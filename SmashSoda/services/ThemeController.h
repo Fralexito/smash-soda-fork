@@ -10,6 +10,7 @@
 #include "../themes/EmberTheme.h"
 #include "../themes/EmeraldTheme.h"
 #include "../themes/IndigoTheme.h"
+#include "../phoenix/PhoenixTheme.h"
 #include "../themes/GoldenTheme.h"
 #include "../themes/WildfireTheme.h"
 #include "helpers/PathHelper.h"

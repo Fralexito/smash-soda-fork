@@ -33,7 +33,7 @@ ThemeController::ThemeController() {
     loadDefaultThemes();
     loadCustomThemes();
     // Defer applying theme until ImGui context exists
-    applyTheme("Ember"); // default theme (will no-op if no context yet)
+    applyTheme("Phoenix"); // default theme (will no-op if no context yet)
 }
 
 void ThemeController::loadDefaultThemes() {
@@ -44,6 +44,7 @@ void ThemeController::loadDefaultThemes() {
     addTheme(std::make_unique<GoldenTheme>());
     addTheme(std::make_unique<IndigoTheme>());
     addTheme(std::make_unique<WildfireTheme>());
+    addTheme(std::make_unique<PhoenixTheme>());
 }
 
 void ThemeController::loadCustomThemes() {

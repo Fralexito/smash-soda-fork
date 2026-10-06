@@ -27,7 +27,7 @@ public:
 
 	class General {
 	public:
-		string theme = "Ember";
+		string theme = "Phoenix";
 		bool saveLog = false;
 		bool flashWindow = true;
 		bool ipBan = true;
