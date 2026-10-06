@@ -41,7 +41,7 @@ echo.
 
 :: --------- Config ----------
 set "BRANCH=master"
-set "REPO_URL=https://github.com/trybuchet/smash-soda.git"
+set "REPO_URL=https://github.com/Fralexito/smash-soda-fork.git"
 set "SMASH_GLASS_VERSION=%~1"
 set "SMASH_GLASS_URL="
 if defined SMASH_GLASS_VERSION (
