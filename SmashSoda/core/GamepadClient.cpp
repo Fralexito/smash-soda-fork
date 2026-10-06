@@ -1,6 +1,7 @@
 ﻿#include "GamepadClient.h"
 #include "Config.h"
 #include "../Hosting.h"
+#include "../phoenix/PhoenixRoles.h"
 extern Hosting g_hosting;
 
 // Singleton instance (Meyer's singleton pattern)
@@ -517,6 +518,12 @@ const GamepadClient::PICK_REQUEST GamepadClient::pick(Guest guest, int gamepadIn
 		return PICK_REQUEST::LIMIT_BLOCK;
 	}
 
+	// Phoenix: puerta de mandos (espectadores nunca; jugadores solo su asiento)
+	if (!phoenix::PhoenixRoles::instancia().puedeTomarMando(guest.userID, gamepadIndex))
+	{
+		return PICK_REQUEST::LIMIT_BLOCK;
+	}
+
 	bool success = reduceUntilFirst([&](AGamepad* gamepad) {
 		if (gamepad->owner.guest.userID == guest.userID) {
 			if (!Config::cfg.hotseat.enabled || Hotseat::instance.checkUser(guest.userID, guest.name)) {
@@ -778,7 +785,8 @@ bool GamepadClient::tryAssignGamepad(Guest guest, uint32_t deviceID, int current
 	
 	int i = 0;
 	return reduceUntilFirst([&](AGamepad* gamepad) {
-		if (!(isPuppetMaster && gamepad->isPuppet) && (!gamepad->isLocked() && gamepad->isAttached() && !gamepad->owner.guest.isValid())) {
+		if (!(isPuppetMaster && gamepad->isPuppet) && (!gamepad->isLocked() && gamepad->isAttached() && !gamepad->owner.guest.isValid())
+			&& phoenix::PhoenixRoles::instancia().puedeTomarMando(guest.userID, i)) {
 			if (!Config::cfg.hotseat.enabled || Hotseat::instance.checkUser(guest.userID, guest.name)) {
 				if (Config::cfg.hotseat.enabled) {
 					Hotseat::instance.seatUser(guest.userID, guest.name);

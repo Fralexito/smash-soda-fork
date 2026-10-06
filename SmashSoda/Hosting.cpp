@@ -1,4 +1,5 @@
 #include "Hosting.h"
+#include "phoenix/PhoenixRoles.h"
 #include "services/OverlayService.h"
 #include "services/InputControlService.h"
 #include "services/GuestStateStore.h"
@@ -1572,6 +1573,11 @@ void Hosting::processNewGuestConnection(Guest& guest) {
 	}
 	if (isBlockedVPN(guest)) {
 		logGuestKick(guest, "VPN");
+		ParsecHostKickGuest(_parsec, guest.id);
+		return;
+	}
+	if (_host.userID != guest.userID && phoenix::PhoenixRoles::instancia().debeExpulsar(guest.userID)) {
+		logGuestKick(guest, "Phoenix: no figura en la lista de la sala");
 		ParsecHostKickGuest(_parsec, guest.id);
 		return;
 	}
