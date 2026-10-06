@@ -24,6 +24,7 @@
 #include "Globals/AppFonts.h"
 #include "Globals/AppColors.h"
 #include "Widgets/LoginWidget.h"
+#include "phoenix/PhoenixBuild.h"
 #include "Widgets/NavBar.h"
 #include "Widgets/HostInfoWidget.h"
 #include "Widgets/HostSettingsWidget.h"
@@ -331,11 +332,14 @@ int CALLBACK WinMain(_In_ HINSTANCE hInstance, _In_ HINSTANCE hPrevInstance, _In
     // =====================================================================
     //  Soda Arcade
     // =====================================================================
-    if (Arcade::instance.loadCredentials()) {
+    if (!phoenix::kSodaArcadeHabilitado) {
+        Config::cfg.arcade.showLogin = false;
+    }
+    else if (Arcade::instance.loadCredentials()) {
         Arcade::instance.checkToken(Arcade::instance.credentials.token);
     }
 
-    if (!Config::cfg.developer.skipUpdateCheck && Cache::cache.checkForUpdates()) {
+    if (phoenix::kActualizacionesAutor && !Config::cfg.developer.skipUpdateCheck && Cache::cache.checkForUpdates()) {
         versionWidget.showUpdate = true;
     }
 

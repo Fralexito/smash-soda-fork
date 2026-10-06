@@ -1,6 +1,7 @@
 ﻿#include "../Hosting.h"
 extern Hosting g_hosting;
 #include "Arcade.h"
+#include "../phoenix/PhoenixBuild.h"
 
 // Singleton
 Arcade Arcade::instance = Arcade();
@@ -54,6 +55,7 @@ bool Arcade::loadEnvironment() {
  * @return bool
  */
 bool Arcade::login(string email, string password, string twoFactor = "") {
+	if (!phoenix::kSodaArcadeHabilitado) return false;
 
 	// Create the JSON object
 	json j;
@@ -177,6 +179,7 @@ bool Arcade::deleteCredentials() {
  * @return bool
  */
 bool Arcade::checkToken(string token) {
+	if (!phoenix::kSodaArcadeHabilitado) return false;
 
 	// Build the JSON string
 	string data = "";
@@ -219,6 +222,7 @@ bool Arcade::checkToken(string token) {
  * @return bool
  */
 bool Arcade::getArtwork() {
+	if (!phoenix::kSodaArcadeHabilitado) return false;
 
 	// Build the JSON string
 	string data = "";
@@ -265,6 +269,7 @@ bool Arcade::getArtwork() {
  * @return bool
  */
 bool Arcade::createPost() {
+	if (!phoenix::kSodaArcadeHabilitado) return false;
 
 	// Parsec session
 	string peer_id = g_hosting.getSession().hostPeerId;
@@ -357,6 +362,7 @@ bool Arcade::createPost() {
  * @return bool
  */
 bool Arcade::deletePost() {
+	if (!phoenix::kSodaArcadeHabilitado) return false;
 
 	// Delete the post ID
 	postID = -1;
@@ -395,6 +401,7 @@ bool Arcade::deletePost() {
  * @return bool
  */
 bool Arcade::updateGuestCount(int guestCount) {
+	if (!phoenix::kSodaArcadeHabilitado) return false;
 
 	// Create the JSON object
 	json j;
