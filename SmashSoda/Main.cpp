@@ -321,6 +321,7 @@ int CALLBACK WinMain(_In_ HINSTANCE hInstance, _In_ HINSTANCE hPrevInstance, _In
     panelesPhoenix.audio      = [&]() { bool v = true; audioSettingswidget.render(v); };
     panelesPhoenix.streaming  = [&]() { bool v = true; streamingWidget.render(v); };
     panelesPhoenix.biblioteca = [&]() { bool v = true; libraryWidget.render(v); };
+    panelesPhoenix.avanzado   = [&]() { bool v = true; developerWidget.render(v); };
 
     //ITaskbarList3* m_pTaskBarlist;
     //CoCreateInstance(
