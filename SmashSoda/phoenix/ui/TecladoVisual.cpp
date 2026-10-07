@@ -63,7 +63,7 @@ namespace phoenix {
 
 			ImGui::SetCursorScreenPos(p0);
 			ImGui::PushID(b.idx);
-			const bool clic = ImGui::InvisibleButton("##btn", b.tam * escala);
+			const bool clic = ImGui::InvisibleButton("##btn", ImVec2(b.tam.x * escala, b.tam.y * escala));
 
 			// Dibujar botón
 			const bool h = ImGui::IsItemHovered();
