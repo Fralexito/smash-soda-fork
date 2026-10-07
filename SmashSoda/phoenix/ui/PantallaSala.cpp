@@ -307,6 +307,7 @@ namespace phoenix {
 
 			InstantaneaSala foto;
 			foto.abierta = sala.abierta();
+			if (foto.abierta && salaEstado().enlaceCache.empty()) salaEstado().enlaceCache = sala.enlace();
 			foto.enlace = foto.abierta ? salaEstado().enlaceCache : std::string();
 			foto.plazasTotal = sala.plazas();
 			foto.plazasLibres = (std::max)(0, foto.plazasTotal - sala.totalInvitados());
