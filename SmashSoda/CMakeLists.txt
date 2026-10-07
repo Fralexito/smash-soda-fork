@@ -93,7 +93,7 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 # --------------------------
 if(MSVC)
     # Suppress warnings, enable secure & large object support
-    target_compile_options(${PROJECT_NAME} PRIVATE /W0 /permissive- /sdl /bigobj /wd4996)
+    target_compile_options(${PROJECT_NAME} PRIVATE /W0 /permissive- /sdl /bigobj /wd4996 /utf-8)
     
     target_link_options(${PROJECT_NAME} PRIVATE
         /SUBSYSTEM:WINDOWS

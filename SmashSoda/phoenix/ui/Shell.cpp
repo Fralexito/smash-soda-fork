@@ -433,7 +433,7 @@ namespace phoenix {
 		const float anchoMenu = kAnchoMenu * s;
 		const float altoEstado = kAltoEstado * s;
 		const float sep = kSeparacion * s;
-		const float anchoChat = (std::min)(kAnchoChat * s, v.x * 0.30f);
+		const float anchoChat = (std::max)(260.0f * s, (std::min)(kAnchoChat * s, v.x * 0.26f));
 
 		// Zonas fijas
 		barraSuperior(o, ImVec2(v.x, altoBarra), tema, s);
@@ -460,13 +460,27 @@ namespace phoenix {
 		switch (e.seccion) {
 		case SALA: {
 			cabecera(ImVec2(xCont, yCuerpo), ImVec2(anchoCont, altoCab), tema, s, "nav.sala", "sub.sala", {});
-			const float anchoIzq = std::floor((tamPanel.x - sep) * 0.56f);
-			const float anchoDer = tamPanel.x - sep - anchoIzq;
-			const float altoInv = std::floor((tamPanel.y - sep) * 0.58f);
-			acoplar(p.configSala, posPanel, ImVec2(anchoIzq, tamPanel.y), s);
-			acoplar(p.invitados, ImVec2(posPanel.x + anchoIzq + sep, posPanel.y), ImVec2(anchoDer, altoInv), s);
-			acoplar(p.actividad, ImVec2(posPanel.x + anchoIzq + sep, posPanel.y + altoInv + sep),
-				ImVec2(anchoDer, tamPanel.y - altoInv - sep), s);
+			if (tamPanel.x >= 900.0f * s) {
+				// Ancho: configuración a la izquierda, invitados y actividad a la derecha
+				const float anchoIzq = std::floor((tamPanel.x - sep) * 0.56f);
+				const float anchoDer = tamPanel.x - sep - anchoIzq;
+				const float altoInv = std::floor((tamPanel.y - sep) * 0.58f);
+				acoplar(p.configSala, posPanel, ImVec2(anchoIzq, tamPanel.y), s);
+				acoplar(p.invitados, ImVec2(posPanel.x + anchoIzq + sep, posPanel.y), ImVec2(anchoDer, altoInv), s);
+				acoplar(p.actividad, ImVec2(posPanel.x + anchoIzq + sep, posPanel.y + altoInv + sep),
+					ImVec2(anchoDer, tamPanel.y - altoInv - sep), s);
+			}
+			else {
+				// Angosto: configuración arriba, invitados y actividad lado a lado abajo
+				const float altoArriba = std::floor((tamPanel.y - sep) * 0.55f);
+				const float anchoMitad = std::floor((tamPanel.x - sep) * 0.5f);
+				const float yAbajo = posPanel.y + altoArriba + sep;
+				const float altoAbajo = tamPanel.y - altoArriba - sep;
+				acoplar(p.configSala, posPanel, ImVec2(tamPanel.x, altoArriba), s);
+				acoplar(p.invitados, ImVec2(posPanel.x, yAbajo), ImVec2(anchoMitad, altoAbajo), s);
+				acoplar(p.actividad, ImVec2(posPanel.x + anchoMitad + sep, yAbajo),
+					ImVec2(tamPanel.x - anchoMitad - sep, altoAbajo), s);
+			}
 			break;
 		}
 		case PARTIDO:

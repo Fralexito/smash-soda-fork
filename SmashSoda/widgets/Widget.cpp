@@ -1,5 +1,6 @@
 #include "Widget.h"
 #include "../phoenix/ui/UiDock.h"
+#include "../phoenix/I18n.h"
 #include <algorithm>
 
 namespace {
@@ -83,12 +84,17 @@ void Widget::startWidget(const char* name, bool& visible, int x, int y, int w, i
     // Set widget name
     widgetName = (char*)name;
 
+    // Phoenix: si el shell reservó un hueco, el panel va fijo ahí
+    ImVec2 dockPos, dockTam;
+    const bool acoplado = phoenix::UiDock::tomar(dockPos, dockTam);
+    estaAcoplado = acoplado;
+
     Theme* theme = ThemeController::getInstance().getActiveTheme();
     bool wasPopupOpen = isPopupOpen;
     isPopupOpen = false;
 
     // Check if the window is focused, and set text color accordingly
-    if (isTitleFocused || isHeaderFocused || isBodyFocused || isFooterFocused || isFocused || wasPopupOpen) {
+    if (!acoplado && (isTitleFocused || isHeaderFocused || isBodyFocused || isFooterFocused || isFocused || wasPopupOpen)) {
         ImGui::PushStyleColor(ImGuiCol_Text, theme->panelTitleBarActiveText);  // Focused text color
         ImGui::PushStyleColor(ImGuiCol_Border, theme->panelBorderActive);
         ImGui::PushStyleColor(ImGuiCol_TitleBg, theme->panelTitleBarActive);
@@ -108,10 +114,6 @@ void Widget::startWidget(const char* name, bool& visible, int x, int y, int w, i
 
     // Set the font
     ImGui::PushFont(AppFonts::title);
-
-    // Phoenix: si el shell reservó un hueco, el panel va fijo ahí
-    ImVec2 dockPos, dockTam;
-    const bool acoplado = phoenix::UiDock::tomar(dockPos, dockTam);
 
     // Set window position and size constraints
     if (acoplado) {
@@ -161,7 +163,7 @@ void Widget::startTabs(const std::vector<Tab>& tabs, bool footer) {
     hasFooter = footer;
 
     Theme* theme = ThemeController::getInstance().getActiveTheme();
-    const float tabsHeaderHeight = S(64.0f);
+    const float tabsHeaderHeight = S(estaAcoplado ? 50.0f : 64.0f);
     const float tabsBorderThickness = S(1.0f);
     const ImU32 tabsBorderColor = ImGui::ColorConvertFloat4ToU32(theme->panelBorder);
 
@@ -176,7 +178,7 @@ void Widget::startTabs(const std::vector<Tab>& tabs, bool footer) {
         ImDrawFlags_RoundCornersBottom
     );
     ImGui::SetCursorPos(SV(0.0f, 0.0f));
-    ImGui::Dummy(SV(0.0f, 30.0f));
+    ImGui::Dummy(SV(0.0f, estaAcoplado ? 14.0f : 30.0f));
 
     std::string pillsName = "##pills-" + std::string(widgetName);
     ImGui::BeginTabBar(pillsName.c_str());
@@ -198,7 +200,8 @@ void Widget::startTabs(const std::vector<Tab>& tabs, bool footer) {
             ImGui::PushStyleColor(ImGuiCol_Text, theme->buttonSecondaryText);
         }
 
-        if (ImGui::BeginTabItem(tabs[i].name)) {
+        const std::string nombrePestana = phoenix::Tr(tabs[i].name);
+        if (ImGui::BeginTabItem(nombrePestana.c_str())) {
             activeTab = i;
             const float seamOffset = ImGui::GetStyle().ItemSpacing.y;
             ImGui::SetCursorPosY(ImGui::GetCursorPosY() - seamOffset);
@@ -324,7 +327,7 @@ void Widget::elLabel(std::string label) {
     ImGui::PushFont(AppFonts::label);
     ImGui::PushStyleColor(ImGuiCol_Text, theme->formLabel);
     ImGui::SetNextItemWidth(size.x - S(40.0f));
-	ImGui::Text(label.c_str());
+	ImGui::TextUnformatted(phoenix::Tr(label).c_str());
 	ImGui::PopStyleColor();
     ImGui::PopFont();
 }
@@ -339,7 +342,7 @@ void Widget::elHelp(std::string help) {
     ImGui::PushStyleColor(ImGuiCol_Text, theme->formHelpText);
     ImGui::SetNextItemWidth(size.x - S(60.0f));
     ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + size.x - S(60.0f));
-	ImGui::TextWrapped(help.c_str());
+	ImGui::TextWrapped("%s", phoenix::Tr(help).c_str());
     ImGui::PopStyleColor();
 	ImGui::PopFont();
 }
@@ -351,7 +354,7 @@ void Widget::elError(std::string error) {
     ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.3f, 0.3f, 1.0f));
     ImGui::SetNextItemWidth(size.x - S(60.0f));
     ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + size.x - S(60.0f));
-    ImGui::TextWrapped(error.c_str());
+    ImGui::TextWrapped("%s", phoenix::Tr(error).c_str());
     ImGui::PopTextWrapPos();
     ImGui::PopStyleColor();
     ImGui::PopFont();
@@ -367,7 +370,7 @@ void Widget::elParagraph(std::string text) {
     ImGui::PushStyleColor(ImGuiCol_Text, theme->panelText);
     ImGui::SetNextItemWidth(size.x - S(40.0f));
     ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + size.x - S(60.0f));
-    ImGui::TextWrapped(text.c_str());
+    ImGui::TextWrapped("%s", phoenix::Tr(text).c_str());
     ImGui::PopStyleColor();
     ImGui::PopFont();
     ImGui::Dummy(SV(0.0f, 10.0f));
@@ -649,7 +652,7 @@ bool Widget::elCheckbox(std::string label, bool& isOn, std::string help, std::st
     ImGui::PushStyleColor(ImGuiCol_FrameBgActive, theme->formInputBackground);
 
     ImGui::SetNextItemWidth(size.x - S(20.0f));
-    if (ImGui::Checkbox(label.c_str(), &isOn)) {
+    if (ImGui::Checkbox(phoenix::Tr(label).c_str(), &isOn)) {
         response = true;
     }
     ImGui::PopStyleColor(4);
@@ -826,7 +829,7 @@ bool Widget::elBtn(std::string label) {
 
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, SV(10.0f, 5.0f));
 
-    if (ImGui::Button(label.c_str())) {
+    if (ImGui::Button(phoenix::Tr(label).c_str())) {
 
         ImGui::PopStyleColor();
         ImGui::PopStyleColor();
@@ -857,7 +860,7 @@ bool Widget::elBtnSecondary(std::string label) {
     ImGui::PushStyleColor(ImGuiCol_Text, theme->buttonSecondaryText);
 
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, SV(10.0f, 5.0f));
-    if (ImGui::Button(label.c_str())) {
+    if (ImGui::Button(phoenix::Tr(label).c_str())) {
 
         ImGui::PopStyleColor();
         ImGui::PopStyleColor();

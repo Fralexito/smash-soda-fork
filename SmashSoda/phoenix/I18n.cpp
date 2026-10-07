@@ -1,4 +1,5 @@
 ﻿#include "I18n.h"
+#include "I18nOriginal.h"
 
 #include <map>
 #include <mutex>
@@ -161,6 +162,7 @@ namespace phoenix {
 			e.cargado = true;
 
 			e.tablas["es"] = kEs;
+			for (const auto& par : textosOriginalesEs()) e.tablas["es"].insert(par);
 			e.tablas["en"] = kEn;
 			e.tablas["pt"] = kPt;
 			e.tablas["fr"] = kFr;
@@ -214,6 +216,26 @@ namespace phoenix {
 		if (const char* s = buscar(e.codigo)) return s;
 		if (const char* s = buscar("es")) return s;
 		return clave;
+	}
+
+	std::string Tr(const std::string& original) {
+		if (original.empty()) return original;
+
+		const size_t corte = original.find("##");
+		const std::string base = corte == std::string::npos ? original : original.substr(0, corte);
+		const std::string sufijo = corte == std::string::npos ? std::string() : original.substr(corte);
+		if (base.empty()) return original;
+
+		Estado& e = estado();
+		std::lock_guard<std::mutex> lock(e.mutex);
+		cargarSiHaceFalta(e);
+		if (e.codigo == "en") return original;
+
+		auto t = e.tablas.find(e.codigo);
+		if (t == e.tablas.end()) return original;
+		auto it = t->second.find("en:" + base);
+		if (it == t->second.end()) return original;
+		return it->second + sufijo;
 	}
 
 	void I18n::establecer(const std::string& codigo) {

@@ -19,6 +19,7 @@ class Widget {
 public:
     char* widgetName;
     bool isFocused = false;
+    bool estaAcoplado = false;   // Phoenix: panel fijo dentro del shell
     bool isHeaderFocused = false;
     bool isTitleFocused = false;
     bool isBodyFocused = false;
