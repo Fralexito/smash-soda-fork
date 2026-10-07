@@ -116,14 +116,23 @@ namespace phoenix {
 			dl->AddRectFilledMultiColor(ImVec2(pos.x, yLinea), ImVec2(pos.x + tam.x, pos.y + tam.y),
 				col(tema->primary), col(tema->secondary), col(tema->secondary), col(tema->primary));
 
-			// Marca
+			// Marca: Phoenix Portal con glow
 			ImGui::PushFont(AppFonts::title);
 			const float yTexto = pos.y + (tam.y - ImGui::GetFontSize()) * 0.5f;
-			dl->AddText(ImVec2(pos.x + 24.0f * s, yTexto), col(tema->primary), "PHOENIX");
+			const ImVec2 posMarc(pos.x + 24.0f * s, yTexto);
+
+			// Glow cian detrás de PHOENIX
+			dl->AddText(ImVec2(posMarc.x - 2.0f, posMarc.y),
+				ImGui::GetColorU32(ImVec4(0, 229, 255, 0.3f)), "PHOENIX");
+			dl->AddText(posMarc, col(tema->primary), "PHOENIX");
+
 			const float anchoMarca = ImGui::CalcTextSize("PHOENIX").x;
 			ImGui::PopFont();
 			ImGui::PushFont(AppFonts::label);
-			dl->AddText(ImVec2(pos.x + 30.0f * s + anchoMarca, yTexto + 2.0f * s), col(tema->textMuted), "SODA");
+
+			// PORTAL en púrpura con tracking más ancho
+			const ImVec2 posPortal(pos.x + 30.0f * s + anchoMarca, yTexto + 2.0f * s);
+			dl->AddText(posPortal, col(tema->secondary), "PORTAL");
 			ImGui::PopFont();
 
 			// Píldora de estado de la sala (late suave cuando está en vivo)
