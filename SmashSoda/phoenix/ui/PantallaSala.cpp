@@ -11,6 +11,7 @@
 #include "../PhoenixPrefs.h"
 #include "../core/ProveedorSala.h"
 #include "../link/PhoenixLink.h"
+#include "TableroMandos.h"
 #include <cstring>
 #include "../../globals/AppFonts.h"
 #include "../../services/ThemeController.h"
@@ -616,8 +617,8 @@ namespace phoenix {
 			try {
 				salaTarjetaPrincipal(*sala, tema, s, anchoUtil);
 				salaOpciones(tema, s, anchoUtil);
-				salaAsientos(*sala, tema, s, anchoUtil);
-				salaEspectadores(*sala, tema, s, anchoUtil);
+				salaTitulo(T("sala.mandos"), tema, s);
+				TableroMandos::render(*sala, anchoUtil, true);
 
 				ImGui::Dummy(ImVec2(0, 10 * s));
 				static float hoverAvanzado = 0.0f;

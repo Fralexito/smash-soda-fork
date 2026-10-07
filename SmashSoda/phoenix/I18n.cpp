@@ -85,6 +85,19 @@ namespace phoenix {
 			{"web.sin_vincular", "Esta PC no está vinculada a tu cuenta"},
 			{"web.ayuda_codigo", "En la web: Perfil → Vincular Smash Soda. Escribe aquí el código de 6 dígitos."},
 			{"web.vincular", "Vincular"},
+			{"mandos.cantidad", "Mandos"},
+			{"mandos.local", "Local"},
+			{"mandos.equipo_local", "LOCAL"},
+			{"mandos.equipo_visitante", "VISITANTE"},
+			{"mandos.conectar", "Conectar mando"},
+			{"mandos.clic_conectar", "Clic para conectarlo"},
+			{"mandos.arrastra", "Arrástralo para moverlo"},
+			{"mandos.arrastra_aqui", "Arrastra aquí a un jugador"},
+			{"mandos.bloqueado", "Bloqueado"},
+			{"mandos.bloquear", "Bloquear este mando"},
+			{"mandos.desbloquear", "Desbloquear este mando"},
+			{"mandos.soltar", "suelta sobre un mando"},
+			{"mandos.ayuda_arrastrar", "Arrastra a un espectador sobre un mando para darle control."},
 			{"web.reintentar", "Reintentar"},
 			{"web.desvincular", "Desvincular esta PC"},
 		};
@@ -123,7 +136,11 @@ namespace phoenix {
 			{"web.sin_conexion", "No connection to the web: retrying"}, {"web.pausado", "Web connection paused"},
 			{"web.sin_vincular", "This PC is not linked to your account"},
 			{"web.ayuda_codigo", "On the web: Profile → Link Smash Soda. Type the 6-digit code here."},
-			{"sala.parche", "Patch"}, {"sala.region", "Region"}, {"web.vincular", "Link"}, {"web.reintentar", "Retry"}, {"web.desvincular", "Unlink this PC"},
+			{"mandos.cantidad", "Gamepads"}, {"mandos.local", "Home"}, {"mandos.equipo_local", "HOME"},
+			{"mandos.equipo_visitante", "AWAY"}, {"mandos.conectar", "Connect gamepad"}, {"mandos.clic_conectar", "Click to connect"},
+			{"mandos.arrastra", "Drag to move"}, {"mandos.arrastra_aqui", "Drop a player here"}, {"mandos.bloqueado", "Locked"},
+			{"mandos.bloquear", "Lock this gamepad"}, {"mandos.desbloquear", "Unlock this gamepad"}, {"mandos.soltar", "drop on a gamepad"},
+			{"mandos.ayuda_arrastrar", "Drag a spectator onto a gamepad to give control."}, {"sala.parche", "Patch"}, {"sala.region", "Region"}, {"web.vincular", "Link"}, {"web.reintentar", "Retry"}, {"web.desvincular", "Unlink this PC"},
 		};
 
 		const Tabla kPt = {

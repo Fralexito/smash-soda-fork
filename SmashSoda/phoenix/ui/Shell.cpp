@@ -11,6 +11,7 @@
 #include "../PhoenixBuild.h"
 #include "../PhoenixPrefs.h"
 #include "PantallaSala.h"
+#include "TableroMandos.h"
 #include "../core/ProveedorSala.h"
 #include "../../globals/AppFonts.h"
 #include "../../globals/AppIcons.h"
@@ -473,8 +474,26 @@ namespace phoenix {
 		case MANDOS: {
 			const int t = cabecera(ImVec2(xCont, yCuerpo), ImVec2(anchoCont, altoCab), tema, s, "nav.mandos", "sub.mandos",
 				{ "tab.mandos", "tab.puppets", "tab.hotseat", "tab.bloqueo", "tab.teclado" });
-			const std::function<void()>* paneles[] = { &p.mandos, &p.puppets, &p.hotseat, &p.bloqueo, &p.teclado };
-			acoplar(*paneles[t], posPanel, tamPanel, s);
+			if (t == 0 && gProveedor != nullptr) {
+				// Tablero propio de Phoenix (8 mandos, equipos, arrastrar y soltar)
+				const float alfa = 0.25f + 0.75f * progresoTransicion();
+				ImGui::SetNextWindowPos(posPanel, ImGuiCond_Always);
+				ImGui::SetNextWindowSize(tamPanel, ImGuiCond_Always);
+				ImGui::PushStyleVar(ImGuiStyleVar_Alpha, alfa);
+				ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(22 * s, 20 * s));
+				ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 12.0f * s);
+				ImGui::PushStyleColor(ImGuiCol_WindowBg, tema->panelBackground);
+				ImGui::Begin("##phx_mandos", nullptr,
+					ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings);
+				try { TableroMandos::render(*gProveedor, ImGui::GetContentRegionAvail().x, false); } catch (...) {}
+				ImGui::End();
+				ImGui::PopStyleColor();
+				ImGui::PopStyleVar(3);
+			}
+			else {
+				const std::function<void()>* paneles[] = { &p.mandos, &p.puppets, &p.hotseat, &p.bloqueo, &p.teclado };
+				acoplar(*paneles[t], posPanel, tamPanel, s);
+			}
 			break;
 		}
 		case COMUNIDAD:

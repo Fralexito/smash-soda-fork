@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <cstdint>
 #include <string>
@@ -23,6 +23,7 @@ namespace phoenix {
 		std::string jugador;         ///< nombre Parsec del dueño
 		uint32_t parsecId = 0;
 		int pingMs = -1;             ///< -1 = sin dato
+		bool bloqueado = false;
 	};
 
 	struct EspectadorVista {
@@ -48,6 +49,14 @@ namespace phoenix {
 		virtual std::vector<AsientoVista> asientos(int maximo) = 0;
 		virtual std::vector<EspectadorVista> espectadores() = 0;
 		virtual int totalInvitados() = 0;
+
+		// Acciones sobre mandos (índice 0 = mando 1)
+		virtual void conectarMando(int indice) = 0;
+		virtual void desconectarMando(int indice) = 0;
+		virtual void alternarBloqueo(int indice) = 0;
+		virtual void liberarMando(int indice) = 0;
+		/// Asigna el mando al invitado con ese ID Parsec (respeta la puerta de roles).
+		virtual bool asignarMando(int indice, uint32_t parsecId) = 0;
 	};
 
 }

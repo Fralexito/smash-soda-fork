@@ -1,0 +1,270 @@
+﻿#include "TableroMandos.h"
+
+#include <cfloat>
+#include <cstdio>
+#include <cstring>
+#include <string>
+#include <vector>
+
+#include "imgui.h"
+#include "UiComun.h"
+#include "../I18n.h"
+#include "../PhoenixPrefs.h"
+#include "../core/ProveedorSala.h"
+#include "../../globals/AppFonts.h"
+#include "../../globals/AppIcons.h"
+#include "../../services/ThemeController.h"
+
+namespace phoenix {
+
+	namespace {
+
+		const char* kPayload = "PHX_PARSEC";
+
+		float tabEscala() {
+			const float s = ThemeController::getInstance().getUiScale();
+			return s > 0.0f ? s : 1.0f;
+		}
+
+		/// Botón pequeño redondo con texto. Devuelve true al hacer clic.
+		bool tabMini(const char* id, ImVec2 p, float lado, const char* texto, const ImVec4& color, float s) {
+			ImGui::SetCursorScreenPos(p);
+			const bool clic = ImGui::InvisibleButton(id, ImVec2(lado, lado));
+			const bool encima = ImGui::IsItemHovered();
+			if (encima) ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+			ImDrawList* dl = ImGui::GetWindowDrawList();
+			dl->AddRectFilled(p, ImVec2(p.x + lado, p.y + lado), vis::col(color, encima ? 0.35f : 0.18f), lado * 0.5f);
+			const ImVec2 t = ImGui::CalcTextSize(texto);
+			dl->AddText(ImVec2(p.x + (lado - t.x) * 0.5f, p.y + (lado - t.y) * 0.5f), vis::col(color), texto);
+			return clic;
+		}
+
+		/// Selector «etiqueta  −  n  +» dibujado en `p`. Devuelve el nuevo valor.
+		int tabStepper(const char* id, ImVec2 p, int valor, int minimo, int maximo, const char* etiqueta, Theme* tema, float s) {
+			ImGui::PushID(id);
+			ImDrawList* dl = ImGui::GetWindowDrawList();
+			const float lado = 30 * s;
+			ImFont* f = AppFonts::label;
+			const ImVec2 te = f->CalcTextSizeA(f->FontSize, FLT_MAX, 0, etiqueta);
+			dl->AddText(f, f->FontSize, ImVec2(p.x, p.y + (lado - te.y) * 0.5f), vis::col(tema->textMuted), etiqueta);
+			float x = p.x + te.x + 10 * s;
+			if (tabMini("##menos", ImVec2(x, p.y), lado, "-", valor > minimo ? tema->primary : tema->textMuted, s) && valor > minimo) valor--;
+			char n[8];
+			snprintf(n, sizeof(n), "%d", valor);
+			const ImVec2 tn = f->CalcTextSizeA(f->FontSize, FLT_MAX, 0, n);
+			x += lado + 10 * s;
+			dl->AddText(f, f->FontSize, ImVec2(x, p.y + (lado - tn.y) * 0.5f), vis::col(tema->text), n);
+			x += tn.x + 10 * s;
+			if (tabMini("##mas", ImVec2(x, p.y), lado, "+", valor < maximo ? tema->primary : tema->textMuted, s) && valor < maximo) valor++;
+			ImGui::PopID();
+			return valor;
+		}
+
+		/// Una tarjeta de mando. Devuelve la altura usada.
+		void tabTarjeta(ProveedorSala& sala, const AsientoVista& a, int indice, ImVec2 p0, ImVec2 tam,
+			const ImVec4& colorEquipo, Theme* tema, float s, bool compacto) {
+
+			ImDrawList* dl = ImGui::GetWindowDrawList();
+			const ImVec2 p1(p0.x + tam.x, p0.y + tam.y);
+			ImGui::PushID(indice);
+
+			// Zona interactiva de toda la tarjeta (clic, arrastrar y soltar)
+			ImGui::SetCursorScreenPos(p0);
+			const bool clic = ImGui::InvisibleButton("##tarjeta", tam);
+			const bool encima = ImGui::IsItemHovered();
+
+			ImGuiStorage* st = ImGui::GetStateStorage();
+			const ImGuiID claveHover = ImGui::GetID("##h");
+			float h = st->GetFloat(claveHover, 0.0f);
+			h = vis::acercar(h, encima ? 1.0f : 0.0f, 16.0f);
+			st->SetFloat(claveHover, h);
+
+			if (a.ocupado && ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID)) {
+				ImGui::SetDragDropPayload(kPayload, &a.parsecId, sizeof(a.parsecId));
+				ImGui::Text("%s  ->  %s", a.jugador.c_str(), T("mandos.soltar"));
+				ImGui::EndDragDropSource();
+			}
+			bool resaltarDrop = false;
+			if (ImGui::BeginDragDropTarget()) {
+				resaltarDrop = true;
+				if (const ImGuiPayload* pl = ImGui::AcceptDragDropPayload(kPayload)) {
+					uint32_t id = 0;
+					memcpy(&id, pl->Data, sizeof(id));
+					if (!a.conectado) sala.conectarMando(indice);
+					sala.asignarMando(indice, id);
+				}
+				ImGui::EndDragDropTarget();
+			}
+			if (clic && !a.conectado) sala.conectarMando(indice);
+			if (encima && !a.conectado) ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+
+			// Fondo y borde
+			const float lift = 2.0f * s * h;
+			const ImVec2 q0(p0.x, p0.y - lift), q1(p1.x, p1.y - lift);
+			const ImVec4 fondo = a.ocupado ? tema->listItemBackground : tema->formInputBackground;
+			dl->AddRectFilled(q0, q1, vis::col(fondo), 12 * s);
+			const float bordeA = resaltarDrop ? 1.0f : (a.ocupado ? 0.55f : 0.18f) + 0.25f * h;
+			dl->AddRect(q0, q1, vis::col(resaltarDrop ? tema->primary : colorEquipo, bordeA), 12 * s, 0, (resaltarDrop ? 2.0f : 1.0f) * s);
+			dl->AddRectFilled(ImVec2(q0.x, q0.y + 12 * s), ImVec2(q0.x + 4 * s, q1.y - 12 * s), vis::col(colorEquipo, a.ocupado ? 1.0f : 0.35f), 2 * s);
+
+			// Número del mando
+			char num[8];
+			snprintf(num, sizeof(num), "%d", a.numero);
+			ImFont* fn = AppFonts::title;
+			const float tamNum = fn->FontSize * (compacto ? 1.0f : 1.3f);
+			dl->AddText(fn, tamNum, ImVec2(q0.x + 16 * s, q0.y + (tam.y - tamNum) * 0.5f), vis::col(colorEquipo, a.ocupado ? 1.0f : 0.5f), num);
+
+			// Nombre / estado
+			const float xTexto = q0.x + 16 * s + 34 * s;
+			const char* principal = a.ocupado ? a.jugador.c_str()
+				: (a.conectado ? T("sala.libre") : T("mandos.conectar"));
+			dl->PushClipRect(ImVec2(xTexto, q0.y), ImVec2(q1.x - 70 * s, q1.y), true);
+			dl->AddText(AppFonts::label, AppFonts::label->FontSize, ImVec2(xTexto, q0.y + tam.y * 0.5f - AppFonts::label->FontSize + 2 * s),
+				vis::col(a.ocupado ? tema->text : (a.conectado ? tema->textMuted : tema->primary)), principal);
+			const char* sub = a.bloqueado ? T("mandos.bloqueado")
+				: a.ocupado ? T("mandos.arrastra") : (a.conectado ? T("mandos.arrastra_aqui") : T("mandos.clic_conectar"));
+			dl->AddText(AppFonts::input, AppFonts::input->FontSize * 0.85f, ImVec2(xTexto, q0.y + tam.y * 0.5f + 4 * s),
+				vis::col(a.bloqueado ? tema->negative : tema->textMuted, 0.8f), sub);
+			dl->PopClipRect();
+
+			// Ping
+			if (a.ocupado) {
+				const ImVec4 cp = vis::colorPing(a.pingMs, tema->positive, tema->negative, tema->textMuted);
+				char ping[16];
+				if (a.pingMs >= 0) snprintf(ping, sizeof(ping), "%d ms", a.pingMs); else snprintf(ping, sizeof(ping), "— ms");
+				const ImVec2 tp = ImGui::CalcTextSize(ping);
+				const ImVec2 c0(q1.x - tp.x - 26 * s, q0.y + 10 * s);
+				dl->AddCircleFilled(ImVec2(c0.x + 6 * s, c0.y + tp.y * 0.5f), 4 * s, vis::col(cp));
+				dl->AddText(ImVec2(c0.x + 14 * s, c0.y), vis::col(cp), ping);
+			}
+
+			// Acciones al pasar el mouse (solo mandos conectados)
+			if (a.conectado && h > 0.3f) {
+				const float lado = 24 * s;
+				const float y = q1.y - lado - 8 * s;
+				ImVec2 pb(q1.x - lado - 10 * s, y);
+				if (a.ocupado && tabMini("##liberar", pb, lado, "x", tema->negative, s)) sala.liberarMando(indice);
+				pb.x -= lado + 6 * s;
+				if (tabMini("##bloq", pb, lado, a.bloqueado ? "U" : "L", a.bloqueado ? tema->positive : tema->secondary, s)) sala.alternarBloqueo(indice);
+				if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", a.bloqueado ? T("mandos.desbloquear") : T("mandos.bloquear"));
+			}
+
+			ImGui::PopID();
+		}
+
+		void tabColumna(ProveedorSala& sala, const std::vector<AsientoVista>& asientos, int desde, int hasta,
+			const char* titulo, const ImVec4& color, ImVec2 origen, float ancho, Theme* tema, float s, bool compacto, float& altoUsado) {
+
+			ImDrawList* dl = ImGui::GetWindowDrawList();
+			dl->AddText(AppFonts::label, AppFonts::label->FontSize, origen, vis::col(color), titulo);
+			char cuenta[16];
+			snprintf(cuenta, sizeof(cuenta), "%d", hasta - desde);
+			const ImVec2 tt = AppFonts::label->CalcTextSizeA(AppFonts::label->FontSize, FLT_MAX, 0, titulo);
+			dl->AddText(AppFonts::label, AppFonts::label->FontSize, ImVec2(origen.x + tt.x + 8 * s, origen.y), vis::col(tema->textMuted), cuenta);
+
+			const float sep = 10 * s;
+			const float altoTarjeta = (compacto ? 64.0f : 78.0f) * s;
+			const int columnas = ancho >= 2 * 220 * s + sep ? 2 : 1;
+			const float anchoT = (ancho - sep * (columnas - 1)) / columnas;
+			const float y0 = origen.y + 30 * s;
+			int n = 0;
+			for (int i = desde; i < hasta && i < static_cast<int>(asientos.size()); i++, n++) {
+				const int f = n / columnas, c = n % columnas;
+				tabTarjeta(sala, asientos[i], i, ImVec2(origen.x + c * (anchoT + sep), y0 + f * (altoTarjeta + sep)),
+					ImVec2(anchoT, altoTarjeta), color, tema, s, compacto);
+			}
+			const int filas = (n + columnas - 1) / columnas;
+			altoUsado = 30 * s + filas * (altoTarjeta + sep);
+		}
+	}
+
+	void TableroMandos::render(ProveedorSala& sala, float ancho, bool compacto) {
+		Theme* tema = ThemeController::getInstance().getActiveTheme();
+		const float s = tabEscala();
+		PhoenixPrefs& pr = PhoenixPrefs::get();
+		bool cambio = false;
+
+		std::vector<AsientoVista> asientos = sala.asientos(8);
+		if (asientos.empty()) {
+			ImGui::TextColored(tema->textMuted, "%s", T("sala.sin_mando"));
+			return;
+		}
+		const int maximo = (std::min)(8, static_cast<int>(asientos.size()));
+
+		// Formación: cuántos mandos y cómo se reparten
+		{
+			const int antesMandos = pr.mandosActivos, antesLocal = pr.equipoLocal;
+			const ImVec2 o = ImGui::GetCursorScreenPos();
+			pr.mandosActivos = tabStepper("mandos", o, (std::min)(pr.mandosActivos, maximo), 2, maximo, T("mandos.cantidad"), tema, s);
+			pr.equipoLocal = (std::max)(1, (std::min)(pr.equipoLocal, pr.mandosActivos - 1));
+			pr.equipoLocal = tabStepper("local", ImVec2(o.x + 250 * s, o.y), pr.equipoLocal, 1, pr.mandosActivos - 1, T("mandos.local"), tema, s);
+			char formacion[32];
+			snprintf(formacion, sizeof(formacion), "%d  vs  %d", pr.equipoLocal, pr.mandosActivos - pr.equipoLocal);
+			ImFont* ft = AppFonts::title;
+			ImGui::GetWindowDrawList()->AddText(ft, ft->FontSize * 1.2f, ImVec2(o.x + 500 * s, o.y + 2 * s), vis::col(tema->primary), formacion);
+			ImGui::SetCursorScreenPos(ImVec2(o.x, o.y + 30 * s));
+			ImGui::Dummy(ImVec2(ancho, 1));
+			cambio = antesMandos != pr.mandosActivos || antesLocal != pr.equipoLocal;
+		}
+		ImGui::Dummy(ImVec2(0, 10 * s));
+
+		// Dos columnas: LOCAL (cian) y VISITANTE (púrpura)
+		const float sep = 16 * s;
+		const float anchoCol = (ancho - sep) * 0.5f;
+		const ImVec2 origen = ImGui::GetCursorScreenPos();
+		float altoA = 0, altoB = 0;
+		tabColumna(sala, asientos, 0, pr.equipoLocal, T("mandos.equipo_local"), tema->primary, origen, anchoCol, tema, s, compacto, altoA);
+		tabColumna(sala, asientos, pr.equipoLocal, pr.mandosActivos, T("mandos.equipo_visitante"), tema->secondary,
+			ImVec2(origen.x + anchoCol + sep, origen.y), anchoCol, tema, s, compacto, altoB);
+		ImGui::SetCursorScreenPos(ImVec2(origen.x, origen.y + (std::max)(altoA, altoB)));
+		ImGui::Dummy(ImVec2(ancho, 2 * s));
+
+		// Espectadores arrastrables
+		const std::vector<EspectadorVista> lista = sala.espectadores();
+		ImGui::PushFont(AppFonts::label);
+		ImGui::TextColored(tema->textMuted, "%s  ·  %d", T("sala.espectadores"), static_cast<int>(lista.size()));
+		ImGui::PopFont();
+		if (lista.empty()) {
+			ImGui::PushFont(AppFonts::input);
+			ImGui::TextColored(tema->textMuted, "%s", T("sala.sin_espectadores"));
+			ImGui::PopFont();
+		}
+		else {
+			ImGui::PushFont(AppFonts::input);
+			ImDrawList* dl = ImGui::GetWindowDrawList();
+			const ImVec2 o = ImGui::GetCursorScreenPos();
+			float x = o.x, y = o.y;
+			const float alto = 34 * s;
+			for (size_t i = 0; i < lista.size(); i++) {
+				const EspectadorVista& e = lista[i];
+				const ImVec2 tt = ImGui::CalcTextSize(e.nombre.c_str());
+				const float w = tt.x + 44 * s;
+				if (x + w > o.x + ancho && x > o.x) { x = o.x; y += alto + 8 * s; }
+				ImGui::SetCursorScreenPos(ImVec2(x, y));
+				ImGui::PushID(static_cast<int>(i) + 1000);
+				ImGui::InvisibleButton("##esp", ImVec2(w, alto));
+				const bool encima = ImGui::IsItemHovered();
+				if (encima) ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+				if (ImGui::BeginDragDropSource()) {
+					ImGui::SetDragDropPayload(kPayload, &e.parsecId, sizeof(e.parsecId));
+					ImGui::Text("%s  ->  %s", e.nombre.c_str(), T("mandos.soltar"));
+					ImGui::EndDragDropSource();
+				}
+				ImGui::PopID();
+				const ImVec4 cp = vis::colorPing(e.pingMs, tema->positive, tema->negative, tema->textMuted);
+				dl->AddRectFilled(ImVec2(x, y), ImVec2(x + w, y + alto), vis::col(tema->listItemBackground, encima ? 1.0f : 0.8f), alto * 0.5f);
+				if (encima) dl->AddRect(ImVec2(x, y), ImVec2(x + w, y + alto), vis::col(tema->primary, 0.6f), alto * 0.5f);
+				dl->AddText(ImVec2(x + 12 * s, y + (alto - tt.y) * 0.5f), vis::col(tema->textMuted, 0.7f), "::");
+				dl->AddCircleFilled(ImVec2(x + 28 * s, y + alto * 0.5f), 4 * s, vis::col(cp));
+				dl->AddText(ImVec2(x + 36 * s, y + (alto - tt.y) * 0.5f), vis::col(tema->text), e.nombre.c_str());
+				x += w + 8 * s;
+			}
+			ImGui::SetCursorScreenPos(ImVec2(o.x, y + alto + 6 * s));
+			ImGui::TextColored(ImVec4(tema->textMuted.x, tema->textMuted.y, tema->textMuted.z, 0.7f), "%s", T("mandos.ayuda_arrastrar"));
+			ImGui::PopFont();
+		}
+
+		if (cambio) pr.guardar();
+	}
+
+}

@@ -1,5 +1,7 @@
 ﻿#include "PhoenixPrefs.h"
 
+#include <algorithm>
+
 #include <nlohmann/json.hpp>
 
 #include "../helpers/PathHelper.h"
@@ -45,6 +47,8 @@ namespace phoenix {
 			juego = j.value("juego", juego).substr(0, 60);
 			parche = j.value("parche", parche).substr(0, 60);
 			region = j.value("region", region).substr(0, 40);
+			mandosActivos = (std::max)(2, (std::min)(8, j.value("mandosActivos", mandosActivos)));
+			equipoLocal = (std::max)(1, (std::min)(mandosActivos - 1, j.value("equipoLocal", equipoLocal)));
 		}
 		catch (...) {
 			// Preferencias dañadas: se quedan los valores por defecto.
@@ -65,6 +69,8 @@ namespace phoenix {
 				{"juego", juego},
 				{"parche", parche},
 				{"region", region},
+				{"mandosActivos", mandosActivos},
+				{"equipoLocal", equipoLocal},
 			};
 			const std::string texto = j.dump(2);
 			MTY_WriteFile(r.c_str(), texto.c_str(), texto.size());

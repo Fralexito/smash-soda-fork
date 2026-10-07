@@ -24,6 +24,8 @@ namespace phoenix {
 		std::string juego = "eFootball PES 2021";
 		std::string parche = "Conmegol";
 		std::string region = "Lima";
+		int mandosActivos = 2;    ///< 2–8 mandos visibles en el tablero
+		int equipoLocal = 1;      ///< cuántos mandos son del equipo local
 
 		static PhoenixPrefs& get();
 		void cargar();

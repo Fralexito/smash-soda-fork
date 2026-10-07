@@ -1,9 +1,10 @@
-#include "ProveedorSalaSoda.h"
+﻿#include "ProveedorSalaSoda.h"
 
 #include <set>
 
 #include "../../Hosting.h"
 #include "../../widgets/HostSettingsWidget.h"
+#include "../PhoenixRoles.h"
 
 namespace phoenix {
 
@@ -54,6 +55,7 @@ namespace phoenix {
 				a.numero = ++numero;
 				a.conectado = pad->isConnected();
 				a.ocupado = pad->isOwned();
+				a.bloqueado = pad->isLocked();
 				if (a.ocupado) {
 					a.jugador = pad->owner.guest.name;
 					a.parsecId = pad->owner.guest.userID;
@@ -88,6 +90,36 @@ namespace phoenix {
 		catch (...) {
 		}
 		return lista;
+	}
+
+	namespace {
+		AGamepad* padEn(Hosting& h, int i) {
+			std::vector<AGamepad*>& lista = h.getGamepadClient().gamepads;
+			return (i >= 0 && i < static_cast<int>(lista.size())) ? lista[i] : nullptr;
+		}
+	}
+
+	void ProveedorSalaSoda::conectarMando(int i) { try { if (AGamepad* p = padEn(_hosting, i)) p->connect(); } catch (...) {} }
+	void ProveedorSalaSoda::desconectarMando(int i) { try { if (AGamepad* p = padEn(_hosting, i)) p->disconnect(); } catch (...) {} }
+	void ProveedorSalaSoda::alternarBloqueo(int i) { try { if (AGamepad* p = padEn(_hosting, i)) p->toggleLocked(); } catch (...) {} }
+	void ProveedorSalaSoda::liberarMando(int i) { try { _hosting.stripGamepad(i); } catch (...) {} }
+
+	bool ProveedorSalaSoda::asignarMando(int i, uint32_t parsecId) {
+		try {
+			AGamepad* p = padEn(_hosting, i);
+			if (p == nullptr || !PhoenixRoles::instancia().puedeTomarMando(parsecId, i)) return false;
+			for (Guest& g : _hosting.getGuests()) {
+				if (g.userID != parsecId) continue;
+				// Si ya tenía otro mando, lo suelta (un jugador = un mando al moverlo)
+				for (AGamepad* otro : _hosting.getGamepadClient().gamepads) {
+					if (otro != nullptr && otro != p && otro->isOwned() && otro->owner.guest.userID == parsecId) otro->clearOwner();
+				}
+				_hosting.setOwner(*p, g, 0);
+				return true;
+			}
+		}
+		catch (...) {}
+		return false;
 	}
 
 	int ProveedorSalaSoda::totalInvitados() {
