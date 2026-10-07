@@ -61,6 +61,10 @@ namespace phoenix {
 		virtual void aplicarAsientosReservados() = 0;
 		/// Saca de la sala al invitado con ese ID Parsec.
 		virtual void expulsar(uint32_t parsecId) = 0;
+		/// El host maneja el mando (bloquea al dueño mientras tanto). activo=false lo devuelve.
+		virtual void tomarControl(int indice, bool activo) = 0;
+		/// Estado que el host envía al mando tomado (formato XInput: botones + stick izq.).
+		virtual void inyectar(int indice, uint16_t botones, int16_t lx, int16_t ly) = 0;
 		/// Calidad de transmisión (se aplica al instante y se guarda).
 		virtual void aplicarVideo(int fps, int mbps) = 0;
 	};

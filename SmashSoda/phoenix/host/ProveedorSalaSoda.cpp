@@ -154,6 +154,30 @@ namespace phoenix {
 		catch (...) {}
 	}
 
+	void ProveedorSalaSoda::tomarControl(int i, bool activo) {
+		try {
+			AGamepad* p = padEn(_hosting, i);
+			if (p == nullptr) return;
+			if (activo && !p->isConnected()) p->connect();
+			p->setLocked(activo);          // el dueño no puede mover mientras el host controla
+			if (!activo) p->clearState();
+		}
+		catch (...) {}
+	}
+
+	void ProveedorSalaSoda::inyectar(int i, uint16_t botones, int16_t lx, int16_t ly) {
+		try {
+			AGamepad* p = padEn(_hosting, i);
+			if (p == nullptr || !p->isConnected()) return;
+			XINPUT_STATE st = {};
+			st.Gamepad.wButtons = botones;
+			st.Gamepad.sThumbLX = lx;
+			st.Gamepad.sThumbLY = ly;
+			p->setState(st);
+		}
+		catch (...) {}
+	}
+
 	void ProveedorSalaSoda::aplicarVideo(int fps, int mbps) {
 		try {
 			_hosting.setHostVideoConfig(static_cast<uint32_t>(fps), static_cast<uint32_t>(mbps));

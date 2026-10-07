@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 #include <string>
 #include <vector>
 
@@ -15,6 +16,7 @@
 #include "PantallaGente.h"
 #include "PantallaAjustes.h"
 #include "../core/ProveedorSala.h"
+#include "../core/MandoHost.h"
 #include "../../globals/AppFonts.h"
 #include "../../globals/AppIcons.h"
 #include "../../services/ThemeController.h"
@@ -127,6 +129,11 @@ namespace phoenix {
 			const int invitados = gProveedor != nullptr ? gProveedor->totalInvitados() : 0;
 			std::string textoEstado = enVivo ? T("estado.vivo") : T("estado.cerrada");
 			if (enVivo) textoEstado += "  ·  " + std::to_string(invitados) + " " + T("estado.invitados");
+			if (MandoHost::activo() > 0) {
+				char b[96];
+				snprintf(b, sizeof(b), T("estado.controlando"), MandoHost::activo());
+				textoEstado = b;
+			}
 
 			ImGui::PushFont(AppFonts::label);
 			const ImVec2 tamTexto = ImGui::CalcTextSize(textoEstado.c_str());
@@ -388,6 +395,7 @@ namespace phoenix {
 		}
 
 		PantallaSala::tick(gProveedor); // web y asientos, en cualquier sección
+		MandoHost::tick(gProveedor);    // Ctrl+Alt+N: el host toma un mando
 
 		Theme* tema = ThemeController::getInstance().getActiveTheme();
 		const float s = escala();
