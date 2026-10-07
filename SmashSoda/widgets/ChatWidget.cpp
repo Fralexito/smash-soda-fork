@@ -1,4 +1,5 @@
 ﻿#include "ChatWidget.h"
+#include "../phoenix/I18n.h"
 
 ChatWidget::ChatWidget(Hosting& hosting, function<void(void)> onMessageCallback)
     : _hosting(hosting), _chatLog(hosting.getMessageLog()), _messageCount(0), _onMessageCallback(onMessageCallback)
@@ -284,7 +285,7 @@ bool ChatWidget::renderTopBar(bool& isWindowLocked, bool& isClearChat) {
 
         ImGui::PushFont(AppFonts::input);
         ImGui::PushStyleColor(ImGuiCol_Text, theme->formInputText);
-        ImGui::Text("Delete chat history?");
+        ImGui::Text(phoenix::Tr("Delete chat history?").c_str());
         ImGui::PopStyleColor();
         ImGui::PopFont();
 

@@ -1,4 +1,5 @@
 #include "HostInfoWidget.h"
+#include "../phoenix/I18n.h"
 
 HostInfoWidget::HostInfoWidget(Hosting& hosting)
 	: _hosting(hosting)
@@ -62,7 +63,7 @@ void HostInfoWidget::renderArcade() {
 				ImGui::PushStyleColor(ImGuiCol_Text, theme->buttonSecondaryText);
 
 				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(10.0f * uiScale, 2.0f * uiScale));
-				if (ImGui::Button("Logout")) {
+				if (ImGui::Button(phoenix::Tr("Logout").c_str())) {
 					Arcade::instance.logout();
 				}
 
@@ -76,7 +77,7 @@ void HostInfoWidget::renderArcade() {
 			}
 			else {
 				ImGui::PushStyleColor(ImGuiCol_Text, theme->textMuted);
-				ImGui::Text("Not logged in");
+				ImGui::Text(phoenix::Tr("Not logged in").c_str());
 				ImGui::PopStyleColor();
 
 				ImGui::PushStyleColor(ImGuiCol_Button, theme->buttonSecondary);
@@ -85,7 +86,7 @@ void HostInfoWidget::renderArcade() {
 				ImGui::PushStyleColor(ImGuiCol_Text, theme->buttonSecondaryText);
 
 				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(10.0f * uiScale, 2.0f * uiScale));
-				if (ImGui::Button("Login")) {
+				if (ImGui::Button(phoenix::Tr("Login").c_str())) {
 					Config::cfg.arcade.showLogin = true;
 				}
 
@@ -236,7 +237,7 @@ void HostInfoWidget::render() {
 			ImGui::PushStyleColor(ImGuiCol_Text, theme->buttonSecondaryText);
 
 			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(10.0f * uiScale, 2.0f * uiScale));
-			if (ImGui::Button("Logout")) {
+			if (ImGui::Button(phoenix::Tr("Logout").c_str())) {
 				_hosting.getSession().deleteSessionCache();
 			}
 
@@ -259,7 +260,7 @@ void HostInfoWidget::render() {
 		ImGui::PopFont();
 		ImGui::PushFont(AppFonts::input);
 		ImGui::PushStyleColor(ImGuiCol_Text, theme->negative);
-		ImGui::TextWrapped("Session Expired");
+		ImGui::TextWrapped(phoenix::Tr("Session Expired").c_str());
 		ImGui::PopStyleColor();
 		ImGui::PopFont();
 		TitleTooltipWidget::render(
@@ -286,7 +287,7 @@ void HostInfoWidget::render() {
 		ImGui::PopFont();
 		ImGui::PushFont(AppFonts::input);
 		ImGui::PushStyleColor(ImGuiCol_Text, theme->formInputText);
-		ImGui::TextWrapped("Unknown Host");
+		ImGui::TextWrapped(phoenix::Tr("Unknown Host").c_str());
 		ImGui::PopStyleColor();
 		ImGui::PopFont();
 	}

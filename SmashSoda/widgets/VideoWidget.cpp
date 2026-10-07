@@ -1,4 +1,5 @@
 #include "VideoWidget.h"
+#include "../phoenix/I18n.h"
 
 VideoWidget::VideoWidget(Hosting& hosting)
     : _hosting(hosting), _dx11(_hosting.getDX11())
@@ -124,7 +125,7 @@ bool VideoWidget::render(bool& showWindow)
     static bool framePacingEnabled = Config::cfg.video.framePacing;
     framePacingEnabled = Config::cfg.video.framePacing;
 
-    if (ImGui::Checkbox("Frame rhythm", &framePacingEnabled)) {
+    if (ImGui::Checkbox(phoenix::Tr("Frame rhythm").c_str(), &framePacingEnabled)) {
         Config::cfg.video.framePacing = framePacingEnabled;
         Config::cfg.Save();
     }
@@ -142,7 +143,7 @@ bool VideoWidget::render(bool& showWindow)
 
     /*ImGui::BeginGroup();
     AppStyle::pushLabel();
-    ImGui::Text("Bitrate");
+    ImGui::Text(phoenix::Tr("Bitrate").c_str());
     AppStyle::pop();
     if (IntRangeWidget::render("Bandwidth (Mbps)", _bandwidth, 1, 1000, 1))
     {
@@ -158,7 +159,7 @@ bool VideoWidget::render(bool& showWindow)
     // =========================================================
     /*ImGui::BeginGroup();
     AppStyle::pushLabel();
-    ImGui::Text("FPS");
+    ImGui::Text(phoenix::Tr("FPS").c_str());
     AppStyle::pop();
     if (IntRangeWidget::render("Encoder FPS", _fps, 10, 250, 0.5f)) {
         TitleTooltipWidget::render("Encoder FPS", "Limits the amount of frames per second.");

@@ -1,4 +1,5 @@
 #include "LoginWidget.h"
+#include "../phoenix/I18n.h"
 #include "../services/ThemeController.h"
 
 LoginWidget::LoginWidget(Hosting& hosting, HostSettingsWidget& hostSettingsWidget)
@@ -111,7 +112,7 @@ void LoginWidget::render3rd(float width)
 {
 
     Theme* theme = ThemeController::getInstance().getActiveTheme();
-    ImGui::Text("Auth Code");
+    ImGui::Text(phoenix::Tr("Auth Code").c_str());
     AppFonts::pushSugoiDekai();
     ImGui::SetNextItemWidth(width);
     ImGui::PushStyleColor(ImGuiCol_Border, theme->formInputBorderActive);

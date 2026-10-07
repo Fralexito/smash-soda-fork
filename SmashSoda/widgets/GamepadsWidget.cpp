@@ -1,4 +1,5 @@
 #include "GamepadsWidget.h"
+#include "../phoenix/I18n.h"
 #include "../core/GamepadClient.h"
 #include "../services/ThemeController.h"
 #include "../globals/AppFonts.h"
@@ -76,7 +77,7 @@ bool GamepadsWidget::render(bool& showWindow) {
         ImGui::PushFont(AppFonts::label);
         ImGui::PushStyleColor(ImGuiCol_Text, theme->formLabel);
         ImGui::SetNextItemWidth(size.x - 20);
-        ImGui::TextWrapped("You will not be able to use the gamepads widget whilst Smash Soda is in hotseat or tournament mode.");
+        ImGui::TextWrapped(phoenix::Tr("You will not be able to use the gamepads widget whilst Smash Soda is in hotseat or tournament mode.").c_str());
         ImGui::PopStyleColor();
         ImGui::PopFont();
     }
@@ -196,7 +197,7 @@ bool GamepadsWidget::render(bool& showWindow) {
                             
                                     ImGui::PushFont(AppFonts::label);
                                     ImGui::PushStyleColor(ImGuiCol_Text, theme->formLabel);
-                                    ImGui::Text("Drop into another Gamepad to swap.");
+                                    ImGui::Text(phoenix::Tr("Drop into another Gamepad to swap.").c_str());
                                     ImGui::PopStyleColor();
                                     ImGui::PopFont();
                                 }
@@ -514,7 +515,7 @@ bool GamepadsWidget::render(bool& showWindow) {
 //                    AppFonts::pop();
 //
 //                    ImGui::PushFont(AppFonts::label);
-//                    ImGui::Text("Drop into another Gamepad to swap.");
+//                    ImGui::Text(phoenix::Tr("Drop into another Gamepad to swap.").c_str());
 //                    AppStyle::pop();
 //                }
 //
@@ -692,7 +693,7 @@ bool GamepadsWidget::render(bool& showWindow) {
 //                ImGui::Indent(20);
 //                //ImGui::Dummy(ImVec2(0, 20.0f));
 //                AppColors::pushButtonSolid();
-//                if (ImGui::Button("Connect Gamepad")) {
+//                if (ImGui::Button(phoenix::Tr("Connect Gamepad").c_str())) {
 //                    gi->connect();
 //                    isConnectionButtonPressed = true;
 //                }

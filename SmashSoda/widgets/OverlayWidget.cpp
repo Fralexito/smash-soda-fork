@@ -1,4 +1,5 @@
 #include "OverlayWidget.h"
+#include "../phoenix/I18n.h"
 #include "../services/ThemeController.h"
 #include "../globals/AppFonts.h"
 #include "../Hosting.h"
@@ -38,7 +39,7 @@ bool OverlayWidget::render(bool& showWindow) {
 
     ImGui::PushFont(AppFonts::label);
     ImGui::PushStyleColor(ImGuiCol_Text, theme->formLabel);
-    ImGui::Text("MONITOR");
+    ImGui::Text(phoenix::Tr("MONITOR").c_str());
     ImGui::PopStyleColor();
     ImGui::PopFont();
     ImGui::PushFont(AppFonts::input);
@@ -62,7 +63,7 @@ bool OverlayWidget::render(bool& showWindow) {
     ImGui::PopFont();
     ImGui::PushFont(AppFonts::label);
     ImGui::PushStyleColor(ImGuiCol_Text, theme->formLabel);
-    ImGui::TextWrapped("The monitor where the overlay will be displayed.");
+    ImGui::TextWrapped(phoenix::Tr("The monitor where the overlay will be displayed.").c_str());
     ImGui::PopStyleColor();
     ImGui::PopFont();
 
@@ -70,7 +71,7 @@ bool OverlayWidget::render(bool& showWindow) {
 
     ImGui::PushFont(AppFonts::label);
     ImGui::PushStyleColor(ImGuiCol_Text, theme->formLabel);
-    ImGui::Text("OVERLAY THEME");
+    ImGui::Text(phoenix::Tr("OVERLAY THEME").c_str());
     ImGui::PopStyleColor();
     ImGui::PopFont();
     ImGui::SetNextItemWidth(size.x);
@@ -83,7 +84,7 @@ bool OverlayWidget::render(bool& showWindow) {
         if (Config::cfg.overlay.theme == "" || Config::cfg.overlay.theme == "None") {
             isSelected = true;
         }
-        if (ImGui::Selectable("None", isSelected)) {
+        if (ImGui::Selectable(phoenix::Tr("None").c_str(), isSelected)) {
             Config::cfg.overlay.theme = "";
             Config::cfg.Save();
         }
@@ -110,7 +111,7 @@ bool OverlayWidget::render(bool& showWindow) {
     }
     ImGui::PushFont(AppFonts::label);
     ImGui::PushStyleColor(ImGuiCol_Text, theme->formLabel);
-    ImGui::TextWrapped("Custom CSS files loaded from the 'overlay/themes' folder.");
+    ImGui::TextWrapped(phoenix::Tr("Custom CSS files loaded from the 'overlay/themes' folder.").c_str());
     ImGui::PopStyleColor();
     ImGui::PopFont();
 
@@ -118,7 +119,7 @@ bool OverlayWidget::render(bool& showWindow) {
 
     ImGui::PushFont(AppFonts::label);
     ImGui::PushStyleColor(ImGuiCol_Text, theme->positive);
-    ImGui::Text("CHAT WIDGET");
+    ImGui::Text(phoenix::Tr("CHAT WIDGET").c_str());
     ImGui::PopStyleColor();
     ImGui::PopFont();
     ImGui::Dummy(ImVec2(0, 10.0f));
@@ -141,7 +142,7 @@ bool OverlayWidget::render(bool& showWindow) {
     ImGui::PopFont();
     ImGui::PushFont(AppFonts::label);
     ImGui::PushStyleColor(ImGuiCol_Text, theme->formLabel);
-    ImGui::Text("POSITION");
+    ImGui::Text(phoenix::Tr("POSITION").c_str());
     ImGui::PopStyleColor();
     ImGui::PopFont();
     ImGui::SetNextItemWidth(size.x);
@@ -170,7 +171,7 @@ bool OverlayWidget::render(bool& showWindow) {
 
     ImGui::PushFont(AppFonts::label);
     ImGui::PushStyleColor(ImGuiCol_Text, theme->positive);
-    ImGui::Text("GAMEPADS WIDGET");
+    ImGui::Text(phoenix::Tr("GAMEPADS WIDGET").c_str());
     ImGui::PopStyleColor();
     ImGui::PopFont();
     ImGui::Dummy(ImVec2(0, 10.0f));
@@ -187,7 +188,7 @@ bool OverlayWidget::render(bool& showWindow) {
     ImGui::PopFont();
     ImGui::PushFont(AppFonts::label);
     ImGui::PushStyleColor(ImGuiCol_Text, theme->formLabel);
-    ImGui::Text("POSITION");
+    ImGui::Text(phoenix::Tr("POSITION").c_str());
     ImGui::PopStyleColor();
     ImGui::PopFont();
     ImGui::SetNextItemWidth(size.x);
@@ -216,7 +217,7 @@ bool OverlayWidget::render(bool& showWindow) {
 
     ImGui::PushFont(AppFonts::label);
     ImGui::PushStyleColor(ImGuiCol_Text, theme->positive);
-    ImGui::Text("GUESTS WIDGET");
+    ImGui::Text(phoenix::Tr("GUESTS WIDGET").c_str());
     ImGui::PopStyleColor();
     ImGui::PopFont();
     ImGui::Dummy(ImVec2(0, 10.0f));
@@ -239,7 +240,7 @@ bool OverlayWidget::render(bool& showWindow) {
     ImGui::PopFont();
     ImGui::PushFont(AppFonts::label);
     ImGui::PushStyleColor(ImGuiCol_Text, theme->formLabel);
-    ImGui::Text("POSITION");
+    ImGui::Text(phoenix::Tr("POSITION").c_str());
     ImGui::PopStyleColor();
     ImGui::PopFont();
     ImGui::SetNextItemWidth(size.x);

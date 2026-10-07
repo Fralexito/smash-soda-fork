@@ -1,4 +1,5 @@
-#include "InfoWidget.h"
+﻿#include "InfoWidget.h"
+#include "../phoenix/I18n.h"
 #include "../globals/AppFonts.h"
 #include "../services/ThemeController.h"
 
@@ -26,7 +27,7 @@ bool InfoWidget::render(bool& showWindow)
 
     renderSugoiButton("github.com/FlavioFS/ParsecSoda", L"https://github.com/FlavioFS/ParsecSoda");
     ImGui::SetCursorPosX(25);
-    ImGui::TextWrapped("Parsec Soda is FREE and Open Source. If you paid for this app, you have been scammed. You can find the source code at this address.");
+    ImGui::TextWrapped(phoenix::Tr("Parsec Soda is FREE and Open Source. If you paid for this app, you have been scammed. You can find the source code at this address.").c_str());
 
     ImGui::Dummy(ImVec2(0, 10));
     ImGui::Separator();
@@ -34,7 +35,7 @@ bool InfoWidget::render(bool& showWindow)
 
     renderSugoiButton("linktr.ee/flafcodes", L"https://linktr.ee/flafcodes");
     ImGui::SetCursorPosX(25);
-    ImGui::TextWrapped("Parsec Soda was created by FlaF. You can find all my social media links there.");
+    ImGui::TextWrapped(phoenix::Tr("Parsec Soda was created by FlaF. You can find all my social media links there.").c_str());
 
     ImGui::Dummy(ImVec2(0, 10));
     ImGui::Separator();
@@ -42,7 +43,7 @@ bool InfoWidget::render(bool& showWindow)
 
     renderSugoiButton("github.com/MickeyUK/SmashSoda/", L"https://github.com/MickeyUK/SmashSoda/");
     ImGui::SetCursorPosX(25);
-    ImGui::TextWrapped("Smash Soda is an unofficial modified version of Parsec Soda. You can find latest releases, guides and source code here!");
+    ImGui::TextWrapped(phoenix::Tr("Smash Soda is an unofficial modified version of Parsec Soda. You can find latest releases, guides and source code here!").c_str());
 
     ImGui::Dummy(ImVec2(0, 10));
     ImGui::Separator();
@@ -51,7 +52,7 @@ bool InfoWidget::render(bool& showWindow)
     ImGui::BeginGroup();
     renderSugoiButton("Donate", L"https://github.com/FlavioFS/ParsecSoda#donate");
     ImGui::SetCursorPosX(25);
-    ImGui::TextWrapped("If you love Smash Soda then you should support Fl�vio by donating to him with the links below!");
+    ImGui::TextWrapped(phoenix::Tr("If you love Smash Soda then you should support Flávio by donating to him with the links below!").c_str());
 
     ImGui::Dummy(ImVec2(0, 10));
     
@@ -60,17 +61,17 @@ bool InfoWidget::render(bool& showWindow)
     static char pix[] = "1194a8f0-ac1f-40f3-8f89-524697c072ea";
     AppFonts::pushInput();
     ImGui::SetCursorPosX(25);
-    ImGui::Text("Pix (Brazil)");
+    ImGui::Text(phoenix::Tr("Pix (Brazil)").c_str());
     ImGui::SameLine();
     ImGui::SetCursorPosX(120);
     ImGui::SetNextItemWidth(250);
     ImGui::InputText("### Donate Pix", pix, 64, ImGuiInputTextFlags_ReadOnly);
     ImGui::SameLine();
-    ImGui::Text("   (Flavio Freitas)");
+    ImGui::Text(phoenix::Tr("   (Flavio Freitas)").c_str());
 
     static char btc[] = "bc1qmvuljqen7tcs57z6pems5jam7dt0taswp6y5x9";
     ImGui::SetCursorPosX(25);
-    ImGui::Text("BTC");
+    ImGui::Text(phoenix::Tr("BTC").c_str());
     ImGui::SameLine();
     ImGui::SetCursorPosX(120);
     ImGui::SetNextItemWidth(365);
@@ -78,7 +79,7 @@ bool InfoWidget::render(bool& showWindow)
 
     static char ltc[] = "ltc1q349yxyzt09u7kvdz5xvkln0pappxhcwl4g4mt9";
     ImGui::SetCursorPosX(25);
-    ImGui::Text("LTC");
+    ImGui::Text(phoenix::Tr("LTC").c_str());
     ImGui::SameLine();
     ImGui::SetCursorPosX(120);
     ImGui::SetNextItemWidth(365);
@@ -86,7 +87,7 @@ bool InfoWidget::render(bool& showWindow)
 
     static char eth[] = "0x4B0d629d60e7b910d03f3f15d0Db25146Be05642";
     ImGui::SetCursorPosX(25);
-    ImGui::Text("ETH");
+    ImGui::Text(phoenix::Tr("ETH").c_str());
     ImGui::SameLine();
     ImGui::SetCursorPosX(120);
     ImGui::SetNextItemWidth(365);
@@ -101,7 +102,7 @@ bool InfoWidget::render(bool& showWindow)
     // QR
     ImGui::BeginGroup();
     ImGui::BeginGroup();
-    ImGui::Text("BTC");
+    ImGui::Text(phoenix::Tr("BTC").c_str());
     ImGui::Image(AppIcons::btc, ImVec2(145, 145));
     ImGui::EndGroup();
     
@@ -110,14 +111,14 @@ bool InfoWidget::render(bool& showWindow)
     ImGui::SameLine();
     
     ImGui::BeginGroup();
-    ImGui::Text("LTC");
+    ImGui::Text(phoenix::Tr("LTC").c_str());
     ImGui::Image(AppIcons::ltc, ImVec2(145, 145));
     ImGui::EndGroup();
     
     ImGui::Dummy(ImVec2(0, 10));
 
     ImGui::BeginGroup();
-    ImGui::Text("ETH");
+    ImGui::Text(phoenix::Tr("ETH").c_str());
     ImGui::Image(AppIcons::eth, ImVec2(145, 145));
     ImGui::EndGroup();
     ImGui::EndGroup();

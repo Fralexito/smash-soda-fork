@@ -1,4 +1,5 @@
 #include "ConfirmPopupWidget.h"
+#include "../phoenix/I18n.h"
 #include "../services/ThemeController.h"
 #include "../globals/AppFonts.h"
 
@@ -49,7 +50,7 @@ bool ConfirmPopupWidget::render(const char* title, bool& showPopup, std::string 
 
             ImGui::PushFont(AppFonts::input);
             ImGui::PushStyleColor(ImGuiCol_Text, theme->formInputText);
-            ImGui::TextWrapped(textString.c_str());
+            ImGui::TextWrapped("%s", phoenix::Tr(textString).c_str());
             ImGui::PopStyleColor();
             ImGui::PopFont();
         }

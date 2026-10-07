@@ -1,4 +1,5 @@
 ﻿#include "DeveloperWidget.h"
+#include "../phoenix/I18n.h"
 #include "../Hosting.h"
 extern Hosting g_hosting;
 #include "../services/ThemeController.h"
@@ -43,7 +44,7 @@ bool DeveloperWidget::render(bool& showWindow) {
     ImGui::Begin("Developer", &showWindow);
     ImGui::PushFont(AppFonts::label);
     ImGui::PushStyleColor(ImGuiCol_Text, theme->formLabel);
-    ImGui::TextWrapped("DO NOT MODIFY ANY OF THESE UNLESS YOU KNOW WHAT YOU ARE DOING!");
+    ImGui::TextWrapped(phoenix::Tr("DO NOT MODIFY ANY OF THESE UNLESS YOU KNOW WHAT YOU ARE DOING!").c_str());
     ImGui::PopStyleColor();
     ImGui::PopFont();
 
@@ -77,7 +78,7 @@ bool DeveloperWidget::render(bool& showWindow) {
 
     ImGui::BeginGroup();
     AppColors::pushButtonSecondary();
-    if (ImGui::Button("Add Fake Guest")) {
+    if (ImGui::Button(phoenix::Tr("Add Fake Guest").c_str())) {
         if (!_hosting.isRunning()) {
             _hosting.addFakeGuests(1);
         }
@@ -85,7 +86,7 @@ bool DeveloperWidget::render(bool& showWindow) {
     AppColors::popButton();
     ImGui::PushFont(AppFonts::label);
     ImGui::PushStyleColor(ImGuiCol_Text, theme->formLabel);
-    ImGui::TextWrapped("This can only be used when not hosting. For testing commands.");
+    ImGui::TextWrapped(phoenix::Tr("This can only be used when not hosting. For testing commands.").c_str());
     ImGui::PopStyleColor();
     ImGui::PopFont();
     ImGui::EndGroup();
@@ -94,7 +95,7 @@ bool DeveloperWidget::render(bool& showWindow) {
 
     ImGui::BeginGroup();
     AppColors::pushButtonSecondary();
-    if (ImGui::Button("Toggle Hotseat Thread")) {
+    if (ImGui::Button(phoenix::Tr("Toggle Hotseat Thread").c_str())) {
         if (!_hosting.getHotseat().running) {
             Config::cfg.hotseat.enabled = true;
 			_hosting.getHotseat().start();
@@ -107,7 +108,7 @@ bool DeveloperWidget::render(bool& showWindow) {
     AppColors::popButton();
     ImGui::PushFont(AppFonts::label);
     ImGui::PushStyleColor(ImGuiCol_Text, theme->formLabel);
-    ImGui::TextWrapped("This can only be used when not hosting. For testing commands.");
+    ImGui::TextWrapped(phoenix::Tr("This can only be used when not hosting. For testing commands.").c_str());
     ImGui::PopStyleColor();
     ImGui::PopFont();
     ImGui::EndGroup();

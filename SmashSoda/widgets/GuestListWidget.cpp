@@ -1,4 +1,5 @@
 #include "GuestListWidget.h"
+#include "../phoenix/I18n.h"
 #include "../core/GamepadClient.h"
 
 GuestListWidget::GuestListWidget(Hosting& hosting)
@@ -122,7 +123,7 @@ void GuestListWidget::renderOnlineGuests() {
             ImGui::Text("  N/A");
         } else {
 
-            ImGui::Text("  %.0fms",
+            ImGui::Text(phoenix::Tr("  %.0fms").c_str(),
                 m.metrics.networkLatency
                 //m.metrics.bitrate,
                 //m.metrics.queuedFrames,
@@ -194,30 +195,30 @@ void GuestListWidget::renderOnlineGuests() {
             ImGui::Dummy(ImVec2(0.0f, 10.0f));
             ImGui::PushStyleColor(ImGuiCol_Text, theme->panelText);
 
-            if (ImGui::MenuItem("Allow keyboard input", nullptr, allowKeyboardInput)) {
+            if (ImGui::MenuItem(phoenix::Tr("Allow keyboard input").c_str(), nullptr, allowKeyboardInput)) {
                 _hosting.setGuestInputPermissions(userID, !allowKeyboardInput, _guests[i].allowMouseInput);
             }
 
-            if (ImGui::MenuItem("Allow mouse input", nullptr, allowMouseInput)) {
+            if (ImGui::MenuItem(phoenix::Tr("Allow mouse input").c_str(), nullptr, allowMouseInput)) {
                 _hosting.setGuestInputPermissions(userID, _guests[i].allowKeyboardInput, !allowMouseInput);
             }
 
             ImGui::Dummy(ImVec2(0.0f, 2.0f));
 
             if (Cache::cache.vipList.isVIP(userID)) {
-                if (ImGui::Selectable("Revoke VIP Status")) {
+                if (ImGui::Selectable(phoenix::Tr("Revoke VIP Status").c_str())) {
                     Cache::cache.vipList.unVIP(userID);
                 }
             }
             else {
-                if (ImGui::Selectable("Make VIP")) {
+                if (ImGui::Selectable(phoenix::Tr("Make VIP").c_str())) {
                     Cache::cache.vipList.VIP(GuestData(name, userID));
                 }
             }
 
             ImGui::Dummy(ImVec2(0.0f, 2.0f));
 
-            if (ImGui::Selectable("Make spectator")) {
+            if (ImGui::Selectable(phoenix::Tr("Make spectator").c_str())) {
                 _hosting.sendHostMessage((
                     string("!spectate ") + to_string(userID)
                     ).c_str(), true);
@@ -225,7 +226,7 @@ void GuestListWidget::renderOnlineGuests() {
 
             ImGui::Dummy(ImVec2(0.0f, 2.0f));
 
-            if (ImGui::Selectable("Kick Guest")) {
+            if (ImGui::Selectable(phoenix::Tr("Kick Guest").c_str())) {
                 _hosting.sendHostMessage((
                     string("!kick ") + to_string(userID)
                     ).c_str(), true);
@@ -234,12 +235,12 @@ void GuestListWidget::renderOnlineGuests() {
             ImGui::Dummy(ImVec2(0.0f, 2.0f));
 
             if (Cache::cache.banList.isBanned(userID)) {
-                if (ImGui::Selectable("Unban Guest")) {
+                if (ImGui::Selectable(phoenix::Tr("Unban Guest").c_str())) {
                     Cache::cache.banList.unban(userID);
                 }
             }
             else {
-                if (ImGui::Selectable("Ban Guest")) {
+                if (ImGui::Selectable(phoenix::Tr("Ban Guest").c_str())) {
                     _hosting.sendHostMessage((
                         string("!ban ") + to_string(userID)
                         ).c_str(), true);
@@ -249,19 +250,19 @@ void GuestListWidget::renderOnlineGuests() {
             ImGui::Dummy(ImVec2(0.0f, 2.0f));
 
             if (Cache::cache.modList.isModded(userID)) {
-                if (ImGui::Selectable("Revoke Moderator Role")) {
+                if (ImGui::Selectable(phoenix::Tr("Revoke Moderator Role").c_str())) {
                     Cache::cache.modList.unmod(userID);
                 }
             }
             else {
-                if (ImGui::Selectable("Make Moderator")) {
+                if (ImGui::Selectable(phoenix::Tr("Make Moderator").c_str())) {
                     Cache::cache.modList.mod(GuestData(name, userID));
                 }
             }
 
             ImGui::Dummy(ImVec2(0.0f, 2.0f));
 
-            if (ImGui::Selectable("Create Keyboard Profile")) {
+            if (ImGui::Selectable(phoenix::Tr("Create Keyboard Profile").c_str())) {
                 GamepadClient::instance.getKeyMap().createProfile(name, userID);
             }
 
@@ -275,7 +276,7 @@ void GuestListWidget::renderOnlineGuests() {
         if (ImGui::BeginDragDropSource()) {
             ImGui::SetDragDropPayload("Guest", &i, sizeof(int));
             ImGui::Text("%s", name.c_str());
-            ImGui::Text("Drop into a Gamepad to assign.");
+            ImGui::Text(phoenix::Tr("Drop into a Gamepad to assign.").c_str());
             ImGui::EndDragDropSource();
         }
 

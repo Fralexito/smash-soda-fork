@@ -1,4 +1,5 @@
 #include "MasterOfPuppetsWidget.h"
+#include "../phoenix/I18n.h"
 #include "../core/GamepadClient.h"
 
 MasterOfPuppetsWidget::MasterOfPuppetsWidget()
@@ -149,7 +150,7 @@ void MasterOfPuppetsWidget::renderMasterSDL()
     ImGui::BeginGroup();
 
     AppFonts::pushSugoiDekai();
-    ImGui::Text("Master");
+    ImGui::Text(phoenix::Tr("Master").c_str());
     AppFonts::pop();
 
     ImGui::Dummy(ImVec2(200, 0));
@@ -244,7 +245,7 @@ void MasterOfPuppetsWidget::renderMasterXInput()
     ImGui::BeginGroup();
 
     AppFonts::pushSugoiDekai();
-    ImGui::Text("Master");
+    ImGui::Text(phoenix::Tr("Master").c_str());
     AppFonts::pop();
 
     ImGui::Dummy(ImVec2(200, 0));
@@ -333,7 +334,7 @@ void MasterOfPuppetsWidget::renderPuppets()
     ImGui::BeginGroup();
 
     AppFonts::pushSugoiDekai();
-    ImGui::Text("Puppets");
+    ImGui::Text(phoenix::Tr("Puppets").c_str());
     AppFonts::pop();
 
     ImGui::Dummy(ImVec2(0, 0));

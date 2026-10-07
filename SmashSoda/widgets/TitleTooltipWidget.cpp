@@ -1,4 +1,5 @@
 ﻿#include "TitleTooltipWidget.h"
+#include "../phoenix/I18n.h"
 
 bool TitleTooltipWidget::render(const char* title, const char* description, bool forceShow)
 {
@@ -15,10 +16,10 @@ bool TitleTooltipWidget::render(const char* title, const char* description, bool
 		ImGui::BeginTooltip();
 
 		ImGui::PushStyleColor(ImGuiCol_Text, theme->formLabel);
-		ImGui::Text(title);
+		ImGui::TextUnformatted(phoenix::Tr(title).c_str());
 
 		ImGui::PushStyleColor(ImGuiCol_Text, theme->panelText);
-		ImGui::Text(description);
+		ImGui::TextUnformatted(phoenix::Tr(description).c_str());
 
 		ImGui::EndTooltip();
 

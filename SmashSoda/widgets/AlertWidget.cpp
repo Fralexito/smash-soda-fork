@@ -1,4 +1,5 @@
 #include "AlertWidget.h"
+#include "../phoenix/I18n.h"
 #include "../services/ThemeController.h"
 #include "../globals/AppFonts.h"
 
@@ -45,7 +46,7 @@ bool AlertWidget::render(const char * title, const char* message) {
 
         ImGui::PushFont(AppFonts::input);
         ImGui::PushStyleColor(ImGuiCol_Text, theme->formInputText);
-        ImGui::TextWrapped(message);
+        ImGui::TextWrapped("%s", phoenix::Tr(message).c_str());
         ImGui::PopStyleColor();
         ImGui::PopFont();
 

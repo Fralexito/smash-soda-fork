@@ -1,4 +1,5 @@
 #include "VersionWidget.h"
+#include "../phoenix/I18n.h"
 #include <Windows.h>
 #include <shellapi.h>
 
@@ -252,7 +253,7 @@ bool VersionWidget::renderDownloadWindow() {
     // Text with wrap
     ImGui::PushFont(AppFonts::input);
     ImGui::PushStyleColor(ImGuiCol_Text, theme->formLabel);
-    ImGui::TextWrapped("The overlay files need to be updated. Delete the contents of the overlay folder wherever you have Smash Soda installed, and download the new files.");
+    ImGui::TextWrapped(phoenix::Tr("The overlay files need to be updated. Delete the contents of the overlay folder wherever you have Smash Soda installed, and download the new files.").c_str());
     ImGui::PopStyleColor();
     ImGui::PopFont();
 
@@ -261,7 +262,7 @@ bool VersionWidget::renderDownloadWindow() {
     ImGui::Spacing();
 
     ImGui::SetCursorPosX(ImGui::GetWindowWidth() * 0.5f - 35);
-    if (ImGui::Button("Download")) {
+    if (ImGui::Button(phoenix::Tr("Download").c_str())) {
         const wchar_t* link = L"https://github.com/MickeyUK/smash-soda-overlay/releases/latest";
         ShellExecute(0, 0, link, 0, 0, SW_SHOW);
         Config::cfg.overlay.update = false;
@@ -270,7 +271,7 @@ bool VersionWidget::renderDownloadWindow() {
     }
 
     ImGui::SetCursorPosX(ImGui::GetWindowWidth() * 0.5f - 85);
-    if (ImGui::Button("I've already downloaded")) {
+    if (ImGui::Button(phoenix::Tr("I've already downloaded").c_str())) {
         showDownload = false;
         Config::cfg.overlay.update = false;
         Config::cfg.Save();
@@ -323,7 +324,7 @@ bool VersionWidget::renderUpdateWindow() {
 
     ImGui::PushFont(AppFonts::input);
     ImGui::PushStyleColor(ImGuiCol_Text, theme->positive);
-	ImGui::Text("Version: ");
+	ImGui::Text(phoenix::Tr("Version: ").c_str());
     ImGui::SameLine();
     ImGui::Text(Cache::cache.update.version.c_str());
     ImGui::PopStyleColor();
@@ -332,7 +333,7 @@ bool VersionWidget::renderUpdateWindow() {
     // Text with wrap
     ImGui::PushFont(AppFonts::input);
     ImGui::PushStyleColor(ImGuiCol_Text, theme->formLabel);
-	ImGui::TextWrapped("A new version of Smash Soda is available. Please close this, pull the latest commit and rebuild!");
+	ImGui::TextWrapped(phoenix::Tr("A new version of Smash Soda is available. Please close this, pull the latest commit and rebuild!").c_str());
     ImGui::PopStyleColor();
     ImGui::PopFont();
     

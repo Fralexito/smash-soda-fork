@@ -1,4 +1,5 @@
 #include "HotseatWidget.h"
+#include "../phoenix/I18n.h"
 #include "../services/ThemeController.h"
 #include "../globals/AppFonts.h"
 #include "../Hosting.h"
@@ -64,7 +65,7 @@ void HotseatWidget::renderOverview() {
 
             if (user.cooldown) {
                 ImGui::PushStyleColor(ImGuiCol_Text, theme->primary);
-                ImGui::Text("RESET IN ");
+                ImGui::Text(phoenix::Tr("RESET IN ").c_str());
                 ImGui::SameLine();
                 ImGui::PopStyleColor();
                 ImGui::PushStyleColor(ImGuiCol_Text, theme->formInputText);
@@ -72,7 +73,7 @@ void HotseatWidget::renderOverview() {
                 ImGui::PopStyleColor();
             }
             else if (user.inSeat && user.stopwatch->isRunning()) {
-                ImGui::Text("REMAINING ");
+                ImGui::Text(phoenix::Tr("REMAINING ").c_str());
                 ImGui::SameLine();
                 ImGui::PushStyleColor(ImGuiCol_Text, theme->formInputText);
                 ImGui::Text("%s", user.stopwatch->getRemainingTime().c_str());
@@ -80,7 +81,7 @@ void HotseatWidget::renderOverview() {
             }
             else {
                 ImGui::PushStyleColor(ImGuiCol_Text, theme->formHelpText);
-                ImGui::Text("PAUSED ");
+                ImGui::Text(phoenix::Tr("PAUSED ").c_str());
                 ImGui::PopStyleColor();
                 ImGui::SameLine();
                 ImGui::PushStyleColor(ImGuiCol_Text, theme->formInputText);

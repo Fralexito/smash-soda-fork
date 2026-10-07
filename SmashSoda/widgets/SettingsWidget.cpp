@@ -1,4 +1,5 @@
 #include "SettingsWidget.h"
+#include "../phoenix/I18n.h"
 #include "../ImGui/imform.h"
 #include "../helpers/PathHelper.h"
 #include <algorithm>
@@ -331,7 +332,7 @@ void SettingsWidget::renderChatbot() {
     ImGui::BeginGroup();
     ImGui::Indent(10);
     AppColors::pushButtonSolid();
-    if (ImGui::Button("Refresh SFX List")) {
+    if (ImGui::Button(phoenix::Tr("Refresh SFX List").c_str())) {
         Cache::cache.reloadSfxList();
     }
     ImGui::PopStyleColor(4);
@@ -373,7 +374,7 @@ void SettingsWidget::renderSfx() {
     Theme* theme = ThemeController::getInstance().getActiveTheme();
     ImGui::PushFont(AppFonts::label);
     ImGui::PushStyleColor(ImGuiCol_Text, theme->formLabel);
-    ImGui::Text("Loaded: %d", static_cast<int>(rows.size()));
+    ImGui::Text(phoenix::Tr("Loaded: %d").c_str(), static_cast<int>(rows.size()));
     ImGui::PopStyleColor();
     ImGui::PopFont();
 
@@ -449,7 +450,7 @@ void SettingsWidget::renderPermissions() {
     Theme* theme = ThemeController::getInstance().getActiveTheme();
     ImGui::PushFont(AppFonts::title);
     ImGui::PushStyleColor(ImGuiCol_Text, theme->panelText);
-    ImGui::Text("Regular Guest");
+    ImGui::Text(phoenix::Tr("Regular Guest").c_str());
     ImGui::PopStyleColor();
     ImGui::PopFont();
 
@@ -471,7 +472,7 @@ void SettingsWidget::renderPermissions() {
     ImGui::Dummy(ImVec2(0, 10));
     ImGui::PushFont(AppFonts::title);
     ImGui::PushStyleColor(ImGuiCol_Text, theme->panelText);
-    ImGui::Text("VIPs");
+    ImGui::Text(phoenix::Tr("VIPs").c_str());
     ImGui::PopStyleColor();
     ImGui::PopFont();
 
@@ -493,7 +494,7 @@ void SettingsWidget::renderPermissions() {
     ImGui::Dummy(ImVec2(0, 10));
     ImGui::PushFont(AppFonts::title);
     ImGui::PushStyleColor(ImGuiCol_Text, theme->panelText);
-    ImGui::Text("Moderators");
+    ImGui::Text(phoenix::Tr("Moderators").c_str());
     ImGui::PopStyleColor();
     ImGui::PopFont();
 
@@ -549,7 +550,7 @@ void SettingsWidget::renderHotkeys() {
 
     ImGui::PushFont(AppFonts::label);
     ImGui::PushStyleColor(ImGuiCol_Text, theme->formHelpText);
-    ImGui::TextWrapped("Hotkeys trigger chat commands as CTRL + key.");
+    ImGui::TextWrapped(phoenix::Tr("Hotkeys trigger chat commands as CTRL + key.").c_str());
     ImGui::PopStyleColor();
     ImGui::PopFont();
     ImGui::Dummy(ImVec2(0, 6));
@@ -564,7 +565,7 @@ void SettingsWidget::renderHotkeys() {
         if (!awaitingHotkeyCapture) {
             ImGui::PushFont(AppFonts::title);
             ImGui::PushStyleColor(ImGuiCol_Text, theme->panelText);
-            ImGui::TextWrapped("Step 1 of 2: Enter a chat command.");
+            ImGui::TextWrapped(phoenix::Tr("Step 1 of 2: Enter a chat command.").c_str());
             ImGui::PopStyleColor();
             ImGui::PopFont();
 
@@ -602,17 +603,17 @@ void SettingsWidget::renderHotkeys() {
         else {
             ImGui::PushFont(AppFonts::title);
             ImGui::PushStyleColor(ImGuiCol_Text, theme->panelText);
-            ImGui::TextWrapped("Step 2 of 2: Press the key you want to use.");
+            ImGui::TextWrapped(phoenix::Tr("Step 2 of 2: Press the key you want to use.").c_str());
             ImGui::PopStyleColor();
             ImGui::PopFont();
 
             ImGui::PushFont(AppFonts::label);
             ImGui::PushStyleColor(ImGuiCol_Text, theme->formHelpText);
-            ImGui::TextWrapped("Command: %s", Config::cfg.pendingHotkeyCommand.c_str());
-            ImGui::TextWrapped("This registers as CTRL + key.");
-            ImGui::TextWrapped("Press ESC to cancel.");
+            ImGui::TextWrapped(phoenix::Tr("Command: %s").c_str(), Config::cfg.pendingHotkeyCommand.c_str());
+            ImGui::TextWrapped(phoenix::Tr("This registers as CTRL + key.").c_str());
+            ImGui::TextWrapped(phoenix::Tr("Press ESC to cancel.").c_str());
             if (!hotkeyCaptureArmed) {
-                ImGui::TextWrapped("Release all keys to start capture...");
+                ImGui::TextWrapped(phoenix::Tr("Release all keys to start capture...").c_str());
             }
             ImGui::PopStyleColor();
             ImGui::PopFont();

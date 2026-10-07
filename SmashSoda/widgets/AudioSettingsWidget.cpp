@@ -1,4 +1,5 @@
 #include "AudioSettingsWidget.h"
+#include "../phoenix/I18n.h"
 #include "../services/ThemeController.h"
 
 AudioSettingsWidget::AudioSettingsWidget(Hosting& hosting)
@@ -35,7 +36,7 @@ bool AudioSettingsWidget::render(bool& showWindow)
 
     AppFonts::pushTitle();
     AppColors::pushInput();
-    ImGui::Text("Microphone");
+    ImGui::Text(phoenix::Tr("Microphone").c_str());
     AppColors::pop();
     AppFonts::pop();
 
@@ -88,7 +89,7 @@ bool AudioSettingsWidget::render(bool& showWindow)
     // =============================================================
     AppFonts::pushTitle();
     AppColors::pushInput();
-    ImGui::Text("Speakers");
+    ImGui::Text(phoenix::Tr("Speakers").c_str());
     AppColors::pop();
     AppFonts::pop();
 
@@ -140,7 +141,7 @@ bool AudioSettingsWidget::render(bool& showWindow)
 
     }
 
-    //ImGui::Checkbox("Plot Audio (debug for devs)", &showPlot);
+    //ImGui::Checkbox(phoenix::Tr("Plot Audio (debug for devs)").c_str(), &showPlot);
     //_audioIn.togglePlot(showPlot);
     //_audioOut.togglePlot(showPlot);
 
