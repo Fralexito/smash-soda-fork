@@ -32,6 +32,8 @@ namespace phoenix {
 		void liberarMando(int indice) override;
 		bool asignarMando(int indice, uint32_t parsecId) override;
 		void aplicarAsientosReservados() override;
+		void expulsar(uint32_t parsecId) override;
+		void aplicarVideo(int fps, int mbps) override;
 
 	private:
 		Hosting& _hosting;

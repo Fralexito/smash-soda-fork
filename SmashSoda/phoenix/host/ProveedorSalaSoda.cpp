@@ -145,6 +145,24 @@ namespace phoenix {
 		catch (...) {}
 	}
 
+	void ProveedorSalaSoda::expulsar(uint32_t parsecId) {
+		try {
+			for (Guest& g : _hosting.getGuests()) {
+				if (g.userID == parsecId) { ParsecHostKickGuest(_hosting.getParsec(), g.id); return; }
+			}
+		}
+		catch (...) {}
+	}
+
+	void ProveedorSalaSoda::aplicarVideo(int fps, int mbps) {
+		try {
+			_hosting.setHostVideoConfig(static_cast<uint32_t>(fps), static_cast<uint32_t>(mbps));
+			if (_hosting.isRunning()) _hosting.applyHostConfig();
+			Config::cfg.Save();
+		}
+		catch (...) {}
+	}
+
 	int ProveedorSalaSoda::totalInvitados() {
 		try {
 			return static_cast<int>(_hosting.getGuests().size());

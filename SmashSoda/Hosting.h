@@ -79,6 +79,7 @@ public:
 	vector<string>& getMessageLog();
 	vector<string>& getCommandLog();
 	vector<Guest>& getGuests();
+	ParsecDSO* getParsec() { return _parsec; }   // Phoenix: expulsar desde la UI
 	bool setGuestInputPermissions(uint32_t userID, bool allowKeyboard, bool allowMouse);
 	vector<Guest> getPlayingGuests();
 	vector<Guest> getRandomGuests();

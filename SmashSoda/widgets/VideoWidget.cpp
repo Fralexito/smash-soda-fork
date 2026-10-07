@@ -1,4 +1,4 @@
-#include "VideoWidget.h"
+﻿#include "VideoWidget.h"
 #include "../phoenix/I18n.h"
 
 VideoWidget::VideoWidget(Hosting& hosting)
@@ -13,6 +13,13 @@ bool VideoWidget::render(bool& showWindow)
     static float indentSize = 0;
     static ImVec2 dummySize = ImVec2(0.0f, 5.0f);
     static ImVec2 cursor;
+
+    // Phoenix: si otro panel (presets) cambió la calidad, refleja el valor nuevo.
+    static unsigned int vistoFps = Config::cfg.video.fps, vistoBw = Config::cfg.video.bandwidth;
+    if (Config::cfg.video.fps != vistoFps || Config::cfg.video.bandwidth != vistoBw) {
+        vistoFps = Config::cfg.video.fps; vistoBw = Config::cfg.video.bandwidth;
+        _fps = (int)vistoFps; _bandwidth = (int)vistoBw;
+    }
 
     //ImGui::SetNextWindowSizeConstraints(ImVec2(400, 400), ImVec2(800, 900));
 

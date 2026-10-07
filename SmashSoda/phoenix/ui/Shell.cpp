@@ -12,6 +12,8 @@
 #include "../PhoenixPrefs.h"
 #include "PantallaSala.h"
 #include "TableroMandos.h"
+#include "PantallaGente.h"
+#include "PantallaAjustes.h"
 #include "../core/ProveedorSala.h"
 #include "../../globals/AppFonts.h"
 #include "../../globals/AppIcons.h"
@@ -35,14 +37,14 @@ namespace phoenix {
 		constexpr float kAltoCabecera = 70.0f;
 		constexpr float kDuracionTransicion = 0.20f; // s, corto y firme
 
-		enum Seccion { SALA = 0, PARTIDO, MANDOS, COMUNIDAD, AJUSTES, TOTAL_SECCIONES };
+		enum Seccion { SALA = 0, MANDOS, GENTE, AJUSTES, TOTAL_SECCIONES };
 
 		struct EstadoUi {
 			int seccion = SALA;
-			int pestana[TOTAL_SECCIONES] = { 0, 0, 0, 0, 0 };
+			int pestana[TOTAL_SECCIONES] = {};
 			double cambioEn = -10.0;      // momento del último cambio (para el fundido)
 			float indicadorY = -1.0f;     // barra activa del menú (animada)
-			float hover[TOTAL_SECCIONES] = { 0, 0, 0, 0, 0 };
+			float hover[TOTAL_SECCIONES] = {};
 			float subrayadoX = -1.0f, subrayadoW = 0.0f; // pestaña activa (animada)
 			bool iniciado = false;
 		};
@@ -198,9 +200,8 @@ namespace phoenix {
 
 			const ItemMenu items[TOTAL_SECCIONES] = {
 				{ "nav.sala",      AppIcons::play },
-				{ "nav.partido",   AppIcons::tournament },
 				{ "nav.mandos",    AppIcons::padOn },
-				{ "nav.comunidad", AppIcons::users },
+				{ "nav.gente",     AppIcons::users },
 				{ "nav.ajustes",   AppIcons::settings },
 			};
 
@@ -373,44 +374,6 @@ namespace phoenix {
 			UiDock::cancelar(); // por si el panel no llamó a startWidget
 			ImGui::PopStyleVar();
 		}
-
-		void panelProximamente(ImVec2 pos, ImVec2 tam, Theme* tema, float s) {
-			const float p = progresoTransicion();
-			ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.25f + 0.75f * p);
-			inicioFija("##phx_partido", pos, tam, tema->panelBackground);
-			ImDrawList* dl = ImGui::GetWindowDrawList();
-
-			const ImVec2 c(pos.x + tam.x * 0.5f, pos.y + tam.y * 0.42f);
-			const float t = static_cast<float>(ImGui::GetTime());
-			for (int i = 0; i < 3; i++) { // ondas suaves alrededor del icono
-				const float fase = std::fmod(t * 0.6f + i / 3.0f, 1.0f);
-				dl->AddCircle(c, (40.0f + 70.0f * fase) * s, col(tema->secondary, 0.35f * (1.0f - fase)), 48, 2.0f * s);
-			}
-			if (AppIcons::tournament != nullptr) {
-				const float lado = 56.0f * s;
-				dl->AddImage(AppIcons::tournament, ImVec2(c.x - lado * 0.5f, c.y - lado * 0.5f),
-					ImVec2(c.x + lado * 0.5f, c.y + lado * 0.5f), ImVec2(0, 0), ImVec2(1, 1), col(tema->primary));
-			}
-
-			ImGui::PushFont(AppFonts::title);
-			const char* titulo = T("partido.titulo");
-			const ImVec2 tt = ImGui::CalcTextSize(titulo);
-			dl->AddText(ImVec2(c.x - tt.x * 0.5f, c.y + 90.0f * s), col(tema->text), titulo);
-			ImGui::PopFont();
-
-			ImGui::PushFont(AppFonts::input);
-			const float anchoTexto = (std::min)(tam.x - 80.0f * s, 520.0f * s);
-			ImGui::SetCursorScreenPos(ImVec2(c.x - anchoTexto * 0.5f, c.y + 128.0f * s));
-			ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + anchoTexto);
-			ImGui::PushStyleColor(ImGuiCol_Text, tema->textMuted);
-			ImGui::TextWrapped("%s", T("partido.desc"));
-			ImGui::PopStyleColor();
-			ImGui::PopTextWrapPos();
-			ImGui::PopFont();
-
-			finFija();
-			ImGui::PopStyleVar();
-		}
 	}
 
 	// =========================================================================
@@ -469,10 +432,6 @@ namespace phoenix {
 				posPanel, tamPanel, alfa);
 			break;
 		}
-		case PARTIDO:
-			cabecera(ImVec2(xCont, yCuerpo), ImVec2(anchoCont, altoCab), tema, s, "nav.partido", "sub.partido", {});
-			panelProximamente(posPanel, tamPanel, tema, s);
-			break;
 		case MANDOS: {
 			const int t = cabecera(ImVec2(xCont, yCuerpo), ImVec2(anchoCont, altoCab), tema, s, "nav.mandos", "sub.mandos",
 				{ "tab.mandos", "tab.puppets", "tab.hotseat", "tab.bloqueo", "tab.teclado" });
@@ -498,15 +457,23 @@ namespace phoenix {
 			}
 			break;
 		}
-		case COMUNIDAD:
-			cabecera(ImVec2(xCont, yCuerpo), ImVec2(anchoCont, altoCab), tema, s, "nav.comunidad", "sub.comunidad", {});
-			acoplar(p.invitados, posPanel, tamPanel, s);
+		case GENTE: {
+			const int t = cabecera(ImVec2(xCont, yCuerpo), ImVec2(anchoCont, altoCab), tema, s, "nav.gente", "sub.gente",
+				{ "tab.en_sala", "tab.moderacion" });
+			if (t == 0) PantallaGente::render(gProveedor, posPanel, tamPanel, 0.25f + 0.75f * progresoTransicion());
+			else acoplar(p.invitados, posPanel, tamPanel, s);
 			break;
+		}
 		case AJUSTES: {
 			const int t = cabecera(ImVec2(xCont, yCuerpo), ImVec2(anchoCont, altoCab), tema, s, "nav.ajustes", "sub.ajustes",
-				{ "tab.general", "tab.video", "tab.audio", "tab.streaming", "tab.biblioteca" });
-			const std::function<void()>* paneles[] = { &p.general, &p.video, &p.audio, &p.streaming, &p.biblioteca };
-			acoplar(*paneles[t], posPanel, tamPanel, s);
+				{ "tab.rapido", "tab.general", "tab.video", "tab.audio", "tab.biblioteca" });
+			if (t == 0) {
+				PantallaAjustes::rapido(gProveedor, posPanel, tamPanel, 0.25f + 0.75f * progresoTransicion());
+			}
+			else {
+				const std::function<void()>* paneles[] = { &p.general, &p.video, &p.audio, &p.biblioteca };
+				acoplar(*paneles[t - 1], posPanel, tamPanel, s);
+			}
 			break;
 		}
 		default:
