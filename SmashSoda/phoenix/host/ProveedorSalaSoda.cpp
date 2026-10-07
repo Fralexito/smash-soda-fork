@@ -27,9 +27,20 @@ namespace phoenix {
 
 	bool ProveedorSalaSoda::abierta() { return _hosting.isRunning(); }
 
-	bool ProveedorSalaSoda::abrir(std::string& error) { return _ajustes.phoenixAbrirSala(error); }
+	bool ProveedorSalaSoda::abrir(std::string& error) {
+	if (!_ajustes.phoenixAbrirSala(error)) return false;
+	// Phoenix: enchufa los 8 mandos al abrir para fijar su orden en Windows
+	try { for (int i = 0; i < 8; i++) if (AGamepad* p = padEn(_hosting, i)) p->connect(); }
+	catch (...) {}
+	return true;
+}
 
-	void ProveedorSalaSoda::cerrar() { _ajustes.phoenixCerrarSala(); }
+	void ProveedorSalaSoda::cerrar() {
+	_ajustes.phoenixCerrarSala();
+	// Phoenix: desenchufa los mandos al cerrar (limpieza)
+	try { for (int i = 0; i < 8; i++) if (AGamepad* p = padEn(_hosting, i)) p->disconnect(); }
+	catch (...) {}
+}
 
 	std::string ProveedorSalaSoda::enlace() { return _ajustes.phoenixEnlace(); }
 
