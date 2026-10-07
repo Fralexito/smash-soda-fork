@@ -84,9 +84,33 @@ namespace phoenix {
 		recargarSiCambio();
 	}
 
+	void PhoenixRoles::establecerDesdeWeb(bool activa, const std::map<uint32_t, int>& jugadores,
+		const std::set<uint32_t>& espectadores, bool expulsarNoListados) {
+		{
+			std::lock_guard<std::mutex> lock(_mutex);
+			_fuenteWeb = true;
+			_activa = activa && !jugadores.empty();
+			_jugadores = jugadores;
+			_espectadores = espectadores;
+			_expulsarNoListados = expulsarNoListados;
+		}
+	}
+
+	void PhoenixRoles::limpiarWeb() {
+		{
+			std::lock_guard<std::mutex> lock(_mutex);
+			if (!_fuenteWeb) return;
+			_fuenteWeb = false;
+			_ultimoTexto.clear();
+			_ultimaRevisionMs = 0;
+		}
+		recargarSiCambio();
+	}
+
 	void PhoenixRoles::recargarSiCambio() {
 		{
 			std::lock_guard<std::mutex> lock(_mutex);
+			if (_fuenteWeb) return; // la lista de la web manda
 			const uint64_t ahora = ahoraMs();
 			if (_ultimaRevisionMs != 0 && ahora - _ultimaRevisionMs < kIntervaloRevisionMs) return;
 			_ultimaRevisionMs = ahora;

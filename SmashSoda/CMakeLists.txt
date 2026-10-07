@@ -43,6 +43,7 @@ set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
 # Add executable
 # --------------------------
 add_executable("${PROJECT_NAME}" ${ALL_FILES})
+set_target_properties("${PROJECT_NAME}" PROPERTIES OUTPUT_NAME "PhoenixSoda")
 
 # --------------------------
 # Include directories
@@ -188,6 +189,8 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 
 set_source_files_properties(
     "${CMAKE_CURRENT_SOURCE_DIR}/WGCapture.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/link/Http.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/link/PhoenixLink.cpp"
     PROPERTIES
         SKIP_UNITY_BUILD_INCLUSION ON
         SKIP_PRECOMPILE_HEADERS ON

@@ -78,6 +78,15 @@ namespace phoenix {
 			{"sala.sin_espectadores", "Nadie mirando todavía."},
 			{"sala.avanzado", "Configuración avanzada"},
 			{"sala.volver", "‹ Volver a la sala"},
+			{"web.conectado", "Conectado a la web como"},
+			{"web.vinculando", "Vinculando esta PC…"},
+			{"web.sin_conexion", "Sin conexión con la web: reintentando solo"},
+			{"web.pausado", "Conexión con la web en pausa"},
+			{"web.sin_vincular", "Esta PC no está vinculada a tu cuenta"},
+			{"web.ayuda_codigo", "En la web: Perfil → Vincular Smash Soda. Escribe aquí el código de 6 dígitos."},
+			{"web.vincular", "Vincular"},
+			{"web.reintentar", "Reintentar"},
+			{"web.desvincular", "Desvincular esta PC"},
 		};
 
 		const Tabla kEn = {
@@ -110,6 +119,11 @@ namespace phoenix {
 			{"sala.sin_mando", "Gamepad disconnected"}, {"sala.espectadores", "SPECTATORS"},
 			{"sala.sin_espectadores", "Nobody watching yet."}, {"sala.avanzado", "Advanced settings"},
 			{"sala.volver", "‹ Back to room"},
+			{"web.conectado", "Connected to the web as"}, {"web.vinculando", "Linking this PC…"},
+			{"web.sin_conexion", "No connection to the web: retrying"}, {"web.pausado", "Web connection paused"},
+			{"web.sin_vincular", "This PC is not linked to your account"},
+			{"web.ayuda_codigo", "On the web: Profile → Link Smash Soda. Type the 6-digit code here."},
+			{"web.vincular", "Link"}, {"web.reintentar", "Retry"}, {"web.desvincular", "Unlink this PC"},
 		};
 
 		const Tabla kPt = {

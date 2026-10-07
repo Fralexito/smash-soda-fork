@@ -1,4 +1,4 @@
-#include "PantallaSala.h"
+﻿#include "PantallaSala.h"
 
 #include <cfloat>
 #include <cmath>
@@ -10,6 +10,8 @@
 #include "../I18n.h"
 #include "../PhoenixPrefs.h"
 #include "../core/ProveedorSala.h"
+#include "../link/PhoenixLink.h"
+#include <cstring>
 #include "../../globals/AppFonts.h"
 #include "../../services/ThemeController.h"
 
@@ -231,6 +233,96 @@ namespace phoenix {
 		}
 
 		// ---------------------------------------------------------------------
+		//  Conexión con la web (PhoenixLink)
+		// ---------------------------------------------------------------------
+		void salaConexionWeb(Theme* tema, float s, float ancho) {
+			PhoenixLink& link = PhoenixLink::instancia();
+			const EstadoLink est = link.estado();
+			ImDrawList* dl = ImGui::GetWindowDrawList();
+			ImGui::Dummy(ImVec2(0, 10 * s));
+
+			ImVec4 color = tema->textMuted;
+			std::string titulo;
+			switch (est) {
+			case EstadoLink::Conectado:   color = tema->positive; titulo = std::string(T("web.conectado")) + " " + link.usuario(); break;
+			case EstadoLink::Vinculando:  color = tema->primary;  titulo = T("web.vinculando"); break;
+			case EstadoLink::SinConexion: color = ImVec4(0.96f, 0.71f, 0.27f, 1.0f); titulo = T("web.sin_conexion"); break;
+			case EstadoLink::Pausado:     color = tema->negative; titulo = T("web.pausado"); break;
+			default:                      titulo = T("web.sin_vincular"); break;
+			}
+
+			const ImVec2 p = ImGui::GetCursorScreenPos();
+			const float pulso = 0.6f + 0.4f * std::sin(static_cast<float>(ImGui::GetTime()) * 3.0f);
+			dl->AddCircleFilled(ImVec2(p.x + 6 * s, p.y + 11 * s), 5 * s, vis::col(color, est == EstadoLink::Conectado ? 1.0f : pulso));
+			ImGui::SetCursorScreenPos(ImVec2(p.x + 20 * s, p.y));
+			ImGui::PushFont(AppFonts::label);
+			ImGui::TextColored(color, "%s", titulo.c_str());
+			ImGui::PopFont();
+
+			const std::string msg = link.mensaje();
+			if (!msg.empty()) {
+				ImGui::PushFont(AppFonts::input);
+				ImGui::TextColored(tema->textMuted, "%s", msg.c_str());
+				ImGui::PopFont();
+			}
+
+			ImGui::PushFont(AppFonts::input);
+			if (est == EstadoLink::SinVincular) {
+				static char codigo[16] = {};
+				ImGui::TextColored(tema->textMuted, "%s", T("web.ayuda_codigo"));
+				ImGui::SetNextItemWidth(160 * s);
+				ImGui::PushStyleColor(ImGuiCol_FrameBg, tema->formInputBackground);
+				ImGui::InputTextWithHint("##codigo", "123456", codigo, sizeof(codigo), ImGuiInputTextFlags_CharsDecimal);
+				ImGui::PopStyleColor();
+				ImGui::SameLine(0, 10 * s);
+				static float hoverVincular = 0.0f;
+				ImGui::SetCursorPosY(ImGui::GetCursorPosY() - 4 * s);
+				if (salaBoton("##vincular", ImVec2(140 * s, 36 * s), hoverVincular, true, tema->primary, T("web.vincular"), tema, s)
+					&& strlen(codigo) == 6) {
+					link.emparejar(codigo);
+					codigo[0] = 0;
+				}
+			}
+			else if (est == EstadoLink::Pausado) {
+				static float hoverReintentar = 0.0f;
+				if (salaBoton("##reintentar", ImVec2(160 * s, 34 * s), hoverReintentar, false, tema->primary, T("web.reintentar"), tema, s)) {
+					link.reintentar();
+				}
+			}
+			else if (est == EstadoLink::Conectado) {
+				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(tema->textMuted.x, tema->textMuted.y, tema->textMuted.z, 0.7f));
+				if (ImGui::SmallButton(T("web.desvincular"))) link.desvincular();
+				ImGui::PopStyleColor();
+			}
+			ImGui::PopFont();
+		}
+
+		/// Envía a PhoenixLink una foto de la sala (≈ 1 vez por segundo).
+		void salaAlimentarLink(ProveedorSala& sala) {
+			static double ultima = -10.0;
+			const double ahora = ImGui::GetTime();
+			if (ahora - ultima < 1.0) return;
+			ultima = ahora;
+
+			InstantaneaSala foto;
+			foto.abierta = sala.abierta();
+			foto.enlace = foto.abierta ? salaEstado().enlaceCache : std::string();
+			foto.plazasTotal = sala.plazas();
+			foto.plazasLibres = (std::max)(0, foto.plazasTotal - sala.totalInvitados());
+			for (const AsientoVista& a : sala.asientos(16)) {
+				if (a.ocupado && a.parsecId != 0) foto.invitados.push_back({ std::to_string(a.parsecId), a.jugador, a.pingMs });
+			}
+			for (const EspectadorVista& e : sala.espectadores()) {
+				foto.invitados.push_back({ std::to_string(e.parsecId), e.nombre, e.pingMs });
+			}
+			const PhoenixPrefs& pr = PhoenixPrefs::get();
+			foto.visibilidad = pr.visibilidad;
+			foto.aceptaEspectadores = pr.espectadores;
+			foto.limiteEspectadores = pr.limiteEspectadores;
+			PhoenixLink::instancia().actualizar(foto);
+		}
+
+		// ---------------------------------------------------------------------
 		//  Visibilidad y espectadores
 		// ---------------------------------------------------------------------
 		void salaOpciones(Theme* tema, float s, float ancho) {
@@ -310,11 +402,7 @@ namespace phoenix {
 				ImGui::PopFont();
 			}
 
-			ImGui::PushFont(AppFonts::input);
-			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(tema->textMuted.x, tema->textMuted.y, tema->textMuted.z, 0.7f));
-			ImGui::TextUnformatted(T("sala.web_pendiente"));
-			ImGui::PopStyleColor();
-			ImGui::PopFont();
+			salaConexionWeb(tema, s, ancho);
 
 			if (cambio) pr.guardar();
 		}
@@ -459,6 +547,7 @@ namespace phoenix {
 			: ImVec2(tam.x, tam.y - tamPrincipal.y - sep);
 
 		if (sala == nullptr) return; // forma sin modo host: el shell muestra otra pantalla
+		try { salaAlimentarLink(*sala); } catch (...) {}
 
 		if (e.avanzado) {
 			// Configuración original del Soda, con un botón para volver

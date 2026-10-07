@@ -29,6 +29,7 @@
 #include "phoenix/I18n.h"
 #include "phoenix/ui/Shell.h"
 #include "phoenix/host/ProveedorSalaSoda.h"
+#include "phoenix/link/PhoenixLink.h"
 #include "Widgets/NavBar.h"
 #include "Widgets/HostInfoWidget.h"
 #include "Widgets/HostSettingsWidget.h"
@@ -197,7 +198,7 @@ int CALLBACK WinMain(_In_ HINSTANCE hInstance, _In_ HINSTANCE hPrevInstance, _In
     wc.hIconSm = NULL;
     ::RegisterClassEx(&wc);
     HWND hwnd = ::CreateWindow(
-        wc.lpszClassName, _T("Smash Soda"), WS_OVERLAPPEDWINDOW,
+        wc.lpszClassName, _T("Phoenix Soda"), WS_OVERLAPPEDWINDOW,
         Config::cfg.video.windowX, Config::cfg.video.windowY,
         Config::cfg.video.windowW, Config::cfg.video.windowH,
         NULL, NULL, wc.hInstance, NULL
@@ -251,7 +252,7 @@ int CALLBACK WinMain(_In_ HINSTANCE hInstance, _In_ HINSTANCE hPrevInstance, _In
     ApplyWindowDpiScale(hwnd);
 
     HostSettingsWidget hostSettingsWindow(g_hosting, [&hwnd](bool isRunning) {
-        SetWindowTextW(hwnd, isRunning ? L"⚫ [LIVE] Smash Soda" : L"Smash Soda");
+        SetWindowTextW(hwnd, isRunning ? L"● EN VIVO · Phoenix Soda" : L"Phoenix Soda");
         });
     LoginWidget loginWindow(g_hosting, hostSettingsWindow);
     LogWidget logWindow(g_hosting);
@@ -303,6 +304,7 @@ int CALLBACK WinMain(_In_ HINSTANCE hInstance, _In_ HINSTANCE hPrevInstance, _In
 
     phoenix::ProveedorSalaSoda proveedorSala(g_hosting, hostSettingsWindow);
     phoenix::Shell::establecerProveedor(&proveedorSala);
+    phoenix::PhoenixLink::instancia().iniciar();
 
     phoenix::Paneles panelesPhoenix;
     panelesPhoenix.configSala = [&]() { bool v = true; hostSettingsWindow.render(v, hwnd); };
@@ -529,6 +531,7 @@ int CALLBACK WinMain(_In_ HINSTANCE hInstance, _In_ HINSTANCE hPrevInstance, _In
         }
     }
 
+    phoenix::PhoenixLink::instancia().detener(); // avisa a la web que la sala se cierra
     // Cleanup
     ImGui_ImplDX11_Shutdown();
     ImGui_ImplWin32_Shutdown();

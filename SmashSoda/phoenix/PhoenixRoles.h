@@ -56,6 +56,13 @@ namespace phoenix {
 
 		std::string rutaArchivo();
 
+		/// Lista que llega de la web (PhoenixLink). Mientras esté puesta, manda
+		/// sobre el archivo local. asiento = número de mando (1 = primero).
+		void establecerDesdeWeb(bool activa, const std::map<uint32_t, int>& jugadores,
+			const std::set<uint32_t>& espectadores, bool expulsarNoListados);
+		/// Vuelve al archivo local (p. ej. al cerrar la sala).
+		void limpiarWeb();
+
 	private:
 		PhoenixRoles() = default;
 		void recargarSiCambio();
@@ -63,6 +70,7 @@ namespace phoenix {
 
 		std::mutex _mutex;
 		bool _activa = false;
+		bool _fuenteWeb = false;
 		bool _expulsarNoListados = false;
 		std::map<uint32_t, int> _jugadores;   // parsecId -> asiento (1..n, 0 = cualquiera)
 		std::set<uint32_t> _espectadores;
