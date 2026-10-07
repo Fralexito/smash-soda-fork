@@ -4,6 +4,7 @@
 #include <map>
 #include <mutex>
 #include <set>
+#include <vector>
 #include <string>
 
 // =============================================================================
@@ -68,6 +69,14 @@ namespace phoenix {
 		/// Solo el host: mueve a un jugador a otro asiento (se mantiene sobre la lista de la web).
 		bool moverAsiento(uint32_t parsecId, int asiento);
 
+		// --- Entrada directa por Parsec (fuera de la lista) ---------------
+		/// Si está activo, quien no figura en la lista no se expulsa: queda «en espera».
+		void permitirParsec(bool si);
+		/// IDs que entraron por Parsec y esperan la decisión del host.
+		std::vector<uint32_t> enEspera();
+		/// El host decide: jugador (puede tomar mando) o espectador (nunca juega).
+		void admitir(uint32_t parsecId, bool comoJugador);
+
 	private:
 		PhoenixRoles() = default;
 		void recargarSiCambio();
@@ -80,6 +89,10 @@ namespace phoenix {
 		std::map<uint32_t, int> _jugadores;   // parsecId -> asiento (1..n, 0 = cualquiera)
 		std::set<uint32_t> _espectadores;
 		std::map<uint32_t, int> _movidosPorHost;   // parsecId -> asiento elegido por el host
+		bool _permitirParsec = false;
+		std::set<uint32_t> _enEspera;            // entraron por Parsec, sin decidir
+		std::set<uint32_t> _admitidosJugador;    // el host los aceptó como jugadores
+		std::set<uint32_t> _admitidosEspectador; // el host los aceptó como espectadores
 		std::string _ultimoTexto;
 		uint64_t _ultimaRevisionMs = 0;
 	};

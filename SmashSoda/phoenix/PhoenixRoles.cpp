@@ -61,7 +61,12 @@ namespace phoenix {
 		if (!_activa) return true;
 
 		auto it = _jugadores.find(parsecId);
-		if (it == _jugadores.end()) return false;      // espectador o no listado: nunca
+		if (it == _jugadores.end()) {
+			// Entró por Parsec y el host lo aceptó como jugador
+			if (!_admitidosJugador.count(parsecId)) return false;   // espectador, en espera o no listado
+			auto m = _movidosPorHost.find(parsecId);
+			return m == _movidosPorHost.end() || m->second <= 0 || indiceMando == m->second - 1;
+		}
 
 		const int asiento = it->second;
 		if (asiento <= 0) return true;                 // jugador sin asiento fijo
@@ -72,7 +77,10 @@ namespace phoenix {
 		recargarSiCambio();
 		std::lock_guard<std::mutex> lock(_mutex);
 		if (!_activa || !_expulsarNoListados) return false;
-		return !_jugadores.count(parsecId) && !_espectadores.count(parsecId);
+		if (_jugadores.count(parsecId) || _espectadores.count(parsecId)) return false;
+		if (_admitidosJugador.count(parsecId) || _admitidosEspectador.count(parsecId)) return false;
+		if (_permitirParsec) { _enEspera.insert(parsecId); return false; }   // el host decide
+		return true;
 	}
 
 	void PhoenixRoles::recargar() {
@@ -105,14 +113,41 @@ namespace phoenix {
 		std::lock_guard<std::mutex> lock(_mutex);
 		if (!_activa) return 0;
 		auto it = _jugadores.find(parsecId);
-		return it == _jugadores.end() ? 0 : it->second;
+		if (it != _jugadores.end()) return it->second;
+		if (_admitidosJugador.count(parsecId)) {
+			auto m = _movidosPorHost.find(parsecId);
+			return m == _movidosPorHost.end() ? 0 : m->second;
+		}
+		return 0;
+	}
+
+	void PhoenixRoles::permitirParsec(bool si) {
+		std::lock_guard<std::mutex> lock(_mutex);
+		_permitirParsec = si;
+	}
+
+	std::vector<uint32_t> PhoenixRoles::enEspera() {
+		std::lock_guard<std::mutex> lock(_mutex);
+		return std::vector<uint32_t>(_enEspera.begin(), _enEspera.end());
+	}
+
+	void PhoenixRoles::admitir(uint32_t parsecId, bool comoJugador) {
+		std::lock_guard<std::mutex> lock(_mutex);
+		_enEspera.erase(parsecId);
+		_admitidosJugador.erase(parsecId);
+		_admitidosEspectador.erase(parsecId);
+		(comoJugador ? _admitidosJugador : _admitidosEspectador).insert(parsecId);
 	}
 
 	bool PhoenixRoles::moverAsiento(uint32_t parsecId, int asiento) {
 		std::lock_guard<std::mutex> lock(_mutex);
 		if (!_activa) return true;                       // sin lista: todo libre
 		auto it = _jugadores.find(parsecId);
-		if (it == _jugadores.end()) return false;        // espectadores nunca juegan
+		if (it == _jugadores.end()) {
+			if (!_admitidosJugador.count(parsecId)) return false;   // espectadores nunca juegan
+			_movidosPorHost[parsecId] = asiento;                     // entró por Parsec como jugador
+			return true;
+		}
 		// Si otro jugador tenía ese asiento, intercambian
 		for (auto& par : _jugadores) {
 			if (par.first != parsecId && par.second == asiento) {
@@ -129,6 +164,9 @@ namespace phoenix {
 		{
 			std::lock_guard<std::mutex> lock(_mutex);
 			_movidosPorHost.clear();
+			_enEspera.clear();
+			_admitidosJugador.clear();
+			_admitidosEspectador.clear();
 			if (!_fuenteWeb) return;
 			_fuenteWeb = false;
 			_ultimoTexto.clear();

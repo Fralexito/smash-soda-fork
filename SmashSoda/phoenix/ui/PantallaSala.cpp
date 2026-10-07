@@ -9,6 +9,7 @@
 #include "UiComun.h"
 #include "../I18n.h"
 #include "../PhoenixPrefs.h"
+#include "../PhoenixRoles.h"
 #include "../core/ProveedorSala.h"
 #include "../link/PhoenixLink.h"
 #include "TableroMandos.h"
@@ -408,6 +409,20 @@ namespace phoenix {
 				ImGui::PopFont();
 			}
 
+			// Entrada directa por Parsec (quien no está en la lista: el host decide)
+			ImGui::Dummy(ImVec2(0, 4 * s));
+			if (salaInterruptor("##parsec", pr.entradaParsec, tema, s)) cambio = true;
+			ImGui::SameLine(0, 12 * s);
+			ImGui::PushFont(AppFonts::label);
+			ImGui::AlignTextToFramePadding();
+			ImGui::TextUnformatted(T("sala.entrada_parsec"));
+			ImGui::PopFont();
+			ImGui::PushFont(AppFonts::input);
+			ImGui::PushStyleColor(ImGuiCol_Text, tema->textMuted);
+			ImGui::TextUnformatted(T(pr.entradaParsec ? "sala.entrada_parsec_on" : "sala.entrada_parsec_off"));
+			ImGui::PopStyleColor();
+			ImGui::PopFont();
+
 			// Juego, parche y región: se muestran en las tarjetas de la web
 			ImGui::Dummy(ImVec2(0, 8 * s));
 			ImGui::PushFont(AppFonts::input);
@@ -560,6 +575,7 @@ namespace phoenix {
 	// =========================================================================
 	void PantallaSala::tick(ProveedorSala* sala) {
 		if (sala == nullptr) return;
+		PhoenixRoles::instancia().permitirParsec(PhoenixPrefs::get().entradaParsec);
 		try { salaAlimentarLink(*sala); } catch (...) {}
 	}
 

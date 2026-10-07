@@ -41,6 +41,7 @@ namespace phoenix {
 			visibilidad = j.value("visibilidad", visibilidad);
 			if (visibilidad != "publica" && visibilidad != "amigos" && visibilidad != "privada") visibilidad = "amigos";
 			espectadores = j.value("espectadores", espectadores);
+			entradaParsec = j.value("entradaParsec", entradaParsec);
 			limiteEspectadores = j.value("limiteEspectadores", limiteEspectadores);
 			if (limiteEspectadores < 0) limiteEspectadores = 0;
 			if (limiteEspectadores > 16) limiteEspectadores = 16;
@@ -65,6 +66,7 @@ namespace phoenix {
 				{"seccion", seccion},
 				{"visibilidad", visibilidad},
 				{"espectadores", espectadores},
+				{"entradaParsec", entradaParsec},
 				{"limiteEspectadores", limiteEspectadores},
 				{"juego", juego},
 				{"parche", parche},

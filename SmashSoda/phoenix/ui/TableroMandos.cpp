@@ -12,6 +12,7 @@
 #include "../PhoenixPrefs.h"
 #include "../core/ProveedorSala.h"
 #include "../core/Solicitudes.h"
+#include "../PhoenixRoles.h"
 #include <cmath>
 #include "../../globals/AppFonts.h"
 #include "../../globals/AppIcons.h"
@@ -179,6 +180,60 @@ namespace phoenix {
 			altoUsado = 30 * s + filas * (altoTarjeta + sep);
 		}
 		/// Solicitudes de cambio de los jugadores: tarjeta con Aceptar / Rechazar.
+		/// Quien entró directo por Parsec espera: el host elige Jugador, Espectador o Expulsar.
+		void tabEnEspera(ProveedorSala& sala, const std::vector<AsientoVista>& asientos, float ancho, Theme* tema, float s) {
+			const std::vector<uint32_t> ids = PhoenixRoles::instancia().enEspera();
+			if (ids.empty()) return;
+			const std::vector<EspectadorVista> presentes = sala.espectadores();
+			const PhoenixPrefs& pr = PhoenixPrefs::get();
+			ImDrawList* dl = ImGui::GetWindowDrawList();
+			const float pulso = 0.6f + 0.4f * std::sin(static_cast<float>(ImGui::GetTime()) * 4.0f);
+
+			for (uint32_t id : ids) {
+				const EspectadorVista* quien = nullptr;
+				for (const EspectadorVista& ev : presentes) if (ev.parsecId == id) quien = &ev;
+				if (quien == nullptr) continue;   // ya se fue (o ya tiene mando)
+
+				const ImVec2 p0 = ImGui::GetCursorScreenPos();
+				const float alto = 48 * s;
+				dl->AddRectFilled(p0, ImVec2(p0.x + ancho, p0.y + alto), vis::col(tema->primary, 0.12f), 12 * s);
+				dl->AddRect(p0, ImVec2(p0.x + ancho, p0.y + alto), vis::col(tema->primary, 0.5f * pulso + 0.3f), 12 * s, 0, 1.5f * s);
+				char texto[160];
+				snprintf(texto, sizeof(texto), T("mandos.entro_parsec"), quien->nombre.c_str());
+				dl->AddText(AppFonts::label, AppFonts::label->FontSize, ImVec2(p0.x + 16 * s, p0.y + (alto - AppFonts::label->FontSize) * 0.5f),
+					vis::col(tema->text), texto);
+
+				ImGui::PushID(static_cast<int>(id) ^ 0x5A5A);
+				ImGui::PushFont(AppFonts::label);
+				const float w1 = ImGui::CalcTextSize(T("mandos.como_jugador")).x + 26 * s;
+				const float w2 = ImGui::CalcTextSize(T("mandos.como_espectador")).x + 26 * s;
+				const float w3 = ImGui::CalcTextSize(T("gente.expulsar")).x + 26 * s;
+				ImGui::SetCursorScreenPos(ImVec2(p0.x + ancho - w1 - w2 - w3 - 32 * s, p0.y + (alto - 32 * s) * 0.5f));
+				const bool jugador = vis::chip("##jug", T("mandos.como_jugador"), tema->primary, true, s);
+				ImGui::SameLine(0, 6 * s);
+				const bool espectador = vis::chip("##esp", T("mandos.como_espectador"), tema->secondary, false, s);
+				ImGui::SameLine(0, 6 * s);
+				const bool fuera = vis::chip("##fuera", T("gente.expulsar"), tema->negative, false, s);
+				ImGui::PopFont();
+				ImGui::PopID();
+
+				if (jugador) {
+					PhoenixRoles::instancia().admitir(id, true);
+					for (int i = 0; i < pr.mandosActivos && i < static_cast<int>(asientos.size()); i++) {
+						if (asientos[i].ocupado) continue;
+						if (!asientos[i].conectado) sala.conectarMando(i);
+						sala.asignarMando(i, id);
+						break;
+					}
+				}
+				else if (espectador) PhoenixRoles::instancia().admitir(id, false);
+				else if (fuera) { PhoenixRoles::instancia().admitir(id, false); sala.expulsar(id); }
+
+				ImGui::SetCursorScreenPos(ImVec2(p0.x, p0.y + alto + 8 * s));
+				ImGui::Dummy(ImVec2(ancho, 1));
+			}
+		}
+
 		void tabSolicitudes(ProveedorSala& sala, const std::vector<AsientoVista>& asientos, float ancho, Theme* tema, float s) {
 			const std::vector<Solicitud> lista = Solicitudes::instancia().pendientes();
 			if (lista.empty()) return;
@@ -254,6 +309,7 @@ namespace phoenix {
 		}
 		const int maximo = (std::min)(8, static_cast<int>(asientos.size()));
 
+		tabEnEspera(sala, asientos, ancho, tema, s);
 		tabSolicitudes(sala, asientos, ancho, tema, s);
 
 		// Formación: cuántos mandos y cómo se reparten
