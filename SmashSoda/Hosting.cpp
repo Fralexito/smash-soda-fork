@@ -1,5 +1,6 @@
-#include "Hosting.h"
+﻿#include "Hosting.h"
 #include "phoenix/PhoenixRoles.h"
+#include "phoenix/core/Solicitudes.h"
 #include "services/OverlayService.h"
 #include "services/InputControlService.h"
 #include "services/GuestStateStore.h"
@@ -783,6 +784,19 @@ void Hosting::handleMessage(const char* message, Guest& guest, bool isHost, bool
 
 	if (!handleMuting(message, guest)) {
 		return;
+	}
+
+	// Phoenix: pedidos de cambio de mando/equipo (!cambio N, !equipo)
+	if (!isHost) {
+		bool tieneMando = phoenix::PhoenixRoles::instancia().asientoDe(guest.userID) > 0;
+		for (AGamepad* pad : GamepadClient::instance.gamepads) {
+			if (pad != nullptr && pad->isOwned() && pad->owner.guest.userID == guest.userID) tieneMando = true;
+		}
+		std::string respuesta;
+		if (phoenix::Solicitudes::instancia().procesarChat(message, guest.userID, guest.name, tieneMando, respuesta)) {
+			broadcastChatMessageAndLogCommand(respuesta);
+			return;
+		}
 	}
 
 	ACommand* command = _chatBot->identifyUserDataMessage(message, guest, isHost);

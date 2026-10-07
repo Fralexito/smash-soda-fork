@@ -11,6 +11,8 @@
 #include "../I18n.h"
 #include "../PhoenixPrefs.h"
 #include "../core/ProveedorSala.h"
+#include "../core/Solicitudes.h"
+#include <cmath>
 #include "../../globals/AppFonts.h"
 #include "../../globals/AppIcons.h"
 #include "../../services/ThemeController.h"
@@ -176,6 +178,67 @@ namespace phoenix {
 			const int filas = (n + columnas - 1) / columnas;
 			altoUsado = 30 * s + filas * (altoTarjeta + sep);
 		}
+		/// Solicitudes de cambio de los jugadores: tarjeta con Aceptar / Rechazar.
+		void tabSolicitudes(ProveedorSala& sala, const std::vector<AsientoVista>& asientos, float ancho, Theme* tema, float s) {
+			const std::vector<Solicitud> lista = Solicitudes::instancia().pendientes();
+			if (lista.empty()) return;
+			const PhoenixPrefs& pr = PhoenixPrefs::get();
+			ImDrawList* dl = ImGui::GetWindowDrawList();
+			const float pulso = 0.6f + 0.4f * std::sin(static_cast<float>(ImGui::GetTime()) * 4.0f);
+
+			for (size_t k = 0; k < lista.size(); k++) {
+				const Solicitud& sol = lista[k];
+				const ImVec2 p0 = ImGui::GetCursorScreenPos();
+				const float alto = 48 * s;
+				dl->AddRectFilled(p0, ImVec2(p0.x + ancho, p0.y + alto), vis::col(tema->secondary, 0.16f), 12 * s);
+				dl->AddRect(p0, ImVec2(p0.x + ancho, p0.y + alto), vis::col(tema->secondary, 0.5f * pulso + 0.3f), 12 * s, 0, 1.5f * s);
+
+				char texto[160];
+				if (sol.mandoDestino > 0) snprintf(texto, sizeof(texto), T("mandos.pide_mando"), sol.nombre.c_str(), sol.mandoDestino);
+				else snprintf(texto, sizeof(texto), T("mandos.pide_equipo"), sol.nombre.c_str());
+				dl->AddText(AppFonts::label, AppFonts::label->FontSize, ImVec2(p0.x + 16 * s, p0.y + (alto - AppFonts::label->FontSize) * 0.5f),
+					vis::col(tema->text), texto);
+
+				ImGui::PushID(static_cast<int>(sol.parsecId));
+				const float lado = 34 * s;
+				const float wBoton = 110 * s;
+				ImGui::SetCursorScreenPos(ImVec2(p0.x + ancho - 2 * wBoton - 20 * s, p0.y + (alto - lado) * 0.5f));
+				ImGui::PushStyleColor(ImGuiCol_Button, tema->primary);
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, tema->buttonPrimaryHovered);
+				ImGui::PushStyleColor(ImGuiCol_Text, tema->buttonPrimaryText);
+				const bool aceptar = ImGui::Button(T("mandos.aceptar"), ImVec2(wBoton, lado));
+				ImGui::PopStyleColor(3);
+				ImGui::SameLine(0, 8 * s);
+				const bool rechazar = ImGui::Button(T("mandos.rechazar"), ImVec2(wBoton, lado));
+				ImGui::PopID();
+
+				if (aceptar) {
+					int destino = sol.mandoDestino - 1;
+					if (sol.mandoDestino == 0) {
+						// Pasar al otro equipo: primer mando libre del otro lado (o intercambio con el primero)
+						int actual = -1;
+						for (size_t i = 0; i < asientos.size(); i++) if (asientos[i].ocupado && asientos[i].parsecId == sol.parsecId) actual = static_cast<int>(i);
+						const bool esLocal = actual >= 0 && actual < pr.equipoLocal;
+						const int desde = esLocal ? pr.equipoLocal : 0;
+						const int hasta = esLocal ? pr.mandosActivos : pr.equipoLocal;
+						destino = desde;
+						for (int i = desde; i < hasta && i < static_cast<int>(asientos.size()); i++) {
+							if (!asientos[i].ocupado) { destino = i; break; }
+						}
+					}
+					if (destino >= 0 && destino < static_cast<int>(asientos.size())) {
+						if (!asientos[destino].conectado) sala.conectarMando(destino);
+						sala.asignarMando(destino, sol.parsecId);
+					}
+					Solicitudes::instancia().quitar(sol.parsecId);
+				}
+				else if (rechazar) {
+					Solicitudes::instancia().quitar(sol.parsecId);
+				}
+				ImGui::SetCursorScreenPos(ImVec2(p0.x, p0.y + alto + 8 * s));
+				ImGui::Dummy(ImVec2(ancho, 1));
+			}
+		}
 	}
 
 	void TableroMandos::render(ProveedorSala& sala, float ancho, bool compacto) {
@@ -190,6 +253,8 @@ namespace phoenix {
 			return;
 		}
 		const int maximo = (std::min)(8, static_cast<int>(asientos.size()));
+
+		tabSolicitudes(sala, asientos, ancho, tema, s);
 
 		// Formación: cuántos mandos y cómo se reparten
 		{
