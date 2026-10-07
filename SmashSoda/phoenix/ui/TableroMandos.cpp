@@ -315,15 +315,35 @@ namespace phoenix {
 		// Formación: cuántos mandos y cómo se reparten
 		{
 			const int antesMandos = pr.mandosActivos, antesLocal = pr.equipoLocal;
+			// Cada equipo con su propio contador: «Local [-] 3 [+]  VS  Visitante [-] 3 [+]»
+			int local = (std::max)(1, (std::min)(pr.equipoLocal, maximo - 1));
+			int visita = (std::max)(1, (std::min)(pr.mandosActivos - pr.equipoLocal, maximo - local));
 			const ImVec2 o = ImGui::GetCursorScreenPos();
-			pr.mandosActivos = tabStepper("mandos", o, (std::min)(pr.mandosActivos, maximo), 2, maximo, T("mandos.cantidad"), tema, s);
-			pr.equipoLocal = (std::max)(1, (std::min)(pr.equipoLocal, pr.mandosActivos - 1));
-			pr.equipoLocal = tabStepper("local", ImVec2(o.x + 250 * s, o.y), pr.equipoLocal, 1, pr.mandosActivos - 1, T("mandos.local"), tema, s);
-			char formacion[32];
-			snprintf(formacion, sizeof(formacion), "%d  vs  %d", pr.equipoLocal, pr.mandosActivos - pr.equipoLocal);
+			local = tabStepper("local", o, local, 1, maximo - visita, T("mandos.equipo_local"), tema, s);
 			ImFont* ft = AppFonts::title;
-			ImGui::GetWindowDrawList()->AddText(ft, ft->FontSize * 1.2f, ImVec2(o.x + 500 * s, o.y + 2 * s), vis::col(tema->primary), formacion);
-			ImGui::SetCursorScreenPos(ImVec2(o.x, o.y + 30 * s));
+			ImGui::GetWindowDrawList()->AddText(ft, ft->FontSize, ImVec2(o.x + 230 * s, o.y + 2 * s), vis::col(tema->text), "VS");
+			visita = tabStepper("visita", ImVec2(o.x + 285 * s, o.y), visita, 1, maximo - local, T("mandos.equipo_visitante"), tema, s);
+
+			// Atajos: un toque y listo
+			ImGui::PushFont(AppFonts::label);
+			const bool abajo = 560 * s + (maximo / 2) * 84 * s > ancho;   // sin espacio: atajos en otra fila
+			float x = abajo ? o.x : o.x + 560 * s;
+			const float yChips = abajo ? o.y + 40 * s : o.y - 2 * s;
+			for (int n = 1; n * 2 <= maximo; n++) {
+				char t[16];
+				snprintf(t, sizeof(t), "%dvs%d", n, n);
+				const bool activa = local == n && visita == n;
+				ImGui::SetCursorScreenPos(ImVec2(x, yChips));
+				ImGui::PushID(n);
+				if (vis::chip("##form", t, tema->primary, activa, s)) { local = n; visita = n; }
+				ImGui::PopID();
+				x += ImGui::CalcTextSize(t).x + 34 * s;
+			}
+			ImGui::PopFont();
+
+			pr.equipoLocal = local;
+			pr.mandosActivos = local + visita;
+			ImGui::SetCursorScreenPos(ImVec2(o.x, o.y + (abajo ? 76 : 34) * s));
 			ImGui::Dummy(ImVec2(ancho, 1));
 			cambio = antesMandos != pr.mandosActivos || antesLocal != pr.equipoLocal;
 		}

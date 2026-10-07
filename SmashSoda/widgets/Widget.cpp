@@ -1,3 +1,5 @@
+﻿#include <cfloat>
+#include <algorithm>
 #include "Widget.h"
 #include "../phoenix/ui/UiDock.h"
 #include "../phoenix/I18n.h"
@@ -332,6 +334,94 @@ void Widget::endWidget() {
     ImGui::PopStyleColor(9);
 }
 
+
+// =============================================================================
+//  Phoenix: filas compactas. Cada ajuste ocupa una tarjeta-fila:
+//  [ Nombre en negrita                       ] [ control ]
+//  [ ayuda corta en gris                     ]
+//  Solo dentro del shell Phoenix (estaAcoplado); la interfaz clásica no cambia.
+// =============================================================================
+namespace {
+    struct FilaPhoenix { ImVec2 p0; float ancho = 0, alto = 0; };
+    FilaPhoenix gFila;
+
+    float filaAcercar(float a, float b, float v) {
+        const float k = (std::min)(1.0f, ImGui::GetIO().DeltaTime * v);
+        return a + (b - a) * k;
+    }
+    ImU32 filaCol(const ImVec4& c, float a = 1.0f) {
+        return ImGui::ColorConvertFloat4ToU32(ImVec4(c.x, c.y, c.z, c.w * a));
+    }
+}
+
+void Widget::filaInicio(const std::string& label, const std::string& help, float anchoCtrl, float altoCtrl) {
+    Theme* t = ThemeController::getInstance().getActiveTheme();
+    ImDrawList* dl = ImGui::GetWindowDrawList();
+    const float pad = S(14.0f);
+    const float W = ImGui::GetContentRegionAvail().x - S(6.0f);
+    const ImVec2 p0 = ImGui::GetCursorScreenPos();
+    const std::string L = phoenix::Tr(label);
+    const std::string H = help.empty() ? std::string() : phoenix::Tr(help);
+    const float textoW = (std::max)(S(120.0f), W - anchoCtrl - pad * 3.0f);
+
+    ImFont* fL = AppFonts::label;
+    ImFont* fH = AppFonts::input;
+    const ImVec2 tl = fL->CalcTextSizeA(fL->FontSize, FLT_MAX, textoW, L.c_str());
+    const ImVec2 th = H.empty() ? ImVec2(0, 0) : fH->CalcTextSizeA(fH->FontSize, FLT_MAX, textoW, H.c_str());
+    const float altoTexto = tl.y + (H.empty() ? 0.0f : th.y + S(3.0f));
+    const float alto = (std::max)(altoTexto, altoCtrl) + pad * 1.3f;
+
+    // Brillo al pasar el mouse (animado)
+    ImGuiStorage* st = ImGui::GetStateStorage();
+    const ImGuiID k = ImGui::GetID(("##fila" + label).c_str());
+    const bool encima = ImGui::IsMouseHoveringRect(p0, ImVec2(p0.x + W, p0.y + alto));
+    const float h = filaAcercar(st->GetFloat(k, 0.0f), encima ? 1.0f : 0.0f, 16.0f);
+    st->SetFloat(k, h);
+
+    const float r = S(12.0f);
+    dl->AddRectFilled(p0, ImVec2(p0.x + W, p0.y + alto), filaCol(t->listItemBackground, 0.55f + 0.45f * h), r);
+    dl->AddRect(p0, ImVec2(p0.x + W, p0.y + alto), filaCol(t->primary, 0.06f + 0.40f * h), r, 0, S(1.0f));
+    dl->AddRectFilled(ImVec2(p0.x, p0.y + r), ImVec2(p0.x + S(3.0f), p0.y + alto - r), filaCol(t->primary, h), S(2.0f));
+
+    const float yTexto = p0.y + (alto - altoTexto) * 0.5f;
+    dl->AddText(fL, fL->FontSize, ImVec2(p0.x + pad, yTexto), filaCol(t->text), L.c_str(), nullptr, textoW);
+    if (!H.empty()) {
+        dl->AddText(fH, fH->FontSize, ImVec2(p0.x + pad, yTexto + tl.y + S(3.0f)), filaCol(t->textMuted), H.c_str(), nullptr, textoW);
+    }
+
+    ImGui::SetCursorScreenPos(ImVec2(p0.x + W - pad - anchoCtrl, p0.y + (alto - altoCtrl) * 0.5f));
+    gFila.p0 = p0; gFila.ancho = W; gFila.alto = alto;
+}
+
+void Widget::filaFin(const std::string& error) {
+    ImGui::SetCursorScreenPos(ImVec2(gFila.p0.x, gFila.p0.y + gFila.alto + S(4.0f)));
+    elError(error);
+    ImGui::Dummy(ImVec2(gFila.ancho, S(4.0f)));
+}
+
+bool Widget::interruptor(const std::string& id, bool& valor) {
+    Theme* t = ThemeController::getInstance().getActiveTheme();
+    ImDrawList* dl = ImGui::GetWindowDrawList();
+    const ImVec2 tam(S(46.0f), S(26.0f));
+    const ImVec2 p0 = ImGui::GetCursorScreenPos();
+    const ImGuiID k = ImGui::GetID(id.c_str());
+    const bool clic = ImGui::InvisibleButton(id.c_str(), tam);
+    if (ImGui::IsItemHovered()) ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+    if (clic) valor = !valor;
+    ImGuiStorage* st = ImGui::GetStateStorage();
+    const float pos = filaAcercar(st->GetFloat(k, valor ? 1.0f : 0.0f), valor ? 1.0f : 0.0f, 18.0f);
+    st->SetFloat(k, pos);
+    const ImVec4 off = t->buttonDisable;
+    const ImVec4 on = t->primary;
+    const ImVec4 c(off.x + (on.x - off.x) * pos, off.y + (on.y - off.y) * pos, off.z + (on.z - off.z) * pos, 1.0f);
+    if (pos > 0.01f) dl->AddRectFilled(ImVec2(p0.x - S(3), p0.y - S(3)), ImVec2(p0.x + tam.x + S(3), p0.y + tam.y + S(3)),
+        filaCol(on, 0.18f * pos), tam.y);
+    dl->AddRectFilled(p0, ImVec2(p0.x + tam.x, p0.y + tam.y), filaCol(c), tam.y * 0.5f);
+    const float rad = tam.y * 0.5f - S(3.0f);
+    dl->AddCircleFilled(ImVec2(p0.x + tam.y * 0.5f + (tam.x - tam.y) * pos, p0.y + tam.y * 0.5f), rad, filaCol(ImVec4(1, 1, 1, 1)));
+    return clic;
+}
+
 void Widget::elLabel(std::string label) {
 
     Theme* theme = ThemeController::getInstance().getActiveTheme();
@@ -404,10 +494,16 @@ bool Widget::elText(
     ImVec2 size = ImGui::GetContentRegionAvail();
     std::string inputLabel = "##" + label;
 
-    if (!label.empty()) {
-        elLabel(label);
-	}
-    ImGui::SetNextItemWidth(width > 0.0f ? width : size.x - S(20.0f));
+    const bool fila = estaAcoplado && !label.empty() && width <= 0.0f;
+    if (fila) {
+        const float ancho = (std::min)(S(360.0f), size.x * 0.5f);
+        filaInicio(label, help, ancho, ImGui::GetFrameHeight());
+        ImGui::SetNextItemWidth(ancho);
+    }
+    else {
+        if (!label.empty()) elLabel(label);
+        ImGui::SetNextItemWidth(width > 0.0f ? width : size.x - S(20.0f));
+    }
     ImGui::PushStyleColor(ImGuiCol_FrameBg, theme->formInputBackground);
     ImGui::PushStyleColor(ImGuiCol_Text, theme->formInputText);
 
@@ -444,6 +540,11 @@ bool Widget::elText(
     }
 
     ImGui::PopStyleColor(2);
+
+    if (fila) {
+        filaFin(error);
+        return response;
+    }
 
     if (!help.empty() || !error.empty()) {
         ImGui::SetNextItemWidth(size.x - S(20.0f));
@@ -557,6 +658,17 @@ bool Widget::elNumber(std::string label, int& value, int from, int to, std::stri
     ImVec2 size = ImGui::GetContentRegionAvail();
     std::string inputLabel = "##" + label;
 
+    if (estaAcoplado) {
+        filaInicio(label, help, S(120.0f), ImGui::GetFrameHeight());
+        ImGui::SetNextItemWidth(S(120.0f));
+        ImGui::PushStyleColor(ImGuiCol_Text, theme->formInputText);
+        ImGui::PushStyleColor(ImGuiCol_FrameBg, theme->formInputBackground);
+        response = IntRangeWidget::render(label.c_str(), value, from, to, 0.025f);
+        ImGui::PopStyleColor(2);
+        filaFin(error);
+        return response;
+    }
+
     elLabel(label);
     ImGui::SetNextItemWidth(size.x - S(20.0f));
     ImGui::PushStyleColor(ImGuiCol_Text, theme->formInputText);
@@ -657,6 +769,13 @@ bool Widget::elCheckbox(std::string label, bool& isOn, std::string help, std::st
     bool response = false;
     ImVec2 size = ImGui::GetContentRegionAvail();
 
+    if (estaAcoplado) {
+        filaInicio(label, help, S(46.0f), S(26.0f));
+        response = interruptor("##chk" + label, isOn);
+        filaFin(error);
+        return response;
+    }
+
     ImGui::PushFont(AppFonts::label);
     ImGui::PushStyleColor(ImGuiCol_Text, theme->formLabel);
     ImGui::PushStyleColor(ImGuiCol_FrameBg, theme->formInputBackground);
@@ -692,8 +811,16 @@ bool Widget::elSelect(std::string label,
     ImVec2 size = ImGui::GetContentRegionAvail();
     std::string inputLabel = "##" + label;
 
-    elLabel(label);
-    ImGui::SetNextItemWidth(size.x - S(20.0f));
+    const bool fila = estaAcoplado;
+    if (fila) {
+        const float ancho = (std::min)(S(320.0f), size.x * 0.45f);
+        filaInicio(label, help, ancho, ImGui::GetFrameHeight());
+        ImGui::SetNextItemWidth(ancho);
+    }
+    else {
+        elLabel(label);
+        ImGui::SetNextItemWidth(size.x - S(20.0f));
+    }
     ImGui::PushStyleColor(ImGuiCol_Text, theme->formInputText);
     ImGui::PushStyleColor(ImGuiCol_FrameBg, theme->formInputBackground);
     ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, theme->formInputBackground);
@@ -730,6 +857,11 @@ bool Widget::elSelect(std::string label,
     }
 
     ImGui::PopStyleColor(8);
+
+    if (fila) {
+        filaFin(error);
+        return itemSelected;
+    }
 
     ImGui::SetNextItemWidth(size.x - S(20.0f));
     elHelp(help);

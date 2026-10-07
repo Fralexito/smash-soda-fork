@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "imgui.h"
 #include <string>
@@ -75,6 +75,11 @@ public:
     bool elTextArea(std::string label, char* buffer, std::string help = "", std::string error = "");
     bool elCheckbox(std::string label, bool& isOn, std::string help = "", std::string error = "");
     bool elNumber(std::string label, int& value, int from, int to, std::string help = "", std::string error = "");
+
+    // Phoenix: filas compactas (texto a la izquierda, control a la derecha)
+    void filaInicio(const std::string& label, const std::string& help, float anchoControl, float altoControl);
+    void filaFin(const std::string& error = "");
+    bool interruptor(const std::string& id, bool& valor);
 
     static bool elBtn(std::string label);
     static bool elBtnSecondary(std::string label);
