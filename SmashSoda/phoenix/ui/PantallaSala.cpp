@@ -557,6 +557,11 @@ namespace phoenix {
 	}
 
 	// =========================================================================
+	void PantallaSala::tick(ProveedorSala* sala) {
+		if (sala == nullptr) return;
+		try { salaAlimentarLink(*sala); } catch (...) {}
+	}
+
 	void PantallaSala::render(ProveedorSala* sala,
 		const std::function<void()>& panelActividad,
 		const std::function<void()>& panelAvanzado,
@@ -581,7 +586,6 @@ namespace phoenix {
 			: ImVec2(tam.x, tam.y - tamPrincipal.y - sep);
 
 		if (sala == nullptr) return; // forma sin modo host: el shell muestra otra pantalla
-		try { salaAlimentarLink(*sala); } catch (...) {}
 
 		if (e.avanzado) {
 			// Configuración original del Soda, con un botón para volver

@@ -424,6 +424,8 @@ namespace phoenix {
 			e.cambioEn = ImGui::GetTime();
 		}
 
+		PantallaSala::tick(gProveedor); // web y asientos, en cualquier sección
+
 		Theme* tema = ThemeController::getInstance().getActiveTheme();
 		const float s = escala();
 		const ImGuiViewport* vp = ImGui::GetMainViewport();

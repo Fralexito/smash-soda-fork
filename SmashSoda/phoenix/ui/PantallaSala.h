@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <functional>
 #include "imgui.h"
@@ -18,6 +18,9 @@ namespace phoenix {
 	public:
 		/// `acoplar(dibujar, pos, tam)` lo provee el shell para paneles del autor.
 		using Acoplador = std::function<void(const std::function<void()>&, ImVec2, ImVec2)>;
+
+		/// Tareas de fondo (web, asientos). Llamar en cada frame, en cualquier sección.
+		static void tick(ProveedorSala* sala);
 
 		static void render(ProveedorSala* sala,
 			const std::function<void()>& panelActividad,
