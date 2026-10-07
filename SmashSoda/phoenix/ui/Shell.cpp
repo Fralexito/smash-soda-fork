@@ -15,6 +15,7 @@
 #include "TableroMandos.h"
 #include "PantallaGente.h"
 #include "PantallaAjustes.h"
+#include "PantallaBiblioteca.h"
 #include "../core/ProveedorSala.h"
 #include "../core/MandoHost.h"
 #include "../../globals/AppFonts.h"
@@ -477,6 +478,10 @@ namespace phoenix {
 				{ "tab.rapido", "tab.general", "tab.video", "tab.audio", "tab.biblioteca", "tab.avanzado" });
 			if (t == 0) {
 				PantallaAjustes::rapido(gProveedor, posPanel, tamPanel, 0.25f + 0.75f * progresoTransicion());
+			}
+			else if (t == 4 && PhoenixPrefs::get().interfazPhoenix) {
+				// Biblioteca mejorada en Phoenix
+				PantallaBiblioteca::render(gProveedor, posPanel, tamPanel, 0.25f + 0.75f * progresoTransicion());
 			}
 			else {
 				const std::function<void()>* paneles[] = { &p.general, &p.video, &p.audio, &p.biblioteca, &p.avanzado };
