@@ -37,7 +37,7 @@ namespace phoenix {
 		}
 	}
 
-	bool TecladoVisual::render(Keyboard& keyboard, ImVec2 pos, ImVec2 tam, Widget* widget) {
+	bool TecladoVisual::render(void* keyboard, ImVec2 pos, ImVec2 tam, Widget* widget) {
 		Theme* tema = ThemeController::getInstance().getActiveTheme();
 		const float s = ThemeController::getInstance().getUiScale();
 		ImDrawList* dl = ImGui::GetWindowDrawList();
@@ -46,18 +46,20 @@ namespace phoenix {
 		bool cambio = false;
 
 		const float escala = (std::min)(tam.x / 200.0f, tam.y / 140.0f);
-		const ImVec2 origen = pos + (tam - ImVec2(200, 140) * escala) * 0.5f;
+		const ImVec2 tamanio_escalado = ImVec2(200.0f * escala, 140.0f * escala);
+		const ImVec2 offset = ImVec2((tam.x - tamanio_escalado.x) * 0.5f, (tam.y - tamanio_escalado.y) * 0.5f);
+		const ImVec2 origen = ImVec2(pos.x + offset.x, pos.y + offset.y);
 
 		// Marco del mando
 		const ImVec2 m0 = origen;
-		const ImVec2 m1 = origen + ImVec2(200, 140) * escala;
-		dl->AddRectFilled(m0, m1, tema->listItemBackground, 16.0f * escala);
-		dl->AddRect(m0, m1, tema->primary, 16.0f * escala, 0, 2.0f * escala);
+		const ImVec2 m1 = ImVec2(origen.x + tamanio_escalado.x, origen.y + tamanio_escalado.y);
+		dl->AddRectFilled(m0, m1, ImGui::ColorConvertFloat4ToU32(tema->listItemBackground), 16.0f * escala);
+		dl->AddRect(m0, m1, ImGui::ColorConvertFloat4ToU32(tema->primary), 12.0f * escala, 0, 1.0f * escala);
 
 		const auto bs = tv::botones();
 		for (const auto& b : bs) {
-			const ImVec2 p0 = origen + b.pos * escala;
-			const ImVec2 p1 = p0 + b.tam * escala;
+			const ImVec2 p0 = ImVec2(origen.x + b.pos.x * escala, origen.y + b.pos.y * escala);
+			const ImVec2 p1 = ImVec2(p0.x + b.tam.x * escala, p0.y + b.tam.y * escala);
 
 			ImGui::SetCursorScreenPos(p0);
 			ImGui::PushID(b.idx);
@@ -84,7 +86,7 @@ namespace phoenix {
 			ImGui::PopID();
 		}
 
-		ImGui::SetCursorScreenPos(m1 + ImVec2(0, 12.0f * escala));
+		ImGui::SetCursorScreenPos(ImVec2(m1.x, m1.y + 12.0f * escala));
 		ImGui::Dummy(ImVec2(tam.x, 1));
 
 		return cambio;
