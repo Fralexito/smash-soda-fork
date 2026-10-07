@@ -442,7 +442,7 @@ namespace phoenix {
 		}
 		case MANDOS: {
 			const int t = cabecera(ImVec2(xCont, yCuerpo), ImVec2(anchoCont, altoCab), tema, s, "nav.mandos", "sub.mandos",
-				{ "tab.mandos", "tab.puppets", "tab.hotseat", "tab.bloqueo", "tab.teclado" });
+				{ "tab.mandos", "tab.turnos", "tab.teclado" });
 			if (t == 0 && gProveedor != nullptr) {
 				// Tablero propio de Phoenix (8 mandos, equipos, arrastrar y soltar)
 				const float alfa = 0.25f + 0.75f * progresoTransicion();
@@ -460,7 +460,7 @@ namespace phoenix {
 				ImGui::PopStyleVar(3);
 			}
 			else {
-				const std::function<void()>* paneles[] = { &p.mandos, &p.puppets, &p.hotseat, &p.bloqueo, &p.teclado };
+				const std::function<void()>* paneles[] = { &p.mandos, &p.hotseat, &p.teclado };
 				acoplar(*paneles[t], posPanel, tamPanel, s);
 			}
 			break;
@@ -474,12 +474,12 @@ namespace phoenix {
 		}
 		case AJUSTES: {
 			const int t = cabecera(ImVec2(xCont, yCuerpo), ImVec2(anchoCont, altoCab), tema, s, "nav.ajustes", "sub.ajustes",
-				{ "tab.rapido", "tab.general", "tab.video", "tab.audio", "tab.biblioteca" });
+				{ "tab.rapido", "tab.general", "tab.video", "tab.audio", "tab.biblioteca", "tab.avanzado" });
 			if (t == 0) {
 				PantallaAjustes::rapido(gProveedor, posPanel, tamPanel, 0.25f + 0.75f * progresoTransicion());
 			}
 			else {
-				const std::function<void()>* paneles[] = { &p.general, &p.video, &p.audio, &p.biblioteca };
+				const std::function<void()>* paneles[] = { &p.general, &p.video, &p.audio, &p.biblioteca, &p.avanzado };
 				acoplar(*paneles[t - 1], posPanel, tamPanel, s);
 			}
 			break;
