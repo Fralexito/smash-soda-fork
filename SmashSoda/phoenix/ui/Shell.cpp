@@ -481,7 +481,7 @@ namespace phoenix {
 				ImGui::PushStyleColor(ImGuiCol_WindowBg, tema->panelBackground);
 				ImGui::Begin("##phx_teclado", nullptr,
 					ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings);
-				try { TecladoVisual::render(Config::cfg.keyboard, ImGui::GetCursorScreenPos(), ImGui::GetContentRegionAvail(), nullptr); } catch (...) {}
+				try { TecladoVisual::render((void*)&Config::cfg.keyboard, ImGui::GetCursorScreenPos(), ImGui::GetContentRegionAvail(), nullptr); } catch (...) {}
 				ImGui::End();
 				ImGui::PopStyleColor();
 				ImGui::PopStyleVar(3);
