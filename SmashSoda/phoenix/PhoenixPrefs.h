@@ -17,6 +17,11 @@ namespace phoenix {
 		std::string idioma = "es";
 		int seccion = 0;              ///< sección abierta al iniciar
 
+		// Sala (se enviarán a la web con PhoenixLink)
+		std::string visibilidad = "amigos"; ///< publica | amigos | privada
+		bool espectadores = true;
+		int limiteEspectadores = 4;
+
 		static PhoenixPrefs& get();
 		void cargar();
 		void guardar() const;

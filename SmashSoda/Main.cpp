@@ -28,6 +28,7 @@
 #include "phoenix/PhoenixPrefs.h"
 #include "phoenix/I18n.h"
 #include "phoenix/ui/Shell.h"
+#include "phoenix/host/ProveedorSalaSoda.h"
 #include "Widgets/NavBar.h"
 #include "Widgets/HostInfoWidget.h"
 #include "Widgets/HostSettingsWidget.h"
@@ -299,6 +300,9 @@ int CALLBACK WinMain(_In_ HINSTANCE hInstance, _In_ HINSTANCE hPrevInstance, _In
     // =====================================================================
     phoenix::PhoenixPrefs::get().cargar();
     phoenix::I18n::establecer(phoenix::PhoenixPrefs::get().idioma);
+
+    phoenix::ProveedorSalaSoda proveedorSala(g_hosting, hostSettingsWindow);
+    phoenix::Shell::establecerProveedor(&proveedorSala);
 
     phoenix::Paneles panelesPhoenix;
     panelesPhoenix.configSala = [&]() { bool v = true; hostSettingsWindow.render(v, hwnd); };

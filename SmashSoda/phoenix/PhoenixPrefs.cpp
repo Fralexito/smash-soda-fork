@@ -36,6 +36,12 @@ namespace phoenix {
 			interfazPhoenix = j.value("interfaz", std::string("phoenix")) != "clasica";
 			idioma = j.value("idioma", idioma);
 			seccion = j.value("seccion", seccion);
+			visibilidad = j.value("visibilidad", visibilidad);
+			if (visibilidad != "publica" && visibilidad != "amigos" && visibilidad != "privada") visibilidad = "amigos";
+			espectadores = j.value("espectadores", espectadores);
+			limiteEspectadores = j.value("limiteEspectadores", limiteEspectadores);
+			if (limiteEspectadores < 0) limiteEspectadores = 0;
+			if (limiteEspectadores > 16) limiteEspectadores = 16;
 		}
 		catch (...) {
 			// Preferencias dañadas: se quedan los valores por defecto.
@@ -50,6 +56,9 @@ namespace phoenix {
 				{"interfaz", interfazPhoenix ? "phoenix" : "clasica"},
 				{"idioma", idioma},
 				{"seccion", seccion},
+				{"visibilidad", visibilidad},
+				{"espectadores", espectadores},
+				{"limiteEspectadores", limiteEspectadores},
 			};
 			const std::string texto = j.dump(2);
 			MTY_WriteFile(r.c_str(), texto.c_str(), texto.size());

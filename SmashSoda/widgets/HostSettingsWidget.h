@@ -33,6 +33,13 @@ public:
 	void renderAudio();
 	void updateSecretLink();
 
+	// Phoenix: control directo desde la pantalla Sala (phoenix/host/HostSettingsPhoenix.cpp)
+	bool phoenixAbrirSala(std::string& error);
+	void phoenixCerrarSala();
+	std::string phoenixEnlace();
+	std::string phoenixNombreSala();
+	int phoenixPlazas();
+
 	const ImVec2 DEFAULT_BUTTON_SIZE = ImVec2(40, 40);
 	const uint8_t LINK_COMPATIBLE_SECRET_SIZE = 9;
 

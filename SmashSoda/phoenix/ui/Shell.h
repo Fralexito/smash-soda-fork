@@ -35,6 +35,8 @@ namespace phoenix {
 		std::function<void()> biblioteca;   // Library
 	};
 
+	class ProveedorSala;
+
 	class Shell {
 	public:
 		/// Dibuja la interfaz Phoenix completa (un frame).
@@ -42,6 +44,9 @@ namespace phoenix {
 
 		/// En la interfaz clásica: botón flotante para volver a Phoenix.
 		static void renderBotonVolver();
+
+		/// Conecta el motor de host (nullptr = app sin modo host).
+		static void establecerProveedor(ProveedorSala* proveedor);
 	};
 
 }

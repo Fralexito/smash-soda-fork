@@ -10,16 +10,18 @@
 #include "../I18n.h"
 #include "../PhoenixBuild.h"
 #include "../PhoenixPrefs.h"
-#include "../../Hosting.h"
+#include "PantallaSala.h"
+#include "../core/ProveedorSala.h"
 #include "../../globals/AppFonts.h"
 #include "../../globals/AppIcons.h"
 #include "../../services/ThemeController.h"
 
-extern Hosting g_hosting;
 
 namespace phoenix {
 
 	namespace {
+
+		ProveedorSala* gProveedor = nullptr; // nullptr = app sin modo host
 
 		// ---------------------------------------------------------------------
 		//  Medidas base (se multiplican por la escala de la UI)
@@ -118,8 +120,8 @@ namespace phoenix {
 			ImGui::PopFont();
 
 			// Píldora de estado de la sala (late suave cuando está en vivo)
-			const bool enVivo = g_hosting.isRunning();
-			const int invitados = static_cast<int>(g_hosting.getGuests().size());
+			const bool enVivo = gProveedor != nullptr && gProveedor->abierta();
+			const int invitados = gProveedor != nullptr ? gProveedor->totalInvitados() : 0;
 			std::string textoEstado = enVivo ? T("estado.vivo") : T("estado.cerrada");
 			if (enVivo) textoEstado += "  ·  " + std::to_string(invitados) + " " + T("estado.invitados");
 
@@ -263,10 +265,8 @@ namespace phoenix {
 			ImGui::PushFont(AppFonts::input);
 
 			std::string izquierda = std::string(kNombreBuild) + " " + kVersion;
-			Guest& host = g_hosting.getHost();
-			std::string derecha = host.isValid()
-				? "Parsec: " + host.name + "  #" + std::to_string(host.userID)
-				: std::string(T("barra.sin_host"));
+			const std::string cuenta = gProveedor != nullptr ? gProveedor->cuentaHost() : std::string();
+			std::string derecha = !cuenta.empty() ? "Parsec: " + cuenta : std::string(T("barra.sin_host"));
 
 			const float y = pos.y + (tam.y - ImGui::GetFontSize()) * 0.5f;
 			dl->AddText(ImVec2(pos.x + 18.0f * s, y), col(tema->textMuted), izquierda.c_str());
@@ -460,27 +460,10 @@ namespace phoenix {
 		switch (e.seccion) {
 		case SALA: {
 			cabecera(ImVec2(xCont, yCuerpo), ImVec2(anchoCont, altoCab), tema, s, "nav.sala", "sub.sala", {});
-			if (tamPanel.x >= 900.0f * s) {
-				// Ancho: configuración a la izquierda, invitados y actividad a la derecha
-				const float anchoIzq = std::floor((tamPanel.x - sep) * 0.56f);
-				const float anchoDer = tamPanel.x - sep - anchoIzq;
-				const float altoInv = std::floor((tamPanel.y - sep) * 0.58f);
-				acoplar(p.configSala, posPanel, ImVec2(anchoIzq, tamPanel.y), s);
-				acoplar(p.invitados, ImVec2(posPanel.x + anchoIzq + sep, posPanel.y), ImVec2(anchoDer, altoInv), s);
-				acoplar(p.actividad, ImVec2(posPanel.x + anchoIzq + sep, posPanel.y + altoInv + sep),
-					ImVec2(anchoDer, tamPanel.y - altoInv - sep), s);
-			}
-			else {
-				// Angosto: configuración arriba, invitados y actividad lado a lado abajo
-				const float altoArriba = std::floor((tamPanel.y - sep) * 0.55f);
-				const float anchoMitad = std::floor((tamPanel.x - sep) * 0.5f);
-				const float yAbajo = posPanel.y + altoArriba + sep;
-				const float altoAbajo = tamPanel.y - altoArriba - sep;
-				acoplar(p.configSala, posPanel, ImVec2(tamPanel.x, altoArriba), s);
-				acoplar(p.invitados, ImVec2(posPanel.x, yAbajo), ImVec2(anchoMitad, altoAbajo), s);
-				acoplar(p.actividad, ImVec2(posPanel.x + anchoMitad + sep, yAbajo),
-					ImVec2(tamPanel.x - anchoMitad - sep, altoAbajo), s);
-			}
+			const float alfa = 0.25f + 0.75f * progresoTransicion();
+			PantallaSala::render(gProveedor, p.actividad, p.configSala,
+				[s](const std::function<void()>& dibujar, ImVec2 pos, ImVec2 tam) { acoplar(dibujar, pos, tam, s); },
+				posPanel, tamPanel, alfa);
 			break;
 		}
 		case PARTIDO:
@@ -509,6 +492,10 @@ namespace phoenix {
 			e.seccion = SALA;
 			break;
 		}
+	}
+
+	void Shell::establecerProveedor(ProveedorSala* proveedor) {
+		gProveedor = proveedor;
 	}
 
 	void Shell::renderBotonVolver() {
