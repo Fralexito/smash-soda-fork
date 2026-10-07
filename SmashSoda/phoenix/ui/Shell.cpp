@@ -66,7 +66,7 @@ namespace phoenix {
 
 		const ImGuiWindowFlags kFlagsFijo =
 			ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings
-			| ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoScrollWithMouse;
+			| ImGuiWindowFlags_NoScrollWithMouse;
 
 		/// Abre una ventana fija del shell (barra, menú…). Siempre cerrar con finFija().
 		void inicioFija(const char* id, ImVec2 pos, ImVec2 tam, const ImVec4& fondo) {

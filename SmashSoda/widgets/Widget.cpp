@@ -134,7 +134,7 @@ void Widget::startWidget(const char* name, bool& visible, int x, int y, int w, i
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
     if (acoplado) {
         flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize
-            | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoBringToFrontOnFocus;
+            | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings;
     }
     ImGui::Begin(name, acoplado ? nullptr : &visible, flags);
 
