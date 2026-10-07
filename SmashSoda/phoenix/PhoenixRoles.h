@@ -63,6 +63,11 @@ namespace phoenix {
 		/// Vuelve al archivo local (p. ej. al cerrar la sala).
 		void limpiarWeb();
 
+		/// Asiento reservado (1 = mando 1) de un jugador; 0 = sin asiento fijo / no es jugador.
+		int asientoDe(uint32_t parsecId);
+		/// Solo el host: mueve a un jugador a otro asiento (se mantiene sobre la lista de la web).
+		bool moverAsiento(uint32_t parsecId, int asiento);
+
 	private:
 		PhoenixRoles() = default;
 		void recargarSiCambio();
@@ -74,6 +79,7 @@ namespace phoenix {
 		bool _expulsarNoListados = false;
 		std::map<uint32_t, int> _jugadores;   // parsecId -> asiento (1..n, 0 = cualquiera)
 		std::set<uint32_t> _espectadores;
+		std::map<uint32_t, int> _movidosPorHost;   // parsecId -> asiento elegido por el host
 		std::string _ultimoTexto;
 		uint64_t _ultimaRevisionMs = 0;
 	};

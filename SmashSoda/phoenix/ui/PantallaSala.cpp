@@ -316,6 +316,7 @@ namespace phoenix {
 			for (const EspectadorVista& e : sala.espectadores()) {
 				foto.invitados.push_back({ std::to_string(e.parsecId), e.nombre, e.pingMs });
 			}
+			sala.aplicarAsientosReservados();
 			const PhoenixPrefs& pr = PhoenixPrefs::get();
 			foto.visibilidad = pr.visibilidad;
 			foto.juego = pr.juego;

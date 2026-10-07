@@ -107,7 +107,10 @@ namespace phoenix {
 	bool ProveedorSalaSoda::asignarMando(int i, uint32_t parsecId) {
 		try {
 			AGamepad* p = padEn(_hosting, i);
-			if (p == nullptr || !PhoenixRoles::instancia().puedeTomarMando(parsecId, i)) return false;
+			if (p == nullptr) return false;
+			// El host manda: mover a un jugador cambia su asiento reservado.
+			// Un espectador marcado por la web nunca recibe mando.
+			if (!PhoenixRoles::instancia().moverAsiento(parsecId, i + 1)) return false;
 			for (Guest& g : _hosting.getGuests()) {
 				if (g.userID != parsecId) continue;
 				// Si ya tenía otro mando, lo suelta (un jugador = un mando al moverlo)
@@ -120,6 +123,26 @@ namespace phoenix {
 		}
 		catch (...) {}
 		return false;
+	}
+
+	void ProveedorSalaSoda::aplicarAsientosReservados() {
+		try {
+			if (!_hosting.isRunning()) return;
+			std::vector<AGamepad*>& mandos = _hosting.getGamepadClient().gamepads;
+			for (Guest& g : _hosting.getGuests()) {
+				const int asiento = PhoenixRoles::instancia().asientoDe(g.userID);
+				if (asiento <= 0 || asiento > static_cast<int>(mandos.size())) continue;
+				AGamepad* p = mandos[asiento - 1];
+				if (p == nullptr || (p->isOwned() && p->owner.guest.userID == g.userID)) continue;
+				if (!p->isConnected()) p->connect();
+				for (AGamepad* otro : mandos) {   // suelta cualquier otro mando que tuviera
+					if (otro != nullptr && otro != p && otro->isOwned() && otro->owner.guest.userID == g.userID) otro->clearOwner();
+				}
+				if (p->isOwned()) p->clearOwner(); // el asiento es suyo por reserva
+				_hosting.setOwner(*p, g, 0);
+			}
+		}
+		catch (...) {}
 	}
 
 	int ProveedorSalaSoda::totalInvitados() {

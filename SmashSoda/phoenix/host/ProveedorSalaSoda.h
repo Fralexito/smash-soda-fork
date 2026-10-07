@@ -31,6 +31,7 @@ namespace phoenix {
 		void alternarBloqueo(int indice) override;
 		void liberarMando(int indice) override;
 		bool asignarMando(int indice, uint32_t parsecId) override;
+		void aplicarAsientosReservados() override;
 
 	private:
 		Hosting& _hosting;

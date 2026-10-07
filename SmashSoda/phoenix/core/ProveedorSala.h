@@ -57,6 +57,8 @@ namespace phoenix {
 		virtual void liberarMando(int indice) = 0;
 		/// Asigna el mando al invitado con ese ID Parsec (respeta la puerta de roles).
 		virtual bool asignarMando(int indice, uint32_t parsecId) = 0;
+		/// Sienta a cada jugador conectado en su mando reservado (≈ 1 vez por segundo).
+		virtual void aplicarAsientosReservados() = 0;
 	};
 
 }

@@ -91,14 +91,44 @@ namespace phoenix {
 			_fuenteWeb = true;
 			_activa = activa && !jugadores.empty();
 			_jugadores = jugadores;
+			for (const auto& par : _movidosPorHost) {   // lo que movió el host manda
+				auto it = _jugadores.find(par.first);
+				if (it != _jugadores.end()) it->second = par.second;
+			}
 			_espectadores = espectadores;
 			_expulsarNoListados = expulsarNoListados;
 		}
 	}
 
+	int PhoenixRoles::asientoDe(uint32_t parsecId) {
+		recargarSiCambio();
+		std::lock_guard<std::mutex> lock(_mutex);
+		if (!_activa) return 0;
+		auto it = _jugadores.find(parsecId);
+		return it == _jugadores.end() ? 0 : it->second;
+	}
+
+	bool PhoenixRoles::moverAsiento(uint32_t parsecId, int asiento) {
+		std::lock_guard<std::mutex> lock(_mutex);
+		if (!_activa) return true;                       // sin lista: todo libre
+		auto it = _jugadores.find(parsecId);
+		if (it == _jugadores.end()) return false;        // espectadores nunca juegan
+		// Si otro jugador tenía ese asiento, intercambian
+		for (auto& par : _jugadores) {
+			if (par.first != parsecId && par.second == asiento) {
+				par.second = it->second;
+				_movidosPorHost[par.first] = par.second;
+			}
+		}
+		it->second = asiento;
+		_movidosPorHost[parsecId] = asiento;
+		return true;
+	}
+
 	void PhoenixRoles::limpiarWeb() {
 		{
 			std::lock_guard<std::mutex> lock(_mutex);
+			_movidosPorHost.clear();
 			if (!_fuenteWeb) return;
 			_fuenteWeb = false;
 			_ultimoTexto.clear();
