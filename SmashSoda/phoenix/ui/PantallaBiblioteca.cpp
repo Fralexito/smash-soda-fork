@@ -77,7 +77,7 @@ namespace phoenix {
 			ImGui::PopStyleColor();
 			ImGui::PopFont();
 
-			ImGui::SetCursorScreenPos(p1 + ImVec2(0, 8.0f * s));
+			ImGui::SetCursorScreenPos(ImVec2(p1.x, p1.y + 8.0f * s));
 			ImGui::Dummy(ImVec2(anchoTarjeta, 1));
 		}
 

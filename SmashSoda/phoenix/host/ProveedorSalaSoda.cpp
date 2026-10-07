@@ -19,6 +19,11 @@ namespace phoenix {
 				return -1;
 			}
 		}
+
+		AGamepad* padEn(Hosting& h, int i) {
+			std::vector<AGamepad*>& lista = h.getGamepadClient().gamepads;
+			return (i >= 0 && i < static_cast<int>(lista.size())) ? lista[i] : nullptr;
+		}
 	}
 
 	ProveedorSalaSoda::ProveedorSalaSoda(Hosting& hosting, HostSettingsWidget& ajustes)
@@ -101,13 +106,6 @@ namespace phoenix {
 		catch (...) {
 		}
 		return lista;
-	}
-
-	namespace {
-		AGamepad* padEn(Hosting& h, int i) {
-			std::vector<AGamepad*>& lista = h.getGamepadClient().gamepads;
-			return (i >= 0 && i < static_cast<int>(lista.size())) ? lista[i] : nullptr;
-		}
 	}
 
 	void ProveedorSalaSoda::conectarMando(int i) { try { if (AGamepad* p = padEn(_hosting, i)) p->connect(); } catch (...) {} }

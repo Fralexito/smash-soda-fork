@@ -9,7 +9,7 @@
 #include "../../globals/AppFonts.h"
 #include "../../services/ThemeController.h"
 #include "../../widgets/Widget.h"
-#include "../core/Keyboard.h"
+#include "../../AGamepad.h"
 
 namespace phoenix {
 

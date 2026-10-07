@@ -151,6 +151,22 @@ public:
 		bool enabled = false;
 	};
 
+	class Keyboard {
+	public:
+		bool LLeft = false;
+		bool LRight = false;
+		bool LUp = false;
+		bool LDown = false;
+		bool RLeft = false;
+		bool RRight = false;
+		bool RUp = false;
+		bool RDown = false;
+
+		void clear() {
+			LLeft = LRight = LUp = LDown = RLeft = RRight = RUp = RDown = false;
+		}
+	};
+
 	class Overlay {
 	public:
 		class Chat {
@@ -244,6 +260,7 @@ public:
 	Widgets widgets;
 	Hotseat hotseat;
 	KioskMode kioskMode;
+	Keyboard keyboard;
 	Overlay overlay;
 	Permissions permissions;
 	Arcade arcade;
