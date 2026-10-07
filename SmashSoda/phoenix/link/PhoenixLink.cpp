@@ -9,6 +9,8 @@
 #include <map>
 #include <set>
 #include <sstream>
+#include <cmath>
+#include <cstdio>
 #include <nlohmann/json.hpp>
 
 #include "Http.h"
@@ -233,9 +235,15 @@ namespace phoenix {
 				if (!codigo.empty()) pasoEmparejar(codigo);
 				else if (!token.empty() && !pausado && ahoraMs() >= esperaHasta) {
 					const std::string firma = foto.visibilidad + "|" + (foto.aceptaEspectadores ? "1" : "0")
-						+ "|" + std::to_string(foto.limiteEspectadores) + "|" + std::to_string(foto.plazasTotal);
+						+ "|" + std::to_string(foto.limiteEspectadores) + "|" + std::to_string(foto.plazasTotal)
+						+ "|" + foto.juego + "|" + foto.parche + "|" + foto.region;
 					if (foto.abierta && (salaId.empty() || firma != firmaPublicada)) pasoAbrir(foto);
 					else if (foto.abierta && ahoraMs() >= proximoLatido) pasoLatido(foto);
+					else if (foto.abierta) {
+						std::string diag;
+						{ std::lock_guard<std::mutex> lock(_mutex); diag = _salaDiagnosticada; }
+						if (diag != salaId) pasoDiagnostico(salaId);
+					}
 					else if (!foto.abierta && !salaId.empty()) {
 						pasoCerrar(salaId);
 						std::lock_guard<std::mutex> lock(_mutex);
@@ -286,7 +294,7 @@ namespace phoenix {
 
 		json cuerpo = {
 			{"plazas_total", (std::max)(1, (std::min)(16, foto.plazasTotal))},
-			{"juego", "eFootball PES 2021"},
+			{"juego", foto.juego.empty() ? std::string("eFootball PES 2021") : foto.juego},
 			{"visibilidad", foto.visibilidad},
 			{"acepta_espectadores", foto.aceptaEspectadores},
 			{"limite_espectadores", foto.aceptaEspectadores ? (std::max)(0, (std::min)(16, foto.limiteEspectadores)) : 0},
@@ -294,6 +302,8 @@ namespace phoenix {
 			{"publicar_en_pagina", foto.visibilidad != "privada"},
 		};
 		if (foto.enlace.rfind("https://", 0) == 0) cuerpo["enlace"] = foto.enlace;
+		if (!foto.parche.empty()) cuerpo["parche"] = foto.parche;
+		if (!foto.region.empty()) cuerpo["region"] = foto.region;
 
 		const http::Respuesta r = http::peticion("POST", std::string(kBase) + "/v1/sala/abrir", cuerpo.dump(),
 			{ "Authorization: Bearer " + token, std::string("X-Phoenix-Version: ") + kVersionApp, "X-Phoenix-Build: " + huellaExe() });
@@ -305,7 +315,8 @@ namespace phoenix {
 			_latidoSeg = (std::max)(10, j.value("latido_seg", 30));
 			_proximoLatidoMs = ahoraMs() + (std::max)(10, _latidoSeg) * 1000LL; // primer latido ≥ 10 s
 			_firmaPrefs = foto.visibilidad + "|" + (foto.aceptaEspectadores ? "1" : "0")
-				+ "|" + std::to_string(foto.limiteEspectadores) + "|" + std::to_string(foto.plazasTotal);
+				+ "|" + std::to_string(foto.limiteEspectadores) + "|" + std::to_string(foto.plazasTotal)
+				+ "|" + foto.juego + "|" + foto.parche + "|" + foto.region;
 			_estado = EstadoLink::Conectado;
 			_espera = 0;
 			_mensaje = foto.visibilidad == "publica" ? "Sala publicada en el radar de retos."
@@ -363,6 +374,62 @@ namespace phoenix {
 		http::peticion("POST", std::string(kBase) + "/v1/sala/cerrar", cuerpo.dump(),
 			{ "Authorization: Bearer " + token, std::string("X-Phoenix-Version: ") + kVersionApp, "X-Phoenix-Build: " + huellaExe() });
 		// Si falla, el servidor la marca caída a los 3 min sin latido.
+	}
+
+	void PhoenixLink::pasoDiagnostico(const std::string& salaId) {
+		// Autodiagnóstico del host (contrato §14): latencia, jitter, pérdida y subida
+		// contra Cloudflare. ~5 s, una vez por sala. Nunca bloquea el juego (hilo propio).
+		{ std::lock_guard<std::mutex> lock(_mutex); _salaDiagnosticada = salaId; }
+		try {
+			std::vector<double> rtts;
+			int fallos = 0;
+			const int intentos = 12;
+			for (int i = 0; i < intentos && _corriendo; i++) {
+				const long long t0 = ahoraMs();
+				const http::Respuesta r = http::peticion("GET", "https://speed.cloudflare.com/__down?bytes=0", "", {}, 3000);
+				if (r.estado == 200) rtts.push_back(static_cast<double>(ahoraMs() - t0));
+				else fallos++;
+				Sleep(120);
+			}
+			if (rtts.empty()) return;
+			std::vector<double> orden = rtts;
+			std::sort(orden.begin(), orden.end());
+			const double mediana = orden[orden.size() / 2];
+			double jitter = 0;
+			for (size_t i = 1; i < rtts.size(); i++) jitter += std::abs(rtts[i] - rtts[i - 1]);
+			if (rtts.size() > 1) jitter /= static_cast<double>(rtts.size() - 1);
+
+			// Subida: 2 envíos de 1,5 MB, se toma el mejor
+			const std::string bloque(1500 * 1024, 'p');
+			double mejorKbps = 0;
+			for (int i = 0; i < 2 && _corriendo; i++) {
+				const long long t0 = ahoraMs();
+				const http::Respuesta r = http::peticion("POST", "https://speed.cloudflare.com/__up", bloque, {}, 20000);
+				const long long ms = (std::max)(1LL, ahoraMs() - t0);
+				if (r.estado == 200) mejorKbps = (std::max)(mejorKbps, bloque.size() * 8.0 / ms);
+			}
+
+			std::string token;
+			{ std::lock_guard<std::mutex> lock(_mutex); token = _token; }
+			const json cuerpo = {
+				{"latencia_ms", mediana}, {"jitter_ms", jitter},
+				{"perdida_pct", 100.0 * fallos / intentos}, {"subida_kbps", static_cast<long long>(mejorKbps)},
+				{"muestras", static_cast<int>(rtts.size())}, {"referencia", "cloudflare"},
+				{"jugadores_esperados", 2}, {"sala_id", salaId},
+			};
+			const http::Respuesta r = http::peticion("POST", std::string(kBase) + "/v1/diagnostico", cuerpo.dump(),
+				{ "Authorization: Bearer " + token, std::string("X-Phoenix-Version: ") + kVersionApp, "X-Phoenix-Build: " + huellaExe() });
+			const json j = json::parse(r.cuerpo, nullptr, false);
+			if (r.estado == 200 && !j.is_discarded() && j.value("ok", false)) {
+				std::lock_guard<std::mutex> lock(_mutex);
+				char texto[160];
+				snprintf(texto, sizeof(texto), "Tu red: %.0f ms · subida %.1f Mbps · semáforo %s",
+					mediana, mejorKbps / 1000.0, j.value("semaforo", "?").c_str());
+				_mensaje = texto;
+			}
+		}
+		catch (...) {
+		}
 	}
 
 	void PhoenixLink::aplicarRoles(const std::string& jsonRoles) {

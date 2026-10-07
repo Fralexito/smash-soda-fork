@@ -123,7 +123,7 @@ namespace phoenix {
 			{"web.sin_conexion", "No connection to the web: retrying"}, {"web.pausado", "Web connection paused"},
 			{"web.sin_vincular", "This PC is not linked to your account"},
 			{"web.ayuda_codigo", "On the web: Profile → Link Smash Soda. Type the 6-digit code here."},
-			{"web.vincular", "Link"}, {"web.reintentar", "Retry"}, {"web.desvincular", "Unlink this PC"},
+			{"sala.parche", "Patch"}, {"sala.region", "Region"}, {"web.vincular", "Link"}, {"web.reintentar", "Retry"}, {"web.desvincular", "Unlink this PC"},
 		};
 
 		const Tabla kPt = {

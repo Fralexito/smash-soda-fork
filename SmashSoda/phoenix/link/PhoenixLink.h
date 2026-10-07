@@ -32,6 +32,7 @@ namespace phoenix {
 		std::string visibilidad = "amigos";
 		bool aceptaEspectadores = true;
 		int limiteEspectadores = 4;
+		std::string juego, parche, region;
 	};
 
 	enum class EstadoLink { SinVincular, Vinculando, Conectado, SinConexion, Pausado };
@@ -64,6 +65,7 @@ namespace phoenix {
 		void pasoAbrir(const InstantaneaSala& foto);
 		void pasoLatido(const InstantaneaSala& foto);
 		void pasoCerrar(const std::string& salaId);
+		void pasoDiagnostico(const std::string& salaId);
 		void aplicarRoles(const std::string& jsonRoles);
 		void fallo(const std::string& codigo, const std::string& mensaje, int reintentarEn);
 
@@ -86,6 +88,7 @@ namespace phoenix {
 		long long _esperaHastaMs = 0;
 		int _espera = 0;
 		int _latidoSeg = 30;
+		std::string _salaDiagnosticada;
 	};
 
 }

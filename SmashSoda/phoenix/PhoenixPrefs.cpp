@@ -42,6 +42,9 @@ namespace phoenix {
 			limiteEspectadores = j.value("limiteEspectadores", limiteEspectadores);
 			if (limiteEspectadores < 0) limiteEspectadores = 0;
 			if (limiteEspectadores > 16) limiteEspectadores = 16;
+			juego = j.value("juego", juego).substr(0, 60);
+			parche = j.value("parche", parche).substr(0, 60);
+			region = j.value("region", region).substr(0, 40);
 		}
 		catch (...) {
 			// Preferencias dañadas: se quedan los valores por defecto.
@@ -59,6 +62,9 @@ namespace phoenix {
 				{"visibilidad", visibilidad},
 				{"espectadores", espectadores},
 				{"limiteEspectadores", limiteEspectadores},
+				{"juego", juego},
+				{"parche", parche},
+				{"region", region},
 			};
 			const std::string texto = j.dump(2);
 			MTY_WriteFile(r.c_str(), texto.c_str(), texto.size());

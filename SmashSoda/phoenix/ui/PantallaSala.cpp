@@ -317,6 +317,9 @@ namespace phoenix {
 			}
 			const PhoenixPrefs& pr = PhoenixPrefs::get();
 			foto.visibilidad = pr.visibilidad;
+			foto.juego = pr.juego;
+			foto.parche = pr.parche;
+			foto.region = pr.region;
 			foto.aceptaEspectadores = pr.espectadores;
 			foto.limiteEspectadores = pr.limiteEspectadores;
 			PhoenixLink::instancia().actualizar(foto);
@@ -401,6 +404,35 @@ namespace phoenix {
 				ImGui::PopStyleColor(3);
 				ImGui::PopFont();
 			}
+
+			// Juego, parche y región: se muestran en las tarjetas de la web
+			ImGui::Dummy(ImVec2(0, 8 * s));
+			ImGui::PushFont(AppFonts::input);
+			ImGui::PushStyleColor(ImGuiCol_FrameBg, tema->formInputBackground);
+			const float col3 = (ancho - 20 * s) / 3.0f;
+			static const char* juegos[] = { "eFootball PES 2021", "Football Life 2026", "Football Life 2027" };
+			ImGui::SetNextItemWidth(col3);
+			if (ImGui::BeginCombo("##juego", pr.juego.c_str())) {
+				for (const char* jn : juegos) {
+					if (ImGui::Selectable(jn, pr.juego == jn)) { pr.juego = jn; cambio = true; }
+				}
+				ImGui::EndCombo();
+			}
+			ImGui::SameLine(0, 10 * s);
+			static char parche[64] = {}, region[48] = {};
+			static bool listos = false;
+			if (!listos) {
+				strncpy_s(parche, pr.parche.c_str(), _TRUNCATE);
+				strncpy_s(region, pr.region.c_str(), _TRUNCATE);
+				listos = true;
+			}
+			ImGui::SetNextItemWidth(col3);
+			if (ImGui::InputTextWithHint("##parche", T("sala.parche"), parche, sizeof(parche))) { pr.parche = parche; cambio = true; }
+			ImGui::SameLine(0, 10 * s);
+			ImGui::SetNextItemWidth(col3);
+			if (ImGui::InputTextWithHint("##region", T("sala.region"), region, sizeof(region))) { pr.region = region; cambio = true; }
+			ImGui::PopStyleColor();
+			ImGui::PopFont();
 
 			salaConexionWeb(tema, s, ancho);
 

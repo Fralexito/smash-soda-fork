@@ -21,6 +21,9 @@ namespace phoenix {
 		std::string visibilidad = "amigos"; ///< publica | amigos | privada
 		bool espectadores = true;
 		int limiteEspectadores = 4;
+		std::string juego = "eFootball PES 2021";
+		std::string parche = "Conmegol";
+		std::string region = "Lima";
 
 		static PhoenixPrefs& get();
 		void cargar();
