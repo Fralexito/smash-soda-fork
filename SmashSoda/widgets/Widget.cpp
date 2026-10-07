@@ -1,4 +1,5 @@
 #include "Widget.h"
+#include "../phoenix/ui/UiDock.h"
 #include <algorithm>
 
 namespace {
@@ -108,19 +109,34 @@ void Widget::startWidget(const char* name, bool& visible, int x, int y, int w, i
     // Set the font
     ImGui::PushFont(AppFonts::title);
 
+    // Phoenix: si el shell reservó un hueco, el panel va fijo ahí
+    ImVec2 dockPos, dockTam;
+    const bool acoplado = phoenix::UiDock::tomar(dockPos, dockTam);
+
     // Set window position and size constraints
-    ImGui::SetNextWindowPos(ImVec2(S(static_cast<float>(x)), S(static_cast<float>(y))), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSizeConstraints(
-        ImVec2(S(static_cast<float>(minW)), S(static_cast<float>(minH))),
-        ImVec2(S(static_cast<float>(w)), S(static_cast<float>(h)))
-    );
+    if (acoplado) {
+        ImGui::SetNextWindowPos(dockPos, ImGuiCond_Always);
+        ImGui::SetNextWindowSize(dockTam, ImGuiCond_Always);
+    }
+    else {
+        ImGui::SetNextWindowPos(ImVec2(S(static_cast<float>(x)), S(static_cast<float>(y))), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSizeConstraints(
+            ImVec2(S(static_cast<float>(minW)), S(static_cast<float>(minH))),
+            ImVec2(S(static_cast<float>(w)), S(static_cast<float>(h)))
+        );
+    }
 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, SV(0.0f, 0.0f));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, S(8.0f));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, S(8.0f));
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0,0,0,0.2f));
 
-    ImGui::Begin(name, &visible, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
+    if (acoplado) {
+        flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize
+            | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoBringToFrontOnFocus;
+    }
+    ImGui::Begin(name, acoplado ? nullptr : &visible, flags);
 
     size = ImGui::GetContentRegionAvail();
     pos = ImGui::GetWindowPos();

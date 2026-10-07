@@ -1,0 +1,241 @@
+﻿#include "I18n.h"
+
+#include <map>
+#include <mutex>
+#include <nlohmann/json.hpp>
+
+#include "../helpers/PathHelper.h"
+
+using json = nlohmann::json;
+
+namespace phoenix {
+
+	namespace {
+
+		using Tabla = std::map<std::string, std::string>;
+
+		// Español = idioma base: toda clave nueva se escribe primero aquí.
+		const Tabla kEs = {
+			{"app.nombre", "Phoenix Soda"},
+			{"estado.vivo", "EN VIVO"},
+			{"estado.cerrada", "SALA CERRADA"},
+			{"estado.invitados", "en sala"},
+			{"nav.sala", "Sala"},
+			{"nav.partido", "Partido"},
+			{"nav.mandos", "Mandos"},
+			{"nav.comunidad", "Comunidad"},
+			{"nav.ajustes", "Ajustes"},
+			{"sub.sala", "Tu sala de un vistazo"},
+			{"sub.partido", "Control y justicia del partido"},
+			{"sub.mandos", "Quién controla qué"},
+			{"sub.comunidad", "Moderación y jugadores"},
+			{"sub.ajustes", "Configura la app a tu gusto"},
+			{"tab.mandos", "Mandos"},
+			{"tab.puppets", "Puppets"},
+			{"tab.hotseat", "Turnos"},
+			{"tab.bloqueo", "Bloqueo de botones"},
+			{"tab.teclado", "Teclado"},
+			{"tab.general", "General"},
+			{"tab.video", "Video"},
+			{"tab.audio", "Audio"},
+			{"tab.streaming", "Transmisión"},
+			{"tab.biblioteca", "Biblioteca"},
+			{"panel.config", "Configuración de la sala"},
+			{"panel.invitados", "Invitados"},
+			{"panel.actividad", "Actividad"},
+			{"partido.titulo", "Próximamente"},
+			{"partido.desc", "Pausas técnicas, detección de inicio y fin, captura del resultado y retraso al host llegan en las próximas fases."},
+			{"barra.idioma", "Idioma"},
+			{"barra.clasica", "Interfaz clásica"},
+			{"barra.volver", "Volver a Phoenix"},
+			{"barra.version", "Versión"},
+			{"barra.sin_host", "Sin cuenta Parsec"},
+		};
+
+		const Tabla kEn = {
+			{"estado.vivo", "LIVE"}, {"estado.cerrada", "ROOM CLOSED"}, {"estado.invitados", "in room"},
+			{"nav.sala", "Room"}, {"nav.partido", "Match"}, {"nav.mandos", "Gamepads"},
+			{"nav.comunidad", "Community"}, {"nav.ajustes", "Settings"},
+			{"sub.sala", "Your room at a glance"}, {"sub.partido", "Match control and fairness"},
+			{"sub.mandos", "Who controls what"}, {"sub.comunidad", "Moderation and players"},
+			{"sub.ajustes", "Make the app yours"},
+			{"tab.mandos", "Gamepads"}, {"tab.puppets", "Puppets"}, {"tab.hotseat", "Hotseat"},
+			{"tab.bloqueo", "Button lock"}, {"tab.teclado", "Keyboard"},
+			{"tab.general", "General"}, {"tab.video", "Video"}, {"tab.audio", "Audio"},
+			{"tab.streaming", "Streaming"}, {"tab.biblioteca", "Library"},
+			{"panel.config", "Room settings"}, {"panel.invitados", "Guests"}, {"panel.actividad", "Activity"},
+			{"partido.titulo", "Coming soon"},
+			{"partido.desc", "Technical pauses, match start/end detection, result capture and host delay arrive in the next phases."},
+			{"barra.idioma", "Language"}, {"barra.clasica", "Classic interface"},
+			{"barra.volver", "Back to Phoenix"}, {"barra.version", "Version"}, {"barra.sin_host", "No Parsec account"},
+		};
+
+		const Tabla kPt = {
+			{"estado.vivo", "AO VIVO"}, {"estado.cerrada", "SALA FECHADA"}, {"estado.invitados", "na sala"},
+			{"nav.sala", "Sala"}, {"nav.partido", "Partida"}, {"nav.mandos", "Controles"},
+			{"nav.comunidad", "Comunidade"}, {"nav.ajustes", "Ajustes"},
+			{"sub.sala", "Sua sala num relance"}, {"sub.partido", "Controle e justiça da partida"},
+			{"sub.mandos", "Quem controla o quê"}, {"sub.comunidad", "Moderação e jogadores"},
+			{"sub.ajustes", "Configure o app do seu jeito"},
+			{"tab.mandos", "Controles"}, {"tab.puppets", "Puppets"}, {"tab.hotseat", "Turnos"},
+			{"tab.bloqueo", "Bloqueio de botões"}, {"tab.teclado", "Teclado"},
+			{"tab.general", "Geral"}, {"tab.video", "Vídeo"}, {"tab.audio", "Áudio"},
+			{"tab.streaming", "Transmissão"}, {"tab.biblioteca", "Biblioteca"},
+			{"panel.config", "Configuração da sala"}, {"panel.invitados", "Convidados"}, {"panel.actividad", "Atividade"},
+			{"partido.titulo", "Em breve"},
+			{"partido.desc", "Pausas técnicas, detecção de início e fim, captura do resultado e atraso do host chegam nas próximas fases."},
+			{"barra.idioma", "Idioma"}, {"barra.clasica", "Interface clássica"},
+			{"barra.volver", "Voltar ao Phoenix"}, {"barra.version", "Versão"}, {"barra.sin_host", "Sem conta Parsec"},
+		};
+
+		const Tabla kFr = {
+			{"estado.vivo", "EN DIRECT"}, {"estado.cerrada", "SALLE FERMÉE"}, {"estado.invitados", "dans la salle"},
+			{"nav.sala", "Salle"}, {"nav.partido", "Match"}, {"nav.mandos", "Manettes"},
+			{"nav.comunidad", "Communauté"}, {"nav.ajustes", "Réglages"},
+			{"sub.sala", "Votre salle en un coup d'oeil"}, {"sub.partido", "Contrôle et équité du match"},
+			{"sub.mandos", "Qui contrôle quoi"}, {"sub.comunidad", "Modération et joueurs"},
+			{"sub.ajustes", "Personnalisez l'application"},
+			{"tab.mandos", "Manettes"}, {"tab.puppets", "Puppets"}, {"tab.hotseat", "Tours"},
+			{"tab.bloqueo", "Verrouillage"}, {"tab.teclado", "Clavier"},
+			{"tab.general", "Général"}, {"tab.video", "Vidéo"}, {"tab.audio", "Audio"},
+			{"tab.streaming", "Diffusion"}, {"tab.biblioteca", "Bibliothèque"},
+			{"panel.config", "Réglages de la salle"}, {"panel.invitados", "Invités"}, {"panel.actividad", "Activité"},
+			{"partido.titulo", "Bientôt"},
+			{"partido.desc", "Pauses techniques, détection de début et de fin, capture du résultat et délai de l'hôte arrivent dans les prochaines phases."},
+			{"barra.idioma", "Langue"}, {"barra.clasica", "Interface classique"},
+			{"barra.volver", "Retour à Phoenix"}, {"barra.version", "Version"}, {"barra.sin_host", "Aucun compte Parsec"},
+		};
+
+		const Tabla kIt = {
+			{"estado.vivo", "IN DIRETTA"}, {"estado.cerrada", "STANZA CHIUSA"}, {"estado.invitados", "in stanza"},
+			{"nav.sala", "Stanza"}, {"nav.partido", "Partita"}, {"nav.mandos", "Controller"},
+			{"nav.comunidad", "Comunità"}, {"nav.ajustes", "Impostazioni"},
+			{"sub.sala", "La tua stanza a colpo d'occhio"}, {"sub.partido", "Controllo e correttezza della partita"},
+			{"sub.mandos", "Chi controlla cosa"}, {"sub.comunidad", "Moderazione e giocatori"},
+			{"sub.ajustes", "Configura l'app a modo tuo"},
+			{"tab.mandos", "Controller"}, {"tab.puppets", "Puppets"}, {"tab.hotseat", "Turni"},
+			{"tab.bloqueo", "Blocco pulsanti"}, {"tab.teclado", "Tastiera"},
+			{"tab.general", "Generale"}, {"tab.video", "Video"}, {"tab.audio", "Audio"},
+			{"tab.streaming", "Trasmissione"}, {"tab.biblioteca", "Libreria"},
+			{"panel.config", "Impostazioni stanza"}, {"panel.invitados", "Ospiti"}, {"panel.actividad", "Attività"},
+			{"partido.titulo", "In arrivo"},
+			{"partido.desc", "Pause tecniche, rilevamento di inizio e fine, cattura del risultato e ritardo dell'host arrivano nelle prossime fasi."},
+			{"barra.idioma", "Lingua"}, {"barra.clasica", "Interfaccia classica"},
+			{"barra.volver", "Torna a Phoenix"}, {"barra.version", "Versione"}, {"barra.sin_host", "Nessun account Parsec"},
+		};
+
+		const Tabla kDe = {
+			{"estado.vivo", "LIVE"}, {"estado.cerrada", "RAUM GESCHLOSSEN"}, {"estado.invitados", "im Raum"},
+			{"nav.sala", "Raum"}, {"nav.partido", "Spiel"}, {"nav.mandos", "Controller"},
+			{"nav.comunidad", "Community"}, {"nav.ajustes", "Einstellungen"},
+			{"sub.sala", "Dein Raum auf einen Blick"}, {"sub.partido", "Spielkontrolle und Fairness"},
+			{"sub.mandos", "Wer steuert was"}, {"sub.comunidad", "Moderation und Spieler"},
+			{"sub.ajustes", "Passe die App an"},
+			{"tab.mandos", "Controller"}, {"tab.puppets", "Puppets"}, {"tab.hotseat", "Hotseat"},
+			{"tab.bloqueo", "Tastensperre"}, {"tab.teclado", "Tastatur"},
+			{"tab.general", "Allgemein"}, {"tab.video", "Video"}, {"tab.audio", "Audio"},
+			{"tab.streaming", "Streaming"}, {"tab.biblioteca", "Bibliothek"},
+			{"panel.config", "Raumeinstellungen"}, {"panel.invitados", "Gäste"}, {"panel.actividad", "Aktivität"},
+			{"partido.titulo", "Demnächst"},
+			{"partido.desc", "Technische Pausen, Erkennung von Spielbeginn und -ende, Ergebniserfassung und Host-Verzögerung folgen in den nächsten Phasen."},
+			{"barra.idioma", "Sprache"}, {"barra.clasica", "Klassische Oberfläche"},
+			{"barra.volver", "Zurück zu Phoenix"}, {"barra.version", "Version"}, {"barra.sin_host", "Kein Parsec-Konto"},
+		};
+
+		struct Estado {
+			std::mutex mutex;
+			std::string codigo = "es";
+			std::map<std::string, Tabla> tablas;
+			std::map<std::string, std::string> nombres;
+			bool cargado = false;
+		};
+
+		Estado& estado() {
+			static Estado e;
+			return e;
+		}
+
+		// Llamar con el mutex tomado.
+		void cargarSiHaceFalta(Estado& e) {
+			if (e.cargado) return;
+			e.cargado = true;
+
+			e.tablas["es"] = kEs;
+			e.tablas["en"] = kEn;
+			e.tablas["pt"] = kPt;
+			e.tablas["fr"] = kFr;
+			e.tablas["it"] = kIt;
+			e.tablas["de"] = kDe;
+			e.nombres = {
+				{"es", "Español"}, {"en", "English"}, {"pt", "Português"},
+				{"fr", "Français"}, {"it", "Italiano"}, {"de", "Deutsch"},
+			};
+
+			// Idiomas extra / correcciones desde archivos (nunca rompe la app).
+			try {
+				const std::string carpeta = PathHelper::GetConfigPath() + "idiomas\\";
+				for (const std::string& archivo : PathHelper::GetFilenames(carpeta, true)) {
+					if (archivo.size() < 6 || archivo.substr(archivo.size() - 5) != ".json") continue;
+					const std::string codigo = archivo.substr(0, archivo.size() - 5);
+					size_t tam = 0;
+					void* datos = MTY_ReadFile((carpeta + archivo).c_str(), &tam);
+					if (datos == nullptr) continue;
+					const std::string texto(static_cast<const char*>(datos), tam);
+					MTY_Free(datos);
+
+					const json j = json::parse(texto, nullptr, false);
+					if (j.is_discarded() || !j.is_object()) continue;
+					Tabla& destino = e.tablas[codigo];
+					for (auto it = j.begin(); it != j.end(); ++it) {
+						if (it.key() == "_nombre" && it->is_string()) e.nombres[codigo] = it->get<std::string>();
+						else if (it->is_string()) destino[it.key()] = it->get<std::string>();
+					}
+					if (!e.nombres.count(codigo)) e.nombres[codigo] = codigo;
+				}
+			}
+			catch (...) {
+				// Archivos de idioma defectuosos se ignoran.
+			}
+		}
+	}
+
+	const char* T(const char* clave) {
+		Estado& e = estado();
+		std::lock_guard<std::mutex> lock(e.mutex);
+		cargarSiHaceFalta(e);
+
+		auto buscar = [&](const std::string& codigo) -> const char* {
+			auto t = e.tablas.find(codigo);
+			if (t == e.tablas.end()) return nullptr;
+			auto it = t->second.find(clave);
+			return it == t->second.end() ? nullptr : it->second.c_str();
+		};
+
+		if (const char* s = buscar(e.codigo)) return s;
+		if (const char* s = buscar("es")) return s;
+		return clave;
+	}
+
+	void I18n::establecer(const std::string& codigo) {
+		Estado& e = estado();
+		std::lock_guard<std::mutex> lock(e.mutex);
+		cargarSiHaceFalta(e);
+		e.codigo = e.tablas.count(codigo) ? codigo : "es";
+	}
+
+	const std::string& I18n::actual() {
+		Estado& e = estado();
+		std::lock_guard<std::mutex> lock(e.mutex);
+		return e.codigo;
+	}
+
+	std::vector<std::pair<std::string, std::string>> I18n::disponibles() {
+		Estado& e = estado();
+		std::lock_guard<std::mutex> lock(e.mutex);
+		cargarSiHaceFalta(e);
+		std::vector<std::pair<std::string, std::string>> lista;
+		for (const auto& par : e.nombres) lista.push_back(par);
+		return lista;
+	}
+
+}

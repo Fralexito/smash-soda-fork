@@ -25,6 +25,9 @@
 #include "Globals/AppColors.h"
 #include "Widgets/LoginWidget.h"
 #include "phoenix/PhoenixBuild.h"
+#include "phoenix/PhoenixPrefs.h"
+#include "phoenix/I18n.h"
+#include "phoenix/ui/Shell.h"
 #include "Widgets/NavBar.h"
 #include "Widgets/HostInfoWidget.h"
 #include "Widgets/HostSettingsWidget.h"
@@ -291,6 +294,28 @@ int CALLBACK WinMain(_In_ HINSTANCE hInstance, _In_ HINSTANCE hPrevInstance, _In
         }
     });
 
+    // =====================================================================
+    //  Phoenix: interfaz principal (reversible a la clásica)
+    // =====================================================================
+    phoenix::PhoenixPrefs::get().cargar();
+    phoenix::I18n::establecer(phoenix::PhoenixPrefs::get().idioma);
+
+    phoenix::Paneles panelesPhoenix;
+    panelesPhoenix.configSala = [&]() { bool v = true; hostSettingsWindow.render(v, hwnd); };
+    panelesPhoenix.chat       = [&]() { bool v = true; chatWindow.render(v); };
+    panelesPhoenix.actividad  = [&]() { bool v = true; logWindow.render(v); };
+    panelesPhoenix.invitados  = [&]() { bool v = true; guestsWindow.render(v); };
+    panelesPhoenix.mandos     = [&]() { bool v = true; gamepadsWindow.render(v); };
+    panelesPhoenix.puppets    = [&]() { bool v = true; masterOfPuppets.render(v); };
+    panelesPhoenix.hotseat    = [&]() { bool v = true; hotseatWidget.render(v); };
+    panelesPhoenix.bloqueo    = [&]() { bool v = true; buttonLockWidget.render(v); };
+    panelesPhoenix.teclado    = [&]() { bool v = true; keyMapWidget.render(v); };
+    panelesPhoenix.general    = [&]() { bool v = true; settingsWidget.render(v); };
+    panelesPhoenix.video      = [&]() { bool v = true; videoWidget.render(v); };
+    panelesPhoenix.audio      = [&]() { bool v = true; audioSettingswidget.render(v); };
+    panelesPhoenix.streaming  = [&]() { bool v = true; streamingWidget.render(v); };
+    panelesPhoenix.biblioteca = [&]() { bool v = true; libraryWidget.render(v); };
+
     //ITaskbarList3* m_pTaskBarlist;
     //CoCreateInstance(
     //    CLSID_TaskbarList, NULL, CLSCTX_ALL,
@@ -393,7 +418,7 @@ int CALLBACK WinMain(_In_ HINSTANCE hInstance, _In_ HINSTANCE hPrevInstance, _In
         // =====================================================================
         ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
 
-        versionWidget.render();
+        if (!phoenix::PhoenixPrefs::get().interfazPhoenix) versionWidget.render();
         
         if (Cache::cache.showParsecLogin) {
             loginWindow.render(Cache::cache.showParsecLogin);
@@ -405,6 +430,11 @@ int CALLBACK WinMain(_In_ HINSTANCE hInstance, _In_ HINSTANCE hPrevInstance, _In
         }
         else if (Config::cfg.arcade.showLogin) {
             versionWidget.renderLoginWindow();
+        }
+        else if (phoenix::PhoenixPrefs::get().interfazPhoenix)
+        {
+            backgroundWidget.render();
+            phoenix::Shell::render(panelesPhoenix);
         }
         else
         {
@@ -444,6 +474,8 @@ int CALLBACK WinMain(_In_ HINSTANCE hInstance, _In_ HINSTANCE hPrevInstance, _In
             hostInfoWidget.render();
 
             backgroundWidget.render();
+
+            phoenix::Shell::renderBotonVolver();
 
             bool widgetsChanged = false;
             widgetsChanged |= syncWidgetVisibility(showHostSettings, Config::cfg.widgets.host);

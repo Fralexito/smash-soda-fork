@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 // =============================================================================
 //  Phoenix Soda · Identidad de la build
