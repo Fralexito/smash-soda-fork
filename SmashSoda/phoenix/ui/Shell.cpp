@@ -13,6 +13,7 @@
 #include "../PhoenixPrefs.h"
 #include "PantallaSala.h"
 #include "TableroMandos.h"
+#include "TecladoVisual.h"
 #include "PantallaGente.h"
 #include "PantallaAjustes.h"
 #include "PantallaBiblioteca.h"
@@ -456,6 +457,22 @@ namespace phoenix {
 				ImGui::Begin("##phx_mandos", nullptr,
 					ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings);
 				try { TableroMandos::render(*gProveedor, ImGui::GetContentRegionAvail().x, false); } catch (...) {}
+				ImGui::End();
+				ImGui::PopStyleColor();
+				ImGui::PopStyleVar(3);
+			}
+			else if (t == 2 && PhoenixPrefs::get().interfazPhoenix) {
+				// Teclado visual en Phoenix
+				const float alfa = 0.25f + 0.75f * progresoTransicion();
+				ImGui::SetNextWindowPos(posPanel, ImGuiCond_Always);
+				ImGui::SetNextWindowSize(tamPanel, ImGuiCond_Always);
+				ImGui::PushStyleVar(ImGuiStyleVar_Alpha, alfa);
+				ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(22 * s, 20 * s));
+				ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 12.0f * s);
+				ImGui::PushStyleColor(ImGuiCol_WindowBg, tema->panelBackground);
+				ImGui::Begin("##phx_teclado", nullptr,
+					ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings);
+				try { TecladoVisual::render(Config::cfg.keyboard, ImGui::GetCursorScreenPos(), ImGui::GetContentRegionAvail(), nullptr); } catch (...) {}
 				ImGui::End();
 				ImGui::PopStyleColor();
 				ImGui::PopStyleVar(3);
