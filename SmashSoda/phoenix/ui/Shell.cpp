@@ -56,7 +56,7 @@ namespace phoenix {
 
 		float acercar(float actual, float objetivo, float velocidad) {
 			const float dt = ImGui::GetIO().DeltaTime;
-			const float k = std::min(1.0f, dt * velocidad);
+			const float k = (std::min)(1.0f, dt * velocidad);
 			return actual + (objetivo - actual) * k;
 		}
 
@@ -245,7 +245,7 @@ namespace phoenix {
 				}
 				const char* texto = T(items[i].clave);
 				const ImVec2 tamTexto = ImGui::CalcTextSize(texto);
-				const float escalaTexto = std::min(1.0f, (tam.x - 8.0f * s) / std::max(1.0f, tamTexto.x));
+				const float escalaTexto = (std::min)(1.0f, (tam.x - 8.0f * s) / (std::max)(1.0f, tamTexto.x));
 				dl->AddText(ImGui::GetFont(), ImGui::GetFontSize() * escalaTexto,
 					ImVec2(p0.x + (tam.x - tamTexto.x * escalaTexto) * 0.5f, p0.y + 46.0f * s),
 					col(colorItem), texto);
@@ -305,7 +305,7 @@ namespace phoenix {
 
 			// Pestañas tipo píldora a la derecha del título, con subrayado que se desliza
 			ImGui::PushFont(AppFonts::label);
-			float x = pos.x + std::max(anchoTitulo, 260.0f * s) + 40.0f * s;
+			float x = pos.x + (std::max)(anchoTitulo, 260.0f * s) + 40.0f * s;
 			const float altoPestana = 36.0f * s;
 			const float yPestana = pos.y + 12.0f * s;
 			float objetivoX = x, objetivoW = 0.0f;
@@ -398,7 +398,7 @@ namespace phoenix {
 			ImGui::PopFont();
 
 			ImGui::PushFont(AppFonts::input);
-			const float anchoTexto = std::min(tam.x - 80.0f * s, 520.0f * s);
+			const float anchoTexto = (std::min)(tam.x - 80.0f * s, 520.0f * s);
 			ImGui::SetCursorScreenPos(ImVec2(c.x - anchoTexto * 0.5f, c.y + 128.0f * s));
 			ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + anchoTexto);
 			ImGui::PushStyleColor(ImGuiCol_Text, tema->textMuted);
@@ -433,7 +433,7 @@ namespace phoenix {
 		const float anchoMenu = kAnchoMenu * s;
 		const float altoEstado = kAltoEstado * s;
 		const float sep = kSeparacion * s;
-		const float anchoChat = std::min(kAnchoChat * s, v.x * 0.30f);
+		const float anchoChat = (std::min)(kAnchoChat * s, v.x * 0.30f);
 
 		// Zonas fijas
 		barraSuperior(o, ImVec2(v.x, altoBarra), tema, s);
