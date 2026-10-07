@@ -173,7 +173,7 @@ void Widget::startTabs(const std::vector<Tab>& tabs, bool footer) {
     drawList->AddRectFilled(
         pos,
         ImVec2(pos.x + size.x, pos.y + tabsHeaderHeight),
-        ImGui::ColorConvertFloat4ToU32(theme->tabsBackground),
+        ImGui::ColorConvertFloat4ToU32(estaAcoplado ? theme->panelBackground : theme->tabsBackground),
         S(10.0f),
         ImDrawFlags_RoundCornersBottom
     );
@@ -188,21 +188,33 @@ void Widget::startTabs(const std::vector<Tab>& tabs, bool footer) {
 
     for (int i = 0; i < tabs.size(); i++) {
 
+        // Phoenix: pestañas tipo texto con subrayado cuando el panel está acoplado
+        if (estaAcoplado) {
+            ImGui::PushStyleColor(ImGuiCol_Tab, ImVec4(0, 0, 0, 0));
+            ImGui::PushStyleColor(ImGuiCol_TabHovered, ImVec4(theme->textMuted.x, theme->textMuted.y, theme->textMuted.z, 0.10f));
+            ImGui::PushStyleColor(ImGuiCol_TabActive, ImVec4(theme->secondary.x, theme->secondary.y, theme->secondary.z, 0.16f));
+        }
+
         if (activeTab == i) {
             ImGui::PushStyleColor(ImGuiCol_Button, theme->buttonPrimary);
             ImGui::PushStyleColor(ImGuiCol_ButtonHovered, theme->buttonPrimaryHovered);
             ImGui::PushStyleColor(ImGuiCol_ButtonActive, theme->buttonPrimaryActive);
-            ImGui::PushStyleColor(ImGuiCol_Text, theme->buttonPrimaryText);
+            ImGui::PushStyleColor(ImGuiCol_Text, estaAcoplado ? theme->primary : theme->buttonPrimaryText);
         } else {
             ImGui::PushStyleColor(ImGuiCol_Button, theme->buttonSecondary);
             ImGui::PushStyleColor(ImGuiCol_ButtonHovered, theme->buttonSecondaryHovered);
             ImGui::PushStyleColor(ImGuiCol_ButtonActive, theme->buttonSecondaryActive);
-            ImGui::PushStyleColor(ImGuiCol_Text, theme->buttonSecondaryText);
+            ImGui::PushStyleColor(ImGuiCol_Text, estaAcoplado ? theme->textMuted : theme->buttonSecondaryText);
         }
 
         const std::string nombrePestana = phoenix::Tr(tabs[i].name);
         if (ImGui::BeginTabItem(nombrePestana.c_str())) {
             activeTab = i;
+            if (estaAcoplado) {
+                const ImVec2 a = ImGui::GetItemRectMin(), b = ImGui::GetItemRectMax();
+                drawList->AddRectFilled(ImVec2(a.x + S(8.0f), b.y - S(3.0f)), ImVec2(b.x - S(8.0f), b.y),
+                    ImGui::ColorConvertFloat4ToU32(theme->primary), S(2.0f));
+            }
             const float seamOffset = ImGui::GetStyle().ItemSpacing.y;
             ImGui::SetCursorPosY(ImGui::GetCursorPosY() - seamOffset);
             const ImVec2 contentStart = ImGui::GetCursorScreenPos();
@@ -215,7 +227,7 @@ void Widget::startTabs(const std::vector<Tab>& tabs, bool footer) {
             tabs[i].render();
             ImGui::EndTabItem();
         }
-        ImGui::PopStyleColor(4);
+        ImGui::PopStyleColor(estaAcoplado ? 7 : 4);
 
     }
 }

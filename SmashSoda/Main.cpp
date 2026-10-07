@@ -363,6 +363,7 @@ int CALLBACK WinMain(_In_ HINSTANCE hInstance, _In_ HINSTANCE hPrevInstance, _In
     // =====================================================================
     if (!phoenix::kSodaArcadeHabilitado) {
         Config::cfg.arcade.showLogin = false;
+        Config::cfg.room.privateRoom = true; // la visibilidad la maneja Phoenix
     }
     else if (Arcade::instance.loadCredentials()) {
         Arcade::instance.checkToken(Arcade::instance.credentials.token);

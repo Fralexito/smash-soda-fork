@@ -1,4 +1,5 @@
 #include "HostSettingsWidget.h"
+#include "../phoenix/PhoenixBuild.h"
 #include "../ImGui/imform.h"
 #include "../services/OverlayService.h"
 
@@ -184,6 +185,8 @@ bool HostSettingsWidget::render(bool& showWindow, HWND& hwnd) {
         }
     }
 
+    // Phoenix: Soda Arcade apagado → sin sala pública/privada de Arcade, Stream URL, detalles ni artwork
+    if (phoenix::kSodaArcadeHabilitado) {
     // Private room
     if (elCheckbox("Private Room", Config::cfg.room.privateRoom, "Whether to post your room on Soda Arcade.")) {
         // If public game is false, check we have authenticated with Soda Arcade
@@ -280,6 +283,8 @@ bool HostSettingsWidget::render(bool& showWindow, HWND& hwnd) {
     }
 
     // Hotseat
+    }
+
     elCheckbox("Hotseat", Config::cfg.hotseat.enabled, "Allow guests to take turns playing.");
 
     // Kiosk mode
