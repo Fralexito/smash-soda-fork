@@ -54,7 +54,7 @@ namespace phoenix {
 		const ImVec2 m0 = origen;
 		const ImVec2 m1 = ImVec2(origen.x + tamanio_escalado.x, origen.y + tamanio_escalado.y);
 		dl->AddRectFilled(m0, m1, ImGui::ColorConvertFloat4ToU32(tema->listItemBackground), 16.0f * escala);
-		dl->AddRect(m0, m1, ImGui::ColorConvertFloat4ToU32(tema->primary), 12.0f * escala, 0, 1.0f * escala);
+		dl->AddRect(m0, m1, ImGui::ColorConvertFloat4ToU32(tema->primary), 16.0f * escala, 0, 2.0f * escala);
 
 		const auto bs = tv::botones();
 		for (const auto& b : bs) {
