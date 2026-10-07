@@ -33,6 +33,7 @@ namespace phoenix {
 		std::function<void()> audio;
 		std::function<void()> streaming;
 		std::function<void()> biblioteca;   // Library
+		std::function<void()> avanzado;     // Advanced
 	};
 
 	class ProveedorSala;
