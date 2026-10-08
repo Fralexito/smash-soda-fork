@@ -19,6 +19,7 @@
 #include "../core/Emparejamiento.h"
 #include "../core/Integridad.h"
 #include "../core/LigaMaster.h"
+#include "../core/Alineacion.h"
 #include "../core/Firma.h"
 #include "../core/Sincronizacion.h"
 #include <nlohmann/json.hpp>
@@ -360,13 +361,13 @@ int main() {
 			CHECK(g.valor->moverUsuarioAIA(5, 7, 5003, 0, 5003).error.codigo == "SUSTITUTO_INVALIDO");
 			CHECK(g.valor->datos() == antes);
 			// Venta real: idx 3 (pid 5003, posición 22 → reserva, pero tiene rol) con sustituto idx 20 (pid 5020, posición 5).
-			auto r = g.valor->moverUsuarioAIA(5, 7, 5003, 3, 5020);   // dorsal 3 está ocupado en el destino → el más alto libre (99)
+			auto r = g.valor->moverUsuarioAIA(5, 7, 5003, 3, 5020);   // el 3 está ocupado en el destino → el suyo de origen (13), como hace el juego
 			CHECK(r.ok());
 			if (r.ok()) {
-				CHECK(*r.valor == 99);
+				CHECK(*r.valor == 13);
 				auto u = g.valor->equipo(5), ia = g.valor->equipo(7);
 				CHECK(u.valor->plantilla.size() == 25 && ia.valor->plantilla.size() == 4);
-				CHECK(ia.valor->plantilla.back().pid == 5003 && ia.valor->plantilla.back().reg == 1003 && ia.valor->plantilla.back().dorsal == 99);
+				CHECK(ia.valor->plantilla.back().pid == 5003 && ia.valor->plantilla.back().reg == 1003 && ia.valor->plantilla.back().dorsal == 13);
 				CHECK(u.valor->plantilla[3].pid == 5004 && u.valor->plantilla[3].dorsal == 14);
 				// Tablas, como lo hace el juego (§12): A B C D E F J M → el registro 3 queda VACÍO en su sitio (el 4 no se mueve);
 				// G H (108) e I (48) → se compacta (el 4 ocupa el sitio del 3 con su contenido entero); A2 → no se toca.
@@ -498,6 +499,17 @@ int main() {
 			}
 			CHECK(leerOrden(g.valor->datos(), 7) == compacto({ 2, 0, 1, 3, 4 }, { 0, 0, 1, 0, 0, 2 }));
 		}
+	}
+
+	std::printf("Dorsal del que llega (como el juego)\n");
+	{
+		using mercado::alineacion::elegirDorsal;
+		CHECK(elegirDorsal({ 1, 1, 12 }, { 1, 3, 4 }) == 12);    // Sommer: el 1 ocupado (pedido y de origen) → el de su selección
+		CHECK(elegirDorsal({ 0, 9 }, { 1, 2 }) == 9);            // sin pedido: el de su club de origen
+		CHECK(elegirDorsal({ 13 }, { 13 }) == 99);               // todos ocupados → el más alto libre
+		CHECK(elegirDorsal({ 0 }, { 99, 98 }) == 97);
+		std::vector<uint16_t> todos; for (uint16_t i = 1; i <= 99; i++) todos.push_back(i);
+		CHECK(elegirDorsal({ 5 }, todos) == 0);
 	}
 
 	std::printf("Firma Ed25519 y sobres de la web\n");

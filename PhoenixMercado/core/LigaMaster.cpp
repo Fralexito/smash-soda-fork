@@ -265,6 +265,19 @@ namespace mercado::lm {
 		return out;
 	}
 
+	namespace {
+		/// Candidatos de dorsal: el pedido, el que tiene en su club de origen y el de sus otros equipos (selección), en ese orden.
+		std::vector<uint16_t> candidatosDorsal(const Datos& d, uint16_t pedido, uint16_t enOrigen, uint32_t pid, int origen, int destino) {
+			std::vector<uint16_t> c = { pedido, enOrigen };
+			for (int k = 0; k < kNumEquipos; k++) {
+				if (k == origen || k == destino) continue;
+				for (const auto& p : leerPlantilla(d, k)) if (p.pid == pid && p.dorsal) c.push_back(p.dorsal);
+			}
+			return c;
+		}
+		std::vector<uint16_t> dorsalesDe(const std::vector<Plaza>& pl) { std::vector<uint16_t> v; for (const auto& p : pl) v.push_back(p.dorsal); return v; }
+	}
+
 	Resultado<uint16_t> GuardadoLM::moverEntreIA(int origen, int destino, uint32_t pid, uint16_t dorsal, uint32_t pidSustituto) {
 		using R = Resultado<uint16_t>;
 		try {
@@ -298,14 +311,8 @@ namespace mercado::lm {
 			if (idxS < 0 && necesitaSustituto(ao.valor->orden, ao.valor->roles, idx))
 				return R::mal("FALTA_SUSTITUTO", "Es titular o tiene un rol en su equipo: hace falta un sustituto");
 
-			auto libre = [&](uint16_t d) {
-				return d >= 1 && d <= 99 && std::none_of(pd.begin(), pd.end(), [&](const Plaza& p) { return p.dorsal == d; });
-			};
-			if (!libre(dorsal)) {
-				dorsal = 99;
-				while (dorsal > 1 && !libre(dorsal)) dorsal--;
-				if (!libre(dorsal)) return R::mal("SIN_DORSAL", "No queda ningún dorsal libre en el destino");
-			}
+			dorsal = alineacion::elegirDorsal(candidatosDorsal(_datos, dorsal, po[size_t(idx)].dorsal, pid, origen, destino), dorsalesDe(pd));
+			if (!dorsal) return R::mal("SIN_DORSAL", "No queda ningún dorsal libre en el destino");
 
 			// --- Todo cuadra: se trabaja sobre una copia y solo al final se adopta (todo o nada) ---------
 			AliIA nuevaO = *ao.valor, nuevaD = *ad.valor;
@@ -716,12 +723,8 @@ namespace mercado::lm {
 			if (idxS < 0 && std::any_of(a.roles.begin(), a.roles.end(), [&](uint8_t v) { return v == idx; }))
 				return R::mal("FALTA_SUSTITUTO", "El jugador tiene un rol (capitán o lanzador): hace falta un sustituto");
 
-			auto libre = [&](uint16_t x) { return x >= 1 && x <= 99 && std::none_of(pd.begin(), pd.end(), [&](const Plaza& p) { return p.dorsal == x; }); };
-			if (!libre(dorsal)) {
-				dorsal = 99;
-				while (dorsal > 1 && !libre(dorsal)) dorsal--;
-				if (!libre(dorsal)) return R::mal("SIN_DORSAL", "No queda ningún dorsal libre en el destino");
-			}
+			dorsal = alineacion::elegirDorsal(candidatosDorsal(_datos, dorsal, pu[size_t(idx)].dorsal, pid, kUsuario, kDestino), dorsalesDe(pd));
+			if (!dorsal) return R::mal("SIN_DORSAL", "No queda ningún dorsal libre en el destino");
 
 			// --- Todo cuadra: se trabaja sobre una copia y solo al final se adopta ----------------
 			Datos d = _datos;

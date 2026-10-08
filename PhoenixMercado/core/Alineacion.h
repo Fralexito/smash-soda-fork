@@ -123,6 +123,16 @@ namespace mercado::alineacion {
 
 	inline void escribirRoles(uint8_t* p, const Roles& roles) { for (size_t i = 0; i < kBytesRoles; i++) p[i] = roles[i]; }
 
+	/// Dorsal para el que llega, como lo hace el juego (Sommer: el 1 del Inter estaba ocupado en el City → recibió el 12, el de
+	/// su selección): se prueba en orden cada candidato (el pedido, el de su club de origen, el de su selección…) y el primero
+	/// libre gana; si ninguno lo está, el más alto libre (99 hacia abajo). 0 = no queda ninguno libre.
+	inline uint16_t elegirDorsal(const std::vector<uint16_t>& candidatos, const std::vector<uint16_t>& ocupados) {
+		auto libre = [&](uint16_t d) { return d >= 1 && d <= 99 && std::find(ocupados.begin(), ocupados.end(), d) == ocupados.end(); };
+		for (uint16_t c : candidatos) if (libre(c)) return c;
+		for (uint16_t d = 99; d >= 1; d--) if (libre(d)) return d;
+		return 0;
+	}
+
 	/// ¿La cola del orden (desde n) es identidad (n, n+1, …)? (Para conservar el formato que ya tenía.)
 	inline bool colaEsIdentidad(const uint8_t* p, size_t n) {
 		if (n >= kBytesOrden) return false;

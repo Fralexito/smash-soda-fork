@@ -237,9 +237,13 @@ namespace mercado {
 			aliDestino = *a.valor;
 			aliDestino.orden.push_back(uint8_t(pdAntes.size()));   // el que llega es la última reserva
 		}
-		if (dorsal == 0) {
-			dorsal = 99;
-			while (dorsal > 1 && std::any_of(pdAntes.begin(), pdAntes.end(), [&](const PlazaPlantilla& p) { return p.dorsal == dorsal; })) dorsal--;
+		{   // Como el juego: el pedido, el de su club de origen, el de sus otros equipos (selección); si no, el más alto libre.
+			std::vector<uint16_t> cand = { dorsal };
+			if (origen) cand.push_back(_plantillas.at(origen)[size_t(salida.idx)].dorsal);
+			for (const auto& [eq, pl] : _plantillas) if (eq != origen && eq != destino) for (const auto& p : pl) if (p.jugador == jugador) cand.push_back(p.dorsal);
+			std::vector<uint16_t> ocupados; for (const auto& p : pdAntes) ocupados.push_back(p.dorsal);
+			dorsal = alineacion::elegirDorsal(cand, ocupados);
+			if (!dorsal) return R::mal("SIN_DORSAL", "No queda ningún dorsal libre en el destino");
 		}
 		// --- Todo cuadra: se aplica ---------------------------------------------
 		if (origen) {
