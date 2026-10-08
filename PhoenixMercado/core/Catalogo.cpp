@@ -1,6 +1,7 @@
 #include "Catalogo.h"
 
 #include <nlohmann/json.hpp>
+#include <tuple>
 
 using json = nlohmann::json;
 
@@ -65,13 +66,40 @@ namespace mercado {
 
 namespace mercado {
 
+	namespace {
+		// Reglas de la web (CHECK de lm_jugadores / lm_clubes). Un dato fuera de rango
+		// se QUITA (la web conserva el que tenía); un jugador sin nombre no se envía.
+		bool enRango(const json& j, const char* k, int lo, int hi) {
+			return !j.contains(k) || (j[k].is_number_integer() && j[k].get<int>() >= lo && j[k].get<int>() <= hi);
+		}
+		json limpiarJugador(json j) {
+			if (!j.contains("nombre") || !j["nombre"].is_string() || j["nombre"].get<std::string>().empty()) return nullptr;
+			std::string n = j["nombre"]; if (n.size() > 80) j["nombre"] = n.substr(0, 80);
+			for (const auto& [k, lo, hi] : std::initializer_list<std::tuple<const char*, int, int>>{ {"dorsal", 1, 99}, {"edad", 10, 60}, {"altura", 120, 230}, {"peso", 30, 150}, {"media", 1, 99} })
+				if (!enRango(j, k, lo, hi)) j.erase(k);
+			if (j.contains("fuente") && j["fuente"] != "option" && j["fuente"] != "parche") j.erase("fuente");
+			if (j.contains("habilidades") && j["habilidades"].dump().size() > 3500) j.erase("habilidades");
+			if (j.contains("otros_equipos") && j["otros_equipos"].dump().size() > 1800) j.erase("otros_equipos");
+			if (j.contains("nacionalidad") && !j["nacionalidad"].is_string()) j["nacionalidad"] = j["nacionalidad"].dump();
+			return j;
+		}
+	}
+
 	std::vector<std::string> lotesCatalogo(const std::string& catalogoJson, size_t porLote) {
 		const json c = json::parse(catalogoJson);
-		const json& jug = c.at("jugadores");
+		json jug = json::array();
+		for (const auto& j : c.at("jugadores")) { json l = limpiarJugador(j); if (!l.is_null()) jug.push_back(l); }
+		json equipos = json::array();
+		for (auto e : c.at("equipos")) {
+			std::string n = e.value("nombre", "");
+			if (n.size() < 2) n = "Equipo #" + std::to_string(e.value("pes_team_id", 0));
+			e["nombre"] = n.substr(0, 60);
+			equipos.push_back(e);
+		}
 		std::vector<std::string> lotes;
 		for (size_t i = 0; i == 0 || i < jug.size(); i += porLote) {
 			json lote = { {"formato", c.value("formato", "")}, {"parche", c.value("parche", "")},
-				{"equipos", i == 0 ? c.at("equipos") : json::array()}, {"jugadores", json::array()} };
+				{"equipos", i == 0 ? equipos : json::array()}, {"jugadores", json::array()} };
 			for (size_t k = i; k < jug.size() && k < i + porLote; k++) lote["jugadores"].push_back(jug[k]);
 			lotes.push_back(lote.dump());
 		}

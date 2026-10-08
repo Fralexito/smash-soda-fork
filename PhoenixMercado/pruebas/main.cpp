@@ -146,12 +146,20 @@ int main() {
 	std::printf("Lotes de catálogo\n");
 	{
 		nlohmann::json c = { {"formato","x"}, {"parche","p"}, {"equipos", nlohmann::json::array({ {{"pes_team_id",1},{"nombre","A"}} })}, {"jugadores", nlohmann::json::array()} };
-		for (int i = 0; i < 7001; i++) c["jugadores"].push_back({ {"pes_id", i + 1} });
+		for (int i = 0; i < 7001; i++) c["jugadores"].push_back({ {"pes_id", i + 1}, {"nombre", "J" + std::to_string(i)} });
 		auto l = lotesCatalogo(c.dump(), 3000);
 		CHECK(l.size() == 3);
+		if (l.size() != 3) return 1;
 		auto l0 = nlohmann::json::parse(l[0]), l2 = nlohmann::json::parse(l[2]);
 		CHECK(l0["equipos"].size() == 1 && l0["jugadores"].size() == 3000);
 		CHECK(l2["equipos"].empty() && l2["jugadores"].size() == 1001);
+		nlohmann::json m = { {"equipos", nlohmann::json::array()}, {"jugadores", nlohmann::json::array({
+			{{"pes_id",1},{"nombre","Ok"},{"dorsal",120},{"edad",30},{"fuente","desconocida"},{"nacionalidad",144}},
+			{{"pes_id",2},{"fuente","desconocida"}} })} };
+		auto lm = nlohmann::json::parse(lotesCatalogo(m.dump())[0]);
+		CHECK(lm["jugadores"].size() == 1);                                   // sin nombre: no se envía
+		CHECK(!lm["jugadores"][0].contains("dorsal") && lm["jugadores"][0]["edad"] == 30);   // fuera de rango: se quita
+		CHECK(!lm["jugadores"][0].contains("fuente") && lm["jugadores"][0]["nacionalidad"] == "144");
 	}
 
 	std::printf("Bits\n");
