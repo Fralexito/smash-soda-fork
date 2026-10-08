@@ -1,0 +1,30 @@
+# Phoenix Mercado
+
+Módulo de la Liga Máster web para PES 2021. Vive en este repo y está **separado en código** de Phoenix Soda:
+la build de Phoenix Soda (`SmashSoda/`) no lo incluye todavía, así que **no la puede romper**.
+
+| Carpeta | Qué es |
+|---|---|
+| `core/` | Toda la lógica, sin Windows ni interfaz: API `/mercado/v1`, SHA-256, copias de seguridad |
+| `windows/` | HTTPS (WinHTTP) y token cifrado (DPAPI) |
+| `app/` | App de consola para probar |
+| `pruebas/` | Pruebas del Core con una web falsa (sin internet) |
+
+## Compilar (Windows, desde la raíz del repo)
+```
+cmake -S PhoenixMercado -B build-mercado -A x64
+cmake --build build-mercado --config Release
+build-mercado\Release\PhoenixMercadoPruebas.exe
+build-mercado\Release\PhoenixMercado.exe eco
+```
+
+## Dos modos de token
+| Modo | Cómo | Estado |
+|---|---|---|
+| **compartido** (por defecto) | Usa el token de Phoenix Link (`phoenix-token.dat`). **Solo lo lee**: nunca lo escribe ni lo borra | Necesita que la web acepte ese token en `/mercado` |
+| **codigoManager** (`--manager`) | Segundo código de 8 caracteres solo para el modo manager; token propio en `%APPDATA%\Phoenix Mercado\` | Funciona hoy con `/mercado/v1/vincular` |
+
+## Reglas
+- Nunca toca el original: las copias llevan fecha y hora, nunca se sobrescriben y se verifican por SHA-256.
+- El option oficial se descarga, se verifica la huella, y si no coincide se descarta.
+- El token nunca va al log (`limpiarSecretos` lo tacha por si acaso).
