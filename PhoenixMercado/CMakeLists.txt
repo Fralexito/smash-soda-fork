@@ -9,13 +9,27 @@
 #    build-mercado\Release\PhoenixMercadoPruebas.exe
 # =============================================================================
 cmake_minimum_required(VERSION 3.18)
-project(PhoenixMercado LANGUAGES CXX)
+project(PhoenixMercado LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 if(MSVC)
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")   # igual que Phoenix Soda
-    add_compile_options(/utf-8 /W3 /permissive-)
+    add_compile_options(/utf-8 $<$<COMPILE_LANGUAGE:CXX>:/W3> $<$<COMPILE_LANGUAGE:CXX>:/permissive->)
+endif()
+
+# --- Terceros en C (ver terceros/README.md) -----------------------------------
+add_library(PhoenixMercadoTerceros STATIC
+    terceros/pesxcrypter/crypt.c
+    terceros/pesxcrypter/masterkey.c
+    terceros/pesxcrypter/mt19937ar.c
+    terceros/miniz/miniz.c
+)
+if(MSVC)
+    target_compile_options(PhoenixMercadoTerceros PRIVATE /W0)
+    target_compile_definitions(PhoenixMercadoTerceros PRIVATE _CRT_SECURE_NO_WARNINGS)
+else()
+    target_compile_options(PhoenixMercadoTerceros PRIVATE -w)
 endif()
 
 # --- Core: toda la lógica, sin Windows ni interfaz ---------------------------
@@ -23,7 +37,11 @@ add_library(PhoenixMercadoCore STATIC
     core/Sha256.cpp
     core/Copias.cpp
     core/ClienteMercado.cpp
+    core/OptionFile.cpp
+    core/BaseDatosParche.cpp
+    core/Catalogo.cpp
 )
+target_link_libraries(PhoenixMercadoCore PUBLIC PhoenixMercadoTerceros)
 target_include_directories(PhoenixMercadoCore PUBLIC
     "${CMAKE_CURRENT_SOURCE_DIR}"
     "${CMAKE_CURRENT_SOURCE_DIR}/../external"   # nlohmann/json (ya está en el repo)

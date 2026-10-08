@@ -11,6 +11,10 @@
 #include "../core/ClienteMercado.h"
 #include "../core/Copias.h"
 #include "../core/Sha256.h"
+#include "../core/OptionFile.h"
+#include "../core/BaseDatosParche.h"
+#include "../core/Catalogo.h"
+#include <cstdlib>
 
 using namespace mercado;
 namespace fs = std::filesystem;
@@ -100,6 +104,68 @@ int main() {
 	CHECK(sha256::deArchivo(original.string()) == huellaAntes);   // original intacto
 	CHECK(copias::crear((tmp / "no-existe").string(), tmp.string()).error.codigo == "ARCHIVO_NO_EXISTE");
 	fs::remove_all(tmp);
+
+
+	std::printf("Bits\n");
+	{ const uint8_t b[4] = { 0xB4, 0x01, 0, 0 };   // 0x01B4 = 436
+	  CHECK(leerBits(b, 0, 16) == 436); CHECK(leerBits(b, 2, 3) == 5); }
+
+	// --- Pruebas con archivos reales (opcionales) -------------------------
+	//  PM_EDIT = ruta a una COPIA de EDIT00000000 · PM_CPK = ruta a CGP_database.cpk
+	const char* rEdit = std::getenv("PM_EDIT");
+	const char* rCpk = std::getenv("PM_CPK");
+	if (rEdit) {
+		std::printf("Option file real\n");
+		const std::string huellaAntes = sha256::deArchivo(rEdit);
+		auto of = OptionFile::abrir(rEdit);
+		CHECK(of.ok());
+		if (of.ok()) {
+			CHECK(of.valor->equipos().size() > 100);
+			CHECK(of.valor->plantillas().size() == of.valor->equipos().size());
+			// Elegir un jugador cualquiera de la primera plantilla con gente y moverlo a otra.
+			uint32_t jug = 0, origen = 0, destino = 0;
+			for (const auto& [eq, pl] : of.valor->plantillas()) {
+				if (!jug && !pl.empty() && pl.size() < 40) { jug = pl.back().jugador; origen = eq; }
+				else if (jug && !destino && eq != origen && !pl.empty() && pl.size() < 39) destino = eq;
+			}
+			auto copia = *of.valor;
+			CHECK(copia.mover(jug, destino, origen).ok());
+			const std::string salida = (fs::temp_directory_path() / "pm-edit-prueba").string();
+			fs::remove(salida);
+			auto g = copia.guardarComo(salida);
+			CHECK(g.ok());
+			CHECK(copia.guardarComo(salida).error.codigo == "DESTINO_OCUPADO");
+			auto re = OptionFile::abrir(salida);
+			bool enDestino = false, enOrigen = false;
+			if (re.ok()) {
+				for (auto& p : re.valor->plantillas().at(destino)) enDestino |= p.jugador == jug;
+				for (auto& p : re.valor->plantillas().at(origen)) enOrigen |= p.jugador == jug;
+			}
+			CHECK(enDestino && !enOrigen);
+			CHECK(sha256::deArchivo(rEdit) == huellaAntes);   // el original no se tocó
+			fs::remove(salida);
+
+			if (rCpk) {
+				std::printf("Base de datos del parche + catálogo\n");
+				auto base = leerBaseDatos(rCpk);
+				CHECK(base.ok() && base.valor->size() > 1000);
+				if (base.ok()) {
+					auto cat = construirCatalogo(*of.valor, *base.valor, "prueba");
+					std::printf("  catálogo: %d equipos, %d jugadores, %d sin datos\n", cat.equipos, cat.jugadores, cat.sinDatos);
+					CHECK(cat.jugadores > 1000 && cat.sinDatos * 50 < cat.jugadores);
+					// Los jugadores editados deben coincidir en altura con la base (dato estable).
+					int iguales = 0, revisados = 0;
+					for (const auto& e : of.valor->editados()) {
+						auto it = base.valor->find(e.id);
+						if (it == base.valor->end()) continue;
+						revisados++; iguales += it->second.altura == e.altura && it->second.nacionalidad == e.nacionalidad;
+					}
+					std::printf("  editados que coinciden: %d/%d\n", iguales, revisados);
+					CHECK(revisados > 0 && iguales == revisados);
+				}
+			}
+		}
+	}
 
 	std::printf("\n%d/%d pruebas OK\n", total - fallos, total);
 	return fallos == 0 ? 0 : 1;

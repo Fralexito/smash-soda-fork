@@ -5,7 +5,8 @@ la build de Phoenix Soda (`SmashSoda/`) no lo incluye todavía, así que **no la
 
 | Carpeta | Qué es |
 |---|---|
-| `core/` | Toda la lógica, sin Windows ni interfaz: API `/mercado/v1`, SHA-256, copias de seguridad |
+| `core/` | Toda la lógica, sin Windows ni interfaz: API `/mercado/v1`, SHA-256, copias, option file (leer/mover/guardar), base de datos del parche (.cpk → Player.bin), catálogo |
+| `terceros/` | libpesXcrypter (cifrado del option file) y miniz (zlib) |
 | `windows/` | HTTPS (WinHTTP) y token cifrado (DPAPI) |
 | `app/` | App de consola para probar |
 | `pruebas/` | Pruebas del Core con una web falsa (sin internet) |
@@ -28,3 +29,17 @@ build-mercado\Release\PhoenixMercado.exe eco
 - Nunca toca el original: las copias llevan fecha y hora, nunca se sobrescriben y se verifican por SHA-256.
 - El option oficial se descarga, se verifica la huella, y si no coincide se descarta.
 - El token nunca va al log (`limpiarSecretos` lo tacha por si acaso).
+
+## Comandos de prueba
+```
+PhoenixMercado catalogo <copia de EDIT00000000> <CGP_database.cpk> catalogo.json "ConmeGOL Patch 26"
+PhoenixMercado mover <copia de EDIT00000000> <pes_id> <equipo_destino> <EDIT nuevo>
+```
+`mover` nunca sobrescribe: guarda en un archivo nuevo y lo relee para verificarlo.
+
+## Pruebas con tus archivos reales
+```
+set PM_EDIT=C:\ruta\copia\EDIT00000000
+set PM_CPK=C:\ruta\CGP_database.cpk
+build-mercado\Release\PhoenixMercadoPruebas.exe
+```

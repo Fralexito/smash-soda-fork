@@ -8,6 +8,8 @@
 //  PhoenixMercado bajar <carpeta>        [--manager]   baja y verifica el oficial
 //  PhoenixMercado hash <archivo>
 //  PhoenixMercado copia <archivo> <carpetaCopias>
+//  PhoenixMercado catalogo <EDIT> <base.cpk> <salida.json> [nombreParche]
+//  PhoenixMercado mover <EDIT> <pes_id> <equipoDestino> <salidaNueva>   (nunca sobrescribe)
 //
 //  Modo de token: por defecto «compartido» (el de Phoenix Link).
 //  --manager usa el token propio de Mercado (segundo código).
@@ -22,6 +24,10 @@
 #include "../core/ClienteMercado.h"
 #include "../core/Copias.h"
 #include "../core/Sha256.h"
+#include "../core/OptionFile.h"
+#include "../core/BaseDatosParche.h"
+#include "../core/Catalogo.h"
+#include <fstream>
 #include "../windows/Plataforma.h"
 
 using namespace mercado;
@@ -29,7 +35,9 @@ using namespace mercado;
 static void imprimirError(const Error& e) {
 	std::printf("ERROR %s%s%s\n", e.codigo.c_str(), e.detalle.empty() ? "" : " · ", e.detalle.c_str());
 	if (e.codigo == "TOKEN_INVALIDO")
-		std::printf("Pista: en modo compartido la web aún no acepta el token de Phoenix Link. Prueba con --manager.\n");
+		std::printf("Pista: vuelve a vincular esta PC.\n");
+	if (e.codigo == "CODIGO_MANAGER_REQUERIDO")
+		std::printf("Tu cuenta exige el código manager: usa --manager y «vincular».\n");
 }
 
 int main(int argc, char** argv) {
@@ -39,7 +47,7 @@ int main(int argc, char** argv) {
 	for (auto it = a.begin(); it != a.end();) {
 		if (*it == "--manager") { manager = true; it = a.erase(it); } else ++it;
 	}
-	if (a.empty()) { std::printf("Uso: eco | yo | vincular <codigo> | option | bajar <carpeta> | hash <archivo> | copia <archivo> <carpeta> [--manager]\n"); return 1; }
+	if (a.empty()) { std::printf("Uso: eco | yo | vincular <codigo> | option | bajar <carpeta> | hash <archivo> | copia <archivo> <carpeta> | catalogo <EDIT> <cpk> <json> | mover <EDIT> <id> <equipo> <salida> [--manager]\n"); return 1; }
 
 	try {
 		windows::HttpWinHttp http;
@@ -88,6 +96,25 @@ int main(int argc, char** argv) {
 			auto r = copias::crear(a[1], a[2]);
 			if (!r.ok()) { imprimirError(r.error); return 2; }
 			std::printf("Copia creada y verificada: %s\n", r.valor->ruta.c_str());
+		}
+		else if (cmd == "catalogo" && a.size() >= 4) {
+			auto of = OptionFile::abrir(a[1]);
+			if (!of.ok()) { imprimirError(of.error); return 2; }
+			auto base = leerBaseDatos(a[2]);
+			if (!base.ok()) { imprimirError(base.error); return 2; }
+			auto cat = construirCatalogo(*of.valor, *base.valor, a.size() >= 5 ? a[4] : "sin nombre");
+			if (std::filesystem::exists(aRuta(a[3]))) { std::printf("ERROR DESTINO_OCUPADO %s\n", a[3].c_str()); return 2; }
+			std::ofstream(aRuta(a[3]), std::ios::binary) << cat.json;
+			std::printf("Catálogo: %d equipos, %d jugadores (%d sin datos) → %s\n", cat.equipos, cat.jugadores, cat.sinDatos, a[3].c_str());
+		}
+		else if (cmd == "mover" && a.size() >= 5) {
+			auto of = OptionFile::abrir(a[1]);
+			if (!of.ok()) { imprimirError(of.error); return 2; }
+			auto m = of.valor->mover(static_cast<uint32_t>(std::stoul(a[2])), static_cast<uint32_t>(std::stoul(a[3])));
+			if (!m.ok()) { imprimirError(m.error); return 2; }
+			auto g = of.valor->guardarComo(a[4]);
+			if (!g.ok()) { imprimirError(g.error); return 2; }
+			std::printf("Guardado y verificado: %s (sha256 %s)\n", a[4].c_str(), g.valor->c_str());
 		}
 		else { std::printf("Comando no reconocido.\n"); return 1; }
 	}
