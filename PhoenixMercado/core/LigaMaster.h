@@ -70,6 +70,16 @@ namespace mercado::lm {
 		bool kEspejo = true;            ///< false = la lista K del archivo no reflejaba el orden (el juego la rehace más tarde)
 	};
 
+	/// Dinero del club del usuario (en euros; en el archivo van en u32 ×100). ESTRUCTURA-ML.md §13 y §17.
+	struct Finanzas {
+		uint64_t presupuestoFichajes = 0;        ///< lo que queda para fichar (pantalla «Ppto. fichajes»)
+		uint64_t presupuestoFichajesInicial = 0; ///< el de inicio de temporada
+		uint64_t topeSalarial = 0;               ///< tope de masa salarial
+		uint64_t sueldosActuales = 0;            ///< suma de los sueldos anuales de los contratos vigentes (tabla de contratos)
+		uint64_t presupuestoSalarial() const { return topeSalarial > sueldosActuales ? topeSalarial - sueldosActuales : 0; } ///< lo que muestra la pantalla
+		size_t ofs = 0;                          ///< dónde está el bloque (para el log)
+	};
+
 	class GuardadoLM {
 	public:
 		/// Lee y descifra un guardado ML. No modifica el archivo de origen.
@@ -114,6 +124,13 @@ namespace mercado::lm {
 		Resultado<uint16_t> moverUsuarioAIA(int kUsuario, int kDestino, uint32_t pid, uint16_t dorsal, uint32_t pidSustituto);
 		/// Qué tablas tocó la última operación sobre el equipo del usuario (para el log / la bitácora).
 		const std::string& ultimoInforme() const { return _ultimoInforme; }
+
+		/// Dinero del club del usuario. Se localiza por ancla (a distancia fija de la tabla A del usuario) y se valida contra
+		/// los contratos (el tope salarial tiene que cubrir los sueldos). Probado en el juego (ranura 12: 500 M / 86.096.000 €).
+		Resultado<Finanzas> finanzas(int kUsuario) const;
+		/// Fija el presupuesto de fichajes y/o el tope salarial (en euros; 0 = no cambiar ese campo). Máximo 40.000 millones.
+		/// El presupuesto salarial de pantalla sale solo: tope − sueldos. Todo o nada.
+		Resultado<Finanzas> fijarFinanzas(int kUsuario, uint64_t presupuestoFichajesEur, uint64_t topeSalarialEur);
 
 		const std::vector<uint8_t>& datos() const { return _datos; }
 

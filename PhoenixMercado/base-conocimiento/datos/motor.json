@@ -201,7 +201,8 @@
             "M": "u32 anterior al siguiente reg = 0"
           },
           "estado": "probado (réplica byte a byte)"
-        }
+        },
+        "A2": "opcional: vacía (0xFFFF) en una carrera recién empezada; el programa no la exige"
       },
       "orden_formacion": {
         "localizar": "bloque 627 del arreglo de alineaciones: primer bloque con el ID del usuario (0xfffffff5); orden en +0x220, roles en +0x248",
@@ -242,7 +243,9 @@
         "ppto_fichajes_inicial": "0xC7DD10",
         "tope_salarial": "0xC7DD14",
         "ppto_salarial_pantalla": "tope - suma sueldos tabla I",
-        "estado": "probado"
+        "estado": "probado",
+        "localizar": "ancla: tabla A del usuario + 0x97D38 (visto igual en 6 guardados, incluida carrera recién empezada); validar tope >= suma de sueldos (contratos tipo 5 del club)",
+        "api": "GuardadoLM::finanzas(k) / fijarFinanzas(k, fichajesEur, topeEur)"
       },
       "club_id": {
         "formula": "(idOption << 14) | indice_bloque",

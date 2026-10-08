@@ -271,7 +271,7 @@ Comparando la ranura 10 (`ML00000009`) con la 11 (`ML0000000A`, el juego despide
   | Tabla | Qué hace el juego | Detalle del hueco |
   |---|---|---|
   | A (24) | hueco en su sitio | todo a 0, reg 0xffff, **fecha vacía 0xffff en +16** |
-  | A2 (24, a 976 B de A) | **no la toca** (la rehace después; su campo anterior a `reg` es la valoración del último partido en float) | — |
+  | A2 (24, a 976 B de A) | **no la toca** (la rehace después; su campo anterior a `reg` es la valoración del último partido en float). Está **vacía en el respaldo r0** (carrera recién empezada): el C++ no la exige (firma 24↑ ×1) | — |
   | B (24↓) | hueco | reg 0xffff, pid 0, +8 a 0, **conserva la constante de +10** (0x324f) |
   | C (44) | hueco | registro = [reg…reg+44): todo a 0 y reg 0xffff; el campo anterior a `reg` es el final del registro anterior |
   | D (368), E (192), J (16) | hueco | igual que un registro nunca usado (reg 0xffff, resto 0) |
@@ -296,3 +296,13 @@ Comparando la ranura 10 (`ML00000009`) con la 11 (`ML0000000A`, el juego despide
 - **Las tablas del usuario NO van por índice de plantilla**: el juego las busca por (reg, pid). Por eso tolera huecos y por eso los
   fichajes nuevos van al final (Neymar está después de los 32 juveniles en D). El ancla del C++ (`tablasDe`) ya salta huecos y
   fichas de jugadores que ya no están (hasta 8).
+
+## 18. Dinero por ancla (8 oct, 16:10) — **[PROBADO en el juego con direcciones fijas; ancla verificada en 6 guardados]**
+- El bloque de dinero (§13: 0xc7dd00 actual, +0x10 inicial, +0x14 tope) está a **0x97d38 de la tabla A** del usuario en todos los
+  guardados vistos (r0 respaldo, v6…v9, ranuras 9/10/11/12). Es parte de la estructura fija «club del usuario» del motor, que no se
+  desplaza con el blob (el blob está después). El C++ (`GuardadoLM::finanzas` / `fijarFinanzas`) lo localiza así y **valida** que el
+  tope cubra la suma de sueldos de los contratos vigentes (tipo 5 del club del usuario) y que las cifras no pasen de 40.000 M.
+- Lecturas reales: r0 (respaldo) fichajes 163.240.600 / tope 147.060.000 / sueldos 143.426.600 → ppto salarial 3.633.400;
+  ranura 11 fichajes 162.573.800 / tope 147.520.600 / sueldos 113.904.000 → 33.616.600 (= lo que muestra la pantalla).
+- `fijarFinanzas` solo escribe los campos pedidos (0 = no tocar), en múltiplos de 100 €, y rechaza un tope menor que los sueldos.
+

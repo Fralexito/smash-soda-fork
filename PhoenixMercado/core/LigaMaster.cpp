@@ -388,7 +388,7 @@ namespace mercado::lm {
 		constexpr uint32_t kFlagFinK = 0xc7;        // los que siguen al primer libre
 		constexpr int kMaxRegistrosTabla = 200;     // tope de seguridad al recorrer una tabla
 		constexpr int kVaciosFin = 3;               // tantos vacíos seguidos = fin de la tabla (puede haber huecos sueltos)
-		constexpr size_t kTablasEsperadas = 12;     // A A2 B C D E F G H×3 M I J  menos K (ESTRUCTURA-ML.md §4)
+		constexpr size_t kTablasEsperadas = 11;     // A B C D E F G H×3 M I J (A2 es opcional: vacía al empezar la carrera) menos K (§4)
 		constexpr size_t kDistanciaA2 = 976;        // A2 está a 40 registros de 24 B + 16 B de A
 		constexpr size_t kRegEnContrato = 28;       // tabla I: el registro empieza 28 B antes de `reg` (§12)
 		constexpr size_t kTamNegociacion = 60;      // lista de negociaciones abiertas (§12)
@@ -692,7 +692,8 @@ namespace mercado::lm {
 			// rellena al avanzar la temporada) también se tratan, porque llevan los mismos (reg, pid).
 			{
 				struct Firma { size_t stride; int dir; int veces; };
-				Firma firmas[] = { {24,+1,2}, {24,-1,1}, {44,+1,1}, {368,+1,1}, {192,+1,1}, {52,+1,1}, {108,+1,3}, {5628,+1,1}, {48,+1,1}, {16,+1,1} };
+				// A2 (la segunda de 24 B) está vacía en una carrera recién empezada (respaldo r0): no se exige.
+				Firma firmas[] = { {24,+1,1}, {24,-1,1}, {44,+1,1}, {368,+1,1}, {192,+1,1}, {52,+1,1}, {108,+1,3}, {5628,+1,1}, {48,+1,1}, {16,+1,1} };
 				std::string faltan;
 				for (const auto& f : firmas) {
 					const int hay = int(std::count_if(objetivos.begin(), objetivos.end(), [&](const Objetivo& o) { return o.t.stride == f.stride && o.t.dir == f.dir; }));
@@ -797,6 +798,80 @@ namespace mercado::lm {
 			return R::bien(dorsal);
 		}
 		catch (const std::exception& e) { return R::mal("ML_ERROR", e.what()); }
+	}
+
+	// =========================================================================
+	//  Dinero del usuario (§13, §17): bloque a distancia fija de la tabla A (el «club del usuario» es una estructura fija
+	//  del motor; A está en 0xbe5fc8 y el dinero en 0xc7dd00 en todos los guardados vistos).
+	// =========================================================================
+	namespace {
+		constexpr size_t kFinanzasDesdeA = 0xc7dd00 - 0xbe5fc8;    // 0x97d38
+		constexpr size_t kFinOfsActual = 0x00, kFinOfsInicial = 0x10, kFinOfsTope = 0x14;
+		constexpr uint64_t kMaxEuros = 40000000000ull;               // 40.000 M: por encima no cabe en u32 ×100 con margen
+		constexpr uint8_t kContratoVigente = 5;
+
+		struct TablasUsuario { TablaAlineada a; TablaAlineada contratos; bool ok = false; };
+
+		/// Localiza A (la primera tabla de 24 B hacia delante; A2, si existe, está 976 B después) y la de contratos.
+		TablasUsuario tablasClave(const GuardadoLM& g, int k) {
+			TablasUsuario t;
+			const auto tablas = g.tablasDe(k);
+			bool hayA = false, hayI = false;
+			for (const auto& x : tablas) {
+				if (x.stride == 24 && x.dir > 0 && (!hayA || x.ofsReg0 < t.a.ofsReg0)) { t.a = x; hayA = true; }
+				if (x.stride == 48 && !hayI) { t.contratos = x; hayI = true; }
+			}
+			t.ok = hayA && hayI;
+			return t;
+		}
+
+		/// Suma de sueldos anuales (/100) de los contratos vigentes del club.
+		uint64_t sueldosDe(const Datos& d, const TablaAlineada& contratos, uint32_t club) {
+			uint64_t suma = 0;
+			const int ext = extensionDe(d, contratos);
+			for (int i = 0; i < ext; i++) {
+				const size_t r = size_t(regDe(contratos, i));
+				if (registroVacio(d, r)) continue;
+				if (d[r - kRegEnContrato + 8] == kContratoVigente && u32(d, r - kRegEnContrato + 4) == club) suma += u32(d, r + 8);
+			}
+			return suma;
+		}
+	}
+
+	Resultado<Finanzas> GuardadoLM::finanzas(int k) const {
+		using R = Resultado<Finanzas>;
+		if (k < 0 || k >= kNumEquipos) return R::mal("EQUIPO_INVALIDO", std::to_string(k));
+		const auto t = tablasClave(*this, k);
+		if (!t.ok) return R::mal("NO_ES_USUARIO", "Ese equipo no tiene las tablas del usuario (A y contratos)");
+		const size_t ofs = t.a.ofsReg0 + kFinanzasDesdeA;
+		if (ofs + 0x40 > _datos.size()) return R::mal("ML_FORMATO", "El bloque de dinero cae fuera del archivo");
+		const uint32_t club = u32(_datos, t.contratos.ofsReg0 - kRegEnContrato + 4);
+		if ((club & 0x3fff) != uint32_t(k)) return R::mal("CONTRATOS_INESPERADOS", "La tabla de contratos no lleva el club del usuario");
+		Finanzas f;
+		f.ofs = ofs;
+		f.presupuestoFichajes = uint64_t(u32(_datos, ofs + kFinOfsActual)) * 100;
+		f.presupuestoFichajesInicial = uint64_t(u32(_datos, ofs + kFinOfsInicial)) * 100;
+		f.topeSalarial = uint64_t(u32(_datos, ofs + kFinOfsTope)) * 100;
+		f.sueldosActuales = sueldosDe(_datos, t.contratos, club) * 100;
+		// Validación del ancla: cifras con sentido (tope que cubre los sueldos y presupuestos por debajo del máximo).
+		if (f.topeSalarial < f.sueldosActuales || f.topeSalarial > kMaxEuros || f.presupuestoFichajes > kMaxEuros || f.sueldosActuales == 0)
+			return R::mal("FINANZAS_NO_HALLADAS", "El bloque de dinero no cuadra con los contratos (¿otra versión del guardado?)");
+		return R::bien(f);
+	}
+
+	Resultado<Finanzas> GuardadoLM::fijarFinanzas(int k, uint64_t presupuestoFichajesEur, uint64_t topeSalarialEur) {
+		using R = Resultado<Finanzas>;
+		auto f = finanzas(k);
+		if (!f.ok()) return f;
+		if (presupuestoFichajesEur > kMaxEuros || topeSalarialEur > kMaxEuros) return R::mal("IMPORTE_INVALIDO", "Más de 40.000 millones");
+		if (presupuestoFichajesEur % 100 || topeSalarialEur % 100) return R::mal("IMPORTE_INVALIDO", "El juego guarda el dinero en múltiplos de 100 €");
+		if (topeSalarialEur && topeSalarialEur < f.valor->sueldosActuales)
+			return R::mal("TOPE_INSUFICIENTE", "El tope salarial no cubre los sueldos actuales (" + std::to_string(f.valor->sueldosActuales) + " €)");
+		Datos d = _datos;
+		if (presupuestoFichajesEur) p32(d, f.valor->ofs + kFinOfsActual, uint32_t(presupuestoFichajesEur / 100));
+		if (topeSalarialEur) p32(d, f.valor->ofs + kFinOfsTope, uint32_t(topeSalarialEur / 100));
+		_datos.swap(d);
+		return finanzas(k);
 	}
 
 	Resultado<std::string> GuardadoLM::guardarComo(const std::string& rutaNueva, const std::string& textoInfo) const {

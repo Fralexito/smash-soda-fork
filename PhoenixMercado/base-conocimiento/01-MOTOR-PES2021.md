@@ -81,7 +81,7 @@ referencia) es la copia «como equipo de la IA» (ID real 0xAD, orden identidad)
 | Cómo las usa el juego | **por (reg, pid), no por índice**: admite huecos en medio; los fichajes nuevos van al final (en D, tras los 32 juveniles) | ✅ |
 | Registro de cada tabla | empieza 4 B antes de `reg` (`[x][reg][pid]…`) salvo contratos (28 B antes); vacío = reg 0/0xFFFF con pid 0 | ✅ |
 | **Qué hace el juego cuando un jugador se va** | **hueco** en A, B, C, D, E, F, J, M (A: fecha vacía 0xFFFF en +16; B conserva +10; F +40 a 0; M también 0 en la palabra anterior al siguiente `reg`); **compacta** G, H y contratos; **no toca** A2 ni K al momento | ✅ (réplica idéntica byte a byte) |
-| A2 | a 976 B de A; su campo anterior a `reg` es un **float** (valoración del último partido) | 🔎 |
+| A2 | a 976 B de A; su campo anterior a `reg` es un **float** (valoración del último partido). **Vacía (0xFFFF) en una carrera recién empezada**: el programa no la exige | 🔎 |
 | Ficha del último partido | 16 B, solo los que jugaron: **no es tabla de plantilla**, no se toca | ✅ |
 | **Orden de formación** (40 B) + **roles** (6 B) | bloque 627 de alineaciones (+0x220 / +0x248): el primer bloque con el ID del usuario | ✅ |
 | **Lista K** (Estrategia) | 16 B por puesto `[flag, reg, pid, 0]`; K0 flag 0, usados 0xC0–0xC6 (flags por jugador: p. ej. 0xC4), libre 0xC0/0xC1, después 0xC7. Se localiza por estructura; puede estar **atrasada** respecto al orden (el juego la rehace después) | ✅ |
@@ -98,6 +98,7 @@ referencia) es la copia «como equipo de la IA» (ID real 0xAD, orden identidad)
 | Presupuesto de fichajes inicial de temporada | 0xC7DD10 | 🔎 |
 | **Tope salarial** | 0xC7DD14 | ✅ |
 | Presupuesto salarial en pantalla | = tope − Σ sueldos (tabla I, un contrato por jugador) | ✅ (dos comprobaciones exactas) |
+| Cómo lo localiza el programa | **por ancla**: el bloque está a 0x97D38 de la tabla A del usuario (estructura fija del motor, vista igual en 6 guardados, también en una carrera recién empezada) y se valida contra los contratos (tope ≥ Σ sueldos) | ✅ (`finanzas` / `fijarFinanzas` en C++) |
 | Clubes de la IA | **no tienen presupuesto** guardado; fichan por reglas | ❌ |
 
 ## G. Lo que NO está donde se esperaba

@@ -215,6 +215,7 @@ int main() {
 				p32(size_t(r0), 0xAA000000 | uint32_t(i)); p32(size_t(r0) + 4, reg); p32(size_t(r0) + 8, pid);
 				const size_t finMarca = t.stride == 48 ? 24 : t.stride;
 				for (size_t b = 12; b < finMarca; b++) d[size_t(r0) + b] = uint8_t(usado ? (i + 1) : 0);
+				if (t.stride == 48) { p32(size_t(r0) + 12, usado ? uint32_t(i + 1) : 0); p32(size_t(r0) + 16, 0); p32(size_t(r0) + 20, usado ? 0x1f0807eb : 0xffff); }   // sueldo (i+1)/100 €, cláusula 0, fin 31/8/2027
 				if (t.stride == 48) {   // cabecera del registro (28 B antes de reg): índice, club, tipo (5 contrato / 3 oferta), inicio, -1, -1
 					const size_t h = size_t(r0) - 24;
 					p32(h, usado ? uint32_t(i) : 0xffff); p32(h + 4, !usado ? 0xffffffff : i == 26 ? clubOtro : clubU);
@@ -299,9 +300,46 @@ int main() {
 		}
 		const std::vector<uint8_t> fichaAntes(d.begin() + long(FICHA), d.begin() + long(FICHA + 16 * 17));
 
+		// Dinero: a 0x97d38 de la tabla A (como en el juego): 163.240.600 € de presupuesto, 147.520.600 € de tope.
+		const size_t FINZ = tablas[0].reg0 + 0x97d38;
+		p32(FINZ, 1632406); p32(FINZ + 0x10, 1632406); p32(FINZ + 0x14, 1475206);
+
+		// Carrera recién empezada (respaldo r0 del juego): A2 está VACÍA (0xffff). Tiene que funcionar igual, sin A2.
+		{
+			std::vector<uint8_t> d0 = d;
+			for (size_t i = 0; i < 32; i++) { const size_t r = tablas[1].reg0 + 24 * i; for (size_t b = 0; b < 24; b++) d0[r - 4 + b] = 0; d0[r] = 0xff; d0[r + 1] = 0xff; }
+			auto g0 = GuardadoLM::desdeDatos(d0);
+			CHECK(g0.ok());
+			if (g0.ok()) {
+				CHECK(g0.valor->tablasDe(5).size() == 13);   // las 12 de la plantilla + la ficha del partido (sin A2)
+				auto f0 = g0.valor->finanzas(5);
+				CHECK(f0.ok() && f0.valor->presupuestoFichajes == 163240600 && f0.valor->sueldosActuales == 351 * 100);
+				auto v0 = g0.valor->moverUsuarioAIA(5, 7, 5003, 3, 5020);
+				if (!v0.ok()) std::printf("  sin A2: %s %s\n", v0.error.codigo.c_str(), v0.error.detalle.c_str());
+				CHECK(v0.ok() && g0.valor->equipo(5).valor->plantilla.size() == 25 && g0.valor->equipo(7).valor->plantilla.size() == 4);
+			}
+		}
+
 		auto g = GuardadoLM::desdeDatos(d);
 		CHECK(g.ok());
 		if (g.ok()) {
+			{   // Finanzas por ancla: sueldos = suma de los 26 contratos vigentes (cada uno lleva su marca i+1 en el sueldo: 1+2+…+26 = 351 ×100)
+				auto f = g.valor->finanzas(5);
+				if (!f.ok()) std::printf("  finanzas: %s %s\n", f.error.codigo.c_str(), f.error.detalle.c_str());
+				CHECK(f.ok());
+				if (f.ok()) {
+					CHECK(f.valor->presupuestoFichajes == 163240600 && f.valor->topeSalarial == 147520600 && f.valor->presupuestoFichajesInicial == 163240600);
+					CHECK(f.valor->sueldosActuales == 351 * 100);   // 1+2+…+26 contratos vigentes; la oferta (tipo 3) no cuenta
+					CHECK(f.valor->presupuestoSalarial() == f.valor->topeSalarial - f.valor->sueldosActuales);
+				}
+				CHECK(g.valor->finanzas(7).error.codigo == "NO_ES_USUARIO");
+				CHECK(g.valor->fijarFinanzas(5, 500000000, 0).ok());
+				auto f2 = g.valor->finanzas(5);
+				CHECK(f2.ok() && f2.valor->presupuestoFichajes == 500000000 && f2.valor->topeSalarial == 147520600);
+				CHECK(g.valor->fijarFinanzas(5, 0, 1).error.codigo == "IMPORTE_INVALIDO");
+				CHECK(g.valor->fijarFinanzas(5, 0, 100).error.codigo == "TOPE_INSUFICIENTE");
+				CHECK(g.valor->fijarFinanzas(5, 0, 200000000).ok() && g.valor->finanzas(5).valor->presupuestoSalarial() == 200000000 - g.valor->finanzas(5).valor->sueldosActuales);
+			}
 			CHECK(g.valor->esEquipoUsuario(5) && !g.valor->esEquipoUsuario(7));
 			CHECK(g.valor->tablasDe(5).size() == 14);   // las 12 de la plantilla + A2 + la ficha del partido (la venta la descarta)
 			if (g.valor->tablasDe(5).size() != 14) for (auto& t : g.valor->tablasDe(5)) std::printf("  tabla paso %zu dir %d en 0x%zx\n", t.stride, t.dir, t.ofsReg0);
