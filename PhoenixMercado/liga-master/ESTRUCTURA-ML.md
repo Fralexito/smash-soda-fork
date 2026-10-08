@@ -306,3 +306,22 @@ Comparando la ranura 10 (`ML00000009`) con la 11 (`ML0000000A`, el juego despide
   ranura 11 fichajes 162.573.800 / tope 147.520.600 / sueldos 113.904.000 → 33.616.600 (= lo que muestra la pantalla).
 - `fijarFinanzas` solo escribe los campos pedidos (0 = no tocar), en múltiplos de 100 €, y rechaza un tope menor que los sueldos.
 
+
+## 19. Lo que escribe el juego al FICHAR para el usuario (Sommer, Inter → City, 8 oct 17:20) — **[VERDAD DEL JUEGO]**
+Base: ranura 2 (carrera recién empezada, igual a r0 salvo 90 B); resultado: ranura 15 (`ML0000000E`, md5 b1db56aa…). El juego
+también guardó solo encima de la ranura 2 (mismo contenido que la 15 salvo 68 KB de estado). Sommer: reg 5895, pid 36627, dorsal 12.
+- **Plantillas:** sale del bloque del Inter (k 213, índice 0; la lista se compacta) y entra **al final** del City (índice 26). En Suiza
+  (selección, k 563) sigue igual.
+- **Tablas del usuario:** en TODAS aparece un registro nuevo en el **primer hueco libre** (A, B, C, F, G, H×3, M, J: registro 26; C y D:
+  registro 58 = 26 + 32 juveniles). Nada se desplaza. Pero el registro **no es un molde vacío**: lleva datos del jugador:
+  A `[0][reg][pid][6][?][?][fecha de llegada 2026-08-17]`; B `[reg][pid][0x1e][?]`; C `[reg][pid][2]…[2]`; D estadísticas iniciales
+  (+12: 0x451d repetido, luego una tabla de u16); **E = curva de 0x3c→0x57→0x51 (≈ progresión por edad/mes, 50+ bytes)**; F `[ffff][reg][pid][0x3c0]`;
+  G/H vacíos salvo reg/pid; M (5.628 B) `[1][reg][pid][club City 0x2b409a][0][0x00080314][ffff][fecha][…][0x1dc0d5 = Inter (k 213)][5]…`.
+- **Contrato (tabla I):** registro nuevo índice 30, formato §17: club City, tipo 5, inicio 17/8/2026, sueldo 3.561.100 €/año,
+  cláusula 2.200.000 €, fin 31/8/2027.
+- **Historial de traspasos:** registro con fecha 17/8/2026, reg/pid, club destino City, club origen Inter (0x1dc0d5), **monto 2.575.000 €**.
+- **Lista K:** se añade K[26] con flag **0xc1** (no 0xc0) y el libre sigue con 0xc1. **Orden de formación:** el 26 al final (última reserva).
+- **Dinero:** fichajes 163.240.600 → 160.665.600 (−2.575.000 = el monto); tope salarial 147.060.000 → 147.333.100; sueldos +3.561.100.
+- Hay más listas tocadas (0xc00de0, 0xc01564, 0xc07170, 0x10bab98, 0x12dddad) por identificar.
+**Conclusión:** fichar PARA el usuario se puede replicar, pero hay que **rellenar** varios registros con datos del jugador (curva de
+E, estadísticas de D, bloque M). Siguiente paso: averiguar de dónde salen (la ficha de 156 B del blob, el Player.bin) para generarlos.

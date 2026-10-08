@@ -186,3 +186,9 @@ En el juego: **Bettinelli en CA Lanús** (último de la plantilla, 29/29; ficha:
 **Manchester City** con su alineación 4-1-3-2 completa y coherente (Donnarumma de arquero y capitán, sin huecos ni jugadores en
 blanco; Rulli encabeza la banca). Primera venta con la lógica «igual que el juego» (contratos, ofertas, negociaciones, huecos)
 confirmada en pantalla. Pendiente de esta ranura: jugar/guardar y el fichaje (ranuras 14/15).
+
+**8 oct 17:20 · Prueba 16 (referencia del juego) · Fichaje de Yann Sommer (Inter → City, dorsal 12) desde la ranura 2, guardado en la 15** — 🔎
+Fralex fichó en el juego (el mercado de la ranura 13 ya estaba cerrado el 31/8, por eso se usó una ranura de inicio de temporada). Se
+comparó con la base (= respaldo r0): el juego añade a Sommer en el primer hueco de cada tabla del usuario, con datos propios del
+jugador (curva de crecimiento, estadísticas, contrato, historial, dinero). Detalle en ESTRUCTURA-ML §19. Ojo: el juego guardó también
+encima de la ranura 2.
