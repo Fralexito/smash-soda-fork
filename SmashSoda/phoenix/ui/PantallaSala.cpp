@@ -13,6 +13,8 @@
 #include "../PhoenixRoles.h"
 #include "../core/ProveedorSala.h"
 #include "../link/PhoenixLink.h"
+#include "../../core/Config.h"
+#include <functional>
 #include "TableroMandos.h"
 #include <cstring>
 #include "../../globals/AppFonts.h"
@@ -123,6 +125,136 @@ namespace phoenix {
 		}
 
 		// ---------------------------------------------------------------------
+		//  Historial de latencia (se alimenta cada frame desde tick)
+		// ---------------------------------------------------------------------
+		struct HistLat {
+			float v[64] = {};
+			double ultima = -10.0;
+			float ms = 0.0f;
+			int ping = -1;
+			bool hayRival = false;
+			std::string rival;
+			int numRival = 0;
+		};
+
+		HistLat& histLat() {
+			static HistLat h;
+			return h;
+		}
+
+		void histActualizar(ProveedorSala& sala) {
+			HistLat& h = histLat();
+			h.rival.clear();
+			h.ping = -1;
+			h.numRival = 0;
+			for (const AsientoVista& a : sala.asientos(16)) {
+				if (a.ocupado) { h.rival = a.jugador; h.ping = a.pingMs; h.numRival = a.numero; break; }
+			}
+			h.hayRival = !h.rival.empty();
+			const double ahora = ImGui::GetTime();
+			if (ahora - h.ultima >= 0.5) {
+				h.ultima = ahora;
+				for (int i = 0; i < 63; i++) h.v[i] = h.v[i + 1];
+				h.v[63] = (h.hayRival && h.ping >= 0) ? static_cast<float>(h.ping) : 0.0f;
+			}
+			h.ms = vis::acercar(h.ms, (h.hayRival && h.ping >= 0) ? static_cast<float>(h.ping) : 0.0f, 8.0f);
+		}
+
+		/// Dos columnas (o una sola si no cabe). Cada lado recibe su ancho.
+		void salaFila(float ancho, float s, const std::function<void(float)>& izq, const std::function<void(float)>& der) {
+			const ImVec2 o = ImGui::GetCursorScreenPos();
+			if (ancho < 760.0f * s) {
+				izq(ancho);
+				der(ancho);
+				return;
+			}
+			const float sepCol = 14.0f * s;
+			const float w = (ancho - sepCol) * 0.5f;
+			ImGui::SetCursorScreenPos(o);
+			izq(w);
+			const float y1 = ImGui::GetCursorScreenPos().y;
+			ImGui::SetCursorScreenPos(ImVec2(o.x + w + sepCol, o.y));
+			der(w);
+			const float y2 = ImGui::GetCursorScreenPos().y;
+			ImGui::SetCursorScreenPos(ImVec2(o.x, (std::max)(y1, y2)));
+		}
+
+		/// Panel «Latencia en vivo»: gráfica con rejilla (0–150 ms).
+		void salaPanelLatencia(Theme* tema, float s, float ancho) {
+			const HistLat& h = histLat();
+			ImDrawList* dl = ImGui::GetWindowDrawList();
+			const float alto = 176.0f * s;
+			const ImVec2 p0 = ImGui::GetCursorScreenPos();
+			const ImVec2 p1(p0.x + ancho, p0.y + alto);
+			dl->AddRectFilled(p0, p1, vis::col(tema->listItemBackground), 14.0f * s);
+			dl->AddRect(p0, p1, vis::col(tema->panelBorder), 14.0f * s, 0, 1.0f * s);
+
+			salaTexto(dl, AppFonts::label, AppFonts::label->FontSize, ImVec2(p0.x + 20 * s, p0.y + 16 * s),
+				vis::col(tema->textMuted), T("sala.latencia_vivo"));
+			const ImVec4 cw = (h.hayRival && h.ping >= 0)
+				? vis::colorPing(h.ping, tema->positive, tema->negative, tema->textMuted) : tema->textMuted;
+			const std::string ms = h.hayRival ? std::to_string(static_cast<int>(h.ms + 0.5f)) + " ms" : std::string("— ms");
+			const ImVec2 tm = salaMedir(AppFonts::title, AppFonts::title->FontSize, ms.c_str());
+			salaTexto(dl, AppFonts::title, AppFonts::title->FontSize, ImVec2(p1.x - 20 * s - tm.x, p0.y + 14 * s),
+				vis::col(cw), ms.c_str());
+
+			const float xa = p0.x + 54.0f * s, xb = p1.x - 20.0f * s;
+			const float ya = p0.y + 52.0f * s, yb = p1.y - 20.0f * s;
+			const float marcas[4] = { 150.0f, 100.0f, 50.0f, 0.0f };
+			for (int i = 0; i < 4; i++) {
+				const float y = ya + (yb - ya) * (i / 3.0f);
+				dl->AddLine(ImVec2(xa, y), ImVec2(xb, y), vis::col(tema->textMuted, 0.18f), 1.0f * s);
+				char t[8];
+				snprintf(t, sizeof(t), "%d", static_cast<int>(marcas[i]));
+				const ImVec2 tt = salaMedir(AppFonts::input, AppFonts::input->FontSize, t);
+				salaTexto(dl, AppFonts::input, AppFonts::input->FontSize, ImVec2(xa - 8 * s - tt.x, y - tt.y * 0.5f),
+					vis::col(tema->textMuted, 0.8f), t);
+			}
+			const float paso = (xb - xa) / 63.0f;
+			auto yDe = [&](float v) { return yb - (yb - ya) * ((std::min)(v, 150.0f) / 150.0f); };
+			for (int i = 0; i < 63; i++) {
+				const float xA = xa + paso * i, xB = xa + paso * (i + 1);
+				dl->AddLine(ImVec2(xB, yDe(h.v[i + 1])), ImVec2(xB, yb), vis::col(cw, 0.07f), (std::max)(1.0f, paso));
+				dl->AddLine(ImVec2(xA, yDe(h.v[i])), ImVec2(xB, yDe(h.v[i + 1])), vis::col(cw, 0.9f), 2.0f * s);
+			}
+
+			ImGui::SetCursorScreenPos(ImVec2(p0.x, p1.y));
+			ImGui::Dummy(ImVec2(ancho, 14.0f * s));
+		}
+
+		/// Panel «Transmisión»: cuatro datos grandes.
+		void salaPanelTransmision(ProveedorSala& sala, Theme* tema, float s, float ancho) {
+			ImDrawList* dl = ImGui::GetWindowDrawList();
+			salaTitulo(T("sala.transmision"), tema, s);
+			const ImVec2 o = ImGui::GetCursorScreenPos();
+			const float sepT = 8.0f * s;
+			const float w = (ancho - sepT * 3) / 4.0f;
+			const float alto = 70.0f * s;
+			const std::string valores[4] = {
+				std::to_string(Config::cfg.video.bandwidth),
+				std::to_string(Config::cfg.video.fps),
+				std::to_string(sala.totalInvitados()),
+				std::to_string(sala.plazas()),
+			};
+			const char* etiquetas[4] = { "Mbps", "FPS", T("sala.invitados"), T("sala.plazas") };
+			for (int i = 0; i < 4; i++) {
+				const ImVec2 a(o.x + i * (w + sepT), o.y), b(a.x + w, a.y + alto);
+				dl->AddRectFilled(a, b, vis::col(tema->listItemBackground), 12.0f * s);
+				dl->AddRect(a, b, vis::col(tema->panelBorder), 12.0f * s, 0, 1.0f * s);
+				const ImVec2 tv = salaMedir(AppFonts::title, AppFonts::title->FontSize * 1.3f, valores[i].c_str());
+				salaTexto(dl, AppFonts::title, AppFonts::title->FontSize * 1.3f, ImVec2(a.x + (w - tv.x) * 0.5f, a.y + 10 * s),
+					vis::col(tema->primary), valores[i].c_str());
+				const ImVec2 te = salaMedir(AppFonts::input, AppFonts::input->FontSize, etiquetas[i]);
+				dl->PushClipRect(a, b, true);
+				salaTexto(dl, AppFonts::input, AppFonts::input->FontSize, ImVec2(a.x + (w - te.x) * 0.5f, a.y + alto - te.y - 8 * s),
+					vis::col(tema->textMuted), etiquetas[i]);
+				dl->PopClipRect();
+			}
+			ImGui::SetCursorScreenPos(ImVec2(o.x, o.y + alto));
+			ImGui::Dummy(ImVec2(ancho, 8.0f * s));
+		}
+
+		// ---------------------------------------------------------------------
 		//  Enlace visual: anfitrión ↔ invitado, con la latencia en vivo
 		// ---------------------------------------------------------------------
 		std::string salaIniciales(const std::string& nombre) {
@@ -172,9 +304,7 @@ namespace phoenix {
 		}
 
 		void salaEnlaceVisual(ProveedorSala& sala, Theme* tema, float s, float ancho) {
-			static float hist[64] = {};
-			static double ultimaMuestra = -10.0;
-			static float msSuave = 0.0f;
+			const HistLat& H = histLat();
 			ImDrawList* dl = ImGui::GetWindowDrawList();
 			const double ahora = ImGui::GetTime();
 
@@ -187,14 +317,6 @@ namespace phoenix {
 			}
 			const bool hayRival = !rival.empty();
 			const bool abierta = sala.abierta();
-
-			// Una muestra de latencia cada medio segundo (≈ 32 s de historia)
-			if (ahora - ultimaMuestra >= 0.5) {
-				ultimaMuestra = ahora;
-				for (int i = 0; i < 63; i++) hist[i] = hist[i + 1];
-				hist[63] = (hayRival && ping >= 0) ? static_cast<float>(ping) : 0.0f;
-			}
-			msSuave = vis::acercar(msSuave, (hayRival && ping >= 0) ? static_cast<float>(ping) : 0.0f, 8.0f);
 
 			const float alto = 132.0f * s;
 			const ImVec2 p0 = ImGui::GetCursorScreenPos();
@@ -239,8 +361,8 @@ namespace phoenix {
 					const float yTope = p0.y + 40.0f * s;
 					const float paso = (x1 - x0) / 63.0f;
 					for (int i = 0; i < 63; i++) {
-						const float va = (std::min)(hist[i], 150.0f) / 150.0f;
-						const float vb = (std::min)(hist[i + 1], 150.0f) / 150.0f;
+						const float va = (std::min)(H.v[i], 150.0f) / 150.0f;
+						const float vb = (std::min)(H.v[i + 1], 150.0f) / 150.0f;
 						dl->AddLine(ImVec2(x0 + paso * i, yTope + amp * (1.0f - va)),
 							ImVec2(x0 + paso * (i + 1), yTope + amp * (1.0f - vb)), vis::col(cw, 0.35f + 0.65f * (i / 63.0f)), 2.0f * s);
 					}
@@ -253,7 +375,7 @@ namespace phoenix {
 						dl->AddCircleFilled(ImVec2(x0 + (x1 - x0) * sentido, yCable), 3.2f * s, vis::col(cw, 0.9f), 16);
 					}
 
-					const std::string ms = std::to_string(static_cast<int>(msSuave + 0.5f)) + " ms";
+					const std::string ms = std::to_string(static_cast<int>(H.ms + 0.5f)) + " ms";
 					centrado(AppFonts::title, AppFonts::title->FontSize, yCable + 10.0f * s, vis::col(tema->text), ms.c_str());
 				}
 				else {
@@ -725,6 +847,7 @@ namespace phoenix {
 		if (sala == nullptr) return;
 		PhoenixRoles::instancia().permitirParsec(PhoenixPrefs::get().entradaParsec);
 		try { salaAlimentarLink(*sala); } catch (...) {}
+		try { histActualizar(*sala); } catch (...) {}
 	}
 
 	void PantallaSala::render(ProveedorSala* sala,
@@ -736,23 +859,16 @@ namespace phoenix {
 		EstadoSala& e = salaEstado();
 		Theme* tema = ThemeController::getInstance().getActiveTheme();
 		const float s = salaEscala();
-		const float sep = 12.0f * s;
-
-		// Reparto: principal a la izquierda, actividad a la derecha (o abajo si es angosto)
-		// Pestaña 0 = Resumen (con actividad al lado) · 1 = Opciones (todo el ancho)
-		const bool conActividad = (pestana == 0);
-		const bool ancho = tam.x >= 900.0f * s;
-		const ImVec2 tamPrincipal = !conActividad ? tam : (ancho
-			? ImVec2(std::floor((tam.x - sep) * 0.64f), tam.y)
-			: ImVec2(tam.x, std::floor((tam.y - sep) * 0.68f)));
-		const ImVec2 posActividad = ancho
-			? ImVec2(pos.x + tamPrincipal.x + sep, pos.y)
-			: ImVec2(pos.x, pos.y + tamPrincipal.y + sep);
-		const ImVec2 tamActividad = ancho
-			? ImVec2(tam.x - tamPrincipal.x - sep, tam.y)
-			: ImVec2(tam.x, tam.y - tamPrincipal.y - sep);
+		
+		// Pestañas: 0 = Resumen · 1 = Opciones · 2 = Actividad (registro)
+		const ImVec2 tamPrincipal = tam;
 
 		if (sala == nullptr) return; // forma sin modo host: el shell muestra otra pantalla
+
+		if (pestana == 2) {
+			acoplar(panelActividad, pos, tam);
+			return;
+		}
 
 		if (e.avanzado && pestana == 1) {
 			// Configuración original del Soda, con un botón para volver
@@ -789,7 +905,12 @@ namespace phoenix {
 			try {
 				if (pestana == 0) {
 					salaEnlaceVisual(*sala, tema, s, anchoUtil);
-					salaTarjetaPrincipal(*sala, tema, s, anchoUtil);
+					salaFila(anchoUtil, s,
+						[&](float w) { salaTarjetaPrincipal(*sala, tema, s, w); },
+						[&](float w) { salaPanelLatencia(tema, s, w); });
+					salaFila(anchoUtil, s,
+						[&](float w) { salaPanelTransmision(*sala, tema, s, w); },
+						[&](float w) { salaEspectadores(*sala, tema, s, w); });
 					salaTitulo(T("sala.mandos"), tema, s);
 					TableroMandos::render(*sala, anchoUtil, true);
 				}
@@ -813,7 +934,6 @@ namespace phoenix {
 			ImGui::PopStyleVar(4);
 		}
 
-		if (conActividad) acoplar(panelActividad, posActividad, tamActividad);
 	}
 
 }
