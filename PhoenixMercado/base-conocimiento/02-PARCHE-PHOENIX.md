@@ -10,7 +10,7 @@ de cada pieza. Lo marcado ❓ está por verificar: no se da por sabido.
 | Pieza | Dónde vive | Qué contiene | Cómo se fabrica / edita | Estado nuestro |
 |---|---|---|---|---|
 | **Archivos CPK** | `<juego>\download\*.cpk` | paquetes CRI con todo el contenido: base de datos, caras, uniformes, estadios, balones, botines, logos, menús | se arman con herramientas CPK (CriPakTools / CPK File Builder); el juego los carga por `DpFileList.bin` | leemos la base (`.cpk` → `Player.bin`) ✅; **no armamos CPK todavía** ⏳ |
-| **`DpFileList.bin`** | `<juego>\download\` | lista de CPK que el juego carga y en qué orden (el último pisa a los anteriores) | «DpFileList Generator» o generador propio (formato simple) | ❓ formato por documentar |
+| **`DpFileList.bin`** | `<juego>\download\` | lista de CPK que el juego carga y en qué orden (el último pisa a los anteriores) | «DpFileList Generator» o generador propio | 🔎 formato leído del ConmeGOL (ver `parches/conmegol-26.md`): 16 B + 48 B por CPK |
 | **Base de datos** (`common\etc\pesdb\`) | dentro del CPK de base (ConmeGOL: `CGP_database.cpk`) | `Player.bin` (jugadores y habilidades, mapa de bits), `Team.bin`, `PlayerAssignment.bin` (plantillas), `Competition*.bin`, `Coach.bin`, `Stadium.bin`, `Ball.bin`, `Boots.bin`… | editores de base (PES editor / 4ccEditor) o escritura directa con el mapa de bits | `Player.bin` ✅ (mapa de bits en 01 §B); el resto ❓ |
 | **Option file** (`EDIT00000000`) | carpeta `save` de Steam | jugadores/equipos editados, plantillas, dorsales, tácticas, uniformes editados, competiciones editadas | el juego (modo Editar) o Phoenix Mercado | plantillas, dorsales y tácticas ✅; uniformes/competiciones ❓ |
 | **Caras y cuerpos** | CPK (`common\character0\model\character\face\real\<id>\`) | modelos `.fmdl`, texturas `.ftex`, `face.fpk` | Facemaker / Blender + herramientas de la comunidad | solo se reutilizan (viajan con el ID del jugador) |
@@ -37,7 +37,7 @@ de cada pieza. Lo marcado ❓ está por verificar: no se da por sabido.
 
 ## C. Lo que falta dominar para un parche propio (por orden sugerido)
 
-1. **Empaquetar CPK y generar `DpFileList.bin`** desde Phoenix Mercado (o un script): sin esto no hay parche propio. ❓
+1. **Empaquetar CPK y generar `DpFileList.bin`** desde Phoenix Mercado (o un script). `DpFileList.bin` ya está entendido 🔎; el CPK se puede **evitar casi del todo con LiveCPK de Sider** (así hace ConmeGOL: solo su base va en un `.cpk` de 3,7 MB; el resto, carpetas sueltas). ❓ armar el `.cpk` de la base
 2. **Escribir la base de datos** (`Team.bin`, `PlayerAssignment.bin`, `Competition*.bin`) y no solo leer `Player.bin`:
    crear/renombrar equipos, cambiar plantillas de fábrica, competiciones y calendarios base. ❓ (formatos por documentar;
    el mapa de bits de `Player.bin` ya está).
