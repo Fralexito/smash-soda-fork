@@ -10,8 +10,8 @@ import { accion, confirmar, avisar } from "../tienda.js";
 import { Tarjeta, Titulo, Boton, Interruptor, Campo, Avatar, Chip, Icono, Vacio, colorPing, cx, dos } from "../ui.js";
 
 export const PESTANAS_PARTIDO = [
-  { id: "vivo", es: "EN VIVO", en: "LIVE" },
-  { id: "historial", es: "HISTORIAL", en: "HISTORY" },
+  { id: "vivo", es: "EN VIVO", en: "LIVE", d: ["Arma los dos lados, lleva el marcador y el reloj. Al terminar se guarda y se avisa en el chat y la web.", "Set up sides, keep score and time."] },
+  { id: "historial", es: "HISTORIAL", en: "HISTORY", d: ["Partidos jugados en esta PC y la tabla de la sala (3 puntos por victoria).", "Matches played on this PC and the room table."] },
 ];
 
 export function VistaPartido({ s, pestana }) {

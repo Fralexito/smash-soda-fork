@@ -8,11 +8,11 @@ import { accion, confirmar } from "../tienda.js";
 import { Tarjeta, Titulo, Boton, Interruptor, Ajuste, AjusteSw, Stepper, Icono, Vacio, Avatar, Chip, colorPing, cx, dos } from "../ui.js";
 
 export const PESTANAS_MANDOS = [
-  { id: "puestos", es: "PUESTOS", en: "SEATS" },
-  { id: "teclado", es: "TECLADO", en: "KEYBOARD" },
-  { id: "turnos", es: "TURNOS", en: "HOTSEAT" },
-  { id: "marionetas", es: "MARIONETAS", en: "PUPPETS" },
-  { id: "bloqueo", es: "BLOQUEO", en: "LOCK" },
+  { id: "puestos", es: "PUESTOS", en: "SEATS", d: ["Toca «Asignar» para dar un mando o arrastra un puesto sobre otro para intercambiarlos.", "Tap Assign or drag a seat onto another to swap."] },
+  { id: "teclado", es: "TECLADO", en: "KEYBOARD", d: ["Quién puede jugar con teclado y qué tecla es cada botón.", "Who can play with keyboard and the key map."] },
+  { id: "turnos", es: "TURNOS", en: "HOTSEAT", d: ["Rotación automática: cada uno juega un rato y cede el mando.", "Automatic rotation of the pads."] },
+  { id: "marionetas", es: "MARIONETAS", en: "PUPPETS", d: ["Cuántos mandos virtuales ve el juego y los mandos físicos de esta PC.", "Virtual pads the game sees."] },
+  { id: "bloqueo", es: "BLOQUEO", en: "LOCK", d: ["Congela los mandos (pausas, revisión) o solo algunos botones.", "Freeze pads or some buttons."] },
 ];
 
 export function metaMandos(s) {
@@ -123,9 +123,9 @@ function Puesto({ p, m, alAsignar, arrastre }) {
         ${p.ocupado
           ? html`<${Boton} tipo="peligro" estilo="flex:1" al=${() => esHost ? accion("mandos.tomar", { numero: 0 }) : accion("mandos.liberar", { indice: p.n - 1 })}>${t("QUITAR MANDO", "REMOVE")}</${Boton}>`
           : html`<${Boton} estilo="flex:1" al=${() => alAsignar(p.n - 1)}>${t("ASIGNAR", "ASSIGN")}</${Boton}>`}
-        <button class="icono-btn" style="height:38px;width:38px" title=${p.bloqueado ? t("Desbloquear", "Unlock") : t("Bloquear", "Lock")}
+        <button class="icono-btn" style="height:38px;width:38px" data-tip=${p.bloqueado ? t("Desbloquear este mando", "Unlock this pad") : t("Bloquear este mando", "Lock this pad")}
           onClick=${() => accion("mandos.bloquear", { indice: p.n - 1 })}><span style=${p.bloqueado ? "color:var(--warn)" : ""}><${Icono} n="candado" t=${17}/></span></button>
-        <button class="icono-btn" style="height:38px;width:38px" title=${p.conectado ? t("Desconectar mando virtual", "Unplug virtual pad") : t("Conectar mando virtual", "Plug virtual pad")}
+        <button class="icono-btn" style="height:38px;width:38px" data-tip=${p.conectado ? t("Desenchufar el mando virtual", "Unplug virtual pad") : t("Enchufar el mando virtual", "Plug virtual pad")}
           onClick=${() => accion(p.conectado ? "mandos.desconectar" : "mandos.conectar", { indice: p.n - 1 })}><span style=${p.conectado ? "color:var(--ok)" : "color:var(--bad)"}><${Icono} n="enlace" t=${17}/></span></button>
       </div>
     </div>

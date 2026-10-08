@@ -274,7 +274,12 @@ select.campo option { background: var(--panel); color: var(--fg); }
 .sw:disabled { opacity: .4; cursor: not-allowed; }
 
 .stepper { display: inline-flex; align-items: center; gap: 4px; }
-.stepper .v { min-width: 44px; text-align: center; font: 600 18px/1 var(--f-mono); }
+.stepper .v { min-width: 44px; height: 34px; text-align: center; font: 600 18px/1 var(--f-mono); color: var(--fg);
+  background: transparent; border: 1px solid transparent; border-radius: 8px; outline: none; padding: 0 4px; cursor: text;
+  transition: border-color .15s var(--ease), background .15s var(--ease); user-select: text; }
+.stepper .v:hover { border-color: var(--tenue); }
+.stepper .v:focus { border-color: var(--acc); background: var(--hundido); box-shadow: 0 0 0 3px var(--acc-suave); }
+.stepper.off { opacity: .5; }
 .seg { display: inline-flex; padding: 4px; gap: 4px; border-radius: 22px; background: var(--hundido); border: 1px solid var(--tenue); }
 .seg button { height: 34px; padding: 0 16px; border-radius: 17px; border: 0; background: transparent; color: var(--mut); cursor: pointer; font: 600 12px/1 var(--f-disp); letter-spacing: .12em; transition: background .15s var(--ease), color .15s; }
 .seg button.on { background: var(--acc2); color: #fff; }
@@ -439,3 +444,54 @@ button.persona:disabled { opacity: .45; cursor: not-allowed; }
 @media (max-width: 900px) {
   .heroe .derecha { width: 100% !important; flex-direction: row !important; align-items: center; justify-content: space-between !important; text-align: left !important; }
 }
+
+/* ---------- Capa dinámica ---------- */
+/* Fondo vivo: una aurora lenta (solo transform/opacity) */
+.fondo::after { content: ""; position: absolute; inset: -20%; pointer-events: none;
+  background: radial-gradient(40% 35% at 30% 40%, var(--brillo1), transparent 70%), radial-gradient(35% 30% at 70% 60%, var(--brillo2), transparent 70%);
+  opacity: .55; animation: aurora 26s ease-in-out infinite alternate; }
+@keyframes aurora { from { transform: translate3d(-4%, -2%, 0) scale(1); } to { transform: translate3d(4%, 3%, 0) scale(1.08); } }
+
+/* Entrada escalonada de las tarjetas al cambiar de pestaña */
+.vista > * > *, .vista > .rej2 > *, .vista > .rej3 > * { animation: subir .32s var(--ease) both; }
+.vista > * > *:nth-child(2) { animation-delay: .04s; } .vista > * > *:nth-child(3) { animation-delay: .08s; }
+.vista > * > *:nth-child(4) { animation-delay: .12s; } .vista > * > *:nth-child(n+5) { animation-delay: .16s; }
+@keyframes subir { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+/* Tarjetas que responden al ratón */
+@media (hover: hover) {
+  .cut.vivo-hover, .puesto, .caja.boton, .persona { transition: transform .18s var(--ease), border-color .15s var(--ease), background .15s var(--ease); }
+  .cut.vivo-hover:hover, .caja.boton:hover { transform: translateY(-2px); }
+  .puesto:hover { transform: translateY(-2px); }
+  .cut[draggable="true"]:hover { transform: translateY(-2px); transition: transform .18s var(--ease); }
+}
+.caja.boton { cursor: pointer; }
+.btn:not(:disabled):active, .icono-btn:not(:disabled):active { transform: scale(.94); }
+
+/* Ayudas al pasar el ratón (data-tip) */
+[data-tip] { position: relative; }
+@media (hover: hover) {
+  [data-tip]:hover::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+    white-space: nowrap; padding: 6px 10px; border-radius: 8px; background: #000c; border: 1px solid var(--linea); color: var(--fg);
+    font: 500 12px/1.2 var(--f-body); letter-spacing: 0; text-transform: none; pointer-events: none; z-index: 20; animation: aparecer .12s var(--ease); }
+}
+
+/* Lista de pasos (sala cerrada) */
+.pasos { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+.paso { display: flex; gap: 10px; align-items: center; padding: 12px; border-radius: 12px; border: 1px solid var(--tenue); background: rgba(255,255,255,.025); text-align: left; color: inherit; font: inherit; }
+button.paso { cursor: pointer; }
+.paso .marca-paso { width: 28px; height: 28px; flex: none; border-radius: 14px; display: inline-flex; align-items: center; justify-content: center; font: 700 14px/1 var(--f-disp); }
+.paso.ok .marca-paso { background: rgba(61,220,151,.16); color: var(--ok); }
+.paso.falta .marca-paso { background: rgba(255,181,71,.16); color: var(--warn); }
+.paso.mal .marca-paso { background: rgba(255,107,128,.16); color: var(--bad); }
+.paso .t { font-weight: 600; font-size: 14px; } .paso .d { color: var(--mut); font-size: 12px; margin-top: 2px; }
+
+/* Barra de ping viva */
+.medidor > i { position: relative; overflow: hidden; }
+.medidor > i::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,.45), transparent);
+  transform: translateX(-100%); animation: barrido 2.4s ease-in-out infinite; }
+@keyframes barrido { to { transform: translateX(100%); } }
+
+/* Descripción de la pestaña */
+.guia { display: flex; align-items: center; gap: 10px; color: var(--mut); font-size: 13px; margin-top: -6px; }
+.guia .acc { flex: none; }

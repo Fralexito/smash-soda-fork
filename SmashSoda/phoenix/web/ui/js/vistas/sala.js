@@ -5,16 +5,16 @@ import { html, useState, useEffect } from "../lib.js";
 import { t, duracion, haceCuanto } from "../i18n.js";
 import { accion, confirmar, irA, avisar } from "../tienda.js";
 import {
-  Tarjeta, Titulo, Boton, Interruptor, Ajuste, AjusteSw, Stepper, Segmentos, Selector, Campo,
+  Cifra, Tarjeta, Titulo, Boton, Interruptor, Ajuste, AjusteSw, Stepper, Segmentos, Selector, Campo,
   Minigrafica, Chip, Icono, Vacio, colorPing, claseSemaforo, cx, dos,
 } from "../ui.js";
 
 export const PESTANAS_SALA = [
-  { id: "resumen", es: "RESUMEN", en: "OVERVIEW" },
-  { id: "opciones", es: "OPCIONES DE SALA", en: "ROOM OPTIONS" },
-  { id: "juegos", es: "JUEGOS", en: "GAMES" },
-  { id: "red", es: "RED", en: "NETWORK" },
-  { id: "actividad", es: "ACTIVIDAD", en: "ACTIVITY" },
+  { id: "resumen", es: "RESUMEN", en: "OVERVIEW", d: ["Tu sala de un vistazo: enlace, tiempo en vivo, quién juega y cómo va la conexión.", "Your room at a glance."] },
+  { id: "opciones", es: "OPCIONES DE SALA", en: "ROOM OPTIONS", d: ["Nombre, plazas, quién puede entrar y la calidad de la imagen. Se guarda al instante.", "Name, slots, who can join and image quality."] },
+  { id: "juegos", es: "JUEGOS", en: "GAMES", d: ["Qué se juega (se muestra en la web de la liga) y el juego que abre el modo quiosco.", "What is being played and the kiosk game."] },
+  { id: "red", es: "RED", en: "NETWORK", d: ["El ping de cada invitado segundo a segundo. Verde va bien, ámbar aguanta, rojo es lag.", "Each guest's ping, live."] },
+  { id: "actividad", es: "ACTIVIDAD", en: "ACTIVITY", d: ["Todo lo que pasó en la sala, del más nuevo al más viejo.", "Everything that happened in the room."] },
 ];
 
 export const PRESETS_CALIDAD = [
@@ -76,6 +76,7 @@ function Heroe({ m }) {
           <${Boton} tipo="lleno enorme" deshabilitado=${!sala.lista} al=${abrirSala}><${Icono} n="rayo" t=${18}/>${t("ABRIR SALA", "OPEN ROOM")}</${Boton}>
           <${Boton} tipo="suave enorme" al=${() => irA("sala", "opciones")}>${t("OPCIONES", "OPTIONS")}</${Boton}>
         </div>
+        <${ListaParaAbrir} m=${m}/>
       </div>
       <div class="derecha" style="width:190px;display:flex;flex-direction:column;gap:10px;text-align:right">
         <div class="lab">${t("PLAZAS", "SLOTS")}</div>
@@ -102,6 +103,23 @@ function Heroe({ m }) {
       <${Boton} tipo="peligro lleno enorme" al=${() => cerrarSala(m)}>${t("DETENER SALA", "STOP ROOM")}</${Boton}>
     </div>
   </${Tarjeta}>`;
+}
+
+function ListaParaAbrir({ m }) {
+  const mandos = m.mandos?.lista || [];
+  const conectados = mandos.filter((p) => p.conectado).length;
+  const web = m.web?.estado;
+  const pasos = [
+    { ok: m.sala.lista, mal: !m.sala.lista, t: t("Parsec listo", "Parsec ready"), d: m.sala.lista ? (m.sala.cuentaHost || t("Sesión iniciada", "Signed in")) : t("Preparando…", "Starting…"), ir: ["ajustes", "diagnostico"] },
+    { ok: conectados > 0, mal: mandos.length === 0, t: t("Mandos virtuales", "Virtual pads"), d: mandos.length ? `${conectados}/${mandos.length} ${t("conectados", "connected")}` : t("Falta ViGEmBus", "ViGEmBus missing"), ir: ["mandos", "puestos"] },
+    { ok: web === "conectado", mal: web === "sin_conexion", t: t("Web de la liga", "League website"), d: web === "conectado" ? (m.web.usuario || t("Vinculada", "Linked")) : web === "sin_vincular" ? t("Toca para vincular", "Tap to link") : t("Sin conexión", "Offline"), ir: ["ajustes", "web"] },
+    { ok: (m.sala.plazas || 0) > 0, mal: false, t: t("Plazas", "Slots"), d: `${m.sala.plazas} ${t("invitados a la vez", "guests at once")}`, ir: ["sala", "opciones"] },
+  ];
+  return html`<div class="pasos" style="margin-top:16px">${pasos.map((p) => html`
+    <button class=${cx("paso", p.ok ? "ok" : p.mal ? "mal" : "falta")} onClick=${() => irA(p.ir[0], p.ir[1])}>
+      <span class="marca-paso">${p.ok ? "✓" : p.mal ? "×" : "!"}</span>
+      <span style="min-width:0"><div class="t">${p.t}</div><div class="d">${p.d}</div></span>
+    </button>`)}</div>`;
 }
 
 function textoVisibilidad(v) {
@@ -145,7 +163,7 @@ function Indicadores({ m }) {
   const caja = (lab, valor, unidad, color) => html`
     <div class="caja" style="border-color:var(--linea);background:rgba(13,18,42,.6)">
       <div class="lab" style="letter-spacing:.12em">${lab}</div>
-      <div class="disp" style=${`margin-top:10px;font-size:30px;font-weight:700;line-height:1;color:${color}`}>${valor}</div>
+      <div class="disp" style=${`margin-top:10px;font-size:30px;font-weight:700;line-height:1;color:${color}`}>${typeof valor === "number" ? html`<${Cifra} valor=${valor}/>` : valor}</div>
       <div class="mono mut" style="margin-top:6px;font-size:12px">${unidad}</div>
     </div>`;
   return html`<div class="rej3" style="gap:12px">
@@ -196,7 +214,9 @@ export function TarjetaCalidad({ m }) {
   const actual = PRESETS_CALIDAD.find((p) => p.fps === fps && p.mbps === mbps);
   const aplicar = (f, b) => accion("sala.calidad", { fps: f, mbps: b });
   return html`<${Tarjeta} interior="padding:22px 24px">
-    <${Titulo} texto=${t("CALIDAD DE TRANSMISIÓN", "STREAM QUALITY")} derecha=${html`<span class="mono mut" style="font-size:12px">${fps} FPS · ${mbps} MBPS</span>`}/>
+    <${Titulo} texto=${t("CALIDAD DE TRANSMISIÓN", "STREAM QUALITY")} derecha=${actual
+      ? html`<span class="mono mut" style="font-size:12px">${fps} FPS · ${mbps} MBPS</span>`
+      : html`<span class="chip acc2">${t("PERSONALIZADA", "CUSTOM")} · ${mbps} MBPS</span>`}/>
     <div class="rej3" style="gap:10px">${PRESETS_CALIDAD.map((p) => html`
       <button class="caja" style=${`cursor:pointer;text-align:left;border-color:${actual?.id === p.id ? "var(--acc)" : "var(--tenue)"};background:${actual?.id === p.id ? "var(--acc-suave)" : ""}`}
         onClick=${() => aplicar(p.fps, p.mbps)}>
@@ -206,8 +226,8 @@ export function TarjetaCalidad({ m }) {
       </button>`)}</div>
     <${Ajuste} titulo=${t("Fotogramas por segundo", "Frames per second")} desc=${t("60 es lo ideal para PES.", "60 is ideal for PES.")}>
       <${Stepper} valor=${fps} min=${10} max=${250} paso=${5} al=${(v) => aplicar(v, mbps)}/></${Ajuste}>
-    <${Ajuste} titulo=${t("Ancho de banda (Mbps)", "Bandwidth (Mbps)")} desc=${t("Más alto = mejor imagen, pero exige más a tu internet.", "Higher = better image, needs more upload.")}>
-      <${Stepper} valor=${mbps} min=${1} max=${1000} al=${(v) => aplicar(fps, v)}/></${Ajuste}>
+    <${Ajuste} titulo=${t("Ancho de banda (Mbps)", "Bandwidth (Mbps)")} desc=${t("Escribe el valor que quieras (1–1000) o usa − / +. Más alto = mejor imagen, pero exige más a tu internet.", "Type any value (1–1000) or use − / +.")}>
+      <${Stepper} valor=${mbps} min=${1} max=${1000} ancho=${4} al=${(v) => aplicar(fps, v)}/></${Ajuste}>
   </${Tarjeta}>`;
 }
 

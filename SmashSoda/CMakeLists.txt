@@ -223,6 +223,8 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         "${CMAKE_SOURCE_DIR}/SmashSoda/phoenix/web/ui" $<TARGET_FILE_DIR:${PROJECT_NAME}>/ui
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${CMAKE_SOURCE_DIR}/external/webview2/${TARGET_ARCH}/WebView2Loader.dll" $<TARGET_FILE_DIR:${PROJECT_NAME}>
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_SOURCE_DIR}/SmashSoda/phoenix/LICENCIAS.txt" $<TARGET_FILE_DIR:${PROJECT_NAME}>
 )
 
 if(TARGET_ARCH STREQUAL "x64")

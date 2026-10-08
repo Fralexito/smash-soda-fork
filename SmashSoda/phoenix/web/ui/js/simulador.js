@@ -39,6 +39,7 @@ export function crearSimulador(enviar) {
     baneados: [{ parsecId: 6666, nombre: "Troll", motivo: "Insultos" }],
     web: { estado: "conectado", usuario: "Fralex", mensaje: "Sala publicada en la web.", publicada: true },
     seccion: "sala", pestana: "resumen",
+    sonidos: [{ ruta: "sfx/gol.wav", etiqueta: "gol", espera: 5 }, { ruta: "sfx/silbato.wav", etiqueta: "silbato", espera: 10 }, { ruta: "sfx/abucheo.wav", etiqueta: "abucheo", espera: 30 }],
     chat: ["Mirko: buenas!", "Kaiser: listos para la revancha", "[PhoenixBot] ElTigre entró a la sala."],
     actividad: ["[PhoenixBot] Sala abierta con eFootball PES 2021", "[PhoenixBot] Mirko joined.", "[PhoenixBot] Kaiser joined.", "[PhoenixBot] Mando 03 asignado a ElTigre"],
   };
@@ -185,6 +186,9 @@ export function crearSimulador(enviar) {
     "ajustes.videoListas": () => ({ pantallas: ["Pantalla 1 (1920×1080)", "Pantalla 2 (2560×1440)"], gpus: ["NVIDIA GeForce RTX 3060"], wgc: true }),
     "ajustes.audio": (d) => { s.audio[d.canal][d.clave] = d.valor; },
     "ajustes.overlay": (d) => { const [a, b] = d.clave.split("."); if (b) s.ajustes.overlay[a][b] = d.valor; else s.ajustes.overlay[a] = d.valor; },
+    "sfx.lista": () => ({ sonidos: s.sonidos }),
+    "sfx.recargar": () => ({ sonidos: s.sonidos }),
+    "sfx.espera": (d) => { const x = s.sonidos.find((y) => y.ruta === d.ruta); if (!x) error("NO_EXISTE", "Ese sonido ya no está."); x.espera = d.segundos; },
     "diag.ejecutar": () => ({ chequeos: [
       { id: "webview2", estado: "ok", datos: { version: "130.0.2849.80" } },
       { id: "vigem", estado: "ok", datos: { instalado: true, mandos: 8, conectados: 8 } },

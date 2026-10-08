@@ -9,15 +9,16 @@ import { Tarjeta, Titulo, Boton, Interruptor, Ajuste, AjusteSw, Stepper, Selecto
 import { TarjetaCalidad } from "./sala.js";
 
 export const PESTANAS_AJUSTES = [
-  { id: "general", es: "GENERAL", en: "GENERAL" },
-  { id: "video", es: "VIDEO", en: "VIDEO" },
-  { id: "audio", es: "AUDIO", en: "AUDIO" },
-  { id: "overlay", es: "OVERLAY", en: "OVERLAY" },
-  { id: "permisos", es: "PERMISOS", en: "PERMISSIONS" },
-  { id: "web", es: "CUENTA WEB", en: "WEB ACCOUNT" },
-  { id: "interfaz", es: "INTERFAZ", en: "INTERFACE" },
-  { id: "diagnostico", es: "DIAGNÓSTICO", en: "DIAGNOSTICS" },
-  { id: "avanzado", es: "AVANZADO", en: "ADVANCED" },
+  { id: "general", es: "GENERAL", en: "GENERAL", d: ["Tema, bot del chat y seguridad de la sala.", "Theme, chat bot and room security."] },
+  { id: "video", es: "VIDEO", en: "VIDEO", d: ["Qué pantalla y tarjeta de video se transmiten, y con qué calidad.", "Screen, GPU and quality."] },
+  { id: "audio", es: "AUDIO", en: "AUDIO", d: ["Sonido del juego y micrófono, con medidor en vivo.", "Game sound and microphone."] },
+  { id: "sonidos", es: "SONIDOS", en: "SOUNDS", d: ["Los sonidos del comando !sfx y cuánto esperar entre uno y otro.", "Sounds for !sfx and their cooldown."] },
+  { id: "overlay", es: "OVERLAY", en: "OVERLAY", d: ["Chat, mandos e invitados encima del juego.", "Chat, pads and guests over the game."] },
+  { id: "permisos", es: "PERMISOS", en: "PERMISSIONS", d: ["Qué puede hacer cada rol desde el chat.", "What each role can do from chat."] },
+  { id: "web", es: "CUENTA WEB", en: "WEB ACCOUNT", d: ["Vincula esta PC con tu cuenta de la liga para aparecer en el radar y ver a tus amigos.", "Link this PC to your league account."] },
+  { id: "interfaz", es: "INTERFAZ", en: "INTERFACE", d: ["Idioma, atajos de teclado y recarga de la interfaz.", "Language, shortcuts and reload."] },
+  { id: "diagnostico", es: "DIAGNÓSTICO", en: "DIAGNOSTICS", d: ["Revisa si la PC está lista para hostear y qué falta.", "Checks whether this PC is ready to host."] },
+  { id: "avanzado", es: "AVANZADO", en: "ADVANCED", d: ["WebSocket, registros y modo desarrollador.", "WebSocket, logs and developer mode."] },
 ];
 
 export function VistaAjustes({ s, pestana }) {
@@ -27,6 +28,7 @@ export function VistaAjustes({ s, pestana }) {
     case "video": return html`<${Video} m=${m} info=${s.info}/>`;
     case "audio": return html`<${Audio} m=${m}/>`;
     case "overlay": return html`<${Overlay} m=${m} info=${s.info}/>`;
+    case "sonidos": return html`<${Sonidos} m=${m}/>`;
     case "permisos": return html`<${Permisos} m=${m}/>`;
     case "web": return html`<${CuentaWeb} m=${m}/>`;
     case "interfaz": return html`<${Interfaz} m=${m} info=${s.info}/>`;
@@ -88,11 +90,6 @@ function General({ m }) {
         <${AjusteSw} titulo=${t("Sonido de mensaje", "Message sound")} valor=${g.messageNotification} al=${(v) => gen("messageNotification", v)}/>
         <${AjusteSw} titulo=${t("Leer el chat en voz alta", "Text to speech")} valor=${g.ttsEnabled} al=${(v) => gen("ttsEnabled", v)}/>
         <${AjusteSw} titulo=${t("Permitir !bonk", "Allow !bonk")} desc=${t("El juego de golpes del chat.", "The chat bonk game.")} valor=${g.bonkEnabled} al=${(v) => gen("bonkEnabled", v)}/>
-      </${Tarjeta}>
-      <${Tarjeta} interior="padding:20px 24px;display:flex;justify-content:space-between;align-items:center;gap:16px">
-        <div><div style="font-weight:600;font-size:16px">${t("Todas las opciones originales", "All original options")}</div>
-          <div class="ayuda">${t("País, WebSocket, permisos por rol y SFX.", "Country, WebSocket, role permissions and SFX.")}</div></div>
-        <${Boton} al=${() => clasico(1)}>${t("ABRIR PANEL CLÁSICO", "OPEN CLASSIC PANEL")}</${Boton}>
       </${Tarjeta}>
     </div>
   </div>`;
@@ -200,6 +197,42 @@ function Overlay({ m, info }) {
   </div>`;
 }
 
+// ---- Sonidos (!sfx) ---------------------------------------------------------------------------
+function Sonidos({ m }) {
+  const [lista, setLista] = useState(null);
+  const [filtro, setFiltro] = useState("");
+  const cargar = async (accionNombre = "sfx.lista", ok = null) => { const r = await accion(accionNombre, {}, { ok }); if (r) setLista(r.sonidos || []); };
+  useEffect(() => { cargar(); }, []);
+  const p = m.ajustes.permisos;
+  const permiso = (g, v) => accion("ajustes.permisos", { grupo: g, clave: "useSFX", valor: v });
+  const vis = (lista || []).filter((x) => !filtro || x.etiqueta.toLowerCase().includes(filtro.toLowerCase()));
+  return html`<div class="fila partible">
+    <${Tarjeta} estilo="flex:1.4;min-width:0" interior="padding:22px 24px;display:flex;flex-direction:column;gap:12px">
+      <${Titulo} texto=${t("SONIDOS DEL CHAT", "CHAT SOUNDS")} derecha=${html`<span class="mono mut">${lista ? lista.length : "…"}</span>`}/>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <input class="campo" style="flex:1;min-width:180px" placeholder=${t("Buscar sonido…", "Search sound…")} value=${filtro} onInput=${(e) => setFiltro(e.currentTarget.value)}/>
+        <${Boton} al=${() => cargar("sfx.recargar", t("Lista actualizada.", "List refreshed."))}>${t("BUSCAR SONIDOS NUEVOS", "SCAN FOR SOUNDS")}</${Boton}>
+      </div>
+      <div class="ayuda">${t("Pon tus archivos de audio en la carpeta sfx y pulsa «Buscar sonidos nuevos». La espera evita que alguien repita el mismo sonido sin parar.", "Put audio files in the sfx folder and scan.")}</div>
+      ${lista && lista.length === 0 ? html`<div class="vacio"><div class="grande">${t("Sin sonidos", "No sounds")}</div>${t("Aún no hay sonidos en la carpeta.", "No sounds in the folder yet.")}</div>` : null}
+      <div style="display:flex;flex-direction:column;gap:6px;max-height:52vh;overflow:auto">${vis.map((x) => html`<div class="persona" style="cursor:default" key=${x.ruta}>
+        <span class="avatar" style="width:34px;height:34px;font-size:14px;background:var(--acc-suave);color:var(--acc)">♪</span>
+        <div style="flex:1;min-width:0"><div class="nom mono">!sfx ${x.etiqueta}</div></div>
+        <span class="mut" style="font-size:12px">${t("espera", "cooldown")}</span>
+        <${Stepper} valor=${x.espera} min=${0} max=${3600} sufijo="s" al=${async (v) => {
+          if (await accion("sfx.espera", { ruta: x.ruta, segundos: v })) setLista((l) => l.map((y) => (y.ruta === x.ruta ? { ...y, espera: v } : y)));
+        }}/>
+      </div>`)}</div>
+    </${Tarjeta}>
+    <${Tarjeta} estilo="flex:1;min-width:0" interior="padding:22px 24px">
+      <${Titulo} texto=${t("QUIÉN PUEDE USAR !SFX", "WHO CAN USE !SFX")}/>
+      <${AjusteSw} titulo=${t("Invitados", "Guests")} valor=${p.guest.useSFX} al=${(v) => permiso("guest", v)}/>
+      <${AjusteSw} titulo="VIP" valor=${p.vip.useSFX} al=${(v) => permiso("vip", v)}/>
+      <${AjusteSw} titulo=${t("Moderadores", "Moderators")} valor=${p.moderator.useSFX} al=${(v) => permiso("moderator", v)}/>
+    </${Tarjeta}>
+  </div>`;
+}
+
 // ---- Permisos por rol ---------------------------------------------------------------------------
 function Permisos({ m }) {
   const p = m.ajustes.permisos;
@@ -253,7 +286,7 @@ function CuentaWeb({ m }) {
       <div class="lab acc">${vinculada ? t("VINCULAR DE NUEVO", "LINK AGAIN") : t("CÓMO VINCULAR", "HOW TO LINK")}</div>
       <ol class="ayuda" style="font-size:14px;line-height:1.7;margin:0;padding-left:20px">
         <li>${t("Entra a la web de la liga con tu cuenta.", "Sign in on the league website.")}</li>
-        <li>${t("Ve a Mi perfil › pestaña «Smash Soda» (o a Mis salas) y genera el código.", "Go to My profile › «Smash Soda» tab (or My rooms) and generate the code.")}</li>
+        <li>${t("Ve a Mi perfil › vincular PC (o a Mis salas) y genera el código.", "Go to My profile › link PC (or My rooms) and generate the code.")}</li>
         <li>${t("Escribe aquí los 6 dígitos (vale 10 minutos).", "Type the 6 digits here (valid 10 minutes).")}</li>
       </ol>
       <div style="display:flex;gap:10px">
@@ -286,7 +319,6 @@ function Interfaz({ m, info }) {
       <div class="ayuda">${t("Atajos: Ctrl+K busca cualquier acción · Ctrl+Espacio abre el chat · Alt+1…5 cambia de sección · Esc cierra.", "Shortcuts: Ctrl+K search · Ctrl+Space chat · Alt+1…5 sections · Esc close.")}</div>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
         <${Boton} al=${() => accion("ui.recargar")}>${t("RECARGAR INTERFAZ", "RELOAD INTERFACE")}</${Boton}>
-        <${Boton} tipo="suave" al=${() => clasico(0)}>${t("ABRIR PANEL CLÁSICO", "OPEN CLASSIC PANEL")}</${Boton}>
         <${Boton} tipo="peligro" al=${cambiarInterfaz}>${t("USAR LA INTERFAZ ANTERIOR", "USE PREVIOUS INTERFACE")}</${Boton}>
       </div>
     </${Tarjeta}>
@@ -303,7 +335,7 @@ const diag = () => ({
   config: [t("Carpeta de configuración", "Config folder"), (d) => d.ruta || ""],
   web: [t("Web de la liga", "League website"), (d) => d.usuario ? `${d.usuario} · ${d.mensaje || ""}` : (d.mensaje || t("Sin vincular", "Not linked"))],
   overlay: [t("Overlay", "Overlay"), (d) => d.activo ? (d.websocket ? `WebSocket :${d.puerto}` : t("WebSocket apagado", "WebSocket off")) : t("Desactivado", "Off")],
-  sistema: [t("Sistema", "System"), (d) => `${d.windows || "Windows"} · Phoenix ${d.app} · Soda ${d.soda}`],
+  sistema: [t("Sistema", "System"), (d) => `${d.windows || "Windows"} · Phoenix Link ${d.app}`],
 });
 
 function Diagnostico() {
@@ -338,7 +370,7 @@ function Avanzado({ m }) {
       <${Titulo} texto=${t("REGISTROS Y DESARROLLO", "LOGS AND DEVELOPMENT")}/>
       <${AjusteSw} titulo=${t("Registros de Parsec", "Parsec logs")} desc=${t("Muestra los registros de Parsec en el Registro.", "Shows Parsec logs in the log.")} valor=${g.parsecLogs} al=${(v) => gen("parsecLogs", v)}/>
       <${AjusteSw} titulo=${t("Modo desarrollador", "Developer mode")} desc=${t("Herramientas extra. Al reiniciar, permite inspeccionar esta interfaz con F12.", "Extra tools; after restart enables F12 here.")} valor=${g.devMode} al=${(v) => gen("devMode", v)}/>
-      <div style="margin-top:14px"><${Boton} al=${() => clasico(6)}>${t("AVANZADO DEL PANEL CLÁSICO", "CLASSIC ADVANCED")}</${Boton}></div>
+      <div style="margin-top:14px"><${Boton} al=${() => clasico(6)}>${t("MÁS OPCIONES AVANZADAS", "MORE ADVANCED OPTIONS")}</${Boton}></div>
     </${Tarjeta}>
   </div>`;
 }

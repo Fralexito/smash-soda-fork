@@ -90,7 +90,7 @@ function Menu({ s }) {
         <${Icono} n=${x.id} t=${26}/><span>${t(x.es, x.en)}</span>
         ${chapas[x.id] ? html`<span class="chapa">${chapas[x.id]}</span>` : null}
       </button>`)}
-    <div class="pie">v${m?.app?.version || "—"}<br/>SODA ${m?.app?.soda || "—"}</div>
+    <div class="pie">PHOENIX<br/>LINK ${m?.app?.version || ""}</div>
   </nav>`;
 }
 
@@ -100,6 +100,7 @@ function Contenido({ s }) {
   const pestana = s.pestanas[sec.id] || sec.pestanas[0].id;
   const Vista = sec.vista;
   const meta = sec.meta ? sec.meta(s) : null;
+  const info = sec.pestanas.find((p) => p.id === pestana);
   return html`<main class="contenido">
     <div class="cabecera">
       <div class="pestanas" role="tablist">
@@ -110,6 +111,7 @@ function Contenido({ s }) {
       </div>
       ${meta}
     </div>
+    ${info?.d ? html`<div class="guia" key=${"g" + pestana}><span class="acc"><${Icono} n="rayo" t=${14}/></span>${t(info.d[0], info.d[1])}</div>` : null}
     <div class="vista" key=${sec.id + "/" + pestana}>
       <${Vista} s=${s} pestana=${pestana}/>
     </div>

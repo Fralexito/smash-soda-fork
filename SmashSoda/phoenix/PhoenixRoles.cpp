@@ -211,7 +211,7 @@ namespace phoenix {
 		std::string mensaje;
 
 		if (texto.empty()) {
-			mensaje = "Sin lista de roles: mandos como en Smash Soda original.";
+			mensaje = "Sin lista de roles de la web: cualquiera puede tomar mando.";
 		}
 		else {
 			try {

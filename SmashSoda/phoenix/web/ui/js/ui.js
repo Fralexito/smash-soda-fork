@@ -95,13 +95,60 @@ export function AjusteSw({ titulo, desc, valor, al, deshabilitado }) {
   return html`<${Ajuste} titulo=${titulo} desc=${desc}><${Interruptor} valor=${valor} al=${al} deshabilitado=${deshabilitado} etiqueta=${titulo}/></${Ajuste}>`;
 }
 
-export function Stepper({ valor, min = 0, max = 99, paso = 1, al, sufijo = "", deshabilitado = false }) {
-  const mover = (d) => { const v = Math.min(max, Math.max(min, (valor ?? 0) + d)); if (v !== valor) al(v); };
-  return html`<div class="stepper">
-    <button class="icono-btn" disabled=${deshabilitado || valor <= min} onClick=${() => mover(-paso)} aria-label="Menos"><${Icono} n="menos" t=${16}/></button>
-    <span class="v">${valor}${sufijo}</span>
-    <button class="icono-btn" disabled=${deshabilitado || valor >= max} onClick=${() => mover(paso)} aria-label="Más"><${Icono} n="mas" t=${16}/></button>
+/**
+ * Número editable: botones − / + y el valor se puede escribir a mano
+ * (se guarda al salir del campo o con Enter; se ajusta al rango permitido).
+ */
+export function Stepper({ valor, min = 0, max = 99, paso = 1, al, sufijo = "", deshabilitado = false, ancho = 3 }) {
+  const [borrador, setBorrador] = useState(String(valor ?? ""));
+  const enfocado = useRef(false);
+  useEffect(() => { if (!enfocado.current) setBorrador(String(valor ?? "")); }, [valor]);
+  const fijar = (v) => { const n = Math.min(max, Math.max(min, Math.round(v))); setBorrador(String(n)); if (n !== valor) al(n); };
+  const confirmar = () => {
+    enfocado.current = false;
+    const n = Number(String(borrador).replace(",", "."));
+    if (borrador === "" || Number.isNaN(n)) setBorrador(String(valor ?? ""));
+    else fijar(n);
+  };
+  return html`<div class=${cx("stepper", deshabilitado && "off")}>
+    <button class="icono-btn" disabled=${deshabilitado || valor <= min} onClick=${() => fijar((valor ?? 0) - paso)} aria-label="Menos"><${Icono} n="menos" t=${16}/></button>
+    <input class="v" inputmode="numeric" disabled=${deshabilitado} value=${borrador} title=${`${min}–${max}`}
+      style=${`width:${Math.max(3, ancho) + 1.2}ch`}
+      onFocus=${(e) => { enfocado.current = true; e.currentTarget.select(); }}
+      onInput=${(e) => setBorrador(e.currentTarget.value.replace(/[^0-9.,-]/g, ""))}
+      onBlur=${confirmar}
+      onKeyDown=${(e) => {
+        if (e.key === "Enter") e.currentTarget.blur();
+        else if (e.key === "Escape") { setBorrador(String(valor ?? "")); enfocado.current = false; e.currentTarget.blur(); }
+        else if (e.key === "ArrowUp") { e.preventDefault(); fijar((valor ?? 0) + paso); }
+        else if (e.key === "ArrowDown") { e.preventDefault(); fijar((valor ?? 0) - paso); }
+      }}/>
+    ${sufijo ? html`<span class="mono mut" style="font-size:12px">${sufijo}</span>` : null}
+    <button class="icono-btn" disabled=${deshabilitado || valor >= max} onClick=${() => fijar((valor ?? 0) + paso)} aria-label="Más"><${Icono} n="mas" t=${16}/></button>
   </div>`;
+}
+
+/** Número que sube o baja con una animación corta cuando cambia. */
+export function Cifra({ valor, decimales = 0 }) {
+  const [mostrado, setMostrado] = useState(typeof valor === "number" ? valor : 0);
+  const desde = useRef(mostrado);
+  useEffect(() => {
+    if (typeof valor !== "number") return;
+    const reducido = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reducido || Math.abs(valor - desde.current) < 1e-9) { desde.current = valor; setMostrado(valor); return; }
+    const inicio = performance.now(), a = desde.current, d = 360;
+    let id = 0;
+    const paso = (t) => {
+      const k = Math.min(1, (t - inicio) / d), e = 1 - Math.pow(1 - k, 3);
+      const v = a + (valor - a) * e;
+      desde.current = v; setMostrado(v);
+      if (k < 1) id = requestAnimationFrame(paso);
+    };
+    id = requestAnimationFrame(paso);
+    return () => cancelAnimationFrame(id);
+  }, [valor]);
+  if (typeof valor !== "number") return html`${valor ?? "—"}`;
+  return html`${mostrado.toFixed(decimales)}`;
 }
 
 export function Segmentos({ opciones, valor, al }) {

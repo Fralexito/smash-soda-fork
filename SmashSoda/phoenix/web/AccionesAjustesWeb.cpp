@@ -8,6 +8,7 @@
 #include "../../Hosting.h"
 #include "../../core/Cache.h"
 #include "../../core/Config.h"
+#include "../../helpers/PathHelper.h"
 #include "../../services/WebSocket.h"
 #include "../../services/OverlayService.h"
 #include "../PhoenixBuild.h"
@@ -68,6 +69,33 @@ namespace phoenix::web {
 			catch (...) {
 				return false;
 			}
+		}
+
+		/// Sonidos de !sfx: mismo archivo y formato que la pestaña SFX original (sfx.json).
+		std::string rutaSfx() {
+			const std::string base = PathHelper::GetConfigPath();
+			if (base.empty()) throw ErrorAccion("SIN_CARPETA", "No se encontró la carpeta de configuración.");
+			return base + "sfx.json";
+		}
+
+		json leerSfx() {
+			std::ifstream f(rutaSfx(), std::ios::binary);
+			if (!f) return json{ {"sfx", json::array()} };
+			const json j = json::parse(f, nullptr, false);
+			if (j.is_discarded() || !j.is_object() || !j.contains("sfx") || !j["sfx"].is_array()) return json{ {"sfx", json::array()} };
+			return j;
+		}
+
+		json listaSfx() {
+			json lista = json::array();
+			for (const json& x : leerSfx()["sfx"]) {
+				if (!x.is_object()) continue;
+				const std::string ruta = x.value("path", "");
+				if (ruta.empty()) continue;
+				lista.push_back({ {"ruta", ruta}, {"etiqueta", x.value("tag", ruta)}, {"espera", (std::max)(0, x.value("cooldown", 5))} });
+			}
+			std::sort(lista.begin(), lista.end(), [](const json& a, const json& b) { return a["etiqueta"].get<std::string>() < b["etiqueta"].get<std::string>(); });
+			return lista;
 		}
 
 		json chequeo(const char* id, const char* estado, json datos) {
@@ -240,6 +268,33 @@ namespace phoenix::web {
 			}
 			else throw ErrorAccion("DATOS_INVALIDOS", "Ajuste del overlay desconocido.");
 			Config::cfg.Save();
+			return json::object();
+		});
+
+		// ---- Sonidos (!sfx) ------------------------------------------------------------
+		p.registrar("sfx.lista", [](const json&, uint64_t) -> std::optional<json> {
+			return json{ {"sonidos", listaSfx()} };
+		});
+		p.registrar("sfx.recargar", [](const json&, uint64_t) -> std::optional<json> {
+			Cache::cache.reloadSfxList(); // como «Rescan SFX Folder»
+			return json{ {"sonidos", listaSfx()} };
+		});
+		p.registrar("sfx.espera", [](const json& d, uint64_t) -> std::optional<json> {
+			const std::string ruta = texto(d, "ruta", 400);
+			const int segundos = entero(d, "segundos", 0, 3600);
+			json j = leerSfx();
+			bool hallado = false;
+			for (json& x : j["sfx"]) {
+				if (x.is_object() && x.value("path", "") == ruta) { x["cooldown"] = segundos; hallado = true; }
+			}
+			if (!hallado) throw ErrorAccion("NO_EXISTE", "Ese sonido ya no está en la lista. Pulsa «Buscar sonidos».");
+			{
+				std::ofstream f(rutaSfx(), std::ios::binary | std::ios::trunc);
+				if (!f) throw ErrorAccion("NO_SE_PUDO_GUARDAR", "No se pudo guardar sfx.json.");
+				f << j.dump(4);
+				if (!f.good()) throw ErrorAccion("NO_SE_PUDO_GUARDAR", "No se pudo guardar sfx.json.");
+			}
+			Cache::cache.reloadSfxList();
 			return json::object();
 		});
 

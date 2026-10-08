@@ -21,7 +21,7 @@
 - **Web de la liga:** `web.vincular{codigo}`, `web.reintentar`, `web.desvincular`, `web.soltarRival`.
 - **Mandos:** `mandos.conectar|desconectar|bloquear|liberar{indice}`, `mandos.asignar{indice,parsecId}`, `mandos.intercambiar{a,b}`, `mandos.formacion{local,visitante}`, `mandos.tomar{numero 0-8}`, `mandos.herramienta{nombre:reiniciar|desconectarTodos|ordenar|bloquearTodo|bloquearBotones}`, `mandos.cantidad{xbox,ds4}` (≤ 8), `solicitud.aceptar|rechazar{parsecId}`, `espera.decidir{parsecId,como:jugador|espectador|expulsar}`, `turnos.activar{si}`, `turnos.ajustes{juegoMin,reinicioMin,recordatorioMin}`.
 - **Gente:** `gente.mod|vip|expulsar|banear{parsecId}`, `gente.teclado|raton{parsecId,si}`, `moderacion.listas`, `moderacion.desbanear|quitarMod|quitarVip|banear{parsecId}`, `moderacion.motivo{parsecId,motivo}`, `chat.enviar{texto}`, `amigos.invitar{usuarioId}`.
-- **Ajustes:** `ajustes.general{clave,valor}`, `ajustes.permisos{grupo,clave,valor}`, `ajustes.video{clave,valor}`, `ajustes.videoListas`, `ajustes.audio{canal,clave,valor}`, `ajustes.overlay{clave,valor}`, `diag.ejecutar`.
+- **Ajustes:** `ajustes.general{clave,valor}`, `ajustes.permisos{grupo,clave,valor}`, `ajustes.video{clave,valor}`, `ajustes.videoListas`, `ajustes.audio{canal,clave,valor}`, `ajustes.overlay{clave,valor}`, `sfx.lista`, `sfx.recargar`, `sfx.espera{ruta,segundos}` (mismo `sfx.json` que la pestaña SFX original), `diag.ejecutar`.
 - **Partido:** `partido.preparar{a[],b[],nombreA,nombreB,asignar}`, `partido.iniciar{anunciar}`, `partido.gol{lado,delta}`, `partido.pausa{si}`, `partido.cambiarLados`, `partido.finalizar` → `{registro,guardado}`, `partido.cancelar`, `partido.historial{max}`.
 
 ## Archivos que crea en el PC

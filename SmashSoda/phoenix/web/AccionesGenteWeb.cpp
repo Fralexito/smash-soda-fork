@@ -77,7 +77,7 @@ namespace phoenix::web {
 		});
 		p.registrar("gente.banear", [&in](const json& d, uint64_t) -> std::optional<json> {
 			const uint32_t id = idParsec(d);
-			if (Cache::cache.isSodaCop(id)) throw ErrorAccion("NO_BANEABLE", "Es policía de Soda: no se puede banear.");
+			if (Cache::cache.isSodaCop(id)) throw ErrorAccion("NO_BANEABLE", "Es un moderador oficial: no se puede banear.");
 			if (!salaObligatoria(in).banear(id, nombreDe(in, id, d))) throw ErrorAccion("NO_SE_PUDO", "No se pudo banear.");
 			PhoenixLink::instancia().evento("expulsion", std::to_string(id), json{ {"motivo", "ban"} }.dump());
 			return json::object();
@@ -114,7 +114,7 @@ namespace phoenix::web {
 		});
 		p.registrar("moderacion.banear", [&in](const json& d, uint64_t) -> std::optional<json> {
 			const uint32_t id = idParsec(d);
-			if (Cache::cache.isSodaCop(id)) throw ErrorAccion("NO_BANEABLE", "Es policía de Soda: no se puede banear.");
+			if (Cache::cache.isSodaCop(id)) throw ErrorAccion("NO_BANEABLE", "Es un moderador oficial: no se puede banear.");
 			if (!salaObligatoria(in).banear(id, nombreDe(in, id, d))) throw ErrorAccion("NO_SE_PUDO", "No se pudo banear.");
 			return json::object();
 		});

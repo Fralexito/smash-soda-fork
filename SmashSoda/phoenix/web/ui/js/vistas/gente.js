@@ -8,9 +8,9 @@ import { accion, confirmar, irA } from "../tienda.js";
 import { Tarjeta, Titulo, Boton, AjusteSw, Campo, Avatar, Chip, Icono, Vacio, colorPing, cx, dos } from "../ui.js";
 
 export const PESTANAS_GENTE = [
-  { id: "sala", es: "EN SALA", en: "IN ROOM" },
-  { id: "moderacion", es: "MODERACIÓN", en: "MODERATION" },
-  { id: "amigos", es: "AMIGOS", en: "FRIENDS" },
+  { id: "sala", es: "EN SALA", en: "IN ROOM", d: ["Elige a alguien de la lista para ver su ficha, su carta de la liga y sus permisos.", "Pick someone to see their card and permissions."] },
+  { id: "moderacion", es: "MODERACIÓN", en: "MODERATION", d: ["Baneados, moderadores, VIP y quién pasó por tu sala.", "Bans, mods, VIPs and visit history."] },
+  { id: "amigos", es: "AMIGOS", en: "FRIENDS", d: ["Tus amigos de la web de la liga. Invítalos a tu sala con un clic.", "Your league friends. Invite them in one click."] },
 ];
 
 export function metaGente(s) {
@@ -116,7 +116,7 @@ function Ficha({ m, g }) {
           <${Chip} tipo="acc">${g.mando ? `${t("JUGANDO · MANDO", "PLAYING · PAD")} ${dos(g.mando)}` : t("MIRANDO", "WATCHING")}</${Chip}>
           ${rol ? html`<${Chip} tipo=${rol[0]}>${t(rol[1], rol[2])}</${Chip}>` : null}
           ${perfil ? html`<${Chip} tipo="acc2">${t("CUENTA DE LA LIGA", "LEAGUE ACCOUNT")}: ${perfil.nombre}</${Chip}>` : null}
-          ${g.cop ? html`<${Chip} tipo="bad">SODA COP</${Chip}>` : null}
+          ${g.cop ? html`<${Chip} tipo="bad">${t("MOD OFICIAL", "OFFICIAL MOD")}</${Chip}>` : null}
         </div>
       </div>
       <div style="text-align:right"><div class="lab">PING</div><div class="mono" style=${`margin-top:8px;font-size:30px;font-weight:700;color:${colorPing(g.ping)}`}>${g.ping >= 0 ? g.ping + " ms" : "—"}</div></div>
