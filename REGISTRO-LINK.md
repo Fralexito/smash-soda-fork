@@ -44,3 +44,16 @@ Lo que solo sabe este chat. Corrige/completa el bloque anterior.
 ---
 2026-10-08 08:50 (Lima) | Cuenta ? (chat LINK) | LINK | Volcado completado con estado real de compilación, causa raíz de «FALLO» (carpeta principal en mercado-fase0) y pendientes | REGISTRO-LINK.md | HECHO | Fralex ejecuta COMPILAR_PHOENIX.bat nuevo; si EXITO, Ajustes (General/Video/Audio/Overlay/Avanzado) en Phoenix
 2026-10-08 09:00 (Lima) | Cuenta ? (chat LINK) | LINK | Traspaso sin pérdida: prototipo HTML v3 y capturas copiados al repo; copia versionada del .bat; sección «Retomar» en CLAUDE.md | docs/prototipo/*, tools/COMPILAR_PHOENIX.bat, CLAUDE.md | HECHO | Fralex ejecuta el .bat; luego Ajustes
+
+---
+## 2026-10-08 13:20 (Lima) · chat LINK · LECTURA de los informes de los otros frentes (para no pisar nada)
+Leído hoy: `COORDINACION.md`, `PhoenixMercado/REGISTRO.md` y `PRUEBAS.md` (rama `mercado-fase0`, último commit d64c30c, 12:55), `REGISTRO.md` del repo web (rama `borrador`, cierre Cuenta A 16:05Z, f86ff94) y las notas del proyecto (`REGLAS-ECOSISTEMA`, `contrato-v1`, `mercado-api`, `RESUMEN-WEB`).
+- **MERCADO** (16 commits desde la base): solo toca `PhoenixMercado/`, `COORDINACION.md` y `CLAUDE.md`. NADA en `SmashSoda/` ni en el `CMakeLists` de Link. Trabaja en la Liga Máster interna del PES (`ML0000000N`), option file y emparejamiento; pendiente suyo: `OptionFile::mover` con alineación/roles, fichar IA→usuario, aplicar traspasos en cola, y la pantalla dentro de Phoenix Link. Tiene su propio `COMPILAR_MERCADO.bat`. La carpeta principal del PC sigue en su rama.
+- **WEB** (migraciones hasta 093; Cuenta A cerrada): el contrato `/v1` de Link está en **1.6.0** (nuevo `POST /v1/perfiles`; `version_liga` ya sale en `/presencia` y `/sala/latido`). En la web «Mis salas» pasó a llamarse «Phoenix Link» y «Modo Mánager» a «Liga Máster». Endpoints publicados no cambian; solo ganan campos opcionales.
+- **Efectos para LINK (nada roto, todo aditivo):**
+  1. El cliente C++ (`link/PhoenixLink.h`) está escrito contra el contrato 1.5.0; no se rompe con 1.6.0, pero no usa `/v1/perfiles` ni `version_liga`. PENDIENTE (hacerlo con el chat MERCADO: Link detecta `version_liga` y avisa a Mercado). Sin tocar la web.
+  2. Al integrar Mercado hará falta un hueco en `Shell.cpp` (pestaña/sección «Liga Máster»). Acordar antes con el chat MERCADO; no tocar `PhoenixMercado/`.
+  3. **Unión de ramas:** simulada con `git merge-tree`: único conflicto = `CLAUDE.md` (añadido por separado en ambas ramas, add/add; Mercado le añadió una línea de `PRUEBAS.md`). Para no agrandarlo moví mi sección «Retomar» a `docs/RETOMAR-LINK.md` y dejé en `CLAUDE.md` solo una línea de enlace. Al unir: conservar las dos líneas. `COORDINACION.md` es idéntico en ambas ramas: no editarlo a la vez.
+- Respetado: no cambio ni borro endpoints; web/BD solo por prompt al chat WEB; «si algo se rompe, mejor no lo hagas»; no he escrito nada en la rama del Mercado.
+---
+2026-10-08 13:20 (Lima) | Cuenta ? (chat LINK) | LINK | Leídos los informes de MERCADO y WEB; sin solapes con SmashSoda/; conflicto previsto solo en CLAUDE.md (reducido); «Retomar» movido a docs/RETOMAR-LINK.md | REGISTRO-LINK.md, CLAUDE.md, docs/RETOMAR-LINK.md | HECHO | PENDIENTE-WEB: ninguno. Siguen pendientes: EXITO del .bat, Ajustes en Phoenix, logo, consumir contrato 1.6.0 junto a MERCADO
