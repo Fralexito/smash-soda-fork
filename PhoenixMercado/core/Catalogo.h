@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 #include "BaseDatosParche.h"
 #include "OptionFile.h"
 
@@ -18,6 +19,12 @@ namespace mercado {
 		std::string json;
 		int equipos = 0, jugadores = 0, sinDatos = 0;
 	};
+
+	/// Divide el catálogo en lotes para POST /catalogo (máx. 5 MB y 10 llamadas/hora en la web).
+	/// El primer lote lleva TODOS los equipos (la web crea los clubes antes que los jugadores);
+	/// los demás llevan equipos:[]. Los nombres de club repetidos se hacen únicos con « (#id)»,
+	/// porque la web identifica los clubes por (liga, nombre).
+	std::vector<std::string> lotesCatalogo(const std::string& catalogoJson, size_t jugadoresPorLote = 3000);
 
 	ResumenCatalogo construirCatalogo(const OptionFile& option, const std::map<uint32_t, FichaJugador>& base,
 		const std::string& nombreParche);

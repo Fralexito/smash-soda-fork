@@ -267,9 +267,12 @@ namespace mercado {
 		for (const auto& r : js) {
 			cuenta[nombreEstado(r.estado)]++;
 			json c = json::array();
-			for (const auto& x : r.candidatos) c.push_back({ {"pes_id", x.idLocal}, {"puntaje", x.puntaje}, {"nombre", x.nombre} });
-			jj.push_back({ {"phoenix_id", r.phoenixId}, {"estado", nombreEstado(r.estado)}, {"pes_id_local", r.idLocal},
-				{"metodo", r.metodo}, {"motivo", r.motivo}, {"candidatos", c} });
+			for (const auto& x : r.candidatos) c.push_back({ {"pes_id_local", x.idLocal}, {"puntaje", x.puntaje}, {"nombre", x.nombre} });
+			json fila = { {"phoenix_id", r.phoenixId}, {"estado", nombreEstado(r.estado)},
+				{"metodo", r.metodo}, {"motivo", r.motivo}, {"candidatos", c} };
+			if (r.idLocal) fila["pes_id_local"] = r.idLocal;
+			if (!r.candidatos.empty()) fila["puntaje"] = r.candidatos[0].puntaje;
+			jj.push_back(fila);
 		}
 		json jc = json::array();
 		for (const auto& r : cs)

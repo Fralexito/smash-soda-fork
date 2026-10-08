@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <fstream>
 #include <string>
+#include <set>
 
 #include "../core/ClienteMercado.h"
 #include "../core/Copias.h"
@@ -16,6 +17,7 @@
 #include "../core/Catalogo.h"
 #include "../core/Emparejamiento.h"
 #include "../core/Integridad.h"
+#include <nlohmann/json.hpp>
 #include <cstdlib>
 
 using namespace mercado;
@@ -140,6 +142,18 @@ int main() {
 		CHECK(d.size() == 1 && d[0].jugador == 3 && d[0].clubEsperado == 7 && d[0].clubActual == 5);
 	}
 
+
+	std::printf("Lotes de catálogo\n");
+	{
+		nlohmann::json c = { {"formato","x"}, {"parche","p"}, {"equipos", nlohmann::json::array({ {{"pes_team_id",1},{"nombre","A"}} })}, {"jugadores", nlohmann::json::array()} };
+		for (int i = 0; i < 7001; i++) c["jugadores"].push_back({ {"pes_id", i + 1} });
+		auto l = lotesCatalogo(c.dump(), 3000);
+		CHECK(l.size() == 3);
+		auto l0 = nlohmann::json::parse(l[0]), l2 = nlohmann::json::parse(l[2]);
+		CHECK(l0["equipos"].size() == 1 && l0["jugadores"].size() == 3000);
+		CHECK(l2["equipos"].empty() && l2["jugadores"].size() == 1001);
+	}
+
 	std::printf("Bits\n");
 	{ const uint8_t b[4] = { 0xB4, 0x01, 0, 0 };   // 0x01B4 = 436
 	  CHECK(leerBits(b, 0, 16) == 436); CHECK(leerBits(b, 2, 3) == 5); }
@@ -186,6 +200,12 @@ int main() {
 				if (base.ok()) {
 					auto cat = construirCatalogo(*of.valor, *base.valor, "prueba");
 					std::printf("  catálogo: %d equipos, %d jugadores, %d sin datos\n", cat.equipos, cat.jugadores, cat.sinDatos);
+
+					{   // nombres de club únicos (la web identifica clubes por nombre)
+						auto cj = nlohmann::json::parse(cat.json); std::set<std::string> vistos; bool repetido = false;
+						for (auto& e : cj["equipos"]) repetido |= !vistos.insert(e["nombre"].get<std::string>()).second;
+						CHECK(!repetido);
+					}
 					CHECK(cat.jugadores > 1000 && cat.sinDatos * 50 < cat.jugadores);
 					// Los jugadores editados deben coincidir en altura con la base (dato estable).
 					int iguales = 0, revisados = 0;

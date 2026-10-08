@@ -14,10 +14,17 @@ namespace mercado {
 		for (const auto& e : option.editados()) editados[e.id] = &e;
 
 		json equipos = json::array();
+		std::map<std::string, int> vecesNombre;
+		for (const auto& t : option.equipos()) {
+			auto it = option.plantillas().find(t.id);
+			if (it != option.plantillas().end() && !it->second.empty()) vecesNombre[t.nombre]++;
+		}
 		for (const auto& t : option.equipos()) {
 			auto it = option.plantillas().find(t.id);
 			if (it == option.plantillas().end() || it->second.empty()) continue;
-			equipos.push_back({ {"pes_team_id", t.id}, {"nombre", t.nombre}, {"abreviatura", t.abreviatura} });
+			std::string nombre = t.nombre.empty() ? std::string("Equipo") : t.nombre;
+			if (vecesNombre[t.nombre] > 1 || t.nombre.empty() || t.nombre == "-") nombre += " (#" + std::to_string(t.id) + ")";
+			equipos.push_back({ {"pes_team_id", t.id}, {"nombre", nombre.substr(0, 60)}, {"abreviatura", t.abreviatura} });
 		}
 
 		// Un jugador puede estar en club + selección: el primero es su equipo principal.
@@ -52,6 +59,23 @@ namespace mercado {
 		r.json = json({ {"formato", "phoenix-mercado/catalogo@0.2"}, {"parche", nombreParche},
 			{"equipos", equipos}, {"jugadores", jugadores} }).dump();
 		return r;
+	}
+
+}
+
+namespace mercado {
+
+	std::vector<std::string> lotesCatalogo(const std::string& catalogoJson, size_t porLote) {
+		const json c = json::parse(catalogoJson);
+		const json& jug = c.at("jugadores");
+		std::vector<std::string> lotes;
+		for (size_t i = 0; i == 0 || i < jug.size(); i += porLote) {
+			json lote = { {"formato", c.value("formato", "")}, {"parche", c.value("parche", "")},
+				{"equipos", i == 0 ? c.at("equipos") : json::array()}, {"jugadores", json::array()} };
+			for (size_t k = i; k < jug.size() && k < i + porLote; k++) lote["jugadores"].push_back(jug[k]);
+			lotes.push_back(lote.dump());
+		}
+		return lotes;
 	}
 
 }

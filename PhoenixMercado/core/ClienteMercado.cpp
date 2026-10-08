@@ -121,4 +121,16 @@ namespace mercado {
 		return R::bien(huella);
 	}
 
+
+	Resultado<std::string> ClienteMercado::subirCatalogo(const std::string& cuerpo) { return llamar("POST", "/catalogo", cuerpo, true); }
+	Resultado<std::string> ClienteMercado::subirEquivalencias(const std::string& cuerpo) { return llamar("POST", "/equivalencias", cuerpo, true); }
+	Resultado<std::string> ClienteMercado::plantillas() {
+		auto r = llamar("GET", "/plantillas", "", true);
+		if (!r.ok()) return r;
+		const json d = json::parse(*r.valor, nullptr, false);
+		if (d.is_discarded() || !d.contains("contenido") || !d["contenido"].is_string())
+			return Resultado<std::string>::mal("RESPUESTA_INVALIDA", "Falta «contenido»");
+		return Resultado<std::string>::bien(d["contenido"].get<std::string>());
+	}
+
 }

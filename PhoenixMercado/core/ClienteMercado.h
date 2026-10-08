@@ -35,6 +35,14 @@ namespace mercado {
 		Resultado<Usuario> yo();
 		Resultado<OptionOficial> optionActual();
 
+		/// POST /catalogo (solo staff). `cuerpo` = un lote de lotesCatalogo(). Devuelve el JSON de «datos».
+		Resultado<std::string> subirCatalogo(const std::string& cuerpo);
+		/// GET /plantillas → texto firmado. Devuelve el «contenido» (JSON) tal cual llegó.
+		/// Pendiente: verificar la firma Ed25519 antes de usarlo para escribir en el juego.
+		Resultado<std::string> plantillas();
+		/// POST /equivalencias (solo staff). Máx. 3000 filas por llamada.
+		Resultado<std::string> subirEquivalencias(const std::string& cuerpo);
+
 		/// Baja el option oficial a `rutaDestino` y comprueba tamaño y SHA-256.
 		/// Si no coincide, borra lo descargado y devuelve OPTION_HUELLA_DISTINTA.
 		Resultado<std::string> descargarOption(const OptionOficial& oficial, const std::string& rutaDestino);
