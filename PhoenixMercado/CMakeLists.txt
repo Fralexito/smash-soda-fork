@@ -40,6 +40,8 @@ add_library(PhoenixMercadoCore STATIC
     core/OptionFile.cpp
     core/BaseDatosParche.cpp
     core/Catalogo.cpp
+    core/Emparejamiento.cpp
+    core/Integridad.cpp
 )
 target_link_libraries(PhoenixMercadoCore PUBLIC PhoenixMercadoTerceros)
 target_include_directories(PhoenixMercadoCore PUBLIC

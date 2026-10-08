@@ -9,6 +9,8 @@
 //  PhoenixMercado hash <archivo>
 //  PhoenixMercado copia <archivo> <carpetaCopias>
 //  PhoenixMercado catalogo <EDIT> <base.cpk> <salida.json> [nombreParche]
+//  PhoenixMercado verificar <EDIT> <base.cpk>            (modo seguro: ¿se puede escribir?)
+//  PhoenixMercado emparejar <EDIT ref> <cpk ref> <EDIT local> <cpk local> <informe.json>
 //  PhoenixMercado mover <EDIT> <pes_id> <equipoDestino> <salidaNueva>   (nunca sobrescribe)
 //
 //  Modo de token: por defecto «compartido» (el de Phoenix Link).
@@ -27,7 +29,10 @@
 #include "../core/OptionFile.h"
 #include "../core/BaseDatosParche.h"
 #include "../core/Catalogo.h"
+#include "../core/Emparejamiento.h"
+#include "../core/Integridad.h"
 #include <fstream>
+#include <algorithm>
 #include "../windows/Plataforma.h"
 
 using namespace mercado;
@@ -47,7 +52,7 @@ int main(int argc, char** argv) {
 	for (auto it = a.begin(); it != a.end();) {
 		if (*it == "--manager") { manager = true; it = a.erase(it); } else ++it;
 	}
-	if (a.empty()) { std::printf("Uso: eco | yo | vincular <codigo> | option | bajar <carpeta> | hash <archivo> | copia <archivo> <carpeta> | catalogo <EDIT> <cpk> <json> | mover <EDIT> <id> <equipo> <salida> [--manager]\n"); return 1; }
+	if (a.empty()) { std::printf("Uso: eco | yo | vincular <codigo> | option | bajar <carpeta> | hash <archivo> | copia <archivo> <carpeta> | catalogo <EDIT> <cpk> <json> | mover <EDIT> <id> <equipo> <salida> | verificar <EDIT> <cpk> | emparejar <EDITref> <cpkRef> <EDIT> <cpk> <json> [--manager]\n"); return 1; }
 
 	try {
 		windows::HttpWinHttp http;
@@ -115,6 +120,48 @@ int main(int argc, char** argv) {
 			auto g = of.valor->guardarComo(a[4]);
 			if (!g.ok()) { imprimirError(g.error); return 2; }
 			std::printf("Guardado y verificado: %s (sha256 %s)\n", a[4].c_str(), g.valor->c_str());
+		}
+		else if (cmd == "verificar" && a.size() >= 3) {
+			auto of = OptionFile::abrir(a[1]);
+			if (!of.ok()) { imprimirError(of.error); return 2; }
+			auto base = leerBaseDatos(a[2]);
+			if (!base.ok()) { imprimirError(base.error); return 2; }
+			auto an = revisarEstructura(*of.valor, *base.valor);
+			for (auto& x : an) std::printf("[%s] %s %s\n", x.gravedad.c_str(), x.codigo.c_str(), x.detalle.c_str());
+			std::printf(hayBloqueo(an) ? "MODO SEGURO: no se escribirá nada en este option file.\n" : "OK: se puede trabajar con este option file.\n");
+			return hayBloqueo(an) ? 3 : 0;
+		}
+		else if (cmd == "emparejar" && a.size() >= 6) {
+			auto ofR = OptionFile::abrir(a[1]); auto bR = leerBaseDatos(a[2]);
+			auto ofL = OptionFile::abrir(a[3]); auto bL = leerBaseDatos(a[4]);
+			for (const Error* e : { &ofR.error, &bR.error, &ofL.error, &bL.error })
+				if (!e->codigo.empty()) { imprimirError(*e); return 2; }
+			if (hayBloqueo(revisarEstructura(*ofL.valor, *bL.valor))) { std::printf("MODO SEGURO: el parche local no pasa la verificación.\n"); return 3; }
+			std::vector<JugadorReferencia> refs; std::vector<ClubReferencia> clubes;
+			for (const auto& t : ofR.valor->equipos()) {
+				const auto& pl = ofR.valor->plantillas().at(t.id);
+				if (pl.empty()) continue;
+				ClubReferencia c{ t.id, t.id, t.nombre, {} };
+				for (const auto& p : pl) {
+					c.jugadores.push_back(p.jugador);
+					auto f = bR.valor->find(p.jugador);
+					if (f != bR.valor->end())
+						refs.push_back({ p.jugador, p.jugador, f->second.nombre, f->second.nacionalidad, f->second.altura, f->second.edad, f->second.posicion });
+				}
+				clubes.push_back(c);
+			}
+			std::sort(refs.begin(), refs.end(), [](auto& x, auto& y) { return x.phoenixId < y.phoenixId; });
+			refs.erase(std::unique(refs.begin(), refs.end(), [](auto& x, auto& y) { return x.phoenixId == y.phoenixId; }), refs.end());
+			Emparejador emp(*bL.valor);
+			auto rj = emp.emparejarTodos(refs);
+			auto rc = emp.emparejarClubes(clubes, rj, *ofL.valor);
+			if (std::filesystem::exists(aRuta(a[5]))) { std::printf("ERROR DESTINO_OCUPADO %s\n", a[5].c_str()); return 2; }
+			std::ofstream(aRuta(a[5]), std::ios::binary) << informeJson(rj, rc, "local");
+			int n[3] = {}, m[3] = {};
+			for (auto& r : rj) n[int(r.estado)]++;
+			for (auto& r : rc) m[int(r.estado)]++;
+			std::printf("Jugadores: %d automáticos, %d a revisar, %d sin candidato\nClubes: %d automáticos, %d a revisar, %d sin candidato\nInforme: %s\n",
+				n[0], n[1], n[2], m[0], m[1], m[2], a[5].c_str());
 		}
 		else { std::printf("Comando no reconocido.\n"); return 1; }
 	}

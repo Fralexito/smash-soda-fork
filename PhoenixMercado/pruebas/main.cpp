@@ -14,6 +14,8 @@
 #include "../core/OptionFile.h"
 #include "../core/BaseDatosParche.h"
 #include "../core/Catalogo.h"
+#include "../core/Emparejamiento.h"
+#include "../core/Integridad.h"
 #include <cstdlib>
 
 using namespace mercado;
@@ -106,6 +108,38 @@ int main() {
 	fs::remove_all(tmp);
 
 
+
+	std::printf("Nombres\n");
+	CHECK(normalizarNombre("Luka Modrić") == "luka modric");
+	CHECK(normalizarNombre("João  Simões-Pérez") == "joao simoes perez");
+	CHECK(parecidoNombre("Gaby Torres", "Gabriel Torres") >= 0.7);
+	CHECK(parecidoNombre("Richard Ortiz", "Celso Ortiz") < 0.6);      // otra persona
+	CHECK(parecidoNombre("Dante", "Dante Bonfim") >= 0.8);
+	{
+		std::map<uint32_t, FichaJugador> base;
+		base[10] = { 10, "Luis García", "", 151, 190, 26, 0, {} };   // homónimo con el mismo ID
+		base[20] = { 20, "Luis García", "", 151, 177, 38, 8, {} };   // el verdadero
+		base[30] = { 30, "Celso Ortiz", "", 150, 175, 36, 4, {} };
+		Emparejador e(base);
+		auto r1 = e.emparejar({ 1, 10, "Luis García", 151, 177, 37, 8 });
+		CHECK(r1.idLocal != 10);                                       // no se deja engañar por el ID
+		auto r2 = e.emparejar({ 2, 0, "Richard Ortiz", 150, 174, 35, 4 });
+		CHECK(r2.estado != EstadoEmparejamiento::Automatico);          // nunca automático con otra persona
+		auto r3 = e.emparejar({ 3, 30, "Celso Ortiz", 150, 175, 37, 4 });
+		CHECK(r3.estado == EstadoEmparejamiento::Automatico && r3.idLocal == 30 && r3.metodo == "por_id");
+	}
+
+	std::printf("Huella de plantillas\n");
+	{
+		PlantillasPhoenix a{ {7, {3, 1, 2}}, {5, {9}} }, b{ {5, {9}}, {7, {2, 3, 1}} };
+		CHECK(huellaPlantillas(a) == huellaPlantillas(b));            // el orden no importa
+		CHECK(textoCanonico(a) == "5:9\n7:1,2,3\n");
+		PlantillasPhoenix c{ {7, {1, 2}}, {5, {9, 3}} };               // jugador 3 movido al club 5
+		CHECK(huellaPlantillas(a) != huellaPlantillas(c));
+		auto d = diferencias(a, c);
+		CHECK(d.size() == 1 && d[0].jugador == 3 && d[0].clubEsperado == 7 && d[0].clubActual == 5);
+	}
+
 	std::printf("Bits\n");
 	{ const uint8_t b[4] = { 0xB4, 0x01, 0, 0 };   // 0x01B4 = 436
 	  CHECK(leerBits(b, 0, 16) == 436); CHECK(leerBits(b, 2, 3) == 5); }
@@ -159,6 +193,22 @@ int main() {
 						auto it = base.valor->find(e.id);
 						if (it == base.valor->end()) continue;
 						revisados++; iguales += it->second.altura == e.altura && it->second.nacionalidad == e.nacionalidad;
+					}
+
+					auto anom = revisarEstructura(*of.valor, *base.valor);
+					for (auto& a : anom) std::printf("  [%s] %s %s\n", a.gravedad.c_str(), a.codigo.c_str(), a.detalle.c_str());
+					CHECK(!hayBloqueo(anom));                         // option y base del mismo parche
+					if (const char* otro = std::getenv("PM_CPK_OTRO")) {   // base de OTRO parche
+						auto b2 = leerBaseDatos(otro);
+						CHECK(b2.ok() && hayBloqueo(revisarEstructura(*of.valor, *b2.valor)));   // debe entrar en modo seguro
+						if (b2.ok()) {
+							std::vector<uint32_t> liga;
+							for (auto& [eq, pl] : of.valor->plantillas()) for (auto& p : pl) if (liga.size() < 500) liga.push_back(p.jugador);
+							auto inf = compararBases(*base.valor, *b2.valor, liga);
+							std::printf("  cambios entre parches: %d nuevos, %d eliminados, %d modificados | liga: %zu eliminados, %zu otra identidad\n",
+								inf.nuevos, inf.eliminados, inf.modificados, inf.ligaEliminados.size(), inf.ligaCambiaronIdentidad.size());
+							CHECK(inf.nuevos > 0 && inf.eliminados > 0);
+						}
 					}
 					std::printf("  editados que coinciden: %d/%d\n", iguales, revisados);
 					CHECK(iguales == revisados);   // un save nuevo puede no tener editados
