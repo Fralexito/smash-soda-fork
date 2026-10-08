@@ -7,7 +7,7 @@
 #include <vector>
 
 // =============================================================================
-//  Phoenix Soda · PhoenixLink: la app ↔ la web (API /v1, contrato 1.5.0)
+//  Phoenix Link · PhoenixLink: la app ↔ la web (API /v1, contrato 1.5.0)
 // -----------------------------------------------------------------------------
 //  Corre en un hilo propio: nunca traba el juego ni la interfaz. La interfaz le
 //  pasa una «foto» de la sala (actualizar) y lee su estado para mostrarlo.

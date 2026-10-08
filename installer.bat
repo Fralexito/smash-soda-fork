@@ -545,21 +545,21 @@ if "%STEP_INSTALL_APP%"=="0" (
   goto :after_install_app
 )
 set "RELEASE_DIR="
-if exist "%SRC_DIR%\x64\release\PhoenixSoda.exe" set "RELEASE_DIR=%SRC_DIR%\x64\release"
-if not defined RELEASE_DIR if exist "%SRC_DIR%\x64\Release\PhoenixSoda.exe" set "RELEASE_DIR=%SRC_DIR%\x64\Release"
-if not defined RELEASE_DIR if exist "%BUILD%\Release\PhoenixSoda.exe" set "RELEASE_DIR=%BUILD%\Release"
-if not defined RELEASE_DIR if exist "%BUILD%\SmashSoda\Release\PhoenixSoda.exe" set "RELEASE_DIR=%BUILD%\SmashSoda\Release"
+if exist "%SRC_DIR%\x64\release\PhoenixLink.exe" set "RELEASE_DIR=%SRC_DIR%\x64\release"
+if not defined RELEASE_DIR if exist "%SRC_DIR%\x64\Release\PhoenixLink.exe" set "RELEASE_DIR=%SRC_DIR%\x64\Release"
+if not defined RELEASE_DIR if exist "%BUILD%\Release\PhoenixLink.exe" set "RELEASE_DIR=%BUILD%\Release"
+if not defined RELEASE_DIR if exist "%BUILD%\SmashSoda\Release\PhoenixLink.exe" set "RELEASE_DIR=%BUILD%\SmashSoda\Release"
 if not defined RELEASE_DIR (
-  for /f "delims=" %%F in ('dir /b /s "%BUILD%\PhoenixSoda.exe" 2^>nul') do (
+  for /f "delims=" %%F in ('dir /b /s "%BUILD%\PhoenixLink.exe" 2^>nul') do (
     if not defined RELEASE_DIR set "RELEASE_DIR=%%~dpF"
   )
 )
 if not defined RELEASE_DIR (
   echo ERROR: Release output not found. Checked:
-  echo   "%SRC_DIR%\x64\release\PhoenixSoda.exe"
-  echo   "%SRC_DIR%\x64\Release\PhoenixSoda.exe"
-  echo   "%BUILD%\Release\PhoenixSoda.exe"
-  echo   "%BUILD%\SmashSoda\Release\PhoenixSoda.exe"
+  echo   "%SRC_DIR%\x64\release\PhoenixLink.exe"
+  echo   "%SRC_DIR%\x64\Release\PhoenixLink.exe"
+  echo   "%BUILD%\Release\PhoenixLink.exe"
+  echo   "%BUILD%\SmashSoda\Release\PhoenixLink.exe"
   pause
   exit /b 1
 )
@@ -681,11 +681,11 @@ exit /b 0
 :shortcuts
 setlocal EnableExtensions DisableDelayedExpansion
 set "APP_NAME=Smash Soda"
-set "APP_EXE=%INSTALL_DIR%\PhoenixSoda.exe"
-if not exist "%APP_EXE%" set "APP_EXE=%RELEASE_DIR%\PhoenixSoda.exe"
+set "APP_EXE=%INSTALL_DIR%\PhoenixLink.exe"
+if not exist "%APP_EXE%" set "APP_EXE=%RELEASE_DIR%\PhoenixLink.exe"
 
 if not exist "%APP_EXE%" (
-  echo WARNING: Could not find PhoenixSoda.exe to create a shortcut.
+  echo WARNING: Could not find PhoenixLink.exe to create a shortcut.
   exit /b 0
 )
 

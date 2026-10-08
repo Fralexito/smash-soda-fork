@@ -49,14 +49,14 @@ if ($LASTEXITCODE -ne 0) {
 
 Write-Host "EXITO: Compilacion completada!"
 Write-Host ""
-Write-Host "Ejecutando PhoenixSoda.exe..."
+Write-Host "Ejecutando PhoenixLink.exe..."
 
-$exePath = "$projectDir\build\SmashSoda\Release\PhoenixSoda.exe"
+$exePath = "$projectDir\build\SmashSoda\Release\PhoenixLink.exe"
 if (Test-Path $exePath) {
     Start-Process -FilePath $exePath
     Write-Host "Aplicacion iniciada"
 } else {
-    Write-Host "ERROR: PhoenixSoda.exe no encontrado en $exePath"
+    Write-Host "ERROR: PhoenixLink.exe no encontrado en $exePath"
 }
 
 Read-Host "Presiona Enter para terminar"

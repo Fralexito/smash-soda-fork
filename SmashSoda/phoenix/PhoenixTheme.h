@@ -3,7 +3,7 @@
 #include "../models/Theme.h"
 
 // =============================================================================
-//  Phoenix Soda · Tema «Phoenix» (identidad Galaxy)
+//  Phoenix Link · Tema «Phoenix» (identidad Galaxy)
 // -----------------------------------------------------------------------------
 //  Cian #00E5FF + púrpura sobre fondo espacial, igual que la web.
 //  Primer paso visual: solo colores y redondeos. La reorganización de paneles

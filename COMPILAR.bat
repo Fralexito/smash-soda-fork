@@ -19,12 +19,12 @@ if errorlevel 1 (
 echo.
 echo EXITO: Compilacion completada
 echo.
-echo Ejecutando PhoenixSoda.exe...
+echo Ejecutando PhoenixLink.exe...
 cd "C:\Users\WinterOS\smash-soda-fork\build\SmashSoda\Release"
-if exist PhoenixSoda.exe (
+if exist PhoenixLink.exe (
     echo Iniciando aplicacion...
-    start PhoenixSoda.exe
+    start PhoenixLink.exe
 ) else (
-    echo ERROR: PhoenixSoda.exe no encontrado
+    echo ERROR: PhoenixLink.exe no encontrado
     pause
 )

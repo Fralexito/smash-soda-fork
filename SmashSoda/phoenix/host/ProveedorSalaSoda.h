@@ -6,7 +6,7 @@ class Hosting;
 class HostSettingsWidget;
 
 // =============================================================================
-//  Phoenix Soda · Proveedor de sala sobre el motor de Smash Soda (Parsec)
+//  Phoenix Link · Proveedor de sala sobre el motor de Smash Soda (Parsec)
 //  Solo existe en la forma completa (modo host).
 // =============================================================================
 

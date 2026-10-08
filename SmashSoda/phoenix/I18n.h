@@ -5,7 +5,7 @@
 #include <vector>
 
 // =============================================================================
-//  Phoenix Soda · Idiomas
+//  Phoenix Link · Idiomas
 // -----------------------------------------------------------------------------
 //  Uso: phoenix::T("nav.sala")  → texto en el idioma activo.
 //  Orden de búsqueda: idioma activo → español (base) → la propia clave.

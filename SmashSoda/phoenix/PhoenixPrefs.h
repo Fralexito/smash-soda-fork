@@ -3,7 +3,7 @@
 #include <string>
 
 // =============================================================================
-//  Phoenix Soda · Preferencias de interfaz
+//  Phoenix Link · Preferencias de interfaz
 // -----------------------------------------------------------------------------
 //  Archivo propio `phoenix-ui.json` en la carpeta de configuración de Smash
 //  Soda. Separado del config.json del autor para no mezclar formatos.

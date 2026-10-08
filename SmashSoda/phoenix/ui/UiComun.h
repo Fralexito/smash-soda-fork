@@ -4,7 +4,7 @@
 #include "imgui.h"
 
 // =============================================================================
-//  Phoenix Soda · utilidades visuales compartidas por las pantallas del shell
+//  Phoenix Link · utilidades visuales compartidas por las pantallas del shell
 // =============================================================================
 
 namespace phoenix::vis {

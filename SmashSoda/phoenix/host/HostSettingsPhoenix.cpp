@@ -1,5 +1,5 @@
 // =============================================================================
-//  Phoenix Soda · Control de la sala desde la interfaz Phoenix
+//  Phoenix Link · Control de la sala desde la interfaz Phoenix
 // -----------------------------------------------------------------------------
 //  Métodos de HostSettingsWidget definidos fuera del archivo del autor para
 //  que sincronizar versiones nuevas de Smash Soda no genere conflictos.

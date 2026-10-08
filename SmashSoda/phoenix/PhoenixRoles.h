@@ -8,7 +8,7 @@
 #include <string>
 
 // =============================================================================
-//  Phoenix Soda · Roles de sala y puerta de mandos
+//  Phoenix Link · Roles de sala y puerta de mandos
 // -----------------------------------------------------------------------------
 //  Regla: con una lista de roles activa, SOLO los invitados con rol «jugador»
 //  pueden recibir un mando (autoíndice, !swap o !pick). Los espectadores nunca.

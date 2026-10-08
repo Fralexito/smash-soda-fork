@@ -6,7 +6,7 @@
 #include <vector>
 
 // =============================================================================
-//  Phoenix Soda · Solicitudes de cambio de los jugadores
+//  Phoenix Link · Solicitudes de cambio de los jugadores
 // -----------------------------------------------------------------------------
 //  Un jugador pide desde el chat:
 //    !cambio 3   → quiere el mando 3

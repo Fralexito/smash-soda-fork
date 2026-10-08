@@ -43,7 +43,7 @@ set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
 # Add executable
 # --------------------------
 add_executable("${PROJECT_NAME}" ${ALL_FILES})
-set_target_properties("${PROJECT_NAME}" PROPERTIES OUTPUT_NAME "PhoenixSoda")
+set_target_properties("${PROJECT_NAME}" PROPERTIES OUTPUT_NAME "PhoenixLink")
 
 # --------------------------
 # Include directories

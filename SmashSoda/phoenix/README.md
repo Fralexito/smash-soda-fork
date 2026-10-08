@@ -1,4 +1,4 @@
-# phoenix/ · Código propio de Phoenix Soda
+# phoenix/ · Código propio de Phoenix Link
 
 Todo lo de Phoenix vive aquí. El código del autor solo recibe ganchos de 1–5 líneas, marcados con `phoenix::`, para que sincronizar versiones nuevas de Smash Soda sea fácil.
 

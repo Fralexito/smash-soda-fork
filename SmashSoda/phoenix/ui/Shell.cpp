@@ -116,7 +116,7 @@ namespace phoenix {
 			dl->AddRectFilledMultiColor(ImVec2(pos.x, yLinea), ImVec2(pos.x + tam.x, pos.y + tam.y),
 				col(tema->primary), col(tema->secondary), col(tema->secondary), col(tema->primary));
 
-			// Marca: Phoenix Portal con glow
+			// Marca: Phoenix Link con glow
 			ImGui::PushFont(AppFonts::title);
 			const float yTexto = pos.y + (tam.y - ImGui::GetFontSize()) * 0.5f;
 			const ImVec2 posMarc(pos.x + 24.0f * s, yTexto);

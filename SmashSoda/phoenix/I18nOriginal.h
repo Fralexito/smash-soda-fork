@@ -4,7 +4,7 @@
 #include <string>
 
 // =============================================================================
-//  Phoenix Soda · Traducción de los textos originales de Smash Soda
+//  Phoenix Link · Traducción de los textos originales de Smash Soda
 // -----------------------------------------------------------------------------
 //  Los paneles del autor escriben sus textos en inglés. En vez de editar cada
 //  panel, Widget.cpp pasa cada etiqueta, ayuda, botón y pestaña por

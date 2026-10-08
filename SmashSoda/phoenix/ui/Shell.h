@@ -3,7 +3,7 @@
 #include <functional>
 
 // =============================================================================
-//  Phoenix Soda · Shell (interfaz principal)
+//  Phoenix Link · Shell (interfaz principal)
 // -----------------------------------------------------------------------------
 //  Reemplaza las 16 ventanas flotantes por una app de distribución fija:
 //

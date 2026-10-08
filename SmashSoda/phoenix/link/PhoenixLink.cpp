@@ -38,7 +38,7 @@ namespace phoenix {
 		// --- Token cifrado con DPAPI (solo este usuario de Windows lo descifra) ---
 		bool guardarToken(const std::string& token) {
 			DATA_BLOB entrada{ static_cast<DWORD>(token.size()), (BYTE*)token.data() }, salida{};
-			if (!CryptProtectData(&entrada, L"PhoenixSoda", nullptr, nullptr, nullptr, 0, &salida)) return false;
+			if (!CryptProtectData(&entrada, L"PhoenixLink", nullptr, nullptr, nullptr, 0, &salida)) return false;
 			std::ofstream f(carpeta() + "phoenix-token.dat", std::ios::binary | std::ios::trunc);
 			f.write(reinterpret_cast<char*>(salida.pbData), salida.cbData);
 			LocalFree(salida.pbData);
@@ -370,7 +370,7 @@ namespace phoenix {
 		std::string token;
 		{ std::lock_guard<std::mutex> lock(_mutex); token = _token; }
 		if (token.empty()) return;
-		const json cuerpo = { {"sala_id", salaId}, {"motivo", "cierre desde Phoenix Soda"} };
+		const json cuerpo = { {"sala_id", salaId}, {"motivo", "cierre desde Phoenix Link"} };
 		http::peticion("POST", std::string(kBase) + "/v1/sala/cerrar", cuerpo.dump(),
 			{ "Authorization: Bearer " + token, std::string("X-Phoenix-Version: ") + kVersionApp, "X-Phoenix-Build: " + huellaExe() });
 		// Si falla, el servidor la marca caída a los 3 min sin latido.

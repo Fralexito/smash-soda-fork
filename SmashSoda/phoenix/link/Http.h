@@ -4,7 +4,7 @@
 #include <vector>
 
 // =============================================================================
-//  Phoenix Soda · Cliente HTTPS mínimo sobre WinHTTP (viene con Windows:
+//  Phoenix Link · Cliente HTTPS mínimo sobre WinHTTP (viene con Windows:
 //  cero dependencias nuevas). Bloqueante: usar SOLO desde el hilo de PhoenixLink.
 // =============================================================================
 

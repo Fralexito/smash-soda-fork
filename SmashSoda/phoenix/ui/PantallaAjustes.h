@@ -7,7 +7,7 @@ namespace phoenix {
 	class ProveedorSala;
 
 	// =========================================================================
-	//  Phoenix Soda · Ajustes rápidos
+	//  Phoenix Link · Ajustes rápidos
 	// -------------------------------------------------------------------------
 	//  Lo que más se toca, en tarjetas de un clic: calidad (presets), idioma
 	//  e interfaz. El detalle fino queda en las pestañas General/Video/Audio.

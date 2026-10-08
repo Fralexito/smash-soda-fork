@@ -7,7 +7,7 @@ namespace phoenix {
 	class ProveedorSala;
 
 	// =========================================================================
-	//  Phoenix Soda · Gente
+	//  Phoenix Link · Gente
 	// -------------------------------------------------------------------------
 	//  Fichas de todos los que están en la sala (jugadores y espectadores),
 	//  con ping en color y acciones de un toque: dar/quitar mando, expulsar.

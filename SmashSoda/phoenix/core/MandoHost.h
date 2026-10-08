@@ -1,7 +1,7 @@
 #pragma once
 
 // =============================================================================
-//  Phoenix Soda · El host toma cualquier mando (atajo global, funciona en el juego)
+//  Phoenix Link · El host toma cualquier mando (atajo global, funciona en el juego)
 // -----------------------------------------------------------------------------
 //  Ctrl + Alt + 1…8  → el host maneja ese mando (el dueño queda bloqueado)
 //  Ctrl + Alt + 0    → lo suelta

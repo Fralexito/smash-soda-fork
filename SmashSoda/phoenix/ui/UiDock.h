@@ -3,7 +3,7 @@
 #include "imgui.h"
 
 // =============================================================================
-//  Phoenix Soda · Acople de paneles
+//  Phoenix Link · Acople de paneles
 // -----------------------------------------------------------------------------
 //  Los paneles del autor abren su propia ventana flotante en Widget::startWidget.
 //  El shell Phoenix reserva un rectángulo y llama a colocar(); el siguiente

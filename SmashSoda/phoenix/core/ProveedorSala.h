@@ -5,7 +5,7 @@
 #include <vector>
 
 // =============================================================================
-//  Phoenix Soda · Contrato entre la interfaz y el motor de host
+//  Phoenix Link · Contrato entre la interfaz y el motor de host
 // -----------------------------------------------------------------------------
 //  La interfaz (shell, pantalla Sala, barra superior) NUNCA habla con la clase
 //  Hosting del autor: habla con esta interfaz. Así el mismo shell sirve para:

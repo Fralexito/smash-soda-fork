@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 // =============================================================================
-//  Phoenix Soda · Identidad de la build
+//  Phoenix Link · Identidad de la build
 // -----------------------------------------------------------------------------
 //  Interruptores en tiempo de compilación de la build Phoenix.
 //  Todo el código propio de Phoenix vive en la carpeta phoenix/ y solo toca el
