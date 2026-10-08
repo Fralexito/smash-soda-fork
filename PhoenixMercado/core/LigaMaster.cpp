@@ -1,6 +1,7 @@
 #include "LigaMaster.h"
 
 #include <algorithm>
+#include <cstdio>
 #include <cstring>
 
 namespace mercado::lm {
@@ -58,6 +59,108 @@ namespace mercado::lm {
 			if (u32(d, 0) != 10 || u32(d, 4) != kInicioEquipos || u32(d, 16) != kNumEquipos || u32(d, 20) != kNumEquipos)
 				return R::mal("ML_FORMATO", "Cabecera desconocida (¿otra versión del juego o del parche?)");
 			return R::bien(true);
+		}
+
+		// --- Orden de formación (lo comparten el equipo del usuario y los de la IA) -------------------
+		constexpr size_t kBytesOrden = 40;          // 40 índices de plantilla (relleno 0xff)
+		constexpr size_t kOrdenARoles = 0x28;       // los 6 roles van justo después de los 40 bytes
+		constexpr size_t kBytesRoles = 6;
+		constexpr size_t kPrimeraReserva = 18;      // posiciones 0–10 titulares, 11–17 banca, 18+ reservas
+
+		// --- Bloques de alineación de los equipos de la IA (ESTRUCTURA-ML.md §10) -----------------------
+		//  Un bloque de 600 B por equipo, en el orden de los bloques de equipo: [índice u32][ID option u32]
+		//  [nombre del técnico]…[orden de formación 40 B en +0x220][roles 6 B]. El juego lee las PRIMERAS n
+		//  entradas del orden (n = plantilla): si una es 0xff, en la pantalla Alineación sale un jugador
+		//  en blanco con valoración 0 (lo que pasó con Guéhi en el Real Madrid, 8 oct 2026).
+		constexpr size_t kTamBloqueAli = 600;
+		constexpr size_t kAliOfsEquipo = 4;
+		constexpr size_t kAliOfsOrden = 0x220;
+		constexpr int kMinBloquesAli = 528;         // al menos todos los clubes y selecciones
+
+		struct BloquesAli { size_t inicio = 0; int cantidad = 0; };
+
+		BloquesAli buscarBloquesAli(const Datos& d) {
+			for (size_t s = kFinBloques; s + 4 * kTamBloqueAli <= d.size(); s += 4) {
+				if (u32(d, s) != 0 || u32(d, s + kTamBloqueAli) != 1 || u32(d, s + 2 * kTamBloqueAli) != 2 || u32(d, s + 3 * kTamBloqueAli) != 3)
+					continue;
+				int n = 0;
+				while (s + size_t(n + 1) * kTamBloqueAli <= d.size() && u32(d, s + size_t(n) * kTamBloqueAli) == uint32_t(n)) n++;
+				if (n < kMinBloquesAli) continue;
+				// Confirmación: casi todos los bloques llevan el ID option de su equipo (el del usuario no).
+				int coinciden = 0;
+				const int revisar = std::min(n, kNumEquipos);
+				for (int k = 0; k < revisar; k++)
+					coinciden += u32(d, s + size_t(k) * kTamBloqueAli + kAliOfsEquipo) == u32(d, baseEquipo(k) + kOfsIdOption);
+				if (coinciden * 10 >= revisar * 9) return { s, n };
+			}
+			return {};
+		}
+
+		/// Alineación de un equipo de la IA: las primeras n entradas del orden (n = plantilla) y los roles.
+		struct AliIA { size_t ofs = 0; std::vector<uint8_t> orden; std::array<uint8_t, 6> roles{}; };
+
+		Resultado<AliIA> leerAliIA(const Datos& d, const BloquesAli& b, int k) {
+			using R = Resultado<AliIA>;
+			const std::string eq = "equipo " + std::to_string(k);
+			if (!b.cantidad) return R::mal("ALINEACIONES_IA_NO_HALLADAS", "No se encontró el arreglo de alineaciones de la IA");
+			if (k < 0 || k >= b.cantidad) return R::mal("SIN_ALINEACION_IA", "El " + eq + " no tiene bloque de alineación");
+			const size_t s = b.inicio + size_t(k) * kTamBloqueAli;
+			if (u32(d, s + kAliOfsEquipo) != u32(d, baseEquipo(k) + kOfsIdOption))
+				return R::mal("ALINEACION_IA_NO_COINCIDE", "El bloque de alineación no corresponde al " + eq);
+			const size_t n = leerPlantilla(d, k).size();
+			AliIA a;
+			a.ofs = s + kAliOfsOrden;
+			uint64_t visto = 0;
+			for (size_t i = 0; i < n; i++) {
+				const uint8_t v = d[a.ofs + i];
+				if (v >= n || (visto >> v) & 1) return R::mal("ALINEACION_IA_INVALIDA", "La alineación del " + eq + " no es válida: no se toca");
+				visto |= uint64_t(1) << v;
+				a.orden.push_back(v);
+			}
+			for (size_t i = 0; i < kBytesRoles; i++) {
+				a.roles[i] = d[a.ofs + kOrdenARoles + i];
+				if (n && a.roles[i] >= n) return R::mal("ALINEACION_IA_INVALIDA", "Roles del " + eq + " fuera de la plantilla: no se toca");
+			}
+			return R::bien(std::move(a));
+		}
+
+		/// Escribe en formato compacto (como lo deja el juego): n entradas y 0xff hasta 40; luego los roles.
+		void escribirAliIA(Datos& d, const AliIA& a) {
+			for (size_t i = 0; i < kBytesOrden; i++) d[a.ofs + i] = i < a.orden.size() ? a.orden[i] : 0xff;
+			for (size_t i = 0; i < kBytesRoles; i++) d[a.ofs + kOrdenARoles + i] = a.roles[i];
+		}
+
+		/// Quita `idx` del orden y de los roles. Con sustituto (idxS >= 0), este ocupa el puesto del que se va y
+		/// deja libre el suyo. Los índices mayores que idx bajan uno (la plantilla se compacta igual).
+		bool quitarDeOrden(std::vector<uint8_t>& orden, std::array<uint8_t, 6>& roles, int idx, int idxS, std::string& porque) {
+			auto itH = std::find(orden.begin(), orden.end(), uint8_t(idx));
+			if (itH == orden.end()) { porque = "el jugador no está en el orden de formación"; return false; }
+			const size_t posH = size_t(itH - orden.begin());
+			if (idxS >= 0) {
+				auto itS = std::find(orden.begin(), orden.end(), uint8_t(idxS));
+				if (itS == orden.end()) { porque = "el sustituto no está en el orden de formación"; return false; }
+				const size_t posS = size_t(itS - orden.begin());
+				orden[posH] = uint8_t(idxS);
+				orden.erase(orden.begin() + posS);
+			}
+			else orden.erase(orden.begin() + posH);
+			for (auto& v : orden) if (v > idx) v--;
+			for (auto& v : roles) {
+				if (v == idx) { if (idxS < 0) { porque = "el jugador tiene un rol y no hay sustituto"; return false; } v = uint8_t(idxS); }
+				if (v > idx) v--;
+			}
+			return true;
+		}
+
+		/// ¿Hace falta sustituto? Sí si ocupa un puesto antes de `limite` o tiene un rol.
+		///  · IA: limite 11 (solo titulares). Así lo hace el juego (guardados del 8 oct): si se va un titular, una
+		///    reserva ocupa su puesto; si se va un suplente o una reserva, los de atrás simplemente suben.
+		///  · Usuario: limite 18 (titulares y banca), como el prototipo v6 probado en el juego.
+		constexpr size_t kLimiteIA = 11, kLimiteUsuario = 18;
+		bool necesitaSustituto(const std::vector<uint8_t>& orden, const std::array<uint8_t, 6>& roles, int idx, size_t limite) {
+			const auto it = std::find(orden.begin(), orden.end(), uint8_t(idx));
+			if (it != orden.end() && size_t(it - orden.begin()) < limite) return true;
+			return std::any_of(roles.begin(), roles.end(), [&](uint8_t v) { return v == idx; });
 		}
 	}
 
@@ -143,13 +246,14 @@ namespace mercado::lm {
 		return out;
 	}
 
-	Resultado<uint16_t> GuardadoLM::moverEntreIA(int origen, int destino, uint32_t pid, uint16_t dorsal) {
+	Resultado<uint16_t> GuardadoLM::moverEntreIA(int origen, int destino, uint32_t pid, uint16_t dorsal, uint32_t pidSustituto) {
 		using R = Resultado<uint16_t>;
 		try {
 			if (origen < 0 || origen >= kNumEquipos || destino < 0 || destino >= kNumEquipos)
 				return R::mal("EQUIPO_INVALIDO", std::to_string(origen) + " → " + std::to_string(destino));
 			if (origen == destino) return R::mal("MISMO_EQUIPO", std::to_string(origen));
 			if (pid == 0) return R::mal("JUGADOR_INVALIDO", "pid 0");
+			if (pidSustituto == pid) return R::mal("SUSTITUTO_INVALIDO", "El sustituto es el mismo jugador");
 			if (esEquipoUsuario(origen) || esEquipoUsuario(destino))
 				return R::mal("EQUIPO_DEL_USUARIO", "El equipo del usuario guarda tablas, alineación y listas extra: no se edita por el camino IA↔IA");
 
@@ -158,11 +262,22 @@ namespace mercado::lm {
 			if (_datos[baseEquipo(origen) + kOfsContador] != po.size() || _datos[baseEquipo(destino) + kOfsContador] != pd.size())
 				return R::mal("ML_INCONSISTENTE", "El contador de plantilla no coincide con la lista (¿guardado dañado?)");
 
-			auto it = std::find_if(po.begin(), po.end(), [&](const Plaza& p) { return p.pid == pid; });
-			if (it == po.end()) return R::mal("JUGADOR_NO_ESTA", "El jugador no está en el equipo de origen");
+			int idx = -1, idxS = -1;
+			for (size_t i = 0; i < po.size(); i++) { if (po[i].pid == pid) idx = int(i); if (pidSustituto && po[i].pid == pidSustituto) idxS = int(i); }
+			if (idx < 0) return R::mal("JUGADOR_NO_ESTA", "El jugador no está en el equipo de origen");
+			if (pidSustituto && idxS < 0) return R::mal("SUSTITUTO_NO_ESTA", "El sustituto no está en el equipo de origen");
 			if (std::any_of(pd.begin(), pd.end(), [&](const Plaza& p) { return p.pid == pid; }))
 				return R::mal("JUGADOR_YA_EN_DESTINO", "Ya está en la plantilla de destino");
 			if (pd.size() >= size_t(kMaxPlantilla)) return R::mal("PLANTILLA_LLENA", "El destino ya tiene 40 jugadores");
+
+			// Alineaciones de los dos equipos (la pantalla Alineación las lee: tienen que seguir a la plantilla).
+			const auto bloques = buscarBloquesAli(_datos);
+			auto ao = leerAliIA(_datos, bloques, origen);
+			if (!ao.ok()) return R::mal(ao.error.codigo, ao.error.detalle);
+			auto ad = leerAliIA(_datos, bloques, destino);
+			if (!ad.ok()) return R::mal(ad.error.codigo, ad.error.detalle);
+			if (idxS < 0 && necesitaSustituto(ao.valor->orden, ao.valor->roles, idx, kLimiteIA))
+				return R::mal("FALTA_SUSTITUTO", "Es titular o tiene un rol en su equipo: hace falta un sustituto");
 
 			auto libre = [&](uint16_t d) {
 				return d >= 1 && d <= 99 && std::none_of(pd.begin(), pd.end(), [&](const Plaza& p) { return p.dorsal == d; });
@@ -173,15 +288,76 @@ namespace mercado::lm {
 				if (!libre(dorsal)) return R::mal("SIN_DORSAL", "No queda ningún dorsal libre en el destino");
 			}
 
-			Plaza movida = *it;
-			po.erase(it);
+			// --- Todo cuadra: se trabaja sobre una copia y solo al final se adopta (todo o nada) ---------
+			AliIA nuevaO = *ao.valor, nuevaD = *ad.valor;
+			std::string porque;
+			if (!quitarDeOrden(nuevaO.orden, nuevaO.roles, idx, idxS, porque)) return R::mal("ALINEACION_IA_INVALIDA", porque);
+			nuevaD.orden.push_back(uint8_t(pd.size()));       // el que llega: al final de la plantilla y última reserva
+
+			Plaza movida = po[size_t(idx)];
+			po.erase(po.begin() + idx);
 			movida.dorsal = dorsal;
 			pd.push_back(movida);
 
-			// Todo validado: recién ahora se escribe (todo o nada).
-			escribirPlantilla(_datos, origen, po);
-			escribirPlantilla(_datos, destino, pd);
+			Datos d = _datos;
+			escribirPlantilla(d, origen, po);
+			escribirPlantilla(d, destino, pd);
+			escribirAliIA(d, nuevaO);
+			escribirAliIA(d, nuevaD);
+			_datos.swap(d);
 			return R::bien(dorsal);
+		}
+		catch (const std::exception& e) { return R::mal("ML_ERROR", e.what()); }
+	}
+
+	Resultado<uint32_t> GuardadoLM::sugerirSustituto(int k, uint32_t pid, const std::function<int(uint32_t)>& posicionDe) const {
+		using R = Resultado<uint32_t>;
+		try {
+			if (k < 0 || k >= kNumEquipos) return R::mal("EQUIPO_INVALIDO", std::to_string(k));
+			const auto pl = leerPlantilla(_datos, k);
+			int idx = -1;
+			for (size_t i = 0; i < pl.size(); i++) if (pl[i].pid == pid) idx = int(i);
+			if (idx < 0) return R::mal("JUGADOR_NO_ESTA", "El jugador no está en ese equipo");
+
+			std::vector<uint8_t> orden;
+			std::array<uint8_t, 6> roles{};
+			size_t limite = kLimiteIA;
+			if (esEquipoUsuario(k)) {
+				auto a = alineacionDe(k);
+				if (!a.ok()) return R::mal(a.error.codigo, a.error.detalle);
+				orden = a.valor->orden; roles = a.valor->roles; limite = kLimiteUsuario;
+			}
+			else {
+				auto a = leerAliIA(_datos, buscarBloquesAli(_datos), k);
+				if (!a.ok()) return R::mal(a.error.codigo, a.error.detalle);
+				orden = a.valor->orden; roles = a.valor->roles;
+			}
+			if (!necesitaSustituto(orden, roles, idx, limite)) return R::bien(0u);
+
+			const size_t posH = size_t(std::find(orden.begin(), orden.end(), uint8_t(idx)) - orden.begin());
+			// Línea: 0 portero · 1 defensa (DC, LI, LD) · 2 medio (MCD, MC, II, ID, MP) · 3 ataque (EI, ED, SD, DC)
+			auto linea = [](int c) { return c < 0 ? -1 : c == 0 ? 0 : c <= 3 ? 1 : c <= 8 ? 2 : 3; };
+			const int cH = posicionDe ? posicionDe(pid) : -1;
+			const bool esPortero = cH == 0 || (cH < 0 && posH == 0);   // el puesto 0 de la formación es siempre el portero
+
+			// Candidatos, en este orden: las reservas (así lo hace el juego) y después la banca. Nunca otro titular.
+			std::vector<size_t> cand;
+			for (size_t p = kPrimeraReserva; p < orden.size(); p++) if (p != posH) cand.push_back(p);
+			for (size_t p = 11; p < std::min(kPrimeraReserva, orden.size()); p++) if (p != posH) cand.push_back(p);
+
+			int mejor = -1; size_t elegido = 0;
+			for (size_t p : cand) {
+				const int c = posicionDe ? posicionDe(pl[orden[p]].pid) : -1;
+				int puntos;
+				if (esPortero) { if (c != 0) continue; puntos = 2; }
+				else {
+					if (c == 0) continue;                                  // un portero nunca cubre a un jugador de campo
+					puntos = (cH >= 0 && c == cH) ? 2 : (cH >= 0 && linea(c) == linea(cH)) ? 1 : 0;
+				}
+				if (puntos > mejor) { mejor = puntos; elegido = p; }
+			}
+			if (mejor < 0) return R::mal("SIN_SUSTITUTO", esPortero ? "No hay otro portero para cubrir el puesto" : "No hay ningún jugador libre para cubrir el puesto");
+			return R::bien(pl[orden[elegido]].pid);
 		}
 		catch (const std::exception& e) { return R::mal("ML_ERROR", e.what()); }
 	}
@@ -190,10 +366,7 @@ namespace mercado::lm {
 	//  Equipo del usuario: alineación (orden + roles + K) y venta a la IA
 	// =========================================================================
 	namespace {
-		constexpr size_t kBytesOrden = 40;          // 40 índices de plantilla (relleno 0xff)
-		constexpr size_t kOrdenARoles = 0x28;       // los 6 roles van justo después de los 40 bytes
-		constexpr size_t kBytesRoles = 6;
-		constexpr size_t kTamK = 16;                // [flag u32][reg u32][pid u32][0 u32]
+		constexpr size_t kTamK = 16;               // [flag u32][reg u32][pid u32][0 u32]
 		constexpr uint32_t kFlagLibreMin = 0xc0;    // primer registro libre de K (0xc0 con 25 jugadores, 0xc1 con 26…)
 		constexpr uint32_t kFlagFinK = 0xc7;        // los que siguen al primer libre
 		constexpr int kMaxRegistrosTabla = 200;     // tope de seguridad al contar registros de una tabla
@@ -341,6 +514,9 @@ namespace mercado::lm {
 			auto ali = alineacionDe(kUsuario);
 			if (!ali.ok()) return R::mal(ali.error.codigo, ali.error.detalle);
 			Alineacion a = *ali.valor;
+			// Alineación del equipo de la IA que recibe: el nuevo tiene que entrar también ahí (si no, sale «en blanco»).
+			auto aliDestino = leerAliIA(_datos, buscarBloquesAli(_datos), kDestino);
+			if (!aliDestino.ok()) return R::mal(aliDestino.error.codigo, aliDestino.error.detalle);
 
 			// En cada tabla el jugador se busca por su (reg, pid): los fichajes recientes no están en su índice de
 			// plantilla sino al final (tablas C y D: 24 del primer equipo, 32 juveniles y luego los fichados).
@@ -431,6 +607,9 @@ namespace mercado::lm {
 			movida.dorsal = dorsal;
 			pd2.push_back(movida);
 			escribirPlantilla(d, kDestino, pd2);
+			AliIA nuevaD = *aliDestino.valor;
+			nuevaD.orden.push_back(uint8_t(pd.size()));      // el que llega: última reserva (el técnico de la IA decide después)
+			escribirAliIA(d, nuevaD);
 
 			// Lista K = espejo del nuevo orden con los flags que quedaron; luego el libre (flag anterior − 1, mínimo 0xc0) y 0xc7.
 			for (size_t i = 0; i < orden.size(); i++) {

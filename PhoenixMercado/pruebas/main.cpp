@@ -3,6 +3,7 @@
 //  Usa una web «falsa» (HttpFalso) para probar todas las respuestas posibles.
 // =============================================================================
 
+#include <array>
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
@@ -218,6 +219,41 @@ int main() {
 		for (size_t i = 0; i < 26; i++) { const size_t r = K0 + 16 * i; p32(r, i ? 0xc0 : 0); p32(r + 4, 1000 + orden[i]); p32(r + 8, 5000 + orden[i]); }
 		p32(K0 + 16 * 26, 0xc1); p32(K0 + 16 * 26 + 4, 0xffff); p32(K0 + 16 * 27, 0xc7); p32(K0 + 16 * 27 + 4, 0xffff); p32(K0 + 16 * 28, 0xc7); p32(K0 + 16 * 28 + 4, 0xffff);
 
+		// Alineaciones de la IA (ESTRUCTURA-ML.md §10): 629 bloques de 600 B como en el juego. ID option = 2000 + k;
+		// el usuario (5) cambia de ID como en el juego (City: -11) y su bloque viejo queda con el ID original.
+		for (int k = 0; k < 700; k++) p32(0x50 + 1680 * size_t(k) + 656, 2000 + uint32_t(k));
+		p32(0x50 + 1680 * 5 + 656, 0xfffffff5);
+		const size_t ALI = FIN + 0x100000;
+		auto bloqueAli = [&](int k) { return ALI + 600 * size_t(k); };
+		for (int k = 0; k < 629; k++) {
+			p32(bloqueAli(k), uint32_t(k)); p32(bloqueAli(k) + 4, k < 627 ? 2000 + uint32_t(k) : 0xfffffff5);
+			for (int i = 0; i < 40; i++) d[bloqueAli(k) + 0x220 + i] = 0xff;
+		}
+		auto ponerOrden = [&](int k, const std::vector<uint8_t>& o, std::array<uint8_t, 6> roles) {
+			for (size_t i = 0; i < 40; i++) d[bloqueAli(k) + 0x220 + i] = i < o.size() ? o[i] : 0xff;
+			for (size_t i = 0; i < 6; i++) d[bloqueAli(k) + 0x220 + 0x28 + i] = roles[i];
+		};
+		auto leerOrden = [&](const std::vector<uint8_t>& dd, int k) { return std::vector<uint8_t>(dd.begin() + long(bloqueAli(k) + 0x220), dd.begin() + long(bloqueAli(k) + 0x220 + 46)); };
+		auto compacto = [](std::vector<uint8_t> o, std::array<uint8_t, 6> roles) { o.resize(40, 0xff); o.insert(o.end(), roles.begin(), roles.end()); return o; };
+		auto equipoIA = [&](int k, uint32_t reg0, uint32_t pid0, int n) {
+			std::vector<std::pair<uint32_t, uint32_t>> J; std::vector<uint16_t> dJ;
+			for (uint32_t i = 0; i < uint32_t(n); i++) { J.push_back({ reg0 + i, pid0 + i }); dJ.push_back(uint16_t(1 + i)); }
+			plantilla(k, J, dJ);
+		};
+		ponerOrden(7, { 2, 0, 1 }, { 0, 0, 1, 0, 0, 2 });
+		ponerOrden(8, { 11, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }, { 11, 1, 2, 0, 0, 0 });            // 12: XI = 11,0…9 · banca = 10
+		equipoIA(9, 6000, 9100, 20);                                                            // formato «identidad de 40»
+		{ std::vector<uint8_t> o; for (uint8_t i = 0; i < 40; i++) o.push_back(i); ponerOrden(9, o, { 0, 0, 0, 0, 0, 0 }); }
+		equipoIA(10, 6100, 9200, 15);                                                           // formato «0…14, ff, 15…38»
+		{ std::vector<uint8_t> o; for (uint8_t i = 0; i < 15; i++) o.push_back(i); o.push_back(0xff); for (uint8_t i = 15; i < 39; i++) o.push_back(i); ponerOrden(10, o, { 0, 0, 0, 0, 0, 0 }); }
+		equipoIA(11, 6200, 9250, 13);                                                           // orden roto (repetido): no se toca
+		{ std::vector<uint8_t> o; for (uint8_t i = 0; i < 13; i++) o.push_back(i); o[1] = 0; ponerOrden(11, o, { 0, 0, 0, 0, 0, 0 }); }
+		equipoIA(12, 6300, 9300, 25);                                                           // 25 con posiciones, para los sustitutos
+		{ std::vector<uint8_t> o; for (uint8_t i = 0; i < 25; i++) o.push_back(i); ponerOrden(12, o, { 3, 7, 7, 3, 3, 20 }); }
+		// Posiciones del 12: XI 0–10 · banca 11–17 · reservas 18–24  (0 PT, 1 DC, 2 LI, 3 LD, 4 MCD, 5 MC, 6 II, 8 MP, 9 EI, 10 ED, 12 DC)
+		const int pos12[25] = { 0, 1, 2, 3, 1, 4, 5, 8, 9, 12, 10,   0, 1, 3, 5, 8, 12, 9,   0, 1, 2, 5, 12, 10, 6 };
+		auto posicionDe = [&](uint32_t pid) { return pid >= 9300 && pid < 9325 ? pos12[pid - 9300] : -1; };
+
 		auto g = GuardadoLM::desdeDatos(d);
 		CHECK(g.ok());
 		if (g.ok()) {
@@ -267,6 +303,49 @@ int main() {
 					CHECK(g.valor->datos()[LU + 25] == 0xff);
 				}
 			}
+			// El destino de la IA (7) recibió al vendido como última reserva; sus roles no cambian.
+			CHECK(leerOrden(g.valor->datos(), 7) == compacto({ 2, 0, 1, 3 }, { 0, 0, 1, 0, 0, 2 }));
+
+			std::printf("Liga Máster interna (alineaciones de la IA)\n");
+			// Sustitutos por posición (equipo 12: compacto, 25)
+			auto s9 = g.valor->sugerirSustituto(12, 9309, posicionDe);   // DC titular → la reserva DC (idx 22)
+			CHECK(s9.ok() && *s9.valor == 9322);
+			auto s0 = g.valor->sugerirSustituto(12, 9300, posicionDe);   // portero → la reserva portero (idx 18), no el de la banca
+			CHECK(s0.ok() && *s0.valor == 9318);
+			auto s5 = g.valor->sugerirSustituto(12, 9305, posicionDe);   // MCD: ninguna reserva MCD → misma línea (MC, idx 21)
+			CHECK(s5.ok() && *s5.valor == 9321);
+			auto s12 = g.valor->sugerirSustituto(12, 9312, posicionDe);  // suplente sin rol → no hace falta nadie
+			CHECK(s12.ok() && *s12.valor == 0);
+			auto s20 = g.valor->sugerirSustituto(12, 9320, posicionDe);  // reserva con rol (LI) → otro defensa de las reservas (DC, idx 19)
+			CHECK(s20.ok() && *s20.valor == 9319);
+			CHECK(g.valor->sugerirSustituto(12, 9300, nullptr).error.codigo == "SIN_SUSTITUTO");   // sin posiciones no se arriesga con el portero
+			CHECK(g.valor->sugerirSustituto(12, 4242, posicionDe).error.codigo == "JUGADOR_NO_ESTA");
+			auto su = g.valor->sugerirSustituto(5, 5004, posicionDe);    // equipo del usuario: va por su propia alineación
+			CHECK(su.ok());
+
+			// IA → IA: errores que no tocan nada
+			const auto antesIA = g.valor->datos();
+			CHECK(g.valor->moverEntreIA(8, 9, 8001, 0, 0).error.codigo == "FALTA_SUSTITUTO");       // titular sin sustituto
+			CHECK(g.valor->moverEntreIA(8, 9, 8001, 0, 4242).error.codigo == "SUSTITUTO_NO_ESTA");
+			CHECK(g.valor->moverEntreIA(11, 9, 9251, 0, 0).error.codigo == "ALINEACION_IA_INVALIDA");  // orden roto en el origen
+			CHECK(g.valor->moverEntreIA(9, 11, 9101, 0, 0).error.codigo == "ALINEACION_IA_INVALIDA");  // orden roto en el destino
+			CHECK(g.valor->moverEntreIA(5, 9, 5004, 0, 0).error.codigo == "EQUIPO_DEL_USUARIO");
+			CHECK(g.valor->datos() == antesIA);
+
+			// IA → IA con sustituto: 8001 (idx 1, titular en el puesto 2, con rol) sale; 8010 (banca) ocupa su puesto.
+			auto m1 = g.valor->moverEntreIA(8, 9, 8001, 7, 8010);
+			CHECK(m1.ok() && *m1.valor == 99);   // el 7 está ocupado en el 9 (dorsales 1…20) → el más alto libre
+			CHECK(leerOrden(g.valor->datos(), 8) == compacto({ 10, 0, 9, 1, 2, 3, 4, 5, 6, 7, 8 }, { 10, 9, 1, 0, 0, 0 }));
+			{ std::vector<uint8_t> o; for (uint8_t i = 0; i <= 20; i++) o.push_back(i); CHECK(leerOrden(g.valor->datos(), 9) == compacto(o, { 0, 0, 0, 0, 0, 0 })); }
+			CHECK(g.valor->equipo(8).valor->plantilla.size() == 11 && g.valor->equipo(9).valor->plantilla.size() == 21);
+			CHECK(g.valor->equipo(9).valor->plantilla.back().pid == 8001);
+
+			// IA → IA sin sustituto (reserva sin rol): 9119 (idx 19) del 9 al 10 («0…14, ff, …» → compacto 0…15)
+			auto m2 = g.valor->moverEntreIA(9, 10, 9119, 0, 0);
+			CHECK(m2.ok());
+			{ std::vector<uint8_t> o; for (uint8_t i = 0; i < 20; i++) o.push_back(i); CHECK(leerOrden(g.valor->datos(), 9) == compacto(o, { 0, 0, 0, 0, 0, 0 })); }
+			{ std::vector<uint8_t> o; for (uint8_t i = 0; i <= 15; i++) o.push_back(i); CHECK(leerOrden(g.valor->datos(), 10) == compacto(o, { 0, 0, 0, 0, 0, 0 })); }
+			CHECK(g.valor->equipo(9).valor->plantilla.back().pid == 8001 && g.valor->equipo(10).valor->plantilla.back().pid == 9119);
 		}
 	}
 

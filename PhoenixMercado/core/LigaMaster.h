@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cstdint>
+#include <functional>
 #include <optional>
 #include <string>
 #include <vector>
@@ -13,14 +14,15 @@
 // -----------------------------------------------------------------------------
 //  Estructura y pruebas en el juego: liga-master/ESTRUCTURA-ML.md.
 //
-//  Qué hace hoy este módulo (y qué NO):
+//  Qué hace hoy este módulo:
 //   · Lee los 700 equipos (nombre, plantilla, dorsales).                         [probado]
-//   · Mueve un jugador entre dos equipos de la IA: solo cambian la lista de      [probado en el
-//     plantilla, los dorsales y el contador de cada bloque de equipo.             juego: Mbappé → Santos]
-//   · Detecta el equipo del USUARIO (tiene tablas alineadas con su plantilla) y
-//     se NIEGA a tocarlo por este camino: ese equipo guarda datos extra por
-//     jugador (tablas, alineación, listas ordenadas) que aún no se editan aquí.
+//   · Mueve un jugador entre dos equipos de la IA: plantilla, dorsales, contador
+//     y la ALINEACIÓN de cada uno (bloques de 600 B, §10).                       [pendiente de verlo en el juego]
+//   · Vende un jugador del equipo del USUARIO a la IA: 12+ tablas por jugador,
+//     orden de formación, roles, lista K, plantillas y alineación del destino.  [probado en el juego salvo §10]
+//   · Propone sustitutos por posición (reservas primero, como el juego).
 //   · Guarda siempre en un archivo NUEVO (nunca sobrescribe) y lo verifica.
+//  Qué NO hace todavía: fichar PARA el usuario (IA → usuario).
 // =============================================================================
 
 namespace mercado::lm {
@@ -82,8 +84,16 @@ namespace mercado::lm {
 		bool esEquipoUsuario(int indice) const { return tablasDe(indice).size() >= 3; }
 
 		/// Mueve `pid` de `origen` a `destino` (los dos de la IA). dorsal 0 o ya ocupado = el más alto libre.
-		/// Devuelve el dorsal que quedó. Todo o nada: si falla, no cambia nada.
-		Resultado<uint16_t> moverEntreIA(int origen, int destino, uint32_t pid, uint16_t dorsal = 0);
+		/// Además de las plantillas, actualiza la ALINEACIÓN de los dos equipos (bloques de 600 B, ESTRUCTURA-ML.md §10):
+		/// en el origen, si era titular o tenía un rol, `pidSustituto` (del mismo equipo) ocupa su puesto; en el
+		/// destino, entra como última reserva. Devuelve el dorsal que quedó. Todo o nada: si falla, no cambia nada.
+		Resultado<uint16_t> moverEntreIA(int origen, int destino, uint32_t pid, uint16_t dorsal = 0, uint32_t pidSustituto = 0);
+
+		/// Propone quién cubre el puesto de `pid` en el equipo `k` si se va (0 = no hace falta nadie).
+		/// `posicionDe(pid)` da la posición registrada (0 PT, 1 DC, 2 LI, 3 LD, 4 MCD, 5 MC, 6 II, 7 ID, 8 MP,
+		/// 9 EI, 10 ED, 11 SD, 12 DC) o -1 si no se sabe. Busca primero entre las reservas (como hace el juego)
+		/// y después en la banca: misma posición > misma línea > cualquiera; un portero solo lo cubre otro portero.
+		Resultado<uint32_t> sugerirSustituto(int k, uint32_t pid, const std::function<int(uint32_t)>& posicionDe) const;
 
 		/// Alineación del equipo del USUARIO, localizada por anclas (no por direcciones fijas).
 		Resultado<Alineacion> alineacionDe(int indice) const;
@@ -94,7 +104,8 @@ namespace mercado::lm {
 		///   · en la alineación, `pidSustituto` ocupa el puesto del que se va y desaparece de su sitio anterior;
 		///     si el que se va es reserva (posición ≥ 18) puede ir sin sustituto (0),
 		///   · reescribe la lista K como espejo de la alineación, la plantilla y los dorsales del usuario,
-		///   · añade al jugador al final de la plantilla del destino con `dorsal` (0 u ocupado = el más alto libre).
+		///   · añade al jugador al final de la plantilla del destino con `dorsal` (0 u ocupado = el más alto libre)
+		///     y como última reserva en la alineación del destino.
 		/// Todo o nada: si algo no cuadra, no cambia un solo byte. Devuelve el dorsal que quedó.
 		Resultado<uint16_t> moverUsuarioAIA(int kUsuario, int kDestino, uint32_t pid, uint16_t dorsal, uint32_t pidSustituto);
 		/// Qué tablas tocó la última operación sobre el equipo del usuario (para el log / la bitácora).
