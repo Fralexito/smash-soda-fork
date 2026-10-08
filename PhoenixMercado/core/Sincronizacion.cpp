@@ -149,9 +149,9 @@ namespace mercado::sinc {
 							if (!m.ok()) return errorEn(c, "liga máster", m.error);
 							ln.ligaMaster = true; inf.aplicadosLM++;
 							auto eo = ml->equipo(kO);
-							if (eo.ok() && c.clubDesdePes) {
+							if (eo.ok() && c.clubDesdePes) {   // la web y la carrera no coinciden en el club de origen (la IA lo movió): se avisa
 								auto idO = ml->idOptionDe(kO);
-								if (idO.ok() && *idO.valor != c.clubDesdePes) ln.texto += " (en la Liga Máster estaba en " + eo.valor->nombre + ")";
+								if (idO.ok() && *idO.valor != c.clubDesdePes) ln.texto += " (en la Liga Máster estaba en " + (eo.valor->nombre.empty() ? "el equipo " + std::to_string(kO) : eo.valor->nombre) + ")";
 							}
 						}
 					}

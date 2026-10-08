@@ -197,3 +197,9 @@ encima de la ranura 2.
 Alineación de Boca en la pantalla de estrategia: **Montero** de arquero, **Braida (Malcom) de LI** en el puesto de Blanco, el resto
 del once igual (Di Lollo, Costa, Lozano, Paredes, Delgado, Villa, Aranda, Merentiel, Valencia) y **Marchesín primero en el banco**.
 El error del portero suplente de delantero quedó corregido: el bloque de tácticas del option file se actualiza bien.
+
+**8 oct 18:41 · PROBAR2.bat en la PC de Fralex (ejecutables cruzados con MinGW)** — ✅
+Conexión con la web OK, cuenta OK (token de Phoenix Link), **271/271 pruebas** con el option file real y el catálogo, y la
+**sincronización real con la web**: `GET /liga/cambios?desde=0` respondió, **la firma Ed25519 se verificó** con la clave incrustada y
+la liga está en la versión 0 (sin traspasos aún). El original no cambió (huella igual). El paso 5 (modo código manager) dio
+`NO_VINCULADO`, que es lo esperado: esa PC usa el token compartido.
