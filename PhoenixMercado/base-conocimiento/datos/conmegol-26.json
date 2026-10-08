@@ -1,0 +1,4640 @@
+{
+ "parche": "ConmeGOL Patch 26",
+ "fecha_auditoria": "2026-10-08",
+ "option_file": {
+  "jugadores_editados": 21,
+  "equipos_con_plantilla": 749
+ },
+ "liga_master": {
+  "bloques_equipo": 700,
+  "equipos_con_nombre": 627,
+  "selecciones_desde_indice": 528
+ },
+ "competiciones_en_LM": [
+  {
+   "offset": "0xb08664",
+   "equipos": 40,
+   "primero": "",
+   "ultimo": "Gales"
+  },
+  {
+   "offset": "0xb09220",
+   "equipos": 16,
+   "primero": "Argelia",
+   "ultimo": "Zambia"
+  },
+  {
+   "offset": "0xb09dd8",
+   "equipos": 16,
+   "primero": "Canada",
+   "ultimo": "Estados Unidos"
+  },
+  {
+   "offset": "0xb0a990",
+   "equipos": 10,
+   "primero": "Argentina",
+   "ultimo": "Venezuela"
+  },
+  {
+   "offset": "0xb0b548",
+   "equipos": 16,
+   "primero": "Australia",
+   "ultimo": "Uzbekistán"
+  },
+  {
+   "offset": "0xb0d870",
+   "equipos": 30,
+   "primero": "CA Aldosivi",
+   "ultimo": "CA Vélez Sarsfield"
+  },
+  {
+   "offset": "0xb0e428",
+   "equipos": 16,
+   "primero": "SD Aucas",
+   "ultimo": "CD Universidad Católica"
+  },
+  {
+   "offset": "0xb0efe0",
+   "equipos": 20,
+   "primero": "Águilas Doradas",
+   "ultimo": "Once Caldas"
+  },
+  {
+   "offset": "0xb0fb98",
+   "equipos": 16,
+   "primero": "Audax Italiano",
+   "ultimo": "Universidad de Concepción"
+  },
+  {
+   "offset": "0xb10750",
+   "equipos": 20,
+   "primero": "Athletico Paranaense",
+   "ultimo": "EC Vitória"
+  },
+  {
+   "offset": "0xb11308",
+   "equipos": 18,
+   "primero": "Alianza Atlético",
+   "ultimo": "Universitario"
+  },
+  {
+   "offset": "0xb11ec0",
+   "equipos": 20,
+   "primero": "Athletic Club",
+   "ultimo": "Villarreal CF"
+  },
+  {
+   "offset": "0xb12a78",
+   "equipos": 20,
+   "primero": "Arsenal FC",
+   "ultimo": "Tottenham Hotspur FC"
+  },
+  {
+   "offset": "0xb13630",
+   "equipos": 20,
+   "primero": "Atalanta BC",
+   "ultimo": "Venezia FC"
+  },
+  {
+   "offset": "0xb141e8",
+   "equipos": 16,
+   "primero": "CD Cobreloa",
+   "ultimo": "CD Unión San Felipe"
+  },
+  {
+   "offset": "0xb14da0",
+   "equipos": 18,
+   "primero": "Angers SCO",
+   "ultimo": "ESTAC Troyes"
+  },
+  {
+   "offset": "0xb15958",
+   "equipos": 12,
+   "primero": "LD Alajuelense",
+   "ultimo": "Sporting FC"
+  },
+  {
+   "offset": "0xb17c80",
+   "equipos": 12,
+   "primero": "LD Alajuelense",
+   "ultimo": "Sporting FC"
+  },
+  {
+   "offset": "0xb193f0",
+   "equipos": 47,
+   "primero": "CA Lanús",
+   "ultimo": "Deportivo Táchira FC"
+  },
+  {
+   "offset": "0xb19fa8",
+   "equipos": 44,
+   "primero": "CA River Plate",
+   "ultimo": "Metropolitanos FC"
+  },
+  {
+   "offset": "0xb1b718",
+   "equipos": 19,
+   "primero": "FC Bayern Múnich",
+   "ultimo": "FC Porto"
+  },
+  {
+   "offset": "0xb1e5f8",
+   "equipos": 25,
+   "primero": "Atlético Ottawa",
+   "ultimo": "CD Luis Angel Firpo"
+  },
+  {
+   "offset": "0xb1f1b0",
+   "equipos": 66,
+   "primero": "CA Aldosivi",
+   "ultimo": "CSD Tristán Suárez"
+  },
+  {
+   "offset": "0xb1fd68",
+   "equipos": 36,
+   "primero": "Águilas Doradas",
+   "ultimo": "Unión Magdalena"
+  },
+  {
+   "offset": "0xb20920",
+   "equipos": 40,
+   "primero": "Athletico Paranaense",
+   "ultimo": "Vila Nova FC"
+  },
+  {
+   "offset": "0xb214d8",
+   "equipos": 26,
+   "primero": "SD Aucas",
+   "ultimo": "Gualaceo SC"
+  },
+  {
+   "offset": "0xb22090",
+   "equipos": 32,
+   "primero": "Audax Italiano",
+   "ultimo": "CD Unión San Felipe"
+  },
+  {
+   "offset": "0xb22c48",
+   "equipos": 32,
+   "primero": "Alianza Atlético",
+   "ultimo": "CD Universidad San Martin"
+  },
+  {
+   "offset": "0xb23800",
+   "equipos": 18,
+   "primero": "Abha Club",
+   "ultimo": "Neom SC"
+  },
+  {
+   "offset": "0xb243b8",
+   "equipos": 28,
+   "primero": "Atlanta United FC",
+   "ultimo": "Vancouver Whitecaps FC"
+  },
+  {
+   "offset": "0xb28a08",
+   "equipos": 48,
+   "primero": "México",
+   "ultimo": "Panamá"
+  },
+  {
+   "offset": "0xb295c0",
+   "equipos": 24,
+   "primero": "Albania",
+   "ultimo": "Ucrania"
+  },
+  {
+   "offset": "0xb2a178",
+   "equipos": 16,
+   "primero": "Canada",
+   "ultimo": "Venezuela"
+  },
+  {
+   "offset": "0xb2ad30",
+   "equipos": 15,
+   "primero": "Australia",
+   "ultimo": "Uzbekistán"
+  },
+  {
+   "offset": "0xb2b8e8",
+   "equipos": 16,
+   "primero": "Argelia",
+   "ultimo": "Zambia"
+  },
+  {
+   "offset": "0xb2d058",
+   "equipos": 36,
+   "primero": "CA Acassuso",
+   "ultimo": "CSD Tristán Suárez"
+  },
+  {
+   "offset": "0xb2dc10",
+   "equipos": 20,
+   "primero": "América Mineiro",
+   "ultimo": "Vila Nova FC"
+  },
+  {
+   "offset": "0xb2e7c8",
+   "equipos": 16,
+   "primero": "9 de Octubre FC",
+   "ultimo": "Vinotinto FC"
+  },
+  {
+   "offset": "0xb2f380",
+   "equipos": 20,
+   "primero": "Alianza Petrolera FC",
+   "ultimo": "Unión Magdalena"
+  }
+ ],
+ "equipos": [
+  {
+   "indice": 0,
+   "id_option": 2717,
+   "nombre": "CA Aldosivi",
+   "plantilla": 32,
+   "seleccion": false
+  },
+  {
+   "indice": 1,
+   "id_option": 1236,
+   "nombre": "AA Argentinos Juniors",
+   "plantilla": 34,
+   "seleccion": false
+  },
+  {
+   "indice": 2,
+   "id_option": 2719,
+   "nombre": "Atlético Tucumán",
+   "plantilla": 32,
+   "seleccion": false
+  },
+  {
+   "indice": 3,
+   "id_option": 1927,
+   "nombre": "CA Banfield",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 4,
+   "id_option": 5657,
+   "nombre": "CA Barracas Central",
+   "plantilla": 37,
+   "seleccion": false
+  },
+  {
+   "indice": 5,
+   "id_option": 2536,
+   "nombre": "CA Belgrano",
+   "plantilla": 29,
+   "seleccion": false
+  },
+  {
+   "indice": 6,
+   "id_option": 139,
+   "nombre": "CA Boca Juniors",
+   "plantilla": 32,
+   "seleccion": false
+  },
+  {
+   "indice": 7,
+   "id_option": 4995,
+   "nombre": "CA Central Córdoba",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 8,
+   "id_option": 2722,
+   "nombre": "Defensa y Justicia",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 9,
+   "id_option": 5366,
+   "nombre": "Deportivo Riestra",
+   "plantilla": 33,
+   "seleccion": false
+  },
+  {
+   "indice": 10,
+   "id_option": 1238,
+   "nombre": "Club Estudiantes La Plata",
+   "plantilla": 32,
+   "seleccion": false
+  },
+  {
+   "indice": 11,
+   "id_option": 5659,
+   "nombre": "AA Estudiantes (Río Cuarto)",
+   "plantilla": 32,
+   "seleccion": false
+  },
+  {
+   "indice": 12,
+   "id_option": 1239,
+   "nombre": "Gimnasia La Plata",
+   "plantilla": 32,
+   "seleccion": false
+  },
+  {
+   "indice": 13,
+   "id_option": 4997,
+   "nombre": "CA Gimnasia y Esgrima (Mendoza)",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 14,
+   "id_option": 1922,
+   "nombre": "CA Huracán",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 15,
+   "id_option": 1240,
+   "nombre": "CA Independiente",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 16,
+   "id_option": 2726,
+   "nombre": "CS Independiente Rivadavia",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 17,
+   "id_option": 2727,
+   "nombre": "Instituto AC Córdoba",
+   "plantilla": 29,
+   "seleccion": false
+  },
+  {
+   "indice": 18,
+   "id_option": 1929,
+   "nombre": "CA Lanús",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 19,
+   "id_option": 1241,
+   "nombre": "Newell's Old Boys",
+   "plantilla": 32,
+   "seleccion": false
+  },
+  {
+   "indice": 20,
+   "id_option": 5454,
+   "nombre": "CA Platense",
+   "plantilla": 39,
+   "seleccion": false
+  },
+  {
+   "indice": 21,
+   "id_option": 1237,
+   "nombre": "Racing Club",
+   "plantilla": 32,
+   "seleccion": false
+  },
+  {
+   "indice": 22,
+   "id_option": 138,
+   "nombre": "CA River Plate",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 23,
+   "id_option": 1242,
+   "nombre": "CA Rosario Central",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 24,
+   "id_option": 1243,
+   "nombre": "CA San Lorenzo",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 25,
+   "id_option": 2730,
+   "nombre": "CA Sarmiento",
+   "plantilla": 34,
+   "seleccion": false
+  },
+  {
+   "indice": 26,
+   "id_option": 5046,
+   "nombre": "CA Talleres",
+   "plantilla": 27,
+   "seleccion": false
+  },
+  {
+   "indice": 27,
+   "id_option": 1926,
+   "nombre": "CA Tigre",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 28,
+   "id_option": 2538,
+   "nombre": "CA Unión",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 29,
+   "id_option": 1244,
+   "nombre": "CA Vélez Sarsfield",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 30,
+   "id_option": 2653,
+   "nombre": "Águilas Doradas",
+   "plantilla": 29,
+   "seleccion": false
+  },
+  {
+   "indice": 31,
+   "id_option": 5207,
+   "nombre": "Alianza FC",
+   "plantilla": 33,
+   "seleccion": false
+  },
+  {
+   "indice": 32,
+   "id_option": 1257,
+   "nombre": "América de Cali",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 33,
+   "id_option": 5208,
+   "nombre": "Atlético Bucaramanga",
+   "plantilla": 29,
+   "seleccion": false
+  },
+  {
+   "indice": 34,
+   "id_option": 2193,
+   "nombre": "Atlético Nacional",
+   "plantilla": 27,
+   "seleccion": false
+  },
+  {
+   "indice": 35,
+   "id_option": 2195,
+   "nombre": "Boyacá Chicó FC",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 36,
+   "id_option": 2194,
+   "nombre": "Cúcuta Deportivo FC",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 37,
+   "id_option": 2361,
+   "nombre": "Deportes Tolima",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 38,
+   "id_option": 2650,
+   "nombre": "Deportivo Cali",
+   "plantilla": 26,
+   "seleccion": false
+  },
+  {
+   "indice": 39,
+   "id_option": 2651,
+   "nombre": "Deportivo Pasto",
+   "plantilla": 32,
+   "seleccion": false
+  },
+  {
+   "indice": 40,
+   "id_option": 5370,
+   "nombre": "Deportivo Pereira",
+   "plantilla": 24,
+   "seleccion": false
+  },
+  {
+   "indice": 41,
+   "id_option": 5371,
+   "nombre": "Fortaleza CEIF",
+   "plantilla": 29,
+   "seleccion": false
+  },
+  {
+   "indice": 42,
+   "id_option": 2210,
+   "nombre": "Independiente Medellín",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 43,
+   "id_option": 2657,
+   "nombre": "Independiente Santa Fe",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 44,
+   "id_option": 2654,
+   "nombre": "Internacional de Bogotá",
+   "plantilla": 26,
+   "seleccion": false
+  },
+  {
+   "indice": 45,
+   "id_option": 5210,
+   "nombre": "Jaguares de Córdoba",
+   "plantilla": 34,
+   "seleccion": false
+  },
+  {
+   "indice": 46,
+   "id_option": 2285,
+   "nombre": "Junior FC",
+   "plantilla": 29,
+   "seleccion": false
+  },
+  {
+   "indice": 47,
+   "id_option": 5373,
+   "nombre": "Llaneros FC",
+   "plantilla": 26,
+   "seleccion": false
+  },
+  {
+   "indice": 48,
+   "id_option": 1258,
+   "nombre": "Millonarios FC",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 49,
+   "id_option": 2284,
+   "nombre": "Once Caldas",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 50,
+   "id_option": 1930,
+   "nombre": "Athletico Paranaense",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 51,
+   "id_option": 1245,
+   "nombre": "Atlético Mineiro",
+   "plantilla": 33,
+   "seleccion": false
+  },
+  {
+   "indice": 52,
+   "id_option": 2453,
+   "nombre": "EC Bahia",
+   "plantilla": 32,
+   "seleccion": false
+  },
+  {
+   "indice": 53,
+   "id_option": 1246,
+   "nombre": "Botafogo",
+   "plantilla": 33,
+   "seleccion": false
+  },
+  {
+   "indice": 54,
+   "id_option": 4108,
+   "nombre": "Chapecoense",
+   "plantilla": 39,
+   "seleccion": false
+  },
+  {
+   "indice": 55,
+   "id_option": 1247,
+   "nombre": "SC Corinthians",
+   "plantilla": 32,
+   "seleccion": false
+  },
+  {
+   "indice": 56,
+   "id_option": 1931,
+   "nombre": "Coritiba FC",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 57,
+   "id_option": 274,
+   "nombre": "Cruzeiro EC",
+   "plantilla": 32,
+   "seleccion": false
+  },
+  {
+   "indice": 58,
+   "id_option": 1248,
+   "nombre": "CR Flamengo",
+   "plantilla": 25,
+   "seleccion": false
+  },
+  {
+   "indice": 59,
+   "id_option": 1249,
+   "nombre": "Fluminense FC",
+   "plantilla": 35,
+   "seleccion": false
+  },
+  {
+   "indice": 60,
+   "id_option": 1250,
+   "nombre": "Grêmio",
+   "plantilla": 29,
+   "seleccion": false
+  },
+  {
+   "indice": 61,
+   "id_option": 1252,
+   "nombre": "SC Internacional",
+   "plantilla": 26,
+   "seleccion": false
+  },
+  {
+   "indice": 62,
+   "id_option": 5767,
+   "nombre": "Mirassol FC",
+   "plantilla": 32,
+   "seleccion": false
+  },
+  {
+   "indice": 63,
+   "id_option": 137,
+   "nombre": "SE Palmeiras",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 64,
+   "id_option": 2459,
+   "nombre": "Red Bull Bragantino",
+   "plantilla": 32,
+   "seleccion": false
+  },
+  {
+   "indice": 65,
+   "id_option": 5145,
+   "nombre": "Clube do Remo",
+   "plantilla": 32,
+   "seleccion": false
+  },
+  {
+   "indice": 66,
+   "id_option": 1254,
+   "nombre": "Santos FC",
+   "plantilla": 33,
+   "seleccion": false
+  },
+  {
+   "indice": 67,
+   "id_option": 1255,
+   "nombre": "São Paulo FC",
+   "plantilla": 38,
+   "seleccion": false
+  },
+  {
+   "indice": 68,
+   "id_option": 136,
+   "nombre": "Vasco da Gama",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 69,
+   "id_option": 1937,
+   "nombre": "EC Vitória",
+   "plantilla": 37,
+   "seleccion": false
+  },
+  {
+   "indice": 70,
+   "id_option": 5458,
+   "nombre": "SD Aucas",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 71,
+   "id_option": 2658,
+   "nombre": "Barcelona SC",
+   "plantilla": 29,
+   "seleccion": false
+  },
+  {
+   "indice": 72,
+   "id_option": 5434,
+   "nombre": "Delfín SC",
+   "plantilla": 33,
+   "seleccion": false
+  },
+  {
+   "indice": 73,
+   "id_option": 2196,
+   "nombre": "Deportivo Cuenca",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 74,
+   "id_option": 2286,
+   "nombre": "CS Emelec",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 75,
+   "id_option": 5459,
+   "nombre": "Guayaquil City FC",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 76,
+   "id_option": 2659,
+   "nombre": "Independiente Del Valle",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 77,
+   "id_option": 4446,
+   "nombre": "Leones FC (Atuntaqui)",
+   "plantilla": 34,
+   "seleccion": false
+  },
+  {
+   "indice": 78,
+   "id_option": 4036,
+   "nombre": "Libertad FC",
+   "plantilla": 25,
+   "seleccion": false
+  },
+  {
+   "indice": 79,
+   "id_option": 1907,
+   "nombre": "Liga de Quito",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 80,
+   "id_option": 2661,
+   "nombre": "CD Macará",
+   "plantilla": 27,
+   "seleccion": false
+  },
+  {
+   "indice": 81,
+   "id_option": 2662,
+   "nombre": "Manta FC",
+   "plantilla": 27,
+   "seleccion": false
+  },
+  {
+   "indice": 82,
+   "id_option": 5465,
+   "nombre": "Mushuc Runa SC",
+   "plantilla": 29,
+   "seleccion": false
+  },
+  {
+   "indice": 83,
+   "id_option": 5466,
+   "nombre": "Orense SC",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 84,
+   "id_option": 2664,
+   "nombre": "CD Técnico Universitario",
+   "plantilla": 33,
+   "seleccion": false
+  },
+  {
+   "indice": 85,
+   "id_option": 4404,
+   "nombre": "CD Universidad Católica",
+   "plantilla": 27,
+   "seleccion": false
+  },
+  {
+   "indice": 86,
+   "id_option": 2192,
+   "nombre": "Audax Italiano",
+   "plantilla": 27,
+   "seleccion": false
+  },
+  {
+   "indice": 87,
+   "id_option": 2553,
+   "nombre": "CD Cobresal",
+   "plantilla": 29,
+   "seleccion": false
+  },
+  {
+   "indice": 88,
+   "id_option": 1256,
+   "nombre": "CSD Colo Colo",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 89,
+   "id_option": 2707,
+   "nombre": "Coquimbo Unido",
+   "plantilla": 25,
+   "seleccion": false
+  },
+  {
+   "indice": 90,
+   "id_option": 2709,
+   "nombre": "Deportes Concepción",
+   "plantilla": 27,
+   "seleccion": false
+  },
+  {
+   "indice": 91,
+   "id_option": 2544,
+   "nombre": "Deportes La Serena",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 92,
+   "id_option": 2716,
+   "nombre": "Deportes Limache",
+   "plantilla": 25,
+   "seleccion": false
+  },
+  {
+   "indice": 93,
+   "id_option": 2208,
+   "nombre": "CD Everton",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 94,
+   "id_option": 2545,
+   "nombre": "Huachipato FC",
+   "plantilla": 26,
+   "seleccion": false
+  },
+  {
+   "indice": 95,
+   "id_option": 2699,
+   "nombre": "CD Ñublense",
+   "plantilla": 29,
+   "seleccion": false
+  },
+  {
+   "indice": 96,
+   "id_option": 2541,
+   "nombre": "CD O'Higgins",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 97,
+   "id_option": 2548,
+   "nombre": "CD Palestino",
+   "plantilla": 32,
+   "seleccion": false
+  },
+  {
+   "indice": 98,
+   "id_option": 2546,
+   "nombre": "Unión La Calera",
+   "plantilla": 32,
+   "seleccion": false
+  },
+  {
+   "indice": 99,
+   "id_option": 2191,
+   "nombre": "Universidad Católica",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 100,
+   "id_option": 2209,
+   "nombre": "Universidad de Chile",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 101,
+   "id_option": 2551,
+   "nombre": "Universidad de Concepción",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 102,
+   "id_option": 5491,
+   "nombre": "Alianza Atlético",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 103,
+   "id_option": 2287,
+   "nombre": "Alianza Lima",
+   "plantilla": 32,
+   "seleccion": false
+  },
+  {
+   "indice": 104,
+   "id_option": 5492,
+   "nombre": "Atlético Grau",
+   "plantilla": 29,
+   "seleccion": false
+  },
+  {
+   "indice": 105,
+   "id_option": 5261,
+   "nombre": "FC Cajamarca",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 106,
+   "id_option": 2202,
+   "nombre": "Club Cienciano",
+   "plantilla": 33,
+   "seleccion": false
+  },
+  {
+   "indice": 107,
+   "id_option": 5487,
+   "nombre": "CD Comerciantes Unidos",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 108,
+   "id_option": 2675,
+   "nombre": "Cusco FC",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 109,
+   "id_option": 5586,
+   "nombre": "Deportivo Garcilaso",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 110,
+   "id_option": 5490,
+   "nombre": "Deportivo Moquegua",
+   "plantilla": 29,
+   "seleccion": false
+  },
+  {
+   "indice": 111,
+   "id_option": 5501,
+   "nombre": "Juan Pablo II",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 112,
+   "id_option": 5496,
+   "nombre": "CD Los Chankas",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 113,
+   "id_option": 2674,
+   "nombre": "FBC Melgar",
+   "plantilla": 35,
+   "seleccion": false
+  },
+  {
+   "indice": 114,
+   "id_option": 2676,
+   "nombre": "Sport Boys",
+   "plantilla": 29,
+   "seleccion": false
+  },
+  {
+   "indice": 115,
+   "id_option": 2503,
+   "nombre": "Sport Huancayo",
+   "plantilla": 26,
+   "seleccion": false
+  },
+  {
+   "indice": 116,
+   "id_option": 2216,
+   "nombre": "Sporting Cristal",
+   "plantilla": 37,
+   "seleccion": false
+  },
+  {
+   "indice": 117,
+   "id_option": 5585,
+   "nombre": "AD Tarma",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 118,
+   "id_option": 4407,
+   "nombre": "UTC Cajamarca",
+   "plantilla": 22,
+   "seleccion": false
+  },
+  {
+   "indice": 119,
+   "id_option": 2215,
+   "nombre": "Universitario",
+   "plantilla": 34,
+   "seleccion": false
+  },
+  {
+   "indice": 120,
+   "id_option": 258,
+   "nombre": "Athletic Club",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 121,
+   "id_option": 172,
+   "nombre": "Atlético de Madrid",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 122,
+   "id_option": 108,
+   "nombre": "FC Barcelona",
+   "plantilla": 22,
+   "seleccion": false
+  },
+  {
+   "indice": 123,
+   "id_option": 195,
+   "nombre": "RC Celta de Vigo",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 124,
+   "id_option": 4145,
+   "nombre": "Deportivo Alavés",
+   "plantilla": 26,
+   "seleccion": false
+  },
+  {
+   "indice": 125,
+   "id_option": 111,
+   "nombre": "RC Deportivo A Coruña",
+   "plantilla": 29,
+   "seleccion": false
+  },
+  {
+   "indice": 126,
+   "id_option": 361,
+   "nombre": "Elche CF",
+   "plantilla": 26,
+   "seleccion": false
+  },
+  {
+   "indice": 127,
+   "id_option": 259,
+   "nombre": "RCD Espanyol",
+   "plantilla": 26,
+   "seleccion": false
+  },
+  {
+   "indice": 128,
+   "id_option": 362,
+   "nombre": "Getafe CF",
+   "plantilla": 27,
+   "seleccion": false
+  },
+  {
+   "indice": 129,
+   "id_option": 366,
+   "nombre": "Levante UD",
+   "plantilla": 27,
+   "seleccion": false
+  },
+  {
+   "indice": 130,
+   "id_option": 260,
+   "nombre": "Málaga CF",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 131,
+   "id_option": 263,
+   "nombre": "CA Osasuna",
+   "plantilla": 25,
+   "seleccion": false
+  },
+  {
+   "indice": 132,
+   "id_option": 264,
+   "nombre": "Real Racing Club",
+   "plantilla": 27,
+   "seleccion": false
+  },
+  {
+   "indice": 133,
+   "id_option": 370,
+   "nombre": "Rayo Vallecano",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 134,
+   "id_option": 194,
+   "nombre": "Real Betis",
+   "plantilla": 27,
+   "seleccion": false
+  },
+  {
+   "indice": 135,
+   "id_option": 109,
+   "nombre": "Real Madrid CF",
+   "plantilla": 29,
+   "seleccion": false
+  },
+  {
+   "indice": 136,
+   "id_option": 196,
+   "nombre": "Real Sociedad",
+   "plantilla": 26,
+   "seleccion": false
+  },
+  {
+   "indice": 137,
+   "id_option": 265,
+   "nombre": "Sevilla FC",
+   "plantilla": 32,
+   "seleccion": false
+  },
+  {
+   "indice": 138,
+   "id_option": 110,
+   "nombre": "Valencia CF",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 139,
+   "id_option": 267,
+   "nombre": "Villarreal CF",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 140,
+   "id_option": 101,
+   "nombre": "Arsenal FC",
+   "plantilla": 27,
+   "seleccion": false
+  },
+  {
+   "indice": 141,
+   "id_option": 107,
+   "nombre": "Aston Villa FC",
+   "plantilla": 26,
+   "seleccion": false
+  },
+  {
+   "indice": 142,
+   "id_option": 4071,
+   "nombre": "AFC Bournemouth",
+   "plantilla": 24,
+   "seleccion": false
+  },
+  {
+   "indice": 143,
+   "id_option": 4180,
+   "nombre": "Brentford FC",
+   "plantilla": 22,
+   "seleccion": false
+  },
+  {
+   "indice": 144,
+   "id_option": 377,
+   "nombre": "Brighton & Hove Albion",
+   "plantilla": 27,
+   "seleccion": false
+  },
+  {
+   "indice": 145,
+   "id_option": 102,
+   "nombre": "Chelsea FC",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 146,
+   "id_option": 4183,
+   "nombre": "Coventry City FC",
+   "plantilla": 26,
+   "seleccion": false
+  },
+  {
+   "indice": 147,
+   "id_option": 382,
+   "nombre": "Crystal Palace FC",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 148,
+   "id_option": 177,
+   "nombre": "Everton FC",
+   "plantilla": 24,
+   "seleccion": false
+  },
+  {
+   "indice": 149,
+   "id_option": 178,
+   "nombre": "Fulham FC",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 150,
+   "id_option": 1589,
+   "nombre": "Hull City AFC",
+   "plantilla": 24,
+   "seleccion": false
+  },
+  {
+   "indice": 151,
+   "id_option": 386,
+   "nombre": "Ipswich Town FC",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 152,
+   "id_option": 104,
+   "nombre": "Leeds United",
+   "plantilla": 25,
+   "seleccion": false
+  },
+  {
+   "indice": 153,
+   "id_option": 103,
+   "nombre": "Liverpool FC",
+   "plantilla": 25,
+   "seleccion": false
+  },
+  {
+   "indice": 154,
+   "id_option": -11,
+   "nombre": "Manchester City FC",
+   "plantilla": 23,
+   "seleccion": false
+  },
+  {
+   "indice": 155,
+   "id_option": 100,
+   "nombre": "Manchester United FC",
+   "plantilla": 27,
+   "seleccion": false
+  },
+  {
+   "indice": 156,
+   "id_option": 106,
+   "nombre": "Newcastle United FC",
+   "plantilla": 25,
+   "seleccion": false
+  },
+  {
+   "indice": 157,
+   "id_option": 389,
+   "nombre": "Nottingham Forest FC",
+   "plantilla": 27,
+   "seleccion": false
+  },
+  {
+   "indice": 158,
+   "id_option": 396,
+   "nombre": "Sunderland AFC",
+   "plantilla": 27,
+   "seleccion": false
+  },
+  {
+   "indice": 159,
+   "id_option": 179,
+   "nombre": "Tottenham Hotspur FC",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 160,
+   "id_option": 2549,
+   "nombre": "CD Cobreloa",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 161,
+   "id_option": 2708,
+   "nombre": "CDP Curicó Unido",
+   "plantilla": 34,
+   "seleccion": false
+  },
+  {
+   "indice": 162,
+   "id_option": 2547,
+   "nombre": "CD Antofagasta",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 163,
+   "id_option": 2710,
+   "nombre": "Deportes Copiapó",
+   "plantilla": 32,
+   "seleccion": false
+  },
+  {
+   "indice": 164,
+   "id_option": 2543,
+   "nombre": "Deportes Iquique",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 165,
+   "id_option": 5006,
+   "nombre": "Deportes Puerto Montt",
+   "plantilla": 27,
+   "seleccion": false
+  },
+  {
+   "indice": 166,
+   "id_option": 2483,
+   "nombre": "Deportes Recoleta",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 167,
+   "id_option": 5582,
+   "nombre": "Deportes Santa Cruz",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 168,
+   "id_option": 4321,
+   "nombre": "Deportes Temuco",
+   "plantilla": 26,
+   "seleccion": false
+  },
+  {
+   "indice": 169,
+   "id_option": 2712,
+   "nombre": "CD Magallanes",
+   "plantilla": 34,
+   "seleccion": false
+  },
+  {
+   "indice": 170,
+   "id_option": 2550,
+   "nombre": "CSD Rangers",
+   "plantilla": 33,
+   "seleccion": false
+  },
+  {
+   "indice": 171,
+   "id_option": 2714,
+   "nombre": "CD San Luis (Quillota)",
+   "plantilla": 32,
+   "seleccion": false
+  },
+  {
+   "indice": 172,
+   "id_option": 2700,
+   "nombre": "CD San Marcos (Arica)",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 173,
+   "id_option": 2542,
+   "nombre": "CD Santiago Wanderers",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 174,
+   "id_option": 2360,
+   "nombre": "Unión Española",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 175,
+   "id_option": 2552,
+   "nombre": "CD Unión San Felipe",
+   "plantilla": 27,
+   "seleccion": false
+  },
+  {
+   "indice": 176,
+   "id_option": 403,
+   "nombre": "Angers SCO",
+   "plantilla": 25,
+   "seleccion": false
+  },
+  {
+   "indice": 177,
+   "id_option": 180,
+   "nombre": "AJ Auxerre",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 178,
+   "id_option": 413,
+   "nombre": "Le Havre AC",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 179,
+   "id_option": 212,
+   "nombre": "Le Mans FC",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 180,
+   "id_option": 213,
+   "nombre": "LOSC Lille",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 181,
+   "id_option": 414,
+   "nombre": "FC Lorient",
+   "plantilla": 24,
+   "seleccion": false
+  },
+  {
+   "indice": 182,
+   "id_option": 112,
+   "nombre": "AS Mónaco",
+   "plantilla": 27,
+   "seleccion": false
+  },
+  {
+   "indice": 183,
+   "id_option": 217,
+   "nombre": "OGC Niza",
+   "plantilla": 29,
+   "seleccion": false
+  },
+  {
+   "indice": 184,
+   "id_option": 181,
+   "nombre": "Olympique de Lyon",
+   "plantilla": 27,
+   "seleccion": false
+  },
+  {
+   "indice": 185,
+   "id_option": 113,
+   "nombre": "Olympique de Marsella",
+   "plantilla": 25,
+   "seleccion": false
+  },
+  {
+   "indice": 186,
+   "id_option": 4211,
+   "nombre": "Paris FC",
+   "plantilla": 32,
+   "seleccion": false
+  },
+  {
+   "indice": 187,
+   "id_option": 114,
+   "nombre": "París Saint-Germain FC",
+   "plantilla": 27,
+   "seleccion": false
+  },
+  {
+   "indice": 188,
+   "id_option": 4213,
+   "nombre": "Racing Club de Estrasburgo",
+   "plantilla": 26,
+   "seleccion": false
+  },
+  {
+   "indice": 189,
+   "id_option": 182,
+   "nombre": "RC Lens",
+   "plantilla": 29,
+   "seleccion": false
+  },
+  {
+   "indice": 190,
+   "id_option": 1329,
+   "nombre": "Stade Brestois 29",
+   "plantilla": 24,
+   "seleccion": false
+  },
+  {
+   "indice": 191,
+   "id_option": 218,
+   "nombre": "Stade Rennais FC",
+   "plantilla": 25,
+   "seleccion": false
+  },
+  {
+   "indice": 192,
+   "id_option": 221,
+   "nombre": "Toulouse FC",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 193,
+   "id_option": 420,
+   "nombre": "ESTAC Troyes",
+   "plantilla": 29,
+   "seleccion": false
+  },
+  {
+   "indice": 194,
+   "id_option": 5051,
+   "nombre": "LD Alajuelense",
+   "plantilla": 27,
+   "seleccion": false
+  },
+  {
+   "indice": 195,
+   "id_option": 5053,
+   "nombre": "CS Cartaginés",
+   "plantilla": 25,
+   "seleccion": false
+  },
+  {
+   "indice": 196,
+   "id_option": 5082,
+   "nombre": "Escorpiones de Belén",
+   "plantilla": 33,
+   "seleccion": false
+  },
+  {
+   "indice": 197,
+   "id_option": 5058,
+   "nombre": "Guadalupe FC",
+   "plantilla": 36,
+   "seleccion": false
+  },
+  {
+   "indice": 198,
+   "id_option": 5052,
+   "nombre": "CS Herediano",
+   "plantilla": 23,
+   "seleccion": false
+  },
+  {
+   "indice": 199,
+   "id_option": 5076,
+   "nombre": "Inter de San Carlos",
+   "plantilla": 27,
+   "seleccion": false
+  },
+  {
+   "indice": 200,
+   "id_option": 5054,
+   "nombre": "AD Municipal Pérez Zeledón",
+   "plantilla": 29,
+   "seleccion": false
+  },
+  {
+   "indice": 201,
+   "id_option": 5078,
+   "nombre": "Puntarenas FC",
+   "plantilla": 26,
+   "seleccion": false
+  },
+  {
+   "indice": 202,
+   "id_option": 5055,
+   "nombre": "AD San Carlos",
+   "plantilla": 27,
+   "seleccion": false
+  },
+  {
+   "indice": 203,
+   "id_option": 5056,
+   "nombre": "Santa Ana FC",
+   "plantilla": 24,
+   "seleccion": false
+  },
+  {
+   "indice": 204,
+   "id_option": 5050,
+   "nombre": "Deportivo Saprissa",
+   "plantilla": 27,
+   "seleccion": false
+  },
+  {
+   "indice": 205,
+   "id_option": 5075,
+   "nombre": "Sporting FC",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 206,
+   "id_option": 234,
+   "nombre": "Atalanta BC",
+   "plantilla": 26,
+   "seleccion": false
+  },
+  {
+   "indice": 207,
+   "id_option": 186,
+   "nombre": "Bologna FC",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 208,
+   "id_option": 320,
+   "nombre": "Cagliari Calcio",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 209,
+   "id_option": 4219,
+   "nombre": "Como 1907",
+   "plantilla": 29,
+   "seleccion": false
+  },
+  {
+   "indice": 210,
+   "id_option": 124,
+   "nombre": "ACF Fiorentina",
+   "plantilla": 29,
+   "seleccion": false
+  },
+  {
+   "indice": 211,
+   "id_option": 4234,
+   "nombre": "Frosinone Calcio",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 212,
+   "id_option": 323,
+   "nombre": "Genoa CFC",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 213,
+   "id_option": 119,
+   "nombre": "FC Inter de Milán",
+   "plantilla": 25,
+   "seleccion": false
+  },
+  {
+   "indice": 214,
+   "id_option": 120,
+   "nombre": "Juventus FC",
+   "plantilla": 29,
+   "seleccion": false
+  },
+  {
+   "indice": 215,
+   "id_option": 122,
+   "nombre": "SS Lazio",
+   "plantilla": 29,
+   "seleccion": false
+  },
+  {
+   "indice": 216,
+   "id_option": 4237,
+   "nombre": "US Lecce",
+   "plantilla": 26,
+   "seleccion": false
+  },
+  {
+   "indice": 217,
+   "id_option": 121,
+   "nombre": "AC Milan",
+   "plantilla": 26,
+   "seleccion": false
+  },
+  {
+   "indice": 218,
+   "id_option": 4914,
+   "nombre": "AC Monza",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 219,
+   "id_option": 327,
+   "nombre": "SSC Napoli",
+   "plantilla": 25,
+   "seleccion": false
+  },
+  {
+   "indice": 220,
+   "id_option": 123,
+   "nombre": "Parma Calcio",
+   "plantilla": 26,
+   "seleccion": false
+  },
+  {
+   "indice": 221,
+   "id_option": 125,
+   "nombre": "AS Roma",
+   "plantilla": 29,
+   "seleccion": false
+  },
+  {
+   "indice": 222,
+   "id_option": 1919,
+   "nombre": "US Sassuolo",
+   "plantilla": 27,
+   "seleccion": false
+  },
+  {
+   "indice": 223,
+   "id_option": 333,
+   "nombre": "Torino FC",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 224,
+   "id_option": 190,
+   "nombre": "Udinese Calcio",
+   "plantilla": 27,
+   "seleccion": false
+  },
+  {
+   "indice": 225,
+   "id_option": 4229,
+   "nombre": "Venezia FC",
+   "plantilla": 32,
+   "seleccion": false
+  },
+  {
+   "indice": 226,
+   "id_option": 5828,
+   "nombre": "CA Acassuso",
+   "plantilla": 38,
+   "seleccion": false
+  },
+  {
+   "indice": 227,
+   "id_option": 5363,
+   "nombre": "Club Agropecuario",
+   "plantilla": 37,
+   "seleccion": false
+  },
+  {
+   "indice": 228,
+   "id_option": 2539,
+   "nombre": "CA All Boys",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 229,
+   "id_option": 5044,
+   "nombre": "Club Almagro",
+   "plantilla": 24,
+   "seleccion": false
+  },
+  {
+   "indice": 230,
+   "id_option": 2718,
+   "nombre": "Club Almirante Brown",
+   "plantilla": 32,
+   "seleccion": false
+  },
+  {
+   "indice": 231,
+   "id_option": 5656,
+   "nombre": "CA Atlanta",
+   "plantilla": 29,
+   "seleccion": false
+  },
+  {
+   "indice": 232,
+   "id_option": 2537,
+   "nombre": "Atlético de Rafaela",
+   "plantilla": 34,
+   "seleccion": false
+  },
+  {
+   "indice": 233,
+   "id_option": 5007,
+   "nombre": "CA Central Norte",
+   "plantilla": 33,
+   "seleccion": false
+  },
+  {
+   "indice": 234,
+   "id_option": 4996,
+   "nombre": "CA Chacarita Juniors",
+   "plantilla": 26,
+   "seleccion": false
+  },
+  {
+   "indice": 235,
+   "id_option": 2694,
+   "nombre": "CA Chaco For Ever",
+   "plantilla": 32,
+   "seleccion": false
+  },
+  {
+   "indice": 236,
+   "id_option": 5829,
+   "nombre": "Club Ciudad de Bolívar",
+   "plantilla": 34,
+   "seleccion": false
+  },
+  {
+   "indice": 237,
+   "id_option": 4009,
+   "nombre": "CA Colegiales",
+   "plantilla": 25,
+   "seleccion": false
+  },
+  {
+   "indice": 238,
+   "id_option": 1923,
+   "nombre": "CA Colón",
+   "plantilla": 27,
+   "seleccion": false
+  },
+  {
+   "indice": 239,
+   "id_option": 5453,
+   "nombre": "CA Defensores de Belgrano",
+   "plantilla": 29,
+   "seleccion": false
+  },
+  {
+   "indice": 240,
+   "id_option": 2498,
+   "nombre": "CS Deportivo Madryn",
+   "plantilla": 29,
+   "seleccion": false
+  },
+  {
+   "indice": 241,
+   "id_option": 2473,
+   "nombre": "Club Deportivo Maipú",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 242,
+   "id_option": 5364,
+   "nombre": "Club Deportivo Morón",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 243,
+   "id_option": 5658,
+   "nombre": "CA Estudiantes (Caseros)",
+   "plantilla": 32,
+   "seleccion": false
+  },
+  {
+   "indice": 244,
+   "id_option": 2725,
+   "nombre": "Ferro Carril Oeste",
+   "plantilla": 32,
+   "seleccion": false
+  },
+  {
+   "indice": 245,
+   "id_option": 5830,
+   "nombre": "CA Ferrocarril Midland",
+   "plantilla": 34,
+   "seleccion": false
+  },
+  {
+   "indice": 246,
+   "id_option": 1928,
+   "nombre": "CA Gimnasia y Esgrima (Jujuy)",
+   "plantilla": 32,
+   "seleccion": false
+  },
+  {
+   "indice": 247,
+   "id_option": 2690,
+   "nombre": "Club de Gimnasia y Tiro",
+   "plantilla": 23,
+   "seleccion": false
+  },
+  {
+   "indice": 248,
+   "id_option": 1924,
+   "nombre": "CD Godoy Cruz",
+   "plantilla": 32,
+   "seleccion": false
+  },
+  {
+   "indice": 249,
+   "id_option": 2478,
+   "nombre": "CA Güemes",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 250,
+   "id_option": 5001,
+   "nombre": "CA Los Andes",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 251,
+   "id_option": 5365,
+   "nombre": "CA Mitre",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 252,
+   "id_option": 2728,
+   "nombre": "CA Nueva Chicago",
+   "plantilla": 37,
+   "seleccion": false
+  },
+  {
+   "indice": 253,
+   "id_option": 2729,
+   "nombre": "CA Patronato",
+   "plantilla": 29,
+   "seleccion": false
+  },
+  {
+   "indice": 254,
+   "id_option": 2629,
+   "nombre": "Quilmes AC",
+   "plantilla": 26,
+   "seleccion": false
+  },
+  {
+   "indice": 255,
+   "id_option": 4046,
+   "nombre": "CA Racing (Córdoba)",
+   "plantilla": 34,
+   "seleccion": false
+  },
+  {
+   "indice": 256,
+   "id_option": 1925,
+   "nombre": "CA San Martín (San Juan)",
+   "plantilla": 33,
+   "seleccion": false
+  },
+  {
+   "indice": 257,
+   "id_option": 2702,
+   "nombre": "CA San Martín (Tucumán)",
+   "plantilla": 40,
+   "seleccion": false
+  },
+  {
+   "indice": 258,
+   "id_option": 5004,
+   "nombre": "CA San Miguel",
+   "plantilla": 26,
+   "seleccion": false
+  },
+  {
+   "indice": 259,
+   "id_option": 5862,
+   "nombre": "CA San Telmo",
+   "plantilla": 29,
+   "seleccion": false
+  },
+  {
+   "indice": 260,
+   "id_option": 4910,
+   "nombre": "CA Temperley",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 261,
+   "id_option": 5827,
+   "nombre": "CSD Tristán Suárez",
+   "plantilla": 32,
+   "seleccion": false
+  },
+  {
+   "indice": 262,
+   "id_option": 2450,
+   "nombre": "América Mineiro",
+   "plantilla": 37,
+   "seleccion": false
+  },
+  {
+   "indice": 263,
+   "id_option": 5973,
+   "nombre": "Athletic Club (Minas Gerais)",
+   "plantilla": 37,
+   "seleccion": false
+  },
+  {
+   "indice": 264,
+   "id_option": 2451,
+   "nombre": "Atlético Goianiense",
+   "plantilla": 29,
+   "seleccion": false
+  },
+  {
+   "indice": 265,
+   "id_option": 2452,
+   "nombre": "Avaí FC",
+   "plantilla": 32,
+   "seleccion": false
+  },
+  {
+   "indice": 266,
+   "id_option": 5139,
+   "nombre": "Botafogo FC",
+   "plantilla": 33,
+   "seleccion": false
+  },
+  {
+   "indice": 267,
+   "id_option": 2454,
+   "nombre": "Ceará SC",
+   "plantilla": 27,
+   "seleccion": false
+  },
+  {
+   "indice": 268,
+   "id_option": 2460,
+   "nombre": "Criciúma EC",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 269,
+   "id_option": 5142,
+   "nombre": "Cuiabá EC",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 270,
+   "id_option": 5143,
+   "nombre": "Fortaleza EC",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 271,
+   "id_option": 1933,
+   "nombre": "Goiás EC",
+   "plantilla": 32,
+   "seleccion": false
+  },
+  {
+   "indice": 272,
+   "id_option": 5768,
+   "nombre": "Grêmio Novorizontino",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 273,
+   "id_option": 5137,
+   "nombre": "EC Juventude",
+   "plantilla": 29,
+   "seleccion": false
+  },
+  {
+   "indice": 274,
+   "id_option": 5048,
+   "nombre": "Londrina EC",
+   "plantilla": 37,
+   "seleccion": false
+  },
+  {
+   "indice": 275,
+   "id_option": 1935,
+   "nombre": "Náutico Capibaribe",
+   "plantilla": 34,
+   "seleccion": false
+  },
+  {
+   "indice": 276,
+   "id_option": 5433,
+   "nombre": "Operário Ferroviário EC",
+   "plantilla": 35,
+   "seleccion": false
+  },
+  {
+   "indice": 277,
+   "id_option": 2465,
+   "nombre": "AA Ponte Preta",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 278,
+   "id_option": 2506,
+   "nombre": "Clube de Regatas Brasil",
+   "plantilla": 29,
+   "seleccion": false
+  },
+  {
+   "indice": 279,
+   "id_option": 5911,
+   "nombre": "São Bernardo FC",
+   "plantilla": 37,
+   "seleccion": false
+  },
+  {
+   "indice": 280,
+   "id_option": 1936,
+   "nombre": "Sport Recife",
+   "plantilla": 26,
+   "seleccion": false
+  },
+  {
+   "indice": 281,
+   "id_option": 2468,
+   "nombre": "Vila Nova FC",
+   "plantilla": 32,
+   "seleccion": false
+  },
+  {
+   "indice": 282,
+   "id_option": 2340,
+   "nombre": "9 de Octubre FC",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 283,
+   "id_option": 4447,
+   "nombre": "22 de Julio FC",
+   "plantilla": 33,
+   "seleccion": false
+  },
+  {
+   "indice": 284,
+   "id_option": 4030,
+   "nombre": "Atlético FC",
+   "plantilla": 33,
+   "seleccion": false
+  },
+  {
+   "indice": 285,
+   "id_option": 4445,
+   "nombre": "Cuenca Juniors",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 286,
+   "id_option": 5408,
+   "nombre": "Cumbayá FC",
+   "plantilla": 32,
+   "seleccion": false
+  },
+  {
+   "indice": 287,
+   "id_option": 4450,
+   "nombre": "Daquilema FC",
+   "plantilla": 34,
+   "seleccion": false
+  },
+  {
+   "indice": 288,
+   "id_option": 2211,
+   "nombre": "Deportivo Quito",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 289,
+   "id_option": 4039,
+   "nombre": "Deportivo Santo Domingo",
+   "plantilla": 27,
+   "seleccion": false
+  },
+  {
+   "indice": 290,
+   "id_option": 2212,
+   "nombre": "CD El Nacional",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 291,
+   "id_option": 5463,
+   "nombre": "Gualaceo SC",
+   "plantilla": 23,
+   "seleccion": false
+  },
+  {
+   "indice": 292,
+   "id_option": 2663,
+   "nombre": "CD Olmedo",
+   "plantilla": 32,
+   "seleccion": false
+  },
+  {
+   "indice": 293,
+   "id_option": 4449,
+   "nombre": "Independiente Juniors",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 294,
+   "id_option": 4444,
+   "nombre": "FC Insutec",
+   "plantilla": 26,
+   "seleccion": false
+  },
+  {
+   "indice": 295,
+   "id_option": 5464,
+   "nombre": "Liga de Portoviejo",
+   "plantilla": 36,
+   "seleccion": false
+  },
+  {
+   "indice": 296,
+   "id_option": 4448,
+   "nombre": "San Antonio FC",
+   "plantilla": 29,
+   "seleccion": false
+  },
+  {
+   "indice": 297,
+   "id_option": 4042,
+   "nombre": "Vinotinto FC",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 298,
+   "id_option": 5213,
+   "nombre": "Alianza Petrolera FC",
+   "plantilla": 24,
+   "seleccion": false
+  },
+  {
+   "indice": 299,
+   "id_option": 5367,
+   "nombre": "Atlético FC",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 300,
+   "id_option": 2648,
+   "nombre": "CD Atlético Huila",
+   "plantilla": 24,
+   "seleccion": false
+  },
+  {
+   "indice": 301,
+   "id_option": 5368,
+   "nombre": "Barranquilla FC",
+   "plantilla": 38,
+   "seleccion": false
+  },
+  {
+   "indice": 302,
+   "id_option": 5377,
+   "nombre": "Boca Juniors de Cali",
+   "plantilla": 35,
+   "seleccion": false
+  },
+  {
+   "indice": 303,
+   "id_option": 5369,
+   "nombre": "Bogotá FC",
+   "plantilla": 40,
+   "seleccion": false
+  },
+  {
+   "indice": 304,
+   "id_option": 5209,
+   "nombre": "Cortuluá FC",
+   "plantilla": 26,
+   "seleccion": false
+  },
+  {
+   "indice": 305,
+   "id_option": 2649,
+   "nombre": "Deportes Quindío",
+   "plantilla": 34,
+   "seleccion": false
+  },
+  {
+   "indice": 306,
+   "id_option": 2652,
+   "nombre": "Envigado FC",
+   "plantilla": 26,
+   "seleccion": false
+  },
+  {
+   "indice": 307,
+   "id_option": 5378,
+   "nombre": "Independiente Valle del Cauca",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 308,
+   "id_option": 5215,
+   "nombre": "Internacional FC",
+   "plantilla": 39,
+   "seleccion": false
+  },
+  {
+   "indice": 309,
+   "id_option": 5214,
+   "nombre": "CD La Equidad",
+   "plantilla": 24,
+   "seleccion": false
+  },
+  {
+   "indice": 310,
+   "id_option": 5372,
+   "nombre": "Leones FC",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 311,
+   "id_option": 5374,
+   "nombre": "Orsomarso SC",
+   "plantilla": 37,
+   "seleccion": false
+  },
+  {
+   "indice": 312,
+   "id_option": 2655,
+   "nombre": "Patriotas FC",
+   "plantilla": 33,
+   "seleccion": false
+  },
+  {
+   "indice": 313,
+   "id_option": 2656,
+   "nombre": "CD Real Cartagena",
+   "plantilla": 33,
+   "seleccion": false
+  },
+  {
+   "indice": 314,
+   "id_option": 5375,
+   "nombre": "Real Cundinamarca FC",
+   "plantilla": 40,
+   "seleccion": false
+  },
+  {
+   "indice": 315,
+   "id_option": 5212,
+   "nombre": "CD Real Santander",
+   "plantilla": 36,
+   "seleccion": false
+  },
+  {
+   "indice": 316,
+   "id_option": 5211,
+   "nombre": "Tigres FC",
+   "plantilla": 35,
+   "seleccion": false
+  },
+  {
+   "indice": 317,
+   "id_option": 5376,
+   "nombre": "Unión Magdalena",
+   "plantilla": 32,
+   "seleccion": false
+  },
+  {
+   "indice": 318,
+   "id_option": 5514,
+   "nombre": "Academia Puerto Cabello",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 319,
+   "id_option": 2219,
+   "nombre": "Anzoátegui FC",
+   "plantilla": 32,
+   "seleccion": false
+  },
+  {
+   "indice": 320,
+   "id_option": 5015,
+   "nombre": "Carabobo FC",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 321,
+   "id_option": 2205,
+   "nombre": "Caracas FC",
+   "plantilla": 29,
+   "seleccion": false
+  },
+  {
+   "indice": 322,
+   "id_option": 4409,
+   "nombre": "Deportivo La Guaira FC",
+   "plantilla": 27,
+   "seleccion": false
+  },
+  {
+   "indice": 323,
+   "id_option": 2218,
+   "nombre": "Deportivo Táchira FC",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 324,
+   "id_option": 5438,
+   "nombre": "Estudiantes de Mérida FC",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 325,
+   "id_option": 5518,
+   "nombre": "Metropolitanos FC",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 326,
+   "id_option": 2701,
+   "nombre": "Monagas SC",
+   "plantilla": 33,
+   "seleccion": false
+  },
+  {
+   "indice": 327,
+   "id_option": 5519,
+   "nombre": "Portuguesa FC",
+   "plantilla": 32,
+   "seleccion": false
+  },
+  {
+   "indice": 328,
+   "id_option": 5520,
+   "nombre": "Deportivo Rayo Zuliano",
+   "plantilla": 38,
+   "seleccion": false
+  },
+  {
+   "indice": 329,
+   "id_option": 4048,
+   "nombre": "Trujillanos FC",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 330,
+   "id_option": 5535,
+   "nombre": "Universidad Central de Venezuela",
+   "plantilla": 27,
+   "seleccion": false
+  },
+  {
+   "indice": 331,
+   "id_option": 2504,
+   "nombre": "Zamora FC",
+   "plantilla": 25,
+   "seleccion": false
+  },
+  {
+   "indice": 332,
+   "id_option": 5504,
+   "nombre": "Albion FC",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 333,
+   "id_option": 5436,
+   "nombre": "CA Boston River",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 334,
+   "id_option": 2680,
+   "nombre": "Central Español FC",
+   "plantilla": 35,
+   "seleccion": false
+  },
+  {
+   "indice": 335,
+   "id_option": 2289,
+   "nombre": "CA Cerro",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 336,
+   "id_option": 2681,
+   "nombre": "Cerro Largo FC",
+   "plantilla": 35,
+   "seleccion": false
+  },
+  {
+   "indice": 337,
+   "id_option": 2203,
+   "nombre": "Danubio FC",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 338,
+   "id_option": 2217,
+   "nombre": "Defensor Sporting Club",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 339,
+   "id_option": 5506,
+   "nombre": "CD Maldonado",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 340,
+   "id_option": 2684,
+   "nombre": "CA Juventud (Las Piedras)",
+   "plantilla": 29,
+   "seleccion": false
+  },
+  {
+   "indice": 341,
+   "id_option": 2363,
+   "nombre": "Liverpool FC (Montevideo)",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 342,
+   "id_option": 5503,
+   "nombre": "Montevideo City Torque",
+   "plantilla": 29,
+   "seleccion": false
+  },
+  {
+   "indice": 343,
+   "id_option": 2204,
+   "nombre": "Montevideo Wanderers FC",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 344,
+   "id_option": 1262,
+   "nombre": "Club Nacional de Football",
+   "plantilla": 29,
+   "seleccion": false
+  },
+  {
+   "indice": 345,
+   "id_option": 1263,
+   "nombre": "CA Peñarol",
+   "plantilla": 36,
+   "seleccion": false
+  },
+  {
+   "indice": 346,
+   "id_option": 2685,
+   "nombre": "CA Progreso",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 347,
+   "id_option": 2290,
+   "nombre": "Racing Club (Montevideo)",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 348,
+   "id_option": 5498,
+   "nombre": "ADA Jaén",
+   "plantilla": 32,
+   "seleccion": false
+  },
+  {
+   "indice": 349,
+   "id_option": 5583,
+   "nombre": "CSDC Alianza Universidad",
+   "plantilla": 37,
+   "seleccion": false
+  },
+  {
+   "indice": 350,
+   "id_option": 2672,
+   "nombre": "Ayacucho FC",
+   "plantilla": 27,
+   "seleccion": false
+  },
+  {
+   "indice": 351,
+   "id_option": 5252,
+   "nombre": "Bentín Tacna Heroica",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 352,
+   "id_option": 5486,
+   "nombre": "AD Cantolao",
+   "plantilla": 33,
+   "seleccion": false
+  },
+  {
+   "indice": 353,
+   "id_option": 5497,
+   "nombre": "Comerciantes FC",
+   "plantilla": 24,
+   "seleccion": false
+  },
+  {
+   "indice": 354,
+   "id_option": 2731,
+   "nombre": "CD Llacuabamba",
+   "plantilla": 33,
+   "seleccion": false
+  },
+  {
+   "indice": 355,
+   "id_option": 5499,
+   "nombre": "Estudiantil CNI",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 356,
+   "id_option": 5493,
+   "nombre": "CA Mannucci",
+   "plantilla": 32,
+   "seleccion": false
+  },
+  {
+   "indice": 357,
+   "id_option": 5584,
+   "nombre": "Pirata FC",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 358,
+   "id_option": 2677,
+   "nombre": "CD Unión Comercio",
+   "plantilla": 29,
+   "seleccion": false
+  },
+  {
+   "indice": 359,
+   "id_option": 5495,
+   "nombre": "Club Unión Minas",
+   "plantilla": 36,
+   "seleccion": false
+  },
+  {
+   "indice": 360,
+   "id_option": 2678,
+   "nombre": "Universidad César Vallejo",
+   "plantilla": 33,
+   "seleccion": false
+  },
+  {
+   "indice": 361,
+   "id_option": 2200,
+   "nombre": "CD Universidad San Martin",
+   "plantilla": 29,
+   "seleccion": false
+  },
+  {
+   "indice": 362,
+   "id_option": 5509,
+   "nombre": "Plaza Colonia",
+   "plantilla": 32,
+   "seleccion": false
+  },
+  {
+   "indice": 363,
+   "id_option": 5513,
+   "nombre": "CA Artigas",
+   "plantilla": 32,
+   "seleccion": false
+  },
+  {
+   "indice": 364,
+   "id_option": 5502,
+   "nombre": "CA Atenas",
+   "plantilla": 32,
+   "seleccion": false
+  },
+  {
+   "indice": 365,
+   "id_option": 2686,
+   "nombre": "River Plate (Montevideo)",
+   "plantilla": 29,
+   "seleccion": false
+  },
+  {
+   "indice": 366,
+   "id_option": 5505,
+   "nombre": "CS Cerrito",
+   "plantilla": 36,
+   "seleccion": false
+  },
+  {
+   "indice": 367,
+   "id_option": 5410,
+   "nombre": "Colón FC",
+   "plantilla": 36,
+   "seleccion": false
+  },
+  {
+   "indice": 368,
+   "id_option": 5411,
+   "nombre": "Paysandú FC",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 369,
+   "id_option": 5507,
+   "nombre": "CS Miramar Misiones",
+   "plantilla": 34,
+   "seleccion": false
+  },
+  {
+   "indice": 370,
+   "id_option": 2683,
+   "nombre": "CA Fénix",
+   "plantilla": 36,
+   "seleccion": false
+  },
+  {
+   "indice": 371,
+   "id_option": 2499,
+   "nombre": "La Luz FC",
+   "plantilla": 34,
+   "seleccion": false
+  },
+  {
+   "indice": 372,
+   "id_option": 5508,
+   "nombre": "Club Oriental",
+   "plantilla": 32,
+   "seleccion": false
+  },
+  {
+   "indice": 373,
+   "id_option": 5437,
+   "nombre": "Rampla Juniors FC",
+   "plantilla": 26,
+   "seleccion": false
+  },
+  {
+   "indice": 374,
+   "id_option": 4408,
+   "nombre": "CA Rentistas",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 375,
+   "id_option": 5510,
+   "nombre": "Huracán FC",
+   "plantilla": 35,
+   "seleccion": false
+  },
+  {
+   "indice": 376,
+   "id_option": 5511,
+   "nombre": "Tacuarembó FC",
+   "plantilla": 34,
+   "seleccion": false
+  },
+  {
+   "indice": 377,
+   "id_option": 5512,
+   "nombre": "Uruguay Montevideo FC",
+   "plantilla": 38,
+   "seleccion": false
+  },
+  {
+   "indice": 378,
+   "id_option": 1264,
+   "nombre": "Club América",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 379,
+   "id_option": 1776,
+   "nombre": "CF Atlante",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 380,
+   "id_option": 1777,
+   "nombre": "Atlas FC",
+   "plantilla": 27,
+   "seleccion": false
+  },
+  {
+   "indice": 381,
+   "id_option": 5379,
+   "nombre": "Atlético San Luis",
+   "plantilla": 27,
+   "seleccion": false
+  },
+  {
+   "indice": 382,
+   "id_option": 1265,
+   "nombre": "CF Cruz Azul",
+   "plantilla": 27,
+   "seleccion": false
+  },
+  {
+   "indice": 383,
+   "id_option": 1700,
+   "nombre": "CD Guadalajara",
+   "plantilla": 27,
+   "seleccion": false
+  },
+  {
+   "indice": 384,
+   "id_option": 5153,
+   "nombre": "FC Juárez",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 385,
+   "id_option": 1789,
+   "nombre": "Club León",
+   "plantilla": 27,
+   "seleccion": false
+  },
+  {
+   "indice": 386,
+   "id_option": 1778,
+   "nombre": "CF Monterrey",
+   "plantilla": 26,
+   "seleccion": false
+  },
+  {
+   "indice": 387,
+   "id_option": 5130,
+   "nombre": "Club Necaxa",
+   "plantilla": 29,
+   "seleccion": false
+  },
+  {
+   "indice": 388,
+   "id_option": 1699,
+   "nombre": "CF Pachuca",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 389,
+   "id_option": 1772,
+   "nombre": "Club Puebla",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 390,
+   "id_option": 1775,
+   "nombre": "Pumas UNAM",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 391,
+   "id_option": 1792,
+   "nombre": "Querétaro FC",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 392,
+   "id_option": 1779,
+   "nombre": "Club Santos Laguna",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 393,
+   "id_option": 1782,
+   "nombre": "Tigres UANL",
+   "plantilla": 26,
+   "seleccion": false
+  },
+  {
+   "indice": 394,
+   "id_option": 1785,
+   "nombre": "Club Tijuana",
+   "plantilla": 24,
+   "seleccion": false
+  },
+  {
+   "indice": 395,
+   "id_option": 1773,
+   "nombre": "CD Toluca",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 396,
+   "id_option": 5736,
+   "nombre": "Atlanta United FC",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 397,
+   "id_option": 5740,
+   "nombre": "Austin FC",
+   "plantilla": 29,
+   "seleccion": false
+  },
+  {
+   "indice": 398,
+   "id_option": 5832,
+   "nombre": "Charlotte FC",
+   "plantilla": 29,
+   "seleccion": false
+  },
+  {
+   "indice": 399,
+   "id_option": 4148,
+   "nombre": "Chicago Fire FC",
+   "plantilla": 32,
+   "seleccion": false
+  },
+  {
+   "indice": 400,
+   "id_option": 5737,
+   "nombre": "FC Cincinnati",
+   "plantilla": 25,
+   "seleccion": false
+  },
+  {
+   "indice": 401,
+   "id_option": 4150,
+   "nombre": "Colorado Rapids",
+   "plantilla": 26,
+   "seleccion": false
+  },
+  {
+   "indice": 402,
+   "id_option": 4151,
+   "nombre": "Columbus Crew",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 403,
+   "id_option": 4153,
+   "nombre": "FC Dallas",
+   "plantilla": 33,
+   "seleccion": false
+  },
+  {
+   "indice": 404,
+   "id_option": 4152,
+   "nombre": "DC United",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 405,
+   "id_option": 4154,
+   "nombre": "Houston Dynamo FC",
+   "plantilla": 23,
+   "seleccion": false
+  },
+  {
+   "indice": 406,
+   "id_option": 5738,
+   "nombre": "Inter Miami CF",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 407,
+   "id_option": 4155,
+   "nombre": "Los Angeles Galaxy",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 408,
+   "id_option": 5741,
+   "nombre": "Los Angeles FC",
+   "plantilla": 32,
+   "seleccion": false
+  },
+  {
+   "indice": 409,
+   "id_option": 5742,
+   "nombre": "Minnesota United",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 410,
+   "id_option": 4156,
+   "nombre": "CF Montréal",
+   "plantilla": 29,
+   "seleccion": false
+  },
+  {
+   "indice": 411,
+   "id_option": 5739,
+   "nombre": "Nashville SC",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 412,
+   "id_option": 4157,
+   "nombre": "New England Revolution",
+   "plantilla": 29,
+   "seleccion": false
+  },
+  {
+   "indice": 413,
+   "id_option": 5061,
+   "nombre": "New York City FC",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 414,
+   "id_option": 4158,
+   "nombre": "New York RB",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 415,
+   "id_option": 5062,
+   "nombre": "Orlando City SC",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 416,
+   "id_option": 4159,
+   "nombre": "Philadelphia Union",
+   "plantilla": 29,
+   "seleccion": false
+  },
+  {
+   "indice": 417,
+   "id_option": 4160,
+   "nombre": "Portland Timbers",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 418,
+   "id_option": 4161,
+   "nombre": "Real Salt Lake City",
+   "plantilla": 33,
+   "seleccion": false
+  },
+  {
+   "indice": 419,
+   "id_option": 6084,
+   "nombre": "San Diego FC",
+   "plantilla": 29,
+   "seleccion": false
+  },
+  {
+   "indice": 420,
+   "id_option": 4162,
+   "nombre": "San Jose Earthquakes",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 421,
+   "id_option": 4163,
+   "nombre": "Seattle Sounders FC",
+   "plantilla": 26,
+   "seleccion": false
+  },
+  {
+   "indice": 422,
+   "id_option": 4164,
+   "nombre": "Sporting Kansas City",
+   "plantilla": 26,
+   "seleccion": false
+  },
+  {
+   "indice": 423,
+   "id_option": 5903,
+   "nombre": "St. Louis City SC",
+   "plantilla": 32,
+   "seleccion": false
+  },
+  {
+   "indice": 424,
+   "id_option": 4165,
+   "nombre": "Toronto FC",
+   "plantilla": 32,
+   "seleccion": false
+  },
+  {
+   "indice": 425,
+   "id_option": 4166,
+   "nombre": "Vancouver Whitecaps FC",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 426,
+   "id_option": 5457,
+   "nombre": "Club ABB",
+   "plantilla": 34,
+   "seleccion": false
+  },
+  {
+   "indice": 427,
+   "id_option": 2190,
+   "nombre": "Club Always Ready",
+   "plantilla": 32,
+   "seleccion": false
+  },
+  {
+   "indice": 428,
+   "id_option": 1939,
+   "nombre": "CD Aurora",
+   "plantilla": 37,
+   "seleccion": false
+  },
+  {
+   "indice": 429,
+   "id_option": 2282,
+   "nombre": "Club Blooming",
+   "plantilla": 29,
+   "seleccion": false
+  },
+  {
+   "indice": 430,
+   "id_option": 2283,
+   "nombre": "Club Bolívar",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 431,
+   "id_option": 2644,
+   "nombre": "CDSC Guabirá",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 432,
+   "id_option": 2647,
+   "nombre": "GV San José",
+   "plantilla": 32,
+   "seleccion": false
+  },
+  {
+   "indice": 433,
+   "id_option": 5455,
+   "nombre": "Independiente Petrolero",
+   "plantilla": 38,
+   "seleccion": false
+  },
+  {
+   "indice": 434,
+   "id_option": 2645,
+   "nombre": "CA Nacional Potosí",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 435,
+   "id_option": 2359,
+   "nombre": "CD Oriente Petrolero",
+   "plantilla": 36,
+   "seleccion": false
+  },
+  {
+   "indice": 436,
+   "id_option": 1940,
+   "nombre": "Real Potosí",
+   "plantilla": 33,
+   "seleccion": false
+  },
+  {
+   "indice": 437,
+   "id_option": 5418,
+   "nombre": "CD Real Tomayapo",
+   "plantilla": 35,
+   "seleccion": false
+  },
+  {
+   "indice": 438,
+   "id_option": 5452,
+   "nombre": "CD San Antonio",
+   "plantilla": 37,
+   "seleccion": false
+  },
+  {
+   "indice": 439,
+   "id_option": 2502,
+   "nombre": "Club The Strongest",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 440,
+   "id_option": 5456,
+   "nombre": "CD Totora Real Oruro",
+   "plantilla": 35,
+   "seleccion": false
+  },
+  {
+   "indice": 441,
+   "id_option": 5019,
+   "nombre": "FC Universitario de Vinto",
+   "plantilla": 34,
+   "seleccion": false
+  },
+  {
+   "indice": 442,
+   "id_option": 1260,
+   "nombre": "Club Cerro Porteño",
+   "plantilla": 33,
+   "seleccion": false
+  },
+  {
+   "indice": 443,
+   "id_option": 2213,
+   "nombre": "Club Guaraní",
+   "plantilla": 36,
+   "seleccion": false
+  },
+  {
+   "indice": 444,
+   "id_option": 2198,
+   "nombre": "Club Libertad",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 445,
+   "id_option": 2214,
+   "nombre": "Club Nacional (Asunción)",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 446,
+   "id_option": 1261,
+   "nombre": "Club Olimpia",
+   "plantilla": 35,
+   "seleccion": false
+  },
+  {
+   "indice": 447,
+   "id_option": 5483,
+   "nombre": "Recoleta FC",
+   "plantilla": 38,
+   "seleccion": false
+  },
+  {
+   "indice": 448,
+   "id_option": 2667,
+   "nombre": "Club Rubio Ñú",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 449,
+   "id_option": 5471,
+   "nombre": "Club Sportivo 2 de Mayo",
+   "plantilla": 35,
+   "seleccion": false
+  },
+  {
+   "indice": 450,
+   "id_option": 5475,
+   "nombre": "Club Sportivo Ameliano",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 451,
+   "id_option": 2199,
+   "nombre": "Club Sportivo Luqueño",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 452,
+   "id_option": 5484,
+   "nombre": "Club Sportivo San Lorenzo",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 453,
+   "id_option": 5485,
+   "nombre": "Club Sportivo Trinidense",
+   "plantilla": 33,
+   "seleccion": false
+  },
+  {
+   "indice": 454,
+   "id_option": 4383,
+   "nombre": "CD Choloma",
+   "plantilla": 33,
+   "seleccion": false
+  },
+  {
+   "indice": 455,
+   "id_option": 4381,
+   "nombre": "CD Estrella Roja",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 456,
+   "id_option": 4386,
+   "nombre": "CA Independiente (Siguatepeque)",
+   "plantilla": 26,
+   "seleccion": false
+  },
+  {
+   "indice": 457,
+   "id_option": 4382,
+   "nombre": "Juticalpa FC",
+   "plantilla": 32,
+   "seleccion": false
+  },
+  {
+   "indice": 458,
+   "id_option": 4380,
+   "nombre": "CD Lobos UPNFM",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 459,
+   "id_option": 4377,
+   "nombre": "CD Marathón",
+   "plantilla": 29,
+   "seleccion": false
+  },
+  {
+   "indice": 460,
+   "id_option": 4376,
+   "nombre": "FC Motagua",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 461,
+   "id_option": 4379,
+   "nombre": "Olancho FC",
+   "plantilla": 36,
+   "seleccion": false
+  },
+  {
+   "indice": 462,
+   "id_option": 4375,
+   "nombre": "CD Olimpia",
+   "plantilla": 29,
+   "seleccion": false
+  },
+  {
+   "indice": 463,
+   "id_option": 4385,
+   "nombre": "Platense FC",
+   "plantilla": 34,
+   "seleccion": false
+  },
+  {
+   "indice": 464,
+   "id_option": 4384,
+   "nombre": "Génesis FC",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 465,
+   "id_option": 4378,
+   "nombre": "Real CD España",
+   "plantilla": 25,
+   "seleccion": false
+  },
+  {
+   "indice": 466,
+   "id_option": 2585,
+   "nombre": "Abha Club",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 467,
+   "id_option": 1349,
+   "nombre": "Al-Ahli SFC",
+   "plantilla": 23,
+   "seleccion": false
+  },
+  {
+   "indice": 468,
+   "id_option": 2578,
+   "nombre": "Al-Diriyah FC",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 469,
+   "id_option": 1902,
+   "nombre": "Al-Ettifaq FC",
+   "plantilla": 24,
+   "seleccion": false
+  },
+  {
+   "indice": 470,
+   "id_option": 2584,
+   "nombre": "Al-Faisaly FC",
+   "plantilla": 27,
+   "seleccion": false
+  },
+  {
+   "indice": 471,
+   "id_option": 2576,
+   "nombre": "Al-Fateh SC",
+   "plantilla": 32,
+   "seleccion": false
+  },
+  {
+   "indice": 472,
+   "id_option": 2575,
+   "nombre": "Al-Fayha FC",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 473,
+   "id_option": 2587,
+   "nombre": "Al-Hazem SC",
+   "plantilla": 25,
+   "seleccion": false
+  },
+  {
+   "indice": 474,
+   "id_option": 1489,
+   "nombre": "Al-Hilal SFC",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 475,
+   "id_option": 1350,
+   "nombre": "Al-Ittihad Club",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 476,
+   "id_option": 2586,
+   "nombre": "Al-Khaleej FC",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 477,
+   "id_option": 2583,
+   "nombre": "Al-Kholood Club",
+   "plantilla": 29,
+   "seleccion": false
+  },
+  {
+   "indice": 478,
+   "id_option": 2577,
+   "nombre": "Al-Nassr FC",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 479,
+   "id_option": 2581,
+   "nombre": "Al-Qadsiah FC",
+   "plantilla": 22,
+   "seleccion": false
+  },
+  {
+   "indice": 480,
+   "id_option": 2579,
+   "nombre": "Al-Riyadh SC",
+   "plantilla": 29,
+   "seleccion": false
+  },
+  {
+   "indice": 481,
+   "id_option": 1348,
+   "nombre": "Al-Shabab FC",
+   "plantilla": 32,
+   "seleccion": false
+  },
+  {
+   "indice": 482,
+   "id_option": 2580,
+   "nombre": "Al-Taawoun FC",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 483,
+   "id_option": 2582,
+   "nombre": "Neom SC",
+   "plantilla": 27,
+   "seleccion": false
+  },
+  {
+   "indice": 484,
+   "id_option": 127,
+   "nombre": "FC Bayern Múnich",
+   "plantilla": 24,
+   "seleccion": false
+  },
+  {
+   "indice": 485,
+   "id_option": 128,
+   "nombre": "Bayer 04 Leverkusen",
+   "plantilla": 26,
+   "seleccion": false
+  },
+  {
+   "indice": 486,
+   "id_option": 126,
+   "nombre": "Borussia Dortmund",
+   "plantilla": 26,
+   "seleccion": false
+  },
+  {
+   "indice": 487,
+   "id_option": 193,
+   "nombre": "Sporting CP",
+   "plantilla": 27,
+   "seleccion": false
+  },
+  {
+   "indice": 488,
+   "id_option": 4326,
+   "nombre": "Qarabağ FK",
+   "plantilla": 25,
+   "seleccion": false
+  },
+  {
+   "indice": 489,
+   "id_option": 130,
+   "nombre": "Galatasaray SK",
+   "plantilla": 26,
+   "seleccion": false
+  },
+  {
+   "indice": 490,
+   "id_option": 118,
+   "nombre": "PSV Eindhoven",
+   "plantilla": 26,
+   "seleccion": false
+  },
+  {
+   "indice": 491,
+   "id_option": 269,
+   "nombre": "Club Brujas KV",
+   "plantilla": 27,
+   "seleccion": false
+  },
+  {
+   "indice": 492,
+   "id_option": 226,
+   "nombre": "Eintracht Frankfurt",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 493,
+   "id_option": 5220,
+   "nombre": "Union Saint-Gilloise",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 494,
+   "id_option": 5253,
+   "nombre": "FK Bodø/Glimt",
+   "plantilla": 24,
+   "seleccion": false
+  },
+  {
+   "indice": 495,
+   "id_option": 5189,
+   "nombre": "SK Slavia Praga",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 496,
+   "id_option": 4342,
+   "nombre": "Pafos FC",
+   "plantilla": 29,
+   "seleccion": false
+  },
+  {
+   "indice": 497,
+   "id_option": 1207,
+   "nombre": "FC Copenhague",
+   "plantilla": 26,
+   "seleccion": false
+  },
+  {
+   "indice": 498,
+   "id_option": 133,
+   "nombre": "Olympiacos FC",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 499,
+   "id_option": 2058,
+   "nombre": "FC Kairat Almaty",
+   "plantilla": 22,
+   "seleccion": false
+  },
+  {
+   "indice": 500,
+   "id_option": 116,
+   "nombre": "Ajax Amsterdam",
+   "plantilla": 25,
+   "seleccion": false
+  },
+  {
+   "indice": 501,
+   "id_option": 191,
+   "nombre": "SL Benfica",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 502,
+   "id_option": 192,
+   "nombre": "FC Porto",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 503,
+   "id_option": 5701,
+   "nombre": "Atlético Ottawa",
+   "plantilla": 26,
+   "seleccion": false
+  },
+  {
+   "indice": 504,
+   "id_option": 5702,
+   "nombre": "Cavalry FC",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 505,
+   "id_option": 5703,
+   "nombre": "Forge FC",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 506,
+   "id_option": 5704,
+   "nombre": "Academia Quintana",
+   "plantilla": 26,
+   "seleccion": false
+  },
+  {
+   "indice": 507,
+   "id_option": 5705,
+   "nombre": "Diriangén FC",
+   "plantilla": 24,
+   "seleccion": false
+  },
+  {
+   "indice": 508,
+   "id_option": 5706,
+   "nombre": "Managua FC",
+   "plantilla": 26,
+   "seleccion": false
+  },
+  {
+   "indice": 509,
+   "id_option": 5707,
+   "nombre": "Real Estelí FC",
+   "plantilla": 27,
+   "seleccion": false
+  },
+  {
+   "indice": 510,
+   "id_option": 5708,
+   "nombre": "CD Plaza Amador",
+   "plantilla": 24,
+   "seleccion": false
+  },
+  {
+   "indice": 511,
+   "id_option": 5709,
+   "nombre": "Tauro FC",
+   "plantilla": 21,
+   "seleccion": false
+  },
+  {
+   "indice": 512,
+   "id_option": 5710,
+   "nombre": "SV Robinhood",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 513,
+   "id_option": 5711,
+   "nombre": "Altitude FC",
+   "plantilla": 26,
+   "seleccion": false
+  },
+  {
+   "indice": 514,
+   "id_option": 5712,
+   "nombre": "Real Hope FA",
+   "plantilla": 31,
+   "seleccion": false
+  },
+  {
+   "indice": 515,
+   "id_option": 5713,
+   "nombre": "Violette AC",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 516,
+   "id_option": 5714,
+   "nombre": "Cavalier FC",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 517,
+   "id_option": 5715,
+   "nombre": "Atlético Pantoja",
+   "plantilla": 26,
+   "seleccion": false
+  },
+  {
+   "indice": 518,
+   "id_option": 5716,
+   "nombre": "Cibao FC",
+   "plantilla": 28,
+   "seleccion": false
+  },
+  {
+   "indice": 519,
+   "id_option": 5717,
+   "nombre": "Moca FC",
+   "plantilla": 26,
+   "seleccion": false
+  },
+  {
+   "indice": 520,
+   "id_option": 5274,
+   "nombre": "Comunicaciones FC",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 521,
+   "id_option": 5272,
+   "nombre": "CSD Municipal",
+   "plantilla": 30,
+   "seleccion": false
+  },
+  {
+   "indice": 522,
+   "id_option": 5276,
+   "nombre": "CSD Xelajú MC",
+   "plantilla": 24,
+   "seleccion": false
+  },
+  {
+   "indice": 523,
+   "id_option": 5273,
+   "nombre": "Antigua GFC",
+   "plantilla": 21,
+   "seleccion": false
+  },
+  {
+   "indice": 524,
+   "id_option": 4390,
+   "nombre": "CD FAS",
+   "plantilla": 26,
+   "seleccion": false
+  },
+  {
+   "indice": 525,
+   "id_option": 4387,
+   "nombre": "Alianza FC",
+   "plantilla": 29,
+   "seleccion": false
+  },
+  {
+   "indice": 526,
+   "id_option": 4388,
+   "nombre": "CD Águila",
+   "plantilla": 25,
+   "seleccion": false
+  },
+  {
+   "indice": 527,
+   "id_option": 4389,
+   "nombre": "CD Luis Angel Firpo",
+   "plantilla": 23,
+   "seleccion": false
+  },
+  {
+   "indice": 528,
+   "id_option": 1165,
+   "nombre": "Albania",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 529,
+   "id_option": 21,
+   "nombre": "Austria",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 530,
+   "id_option": 9,
+   "nombre": "Bélgica",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 531,
+   "id_option": 1170,
+   "nombre": "Bosnia-herzegovina",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 532,
+   "id_option": 27,
+   "nombre": "Bulgaria",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 533,
+   "id_option": 24,
+   "nombre": "Croacia",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 534,
+   "id_option": 1171,
+   "nombre": "Chipre",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 535,
+   "id_option": 13,
+   "nombre": "República Checa",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 536,
+   "id_option": 15,
+   "nombre": "Dinamarca",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 537,
+   "id_option": 5,
+   "nombre": "Inglaterra",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 538,
+   "id_option": 18,
+   "nombre": "Finlandia",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 539,
+   "id_option": 8,
+   "nombre": "Francia",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 540,
+   "id_option": 1174,
+   "nombre": "Georgia",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 541,
+   "id_option": 14,
+   "nombre": "Alemania",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 542,
+   "id_option": 28,
+   "nombre": "Grecia",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 543,
+   "id_option": 22,
+   "nombre": "Hungría",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 544,
+   "id_option": 1175,
+   "nombre": "Islandia",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 545,
+   "id_option": 1164,
+   "nombre": "Israel",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 546,
+   "id_option": 12,
+   "nombre": "Italia",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 547,
+   "id_option": 1181,
+   "nombre": "Malta",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 548,
+   "id_option": 1551,
+   "nombre": "Montenegro",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 549,
+   "id_option": 10,
+   "nombre": "Países Bajos",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 550,
+   "id_option": 1180,
+   "nombre": "Macedonia Del Norte",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 551,
+   "id_option": 2,
+   "nombre": "Irlanda Del Norte",
+   "plantilla": 21,
+   "seleccion": true
+  },
+  {
+   "indice": 552,
+   "id_option": 16,
+   "nombre": "Noruega",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 553,
+   "id_option": 19,
+   "nombre": "Polonia",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 554,
+   "id_option": 6,
+   "nombre": "Portugal",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 555,
+   "id_option": 1,
+   "nombre": "Irlanda",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 556,
+   "id_option": 26,
+   "nombre": "Rumanía",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 557,
+   "id_option": 3,
+   "nombre": "Escocia",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 558,
+   "id_option": 1550,
+   "nombre": "Serbia",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 559,
+   "id_option": 20,
+   "nombre": "Eslovaquia",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 560,
+   "id_option": 23,
+   "nombre": "Eslovenia",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 561,
+   "id_option": 7,
+   "nombre": "España",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 562,
+   "id_option": 17,
+   "nombre": "Suecia",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 563,
+   "id_option": 11,
+   "nombre": "Suiza",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 564,
+   "id_option": 29,
+   "nombre": "Turquía",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 565,
+   "id_option": 30,
+   "nombre": "Ucrania",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 566,
+   "id_option": 4,
+   "nombre": "Gales",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 567,
+   "id_option": 1040,
+   "nombre": "Argelia",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 568,
+   "id_option": 1044,
+   "nombre": "Burkina Faso",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 569,
+   "id_option": 36,
+   "nombre": "Camerún",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 570,
+   "id_option": 1046,
+   "nombre": "Cabo Verde",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 571,
+   "id_option": 1051,
+   "nombre": "Costa De Marfil",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 572,
+   "id_option": 1050,
+   "nombre": "DR Congo",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 573,
+   "id_option": 34,
+   "nombre": "Egipto",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 574,
+   "id_option": 1058,
+   "nombre": "Ghana",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 575,
+   "id_option": 1059,
+   "nombre": "Guinea",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 576,
+   "id_option": 1067,
+   "nombre": "Mali",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 577,
+   "id_option": 32,
+   "nombre": "Marruecos",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 578,
+   "id_option": 35,
+   "nombre": "Nigeria",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 579,
+   "id_option": 38,
+   "nombre": "Senegal",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 580,
+   "id_option": 37,
+   "nombre": "Sudáfrica",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 581,
+   "id_option": 33,
+   "nombre": "Túnez",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 582,
+   "id_option": 1083,
+   "nombre": "Zambia",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 583,
+   "id_option": 1099,
+   "nombre": "Canada",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 584,
+   "id_option": 42,
+   "nombre": "Costa Rica",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 585,
+   "id_option": 1124,
+   "nombre": "Curazao",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 586,
+   "id_option": 1103,
+   "nombre": "República Dominicana",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 587,
+   "id_option": 1104,
+   "nombre": "El Salvador",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 588,
+   "id_option": 1107,
+   "nombre": "Guatemala",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 589,
+   "id_option": 1108,
+   "nombre": "Haití",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 590,
+   "id_option": 43,
+   "nombre": "Honduras",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 591,
+   "id_option": 41,
+   "nombre": "Jamaica",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 592,
+   "id_option": 40,
+   "nombre": "México",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 593,
+   "id_option": 1112,
+   "nombre": "Nicaragua",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 594,
+   "id_option": 1113,
+   "nombre": "Panamá",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 595,
+   "id_option": 1114,
+   "nombre": "Puerto Rico",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 596,
+   "id_option": 1123,
+   "nombre": "Suriname",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 597,
+   "id_option": 1118,
+   "nombre": "Trinidad Y Tobago",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 598,
+   "id_option": 39,
+   "nombre": "Estados Unidos",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 599,
+   "id_option": 50,
+   "nombre": "Argentina",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 600,
+   "id_option": 1128,
+   "nombre": "Bolivia",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 601,
+   "id_option": 45,
+   "nombre": "Brasil",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 602,
+   "id_option": 47,
+   "nombre": "Chile",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 603,
+   "id_option": 44,
+   "nombre": "Colombia",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 604,
+   "id_option": 51,
+   "nombre": "Ecuador",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 605,
+   "id_option": 48,
+   "nombre": "Paraguay",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 606,
+   "id_option": 46,
+   "nombre": "Perú",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 607,
+   "id_option": 49,
+   "nombre": "Uruguay",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 608,
+   "id_option": 1129,
+   "nombre": "Venezuela",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 609,
+   "id_option": 57,
+   "nombre": "Australia",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 610,
+   "id_option": 54,
+   "nombre": "China",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 611,
+   "id_option": 55,
+   "nombre": "Irán",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 612,
+   "id_option": 1010,
+   "nombre": "Iraq",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 613,
+   "id_option": 52,
+   "nombre": "Japón",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 614,
+   "id_option": 1011,
+   "nombre": "Jordania",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 615,
+   "id_option": 1015,
+   "nombre": "Líbano",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 616,
+   "id_option": 1141,
+   "nombre": "Nueva Zelanda",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 617,
+   "id_option": 1012,
+   "nombre": "Corea Del Norte",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 618,
+   "id_option": 1022,
+   "nombre": "Omán",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 619,
+   "id_option": 1026,
+   "nombre": "Qatar",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 620,
+   "id_option": 56,
+   "nombre": "Arabia Saudí",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 621,
+   "id_option": 53,
+   "nombre": "Corea Del Sur",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 622,
+   "id_option": 1031,
+   "nombre": "Tailandia",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 623,
+   "id_option": 1032,
+   "nombre": "Emiratos Árabes Unidos",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 624,
+   "id_option": 1184,
+   "nombre": "Uzbekistán",
+   "plantilla": 23,
+   "seleccion": true
+  },
+  {
+   "indice": 625,
+   "id_option": 4971,
+   "nombre": "The Old Boys",
+   "plantilla": 0,
+   "seleccion": true
+  },
+  {
+   "indice": 626,
+   "id_option": 5129,
+   "nombre": "World Selection",
+   "plantilla": 0,
+   "seleccion": true
+  }
+ ]
+}

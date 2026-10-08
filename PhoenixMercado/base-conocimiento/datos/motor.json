@@ -1,0 +1,32 @@
+{
+  "juego": "eFootball PES 2021 SEASON UPDATE (PC)",
+  "version_base": "2026-10-08",
+  "estados": {"probado": "editado y visto en el juego", "observado": "deducido comparando archivos o contra la pantalla", "hipotesis": "sin comprobar", "descartado": "no está o no funciona así"},
+  "option_file": {
+    "cifrado": "libpesXcrypter PES2021",
+    "n_jugadores_editados": {"offset": 96, "tipo": "u16", "estado": "probado"},
+    "n_equipos": {"offset": 100, "tipo": "u16", "estado": "probado"},
+    "jugadores_editados": {"inicio": 124, "tam_registro": 312, "formato": "Player.bin", "estado": "probado"},
+    "equipos": {"inicio": 9360124, "tam_registro": 588, "nombre": 104, "abreviatura": 174, "estado": "probado"},
+    "plantillas": {"inicio": 10307144, "tam_registro": 284, "campos": {"id_equipo": "u32 +0", "jugadores": "40 x u32 +4", "dorsales": "40 x u16 +164", "resto": "40 B"}, "estado": "probado"},
+    "tacticas": {"inicio": 10524800, "tam_registro": 628, "campos": {"id_equipo": "u32 +0", "orden_formacion": "40 B +0x1E4", "roles": "6 B +0x20C"}, "estado": "observado"},
+    "bits_playerbin": {"ataque": 370, "control": 281, "regate": 352, "regate_ajustado": 416, "pase_raso": 263, "pase_bombeado": 402, "finalizacion": 396, "cabezazo": 288, "balon_parado": 250, "efecto": 332, "velocidad": 306, "aceleracion": 344, "equilibrio": 376, "contacto_fisico": 390, "salto": 294, "resistencia": 338, "defensa": 275, "recuperacion": 312, "agresividad": 384, "altura": [216, 8, 100], "peso": [256, 7, 30], "edad": [408, 6, 15], "posicion": [434, 4, 0], "nacionalidad": [233, 9, 0], "nota": "6 bits y +40 salvo donde se indica [bit, ancho, suma]"}
+  },
+  "liga_master": {
+    "cabecera": {"tam": 80, "firma": [10, 80, null, null, 700, 700], "bytes_variables": "0x30-0x4F", "estado": "probado"},
+    "bloques_equipo": {"inicio": 80, "cantidad": 700, "tam": 1680, "campos": {"nombre": 4, "id_option": 656, "plantilla": "0x14C (40 x reg u32, pid u32; vacío 65535,0)", "dorsales": "0x29A (40 x u16)", "contador": "0x426 (u8)"}, "selecciones_desde": 528, "estado": "probado"},
+    "alineaciones_ia": {"localizar": "indices 0,1,2,3 cada 600 B con el id_option del equipo en +4", "cantidad": 629, "tam": 600, "campos": {"indice": "u32 +0", "id_option": "u32 +4", "tecnico": "+8", "orden_formacion": "40 B +0x220", "roles": "6 B +0x248"}, "titulares": "0-10", "reglas": ["primeras n entradas = plantilla", "0xFF en las primeras n = jugador en blanco", "el que llega = última reserva", "si se va un titular, una reserva ocupa su puesto"], "bloque_usuario": 627, "estado": "probado"},
+    "usuario": {
+      "tablas": {"localizar": "ancla: 5 primeros (reg,pid) de la plantilla a paso fijo", "pasos": [24, 24, -24, 44, 368, 192, 52, 108, 108, 108, 5628, 48, 16], "registro": "[x][reg][pid]... empieza 4 B antes de reg", "vacio": "reg 0/0xFFFF y pid 0", "fichajes_recientes": "al final en C y D (buscar por reg,pid)", "ficha_partido": "16 B solo los que jugaron: no tocar", "estado": "probado"},
+      "orden_formacion": {"localizar": "permutación de 0..n-1 + relleno 0xFF, roles<n en +0x28, espejo en K", "tam": 40, "roles": 6, "estado": "probado"},
+      "lista_K": {"tam_registro": 16, "campos": "[flag u32][reg][pid][0]", "flags": {"K0": 0, "usado": 192, "libre_25": 192, "libre_26": 193, "fin": 199}, "estado": "probado"},
+      "contratos_tabla_I": {"paso": 48, "campos": {"sueldo_100": "+0 tras pid", "clausula_100": "+4", "fin": "+8 (año u16, mes, dia)", "numero_unico": "+0x14", "tipo": "+0x18 (18/22/154 vigente; 125/255 oferta abierta)", "inicio": "+0x1C"}, "estado": "probado"},
+      "dinero": {"ppto_fichajes_actual": "0xC7DD00 u32 x100", "ppto_fichajes_inicial": "0xC7DD10", "tope_salarial": "0xC7DD14", "ppto_salarial_pantalla": "tope - suma sueldos tabla I", "estado": "probado"}
+    },
+    "ia_presupuesto": {"estado": "descartado", "nota": "no existe en el guardado"},
+    "competiciones": {"inicio_aprox": "0xB08000", "tam_bloque": 3000, "lista_equipos": "IDs u32, relleno 0x0003FFFF", "estado": "observado"},
+    "calendario_usuario": {"registro": 708, "por": "día", "campos": "fecha(4) comp u16 rival u16; 10 IDs de partido u16 en días de liga", "meses_vistos": ["enero 0xA8D6D8", "junio 0xAAB288"], "estado": "observado"},
+    "calendario_partidos": {"estado": "no localizado", "pista": "IDs de partido por jornada (p.ej. 285-294)", "experimento": "guardar antes y después de un partido el mismo día"},
+    "blob": {"cabecera": "0x1140364", "tam_palabra": "0x11403A8", "zlib_desde": "0x11403D4", "tramos": 18, "tam_descomprimido": 4678743, "fichas_156": {"inicio": 30, "cantidad": 16422, "campos": {"reg": "u32 +2", "pid": "u32 +6", "competiciones": "pares u16 desde +10", "sueldo_100": "u32 +0x56", "valor_mercado_100": "u32 +0x5A", "num_contrato": "u32 +0x62", "fin_contrato": "+0x66", "inicio_contrato": "+0x6A", "valoracion_x10?": "u8 +0x4B", "experiencia?": "u16 +0x74", "condicion?": "u8 +0x7A"}, "estado": "observado"}, "despues": "puntos de liga por equipo (+3 al ganar), inscritos por competición", "estado": "observado"}
+  }
+}
