@@ -1,4 +1,5 @@
 #include "LigaMaster.h"
+#include "Alineacion.h"
 
 #include <algorithm>
 #include <cstdio>
@@ -66,10 +67,13 @@ namespace mercado::lm {
 		}
 
 		// --- Orden de formación (lo comparten el equipo del usuario y los de la IA) -------------------
-		constexpr size_t kBytesOrden = 40;          // 40 índices de plantilla (relleno 0xff)
-		constexpr size_t kOrdenARoles = 0x28;       // los 6 roles van justo después de los 40 bytes
-		constexpr size_t kBytesRoles = 6;
-		constexpr size_t kTitulares = 11;           // posiciones 0–10 titulares; después la banca (12 en este guardado) y las reservas
+		// Orden de formación y roles: lógica compartida con el option file (Alineacion.h).
+		constexpr size_t kBytesOrden = alineacion::kBytesOrden;      // 40 índices de plantilla (relleno 0xff)
+		constexpr size_t kOrdenARoles = alineacion::kOrdenARoles;    // los 6 roles van justo después de los 40 bytes
+		constexpr size_t kBytesRoles = alineacion::kBytesRoles;
+		constexpr size_t kTitulares = alineacion::kTitulares;        // posiciones 0–10 titulares; después la banca (7 o 12) y las reservas
+		using alineacion::quitarDeOrden;
+		using alineacion::necesitaSustituto;
 
 		// --- Bloques de alineación de los equipos de la IA (ESTRUCTURA-ML.md §10) -----------------------
 		//  Un bloque de 600 B por equipo, en el orden de los bloques de equipo: [índice u32][ID option u32]
@@ -134,37 +138,6 @@ namespace mercado::lm {
 			for (size_t i = 0; i < kBytesRoles; i++) d[a.ofs + kOrdenARoles + i] = a.roles[i];
 		}
 
-		/// Quita `idx` del orden y de los roles. Con sustituto (idxS >= 0), este ocupa el puesto del que se va y
-		/// deja libre el suyo. Los índices mayores que idx bajan uno (la plantilla se compacta igual).
-		bool quitarDeOrden(std::vector<uint8_t>& orden, std::array<uint8_t, 6>& roles, int idx, int idxS, std::string& porque) {
-			auto itH = std::find(orden.begin(), orden.end(), uint8_t(idx));
-			if (itH == orden.end()) { porque = "el jugador no está en el orden de formación"; return false; }
-			const size_t posH = size_t(itH - orden.begin());
-			if (idxS >= 0) {
-				auto itS = std::find(orden.begin(), orden.end(), uint8_t(idxS));
-				if (itS == orden.end()) { porque = "el sustituto no está en el orden de formación"; return false; }
-				const size_t posS = size_t(itS - orden.begin());
-				orden[posH] = uint8_t(idxS);
-				orden.erase(orden.begin() + posS);
-			}
-			else orden.erase(orden.begin() + posH);
-			for (auto& v : orden) if (v > idx) v--;
-			for (auto& v : roles) {
-				if (v == idx) { if (idxS < 0) { porque = "el jugador tiene un rol y no hay sustituto"; return false; } v = uint8_t(idxS); }
-				if (v > idx) v--;
-			}
-			return true;
-		}
-
-		/// ¿Hace falta sustituto? Solo si es TITULAR (puestos 0–10: cada uno es un sitio de la formación) o tiene un rol.
-		/// Así lo hace el juego (guardados del 8 oct): si se va un titular, otro ocupa su puesto; si se va un suplente o
-		/// una reserva, los de atrás simplemente suben (la banca y las reservas son una lista, no sitios en la cancha).
-		/// No depende del tamaño de la banca (en este guardado es de 12; en otros puede ser de 7).
-		bool necesitaSustituto(const std::vector<uint8_t>& orden, const std::array<uint8_t, 6>& roles, int idx) {
-			const auto it = std::find(orden.begin(), orden.end(), uint8_t(idx));
-			if (it != orden.end() && size_t(it - orden.begin()) < kTitulares) return true;
-			return std::any_of(roles.begin(), roles.end(), [&](uint8_t v) { return v == idx; });
-		}
 	}
 
 	Resultado<GuardadoLM> GuardadoLM::abrir(const std::string& ruta) {
@@ -349,32 +322,16 @@ namespace mercado::lm {
 			}
 			if (!necesitaSustituto(orden, roles, idx)) return R::bien(0u);
 
-			const size_t posH = size_t(std::find(orden.begin(), orden.end(), uint8_t(idx)) - orden.begin());
-			// Grupo fino y línea de cada posición: PT | DC | LI-LD | MCD-MC | II-ID | MP | EI-ED | SD-DC (delantero)
-			//                                        línea: 0 portero · 1 defensa · 2 medio · 3 ataque
-			auto grupo = [](int c) { static const int g[13] = { 0, 1, 2, 2, 3, 3, 4, 4, 5, 6, 6, 7, 7 }; return c < 0 || c > 12 ? -1 : g[c]; };
-			auto linea = [](int c) { return c < 0 ? -1 : c == 0 ? 0 : c <= 3 ? 1 : c <= 8 ? 2 : 3; };
-			const int cH = posicionDe ? posicionDe(pid) : -1;
-			const bool esPortero = cH == 0 || (cH < 0 && posH == 0);   // el puesto 0 de la formación es siempre el portero
-
-			// Candidatos: todos los que NO son titulares, empezando por el final de la lista (las reservas) y
-			// subiendo hacia la banca. Así no hace falta saber de cuántos es la banca (7 o 12).
-			std::vector<size_t> cand;
-			for (size_t p = orden.size(); p-- > kTitulares;) if (p != posH) cand.push_back(p);
-
-			int mejor = -1; size_t elegido = 0;
-			for (size_t p : cand) {
-				const int c = posicionDe ? posicionDe(pl[orden[p]].pid) : -1;
-				int puntos;
-				if (esPortero) { if (c != 0) continue; puntos = 3; }
-				else {
-					if (c == 0) continue;                                  // un portero nunca cubre a un jugador de campo
-					puntos = cH < 0 || c < 0 ? 0 : c == cH ? 3 : grupo(c) == grupo(cH) ? 2 : linea(c) == linea(cH) ? 1 : 0;
-				}
-				if (puntos > mejor) { mejor = puntos; elegido = p; }
+			// Elección compartida con el option file (Alineacion.h): posición del índice de plantilla vía `posicionDe(pid)`.
+			std::function<int(int)> posDeIdx;
+			if (posicionDe) posDeIdx = [&](int i) { return i >= 0 && size_t(i) < pl.size() ? posicionDe(pl[size_t(i)].pid) : -1; };
+			const int elegido = alineacion::elegirSustituto(orden, idx, posDeIdx);
+			if (elegido < 0) {
+				const int cH = posicionDe ? posicionDe(pid) : -1;
+				const bool esPortero = cH == 0 || (cH < 0 && !orden.empty() && orden[0] == uint8_t(idx));
+				return R::mal("SIN_SUSTITUTO", esPortero ? "No hay otro portero para cubrir el puesto" : "No hay ningún jugador libre para cubrir el puesto");
 			}
-			if (mejor < 0) return R::mal("SIN_SUSTITUTO", esPortero ? "No hay otro portero para cubrir el puesto" : "No hay ningún jugador libre para cubrir el puesto");
-			return R::bien(pl[orden[elegido]].pid);
+			return R::bien(pl[size_t(elegido)].pid);
 		}
 		catch (const std::exception& e) { return R::mal("ML_ERROR", e.what()); }
 	}

@@ -508,12 +508,33 @@ int main() {
 		if (of.ok()) {
 			CHECK(of.valor->equipos().size() > 100);
 			CHECK(of.valor->plantillas().size() == of.valor->equipos().size());
-			// Elegir un jugador cualquiera de la primera plantilla con gente y moverlo a otra.
+			// Catálogo de posiciones del parche (opcional, PM_CATALOGO = catálogo JSON): permite probar al portero.
+			std::function<int(uint32_t)> posicionDe;
+			if (const char* rCat = std::getenv("PM_CATALOGO")) {
+				std::ifstream fc(rCat); auto cj = nlohmann::json::parse(fc);
+				static std::map<uint32_t, int> posiciones;
+				static const std::map<std::string, int> codigo = { {"GK",0},{"CB",1},{"LB",2},{"RB",3},{"DMF",4},{"CMF",5},{"LMF",6},{"RMF",7},{"AMF",8},{"LWF",9},{"RWF",10},{"SS",11},{"CF",12} };
+				for (auto& j : cj["jugadores"]) { auto it = codigo.find(j.value("posicion", "")); if (it != codigo.end()) posiciones[j["pes_id"].get<uint32_t>()] = it->second; }
+				posicionDe = [](uint32_t id) { auto it = posiciones.find(id); return it == posiciones.end() ? -1 : it->second; };
+				std::printf("  catálogo de posiciones: %zu jugadores\n", posiciones.size());
+			}
+			// Elegir un jugador cualquiera (la última reserva) de un equipo y moverlo a otro. Con catálogo, el equipo de
+			// origen es uno con alineación «normal» (un solo portero en el XI y otro de reserva), como un club jugable.
 			uint32_t jug = 0, origen = 0, destino = 0;
 			for (const auto& [eq, pl] : of.valor->plantillas()) {
-				if (!jug && !pl.empty() && pl.size() < 40) { jug = pl.back().jugador; origen = eq; }
+				if (!jug && pl.size() >= 18 && pl.size() < 40) {
+					if (posicionDe) {
+						auto a = of.valor->alineacion(eq);
+						if (!a.ok()) continue;
+						int porterosXI = 0, porteros = 0;
+						for (size_t i = 0; i < a.valor->orden.size(); i++) { const bool pt = posicionDe(pl[a.valor->orden[i]].jugador) == 0; porteros += pt; porterosXI += pt && i < 11; }
+						if (porterosXI != 1 || porteros < 2) continue;
+					}
+					jug = pl.back().jugador; origen = eq;
+				}
 				else if (jug && !destino && eq != origen && !pl.empty() && pl.size() < 39) destino = eq;
 			}
+			std::printf("  origen %u → destino %u, jugador %u\n", origen, destino, jug);
 			auto copia = *of.valor;
 			CHECK(copia.mover(jug, destino, origen).ok());
 			const std::string salida = (fs::temp_directory_path() / "pm-edit-prueba").string();
@@ -530,6 +551,53 @@ int main() {
 			CHECK(enDestino && !enOrigen);
 			CHECK(sha256::deArchivo(rEdit) == huellaAntes);   // el original no se tocó
 			fs::remove(salida);
+
+			// Alineación (bloque de tácticas): el que se va era la última reserva → el XI del origen no cambia y el que
+			// llega es la última reserva del destino. Con un TITULAR hace falta sustituto y el XI conserva a los otros 10.
+			{
+				auto aO = of.valor->alineacion(origen), aD = of.valor->alineacion(destino);
+				CHECK(aO.ok() && aD.ok());
+				if (aO.ok() && aD.ok()) {
+					const auto& plO = of.valor->plantillas().at(origen);
+					const auto& plD = of.valor->plantillas().at(destino);
+					auto xi = [](const std::vector<PlazaPlantilla>& pl, const AlineacionLocal& a) {
+						std::vector<uint32_t> v; for (size_t i = 0; i < 11 && i < a.orden.size(); i++) v.push_back(pl[a.orden[i]].jugador); return v; };
+					const auto xiO = xi(plO, *aO.valor), xiD = xi(plD, *aD.valor);
+					auto a2O = copia.alineacion(origen), a2D = copia.alineacion(destino);
+					CHECK(a2O.ok() && a2D.ok());
+					if (a2O.ok() && a2D.ok()) {
+						CHECK(xi(copia.plantillas().at(origen), *a2O.valor) == xiO);
+						CHECK(xi(copia.plantillas().at(destino), *a2D.valor) == xiD);
+						CHECK(a2D.valor->orden.size() == plD.size() + 1 && a2D.valor->orden.back() == plD.size());
+						CHECK(a2O.valor->orden.size() == plO.size() - 1);
+					}
+					// Titular: sin sustituto se niega; con el sugerido, el XI conserva a los otros 10 y el que se va ya no está.
+					// Sin catálogo de posiciones se prueba con un jugador de campo (puesto 5); con PM_CATALOGO (catálogo JSON
+					// del parche) también con el portero (puesto 0), que solo puede cubrirlo otro portero.
+					for (size_t puesto : { size_t(5), size_t(0) }) {
+						if (puesto == 0 && !posicionDe) continue;
+						const uint32_t titular = plO[aO.valor->orden[puesto]].jugador;
+						auto c2 = *of.valor;
+						CHECK(c2.mover(titular, destino, origen).error.codigo == "FALTA_SUSTITUTO");
+						auto sug = of.valor->sugerirSustituto(origen, titular, posicionDe);
+						if (!sug.ok()) std::printf("  sustituto puesto %zu: %s %s\n", puesto, sug.error.codigo.c_str(), sug.error.detalle.c_str());
+						CHECK(sug.ok() && *sug.valor != 0 && *sug.valor != titular);
+						if (sug.ok()) {
+							if (posicionDe && puesto == 0) CHECK(posicionDe(*sug.valor) == 0);   // al portero lo cubre otro portero
+							CHECK(c2.mover(titular, destino, origen, 0, *sug.valor).ok());
+							auto a3 = c2.alineacion(origen);
+							CHECK(a3.ok());
+							if (a3.ok()) {
+								const auto xi3 = xi(c2.plantillas().at(origen), *a3.valor);
+								CHECK(xi3[puesto] == *sug.valor);
+								for (size_t i = 0; i < 11; i++) if (i != puesto) CHECK(xi3[i] == xiO[i]);
+								bool sigue = false; for (auto v : xi3) sigue |= v == titular; CHECK(!sigue);
+								CHECK(a3.valor->colaIdentidad == aO.valor->colaIdentidad);
+							}
+						}
+					}
+				}
+			}
 
 			if (rCpk) {
 				std::printf("Base de datos del parche + catálogo\n");

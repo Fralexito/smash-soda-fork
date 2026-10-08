@@ -51,7 +51,12 @@
         "orden_formacion": "40 B +0x1E4",
         "roles": "6 B +0x20C"
       },
-      "estado": "observado"
+      "estado": "probado en archivo (749 bloques); pendiente en juego",
+      "formatos": {
+        "identidad 0..39": 711,
+        "vacio 0xFF": 38
+      },
+      "cabecera": "tras el ID: presets de formación (11 códigos de posición + 1 byte + 10 pares (x,y))  [hipótesis]"
     },
     "bits_playerbin": {
       "ataque": 370,

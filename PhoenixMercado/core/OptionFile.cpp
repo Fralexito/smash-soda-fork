@@ -1,4 +1,5 @@
 #include "OptionFile.h"
+#include "Alineacion.h"
 #include "Sha256.h"
 
 #include <algorithm>
@@ -25,6 +26,12 @@ namespace mercado {
 		constexpr size_t kInicioPlantillas = 0x9D4648;
 		constexpr size_t kTamPlantilla = 4 + 40 * 4 + 40 * 2 + 40;  // 284
 		constexpr int kPlazas = 40;
+		// Tácticas por equipo (verificado en el option file del ConmeGOL 26: 749 bloques, todos con el ID del equipo en +0;
+		// el editor del juego deja el orden como identidad 0…39 y los equipos vacíos todo 0xFF).
+		constexpr size_t kInicioTacticas = 0xA09880;
+		constexpr size_t kTamTactica = 628;
+		constexpr size_t kTacOfsOrden = 0x1E4;
+		constexpr size_t kTacOfsRoles = 0x20C;
 
 		uint32_t u32(const std::vector<uint8_t>& d, size_t o) {
 			return d[o] | (d[o + 1] << 8) | (d[o + 2] << 16) | (uint32_t(d[o + 3]) << 24);
@@ -77,6 +84,7 @@ namespace mercado {
 
 			const size_t nj = u16(d, kNumJugadores), ne = u16(d, kNumEquipos);
 			if (kInicioPlantillas + ne * kTamPlantilla > d.size()
+				|| kInicioTacticas + ne * kTamTactica > d.size()
 				|| kInicioJugadores + nj * kTamJugador > kInicioEquipos)
 				return R::mal("OPTION_FORMATO_DESCONOCIDO", "Cantidades fuera de rango");
 
@@ -114,6 +122,10 @@ namespace mercado {
 				}
 				o._plantillas[eq] = pl;
 				o._offsetPlantilla[eq] = base;
+				// Bloque de tácticas del mismo equipo (mismo orden que las plantillas; lleva el ID en +0).
+				const size_t tac = kInicioTacticas + i * kTamTactica;
+				if (u32(d, tac) != eq) return R::mal("OPTION_FORMATO_DESCONOCIDO", "El bloque de tácticas no corresponde al equipo " + std::to_string(eq));
+				o._offsetTactica[eq] = tac;
 			}
 			return R::bien(std::move(o));
 		}
@@ -131,30 +143,100 @@ namespace mercado {
 		// Los 40 bytes finales («Unknown A» en 4ccEditor) no se tocan.
 	}
 
-	Resultado<bool> OptionFile::mover(uint32_t jugador, uint32_t destino, uint32_t origen, uint16_t dorsal) {
+	Resultado<AlineacionLocal> OptionFile::leerAlineacion(uint32_t equipo, size_t n) const {
+		using R = Resultado<AlineacionLocal>;
+		const auto it = _offsetTactica.find(equipo);
+		if (it == _offsetTactica.end()) return R::mal("EQUIPO_NO_EXISTE", std::to_string(equipo));
+		const uint8_t* p = _datos.data() + it->second;
+		AlineacionLocal a;
+		std::string porque;
+		if (!alineacion::leerOrden(p + kTacOfsOrden, n, a.orden, porque)) return R::mal("ALINEACION_INVALIDA", "Equipo " + std::to_string(equipo) + ": " + porque);
+		if (!alineacion::leerRoles(p + kTacOfsRoles, n, a.roles, porque)) return R::mal("ALINEACION_INVALIDA", "Equipo " + std::to_string(equipo) + ": " + porque);
+		a.colaIdentidad = alineacion::colaEsIdentidad(p + kTacOfsOrden, n);
+		return R::bien(std::move(a));
+	}
+
+	void OptionFile::escribirAlineacion(uint32_t equipo, const AlineacionLocal& a) {
+		uint8_t* p = _datos.data() + _offsetTactica.at(equipo);
+		alineacion::escribirOrden(p + kTacOfsOrden, a.orden, a.colaIdentidad);
+		alineacion::escribirRoles(p + kTacOfsRoles, a.roles);
+	}
+
+	Resultado<AlineacionLocal> OptionFile::alineacion(uint32_t equipo) const {
+		using R = Resultado<AlineacionLocal>;
+		const auto it = _plantillas.find(equipo);
+		if (it == _plantillas.end()) return R::mal("EQUIPO_NO_EXISTE", std::to_string(equipo));
+		return leerAlineacion(equipo, it->second.size());
+	}
+
+	Resultado<uint32_t> OptionFile::sugerirSustituto(uint32_t equipo, uint32_t jugador, const std::function<int(uint32_t)>& posicionDe) const {
+		using R = Resultado<uint32_t>;
+		const auto it = _plantillas.find(equipo);
+		if (it == _plantillas.end()) return R::mal("EQUIPO_NO_EXISTE", std::to_string(equipo));
+		const auto& pl = it->second;
+		int idx = -1;
+		for (size_t i = 0; i < pl.size(); i++) if (pl[i].jugador == jugador) idx = int(i);
+		if (idx < 0) return R::mal("JUGADOR_NO_ESTA", "El jugador no está en ese equipo");
+		auto a = leerAlineacion(equipo, pl.size());
+		if (!a.ok()) return R::mal(a.error.codigo, a.error.detalle);
+		if (!alineacion::necesitaSustituto(a.valor->orden, a.valor->roles, idx)) return R::bien(0u);
+		std::function<int(int)> posDeIdx;
+		if (posicionDe) posDeIdx = [&](int i) { return i >= 0 && size_t(i) < pl.size() ? posicionDe(pl[size_t(i)].jugador) : -1; };
+		const int elegido = alineacion::elegirSustituto(a.valor->orden, idx, posDeIdx);
+		if (elegido < 0) return R::mal("SIN_SUSTITUTO", "No hay ningún jugador libre (o ningún otro portero) para cubrir el puesto");
+		return R::bien(pl[size_t(elegido)].jugador);
+	}
+
+	Resultado<bool> OptionFile::mover(uint32_t jugador, uint32_t destino, uint32_t origen, uint16_t dorsal, uint32_t sustituto) {
 		using R = Resultado<bool>;
 		if (!_plantillas.count(destino)) return R::mal("EQUIPO_NO_EXISTE", std::to_string(destino));
-		auto& pd = _plantillas[destino];
-		for (const auto& p : pd) if (p.jugador == jugador) return R::mal("YA_ESTA_EN_DESTINO");
-		if (int(pd.size()) >= kPlazas) return R::mal("PLANTILLA_LLENA", "El destino ya tiene 40 jugadores");
+		const auto& pdAntes = _plantillas.at(destino);
+		for (const auto& p : pdAntes) if (p.jugador == jugador) return R::mal("YA_ESTA_EN_DESTINO");
+		if (int(pdAntes.size()) >= kPlazas) return R::mal("PLANTILLA_LLENA", "El destino ya tiene 40 jugadores");
 
 		if (origen == 0) {
 			for (const auto& [eq, pl] : _plantillas)
 				for (const auto& p : pl) if (p.jugador == jugador && eq != destino && !origen) origen = eq;
 		}
+		// --- Se comprueba TODO antes de tocar nada (todo o nada) ---------------
+		AlineacionLocal aliOrigen, aliDestino;
+		int idx = -1, idxS = -1;
 		if (origen) {
-			auto& po = _plantillas[origen];
-			auto it = std::find_if(po.begin(), po.end(), [&](const PlazaPlantilla& p) { return p.jugador == jugador; });
-			if (it == po.end()) return R::mal("JUGADOR_NO_ESTA_EN_ORIGEN");
-			po.erase(it);                // se compacta: sin huecos en la lista
-			escribirPlantilla(origen);
+			if (!_plantillas.count(origen)) return R::mal("EQUIPO_NO_EXISTE", std::to_string(origen));
+			const auto& po = _plantillas.at(origen);
+			for (size_t i = 0; i < po.size(); i++) { if (po[i].jugador == jugador) idx = int(i); if (sustituto && po[i].jugador == sustituto) idxS = int(i); }
+			if (idx < 0) return R::mal("JUGADOR_NO_ESTA_EN_ORIGEN");
+			if (sustituto && idxS < 0) return R::mal("SUSTITUTO_NO_ESTA", "El sustituto no está en el equipo de origen");
+			if (sustituto && sustituto == jugador) return R::mal("SUSTITUTO_INVALIDO", "El sustituto es el mismo jugador");
+			auto a = leerAlineacion(origen, po.size());
+			if (!a.ok()) return R::mal(a.error.codigo, a.error.detalle);
+			aliOrigen = *a.valor;
+			if (idxS < 0 && alineacion::necesitaSustituto(aliOrigen.orden, aliOrigen.roles, idx))
+				return R::mal("FALTA_SUSTITUTO", "El jugador es titular o tiene un rol en la alineación: hace falta un sustituto (sugerirSustituto)");
+			std::string porque;
+			if (!alineacion::quitarDeOrden(aliOrigen.orden, aliOrigen.roles, idx, idxS, porque)) return R::mal("ALINEACION_INVALIDA", porque);
+		}
+		{
+			auto a = leerAlineacion(destino, pdAntes.size());
+			if (!a.ok()) return R::mal(a.error.codigo, a.error.detalle);
+			aliDestino = *a.valor;
+			aliDestino.orden.push_back(uint8_t(pdAntes.size()));   // el que llega es la última reserva
 		}
 		if (dorsal == 0) {
 			dorsal = 99;
-			while (dorsal > 1 && std::any_of(pd.begin(), pd.end(), [&](const PlazaPlantilla& p) { return p.dorsal == dorsal; })) dorsal--;
+			while (dorsal > 1 && std::any_of(pdAntes.begin(), pdAntes.end(), [&](const PlazaPlantilla& p) { return p.dorsal == dorsal; })) dorsal--;
 		}
+		// --- Todo cuadra: se aplica ---------------------------------------------
+		if (origen) {
+			auto& po = _plantillas[origen];
+			po.erase(po.begin() + idx);   // se compacta: sin huecos en la lista (los índices mayores bajan uno, igual que en el orden)
+			escribirPlantilla(origen);
+			escribirAlineacion(origen, aliOrigen);
+		}
+		auto& pd = _plantillas[destino];
 		pd.push_back({ jugador, dorsal });
 		escribirPlantilla(destino);
+		escribirAlineacion(destino, aliDestino);
 		return R::bien(true);
 	}
 

@@ -33,8 +33,13 @@ localiza **por anclas** (buscando la forma de los datos), no por posición fija.
 | **Tácticas por equipo** | desde 0xA09880, **628 B por equipo**, mismo orden que las plantillas: ID equipo u32 · formaciones (varias copias de coordenadas) · **orden de formación 40 B en +0x1E4** (índices de plantilla; 0–10 titulares) · **6 roles en +0x20C** | 🔎 (ver §G) |
 | Bits de habilidades (Player.bin / editados) | ataque 370, control 281, regate 352, regate ajustado 416, pase raso 263, pase bombeado 402, finalización 396, cabezazo 288, balón parado 250, efecto 332, velocidad 306, aceleración 344, equilibrio 376, contacto físico 390, salto 294, resistencia 338, defensa 275, recuperación 312, agresividad 384 (6 bits, +40) · altura 216 (8 bits, +100) · peso 256 (7, +30) · edad 408 (6, +15) · posición 434 (4) · nacionalidad 233 (9) | ✅ |
 
-**Error conocido (pendiente de corregir):** al mover un jugador solo en la plantilla, la alineación del equipo que lo pierde queda
-corrida (en un amistoso el portero suplente puede salir de delantero). Hay que actualizar el bloque de tácticas igual que en la LM.
+**Corregido (8 oct, 16:30):** al mover un jugador el programa actualiza también el bloque de tácticas de los dos equipos, con la
+misma lógica que la Liga Máster (`core/Alineacion.h`): el que se va sale del orden y de los roles, los índices mayores bajan uno,
+si era titular o tenía rol hace falta sustituto (elegido por posición con el catálogo; a un portero solo lo cubre otro portero) y el
+que llega entra como última reserva. Comprobado en el option file real del ConmeGOL 26: **749 bloques**, todos con el ID del
+equipo en +0; 711 equipos con el orden como **identidad 0…39** (así lo deja el editor del juego) y 38 equipos vacíos con todo
+0xFF. El formato (cola identidad o 0xFF) se conserva. Pendiente la prueba en el juego (amistoso con un option file temporal).
+Antes de esto, al mover un jugador solo en la plantilla la alineación quedaba corrida (el portero suplente salía de delantero).
 
 ## C. Guardado de Liga Máster (`ML0000000N`): estructura general
 
