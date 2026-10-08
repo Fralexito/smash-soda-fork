@@ -17,6 +17,10 @@ namespace mercado::lm {
 		constexpr size_t kOfsDorsales = kOfsPlantilla + 4 + 0x14a;   // 40 × u16
 		constexpr size_t kOfsContador = kOfsPlantilla + 4 + 0x2d6;   // 1 byte
 		constexpr uint32_t kRegVacio = 65535;                        // relleno de la lista: (65535, 0)
+		constexpr uint32_t kMaxReg = 20000, kMaxPid = 1000000;       // plausibilidad de una ficha (reg: 16.422 en el universo; pid del option)
+		constexpr uint32_t kPrefijoRegGenerado = 0xdb65;             // jugadores que CREA el juego (regens): reg = 0xdb65xxxx, pid > 126.000 (§17)
+		/// ¿`reg` puede ser una ficha de jugador? (del universo del parche o creado por el juego)
+		bool regPlausible(uint32_t reg) { return reg < kMaxReg || (reg >> 16) == kPrefijoRegGenerado; }
 
 		using Datos = std::vector<uint8_t>;
 
@@ -218,12 +222,15 @@ namespace mercado::lm {
 			{ 24, +1 }, { 24, -1 }, { 44, +1 }, { 368, +1 }, { 192, +1 },
 			{ 52, +1 }, { 108, +1 }, { 5628, +1 }, { 48, +1 }, { 16, +1 } };
 
-		// Se busca el par (reg, pid) del primer jugador y, en cada acierto, se comprueban los 4 siguientes
-		// a la distancia de cada tabla conocida. Solo se mira después de los bloques de equipo.
+		// Se busca el par (reg, pid) del primer jugador y, en cada acierto, se comprueban los 4 siguientes a la distancia
+		// de cada tabla conocida. Entre medio puede haber HUECOS (registros vacíos que deja el juego cuando se va un
+		// jugador, §12) o registros de jugadores que ya no están (A2 hasta que el juego la rehace): se saltan, hasta 8.
+		// Solo se mira después de los bloques de equipo.
 		uint8_t patron[8];
 		for (int i = 0; i < 4; i++) { patron[i] = uint8_t(pl[0].reg >> (8 * i)); patron[4 + i] = uint8_t(pl[0].pid >> (8 * i)); }
 		const uint8_t* base = _datos.data();
 		const size_t n = _datos.size();
+		constexpr int kMaxHuecosAncla = 8;
 		size_t h = kFinBloques;
 		while (h + 8 <= n) {
 			const void* f = std::memchr(base + h, patron[0], n - 8 + 1 - h);
@@ -232,12 +239,22 @@ namespace mercado::lm {
 			if (std::memcmp(base + h, patron, 8) == 0) {
 				for (const auto& e : especs) {
 					bool ok = true;
-					for (size_t i = 1; i <= 4 && ok; i++) {
-						const long long pos = (long long)h + e.dir * (long long)(i * e.stride);
+					int huecos = 0;
+					size_t siguiente = 1;                 // jugador de la plantilla que toca encontrar
+					for (long long r = 1; siguiente <= 4 && ok; r++) {
+						const long long pos = (long long)h + e.dir * (long long)(size_t(r) * e.stride);
 						if (pos < (long long)kFinBloques || size_t(pos) + 8 > n) { ok = false; break; }
-						ok = u32(_datos, size_t(pos)) == pl[i].reg && u32(_datos, size_t(pos) + 4) == pl[i].pid;
+						const uint32_t reg = u32(_datos, size_t(pos)), pid = u32(_datos, size_t(pos) + 4);
+						if (reg == pl[siguiente].reg && pid == pl[siguiente].pid) { siguiente++; continue; }
+						// Se salta un hueco (vacío) o la ficha de alguien que ya no está en la plantilla (A2 conserva al vendido
+						// hasta que el juego la rehace). Cualquier otra cosa (otro jugador de la plantilla, datos sueltos) descarta.
+						const bool vacio = pid == 0 && (reg == 0 || reg == 0xffff || reg == kRegVacio);
+						const bool ajeno = !vacio && pid && pid < kMaxPid && regPlausible(reg)
+							&& std::none_of(pl.begin(), pl.end(), [&](const Plaza& p) { return p.pid == pid || p.reg == reg; });
+						if ((vacio || ajeno) && ++huecos <= kMaxHuecosAncla) continue;
+						ok = false;
 					}
-					if (ok) out.push_back({ h, e.stride, e.dir });
+					if (ok) out.push_back({ h, e.stride, e.dir, e.stride == 48 ? size_t(28) : size_t(4) });
 				}
 			}
 			h++;
@@ -369,8 +386,14 @@ namespace mercado::lm {
 		constexpr size_t kTamK = 16;               // [flag u32][reg u32][pid u32][0 u32]
 		constexpr uint32_t kFlagLibreMin = 0xc0;    // primer registro libre de K (0xc0 con 25 jugadores, 0xc1 con 26…)
 		constexpr uint32_t kFlagFinK = 0xc7;        // los que siguen al primer libre
-		constexpr int kMaxRegistrosTabla = 200;     // tope de seguridad al contar registros de una tabla
-		constexpr size_t kTablasEsperadas = 12;     // A B C D E F G H M I J + L (ESTRUCTURA-ML.md §4)
+		constexpr int kMaxRegistrosTabla = 200;     // tope de seguridad al recorrer una tabla
+		constexpr int kVaciosFin = 3;               // tantos vacíos seguidos = fin de la tabla (puede haber huecos sueltos)
+		constexpr size_t kTablasEsperadas = 12;     // A A2 B C D E F G H×3 M I J  menos K (ESTRUCTURA-ML.md §4)
+		constexpr size_t kDistanciaA2 = 976;        // A2 está a 40 registros de 24 B + 16 B de A
+		constexpr size_t kRegEnContrato = 28;       // tabla I: el registro empieza 28 B antes de `reg` (§12)
+		constexpr size_t kTamNegociacion = 60;      // lista de negociaciones abiertas (§12)
+		constexpr size_t kRegEnNegociacion = 32;
+		constexpr int kMaxNegociaciones = 64;
 
 		bool registroVacio(const Datos& d, size_t ofsReg) {
 			const uint32_t reg = u32(d, ofsReg), pid = u32(d, ofsReg + 4);
@@ -379,32 +402,67 @@ namespace mercado::lm {
 
 		/// Dirección del campo `reg` del registro i de una tabla alineada.
 		long long regDe(const TablaAlineada& t, long long i) { return (long long)t.ofsReg0 + t.dir * i * (long long)t.stride; }
-		/// Un registro empieza 4 bytes antes de `reg` ([x][reg][pid]…) y mide `stride`.
-		long long inicioDe(const TablaAlineada& t, long long i) { return regDe(t, i) - 4; }
+		/// Dónde empieza el registro i: `inicioRel` bytes antes de `reg` (4 en casi todas; 28 en la de contratos).
+		long long inicioDe(const TablaAlineada& t, long long i) { return regDe(t, i) - (long long)t.inicioRel; }
 
-		/// Cuántos registros usados tiene la tabla (hasta el primer vacío). -1 = no termina (tabla dañada).
-		int usadosEn(const Datos& d, const TablaAlineada& t) {
-			for (int n = 0; n <= kMaxRegistrosTabla; n++) {
+		/// Cuántos registros ocupa la tabla hasta el último usado (inclusive). Igual que el juego, una tabla puede tener
+		/// HUECOS (reg 0xffff, pid 0) en medio: se sigue hasta ver `kVaciosFin` vacíos seguidos. -1 = no termina (dañada).
+		/// El registro devuelto (índice = extensión) está vacío: sirve de plantilla de «registro nunca usado».
+		int extensionDe(const Datos& d, const TablaAlineada& t) {
+			int ultimoUsado = -1, vacios = 0;
+			for (int n = 0; n < kMaxRegistrosTabla; n++) {
 				const long long r = regDe(t, n);
 				if (r < (long long)kFinBloques || size_t(r) + 8 > d.size()) return -1;
-				if (registroVacio(d, size_t(r))) return n;
+				if (registroVacio(d, size_t(r))) { if (++vacios >= kVaciosFin) return ultimoUsado + 1; }
+				else { vacios = 0; ultimoUsado = n; }
 			}
 			return -1;
 		}
 
-		/// Quita el registro `idx` compactando hacia él; el último usado queda como el primer vacío (plantilla).
-		/// Igual que `quitar_registro` / `L_quitar` del prototipo probado en el juego.
-		bool quitarRegistro(Datos& d, const TablaAlineada& t, int idx, std::string& porque) {
-			const int n = usadosEn(d, t);
-			if (n < 0) { porque = "tabla sin fin"; return false; }
-			if (idx < 0 || idx >= n) { porque = "índice fuera de la tabla (" + std::to_string(idx) + "/" + std::to_string(n) + ")"; return false; }
-			const long long lo = std::min(inicioDe(t, 0), inicioDe(t, n)), hi = std::max(inicioDe(t, 0), inicioDe(t, n)) + (long long)t.stride;
-			if (lo < (long long)kFinBloques || size_t(hi) > d.size()) { porque = "tabla fuera del archivo"; return false; }
-			std::vector<uint8_t> vacio(d.begin() + inicioDe(t, n), d.begin() + inicioDe(t, n) + (long long)t.stride);
-			for (int i = idx; i < n - 1; i++)
+		bool rangoValido(const Datos& d, const TablaAlineada& t, int ext) {
+			const long long lo = std::min(inicioDe(t, 0), inicioDe(t, ext)), hi = std::max(inicioDe(t, 0), inicioDe(t, ext)) + (long long)t.stride;
+			return lo >= (long long)kFinBloques && size_t(hi) <= d.size();
+		}
+
+		/// Quita el registro `idx` COMPACTANDO: los siguientes suben uno y el último usado queda como el primer vacío.
+		/// Así lo hace el juego en G, H e I (Stones, 8 oct). `ext` = extensión de la tabla (extensionDe).
+		bool quitarRegistro(Datos& d, const TablaAlineada& t, int idx, int ext, std::string& porque) {
+			if (ext < 0) { porque = "tabla sin fin"; return false; }
+			if (idx < 0 || idx >= ext) { porque = "índice fuera de la tabla (" + std::to_string(idx) + "/" + std::to_string(ext) + ")"; return false; }
+			if (!rangoValido(d, t, ext)) { porque = "tabla fuera del archivo"; return false; }
+			std::vector<uint8_t> vacio(d.begin() + inicioDe(t, ext), d.begin() + inicioDe(t, ext) + (long long)t.stride);
+			for (int i = idx; i < ext - 1; i++)
 				std::memmove(&d[size_t(inicioDe(t, i))], &d[size_t(inicioDe(t, i + 1))], t.stride);
-			std::memcpy(&d[size_t(inicioDe(t, n - 1))], vacio.data(), t.stride);
+			std::memcpy(&d[size_t(inicioDe(t, ext - 1))], vacio.data(), t.stride);
 			return true;
+		}
+
+		/// Deja el registro `idx` vacío EN SU SITIO, exactamente como lo deja el juego (Stones, 8 oct; A B C D E F J M):
+		/// copia el primer registro nunca usado desde `reg` hasta el final del registro (lo que hay antes de `reg` se
+		/// conserva), pone reg = 0xffff y aplica los retoques vistos en el juego:
+		///   A (24): fecha vacía 0xffff en +16 · B (24↓): conserva la constante de +10 · F (52): 0 en +40 ·
+		///   M (5628): también 0 en la palabra justo antes del siguiente `reg` (es el final de su propio registro).
+		bool vaciarRegistro(Datos& d, const TablaAlineada& t, int idx, int ext, std::string& porque) {
+			if (ext < 0) { porque = "tabla sin fin"; return false; }
+			if (idx < 0 || idx >= ext) { porque = "índice fuera de la tabla (" + std::to_string(idx) + "/" + std::to_string(ext) + ")"; return false; }
+			if (!rangoValido(d, t, ext)) { porque = "tabla fuera del archivo"; return false; }
+			const size_t r = size_t(regDe(t, idx)), plantilla = size_t(regDe(t, ext)), largo = t.stride - 4;
+			const uint16_t constanteB = u16(d, r + 10);
+			std::memmove(&d[r], &d[plantilla], largo);
+			p32(d, r, 0xffff); p32(d, r + 4, 0);
+			if (t.stride == 24 && t.dir > 0) p16(d, r + 16, 0xffff);
+			if (t.stride == 24 && t.dir < 0) p16(d, r + 10, constanteB);
+			if (t.stride == 52) p32(d, r + 40, 0);
+			if (t.stride == 5628 && r + t.stride <= d.size()) p32(d, r + t.stride - 4, 0);   // M: su registro acaba en la palabra anterior al siguiente `reg`
+			return true;
+		}
+
+		/// Qué hace el juego con cada tabla cuando un jugador deja el equipo del usuario (§12):
+		enum class Politica { Hueco, Compactar, NoTocar };
+		Politica politicaDe(const TablaAlineada& t, bool esA2) {
+			if (t.stride == 24 && t.dir > 0) return esA2 ? Politica::NoTocar : Politica::Hueco;
+			if (t.stride == 108 || t.stride == 48) return Politica::Compactar;
+			return Politica::Hueco;
 		}
 
 		/// ¿`orden[0..n)` es una permutación de 0..n-1 y lo que sigue hasta 40 es 0xff?
@@ -419,6 +477,90 @@ namespace mercado::lm {
 			for (size_t i = n; i < kBytesOrden; i++) if (d[ofs + i] != 0xff) return false;
 			return true;
 		}
+
+		/// Lista de negociaciones abiertas (tras el blob; §12). Registro de 60 B:
+		///   [estado u16][club que negocia u32][banderas][0xffff][-1][-1][0xffff u16] [club del jugador u32][reg][pid][monto][monto][0xffff][0xffff][0]
+		/// El juego borra las del jugador que se va y compacta la lista (Stones, 8 oct). Devuelve cuántas quitó (-1 = lista rota).
+		int quitarNegociaciones(Datos& d, uint32_t club, uint32_t reg, uint32_t pid) {
+			uint8_t patron[12];
+			for (int i = 0; i < 4; i++) { patron[i] = uint8_t(club >> (8 * i)); patron[4 + i] = uint8_t(reg >> (8 * i)); patron[8 + i] = uint8_t(pid >> (8 * i)); }
+			auto esNegociacion = [&](size_t h) {   // h = campo «club del jugador»
+				return h >= kFinBloques + 28 && h + 32 <= d.size()
+					&& u32(d, h - 16) == 0xffff && u32(d, h - 12) == 0xffffffff && u32(d, h - 8) == 0xffffffff && u16(d, h - 4) == 0xffff
+					&& u32(d, h + 20) == 0xffff && u32(d, h + 24) == 0xffff && u32(d, h + 28) == 0;
+			};
+			auto usada = [&](size_t ini) { return ini + kTamNegociacion <= d.size() && u32(d, ini + 28) != 0xffffffff; };
+			static const uint32_t vacia[15] = { 0xffff, 0xffffffff, 0, 0xffff, 0xffffffff, 0xffffffff, 0xffff, 0xffffffff, 0xffff, 0, 0, 0, 0xffff, 0xffff, 0 };
+			int quitadas = 0;
+			for (int vuelta = 0; vuelta < kMaxNegociaciones; vuelta++) {
+				const uint8_t* base = d.data();
+				size_t h = kFinBloques + 28; bool hallada = false;
+				while (h + 12 <= d.size()) {
+					const void* f = std::memchr(base + h, patron[0], d.size() - 12 + 1 - h);
+					if (!f) break;
+					h = size_t(static_cast<const uint8_t*>(f) - base);
+					if (std::memcmp(base + h, patron, 12) == 0 && esNegociacion(h)) { hallada = true; break; }
+					h++;
+				}
+				if (!hallada) return quitadas;
+				const size_t ini = h - 28;
+				int n = 1;                                               // registros usados desde esta negociación
+				while (n < kMaxNegociaciones && usada(ini + size_t(n) * kTamNegociacion)) n++;
+				if (n >= kMaxNegociaciones) return -1;
+				std::memmove(&d[ini], &d[ini + kTamNegociacion], kTamNegociacion * size_t(n - 1));
+				for (int i = 0; i < 15; i++) p32(d, ini + kTamNegociacion * size_t(n - 1) + 4 * size_t(i), vacia[i]);
+				quitadas++;
+			}
+			return -1;
+		}
+	}
+
+	namespace {
+		/// Busca la lista K del equipo del usuario por su ESTRUCTURA (no hace falta que refleje el orden actual: el juego la
+		/// deja atrasada un tiempo tras un cambio de plantilla, p. ej. al despedir a Stones, 8 oct):
+		///   K0 = [0][reg][pid][0] de alguien de la plantilla; luego registros [flag 0xc0–0xc6][reg][pid][0] de jugadores
+		///   (casi todos de la plantilla; se admiten hasta 2 que ya no estén), un libre [flag 0xc0–0xc6][0xffff][0][0] y
+		///   por lo menos un [0xc7][0xffff][0][0]. Devuelve las posiciones de K0 halladas.
+		struct KHallada { size_t k0 = 0; std::vector<std::array<uint32_t, 3>> usados; uint32_t flagLibre = 0; };
+
+		std::vector<KHallada> buscarK(const Datos& d, const std::vector<Plaza>& pl) {
+			std::vector<KHallada> out;
+			const uint8_t* base = d.data();
+			auto esFlagUsado = [](uint32_t f) { return f >= kFlagLibreMin && f < kFlagFinK; };
+			for (const Plaza& p : pl) {
+				uint8_t patron[8];
+				for (int i = 0; i < 4; i++) { patron[i] = uint8_t(p.reg >> (8 * i)); patron[4 + i] = uint8_t(p.pid >> (8 * i)); }
+				size_t h = kFinBloques + 4;
+				while (h + 12 <= d.size()) {
+					const void* f = std::memchr(base + h, patron[0], d.size() - 12 + 1 - h);
+					if (!f) break;
+					h = size_t(static_cast<const uint8_t*>(f) - base);
+					if (std::memcmp(base + h, patron, 8) == 0 && u32(d, h - 4) == 0 && u32(d, h + 8) == 0) {
+						const size_t k0 = h - 4;
+						KHallada k; k.k0 = k0; k.usados.push_back({ 0, p.reg, p.pid });
+						bool ok = true; size_t r = k0 + kTamK;
+						for (;; r += kTamK) {
+							if (r + 2 * kTamK > d.size() || k.usados.size() > kMaxPlantilla) { ok = false; break; }
+							const uint32_t fl = u32(d, r), reg = u32(d, r + 4), pid = u32(d, r + 8), z = u32(d, r + 12);
+							if (z != 0 || !esFlagUsado(fl)) { ok = false; break; }
+							if (pid == 0 && reg == 0xffff) { k.flagLibre = fl; break; }     // el libre
+							if (pid == 0 || !regPlausible(reg) || pid >= kMaxPid) { ok = false; break; }
+							k.usados.push_back({ fl, reg, pid });
+						}
+						if (ok) ok = u32(d, r + kTamK) == kFlagFinK && u32(d, r + kTamK + 4) == 0xffff && u32(d, r + kTamK + 8) == 0;
+						if (ok && k.usados.size() >= kTitulares) {
+							size_t enPlantilla = 0;
+							for (const auto& u : k.usados) enPlantilla += std::any_of(pl.begin(), pl.end(), [&](const Plaza& q) { return q.reg == u[1] && q.pid == u[2]; });
+							if (enPlantilla + 2 >= k.usados.size() && enPlantilla + 2 >= pl.size()) out.push_back(std::move(k));
+						}
+					}
+					h++;
+				}
+			}
+			std::sort(out.begin(), out.end(), [](const KHallada& a, const KHallada& b) { return a.k0 < b.k0; });
+			out.erase(std::unique(out.begin(), out.end(), [](const KHallada& a, const KHallada& b) { return a.k0 == b.k0; }), out.end());
+			return out;
+		}
 	}
 
 	Resultado<Alineacion> GuardadoLM::alineacionDe(int k) const {
@@ -426,60 +568,50 @@ namespace mercado::lm {
 		if (k < 0 || k >= kNumEquipos) return R::mal("EQUIPO_INVALIDO", std::to_string(k));
 		const auto pl = leerPlantilla(_datos, k);
 		const size_t n = pl.size();
-		if (n < 11) return R::mal("PLANTILLA_CORTA", "Menos de 11 jugadores");
+		if (n < kTitulares) return R::mal("PLANTILLA_CORTA", "Menos de 11 jugadores");
 		const Datos& d = _datos;
 
-		// 1) Candidatos a `orden`: ventana de 40 B con permutación de 0..n-1 + relleno 0xff y 6 roles < n después.
-		std::vector<size_t> candidatos;
-		for (size_t o = kFinBloques; o + kBytesOrden + kOrdenARoles + kBytesRoles <= d.size(); o++) {
-			if (n < kBytesOrden && d[o + n] != 0xff) continue;
-			if (d[o] >= n) continue;
-			if (!esOrdenValido(d, o, n)) continue;
-			bool rolesOk = true;
-			for (size_t i = 0; i < kBytesRoles && rolesOk; i++) rolesOk = d[o + kOrdenARoles + i] < n;
-			if (rolesOk) candidatos.push_back(o);
+		// 1) El orden de formación del usuario vive en el arreglo de alineaciones (§10): en el primer bloque que lleva el
+		//    ID del equipo del usuario (-11 en el bloque de equipo) y NO es el bloque del propio índice (ese es su copia
+		//    «como equipo de la IA»). En el guardado de referencia es el bloque 627 (0x18f9d8); el 628 es su reserva.
+		const auto bloques = buscarBloquesAli(d);
+		if (!bloques.cantidad) return R::mal("ALINEACIONES_IA_NO_HALLADAS", "No se encontró el arreglo de alineaciones");
+		const uint32_t idUsuario = u32(d, baseEquipo(k) + kOfsIdOption);
+		size_t ofsOrden = 0; int bloqueUsuario = -1;
+		for (int b = 0; b < bloques.cantidad && bloqueUsuario < 0; b++) {
+			if (b == k) continue;
+			const size_t s = bloques.inicio + size_t(b) * kTamBloqueAli;
+			if (u32(d, s + kAliOfsEquipo) != idUsuario) continue;
+			if (esOrdenValido(d, s + kAliOfsOrden, n)) { bloqueUsuario = b; ofsOrden = s + kAliOfsOrden; }
 		}
-		if (candidatos.empty()) return R::mal("ALINEACION_NO_HALLADA", "No se encontró el orden de formación del equipo");
+		if (bloqueUsuario < 0) return R::mal("ALINEACION_NO_HALLADA", "Ningún bloque de alineación con el ID del usuario tiene un orden válido para " + std::to_string(n) + " jugadores");
+		Alineacion a;
+		a.ofsOrden = ofsOrden; a.ofsRoles = ofsOrden + kOrdenARoles;
+		a.orden.assign(d.begin() + long(ofsOrden), d.begin() + long(ofsOrden + n));
+		for (size_t i = 0; i < kBytesRoles; i++) {
+			a.roles[i] = d[a.ofsRoles + i];
+			if (a.roles[i] >= n) return R::mal("ALINEACION_NO_HALLADA", "Roles fuera de la plantilla");
+		}
 
-		// 2) Para cada candidato, la lista K debe ser su espejo: K[i] = plantilla[orden[i]] para los n, y luego un libre.
-		std::vector<Alineacion> halladas;
-		for (size_t o : candidatos) {
-			std::vector<uint8_t> orden(d.begin() + o, d.begin() + o + n);
-			uint8_t patron[8];
-			for (int i = 0; i < 4; i++) { patron[i] = uint8_t(pl[orden[0]].reg >> (8 * i)); patron[4 + i] = uint8_t(pl[orden[0]].pid >> (8 * i)); }
-			const uint8_t* base = d.data();
-			size_t h = kFinBloques + 4;
-			while (h + 8 <= d.size()) {
-				const void* f = std::memchr(base + h, patron[0], d.size() - 8 + 1 - h);
-				if (!f) break;
-				h = size_t(static_cast<const uint8_t*>(f) - base);
-				if (std::memcmp(base + h, patron, 8) == 0 && u32(d, h + 8) == 0) {
-					const size_t k0 = h - 4;
-					bool ok = k0 + kTamK * (n + 2) <= d.size();
-					for (size_t i = 0; i < n && ok; i++) {
-						const size_t r = k0 + kTamK * i;
-						ok = u32(d, r + 4) == pl[orden[i]].reg && u32(d, r + 8) == pl[orden[i]].pid && u32(d, r + 12) == 0;
-					}
-					if (ok) {
-						const size_t libre = k0 + kTamK * n;
-						ok = u32(d, libre + 4) == 0xffff && u32(d, libre + 8) == 0 && u32(d, libre) >= kFlagLibreMin
-							&& u32(d, libre + kTamK + 4) == 0xffff && u32(d, libre + kTamK + 8) == 0;
-					}
-					if (ok) {
-						Alineacion a;
-						a.ofsOrden = o; a.ofsRoles = o + kOrdenARoles; a.ofsK = k0; a.orden = orden;
-						for (size_t i = 0; i < kBytesRoles; i++) a.roles[i] = d[a.ofsRoles + i];
-						for (size_t i = 0; i < n; i++) a.flagsK.push_back(u32(d, k0 + kTamK * i));
-						a.flagLibreK = u32(d, k0 + kTamK * n);
-						halladas.push_back(std::move(a));
-					}
-				}
-				h++;
-			}
+		// 2) La lista K, por estructura. Lo normal es que refleje el orden (K[i] = plantilla[orden[i]]); si el juego aún no
+		//    la rehízo (queda atrasada tras un cambio de plantilla), se conservan los flags por jugador y se reconstruye.
+		auto ks = buscarK(d, pl);
+		if (ks.empty()) return R::mal("ALINEACION_NO_HALLADA", "No se encontró la lista K del equipo");
+		if (ks.size() > 1) return R::mal("ALINEACION_AMBIGUA", std::to_string(ks.size()) + " listas K candidatas; no se toca nada");
+		const KHallada& kh = ks[0];
+		a.ofsK = kh.k0; a.flagLibreK = kh.flagLibre;
+		a.kEspejo = kh.usados.size() == n;
+		for (size_t i = 0; i < n; i++) {
+			const Plaza& p = pl[a.orden[i]];
+			uint32_t flag = i == 0 ? 0 : kFlagLibreMin;
+			bool hallado = false;
+			for (size_t j = 0; j < kh.usados.size(); j++)
+				if (kh.usados[j][1] == p.reg && kh.usados[j][2] == p.pid) { flag = kh.usados[j][0]; hallado = true; if (j != i) a.kEspejo = false; break; }
+			if (!hallado) a.kEspejo = false;
+			if (i == 0) flag = 0;
+			a.flagsK.push_back(flag);
 		}
-		if (halladas.empty()) return R::mal("ALINEACION_NO_HALLADA", "Orden de formación sin lista K que lo refleje");
-		if (halladas.size() > 1) return R::mal("ALINEACION_AMBIGUA", std::to_string(halladas.size()) + " candidatas; no se toca nada");
-		return R::bien(std::move(halladas[0]));
+		return R::bien(std::move(a));
 	}
 
 	Resultado<uint16_t> GuardadoLM::moverUsuarioAIA(int kUsuario, int kDestino, uint32_t pid, uint16_t dorsal, uint32_t pidSustituto) {
@@ -520,21 +652,21 @@ namespace mercado::lm {
 
 			// En cada tabla el jugador se busca por su (reg, pid): los fichajes recientes no están en su índice de
 			// plantilla sino al final (tablas C y D: 24 del primer equipo, 32 juveniles y luego los fichados).
-			struct Objetivo { TablaAlineada t; int j; int usados; int repetidos; };
+			struct Objetivo { TablaAlineada t; std::vector<int> j; int ext; Politica politica; };
 			std::vector<Objetivo> objetivos;
 			std::string descartadas;
 			const Plaza& quien = pu[size_t(idx)];
 			for (const auto& t : tablas) {
 				if (t.ofsReg0 == a.ofsK + 4) continue;                   // la lista K no es una tabla: se trata aparte
 				if (std::any_of(objetivos.begin(), objetivos.end(), [&](const Objetivo& o) { return o.t.ofsReg0 == t.ofsReg0 && o.t.stride == t.stride && o.t.dir == t.dir; })) continue;
-				const int usados = usadosEn(_datos, t);
+				const int ext = extensionDe(_datos, t);
 				// Una tabla de la plantilla tiene a TODOS los jugadores. Si no (p. ej. la ficha del último partido, que
 				// el juego crea al jugar y lista solo a los que jugaron, en orden de plantilla), no es de las nuestras:
 				// es historial y no se toca. Si faltara una tabla de verdad, la comprobación de firmas de abajo lo detecta.
-				bool estanTodos = usados >= n;
+				bool estanTodos = ext >= n;
 				for (int i = 0; i < n && estanTodos; i++) {
 					bool esta = false;
-					for (int r = 0; r < usados && !esta; r++) {
+					for (int r = 0; r < ext && !esta; r++) {
 						const size_t o = size_t(regDe(t, r));
 						esta = u32(_datos, o) == pu[size_t(i)].reg && u32(_datos, o + 4) == pu[size_t(i)].pid;
 					}
@@ -542,22 +674,25 @@ namespace mercado::lm {
 				}
 				if (!estanTodos) {
 					char hexd[32]; std::snprintf(hexd, sizeof hexd, "%zx", t.ofsReg0);
-					descartadas += "descartada (no es de la plantilla: " + std::to_string(usados) + " registros) paso " + std::to_string(t.stride) + " en 0x" + hexd + "\n";
+					descartadas += "descartada (no es de la plantilla: " + std::to_string(ext) + " registros) paso " + std::to_string(t.stride) + " en 0x" + hexd + "\n";
 					continue;
 				}
-				int j = -1, rep = 0;
-				for (int i = 0; i < usados; i++) {
+				std::vector<int> j;
+				for (int i = 0; i < ext; i++) {
 					const size_t r = size_t(regDe(t, i));
-					if (u32(_datos, r) == quien.reg && u32(_datos, r + 4) == quien.pid) { if (j < 0) j = i; else rep++; }
+					if (u32(_datos, r) == quien.reg && u32(_datos, r + 4) == quien.pid) j.push_back(i);
 				}
-				if (j < 0) return R::mal("JUGADOR_NO_EN_TABLA", "El jugador no aparece en la tabla de paso " + std::to_string(t.stride) + (t.dir < 0 ? "↓" : ""));
-				objetivos.push_back({ t, j, usados, rep });
+				if (j.empty()) return R::mal("JUGADOR_NO_EN_TABLA", "El jugador no aparece en la tabla de paso " + std::to_string(t.stride) + (t.dir < 0 ? "↓" : ""));
+				// A2 es la segunda tabla de 24 B, exactamente a 976 B de A (40 registros + 16 B); el juego no la toca al momento.
+				const bool esA2 = t.stride == 24 && t.dir > 0 && std::any_of(tablas.begin(), tablas.end(), [&](const TablaAlineada& x) {
+					return x.stride == 24 && x.dir > 0 && x.ofsReg0 + kDistanciaA2 == t.ofsReg0; });
+				objetivos.push_back({ t, j, ext, politicaDe(t, esA2) });
 			}
 			// Tienen que estar las 12 tablas conocidas (ESTRUCTURA-ML.md §4); si hay más (p. ej. una que el juego
-			// rellena al avanzar la temporada) también se compactan, porque van en el mismo orden que la plantilla.
+			// rellena al avanzar la temporada) también se tratan, porque llevan los mismos (reg, pid).
 			{
 				struct Firma { size_t stride; int dir; int veces; };
-				Firma firmas[] = { {24,+1,1}, {24,-1,1}, {44,+1,1}, {368,+1,1}, {192,+1,1}, {52,+1,1}, {108,+1,3}, {5628,+1,1}, {48,+1,1}, {16,+1,1} };
+				Firma firmas[] = { {24,+1,2}, {24,-1,1}, {44,+1,1}, {368,+1,1}, {192,+1,1}, {52,+1,1}, {108,+1,3}, {5628,+1,1}, {48,+1,1}, {16,+1,1} };
 				std::string faltan;
 				for (const auto& f : firmas) {
 					const int hay = int(std::count_if(objetivos.begin(), objetivos.end(), [&](const Objetivo& o) { return o.t.stride == f.stride && o.t.dir == f.dir; }));
@@ -565,14 +700,23 @@ namespace mercado::lm {
 				}
 				if (!faltan.empty()) return R::mal("TABLAS_INESPERADAS", "Faltan tablas conocidas del equipo del usuario:" + faltan);
 				if (objetivos.size() < kTablasEsperadas) return R::mal("TABLAS_INESPERADAS", "Solo " + std::to_string(objetivos.size()) + " tablas");
+				// Las de un solo registro por jugador no pueden tenerlo repetido (solo la de contratos: ofertas abiertas).
+				for (const auto& o : objetivos)
+					if (o.j.size() > 1 && o.t.stride != 48) return R::mal("TABLA_DANADA", "El jugador está repetido en la tabla de paso " + std::to_string(o.t.stride));
 			}
+			// Club interno del usuario = (ID option << 14) | índice del bloque; está en la cabecera de cada contrato (§12).
+			uint32_t clubUsuario = 0;
+			for (const auto& o : objetivos) if (o.t.stride == 48) clubUsuario = u32(_datos, o.t.ofsReg0 - kRegEnContrato + 4);
+			if ((clubUsuario & 0x3fff) != uint32_t(kUsuario))
+				return R::mal("CONTRATOS_INESPERADOS", "La tabla de contratos no lleva el club del usuario (¿otra versión?)");
+
 			_ultimoInforme = descartadas;
 			for (const auto& o : objetivos) {
 				_ultimoInforme += "tabla paso " + std::to_string(o.t.stride) + (o.t.dir < 0 ? "↓" : "") + " en 0x";
 				char hex[32]; std::snprintf(hex, sizeof hex, "%zx", o.t.ofsReg0); _ultimoInforme += hex;
-				_ultimoInforme += ": registro " + std::to_string(o.j) + " de " + std::to_string(o.usados);
-				if (o.repetidos) _ultimoInforme += " (quedan " + std::to_string(o.repetidos) + " repetidos sin tocar)";
-				_ultimoInforme += "\n";
+				_ultimoInforme += ": registro";
+				for (int j : o.j) _ultimoInforme += " " + std::to_string(j);
+				_ultimoInforme += " de " + std::to_string(o.ext) + (o.politica == Politica::Hueco ? " → hueco" : o.politica == Politica::Compactar ? " → compacta" : " → no se toca (A2)") + "\n";
 			}
 
 			// Alineación: dónde está el que se va y, si hace falta, el sustituto.
@@ -594,8 +738,18 @@ namespace mercado::lm {
 			// --- Todo cuadra: se trabaja sobre una copia y solo al final se adopta ----------------
 			Datos d = _datos;
 			std::string porque;
-			for (const auto& o : objetivos)
-				if (!quitarRegistro(d, o.t, o.j, porque)) return R::mal("TABLA_DANADA", porque);
+			for (const auto& o : objetivos) {
+				if (o.politica == Politica::NoTocar) continue;
+				if (o.politica == Politica::Hueco) { if (!vaciarRegistro(d, o.t, o.j[0], o.ext, porque)) return R::mal("TABLA_DANADA", porque); continue; }
+				// Compactar: de atrás hacia adelante para que los índices anteriores sigan valiendo (contratos: TODOS los suyos).
+				int ext = o.ext;
+				for (auto it = o.j.rbegin(); it != o.j.rend(); ++it, --ext)
+					if (!quitarRegistro(d, o.t, *it, ext, porque)) return R::mal("TABLA_DANADA", porque);
+			}
+			// Negociaciones abiertas por el jugador (ofertas de otros clubes): el juego las borra y compacta la lista.
+			const int negociaciones = quitarNegociaciones(d, clubUsuario, quien.reg, quien.pid);
+			if (negociaciones < 0) return R::mal("TABLA_DANADA", "La lista de negociaciones no termina");
+			_ultimoInforme += "negociaciones abiertas quitadas: " + std::to_string(negociaciones) + "\n";
 
 			// Orden de formación y roles (prototipo v6): el sustituto ocupa el puesto; se quita de su sitio; los índices > idx bajan 1.
 			std::vector<uint8_t> orden = a.orden;

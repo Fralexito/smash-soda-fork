@@ -193,28 +193,59 @@ int main() {
 		plantilla(5, U, dU); plantilla(7, IA, dIA);
 		{ std::vector<std::pair<uint32_t, uint32_t>> B; std::vector<uint16_t> dB; for (uint32_t i = 0; i < 12; i++) { B.push_back({ 3000 + i, 8000 + i }); dB.push_back(uint16_t(1 + i)); } plantilla(8, B, dB); }
 		// Tablas: registro = [x][reg][pid][…]; el contenido lleva una marca por registro para ver que se mueve entero.
+		// A2 va exactamente a 976 B de A (como en el juego). La de contratos (48) tiene el registro real 28 B antes de `reg`:
+		// [índice][club][tipo][inicio][-1][-1][x][reg][pid][sueldo][cláusula][fin]; el jugador 3 tiene además una OFERTA (tipo 3).
+		const uint32_t clubU = (2005u << 14) | 5u, clubOtro = (2300u << 14) | 300u;
 		struct T { size_t stride; int dir; size_t reg0; };
-		std::vector<T> tablas = { {24,+1,0}, {24,-1,0}, {44,+1,0}, {368,+1,0}, {192,+1,0}, {52,+1,0}, {108,+1,0}, {108,+1,0}, {108,+1,0}, {5628,+1,0}, {48,+1,0}, {16,+1,0} };
+		std::vector<T> tablas = { {24,+1,0}, {24,+1,0}, {24,-1,0}, {44,+1,0}, {368,+1,0}, {192,+1,0}, {52,+1,0}, {108,+1,0}, {108,+1,0}, {108,+1,0}, {5628,+1,0}, {48,+1,0}, {16,+1,0} };
 		size_t cur = FIN + 0x1000;
-		for (auto& t : tablas) {
+		for (size_t ti = 0; ti < tablas.size(); ti++) {
+			auto& t = tablas[ti];
 			const size_t nreg = t.stride == 368 ? 60 : 30;   // la de 368 lleva 26 + juveniles
+			if (ti == 1) cur = tablas[0].reg0 - 4 + 976;     // A2
+			if (t.stride == 48) cur += 32;                   // sitio para la cabecera del registro 0
 			size_t ini = cur + (t.dir < 0 ? t.stride * (nreg + 2) : 0);
 			t.reg0 = ini + 4;
 			for (size_t i = 0; i < nreg + 2; i++) {
 				const long long r0 = (long long)ini + t.dir * (long long)(i * t.stride);
-				const bool usado = i < (t.stride == 368 ? 26 + 30 : 26);
+				const size_t nUsados = t.stride == 368 ? 26 + 30 : t.stride == 48 ? 27 : 26;
+				const bool usado = i < nUsados;
 				uint32_t reg = 0xffff, pid = 0;
-				if (usado) { if (i < 26) { reg = 1000 + uint32_t(i); pid = 5000 + uint32_t(i); } else { reg = 20000 + uint32_t(i); pid = 7000 + uint32_t(i); } }
+				if (usado) { if (i < 26) { reg = 1000 + uint32_t(i); pid = 5000 + uint32_t(i); } else if (t.stride == 48) { reg = 1003; pid = 5003; } else { reg = 20000 + uint32_t(i); pid = 7000 + uint32_t(i); } }
 				p32(size_t(r0), 0xAA000000 | uint32_t(i)); p32(size_t(r0) + 4, reg); p32(size_t(r0) + 8, pid);
-				for (size_t b = 12; b < t.stride; b++) d[size_t(r0) + b] = uint8_t(usado ? (i + 1) : 0);
+				const size_t finMarca = t.stride == 48 ? 24 : t.stride;
+				for (size_t b = 12; b < finMarca; b++) d[size_t(r0) + b] = uint8_t(usado ? (i + 1) : 0);
+				if (t.stride == 48) {   // cabecera del registro (28 B antes de reg): índice, club, tipo (5 contrato / 3 oferta), inicio, -1, -1
+					const size_t h = size_t(r0) - 24;
+					p32(h, usado ? uint32_t(i) : 0xffff); p32(h + 4, !usado ? 0xffffffff : i == 26 ? clubOtro : clubU);
+					p32(h + 8, !usado ? 0 : i == 26 ? 3 : 5); p32(h + 12, usado && i < 26 ? 0x010707e4 : 0xffff); p32(h + 16, 0xffffffff); p32(h + 20, 0xffffffff);
+				}
+				if (t.stride == 24 && ti == 1) p32(size_t(r0), 0x40a00000);   // A2: valoración (float 5.0) antes de reg
 			}
 			cur += t.stride * (nreg + 3) + 64;
 		}
-		// Orden de formación (permutación), roles y lista K en su espejo.
+		// Lista de negociaciones abiertas (60 B): [estado][club que negocia][banderas][ffff][-1][-1][ffff][club del jugador][reg][pid][monto][monto][ffff][ffff][0]
+		const size_t NEG = cur + 0x200;
+		{
+			auto negociacion = [&](size_t i, uint32_t reg, uint32_t pid, uint32_t monto) {
+				const size_t r = NEG + 60 * i;
+				p32(r, 0x1d); p32(r + 4, clubOtro); p32(r + 8, 1); p32(r + 12, 0xffff); p32(r + 16, 0xffffffff); p32(r + 20, 0xffffffff); p32(r + 24, 0xffff);
+				p32(r + 28, clubU); p32(r + 32, reg); p32(r + 36, pid); p32(r + 40, monto); p32(r + 44, monto); p32(r + 48, 0xffff); p32(r + 52, 0xffff); p32(r + 56, 0);
+			};
+			negociacion(0, 1001, 5001, 2600); negociacion(1, 1003, 5003, 62400); negociacion(2, 1012, 5012, 100);
+			for (size_t i = 3; i < 6; i++) {   // vacías
+				const size_t r = NEG + 60 * i; const uint32_t v[15] = { 0xffff, 0xffffffff, 0, 0xffff, 0xffffffff, 0xffffffff, 0xffff, 0xffffffff, 0xffff, 0, 0, 0, 0xffff, 0xffff, 0 };
+				for (int w = 0; w < 15; w++) p32(r + 4 * size_t(w), v[w]);
+			}
+			cur = NEG + 60 * 6 + 64;
+		}
+		// Orden de formación (permutación) y roles: en el bloque de alineación del usuario (627, más abajo); lista K en su espejo.
 		std::vector<uint8_t> orden; for (int i = 25; i >= 0; i--) orden.push_back(uint8_t(i));   // 25,24,…,0
-		const size_t LU = FIN + 0x100, RO = LU + 0x28;
-		for (size_t i = 0; i < 40; i++) d[LU + i] = i < 26 ? orden[i] : 0xff;
-		const uint8_t roles[6] = { 3, 9, 0, 0, 0, 25 }; for (int i = 0; i < 6; i++) d[RO + i] = roles[i];
+		const uint8_t roles[6] = { 3, 9, 0, 0, 0, 25 };
+		// Un señuelo: la misma permutación suelta en otro sitio NO debe tomarse por el orden del usuario.
+		const size_t SENUELO = FIN + 0x100;
+		for (size_t i = 0; i < 40; i++) d[SENUELO + i] = i < 26 ? orden[i] : 0xff;
+		for (int i = 0; i < 6; i++) d[SENUELO + 0x28 + i] = roles[i];
 		const size_t K0 = cur + 0x100;
 		for (size_t i = 0; i < 26; i++) { const size_t r = K0 + 16 * i; p32(r, i ? 0xc0 : 0); p32(r + 4, 1000 + orden[i]); p32(r + 8, 5000 + orden[i]); }
 		p32(K0 + 16 * 26, 0xc1); p32(K0 + 16 * 26 + 4, 0xffff); p32(K0 + 16 * 27, 0xc7); p32(K0 + 16 * 27 + 4, 0xffff); p32(K0 + 16 * 28, 0xc7); p32(K0 + 16 * 28 + 4, 0xffff);
@@ -233,6 +264,10 @@ int main() {
 			for (size_t i = 0; i < 40; i++) d[bloqueAli(k) + 0x220 + i] = i < o.size() ? o[i] : 0xff;
 			for (size_t i = 0; i < 6; i++) d[bloqueAli(k) + 0x220 + 0x28 + i] = roles[i];
 		};
+		// El orden del USUARIO (equipo 5) va en el bloque 627 (el primero con su ID); el 628 queda como identidad (reserva del juego).
+		ponerOrden(627, orden, { roles[0], roles[1], roles[2], roles[3], roles[4], roles[5] });
+		{ std::vector<uint8_t> o; for (uint8_t i = 0; i < 26; i++) o.push_back(i); ponerOrden(628, o, { 0, 0, 0, 0, 0, 0 }); }
+		const size_t LU = bloqueAli(627) + 0x220, RO = LU + 0x28;
 		auto leerOrden = [&](const std::vector<uint8_t>& dd, int k) { return std::vector<uint8_t>(dd.begin() + long(bloqueAli(k) + 0x220), dd.begin() + long(bloqueAli(k) + 0x220 + 46)); };
 		auto compacto = [](std::vector<uint8_t> o, std::array<uint8_t, 6> roles) { o.resize(40, 0xff); o.insert(o.end(), roles.begin(), roles.end()); return o; };
 		auto equipoIA = [&](int k, uint32_t reg0, uint32_t pid0, int n) {
@@ -268,7 +303,8 @@ int main() {
 		CHECK(g.ok());
 		if (g.ok()) {
 			CHECK(g.valor->esEquipoUsuario(5) && !g.valor->esEquipoUsuario(7));
-			CHECK(g.valor->tablasDe(5).size() == 13);   // las 12 de la plantilla + la ficha del partido (la venta la descarta)
+			CHECK(g.valor->tablasDe(5).size() == 14);   // las 12 de la plantilla + A2 + la ficha del partido (la venta la descarta)
+			if (g.valor->tablasDe(5).size() != 14) for (auto& t : g.valor->tablasDe(5)) std::printf("  tabla paso %zu dir %d en 0x%zx\n", t.stride, t.dir, t.ofsReg0);
 			auto a = g.valor->alineacionDe(5);
 			CHECK(a.ok());
 			if (a.ok()) { CHECK(a.valor->ofsOrden == LU && a.valor->ofsRoles == RO && a.valor->ofsK == K0 && a.valor->flagLibreK == 0xc1); }
@@ -290,16 +326,47 @@ int main() {
 				CHECK(u.valor->plantilla.size() == 25 && ia.valor->plantilla.size() == 4);
 				CHECK(ia.valor->plantilla.back().pid == 5003 && ia.valor->plantilla.back().reg == 1003 && ia.valor->plantilla.back().dorsal == 99);
 				CHECK(u.valor->plantilla[3].pid == 5004 && u.valor->plantilla[3].dorsal == 14);
-				// Tablas: el registro 3 desapareció, el 4 ocupa su sitio con su contenido entero, el último usado quedó vacío.
-				for (const auto& t : tablas) {
+				// Tablas, como lo hace el juego (§12): A B C D E F J M → el registro 3 queda VACÍO en su sitio (el 4 no se mueve);
+				// G H (108) e I (48) → se compacta (el 4 ocupa el sitio del 3 con su contenido entero); A2 → no se toca.
+				for (size_t ti = 0; ti < tablas.size(); ti++) {
+					const auto& t = tablas[ti];
 					const auto& dd = g.valor->datos();
 					auto u32 = [&](size_t o) { return uint32_t(dd[o] | (dd[o + 1] << 8) | (dd[o + 2] << 16) | (uint32_t(dd[o + 3]) << 24)); };
-					const long long r3 = (long long)t.reg0 + t.dir * 3 * (long long)t.stride;
-					CHECK(u32(size_t(r3)) == 1004 && u32(size_t(r3) + 4) == 5004 && dd[size_t(r3) + 8] == 5 && u32(size_t(r3) - 4) == (0xAA000000 | 4));
-					const size_t nUs = t.stride == 368 ? 56 : 26;
+					const long long r3 = (long long)t.reg0 + t.dir * 3 * (long long)t.stride, r4 = (long long)t.reg0 + t.dir * 4 * (long long)t.stride;
+					const size_t nUs = t.stride == 368 ? 56 : t.stride == 48 ? 27 : 26;
 					const long long rUlt = (long long)t.reg0 + t.dir * (long long)(nUs - 1) * (long long)t.stride;
-					CHECK(u32(size_t(rUlt)) == 0xffff && u32(size_t(rUlt) + 4) == 0 && dd[size_t(rUlt) + 8] == 0);
-					if (t.stride == 368) { const long long r25 = (long long)t.reg0 + 25 * (long long)t.stride; CHECK(u32(size_t(r25)) == 20026 && u32(size_t(r25) + 4) == 7026); }
+					if (ti == 1) {   // A2 intacta
+						CHECK(u32(size_t(r3)) == 1003 && u32(size_t(r3) + 4) == 5003 && u32(size_t(r3) - 4) == 0x40a00000);
+					}
+					else if (t.stride == 108 || t.stride == 48) {   // compactada
+						CHECK(u32(size_t(r3)) == 1004 && u32(size_t(r3) + 4) == 5004 && dd[size_t(r3) + 8] == 5 && u32(size_t(r3) - 4) == (0xAA000004));
+						CHECK(u32(size_t(rUlt)) == 0xffff && u32(size_t(rUlt) + 4) == 0 && dd[size_t(rUlt) + 8] == 0);
+						if (t.stride == 48) {
+							CHECK(u32(size_t(r3) - 28) == 4 && u32(size_t(r3) - 24) == clubU && u32(size_t(r3) - 20) == 5);   // la cabecera viaja con el registro
+							const long long r25 = (long long)t.reg0 + 25 * 48, r24 = (long long)t.reg0 + 24 * 48;
+							CHECK(u32(size_t(r25)) == 0xffff && u32(size_t(r24)) == 1025 && u32(size_t(r24) - 28) == 25);   // la oferta (registro 26) también se fue: 27 → 25
+							bool queda5003 = false; for (int i = 0; i < 30; i++) queda5003 |= u32(size_t(t.reg0 + 48 * i) + 4) == 5003;
+							CHECK(!queda5003);
+						}
+					}
+					else {   // hueco en su sitio
+						CHECK(u32(size_t(r3)) == 0xffff && u32(size_t(r3) + 4) == 0 && u32(size_t(r3) - 4) == (0xAA000003));
+						CHECK(u32(size_t(r4)) == 1004 && u32(size_t(r4) + 4) == 5004 && dd[size_t(r4) + 8] == 5);
+						CHECK(u32(size_t(rUlt)) == (t.stride == 368 ? 20055u : 1025u));
+						size_t sucios = 0; for (size_t b = 8; b < t.stride - 4; b++) sucios += dd[size_t(r3) + b] != 0;
+						if (t.stride == 24 && t.dir > 0) CHECK(sucios == 2 && dd[size_t(r3) + 16] == 0xff && dd[size_t(r3) + 17] == 0xff);   // A: fecha vacía
+						else if (t.stride == 24 && t.dir < 0) CHECK(sucios == 2 && dd[size_t(r3) + 10] == 4 && dd[size_t(r3) + 11] == 4);     // B: conserva +10
+						else CHECK(sucios == 0);
+						if (t.stride == 368) { const long long r26 = (long long)t.reg0 + 26 * (long long)t.stride; CHECK(u32(size_t(r26)) == 20026 && u32(size_t(r26) + 4) == 7026); }
+					}
+				}
+				// Negociaciones: la del 5003 desapareció y la lista se compactó (5001, 5012, vacía…).
+				{
+					const auto& dd = g.valor->datos();
+					auto u32 = [&](size_t o) { return uint32_t(dd[o] | (dd[o + 1] << 8) | (dd[o + 2] << 16) | (uint32_t(dd[o + 3]) << 24)); };
+					CHECK(u32(NEG + 36) == 5001 && u32(NEG + 60 + 36) == 5012 && u32(NEG + 60 + 40) == 100 && u32(NEG + 60 + 4) == clubOtro);
+					CHECK(u32(NEG + 120 + 28) == 0xffffffff && u32(NEG + 120 + 32) == 0xffff && u32(NEG + 120 + 8) == 0 && u32(NEG + 180 + 28) == 0xffffffff);
+					CHECK(g.valor->ultimoInforme().find("negociaciones abiertas quitadas: 1") != std::string::npos);
 				}
 				// Orden: 25,24,…,4,3,2,1,0 → el 3 (posición 22) lo ocupa el 20 (que estaba en la posición 5) y todo > 3 baja uno.
 				auto a2 = g.valor->alineacionDe(5);
@@ -362,9 +429,23 @@ int main() {
 
 			// Usuario: un suplente sin rol se va SIN sustituto (los de atrás suben), igual que en la IA.
 			// Tras la primera venta el orden del usuario es 24,23,22,21,20,18,…,4,3,19,2,1,0: en el puesto 12 está el índice 11 (5012).
+			// Antes, se deja la lista K ATRASADA (la de antes de la primera venta, con 26 y el vendido), como la deja el juego
+			// un tiempo tras un cambio de plantilla: hay que encontrarla igual, conservar los flags y reconstruirla.
+			{
+				std::vector<uint8_t> dd = g.valor->datos();
+				std::copy(antes.begin() + long(K0), antes.begin() + long(K0 + 16 * 29), dd.begin() + long(K0));
+				auto gk = GuardadoLM::desdeDatos(dd); CHECK(gk.ok());
+				auto ak = gk.valor->alineacionDe(5);
+				CHECK(ak.ok() && !ak.valor->kEspejo && ak.valor->orden.size() == 25 && ak.valor->flagsK.size() == 25 && ak.valor->flagsK[0] == 0 && ak.valor->flagsK[1] == 0xc0);
+				auto vk = gk.valor->moverUsuarioAIA(5, 7, 5012, 0, 0);
+				CHECK(vk.ok());
+				auto ak2 = gk.valor->alineacionDe(5);
+				CHECK(ak2.ok() && ak2.valor->kEspejo && ak2.valor->orden.size() == 24 && ak2.valor->flagLibreK == 0xc0);
+			}
 			auto a3 = g.valor->alineacionDe(5);
-			CHECK(a3.ok() && a3.valor->orden.size() == 25 && a3.valor->orden[12] == 11);
+			CHECK(a3.ok() && a3.valor->kEspejo && a3.valor->orden.size() == 25 && a3.valor->orden[12] == 11);
 			auto v2 = g.valor->moverUsuarioAIA(5, 7, 5012, 0, 0);
+			if (!v2.ok()) std::printf("  v2: %s %s\n", v2.error.codigo.c_str(), v2.error.detalle.c_str());
 			CHECK(v2.ok());
 			auto a4 = g.valor->alineacionDe(5);
 			CHECK(a4.ok() && a4.valor->orden.size() == 24 && a4.valor->flagLibreK == 0xc0);

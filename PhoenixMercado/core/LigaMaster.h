@@ -50,11 +50,12 @@ namespace mercado::lm {
 		size_t ofsReg0 = 0;    ///< posición del campo `reg` del registro 0
 		size_t stride = 0;     ///< bytes entre registros
 		int dir = +1;
+		size_t inicioRel = 4;  ///< el registro empieza tantos bytes antes de `reg` (4 casi siempre; 28 en la de contratos)
 	};
 
 	/// Alineación del equipo del usuario (solo él la tiene). Tres piezas que el juego mantiene en espejo:
 	///   · `orden`: índices de plantilla en orden de formación (0–10 XI; después la banca —12 en este guardado— y las reservas),
-	///     40 bytes en el archivo, los libres a 0xff;
+	///     40 bytes en el archivo, los libres a 0xff; vive en el bloque de alineación del usuario (el 627 en la referencia);
 	///   · `roles`: 6 índices de plantilla (capitán, lanzadores…) justo después (+0x28);
 	///   · lista K: un registro de 16 B `[flag, reg, pid, 0]` por posición de `orden` (K[i] = plantilla[orden[i]]),
 	///     seguida de un registro libre (reg 0xffff) con flag 0xc0+ y luego 0xc7. Estrategia lee K.
@@ -64,8 +65,9 @@ namespace mercado::lm {
 		size_t ofsK = 0;                ///< campo `flag` del registro K0
 		std::vector<uint8_t> orden;     ///< tantas entradas como jugadores
 		std::array<uint8_t, 6> roles{};
-		std::vector<uint32_t> flagsK;   ///< flag de cada K[i] usado
+		std::vector<uint32_t> flagsK;   ///< flag de cada K[i] usado (por jugador; si K estaba atrasada, 0xc0 para los nuevos)
 		uint32_t flagLibreK = 0;        ///< flag del primer registro libre (0xc0 con 25 jugadores, 0xc1 con 26)
+		bool kEspejo = true;            ///< false = la lista K del archivo no reflejaba el orden (el juego la rehace más tarde)
 	};
 
 	class GuardadoLM {

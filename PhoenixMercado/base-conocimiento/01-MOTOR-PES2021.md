@@ -48,10 +48,13 @@ corrida (en un amistoso el portero suplente puede salir de delantero). Hay que a
 | Tablas del equipo del usuario | 0xBE5FC8 … 0x1049B3C | ver §E | ✅ |
 | Competiciones | desde ~0xB08000, **bloques de 3000 B** | lista de equipos de cada competición (IDs u32, relleno `0x0003FFFF`) | 🔎 |
 | Calendario del usuario (meses especiales) | 0xA8D6D8 (enero), 0xAAB288 (junio) | 1 registro de 708 B por día: fecha · ID competición · rival; en días de liga, **10 IDs de partido u16** | 🔎 |
-| Tabla de clubes (16 B) | 0xC016C0, 263 registros | equipo u16 en +8 y un valor decreciente en +12/+14 (¿prestigio?) | ❓ |
+| **Ranking de clubes** (16 B) | 0xC016B0, 263 registros | `[?][ID interno de club u32][puesto u32][v u16 ×2]`; Real Madrid 1.º (1015), PSG 2.º, City 3.º… | 🔎 |
 | **Blob comprimido** | cabecera 0x1140364, zlib desde 0x11403D4 | ver §H | 🔎 |
 | Contratos (tabla I) | tras el blob (se desplaza con su tamaño) | ver §E | ✅ |
+| Negociaciones abiertas | tras el blob (0x1279F18 en la referencia), registros de **60 B** | ver §E | ✅ |
 | Historial de traspasos | ~0x12B430F, registros de 36 B | jugador, monto, fecha | 🔎 |
+| Noticias / caja | 0xBE34B4 (`[reg][pid]…[tipo][fecha]`) · 0xC8018C (36 B, `[reg][pid]…[monto i32 ×100]`) | el juego anota ahí cada salida y cada pago | 🔎 |
+| Jugadores creados por el juego | en las plantillas de la IA: `reg = 0xDB65xxxx`, pid > 126.000 | regens/canteranos; 771 al empezar, 1.127 un mes después; no están en el catálogo del parche | 🔎 |
 
 ## D. Alineación de los equipos de la IA (bloque de 600 B)
 
@@ -66,22 +69,26 @@ corrida (en un amistoso el portero suplente puede salir de delantero). Hay que a
 
 Reglas vistas en el juego: el juego lee las **primeras n entradas** (n = plantilla); si una es 0xFF sale un jugador en blanco «0».
 Formatos válidos: compacto (n + 0xFF), identidad (0…39) y «0…n−1, FF, n…». El que llega entra como **última reserva**; si se va un
-titular, una reserva ocupa su puesto. Bloque 627 = el equipo del usuario (su orden es el de §E); 628 y el bloque original del club
-del usuario no se mantienen.
+titular, una reserva ocupa su puesto. **Bloque 627 = el equipo del usuario**: lleva su ID (-11), de técnico el nombre del mánager, y
+su orden es el de verdad (§E). El 628 es su reserva (orden identidad) y el bloque del índice del club del usuario (154 en la
+referencia) es la copia «como equipo de la IA» (ID real 0xAD, orden identidad): no se usan.
 
 ## E. El equipo del usuario: tablas, alineación y contratos
 
 | Qué | Cómo se localiza | Estado |
 |---|---|---|
-| **12 tablas alineadas** con la plantilla (A, A2, B, C, D, E, F, G, H, M, I, J y L) | por ancla: los 5 primeros `(reg, pid)` de la plantilla a paso fijo; pasos 24, 24, 24↓, 44, 368, 192, 52, 108×3, 5628, 48, 16 | ✅ |
-| Registro de cada tabla | empieza 4 B antes de `reg`: `[x][reg][pid]…`; vacío = reg 0/0xFFFF con pid 0 | ✅ |
-| Fichajes recientes en C y D | van **al final**, tras 32 juveniles (no en su índice): buscar por `(reg, pid)` | ✅ |
+| **12 tablas** con un registro por jugador (A, A2, B, C, D, E, F, G, H×3, M, I, J) | por ancla: los 5 primeros `(reg, pid)` de la plantilla a paso fijo, **saltando huecos** y fichas de gente que ya no está (hasta 8); pasos 24, 24, 24↓, 44, 368, 192, 52, 108×3, 5628, 48, 16 | ✅ |
+| Cómo las usa el juego | **por (reg, pid), no por índice**: admite huecos en medio; los fichajes nuevos van al final (en D, tras los 32 juveniles) | ✅ |
+| Registro de cada tabla | empieza 4 B antes de `reg` (`[x][reg][pid]…`) salvo contratos (28 B antes); vacío = reg 0/0xFFFF con pid 0 | ✅ |
+| **Qué hace el juego cuando un jugador se va** | **hueco** en A, B, C, D, E, F, J, M (A: fecha vacía 0xFFFF en +16; B conserva +10; F +40 a 0; M también 0 en la palabra anterior al siguiente `reg`); **compacta** G, H y contratos; **no toca** A2 ni K al momento | ✅ (réplica idéntica byte a byte) |
+| A2 | a 976 B de A; su campo anterior a `reg` es un **float** (valoración del último partido) | 🔎 |
 | Ficha del último partido | 16 B, solo los que jugaron: **no es tabla de plantilla**, no se toca | ✅ |
-| **Orden de formación** (40 B) + **roles** (6 B) | permutación de 0…n−1 + relleno 0xFF, con roles < n, cruzado con K | ✅ |
-| **Lista K** (Estrategia) | 16 B por puesto `[flag, reg, pid, 0]` espejo del orden; K0 flag 0, usados 0xC0; libre 0xC0 (25) / 0xC1 (26); después 0xC7 | ✅ |
-| **Tabla I = contratos** (paso 48) | tras `[x][reg][pid]`: +0 sueldo anual/100 · +4 cláusula/100 · +8 fin (año u16, mes, día) · +0x14 nº único · +0x18 tipo (18/22/154 vigente; 125/255 **oferta abierta**) · +0x1C inicio | ✅ (cifras = pantalla) |
-| Contratos dobles | un jugador con oferta abierta tiene 2 registros; al salir, el juego borra **los dos** y la negociación | ✅ (visto al despedir) |
-| Lista de ofertas/negociaciones | tras el blob (0x1279F74 en el guardado de referencia): registros con club, jugador y club que oferta | 🔎 |
+| **Orden de formación** (40 B) + **roles** (6 B) | bloque 627 de alineaciones (+0x220 / +0x248): el primer bloque con el ID del usuario | ✅ |
+| **Lista K** (Estrategia) | 16 B por puesto `[flag, reg, pid, 0]`; K0 flag 0, usados 0xC0–0xC6 (flags por jugador: p. ej. 0xC4), libre 0xC0/0xC1, después 0xC7. Se localiza por estructura; puede estar **atrasada** respecto al orden (el juego la rehace después) | ✅ |
+| **ID interno de club** | `(ID option << 14) \| índice del bloque` (City 0x2B409A = 173, 154); el bloque del usuario lleva -11 en vez del ID | ✅ |
+| **Contratos** (tabla I, 48 B; el registro empieza **28 B antes** de `reg`) | `[índice u8][ID club][tipo u8][inicio][-1][-1] \| [x u16][reg][pid][sueldo/100][cláusula/100][fin]` · tipo **5** = contrato vigente · tipo **3** = **oferta** de otro club (sin inicio) | ✅ (cifras = pantalla) |
+| Contratos dobles | un jugador con ofertas tiene varios registros (5 + 3…); al salir se borran **todos** | ✅ |
+| **Negociaciones abiertas** (60 B, `reg` en +32) | `[estado u16][ID club que oferta][banderas][0xFFFF][-1][-1][0xFFFF] \| [ID club del jugador][reg][pid][monto/100][monto/100][0xFFFF][0xFFFF][0]`; vacío = -1/0xFFFF; al salir el jugador se borra y se compacta | ✅ |
 
 ## F. Dinero del usuario (todo en u32 × 100 €)
 
@@ -123,5 +130,6 @@ del usuario no se mantienen.
 - Tras un partido reescribe: cabecera 0x30, la zona posterior al blob (contratos, calendario, historial), fichas de 156 B de los
   que jugaron, puntos de liga; **no** corrige plantillas ni alineaciones editadas.
 - Al avanzar el día hace fichajes de la IA (cientos de cambios de plantilla en el último día de mercado).
-- Al salir un jugador del usuario: borra sus contratos y negociación, vacía o compacta sus registros en las tablas y pone a un
-  suplente en su puesto; deja K y A2 para más tarde.
+- Al salir un jugador del usuario: borra sus contratos y negociación, vacía o compacta sus registros en las tablas (ver §E) y pone a un
+  suplente en su puesto; deja K y A2 para más tarde; anota noticia y pago en caja; recalcula las medias del equipo (bloque +0x5DA).
+- Crea jugadores propios (regens, `reg 0xDB65xxxx`) y los reparte entre los clubes de la IA a lo largo de la temporada.

@@ -163,3 +163,15 @@ crecimiento y condición. Ver ESTRUCTURA-ML §15. El calendario de partidos toda
 Se probaron todas las formas habituales de guardar un calendario y ninguna aparece. Pista fuerte: cada jornada tiene **10 números
 de partido** (ej. 285–294) en el calendario del usuario. Falta un experimento: guardar justo antes y justo después de jugar un
 partido, el mismo día. Ver ESTRUCTURA-ML §16.
+
+**8 oct 15:35 · Laboratorio: la venta del C++ comparada byte a byte con el despido de Stones hecho por el juego** — ✅
+Se reprogramó la venta para hacer exactamente lo que hace el juego (huecos en A–F/J/M, compactar G/H/contratos, borrar todas las
+entradas de contratos y la negociación abierta) y se comparó el resultado sobre la ranura 10 con la ranura 11 del juego: **todas las
+tablas, los contratos y las negociaciones quedan idénticos** (solo difieren bytes de relleno que el juego limpia, y lo que no
+replicamos aún: noticias, caja, medias del equipo). Antes de esto, la venta dejaba un contrato fantasma y la oferta abierta.
+Detalle en ESTRUCTURA-ML §17. 146/146 pruebas sintéticas.
+
+**8 oct 15:40 · Prueba 14 · Ranura 13 (`ML0000000C`) · Bettinelli City → Lanús (dorsal 99), desde la ranura 11 del juego** — ⏳ EN PRUEBA
+Primera venta con la lógica nueva y partiendo de un guardado en el que el juego aún no había rehecho la lista K. Qué mirar:
+plantilla del City (22), negociaciones (sin la de Lanús; sigue la del Deportivo por Rulli), contratos (sin Bettinelli; ppto. salarial
++≈2,3 M), Lanús con Bettinelli al final, ficha de Guéhi en el Madrid (club/contrato), jugar y guardar.

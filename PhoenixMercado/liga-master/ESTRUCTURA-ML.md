@@ -248,3 +248,51 @@ plaza 0–19, registros de 2–200 B y campos en cualquier posición; (b) rondas
 **Experimento que falta para cerrar el calendario:** dos guardados de la MISMA fecha, uno justo ANTES de jugar un partido del
 usuario y otro justo DESPUÉS (sin avanzar el día). La diferencia aislará el registro del partido jugado (goles, estado) y con él
 el formato de todo el calendario.
+
+## 17. Contratos, negociaciones y huecos: formato exacto y réplica byte a byte (8 oct, 15:30) — **[VERDAD DEL JUEGO]**
+Comparando la ranura 10 (`ML00000009`) con la 11 (`ML0000000A`, el juego despide a Stones) se cerró lo que faltaba del §12.
+- **ID interno de club** = `(ID option << 14) | índice del bloque de equipo`. City = 0x2b409a → ID 173 (0xad), índice 154 (0x9a).
+  Deportivo A Coruña 0x1bc07d (111 | 125), River 0x228016 (138 | 22), Lanús 0x1e24012 (1929 | 18). Es el ID que usan los
+  contratos, las negociaciones y la tabla de 16 B de 0xc016b0 (que resulta ser un **ranking de clubes**: `[?][ID club][puesto][v u16 ×2]`,
+  Real Madrid 1.º 1015, PSG 2.º 1009, City 3.º 1002…). El bloque de equipo del usuario lleva **-11** (0xfffffff5) en +656 en vez
+  de su ID option (marca de «lo lleva el usuario»); su ID real se recupera de los contratos (`club >> 14`).
+- **Tabla I = contratos, registro de 48 B que empieza 28 B ANTES de `reg`:**
+  `[índice u8+relleno][ID club u32][tipo u8+relleno][inicio (año u16, mes, día)][-1][-1] | [x u16][reg][pid][sueldo/100][cláusula/100][fin]`.
+  Tipo 5 = contrato vigente con el club del registro; **tipo 3 = oferta** de otro club por ese jugador (sin fecha de inicio). Un
+  jugador puede tener su contrato (tipo 5, club del usuario) y una o más ofertas (tipo 3, club que oferta). City tenía 24 contratos
+  + Bettinelli←Lanús, Stones←River, Rulli←Deportivo. Los bytes de relleno llevan basura de memoria; el juego los limpia a 0 cuando
+  reescribe la tabla. El «número único» del §13 era en realidad el ID del club.
+- **Lista de negociaciones abiertas** (tras el blob; 0x1279f18 en la ranura 10), registro de **60 B**, `reg` en +32:
+  `[estado u16][ID club que oferta][banderas u8…][0xffff][-1][-1][0xffff u16] | [ID club del jugador][reg][pid][monto/100][monto/100][0xffff][0xffff][0]`.
+  Stones: River 6.240.000 €, Bettinelli: Lanús 260.000 €, Rulli: Deportivo 3.120.000 €. Registro vacío: estado 0xffff, clubes -1,
+  reg 0xffff. El juego **borra la del que se va y compacta**.
+- **Qué hace el juego con cada tabla del usuario cuando un jugador se va** (y ahora el C++ hace lo mismo, comprobado byte a byte
+  sobre la ranura 10 → resultado idéntico a la ranura 11 salvo relleno):
+  | Tabla | Qué hace el juego | Detalle del hueco |
+  |---|---|---|
+  | A (24) | hueco en su sitio | todo a 0, reg 0xffff, **fecha vacía 0xffff en +16** |
+  | A2 (24, a 976 B de A) | **no la toca** (la rehace después; su campo anterior a `reg` es la valoración del último partido en float) | — |
+  | B (24↓) | hueco | reg 0xffff, pid 0, +8 a 0, **conserva la constante de +10** (0x324f) |
+  | C (44) | hueco | registro = [reg…reg+44): todo a 0 y reg 0xffff; el campo anterior a `reg` es el final del registro anterior |
+  | D (368), E (192), J (16) | hueco | igual que un registro nunca usado (reg 0xffff, resto 0) |
+  | F (52) | hueco | como nunca usado pero **+40 a 0** (el nunca usado lleva 1) |
+  | M (5628) | hueco | como nunca usado; **y 0 en la palabra anterior al siguiente `reg`** (es el final de su propio registro) |
+  | G, H ×3 (108) | **compacta** | — |
+  | I (48, contratos) | **compacta** quitando **todos** los registros del jugador (contrato + ofertas) con la frontera de 28 B | — |
+  | K | no la toca al momento (queda atrasada; el C++ la reescribe porque Estrategia la lee) | — |
+  Además el juego: anota al jugador en una lista de noticias (0xbe34b4: `[reg][pid]…[6][fecha]`) y en la **caja** (0xc8018c, registros
+  de 36 B `[reg][pid]…[monto i32 ×100]`, −666.800 € de indemnización), baja el presupuesto (0xc7dd00), recalcula las medias del
+  equipo (bloque del City +0x5da…+0x608) y añade un par (reg 3807, pid 61147) a una lista de pares en 0xc07160 (¿objetivos?). ⏳ Lo
+  de noticias/caja/medias no se replica todavía (el juego lo recalcula o es informativo).
+- **El orden de formación del usuario es el bloque 627 del arreglo de alineaciones** (0x18f9d8 = bloque 627 + 0x220): es el primer
+  bloque con el ID del usuario (-11) y «técnico» = nombre del mánager (Lionel Messi); el 628 es su reserva (orden identidad). El
+  bloque 154 es la copia del City «como equipo de la IA» (ID 0xad, orden identidad). Ya no hace falta buscar el orden por fuerza bruta.
+- **Lista K atrasada:** tras despedir a Stones el juego dejó K con 24 entradas (Stones incluido) y cambió el flag de Gvardiol de
+  0xc0 a **0xc4** (bit desconocido). El C++ ahora localiza K por su estructura (flag 0 + registros 0xc0–0xc6 + libre + 0xc7),
+  conserva el flag de cada jugador y la reconstruye desde el orden nuevo.
+- **Jugadores creados por el juego (regens/canteranos de la IA):** `reg = 0xdb65xxxx`, pid > 126.000, no están en el catálogo
+  del parche; 771 al empezar la carrera y 1.127 un mes después. Están en las plantillas de la IA (hasta 3–4 por club). El C++ los
+  admite como fichas válidas. ⏳ Falta ver dónde viven sus fichas de 156 B (no caben en el arreglo de 16.422).
+- **Las tablas del usuario NO van por índice de plantilla**: el juego las busca por (reg, pid). Por eso tolera huecos y por eso los
+  fichajes nuevos van al final (Neymar está después de los 32 juveniles en D). El ancla del C++ (`tablasDe`) ya salta huecos y
+  fichas de jugadores que ya no están (hasta 8).
