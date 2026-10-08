@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -49,6 +50,22 @@ namespace mercado::lm {
 		int dir = +1;
 	};
 
+	/// Alineación del equipo del usuario (solo él la tiene). Tres piezas que el juego mantiene en espejo:
+	///   · `orden`: índices de plantilla en orden de formación (0–10 XI, 11–17 banca, resto reservas),
+	///     40 bytes en el archivo, los libres a 0xff;
+	///   · `roles`: 6 índices de plantilla (capitán, lanzadores…) justo después (+0x28);
+	///   · lista K: un registro de 16 B `[flag, reg, pid, 0]` por posición de `orden` (K[i] = plantilla[orden[i]]),
+	///     seguida de un registro libre (reg 0xffff) con flag 0xc0+ y luego 0xc7. Estrategia lee K.
+	struct Alineacion {
+		size_t ofsOrden = 0;
+		size_t ofsRoles = 0;
+		size_t ofsK = 0;                ///< campo `flag` del registro K0
+		std::vector<uint8_t> orden;     ///< tantas entradas como jugadores
+		std::array<uint8_t, 6> roles{};
+		std::vector<uint32_t> flagsK;   ///< flag de cada K[i] usado
+		uint32_t flagLibreK = 0;        ///< flag del primer registro libre (0xc0 con 25 jugadores, 0xc1 con 26)
+	};
+
 	class GuardadoLM {
 	public:
 		/// Lee y descifra un guardado ML. No modifica el archivo de origen.
@@ -68,6 +85,21 @@ namespace mercado::lm {
 		/// Devuelve el dorsal que quedó. Todo o nada: si falla, no cambia nada.
 		Resultado<uint16_t> moverEntreIA(int origen, int destino, uint32_t pid, uint16_t dorsal = 0);
 
+		/// Alineación del equipo del USUARIO, localizada por anclas (no por direcciones fijas).
+		Resultado<Alineacion> alineacionDe(int indice) const;
+
+		/// Mueve `pid` del equipo del USUARIO `kUsuario` a un equipo de la IA `kDestino` (venta / cesión).
+		/// Reproduce exactamente lo probado en el juego (prototipo v6, 8 oct 2026):
+		///   · compacta las 12 tablas alineadas del usuario (A…M y L),
+		///   · en la alineación, `pidSustituto` ocupa el puesto del que se va y desaparece de su sitio anterior;
+		///     si el que se va es reserva (posición ≥ 18) puede ir sin sustituto (0),
+		///   · reescribe la lista K como espejo de la alineación, la plantilla y los dorsales del usuario,
+		///   · añade al jugador al final de la plantilla del destino con `dorsal` (0 u ocupado = el más alto libre).
+		/// Todo o nada: si algo no cuadra, no cambia un solo byte. Devuelve el dorsal que quedó.
+		Resultado<uint16_t> moverUsuarioAIA(int kUsuario, int kDestino, uint32_t pid, uint16_t dorsal, uint32_t pidSustituto);
+		/// Qué tablas tocó la última operación sobre el equipo del usuario (para el log / la bitácora).
+		const std::string& ultimoInforme() const { return _ultimoInforme; }
+
 		const std::vector<uint8_t>& datos() const { return _datos; }
 
 		/// Cifra y escribe en `rutaNueva` (falla si existe; verifica releyendo). `textoInfo` vacío = conserva el original.
@@ -76,6 +108,7 @@ namespace mercado::lm {
 	private:
 		std::vector<uint8_t> _datos;
 		std::optional<SobrePes> _sobre;   // ausente si vino de desdeDatos()
+		std::string _ultimoInforme;
 	};
 
 }

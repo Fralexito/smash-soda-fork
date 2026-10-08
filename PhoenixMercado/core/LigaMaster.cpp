@@ -186,6 +186,269 @@ namespace mercado::lm {
 		catch (const std::exception& e) { return R::mal("ML_ERROR", e.what()); }
 	}
 
+	// =========================================================================
+	//  Equipo del usuario: alineación (orden + roles + K) y venta a la IA
+	// =========================================================================
+	namespace {
+		constexpr size_t kBytesOrden = 40;          // 40 índices de plantilla (relleno 0xff)
+		constexpr size_t kOrdenARoles = 0x28;       // los 6 roles van justo después de los 40 bytes
+		constexpr size_t kBytesRoles = 6;
+		constexpr size_t kTamK = 16;                // [flag u32][reg u32][pid u32][0 u32]
+		constexpr uint32_t kFlagLibreMin = 0xc0;    // primer registro libre de K (0xc0 con 25 jugadores, 0xc1 con 26…)
+		constexpr uint32_t kFlagFinK = 0xc7;        // los que siguen al primer libre
+		constexpr int kMaxRegistrosTabla = 200;     // tope de seguridad al contar registros de una tabla
+		constexpr size_t kTablasEsperadas = 12;     // A B C D E F G H M I J + L (ESTRUCTURA-ML.md §4)
+
+		bool registroVacio(const Datos& d, size_t ofsReg) {
+			const uint32_t reg = u32(d, ofsReg), pid = u32(d, ofsReg + 4);
+			return pid == 0 && (reg == 0 || reg == 0xffff || reg == kRegVacio);
+		}
+
+		/// Dirección del campo `reg` del registro i de una tabla alineada.
+		long long regDe(const TablaAlineada& t, long long i) { return (long long)t.ofsReg0 + t.dir * i * (long long)t.stride; }
+		/// Un registro empieza 4 bytes antes de `reg` ([x][reg][pid]…) y mide `stride`.
+		long long inicioDe(const TablaAlineada& t, long long i) { return regDe(t, i) - 4; }
+
+		/// Cuántos registros usados tiene la tabla (hasta el primer vacío). -1 = no termina (tabla dañada).
+		int usadosEn(const Datos& d, const TablaAlineada& t) {
+			for (int n = 0; n <= kMaxRegistrosTabla; n++) {
+				const long long r = regDe(t, n);
+				if (r < (long long)kFinBloques || size_t(r) + 8 > d.size()) return -1;
+				if (registroVacio(d, size_t(r))) return n;
+			}
+			return -1;
+		}
+
+		/// Quita el registro `idx` compactando hacia él; el último usado queda como el primer vacío (plantilla).
+		/// Igual que `quitar_registro` / `L_quitar` del prototipo probado en el juego.
+		bool quitarRegistro(Datos& d, const TablaAlineada& t, int idx, std::string& porque) {
+			const int n = usadosEn(d, t);
+			if (n < 0) { porque = "tabla sin fin"; return false; }
+			if (idx < 0 || idx >= n) { porque = "índice fuera de la tabla (" + std::to_string(idx) + "/" + std::to_string(n) + ")"; return false; }
+			const long long lo = std::min(inicioDe(t, 0), inicioDe(t, n)), hi = std::max(inicioDe(t, 0), inicioDe(t, n)) + (long long)t.stride;
+			if (lo < (long long)kFinBloques || size_t(hi) > d.size()) { porque = "tabla fuera del archivo"; return false; }
+			std::vector<uint8_t> vacio(d.begin() + inicioDe(t, n), d.begin() + inicioDe(t, n) + (long long)t.stride);
+			for (int i = idx; i < n - 1; i++)
+				std::memmove(&d[size_t(inicioDe(t, i))], &d[size_t(inicioDe(t, i + 1))], t.stride);
+			std::memcpy(&d[size_t(inicioDe(t, n - 1))], vacio.data(), t.stride);
+			return true;
+		}
+
+		/// ¿`orden[0..n)` es una permutación de 0..n-1 y lo que sigue hasta 40 es 0xff?
+		bool esOrdenValido(const Datos& d, size_t ofs, size_t n) {
+			if (n == 0 || n > kBytesOrden || ofs + kBytesOrden > d.size()) return false;
+			uint64_t visto = 0;
+			for (size_t i = 0; i < n; i++) {
+				const uint8_t v = d[ofs + i];
+				if (v >= n || (visto >> v) & 1) return false;
+				visto |= uint64_t(1) << v;
+			}
+			for (size_t i = n; i < kBytesOrden; i++) if (d[ofs + i] != 0xff) return false;
+			return true;
+		}
+	}
+
+	Resultado<Alineacion> GuardadoLM::alineacionDe(int k) const {
+		using R = Resultado<Alineacion>;
+		if (k < 0 || k >= kNumEquipos) return R::mal("EQUIPO_INVALIDO", std::to_string(k));
+		const auto pl = leerPlantilla(_datos, k);
+		const size_t n = pl.size();
+		if (n < 11) return R::mal("PLANTILLA_CORTA", "Menos de 11 jugadores");
+		const Datos& d = _datos;
+
+		// 1) Candidatos a `orden`: ventana de 40 B con permutación de 0..n-1 + relleno 0xff y 6 roles < n después.
+		std::vector<size_t> candidatos;
+		for (size_t o = kFinBloques; o + kBytesOrden + kOrdenARoles + kBytesRoles <= d.size(); o++) {
+			if (n < kBytesOrden && d[o + n] != 0xff) continue;
+			if (d[o] >= n) continue;
+			if (!esOrdenValido(d, o, n)) continue;
+			bool rolesOk = true;
+			for (size_t i = 0; i < kBytesRoles && rolesOk; i++) rolesOk = d[o + kOrdenARoles + i] < n;
+			if (rolesOk) candidatos.push_back(o);
+		}
+		if (candidatos.empty()) return R::mal("ALINEACION_NO_HALLADA", "No se encontró el orden de formación del equipo");
+
+		// 2) Para cada candidato, la lista K debe ser su espejo: K[i] = plantilla[orden[i]] para los n, y luego un libre.
+		std::vector<Alineacion> halladas;
+		for (size_t o : candidatos) {
+			std::vector<uint8_t> orden(d.begin() + o, d.begin() + o + n);
+			uint8_t patron[8];
+			for (int i = 0; i < 4; i++) { patron[i] = uint8_t(pl[orden[0]].reg >> (8 * i)); patron[4 + i] = uint8_t(pl[orden[0]].pid >> (8 * i)); }
+			const uint8_t* base = d.data();
+			size_t h = kFinBloques + 4;
+			while (h + 8 <= d.size()) {
+				const void* f = std::memchr(base + h, patron[0], d.size() - 8 + 1 - h);
+				if (!f) break;
+				h = size_t(static_cast<const uint8_t*>(f) - base);
+				if (std::memcmp(base + h, patron, 8) == 0 && u32(d, h + 8) == 0) {
+					const size_t k0 = h - 4;
+					bool ok = k0 + kTamK * (n + 2) <= d.size();
+					for (size_t i = 0; i < n && ok; i++) {
+						const size_t r = k0 + kTamK * i;
+						ok = u32(d, r + 4) == pl[orden[i]].reg && u32(d, r + 8) == pl[orden[i]].pid && u32(d, r + 12) == 0;
+					}
+					if (ok) {
+						const size_t libre = k0 + kTamK * n;
+						ok = u32(d, libre + 4) == 0xffff && u32(d, libre + 8) == 0 && u32(d, libre) >= kFlagLibreMin
+							&& u32(d, libre + kTamK + 4) == 0xffff && u32(d, libre + kTamK + 8) == 0;
+					}
+					if (ok) {
+						Alineacion a;
+						a.ofsOrden = o; a.ofsRoles = o + kOrdenARoles; a.ofsK = k0; a.orden = orden;
+						for (size_t i = 0; i < kBytesRoles; i++) a.roles[i] = d[a.ofsRoles + i];
+						for (size_t i = 0; i < n; i++) a.flagsK.push_back(u32(d, k0 + kTamK * i));
+						a.flagLibreK = u32(d, k0 + kTamK * n);
+						halladas.push_back(std::move(a));
+					}
+				}
+				h++;
+			}
+		}
+		if (halladas.empty()) return R::mal("ALINEACION_NO_HALLADA", "Orden de formación sin lista K que lo refleje");
+		if (halladas.size() > 1) return R::mal("ALINEACION_AMBIGUA", std::to_string(halladas.size()) + " candidatas; no se toca nada");
+		return R::bien(std::move(halladas[0]));
+	}
+
+	Resultado<uint16_t> GuardadoLM::moverUsuarioAIA(int kUsuario, int kDestino, uint32_t pid, uint16_t dorsal, uint32_t pidSustituto) {
+		using R = Resultado<uint16_t>;
+		try {
+			if (kUsuario < 0 || kUsuario >= kNumEquipos || kDestino < 0 || kDestino >= kNumEquipos)
+				return R::mal("EQUIPO_INVALIDO", std::to_string(kUsuario) + " → " + std::to_string(kDestino));
+			if (kUsuario == kDestino) return R::mal("MISMO_EQUIPO", std::to_string(kUsuario));
+			if (pid == 0) return R::mal("JUGADOR_INVALIDO", "pid 0");
+			if (pidSustituto == pid) return R::mal("SUSTITUTO_INVALIDO", "El sustituto es el mismo jugador");
+
+			// --- Leer y validar todo ANTES de tocar un byte -------------------------------------
+			const auto pu = leerPlantilla(_datos, kUsuario);
+			const auto pd = leerPlantilla(_datos, kDestino);
+			if (_datos[baseEquipo(kUsuario) + kOfsContador] != pu.size() || _datos[baseEquipo(kDestino) + kOfsContador] != pd.size())
+				return R::mal("ML_INCONSISTENTE", "El contador de plantilla no coincide con la lista (¿guardado dañado?)");
+			const int n = int(pu.size());
+			if (n <= 11) return R::mal("PLANTILLA_MINIMA", "El usuario se quedaría sin 11 jugadores");
+
+			int idx = -1, idxS = -1;
+			for (int i = 0; i < n; i++) { if (pu[i].pid == pid) idx = i; if (pidSustituto && pu[i].pid == pidSustituto) idxS = i; }
+			if (idx < 0) return R::mal("JUGADOR_NO_ESTA", "El jugador no está en el equipo del usuario");
+			if (pidSustituto && idxS < 0) return R::mal("SUSTITUTO_NO_ESTA", "El sustituto no está en el equipo del usuario");
+			if (std::any_of(pd.begin(), pd.end(), [&](const Plaza& p) { return p.pid == pid; }))
+				return R::mal("JUGADOR_YA_EN_DESTINO", "Ya está en la plantilla de destino");
+			if (pd.size() >= size_t(kMaxPlantilla)) return R::mal("PLANTILLA_LLENA", "El destino ya tiene 40 jugadores");
+
+			// Tablas alineadas del usuario: tienen que ser exactamente las 12 conocidas y cuadrar con TODA la plantilla.
+			auto tablas = tablasDe(kUsuario);
+			if (tablas.empty()) return R::mal("NO_ES_USUARIO", "Ese equipo no tiene tablas alineadas: no es el equipo del usuario");
+			if (!tablasDe(kDestino).empty()) return R::mal("DESTINO_ES_USUARIO", "El destino también es un equipo del usuario");
+			auto ali = alineacionDe(kUsuario);
+			if (!ali.ok()) return R::mal(ali.error.codigo, ali.error.detalle);
+			Alineacion a = *ali.valor;
+
+			// En cada tabla el jugador se busca por su (reg, pid): los fichajes recientes no están en su índice de
+			// plantilla sino al final (tablas C y D: 24 del primer equipo, 32 juveniles y luego los fichados).
+			struct Objetivo { TablaAlineada t; int j; int usados; int repetidos; };
+			std::vector<Objetivo> objetivos;
+			const Plaza& quien = pu[size_t(idx)];
+			for (const auto& t : tablas) {
+				if (t.ofsReg0 == a.ofsK + 4) continue;                   // la lista K no es una tabla: se trata aparte
+				if (std::any_of(objetivos.begin(), objetivos.end(), [&](const Objetivo& o) { return o.t.ofsReg0 == t.ofsReg0 && o.t.stride == t.stride && o.t.dir == t.dir; })) continue;
+				const int usados = usadosEn(_datos, t);
+				if (usados < n) return R::mal("TABLA_DANADA", "Tabla de paso " + std::to_string(t.stride) + " con menos registros que la plantilla");
+				int j = -1, rep = 0;
+				for (int i = 0; i < usados; i++) {
+					const size_t r = size_t(regDe(t, i));
+					if (u32(_datos, r) == quien.reg && u32(_datos, r + 4) == quien.pid) { if (j < 0) j = i; else rep++; }
+				}
+				if (j < 0) return R::mal("JUGADOR_NO_EN_TABLA", "El jugador no aparece en la tabla de paso " + std::to_string(t.stride) + (t.dir < 0 ? "↓" : ""));
+				objetivos.push_back({ t, j, usados, rep });
+			}
+			// Tienen que estar las 12 tablas conocidas (ESTRUCTURA-ML.md §4); si hay más (p. ej. una que el juego
+			// rellena al avanzar la temporada) también se compactan, porque van en el mismo orden que la plantilla.
+			{
+				struct Firma { size_t stride; int dir; int veces; };
+				Firma firmas[] = { {24,+1,1}, {24,-1,1}, {44,+1,1}, {368,+1,1}, {192,+1,1}, {52,+1,1}, {108,+1,3}, {5628,+1,1}, {48,+1,1}, {16,+1,1} };
+				std::string faltan;
+				for (const auto& f : firmas) {
+					const int hay = int(std::count_if(objetivos.begin(), objetivos.end(), [&](const Objetivo& o) { return o.t.stride == f.stride && o.t.dir == f.dir; }));
+					if (hay < f.veces) faltan += " " + std::to_string(f.stride) + (f.dir < 0 ? "↓" : "");
+				}
+				if (!faltan.empty()) return R::mal("TABLAS_INESPERADAS", "Faltan tablas conocidas del equipo del usuario:" + faltan);
+				if (objetivos.size() < kTablasEsperadas) return R::mal("TABLAS_INESPERADAS", "Solo " + std::to_string(objetivos.size()) + " tablas");
+			}
+			_ultimoInforme.clear();
+			for (const auto& o : objetivos) {
+				_ultimoInforme += "tabla paso " + std::to_string(o.t.stride) + (o.t.dir < 0 ? "↓" : "") + " en 0x";
+				char hex[32]; std::snprintf(hex, sizeof hex, "%zx", o.t.ofsReg0); _ultimoInforme += hex;
+				_ultimoInforme += ": registro " + std::to_string(o.j) + " de " + std::to_string(o.usados);
+				if (o.repetidos) _ultimoInforme += " (quedan " + std::to_string(o.repetidos) + " repetidos sin tocar)";
+				_ultimoInforme += "\n";
+			}
+
+			// Alineación: dónde está el que se va y, si hace falta, el sustituto.
+			int posH = -1, posS = -1;
+			for (int i = 0; i < n; i++) { if (a.orden[size_t(i)] == idx) posH = i; if (idxS >= 0 && a.orden[size_t(i)] == idxS) posS = i; }
+			if (posH < 0) return R::mal("ALINEACION_INCOHERENTE", "El jugador no aparece en el orden de formación");
+			if (idxS >= 0 && posS < 0) return R::mal("ALINEACION_INCOHERENTE", "El sustituto no aparece en el orden de formación");
+			if (idxS < 0 && posH < 18) return R::mal("FALTA_SUSTITUTO", "El jugador está en el XI o en la banca: hace falta un sustituto");
+			if (idxS < 0 && std::any_of(a.roles.begin(), a.roles.end(), [&](uint8_t v) { return v == idx; }))
+				return R::mal("FALTA_SUSTITUTO", "El jugador tiene un rol (capitán o lanzador): hace falta un sustituto");
+
+			auto libre = [&](uint16_t x) { return x >= 1 && x <= 99 && std::none_of(pd.begin(), pd.end(), [&](const Plaza& p) { return p.dorsal == x; }); };
+			if (!libre(dorsal)) {
+				dorsal = 99;
+				while (dorsal > 1 && !libre(dorsal)) dorsal--;
+				if (!libre(dorsal)) return R::mal("SIN_DORSAL", "No queda ningún dorsal libre en el destino");
+			}
+
+			// --- Todo cuadra: se trabaja sobre una copia y solo al final se adopta ----------------
+			Datos d = _datos;
+			std::string porque;
+			for (const auto& o : objetivos)
+				if (!quitarRegistro(d, o.t, o.j, porque)) return R::mal("TABLA_DANADA", porque);
+
+			// Orden de formación y roles (prototipo v6): el sustituto ocupa el puesto; se quita de su sitio; los índices > idx bajan 1.
+			std::vector<uint8_t> orden = a.orden;
+			std::vector<uint32_t> flags = a.flagsK;
+			if (idxS >= 0) {
+				orden[size_t(posH)] = uint8_t(idxS);
+				orden.erase(orden.begin() + posS);
+				flags.erase(flags.begin() + posS);
+			}
+			else {
+				orden.erase(orden.begin() + posH);
+				flags.erase(flags.begin() + posH);
+			}
+			for (auto& v : orden) if (v > idx) v--;
+			std::array<uint8_t, 6> roles = a.roles;
+			for (auto& v : roles) { if (v == idx) v = uint8_t(idxS); if (v > idx) v--; }
+			for (size_t i = 0; i < kBytesOrden; i++) d[a.ofsOrden + i] = i < orden.size() ? orden[i] : 0xff;
+			for (size_t i = 0; i < kBytesRoles; i++) d[a.ofsRoles + i] = roles[i];
+
+			// Plantilla y dorsales del usuario; destino al final con su dorsal.
+			std::vector<Plaza> pu2 = pu;
+			Plaza movida = pu2[size_t(idx)];
+			pu2.erase(pu2.begin() + idx);
+			escribirPlantilla(d, kUsuario, pu2);
+			std::vector<Plaza> pd2 = pd;
+			movida.dorsal = dorsal;
+			pd2.push_back(movida);
+			escribirPlantilla(d, kDestino, pd2);
+
+			// Lista K = espejo del nuevo orden con los flags que quedaron; luego el libre (flag anterior − 1, mínimo 0xc0) y 0xc7.
+			for (size_t i = 0; i < orden.size(); i++) {
+				const size_t r = a.ofsK + kTamK * i;
+				p32(d, r, flags[i]); p32(d, r + 4, pu2[orden[i]].reg); p32(d, r + 8, pu2[orden[i]].pid); p32(d, r + 12, 0);
+			}
+			const uint32_t flagLibre = a.flagLibreK > kFlagLibreMin ? a.flagLibreK - 1 : kFlagLibreMin;
+			size_t r = a.ofsK + kTamK * orden.size();
+			p32(d, r, flagLibre); p32(d, r + 4, 0xffff); p32(d, r + 8, 0); p32(d, r + 12, 0);
+			r += kTamK;
+			p32(d, r, kFlagFinK); p32(d, r + 4, 0xffff); p32(d, r + 8, 0); p32(d, r + 12, 0);
+
+			_datos.swap(d);
+			return R::bien(dorsal);
+		}
+		catch (const std::exception& e) { return R::mal("ML_ERROR", e.what()); }
+	}
+
 	Resultado<std::string> GuardadoLM::guardarComo(const std::string& rutaNueva, const std::string& textoInfo) const {
 		using R = Resultado<std::string>;
 		if (!_sobre) return R::mal("SIN_SOBRE", "Este guardado vino de datos sueltos: no hay envoltura para cifrar");

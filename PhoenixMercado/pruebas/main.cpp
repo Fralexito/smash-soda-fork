@@ -17,6 +17,7 @@
 #include "../core/Catalogo.h"
 #include "../core/Emparejamiento.h"
 #include "../core/Integridad.h"
+#include "../core/LigaMaster.h"
 #include <nlohmann/json.hpp>
 #include <cstdlib>
 
@@ -165,6 +166,109 @@ int main() {
 	std::printf("Bits\n");
 	{ const uint8_t b[4] = { 0xB4, 0x01, 0, 0 };   // 0x01B4 = 436
 	  CHECK(leerBits(b, 0, 16) == 436); CHECK(leerBits(b, 2, 3) == 5); }
+
+	std::printf("Liga Máster interna (equipo del usuario, datos sintéticos)\n");
+	{
+		using namespace mercado::lm;
+		// Guardado ML falso: cabecera, 700 bloques, y después una zona con las 12 tablas alineadas, orden/roles y lista K.
+		const size_t FIN = 0x50 + 1680 * 700;
+		std::vector<uint8_t> d(FIN + 0x200000, 0);
+		auto p32 = [&](size_t o, uint32_t v) { for (int i = 0; i < 4; i++) d[o + i] = uint8_t(v >> (8 * i)); };
+		auto p16 = [&](size_t o, uint16_t v) { d[o] = uint8_t(v); d[o + 1] = uint8_t(v >> 8); };
+		p32(0, 10); p32(4, 0x50); p32(16, 700); p32(20, 700);
+		auto plantilla = [&](int k, const std::vector<std::pair<uint32_t, uint32_t>>& j, const std::vector<uint16_t>& dor) {
+			const size_t b = 0x50 + 1680 * size_t(k), s = b + 0x14c;
+			for (int i = 0; i < 40; i++) {
+				const bool hay = size_t(i) < j.size();
+				p32(s + 8 * i, hay ? j[i].first : 65535); p32(s + 8 * i + 4, hay ? j[i].second : 0);
+				p16(b + 0x14c + 4 + 0x14a + 2 * i, hay ? dor[i] : 0);
+			}
+			d[b + 0x14c + 4 + 0x2d6] = uint8_t(j.size());
+		};
+		// Usuario = equipo 5 con 26 jugadores (reg 1000+i, pid 5000+i); IA = equipo 7 con 3.
+		std::vector<std::pair<uint32_t, uint32_t>> U, IA = { {1,9001}, {2,9002}, {3,9003} };
+		std::vector<uint16_t> dU, dIA = { 1, 2, 3 };
+		for (uint32_t i = 0; i < 26; i++) { U.push_back({ 1000 + i, 5000 + i }); dU.push_back(uint16_t(10 + i)); }
+		plantilla(5, U, dU); plantilla(7, IA, dIA);
+		{ std::vector<std::pair<uint32_t, uint32_t>> B; std::vector<uint16_t> dB; for (uint32_t i = 0; i < 12; i++) { B.push_back({ 3000 + i, 8000 + i }); dB.push_back(uint16_t(1 + i)); } plantilla(8, B, dB); }
+		// Tablas: registro = [x][reg][pid][…]; el contenido lleva una marca por registro para ver que se mueve entero.
+		struct T { size_t stride; int dir; size_t reg0; };
+		std::vector<T> tablas = { {24,+1,0}, {24,-1,0}, {44,+1,0}, {368,+1,0}, {192,+1,0}, {52,+1,0}, {108,+1,0}, {108,+1,0}, {108,+1,0}, {5628,+1,0}, {48,+1,0}, {16,+1,0} };
+		size_t cur = FIN + 0x1000;
+		for (auto& t : tablas) {
+			const size_t nreg = t.stride == 368 ? 60 : 30;   // la de 368 lleva 26 + juveniles
+			size_t ini = cur + (t.dir < 0 ? t.stride * (nreg + 2) : 0);
+			t.reg0 = ini + 4;
+			for (size_t i = 0; i < nreg + 2; i++) {
+				const long long r0 = (long long)ini + t.dir * (long long)(i * t.stride);
+				const bool usado = i < (t.stride == 368 ? 26 + 30 : 26);
+				uint32_t reg = 0xffff, pid = 0;
+				if (usado) { if (i < 26) { reg = 1000 + uint32_t(i); pid = 5000 + uint32_t(i); } else { reg = 20000 + uint32_t(i); pid = 7000 + uint32_t(i); } }
+				p32(size_t(r0), 0xAA000000 | uint32_t(i)); p32(size_t(r0) + 4, reg); p32(size_t(r0) + 8, pid);
+				for (size_t b = 12; b < t.stride; b++) d[size_t(r0) + b] = uint8_t(usado ? (i + 1) : 0);
+			}
+			cur += t.stride * (nreg + 3) + 64;
+		}
+		// Orden de formación (permutación), roles y lista K en su espejo.
+		std::vector<uint8_t> orden; for (int i = 25; i >= 0; i--) orden.push_back(uint8_t(i));   // 25,24,…,0
+		const size_t LU = FIN + 0x100, RO = LU + 0x28;
+		for (size_t i = 0; i < 40; i++) d[LU + i] = i < 26 ? orden[i] : 0xff;
+		const uint8_t roles[6] = { 3, 9, 0, 0, 0, 25 }; for (int i = 0; i < 6; i++) d[RO + i] = roles[i];
+		const size_t K0 = cur + 0x100;
+		for (size_t i = 0; i < 26; i++) { const size_t r = K0 + 16 * i; p32(r, i ? 0xc0 : 0); p32(r + 4, 1000 + orden[i]); p32(r + 8, 5000 + orden[i]); }
+		p32(K0 + 16 * 26, 0xc1); p32(K0 + 16 * 26 + 4, 0xffff); p32(K0 + 16 * 27, 0xc7); p32(K0 + 16 * 27 + 4, 0xffff); p32(K0 + 16 * 28, 0xc7); p32(K0 + 16 * 28 + 4, 0xffff);
+
+		auto g = GuardadoLM::desdeDatos(d);
+		CHECK(g.ok());
+		if (g.ok()) {
+			CHECK(g.valor->esEquipoUsuario(5) && !g.valor->esEquipoUsuario(7));
+			CHECK(g.valor->tablasDe(5).size() == 12);
+			auto a = g.valor->alineacionDe(5);
+			CHECK(a.ok());
+			if (a.ok()) { CHECK(a.valor->ofsOrden == LU && a.valor->ofsRoles == RO && a.valor->ofsK == K0 && a.valor->flagLibreK == 0xc1); }
+			// Errores que no deben tocar nada
+			const auto antes = g.valor->datos();
+			CHECK(g.valor->moverUsuarioAIA(5, 7, 5009, 0, 0).error.codigo == "FALTA_SUSTITUTO");       // está en el XI (posición 16? no: orden invertido → pid 5009 = idx 9 → posición 16, banca)
+			CHECK(g.valor->moverUsuarioAIA(5, 7, 5025, 0, 0).error.codigo == "FALTA_SUSTITUTO");       // idx 25 está en posición 0 (XI) y es rol
+			CHECK(g.valor->moverUsuarioAIA(5, 7, 4242, 0, 0).error.codigo == "JUGADOR_NO_ESTA");
+			CHECK(g.valor->moverUsuarioAIA(7, 5, 9001, 0, 0).error.codigo == "PLANTILLA_MINIMA");   // la IA de 3 jugadores no puede vender
+			CHECK(g.valor->moverUsuarioAIA(8, 7, 8000, 0, 0).error.codigo == "NO_ES_USUARIO");     // equipo de la IA con 12: no tiene tablas
+			CHECK(g.valor->moverUsuarioAIA(5, 7, 5003, 0, 5003).error.codigo == "SUSTITUTO_INVALIDO");
+			CHECK(g.valor->datos() == antes);
+			// Venta real: idx 3 (pid 5003, posición 22 → reserva, pero tiene rol) con sustituto idx 20 (pid 5020, posición 5).
+			auto r = g.valor->moverUsuarioAIA(5, 7, 5003, 3, 5020);   // dorsal 3 está ocupado en el destino → el más alto libre (99)
+			CHECK(r.ok());
+			if (r.ok()) {
+				CHECK(*r.valor == 99);
+				auto u = g.valor->equipo(5), ia = g.valor->equipo(7);
+				CHECK(u.valor->plantilla.size() == 25 && ia.valor->plantilla.size() == 4);
+				CHECK(ia.valor->plantilla.back().pid == 5003 && ia.valor->plantilla.back().reg == 1003 && ia.valor->plantilla.back().dorsal == 99);
+				CHECK(u.valor->plantilla[3].pid == 5004 && u.valor->plantilla[3].dorsal == 14);
+				// Tablas: el registro 3 desapareció, el 4 ocupa su sitio con su contenido entero, el último usado quedó vacío.
+				for (const auto& t : tablas) {
+					const auto& dd = g.valor->datos();
+					auto u32 = [&](size_t o) { return uint32_t(dd[o] | (dd[o + 1] << 8) | (dd[o + 2] << 16) | (uint32_t(dd[o + 3]) << 24)); };
+					const long long r3 = (long long)t.reg0 + t.dir * 3 * (long long)t.stride;
+					CHECK(u32(size_t(r3)) == 1004 && u32(size_t(r3) + 4) == 5004 && dd[size_t(r3) + 8] == 5 && u32(size_t(r3) - 4) == (0xAA000000 | 4));
+					const size_t nUs = t.stride == 368 ? 56 : 26;
+					const long long rUlt = (long long)t.reg0 + t.dir * (long long)(nUs - 1) * (long long)t.stride;
+					CHECK(u32(size_t(rUlt)) == 0xffff && u32(size_t(rUlt) + 4) == 0 && dd[size_t(rUlt) + 8] == 0);
+					if (t.stride == 368) { const long long r25 = (long long)t.reg0 + 25 * (long long)t.stride; CHECK(u32(size_t(r25)) == 20026 && u32(size_t(r25) + 4) == 7026); }
+				}
+				// Orden: 25,24,…,4,3,2,1,0 → el 3 (posición 22) lo ocupa el 20 (que estaba en la posición 5) y todo > 3 baja uno.
+				auto a2 = g.valor->alineacionDe(5);
+				CHECK(a2.ok());
+				if (a2.ok()) {
+					std::vector<uint8_t> esperado;
+					for (int i = 25; i >= 0; i--) { if (i == 20) continue; esperado.push_back(uint8_t(i == 3 ? 20 - 1 : (i > 3 ? i - 1 : i))); }
+					CHECK(a2.valor->orden == esperado);
+					CHECK(a2.valor->roles[0] == 19 && a2.valor->roles[1] == 8 && a2.valor->roles[5] == 24 && a2.valor->roles[2] == 0);
+					CHECK(a2.valor->flagLibreK == 0xc0 && a2.valor->flagsK.size() == 25 && a2.valor->flagsK[0] == 0 && a2.valor->flagsK[24] == 0xc0);
+					CHECK(g.valor->datos()[LU + 25] == 0xff);
+				}
+			}
+		}
+	}
 
 	// --- Pruebas con archivos reales (opcionales) -------------------------
 	//  PM_EDIT = ruta a una COPIA de EDIT00000000 · PM_CPK = ruta a CGP_database.cpk

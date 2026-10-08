@@ -82,3 +82,20 @@ enc2 <ML original> v5.bin <ML nuevo> "nombre" $'PRUEBA 4\n4/8/2026\nPremier Leag
 python3 prototipos/diff_gt.py base.bin guardado_por_el_juego.bin catalogo.json | head -80
 ```
 `enc2` exige mismo tamaño de datos que el original (limitación a quitar en el módulo definitivo). Los `.bin` descifrados son datos del juego: no se versionan.
+
+## 9. Hallazgos del 8 oct (tarde) con el módulo C++ (`core/LigaMaster.cpp`, todo por anclas)
+- **El juego aceptó el slot 6 (v6) y jugó un partido** (`ML00000006`): los 700 bloques de equipo, las tablas A–M, L, K y el orden
+  de formación quedaron **idénticos** a la candidata. Solo cambió: cabecera 0x30–0x4f, 6 B en 0xafa2b4 (→ 0xff), 3 banderas de
+  1 B (0xafbc58, 0xbe90e4, 0xbe9134: 1→0) y la zona posterior al blob (0x1267d31–0x12dc292: calendario/resultados). [PROBADO]
+- **Las direcciones de §4 solo valen para un guardado**: el blob crece con la temporada (0x1237b7 en el respaldo → 0x12794f en
+  `ML00000006`, +16.792 B) y desplaza las tablas I y J. Por eso el C++ no usa direcciones: ancla cada tabla con los 5 primeros
+  (reg, pid) de la plantilla, y el orden de formación/K por permutación + espejo.
+- **Tabla «A2»** (paso 24, justo después de A, en 0xbe639c): vacía (0xffff) en el respaldo y rellena con los 25 de la plantilla en
+  el guardado posterior. El C++ la trata como una tabla alineada más (se compacta igual). [OBSERVADO]
+- **C y D: los fichajes NO van en su índice de plantilla** sino al final, tras los 32 juveniles (Neymar, índice 24 de plantilla,
+  está en el registro 57). Por eso el C++ busca al jugador por (reg, pid) dentro de cada tabla y compacta ahí.
+- **Tabla I (paso 48, tras el blob)** tiene 28 registros: los 24 del primer equipo y luego 11, 24, 14, 10 (repetidos). El juego
+  reescribe su contenido tras cada partido. El C++ quita solo la PRIMERA aparición (igual que v6) y anota los repetidos.
+- **Flags de K**: K0 = 0 y todos los usados 0xc0 (26 y 25 jugadores); primer libre 0xc1 (26) / 0xc0 (25); después 0xc7.
+- **Comprobado byte a byte**: `moverUsuarioAIA` == `build_v6.py` sobre el respaldo (Haaland→Santos, Neymar sustituto) y ==
+  `ref_v7_juego.py` sobre `ML00000006` (Guéhi→Real Madrid dorsal 30, Stones sustituto; entregado como `ML00000007`, slot 8).
