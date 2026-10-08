@@ -12,11 +12,11 @@ Detalle técnico completo: `liga-master/ESTRUCTURA-ML.md` (estructura del archiv
 
 ---
 
-## Resumen (al 8 oct 2026, 13:10)
+## Resumen (al 8 oct 2026, 13:40)
 
-- **Pruebas mirando el juego:** 10 · ✅ 7 · ❌ 3 (las 3 ya corregidas y vueltas a probar)
+- **Pruebas mirando el juego:** 11 · ✅ 8 · ❌ 3 (las 3 ya corregidas y vueltas a probar)
 - **Otros errores:** subida del catálogo a la web ❌ (corregido; ⏳ falta volver a ejecutar) · alineación del option file en
-  amistosos 🔎 (⏳ por corregir)
+  amistosos 🔎 (⏳ por corregir) · venta bloqueada después de jugar un partido 🔎 (✅ corregido) · contratos dobles 🔎 (⏳ prueba pedida)
 - **Pruebas automáticas:** 117 de 117 bien (en Linux) · compilación en Windows ⏳
 
 ---
@@ -84,7 +84,7 @@ Causa: **cada equipo de la IA tiene su propia lista de alineación** (bloque de 
 - Santos: Isak al final de la lista, con el 99.
 - City: sin cambios, Stones titular.
 > Hallazgo: en esta partida la **banca es de 12**, no de 7. El programa ya no supone un tamaño fijo.
-> ⏳ Falta: jugar un partido y guardar en una ranura nueva.
+> ✅ 8 oct 13:07: Fralex jugó un partido y guardó en la **ranura 10**: todo se mantuvo (ver abajo).
 
 ---
 
@@ -97,6 +97,7 @@ Causa: **cada equipo de la IA tiene su propia lista de alineación** (bloque de 
 | 8 oct 11:55 | 88 de 88 ✅ | Venta de tu equipo a la IA (datos de prueba) |
 | 8 oct 12:36 | 112 de 112 ✅ | Alineaciones de la IA, traspasos IA ↔ IA, sustitutos |
 | 8 oct 13:00 | 117 de 117 ✅ | Sustitutos sin suponer el tamaño de la banca |
+| 8 oct 13:35 | 119 de 119 ✅ | La venta ignora la ficha del último partido |
 | — | ⏳ | Compilar en Windows (`COMPILAR_MERCADO.bat`) |
 
 Además, en archivos reales: el programa en C++ da **exactamente el mismo archivo** que el prototipo que el juego aceptó
@@ -118,3 +119,20 @@ Además, en archivos reales: el programa en C++ da **exactamente el mismo archiv
 ## Registro de nuevas pruebas (se añade abajo)
 
 <!-- Formato: **Fecha · Ranura/archivo · Qué se probó** — ✅/❌/⏳ · qué se vio · causa · qué se cambió (commit) -->
+
+**8 oct 13:07 · Ranura 9 → jugar un partido → guardar en la ranura 10** — ✅
+Todo se mantuvo: Guéhi en el Madrid, Isak en el Santos, Ekitiké en el Liverpool, Stones titular del City. El técnico de la IA puso
+a **Isak de titular** en el Santos por su cuenta (Haaland pasó a la banca). Todas las alineaciones de la IA siguen bien.
+> Ojo: el juego **guardó solo** encima de la ranura 9 al terminar el partido. Por eso cada prueba se identifica por su huella.
+
+**8 oct 13:20 · Revisión del guardado de la ranura 10 (después del partido)** — 🔎 ❌ → ✅
+Al intentar vender con ese archivo, el programa **se negaba** («tabla dañada»). No rompía nada (se frenó solo), pero no dejaba vender.
+Causa: al jugar, el juego crea una **ficha del partido** con los que jugaron; empieza igual que una lista de la plantilla y el programa
+la confundía. Arreglo: solo cuenta como lista de la plantilla la que tiene a **todos** los jugadores; la ficha del partido no se toca.
+Probado con tu archivo real: venta de Max Alleyne (reserva) y de Stones (titular, con Aké de sustituto), todo verificado.
+
+**8 oct 13:30 · Contratos dobles** — 🔎 ⏳
+La tabla I guarda los **contratos**. Tres jugadores del City tienen **dos** (Rulli, Bettinelli y Stones; el segundo de Stones dura
+hasta 2028). El programa solo borra el primero al vender, así que el segundo quedaría como un contrato «fantasma».
+Para hacerlo exactamente como el juego: **rescindir el contrato de Stones en el juego** (ranura 10), guardar en una ranura nueva y
+comparar qué borra el juego. Mientras tanto, el archivo de prueba «v9 Stones al Madrid» **no se entrega**.

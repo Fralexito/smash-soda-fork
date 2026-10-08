@@ -139,8 +139,25 @@ python3 prototipos/diff_gt.py base.bin guardado_por_el_juego.bin catalogo.json |
 | Menú | Archivo | Contenido | Resultado |
 |---|---|---|---|
 | 8 | `ML00000007` | C++ v7: Guéhi City → Real Madrid (Stones sustituto), sin bloque de alineación | Equipos/búsqueda ✓; City ✓; **Alineación del Madrid: jugador en blanco «DC 0»** ✗ |
-| 9 | `ML00000008` | C++ v8: lo mismo + alineación del Madrid (1 byte: orden[30] = 30) + Isak Liverpool → Santos (Ekitiké sustituto, dorsal 99) | ✓ Madrid: Guéhi última reserva con el 30, sin jugador en blanco · ✓ Liverpool: Ekitiké en el puesto de Isak · ✓ Santos: Isak última reserva con el 99 · ✓ City sin cambios (Stones titular). Falta: partido + guardar |
+| 9 | `ML00000008` | C++ v8: lo mismo + alineación del Madrid (1 byte: orden[30] = 30) + Isak Liverpool → Santos (Ekitiké sustituto, dorsal 99) | ✓ Madrid: Guéhi última reserva con el 30, sin jugador en blanco · ✓ Liverpool: Ekitiké en el puesto de Isak · ✓ Santos: Isak última reserva con el 99 · ✓ City sin cambios (Stones titular). Partido jugado: ✓ (ver §11). Ojo: el juego **autoguardó** encima de esta ranura |
+| 10 | `ML00000009` | Guardado por el juego tras el partido de la ranura 9 (31/8/2026) | ✓ base de las pruebas siguientes |
 
 - **La banca es de 12 en este guardado** (visto en las pantallas *Alineación* del slot 9: la raya entre banca y reservas cae
   después del puesto 22). Por eso el C++ ya no supone «11–17 banca»: solo distingue **titulares (0–10)** del resto, y al buscar
   sustituto recorre la lista desde el final (reservas) hacia arriba (banca), sin necesitar el tamaño de la banca.
+
+## 11. Después de jugar un partido (ranura 9 → ranura 10, 31/8/2026) — **[OBSERVADO]**
+- **Nuestros cambios se mantuvieron:** Guéhi en el Madrid, Isak y Haaland en el Santos, Ekitiké en el Liverpool, Stones y Neymar en el City.
+  Las 627 alineaciones de la IA siguen válidas. El técnico de la IA **reordenó** a su gusto: Isak pasó a titular del Santos (Haaland a la
+  banca) y el Madrid dejó a Guéhi de reserva. Además hubo 332 cambios de plantilla de la IA (último día de fichajes).
+- **El juego autoguarda** en la ranura cargada al terminar el partido (`ML00000008` quedó sobrescrito 11 s antes de que Fralex guardara
+  en la 10). Por eso cada archivo de prueba se identifica por su huella (md5), nunca solo por su nombre.
+- **Ficha del último partido** (aparece al jugar): dentro del arreglo de fichas de 596 B (registro 5531, en 0x64e7dc): dos listas de 17
+  registros de 16 B `[x][reg][pid][y]` con **los que jugaron** de cada equipo, en orden de plantilla. Como empieza igual que una tabla
+  de la plantilla (0, 1, 2, 3, 4…), `tablasDe` la confundía y la venta se **negaba** («TABLA_DANADA»). Arreglo: una tabla de la
+  plantilla debe tener a **todos** los jugadores; si no, se descarta y no se toca (es historial).
+- **Tabla I (paso 48) = CONTRATOS** [OBSERVADO]: cada registro lleva cantidades (¿sueldo?), una fecha de fin (`eb 07 08 1f` = 31/08/2027),
+  una de inicio (`e4 07 07 01` = 01/07/2020), un número de registro único y un tipo (05 / 03). **Un jugador puede tener DOS registros**:
+  en el respaldo no había ninguno doble; en los guardados posteriores sí (Rulli, Bettinelli y Stones; el segundo de Stones termina en 2028).
+  Hoy el C++ quita solo el primero → el segundo quedaría como un contrato «fantasma». ⏳ Para hacerlo igual que el juego: Fralex
+  rescinde el contrato de Stones en el juego y se compara qué borra el juego.
