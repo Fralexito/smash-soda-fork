@@ -17,3 +17,12 @@ Protocolo: `COORDINACION.md` (raíz) → «Dos cuentas de Claude».
 **No verificado:** si 1de7c0a ya se probó contra la web real; resultado del primer envío de equivalencias.
 ---
 2026-10-08 08:50 (Lima) | Cuenta A | MERCADO | Protocolo de dos cuentas añadido (COORDINACION.md copiado de la rama LINK, CLAUDE.md, esta bitácora) | COORDINACION.md, CLAUDE.md, PhoenixMercado/REGISTRO.md | HECHO | Chat MERCADO: completar el volcado; subir catálogo real y luego equivalencias
+
+## 2026-10-08 09:35 (Lima) · chat MERCADO · COMPLEMENTO al volcado inicial (Liga Máster interna del PES)
+**Frente añadido:** además del option file, Mercado refleja la Liga Máster web dentro de la **Liga Máster interna del juego** (`ML0000000N` en `…\239200\save`). Todo lo descubierto está en `PhoenixMercado/liga-master/ESTRUCTURA-ML.md` (estructura, direcciones, resultados en juego, pendientes); prototipos Python en `liga-master/prototipos/`, herramientas C en `liga-master/herramientas/`.
+**Probado en el juego (Fralex, 8 oct):** mover un jugador entre dos equipos de la IA tocando solo lista de plantilla + dorsales + contador funciona (Mbappé → Santos). Mover a Haaland del equipo del usuario (City) a Santos con la versión completa (listas + tablas A–M + L + K) aparece bien en Santos.
+**A medias:** falta que Fralex confirme el lado City de esa ranura (Estrategia/plantilla) y que aguante jugar un partido; el resultado se anota aquí. Sentido inverso (IA → usuario) sin implementar. Módulo C++ sin empezar (los prototipos Python reproducen byte a byte la candidata).
+**Trampas:** (1) el menú Cargar NO muestra el nombre de 128 B sino el texto info (bytes 128+ de la descripción). (2) El menú numera por archivo: ranura 1 = `ML00000000`. (3) Lecturas de archivos del PC de Fralex por el puente pueden venir desfasadas: verificar con md5 tras `device_stage_files`. (4) No se versionan guardados ni `.bin` descifrados.
+**No verificado:** si Fralex volvió a ejecutar `SUBIR.bat` (catálogo en 7 lotes y luego equivalencias; esperado en la base 18.241 jugadores / 711 clubes); mover `EDIT00000000` de `save\resplado` de vuelta a `save` (mover, no copiar) al terminar las pruebas.
+---
+2026-10-08 09:35 (Lima) | Cuenta ? | MERCADO | Documentada la estructura de la Liga Máster interna + prototipos validados en juego | PhoenixMercado/liga-master/ (ESTRUCTURA-ML.md, prototipos/, herramientas/) | HECHO | Fralex confirma partida 5 (City + partido); luego portar a C++ en core/
