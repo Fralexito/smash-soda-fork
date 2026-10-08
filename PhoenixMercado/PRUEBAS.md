@@ -192,3 +192,8 @@ Fralex fichó en el juego (el mercado de la ranura 13 ya estaba cerrado el 31/8,
 comparó con la base (= respaldo r0): el juego añade a Sommer en el primer hueco de cada tabla del usuario, con datos propios del
 jugador (curva de crecimiento, estadísticas, contrato, historial, dinero). Detalle en ESTRUCTURA-ML §19. Ojo: el juego guardó también
 encima de la ranura 2.
+
+**8 oct 18:32 · Resultado prueba 15 · Option file `EDIT_prueba_boca` (regenerado, md5 f91c6c45…) en un amistoso Boca–Huracán** — ✅
+Alineación de Boca en la pantalla de estrategia: **Montero** de arquero, **Braida (Malcom) de LI** en el puesto de Blanco, el resto
+del once igual (Di Lollo, Costa, Lozano, Paredes, Delgado, Villa, Aranda, Merentiel, Valencia) y **Marchesín primero en el banco**.
+El error del portero suplente de delantero quedó corregido: el bloque de tácticas del option file se actualiza bien.
