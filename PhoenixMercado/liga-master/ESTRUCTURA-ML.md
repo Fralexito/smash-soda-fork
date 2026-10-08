@@ -175,3 +175,25 @@ python3 prototipos/diff_gt.py base.bin guardado_por_el_juego.bin catalogo.json |
 - **Consecuencias para el C++:** (1) al vender hay que borrar **todos** los contratos del jugador en la tabla I, no solo el primero;
   (2) hay que borrar sus **negociaciones abiertas**; (3) compactar o dejar hueco funciona en ambos casos (el juego aceptó nuestra
   compactación en las ranuras 6 y 9), así que se mantiene la compactación. ⏳ (1) y (2) pendientes de programar y probar.
+
+## 13. Dinero, contratos y competiciones (escaneo del 8 oct, tarde) — **[OBSERVADO]**
+**Dinero del usuario** (bloque en 0xc7dd00, valores en u32 ×100 €; comprobado con las pantallas y con el despido de Stones):
+| Qué | Dónde | Ejemplo |
+|---|---|---|
+| Presupuesto de fichajes ACTUAL | 0xc7dd00 | 1.632.406 → 163.240.600 € (bajó 666.800 € al despedir a Stones) |
+| Presupuesto de fichajes inicial de la temporada | 0xc7dd10 | 1.632.406 |
+| **Tope salarial** | 0xc7dd14 | 1.475.206 → 147.520.600 € |
+| Otros (sin interpretar) | 0xc7dd1c, 0xc7dd2c, 0xc7dd30, 0xc7dd34 | 3,6 M · 171,2 M · 122,1 M · 18,6 M |
+- **Presupuesto salarial en pantalla = tope salarial − suma de sueldos** de la tabla I (comprobado en dos guardados:
+  147.520.600 − 117.238.000 = 30.282.600 ✓; tras despedir a Stones 147.520.600 − 113.904.000 = 33.616.600 ✓).
+- **Tabla I (contratos, paso 48)**, por registro tras `[x][reg][pid]`: +0 sueldo anual /100 · +4 cláusula de rescisión /100 ·
+  +8 fecha de fin (año u16, mes, día) · +0x14 número único · +0x18 tipo (18/22/154 = contrato vigente; 125/255 = oferta
+  pendiente) · +0x1c fecha de inicio. Stones: sueldo 3.334.000 €, cláusula 12.000.000 € ✓ (pantalla).
+- **Clubes de la IA: NO tienen presupuesto en el guardado.** Solo hay dos arreglos por equipo (bloques de 1680 B y de 600 B)
+  y ninguno guarda dinero; la IA ficha por reglas, no por caja. Las fichas de jugador de 596 B tampoco guardan el valor de mercado
+  (lo calcula el juego).
+**Competiciones dentro de la Liga Máster:** bloques de **3000 B por competición** (desde ~0xb08000), cada uno con la **lista de
+equipos** (IDs u32, relleno `0x0003ffff`): liga argentina 30, Premier 20, Brasileirão 20, Liga 1 Perú 18, segundas divisiones
+hasta 66… **Capacidad holgada** (los bloques de 3000 B admiten muchos más IDs). El tamaño de una liga en la LM se podría cambiar
+en esa lista, pero el **calendario** (zona tras el blob) se genera con ese tamaño: habría que regenerarlo o cambiarlo antes de empezar
+la temporada. También hay listas de selecciones y de grupos de copas (0x1f468c…).

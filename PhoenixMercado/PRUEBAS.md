@@ -142,3 +142,8 @@ Stones quedó libre y el City con 23. Ahora sabemos qué borra **el propio juego
 segundo era una oferta de otro club) y **la negociación abierta**. Nuestro programa solo borraba el primer contrato y no tocaba la
 oferta → ⏳ hay que agregarlo antes de dar la venta por terminada. Detalle en ESTRUCTURA-ML §12.
 > Dato: la ranura 11 se llama `ML0000000A` (el juego cuenta en hexadecimal).
+
+**8 oct 13:55 · Escaneo de dinero y competiciones (sin probar aún en el juego)** — 🔎
+Se encontró dónde están el **presupuesto de fichajes** y el **tope salarial** de tu club, y cómo se calcula el presupuesto salarial
+(tope − sueldos). Los **sueldos y cláusulas** de cada jugador están en la tabla de contratos. Los clubes de la IA **no tienen dinero**
+guardado. Las **ligas de la Liga Máster** tienen su lista de equipos con espacio de sobra. Detalle en ESTRUCTURA-ML §13.
