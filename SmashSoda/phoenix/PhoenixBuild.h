@@ -12,7 +12,7 @@
 namespace phoenix {
 
 	/// Nombre visible de la build.
-	inline constexpr const char* kNombreBuild = "Phoenix Portal";
+	inline constexpr const char* kNombreBuild = "Phoenix Link";
 
 	/// Versión propia de Phoenix (independiente de la versión del autor).
 	inline constexpr const char* kVersion = "0.1.0";

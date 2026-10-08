@@ -132,7 +132,7 @@ namespace phoenix {
 
 			// PORTAL en púrpura con tracking más ancho
 			const ImVec2 posPortal(pos.x + 30.0f * s + anchoMarca, yTexto + 2.0f * s);
-			dl->AddText(posPortal, col(tema->secondary), "PORTAL");
+			dl->AddText(posPortal, col(tema->secondary), "LINK");
 			ImGui::PopFont();
 
 			// Píldora de estado de la sala (late suave cuando está en vivo)

@@ -17,7 +17,7 @@ namespace phoenix {
 
 		// Español = idioma base: toda clave nueva se escribe primero aquí.
 		const Tabla kEs = {
-			{"app.nombre", "Phoenix Portal"},
+			{"app.nombre", "Phoenix Link"},
 			{"estado.vivo", "EN VIVO"},
 			{"estado.cerrada", "SALA CERRADA"},
 			{"estado.invitados", "en sala"},

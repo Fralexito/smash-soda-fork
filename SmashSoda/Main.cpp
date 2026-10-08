@@ -198,7 +198,7 @@ int CALLBACK WinMain(_In_ HINSTANCE hInstance, _In_ HINSTANCE hPrevInstance, _In
     wc.hIconSm = NULL;
     ::RegisterClassEx(&wc);
     HWND hwnd = ::CreateWindow(
-        wc.lpszClassName, _T("Phoenix Soda"), WS_OVERLAPPEDWINDOW,
+        wc.lpszClassName, _T("Phoenix Link"), WS_OVERLAPPEDWINDOW,
         Config::cfg.video.windowX, Config::cfg.video.windowY,
         Config::cfg.video.windowW, Config::cfg.video.windowH,
         NULL, NULL, wc.hInstance, NULL
@@ -252,7 +252,7 @@ int CALLBACK WinMain(_In_ HINSTANCE hInstance, _In_ HINSTANCE hPrevInstance, _In
     ApplyWindowDpiScale(hwnd);
 
     HostSettingsWidget hostSettingsWindow(g_hosting, [&hwnd](bool isRunning) {
-        SetWindowTextW(hwnd, isRunning ? L"● EN VIVO · Phoenix Soda" : L"Phoenix Soda");
+        SetWindowTextW(hwnd, isRunning ? L"● EN VIVO · Phoenix Link" : L"Phoenix Link");
         });
     LoginWidget loginWindow(g_hosting, hostSettingsWindow);
     LogWidget logWindow(g_hosting);
