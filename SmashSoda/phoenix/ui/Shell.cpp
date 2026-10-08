@@ -455,11 +455,12 @@ namespace phoenix {
 
 		switch (e.seccion) {
 		case SALA: {
-			cabecera(ImVec2(xCont, yCuerpo), ImVec2(anchoCont, altoCab), tema, s, "nav.sala", "sub.sala", {});
+			const int tSala = cabecera(ImVec2(xCont, yCuerpo), ImVec2(anchoCont, altoCab), tema, s, "nav.sala", "sub.sala",
+				{ "tab.resumen", "tab.opciones" });
 			const float alfa = 0.25f + 0.75f * progresoTransicion();
 			PantallaSala::render(gProveedor, p.actividad, p.configSala,
 				[s](const std::function<void()>& dibujar, ImVec2 pos, ImVec2 tam) { acoplar(dibujar, pos, tam, s); },
-				posPanel, tamPanel, alfa);
+				posPanel, tamPanel, alfa, tSala);
 			break;
 		}
 		case MANDOS: {

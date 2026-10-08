@@ -26,7 +26,7 @@ namespace phoenix {
 			const std::function<void()>& panelActividad,
 			const std::function<void()>& panelAvanzado,
 			const Acoplador& acoplar,
-			ImVec2 pos, ImVec2 tam, float alfa);
+			ImVec2 pos, ImVec2 tam, float alfa, int pestana = 0);
 	};
 
 }
