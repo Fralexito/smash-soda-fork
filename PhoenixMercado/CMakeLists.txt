@@ -42,6 +42,8 @@ add_library(PhoenixMercadoCore STATIC
     core/Catalogo.cpp
     core/Emparejamiento.cpp
     core/Integridad.cpp
+    core/SobrePes.cpp
+    core/LigaMaster.cpp
 )
 target_link_libraries(PhoenixMercadoCore PUBLIC PhoenixMercadoTerceros)
 target_include_directories(PhoenixMercadoCore PUBLIC
