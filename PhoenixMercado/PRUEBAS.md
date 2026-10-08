@@ -14,7 +14,7 @@ Detalle técnico completo: `liga-master/ESTRUCTURA-ML.md` (estructura del archiv
 
 ## Resumen (al 8 oct 2026, 13:40)
 
-- **Pruebas mirando el juego:** 11 · ✅ 8 · ❌ 3 (las 3 ya corregidas y vueltas a probar)
+- **Pruebas mirando el juego:** 13 · ✅ 10 · ❌ 3 (las 3 ya corregidas y vueltas a probar)
 - **Otros errores:** subida del catálogo a la web ❌ (corregido; ⏳ falta volver a ejecutar) · alineación del option file en
   amistosos 🔎 (⏳ por corregir) · venta bloqueada después de jugar un partido 🔎 (✅ corregido) · contratos dobles 🔎 (⏳ prueba pedida)
 - **Pruebas automáticas:** 117 de 117 bien (en Linux) · compilación en Windows ⏳
@@ -148,9 +148,13 @@ Se encontró dónde están el **presupuesto de fichajes** y el **tope salarial**
 (tope − sueldos). Los **sueldos y cláusulas** de cada jugador están en la tabla de contratos. Los clubes de la IA **no tienen dinero**
 guardado. Las **ligas de la Liga Máster** tienen su lista de equipos con espacio de sobra. Detalle en ESTRUCTURA-ML §13.
 
-**8 oct 14:10 · Ranura 12 (`ML0000000B`) · Presupuesto de fichajes 500 M y tope salarial 200 M** — ⏳
-Archivo hecho a partir de la ranura 11 cambiando solo esos dos números. Si en el juego aparece "Ppto. fichajes 500.000.000 €" y el
-presupuesto salarial sube a 200.000.000 − sueldos (≈ 86 M), queda probado que el dinero se puede fijar desde fuera.
+**8 oct 14:10 · Ranura 12 (`ML0000000B`) · Presupuesto de fichajes 500 M y tope salarial 200 M** — ✅
+En el juego: **Ppto. fichajes 500.000.000 €** y **Ppto. salarial 86.096.000 €** (= 200.000.000 − 113.904.000, la cifra exacta que
+se había calculado). El dinero del club se puede fijar desde fuera.
 
 **8 oct 14:10 · El «blob» era zlib** — 🔎
 La zona de 1,2 MB que nadie entendía se descomprime (4,7 MB) y guarda el calendario y los resultados de todas las ligas. Detalle §14.
+
+**8 oct 14:30 · Dentro del blob: la ficha de Liga Máster de cada jugador** — 🔎
+16.422 fichas de 156 B con sueldo, valor de mercado (Dias 55 M = pantalla ✓), contrato, competiciones inscritas, valoración,
+crecimiento y condición. Ver ESTRUCTURA-ML §15. El calendario de partidos todavía no se localizó.

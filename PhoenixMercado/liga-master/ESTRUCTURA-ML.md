@@ -212,3 +212,24 @@ la temporada. También hay listas de selecciones y de grupos de copas (0x1f468c�
 - **Tamaños de liga en la LM:** el guardado ya tiene una liga de **30 equipos** (Argentina) y segundas de hasta 66: el motor acepta
   ligas grandes si el parche las define (CPK de competiciones). Lo que fija el tamaño al empezar la carrera es el CPK; después, el
   calendario del blob queda armado con ese tamaño.
+
+## 15. Dentro del blob: la FICHA DE LIGA MÁSTER de cada jugador (156 B) — **[OBSERVADO, 8 oct tarde]**
+- Desde el byte 0x1e del blob descomprimido: **16.422 registros de 156 B, uno por `reg`** (todos los jugadores del universo de la
+  carrera, incluidos libres y juveniles). Registro: `[u16][reg u32][pid u32]` + lista de **competiciones en las que está inscrito**
+  (pares u16 id · u16 banderas, relleno 0xffff) + campos de temporada. Campos ya identificados:
+  | Desplazamiento | Qué | Comprobado con |
+  |---|---|---|
+  | +0x56 (u32) | **sueldo anual /100** | igual al de la tabla I (24/24 jugadores del City) |
+  | +0x5a (u32) | **valor de mercado /100** | Rúben Dias 550.000 → 55.000.000 € = pantalla ✓ |
+  | +0x62 (u32) | número único del contrato | el mismo de la tabla I |
+  | +0x66, +0x6a | fin e inicio del contrato (año u16, mes, día) | 31/8/2027 · 1/7/2020 ✓ |
+  | +0x4b (u8) | ¿valoración media de la temporada ×10? | 0 al inicio; 64–91 tras 2 partidos (Marmoush 91) |
+  | +0x74 (u16) | ¿experiencia / crecimiento? | sube ~+11/+12 por partido en todos los que juegan |
+  | +0x7a (u8) | ¿condición física? | 100 en todos al inicio de temporada; 85–100 y otros valores después |
+  | +0x16…+0x29 | estadísticas de temporada (cambian en 1.000–1.400 jugadores por fecha) | por decodificar |
+- **Potencial:** leer de aquí goles, valoraciones y minutos para mandarlos solos a la web; fijar valor de mercado, sueldo y
+  condición desde la web; ver en qué competiciones está inscrito cada jugador.
+- Después del arreglo (desde 0x271746) hay más registros con **puntos de liga** (+3 al ganar, se ve en decenas de equipos) y
+  otros datos de temporada por equipo, y listas de jugadores inscritos por competición. ⏳ **El calendario de partidos** (local,
+  visitante, fecha, goles) aún no se localizó: no aparece como pares de IDs ni de índices; probablemente use el número de plaza
+  dentro de cada competición. Siguiente pista: comparar dos guardados consecutivos de la MISMA fecha jugada (sin avanzar días).
