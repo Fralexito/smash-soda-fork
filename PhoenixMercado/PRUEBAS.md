@@ -136,3 +136,9 @@ La tabla I guarda los **contratos**. Tres jugadores del City tienen **dos** (Rul
 hasta 2028). El programa solo borra el primero al vender, así que el segundo quedaría como un contrato «fantasma».
 Para hacerlo exactamente como el juego: **rescindir el contrato de Stones en el juego** (ranura 10), guardar en una ranura nueva y
 comparar qué borra el juego. Mientras tanto, el archivo de prueba «v9 Stones al Madrid» **no se entrega**.
+
+**8 oct 13:30 · Ranura 10 → «Despedir» a Stones → guardar en la ranura 11** — ✅ (prueba de referencia)
+Stones quedó libre y el City con 23. Ahora sabemos qué borra **el propio juego** cuando un jugador se va: **sus dos contratos** (el
+segundo era una oferta de otro club) y **la negociación abierta**. Nuestro programa solo borraba el primer contrato y no tocaba la
+oferta → ⏳ hay que agregarlo antes de dar la venta por terminada. Detalle en ESTRUCTURA-ML §12.
+> Dato: la ranura 11 se llama `ML0000000A` (el juego cuenta en hexadecimal).

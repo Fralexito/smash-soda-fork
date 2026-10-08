@@ -161,3 +161,17 @@ python3 prototipos/diff_gt.py base.bin guardado_por_el_juego.bin catalogo.json |
   en el respaldo no había ninguno doble; en los guardados posteriores sí (Rulli, Bettinelli y Stones; el segundo de Stones termina en 2028).
   Hoy el C++ quita solo el primero → el segundo quedaría como un contrato «fantasma». ⏳ Para hacerlo igual que el juego: Fralex
   rescinde el contrato de Stones en el juego y se compara qué borra el juego.
+
+## 12. Lo que borra el PROPIO juego al despedir a un jugador (Stones, ranura 10 → ranura 11 `ML0000000A`) — **[VERDAD DEL JUEGO]**
+- Las ranuras pasan a **hexadecimal**: la ranura 11 es `ML0000000A` (no `ML00000010`).
+- Fralex usó **«Despedir»** (Stones quedó libre, en ningún club). Stones tenía una **oferta abierta** de otro club: su segundo
+  registro de contrato era esa oferta.
+- El juego: compacta la plantilla, dorsales y contador del City; mete a **Rúben Dias (banca)** en el puesto de Stones del XI y sube a
+  los demás; quita a Stones de **las dos** entradas de la tabla I (contratos: 27 → 25) y de la J; **borra la negociación abierta** de una
+  lista de ofertas tras el blob (registros con el club, el jugador y el club que ofertaba) y la compacta; añade a Stones a dos listas
+  de «salidas» (0xbe34b4 y 0xc8018c); vacía **en su sitio** (sin correr a los demás) su registro en A, B, C, D, E, L y M, y **compacta**
+  F, G y H. **No** toca la lista K ni la tabla A2 (las actualiza más tarde). También cambian unos bytes del bloque del equipo (+0x5da,
+  parecen medias del equipo) y del dinero.
+- **Consecuencias para el C++:** (1) al vender hay que borrar **todos** los contratos del jugador en la tabla I, no solo el primero;
+  (2) hay que borrar sus **negociaciones abiertas**; (3) compactar o dejar hueco funciona en ambos casos (el juego aceptó nuestra
+  compactación en las ranuras 6 y 9), así que se mantiene la compactación. ⏳ (1) y (2) pendientes de programar y probar.
