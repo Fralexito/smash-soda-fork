@@ -21,6 +21,7 @@
 #include "../core/MandoHost.h"
 #include "../../globals/AppFonts.h"
 #include "../../globals/AppIcons.h"
+#include "../../core/Config.h"
 #include "../../services/ThemeController.h"
 
 

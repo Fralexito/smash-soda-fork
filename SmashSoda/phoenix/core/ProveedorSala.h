@@ -61,6 +61,19 @@ namespace phoenix {
 		virtual void aplicarAsientosReservados() = 0;
 		/// Saca de la sala al invitado con ese ID Parsec.
 		virtual void expulsar(uint32_t parsecId) = 0;
+
+		// --- Moderación y permisos por invitado (clave: ID Parsec) -------------
+		virtual bool esMod(uint32_t parsecId) = 0;
+		virtual bool esVip(uint32_t parsecId) = 0;
+		/// Activa o quita el rol (si ya lo tiene, lo quita).
+		virtual void alternarMod(uint32_t parsecId, const std::string& nombre) = 0;
+		virtual void alternarVip(uint32_t parsecId, const std::string& nombre) = 0;
+		/// Banea y saca de la sala. Devuelve false si no se pudo (p. ej. es policía de Soda).
+		virtual bool banear(uint32_t parsecId, const std::string& nombre) = 0;
+		virtual bool tecladoPermitido(uint32_t parsecId) = 0;
+		virtual bool ratonPermitido(uint32_t parsecId) = 0;
+		virtual void permitirTeclado(uint32_t parsecId, bool si) = 0;
+		virtual void permitirRaton(uint32_t parsecId, bool si) = 0;
 		/// El host maneja el mando (bloquea al dueño mientras tanto). activo=false lo devuelve.
 		virtual void tomarControl(int indice, bool activo) = 0;
 		/// Estado que el host envía al mando tomado (formato XInput: botones + stick izq.).

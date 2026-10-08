@@ -3,6 +3,7 @@
 #include <set>
 
 #include "../../Hosting.h"
+#include "../../core/Cache.h"
 #include "../../widgets/HostSettingsWidget.h"
 #include "../PhoenixRoles.h"
 
@@ -159,6 +160,74 @@ namespace phoenix {
 			for (Guest& g : _hosting.getGuests()) {
 				if (g.userID == parsecId) { ParsecHostKickGuest(_hosting.getParsec(), g.id); return; }
 			}
+		}
+		catch (...) {}
+	}
+
+	bool ProveedorSalaSoda::esMod(uint32_t parsecId) {
+		try { return Cache::cache.modList.isModded(parsecId); }
+		catch (...) { return false; }
+	}
+
+	bool ProveedorSalaSoda::esVip(uint32_t parsecId) {
+		try { return Cache::cache.vipList.isVIP(parsecId); }
+		catch (...) { return false; }
+	}
+
+	void ProveedorSalaSoda::alternarMod(uint32_t parsecId, const std::string& nombre) {
+		try {
+			if (Cache::cache.modList.isModded(parsecId)) Cache::cache.modList.unmod(parsecId);
+			else Cache::cache.modList.mod(GuestData(nombre, parsecId));
+		}
+		catch (...) {}
+	}
+
+	void ProveedorSalaSoda::alternarVip(uint32_t parsecId, const std::string& nombre) {
+		try {
+			if (Cache::cache.vipList.isVIP(parsecId)) Cache::cache.vipList.unVIP(parsecId);
+			else Cache::cache.vipList.VIP(GuestData(nombre, parsecId));
+		}
+		catch (...) {}
+	}
+
+	bool ProveedorSalaSoda::banear(uint32_t parsecId, const std::string& nombre) {
+		try {
+			if (Cache::cache.isSodaCop(parsecId)) return false;   // un policía de Soda no se banea
+			Cache::cache.banList.ban(GuestData(nombre, parsecId));
+			expulsar(parsecId);
+			return true;
+		}
+		catch (...) {
+			return false;
+		}
+	}
+
+	bool ProveedorSalaSoda::tecladoPermitido(uint32_t parsecId) {
+		try {
+			for (Guest& g : _hosting.getGuests()) if (g.userID == parsecId) return g.allowKeyboardInput;
+		}
+		catch (...) {}
+		return false;
+	}
+
+	bool ProveedorSalaSoda::ratonPermitido(uint32_t parsecId) {
+		try {
+			for (Guest& g : _hosting.getGuests()) if (g.userID == parsecId) return g.allowMouseInput;
+		}
+		catch (...) {}
+		return false;
+	}
+
+	void ProveedorSalaSoda::permitirTeclado(uint32_t parsecId, bool si) {
+		try {
+			for (Guest& g : _hosting.getGuests()) if (g.userID == parsecId) { g.allowKeyboardInput = si; return; }
+		}
+		catch (...) {}
+	}
+
+	void ProveedorSalaSoda::permitirRaton(uint32_t parsecId, bool si) {
+		try {
+			for (Guest& g : _hosting.getGuests()) if (g.userID == parsecId) { g.allowMouseInput = si; return; }
 		}
 		catch (...) {}
 	}

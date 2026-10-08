@@ -33,6 +33,15 @@ namespace phoenix {
 		bool asignarMando(int indice, uint32_t parsecId) override;
 		void aplicarAsientosReservados() override;
 		void expulsar(uint32_t parsecId) override;
+		bool esMod(uint32_t parsecId) override;
+		bool esVip(uint32_t parsecId) override;
+		void alternarMod(uint32_t parsecId, const std::string& nombre) override;
+		void alternarVip(uint32_t parsecId, const std::string& nombre) override;
+		bool banear(uint32_t parsecId, const std::string& nombre) override;
+		bool tecladoPermitido(uint32_t parsecId) override;
+		bool ratonPermitido(uint32_t parsecId) override;
+		void permitirTeclado(uint32_t parsecId, bool si) override;
+		void permitirRaton(uint32_t parsecId, bool si) override;
 		void tomarControl(int indice, bool activo) override;
 		void inyectar(int indice, uint16_t botones, int16_t lx, int16_t ly) override;
 		void aplicarVideo(int fps, int mbps) override;
