@@ -174,7 +174,9 @@ namespace phoenix {
 			izq(w);
 			const float y1 = ImGui::GetCursorScreenPos().y;
 			ImGui::SetCursorScreenPos(ImVec2(o.x + w + sepCol, o.y));
+			ImGui::Indent(w + sepCol); // ImGui devuelve el cursor al margen izquierdo tras cada elemento
 			der(w);
+			ImGui::Unindent(w + sepCol);
 			const float y2 = ImGui::GetCursorScreenPos().y;
 			ImGui::SetCursorScreenPos(ImVec2(o.x, (std::max)(y1, y2)));
 		}
@@ -474,7 +476,7 @@ namespace phoenix {
 			const ImVec2 e0(xEnlace, yEnlace), e1(xEnlace + anchoEnlace, yEnlace + 48 * s);
 			dl->AddRectFilled(e0, e1, vis::col(tema->formInputBackground), 12 * s);
 			const char* textoEnlace = e.enlaceCache.empty() ? T("sala.sin_enlace") : e.enlaceCache.c_str();
-			dl->PushClipRect(ImVec2(e0.x + 14 * s, e0.y), ImVec2(e1.x - 110 * s, e1.y), true);
+			dl->PushClipRect(ImVec2(e0.x + 14 * s, e0.y), ImVec2(e1.x - (e.enlaceCache.empty() ? 14 : 110) * s, e1.y), true);
 			salaTexto(dl, AppFonts::input, AppFonts::input->FontSize,
 				ImVec2(e0.x + 14 * s, e0.y + (48 * s - AppFonts::input->FontSize) * 0.5f),
 				vis::col(e.enlaceCache.empty() ? tema->textMuted : tema->text), textoEnlace);
