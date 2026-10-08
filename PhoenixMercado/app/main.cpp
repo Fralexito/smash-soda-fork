@@ -14,6 +14,10 @@
 //  PhoenixMercado subir-catalogo <EDIT> <cpk> <nombreParche>                    (staff, por lotes)
 //  PhoenixMercado subir-equivalencias <EDIT ref> <cpk ref> <EDIT local> <cpk local> <perfil> [--referencia]
 //  PhoenixMercado mover <EDIT> <pes_id> <equipoDestino> <salidaNueva>   (nunca sobrescribe)
+//  PhoenixMercado sincronizar <EDIT> <EDIT nuevo> [--ml <ML> <ML nuevo>] [--catalogo <catalogo.json>] [--desde N]
+//                 [--solo-option | --solo-ml] [--cambios <archivo.json>]   (--manager)
+//      Baja GET /liga/cambios?desde=N (firmado), verifica la firma, aplica al option file y/o a la Liga Máster
+//      y guarda SIEMPRE en archivos nuevos. --cambios usa un sobre firmado guardado en disco en vez de la web.
 //
 //  Modo de token: por defecto «compartido» (el de Phoenix Link).
 //  --manager usa el token propio de Mercado (segundo código).
@@ -33,7 +37,12 @@
 #include "../core/Catalogo.h"
 #include "../core/Emparejamiento.h"
 #include "../core/Integridad.h"
+#include "../core/LigaMaster.h"
+#include "../core/Firma.h"
+#include "../core/Sincronizacion.h"
 #include <fstream>
+#include <map>
+#include <optional>
 #include <nlohmann/json.hpp>
 #include <algorithm>
 #include "../windows/Plataforma.h"
@@ -57,7 +66,7 @@ int main(int argc, char** argv) {
 	for (auto it = a.begin(); it != a.end();) {
 		if (*it == "--manager") { manager = true; it = a.erase(it); } else ++it;
 	}
-	if (a.empty()) { std::printf("Uso: eco | yo | vincular <codigo> | option | bajar <carpeta> | hash <archivo> | copia <archivo> <carpeta> | catalogo <EDIT> <cpk> <json> | mover <EDIT> <id> <equipo> <salida> | verificar <EDIT> <cpk> | emparejar <EDITref> <cpkRef> <EDIT> <cpk> <json> [--manager]\n"); return 1; }
+	if (a.empty()) { std::printf("Uso: eco | yo | vincular <codigo> | option | bajar <carpeta> | hash <archivo> | copia <archivo> <carpeta> | catalogo <EDIT> <cpk> <json> | mover <EDIT> <id> <equipo> <salida> | sincronizar <EDIT> <EDITnuevo> [--ml <ML> <MLnuevo>] [--catalogo c.json] [--desde N] | verificar <EDIT> <cpk> | emparejar <EDITref> <cpkRef> <EDIT> <cpk> <json> [--manager]\n"); return 1; }
 
 	try {
 		const bool lento = cmd0(a) == "subir-catalogo" || cmd0(a) == "subir-equivalencias";
@@ -126,6 +135,73 @@ int main(int argc, char** argv) {
 			auto g = of.valor->guardarComo(a[4]);
 			if (!g.ok()) { imprimirError(g.error); return 2; }
 			std::printf("Guardado y verificado: %s (sha256 %s)\n", a[4].c_str(), g.valor->c_str());
+		}
+		else if (cmd == "sincronizar" && a.size() >= 3) {
+			// Opciones
+			std::string rutaMl, rutaMlNueva, rutaCatalogo, rutaCambios; long long desde = 0;
+			sinc::Alcance alcance;
+			for (size_t i = 3; i < a.size(); i++) {
+				if (a[i] == "--ml" && i + 2 < a.size()) { rutaMl = a[i + 1]; rutaMlNueva = a[i + 2]; i += 2; }
+				else if (a[i] == "--catalogo" && i + 1 < a.size()) rutaCatalogo = a[++i];
+				else if (a[i] == "--desde" && i + 1 < a.size()) desde = std::stoll(a[++i]);
+				else if (a[i] == "--cambios" && i + 1 < a.size()) rutaCambios = a[++i];
+				else if (a[i] == "--solo-option") alcance.ligaMaster = false;
+				else if (a[i] == "--solo-ml") alcance.optionFile = false;
+				else { std::printf("Opción desconocida: %s\n", a[i].c_str()); return 1; }
+			}
+			if (alcance.ligaMaster && rutaMl.empty()) alcance.ligaMaster = false;
+			// Posiciones y nombres del catálogo (para elegir sustitutos y para el informe)
+			std::map<uint32_t, int> posiciones; std::map<uint32_t, std::string> nombres;
+			if (!rutaCatalogo.empty()) {
+				std::ifstream fc(aRuta(rutaCatalogo)); auto cj = nlohmann::json::parse(fc, nullptr, false);
+				static const std::map<std::string, int> codigo = { {"GK",0},{"CB",1},{"LB",2},{"RB",3},{"DMF",4},{"CMF",5},{"LMF",6},{"RMF",7},{"AMF",8},{"LWF",9},{"RWF",10},{"SS",11},{"CF",12} };
+				if (!cj.is_discarded() && cj.contains("jugadores"))
+					for (auto& j : cj["jugadores"]) {
+						if (!j.contains("pes_id") || !j["pes_id"].is_number()) continue;
+						const uint32_t id = j["pes_id"].get<uint32_t>();
+						auto it = codigo.find(j.value("posicion", "")); if (it != codigo.end()) posiciones[id] = it->second;
+						nombres[id] = j.value("nombre", "");
+					}
+				std::printf("Catálogo: %zu jugadores con posición\n", posiciones.size());
+			}
+			auto posicionDe = [&](uint32_t id) { auto it = posiciones.find(id); return it == posiciones.end() ? -1 : it->second; };
+			auto nombreDe = [&](uint32_t id) { auto it = nombres.find(id); return it == nombres.end() || it->second.empty() ? "jugador " + std::to_string(id) : it->second; };
+			// Sobre firmado: de la web o de un archivo
+			std::string sobre;
+			if (!rutaCambios.empty()) { std::ifstream f(aRuta(rutaCambios), std::ios::binary); sobre.assign(std::istreambuf_iterator<char>(f), std::istreambuf_iterator<char>()); }
+			else {
+				auto r = api.ligaCambiosFirmados(desde);
+				if (!r.ok()) { imprimirError(r.error); return 2; }
+				sobre = *r.valor;
+			}
+			auto contenido = abrirSobreFirmado(sobre, sinc::claveWeb());
+			if (!contenido.ok()) { imprimirError(contenido.error); return 2; }
+			auto lista = sinc::parsearCambios(*contenido.valor);
+			if (!lista.ok()) { imprimirError(lista.error); return 2; }
+			std::printf("Cambios de liga: %zu (desde %lld, versión actual %lld)\n", lista.valor->cambios.size(), (long long)lista.valor->desde, (long long)lista.valor->versionActual);
+			// Archivos
+			auto of = OptionFile::abrir(a[1]);
+			if (!of.ok()) { imprimirError(of.error); return 2; }
+			std::optional<lm::GuardadoLM> ml;
+			if (alcance.ligaMaster) {
+				auto g = lm::GuardadoLM::abrir(rutaMl);
+				if (!g.ok()) { imprimirError(g.error); return 2; }
+				ml = std::move(*g.valor);
+			}
+			auto inf = sinc::aplicarCambios(*lista.valor, desde, alcance, alcance.optionFile ? &*of.valor : nullptr, ml ? &*ml : nullptr, posicionDe, nombreDe);
+			if (!inf.ok()) { imprimirError(inf.error); std::printf("No se escribió nada.\n"); return 2; }
+			std::printf("%s", inf.valor->texto().c_str());
+			if (alcance.optionFile) {
+				auto g = of.valor->guardarComo(a[2]);
+				if (!g.ok()) { imprimirError(g.error); return 2; }
+				std::printf("Option file guardado y verificado: %s (sha256 %s)\n", a[2].c_str(), g.valor->c_str());
+			}
+			if (ml) {
+				auto g = ml->guardarComo(rutaMlNueva, "Phoenix Mercado v" + std::to_string(inf.valor->versionAplicada));
+				if (!g.ok()) { imprimirError(g.error); return 2; }
+				std::printf("Liga Máster guardada y verificada: %s (sha256 %s)\n", rutaMlNueva.c_str(), g.valor->c_str());
+			}
+			std::printf("Versión de liga aplicada: %lld\n", (long long)inf.valor->versionAplicada);
 		}
 		else if (cmd == "verificar" && a.size() >= 3) {
 			auto of = OptionFile::abrir(a[1]);

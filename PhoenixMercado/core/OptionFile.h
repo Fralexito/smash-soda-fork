@@ -73,6 +73,9 @@ namespace mercado {
 		/// ver sugerirSustituto). El que llega entra como última reserva en el destino. Todo o nada.
 		Resultado<bool> mover(uint32_t jugador, uint32_t equipoDestino, uint32_t equipoOrigen = 0, uint16_t dorsal = 0, uint32_t sustituto = 0);
 
+		/// Saca al jugador del equipo sin ponerlo en otro (queda libre). Mismas reglas de alineación que `mover`.
+		Resultado<bool> quitar(uint32_t jugador, uint32_t equipo, uint32_t sustituto = 0);
+
 		/// Cifra y escribe en `rutaNueva`. Falla si ya existe (nunca sobrescribe).
 		Resultado<std::string> guardarComo(const std::string& rutaNueva) const;
 

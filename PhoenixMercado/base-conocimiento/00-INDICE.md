@@ -8,6 +8,7 @@ Se **alimenta en cada auditoría** y nunca se borra lo aprendido: si algo cambia
 | Archivo | Qué guarda |
 |---|---|
 | `01-MOTOR-PES2021.md` | Lo que es del **juego** y vale para **cualquier parche**: cómo están armados el option file, el guardado de Liga Máster y el bloque comprimido. Tablas con posición, tamaño, campo y estado. |
+| `02-PARCHE-PHOENIX.md` | **El objetivo de fondo:** anatomía de un parche de PES 2021, qué ya controlamos y qué falta para fabricar el **parche Phoenix** vinculado a la web, a Phoenix Link y al Mercado. |
 | `parches/conmegol-26.md` | Lo que es **solo del ConmeGOL Patch 26**: carpetas, archivos, números de equipos y jugadores, IDs, competiciones, rarezas vistas. |
 | `parches/sudamerican-2026.md` | Lo poco que ya se sabe del Sudamerican Project 2026 (pendiente de auditar). |
 | `datos/motor.json` | La misma información del motor, en formato de datos, para que el software la lea. |

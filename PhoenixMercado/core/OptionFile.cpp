@@ -187,6 +187,31 @@ namespace mercado {
 		return R::bien(pl[size_t(elegido)].jugador);
 	}
 
+	namespace {
+		struct SalidaPreparada { int idx = -1; AlineacionLocal ali; };
+	}
+
+	/// Comprueba la salida de `jugador` de `origen` (índice, sustituto, alineación nueva) sin tocar nada.
+	static Resultado<SalidaPreparada> prepararSalida(const OptionFile& of, const std::map<uint32_t, std::vector<PlazaPlantilla>>& plantillas,
+		uint32_t jugador, uint32_t origen, uint32_t sustituto) {
+		using R = Resultado<SalidaPreparada>;
+		if (!plantillas.count(origen)) return R::mal("EQUIPO_NO_EXISTE", std::to_string(origen));
+		const auto& po = plantillas.at(origen);
+		SalidaPreparada s; int idxS = -1;
+		for (size_t i = 0; i < po.size(); i++) { if (po[i].jugador == jugador) s.idx = int(i); if (sustituto && po[i].jugador == sustituto) idxS = int(i); }
+		if (s.idx < 0) return R::mal("JUGADOR_NO_ESTA_EN_ORIGEN");
+		if (sustituto && idxS < 0) return R::mal("SUSTITUTO_NO_ESTA", "El sustituto no está en el equipo de origen");
+		if (sustituto && sustituto == jugador) return R::mal("SUSTITUTO_INVALIDO", "El sustituto es el mismo jugador");
+		auto a = of.alineacion(origen);
+		if (!a.ok()) return R::mal(a.error.codigo, a.error.detalle);
+		s.ali = *a.valor;
+		if (idxS < 0 && alineacion::necesitaSustituto(s.ali.orden, s.ali.roles, s.idx))
+			return R::mal("FALTA_SUSTITUTO", "El jugador es titular o tiene un rol en la alineación: hace falta un sustituto (sugerirSustituto)");
+		std::string porque;
+		if (!alineacion::quitarDeOrden(s.ali.orden, s.ali.roles, s.idx, idxS, porque)) return R::mal("ALINEACION_INVALIDA", porque);
+		return R::bien(std::move(s));
+	}
+
 	Resultado<bool> OptionFile::mover(uint32_t jugador, uint32_t destino, uint32_t origen, uint16_t dorsal, uint32_t sustituto) {
 		using R = Resultado<bool>;
 		if (!_plantillas.count(destino)) return R::mal("EQUIPO_NO_EXISTE", std::to_string(destino));
@@ -199,23 +224,13 @@ namespace mercado {
 				for (const auto& p : pl) if (p.jugador == jugador && eq != destino && !origen) origen = eq;
 		}
 		// --- Se comprueba TODO antes de tocar nada (todo o nada) ---------------
-		AlineacionLocal aliOrigen, aliDestino;
-		int idx = -1, idxS = -1;
+		SalidaPreparada salida;
 		if (origen) {
-			if (!_plantillas.count(origen)) return R::mal("EQUIPO_NO_EXISTE", std::to_string(origen));
-			const auto& po = _plantillas.at(origen);
-			for (size_t i = 0; i < po.size(); i++) { if (po[i].jugador == jugador) idx = int(i); if (sustituto && po[i].jugador == sustituto) idxS = int(i); }
-			if (idx < 0) return R::mal("JUGADOR_NO_ESTA_EN_ORIGEN");
-			if (sustituto && idxS < 0) return R::mal("SUSTITUTO_NO_ESTA", "El sustituto no está en el equipo de origen");
-			if (sustituto && sustituto == jugador) return R::mal("SUSTITUTO_INVALIDO", "El sustituto es el mismo jugador");
-			auto a = leerAlineacion(origen, po.size());
-			if (!a.ok()) return R::mal(a.error.codigo, a.error.detalle);
-			aliOrigen = *a.valor;
-			if (idxS < 0 && alineacion::necesitaSustituto(aliOrigen.orden, aliOrigen.roles, idx))
-				return R::mal("FALTA_SUSTITUTO", "El jugador es titular o tiene un rol en la alineación: hace falta un sustituto (sugerirSustituto)");
-			std::string porque;
-			if (!alineacion::quitarDeOrden(aliOrigen.orden, aliOrigen.roles, idx, idxS, porque)) return R::mal("ALINEACION_INVALIDA", porque);
+			auto s = prepararSalida(*this, _plantillas, jugador, origen, sustituto);
+			if (!s.ok()) return R::mal(s.error.codigo, s.error.detalle);
+			salida = *s.valor;
 		}
+		AlineacionLocal aliDestino;
 		{
 			auto a = leerAlineacion(destino, pdAntes.size());
 			if (!a.ok()) return R::mal(a.error.codigo, a.error.detalle);
@@ -229,14 +244,25 @@ namespace mercado {
 		// --- Todo cuadra: se aplica ---------------------------------------------
 		if (origen) {
 			auto& po = _plantillas[origen];
-			po.erase(po.begin() + idx);   // se compacta: sin huecos en la lista (los índices mayores bajan uno, igual que en el orden)
+			po.erase(po.begin() + salida.idx);   // se compacta: sin huecos en la lista (los índices mayores bajan uno, igual que en el orden)
 			escribirPlantilla(origen);
-			escribirAlineacion(origen, aliOrigen);
+			escribirAlineacion(origen, salida.ali);
 		}
 		auto& pd = _plantillas[destino];
 		pd.push_back({ jugador, dorsal });
 		escribirPlantilla(destino);
 		escribirAlineacion(destino, aliDestino);
+		return R::bien(true);
+	}
+
+	Resultado<bool> OptionFile::quitar(uint32_t jugador, uint32_t equipo, uint32_t sustituto) {
+		using R = Resultado<bool>;
+		auto s = prepararSalida(*this, _plantillas, jugador, equipo, sustituto);
+		if (!s.ok()) return R::mal(s.error.codigo, s.error.detalle);
+		auto& po = _plantillas[equipo];
+		po.erase(po.begin() + s.valor->idx);
+		escribirPlantilla(equipo);
+		escribirAlineacion(equipo, s.valor->ali);
 		return R::bien(true);
 	}
 

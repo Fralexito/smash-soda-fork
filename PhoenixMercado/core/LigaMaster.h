@@ -91,6 +91,12 @@ namespace mercado::lm {
 		/// Equipos (de club y selección) en cuya plantilla está el jugador.
 		std::vector<int> equiposDe(uint32_t pid) const;
 
+		/// ID del equipo en el option file. El bloque del equipo del usuario lleva -11 (0xfffffff5) en vez de su ID
+		/// (marca de «lo lleva el usuario»); su ID real se recupera de la cabecera de sus contratos (club >> 14). §17.
+		Resultado<uint32_t> idOptionDe(int indice) const;
+		/// Índice del bloque de equipo (0–699) cuyo ID en el option file es `idOption` (también el del usuario).
+		Resultado<int> indicePorIdOption(uint32_t idOption) const;
+
 		/// Tablas alineadas halladas para ese equipo (vacío = equipo de la IA). Son CANDIDATAS: tras jugar un partido
 		/// también aparece la ficha de ese partido (lista a los que jugaron); moverUsuarioAIA la descarta.
 		std::vector<TablaAlineada> tablasDe(int indice) const;

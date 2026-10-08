@@ -37,9 +37,15 @@ namespace mercado {
 
 		/// POST /catalogo (solo staff). `cuerpo` = un lote de lotesCatalogo(). Devuelve el JSON de «datos».
 		Resultado<std::string> subirCatalogo(const std::string& cuerpo);
-		/// GET /plantillas → texto firmado. Devuelve el «contenido» (JSON) tal cual llegó.
-		/// Pendiente: verificar la firma Ed25519 antes de usarlo para escribir en el juego.
+		/// GET /plantillas → sobre firmado. Devuelve el JSON de «datos» ENTERO ({ contenido, firma, clave_id, algoritmo }):
+		/// hay que abrirlo con abrirSobreFirmado (Firma.h) antes de usar el contenido.
+		Resultado<std::string> plantillasFirmadas();
+		/// GET /plantillas → solo el «contenido» SIN verificar la firma (para mostrar; nunca para escribir en el juego).
 		Resultado<std::string> plantillas();
+		/// GET /liga/cambios?desde=<versión> → sobre firmado (igual que plantillasFirmadas). Sincronizacion.h lo aplica.
+		Resultado<std::string> ligaCambiosFirmados(long long desde);
+		/// POST /liga/aplicado { version, huella_plantillas } → { version_actual, al_dia, coincide } (JSON de «datos»).
+		Resultado<std::string> ligaAplicado(const std::string& cuerpo);
 		/// POST /equivalencias (solo staff). Máx. 3000 filas por llamada.
 		Resultado<std::string> subirEquivalencias(const std::string& cuerpo);
 

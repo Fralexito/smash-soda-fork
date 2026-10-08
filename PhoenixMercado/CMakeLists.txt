@@ -24,6 +24,13 @@ add_library(PhoenixMercadoTerceros STATIC
     terceros/pesxcrypter/masterkey.c
     terceros/pesxcrypter/mt19937ar.c
     terceros/miniz/miniz.c
+    terceros/ed25519/fe.c
+    terceros/ed25519/ge.c
+    terceros/ed25519/sc.c
+    terceros/ed25519/sha512.c
+    terceros/ed25519/verify.c
+    terceros/ed25519/sign.c
+    terceros/ed25519/keypair.c
 )
 if(MSVC)
     target_compile_options(PhoenixMercadoTerceros PRIVATE /W0)
@@ -44,6 +51,8 @@ add_library(PhoenixMercadoCore STATIC
     core/Integridad.cpp
     core/SobrePes.cpp
     core/LigaMaster.cpp
+    core/Firma.cpp
+    core/Sincronizacion.cpp
 )
 target_link_libraries(PhoenixMercadoCore PUBLIC PhoenixMercadoTerceros)
 target_include_directories(PhoenixMercadoCore PUBLIC

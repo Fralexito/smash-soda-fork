@@ -19,6 +19,8 @@
 #include "../core/Emparejamiento.h"
 #include "../core/Integridad.h"
 #include "../core/LigaMaster.h"
+#include "../core/Firma.h"
+#include "../core/Sincronizacion.h"
 #include <nlohmann/json.hpp>
 #include <cstdlib>
 
@@ -168,6 +170,7 @@ int main() {
 	{ const uint8_t b[4] = { 0xB4, 0x01, 0, 0 };   // 0x01B4 = 436
 	  CHECK(leerBits(b, 0, 16) == 436); CHECK(leerBits(b, 2, 3) == 5); }
 
+	std::vector<uint8_t> dSint;   // la Liga Máster sintética, para reutilizarla en la sincronización
 	std::printf("Liga Máster interna (equipo del usuario, datos sintéticos)\n");
 	{
 		using namespace mercado::lm;
@@ -320,6 +323,7 @@ int main() {
 			}
 		}
 
+		dSint = d;   // copia para las pruebas de sincronización
 		auto g = GuardadoLM::desdeDatos(d);
 		CHECK(g.ok());
 		if (g.ok()) {
@@ -496,6 +500,102 @@ int main() {
 		}
 	}
 
+	std::printf("Firma Ed25519 y sobres de la web\n");
+	{
+		CHECK(aBase64({ 'M','a','n' }) == "TWFu" && aBase64({ 'M','a' }) == "TWE=" && aBase64({ 'M' }) == "TQ==");
+		CHECK(desdeBase64("TWFu") == std::vector<uint8_t>({ 'M','a','n' }) && desdeBase64("TWE=") == std::vector<uint8_t>({ 'M','a' }) && desdeBase64("TQ==") == std::vector<uint8_t>({ 'M' }));
+		CHECK(desdeBase64("T$==").empty());
+		std::vector<uint8_t> semilla(32); for (int i = 0; i < 32; i++) semilla[i] = uint8_t(i);
+		auto par = parClavesDesdeSemilla(semilla);
+		// Misma clave pública que la biblioteca estándar (cryptography de Python) con esta semilla: la implementación es compatible.
+		CHECK(aBase64(par.publica) == "A6EHv/POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg=");
+		const std::string contenido = "{\"liga\":\"galaxy\",\"desde\":0,\"version_actual\":3,\"cambios\":[]}";
+		const std::string firma = firmarTexto(par, contenido);
+		// Firma que produjo Python para el mismo texto y la misma clave: idéntica byte a byte.
+		CHECK(firma == "sYTfVmWe+AZPIXqVNx9dwkf306fDV/0cNV+JjrYs8oIOEgL5TxRFdyajDkjpprnPfmPlVeORm5DhxDeJRt++AQ==");
+		ClavePublica clave; clave.claveId = "k1"; clave.publica = par.publica;
+		CHECK(verificarFirma(clave, contenido, firma));
+		CHECK(!verificarFirma(clave, contenido + " ", firma));
+		nlohmann::json sobre = { {"contenido", contenido}, {"firma", firma}, {"clave_id", "k1"}, {"algoritmo", "Ed25519"} };
+		auto ab = abrirSobreFirmado(sobre.dump(), clave);
+		CHECK(ab.ok() && *ab.valor == contenido);
+		sobre["clave_id"] = "k2"; CHECK(abrirSobreFirmado(sobre.dump(), clave).error.codigo == "CLAVE_DESCONOCIDA"); sobre["clave_id"] = "k1";
+		sobre["contenido"] = contenido + " "; CHECK(abrirSobreFirmado(sobre.dump(), clave).error.codigo == "FIRMA_INVALIDA"); sobre["contenido"] = contenido;
+		sobre["algoritmo"] = "RSA"; CHECK(abrirSobreFirmado(sobre.dump(), clave).error.codigo == "SOBRE_INVALIDO");
+		CHECK(abrirSobreFirmado("no es json", clave).error.codigo == "SOBRE_INVALIDO");
+		CHECK(abrirSobreFirmado("{}", clave).error.codigo == "SOBRE_INVALIDO");
+	}
+
+	std::printf("Sincronización con la web (cambios de liga)\n");
+	{
+		using namespace mercado::sinc;
+		auto l = parsearCambios(R"({"liga":"galaxy","desde":2,"version_actual":5,"cambios":[
+			{"version":3,"phoenix_id":10,"pes_id":9101,"club_desde":"Nueve","club_hacia":"Diez","club_desde_pes":2009,"club_hacia_pes":2010,"tipo":"traspaso","fecha":"2026-10-08"},
+			{"version":4,"phoenix_id":11,"pes_id":5012,"club_desde":"Usuario","club_hacia":"Siete","club_desde_pes":2005,"club_hacia_pes":2007,"tipo":"traspaso"},
+			{"version":5,"phoenix_id":12,"pes_id":null,"club_desde":"Siete","club_hacia":null,"club_desde_pes":2007,"club_hacia_pes":null,"tipo":"libre"}]})");
+		CHECK(l.ok());
+		if (l.ok()) {
+			CHECK(l.valor->liga == "galaxy" && l.valor->desde == 2 && l.valor->versionActual == 5 && l.valor->cambios.size() == 3);
+			CHECK(l.valor->cambios[0].pesId == 9101 && l.valor->cambios[0].clubDesdePes == 2009 && l.valor->cambios[0].clubHaciaPes == 2010);
+			CHECK(l.valor->cambios[2].pesId == 0 && l.valor->cambios[2].clubHaciaPes == 0);
+		}
+		CHECK(parsearCambios(R"({"cambios":[{"version":2},{"version":2}]})").error.codigo == "CAMBIOS_INVALIDOS");
+		CHECK(parsearCambios(R"({"cambios":[{"version":9},{"version":3}]})").error.codigo == "CAMBIOS_INVALIDOS");
+		CHECK(parsearCambios("[]").error.codigo == "CAMBIOS_INVALIDOS");
+		CHECK(cuerpoAplicado(7, "abc") == R"({"huella_plantillas":"abc","version":7})");
+
+		// Liga Máster sintética (la misma de arriba, desde cero): usuario = 5 (ID real 2005), IA 7…12 (ID 2000 + k).
+		{
+			using namespace mercado::lm;
+			auto gl = GuardadoLM::desdeDatos(dSint);
+			CHECK(gl.ok());
+			auto cambios = parsearCambios(R"({"liga":"galaxy","desde":0,"version_actual":8,"cambios":[
+				{"version":1,"pes_id":9101,"club_desde":"Nueve","club_hacia":"Diez","club_desde_pes":2009,"club_hacia_pes":2010},
+				{"version":2,"pes_id":5012,"club_desde":"Usuario","club_hacia":"Siete","club_desde_pes":2005,"club_hacia_pes":2007},
+				{"version":3,"pes_id":8005,"club_desde":"Ocho","club_hacia":"Usuario","club_desde_pes":2008,"club_hacia_pes":2005},
+				{"version":4,"pes_id":9001,"club_desde":"Siete","club_hacia":null,"club_desde_pes":2007,"club_hacia_pes":null},
+				{"version":5,"pes_id":null,"club_desde":"Siete","club_hacia":"Nueve","club_desde_pes":2007,"club_hacia_pes":2009},
+				{"version":6,"pes_id":9324,"club_desde":"Once","club_hacia":"Nueve","club_desde_pes":2011,"club_hacia_pes":2009},
+				{"version":7,"pes_id":9102,"club_desde":"Nueve","club_hacia":"Fantasma","club_desde_pes":2009,"club_hacia_pes":99999},
+				{"version":8,"pes_id":9103,"club_desde":"Nueve","club_hacia":"Nueve","club_desde_pes":2009,"club_hacia_pes":2009}]})");
+			CHECK(cambios.ok());
+			if (gl.ok() && cambios.ok()) {
+				const auto antes = gl.valor->datos();
+				// Sin option file ni LM en el alcance → error y nada cambia.
+				CHECK(aplicarCambios(*cambios.valor, 0, { false, false }, nullptr, &*gl.valor, nullptr).error.codigo == "SIN_DESTINO");
+				auto inf = aplicarCambios(*cambios.valor, 0, { true, true }, nullptr, &*gl.valor, nullptr);
+				if (!inf.ok()) std::printf("  sincronización: %s %s\n", inf.error.codigo.c_str(), inf.error.detalle.c_str());
+				CHECK(inf.ok());
+				if (inf.ok()) {
+					CHECK(inf.valor->versionAplicada == 8 && inf.valor->aplicadosOption == 0);
+					CHECK(inf.valor->aplicadosLM == 4 && inf.valor->pendientesLM == 3);   // v1, v2, v6 y v8 (ya estaba); v3, v4, v7 pendientes
+					CHECK(inf.valor->lineas.size() == 8);
+					CHECK(inf.valor->lineas[0].ligaMaster && inf.valor->lineas[1].ligaMaster && inf.valor->lineas[5].ligaMaster && inf.valor->lineas[7].ligaMaster);
+					CHECK(!inf.valor->lineas[2].pendienteLM.empty() && !inf.valor->lineas[3].pendienteLM.empty() && !inf.valor->lineas[6].pendienteLM.empty());
+					CHECK(inf.valor->lineas[4].texto.find("sin pes_id") != std::string::npos);
+					CHECK(inf.valor->lineas[5].texto.find("estaba en") != std::string::npos);   // la web decía club 2011; en la LM estaba en el 12
+					CHECK(inf.valor->lineas[7].texto.find("ya estaba") != std::string::npos);
+					CHECK(gl.valor->equipo(10).valor->plantilla.back().pid == 9101 && gl.valor->equipo(9).valor->plantilla.size() == 20);   // 20 - 9101 + 9324
+					CHECK(gl.valor->equipo(7).valor->plantilla.back().pid == 5012 && gl.valor->equipo(5).valor->plantilla.size() == 25);
+					CHECK(gl.valor->equipo(12).valor->plantilla.size() == 24);
+					std::printf("%s", inf.valor->texto().c_str());
+				}
+				// Todo o nada: un cambio que falla (el equipo 11 tiene la alineación rota) deja la Liga Máster como estaba.
+				auto g2 = GuardadoLM::desdeDatos(dSint);
+				auto malos = parsearCambios(R"({"cambios":[
+					{"version":1,"pes_id":9101,"club_desde_pes":2009,"club_hacia_pes":2010},
+					{"version":2,"pes_id":9251,"club_desde_pes":2011,"club_hacia_pes":2009}]})");
+				CHECK(malos.ok());
+				auto r2 = aplicarCambios(*malos.valor, 0, { true, true }, nullptr, &*g2.valor, nullptr);
+				CHECK(!r2.ok() && r2.error.codigo == "ALINEACION_IA_INVALIDA" && g2.valor->datos() == antes);
+				// Las versiones ya aplicadas se saltan.
+				auto g3 = GuardadoLM::desdeDatos(dSint);
+				auto r3 = aplicarCambios(*cambios.valor, 7, { true, true }, nullptr, &*g3.valor, nullptr);
+				CHECK(r3.ok() && r3.valor->lineas.size() == 1 && r3.valor->versionAplicada == 8 && g3.valor->datos() == antes);
+			}
+		}
+	}
+
 	// --- Pruebas con archivos reales (opcionales) -------------------------
 	//  PM_EDIT = ruta a una COPIA de EDIT00000000 · PM_CPK = ruta a CGP_database.cpk
 	const char* rEdit = std::getenv("PM_EDIT");
@@ -574,6 +674,39 @@ int main() {
 					// Titular: sin sustituto se niega; con el sugerido, el XI conserva a los otros 10 y el que se va ya no está.
 					// Sin catálogo de posiciones se prueba con un jugador de campo (puesto 5); con PM_CATALOGO (catálogo JSON
 					// del parche) también con el portero (puesto 0), que solo puede cubrirlo otro portero.
+					// Sincronización con la web sobre el option file real: el titular del puesto 5 cambia de club por una lista de
+					// cambios firmada; el XI del origen conserva a los otros 10 y el que llega es la última reserva del destino.
+					{
+						const uint32_t titular = plO[aO.valor->orden[5]].jugador;
+						nlohmann::json lista = { {"liga","galaxy"}, {"desde",0}, {"version_actual",1}, {"cambios", nlohmann::json::array({
+							{ {"version",1}, {"pes_id",titular}, {"club_desde","A"}, {"club_hacia","B"}, {"club_desde_pes",origen}, {"club_hacia_pes",destino} } }) } };
+						auto lc = mercado::sinc::parsearCambios(lista.dump());
+						CHECK(lc.ok());
+						auto c3 = *of.valor;
+						auto inf = mercado::sinc::aplicarCambios(*lc.valor, 0, { true, false }, &c3, nullptr, posicionDe);
+						if (!inf.ok()) std::printf("  sincronización option real: %s %s\n", inf.error.codigo.c_str(), inf.error.detalle.c_str());
+						CHECK(inf.ok() && inf.valor->aplicadosOption == 1 && inf.valor->versionAplicada == 1);
+						bool enB = false; for (auto& p : c3.plantillas().at(destino)) enB |= p.jugador == titular;
+						bool enA = false; for (auto& p : c3.plantillas().at(origen)) enA |= p.jugador == titular;
+						CHECK(enB && !enA);
+						auto a3 = c3.alineacion(origen);
+						CHECK(a3.ok());
+						if (a3.ok()) { const auto xi3 = xi(c3.plantillas().at(origen), *a3.valor); for (size_t i = 0; i < 11; i++) if (i != 5) CHECK(xi3[i] == xiO[i]); CHECK(xi3[5] != titular); }
+						auto aD3 = c3.alineacion(destino);
+						CHECK(aD3.ok() && aD3.valor->orden.back() == plD.size() && c3.plantillas().at(destino).back().jugador == titular);
+						// Y el camino de «agente libre» (club_hacia null): sale del club y no entra en ninguno.
+						nlohmann::json libre = { {"cambios", nlohmann::json::array({ { {"version",1}, {"pes_id",titular}, {"club_desde_pes",origen}, {"club_hacia_pes",nullptr} } }) } };
+						auto ll = mercado::sinc::parsearCambios(libre.dump());
+						auto c4 = *of.valor;
+						auto inf4 = mercado::sinc::aplicarCambios(*ll.valor, 0, { true, false }, &c4, nullptr, posicionDe);
+						CHECK(inf4.ok() && inf4.valor->aplicadosOption == 1);
+						// (puede seguir en su selección: solo se le saca del club)
+						int equiposAntes = 0, equiposDespues = 0;
+						for (auto& [eq, pl] : of.valor->plantillas()) for (auto& p : pl) equiposAntes += p.jugador == titular;
+						for (auto& [eq, pl] : c4.plantillas()) for (auto& p : pl) equiposDespues += p.jugador == titular;
+						bool enOrigen4 = false; for (auto& p : c4.plantillas().at(origen)) enOrigen4 |= p.jugador == titular;
+						CHECK(!enOrigen4 && equiposDespues == equiposAntes - 1 && c4.plantillas().at(origen).size() == plO.size() - 1);
+					}
 					for (size_t puesto : { size_t(5), size_t(0) }) {
 						if (puesto == 0 && !posicionDe) continue;
 						const uint32_t titular = plO[aO.valor->orden[puesto]].jugador;

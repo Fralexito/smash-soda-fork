@@ -8,6 +8,10 @@ la build de Phoenix Soda (`SmashSoda/`) no lo incluye todavía, así que **no la
 | `core/` | Toda la lógica, sin Windows ni interfaz: API `/mercado/v1`, SHA-256, copias, option file (leer/mover/guardar), base de datos del parche (.cpk → Player.bin), catálogo |
 | `core/Emparejamiento.*` | Phoenix ID ↔ ID local: por ID (si los datos coinciden), por datos, o a revisión manual. Nunca automático ante la duda |
 | `core/Integridad.*` | Huella de plantillas (antitrampa entre parches), modo seguro, informe de cambios tras una actualización |
+| `core/LigaMaster.*` | Guardados de Liga Máster: plantillas, alineaciones, venta usuario→IA (igual que el juego), IA↔IA, dinero por anclas |
+| `core/Alineacion.h` | Lógica de alineación (orden de formación + roles) compartida por la Liga Máster y el option file |
+| `core/Firma.*` | Verificación Ed25519 de lo que firma la web (terceros/ed25519) |
+| `core/Sincronizacion.*` | Aplica los cambios de liga de la web al option file y/o a la Liga Máster (todo o nada, informe) |
 | `terceros/` | libpesXcrypter (cifrado del option file) y miniz (zlib) |
 | `windows/` | HTTPS (WinHTTP) y token cifrado (DPAPI) |
 | `app/` | App de consola para probar |
@@ -42,6 +46,15 @@ PhoenixMercado verificar <EDIT> <cpk>          → modo seguro: ¿se puede escri
 PhoenixMercado emparejar <EDIT ref> <cpk ref> <EDIT local> <cpk local> informe.json
 ```
 `mover` nunca sobrescribe: guarda en un archivo nuevo y lo relee para verificarlo.
+
+```
+PhoenixMercado sincronizar <EDIT> <EDIT nuevo> --ml <ML> <ML nuevo> --catalogo catalogo.json --desde 0 --manager
+PhoenixMercado sincronizar <EDIT> <EDIT nuevo> --solo-option --cambios sobre.json      (sobre firmado guardado en disco)
+```
+`sincronizar` baja los cambios de liga de la web (`/liga/cambios`, firmados con Ed25519: se verifica la firma con la clave
+pública incrustada en `core/Sincronizacion.h`), los aplica al option file y/o a la Liga Máster (`--solo-option`, `--solo-ml`)
+con sustitutos por posición (catálogo) y guarda siempre en archivos nuevos. Lo que la Liga Máster aún no sabe hacer (fichar
+PARA el usuario, agentes libres) queda listado como pendiente en el informe.
 
 ## Pruebas con tus archivos reales
 ```

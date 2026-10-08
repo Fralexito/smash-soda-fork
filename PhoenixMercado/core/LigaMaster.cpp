@@ -18,6 +18,7 @@ namespace mercado::lm {
 		constexpr size_t kOfsDorsales = kOfsPlantilla + 4 + 0x14a;   // 40 × u16
 		constexpr size_t kOfsContador = kOfsPlantilla + 4 + 0x2d6;   // 1 byte
 		constexpr uint32_t kRegVacio = 65535;                        // relleno de la lista: (65535, 0)
+		constexpr uint32_t kMarcaUsuario = 0xfffffff5;               // -11 en +656 del bloque: el equipo lo lleva el usuario (§17)
 		constexpr uint32_t kMaxReg = 20000, kMaxPid = 1000000;       // plausibilidad de una ficha (reg: 16.422 en el universo; pid del option)
 		constexpr uint32_t kPrefijoRegGenerado = 0xdb65;             // jugadores que CREA el juego (regens): reg = 0xdb65xxxx, pid > 126.000 (§17)
 		/// ¿`reg` puede ser una ficha de jugador? (del universo del parche o creado por el juego)
@@ -173,6 +174,35 @@ namespace mercado::lm {
 		e.idOption = u32(_datos, b + kOfsIdOption);
 		e.plantilla = leerPlantilla(_datos, k);
 		return R::bien(std::move(e));
+	}
+
+	Resultado<uint32_t> GuardadoLM::idOptionDe(int k) const {
+		using R = Resultado<uint32_t>;
+		if (k < 0 || k >= kNumEquipos) return R::mal("EQUIPO_INVALIDO", std::to_string(k));
+		const uint32_t id = u32(_datos, baseEquipo(k) + kOfsIdOption);
+		if (id != kMarcaUsuario) return R::bien(id);
+		// Equipo del usuario: el ID real está en la cabecera de su tabla de contratos (paso 48): [índice][club = (id << 14) | k]…
+		for (const auto& t : tablasDe(k)) {
+			if (t.stride != 48) continue;
+			const uint32_t club = u32(_datos, t.ofsReg0 - 28 + 4);
+			if ((club & 0x3fff) == uint32_t(k)) return R::bien(club >> 14);
+		}
+		return R::mal("ID_USUARIO_NO_HALLADO", "El bloque lleva la marca de usuario (-11) pero no se halló su ID en los contratos");
+	}
+
+	Resultado<int> GuardadoLM::indicePorIdOption(uint32_t idOption) const {
+		using R = Resultado<int>;
+		int usuario = -1;
+		for (int k = 0; k < kNumEquipos; k++) {
+			const uint32_t id = u32(_datos, baseEquipo(k) + kOfsIdOption);
+			if (id == idOption) return R::bien(k);
+			if (id == kMarcaUsuario && usuario < 0) usuario = k;
+		}
+		if (usuario >= 0) {
+			auto id = idOptionDe(usuario);
+			if (id.ok() && *id.valor == idOption) return R::bien(usuario);
+		}
+		return R::mal("EQUIPO_NO_ESTA", "Ningún equipo de la Liga Máster tiene el ID " + std::to_string(idOption));
 	}
 
 	std::vector<int> GuardadoLM::equiposDe(uint32_t pid) const {

@@ -175,3 +175,8 @@ Detalle en ESTRUCTURA-ML §17. 146/146 pruebas sintéticas.
 Primera venta con la lógica nueva y partiendo de un guardado en el que el juego aún no había rehecho la lista K. Qué mirar:
 plantilla del City (22), negociaciones (sin la de Lanús; sigue la del Deportivo por Rulli), contratos (sin Bettinelli; ppto. salarial
 +≈2,3 M), Lanús con Bettinelli al final, ficha de Guéhi en el Madrid (club/contrato), jugar y guardar.
+
+**8 oct 16:20 · Prueba 15 · Option file `EDIT_prueba_boca` (md5 05bb20fe…) · Lautaro Blanco (LB titular de Boca) → club 193, Braida de LB** — ⏳ EN PRUEBA
+Primera prueba de la corrección de alineación en el option file (bloque de tácticas, `core/Alineacion.h`). Antes, al mover a Blanco
+la formación de Boca se corría un puesto (Paredes de LB … Marchesín de delantero). Qué mirar en un amistoso con Boca: Montero de
+arquero, Braida de LB, el resto del once igual, Marchesín en el banco. Archivo hecho desde `save\resplado\EDIT00000000` (md5 027b0fa2…).
