@@ -32,6 +32,7 @@ namespace phoenix {
 		std::function<void()> video;
 		std::function<void()> audio;
 		std::function<void()> streaming;
+		std::function<void()> overlay;      // Overlay
 		std::function<void()> biblioteca;   // Library
 		std::function<void()> avanzado;     // Advanced
 	};

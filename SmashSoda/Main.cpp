@@ -320,6 +320,7 @@ int CALLBACK WinMain(_In_ HINSTANCE hInstance, _In_ HINSTANCE hPrevInstance, _In
     panelesPhoenix.video      = [&]() { bool v = true; videoWidget.render(v); };
     panelesPhoenix.audio      = [&]() { bool v = true; audioSettingswidget.render(v); };
     panelesPhoenix.streaming  = [&]() { bool v = true; streamingWidget.render(v); };
+    panelesPhoenix.overlay    = [&]() { bool v = true; overlayWidget.render(v); };
     panelesPhoenix.biblioteca = [&]() { bool v = true; libraryWidget.render(v); };
     panelesPhoenix.avanzado   = [&]() { bool v = true; developerWidget.render(v); };
 

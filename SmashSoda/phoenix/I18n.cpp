@@ -17,7 +17,7 @@ namespace phoenix {
 
 		// Español = idioma base: toda clave nueva se escribe primero aquí.
 		const Tabla kEs = {
-			{"app.nombre", "Phoenix Soda"},
+			{"app.nombre", "Phoenix Portal"},
 			{"estado.vivo", "EN VIVO"},
 			{"estado.cerrada", "SALA CERRADA"},
 			{"estado.invitados", "en sala"},
@@ -68,9 +68,9 @@ namespace phoenix {
 			{"sub.comunidad", "Moderación y jugadores"},
 			{"sub.ajustes", "Configura la app a tu gusto"},
 			{"tab.mandos", "Mandos"},
-			{"tab.puppets", "Puppets"},
+			{"tab.puppets", "Maestro"},
 			{"tab.hotseat", "Turnos"},
-			{"tab.bloqueo", "Bloqueo de botones"},
+			{"tab.bloqueo", "Bloqueo"},
 			{"tab.teclado", "Teclado"},
 			{"tab.avanzado", "Avanzado"},
 			{"teclado.presiona_tecla", "Presiona la tecla en el teclado..."},
@@ -79,6 +79,7 @@ namespace phoenix {
 			{"tab.audio", "Audio"},
 			{"tab.streaming", "Transmisión"},
 			{"tab.biblioteca", "Biblioteca"},
+			{"tab.overlay", "Overlay"},
 			{"panel.config", "Configuración de la sala"},
 			{"panel.invitados", "Invitados"},
 			{"panel.actividad", "Actividad"},

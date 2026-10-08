@@ -323,16 +323,28 @@ namespace phoenix {
 			}
 			activa = std::clamp(activa, 0, static_cast<int>(pestanas.size()) - 1);
 
-			// Pestañas tipo píldora a la derecha del título, con subrayado que se desliza
+			// Pestañas tipo píldora a la derecha del título: la activa va rellena, las demás con borde.
+			// Si no caben, se reduce el relleno horizontal de cada una (nunca se salen del panel).
 			ImGui::PushFont(AppFonts::label);
-			float x = pos.x + (std::max)(anchoTitulo, 260.0f * s) + 40.0f * s;
-			const float altoPestana = 36.0f * s;
-			const float yPestana = pos.y + 12.0f * s;
-			float objetivoX = x, objetivoW = 0.0f;
+			const float altoPestana = 34.0f * s;
+			const float yPestana = pos.y + 14.0f * s;
+			const float separacionPestanas = 6.0f * s;
+			const float xInicio = pos.x + (std::max)(anchoTitulo, 260.0f * s) + 40.0f * s;
+			const float disponible = (pos.x + tam.x) - xInicio - 8.0f * s;
+			const int cantidad = static_cast<int>(pestanas.size());
 
-			for (int i = 0; i < static_cast<int>(pestanas.size()); i++) {
+			float sumaTextos = 0.0f;
+			for (const char* clave : pestanas) sumaTextos += ImGui::CalcTextSize(T(clave)).x;
+			float relleno = 28.0f * s;
+			if (sumaTextos + cantidad * relleno + (cantidad - 1) * separacionPestanas > disponible) {
+				relleno = (disponible - sumaTextos - (cantidad - 1) * separacionPestanas) / static_cast<float>(cantidad);
+				relleno = (std::max)(relleno, 12.0f * s);
+			}
+
+			float x = xInicio;
+			for (int i = 0; i < cantidad; i++) {
 				const char* texto = T(pestanas[i]);
-				const float ancho = ImGui::CalcTextSize(texto).x + 28.0f * s;
+				const float ancho = ImGui::CalcTextSize(texto).x + relleno;
 				ImGui::SetCursorScreenPos(ImVec2(x, yPestana));
 				ImGui::PushID(i);
 				if (ImGui::InvisibleButton("##pestana", ImVec2(ancho, altoPestana))) {
@@ -346,22 +358,21 @@ namespace phoenix {
 				if (encima) ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
 
 				const bool esActiva = (i == activa);
-				if (esActiva) { objetivoX = x; objetivoW = ancho; }
-				if (encima && !esActiva) {
-					dl->AddRectFilled(ImVec2(x, yPestana), ImVec2(x + ancho, yPestana + altoPestana),
-						col(tema->textMuted, 0.08f), altoPestana * 0.5f);
+				const ImVec2 p0(x, yPestana);
+				const ImVec2 p1(x + ancho, yPestana + altoPestana);
+				const float radio = altoPestana * 0.5f;
+				if (esActiva) {
+					dl->AddRectFilled(p0, p1, col(tema->primary, 0.16f), radio);
+					dl->AddRect(p0, p1, col(tema->primary, 0.70f), radio, 0, 1.0f * s);
 				}
-				dl->AddText(ImVec2(x + 14.0f * s, yPestana + (altoPestana - ImGui::GetFontSize()) * 0.5f),
+				else {
+					if (encima) dl->AddRectFilled(p0, p1, col(tema->textMuted, 0.08f), radio);
+					dl->AddRect(p0, p1, col(tema->textMuted, encima ? 0.55f : 0.30f), radio, 0, 1.0f * s);
+				}
+				dl->AddText(ImVec2(x + relleno * 0.5f, yPestana + (altoPestana - ImGui::GetFontSize()) * 0.5f),
 					col(esActiva ? tema->primary : tema->textMuted), texto);
-				x += ancho + 6.0f * s;
+				x += ancho + separacionPestanas;
 			}
-
-			if (e.subrayadoX < 0.0f) { e.subrayadoX = objetivoX; e.subrayadoW = objetivoW; }
-			e.subrayadoX = acercar(e.subrayadoX, objetivoX, 18.0f);
-			e.subrayadoW = acercar(e.subrayadoW, objetivoW, 18.0f);
-			dl->AddRectFilled(ImVec2(e.subrayadoX + 12.0f * s, yPestana + altoPestana + 2.0f * s),
-				ImVec2(e.subrayadoX + e.subrayadoW - 12.0f * s, yPestana + altoPestana + 5.0f * s),
-				col(tema->primary), 2.0f * s);
 
 			ImGui::PopFont();
 			finFija();
@@ -453,7 +464,7 @@ namespace phoenix {
 		}
 		case MANDOS: {
 			const int t = cabecera(ImVec2(xCont, yCuerpo), ImVec2(anchoCont, altoCab), tema, s, "nav.mandos", "sub.mandos",
-				{ "tab.mandos", "tab.turnos", "tab.teclado" });
+				{ "tab.mandos", "tab.teclado", "tab.hotseat", "tab.puppets", "tab.bloqueo" });
 			if (t == 0 && gProveedor != nullptr) {
 				// Tablero propio de Phoenix (8 mandos, equipos, arrastrar y soltar)
 				const float alfa = 0.25f + 0.75f * progresoTransicion();
@@ -470,7 +481,7 @@ namespace phoenix {
 				ImGui::PopStyleColor();
 				ImGui::PopStyleVar(3);
 			}
-			else if (t == 2 && PhoenixPrefs::get().interfazPhoenix) {
+			else if (t == 1 && PhoenixPrefs::get().interfazPhoenix) {
 				// Teclado visual en Phoenix
 				const float alfa = 0.25f + 0.75f * progresoTransicion();
 				ImGui::SetNextWindowPos(posPanel, ImGuiCond_Always);
@@ -487,7 +498,7 @@ namespace phoenix {
 				ImGui::PopStyleVar(3);
 			}
 			else {
-				const std::function<void()>* paneles[] = { &p.mandos, &p.hotseat, &p.teclado };
+				const std::function<void()>* paneles[] = { &p.mandos, &p.teclado, &p.hotseat, &p.puppets, &p.bloqueo };
 				acoplar(*paneles[t], posPanel, tamPanel, s);
 			}
 			break;
@@ -501,16 +512,16 @@ namespace phoenix {
 		}
 		case AJUSTES: {
 			const int t = cabecera(ImVec2(xCont, yCuerpo), ImVec2(anchoCont, altoCab), tema, s, "nav.ajustes", "sub.ajustes",
-				{ "tab.rapido", "tab.general", "tab.video", "tab.audio", "tab.biblioteca", "tab.avanzado" });
+				{ "tab.rapido", "tab.general", "tab.video", "tab.audio", "tab.overlay", "tab.biblioteca", "tab.avanzado" });
 			if (t == 0) {
 				PantallaAjustes::rapido(gProveedor, posPanel, tamPanel, 0.25f + 0.75f * progresoTransicion());
 			}
-			else if (t == 4 && PhoenixPrefs::get().interfazPhoenix) {
+			else if (t == 5 && PhoenixPrefs::get().interfazPhoenix) {
 				// Biblioteca mejorada en Phoenix
 				PantallaBiblioteca::render(gProveedor, posPanel, tamPanel, 0.25f + 0.75f * progresoTransicion());
 			}
 			else {
-				const std::function<void()>* paneles[] = { &p.general, &p.video, &p.audio, &p.biblioteca, &p.avanzado };
+				const std::function<void()>* paneles[] = { &p.general, &p.video, &p.audio, &p.overlay, &p.biblioteca, &p.avanzado };
 				acoplar(*paneles[t - 1], posPanel, tamPanel, s);
 			}
 			break;

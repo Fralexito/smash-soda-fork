@@ -354,10 +354,14 @@ bool GamepadsWidget::render(bool& showWindow) {
         ImGui::Dummy(ImVec2(10.0, .05f));
         if (!_hosting.getGamepadClient().isSlave) {
 
+            // PES admite como maximo 8 mandos a la vez (Xbox + Dualshock en total).
+            if (xboxCount > 8) xboxCount = 8;
+            if (ds4Count > 8 - xboxCount) ds4Count = 8 - xboxCount;
+
             ImGui::Image(AppIcons::xinput, ImVec2(24, 24), ImVec2(0, 0), ImVec2(1, 1), AppColors::buttonSecondary);
             ImGui::SameLine();
-            if (IntRangeWidget::render("xboxCounter", xboxCount, 0, 32)) {
-                TitleTooltipWidget::render("XBox Puppet Counter", "Set the amount of XBox controllers.\n\n* Warning: disconnect all gamepads before changing this.");
+            if (IntRangeWidget::render("xboxCounter", xboxCount, 0, 8 - ds4Count)) {
+                TitleTooltipWidget::render("XBox Puppet Counter", "Set the amount of XBox controllers (max 8 gamepads in total).\n\n* Warning: disconnect all gamepads before changing this.");
             }
 
             ImGui::SameLine();
@@ -369,8 +373,8 @@ bool GamepadsWidget::render(bool& showWindow) {
 
             ImGui::Image(AppIcons::dinput, ImVec2(24, 24), ImVec2(0, 0), ImVec2(1, 1), AppColors::buttonSecondary);
             ImGui::SameLine();
-            if (IntRangeWidget::render("ds4Counter", ds4Count, 0, 32)) {
-                TitleTooltipWidget::render("Dualshock Puppet Counter", "Set the amount of DS4 controllers.\n\n* Warning: disconnect all gamepads before changing this.");
+            if (IntRangeWidget::render("ds4Counter", ds4Count, 0, 8 - xboxCount)) {
+                TitleTooltipWidget::render("Dualshock Puppet Counter", "Set the amount of DS4 controllers (max 8 gamepads in total).\n\n* Warning: disconnect all gamepads before changing this.");
             }
 
             ImGui::Dummy(ImVec2(0, 15));
@@ -392,8 +396,8 @@ bool GamepadsWidget::render(bool& showWindow) {
     }
 
     if (lastXboxCount != xboxCount || lastDs4Count != ds4Count) {
-        if (xboxCount > 32) xboxCount = 32;
-        if (ds4Count > 32) ds4Count = 32;
+        if (xboxCount > 8) xboxCount = 8;
+        if (ds4Count > 8 - xboxCount) ds4Count = 8 - xboxCount;
         lastXboxCount = xboxCount;
         lastDs4Count = ds4Count;
         Config::cfg.input.xboxPuppetCount = xboxCount;
