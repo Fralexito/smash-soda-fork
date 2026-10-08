@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Phoenix Link — Gente</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.root *{box-sizing:border-box}
+.cut{padding:1px;background:linear-gradient(135deg,var(--acc),rgba(255,255,255,.05) 45%,var(--acc2));clip-path:polygon(0 0,calc(100% - 22px) 0,100% 22px,100% 100%,22px 100%,0 calc(100% - 22px))}
+.cut>.in{background:var(--panelsolid);clip-path:polygon(0 0,calc(100% - 22px) 0,100% 22px,100% 100%,22px 100%,0 calc(100% - 22px));height:100%}
+.nv{display:flex;flex-direction:column;align-items:center;gap:6px;width:72px;padding:12px 0;border-radius:12px;color:var(--mut);font:600 12px/1 'Chakra Petch',sans-serif;letter-spacing:.14em}
+.nv.on{color:var(--acc);background:linear-gradient(180deg,var(--accsoft),transparent)}
+.pill{display:flex;align-items:center;gap:8px;height:34px;padding:0 14px;border-radius:17px;border:1px solid var(--line);background:rgba(255,255,255,.03);font:500 12px/1 'IBM Plex Mono',monospace;letter-spacing:.08em;color:var(--fg)}
+.lab{font:600 12px/1 'Chakra Petch',sans-serif;letter-spacing:.2em;color:var(--mut)}
+.tab{height:36px;padding:0 18px;display:flex;align-items:center;border-radius:18px;border:1px solid var(--line);font:600 12px/1 'Chakra Petch',sans-serif;letter-spacing:.14em;color:var(--mut)}
+.tab.on{background:var(--acc);color:var(--onacc);border-color:var(--acc)}
+.btn{height:40px;padding:0 18px;border-radius:10px;background:transparent;font:600 12px/1 'Chakra Petch',sans-serif;letter-spacing:.14em;cursor:pointer}
+.bdg{height:20px;padding:0 8px;display:flex;align-items:center;border-radius:5px;font:600 12px/1 'Chakra Petch',sans-serif;letter-spacing:.1em}
+</style>
+</helmet>
+<div class="root" style="position:relative;width:1280px;height:760px;overflow:hidden;background:{{bg}};color:#e8f1ff;font-family:'IBM Plex Sans','Segoe UI',sans-serif;--bg:{{bg}};--panelsolid:{{panel}};--acc:{{acc}};--acc2:{{acc2}};--accsoft:{{accsoft}};--line:{{line}};--mut:#a3b3d9;--onacc:{{onacc}};--ok:#3ddc97;--warn:#ffb547;--bad:#ff6b80">
+  <div style="position:absolute;inset:0;background:radial-gradient(900px 500px at 85% -10%,{{glow2}},transparent 60%),radial-gradient(800px 600px at 0% 110%,{{glow1}},transparent 60%)"></div>
+
+  <div style="position:absolute;left:0;top:0;width:1280px;height:64px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;border-bottom:1px solid var(--line);background:rgba(5,6,15,.55)">
+    <div style="display:flex;align-items:center;gap:14px">
+      <svg width="36" height="36" viewBox="0 0 36 36" fill="none" stroke="var(--acc)" stroke-width="2" aria-label="Logo"><path d="M18 3l13 7.5v15L18 33 5 25.5v-15z"/><path d="M18 11c3 4 5 6 5 9a5 5 0 01-10 0c0-2 1-3 2-4 .5 2 1.5 2.500 2.500 2.500C17 15 17 13 18 11z" fill="var(--acc2)" stroke="none"/></svg>
+      <div>
+        <div style="font:700 22px/1 'Chakra Petch',sans-serif;letter-spacing:.2em;background:linear-gradient(90deg,var(--acc),var(--acc2));-webkit-background-clip:text;background-clip:text;color:transparent">PHOENIX LINK</div>
+        <div style="margin-top:5px;font:500 12px/1 'IBM Plex Mono',monospace;color:var(--mut)">{{liga}}</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center">
+      <div class="pill"><span style="width:8px;height:8px;border-radius:4px;background:var(--ok);box-shadow:0 0 10px var(--ok)"></span>EN VIVO · 3 EN SALA</div>
+      <div class="pill"><span style="width:8px;height:8px;border-radius:4px;background:var(--ok)"></span>WEB SYNC</div>
+      <div class="pill" style="color:var(--acc);border-color:var(--acc)">{{themeName}}</div>
+    </div>
+  </div>
+
+  <div style="position:absolute;left:0;top:64px;width:96px;height:696px;border-right:1px solid var(--line);background:rgba(5,6,15,.4);display:flex;flex-direction:column;align-items:center;gap:6px;padding-top:16px">
+    <div class="nv"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8" stroke-dasharray="3 3"/></svg>SALA</div>
+    <div class="nv"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 21V4h11l-2 4 2 4H6"/></svg>PARTIDO</div>
+    <div class="nv"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.500" y="7" width="19" height="10" rx="5"/><path d="M8 10v4M6 12h4M16 11h.01M18 13h.01"/></svg>MANDOS</div>
+    <div class="nv on"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="9" cy="8" r="3.500"/><path d="M2.500 20c0-4 3-6 6.500-6s6.500 2 6.500 6M16 5a3.500 3.500 0 010 6.500M18 14c2.500.7 3.500 2.700 3.500 6"/></svg>GENTE</div>
+    <div class="nv"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>AJUSTES</div>
+    <div style="margin-top:auto;padding-bottom:14px;text-align:center;font:500 12px/1.4 'IBM Plex Mono',monospace;color:var(--mut)">DATOS DE<br>EJEMPLO</div>
+  </div>
+
+  <div style="position:absolute;left:96px;top:64px;width:1184px;height:696px;padding:22px 28px;display:flex;flex-direction:column;gap:18px">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div style="display:flex;gap:10px"><div class="tab on">EN SALA</div><div class="tab">MODERACIÓN</div></div>
+      <div style="font:500 14px/1 'IBM Plex Mono',monospace;color:var(--mut)">5 CONECTADOS</div>
+    </div>
+
+    <div style="display:flex;gap:18px;flex:1;min-height:0">
+      <div style="width:470px;display:flex;flex-direction:column;gap:12px">
+        <div style="height:44px;border-radius:10px;border:1px solid var(--line);background:rgba(0,0,0,.35);display:flex;align-items:center;padding:0 16px;font:400 14px/1 'IBM Plex Sans',sans-serif;color:var(--mut)">Filtrar por nombre o ID</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <sc-for list="{{people}}" as="p" hint-placeholder-count="5">
+            <div style="height:68px;border-radius:12px;border:1px solid {{p.border}};background:{{p.bg}};display:flex;align-items:center;gap:14px;padding:0 14px">
+              <div style="width:40px;height:40px;border-radius:20px;background:{{p.avatar}};display:flex;align-items:center;justify-content:center;font:700 18px/1 'Chakra Petch',sans-serif;color:#05060f;flex:none">{{p.initial}}</div>
+              <div style="flex:1;min-width:0">
+                <div style="font:600 16px/1.2 'IBM Plex Sans',sans-serif;color:#fff">{{p.name}}</div>
+                <div style="margin-top:5px;display:flex;gap:6px;align-items:center"><span style="font:500 12px/1 'IBM Plex Mono',monospace;color:var(--mut)">{{p.id}}</span><sc-if value="{{p.mod}}" hint-placeholder-val="{{ true }}"><span class="bdg" style="background:rgba(61,220,151,.16);color:#3ddc97">MOD</span></sc-if><sc-if value="{{p.vip}}" hint-placeholder-val="{{ true }}"><span class="bdg" style="background:rgba(255,181,71,.16);color:#ffb547">VIP</span></sc-if></div>
+              </div>
+              <div style="text-align:right"><div style="font:600 16px/1 'IBM Plex Mono',monospace;color:{{p.pingColor}}">{{p.ping}}</div><div style="margin-top:4px;font:500 12px/1 'IBM Plex Mono',monospace;color:var(--mut)">{{p.role}}</div></div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div class="cut" style="flex:1"><div class="in" style="padding:26px 30px;display:flex;flex-direction:column;gap:18px">
+        <div style="display:flex;gap:18px;align-items:center">
+          <div style="width:72px;height:72px;border-radius:36px;background:linear-gradient(135deg,var(--acc),var(--acc2));display:flex;align-items:center;justify-content:center;font:700 32px/1 'Chakra Petch',sans-serif;color:#05060f">B</div>
+          <div style="flex:1">
+            <div style="font:700 30px/1.1 'Chakra Petch',sans-serif;color:#fff">Jugador B</div>
+            <div style="margin-top:8px;display:flex;gap:10px;align-items:center"><span style="font:500 13px/1 'IBM Plex Mono',monospace;color:var(--mut)">#2041</span><span class="bdg" style="background:var(--accsoft);color:var(--acc)">JUGANDO · MANDO 02</span></div>
+          </div>
+          <div style="text-align:right"><div class="lab">PING</div><div style="margin-top:8px;font:700 30px/1 'IBM Plex Mono',monospace;color:var(--ok)">27 ms</div></div>
+        </div>
+
+        <div style="display:flex;gap:28px">
+          <div style="flex:1">
+            <div class="lab" style="color:var(--acc)">ROLES</div>
+            <div style="margin-top:12px;display:flex;gap:10px"><button class="btn" style="border:1px solid #ffb547;color:#ffb547">HACER VIP</button><button class="btn" style="border:1px solid #3ddc97;color:#3ddc97">HACER MODERADOR</button></div>
+          </div>
+        </div>
+
+        <div>
+          <div class="lab" style="color:var(--acc)">PERMISOS</div>
+          <div style="margin-top:6px;display:flex;flex-direction:column">
+            <sc-for list="{{perms}}" as="q" hint-placeholder-count="2">
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid rgba(255,255,255,.07)">
+                <div><div style="font:500 15px/1.2 'IBM Plex Sans',sans-serif;color:#fff">{{q.title}}</div><div style="margin-top:4px;font-size:13px;color:var(--mut)">{{q.desc}}</div></div>
+                <div style="width:46px;height:24px;border-radius:12px;background:{{q.track}};position:relative;flex:none"><div style="position:absolute;top:3px;left:{{q.knob}};width:18px;height:18px;border-radius:9px;background:#fff"></div></div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="margin-top:auto;display:flex;gap:10px">
+          <button class="btn" style="border:1px solid var(--acc);color:var(--acc)">QUITAR MANDO</button>
+          <button class="btn" style="border:1px solid #ffb547;color:#ffb547">EXPULSAR</button>
+          <button class="btn" style="border:1px solid #ff6b80;color:#ff6b80">BANEAR</button>
+        </div>
+      </div></div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["galaxy","sudario"],"default":"galaxy"},"$preview":{"width":1280,"height":760}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const TH = {
+      galaxy: { bg:'#05060f', panel:'#0b1030', acc:'#00e5ff', acc2:'#8000ff', accsoft:'rgba(0,229,255,.14)', line:'rgba(0,229,255,.26)', onacc:'#021018', glow1:'rgba(0,229,255,.12)', glow2:'rgba(128,0,255,.22)', liga:'Galaxy League', themeName:'GALAXY' },
+      sudario:{ bg:'#050a18', panel:'#0c1634', acc:'#f5c451', acc2:'#3b82f6', accsoft:'rgba(245,196,81,.14)', line:'rgba(245,196,81,.28)', onacc:'#1a1203', glow1:'rgba(245,196,81,.10)', glow2:'rgba(59,130,246,.22)', liga:'Liga Sudario', themeName:'SUDARIO' }
+    };
+    const t = TH[this.props.theme] || TH.galaxy;
+    const ok = '#3ddc97', warn = '#ffb547';
+    const P = (name, id, ping, role, mod, vip, sel) => ({
+      name, id, ping: ping + ' ms', role, mod, vip, initial: name.slice(-1),
+      pingColor: ping < 40 ? ok : warn,
+      avatar: sel ? 'linear-gradient(135deg,' + t.acc + ',' + t.acc2 + ')' : 'rgba(255,255,255,.22)',
+      border: sel ? t.acc : 'rgba(255,255,255,.10)',
+      bg: sel ? t.accsoft : 'rgba(255,255,255,.025)'
+    });
+    const sw = (title, desc, on) => ({ title, desc, track: on ? t.acc : 'rgba(255,255,255,.14)', knob: on ? '25px' : '3px' });
+    return Object.assign({}, t, {
+      people: [
+        P('Jugador A', '#1187', 18, 'MANDO 01', true, false, false),
+        P('Jugador B', '#2041', 27, 'MANDO 02', false, true, true),
+        P('Jugador C', '#3310', 58, 'MANDO 03', false, false, false),
+        P('Jugador D', '#4402', 33, 'MANDO 05', false, false, false),
+        P('Jugador E', '#5126', 41, 'ESPECTADOR', false, false, false)
+      ],
+      perms: [
+        sw('Permitir teclado', 'Puede jugar con el teclado aunque no tenga mando.', false),
+        sw('Permitir ratón', 'Puede mover el ratón en el equipo anfitrión.', false)
+      ]
+    });
+  }
+}
+</script>
+</body>
+</html>

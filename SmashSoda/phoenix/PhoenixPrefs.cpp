@@ -36,6 +36,9 @@ namespace phoenix {
 			if (j.is_discarded() || !j.is_object()) return;
 
 			interfazPhoenix = j.value("interfaz", std::string("phoenix")) != "clasica";
+			interfazWeb = j.value("interfazWeb", interfazWeb);
+			tema = j.value("tema", tema);
+			if (tema != "galaxy" && tema != "sudario") tema = "galaxy";
 			idioma = j.value("idioma", idioma);
 			seccion = j.value("seccion", seccion);
 			visibilidad = j.value("visibilidad", visibilidad);
@@ -62,6 +65,8 @@ namespace phoenix {
 			if (r.empty()) return;
 			const json j = {
 				{"interfaz", interfazPhoenix ? "phoenix" : "clasica"},
+				{"interfazWeb", interfazWeb},
+				{"tema", tema},
 				{"idioma", idioma},
 				{"seccion", seccion},
 				{"visibilidad", visibilidad},

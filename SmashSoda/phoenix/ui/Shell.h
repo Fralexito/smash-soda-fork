@@ -49,6 +49,14 @@ namespace phoenix {
 
 		/// Conecta el motor de host (nullptr = app sin modo host).
 		static void establecerProveedor(ProveedorSala* proveedor);
+
+		/// Lógica que debe correr cada frame aunque el shell no se dibuje
+		/// (web y asientos, Ctrl+Alt+N). render() ya la llama.
+		static void tickLogica();
+
+		/// Abre una sección y pestaña (0 = Sala, 1 = Mandos, 2 = Gente, 3 = Ajustes).
+		/// Lo usa la interfaz web para «Abrir en el panel clásico».
+		static void irA(int seccion, int pestana);
 	};
 
 }

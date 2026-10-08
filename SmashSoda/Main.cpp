@@ -30,6 +30,7 @@
 #include "phoenix/ui/Shell.h"
 #include "phoenix/host/ProveedorSalaSoda.h"
 #include "phoenix/link/PhoenixLink.h"
+#include "phoenix/web/InterfazWeb.h"
 #include "Widgets/NavBar.h"
 #include "Widgets/HostInfoWidget.h"
 #include "Widgets/HostSettingsWidget.h"
@@ -283,7 +284,8 @@ int CALLBACK WinMain(_In_ HINSTANCE hInstance, _In_ HINSTANCE hPrevInstance, _In
     fi.dwFlags = FLASHW_ALL | FLASHW_TIMERNOFG;
     fi.uCount = 0;
     fi.dwTimeout = 0;
-    ChatWidget chatWindow(g_hosting, [&hwnd, &fi]() {
+    // Aviso de mensaje nuevo (parpadeo + sonido): lo usan el chat clásico y la interfaz web
+    auto avisoMensajeChat = [&hwnd, &fi]() {
         if (Config::cfg.general.flashWindow) {
             FlashWindowEx(&fi);
         };
@@ -294,7 +296,8 @@ int CALLBACK WinMain(_In_ HINSTANCE hInstance, _In_ HINSTANCE hPrevInstance, _In
             }
             catch (const std::exception&) {}
         }
-    });
+    };
+    ChatWidget chatWindow(g_hosting, avisoMensajeChat);
 
     // =====================================================================
     //  Phoenix: interfaz principal (reversible a la clásica)
@@ -323,6 +326,18 @@ int CALLBACK WinMain(_In_ HINSTANCE hInstance, _In_ HINSTANCE hPrevInstance, _In
     panelesPhoenix.overlay    = [&]() { bool v = true; overlayWidget.render(v); };
     panelesPhoenix.biblioteca = [&]() { bool v = true; libraryWidget.render(v); };
     panelesPhoenix.avanzado   = [&]() { bool v = true; developerWidget.render(v); };
+
+    // Interfaz nueva (HTML en WebView2). Si la PC no la soporta, todo sigue con ImGui.
+    phoenix::web::InterfazWeb& webUi = phoenix::web::InterfazWeb::instancia();
+    {
+        phoenix::web::ContextoWeb contextoWeb;
+        contextoWeb.hosting = &g_hosting;
+        contextoWeb.ajustesSala = &hostSettingsWindow;
+        contextoWeb.sala = &proveedorSala;
+        contextoWeb.ventana = hwnd;
+        contextoWeb.alMensajeChat = avisoMensajeChat;
+        webUi.iniciar(contextoWeb);
+    }
 
     //ITaskbarList3* m_pTaskBarlist;
     //CoCreateInstance(
@@ -415,6 +430,9 @@ int CALLBACK WinMain(_In_ HINSTANCE hInstance, _In_ HINSTANCE hPrevInstance, _In
         if (done)
             break;
 
+        // Interfaz nueva: estado y visibilidad (las pantallas propias de ImGui van primero)
+        webUi.tick(!(Cache::cache.showParsecLogin || versionWidget.showUpdate || Config::cfg.arcade.showLogin));
+
         // Start the Dear ImGui frame
         ImGui_ImplDX11_NewFrame();
         ImGui_ImplWin32_NewFrame();
@@ -440,10 +458,16 @@ int CALLBACK WinMain(_In_ HINSTANCE hInstance, _In_ HINSTANCE hPrevInstance, _In
         else if (Config::cfg.arcade.showLogin) {
             versionWidget.renderLoginWindow();
         }
+        else if (webUi.cubreVentana())
+        {
+            // La interfaz web cubre la ventana: ImGui no dibuja, solo corre la lógica de cada frame
+            phoenix::Shell::tickLogica();
+        }
         else if (phoenix::PhoenixPrefs::get().interfazPhoenix)
         {
             backgroundWidget.render();
             phoenix::Shell::render(panelesPhoenix);
+            webUi.renderImGui(); // «Volver a la interfaz nueva» o aviso si no pudo abrirse
         }
         else
         {
@@ -533,6 +557,7 @@ int CALLBACK WinMain(_In_ HINSTANCE hInstance, _In_ HINSTANCE hPrevInstance, _In
         }
     }
 
+    webUi.cerrar();
     phoenix::PhoenixLink::instancia().detener(); // avisa a la web que la sala se cierra
     // Cleanup
     ImGui_ImplDX11_Shutdown();
@@ -727,12 +752,15 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     case WM_MOVE:
         if (g_hosting.mainWindow == hWnd) {
             PersistWindowRect(hWnd, /*savePosition=*/true, /*saveSize=*/false);
+            phoenix::web::InterfazWeb::instancia().alMoverVentana();
         }
         break;
     case WM_SIZE:
         if (wParam == SIZE_MINIMIZED) {
+            if (g_hosting.mainWindow == hWnd) phoenix::web::InterfazWeb::instancia().alRedimensionar(true);
             return 0; // Don't resize or persist while minimized.
         }
+        if (g_hosting.mainWindow == hWnd) phoenix::web::InterfazWeb::instancia().alRedimensionar(false);
 
         if (g_pd3dDevice != NULL)
         {
@@ -775,6 +803,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         break;
     case WM_QUIT:
     case WM_DESTROY:
+        if (g_hosting.mainWindow == hWnd) phoenix::web::InterfazWeb::instancia().cerrar(); // antes de que se destruya la ventana hija
         g_hosting.release();
         RECT windowRect;
         /*if (GetWindowRect(hWnd, &windowRect))

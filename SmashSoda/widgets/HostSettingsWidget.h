@@ -39,6 +39,16 @@ public:
 	std::string phoenixEnlace();
 	std::string phoenixNombreSala();
 	int phoenixPlazas();
+	// Phoenix: opciones de sala desde la interfaz web (mismos efectos que los controles originales)
+	void phoenixLeerOpciones(std::string& nombre, int& plazas, bool& limitador, int& limiteMs,
+		std::string& biblioteca, bool& pendiente);
+	void phoenixCambiarNombre(const std::string& nombre);
+	void phoenixCambiarPlazas(int plazas);
+	void phoenixCambiarLimitador(bool activo, int limiteMs);
+	bool phoenixCambiarQuiosco(bool activo);
+	void phoenixCambiarOverlay(bool activo);
+	void phoenixElegirBiblioteca(const std::string& juego);
+	bool phoenixAplicarCambios(std::string& error);
 
 	const ImVec2 DEFAULT_BUTTON_SIZE = ImVec2(40, 40);
 	const uint8_t LINK_COMPATIBLE_SECRET_SIZE = 9;

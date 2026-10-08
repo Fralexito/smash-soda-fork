@@ -12,6 +12,7 @@
 #include "../PhoenixPrefs.h"
 #include "../core/ProveedorSala.h"
 #include "../core/Solicitudes.h"
+#include "../core/AccionesSala.h"
 #include "../PhoenixRoles.h"
 #include <cmath>
 #include "../../globals/AppFonts.h"
@@ -217,17 +218,10 @@ namespace phoenix {
 				ImGui::PopFont();
 				ImGui::PopID();
 
-				if (jugador) {
-					PhoenixRoles::instancia().admitir(id, true);
-					for (int i = 0; i < pr.mandosActivos && i < static_cast<int>(asientos.size()); i++) {
-						if (asientos[i].ocupado) continue;
-						if (!asientos[i].conectado) sala.conectarMando(i);
-						sala.asignarMando(i, id);
-						break;
-					}
-				}
-				else if (espectador) PhoenixRoles::instancia().admitir(id, false);
-				else if (fuera) { PhoenixRoles::instancia().admitir(id, false); sala.expulsar(id); }
+				// Misma lógica que la interfaz web (core/AccionesSala)
+				if (jugador) AccionesSala::decidirEspera(sala, id, DecisionEspera::Jugador);
+				else if (espectador) AccionesSala::decidirEspera(sala, id, DecisionEspera::Espectador);
+				else if (fuera) AccionesSala::decidirEspera(sala, id, DecisionEspera::Expulsar);
 
 				ImGui::SetCursorScreenPos(ImVec2(p0.x, p0.y + alto + 8 * s));
 				ImGui::Dummy(ImVec2(ancho, 1));
@@ -267,29 +261,9 @@ namespace phoenix {
 				const bool rechazar = ImGui::Button(T("mandos.rechazar"), ImVec2(wBoton, lado));
 				ImGui::PopID();
 
-				if (aceptar) {
-					int destino = sol.mandoDestino - 1;
-					if (sol.mandoDestino == 0) {
-						// Pasar al otro equipo: primer mando libre del otro lado (o intercambio con el primero)
-						int actual = -1;
-						for (size_t i = 0; i < asientos.size(); i++) if (asientos[i].ocupado && asientos[i].parsecId == sol.parsecId) actual = static_cast<int>(i);
-						const bool esLocal = actual >= 0 && actual < pr.equipoLocal;
-						const int desde = esLocal ? pr.equipoLocal : 0;
-						const int hasta = esLocal ? pr.mandosActivos : pr.equipoLocal;
-						destino = desde;
-						for (int i = desde; i < hasta && i < static_cast<int>(asientos.size()); i++) {
-							if (!asientos[i].ocupado) { destino = i; break; }
-						}
-					}
-					if (destino >= 0 && destino < static_cast<int>(asientos.size())) {
-						if (!asientos[destino].conectado) sala.conectarMando(destino);
-						sala.asignarMando(destino, sol.parsecId);
-					}
-					Solicitudes::instancia().quitar(sol.parsecId);
-				}
-				else if (rechazar) {
-					Solicitudes::instancia().quitar(sol.parsecId);
-				}
+				// Misma lógica que la interfaz web (core/AccionesSala)
+				if (aceptar) AccionesSala::aceptarSolicitud(sala, sol.parsecId);
+				else if (rechazar) AccionesSala::rechazarSolicitud(sol.parsecId);
 				ImGui::SetCursorScreenPos(ImVec2(p0.x, p0.y + alto + 8 * s));
 				ImGui::Dummy(ImVec2(ancho, 1));
 			}

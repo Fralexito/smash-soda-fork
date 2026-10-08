@@ -14,6 +14,8 @@ namespace phoenix {
 
 	struct PhoenixPrefs {
 		bool interfazPhoenix = true;  ///< false = interfaz clásica del Smash Soda
+		bool interfazWeb = true;      ///< interfaz nueva en HTML (WebView2); si no se puede, se usa la ImGui
+		std::string tema = "galaxy";  ///< tema de la interfaz web: galaxy | sudario
 		std::string idioma = "es";
 		int seccion = 0;              ///< sección abierta al iniciar
 

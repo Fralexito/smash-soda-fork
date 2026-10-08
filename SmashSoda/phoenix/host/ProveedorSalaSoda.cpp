@@ -193,9 +193,23 @@ namespace phoenix {
 	bool ProveedorSalaSoda::banear(uint32_t parsecId, const std::string& nombre) {
 		try {
 			if (Cache::cache.isSodaCop(parsecId)) return false;   // un policía de Soda no se banea
+			if (parsecId == _hosting.getHost().userID) return false; // nadie se banea a sí mismo
+			bool enSala = false;
+			for (Guest& g : _hosting.getGuests()) if (g.userID == parsecId) { enSala = true; break; }
+			if (enSala) {
+				// Mismo camino que «Ban Guest» de la lista original: comando !ban (aviso en el
+				// chat, sonido y expulsión), oculto para el resto.
+				_hosting.sendHostMessage((std::string("!ban ") + std::to_string(parsecId)).c_str(), true);
+				if (!Cache::cache.banList.isBanned(parsecId)) {
+					// Por si el comando no lo encontró: ban directo y expulsión
+					Cache::cache.banList.ban(GuestData(nombre, parsecId));
+					expulsar(parsecId);
+				}
+				return Cache::cache.banList.isBanned(parsecId);
+			}
+			// Fuera de la sala (historial): el comando !ban solo busca por nombre, así que va directo.
 			Cache::cache.banList.ban(GuestData(nombre, parsecId));
-			expulsar(parsecId);
-			return true;
+			return Cache::cache.banList.isBanned(parsecId);
 		}
 		catch (...) {
 			return false;

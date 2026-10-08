@@ -21,6 +21,8 @@ namespace phoenix {
 		/// Mando que controla el host (1..8) o 0.
 		static int activo();
 		static void soltar(ProveedorSala* sala);
+		/// Igual que Ctrl+Alt+N desde un botón de la interfaz (1..8). n == activo() → lo suelta.
+		static void tomar(ProveedorSala* sala, int n);
 	};
 
 }
