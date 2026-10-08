@@ -325,3 +325,15 @@ también guardó solo encima de la ranura 2 (mismo contenido que la 15 salvo 68 
 - Hay más listas tocadas (0xc00de0, 0xc01564, 0xc07170, 0x10bab98, 0x12dddad) por identificar.
 **Conclusión:** fichar PARA el usuario se puede replicar, pero hay que **rellenar** varios registros con datos del jugador (curva de
 E, estadísticas de D, bloque M). Siguiente paso: averiguar de dónde salen (la ficha de 156 B del blob, el Player.bin) para generarlos.
+- **(17:50) Tabla E = historial de medias:** `[edad u8][media cada medio año…]`, longitud = 2 × (edad − 9) valores, el último = media
+  actual (comprobado en los 27 del City: Donnarumma 27 → 36 valores, Sommer 37 → 56). Antes del fichaje esta curva **no existía en el
+  archivo**: el juego la **genera** al fichar (sube desde ~55–60; en veteranos llega a un pico y baja hasta la media actual).
+- **Tabla D (368 B):** `+8` 14 B con un patrón `xx 45` (0x14 para la plantilla de inicio, 0x1d para Sommer: ¿semana de llegada?);
+  `+0x2c` 3 × u16 con un 10000 según el tipo de puesto (portero en el 3.º, central en el 1.º); después ~17 u16 entre 0 y 9.999 de
+  aspecto **aleatorio** (semillas o pesos de desarrollo por puesto). También los genera el juego.
+- **Listas laterales que toca el fichaje** (parecen noticias/historial; ❓ si son obligatorias): 0xc00de0 `[0x15ff][reg][pid]` (12 B,
+  «llegados»), 0xc01564 `[reg][pid][fecha][monto/100 u16][?][1]` (historial con fecha, se inserta arriba), 0xc07170 `[reg][pid]` (8 B),
+  0x10bab98 (noticia con fecha 29/8 y los dos clubes), lista de 24 B tras el blob (0x12dddad) `[-1][0][reg][pid][0x0d][0][ffff][-1]`.
+- **Plan para programarlo:** registro nuevo en el primer hueco de cada tabla, **clonando** el de un compañero del mismo puesto y
+  cambiando reg/pid/edad/fechas; curva E generada (edad y media del catálogo); contrato y historial con el formato §17; K con flag
+  0xc1; dinero. Probar en el juego primero SIN las listas laterales; si el juego se queja, añadirlas.
