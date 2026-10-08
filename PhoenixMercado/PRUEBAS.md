@@ -158,3 +158,8 @@ La zona de 1,2 MB que nadie entendía se descomprime (4,7 MB) y guarda el calend
 **8 oct 14:30 · Dentro del blob: la ficha de Liga Máster de cada jugador** — 🔎
 16.422 fichas de 156 B con sueldo, valor de mercado (Dias 55 M = pantalla ✓), contrato, competiciones inscritas, valoración,
 crecimiento y condición. Ver ESTRUCTURA-ML §15. El calendario de partidos todavía no se localizó.
+
+**8 oct 15:00 · Búsqueda del calendario de partidos** — 🔎 ❌ (todavía)
+Se probaron todas las formas habituales de guardar un calendario y ninguna aparece. Pista fuerte: cada jornada tiene **10 números
+de partido** (ej. 285–294) en el calendario del usuario. Falta un experimento: guardar justo antes y justo después de jugar un
+partido, el mismo día. Ver ESTRUCTURA-ML §16.

@@ -233,3 +233,18 @@ la temporada. También hay listas de selecciones y de grupos de copas (0x1f468c�
   otros datos de temporada por equipo, y listas de jugadores inscritos por competición. ⏳ **El calendario de partidos** (local,
   visitante, fecha, goles) aún no se localizó: no aparece como pares de IDs ni de índices; probablemente use el número de plaza
   dentro de cada competición. Siguiente pista: comparar dos guardados consecutivos de la MISMA fecha jugada (sin avanzar días).
+
+## 16. Búsqueda del calendario de partidos (8 oct, tarde) — **[NEGATIVO por ahora, con pistas]**
+Se buscó en el blob y fuera de él, con escaneos sistemáticos, cualquiera de estas formas: (a) rondas de 10 partidos con índices de
+plaza 0–19, registros de 2–200 B y campos en cualquier posición; (b) rondas con índices de bloque (140–159) o IDs option; (c) rejillas
+20×20 de jornadas. **Ninguna aparece.** Lo que sí se encontró:
+- **IDs de partido:** el calendario del usuario de enero (708 B por día) trae en los días de liga **10 números u16 seguidos** (2 ene:
+  285–294; 31 ene: 360–369): son los partidos de esa jornada numerados globalmente. El registro de partido debe estar indexado por
+  ese número, en algún arreglo aún no identificado (quizá con los equipos como «plaza dentro de la competición» y no como ID).
+- **Tabla de equipos de 16 B** en 0xc016c0 (263 registros, orden alfabético por liga): `[00 00][05 00][4 B][equipo u16][00 00][v u16][v u16]`
+  con `v` decreciente a lo largo de la lista (1009 → 857 City → …): parece un orden/prestigio de clubes. Sin uso todavía.
+- **Lo que no está en el blob:** las habilidades de los jugadores (se probó el mapa de bits de Player.bin y búsqueda por fuerza bruta:
+  no están). El crecimiento de la LM se guarda aparte (probablemente como puntos de experiencia, +0x74 de la ficha de 156 B).
+**Experimento que falta para cerrar el calendario:** dos guardados de la MISMA fecha, uno justo ANTES de jugar un partido del
+usuario y otro justo DESPUÉS (sin avanzar el día). La diferencia aislará el registro del partido jugado (goles, estado) y con él
+el formato de todo el calendario.
