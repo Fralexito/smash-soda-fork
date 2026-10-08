@@ -203,3 +203,8 @@ Conexión con la web OK, cuenta OK (token de Phoenix Link), **271/271 pruebas** 
 **sincronización real con la web**: `GET /liga/cambios?desde=0` respondió, **la firma Ed25519 se verificó** con la clave incrustada y
 la liga está en la versión 0 (sin traspasos aún). El original no cambió (huella igual). El paso 5 (modo código manager) dio
 `NO_VINCULADO`, que es lo esperado: esa PC usa el token compartido.
+
+**8 oct 19:05 · Prueba 17 · Ranura 1 (`ML00000000`, md5 92c9e6b2…) · Reescritura del blob comprimido** — ⏳ EN PRUEBA
+Hecha desde la ranura 15 del juego (fichaje de Sommer). Único cambio: **valor de mercado de Sommer 2.500.000 → 77.700.000 €**
+dentro del blob, que se recomprimió con miniz (el tramo cambiado; los demás copiados tal cual). Si el juego carga la partida y
+muestra 77,7 M, la escritura del blob queda validada (necesaria para inscribir fichajes en competiciones).

@@ -52,6 +52,7 @@ add_library(PhoenixMercadoCore STATIC
     core/SobrePes.cpp
     core/LigaMaster.cpp
     core/Firma.cpp
+    core/BlobLM.cpp
     core/Sincronizacion.cpp
 )
 target_link_libraries(PhoenixMercadoCore PUBLIC PhoenixMercadoTerceros)
