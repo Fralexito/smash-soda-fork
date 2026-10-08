@@ -124,6 +124,30 @@ namespace phoenix {
 			ImGui::Dummy(ImVec2(0, 2.0f * s));
 		}
 
+		/// Fondo con degradado horizontal y esquinas redondeadas (como el .hero del diseño HTML).
+		void salaFondoDegradado(ImDrawList* dl, ImVec2 p0, ImVec2 p1, const ImVec4& izq, const ImVec4& der, float radio) {
+			dl->AddRectFilled(p0, p1, vis::col(izq), radio);
+			dl->AddRectFilledMultiColor(ImVec2(p0.x + radio, p0.y), ImVec2(p1.x - radio, p1.y),
+				vis::col(izq), vis::col(der), vis::col(der), vis::col(izq));
+			dl->PushClipRect(ImVec2(p1.x - radio, p0.y), p1, true);
+			dl->AddRectFilled(p0, p1, vis::col(der), radio);
+			dl->PopClipRect();
+		}
+
+		/// Resplandor suave alrededor de un círculo (el «glow» de los avatares del HTML).
+		void salaResplandor(ImDrawList* dl, ImVec2 c, float r, const ImVec4& color, float intensidad, float s) {
+			if (intensidad <= 0.01f) return;
+			for (int i = 5; i >= 1; i--) {
+				dl->AddCircleFilled(c, r + 4.5f * i * s, vis::col(color, intensidad * 0.030f * (6 - i)), 48);
+			}
+		}
+
+		/// Barra de acento del borde izquierdo (3 px con degradado cian → púrpura).
+		void salaBarraAcento(ImDrawList* dl, ImVec2 p0, ImVec2 p1, const ImVec4& a, const ImVec4& b, float s) {
+			dl->AddRectFilledMultiColor(ImVec2(p0.x, p0.y + 10 * s), ImVec2(p0.x + 3.0f * s, p1.y - 10 * s),
+				vis::col(a), vis::col(a), vis::col(b), vis::col(b));
+		}
+
 		// ---------------------------------------------------------------------
 		//  Historial de latencia (se alimenta cada frame desde tick)
 		// ---------------------------------------------------------------------
@@ -188,8 +212,9 @@ namespace phoenix {
 			const float alto = 176.0f * s;
 			const ImVec2 p0 = ImGui::GetCursorScreenPos();
 			const ImVec2 p1(p0.x + ancho, p0.y + alto);
-			dl->AddRectFilled(p0, p1, vis::col(tema->listItemBackground), 14.0f * s);
-			dl->AddRect(p0, p1, vis::col(tema->panelBorder), 14.0f * s, 0, 1.0f * s);
+			dl->AddRectFilled(p0, p1, vis::col(tema->listItemBackground), 12.0f * s);
+			dl->AddRect(p0, p1, vis::col(tema->primary, 0.22f), 12.0f * s, 0, 1.0f * s);
+			salaBarraAcento(dl, p0, p1, tema->primary, tema->secondary, s);
 
 			salaTexto(dl, AppFonts::label, AppFonts::label->FontSize, ImVec2(p0.x + 20 * s, p0.y + 16 * s),
 				vis::col(tema->textMuted), T("sala.latencia_vivo"));
@@ -281,8 +306,19 @@ namespace phoenix {
 			const ImVec2 c(xAv, yc);
 			const ImVec4 cc = vacio ? tema->textMuted : color;
 
-			dl->AddCircleFilled(c, av * 0.5f, vis::col(cc, vacio ? 0.08f : 0.18f), 48);
-			dl->AddCircle(c, av * 0.5f, vis::col(cc, vacio ? 0.40f : 0.90f), 48, 2.0f * s);
+			salaResplandor(dl, c, av * 0.5f, cc, vacio ? 0.0f : 1.0f, s);
+			dl->AddCircleFilled(c, av * 0.5f, vis::col(tema->listItemBackground), 48);
+			dl->AddCircleFilled(c, av * 0.5f, vis::col(cc, vacio ? 0.06f : 0.16f), 48);
+			if (vacio) {
+				for (int i = 0; i < 24; i++) {
+					const float a0 = i * 6.2831853f / 24.0f, a1 = a0 + 6.2831853f / 48.0f;
+					dl->PathArcTo(c, av * 0.5f, a0, a1, 4);
+					dl->PathStroke(vis::col(cc, 0.55f), 0, 2.0f * s);
+				}
+			}
+			else {
+				dl->AddCircle(c, av * 0.5f, vis::col(cc, 0.95f), 48, 2.0f * s);
+			}
 			const std::string ini = vacio ? std::string("+") : salaIniciales(nombre);
 			const ImVec2 ti = salaMedir(AppFonts::title, AppFonts::title->FontSize, ini.c_str());
 			salaTexto(dl, AppFonts::title, AppFonts::title->FontSize, ImVec2(c.x - ti.x * 0.5f, c.y - ti.y * 0.5f),
@@ -324,9 +360,10 @@ namespace phoenix {
 			const ImVec2 p0 = ImGui::GetCursorScreenPos();
 			const ImVec2 p1(p0.x + ancho, p0.y + alto);
 			const float yc = p0.y + alto * 0.5f;
-			dl->AddRectFilled(p0, p1, vis::col(tema->listItemBackground), 14.0f * s);
-			dl->AddRect(p0, p1, vis::col(hayRival ? vis::mezclar(tema->panelBorder, tema->primary, 0.45f) : tema->panelBorder),
-				14.0f * s, 0, 1.0f * s);
+			salaFondoDegradado(dl, p0, p1,
+				vis::mezclar(tema->listItemBackground, tema->primary, 0.09f),
+				vis::mezclar(tema->listItemBackground, tema->secondary, 0.14f), 12.0f * s);
+			dl->AddRect(p0, p1, vis::col(tema->primary, hayRival ? 0.40f : 0.22f), 12.0f * s, 0, 1.0f * s);
 
 			const float margen = 20.0f * s;
 			const float wAsiento = (std::max)(150.0f * s, ancho * 0.26f);
