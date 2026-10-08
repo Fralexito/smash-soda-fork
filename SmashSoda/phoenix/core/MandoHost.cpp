@@ -21,6 +21,17 @@ namespace phoenix {
 		mhActivo = 0;
 	}
 
+	void MandoHost::tomar(ProveedorSala* sala, int n) {
+		if (sala == nullptr || n < 0 || n > 8) return;
+		try {
+			if (n == 0 || n == mhActivo) { soltar(sala); return; }
+			soltar(sala);
+			mhActivo = n;
+			sala->tomarControl(n - 1, true);
+		}
+		catch (...) {}
+	}
+
 	void MandoHost::tick(ProveedorSala* sala) {
 		if (sala == nullptr) return;
 		try {

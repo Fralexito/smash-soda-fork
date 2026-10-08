@@ -417,8 +417,7 @@ namespace phoenix {
 			e.cambioEn = ImGui::GetTime();
 		}
 
-		PantallaSala::tick(gProveedor); // web y asientos, en cualquier sección
-		MandoHost::tick(gProveedor);    // Ctrl+Alt+N: el host toma un mando
+		tickLogica(); // web y asientos + Ctrl+Alt+N, en cualquier sección
 
 		Theme* tema = ThemeController::getInstance().getActiveTheme();
 		const float s = escala();
@@ -549,6 +548,23 @@ namespace phoenix {
 
 	void Shell::establecerProveedor(ProveedorSala* proveedor) {
 		gProveedor = proveedor;
+	}
+
+	void Shell::tickLogica() {
+		PantallaSala::tick(gProveedor); // web y asientos, en cualquier sección
+		MandoHost::tick(gProveedor);    // Ctrl+Alt+N: el host toma un mando
+	}
+
+	void Shell::irA(int seccion, int pestana) {
+		EstadoUi& e = ui();
+		const int s = std::clamp(seccion, 0, TOTAL_SECCIONES - 1);
+		if (!e.iniciado) {
+			e.iniciado = true;
+			e.cambioEn = ImGui::GetTime();
+		}
+		cambiarSeccion(s);
+		e.pestana[s] = (std::max)(0, pestana);
+		e.subrayadoX = -1.0f;
 	}
 
 	void Shell::renderBotonVolver() {

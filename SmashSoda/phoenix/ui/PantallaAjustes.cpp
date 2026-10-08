@@ -14,6 +14,7 @@
 #include "../../globals/AppFonts.h"
 #include "../../globals/AppIcons.h"
 #include "../../services/ThemeController.h"
+#include "../web/InterfazWeb.h"
 
 namespace phoenix {
 
@@ -176,7 +177,7 @@ namespace phoenix {
 				? ImGui::InputTextMultiline(id, buf, tam, ImVec2(w, alto))
 				: ImGui::InputText(id, buf, tam);
 			est->SetBool(kid, ImGui::IsItemActive());
-ImGui::PopStyleVar(2);
+			ImGui::PopStyleVar(2);
 			ImGui::PopStyleColor(2);
 			ImGui::PopFont();
 			if (cambio) destino = buf;
@@ -270,10 +271,20 @@ ImGui::PopStyleVar(2);
 			// --- Interfaz ---------------------------------------------------
 			ajustes::titulo("aj.interfaz", tema, s);
 			ImGui::PushFont(AppFonts::label);
+			// Interfaz nueva (HTML): si la PC no puede mostrarla, la app vuelve sola a esta
+			if (vis::chip("##nueva", T("aj.usar_nueva"), tema->primary, true, s)) {
+				web::InterfazWeb::instancia().usarWeb(true);
+			}
+			ImGui::SameLine(0, 8.0f * s);
 			if (vis::chip("##clasica", T("barra.clasica"), tema->secondary, false, s)) {
 				PhoenixPrefs::get().interfazPhoenix = false;
 				PhoenixPrefs::get().guardar();
 			}
+			ImGui::PopFont();
+			ImGui::PushFont(AppFonts::input);
+			ImGui::PushStyleColor(ImGuiCol_Text, tema->textMuted);
+			ImGui::TextWrapped("%s", T("aj.usar_nueva_d"));
+			ImGui::PopStyleColor();
 			ImGui::PopFont();
 			ImGui::PushFont(AppFonts::input);
 			ImGui::PushStyleColor(ImGuiCol_Text, tema->textMuted);

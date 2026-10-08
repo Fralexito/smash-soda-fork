@@ -68,6 +68,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC
     "${CMAKE_CURRENT_SOURCE_DIR}/../Dependencies/matoya"
     "${CMAKE_CURRENT_SOURCE_DIR}/../Dependencies/vigem/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/../Dependencies/sdl/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../external/webview2/include"
 )
 
 # --------------------------
@@ -191,6 +192,7 @@ set_source_files_properties(
     "${CMAKE_CURRENT_SOURCE_DIR}/WGCapture.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/link/Http.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/link/PhoenixLink.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/web/AnfitrionWeb.cpp"
     PROPERTIES
         SKIP_UNITY_BUILD_INCLUSION ON
         SKIP_PRECOMPILE_HEADERS ON
@@ -215,6 +217,12 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         "${CMAKE_SOURCE_DIR}/Dependencies/parsecsdk/windows/parsec.dll" $<TARGET_FILE_DIR:${PROJECT_NAME}>
     COMMAND ${CMAKE_COMMAND} -E copy
         "${SDL2LIB_DIR}/SDL2.dll" $<TARGET_FILE_DIR:${PROJECT_NAME}>
+    # Phoenix: interfaz nueva (HTML) y el cargador de WebView2 junto al exe
+    COMMAND ${CMAKE_COMMAND} -E remove_directory $<TARGET_FILE_DIR:${PROJECT_NAME}>/ui
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_SOURCE_DIR}/SmashSoda/phoenix/web/ui" $<TARGET_FILE_DIR:${PROJECT_NAME}>/ui
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_SOURCE_DIR}/external/webview2/${TARGET_ARCH}/WebView2Loader.dll" $<TARGET_FILE_DIR:${PROJECT_NAME}>
 )
 
 if(TARGET_ARCH STREQUAL "x64")

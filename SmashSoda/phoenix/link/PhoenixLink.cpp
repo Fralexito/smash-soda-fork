@@ -108,6 +108,44 @@ namespace phoenix {
 			return s.empty() ? "Mi PC" : s.substr(0, 40);
 		}
 
+		/// Texto de un campo que puede venir null o ausente.
+		std::string textoDe(const json& j, const char* clave) {
+			if (!j.is_object() || !j.contains(clave) || j[clave].is_null()) return std::string();
+			if (j[clave].is_string()) return j[clave].get<std::string>();
+			return j[clave].dump();
+		}
+
+		/// Clave única para eventos (UUID v4).
+		std::string uuid4() {
+			unsigned char b[16] = {};
+			if (BCryptGenRandom(nullptr, b, sizeof(b), BCRYPT_USE_SYSTEM_PREFERRED_RNG) != 0) {
+				for (int i = 0; i < 16; i++) b[i] = static_cast<unsigned char>((GetTickCount64() >> (i % 8)) ^ (i * 37));
+			}
+			b[6] = static_cast<unsigned char>((b[6] & 0x0F) | 0x40);
+			b[8] = static_cast<unsigned char>((b[8] & 0x3F) | 0x80);
+			static const char* hex = "0123456789abcdef";
+			std::string s;
+			for (int i = 0; i < 16; i++) {
+				if (i == 4 || i == 6 || i == 8 || i == 10) s += '-';
+				s += hex[b[i] >> 4];
+				s += hex[b[i] & 15];
+			}
+			return s;
+		}
+
+		/// Hora UTC en ISO 8601 (2026-10-06T19:00:00.000Z).
+		std::string ahoraIso() {
+			SYSTEMTIME t{};
+			GetSystemTime(&t);
+			char b[32];
+			snprintf(b, sizeof(b), "%04d-%02d-%02dT%02d:%02d:%02d.%03dZ", t.wYear, t.wMonth, t.wDay, t.wHour, t.wMinute, t.wSecond, t.wMilliseconds);
+			return b;
+		}
+
+		std::vector<std::string> cabecerasCon(const std::string& token) {
+			return { "Authorization: Bearer " + token, std::string("X-Phoenix-Version: ") + kVersionApp, "X-Phoenix-Build: " + huellaExe() };
+		}
+
 		/// Mensaje en español para cada código estable del contrato.
 		std::string textoError(const std::string& codigo, const std::string& mensaje) {
 			static const std::map<std::string, std::string> textos = {
@@ -124,6 +162,9 @@ namespace phoenix {
 				{"BUILD_DESACTIVADO", "Esta build fue retirada."},
 				{"VERSION_DESACTIVADA", "Esta versión fue desactivada."},
 				{"DEMASIADOS_INTENTOS", "Demasiados intentos: espera un momento."},
+				{"NO_SON_AMIGOS", "Solo puedes invitar a tus amigos."},
+				{"SALA_CERRADA", "La sala ya no está abierta en la web."},
+				{"SALA_NO_ENCONTRADA", "La web aún no conoce tu sala: espera unos segundos."},
 			};
 			auto it = textos.find(codigo);
 			return it != textos.end() ? it->second : (mensaje.empty() ? codigo : mensaje);
@@ -143,6 +184,7 @@ namespace phoenix {
 			_usuario = leerUsuario();
 			_estado = _token.empty() ? EstadoLink::SinVincular : EstadoLink::Conectado;
 		}
+		cargarEventos();
 		_hilo = std::thread([this]() { bucle(); });
 	}
 
@@ -160,6 +202,11 @@ namespace phoenix {
 	void PhoenixLink::actualizar(const InstantaneaSala& foto) {
 		std::lock_guard<std::mutex> lock(_mutex);
 		_foto = foto;
+		_presentes.clear();
+		for (const InvitadoMuestra& inv : foto.invitados) {
+			try { if (!inv.parsecId.empty()) _presentes.push_back(static_cast<uint32_t>(std::stoul(inv.parsecId))); }
+			catch (...) {}
+		}
 	}
 
 	void PhoenixLink::emparejar(const std::string& codigo) {
@@ -251,6 +298,15 @@ namespace phoenix {
 						_jugadores = 0;
 						PhoenixRoles::instancia().limpiarWeb();
 					}
+
+					// Interfaz nueva: un paso opcional por vuelta (pedidos, eventos, cartas, presencia, amigos)
+					bool sigue = false;
+					{
+						std::lock_guard<std::mutex> lock(_mutex);
+						sigue = _corriendo && !_token.empty() && !_pausado && ahoraMs() >= _esperaHastaMs;
+						salaId = _salaId;
+					}
+					if (sigue) pasoOpcional(token, salaId, foto);
 				}
 			}
 			catch (...) {
@@ -341,7 +397,9 @@ namespace phoenix {
 			invitados.push_back(i);
 			if (invitados.size() >= 16) break;
 		}
-		const json cuerpo = { {"sala_id", sala}, {"estado", "abierta"},
+		bool enPartida = false;
+		{ std::lock_guard<std::mutex> lock(_mutex); enPartida = _enPartida; }
+		const json cuerpo = { {"sala_id", sala}, {"estado", enPartida ? "en_partida" : "abierta"},
 			{"plazas_libres", (std::max)(0, (std::min)(16, foto.plazasLibres))}, {"invitados", invitados} };
 
 		const http::Respuesta r = http::peticion("POST", std::string(kBase) + "/v1/sala/latido", cuerpo.dump(),
@@ -465,6 +523,309 @@ namespace phoenix {
 		for (const auto& par : jugadores) if (par.second >= 2) hayRival = true;
 		const bool activa = roles.value("modo", "") == "reto" || hayRival;
 		PhoenixRoles::instancia().establecerDesdeWeb(activa, jugadores, espectadores, false);
+	}
+
+	// =========================================================================
+	//  Interfaz nueva (contrato 1.4.0 – 1.6.0): presencia, amigos, invitar,
+	//  cartas de jugador, eventos y «en_partida». Todo opcional: si falla, la
+	//  sala y el latido siguen igual (estos pasos no tocan la espera global
+	//  salvo por errores de token).
+	// =========================================================================
+
+	void PhoenixLink::ventanaVisible(bool si) {
+		std::lock_guard<std::mutex> l(_mutex);
+		if (si && !_ventanaVisible) _proximoAmigosMs = 0; // al volver a la ventana: sondeo inmediato
+		_ventanaVisible = si;
+	}
+
+	void PhoenixLink::marcarPartido(bool enJuego) {
+		std::lock_guard<std::mutex> l(_mutex);
+		if (_enPartida != enJuego) {
+			_enPartida = enJuego;
+			_proximoLatidoMs = 0;     // el cambio de estado sale en el próximo latido posible
+			_proximaPresenciaMs = 0;
+		}
+	}
+
+	void PhoenixLink::evento(const std::string& tipo, const std::string& actorParsec, const std::string& datosJson) {
+		std::lock_guard<std::mutex> l(_mutex);
+		if (_token.empty()) return; // sin vínculo con la web no hay a quién mandarlo
+		json e = { {"clave", uuid4()}, {"tipo", tipo}, {"ocurrido", ahoraIso()} };
+		if (!actorParsec.empty()) e["actor_parsec"] = actorParsec;
+		const json datos = json::parse(datosJson.empty() ? std::string("{}") : datosJson, nullptr, false);
+		e["datos"] = (!datos.is_discarded() && datos.is_object()) ? datos : json::object();
+		_eventos.push_back(e.dump());
+		while (_eventos.size() > 500) _eventos.erase(_eventos.begin()); // tope: nunca crece sin fin
+		guardarEventos();
+	}
+
+	std::vector<AmigoWeb> PhoenixLink::amigos() { std::lock_guard<std::mutex> l(_mutex); return _amigos; }
+	bool PhoenixLink::amigosCargados() { std::lock_guard<std::mutex> l(_mutex); return _amigosCargados; }
+	long long PhoenixLink::versionLiga() { std::lock_guard<std::mutex> l(_mutex); return _versionLiga; }
+	std::string PhoenixLink::salaId() { std::lock_guard<std::mutex> l(_mutex); return _salaId; }
+	int PhoenixLink::eventosEnCola() { std::lock_guard<std::mutex> l(_mutex); return static_cast<int>(_eventos.size()); }
+
+	void PhoenixLink::invitar(uint64_t ticket, const std::string& usuarioId) {
+		std::lock_guard<std::mutex> l(_mutex);
+		_pedidos.push_back({ ticket, "invitar", usuarioId });
+	}
+
+	void PhoenixLink::soltarRival(uint64_t ticket) {
+		std::lock_guard<std::mutex> l(_mutex);
+		_pedidos.push_back({ ticket, "soltar_rival", "" });
+	}
+
+	std::vector<ResultadoWeb> PhoenixLink::tomarResultados() {
+		std::lock_guard<std::mutex> l(_mutex);
+		std::vector<ResultadoWeb> r;
+		r.swap(_resultados);
+		return r;
+	}
+
+	std::map<uint32_t, std::string> PhoenixLink::perfiles() {
+		std::lock_guard<std::mutex> l(_mutex);
+		std::map<uint32_t, std::string> r;
+		for (uint32_t id : _presentes) {
+			auto it = _perfiles.find(id);
+			if (it != _perfiles.end() && !it->second.json.empty()) r[id] = it->second.json;
+		}
+		return r;
+	}
+
+	void PhoenixLink::guardarEventos() {
+		// Llamar con _mutex tomado.
+		try {
+			json arr = json::array();
+			for (const std::string& e : _eventos) {
+				const json x = json::parse(e, nullptr, false);
+				if (!x.is_discarded()) arr.push_back(x);
+			}
+			std::ofstream f(carpeta() + "phoenix-eventos.json", std::ios::binary | std::ios::trunc);
+			f << arr.dump();
+		}
+		catch (...) {}
+	}
+
+	void PhoenixLink::cargarEventos() {
+		try {
+			std::ifstream f(carpeta() + "phoenix-eventos.json", std::ios::binary);
+			if (!f) return;
+			std::string texto((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
+			const json arr = json::parse(texto, nullptr, false);
+			if (arr.is_discarded() || !arr.is_array()) return;
+			std::lock_guard<std::mutex> l(_mutex);
+			for (const json& e : arr) {
+				if (e.is_object() && e.contains("clave") && e.contains("tipo")) _eventos.push_back(e.dump());
+				if (_eventos.size() >= 500) break;
+			}
+		}
+		catch (...) {}
+	}
+
+	bool PhoenixLink::pasoOpcional(const std::string& token, const std::string& salaId, const InstantaneaSala& foto) {
+		// Orden: lo que pidió el host ya, luego lo que la web necesita, luego lo «bonito».
+		if (pasoPedidos(token, salaId)) return true;
+		if (pasoEventos(token, salaId)) return true;
+		if (pasoPerfiles(token, foto)) return true;
+		if (pasoPresencia(token, salaId)) return true;
+		return pasoAmigos(token);
+	}
+
+	bool PhoenixLink::pasoPedidos(const std::string& token, const std::string& salaId) {
+		Pedido p;
+		{
+			std::lock_guard<std::mutex> l(_mutex);
+			if (_pedidos.empty()) return false;
+			p = _pedidos.front();
+			_pedidos.erase(_pedidos.begin());
+		}
+		ResultadoWeb r;
+		r.ticket = p.ticket;
+		if (salaId.empty()) {
+			r.codigo = "SALA_NO_PUBLICADA";
+			r.mensaje = "Tu sala aún no está publicada en la web: ábrela y espera unos segundos.";
+			std::lock_guard<std::mutex> l(_mutex);
+			_resultados.push_back(r);
+			return true;
+		}
+		json cuerpo = { {"sala_id", salaId} };
+		std::string ruta = "/v1/sala/soltar_rival";
+		if (p.tipo == "invitar") {
+			cuerpo["usuario_id"] = p.usuarioId;
+			ruta = "/v1/invitar";
+		}
+		const http::Respuesta resp = http::peticion("POST", std::string(kBase) + ruta, cuerpo.dump(), cabecerasCon(token));
+		const json j = json::parse(resp.cuerpo, nullptr, false);
+		std::lock_guard<std::mutex> l(_mutex);
+		if (resp.estado == 200 && !j.is_discarded() && j.value("ok", false)) {
+			r.ok = true;
+			if (p.tipo == "invitar") {
+				r.mensaje = j.value("notificado", false) ? "Invitación enviada: le llegó el aviso."
+					: "Invitación lista: tu amigo apagó los avisos, pero ya puede ver y entrar a tu sala.";
+			}
+			else {
+				r.mensaje = "Puesto de rival liberado: tu sala vuelve al radar.";
+				if (j.contains("roles")) aplicarRoles(j["roles"].dump());
+			}
+		}
+		else if (resp.estado == 0) {
+			r.codigo = "RED";
+			r.mensaje = "Sin conexión con la web. Revisa tu internet.";
+		}
+		else {
+			r.codigo = j.is_discarded() ? "ERROR_INTERNO" : j.value("codigo", "ERROR_INTERNO");
+			r.mensaje = textoError(r.codigo, j.is_discarded() ? "" : j.value("mensaje", ""));
+			if (r.codigo.rfind("TOKEN_", 0) == 0) fallo(r.codigo, r.mensaje, 0);
+		}
+		_resultados.push_back(r);
+		return true;
+	}
+
+	bool PhoenixLink::pasoEventos(const std::string& token, const std::string& salaId) {
+		std::vector<std::string> lote;
+		{
+			std::lock_guard<std::mutex> l(_mutex);
+			if (salaId.empty() || _eventos.empty() || ahoraMs() < _proximoEnvioEventosMs) return false;
+			for (size_t i = 0; i < _eventos.size() && i < 50; i++) lote.push_back(_eventos[i]);
+		}
+		json arr = json::array();
+		for (const std::string& e : lote) {
+			const json x = json::parse(e, nullptr, false);
+			if (!x.is_discarded()) arr.push_back(x);
+		}
+		const json cuerpo = { {"sala_id", salaId}, {"eventos", arr} };
+		const http::Respuesta resp = http::peticion("POST", std::string(kBase) + "/v1/eventos", cuerpo.dump(), cabecerasCon(token));
+		const json j = json::parse(resp.cuerpo, nullptr, false);
+		std::lock_guard<std::mutex> l(_mutex);
+		const std::string codigo = j.is_discarded() ? "" : j.value("codigo", "");
+		const bool enviado = resp.estado == 200 && !j.is_discarded() && j.value("ok", false);
+		// Aceptados, duplicados y rechazados ya no se reintentan (§6). Un evento de una sala
+		// que murió tampoco tiene a dónde ir.
+		if (enviado || codigo == "SALA_CERRADA" || codigo == "SALA_NO_ENCONTRADA" || codigo == "CAMPO_INVALIDO" || codigo == "JSON_INVALIDO") {
+			const size_t n = (std::min)(lote.size(), _eventos.size());
+			_eventos.erase(_eventos.begin(), _eventos.begin() + static_cast<std::ptrdiff_t>(n));
+			guardarEventos();
+			_proximoEnvioEventosMs = ahoraMs() + 15000; // eventos_envio_seg
+		}
+		else {
+			if (codigo.rfind("TOKEN_", 0) == 0) fallo(codigo, j.value("mensaje", ""), 0);
+			const int espera = j.is_discarded() ? 0 : j.value("reintentar_en", 0);
+			_proximoEnvioEventosMs = ahoraMs() + (std::max)(30, espera) * 1000LL;
+		}
+		return true;
+	}
+
+	bool PhoenixLink::pasoPresencia(const std::string& token, const std::string& salaId) {
+		bool enPartida;
+		{
+			std::lock_guard<std::mutex> l(_mutex);
+			if (ahoraMs() < _proximaPresenciaMs) return false;
+			enPartida = _enPartida;
+		}
+		json cuerpo = { {"estado", enPartida ? "en_partida" : "disponible"} };
+		if (!salaId.empty()) cuerpo["sala_id"] = salaId;
+		const http::Respuesta resp = http::peticion("POST", std::string(kBase) + "/v1/presencia", cuerpo.dump(), cabecerasCon(token));
+		const json j = json::parse(resp.cuerpo, nullptr, false);
+		std::lock_guard<std::mutex> l(_mutex);
+		if (resp.estado == 200 && !j.is_discarded() && j.value("ok", false)) {
+			_proximaPresenciaMs = ahoraMs() + (std::max)(30, j.value("siguiente_seg", 60)) * 1000LL;
+			if (j.contains("version_liga") && j["version_liga"].is_number()) _versionLiga = j["version_liga"].get<long long>();
+		}
+		else {
+			const std::string codigo = j.is_discarded() ? "" : j.value("codigo", "");
+			if (codigo.rfind("TOKEN_", 0) == 0) fallo(codigo, j.value("mensaje", ""), 0);
+			_proximaPresenciaMs = ahoraMs() + 120000; // reintento tranquilo
+		}
+		return true;
+	}
+
+	bool PhoenixLink::pasoAmigos(const std::string& token) {
+		std::string etag;
+		{
+			std::lock_guard<std::mutex> l(_mutex);
+			if (!_ventanaVisible || ahoraMs() < _proximoAmigosMs) return false;
+			etag = _etagAmigos;
+		}
+		std::vector<std::string> cab = cabecerasCon(token);
+		if (!etag.empty()) cab.push_back("If-None-Match: " + etag);
+		const http::Respuesta resp = http::peticion("GET", std::string(kBase) + "/v1/presencia/amigos", "", cab);
+		const json j = json::parse(resp.cuerpo, nullptr, false);
+		std::lock_guard<std::mutex> l(_mutex);
+		if (resp.estado == 304) {
+			_proximoAmigosMs = ahoraMs() + 30000;
+			_amigosCargados = true;
+			return true;
+		}
+		if (resp.estado == 200 && !j.is_discarded() && j.value("ok", false)) {
+			_amigos.clear();
+			if (j.contains("amigos") && j["amigos"].is_array()) {
+				for (const json& a : j["amigos"]) {
+					AmigoWeb x;
+					x.usuarioId = textoDe(a, "usuario_id");
+					x.nombre = textoDe(a, "nombre");
+					x.avatarUrl = textoDe(a, "avatar_url");
+					x.estado = textoDe(a, "estado");
+					x.salaId = textoDe(a, "sala_id");
+					x.desde = textoDe(a, "desde");
+					if (!x.usuarioId.empty()) _amigos.push_back(x);
+				}
+			}
+			_etagAmigos = j.value("etag", "");
+			_amigosCargados = true;
+			_proximoAmigosMs = ahoraMs() + (std::max)(15, j.value("sondeo_seg", 30)) * 1000LL;
+			return true;
+		}
+		const std::string codigo = j.is_discarded() ? "" : j.value("codigo", "");
+		if (codigo.rfind("TOKEN_", 0) == 0) fallo(codigo, j.value("mensaje", ""), 0);
+		_proximoAmigosMs = ahoraMs() + 60000;
+		return true;
+	}
+
+	bool PhoenixLink::pasoPerfiles(const std::string& token, const InstantaneaSala& foto) {
+		std::vector<uint32_t> faltan;
+		{
+			std::lock_guard<std::mutex> l(_mutex);
+			if (ahoraMs() < _proximoPerfilesMs) return false;
+			const long long ahora = ahoraMs();
+			for (uint32_t id : _presentes) {
+				auto it = _perfiles.find(id);
+				if (it == _perfiles.end() || it->second.hastaMs < ahora) faltan.push_back(id);
+				if (faltan.size() >= 16) break;
+			}
+			if (faltan.empty()) return false;
+		}
+		json ids = json::array();
+		for (uint32_t id : faltan) ids.push_back(id);
+		const json cuerpo = { {"parsec_ids", ids} };
+		const http::Respuesta resp = http::peticion("POST", std::string(kBase) + "/v1/perfiles", cuerpo.dump(), cabecerasCon(token));
+		const json j = json::parse(resp.cuerpo, nullptr, false);
+		std::lock_guard<std::mutex> l(_mutex);
+		_proximoPerfilesMs = ahoraMs() + 6000; // la web acepta 1 llamada cada 5 s
+		if (resp.estado == 200 && !j.is_discarded() && j.value("ok", false)) {
+			const long long hasta = ahoraMs() + 10 * 60 * 1000LL; // se refresca cada 10 min
+			for (uint32_t id : faltan) _perfiles[id] = { std::string(), hasta }; // sin cuenta vinculada
+			if (j.contains("perfiles") && j["perfiles"].is_array()) {
+				for (const json& p : j["perfiles"]) {
+					uint32_t id = 0;
+					try {
+						if (p["parsec_id"].is_number()) id = p["parsec_id"].get<uint32_t>();
+						else id = static_cast<uint32_t>(std::stoul(p["parsec_id"].get<std::string>()));
+					}
+					catch (...) { id = 0; }
+					if (id != 0) _perfiles[id] = { p.dump(), hasta };
+				}
+			}
+			// No acumular cartas de gente que se fue hace mucho
+			if (_perfiles.size() > 200) _perfiles.clear();
+		}
+		else {
+			const std::string codigo = j.is_discarded() ? "" : j.value("codigo", "");
+			if (codigo.rfind("TOKEN_", 0) == 0) fallo(codigo, j.value("mensaje", ""), 0);
+			const int espera = j.is_discarded() ? 0 : j.value("reintentar_en", 0);
+			_proximoPerfilesMs = ahoraMs() + (std::max)(30, espera) * 1000LL;
+		}
+		(void)foto;
+		return true;
 	}
 
 }
