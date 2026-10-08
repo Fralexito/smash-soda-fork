@@ -53,7 +53,7 @@ namespace mercado::lm {
 	};
 
 	/// Alineación del equipo del usuario (solo él la tiene). Tres piezas que el juego mantiene en espejo:
-	///   · `orden`: índices de plantilla en orden de formación (0–10 XI, 11–17 banca, resto reservas),
+	///   · `orden`: índices de plantilla en orden de formación (0–10 XI; después la banca —12 en este guardado— y las reservas),
 	///     40 bytes en el archivo, los libres a 0xff;
 	///   · `roles`: 6 índices de plantilla (capitán, lanzadores…) justo después (+0x28);
 	///   · lista K: un registro de 16 B `[flag, reg, pid, 0]` por posición de `orden` (K[i] = plantilla[orden[i]]),
@@ -90,9 +90,10 @@ namespace mercado::lm {
 		Resultado<uint16_t> moverEntreIA(int origen, int destino, uint32_t pid, uint16_t dorsal = 0, uint32_t pidSustituto = 0);
 
 		/// Propone quién cubre el puesto de `pid` en el equipo `k` si se va (0 = no hace falta nadie).
+		/// Hace falta sustituto solo si es titular (puestos 0–10) o tiene un rol.
 		/// `posicionDe(pid)` da la posición registrada (0 PT, 1 DC, 2 LI, 3 LD, 4 MCD, 5 MC, 6 II, 7 ID, 8 MP,
-		/// 9 EI, 10 ED, 11 SD, 12 DC) o -1 si no se sabe. Busca primero entre las reservas (como hace el juego)
-		/// y después en la banca: misma posición > misma línea > cualquiera; un portero solo lo cubre otro portero.
+		/// 9 EI, 10 ED, 11 SD, 12 DC) o -1 si no se sabe. Busca desde el final de la lista (reservas) hacia la banca:
+		/// misma posición > mismo grupo (p. ej. LI-LD) > misma línea > cualquiera; un portero solo lo cubre otro portero.
 		Resultado<uint32_t> sugerirSustituto(int k, uint32_t pid, const std::function<int(uint32_t)>& posicionDe) const;
 
 		/// Alineación del equipo del USUARIO, localizada por anclas (no por direcciones fijas).
@@ -102,7 +103,7 @@ namespace mercado::lm {
 		/// Reproduce exactamente lo probado en el juego (prototipo v6, 8 oct 2026):
 		///   · compacta las 12 tablas alineadas del usuario (A…M y L),
 		///   · en la alineación, `pidSustituto` ocupa el puesto del que se va y desaparece de su sitio anterior;
-		///     si el que se va es reserva (posición ≥ 18) puede ir sin sustituto (0),
+		///     si el que se va no es titular ni tiene rol puede ir sin sustituto (0),
 		///   · reescribe la lista K como espejo de la alineación, la plantilla y los dorsales del usuario,
 		///   · añade al jugador al final de la plantilla del destino con `dorsal` (0 u ocupado = el más alto libre)
 		///     y como última reserva en la alineación del destino.

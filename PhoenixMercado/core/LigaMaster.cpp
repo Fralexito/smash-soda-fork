@@ -65,7 +65,7 @@ namespace mercado::lm {
 		constexpr size_t kBytesOrden = 40;          // 40 índices de plantilla (relleno 0xff)
 		constexpr size_t kOrdenARoles = 0x28;       // los 6 roles van justo después de los 40 bytes
 		constexpr size_t kBytesRoles = 6;
-		constexpr size_t kPrimeraReserva = 18;      // posiciones 0–10 titulares, 11–17 banca, 18+ reservas
+		constexpr size_t kTitulares = 11;           // posiciones 0–10 titulares; después la banca (12 en este guardado) y las reservas
 
 		// --- Bloques de alineación de los equipos de la IA (ESTRUCTURA-ML.md §10) -----------------------
 		//  Un bloque de 600 B por equipo, en el orden de los bloques de equipo: [índice u32][ID option u32]
@@ -152,14 +152,13 @@ namespace mercado::lm {
 			return true;
 		}
 
-		/// ¿Hace falta sustituto? Sí si ocupa un puesto antes de `limite` o tiene un rol.
-		///  · IA: limite 11 (solo titulares). Así lo hace el juego (guardados del 8 oct): si se va un titular, una
-		///    reserva ocupa su puesto; si se va un suplente o una reserva, los de atrás simplemente suben.
-		///  · Usuario: limite 18 (titulares y banca), como el prototipo v6 probado en el juego.
-		constexpr size_t kLimiteIA = 11, kLimiteUsuario = 18;
-		bool necesitaSustituto(const std::vector<uint8_t>& orden, const std::array<uint8_t, 6>& roles, int idx, size_t limite) {
+		/// ¿Hace falta sustituto? Solo si es TITULAR (puestos 0–10: cada uno es un sitio de la formación) o tiene un rol.
+		/// Así lo hace el juego (guardados del 8 oct): si se va un titular, otro ocupa su puesto; si se va un suplente o
+		/// una reserva, los de atrás simplemente suben (la banca y las reservas son una lista, no sitios en la cancha).
+		/// No depende del tamaño de la banca (en este guardado es de 12; en otros puede ser de 7).
+		bool necesitaSustituto(const std::vector<uint8_t>& orden, const std::array<uint8_t, 6>& roles, int idx) {
 			const auto it = std::find(orden.begin(), orden.end(), uint8_t(idx));
-			if (it != orden.end() && size_t(it - orden.begin()) < limite) return true;
+			if (it != orden.end() && size_t(it - orden.begin()) < kTitulares) return true;
 			return std::any_of(roles.begin(), roles.end(), [&](uint8_t v) { return v == idx; });
 		}
 	}
@@ -276,7 +275,7 @@ namespace mercado::lm {
 			if (!ao.ok()) return R::mal(ao.error.codigo, ao.error.detalle);
 			auto ad = leerAliIA(_datos, bloques, destino);
 			if (!ad.ok()) return R::mal(ad.error.codigo, ad.error.detalle);
-			if (idxS < 0 && necesitaSustituto(ao.valor->orden, ao.valor->roles, idx, kLimiteIA))
+			if (idxS < 0 && necesitaSustituto(ao.valor->orden, ao.valor->roles, idx))
 				return R::mal("FALTA_SUSTITUTO", "Es titular o tiene un rol en su equipo: hace falta un sustituto");
 
 			auto libre = [&](uint16_t d) {
@@ -321,38 +320,39 @@ namespace mercado::lm {
 
 			std::vector<uint8_t> orden;
 			std::array<uint8_t, 6> roles{};
-			size_t limite = kLimiteIA;
 			if (esEquipoUsuario(k)) {
 				auto a = alineacionDe(k);
 				if (!a.ok()) return R::mal(a.error.codigo, a.error.detalle);
-				orden = a.valor->orden; roles = a.valor->roles; limite = kLimiteUsuario;
+				orden = a.valor->orden; roles = a.valor->roles;
 			}
 			else {
 				auto a = leerAliIA(_datos, buscarBloquesAli(_datos), k);
 				if (!a.ok()) return R::mal(a.error.codigo, a.error.detalle);
 				orden = a.valor->orden; roles = a.valor->roles;
 			}
-			if (!necesitaSustituto(orden, roles, idx, limite)) return R::bien(0u);
+			if (!necesitaSustituto(orden, roles, idx)) return R::bien(0u);
 
 			const size_t posH = size_t(std::find(orden.begin(), orden.end(), uint8_t(idx)) - orden.begin());
-			// Línea: 0 portero · 1 defensa (DC, LI, LD) · 2 medio (MCD, MC, II, ID, MP) · 3 ataque (EI, ED, SD, DC)
+			// Grupo fino y línea de cada posición: PT | DC | LI-LD | MCD-MC | II-ID | MP | EI-ED | SD-DC (delantero)
+			//                                        línea: 0 portero · 1 defensa · 2 medio · 3 ataque
+			auto grupo = [](int c) { static const int g[13] = { 0, 1, 2, 2, 3, 3, 4, 4, 5, 6, 6, 7, 7 }; return c < 0 || c > 12 ? -1 : g[c]; };
 			auto linea = [](int c) { return c < 0 ? -1 : c == 0 ? 0 : c <= 3 ? 1 : c <= 8 ? 2 : 3; };
 			const int cH = posicionDe ? posicionDe(pid) : -1;
 			const bool esPortero = cH == 0 || (cH < 0 && posH == 0);   // el puesto 0 de la formación es siempre el portero
 
-			// Candidatos, en este orden: las reservas (así lo hace el juego) y después la banca. Nunca otro titular.
+			// Candidatos: todos los que NO son titulares, empezando por el final de la lista (las reservas) y
+			// subiendo hacia la banca. Así no hace falta saber de cuántos es la banca (7 o 12).
 			std::vector<size_t> cand;
-			for (size_t p = kPrimeraReserva; p < orden.size(); p++) if (p != posH) cand.push_back(p);
-			for (size_t p = 11; p < std::min(kPrimeraReserva, orden.size()); p++) if (p != posH) cand.push_back(p);
+			for (size_t p = orden.size(); p-- > kTitulares;) if (p != posH) cand.push_back(p);
 
 			int mejor = -1; size_t elegido = 0;
 			for (size_t p : cand) {
 				const int c = posicionDe ? posicionDe(pl[orden[p]].pid) : -1;
 				int puntos;
-				if (esPortero) { if (c != 0) continue; puntos = 2; }
+				if (esPortero) { if (c != 0) continue; puntos = 3; }
 				else {
 					if (c == 0) continue;                                  // un portero nunca cubre a un jugador de campo
-					puntos = (cH >= 0 && c == cH) ? 2 : (cH >= 0 && linea(c) == linea(cH)) ? 1 : 0;
+					puntos = cH < 0 || c < 0 ? 0 : c == cH ? 3 : grupo(c) == grupo(cH) ? 2 : linea(c) == linea(cH) ? 1 : 0;
 				}
 				if (puntos > mejor) { mejor = puntos; elegido = p; }
 			}
@@ -563,7 +563,7 @@ namespace mercado::lm {
 			for (int i = 0; i < n; i++) { if (a.orden[size_t(i)] == idx) posH = i; if (idxS >= 0 && a.orden[size_t(i)] == idxS) posS = i; }
 			if (posH < 0) return R::mal("ALINEACION_INCOHERENTE", "El jugador no aparece en el orden de formación");
 			if (idxS >= 0 && posS < 0) return R::mal("ALINEACION_INCOHERENTE", "El sustituto no aparece en el orden de formación");
-			if (idxS < 0 && posH < 18) return R::mal("FALTA_SUSTITUTO", "El jugador está en el XI o en la banca: hace falta un sustituto");
+			if (idxS < 0 && size_t(posH) < kTitulares) return R::mal("FALTA_SUSTITUTO", "El jugador es titular: hace falta un sustituto");
 			if (idxS < 0 && std::any_of(a.roles.begin(), a.roles.end(), [&](uint8_t v) { return v == idx; }))
 				return R::mal("FALTA_SUSTITUTO", "El jugador tiene un rol (capitán o lanzador): hace falta un sustituto");
 

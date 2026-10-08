@@ -52,7 +52,7 @@ El equipo del usuario guarda datos extra por jugador en tablas **con el mismo or
 | M | 0x105611c | 5628 | registros enormes por jugador |
 | I / J | 0x1263d4f / 0x12d46ab | 48 / 16 | **después del blob**: la dirección se desplaza con su tamaño |
 | **L** | 0xc06178 | 24 | **orden inverso** (crece hacia direcciones bajas): posición p = 25 − índice de plantilla |
-| **K = alineación** | 0xb7f960 (K10) | 16 | `[flag, reg, pid, 0]`. K0–K10 = XI en orden de formación, K11–K17 banca, luego reservas. Flags: K0 = 0, usados 0xc0; primer libre c0 (25 jugadores) → c1 (26); más allá c7 |
+| **K = alineación** | 0xb7f960 (K10) | 16 | `[flag, reg, pid, 0]`. K0–K10 = XI en orden de formación, luego la banca (**12 en este guardado**: K11–K22) y las reservas. Flags: K0 = 0, usados 0xc0; primer libre c0 (25 jugadores) → c1 (26); más allá c7 |
 
 Qué pantalla lee qué: **Estrategia lee K**; **Plantilla lee A–M**; **Búsqueda avanzada lee las listas de plantilla** de los bloques de equipo.
 Por eso el primer intento (solo la lista de plantilla) dejaba a Haaland «sin equipo» en la búsqueda pero vivo en Estrategia y zona de ventas.
@@ -115,7 +115,7 @@ python3 prototipos/diff_gt.py base.bin guardado_por_el_juego.bin catalogo.json |
 | ID del equipo en el option file | +4 (u32) |
 | Nombre del técnico (UTF-8) | +8 |
 | Formaciones (varias copias de coordenadas) | … |
-| **Orden de formación**: 40 índices de plantilla (0–10 titulares, 11–17 banca, 18+ reservas) | +0x220 |
+| **Orden de formación**: 40 índices de plantilla (0–10 titulares; luego la banca —12 en este guardado— y las reservas) | +0x220 |
 | **Roles** (capitán, lanzadores): 6 índices de plantilla | +0x248 |
 
 - Bloques 0–626 = equipos 0–626 (clubes y selecciones). **627 = equipo del usuario** (su orden es el de 0x18f9d8, el que lee
@@ -139,4 +139,8 @@ python3 prototipos/diff_gt.py base.bin guardado_por_el_juego.bin catalogo.json |
 | Menú | Archivo | Contenido | Resultado |
 |---|---|---|---|
 | 8 | `ML00000007` | C++ v7: Guéhi City → Real Madrid (Stones sustituto), sin bloque de alineación | Equipos/búsqueda ✓; City ✓; **Alineación del Madrid: jugador en blanco «DC 0»** ✗ |
-| 9 | `ML00000008` | C++ v8: lo mismo + alineación del Madrid (1 byte: orden[30] = 30) + Isak Liverpool → Santos (Ekitiké sustituto, dorsal 99) | pendiente |
+| 9 | `ML00000008` | C++ v8: lo mismo + alineación del Madrid (1 byte: orden[30] = 30) + Isak Liverpool → Santos (Ekitiké sustituto, dorsal 99) | ✓ Madrid: Guéhi última reserva con el 30, sin jugador en blanco · ✓ Liverpool: Ekitiké en el puesto de Isak · ✓ Santos: Isak última reserva con el 99 · ✓ City sin cambios (Stones titular). Falta: partido + guardar |
+
+- **La banca es de 12 en este guardado** (visto en las pantallas *Alineación* del slot 9: la raya entre banca y reservas cae
+  después del puesto 22). Por eso el C++ ya no supone «11–17 banca»: solo distingue **titulares (0–10)** del resto, y al buscar
+  sustituto recorre la lista desde el final (reservas) hacia arriba (banca), sin necesitar el tamaño de la banca.

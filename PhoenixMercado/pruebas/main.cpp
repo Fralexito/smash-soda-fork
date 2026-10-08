@@ -316,8 +316,8 @@ int main() {
 			CHECK(s5.ok() && *s5.valor == 9321);
 			auto s12 = g.valor->sugerirSustituto(12, 9312, posicionDe);  // suplente sin rol → no hace falta nadie
 			CHECK(s12.ok() && *s12.valor == 0);
-			auto s20 = g.valor->sugerirSustituto(12, 9320, posicionDe);  // reserva con rol (LI) → otro defensa de las reservas (DC, idx 19)
-			CHECK(s20.ok() && *s20.valor == 9319);
+			auto s20 = g.valor->sugerirSustituto(12, 9320, posicionDe);  // no titular con rol (LI) → otro lateral (LD, idx 13) antes que un DC
+			CHECK(s20.ok() && *s20.valor == 9313);
 			CHECK(g.valor->sugerirSustituto(12, 9300, nullptr).error.codigo == "SIN_SUSTITUTO");   // sin posiciones no se arriesga con el portero
 			CHECK(g.valor->sugerirSustituto(12, 4242, posicionDe).error.codigo == "JUGADOR_NO_ESTA");
 			auto su = g.valor->sugerirSustituto(5, 5004, posicionDe);    // equipo del usuario: va por su propia alineación
@@ -346,6 +346,21 @@ int main() {
 			{ std::vector<uint8_t> o; for (uint8_t i = 0; i < 20; i++) o.push_back(i); CHECK(leerOrden(g.valor->datos(), 9) == compacto(o, { 0, 0, 0, 0, 0, 0 })); }
 			{ std::vector<uint8_t> o; for (uint8_t i = 0; i <= 15; i++) o.push_back(i); CHECK(leerOrden(g.valor->datos(), 10) == compacto(o, { 0, 0, 0, 0, 0, 0 })); }
 			CHECK(g.valor->equipo(9).valor->plantilla.back().pid == 8001 && g.valor->equipo(10).valor->plantilla.back().pid == 9119);
+
+			// Usuario: un suplente sin rol se va SIN sustituto (los de atrás suben), igual que en la IA.
+			// Tras la primera venta el orden del usuario es 24,23,22,21,20,18,…,4,3,19,2,1,0: en el puesto 12 está el índice 11 (5012).
+			auto a3 = g.valor->alineacionDe(5);
+			CHECK(a3.ok() && a3.valor->orden.size() == 25 && a3.valor->orden[12] == 11);
+			auto v2 = g.valor->moverUsuarioAIA(5, 7, 5012, 0, 0);
+			CHECK(v2.ok());
+			auto a4 = g.valor->alineacionDe(5);
+			CHECK(a4.ok() && a4.valor->orden.size() == 24 && a4.valor->flagLibreK == 0xc0);
+			if (a3.ok() && a4.ok()) {
+				std::vector<uint8_t> esperado;
+				for (size_t i = 0; i < a3.valor->orden.size(); i++) { const uint8_t v = a3.valor->orden[i]; if (v == 11) continue; esperado.push_back(uint8_t(v > 11 ? v - 1 : v)); }
+				CHECK(a4.valor->orden == esperado);
+			}
+			CHECK(leerOrden(g.valor->datos(), 7) == compacto({ 2, 0, 1, 3, 4 }, { 0, 0, 1, 0, 0, 2 }));
 		}
 	}
 
