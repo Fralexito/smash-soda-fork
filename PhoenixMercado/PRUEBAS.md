@@ -180,3 +180,9 @@ plantilla del City (22), negociaciones (sin la de Lanús; sigue la del Deportivo
 Primera prueba de la corrección de alineación en el option file (bloque de tácticas, `core/Alineacion.h`). Antes, al mover a Blanco
 la formación de Boca se corría un puesto (Paredes de LB … Marchesín de delantero). Qué mirar en un amistoso con Boca: Montero de
 arquero, Braida de LB, el resto del once igual, Marchesín en el banco. Archivo hecho desde `save\resplado\EDIT00000000` (md5 027b0fa2…).
+
+**8 oct 17:05 · Resultado prueba 14 · Ranura 13 (`ML0000000C`)** — ✅
+En el juego: **Bettinelli en CA Lanús** (último de la plantilla, 29/29; ficha: equipo CA Lanús, liga Torneo Apertura), y el
+**Manchester City** con su alineación 4-1-3-2 completa y coherente (Donnarumma de arquero y capitán, sin huecos ni jugadores en
+blanco; Rulli encabeza la banca). Primera venta con la lógica «igual que el juego» (contratos, ofertas, negociaciones, huecos)
+confirmada en pantalla. Pendiente de esta ranura: jugar/guardar y el fichaje (ranuras 14/15).
