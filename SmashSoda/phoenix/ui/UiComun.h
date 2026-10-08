@@ -64,6 +64,25 @@ namespace phoenix::vis {
 		dl->AddRect(a, b, col(acento, activa ? 0.9f : 0.12f + 0.45f * h), r, 0, (activa ? 2.0f : 1.0f) * s);
 	}
 
+	/// Interruptor animado (pista + perilla). Devuelve true al clic; quien llama cambia el valor.
+	inline bool interruptor(const char* id, bool activo, const ImVec4& color, float s) {
+		ImDrawList* dl = ImGui::GetWindowDrawList();
+		const ImVec2 tam(42.0f * s, 22.0f * s);
+		const ImVec2 p = ImGui::GetCursorScreenPos();
+		const ImGuiID k = ImGui::GetID(id);
+		const bool clic = ImGui::InvisibleButton(id, tam);
+		if (ImGui::IsItemHovered()) ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+		ImGuiStorage* st = ImGui::GetStateStorage();
+		const float meta = activo ? 1.0f : 0.0f;
+		const float v = acercar(st->GetFloat(k, meta), meta, 16.0f);
+		st->SetFloat(k, v);
+		const ImVec4 pista = mezclar(ImVec4(1, 1, 1, 0.12f), ImVec4(color.x, color.y, color.z, 0.85f), v);
+		dl->AddRectFilled(p, ImVec2(p.x + tam.x, p.y + tam.y), col(pista), tam.y * 0.5f);
+		const float r = tam.y * 0.5f;
+		dl->AddCircleFilled(ImVec2(p.x + r + (tam.x - tam.y) * v, p.y + r), r - 3.0f * s, col(ImVec4(1, 1, 1, 1)));
+		return clic;
+	}
+
 	/// Color estable a partir de un texto (avatares).
 	inline ImVec4 colorDe(const char* t) {
 		unsigned h = 2166136261u;

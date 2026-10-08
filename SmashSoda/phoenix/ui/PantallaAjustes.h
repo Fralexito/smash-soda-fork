@@ -15,6 +15,10 @@ namespace phoenix {
 	class PantallaAjustes {
 	public:
 		static void rapido(ProveedorSala* sala, ImVec2 pos, ImVec2 tam, float alfa);
+		/// Pestaña General en Phoenix (tarjetas con interruptores). Devuelve true si se pidió el panel clásico.
+		static bool general(ImVec2 pos, ImVec2 tam, float alfa);
+		/// Barrita «Volver a General» que se dibuja sobre el panel clásico. Devuelve true al clic.
+		static bool barraVolver(ImVec2 pos, ImVec2 tam, float alfa);
 	};
 
 }

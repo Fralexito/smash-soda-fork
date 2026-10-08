@@ -518,6 +518,19 @@ namespace phoenix {
 			if (t == 0) {
 				PantallaAjustes::rapido(gProveedor, posPanel, tamPanel, 0.25f + 0.75f * progresoTransicion());
 			}
+			else if (t == 1 && PhoenixPrefs::get().interfazPhoenix) {
+				// General en Phoenix; el panel original sigue disponible detrás de «Abrir panel clásico»
+				static bool clasico = false;
+				const float alfaG = 0.25f + 0.75f * progresoTransicion();
+				if (!clasico) {
+					if (PantallaAjustes::general(posPanel, tamPanel, alfaG)) clasico = true;
+				}
+				else {
+					const float hBarra = 46.0f * s;
+					if (PantallaAjustes::barraVolver(posPanel, ImVec2(tamPanel.x, hBarra), alfaG)) clasico = false;
+					acoplar(p.general, ImVec2(posPanel.x, posPanel.y + hBarra + 6.0f * s), ImVec2(tamPanel.x, tamPanel.y - hBarra - 6.0f * s), s);
+				}
+			}
 			else if (t == 5 && PhoenixPrefs::get().interfazPhoenix) {
 				// Biblioteca mejorada en Phoenix
 				PantallaBiblioteca::render(gProveedor, posPanel, tamPanel, 0.25f + 0.75f * progresoTransicion());
