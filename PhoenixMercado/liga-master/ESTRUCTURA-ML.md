@@ -197,3 +197,18 @@ equipos** (IDs u32, relleno `0x0003ffff`): liga argentina 30, Premier 20, Brasil
 hasta 66… **Capacidad holgada** (los bloques de 3000 B admiten muchos más IDs). El tamaño de una liga en la LM se podría cambiar
 en esa lista, pero el **calendario** (zona tras el blob) se genera con ese tamaño: habría que regenerarlo o cambiarlo antes de empezar
 la temporada. También hay listas de selecciones y de grupos de copas (0x1f468c…).
+
+## 14. El «blob» NO es un misterio: es zlib — **[OBSERVADO, 8 oct tarde]**
+- Desde 0x11403d4: **18 tramos zlib** (firma `78 9c`), cada uno de 256 KB descomprimidos, separados por 12 B
+  (`00 04 00 00 | tamaño comprimido | desplazamiento acumulado`). Descomprimido mide **4.678.743 B, siempre igual** (estructura
+  fija). Herramienta: `prototipos/blob.py`. Para escribir habrá que volver a comprimir por tramos y actualizar la palabra de tamaño
+  (0x11403a8) y las cabeceras de tramo; por eso el tamaño del archivo cambia entre guardados.
+- Contiene **calendario y resultados de todas las competiciones**: entre el guardado del 21/8 y el del 31/8 (una fecha jugada + 10 días)
+  cambiaron 11.144 zonas; al despedir a Stones sin jugar, solo 96 B (0xa588c). Hay zonas densas de fechas (0x1a330–0x83b24 con 2.646,
+  0xeda68–0x197e50 con 4.477) y miles de pares de IDs de equipo. ⏳ Falta decodificar el formato de partido (local, visitante, fecha, goles).
+- Fuera del blob también hay: **calendario del usuario mes a mes** (0xa8d6d8…: 1 registro de 708 B por día, con fecha, ID de
+  competición y rival; comp 9 = Premier, 63 = ventana de fichajes…), **listas de equipos por competición** (§13) y un **historial de
+  traspasos** (0x12b430f, registros de 36 B con jugador, monto y fecha).
+- **Tamaños de liga en la LM:** el guardado ya tiene una liga de **30 equipos** (Argentina) y segundas de hasta 66: el motor acepta
+  ligas grandes si el parche las define (CPK de competiciones). Lo que fija el tamaño al empezar la carrera es el CPK; después, el
+  calendario del blob queda armado con ese tamaño.

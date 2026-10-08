@@ -147,3 +147,10 @@ oferta → ⏳ hay que agregarlo antes de dar la venta por terminada. Detalle en
 Se encontró dónde están el **presupuesto de fichajes** y el **tope salarial** de tu club, y cómo se calcula el presupuesto salarial
 (tope − sueldos). Los **sueldos y cláusulas** de cada jugador están en la tabla de contratos. Los clubes de la IA **no tienen dinero**
 guardado. Las **ligas de la Liga Máster** tienen su lista de equipos con espacio de sobra. Detalle en ESTRUCTURA-ML §13.
+
+**8 oct 14:10 · Ranura 12 (`ML0000000B`) · Presupuesto de fichajes 500 M y tope salarial 200 M** — ⏳
+Archivo hecho a partir de la ranura 11 cambiando solo esos dos números. Si en el juego aparece "Ppto. fichajes 500.000.000 €" y el
+presupuesto salarial sube a 200.000.000 − sueldos (≈ 86 M), queda probado que el dinero se puede fijar desde fuera.
+
+**8 oct 14:10 · El «blob» era zlib** — 🔎
+La zona de 1,2 MB que nadie entendía se descomprime (4,7 MB) y guarda el calendario y los resultados de todas las ligas. Detalle §14.
