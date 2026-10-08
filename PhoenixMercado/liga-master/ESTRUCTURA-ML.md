@@ -34,6 +34,10 @@ sin prueba visual · **[HIPÓTESIS]** pendiente. Todas las direcciones son del g
 Huella validada en 246 movimientos reales del juego y confirmada en juego (Mbappé → Santos aparece perfecto): solo cambian, en origen y destino,
 la lista de plantilla (los que se quedan conservan el orden; el nuevo va al final), el array de dorsales y el contador. Nada más.
 
+> **CORRECCIÓN (8 oct, tarde): falta la ALINEACIÓN de cada equipo (§10).** Esa huella solo miró los 700 bloques de equipo. En la
+> prueba Mbappé → Santos nadie miró la pantalla *Alineación*. Sin actualizar el bloque de alineación, el que llega sale como un
+> jugador en blanco con valoración 0 (visto con Guéhi en el Real Madrid, slot 8).
+
 ## 4. Equipo DEL USUARIO: tablas alineadas con la plantilla — **[OBSERVADO; probado en juego solo para quitar]**
 El equipo del usuario guarda datos extra por jugador en tablas **con el mismo orden que su lista de plantilla**. Cada registro empieza 8 B antes del pid:
 `[x][reg][pid]…`; vacío = `reg` 0 o 0xffff con `pid` 0. Direcciones del guardado «después» (Haaland = índice 9):
@@ -84,9 +88,10 @@ python3 prototipos/diff_gt.py base.bin guardado_por_el_juego.bin catalogo.json |
 `enc2` exige mismo tamaño de datos que el original (limitación a quitar en el módulo definitivo). Los `.bin` descifrados son datos del juego: no se versionan.
 
 ## 9. Hallazgos del 8 oct (tarde) con el módulo C++ (`core/LigaMaster.cpp`, todo por anclas)
-- **El juego aceptó el slot 6 (v6) y jugó un partido** (`ML00000006`): los 700 bloques de equipo, las tablas A–M, L, K y el orden
-  de formación quedaron **idénticos** a la candidata. Solo cambió: cabecera 0x30–0x4f, 6 B en 0xafa2b4 (→ 0xff), 3 banderas de
-  1 B (0xafbc58, 0xbe90e4, 0xbe9134: 1→0) y la zona posterior al blob (0x1267d31–0x12dc292: calendario/resultados). [PROBADO]
+- **El juego aceptó el slot 6 (v6) y jugó un partido** (`ML00000006`). [PROBADO]
+  > **CORRECCIÓN:** `ML00000005` ya NO es la candidata v6: el juego la sobrescribió a las 10:53 (Lima) al guardar Fralex en esa
+  > ranura. Comparar `ML00000005` con `ML00000006` es comparar dos guardados del juego con 5 min de diferencia, no «candidata vs
+  > juego». Entre esos dos solo cambió: cabecera 0x30–0x4f, 6 B en 0xafa2b4, 3 banderas de 1 B y la zona posterior al blob.
 - **Las direcciones de §4 solo valen para un guardado**: el blob crece con la temporada (0x1237b7 en el respaldo → 0x12794f en
   `ML00000006`, +16.792 B) y desplaza las tablas I y J. Por eso el C++ no usa direcciones: ancla cada tabla con los 5 primeros
   (reg, pid) de la plantilla, y el orden de formación/K por permutación + espejo.
@@ -99,3 +104,39 @@ python3 prototipos/diff_gt.py base.bin guardado_por_el_juego.bin catalogo.json |
 - **Flags de K**: K0 = 0 y todos los usados 0xc0 (26 y 25 jugadores); primer libre 0xc1 (26) / 0xc0 (25); después 0xc7.
 - **Comprobado byte a byte**: `moverUsuarioAIA` == `build_v6.py` sobre el respaldo (Haaland→Santos, Neymar sustituto) y ==
   `ref_v7_juego.py` sobre `ML00000006` (Guéhi→Real Madrid dorsal 30, Stones sustituto; entregado como `ML00000007`, slot 8).
+
+## 10. Alineación de los equipos de la IA (bloques de 600 B) — **[OBSERVADO; prueba en juego: slot 9]**
+- Arreglo de **629 bloques de 600 B** justo después de los bloques de equipo (0x133a30 en estos guardados; el C++ lo busca: índices
+  0, 1, 2, 3… cada 600 B con el ID option de cada equipo detrás). Bloque k:
+
+| Qué | Dónde (desde el inicio del bloque) |
+|---|---|
+| Índice del bloque (= k) | +0 (u32) |
+| ID del equipo en el option file | +4 (u32) |
+| Nombre del técnico (UTF-8) | +8 |
+| Formaciones (varias copias de coordenadas) | … |
+| **Orden de formación**: 40 índices de plantilla (0–10 titulares, 11–17 banca, 18+ reservas) | +0x220 |
+| **Roles** (capitán, lanzadores): 6 índices de plantilla | +0x248 |
+
+- Bloques 0–626 = equipos 0–626 (clubes y selecciones). **627 = equipo del usuario** (su orden es el de 0x18f9d8, el que lee
+  Estrategia; ID −11). 628 = otra copia del usuario y 154 = el City original (ID 173): el juego **no** los mantiene (iguales en
+  todos los guardados aunque cambie la plantilla), así que no se tocan.
+- **El juego lee las primeras n entradas del orden (n = plantilla).** Si una de ellas es 0xff, la pantalla *Alineación* muestra un
+  jugador en blanco «DC 0» (slot 8: Guéhi en el Madrid; el orden tenía 30 entradas y la plantilla 31). [PROBADO]
+- Formatos que aparecen: **compacto** (n entradas + 0xff hasta 40, es lo que escribe el juego), «identidad de 40» (0…39) y
+  «0…n−1, ff, n…» en equipos que nunca se reordenaron. Se aceptan los tres si las primeras n entradas son una permutación; al
+  editar se escribe siempre en compacto. Si no son una permutación, el C++ **se niega** a tocar ese equipo.
+- **Qué hace el juego** (respaldo → guardado posterior, 431 equipos de la IA con cambios): los que se quedan conservan su orden
+  relativo; los nuevos van al final de la plantilla; el orden queda siempre compacto con n = plantilla. Si se va un **titular**, una
+  **reserva** ocupa su puesto (en las pruebas, de su misma posición) y el resto conserva el orden; si se va un **suplente o una
+  reserva**, los de atrás suben un puesto. A los que llegan el técnico de la IA los coloca después (Haaland acabó titular en el Santos).
+- **Qué hace el C++:** destino → el que llega entra como **última reserva**; origen → si era titular o tenía un rol, un **sustituto**
+  ocupa su puesto (`sugerirSustituto`: reservas primero, misma posición > misma línea > cualquiera; un portero solo lo cubre otro
+  portero); si no, los de atrás suben. Roles: los del que se va pasan al sustituto; los índices mayores bajan uno.
+- **Fichas por jugador de 596 B** (0x329b00, una por `reg`, 5759): el campo +4 parecía el club pero **no lo es** (no cambió en
+  ninguno de 169 traspasos hechos por el juego; Neymar sigue con el código del Santos estando en el City). No se tocan.
+
+| Menú | Archivo | Contenido | Resultado |
+|---|---|---|---|
+| 8 | `ML00000007` | C++ v7: Guéhi City → Real Madrid (Stones sustituto), sin bloque de alineación | Equipos/búsqueda ✓; City ✓; **Alineación del Madrid: jugador en blanco «DC 0»** ✗ |
+| 9 | `ML00000008` | C++ v8: lo mismo + alineación del Madrid (1 byte: orden[30] = 30) + Isak Liverpool → Santos (Ekitiké sustituto, dorsal 99) | pendiente |
