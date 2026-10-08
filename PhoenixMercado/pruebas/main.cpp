@@ -254,11 +254,21 @@ int main() {
 		const int pos12[25] = { 0, 1, 2, 3, 1, 4, 5, 8, 9, 12, 10,   0, 1, 3, 5, 8, 12, 9,   0, 1, 2, 5, 12, 10, 6 };
 		auto posicionDe = [&](uint32_t pid) { return pid >= 9300 && pid < 9325 ? pos12[pid - 9300] : -1; };
 
+		// Ficha del último partido (la crea el juego al jugar): registros de 16 B con SOLO los que jugaron, en orden de
+		// plantilla. Empieza igual que una tabla (0,1,2,3,4…) pero no tiene a todos: no se debe tocar.
+		const size_t FICHA = FIN + 0x180000;
+		const uint32_t jugaron[12] = { 0, 1, 2, 3, 4, 6, 9, 10, 12, 20, 21, 22 };
+		for (size_t i = 0; i < 17; i++) {
+			const size_t r = FICHA + 16 * i;
+			p32(r, i < 12 ? 0x60195a : 0); p32(r + 4, i < 12 ? 1000 + jugaron[i] : 0xffff); p32(r + 8, i < 12 ? 5000 + jugaron[i] : 0); p32(r + 12, 0);
+		}
+		const std::vector<uint8_t> fichaAntes(d.begin() + long(FICHA), d.begin() + long(FICHA + 16 * 17));
+
 		auto g = GuardadoLM::desdeDatos(d);
 		CHECK(g.ok());
 		if (g.ok()) {
 			CHECK(g.valor->esEquipoUsuario(5) && !g.valor->esEquipoUsuario(7));
-			CHECK(g.valor->tablasDe(5).size() == 12);
+			CHECK(g.valor->tablasDe(5).size() == 13);   // las 12 de la plantilla + la ficha del partido (la venta la descarta)
 			auto a = g.valor->alineacionDe(5);
 			CHECK(a.ok());
 			if (a.ok()) { CHECK(a.valor->ofsOrden == LU && a.valor->ofsRoles == RO && a.valor->ofsK == K0 && a.valor->flagLibreK == 0xc1); }
@@ -303,6 +313,9 @@ int main() {
 					CHECK(g.valor->datos()[LU + 25] == 0xff);
 				}
 			}
+			// La ficha del último partido no se tocó (el vendido, idx 3, había jugado) y el informe lo explica.
+			CHECK(std::vector<uint8_t>(g.valor->datos().begin() + long(FICHA), g.valor->datos().begin() + long(FICHA + 16 * 17)) == fichaAntes);
+			CHECK(g.valor->ultimoInforme().find("descartada") != std::string::npos);
 			// El destino de la IA (7) recibió al vendido como última reserva; sus roles no cambian.
 			CHECK(leerOrden(g.valor->datos(), 7) == compacto({ 2, 0, 1, 3 }, { 0, 0, 1, 0, 0, 2 }));
 

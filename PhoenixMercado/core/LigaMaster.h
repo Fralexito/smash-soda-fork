@@ -79,7 +79,8 @@ namespace mercado::lm {
 		/// Equipos (de club y selección) en cuya plantilla está el jugador.
 		std::vector<int> equiposDe(uint32_t pid) const;
 
-		/// Tablas alineadas halladas para ese equipo (vacío = equipo de la IA).
+		/// Tablas alineadas halladas para ese equipo (vacío = equipo de la IA). Son CANDIDATAS: tras jugar un partido
+		/// también aparece la ficha de ese partido (lista a los que jugaron); moverUsuarioAIA la descarta.
 		std::vector<TablaAlineada> tablasDe(int indice) const;
 		bool esEquipoUsuario(int indice) const { return tablasDe(indice).size() >= 3; }
 

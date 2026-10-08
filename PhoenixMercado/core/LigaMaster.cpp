@@ -522,12 +522,29 @@ namespace mercado::lm {
 			// plantilla sino al final (tablas C y D: 24 del primer equipo, 32 juveniles y luego los fichados).
 			struct Objetivo { TablaAlineada t; int j; int usados; int repetidos; };
 			std::vector<Objetivo> objetivos;
+			std::string descartadas;
 			const Plaza& quien = pu[size_t(idx)];
 			for (const auto& t : tablas) {
 				if (t.ofsReg0 == a.ofsK + 4) continue;                   // la lista K no es una tabla: se trata aparte
 				if (std::any_of(objetivos.begin(), objetivos.end(), [&](const Objetivo& o) { return o.t.ofsReg0 == t.ofsReg0 && o.t.stride == t.stride && o.t.dir == t.dir; })) continue;
 				const int usados = usadosEn(_datos, t);
-				if (usados < n) return R::mal("TABLA_DANADA", "Tabla de paso " + std::to_string(t.stride) + " con menos registros que la plantilla");
+				// Una tabla de la plantilla tiene a TODOS los jugadores. Si no (p. ej. la ficha del último partido, que
+				// el juego crea al jugar y lista solo a los que jugaron, en orden de plantilla), no es de las nuestras:
+				// es historial y no se toca. Si faltara una tabla de verdad, la comprobación de firmas de abajo lo detecta.
+				bool estanTodos = usados >= n;
+				for (int i = 0; i < n && estanTodos; i++) {
+					bool esta = false;
+					for (int r = 0; r < usados && !esta; r++) {
+						const size_t o = size_t(regDe(t, r));
+						esta = u32(_datos, o) == pu[size_t(i)].reg && u32(_datos, o + 4) == pu[size_t(i)].pid;
+					}
+					estanTodos = esta;
+				}
+				if (!estanTodos) {
+					char hexd[32]; std::snprintf(hexd, sizeof hexd, "%zx", t.ofsReg0);
+					descartadas += "descartada (no es de la plantilla: " + std::to_string(usados) + " registros) paso " + std::to_string(t.stride) + " en 0x" + hexd + "\n";
+					continue;
+				}
 				int j = -1, rep = 0;
 				for (int i = 0; i < usados; i++) {
 					const size_t r = size_t(regDe(t, i));
@@ -549,7 +566,7 @@ namespace mercado::lm {
 				if (!faltan.empty()) return R::mal("TABLAS_INESPERADAS", "Faltan tablas conocidas del equipo del usuario:" + faltan);
 				if (objetivos.size() < kTablasEsperadas) return R::mal("TABLAS_INESPERADAS", "Solo " + std::to_string(objetivos.size()) + " tablas");
 			}
-			_ultimoInforme.clear();
+			_ultimoInforme = descartadas;
 			for (const auto& o : objetivos) {
 				_ultimoInforme += "tabla paso " + std::to_string(o.t.stride) + (o.t.dir < 0 ? "↓" : "") + " en 0x";
 				char hex[32]; std::snprintf(hex, sizeof hex, "%zx", o.t.ofsReg0); _ultimoInforme += hex;
