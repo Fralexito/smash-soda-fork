@@ -167,6 +167,7 @@ namespace phoenix::web {
 		}
 
 		EstadoAnfitrion gEstadoAnterior = EstadoAnfitrion::Apagado;
+		int gReintentosAuto = 0;
 	}
 
 	using namespace detalle_interfaz;
@@ -247,8 +248,15 @@ namespace phoenix::web {
 			EstadoAnfitrion est = a.estado();
 
 			// Vigilante: si en 30 s no cargó, se da por fallida (la app sigue con ImGui).
-			if ((est == EstadoAnfitrion::Creando || est == EstadoAnfitrion::Cargando) && a.segundosDesdeInicio() > 30.0
+			if ((est == EstadoAnfitrion::Creando || est == EstadoAnfitrion::Cargando || est == EstadoAnfitrion::Listo) && a.segundosDesdeInicio() > 30.0
 				&& !(in.puente && in.puente->listo())) {
+				// Primer arranque lento (WebView2 prepara su perfil) o página sin «hola»: reintenta solo dos veces.
+				if (gReintentosAuto < 2) {
+					gReintentosAuto++;
+					destruirVista(in);
+					crearVista(in);
+					return;
+				}
 				destruirVista(in);
 				in.anfitrion = std::make_unique<AnfitrionWeb>(); // queda en Apagado con motivo
 				return;
