@@ -499,3 +499,11 @@ se puede cambiar un guardado con el juego abierto mientras no esté cargado (Fra
   - Se comprueban los tres antes de escribir; si uno no cuadra, no se escribe ninguno. Decodificados con capstone. Simulación OK.
 - **Riesgo:** los estados 0–4 (dos objetos de espera y la comparación de versión DLC) se ejecutan tal cual y aún no se han estudiado. Pueden pedir algo de red o dar «versión antigua».
 - Instalado (sha verificado en el PC; respaldo `phoenix.lua.v015b`). Phoenix-DB con **v99** (el juego tiene v90).
+
+### 🏆🏆🏆🏆 2026-10-09 05:53 · BOTÓN NATIVO EN EL SITIO, CON MENSAJE NATIVO — CONSEGUIDO (v0.16)
+- 05:52:44: U → parches A, B y C aplicados. FRALEX: **Partido → Datos Actual. en vivo → Activar**.
+- **Sin inicio de sesión ni error.** Apareció el **diálogo nativo** de la actualización en vivo: «No hay cambios de la Actualización en vivo en la Valorac. de forma física…», con las 5 flechas de forma.
+- El juego releyó **toda la base dos veces** (huella **v99** en las dos: 3611839843 / 3265817782) y aplicó los datos **sin salir de la pantalla**. Lamine: **Velocidad 99** (antes 90).
+- **Resultado:** el botón de Konami vuelve a funcionar como en 2021: pulsas Activar → mensaje → datos nuevos al momento. Sin teclas de recarga, sin Editar, sin volver al menú.
+- **Para revisar:** la plantilla del Atlético en esa pantalla cambió (aparecen José María Giménez, Matteo Ruggeri y Nico González). Posible causa: en modo «Datos en vivo» el juego toma las plantillas de la **base** (PlayerAssignment de olmosjr23) en vez de las del option file. Hay que confirmarlo antes de usarlo para fichajes.
+- El mensaje habla de la «forma física» (PlayerWeekly). En el futuro, sirviendo nuestro `PlayerWeekly.bin` se podría mostrar la forma de Phoenix (Phoenix Weekly).

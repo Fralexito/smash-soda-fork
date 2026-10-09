@@ -94,6 +94,14 @@ Ayudantes guardados en la VM: `~/re/xref.py`, `~/re/desm.py`, `~/re/quien.py`, `
 - **Parche de 19 B** en `exe+0x20AF73B` (inicio del estado 1): `mov byte [exe+0x37F5C39], 1 ; mov dword [rdi+0x94], 7 ; jmp 0x20AF7BA`. Original: `48 83 BF 98 00 00 00 00 75 6B 33 DB 89 5C 24 28 C7 44 24`.
 - **Con el byte de la recarga completa** (`0xAEF78E` = 1): Activar → sin inicio de sesión → interruptor = 1 → al entrar a Partido el juego relee EDIT + toda la base. **Probado: Lamine 95 → 90 sin pulsar L ni P.**
 
+### 4.2 🏆 En el sitio, con el mensaje nativo (v0.16, 05:53)
+- **Parche A** (`0x20AF73B`): `mov [rdi+0x94], 3 ; jmp 0x20AF7BA` → sin inicio de sesión, crea LiveDataSetFlow.
+- **Parche B** (`0x20AC6B9`, estado 5): `mov [rdi+0x94], 0x16 ; jmp 0x20AEC82` → sin internet, al diálogo nativo (0xF90042).
+- **Parche C** (`0x20AE664`): `0x100 → 0x101` → la recarga del estado 26 incluye la base.
+- **Probado:** Activar → diálogo nativo («No hay cambios… forma física», con flechas) → el juego relee toda la base y la aplica **sin salir de la pantalla** (Lamine 90 → 99).
+- Los estados 0–4 pasaron sin problemas (la comparación de versión no dio error).
+- **Pendiente:** en esta recarga, las plantillas del Atlético cambiaron. ¿En modo vivo manda la base sobre el option file? Hay que confirmarlo.
+
 ## 5. Viabilidad (honesta) tras el estudio
 
 | Meta | Antes | Ahora | Por qué |
