@@ -251,3 +251,12 @@ se puede cambiar un guardado con el juego abierto mientras no esté cargado (Fra
   **Lección:** probar siempre con el entorno restringido de Sider, no con Lua normal.
 - **Resultado 2 (00:39): FUNCIONÓ.** Fralex reinició el juego con el switcher (Shift+R no sirve aquí: solo recarga módulos que ya estaban activos). El overlay muestra «PHOENIX EVOLUTION · puente en vivo v0.2-prueba · conectado» con el aviso de bienvenida.
 - **Resultado 3 (00:39): TIEMPO REAL CONFIRMADO.** Con el juego abierto se reemplazó `avisos.txt` en la raíz (tmp + mv, atómico). El overlay mostró el texto nuevo en ~1 s («último aviso 00:39:07» para un archivo escrito a las 00:39:06), sin cerrar el juego. Las tildes, la ñ y los símbolos ⚡ y → se ven bien con la fuente Consolas del overlay. El juego siguió estable (pantalla de título).
+
+### 2026-10-09 · Sider · Prueba 2 «solo mirar» (phoenix.lua v0.3) — INSTALADA, ESPERANDO A FRALEX
+- **Qué hace:** con el overlay abierto en PHOENIX EVOLUTION, la tecla **B** busca en la memoria del juego la ficha de Lamine Yamal (ID 162114). Usa dos patrones:
+  - A = 58 bytes de Player.bin desde el ID (base viva olmosjr23, registro 16179);
+  - B = el nombre «Lamine Yamal».
+- **Cómo busca:** recorre las regiones COMMIT legibles con `VirtualQuery` (ya declarado por la librería memory de Sider) y salta las zonas con guarda o sin acceso. Revisa 24 MB por cuadro para no congelar el menú. **Solo lee; nunca escribe.**
+- **Qué muestra:** por cada coincidencia, la dirección y 5 cualidades decodificadas. El detalle completo va a sider.log (líneas `[phoenix] sonda`).
+- **Prueba previa:** simulación en LuaJIT con memoria falsa (3 regiones, una no legible). Encontró las 2 copias legibles con las cualidades correctas (Vel 90, Ace 93, Reg 93, Fin 81, Pase 82), ignoró la región sin acceso y no tocó nada.
+- **Resultado en el juego:** (pendiente)
