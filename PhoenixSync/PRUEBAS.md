@@ -376,3 +376,11 @@ se puede cambiar un guardado con el juego abierto mientras no esté cargado (Fra
 - **Siguiente prueba para separarlo:** reiniciar el juego con v99 puesto y entrar a la misma carrera. Si sale 99 → la LM usa la base del arranque (stats nuevas al reiniciar). Si sigue 90 → las stats viven dentro del guardado `ML0000000N` y habría que editarlas ahí (Phoenix Sync ya edita ese archivo).
 - Phoenix-DB queda con **v99** a propósito para esa prueba.
 - **Ejecutable:** `PES2021.exe` pesa 437 MB, con una sección `.impdata` de 380 MB (capa de protección típica tipo Denuvo) y el código en `.trace` (37 MB). Importa para la idea de llamar funciones internas.
+
+### 2026-10-09 05:10 · Estudio de PES2021.exe y phoenix.lua v0.11 (tecla L: recarga nativa) — INSTALADO, falta probar
+- El código del exe (`.trace`, 37 MB) **no está cifrado**. Mapa completo en `base-conocimiento/07-MOTOR-POR-DENTRO.md`.
+- **Interruptor nativo** `exe+0x37F5C39`: si vale 1, al volver al menú principal el juego crea la tarea `editLoadDataInTopMenu` (misma fábrica que Editar → Cargar) y lo pone a 0. Konami lo usa en «Ser una Leyenda».
+- **Actualización en vivo de Konami** = máquina de 38 estados. El 5 pide la lista al servidor y el 26 carga el EDIT (`editLoadDataInLiveDataSet`).
+- **v0.11:** tecla L → comprueba 7 bytes de código en `0xAEF770` y `0x1EFB440` → escribe 1 en el interruptor → el overlay muestra el valor y avisa cuando el juego lo consume. Simulación LuaJIT OK (incluido el caso «exe distinto → no toca nada»).
+- **Instalado** en las dos carpetas `modules` (respaldo `phoenix.lua.v010`). Phoenix-DB con **Player_v95** (huella 1785225260 / 304097887) para ver el cambio.
+- **Plan:** Shift+R → overlay → L → salir de la Liga Máster al menú principal → ¿«EL JUEGO RECARGÓ»? → amistoso: ¿Lamine 95?

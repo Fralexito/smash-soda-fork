@@ -18,7 +18,7 @@
 --                    lua.module = "phoenix.lua"  en sider.ini
 -- =============================================================================
 
-local m = { version = "0.10-prueba" }
+local m = { version = "0.11-prueba" }
 
 local CADA_SEG    = 2      -- cada cuántos segundos se vuelve a mirar el archivo (solo con el overlay abierto)
 local MAX_BYTES   = 4096   -- nunca se lee más que esto
@@ -130,6 +130,7 @@ end
 local VK_B        = 0x42
 local VK_V        = 0x56   -- escribir Velocidad 99
 local VK_N        = 0x4E   -- devolver Velocidad original
+local VK_L        = 0x4C   -- v0.11: pedir al juego que recargue EDIT + base al volver al menú principal
 local NUEVA_VEL   = 99
 local TROZO       = 24 * 1024 * 1024   -- bytes revisados por cada cuadro con el overlay abierto
 local MAX_HITS    = 12
@@ -450,10 +451,71 @@ local function textoSonda()
     return table.concat(t, "\n")
 end
 
+
+-- ─── v0.11 · INTERRUPTOR NATIVO «recargar al volver al menú principal» ──────────────────
+-- Hallado el 2026-10-09 leyendo PES2021.exe (sección .trace, sin cifrar):
+--   menu::ModeFlowCmnInitFunctor (se ejecuta al volver al menú principal desde un modo) hace
+--     cmp byte [exe+0x37F5C39], 0  →  si NO es 0: crea la tarea «editLoadDataInTopMenu»
+--     (la misma fábrica 0x1EFB1F0 que usa Editar→Cargar) y pone el byte otra vez a 0.
+--   Konami lo usa tras guardar en «Ser una Leyenda» (EditSaveForBLPlayerSave → pone 1).
+-- Por seguridad, ANTES de escribir se comprueba que el código del exe es EXACTAMENTE el esperado
+-- (si el exe fuera otra versión, no se toca nada). Se escribe 1 byte, en una zona de datos (.bss).
+local RVA_BANDERA = 0x37F5C39
+local CHEQUEOS = {
+    { 0xAEF770,  "\128\61\194\100\208\2\0" },   -- cmp byte ptr [rip+0x2d064c2], 0
+    { 0x1EFB440, "\136\13\243\167\143\1\195" }, -- mov [rip+0x18fa7f3], cl ; ret
+}
+local exeBase = nil
+local recarga = nil      -- texto de estado para el overlay
+local banderaVista = nil -- último valor leído
+local function baseExe()
+    if exeBase then return exeBase end
+    ffi.cdef[[ void* phx11_GMH(const char* nombre) __asm__("GetModuleHandleA"); ]]
+    exeBase = tonumber(ffi.cast("uint64_t", ffi.C.phx11_GMH(nil)))
+    return exeBase
+end
+local function leerBandera()
+    local b = leerSeguro(baseExe() + RVA_BANDERA, 1)
+    return b and b:byte(1) or nil
+end
+local function pedirRecarga()
+    prepararLector()
+    local base = baseExe()
+    for _, c in ipairs(CHEQUEOS) do
+        local real = leerSeguro(base + c[1], #c[2])
+        if real ~= c[2] then
+            recarga = string.format("NO se tocó nada: el código en exe+%X no es el esperado (%s)", c[1], real and hex(real) or "ilegible")
+            log("[phoenix] " .. recarga)
+            return
+        end
+    end
+    local antes = leerBandera()
+    if antes == nil or antes > 1 then
+        recarga = "NO se tocó nada: el interruptor tiene un valor raro (" .. tostring(antes) .. ")"
+        log("[phoenix] " .. recarga); return
+    end
+    local ok = escribirByte(base + RVA_BANDERA, 1)
+    local despues = leerBandera()
+    recarga = string.format("[%s] interruptor %d → %s %s · ahora vuelve al MENÚ PRINCIPAL",
+        os.date("%H:%M:%S"), antes, tostring(despues), (ok and despues == 1) and "✓" or "✗ (no se pudo escribir)")
+    log(string.format("[phoenix] pedir recarga: base exe %s, bandera %d -> %s (ok=%s)", memory.hex(base), antes, tostring(despues), tostring(ok)))
+end
+local function textoRecarga()
+    if not RPM then return "\n  [RECARGA] tecla L = pedir recarga del EDIT y la base al volver al menú principal" end
+    local b = leerBandera()
+    if banderaVista == 1 and b == 0 then
+        log("[phoenix] el juego consumió el interruptor (1 -> 0) a las " .. os.date("%H:%M:%S") .. ": recarga hecha")
+        recarga = (recarga or "") .. "  ·  ✓ EL JUEGO RECARGÓ (" .. os.date("%H:%M:%S") .. ")"
+    end
+    banderaVista = b
+    return "\n  [RECARGA] interruptor = " .. tostring(b) .. (recarga and ("  ·  " .. recarga) or "  ·  tecla L = pedir recarga")
+end
+
 function m.key_down(ctx, vkey)
     if apagado then return end
     local libre = not sonda or sonda.hecho
     if vkey == VK_B and libre then iniciarSonda("mirar") end
+    if vkey == VK_L then pedirRecarga() end
     -- v0.10: V y N DESACTIVADAS. Escribir en memoria ensucia la prueba de la base servida por Sider
     -- (03:44 se pulsó V y volvió a poner 99 en una copia con 90). El camino elegido es el archivo.
 end
@@ -508,7 +570,7 @@ local function textoOverlay()
     pasoSonda()
     local cab = string.format("PHOENIX EVOLUTION  ·  puente en vivo v%s  ·  %s", m.version, estado)
     if actualizado ~= "" then cab = cab .. "  ·  último aviso " .. actualizado end
-    return cab .. "\n\n" .. contenido .. textoSonda() .. textoEspia()
+    return cab .. "\n\n" .. contenido .. textoSonda() .. textoEspia() .. textoRecarga()
 end
 
 -- Ojo: el Lua de Sider NO trae pcall (lo confirma el volcado de env.lua en sider.log).
@@ -541,7 +603,7 @@ function m.init(ctx)
     ctx.register("overlay_on", m.overlay_on)
     ctx.register("key_down", m.key_down)
     ctx.register("livecpk_read", m.livecpk_read)
-    log("[phoenix] v" .. m.version .. " listo (solo lectura; tecla B = buscar en memoria). Archivo: " .. ruta)
+    log("[phoenix] v" .. m.version .. " listo (tecla B = buscar en memoria; tecla L = pedir recarga nativa). Archivo: " .. ruta)
 end
 
 return m

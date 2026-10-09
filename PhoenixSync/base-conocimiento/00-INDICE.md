@@ -15,6 +15,7 @@ Se **alimenta en cada auditoría** y nunca se borra lo aprendido: si algo cambia
 | `04-ESTRATEGIA-PHOENIX.md` | **Informe estratégico**: ConmeGOL y Sudamerican por dentro (bases de datos comparadas, contenido, Sider), sus estrategias y sus fallos, cómo superarlos en estabilidad y rendimiento, funciones nuevas por viabilidad (🟢🟡🔴), límites del motor y ruta completa por fases. |
 | `05-PUERTA-EN-VIVO.md` | **🏆 Cambiar la base sin reiniciar** (2026-10-09): Player.bin propio servido por Sider + **Editar → Cargar**. Qué falló y por qué, cuándo lee el juego cada archivo, el universo que abre (fichajes, DT, competiciones, forma semanal) y los deseos a futuro (crear jugadores, avisos nativos). |
 | `06-RUTA-DEL-DESCUBRIMIENTO.md` | **El relato en orden** de la noche del 8-9 de octubre: cada intento, por qué, qué salió bien, **qué salió mal** (incluidos los errores de Claude), aciertos, errores con su lección y el método de trabajo que funcionó. |
+- [07 · El motor por dentro](07-MOTOR-POR-DENTRO.md): interruptor nativo de recarga y mapa de la actualización en vivo de Konami.
 | `parches/conmegol-26.md` | Lo que es **solo del ConmeGOL Patch 26**: carpetas, archivos, números de equipos y jugadores, IDs, competiciones, rarezas vistas. |
 | `parches/sudamerican-2026.md` | Lo poco que ya se sabe del Sudamerican Project 2026 (pendiente de auditar). |
 | `datos/motor.json` | La misma información del motor, en formato de datos, para que el software la lea. |
