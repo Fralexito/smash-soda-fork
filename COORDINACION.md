@@ -19,6 +19,7 @@ Dos trabajos independientes dentro del mismo Phoenix Link:
 - 2026-10-07 · Renombre a Phoenix Link: ejecutable `PhoenixLink.exe` (antes `PhoenixSoda.exe`), `OUTPUT_NAME` en `SmashSoda/CMakeLists.txt`. La etiqueta de texto del token pasó de "PhoenixSoda" a "PhoenixLink"; no afecta a la lectura.
 - 2026-10-07 · `core/ProveedorSala.h` (interfaz interna de Phoenix Link) gana métodos de moderación: `esMod`, `esVip`, `alternarMod`, `alternarVip`, `banear`, `tecladoPermitido`, `ratonPermitido`, `permitirTeclado`, `permitirRaton`. Solo afecta si Mercado implementa o usa `ProveedorSala` (hoy no lo hace). La pantalla Gente se rediseñó (lista + ficha).
 - 2026-10-08 · Build: `COMPILAR_PHOENIX.bat` (no versionado) ahora compila en `_phoenix-link\` (worktree desacoplado de la rama activa de la carpeta principal). Salida: `_phoenix-link\x64\Release\PhoenixLink.exe`. Ya no mata `MSBuild`/`cl`/`link`, para no cortar compilaciones del Mercado.
+- 2026-10-09 · (MERCADO) Puente Sider probado en el juego: `phoenix.lua` muestra `<juego>\SiderAddons\content\phoenix\avisos.txt` en vivo. Prompts listos en `PhoenixMercado/prompts/` para que WEB cree §25 (`/v1/juego/buzon`) y LINK escriba ese archivo (atómico, UTF-8 sin BOM, ≤ 14 líneas / 1500 bytes).
 
 ## Dos cuentas de Claude (A y B) — protocolo obligatorio
 Fralex usa 2 cuentas; cuando una se queda sin tokens sigue la otra. **La memoria es el repo, no el chat.**
