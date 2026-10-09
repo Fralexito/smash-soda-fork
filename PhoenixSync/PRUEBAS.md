@@ -474,3 +474,12 @@ se puede cambiar un guardado con el juego abierto mientras no esté cargado (Fra
 - **05:45 · v0.15, intento 2:** el overlay seguía en «v0.15-prueba» y el log repetía el error de VP. **El archivo arreglado nunca llegó al PC:** al reenviarlo con la misma ruta de salida (`outputs/v015/`), el puente dejó la versión vieja (sha 49c3…). **Error de Claude: no se verificó el sha en el PC después de copiar.** Se reenvió desde una ruta nueva (`outputs/v015b/`) y ahora el sha en el PC es el de v0.15b (3867…).
   - **Regla nueva:** después de cada `device_commit_files`, comprobar el sha256 en el PC.
 - Sin el parche, el botón nativo hizo lo de siempre: «Los servicios en línea de este título finalizaron… 25/08/2022» y luego «No se han podido implementar los Datos de Actualización en vivo». Lamine siguió en 95.
+
+### 🏆🏆🏆 2026-10-09 05:46 · EL BOTÓN NATIVO «Datos Actual. en vivo» CARGA NUESTROS DATOS — CONSEGUIDO
+- v0.15b de verdad cargado (log: «v0.15b-prueba listo»). 05:46:22: U → «parche botón nativo aplicado en exe+20AF73B (19 B)».
+- FRALEX: Partido → **Datos Actual. en vivo → Activar** → menú → Partido.
+- **Nadie pulsó L ni P:** el log no tiene ningún «pedir recarga». El interruptor lo encendió **el botón nativo del juego** (nuestro parche en el estado 1 del flujo común).
+- 05:46:35: el juego consumió el interruptor y releyó TODA la base. Huella player.bin = **v90** (3958249664 / 1038543739).
+- Ficha de Lamine: **Velocidad 90** (antes 95). ✅
+- **Resultado:** la opción nativa de Konami, apagada desde 2022, vuelve a funcionar y ahora carga los datos de Phoenix.
+- Falta confirmar con FRALEX si al pulsar Activar ya no salió ningún mensaje de error.

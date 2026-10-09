@@ -84,12 +84,22 @@ Ayudantes guardados en la VM: `~/re/xref.py`, `~/re/desm.py`, `~/re/quien.py`, `
   - (b) hallar el objeto del flujo y cambiar su estado desde Lua.
 - **Falta averiguar:** si antes del flujo hay una **puerta de inicio de sesión** (`ProcessEditLiveUpdateLogin`, `OnlineFlowLogin`) que corta con el mensaje «los servicios finalizaron el 25/08/2022». Habría que encontrar esa puerta y dejarla pasar.
 
+### 4.1 🏆 La puerta y el botón nativo funcionando (05:46)
+- **Ruta del botón** «Partido → Datos Actual. en vivo → Activar»: `Exhibition/LiveData/LiveDataSet` (`0x1308090`) → «ProcessCmnLiveDataSetFlow» (crea `0x1350E10`, actualización `0x20AF620`).
+- **Estados del flujo común:**
+  - 1 = crear «LiveDataLogin» (**la puerta**: inicio de sesión en Konami);
+  - 2 = esperar. `0x20AF7D0` recibe el resultado; la decisión `0x1350E90` está **virtualizada**. Si falla, va al estado 5 = diálogo «servicios finalizados» + «No se han podido implementar…»;
+  - 3 = crear LiveDataSetFlow;
+  - 7 = terminar.
+- **Parche de 19 B** en `exe+0x20AF73B` (inicio del estado 1): `mov byte [exe+0x37F5C39], 1 ; mov dword [rdi+0x94], 7 ; jmp 0x20AF7BA`. Original: `48 83 BF 98 00 00 00 00 75 6B 33 DB 89 5C 24 28 C7 44 24`.
+- **Con el byte de la recarga completa** (`0xAEF78E` = 1): Activar → sin inicio de sesión → interruptor = 1 → al entrar a Partido el juego relee EDIT + toda la base. **Probado: Lamine 95 → 90 sin pulsar L ni P.**
+
 ## 5. Viabilidad (honesta) tras el estudio
 
 | Meta | Antes | Ahora | Por qué |
 |---|---|---|---|
 | Recargar sin entrar a Editar | ~35–50 % | **✅ PROBADO: fichajes (L) y stats + fichajes (P)** | El juego ya trae el interruptor; es 1 byte de datos |
-| Que el botón «actualización en vivo» cargue nuestros datos | ~25–35 % | **~60–70 %** | Ya tenemos el mapa completo del flujo; falta la puerta de inicio de sesión |
+| Que el botón «actualización en vivo» cargue nuestros datos | ~25–35 % | **✅ PROBADO (05:46)** | Ya tenemos el mapa completo del flujo; falta la puerta de inicio de sesión |
 | Que la Liga Máster reciba stats en vivo | ? | Pendiente | Editar → Cargar no llega (prueba 04:53); falta la prueba de reinicio |
 
 ## 6. Reglas para seguir
