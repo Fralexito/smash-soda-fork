@@ -96,6 +96,16 @@ FRALEX quería cambios **en tiempo real**. Primera idea: encontrar la ficha de L
 
 **Lección:** stats → archivo de la base; plantillas → option file. Mismo botón para las dos: Editar → Cargar.
 
+## Etapa 10 · Liga Máster y el motor por dentro (04:50–05:15)
+
+| Paso | Qué se hizo | Resultado |
+|---|---|---|
+| 27 | Stats v99 + Editar → Cargar (huella v99 confirmada) → entrar a la Liga Máster. | ❌ En la carrera Lamine sigue en 90: la LM usa su propia copia. Falta la prueba de reinicio. |
+| 28 | Idea de FRALEX: usar la opción nativa de actualización en vivo y «hacer invisible» la parte de internet. Se leyó `PES2021.exe` por dentro (capstone en la VM del PC). | ✅ El código (37 MB) **no está cifrado**. La actualización en vivo de Konami es una máquina de 38 pasos: el 5 pide los datos al servidor y **el 26 carga el EDIT**. La idea de FRALEX era exactamente cómo lo hacía Konami. |
+| 29 | Hallazgo extra: un **interruptor nativo** (`exe+0x37F5C39`) que hace que el juego recargue EDIT + base al volver al menú principal (lo usa «Ser una Leyenda»). | 🟡 `phoenix.lua` v0.11 (tecla L) instalado con comprobación de bytes. Falta la prueba en el juego. |
+
+**Acierto de FRALEX:** no conformarse con «un botón de Editar» y apuntar a la opción nativa. Eso llevó a leer el exe.
+
 ---
 
 ## Resumen de aciertos
