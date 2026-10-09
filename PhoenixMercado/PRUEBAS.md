@@ -227,3 +227,10 @@ calculado desde la ficha del blob) y el nuestro (nº 28) quedó **duplicado** �
 **Corrección:** el programa ya no escribe el contrato en la tabla I; solo la ficha del blob (el juego hace el resto).
 
 **8 oct 19:25 · Prueba 19 · Ranura 2 (`ML00000001`, md5 1ba38ab8…) · Sommer fichado v2 (sin contrato en la tabla I)** — ⏳ EN PRUEBA
+
+**8 oct 19:26 · Resultado prueba 19 · Ranura 2 → partido simulado → ranura 3 (`ML00000002`, md5 432531d3…)** — ✅
+Fecha 15/8/2026. Sommer sigue en el City (dorsal 12, titular de arquero), **jugó el partido** (tabla de estadísticas C: 1 partido),
+**un solo contrato** (el que crea el juego, nº 25, 3.186.500 €/año, cláusula 2.400.000 €), inscrito en las 6 competiciones,
+presupuesto de fichajes 160.665.600 € y **presupuesto salarial positivo (902.100 €**: el juego subió el tope a 147.515.200 €).
+**Fichar PARA el equipo del usuario queda validado en el juego.** Además: el juego relee el archivo al cargar la ranura, así que
+se puede cambiar un guardado con el juego abierto mientras no esté cargado (Fralex salió y entró a la ranura 2 y vio la versión nueva).
