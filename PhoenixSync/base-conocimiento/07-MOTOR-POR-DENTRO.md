@@ -55,6 +55,13 @@ Ayudantes guardados en la VM: `~/re/xref.py`, `~/re/desm.py`, `~/re/quien.py`, `
 - 🏆 **05:13 · probado:** option file original + L + entrar a Partido ⇒ Lamine volvió al Barça. **Fichajes en vivo sin Editar → Cargar.**
 - **Consecuencia:** fichajes (option file) → interruptor ✅; stats (base) → falta disparar `0x1EF2FA0(gestor, 0)`.
 
+### 3.2 🏆 La recarga completa (05:31): stats + fichajes sin Editar
+- Editar → Cargar = proceso «ProcessEditDataLoad::CreateReloadPesdb» (tabla `.data 0x34DA048` → fábrica `0x130F220`, bandera `[+0x8C] = 1`) → tarea «editLoadData» con parámetros **1,1,0,0,0**.
+- El menú principal (`0xAEF78A`: `mov dword [rsp+0x20], 0x100`) pasa **0,1,0,0,0** → recarga el EDIT sin la base.
+- **Parche en memoria de 1 byte:** `exe+0xAEF78E` 00 → 01 (queda 0x101, igual que Cargar). No se toca el exe en disco. La página ya era RWX (0x40).
+- **Probado:** tecla P (parche + interruptor) → entrar a Partido → el juego relee TODA la base (huella v95) → **Lamine Velocidad 95**. ✅
+- `0x1EF2FA0` (tecla K) solo **lee** 4 archivos (tipo 0: Boots, Glove, Player, Country) y **no aplica**. Sirve para diagnóstico, no para el producto.
+
 ## 4. La actualización en vivo de Konami por dentro (`LiveDataSetFlow`)
 
 - **Se crea con** `0x20AC030(nombre, modo, 1, 2)`. Por ejemplo, desde Editar → Gestión de datos → Actualización en vivo (`0x13AB293`, «ProcessEditLiveUpdate_LiveDataSetFlow»).
@@ -81,7 +88,7 @@ Ayudantes guardados en la VM: `~/re/xref.py`, `~/re/desm.py`, `~/re/quien.py`, `
 
 | Meta | Antes | Ahora | Por qué |
 |---|---|---|---|
-| Recargar sin entrar a Editar | ~35–50 % | **✅ fichajes probados**; stats ~80 % (falta llamar a `0x1EF2FA0`) | El juego ya trae el interruptor; es 1 byte de datos |
+| Recargar sin entrar a Editar | ~35–50 % | **✅ PROBADO: fichajes (L) y stats + fichajes (P)** | El juego ya trae el interruptor; es 1 byte de datos |
 | Que el botón «actualización en vivo» cargue nuestros datos | ~25–35 % | **~60–70 %** | Ya tenemos el mapa completo del flujo; falta la puerta de inicio de sesión |
 | Que la Liga Máster reciba stats en vivo | ? | Pendiente | Editar → Cargar no llega (prueba 04:53); falta la prueba de reinicio |
 

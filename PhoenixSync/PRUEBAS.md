@@ -440,3 +440,13 @@ se puede cambiar un guardado con el juego abierto mientras no esté cargado (Fra
   - El menú principal (`0xAEF78A: mov dword [rsp+0x20], 0x100`) pasa **0,1,0,0,0**. Por eso recarga el EDIT pero **no** la base.
 - **v0.14 · tecla P (recarga completa):** comprueba los 8 bytes de `0xAEF78A` → VirtualProtect → cambia **1 byte de código en memoria** (`exe+0xAEF78E`: 00 → 01, o sea 0x100 → 0x101) → restaura la protección → verifica → pone el interruptor. El exe en disco **no se toca**; el cambio dura hasta cerrar el juego. Simulación OK (casos: ya activo, exe distinto → no toca nada).
 - Instalado (respaldo `phoenix.lua.v013`). Phoenix-DB sigue con v95.
+
+### 🏆🏆 2026-10-09 05:31 · RECARGA COMPLETA SIN EDITAR → CARGAR — CONSEGUIDA (tecla P)
+- 05:30:14: P → parche en memoria `exe+0xAEF78E` 00 → 01 aplicado (la página ya era 0x40 = RWX) + interruptor 0 → 1.
+- 05:31:49: FRALEX volvió al menú principal y entró a Partido → el juego consumió el interruptor y **releyó TODA la base** (el espía ve ball, boots, coach, competition*, country, derby, glove, player, playerassignment, stadium, tactics, team, weekly…). Huella player.bin = **v95** (1785225260 / 304097887).
+- Ficha de Lamine en el amistoso: **Velocidad 95** (antes 99). ✅ **Stats en vivo sin entrar a Editar, sin reiniciar y sin crash.**
+- **MÉTODO FINAL (stats + fichajes):**
+  1. Phoenix Sync coloca el `Player.bin` nuevo (Phoenix-DB) y/o el option file nuevo.
+  2. Sider: parche de 1 byte en memoria (0x100 → 0x101, la recarga del menú pasa a ser «como Cargar») + interruptor nativo `exe+0x37F5C39` = 1. Todo con comprobación previa de bytes.
+  3. El jugador entra a cualquier modo → el juego recarga **EDIT + base** solo.
+- La tecla K (v0.12–0.13) queda como herramienta de diagnóstico: lee la base pero no la aplica. No hace falta.
