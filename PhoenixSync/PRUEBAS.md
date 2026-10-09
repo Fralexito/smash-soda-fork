@@ -450,3 +450,18 @@ se puede cambiar un guardado con el juego abierto mientras no esté cargado (Fra
   2. Sider: parche de 1 byte en memoria (0x100 → 0x101, la recarga del menú pasa a ser «como Cargar») + interruptor nativo `exe+0x37F5C39` = 1. Todo con comprobación previa de bytes.
   3. El jugador entra a cualquier modo → el juego recarga **EDIT + base** solo.
 - La tecla K (v0.12–0.13) queda como herramienta de diagnóstico: lee la base pero no la aplica. No hace falta.
+
+### 2026-10-09 05:45 · La «puerta» del botón nativo, encontrada — v0.15 (tecla U) instalada, falta probar
+- **Ruta del botón** «Partido → Datos Actual. en vivo → Activar» (tabla de procesos en .data):
+  - `Exhibition/LiveData/LiveDataSet` → `ProcessLiveDataSet` (0x1308000/0x1308090);
+  - → «ProcessCmnLiveDataSetFlow» (crea 0x1350E10, actualización `0x20AF620`, estado en `[+0x94]`).
+  - Hay también `LiveDataCheck` (0x1303F70) y `LiveDataRemove` (0x1308DD0).
+- **Estados del flujo común** (`0x20AF620`):
+  - 0 → 1: crea «LiveDataLogin» (**inicio de sesión en Konami = la puerta**);
+  - 2: espera. El resultado lo procesa `0x20AF7D0`: evento 0x10D0002 → la decisión `0x1350E90` está **virtualizada** por la protección → si falla, estado 5 = **diálogo de error** («servicios finalizados»);
+  - 3: crea «LiveDataSetFlow» (los 38 pasos);
+  - 7: termina y avisa al padre (evento 0x10A0001, resultado `[+0xA8]`).
+- **Parche v0.15 (tecla U, en memoria, 19 B en `exe+0x20AF73B`, inicio del estado 1):** `mov byte [exe+0x37F5C39], 1 ; mov dword [rdi+0x94], 7 ; jmp 0x20AF7BA`. Así el botón **no inicia sesión ni da error**: enciende nuestro interruptor y termina bien. Con la recarga completa (U también aplica el byte de la P), el siguiente modo que se abra relee EDIT + base.
+  - Comprobado con capstone que los bytes son esas 3 instrucciones (rel → 0x37F5C39). Bytes originales comprobados antes de escribir. Simulación OK.
+- Instalado (respaldo `phoenix.lua.v014`). **Phoenix-DB con Player_v90** (el juego tiene v95).
+- **Plan:** Shift+R → U → Partido → Datos Actual. en vivo → Activar → ¿sin error? ¿interruptor = 1? → volver al menú → Partido → ¿Lamine 90?

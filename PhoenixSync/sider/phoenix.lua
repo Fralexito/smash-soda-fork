@@ -18,7 +18,7 @@
 --                    lua.module = "phoenix.lua"  en sider.ini
 -- =============================================================================
 
-local m = { version = "0.14-prueba" }
+local m = { version = "0.15-prueba" }
 
 local CADA_SEG    = 2      -- cada cuántos segundos se vuelve a mirar el archivo (solo con el overlay abierto)
 local MAX_BYTES   = 4096   -- nunca se lee más que esto
@@ -132,6 +132,7 @@ local VK_V        = 0x56   -- escribir Velocidad 99
 local VK_N        = 0x4E   -- devolver Velocidad original
 local VK_K        = 0x4B   -- v0.12: pedir al juego que relea la BASE (pesdb), como hace Editar → Cargar
 local VK_P        = 0x50   -- v0.14: recarga COMPLETA (EDIT + base) al entrar a un modo, como Editar → Cargar
+local VK_U        = 0x55   -- v0.15: el botón nativo «Datos Actual. en vivo» dispara nuestra recarga
 local VK_L        = 0x4C   -- v0.11: pedir al juego que recargue EDIT + base al volver al menú principal
 local NUEVA_VEL   = 99
 local TROZO       = 24 * 1024 * 1024   -- bytes revisados por cada cuadro con el overlay abierto
@@ -638,6 +639,54 @@ local function textoParche()
     return "\n  [COMPLETA] " .. (estadoParche or "tecla P = recarga completa (EDIT + base) al entrar a un modo")
 end
 
+-- ─── v0.15 · BOTÓN NATIVO «Datos Actual. en vivo» → nuestra recarga ───────────────────────
+-- Hallado 05:45: Partido → «Datos Actual. en vivo → Activar» = proceso Exhibition/LiveData/LiveDataSet
+-- (0x1308090) → «ProcessCmnLiveDataSetFlow» (0x1350E10; actualización 0x20AF620, estado en [+0x94]):
+--   0 → 1: crea «LiveDataLogin» (inicio de sesión en Konami; su resultado lo decide 0x1350E90, que está
+--          VIRTUALIZADO por la protección) → si falla, estado 5 = diálogo de error («servicios finalizados»)
+--   3: crea «LiveDataSetFlow» (los 38 pasos)   ·   7: termina avisando al padre (resultado [+0xA8])
+-- PARCHE (en memoria, 19 B al inicio del estado 1, exe+0x20AF73B):
+--   mov byte [exe+0x37F5C39], 1      ; enciende NUESTRO interruptor de recarga
+--   mov dword [rdi+0x94], 7          ; termina el flujo SIN iniciar sesión (sin error)
+--   jmp fin                          ; (salta al final de la función, 0x20AF7BA)
+-- Con la recarga completa (byte 0xAEF78E = 1) el próximo modo que se abra relee EDIT + base.
+local RVA_CMN1 = 0x20AF73B
+local CMN1_ORIGINAL = "\72\131\191\152\0\0\0\0\117\107\51\219\137\92\36\40\199\68\36"
+local CMN1_PARCHE   = "\198\5\247\100\116\1\1\199\135\148\0\0\0\7\0\0\0\235\108"
+local estadoBoton = nil
+local function escribirBytes(a, txt)
+    local n = ffi.new("size_t[1]")
+    local src = ffi.new("uint8_t[?]", #txt); ffi.copy(src, txt, #txt)
+    local vieja = ffi.new("uint32_t[1]")
+    if VP(ffi.cast("void*", a), #txt, 0x40, vieja) == 0 then return false end
+    local ok = WPM(PROC, ffi.cast("void*", a), src, #txt, n)
+    local v2 = ffi.new("uint32_t[1]")
+    VP(ffi.cast("void*", a), #txt, vieja[0], v2)
+    return ok ~= 0 and tonumber(n[0]) == #txt
+end
+local function botonNativo()
+    if not parchear() then estadoBoton = "NO: falta la recarga completa (ver [COMPLETA])"; return end
+    local base = baseExe()
+    local real = leerSeguro(base + RVA_CMN1, #CMN1_ORIGINAL)
+    if real == CMN1_PARCHE then estadoBoton = "botón nativo YA conectado"; return end
+    if real ~= CMN1_ORIGINAL then
+        estadoBoton = "NO se tocó: el código en exe+20AF73B no es el esperado"
+        log("[phoenix] " .. estadoBoton .. " (" .. (real and hex(real) or "ilegible") .. ")"); return
+    end
+    local ok = escribirBytes(base + RVA_CMN1, CMN1_PARCHE)
+    local despues = leerSeguro(base + RVA_CMN1, #CMN1_PARCHE)
+    if ok and despues == CMN1_PARCHE then
+        estadoBoton = "[" .. os.date("%H:%M:%S") .. "] botón nativo CONECTADO ✓ · Partido → Datos Actual. en vivo → Activar"
+        log("[phoenix] parche botón nativo aplicado en exe+20AF73B (19 B)")
+    else
+        estadoBoton = "✗ el parche del botón no quedó"
+        log("[phoenix] " .. estadoBoton .. " (" .. (despues and hex(despues) or "ilegible") .. ")")
+    end
+end
+local function textoBoton()
+    return "\n  [BOTÓN] " .. (estadoBoton or "tecla U = conectar el botón nativo «Datos Actual. en vivo»")
+end
+
 function m.key_down(ctx, vkey)
     if apagado then return end
     local libre = not sonda or sonda.hecho
@@ -645,6 +694,7 @@ function m.key_down(ctx, vkey)
     if vkey == VK_L then pedirRecarga() end
     if vkey == VK_K then pedirBase() end
     if vkey == VK_P then recargaCompleta() end
+    if vkey == VK_U then botonNativo() end
     -- v0.10: V y N DESACTIVADAS. Escribir en memoria ensucia la prueba de la base servida por Sider
     -- (03:44 se pulsó V y volvió a poner 99 en una copia con 90). El camino elegido es el archivo.
 end
@@ -699,7 +749,7 @@ local function textoOverlay()
     pasoSonda()
     local cab = string.format("PHOENIX EVOLUTION  ·  puente en vivo v%s  ·  %s", m.version, estado)
     if actualizado ~= "" then cab = cab .. "  ·  último aviso " .. actualizado end
-    return cab .. "\n\n" .. contenido .. textoSonda() .. textoEspia() .. textoRecarga() .. textoBase() .. textoParche()
+    return cab .. "\n\n" .. contenido .. textoSonda() .. textoEspia() .. textoRecarga() .. textoBase() .. textoParche() .. textoBoton()
 end
 
 -- Ojo: el Lua de Sider NO trae pcall (lo confirma el volcado de env.lua en sider.log).
