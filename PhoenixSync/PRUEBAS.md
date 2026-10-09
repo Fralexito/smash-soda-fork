@@ -423,3 +423,12 @@ se puede cambiar un guardado con el juego abierto mientras no esté cargado (Fra
   - Lo destruye `0x1EEDAA0` (estado 0xC del menú principal).
 - **v0.13:** si el gestor no existe, K llama primero a `0x1EEBBA0(1)` (comprobando sus 34 bytes), igual que Editar → Cargar (`0x13E4580`: crear gestor → releer base). Simulación OK. Instalado (respaldo `phoenix.lua.v012`).
 - El interruptor quedó en 1 (FRALEX pulsó L a las 05:20:54): la próxima entrada a un modo recargará el EDIT.
+
+### 2026-10-09 05:23 · Prueba B, intento 2 (v0.13) → ✅ ¡el juego relee la base sin Editar! (falta ver si se aplica)
+- K a las 05:23:02:
+  - `0x1EEBBA0(1)` creó el gestor (0x37779130);
+  - `0x1EF2FA0(gestor, 0)` respondió 1;
+  - el juego leyó **boots, glove, player y country**, y la huella de player.bin es **exactamente v95** (1785225260 / 304097887). **Sin crash.**
+- La lista del tipo 0 (en `0x3529900` → `0x142B9D3C0`) es justo `[2, 11, 15, 9]` = Boots, Glove, Player, Country (28 = fin). **La relectura se completó entera.** (Tipo 2, usado por la carga del EDIT: `[2, 11, 15, 9, 25, 16, 3, 5, 8, 6, 19]`.)
+- El overlay sigue en «EN CURSO»: el objeto de relectura no se libera fuera de Editar (`[gestor+0x88] ≠ 0`). Las pulsaciones extra de K se rechazaron bien («ya hay una relectura en curso»).
+- **Siguiente:** con el interruptor en 1, entrar a Partido → ¿Lamine 95?
