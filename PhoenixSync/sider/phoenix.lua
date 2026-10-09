@@ -14,7 +14,7 @@
 --                    lua.module = "phoenix.lua"  en sider.ini
 -- =============================================================================
 
-local m = { version = "0.4-prueba" }
+local m = { version = "0.5-prueba" }
 
 local CADA_SEG    = 2      -- cada cuántos segundos se vuelve a mirar el archivo (solo con el overlay abierto)
 local MAX_BYTES   = 4096   -- nunca se lee más que esto
@@ -130,6 +130,8 @@ local MAX_CAND    = 20000              -- candidatos de ID que se llegan a verif
 local PID         = 162114
 local PAT_A = "\66\121\2\0"            -- 162114 en u32 little-endian
 local PAT_B = "LAMINE YAMAL"
+local REC_ARCHIVO = "\0\0\0\0\0\0\0\0\66\121\2\0\38\78\53\49\0\0\0\144\128\132\30\28\0\0\0\83\0\216\185\132\40\21\120\98\214\7\200\15\0\208\170\53\181\9\172\175\27\153\178\3\116\145\40\137\169\164\72\34\128\42\22\66\132\200\9\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\76\65\77\73\78\69\32\89\65\77\65\76\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\76\65\77\73\78\69\32\89\65\77\65\76\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\76\97\109\105\110\101\32\89\97\109\97\108\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"   -- la ficha completa tal como está en Player.bin (para comparar)
+local OFS_NOMBRE = 129             -- «LAMINE YAMAL» empieza en el byte 129 de la ficha
 local CAMPOS = { {"Velocidad",306,90}, {"Aceleracion",344,93}, {"Regate",352,93}, {"Finalizacion",396,81}, {"Pase raso",263,82} }
 
 local sonda = nil      -- estado de la búsqueda
@@ -268,6 +270,26 @@ local function cerrarSonda()
     for i, a in ipairs(sonda.hitsB) do
         log(string.format("[phoenix] sonda B%d @ %s  %s", i, memory.hex(a), hex(sonda.ctxB[i] or "")))
     end
+    -- v0.5: cada nombre que esté en el byte 129 de una ficha → leer la ficha entera y compararla con el archivo
+    sonda.copias = {}
+    for _, a in ipairs(sonda.hitsB) do
+        local ini = a - OFS_NOMBRE
+        local rec = leerSeguro(ini, 312)
+        if rec and rec:sub(OFS_NOMBRE + 1, OFS_NOMBRE + 12) == PAT_B and rec:sub(191, 202) == PAT_B then
+            local dif, lista = 0, {}
+            for k = 1, 312 do
+                if rec:byte(k) ~= REC_ARCHIVO:byte(k) then
+                    dif = dif + 1
+                    if #lista < 24 then lista[#lista + 1] = string.format("%d:%02x>%02x", k - 1, REC_ARCHIVO:byte(k), rec:byte(k)) end
+                end
+            end
+            local partes = {}
+            for _, c in ipairs(CAMPOS) do partes[#partes + 1] = c[1] .. " " .. (leerBits(rec, c[2], 6) + 40) end
+            sonda.copias[#sonda.copias + 1] = { dir = ini, dif = dif, partes = table.concat(partes, " · ") }
+            log(string.format("[phoenix] sonda COPIA @ %s  bytes distintos al archivo: %d  [%s]  %s  hex=%s",
+                memory.hex(ini), dif, table.concat(lista, " "), table.concat(partes, ", "), hex(rec)))
+        end
+    end
 end
 
 local function pasoSonda()
@@ -311,6 +333,10 @@ local function textoSonda()
         t[#t + 1] = string.format("  #%d %s → %s", i, memory.hex(a), table.concat(partes, " · "))
     end
     if #sonda.hitsA == 0 then t[#t + 1] = "  No apareció la ficha verificada (no es un fallo: se analiza el diario)." end
+    for i, c in ipairs(sonda.copias or {}) do
+        t[#t + 1] = string.format("  Copia %d %s → %s · %s", i, memory.hex(c.dir),
+            c.dif == 0 and "IGUAL al archivo" or (c.dif .. " bytes distintos"), c.partes)
+    end
     return table.concat(t, "\n")
 end
 

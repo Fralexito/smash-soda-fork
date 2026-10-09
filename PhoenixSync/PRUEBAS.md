@@ -276,3 +276,8 @@ se puede cambiar un guardado con el juego abierto mientras no esté cargado (Fra
   - quita duplicados.
   - **Simulado:** zona «liberada» a mitad de la búsqueda (sin crash, contada como lectura fallida), zona mapeada saltada, 2100 IDs falsos descartados, ficha con un bit de forma cambiado encontrada.
   - **Lección:** en el juego, otros hilos (ReShade, DLSS, carga de texturas) liberan memoria en cualquier momento. **Nunca leer memoria ajena directo; siempre copiar con una función que pueda fallar sin cerrar el juego.**
+- **Resultado 3 (02:53, v0.4): FICHA ENCONTRADA, sin crash.**
+  - 2728 MB (solo memoria privada) en 6,6 s, 0 lecturas fallidas, 24 candidatos de ID.
+  - **1 ficha verificada en 0x7ff4d8f80640**, idéntica a Player.bin (8 bytes en cero + ID): Velocidad 90, Aceleración 93, Regate 93, Finalización 81, Pase raso 82. Foto de Fralex.
+  - El nombre aparece además en **0x7ff4d932d570**, una segunda ficha cuyos bytes difieren (por ejemplo, el byte 66 es 0x31 en vez de 0x00). Puede ser la copia «viva» que usa el juego.
+  - Siguiente paso: v0.5 lee y compara las dos copias con el archivo, todavía solo leyendo.
