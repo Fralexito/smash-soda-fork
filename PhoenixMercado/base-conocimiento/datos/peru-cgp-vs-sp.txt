@@ -1,0 +1,12 @@
+[ConmeGOL] PERU_D1_LEAGUE (18): Alianza Atlético, Alianza Lima, Atlético Grau, FC Cajamarca, Club Cienciano, CD Comerciantes Unidos, Cusco FC, Deportivo Garcilaso, Deportivo Moquegua, Juan Pablo II, CD Los Chankas, FBC Melgar, Sport Boys, Sport Huancayo, Sporting Cristal, AD Tarma, UTC Cajamarca, Universitario
+[ConmeGOL] PERU_D1_CUP (32): Alianza Atlético, Alianza Lima, Atlético Grau, FC Cajamarca, Club Cienciano, CD Comerciantes Unidos, Cusco FC, Deportivo Garcilaso, Deportivo Moquegua, Juan Pablo II, CD Los Chankas, FBC Melgar, Sport Boys, Sport Huancayo, Sporting Cristal, AD Tarma, UTC Cajamarca, Universitario, ADA Jaén, CSDC Alianza Universidad, Ayacucho FC, Bentín Tacna Heroica, AD Cantolao, Comerciantes FC, CD Llacuabamba, Estudiantil CNI, CA Mannucci, Pirata FC, CD Unión Comercio, Club Unión Minas, Universidad César Vallejo, CD Universidad San Martin
+[ConmeGOL] PERU_SUPER_CUP (2): Universitario, Alianza Lima
+[ConmeGOL] PERU_D2_LEAGUE (0): —
+[Sudamerican] PERU_D1_LEAGUE (18): ADT, Alianza Atlético Sullana, Alianza Lima, Atlético Grau, Cienciano, Comerciantes Unidos, Cusco FC, Deportivo Garcilaso, Deportivo Moquegua, FBC Melgar, FC Cajamarca, Juan Pablo II College, Los Chankas, Sport Boys Association, Sport Huancayo, Sporting Cristal, Universitario, UTC Cajamarca
+[Sudamerican] PERU_D1_CUP (32): ADT, Alianza Atlético Sullana, Alianza Lima, Atlético Grau, Ayacucho FC, Cienciano, Comerciantes Unidos, Cusco FC, Deportivo Garcilaso, FBC Melgar, Juan Pablo II College, Los Chankas, Sport Boys Association, Sport Huancayo, Sporting Cristal, Universitario, UTC Cajamarca, Deportivo Moquegua, Universidad César Vallejo, Carlos A. Mannucci, Comerciantes FC, ADA Jaén, Santos FC Nazca, FC San Marcos, Piratas FC, Academia Deportiva Cantolao, Deportivo Llacuabamba, Universidad de San Martín, FC Cajamarca, Bentín Tacna, Unión Minas, Estudiantes CNI
+[Sudamerican] PERU_D2_LEAGUE (14): Academia Deportiva Cantolao, ADA Jaén, Alianza Universidad de Huánuco, Ayacucho FC, Bentín Tacna, Carlos A. Mannucci, Comerciantes FC, Estudiantes CNI, FC San Marcos, Piratas FC, Santos FC Nazca, Unión Minas, Universidad César Vallejo, Universidad de San Martín
+[Sudamerican] PERU_D2_PLAYOFF (0): —
+[Sudamerican] PERU_SUPER_CUP (2): Universitario, Cusco FC
+
+IDs de equipo en comun: 467 | solo CGP: 244 | solo SP: 259
+mismo nombre (aprox) en IDs comunes: 274

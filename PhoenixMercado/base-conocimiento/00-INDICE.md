@@ -10,6 +10,7 @@ Se **alimenta en cada auditoría** y nunca se borra lo aprendido: si algo cambia
 | `01-MOTOR-PES2021.md` | Lo que es del **juego** y vale para **cualquier parche**: cómo están armados el option file, el guardado de Liga Máster y el bloque comprimido. Tablas con posición, tamaño, campo y estado. |
 | `02-PARCHE-PHOENIX.md` | **El objetivo de fondo:** anatomía de un parche de PES 2021, qué ya controlamos y qué falta para fabricar el **parche Phoenix** vinculado a la web, a Phoenix Link y al Mercado. |
 | `03-INVESTIGACION-PARCHES.md` | **Lo que enseñan los demás parches** (FL, Evoweb, ConmeGOL, Sudamerican, Gogosz, PESBUL): causas de crash y la regla Phoenix para cada una, modo online realista, herramientas y formatos para fabricar el parche, y la receta del Phoenix Evolution Patch. Informes completos en `investigacion/`. |
+| `04-ESTRATEGIA-PHOENIX.md` | **Informe estratégico**: ConmeGOL y Sudamerican por dentro (bases de datos comparadas, contenido, Sider), sus estrategias y sus fallos, cómo superarlos en estabilidad y rendimiento, funciones nuevas por viabilidad (🟢🟡🔴), límites del motor y ruta completa por fases. |
 | `parches/conmegol-26.md` | Lo que es **solo del ConmeGOL Patch 26**: carpetas, archivos, números de equipos y jugadores, IDs, competiciones, rarezas vistas. |
 | `parches/sudamerican-2026.md` | Lo poco que ya se sabe del Sudamerican Project 2026 (pendiente de auditar). |
 | `datos/motor.json` | La misma información del motor, en formato de datos, para que el software la lea. |
