@@ -18,7 +18,7 @@
 --                    lua.module = "phoenix.lua"  en sider.ini
 -- =============================================================================
 
-local m = { version = "0.12-prueba" }
+local m = { version = "0.13-prueba" }
 
 local CADA_SEG    = 2      -- cada cuántos segundos se vuelve a mirar el archivo (solo con el overlay abierto)
 local MAX_BYTES   = 4096   -- nunca se lee más que esto
@@ -521,7 +521,9 @@ end
 -- cerrarse (no se guarda nada, no hay daño en datos). Antes se comprueban los bytes exactos.
 local RVA_GESTOR = 0x37F5C28
 local RVA_RELEER = 0x1EF2FA0
+local RVA_CREAR_GESTOR = 0x1EEBBA0   -- v0.13: crea el gestor si no existe (Editar→Cargar lo llama con 1)
 local CHEQUEOS_BASE = {
+    { 0x1EEBBA0, "\64\83\72\131\236\48\72\199\68\36\32\254\255\255\255\15\182\217\72\131\61\110\160\144\1\0\117\98\199\68\36\72\35\0" },  -- crear gestor: …cmp [exe+0x37F5C28],0 (34 B)
     { 0x1EF2FA0, "\64\87\72\131\236\48\72\199\68\36\32\254\255\255\255\72\137\92\36\72\139\250\72\139\217" },  -- inicio de la función (25 B)
     { 0x1EF2250, "\72\139\5\209\57\144\1\195" },  -- mov rax, [exe+0x37F5C28] ; ret  (lector del gestor)
     { 0x13E4580, "\64\83\72\131\236\32\72\139\217\177\1\232\16\118\176\0\232\187\220\176\0\51\210\72\139\200\232\1\234\176\0\199" },  -- Editar→Cargar: …xor edx,edx; call 0x1EF2FA0 (32 B)
@@ -545,9 +547,21 @@ local function pedirBase()
         end
     end
     local gestor = leerU64(base + RVA_GESTOR)
-    if not gestor or gestor == 0 then
-        estadoBase = "NO se llamó: el gestor de edición aún no existe (entra una vez a Editar o a un modo)"
+    if gestor == nil then
+        estadoBase = "NO se llamó: no se pudo leer el gestor"
         log("[phoenix] " .. estadoBase); return
+    end
+    -- v0.13 (05:21): en el menú principal el gestor NO existe (el juego lo crea al entrar a Editar o al
+    -- recargar, y lo destruye al volver al menú). Editar→Cargar hace primero 0x1EEBBA0(1) = crearlo.
+    if gestor == 0 then
+        log(string.format("[phoenix] prueba B: el gestor no existe; llamando a exe+%X(1) para crearlo...", RVA_CREAR_GESTOR))
+        ffi.cast("void (*)(uint8_t)", base + RVA_CREAR_GESTOR)(1)
+        gestor = leerU64(base + RVA_GESTOR)
+        log("[phoenix] prueba B: gestor ahora " .. (gestor and memory.hex(tonumber(gestor)) or "ilegible"))
+        if not gestor or gestor == 0 then
+            estadoBase = "NO se llamó: no se pudo crear el gestor"
+            log("[phoenix] " .. estadoBase); return
+        end
     end
     local enCursoB = leerU64(gestor + 0x88)
     if enCursoB == nil or enCursoB ~= 0 then

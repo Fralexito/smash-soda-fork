@@ -416,3 +416,10 @@ se puede cambiar un guardado con el juego abierto mientras no esté cargado (Fra
 - Simulación LuaJIT OK: llama una sola vez; no llama si hay relectura en curso, si el exe es distinto o si el gestor no existe.
 - Instalado en las dos carpetas `modules` (respaldo `phoenix.lua.v011`). Phoenix-DB con **v95** (el juego tiene v99 del arranque).
 - **Plan:** Shift+R → menú principal → overlay → **K** → ¿«BASE RELEÍDA»? (el espía debe ver player.bin con la huella de v95) → ¿Velocidad 95 ya? Si no: **L** + entrar a un modo → ¿95?
+
+### 2026-10-09 05:21 · Prueba B, intento 1 → «NO se llamó: el gestor no existe» (sin riesgo, no se llamó nada)
+- En el menú principal `[exe+0x37F5C28] = 0`: el gestor de edición **solo existe** mientras se edita o se recarga.
+  - Lo crea `0x1EEBBA0(1)`: reserva 0x310 B, lo guarda en el global y lo cuelga del árbol de tareas (grupo 2), así que el juego lo avanza solo.
+  - Lo destruye `0x1EEDAA0` (estado 0xC del menú principal).
+- **v0.13:** si el gestor no existe, K llama primero a `0x1EEBBA0(1)` (comprobando sus 34 bytes), igual que Editar → Cargar (`0x13E4580`: crear gestor → releer base). Simulación OK. Instalado (respaldo `phoenix.lua.v012`).
+- El interruptor quedó en 1 (FRALEX pulsó L a las 05:20:54): la próxima entrada a un modo recargará el EDIT.
