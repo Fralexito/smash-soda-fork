@@ -296,3 +296,8 @@ se puede cambiar un guardado con el juego abierto mientras no esté cargado (Fra
 - **cdef con nombres por versión** (phx06_*), porque tras Shift+R el Lua es el mismo y no se puede redeclarar.
 - **Simulado:** 2 fichas legibles cambiadas de 90 a 99, la zona «liberada» intacta; N las devolvió a 90.
 - **Resultado en el juego:** (pendiente)
+- **Resultado 1 (03:04, v0.6):** se escribió Velocidad 99 en 1 copia (0x55b7380), pero la pantalla de habilidades de Lamine (Día de partido, Arsenal–Barça) **siguió mostrando 90**.
+  - El log muestra **4 copias** de la ficha (0x4c98a98, 0x55b7380, 0x6058ac0, 0x77b88ae8), con los primeros 96 bytes idénticos.
+  - 3 se saltaron porque **no tienen el nombre en el byte 129**, y v0.6 lo exigía. Esas copias sin nombre son las que crea y usa el juego (aparecen nuevas al entrar a pantallas).
+  - El aviso «[02:59] hola» llegó **desde la web** por Phoenix Link: **cadena web → Link → buzón → Sider confirmada de punta a punta.**
+- **Arreglo v0.7:** para escribir se exige el ID en +8 y los bytes 12-65 idénticos a Player.bin, salvo el de Velocidad y los bytes 54-57 (forma, lesión y pie malo, que el juego varía). Así se escribe en todas las copias reales sin depender del nombre. Simulado OK (incluida una ficha con el bit de forma cambiado).

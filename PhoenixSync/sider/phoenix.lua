@@ -18,7 +18,7 @@
 --                    lua.module = "phoenix.lua"  en sider.ini
 -- =============================================================================
 
-local m = { version = "0.6-prueba" }
+local m = { version = "0.7-prueba" }
 
 local CADA_SEG    = 2      -- cada cuántos segundos se vuelve a mirar el archivo (solo con el overlay abierto)
 local MAX_BYTES   = 4096   -- nunca se lee más que esto
@@ -322,11 +322,16 @@ local function escribirVelocidad()
     for _, a in ipairs(sonda.hitsA) do
         local ini = a - 8
         local rec = leerSeguro(ini, 312)              -- se vuelve a leer JUSTO antes de escribir
-        local valido = rec and rec:sub(9, 12) == PAT_A and rec:sub(OFS_NOMBRE + 1, OFS_NOMBRE + 12) == PAT_B
+        -- v0.7: las copias que usa el juego NO llevan el nombre en el byte 129 (v0.6 las saltó y la
+        -- pantalla siguió en 90). Ahora se exige algo igual de seguro y que sí cumplen: ID en +8 y
+        -- los bytes 12..65 (todas las cualidades) IDÉNTICOS a Player.bin, salvo el byte de Velocidad.
+        local valido = rec and rec:sub(9, 12) == PAT_A
         if valido then
-            local k = 0
-            for _, c in ipairs(CAMPOS) do if leerBits(rec, c[2], 6) + 40 == c[3] then k = k + 1 end end
-            valido = k >= 4
+            for k = 13, 66 do
+                -- se ignoran el byte de Velocidad y los bytes 54-57 (forma, lesión, pie malo: el juego los varía)
+                local ignorar = k == BYTE_VEL + 1 or (k >= 55 and k <= 58)
+                if not ignorar and rec:byte(k) ~= REC_ARCHIVO:byte(k) then valido = false break end
+            end
         end
         if valido then
             local dir = ini + BYTE_VEL
