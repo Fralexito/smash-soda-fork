@@ -519,3 +519,6 @@ se puede cambiar un guardado con el juego abierto mientras no esté cargado (Fra
 - `mover_of` (OptionFile::mover): Lamine 108 → **173 (Manchester City FC)**, **dorsal 7** (el 10 está ocupado en el City); en el once del Barça entra Roony Bardghji. 95 bytes cambiados. sha ccb8e3e1… (copia en `db\EDIT00000000.lamineCity`).
 - **Paso 1:** City puesto en `save\EDIT00000000`. FRALEX: Editar → Cargar → comprobar a Lamine en el City.
 - **Paso 2 (cuando confirme):** volver a poner el original en disco → FRALEX pulsa Activar → Lamine debe volver al Barça.
+- **06:28 · nueva petición de FRALEX:** Julián Álvarez (ID 126624, Atlético 172, dorsal 19) **al Barça**, y que entre al pulsar «Datos Actual. en vivo».
+  - Preparado desde el original (Lamine en el Barça): Julián 172 → 108 con el **19** (libre en el Barça); en el once del Atlético entra Alexander Sørloth. sha 96cdf0d9… en `db\EDIT00000000.julianBarca`.
+  - En disco sigue el del City (ccb8e3e1…) hasta que FRALEX confirme que ya lo cargó. Entonces se coloca el de Julián y FRALEX pulsa Activar ⇒ **Lamine vuelve al Barça y llega Julián**, las dos cosas con un solo clic.
