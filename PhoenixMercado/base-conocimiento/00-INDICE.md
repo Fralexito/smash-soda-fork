@@ -14,6 +14,7 @@ Se **alimenta en cada auditoría** y nunca se borra lo aprendido: si algo cambia
 | `datos/motor.json` | La misma información del motor, en formato de datos, para que el software la lea. |
 | `datos/conmegol-26.json` | Equipos, IDs y competiciones del ConmeGOL 26 sacados del guardado (627 equipos, 39 competiciones). |
 | `../sider/RIESGOS-SIDER.md` | **Puente en vivo con Sider**: qué permite el Lua de Sider (archivos, memoria, overlay), cómo es el puente web → app → archivo → juego, los 12 riesgos con su medida y las fases de prueba. |
+| `../sider/AUDITORIA-SIDER.md` | **Auditoría de los 49 módulos Sider activos**: qué toca cada uno, choques encontrados (cámaras que se pisan, escrituras a ciegas), módulos que no hacen nada y plan de limpieza. Detalle en `../sider/auditoria/`. |
 | `../PRUEBAS.md` | Diario de prueba y error: qué se probó en el juego, qué falló y cómo se corrigió. |
 | `../liga-master/ESTRUCTURA-ML.md` | El cuaderno técnico original (más detalle, menos orden). |
 

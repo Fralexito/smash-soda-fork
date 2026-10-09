@@ -11,6 +11,7 @@ FECHA=$(date +%Y-%m-%d\ %H:%M)
   cat parches/conmegol-26.md; printf '\n\n\\newpage\n\n'
   cat parches/sudamerican-2026.md; printf '\n\n\\newpage\n\n'
   cat ../sider/RIESGOS-SIDER.md; printf '\n\n\\newpage\n\n'
+  cat ../sider/AUDITORIA-SIDER.md; printf '\n\n\\newpage\n\n'
   cat ../PRUEBAS.md
 } | sed -e 's/✅/[PROBADO]/g' -e 's/🔎/[OBSERVADO]/g' -e 's/❓/[HIPÓTESIS]/g' -e 's/❌/[NO]/g' -e 's/⏳/[PENDIENTE]/g' -e 's/⚠️/[OJO]/g' -e 's/🟢/[VERDE]/g' -e 's/🟡/[AMARILLO]/g' -e 's/🟠/[NARANJA]/g' -e 's/🔴/[ROJO]/g' > /tmp/bc_todo.md
 pandoc /tmp/bc_todo.md -f markdown -t html5 -s --metadata lang=es -c /dev/null -o /tmp/bc_todo.html --css estilo.css --self-contained 2>/dev/null || pandoc /tmp/bc_todo.md -f markdown -t html5 -s -o /tmp/bc_todo.html

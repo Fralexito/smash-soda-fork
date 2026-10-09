@@ -1,0 +1,944 @@
+{
+ "lib\\CommonLib.lua": {
+  "existe": false
+ },
+ "CGP_data.lua": {
+  "existe": true,
+  "origen": "parche",
+  "bytes": 38997,
+  "bytecode": true,
+  "eventos": [],
+  "mem_write": 0,
+  "mem_search": 0,
+  "mem_read": 0,
+  "ffi": false,
+  "io_w": 0,
+  "hook_rbx": false,
+  "unprotect": 0,
+  "pcall": 0
+ },
+ "CGP_SB_Addons.lua": {
+  "existe": true,
+  "origen": "parche",
+  "bytes": 58947,
+  "bytecode": true,
+  "eventos": [],
+  "mem_write": 0,
+  "mem_search": 0,
+  "mem_read": 0,
+  "ffi": false,
+  "io_w": 0,
+  "hook_rbx": false,
+  "unprotect": 0,
+  "pcall": 0
+ },
+ "CGP_SB_Addons_2.lua": {
+  "existe": true,
+  "origen": "parche",
+  "bytes": 18933,
+  "bytecode": true,
+  "eventos": [],
+  "mem_write": 0,
+  "mem_search": 0,
+  "mem_read": 0,
+  "ffi": false,
+  "io_w": 0,
+  "hook_rbx": false,
+  "unprotect": 0,
+  "pcall": 0
+ },
+ "lib\\nesalib.lua": {
+  "existe": false
+ },
+ "real-coach-team.lua": {
+  "existe": true,
+  "origen": "parche",
+  "bytes": 194107,
+  "bytecode": false,
+  "eventos": [
+   "context_reset",
+   "livecpk_get_filepath",
+   "livecpk_make_key",
+   "overlay_on",
+   "set_teams"
+  ],
+  "mem_write": 0,
+  "mem_search": 0,
+  "mem_read": 0,
+  "ffi": false,
+  "io_w": 2,
+  "hook_rbx": false,
+  "unprotect": 0,
+  "pcall": 0
+ },
+ "sifflet.lua": {
+  "existe": true,
+  "origen": "parche",
+  "bytes": 2792,
+  "bytecode": false,
+  "eventos": [
+   "display_frame",
+   "set_teams"
+  ],
+  "mem_write": 0,
+  "mem_search": 0,
+  "mem_read": 0,
+  "ffi": false,
+  "io_w": 0,
+  "hook_rbx": false,
+  "unprotect": 0,
+  "pcall": 2
+ },
+ "goalscreams.lua": {
+  "existe": true,
+  "origen": "parche",
+  "bytes": 5033,
+  "bytecode": false,
+  "eventos": [
+   "context_reset",
+   "goal_scored",
+   "overlay_on",
+   "set_teams"
+  ],
+  "mem_write": 0,
+  "mem_search": 0,
+  "mem_read": 0,
+  "ffi": false,
+  "io_w": 0,
+  "hook_rbx": false,
+  "unprotect": 0,
+  "pcall": 0
+ },
+ "shirtless_celebration.lua": {
+  "existe": true,
+  "origen": "parche",
+  "bytes": 107621,
+  "bytecode": false,
+  "eventos": [
+   "after_set_conditions",
+   "gamepad_input",
+   "key_down",
+   "livecpk_data_ready",
+   "livecpk_get_filepath",
+   "livecpk_rewrite",
+   "overlay_on",
+   "set_teams"
+  ],
+  "mem_write": 35,
+  "mem_search": 2,
+  "mem_read": 82,
+  "ffi": true,
+  "io_w": 1,
+  "hook_rbx": false,
+  "unprotect": 0,
+  "pcall": 0
+ },
+ "PES ID.lua": {
+  "existe": true,
+  "origen": "raiz",
+  "bytes": 3807,
+  "bytecode": false,
+  "eventos": [
+   "livecpk_data_ready",
+   "overlay_on"
+  ],
+  "mem_write": 0,
+  "mem_search": 1,
+  "mem_read": 6,
+  "ffi": false,
+  "io_w": 0,
+  "hook_rbx": false,
+  "unprotect": 0,
+  "pcall": 0
+ },
+ "Chatty_AutoLineup_v0.8.lua": {
+  "existe": true,
+  "origen": "raiz",
+  "bytes": 43620,
+  "bytecode": false,
+  "eventos": [
+   "after_set_conditions",
+   "context_reset",
+   "key_down",
+   "overlay_on",
+   "set_teams"
+  ],
+  "mem_write": 7,
+  "mem_search": 0,
+  "mem_read": 1,
+  "ffi": false,
+  "io_w": 0,
+  "hook_rbx": false,
+  "unprotect": 0,
+  "pcall": 0
+ },
+ "BannerServerHome.lua": {
+  "existe": true,
+  "origen": "raiz",
+  "bytes": 1334,
+  "bytecode": true,
+  "eventos": [],
+  "mem_write": 0,
+  "mem_search": 0,
+  "mem_read": 0,
+  "ffi": false,
+  "io_w": 0,
+  "hook_rbx": false,
+  "unprotect": 0,
+  "pcall": 0
+ },
+ "BannerServerAway.lua": {
+  "existe": true,
+  "origen": "raiz",
+  "bytes": 555,
+  "bytecode": true,
+  "eventos": [],
+  "mem_write": 0,
+  "mem_search": 0,
+  "mem_read": 0,
+  "ffi": false,
+  "io_w": 0,
+  "hook_rbx": false,
+  "unprotect": 0,
+  "pcall": 0
+ },
+ "StadiumServer.lua": {
+  "existe": true,
+  "origen": "raiz",
+  "bytes": 93026,
+  "bytecode": false,
+  "eventos": [
+   "after_set_conditions",
+   "get_stadium_name",
+   "hide",
+   "key_down",
+   "key_up",
+   "livecpk_get_filepath",
+   "livecpk_make_key",
+   "overlay_on",
+   "set_conditions",
+   "set_stadium",
+   "set_teams",
+   "show"
+  ],
+  "mem_write": 0,
+  "mem_search": 0,
+  "mem_read": 0,
+  "ffi": false,
+  "io_w": 0,
+  "hook_rbx": false,
+  "unprotect": 0,
+  "pcall": 0
+ },
+ "SleeveBadge-ArmbandServer.lua": {
+  "existe": true,
+  "origen": "raiz",
+  "bytes": 18099,
+  "bytecode": false,
+  "eventos": [
+   "key_down",
+   "livecpk_get_filepath",
+   "overlay_on",
+   "set_home_team_for_kits",
+   "set_teams"
+  ],
+  "mem_write": 9,
+  "mem_search": 3,
+  "mem_read": 0,
+  "ffi": true,
+  "io_w": 0,
+  "hook_rbx": false,
+  "unprotect": 0,
+  "pcall": 0
+ },
+ "kserv.lua": {
+  "existe": true,
+  "origen": "raiz",
+  "bytes": 74485,
+  "bytecode": false,
+  "eventos": [
+   "after_set_conditions",
+   "key_down",
+   "key_up",
+   "livecpk_data_ready",
+   "livecpk_get_filepath",
+   "livecpk_make_key",
+   "overlay_on",
+   "set_home_team_for_kits",
+   "set_kits",
+   "set_teams"
+  ],
+  "mem_write": 0,
+  "mem_search": 0,
+  "mem_read": 1,
+  "ffi": false,
+  "io_w": 1,
+  "hook_rbx": false,
+  "unprotect": 0,
+  "pcall": 0
+ },
+ "CGP_ScoreboardServer.lua": {
+  "existe": true,
+  "origen": "parche",
+  "bytes": 16140,
+  "bytecode": true,
+  "eventos": [],
+  "mem_write": 0,
+  "mem_search": 0,
+  "mem_read": 0,
+  "ffi": false,
+  "io_w": 0,
+  "hook_rbx": false,
+  "unprotect": 0,
+  "pcall": 0
+ },
+ "scoreboard-hexx.lua": {
+  "existe": true,
+  "origen": "raiz",
+  "bytes": 50445,
+  "bytecode": false,
+  "eventos": [
+   "key_down",
+   "livecpk_data_ready",
+   "overlay_on",
+   "set_teams"
+  ],
+  "mem_write": 16,
+  "mem_search": 0,
+  "mem_read": 10,
+  "ffi": true,
+  "io_w": 0,
+  "hook_rbx": false,
+  "unprotect": 0,
+  "pcall": 0
+ },
+ "SoundServer.lua": {
+  "existe": true,
+  "origen": "raiz",
+  "bytes": 7413,
+  "bytecode": false,
+  "eventos": [
+   "key_down",
+   "overlay_on",
+   "set_conditions",
+   "set_teams"
+  ],
+  "mem_write": 1,
+  "mem_search": 0,
+  "mem_read": 4,
+  "ffi": false,
+  "io_w": 0,
+  "hook_rbx": false,
+  "unprotect": 0,
+  "pcall": 0
+ },
+ "Chants-Server.lua": {
+  "existe": true,
+  "origen": "raiz",
+  "bytes": 20499,
+  "bytecode": false,
+  "eventos": [
+   "gamepad_input",
+   "key_down",
+   "livecpk_data_ready",
+   "overlay_on",
+   "set_teams"
+  ],
+  "mem_write": 0,
+  "mem_search": 0,
+  "mem_read": 0,
+  "ffi": false,
+  "io_w": 1,
+  "hook_rbx": false,
+  "unprotect": 0,
+  "pcall": 0
+ },
+ "IntroServer.lua": {
+  "existe": true,
+  "origen": "parche",
+  "bytes": 15093,
+  "bytecode": false,
+  "eventos": [
+   "livecpk_data_ready",
+   "livecpk_get_filepath",
+   "livecpk_rewrite",
+   "overlay_on"
+  ],
+  "mem_write": 0,
+  "mem_search": 0,
+  "mem_read": 0,
+  "ffi": false,
+  "io_w": 0,
+  "hook_rbx": false,
+  "unprotect": 0,
+  "pcall": 0
+ },
+ "RefKitServer.lua": {
+  "existe": true,
+  "origen": "raiz",
+  "bytes": 19289,
+  "bytecode": false,
+  "eventos": [
+   "after_set_conditions",
+   "key_down",
+   "livecpk_get_filepath",
+   "livecpk_make_key",
+   "overlay_on",
+   "set_teams"
+  ],
+  "mem_write": 0,
+  "mem_search": 0,
+  "mem_read": 0,
+  "ffi": false,
+  "io_w": 0,
+  "hook_rbx": false,
+  "unprotect": 0,
+  "pcall": 0
+ },
+ "BallServer.lua": {
+  "existe": true,
+  "origen": "raiz",
+  "bytes": 48776,
+  "bytecode": false,
+  "eventos": [
+   "after_set_conditions",
+   "get_ball_name",
+   "hide",
+   "key_down",
+   "key_up",
+   "livecpk_get_filepath",
+   "livecpk_make_key",
+   "overlay_on",
+   "set_teams",
+   "show"
+  ],
+  "mem_write": 0,
+  "mem_search": 0,
+  "mem_read": 0,
+  "ffi": false,
+  "io_w": 0,
+  "hook_rbx": false,
+  "unprotect": 0,
+  "pcall": 0
+ },
+ "UIColors.lua": {
+  "existe": true,
+  "origen": "raiz",
+  "bytes": 18315,
+  "bytecode": false,
+  "eventos": [
+   "key_down",
+   "livecpk_read",
+   "overlay_on"
+  ],
+  "mem_write": 1,
+  "mem_search": 1,
+  "mem_read": 2,
+  "ffi": false,
+  "io_w": 2,
+  "hook_rbx": false,
+  "unprotect": 0,
+  "pcall": 0
+ },
+ "Entrance_fix.lua": {
+  "existe": true,
+  "origen": "raiz",
+  "bytes": 7606,
+  "bytecode": false,
+  "eventos": [
+   "livecpk_get_filepath",
+   "livecpk_make_key"
+  ],
+  "mem_write": 0,
+  "mem_search": 0,
+  "mem_read": 0,
+  "ffi": false,
+  "io_w": 0,
+  "hook_rbx": false,
+  "unprotect": 0,
+  "pcall": 0
+ },
+ "Entrance.lua": {
+  "existe": true,
+  "origen": "parche",
+  "bytes": 42448,
+  "bytecode": false,
+  "eventos": [
+   "livecpk_get_filepath",
+   "livecpk_make_key",
+   "set_teams",
+   "trophy_rewrite"
+  ],
+  "mem_write": 0,
+  "mem_search": 0,
+  "mem_read": 0,
+  "ffi": false,
+  "io_w": 0,
+  "hook_rbx": false,
+  "unprotect": 0,
+  "pcall": 0
+ },
+ "POTM_Server.lua": {
+  "existe": true,
+  "origen": "parche",
+  "bytes": 22219,
+  "bytecode": false,
+  "eventos": [
+   "livecpk_get_filepath",
+   "livecpk_make_key",
+   "set_teams"
+  ],
+  "mem_write": 0,
+  "mem_search": 0,
+  "mem_read": 0,
+  "ffi": false,
+  "io_w": 0,
+  "hook_rbx": false,
+  "unprotect": 0,
+  "pcall": 0
+ },
+ "MasterLeague.lua": {
+  "existe": true,
+  "origen": "raiz",
+  "bytes": 8211,
+  "bytecode": false,
+  "eventos": [
+   "key_down",
+   "livecpk_get_filepath",
+   "livecpk_make_key",
+   "overlay_on"
+  ],
+  "mem_write": 0,
+  "mem_search": 0,
+  "mem_read": 0,
+  "ffi": false,
+  "io_w": 0,
+  "hook_rbx": false,
+  "unprotect": 0,
+  "pcall": 0
+ },
+ "Competition-Server.lua": {
+  "existe": true,
+  "origen": "raiz",
+  "bytes": 7592,
+  "bytecode": false,
+  "eventos": [],
+  "mem_write": 1,
+  "mem_search": 1,
+  "mem_read": 0,
+  "ffi": false,
+  "io_w": 0,
+  "hook_rbx": false,
+  "unprotect": 0,
+  "pcall": 0
+ },
+ "GFX_lod.lua": {
+  "existe": true,
+  "origen": "raiz",
+  "bytes": 250,
+  "bytecode": false,
+  "eventos": [],
+  "mem_write": 2,
+  "mem_search": 0,
+  "mem_read": 0,
+  "ffi": false,
+  "io_w": 0,
+  "hook_rbx": false,
+  "unprotect": 0,
+  "pcall": 0
+ },
+ "env.lua": {
+  "existe": true,
+  "origen": "raiz",
+  "bytes": 413,
+  "bytecode": false,
+  "eventos": [],
+  "mem_write": 0,
+  "mem_search": 0,
+  "mem_read": 0,
+  "ffi": false,
+  "io_w": 0,
+  "hook_rbx": false,
+  "unprotect": 0,
+  "pcall": 0
+ },
+ "tunnel.lua": {
+  "existe": false
+ },
+ "Stadium_Banner.lua": {
+  "existe": false
+ },
+ "Stadium_Board.lua": {
+  "existe": false
+ },
+ "Stadium_CornerFlag.lua": {
+  "existe": false
+ },
+ "GoalSongServer.lua": {
+  "existe": false
+ },
+ "Derbys.lua": {
+  "existe": false
+ },
+ "cr7_audio.lua": {
+  "existe": false
+ },
+ "Commentary-Server.lua": {
+  "existe": true,
+  "origen": "raiz",
+  "bytes": 14520,
+  "bytecode": false,
+  "eventos": [
+   "key_down",
+   "key_up",
+   "livecpk_get_filepath",
+   "overlay_on",
+   "set_teams"
+  ],
+  "mem_write": 3,
+  "mem_search": 2,
+  "mem_read": 2,
+  "ffi": false,
+  "io_w": 0,
+  "hook_rbx": false,
+  "unprotect": 0,
+  "pcall": 0
+ },
+ "trophy.lua": {
+  "existe": true,
+  "origen": "raiz",
+  "bytes": 3210,
+  "bytecode": false,
+  "eventos": [
+   "key_down",
+   "livecpk_get_filepath",
+   "livecpk_make_key",
+   "overlay_on",
+   "trophy_rewrite"
+  ],
+  "mem_write": 0,
+  "mem_search": 0,
+  "mem_read": 0,
+  "ffi": false,
+  "io_w": 0,
+  "hook_rbx": false,
+  "unprotect": 0,
+  "pcall": 0
+ },
+ "MenuServer.lua": {
+  "existe": true,
+  "origen": "raiz",
+  "bytes": 9708,
+  "bytecode": false,
+  "eventos": [
+   "livecpk_get_filepath",
+   "livecpk_make_key",
+   "set_teams"
+  ],
+  "mem_write": 0,
+  "mem_search": 0,
+  "mem_read": 0,
+  "ffi": false,
+  "io_w": 0,
+  "hook_rbx": false,
+  "unprotect": 0,
+  "pcall": 0
+ },
+ "MiniFaceServer.lua": {
+  "existe": true,
+  "origen": "raiz",
+  "bytes": 2200,
+  "bytecode": false,
+  "eventos": [
+   "livecpk_get_filepath",
+   "livecpk_make_key",
+   "trophy_rewrite"
+  ],
+  "mem_write": 0,
+  "mem_search": 0,
+  "mem_read": 0,
+  "ffi": false,
+  "io_w": 0,
+  "hook_rbx": false,
+  "unprotect": 0,
+  "pcall": 0
+ },
+ "BallBoysServer.lua": {
+  "existe": false
+ },
+ "camera.lua": {
+  "existe": true,
+  "origen": "raiz",
+  "bytes": 12959,
+  "bytecode": false,
+  "eventos": [
+   "gamepad_input",
+   "key_down",
+   "overlay_on",
+   "set_teams"
+  ],
+  "mem_write": 3,
+  "mem_search": 1,
+  "mem_read": 7,
+  "ffi": false,
+  "io_w": 1,
+  "hook_rbx": false,
+  "unprotect": 0,
+  "pcall": 0
+ },
+ "BroadCastCam.lua": {
+  "existe": true,
+  "origen": "raiz",
+  "bytes": 4130,
+  "bytecode": false,
+  "eventos": [
+   "gamepad_input",
+   "key_down",
+   "overlay_on"
+  ],
+  "mem_write": 1,
+  "mem_search": 0,
+  "mem_read": 1,
+  "ffi": false,
+  "io_w": 0,
+  "hook_rbx": false,
+  "unprotect": 0,
+  "pcall": 0
+ },
+ "CommonCam.lua": {
+  "existe": true,
+  "origen": "raiz",
+  "bytes": 2874,
+  "bytecode": false,
+  "eventos": [
+   "gamepad_input",
+   "key_down",
+   "overlay_on"
+  ],
+  "mem_write": 0,
+  "mem_search": 0,
+  "mem_read": 1,
+  "ffi": false,
+  "io_w": 0,
+  "hook_rbx": false,
+  "unprotect": 0,
+  "pcall": 0
+ },
+ "DynamicWideCam.lua": {
+  "existe": true,
+  "origen": "raiz",
+  "bytes": 3710,
+  "bytecode": false,
+  "eventos": [
+   "gamepad_input",
+   "key_down",
+   "overlay_on"
+  ],
+  "mem_write": 1,
+  "mem_search": 0,
+  "mem_read": 3,
+  "ffi": false,
+  "io_w": 0,
+  "hook_rbx": false,
+  "unprotect": 0,
+  "pcall": 0
+ },
+ "FanViewCam.lua": {
+  "existe": true,
+  "origen": "raiz",
+  "bytes": 2487,
+  "bytecode": false,
+  "eventos": [
+   "gamepad_input",
+   "key_down",
+   "overlay_on",
+   "set_teams"
+  ],
+  "mem_write": 0,
+  "mem_search": 0,
+  "mem_read": 1,
+  "ffi": false,
+  "io_w": 0,
+  "hook_rbx": false,
+  "unprotect": 0,
+  "pcall": 0
+ },
+ "PenaltyCam.lua": {
+  "existe": true,
+  "origen": "raiz",
+  "bytes": 4501,
+  "bytecode": false,
+  "eventos": [
+   "gamepad_input",
+   "key_down",
+   "overlay_on"
+  ],
+  "mem_write": 2,
+  "mem_search": 0,
+  "mem_read": 2,
+  "ffi": false,
+  "io_w": 0,
+  "hook_rbx": false,
+  "unprotect": 0,
+  "pcall": 0
+ },
+ "ReplayCam.lua": {
+  "existe": true,
+  "origen": "raiz",
+  "bytes": 4072,
+  "bytecode": false,
+  "eventos": [
+   "gamepad_input",
+   "key_down",
+   "overlay_on"
+  ],
+  "mem_write": 0,
+  "mem_search": 0,
+  "mem_read": 0,
+  "ffi": false,
+  "io_w": 0,
+  "hook_rbx": false,
+  "unprotect": 0,
+  "pcall": 0
+ },
+ "StadiumCam.lua": {
+  "existe": true,
+  "origen": "raiz",
+  "bytes": 4636,
+  "bytecode": false,
+  "eventos": [
+   "gamepad_input",
+   "key_down",
+   "overlay_on"
+  ],
+  "mem_write": 0,
+  "mem_search": 0,
+  "mem_read": 1,
+  "ffi": false,
+  "io_w": 0,
+  "hook_rbx": false,
+  "unprotect": 0,
+  "pcall": 0
+ },
+ "VerticalCam.lua": {
+  "existe": true,
+  "origen": "raiz",
+  "bytes": 5077,
+  "bytecode": false,
+  "eventos": [
+   "gamepad_input",
+   "key_down",
+   "overlay_on"
+  ],
+  "mem_write": 0,
+  "mem_search": 0,
+  "mem_read": 2,
+  "ffi": false,
+  "io_w": 0,
+  "hook_rbx": false,
+  "unprotect": 0,
+  "pcall": 0
+ },
+ "matchset.lua": {
+  "existe": true,
+  "origen": "raiz",
+  "bytes": 734,
+  "bytecode": false,
+  "eventos": [
+   "set_match_settings"
+  ],
+  "mem_write": 0,
+  "mem_search": 0,
+  "mem_read": 0,
+  "ffi": false,
+  "io_w": 0,
+  "hook_rbx": false,
+  "unprotect": 0,
+  "pcall": 0
+ },
+ "tournament_anth_tunnel.lua": {
+  "existe": false
+ },
+ "TournamentCornerFlags.lua": {
+  "existe": true,
+  "origen": "parche",
+  "bytes": 4447,
+  "bytecode": false,
+  "eventos": [
+   "livecpk_get_filepath",
+   "livecpk_make_key",
+   "set_teams",
+   "trophy_rewrite"
+  ],
+  "mem_write": 0,
+  "mem_search": 0,
+  "mem_read": 0,
+  "ffi": false,
+  "io_w": 0,
+  "hook_rbx": false,
+  "unprotect": 0,
+  "pcall": 0
+ },
+ "Nets-Server.lua": {
+  "existe": false
+ },
+ "CornerFlag.lua": {
+  "existe": false
+ },
+ "awaygoals.lua": {
+  "existe": true,
+  "origen": "raiz",
+  "bytes": 4283,
+  "bytecode": false,
+  "eventos": [
+   "key_down",
+   "overlay_on"
+  ],
+  "mem_write": 2,
+  "mem_search": 1,
+  "mem_read": 4,
+  "ffi": false,
+  "io_w": 0,
+  "hook_rbx": false,
+  "unprotect": 0,
+  "pcall": 0
+ },
+ "movieintro.lua": {
+  "existe": true,
+  "origen": "raiz",
+  "bytes": 7554,
+  "bytecode": false,
+  "eventos": [
+   "livecpk_data_ready",
+   "livecpk_get_filepath",
+   "livecpk_rewrite",
+   "overlay_off"
+  ],
+  "mem_write": 0,
+  "mem_search": 0,
+  "mem_read": 0,
+  "ffi": false,
+  "io_w": 0,
+  "hook_rbx": false,
+  "unprotect": 0,
+  "pcall": 0
+ },
+ "StartingYearChanger.lua": {
+  "existe": true,
+  "origen": "raiz",
+  "bytes": 4340,
+  "bytecode": false,
+  "eventos": [
+   "key_down",
+   "overlay_on"
+  ],
+  "mem_write": 1,
+  "mem_search": 3,
+  "mem_read": 1,
+  "ffi": false,
+  "io_w": 0,
+  "hook_rbx": false,
+  "unprotect": 0,
+  "pcall": 0
+ }
+}

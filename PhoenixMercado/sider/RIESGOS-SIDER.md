@@ -5,7 +5,7 @@ Regla de oro: **cada paso se prueba primero en la PC de Fralex, en partidos offl
 
 ## Qué se sabe del entorno (revisado el 2026-10-08 en la PC de Fralex)
 
-- 🔎 Sider **7.3.3**, con 57 módulos Lua cargados por ConmeGOL 26 (`SiderAddons\sider.ini`, líneas `lua.module`).
+- 🔎 Sider **7.3.3**; `sider.ini` pide 60 módulos Lua: 49 cargan y 11 no existen. Auditoría completa en `AUDITORIA-SIDER.md`.
 - 🔎 El Lua de Sider (LuaJIT 5.1) trae: `io` (leer y escribir archivos), `fs` (`find_files`, `make_dirs`), `memory` (leer/escribir/buscar en la memoria del juego), `ffi`, `zlib`, `match`, `audio`, `os` (solo `date`, `time`, `clock`). **No trae red**: el juego no habla con Internet desde Lua (salvo por `ffi`, que no usaremos para eso).
 - 🔎 El overlay de Sider se abre con **Espacio** (`overlay.vkey.toggle = 0x20`), se cambia de módulo con **1** y **º/`**. Solo se dibuja (y solo llama a los módulos) mientras está abierto.
 - 🔎 Si un módulo de la lista no existe, Sider lo anota (`PROBLEM: Unable to open file`) y sigue: hoy hay 7 así en `sider.ini` y el juego funciona.
@@ -28,6 +28,7 @@ El juego no se conecta a nada: solo lee un archivo pequeño que la app de PC dej
 | 3 | Archivo gigante o con basura | Lentitud o caracteres extraños | Se leen como máximo 4 KB, 14 líneas, 110 bytes por línea; si no es UTF-8 válido no se muestra; se quitan caracteres de control. |
 | 4 | Bajón de rendimiento (FPS) | Tirones | Solo trabaja con el overlay abierto y mira el archivo cada 2 s como mucho. Con el overlay cerrado su coste es cero. |
 | 5 | Choque de teclas con otros módulos | Una tecla hace dos cosas | La prueba 1 no usa ninguna tecla propia (MasterLeague usa 0, 6–9, RePág/AvPág, Supr; BallServer, F3…). |
+| 6b | Instalar en la carpeta equivocada | El switcher pisa el cambio (pasó el 8 oct: la línea se perdió y el módulo nunca cargó) | Instalar en `ConmeGol Extras\ConmeGOL Patch 26\SiderAddons`, que es la que copia el switcher. |
 | 6 | Romper `sider.ini` | Sider no carga ningún mod | Antes de tocarlo se guarda `sider.ini.respaldo-phoenix`; el cambio es **una sola línea al final** de la lista de módulos. Desinstalar = quitar esa línea o restaurar el respaldo. |
 | 7 | Una actualización de ConmeGOL pisa `sider.ini` | El módulo deja de cargarse (no rompe nada) | Documentado: hay que volver a añadir la línea. El instalador de Phoenix lo comprobará en el futuro. |
 | 8 | Online con PESBUL / partidas entre dos PCs | Desincronización si los dos juegos no tienen lo mismo | La prueba 1 **solo dibuja texto**: no cambia nada del partido, así que no puede desincronizar. Para módulos que escriban memoria: **apagados en online** y probados solo offline hasta demostrar que son seguros. |
