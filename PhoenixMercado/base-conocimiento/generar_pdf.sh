@@ -8,6 +8,7 @@ FECHA=$(date +%Y-%m-%d\ %H:%M)
   cat 00-INDICE.md; printf '\n\n\\newpage\n\n'
   cat 01-MOTOR-PES2021.md; printf '\n\n\\newpage\n\n'
   cat 02-PARCHE-PHOENIX.md; printf '\n\n\\newpage\n\n'
+  cat 03-INVESTIGACION-PARCHES.md; printf '\n\n\\newpage\n\n'
   cat parches/conmegol-26.md; printf '\n\n\\newpage\n\n'
   cat parches/sudamerican-2026.md; printf '\n\n\\newpage\n\n'
   cat ../sider/RIESGOS-SIDER.md; printf '\n\n\\newpage\n\n'
