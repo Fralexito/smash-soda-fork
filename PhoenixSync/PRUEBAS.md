@@ -407,3 +407,4 @@ se puede cambiar un guardado con el juego abierto mientras no esté cargado (Fra
   3. El juego recarga el option file él solo **al entrar a un modo** (menu::ModeFlowCmnInitFunctor).
 - **Estado al cerrar:** option file = original (Lamine en el Barça, sha cb6e176e…). El Madrid ya no tiene a Lamine.
 - **Pendiente:** stats sin Editar (llamar `0x1EF2FA0(gestor, 0)`, prueba B) y la Velocidad que vio FRALEX en la Liga Máster tras el reinicio de las 05:01.
+- **05:15 · confirmación:** después de la recarga con L, la ficha de Lamine (ya en el Barça) sigue con **Velocidad 99**, la base del arranque de las 05:01. Confirma que el interruptor recarga el option file pero **no** la base de stats.
