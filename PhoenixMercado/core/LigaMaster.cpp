@@ -1072,28 +1072,10 @@ namespace mercado::lm {
 				}
 				informe += "tabla paso " + std::to_string(x.t.stride) + (x.t.dir < 0 ? "↓" : "") + ": registro nuevo " + std::to_string(x.iNuevo) + " (molde " + std::to_string(x.iMolde) + ")\n";
 			}
-			// 2) Contrato (tabla I): al final, número = el mayor + 1
-			{
-				const int ext = extensionDe(d, tablaContratos);
-				if (ext < 0 || !rangoValido(d, tablaContratos, ext + 1)) return R::mal("TABLA_DANADA", "La tabla de contratos no tiene sitio");
-				uint32_t maxNum = 0; int iMoldeC = -1;
-				for (int i = 0; i < ext; i++) {
-					const size_t ini = size_t(regDe(tablaContratos, i)) - kRegEnContrato;
-					if (!registroVacio(d, ini + kRegEnContrato)) maxNum = std::max(maxNum, u32(d, ini) & 0xff);
-					if (u32(d, ini + kRegEnContrato) == pm.reg && u32(d, ini + kRegEnContrato + 4) == pm.pid && d[ini + 8] == 5) iMoldeC = i;
-				}
-				if (iMoldeC < 0) return R::mal("CONTRATOS_INESPERADOS", "El molde no tiene contrato vigente");
-				const size_t src = size_t(regDe(tablaContratos, iMoldeC)) - kRegEnContrato, dst = size_t(regDe(tablaContratos, ext)) - kRegEnContrato;
-				std::memmove(&d[dst], &d[src], tablaContratos.stride);
-				p32(d, dst, maxNum + 1);
-				p32(d, dst + 4, clubU);
-				p32(d, dst + 8, 5);
-				p32(d, dst + 12, fecha.empaquetada());
-				const size_t r = dst + kRegEnContrato;
-				p32(d, r, llega.reg); p32(d, r + 4, llega.pid);
-				p32(d, r + 8, uint32_t(sueldo / 100)); p32(d, r + 12, uint32_t(op.clausulaEur / 100)); p32(d, r + 16, fin.empaquetada());
-				informe += "contrato nuevo nº " + std::to_string(maxNum + 1) + ": " + std::to_string(sueldo) + " €/año hasta " + std::to_string(fin.dia) + "/" + std::to_string(fin.mes) + "/" + std::to_string(fin.anio) + "\n";
-			}
+			// 2) Contrato: NO se escribe en la tabla I. El juego la rehace desde la ficha del blob al avanzar (prueba 18:
+			//    con el registro escrito por nosotros quedaron DOS contratos de Sommer y el presupuesto salarial se descuadró).
+			//    El sueldo, las fechas y la cláusula (la calcula el juego) salen de la ficha del blob (paso 5).
+			informe += "contrato: en la ficha del blob (" + std::to_string(sueldo) + " €/año hasta " + std::to_string(fin.dia) + "/" + std::to_string(fin.mes) + "/" + std::to_string(fin.anio) + "); el juego crea el registro de la tabla I\n";
 			// 3) Plantillas, alineaciones, K
 			{
 				std::vector<Plaza> po2 = po; po2.erase(po2.begin() + idxO); escribirPlantilla(d, kO, po2);

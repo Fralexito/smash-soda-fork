@@ -217,3 +217,13 @@ el juego (§20). Qué mirar: plantilla, alineación, ficha y contrato de Sommer,
 **8 oct 19:08 · Resultado prueba 17 · Ranura 1 · Blob reescrito por el programa** — ✅
 La partida carga normal y la ficha de Sommer muestra **Valor de mercado 77.700.000 €** (antes 2.500.000). El presupuesto no cambió
 (160.665.600 €): solo cambió el dato pedido. **El juego acepta la zona comprimida recomprimida por Phoenix Mercado (miniz).**
+
+**8 oct 19:20 · Resultado prueba 18 · Ranura 2 (fichaje de Sommer hecho por el programa)** — ⚠️ CASI (se corrigió)
+En pantalla todo bien: Sommer en el City (27/27), sueldo 3.186.500 €, contrato hasta 30/6/2027, presupuesto 160.665.600 €,
+ppto. salarial 446.900 €, Inter con Josep Martínez de arquero. Fralex lo puso de titular, el partido **arrancó con Sommer** (está
+bien inscrito); al salir del partido el juego volvió al menú sin guardar, pero antes había **autoguardado** la ranura 2 (13/8).
+En ese autoguardado: todo sigue igual salvo que **el juego creó su propio contrato** para Sommer (nº 25, cláusula 2.400.000 €,
+calculado desde la ficha del blob) y el nuestro (nº 28) quedó **duplicado** → la suma de sueldos supera el tope salarial.
+**Corrección:** el programa ya no escribe el contrato en la tabla I; solo la ficha del blob (el juego hace el resto).
+
+**8 oct 19:25 · Prueba 19 · Ranura 2 (`ML00000001`, md5 1ba38ab8…) · Sommer fichado v2 (sin contrato en la tabla I)** — ⏳ EN PRUEBA
