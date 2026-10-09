@@ -522,3 +522,4 @@ se puede cambiar un guardado con el juego abierto mientras no esté cargado (Fra
 - **06:28 · nueva petición de FRALEX:** Julián Álvarez (ID 126624, Atlético 172, dorsal 19) **al Barça**, y que entre al pulsar «Datos Actual. en vivo».
   - Preparado desde el original (Lamine en el Barça): Julián 172 → 108 con el **19** (libre en el Barça); en el once del Atlético entra Alexander Sørloth. sha 96cdf0d9… en `db\EDIT00000000.julianBarca`.
   - En disco sigue el del City (ccb8e3e1…) hasta que FRALEX confirme que ya lo cargó. Entonces se coloca el de Julián y FRALEX pulsa Activar ⇒ **Lamine vuelve al Barça y llega Julián**, las dos cosas con un solo clic.
+- **06:41:** colocado en disco el option file de Julián + Lamine en el Barça (sha 96cdf0d9…). Falta que FRALEX pulse Activar.
