@@ -551,6 +551,15 @@ int main() {
 			CHECK(l.valor->cambios[0].pesId == 9101 && l.valor->cambios[0].clubDesdePes == 2009 && l.valor->cambios[0].clubHaciaPes == 2010);
 			CHECK(l.valor->cambios[2].pesId == 0 && l.valor->cambios[2].clubHaciaPes == 0);
 		}
+		{
+			auto co = parsearCambios(R"({"cambios":[{"version":1,"pes_id":5,"club_desde_pes":1,"club_hacia_pes":2,"monto":2575000,"sueldo":3186500,"clausula":2400000,"fin_contrato":"2027-06-30","dorsal":12}]})");
+			CHECK(co.ok() && co.valor->cambios[0].montoEur == 2575000 && co.valor->cambios[0].sueldoEur == 3186500 && co.valor->cambios[0].clausulaEur == 2400000);
+			CHECK(co.ok() && co.valor->cambios[0].finContrato == "2027-06-30" && co.valor->cambios[0].dorsal == 12);
+			CHECK(parsearCambios(R"({"cambios":[{"version":1,"pes_id":5,"fin_contrato":"30/06/2027"}]})").error.codigo == "CAMBIOS_INVALIDOS");
+			CHECK(parsearCambios(R"({"cambios":[{"version":1,"pes_id":5,"dorsal":120}]})").error.codigo == "CAMBIOS_INVALIDOS");
+			auto neg = parsearCambios(R"({"cambios":[{"version":1,"pes_id":5,"monto":-5,"sueldo":9e12}]})");
+			CHECK(neg.ok() && neg.valor->cambios[0].montoEur == 0 && neg.valor->cambios[0].sueldoEur == 0);   // fuera de rango → lo decide el programa
+		}
 		CHECK(parsearCambios(R"({"cambios":[{"version":2},{"version":2}]})").error.codigo == "CAMBIOS_INVALIDOS");
 		CHECK(parsearCambios(R"({"cambios":[{"version":9},{"version":3}]})").error.codigo == "CAMBIOS_INVALIDOS");
 		CHECK(parsearCambios("[]").error.codigo == "CAMBIOS_INVALIDOS");
@@ -564,7 +573,7 @@ int main() {
 			auto cambios = parsearCambios(R"({"liga":"galaxy","desde":0,"version_actual":8,"cambios":[
 				{"version":1,"pes_id":9101,"club_desde":"Nueve","club_hacia":"Diez","club_desde_pes":2009,"club_hacia_pes":2010},
 				{"version":2,"pes_id":5012,"club_desde":"Usuario","club_hacia":"Siete","club_desde_pes":2005,"club_hacia_pes":2007},
-				{"version":3,"pes_id":8005,"club_desde":"Ocho","club_hacia":"Usuario","club_desde_pes":2008,"club_hacia_pes":2005},
+				{"version":3,"pes_id":8005,"club_desde":null,"club_hacia":"Usuario","club_desde_pes":null,"club_hacia_pes":2005},
 				{"version":4,"pes_id":9001,"club_desde":"Siete","club_hacia":null,"club_desde_pes":2007,"club_hacia_pes":null},
 				{"version":5,"pes_id":null,"club_desde":"Siete","club_hacia":"Nueve","club_desde_pes":2007,"club_hacia_pes":2009},
 				{"version":6,"pes_id":9324,"club_desde":"Once","club_hacia":"Nueve","club_desde_pes":2011,"club_hacia_pes":2009},
@@ -580,7 +589,7 @@ int main() {
 				CHECK(inf.ok());
 				if (inf.ok()) {
 					CHECK(inf.valor->versionAplicada == 8 && inf.valor->aplicadosOption == 0);
-					CHECK(inf.valor->aplicadosLM == 4 && inf.valor->pendientesLM == 3);   // v1, v2, v6 y v8 (ya estaba); v3, v4, v7 pendientes
+					CHECK(inf.valor->aplicadosLM == 4 && inf.valor->pendientesLM == 3);   // v1, v2, v6 y v8 (ya estaba); v3 (libre → usuario), v4, v7 pendientes
 					CHECK(inf.valor->lineas.size() == 8);
 					CHECK(inf.valor->lineas[0].ligaMaster && inf.valor->lineas[1].ligaMaster && inf.valor->lineas[5].ligaMaster && inf.valor->lineas[7].ligaMaster);
 					CHECK(!inf.valor->lineas[2].pendienteLM.empty() && !inf.valor->lineas[3].pendienteLM.empty() && !inf.valor->lineas[6].pendienteLM.empty());
@@ -604,6 +613,17 @@ int main() {
 				auto g3 = GuardadoLM::desdeDatos(dSint);
 				auto r3 = aplicarCambios(*cambios.valor, 7, { true, true }, nullptr, &*g3.valor, nullptr);
 				CHECK(r3.ok() && r3.valor->lineas.size() == 1 && r3.valor->versionAplicada == 8 && g3.valor->datos() == antes);
+				// Fichaje PARA el usuario: en la LM sintética no hay bloque comprimido ni fecha → falla entero y no toca nada.
+				auto g4 = GuardadoLM::desdeDatos(dSint);
+				auto fu = parsearCambios(R"({"cambios":[
+					{"version":1,"pes_id":9101,"club_desde_pes":2009,"club_hacia_pes":2010},
+					{"version":2,"pes_id":8005,"club_desde_pes":2008,"club_hacia_pes":2005}]})");
+				CHECK(fu.ok());
+				if (fu.ok() && g4.ok()) {
+					auto r4 = aplicarCambios(*fu.valor, 0, { true, true }, nullptr, &*g4.valor, nullptr);
+					CHECK(!r4.ok() && g4.valor->datos() == antes);
+					if (!r4.ok()) std::printf("  fichaje para el usuario en LM sintética: %s (esperado)\n", r4.error.codigo.c_str());
+				}
 			}
 		}
 	}
@@ -785,6 +805,67 @@ int main() {
 					CHECK(iguales == revisados);   // un save nuevo puede no tener editados
 				}
 			}
+		}
+	}
+
+	// --- Liga Máster real: fichaje para el usuario a través de la sincronización -----------------
+	//  PM_ML_DATOS = DATOS descifrados de un guardado de inicio de temporada (ej. el respaldo r0) · PM_CATALOGO opcional
+	if (const char* rMl = std::getenv("PM_ML_DATOS")) {
+		std::printf("Liga Máster real: sincronización con fichaje para el usuario\n");
+		std::ifstream fm(rMl, std::ios::binary);
+		std::vector<uint8_t> dm((std::istreambuf_iterator<char>(fm)), {});
+		auto gm = mercado::lm::GuardadoLM::desdeDatos(dm);
+		CHECK(gm.ok());
+		if (gm.ok()) {
+			std::map<uint32_t, int> pos, eda;
+			if (const char* rCat = std::getenv("PM_CATALOGO")) {
+				std::ifstream fc(rCat); auto cj = nlohmann::json::parse(fc);
+				static const std::map<std::string, int> codigo = { {"GK",0},{"CB",1},{"LB",2},{"RB",3},{"DMF",4},{"CMF",5},{"LMF",6},{"RMF",7},{"AMF",8},{"LWF",9},{"RWF",10},{"SS",11},{"CF",12} };
+				for (auto& j : cj["jugadores"]) { const uint32_t id = j["pes_id"].get<uint32_t>(); auto it = codigo.find(j.value("posicion", "")); if (it != codigo.end()) pos[id] = it->second; if (j.contains("edad") && j["edad"].is_number_integer()) eda[id] = j["edad"].get<int>(); }
+			}
+			std::function<int(uint32_t)> posDe = [&](uint32_t id) { auto it = pos.find(id); return it == pos.end() ? -1 : it->second; };
+			std::function<int(uint32_t)> edadDe = [&](uint32_t id) { auto it = eda.find(id); return it == eda.end() ? 0 : it->second; };
+			// Usuario: el primer equipo con tablas propias. Jugador: Sommer (36627) si está; si no, la última reserva de otro club.
+			int kU = -1;
+			for (int k = 0; k < 528 && kU < 0; k++) if (gm.valor->esEquipoUsuario(k)) kU = k;
+			CHECK(kU >= 0);
+			uint32_t pid = 0; int kO = -1;
+			for (int k : gm.valor->equiposDe(36627)) if (k < 528 && k != kU) { pid = 36627; kO = k; }
+			auto idU = gm.valor->idOptionDe(kU);
+			CHECK(idU.ok());
+			if (kO >= 0 && idU.ok()) {
+				auto idO = gm.valor->idOptionDe(kO);
+				CHECK(idO.ok());
+				const size_t antesU = gm.valor->equipo(kU).valor->plantilla.size(), antesO = gm.valor->equipo(kO).valor->plantilla.size();
+				nlohmann::json cj = { {"liga","prueba"}, {"desde",0}, {"version_actual",1}, {"cambios", nlohmann::json::array({
+					{ {"version",1}, {"pes_id",pid}, {"club_desde","Origen"}, {"club_hacia","Usuario"}, {"club_desde_pes",*idO.valor}, {"club_hacia_pes",*idU.valor},
+					  {"monto",2575000}, {"sueldo",3186500}, {"fin_contrato","2027-06-30"} } }) } };
+				auto lc = mercado::sinc::parsearCambios(cj.dump());
+				CHECK(lc.ok());
+				if (lc.ok()) {
+					auto copia = *gm.valor;
+					auto fin0 = copia.finanzas(kU);
+					auto inf = mercado::sinc::aplicarCambios(*lc.valor, 0, { false, true }, nullptr, &copia, posDe, nullptr, edadDe);
+					if (!inf.ok()) std::printf("  ERROR: %s %s\n", inf.error.codigo.c_str(), inf.error.detalle.c_str());
+					CHECK(inf.ok() && inf.valor->aplicadosLM == 1 && inf.valor->pendientesLM == 0);
+					if (inf.ok()) {
+						std::printf("%s", inf.valor->texto().c_str());
+						CHECK(copia.equipo(kU).valor->plantilla.size() == antesU + 1 && copia.equipo(kU).valor->plantilla.back().pid == pid);
+						CHECK(copia.equipo(kO).valor->plantilla.size() == antesO - 1);
+						auto fin1 = copia.finanzas(kU);
+						CHECK(fin0.ok() && fin1.ok() && fin0.valor->presupuestoFichajes - fin1.valor->presupuestoFichajes == 2575000);
+						// Mismo resultado que llamar directamente a ficharParaUsuario (la sincronización no añade nada raro).
+						auto directo = *gm.valor;
+						mercado::lm::OpcionesFichaje op; op.montoEur = 2575000; op.sueldoEur = 3186500; op.finContrato = { 2027, 6, 30 }; op.edad = edadDe(pid); op.posicionDe = posDe;
+						auto sus = directo.sugerirSustituto(kO, pid, posDe); CHECK(sus.ok()); if (sus.ok()) op.pidSustituto = *sus.valor;
+						CHECK(directo.ficharParaUsuario(kU, kO, pid, op).ok() && directo.datos() == copia.datos());
+						// La misma versión otra vez no hace nada (ya aplicada).
+						auto otra = mercado::sinc::aplicarCambios(*lc.valor, 1, { false, true }, nullptr, &copia, posDe, nullptr, edadDe);
+						CHECK(otra.ok() && otra.valor->lineas.empty());
+					}
+				}
+			}
+			else std::printf("  (Sommer no está en un club de la IA en este guardado: prueba saltada)\n");
 		}
 	}
 

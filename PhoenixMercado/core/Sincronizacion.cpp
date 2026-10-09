@@ -1,6 +1,7 @@
 #include "Sincronizacion.h"
 
 #include <algorithm>
+#include <cstdio>
 #include <nlohmann/json.hpp>
 
 namespace mercado::sinc {
@@ -15,6 +16,18 @@ namespace mercado::sinc {
 		}
 		std::string textoOpcional(const nlohmann::json& j, const char* campo) {
 			return j.contains(campo) && j[campo].is_string() ? j[campo].get<std::string>() : std::string();
+		}
+		uint64_t eurosOpcional(const nlohmann::json& j, const char* campo) {
+			if (!j.contains(campo) || !j[campo].is_number()) return 0;
+			const double v = j[campo].get<double>();
+			return v > 0 && v <= 40e9 ? uint64_t(v) : 0;   // tope de seguridad: 40.000 millones (como fijarFinanzas)
+		}
+		/// «AAAA-MM-DD» → Fecha (inválida si no tiene esa forma).
+		lm::Fecha fechaDeTexto(const std::string& t) {
+			lm::Fecha f;
+			int a = 0, m = 0, d = 0;
+			if (t.size() == 10 && t[4] == '-' && t[7] == '-' && std::sscanf(t.c_str(), "%4d-%2d-%2d", &a, &m, &d) == 3) { f.anio = uint16_t(a); f.mes = uint8_t(m); f.dia = uint8_t(d); }
+			return f;
 		}
 	}
 
@@ -42,6 +55,16 @@ namespace mercado::sinc {
 			x.clubHaciaPes = u32Opcional(c, "club_hacia_pes");
 			x.tipo = textoOpcional(c, "tipo");
 			x.fecha = textoOpcional(c, "fecha");
+			x.montoEur = eurosOpcional(c, "monto");
+			x.sueldoEur = eurosOpcional(c, "sueldo");
+			x.clausulaEur = eurosOpcional(c, "clausula");
+			x.finContrato = textoOpcional(c, "fin_contrato");
+			if (!x.finContrato.empty() && !fechaDeTexto(x.finContrato).valida()) return R::mal("CAMBIOS_INVALIDOS", "fin_contrato no es AAAA-MM-DD (" + x.finContrato + ")");
+			if (c.contains("dorsal") && !c["dorsal"].is_null()) {
+				const uint32_t d = u32Opcional(c, "dorsal");
+				if (d < 1 || d > 99) return R::mal("CAMBIOS_INVALIDOS", "dorsal fuera de 1-99");
+				x.dorsal = uint16_t(d);
+			}
 			l.cambios.push_back(std::move(x));
 		}
 		if (l.versionActual < anterior) l.versionActual = anterior;
@@ -67,7 +90,8 @@ namespace mercado::sinc {
 
 	Resultado<Informe> aplicarCambios(const ListaCambios& lista, int64_t versionYaAplicada, Alcance alcance,
 		OptionFile* option, lm::GuardadoLM* liga,
-		const std::function<int(uint32_t)>& posicionDe, const std::function<std::string(uint32_t)>& nombreDe) {
+		const std::function<int(uint32_t)>& posicionDe, const std::function<std::string(uint32_t)>& nombreDe,
+		const std::function<int(uint32_t)>& edadDe) {
 		using R = Resultado<Informe>;
 		const bool conOption = alcance.optionFile && option;
 		const bool conLM = alcance.ligaMaster && liga;
@@ -139,7 +163,25 @@ namespace mercado::sinc {
 						}
 						if (yaEsta) { ln.ligaMaster = true; inf.aplicadosLM++; ln.texto += " (ya estaba en el destino en la Liga Máster)"; }
 						else if (kO < 0) pendiente = "el jugador no está en ningún club de esta Liga Máster";
-						else if (ml->esEquipoUsuario(*kD.valor)) pendiente = "fichar PARA el equipo del usuario todavía no se hace";
+						else if (ml->esEquipoUsuario(*kD.valor)) {
+							// Fichaje PARA el equipo del usuario (IA → usuario), como lo hace el juego (prueba 19, ESTRUCTURA-ML §20).
+							if (ml->esEquipoUsuario(kO)) return errorEn(c, "liga máster", { "CAMBIO_INVALIDO", "el club de origen también es del usuario" });
+							auto s = ml->sugerirSustituto(kO, c.pesId, posicionDe);
+							if (!s.ok()) return errorEn(c, "liga máster", s.error);
+							lm::OpcionesFichaje op;
+							op.dorsal = c.dorsal;
+							op.pidSustituto = *s.valor;
+							op.montoEur = c.montoEur;
+							op.sueldoEur = c.sueldoEur;
+							op.clausulaEur = c.clausulaEur;
+							if (!c.finContrato.empty()) op.finContrato = fechaDeTexto(c.finContrato);
+							op.edad = edadDe ? edadDe(c.pesId) : 0;
+							op.posicionDe = posicionDe;
+							auto f = ml->ficharParaUsuario(*kD.valor, kO, c.pesId, op);
+							if (!f.ok()) return errorEn(c, "liga máster", f.error);
+							ln.ligaMaster = true; inf.aplicadosLM++;
+							ln.texto += " (dorsal " + std::to_string(*f.valor) + ")";
+						}
 						else {
 							auto s = ml->sugerirSustituto(kO, c.pesId, posicionDe);
 							if (!s.ok()) return errorEn(c, "liga máster", s.error);

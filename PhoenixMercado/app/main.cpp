@@ -151,7 +151,7 @@ int main(int argc, char** argv) {
 			}
 			if (alcance.ligaMaster && rutaMl.empty()) alcance.ligaMaster = false;
 			// Posiciones y nombres del catálogo (para elegir sustitutos y para el informe)
-			std::map<uint32_t, int> posiciones; std::map<uint32_t, std::string> nombres;
+			std::map<uint32_t, int> posiciones, edades; std::map<uint32_t, std::string> nombres;
 			if (!rutaCatalogo.empty()) {
 				std::ifstream fc(aRuta(rutaCatalogo)); auto cj = nlohmann::json::parse(fc, nullptr, false);
 				static const std::map<std::string, int> codigo = { {"GK",0},{"CB",1},{"LB",2},{"RB",3},{"DMF",4},{"CMF",5},{"LMF",6},{"RMF",7},{"AMF",8},{"LWF",9},{"RWF",10},{"SS",11},{"CF",12} };
@@ -161,10 +161,12 @@ int main(int argc, char** argv) {
 						const uint32_t id = j["pes_id"].get<uint32_t>();
 						auto it = codigo.find(j.value("posicion", "")); if (it != codigo.end()) posiciones[id] = it->second;
 						nombres[id] = j.value("nombre", "");
+						if (j.contains("edad") && j["edad"].is_number_integer()) edades[id] = j["edad"].get<int>();
 					}
 				std::printf("Catálogo: %zu jugadores con posición\n", posiciones.size());
 			}
 			auto posicionDe = [&](uint32_t id) { auto it = posiciones.find(id); return it == posiciones.end() ? -1 : it->second; };
+			auto edadDe = [&](uint32_t id) { auto it = edades.find(id); return it == edades.end() ? 0 : it->second; };
 			auto nombreDe = [&](uint32_t id) { auto it = nombres.find(id); return it == nombres.end() || it->second.empty() ? "jugador " + std::to_string(id) : it->second; };
 			// Sobre firmado: de la web o de un archivo
 			std::string sobre;
@@ -188,7 +190,7 @@ int main(int argc, char** argv) {
 				if (!g.ok()) { imprimirError(g.error); return 2; }
 				ml = std::move(*g.valor);
 			}
-			auto inf = sinc::aplicarCambios(*lista.valor, desde, alcance, alcance.optionFile ? &*of.valor : nullptr, ml ? &*ml : nullptr, posicionDe, nombreDe);
+			auto inf = sinc::aplicarCambios(*lista.valor, desde, alcance, alcance.optionFile ? &*of.valor : nullptr, ml ? &*ml : nullptr, posicionDe, nombreDe, edadDe);
 			if (!inf.ok()) { imprimirError(inf.error); std::printf("No se escribió nada.\n"); return 2; }
 			std::printf("%s", inf.valor->texto().c_str());
 			if (alcance.optionFile) {

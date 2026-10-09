@@ -98,6 +98,7 @@ Causa: **cada equipo de la IA tiene su propia lista de alineación** (bloque de 
 | 8 oct 12:36 | 112 de 112 ✅ | Alineaciones de la IA, traspasos IA ↔ IA, sustitutos |
 | 8 oct 13:00 | 117 de 117 ✅ | Sustitutos sin suponer el tamaño de la banca |
 | 8 oct 13:35 | 119 de 119 ✅ | La venta ignora la ficha del último partido |
+| 8 oct 21:30 | 211 de 211 ✅ (sin archivos) · **295 de 295 ✅** (con option file, base, catálogo y guardado real) | Fichaje para el usuario **desde la sincronización con la web**: da **exactamente los mismos bytes** que el fichaje validado en el juego (prueba 19); condiciones opcionales de la web (monto, sueldo, cláusula, fin de contrato, dorsal) |
 | — | ⏳ | Compilar en Windows (`COMPILAR_MERCADO.bat`) |
 
 Además, en archivos reales: el programa en C++ da **exactamente el mismo archivo** que el prototipo que el juego aceptó

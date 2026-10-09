@@ -53,8 +53,9 @@ PhoenixMercado sincronizar <EDIT> <EDIT nuevo> --solo-option --cambios sobre.jso
 ```
 `sincronizar` baja los cambios de liga de la web (`/liga/cambios`, firmados con Ed25519: se verifica la firma con la clave
 pública incrustada en `core/Sincronizacion.h`), los aplica al option file y/o a la Liga Máster (`--solo-option`, `--solo-ml`)
-con sustitutos por posición (catálogo) y guarda siempre en archivos nuevos. Lo que la Liga Máster aún no sabe hacer (fichar
-PARA el usuario, agentes libres) queda listado como pendiente en el informe.
+con sustitutos por posición (catálogo) y guarda siempre en archivos nuevos. En la Liga Máster aplica usuario→IA, IA→IA y
+**IA→usuario** (fichaje para tu equipo, con la edad del catálogo; si la web manda `monto`, `sueldo`, `clausula`, `fin_contrato`
+o `dorsal`, se usan). Los agentes libres todavía quedan listados como pendientes en el informe.
 
 ## Pruebas con tus archivos reales
 ```
