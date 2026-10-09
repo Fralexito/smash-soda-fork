@@ -117,19 +117,34 @@ referencia) es la copia «como equipo de la IA» (ID real 0xAD, orden identidad)
 
 | Qué | Dato | Estado |
 |---|---|---|
-| Formato | 18 tramos zlib de 256 KB descomprimidos, separados por 12 B (`00 04 00 00`, tamaño comprimido, acumulado); palabra de tamaño total en 0x11403A8 | ✅ (herramienta `blob.py`) |
-| Tamaño descomprimido | **4.678.743 B, fijo** | ✅ |
-| **Fichas de LM por jugador** | desde +0x1E, **16.422 registros de 156 B**, uno por `reg` | 🔎 |
-| · competiciones inscritas | pares (id u16, banderas u16) tras `[u16][reg][pid]`, relleno 0xFFFF | 🔎 |
-| · sueldo anual /100 | +0x56 (u32) | ✅ (= tabla I) |
-| · **valor de mercado /100** | +0x5A (u32) | ✅ (= pantalla) |
-| · nº único del contrato, fin e inicio | +0x62, +0x66, +0x6A | ✅ |
-| · ¿valoración media ×10? | +0x4B (u8) | ❓ |
+| Formato | desde 0x11403AC: 28 B de cabecera (`0x0007458c`…; +0x14 y +0x18 = sumas BE de los tramos) y **18 tramos zlib**, cada uno con separador `[descomprimido BE][comprimido BE][fin BE]` (fin = rel + comprimido; 0 en el último) | ✅ |
+| Palabra de tamaño (0x11403A8) | tamaño de la zona **menos 12** (el último tramo termina 12 B después) | ✅ |
+| Tamaño descomprimido | **4.680.156 B, fijo** | ✅ |
+| **Escribirlo** | se recomprimen solo los tramos cambiados (miniz nivel 9) y se rehacen separadores, sumas y tamaño; el archivo cambia de tamaño y lo de detrás se desplaza | ✅ **probado en el juego** (prueba 17: valor de Sommer 77,7 M en pantalla) |
+| **Fichas de LM por jugador** | en `0x1E + 156·reg` (una por `reg`, 16.422) | ✅ |
+| · competiciones inscritas | +10: 12 pares (id u16, banderas u16), libre = 0xFFFF; al fichar se añaden las del club | ✅ |
+| · 6 B que van a la tabla A al fichar | +0x4A | ✅ |
+| · sueldo anual /100 | +0x56 (u32) | ✅ (el juego crea el contrato de la tabla I desde aquí) |
+| · **valor de mercado /100** | +0x5A (u32) | ✅ (escrito y visto en pantalla) |
+| · club anterior, fin e inicio del contrato | +0x5E, +0x66, +0x6A | ✅ |
 | · ¿experiencia/crecimiento? | +0x74 (u16), sube ~+11 por partido jugado | ❓ |
 | · ¿condición? | +0x7A (u8), 100 al inicio de temporada | ❓ |
-| · estadísticas de temporada | +0x16…+0x29 (cambian en ~1.300 jugadores por fecha) | ❓ |
 | Después de las fichas | registros de temporada por equipo con **puntos de liga** (+3 al ganar) y listas de inscritos por competición | 🔎 |
-| Para escribirlo | recomprimir por tramos y actualizar la palabra de tamaño y las cabeceras de tramo | ❓ (no hecho) |
+| Fecha actual de la partida | **0xACC61C** (u32 fecha), con `[día del año][año][365]` delante | ✅ |
+
+## H2. Fichar PARA el equipo del usuario (IA → usuario) — ✅ PROBADO EN EL JUEGO (pruebas 18 y 19)
+
+Comparado con el fichaje de Sommer hecho por el propio juego y luego probado jugando un partido:
+- Plantillas: sale del club de la IA (lista compactada, su alineación con sustituto) y entra al final del equipo del usuario.
+- Dorsal: el pedido → el de su club → el de su selección → el más alto libre (Sommer: el 1 ocupado → 12, el de Suiza).
+- Tablas del usuario: registro nuevo en el primer hueco de cada una, copiando el de un compañero del mismo puesto; datos propios en A
+  (6 B de la ficha + fecha de llegada), E (edad + historial de medias, que el juego inventa al fichar: 2 valores por año desde los 9),
+  F (contador a 0), M (club, fechas, club de origen, bit 0x80000 «fichado esta temporada»).
+- Orden de formación +n y lista K con el flag del libre. Dinero: se descuenta el monto; el tope salarial nunca por debajo de los sueldos.
+- **Contrato: NO se escribe en la tabla I** — el juego lo crea solo desde la ficha del blob (con su cláusula). Si se escribe, queda duplicado.
+- Blob: competiciones del club, sueldo, fechas y club anterior.
+- Resultado en el juego: Sommer jugó de titular, un solo contrato, presupuesto salarial positivo.
+- El juego **relee el archivo al cargar la ranura**: se puede cambiar un guardado con el juego abierto si esa ranura no está cargada.
 
 ## I. Qué hace el juego por su cuenta (para no pelear con él)
 
