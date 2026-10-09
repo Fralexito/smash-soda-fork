@@ -329,3 +329,16 @@ se puede cambiar un guardado con el juego abierto mientras no esté cargado (Fra
   - **V y N desactivadas:** el camino elegido es el archivo, no la memoria.
   - **Huella de cada lectura de player.bin:** suma cada 64 bytes del trozo que entrega Sider, con su offset y largo. Así se sabe si el juego leyó v95 o v99.
   - Prueba limpia: arrancar con v95 → debe verse 95. Cambiar a v90 con el juego abierto → Editar → amistoso nuevo → mirar y comparar huellas.
+
+### 🏆 2026-10-09 03:53 · CAMBIO DE STATS EN VIVO, SIN REINICIAR — CONSEGUIDO
+- **Huella (v0.10):** al arrancar, el juego leyó **exactamente** el Player.bin v95 (sumas 1785225260 / 304097887). La pantalla mostró **95**.
+- **03:51:21:** con el juego abierto se reemplazó el archivo por **v90** (tmp + mv).
+- **Solo entrar y salir de EDITAR (03:51:51):** el juego relee Player.bin y la huella es la de **v90** (3958249664 / 1038543739). **Pero el amistoso sigue en 95.** Editar carga la base en un borrador propio y lo descarta al salir.
+- **EDITAR → CARGAR** (cargar EDIT00000000, sin guardar; 03:53:45, huella v90): amistoso nuevo → **Velocidad 90**. ✅
+- **MÉTODO PROBADO:**
+  1. Phoenix Sync genera Player.bin con los cambios (base viva + bytes cambiados, WESYS/zlib).
+  2. Se coloca de forma atómica en la raíz `livecpk\Phoenix-DB`, que va antes de `olmosjr23\Database`.
+  3. El jugador pulsa **Editar → Cargar** (un botón nativo del juego).
+  4. En el siguiente partido o pantalla nueva se ven los cambios. Sin reiniciar y sin tocar la memoria.
+- **Estado al cerrar la prueba:** Phoenix-DB tiene v90, cuyos datos son idénticos a los originales de olmosjr23 (solo recomprimido), en la raíz y en la carpeta del modo. Lamine queda como en el parche.
+- **Cuidado futuro:** la raíz Phoenix-DB **tapa** el Player.bin de olmosjr23. Cuando el parche se actualice, hay que regenerar nuestro archivo desde la base nueva (Auditor de parches), o se servirían datos viejos.
