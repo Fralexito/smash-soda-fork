@@ -384,3 +384,16 @@ se puede cambiar un guardado con el juego abierto mientras no esté cargado (Fra
 - **v0.11:** tecla L → comprueba 7 bytes de código en `0xAEF770` y `0x1EFB440` → escribe 1 en el interruptor → el overlay muestra el valor y avisa cuando el juego lo consume. Simulación LuaJIT OK (incluido el caso «exe distinto → no toca nada»).
 - **Instalado** en las dos carpetas `modules` (respaldo `phoenix.lua.v010`). Phoenix-DB con **Player_v95** (huella 1785225260 / 304097887) para ver el cambio.
 - **Plan:** Shift+R → overlay → L → salir de la Liga Máster al menú principal → ¿«EL JUEGO RECARGÓ»? → amistoso: ¿Lamine 95?
+
+### 2026-10-09 05:08 · Tecla L (interruptor nativo) — ✅ el juego obedece, pero recarga SOLO el option file
+- 05:08:02: L → interruptor 0 → 1 ✓ (base del exe 0x140000000, bytes de código comprobados). 05:08:05: **el juego lo consumió (1 → 0)** al entrar a un modo (pantalla de amistoso). Sin crash.
+- **Pero la base no se releyó:** el espía no ve ninguna lectura de `pesdb` (solo `installversionplayer.bin`). Lamine sigue en **99** (la base del arranque de las 05:01, que se hizo con v99). El v95 puesto después no se leyó.
+- ⇒ `editLoadDataInTopMenu` recarga **solo el EDIT**. Editar → Cargar hace **dos cosas**: la tarea del EDIT **y** `StartReloadPesdb(gestor, 0)`.
+- **Hallado en el exe (código C++ legible):**
+  - `0x1EF2250` = obtener el gestor de datos de edición; `0x1EEBBA0(1)` = crearlo si no existe.
+  - `0x1EF2FA0(gestor, tipo)` = **iniciar la relectura de la base** (tipo 0 = la de Editar → Cargar). Crea un objeto de 0x48 B que el gestor avanza en cada cuadro (`0x1F08820`, lee con `0x125F310` «cpk_dat/common/etc/pesdb/%s»). Listas de archivos por tipo en `0x3529900`.
+  - `0x13E4580` (proceso de Editar → Cargar): `0x1EEBBA0(1)` → `gestor = 0x1EF2250()` → `0x1EF2FA0(gestor, 0)`.
+  - El constructor de la tarea de carga del EDIT (`0x1EFAE20`) está **virtualizado por la protección** (salta a `.impdata`): no se puede leer, solo usar.
+- **Arranque de las 05:01 con v99:** FRALEX entró a la Liga Máster a las 05:01:20 → **falta saber qué Velocidad vio ahí** (resuelve si la LM toma la base del arranque).
+- **Siguiente prueba (A, fichajes):** se devolvió el option file **original** (Lamine en el Barça; sha cb6e176e…) con el juego abierto. L → entrar a un modo → ¿Lamine vuelve al Barça? Si sí: **fichajes en vivo sin Editar → Cargar**.
+- **Prueba B (stats, más adelante y con OK):** llamar desde Sider a `0x1EF2FA0(gestor, 0)`. Es llamar a una función del juego desde otro hilo, así que hay riesgo de cierre (sin daño a los datos).

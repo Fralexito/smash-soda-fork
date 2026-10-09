@@ -46,6 +46,14 @@ Ayudantes guardados en la VM: `~/re/xref.py`, `~/re/desm.py`, `~/re/quien.py`, `
 - **Idea:** escribir **1** en ese byte. La próxima vez que el jugador vuelva al menú principal, el juego recarga EDIT + base **solo**. Sin Editar → Cargar.
 - **Prueba:** `phoenix.lua` v0.11, tecla **L**. Antes de escribir, comprueba los 7 bytes de `0xAEF770` y de `0x1EFB440` (si el exe fuera otro, no toca nada). Muestra el valor en el overlay y avisa cuando el juego lo consume (1 → 0). Simulado OK en LuaJIT con el entorno de Sider. **Resultado en el juego: ver PRUEBAS.md.**
 
+### 3.1 Resultado de la prueba (05:08) y la relectura de la base
+- ✅ El juego **consume el interruptor** al entrar a un modo (1 → 0), sin crash. **Recarga solo el EDIT, no la base** (el espía no ve lecturas de pesdb).
+- Editar → Cargar hace dos cosas: la tarea del EDIT + **`0x1EF2FA0(gestor, 0)` = iniciar la relectura de la base**.
+  - El gestor se obtiene con `0x1EF2250()` (y se crea con `0x1EEBBA0(1)` si falta). Así lo hace el proceso `0x13E4580`.
+  - El gestor avanza la relectura cuadro a cuadro (`0x1F08820` → `0x125F310`, «cpk_dat/common/etc/pesdb/%s»). Listas de archivos por tipo (0–2) en `0x3529900`.
+- El constructor de la tarea del EDIT (`0x1EFAE20`) está **virtualizado** por la protección: se puede usar, no leer.
+- **Consecuencia:** fichajes (option file) → interruptor; stats (base) → falta disparar `0x1EF2FA0(gestor, 0)`.
+
 ## 4. La actualización en vivo de Konami por dentro (`LiveDataSetFlow`)
 
 - **Se crea con** `0x20AC030(nombre, modo, 1, 2)`. Por ejemplo, desde Editar → Gestión de datos → Actualización en vivo (`0x13AB293`, «ProcessEditLiveUpdate_LiveDataSetFlow»).
