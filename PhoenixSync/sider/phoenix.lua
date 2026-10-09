@@ -18,7 +18,7 @@
 --                    lua.module = "phoenix.lua"  en sider.ini
 -- =============================================================================
 
-local m = { version = "0.7-prueba" }
+local m = { version = "0.8-prueba" }
 
 local CADA_SEG    = 2      -- cada cuántos segundos se vuelve a mirar el archivo (solo con el overlay abierto)
 local MAX_BYTES   = 4096   -- nunca se lee más que esto
@@ -141,6 +141,19 @@ local REC_ARCHIVO = "\0\0\0\0\0\0\0\0\66\121\2\0\38\78\53\49\0\0\0\144\128\132\3
 local OFS_NOMBRE = 129             -- «LAMINE YAMAL» empieza en el byte 129 de la ficha
 local CAMPOS = { {"Velocidad",306,90}, {"Aceleracion",344,93}, {"Regate",352,93}, {"Finalizacion",396,81}, {"Pase raso",263,82} }
 
+-- v0.8: la pantalla de habilidades siguió en 90 aunque TODAS las copias empaquetadas ya tenían 99
+-- (el log lo prueba: incluso copias nuevas nacían con 99). Entonces la pantalla lee otra forma de la
+-- ficha: «desempaquetada» (cada cualidad en su propio byte o número). Se buscan varias formas posibles
+-- con las cualidades de Lamine en el orden de la pantalla y en el orden del archivo (sin la velocidad).
+local EXTRA = {
+    { "pantalla_bytes",  "\83\89\93\92\82\84\81\62\73\85" },
+    { "pantalla_menos40", "\43\49\53\52\42\44\41\22\33\45" },
+    { "bits_bytes",      "\85\82\93\93\78\83\87\67\76\81\84\92" },
+    { "bits_menos40",    "\45\42\53\53\38\43\47\27\36\41\44\52" },
+    { "pantalla_u16",    "\83\0\89\0\93\0\92\0\82\0\84\0\81\0\62\0" },
+    { "pantalla_u32",    "\83\0\0\0\89\0\0\0\93\0\0\0\92\0\0\0\82\0\0\0\84\0\0\0" },
+}
+
 local sonda = nil      -- estado de la búsqueda
 local MBI = nil
 local BUF_TAM = 1024 * 1024 + 4096   -- copia de trabajo: 1 MB + solape
@@ -205,11 +218,14 @@ local function iniciarSonda(accion)
     sonda = {
         dir = dirNum(si.lpMinimumApplicationAddress), tope = dirNum(si.lpMaximumApplicationAddress),
         regIni = 0, regFin = 0, pos = 0,
-        hitsA = {}, hitsB = {}, recA = {}, ctxB = {}, mb = 0, regiones = 0, candidatos = 0, fallosLectura = 0, vistos = {},
+        hitsA = {}, hitsB = {}, recA = {}, ctxB = {}, extra = {}, mb = 0, regiones = 0, candidatos = 0, fallosLectura = 0, vistos = {},
         propiaA = dirNum(ffi.cast("const char*", PAT_A)), propiaB = dirNum(ffi.cast("const char*", PAT_B)),
         t0 = os.clock(), hecho = false, accion = accion or "mirar",
     }
-    log("[phoenix] sonda v0.4: inicio de la búsqueda de " .. PID .. " (solo lectura, copia segura)")
+    for _, e in ipairs(EXTRA) do
+        sonda.extra[e[1]] = { hits = {}, ctx = {}, propia = dirNum(ffi.cast("const char*", e[2])) }
+    end
+    log("[phoenix] sonda v0.8: inicio de la búsqueda de " .. PID .. " (solo lectura, copia segura)")
 end
 
 -- Siguiente región privada (heap del juego), COMMIT y legible. La memoria «mapeada» (gráficos,
@@ -236,7 +252,7 @@ local function siguienteRegion()
 end
 
 -- Busca pat dentro de la copia (buf[0..n)), que corresponde a la dirección real «origen».
-local function buscarEnCopia(pat, n, origen, lista, propia, verificar)
+local function buscarEnCopia(pat, n, origen, lista, propia, verificar, ctxTabla)
     local d = 0
     while #lista < MAX_HITS and d < n do
         local h = memory.search(pat, bufIni + d, bufIni + n)
@@ -259,7 +275,8 @@ local function buscarEnCopia(pat, n, origen, lista, propia, verificar)
             else
                 lista[#lista + 1] = a
                 local i0 = math.max(0, off - 64)
-                sonda.ctxB[#lista] = ffi.string(buf + i0, math.min(160, n - i0))
+                local ct = ctxTabla or sonda.ctxB
+                ct[#lista] = ffi.string(buf + i0, math.min(224, n - i0))
             end
         end
         d = off + 1
@@ -281,6 +298,13 @@ local function cerrarSonda()
     end
     for i, a in ipairs(sonda.hitsB) do
         log(string.format("[phoenix] sonda B%d @ %s  %s", i, memory.hex(a), hex(sonda.ctxB[i] or "")))
+    end
+    for _, e in ipairs(EXTRA) do
+        local x = sonda.extra[e[1]]
+        log(string.format("[phoenix] sonda EXTRA %s: %d coincidencia(s)", e[1], #x.hits))
+        for i, a in ipairs(x.hits) do
+            log(string.format("[phoenix] sonda EXTRA %s #%d @ %s  %s", e[1], i, memory.hex(a), hex(x.ctx[i] or "")))
+        end
     end
     -- v0.5: cada nombre que esté en el byte 129 de una ficha → leer la ficha entera y compararla con el archivo
     sonda.copias = {}
@@ -383,6 +407,10 @@ local function pasoSonda()
         if copiado > 0 then
             buscarEnCopia(PAT_A, copiado, sonda.pos, sonda.hitsA, sonda.propiaA, true)
             buscarEnCopia(PAT_B, copiado, sonda.pos, sonda.hitsB, sonda.propiaB, false)
+            for _, e in ipairs(EXTRA) do
+                local x = sonda.extra[e[1]]
+                buscarEnCopia(e[2], copiado, sonda.pos, x.hits, x.propia, false, x.ctx)
+            end
         else
             sonda.fallosLectura = sonda.fallosLectura + 1   -- la zona cambió: se salta, sin leerla
             if copiar(sonda.pos, 1) == 0 then sonda.pos = sonda.regFin; fin = sonda.regFin end
@@ -412,6 +440,9 @@ local function textoSonda()
     end
     if #sonda.hitsA == 0 then t[#t + 1] = "  No apareció la ficha verificada (no es un fallo: se analiza el diario)." end
     if estadoEscritura then t[#t + 1] = "  [FASE 2] " .. estadoEscritura end
+    local resumen = {}
+    for _, e in ipairs(EXTRA) do resumen[#resumen + 1] = e[1] .. " " .. #sonda.extra[e[1]].hits end
+    t[#t + 1] = "  [DESEMPAQUETADA] " .. table.concat(resumen, " · ")
     for i, c in ipairs(sonda.copias or {}) do
         t[#t + 1] = string.format("  Copia %d %s → %s · %s", i, memory.hex(c.dir),
             c.dif == 0 and "IGUAL al archivo" or (c.dif .. " bytes distintos"), c.partes)
