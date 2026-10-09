@@ -275,7 +275,7 @@ local function cerrarSonda()
     for _, a in ipairs(sonda.hitsB) do
         local ini = a - OFS_NOMBRE
         local rec = leerSeguro(ini, 312)
-        if rec and rec:sub(OFS_NOMBRE + 1, OFS_NOMBRE + 12) == PAT_B and rec:sub(191, 202) == PAT_B then
+        if rec and rec:sub(9, 12) == PAT_A and rec:sub(OFS_NOMBRE + 1, OFS_NOMBRE + 12) == PAT_B then
             local dif, lista = 0, {}
             for k = 1, 312 do
                 if rec:byte(k) ~= REC_ARCHIVO:byte(k) then

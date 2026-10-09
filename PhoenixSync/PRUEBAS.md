@@ -281,3 +281,8 @@ se puede cambiar un guardado con el juego abierto mientras no esté cargado (Fra
   - **1 ficha verificada en 0x7ff4d8f80640**, idéntica a Player.bin (8 bytes en cero + ID): Velocidad 90, Aceleración 93, Regate 93, Finalización 81, Pase raso 82. Foto de Fralex.
   - El nombre aparece además en **0x7ff4d932d570**, una segunda ficha cuyos bytes difieren (por ejemplo, el byte 66 es 0x31 en vez de 0x00). Puede ser la copia «viva» que usa el juego.
   - Siguiente paso: v0.5 lee y compara las dos copias con el archivo, todavía solo leyendo.
+- **Resultado 4 (02:55, v0.5, Fralex en la pantalla de habilidades de Lamine):**
+  - 2926 MB en 3,8 s, sin crash.
+  - **Ficha verificada, ahora en 0x55b7380** (el juego la movió desde 0x7ff4d8f80640: las direcciones cambian, siempre hay que buscarla).
+  - Las «Copias 1-5» **no eran fichas**: eran otras listas con el nombre repetido a la misma distancia. Sus cualidades salían en 40 porque no son registros de jugador. Arreglo: exigir el ID en +8 para llamarla «copia».
+  - **Calibración:** las 15 cualidades que muestra el juego en esa pantalla coinciden exactamente con nuestro mapa de bits, **incluida Potencia de tiro 78 (bit 358), que pasa de «por confirmar» a CONFIRMADA**.
