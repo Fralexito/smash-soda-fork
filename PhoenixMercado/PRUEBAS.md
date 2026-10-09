@@ -245,3 +245,7 @@ se puede cambiar un guardado con el juego abierto mientras no esté cargado (Fra
 - Antes de instalar: sintaxis comprobada con LuaJIT y simulación con un contexto falso de Sider (lee el aviso con tildes y ñ).
 - Los avisos en vivo se escriben en la raíz: `Conmegol Patch\SiderAddons\content\phoenix\avisos.txt`, porque `sider_dir` es la raíz.
 - Resultado en el juego: (pendiente)
+- **Resultado 1 (00:34): NO cargó.** En sider.log: `"init" function returned an error: phoenix.lua:145: attempt to call global 'pcall' (a nil value)` → `Module (phoenix.lua) is NOT activated`. El juego siguió funcionando normal.
+  **Causa:** el Lua de Sider 7.3.3 **no trae `pcall`**. El volcado de env.lua en el mismo log lista los globales que sí existen: assert, pairs, ipairs, tostring, tonumber, type, error, unpack, collectgarbage, table, string, math, os, io, fs, ffi, jit, bit, zlib, memory, match, audio, input, log.
+  **Arreglo (v0.2):** sin `pcall`. Los errores se cuentan con una «bandera» (Sider ya atrapa el error de cada evento) y el módulo se apaga solo tras 5 seguidos. Probado en LuaJIT con un entorno igual al de Sider (sin pcall) y con errores simulados.
+  **Lección:** probar siempre con el entorno restringido de Sider, no con Lua normal.

@@ -13,7 +13,7 @@
 --                    lua.module = "phoenix.lua"  en sider.ini
 -- =============================================================================
 
-local m = { version = "0.1-prueba" }
+local m = { version = "0.2-prueba" }
 
 local CADA_SEG    = 2      -- cada cuántos segundos se vuelve a mirar el archivo (solo con el overlay abierto)
 local MAX_BYTES   = 4096   -- nunca se lee más que esto
@@ -122,27 +122,33 @@ local function textoOverlay()
     return cab .. "\n\n" .. contenido
 end
 
+-- Ojo: el Lua de Sider NO trae pcall (lo confirma el volcado de env.lua en sider.log).
+-- Sider ya atrapa los errores de cada evento y sigue funcionando; para contar fallos usamos una
+-- «bandera»: se levanta al entrar y se baja al salir bien. Si al entrar la encontramos levantada,
+-- es que la vez anterior hubo un error (Sider la cortó a la mitad).
+local enCurso = false
+
 function m.overlay_on(ctx)
     if apagado then return "PHOENIX EVOLUTION · módulo detenido por seguridad (ver sider.log)" end
-    local ok, res = pcall(textoOverlay)
-    if ok then
-        fallos = 0
-        return res
+    if enCurso then
+        fallos = fallos + 1
+        log("[phoenix] la vez anterior hubo un error (" .. fallos .. "/" .. MAX_FALLOS .. ")")
+        if fallos >= MAX_FALLOS then
+            apagado = true
+            log("[phoenix] demasiados errores seguidos: el módulo se detiene hasta reiniciar el juego")
+            return "PHOENIX EVOLUTION · módulo detenido por seguridad (ver sider.log)"
+        end
     end
-    fallos = fallos + 1
-    log("[phoenix] error interno (" .. fallos .. "/" .. MAX_FALLOS .. "): " .. tostring(res))
-    if fallos >= MAX_FALLOS then
-        apagado = true
-        log("[phoenix] demasiados errores seguidos: el módulo se detiene hasta reiniciar el juego")
-    end
-    return "PHOENIX EVOLUTION · error interno (ver sider.log)"
+    enCurso = true
+    local res = textoOverlay()
+    enCurso = false
+    fallos = 0
+    return res
 end
 
 function m.init(ctx)
     local base = ctx.sider_dir or ".\\"
     ruta = base .. "content\\phoenix\\avisos.txt"
-    -- Crea la carpeta si no existe (fs.make_dirs es de Sider; si no estuviera, no pasa nada).
-    if fs and fs.make_dirs then pcall(fs.make_dirs, base .. "content\\phoenix") end
     ctx.register("overlay_on", m.overlay_on)
     log("[phoenix] v" .. m.version .. " listo (solo lectura). Archivo: " .. ruta)
 end
