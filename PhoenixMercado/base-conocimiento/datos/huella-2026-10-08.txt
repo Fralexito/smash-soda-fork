@@ -1,0 +1,248 @@
+# Huella de versiones 2026-10-08 (antes de las actualizaciones)
+## ConmeGOL
+ConmeGOL Patch 26
+
+CONMEGOL PATCH 2026
+
+Modo actual:
+ConmeGOL Patch 26
+
+d2d62b4d9b0deca371f28ec956a56111  3699240  Conmegol Patch/download/CGP_database.cpk
+b1587a07ee379aeb93c346016c471c00  400  Conmegol Patch/download/DpFileList.bin
+d2d62b4d9b0deca371f28ec956a56111  3699240  Conmegol Patch/ConmeGol Extras/ConmeGOL Patch 26/download/CGP_database.cpk
+80ad499fd5dd15edcd00ae68a782e0b5  9751  Conmegol Patch/ConmeGol Extras/ConmeGOL Patch 26/SiderAddons/sider.ini
+80ad499fd5dd15edcd00ae68a782e0b5  9751  Conmegol Patch/SiderAddons/sider.ini
+d47609625d46a940457ef774a05a90cc  458806784  Conmegol Patch/PES2021.exe
+### download
+3699240 2026-08-19 CGP_database.cpk  
+400 2026-06-12 DpFileList.bin  
+1631610910 2025-10-31 dt80_100E_x64.cpk  
+2325905438 2025-10-31 dt80_200E_x64.cpk  
+1163005982 2025-10-31 dt80_300E_x64.cpk  
+999602206 2025-10-31 dt80_400E_x64.cpk  
+1207423006 2025-10-31 dt80_500E_x64.cpk  
+1113294878 2025-10-31 dt80_600E_x64.cpk  
+877967390 2025-10-31 dt80_700E_x64.cpk  
+### modulos (raiz)
+1264 2026-01-17 Anti-Cheat.lua 
+48776 2023-10-25 BallServer.lua 
+555 2026-08-21 BannerServerAway.lua 
+1334 2026-08-21 BannerServerHome.lua 
+55700 2025-02-28 BroadCastCam.ini 
+4130 2020-09-28 BroadCastCam.lua 
+58947 2026-08-21 CGP_SB_Addons.lua 
+18933 2026-08-21 CGP_SB_Addons_2.lua 
+16140 2026-08-21 CGP_ScoreboardServer.lua 
+38997 2026-08-21 CGP_data.lua 
+20499 2026-02-18 Chants-Server.lua 
+507 2026-09-01 Chatty_AutoLineup.ini 
+43620 2026-09-01 Chatty_AutoLineup_v0.8.lua 
+14520 2025-07-18 Commentary-Server.lua 
+17128 2025-02-12 CommonCam.ini 
+2874 2020-09-28 CommonCam.lua 
+7592 2024-01-24 Competition-Server.lua 
+85 2025-04-18 DynamicWideCam.ini 
+3710 2020-09-28 DynamicWideCam.lua 
+42448 2026-08-19 Entrance.lua 
+7606 2024-02-25 Entrance_fix.lua 
+13376 2026-08-21 FWC_Calendario.lua 
+6532 2026-08-21 FWC_Expansion.lua 
+8114 2026-08-21 FWC_Grupos.lua 
+6593 2026-08-21 FWC_Llaves.lua 
+119 2025-02-12 FanView.ini 
+2487 2020-09-28 FanViewCam.lua 
+13152 2026-08-11 FoulScenes.lua 
+250 2020-10-05 GFX_lod.lua 
+15093 2025-03-02 IntroServer.lua 
+8211 2021-03-20 MasterLeague.lua 
+9708 2021-01-04 MenuServer.lua 
+2200 2024-08-07 MiniFaceServer.lua 
+3807 2026-01-20 PES ID.lua
+22219 2026-03-22 POTM_Server.lua 
+98 2025-02-12 PenaltyCam.ini 
+4501 2020-09-28 PenaltyCam.lua 
+1370 2026-09-03 RTMM-night-lighting.ini 
+2774 2026-09-05 RTMM-settings.ini 
+88591 2026-09-04 Real-Life-Feel-Weather-Manager.lua 
+175904 2026-09-05 Real-Time-Match-Manager.lua 
+19289 2023-09-14 RefKitServer.lua 
+98 2025-02-12 ReplayCam.ini 
+4072 2020-09-28 ReplayCam.lua 
+18099 2023-04-30 SleeveBadge-ArmbandServer.lua 
+177 2026-09-16 SoundServer.ini 
+7413 2025-11-02 SoundServer.lua 
+33186 2025-04-18 StadiumCam.ini 
+4636 2020-09-28 StadiumCam.lua 
+93026 2026-04-25 StadiumServer.lua 
+19 2026-07-09 StartingYearChanger.ini 
+4340 2023-05-02 StartingYearChanger.lua 
+4416 2022-01-13 SubBoard.lua 
+4447 2026-08-04 TournamentCornerFlags.lua 
+18315 2024-08-22 UIColors.lua 
+110 2025-02-12 VerticalCam.ini 
+5077 2021-02-04 VerticalCam.lua 
+5793 2025-04-04 WeatherConditions.lua 
+149 2026-09-18 WeatherManager-history.txt 
+1739 2026-09-03 WeatherManager-settings.ini 
+18957 2026-01-08 attack_mentality.lua 
+4283 2023-03-27 awaygoals.lua 
+12959 2019-09-03 camera.lua 
+7584 2024-10-10 competitions.lua 
+1933 2026-06-11 cpkdump.lua 
+413 2025-08-18 env.lua 
+1907 2026-04-12 face-relinker.lua 
+630 2019-05-12 filedump.lua 
+5033 2026-09-15 goalscreams.lua 
+74485 2023-02-21 kserv.lua 
+4096 2026-08-21 lib 
+734 2025-10-06 matchset.lua 
+7554 2024-08-23 movieintro.lua 
+1226 2025-10-21 nets.lua 
+5533 2026-10-09 phoenix.lua 
+194107 2026-08-26 real-coach-team.lua 
+50445 2026-04-19 scoreboard-hexx.lua 
+71 2026-10-09 shirtless_celebration.ini 
+107621 2026-08-02 shirtless_celebration.lua 
+1858 2026-08-02 shirtless_player_profiles.ini 
+235944 2026-07-18 shirtless_skin_map.bin 
+2792 2026-09-10 sifflet.lua 
+912 2022-08-08 stadswitch.lua 
+449 2025-10-06 tracer.lua 
+3210 2019-10-04 trophy.lua 
+### modulos (parche)
+1264 2026-01-17 Anti-Cheat.lua 
+58947 2026-08-21 CGP_SB_Addons.lua 
+18933 2026-08-21 CGP_SB_Addons_2.lua 
+16140 2026-08-21 CGP_ScoreboardServer.lua 
+38997 2026-08-21 CGP_data.lua 
+42448 2026-08-19 Entrance.lua 
+13152 2026-08-11 FoulScenes.lua 
+15093 2025-03-02 IntroServer.lua 
+22219 2026-03-22 POTM_Server.lua 
+1370 2026-09-03 RTMM-night-lighting.ini 
+2774 2026-09-05 RTMM-settings.ini 
+88591 2026-09-04 Real-Life-Feel-Weather-Manager.lua 
+175904 2026-09-05 Real-Time-Match-Manager.lua 
+4447 2026-08-04 TournamentCornerFlags.lua 
+1739 2026-09-03 WeatherManager-settings.ini 
+18957 2026-01-08 attack_mentality.lua 
+5033 2026-09-15 goalscreams.lua 
+194107 2026-08-26 real-coach-team.lua 
+71 2026-08-02 shirtless_celebration.ini 
+107621 2026-08-02 shirtless_celebration.lua 
+1858 2026-08-02 shirtless_player_profiles.ini 
+235944 2026-07-18 shirtless_skin_map.bin 
+2792 2026-09-10 sifflet.lua 
+## Sudamerican
+4c554f9b94260e9e974b1aa33203c1c2  3878768  SP2026/download/SP_Subs.cpk
+7135672a2754db9cf79dc07c3c4e27a5  3846063  SP2026/download/SP_Subs_WC.cpk
+06d007bb55532ae24950090e7f23ddbe  1648  SP2026/download/DpFileList.bin
+a6c4308554d80989d4a035ab26325977  9916  SP2026/Sudamerican Project Sider/sider.ini
+ff84c89c315467f5ab129d4195b80d6d  10136  SP2026/Sudamerican Project Sider WC26/sider.ini
+d47609625d46a940457ef774a05a90cc  458806784  SP2026/PES2021.exe
+### download
+1648 2026-09-04 DpFileList.bin  
+1648 2026-09-04 DpFileList.bin.Backup  
+395567368 2022-10-24 PredsKanas2021_NatAnthems.cpk  
+6939239738 2024-09-28 SP_Adboards_1.cpk  
+5247362522 2024-09-28 SP_Adboards_2.cpk  
+5916200034 2024-09-28 SP_Adboards_3.cpk  
+6909829338 2024-09-28 SP_Adboards_4.cpk  
+5306723866 2024-09-28 SP_Adboards_5.cpk  
+6405400106 2024-09-28 SP_Adboards_6.cpk  
+6563784722 2024-09-28 SP_Adboards_7.cpk  
+326512 2025-07-09 SP_Adboards_8.cpk  
+5193825528 2024-10-27 SP_Faces_0.cpk  
+9376662910 2025-03-30 SP_Faces_1.cpk  
+748545840 2025-09-14 SP_Faces_10.cpk  
+1889395048 2025-11-15 SP_Faces_11.cpk  
+2641341592 2026-05-01 SP_Faces_12.cpk  
+11378626788 2025-03-30 SP_Faces_2.cpk  
+10360408782 2025-03-30 SP_Faces_3.cpk  
+9972513789 2025-03-30 SP_Faces_4.cpk  
+9731977823 2025-03-30 SP_Faces_5.cpk  
+9802769496 2025-03-30 SP_Faces_6.cpk  
+9837092936 2025-03-30 SP_Faces_7.cpk  
+11137169504 2025-03-30 SP_Faces_8.cpk  
+6522416504 2025-08-23 SP_Faces_9.cpk  
+368062976 2025-10-09 SP_Music.cpk  
+3878768 2026-05-11 SP_Subs.cpk  
+3846063 2026-07-11 SP_Subs_WC.cpk  
+1417603552 2024-05-29 VIPER_Bambino Pons.cpk 
+2853863840 2024-03-17 VIPER_Fernando Solabarrieta.cpk 
+1471558072 2024-04-18 VIPER_Miguel Simon.cpk 
+309160408 2020-06-06 db_st_7.0_byJGames.cpk  
+1631610910 2020-10-13 dt80_100E_x64.cpk  
+2325905438 2023-03-20 dt80_200E_x64.cpk  
+2328443080 2021-11-23 dt80_300E_x64.cpk  
+1963294352 2021-05-28 dt80_400E_x64.cpk  
+3725528976 2021-11-23 dt80_500E_x64.cpk  
+3055522000 2021-11-23 dt80_600E_x64.cpk  
+868689950 2023-03-20 dt80_700E_x64.cpk  
+### modulos
+6784 2025-11-09 BallBoysServer.lua 
+48776 2023-10-25 BallServer.lua 
+29 2023-12-25 BroadCastCam.ini 
+4130 2020-09-28 BroadCastCam.lua 
+14767 2021-12-02 Chants-Server.lua 
+28 2023-12-25 CommonCam.ini 
+2874 2020-02-28 CommonCam.lua 
+76118 2024-04-28 CornerFlag.lua 
+3117 2024-06-17 Custom Euro
+20365 2025-09-16 CustomExhibitionMatch.lua 
+3710 2020-01-24 DynamicWideCam.lua 
+47909 2026-05-01 Entrance.lua 
+7606 2022-02-14 Entrance_fix.lua 
+1050 2022-05-25 Exterior.lua 
+29 2023-12-25 FanView.ini 
+2487 2020-01-24 FanViewCam.lua 
+13152 2026-08-11 FoulScenes.lua 
+250 2020-10-05 GFX_lod.lua 
+27805 2021-05-08 GoalSongServer.lua 
+1702 2019-12-14 GoalSounds.lua 
+246001 2023-01-30 Goalnets-Server.lua 
+20543 2026-05-01 IntroServer.lua 
+32430 2024-06-08 LogoHD.lua 
+7085 2026-03-06 ML.lua 
+10433 2025-03-24 MasterLeague.lua 
+9769 2024-06-18 MenuServer.lua 
+2210 2022-11-04 MiniFaceServer.lua 
+3759 2025-09-20 PES ID.lua
+19272 2021-03-01 RefKitServer.lua 
+4072 2020-02-16 ReplayCam.lua 
+30135 2024-06-25 ScoreboardServer.lua 
+18099 2023-04-30 SleeveBadge-ArmbandServer.lua 
+49374 2025-11-13 SoundtrackServer.lua 
+27 2023-12-25 StadiumCam.ini 
+4636 2020-01-10 StadiumCam.lua 
+86212 2023-06-29 StadiumServer.lua 
+2084 2025-11-14 Stadium_Banner.lua 
+7709 2025-11-09 Stadium_Board.lua 
+24574 2025-11-24 Stadium_Tunnel.lua 
+19 2026-03-06 StartingYearChanger.ini 
+5560 2023-08-20 StartingYearChanger.lua 
+4062 2026-09-04 SubBoard.lua 
+6724 2025-11-15 TournamentCornerFlags.lua 
+17826 2023-05-16 TurfLoader.lua 
+18315 2025-11-01 UIColors.lua 
+5077 2021-02-04 VerticalCam.lua 
+6009 2022-03-23 WeatherConditions.lua 
+4283 2023-09-10 awaygoals.lua 
+12959 2019-09-03 camera.lua 
+8092 2025-03-03 commentary-server.lua 
+453 2017-06-12 env.lua 
+2346 2019-08-13 etrace.lua 
+2776 2024-08-03 exhibition_locker.lua 
+171 2024-08-12 kitglobal.ini 
+2314 2020-03-09 kitglobal.lua 
+71771 2020-02-07 kserv.lua 
+4096 2026-05-01 lib 
+897 2022-07-27 matchset.lua 
+888 2020-01-29 mstats.lua 
+1116 2020-09-15 netblock.lua 
+1190 2024-06-25 randomMenu.lua 
+49912 2025-11-20 scoreboard-hexx.lua 
+114577 2025-11-15 tournament_anth_tunnel.lua 
+## Option files
+027b0fa2003e6ad89531711c48b0c8e9  11014094  239200--save/EDIT00000000
+6c612a4c9224fca67a194850e52b21eb  11026772  292733975847239680--save/EDIT00000000

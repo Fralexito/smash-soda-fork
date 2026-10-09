@@ -179,3 +179,72 @@ arriba son las ya contadas.)*
 **Créditos y permisos:** casi todo el contenido visual de los dos parches es obra de terceros (facemakers, kitmakers, Olmos Jr 23,
 Afandix…). Para publicarlo dentro de Phoenix hace falta su permiso y su crédito. Lo propio de Phoenix (base de datos, herramientas,
 conexión con la web) es 100 % de Fralex.
+
+---
+
+## 7. Proyección a futuro: cuando los parches se actualicen (y lleguen otros)
+
+Se esperan pronto: **ConmeGOL** (la versión instalada es la **26**, base del 19/8/2026; ya existe la **27**, sept. 2026) y
+**Sudamerican** (en una semana). Más adelante, **FL27** (inicios de noviembre) y otros. La idea: que cada actualización **no rompa
+nada nuestro** y que además **nos enseñe algo**.
+
+### 7.1 Lo que suele cambiar en una actualización de parche
+
+| Qué cambia | Cómo afecta a Phoenix |
+|---|---|
+| Base de datos (fichajes, equipos nuevos, IDs que se mueven, competiciones nuevas) | El **catálogo** del Mercado queda viejo → regenerarlo y subirlo a la web; revisar si cambian IDs de equipos/jugadores |
+| Option file nuevo | Las plantillas cambian; el option file oficial de la web tiene que rehacerse sobre la nueva base |
+| Módulos Sider nuevos o actualizados, `sider.ini` nuevo | **Volver a auditar** (choques, escrituras a ciegas); el switcher puede pisar lo que hayamos instalado |
+| Carreras de Liga Máster | Muchos parches piden **empezar una carrera nueva** tras actualizar la base; las carreras viejas pueden dar plantillas raras |
+| Estructura (más CPK, nuevas carpetas livecpk) | Revisar DpFileList (orden, cantidad) y espacio en disco |
+
+**Lo que NO debería romperse:** Phoenix Mercado localiza todo **por anclas** (busca la forma de los datos, no posiciones fijas) y valida
+antes de escribir; si algo cambió de forma, **se frena** en vez de estropear el archivo. Esa decisión de diseño es justo para este momento.
+
+### 7.2 Huella del «antes» (hecha hoy, 8 oct 2026, 21:15)
+
+Guardada en la PC en `_PhoenixMercado_prueba\_versiones\2026-10-08\` (y la lista en `datos/huella-2026-10-08.txt`):
+- ConmeGOL: `CGP_database.cpk` (md5 d2d62b4d…, 3.699.240 B, 19/8/2026), `DpFileList.bin`, `sider.ini` (md5 80ad499f…), option file
+  (md5 027b0fa2…), lista de módulos y CPK con tamaño y fecha.
+- Sudamerican: `SP_Subs.cpk` (11/5/2026), `SP_Subs_WC.cpk`, `DpFileList.bin`, los dos `sider.ini`, option file (md5 6c612a4c…).
+- El mismo `PES2021.exe` en los dos (md5 d4760962…).
+Con esto, después de actualizar se puede decir **exactamente** qué cambió.
+
+### 7.3 Protocolo del «día de actualización» (para mañana y para siempre)
+
+**Antes** (Fralex):
+1. Copiar la carpeta `save` del parche (option file y carreras) a un lugar seguro.
+2. Avisar: «voy a actualizar ConmeGOL / Sudamerican».
+
+**Después** (Claude, con la PC conectada):
+1. Nueva huella y **comparación** con la anterior: qué archivos cambiaron.
+2. **Base de datos:** equipos que entran/salen, IDs que cambian, competiciones nuevas, jugadores movidos (con atención a Perú).
+3. **Sider:** módulos nuevos o cambiados → auditoría solo de esos; comprobar si siguen los choques de cámaras, etc.
+4. **Option file:** comparar plantillas.
+5. **Mercado:** regenerar el catálogo, correr las pruebas (`PROBAR2.bat`), subir el catálogo nuevo a la web.
+6. **Liga Máster:** probar que el programa lee una carrera nueva de la versión nueva (y decidir qué pasa con las viejas).
+7. Anotar todo en `parches/<parche>.md` como **«changelog técnico»** (lo que el autor no cuenta), en `PRUEBAS.md` y en Drive.
+
+### 7.4 Automatizarlo: el «Auditor de parches» (fase 2)
+
+Lo que hoy hacemos a mano se convierte en un comando de Phoenix Mercado:
+- `auditar <carpeta del juego>` → huella completa (base, DpFileList, Sider, option file), comparación con la última, informe en Markdown.
+- Comparador de bases de datos (equipos, competiciones, plantillas) y **tabla de equivalencias de IDs entre versiones** (reutilizando el
+  emparejamiento ConmeGOL ↔ Sudamerican que ya existe).
+- Auditoría automática de `sider.ini` y módulos (Phoenix Doctor).
+- Un **registro de parches** (nombre, versión, carpeta del juego, carpeta `save`, número de Steam) para que el Mercado y Phoenix Link
+  sepan siempre con qué parche y qué versión trabajan, y no mezclen archivos (ConmeGOL y Sudamerican comparten la carpeta de documentos).
+
+### 7.5 Parches futuros (FL27, Gogosz, nuevas versiones)
+
+Cada parche nuevo que entre a la PC recibe la misma ficha: identificación, base de datos (comparada con las demás), contenido, Sider
+auditado, estrategias, fallos, y qué copiar o evitar. Con varias fichas se ve **la tendencia** (qué hace la comunidad cada temporada)
+y Phoenix puede adelantarse.
+
+### 7.6 El propio Phoenix, preparado para su futuro
+
+- **Versiones con número claro** y cada actualización marcada: «no afecta a tu carrera» / «necesita carrera nueva» / «se aplica la
+  próxima temporada» (como FL).
+- **Huella publicada** de cada archivo (como el option file oficial de la web) y lanzador que comprueba y repara.
+- **Las carreras y los datos de la web sobreviven** a las actualizaciones: la web guarda la verdad (fichajes, presupuestos) y el
+  Mercado puede **reaplicarla** sobre una base nueva.
