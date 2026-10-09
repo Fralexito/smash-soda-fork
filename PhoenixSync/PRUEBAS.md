@@ -523,3 +523,10 @@ se puede cambiar un guardado con el juego abierto mientras no esté cargado (Fra
   - Preparado desde el original (Lamine en el Barça): Julián 172 → 108 con el **19** (libre en el Barça); en el once del Atlético entra Alexander Sørloth. sha 96cdf0d9… en `db\EDIT00000000.julianBarca`.
   - En disco sigue el del City (ccb8e3e1…) hasta que FRALEX confirme que ya lo cargó. Entonces se coloca el de Julián y FRALEX pulsa Activar ⇒ **Lamine vuelve al Barça y llega Julián**, las dos cosas con un solo clic.
 - **06:41:** colocado en disco el option file de Julián + Lamine en el Barça (sha 96cdf0d9…). Falta que FRALEX pulse Activar.
+
+### 2026-10-09 06:54 · Julián NO llegó al Barça con «Datos Actual. en vivo» → hallazgo: en el modo vivo las plantillas salen de la BASE
+- 06:53:53 y 06:53:56: Activar → el juego releyó `playerassignment.bin` + `player.bin` (Phoenix-DB). En pantalla, Julián sigue en el Atlético.
+- **Pista:** las plantillas en pantalla son las de la **base** (`PlayerAssignment.bin` de olmosjr23), no las del option file. En el Barça aparecen Kochen y J. Caicedo; en el Atlético, Giménez, Ruggeri y Nico González (lo mismo que ya vimos en la prueba de las 05:53).
+- ⇒ **Con la actualización en vivo activada, el juego usa las plantillas de la base (como hacía Konami con sus datos en vivo).** El option file solo manda con la opción desactivada (Editar → Cargar, prueba 04:47).
+- **Arreglo:** `PlayerAssignment.bin` propio en Phoenix-DB, con Julián 172 → 108, dorsal 19 (byte 18) y orden 24 (último del Barça). sha 7fb34a54…, en las dos carpetas Phoenix-DB (copia en `db\PlayerAssignment_julianBarca.bin`).
+- **Siguiente:** Activar otra vez → ¿Julián en el Barça?
