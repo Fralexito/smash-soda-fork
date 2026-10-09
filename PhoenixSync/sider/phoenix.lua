@@ -1,7 +1,7 @@
 -- =============================================================================
 --  Phoenix Evolution · Puente en vivo para Sider (PES 2021)
 --  Prueba 1 — lee un archivo de texto y lo muestra en el overlay de Sider.
---  Prueba 2 (v0.3, «solo mirar») — con la tecla B, y SOLO si el overlay muestra
+--  Prueba 2 (v0.4, «solo mirar», lectura segura con copia) — con la tecla B, y SOLO si el overlay muestra
 --  este módulo, busca la ficha de Lamine Yamal (ID 162114) en la memoria del
 --  juego y la LEE. NUNCA escribe en la memoria, NO registra hooks del partido,
 --  NO cambia archivos del juego. Si algo falla, se apaga solo (ver sider.log).
@@ -14,7 +14,7 @@
 --                    lua.module = "phoenix.lua"  en sider.ini
 -- =============================================================================
 
-local m = { version = "0.3-prueba" }
+local m = { version = "0.4-prueba" }
 
 local CADA_SEG    = 2      -- cada cuántos segundos se vuelve a mirar el archivo (solo con el overlay abierto)
 local MAX_BYTES   = 4096   -- nunca se lee más que esto
@@ -119,21 +119,58 @@ end
 -- ─────────────────────────────────────────────────────────────────────────────
 --  PRUEBA 2 · «SOLO MIRAR»: buscar a un jugador en la memoria (solo lectura)
 -- ─────────────────────────────────────────────────────────────────────────────
---  Patrón A: los 58 bytes de Player.bin desde el ID (+8) con sus cualidades
---  (base viva olmosjr23, registro 16179). Patrón B: el nombre «Lamine Yamal».
---  Se recorre la memoria por regiones (VirtualQuery, ya declarado por la librería
---  memory de Sider), solo las COMMIT legibles, en trozos pequeños por cuadro para
---  no congelar el menú.
+--  v0.3 (prueba en el juego, 02:41): con 58 bytes exactos NO apareció → el juego cambia
+--  algunos bits al cargar (forma física, lesión…). v0.4 busca el ID solo (4 bytes) y
+--  VERIFICA cada candidato leyendo sus cualidades: si al menos 4 de 5 coinciden, es él.
+--  Además busca el nombre en mayúsculas («LAMINE YAMAL»), como lo guarda Player.bin.
 local VK_B        = 0x42
 local TROZO       = 24 * 1024 * 1024   -- bytes revisados por cada cuadro con el overlay abierto
 local MAX_HITS    = 12
+local MAX_CAND    = 20000              -- candidatos de ID que se llegan a verificar como máximo
 local PID         = 162114
-local PAT_A = "\66\121\2\0\38\78\53\49\0\0\0\144\128\132\30\28\0\0\0\83\0\216\185\132\40\21\120\98\214\7\200\15\0\208\170\53\181\9\172\175\27\153\178\3\116\145\40\137\169\164\72\34\128\42\22\66\132\200\9"
-local PAT_B = "Lamine Yamal"
-local CAMPOS = { {"Velocidad",306}, {"Aceleracion",344}, {"Regate",352}, {"Finalizacion",396}, {"Pase raso",263} }
+local PAT_A = "\66\121\2\0"            -- 162114 en u32 little-endian
+local PAT_B = "LAMINE YAMAL"
+local CAMPOS = { {"Velocidad",306,90}, {"Aceleracion",344,93}, {"Regate",352,93}, {"Finalizacion",396,81}, {"Pase raso",263,82} }
 
 local sonda = nil      -- estado de la búsqueda
 local MBI = nil
+local BUF_TAM = 1024 * 1024 + 4096   -- copia de trabajo: 1 MB + solape
+local buf, bufIni, bufFin = nil, 0, 0
+local RPM, PROC = nil, nil           -- ReadProcessMemory sobre el propio proceso
+
+-- CRASH 02:43 (v0.3): leer DIRECTO una zona que otro hilo (ReShade, al recargar efectos)
+-- acababa de liberar → 0xC0000005 dentro de sider.dll. Desde v0.4 NUNCA se lee la memoria
+-- del juego directamente: se COPIA con ReadProcessMemory, que si la zona ya no existe
+-- devuelve «falló» en vez de cerrar el juego. Las búsquedas se hacen sobre esa copia.
+local function prepararLector()
+    if RPM then return true end
+    -- nombres propios (phx_*) apuntando a las funciones de Windows: así no chocan con
+    -- declaraciones de otros módulos (ffi.cdef no deja redeclarar).
+    ffi.cdef[[
+        int   phx_RPM(void* proceso, const void* desde, void* hacia, size_t n, size_t* leidos) __asm__("ReadProcessMemory");
+        void* phx_GCP(void) __asm__("GetCurrentProcess");
+    ]]
+    RPM, PROC = ffi.C.phx_RPM, ffi.C.phx_GCP()
+    buf = ffi.new("uint8_t[?]", BUF_TAM)
+    bufIni = tonumber(ffi.cast("uint64_t", buf)); bufFin = bufIni + BUF_TAM
+    return true
+end
+
+local leidos1 = nil
+-- Copia n bytes desde la dirección a hacia buf (desde el byte 0). Devuelve cuántos copió (0 = falló).
+local function copiar(a, n)
+    leidos1 = leidos1 or ffi.new("size_t[1]")
+    leidos1[0] = 0
+    local ok = RPM(PROC, ffi.cast("const void*", a), buf, n, leidos1)
+    if ok == 0 then return 0 end
+    return tonumber(leidos1[0])
+end
+
+-- Lee len bytes como texto Lua, de forma segura (nil si la zona ya no existe).
+local function leerSeguro(a, len)
+    if copiar(a, len) ~= len then return nil end
+    return ffi.string(buf, len)
+end
 
 local function leerBits(s, pos, n)
     local v = 0
@@ -148,19 +185,21 @@ end
 local function dirNum(p) return tonumber(ffi.cast("uint64_t", p)) end
 
 local function iniciarSonda()
+    prepararLector()
     local si = memory.get_system_info()
     MBI = MBI or ffi.new("MEMORY_BASIC_INFORMATION[1]")
     sonda = {
         dir = dirNum(si.lpMinimumApplicationAddress), tope = dirNum(si.lpMaximumApplicationAddress),
         regIni = 0, regFin = 0, pos = 0,
-        hitsA = {}, hitsB = {}, mb = 0, regiones = 0,
+        hitsA = {}, hitsB = {}, recA = {}, ctxB = {}, mb = 0, regiones = 0, candidatos = 0, fallosLectura = 0, vistos = {},
         propiaA = dirNum(ffi.cast("const char*", PAT_A)), propiaB = dirNum(ffi.cast("const char*", PAT_B)),
         t0 = os.clock(), hecho = false,
     }
-    log("[phoenix] sonda: inicio de la búsqueda de " .. PID .. " (solo lectura)")
+    log("[phoenix] sonda v0.4: inicio de la búsqueda de " .. PID .. " (solo lectura, copia segura)")
 end
 
--- Pasa a la siguiente región legible. Devuelve false cuando ya no quedan.
+-- Siguiente región privada (heap del juego), COMMIT y legible. La memoria «mapeada» (gráficos,
+-- archivos) y la del propio .exe se saltan: ahí no viven las fichas y es la que más cambia.
 local function siguienteRegion()
     local tam = ffi.sizeof("MEMORY_BASIC_INFORMATION")
     while sonda.dir < sonda.tope do
@@ -168,11 +207,12 @@ local function siguienteRegion()
         if r == 0 then return false end
         local base = dirNum(MBI[0].BaseAddress)
         local size = tonumber(MBI[0].RegionSize)
-        local estadoMem, prot = tonumber(MBI[0].State), tonumber(MBI[0].Protect)
+        local estadoMem, prot, tipo = tonumber(MBI[0].State), tonumber(MBI[0].Protect), tonumber(MBI[0].Type)
         sonda.dir = base + size
-        local legible = estadoMem == 0x1000 and bit.band(prot, 0x100) == 0 and bit.band(prot, 0x01) == 0
-                        and bit.band(prot, 0xEE) ~= 0
-        if legible then
+        local legible = estadoMem == 0x1000 and tipo == 0x20000 and bit.band(prot, 0x100) == 0
+                        and bit.band(prot, 0x01) == 0 and bit.band(prot, 0xEE) ~= 0
+        local esBuf = base < bufFin and base + size > bufIni
+        if legible and not esBuf then
             sonda.regIni, sonda.regFin, sonda.pos = base, base + size, base
             sonda.regiones = sonda.regiones + 1
             return true
@@ -181,14 +221,52 @@ local function siguienteRegion()
     return false
 end
 
-local function buscarEn(pat, desde, hasta, lista, propia)
-    local d = desde
-    while #lista < MAX_HITS and d < hasta do
-        local h = memory.search(pat, d, hasta)
+-- Busca pat dentro de la copia (buf[0..n)), que corresponde a la dirección real «origen».
+local function buscarEnCopia(pat, n, origen, lista, propia, verificar)
+    local d = 0
+    while #lista < MAX_HITS and d < n do
+        local h = memory.search(pat, bufIni + d, bufIni + n)
         if not h then return end
-        local a = dirNum(h)
-        if a ~= propia then lista[#lista + 1] = a end
-        d = a + 1
+        local off = dirNum(h) - bufIni
+        local a = origen + off
+        if a ~= propia and not sonda.vistos[a] then
+            sonda.vistos[a] = true
+            if verificar then
+                sonda.candidatos = sonda.candidatos + 1
+                if sonda.candidatos > MAX_CAND then return end
+                local guardado = ffi.string(buf, n)          -- la verificación reutiliza buf
+                local rec = leerSeguro(a - 8, 312)
+                ffi.copy(buf, guardado, n)
+                if rec then
+                    local k = 0
+                    for _, c in ipairs(CAMPOS) do if leerBits(rec, c[2], 6) + 40 == c[3] then k = k + 1 end end
+                    if k >= 4 then lista[#lista + 1] = a; sonda.recA[#lista] = rec end
+                end
+            else
+                lista[#lista + 1] = a
+                local i0 = math.max(0, off - 64)
+                sonda.ctxB[#lista] = ffi.string(buf + i0, math.min(160, n - i0))
+            end
+        end
+        d = off + 1
+    end
+end
+
+local function hex(s) return (s:gsub(".", function(ch) return string.format("%02x", ch:byte()) end)) end
+
+local function cerrarSonda()
+    sonda.hecho = true
+    sonda.seg = os.clock() - sonda.t0
+    log(string.format("[phoenix] sonda: fin. %d regiones, %d MB, %.1f s. Candidatos ID: %d, fichas verificadas: %d, nombre: %d, lecturas fallidas: %d",
+        sonda.regiones, sonda.mb, sonda.seg, sonda.candidatos, #sonda.hitsA, #sonda.hitsB, sonda.fallosLectura))
+    for i, a in ipairs(sonda.hitsA) do
+        local rec = sonda.recA[i]
+        local partes = {}
+        for _, c in ipairs(CAMPOS) do partes[#partes + 1] = c[1] .. " " .. (leerBits(rec, c[2], 6) + 40) end
+        log(string.format("[phoenix] sonda A%d @ %s  %s  hex=%s", i, memory.hex(a), table.concat(partes, ", "), hex(rec:sub(1, 96))))
+    end
+    for i, a in ipairs(sonda.hitsB) do
+        log(string.format("[phoenix] sonda B%d @ %s  %s", i, memory.hex(a), hex(sonda.ctxB[i] or "")))
     end
 end
 
@@ -197,30 +275,18 @@ local function pasoSonda()
     local presupuesto = TROZO
     while presupuesto > 0 do
         if sonda.pos >= sonda.regFin then
-            if not siguienteRegion() then
-                sonda.hecho = true
-                sonda.seg = os.clock() - sonda.t0
-                log(string.format("[phoenix] sonda: fin. %d regiones, %d MB, %.1f s. Patrón A: %d, nombre: %d",
-                    sonda.regiones, sonda.mb, sonda.seg, #sonda.hitsA, #sonda.hitsB))
-                for i, a in ipairs(sonda.hitsA) do
-                    local rec = memory.read(a - 8, 312)
-                    local partes = {}
-                    for _, c in ipairs(CAMPOS) do partes[#partes + 1] = c[1] .. " " .. (leerBits(rec, c[2], 6) + 40) end
-                    log(string.format("[phoenix] sonda A%d @ %s  ceros_antes=%s  %s", i, memory.hex(a),
-                        tostring(rec:sub(1, 8) == string.rep("\0", 8)), table.concat(partes, ", ")))
-                end
-                for i, a in ipairs(sonda.hitsB) do
-                    local ctxb = memory.read(a - 64, 160)
-                    log(string.format("[phoenix] sonda B%d @ %s  %s", i, memory.hex(a),
-                        (ctxb:gsub(".", function(ch) return string.format("%02x", ch:byte()) end))))
-                end
-                return
-            end
+            if not siguienteRegion() then cerrarSonda() return end
         end
-        local fin = math.min(sonda.regFin, sonda.pos + presupuesto)
-        local finSolape = math.min(sonda.regFin, fin + #PAT_A)
-        buscarEn(PAT_A, sonda.pos, finSolape, sonda.hitsA, sonda.propiaA)
-        buscarEn(PAT_B, sonda.pos, finSolape, sonda.hitsB, sonda.propiaB)
+        local fin = math.min(sonda.regFin, sonda.pos + 1024 * 1024)
+        local n = math.min(sonda.regFin, fin + 64) - sonda.pos       -- 64 bytes de solape
+        local copiado = copiar(sonda.pos, n)
+        if copiado > 0 then
+            buscarEnCopia(PAT_A, copiado, sonda.pos, sonda.hitsA, sonda.propiaA, true)
+            buscarEnCopia(PAT_B, copiado, sonda.pos, sonda.hitsB, sonda.propiaB, false)
+        else
+            sonda.fallosLectura = sonda.fallosLectura + 1   -- la zona cambió: se salta, sin leerla
+            if copiar(sonda.pos, 1) == 0 then sonda.pos = sonda.regFin; fin = sonda.regFin end
+        end
         presupuesto = presupuesto - (fin - sonda.pos)
         sonda.mb = sonda.mb + (fin - sonda.pos) / 1048576
         sonda.pos = fin
@@ -232,19 +298,19 @@ local function textoSonda()
         return "\n\n[PRUEBA 2 · SOLO MIRAR] Pulsa B (en el menú, nunca en un partido) para buscar a Lamine Yamal en la memoria."
     end
     if not sonda.hecho then
-        return string.format("\n\n[PRUEBA 2] Buscando... %d MB revisados en %d zonas. Patrón: %d · nombre: %d",
-            sonda.mb, sonda.regiones, #sonda.hitsA, #sonda.hitsB)
+        return string.format("\n\n[PRUEBA 2] Buscando... %d MB revisados en %d zonas. IDs revisados: %d · fichas: %d · nombre: %d",
+            sonda.mb, sonda.regiones, sonda.candidatos, #sonda.hitsA, #sonda.hitsB)
     end
-    local t = { string.format("\n\n[PRUEBA 2] Terminado: %d MB en %.1f s · ficha encontrada %d vez/veces · nombre %d vez/veces",
-        sonda.mb, sonda.seg or 0, #sonda.hitsA, #sonda.hitsB) }
+    local t = { string.format("\n\n[PRUEBA 2] Terminado: %d MB en %.1f s · IDs revisados %d · fichas de Lamine %d · nombre %d",
+        sonda.mb, sonda.seg or 0, sonda.candidatos, #sonda.hitsA, #sonda.hitsB) }
     for i, a in ipairs(sonda.hitsA) do
         if i > 3 then break end
-        local rec = memory.read(a - 8, 312)
+        local rec = sonda.recA[i]
         local partes = {}
         for _, c in ipairs(CAMPOS) do partes[#partes + 1] = c[1] .. " " .. (leerBits(rec, c[2], 6) + 40) end
         t[#t + 1] = string.format("  #%d %s → %s", i, memory.hex(a), table.concat(partes, " · "))
     end
-    if #sonda.hitsA == 0 then t[#t + 1] = "  No apareció la ficha con ese formato (no es un fallo: se analiza el diario)." end
+    if #sonda.hitsA == 0 then t[#t + 1] = "  No apareció la ficha verificada (no es un fallo: se analiza el diario)." end
     return table.concat(t, "\n")
 end
 

@@ -260,3 +260,19 @@ se puede cambiar un guardado con el juego abierto mientras no esté cargado (Fra
 - **Qué muestra:** por cada coincidencia, la dirección y 5 cualidades decodificadas. El detalle completo va a sider.log (líneas `[phoenix] sonda`).
 - **Prueba previa:** simulación en LuaJIT con memoria falsa (3 regiones, una no legible). Encontró las 2 copias legibles con las cualidades correctas (Vel 90, Ace 93, Reg 93, Fin 81, Pase 82), ignoró la región sin acceso y no tocó nada.
 - **Resultado en el juego:** (pendiente)
+- **Resultado 1 (02:41, v0.3):** revisó 4407 MB en 3735 regiones en 32,7 s. El juego aguantó.
+  - Patrón exacto de 58 bytes: **0 coincidencias**. El juego cambia bits al cargar la ficha (forma, lesión…), así que hay que buscar por ID y verificar.
+  - Nombre «Lamine Yamal»: 6 coincidencias, pero todas eran textos nuestros (el overlay y el log) o zonas que ya habían cambiado.
+- **Resultado 2 (02:43, v0.3): CRASH.** Fralex pulsó B otra vez y el juego se cerró.
+  - dlss5-feed.log: `exception 0xC0000005 (reading address 0x6E0000) in sider.dll`, justo después de que ReShade recargara sus efectos (02:43:01) y liberara memoria.
+  - **Causa:** la búsqueda leía DIRECTO zonas de memoria. Se averiguaba qué zonas eran legibles en un cuadro y se leían en los siguientes; otro hilo la liberó en medio → lectura de memoria inexistente.
+  - **Daño:** ninguno. Solo se leía. Los guardados (EDIT, ML00000000-2, SYSTEM) tienen fecha anterior al crash.
+  - **Acción inmediata:** se reinstaló phoenix.lua v0.2 (solo avisos) en la raíz y en la carpeta del modo.
+- **Arreglo v0.4 (NO instalado, espera el OK de Fralex):**
+  - nunca lee la memoria directo: la **copia con ReadProcessMemory** sobre el propio proceso (si la zona ya no existe, devuelve «falló» en vez de cerrar el juego) y busca sobre la copia;
+  - solo revisa memoria privada (heap) y salta la mapeada (gráficos y ReShade);
+  - busca el ID (4 bytes) y verifica 5 cualidades (≥ 4 iguales);
+  - además busca «LAMINE YAMAL»;
+  - quita duplicados.
+  - **Simulado:** zona «liberada» a mitad de la búsqueda (sin crash, contada como lectura fallida), zona mapeada saltada, 2100 IDs falsos descartados, ficha con un bit de forma cambiado encontrada.
+  - **Lección:** en el juego, otros hilos (ReShade, DLSS, carga de texturas) liberan memoria en cualquier momento. **Nunca leer memoria ajena directo; siempre copiar con una función que pueda fallar sin cerrar el juego.**
