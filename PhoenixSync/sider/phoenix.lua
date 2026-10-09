@@ -18,7 +18,7 @@
 --                    lua.module = "phoenix.lua"  en sider.ini
 -- =============================================================================
 
-local m = { version = "0.15-prueba" }
+local m = { version = "0.15b-prueba" }
 
 local CADA_SEG    = 2      -- cada cuántos segundos se vuelve a mirar el archivo (solo con el overlay abierto)
 local MAX_BYTES   = 4096   -- nunca se lee más que esto
@@ -602,6 +602,14 @@ local PARAM_ORIGINAL = "\199\68\36\32\0\1\0\0"   -- c7 44 24 20 00 01 00 00
 local PARAM_PARCHE   = "\199\68\36\32\1\1\0\0"   -- c7 44 24 20 01 01 00 00
 local estadoParche = nil
 local VP = nil
+-- v0.15b (05:41): tras Shift+R, parchear() salía antes («YA activa») sin preparar VP y la tecla U
+-- fallaba con «attempt to call upvalue 'VP' (a nil value)» (Sider atrapó el error; no se escribió nada).
+local function prepararVP()
+    if not VP then
+        ffi.cdef[[ int phx15b_VP(void* dir, size_t n, uint32_t nueva, uint32_t* vieja) __asm__("VirtualProtect"); ]]
+        VP = ffi.C.phx15b_VP
+    end
+end
 local function parchear()
     prepararLector()
     local base = baseExe()
@@ -611,10 +619,7 @@ local function parchear()
         estadoParche = "NO se tocó: el código en exe+AEF78A no es el esperado (" .. (real and hex(real) or "ilegible") .. ")"
         log("[phoenix] " .. estadoParche); return false
     end
-    if not VP then
-        ffi.cdef[[ int phx14_VP(void* dir, size_t n, uint32_t nueva, uint32_t* vieja) __asm__("VirtualProtect"); ]]
-        VP = ffi.C.phx14_VP
-    end
+    prepararVP()
     local dir = base + RVA_PARAM + 4
     local vieja = ffi.new("uint32_t[1]")
     if VP(ffi.cast("void*", dir), 1, 0x40, vieja) == 0 then
@@ -655,6 +660,7 @@ local CMN1_ORIGINAL = "\72\131\191\152\0\0\0\0\117\107\51\219\137\92\36\40\199\6
 local CMN1_PARCHE   = "\198\5\247\100\116\1\1\199\135\148\0\0\0\7\0\0\0\235\108"
 local estadoBoton = nil
 local function escribirBytes(a, txt)
+    prepararVP()
     local n = ffi.new("size_t[1]")
     local src = ffi.new("uint8_t[?]", #txt); ffi.copy(src, txt, #txt)
     local vieja = ffi.new("uint32_t[1]")

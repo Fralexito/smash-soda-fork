@@ -465,3 +465,9 @@ se puede cambiar un guardado con el juego abierto mientras no esté cargado (Fra
   - Comprobado con capstone que los bytes son esas 3 instrucciones (rel → 0x37F5C39). Bytes originales comprobados antes de escribir. Simulación OK.
 - Instalado (respaldo `phoenix.lua.v014`). **Phoenix-DB con Player_v90** (el juego tiene v95).
 - **Plan:** Shift+R → U → Partido → Datos Actual. en vivo → Activar → ¿sin error? ¿interruptor = 1? → volver al menú → Partido → ¿Lamine 90?
+
+### 2026-10-09 05:41 · v0.15, intento 1 → ❌ error de Lua en la tecla U (sin escritura, sin daño)
+- `sider.log`: «attempt to call upvalue 'VP' (a nil value)». Después de Shift+R, `parchear()` devolvía «YA activa» (el byte de la P seguía puesto desde la v0.14) **sin preparar VirtualProtect**, y `escribirBytes` lo llamaba vacío. Sider atrapó el error y **no se escribió nada**.
+- **Error de Claude:** la simulación siempre empezaba con el parche de la P sin poner, así que no cubría el caso «módulo recargado con el parche ya activo».
+- **Arreglo v0.15b:** `prepararVP()` se llama dentro de `escribirBytes` y de `parchear`. Nombre FFI con versión (`phx15b_VP`). Simulación OK. Instalado.
+- **Hallazgo colateral (05:40:08):** el juego hizo una relectura de la **lista tipo 2** (boots, glove, player, country, team, playerassignment, coach, competition, competitionregulation, competitionentry, stadium) con la huella de **v90**. La causa más probable es que FRALEX tocara «Datos Actual. en vivo» sin el parche. Aun así, la ficha siguió en 95: esa relectura no aplica a la plantilla del amistoso. Falta confirmarlo.
