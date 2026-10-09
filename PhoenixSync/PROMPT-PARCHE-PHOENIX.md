@@ -4,6 +4,8 @@ Copia todo lo que está debajo de la línea y pégalo como primer mensaje en el 
 
 ---
 
+> **Actualizado el 2026-10-09:** lo más nuevo y completo está en `PhoenixSync/MANUAL-PARCHE-PHOENIX.md`. Si algo de este prompt choca con el manual, **manda el manual**.
+
 Hola. Soy **FRALEX** (llámame siempre así). Vengo de otro chat donde trabajamos muchas horas en mi proyecto de **parche propio de PES 2021**. Te paso **todo el contexto** para que sigas exactamente donde quedamos. Léelo entero antes de hacer nada.
 
 ## 0. Cómo quiero que trabajes conmigo
@@ -87,7 +89,7 @@ Además quiero un **"PES online" propio**, conectado a mi web, y **funciones nue
 
 - Sider **7.3.3** en ConmeGOL y 7.3.4 en Sudamerican. Su Lua trae acceso a archivos, a la memoria del juego, `ffi`, `zlib`, `match.stats()` y una **pantallita (overlay)** que se abre con Espacio y cambia de módulo con la tecla 1. **No trae internet.**
 - **El switcher de ConmeGOL copia `ConmeGol Extras\ConmeGOL Patch 26\SiderAddons` encima de `SiderAddons` del juego.** Por eso cualquier cambio hay que hacerlo **en la carpeta del parche**. Así se perdió la línea de `phoenix.lua`, que **nunca llegó a cargarse**.
-- `phoenix.lua` (prueba 1, solo lectura): lee `content\phoenix\avisos.txt` y lo muestra en el overlay. Todo va dentro de `pcall` y se apaga solo tras 5 errores. **No está activo.** El archivo está en `SiderAddons\modules` del juego; hay un respaldo `sider.ini.respaldo-phoenix`.
+- `phoenix.lua` **está activo** (v0.10, instalado en la carpeta del modo): muestra `content\phoenix\avisos.txt` en el overlay (los avisos de la web llegan en vivo), tiene la tecla B (buscar una ficha en memoria con copia segura) y un **espía** de lecturas de la base. El Lua de Sider **no trae `pcall`**: se usa una bandera.
 - **Auditoría** (antes de instalar nada; yo pedí un análisis profundo de **cada línea** para tener la máxima certeza de que nada choque):
   - 🔴 `camera.lua` + `DynamicWideCam.lua` parchean **la misma instrucción** y corrompen datos (comprobado en el log, en los **dos** parches).
   - 🔴 `GFX_lod.lua` escribe a ciegas.
@@ -167,7 +169,7 @@ Además quiero un **"PES online" propio**, conectado a mi web, y **funciones nue
 - Pedí que **todo mi equipo y mi Liga Máster sean totalmente editables, como en el juego e incluso más**: ficha de cada jugador con cara, escudo, camisetas, estadísticas, posición, dorsal, altura, habilidades…
 - **Mi equipo de prueba es el Barcelona**: ID 108, carrera nueva en la **ranura 1** (`ML00000000`), índice 122 en la Liga Máster.
 - **Hecho:** página editable (enlace arriba) con los 25 jugadores, minifaces y escudo (los sacamos del parche y los metimos en la página), datos de `Player.bin` de la base viva (olmosjr23), habilidades, posiciones jugables en un campo, valor y sueldo de la Liga Máster y finanzas. Los cambios se guardan como **pendientes** en la base de datos de la página (`cambios: [{campo, valor}]`).
-- **Todavía NO llegan al juego.** El siguiente paso es aplicarlos: editar `Player.bin` **solo en los campos confirmados**, servido por una raíz de Sider propia (`cpk.root` antes de olmosjr23), y la Liga Máster con lo que ya sabemos. Después marcar el jugador como aplicado.
+- **Actualización 2026-10-09:** la técnica para aplicarlos ya está **probada** (Player.bin propio en `livecpk\Phoenix-DB` + Editar → Cargar). Falta automatizar. Plan original: editar `Player.bin` **solo en los campos confirmados**, servido por una raíz de Sider propia (`cpk.root` antes de olmosjr23), y la Liga Máster con lo que ya sabemos. Después marcar el jugador como aplicado.
 - **Mapa de `Player.bin` (registro de 312 B, id en +8):**
   - Las 19 habilidades de campo ya estaban confirmadas.
   - Potencia de tiro: bit 358.

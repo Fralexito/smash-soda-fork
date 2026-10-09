@@ -3,6 +3,8 @@
 **Qué es:** todo lo que Phoenix Sync sabe de los archivos de PES 2021, ordenado como una base de datos.
 Se **alimenta en cada auditoría** y nunca se borra lo aprendido: si algo cambia en una versión nueva del parche, se anota la fecha y el motivo.
 
+**📘 Empieza por `../MANUAL-PARCHE-PHOENIX.md`**: el manual que reúne todo para construir el parche (visión, cómo funciona el juego, recetas, reglas de oro, ruta y futuro).
+
 **Cómo está dividida:**
 
 | Archivo | Qué guarda |
