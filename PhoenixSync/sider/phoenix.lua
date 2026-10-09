@@ -18,7 +18,7 @@
 --                    lua.module = "phoenix.lua"  en sider.ini
 -- =============================================================================
 
-local m = { version = "0.13-prueba" }
+local m = { version = "0.14-prueba" }
 
 local CADA_SEG    = 2      -- cada cuántos segundos se vuelve a mirar el archivo (solo con el overlay abierto)
 local MAX_BYTES   = 4096   -- nunca se lee más que esto
@@ -131,6 +131,7 @@ local VK_B        = 0x42
 local VK_V        = 0x56   -- escribir Velocidad 99
 local VK_N        = 0x4E   -- devolver Velocidad original
 local VK_K        = 0x4B   -- v0.12: pedir al juego que relea la BASE (pesdb), como hace Editar → Cargar
+local VK_P        = 0x50   -- v0.14: recarga COMPLETA (EDIT + base) al entrar a un modo, como Editar → Cargar
 local VK_L        = 0x4C   -- v0.11: pedir al juego que recargue EDIT + base al volver al menú principal
 local NUEVA_VEL   = 99
 local TROZO       = 24 * 1024 * 1024   -- bytes revisados por cada cuadro con el overlay abierto
@@ -587,12 +588,63 @@ local function textoBase()
     return "\n  [BASE] relectura: " .. ahora .. (estadoBase and ("  ·  " .. estadoBase) or "  ·  tecla K = releer la base")
 end
 
+-- ─── v0.14 · RECARGA COMPLETA: el menú principal carga «como Cargar» (con la base) ──────────
+-- Hallado 05:30: Editar → Cargar es el proceso «ProcessEditDataLoad::CreateReloadPesdb» (tabla en
+-- .data 0x34DA048 → fábrica 0x130F220), que construye el proceso con la bandera [+0x8C] = 1 y la pasa
+-- como 1.er byte de parámetros a la tarea de carga (0x130F280: «editLoadData», parámetros 1,1,0,0,0).
+-- El menú principal (0xAEF78A) usa «mov dword [rsp+0x20], 0x100» → parámetros 0,1,0,0,0: SIN base.
+-- La tecla K (v0.13) leyó la base pero NO la aplicó (prueba 05:27: Lamine siguió en 99).
+-- PARCHE (solo en memoria, se borra al cerrar el juego; el exe NO se toca): byte exe+0xAEF78E 00 → 01.
+-- Así la recarga del menú principal pasa 0x101 = igual que Cargar. Antes se comprueban los 8 bytes.
+local RVA_PARAM = 0xAEF78A
+local PARAM_ORIGINAL = "\199\68\36\32\0\1\0\0"   -- c7 44 24 20 00 01 00 00
+local PARAM_PARCHE   = "\199\68\36\32\1\1\0\0"   -- c7 44 24 20 01 01 00 00
+local estadoParche = nil
+local VP = nil
+local function parchear()
+    prepararLector()
+    local base = baseExe()
+    local real = leerSeguro(base + RVA_PARAM, 8)
+    if real == PARAM_PARCHE then estadoParche = "recarga completa YA activa"; return true end
+    if real ~= PARAM_ORIGINAL then
+        estadoParche = "NO se tocó: el código en exe+AEF78A no es el esperado (" .. (real and hex(real) or "ilegible") .. ")"
+        log("[phoenix] " .. estadoParche); return false
+    end
+    if not VP then
+        ffi.cdef[[ int phx14_VP(void* dir, size_t n, uint32_t nueva, uint32_t* vieja) __asm__("VirtualProtect"); ]]
+        VP = ffi.C.phx14_VP
+    end
+    local dir = base + RVA_PARAM + 4
+    local vieja = ffi.new("uint32_t[1]")
+    if VP(ffi.cast("void*", dir), 1, 0x40, vieja) == 0 then
+        estadoParche = "NO se pudo cambiar la protección de la página"; log("[phoenix] " .. estadoParche); return false
+    end
+    local ok = escribirByte(dir, 1)
+    local v2 = ffi.new("uint32_t[1]")
+    VP(ffi.cast("void*", dir), 1, vieja[0], v2)
+    local despues = leerSeguro(base + RVA_PARAM, 8)
+    if ok and despues == PARAM_PARCHE then
+        estadoParche = "[" .. os.date("%H:%M:%S") .. "] recarga completa ACTIVADA ✓ (hasta cerrar el juego)"
+        log("[phoenix] parche exe+AEF78E 00 -> 01 aplicado (protección original " .. tonumber(vieja[0]) .. ")")
+        return true
+    end
+    estadoParche = "✗ el parche no quedó (" .. (despues and hex(despues) or "ilegible") .. ")"
+    log("[phoenix] " .. estadoParche); return false
+end
+local function recargaCompleta()
+    if parchear() then pedirRecarga() end
+end
+local function textoParche()
+    return "\n  [COMPLETA] " .. (estadoParche or "tecla P = recarga completa (EDIT + base) al entrar a un modo")
+end
+
 function m.key_down(ctx, vkey)
     if apagado then return end
     local libre = not sonda or sonda.hecho
     if vkey == VK_B and libre then iniciarSonda("mirar") end
     if vkey == VK_L then pedirRecarga() end
     if vkey == VK_K then pedirBase() end
+    if vkey == VK_P then recargaCompleta() end
     -- v0.10: V y N DESACTIVADAS. Escribir en memoria ensucia la prueba de la base servida por Sider
     -- (03:44 se pulsó V y volvió a poner 99 en una copia con 90). El camino elegido es el archivo.
 end
@@ -647,7 +699,7 @@ local function textoOverlay()
     pasoSonda()
     local cab = string.format("PHOENIX EVOLUTION  ·  puente en vivo v%s  ·  %s", m.version, estado)
     if actualizado ~= "" then cab = cab .. "  ·  último aviso " .. actualizado end
-    return cab .. "\n\n" .. contenido .. textoSonda() .. textoEspia() .. textoRecarga() .. textoBase()
+    return cab .. "\n\n" .. contenido .. textoSonda() .. textoEspia() .. textoRecarga() .. textoBase() .. textoParche()
 end
 
 -- Ojo: el Lua de Sider NO trae pcall (lo confirma el volcado de env.lua en sider.log).

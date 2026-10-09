@@ -432,3 +432,11 @@ se puede cambiar un guardado con el juego abierto mientras no esté cargado (Fra
 - La lista del tipo 0 (en `0x3529900` → `0x142B9D3C0`) es justo `[2, 11, 15, 9]` = Boots, Glove, Player, Country (28 = fin). **La relectura se completó entera.** (Tipo 2, usado por la carga del EDIT: `[2, 11, 15, 9, 25, 16, 3, 5, 8, 6, 19]`.)
 - El overlay sigue en «EN CURSO»: el objeto de relectura no se libera fuera de Editar (`[gestor+0x88] ≠ 0`). Las pulsaciones extra de K se rechazaron bien («ya hay una relectura en curso»).
 - **Siguiente:** con el interruptor en 1, entrar a Partido → ¿Lamine 95?
+
+### 2026-10-09 05:27 · Prueba B, intentos 3–4 → la base se LEE pero NO se APLICA (Lamine sigue en 99)
+- Secuencia limpia (log): K a las 05:26:40 (gestor creado, player.bin v95 leído) → interruptor consumido a las 05:27:00 **con el gestor vivo** → gestor destruido a las 05:27:01. Ficha de Lamine: **99**.
+- ⇒ «leer la base» (tipo 0) no basta. Hace falta que la **carga del EDIT** la aplique.
+- **Clave hallada (05:30):** la tabla de procesos en `.data 0x34DA048` = { `0x130F220`, «ProcessEditDataLoad::CreateReloadPesdb», «Edit/Load/EditDataLoadProcess» }. Esa fábrica construye el proceso de **Editar → Cargar** con la bandera `[+0x8C] = 1` (la otra fábrica, `0x130F1C0`, usa 0). `0x130F280` pasa esa bandera como **primer byte de parámetros** de la tarea «editLoadData» → parámetros **1,1,0,0,0**.
+  - El menú principal (`0xAEF78A: mov dword [rsp+0x20], 0x100`) pasa **0,1,0,0,0**. Por eso recarga el EDIT pero **no** la base.
+- **v0.14 · tecla P (recarga completa):** comprueba los 8 bytes de `0xAEF78A` → VirtualProtect → cambia **1 byte de código en memoria** (`exe+0xAEF78E`: 00 → 01, o sea 0x100 → 0x101) → restaura la protección → verifica → pone el interruptor. El exe en disco **no se toca**; el cambio dura hasta cerrar el juego. Simulación OK (casos: ya activo, exe distinto → no toca nada).
+- Instalado (respaldo `phoenix.lua.v013`). Phoenix-DB sigue con v95.
