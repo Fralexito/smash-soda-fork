@@ -15,7 +15,7 @@ Regla de oro: **cada paso se prueba primero en la PC de Fralex, en partidos offl
 ## Cómo es el puente
 
 ```
-Web Phoenix ──► Phoenix Link / Phoenix Mercado (PC) ──► archivo avisos.txt ──► phoenix.lua (dentro del juego) ──► overlay
+Web Phoenix -> Phoenix Link / Phoenix Mercado (PC) -> archivo avisos.txt -> phoenix.lua (dentro del juego) -> overlay
 ```
 El juego no se conecta a nada: solo lee un archivo pequeño que la app de PC deja en `SiderAddons\content\phoenix\`.
 
