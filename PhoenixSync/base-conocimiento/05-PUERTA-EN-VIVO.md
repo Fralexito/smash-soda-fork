@@ -50,12 +50,17 @@ Diario completo de cada prueba: `../PRUEBAS.md` (Pruebas 1–4 de Sider). Este d
 | Archivo que se relee | Qué permitiría cambiar en vivo | Estado |
 |---|---|---|
 | `Player.bin` | Stats, habilidades, posiciones, altura, edad, nacionalidad | ✅ Probado (Velocidad) |
-| `PlayerAssignment.bin` | **Fichajes y traspasos** entre clubes (el jugador cambia de plantilla) | 🟢 Mismo método, por probar |
+| `PlayerAssignment.bin` | ❌ **No sirve para fichajes en vivo**: el juego lo lee, pero las plantillas las manda el **option file** | ❌ Probado 04:41 |
+| **Option file `EDIT00000000`** (plantillas, 284 B por equipo) | **Fichajes y traspasos en vivo**: `OptionFile::mover` + Editar → Cargar | ✅ Probado (Lamine → Real Madrid, dorsal 26) |
 | `Coach.bin` | Cambios de entrenador | 🟢 Por probar |
 | `Team.bin` | Datos de los clubes | 🟢 Por probar |
 | `CompetitionEntry.bin` | Ascensos, descensos, qué equipos juegan cada liga | 🟢 Por probar (ojo: los módulos CGP comprueban equipos en ciertas competiciones) |
 | `Stadium.bin`, `Boots.bin`, `Glove.bin` | Estadios, botines y guantes | 🟢 Por probar |
 | `PlayerWeekly.bin` / `TeamWeekly.bin` | **Forma semanal propia** (las flechas), al estilo de la actualización en vivo de Konami | 🟡 Por investigar (la opción nativa pide el servidor) |
+
+**Regla de oro (probada el 2026-10-09, 04:47):** las **stats** van por archivo de la base (`Player.bin` en Phoenix-DB); las **plantillas** (fichajes) van por el **option file**. Las dos se aplican con el mismo botón nativo: **Editar → Cargar**. Las stats de un jugador funcionan por archivo solo si **no está entre los jugadores editados** del option file (los editados mandan); Phoenix Sync debe comprobarlo antes de generar.
+
+**Formato `PlayerAssignment.bin` (16 B):** `[índice u32][jugador u32][equipo u32][dorsal−1 u8][orden<<2 u8][banderas u8 (0x20 = capitán?)][0]`.
 
 **Productos que salen de ahí:**
 1. **Mercado de fichajes real:** fichajes confirmados en la vida real o hechos en la web, aplicados con Editar → Cargar.
@@ -77,5 +82,7 @@ Diario completo de cada prueba: `../PRUEBAS.md` (Pruebas 1–4 de Sider). Este d
 - **Cuando el parche se actualiza** (ConmeGOL o SP), la raíz Phoenix-DB **tapa** su base: hay que **regenerar** nuestros archivos desde la base nueva (Auditor de parches) **antes** de jugar. Si no, se servirían datos viejos.
 - **No pulsar «Guardar» en Editar** durante las pruebas.
 - **Nunca escribir memoria** durante un partido. El método por archivo no la necesita.
-- **Respaldos en el PC de Fralex:** `sider.ini.respaldo-phoenix-20261009` (módulo phoenix.lua) y `sider.ini.respaldo-phoenixdb-20261009` (raíz Phoenix-DB). Variantes de prueba en `_PhoenixMercado_prueba\db\`.
+- **Respaldos en el PC de Fralex:** `sider.ini.respaldo-phoenix-20261009` (módulo phoenix.lua), `sider.ini.respaldo-phoenixdb-20261009` (raíz Phoenix-DB) y `EDIT00000000.respaldo-fichaje-20261009` (option file antes del fichaje de Lamine, en `save\` y en `_PhoenixMercado_prueba\db\`). Variantes de prueba en `_PhoenixMercado_prueba\db\`.
+- **La carpeta de guardado activa** es `…\KONAMI\eFootball PES 2021 SEASON UPDATE\239200\save`.
+- **Estado del option file al cerrar la prueba:** Lamine Yamal sigue en el Real Madrid (dorsal 26) hasta que Fralex pida volver al respaldo.
 - **Estado al cerrar la prueba:** Phoenix-DB contiene v90, que son los datos originales (solo recomprimidos).

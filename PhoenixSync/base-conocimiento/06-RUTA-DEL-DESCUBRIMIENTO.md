@@ -87,6 +87,15 @@ FRALEX quería cambios **en tiempo real**. Primera idea: encontrar la ficha de L
   - **pie malo, regularidad y lesiones = valor guardado + 1**;
   - **496 = Patadón en largo**; 502/522 = Pase largo portero / Parapenaltis.
 
+## Etapa 9 · El fichaje en vivo (04:33–04:47)
+
+| Paso | Qué se hizo | Resultado |
+|---|---|---|
+| 25 | Se sirvió un `PlayerAssignment.bin` propio (Lamine: Barça → Real Madrid) desde Phoenix-DB. Editar → Cargar. | ❌ El espía demuestra que el juego **leyó nuestro archivo**, pero Lamine siguió en el Barça. **Error de Claude:** suponer que las plantillas salen de la base; al cargar, **las plantillas las manda el option file**. |
+| 26 | Se cambió el **option file** con `OptionFile::mover` (núcleo de Phoenix Sync, ya probado días antes), con respaldo, y Editar → Cargar. | 🏆 **Lamine titular en el Real Madrid con el 26, fuera del Barça. Fichaje en vivo sin reiniciar.** |
+
+**Lección:** stats → archivo de la base; plantillas → option file. Mismo botón para las dos: Editar → Cargar.
+
 ---
 
 ## Resumen de aciertos
@@ -112,6 +121,7 @@ FRALEX quería cambios **en tiempo real**. Primera idea: encontrar la ficha de L
 | Insistir en la memoria (v0.6–v0.8) | 3 intentos sin éxito | Si el juego rehace copias, el problema está en la **fuente** (el archivo) |
 | Dejar activa la tecla V | Ensució una prueba | Desactivar las herramientas de pruebas descartadas |
 | Creer que «entrar a Editar» bastaba | Una prueba a medias | Medir con huella; el paso correcto es **Cargar** |
+| Suponer que las plantillas salen de `PlayerAssignment.bin` | Un intento fallido | Al cargar, **el option file manda** en plantillas; las stats van por la base solo si el jugador no está editado |
 
 ## Cómo se trabajó (método que funcionó)
 

@@ -176,7 +176,7 @@ El juego **no** usa `CGP_database.cpk`. Usa la base que sirve Sider desde `Sider
 | Qué | Archivo | Estado |
 |---|---|---|
 | Stats y habilidades | `Player.bin` | ✅ |
-| **Fichajes y traspasos en vivo** | `PlayerAssignment.bin` | 🟢 (siguiente experimento) |
+| **Fichajes y traspasos en vivo** | **option file `EDIT00000000`** (`OptionFile::mover`) + Editar → Cargar. `PlayerAssignment.bin` NO sirve: el option file manda en plantillas | ✅ Probado (Lamine → Real Madrid) |
 | Entrenadores | `Coach.bin` | 🟢 |
 | Equipos | `Team.bin` | 🟢 |
 | Ascensos, descensos, participantes de cada liga | `CompetitionEntry.bin` | 🟢 (ojo: los módulos CGP comprueban equipos por competición) |
@@ -205,7 +205,7 @@ El juego **no** usa `CGP_database.cpk`. Usa la base que sirve Sider desde `Sider
 | **5. Más allá** | Competiciones propias 🟡, estadísticas completas 🟡, **Liga Máster online asíncrona** 🔴 (la idea más original), crear jugadores 🟡, avisos con aspecto nativo 🟡 | Futuro |
 
 **Inmediato (para la próxima sesión):**
-1. Fichaje en vivo con `PlayerAssignment.bin` + Editar → Cargar.
+1. ~~Fichaje en vivo~~ ✅ hecho (option file + Editar → Cargar). Siguiente: confirmar que stats y fichajes llegan a la Liga Máster.
 2. Confirmar si los cambios de stats llegan a la Liga Máster.
 3. Automatizar: Vestuario web → Phoenix Sync arma el archivo → Phoenix Link lo coloca → aviso «Editar → Cargar». Los prompts para LINK y WEB están por escribir.
 4. Calibración: portero completo, pie malo, forma y lesiones ✅. Siguen las habilidades especiales (bits 480–531), una foto de «Habilid. 4/4» por jugador.

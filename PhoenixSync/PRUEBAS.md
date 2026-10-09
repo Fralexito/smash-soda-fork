@@ -356,3 +356,15 @@ se puede cambiar un guardado con el juego abierto mientras no esté cargado (Fra
 - **Habilidades especiales:**
   - Joan: solo «Patadón en largo (PT)», bit 496 encendido ⇒ **496 = Patadón en largo** ✅.
   - Livakovic: Patadón + «Pase largo portero» + «Parapenaltis», bits 496, 502 y 522 ⇒ 502/522 son esas dos (el orden se resuelve con Szczęsny: 486, 490, 502).
+
+### 🏆 2026-10-09 04:47 · FICHAJE EN VIVO, SIN REINICIAR — CONSEGUIDO (Lamine Yamal → Real Madrid)
+- **Intento 1 (04:35-04:41): ❌ por el archivo de la base.** Se sirvió un `PlayerAssignment.bin` propio desde `livecpk\Phoenix-DB` (fila de Lamine: equipo 108 → 109, dorsal 26, orden 27). Editar → Cargar. El espía confirma que el juego **sí leyó nuestro archivo** (155 323 bytes, lectura #6 a las 04:39:49), **pero Lamine siguió en el Barça**.
+  - **Motivo:** al pulsar Cargar, las **plantillas vienen del option file** (`EDIT00000000`, bloque de plantillas de 284 B por equipo, 749 equipos). El option file manda sobre `PlayerAssignment.bin`. Las stats sí funcionaron por archivo porque Lamine **no está entre los jugadores editados** del option file; las plantillas, en cambio, están completas en el option file.
+  - Phoenix-DB quedó después con el PlayerAssignment original (misma suma que olmosjr23).
+- **Intento 2 (04:44-04:47): ✅ por el option file.** Con el juego abierto se reemplazó `239200\save\EDIT00000000` por una copia modificada con `mover_of` (núcleo de Phoenix Sync, `OptionFile::mover`): Lamine sale del Barça (sustituto en el once: Roony Bardghji) y entra en el Real Madrid con el **dorsal 26**. Solo cambian **95 bytes** (plantillas de los dos clubes + alineación del Barça). Respaldo en `save\EDIT00000000.respaldo-fichaje-20261009` y en `_PhoenixMercado_prueba\db\`.
+  - **Editar → Cargar → amistoso Real Madrid–Barça:** **Lamine titular en el Madrid (87) y ausente en el Barça.** Sin reiniciar, sin memoria, con un botón nativo.
+  - Curioso: el juego lo puso **titular** aunque entró como última reserva; el juego reordena el once del Madrid por su cuenta (orden identidad en el option file).
+- **Lo aprendido del formato `PlayerAssignment.bin` (16 B):** `[índice u32][jugador u32][equipo u32][dorsal−1 u8][orden<<2 u8][banderas u8: 0x20 = capitán?][0]`. Courtois 0 → dorsal 1, Mbappé 9 → 10, Lamine 9 → 10.
+- **Regla nueva:** **stats → archivo de la base (Phoenix-DB); plantillas (fichajes) → option file.** Las dos cosas se aplican con el mismo botón: Editar → Cargar.
+- **Dos carpetas de guardado en el PC:** la activa es `…\KONAMI\eFootball PES 2021 SEASON UPDATE\239200\save` (SYSTEM y ML00000000 cambian hoy); la de `292733975847239680\save` no se usa.
+- **Herramienta:** `mover_of` ahora acepta un 7.º argumento (dorsal). Antes ponía 99 por defecto.
