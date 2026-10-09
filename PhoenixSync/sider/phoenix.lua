@@ -1,6 +1,10 @@
 -- =============================================================================
 --  Phoenix Evolution · Puente en vivo para Sider (PES 2021)
 --  Prueba 1 — lee un archivo de texto y lo muestra en el overlay de Sider.
+--  Prueba 3 (v0.6, «escribir un número»): tecla V = Velocidad de Lamine a 99 SOLO en la
+--  memoria (los archivos no se tocan; al cerrar el juego vuelve a 90). Tecla N = devolverla
+--  a su valor. Escribe con WriteProcessMemory (si la zona ya no existe, falla sin cerrar el
+--  juego) y solo tras volver a leer y comprobar ID + nombre + cualidades un instante antes.
 --  Prueba 2 (v0.4, «solo mirar», lectura segura con copia) — con la tecla B, y SOLO si el overlay muestra
 --  este módulo, busca la ficha de Lamine Yamal (ID 162114) en la memoria del
 --  juego y la LEE. NUNCA escribe en la memoria, NO registra hooks del partido,
@@ -14,7 +18,7 @@
 --                    lua.module = "phoenix.lua"  en sider.ini
 -- =============================================================================
 
-local m = { version = "0.5-prueba" }
+local m = { version = "0.6-prueba" }
 
 local CADA_SEG    = 2      -- cada cuántos segundos se vuelve a mirar el archivo (solo con el overlay abierto)
 local MAX_BYTES   = 4096   -- nunca se lee más que esto
@@ -124,6 +128,9 @@ end
 --  VERIFICA cada candidato leyendo sus cualidades: si al menos 4 de 5 coinciden, es él.
 --  Además busca el nombre en mayúsculas («LAMINE YAMAL»), como lo guarda Player.bin.
 local VK_B        = 0x42
+local VK_V        = 0x56   -- escribir Velocidad 99
+local VK_N        = 0x4E   -- devolver Velocidad original
+local NUEVA_VEL   = 99
 local TROZO       = 24 * 1024 * 1024   -- bytes revisados por cada cuadro con el overlay abierto
 local MAX_HITS    = 12
 local MAX_CAND    = 20000              -- candidatos de ID que se llegan a verificar como máximo
@@ -138,7 +145,9 @@ local sonda = nil      -- estado de la búsqueda
 local MBI = nil
 local BUF_TAM = 1024 * 1024 + 4096   -- copia de trabajo: 1 MB + solape
 local buf, bufIni, bufFin = nil, 0, 0
-local RPM, PROC = nil, nil           -- ReadProcessMemory sobre el propio proceso
+local RPM, WPM, PROC = nil, nil, nil  -- Read/WriteProcessMemory sobre el propio proceso
+local escritos = {}                   -- { dir, antes, despues } de cada byte cambiado (para devolverlo con N)
+local estadoEscritura = nil
 
 -- CRASH 02:43 (v0.3): leer DIRECTO una zona que otro hilo (ReShade, al recargar efectos)
 -- acababa de liberar → 0xC0000005 dentro de sider.dll. Desde v0.4 NUNCA se lee la memoria
@@ -148,11 +157,14 @@ local function prepararLector()
     if RPM then return true end
     -- nombres propios (phx_*) apuntando a las funciones de Windows: así no chocan con
     -- declaraciones de otros módulos (ffi.cdef no deja redeclarar).
+    -- v0.6: nombres con versión (phx06_*): tras Shift+R el módulo nuevo vive en el MISMO Lua que
+    -- el viejo, y ffi.cdef no deja declarar dos veces el mismo nombre.
     ffi.cdef[[
-        int   phx_RPM(void* proceso, const void* desde, void* hacia, size_t n, size_t* leidos) __asm__("ReadProcessMemory");
-        void* phx_GCP(void) __asm__("GetCurrentProcess");
+        int   phx06_RPM(void* proceso, const void* desde, void* hacia, size_t n, size_t* leidos) __asm__("ReadProcessMemory");
+        int   phx06_WPM(void* proceso, void* hacia, const void* desde, size_t n, size_t* escritos) __asm__("WriteProcessMemory");
+        void* phx06_GCP(void) __asm__("GetCurrentProcess");
     ]]
-    RPM, PROC = ffi.C.phx_RPM, ffi.C.phx_GCP()
+    RPM, WPM, PROC = ffi.C.phx06_RPM, ffi.C.phx06_WPM, ffi.C.phx06_GCP()
     buf = ffi.new("uint8_t[?]", BUF_TAM)
     bufIni = tonumber(ffi.cast("uint64_t", buf)); bufFin = bufIni + BUF_TAM
     return true
@@ -186,7 +198,7 @@ end
 
 local function dirNum(p) return tonumber(ffi.cast("uint64_t", p)) end
 
-local function iniciarSonda()
+local function iniciarSonda(accion)
     prepararLector()
     local si = memory.get_system_info()
     MBI = MBI or ffi.new("MEMORY_BASIC_INFORMATION[1]")
@@ -195,7 +207,7 @@ local function iniciarSonda()
         regIni = 0, regFin = 0, pos = 0,
         hitsA = {}, hitsB = {}, recA = {}, ctxB = {}, mb = 0, regiones = 0, candidatos = 0, fallosLectura = 0, vistos = {},
         propiaA = dirNum(ffi.cast("const char*", PAT_A)), propiaB = dirNum(ffi.cast("const char*", PAT_B)),
-        t0 = os.clock(), hecho = false,
+        t0 = os.clock(), hecho = false, accion = accion or "mirar",
     }
     log("[phoenix] sonda v0.4: inicio de la búsqueda de " .. PID .. " (solo lectura, copia segura)")
 end
@@ -292,12 +304,73 @@ local function cerrarSonda()
     end
 end
 
+-- ─── Fase 2: escribir UN byte con comprobación previa ───────────────────────────────────
+-- Velocidad = bits 306..311 → todos dentro del byte 38 de la ficha (bits 2..7 de ese byte).
+local BYTE_VEL, DESPL_VEL = 38, 2
+
+local unByte = nil
+local function escribirByte(a, valor)
+    unByte = unByte or ffi.new("uint8_t[1]")
+    unByte[0] = valor
+    local n = ffi.new("size_t[1]")
+    local ok = WPM(PROC, ffi.cast("void*", a), unByte, 1, n)
+    return ok ~= 0 and tonumber(n[0]) == 1
+end
+
+local function escribirVelocidad()
+    local hechos, saltados = 0, 0
+    for _, a in ipairs(sonda.hitsA) do
+        local ini = a - 8
+        local rec = leerSeguro(ini, 312)              -- se vuelve a leer JUSTO antes de escribir
+        local valido = rec and rec:sub(9, 12) == PAT_A and rec:sub(OFS_NOMBRE + 1, OFS_NOMBRE + 12) == PAT_B
+        if valido then
+            local k = 0
+            for _, c in ipairs(CAMPOS) do if leerBits(rec, c[2], 6) + 40 == c[3] then k = k + 1 end end
+            valido = k >= 4
+        end
+        if valido then
+            local dir = ini + BYTE_VEL
+            local antes = rec:byte(BYTE_VEL + 1)
+            local despues = bit.bor(bit.band(antes, 0x03), bit.lshift(NUEVA_VEL - 40, DESPL_VEL))
+            if escribirByte(dir, despues) and leerSeguro(dir, 1) == string.char(despues) then
+                escritos[#escritos + 1] = { dir = dir, antes = antes, despues = despues }
+                hechos = hechos + 1
+                log(string.format("[phoenix] fase2: Velocidad %d -> %d en %s (byte %02x -> %02x)",
+                    leerBits(rec, 306, 6) + 40, NUEVA_VEL, memory.hex(ini), antes, despues))
+            else
+                saltados = saltados + 1
+                log("[phoenix] fase2: no se pudo escribir en " .. memory.hex(ini) .. " (zona cambiada): no se tocó nada")
+            end
+        else
+            saltados = saltados + 1
+            log("[phoenix] fase2: la ficha en " .. memory.hex(ini) .. " ya no coincide: no se tocó")
+        end
+    end
+    estadoEscritura = string.format("Velocidad %d escrita en %d ficha(s)%s. Sal y vuelve a entrar a la pantalla de habilidades de Lamine. (N = devolver a 90)",
+        NUEVA_VEL, hechos, saltados > 0 and (" · " .. saltados .. " saltada(s) por seguridad") or "")
+end
+
+local function devolverVelocidad()
+    prepararLector()
+    local ok, no = 0, 0
+    for _, e in ipairs(escritos) do
+        if leerSeguro(e.dir, 1) == string.char(e.despues) and escribirByte(e.dir, e.antes) then ok = ok + 1 else no = no + 1 end
+    end
+    log(string.format("[phoenix] fase2: devueltos %d byte(s), %d ya no estaban (el juego los movió o recargó)", ok, no))
+    escritos = {}
+    estadoEscritura = string.format("Velocidad devuelta a su valor en %d ficha(s)%s.", ok, no > 0 and (" · " .. no .. " ya no estaban") or "")
+end
+
 local function pasoSonda()
     if not sonda or sonda.hecho then return end
     local presupuesto = TROZO
     while presupuesto > 0 do
         if sonda.pos >= sonda.regFin then
-            if not siguienteRegion() then cerrarSonda() return end
+            if not siguienteRegion() then
+                cerrarSonda()
+                if sonda.accion == "velocidad" then escribirVelocidad() end
+                return
+            end
         end
         local fin = math.min(sonda.regFin, sonda.pos + 1024 * 1024)
         local n = math.min(sonda.regFin, fin + 64) - sonda.pos       -- 64 bytes de solape
@@ -317,7 +390,7 @@ end
 
 local function textoSonda()
     if not sonda then
-        return "\n\n[PRUEBA 2 · SOLO MIRAR] Pulsa B (en el menú, nunca en un partido) para buscar a Lamine Yamal en la memoria."
+        return "\n\n[PRUEBAS] B = buscar a Lamine (solo mirar) · V = ponerle Velocidad 99 (solo memoria) · N = devolverla. Solo en el menú, nunca en un partido."
     end
     if not sonda.hecho then
         return string.format("\n\n[PRUEBA 2] Buscando... %d MB revisados en %d zonas. IDs revisados: %d · fichas: %d · nombre: %d",
@@ -333,6 +406,7 @@ local function textoSonda()
         t[#t + 1] = string.format("  #%d %s → %s", i, memory.hex(a), table.concat(partes, " · "))
     end
     if #sonda.hitsA == 0 then t[#t + 1] = "  No apareció la ficha verificada (no es un fallo: se analiza el diario)." end
+    if estadoEscritura then t[#t + 1] = "  [FASE 2] " .. estadoEscritura end
     for i, c in ipairs(sonda.copias or {}) do
         t[#t + 1] = string.format("  Copia %d %s → %s · %s", i, memory.hex(c.dir),
             c.dif == 0 and "IGUAL al archivo" or (c.dif .. " bytes distintos"), c.partes)
@@ -342,7 +416,10 @@ end
 
 function m.key_down(ctx, vkey)
     if apagado then return end
-    if vkey == VK_B and (not sonda or sonda.hecho) then iniciarSonda() end
+    local libre = not sonda or sonda.hecho
+    if vkey == VK_B and libre then iniciarSonda("mirar") end
+    if vkey == VK_V and libre then estadoEscritura = "Buscando la ficha para escribir..."; iniciarSonda("velocidad") end
+    if vkey == VK_N and libre and #escritos > 0 then devolverVelocidad() end
 end
 
 local function textoOverlay()

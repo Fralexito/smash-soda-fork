@@ -286,3 +286,13 @@ se puede cambiar un guardado con el juego abierto mientras no esté cargado (Fra
   - **Ficha verificada, ahora en 0x55b7380** (el juego la movió desde 0x7ff4d8f80640: las direcciones cambian, siempre hay que buscarla).
   - Las «Copias 1-5» **no eran fichas**: eran otras listas con el nombre repetido a la misma distancia. Sus cualidades salían en 40 porque no son registros de jugador. Arreglo: exigir el ID en +8 para llamarla «copia».
   - **Calibración:** las 15 cualidades que muestra el juego en esa pantalla coinciden exactamente con nuestro mapa de bits, **incluida Potencia de tiro 78 (bit 358), que pasa de «por confirmar» a CONFIRMADA**.
+
+### 2026-10-09 · Sider · Prueba 3 «escribir un número» (phoenix.lua v0.6) — INSTALADA CON OK DE FRALEX
+- **Teclas:** V = buscar la ficha y poner Velocidad 99 **solo en la memoria**; N = devolver el byte original.
+- **Qué cambia:** **un solo byte**, el 38 de la ficha (Velocidad = bits 306-311 = bits 2-7 de ese byte). Los 2 bits bajos se conservan.
+- **Antes de escribir, en el mismo instante:** se vuelve a leer la ficha y se comprueban ID + nombre + ≥4 cualidades.
+- **Cómo escribe:** con WriteProcessMemory, que falla sin cerrar el juego si la zona ya no existe. Después lee de nuevo para confirmar.
+- **N** solo devuelve el byte si todavía tiene el valor escrito por nosotros.
+- **cdef con nombres por versión** (phx06_*), porque tras Shift+R el Lua es el mismo y no se puede redeclarar.
+- **Simulado:** 2 fichas legibles cambiadas de 90 a 99, la zona «liberada» intacta; N las devolvió a 90.
+- **Resultado en el juego:** (pendiente)
