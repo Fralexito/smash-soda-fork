@@ -235,3 +235,13 @@ Fecha 15/8/2026. Sommer sigue en el City (dorsal 12, titular de arquero), **jug�
 presupuesto de fichajes 160.665.600 € y **presupuesto salarial positivo (902.100 €**: el juego subió el tope a 147.515.200 €).
 **Fichar PARA el equipo del usuario queda validado en el juego.** Además: el juego relee el archivo al cargar la ranura, así que
 se puede cambiar un guardado con el juego abierto mientras no esté cargado (Fralex salió y entró a la ranura 2 y vio la versión nueva).
+
+### 2026-10-09 · Sider · Prueba 1 «buzón» (phoenix.lua) — INSTALADA, ESPERANDO A FRALEX
+- Instalada en la carpeta del modo `ConmeGol Extras\ConmeGOL Patch 26\SiderAddons`, porque el switcher copia esa carpeta encima del juego con robocopy:
+  - `modules\phoenix.lua`;
+  - la línea `lua.module = "phoenix.lua"` (línea 199, la última de los módulos);
+  - `content\phoenix\avisos.txt`.
+- Respaldo: `sider.ini.respaldo-phoenix-20261009`. El diff confirma que solo cambió 1 línea.
+- Antes de instalar: sintaxis comprobada con LuaJIT y simulación con un contexto falso de Sider (lee el aviso con tildes y ñ).
+- Los avisos en vivo se escriben en la raíz: `Conmegol Patch\SiderAddons\content\phoenix\avisos.txt`, porque `sider_dir` es la raíz.
+- Resultado en el juego: (pendiente)
