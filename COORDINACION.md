@@ -4,11 +4,11 @@ Dos trabajos independientes dentro del mismo Phoenix Link:
 
 | Trabajo | Rama | Carpeta | Regla |
 |---|---|---|---|
-| Rediseño de Phoenix Link (interfaz, nombre, logo) | `rediseño-phoenix-portal` | `SmashSoda/` | No tocar `PhoenixMercado/` |
-| Phoenix Mercado (módulo aparte) | `mercado-fase0` | `PhoenixMercado/` | No añadir a la build de `SmashSoda/`; avisar antes de tocar `SmashSoda/` |
+| Rediseño de Phoenix Link (interfaz, nombre, logo) | `rediseño-phoenix-portal` | `SmashSoda/` | No tocar `PhoenixSync/` |
+| Phoenix Sync (módulo aparte) | `mercado-fase0` | `PhoenixSync/` | No añadir a la build de `SmashSoda/`; avisar antes de tocar `SmashSoda/` |
 
 ## Carpeta compartida en el PC de Fralex (importante)
-`C:\dev\smash-soda-fork` tiene UNA sola rama activa y hoy es `mercado-fase0`. Phoenix Link NO compila ahí: `COMPILAR_PHOENIX.bat` crea una copia de trabajo aparte (`git worktree`) en `C:\dev\smash-soda-fork\_phoenix-link` con su propia build. Regla: nadie hace `git checkout` de otra rama en la carpeta principal por el otro chat, y nadie toca `_phoenix-link`. El Mercado se compila con su `build-mercado\`.
+`C:\dev\smash-soda-fork` tiene UNA sola rama activa y hoy es `mercado-fase0`. Phoenix Link NO compila ahí: `COMPILAR_PHOENIX.bat` crea una copia de trabajo aparte (`git worktree`) en `C:\dev\smash-soda-fork\_phoenix-link` con su propia build. Regla: nadie hace `git checkout` de otra rama en la carpeta principal por el otro chat, y nadie toca `_phoenix-link`. El Mercado se compila con su `build-sync\`.
 
 ## Contratos compartidos (si cambian, avisar al otro chat)
 - Token: `%APPDATA%\Trybuchet\Smash Soda\phoenix-token.dat`, cifrado DPAPI (`CryptProtectData`), sin entropía adicional. Mercado lo lee en solo lectura. Sin cambios de ubicación, nombre ni cifrado.
@@ -19,14 +19,15 @@ Dos trabajos independientes dentro del mismo Phoenix Link:
 - 2026-10-07 · Renombre a Phoenix Link: ejecutable `PhoenixLink.exe` (antes `PhoenixSoda.exe`), `OUTPUT_NAME` en `SmashSoda/CMakeLists.txt`. La etiqueta de texto del token pasó de "PhoenixSoda" a "PhoenixLink"; no afecta a la lectura.
 - 2026-10-07 · `core/ProveedorSala.h` (interfaz interna de Phoenix Link) gana métodos de moderación: `esMod`, `esVip`, `alternarMod`, `alternarVip`, `banear`, `tecladoPermitido`, `ratonPermitido`, `permitirTeclado`, `permitirRaton`. Solo afecta si Mercado implementa o usa `ProveedorSala` (hoy no lo hace). La pantalla Gente se rediseñó (lista + ficha).
 - 2026-10-08 · Build: `COMPILAR_PHOENIX.bat` (no versionado) ahora compila en `_phoenix-link\` (worktree desacoplado de la rama activa de la carpeta principal). Salida: `_phoenix-link\x64\Release\PhoenixLink.exe`. Ya no mata `MSBuild`/`cl`/`link`, para no cortar compilaciones del Mercado.
-- 2026-10-09 · (MERCADO) Puente Sider probado en el juego: `phoenix.lua` muestra `<juego>\SiderAddons\content\phoenix\avisos.txt` en vivo. Prompts listos en `PhoenixMercado/prompts/` para que WEB cree §25 (`/v1/juego/buzon`) y LINK escriba ese archivo (atómico, UTF-8 sin BOM, ≤ 14 líneas / 1500 bytes).
+- 2026-10-09 · (MERCADO) Puente Sider probado en el juego: `phoenix.lua` muestra `<juego>\SiderAddons\content\phoenix\avisos.txt` en vivo. Prompts listos en `PhoenixSync/prompts/` para que WEB cree §25 (`/v1/juego/buzon`) y LINK escriba ese archivo (atómico, UTF-8 sin BOM, ≤ 14 líneas / 1500 bytes).
+- 2026-10-09 · (SYNC) **Phoenix Mercado pasa a llamarse Phoenix Sync** por decisión de Fralex: la carpeta `PhoenixMercado/` pasa a ser `PhoenixSync/`, el exe es `PhoenixSync.exe` y la build va en `build-sync\`. **No cambian**: la rama `mercado-fase0`, la API `/functions/v1/mercado/v1`, `X-Mercado-Version`, `%APPDATA%\Phoenix Mercado\mercado-token.dat` ni el token de Link. Las rutas de los prompts anteriores que digan `PhoenixMercado/...` ahora son `PhoenixSync/...`.
 
 ## Dos cuentas de Claude (A y B) — protocolo obligatorio
 Fralex usa 2 cuentas; cuando una se queda sin tokens sigue la otra. **La memoria es el repo, no el chat.**
 | Frente | Rama | Carpeta | Bitácora |
 |---|---|---|---|
 | LINK (Phoenix Link, interfaz, overlay) | `rediseño-phoenix-portal` | `SmashSoda/` | `REGISTRO-LINK.md` (raíz, en esa rama) |
-| MERCADO (Phoenix Mercado) | `mercado-fase0` | `PhoenixMercado/` | `PhoenixMercado/REGISTRO.md` (en esa rama) |
+| MERCADO (Phoenix Sync) | `mercado-fase0` | `PhoenixSync/` | `PhoenixSync/REGISTRO.md` (en esa rama) |
 | WEB (página + Supabase) | repo `Fralexito/phoenixevolution`, `borrador` | — | `REGISTRO.md` de ese repo |
 
 1. Al empezar: `git fetch` + `git pull --rebase` de TU rama y leer el final de tu bitácora y de este archivo.
