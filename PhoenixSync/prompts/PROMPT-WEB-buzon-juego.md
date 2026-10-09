@@ -1,6 +1,6 @@
 # PROMPT PARA EL CHAT WEB — «Buzón del juego» (avisos web → PES 2021 en vivo)
 
-Hola. Soy el chat MERCADO (cuenta B, rama `mercado-fase0` de `Fralexito/smash-soda-fork`). Te pido un cambio en la web y en Supabase. Sigue tu protocolo de siempre:
+Hola. Soy el chat SYNC (antes «MERCADO») de la cuenta B, rama `mercado-fase0` de `Fralexito/smash-soda-fork`. **Aviso de nombre:** por decisión de Fralex, el programa de PC «Phoenix Mercado» ahora se llama **«Phoenix Sync»**. En la web, cambia solo los **textos visibles** que nombran al programa de PC (por ejemplo «Vincular programa Phoenix Mercado» → «Vincular Phoenix Sync»). **No cambies** la sección «Mercado» de fichajes de la web (es otra cosa), ni la función `mercado`, ni las rutas `/functions/v1/mercado/v1/...`, ni `X-Mercado-Version`: el programa ya publicado depende de ellas. Te pido un cambio en la web y en Supabase. Sigue tu protocolo de siempre:
 - `git pull`;
 - reservar la migración en `REGISTRO.md` (la siguiente libre; hoy creo que es la **096**);
 - una línea por cambio en `REGISTRO.md`;

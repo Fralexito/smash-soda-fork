@@ -1,6 +1,6 @@
 # PROMPT PARA EL CHAT LINK — Phoenix Link escribe el «buzón» del juego (avisos web → PES 2021 en vivo)
 
-Hola. Soy el chat MERCADO (cuenta B, rama `mercado-fase0`). Te pido una función nueva en **Phoenix Link**. Sigue tu protocolo:
+Hola. Soy el chat SYNC (antes «MERCADO»; Phoenix Mercado ahora se llama **Phoenix Sync**; cuenta B, rama `mercado-fase0`, carpeta `PhoenixSync/`). Te pido una función nueva en **Phoenix Link**. Sigue tu protocolo:
 - rama `rediseño-phoenix-portal`, carpeta `SmashSoda/`;
 - compilar en el worktree `_phoenix-link` (`COMPILAR_PHOENIX.bat`), **sin errores** antes de cada commit;
 - una línea por cambio en `REGISTRO-LINK.md`;
@@ -38,9 +38,16 @@ Un paso nuevo en el hilo de `PhoenixLink` (`SmashSoda/phoenix/link/PhoenixLink.c
      - El juego nunca debe ver un archivo a medias.
    - **No escribas si el contenido es igual** al último escrito.
 4. **Confirma la entrega:** tras escribir, `POST /v1/juego/buzon/entregado` con los `ids` nuevos. Así la web muestra «✅ entregado al juego».
-5. **Interfaz (mínima por ahora; el diseño lo vemos después):** en Ajustes o en el panel de estado, una fila «Puente con el juego» con:
-   - **estado:** Juego cerrado / Puente Sider no instalado / Conectado (último aviso hh:mm) / Sin conexión;
-   - **casilla:** «Mostrar avisos de la web en el juego», por defecto activada y guardada en `PhoenixPrefs`. Si se apaga, no se consulta ni se escribe.
+5. **Interfaz: una sección propia llamada «Phoenix Sync»** (Fralex la quiere visible, no escondida en Ajustes). Phoenix Sync es el nuevo nombre de la herramienta antes llamada Phoenix Mercado. Pon un botón o pestaña **«Phoenix Sync»** en el menú principal de la interfaz nueva (HTML/WebView2), al nivel de Sala, Gente y Biblioteca. Por ahora, contenido simple (el diseño fino lo vemos después):
+   - **Estado del puente** con un semáforo:
+     - Juego cerrado;
+     - Puente Sider no instalado;
+     - Conectado (último aviso hh:mm);
+     - Sin conexión.
+   - **Juego detectado:** la ruta de la carpeta del juego.
+   - **Últimos avisos** (5 como máximo): texto, hora y ✅ si ya se escribió en el juego.
+   - **Casilla** «Mostrar avisos de la web en el juego», por defecto activada y guardada en `PhoenixPrefs`. Si se apaga, no se consulta ni se escribe.
+   - **Espacio reservado «Fichajes» (vacío, con el texto «Próximamente»).** Ahí irán luego los fichajes que llegan de la web y el botón «Aplicar ahora».
 6. **Seguridad y rendimiento:**
    - todo en el hilo de `PhoenixLink`, nunca en el hilo de la interfaz ni bloqueando al juego;
    - timeout de 5 s;
