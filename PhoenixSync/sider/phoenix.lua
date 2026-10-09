@@ -18,7 +18,7 @@
 --                    lua.module = "phoenix.lua"  en sider.ini
 -- =============================================================================
 
-local m = { version = "0.16-prueba" }
+local m = { version = "0.17" }
 
 local CADA_SEG    = 2      -- cada cuántos segundos se vuelve a mirar el archivo (solo con el overlay abierto)
 local MAX_BYTES   = 4096   -- nunca se lee más que esto
@@ -768,9 +768,17 @@ local function sumaTrozo(s)
     for i = 1, #s, 64 do h = (h * 31 + s:byte(i)) % 4294967296 end
     return h
 end
+-- v0.17: los parches del botón nativo se aplican SOLOS una vez por sesión, la primera vez que el
+-- juego lee la base (arranque; el código del juego ya está en memoria). Antes se comprueban los bytes.
+local autoHecho = false
 function m.livecpk_read(ctx, filename, addr, len, total_size, offset)
     local corto = cortoPesdb(filename)
     if not corto then return end
+    if not autoHecho then
+        autoHecho = true
+        botonEnElSitio()
+        log("[phoenix] v0.17 auto: " .. tostring(estadoBoton))
+    end
     if corto == "player.bin" and addr and len and len > 0 then
         local h = sumaTrozo(memory.read(addr, len))
         if lineasLog < 300 then
@@ -832,7 +840,7 @@ function m.init(ctx)
     ctx.register("overlay_on", m.overlay_on)
     ctx.register("key_down", m.key_down)
     ctx.register("livecpk_read", m.livecpk_read)
-    log("[phoenix] v" .. m.version .. " listo (tecla B = buscar en memoria; tecla L = pedir recarga nativa; tecla K = releer la base). Archivo: " .. ruta)
+    log("[phoenix] v" .. m.version .. " listo (botón nativo automático; tecla B = buscar en memoria; tecla L = pedir recarga nativa; tecla K = releer la base). Archivo: " .. ruta)
 end
 
 return m

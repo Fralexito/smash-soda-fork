@@ -507,3 +507,9 @@ se puede cambiar un guardado con el juego abierto mientras no esté cargado (Fra
 - **Resultado:** el botón de Konami vuelve a funcionar como en 2021: pulsas Activar → mensaje → datos nuevos al momento. Sin teclas de recarga, sin Editar, sin volver al menú.
 - **Para revisar:** la plantilla del Atlético en esa pantalla cambió (aparecen José María Giménez, Matteo Ruggeri y Nico González). Posible causa: en modo «Datos en vivo» el juego toma las plantillas de la **base** (PlayerAssignment de olmosjr23) en vez de las del option file. Hay que confirmarlo antes de usarlo para fichajes.
 - El mensaje habla de la «forma física» (PlayerWeekly). En el futuro, sirviendo nuestro `PlayerWeekly.bin` se podría mostrar la forma de Phoenix (Phoenix Weekly).
+
+### 2026-10-09 06:05 · v0.17: el botón nativo se conecta SOLO al arrancar (sin tecla U) — INSTALADO, falta probar
+- La primera vez que el juego lee la base (`livecpk_read` de un `pesdb\*.bin`, durante el arranque), `phoenix.lua` aplica los parches A/B/C con su comprobación de bytes. Si ya estaban puestos, no reescribe nada. La tecla U sigue funcionando como respaldo.
+- Simulación OK (arranque nuevo → la primera lectura aplica; la segunda no repite). Instalado, sha verificado en el PC (d85e…). Respaldo `phoenix.lua.v016`.
+- **Plan:** cerrar el juego → abrir → el overlay debe mostrar «[BOTÓN] … EN EL SITIO ✓» sin pulsar nada → Partido → Datos Actual. en vivo → Activar → mensaje nativo + datos.
+- Prompt para el chat LINK: `prompts/PROMPT-LINK-boton-nativo.md` (colocar las entregas de Sync y avisar «pulsa Datos Actual. en vivo»).
