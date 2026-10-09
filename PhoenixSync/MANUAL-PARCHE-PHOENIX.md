@@ -77,12 +77,12 @@ WEB (Supabase) ⇄ PHOENIX LINK (cartero, internet) ⇄ archivos en la PC ⇄ SI
   - edad 408 (6 bits, +15);
   - posición principal 434 (4 bits);
   - nacionalidad 233 (9 bits → `Country.bin`).
-- **Portero**: bits 269, 300, 320, 326, 364 🔎. Falta saber cuál es cuál: hace falta una foto de la ficha de Joan García.
+- **Portero** ✅: 269 = Despejar, 300 = Cobertura, 364 = Atajar. 320 y 326 = Actitud de portero y Reflejos, falta saber cuál es cuál (se resuelve con la foto de Livakovic: 320 = 84, 326 = 82).
 - **Posiciones jugables** (2 bits: 0 no, 1 B, 2 A) 🔎:
   - PT 350, DFC 468, LI 318, LD 474;
   - MCD 414, MC 456, MI 466, MD 460, MO 464;
   - EI 472, ED 476, SD 478, DC 470.
-- **Pie malo** uso 454 / precisión 462, **forma** 438, **lesiones** 458 ❓. El juego **varía** los bytes 54-57 al cargar.
+- **Pie malo** uso 454 / precisión 462, **forma (Regularidad)** 438, **lesiones** 458 ✅: lo que muestra el juego = valor guardado + 1. El juego **varía** estos bytes (54-57) al cargar.
 - **Habilidades especiales y estilos COM**: bits 480–531 ❓.
 - **Nombres** dentro de la ficha (en mayúsculas en el byte 129 y otra vez en el 190; en formato normal en el 251).
 
@@ -208,7 +208,7 @@ El juego **no** usa `CGP_database.cpk`. Usa la base que sirve Sider desde `Sider
 1. Fichaje en vivo con `PlayerAssignment.bin` + Editar → Cargar.
 2. Confirmar si los cambios de stats llegan a la Liga Máster.
 3. Automatizar: Vestuario web → Phoenix Sync arma el archivo → Phoenix Link lo coloca → aviso «Editar → Cargar». Los prompts para LINK y WEB están por escribir.
-4. Calibrar el portero, el pie malo, la forma y las lesiones con fotos de la ficha de Joan García.
+4. Calibración: pie malo, forma, lesiones y 3 de 5 cualidades de portero ✅. Falta Actitud vs Reflejos (foto de Livakovic).
 5. Actualización de ConmeGOL: aplicar la receta R5 y regenerar `Phoenix-DB`.
 
 ---

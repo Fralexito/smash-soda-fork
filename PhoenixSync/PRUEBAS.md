@@ -342,3 +342,11 @@ se puede cambiar un guardado con el juego abierto mientras no esté cargado (Fra
   4. En el siguiente partido o pantalla nueva se ven los cambios. Sin reiniciar y sin tocar la memoria.
 - **Estado al cerrar la prueba:** Phoenix-DB tiene v90, cuyos datos son idénticos a los originales de olmosjr23 (solo recomprimido), en la raíz y en la carpeta del modo. Lamine queda como en el parche.
 - **Cuidado futuro:** la raíz Phoenix-DB **tapa** el Player.bin de olmosjr23. Cuando el parche se actualice, hay que regenerar nuestro archivo desde la base nueva (Auditor de parches), o se servirían datos viejos.
+
+### 2026-10-09 04:20 · Calibración con la ficha de Joan García (4 pantallas del juego)
+- **Habilidad 3/4 del juego:** Actitud de portero 92, Atajar 90, Despejar 89, Reflejos 92, Cobertura 91.
+  - Player.bin: 269 = 89, 300 = 91, 320 = 92, 326 = 92, 364 = 90.
+  - ⇒ **269 = Despejar, 300 = Cobertura, 364 = Atajar** ✅. 320 y 326 = Actitud o Reflejos; los dos valen 92, así que falta una foto de **Livakovic** (320 = 84, 326 = 82).
+- **Uso de pie malo 2, precisión 2, regularidad 4, resistencia a lesiones 2.** Guardado: 454 = 1, 462 = 1, 438 = 3, 458 = 1 ⇒ **lo que muestra el juego = valor guardado + 1** ✅ (Lamine, guardado 2/2/4/1, cuadra con 3/3/5/2).
+- **Habilidad 2/4:** las 17 cualidades de campo coinciden con el mapa, incluida Potencia de tiro 81 ✅.
+- **Habilidad especial:** «Patadón en largo (PT)». Sin estilos COM. Sirve para empezar a calibrar los bits 480-531.
