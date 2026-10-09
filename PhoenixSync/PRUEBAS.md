@@ -483,3 +483,19 @@ se puede cambiar un guardado con el juego abierto mientras no esté cargado (Fra
 - Ficha de Lamine: **Velocidad 90** (antes 95). ✅
 - **Resultado:** la opción nativa de Konami, apagada desde 2022, vuelve a funcionar y ahora carga los datos de Phoenix.
 - Falta confirmar con FRALEX si al pulsar Activar ya no salió ningún mensaje de error.
+- **05:50 · FRALEX:** al pulsar Activar con v0.15b **no salió ningún mensaje**. Pide que salga el mensaje de éxito y que la recarga sea **ahí mismo**, sin volver al menú.
+
+### 2026-10-09 05:55 · v0.16: botón nativo «en el sitio» (con mensaje de éxito) — INSTALADO, falta probar
+- **LiveDataSetFlow**, estados ya mapeados:
+  - 22 = diálogo «LiveDataSetDialog» con el mensaje **0xF90042** (el error del flujo común era 0xF90043);
+  - 23 = espera ≥ 2 s;
+  - **26 = «editLoadDataInLiveDataSet»** (la recarga en el sitio);
+  - 36/37 = avisar al flujo común (0x10A0001) y terminar.
+- **Constructor** `0x20AB7C0`: `[+0x90]` = modo (Partido = 2) y `[+0x22C]` = 5.º argumento (Partido = 0). Así el estado 26 **sí** hace la recarga, porque solo se desvía si `[+0x22C] = 2`.
+- **Parches v0.16 (tecla U, en memoria):**
+  - **A** `0x20AF73B`: `mov [rdi+0x94], 3 ; jmp 0x20AF7BA` (sin inicio de sesión → crear LiveDataSetFlow). Acepta el original o el parche de la v0.15.
+  - **B** `0x20AC6B9`, estado 5: `mov [rdi+0x94], 0x16 ; jmp 0x20AEC82` (sin internet → diálogo de éxito).
+  - **C** `0x20AE664`: `mov word [rsp+0x30], 0x100 → 0x101` (la recarga del estado 26 incluye la base).
+  - Se comprueban los tres antes de escribir; si uno no cuadra, no se escribe ninguno. Decodificados con capstone. Simulación OK.
+- **Riesgo:** los estados 0–4 (dos objetos de espera y la comparación de versión DLC) se ejecutan tal cual y aún no se han estudiado. Pueden pedir algo de red o dar «versión antigua».
+- Instalado (sha verificado en el PC; respaldo `phoenix.lua.v015b`). Phoenix-DB con **v99** (el juego tiene v90).

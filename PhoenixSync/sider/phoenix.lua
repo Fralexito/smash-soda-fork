@@ -18,7 +18,7 @@
 --                    lua.module = "phoenix.lua"  en sider.ini
 -- =============================================================================
 
-local m = { version = "0.15b-prueba" }
+local m = { version = "0.16-prueba" }
 
 local CADA_SEG    = 2      -- cada cuántos segundos se vuelve a mirar el archivo (solo con el overlay abierto)
 local MAX_BYTES   = 4096   -- nunca se lee más que esto
@@ -690,7 +690,51 @@ local function botonNativo()
     end
 end
 local function textoBoton()
-    return "\n  [BOTÓN] " .. (estadoBoton or "tecla U = conectar el botón nativo «Datos Actual. en vivo»")
+    return "\n  [BOTÓN] " .. (estadoBoton or "tecla U = conectar el botón nativo «Datos Actual. en vivo» (en el sitio)")
+end
+
+-- ─── v0.16 · BOTÓN NATIVO «EN EL SITIO»: mensaje de éxito + recarga sin volver al menú ────────
+-- Petición de FRALEX (05:50): que «Activar» muestre el mensaje de éxito y recargue ahí mismo.
+-- Konami ya lo hacía: LiveDataSetFlow (38 estados) estado 22 = diálogo «LiveDataSetDialog» con el
+-- mensaje 0xF90042 (éxito; el de error del flujo común es 0xF90043) → espera ≥2 s → estado 26 =
+-- «editLoadDataInLiveDataSet» (recarga EN EL SITIO) → 36/37 → avisa al flujo común (0x10A0001) → fin.
+-- En Partido el flujo se crea con modo [+0x90]=2 y [+0x22C]=0 → el estado 26 SÍ recarga (no se desvía).
+-- PARCHES (en memoria; se comprueban los bytes antes de escribir):
+--   A. flujo común, estado 1 (exe+0x20AF73B): mov dword [rdi+0x94], 3 ; jmp fin  → sin inicio de
+--      sesión, va directo a crear LiveDataSetFlow (acepta el original o el parche de la v0.15).
+--   B. LiveDataSetFlow, estado 5 (exe+0x20AC6B9, la petición al servidor): mov dword [rdi+0x94], 0x16 ;
+--      jmp 0x20AEC82  → sin internet, salta al diálogo de ÉXITO.
+--   C. estado 26 (exe+0x20AE664): mov word [rsp+0x30], 0x100 → 0x101  → la recarga incluye la BASE.
+local PARCHES16 = {
+    { nombre = "A", rva = 0x20AF73B,
+      originales = { "\72\131\191\152\0\0\0\0\117\107\51\219\137\92\36\40\199\68\36", "\198\5\247\100\116\1\1\199\135\148\0\0\0\7\0\0\0\235\108" }, nuevo = "\199\135\148\0\0\0\3\0\0\0\235\115" },
+    { nombre = "B", rva = 0x20AC6B9, originales = { "\232\82\226\9\255\72\133\192\116\16\72\141\21\22\83" }, nuevo = "\199\135\148\0\0\0\22\0\0\0\233\186\37\0\0" },
+    { nombre = "C", rva = 0x20AE664, originales = { "\102\199\68\36\48\0\1" }, nuevo = "\102\199\68\36\48\1\1" },
+}
+local function botonEnElSitio()
+    prepararLector(); prepararVP()
+    local base = baseExe()
+    -- 1) comprobar TODO antes de escribir NADA
+    for _, pt in ipairs(PARCHES16) do
+        local real = leerSeguro(base + pt.rva, #pt.nuevo)
+        local ok = (real == pt.nuevo)
+        for _, o in ipairs(pt.originales) do if real == o:sub(1, #pt.nuevo) then ok = true end end
+        if not ok then
+            estadoBoton = "NO se tocó nada: el código del parche " .. pt.nombre .. " no es el esperado"
+            log("[phoenix] " .. estadoBoton .. " (" .. (real and hex(real) or "ilegible") .. ")"); return
+        end
+    end
+    -- 2) escribir y verificar
+    for _, pt in ipairs(PARCHES16) do
+        if leerSeguro(base + pt.rva, #pt.nuevo) ~= pt.nuevo then
+            if not escribirBytes(base + pt.rva, pt.nuevo) or leerSeguro(base + pt.rva, #pt.nuevo) ~= pt.nuevo then
+                estadoBoton = "✗ el parche " .. pt.nombre .. " no quedó"
+                log("[phoenix] " .. estadoBoton); return
+            end
+            log("[phoenix] v0.16: parche " .. pt.nombre .. " aplicado en exe+" .. string.format("%X", pt.rva))
+        end
+    end
+    estadoBoton = "[" .. os.date("%H:%M:%S") .. "] botón nativo EN EL SITIO ✓ · Partido → Datos Actual. en vivo → Activar"
 end
 
 function m.key_down(ctx, vkey)
@@ -700,7 +744,7 @@ function m.key_down(ctx, vkey)
     if vkey == VK_L then pedirRecarga() end
     if vkey == VK_K then pedirBase() end
     if vkey == VK_P then recargaCompleta() end
-    if vkey == VK_U then botonNativo() end
+    if vkey == VK_U then botonEnElSitio() end   -- v0.16 (la v0.15 era botonNativo)
     -- v0.10: V y N DESACTIVADAS. Escribir en memoria ensucia la prueba de la base servida por Sider
     -- (03:44 se pulsó V y volvió a poner 99 en una copia con 90). El camino elegido es el archivo.
 end
