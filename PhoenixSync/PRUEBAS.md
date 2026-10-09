@@ -368,3 +368,11 @@ se puede cambiar un guardado con el juego abierto mientras no esté cargado (Fra
 - **Regla nueva:** **stats → archivo de la base (Phoenix-DB); plantillas (fichajes) → option file.** Las dos cosas se aplican con el mismo botón: Editar → Cargar.
 - **Dos carpetas de guardado en el PC:** la activa es `…\KONAMI\eFootball PES 2021 SEASON UPDATE\239200\save` (SYSTEM y ML00000000 cambian hoy); la de `292733975847239680\save` no se usa.
 - **Herramienta:** `mover_of` ahora acepta un 7.º argumento (dorsal). Antes ponía 99 por defecto.
+
+### 2026-10-09 04:53 · ¿Las stats en vivo llegan a la Liga Máster? → ❌ NO (con Editar → Cargar)
+- Phoenix-DB con **Player_v99** (Lamine Velocidad 99). Editar → Cargar a las **04:51:34**: la huella es **exactamente v99** (3611839843 / 3265817782). FRALEX lo hizo bien.
+- Entró a su Liga Máster (Borussia Dortmund) a las 04:52:00 (el juego solo lee `installversionplayer.bin`). Ficha de Lamine en la carrera: **Velocidad 90**.
+- **Conclusión:** la Liga Máster **no** toma las stats de la copia que rehace «Cargar». Usa su propia copia (la del arranque o la de su guardado).
+- **Siguiente prueba para separarlo:** reiniciar el juego con v99 puesto y entrar a la misma carrera. Si sale 99 → la LM usa la base del arranque (stats nuevas al reiniciar). Si sigue 90 → las stats viven dentro del guardado `ML0000000N` y habría que editarlas ahí (Phoenix Sync ya edita ese archivo).
+- Phoenix-DB queda con **v99** a propósito para esa prueba.
+- **Ejecutable:** `PES2021.exe` pesa 437 MB, con una sección `.impdata` de 380 MB (capa de protección típica tipo Denuvo) y el código en `.trace` (37 MB). Importa para la idea de llamar funciones internas.
