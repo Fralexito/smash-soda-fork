@@ -79,7 +79,7 @@ arriba son las ya contadas.)*
 | Módulos de **prueba** activos (`env`, `etrace`, `jittest`, `zlibtest`) | `env` | varios | Logs gigantes, más carga |
 | Módulos que no hacen nada / de otra versión (Chatty para FL26, scoreboard EPL, Anti-Cheat placebo, goalscreams) | sí | parcial | Falsa sensación de función |
 | `netblock.lua` | — | sí | Bloquea cualquier online |
-| Contenido duplicado entre modos (cada variante copia todo) | sí (~234 GB el pack completo) | ✅ (dos Sider casi iguales) | Pesado, lento de actualizar |
+| Contenido duplicado entre modos (cada variante copia todo) | sí (~234 GB el pack completo) | sí (dos Sider casi iguales) | Pesado, lento de actualizar |
 | CPK de caras de 5–11 GB | — | sí | Actualizar una cara = bajar 10 GB |
 | Miles de archivos diminutos (`slotkits`, cuerpos PRDX) | sí | — | Cada archivo cuesta una búsqueda de Sider |
 | Instalación por `.bat` con letra de disco | — | sí | Frágil; el antivirus desconfía |
