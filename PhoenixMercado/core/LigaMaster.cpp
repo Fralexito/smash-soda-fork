@@ -1,7 +1,9 @@
 #include "LigaMaster.h"
 #include "Alineacion.h"
+#include "BlobLM.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <cstring>
 
@@ -862,6 +864,294 @@ namespace mercado::lm {
 		if (topeSalarialEur) p32(d, f.valor->ofs + kFinOfsTope, uint32_t(topeSalarialEur / 100));
 		_datos.swap(d);
 		return finanzas(k);
+	}
+
+
+	// =========================================================================
+	//  Fichar PARA el usuario (IA → usuario), §19–§20
+	// =========================================================================
+	namespace {
+		constexpr size_t kOfsFecha = 0xacc61c;          // fecha actual: [día del año u16][año u16][365 u16][?][fecha u32] → fecha en +8
+		constexpr uint32_t kBitFichadoM = 0x80000;      // tabla M +0x14: «llegó esta temporada» (visto en todos los fichados)
+		// Ficha del blob (156 B):
+		constexpr size_t kFichaComps = 10, kFichaNumComps = 12;    // pares (comp u16, banderas u16), 0xffff = libre
+		constexpr size_t kFichaA = 0x4a;                // 6 B que el juego copia a la tabla A al fichar
+		constexpr size_t kFichaSueldo = 0x56, kFichaClubAnterior = 0x5e, kFichaFin = 0x66, kFichaInicio = 0x6a;
+		// Historial de medias (tabla E, 192 B): [edad][media cada medio año desde los 9 años…]
+		constexpr int kEdadInicioHistorial = 9;
+
+		/// Historial de medias como lo inventa el juego al fichar (§20): sube desde ~media−27 hasta el pico (a los ~29–31) y,
+		/// en los veteranos, baja suavemente hasta la media actual. Dos valores por año; el último = media actual.
+		std::vector<uint8_t> historialMedias(int edad, int media) {
+			const int n = std::max(2, 2 * (edad - kEdadInicioHistorial));
+			const int bajaVeterano = edad > 31 ? std::min(8, (edad - 31)) : 0;   // Sommer 37 → pico 87, actual 81
+			const int pico = std::min(99, media + bajaVeterano);
+			const int inicio = std::max(40, pico - 27);
+			const int idxPico = std::max(1, std::min(n - 1, n - 1 - 2 * std::max(0, edad - 31)));
+			std::vector<uint8_t> v(static_cast<size_t>(n), uint8_t(0));
+			for (int i = 0; i < n; i++) {
+				double x;
+				if (i <= idxPico) x = inicio + (pico - inicio) * std::pow(double(i) / idxPico, 0.8);
+				else x = pico - (pico - media) * double(i - idxPico) / std::max(1, n - 1 - idxPico);
+				v[size_t(i)] = uint8_t(std::lround(x));
+			}
+			v.back() = uint8_t(media);
+			return v;
+		}
+
+		/// Grupo y línea de una posición (0 PT … 12 DC) para elegir el compañero que sirve de molde.
+		int grupoPos(int c) { static const int g[13] = { 0, 1, 2, 2, 3, 3, 4, 4, 5, 6, 6, 7, 7 }; return c < 0 || c > 12 ? -1 : g[c]; }
+		int lineaPos(int c) { return c < 0 ? -1 : c == 0 ? 0 : c <= 3 ? 1 : c <= 8 ? 2 : 3; }
+	}
+
+	Resultado<Fecha> GuardadoLM::fechaActual() const {
+		using R = Resultado<Fecha>;
+		if (_datos.size() < kOfsFecha + 4) return R::mal("FECHA_NO_HALLADA", "Guardado demasiado corto");
+		const Fecha f = Fecha::desde(u32(_datos, kOfsFecha));
+		const uint16_t anio2 = u16(_datos, kOfsFecha - 6), dias = u16(_datos, kOfsFecha - 4);
+		if (!f.valida() || anio2 != f.anio || (dias != 365 && dias != 366)) return R::mal("FECHA_NO_HALLADA", "La fecha actual no está donde se esperaba");
+		return R::bien(f);
+	}
+
+	Resultado<uint16_t> GuardadoLM::ficharParaUsuario(int kU, int kO, uint32_t pid, const OpcionesFichaje& op) {
+		using R = Resultado<uint16_t>;
+		try {
+			if (kU < 0 || kU >= kNumEquipos || kO < 0 || kO >= kNumEquipos || kU == kO) return R::mal("EQUIPO_INVALIDO", std::to_string(kO) + " → " + std::to_string(kU));
+			if (!esEquipoUsuario(kU)) return R::mal("NO_ES_USUARIO", "El destino no es el equipo del usuario");
+			if (esEquipoUsuario(kO)) return R::mal("ORIGEN_ES_USUARIO", "El origen también es del usuario");
+			auto pu = leerPlantilla(_datos, kU);
+			auto po = leerPlantilla(_datos, kO);
+			if (_datos[baseEquipo(kU) + kOfsContador] != pu.size() || _datos[baseEquipo(kO) + kOfsContador] != po.size())
+				return R::mal("ML_INCONSISTENTE", "El contador de plantilla no coincide con la lista");
+			if (pu.size() >= size_t(kMaxPlantilla)) return R::mal("PLANTILLA_LLENA", "Tu equipo ya tiene 40 jugadores");
+			if (std::any_of(pu.begin(), pu.end(), [&](const Plaza& p) { return p.pid == pid; })) return R::mal("JUGADOR_YA_EN_DESTINO", "Ya está en tu plantilla");
+			int idxO = -1, idxS = -1;
+			for (size_t i = 0; i < po.size(); i++) { if (po[i].pid == pid) idxO = int(i); if (op.pidSustituto && po[i].pid == op.pidSustituto) idxS = int(i); }
+			if (idxO < 0) return R::mal("JUGADOR_NO_ESTA", "El jugador no está en el equipo de origen");
+			if (op.pidSustituto && idxS < 0) return R::mal("SUSTITUTO_NO_ESTA", "El sustituto no está en el equipo de origen");
+			const Plaza llega = po[size_t(idxO)];
+			const int n = int(pu.size());
+
+			// Fecha del fichaje
+			Fecha fecha = op.fecha;
+			if (!fecha.valida()) { auto fa = fechaActual(); if (!fa.ok()) return R::mal(fa.error.codigo, fa.error.detalle); fecha = *fa.valor; }
+
+			// Club interno del usuario y del origen (§17)
+			auto idU = idOptionDe(kU); auto idO = idOptionDe(kO);
+			if (!idU.ok()) return R::mal(idU.error.codigo, idU.error.detalle);
+			if (!idO.ok()) return R::mal(idO.error.codigo, idO.error.detalle);
+			const uint32_t clubU = (*idU.valor << 14) | uint32_t(kU), clubO = (*idO.valor << 14) | uint32_t(kO);
+
+			// Alineación del origen (IA): sale el jugador, con sustituto si era titular o tenía rol
+			const auto bloques = buscarBloquesAli(_datos);
+			auto ao = leerAliIA(_datos, bloques, kO);
+			if (!ao.ok()) return R::mal(ao.error.codigo, ao.error.detalle);
+			if (idxS < 0 && necesitaSustituto(ao.valor->orden, ao.valor->roles, idxO))
+				return R::mal("FALTA_SUSTITUTO", "Es titular o tiene un rol en su equipo: hace falta un sustituto");
+			AliIA nuevaO = *ao.valor;
+			std::string porque;
+			if (!quitarDeOrden(nuevaO.orden, nuevaO.roles, idxO, idxS, porque)) return R::mal("ALINEACION_IA_INVALIDA", porque);
+
+			// Alineación del usuario (orden en el bloque 627 + lista K)
+			auto ali = alineacionDe(kU);
+			if (!ali.ok()) return R::mal(ali.error.codigo, ali.error.detalle);
+			const Alineacion a = *ali.valor;
+
+			// Compañero que sirve de molde: mismo puesto, si no mismo grupo, si no misma línea, si no el último.
+			const int posLlega = op.posicionDe ? op.posicionDe(pid) : -1;
+			int molde = n - 1, mejor = -1;
+			for (int i = 0; i < n; i++) {
+				const int c = op.posicionDe ? op.posicionDe(pu[size_t(i)].pid) : -1;
+				const int pts = posLlega < 0 || c < 0 ? 0 : c == posLlega ? 3 : grupoPos(c) == grupoPos(posLlega) ? 2 : lineaPos(c) == lineaPos(posLlega) ? 1 : 0;
+				if (pts >= mejor) { mejor = pts; molde = i; }   // a igualdad, el más reciente (los primeros registros tienen bytes raros delante)
+			}
+			const Plaza pm = pu[size_t(molde)];
+
+			// Tablas del usuario: las que tienen a TODA la plantilla (se descarta la ficha del último partido y K)
+			auto tablas = tablasDe(kU);
+			struct Destino { TablaAlineada t; int iMolde = -1, iNuevo = -1; bool esA = false, esA2 = false; };
+			std::vector<Destino> destinos;
+			TablaAlineada tablaContratos; bool hayContratos = false;
+			size_t primeraA = SIZE_MAX;
+			for (const auto& t : tablas) if (t.stride == 24 && t.dir > 0) primeraA = std::min(primeraA, t.ofsReg0);
+			for (const auto& t : tablas) {
+				if (t.ofsReg0 == a.ofsK + 4) continue;
+				if (std::any_of(destinos.begin(), destinos.end(), [&](const Destino& x) { return x.t.ofsReg0 == t.ofsReg0 && x.t.stride == t.stride; })) continue;
+				const int ext = extensionDe(_datos, t);
+				if (ext < 0) return R::mal("TABLA_DANADA", "Tabla de paso " + std::to_string(t.stride) + " sin fin");
+				bool todos = ext >= n;
+				for (int i = 0; i < n && todos; i++) {
+					bool esta = false;
+					for (int r = 0; r < ext && !esta; r++) { const size_t o = size_t(regDe(t, r)); esta = u32(_datos, o) == pu[size_t(i)].reg && u32(_datos, o + 4) == pu[size_t(i)].pid; }
+					todos = esta;
+				}
+				if (!todos) continue;
+				if (t.stride == 48) { tablaContratos = t; hayContratos = true; continue; }
+				Destino x; x.t = t;
+				x.esA = t.stride == 24 && t.dir > 0 && t.ofsReg0 == primeraA;
+				x.esA2 = t.stride == 24 && t.dir > 0 && t.ofsReg0 == primeraA + kDistanciaA2;
+				for (int r = 0; r < ext; r++) { const size_t o = size_t(regDe(t, r)); if (u32(_datos, o) == pm.reg && u32(_datos, o + 4) == pm.pid) { x.iMolde = r; break; } }
+				for (int r = 0; r <= ext; r++) if (registroVacio(_datos, size_t(regDe(t, r)))) { x.iNuevo = r; break; }
+				if (x.iMolde < 0 || x.iNuevo < 0) return R::mal("TABLA_DANADA", "Sin molde o sin hueco en la tabla de paso " + std::to_string(t.stride));
+				if (!rangoValido(_datos, t, x.iNuevo + 1)) return R::mal("TABLA_DANADA", "La tabla de paso " + std::to_string(t.stride) + " no tiene sitio");
+				destinos.push_back(x);
+			}
+			{
+				struct Firma { size_t stride; int dir; int veces; };
+				Firma firmas[] = { {24,+1,1}, {24,-1,1}, {44,+1,1}, {368,+1,1}, {192,+1,1}, {52,+1,1}, {108,+1,3}, {5628,+1,1}, {16,+1,1} };
+				std::string faltan;
+				for (const auto& f : firmas)
+					if (int(std::count_if(destinos.begin(), destinos.end(), [&](const Destino& x) { return x.t.stride == f.stride && x.t.dir == f.dir; })) < f.veces)
+						faltan += " " + std::to_string(f.stride);
+				if (!faltan.empty() || !hayContratos) return R::mal("TABLAS_INESPERADAS", "Faltan tablas del usuario:" + faltan + (hayContratos ? "" : " 48"));
+			}
+			if ((u32(_datos, tablaContratos.ofsReg0 - kRegEnContrato + 4) & 0x3fff) != uint32_t(kU))
+				return R::mal("CONTRATOS_INESPERADOS", "La tabla de contratos no lleva el club del usuario");
+
+			// Blob: ficha del que llega y la del molde (competiciones del club)
+			auto blob = BlobLM::leer(_datos);
+			if (!blob.ok()) return R::mal(blob.error.codigo, blob.error.detalle);
+			const long long fL = blob.valor->fichaDe(llega.reg, llega.pid), fM = blob.valor->fichaDe(pm.reg, pm.pid);
+			if (fL < 0 || fM < 0) return R::mal("FICHA_NO_HALLADA", "No está la ficha de Liga Máster del jugador o del molde en el blob");
+			auto& pl = blob.valor->contenido();
+			const uint64_t sueldoAnterior = uint64_t(u32(pl, size_t(fL) + kFichaSueldo)) * 100;
+
+			// Contrato
+			const uint64_t sueldo = op.sueldoEur ? op.sueldoEur : sueldoAnterior;
+			Fecha fin = op.finContrato;
+			if (!fin.valida()) { fin.anio = uint16_t(fecha.anio + 1); fin.mes = 6; fin.dia = 30; }
+			if (!(fecha < fin)) return R::mal("CONTRATO_INVALIDO", "El contrato termina antes de empezar");
+			if (sueldo % 100 || op.clausulaEur % 100 || op.montoEur % 100) return R::mal("IMPORTE_INVALIDO", "El juego guarda el dinero en múltiplos de 100 €");
+
+			// Dinero
+			auto fz = finanzas(kU);
+			if (!fz.ok()) return R::mal(fz.error.codigo, fz.error.detalle);
+			if (op.montoEur > fz.valor->presupuestoFichajes) return R::mal("PRESUPUESTO_INSUFICIENTE", "El presupuesto de fichajes no alcanza");
+
+			// Dorsal
+			const uint16_t dorsal = alineacion::elegirDorsal(candidatosDorsal(_datos, op.dorsal, llega.dorsal, pid, kO, kU), dorsalesDe(pu));
+			if (!dorsal) return R::mal("SIN_DORSAL", "No queda ningún dorsal libre en tu equipo");
+
+			// ===================== Todo cuadra: se trabaja sobre una copia =====================
+			Datos d = _datos;
+			std::string informe;
+			// 1) Tablas del usuario: registro nuevo copiando el del molde
+			const std::vector<uint8_t> fichaA(pl.begin() + fL + long(kFichaA), pl.begin() + fL + long(kFichaA) + 6);
+			for (const auto& x : destinos) {
+				if (x.esA2) { informe += "tabla A2: no se toca (el juego la rehace)\n"; continue; }
+				// Contenido del molde desde `reg`; lo de delante (x) se toma del registro 1, que es un registro «normal»
+				// (el 0 lleva delante el final de la estructura anterior).
+				const size_t rM = size_t(regDe(x.t, x.iMolde)), r = size_t(regDe(x.t, x.iNuevo)), x1 = size_t(regDe(x.t, 1)) - 4;
+				std::memmove(&d[r], &d[rM], x.t.stride - 4);
+				std::memmove(&d[r - 4], &d[x1], 4);
+				p32(d, r, llega.reg); p32(d, r + 4, llega.pid);
+				if (x.t.stride == 52) { p32(d, r + 8, 0); p32(d, r + 40, 0); }   // F: contador a 0 y sin la marca de «de la plantilla inicial»
+				if (x.esA) {   // [reg][pid][6 B de la ficha][0 0][fecha]
+					for (size_t i = 0; i < 6; i++) d[r + 8 + i] = fichaA[i];
+					p16(d, r + 14, 0); p32(d, r + 16, fecha.empaquetada());
+				}
+				else if (x.t.stride == 192) {   // E: [edad][historial de medias]
+					const int edadM = d[size_t(regDe(x.t, x.iMolde)) + 8];
+					std::vector<uint8_t> hm; for (size_t i = 9; i < x.t.stride - 4; i++) hm.push_back(d[size_t(regDe(x.t, x.iMolde)) + i]);
+					while (!hm.empty() && !hm.back()) hm.pop_back();
+					const int edad = op.edad > 0 ? op.edad : edadM;
+					const int media = op.media > 0 ? op.media : (hm.empty() ? 70 : hm.back());
+					const auto h = historialMedias(edad, media);
+					if (h.size() + 9 > x.t.stride - 4) return R::mal("EDAD_INVALIDA", "Edad fuera de rango para el historial");
+					for (size_t i = 8; i < x.t.stride - 4; i++) d[r + i] = 0;
+					d[r + 8] = uint8_t(edad);
+					for (size_t i = 0; i < h.size(); i++) d[r + 9 + i] = h[i];
+				}
+				else if (x.t.stride == 5628) {   // M: [1][reg][pid][club][0][banderas][ffff][fecha][…][club de origen]…[fecha]
+					const size_t ini = r - 4;
+					p32(d, ini + 0x0c, clubU);
+					p32(d, ini + 0x14, u32(d, ini + 0x14) | kBitFichadoM);
+					p32(d, ini + 0x1c, fecha.empaquetada());
+					p32(d, ini + 0x2c, clubO);
+					p32(d, ini + 0x54, fecha.empaquetada());
+				}
+				informe += "tabla paso " + std::to_string(x.t.stride) + (x.t.dir < 0 ? "↓" : "") + ": registro nuevo " + std::to_string(x.iNuevo) + " (molde " + std::to_string(x.iMolde) + ")\n";
+			}
+			// 2) Contrato (tabla I): al final, número = el mayor + 1
+			{
+				const int ext = extensionDe(d, tablaContratos);
+				if (ext < 0 || !rangoValido(d, tablaContratos, ext + 1)) return R::mal("TABLA_DANADA", "La tabla de contratos no tiene sitio");
+				uint32_t maxNum = 0; int iMoldeC = -1;
+				for (int i = 0; i < ext; i++) {
+					const size_t ini = size_t(regDe(tablaContratos, i)) - kRegEnContrato;
+					if (!registroVacio(d, ini + kRegEnContrato)) maxNum = std::max(maxNum, u32(d, ini) & 0xff);
+					if (u32(d, ini + kRegEnContrato) == pm.reg && u32(d, ini + kRegEnContrato + 4) == pm.pid && d[ini + 8] == 5) iMoldeC = i;
+				}
+				if (iMoldeC < 0) return R::mal("CONTRATOS_INESPERADOS", "El molde no tiene contrato vigente");
+				const size_t src = size_t(regDe(tablaContratos, iMoldeC)) - kRegEnContrato, dst = size_t(regDe(tablaContratos, ext)) - kRegEnContrato;
+				std::memmove(&d[dst], &d[src], tablaContratos.stride);
+				p32(d, dst, maxNum + 1);
+				p32(d, dst + 4, clubU);
+				p32(d, dst + 8, 5);
+				p32(d, dst + 12, fecha.empaquetada());
+				const size_t r = dst + kRegEnContrato;
+				p32(d, r, llega.reg); p32(d, r + 4, llega.pid);
+				p32(d, r + 8, uint32_t(sueldo / 100)); p32(d, r + 12, uint32_t(op.clausulaEur / 100)); p32(d, r + 16, fin.empaquetada());
+				informe += "contrato nuevo nº " + std::to_string(maxNum + 1) + ": " + std::to_string(sueldo) + " €/año hasta " + std::to_string(fin.dia) + "/" + std::to_string(fin.mes) + "/" + std::to_string(fin.anio) + "\n";
+			}
+			// 3) Plantillas, alineaciones, K
+			{
+				std::vector<Plaza> po2 = po; po2.erase(po2.begin() + idxO); escribirPlantilla(d, kO, po2);
+				escribirAliIA(d, nuevaO);
+				std::vector<Plaza> pu2 = pu; Plaza p = llega; p.dorsal = dorsal; pu2.push_back(p); escribirPlantilla(d, kU, pu2);
+				std::vector<uint8_t> orden = a.orden; orden.push_back(uint8_t(n));
+				std::vector<uint32_t> flags = a.flagsK; flags.push_back(a.flagLibreK);
+				for (size_t i = 0; i < kBytesOrden; i++) d[a.ofsOrden + i] = i < orden.size() ? orden[i] : 0xff;
+				for (size_t i = 0; i < orden.size(); i++) {
+					const size_t r = a.ofsK + kTamK * i;
+					p32(d, r, flags[i]); p32(d, r + 4, pu2[orden[i]].reg); p32(d, r + 8, pu2[orden[i]].pid); p32(d, r + 12, 0);
+				}
+				size_t r = a.ofsK + kTamK * orden.size();
+				p32(d, r, a.flagLibreK); p32(d, r + 4, 0xffff); p32(d, r + 8, 0); p32(d, r + 12, 0);
+				r += kTamK; p32(d, r, kFlagFinK); p32(d, r + 4, 0xffff); p32(d, r + 8, 0); p32(d, r + 12, 0);
+			}
+			// 4) Dinero: se paga el monto; el tope salarial nunca queda por debajo de los sueldos
+			{
+				const size_t ofs = fz.valor->ofs;
+				p32(d, ofs, uint32_t((fz.valor->presupuestoFichajes - op.montoEur) / 100));
+				const uint64_t sueldos = fz.valor->sueldosActuales + sueldo;
+				if (fz.valor->topeSalarial < sueldos) p32(d, ofs + 0x14, uint32_t(sueldos / 100));
+			}
+			// 5) Blob: competiciones del club (las del molde que le falten), contrato y club anterior
+			{
+				auto b2 = BlobLM::leer(d);
+				if (!b2.ok()) return R::mal(b2.error.codigo, b2.error.detalle);
+				auto& q = b2.valor->contenido();
+				const size_t f = size_t(fL), m = size_t(fM);
+				int anadidas = 0;
+				for (size_t i = 0; i < kFichaNumComps; i++) {
+					const uint16_t comp = u16(q, m + kFichaComps + 4 * i);
+					if (comp == 0xffff) continue;
+					bool tiene = false; size_t libre = SIZE_MAX;
+					for (size_t j = 0; j < kFichaNumComps; j++) {
+						const uint16_t c = u16(q, f + kFichaComps + 4 * j);
+						if (c == comp) tiene = true;
+						if (c == 0xffff && libre == SIZE_MAX) libre = j;
+					}
+					if (tiene) continue;
+					if (libre == SIZE_MAX) return R::mal("FICHA_LLENA", "El jugador ya está inscrito en demasiadas competiciones");
+					p16(q, f + kFichaComps + 4 * libre, comp); p16(q, f + kFichaComps + 4 * libre + 2, u16(q, m + kFichaComps + 4 * i + 2));
+					anadidas++;
+				}
+				p32(q, f + kFichaSueldo, uint32_t(sueldo / 100));
+				p32(q, f + kFichaClubAnterior, clubO);
+				p32(q, f + kFichaFin, fin.empaquetada());
+				p32(q, f + kFichaInicio, fecha.empaquetada());
+				auto nd = b2.valor->aplicar(d);
+				if (!nd.ok()) return R::mal(nd.error.codigo, nd.error.detalle);
+				d = std::move(*nd.valor);
+				informe += "blob: inscrito en " + std::to_string(anadidas) + " competiciones nuevas; contrato en la ficha\n";
+			}
+			_datos.swap(d);
+			_ultimoInforme = informe;
+			return R::bien(dorsal);
+		}
+		catch (const std::exception& e) { return R::mal("ML_ERROR", e.what()); }
 	}
 
 	Resultado<std::string> GuardadoLM::guardarComo(const std::string& rutaNueva, const std::string& textoInfo) const {

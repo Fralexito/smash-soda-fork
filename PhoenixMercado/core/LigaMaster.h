@@ -80,6 +80,30 @@ namespace mercado::lm {
 		size_t ofs = 0;                          ///< dónde está el bloque (para el log)
 	};
 
+	/// Fecha tal como la guarda el juego: u16 año, u8 mes, u8 día.
+	struct Fecha {
+		uint16_t anio = 0; uint8_t mes = 0, dia = 0;
+		bool valida() const { return anio >= 2000 && anio <= 2100 && mes >= 1 && mes <= 12 && dia >= 1 && dia <= 31; }
+		uint32_t empaquetada() const { return uint32_t(anio) | (uint32_t(mes) << 16) | (uint32_t(dia) << 24); }
+		static Fecha desde(uint32_t v) { Fecha f; f.anio = uint16_t(v); f.mes = uint8_t(v >> 16); f.dia = uint8_t(v >> 24); return f; }
+		bool operator<(const Fecha& o) const { return empaquetadaOrdenable() < o.empaquetadaOrdenable(); }
+		uint32_t empaquetadaOrdenable() const { return (uint32_t(anio) << 16) | (uint32_t(mes) << 8) | dia; }
+	};
+
+	/// Condiciones de un fichaje PARA el equipo del usuario (IA → usuario). 0 / vacío = valor por defecto.
+	struct OpcionesFichaje {
+		uint16_t dorsal = 0;                 ///< 0 = el del jugador en su club / selección, o el más alto libre
+		uint32_t pidSustituto = 0;           ///< quién ocupa su puesto en el equipo de la IA que lo pierde (si era titular o tenía rol)
+		uint64_t montoEur = 0;               ///< lo que se paga al club de origen (se descuenta del presupuesto de fichajes)
+		uint64_t sueldoEur = 0;              ///< sueldo anual del contrato nuevo (0 = el que tenía)
+		uint64_t clausulaEur = 0;            ///< cláusula de rescisión
+		Fecha finContrato;                   ///< vacía = 30 de junio del año siguiente al de la fecha del fichaje
+		Fecha fecha;                         ///< fecha de llegada (vacía = la fecha actual de la partida)
+		int edad = 0;                        ///< para su historial de medias (tabla E); 0 = la del compañero que sirve de molde
+		int media = 0;                       ///< media actual (último valor del historial); 0 = la del molde
+		std::function<int(uint32_t)> posicionDe;   ///< posición registrada por pid (catálogo) para elegir el molde y el sustituto
+	};
+
 	class GuardadoLM {
 	public:
 		/// Lee y descifra un guardado ML. No modifica el archivo de origen.
@@ -130,6 +154,16 @@ namespace mercado::lm {
 		Resultado<uint16_t> moverUsuarioAIA(int kUsuario, int kDestino, uint32_t pid, uint16_t dorsal, uint32_t pidSustituto);
 		/// Qué tablas tocó la última operación sobre el equipo del usuario (para el log / la bitácora).
 		const std::string& ultimoInforme() const { return _ultimoInforme; }
+
+		/// Fecha actual de la partida (la que se ve arriba en la pantalla de la Liga Máster). ESTRUCTURA-ML §20.
+		Resultado<Fecha> fechaActual() const;
+
+		/// Ficha a `pid` del equipo de la IA `kOrigen` PARA el equipo del usuario, como lo hace el juego (Sommer, §19–§20):
+		/// plantillas y alineaciones de los dos equipos, un registro nuevo en cada tabla del usuario (copiando el de un
+		/// compañero del mismo puesto y poniendo los datos propios: fechas, club de origen, historial de medias), contrato,
+		/// lista K y orden de formación, dinero, y en el blob su inscripción en las competiciones del club y el contrato.
+		/// Todo o nada. Devuelve el dorsal asignado.
+		Resultado<uint16_t> ficharParaUsuario(int kUsuario, int kOrigen, uint32_t pid, const OpcionesFichaje& opciones);
 
 		/// Dinero del club del usuario. Se localiza por ancla (a distancia fija de la tabla A del usuario) y se valida contra
 		/// los contratos (el tope salarial tiene que cubrir los sueldos). Probado en el juego (ranura 12: 500 M / 86.096.000 €).

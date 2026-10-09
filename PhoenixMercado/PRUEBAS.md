@@ -208,3 +208,8 @@ la liga está en la versión 0 (sin traspasos aún). El original no cambió (hue
 Hecha desde la ranura 15 del juego (fichaje de Sommer). Único cambio: **valor de mercado de Sommer 2.500.000 → 77.700.000 €**
 dentro del blob, que se recomprimió con miniz (el tramo cambiado; los demás copiados tal cual). Si el juego carga la partida y
 muestra 77,7 M, la escritura del blob queda validada (necesaria para inscribir fichajes en competiciones).
+
+**8 oct 19:45 · Prueba 18 · Ranura 2 (`ML00000001`, md5 054f2e78…) · El programa ficha a Sommer (Inter → City)** — ⏳ EN PRUEBA
+Desde el respaldo de inicio de temporada (4/8/2026). Sommer al City con dorsal 12 (el de su selección: el 1 está ocupado), contrato
+3.186.500 €/año hasta el 30/6/2027, pago 2.575.000 €, Josep Martínez a la portería del Inter. Comparado antes con el fichaje que hizo
+el juego (§20). Qué mirar: plantilla, alineación, ficha y contrato de Sommer, presupuesto, el Inter; y jugar un partido oficial.

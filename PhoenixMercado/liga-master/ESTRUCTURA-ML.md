@@ -337,3 +337,18 @@ E, estadísticas de D, bloque M). Siguiente paso: averiguar de dónde salen (la 
 - **Plan para programarlo:** registro nuevo en el primer hueco de cada tabla, **clonando** el de un compañero del mismo puesto y
   cambiando reg/pid/edad/fechas; curva E generada (edad y media del catálogo); contrato y historial con el formato §17; K con flag
   0xc1; dinero. Probar en el juego primero SIN las listas laterales; si el juego se queja, añadirlas.
+
+## 20. Fichar PARA el usuario programado y comparado con el juego (8 oct, 19:40) — **[OBSERVADO; prueba en juego: ranura 2]**
+- **Blob:** la zona real mide `tamaño + 12` (la palabra de 0x11403a8 no cuenta los 12 B finales) y descomprime **4.680.156 B**;
+  separadores `[desc BE][comp BE][fin BE]` con `fin = rel + comp` (0 en el último); cabecera rel +0x14/+0x18 = sumas (BE). La ficha
+  de 156 B del jugador está en `0x1e + 156·reg`. `core/BlobLM` lee y reescribe (ida y vuelta idéntica en 4 guardados).
+- **Fecha actual de la partida:** 0xacc61c (u32 fecha) con `[día del año u16][año u16][365]` delante (0xacc614); luego el club del usuario.
+- **Ficha del blob al fichar:** se añaden las competiciones del club que le faltan (las mismas de sus compañeros), sueldo (+0x56),
+  club anterior (+0x5e), fin (+0x66) e inicio (+0x6a). Los 6 B de +0x4a se copian a la tabla A (+8) junto con la fecha (+16).
+- **`GuardadoLM::ficharParaUsuario`**: molde = compañero del mismo puesto (el más reciente), registro nuevo en el primer hueco de cada
+  tabla (lo de delante de `reg` se toma del registro 1), E con historial de medias generado, F a 0 (contador y marca), M con club,
+  fechas, club de origen y bit 0x80000 en +0x14; contrato al final de la tabla I (nº = mayor + 1); K con el flag del libre; orden +n;
+  dinero; IA de origen con sustituto. Comparado con el fichaje de Sommer hecho por el juego: **iguales** plantillas, orden, K, dinero,
+  A, contrato y ficha del blob; difieren solo valores que el juego genera/actualiza con el tiempo (B +10, D +8, F contador, M +0x14).
+- No se escriben (¿decoración?): historial de negociación (3 × 80 B en 0xbe90a8…), lista de 60 B en 0xbe8a54, llegados (0xc00de0),
+  eventos con fecha (0xc01564), 0xc07170, 0xc80414, noticia 0x10bab98, lista tras el blob. Si el juego los necesitara, la prueba lo dirá.
