@@ -305,3 +305,9 @@ se puede cambiar un guardado con el juego abierto mientras no esté cargado (Fra
   - **Conclusión:** la pantalla lee **otra representación**, probablemente la ficha «desempaquetada» (una cualidad por byte o por número), creada antes y no regenerada.
 - **v0.8 (solo lectura en B):** además de lo anterior, busca 6 formas desempaquetadas de las cualidades de Lamine (orden de pantalla y orden del archivo; valores tal cual y −40; bytes, u16 y u32), sin la velocidad. Simulado OK.
 - **Idea de Fralex:** usar los menús del juego («Datos Actual. en vivo») en vez del overlay de Sider. Se investigó: los «live update» de los parches (por ejemplo, EPP) son bases de datos servidas por Sider al arrancar, no la función nativa del juego.
+- **Resultado 3 (03:17, v0.8):** 0 coincidencias en las 6 formas desempaquetadas. La pantalla sigue en 90.
+  - Hay **7 copias**: las nuevas nacen con 90 aunque las anteriores ya tenían 99, y todas tienen el formato exacto del archivo (8 ceros + ID).
+  - **Nueva hipótesis:** el juego **vuelve a leer `common\etc\pesdb\Player.bin`** (vía Sider livecpk) cada vez que necesita al jugador, en vez de tener una copia madre.
+  - Si se confirma, el camino limpio es servirle **nuestro** Player.bin con `livecpk_get_filepath`: sin tocar memoria, y cada pantalla nueva vería los cambios.
+  - **Técnica vista en el parche:** `lib\CommonLib.lua` (zlac) usa el evento `livecpk_read(ctx, filename, addr, len, total_size, offset)` para leer CompetitionEntry.bin y CompetitionRegulation.bin.
+- **v0.9 (espía pasivo):** registra `livecpk_read` y solo cuenta y anota cuándo empieza cada lectura de `pesdb\*.bin`. No lee ni cambia datos. Simulado OK.

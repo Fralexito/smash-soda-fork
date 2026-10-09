@@ -18,7 +18,7 @@
 --                    lua.module = "phoenix.lua"  en sider.ini
 -- =============================================================================
 
-local m = { version = "0.8-prueba" }
+local m = { version = "0.9-prueba" }
 
 local CADA_SEG    = 2      -- cada cuántos segundos se vuelve a mirar el archivo (solo con el overlay abierto)
 local MAX_BYTES   = 4096   -- nunca se lee más que esto
@@ -458,12 +458,42 @@ function m.key_down(ctx, vkey)
     if vkey == VK_N and libre and #escritos > 0 then devolverVelocidad() end
 end
 
+-- ─── v0.9 · ESPÍA DE LECTURAS (solo anota; no lee ni cambia datos) ─────────────────────
+-- Hipótesis: el juego vuelve a leer common\etc\pesdb\Player.bin cada vez que lo necesita
+-- (por eso aparecen copias nuevas con Velocidad 90). Si es así, basta con servirle NUESTRO
+-- Player.bin (livecpk_get_filepath) y cada pantalla nueva vería los cambios, sin tocar memoria.
+local lecturas = {}            -- nombre corto → veces que se empezó a leer
+local lineasLog = 0
+local function cortoPesdb(nombre)
+    local n = string.lower(nombre or "")
+    local corto = n:match("pesdb\\([%w_]+%.bin)$")
+    return corto
+end
+function m.livecpk_read(ctx, filename, addr, len, total_size, offset)
+    local corto = cortoPesdb(filename)
+    if not corto then return end
+    if offset == 0 then
+        lecturas[corto] = (lecturas[corto] or 0) + 1
+        if lineasLog < 300 then
+            lineasLog = lineasLog + 1
+            log(string.format("[phoenix] espía: lectura #%d de %s (total %d bytes) a las %s",
+                lecturas[corto], corto, total_size or -1, os.date("%H:%M:%S")))
+        end
+    end
+end
+local function textoEspia()
+    local t = {}
+    for k, v in pairs(lecturas) do t[#t + 1] = k .. " ×" .. v end
+    table.sort(t)
+    return "\n  [ESPÍA] lecturas de la base: " .. (#t > 0 and table.concat(t, " · ") or "ninguna todavía")
+end
+
 local function textoOverlay()
     refrescar()
     pasoSonda()
     local cab = string.format("PHOENIX EVOLUTION  ·  puente en vivo v%s  ·  %s", m.version, estado)
     if actualizado ~= "" then cab = cab .. "  ·  último aviso " .. actualizado end
-    return cab .. "\n\n" .. contenido .. textoSonda()
+    return cab .. "\n\n" .. contenido .. textoSonda() .. textoEspia()
 end
 
 -- Ojo: el Lua de Sider NO trae pcall (lo confirma el volcado de env.lua en sider.log).
@@ -495,6 +525,7 @@ function m.init(ctx)
     ruta = base .. "content\\phoenix\\avisos.txt"
     ctx.register("overlay_on", m.overlay_on)
     ctx.register("key_down", m.key_down)
+    ctx.register("livecpk_read", m.livecpk_read)
     log("[phoenix] v" .. m.version .. " listo (solo lectura; tecla B = buscar en memoria). Archivo: " .. ruta)
 end
 
