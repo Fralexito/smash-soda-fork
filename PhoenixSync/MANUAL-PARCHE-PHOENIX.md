@@ -77,13 +77,13 @@ WEB (Supabase) ⇄ PHOENIX LINK (cartero, internet) ⇄ archivos en la PC ⇄ SI
   - edad 408 (6 bits, +15);
   - posición principal 434 (4 bits);
   - nacionalidad 233 (9 bits → `Country.bin`).
-- **Portero** ✅: 269 = Despejar, 300 = Cobertura, 364 = Atajar. 320 y 326 = Actitud de portero y Reflejos, falta saber cuál es cuál (se resuelve con la foto de Livakovic: 320 = 84, 326 = 82).
+- **Portero** ✅: 269 = Despejar, 300 = Cobertura, **320 = Reflejos**, **326 = Actitud de portero**, 364 = Atajar (confirmado con Joan García y Livakovic).
 - **Posiciones jugables** (2 bits: 0 no, 1 B, 2 A) 🔎:
   - PT 350, DFC 468, LI 318, LD 474;
   - MCD 414, MC 456, MI 466, MD 460, MO 464;
   - EI 472, ED 476, SD 478, DC 470.
 - **Pie malo** uso 454 / precisión 462, **forma (Regularidad)** 438, **lesiones** 458 ✅: lo que muestra el juego = valor guardado + 1. El juego **varía** estos bytes (54-57) al cargar.
-- **Habilidades especiales y estilos COM**: bits 480–531 ❓.
+- **Habilidades especiales y estilos COM**: bits 480–531, uno por habilidad. **496 = Patadón en largo (PT)** ✅. 502/522 = Pase largo portero / Parapenaltis (falta el orden). Resto ❓.
 - **Nombres** dentro de la ficha (en mayúsculas en el byte 129 y otra vez en el 190; en formato normal en el 251).
 
 **Imágenes:**
@@ -208,7 +208,7 @@ El juego **no** usa `CGP_database.cpk`. Usa la base que sirve Sider desde `Sider
 1. Fichaje en vivo con `PlayerAssignment.bin` + Editar → Cargar.
 2. Confirmar si los cambios de stats llegan a la Liga Máster.
 3. Automatizar: Vestuario web → Phoenix Sync arma el archivo → Phoenix Link lo coloca → aviso «Editar → Cargar». Los prompts para LINK y WEB están por escribir.
-4. Calibración: pie malo, forma, lesiones y 3 de 5 cualidades de portero ✅. Falta Actitud vs Reflejos (foto de Livakovic).
+4. Calibración: portero completo, pie malo, forma y lesiones ✅. Siguen las habilidades especiales (bits 480–531), una foto de «Habilid. 4/4» por jugador.
 5. Actualización de ConmeGOL: aplicar la receta R5 y regenerar `Phoenix-DB`.
 
 ---
@@ -231,7 +231,8 @@ El juego **no** usa `CGP_database.cpk`. Usa la base que sirve Sider desde `Sider
 | Qué | Dónde |
 |---|---|
 | Este manual | `PhoenixSync/MANUAL-PARCHE-PHOENIX.md` (y en Drive) |
-| Base de conocimiento | `PhoenixSync/base-conocimiento/` (00-05, `parches/`, `investigacion/`, `datos/`) + PDF `base-conocimiento-PES21.pdf` |
+| Relato de cómo se llegó aquí (aciertos y errores) | `PhoenixSync/base-conocimiento/06-RUTA-DEL-DESCUBRIMIENTO.md` |
+| Base de conocimiento | `PhoenixSync/base-conocimiento/` (00-06, `parches/`, `investigacion/`, `datos/`) + PDF `base-conocimiento-PES21.pdf` |
 | Diario de pruebas en el juego | `PhoenixSync/PRUEBAS.md` |
 | Bitácora de cambios | `PhoenixSync/REGISTRO.md` (Sync) · `REGISTRO-LINK.md` (Link, en su rama) · `REGISTRO.md` del repo web |
 | Sider | `PhoenixSync/sider/` (`phoenix.lua`, `VINCULO-TIEMPO-REAL.md`, `RIESGOS-SIDER.md`, `AUDITORIA-SIDER.md`) |

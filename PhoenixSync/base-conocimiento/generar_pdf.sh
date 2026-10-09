@@ -12,6 +12,7 @@ FECHA=$(date +%Y-%m-%d\ %H:%M)
   cat 03-INVESTIGACION-PARCHES.md; printf '\n\n\\newpage\n\n'
   cat 04-ESTRATEGIA-PHOENIX.md; printf '\n\n\\newpage\n\n'
   cat 05-PUERTA-EN-VIVO.md; printf '\n\n\\newpage\n\n'
+  cat 06-RUTA-DEL-DESCUBRIMIENTO.md; printf '\n\n\\newpage\n\n'
   cat parches/conmegol-26.md; printf '\n\n\\newpage\n\n'
   cat parches/sudamerican-2026.md; printf '\n\n\\newpage\n\n'
   cat ../sider/RIESGOS-SIDER.md; printf '\n\n\\newpage\n\n'

@@ -350,3 +350,9 @@ se puede cambiar un guardado con el juego abierto mientras no esté cargado (Fra
 - **Uso de pie malo 2, precisión 2, regularidad 4, resistencia a lesiones 2.** Guardado: 454 = 1, 462 = 1, 438 = 3, 458 = 1 ⇒ **lo que muestra el juego = valor guardado + 1** ✅ (Lamine, guardado 2/2/4/1, cuadra con 3/3/5/2).
 - **Habilidad 2/4:** las 17 cualidades de campo coinciden con el mapa, incluida Potencia de tiro 81 ✅.
 - **Habilidad especial:** «Patadón en largo (PT)». Sin estilos COM. Sirve para empezar a calibrar los bits 480-531.
+- **04:23 · Livakovic (4 pantallas):** Actitud 82, Atajar 75, Despejar 77, Reflejos 84, Cobertura 86.
+  - Player.bin: 269 = 77, 300 = 86, **320 = 84 ⇒ Reflejos**, **326 = 82 ⇒ Actitud de portero**, 364 = 75 ⇒ **portero 100 % mapeado** ✅.
+  - Pie malo 1/2, regularidad 6, lesiones 3; guardado 0/1/5/2 ⇒ +1 confirmado otra vez ✅.
+- **Habilidades especiales:**
+  - Joan: solo «Patadón en largo (PT)», bit 496 encendido ⇒ **496 = Patadón en largo** ✅.
+  - Livakovic: Patadón + «Pase largo portero» + «Parapenaltis», bits 496, 502 y 522 ⇒ 502/522 son esas dos (el orden se resuelve con Szczęsny: 486, 490, 502).

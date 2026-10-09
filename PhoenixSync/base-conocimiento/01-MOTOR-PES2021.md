@@ -164,10 +164,10 @@ Registro de 312 B; **NO** tiene el mismo orden que el jugador editado del option
 |---|---|---|
 | 19 habilidades de campo (6 bits, valor − 40) | ver §B | ✅ |
 | **Potencia de tiro** | 358 (6, −40) | ✅ (2026-10-09: Lamine 78 en la pantalla del juego = valor leído; las 15 cualidades visibles coinciden) |
-| **5 habilidades de portero** | **269 = Despejar (PT)** ✅ · **300 = Cobertura (PT)** ✅ · **364 = Atajar (PT)** ✅ · 320 y 326 = Actitud de portero y Reflejos (PT), falta saber cuál es cuál (6, −40) | ✅/🔎 (2026-10-09, Joan García en el juego: Actitud 92, Atajar 90, Despejar 89, Reflejos 92, Cobertura 91 = 320:92, 364:90, 269:89, 326:92, 300:91. Se resuelve con Livakovic, que tiene 320=84 y 326=82) |
+| **5 habilidades de portero** | **269 = Despejar · 300 = Cobertura · 320 = Reflejos · 326 = Actitud de portero · 364 = Atajar** (6 bits, −40) | ✅ (2026-10-09: Joan García 89/91/92/92/90 y Livakovic 77/86/84/82/75 coinciden con las pantallas del juego) |
 | **Posiciones jugables** (2 bits: 0 no, 1 B, 2 A) | PT 350 · DFC 468 · LI 318 · LD 474 · MCD 414 · MC 456 · MI 466 · MD 460 · MO 464 · EI 472 · ED 476 · SD 478 (probable) · DC 470 | 🔎 (la posición registrada vale 2 en el 99 %) |
-| Pie malo uso / precisión, forma («Regularidad»), resistencia a lesiones | 454 (2) / 462 (2), 438 (3), 458 (2). **Lo que muestra el juego = valor guardado + 1** | ✅ (2026-10-09, Joan García: guardado 1/1/3/1 → juego 2/2/4/2) |
-| Habilidades especiales + estilos COM | bits 480–531 (52 bits) | ❓ en calibración (490, 496, 502, 522 solo en porteros: despejes/saques/penales de portero) |
+| Pie malo uso / precisión, forma («Regularidad»), resistencia a lesiones | 454 (2) / 462 (2), 438 (3), 458 (2). **Lo que muestra el juego = valor guardado + 1** | ✅ (Joan 1/1/3/1 → 2/2/4/2; Livakovic 0/1/5/2 → 1/2/6/3) |
+| Habilidades especiales + estilos COM | bits 480–531 (1 bit cada una). **496 = Patadón en largo (PT)** ✅ (Joan: solo 496; Livakovic: 496). **502 y 522 = Pase largo portero y Parapenaltis** (Livakovic tiene los dos; el orden se resuelve con Szczęsny, que tiene 502 sin 522). Szczęsny además: 486, 490 | ✅/🔎 en calibración |
 | País | 233 (9) → `Country.bin` (1420 B por país: ID en los bits 10–18, nombre en español en +148) | ✅ |
 
 **Hallazgo importante:** en ConmeGOL 26 la base que usa el juego **no es** `CGP_database.cpk` (19/8) sino la que sirve Sider desde
