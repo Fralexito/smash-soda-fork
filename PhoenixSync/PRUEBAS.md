@@ -311,3 +311,12 @@ se puede cambiar un guardado con el juego abierto mientras no esté cargado (Fra
   - Si se confirma, el camino limpio es servirle **nuestro** Player.bin con `livecpk_get_filepath`: sin tocar memoria, y cada pantalla nueva vería los cambios.
   - **Técnica vista en el parche:** `lib\CommonLib.lua` (zlac) usa el evento `livecpk_read(ctx, filename, addr, len, total_size, offset)` para leer CompetitionEntry.bin y CompetitionRegulation.bin.
 - **v0.9 (espía pasivo):** registra `livecpk_read` y solo cuenta y anota cuándo empieza cada lectura de `pesdb\*.bin`. No lee ni cambia datos. Simulado OK.
+
+### 2026-10-09 · Espía de lecturas (v0.9) — RESULTADOS y prueba 4 «nuestro libro»
+- **Cuándo lee el juego `pesdb\Player.bin`** (log del espía): al arrancar (03:28:16), en «Datos del sistema: Cargando» (03:28:29) y **al entrar y salir del modo EDITAR (03:33:02 → lectura #3)**. No lo relee al entrar a la pantalla de habilidades, al cambiar «Datos Actual. en vivo» ni al entrar a la Liga Máster (que lee `installversionplayer.bin`).
+  - ⇒ **Botón nativo para recargar la base sin reiniciar: entrar y salir de EDITAR.**
+- **«Datos Actual. en vivo → Activar»:** el juego responde «Los servicios en línea de este título finalizaron el 25/08/2022». La actualización en vivo nativa depende del servidor de Konami (cerrado), así que no sirve como canal.
+- **Prueba 4 instalada:** nueva raíz `livecpk\Phoenix-DB` puesta **antes** de `olmosjr23\Database` en sider.ini (raíz y carpeta del modo; respaldo `sider.ini.respaldo-phoenixdb-20261009`; diff = 1 línea).
+  - Sirve un Player.bin propio: base viva de olmosjr23 descomprimida, **1 solo byte cambiado** (Lamine, byte 38 → Velocidad 99) y recomprimida WESYS (zlib 9, cabecera original con tamaños nuevos; verificada de ida y vuelta).
+  - En `_PhoenixMercado_prueba\db\` hay variantes v90, v95 y v99 para la prueba en vivo.
+  - **Plan:** (a) reiniciar → la pantalla debe mostrar 99; (b) con el juego abierto, cambiar el archivo a v95 → entrar y salir de EDITAR → la pantalla debe mostrar 95.
