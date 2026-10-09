@@ -163,7 +163,7 @@ Registro de 312 B; **NO** tiene el mismo orden que el jugador editado del option
 | Campo | Bits | Estado |
 |---|---|---|
 | 19 habilidades de campo (6 bits, valor − 40) | ver §B | ✅ |
-| **Potencia de tiro** | 358 (6, −40) | 🔎 (valores 65–89 en todos los jugadores) |
+| **Potencia de tiro** | 358 (6, −40) | ✅ (2026-10-09: Lamine 78 en la pantalla del juego = valor leído; las 15 cualidades visibles coinciden) |
 | **5 habilidades de portero** | 269, 300, 320, 326, 364 (6, −40) | 🔎 (40 en el 99,8 % de los jugadores de campo; altas en porteros). **Falta saber cuál es cuál** (actitud, atajar, despejar, reflejos, cobertura) |
 | **Posiciones jugables** (2 bits: 0 no, 1 B, 2 A) | PT 350 · DFC 468 · LI 318 · LD 474 · MCD 414 · MC 456 · MI 466 · MD 460 · MO 464 · EI 472 · ED 476 · SD 478 (probable) · DC 470 | 🔎 (la posición registrada vale 2 en el 99 %) |
 | Pie malo uso / precisión, forma, resistencia a lesiones | 454 (2) / 462 (2), 438 (3), 458 (2) | ❓ (coinciden con el option file en los 21 editados) |

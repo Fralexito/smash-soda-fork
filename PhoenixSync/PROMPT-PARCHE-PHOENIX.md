@@ -195,3 +195,10 @@ Además quiero un **"PES online" propio**, conectado a mi web, y **funciones nue
 7. Subir a Drive todo lo nuevo (el experimento Barça todavía no está en Drive).
 
 Empieza leyendo `COORDINACION.md`, el final de `PhoenixSync/REGISTRO.md` y `PhoenixSync/base-conocimiento/04-ESTRATEGIA-PHOENIX.md`. Después dime en simple qué entendiste y seguimos con el pendiente 1.
+
+## 10. 🏆 Lo último: la «puerta en vivo» (2026-10-09)
+- **Método probado:** Player.bin propio en `SiderAddons\livecpk\Phoenix-DB` (raíz antes de `olmosjr23\Database`) + **Editar → Cargar** en el juego ⇒ las stats cambian sin reiniciar (Lamine Velocidad 99 → 95 → 90, confirmado por huella).
+- **Puente web → juego:** Phoenix Link escribe `content\phoenix\avisos.txt` y el módulo `phoenix.lua` lo muestra en el overlay de Sider (el «hola» de la web llegó al juego).
+- **Detalle completo, fallos y universo de posibilidades:** `base-conocimiento/05-PUERTA-EN-VIVO.md`. Diario: `PRUEBAS.md`.
+- **Futuro (no prioritario):** crear jugadores nuevos; avisos con aspecto nativo (imágenes de menú).
+- **Phoenix Mercado ahora se llama Phoenix Sync** (carpeta `PhoenixSync/`; la rama sigue siendo `mercado-fase0`).
