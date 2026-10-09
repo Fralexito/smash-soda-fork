@@ -109,3 +109,33 @@ en MEMORIA el fixture de un torneo. Formato de cada partido (20 B): `[id u16][id
 `24 00 00 00 29 1C 00 60`. Las rondas van como listas de IDs de partido (`Round1 = 24 25 2A 2B 30 31 …`). Esto cuadra con los 10 IDs de
 partido por jornada que vimos en el calendario del usuario del guardado (§16): **el motor identifica los partidos por ID y guarda por
 jornada la lista de IDs; el emparejamiento se guarda aparte**. Dónde está en el guardado sigue pendiente (experimento antes/después).
+
+## La base de datos del parche por dentro (`download\CGP_database.cpk`, 3,7 MB) — 🔎 OBSERVADO (8 oct, 19:50)
+
+Es el corazón del parche: define «el mundo» del juego. 17 archivos (los `.bin` de `pesdb` van con cabecera WESYS + zlib; Phoenix
+Mercado ya los extrae: `cpk::listar`, `cpk::extraer`, `descomprimirWesys`):
+
+| Archivo | Tamaño | Registros | Qué es (lo visto) |
+|---|---|---|---|
+| `common/etc/pesdb/Player.bin` | 9.359.064 B | 29.997 × 312 B | jugadores (ya decodificado: 01 §B) |
+| `PlayerAssignment.bin` | 326.368 B | 20.398 × 16 B | plantillas de fábrica: `[nº registro][jugador][equipo][dorsal u8 + banderas]` |
+| `SpecialPlayerAssignment.bin` | 11.104 B | 694 × 16 B | asignaciones especiales (¿leyendas/clásicos?) ❓ |
+| `Team.bin` | 1.147.468 B | **749 × 1.532 B** | equipos (749 = los del option file) |
+| `Coach.bin` | 84.000 B | 840 × 100 B | entrenadores |
+| `Stadium.bin` | 21.560 B | 55 × 392 B | estadios |
+| `Competition.bin` | 3.240 B | **90 × 36 B** | competiciones: `[0xc864][región][..][id][tipo][0][NOMBRE ASCII 28 B]` (lista en `datos/conmegol-26-competiciones-pesdb.json`) |
+| `CompetitionEntry.bin` | 15.816 B | 1.318 × 12 B | qué equipo juega qué competición |
+| `CompetitionRegulation.bin` | 493.920 B | ❓ | reglas de cada competición (formato, n.º de equipos, fases) — clave para crear/agrandar ligas |
+| `Tactics.bin` / `TacticsFormation.bin` | 17.976 / 593.208 B | 1.498 × 12 / 4.494 × 132 | tácticas (2 por equipo) y formaciones (6 por equipo) |
+| `Derby.bin` | 3.348 B | 279 × 12 B | clásicos/derbis |
+| `Country.bin` | 303.880 B | 214 × 1.420 B | países |
+| `character/appearance/PlayerAppearance.bin` | 1.799.820 B | ❓ | apariencia (cara, cuerpo, accesorios) |
+| `boots/BootsList.bin`, `glove/GloveList.bin` | | | botines y guantes |
+
+Competiciones que define el ConmeGOL 26 (90): Mundial de Clubes, Libertadores, Sudamericana, Recopa, Champions, Concacaf, ligas
+D1/D2 y copas de Argentina, Colombia, Brasil, Ecuador, Chile, Perú, Uruguay, Paraguay, Bolivia, Venezuela, Honduras, Costa Rica,
+México, MLS, España, Inglaterra, Italia, Francia, Arabia; selecciones (Mundial y eliminatorias, Euro, Copa América, Asia, África) y
+propias («CLASICO_EQUIPOS_CLUBES», «CLASICO_EQUIPOS_AMERICA», «LEYENDAS_DEL_FÚTBOL»).
+
+**Para el parche Phoenix:** este `.cpk` es lo que hay que **fabricar** (equipos, plantillas, competiciones y sus reglas). Pendiente:
+decodificar `Team.bin`, `CompetitionEntry.bin` y `CompetitionRegulation.bin` campo por campo, y saber **reempaquetar** el `.cpk`.

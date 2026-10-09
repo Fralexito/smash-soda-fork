@@ -1,0 +1,542 @@
+[
+ {
+  "id": 1,
+  "tipo": 33,
+  "region": 8,
+  "nombre": "FIFA_CLUB_WORLD_CUP"
+ },
+ {
+  "id": 2,
+  "tipo": 34,
+  "region": 8,
+  "nombre": "CONMEBOL_LIBERTADORES"
+ },
+ {
+  "id": 3,
+  "tipo": 34,
+  "region": 8,
+  "nombre": "CONMEBOL_SUDAMERICANA"
+ },
+ {
+  "id": 4,
+  "tipo": 34,
+  "region": 8,
+  "nombre": "CONMEBOL_RECOPA"
+ },
+ {
+  "id": 5,
+  "tipo": 36,
+  "region": 8,
+  "nombre": "UEFA_CHAMPIONS_LEAGUE"
+ },
+ {
+  "id": 8,
+  "tipo": 35,
+  "region": 8,
+  "nombre": "CONCACAF_CHAMPIONS_LEAGUE"
+ },
+ {
+  "id": 9,
+  "tipo": 34,
+  "region": 16,
+  "nombre": "ARGENTINA_D1_LEAGUE"
+ },
+ {
+  "id": 10,
+  "tipo": 34,
+  "region": 40,
+  "nombre": "COLOMBIA_D1_LEAGUE"
+ },
+ {
+  "id": 11,
+  "tipo": 34,
+  "region": 32,
+  "nombre": "BRAZIL_D1_LEAGUE"
+ },
+ {
+  "id": 12,
+  "tipo": 34,
+  "region": 24,
+  "nombre": "ECUADOR_D1_LEAGUE"
+ },
+ {
+  "id": 13,
+  "tipo": 34,
+  "region": 56,
+  "nombre": "CHILE_D1_LEAGUE"
+ },
+ {
+  "id": 14,
+  "tipo": 34,
+  "region": 0,
+  "nombre": "PERU_D1_LEAGUE"
+ },
+ {
+  "id": 15,
+  "tipo": 34,
+  "region": 16,
+  "nombre": "ARGENTINA_D1_CUP"
+ },
+ {
+  "id": 16,
+  "tipo": 34,
+  "region": 40,
+  "nombre": "COLOMBIA_D1_CUP"
+ },
+ {
+  "id": 17,
+  "tipo": 34,
+  "region": 32,
+  "nombre": "BRAZIL_D1_CUP"
+ },
+ {
+  "id": 18,
+  "tipo": 34,
+  "region": 24,
+  "nombre": "ECUADOR_D1_CUP"
+ },
+ {
+  "id": 19,
+  "tipo": 34,
+  "region": 56,
+  "nombre": "CHILE_D1_CUP"
+ },
+ {
+  "id": 20,
+  "tipo": 34,
+  "region": 48,
+  "nombre": "PERU_D1_CUP"
+ },
+ {
+  "id": 21,
+  "tipo": 36,
+  "region": 128,
+  "nombre": "SPAIN_D1_LEAGUE"
+ },
+ {
+  "id": 22,
+  "tipo": 36,
+  "region": 136,
+  "nombre": "ENGLAND_D1_LEAGUE"
+ },
+ {
+  "id": 23,
+  "tipo": 36,
+  "region": 152,
+  "nombre": "ITALY_D1_LEAGUE"
+ },
+ {
+  "id": 24,
+  "tipo": 36,
+  "region": 144,
+  "nombre": "SAUDI_D1_CUP"
+ },
+ {
+  "id": 27,
+  "tipo": 41,
+  "region": 200,
+  "nombre": "FIFA_WORLD_CUP"
+ },
+ {
+  "id": 28,
+  "tipo": 42,
+  "region": 200,
+  "nombre": "FIFA_WORLD_CUP_EUROPE_FIN"
+ },
+ {
+  "id": 29,
+  "tipo": 46,
+  "region": 200,
+  "nombre": "FIFA_WORLD_CUP_NCAMERICA_"
+ },
+ {
+  "id": 30,
+  "tipo": 44,
+  "region": 200,
+  "nombre": "FIFA_WORLD_CUP_SAMERICA_F"
+ },
+ {
+  "id": 31,
+  "tipo": 43,
+  "region": 200,
+  "nombre": "FIFA_WORLD_CUP_ASIA_FINAL"
+ },
+ {
+  "id": 32,
+  "tipo": 45,
+  "region": 200,
+  "nombre": "FIFA_WORLD_CUP_AFRICA_FIN"
+ },
+ {
+  "id": 33,
+  "tipo": 42,
+  "region": 200,
+  "nombre": "EURO"
+ },
+ {
+  "id": 34,
+  "tipo": 44,
+  "region": 200,
+  "nombre": "COPA_AMERICA"
+ },
+ {
+  "id": 35,
+  "tipo": 43,
+  "region": 200,
+  "nombre": "AFC_ASIA_CUP"
+ },
+ {
+  "id": 36,
+  "tipo": 45,
+  "region": 200,
+  "nombre": "AFRICA_NATIONS_CUP"
+ },
+ {
+  "id": 37,
+  "tipo": 80,
+  "region": 208,
+  "nombre": "FAKE_KONAMI"
+ },
+ {
+  "id": 39,
+  "tipo": 34,
+  "region": 0,
+  "nombre": "CHILE_D2_LEAGUE"
+ },
+ {
+  "id": 40,
+  "tipo": 36,
+  "region": 184,
+  "nombre": "FRANCE_D1_LEAGUE"
+ },
+ {
+  "id": 41,
+  "tipo": 35,
+  "region": 192,
+  "nombre": "COSTA_RICA_D1_LEAGUE"
+ },
+ {
+  "id": 43,
+  "tipo": 36,
+  "region": 184,
+  "nombre": "FRANCE_D1_CUP"
+ },
+ {
+  "id": 44,
+  "tipo": 35,
+  "region": 192,
+  "nombre": "COSTA_RICA_D1_CUP"
+ },
+ {
+  "id": 45,
+  "tipo": 104,
+  "region": 208,
+  "nombre": "SPE_FRIENDLY_MATCH"
+ },
+ {
+  "id": 46,
+  "tipo": 96,
+  "region": 208,
+  "nombre": "SPE_PRACTICE_MATCH"
+ },
+ {
+  "id": 47,
+  "tipo": 96,
+  "region": 208,
+  "nombre": "SPE_RETIREMENT_MATCH"
+ },
+ {
+  "id": 49,
+  "tipo": 36,
+  "region": 136,
+  "nombre": "ENGLAND_D1_CUP"
+ },
+ {
+  "id": 56,
+  "tipo": 36,
+  "region": 152,
+  "nombre": "ITALY_D1_CUP"
+ },
+ {
+  "id": 66,
+  "tipo": 34,
+  "region": 16,
+  "nombre": "ARGENTINA_D2_LEAGUE"
+ },
+ {
+  "id": 67,
+  "tipo": 34,
+  "region": 32,
+  "nombre": "BRAZIL_D2_LEAGUE"
+ },
+ {
+  "id": 68,
+  "tipo": 34,
+  "region": 24,
+  "nombre": "ECUADOR_D2_LEAGUE"
+ },
+ {
+  "id": 69,
+  "tipo": 34,
+  "region": 40,
+  "nombre": "COLOMBIA_D2_LEAGUE"
+ },
+ {
+  "id": 70,
+  "tipo": 2,
+  "region": 16,
+  "nombre": "ARGENTINA_D2_PLAYOFF"
+ },
+ {
+  "id": 71,
+  "tipo": 2,
+  "region": 32,
+  "nombre": "BRAZIL_D2_PLAYOFF"
+ },
+ {
+  "id": 72,
+  "tipo": 2,
+  "region": 40,
+  "nombre": "COLOMBIA_D2_PLAYOFF"
+ },
+ {
+  "id": 73,
+  "tipo": 34,
+  "region": 16,
+  "nombre": "ARGENTINA_SUPER_CUP"
+ },
+ {
+  "id": 74,
+  "tipo": 34,
+  "region": 32,
+  "nombre": "BRAZIL_SUPER_CUP"
+ },
+ {
+  "id": 75,
+  "tipo": 34,
+  "region": 24,
+  "nombre": "ECUADOR_SUPER_CUP"
+ },
+ {
+  "id": 76,
+  "tipo": 34,
+  "region": 40,
+  "nombre": "COLOMBIA_SUPER_CUP"
+ },
+ {
+  "id": 77,
+  "tipo": 34,
+  "region": 56,
+  "nombre": "CHILE_SUPER_CUP"
+ },
+ {
+  "id": 78,
+  "tipo": 34,
+  "region": 48,
+  "nombre": "PERU_SUPER_CUP"
+ },
+ {
+  "id": 79,
+  "tipo": 36,
+  "region": 136,
+  "nombre": "ENGLAND_SUPER_CUP"
+ },
+ {
+  "id": 84,
+  "tipo": 35,
+  "region": 192,
+  "nombre": "COSTA_RICA_SUPER_CUP"
+ },
+ {
+  "id": 86,
+  "tipo": 80,
+  "region": 208,
+  "nombre": "KONAMI_LEAGUE"
+ },
+ {
+  "id": 90,
+  "tipo": 36,
+  "region": 144,
+  "nombre": "SAUDI_D1_LEAGUE"
+ },
+ {
+  "id": 97,
+  "tipo": 96,
+  "region": 208,
+  "nombre": "SPE_ML_RETIREMENT_MATCH"
+ },
+ {
+  "id": 100,
+  "tipo": 32,
+  "region": 8,
+  "nombre": "CHAMPIONS_CUP_NA"
+ },
+ {
+  "id": 101,
+  "tipo": 32,
+  "region": 8,
+  "nombre": "CHAMPIONS_CUP_SA"
+ },
+ {
+  "id": 102,
+  "tipo": 32,
+  "region": 8,
+  "nombre": "CHAMPIONS_CUP_ASIA"
+ },
+ {
+  "id": 103,
+  "tipo": 112,
+  "region": 208,
+  "nombre": "WORLD_SELECTION"
+ },
+ {
+  "id": 111,
+  "tipo": 34,
+  "region": 64,
+  "nombre": "VENEZUELA_D1_LEAGUE"
+ },
+ {
+  "id": 112,
+  "tipo": 34,
+  "region": 64,
+  "nombre": "VENEZUELA_D1_CUP"
+ },
+ {
+  "id": 113,
+  "tipo": 34,
+  "region": 64,
+  "nombre": "VENEZUELA_SUPER_CUP"
+ },
+ {
+  "id": 114,
+  "tipo": 34,
+  "region": 72,
+  "nombre": "URUGUAY_D1_LEAGUE"
+ },
+ {
+  "id": 115,
+  "tipo": 34,
+  "region": 72,
+  "nombre": "URUGUAY_D1_CUP"
+ },
+ {
+  "id": 116,
+  "tipo": 34,
+  "region": 72,
+  "nombre": "URUGUAY_SUPER_CUP"
+ },
+ {
+  "id": 117,
+  "tipo": 34,
+  "region": 48,
+  "nombre": "PERU_D2_LEAGUE"
+ },
+ {
+  "id": 119,
+  "tipo": 34,
+  "region": 0,
+  "nombre": "URUGUAY_D2_LEAGUE"
+ },
+ {
+  "id": 122,
+  "tipo": 35,
+  "region": 192,
+  "nombre": "MEXICO_D1_LEAGUE"
+ },
+ {
+  "id": 123,
+  "tipo": 36,
+  "region": 128,
+  "nombre": "SPAIN_D1_CUP"
+ },
+ {
+  "id": 124,
+  "tipo": 35,
+  "region": 192,
+  "nombre": "MEXICO_SUPER_CUP"
+ },
+ {
+  "id": 125,
+  "tipo": 35,
+  "region": 168,
+  "nombre": "MLS_D1_LEAGUE"
+ },
+ {
+  "id": 126,
+  "tipo": 35,
+  "region": 168,
+  "nombre": "MLS_D1_CUP"
+ },
+ {
+  "id": 127,
+  "tipo": 35,
+  "region": 168,
+  "nombre": "MLS_SUPER_CUP"
+ },
+ {
+  "id": 128,
+  "tipo": 34,
+  "region": 96,
+  "nombre": "PARAGUAY_D1_LEAGUE"
+ },
+ {
+  "id": 129,
+  "tipo": 34,
+  "region": 96,
+  "nombre": "PARAGUAY_D1_CUP"
+ },
+ {
+  "id": 137,
+  "tipo": 34,
+  "region": 120,
+  "nombre": "BOLIVIA_D1_LEAGUE"
+ },
+ {
+  "id": 138,
+  "tipo": 34,
+  "region": 120,
+  "nombre": "BOLIVIA__D1_CUP"
+ },
+ {
+  "id": 139,
+  "tipo": 35,
+  "region": 224,
+  "nombre": "HONDURAS_D1_LEAGUE"
+ },
+ {
+  "id": 140,
+  "tipo": 35,
+  "region": 224,
+  "nombre": "HONDURAS_D1_CUP"
+ },
+ {
+  "id": 141,
+  "tipo": 35,
+  "region": 224,
+  "nombre": "HONDURAS_SUPER_CUP"
+ },
+ {
+  "id": 145,
+  "tipo": 99,
+  "region": 0,
+  "nombre": "MATCHDAY_EFOOTBALL_OPEN"
+ },
+ {
+  "id": 197,
+  "tipo": 96,
+  "region": 240,
+  "nombre": "CLASICO_EQUIPOS_CLUBES"
+ },
+ {
+  "id": 198,
+  "tipo": 96,
+  "region": 240,
+  "nombre": "CLASICO_EQUIPOS_AMERICA"
+ },
+ {
+  "id": 199,
+  "tipo": 96,
+  "region": 240,
+  "nombre": "LEYENDAS_DEL_F��TBOL"
+ }
+]
