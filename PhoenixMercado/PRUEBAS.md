@@ -213,3 +213,7 @@ muestra 77,7 M, la escritura del blob queda validada (necesaria para inscribir f
 Desde el respaldo de inicio de temporada (4/8/2026). Sommer al City con dorsal 12 (el de su selección: el 1 está ocupado), contrato
 3.186.500 €/año hasta el 30/6/2027, pago 2.575.000 €, Josep Martínez a la portería del Inter. Comparado antes con el fichaje que hizo
 el juego (§20). Qué mirar: plantilla, alineación, ficha y contrato de Sommer, presupuesto, el Inter; y jugar un partido oficial.
+
+**8 oct 19:08 · Resultado prueba 17 · Ranura 1 · Blob reescrito por el programa** — ✅
+La partida carga normal y la ficha de Sommer muestra **Valor de mercado 77.700.000 €** (antes 2.500.000). El presupuesto no cambió
+(160.665.600 €): solo cambió el dato pedido. **El juego acepta la zona comprimida recomprimida por Phoenix Mercado (miniz).**
