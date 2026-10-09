@@ -513,3 +513,9 @@ se puede cambiar un guardado con el juego abierto mientras no esté cargado (Fra
 - Simulación OK (arranque nuevo → la primera lectura aplica; la segunda no repite). Instalado, sha verificado en el PC (d85e…). Respaldo `phoenix.lua.v016`.
 - **Plan:** cerrar el juego → abrir → el overlay debe mostrar «[BOTÓN] … EN EL SITIO ✓» sin pulsar nada → Partido → Datos Actual. en vivo → Activar → mensaje nativo + datos.
 - Prompt para el chat LINK: `prompts/PROMPT-LINK-boton-nativo.md` (colocar las entregas de Sync y avisar «pulsa Datos Actual. en vivo»).
+
+### 2026-10-09 06:25 · Prueba de ida y vuelta: Lamine al Manchester City → «Datos Actual. en vivo» lo devuelve al Barça
+- Option file actual = original (Lamine en el Barça, sha cb6e176e…), respaldado en `_PhoenixMercado_prueba\db\EDIT00000000.barca-original`.
+- `mover_of` (OptionFile::mover): Lamine 108 → **173 (Manchester City FC)**, **dorsal 7** (el 10 está ocupado en el City); en el once del Barça entra Roony Bardghji. 95 bytes cambiados. sha ccb8e3e1… (copia en `db\EDIT00000000.lamineCity`).
+- **Paso 1:** City puesto en `save\EDIT00000000`. FRALEX: Editar → Cargar → comprobar a Lamine en el City.
+- **Paso 2 (cuando confirme):** volver a poner el original en disco → FRALEX pulsa Activar → Lamine debe volver al Barça.
