@@ -52,7 +52,8 @@ Ayudantes guardados en la VM: `~/re/xref.py`, `~/re/desm.py`, `~/re/quien.py`, `
   - El gestor se obtiene con `0x1EF2250()` (y se crea con `0x1EEBBA0(1)` si falta). Así lo hace el proceso `0x13E4580`.
   - El gestor avanza la relectura cuadro a cuadro (`0x1F08820` → `0x125F310`, «cpk_dat/common/etc/pesdb/%s»). Listas de archivos por tipo (0–2) en `0x3529900`.
 - El constructor de la tarea del EDIT (`0x1EFAE20`) está **virtualizado** por la protección: se puede usar, no leer.
-- **Consecuencia:** fichajes (option file) → interruptor; stats (base) → falta disparar `0x1EF2FA0(gestor, 0)`.
+- 🏆 **05:13 · probado:** option file original + L + entrar a Partido ⇒ Lamine volvió al Barça. **Fichajes en vivo sin Editar → Cargar.**
+- **Consecuencia:** fichajes (option file) → interruptor ✅; stats (base) → falta disparar `0x1EF2FA0(gestor, 0)`.
 
 ## 4. La actualización en vivo de Konami por dentro (`LiveDataSetFlow`)
 
@@ -80,7 +81,7 @@ Ayudantes guardados en la VM: `~/re/xref.py`, `~/re/desm.py`, `~/re/quien.py`, `
 
 | Meta | Antes | Ahora | Por qué |
 |---|---|---|---|
-| Recargar sin entrar a Editar | ~35–50 % | **~90 %** (falta la prueba de la tecla L) | El juego ya trae el interruptor; es 1 byte de datos |
+| Recargar sin entrar a Editar | ~35–50 % | **✅ fichajes probados**; stats ~80 % (falta llamar a `0x1EF2FA0`) | El juego ya trae el interruptor; es 1 byte de datos |
 | Que el botón «actualización en vivo» cargue nuestros datos | ~25–35 % | **~60–70 %** | Ya tenemos el mapa completo del flujo; falta la puerta de inicio de sesión |
 | Que la Liga Máster reciba stats en vivo | ? | Pendiente | Editar → Cargar no llega (prueba 04:53); falta la prueba de reinicio |
 

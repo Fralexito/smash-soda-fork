@@ -397,3 +397,13 @@ se puede cambiar un guardado con el juego abierto mientras no esté cargado (Fra
 - **Arranque de las 05:01 con v99:** FRALEX entró a la Liga Máster a las 05:01:20 → **falta saber qué Velocidad vio ahí** (resuelve si la LM toma la base del arranque).
 - **Siguiente prueba (A, fichajes):** se devolvió el option file **original** (Lamine en el Barça; sha cb6e176e…) con el juego abierto. L → entrar a un modo → ¿Lamine vuelve al Barça? Si sí: **fichajes en vivo sin Editar → Cargar**.
 - **Prueba B (stats, más adelante y con OK):** llamar desde Sider a `0x1EF2FA0(gestor, 0)`. Es llamar a una función del juego desde otro hilo, así que hay riesgo de cierre (sin daño a los datos).
+
+### 🏆 2026-10-09 05:13 · FICHAJE EN VIVO **SIN EDITAR → CARGAR** — CONSEGUIDO (tecla L)
+- Option file original puesto con el juego abierto (Lamine en el Barça). FRALEX: menú principal → overlay → **L** (05:13:17; marcaba «1 → 1» porque el interruptor ya estaba en 1 de una pulsación anterior) → entrar a Partido → **«✓ EL JUEGO RECARGÓ» (05:13:25)**.
+- Amistoso Barça–Atlético: **Lamine Yamal vuelve a ser titular en el Barça (ID, 90)** y Roony Bardghji vuelve al banquillo. Sin entrar a Editar, sin reiniciar, sin crash.
+- **MÉTODO PROBADO (fichajes):**
+  1. Phoenix Sync cambia el option file (`OptionFile::mover`) y lo coloca de forma atómica.
+  2. Sider pone a 1 el interruptor nativo `exe+0x37F5C39` (con comprobación de bytes del exe).
+  3. El juego recarga el option file él solo **al entrar a un modo** (menu::ModeFlowCmnInitFunctor).
+- **Estado al cerrar:** option file = original (Lamine en el Barça, sha cb6e176e…). El Madrid ya no tiene a Lamine.
+- **Pendiente:** stats sin Editar (llamar `0x1EF2FA0(gestor, 0)`, prueba B) y la Velocidad que vio FRALEX en la Liga Máster tras el reinicio de las 05:01.
