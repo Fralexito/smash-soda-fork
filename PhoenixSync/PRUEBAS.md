@@ -320,3 +320,12 @@ se puede cambiar un guardado con el juego abierto mientras no esté cargado (Fra
   - Sirve un Player.bin propio: base viva de olmosjr23 descomprimida, **1 solo byte cambiado** (Lamine, byte 38 → Velocidad 99) y recomprimida WESYS (zlib 9, cabecera original con tamaños nuevos; verificada de ida y vuelta).
   - En `_PhoenixMercado_prueba\db\` hay variantes v90, v95 y v99 para la prueba en vivo.
   - **Plan:** (a) reiniciar → la pantalla debe mostrar 99; (b) con el juego abierto, cambiar el archivo a v95 → entrar y salir de EDITAR → la pantalla debe mostrar 95.
+- **Resultado A (03:41): ✅ EL JUEGO USA NUESTRO PLAYER.BIN.** Tras reiniciar, la pantalla de habilidades de Lamine muestra **Velocidad 99**, servida por la raíz `livecpk\Phoenix-DB` con 1 byte cambiado. **Cambiar stats «al reiniciar» queda probado.**
+- **Resultado B (03:42-03:46): ❓ sin confirmar.**
+  - Se cambió el archivo a v95 con el juego abierto (03:41:22). El juego releyó Player.bin al salir de Editar (03:41:57, mismo tamaño).
+  - Pero en un amistoso nuevo (Inter–Barça) siguió 99 y no apareció ninguna copia con 95.
+  - **Ensuciado:** se pulsó V (escribir en memoria) y volvió a poner 99 en una copia que tenía 90 («byte c8 -> ec»).
+- **v0.10:**
+  - **V y N desactivadas:** el camino elegido es el archivo, no la memoria.
+  - **Huella de cada lectura de player.bin:** suma cada 64 bytes del trozo que entrega Sider, con su offset y largo. Así se sabe si el juego leyó v95 o v99.
+  - Prueba limpia: arrancar con v95 → debe verse 95. Cambiar a v90 con el juego abierto → Editar → amistoso nuevo → mirar y comparar huellas.

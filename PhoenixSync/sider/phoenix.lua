@@ -18,7 +18,7 @@
 --                    lua.module = "phoenix.lua"  en sider.ini
 -- =============================================================================
 
-local m = { version = "0.9-prueba" }
+local m = { version = "0.10-prueba" }
 
 local CADA_SEG    = 2      -- cada cuántos segundos se vuelve a mirar el archivo (solo con el overlay abierto)
 local MAX_BYTES   = 4096   -- nunca se lee más que esto
@@ -423,7 +423,7 @@ end
 
 local function textoSonda()
     if not sonda then
-        return "\n\n[PRUEBAS] B = buscar a Lamine (solo mirar) · V = ponerle Velocidad 99 (solo memoria) · N = devolverla. Solo en el menú, nunca en un partido."
+        return "\n\n[PRUEBAS] B = buscar a Lamine (solo mirar). Solo en el menú, nunca en un partido."
     end
     if not sonda.hecho then
         return string.format("\n\n[PRUEBA 2] Buscando... %d MB revisados en %d zonas. IDs revisados: %d · fichas: %d · nombre: %d",
@@ -454,8 +454,8 @@ function m.key_down(ctx, vkey)
     if apagado then return end
     local libre = not sonda or sonda.hecho
     if vkey == VK_B and libre then iniciarSonda("mirar") end
-    if vkey == VK_V and libre then estadoEscritura = "Buscando la ficha para escribir..."; iniciarSonda("velocidad") end
-    if vkey == VK_N and libre and #escritos > 0 then devolverVelocidad() end
+    -- v0.10: V y N DESACTIVADAS. Escribir en memoria ensucia la prueba de la base servida por Sider
+    -- (03:44 se pulsó V y volvió a poner 99 en una copia con 90). El camino elegido es el archivo.
 end
 
 -- ─── v0.9 · ESPÍA DE LECTURAS (solo anota; no lee ni cambia datos) ─────────────────────
@@ -469,9 +469,24 @@ local function cortoPesdb(nombre)
     local corto = n:match("pesdb\\([%w_]+%.bin)$")
     return corto
 end
+-- v0.10: huella de lo que REALMENTE lee el juego (para saber si fue nuestro v95 o el v99).
+-- Se lee el trozo que Sider entrega (como hace CommonLib) y se calcula una suma simple cada 64 bytes.
+local huella = {}
+local function sumaTrozo(s)
+    local h = 0
+    for i = 1, #s, 64 do h = (h * 31 + s:byte(i)) % 4294967296 end
+    return h
+end
 function m.livecpk_read(ctx, filename, addr, len, total_size, offset)
     local corto = cortoPesdb(filename)
     if not corto then return end
+    if corto == "player.bin" and addr and len and len > 0 then
+        local h = sumaTrozo(memory.read(addr, len))
+        if lineasLog < 300 then
+            lineasLog = lineasLog + 1
+            log(string.format("[phoenix] huella player.bin: offset %d len %d suma %u", offset or -1, len, h))
+        end
+    end
     if offset == 0 then
         lecturas[corto] = (lecturas[corto] or 0) + 1
         if lineasLog < 300 then
