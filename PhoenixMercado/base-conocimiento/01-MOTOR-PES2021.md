@@ -154,3 +154,28 @@ Comparado con el fichaje de Sommer hecho por el propio juego y luego probado jug
 - Al salir un jugador del usuario: borra sus contratos y negociación, vacía o compacta sus registros en las tablas (ver §E) y pone a un
   suplente en su puesto; deja K y A2 para más tarde; anota noticia y pago en caja; recalcula las medias del equipo (bloque +0x5DA).
 - Crea jugadores propios (regens, `reg 0xDB65xxxx`) y los reparte entre los clubes de la IA a lo largo de la temporada.
+
+## J. `Player.bin` (base de datos) — mapa ampliado (8 oct, 22:10)
+
+Registro de 312 B; **NO** tiene el mismo orden que el jugador editado del option file (ese sí sigue el mapa de 4ccEditor, licencia zlib:
+`pes20.cpp`, `fill_player_entry20`). Posiciones en bits desde el inicio del registro (`id` u32 en +8):
+
+| Campo | Bits | Estado |
+|---|---|---|
+| 19 habilidades de campo (6 bits, valor − 40) | ver §B | ✅ |
+| **Potencia de tiro** | 358 (6, −40) | 🔎 (valores 65–89 en todos los jugadores) |
+| **5 habilidades de portero** | 269, 300, 320, 326, 364 (6, −40) | 🔎 (40 en el 99,8 % de los jugadores de campo; altas en porteros). **Falta saber cuál es cuál** (actitud, atajar, despejar, reflejos, cobertura) |
+| **Posiciones jugables** (2 bits: 0 no, 1 B, 2 A) | PT 350 · DFC 468 · LI 318 · LD 474 · MCD 414 · MC 456 · MI 466 · MD 460 · MO 464 · EI 472 · ED 476 · SD 478 (probable) · DC 470 | 🔎 (la posición registrada vale 2 en el 99 %) |
+| Pie malo uso / precisión, forma, resistencia a lesiones | 454 (2) / 462 (2), 438 (3), 458 (2) | ❓ (coinciden con el option file en los 21 editados) |
+| Habilidades especiales + estilos COM | bits 480–531 (52 bits) | ❓ en calibración (490, 496, 502, 522 solo en porteros: despejes/saques/penales de portero) |
+| País | 233 (9) → `Country.bin` (1420 B por país: ID en los bits 10–18, nombre en español en +148) | ✅ |
+
+**Hallazgo importante:** en ConmeGOL 26 la base que usa el juego **no es** `CGP_database.cpk` (19/8) sino la que sirve Sider desde
+`SiderAddons\olmosjr23\Database\common\etc\pesdb\` (5/9): **5.894 jugadores distintos y 64 cambiados**. El catálogo del Mercado
+se generó con la base vieja → hay que regenerarlo desde la de Sider.
+
+**Imágenes:** minifaces en `livecpk\Logos\common\render\symbol\player\<pid>.dds` (2.638; DXT, 180×180) y escudos en
+`…\symbol\flag\e_<6 dígitos del ID>_r_l.png` (Barça: `e_000108_r_l.png`).
+
+**Guardado recién creado:** una carrera guardada en cuanto se crea todavía no tiene fecha (1/1, día 0), ni alineación, ni contratos
+definitivos: el juego los rellena al empezar la temporada.

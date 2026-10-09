@@ -1,0 +1,277 @@
+<title>Vestuario Phoenix · Barça</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: hoja de vestuario — plantilla por líneas a la izquierda, ficha del jugador a la derecha (se apila en móvil). */
+:root{
+  --bg:#f3f1f4; --panel:#ffffff; --ink:#1b1626; --muted:#6b6478; --line:#e2dde6;
+  --grana:#a50044; --azul:#0f4c99; --oro:#c99a1e;
+  --pt:#d39a08; --def:#1f6fd1; --med:#1f9d55; --del:#d4334a;
+  --bar:#ece8ef; --cambio:#fff3c4; --cambio-ink:#7a5a00;
+  --t1:#1f9d55; --t2:#c99a1e; --t3:#e0662b; --t4:#c4204a;
+  --f-disp:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --f-body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --f-num:"JetBrains Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#120f18; --panel:#1b1724; --ink:#efeaf5; --muted:#a39bb3; --line:#2e2839;
+  --grana:#e0457f; --azul:#5b9bf0; --oro:#e2b84a; --bar:#2a2435; --cambio:#3d3315; --cambio-ink:#f1d27a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#120f18; --panel:#1b1724; --ink:#efeaf5; --muted:#a39bb3; --line:#2e2839;
+  --grana:#e0457f; --azul:#5b9bf0; --oro:#e2b84a; --bar:#2a2435; --cambio:#3d3315; --cambio-ink:#f1d27a; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45}
+.envoltura{max-width:1240px;margin:0 auto;padding-inline:16px;padding-block:16px 40px;display:grid;gap:16px}
+header.club{display:flex;flex-wrap:wrap;align-items:center;gap:14px 20px;padding:14px 18px;background:var(--panel);border:1px solid var(--line);border-radius:12px;border-top:4px solid var(--grana);box-shadow:inset 0 4px 0 -0px transparent}
+header.club img{width:56px;height:56px}
+.club h1{margin:0;font-family:var(--f-disp);font-weight:800;font-size:30px;letter-spacing:.3px;text-transform:uppercase;line-height:1}
+.club .sub{color:var(--muted);font-size:13px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-left:auto}
+.chip{display:grid;padding:6px 10px;border:1px solid var(--line);border-radius:8px;min-width:120px}
+.chip b{font-family:var(--f-num);font-size:14px;font-variant-numeric:tabular-nums}
+.chip span{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
+.cuerpo{display:grid;grid-template-columns:minmax(0,360px) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:860px){.cuerpo{grid-template-columns:minmax(0,1fr)}}
+.plantilla{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.linea h2{margin:0;padding:8px 14px;font-family:var(--f-disp);font-size:15px;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);background:var(--bg);border-top:1px solid var(--line)}
+.linea:first-child h2{border-top:0}
+.fila{display:grid;grid-template-columns:34px 38px minmax(0,1fr) auto;align-items:center;gap:10px;width:100%;padding:7px 14px;border:0;border-top:1px solid var(--line);background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.fila:hover{background:var(--bar)}
+.fila[aria-current="true"]{background:color-mix(in srgb,var(--grana) 12%,transparent)}
+.fila:focus-visible{outline:2px solid var(--azul);outline-offset:-2px}
+.dorsal{font-family:var(--f-disp);font-weight:800;font-size:22px;text-align:right;font-variant-numeric:tabular-nums}
+.fila img{width:38px;height:38px;border-radius:50%;object-fit:cover;background:var(--bar)}
+.fila .nom{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fila .meta{font-size:12px;color:var(--muted)}
+.pos{display:inline-block;min-width:38px;padding:2px 6px;border-radius:4px;font-family:var(--f-disp);font-weight:700;font-size:13px;text-align:center;color:#fff;letter-spacing:.4px}
+.p-PT{background:var(--pt)}.p-DFC,.p-LI,.p-LD{background:var(--def)}.p-MCD,.p-MC,.p-MI,.p-MD,.p-MO{background:var(--med)}.p-EI,.p-ED,.p-SD,.p-DC{background:var(--del)}
+.marca{width:8px;height:8px;border-radius:50%;background:var(--oro);display:inline-block;margin-left:6px}
+.ficha{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px;display:grid;gap:18px;min-width:0}
+.cabecera{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:16px;align-items:center}
+.cabecera img{width:96px;height:96px;border-radius:10px;object-fit:cover;background:var(--bar)}
+.cabecera .num{font-family:var(--f-disp);font-weight:800;font-size:64px;line-height:.9;color:var(--grana);font-variant-numeric:tabular-nums}
+.cabecera h2{margin:0;font-family:var(--f-disp);font-weight:700;font-size:32px;line-height:1.05;text-wrap:balance}
+.cabecera .cam{color:var(--muted);font-family:var(--f-num);font-size:12px;letter-spacing:.5px}
+@media (max-width:520px){.cabecera{grid-template-columns:auto minmax(0,1fr)}.cabecera .num{grid-column:1/-1;font-size:44px}}
+.datos{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.dato{display:grid;gap:3px}
+.dato label,.sec h3{font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);font-weight:700}
+.sec h3{margin:0 0 8px;font-family:var(--f-disp);font-size:14px;letter-spacing:1.3px}
+input,select{font:inherit;font-family:var(--f-num);font-size:14px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:5px 8px;width:100%;min-width:0}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--azul);outline-offset:1px}
+input:disabled,select:disabled{opacity:.75}
+.cambiado input,.cambiado select,input.cambiado{background:var(--cambio);color:var(--cambio-ink);border-color:var(--oro)}
+.dos{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px}
+@media (max-width:980px){.dos{grid-template-columns:minmax(0,1fr)}}
+.grupo{display:grid;gap:5px}
+.hab{display:grid;grid-template-columns:minmax(0,1fr) 120px 54px;align-items:center;gap:8px;font-size:14px}
+.hab .barra{height:8px;border-radius:4px;background:var(--bar);overflow:hidden}
+.hab .barra i{display:block;height:100%;border-radius:4px}
+.hab input{padding:3px 6px;text-align:right}
+.campo{position:relative;width:100%;max-width:340px;aspect-ratio:68/100;margin:0 auto;border-radius:10px;background:linear-gradient(var(--med),color-mix(in srgb,var(--med) 80%,#000));opacity:.95}
+.campo::before{content:"";position:absolute;inset:6%;border:2px solid rgba(255,255,255,.55);border-radius:4px}
+.campo::after{content:"";position:absolute;left:6%;right:6%;top:50%;border-top:2px solid rgba(255,255,255,.55)}
+.ppos{position:absolute;transform:translate(-50%,-50%);z-index:1;border:0;border-radius:5px;padding:3px 0;width:46px;font-family:var(--f-disp);font-weight:700;font-size:13px;cursor:pointer;color:#fff;background:rgba(0,0,0,.35)}
+.ppos[data-v="1"]{background:var(--t2);color:#1b1626}.ppos[data-v="2"]{background:#fff;color:#0b3d1f}
+.ppos.cambiado{outline:2px solid var(--oro);outline-offset:1px}
+.ppos:disabled{cursor:default}
+.leyenda{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--muted);margin-top:8px;justify-content:center}
+.leyenda i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-2px}
+.acciones{display:flex;flex-wrap:wrap;gap:10px;align-items:center;position:sticky;bottom:env(safe-area-inset-bottom,0px);background:var(--panel);padding-block:10px;border-top:1px solid var(--line)}
+button.btn{font:inherit;font-weight:700;border-radius:8px;padding:9px 16px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
+button.btn.prim{background:var(--grana);border-color:var(--grana);color:#fff}
+button.btn:disabled{opacity:.5;cursor:default}
+.estado{font-size:13px;color:var(--muted)}
+.estado.ok{color:var(--t1)}.estado.err{color:var(--t4)}
+.aviso{font-size:13px;color:var(--muted);background:var(--bar);border-radius:8px;padding:10px 12px}
+.pendiente{font-size:11px;color:var(--cambio-ink);background:var(--cambio);padding:1px 6px;border-radius:4px;margin-left:6px;font-weight:700;letter-spacing:.3px;text-transform:none}
+.vacio{padding:40px 20px;text-align:center;color:var(--muted)}
+@media (prefers-reduced-motion:no-preference){.hab .barra i{transition:width .25s ease}}
+</style>
+
+<div class="envoltura">
+  <header class="club">
+    <img id="escudo" alt="Escudo del FC Barcelona" src="">
+    <div>
+      <h1>FC Barcelona</h1>
+      <div class="sub" id="subclub">Liga Máster · ranura 1 · ConmeGOL Patch 26</div>
+    </div>
+    <div class="chips" id="chips"></div>
+  </header>
+
+  <div class="cuerpo">
+    <nav class="plantilla" id="plantilla" aria-label="Plantilla">
+      <div class="vacio" id="cargando">Cargando la plantilla del Barça…<br><small>Si tarda, abre esta página desde tu cuenta de Claude: los datos viven en su base de datos.</small></div>
+    </nav>
+    <main class="ficha" id="ficha" aria-live="polite">
+      <div class="vacio">Elige un jugador de la plantilla para ver y editar su ficha.</div>
+    </main>
+  </div>
+
+  <p class="aviso">Los cambios se guardan aquí como <b>pendientes</b>. Phoenix Mercado los aplica a tu juego en un archivo nuevo, con copia de seguridad, y después marca el jugador como aplicado. Lo marcado <span class="pendiente">por confirmar</span> todavía no se puede editar: falta comprobar ese dato con una foto de la ficha en el juego.</p>
+</div>
+
+<script>
+const IMGS = __IMGS__;
+const POS = ["PT","DFC","LI","LD","MCD","MC","MI","MD","MO","EI","ED","SD","DC"];
+const LINEAS = [["Porteros",["PT"]],["Defensas",["DFC","LI","LD"]],["Centrocampistas",["MCD","MC","MI","MD","MO"]],["Delanteros",["EI","ED","SD","DC"]]];
+const GRUPOS = [
+  ["Ataque",[["ataque","Actitud ofensiva"],["control","Control de balón"],["regate","Regate"],["regate_ajustado","Posesión estrecha"],["finalizacion","Finalización"],["cabezazo","Cabezazo"]]],
+  ["Pase y disparo",[["pase_raso","Pase al ras"],["pase_bombeado","Pase bombeado"],["balon_parado","Balón parado"],["efecto","Efecto"],["potencia_tiro","Potencia de tiro",true]]],
+  ["Físico",[["velocidad","Velocidad"],["aceleracion","Aceleración"],["salto","Salto"],["contacto_fisico","Contacto físico"],["equilibrio","Equilibrio"],["resistencia","Resistencia"]]],
+  ["Defensa",[["defensa","Actitud defensiva"],["recuperacion","Recuperación de balón"],["agresividad","Agresividad"]]],
+];
+const PORTERO = [["pt_a","Portero A"],["pt_b","Portero B"],["pt_c","Portero C"],["pt_d","Portero D"],["pt_e","Portero E"]];
+const XY = {PT:[50,91],DFC:[50,75],LI:[17,70],LD:[83,70],MCD:[50,60],MC:[50,48],MI:[16,45],MD:[84,45],MO:[50,35],EI:[18,19],ED:[82,19],SD:[50,23],DC:[50,10]};
+
+let db = null, puedeEscribir = true, docs = new Map(), club = null, actual = null, borrador = {};
+const $ = (s, el=document) => el.querySelector(s);
+const euros = n => n == null ? "—" : new Intl.NumberFormat("es-PE",{maximumFractionDigits:0}).format(n) + " €";
+const tono = v => v >= 90 ? "var(--t4)" : v >= 80 ? "var(--t3)" : v >= 70 ? "var(--t2)" : "var(--t1)";
+function esc(t){ const d=document.createElement("span"); d.textContent = t == null ? "" : String(t); return d.innerHTML; }
+function valorJuego(j, campo){ return campo.split(".").reduce((o,k)=> o == null ? undefined : o[k], j); }
+function valor(j, campo){ return campo in borrador ? borrador[campo] : (pendientes(j)[campo] ?? valorJuego(j, campo)); }
+function pendientes(j){ const m = {}; (j.cambios||[]).forEach(c => { m[c.campo] = c.valor; }); return m; }
+
+$("#escudo").src = IMGS.escudo || "";
+
+function pintarClub(){
+  const f = club && club.finanzas;
+  const fecha = club && club.fecha;
+  $("#chips").innerHTML = f ? `
+    <div class="chip"><b>${euros(f.presupuesto_fichajes)}</b><span>Ppto. fichajes</span></div>
+    <div class="chip"><b>${euros(f.presupuesto_salarial)}</b><span>Ppto. salarial</span></div>
+    <div class="chip"><b>${esc(fecha || "—")}</b><span>Fecha de la partida</span></div>` : "";
+}
+
+function pintarPlantilla(){
+  const lista = [...docs.values()].sort((a,b)=> (a.orden_plantilla??0)-(b.orden_plantilla??0));
+  if (!lista.length){ $("#plantilla").innerHTML = `<div class="vacio">Todavía no hay jugadores cargados.<br><small>Claude los carga desde tu partida de Liga Máster.</small></div>`; return; }
+  $("#plantilla").innerHTML = LINEAS.map(([titulo,pos]) => {
+    const js = lista.filter(j => pos.includes(j.posicion));
+    if (!js.length) return "";
+    return `<section class="linea"><h2>${titulo} · ${js.length}</h2>${js.map(j => `
+      <button class="fila" data-pid="${j.pid}" aria-current="${actual===j.pid}">
+        <span class="dorsal">${esc(valor(j,"dorsal"))}</span>
+        <img alt="" src="${IMGS[j.pid] || IMGS.escudo}">
+        <span style="min-width:0"><div class="nom">${esc(j.nombre)}${(j.cambios||[]).length?'<span class="marca" title="Tiene cambios pendientes"></span>':''}</div>
+          <div class="meta">${esc(j.edad)} años · ${esc(j.altura)} cm · ${esc(j.nacionalidad)}</div></span>
+        <span class="pos p-${esc(j.posicion)}">${esc(j.posicion)}</span>
+      </button>`).join("")}</section>`;
+  }).join("");
+}
+
+function campoNum(campo, j, {min=40,max=99,bloqueado=false}={}){
+  const v = valor(j,campo), orig = valorJuego(j,campo);
+  return `<input type="number" id="f-${campo.replace(/\./g,'-')}" data-campo="${campo}" min="${min}" max="${max}" value="${esc(v)}" ${bloqueado||!puedeEscribir?"disabled":""} class="${v!==orig?"cambiado":""}" aria-label="${campo}">`;
+}
+
+function pintarFicha(){
+  const j = docs.get(actual);
+  if (!j){ $("#ficha").innerHTML = `<div class="vacio">Elige un jugador de la plantilla para ver y editar su ficha.</div>`; return; }
+  const esPT = j.posicion === "PT";
+  const habRow = ([k,nom,porConfirmar]) => {
+    const campo = "habilidades."+k, v = valor(j,campo);
+    return `<div class="hab ${v!==valorJuego(j,campo)?"cambiado":""}"><span>${nom}${porConfirmar?'<span class="pendiente">por confirmar</span>':''}</span>
+      <span class="barra"><i style="width:${Math.max(0,Math.min(100,(v-40)/59*100))}%;background:${tono(v)}"></i></span>${campoNum(campo,j,{bloqueado:porConfirmar})}</div>`;
+  };
+  const lm = j.liga_master || {};
+  $("#ficha").innerHTML = `
+    <div class="cabecera">
+      <img alt="Cara de ${esc(j.nombre)}" src="${IMGS[j.pid] || IMGS.escudo}">
+      <div style="min-width:0"><h2>${esc(j.nombre)}</h2><div class="cam">${esc(j.camiseta)} · ID ${j.pid}</div>
+        <div style="margin-top:6px"><span class="pos p-${esc(j.posicion)}">${esc(j.posicion)}</span> <span class="estado">${esc(j.nacionalidad)}</span></div></div>
+      <div class="num" aria-label="Dorsal">${esc(valor(j,"dorsal"))}</div>
+    </div>
+
+    <div class="sec"><h3>Datos básicos</h3><div class="datos">
+      <div class="dato ${valor(j,"dorsal")!==j.dorsal?"cambiado":""}"><label for="f-dorsal">Dorsal</label>${campoNum("dorsal",j,{min:1,max:99})}</div>
+      <div class="dato ${valor(j,"edad")!==j.edad?"cambiado":""}"><label for="f-edad">Edad</label>${campoNum("edad",j,{min:15,max:50})}</div>
+      <div class="dato ${valor(j,"altura")!==j.altura?"cambiado":""}"><label for="f-altura">Altura (cm)</label>${campoNum("altura",j,{min:150,max:210})}</div>
+      <div class="dato ${valor(j,"peso")!==j.peso?"cambiado":""}"><label for="f-peso">Peso (kg)</label>${campoNum("peso",j,{min:40,max:130})}</div>
+      <div class="dato ${valor(j,"posicion")!==j.posicion?"cambiado":""}"><label for="f-posicion">Posición registrada</label>
+        <select id="f-posicion" data-campo="posicion" ${puedeEscribir?"":"disabled"}>${POS.map(p=>`<option ${valor(j,"posicion")===p?"selected":""}>${p}</option>`).join("")}</select></div>
+      <div class="dato"><label>Pie malo · uso / precisión <span class="pendiente">por confirmar</span></label><input disabled value="${esc(j.pie_malo_uso)} / ${esc(j.pie_malo_precision)}"></div>
+      <div class="dato"><label>Forma <span class="pendiente">por confirmar</span></label><input disabled value="${esc(j.forma)}"></div>
+      <div class="dato"><label>Resist. lesiones <span class="pendiente">por confirmar</span></label><input disabled value="${esc(j.resistencia_lesiones)}"></div>
+    </div></div>
+
+    <div class="dos">
+      <div class="sec"><h3>Habilidades</h3><div class="grupo">
+        ${GRUPOS.map(([t,hs])=>`<div style="font-size:12px;color:var(--muted);margin-top:6px">${t}</div>${hs.map(habRow).join("")}`).join("")}
+      </div></div>
+      <div style="display:grid;gap:18px;align-content:start">
+        <div class="sec"><h3>Posiciones que puede jugar</h3>
+          <div class="campo">${POS.map(p=>{ const v=valor(j,"posiciones."+p); return `<button class="ppos ${v!==valorJuego(j,"posiciones."+p)?"cambiado":""}" data-pos="${p}" data-v="${v}" style="left:${XY[p][0]}%;top:${XY[p][1]}%" ${puedeEscribir?"":"disabled"} aria-label="${p}: ${["no","B","A"][v]}">${p}</button>`; }).join("")}</div>
+          <div class="leyenda"><span><i style="background:#fff"></i>A (natural)</span><span><i style="background:var(--t2)"></i>B</span><span><i style="background:rgba(0,0,0,.35)"></i>No</span><span>Toca una posición para cambiarla</span></div>
+        </div>
+        <div class="sec"><h3>${esPT?"Portero":"Habilidades de portero"} <span class="pendiente">por confirmar</span></h3><div class="grupo">
+          ${PORTERO.map(([k,n])=>{ const v=valor(j,"portero."+k); return `<div class="hab"><span>${n}</span><span class="barra"><i style="width:${(v-40)/59*100}%;background:${tono(v)}"></i></span>${campoNum("portero."+k,j,{bloqueado:true})}</div>`; }).join("")}
+        </div></div>
+        <div class="sec"><h3>Liga Máster · contrato</h3><div class="datos">
+          <div class="dato ${valor(j,"liga_master.valor")!==lm.valor?"cambiado":""}"><label for="f-liga_master-valor">Valor de mercado (€)</label>${campoNum("liga_master.valor",j,{min:0,max:400000000})}</div>
+          <div class="dato ${valor(j,"liga_master.sueldo")!==lm.sueldo?"cambiado":""}"><label for="f-liga_master-sueldo">Sueldo anual (€)</label>${campoNum("liga_master.sueldo",j,{min:0,max:100000000})}</div>
+          <div class="dato"><label>Fin de contrato <span class="pendiente">por confirmar</span></label><input disabled value="${esc(lm.fin_contrato||"—")}"></div>
+        </div></div>
+      </div>
+    </div>
+
+    <div class="acciones">
+      <button class="btn prim" id="guardar" ${puedeEscribir?"":"disabled"}>Guardar cambios</button>
+      <button class="btn" id="descartar" ${puedeEscribir?"":"disabled"}>Volver a los datos del juego</button>
+      <span class="estado" id="estado">${(j.cambios||[]).length ? `${j.cambios.length} cambio(s) pendiente(s) de aplicar al juego` : (j.aplicado_en ? "Cambios aplicados al juego" : "Igual que en el juego")}</span>
+    </div>`;
+}
+
+document.addEventListener("click", e => {
+  const f = e.target.closest(".fila");
+  if (f){ actual = Number(f.dataset.pid); borrador = {}; pintarPlantilla(); pintarFicha(); if (innerWidth < 860) $("#ficha").scrollIntoView({behavior:"smooth",block:"start"}); return; }
+  const p = e.target.closest(".ppos");
+  if (p && !p.disabled){ const j = docs.get(actual); const c = "posiciones."+p.dataset.pos; borrador[c] = (valor(j,c)+1)%3; pintarFicha(); return; }
+  if (e.target.id === "guardar") guardar();
+  if (e.target.id === "descartar") descartar();
+});
+document.addEventListener("change", e => {
+  const el = e.target.closest("[data-campo]"); if (!el || !actual) return;
+  const j = docs.get(actual), c = el.dataset.campo;
+  let v = el.tagName === "SELECT" ? el.value : Number(el.value);
+  if (el.tagName !== "SELECT"){ const mn=Number(el.min), mx=Number(el.max); if (!Number.isFinite(v)) v = valorJuego(j,c); v = Math.round(Math.min(mx,Math.max(mn,v))); }
+  borrador[c] = v; pintarFicha();
+});
+
+async function guardar(){
+  const j = docs.get(actual); if (!j || !db) return;
+  const todos = {...pendientes(j), ...borrador};
+  const cambios = Object.entries(todos).filter(([c,v]) => v !== valorJuego(j,c)).map(([campo,valor]) => ({campo, valor}));
+  $("#estado").textContent = "Guardando…";
+  try{
+    await db.doc("jugadores/"+j.pid).update({cambios, estado: cambios.length ? "pendiente" : "igual", editado_en: new Date().toISOString()});
+    borrador = {};
+    $("#estado").textContent = cambios.length ? `Guardado: ${cambios.length} cambio(s) pendiente(s) de aplicar al juego` : "Sin cambios respecto al juego";
+    $("#estado").className = "estado ok";
+  }catch(err){
+    $("#estado").textContent = err && err.code === "invalid_argument" ? "No tienes permiso para guardar cambios en esta página." : "No se pudo guardar. Revisa tu conexión y vuelve a intentarlo.";
+    $("#estado").className = "estado err";
+    if (err && err.code === "invalid_argument"){ puedeEscribir = false; pintarFicha(); }
+  }
+}
+async function descartar(){
+  const j = docs.get(actual); if (!j || !db) return;
+  borrador = {};
+  try{ await db.doc("jugadores/"+j.pid).update({cambios: [], estado: "igual"}); }catch(err){ $("#estado").textContent = "No se pudo descartar. Vuelve a intentarlo."; $("#estado").className="estado err"; }
+}
+
+(async () => {
+  pintarClub();
+  db = await (window.claude?.use?.("db") ?? null);
+  if (!db){ $("#plantilla").innerHTML = `<div class="vacio">Esta vista no puede leer los datos de la partida.<br><small>Ábrela desde tu cuenta de Claude.</small></div>`; return; }
+  const user = await (window.claude?.use?.("user") ?? null);
+  try{ const w = user && user.can ? await user.can("data.write") : null; if (w === false) puedeEscribir = false; }catch{}
+  db.doc("club/barca").onSnapshot(s => { club = s.exists ? s.data() : null; pintarClub(); }, () => {});
+  db.collection("jugadores").onSnapshot(snap => {
+    docs = new Map(snap.docs.map(d => [Number(d.id), d.data()]));
+    if (actual == null && docs.size){ const primero = [...docs.values()].sort((a,b)=>a.orden_plantilla-b.orden_plantilla)[0]; actual = primero.pid; }
+    pintarPlantilla(); pintarFicha();
+  }, () => { $("#plantilla").innerHTML = `<div class="vacio">Se perdió la conexión con los datos. Recarga la página.</div>`; });
+})();
+</script>
