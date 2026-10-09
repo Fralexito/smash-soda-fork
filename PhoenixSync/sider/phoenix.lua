@@ -18,7 +18,7 @@
 --                    lua.module = "phoenix.lua"  en sider.ini
 -- =============================================================================
 
-local m = { version = "0.11-prueba" }
+local m = { version = "0.12-prueba" }
 
 local CADA_SEG    = 2      -- cada cuántos segundos se vuelve a mirar el archivo (solo con el overlay abierto)
 local MAX_BYTES   = 4096   -- nunca se lee más que esto
@@ -130,6 +130,7 @@ end
 local VK_B        = 0x42
 local VK_V        = 0x56   -- escribir Velocidad 99
 local VK_N        = 0x4E   -- devolver Velocidad original
+local VK_K        = 0x4B   -- v0.12: pedir al juego que relea la BASE (pesdb), como hace Editar → Cargar
 local VK_L        = 0x4C   -- v0.11: pedir al juego que recargue EDIT + base al volver al menú principal
 local NUEVA_VEL   = 99
 local TROZO       = 24 * 1024 * 1024   -- bytes revisados por cada cuadro con el overlay abierto
@@ -511,11 +512,73 @@ local function textoRecarga()
     return "\n  [RECARGA] interruptor = " .. tostring(b) .. (recarga and ("  ·  " .. recarga) or "  ·  tecla L = pedir recarga")
 end
 
+-- ─── v0.12 · PRUEBA B: releer la BASE (pesdb) sin entrar a Editar ───────────────────────
+-- Editar → Cargar (proceso 0x13E4580) hace: gestor = [exe+0x37F5C28] ; 0x1EF2FA0(gestor, 0).
+-- 0x1EF2FA0 = «iniciar relectura de la base»: si [gestor+0x88] ≠ 0 (ya hay una) devuelve 0 sin hacer
+-- nada; si no, crea un objeto de 0x48 B que el gestor avanza cuadro a cuadro (lee pesdb\*.bin) y
+-- luego libera ([gestor+0x88] vuelve a 0). Aquí se LLAMA a esa función del juego desde Sider.
+-- Riesgo aceptado por FRALEX (05:17): si el juego no tolera la llamada desde este hilo, puede
+-- cerrarse (no se guarda nada, no hay daño en datos). Antes se comprueban los bytes exactos.
+local RVA_GESTOR = 0x37F5C28
+local RVA_RELEER = 0x1EF2FA0
+local CHEQUEOS_BASE = {
+    { 0x1EF2FA0, "\64\87\72\131\236\48\72\199\68\36\32\254\255\255\255\72\137\92\36\72\139\250\72\139\217" },  -- inicio de la función (25 B)
+    { 0x1EF2250, "\72\139\5\209\57\144\1\195" },  -- mov rax, [exe+0x37F5C28] ; ret  (lector del gestor)
+    { 0x13E4580, "\64\83\72\131\236\32\72\139\217\177\1\232\16\118\176\0\232\187\220\176\0\51\210\72\139\200\232\1\234\176\0\199" },  -- Editar→Cargar: …xor edx,edx; call 0x1EF2FA0 (32 B)
+}
+local estadoBase = nil
+local releerVisto = nil
+local function leerU64(a)
+    local s = leerSeguro(a, 8)
+    if not s then return nil end
+    local v = ffi.new("uint64_t[1]"); ffi.copy(v, s, 8)
+    return v[0]
+end
+local function pedirBase()
+    prepararLector()
+    local base = baseExe()
+    for _, c in ipairs(CHEQUEOS_BASE) do
+        local real = leerSeguro(base + c[1], #c[2])
+        if real ~= c[2] then
+            estadoBase = string.format("NO se llamó: el código en exe+%X no es el esperado", c[1])
+            log("[phoenix] " .. estadoBase); return
+        end
+    end
+    local gestor = leerU64(base + RVA_GESTOR)
+    if not gestor or gestor == 0 then
+        estadoBase = "NO se llamó: el gestor de edición aún no existe (entra una vez a Editar o a un modo)"
+        log("[phoenix] " .. estadoBase); return
+    end
+    local enCursoB = leerU64(gestor + 0x88)
+    if enCursoB == nil or enCursoB ~= 0 then
+        estadoBase = "NO se llamó: ya hay una relectura en curso (o no se pudo leer el gestor)"
+        log("[phoenix] " .. estadoBase); return
+    end
+    log(string.format("[phoenix] prueba B: llamando a exe+%X(gestor %s, 0)...", RVA_RELEER, memory.hex(tonumber(gestor))))
+    local f = ffi.cast("uint8_t (*)(void*, int)", base + RVA_RELEER)
+    local r = f(ffi.cast("void*", gestor), 0)
+    estadoBase = string.format("[%s] relectura de la base pedida → %s", os.date("%H:%M:%S"), r ~= 0 and "aceptada ✓" or "rechazada ✗")
+    log("[phoenix] prueba B: respuesta " .. tostring(r))
+end
+local function textoBase()
+    if not exeBase then return "\n  [BASE] tecla K = releer la base (prueba B)" end
+    local gestor = leerU64(exeBase + RVA_GESTOR)
+    local obj = (gestor and gestor ~= 0) and leerU64(gestor + 0x88) or nil
+    local ahora = obj and (obj ~= 0 and "EN CURSO" or "libre") or "?"
+    if releerVisto == "EN CURSO" and ahora == "libre" then
+        log("[phoenix] prueba B: relectura terminada a las " .. os.date("%H:%M:%S"))
+        estadoBase = (estadoBase or "") .. "  ·  ✓ BASE RELEÍDA (" .. os.date("%H:%M:%S") .. ")"
+    end
+    releerVisto = ahora
+    return "\n  [BASE] relectura: " .. ahora .. (estadoBase and ("  ·  " .. estadoBase) or "  ·  tecla K = releer la base")
+end
+
 function m.key_down(ctx, vkey)
     if apagado then return end
     local libre = not sonda or sonda.hecho
     if vkey == VK_B and libre then iniciarSonda("mirar") end
     if vkey == VK_L then pedirRecarga() end
+    if vkey == VK_K then pedirBase() end
     -- v0.10: V y N DESACTIVADAS. Escribir en memoria ensucia la prueba de la base servida por Sider
     -- (03:44 se pulsó V y volvió a poner 99 en una copia con 90). El camino elegido es el archivo.
 end
@@ -570,7 +633,7 @@ local function textoOverlay()
     pasoSonda()
     local cab = string.format("PHOENIX EVOLUTION  ·  puente en vivo v%s  ·  %s", m.version, estado)
     if actualizado ~= "" then cab = cab .. "  ·  último aviso " .. actualizado end
-    return cab .. "\n\n" .. contenido .. textoSonda() .. textoEspia() .. textoRecarga()
+    return cab .. "\n\n" .. contenido .. textoSonda() .. textoEspia() .. textoRecarga() .. textoBase()
 end
 
 -- Ojo: el Lua de Sider NO trae pcall (lo confirma el volcado de env.lua en sider.log).
@@ -603,7 +666,7 @@ function m.init(ctx)
     ctx.register("overlay_on", m.overlay_on)
     ctx.register("key_down", m.key_down)
     ctx.register("livecpk_read", m.livecpk_read)
-    log("[phoenix] v" .. m.version .. " listo (tecla B = buscar en memoria; tecla L = pedir recarga nativa). Archivo: " .. ruta)
+    log("[phoenix] v" .. m.version .. " listo (tecla B = buscar en memoria; tecla L = pedir recarga nativa; tecla K = releer la base). Archivo: " .. ruta)
 end
 
 return m

@@ -408,3 +408,11 @@ se puede cambiar un guardado con el juego abierto mientras no esté cargado (Fra
 - **Estado al cerrar:** option file = original (Lamine en el Barça, sha cb6e176e…). El Madrid ya no tiene a Lamine.
 - **Pendiente:** stats sin Editar (llamar `0x1EF2FA0(gestor, 0)`, prueba B) y la Velocidad que vio FRALEX en la Liga Máster tras el reinicio de las 05:01.
 - **05:15 · confirmación:** después de la recarga con L, la ficha de Lamine (ya en el Barça) sigue con **Velocidad 99**, la base del arranque de las 05:01. Confirma que el interruptor recarga el option file pero **no** la base de stats.
+
+### 2026-10-09 05:20 · Prueba B preparada: phoenix.lua v0.12 (tecla K = releer la base sin Editar) — INSTALADO, falta probar
+- OK de FRALEX a las 05:17, aceptando el riesgo de cierre.
+- **K:** comprueba bytes (`0x1EF2FA0` 25 B, `0x1EF2250` 8 B, `0x13E4580` 32 B) → lee el gestor `[exe+0x37F5C28]` → exige `[gestor+0x88] = 0` → **llama a `exe+0x1EF2FA0(gestor, 0)`**, igual que Editar → Cargar. El overlay muestra «relectura: EN CURSO / libre» y «✓ BASE RELEÍDA».
+- El gestor está justo al lado del interruptor (`0x37F5C28`); el lector `0x1EF2250` es solo `mov rax, [exe+0x37F5C28] ; ret`.
+- Simulación LuaJIT OK: llama una sola vez; no llama si hay relectura en curso, si el exe es distinto o si el gestor no existe.
+- Instalado en las dos carpetas `modules` (respaldo `phoenix.lua.v011`). Phoenix-DB con **v95** (el juego tiene v99 del arranque).
+- **Plan:** Shift+R → menú principal → overlay → **K** → ¿«BASE RELEÍDA»? (el espía debe ver player.bin con la huella de v95) → ¿Velocidad 95 ya? Si no: **L** + entrar a un modo → ¿95?
