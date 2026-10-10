@@ -225,6 +225,8 @@ namespace mercado::grupo {
 		for (const auto& c : e.porConfirmar) conf.push_back({ { "id", c.id }, { "estado", c.estado }, { "motivo", c.motivo } });
 		for (const auto& h : e.historial) hist.push_back({ { "fecha", h.fecha }, { "op", h.opId }, { "resumen", h.resumen }, { "autor", h.autor }, { "estado", h.estado }, { "motivo", h.motivo } });
 		for (const auto& o : e.porPublicar) pub.push_back(aJson(o));
+		json miBase = json::array();
+		for (const auto& o : e.paraMiBase) miBase.push_back(aJson(o));
 		// Los conjuntos se recortan para que el archivo no crezca sin fin.
 		auto recorte = [](const std::set<std::string>& s) {
 			std::vector<std::string> v(s.begin(), s.end());
@@ -243,7 +245,7 @@ namespace mercado::grupo {
 			{ "hay_foto", e.hayFoto }, { "foto", plantillasAJson(e.foto) },
 			{ "por_publicar", pub }, { "entrantes", ent }, { "por_confirmar", conf }, { "historial", hist },
 			{ "ultima", { { "entrega", e.ultima.entregaId }, { "respaldo", e.ultima.respaldo }, { "ops", e.ultima.ops }, { "fecha", e.ultima.fecha } } },
-			{ "entrega_en_curso", e.entregaEnCurso } };
+			{ "entrega_en_curso", e.entregaEnCurso }, { "entrega_con_base", e.entregaConBase }, { "para_mi_base", miBase } };
 	}
 
 	Estado estadoDeJson(const json& j) {
@@ -285,6 +287,8 @@ namespace mercado::grupo {
 			e.ultima = { u.value("entrega", ""), u.value("respaldo", ""), u.value("ops", std::vector<std::string>{}), u.value("fecha", "") };
 		}
 		e.entregaEnCurso = j.value("entrega_en_curso", "");
+		e.entregaConBase = j.value("entrega_con_base", false);
+		for (const auto& o : j.value("para_mi_base", json::array())) if (auto r = deJson(o); r.ok()) e.paraMiBase.push_back(*r.valor);
 		return e;
 	}
 

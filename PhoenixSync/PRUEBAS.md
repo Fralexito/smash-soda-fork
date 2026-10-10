@@ -1027,3 +1027,7 @@ carnet del blob no cambia con la velocidad (cola idéntica entre ranuras 4 y 5).
 - Método: descomprimir `Competition.bin`, `CompetitionEntry.bin`, `Team.bin` (WESYS + zlib); contar filas por competición; abrir una copia de un guardado de LM con `dec` (ida y vuelta idéntica) y leer los bloques de 3.000 B con listas de equipos; comparar tres .exe por SHA-256 y por bytes; escanear el .exe buscando tablas de calendario (sin resultado para n ≥ 10).
 - Resultado: ConmeGOL 26 ya tiene Argentina 1.ª = 30, MLS = 30, Argentina 2.ª = 36, Copa Argentina = 66; coinciden con el guardado. El .exe actual es idéntico al de Sudamerican_Backup.
 - Nada se escribió en archivos del juego ni del parche. Detalle y plan de prueba: `base-conocimiento/19-INVESTIGACION-MAS-EQUIPOS-POR-LIGA.md`.
+
+## Prueba (10 oct) — Mis fichajes en MI base + aviso recargar.txt — 🧪 SIMULADO
+- Dos PCs simuladas (web falsa): FRALEX ficha → su PlayerAssignment.bin cambia sin tocar su option file, recargar.txt aparece en la raíz y en el modo del switcher, se publica 1 vez; el amigo lo recibe en option file + base + recargar.txt; sin repetir (anti-bucle); con sync-base no, la base no se toca. 12 comprobaciones nuevas, 170/170.
+- Falta: prueba real en el PC (Link en AUTO-FICHAJES o botón Activar).

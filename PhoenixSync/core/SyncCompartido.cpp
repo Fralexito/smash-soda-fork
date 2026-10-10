@@ -7,7 +7,9 @@
 #include <algorithm>
 #include <chrono>
 #include <filesystem>
+#include <fstream>
 #include <map>
+#include <set>
 
 namespace fs = std::filesystem;
 using json = nlohmann::json;
@@ -231,6 +233,7 @@ namespace mercado::sync {
 		_e.anotarConocida(h);   // lo que vuelve no es un fichaje nuevo
 		if (auto of = _of.leer(deRuta(edit)); of.ok()) { _e.foto = of.valor->plantillas; _e.hayFoto = true; }
 		_e.entregaEnCurso = id;
+		_e.entregaConBase = archivos.size() > 1;
 		_e.anotarHistorial({ fechaIso(), "", "Deshecho: " + std::to_string(_e.ultima.ops.size()) + " cambio(s) del grupo", _en.nombrePc, "deshecho", "" });
 		_e.ultima = {};
 		guardar();
@@ -244,6 +247,7 @@ namespace mercado::sync {
 		respaldoDiario();
 		leerConfig(false);
 		detectarPropios();
+		entregarMiBase();
 		publicarPendientes();
 		traer();
 		procesarEntrantes();
@@ -254,12 +258,75 @@ namespace mercado::sync {
 	void Motor::revisarEntrega() {
 		if (_e.entregaEnCurso.empty()) return;
 		const int st = entrega::estadoDe(carpetaEntrega(), _e.entregaEnCurso);
-		if (st == 1) { log("info", "Link colocó la entrega " + _e.entregaEnCurso); _e.entregaEnCurso.clear(); }
+		if (st == 1) {
+			log("info", "Link colocó la entrega " + _e.entregaEnCurso);
+			if (_e.entregaConBase) avisarRecarga();
+			_e.entregaEnCurso.clear(); _e.entregaConBase = false;
+		}
 		else if (st == -1) {
 			avisar("Phoenix Link rechazó la entrega (mira su historial). Tu option file no cambió.");
 			_e.anotarHistorial({ fechaIso(), "", "Link rechazó la entrega " + _e.entregaEnCurso, _en.nombrePc, "rechazada", "ver historial.log de Link" });
-			_e.entregaEnCurso.clear();
+			_e.entregaEnCurso.clear(); _e.entregaConBase = false;
 		}
+	}
+
+	// Aviso «hay fichajes nuevos» para phoenix.lua v0.18 (contrato en base-conocimiento/31):
+	// recargar.txt en cada buzón <SiderAddons>\content\phoenix que ya exista. En modo ACTIVAR
+	// el juego lo ignora; en AUTO-FICHAJES recarga solo al volver al menú y entrar a un modo.
+	void Motor::avisarRecarga() {
+		const std::string juego = _en.carpetaJuego ? _en.carpetaJuego() : std::string();
+		const std::string texto = fechaIso() + " " + _e.entregaEnCurso;
+		for (const auto& b : rutas::buscarBuzones(juego)) {
+			const fs::path tmp = aRuta(b) / "recargar.tmp", fin = aRuta(b) / "recargar.txt";
+			std::error_code ec;
+			{ std::ofstream f(tmp, std::ios::binary | std::ios::trunc); f << texto; if (!f) { log("warn", "No se pudo escribir " + deRuta(tmp)); continue; } }
+			fs::rename(tmp, fin, ec);
+			if (ec) { fs::remove(tmp, ec); log("warn", "No se pudo escribir " + deRuta(fin)); }
+			else log("info", "Aviso de recarga escrito en " + deRuta(fin));
+		}
+	}
+
+	// Mis propios fichajes también en MI base (PlayerAssignment.bin), para verlos con «Activar».
+	void Motor::entregarMiBase() {
+		if (_e.paraMiBase.empty()) return;
+		if (!_e.baseEnEntrega) { _e.paraMiBase.clear(); return; }
+		if (entrega::hayPendiente(carpetaEntrega()) || !_e.entregaEnCurso.empty()) return;   // se reintenta en la próxima vuelta
+		if (ahora() < _esperarAplicarHasta) return;
+		const std::string pa = asignacionBase();
+		if (pa.empty()) { avisar("No hay PlayerAssignment.bin en Phoenix-DB: tus fichajes entrarán solo con Editar → Cargar"); _e.paraMiBase.clear(); return; }
+		auto a = base::Asignaciones::abrir(pa);
+		if (!a.ok()) { avisar("No se pudo leer PlayerAssignment.bin: " + a.error.codigo); _e.paraMiBase.clear(); return; }
+
+		const auto ops = _e.paraMiBase;
+		int cambios = 0;
+		std::set<std::string> hechas;
+		for (const auto& r : base::aplicarOperaciones(*a.valor, ops)) {
+			if (r.estado == "aplicada" && r.motivo.empty()) { cambios++; hechas.insert(r.id); }
+			else if (r.estado != "aplicada")
+				for (const auto& op : ops) if (op.id == r.id) historial(op, "no en tu base", r.motivo);
+		}
+		if (!cambios) { _e.paraMiBase.clear(); return; }
+
+		auto resp = respaldarAhora("antes de poner mis fichajes en mi base");
+		if (!resp.ok()) {
+			_esperarAplicarHasta = ahora() + 300;
+			avisar("No se pudo respaldar: " + resp.error.detalle + ". Tus fichajes no se pusieron en tu base (se reintenta).");
+			return;
+		}
+		const std::string id = entrega::nuevoId();
+		const fs::path dir = aRuta(carpetaTrabajo());
+		std::error_code ec;
+		fs::create_directories(dir, ec);
+		const std::string salida = deRuta(dir / ("PlayerAssignment.bin." + id));
+		if (auto g = a.valor->guardarComo(salida); !g.ok()) { avisar("No se pudo preparar PlayerAssignment.bin: " + g.error.codigo); _e.paraMiBase.clear(); return; }
+		const std::string resumen = cambios == 1 ? entrega::recortarResumen("Tu fichaje: " + grupo::resumenDe(ops.front(), _en.nombreEquipo), 60)
+			: std::to_string(cambios) + " fichajes tuyos";
+		auto w = entrega::escribir(carpetaEntrega(), id, resumen, { { "PlayerAssignment.bin", salida } }, fechaIso());
+		if (!w.ok()) { avisar("No se pudo dejar la entrega para Link: " + w.error.detalle); return; }
+		_e.entregaEnCurso = id; _e.entregaConBase = true;
+		for (const auto& op : ops) if (hechas.count(op.id)) historial(op, "en tu base", "");
+		_e.paraMiBase.clear();
+		avisar(std::to_string(cambios) + (cambios == 1 ? " fichaje tuyo listo" : " fichajes tuyos listos") + " para «Activar»: Phoenix Link lo coloca y avisa en el juego");
 	}
 
 	void Motor::respaldoDiario() {
@@ -325,6 +392,21 @@ namespace mercado::sync {
 
 		const auto& actual = of.valor->plantillas;
 		const bool deFuera = _e.esConocida(h) || h == _e.ultimoHashSubido;
+		// Mis fichajes también a MI base (con sync-base si), se publiquen o no.
+		if (_e.baseEnEntrega && _e.hayFoto && !deFuera) {
+			for (const auto& m : grupo::diferencias(_e.foto, actual)) {
+				if (!m.desde || !m.hacia) continue;   // altas sin origen y bajas: la base aún no las hace
+				grupo::Operacion op;
+				op.id = "mia-" + entrega::nuevoId().substr(5);
+				op.tipo = "mover";
+				op.jugador = m.jugador; op.equipoOrigen = m.desde; op.equipoDestino = m.hacia;
+				if (of.valor->dorsales.count(m.hacia) && of.valor->dorsales.at(m.hacia).count(m.jugador))
+					op.dorsal = of.valor->dorsales.at(m.hacia).at(m.jugador);
+				op.autorPc = _en.nombrePc; op.creadoEn = fechaIso();
+				_e.paraMiBase.push_back(op);
+			}
+			while (_e.paraMiBase.size() > 500) _e.paraMiBase.erase(_e.paraMiBase.begin());
+		}
 		if (!_e.hayFoto || deFuera || !_e.publicar || _e.grupoId.empty()) {
 			// Primera foto, cambio que llegó de fuera (anti-bucle) o no se publica: solo se actualiza la base.
 			if (deFuera) log("info", "Option file con huella conocida: no se publica (anti-bucle)");
@@ -530,6 +612,7 @@ namespace mercado::sync {
 				_e.foto = ap.valor->plantillasDespues; _e.hayFoto = true;
 			}
 			_e.entregaEnCurso = entregaId;
+			_e.entregaConBase = !salidaBase.empty();
 			_e.ultima = { entregaId, resp.valor->nombre, {}, fechaIso() };
 			// Limpieza: deja solo los 10 últimos archivos de trabajo.
 			std::vector<fs::path> viejos;

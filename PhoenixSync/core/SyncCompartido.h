@@ -140,6 +140,8 @@ namespace mercado::sync {
 		void respaldoDiario();
 		void leerConfig(bool forzar);
 		void detectarPropios();
+		void entregarMiBase();
+		void avisarRecarga();
 		void publicarPendientes();
 		Resultado<int> traer();
 		void procesarEntrantes();

@@ -150,6 +150,8 @@ namespace mercado::grupo {
 		std::deque<LineaHistorial> historial;  ///< últimas 200
 		UltimaAplicacion ultima;
 		std::string entregaEnCurso;            ///< id de entrega escrita, esperando a Link
+		bool entregaConBase = false;           ///< la entrega en curso lleva PlayerAssignment.bin (al colocarla: recargar.txt)
+		std::vector<Operacion> paraMiBase;     ///< mis propios fichajes que faltan en MI base (con baseEnEntrega)
 
 		bool esConocida(const std::string& huella) const;
 		void anotarConocida(const std::string& huella);

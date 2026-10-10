@@ -618,6 +618,54 @@ int main() {
 		CHECK(!amigo.esta(5, 108));
 	}
 
+	std::printf("Mis fichajes en MI base + aviso recargar.txt (todo automático)\n");
+	{
+		WebFalsa web;
+		const grupo::Plantillas inicial = { { 108, { 1, 2, 3 } }, { 109, { 117047, 5 } } };
+		PC fralex(tmp / "pcs4", "FRALEX", web), amigo(tmp / "pcs4", "AMIGO", web);
+		const fs::path pesdb = fs::path("SiderAddons") / "livecpk" / "Phoenix-DB" / "common" / "etc" / "pesdb";
+		const fs::path buzon = fs::path("SiderAddons") / "content" / "phoenix";
+		const fs::path buzonModo = fs::path("ConmeGol Extras") / "Patch 26" / "SiderAddons" / "content" / "phoenix";
+		for (PC* p : { &fralex, &amigo }) {
+			escribirOption(p->edit(), inicial);
+			escribir(p->juego / pesdb / "Player.bin", "WESYS....");
+			escribir(p->juego / pesdb / "PlayerAssignment.bin", hacerPA({ { 1, 108, 10, 0, 0 }, { 2, 108, 19, 1, 0 }, { 3, 108, 28, 2, 0 }, { 117047, 109, 7, 0, 0x20 }, { 5, 109, 9, 1, 0 } }));
+			fs::create_directories(p->juego / buzon); fs::create_directories(p->juego / buzonModo);
+			p->motor.cargar(); p->motor.elegirGrupo("g"); p->motor.ponerBaseEnEntrega(true);
+		}
+		auto enBase = [&](PC& p, uint32_t jug, uint32_t eq) {
+			auto pa = base::Asignaciones::abrir(deRuta(p.juego / pesdb / "PlayerAssignment.bin"));
+			if (!pa.ok()) return false;
+			auto pl = pa.valor->plantillas();
+			return std::find(pl[eq].begin(), pl[eq].end(), jug) != pl[eq].end();
+		};
+		fralex.pasar(30); amigo.pasar(30);
+		CHECK(!fs::exists(fralex.juego / buzon / "recargar.txt"));   // sin fichajes no hay aviso
+		// FRALEX ficha en su PC: va a SU base (sin tocar su option file) y al grupo.
+		fralex.fichar(117047, 109, 108);
+		const std::string editFichado = leer(fralex.edit());
+		fralex.pasar(40);
+		CHECK(enBase(fralex, 117047, 108));
+		CHECK(leer(fralex.edit()) == editFichado);
+		CHECK(fs::exists(fralex.juego / buzon / "recargar.txt"));
+		CHECK(fs::exists(fralex.juego / buzonModo / "recargar.txt"));
+		CHECK(!fs::exists(fralex.juego / buzon / "recargar.tmp"));
+		CHECK(web.publicaciones == 1);
+		// El amigo lo recibe en su option file y en su base, con aviso de recarga.
+		amigo.pasar(30);
+		CHECK(amigo.esta(117047, 108));
+		CHECK(enBase(amigo, 117047, 108));
+		CHECK(fs::exists(amigo.juego / buzon / "recargar.txt"));
+		// Lo que llega de fuera no vuelve a la base ni se publica dos veces (anti-bucle).
+		fralex.pasar(30); amigo.pasar(30);
+		CHECK(web.publicaciones == 1);
+		// Sin el interruptor, mi fichaje no toca mi base.
+		fralex.motor.ponerBaseEnEntrega(false);
+		fralex.fichar(5, 109, 108);
+		fralex.pasar(40);
+		CHECK(!enBase(fralex, 5, 108));
+	}
+
 	fs::remove_all(tmp);
 	std::printf("\n%d/%d pruebas OK\n", total - fallos, total);
 	return fallos ? 1 : 0;

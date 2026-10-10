@@ -45,9 +45,10 @@ Pruebas:
 
 | Pieza | Estado |
 |---|---|
-| Sync: detectar, subir y recibir fichajes | ✅ Hecho; exe recompilado el 10 oct con los comandos sync-* (369/369 pruebas) |
-| Sync: escribir fichajes recibidos en la base | ✅ Hecho, **apagado** hasta `sync-base si` (espera aprobación de FRALEX) |
-| Sync: escribir **mis propios** fichajes en **mi** base | ⏳ Sin construir; espera aprobación de FRALEX |
+| Sync: detectar, subir y recibir fichajes | ✅ Hecho; exe recompilado el 10 oct con los comandos sync-* (381/381 pruebas) |
+| Sync: escribir fichajes recibidos en la base | ✅ Hecho; **encendido en la PC de FRALEX** (`sync-base si`, aprobado 10 oct: «quiero que sea automático cada fichaje») |
+| Sync: escribir **mis propios** fichajes en **mi** base | ✅ Hecho (10 oct, aprobado por FRALEX); va con `sync-base si`, haya grupo o no |
+| Sync: aviso `recargar.txt` al colocar Link una entrega con base | ✅ Hecho (10 oct): en cada `<SiderAddons>\content\phoenix` que exista. Con el modo AUTO-FICHAJES de Link el juego recarga solo |
 | Link: aceptar `PlayerAssignment.bin` | ✅ Hecho en Link (10 oct) |
 | Web: rutas /v1/sync (config, operaciones, aplicada) | ✅ Publicadas (responden 401 sin token) |
 | Web: `GET /v1/sync/grupos` y grupo FRALEX + amigo en `automatico` | ⏳ PENDIENTE-WEB: `prompts/PROMPT-WEB-grupo-prueba-fichajes.md` |

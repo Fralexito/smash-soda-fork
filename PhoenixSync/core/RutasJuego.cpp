@@ -112,6 +112,29 @@ namespace mercado::rutas {
 		return r;
 	}
 
+	std::vector<std::string> buscarBuzones(const std::string& carpetaJuego) {
+		std::vector<std::string> r;
+		const fs::path raiz = aRuta(carpetaJuego);
+		std::error_code ec;
+		if (carpetaJuego.empty() || !fs::is_directory(raiz, ec)) return r;
+		std::vector<std::pair<fs::path, int>> cola{ { raiz, 0 } };
+		for (size_t i = 0; i < cola.size(); i++) {
+			const auto [dir, nivel] = cola[i];
+			for (const auto& sub : subcarpetas(dir)) {
+				const std::string nombre = minus(deRuta(sub.filename()));
+				if (nombre == "sideraddons") {
+					auto c = hijo(sub, "content");
+					auto p = c ? hijo(*c, "phoenix") : std::nullopt;
+					if (p && fs::is_directory(*p, ec)) r.push_back(deRuta(*p));
+					continue;
+				}
+				if (nivel + 1 < 4 && nombre != "download" && nombre != "dt") cola.push_back({ sub, nivel + 1 });
+			}
+		}
+		std::sort(r.begin(), r.end());
+		return r;
+	}
+
 	std::string nombreParche(const std::string& carpetaJuego) {
 		const fs::path raiz = aRuta(carpetaJuego);
 		if (auto v = hijo(raiz, "version_actual.txt")) {

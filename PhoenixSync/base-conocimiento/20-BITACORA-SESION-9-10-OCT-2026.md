@@ -1,0 +1,96 @@
+# 20 · Bitácora completa de la sesión del chat «Player.bin» (9 y 10 de octubre de 2026)
+
+**Para FRALEX.** Registro cronológico de todo lo que se hizo, con herramienta, resultado y dónde quedó guardado. Etiquetas: ✅ probado en el juego · 🔎 observado en archivos · ⏳ falta · ⚠️ riesgo.
+Cuenta/chat: «Cuenta A (Player.bin)». Fecha de zona horaria: Lima.
+
+---
+
+## 1. Resumen en 8 líneas
+
+1. Se calibró **Player.bin** (la ficha de cada jugador) con capturas del juego (experimento «Vestuario Barça»): 20 estadísticas, 5 de portero, pie malo/forma/lesiones, 13 posiciones y unas 45 habilidades/COM.
+2. Se retiró la idea de que los ±1 dependen de la edad. Explicación más probable (sin confirmar): la Liga Máster guarda su propia copia de los jugadores.
+3. Se leyeron los documentos de Drive y GitHub: el proyecto ahora se llama **Phoenix Sync** y avanzó mucho más de lo que decía el primer informe.
+4. Se actualizó el informe en Docs y se guardó la ficha completa de Player.bin en repo, Drive y Proyecto.
+5. Se escribió la **guía de cómo se descubrió la Liga Máster** (herramientas y 24 pasos) y el **traspaso para otra IA** (documento 17).
+6. Se hizo el **panorama completo** (documento 18) uniendo lo de los otros chats con lo de este.
+7. Se investigó **cuántos equipos puede tener una liga** (documento 19): hasta 30 ya funciona; más de 30 es posible pero no probado.
+8. No se escribió nada en Player.bin, ni en archivos del juego, ni en guardados. No se hizo commit ni push.
+
+## 2. Línea de tiempo
+
+| # | Qué se hizo | Herramienta | Resultado |
+|---|---|---|---|
+| 1 | Calibrar Player.bin con capturas (Gordon, Balde, Bernal, Eric García, Cancelo, Szczęsny, Isak, Mbappé, Dembélé, João Pedro ×2, Pedro) | Python sobre `Player.bin` descifrado (29.997 × 312 B), búsqueda por 20 estadísticas con tolerancia ±1 | ✅ campos mapeados; IDs de jugador localizados |
+| 2 | Resolver habilidades especiales (bits 480–531) | Comparar bits encendidos con la pantalla de cada jugador | ✅ unas 45 resueltas; sin resolver: Cortada, bit 514, COM Centrador, 479/516, 498 |
+| 3 | Retirar la hipótesis de la edad | Comparar Gordon/Balde/Bernal/Eric García | Cuatro jugadores casi idénticos ⇒ la edad no explica los ±1 |
+| 4 | Leer Drive (carpeta `15TL096cZpM9A9bLPHtRtpNL6YbczyPuI`, ~45 docs) y repo `PhoenixSync/` | Drive MCP, `device_bash` | Descubierto el cambio de nombre a **Phoenix Sync** |
+| 5 | Arreglar el candado de git | `device_bash`: `mv .git/index.lock .git/stale-index-lock-claude` | ✅ sin borrar nada; rama `mercado-fase0` en el commit `540fa1a`; archivos 08–15 sin seguir |
+| 6 | Guardar la ficha de Player.bin | Nuevo `16-PLAYER-BIN-FICHA-COMPLETA.md` en repo; Drive; Proyecto | ✅ 3 copias |
+| 7 | Actualizar el informe de Docs | Docs MCP: corregir ±1, añadir sección de clasificación por parche | ✅ informe `383547a4…` rev 9 |
+| 8 | Guía «cómo descubrimos la Liga Máster» | Docs MCP, a partir de docs 08, 09, 10, 13, 14, 15 | ✅ `20a8e26b…` |
+| 9 | Documento 17: traspaso para otra IA | Escrito, copiado al repo y al Proyecto, y a Drive | ✅ 11.150 B, tamaño idéntico en repo y Proyecto |
+| 10 | Documento 18: panorama completo | Drive | ✅ |
+| 11 | Investigación «más equipos por liga» | Ver `19-INVESTIGACION-MAS-EQUIPOS-POR-LIGA.md` | ✅ informe en Docs `4884bc86…` + documento 19 |
+| 12 | Este registro (20) y el 19 | Repo, Drive, Proyecto | ✅ |
+
+## 3. Procedimiento de calibración de Player.bin (para repetirlo)
+
+1. Poner la captura del jugador en pantalla (1/9 a 9/9).
+2. Leer los 20 valores de estadística.
+3. Recorrer los 29.997 registros: el registro es un entero little-endian; campo = `(registro >> bit) & máscara`; las estadísticas ocupan 6 bits y el valor mostrado es el crudo + 40.
+4. Elegir el registro cuyos 20 valores coinciden (tolerancia ±1).
+5. Listar los bits 480–531 encendidos y compararlos con las habilidades que muestra la pantalla; repetir con varios jugadores para resolver cada bit.
+
+Mapa completo de bits: ver `16-PLAYER-BIN-FICHA-COMPLETA.md`.
+
+## 4. Errores y correcciones durante la sesión
+
+| Error | Corrección |
+|---|---|
+| Actualizar el informe con el identificador corto de bloque (`.62`) fue rechazado | Usar el identificador completo (`sesión.reloj`) |
+| La carpeta `PhoenixMercado` no existía | Estaba renombrada a `PhoenixSync` |
+| La búsqueda por igualdad exacta no encontraba a Mbappé, Dembélé ni João Pedro | Usar tolerancia ±1 |
+| Un mensaje del usuario («A») no se entendió | Se pidió aclararlo |
+| `git merge --ff-only` dejó un candado `.git/index.lock` | Se movió el candado; no se forzó |
+| Primera versión de mis respuestas: «el juego muestra +1» y plantilla del Barça vieja | Corregido con el usuario antes |
+| Un comando `md5sum` con `grep -r` sobre el parche agotó el tiempo | Se repitió por partes con `sha256sum` (3,7 s) |
+| El proceso en segundo plano se perdió entre llamadas | Se ejecutó cada paso en una sola llamada |
+| Texto del documento 19: «MLS en 0xB531B8» no estaba verificado | Verificado después: coincide exactamente con la MLS (30 de 30) |
+| Texto del documento 19: «Argentina 2.ª en 0xB1FD68» era falso (es la Copa Colombia) | Verificado con la base de datos: la 2.ª argentina está en 0xB2D058; corregido en repo y Proyecto |
+| Los documentos 17, 18 y 19 en Drive mostraban símbolos rotos (🔎, 🧩, 💭 salían como «ð») | Se subieron versiones corregidas con palabras en vez de esos símbolos; los viejos se renombraron «OBSOLETO» |
+
+## 5. Dónde quedó todo guardado
+
+**Repo local** (`C:\dev\smash-soda-fork\PhoenixSync\base-conocimiento\`, sin commit ni push):
+`16-PLAYER-BIN-FICHA-COMPLETA.md` · `17-TRASPASO-LIGA-MASTER-PARA-OTRA-IA.md` · `19-INVESTIGACION-MAS-EQUIPOS-POR-LIGA.md` · `20-BITACORA-SESION-9-10-OCT-2026.md`. Líneas nuevas en `REGISTRO.md` y `PRUEBAS.md`.
+
+**Drive** (carpeta `15TL096cZpM9A9bLPHtRtpNL6YbczyPuI`): documentos 16 (`1TXCzG5tUfLHUv3QKkOzZRlBKbpC68LpxUf7WRgLWh3o`), 17 (`1wYHK1gcjkWHvA_en8AQAgEpXQCvZwj1dmhSYJbKjLQ0`), 18 (`1Ptoq3ntmBOR_DeWapO_PO9qPu0B-xn8FHmcI0218DLg`), 19 y 20.
+
+**Proyecto «Phoenix Evolution FADG»:** `claude/player-bin-ficha-completa.md`, `claude/traspaso-liga-master-para-otra-ia.md`, y copias de 19 y 20.
+
+**Docs de Claude:**
+- Informe actualizado: https://claude.ai/code/artifact/383547a4-cf70-474b-9d12-030a816d9e43
+- Guía de la Liga Máster: https://claude.ai/code/artifact/20a8e26b-3e35-467c-bad6-0634a51c0715
+- Investigación de equipos por liga: https://claude.ai/code/artifact/4884bc86-e1fa-49f8-9704-07aeb714d484
+
+## 6. Resultados de la investigación de equipos por liga (resumen; detalle en el 19)
+
+- La base de datos (`CompetitionEntry.bin`, 1.359 filas de 12 B: equipo · clave · `(puesto<<8)|competición`) ya define **Argentina 1.ª con 30 equipos, MLS con 30, Argentina 2.ª con 36, Copa Argentina con 66**.
+- El guardado de Liga Máster guarda cada lista en bloques de **750 puestos**; los números coinciden con la base de datos.
+- El .exe actual es idéntico al de `Sudamerican_Backup`; contra `Conmegol Backup` solo cambian 15 bytes de cabecera y la tabla de exportaciones.
+- Otros parches indican que el problema está en el **calendario de la Liga Máster y la 2.ª temporada**.
+- Posibilidades (estimación mía): hasta 30 ya funciona · 31–36: 40–55% · 37–48: 20–35% · más de 48: menos de 15%.
+- Plan de prueba de 30 a 32 equipos: preparado, **esperando aprobación de FRALEX**.
+
+## 7. Pendientes (todos)
+
+1. Aprobar y ejecutar la prueba de 30 a 32 equipos.
+2. Descifrar `CompetitionRegulation.bin` (dónde está el número de equipos por etapa).
+3. Ver en pantalla agentes libres, calendario y tablas de posiciones (guías 13, 14, 15).
+4. Encontrar los resultados partido a partido: guardar justo antes y después de un partido, el mismo día, en ranuras distintas.
+5. Confirmar la causa de los ±1 de Player.bin (reiniciar el juego con un `Player.bin` cambiado y cargar una carrera).
+6. Escribir **un** valor de **un** jugador en una copia de `Player.bin`, con respaldo y aprobación.
+7. Resolver Cortada, el bit 514, COM Centrador, Rol, Personalidad, tácticas y la curva de progreso.
+8. Actualizar la página «Vestuario Barça» (ya no están Livakovic, Hamza Abdelkarim ni Gabriel Jesús).
+9. Repetir lo mismo en Sudamerican 2026, Football Life 27, Evoweb y Gogosz.
+10. Decidir cuándo hacer commit y push de los documentos nuevos (no se hizo).

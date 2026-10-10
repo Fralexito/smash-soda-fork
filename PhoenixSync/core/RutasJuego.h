@@ -39,6 +39,10 @@ namespace mercado::rutas {
 	/// Todos los Player.bin de Phoenix-DB bajo la carpeta del juego (hasta 4 niveles). Vacío si no hay.
 	std::vector<BaseParche> buscarPlayerBin(const std::string& carpetaJuego);
 
+	/// Carpetas «buzón» de phoenix.lua (<SiderAddons>\content\phoenix) bajo la carpeta del juego
+	/// (raíz y modos del switcher, hasta 4 niveles). Solo las que ya existen; vacío si no hay.
+	std::vector<std::string> buscarBuzones(const std::string& carpetaJuego);
+
 	/// Nombre del parche para la etiqueta de compatibilidad: el modo activo que deja el
 	/// switcher (version_actual.txt, si existe) o, si no, el nombre de la carpeta del juego.
 	std::string nombreParche(const std::string& carpetaJuego);

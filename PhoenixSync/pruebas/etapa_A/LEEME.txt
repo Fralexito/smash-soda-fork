@@ -1,0 +1,42 @@
+ETAPA A - LEER COMPETICIONES (SOLO LECTURA)
+Proyecto Phoenix - 10 de octubre de 2026
+
+QUE ES
+Un modulo de Sider muy pequeno que SOLO MIRA. No cambia nada del juego, ni de tus guardados.
+Escribe lo que ve en el archivo sider.log:
+  1) Si el .exe en memoria tiene la funcion del numero de equipos (Mundial 32, Euro 24, etc.).
+  2) La tabla de competiciones del motor: cuantos registros tiene y de que tipo es cada uno.
+  3) El numero "tournament_id" de cada partido que juegues.
+
+PARA QUE SIRVE
+Para saber si la tabla tiene espacios libres y si lo que leimos en el archivo .exe es lo mismo que usa el juego.
+Eso decide si podemos pasar a la Etapa B.
+
+COMO ACTIVARLO (cuando tu quieras; yo NO lo he activado)
+  1) Copia leer_competiciones.lua a la carpeta  SiderAddons\modules  del juego.
+  2) Abre  SiderAddons\sider.ini  y agrega, debajo de la linea de phoenix.lua, esta linea:
+         lua.module = "leer_competiciones.lua"
+     (Haz primero una copia de sider.ini.)
+  3) Importante: tu "switcher" copia la carpeta del parche encima de SiderAddons. Si usas el switcher,
+     haz lo mismo (copiar el .lua y agregar la linea) en:
+         ConmeGol Extras\ConmeGOL Patch 26\SiderAddons
+  4) Abre el juego, entra al menu de Liga Master, y juega o simula un partido.
+  5) Dentro del juego, con el overlay de Sider, elige este modulo y pulsa la tecla 4 una vez en el menu de
+     Liga Master (repite la lectura).
+  6) Cierra el juego y mandame el archivo  SiderAddons\sider.log  (o dime "ya", y yo lo leo).
+
+COMO DESACTIVARLO
+Borra la linea "lua.module = leer_competiciones.lua" de sider.ini (o restaura la copia). Nada mas.
+
+QUE BUSCO EN EL LOG
+Todas las lineas empiezan con [leer_competiciones].
+  - "Funcion de equipos: 7 coinciden, 0 no"  -> el .exe en memoria es el que analice.
+  - "RESUMEN tabla: N registros ... el ultimo es el numero K" -> tamano real de la tabla de competiciones.
+  - "tournament_id visto" -> identificadores que usa el juego.
+
+SEGURIDAD
+  - No usa memory.write, ni archivos, ni teclas salvo la 4 dentro de su propio overlay.
+  - Todo va dentro de pcall: si algo falla, lo anota y el juego sigue.
+  - Se probo con una memoria simulada (sin el juego). En el juego real todavia no se ha probado.
+  - Riesgo: bajo. Lee unos 66 KB de memoria como maximo (250 registros de 264 bytes) y se detiene
+    al primer registro vacio.

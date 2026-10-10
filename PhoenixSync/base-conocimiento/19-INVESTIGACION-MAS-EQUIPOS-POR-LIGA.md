@@ -1,0 +1,153 @@
+# 19 · Investigación: ¿se puede aumentar el número de equipos de una liga en PES 2021?
+
+**Para FRALEX · 10 de octubre de 2026 · Estado: investigación terminada, SIN pruebas en el juego.**
+Resumen en una frase: hasta **30 equipos ya funciona** en ConmeGOL 26; pasar de 30 es **posible pero nadie lo ha documentado**, y el límite probable está en el **calendario de la Liga Máster**, no en la base de datos.
+
+Etiquetas: ✅ probado en el juego · 🔎 observado en archivos · ⏳ falta · ⚠️ riesgo · 🧩 depende del parche · 💭 estimación mía.
+
+---
+
+## 1. La pregunta y las reglas de esta investigación
+
+- Pregunta de FRALEX: qué posibilidad hay de aumentar la cantidad de equipos que se pueden tener en **una sola liga** del juego. Libertad total en su PC.
+- Todo fue **solo lectura**. No se cambió ningún archivo del juego, del parche ni del repo (salvo estos documentos nuevos).
+- Se trabajó con **copias en carpetas temporales** de la máquina de trabajo, y se borraron al terminar.
+- Ningún dato se inventó: lo que no se pudo comprobar está en la sección 9.
+
+## 2. Herramientas usadas (y para qué)
+
+| Herramienta | Para qué se usó |
+|---|---|
+| Puente de la app de escritorio (`device_bash`, `device_list_dir`) | Leer los archivos de `D:\Frank\Games_\Conmegol Patch\` y del repo, sin modificarlos |
+| Python 3.10 + NumPy 2.2 (en la máquina de trabajo) | Descomprimir los `.bin`, contar filas, escanear el .exe |
+| `zlib` de Python | Abrir los `.bin` de la base de datos (cabecera WESYS + zlib) |
+| `sha256sum` | Identificar exactamente cada .exe |
+| gcc + `dec.c` del repo (`liga-master/herramientas/`) con libpesXcrypter | Descifrar una **copia** de un guardado de Liga Máster; ida y vuelta idéntica ✅ |
+| WebSearch / WebFetch | Leer páginas de Football Life, Evoweb, Competition-Server y foros |
+| Docs, Drive y Proyecto de Claude | Guardar los informes |
+
+## 3. Archivos de la base de datos analizados 🔎
+
+Carpeta: `D:\Frank\Games_\Conmegol Patch\SiderAddons\olmosjr23\Database\common\etc\pesdb\` (la base viva de ConmeGOL 26).
+
+**Cabecera WESYS (16 B):** `ff 10 81 'W' 'E' 'S' 'Y' 'S'` (8 B) + tamaño comprimido u32 + tamaño descomprimido u32; luego zlib. Se comprobó en 4 archivos (por ejemplo `Competition.bin`: 976 B totales = 16 + 960 comprimidos; 3.240 B descomprimidos).
+
+| Archivo | Comprimido | Descomprimido | Registros |
+|---|---|---|---|
+| `Competition.bin` | 976 B | 3.240 B | 90 × 36 B |
+| `CompetitionEntry.bin` | 8.094 B | 16.308 B | 1.359 × 12 B |
+| `CompetitionRegulation.bin` | 9.184 B | 493.920 B | sin decodificar (ver 3.3) |
+| `Team.bin` | 42.618 B | 1.147.468 B | 749 × 1.532 B |
+
+### 3.1 `Competition.bin` (90 competiciones)
+Registro de 36 B: bytes 0–1 = `0xC864` · byte 3 = región (por ejemplo `0x10` Argentina) · **byte 5 = ID de la competición** · byte 6 = tipo · desde el byte 8, el nombre ASCII (28 B). Ejemplos: ID 9 = `ARGENTINA_D1_LEAGUE`, 10 = Colombia, 11 = Brasil, 12 = Ecuador, 13 = Chile, 14 = Perú, 15 = `ARGENTINA_D1_CUP`, 22 = Inglaterra, 23 = Italia, 21 = España, 66 = `ARGENTINA_D2_LEAGUE`, 125 = `MLS_D1_LEAGUE`.
+
+### 3.2 `CompetitionEntry.bin`: quién juega qué ✅ (decodificado)
+Cada fila de 12 B = tres u32:
+1. **ID del equipo** (el mismo del option file).
+2. **Clave única** de la fila (va de 3.014 a 8.405; 1.359 valores distintos).
+3. **Empaquetado:** `(puesto << 8) | ID de competición`. El puesto va 1, 2, 3… **sin saltos** en todas las competiciones revisadas.
+
+Contando las filas por ID de competición se obtiene el **tamaño de cada competición** (ConmeGOL 26):
+
+| Competición | Equipos | | Competición | Equipos |
+|---|---|---|---|---|
+| Matchday eFootball Open | 118 | | Perú 1.ª | 18 |
+| Copa Argentina | 66 | | Arabia 1.ª | 18 |
+| Mundial (fase final) | 48 | | México 1.ª | 18 |
+| Libertadores | 47 | | Francia 1.ª | 18 |
+| Sudamericana | 44 | | Ecuador 1.ª | 16 |
+| Copa Brasil | 40 | | Chile 1.ª | 16 |
+| **Argentina 2.ª** | **36** | | Uruguay 1.ª | 16 |
+| Copa Colombia | 36 | | Bolivia 1.ª | 16 |
+| **Argentina 1.ª** | **30** | | Venezuela 1.ª | 14 |
+| **MLS** | **30** | | Paraguay 1.ª | 12 |
+| Brasil 1.ª, Brasil 2.ª, Colombia 1.ª y 2.ª, Inglaterra, Italia, España | 20 cada una | | Costa Rica, Honduras | 12 cada una |
+
+(La lista completa incluye además supercopas de 2 equipos, copas de selecciones y torneos de otras regiones.)
+
+### 3.3 `CompetitionRegulation.bin` ⏳ (NO decodificado)
+- 493.920 B. Lo que se ve son registros de **115 B** con el nombre de la competición en el byte +20, y de vez en cuando registros de 135 B (por ejemplo «KNOCKOUT»).
+- Cada competición aparece **20 veces** (por ejemplo «Copa Intercontinental» ×20, «UEFA Champions League» ×300): son los **nombres en 20 idiomas**, por etapa.
+- Conclusión honesta: no se encontró todavía dónde está el número de equipos por etapa. Es la mejor pista pendiente.
+
+### 3.4 `Team.bin`
+749 equipos × 1.532 B. Un tutorial citado en la base de conocimiento dice que tiene **750 puestos**, o sea que queda **1 libre**. No hace falta crear equipos: un equipo existente puede cambiar de liga.
+
+### 3.5 El módulo Competition-Server del propio parche 🔎
+`ConmeGol Extras\ConmeGOL Patch 26\SiderAddons\content\Competition-Server\data.csv` tiene las columnas `Offset, TwoSeason, Type1, Type2, Type3, IntComp, TOTS, PromoteNumber, DemoteNumber, SplitFormat, Eligibility, Commentary, Music`. **No tiene columna de número de equipos.** Los desplazamientos de las ligas de 1.ª división van de 264 en 264 bytes (Argentina 4224, Colombia 4488, Brasil 4752, Ecuador 5016, Chile 5280, Perú 5544), o sea un registro de **264 B por competición**, con índice = ID de competición + 7.
+
+## 4. El guardado de Liga Máster: dónde se guarda la lista de equipos 🔎
+
+Copia usada: `_PhoenixMercado_prueba\respaldos_ranuras\ML00000005_ranura6_original_16-3-2026` (19.829.355 B). `dec` lo abrió: 19.811.040 B de datos, **ida y vuelta idéntica ✅**. Se trabajó sobre una copia en la máquina temporal.
+
+- Cada competición guarda su lista de equipos en un **bloque de 3.000 B = 750 puestos de u32**, relleno con `0x0003FFFF`. Los bloques van de 3.000 en 3.000 B.
+- Ejemplos medidos en esa copia: Argentina 1.ª en `0xB0D870` = **30** · MLS en `0xB531B8` = **30** · Copa Argentina en `0xB1F1B0` = 66 · Argentina 2.ª en `0xB2D058` = 36 · Copa Colombia en `0xB1FD68` = 36 · Premier `0xB12A78` = 20 · Perú `0xB11308` = 18.
+- **Verificado (10 oct, 01:25):** para cada lista se comparó el conjunto de IDs de equipo con el de cada competición de `CompetitionEntry.bin`, y **coincide exactamente** (mismos equipos, mismo número) en las 7 listas anteriores. Esto confirma que `CompetitionEntry.bin` se lee bien.
+- Corrección: una primera versión de este documento decía que la lista de `0xB1FD68` era la 2.ª argentina; en realidad es la **Copa Colombia**. La 2.ª argentina está en `0xB2D058`.
+- Conclusión: el guardado **no** limita una liga a 20 o 30. El espacio es de 750.
+
+## 5. El .exe del juego 🔎
+
+| Archivo | Tamaño | SHA-256 (inicio) |
+|---|---|---|
+| `Conmegol Patch\PES2021.exe` (actual) | 458.806.784 B | `5e27a782…bc224a` |
+| `Backup\Sudamerican_Backup\PES2021.exe` | 458.806.784 B | `5e27a782…bc224a` (**idéntico**) |
+| `Backup\Conmegol Backup\PES2021.exe` | 458.909.184 B | `8aae34ac…abd1` |
+
+- El actual y el de Sudamerican_Backup son idénticos byte a byte.
+- Contra el de Conmegol Backup: **15 bytes distintos** en la cabecera y una tabla de exportaciones (`.edata`) más grande (0x3C7B8 contra 0x236D0). El código del juego es el mismo.
+- Los tres tienen la misma marca de compilación (`0x5F5ED4BF`, septiembre de 2020) y 19 secciones (`.trace`, `.rdata`, `.data`, `.pdata`, `.xtext`, `.tls`, `.bss`, `.data1`, `.impdata`, `.reloc`, `.xcode`, `.rsrc`, `.text1`, `.xtls`, `.idata`, `.sxdata`, `.sbss`, `.tls$`, `.edata`).
+- **Lectura:** ConmeGOL 26 corre ligas de 30 equipos **sin un .exe con parches propios para eso**. ⚠️ No hay un .exe original de Konami para comparar, así que no se puede asegurar que sea 100% el de Konami.
+- **Búsqueda de tablas de calendario:** se escaneó `.rdata`, `.data` y `.data1` buscando secuencias que parezcan rondas de un calendario de n equipos (bloques consecutivos de n bytes que son permutaciones de 0..n−1). Resultado: solo hay candidatos para n = 4 y n = 8 (probablemente otros datos); **ninguno para n ≥ 10**. No prueba nada: las tablas podrían estar en u16/u32 o en pares.
+
+## 6. Lo que dicen otros parches y foros 🔎 (con enlaces)
+
+- **Football Life 27** ([página](https://www.pessmokepatch.com/2026/07/FL27.html)): la liga argentina «estaba limitada a 26 equipos» y en FL27 tendrá los 30; la MLS tenía 20 de sus 30 y meter más «bugearía el calendario»; Francia tenía «un límite duro de 39 equipos» entre la 1.ª y la 2.ª; habla de «restricciones ocultas del motor» que causaban fallos o calendarios rotos y de «los primeros avances importantes», **sin explicar cómo**. Dice que la parte de jugabilidad del .exe está casi toda mapeada y que el .exe «requiere una actualización anual».
+- **Evoweb 2024 v10** ([página](https://www.pesmodding.com/2024/01/pes-2021-evoweb-patch-2024-version-10.html)): Ligue 2 de 20 a 22 equipos, Suiza 10 en vez de 12, Argentina 26 en vez de 28, Bélgica 18 en vez de 16. Dice que casi no se puede cambiar el número de equipos porque causa fallos o calendarios equivocados, y que reestructuraron ligas para una Liga Máster sin fallos.
+- **Evoweb 2022** ([página](https://www.pesmodding.com/2022/05/pes-2021-evoweb-patch-2022-update.html)): tuvieron que volver la liga turca a **21 equipos** porque «el juego fuerza el calendario desde el exe y no se puede cambiar». Con otro número, la Liga Máster fallaba al pasar a la 2.ª temporada; solo se arregla en carreras nuevas.
+- **Competition-Server V2.1 de Gerlamp** ([página](https://www.pesmodding.com/2024/01/pes-2021-competition-server-v21-by.html)): módulo Lua para Sider que añade segundas divisiones y competiciones propias con ascensos/descensos. No dice nada de aumentar equipos.
+- **Hilo de Evoweb «Create a new league»** ([hilo](https://evoweb.uk/threads/create-a-new-league-in-pes-2021.86342/)): nadie dice haber pasado de 20 equipos.
+- En la base de conocimiento del repo (`investigacion/parches-pes2021.md`, `herramientas-y-formatos.md`) ya figuraban: tope de 750 equipos y 40 jugadores por equipo, y «una liga de 40 equipos con parche de exe: NO ENCONTRADO».
+
+## 7. Interpretación 💭 (mía, no medida)
+
+Probabilidad de que una liga funcione en **Liga Máster**, incluida la 2.ª temporada:
+
+| Tamaño | Posibilidad | Razón |
+|---|---|---|
+| Hasta 30 | Ya funciona 🔎 | Argentina y MLS lo tienen en ConmeGOL 26 |
+| 31 a 36 | 40% a 55% | La base de datos lo permite; falta el calendario |
+| 37 a 48 | 20% a 35% | Sin documentación; el «39» de Francia sin explicar |
+| Más de 48 | menos de 15% | Sin evidencia |
+
+Dónde puede estar el límite, de más a menos probable: (1) el calendario de la Liga Máster; (2) reglas por competición en `CompetitionRegulation.bin`; (3) un tope por grupo de país o región (el 39 de Francia); (4) un arreglo de tamaño fijo en la memoria del .exe; (5) pantallas y menús.
+Pista pendiente: el calendario del usuario guarda **10 números de partido por día** (registros de 708 B), pero una liga de 30 equipos juega 15 partidos por jornada. Como funciona, la estructura debe ser más flexible; no está verificado.
+
+## 8. Plan de prueba seguro (30 a 32 equipos) — pendiente de aprobación de FRALEX
+
+1. **Respaldo** de `Database` y `SiderAddons` del parche, con fecha.
+2. Claude prepara un `CompetitionEntry.bin` de prueba en una **carpeta nueva** (2 equipos de la 2.ª argentina pasan a la 1.ª: 36→34 y 30→32, puestos 31 y 32). Se mueven, no se copian: un equipo no puede estar en dos ligas a la vez. Hay que rehacer la cabecera WESYS (tamaños comprimido y descomprimido).
+3. FRALEX carga esa carpeta con el mecanismo de Phoenix-DB (Sider `cpk.root` antes del parche).
+4. Revisión 1: Editar → Estructura de competición debe mostrar 32.
+5. Revisión 2: liga de exhibición, 2 o 3 jornadas.
+6. Revisión 3 (la importante): Liga Máster **nueva**; guardar en ranura de prueba; Claude cuenta los partidos: 32 equipos a una vuelta = **496**.
+7. Revisión 4: simular la temporada completa y pasar a la **2.ª temporada**.
+8. Si pasa: repetir con 34, 36 y 40. Anotar cada paso en `PRUEBAS.md`.
+9. **Parar** si el juego se cierra, si faltan o sobran partidos, si se repiten rivales o si falla la 2.ª temporada: volver al respaldo y anotar dónde falló.
+
+## 9. Lo que NO se sabe
+
+- Si el .exe es exactamente el de Konami.
+- Cómo lograron 30 equipos ConmeGOL y Football Life 27.
+- Qué mide el «límite duro de 39» de Francia.
+- Dónde está el número de equipos por etapa en `CompetitionRegulation.bin`.
+- Qué pasa en la 2.ª temporada con 30 equipos en este parche (se deduce, no se jugó).
+- Cómo guarda el calendario una liga de 15 partidos por jornada.
+- Si Sudamerican 2026 y otros parches tienen los mismos límites (⏳, 🧩).
+
+## 10. Qué se hizo y qué no
+
+- **Se hizo:** leer y decodificar `Competition.bin`, `CompetitionEntry.bin`, `Team.bin`; abrir una copia de un guardado; comparar tres .exe; escanear el .exe; leer cinco páginas web y los documentos del repo.
+- **No se hizo:** ejecutar el juego, cambiar archivos del parche, descifrar `CompetitionRegulation.bin`, encontrar el calendario dentro del .exe.
+- **Limpieza:** las copias temporales (`/tmp/lm` con el guardado descifrado, los `.dec` y el script de escaneo) se borraron.
