@@ -441,3 +441,16 @@ Guardados usados: r0 (4/8), g18 (19/8), g19 y juego (21/8), j9 y jA (31/8, antes
   35/35 (g19), 152/152 (jA), 38/38 (fD); hay siempre una lista de goleadores que suma exactamente los goles de esas tablas.
   Partidos leídos: 5.258–5.294 (City), 2.440 (Barça: otro reparto de competiciones).
 - Aclaración de §23 (9 oct, 23:40): varias de las «tablas de 40 filas» de esa zona son en realidad **listas de goleadores/asistencias** (§24): en la carrera del Barça, 0xcb5bf0 = goleadores de la Ligue 1 (Igamane, Édouard, Avom 8) y 0xcb5f1c = asistencias (João Neves 6).
+
+## 25. Habilidades dentro de la Liga Máster (9 oct, 23:50) — **[PROBADO: no llegan; ubicación SIN ENCONTRAR]**
+- **Prueba en el juego:** Phoenix-DB con Player.bin v99 (Lamine Vel. 99) y el juego reiniciado: amistoso 99; carrera (Barça) **90**,
+  media 88, Pase raso 83 y Contacto 77 (la base tiene 82 y 76). La carrera tiene su copia propia y la hace evolucionar.
+- **Buscado y descartado** (carreras Barça y City): copia literal del registro de 312 B de Player.bin (ventanas de 16 B: 0); las 12
+  tablas del usuario y su ficha M (5.628 B) con búsqueda empaquetada 5–8 bits y desplazamientos 0/20/25/30/40 (±1, orden de pantalla);
+  su ficha de 596 B; la ficha de 156 B del blob (§16). La tabla E es la curva de medias (81…84), no las habilidades.
+- **InstallVersionPlayer.bin** (lo lee el juego al entrar a la LM; Sider lo sirve desde `download\dt80_700E_x64.cpk`, también hay
+  versiones en dt80_100E…600E y en `Data\dt10_x64.cpk`): WESYS + zlib → 59.408 B = 7.426 × `[id jugador u32][versión u32]` (0x64 = 100…).
+  Sin habilidades; Lamine (162114) no figura. Parece la lista de qué versión de datos «instalada» usa cada jugador.
+- **Herramienta nueva en el PC (VM):** `~/phx/cpkls.py` lista el índice de un CPK sin cargarlo (portado de `BaseDatosParche.cpp`).
+- **Experimento propuesto:** dos carreras NUEVAS idénticas (mismo club y ajustes), una con Phoenix-DB v99 y otra con v90 (original),
+  guardadas en ranuras libres. La diferencia entre las dos señala dónde guarda la carrera la Velocidad.

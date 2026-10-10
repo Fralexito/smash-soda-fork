@@ -610,3 +610,11 @@ Compila para Windows (MinGW). Detalle: ESTRUCTURA-ML §24.
 - **Conclusión:** con la v0.17 la opción vale 1 solo unos 3 segundos por cada Activar; el parche C la devuelve a 0. Leerla sola no basta para saber «estoy en modo vivo».
 - **Sin probar todavía:** el valor 2 (¿Valoraciones generales uniformes?), ver «Selección actual: Activar» en pantalla (haría falta que el modo se quede en 1) y la tecla M.
 - **Siguiente (decidido por FRALEX a las 23:07):** primero la opción A (phoenix.lua recuerda la última recarga), luego el experimento B (sin el parche C).
+**2026-10-09 23:25 · Prueba en el juego · ¿Las stats de Phoenix-DB llegan a una Liga Máster ya empezada (tras reiniciar el juego)?** — ❌ NO
+Phoenix-DB con `Player.bin` v99 (Lamine Velocidad 99) desde las 5:51; juego abierto a las 23:00. Capturas de Fralex:
+**amistoso → Lamine Velocidad 99, media 90** ✅ · **Liga Máster (Lamine en el Barça) → Velocidad 90, media 88**, Pase raso 83
+(base 82), Contacto físico 77 (base 76) ❌. Conclusión: cada carrera usa **su propia copia** de las habilidades, que además evoluciona.
+Investigado sin éxito (todo anotado en ESTRUCTURA-ML §25): no hay copia de su registro de `Player.bin` en el guardado; ni en sus
+fichas de tu equipo (A–M), ni en su ficha de 596 B, ni empaquetadas en 5–8 bits. El juego, al entrar a la LM, lee
+`installversionplayer.bin` (23:17 y 23:21; viene de Konami, `dt80_700E_x64.cpk`, 13.223 B): son 7.426 parejas
+«jugador → versión» (sin habilidades; Lamine no está). **Siguiente:** experimento de dos carreras nuevas (v99 y v90) para comparar.
