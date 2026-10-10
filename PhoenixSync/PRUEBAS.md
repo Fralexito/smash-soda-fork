@@ -878,3 +878,11 @@ carnet del blob no cambia con la velocidad (cola idéntica entre ranuras 4 y 5).
 - **Pendiente 4:** `git pull --rebase` en `C:\dev\smash-soda-fork` (atrasada); versión limpia v0.18 sin código de pruebas; repetir la prueba de Vinícius; Entrenamiento (52) sin visitar.
 - **Ajeno:** `StadiumServer.lua` línea 705 da errores al preparar un partido. No se tocó.
 
+### ✅ 2026-10-10 09:02–09:04 · v0.17e PROBADA: las teclas de prueba se ignoran y el botón nativo sigue funcionando
+- Sesión que arrancó a las 08:58:31 (log: «v0.17e listo … teclas de prueba B/K/L/P/U desactivadas»). Parches A/B/C aplicados solos.
+- **09:02:44 tecla K y 09:02:45 tecla L**, con el overlay abierto en el menú principal → log «tecla K ignorada… no se hizo nada» y «tecla L ignorada… no se hizo nada». Ninguna línea de «prueba B», «pedir recarga» ni parche nuevo.
+- Captura de FRALEX (09:02:55): «[TECLAS] de prueba desactivadas (B, K, L, P, U) · M = mirar la opción (solo lectura) · última ignorada: L a las 09:02:45». Las pistas de [PRUEBAS], [RECARGA], [BASE] y [COMPLETA] dicen «tecla X desactivada». [ZONA] TOP_MENU (7) · momento seguro: SÍ. [RECARGA] interruptor = 0 (la L no lo tocó).
+- **09:03:43 Activar** → lectura n.º 3 en modo **1** → «última recarga: ACTIVAR»; 09:03:47 segunda recarga en modo 0 (ignorada). El botón nativo funciona igual que con la v0.17.
+- phoenix.lua: 0 errores.
+- ⇒ **La v0.17e queda como la versión recomendada.** Hace todo lo de la v0.17, lee la opción, la última recarga y la zona, y no se puede disparar nada por un toque accidental.
+
