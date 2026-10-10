@@ -1,1 +1,5 @@
 *.cpp text eol=crlf
+# phoenix.lua y demas Luas de Sider: bytes exactos (el sha256 se comprueba al instalar)
+SmashSoda/phoenix/sider/*.lua -text
+# .bat siempre con CRLF (cmd falla con LF)
+*.bat text eol=crlf
