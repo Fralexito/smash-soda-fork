@@ -406,3 +406,4 @@ Guardados usados: r0 (4/8), g18 (19/8), g19 y juego (21/8), j9 y jA (31/8, antes
   (una **imagen** en bloques de textura, se vacía con el tiempo).
 - ⚠️ 🧩 **Multiparche:** la forma del registro es del juego. Los números de competición y los rangos de partido dependen del parche
   y de la carrera (en el Barça LaLiga es la 29; en el City la Premier es la 30). Siempre se buscan por la forma, nunca fijos.
+- Aclaración: que los números de 10 en 10 del calendario del usuario por días sean estos mismos números globales es 🔎 por confirmar (encajan en los rangos, p. ej. 285–294 cae en la comp 17).
