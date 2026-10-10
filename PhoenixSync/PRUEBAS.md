@@ -648,3 +648,12 @@ Capturas de Fralex comparadas con lo que leyó el programa del archivo:
 - **LaLiga sin empezar:** todos con 0, en el mismo orden que el archivo (Barça, Real Sociedad, Deportivo, Celta…) → **idéntico**.
 - **Calendario:** próximo partido de LaLiga Barça – Real Sociedad (11/4/2026, en casa) = jornada 1 leída del archivo → **idéntico**.
 ESTRUCTURA-ML §22–§24 pasan de 🔎 a ✅.
+
+### ✅ 2026-10-09 23:41–23:43 · Opción A: la etiqueta coincide con las plantillas en pantalla (Vinícius)
+- Archivos como a las 20:08: Vinícius en el Barça **solo** en `PlayerAssignment.bin` de Phoenix-DB; en el option file sigue en el Real Madrid. Mbappé en el Barça en los dos.
+- **23:41:55 Activar** (modo 1; 2.ª recarga 23:41:59, modo 0, ignorada) → «última recarga: ACTIVAR». Captura de FRALEX: once del **Barça con Vinícius (ID 89)** y Mbappé; Atlético con Giménez, Ruggeri y Nico González (plantilla de la base).
+- **23:42:49** recarga normal (entrar y salir de Editar, sin Guardar; modo 0) → «última recarga: NORMAL». Captura de FRALEX: **Vinícius Junior de vuelta en el Real Madrid**; Atlético con Julián Álvarez, Jonathan David y Sørloth (plantilla del option file).
+- ⇒ «ACTIVAR» = equipos de la base y «NORMAL» = equipos del option file, visto en pantalla (1 vez). Entrar a Editar basta para volver al option file; no hizo falta pulsar Cargar.
+- Guardado: foto de las 23:43 idéntica a la base (option file sha 3507ce35…, sin tocar).
+- Aparte, **no es de phoenix.lua**: durante la preparación del partido `sider.log` anotó 96 errores de otro módulo (`StadiumServer.lua` línea 705, «attempt to index a nil value»). phoenix.lua: 0 errores. No se tocó ese módulo; queda anotado por si interesa revisarlo.
+
