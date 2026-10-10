@@ -407,3 +407,21 @@ Guardados usados: r0 (4/8), g18 (19/8), g19 y juego (21/8), j9 y jA (31/8, antes
 - ⚠️ 🧩 **Multiparche:** la forma del registro es del juego. Los números de competición y los rangos de partido dependen del parche
   y de la carrera (en el Barça LaLiga es la 29; en el City la Premier es la 30). Siempre se buscan por la forma, nunca fijos.
 - Aclaración: que los números de 10 en 10 del calendario del usuario por días sean estos mismos números globales es 🔎 por confirmar (encajan en los rangos, p. ej. 285–294 cae en la comp 17).
+
+## 23. 🏆 Tablas de posiciones (9 oct, 22:10) — **[OBSERVADO y cruzado con el calendario; falta verlo en pantalla]**
+- Zona ~0xcb0000–0xcf2000 (ConmeGOL). **Fila de 20 B por club:** `[club: ID interno u32][puesto u32 (empates comparten; ffff ffff = liga sin empezar)][C u32][A u32][B u32]`.
+  - **C:** puntos = bits 0–7 · ganados = bits 8–13 · perdidos = bits 14–19 · empatados = bits 20–25 · ganados de visitante = bits 26+.
+  - **A:** goles a favor = bits 0–11 · goles en contra = bits 12–23 · partidos jugados = bits 24–31.
+  - **B:** goles de visitante.
+- **Dos tablas por liga, seguidas:** la actual y la de la jornada anterior (ej. Ligue 1 en la carrera del Barça: PJ 8 y PJ 7).
+- **Comprobaciones:** (1) en cada tabla, suma de goles a favor = suma de goles en contra (Ligue 1 195/195 y 171/171; otras
+  212/212, 220/220, 64/64…); (2) **cruce con el calendario (§22):** los 10 partidos de la jornada 1 de la Premier (carrera del City,
+  fD 22/9) cuadran 10/10 con la tabla: City 3–0 Crystal Palace, Ipswich 2–2 Everton, Bournemouth 0–3 Brentford, Liverpool 0–0
+  Brighton, Forest 0–1 Newcastle, Sunderland 0–2 Leeds, Arsenal 0–1 Chelsea, Villa 3–1 Coventry, Fulham 2–2 Tottenham,
+  Hull 4–1 Man United. Los ganados de visitante (Brentford, Leeds, Chelsea, Newcastle) y los goles de visitante también cuadran.
+- **Carrera del Barça (ranura 1, 4/3/2026):** LaLiga todavía vacía (puesto ffff ffff); Ligue 1 con 8 jornadas: Lille 22 pts
+  (7-1-0, 19–4), PSG 20, Lens 19, Lorient 16, Marsella 14, Mónaco 14.
+- Las tablas de 40 filas de la misma zona tienen otro formato (no son tablas de liga): sin interpretar.
+- **Resultados partido a partido:** siguen sin aparecer como tabla propia; con el calendario + dos tablas seguidas se puede deducir
+  el resultado de la última jornada cuando cada club jugó un partido (como se hizo arriba). ⏳ Buscar si existen guardados.
+- 🧩 Multiparche: el formato es del juego; la posición de la zona y el orden de las ligas dependen del parche → buscar por la forma.

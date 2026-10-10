@@ -563,3 +563,10 @@ City (ConmeGOL, 4/8–22/9) y Barça (ranura 1 del PC, 4/3/2026). Barça: jornad
 Deportivo – Barça, jornada 10 Real Madrid – Barça. City: jornada 1 City – Crystal Palace, jornada 2 Everton – City. Los
 resultados todavía no aparecen (no van en el registro del partido). **Qué mirar en el juego:** carrera del Barça → Calendario
 de LaLiga: ¿coinciden esas jornadas? Detalle: ESTRUCTURA-ML §22.
+
+**2026-10-09 21:19 · Análisis (sin juego) · Liga Máster: 🏆 tablas de posiciones descifradas** — 🔎 (falta verlo en pantalla)
+Cada liga guarda su tabla (puesto, puntos, G-E-P, goles a favor y en contra, jugados, goles y victorias de visitante) y la de la
+jornada anterior. Comprobado: goles a favor = goles en contra en todas las tablas, y los 10 partidos de la jornada 1 de la Premier
+(carrera del City, 22/9) cuadran 10 de 10 con el calendario (City 3–0 Crystal Palace, Hull 4–1 Man United…). **Qué mirar en el
+juego:** carrera del Barça (ranura 1) → tabla de la liga francesa: Lille 1º 22 pts (8 PJ, 7-1-0, 19–4), PSG 20, Lens 19,
+Lorient 16. Detalle: ESTRUCTURA-ML §23.
