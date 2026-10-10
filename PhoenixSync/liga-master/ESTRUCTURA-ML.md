@@ -425,3 +425,18 @@ Guardados usados: r0 (4/8), g18 (19/8), g19 y juego (21/8), j9 y jA (31/8, antes
 - **Resultados partido a partido:** siguen sin aparecer como tabla propia; con el calendario + dos tablas seguidas se puede deducir
   el resultado de la última jornada cuando cada club jugó un partido (como se hizo arriba). ⏳ Buscar si existen guardados.
 - 🧩 Multiparche: el formato es del juego; la posición de la zona y el orden de las ligas dependen del parche → buscar por la forma.
+
+## 24. Goleadores y asistencias, prefijo de jugador por carrera y lector `TemporadaLM` (9 oct, 23:20) — **[OBSERVADO + pruebas automáticas]**
+- **Rankings (fila de 20 B):** `[reg][pid][club: ID interno][puesto u32][valor u32]`, ordenados por puesto (empates comparten).
+  Varias listas seguidas por competición. **Premier, carrera del City (fD 22/9, 1 jornada):** la 1.ª lista suma **27** = los 27 goles
+  de la jornada, y club por club coincide con los goles a favor de la tabla (City 3: Foden 2 + Semenyo 1; Hull 4; Villa 3; Brentford 3…)
+  → **goleadores** ✅ (en archivos). La 2.ª (15) parece **asistencias**. La 3.ª (41) y la 4.ª (21): sin identificar (¿tarjetas?).
+  Community Shield: Marmoush 3, Guéhi, Semenyo, Gyökeres (City 5 – Arsenal 1). En la Liga de Brasil: Haaland en el Santos con 3
+  (el traspaso que hicimos en la ranura 9).
+- **Corrección de §21:** el prefijo de los jugadores añadidos **cambia en cada carrera** (0xdb65 en la del City, **0xdbdf** en la del
+  Barça). La regla es la misma: ficha en `0x1e + 156·(reg & 0xffff)`. `BlobLM::fichaDe` y `regPlausible` ya aceptan cualquier prefijo
+  (16 bits altos ≥ 0x8000, ≠ 0xffff, índice < 30.000). Antes, en la carrera del Barça, 1.156 jugadores no tenían ficha para el programa.
+- **`core/TemporadaLM` (solo lectura):** lee partidos, tablas (filas coherentes: pts = 3G + E, PJ = G + E + P, ΣGF = ΣGC) y rankings
+  buscando por la forma. Pruebas con 6 guardados reales: jornada 1 de cada liga con 1 sola jornada jugada cruzada con su tabla →
+  35/35 (g19), 152/152 (jA), 38/38 (fD); hay siempre una lista de goleadores que suma exactamente los goles de esas tablas.
+  Partidos leídos: 5.258–5.294 (City), 2.440 (Barça: otro reparto de competiciones).

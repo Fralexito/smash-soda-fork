@@ -22,9 +22,14 @@ namespace mercado::lm {
 		constexpr uint32_t kRegVacio = 65535;                        // relleno de la lista: (65535, 0)
 		constexpr uint32_t kMarcaUsuario = 0xfffffff5;               // -11 en +656 del bloque: el equipo lo lleva el usuario (§17)
 		constexpr uint32_t kMaxReg = 20000, kMaxPid = 1000000;       // plausibilidad de una ficha (reg: 16.422 en el universo; pid del option)
-		constexpr uint32_t kPrefijoRegGenerado = 0xdb65;             // jugadores que CREA el juego (regens): reg = 0xdb65xxxx, pid > 126.000 (§17)
-		/// ¿`reg` puede ser una ficha de jugador? (del universo del parche o creado por el juego)
-		bool regPlausible(uint32_t reg) { return reg < kMaxReg || (reg >> 16) == kPrefijoRegGenerado; }
+		// Jugadores añadidos por el juego: reg = prefijo de 16 bits + índice de ficha (0xdb65xxxx en la carrera del City,
+		// 0xdbdfxxxx en la del Barça: el prefijo CAMBIA en cada carrera, §24). El índice cabe en las 30.000 fichas del blob.
+		constexpr uint32_t kMaxFichas = 30000;
+		/// ¿`reg` puede ser una ficha de jugador? (del universo del parche o añadido por el juego)
+		bool regPlausible(uint32_t reg) {
+			const uint32_t alto = reg >> 16;
+			return reg < kMaxReg || (alto >= 0x8000 && alto != 0xffff && (reg & 0xffffu) < kMaxFichas);
+		}
 
 		using Datos = std::vector<uint8_t>;
 

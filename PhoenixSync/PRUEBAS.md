@@ -570,3 +570,10 @@ jornada anterior. Comprobado: goles a favor = goles en contra en todas las tabla
 (carrera del City, 22/9) cuadran 10 de 10 con el calendario (City 3–0 Crystal Palace, Hull 4–1 Man United…). **Qué mirar en el
 juego:** carrera del Barça (ranura 1) → tabla de la liga francesa: Lille 1º 22 pts (8 PJ, 7-1-0, 19–4), PSG 20, Lens 19,
 Lorient 16. Detalle: ESTRUCTURA-ML §23.
+
+**2026-10-09 23:01 · Pruebas automáticas · Lector de temporada + goleadores + prefijo por carrera** — ✅ (sin juego)
+Nuevo módulo de solo lectura (TemporadaLM): calendario, tablas y goleadores. Con 6 guardados reales: todos los partidos de la
+jornada 1 cuadran con su tabla (35/35, 152/152, 38/38) y los goleadores de la Premier suman los 27 goles de la jornada, club por
+club. **Error encontrado y corregido:** en la carrera del Barça los jugadores añadidos usan otro prefijo (0xdbdf en vez de 0xdb65) y
+el programa no encontraba 1.156 fichas; ahora 0 sin ficha en los 6 guardados. 211/211 sin archivos; 225–234 con cada guardado.
+Compila para Windows (MinGW). Detalle: ESTRUCTURA-ML §24.

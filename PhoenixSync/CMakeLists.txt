@@ -53,6 +53,7 @@ add_library(PhoenixSyncCore STATIC
     core/LigaMaster.cpp
     core/Firma.cpp
     core/BlobLM.cpp
+    core/TemporadaLM.cpp
     core/Sincronizacion.cpp
     core/RutasJuego.cpp
     core/Respaldos.cpp

@@ -20,6 +20,7 @@
 #include "../core/Integridad.h"
 #include "../core/LigaMaster.h"
 #include "../core/BlobLM.h"
+#include "../core/TemporadaLM.h"
 #include "../core/Alineacion.h"
 #include "../core/Firma.h"
 #include "../core/Sincronizacion.h"
@@ -817,7 +818,44 @@ int main() {
 		std::vector<uint8_t> dm((std::istreambuf_iterator<char>(fm)), {});
 		auto gm = mercado::lm::GuardadoLM::desdeDatos(dm);
 		CHECK(gm.ok());
-		// Toda ficha de plantilla (también reg 0xdb65xxxx) tiene su ficha de 156 B en el blob (ESTRUCTURA-ML §21).
+		// Temporada (solo lectura): calendario, tablas y rankings, coherentes entre sí (ESTRUCTURA-ML §22–§24).
+		if (gm.ok()) {
+			auto bl0 = mercado::lm::BlobLM::leer(dm);
+			auto tp = mercado::lm::TemporadaLM::leer(*gm.valor, bl0.ok() ? bl0.valor->posicionTam() : 0);
+			CHECK(tp.ok());
+			if (tp.ok()) {
+				const auto& T = *tp.valor;
+				size_t llenas = 0, cruces = 0, crucesOk = 0, rankingsOk = 0;
+				for (auto& tb : T.tablas) {
+					if (tb.vacia) continue;
+					llenas++;
+					std::map<uint32_t, const mercado::lm::FilaTablaLM*> por;
+					int maxPj = 0, gf = 0;
+					for (auto& f : tb.filas) { por[f.club] = &f; maxPj = std::max(maxPj, f.jugados); gf += f.golesFavor; }
+					// Con UNA jornada jugada, cada partido de la jornada 1 entre clubes de esta tabla debe cuadrar con ella.
+					if (maxPj == 1) {
+						for (auto& p : T.partidos) {
+							if (p.jornada != 0 || !por.count(p.local) || !por.count(p.visitante)) continue;
+							const auto* a = por[p.local]; const auto* b = por[p.visitante];
+							if (a->jugados != 1 || b->jugados != 1) continue;
+							cruces++;
+							if (a->golesFavor == b->golesContra && b->golesFavor == a->golesContra) crucesOk++;
+						}
+						// Y alguna lista de goleadores de esos clubes suma exactamente los goles de la tabla.
+						for (auto& r : T.rankings) {
+							bool todos = std::all_of(r.filas.begin(), r.filas.end(), [&](const mercado::lm::FilaRankingLM& f) { return por.count(f.club) > 0; });
+							if (todos && r.total() == gf) { rankingsOk++; break; }
+						}
+					}
+				}
+				std::printf("  temporada: %zu partidos, %zu tablas (%zu con datos), %zu rankings; jornada 1: %zu/%zu cruces OK, %zu goleadores = goles\n",
+					T.partidos.size(), T.tablas.size(), llenas, T.rankings.size(), crucesOk, cruces, rankingsOk);
+				CHECK(T.partidos.size() > 1000);
+				CHECK(!T.tablas.empty());
+				CHECK(crucesOk == cruces);
+			}
+		}
+		// Toda ficha de plantilla (también reg con prefijo, 0xdb65… / 0xdbdf…) tiene su ficha de 156 B en el blob (ESTRUCTURA-ML §21).
 		if (gm.ok()) {
 			auto bl = mercado::lm::BlobLM::leer(dm);
 			CHECK(bl.ok());
@@ -827,11 +865,11 @@ int main() {
 					auto eq = gm.valor->equipo(k);
 					if (!eq.ok()) continue;
 					for (auto& f : eq.valor->plantilla) {
-						if ((f.reg >> 16) == 0xdb65) generados++;
+						if ((f.reg >> 16) != 0) generados++;
 						(bl.valor->fichaDe(f.reg, f.pid) >= 0 ? conFicha : sinFicha)++;
 					}
 				}
-				std::printf("  fichas del blob: %zu con ficha, %zu sin ficha (%zu con reg 0xdb65)\n", conFicha, sinFicha, generados);
+				std::printf("  fichas del blob: %zu con ficha, %zu sin ficha (%zu con reg con prefijo)\n", conFicha, sinFicha, generados);
 				CHECK(conFicha > 0 && sinFicha == 0);
 				// Multiparche: si el blob está en OTRA posición (otro parche con más o menos datos antes), se encuentra por su
 				// forma, se lee igual y se puede reescribir (simulado metiendo 64 B antes del blob).
