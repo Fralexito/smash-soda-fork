@@ -722,3 +722,15 @@ uno de sus contadores de crecimiento (el n.º 6, en la ficha de 368 B de la tabl
 Búsqueda del valor absoluto (92→93 en la misma carrera cruzado con 99/90 entre carreras, campos de 6/7/8 bits): sin resultado. Su
 carnet del blob no cambia con la velocidad (cola idéntica entre ranuras 4 y 5). Las fichas L y F de Lamine guardan datos de estado
 (60/40/59; 74/73/3395), no habilidades. Fuera de `save` no hay más carpetas de esa carrera.
+
+### ✅ 2026-10-10 00:43–00:49 · Fase D, segundo recorrido: Liga Máster (19), Ser una Leyenda (20) y dentro de un partido (8) — «seguro» solo en el menú, 9 de 9
+- v0.17d, sesión que arrancó a las 00:31:28. FRALEX dejó el overlay abierto (se mira en cada cuadro).
+- **UEFA_ML (19)** 00:33:22 y 00:44:39 → NO. **UEFA_BL (20)** 00:45:04 → NO (a las 00:45:19 activa el gestor de edición). **EXHIBITION (8) dentro del partido, en pausa** (captura 00:48:00) → NO. **EDIT (13)** 00:49:09 → NO.
+- **TOP_MENU (7) → «momento seguro: SÍ»** a las 00:32:25, 00:43:51, 00:44:03, 00:45:00, 00:46:23, 00:49:05 y 00:49:21. Con las 2 del primer recorrido: 9 de 9, y nunca fuera del menú principal.
+- Eventos de Sider: `context_reset` coincide en el segundo con la vuelta a TOP_MENU; `set_teams` 00:46:50 = 109 vs 172.
+- Gestor de la base: estado **2** al entrar a LM/BL y **3** al salir (menos de 1 s), luego 4. 🔎 sin estudiar.
+- **⚠️ Tecla K pulsada con el overlay abierto (entre 00:45:20 y 00:45:35):** log «NO se llamó: ya hay una relectura en curso». No se llamó a nada. Pero K, L, P y U (teclas de prueba de las v0.11–v0.16, presentes también en la v0.17) pueden llamar funciones o escribir si se pulsan en otro momento. Propuesta pendiente: versión con esas teclas desactivadas.
+- `StadiumServer.lua`: 32 errores (línea 705) al preparar el partido; no es de phoenix.lua. phoenix.lua: 0 errores.
+- Guardado: option file idéntico (3507ce35…). `SYSTEM00000000` reescrito a las 00:49:03 (fin del partido); `ML00000005` de las 00:26 (carrera guardada por FRALEX).
+- Detalle: `base-conocimiento/22-ZONA-DEL-JUEGO-MOMENTO-SEGURO.md` §9.
+

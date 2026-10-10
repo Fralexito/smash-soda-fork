@@ -190,3 +190,62 @@ Para el uso real no importa: `phoenix.lua` leerá el cartel en el momento en que
 | Diario de pruebas | `PRUEBAS.md`, entradas del 2026-10-10 de 00:18 y 00:19 |
 
 **Para volver atrás:** con el juego cerrado, copiar `phoenix.lua.v017a` (o `phoenix.lua.v017`) encima de `phoenix.lua` en las dos carpetas `modules`.
+
+---
+
+## 9. Segundo recorrido (00:43–00:49) · añadido a las 00:55
+
+Para cerrar los cabos sueltos del apartado 7. FRALEX dejó el overlay abierto casi todo el recorrido, así que la zona se miró
+en cada cuadro y quedaron anotados todos los cambios. Sesión que arrancó a las 00:31:28.
+
+| Hora | Zona leída | ¿Seguro? | Nota |
+|---|---|---|---|
+| 00:32:25 | TOP_MENU (7) | SÍ | Menú principal tras arrancar |
+| 00:33:22 | **UEFA_ML (19)** | NO | Liga Máster (primera vez que se ve) |
+| 00:43:51 | UEFA_ML (19), base estado 3 → 4 | NO | Saliendo de Liga Máster |
+| 00:43:51 | TOP_MENU (7) | SÍ | Mismo segundo que el evento `context_reset` |
+| 00:43:54 | EXHIBITION (8) | NO | Partido |
+| 00:44:03 | TOP_MENU (7) | SÍ | Vuelta al menú |
+| 00:44:39 | UEFA_ML (19), base estado 2 → 4 | NO | Liga Máster otra vez |
+| 00:45:00 | TOP_MENU (7) | SÍ | Vuelta al menú |
+| 00:45:04 | **UEFA_BL (20)**, base estado 2 → 4 | NO | Ser una Leyenda (primera vez que se ve) |
+| 00:45:19 | UEFA_BL (20), edición ACTIVA | NO | Ser una Leyenda carga el gestor de edición |
+| 00:46:23 | TOP_MENU (7) | SÍ | Vuelta al menú |
+| 00:46:47 | EXHIBITION (8) | NO | Partido |
+| 00:46:50 | — | — | Evento `set_teams`: 109 vs 172 (Real Madrid – Atlético) |
+| 00:48:00 | **EXHIBITION (8)** | NO | **Dentro del partido, en pausa** (captura de FRALEX) |
+| 00:49:05 | TOP_MENU (7) | SÍ | Vuelta al menú tras el partido |
+| 00:49:09 | EDIT (13) | NO | Editar |
+| 00:49:10 | EDIT (13), edición ACTIVA | NO | Editar ya cargado |
+| 00:49:21 | TOP_MENU (7) | SÍ | Vuelta al menú (captura de FRALEX a las 00:49:27) |
+
+### Lo que confirma
+
+1. **Liga Máster = 19 y Ser una Leyenda = 20**, como decía la tabla del exe. Ya están vistos en el juego.
+2. **Dentro de un partido el cartel sigue en EXHIBITION (8).** No hay un número distinto para «pelota en juego».
+3. **«Momento seguro: SÍ» salió 7 veces en esta sesión, siempre en el menú principal y nunca en otro sitio.** Sumadas a las 2 del primer recorrido: 9 de 9.
+4. Al salir de un modo, el evento `context_reset` de Sider y el paso a TOP_MENU ocurren en el mismo segundo.
+5. Estados nuevos del gestor de la base: **2** al entrar a Liga Máster o a Ser una Leyenda y **3** al salir. Duran menos de un segundo y luego vuelve a 4.
+   En esos momentos el modo todavía no es TOP_MENU, así que la regla ya los cubre. (🔎 observado; no se estudió qué significan.)
+6. Ser una Leyenda también activa el gestor de edición.
+7. `SYSTEM00000000` se reescribió a las 00:49:03, al terminar el partido. El option file sigue idéntico (`3507ce35…`).
+
+### ⚠️ Hallazgo de seguridad: las teclas de prueba siguen vivas con el overlay abierto
+
+Entre las 00:45:20 y las 00:45:35, con el overlay abierto, se pulsó la tecla **K**. `sider.log` anotó:
+«NO se llamó: ya hay una relectura en curso (o no se pudo leer el gestor)».
+
+- **No pasó nada:** el código vio que ya había una relectura en marcha y no llamó a ninguna función del juego.
+- **Pero pudo pasar:** K es la «prueba B» de la v0.12/v0.13. Si se pulsa en el menú principal, crea el gestor de edición y llama a
+  la relectura de la base (`0x1EEBBA0` y `0x1EF2FA0`). Eso ya no es solo leer.
+- Lo mismo vale para **L** (escribe el interruptor de recarga), **P** (cambia 1 byte de código en memoria) y **U** (reaplica los
+  parches A/B/C). **B** solo busca en la memoria. Solo actúan con el overlay abierto en el módulo Phoenix.
+- Estas teclas están en **todas** las versiones desde la v0.11, también en la v0.17.
+- **Recomendación (pendiente de aprobación de FRALEX):** una versión que desactive K, L, P, U y B, o que pida una combinación
+  difícil de pulsar por accidente. Mientras tanto, no pulsar letras con el overlay abierto.
+
+### Aparte
+
+`StadiumServer.lua` volvió a dar 32 errores (línea 705) al preparar el partido de las 00:46. Confirma que ese fallo es de la
+preparación del partido y no de `phoenix.lua`.
+
