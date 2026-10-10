@@ -824,3 +824,4 @@ carnet del blob no cambia con la velocidad (cola idéntica entre ranuras 4 y 5).
 - Subieron en Bernal: Actitud ofensiva, Actitud defensiva, Conservación, **Pase raso**, Pase bombeado, Cabeceo, **Aceleración**, Salto, Equilibrio = **9** = 8 barras puestas (1, 2, 6, 8, 9, 10, 22, 24) + 1 natural (25 = Salto). ✅ **Agresividad (77) y Balón parado (72) NO subieron.**
 - **Desempate:** barra **8 = Pase raso**, barra **12 = Agresividad**, barra **24 = Aceleración**, barra **13 = Balón parado**.
 - Comprobación cruzada en los 7 jugadores: con el mapa final, **cada** subida en pantalla tiene su barra que dio la vuelta en el archivo, y **cada** barra que dio la vuelta tiene su subida en pantalla (63 de 63, contando las 3 naturales de Lamine y la de Bernal). ✅
+- **Corrección (01:52):** la cuenta es **64 de 64** (9 + 9 + 8 + 9 + 11 + 9 + 9), no 63.
