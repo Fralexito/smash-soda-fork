@@ -1,6 +1,6 @@
 # 19 · «Datos Actual. en vivo»: informe paso a paso de todo lo que se hizo
 
-**Sesión del 2026-10-09, de 21:04 a 23:35 (Lima).** PC de FRALEX, PES 2021 con ConmeGOL Patch 26 y Sider 7.3.3.
+**Sesión del 2026-10-09, de 21:04 a 23:50 (Lima).** PC de FRALEX, PES 2021 con ConmeGOL Patch 26 y Sider 7.3.3.
 Archivo nuevo. No sustituye a ningún otro. El resultado resumido está en [17 · dónde está la opción](17-OPCION-EN-VIVO-DONDE-ESTA.md).
 Este documento cuenta **el camino completo**, en orden, con las horas, los errores y lo que se decidió en cada momento.
 
@@ -363,13 +363,52 @@ Guion: `sider/pruebas/simular_v017a.py`.
 - Tras Shift+R empieza sin memoria hasta la siguiente recarga del juego.
 - La ventana de 15 segundos es una elección: las dos recargas de Activar se separan unos 3 segundos.
 
-**Resultado en el juego:** se anota en `PRUEBAS.md` cuando FRALEX haga la prueba.
+### 10.6 Resultado en el juego (23:34–23:43) · añadido a las 23:52
+
+Sesión que arrancó a las 23:34:11. Sin errores de `phoenix.lua`.
+
+| Hora | Qué hizo FRALEX | Modo leído | phoenix.lua apuntó |
+|---|---|---|---|
+| 23:34:11 | Abrir el juego (lectura n.º 1) | 0 | NORMAL |
+| 23:34:39 | Segunda pasada del arranque (n.º 2) | 0 | NORMAL |
+| 23:35:00 | **Activar** (n.º 3) | **1** | **ACTIVAR** |
+| 23:35:03 | Segunda recarga de ese Activar (n.º 4) | 0 | No cambió |
+| 23:36:33 | Entrar a Editar (n.º 5) | 0 | **NORMAL** |
+| 23:41:55 | **Activar** (n.º 6) | **1** | **ACTIVAR** |
+| 23:41:59 | Segunda recarga (n.º 7) | 0 | No cambió |
+| 23:42:49 | Entrar y salir de Editar (n.º 8) | 0 | **NORMAL** |
+
+**Capturas del overlay:**
+
+- 23:35:38 → «[ÚLTIMA RECARGA] ACTIVAR → equipos de la base · 23:35:00 · ¿fue Activar? true», con «[MODO] DESACTIVADA (0)».
+- 23:36:46 → «[ÚLTIMA RECARGA] NORMAL → equipos del option file · 23:36:33 · ¿fue Activar? false».
+
+**Comprobación con Vinícius** (en el Barça solo en la base; en el Real Madrid en el option file):
+
+| Después de… | Vinícius aparece en | Atlético de Madrid |
+|---|---|---|
+| Activar (23:41:55) | **Barça** | Giménez, Ruggeri, Nico González (plantilla de la base) |
+| Entrar y salir de Editar (23:42:49) | **Real Madrid** | Julián Álvarez, Jonathan David, Sørloth (plantilla del option file) |
+
+**Lo que se descubrió en esta prueba:**
+
+1. La etiqueta de `phoenix.lua` coincide con los equipos que se ven en pantalla. Visto una vez.
+2. Para volver al option file **basta con entrar a Editar**. No hizo falta pulsar Cargar.
+3. El juego sigue diciendo «Selección actual: Desactivar» aunque los equipos sean los de la base. `phoenix.lua` lo recuerda por su cuenta.
+
+**Dos incidencias, sin daño:**
+
+- **«Guardar» por accidente (23:36).** En Editar, el cursor se fue sin querer a «Guardar». Foto de las 23:37: el option file
+  es idéntico (huella `3507ce35…`) y ni su fecha cambió (19:59:59). No se guardó nada. Foto de las 23:43: igual.
+- **Errores de otro módulo.** Durante la preparación del partido, `sider.log` anotó 96 errores de `StadiumServer.lua`
+  (línea 705, «attempt to index a nil value»). No son de `phoenix.lua` y ese módulo no se tocó. No se sabe si ya ocurría
+  antes, porque el registro se borra en cada arranque.
 
 ---
 
 ## 11. Lo que falta
 
-1. Probar la v0.17a en el juego: Activar → debe decir ACTIVAR; Editar → Cargar → debe decir NORMAL.
+1. Repetir otro día la prueba de la v0.17a con un jugador de referencia (hoy se vio una vez, con Vinícius).
 2. **Opción B (experimento):** sin el parche C, ¿el modo se queda en 1 y la pantalla dice «Selección actual: Activar»?
    ¿Siguen llegando las stats y los fichajes?
 3. Confirmar el valor 2 (¿Valoraciones generales uniformes?).
