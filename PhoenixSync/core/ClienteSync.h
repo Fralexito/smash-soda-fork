@@ -8,7 +8,7 @@
 #include "Tipos.h"
 
 // =============================================================================
-//  Phoenix Sync · Cliente web de «Sync compartido» (contrato v1.8.0, PROPUESTO)
+//  Phoenix Sync · Cliente web de «Sync compartido» (contrato v1.8.0, PUBLICADO por WEB 2026-10-09)
 // -----------------------------------------------------------------------------
 //  Base: la API de Phoenix Link (/functions/v1/phoenix) con el token phx_ de
 //  siempre (modo «compartido»). Rutas (los nombres finales los fija el chat WEB):

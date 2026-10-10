@@ -127,7 +127,7 @@ namespace mercado::sync {
 	}
 
 	Resultado<bool> ClienteSync::confirmar(const std::string& grupoId, const std::string& opId, const std::string& estado, const std::string& motivo) {
-		const json cuerpo = { { "grupo_id", grupoId }, { "id", opId }, { "estado", estado }, { "motivo", entrega::recortarResumen(motivo, 200) } };
+		const json cuerpo = { { "grupo_id", grupoId }, { "op_id", opId }, { "estado", estado }, { "motivo", entrega::recortarResumen(motivo, 200) } };
 		auto r = llamar("POST", "/v1/sync/operaciones/aplicada", cuerpo.dump(), "", nullptr);
 		if (!r.ok()) return Resultado<bool>{ std::nullopt, r.error };
 		return Resultado<bool>::bien(true);

@@ -63,6 +63,7 @@ namespace mercado::grupo {
 		uint16_t dorsal = 0;           ///< 0 = el que elija el programa
 		std::string autor, autorPc, creadoEn;
 		std::string base;              ///< sha256 del option file de origen ANTES del cambio
+		int64_t baseSeq = 0;           ///< hasta qué seq del grupo había visto quien publicó (contrato: base_seq)
 		std::string shaResultado;      ///< sha256 del option file de origen DESPUÉS (informativo)
 		std::string resumen;
 		Compat compat;

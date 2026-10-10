@@ -43,10 +43,11 @@ namespace mercado::grupo {
 	}
 
 	json aJson(const Operacion& o) {
-		json j = { { "id", o.id }, { "tipo", o.tipo }, { "jugador_id", o.jugador }, { "equipo_origen", o.equipoOrigen },
+		// Nombres del contrato publicado (v1.8.0): op_id, base_seq, parche, huella_bd. El resto son extras opcionales.
+		json j = { { "op_id", o.id }, { "tipo", o.tipo }, { "jugador_id", o.jugador }, { "equipo_origen", o.equipoOrigen },
 			{ "equipo_destino", o.equipoDestino }, { "dorsal", o.dorsal }, { "autor_pc", o.autorPc }, { "creado_en", o.creadoEn },
-			{ "base", o.base }, { "sha_resultado", o.shaResultado }, { "resumen", o.resumen },
-			{ "compat", { { "parche", o.compat.parche }, { "huella_base", o.compat.huellaBase }, { "formato", o.compat.formato } } } };
+			{ "base_seq", o.baseSeq }, { "base", o.base }, { "sha_resultado", o.shaResultado }, { "resumen", o.resumen },
+			{ "parche", o.compat.parche }, { "huella_bd", o.compat.huellaBase }, { "formato", o.compat.formato } };
 		if (o.seq) j["seq"] = o.seq;
 		if (!o.autor.empty()) j["autor"] = o.autor;
 		return j;
@@ -58,7 +59,8 @@ namespace mercado::grupo {
 			Operacion o;
 			auto s = [&](const char* k) { return j.contains(k) && j[k].is_string() ? j[k].get<std::string>() : std::string(); };
 			auto u = [&](const char* k) -> int64_t { return j.contains(k) && j[k].is_number_integer() ? j[k].get<int64_t>() : 0; };
-			o.id = s("id");
+			o.id = s("op_id");
+			if (o.id.empty()) o.id = s("id");   // nombre anterior (compatibilidad)
 			o.seq = u("seq");
 			o.tipo = s("tipo");
 			o.jugador = static_cast<uint32_t>(u("jugador_id"));
@@ -67,8 +69,14 @@ namespace mercado::grupo {
 			const int64_t d = u("dorsal");
 			o.dorsal = (d >= 1 && d <= 99) ? static_cast<uint16_t>(d) : 0;
 			o.autor = s("autor"); o.autorPc = s("autor_pc"); o.creadoEn = s("creado_en");
+			o.baseSeq = u("base_seq");
 			o.base = s("base"); o.shaResultado = s("sha_resultado"); o.resumen = s("resumen");
-			if (j.contains("compat") && j["compat"].is_object()) {
+			if (j.contains("huella_bd") || j.contains("parche")) {   // contrato publicado: campos planos
+				o.compat.parche = s("parche");
+				o.compat.huellaBase = s("huella_bd");
+				o.compat.formato = j.contains("formato") && j["formato"].is_number_integer() ? j["formato"].get<int>() : 1;
+			}
+			else if (j.contains("compat") && j["compat"].is_object()) {
 				const auto& c = j["compat"];
 				o.compat.parche = c.value("parche", "");
 				o.compat.huellaBase = c.value("huella_base", "");

@@ -101,12 +101,12 @@ struct HttpFalso : ClienteHttp {
 		}
 		if (metodo == "POST" && url.size() >= 9 && url.substr(url.size() - 9) == "/aplicada") {
 			const json j = json::parse(cuerpo);
-			w.confirmaciones[pc + "|" + j["id"].get<std::string>()] = j["estado"];
+			w.confirmaciones[pc + "|" + j["op_id"].get<std::string>()] = j["estado"];
 			return ok({ { "ok", true } });
 		}
 		if (metodo == "POST" && url.find("/v1/sync/operaciones") != std::string::npos) {
 			json j = json::parse(cuerpo);
-			for (const auto& o : w.ops) if (o["id"] == j["id"]) return { 409, R"({"ok":false,"error":{"codigo":"OPERACION_DUPLICADA"}})", "" };
+			for (const auto& o : w.ops) if (o["op_id"] == j["op_id"]) return { 409, R"({"ok":false,"error":{"codigo":"OPERACION_DUPLICADA"}})", "" };
 			j["seq"] = (int64_t)w.ops.size() + 1; j["autor"] = pc; j.erase("grupo_id");
 			w.ops.push_back(j); w.publicaciones++;
 			return ok({ { "seq", j["seq"] } });
@@ -395,7 +395,7 @@ int main() {
 		// 2) Automático: el amigo lo recibe, respalda, entrega a Link y Link coloca.
 		amigo.pasar(30);
 		CHECK(amigo.esta(7, 108) && !amigo.esta(7, 172));
-		CHECK(web.confirmaciones["AMIGO|" + web.ops[0]["id"].get<std::string>()] == "aplicada");
+		CHECK(web.confirmaciones["AMIGO|" + web.ops[0]["op_id"].get<std::string>()] == "aplicada");
 		const auto respAmigo = amigo.motor.respaldos();
 		CHECK(std::any_of(respAmigo.begin(), respAmigo.end(), [](const auto& r) { return r.motivo == "antes de aplicar cambios del grupo"; }));
 		// 3) Anti-bucle: el amigo NO vuelve a subirlo, y nadie hace ping-pong.

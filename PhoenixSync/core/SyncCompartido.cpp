@@ -317,7 +317,7 @@ namespace mercado::sync {
 			if (m.hacia && of.valor->dorsales.count(m.hacia) && of.valor->dorsales.at(m.hacia).count(m.jugador))
 				op.dorsal = of.valor->dorsales.at(m.hacia).at(m.jugador);
 			op.autorPc = _en.nombrePc; op.creadoEn = fechaIso();
-			op.base = _e.ultimoHashVisto; op.shaResultado = h;
+			op.base = _e.ultimoHashVisto; op.shaResultado = h; op.baseSeq = _e.ultimaSeq;
 			op.compat = _compat;
 			op.resumen = entrega::recortarResumen(grupo::resumenDe(op, _en.nombreEquipo), 60);
 			_e.porPublicar.push_back(op);
@@ -369,7 +369,7 @@ namespace mercado::sync {
 			if (!inc.empty()) {
 				_e.entrantes.push_back({ op, "incompatible", inc });
 				historial(op, "incompatible", inc);
-				confirmarLuego(op.id, "rechazada", "INCOMPATIBLE: " + inc);
+				confirmarLuego(op.id, "incompatible", inc);
 				avisar("1 cambio omitido: " + inc);
 				continue;
 			}
@@ -392,7 +392,7 @@ namespace mercado::sync {
 			return;
 		}
 		for (auto& x : _e.entrantes)
-			if (x.estado == "nuevo") { x.estado = "pendiente"; confirmarLuego(x.op.id, "pendiente", ""); historial(x.op, "pendiente", "espera tu autorización"); }
+			if (x.estado == "nuevo") { x.estado = "pendiente"; historial(x.op, "pendiente", "espera tu autorización"); }
 		avisar(std::to_string(nuevos.size()) + (nuevos.size() == 1 ? " cambio del grupo espera" : " cambios del grupo esperan") + " tu autorización");
 	}
 
