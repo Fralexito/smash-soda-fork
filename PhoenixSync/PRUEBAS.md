@@ -734,3 +734,10 @@ carnet del blob no cambia con la velocidad (cola idéntica entre ranuras 4 y 5).
 - Guardado: option file idéntico (3507ce35…). `SYSTEM00000000` reescrito a las 00:49:03 (fin del partido); `ML00000005` de las 00:26 (carrera guardada por FRALEX).
 - Detalle: `base-conocimiento/22-ZONA-DEL-JUEGO-MOMENTO-SEGURO.md` §9.
 
+### 2026-10-10 00:58 · phoenix.lua v0.17e (teclas de prueba B, K, L, P y U DESACTIVADAS) — PREPARADA y simulada, SIN instalar (falta el OK de FRALEX)
+- Motivo: la tecla K pulsada sin querer a las 00:45 con el overlay abierto (entrada anterior). FRALEX pidió prepararla a las 00:53.
+- **Qué cambia respecto a la v0.17d:** `TECLAS_DE_PRUEBA = false`; `key_down` ignora B, K, L, P y U, lo anota en el log («tecla X ignorada… no se hizo nada») y lo muestra en la línea nueva **[TECLAS]** del overlay. La tecla M (solo lectura) sigue igual. Las pistas del overlay pasan a decir «tecla X desactivada».
+- **Qué NO cambia:** los parches A/B/C del botón nativo se siguen aplicando solos al arrancar (nunca dependieron de las teclas). [MODO], [ÚLTIMA RECARGA] y [ZONA] igual.
+- **Simulación:** las 5 teclas en una situación donde antes actuaban → 0 escrituras, 0 VirtualProtect, 0 llamadas a funciones del juego, las 5 anotadas como ignoradas. En la v0.17d, con la misma memoria falsa, L escribe (1 WriteProcessMemory) y B entra en su búsqueda; K, P y U no se reprodujeron en la simulación (faltan sus bytes de comprobación en la memoria falsa), pero pasan por el mismo bloqueo. Además, los 18 casos anteriores (m, a, d) bien. `sider/pruebas/simular_v017e.py`.
+- Archivo: `sider/pruebas/phoenix-v0.17e-prueba.lua` (sha256 114b6f2e…). En el PC sigue instalada la v0.17d.
+
