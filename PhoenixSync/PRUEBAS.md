@@ -577,3 +577,36 @@ jornada 1 cuadran con su tabla (35/35, 152/152, 38/38) y los goleadores de la Pr
 club. **Error encontrado y corregido:** en la carrera del Barça los jugadores añadidos usan otro prefijo (0xdbdf en vez de 0xdb65) y
 el programa no encontraba 1.156 fichas; ahora 0 sin ficha en los 6 guardados. 211/211 sin archivos; 225–234 con cada guardado.
 Compila para Windows (MinGW). Detalle: ESTRUCTURA-ML §24.
+
+### 2026-10-09 21:09–22:44 · Fase A: ¿«Datos Actual. en vivo» se guarda en disco? → ❌ NO (solo lectura, sin tocar nada)
+- **Método:** «fotos» (sha256 de cada archivo) de `…\239200\save`, de las otras carpetas de guardado y de `settings.dat`, comparadas entre sí. Guion: `herramientas/exe/foto_guardado.sh`.
+- **Fotos:** 21:09 inicial · 22:02 juego cerrado · 22:10 juego abierto (arrancó 22:07) · 22:23 tras Activar (22:22) · 22:31 · 22:32 juego cerrado (cierre 22:31:48) · 22:39 abierto de nuevo + Desactivar · 22:41 tras Activar · 22:44 tras Desactivar.
+- **Resultado:** las 9 fotos son idénticas. Abrir el juego, Activar, Desactivar y cerrar **no escriben ningún archivo de guardado**. En la carpeta del juego solo cambian los diarios de Sider.
+- **Al reiniciar, la opción sale en «Desactivar»** aunque se pulsara Activar antes de cerrar (22:39, visto una vez).
+- **Desactivar, estando ya en «Desactivar», no recarga nada** (22:44: ninguna lectura nueva de la base).
+- **Hallazgo de FRALEX (capturas 22:39 y 22:41):** el juego muestra el estado en «Selección actual: …» y tiene tres posiciones (Activar, Desactivar, Valoraciones generales uniformes). **Después de pulsar Activar con la v0.17, sigue diciendo «Selección actual: Desactivar».**
+- Aviso: la carpeta `C:\dev\smash-soda-fork` del PC estaba atrasada respecto a GitHub. No se hizo `git pull`; se leyó de una copia temporal.
+
+### 2026-10-09 22:45–22:55 · Estudio del exe (copia de solo lectura): candidato para la opción
+- `0x14B6A60` devuelve el **gestor de la base** (`[exe+0x3705E10]`). `0x14B7560(gestor, bandera, modo)` recarga la base y guarda el **modo** en `[gestor+0x38]`. El juego compara ese número con 1 en 12 sitios (entre ellos `ProcessLiveDataCheck`, `0x13040CE`).
+- Activar con la v0.17 = dos recargas: estado 22 (`0x20AE529`, modo **1**) y luego la carga del EDIT con el parche C (`0x1EFAFB0`, modo **0**). Explica las dos lecturas de la base que ve el espía y que la pantalla diga «Desactivar».
+- Desactivar = `LiveDataRemoveFlow` (`0x20AF320`): tarea 0x1B y `0x14B6F20(gestor, 0)`.
+- Detalle completo: `base-conocimiento/17-OPCION-EN-VIVO-DONDE-ESTA.md`. Ayudantes: `herramientas/exe/lib_exe.py`.
+
+### 2026-10-09 22:57 · phoenix.lua v0.17m (prueba «mirar la opción», SOLO LECTURA) — INSTALADA con el OK de FRALEX
+- Es la v0.17 más: tecla **M** (muestra al log), línea **[MODO]** en el overlay y una muestra automática al empezar cada lectura de `player.bin`. No escribe en la memoria. Comprueba antes 3 trozos de código (`0x14B6A60`, `0x13040C9`, `0x14B7587`); si no coinciden, no lee. Usa copia segura a un búfer propio. No cambia los parches A/B/C.
+- Simulación LuaJIT (lupa) con memoria falsa: 6 casos (normal 0→1→2, exe distinto, gestor inexistente, zona ilegible/puntero raro, lecturas durante Activar, módulo recargado): 6/6 OK, 0 escrituras. `sider/pruebas/simular_v017m.py`.
+- **Antes de instalar:** la v0.17 (sha d85e1071…) verificada en 6 sitios; respaldo nuevo `phoenix.lua.v017` en las dos carpetas `modules`; juego cerrado (Sider: «All done» 22:57:04).
+- **Instalación:** copiada a las dos carpetas `modules`; sha256 en el PC = 57ff5ec0…52805 en las dos; respaldos intactos.
+
+### ✅ 2026-10-09 23:00–23:04 · ENCONTRADO: la opción es el modo de carga del gestor de la base (`[[exe+0x3705E10]+0x38]`), 1 = activada
+- Sesión que arrancó a las 23:00:09. Muestras automáticas (lectura de `player.bin` → modo):
+  - n.º 1 23:00:09 (arranque) → **0** · n.º 2 23:01:54 (segunda pasada del arranque) → **0**
+  - n.º 3 23:02:06 (Activar) → **1** · n.º 4 23:02:09 → **0**
+  - n.º 5 23:04:06 (Activar) → **1** · n.º 6 23:04:09 → **0**
+  - n.º 7 23:04:18 (Activar) → **1** · n.º 8 23:04:21 → **0**
+- **3 de 3 repeticiones iguales**, sin errores de Lua, juego normal. Coincide con lo deducido del código.
+- Overlay a las 23:04:30 (captura de FRALEX): «[MODO] opción en vivo: DESACTIVADA (0) · gestor estado 4 · +90..93 = 0 1 0 0», con el juego mostrando «Selección actual: Desactivar».
+- **Conclusión:** con la v0.17 la opción vale 1 solo unos 3 segundos por cada Activar; el parche C la devuelve a 0. Leerla sola no basta para saber «estoy en modo vivo».
+- **Sin probar todavía:** el valor 2 (¿Valoraciones generales uniformes?), ver «Selección actual: Activar» en pantalla (haría falta que el modo se quede en 1) y la tecla M.
+- **Siguiente (decidido por FRALEX a las 23:07):** primero la opción A (phoenix.lua recuerda la última recarga), luego el experimento B (sin el parche C).
