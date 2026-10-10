@@ -73,7 +73,7 @@ function Barra({ s }) {
     </div>
     <div class="ultima-hueco"><${UltimaHora} s=${s}/></div>
     <div class="lado">
-      <${GrupoEstado} m=${m} w=${w}/>
+      <${GrupoEstado} m=${m} w=${w} enSync=${s.seccion === "sync"}/>
       <button class=${cx("pill", s.chatAbierto && "acc")} onClick=${() => alternarChat()} title="Chat (Ctrl+Espacio)">
         <${Icono} n="chat" t=${15}/>CHAT${totalNoLeidos(s) > 0 ? html`<span class="chip bad" style="height:20px">${totalNoLeidos(s) > 99 ? "99+" : totalNoLeidos(s)}</span>` : null}
       </button>
@@ -89,16 +89,17 @@ const ESTADO_JUEGO = {
   conectado: ["ok", "JUEGO CONECTADO", "GAME CONNECTED"], cerrado: ["", "JUEGO CERRADO", "GAME CLOSED"],
   noinstalado: ["warn", "SIN MÓDULO SIDER", "NO SIDER MODULE"], sinconexion: ["bad", "JUEGO SIN WEB", "GAME OFFLINE"], apagado: ["", "AVISOS APAGADOS", "NOTICES OFF"],
 };
-function GrupoEstado({ m, w }) {
+// En Sync, la web y el juego ya salen en sus propias pastillas: aquí solo queda la sala (sin repetir).
+function GrupoEstado({ m, w, enSync = false }) {
   const b = m?.buzon;
   const j = ESTADO_JUEGO[b?.estado] || ESTADO_JUEGO.cerrado;
   const ultimo = b?.estado === "conectado" && b?.ultimo ? " · " + b.ultimo : "";
   return html`<div class="grupo-estado" role="status" aria-label=${t("Estado de la conexión", "Connection status")}>
     <${PildoraSala} m=${m}/>
-    <button class="pill web" onClick=${() => irA("sync", "web")} title=${m?.web?.mensaje || t("Cuenta de la liga", "League account")}>
+    ${enSync ? null : html`<button class="pill web" onClick=${() => irA("sync", "web")} title=${m?.web?.mensaje || t("Cuenta de la liga", "League account")}>
       <span class=${cx("punto", w[0], w[0] === "ok" && "vivo")}></span>${t(w[1], w[2])}</button>
     <button class="pill juego" onClick=${() => irA("sync", "puente")} title=${t("Puente de Phoenix Sync con el juego", "Phoenix Sync game bridge")}>
-      <span class=${cx("punto", j[0], j[0] === "ok" && "vivo")}></span>${t(j[1], j[2])}${ultimo}</button>
+      <span class=${cx("punto", j[0], j[0] === "ok" && "vivo")}></span>${t(j[1], j[2])}${ultimo}</button>`}
   </div>`;
 }
 
