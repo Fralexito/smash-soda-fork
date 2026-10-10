@@ -18,6 +18,7 @@ Si quieres el detalle de una parte, al final (sección 7) está la lista de docu
   - 🟢 = ya se puede hacer.
   - 🟡 = se puede, pero falta investigar.
   - 🔴 = muy difícil; puede que no salga.
+  - 🧩 = depende del parche.
 
 ### Palabras que se repiten
 
@@ -53,7 +54,7 @@ Piensa en un restaurante:
 
 ### A. Abrir y cerrar los archivos del juego ✅
 
-**En simple:** todos los guardados de PES 2021 van en el **mismo tipo de sobre** y con **la misma llave**.
+**En simple:** todos los guardados de PES 2021 van en el **mismo tipo de sobre** y con **la misma llave**. Esto vale **para todos los parches**.
 
 - Herramienta: **libpesXcrypter**, una biblioteca libre de la comunidad de PES.
 - El sobre tiene 5 piezas: cabecera · etiqueta (384 B) · logo (17.315 B) · **datos** · serial (44 B).
@@ -99,7 +100,7 @@ Piensa en un restaurante:
 | Al armar un amistoso, abrir habilidades | ❌ no |
 | Al entrar a la Liga Máster | ❌ no lee `Player.bin` |
 
-**Las 3 reglas de oro:**
+**Las 3 reglas de oro** (son del juego: valen para todos los parches):
 1. **Stats** → van por `Player.bin` (Phoenix-DB).
 2. **Plantillas** → dependen de la opción **«Datos Actual. en vivo»** del juego:
    - **Activada:** el juego toma las plantillas de la **base** (`PlayerAssignment.bin`).
@@ -131,6 +132,7 @@ Lo que hay dentro del cuaderno:
 - **Dinero**: solo lo tiene tu club. **La IA no tiene dinero guardado**: ficha por reglas.
 - **El «blob»**: 18 trozos comprimidos con una **ficha por jugador** (sueldo, valor, contrato, competiciones) y resultados de la temporada.
 - **Competiciones**: listas de equipos con espacio de sobra (ya hay una liga de 30 equipos).
+- 🧩 Probado solo en ConmeGOL 26. En otro parche hay que repetir las pruebas en una carrera nueva (informe 12).
 - Detalle: informes **08** y **09**.
 
 ### F. Lo que el juego hace por su cuenta
@@ -148,7 +150,7 @@ Lo que hay dentro del cuaderno:
 - Probado en tu PC con `PROBAR2.bat`: conexión OK, firma OK, **295 de 295** pruebas automáticas ✅.
 - Phoenix Link ya tiene el **buzón de avisos** (`avisos.txt` → mensaje dentro del juego) ✅.
 
-### H2. Qué vale para todos los parches y qué no 🧩
+### H. Qué vale para todos los parches y qué no 🧩
 
 | Lo pone el juego (igual en todos los parches) | Cambia en cada parche |
 |---|---|
@@ -157,11 +159,11 @@ Lo que hay dentro del cuaderno:
 | La estructura de la Liga Máster | Los **IDs** de equipos y jugadores, y cuántos hay |
 | Editar → Cargar, la regla de «Datos Actual. en vivo», los editados mandan | Si usa **Sider**, cuántos `sider.ini` tiene y si un switcher o lanzador los pisa |
 | El autoguardado y el contrato que crea el juego | Cuántos jugadores trae **editados** en su option file |
-| | Si trae un **exe modificado** (por ejemplo, Football Life) |
+| — | Si trae un **exe modificado** (por ejemplo, Football Life) |
 
 Detalle y guía paso a paso: informe **12**.
 
-### H. Lo que NO funciona (para no repetirlo)
+### I. Lo que NO funciona (para no repetirlo)
 
 | Intento | Por qué no |
 |---|---|
@@ -196,8 +198,9 @@ Detalle y guía paso a paso: informe **12**.
 4. **Crear jugadores que no existen** (juveniles, jugadores reales que faltan): registros nuevos en `Player.bin` + su fila de plantilla + su cara.
 5. **Competiciones propias** (Liga Phoenix, copas de la web): descifrar los archivos `Competition*` comparando antes y después, como hicimos con la Liga Máster.
 6. **Estadísticas completas a la web** (goleadores, tarjetas, posesión).
-7. **Fabricar nuestros propios CPK** (paquetes del juego) y **actualizaciones por partes** (solo lo que cambió).
+7. **Fabricar nuestros propios CPK** (paquetes del juego) y **actualizaciones por partes** (solo lo que cambió). También abriría la puerta a parches que no usan Sider.
 8. **Cambiar más archivos de la base en vivo:** entrenadores (`Coach.bin`), clubes (`Team.bin`), estadios, botines.
+9. **Phoenix en todos los parches:** probar todo en Sudamerican, ConmeGOL 27, Football Life y otros (guía 12).
 
 ### 🔴 La frontera (lo que nadie ha hecho)
 
@@ -216,7 +219,7 @@ Detalle y guía paso a paso: informe **12**.
    - deja Phoenix-DB con datos **originales** salvo lo que estés probando;
    - guarda la huella de cada archivo que funciona.
 2. **Termina el «repartidor» de Phoenix Link** (el prompt ya está hecho): que coloque los archivos, haga respaldo y avise. Es la pieza que une todo.
-3. **Usa siempre Editar → Cargar** como el botón oficial de tu sistema. Es nativo, estable y funciona en cualquier PC con tu parche.
+3. **Usa siempre Editar → Cargar** como el botón oficial de tu sistema. Es nativo, estable y existe en todos los parches.
 4. **Fichajes en los dos sitios** (option file + `PlayerAssignment.bin`). Así se ven con la opción en vivo activada o desactivada.
 5. **Haz la prueba de stats en la Liga Máster** (reiniciar el juego con un `Player.bin` nuevo). Es la duda más importante que queda en la Liga Máster.
 6. **Una base por parche, y sin mezclar.** Cada parche tiene su propia base, su catálogo y su option file (en ConmeGOL hoy es la de `olmosjr23`). Si el parche se actualiza, o cambias de parche, **regenera** Phoenix-DB desde esa base **antes** de jugar (si no, servirías datos viejos o de otro parche).
@@ -238,7 +241,7 @@ Detalle y guía paso a paso: informe **12**.
 5. **Programar** lo mismo y comparar con lo del juego hasta que salga igual.
 6. **Probar en el juego** y anotar el resultado, salga bien o mal.
 
-**Un cambio solo se da por bueno cuando lo ves en el juego.**
+**Un cambio solo se da por bueno cuando lo ves en el juego.** Y en cada parche nuevo, se vuelve a probar.
 
 ---
 
@@ -250,6 +253,7 @@ Detalle y guía paso a paso: informe **12**.
 4. Si algo puede romperse, **mejor no se hace**.
 5. Los guardados y los datos abiertos **no se suben a GitHub**.
 6. Los cambios de la web y de Supabase se piden por prompt al chat WEB.
+7. Toda guía es **multiparche**: separa lo del juego de lo del parche y dice sus riesgos.
 
 ---
 
