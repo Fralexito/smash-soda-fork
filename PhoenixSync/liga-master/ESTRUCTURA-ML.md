@@ -478,3 +478,5 @@ del juego cuadran con la segunda tabla (jornada anterior).
   26 Resistencia. Parejas: {8, 12} = {Pase raso, Agresividad}; {13, 24} = {Balón parado, Aceleración}. 3, 15–18: porteros.
   19, 27, 28: crecen ~decenas al mes (¿escalas 1–8?). 29–30: siempre 0. Poner una barra en 9.999 → +1 a esa habilidad al avanzar
   (60/60 en la prueba de la ranura 8). Las barras también bajan (veteranos); al pasar de 0 se espera −1. 🔎
+- **(10 oct, 01:50) ✅ Desempate con Bernal:** 8 = Pase raso · 12 = Agresividad · 13 = Balón parado · 24 = Aceleración. Mapa de las 20
+  habilidades de campo COMPLETO. Pendiente: porteros (3, 15–18) y 19, 27, 28.

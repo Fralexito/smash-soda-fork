@@ -818,3 +818,9 @@ carnet del blob no cambia con la velocidad (cola idéntica entre ranuras 4 y 5).
 
 - Por qué 8/12 y 13/24 quedan en empate: Lamine subió por las dos barras de cada pareja (una puesta, otra natural), así que solo Bernal (que tenía 8 y 24, no 12 ni 13) las separa. Basta con 2 capturas de Bernal en la ranura 8.
 - Medias: Fermín 86→88, Cubarsí 87→88, Caicedo 58→59; las demás igual.
+
+### 2026-10-10 01:50 · ✅ MAPEO COMPLETO de las 20 habilidades de campo (Bernal ANTES recibido)
+- Captura ANTES de Marc Bernal (ranura 8, sin avanzar; media 78). Después (ranura 9): media 80.
+- Subieron en Bernal: Actitud ofensiva, Actitud defensiva, Conservación, **Pase raso**, Pase bombeado, Cabeceo, **Aceleración**, Salto, Equilibrio = **9** = 8 barras puestas (1, 2, 6, 8, 9, 10, 22, 24) + 1 natural (25 = Salto). ✅ **Agresividad (77) y Balón parado (72) NO subieron.**
+- **Desempate:** barra **8 = Pase raso**, barra **12 = Agresividad**, barra **24 = Aceleración**, barra **13 = Balón parado**.
+- Comprobación cruzada en los 7 jugadores: con el mapa final, **cada** subida en pantalla tiene su barra que dio la vuelta en el archivo, y **cada** barra que dio la vuelta tiene su subida en pantalla (63 de 63, contando las 3 naturales de Lamine y la de Bernal). ✅
