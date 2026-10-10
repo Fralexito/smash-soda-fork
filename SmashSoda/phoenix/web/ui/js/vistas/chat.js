@@ -16,6 +16,7 @@ export function PanelChat({ s }) {
   const vista = s.chatPestana === "registro" ? "registro" : (enSala && s.chatPestana === "sala" ? "sala" : "general");
   const [texto, setTexto] = useState("");
   const [indice, setIndice] = useState(0);
+  const [verCmd, setVerCmd] = useState(false);   // lista de comandos
   const [hasta, setHasta] = useState(0);        // hora (ms) hasta la que se espera para escribir otra vez
   const [, reloj] = useState(0);
   const lineasRef = useRef(null);
@@ -84,8 +85,22 @@ export function PanelChat({ s }) {
         ${enSala ? html`<button class=${vista === "sala" ? "on" : ""} onClick=${() => elegirPestanaChat("sala")}>${t("SALA", "ROOM")}${s.noLeidos > 0 && vista !== "sala" ? html`<span class="cuenta">${s.noLeidos > 99 ? "99+" : s.noLeidos}</span>` : null}</button>` : null}
         <button class=${vista === "registro" ? "on" : ""} onClick=${() => elegirPestanaChat("registro")}>${t("REGISTRO", "LOG")}</button>
       </div>
-      <button class="icono-btn" onClick=${() => cambiar({ chatAbierto: false })} aria-label=${t("Cerrar", "Close")}><${Icono} n="cerrar" t=${16}/></button>
+      <div style="display:flex;gap:4px;align-items:center">
+        <button class=${cx("icono-btn", "cmd-btn", verCmd && "on")} onClick=${() => setVerCmd(!verCmd)} title=${t("Comandos del chat", "Chat commands")} aria-label=${t("Comandos del chat", "Chat commands")}
+          style="font:700 15px/1 var(--f-mono)">!</button>
+        <button class="icono-btn" onClick=${() => cambiar({ chatAbierto: false })} aria-label=${t("Cerrar", "Close")}><${Icono} n="cerrar" t=${16}/></button>
+      </div>
     </div>
+    ${verCmd ? html`<div class="cmds">
+      <div class="mut" style="font-size:12px;padding:2px 2px 8px">${enSala ? t("Toca uno para escribirlo en el chat de la sala.", "Tap one to type it in the room chat.") : t("Se usan en el chat de la sala (abre tu sala primero).", "Used in the room chat (open your room first).")}</div>
+      ${COMANDOS.map((c) => html`<button key=${c.c} class="cmd-fila" onClick=${() => {
+        if (!enSala) return;
+        elegirPestanaChat("sala"); setTexto(c.c + " "); setVerCmd(false);
+        setTimeout(() => entradaRef.current && entradaRef.current.focus(), 50);
+      }}>
+        <span class="c">${c.c}</span><span class=${cx("chip", c.nivel === "host" ? "vip" : c.nivel === "mod" ? "mod" : "")} style="height:18px;padding:0 6px;font-size:10px">${c.nivel === "host" ? "HOST" : c.nivel === "mod" ? "MOD" : t("TODOS", "ALL")}</span>
+        <span class="mut d">${t(c.es, c.en)}</span></button>`)}
+    </div>` : null}
     ${vista === "general" ? html`<div class="sub-chat">${t("Es el mismo chat de la página web.", "Same chat as the website.")}</div>` : null}
     ${aviso ? html`<div class="aviso-chat">${aviso}</div>` : null}
     <div class="lineas" ref=${lineasRef}>

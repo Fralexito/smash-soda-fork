@@ -5,7 +5,7 @@
 import { html, useState, useEffect } from "../lib.js";
 import { t } from "../i18n.js";
 import { accion, confirmar, actualizarInfo, avisar } from "../tienda.js";
-import { Tarjeta, Titulo, Boton, Interruptor, Ajuste, AjusteSw, Stepper, Selector, Segmentos, Campo, Icono, Vacio, Chip, cx } from "../ui.js";
+import { Tarjeta, Titulo, Boton, Interruptor, Ajuste, AjusteSw, Stepper, Selector, Segmentos, Campo, Icono, IconoRed, COLOR_RED, Vacio, Chip, cx } from "../ui.js";
 import { TarjetaCalidad } from "./sala.js";
 
 export const PESTANAS_AJUSTES = [
@@ -14,10 +14,7 @@ export const PESTANAS_AJUSTES = [
   { id: "audio", es: "AUDIO", en: "AUDIO", d: ["Sonido del juego y micrófono, con medidor en vivo.", "Game sound and microphone."] },
   { id: "sonidos", es: "SONIDOS", en: "SOUNDS", d: ["Los sonidos del comando !sfx y cuánto esperar entre uno y otro.", "Sounds for !sfx and their cooldown."] },
   { id: "overlay", es: "OVERLAY", en: "OVERLAY", d: ["Chat, mandos e invitados encima del juego.", "Chat, pads and guests over the game."] },
-  { id: "permisos", es: "PERMISOS", en: "PERMISSIONS", d: ["Qué puede hacer cada rol desde el chat.", "What each role can do from chat."] },
-  { id: "web", es: "CUENTA WEB", en: "WEB ACCOUNT", d: ["Vincula esta PC con tu cuenta de la liga para aparecer en el radar y ver a tus amigos.", "Link this PC to your league account."] },
   { id: "interfaz", es: "INTERFAZ", en: "INTERFACE", d: ["Idioma, atajos de teclado y recarga de la interfaz.", "Language, shortcuts and reload."] },
-  { id: "diagnostico", es: "DIAGNÓSTICO", en: "DIAGNOSTICS", d: ["Revisa si la PC está lista para hostear y qué falta.", "Checks whether this PC is ready to host."] },
   { id: "avanzado", es: "AVANZADO", en: "ADVANCED", d: ["WebSocket, registros y modo desarrollador.", "WebSocket, logs and developer mode."] },
 ];
 
@@ -29,10 +26,7 @@ export function VistaAjustes({ s, pestana }) {
     case "audio": return html`<${Audio} m=${m}/>`;
     case "overlay": return html`<${Overlay} m=${m} info=${s.info}/>`;
     case "sonidos": return html`<${Sonidos} m=${m}/>`;
-    case "permisos": return html`<${Permisos} m=${m}/>`;
-    case "web": return html`<${CuentaWeb} m=${m}/>`;
     case "interfaz": return html`<${Interfaz} m=${m} info=${s.info}/>`;
-    case "diagnostico": return html`<${Diagnostico}/>`;
     case "avanzado": return html`<${Avanzado} m=${m}/>`;
     default: return html`<${General} m=${m}/>`;
   }
@@ -72,7 +66,13 @@ function General({ m }) {
         <${Ajuste} bloque titulo=${t("Mensaje de bienvenida", "Welcome message")} desc=${t("Los invitados lo ven al entrar. Escribe _PLAYER_ para insertar su nombre.", "Guests see it on join. Use _PLAYER_ for their name.")}>
           <${Campo} multilinea valor=${g.welcomeMessage} max=${500} al=${(v) => gen("welcomeMessage", v)}/></${Ajuste}>
         <${Ajuste} bloque titulo=${t("Enlace de Discord", "Discord link")} desc=${t("Lo responde el comando !discord.", "Answered by !discord.")}>
-          <${Campo} valor=${g.discord} max=${255} mono al=${(v) => gen("discord", v)}/></${Ajuste}>
+          <${Campo} valor=${g.discord} max=${255} mono al=${(v) => gen("discord", v)}/>
+          <div class="redes">
+            <button class="red-btn" disabled=${!(g.discord || "").startsWith("https://")} style=${`--red:${COLOR_RED("discord")}`}
+              title=${(g.discord || "").startsWith("https://") ? t("Abrir tu servidor de Discord", "Open your Discord server") : t("Pega arriba el enlace de tu servidor (https://…)", "Paste your server link above (https://…)")}
+              aria-label="Discord" onClick=${() => accion("ui.abrir", { url: g.discord })}>
+              <${IconoRed} red="discord" t=${26}/><span>Discord</span></button>
+          </div></${Ajuste}>
       </${Tarjeta}>
     </div>
     <div class="col" style="flex:1">
@@ -234,7 +234,7 @@ function Sonidos({ m }) {
 }
 
 // ---- Permisos por rol ---------------------------------------------------------------------------
-function Permisos({ m }) {
+export function Permisos({ m }) {
   const p = m.ajustes.permisos;
   const grupos = [["guest", t("INVITADOS", "GUESTS")], ["vip", "VIP"], ["moderator", t("MODERADORES", "MODERATORS")]];
   const claves = [
@@ -252,7 +252,7 @@ function Permisos({ m }) {
 }
 
 // ---- Cuenta web ----------------------------------------------------------------------------------
-function CuentaWeb({ m }) {
+export function CuentaWeb({ m }) {
   const w = m.web || {};
   const [codigo, setCodigo] = useState("");
   const vincular = async () => {
@@ -338,7 +338,7 @@ const diag = () => ({
   sistema: [t("Sistema", "System"), (d) => `${d.windows || "Windows"} · Phoenix Link ${d.app}`],
 });
 
-function Diagnostico() {
+export function Diagnostico() {
   const [r, setR] = useState(null);
   const correr = async () => { setR(null); const x = await accion("diag.ejecutar"); setR(x?.chequeos || []); };
   useEffect(() => { correr(); }, []);

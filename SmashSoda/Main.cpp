@@ -174,8 +174,26 @@ static void SanitizeInitialWindowRect() {
 }
 
 // Main code
+// Phoenix: pide a Windows que no frene este proceso cuando esta minimizado/oculto (modo eficiencia)
+// y que respete el temporizador de 1 ms. El host de Parsec codifica dentro de este proceso.
+static void phoenixSinFrenos() {
+    try {
+        SetPriorityClass(GetCurrentProcess(), ABOVE_NORMAL_PRIORITY_CLASS);
+        struct EstadoFreno { ULONG version; ULONG mascara; ULONG estado; };
+        typedef BOOL(WINAPI* FnSetProcInfo)(HANDLE, int, LPVOID, DWORD);
+        HMODULE k = GetModuleHandleW(L"kernel32.dll");
+        FnSetProcInfo f = k ? (FnSetProcInfo)GetProcAddress(k, "SetProcessInformation") : nullptr;
+        if (f) {
+            EstadoFreno e = { 1, 0x1 | 0x4, 0 }; // EXECUTION_SPEED | IGNORE_TIMER_RESOLUTION, en 0 = sin ahorro
+            f(GetCurrentProcess(), 4 /* ProcessPowerThrottling */, &e, sizeof(e));
+        }
+    }
+    catch (...) {}
+}
+
 int CALLBACK WinMain(_In_ HINSTANCE hInstance, _In_ HINSTANCE hPrevInstance, _In_ LPSTR lpCmdLine, _In_ int nShowCmd)
 {
+    phoenixSinFrenos();
 
     // Create application window
     ImGui_ImplWin32_EnableDpiAwareness();
@@ -558,7 +576,9 @@ int CALLBACK WinMain(_In_ HINSTANCE hInstance, _In_ HINSTANCE hPrevInstance, _In
         static UINT presentFlags = 0;
         if (g_pSwapChain->Present(1, presentFlags) == DXGI_STATUS_OCCLUDED) {
             presentFlags = DXGI_PRESENT_TEST;
-            Sleep(4);
+            // Ventana tapada o minimizada (p. ej. detras del juego): antes giraba ~250 veces/s
+            // armando la interfaz para nada. Ahora duerme ~30 ms, pero despierta al instante si llega un mensaje.
+            MsgWaitForMultipleObjects(0, NULL, FALSE, 30, QS_ALLINPUT);
         }
         else {
             presentFlags = 0;

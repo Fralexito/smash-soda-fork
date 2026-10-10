@@ -99,7 +99,13 @@ std::wstring OverlayService::buildOverlayPath() const {
     PathRemoveFileSpecW(exePath);
 
     wchar_t overlayPath[MAX_PATH];
-    swprintf_s(overlayPath, MAX_PATH, L"%s\\overlay\\SmashGlass.exe", exePath);
+    swprintf_s(overlayPath, MAX_PATH, L"%s\\overlay\\PhoenixGlass.exe", exePath);
+    // Compatibilidad: si solo existe el nombre antiguo, se usa ese.
+    if (GetFileAttributesW(overlayPath) == INVALID_FILE_ATTRIBUTES) {
+        wchar_t viejo[MAX_PATH];
+        swprintf_s(viejo, MAX_PATH, L"%s\\overlay\\SmashGlass.exe", exePath);
+        if (GetFileAttributesW(viejo) != INVALID_FILE_ATTRIBUTES) return std::wstring(viejo);
+    }
     return std::wstring(overlayPath);
 }
 
@@ -123,7 +129,7 @@ bool OverlayService::launchProcess() {
             NULL,
             &si,
             &pi)) {
-        g_hosting.logMessage("Overlay failed to start. Could not launch SmashGlass.exe.");
+        g_hosting.logMessage("Overlay failed to start. Could not launch PhoenixGlass.exe.");
         return false;
     }
 

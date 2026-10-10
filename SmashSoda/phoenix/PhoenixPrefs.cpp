@@ -57,6 +57,9 @@ namespace phoenix {
 			region = j.value("region", region).substr(0, 40);
 			mandosActivos = (std::max)(2, (std::min)(8, j.value("mandosActivos", mandosActivos)));
 			equipoLocal = (std::max)(1, (std::min)(mandosActivos - 1, j.value("equipoLocal", equipoLocal)));
+			anchoAuto = j.value("anchoAuto", anchoAuto);
+			anchoPorPersona = (std::max)(1, (std::min)(50, j.value("anchoPorPersonaV2", anchoPorPersona)));
+			subidaMbps = (std::max)(0, (std::min)(10000, j.value("subidaMbps", subidaMbps)));
 		}
 		catch (...) {
 			// Preferencias dañadas: se quedan los valores por defecto.
@@ -85,6 +88,9 @@ namespace phoenix {
 				{"region", region},
 				{"mandosActivos", mandosActivos},
 				{"equipoLocal", equipoLocal},
+				{"anchoAuto", anchoAuto},
+				{"anchoPorPersonaV2", anchoPorPersona},
+				{"subidaMbps", subidaMbps},
 			};
 			const std::string texto = j.dump(2);
 			MTY_WriteFile(r.c_str(), texto.c_str(), texto.size());

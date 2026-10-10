@@ -577,3 +577,62 @@ button.paso { cursor: pointer; }
 .ultima-detalle.nv-urgente .u-et { color: var(--bad); }
 .ultima-detalle .u-cuerpo { font-size: 14px; line-height: 1.5; user-select: text; word-break: break-word; }
 @media (prefers-reduced-motion: reduce) { .ultima, .ultima-detalle, .ultima .u-punto { animation: none !important; } }
+.caja .luz { width: 12px; height: 12px; border-radius: 50%; background: rgba(255, 255, 255, .15); flex: none; transition: background .1s, box-shadow .1s; }
+.caja .luz.on { background: var(--ok); box-shadow: 0 0 12px var(--ok); }
+
+/* ---------- Dinamismo (solo transform/opacity: casi no gasta GPU) ---------- */
+@media (hover: hover) {
+  .caja { transition: transform .18s var(--ease), border-color .18s, box-shadow .18s; }
+  .caja:hover { transform: translateY(-2px); border-color: var(--linea-fuerte); box-shadow: 0 8px 22px rgba(0, 0, 0, .28); }
+  .btn { transition: transform .12s var(--ease), box-shadow .18s, filter .18s; }
+  .btn:not(:disabled):hover { transform: translateY(-1px); filter: brightness(1.12); }
+  .btn.lleno:not(:disabled):hover { box-shadow: 0 0 22px var(--acc-suave); }
+}
+.chip.acc, .chip.mod { position: relative; overflow: hidden; }
+.chip.acc::after, .chip.mod::after { content: ""; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,.18) 50%, transparent 70%); transform: translateX(-120%); animation: barrido 4.5s ease-in-out infinite; }
+.tab.on { animation: pop .35s var(--ease); }
+
+/* Ventana oculta o minimizada: se congelan todas las animaciones (0 % de trabajo) */
+html.oculta *, html.oculta *::before, html.oculta *::after { animation-play-state: paused !important; }
+@media (prefers-reduced-motion: reduce) { .caja, .btn { transition: none; } .caja:hover, .btn:hover { transform: none; } .chip.acc::after, .chip.mod::after, .tab.on { animation: none !important; } }
+
+/* ---------- Comandos del chat y redes sociales ---------- */
+.chat .cmd-btn.on { background: var(--acc-suave); color: var(--acc); }
+.chat .cmds { max-height: 55%; overflow: auto; padding: 10px 12px; border-bottom: 1px solid var(--tenue); background: rgba(0, 0, 0, .22); animation: aparecer .15s var(--ease); }
+.chat .cmd-fila { display: grid; grid-template-columns: 82px auto 1fr; gap: 8px; align-items: center; width: 100%; text-align: left; padding: 7px 6px; border-radius: 8px; border: 0; background: transparent; color: var(--fg); cursor: pointer; }
+.chat .cmd-fila:hover { background: rgba(255, 255, 255, .06); }
+.chat .cmd-fila .c { font: 600 13px/1 var(--f-mono); color: var(--acc); }
+.chat .cmd-fila .d { font-size: 12px; line-height: 1.3; }
+.redes { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+.red-btn { display: inline-flex; align-items: center; gap: 10px; height: 46px; padding: 0 18px 0 14px; border-radius: 12px; border: 1px solid var(--red, var(--tenue)); background: color-mix(in srgb, var(--red, #888) 16%, transparent); color: #fff; font: 700 13px/1 var(--f-disp); letter-spacing: .08em; cursor: pointer; transition: transform .15s var(--ease), box-shadow .18s, background .18s; }
+.red-btn svg { color: var(--red); }
+.red-btn:not(:disabled):hover { transform: translateY(-2px); background: color-mix(in srgb, var(--red, #888) 30%, transparent); box-shadow: 0 6px 20px color-mix(in srgb, var(--red, #888) 35%, transparent); }
+.red-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+/* ---- Guía para novatos (portada) ------------------------------------------------ */
+.guia-inicio { flex: none; }
+.progreso-guia { display: flex; gap: 6px; }
+.progreso-guia i { flex: 1; height: 5px; border-radius: 3px; background: var(--tenue); transition: background .3s; }
+.progreso-guia i.on { background: linear-gradient(90deg, var(--acc), var(--acc2)); }
+.camino { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
+.peldano { position: relative; display: flex; flex-direction: column; gap: 10px; padding: 16px 16px 14px; border-radius: 14px; border: 1px solid var(--tenue); background: rgba(255, 255, 255, .025); }
+.peldano .cab { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 36px; }
+.peldano .num { font: 700 34px/1 var(--f-disp); color: var(--mut); opacity: .6; }
+.peldano .t { font: 600 16px/1.2 var(--f-body); }
+.peldano .d { color: var(--mut); font-size: 13px; line-height: 1.45; flex: 1; word-break: break-word; }
+.peldano.ok { border-color: rgba(61, 220, 151, .35); }
+.peldano.ok .num { color: var(--ok); opacity: 1; }
+.peldano.sig { border-color: var(--linea-fuerte); background: var(--acc-suave); }
+.peldano.sig .num { color: var(--acc); opacity: 1; }
+.peldano.sig::after { content: ""; position: absolute; inset: -1px; border-radius: 14px; border: 1.5px solid var(--acc); opacity: 0; pointer-events: none; animation: latido-guia 2.4s ease-in-out infinite; }
+@keyframes latido-guia { 0%, 100% { opacity: 0; } 50% { opacity: .75; } }
+.guia-extra { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-radius: 12px; border: 1px dashed var(--tenue); font-size: 13px; line-height: 1.4; }
+.glosario summary { cursor: pointer; font: 600 12px/1 var(--f-disp); letter-spacing: .12em; color: var(--acc); padding: 4px 0; list-style: none; }
+.glosario summary::-webkit-details-marker { display: none; }
+.glosario summary::before { content: "▸ "; }
+.glosario[open] summary::before { content: "▾ "; }
+.glosario dl { margin: 12px 0 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px 22px; }
+.glosario dt { font-weight: 600; font-size: 14px; }
+.glosario dd { margin: 2px 0 0; color: var(--mut); font-size: 13px; line-height: 1.45; }
+.entrenador { flex: none; display: flex; align-items: center; gap: 16px; padding: 14px 20px; border-radius: 14px; border: 1px solid var(--linea); background: var(--acc-suave); }
+@media (prefers-reduced-motion: reduce) { .peldano.sig::after { animation: none; opacity: .5; } }

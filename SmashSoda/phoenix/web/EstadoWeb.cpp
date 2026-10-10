@@ -59,6 +59,31 @@ namespace phoenix::web {
 		}
 
 		/// Ping de cada invitado presente (con mando o mirando).
+		/// Plan de energia de Windows: "ahorro" | "ok" | "?" (se consulta como mucho una vez por minuto)
+		std::string planEnergia() {
+			static std::string cache = "?";
+			static ULONGLONG hasta = 0;
+			const ULONGLONG ahora = GetTickCount64();
+			if (ahora < hasta) return cache;
+			hasta = ahora + 60000;
+			try {
+				HMODULE h = LoadLibraryW(L"powrprof.dll");
+				if (h) {
+					typedef DWORD(WINAPI* Fn)(HKEY, GUID**);
+					Fn f = (Fn)GetProcAddress(h, "PowerGetActiveScheme");
+					GUID* g = nullptr;
+					if (f && f(NULL, &g) == 0 && g) {
+						static const GUID ahorro = { 0xa1841308, 0x3541, 0x4fab, { 0xbc, 0x81, 0xf7, 0x15, 0x56, 0xf2, 0x0b, 0x4a } };
+						cache = memcmp(g, &ahorro, sizeof(GUID)) == 0 ? "ahorro" : "ok";
+						LocalFree(g);
+					}
+					FreeLibrary(h);
+				}
+			}
+			catch (...) {}
+			return cache;
+		}
+
 		std::map<uint32_t, std::pair<std::string, int>> pingsPresentes(ProveedorSala& sala) {
 			std::map<uint32_t, std::pair<std::string, int>> r;
 			for (const AsientoVista& a : sala.asientos(8)) {
@@ -223,7 +248,9 @@ namespace phoenix::web {
 			{"visibilidad", pr.visibilidad}, {"espectadores", pr.espectadores}, {"limiteEspectadores", pr.limiteEspectadores},
 			{"entradaParsec", pr.entradaParsec}, {"juego", pr.juego}, {"parche", pr.parche}, {"region", pr.region},
 		};
-		s["calidad"] = { {"fps", Config::cfg.video.fps}, {"mbps", Config::cfg.video.bandwidth} };
+		s["calidad"] = { {"fps", Config::cfg.video.fps}, {"mbps", Config::cfg.video.bandwidth},
+			{"auto", PhoenixPrefs::get().anchoAuto}, {"porPersona", PhoenixPrefs::get().anchoPorPersona},
+			{"subida", PhoenixPrefs::get().subidaMbps}, {"perdida", g_perdidaPorMil.load()}, {"energia", planEnergia()} };
 		s["sesion"] = { {"pico", in.picoInvitados}, {"entradas", in.entradasSesion}, {"partidos", in.partidosSesion} };
 		e["sala"] = s;
 

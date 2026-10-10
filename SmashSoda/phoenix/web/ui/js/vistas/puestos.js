@@ -10,7 +10,7 @@
 import { html, useState } from "../lib.js";
 import { t } from "../i18n.js";
 import { accion, confirmar } from "../tienda.js";
-import { Boton, Icono, Vacio, Avatar, Chip, colorPing, cx, dos } from "../ui.js";
+import { Boton, Icono, Vacio, Avatar, Chip, Stepper, colorPing, cx, dos } from "../ui.js";
 import { Pendientes, ElegirJugador } from "./mandos.js";
 
 function Agarre() {
@@ -56,13 +56,15 @@ function Fila({ p, m, color, arr, setArr, alAsignar }) {
       ? html`<${Avatar} nombre=${p.jugador} id=${p.parsecId} url=${perfil?.avatar_url} t=${44}/>
         <div style="flex:1;min-width:0">
           <div style="font:600 17px/1.2 var(--f-body);color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.jugador}
-            ${esHost ? html` <${Chip} tipo="acc">${t("TÚ", "YOU")}</${Chip}>` : null}</div>
+            ${esHost ? html` <${Chip} tipo="acc">${t("TÚ", "YOU")}</${Chip}>` : null}
+            <span class=${cx("chip", p.tipo === "ds4" ? "acc2" : "mod")} style="height:20px;margin-left:6px;font-size:11px" title=${p.tipo === "ds4" ? t("Este puesto es un mando de PlayStation (DualShock 4)", "This seat is a PlayStation pad (DualShock 4)") : t("Este puesto es un mando de Xbox", "This seat is an Xbox pad")}>${p.tipo === "ds4" ? "PLAYSTATION" : "XBOX"}</span></div>
           <div class="mono mut" style="font-size:12px">
-            ${p.tipo === "ds4" ? "DS4" : "XInput"} · ${p.conectado ? t("conectado", "connected") : t("desconectado", "unplugged")}${p.bloqueado ? t(" · bloqueado", " · locked") : ""}
+            ${p.conectado ? t("conectado", "connected") : t("desconectado", "unplugged")}${p.bloqueado ? t(" · bloqueado", " · locked") : ""}
             ${p.ping >= 0 ? html` · <span style=${`color:${colorPing(p.ping)}`}>${p.ping} ms</span>` : null}</div>
         </div>`
       : html`<div style="flex:1;min-width:0">
-          <div style="font:600 17px/1.2 var(--f-body);color:var(--mut)">${t("Puesto libre", "Free seat")}</div>
+          <div style="font:600 17px/1.2 var(--f-body);color:var(--mut)">${t("Puesto libre", "Free seat")}
+            ${p.tipo ? html`<span class=${cx("chip", p.tipo === "ds4" ? "acc2" : "mod")} style="height:18px;margin-left:6px;font-size:10px;opacity:.8">${p.tipo === "ds4" ? "PLAYSTATION" : "XBOX"}</span>` : null}</div>
           <div style="font:400 13px/1.3 var(--f-body);color:var(--mut)">${arrastrando && recibe ? t("Suelta aquí", "Drop here") : t("Arrastra a alguien aquí", "Drag someone here")}</div>
         </div>`}
     ${p.ocupado ? html`<button class="icono-btn" style="height:38px;width:38px;flex:none" data-tip=${p.bloqueado ? t("Desbloquear este mando", "Unlock this pad") : t("Bloquear este mando", "Lock this pad")}
@@ -112,7 +114,9 @@ function Espectador({ g, m, arr, setArr }) {
     ${soloWeb ? html`<span style="width:12px;flex:none"></span>` : html`<span style="color:var(--mut)"><${Agarre}/></span>`}
     <${Avatar} nombre=${g.nombre} id=${g.parsecId} url=${perfil?.avatar_url} t=${38}/>
     <div style="flex:1;min-width:0">
-      <div style="font:600 15px/1.2 var(--f-body);color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.nombre}</div>
+      <div style="font:600 15px/1.2 var(--f-body);color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.nombre}
+        <span class="chip" style="height:18px;margin-left:6px;font-size:10px">${t("ESPECTADOR", "SPECTATOR")}</span>
+        <span class=${cx("chip", soloWeb ? "acc2" : "acc")} style="height:18px;margin-left:4px;font-size:10px">${soloWeb ? "WEB" : "PARSEC"}</span></div>
       <div class="mono mut" style="font-size:12px">${soloWeb
         ? t("solo espectador en la web", "web spectator only")
         : g.ping >= 0 ? html`<span style=${`color:${colorPing(g.ping)}`}>${g.ping} ms</span>` : "—"}</div>
@@ -170,7 +174,8 @@ export function PuestosNuevo({ m }) {
 
     <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
       <div class="ayuda" style="font-size:14px">${t("Arrastra a cada persona al puesto que quieras. Quien esté en «Mirando» solo ve la partida.", "Drag each person to the seat you want. Anyone in «Watching» only watches.")}</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <${TipoMando} m=${m} esclavo=${esclavo}/>
         <${Boton} tipo="mini suave" deshabilitado=${esclavo || m.mandos.reiniciando} al=${() => herramienta("ordenar")}>${t("ORDENAR", "SORT")}</${Boton}>
         <${Boton} tipo="mini suave" deshabilitado=${esclavo || m.mandos.reiniciando}
           al=${() => herramienta("reiniciar", [t("¿Reiniciar los mandos?", "Reset pads?"), t("Se desconectan y vuelven a conectar todos los mandos virtuales. Úsalo si el juego dejó de detectarlos.", "All virtual pads are re-plugged. Use it if the game stopped detecting them.")])}>
@@ -205,7 +210,7 @@ export function PuestosNuevo({ m }) {
 
       <div style="display:flex;flex-direction:column;gap:14px;min-width:0">
         <div style="display:flex;align-items:center;gap:12px">
-          <span class="disp" style="font-weight:700;font-size:15px;letter-spacing:.2em">${t("MIRANDO", "WATCHING")}</span>
+          <span class="disp" style="font-weight:700;font-size:15px;letter-spacing:.2em">${t("MIRANDO", "WATCHING")} <span class="mut" style="letter-spacing:.1em;font-size:12px">· ${t("ESPECTADORES", "SPECTATORS")}</span></span>
           <span style="flex:1;height:1px;background:linear-gradient(90deg,rgba(255,255,255,.3),transparent)"></span>
           <span class="mono mut" style="font-size:12px">${mirando.length} ${mirando.length === 1 ? t("PERSONA", "PERSON") : t("PERSONAS", "PEOPLE")}</span>
         </div>
@@ -223,5 +228,18 @@ export function PuestosNuevo({ m }) {
       </div>
     </div>
     ${eligiendo != null ? html`<${ElegirJugador} m=${m} indice=${eligiendo} alCerrar=${() => setEligiendo(null)}/>` : null}
+  </div>`;
+}
+
+/** Cuántos mandos virtuales de cada tipo emula tu PC (a mano). Los primeros puestos son Xbox y los últimos PlayStation. */
+function TipoMando({ m, esclavo }) {
+  const xbox = m.mandos.xbox ?? 0, ds4 = m.mandos.ds4 ?? 0;
+  const cantidad = (x, d) => accion("mandos.cantidad", { xbox: x, ds4: d });
+  return html`<div style=${`display:flex;align-items:center;gap:10px;margin-right:8px;${esclavo ? "opacity:.4;pointer-events:none" : ""}`}
+    title=${t("Cuántos mandos de cada tipo emula tu PC (máximo 8 en total). Cámbialo antes de abrir la sala.", "How many pads of each type your PC emulates (max 8 in total). Change it before opening the room.")}>
+    <span class="chip mod" style="height:22px">XBOX</span>
+    <${Stepper} valor=${xbox} min=${0} max=${8 - ds4} al=${(v) => cantidad(v, ds4)}/>
+    <span class="chip acc2" style="height:22px">PLAYSTATION</span>
+    <${Stepper} valor=${ds4} min=${0} max=${8 - xbox} al=${(v) => cantidad(xbox, v)}/>
   </div>`;
 }

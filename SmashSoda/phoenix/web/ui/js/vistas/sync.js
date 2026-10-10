@@ -7,10 +7,12 @@
 import { html } from "../lib.js";
 import { t } from "../i18n.js";
 import { accion } from "../tienda.js";
+import { CuentaWeb } from "./ajustes.js";
 import { Tarjeta, Titulo, AjusteSw, Segmentos, Vacio, Chip, Icono, Boton, cx } from "../ui.js";
 
 export const PESTANAS_SYNC = [
   { id: "puente", es: "PUENTE", en: "BRIDGE", d: ["Los avisos de la web salen dentro del juego mientras juegas.", "Web notices show up inside the game while you play."] },
+  { id: "web", es: "CUENTA WEB", en: "WEB ACCOUNT", d: ["Vincula esta PC con tu cuenta de la liga para aparecer en el radar y ver a tus amigos.", "Link this PC to your league account to show on the radar and see your friends."] },
   { id: "fichajes", es: "FICHAJES", en: "TRANSFERS", d: ["Los datos y fichajes que Phoenix Sync dejó en tu juego.", "The data and transfers Phoenix Sync placed in your game."] },
 ];
 
@@ -121,6 +123,7 @@ function Entrega({ m }) {
 export function VistaSync({ s, pestana }) {
   const m = s.motor;
   if (!m) return html`<${Vacio} titulo=${t("Conectando…", "Connecting…")} texto=""/>`;
+  if (pestana === "web") return html`<${CuentaWeb} m=${m}/>`;
   if (pestana === "fichajes") return html`<${Entrega} m=${m}/>`;
   return html`<${Puente} m=${m}/>`;
 }

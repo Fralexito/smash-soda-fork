@@ -87,3 +87,35 @@ Leído hoy: `COORDINACION.md`, `PhoenixMercado/REGISTRO.md` y `PRUEBAS.md` (rama
 - 10-oct 02:05 (Lima) INSTALADOR: PhoenixLink-Setup-1.0.0.exe (NSIS, script PhoenixLink-instalador.nsi en C:\dev). Instala en cualquier carpeta sin admin, accesos directos, desinstalador, revisa WebView2. SIN PROBAR en Windows todavia. Noticias: contrato 1.10.0 §28 coincide con pasoNoticias (PENDIENTE-DEPLOY v13 en la web).
 
 - 10-oct 03:30 (Lima) Barra ultima hora: ARREGLO en PhoenixLink.cpp (el contrato §28 no trae "ok"; se ignoraba la respuesta). Ademas muestra ultimos mensajes del chat general como "movimientos". Tema Sudario renombrado a LIGA B (solo texto). Portada de Sala: titulo = nombre de la sala (no el juego), juego/parche en linea chica, PING DE LA SALA por invitado (verde <50, naranja 50-120, rojo >120; colorPing global). Parches: lista (PARCHES en sala.js) + campo extra. REQUIERE RECOMPILAR (C++ y UI). Overlay: falta overlay\SmashGlass.exe (descarga aparte).
+
+## 10 oct 2026 · 04:30 · Rendimiento, ancho automático, PhoenixGlass, puente overlay (REAPLICADO)
+- Los cambios sin commit de las 03:30–04:05 se perdieron al volver la carpeta al commit 60fe44a; se reaplicaron todos.
+- Puente overlay: `PhoenixLink::mensajesOverlay()` (ticker + chat general) enviado desde `Hosting::pollLatency`.
+- `OverlayService.cpp`: busca `overlay\PhoenixGlass.exe`, si no, `SmashGlass.exe`.
+- Ancho automático: `PhoenixPrefs` anchoAuto/anchoPorPersona/subidaMbps; `Hosting::pollLatency` ajusta cada 2 s (sube ya, baja tras 3 sondeos; -20 % si un invitado pierde >5 % de paquetes; tope 80 % de la subida; máx 200). Acción `sala.anchoAuto`. Estado: auto, porPersona, subida, perdida, energia (aviso «Ahorro de energía»). UI en tarjeta CALIDAD.
+- Rendimiento: `Main.cpp` duerme ~30 ms con la ventana tapada y pide a Windows no frenar el proceso (`phoenixSinFrenos`); hilo de video ABOVE_NORMAL.
+- UI: bloque «Dinamismo» en app.css y animaciones congeladas con la ventana oculta.
+- Dato del SDK: `encoderMaxBitrate` se REPARTE entre invitados.
+
+## 10 Oct 2026 - Revisión contra el Smash Soda original
+- Comparado con el commit base del autor (52ee7d8): el código base casi no cambió; lo delicado eran mis partes nuevas.
+- Ancho de banda automático: por defecto pasa de 5 a 10 Mbps por persona (el original usaba 20 Mbps en total). Se guarda con la clave nueva anchoPorPersonaV2 para no arrastrar el 5 viejo.
+- Sin invitados conectados el automático ya no cambia la calidad.
+
+## 10 Oct 2026 - Rediseño para novatos (solo interfaz web, sin tocar C++)
+- Portada: guia nueva «Tu sala en 4 pasos» (vistas/guia.js) con estado real; se oculta sola al abrir la sala la primera vez; boton «Como empezar» la vuelve a mostrar. Con la sala abierta sale «Siguiente paso».
+- Pestañas movidas: Diagnostico -> Sala > Conexion (junto al ping); Cuenta web -> Sync; Permisos -> Gente. Ajustes queda con General, Video, Audio, Sonidos, Overlay, Interfaz, Avanzado.
+- Menu con descripcion al pasar el mouse; Alt+6 llega a Ajustes; paleta Ctrl+K actualizada.
+- Probado con el simulador (sin errores de consola). Falta probar dentro de la app real.
+
+## 10 Oct 2026 - Arreglos del overlay (PhoenixGlass + Link)
+- Link: al cerrar la sala se apagaba el servidor del overlay y NO se levantaba en la siguiente sala (el overlay solo servia en la primera). Ahora startHosting lo levanta de nuevo.
+- Link (WebSocket.cpp/.h): lista de clientes protegida con candado (antes carrera de hilos), envio sin excepciones, mensajes mal formados ignorados, chat vacio no se envia, createServer ya no puede cerrar el programa si se llama dos veces. Los avisos de mandos/ping solo se arman si hay overlay conectado. Ticker se reenvia cada 10 s.
+- Overlay: reintenta conectar cada 1,5 s (antes una sola vez), un plugin/tema roto no impide abrir, una sola copia, Discord ya no lo cierra, monitores (vista previa y numeracion), atajos, plugins con rutas seguras. Repo Fralexito/phoenix-overlay commit 263f60b.
+- Pendiente de FRALEX: recompilar Link (COMPILAR_PHOENIX.bat) y overlay (COMPILAR_OVERLAY.bat) y probar juntos.
+
+## 2026-10-10 · Overlay, segunda pasada
+- Mandos del overlay: ahora se ve el tiempo de turno (hotseat); antes el overlay lo descartaba.
+- Descarga de temas con limite de 30 s (antes podia quedarse colgada).
+- Pendiente de FRALEX: recompilar Link y luego COMPILAR_OVERLAY.bat.
+2026-10-10 06:50 (Lima) | Cuenta ? (chat LINK) | LINK | Base antes del rediseño de la UI: se compila (cmake --build en _phoenix-link, sin el checkout --force de COMPILAR_PHOENIX.bat) y se guarda en git todo lo «A MEDIAS» de esta bitácora (Sync, chat general, última hora, pantalla de carga, ancho automático, overlay, guía para novatos). Copia idéntica en _mis_cambios | SmashSoda/** (26 archivos) | HECHO: compila sin errores con MSVC | Rediseño de la UI (docs/REDISEÑO-UI.md)

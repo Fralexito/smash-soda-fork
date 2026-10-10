@@ -11,7 +11,7 @@ export function crearSimulador(enviar) {
     tema: "galaxy", idioma: "es", abierta: true, abiertaEn: inicio - 6128,
     opciones: { nombre: "Phoenix · Galaxy League", plazas: 4, limitador: false, limite: 30, biblioteca: "Default", juegos: ["PES 2021", "Football Life 2026"], pendiente: false, turnos: false, quiosco: false, overlay: true },
     phoenix: { visibilidad: "amigos", espectadores: true, limiteEspectadores: 4, entradaParsec: true, juego: "eFootball PES 2021", parche: "Conmegol", region: "Lima" },
-    calidad: { fps: 60, mbps: 15 },
+    calidad: { fps: 60, mbps: 15, auto: true, porPersona: 10, subida: 0, perdida: 0, energia: "ok" },
     formacion: { local: 2, visitante: 2 },
     botonesBloq: { mascara: 0x10 | 0x400, lt: false, rt: false, lx: false, ly: false, rx: false, ry: false },
     perfilesTeclado: [
@@ -175,7 +175,8 @@ export function crearSimulador(enviar) {
     "sala.opciones": (d) => { if (d.quiosco && s.opciones.biblioteca === "Default") error("QUIOSCO_SIN_JUEGO", "El modo quiosco necesita un juego de la biblioteca."); Object.assign(s.opciones, d); if (s.abierta && ("nombre" in d || "plazas" in d)) s.opciones.pendiente = true; return { pendiente: s.opciones.pendiente }; },
     "sala.aplicar": () => { s.opciones.pendiente = false; },
     "sala.phoenix": (d) => { Object.assign(s.phoenix, d); },
-    "sala.calidad": (d) => { s.calidad = { fps: d.fps, mbps: d.mbps }; },
+    "sala.calidad": (d) => { s.calidad = { ...s.calidad, fps: d.fps, mbps: d.mbps }; },
+    "sala.anchoAuto": (d) => { if (typeof d.auto === "boolean") s.calidad.auto = d.auto; if (d.porPersona) s.calidad.porPersona = d.porPersona; if (typeof d.subida === "number") s.calidad.subida = d.subida; if (s.calidad.auto) s.calidad.mbps = s.calidad.porPersona * Math.max(1, s.invitados?.length || 1); },
     "web.vincular": (d) => { s.web = { estado: "conectado", usuario: "Fralex", mensaje: "Vinculado con el código " + d.codigo, publicada: s.abierta }; },
     "web.reintentar": () => ({}), "web.desvincular": () => { s.web = { estado: "sin_vincular", usuario: "", mensaje: "Escribe el código de 6 dígitos de la web.", publicada: false }; },
     "web.soltarRival": () => ({ mensaje: "ok" }),

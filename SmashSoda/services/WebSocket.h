@@ -12,6 +12,8 @@
 #include <nlohmann/json.hpp>
 #include <set>
 #include <mutex>
+#include <atomic>
+#include <vector>
 #include <thread>
 #include <functional> // For std::bind
 #include <memory> // For std::shared_ptr
@@ -27,6 +29,7 @@ public:
     void stopServer();
     void sendMessageToAll(const std::string& message);
     bool isRunning();
+    bool hasClients();
 
     static WebSocket instance;
 
@@ -39,7 +42,8 @@ private:
     std::thread serverThread_;
     std::set<websocketpp::connection_hdl, std::owner_less<websocketpp::connection_hdl>> clients_;
     std::mutex clientsMutex_;
-    bool isRunning_ = false;
+    std::atomic<bool> isRunning_{ false };
+    std::atomic<bool> starting_{ false };
     DWORD overlayPID = 0;
     bool _asioInited = false;
 };

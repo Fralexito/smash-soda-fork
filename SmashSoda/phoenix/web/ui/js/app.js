@@ -28,6 +28,16 @@ const SECCIONES = [
   { id: "ajustes", es: "AJUSTES", en: "SETTINGS", vista: VistaAjustes, pestanas: PESTANAS_AJUSTES },
 ];
 
+// Frase corta de «para qué sirve» cada sección (aparece al pasar el mouse por el menú)
+const PARA_QUE = {
+  sala: ["Abrir tu sala, compartir el enlace y ver cómo va la conexión.", "Open your room, share the link and watch the connection."],
+  partido: ["Armar los equipos y llevar el marcador del partido.", "Set up teams and keep the score."],
+  mandos: ["Repartir los mandos: quién juega y quién mira.", "Hand out the pads: who plays, who watches."],
+  gente: ["Ver a los invitados, moderar y revisar permisos.", "See guests, moderate and set permissions."],
+  sync: ["Conectar tu cuenta de la liga y el juego con la web.", "Connect your league account and the game with the website."],
+  ajustes: ["Video, audio, overlay, idioma y tema.", "Video, audio, overlay, language and theme."],
+};
+
 // ---- Barra superior --------------------------------------------------------------
 function PildoraSala({ m }) {
   const sala = m && m.sala;
@@ -64,14 +74,14 @@ function Barra({ s }) {
     <div class="ultima-hueco"><${UltimaHora} s=${s}/></div>
     <div class="lado">
       <${PildoraSala} m=${m}/>
-      <button class="pill web" onClick=${() => irA("ajustes", "web")} title=${m?.web?.mensaje || ""}>
+      <button class="pill web" onClick=${() => irA("sync", "web")} title=${m?.web?.mensaje || ""}>
         <span class=${cx("punto", w[0])}></span>${t(w[1], w[2])}</button>
       <button class=${cx("pill", s.chatAbierto && "acc")} onClick=${() => alternarChat()} title="Chat (Ctrl+Espacio)">
         <${Icono} n="chat" t=${15}/>CHAT${totalNoLeidos(s) > 0 ? html`<span class="chip bad" style="height:20px">${totalNoLeidos(s) > 99 ? "99+" : totalNoLeidos(s)}</span>` : null}
       </button>
       <button class="pill atajo" onClick=${() => cambiar({ paleta: true })} title=${t("Buscar acciones", "Search actions")}>
         <${Icono} n="buscar" t=${15}/><kbd>Ctrl K</kbd></button>
-      <button class="pill acc" onClick=${cambiarTema} title=${t("Cambiar tema", "Switch theme")}>${tema.toUpperCase()}</button>
+      <button class="pill acc" onClick=${cambiarTema} title=${t("Cambiar tema", "Switch theme")}>${tema === "sudario" ? "LIGA B" : "GALAXY"}</button>
     </div>
   </header>`;
 }
@@ -94,7 +104,7 @@ function Menu({ s }) {
   const chapas = { mandos: pendientesMandos, partido: enJuego ? "●" : 0 };
   return html`<nav class="menu" aria-label=${t("Secciones", "Sections")}>
     ${SECCIONES.map((x) => html`
-      <button class=${cx("nv", s.seccion === x.id && "on")} onClick=${() => irA(x.id)} aria-current=${s.seccion === x.id ? "page" : null}>
+      <button class=${cx("nv", s.seccion === x.id && "on")} title=${t(PARA_QUE[x.id][0], PARA_QUE[x.id][1])} onClick=${() => irA(x.id)} aria-current=${s.seccion === x.id ? "page" : null}>
         <${Icono} n=${x.id} t=${26}/><span>${t(x.es, x.en)}</span>
         ${chapas[x.id] ? html`<span class="chapa">${chapas[x.id]}</span>` : null}
       </button>`)}
@@ -170,7 +180,7 @@ function App() {
         if (st.dialogo) cerrarDialogo(false);
         else if (st.paleta) cambiar({ paleta: false });
         else if (st.chatAbierto) alternarChat(false);
-      } else if (e.altKey && /^[1-5]$/.test(e.key)) {
+      } else if (e.altKey && /^[1-6]$/.test(e.key)) {
         e.preventDefault();
         irA(SECCIONES[Number(e.key) - 1].id);
       }
@@ -208,3 +218,10 @@ puente.iniciar().catch((e) => {
   console.error(e);
   avisar(t("No se pudo conectar con el motor.", "Could not reach the engine."), "bad", 0);
 });
+
+// Con la ventana oculta se congelan las animaciones (ver .oculta en app.css)
+try {
+  const marcar = () => document.documentElement.classList.toggle("oculta", document.hidden);
+  document.addEventListener("visibilitychange", marcar);
+  marcar();
+} catch (e) { /* nada */ }

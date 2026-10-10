@@ -5,12 +5,14 @@
 import { html, useState, useEffect } from "../lib.js";
 import { t, fecha } from "../i18n.js";
 import { accion, confirmar, irA } from "../tienda.js";
+import { Permisos } from "./ajustes.js";
 import { Tarjeta, Titulo, Boton, AjusteSw, Campo, Avatar, Chip, Icono, Vacio, colorPing, cx, dos } from "../ui.js";
 
 export const PESTANAS_GENTE = [
   { id: "sala", es: "EN SALA", en: "IN ROOM", d: ["Elige a alguien de la lista para ver su ficha, su carta de la liga y sus permisos.", "Pick someone to see their card and permissions."] },
   { id: "moderacion", es: "MODERACIÓN", en: "MODERATION", d: ["Baneados, moderadores, VIP y quién pasó por tu sala.", "Bans, mods, VIPs and visit history."] },
   { id: "amigos", es: "AMIGOS", en: "FRIENDS", d: ["Tus amigos de la web de la liga. Invítalos a tu sala con un clic.", "Your league friends. Invite them in one click."] },
+  { id: "permisos", es: "PERMISOS", en: "PERMISSIONS", d: ["Qué puede hacer cada rol (invitado, VIP, moderador) desde el chat.", "What each role (guest, VIP, moderator) can do from chat."] },
 ];
 
 export function metaGente(s) {
@@ -23,6 +25,7 @@ export function VistaGente({ s, pestana }) {
   if (!m) return html`<${Vacio} titulo=${t("Conectando…", "Connecting…")} texto=""/>`;
   if (pestana === "moderacion") return html`<${Moderacion}/>`;
   if (pestana === "amigos") return html`<${Amigos} m=${m}/>`;
+  if (pestana === "permisos") return html`<${Permisos} m=${m}/>`;
   return html`<${EnSala} m=${m}/>`;
 }
 
@@ -215,7 +218,7 @@ function Amigos({ m }) {
   const web = m.web || {};
   if (web.estado === "sin_vincular") {
     return html`<${Vacio} titulo=${t("Vincula la app con la web", "Link the app to the website")} texto=${t("Con tu cuenta de la liga verás a tus amigos conectados y podrás invitarlos a tu sala con un clic.", "See your friends online and invite them in one click.")}>
-      <${Boton} tipo="lleno" al=${() => irA("ajustes", "web")}><${Icono} n="web" t=${16}/>${t("VINCULAR", "LINK")}</${Boton}></${Vacio}>`;
+      <${Boton} tipo="lleno" al=${() => irA("sync", "web")}><${Icono} n="web" t=${16}/>${t("VINCULAR", "LINK")}</${Boton}></${Vacio}>`;
   }
   const a = m.amigos || { cargados: false, lista: [] };
   if (!a.cargados) return html`<${Vacio} titulo=${t("Cargando amigos…", "Loading friends…")} texto=${t("Se actualizan solos cada pocos segundos.", "They refresh automatically.")}/>`;

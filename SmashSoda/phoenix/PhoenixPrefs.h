@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include <atomic>
 #include <string>
 
 // =============================================================================
@@ -32,10 +33,16 @@ namespace phoenix {
 		std::string modoPes = "off";  ///< prueba «Solo PES 2021»: off | publicar (la sala solo se publica con PES abierto) | estricto (ademas no deja abrir la sala sin PES)
 		std::string carpetaJuego;  ///< ultima carpeta de PES2021.exe detectada (UTF-8), para el repartidor de datos
 		int equipoLocal = 1;      ///< cuántos mandos son del equipo local
+		bool anchoAuto = true;    ///< ancho de banda automático: sube y baja solo según los invitados conectados
+		int anchoPorPersona = 10;  ///< Mbps por persona cuando el ancho automático está activo (1–50)
+		int subidaMbps = 0;       ///< subida de internet del anfitrión en Mbps (0 = no la sabe); el automático no pasa del 80 %
 
 		static PhoenixPrefs& get();
 		void cargar();
 		void guardar() const;
 	};
+
+	/// Peor pérdida de paquetes entre los invitados, en décimas de por ciento (50 = 5 %). La escribe Hosting cada 2 s.
+	inline std::atomic<int> g_perdidaPorMil{ 0 };
 
 }

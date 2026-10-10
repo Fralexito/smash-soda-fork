@@ -105,7 +105,7 @@ public:
 	
 	class Chat {
 	public:
-		string discord = "";
+		string discord = "https://discord.gg/jsxZ3mtfwe"; // servidor de Phoenix (se puede cambiar en Ajustes)
 		string chatbot = "ChatBot";
 		string chatbotName = "";
 		unsigned int muteTime = 5;

@@ -599,6 +599,65 @@ namespace phoenix {
 		if (abierto && !_chatAbierto) _proximoChatMs = 0;   // al abrir el panel: poner al dia ya
 		_chatAbierto = abierto;
 	}
+	bool PhoenixLink::overlayReciente() const {
+		const long long v = _overlayVistoMs.load();
+		return v != 0 && ahoraMs() - v < 10000;
+	}
+
+	// Lo que se manda al overlay (PhoenixGlass) por el WebSocket local: noticias de ultima hora y mensajes nuevos del chat general.
+	std::vector<std::string> PhoenixLink::mensajesOverlay() {
+		std::vector<std::string> salida;
+		try {
+			const long long ahora = ahoraMs();
+			_overlayVistoMs = ahora;
+			std::lock_guard<std::mutex> l(_mutex);
+			if (ahora < _overlayProximoMs) return salida;
+			_overlayProximoMs = ahora + 3000;
+
+			// Ticker: solo si cambio o cada 10 s (por si el overlay se abrio o reconecto despues)
+			if (_noticiasCargadas) {
+				std::string firma;
+				json items = json::array();
+				for (const NoticiaWeb& n : _noticias) {
+					if (items.size() >= 5) break;
+					items.push_back({ {"id", n.id}, {"texto", n.texto}, {"nivel", n.nivel} });
+					firma += std::to_string(n.id) + "|" + n.texto + "|" + n.nivel + ";";
+				}
+				if (firma != _overlayFirmaTicker || ahora - _overlayTickerMs > 10000) {
+					_overlayFirmaTicker = firma;
+					_overlayTickerMs = ahora;
+					json j; j["event"] = "phoenix:ticker"; j["data"]["items"] = items;
+					salida.push_back(j.dump(-1, ' ', false, json::error_handler_t::replace));
+				}
+			}
+
+			// Chat general: solo mensajes nuevos de otros (maximo 3); la primera vez no vuelca el historial
+			long long maximo = _overlayUltimoChat;
+			for (const MensajeGlobal& m : _chatMsgs) if (m.id > maximo) maximo = m.id;
+			if (!_overlayChatIniciado) {
+				_overlayChatIniciado = _chatCargado;
+				_overlayUltimoChat = maximo;
+			}
+			else if (maximo > _overlayUltimoChat) {
+				std::vector<const MensajeGlobal*> nuevos;
+				for (const MensajeGlobal& m : _chatMsgs) {
+					if (m.id <= _overlayUltimoChat) continue;
+					if (_chatMios.count(m.id) > 0 || (!_usuario.empty() && m.nombre == _usuario)) continue;
+					nuevos.push_back(&m);
+				}
+				const size_t desde = nuevos.size() > 3 ? nuevos.size() - 3 : 0;
+				for (size_t i = desde; i < nuevos.size(); i++) {
+					json j; j["event"] = "phoenix:chatgeneral";
+					j["data"] = { {"id", nuevos[i]->id}, {"nombre", nuevos[i]->nombre}, {"texto", nuevos[i]->texto} };
+					salida.push_back(j.dump(-1, ' ', false, json::error_handler_t::replace));
+				}
+				_overlayUltimoChat = maximo;
+			}
+		}
+		catch (...) {}
+		return salida;
+	}
+
 	void PhoenixLink::enviarChatGlobal(uint64_t ticket, const std::string& texto) {
 		std::lock_guard<std::mutex> l(_mutex);
 		_chatEnvios.emplace_back(ticket, texto);
@@ -728,7 +787,7 @@ namespace phoenix {
 		long long desde = 0;
 		{
 			std::lock_guard<std::mutex> l(_mutex);
-			if (!_ventanaVisible || ahoraMs() < _proximoChatMs) return false;
+			if ((!_ventanaVisible && !overlayReciente()) || ahoraMs() < _proximoChatMs) return false;
 			etag = _chatEtag; desde = _chatUltimoId;
 		}
 		std::string ruta = "/v1/chat/global?limite=50";
@@ -810,7 +869,7 @@ namespace phoenix {
 		std::string etag;
 		{
 			std::lock_guard<std::mutex> l(_mutex);
-			if (!_ventanaVisible || ahoraMs() < _proximoNoticiasMs) return false;
+			if ((!_ventanaVisible && !overlayReciente()) || ahoraMs() < _proximoNoticiasMs) return false;
 			etag = _noticiasEtag;
 		}
 		std::vector<std::string> cab = cabecerasCon(token);

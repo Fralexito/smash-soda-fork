@@ -24,7 +24,7 @@ function opciones(m) {
   ir("sala", "resumen", "Sala · Resumen", "Room · Overview", "sala");
   ir("sala", "opciones", "Sala · Opciones", "Room · Options", "sala");
   ir("sala", "juegos", "Sala · Juegos", "Room · Games", "sala");
-  ir("sala", "red", "Sala · Red (ping en vivo)", "Room · Network", "red");
+  ir("sala", "red", "Sala · Conexión (diagnóstico y ping)", "Room · Connection (diagnostics & ping)", "red");
   ir("partido", "vivo", "Partido · Marcador", "Match · Scoreboard", "partido");
   ir("partido", "historial", "Partido · Historial y tabla", "Match · History", "trofeo");
   ir("mandos", "puestos", "Mandos · Puestos", "Pads · Seats", "mandos");
@@ -33,8 +33,12 @@ function opciones(m) {
   ir("gente", "sala", "Gente · En sala", "People · In room", "gente");
   ir("gente", "moderacion", "Gente · Moderación y baneos", "People · Moderation", "gente");
   ir("gente", "amigos", "Gente · Amigos de la web", "People · Friends", "web");
+  ir("gente", "permisos", "Gente · Permisos por rol", "People · Permissions", "gente");
+  ir("sync", "puente", "Sync · Puente con el juego", "Sync · Game bridge", "web");
+  ir("sync", "web", "Sync · Cuenta web (vincular)", "Sync · Web account (link)", "web");
+  ir("sync", "fichajes", "Sync · Fichajes", "Sync · Transfers", "web");
   for (const [p, es, en] of [["general", "General", "General"], ["video", "Video", "Video"], ["audio", "Audio", "Audio"], ["overlay", "Overlay", "Overlay"],
-    ["permisos", "Permisos", "Permissions"], ["web", "Cuenta web (vincular)", "Web account"], ["interfaz", "Interfaz e idioma", "Interface"], ["diagnostico", "Diagnóstico del PC", "Diagnostics"], ["avanzado", "Avanzado", "Advanced"]]) {
+    ["interfaz", "Interfaz e idioma", "Interface"], ["avanzado", "Avanzado", "Advanced"]]) {
     ir("ajustes", p, `Ajustes · ${es}`, `Settings · ${en}`, "ajustes");
   }
   return r;

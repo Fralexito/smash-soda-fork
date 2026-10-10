@@ -1,5 +1,8 @@
 ﻿#include "Hosting.h"
 #include "phoenix/PhoenixRoles.h"
+#include "phoenix/link/PhoenixLink.h"
+#include "phoenix/PhoenixPrefs.h"
+#include <map>
 #include "phoenix/core/Solicitudes.h"
 #include "services/OverlayService.h"
 #include "services/InputControlService.h"
@@ -695,7 +698,14 @@ void Hosting::startHosting() {
 				}
 
 				// Overlay
-				if (Config::cfg.overlay.enabled) {
+				// Phoenix: al cerrar la sala también se apaga el servidor del overlay. Al abrir otra sala hay que
+				// levantarlo de nuevo; si no, el overlay se abre pero nunca recibe datos (solo funcionaba la primera sala).
+				bool servidorNuevo = false;
+				if (Config::cfg.socket.enabled && !WebSocket::instance.isRunning()) {
+					WebSocket::instance.createServer(Config::cfg.socket.port);   // este también abre el overlay
+					servidorNuevo = true;
+				}
+				if (Config::cfg.overlay.enabled && !servidorNuevo) {
 					OverlayService::instance().start();
 				}
 
@@ -901,6 +911,9 @@ void Hosting::initAllModules() {
 void Hosting::liveStreamMedia() {
 	_mediaMutex.lock();
 	_isMediaThreadRunning = true;
+
+	// Phoenix: el hilo que captura y manda el video va un escalon por encima del resto
+	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_ABOVE_NORMAL);
 
 #ifdef _WIN32
 	// High-resolution timer (1ms) so Sleep() and pacing are more accurate; reduces stutter
@@ -1177,10 +1190,60 @@ void Hosting::pollLatency() {
 	_isLatencyThreadRunning = true;
 	int guestCount = 0;
 	ParsecGuest* guests = nullptr;
+	int bwBajarVeces = 0; // sondeos seguidos pidiendo bajar (evita subir y bajar a cada rato)
+	std::map<uint32_t, std::pair<uint32_t, uint32_t>> bwPrev; // por invitado: paquetes enviados y retransmisiones
 	while (_isRunning)
 	{
 		Sleep(2000);
 		guestCount = ParsecHostGetGuests(_parsec, GUEST_CONNECTED, &guests);
+
+		// Phoenix: ancho de banda automatico. X Mbps por persona conectada (el SDK reparte el total entre los invitados).
+		// Sube enseguida; baja solo tras 3 sondeos seguidos (~6 s). Si un invitado pierde >5 % de paquetes, pide 20 % menos.
+		// Nunca pasa del 80 % de la subida de internet si el anfitrion la indico. Si algo falla, no pasa nada.
+		try {
+			int peor = 0;
+			if (guestCount > 0) {
+				for (int gi = 0; gi < guestCount; gi++) {
+					const ParsecMetrics& pm = guests[gi].metrics[0];
+					const uint32_t rt = pm.fastRTs + pm.slowRTs;
+					auto& pv = bwPrev[guests[gi].id];
+					if (pm.packetsSent > pv.first) {
+						const uint32_t dS = pm.packetsSent - pv.first;
+						const uint32_t dR = rt >= pv.second ? rt - pv.second : 0;
+						if (dS >= 50) { const int pmil = (int)((uint64_t)dR * 1000 / dS); if (pmil > peor) peor = pmil; }
+					}
+					pv = { pm.packetsSent, rt };
+				}
+			}
+			else bwPrev.clear();
+			phoenix::g_perdidaPorMil = peor;
+
+			const phoenix::PhoenixPrefs& pp = phoenix::PhoenixPrefs::get();
+			if (pp.anchoAuto && guestCount > 0) {   // sin invitados no se toca la calidad
+				const int personas = guestCount > 0 ? guestCount : 1;
+				int objetivo = pp.anchoPorPersona * personas;
+				if (peor >= 50) objetivo = objetivo * 8 / 10;
+				if (pp.subidaMbps > 0) { int tope = pp.subidaMbps * 8 / 10; if (tope < 1) tope = 1; if (objetivo > tope) objetivo = tope; }
+				if (objetivo < 1) objetivo = 1;
+				if (objetivo > 200) objetivo = 200;
+				const int actual = (int)Config::cfg.video.bandwidth;
+				if (objetivo > actual) {
+					bwBajarVeces = 0;
+					setHostVideoConfig(Config::cfg.video.fps, (uint32_t)objetivo);
+					applyHostConfig();
+				}
+				else if (objetivo < actual) {
+					if (++bwBajarVeces >= 3) {
+						bwBajarVeces = 0;
+						setHostVideoConfig(Config::cfg.video.fps, (uint32_t)objetivo);
+						applyHostConfig();
+					}
+				}
+				else bwBajarVeces = 0;
+			}
+		}
+		catch (...) {}
+
 		if (guestCount > 0) {
 			GuestList::instance.updateMetrics(guests, guestCount);
 
@@ -1197,7 +1260,7 @@ void Hosting::pollLatency() {
 			}
 		}
 
-		if (WebSocket::instance.isRunning()) {
+		if (WebSocket::instance.isRunning() && WebSocket::instance.hasClients()) {
 			json j;
 			j["event"] = "guest:poll";
 
@@ -1213,6 +1276,12 @@ void Hosting::pollLatency() {
 			j["data"]["users"] = users;
 
 			WebSocket::instance.sendMessageToAll(j.dump());
+
+			// Phoenix: ultima hora y chat general hacia el overlay
+			try {
+				for (const std::string& m : phoenix::PhoenixLink::instancia().mensajesOverlay()) WebSocket::instance.sendMessageToAll(m);
+			}
+			catch (...) {}
 		}
 		
 	}
@@ -1240,8 +1309,8 @@ void Hosting::pollSmashSoda() {
 			Config::cfg.roomChanged = false;
 		}
 
-		// Poll inputs
-		if (WebSocket::instance.isRunning()) {
+		// Poll inputs (Phoenix: solo si hay un overlay conectado que los reciba)
+		if (WebSocket::instance.isRunning() && WebSocket::instance.hasClients()) {
 			json j;
 			j["event"] = "gamepad:poll";
 			json pads = json::array();

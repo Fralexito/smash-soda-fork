@@ -151,6 +151,9 @@ namespace phoenix {
 		/// Chat general (§27). Solo se pregunta con la ventana visible: rapido con el panel abierto, lento (para el contador) con el panel cerrado.
 		InfoChatGlobal chatGlobal();
 		void chatGlobalAbierto(bool abierto);
+
+		/// Para el overlay (PhoenixGlass): textos JSON listos para el WebSocket local (ticker y mensajes nuevos del chat general).
+		std::vector<std::string> mensajesOverlay();
 		void enviarChatGlobal(uint64_t ticket, const std::string& texto);
 		/// PES2021.exe esta abierto (se mira cada ~5 s en el hilo de Link).
 		bool pesAbierto() const { return _pesAbierto.load(); }
@@ -219,6 +222,14 @@ namespace phoenix {
 		bool _noticiasCargadas = false;
 		long long _proximoNoticiasMs = 0;
 		std::string _noticiasEtag;
+		// Overlay (protegido por _mutex, salvo _overlayVistoMs)
+		std::atomic<long long> _overlayVistoMs{ 0 };
+		long long _overlayProximoMs = 0;
+		long long _overlayTickerMs = 0;
+		std::string _overlayFirmaTicker;
+		long long _overlayUltimoChat = 0;
+		bool _overlayChatIniciado = false;
+		bool overlayReciente() const;
 		// Chat general (protegido por _mutex)
 		std::vector<MensajeGlobal> _chatMsgs;
 		std::vector<std::pair<uint64_t, std::string>> _chatEnvios;   ///< ticket + texto por enviar

@@ -239,6 +239,16 @@ namespace phoenix::web {
 			return json::object();
 		});
 
+		// Ancho de banda automatico: {auto?: bool, porPersona?: 1-50, subida?: 0-10000}
+		p.registrar("sala.anchoAuto", [](const json& d, uint64_t) -> std::optional<json> {
+			PhoenixPrefs& pp = PhoenixPrefs::get();
+			if (d.contains("auto") && d["auto"].is_boolean()) pp.anchoAuto = d["auto"].get<bool>();
+			if (d.contains("porPersona")) pp.anchoPorPersona = entero(d, "porPersona", 1, 50);
+			if (d.contains("subida")) pp.subidaMbps = entero(d, "subida", 0, 10000);
+			pp.guardar();
+			return json::object();
+		});
+
 		// ---- Vínculo con la web ------------------------------------------------
 		p.registrar("web.vincular", [](const json& d, uint64_t) -> std::optional<json> {
 			std::string codigo;

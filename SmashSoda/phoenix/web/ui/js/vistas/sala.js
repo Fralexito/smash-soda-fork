@@ -4,6 +4,8 @@
 import { html, useState, useEffect } from "../lib.js";
 import { t, duracion, haceCuanto } from "../i18n.js";
 import { accion, confirmar, irA, avisar } from "../tienda.js";
+import { Diagnostico } from "./ajustes.js";
+import { GuiaInicio, Entrenador, useGuia } from "./guia.js";
 import {
   Cifra, Tarjeta, Titulo, Boton, Interruptor, Ajuste, AjusteSw, Stepper, Segmentos, Selector, Campo,
   Minigrafica, Chip, Icono, Vacio, colorPing, claseSemaforo, cx, dos,
@@ -13,7 +15,7 @@ export const PESTANAS_SALA = [
   { id: "resumen", es: "RESUMEN", en: "OVERVIEW", d: ["Tu sala de un vistazo: enlace, tiempo en vivo, quién juega y cómo va la conexión.", "Your room at a glance."] },
   { id: "opciones", es: "OPCIONES DE SALA", en: "ROOM OPTIONS", d: ["Nombre, plazas, quién puede entrar y la calidad de la imagen. Se guarda al instante.", "Name, slots, who can join and image quality."] },
   { id: "juegos", es: "JUEGOS", en: "GAMES", d: ["Qué se juega (se muestra en la web de la liga) y el juego que abre el modo quiosco.", "What is being played and the kiosk game."] },
-  { id: "red", es: "RED", en: "NETWORK", d: ["El ping de cada invitado segundo a segundo. Verde va bien, ámbar aguanta, rojo es lag.", "Each guest's ping, live."] },
+  { id: "red", es: "CONEXIÓN", en: "CONNECTION", d: ["¿Tu PC está lista para hostear? Y el ping de cada invitado: verde va bien, ámbar aguanta, rojo es lag.", "Is your PC ready to host? And each guest's ping: green is fine, amber holds, red is lag."] },
   { id: "actividad", es: "ACTIVIDAD", en: "ACTIVITY", d: ["Todo lo que pasó en la sala, del más nuevo al más viejo.", "Everything that happened in the room."] },
 ];
 
@@ -32,7 +34,7 @@ export function VistaSala({ s, pestana }) {
   switch (pestana) {
     case "opciones": return html`<${OpcionesSala} m=${m}/>`;
     case "juegos": return html`<${JuegosSala} m=${m}/>`;
-    case "red": return html`<${RedSala} m=${m}/>`;
+    case "red": return html`<${ConexionSala} m=${m}/>`;
     case "actividad": return html`<${ActividadSala} s=${s}/>`;
     default: return html`<${ResumenSala} s=${s} m=${m}/>`;
   }
@@ -61,7 +63,7 @@ export async function cerrarSala(m) {
   if (ok) await accion("sala.cerrar");
 }
 
-function Heroe({ m }) {
+function Heroe({ m, conGuia, verGuia }) {
   const sala = m.sala;
   useSegundos(sala.segundos);
   const titulo = sala.opciones?.nombre || sala.phoenix?.juego || "eFootball PES 2021";
@@ -76,7 +78,7 @@ function Heroe({ m }) {
           <div class="ayuda" style="margin-top:8px;font-size:14px">
             ${sala.lista
               ? t("Abre la sala y comparte el enlace. Tú decides quién juega y quién mira.", "Open the room and share the link. You decide who plays and who watches.")
-              : t("Parsec se está preparando. Si tarda, revisa Ajustes › Diagnóstico.", "Parsec is getting ready. If it takes long, check Settings › Diagnostics.")}
+              : t("Parsec se está preparando. Si tarda, revisa Sala › Conexión.", "Parsec is getting ready. If it takes long, check Room › Connection.")}
           </div>
         </div>
         <div class="derecha" style="display:flex;gap:12px;flex:none">
@@ -95,11 +97,13 @@ function Heroe({ m }) {
       <div style="display:flex;gap:10px;flex-wrap:wrap">
         <${Boton} tipo="lleno enorme" deshabilitado=${!sala.lista} al=${abrirSala}><${Icono} n="rayo" t=${18}/>${t("ABRIR SALA", "OPEN ROOM")}</${Boton}>
         <${Boton} tipo="suave enorme" al=${() => irA("sala", "opciones")}>${t("OPCIONES", "OPTIONS")}</${Boton}>
+        ${conGuia ? null : html`<${Boton} tipo="suave enorme" al=${verGuia}>${t("CÓMO EMPEZAR", "HOW TO START")}</${Boton}>`}
       </div>
-      <div style="margin-top:auto">
+      <${ResumenRed} m=${m}/>
+      ${conGuia ? null : html`<div style="margin-top:auto">
         <div class="lab acc" style="margin-bottom:10px">${t("ANTES DE ABRIR", "BEFORE OPENING")}</div>
         <${ListaParaAbrir} m=${m}/>
-      </div>
+      </div>`}
     </${Tarjeta}>`;
   }
   const copiar = () => accion("sala.copiarEnlace", {}, { ok: t("Enlace copiado. Pégalo en Discord o WhatsApp.", "Link copied.") });
@@ -148,9 +152,9 @@ function ListaParaAbrir({ m }) {
   const conectados = mandos.filter((p) => p.conectado).length;
   const web = m.web?.estado;
   const pasos = [
-    { ok: m.sala.lista, mal: !m.sala.lista, t: t("Parsec listo", "Parsec ready"), d: m.sala.lista ? (m.sala.cuentaHost || t("Sesión iniciada", "Signed in")) : t("Preparando…", "Starting…"), ir: ["ajustes", "diagnostico"] },
+    { ok: m.sala.lista, mal: !m.sala.lista, t: t("Parsec listo", "Parsec ready"), d: m.sala.lista ? (m.sala.cuentaHost || t("Sesión iniciada", "Signed in")) : t("Preparando…", "Starting…"), ir: ["sala", "red"] },
     { ok: conectados > 0, mal: mandos.length === 0, t: t("Mandos virtuales", "Virtual pads"), d: mandos.length ? `${conectados}/${mandos.length} ${t("conectados", "connected")}` : t("Falta ViGEmBus", "ViGEmBus missing"), ir: ["mandos", "puestos"] },
-    { ok: web === "conectado", mal: web === "sin_conexion", t: t("Web de la liga", "League website"), d: web === "conectado" ? (m.web.usuario || t("Vinculada", "Linked")) : web === "sin_vincular" ? t("Toca para vincular", "Tap to link") : t("Sin conexión", "Offline"), ir: ["ajustes", "web"] },
+    { ok: web === "conectado", mal: web === "sin_conexion", t: t("Web de la liga", "League website"), d: web === "conectado" ? (m.web.usuario || t("Vinculada", "Linked")) : web === "sin_vincular" ? t("Toca para vincular", "Tap to link") : t("Sin conexión", "Offline"), ir: ["sync", "web"] },
     { ok: (m.sala.calidad?.fps || 0) > 0, mal: false, t: t("Conexión", "Connection"), d: `${m.sala.calidad?.fps ?? "—"} FPS · ${m.sala.calidad?.mbps ?? "—"} MBPS`, ir: ["sala", "red"] },
   ];
   return html`<div class="pasos" style="margin-top:0">${pasos.map((p) => html`
@@ -176,7 +180,7 @@ function PuestosResumen({ m }) {
         ${ocupados} ${t("DE", "OF")} ${visibles.length} ${t("OCUPADOS", "TAKEN")} › ${t("ver y arrastrar", "view and drag")}</button>
     </div>
     ${visibles.length === 0
-      ? html`<div class="ayuda">${t("No hay mandos virtuales. Revisa Ajustes › Diagnóstico (ViGEmBus).", "No virtual pads. Check Settings › Diagnostics (ViGEmBus).")}</div>`
+      ? html`<div class="ayuda">${t("No hay mandos virtuales. Revisa Sala › Conexión (ViGEmBus).", "No virtual pads. Check Room › Connection (ViGEmBus).")}</div>`
       : html`<div class="rej4">${visibles.map((p) => html`<${MiniPuesto} p=${p} key=${p.n}/>`)}</div>`}
   </${Tarjeta}>`;
 }
@@ -237,28 +241,73 @@ function ActividadResumen({ s }) {
 }
 
 function ResumenSala({ s, m }) {
-  return html`<div class="fila resumen" style="min-height:100%">
+  const [guia, ocultarGuia, mostrarGuia] = useGuia(m.sala.abierta);
+  const verGuia = guia && !m.sala.abierta;
+  return html`<div class="col" style="min-height:100%">
+    ${verGuia ? html`<${GuiaInicio} m=${m} ocultar=${ocultarGuia} abrir=${abrirSala}/>` : null}
+    ${m.sala.abierta ? html`<${Entrenador} m=${m}/>` : null}
+    <div class="fila resumen" style="flex:1 1 auto;min-height:0">
     <div class="col" style="flex:1 1 0">
-      <${Heroe} m=${m}/>
+      <${Heroe} m=${m} conGuia=${verGuia} verGuia=${mostrarGuia}/>
       <${PuestosResumen} m=${m}/>
     </div>
     <div class="col" style="flex:0 0 clamp(360px,25vw,440px)">
       <${Indicadores} m=${m}/>
       <${ActividadResumen} s=${s}/>
     </div>
+    </div>
   </div>`;
 }
 
 // ---- Opciones de sala ---------------------------------------------------------------
+/** Hueco de la portada con la sala cerrada: lo que tu internet aguanta, para decidir antes de abrir. */
+function ResumenRed({ m }) {
+  const c = m.sala?.calidad || {};
+  const auto = c.auto ?? true;
+  const por = c.porPersona ?? 10;
+  const subida = c.subida ?? 0;
+  const aguanta = subida > 0 ? Math.max(1, Math.floor(subida * 0.8 / por)) : null;
+  const dato = (lab, val, sub, color) => html`<div class="caja" style="flex:1;min-width:150px">
+    <div class="lab">${lab}</div>
+    <div class="disp" style=${`font-size:24px;font-weight:700;margin-top:8px;${color ? "color:" + color : ""}`}>${val}</div>
+    <div class="ayuda" style="margin-top:4px">${sub}</div></div>`;
+  return html`<div style="margin-top:22px">
+    <div class="lab acc" style="margin-bottom:10px">${t("TU RED PARA JUGAR", "YOUR NETWORK")}</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      ${dato(t("CALIDAD", "QUALITY"), auto ? t("AUTOMÁTICA", "AUTO") : (c.mbps ?? 15) + " Mbps", auto ? por + " Mbps " + t("por persona", "per person") : t("manual", "manual"))}
+      ${dato(t("INVITADOS", "GUESTS"), aguanta ? "~" + aguanta : "—", aguanta ? t("aguanta tu subida", "your upload handles") : t("escribe tu subida en Opciones", "enter your upload in Options"), aguanta ? "var(--ok)" : null)}
+      ${c.energia === "ahorro" ? dato(t("ENERGÍA", "POWER"), t("AHORRO", "SAVER"), t("cámbiala en Windows", "change it in Windows"), "var(--warn)") : null}
+    </div>
+  </div>`;
+}
+
 export function TarjetaCalidad({ m }) {
   const fps = m.sala?.calidad?.fps ?? m.ajustes?.video?.fps ?? 60;
   const mbps = m.sala?.calidad?.mbps ?? m.ajustes?.video?.mbps ?? 15;
   const actual = PRESETS_CALIDAD.find((p) => p.fps === fps && p.mbps === mbps);
   const aplicar = (f, b) => accion("sala.calidad", { fps: f, mbps: b });
+  const auto = m.sala?.calidad?.auto ?? true;
+  const porPersona = m.sala?.calidad?.porPersona ?? 10;
+  const subida = m.sala?.calidad?.subida ?? 0;
+  const perdida = m.sala?.calidad?.perdida ?? 0;
+  const energia = m.sala?.calidad?.energia ?? "ok";
   return html`<${Tarjeta} interior="padding:22px 24px">
     <${Titulo} texto=${t("CALIDAD DE TRANSMISIÓN", "STREAM QUALITY")} derecha=${actual
       ? html`<span class="mono mut" style="font-size:12px">${fps} FPS · ${mbps} MBPS</span>`
       : html`<span class="chip acc2">${t("PERSONALIZADA", "CUSTOM")} · ${mbps} MBPS</span>`}/>
+    ${perdida >= 50 ? html`<div class="caja" style="border-color:var(--warn);margin-bottom:12px"><b class="warn">${t("Un invitado está perdiendo paquetes", "A guest is losing packets")} (${(perdida / 10).toFixed(1)} %).</b>
+      <div class="ayuda">${auto ? t("El automático ya bajó la calidad un poco. Si sigue, pídele cable o WiFi de 5 GHz.", "Auto mode already lowered quality. If it continues, ask for a cable or 5 GHz WiFi.") : t("Baja los Mbps o activa el automático.", "Lower the Mbps or turn on auto.")}</div></div>` : null}
+    ${energia === "ahorro" ? html`<div class="caja" style="border-color:var(--warn);margin-bottom:12px"><b class="warn">${t("Tu PC está en «Ahorro de energía».", "Your PC is on Power Saver.")}</b>
+      <div class="ayuda">${t("Cámbiala a «Alto rendimiento» o «Equilibrado» en Windows para que no haya tirones.", "Switch to High performance or Balanced in Windows.")}</div></div>` : null}
+    <${AjusteSw} titulo=${t("Ancho de banda automático", "Automatic bandwidth")} desc=${t("Sube y baja solo según cuántas personas hay conectadas. Apágalo para poner el valor tú.", "Raises and lowers itself with the people connected. Turn off to set it yourself.")}
+      valor=${auto} al=${(v) => accion("sala.anchoAuto", { auto: v })}/>
+    ${auto ? html`<${Ajuste} titulo=${t("Mbps por persona", "Mbps per person")} desc=${t("Ahora mismo: ", "Right now: ") + mbps + " Mbps"}>
+      <${Stepper} valor=${porPersona} min=${1} max=${50} al=${(v) => accion("sala.anchoAuto", { porPersona: v })}/></${Ajuste}>` : null}
+    <${Ajuste} titulo=${t("Mi subida de internet (Mbps)", "My upload speed (Mbps)")} desc=${subida > 0
+      ? t("Aguanta unos ", "Handles about ") + Math.max(1, Math.floor(subida * 0.8 / porPersona)) + t(" invitados a ", " guests at ") + porPersona + " Mbps. " + t("El automático nunca pasa del 80 %.", "Auto never exceeds 80%.")
+      : t("0 = no lo sé. Míde tu subida en fast.com o speedtest.net y escríbela aquí.", "0 = unknown. Measure it at fast.com or speedtest.net.")}>
+      <${Stepper} valor=${subida} min=${0} max=${10000} ancho=${4} al=${(v) => accion("sala.anchoAuto", { subida: v })}/></${Ajuste}>
+    <div style=${auto ? "opacity:.4;pointer-events:none" : ""}>
     <div class="rej3" style="gap:10px">${PRESETS_CALIDAD.map((p) => html`
       <button class="caja" style=${`cursor:pointer;text-align:left;border-color:${actual?.id === p.id ? "var(--acc)" : "var(--tenue)"};background:${actual?.id === p.id ? "var(--acc-suave)" : ""}`}
         onClick=${() => aplicar(p.fps, p.mbps)}>
@@ -270,6 +319,7 @@ export function TarjetaCalidad({ m }) {
       <${Stepper} valor=${fps} min=${10} max=${250} paso=${5} al=${(v) => aplicar(v, mbps)}/></${Ajuste}>
     <${Ajuste} titulo=${t("Ancho de banda (Mbps)", "Bandwidth (Mbps)")} desc=${t("Escribe el valor que quieras (1–1000) o usa − / +. Más alto = mejor imagen, pero exige más a tu internet.", "Type any value (1–1000) or use − / +.")}>
       <${Stepper} valor=${mbps} min=${1} max=${1000} ancho=${4} al=${(v) => aplicar(fps, v)}/></${Ajuste}>
+    </div>
   </${Tarjeta}>`;
 }
 
@@ -395,6 +445,12 @@ function JuegosSala({ m }) {
       </div>
     </${Tarjeta}>
   </div>`;
+}
+
+// ---- Conexión: ¿está lista mi PC? + ping de cada invitado ----------------------------
+function ConexionSala({ m }) {
+  // Sala abierta: primero el ping de cada invitado. Cerrada: primero ¿mi PC está lista?
+  return html`<div class="col">${m.sala.abierta ? html`<${RedSala} m=${m}/><${Diagnostico}/>` : html`<${Diagnostico}/><${RedSala} m=${m}/>`}</div>`;
 }
 
 // ---- Red ----------------------------------------------------------------------------
