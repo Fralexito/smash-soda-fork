@@ -3,6 +3,8 @@
 Une el partido de PES 2021 con Phoenix Link (Parsec: PES corre solo en la PC del anfitrión).
 Documento completo (qué se hizo, cómo, por qué, cómo conviven con `phoenix.lua` en el mismo paquete de Luas y cómo replicarlo): `docs/PHOENIX-ESTADIO-ARBITRO.md`.
 
+> Esta carpeta también lleva **`phoenix.lua` v0.18** (el de Phoenix Sync), para instalarlo en la PC de un amigo desde «Módulos del juego» o con `PhoenixJuego-instalar.bat`. Guía: `docs/PREPARAR-JUEGO-AMIGO.md`. Es copia exacta del de Sync (sha256 `a39b54de…`): no editarlo aquí.
+
 ## Qué se vive
 - **En el juego** (overlay de Sider: Espacio, y con 1 / º hasta «PHOENIX ESTADIO»): marcador con los nombres reales de los equipos, minuto y tiempo, goles con su minuto, quién juega en cada lado con su mando y su ping (bien / justo / ALTO), el estado del árbitro y las últimas líneas del chat de la sala.
 - **En Link y en el chat de la sala**:

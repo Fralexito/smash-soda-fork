@@ -23,7 +23,7 @@ namespace {
 	// Módulos que Link conoce: descripción para la interfaz. Los que no estén aquí se muestran con su nombre.
 	const std::map<std::string, std::string> kDescripciones = {
 		{ "phoenix_estadio.lua", "Partido ↔ Phoenix Link: marcador, goles con minuto, HUD del partido y árbitro (solo lectura)." },
-		{ "phoenix.lua", "Phoenix Sync: avisos de la web en el overlay y botón nativo «Datos Actual. en vivo» (lo gestiona Phoenix Sync)." },
+		{ "phoenix.lua", "Phoenix Sync: avisos de la web en el overlay, botón nativo «Datos Actual. en vivo» y modos de recarga de fichajes. Instala también la raíz Phoenix-DB y la carpeta de avisos." },
 	};
 
 	std::string minus(std::string s) { std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) { return (char)std::tolower(c); }); return s; }
@@ -119,6 +119,29 @@ namespace {
 		return v;
 	}
 
+	/// ¿Es una línea cpk.root (activa o comentada)? Devuelve la ruta entre comillas.
+	bool lineaRaiz(const std::string& l, std::string& ruta, bool& comentada) {
+		size_t i = 0;
+		auto blancos = [&]() { while (i < l.size() && (l[i] == ' ' || l[i] == '\t')) i++; };
+		blancos();
+		comentada = false;
+		while (i < l.size() && (l[i] == ';' || l[i] == '#')) { comentada = true; i++; blancos(); }
+		if (l.compare(i, 8, "cpk.root") != 0) return false;
+		i += 8; blancos();
+		if (i >= l.size() || l[i] != '=') return false;
+		i++; blancos();
+		if (i >= l.size() || l[i] != '"') return false;
+		const size_t fin = l.find('"', i + 1);
+		if (fin == std::string::npos) return false;
+		ruta = l.substr(i + 1, fin - i - 1);
+		return true;
+	}
+	bool esPhoenixDB(const std::string& ruta) {
+		std::string m = minus(ruta);
+		std::replace(m.begin(), m.end(), '/', '\\');
+		return m.size() >= 10 && m.compare(m.size() - 10, 10, "phoenix-db") == 0;
+	}
+
 	bool nombreSeguro(const std::string& a) {
 		if (a.size() < 5 || a.size() > 64 || minus(a.substr(a.size() - 4)) != ".lua") return false;
 		for (unsigned char c : a) if (!(std::isalnum(c) || c == '_' || c == '-' || c == '.')) return false;
@@ -174,6 +197,41 @@ std::string comentarLinea(const std::string& ini, const std::string& archivo, bo
 	return cambio ? unir(r) : ini;
 }
 
+bool tieneRaizPhoenixDB(const std::string& ini) {
+	for (const std::string& l : partir(ini).v) {
+		std::string ruta; bool c = false;
+		if (lineaRaiz(l, ruta, c) && !c && esPhoenixDB(ruta)) return true;
+	}
+	return false;
+}
+
+std::string activarRaizPhoenixDB(const std::string& ini, const std::function<bool(const std::string&)>& tieneBase, bool& cambio, std::string& error) {
+	cambio = false;
+	Lineas r = partir(ini);
+	int primera = -1, primeraBase = -1, comentadaPhx = -1;
+	for (size_t i = 0; i < r.v.size(); i++) {
+		std::string ruta; bool c = false;
+		if (!lineaRaiz(r.v[i], ruta, c)) continue;
+		if (esPhoenixDB(ruta)) {
+			if (!c) return ini;                            // ya está activa
+			if (comentadaPhx < 0) comentadaPhx = static_cast<int>(i);
+			continue;
+		}
+		if (c) continue;
+		if (primera < 0) primera = static_cast<int>(i);
+		if (primeraBase < 0 && tieneBase && tieneBase(ruta)) primeraBase = static_cast<int>(i);
+	}
+	int donde = primeraBase >= 0 ? primeraBase : primera;
+	if (donde < 0) { error = "sider.ini no tiene raíces cpk.root: no se toca"; return std::string(); }
+	if (comentadaPhx >= 0) {                                // se quita la comentada para no dejar dos
+		r.v.erase(r.v.begin() + comentadaPhx);
+		if (comentadaPhx < donde) donde--;
+	}
+	r.v.insert(r.v.begin() + donde, "cpk.root = \".\\livecpk\\Phoenix-DB\"");
+	cambio = true;
+	return unir(r);
+}
+
 std::string versionDe(const std::string& lua) {
 	const size_t i = lua.find("version");
 	if (i == std::string::npos || i > 4096) return "";
@@ -221,7 +279,7 @@ std::vector<Modulo> estado(const fs::path& paquete, const fs::path& juego) {
 	}
 	std::vector<std::string> archivos;
 	for (const auto& f : fuente) archivos.push_back(f.first);
-	archivos.push_back("phoenix.lua");   // el de Phoenix Sync: solo se muestra
+	if (!fuente.count("phoenix.lua")) archivos.push_back("phoenix.lua");   // sin paquete: solo se muestra
 
 	const auto ds = destinos(juego);
 	std::map<fs::path, std::string> inis;
@@ -230,7 +288,6 @@ std::vector<Modulo> estado(const fs::path& paquete, const fs::path& juego) {
 	if (!ds.empty()) leer(ds.front().second / "sider.log", log, kMaxLog);
 
 	for (const std::string& a : archivos) {
-		if (a == "phoenix.lua" && fuente.count(a)) continue;   // por si algún día viniera en el paquete
 		Modulo m;
 		m.archivo = a;
 		auto it = kDescripciones.find(a);
@@ -260,6 +317,8 @@ std::vector<Modulo> estado(const fs::path& paquete, const fs::path& juego) {
 		else if (conArchivo == n && conLinea == 0 && comentadas > 0) m.estado = "apagado";
 		else if (conLinea == n && conArchivo == n) m.estado = "desactualizado";
 		else m.estado = "a_medias";
+		if (a == "phoenix.lua" && m.gestionable && m.estado == "instalado")   // sin su raíz Phoenix-DB no está completo
+			for (const auto& d : ds) if (!inis.count(d.second) || !tieneRaizPhoenixDB(inis[d.second])) { m.estado = "a_medias"; break; }
 		if (!log.empty()) {
 			if (log.find("Module (" + a + ") is NOT activated") != std::string::npos) m.carga = "error";
 			else if (log.find("[" + a + "]") != std::string::npos) m.carga = "cargado";
@@ -319,9 +378,32 @@ Resultado instalar(const fs::path& paquete, const fs::path& juego, const std::st
 		std::string ini, error;
 		if (!leer(d.second / "sider.ini", ini, kMaxIni)) { r.mensaje = "No se pudo leer sider.ini en " + d.first + ": no se tocó nada."; return r; }
 		bool cambio = false;
-		const std::string nuevo = activarLinea(ini, archivo, cambio, error);
+		std::string nuevo = activarLinea(ini, archivo, cambio, error);
 		if (!error.empty()) { r.mensaje = error + " (" + d.first + ")."; return r; }
+		if (!cambio) nuevo = ini;
+		if (archivo == "phoenix.lua") {
+			bool cambioRaiz = false;
+			const fs::path sider = d.second;
+			const auto tieneBase = [&](const std::string& ruta) {
+				std::error_code e2;
+				return fs::is_regular_file(sider / phoenix::entrega::deU8(ruta) / "common" / "etc" / "pesdb" / "Player.bin", e2);
+			};
+			const std::string conRaiz = activarRaizPhoenixDB(nuevo, tieneBase, cambioRaiz, error);
+			if (!error.empty()) { r.mensaje = error + " (" + d.first + ")."; return r; }
+			if (cambioRaiz) { nuevo = conRaiz; cambio = true; }
+		}
 		if (cambio) inisNuevos.push_back({ d.second, nuevo });
+	}
+
+	// 1b) phoenix.lua: carpetas del buzón y de Phoenix-DB (vacías; Link escribe los avisos y Sync deja los datos)
+	if (archivo == "phoenix.lua") {
+		for (const auto& d : ds) {
+			std::error_code ec;
+			fs::create_directories(d.second / "content" / "phoenix", ec);
+			if (ec) { r.mensaje = "No se pudo crear content\\phoenix en " + d.first + "."; return r; }
+			fs::create_directories(d.second / "livecpk" / "Phoenix-DB" / "common" / "etc" / "pesdb", ec);
+			if (ec) { r.mensaje = "No se pudo crear livecpk\\Phoenix-DB en " + d.first + "."; return r; }
+		}
 	}
 
 	// 2) Copiar el módulo a cada destino y comprobar el sha256 (sin línea en sider.ini todavía no hace nada)
@@ -332,6 +414,10 @@ Resultado instalar(const fs::path& paquete, const fs::path& juego, const std::st
 		const fs::path mod = d.second / "modules";
 		std::string actual;
 		if (leer(mod / archivo, actual, kMaxLua) && sha(actual) == shaLua) continue;
+		if (!actual.empty()) {   // había otra versión: se guarda al lado antes de reemplazarla
+			const std::string ver = versionDe(actual);
+			phoenix::buzon::escribirAtomicoComo(mod, stem + ".lua.antes-" + (ver.empty() ? sello() : "v" + ver), "", actual);
+		}
 		if (!phoenix::buzon::escribirAtomicoComo(mod, stem, ".lua", lua)) { r.mensaje = "No se pudo copiar " + archivo + " en " + d.first + "."; return r; }
 		if (!leer(mod / archivo, actual, kMaxLua) || sha(actual) != shaLua) { r.mensaje = "La copia de " + archivo + " en " + d.first + " no quedó idéntica."; return r; }
 	}

@@ -31,6 +31,12 @@ Dos trabajos independientes dentro del mismo Phoenix Link:
   - si algo falla a medias, se restaura el `sider.ini` ya escrito.
 
   Solo gestiona los módulos que lleva Link (`SmashSoda/phoenix/sider/*.lua`, hoy `phoenix_estadio.lua`). **`phoenix.lua` (Sync) solo se muestra y nunca se toca.** El resto de Link (buzón y repartidor) sigue sin crear carpetas ni tocar `sider.ini`. Documento: `docs/PHOENIX-ESTADIO-ARBITRO.md` §16.
+- 2026-10-10 · **Cambia otra regla (decisión de Fralex, para instalar Phoenix en la PC de un amigo):** «Módulos del juego» **ya instala también `phoenix.lua`** (v0.18, `SmashSoda/phoenix/sider/phoenix.lua`, sha256 `a39b54de…`). Con él, y solo con él:
+  - añade `cpk.root = ".livecpkPhoenix-DB"` justo antes de la primera raíz con `commonetcpesdbPlayer.bin` (informe 27 de Sync; si no hay, antes de la primera);
+  - crea vacías `contentphoenix` y `livecpkPhoenix-DBcommonetcpesdb`;
+  - si había otra versión, la guarda como `phoenix.lua.antes-v<versión>`.
+
+  Las mismas reglas valen sin Link con `PhoenixJuego-instalar.bat` (raíz del repo). Guía: `docs/PREPARAR-JUEGO-AMIGO.md`. **SYNC:** cuando saquéis una versión nueva de `phoenix.lua`, pedid al chat LINK que la ponga en `SmashSoda/phoenix/sider/` y que actualice el sha256 del .bat.
 
 ## Dos cuentas de Claude (A y B) — protocolo obligatorio
 Fralex usa 2 cuentas; cuando una se queda sin tokens sigue la otra. **La memoria es el repo, no el chat.**

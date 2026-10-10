@@ -244,8 +244,8 @@ export function crearSimulador(enviar) {
       juego: s.buzon.juego, pesAbierto: s.pes.abierto,
       modulos: [
         { archivo: "phoenix_estadio.lua", descripcion: "Partido ↔ Phoenix Link: marcador, goles con minuto, HUD del partido y árbitro (solo lectura).", gestionable: true, version: "1.0", estado: est, carga: "", destinos: est === "no_instalado" ? [] : destinos(est === "instalado", "1.0") },
-        { archivo: "phoenix.lua", descripcion: "Phoenix Sync: avisos de la web en el overlay y botón nativo «Datos Actual. en vivo» (lo gestiona Phoenix Sync).", gestionable: false, version: "", estado: "solo_lectura", carga: "cargado",
-          destinos: [{ nombre: "Raíz del juego", carpeta: "", archivo: true, igual: false, version: "0.17e", linea: true, comentada: false }, { nombre: "ConmeGOL Patch 26", carpeta: "", archivo: true, igual: false, version: "0.17e", linea: true, comentada: false }] },
+        { archivo: "phoenix.lua", descripcion: "Phoenix Sync: avisos de la web en el overlay, botón nativo «Datos Actual. en vivo» y modos de recarga de fichajes. Instala también la raíz Phoenix-DB y la carpeta de avisos.", gestionable: true, version: "0.18", estado: s.modPhx || "desactualizado", carga: "cargado",
+          destinos: [{ nombre: "Raíz del juego", carpeta: "a", archivo: true, igual: s.modPhx === "instalado", version: s.modPhx === "instalado" ? "0.18" : "0.17e", linea: true, comentada: false }, { nombre: "ConmeGOL Patch 26", carpeta: "b", archivo: true, igual: s.modPhx === "instalado", version: s.modPhx === "instalado" ? "0.18" : "0.17e", linea: true, comentada: false }] },
       ],
     };
   };
@@ -332,8 +332,9 @@ export function crearSimulador(enviar) {
     "sync.modulos": () => modulosSim(),
     "sync.modulo": (d) => {
       if (s.pes.abierto) throw Object.assign(new Error("Cierra PES 2021 primero: Sider lee los módulos al arrancar."), { codigo: "PES_ABIERTO" });
-      s.modEstadio = d.accion === "instalar" ? "instalado" : "apagado";
-      return { ...modulosSim(), mensaje: d.accion === "instalar" ? "phoenix_estadio.lua instalado en 2 carpetas. Abre PES: en sider.log debe aparecer que cargó." : "phoenix_estadio.lua apagado (línea comentada en sider.ini)." };
+      const nuevo = d.accion === "instalar" ? "instalado" : "apagado";
+      if (d.archivo === "phoenix.lua") s.modPhx = nuevo; else s.modEstadio = nuevo;
+      return { ...modulosSim(), mensaje: d.accion === "instalar" ? d.archivo + " instalado en 2 carpetas. Abre PES: en sider.log debe aparecer que cargó." : d.archivo + " apagado (línea comentada en sider.ini)." };
     },
     "ajustes.avisosJuego": (d) => { s.buzon.activo = d.valor; s.buzon.estado = d.valor ? "conectado" : "apagado"; },
     "ajustes.general": (d) => { s.ajustes.general[d.clave] = d.valor; },

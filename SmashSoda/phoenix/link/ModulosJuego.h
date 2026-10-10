@@ -6,8 +6,12 @@
 //   · guarda una copia de sider.ini (sider.ini.phoenix-AAAAMMDD-HHMMSS) y añade UNA línea  lua.module = "<archivo>"
 //     debajo del último lua.module activo (o quita el ; si ya estaba comentada). Nada más del sider.ini cambia;
 //   · «Quitar» comenta esa línea (;lua.module = …) con copia previa: el .lua se queda en modules\ (no se borra nada).
-// Nunca crea carpetas. Los módulos que Link no lleva (p. ej. phoenix.lua de Phoenix Sync) solo se muestran.
+// Nunca crea carpetas, salvo para phoenix.lua (decisión de Fralex, 2026-10-10, para instalar Phoenix en la PC de un amigo):
+//   crea content\phoenix\ (buzón de avisos) y livecpk\Phoenix-DB\common\etc\pesdb\ (vacías), añade además
+//   cpk.root = ".\livecpk\Phoenix-DB" antes de la primera raíz que tenga la base del parche (informe 27 de Sync)
+//   y guarda phoenix.lua.antes-<fecha> si había otra versión. Los módulos que Link no lleva solo se muestran.
 #include <filesystem>
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -59,6 +63,13 @@ std::string activarLinea(const std::string& ini, const std::string& archivo, boo
 std::string comentarLinea(const std::string& ini, const std::string& archivo, bool& cambio);
 /// ¿Hay una línea activa / comentada para el módulo?
 void buscarLinea(const std::string& ini, const std::string& archivo, bool& activa, bool& comentada);
+/// Devuelve el sider.ini con  cpk.root = ".\livecpk\Phoenix-DB"  justo antes de la primera raíz activa para la que
+/// tieneBase(ruta) es true (la que tiene common\etc\pesdb\Player.bin); si ninguna, antes de la primera cpk.root.
+/// `cambio` = false si ya estaba activa. "" + error si no hay ninguna cpk.root.
+std::string activarRaizPhoenixDB(const std::string& ini, const std::function<bool(const std::string&)>& tieneBase, bool& cambio, std::string& error);
+/// ¿Hay una cpk.root activa a Phoenix-DB?
+bool tieneRaizPhoenixDB(const std::string& ini);
+
 /// Versión declarada en el .lua (`version = "x"`) o "".
 std::string versionDe(const std::string& lua);
 

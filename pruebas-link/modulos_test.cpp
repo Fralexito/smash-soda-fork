@@ -101,6 +101,62 @@ int main(int argc, char** argv) {
 		std::cout << "instalacion en copia: ok\n";
 	}
 
+	// ── 3) phoenix.lua en la PC de un amigo: sider.ini SIN las líneas de Phoenix (argv[3] = sider.ini real) ──
+	if (argc >= 4) {
+		const fs::path base = fs::path(argv[1]) / "amigo";
+		const fs::path juego = base / "Juego";
+		const fs::path paquete = base / "paquete";
+		std::string limpio;
+		{   // quitar las 2 líneas de Phoenix del sider.ini real = ConmeGOL recién instalado
+			std::istringstream in(leer(argv[3])); std::string l;
+			while (std::getline(in, l)) {
+				if (!l.empty() && l.back() == '\r') l.pop_back();
+				if (l.find("Phoenix-DB") != std::string::npos || l.find("\"phoenix.lua\"") != std::string::npos) continue;
+				limpio += l + "\n";
+			}
+		}
+		const fs::path sa[2] = { juego / "SiderAddons", juego / "ConmeGol Extras" / "ConmeGOL Patch 26" / "SiderAddons" };
+		for (const auto& d : sa) {
+			fs::create_directories(d / "modules");
+			fs::create_directories(d / "olmosjr23" / "Database" / "common" / "etc" / "pesdb");
+			escribir(d / "olmosjr23" / "Database" / "common" / "etc" / "pesdb" / "Player.bin", "base del parche");
+			escribir(d / "sider.ini", limpio);
+		}
+		escribir(sa[1] / "modules" / "phoenix.lua", "local m = { version = \"0.17e-B\" }\n");   // una versión vieja en un destino
+		fs::create_directories(paquete);
+		escribir(paquete / "phoenix.lua", "local m = { version = \"0.18\" }\nreturn m\n");
+		OK(!tieneRaizPhoenixDB(limpio));
+		const auto estadoPhx = [&]() { for (const auto& m : estado(paquete, juego)) if (m.archivo == "phoenix.lua") return m.gestionable ? m.estado : std::string("NO-GESTIONABLE"); return std::string("NO-LISTADO"); };
+		OK(estadoPhx() == "a_medias");   // una versión vieja en un destino
+		Resultado r = instalar(paquete, juego, "phoenix.lua");
+		std::cout << "phoenix.lua (amigo): " << r.mensaje << "\n";
+		OK(r.ok && r.respaldos.size() == 2);
+		OK(estadoPhx() == "instalado");
+		for (const auto& d : sa) {
+			const std::string ini = leer(d / "sider.ini");
+			OK(contar(ini, "cpk.root = \".\\livecpk\\Phoenix-DB\"") == 1);
+			OK(contar(ini, "lua.module = \"phoenix.lua\"") == 1);
+			OK(ini.find("cpk.root = \".\\livecpk\\Phoenix-DB\"\ncpk.root = \".\\olmosjr23\\Database\"") != std::string::npos);   // justo antes de la base
+			OK(contar(ini, "\n") == contar(limpio, "\n") + 2);                // solo 2 líneas más
+			OK(fs::is_directory(d / "content" / "phoenix"));
+			OK(fs::is_directory(d / "livecpk" / "Phoenix-DB" / "common" / "etc" / "pesdb"));
+			OK(leer(d / "modules" / "phoenix.lua") == leer(paquete / "phoenix.lua"));
+		}
+		OK(leer(sa[1] / "modules" / "phoenix.lua.antes-v0.17e-B") == "local m = { version = \"0.17e-B\" }\n");   // la vieja se guardó
+		{   // sin la raíz Phoenix-DB no cuenta como instalado
+			const std::string ini0 = leer(sa[0] / "sider.ini");
+			std::string sin; std::istringstream in(ini0); std::string l;
+			while (std::getline(in, l)) if (l.find("Phoenix-DB") == std::string::npos) sin += l + "\n";
+			escribir(sa[0] / "sider.ini", sin);
+			OK(estadoPhx() == "a_medias");
+			escribir(sa[0] / "sider.ini", ini0);
+		}
+		r = instalar(paquete, juego, "phoenix.lua");                          // segunda vez: nada cambia
+		OK(r.ok && r.respaldos.empty());
+		for (const auto& d : sa) OK(contar(leer(d / "sider.ini"), "Phoenix-DB") == 1);
+		std::cout << "phoenix.lua en la PC de un amigo: ok\n";
+	}
+
 	std::cout << (fallos ? "FALLAS: " + std::to_string(fallos) : std::string("TODO OK")) << "\n";
 	return fallos ? 1 : 0;
 }
