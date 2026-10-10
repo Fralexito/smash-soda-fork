@@ -741,3 +741,11 @@ carnet del blob no cambia con la velocidad (cola idéntica entre ranuras 4 y 5).
 - **Simulación:** las 5 teclas en una situación donde antes actuaban → 0 escrituras, 0 VirtualProtect, 0 llamadas a funciones del juego, las 5 anotadas como ignoradas. En la v0.17d, con la misma memoria falsa, L escribe (1 WriteProcessMemory) y B entra en su búsqueda; K, P y U no se reprodujeron en la simulación (faltan sus bytes de comprobación en la memoria falsa), pero pasan por el mismo bloqueo. Además, los 18 casos anteriores (m, a, d) bien. `sider/pruebas/simular_v017e.py`.
 - Archivo: `sider/pruebas/phoenix-v0.17e-prueba.lua` (sha256 114b6f2e…). En el PC sigue instalada la v0.17d.
 
+
+### 2026-10-10 01:05 · Prueba de la «palanca»: barra 6 de Lamine puesta en 9.999 en la RANURA 6 (pedido de FRALEX: «haz la copia en la ranura 6») — PREPARADA, falta mirar en el juego
+- **Respaldo primero:** `ML00000005` original (16/3/2026, md5 `1feef3a4…`) copiado a `_PhoenixMercado_prueba\respaldos_ranuras\ML00000005_ranura6_original_16-3-2026` y comprobado (md5 igual). Copia local también en la nube (`datos/exp/C_ML00000005`, solo lectura).
+- **Cambio:** solo 2 bytes. Ficha de 368 B de Lamine (reg `0xdb1` en `0xc5122c`), barra n.º 6 (índice 5) en `0xc51268`: **551 → 9.999**. Herramienta nueva `herramientas/palanca/palanca.cpp` (abre con SobrePes, comprueba el valor viejo antes de tocar, cifra con la envoltura original). Texto de Cargar: «PRUEBA PALANCA (Barca) / 16/3/2026 / Lamine barra 6 = 9999».
+- **Comprobación:** descifrado de nuevo y comparado con el original → **2 bytes distintos** (`c51268`, `c51269`), mismo tamaño (19.811.040 descifrado, 19.829.355 cifrado). md5 del nuevo `f220841e…` (sha256 `15cb4533…`); en el PC, la copia de `respaldos_ranuras\ML00000005_palanca_barra6_9999` y `save\ML00000005` dan el mismo md5.
+- **Ojo:** la barra n.º 1 de Lamine ya estaba en **9.969** por sí sola: al avanzar, otra habilidad puede subir +1 además de Conservación. Eso nos dirá qué habilidad es la barra 1.
+- **Lo que tiene que mirar FRALEX:** cargar la ranura 6 → Lamine con Conservación del balón **93** → avanzar → ¿**94**?
+- Para volver atrás: copiar el respaldo de `respaldos_ranuras` sobre `save\ML00000005`.
