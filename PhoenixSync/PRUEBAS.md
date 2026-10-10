@@ -918,3 +918,25 @@ carnet del blob no cambia con la velocidad (cola idéntica entre ranuras 4 y 5).
 - OK a las 09:25. Juego cerrado (Sider «All done» 09:25:48). Respaldo `phoenix.lua.v017e` (114b6f2e…) en las dos carpetas `modules`; v0.17e-B copiada; sha256 en el PC = e276c72e…a811 en las dos; respaldo `.v017` intacto.
 - **Plan de prueba:** abrir → en el registro debe salir «experimento B: parche C NO aplicado» → Partido → Datos Actual. en vivo → Activar → volver a entrar y mirar «Selección actual» → abrir el overlay y mirar [MODO] → entrar a Partido y mirar plantillas → Editar (sin Guardar) → [MODO] debería volver a 0. No entrar a Liga Máster ni guardar nada.
 
+### 2026-10-10 09:30 · ✅ Ronda 1 porteros/lentas: CONFIRMADA en el archivo (ranura 11 = ML0000000A, 2/5/2026)
+- Se trajo `ML0000000A` del PC y se comparó, barra por barra, con `ML00000009` (ranura 10, antes de avanzar).
+- **Las 7 barras plantadas dieron la vuelta exactamente como tocaba:** las 5 puestas en 9999 pasaron a un número bajo (nueva vuelta) y las 2 puestas en 0 (Szczęsny, barras 15 y 16) pasaron a 9833 (vuelta hacia abajo). 7/7. ✅
+- Las demás barras de estos 5 jugadores también cambiaron, pero **de crecimiento normal del juego en 10 días** (22/4 → 2/5/2026), no por vueltas nuestras: en jugadores jóvenes (Lamine, Fermín) el crecimiento natural en 10 días puede ser grande (varios miles) y por eso el chequeo automático simple (número que baja o sube mucho) no sirve para distinguir una vuelta real de un crecimiento rápido normal — hay que mirar si la habilidad correspondiente cambió en pantalla, y en la página 3 (las que nos interesaban) **no cambió ninguna otra**, tal como vio FRALEX. No es un error, es un aviso para el método: con 10 días de diferencia, comparar solo el número de la barra ya no basta para detectar vueltas "de casualidad"; hay que cruzar con la pantalla.
+- Quedan en 0 (sin usar todavía) las barras 29 y 30 en los 5, igual que antes.
+
+### 2026-10-10 09:35 · ⚠️ Aviso importante: el puente al PC (`device_commit_files`) corrompe un archivo de guardado si se manda directo
+- Al preparar la ronda 2, se mandó el archivo nuevo (`ML0000000B`) directo al PC con la herramienta de copiar archivos del puente. **El archivo llegó roto:** en el PC pesaba 19.813.994 bytes en vez de 19.831.781 (le faltaban 17.787 bytes) y la huella no coincidía.
+- **Causa probable:** `ML0000000B` no tiene extensión (como todos los `MLxxxxxxxx`), y el puente parece tratar los archivos sin extensión como texto, cambiándolos por dentro (muy probable: les quita saltos de línea tipo Windows `\r\n`, que aparecen por casualidad dentro de los datos cifrados).
+- **Arreglo que funcionó:** comprimir el archivo en un `.zip` antes de mandarlo (la huella del `.zip` llegó idéntica), y ya en el PC, descomprimirlo con `unzip` y copiarlo a su nombre final `MLxxxxxxxx`. Verificado con huella sha256 en los 3 pasos (zip en el contenedor, zip en el PC, archivo final en el PC) = exactos.
+- **Regla nueva para toda entrega al PC de un archivo `MLxxxxxxxx` (o cualquier archivo sin extensión) por este puente: SIEMPRE comprimir en `.zip` primero, nunca mandarlo directo.** Si se manda directo, el archivo puede quedar dañado sin que la herramienta avise del tamaño raro — hay que comprobar el tamaño/huella en el PC cada vez, no confiar en que "se copió bien" solo porque la herramienta no dio error.
+
+### 2026-10-10 09:36 · Ronda 2 porteros (barras 17 y 18 = Reflejos / Cobertura) PREPARADA en la ranura 12 (ML0000000B)
+- Base: ranura 11 (`ML0000000A`, 2/5/2026), ya confirmada arriba. Respaldo guardado en `_PhoenixMercado_prueba/respaldos_ranuras/ML0000000A_ranura11_2-5-2026` (huella igual al original).
+- Cambios (con `palanca_varias`, los 4 verificados antes de escribir, todo o nada):
+  - **Joan García**: barra 17 7307→**9999** (sube), barra 18 5220→**0** (baja).
+  - **Szczęsny**: barra 17 5311→**0** (baja), barra 18 7717→**9999** (sube).
+  - Es la misma idea que la ronda 1 con las barras 15/16: a cada barra se le pide que suba en un jugador y que baje en el otro, al mismo tiempo. Así, la habilidad (Reflejos o Cobertura) que **sube en Joan y baja en Szczęsny** es la barra 17; la que **baja en Joan y sube en Szczęsny** es la barra 18. Se confirma solo mirando la pantalla, sin tocar nada más.
+  - Verificado: solo 8 bytes distintos en el archivo (los 4 números de 2 bytes), nada más se tocó.
+  - Texto en «Cargar»: «PRUEBA PORTEROS RONDA 2 (Barca) / 2/5/2026 / 17 y 18 cruzadas».
+  - Entregado al PC (con el arreglo del `.zip` de arriba) y huella comprobada igual: `4a9fafbb6b8f1df0d8eb13f550d57fef5573a5a797ec7c1fe9bf018be0d74375`.
+- **Pendiente:** FRALEX cargue la ranura 12, mire Reflejos y Cobertura de Joan García y Szczęsny (sin avanzar, para confirmar que cargó bien), avance unos días, y mande las capturas de antes y después.
