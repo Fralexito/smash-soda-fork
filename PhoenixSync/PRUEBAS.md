@@ -951,3 +951,13 @@ carnet del blob no cambia con la velocidad (cola idéntica entre ranuras 4 y 5).
 - Otros módulos: 64 errores de `StadiumServer.lua` (línea 705) al preparar partidos, como siempre.
 - **Pendiente:** (1) después de Editar, ¿Vinícius sigue en el Barça y la pantalla sigue en «Activar»? (2) ¿«Desactivar» funciona ahora (modo 0 y equipos del option file)? (3) ¿por qué el Barça visitante sale distinto? (4) stats con Activar sin C.
 
+
+### 2026-10-10 09:37 · ✅ Ronda 2 porteros: RESULTADO en pantalla — barra 17 = Reflejos (doble confirmación); barra 18 = Cobertura (por descarte)
+- Capturas de FRALEX, ranura 12, página 3/4:
+  - **Joan García** ANTES (84 de media): Reflejos 92, Cobertura 91. DESPUÉS (85 de media): Reflejos **93** (+1), Cobertura 91 (igual).
+  - **Szczęsny** ANTES (80 de media): Reflejos 87, Cobertura 87. DESPUÉS (80 de media): Reflejos **86** (−1), Cobertura 87 (igual).
+- Joan tenía la barra 17 puesta en 9.999 (sube) y la 18 en 0 (baja). Szczęsny al revés: 17 en 0 (baja), 18 en 9.999 (sube).
+- **Reflejos subió en Joan y bajó en Szczęsny → coincide exactamente con la barra 17 → barra 17 = Reflejos.** Confirmado en los dos sentidos, igual que se hizo con Atajar en la ronda 1.
+- **Cobertura no se movió en ninguno de los dos** (ni subió en Szczęsny ni bajó en Joan), aunque la barra 18 sí se movió en el archivo. Probablemente no alcanzó a completar la vuelta en el tiempo que avanzó esta vez (parece que avanzó menos tiempo que en la ronda 1). No es un problema: **no queda ninguna otra habilidad de portero sin barra**, así que por descarte, **barra 18 = Cobertura**. Para tener a Cobertura con su propia prueba directa (subiendo o bajando) haría falta un avance más largo o un tercer portero — queda como pendiente opcional, no bloquea el mapa.
+- **Con esto, el mapa de barras de crecimiento queda completo:** las 28 barras que sí se usan (1–28) tienen habilidad conocida. Solo quedan sin explicación: la barra de **«Uso de pie malo»** (no se encontró) y las **barras 29 y 30**, que en todos los jugadores probados siempre están en 0 — probablemente no se usan.
+- Pendiente: FRALEX guarde este «después» en una ranura nueva, para tener también la confirmación a nivel de archivo (como se hizo con la ronda 1).
