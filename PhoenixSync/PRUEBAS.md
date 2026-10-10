@@ -713,3 +713,12 @@ Comparar la MISMA carrera da mucho menos ruido (191.549 bytes distintos antes de
    **suben** con el tiempo; el n.º 6 de Lamine pasó de 9.765 a 551 (dio la vuelta al llegar a 10.000). Hipótesis: barra de progreso
    por habilidad; al llenarse, la habilidad sube +1. Los valores iniciales se sortean al crear la carrera.
 **Prueba pedida:** captura de Lamine en la ranura 6, para ver si exactamente una habilidad subió +1 respecto a la ranura 4.
+
+**2026-10-10 00:39 · Prueba en el juego · Ranura 6 (misma carrera, 16/3/2026): ¿subió exactamente una habilidad?** — ✅ PROBADO
+Captura de Fralex: Lamine igual que en la ranura 4 salvo **Conservación del balón 92 → 93** (+1). Coincide con lo predicho: solo
+uno de sus contadores de crecimiento (el n.º 6, en la ficha de 368 B de la tabla C/D) pasó de 10.000 (9.765 → 551).
+**Conclusión:** los contadores 0–9.999 son **barras de progreso por habilidad**; al llenarse, la habilidad sube +1.
+**Contador n.º 6 = Conservación del balón** (los demás, sin asignar todavía).
+Búsqueda del valor absoluto (92→93 en la misma carrera cruzado con 99/90 entre carreras, campos de 6/7/8 bits): sin resultado. Su
+carnet del blob no cambia con la velocidad (cola idéntica entre ranuras 4 y 5). Las fichas L y F de Lamine guardan datos de estado
+(60/40/59; 74/73/3395), no habilidades. Fuera de `save` no hay más carpetas de esa carrera.

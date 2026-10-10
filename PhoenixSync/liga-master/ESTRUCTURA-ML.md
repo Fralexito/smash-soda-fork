@@ -469,3 +469,6 @@ del juego cuadran con la segunda tabla (jornada anterior).
   competición, fecha, listas `[reg][pid][x][dato]` de quienes jugaron; 5.759 = partidos de la temporada). En la ficha de 368 B de
   cada jugador del usuario, desde +54 (contando desde el campo antes de `reg`), ~30 u16 de 0 a 9.999 que suben con el tiempo; uno de
   Lamine pasó 9.765 → 551. [HIPÓTESIS] contador de progreso por habilidad (+1 al pasar de 10.000).
+- **(10 oct, 00:55) ✅ PROBADO:** los ~30 u16 de 0–9.999 de la ficha de 368 B son **barras de crecimiento**: entre la ranura 4 y la 6,
+  solo la barra n.º 6 de Lamine dio la vuelta y en pantalla solo subió **Conservación del balón 92 → 93**. Barra 6 = Conservación del
+  balón. El valor absoluto de las habilidades de la carrera sigue sin localizarse.
