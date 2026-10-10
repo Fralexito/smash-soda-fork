@@ -454,3 +454,8 @@ Guardados usados: r0 (4/8), g18 (19/8), g19 y juego (21/8), j9 y jA (31/8, antes
 - **Herramienta nueva en el PC (VM):** `~/phx/cpkls.py` lista el índice de un CPK sin cargarlo (portado de `BaseDatosParche.cpp`).
 - **Experimento propuesto:** dos carreras NUEVAS idénticas (mismo club y ajustes), una con Phoenix-DB v99 y otra con v90 (original),
   guardadas en ranuras libres. La diferencia entre las dos señala dónde guarda la carrera la Velocidad.
+
+### Verificación en pantalla de §22–§24 (9 oct, 23:45) — ✅ PROBADO
+Carrera del Barça (ranura 1): tabla de la Ligue 1 (puntos, G-E-P, GF, GC), goleadores (8, 8, 8, 5, 5), LaLiga vacía en el mismo orden
+y el primer partido de LaLiga (Barça – Real Sociedad, 11/4/2026) coinciden con lo leído del archivo. Las flechas de subida/bajada
+del juego cuadran con la segunda tabla (jornada anterior).

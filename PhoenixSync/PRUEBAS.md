@@ -638,3 +638,13 @@ fichas de tu equipo (A–M), ni en su ficha de 596 B, ni empaquetadas en 5–8 b
 - **Susto sin daño:** FRALEX avisó de que en Editar el cursor se fue sin querer a «Guardar». Foto de las 23:37: `EDIT00000000` idéntico (sha 3507ce35…, misma fecha 19:59:59) y el resto de la carpeta de guardado igual. No se guardó nada.
 - **Sin comprobar todavía:** que la etiqueta coincide con las plantillas en pantalla (Vinícius en el Barça tras Activar y en el Real Madrid tras la recarga normal), y Editar → Cargar pulsado a propósito.
 
+
+**2026-10-09 23:38 · Prueba en el juego · Carrera del Barça (ranura 1, 4/3/2026): calendario, tabla y goleadores leídos del archivo** — ✅ PROBADO
+Capturas de Fralex comparadas con lo que leyó el programa del archivo:
+- **Goleadores Ligue 1:** Igamane (Lille), Édouard (Lens), Avom (Lorient) 8 · Diop (Niza), Panichelli (Estrasburgo) 5 → **idéntico**.
+- **Tabla Ligue 1:** Lille 22 (7-1-0, 19–4), PSG 20 (6-2-0, 17–4), Lens 19 (6-1-1, 20–8), Lorient 16 (5-1-2, 19–11), Marsella 14
+  (4-2-2, 11–8), Mónaco 14 (4-2-2, 9–6) → **idéntico**. Las flechas (Marsella y Mónaco suben; Lyon y Niza bajan) cuadran con la
+  segunda tabla guardada (la de la jornada anterior).
+- **LaLiga sin empezar:** todos con 0, en el mismo orden que el archivo (Barça, Real Sociedad, Deportivo, Celta…) → **idéntico**.
+- **Calendario:** próximo partido de LaLiga Barça – Real Sociedad (11/4/2026, en casa) = jornada 1 leída del archivo → **idéntico**.
+ESTRUCTURA-ML §22–§24 pasan de 🔎 a ✅.
