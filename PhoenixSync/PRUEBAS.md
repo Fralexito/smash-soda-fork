@@ -664,3 +664,12 @@ Guardada en la **ranura 4** (`ML00000003`, 23:57, md5 6cbe94ff…). **Conclusió
 de la base que sirve Phoenix-DB; una carrera ya empezada conserva su copia (prueba de las 23:50).
 Paso 2 hecho por Claude: Phoenix-DB → **v90** (original, sha256 de702dff…) en las dos carpetas, con el juego cerrado; respaldo de la
 v99 = `_PhoenixMercado_prueba\db\Player_v99.bin` (sha256 2d1a854f…, idéntico). Falta: Fralex crea la MISMA carrera → ranura 5.
+
+**2026-10-10 00:14 · Prueba en el juego · Experimento «dos carreras» — paso 3: la MISMA carrera nueva con Phoenix-DB v90** — ✅
+Fralex creó la misma carrera (Barça) con la base v90: **Lamine Velocidad 90, media 87**. Guardada en la **ranura 5** (`ML00000004`,
+00:11, md5 006dd17a…). Comparación con la ranura 4 (v99, md5 6cbe94ff…), las dos abiertas con ida y vuelta idéntica:
+- Fuera del blob cambian ~1,77 millones de bytes (al crear una carrera hay mucho azar: juveniles, sorteos…).
+- **Dentro del blob**, la ficha de 156 B de Lamine solo cambia en el **sueldo** (+0x56) y en +0x74. No hay habilidades ahí.
+- No hay ningún byte con 99/59 (ranura 4) frente a 90/50 (ranura 5) fuera del blob, salvo ruido en zonas muy cambiantes; ni trozos de
+  8 B de su ficha de Player.bin (v99 o v90) en ninguna de las dos.
+**Duda abierta:** ¿la carrera guarda su copia o calcula al cargar? Prueba pedida: cargar la ranura 4 con la base v90 y mirar a Lamine.

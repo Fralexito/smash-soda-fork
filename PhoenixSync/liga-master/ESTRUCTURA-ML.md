@@ -459,3 +459,6 @@ Guardados usados: r0 (4/8), g18 (19/8), g19 y juego (21/8), j9 y jA (31/8, antes
 Carrera del Barça (ranura 1): tabla de la Ligue 1 (puntos, G-E-P, GF, GC), goleadores (8, 8, 8, 5, 5), LaLiga vacía en el mismo orden
 y el primer partido de LaLiga (Barça – Real Sociedad, 11/4/2026) coinciden con lo leído del archivo. Las flechas de subida/bajada
 del juego cuadran con la segunda tabla (jornada anterior).
+- **(10 oct, 00:20) Experimento «dos carreras»:** carrera nueva con base v99 → Lamine 99 (ranura 4, md5 6cbe94ff…); la misma con v90 → 90
+  (ranura 5, md5 006dd17a…). En el blob, su ficha difiere solo en sueldo (+0x56) y +0x74. Sin copia literal ni empaquetada de la
+  velocidad fuera del blob. Pendiente: cargar la ranura 4 con la base v90 (¿copia guardada o cálculo al cargar?).
