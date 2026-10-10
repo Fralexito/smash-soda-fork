@@ -749,3 +749,11 @@ carnet del blob no cambia con la velocidad (cola idéntica entre ranuras 4 y 5).
 - **Ojo:** la barra n.º 1 de Lamine ya estaba en **9.969** por sí sola: al avanzar, otra habilidad puede subir +1 además de Conservación. Eso nos dirá qué habilidad es la barra 1.
 - **Lo que tiene que mirar FRALEX:** cargar la ranura 6 → Lamine con Conservación del balón **93** → avanzar → ¿**94**?
 - Para volver atrás: copiar el respaldo de `respaldos_ranuras` sobre `save\ML00000005`.
+
+### 2026-10-10 01:11 · ✅ PALANCA PROBADA EN EL JUEGO: Conservación del balón de Lamine 93 → 94
+- FRALEX cargó la ranura 6 (la preparada a las 01:05, barra 6 = 9.999) y avanzó **varios días** (próximo rival: Real Betis). Dos capturas de Lamine: al cargar y después.
+- **Al cargar:** Conservación del balón **93** (igual que antes: poner la barra en 9.999 no cambia nada hasta que el juego avanza). ✅
+- **Después:** Conservación del balón **94**. ✅ **La palanca funciona:** subir una barra a mano hace que el propio juego suba la habilidad +1.
+- **Otras subidas en esos días (crecimiento normal):** Actitud ofensiva 83→84, Salto 71→72, Equilibrio 87→88. Media sigue en 90. Nada raro ni roto.
+- Encaje con las barras que estaban casi llenas en el 16/3: barra 1 = 9.969, barra 22 = 9.940, barra 25 = 9.690 (numeradas desde 1). Lo más probable: **barra 1 = Actitud ofensiva** (la más llena y la primera de la lista). Salto y Equilibrio serán las barras 22 y 25, en un orden todavía sin confirmar. 🔎 Para confirmarlo hace falta el guardado de DESPUÉS (pedido a FRALEX en una ranura nueva).
+- Respaldo del original sigue en `_PhoenixMercado_prueba\respaldos_ranuras\ML00000005_ranura6_original_16-3-2026`.
