@@ -14,6 +14,7 @@ Dos trabajos independientes dentro del mismo Phoenix Link:
 - Token: `%APPDATA%\Trybuchet\Smash Soda\phoenix-token.dat`, cifrado DPAPI (`CryptProtectData`), sin entropía adicional. Mercado lo lee en solo lectura. Sin cambios de ubicación, nombre ni cifrado.
 - Carpeta de ajustes `%APPDATA%\Trybuchet\Smash Soda`: sin cambios.
 - Agente HTTP `PhoenixSoda/1.0` (`link/Http.cpp`): sin cambios.
+- (2026-10-10, SYNC) **Buzón de recarga de phoenix.lua v0.18**, en `<juego>\SiderAddons\content\phoenix\`: `modo.txt` = una palabra `ACTIVAR` | `AUTO-FICHAJES` | `AUTO-SIEMPRE` (lo escribe LINK con el botón «Modo de recarga»; sin archivo o con texto raro = `ACTIVAR`, el de por defecto); `recargar.txt` = cualquier texto distinto del anterior, ≤ 256 B, significa «hay fichajes nuevos» (lo escribe SYNC). Los dos: UTF-8 sin BOM, escritura atómica (`.tmp` + renombrar). Detalle: `PhoenixSync/base-conocimiento/31-MODOS-DE-RECARGA.md`; prompt para LINK: `PhoenixSync/prompts/PROMPT-LINK-modo-recarga.md`.
 
 ## Registro de cambios que afectan al otro chat
 - 2026-10-07 · Renombre a Phoenix Link: ejecutable `PhoenixLink.exe` (antes `PhoenixSoda.exe`), `OUTPUT_NAME` en `SmashSoda/CMakeLists.txt`. La etiqueta de texto del token pasó de "PhoenixSoda" a "PhoenixLink"; no afecta a la lectura.
@@ -39,3 +40,4 @@ Fralex usa 2 cuentas; cuando una se queda sin tokens sigue la otra. **La memoria
 5. Reglas de Fralex: «si algo se rompe, mejor no lo hagas»; compilar sin errores antes de cada commit; Windows 10 y 11; español; respuestas cortas; nunca pedir secretos; nada a `master` sin su permiso.
 6. Protocolo completo y prompts de arranque: `claude/PROTOCOLO-MULTICUENTA.md` (proyecto) o `docs/PROTOCOLO-MULTICUENTA.md` del repo web.
 - 2026-10-09 · (SYNC) **Pedido a LINK:** aceptar `PlayerAssignment.bin` en las entregas de Sync (mismas reglas que `Player.bin`). Prompt: `PhoenixSync/prompts/PROMPT-LINK-playerassignment.md`. Sync no lo manda hasta que se active `sync-base si`.
+- 2026-10-10 · (SYNC) **Pedido a LINK:** botón de tres opciones «Modo de recarga» que escribe `content\phoenix\modo.txt` (contrato arriba). Prompt: `PhoenixSync/prompts/PROMPT-LINK-modo-recarga.md`. Mientras no exista, se usa `PhoenixModo.bat`.

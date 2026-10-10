@@ -987,3 +987,13 @@ carnet del blob no cambia con la velocidad (cola idéntica entre ranuras 4 y 5).
 - Hecho: `base-conocimiento/30-EXPERIMENTO-B-COMO-REPLICAR.md` (bytes de A, B y C, los 3 cambios exactos sobre la v0.17e, sha256, simulación, instalación, prueba, cuadro corregido, problemas conocidos y cómo volver atrás). Índice actualizado.
 - Sin tocar el juego ni el PC. En el PC sigue instalada la v0.17e-B.
 - Siguiente: diseñar la v0.18 con los dos modos y la tecla (con la aprobación de FRALEX antes de escribir código).
+
+### 2026-10-10 10:25 · phoenix.lua v0.18 con TRES MODOS DE RECARGA — escrita y simulada (9/9), SIN instalar
+- **Decisiones de FRALEX:** 09:50, dos formas (automática y Activar) y una tecla para elegir. 10:10, que lo elija cada usuario con un botón en Phoenix Link. 10:12, dejar clara la diferencia y cuál viene por defecto. 10:12, «sí, súbelo todo, explicando dónde, cómo y cuándo se aplica».
+- **Modos:** 🟢 ACTIVAR (por defecto, = v0.17e) · 🔵 AUTO-FICHAJES (recarga sola cuando cambia `content\phoenix\recargar.txt`) · 🟣 AUTO-SIEMPRE (recarga sola cada vez que se vuelve al menú desde un modo y se entra a otro). En los tres, Activar sigue funcionando.
+- **Elección:** `content\phoenix\modo.txt` (lo escribirá Link; mientras tanto `PhoenixModo.bat`). Tecla **T** con el overlay = cambiar solo esta sesión. Sin archivo, texto raro o 3 fallos → ACTIVAR.
+- **Cómo:** evento `display_frame` (un paso cada 2 s). En ACTIVAR no lee ni escribe la memoria. En los automáticos, solo en el momento seguro (guía 22) y tras comprobar todos los bytes: lo mismo que la tecla P (byte `exe+0xAEF78E` + interruptor `exe+0x37F5C39`). La recarga la hace el juego al entrar al siguiente modo.
+- **Fallo encontrado en la simulación y arreglado:** `recargaCompleta()` cambiaba el byte de código ANTES de comprobar los bytes del interruptor. Si el interruptor no era el esperado, quedaba 1 byte escrito sin servir para nada. Ahora se comprueba todo antes de escribir nada (caso S5: 0 escrituras).
+- **Simulación:** `sider/pruebas/simular_v018.py`, 9 de 9. Además pasan con la v0.18 las simulaciones de la v0.17m, la v0.17a, la v0.17d, la v0.17e y la del experimento B.
+- **Archivos:** `sider/pruebas/phoenix-v0.18-prueba.lua` (a39b54de…), `sider/PhoenixModo.bat`, `sider/PhoenixRecargar.bat`, guía `base-conocimiento/31-MODOS-DE-RECARGA.md`, prompt `prompts/PROMPT-LINK-modo-recarga.md`, contrato en `COORDINACION.md`.
+- **Pendiente:** instalar (con OK de FRALEX, juego cerrado, respaldo y sha256) y probar: ¿`display_frame` llega en el menú?, ACTIVAR como la v0.17e, AUTO-SIEMPRE y AUTO-FICHAJES con Partido (sin Liga Máster ni guardar), y qué equipos salen tras la recarga automática (lista completa).

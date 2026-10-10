@@ -20,6 +20,7 @@ Se **alimenta en cada auditoría** y nunca se borra lo aprendido: si algo cambia
 - [19 · «Datos Actual. en vivo»: informe paso a paso](19-OPCION-EN-VIVO-PASO-A-PASO.md): todo lo que se hizo el 2026-10-09 por la noche, en orden, con horas, errores, simulaciones e instalaciones (v0.17m y v0.17a).
 - [22 · Fase D: zona del juego y momento seguro](22-ZONA-DEL-JUEGO-MOMENTO-SEGURO.md): el gestor de modos (`[[exe+0x3704E38]+0xF0]`: 7 = TOP_MENU, 8 = EXHIBITION, 13 = EDIT…), la regla del «momento seguro para recargar» y la prueba con la v0.17d.
 - [30 · Experimento B (v0.17e-B): cómo replicarlo desde cero](30-EXPERIMENTO-B-COMO-REPLICAR.md): botón nativo solo con los parches A y B (sin C) → el juego se queda en «Activar». Bytes exactos, los 3 cambios sobre la v0.17e, sha256, instalación, prueba, resultados corregidos y problemas conocidos.
+- [31 · v0.18: los tres modos de recarga](31-MODOS-DE-RECARGA.md): ACTIVAR (por defecto) · AUTO-FICHAJES · AUTO-SIEMPRE. Dónde se elige (`content\phoenix\modo.txt`, botón de Link, `PhoenixModo.bat`, tecla T), cómo funciona por dentro, cuándo se aplica cada uno, simulación 9/9 y lo que falta probar.
 | `parches/conmegol-26.md` | Lo que es **solo del ConmeGOL Patch 26**: carpetas, archivos, números de equipos y jugadores, IDs, competiciones, rarezas vistas. |
 | `parches/sudamerican-2026.md` | Lo poco que ya se sabe del Sudamerican Project 2026 (pendiente de auditar). |
 | `datos/motor.json` | La misma información del motor, en formato de datos, para que el software la lea. |
