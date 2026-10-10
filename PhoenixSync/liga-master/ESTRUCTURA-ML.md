@@ -352,3 +352,34 @@ E, estadísticas de D, bloque M). Siguiente paso: averiguar de dónde salen (la 
   A, contrato y ficha del blob; difieren solo valores que el juego genera/actualiza con el tiempo (B +10, D +8, F contador, M +0x14).
 - No se escriben (¿decoración?): historial de negociación (3 × 80 B en 0xbe90a8…), lista de 60 B en 0xbe8a54, llegados (0xc00de0),
   eventos con fecha (0xc01564), 0xc07170, 0xc80414, noticia 0x10bab98, lista tras el blob. Si el juego los necesitara, la prueba lo dirá.
+
+## 21. Agentes libres, fichas `0xdb65` y qué es de verdad el blob (9 oct, 21:00) — **[OBSERVADO en 6 guardados; corrección en C++ con pruebas]**
+Guardados usados: r0 (4/8), g18 (19/8), g19 y juego (21/8), j9 y jA (31/8, antes y después de que el juego despidiera a Stones), fD (22/9).
+- **El blob es SOLO el arreglo de fichas de jugador.** Cabecera de 0x1e B + **30.000 plazas de 156 B** (= el límite de jugadores del
+  juego) y una cola corta; 26.255 ocupadas en estos guardados. Después de las fichas solo hay plazas vacías, y esa zona **no cambia**
+  en un mes de temporada. **CORRECCIÓN de §14:** el blob **no** guarda el calendario ni los resultados; lo que cambiaba con cada
+  jornada eran las estadísticas de temporada dentro de las fichas. El calendario y los resultados están **fuera del blob**.
+- **Fichas `0xdb65xxxx` (resuelve el pendiente de §17):** siguen en el mismo arreglo, justo después de las del parche. La posición usa
+  los 16 bits bajos: ficha en `0x1e + 156·(reg & 0xffff)`. El primero es `0xdb654026` (= índice 16.422, justo donde acaban las del
+  parche) y en estos guardados llegan a `0xdb65668f` (9.834 consecutivas). Las 788 (g19) a 1.174 (fD) fichas `0xdb65` que están en
+  plantillas tienen su ficha ahí con el mismo pid. No son solo regens: muchas están en selecciones (bloques ≥ 528) con pid bajos.
+  `BlobLM::fichaDe` ahora usa esa regla (antes devolvía −1 para ellas: no se podía fichar a esos jugadores para el usuario).
+  Prueba nueva con datos reales: «toda plaza de plantilla tiene ficha en el blob» → r0 17.121 / g19 17.551 / jA 17.900 / fD 17.947 con
+  ficha, **0 sin ficha**.
+- **Agente libre = ficha con el bit 0x20 de +0x75 Y fin de contrato vacío (+0x66 = `ffff 0000`) Y en ningún bloque de equipo.**
+  j9: 94; jA: 95 (+ Stones). Los 94 son los libres de Konami (pid 55272…, L. Manas, J. Rekarte…; club anterior −1).
+  Al despedir a Stones el juego cambió en su ficha: quitó las competiciones del club (0x1e, 0x3b, 0x5c; dejó 0x22, 0x29, 0x24),
+  puso el **club anterior** (+0x5e) = City (`0x2b409a`), vació el fin de contrato (+0x66) y pasó +0x75 de 0x05 a **0x25**. +0x62 sigue
+  con el club (City). Fuera del blob quedó en: K (atrasada), noticias (0xbe34b4), A2, historial de negociación (0xbe9058), la lista de
+  12 B por reg de 0xc00d44 (`[reg][pid][0x15ff]`, sin cambios), la caja (0xc8018c) y la lista de 24 B tras el blob (con River, que ofertaba).
+- Dos casos raros con el bit 0x20 **dentro** de un club (bloques 617 y 618, Bin Changhun y A. Jabir, +0x75 = 0x21): sin interpretar.
+- **649 fichas sin club y sin el bit** (regs 14.872–16.325, contrato hasta 31/1/2028, +0x75 = 0x1x o 0x4x; ej. Naser Aliji, Jasir Asani):
+  están en el catálogo pero en ningún bloque. [HIPÓTESIS] jugadores de clubes que no entran en la Liga Máster.
+- **Fuera del blob, entre el 19/8 y el 21/8** (un partido del usuario) cambiaron, además de lo conocido, registros de 20 B en
+  0xccdbf0–0xcce9fc con `[reg][pid][u32 empaquetado]…` (¿jugadores destacados o valoraciones de partidos?) y la zona 0xcd0ce8. ⏳
+- ⚠️ **Multiparche:** la frontera 16.422 depende del parche (cuántos jugadores trae); la regla `reg & 0xffff` no. `BlobLM::kOfsTam`
+  (0x11403a8) es una **dirección fija** del ConmeGOL 26: en un parche con otro número de equipos o jugadores podría moverse. Pendiente:
+  localizarla por ancla.
+- **Experimentos que faltan (los hace Fralex):** (1) fichar a un agente libre en el juego y guardar en otra ranura (verdad del juego
+  para programar el fichaje de libres); (2) guardar justo antes y justo después de un partido, el mismo día (calendario y resultados);
+  (3) reiniciar el juego con un `Player.bin` cambiado y cargar una carrera (stats en la Liga Máster).

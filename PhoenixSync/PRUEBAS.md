@@ -544,3 +544,9 @@ se puede cambiar un guardado con el juego abierto mientras no esté cargado (Fra
 ### ✅ 2026-10-09 ~20:12 · CONFIRMADO: con «Activar», los fichajes entran por la BASE (PlayerAssignment.bin)
 - Vinícius → Barça (dorsal 29) **solo** en `PlayerAssignment.bin` de Phoenix-DB (las dos carpetas). Option file sin tocar (sin Vinícius). Con «Datos Actual. en vivo → Activar» **Vinícius apareció en el Barça** ✅ (Mbappé ya estaba de antes).
 - ⇒ Para fichar con Activar, Sync debe escribir cada fichaje también en `PlayerAssignment.bin` (siempre a partir del de olmos), y Link debe aceptar ese archivo en sus entregas.
+
+**2026-10-09 20:58 · Análisis (sin juego) · Liga Máster: agentes libres, fichas 0xdb65 y el blob** — 🔎 + corrección ✅ en pruebas automáticas
+Con 6 guardados ya abiertos: el blob es **solo** el arreglo de fichas (30.000 plazas); el calendario está fuera. Los agentes libres
+se reconocen por un bit de su ficha (94 de Konami + Stones). Las fichas de los jugadores `0xdb65…` estaban justo después de las del
+parche: el programa no las encontraba y ya está corregido (0 jugadores sin ficha en 4 guardados reales; 211/211 sin archivos y
+225/225 con archivos). Detalle en ESTRUCTURA-ML §21. Faltan 3 pruebas en el juego (ver §21).

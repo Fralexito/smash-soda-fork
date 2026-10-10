@@ -19,6 +19,7 @@
 #include "../core/Emparejamiento.h"
 #include "../core/Integridad.h"
 #include "../core/LigaMaster.h"
+#include "../core/BlobLM.h"
 #include "../core/Alineacion.h"
 #include "../core/Firma.h"
 #include "../core/Sincronizacion.h"
@@ -816,6 +817,24 @@ int main() {
 		std::vector<uint8_t> dm((std::istreambuf_iterator<char>(fm)), {});
 		auto gm = mercado::lm::GuardadoLM::desdeDatos(dm);
 		CHECK(gm.ok());
+		// Toda ficha de plantilla (también reg 0xdb65xxxx) tiene su ficha de 156 B en el blob (ESTRUCTURA-ML §21).
+		if (gm.ok()) {
+			auto bl = mercado::lm::BlobLM::leer(dm);
+			CHECK(bl.ok());
+			if (bl.ok()) {
+				size_t conFicha = 0, sinFicha = 0, generados = 0;
+				for (int k = 0; k < 700; k++) {
+					auto eq = gm.valor->equipo(k);
+					if (!eq.ok()) continue;
+					for (auto& f : eq.valor->plantilla) {
+						if ((f.reg >> 16) == 0xdb65) generados++;
+						(bl.valor->fichaDe(f.reg, f.pid) >= 0 ? conFicha : sinFicha)++;
+					}
+				}
+				std::printf("  fichas del blob: %zu con ficha, %zu sin ficha (%zu con reg 0xdb65)\n", conFicha, sinFicha, generados);
+				CHECK(conFicha > 0 && sinFicha == 0);
+			}
+		}
 		if (gm.ok()) {
 			std::map<uint32_t, int> pos, eda;
 			if (const char* rCat = std::getenv("PM_CATALOGO")) {

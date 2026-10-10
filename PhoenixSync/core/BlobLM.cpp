@@ -112,7 +112,10 @@ namespace mercado::lm {
 
 	long long BlobLM::fichaDe(uint32_t reg, uint32_t pid) const {
 		// Fichas de 156 B desde +0x1e, una por `reg` (la ficha del reg r empieza en 0x1e + 156·r; `reg` y `pid` en +2 y +6).
-		const size_t o = 0x1e + size_t(reg) * kTamFicha;
+		// Los jugadores con reg 0xdb65xxxx (creados o añadidos por el juego) siguen en el MISMO arreglo, justo después:
+		// su posición usa los 16 bits bajos (el primero es 0xdb654026 = índice 16.422 en el ConmeGOL 26). §21.
+		const uint32_t indice = (reg >> 16) == 0xdb65 ? (reg & 0xffffu) : reg;
+		const size_t o = 0x1e + size_t(indice) * kTamFicha;
 		if (o + kTamFicha > _plano.size()) return -1;
 		if (le32(_plano, o + 2) != reg || le32(_plano, o + 6) != pid) return -1;
 		return (long long)o;
