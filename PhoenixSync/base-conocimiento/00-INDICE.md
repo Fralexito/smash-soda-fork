@@ -17,6 +17,7 @@ Se **alimenta en cada auditoría** y nunca se borra lo aprendido: si algo cambia
 | `06-RUTA-DEL-DESCUBRIMIENTO.md` | **El relato en orden** de la noche del 8-9 de octubre: cada intento, por qué, qué salió bien, **qué salió mal** (incluidos los errores de Claude), aciertos, errores con su lección y el método de trabajo que funcionó. |
 - [07 · El motor por dentro](07-MOTOR-POR-DENTRO.md): interruptor nativo de recarga y mapa de la actualización en vivo de Konami.
 - [17 · «Datos Actual. en vivo»: dónde está la opción](17-OPCION-EN-VIVO-DONDE-ESTA.md): no se guarda en disco; es el modo de carga del gestor de la base (`[[exe+0x3705E10]+0x38]`, 1 = activada); lectura segura probada con la v0.17m.
+- [19 · «Datos Actual. en vivo»: informe paso a paso](19-OPCION-EN-VIVO-PASO-A-PASO.md): todo lo que se hizo el 2026-10-09 por la noche, en orden, con horas, errores, simulaciones e instalaciones (v0.17m y v0.17a).
 | `parches/conmegol-26.md` | Lo que es **solo del ConmeGOL Patch 26**: carpetas, archivos, números de equipos y jugadores, IDs, competiciones, rarezas vistas. |
 | `parches/sudamerican-2026.md` | Lo poco que ya se sabe del Sudamerican Project 2026 (pendiente de auditar). |
 | `datos/motor.json` | La misma información del motor, en formato de datos, para que el software la lea. |

@@ -2,6 +2,7 @@
 
 **Investigación del 2026-10-09, de 21:04 a 23:10 (Lima).** PC de FRALEX, PES 2021 con ConmeGOL Patch 26 y Sider 7.3.3.
 Archivo nuevo. No sustituye a ningún otro. Amplía el [07 · El motor por dentro](07-MOTOR-POR-DENTRO.md).
+El camino completo, paso a paso, está en el [19](19-OPCION-EN-VIVO-PASO-A-PASO.md).
 
 ---
 
@@ -32,7 +33,7 @@ Archivo nuevo. No sustituye a ningún otro. Amplía el [07 · El motor por dentr
 | Qué | Dónde | Cómo se sabe |
 |---|---|---|
 | Puntero al gestor de la base | `exe+0x3705E10` (8 bytes) | Lo devuelve la función `0x14B6A60`: `mov rax, [exe+0x3705E10] ; ret` |
-| **Modo de carga (la opción)** | **número de 4 bytes en `[gestor + 0x38]`** | Lo escribe `0x14B7560`. El juego lo compara con 1 en 12 sitios |
+| **Modo de carga (la opción)** | **número de 4 bytes en `[gestor + 0x38]`** | Lo escribe `0x14B7560`. El juego lo lee en 12 sitios; en 11 de ellos lo compara con 1 |
 | Estado del gestor | 4 bytes en `[gestor + 0x30]` | 4 = quieto, 1 = cargando (visto en el juego) |
 | Bandera «carga terminada» | byte `[gestor + 0x91]` | 0 mientras carga, 1 al terminar (visto en el overlay; 🔎 observado) |
 

@@ -618,3 +618,13 @@ Investigado sin éxito (todo anotado en ESTRUCTURA-ML §25): no hay copia de su 
 fichas de tu equipo (A–M), ni en su ficha de 596 B, ni empaquetadas en 5–8 bits. El juego, al entrar a la LM, lee
 `installversionplayer.bin` (23:17 y 23:21; viene de Konami, `dt80_700E_x64.cpk`, 13.223 B): son 7.426 parejas
 «jugador → versión» (sin habilidades; Lamine no está). **Siguiente:** experimento de dos carreras nuevas (v99 y v90) para comparar.
+
+### 2026-10-09 23:31 · phoenix.lua v0.17a (opción A: «recordar la última recarga», SOLO LECTURA) — INSTALADA con el OK de FRALEX, falta probar
+- Decisión de FRALEX (23:07): primero la opción A, luego el experimento B (sin el parche C).
+- **Qué añade a la v0.17m:** al empezar cada lectura de `player.bin` mira el modo y apunta el tipo de recarga: modo 1 → **ACTIVAR**; modo 0 sin un 1 en los últimos 15 s → **NORMAL**; modo 0 dentro de esos 15 s → no cambia (2.ª recarga del mismo Activar). Línea nueva en el overlay: **[ÚLTIMA RECARGA]**. Log: `[phoenix] última recarga: …`. No escribe en la memoria ni cambia los parches A/B/C.
+- **Simulación LuaJIT con reloj falso:** 5 casos nuevos (arranque + Activar ×2; Activar → Editar/Cargar → 2.ª recarga lenta; exe distinto; Shift+R; modo 2, reloj hacia atrás y gestor inexistente) + los 6 de la v0.17m: todos bien, 0 escrituras. `sider/pruebas/simular_v017a.py`.
+- **Instalación:** juego cerrado (Sider «All done» 23:31:02); respaldo `phoenix.lua.v017m` en las dos carpetas `modules`; v0.17a copiada a las dos; sha256 en el PC = 379dce7b…3306c en las dos; respaldos `v017` (d85e1071…) y `v017m` (57ff5ec0…) intactos.
+- **Límites:** no ve recargas que no releen la base (tecla L, «Ser una Leyenda»); tras Shift+R empieza sin memoria.
+- **Plan de prueba:** Activar → overlay «ACTIVAR → equipos de la base»; Editar → Cargar (sin Guardar) → «NORMAL → equipos del option file». Comprobación con Vinícius si los archivos siguen como a las 20:08 (Barça con Activar, Real Madrid con Editar → Cargar).
+- **Corrección a la entrada de las 22:45:** el juego lee `[gestor+0x38]` en 12 sitios y en 11 de ellos lo compara con 1 (no en los 12).
+- Informe paso a paso de toda la sesión: `base-conocimiento/19-OPCION-EN-VIVO-PASO-A-PASO.md` (archivo nuevo).
