@@ -71,7 +71,7 @@ function Maestro({ m }) {
     <div>
       <div class="lab acc" style="margin-bottom:10px">${t("2 · MARCA LOS TÍTERES (MANDOS VIRTUALES)", "2 · MARK THE PUPPETS (VIRTUAL PADS)")}</div>
       ${mar.titeres.length === 0
-        ? html`<div class="ayuda">${t("No hay mandos virtuales. Revisa Ajustes › Diagnóstico (ViGEmBus).", "No virtual pads. Check Settings › Diagnostics.")}</div>`
+        ? html`<div class="ayuda">${t("No hay mandos virtuales. Revisa Sala › Conexión (ViGEmBus).", "No virtual pads. Check Settings › Diagnostics.")}</div>`
         : html`<div class="rej4" style="gap:8px">${mar.titeres.map((p) => html`<button key=${p.n} class=${cx("titere", p.activo && "on")} disabled=${bloqueado || !hayMaestro}
             aria-pressed=${p.activo} onClick=${() => accion("marionetas.titere", { indice: p.n - 1, si: !p.activo })}>
             <span class="numeral" style="font-size:22px">${dos(p.n)}</span>

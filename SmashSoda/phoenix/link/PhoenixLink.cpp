@@ -20,6 +20,7 @@
 #include "../PhoenixPrefs.h"
 #include "BuzonJuego.h"
 #include "Entrega.h"
+#include "ModulosJuego.h"
 #include "../../helpers/PathHelper.h"
 
 #pragma comment(lib, "crypt32.lib")
@@ -293,8 +294,55 @@ namespace phoenix {
 					const bool abierto = g.puente != phoenix::buzon::Puente::JuegoCerrado;
 					_pesAbierto = abierto;
 					const std::string parche = abierto ? phoenix::entrega::nombreParche(g.carpetaJuego) : std::string();
+					_estadoCarpeta = g.puente == phoenix::buzon::Puente::Listo ? g.carpetaBuzon.wstring() : std::wstring();
+					if (abierto && !g.carpetaJuego.empty()) _juegoCarpeta = g.carpetaJuego.wstring();
 					std::lock_guard<std::mutex> lock(_mutex);
 					_buzonInfo.parche = parche;
+				}
+				// Modo de recarga de phoenix.lua v0.18: modo.txt en content\phoenix de la raíz y de cada modo del cambiador.
+				// Se escribe al arrancar y cada vez que cambia la elección (con PES abierto o cerrado). Nunca crea carpetas.
+				{
+					const std::string modo = PhoenixPrefs::get().modoRecarga;
+					if (modo != _modoEscrito && ahoraMs() >= _modoProximoMs) {
+						_modoProximoMs = ahoraMs() + 10000;   // si falla, se reintenta a los 10 s
+						std::filesystem::path juego = _juegoCarpeta.empty() ? std::filesystem::path() : std::filesystem::path(_juegoCarpeta);
+						if (juego.empty() && !PhoenixPrefs::get().carpetaJuego.empty()) juego = phoenix::entrega::deU8(PhoenixPrefs::get().carpetaJuego);
+						int hay = 0, escritos = 0;
+						for (const auto& d : phoenix::modulos::destinos(juego)) {
+							std::error_code ec;
+							const std::filesystem::path c = d.second / "content" / "phoenix";
+							if (!std::filesystem::is_directory(c, ec)) continue;
+							hay++;
+							if (phoenix::buzon::escribirAtomicoComo(c, "modo", ".txt", modo + "\n")) escritos++;
+						}
+						if (hay > 0 && escritos == hay) _modoEscrito = modo;
+					}
+				}
+				// Partido según el juego (estado.json de phoenix.lua): solo lectura, cada vuelta (~1 s), sin red
+				{
+					const juego::EstadoPartidoJuego ej = _estadoCarpeta.empty() ? juego::EstadoPartidoJuego()
+						: juego::leer(std::filesystem::path(_estadoCarpeta));
+					// El Lua de Sider no puede renombrar (no hay os.rename): si se leyó justo a medio escribir,
+					// el archivo es reciente pero no se entiende → se queda el último dato bueno (máx. 3 s).
+					const bool aMedias = !ej.valido && ej.edadSeg >= 0.0 && ej.edadSeg <= juego::kMaxEdadSeg;
+					std::lock_guard<std::mutex> lock(_mutex);
+					if (!(aMedias && _estadoJuego.valido && ahoraMs() - _estadoValidoMs < 3000)) _estadoJuego = ej;
+					if (ej.valido) _estadoValidoMs = ahoraMs();
+					_estadoLeidoMs = ahoraMs();
+				}
+				// Link → juego: sala.txt para el HUD de phoenix_estadio.lua (solo con PES abierto y el puente instalado)
+				if (!_estadoCarpeta.empty() && ahoraMs() >= _salaJuegoProximoMs) {
+					std::string texto;
+					{ std::lock_guard<std::mutex> lock(_mutex); texto = _salaJuegoTexto; }
+					const bool cambio = texto != _salaJuegoEscrito;
+					if (!texto.empty() && (cambio || ahoraMs() - _salaJuegoEscritoMs >= 4000)) {
+						const std::string conHora = texto + "t=" + std::to_string(static_cast<long long>(std::time(nullptr))) + "\n";
+						if (phoenix::buzon::escribirAtomicoComo(std::filesystem::path(_estadoCarpeta), "sala", ".txt", conHora)) {
+							_salaJuegoEscrito = texto;
+							_salaJuegoEscritoMs = ahoraMs();
+						}
+					}
+					_salaJuegoProximoMs = ahoraMs() + 1000;
 				}
 				if (PhoenixPrefs::get().modoPes != "off" && !_pesAbierto) foto.abierta = false;
 
@@ -738,6 +786,18 @@ namespace phoenix {
 	}
 
 	InfoBuzon PhoenixLink::buzon() { std::lock_guard<std::mutex> l(_mutex); return _buzonInfo; }
+
+	void PhoenixLink::salaJuego(const std::string& texto) {
+		std::lock_guard<std::mutex> l(_mutex);
+		_salaJuegoTexto = texto;
+	}
+
+	juego::EstadoPartidoJuego PhoenixLink::estadoJuego() {
+		std::lock_guard<std::mutex> l(_mutex);
+		juego::EstadoPartidoJuego e = _estadoJuego;
+		if (ahoraMs() - _estadoLeidoMs > 4000) e.valido = false;   // el hilo se quedó esperando a la web: dato no fiable
+		return e;
+	}
 
 	// Chat general (contrato §27): lo que se escribe aqui sale en la web y al reves. Nunca rompe nada: si falla, solo se ve el aviso.
 	bool PhoenixLink::pasoChat(const std::string& token) {

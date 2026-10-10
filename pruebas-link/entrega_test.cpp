@@ -155,6 +155,59 @@ int main() {
 	CHECK(av.size() + 8 <= 110 + 8);
 	CHECK(av.find("Activar") != std::string::npos);
 
+	// 13) PlayerAssignment.bin (pedido de Sync, PROMPT-LINK-playerassignment.md)
+	{
+		const fs::path J = T / "pa", E = T / "pa-ent";
+		const std::string db1 = "SiderAddons/livecpk/Phoenix-DB/common/etc/pesdb";
+		const std::string db2 = "ConmeGol Extras/ConmeGOL Patch 26/SiderAddons/livecpk/Phoenix-DB/common/etc/pesdb";
+		fs::create_directories(J / db1); fs::create_directories(J / db2); fs::create_directories(E);
+		escribir(J / db1 / "Player.bin", "P1"); escribir(J / db2 / "Player.bin", "P2");
+		escribir(J / db1 / "PlayerAssignment.bin.anterior", "VIEJO-DE-OTRA-ENTREGA");   // .anterior suelto: no debe volver al deshacer
+		Rutas rp{ E, J, opt };
+		auto pedidoPA = [&](const std::string& id, const std::string& asig, const std::string& player, bool shaMal) {
+			nlohmann::json j = { {"version", 1}, {"id", id}, {"creado_en", "2026-10-10T10:00:00Z"}, {"resumen", "Fichaje: Lamine al Madrid"}, {"archivos", nlohmann::json::array()} };
+			escribir(E / "PlayerAssignment.bin", asig);
+			j["archivos"].push_back({ {"nombre", "PlayerAssignment.bin"}, {"sha256", shaMal ? std::string(64, 'b') : sha256Hex(asig.data(), asig.size())} });
+			if (!player.empty()) { escribir(E / "Player.bin", player); j["archivos"].push_back({ {"nombre", "Player.bin"}, {"sha256", sha256Hex(player.data(), player.size())} }); }
+			escribir(E / "entrega.json", j.dump());
+		};
+		// a) los dos archivos: los dos colocados en las dos carpetas, Player.bin.anterior guardado
+		pedidoPA("pa-1", CAB + "ASIG", CAB + "PLAY", false);
+		Ultima a = entregar(rp);
+		CHECK(a.estado == "colocada");
+		CHECK(leer(J / db1 / "PlayerAssignment.bin") == CAB + "ASIG" && leer(J / db2 / "PlayerAssignment.bin") == CAB + "ASIG");
+		CHECK(leer(J / db1 / "Player.bin") == CAB + "PLAY" && leer(J / db1 / "Player.bin.anterior") == "P1");
+		CHECK(a.player.size() == 4);
+		CHECK(!fs::exists(J / db1 / "PlayerAssignment.bin.anterior") && leer(J / db1 / "PlayerAssignment.bin.anterior.viejo") == "VIEJO-DE-OTRA-ENTREGA");
+		CHECK(fs::exists(E / "entregados" / "pa-1" / "PlayerAssignment.bin"));
+		// b) deshacer: Player.bin vuelve; el PlayerAssignment.bin nuestro se aparta (no había uno antes)
+		Ultima d = deshacer(rp);
+		CHECK(d.estado == "deshecha");
+		CHECK(leer(J / db1 / "Player.bin") == "P1" && leer(J / db2 / "Player.bin") == "P2");
+		CHECK(!fs::exists(J / db1 / "PlayerAssignment.bin") && leer(J / db1 / "PlayerAssignment.bin.deshecho") == CAB + "ASIG");
+		// c) solo PlayerAssignment, con uno ya colocado: se guarda .anterior y el deshacer lo devuelve
+		escribir(J / db1 / "PlayerAssignment.bin", "PA-PREVIO"); escribir(J / db2 / "PlayerAssignment.bin", "PA-PREVIO2");
+		pedidoPA("pa-2", CAB + "ASIG2", "", false);
+		CHECK(entregar(rp).estado == "colocada");
+		CHECK(leer(J / db1 / "PlayerAssignment.bin.anterior") == "PA-PREVIO" && leer(J / db1 / "Player.bin") == "P1");
+		CHECK(deshacer(rp).estado == "deshecha" && leer(J / db1 / "PlayerAssignment.bin") == "PA-PREVIO" && leer(J / db2 / "PlayerAssignment.bin") == "PA-PREVIO2");
+		// d) sha mal: no se coloca nada
+		pedidoPA("pa-3", CAB + "ASIG3", CAB + "PLAY3", true);
+		Ultima m = entregar(rp);
+		CHECK(m.estado == "rechazada" && m.motivo.find("sha256") != std::string::npos);
+		CHECK(leer(J / db1 / "PlayerAssignment.bin") == "PA-PREVIO" && leer(J / db1 / "Player.bin") == "P1");
+		// e) sin cabecera WESYS: rechazado
+		pedidoPA("pa-4", "SIN-CABECERA-NI-NADA", "", false);
+		CHECK(entregar(rp).motivo.find("WESYS") != std::string::npos);
+		// f) sin pesdb: rechazo claro y no se crean carpetas
+		const fs::path J2 = T / "pa-sin";
+		fs::create_directories(J2);
+		Rutas rs{ E, J2, opt };
+		pedidoPA("pa-5", CAB + "X", "", false);
+		CHECK(entregar(rs).motivo == "Phoenix-DB no instalado");
+		CHECK(!fs::exists(J2 / "SiderAddons"));
+	}
+
 	fs::remove_all(T);
 	if (fallos == 0) std::cout << "entrega_test: TODO BIEN\n";
 	return fallos == 0 ? 0 : 1;

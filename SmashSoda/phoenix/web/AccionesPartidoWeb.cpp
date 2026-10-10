@@ -65,6 +65,21 @@ namespace phoenix::web {
 
 	using namespace detalle_partido_web;
 
+	std::optional<json> finalizarPartido(Interno& in, bool anunciar, const std::string& extra) {
+		auto reg = in.partido.finalizar(ahoraSeg());
+		if (!reg) return std::nullopt;
+		const std::string marcador = std::to_string(reg->a.goles) + "-" + std::to_string(reg->b.goles);
+		const bool guardado = in.historial && in.historial->agregar(*reg);
+		in.partidosSesion++;
+		PhoenixLink::instancia().marcarPartido(false);
+		PhoenixLink::instancia().evento("partida_fin", "", json{ {"marcador", marcador} }.dump());
+		if (anunciar) {
+			const std::string res = reg->a.nombre + " " + marcador + " " + reg->b.nombre;
+			mensajeDelBot(in, "Final: " + res + (reg->ganador == "empate" ? ". ¡Empate!" : ". ¡Bien jugado!") + extra);
+		}
+		return json{ {"registro", reg->comoJson()}, {"guardado", guardado} };
+	}
+
 	void registrarAccionesPartido(Interno& in) {
 		Puente& p = *in.puente;
 
@@ -133,18 +148,9 @@ namespace phoenix::web {
 		});
 
 		p.registrar("partido.finalizar", [&in](const json& d, uint64_t) -> std::optional<json> {
-			auto reg = in.partido.finalizar(ahoraSeg());
-			if (!reg) throw ErrorAccion("NO_EN_JUEGO", "No hay partido en juego.");
-			const std::string marcador = std::to_string(reg->a.goles) + "-" + std::to_string(reg->b.goles);
-			const bool guardado = in.historial && in.historial->agregar(*reg);
-			in.partidosSesion++;
-			PhoenixLink::instancia().marcarPartido(false);
-			PhoenixLink::instancia().evento("partida_fin", "", json{ {"marcador", marcador} }.dump());
-			if (d.value("anunciar", true)) {
-				const std::string res = reg->a.nombre + " " + marcador + " " + reg->b.nombre;
-				mensajeDelBot(in, "Final: " + res + (reg->ganador == "empate" ? ". ¡Empate!" : ". ¡Bien jugado!"));
-			}
-			return json{ {"registro", reg->comoJson()}, {"guardado", guardado} };
+			auto r = finalizarPartido(in, d.value("anunciar", true), "");
+			if (!r) throw ErrorAccion("NO_EN_JUEGO", "No hay partido en juego.");
+			return r;
 		});
 
 		p.registrar("partido.cancelar", [&in](const json&, uint64_t) -> std::optional<json> {

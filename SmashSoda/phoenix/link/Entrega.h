@@ -1,6 +1,7 @@
 #pragma once
 // Repartidor de datos: coloca los archivos que deja Phoenix Sync en %APPDATA%\Phoenix Mercado\entrega
-// (Player.bin y/o EDIT00000000) en su sitio dentro del juego, de forma atomica y con respaldo.
+// (Player.bin, PlayerAssignment.bin y/o EDIT00000000) en su sitio dentro del juego, de forma atomica y con respaldo.
+// Player.bin y PlayerAssignment.bin van a cada carpeta Phoenix-DB\common\etc\pesdb (raiz + modos), todo o nada, con <nombre>.anterior.
 // No fabrica nada: solo comprueba, coloca y avisa. Nunca crea carpetas del juego ni toca sider.ini.
 #include <filesystem>
 #include <string>

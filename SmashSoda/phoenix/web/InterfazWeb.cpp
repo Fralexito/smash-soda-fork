@@ -198,6 +198,7 @@ namespace phoenix::web {
 			registrarAccionesGente(in);
 			registrarAccionesAjustes(in);
 			registrarAccionesPartido(in);
+			registrarAccionesModulos(in);
 
 			in.iniciada = true;
 			if (PhoenixPrefs::get().interfazWeb) crearVista(in);

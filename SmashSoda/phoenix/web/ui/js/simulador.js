@@ -2,13 +2,19 @@
 //  Motor simulado (solo vista previa en un navegador normal, nunca dentro de
 //  Phoenix Link). Implementa las mismas acciones y forma de estado que el C++
 //  para poder revisar el diseño y probar la interfaz sin Windows.
+//  Escenarios (en la URL): ?escenario=cerrada · ?escenario=vacia (sala abierta
+//  sin nadie) · ?escenario=llena (por defecto: 6 personas, 2 solicitudes,
+//  1 en espera, pings variados y un partido en curso 2–1).
 // =============================================================================
 
 export function crearSimulador(enviar) {
   const ahora = () => Date.now() / 1000;
   const inicio = ahora();
+  let escenario = "llena";
+  try { escenario = new URLSearchParams(location.search).get("escenario") || "llena"; } catch { /* sin URL */ }
+  const llena = escenario === "llena";
   const s = {
-    tema: "galaxy", idioma: "es", abierta: true, abiertaEn: inicio - 6128,
+    tema: "galaxy", idioma: "es", abierta: escenario !== "cerrada", abiertaEn: inicio - 6128,
     opciones: { nombre: "Phoenix · Galaxy League", plazas: 4, limitador: false, limite: 30, biblioteca: "Default", juegos: ["PES 2021", "Football Life 2026"], pendiente: false, turnos: false, quiosco: false, overlay: true },
     phoenix: { visibilidad: "amigos", espectadores: true, limiteEspectadores: 4, entradaParsec: true, juego: "eFootball PES 2021", parche: "Conmegol", region: "Lima" },
     calidad: { fps: 60, mbps: 15, auto: true, porPersona: 10, subida: 0, perdida: 0, energia: "ok" },
@@ -19,15 +25,21 @@ export function crearSimulador(enviar) {
     ],
     marionetas: { motor: "sdl", maestro: -1, maestros: [{ n: 1, nombre: "Xbox Wireless Controller", tipo: "xbox", activo: true }, { n: 2, nombre: "Wireless Controller", tipo: "ds4", activo: false }], titeres: [1, 2, 3, 4, 5, 6, 7, 8].map((n) => ({ n, activo: false })) },
     xbox: 8, ds4: 0, bloqueoGlobal: false, bloqueoBotones: false, host: 0,
-    invitados: [
+    invitados: escenario === "vacia" ? [] : [
       { parsecId: 1187, nombre: "Mirko", base: 18, mod: true, vip: false, teclado: false, raton: false, rolWeb: "jugador" },
       { parsecId: 2041, nombre: "Kaiser", base: 27, mod: false, vip: true, teclado: false, raton: false, rolWeb: "jugador" },
       { parsecId: 3310, nombre: "ElTigre", base: 58, mod: false, vip: false, teclado: true, raton: false, rolWeb: "jugador" },
+      { parsecId: 4420, nombre: "Lucho", base: 84, mod: false, vip: false, teclado: false, raton: false, rolWeb: "jugador" },
+      { parsecId: 6031, nombre: "Pibe", base: 132, mod: false, vip: false, teclado: false, raton: false, rolWeb: "no_listado" },
       { parsecId: 5126, nombre: "Zurdo10", base: 41, mod: false, vip: false, teclado: false, raton: false, rolWeb: "espectador" },
     ],
-    mandos: [1187, 2041, 3310, 0, 0, 0, 0, 0], bloqueados: new Set(), desconectados: new Set(),
-    solicitudes: [], espera: [{ parsecId: 7777, nombre: "Visitante99", ping: 66 }],
-    series: {}, partido: { fase: "libre", a: { nombre: "", jugadores: [], goles: 0 }, b: { nombre: "", jugadores: [], goles: 0 }, inicio: 0, acumulado: 0, invertido: false },
+    mandos: escenario === "vacia" ? [0, 0, 0, 0, 0, 0, 0, 0] : [1187, 3310, 2041, 4420, 0, 0, 0, 0], bloqueados: new Set(), desconectados: new Set(),
+    solicitudes: llena ? [{ parsecId: 6031, nombre: "Pibe", mando: 5 }, { parsecId: 4420, nombre: "Lucho", mando: 2 }, { parsecId: 9911, nombre: "Zurdo10", mando: -1 }] : [],
+    espera: llena ? [{ parsecId: 7777, nombre: "Visitante99", ping: 66 }] : [],
+    series: {},
+    partido: llena
+      ? { fase: "en_juego", a: { nombre: "Local", jugadores: [{ parsecId: 1187, nombre: "Mirko" }, { parsecId: 3310, nombre: "ElTigre" }], goles: 2 }, b: { nombre: "Visita", jugadores: [{ parsecId: 2041, nombre: "Kaiser" }, { parsecId: 4420, nombre: "Lucho" }], goles: 1 }, inicio: inicio - 1114, acumulado: 0, invertido: false }
+      : { fase: "libre", a: { nombre: "", jugadores: [], goles: 0 }, b: { nombre: "", jugadores: [], goles: 0 }, inicio: 0, acumulado: 0, invertido: false },
     historial: [
       { id: 1, inicioMs: Date.now() - 86400000, duracionSeg: 1210, a: { nombre: "Mirko", jugadores: [{ parsecId: 1187, nombre: "Mirko" }], goles: 3 }, b: { nombre: "Kaiser", jugadores: [{ parsecId: 2041, nombre: "Kaiser" }], goles: 1 }, ganador: "a" },
       { id: 2, inicioMs: Date.now() - 3600000, duracionSeg: 1180, a: { nombre: "ElTigre", jugadores: [{ parsecId: 3310, nombre: "ElTigre" }], goles: 2 }, b: { nombre: "Mirko", jugadores: [{ parsecId: 1187, nombre: "Mirko" }], goles: 2 }, ganador: "empate" },
@@ -35,9 +47,11 @@ export function crearSimulador(enviar) {
     perfilesSala: [{ nombre: "Liga", valores: { plazas: 4, mbps: 15, local: 2, visitante: 2, visibilidad: "amigos" } }],
     buzon: { activo: true, estado: "conectado", ultimo: "00:30", juego: "C:\\Juegos\\PES 2021 ConmeGOL", parche: "ConmeGOL Patch 26", avisos: [{ id: 12, texto: "hola causa", hora: "00:30", escrito: true }, { id: 11, texto: "Tu fichaje de Kaiser ya está listo ⚡", hora: "00:12", escrito: true }, { id: 10, texto: "Recuerda: partido de liga hoy 9 pm", hora: "23:40", escrito: false }] },
     pes: { modo: "off", abierto: true },
+    biblioteca: [{ id: 1, nombre: "PES 2021", ruta: "C:\\Juegos\\PES 2021 ConmeGOL\\PES2021.exe", parametros: "" }, { id: 2, nombre: "Football Life 2026", ruta: "D:\\FL26\\FL26.exe", parametros: "" }],
+    atajos: [{ comando: "!lockall", tecla: 76, nombre: "L" }],
     entrega: { estado: "colocada", id: "demo-1", resumen: "Lamine Yamal: velocidad 99", motivo: "", fecha: "2026-10-09 06:12", puedeDeshacer: true },
     ajustes: {
-      general: { flashWindow: true, ttsEnabled: false, bonkEnabled: true, messageNotification: true, disableGuideButton: true, disableKeyboard: false, autoIndex: false, parsecLogs: false, ipBan: true, blockVPN: false, devMode: false, chatbot: "PhoenixBot", discord: "https://discord.gg/phoenix", welcomeMessage: "¡Bienvenido _PLAYER_! Respeta los turnos y diviértete.", socketEnabled: true, socketPort: 9002, socketActivo: true },
+      general: { flashWindow: true, ttsEnabled: false, bonkEnabled: true, messageNotification: true, disableGuideButton: true, disableKeyboard: false, autoIndex: false, parsecLogs: false, ipBan: true, blockVPN: false, devMode: false, chatbot: "PhoenixBot", discord: "https://discord.gg/phoenix", welcomeMessage: "¡Bienvenido _PLAYER_! Respeta los turnos y diviértete.", socketEnabled: true, socketPort: 9002, socketActivo: true, autoMute: true, autoMuteTime: 500, muteTime: 5, hostBonkProof: false, sfxEnabled: true },
       permisos: { guest: { useBB: false, useSFX: true, changeControls: true }, vip: { useBB: true, useSFX: true, changeControls: true }, moderator: { useBB: true, useSFX: true, changeControls: true } },
       video: { monitor: 0, gpu: 0, captura: 0, resolucion: 0, lanczos: false, ritmo: true, fps: 60, mbps: 15 },
       overlay: { monitor: 0, tema: "", chat: { activo: true, historial: true, posicion: "top Left" }, mandos: { activo: true, posicion: "bottom center" }, invitados: { activo: true, latencia: true, posicion: "top right" }, corriendo: true },
@@ -59,7 +73,51 @@ export function crearSimulador(enviar) {
     ] },
     chat: ["Mirko: buenas!", "Kaiser: listos para la revancha", "[PhoenixBot] ElTigre entró a la sala."],
     actividad: ["[PhoenixBot] Sala abierta con eFootball PES 2021", "[PhoenixBot] Mirko joined.", "[PhoenixBot] Kaiser joined.", "[PhoenixBot] Mando 03 asignado a ElTigre"],
+    // Árbitro: estado.json del juego (?estado=archivo.json lo lee cada segundo) y preferencias
+    juego: { datos: false }, golesJuego: null,
+    arbitro: { competitivo: true, pausaAuto: false, marcadorAuto: true, soloAutorizados: true, modoRecarga: "ACTIVAR", ultimaPausa: "", conStart: false },
+    golesAnunciados: -1,
   };
+  // Prueba con un estado.json falso: ?estado=estado-prueba.json (junto a index.html). Sin archivo = «sin datos del juego».
+  try {
+    const archivo = new URLSearchParams(location.search).get("estado");
+    if (archivo) setInterval(async () => {
+      try {
+        const r = await fetch(archivo, { cache: "no-store" });
+        const j = r.ok ? await r.json() : null;
+        const fases = ["menu", "en_juego", "pausado", "descanso", "final"];
+        s.juego = j && fases.includes(j.fase)
+          ? { datos: true, fase: j.fase, minuto: j.minuto | 0, periodo: j.periodo | 0, golesLocal: j.goles_local ?? -1, golesVisita: j.goles_visita ?? -1,
+              pkLocal: j.pk_local ?? -1, pkVisita: j.pk_visita ?? -1, nombreLocal: j.nombre_local || "", nombreVisita: j.nombre_visita || "",
+              relojCorre: j.reloj_corre !== false, completo: !!j.completo,
+              goles: (Array.isArray(j.goles) ? j.goles : []).slice(0, 40).map((x) => ({ m: x.m | 0, local: x.l !== "v" })) }
+          : { datos: false };
+      } catch { s.juego = { datos: false }; }
+      // Goles del juego → marcador (solo cuando cambian en el juego; la corrección manual se respeta)
+      const p = s.partido, g = s.juego;
+      const vivo = p.fase === "en_juego" || p.fase === "pausado";
+      if (vivo && g.datos && g.golesLocal >= 0 && g.golesVisita >= 0) {
+        const firma = g.golesLocal + ":" + g.golesVisita;
+        if (firma !== s.golesJuego) {
+          s.golesJuego = firma;
+          p.a.goles = p.invertido ? g.golesVisita : g.golesLocal;
+          p.b.goles = p.invertido ? g.golesLocal : g.golesVisita;
+        }
+      } else if (!vivo) s.golesJuego = null;
+      // Marcador automático: relato de goles y final (como Arbitro.cpp)
+      if (!vivo) s.golesAnunciados = -1;
+      if (vivo && g.datos && s.arbitro.marcadorAuto) {
+        const total = g.goles.length;
+        if (s.golesAnunciados < 0 || total < s.golesAnunciados) s.golesAnunciados = total;
+        for (let i = s.golesAnunciados; i < total; i++) {
+          const x = g.goles[i], lado = (x.local !== p.invertido ? p.a : p.b).nombre;
+          bot(`GOL ${x.m}' de ${lado}. ${p.a.nombre} ${p.a.goles}-${p.b.goles} ${p.b.nombre}`);
+        }
+        s.golesAnunciados = total;
+        if (g.fase === "final" && g.completo) acciones["partido.finalizar"]({ anunciar: true });
+      }
+    }, 1000);
+  } catch { /* sin URL */ }
   const perfiles = {
     1187: { parsec_id: 1187, nombre: "Mirko", avatar_url: null, carta: { media: 87, posicion: "DC", club: "Galaxy FC", rareza: "oro", pais: "PE", apodo: "El Mago", stats: { rit: 90, tir: 85, pas: 80, reg: 88, def: 40, fis: 75 } } },
     2041: { parsec_id: 2041, nombre: "Kaiser", avatar_url: null, carta: { media: 91, posicion: "MC", club: "Sudario United", rareza: "leyenda", pais: "AR", apodo: "Kaiser", stats: { rit: 78, tir: 82, pas: 93, reg: 90, def: 70, fis: 77 } } },
@@ -106,6 +164,12 @@ export function crearSimulador(enviar) {
         jugador: hostAqui ? "Fralex" : id ? nombreDe(id) : "", parsecId: hostAqui ? 99 : id, ping: id ? pingDe(id) : -1,
         equipo: n <= s.formacion.local ? "local" : n <= s.formacion.local + s.formacion.visitante ? "visitante" : "fuera",
         tipo: i < s.xbox ? "xbox" : "ds4",
+        // Mando en vivo (solo en Mandos › Puestos, como el motor): cada mando «pulsa» algo distinto con el tiempo
+        ...(s.seccion === "mandos" && (s.pestana === "puestos" || !s.pestana) && (id || hostAqui) ? { entrada: (() => {
+          const k = Math.floor(ahora() * 2 + i * 3), bits = [0x1000, 0x2000, 0x4000, 0x8000, 0x1, 0x8, 0x100, 0x10, 0];
+          return { b: bits[k % bits.length], lt: (k % 5) * 60, rt: ((k + 2) % 5) * 60,
+            lx: Math.round(Math.cos(ahora() + i) * 30000), ly: Math.round(Math.sin(ahora() + i) * 30000), rx: 0, ry: (k % 3 - 1) * 25000 };
+        })() } : {}),
       };
     });
     const verSerie = (s.seccion === "sala" && s.pestana === "red") || s.seccion === "partido";
@@ -134,6 +198,12 @@ export function crearSimulador(enviar) {
       perfiles,
       red: s.abierta ? resumenRed(verSerie) : [],
       partido: { fase: p.fase, a: p.a, b: p.b, segundos: segundosPartido(), inicioMs: 0, invertido: p.invertido },
+      juego: s.juego,
+      arbitro: {
+        ...s.arbitro,
+        activo: s.arbitro.competitivo && s.abierta && (s.juego.datos ? s.juego.fase === "en_juego" : p.fase === "en_juego"),
+        origen: s.juego.datos ? "juego" : p.fase === "en_juego" || p.fase === "pausado" ? "marcador" : "",
+      },
       turnos: s.turnos,
     };
     if (s.seccion === "ajustes" && s.pestana === "audio") {
@@ -161,6 +231,23 @@ export function crearSimulador(enviar) {
     const d = new Date();
     s.chatGlobal.mensajes.push({ id: s.chatGlobal.nextId++, usuarioId: propio ? "yo" : "x" + nombre, nombre, texto, hora: String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"), rol, propio });
     enviar({ t: "evento", nombre: "chatglobal", datos: globalJson() });
+  };
+
+  // Lista de «Módulos del juego» (lo que devuelve sync.modulos en el motor real)
+  const modulosSim = () => {
+    const est = s.modEstadio || "no_instalado";
+    const destinos = (activo, version) => [
+      { nombre: "Raíz del juego", carpeta: "C:\\Juegos\\PES 2021 ConmeGOL\\SiderAddons", archivo: est !== "no_instalado", igual: true, version, linea: activo, comentada: !activo && est === "apagado" },
+      { nombre: "ConmeGOL Patch 26", carpeta: "C:\\Juegos\\PES 2021 ConmeGOL\\ConmeGol Extras\\ConmeGOL Patch 26\\SiderAddons", archivo: est !== "no_instalado", igual: true, version, linea: activo, comentada: !activo && est === "apagado" },
+    ];
+    return {
+      juego: s.buzon.juego, pesAbierto: s.pes.abierto,
+      modulos: [
+        { archivo: "phoenix_estadio.lua", descripcion: "Partido ↔ Phoenix Link: marcador, goles con minuto, HUD del partido y árbitro (solo lectura).", gestionable: true, version: "1.0", estado: est, carga: "", destinos: est === "no_instalado" ? [] : destinos(est === "instalado", "1.0") },
+        { archivo: "phoenix.lua", descripcion: "Phoenix Sync: avisos de la web en el overlay y botón nativo «Datos Actual. en vivo» (lo gestiona Phoenix Sync).", gestionable: false, version: "", estado: "solo_lectura", carga: "cargado",
+          destinos: [{ nombre: "Raíz del juego", carpeta: "", archivo: true, igual: false, version: "0.17e", linea: true, comentada: false }, { nombre: "ConmeGOL Patch 26", carpeta: "", archivo: true, igual: false, version: "0.17e", linea: true, comentada: false }] },
+      ],
+    };
   };
 
   const acciones = {
@@ -196,6 +283,11 @@ export function crearSimulador(enviar) {
     "teclado.crear": (d) => { const base = s.perfilesTeclado[0]; s.perfilesTeclado.push({ userId: d.userId, nombre: d.nombre, teclas: base.teclas.map((x) => ({ ...x })) }); },
     "teclado.reiniciar": () => {},
     "teclado.borrar": (d) => { s.perfilesTeclado = s.perfilesTeclado.filter((x) => x.userId !== d.userId); },
+    "mandos.competitivo": (d) => { s.arbitro.competitivo = !!d.si; },
+    "mandos.pausaAuto": (d) => { s.arbitro.pausaAuto = !!d.si; },
+    "mandos.marcadorAuto": (d) => { s.arbitro.marcadorAuto = !!d.si; },
+    "mandos.soloAutorizados": (d) => { s.arbitro.soloAutorizados = !!d.si; },
+    "sync.modoRecarga": (d) => { s.arbitro.modoRecarga = d.modo; },
     "mandos.botonesBloq": (d) => { s.botonesBloq = { mascara: d.mascara, lt: d.lt, rt: d.rt, lx: d.lx, ly: d.ly, rx: d.rx, ry: d.ry }; },
     "marionetas.motor": (d) => { s.marionetas.motor = d.sdl ? "sdl" : "xinput"; s.marionetas.maestro = -1; },
     "marionetas.actualizar": () => {},
@@ -236,12 +328,26 @@ export function crearSimulador(enviar) {
     "amigos.invitar": () => ({ mensaje: "Invitación enviada." }),
     "ajustes.modoPes": (d) => { s.pes.modo = d.valor; },
     "sync.deshacerEntrega": () => { s.entrega = { ...s.entrega, estado: "deshecha", puedeDeshacer: false, motivo: "" }; },
+    // Módulos del juego (instalador del paquete de Luas): imita ModulosJuego.cpp
+    "sync.modulos": () => modulosSim(),
+    "sync.modulo": (d) => {
+      if (s.pes.abierto) throw Object.assign(new Error("Cierra PES 2021 primero: Sider lee los módulos al arrancar."), { codigo: "PES_ABIERTO" });
+      s.modEstadio = d.accion === "instalar" ? "instalado" : "apagado";
+      return { ...modulosSim(), mensaje: d.accion === "instalar" ? "phoenix_estadio.lua instalado en 2 carpetas. Abre PES: en sider.log debe aparecer que cargó." : "phoenix_estadio.lua apagado (línea comentada en sider.ini)." };
+    },
     "ajustes.avisosJuego": (d) => { s.buzon.activo = d.valor; s.buzon.estado = d.valor ? "conectado" : "apagado"; },
     "ajustes.general": (d) => { s.ajustes.general[d.clave] = d.valor; },
     "ajustes.permisos": (d) => { s.ajustes.permisos[d.grupo][d.clave] = d.valor; },
     "ajustes.video": (d) => { s.ajustes.video[d.clave] = d.valor; },
     "ajustes.videoListas": () => ({ pantallas: ["Pantalla 1 (1920×1080)", "Pantalla 2 (2560×1440)"], gpus: ["NVIDIA GeForce RTX 3060"], wgc: true }),
     "ajustes.audio": (d) => { s.audio[d.canal][d.clave] = d.valor; },
+    "ajustes.overlayMenu": () => ({}),
+    "biblioteca.lista": () => ({ juegos: s.biblioteca }),
+    "biblioteca.guardar": (d) => { const j = s.biblioteca.find((x) => x.id === d.id); if (j) Object.assign(j, { nombre: d.nombre, ruta: d.ruta, parametros: d.parametros || "" }); else s.biblioteca.push({ id: Math.max(0, ...s.biblioteca.map((x) => x.id)) + 1, nombre: d.nombre, ruta: d.ruta, parametros: d.parametros || "" }); s.opciones.juegos = s.biblioteca.map((x) => x.nombre); },
+    "biblioteca.borrar": (d) => { s.biblioteca = s.biblioteca.filter((x) => x.id !== d.id); s.opciones.juegos = s.biblioteca.map((x) => x.nombre); },
+    "atajos.lista": () => ({ atajos: s.atajos, activos: true }),
+    "atajos.agregar": (d) => { const n = d.tecla >= 0x70 ? "F" + (d.tecla - 0x6f) : String.fromCharCode(d.tecla); s.atajos = s.atajos.filter((x) => x.tecla !== d.tecla); s.atajos.push({ comando: d.comando, tecla: d.tecla, nombre: n }); },
+    "atajos.borrar": (d) => { s.atajos.splice(d.indice, 1); },
     "ajustes.overlay": (d) => { const [a, b] = d.clave.split("."); if (b) s.ajustes.overlay[a][b] = d.valor; else s.ajustes.overlay[a] = d.valor; },
     "sfx.lista": () => ({ sonidos: s.sonidos }),
     "sfx.recargar": () => ({ sonidos: s.sonidos }),
@@ -280,7 +386,6 @@ export function crearSimulador(enviar) {
   // Estado cada 200 ms (como el motor real) y una muestra de red por segundo
   setInterval(() => enviar({ t: "estado", datos: estado() }), 200);
   setInterval(tick, 1000);
-  setTimeout(() => { s.solicitudes.push({ parsecId: 2041, nombre: "Kaiser", mando: 4 }); }, 9000);
   setTimeout(() => global("Kaiser", "¿alguien para unas revanchas?", "jugador"), 11000);
 
   return {

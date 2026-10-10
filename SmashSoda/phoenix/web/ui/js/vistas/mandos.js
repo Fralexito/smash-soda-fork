@@ -59,8 +59,11 @@ export function Pendientes({ m }) {
     </div>`)}
     ${sol.map((x) => html`<div class="caja" key=${"s" + x.parsecId} style="border-color:var(--acc);display:flex;align-items:center;gap:14px;flex-wrap:wrap">
       <${Avatar} nombre=${x.nombre} id=${x.parsecId} t=${36}/>
-      <div style="flex:1;min-width:200px"><b>${x.nombre}</b> ${t("pide el mando", "asks for pad")} <b class="acc">${dos(x.mando)}</b>
-        <div class="ayuda">${t("Lo pidió con !cambio o !equipo en el chat.", "Requested with !cambio or !equipo.")}</div></div>
+      ${x.mando < 0
+        ? html`<div style="flex:1;min-width:200px"><b>${x.nombre}</b> ${t("quiere jugar", "wants to play")}
+            <div class="ayuda">${t("Pulsó su mando estando en «Mirando». Si aceptas, toma el primer puesto libre.", "Pressed their pad while watching. If you accept, they take the first free seat.")}</div></div>`
+        : html`<div style="flex:1;min-width:200px"><b>${x.nombre}</b> ${x.mando === 0 ? t("quiere cambiar de equipo", "wants to switch teams") : html`${t("pide el mando", "asks for pad")} <b class="acc">${dos(x.mando)}</b>`}
+            <div class="ayuda">${t("Lo pidió con !cambio o !equipo en el chat.", "Requested with !cambio or !equipo.")}</div></div>`}
       <${Boton} tipo="ok mini" al=${() => accion("solicitud.aceptar", { parsecId: x.parsecId })}>${t("ACEPTAR", "ACCEPT")}</${Boton}>
       <${Boton} tipo="peligro mini" al=${() => accion("solicitud.rechazar", { parsecId: x.parsecId })}>${t("RECHAZAR", "DECLINE")}</${Boton}>
     </div>`)}
@@ -148,7 +151,7 @@ function Puestos({ m }) {
     return accion("mandos.herramienta", { nombre });
   };
   if (total === 0) {
-    return html`<${Vacio} titulo=${t("No hay mandos virtuales", "No virtual pads")} texto=${t("Instala ViGEmBus o revisa Ajustes › Diagnóstico.", "Install ViGEmBus or check Settings › Diagnostics.")}/>`;
+    return html`<${Vacio} titulo=${t("No hay mandos virtuales", "No virtual pads")} texto=${t("Instala ViGEmBus o revisa Sala › Conexión.", "Install ViGEmBus or check Settings › Diagnostics.")}/>`;
   }
   const filas = Math.ceil(total / 4);
   return html`<div class="col" style="min-height:100%">

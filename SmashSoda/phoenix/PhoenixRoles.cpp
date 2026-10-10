@@ -4,6 +4,7 @@
 #include <nlohmann/json.hpp>
 
 #include "../Hosting.h"
+#include "../core/Config.h"
 #include "../helpers/PathHelper.h"
 
 extern Hosting g_hosting;
@@ -58,12 +59,19 @@ namespace phoenix {
 	bool PhoenixRoles::puedeTomarMando(uint32_t parsecId, int indiceMando) {
 		recargarSiCambio();
 		std::lock_guard<std::mutex> lock(_mutex);
-		if (!_activa) return true;
+		// El host lo mandó a «Mirando»: nunca toma mando por su cuenta (puede pedirlo)
+		if (_mirandoHost.count(parsecId)) { anotarPedido(parsecId); return false; }
+		if (!_activa) {
+			// Sin lista de la web: solo quien el host autorizó (salvo con turnos, que tienen su orden)
+			if (!_soloAutorizados || Config::cfg.hotseat.enabled || _autorizadosHost.count(parsecId)) return true;
+			anotarPedido(parsecId);
+			return false;
+		}
 
 		auto it = _jugadores.find(parsecId);
 		if (it == _jugadores.end()) {
 			// Entró por Parsec y el host lo aceptó como jugador
-			if (!_admitidosJugador.count(parsecId)) return false;   // espectador, en espera o no listado
+			if (!_admitidosJugador.count(parsecId)) { anotarPedido(parsecId); return false; }   // espectador, en espera o no listado
 			auto m = _movidosPorHost.find(parsecId);
 			return m == _movidosPorHost.end() || m->second <= 0 || indiceMando == m->second - 1;
 		}
@@ -141,13 +149,22 @@ namespace phoenix {
 
 	bool PhoenixRoles::moverAsiento(uint32_t parsecId, int asiento) {
 		std::lock_guard<std::mutex> lock(_mutex);
-		if (!_activa) return true;                       // sin lista: todo libre
+		// El host le da un puesto: queda autorizado y deja de estar en «Mirando»
+		auto autorizarlo = [&]() {
+			_autorizadosHost.insert(parsecId);
+			_mirandoHost.erase(parsecId);
+			_pidieron.erase(parsecId);
+			_silencioHasta.erase(parsecId);
+		};
+		if (!_activa) { autorizarlo(); return true; }    // sin lista: el host decide
 		auto it = _jugadores.find(parsecId);
 		if (it == _jugadores.end()) {
 			if (!_admitidosJugador.count(parsecId)) return false;   // espectadores nunca juegan
 			_movidosPorHost[parsecId] = asiento;                     // entró por Parsec como jugador
+			autorizarlo();
 			return true;
 		}
+		autorizarlo();
 		// Si otro jugador tenía ese asiento, intercambian
 		for (auto& par : _jugadores) {
 			if (par.first != parsecId && par.second == asiento) {
@@ -158,6 +175,57 @@ namespace phoenix {
 		it->second = asiento;
 		_movidosPorHost[parsecId] = asiento;
 		return true;
+	}
+
+	void PhoenixRoles::anotarPedido(uint32_t parsecId) {
+		const uint64_t t = ahoraMs();
+		auto s = _silencioHasta.find(parsecId);
+		if (s != _silencioHasta.end() && t < s->second) return;   // lo rechazaron hace poco
+		if (_pidieron.size() >= 64 && !_pidieron.count(parsecId)) return;
+		_pidieron[parsecId] = t;
+	}
+
+	void PhoenixRoles::soloAutorizados(bool si) {
+		std::lock_guard<std::mutex> lock(_mutex);
+		_soloAutorizados = si;
+	}
+
+	void PhoenixRoles::autorizar(uint32_t parsecId) {
+		if (parsecId == 0) return;
+		std::lock_guard<std::mutex> lock(_mutex);
+		if (_mirandoHost.count(parsecId)) return;   // lo mandó a mirar el host: manda el host
+		_autorizadosHost.insert(parsecId);
+		_pidieron.erase(parsecId);
+	}
+
+	void PhoenixRoles::mandarAMirar(uint32_t parsecId) {
+		if (parsecId == 0) return;
+		std::lock_guard<std::mutex> lock(_mutex);
+		_mirandoHost.insert(parsecId);
+		_autorizadosHost.erase(parsecId);
+		_pidieron.erase(parsecId);
+	}
+
+	bool PhoenixRoles::estaMirando(uint32_t parsecId) {
+		std::lock_guard<std::mutex> lock(_mutex);
+		return _mirandoHost.count(parsecId) > 0;
+	}
+
+	std::vector<uint32_t> PhoenixRoles::quierenJugar() {
+		std::lock_guard<std::mutex> lock(_mutex);
+		const uint64_t t = ahoraMs();
+		std::vector<uint32_t> v;
+		for (auto it = _pidieron.begin(); it != _pidieron.end();) {
+			if (t - it->second > 60000) it = _pidieron.erase(it);
+			else { v.push_back(it->first); ++it; }
+		}
+		return v;
+	}
+
+	void PhoenixRoles::olvidarPedido(uint32_t parsecId, bool rechazado) {
+		std::lock_guard<std::mutex> lock(_mutex);
+		_pidieron.erase(parsecId);
+		if (rechazado) _silencioHasta[parsecId] = ahoraMs() + 60000;
 	}
 
 	void PhoenixRoles::limpiarWeb() {

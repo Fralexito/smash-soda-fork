@@ -24,6 +24,10 @@ namespace phoenix {
 		uint32_t parsecId = 0;
 		int pingMs = -1;             ///< -1 = sin dato
 		bool bloqueado = false;
+		// Entrada en vivo del mando virtual (lo que recibe el juego ahora mismo)
+		uint16_t botones = 0;        ///< máscara XInput (A 0x1000, B 0x2000, X 0x4000, Y 0x8000, Start 0x10…)
+		uint8_t gatilloI = 0, gatilloD = 0;           ///< 0–255
+		int16_t ejeLX = 0, ejeLY = 0, ejeRX = 0, ejeRY = 0;   ///< −32768…32767
 	};
 
 	struct EspectadorVista {

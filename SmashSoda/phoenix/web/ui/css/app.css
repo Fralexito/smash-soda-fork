@@ -636,3 +636,59 @@ html.oculta *, html.oculta *::before, html.oculta *::after { animation-play-stat
 .glosario dd { margin: 2px 0 0; color: var(--mut); font-size: 13px; line-height: 1.45; }
 .entrenador { flex: none; display: flex; align-items: center; gap: 16px; padding: 14px 20px; border-radius: 14px; border: 1px solid var(--linea); background: var(--acc-suave); }
 @media (prefers-reduced-motion: reduce) { .peldano.sig::after { animation: none; opacity: .5; } }
+
+/* =============================================================================
+   MEZCLA (2026-10-10): piezas del rediseño traídas al diseño original.
+   Grupo de estado «conectado», personas con ping y mando, ficha lateral,
+   tarjetas plegables por su título y resaltado de la paleta.
+   ============================================================================= */
+.grupo-estado { display: flex; gap: 6px; align-items: center; min-width: 0; }
+.cabecera .grupo-estado .pill { height: 30px; }
+.pill .mut { margin-right: -2px; }
+@media (max-width: 1320px) { .barra .pill.juego { display: none; } }
+@media (max-width: 1500px) { .barra .ultima-hueco { display: none; } }
+
+/* Ping con punto (el color cambia con transición) */
+.ping { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; white-space: nowrap; flex: none; }
+.ping > i { width: 8px; height: 8px; border-radius: 50%; background: var(--mut); transition: background-color .2s var(--ease), box-shadow .2s var(--ease); }
+.ping.ok > i { background: var(--ok); box-shadow: 0 0 8px var(--ok); } .ping.ok .mono { color: var(--ok); }
+.ping.warn > i { background: var(--warn); box-shadow: 0 0 8px var(--warn); } .ping.warn .mono { color: var(--warn); }
+.ping.bad > i { background: var(--bad); box-shadow: 0 0 8px var(--bad); } .ping.bad .mono { color: var(--bad); }
+.ping .mono { font-weight: 600; }
+.ping.grande { font-size: 26px; } .ping.grande .mono { font-family: var(--f-disp); font-weight: 700; } .ping.grande > i { width: 12px; height: 12px; }
+
+/* Personas en la portada */
+.lista-sala { display: flex; flex-direction: column; gap: 8px; }
+.lista-sala .persona { gap: 14px; }
+.lista-sala .persona:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
+.selector-puesto { width: 210px; flex: none; height: 36px; font: 600 12px/1 var(--f-disp); letter-spacing: .08em; }
+.selector-puesto.compacto { width: 190px; }
+.selector-puesto.eq-local { border-color: var(--acc); color: var(--acc); }
+.selector-puesto.eq-visitante { border-color: var(--eq-b); color: var(--eq-b); }
+.entra-persona { animation: subir .22s var(--ease) both; }
+
+/* Ficha lateral */
+.velo-panel { position: fixed; inset: 0; z-index: 65; background: rgba(2, 3, 10, .55); backdrop-filter: blur(3px); animation: aparecer .16s var(--ease); }
+.panel-lateral { position: absolute; right: 0; top: 0; bottom: 0; display: flex; flex-direction: column; background: var(--panel); border-left: 1px solid var(--linea-fuerte); box-shadow: -24px 0 60px rgba(0, 0, 0, .55); animation: entrar-lado .2s var(--ease); }
+@keyframes entrar-lado { from { transform: translateX(28px); opacity: 0; } }
+.pl-cab { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 22px 24px 14px; border-bottom: 1px solid var(--tenue); }
+.pl-cab h2 { margin: 6px 0 0; font: 700 26px/1.1 var(--f-disp); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pl-cuerpo { flex: 1; overflow: auto; padding: 16px 24px 28px; display: flex; flex-direction: column; gap: 4px; }
+.ficha-bloque { display: flex; flex-direction: column; gap: 10px; padding: 16px 0; border-top: 1px solid var(--tenue); }
+.ficha-bloque:first-of-type { border-top: 0; }
+.linea-info { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+
+/* Tarjetas plegables por su título */
+.titulo-tarjeta.plegable { cursor: default; }
+.titulo-btn { display: inline-flex; align-items: center; gap: 10px; padding: 0; border: 0; background: none; color: inherit; cursor: pointer; text-align: left; }
+.titulo-btn .chev { display: inline-block; color: var(--acc); font-size: 12px; transform: rotate(90deg); transition: transform .18s var(--ease); }
+.titulo-tarjeta.cerrado .titulo-btn .chev { transform: none; color: var(--mut); }
+.titulo-btn:hover .lab { color: var(--fg); }
+.titulo-btn:focus-visible { outline: 2px solid var(--acc); outline-offset: 4px; border-radius: 4px; }
+.cut.plegada { flex: none !important; min-height: 0 !important; }
+.cut.plegada .titulo-tarjeta { margin-bottom: 0; }
+
+/* La paleta encontró este ajuste */
+.resaltado { animation: resaltar 1.6s var(--ease); border-radius: 8px; }
+@keyframes resaltar { 0%, 60% { box-shadow: 0 0 0 2px var(--acc), 0 0 22px var(--acc-suave); background: var(--acc-suave); } 100% { box-shadow: none; background: transparent; } }
+@media (prefers-reduced-motion: reduce) { .resaltado { animation: none; box-shadow: 0 0 0 2px var(--acc); } .entra-persona, .panel-lateral, .velo-panel { animation: none; } }

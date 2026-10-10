@@ -127,6 +127,31 @@ function BotonesElegidos({ m }) {
   </${Tarjeta}>`;
 }
 
+// Árbitro del partido: lo decide Link mirando la fase del partido (la del juego o, si no hay datos, la del marcador).
+function Arbitro({ m }) {
+  const a = m.arbitro || {};
+  const juego = m.juego?.datos;
+  return html`<${Tarjeta} interior="padding:22px 24px">
+    <${Titulo} texto=${t("ÁRBITRO DEL PARTIDO", "MATCH REFEREE")}
+      derecha=${a.activo ? html`<span class="mono" style="color:var(--ok)">${t("START BLOQUEADO", "START LOCKED")}</span>` : null}/>
+    <${AjusteSw} titulo=${t("Modo competitivo", "Competitive mode")}
+      desc=${t("Con el partido en juego, los invitados no pueden usar Start, Back ni Guía. Al parar vuelve tu bloqueo de siempre.",
+               "While the match is live, guests can't use Start, Back or Guide. Your usual lock comes back afterwards.")}
+      valor=${!!a.competitivo} al=${() => accion("mandos.competitivo", { si: !a.competitivo })}/>
+    <${AjusteSw} titulo=${t("Marcador automático", "Automatic scoreboard")}
+      desc=${t("Con el módulo Phoenix Estadio en el juego: el marcador arranca solo, cada gol se anuncia en el chat con su minuto y al final se guarda en el historial.",
+               "With the Phoenix Estadio game module: the scoreboard starts by itself, each goal is announced with its minute and the result is saved at full time.")}
+      valor=${!!a.marcadorAuto} al=${() => accion("mandos.marcadorAuto", { si: !a.marcadorAuto })}/>
+    <${AjusteSw} titulo=${t("Pausa automática (prueba)", "Auto pause (test)")}
+      desc=${juego ? t("Si un jugador del partido se cae o pasa de 150 ms de ping 5 s: aviso en el chat, pausa del marcador y Start en el juego.",
+                       "If a match player drops or stays above 150 ms for 5 s: chat notice, scoreboard pause and Start in the game.")
+                   : t("Si un jugador del partido se cae o pasa de 150 ms de ping 5 s: aviso en el chat y pausa del marcador. Sin datos del juego no se pulsa nada.",
+                       "If a match player drops or stays above 150 ms for 5 s: chat notice and scoreboard pause. Without game data nothing is pressed.")}
+      valor=${!!a.pausaAuto} al=${() => accion("mandos.pausaAuto", { si: !a.pausaAuto })}/>
+    ${a.ultimaPausa ? html`<div class="ayuda" style="margin-top:8px">${t("Última pausa automática:", "Last auto pause:")} ${a.ultimaPausa}${a.conStart ? t(" (Start pulsado)", " (Start pressed)") : ""}</div>` : null}
+  </${Tarjeta}>`;
+}
+
 export function BloqueoNuevo({ m }) {
   const lista = m.mandos.lista || [];
   return html`<div class="fila partible" style="align-items:flex-start">
@@ -136,12 +161,8 @@ export function BloqueoNuevo({ m }) {
         <${AjusteSw} titulo=${t("Bloquear todos los mandos", "Lock all pads")} desc=${t("Nadie puede mover nada (pausas, árbitro, revisión).", "Nobody can move (pauses, review).")}
           valor=${m.mandos.bloqueoGlobal} deshabilitado=${m.mandos.esclavo} al=${() => accion("mandos.herramienta", { nombre: "bloquearTodo" })}/>
       </${Tarjeta}>
-      <${Tarjeta} interior="padding:22px 24px">
-        <${Titulo} texto=${t("POR MANDO", "PER PAD")}/>
-        ${lista.length === 0 ? html`<div class="ayuda">${t("No hay mandos virtuales.", "No virtual pads.")}</div>` : null}
-        ${lista.map((p) => html`<${AjusteSw} key=${p.n} titulo=${`${t("Mando", "Pad")} ${dos(p.n)}`} desc=${p.ocupado ? p.jugador : t("libre", "free")}
-          valor=${p.bloqueado} al=${() => accion("mandos.bloquear", { indice: p.n - 1 })}/>`)}
-      </${Tarjeta}>
+      <div class="ayuda">${t("Para bloquear un solo mando usa el candado de su puesto en Mandos › Puestos.", "To lock a single pad use the padlock on its seat in Pads › Seats.")}</div>
+      <${Arbitro} m=${m}/>
     </div>
     <div class="col" style="flex:1.5 1 0;min-width:340px">
       <${BotonesElegidos} m=${m}/>

@@ -1,7 +1,10 @@
 // Avisos automáticos a partir de los cambios de estado del motor
 // (alguien entra, pide mando, espera decisión, la web se desconecta…).
 import { puente } from "./puente.js";
-import { avisar } from "./tienda.js";
+import { avisar, irA } from "./tienda.js";
+
+// Botón «Ver» de los avisos que piden una decisión: lleva a la portada, donde se decide
+const ver = () => ({ texto: t("VER", "VIEW"), al: () => irA("sala", "resumen") });
 import { t } from "./i18n.js";
 
 export function vigilarCambios() {
@@ -28,12 +31,12 @@ function revisar(a, b) {
   // Solicitudes de mando (!cambio / !equipo)
   const solAntes = ids(a.solicitudes);
   for (const x of b.solicitudes || []) {
-    if (!solAntes.has(x.parsecId)) avisar(t(`${x.nombre} pide el mando ${x.mando}. Revísalo en Mandos.`, `${x.nombre} asks for pad ${x.mando}. See Pads.`), "warn", 7000);
+    if (!solAntes.has(x.parsecId)) avisar(t(`${x.nombre} pide el mando ${x.mando}.`, `${x.nombre} asks for pad ${x.mando}.`), "warn", 9000, ver());
   }
   // Entrada por Parsec esperando decisión
   const espAntes = ids(a.espera);
   for (const x of b.espera || []) {
-    if (!espAntes.has(x.parsecId)) avisar(t(`${x.nombre} espera que decidas si juega o mira.`, `${x.nombre} is waiting for your decision.`), "warn", 8000);
+    if (!espAntes.has(x.parsecId)) avisar(t(`${x.nombre} espera que decidas si juega o mira.`, `${x.nombre} is waiting for your decision.`), "warn", 9000, ver());
   }
   // Web
   if (a.web?.estado !== b.web?.estado) {

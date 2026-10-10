@@ -3,6 +3,26 @@ import { html, useState, useEffect, useRef, useMemo } from "../lib.js";
 import { t } from "../i18n.js";
 import { accion, cambiar, irA } from "../tienda.js";
 import { Icono, cx } from "../ui.js";
+import { INDICE_AJUSTES } from "../indice-ajustes.js";
+
+const limpio = (x) => String(x || "").replace(/\s+/g, " ").trim().toLowerCase();
+/** Tras ir a la pestaña: despliega la tarjeta si estaba plegada y resalta el ajuste. */
+function resaltar(texto, tarjeta) {
+  const buscar = (intento) => {
+    if (tarjeta) {
+      const cab = [...document.querySelectorAll(".titulo-tarjeta.cerrado")].find((c) => limpio(c.textContent).includes(limpio(tarjeta)));
+      if (cab) cab.querySelector(".titulo-btn")?.click();
+    }
+    const el = [...document.querySelectorAll(".vista .ajuste .t, .vista .lab")].find((e) => limpio(e.textContent) === limpio(texto))
+      || [...document.querySelectorAll(".vista .ajuste .t, .vista .lab")].find((e) => limpio(e.textContent).startsWith(limpio(texto)));
+    if (!el) { if (intento < 6) setTimeout(() => buscar(intento + 1), 150); return; }
+    const caja = el.closest(".ajuste") || el.closest(".titulo-tarjeta") || el;
+    caja.scrollIntoView({ block: "center", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+    caja.classList.remove("resaltado"); void caja.offsetWidth; caja.classList.add("resaltado");
+    setTimeout(() => caja.classList.remove("resaltado"), 1800);
+  };
+  setTimeout(() => buscar(0), 200);
+}
 import { abrirSala, cerrarSala } from "./sala.js";
 
 function opciones(m) {
@@ -28,7 +48,9 @@ function opciones(m) {
   ir("partido", "vivo", "Partido · Marcador", "Match · Scoreboard", "partido");
   ir("partido", "historial", "Partido · Historial y tabla", "Match · History", "trofeo");
   ir("mandos", "puestos", "Mandos · Puestos", "Pads · Seats", "mandos");
+  ir("mandos", "teclado", "Mandos · Teclado (mapa de teclas)", "Pads · Keyboard (key map)", "mandos");
   ir("mandos", "turnos", "Mandos · Turnos", "Pads · Hotseat", "mandos");
+  ir("mandos", "marionetas", "Mandos · Marionetas (cantidad de mandos)", "Pads · Puppets (pad count)", "mandos");
   ir("mandos", "bloqueo", "Mandos · Bloqueo", "Pads · Lock", "candado");
   ir("gente", "sala", "Gente · En sala", "People · In room", "gente");
   ir("gente", "moderacion", "Gente · Moderación y baneos", "People · Moderation", "gente");
@@ -37,12 +59,18 @@ function opciones(m) {
   ir("sync", "puente", "Sync · Puente con el juego", "Sync · Game bridge", "web");
   ir("sync", "web", "Sync · Cuenta web (vincular)", "Sync · Web account (link)", "web");
   ir("sync", "fichajes", "Sync · Fichajes", "Sync · Transfers", "web");
-  for (const [p, es, en] of [["general", "General", "General"], ["video", "Video", "Video"], ["audio", "Audio", "Audio"], ["overlay", "Overlay", "Overlay"],
+  for (const [p, es, en] of [["general", "General", "General"], ["video", "Video", "Video"], ["audio", "Audio", "Audio"], ["sonidos", "Sonidos (!sfx)", "Sounds (!sfx)"], ["overlay", "Overlay", "Overlay"],
     ["interfaz", "Interfaz e idioma", "Interface"], ["avanzado", "Avanzado", "Advanced"]]) {
     ir("ajustes", p, `Ajustes · ${es}`, `Settings · ${en}`, "ajustes");
   }
   return r;
 }
+
+// Cada ajuste de la interfaz (índice generado de las vistas): solo aparece al escribir
+const AJUSTES = INDICE_AJUSTES.map((x) => ({
+  es: `${x.es} — ${x.donde[0]} › ${x.pestana}`, en: `${x.en} — ${x.donde[1]} › ${x.pestana}`, icono: "ajustes", k: t("AJUSTE", "SETTING"), ajuste: true,
+  hacer: () => { irA(x.seccion, x.pestana); resaltar(t(x.es, x.en), x.tarjeta); },
+}));
 
 const normal = (x) => x.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 
@@ -52,7 +80,7 @@ export function Paleta({ s }) {
   const ref = useRef(null);
   useEffect(() => ref.current?.focus(), []);
   const todas = useMemo(() => opciones(s.motor), [s.motor?.sala?.abierta, s.motor?.sala?.lista, s.motor?.app?.tema]);
-  const lista = todas.filter((o) => !q || normal(t(o.es, o.en)).includes(normal(q))).slice(0, 12);
+  const lista = (q ? [...todas, ...AJUSTES] : todas).filter((o) => !q || normal(t(o.es, o.en)).includes(normal(q))).slice(0, 14);
   const ejecutar = (o) => { cambiar({ paleta: false }); o && o.hacer(); };
   const tecla = (e) => {
     if (e.key === "ArrowDown") { e.preventDefault(); setI((x) => Math.min(lista.length - 1, x + 1)); }

@@ -94,7 +94,7 @@ namespace phoenix::web {
 			else if (que == "desconectarTodos") gc.disconnectAllGamepads();
 			else if (que == "ordenar") gc.sortGamepads();
 			else if (que == "bloquearTodo") h.toggleGamepadLock();
-			else if (que == "bloquearBotones") h.toggleGamepadLockButtons();
+			else if (que == "bloquearBotones") alternarBloqueoBotones(in);   // respeta el modo competitivo
 			else throw ErrorAccion("DATOS_INVALIDOS", "Herramienta desconocida.");
 			return json::object();
 		});
@@ -119,7 +119,35 @@ namespace phoenix::web {
 			h._lockedGamepad.sThumbLY = Config::cfg.input.lockedGamepadLY;
 			h._lockedGamepad.sThumbRX = Config::cfg.input.lockedGamepadRX;
 			h._lockedGamepad.sThumbRY = Config::cfg.input.lockedGamepadRY;
+			reaplicarArbitro(in);   // con el partido en juego, Start/Back/Guía siguen bloqueados
 			Config::cfg.Save();
+			return json::object();
+		});
+
+		// ---- Árbitro del partido: preferencias (se guardan en phoenix-ui.json) ---------
+		p.registrar("mandos.competitivo", [&in](const json& d, uint64_t) -> std::optional<json> {
+			PhoenixPrefs& pr = PhoenixPrefs::get();
+			pr.competitivo = booleano(d, "si");
+			pr.guardar();
+			return json::object();   // el árbitro lo aplica o lo quita en su siguiente vuelta (≤ 0,5 s)
+		});
+		p.registrar("mandos.pausaAuto", [&in](const json& d, uint64_t) -> std::optional<json> {
+			PhoenixPrefs& pr = PhoenixPrefs::get();
+			pr.pausaAuto = booleano(d, "si");
+			pr.guardar();
+			if (!pr.pausaAuto) in.arbitro.avisados.clear();
+			return json::object();
+		});
+		p.registrar("mandos.soloAutorizados", [](const json& d, uint64_t) -> std::optional<json> {
+			PhoenixPrefs& pr = PhoenixPrefs::get();
+			pr.soloAutorizados = booleano(d, "si");
+			pr.guardar();
+			return json::object();   // el árbitro lo pasa a PhoenixRoles en su siguiente vuelta (≤ 0,5 s)
+		});
+		p.registrar("mandos.marcadorAuto", [&in](const json& d, uint64_t) -> std::optional<json> {
+			PhoenixPrefs& pr = PhoenixPrefs::get();
+			pr.marcadorAuto = booleano(d, "si");
+			pr.guardar();
 			return json::object();
 		});
 

@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "BuzonJuego.h"
+#include "EstadoJuego.h"
 
 // =============================================================================
 //  Phoenix Link · PhoenixLink: la app ↔ la web (API /v1, contrato 1.6.0)
@@ -157,6 +158,12 @@ namespace phoenix {
 		void enviarChatGlobal(uint64_t ticket, const std::string& texto);
 		/// PES2021.exe esta abierto (se mira cada ~5 s en el hilo de Link).
 		bool pesAbierto() const { return _pesAbierto.load(); }
+		/// Partido según phoenix.lua (estado.json, leído ~1 vez por segundo en el hilo de Link).
+		/// valido = false si no hay archivo, tiene más de 5 s o el hilo lleva más de 3 s sin leerlo.
+		juego::EstadoPartidoJuego estadoJuego();
+		/// Texto de sala.txt para el HUD del juego (lineas clave=valor). El hilo de Link lo escribe atómico
+		/// en content\phoenix\ cuando cambia (y cada 4 s con la hora, para que el juego sepa que Link sigue vivo).
+		void salaJuego(const std::string& texto);
 
 	private:
 		PhoenixLink() = default;
@@ -267,6 +274,18 @@ namespace phoenix {
 		bool _entregaCargada = false;
 		std::wstring _entregaCarpeta;
 		std::vector<uint32_t> _presentes;           ///< parsecIds en la sala (última foto)
+		// Estado del partido (estado.json): _estadoCarpeta solo la toca el hilo de Link; _estadoJuego y _estadoLeidoMs, con _mutex
+		std::wstring _estadoCarpeta;
+		juego::EstadoPartidoJuego _estadoJuego;
+		long long _estadoLeidoMs = 0;
+		long long _estadoValidoMs = 0;
+		// sala.txt (HUD del juego): _salaJuegoTexto con _mutex; el resto solo el hilo de Link
+		std::string _salaJuegoTexto, _salaJuegoEscrito;
+		long long _salaJuegoProximoMs = 0, _salaJuegoEscritoMs = 0;
+		// modo.txt (phoenix.lua v0.18): solo el hilo de Link
+		std::wstring _juegoCarpeta;   ///< carpeta de PES2021.exe (la última vista abierta)
+		std::string _modoEscrito;
+		long long _modoProximoMs = 0;
 	};
 
 }

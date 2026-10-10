@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <map>
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <vector>
@@ -66,6 +67,24 @@ namespace phoenix::web {
 
 		bool reiniciandoMandos = false;            ///< bandera de GamepadClient::resetAll
 
+		/// Árbitro del partido (Arbitro.cpp): modo competitivo, pausa automática y goles del juego.
+		struct Arbitro {
+			bool competitivoActivo = false;        ///< Start/Back/Guía añadidos al bloqueo de los invitados
+			bool lockPrevio = false;               ///< GamepadClient::lockButtons del anfitrión antes de activarlo
+			std::string origen;                    ///< "juego" | "marcador" | "" (de dónde salió la fase)
+			std::set<uint32_t> avisados;           ///< jugadores con un problema ya anunciado (no se repite)
+			std::string ultimaPausa;               ///< texto de la última pausa automática
+			bool ultimaConStart = false;           ///< esa pausa también pulsó Start en el juego
+			int pulsando = -1;                     ///< mando (desde 0) con Start pulsado ahora
+			double soltarEn = 0.0;
+			int golesJuegoL = -1, golesJuegoV = -1;   ///< últimos goles leídos del juego
+			int golesAnunciados = -1;              ///< goles del juego ya anunciados en el chat (-1 = aún sin sincronizar)
+			std::string faseJuego;                 ///< última fase vista en estado.json
+			bool avisoAbandono = false;            ///< ya se avisó de un partido abandonado en el juego
+			double startPendienteHasta = 0.0;      ///< pausa automática: Start espera a que el reloj del juego corra
+			double ultimoTick = 0.0;
+		} arbitro;
+
 		// Cambios que no pueden hacerse dentro de un aviso del propio WebView (se hacen en tick)
 		std::string cambioInterfaz;                ///< "phoenix" | "clasica"
 		bool recargarPendiente = false;
@@ -100,11 +119,24 @@ namespace phoenix::web {
 	void registrarAccionesGente(Interno& in);
 	void registrarAccionesAjustes(Interno& in);
 	void registrarAccionesPartido(Interno& in);
+	void registrarAccionesModulos(Interno& in);
 
 	nlohmann::json construirEstado(Interno& in);
 	nlohmann::json construirBienvenida(Interno& in);
 	/// Muestras de red, sesión, entradas/salidas, chat y actividad (≈ cada frame).
 	void tickDatos(Interno& in);
+	/// Árbitro del partido: modo competitivo, pausa automática y goles del juego (≈ cada frame; trabaja 2 veces por segundo).
+	void tickArbitro(Interno& in);
+	/// Valores del bloqueo de botones del anfitrión (sin lo que añade el modo competitivo).
+	unsigned int mascaraBotonesPropia(Interno& in);
+	bool bloqueoBotonesPropio(Interno& in);
+	/// Alterna el bloqueo de botones del anfitrión respetando el modo competitivo.
+	void alternarBloqueoBotones(Interno& in);
+	/// Vuelve a aplicar el bloqueo tras cambiar la máscara del anfitrión (mandos.botonesBloq).
+	void reaplicarArbitro(Interno& in);
+	/// Termina el partido: historial, evento web «partida_fin» y (si anunciar) mensaje del bot + `extra`.
+	/// nullopt si no había partido en juego o en pausa.
+	std::optional<nlohmann::json> finalizarPartido(Interno& in, bool anunciar, const std::string& extra);
 	/// Respuestas que llegan de la web (invitar, soltar rival).
 	void tickResultadosWeb(Interno& in);
 	/// Valores actuales que se guardan en un perfil de sala.

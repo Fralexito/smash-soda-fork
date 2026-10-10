@@ -41,5 +41,8 @@ EstadoJuego estadoDeCarpeta(const std::filesystem::path& carpetaJuego);
 
 // avisos.tmp + reemplazo atomico. No crea carpetas. Reintenta hasta 10 veces cada 100 ms.
 bool escribirAtomico(const std::filesystem::path& carpetaBuzon, const std::string& contenido, std::string* error = nullptr);
+// Igual, para otro archivo del buzon: <nombre>.tmp + reemplazo atomico de <nombre><extension> (p. ej. "sala", ".txt").
+bool escribirAtomicoComo(const std::filesystem::path& carpetaBuzon, const std::string& nombre, const std::string& extension,
+	const std::string& contenido, std::string* error = nullptr);
 
 } // namespace phoenix::buzon

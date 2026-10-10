@@ -163,6 +163,7 @@ function Marcador({ m }) {
         <div class="goles"><${Numero} valor=${p.a.goles} lado="a"/><span class="sep">:</span><${Numero} valor=${p.b.goles} lado="b"/></div>
         <${Equipo} l=${p.b} clave="b" enJuego=${enJuego} gol=${gol}/>
       </div>
+      <${LineaJuego} j=${m.juego} a=${m.arbitro} p=${p}/>
       ${fiesta ? html`<${Rafaga} key=${fiesta}/>` : null}
     </${Tarjeta}>
     <div class="caja" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
@@ -180,6 +181,26 @@ function Marcador({ m }) {
         <span class="mono" style=${`color:${colorPing(r.ultimo)}`}>${r.ultimo >= 0 ? r.ultimo + " ms" : "—"}</span></div>
       <${MiniSerie} serie=${r.serie}/>
     </div>`)}</div>` : null}
+  </div>`;
+}
+
+// «Juego: en juego · 34'» (estado.json de phoenix.lua) o «sin datos del juego» (todo en manual).
+const FASE_JUEGO = { menu: ["en el menú", "in menu"], en_juego: ["en juego", "playing"], pausado: ["en pausa", "paused"], descanso: ["descanso", "half time"], final: ["final", "full time"] };
+function LineaJuego({ j, a, p }) {
+  const hay = j?.datos;
+  const f = hay ? FASE_JUEGO[j.fase] || [j.fase, j.fase] : null;
+  const conMinuto = hay && (j.fase === "en_juego" || j.fase === "pausado" || j.fase === "descanso");
+  // Equipos del juego (kit-server) y goles con minuto; el local del juego es el lado A salvo tras «Cambiar lados»
+  const equipos = hay && (j.nombreLocal || j.nombreVisita) ? `${j.nombreLocal || "Local"} vs ${j.nombreVisita || "Visita"}` : "";
+  const ladoDe = (local) => (local !== !!p?.invertido ? p?.a?.nombre : p?.b?.nombre) || (local ? "Local" : "Visita");
+  const goles = hay ? (j.goles || []).map((g) => `${g.m}' ${ladoDe(g.local)}`) : [];
+  return html`<div class="mono mut" style="margin-top:14px;display:flex;flex-direction:column;gap:6px;align-items:center;font-size:13px;text-align:center">
+    <div style="display:flex;gap:14px;flex-wrap:wrap;justify-content:center">
+      <span>${t("Juego:", "Game:")} ${hay ? html`<b style=${j.fase === "en_juego" ? "color:var(--ok)" : ""}>${t(f[0], f[1])}</b>${conMinuto ? ` · ${j.minuto}'` : ""}` : t("sin datos del juego", "no game data")}</span>
+      ${equipos ? html`<span>${equipos}</span>` : null}
+      ${a?.activo ? html`<span>${t("Start/Back/Guía bloqueados a los invitados", "Start/Back/Guide locked for guests")}</span>` : null}
+    </div>
+    ${goles.length ? html`<div>${t("Goles:", "Goals:")} ${goles.join(" · ")}</div>` : null}
   </div>`;
 }
 

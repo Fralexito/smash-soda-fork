@@ -4,9 +4,9 @@
 //  y deja apagar el envío. «Fichajes» muestra la última entrega de datos que
 //  Phoenix Sync dejó en el juego (con botón para deshacerla).
 // =============================================================================
-import { html } from "../lib.js";
+import { html, useState, useEffect } from "../lib.js";
 import { t } from "../i18n.js";
-import { accion } from "../tienda.js";
+import { accion, avisar, elegirPestana } from "../tienda.js";
 import { CuentaWeb } from "./ajustes.js";
 import { Tarjeta, Titulo, AjusteSw, Segmentos, Vacio, Chip, Icono, Boton, cx } from "../ui.js";
 
@@ -16,12 +16,21 @@ export const PESTANAS_SYNC = [
   { id: "fichajes", es: "FICHAJES", en: "TRANSFERS", d: ["Los datos y fichajes que Phoenix Sync dejó en tu juego.", "The data and transfers Phoenix Sync placed in your game."] },
 ];
 
+const CUENTA = { conectado: ["ok", "CONECTADA", "CONNECTED"], vinculando: ["warn", "VINCULANDO", "LINKING"], sin_conexion: ["bad", "SIN CONEXIÓN", "OFFLINE"], pausado: ["warn", "EN PAUSA", "PAUSED"], sin_vincular: ["", "SIN VINCULAR", "NOT LINKED"] };
+const DATOS = { ninguna: ["", "SIN ENTREGAS", "NO DELIVERIES"], esperando: ["warn", "ESPERANDO AL JUEGO", "WAITING FOR GAME"], colocada: ["ok", "EN EL JUEGO", "IN GAME"], rechazada: ["bad", "RECHAZADA", "REJECTED"], deshecha: ["warn", "DESHECHA", "UNDONE"] };
+
+/** Tres pastillas: cuenta de la liga · puente con el juego · últimos datos entregados. */
 export function metaSync(s) {
-  const b = s.motor?.buzon;
-  const ok = b && b.estado === "conectado";
-  return html`<div style="display:flex;align-items:center;gap:10px">
-    <span class=${cx("punto", ok ? "ok vivo" : b?.estado === "noinstalado" ? "warn" : b?.estado === "sinconexion" ? "bad" : "")}></span>
-    <span class="mono mut" style="font-size:14px">${ESTADOS(b)[0]}</span>
+  const m = s.motor || {};
+  const b = m.buzon;
+  const c = CUENTA[m.web?.estado] || CUENTA.sin_vincular;
+  const j = b?.estado === "conectado" ? "ok" : b?.estado === "noinstalado" ? "warn" : b?.estado === "sinconexion" ? "bad" : "";
+  const d = DATOS[m.entrega?.estado] || DATOS.ninguna;
+  const p = (estado, et, texto, pes) => html`<button class="pill" onClick=${() => elegirPestana(pes)}><span class=${cx("punto", estado, estado === "ok" && "vivo")}></span><span class="mut">${et}</span>${texto}</button>`;
+  return html`<div class="grupo-estado">
+    ${p(c[0], t("CUENTA ·", "ACCOUNT ·"), t(c[1], c[2]), "web")}
+    ${p(j, t("JUEGO ·", "GAME ·"), ESTADOS(b)[0].toUpperCase(), "puente")}
+    ${p(d[0], t("DATOS ·", "DATA ·"), t(d[1], d[2]), "fichajes")}
   </div>`;
 }
 
@@ -54,6 +63,23 @@ function SoloPes({ m }) {
   </${Tarjeta}>`;
 }
 
+// Modo de recarga de phoenix.lua v0.18 (Link escribe content\phoenix\modo.txt). Textos del pedido de Sync.
+const MODOS_RECARGA = {
+  "ACTIVAR": ["Los fichajes se cargan solo cuando pulsas Partido → Datos Actual. en vivo → Activar.", "Transfers load only when you press Match → Live update → Activate."],
+  "AUTO-FICHAJES": ["Activar sigue funcionando. Además, cuando haya fichajes nuevos, el juego los carga solo al volver al menú principal y entrar a un modo.", "Activate still works. Also, when there are new transfers, the game loads them by itself when you go back to the main menu and enter a mode."],
+  "AUTO-SIEMPRE": ["Activar sigue funcionando. Además, el juego recarga cada vez que vuelves al menú principal y entras a un modo (tarda un poco más).", "Activate still works. Also, the game reloads every time you go back to the main menu and enter a mode (a bit slower)."],
+};
+function ModoRecarga({ m }) {
+  const v = m.arbitro?.modoRecarga || "ACTIVAR";
+  return html`<${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:12px">
+    <${Titulo} texto=${t("MODO DE RECARGA DE FICHAJES", "TRANSFER RELOAD MODE")}/>
+    <${Segmentos} valor=${v} al=${(x) => accion("sync.modoRecarga", { modo: x })}
+      opciones=${[{ valor: "ACTIVAR", texto: t("🟢 ACTIVAR ⭐", "🟢 ACTIVATE ⭐") }, { valor: "AUTO-FICHAJES", texto: t("🔵 AUTO: FICHAJES", "🔵 AUTO: TRANSFERS") }, { valor: "AUTO-SIEMPRE", texto: t("🟣 AUTO: SIEMPRE", "🟣 AUTO: ALWAYS") }]}/>
+    <div class="ayuda" style="font-size:14px">${t(MODOS_RECARGA[v][0], MODOS_RECARGA[v][1])}</div>
+    <div class="ayuda" style="font-size:13px">${t("Necesita phoenix.lua v0.18 en el juego. ACTIVAR viene por defecto y es el probado. El juego nota el cambio en unos 2 segundos.", "Needs phoenix.lua v0.18 in the game. ACTIVATE is the default and the tested one. The game notices the change in about 2 seconds.")}</div>
+  </${Tarjeta}>`;
+}
+
 function Puente({ m }) {
   const b = m.buzon || { activo: true, estado: "cerrado", ultimo: "", juego: "", avisos: [] };
   const [texto, punto, ayuda] = ESTADOS(b);
@@ -76,6 +102,7 @@ function Puente({ m }) {
           desc=${t("Con PES 2021 abierto, los avisos salen en el panel de Sider (barra espaciadora). Si lo apagas, no se consulta ni se escribe nada.", "With PES 2021 open, notices show in the Sider panel (space bar). If off, nothing is fetched or written.")}
           valor=${b.activo} al=${(v) => accion("ajustes.avisosJuego", { valor: v })}/>
       </${Tarjeta}>
+      <${ModoRecarga} m=${m}/>
       <${SoloPes} m=${m}/>
     </div>
     <div class="col" style="flex:1 1 0;min-width:320px">
@@ -89,8 +116,63 @@ function Puente({ m }) {
               ${a.escrito ? html`<${Chip} tipo="acc">✅ ${t("EN EL JUEGO", "IN GAME")}</${Chip}>` : html`<${Chip}>${t("PENDIENTE", "PENDING")}</${Chip}>`}
             </div>`)}
       </${Tarjeta}>
+      <${Modulos}/>
     </div>
   </div>`;
+}
+
+// ---- Módulos del juego: el paquete de Luas de Sider que instala Phoenix Link (solo con PES cerrado) ----
+const ESTADO_MODULO = {
+  instalado: [["INSTALADO", "INSTALLED"], "acc"],
+  desactualizado: [["HAY VERSIÓN NUEVA", "UPDATE AVAILABLE"], "vip"],
+  apagado: [["APAGADO", "OFF"], ""],
+  a_medias: [["A MEDIAS", "PARTIAL"], "vip"],
+  no_instalado: [["NO INSTALADO", "NOT INSTALLED"], ""],
+  solo_lectura: [["LO GESTIONA SYNC", "MANAGED BY SYNC"], ""],
+};
+function Modulos() {
+  const [d, setD] = useState(null);
+  const [ocupado, setOcupado] = useState("");
+  const cargar = async () => { const r = await accion("sync.modulos", {}, { silencioso: true }); if (r) setD(r); };
+  useEffect(() => { cargar(); }, []);
+  const hacer = async (archivo, que) => {
+    setOcupado(archivo);
+    const r = await accion("sync.modulo", { archivo, accion: que });
+    setOcupado("");
+    if (r) { setD(r); if (r.mensaje) avisar(r.mensaje, "ok", 7000); }
+  };
+  const lista = d?.modulos || [];
+  return html`<${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:12px">
+    <${Titulo} texto=${t("MÓDULOS DEL JUEGO", "GAME MODULES")}
+      derecha=${html`<${Boton} tipo="suave mini" al=${cargar}>${t("REVISAR", "CHECK")}</${Boton}>`}/>
+    <div class="ayuda" style="font-size:14px">
+      ${t("El paquete de Luas de Phoenix para Sider. Se instala en la raíz del juego y en cada modo del parche, con copia de sider.ini antes de cada cambio.",
+          "Phoenix's Lua pack for Sider. Installed in the game root and in every patch mode, backing up sider.ini before each change.")}
+    </div>
+    ${d?.pesAbierto ? html`<div class="caja" style="font-size:14px"><span class="punto warn"></span> ${t("Cierra PES 2021 para instalar o apagar: Sider lee los módulos al arrancar.", "Close PES 2021 to install or turn off: Sider loads modules at startup.")}</div>` : null}
+    ${d && !d.juego ? html`<div class="ayuda">${t("Abre PES 2021 una vez para que Phoenix Link conozca la carpeta del juego.", "Open PES 2021 once so Phoenix Link learns the game folder.")}</div>` : null}
+    ${!d ? html`<div class="ayuda">${t("Revisando…", "Checking…")}</div>` : lista.map((x) => {
+      const [et, tipo] = ESTADO_MODULO[x.estado] || [[x.estado, x.estado], ""];
+      const puedeInstalar = x.gestionable && x.estado !== "instalado";
+      const puedeQuitar = x.gestionable && (x.estado === "instalado" || x.estado === "desactualizado" || x.estado === "a_medias");
+      const bloqueado = !!d.pesAbierto || !d.juego || !!ocupado;
+      return html`<div class="caja" key=${x.archivo} style="display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+          <b class="mono" style="font-size:14px">${x.archivo}${x.version ? html` <span class="mut">v${x.version}</span>` : null}</b>
+          <${Chip} tipo=${tipo}>${t(et[0], et[1])}</${Chip}>
+        </div>
+        <div class="ayuda" style="font-size:13px">${x.descripcion}</div>
+        ${x.carga ? html`<div class="ayuda" style="font-size:13px">${x.carga === "cargado" ? t("✅ Cargó en el último arranque del juego.", "✅ Loaded on the last game start.") : t("⚠️ Sider no lo pudo cargar en el último arranque (mira sider.log).", "⚠️ Sider could not load it on the last start (see sider.log).")}</div>` : null}
+        ${(x.destinos || []).length ? html`<div class="mono mut" style="font-size:12px;display:flex;flex-direction:column;gap:2px">
+          ${x.destinos.map((ds) => html`<span key=${ds.carpeta}>${ds.linea ? "●" : ds.comentada ? "○" : "·"} ${ds.nombre}${ds.version ? " · v" + ds.version : ""}${ds.archivo && x.gestionable && !ds.igual ? t(" · distinto", " · different") : ""}</span>`)}
+        </div>` : null}
+        ${x.gestionable ? html`<div style="display:flex;gap:8px;flex-wrap:wrap">
+          ${puedeInstalar ? html`<${Boton} tipo="lleno mini" deshabilitado=${bloqueado} al=${() => hacer(x.archivo, "instalar")}>${x.estado === "desactualizado" ? t("ACTUALIZAR", "UPDATE") : x.estado === "apagado" ? t("ENCENDER", "TURN ON") : t("INSTALAR", "INSTALL")}</${Boton}>` : null}
+          ${puedeQuitar ? html`<${Boton} tipo="suave mini" deshabilitado=${bloqueado} al=${() => hacer(x.archivo, "quitar")}>${t("APAGAR", "TURN OFF")}</${Boton}>` : null}
+        </div>` : null}
+      </div>`;
+    })}
+  </${Tarjeta}>`;
 }
 
 function Entrega({ m }) {

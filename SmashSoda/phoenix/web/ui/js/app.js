@@ -51,7 +51,7 @@ function PildoraSala({ m }) {
 }
 
 const ESTADO_WEB = {
-  conectado: ["ok", "WEB SYNC", "WEB SYNC"],
+  conectado: ["ok", "WEB CONECTADA", "WEB CONNECTED"],
   vinculando: ["warn", "VINCULANDO", "LINKING"],
   sin_conexion: ["bad", "WEB SIN CONEXIÓN", "WEB OFFLINE"],
   pausado: ["warn", "WEB EN PAUSA", "WEB PAUSED"],
@@ -73,9 +73,7 @@ function Barra({ s }) {
     </div>
     <div class="ultima-hueco"><${UltimaHora} s=${s}/></div>
     <div class="lado">
-      <${PildoraSala} m=${m}/>
-      <button class="pill web" onClick=${() => irA("sync", "web")} title=${m?.web?.mensaje || ""}>
-        <span class=${cx("punto", w[0])}></span>${t(w[1], w[2])}</button>
+      <${GrupoEstado} m=${m} w=${w}/>
       <button class=${cx("pill", s.chatAbierto && "acc")} onClick=${() => alternarChat()} title="Chat (Ctrl+Espacio)">
         <${Icono} n="chat" t=${15}/>CHAT${totalNoLeidos(s) > 0 ? html`<span class="chip bad" style="height:20px">${totalNoLeidos(s) > 99 ? "99+" : totalNoLeidos(s)}</span>` : null}
       </button>
@@ -84,6 +82,24 @@ function Barra({ s }) {
       <button class="pill acc" onClick=${cambiarTema} title=${t("Cambiar tema", "Switch theme")}>${tema === "sudario" ? "LIGA B" : "GALAXY"}</button>
     </div>
   </header>`;
+}
+
+// Grupo «conectado»: sala, web de la liga y juego (puente de Phoenix Sync), con su punto vivo.
+const ESTADO_JUEGO = {
+  conectado: ["ok", "JUEGO CONECTADO", "GAME CONNECTED"], cerrado: ["", "JUEGO CERRADO", "GAME CLOSED"],
+  noinstalado: ["warn", "SIN MÓDULO SIDER", "NO SIDER MODULE"], sinconexion: ["bad", "JUEGO SIN WEB", "GAME OFFLINE"], apagado: ["", "AVISOS APAGADOS", "NOTICES OFF"],
+};
+function GrupoEstado({ m, w }) {
+  const b = m?.buzon;
+  const j = ESTADO_JUEGO[b?.estado] || ESTADO_JUEGO.cerrado;
+  const ultimo = b?.estado === "conectado" && b?.ultimo ? " · " + b.ultimo : "";
+  return html`<div class="grupo-estado" role="status" aria-label=${t("Estado de la conexión", "Connection status")}>
+    <${PildoraSala} m=${m}/>
+    <button class="pill web" onClick=${() => irA("sync", "web")} title=${m?.web?.mensaje || t("Cuenta de la liga", "League account")}>
+      <span class=${cx("punto", w[0], w[0] === "ok" && "vivo")}></span>${t(w[1], w[2])}</button>
+    <button class="pill juego" onClick=${() => irA("sync", "puente")} title=${t("Puente de Phoenix Sync con el juego", "Phoenix Sync game bridge")}>
+      <span class=${cx("punto", j[0], j[0] === "ok" && "vivo")}></span>${t(j[1], j[2])}${ultimo}</button>
+  </div>`;
 }
 
 function totalNoLeidos(s) { return s.noLeidos + noLeidosGlobal(s); }
@@ -143,6 +159,7 @@ function Avisos({ avisos }) {
       <span style=${`color:var(--${a.tipo === "ok" ? "ok" : a.tipo === "bad" ? "bad" : a.tipo === "warn" ? "warn" : "acc"})`}>
         <${Icono} n=${a.tipo === "ok" ? "check" : a.tipo === "info" ? "rayo" : "alerta"} t=${18}/></span>
       <div>${a.texto}</div>
+      ${a.boton ? html`<button class="btn mini" onClick=${() => { quitarAviso(a.id); a.boton.al(); }}>${a.boton.texto}</button>` : null}
       <button class="x" onClick=${() => quitarAviso(a.id)} aria-label=${t("Cerrar", "Close")}>×</button>
     </div>`)}</div>`;
 }

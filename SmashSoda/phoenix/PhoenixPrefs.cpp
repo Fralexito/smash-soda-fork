@@ -60,6 +60,12 @@ namespace phoenix {
 			anchoAuto = j.value("anchoAuto", anchoAuto);
 			anchoPorPersona = (std::max)(1, (std::min)(50, j.value("anchoPorPersonaV2", anchoPorPersona)));
 			subidaMbps = (std::max)(0, (std::min)(10000, j.value("subidaMbps", subidaMbps)));
+			competitivo = j.value("competitivo", competitivo);
+			pausaAuto = j.value("pausaAuto", pausaAuto);
+			marcadorAuto = j.value("marcadorAuto", marcadorAuto);
+			soloAutorizados = j.value("soloAutorizados", soloAutorizados);
+			modoRecarga = j.value("modoRecarga", modoRecarga);
+			if (modoRecarga != "AUTO-FICHAJES" && modoRecarga != "AUTO-SIEMPRE") modoRecarga = "ACTIVAR";
 		}
 		catch (...) {
 			// Preferencias dañadas: se quedan los valores por defecto.
@@ -91,6 +97,11 @@ namespace phoenix {
 				{"anchoAuto", anchoAuto},
 				{"anchoPorPersonaV2", anchoPorPersona},
 				{"subidaMbps", subidaMbps},
+				{"competitivo", competitivo},
+				{"pausaAuto", pausaAuto},
+				{"marcadorAuto", marcadorAuto},
+				{"soloAutorizados", soloAutorizados},
+				{"modoRecarga", modoRecarga},
 			};
 			const std::string texto = j.dump(2);
 			MTY_WriteFile(r.c_str(), texto.c_str(), texto.size());

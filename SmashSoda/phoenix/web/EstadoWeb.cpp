@@ -163,6 +163,8 @@ namespace phoenix::web {
 					{"chatbot", c.chat.chatbot}, {"discord", c.chat.discord}, {"welcomeMessage", c.chat.welcomeMessage},
 					{"socketEnabled", c.socket.enabled}, {"socketPort", c.socket.port},
 					{"socketActivo", WebSocket::instance.isRunning()},
+					{"autoMute", c.chat.autoMute}, {"autoMuteTime", c.chat.autoMuteTime}, {"muteTime", c.chat.muteTime},
+					{"hostBonkProof", c.chat.hostBonkProof}, {"sfxEnabled", c.audio.sfxEnabled},
 				}},
 				{"permisos", {
 					{"guest", { {"useBB", c.permissions.guest.useBB}, {"useSFX", c.permissions.guest.useSFX}, {"changeControls", c.permissions.guest.changeControls} }},
@@ -275,15 +277,26 @@ namespace phoenix::web {
 					{"jugador", a.jugador}, {"parsecId", a.parsecId}, {"ping", a.pingMs}, {"equipo", equipo},
 					{"tipo", i < tipos.size() ? tipos[i] : std::string("xbox")},
 				});
+				// Mando en vivo (solo mirando Mandos › Puestos: si no, el estado cambiaría con cada botón)
+				if (in.seccion == "mandos" && (in.pestana == "puestos" || in.pestana.empty()) && a.conectado) {
+					lista.back()["entrada"] = { {"b", a.botones}, {"lt", a.gatilloI}, {"rt", a.gatilloD},
+						{"lx", a.ejeLX}, {"ly", a.ejeLY}, {"rx", a.ejeRX}, {"ry", a.ejeRY} };
+				}
 			}
 			e["mandos"] = {
 				{"lista", lista},
 				{"formacion", { {"local", pr.equipoLocal}, {"visitante", pr.mandosActivos - pr.equipoLocal} }},
 				{"host", MandoHost::activo()},
-				{"bloqueoGlobal", gc.lock}, {"bloqueoBotones", gc.lockButtons}, {"esclavo", gc.isSlave},
+				{"bloqueoGlobal", gc.lock}, {"bloqueoBotones", bloqueoBotonesPropio(in)}, {"esclavo", gc.isSlave},
 				{"xbox", Config::cfg.input.xboxPuppetCount}, {"ds4", Config::cfg.input.ds4PuppetCount},
 				{"reiniciando", in.reiniciandoMandos},
-				{"botonesBloq", {
+				// Lo del anfitrión, sin lo que añade el modo competitivo mientras dura el partido
+				{"botonesBloq", in.arbitro.competitivoActivo ? json{
+					{"mascara", mascaraBotonesPropia(in)},
+					{"lt", Config::cfg.input.lockedGamepadLeftTrigger}, {"rt", Config::cfg.input.lockedGamepadRightTrigger},
+					{"lx", Config::cfg.input.lockedGamepadLX}, {"ly", Config::cfg.input.lockedGamepadLY},
+					{"rx", Config::cfg.input.lockedGamepadRX}, {"ry", Config::cfg.input.lockedGamepadRY},
+				} : json{
 					{"mascara", static_cast<unsigned int>(h._lockedGamepad.wButtons)},
 					{"lt", h._lockedGamepad.bLeftTrigger}, {"rt", h._lockedGamepad.bRightTrigger},
 					{"lx", h._lockedGamepad.sThumbLX}, {"ly", h._lockedGamepad.sThumbLY},
@@ -343,9 +356,19 @@ namespace phoenix::web {
 		for (const Solicitud& sol : Solicitudes::instancia().pendientes()) {
 			solicitudes.push_back({ {"parsecId", sol.parsecId}, {"nombre", sol.nombre}, {"mando", sol.mandoDestino} });
 		}
+		const std::vector<EspectadorVista> espectadores = sala.espectadores();
+		// «Quiere jugar»: pulsó su mando sin permiso (está en «Mirando» o no lo autorizó el host). mando = -1
+		for (uint32_t id : PhoenixRoles::instancia().quierenJugar()) {
+			bool repetida = false;
+			for (const json& s : solicitudes) if (s.value("parsecId", 0u) == id) repetida = true;
+			if (repetida) continue;
+			std::string nombre;
+			for (const EspectadorVista& ev : espectadores) if (ev.parsecId == id) { nombre = ev.nombre; break; }
+			if (nombre.empty()) continue;   // ya no está en la sala o ya tiene mando
+			solicitudes.push_back({ {"parsecId", id}, {"nombre", nombre}, {"mando", -1} });
+		}
 		e["solicitudes"] = solicitudes;
 
-		const std::vector<EspectadorVista> espectadores = sala.espectadores();
 		json espera = json::array();
 		for (uint32_t id : PhoenixRoles::instancia().enEspera()) {
 			for (const EspectadorVista& ev : espectadores) {
@@ -427,6 +450,21 @@ namespace phoenix::web {
 		}
 
 		e["partido"] = in.partido.comoJson(ahora);
+		{
+			// Partido según el juego (estado.json de phoenix.lua). Sin la edad del archivo: cambiaría en cada foto.
+			const juego::EstadoPartidoJuego ej = link.estadoJuego();
+			json golesJ = json::array();
+			for (const juego::GolJuego& g : ej.goles) golesJ.push_back({ {"m", g.minuto}, {"local", g.local} });
+			e["juego"] = ej.valido ? json{ {"datos", true}, {"fase", ej.fase}, {"minuto", ej.minuto}, {"periodo", ej.periodo},
+				{"golesLocal", ej.golesLocal}, {"golesVisita", ej.golesVisita}, {"pkLocal", ej.pkLocal}, {"pkVisita", ej.pkVisita},
+				{"nombreLocal", ej.nombreLocal}, {"nombreVisita", ej.nombreVisita}, {"relojCorre", ej.relojCorre}, {"goles", golesJ} }
+				: json{ {"datos", false} };
+			const PhoenixPrefs& prA = PhoenixPrefs::get();
+			e["arbitro"] = { {"competitivo", prA.competitivo}, {"pausaAuto", prA.pausaAuto}, {"marcadorAuto", prA.marcadorAuto},
+				{"soloAutorizados", prA.soloAutorizados}, {"modoRecarga", prA.modoRecarga},
+				{"activo", in.arbitro.competitivoActivo}, {"origen", in.arbitro.origen},
+				{"ultimaPausa", in.arbitro.ultimaPausa}, {"conStart", in.arbitro.ultimaConStart} };
+		}
 		e["turnos"] = estadoTurnos();
 		if (in.seccion == "ajustes" && in.pestana == "audio") e["audio"] = estadoAudio(h);
 		if (in.seccion == "gente" || in.seccion == "partido") {
@@ -546,6 +584,9 @@ namespace phoenix::web {
 				in.presentesAntes = ahoraPresentes;
 			}
 		}
+
+		// Árbitro del partido (modo competitivo, pausa automática, goles del juego)
+		tickArbitro(in);
 
 		// Previsualización de audio (igual que el panel de audio original mientras está a la vista)
 		if (web && in.seccion == "ajustes" && in.pestana == "audio" && !h.isRunning() && h.isReady()) {

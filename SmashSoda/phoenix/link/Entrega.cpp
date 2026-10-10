@@ -45,6 +45,7 @@ fs::path deU8(const std::string& s) {
 namespace {
 
 const char* kNombrePlayer = "Player.bin";
+const char* kNombreAsignacion = "PlayerAssignment.bin";   // plantillas de la base: las usa «Datos Actual. en vivo → Activar»
 const char* kNombreEdit = "EDIT00000000";
 const char* kRelPesdb = "livecpk/Phoenix-DB/common/etc/pesdb";
 // Carpetas de Documentos donde PES 2021 guarda el option file (varian segun la edicion/parche).
@@ -180,6 +181,7 @@ void archivar(const fs::path& carpeta, const char* subcarpeta, const std::string
 	};
 	mover(carpeta / "entrega.json");
 	mover(carpeta / kNombrePlayer);
+	mover(carpeta / kNombreAsignacion);
 	mover(carpeta / kNombreEdit);
 	(void)p;
 }
@@ -421,25 +423,28 @@ Ultima entregar(const Rutas& r) {
 		if (p.archivos.empty()) return rechazar(r, u, p, "la entrega no trae archivos");
 		if (r.carpetaJuego.empty() || !fs::is_directory(r.carpetaJuego, ec)) return rechazar(r, u, p, "no encuentro la carpeta del juego");
 
-		bool conPlayer = false, conEdit = false;
-		fs::path srcPlayer, srcEdit;
+		bool conPlayer = false, conAsig = false, conEdit = false;
+		fs::path srcPlayer, srcAsig, srcEdit;
 		for (const Archivo& a : p.archivos) {
 			const bool esPlayer = a.nombre == kNombrePlayer;
+			const bool esAsig = a.nombre == kNombreAsignacion;
 			const bool esEdit = a.nombre == kNombreEdit;
-			if (!esPlayer && !esEdit) return rechazar(r, u, p, "archivo no permitido: " + recortar(a.nombre, 40));
-			if ((esPlayer && conPlayer) || (esEdit && conEdit)) return rechazar(r, u, p, "archivo repetido: " + a.nombre);
+			if (!esPlayer && !esAsig && !esEdit) return rechazar(r, u, p, "archivo no permitido: " + recortar(a.nombre, 40));
+			if ((esPlayer && conPlayer) || (esAsig && conAsig) || (esEdit && conEdit)) return rechazar(r, u, p, "archivo repetido: " + a.nombre);
 			const fs::path src = r.carpetaEntrega / a.nombre;
 			if (!fs::is_regular_file(src, ec)) return rechazar(r, u, p, "falta " + a.nombre);
 			std::string hex;
 			if (!sha256Archivo(src, hex)) return rechazar(r, u, p, "no se pudo leer " + a.nombre);
 			if (hex != minusculas(a.sha256)) return rechazar(r, u, p, "sha256 no coincide en " + a.nombre);
-			if (esPlayer) {
-				conPlayer = true; srcPlayer = src;
+			if (esPlayer || esAsig) {
+				// Archivos de la base (pesdb): misma envoltura WESYS + zlib
+				if (esPlayer) { conPlayer = true; srcPlayer = src; }
+				else { conAsig = true; srcAsig = src; }
 				std::ifstream f(src, std::ios::binary);
 				char cab[16] = {};
 				f.read(cab, 16);
 				const std::string c(cab, static_cast<size_t>(f.gcount()));
-				if (f.gcount() < 16 || c.find("WESYS") == std::string::npos) return rechazar(r, u, p, "Player.bin no tiene la cabecera WESYS");
+				if (f.gcount() < 16 || c.find("WESYS") == std::string::npos) return rechazar(r, u, p, a.nombre + " no tiene la cabecera WESYS");
 			}
 			else {
 				conEdit = true; srcEdit = src;
@@ -449,7 +454,7 @@ Ultima entregar(const Rutas& r) {
 		// Destinos (nada se crea: si no estan, se rechaza)
 		std::vector<fs::path> carpetasPlayer;
 		std::string omitidos;
-		if (conPlayer) {
+		if (conPlayer || conAsig) {
 			carpetasPlayer = buscarCarpetasPesdb(r.carpetaJuego, &omitidos);
 			if (carpetasPlayer.empty()) return rechazar(r, u, p, "Phoenix-DB no instalado");
 		}
@@ -470,14 +475,26 @@ Ultima entregar(const Rutas& r) {
 				else fs::remove(q.dst, ec);
 			}
 		};
+		// Player.bin y/o PlayerAssignment.bin en cada carpeta Phoenix-DB (todo o nada)
+		std::vector<std::pair<const char*, fs::path>> deLaBase;
+		if (conPlayer) deLaBase.push_back({ kNombrePlayer, srcPlayer });
+		if (conAsig) deLaBase.push_back({ kNombreAsignacion, srcAsig });
 		for (const fs::path& dir : carpetasPlayer) {
-			Puesto q{ dir / kNombrePlayer, dir / "Player.bin.anterior", false };
-			q.habia = fs::is_regular_file(q.dst, ec);
-			std::string e;
-			if (q.habia && !copiarAtomico(q.dst, q.anterior, e)) { volverAtras(); return rechazar(r, u, p, "no se pudo guardar Player.bin.anterior: " + e); }
-			if (!copiarAtomico(srcPlayer, q.dst, e)) { volverAtras(); return rechazar(r, u, p, "no se pudo colocar Player.bin: " + e); }
-			puestos.push_back(q);
-			u.player.push_back(aU8(q.dst));
+			for (const auto& b : deLaBase) {
+				const std::string nombre = b.first;
+				Puesto q{ dir / nombre, dir / (nombre + ".anterior"), false };
+				q.habia = fs::is_regular_file(q.dst, ec);
+				std::string e;
+				if (q.habia && !copiarAtomico(q.dst, q.anterior, e)) { volverAtras(); return rechazar(r, u, p, "no se pudo guardar " + nombre + ".anterior: " + e); }
+				if (!q.habia && fs::is_regular_file(q.anterior, ec)) {
+					// Un .anterior viejo de otra entrega no debe volver al deshacer: se aparta (no se borra)
+					fs::rename(q.anterior, dir / (nombre + ".anterior.viejo"), ec);
+					ec.clear();
+				}
+				if (!copiarAtomico(b.second, q.dst, e)) { volverAtras(); return rechazar(r, u, p, "no se pudo colocar " + nombre + ": " + e); }
+				puestos.push_back(q);
+				u.player.push_back(aU8(q.dst));   // «player» = archivos de la base colocados (Player.bin y PlayerAssignment.bin)
+			}
 		}
 		if (conEdit) {
 			std::string e;
@@ -498,7 +515,8 @@ Ultima entregar(const Rutas& r) {
 		u.aviso = avisoColocada(p.resumen);
 		guardarUltima(r.carpetaEntrega, u);
 		guardarUltima(r.carpetaEntrega, u, true);
-		historial(r.carpetaEntrega, u, std::string(conPlayer ? "Player.bin x" + std::to_string(carpetasPlayer.size()) + " " : "") + (conEdit ? "EDIT00000000 " : "") + omitidos);
+		historial(r.carpetaEntrega, u, std::string(conPlayer ? "Player.bin x" + std::to_string(carpetasPlayer.size()) + " " : "")
+			+ (conAsig ? "PlayerAssignment.bin x" + std::to_string(carpetasPlayer.size()) + " " : "") + (conEdit ? "EDIT00000000 " : "") + omitidos);
 		archivar(r.carpetaEntrega, "entregados", p.id, p);
 		return u;
 	}
@@ -517,9 +535,17 @@ Ultima deshacer(const Rutas& r) {
 		std::string e, fallos;
 		for (const std::string& ruta : d.player) {
 			const fs::path dst = deU8(ruta);
-			const fs::path anterior = dst.parent_path() / "Player.bin.anterior";
-			if (!fs::is_regular_file(anterior, ec)) { fallos += "falta Player.bin.anterior; "; continue; }
-			if (!copiarAtomico(anterior, dst, e)) fallos += "Player.bin: " + e + "; ";
+			const std::string nombre = aU8(dst.filename());
+			const fs::path anterior = dst.parent_path() / (nombre + ".anterior");
+			if (fs::is_regular_file(anterior, ec)) {
+				if (!copiarAtomico(anterior, dst, e)) fallos += nombre + ": " + e + "; ";
+			}
+			else if (nombre == kNombreAsignacion) {
+				// No había PlayerAssignment.bin propio antes: se aparta el nuestro y vuelve a mandar la base del parche
+				fs::rename(dst, dst.parent_path() / (nombre + ".deshecho"), ec);
+				if (ec) { fallos += nombre + ": no se pudo apartar; "; ec.clear(); }
+			}
+			else fallos += "falta " + nombre + ".anterior; ";
 		}
 		if (!d.edit.empty()) {
 			const fs::path respaldo = deU8(d.editRespaldo);

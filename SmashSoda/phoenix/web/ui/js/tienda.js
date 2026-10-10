@@ -68,13 +68,25 @@ export function elegirPestana(pestana) {
 // El motor solo manda datos pesados (serie de red, audio, amigos) de lo que se mira
 function avisarSeccion() {
   const s = estado;
-  puente.pedir("ui.seccion", { seccion: s.seccion, pestana: s.pestanas[s.seccion] || "" }).catch(() => {});
+  const [seccion, pestana] = vistaExtra || [s.seccion, s.pestanas[s.seccion] || ""];
+  puente.pedir("ui.seccion", { seccion, pestana }).catch(() => {});
+}
+
+// Un panel abierto (p. ej. la ficha de una persona) pide los datos de otra pantalla
+// mientras está a la vista: el motor solo manda la serie de 2 min con «sala/red».
+let vistaExtra = null;
+export function pedirVista(seccion, pestana) {
+  const marca = [seccion, pestana];
+  vistaExtra = marca;
+  avisarSeccion();
+  return () => { if (vistaExtra === marca) { vistaExtra = null; avisarSeccion(); } };
 }
 
 // ---- Avisos (toasts) ----------------------------------------------------------
-export function avisar(texto, tipo = "info", ms = 4200) {
+/** Toast. `boton` opcional: { texto, al } (por ejemplo «Ver» para ir a lo que avisa). */
+export function avisar(texto, tipo = "info", ms = 4200, boton = null) {
   const id = idAviso++;
-  cambiar((s) => ({ avisos: [...s.avisos.slice(-4), { id, texto, tipo }] }));
+  cambiar((s) => ({ avisos: [...s.avisos.slice(-4), { id, texto, tipo, boton }] }));
   if (ms > 0) setTimeout(() => quitarAviso(id), ms);
   return id;
 }

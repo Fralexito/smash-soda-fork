@@ -24,7 +24,16 @@ namespace phoenix {
 			for (const Solicitud& s : Solicitudes::instancia().pendientes()) {
 				if (s.parsecId == parsecId) { sol = s; hay = true; break; }
 			}
-			if (!hay) return false;
+			if (!hay) {
+				// «Quiere jugar»: pulsó su mando sin permiso (espectador o no autorizado) → primer puesto libre
+				for (uint32_t id : PhoenixRoles::instancia().quierenJugar()) {
+					if (id != parsecId) continue;
+					PhoenixRoles::instancia().olvidarPedido(parsecId, false);
+					decidirEspera(sala, parsecId, DecisionEspera::Jugador);
+					return true;
+				}
+				return false;
+			}
 
 			const std::vector<AsientoVista> asientos = sala.asientos(8);
 			const PhoenixPrefs& pr = PhoenixPrefs::get();
@@ -53,6 +62,7 @@ namespace phoenix {
 
 		void rechazarSolicitud(uint32_t parsecId) {
 			Solicitudes::instancia().quitar(parsecId);
+			PhoenixRoles::instancia().olvidarPedido(parsecId, true);   // «quiere jugar» rechazado: 60 s sin volver a pedir
 		}
 
 		void decidirEspera(ProveedorSala& sala, uint32_t parsecId, DecisionEspera decision) {
@@ -71,6 +81,7 @@ namespace phoenix {
 			}
 			case DecisionEspera::Espectador:
 				PhoenixRoles::instancia().admitir(parsecId, false);
+				PhoenixRoles::instancia().mandarAMirar(parsecId);   // aunque pulse su mando, no toma puesto
 				break;
 			case DecisionEspera::Expulsar:
 				PhoenixRoles::instancia().admitir(parsecId, false);

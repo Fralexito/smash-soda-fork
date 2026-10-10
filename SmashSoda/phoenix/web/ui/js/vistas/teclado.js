@@ -5,7 +5,7 @@
 // =============================================================================
 import { html, useState, useEffect } from "../lib.js";
 import { t } from "../i18n.js";
-import { accion, avisar } from "../tienda.js";
+import { accion, avisar, irA } from "../tienda.js";
 import { Tarjeta, Titulo, Boton, AjusteSw, Chip, cx } from "../ui.js";
 
 // KeyboardEvent.code → código de tecla del motor (los de Windows; 0x100 = tecla extendida).
@@ -124,10 +124,8 @@ export function TecladoNuevo({ m }) {
         <${Titulo} texto=${t("TECLADO DE LOS INVITADOS", "GUEST KEYBOARD")}/>
         <${AjusteSw} titulo=${t("Desactivar teclado para todos", "Disable keyboard for everyone")} desc=${t("Nadie juega con teclado aunque tenga permiso.", "Nobody plays with keyboard even if allowed.")}
           valor=${g.disableKeyboard} al=${(v) => accion("ajustes.general", { clave: "disableKeyboard", valor: v })}/>
-        <div class="lab" style="margin-top:14px">${t("PERMISO POR INVITADO", "PER-GUEST PERMISSION")}</div>
-        ${invitados.length === 0 ? html`<div class="ayuda">${t("Sin invitados ahora.", "No guests now.")}</div>` : null}
-        ${invitados.map((x) => html`<${AjusteSw} key=${x.parsecId} titulo=${x.nombre} desc=${"#" + x.parsecId}
-          valor=${x.teclado} al=${(v) => accion("gente.teclado", { parsecId: x.parsecId, si: v })}/>`)}
+        <div class="ayuda" style="margin-top:10px">${t("El permiso de teclado de cada invitado está en su ficha (Gente › En sala).", "Each guest's keyboard permission is on their card (People › In room).")}</div>
+        <div><${Boton} tipo="mini suave" al=${() => irA("gente", "sala")}>${t("IR A GENTE", "GO TO PEOPLE")}</${Boton}></div>
       </${Tarjeta}>
     </div>
     <div class="col" style="flex:1.6 1 0;min-width:360px"><${MapaTeclas} m=${m} invitados=${invitados}/></div>

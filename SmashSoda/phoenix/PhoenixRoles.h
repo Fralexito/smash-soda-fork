@@ -77,6 +77,21 @@ namespace phoenix {
 		/// El host decide: jugador (puede tomar mando) o espectador (nunca juega).
 		void admitir(uint32_t parsecId, bool comoJugador);
 
+		// --- El host manda sobre los puestos (con o sin lista de la web) -----
+		/// Encendido (por defecto): pulsar el mando solo da un puesto libre a quien el host autorizó.
+		/// Con turnos (hotseat) activos no se aplica: los turnos tienen su propio orden.
+		void soloAutorizados(bool si);
+		/// El host le dio un puesto (arrastrar, «Dar puesto», aceptar): puede volver a tomar mando solo.
+		void autorizar(uint32_t parsecId);
+		/// El host lo mandó a «Mirando» (o lo quitó del puesto): no toma mando aunque pulse,
+		/// hasta que el host le dé un puesto otra vez.
+		void mandarAMirar(uint32_t parsecId);
+		bool estaMirando(uint32_t parsecId);
+		/// Quienes pulsaron su mando sin permiso en los últimos 60 s («quiere jugar»).
+		std::vector<uint32_t> quierenJugar();
+		/// El host aceptó o rechazó el pedido. Rechazado: no vuelve a pedir en 60 s.
+		void olvidarPedido(uint32_t parsecId, bool rechazado);
+
 	private:
 		PhoenixRoles() = default;
 		void recargarSiCambio();
@@ -93,6 +108,13 @@ namespace phoenix {
 		std::set<uint32_t> _enEspera;            // entraron por Parsec, sin decidir
 		std::set<uint32_t> _admitidosJugador;    // el host los aceptó como jugadores
 		std::set<uint32_t> _admitidosEspectador; // el host los aceptó como espectadores
+		// Control del host (siempre activo, también sin lista de la web)
+		bool _soloAutorizados = true;
+		std::set<uint32_t> _autorizadosHost;     // les dio puesto el host
+		std::set<uint32_t> _mirandoHost;         // el host los mandó a «Mirando»
+		std::map<uint32_t, uint64_t> _pidieron;  // pulsaron sin permiso → hora (ms)
+		std::map<uint32_t, uint64_t> _silencioHasta;   // pedido rechazado: no vuelve a pedir hasta (ms)
+		void anotarPedido(uint32_t parsecId);    // con _mutex tomado
 		std::string _ultimoTexto;
 		uint64_t _ultimaRevisionMs = 0;
 	};

@@ -105,20 +105,25 @@ EstadoJuego detectarJuego() {
 }
 
 bool escribirAtomico(const std::filesystem::path& carpetaBuzon, const std::string& contenido, std::string* error) {
+	return escribirAtomicoComo(carpetaBuzon, "avisos", ".txt", contenido, error);
+}
+
+bool escribirAtomicoComo(const std::filesystem::path& carpetaBuzon, const std::string& nombre, const std::string& extension,
+	const std::string& contenido, std::string* error) {
 	namespace fs = std::filesystem;
 	std::error_code ec;
 	if (!fs::is_directory(carpetaBuzon, ec)) {
 		if (error) *error = "la carpeta del buzon no existe";
 		return false;
 	}
-	fs::path tmp = carpetaBuzon / "avisos.tmp";
-	fs::path dst = carpetaBuzon / "avisos.txt";
+	fs::path tmp = carpetaBuzon / (nombre + ".tmp");
+	fs::path dst = carpetaBuzon / (nombre + extension);
 	{
 		std::ofstream f(tmp, std::ios::binary | std::ios::trunc);
-		if (!f) { if (error) *error = "no se pudo crear avisos.tmp"; return false; }
+		if (!f) { if (error) *error = "no se pudo crear " + nombre + ".tmp"; return false; }
 		f.write(contenido.data(), (std::streamsize)contenido.size());
 		f.flush();
-		if (!f) { if (error) *error = "no se pudo escribir avisos.tmp"; return false; }
+		if (!f) { if (error) *error = "no se pudo escribir " + nombre + ".tmp"; return false; }
 	}
 	for (int i = 0; i < 10; ++i) {
 		bool ok = false;

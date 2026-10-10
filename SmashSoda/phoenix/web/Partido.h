@@ -51,6 +51,8 @@ namespace phoenix::web {
 		bool pausar(bool pausa, double ahoraSeg);
 		/// lado 0 = A, 1 = B. El marcador queda entre 0 y 99.
 		bool gol(int lado, int delta);
+		/// Marcador entero (lo usa el árbitro con los goles que da el juego). Entre 0 y 99.
+		bool fijarGoles(int golesA, int golesB);
 		/// Termina y devuelve el registro (solo si estaba en juego o en pausa).
 		std::optional<RegistroPartido> finalizar(double ahoraSeg);
 		void cancelar();

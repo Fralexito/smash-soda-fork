@@ -6,6 +6,10 @@ import { t, duracion, haceCuanto } from "../i18n.js";
 import { accion, confirmar, irA, avisar } from "../tienda.js";
 import { Diagnostico } from "./ajustes.js";
 import { GuiaInicio, Entrenador, useGuia } from "./guia.js";
+import { Pendientes } from "./mandos.js";
+import { PersonasSala } from "./personas.js";
+import { EditorBiblioteca } from "./nativas.js";
+import { abrirFicha } from "./gente.js";
 import {
   Cifra, Tarjeta, Titulo, Boton, Interruptor, Ajuste, AjusteSw, Stepper, Segmentos, Selector, Campo,
   Minigrafica, Chip, Icono, Vacio, colorPing, claseSemaforo, cx, dos,
@@ -128,7 +132,7 @@ function Heroe({ m, conGuia, verGuia }) {
   </${Tarjeta}>`;
 }
 
-// Ping de cada invitado a la vista: verde hasta 50 ms, naranja de 50 a 120, rojo de 120 para arriba.
+// Ping de cada invitado a la vista: verde hasta 60 ms, ámbar hasta 100, rojo más arriba (mismo criterio que el motor).
 function PingSala({ m }) {
   const lista = (m.red || []).filter((r) => r.presente);
   if (lista.length === 0) return html`<div class="mono mut" style="margin-top:14px;font-size:12px;letter-spacing:.1em">${t("PING DE LA SALA · esperando invitados", "ROOM PING · waiting for guests")}</div>`;
@@ -137,12 +141,12 @@ function PingSala({ m }) {
     <div style="display:flex;gap:8px;flex-wrap:wrap">${lista.map((r) => {
       const ms = r.ultimo >= 0 ? r.ultimo : r.media;
       const c = colorPing(ms);
-      return html`<div key=${r.parsecId} title=${t("Media ", "Avg ") + (r.media >= 0 ? r.media : "—") + " ms"}
-        style=${`display:flex;align-items:center;gap:8px;padding:6px 12px;border-radius:999px;border:1px solid ${c};background:rgba(0,0,0,.25)`}>
+      return html`<button key=${r.parsecId} title=${t("Ver ficha · media ", "Open card · avg ") + (r.media >= 0 ? r.media : "—") + " ms"} onClick=${() => abrirFicha(r.parsecId)}
+        style=${`display:flex;align-items:center;gap:8px;padding:6px 12px;border-radius:999px;border:1px solid ${c};background:rgba(0,0,0,.25);color:inherit;font:inherit;cursor:pointer`}>
         <span style=${`width:8px;height:8px;border-radius:50%;background:${c}`}></span>
         <span style="font-size:13px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.nombre || "—"}</span>
         <span class="mono" style=${`font-size:13px;font-weight:600;color:${c}`}>${ms >= 0 ? ms + " ms" : "—"}</span>
-      </div>`;
+      </button>`;
     })}</div>
   </div>`;
 }
@@ -246,12 +250,14 @@ function ResumenSala({ s, m }) {
   return html`<div class="col" style="min-height:100%">
     ${verGuia ? html`<${GuiaInicio} m=${m} ocultar=${ocultarGuia} abrir=${abrirSala}/>` : null}
     ${m.sala.abierta ? html`<${Entrenador} m=${m}/>` : null}
-    <div class="fila resumen" style="flex:1 1 auto;min-height:0">
+    <div class="fila resumen" style="flex:1 0 auto">
     <div class="col" style="flex:1 1 0">
       <${Heroe} m=${m} conGuia=${verGuia} verGuia=${mostrarGuia}/>
       <${PuestosResumen} m=${m}/>
+      ${m.sala.abierta ? html`<${PersonasSala} m=${m}/>` : null}
     </div>
     <div class="col" style="flex:0 0 clamp(360px,25vw,440px)">
+      ${m.sala.abierta ? html`<${Pendientes} m=${m}/>` : null}
       <${Indicadores} m=${m}/>
       <${ActividadResumen} s=${s}/>
     </div>
@@ -346,10 +352,10 @@ function OpcionesSala({ m }) {
             valor=${o.limitador} al=${(v) => op({ limitador: v })}/>
           ${o.limitador ? html`<${Ajuste} titulo=${t("Límite (ms)", "Limit (ms)")}>
             <${Stepper} valor=${o.limite ?? 0} min=${0} max=${64} al=${(v) => op({ limite: v })}/></${Ajuste}>` : null}
-          <${AjusteSw} titulo=${t("Turnos (hotseat)", "Hotseat")} desc=${t("Rotación automática del mando por tiempo.", "Automatic pad rotation by time.")}
-            valor=${o.turnos} al=${(v) => op({ turnos: v })}/>
-          <${AjusteSw} titulo=${t("Overlay en pantalla", "On-screen overlay")} desc=${t("Chat y mandos sobre el juego.", "Chat and pads over the game.")}
-            valor=${o.overlay} al=${(v) => op({ overlay: v })}/>
+          <${Ajuste} titulo=${t("Turnos (hotseat)", "Hotseat")} desc=${o.turnos ? t("Activados.", "On.") : t("Apagados.", "Off.")}>
+            <${Boton} tipo="mini suave" al=${() => irA("mandos", "turnos")}>${t("IR A TURNOS", "GO TO HOTSEAT")}</${Boton}></${Ajuste}>
+          <${Ajuste} titulo=${t("Overlay en pantalla", "On-screen overlay")} desc=${o.overlay ? t("Activado.", "On.") : t("Apagado.", "Off.")}>
+            <${Boton} tipo="mini suave" al=${() => irA("ajustes", "overlay")}>${t("IR A OVERLAY", "GO TO OVERLAY")}</${Boton}></${Ajuste}>
           <${AjusteSw} titulo=${t("Modo quiosco", "Kiosk mode")} desc=${t("Abre y vigila el juego de la biblioteca.", "Launches and watches the library game.")}
             valor=${o.quiosco} al=${(v) => op({ quiosco: v })}/>
         </${Tarjeta}>
@@ -411,6 +417,7 @@ function PerfilesSala() {
 
 // ---- Juegos --------------------------------------------------------------------------
 function JuegosSala({ m }) {
+  const [gestionar, setGestionar] = useState(false);
   const o = m.sala.opciones || {};
   const ph = m.sala.phoenix || {};
   const juegos = o.juegos || [];
@@ -434,8 +441,9 @@ function JuegosSala({ m }) {
         <${Campo} valor=${ph.region} max=${40} al=${(v) => phx({ region: v })}/></${Ajuste}>
     </${Tarjeta}>
     <${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column">
-      <${Titulo} texto=${t("BIBLIOTECA", "LIBRARY")} derecha=${html`<${Boton} tipo="mini" al=${() => accion("ui.panelClasico", { seccion: 3, pestana: 5 })}>${t("EDITAR", "EDIT")}</${Boton}>`}/>
-      <div class="ayuda" style="margin-bottom:12px">${t("Juego que se abre con el modo quiosco. Agregar o quitar juegos se hace en el panel clásico.", "Game launched by kiosk mode. Add/remove games in the classic panel.")}</div>
+      <${Titulo} texto=${t("BIBLIOTECA", "LIBRARY")} derecha=${html`<${Boton} tipo=${gestionar ? "mini lleno" : "mini"} al=${() => setGestionar(!gestionar)}>${gestionar ? t("LISTO", "DONE") : t("GESTIONAR", "MANAGE")}</${Boton}>`}/>
+      <div class="ayuda" style="margin-bottom:12px">${t("Juego que se abre con el modo quiosco. Con GESTIONAR añades, editas o quitas juegos.", "Game launched by kiosk mode. MANAGE to add, edit or remove games.")}</div>
+      ${gestionar ? html`<div style="margin-bottom:14px"><${EditorBiblioteca}/></div>` : null}
       <div style="display:flex;flex-direction:column;gap:8px;overflow:auto">
         ${["Default", ...juegos].map((j) => html`<button key=${j} class=${cx("persona", o.biblioteca === j && "on")} onClick=${() => accion("sala.opciones", { biblioteca: j })}>
           <span class="avatar" style="width:34px;height:34px;font-size:14px;background:${o.biblioteca === j ? "var(--acc)" : "rgba(255,255,255,.15)"}">${j === "Default" ? "—" : j[0]}</span>

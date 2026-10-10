@@ -130,6 +130,12 @@ namespace phoenix::web {
 			}
 			else if (clave == "discord") c.chat.discord = texto(d, "valor", 255);
 			else if (clave == "welcomeMessage") c.chat.welcomeMessage = texto(d, "valor", 500);
+			// Nativos de Smash Soda que solo estaban en el panel clásico (SettingsWidget)
+			else if (clave == "autoMute") c.chat.autoMute = booleano(d, "valor");
+			else if (clave == "autoMuteTime") c.chat.autoMuteTime = static_cast<unsigned int>(entero(d, "valor", 100, 10000));
+			else if (clave == "muteTime") c.chat.muteTime = static_cast<unsigned int>(entero(d, "valor", 1, 1440));
+			else if (clave == "hostBonkProof") c.chat.hostBonkProof = booleano(d, "valor");
+			else if (clave == "sfxEnabled") c.audio.sfxEnabled = booleano(d, "valor");
 			else if (clave == "socketEnabled") {
 				c.socket.enabled = booleano(d, "valor");
 				// Se aplica al momento (el panel original pedía reiniciar la app)
@@ -295,7 +301,76 @@ namespace phoenix::web {
 			return json::object();
 		});
 
+		// ---- Abrir la configuración del overlay (la misma ventana de Ctrl+Alt+F1) ------
+		p.registrar("ajustes.overlayMenu", [](const json&, uint64_t) -> std::optional<json> {
+			if (!Config::cfg.overlay.enabled) throw ErrorAccion("DATOS_INVALIDOS", "El overlay está apagado. Enciéndelo primero.");
+			if (!WebSocket::instance.isRunning()) throw ErrorAccion("DATOS_INVALIDOS", "Abre la sala primero: el overlay solo se conecta cuando la sala está abierta.");
+			OverlayService::instance().openMenu();
+			return json::object();
+		});
+
 		// ---- Sonidos (!sfx) ------------------------------------------------------------
+		// ---- Biblioteca de juegos (LibraryWidget): lista, guardar y borrar ------------
+		p.registrar("biblioteca.lista", [](const json&, uint64_t) -> std::optional<json> {
+			json juegos = json::array();
+			for (const GameData& g : Cache::cache.gameList.getGames()) {
+				juegos.push_back({ {"id", g.itemID}, {"nombre", g.name}, {"ruta", g.path}, {"parametros", g.parameters} });
+			}
+			return json{ {"juegos", juegos} };
+		});
+		p.registrar("biblioteca.guardar", [](const json& d, uint64_t) -> std::optional<json> {
+			const std::string nombre = texto(d, "nombre", 128);
+			const std::string ruta = texto(d, "ruta", 1024);
+			const std::string parametros = d.contains("parametros") ? texto(d, "parametros", 512) : std::string();
+			if (nombre.empty() || ruta.empty()) throw ErrorAccion("DATOS_INVALIDOS", "Pon el nombre y la ruta del juego.");
+			std::vector<GameData>& juegos = Cache::cache.gameList.getGames();
+			const uint32_t id = d.contains("id") ? static_cast<uint32_t>(entero(d, "id", 0, 1000000)) : 0;
+			bool editado = false;
+			for (GameData& g : juegos) {
+				if (id != 0 && g.itemID == id) { g.name = nombre; g.path = ruta; g.parameters = parametros; editado = true; break; }
+			}
+			if (!editado) {
+				uint32_t siguiente = 1;
+				for (const GameData& g : juegos) siguiente = (std::max)(siguiente, g.itemID + 1);
+				juegos.push_back(GameData(siguiente, nombre, ruta, parametros));
+			}
+			if (!Cache::cache.gameList.SaveToFile()) throw ErrorAccion("ERROR_INTERNO", "No se pudo guardar la biblioteca.");
+			return json::object();
+		});
+		p.registrar("biblioteca.borrar", [](const json& d, uint64_t) -> std::optional<json> {
+			const uint32_t id = static_cast<uint32_t>(entero(d, "id", 1, 1000000));
+			std::vector<GameData>& juegos = Cache::cache.gameList.getGames();
+			const auto antes = juegos.size();
+			juegos.erase(std::remove_if(juegos.begin(), juegos.end(), [id](const GameData& g) { return g.itemID == id; }), juegos.end());
+			if (juegos.size() == antes) throw ErrorAccion("DATOS_INVALIDOS", "Ese juego ya no está.");
+			Cache::cache.gameList.SaveToFile();
+			return json::object();
+		});
+
+		// ---- Atajos de teclado (Ctrl + tecla → comando del chat, como el panel original) ----
+		p.registrar("atajos.lista", [](const json&, uint64_t) -> std::optional<json> {
+			json lista = json::array();
+			for (const Config::Hotkey& h : Config::cfg.hotkeys.keys) lista.push_back({ {"comando", h.command}, {"tecla", h.key}, {"nombre", h.keyName} });
+			return json{ {"atajos", lista}, {"activos", Config::cfg.hotkeys.enabled} };
+		});
+		p.registrar("atajos.agregar", [](const json& d, uint64_t) -> std::optional<json> {
+			const std::string comando = texto(d, "comando", 200);
+			const int tecla = entero(d, "tecla", 1, 254);
+			if (comando.empty()) throw ErrorAccion("DATOS_INVALIDOS", "Escribe el comando (por ejemplo !lockall).");
+			const size_t antes = Config::cfg.hotkeys.keys.size();
+			Config::cfg.AddHotkey(comando, tecla);
+			bool existe = false;
+			for (const Config::Hotkey& h : Config::cfg.hotkeys.keys) if (h.key == tecla) existe = true;
+			if (!existe && Config::cfg.hotkeys.keys.size() == antes) throw ErrorAccion("NO_SE_PUDO", "Windows no dejó usar Ctrl + esa tecla (otra app ya la usa). Prueba con otra.");
+			return json::object();
+		});
+		p.registrar("atajos.borrar", [](const json& d, uint64_t) -> std::optional<json> {
+			const int indice = entero(d, "indice", 0, 200);
+			if (indice >= static_cast<int>(Config::cfg.hotkeys.keys.size())) throw ErrorAccion("DATOS_INVALIDOS", "Ese atajo ya no está.");
+			Config::cfg.RemoveHotkey(indice);
+			return json::object();
+		});
+
 		p.registrar("sfx.lista", [](const json&, uint64_t) -> std::optional<json> {
 			return json{ {"sonidos", listaSfx()} };
 		});

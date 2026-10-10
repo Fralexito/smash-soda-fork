@@ -193,6 +193,8 @@ set_source_files_properties(
     "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/link/Http.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/link/BuzonJuego.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/link/Entrega.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/link/EstadoJuego.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/link/ModulosJuego.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/link/PhoenixLink.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/web/AnfitrionWeb.cpp"
     PROPERTIES
@@ -223,6 +225,9 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E remove_directory $<TARGET_FILE_DIR:${PROJECT_NAME}>/ui
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         "${CMAKE_SOURCE_DIR}/SmashSoda/phoenix/web/ui" $<TARGET_FILE_DIR:${PROJECT_NAME}>/ui
+    # Phoenix: paquete de módulos Lua de Sider que instala «Módulos del juego» (SYNC › Puente)
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_SOURCE_DIR}/SmashSoda/phoenix/sider" $<TARGET_FILE_DIR:${PROJECT_NAME}>/sider
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${CMAKE_SOURCE_DIR}/external/webview2/${TARGET_ARCH}/WebView2Loader.dll" $<TARGET_FILE_DIR:${PROJECT_NAME}>
     COMMAND ${CMAKE_COMMAND} -E copy_if_different

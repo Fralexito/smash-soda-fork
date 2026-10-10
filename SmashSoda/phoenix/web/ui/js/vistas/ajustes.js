@@ -4,9 +4,10 @@
 // =============================================================================
 import { html, useState, useEffect } from "../lib.js";
 import { t } from "../i18n.js";
-import { accion, confirmar, actualizarInfo, avisar } from "../tienda.js";
+import { accion, confirmar, actualizarInfo, avisar, irA } from "../tienda.js";
 import { Tarjeta, Titulo, Boton, Interruptor, Ajuste, AjusteSw, Stepper, Selector, Segmentos, Campo, Icono, IconoRed, COLOR_RED, Vacio, Chip, cx } from "../ui.js";
 import { TarjetaCalidad } from "./sala.js";
+import { AtajosTeclado } from "./nativas.js";
 
 export const PESTANAS_AJUSTES = [
   { id: "general", es: "GENERAL", en: "GENERAL", d: ["Tema, bot del chat y seguridad de la sala.", "Theme, chat bot and room security."] },
@@ -52,7 +53,7 @@ function General({ m }) {
   return html`<div class="fila partible" style="min-height:100%">
     <div class="col" style="flex:1">
       <${Tarjeta} interior="padding:22px 24px">
-        <div class="lab acc">${t("TEMA", "THEME")}</div>
+        <${Titulo} texto=${t("TEMA", "THEME")}/>
         <div class="ayuda" style="margin-top:6px">${t("Cambia el esquema de colores de toda la app.", "Changes the whole app's colors.")}</div>
         <div class="rej2" style="margin-top:16px;gap:14px">
           <${TemaCarta} id="galaxy" actual=${tema} colores=${["#00e5ff", "#8000ff"]} nombre="GALAXY" sub=${t("CIAN · PÚRPURA", "CYAN · PURPLE")} fondo="linear-gradient(135deg,#0b1030,#1a0a3a)"/>
@@ -60,11 +61,16 @@ function General({ m }) {
         </div>
       </${Tarjeta}>
       <${Tarjeta} estilo="flex:1" interior="padding:22px 24px;display:flex;flex-direction:column;gap:4px">
-        <div class="lab acc">${t("CHAT Y BOT", "CHAT AND BOT")}</div>
+        <${Titulo} texto=${t("CHAT Y BOT", "CHAT AND BOT")}/>
         <${Ajuste} bloque titulo=${t("Nombre del bot", "Bot name")} desc=${t("Ponle un nombre divertido si quieres.", "Give it a fun name.")}>
           <${Campo} valor=${g.chatbot} max=${64} al=${(v) => gen("chatbot", v)}/></${Ajuste}>
         <${Ajuste} bloque titulo=${t("Mensaje de bienvenida", "Welcome message")} desc=${t("Los invitados lo ven al entrar. Escribe _PLAYER_ para insertar su nombre.", "Guests see it on join. Use _PLAYER_ for their name.")}>
           <${Campo} multilinea valor=${g.welcomeMessage} max=${500} al=${(v) => gen("welcomeMessage", v)}/></${Ajuste}>
+        <${AjusteSw} titulo=${t("Silencio automático por spam", "Auto-mute spammers")} desc=${t("Si alguien escribe demasiado rápido, el bot lo silencia un rato.", "Guests who write too fast get muted for a while.")} valor=${g.autoMute} al=${(v) => gen("autoMute", v)}/>
+        ${g.autoMute ? html`<${Ajuste} titulo=${t("Separación mínima entre mensajes", "Minimum gap between messages")} desc=${t("En milisegundos. Más rápido que esto cuenta como spam.", "In ms. Faster than this counts as spam.")}>
+          <${Stepper} valor=${g.autoMuteTime ?? 500} min=${100} max=${10000} paso=${100} ancho=${5} sufijo="ms" al=${(v) => gen("autoMuteTime", v)}/></${Ajuste}>` : null}
+        <${Ajuste} titulo=${t("Minutos de silencio", "Mute minutes")} desc=${t("Cuánto dura un silencio (automático o con !mute).", "How long a mute lasts.")}>
+          <${Stepper} valor=${g.muteTime ?? 5} min=${1} max=${1440} sufijo="min" al=${(v) => gen("muteTime", v)}/></${Ajuste}>
         <${Ajuste} bloque titulo=${t("Enlace de Discord", "Discord link")} desc=${t("Lo responde el comando !discord.", "Answered by !discord.")}>
           <${Campo} valor=${g.discord} max=${255} mono al=${(v) => gen("discord", v)}/>
           <div class="redes">
@@ -77,19 +83,19 @@ function General({ m }) {
     </div>
     <div class="col" style="flex:1">
       <${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column">
-        <div class="lab acc">${t("ENTRADA Y SEGURIDAD", "INPUT AND SECURITY")}</div>
+        <${Titulo} texto=${t("ENTRADA Y SEGURIDAD", "INPUT AND SECURITY")}/>
         <${AjusteSw} titulo=${t("Desactivar botón Guía", "Disable Guide button")} desc=${t("Suele abrir overlays y puede dar problemas al hostear.", "It opens overlays and can cause trouble.")} valor=${g.disableGuideButton} al=${(v) => gen("disableGuideButton", v)}/>
-        <${AjusteSw} titulo=${t("Desactivar teclado", "Disable keyboard")} desc=${t("Impide que invitados sin mando jueguen con teclado.", "Guests without a pad can't use keyboard.")} valor=${g.disableKeyboard} al=${(v) => gen("disableKeyboard", v)}/>
         <${AjusteSw} titulo=${t("Indexar mandos automáticamente", "Auto-index pads")} desc=${t("Puede causar pantallazos azules en algunos equipos.", "May cause blue screens on some PCs.")} valor=${g.autoIndex} al=${(v) => gen("autoIndex", v)}/>
         <${AjusteSw} titulo=${t("Bloquear también la IP", "Also ban the IP")} desc=${t("Al banear a alguien se bloquea su dirección IP.", "Bans also block the IP address.")} valor=${g.ipBan} al=${(v) => gen("ipBan", v)}/>
         <${AjusteSw} titulo=${t("Bloquear VPN", "Block VPN")} desc=${t("Actívalo solo si tienes problemas con trolls.", "Only if you have trolls.")} valor=${g.blockVPN} al=${(v) => gen("blockVPN", v)}/>
       </${Tarjeta}>
       <${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column">
-        <div class="lab acc">${t("AVISOS", "NOTIFICATIONS")}</div>
+        <${Titulo} texto=${t("AVISOS", "NOTIFICATIONS")}/>
         <${AjusteSw} titulo=${t("Parpadear la ventana", "Flash the window")} desc=${t("La barra de tareas avisa cuando alguien escribe.", "Taskbar flashes on new messages.")} valor=${g.flashWindow} al=${(v) => gen("flashWindow", v)}/>
         <${AjusteSw} titulo=${t("Sonido de mensaje", "Message sound")} valor=${g.messageNotification} al=${(v) => gen("messageNotification", v)}/>
         <${AjusteSw} titulo=${t("Leer el chat en voz alta", "Text to speech")} valor=${g.ttsEnabled} al=${(v) => gen("ttsEnabled", v)}/>
         <${AjusteSw} titulo=${t("Permitir !bonk", "Allow !bonk")} desc=${t("El juego de golpes del chat.", "The chat bonk game.")} valor=${g.bonkEnabled} al=${(v) => gen("bonkEnabled", v)}/>
+        <${AjusteSw} titulo=${t("Al anfitrión no le hacen !bonk", "Host can't be bonked")} valor=${g.hostBonkProof} al=${(v) => gen("hostBonkProof", v)}/>
       </${Tarjeta}>
     </div>
   </div>`;
@@ -120,7 +126,11 @@ function Video({ m, info }) {
       <${AjusteSw} titulo=${t("Escalado Lanczos", "Lanczos scaling")} desc=${t("Imagen más nítida al reducir resolución (usa más GPU).", "Sharper downscaling (more GPU).")} valor=${v.lanczos} al=${(x) => vid("lanczos", x)}/>
       <${AjusteSw} titulo=${t("Ritmo de fotogramas", "Frame pacing")} desc=${t("Movimiento más parejo; puede sumar un poco de retraso.", "Smoother motion; may add a bit of delay.")} valor=${v.ritmo} al=${(x) => vid("ritmo", x)}/>
     </${Tarjeta}>
-    <${TarjetaCalidad} m=${m}/>
+    <${Tarjeta} interior="padding:22px 24px">
+      <${Titulo} texto=${t("CALIDAD DE TRANSMISIÓN", "STREAM QUALITY")}/>
+      <div class="ayuda" style="font-size:14px">${t("Los FPS, los Mbps y la calidad automática se ajustan en un solo sitio: Sala › Opciones de sala.", "FPS, Mbps and automatic quality live in one place: Room › Room options.")}</div>
+      <div style="margin-top:14px"><${Boton} al=${() => irA("sala", "opciones")}>${t("IR A OPCIONES DE SALA", "GO TO ROOM OPTIONS")}</${Boton}></div>
+    </${Tarjeta}>
   </div>`;
 }
 
@@ -188,6 +198,19 @@ function Overlay({ m, info }) {
         <${Selector} valor=${o.monitor} opciones=${(info.pantallas.length ? info.pantallas : ["#1"]).map((x, i) => ({ valor: i, texto: x }))} al=${(x) => ov("monitor", Number(x))}/></${Ajuste}>
       <${Ajuste} bloque titulo=${t("Tema del overlay", "Overlay theme")} desc=${t("Carpeta overlay/themes.", "overlay/themes folder.")}>
         <${Selector} valor=${o.tema} opciones=${[{ valor: "", texto: t("(predeterminado)", "(default)") }, ...info.temasOverlay.map((x) => ({ valor: x, texto: x }))]} al=${(x) => ov("tema", x)}/></${Ajuste}>
+      <${Ajuste} bloque titulo=${t("Configurar el overlay", "Configure the overlay")} desc=${t("Abre su ventana de configuración: cuadros, atajos, temas y plugins.", "Opens its settings window: widgets, hotkeys, themes and plugins.")}>
+        ${m.sala?.abierta && activo
+          ? html`<${Boton} al=${() => accion("ajustes.overlayMenu", {}, { ok: t("Mira tu pantalla del juego: la ventana se abre ahí.", "Look at your game screen: the window opens there.") })}>${t("ABRIR CONFIGURACIÓN DEL OVERLAY", "OPEN OVERLAY SETTINGS")}</${Boton}>`
+          : html`<div class="ayuda">${activo ? t("Primero abre la sala: el overlay solo funciona con la sala abierta.", "Open the room first: the overlay only works while it is open.") : t("Primero enciende el interruptor OVERLAY de arriba.", "Turn the OVERLAY switch above on first.")}</div>`}
+      </${Ajuste}>
+      <${Ajuste} bloque titulo=${t("Atajos de teclado (funcionan dentro del juego)", "Hotkeys (work inside the game)")}>
+        <div class="ayuda" style="line-height:1.7">
+          <b>Ctrl + Alt + F1</b> · ${t("abrir/cerrar la configuración", "open/close settings")}<br/>
+          <b>Ctrl + Alt + M</b> · ${t("mover y cambiar tamaño de los cuadros", "move and resize the boxes")}<br/>
+          <b>Ctrl + Alt + C</b> · ${t("escribir en el chat", "write in chat")}<br/>
+          <b>Ctrl + Alt + ← →</b> · ${t("tamaño", "size")} · <b>Ctrl + Alt + ↑ ↓</b> · ${t("transparencia", "opacity")}
+        </div>
+      </${Ajuste}>
     </${Tarjeta}>
     <div class="col" style="gap:12px">
       <${BloqueOverlay} o=${o} ov=${ov} titulo="Chat" clave="chat" extra=${html`<${AjusteSw} titulo=${t("Mostrar historial", "Show history")} valor=${o.chat.historial} al=${(x) => ov("chat.historial", x)}/>`}/>
@@ -226,9 +249,9 @@ function Sonidos({ m }) {
     </${Tarjeta}>
     <${Tarjeta} estilo="flex:1;min-width:0" interior="padding:22px 24px">
       <${Titulo} texto=${t("QUIÉN PUEDE USAR !SFX", "WHO CAN USE !SFX")}/>
-      <${AjusteSw} titulo=${t("Invitados", "Guests")} valor=${p.guest.useSFX} al=${(v) => permiso("guest", v)}/>
-      <${AjusteSw} titulo="VIP" valor=${p.vip.useSFX} al=${(v) => permiso("vip", v)}/>
-      <${AjusteSw} titulo=${t("Moderadores", "Moderators")} valor=${p.moderator.useSFX} al=${(v) => permiso("moderator", v)}/>
+      <${AjusteSw} titulo=${t("Sonidos !sfx activados", "!sfx sounds on")} desc=${t("Apágalo para que nadie pueda reproducir sonidos.", "Turn off so nobody can play sounds.")} valor=${m.ajustes.general.sfxEnabled ?? true} al=${(v) => gen("sfxEnabled", v)}/>
+      <div class="ayuda" style="font-size:14px">${[p.guest.useSFX && t("Invitados", "Guests"), p.vip.useSFX && "VIP", p.moderator.useSFX && t("Moderadores", "Moderators")].filter(Boolean).join(" · ") || t("Nadie", "Nobody")}</div>
+      <div style="margin-top:14px"><${Boton} al=${() => irA("gente", "permisos")}>${t("CAMBIAR EN GENTE › PERMISOS", "CHANGE IN PEOPLE › PERMISSIONS")}</${Boton}></div>
     </${Tarjeta}>
   </div>`;
 }
@@ -316,12 +339,13 @@ function Interfaz({ m, info }) {
     </${Tarjeta}>
     <${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:12px">
       <${Titulo} texto=${t("INTERFAZ", "INTERFACE")}/>
-      <div class="ayuda">${t("Atajos: Ctrl+K busca cualquier acción · Ctrl+Espacio abre el chat · Alt+1…5 cambia de sección · Esc cierra.", "Shortcuts: Ctrl+K search · Ctrl+Space chat · Alt+1…5 sections · Esc close.")}</div>
+      <div class="ayuda">${t("Atajos: Ctrl+K busca cualquier acción · Ctrl+Espacio abre el chat · Alt+1…6 cambia de sección · Esc cierra.", "Shortcuts: Ctrl+K search · Ctrl+Space chat · Alt+1…6 sections · Esc close.")}</div>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
         <${Boton} al=${() => accion("ui.recargar")}>${t("RECARGAR INTERFAZ", "RELOAD INTERFACE")}</${Boton}>
         <${Boton} tipo="peligro" al=${cambiarInterfaz}>${t("USAR LA INTERFAZ ANTERIOR", "USE PREVIOUS INTERFACE")}</${Boton}>
       </div>
     </${Tarjeta}>
+    <${AtajosTeclado}/>
   </div>`;
 }
 

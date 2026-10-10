@@ -73,6 +73,13 @@ namespace phoenix {
 				a.conectado = pad->isConnected();
 				a.ocupado = pad->isOwned();
 				a.bloqueado = pad->isLocked();
+				if (a.conectado) {
+					const XINPUT_STATE st = pad->getState();   // copia de lo que el juego recibe ahora
+					a.botones = st.Gamepad.wButtons;
+					a.gatilloI = st.Gamepad.bLeftTrigger; a.gatilloD = st.Gamepad.bRightTrigger;
+					a.ejeLX = st.Gamepad.sThumbLX; a.ejeLY = st.Gamepad.sThumbLY;
+					a.ejeRX = st.Gamepad.sThumbRX; a.ejeRY = st.Gamepad.sThumbRY;
+				}
 				if (a.ocupado) {
 					a.jugador = pad->owner.guest.name;
 					a.parsecId = pad->owner.guest.userID;
@@ -112,7 +119,15 @@ namespace phoenix {
 	void ProveedorSalaSoda::conectarMando(int i) { try { if (AGamepad* p = padEn(_hosting, i)) p->connect(); } catch (...) {} }
 	void ProveedorSalaSoda::desconectarMando(int i) { try { if (AGamepad* p = padEn(_hosting, i)) p->disconnect(); } catch (...) {} }
 	void ProveedorSalaSoda::alternarBloqueo(int i) { try { if (AGamepad* p = padEn(_hosting, i)) p->toggleLocked(); } catch (...) {} }
-	void ProveedorSalaSoda::liberarMando(int i) { try { _hosting.stripGamepad(i); } catch (...) {} }
+	void ProveedorSalaSoda::liberarMando(int i) {
+		try {
+			// El host lo saca del puesto (QUITAR o arrastrar a «Mirando»): queda mirando y no vuelve solo al pulsar
+			AGamepad* p = padEn(_hosting, i);
+			if (p != nullptr && p->isOwned()) PhoenixRoles::instancia().mandarAMirar(p->owner.guest.userID);
+			_hosting.stripGamepad(i);
+		}
+		catch (...) {}
+	}
 
 	bool ProveedorSalaSoda::asignarMando(int i, uint32_t parsecId) {
 		try {

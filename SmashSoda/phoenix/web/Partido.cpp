@@ -117,6 +117,13 @@ namespace phoenix::web {
 		return true;
 	}
 
+	bool Partido::fijarGoles(int golesA, int golesB) {
+		if (_fase != FasePartido::EnJuego && _fase != FasePartido::Pausado) return false;
+		_a.goles = (std::max)(0, (std::min)(99, golesA));
+		_b.goles = (std::max)(0, (std::min)(99, golesB));
+		return true;
+	}
+
 	int Partido::segundosJugados(double ahoraSeg) const {
 		if (_fase != FasePartido::EnJuego && _fase != FasePartido::Pausado) return 0;
 		double t = ahoraSeg - _inicioSeg - _pausaTotal;

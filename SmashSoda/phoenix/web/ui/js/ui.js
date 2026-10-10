@@ -3,6 +3,18 @@
 //  interruptor, stepper, campos, iconos, minigráfica…).
 // =============================================================================
 import { html, useState, useEffect, useRef } from "./lib.js";
+import { createContext } from "./vendor/preact.mjs";
+import { useContext } from "./vendor/hooks.mjs";
+import { leer } from "./tienda.js";
+
+// ---- Tarjetas plegables -------------------------------------------------------------
+// Toda tarjeta con <Titulo> se pliega tocando el título; se recuerda en este PC.
+const CLAVE_PLEGADAS = "phoenix.plegadas";
+let plegadas = new Set();
+try { plegadas = new Set(JSON.parse(localStorage.getItem(CLAVE_PLEGADAS) || "[]")); } catch { /* sin almacenamiento */ }
+function guardarPlegadas() { try { localStorage.setItem(CLAVE_PLEGADAS, JSON.stringify([...plegadas])); } catch { /* nada */ } }
+const Pliegue = createContext(null);
+function hijos(c) { return (Array.isArray(c) ? c : [c]).flat(Infinity).filter((x) => x != null && x !== false && x !== ""); }
 
 export const cx = (...c) => c.filter(Boolean).join(" ");
 
@@ -56,13 +68,30 @@ export function Logo({ t = 36 }) {
 
 // ---- Contenedores ----------------------------------------------------------------
 export function Tarjeta({ children, clase = "", estilo = "", interior = "", vivo = false, suave = false }) {
-  return html`<div class=${cx("cut", vivo && "vivo", suave && "suave", clase)} style=${estilo}>
-    <div class="in" style=${interior}>${children}</div>
+  const lista = hijos(children);
+  const titulo = lista.find((x) => x && x.type === Titulo && typeof x.props.texto === "string");
+  const st = leer();
+  const clave = titulo ? `${st.seccion}/${st.pestanas?.[st.seccion] || ""}/${titulo.props.texto}` : null;
+  const [plegada, setPlegada] = useState(() => !!clave && plegadas.has(clave));
+  const alternar = () => {
+    const v = !plegada; setPlegada(v);
+    if (v) plegadas.add(clave); else plegadas.delete(clave);
+    guardarPlegadas();
+  };
+  const contenido = plegada ? lista.filter((x) => x === titulo) : children;
+  return html`<div class=${cx("cut", vivo && "vivo", suave && "suave", plegada && "plegada", clase)} style=${estilo}>
+    <div class="in" style=${plegada ? interior + ";padding-top:14px;padding-bottom:14px" : interior}>
+      <${Pliegue.Provider} value=${clave ? { plegada, alternar } : null}>${contenido}</${Pliegue.Provider}>
+    </div>
   </div>`;
 }
 
 export function Titulo({ texto, derecha = null, acc = true }) {
-  return html`<div class="titulo-tarjeta"><div class=${cx("lab", acc && "acc")}>${texto}</div>${derecha}</div>`;
+  const p = useContext(Pliegue);
+  if (!p) return html`<div class="titulo-tarjeta"><div class=${cx("lab", acc && "acc")}>${texto}</div>${derecha}</div>`;
+  return html`<div class=${cx("titulo-tarjeta", "plegable", p.plegada && "cerrado")} style=${p.plegada ? "margin-bottom:0" : ""}>
+    <button class="titulo-btn" aria-expanded=${!p.plegada} onClick=${p.alternar} title=${p.plegada ? "Mostrar" : "Ocultar"}>
+      <span class="chev" aria-hidden="true">▸</span><span class=${cx("lab", acc && "acc")}>${texto}</span></button>${derecha}</div>`;
 }
 
 export function Vacio({ titulo, texto, children }) {
@@ -211,7 +240,7 @@ export function Avatar({ nombre = "?", url = "", t = 40, brillo = false, id = 0 
   </span>`;
 }
 
-export function colorPing(ms, umbral = [50, 120]) {
+export function colorPing(ms, umbral = [60, 100]) {
   if (ms == null || ms < 0) return "var(--mut)";
   if (ms <= umbral[0]) return "var(--ok)";
   if (ms <= umbral[1]) return "var(--warn)";
@@ -242,3 +271,46 @@ export function Chip({ children, tipo = "" }) {
 }
 
 export function dos(n) { return String(n).padStart(2, "0"); }
+
+// ---- Estado «conectado» ------------------------------------------------------------
+/** Ping con un solo criterio: el semáforo del motor; si no hay, 60/100 ms. */
+export function nivelPing(ms, semaforo = null) {
+  if (semaforo === "verde") return "ok";
+  if (semaforo === "ambar") return "warn";
+  if (semaforo === "rojo") return "bad";
+  if (ms == null || ms < 0) return "";
+  return ms <= 60 ? "ok" : ms <= 100 ? "warn" : "bad";
+}
+/** Punto de color + ms (el color cambia con transición). */
+export function Ping({ ms, semaforo = null, grande = false }) {
+  const n = nivelPing(ms, semaforo);
+  return html`<span class=${cx("ping", n, grande && "grande")}><i aria-hidden="true"></i><span class="mono">${ms >= 0 ? ms + " ms" : "—"}</span></span>`;
+}
+/** Pastilla de estado con punto vivo (estilo de la barra). `al` opcional la vuelve un botón. */
+export function Pastilla({ estado = "", texto, titulo = "", al = null, vivo = false }) {
+  const cuerpo = html`<span class=${cx("punto", estado, vivo && "vivo")}></span>${texto}`;
+  return al ? html`<button class="pill" title=${titulo} onClick=${al}>${cuerpo}</button>`
+    : html`<span class="pill" title=${titulo}>${cuerpo}</span>`;
+}
+/** Línea de aviso con el botón que lo resuelve. */
+export function Linea({ texto, children }) {
+  return html`<div class="caja linea-info"><span>${texto}</span>${children}</div>`;
+}
+/** Panel que entra por la derecha sin cambiar de pantalla. Esc o clic fuera lo cierran. */
+export function PanelLateral({ titulo, sub = null, alCerrar, children, ancho = 460 }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const previo = document.activeElement;
+    const tecla = (e) => { if (e.key === "Escape") { e.stopPropagation(); alCerrar(); } };
+    window.addEventListener("keydown", tecla, true);
+    setTimeout(() => ref.current?.querySelector("button, input, select")?.focus(), 30);
+    return () => { window.removeEventListener("keydown", tecla, true); previo && previo.focus && previo.focus(); };
+  }, []);
+  return html`<div class="velo-panel" onMouseDown=${(e) => e.target === e.currentTarget && alCerrar()}>
+    <aside class="panel-lateral" ref=${ref} role="dialog" aria-modal="true" style=${`width:min(${ancho}px,100vw)`}>
+      <div class="pl-cab"><div style="min-width:0"><div class="lab acc">${sub || ""}</div><h2>${titulo}</h2></div>
+        <button class="icono-btn" onClick=${alCerrar} aria-label="Cerrar"><${Icono} n="cerrar" t=${16}/></button></div>
+      <div class="pl-cuerpo">${children}</div>
+    </aside>
+  </div>`;
+}

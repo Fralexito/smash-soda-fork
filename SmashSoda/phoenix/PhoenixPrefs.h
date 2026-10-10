@@ -36,6 +36,11 @@ namespace phoenix {
 		bool anchoAuto = true;    ///< ancho de banda automático: sube y baja solo según los invitados conectados
 		int anchoPorPersona = 10;  ///< Mbps por persona cuando el ancho automático está activo (1–50)
 		int subidaMbps = 0;       ///< subida de internet del anfitrión en Mbps (0 = no la sabe); el automático no pasa del 80 %
+		bool competitivo = true;  ///< árbitro: con el partido en juego, Start/Back/Guía bloqueados a los invitados
+		bool pausaAuto = false;   ///< árbitro: pausa si un jugador del partido se cae o pasa de 150 ms de ping 5 s (apagado hasta probarlo)
+		bool marcadorAuto = true; ///< árbitro: con datos del juego, el marcador arranca, relata los goles y termina solo
+		bool soloAutorizados = true;  ///< puestos: pulsar el mando solo da puesto a quien el host autorizó (los demás «quieren jugar»)
+		std::string modoRecarga = "ACTIVAR";  ///< phoenix.lua v0.18 (modo.txt): ACTIVAR | AUTO-FICHAJES | AUTO-SIEMPRE
 
 		static PhoenixPrefs& get();
 		void cargar();
