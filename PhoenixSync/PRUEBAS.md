@@ -556,3 +556,10 @@ El programa buscaba el blob en una posición fija del ConmeGOL 26. Ahora, si no 
 entero. Prueba: se metieron 64 bytes de relleno antes del blob en 4 guardados reales (como si fuera otro parche) → lo encontró,
 lo leyó igual, lo reescribió y lo volvió a leer bien. Resultados: 211/211 sin archivos; 230/230 (r0, jA, fD) y 221/221 (g19) con
 archivos. Compila también para Windows (MinGW). ⏳ Falta probarlo con un guardado real de otro parche.
+
+**2026-10-09 21:15 · Análisis (sin juego) · Liga Máster: 🏆 calendario de partidos encontrado** — 🔎 (falta verlo en pantalla)
+Cada partido tiene un número global y su registro guarda local, visitante, competición y jornada. Comprobado en dos carreras:
+City (ConmeGOL, 4/8–22/9) y Barça (ranura 1 del PC, 4/3/2026). Barça: jornada 1 Barça – Real Sociedad (en casa), jornada 2
+Deportivo – Barça, jornada 10 Real Madrid – Barça. City: jornada 1 City – Crystal Palace, jornada 2 Everton – City. Los
+resultados todavía no aparecen (no van en el registro del partido). **Qué mirar en el juego:** carrera del Barça → Calendario
+de LaLiga: ¿coinciden esas jornadas? Detalle: ESTRUCTURA-ML §22.

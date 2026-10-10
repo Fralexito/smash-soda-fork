@@ -385,3 +385,24 @@ Guardados usados: r0 (4/8), g18 (19/8), g19 y juego (21/8), j9 y jA (31/8, antes
   (3) reiniciar el juego con un `Player.bin` cambiado y cargar una carrera (stats en la Liga Máster).
 - **(9 oct, 21:25) Actualización:** `BlobLM::leer` ya no depende solo de 0x11403a8: si ahí no está, busca la cabecera
   (`8c 45 07 00`, única en el archivo) y valida la zona entera; `aplicar` reescribe en la posición encontrada (`posicionTam()`).
+
+## 22. 🏆 El calendario de partidos (9 oct, 21:45) — **[OBSERVADO en 2 carreras: City/ConmeGOL y Barça; falta verlo en pantalla]**
+- **Número global de partido:** cada partido de la carrera tiene un número (0…5.758 en la carrera del City). Cada competición
+  ocupa un **rango** seguido: ej. comp 17 = 0–434 (435 = liga de 30 a una vuelta), comp 18 = 435–814 (380 = liga de 20),
+  comp 30 (Premier) = 5.531–5.720. Son los mismos números que aparecen (de 10 en 10) en el calendario del usuario por días.
+- **Registro de partido de liga (paso 32 B, en ~0x1f0000–0x28c000):**
+  `[+0 u32][+4 8 B: datos del partido del USUARIO (ffff f707 si no es suyo)][+12 local: ID interno de club u32]`
+  `[+16 visitante u32][+20 nº de partido u16][+22 ffff][+24 nº de competición u16][+26 código u16: jornada = bits 0–5, orden dentro de la jornada = bits 6+]`.
+  ID interno de club = `(ID option << 14) | índice de bloque` (§17); el club del usuario se escribe con su ID real (City 0x2b409a, Barça 0x1b007a).
+- **Carrera del City (r0 y fD):** Premier (comp 30) con **190** registros = 19 jornadas × 10 → solo la primera vuelta guardada.
+  Jornada 1: City – Crystal Palace; 2: Everton – City; 3: City – Brentford; 4: Brighton – City; 5: City – Newcastle.
+- **Carrera del Barça (ranura 1 del PC, 4/3/2026, md5 7b800612…):** LaLiga (comp 29) con **380** registros (38 jornadas, ids 0–379).
+  Jornada 1: Barça – Real Sociedad; 2: Deportivo – Barça; 3: Barça – Celta; 10: Real Madrid – Barça.
+- **Los cruces no cambian al jugarse** (r0 → g19 → fD iguales): el **marcador no está** en este registro. Solo los partidos del
+  usuario llevan 8 B extra (ej. `0a 00 00 60 1d 00 00 00`): parecen enlazar con su agenda. ⏳ **Resultados: sin localizar.**
+- **Copas:** en la misma zona hay bloques de fase con los números de partido de cada grupo (6 por grupo de 4) y sus 4 clubes; entre
+  el 4/8 y el 22/9 se rellenaron (sorteo de grupos de la Libertadores/Sudamericana).
+- **Descartado como resultados:** 0x66fa2c… (registros de 16 B `[reg][pid][x][fecha?]`: ¿lesiones o sanciones?) y 0x10c0000…
+  (una **imagen** en bloques de textura, se vacía con el tiempo).
+- ⚠️ 🧩 **Multiparche:** la forma del registro es del juego. Los números de competición y los rangos de partido dependen del parche
+  y de la carrera (en el Barça LaLiga es la 29; en el City la Premier es la 30). Siempre se buscan por la forma, nunca fijos.
