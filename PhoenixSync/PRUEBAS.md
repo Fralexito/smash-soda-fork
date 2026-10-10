@@ -832,3 +832,9 @@ carnet del blob no cambia con la velocidad (cola idéntica entre ranuras 4 y 5).
   - (1) un programa contrastó las 28 capturas con las barras del archivo: **64/64**, y todas las diferencias de pantalla son 0 o +1;
   - (2) `GuardadoLM::tablasDe` localiza sola la tabla D en la ranura 9 (equipo k = 122, stride 368, ofsReg0 `0xc5081c`) → el método general funciona sin posiciones fijas. ✅
 - Datos: `herramientas/palanca/antes_despues_mapeo_2026-10-10.json`.
+
+### 2026-10-10 03:44 · phoenix.lua v0.17e (teclas de prueba desactivadas) — INSTALADA con el OK de FRALEX, falta probar
+- OK de FRALEX a las 03:43. Antes de instalar: juego cerrado (Sider «All done», último movimiento del log a las 02:38:38); en el PC seguía la v0.17d (9755c842…) en las dos carpetas `modules`; nadie había tocado `sider/` en el repo desde las 00:58.
+- Respaldo `phoenix.lua.v017d` en las dos carpetas; v0.17e copiada a las dos; sha256 en el PC = 114b6f2e…17c069 en las dos; respaldos v017, v017m, v017a y v017d intactos.
+- **Plan de prueba:** en el menú principal, con el overlay abierto en Phoenix, pulsar K y L → la línea [TECLAS] debe decir «última ignorada: …» y no debe pasar nada más; después, Activar debe seguir funcionando como siempre.
+
