@@ -961,3 +961,16 @@ carnet del blob no cambia con la velocidad (cola idéntica entre ranuras 4 y 5).
 - **Cobertura no se movió en ninguno de los dos** (ni subió en Szczęsny ni bajó en Joan), aunque la barra 18 sí se movió en el archivo. Probablemente no alcanzó a completar la vuelta en el tiempo que avanzó esta vez (parece que avanzó menos tiempo que en la ronda 1). No es un problema: **no queda ninguna otra habilidad de portero sin barra**, así que por descarte, **barra 18 = Cobertura**. Para tener a Cobertura con su propia prueba directa (subiendo o bajando) haría falta un avance más largo o un tercer portero — queda como pendiente opcional, no bloquea el mapa.
 - **Con esto, el mapa de barras de crecimiento queda completo:** las 28 barras que sí se usan (1–28) tienen habilidad conocida. Solo quedan sin explicación: la barra de **«Uso de pie malo»** (no se encontró) y las **barras 29 y 30**, que en todos los jugadores probados siempre están en 0 — probablemente no se usan.
 - Pendiente: FRALEX guarde este «después» en una ranura nueva, para tener también la confirmación a nivel de archivo (como se hizo con la ronda 1).
+
+### 2026-10-10 09:32–09:42 · Experimento B, segunda parte: Editar y Desactivar — hay TRES versiones del Barça
+- **Después de Editar (09:32 y 09:39; 11 archivos releídos, modo sigue en 1):** captura de FRALEX → Barça local **con Mbappé y sin Vinícius** (= lo que dice el option file `3507ce35…`: Mbappé al Barça, Vinícius en el Madrid). La pantalla **sigue diciendo «Selección actual: Activar»** y phoenix.lua apuntó «última recarga: ACTIVAR». ⇒ **Sin el parche C, entrar a Editar vuelve a poner los equipos del option file aunque el juego siga en «Activar».** En este modo, «modo = 1» ya no garantiza equipos de la base, y la opción A se equivoca después de Editar.
+- **Después de Desactivar (≈09:41; el juego NO releyó la base):** captura de FRALEX → Real Madrid **con Vinícius**; Barça **sin Vinícius y sin Mbappé** (Adeyemi de delantero). Es la misma plantilla que tenía el Barça *visitante* en la captura de las 09:31.
+- **Las tres versiones vistas del Barça:**
+  1. Vinícius + Mbappé → base de Phoenix-DB (tras Activar, equipo local).
+  2. Mbappé sin Vinícius → option file (tras Editar).
+  3. Sin Vinícius ni Mbappé → ❓ origen desconocido (equipo visitante, y tras Desactivar). Hipótesis: la plantilla «limpia», sin la capa de la actualización en vivo ni la del option file. Sin comprobar.
+- **Desactivar ahora sí hace algo** (en la v0.17 no hacía nada porque la opción ya estaba en 0): cambia las plantillas sin releer archivos. Coincide con lo leído en el exe (`LiveDataRemoveFlow` → `0x14B6F20`, que borra en memoria la marca de «datos en vivo aplicados»).
+- **Liga Máster:** la zona marcó UEFA_ML a las 09:35:07 (después hubo `set_teams` 108–267, 108–259, 196–108). Comprobado a las 09:42: ningún guardado cambió durante la sesión (el último, `ML0000000B`, es de las 09:27:10, antes de abrir el juego; option file `3507ce35…` sin cambios).
+- phoenix.lua: 0 errores.
+- **Conclusión provisional:** sin el parche C la pantalla dice la verdad («Activar»), pero los equipos dependen del orden de lo que hagas (Activar, Editar, Desactivar) y aparece una tercera plantilla que no entendemos. Con el parche C (v0.17e) el comportamiento es más simple y ya está probado.
+
