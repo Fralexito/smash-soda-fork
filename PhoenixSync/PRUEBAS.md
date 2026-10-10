@@ -863,3 +863,18 @@ carnet del blob no cambia con la velocidad (cola idéntica entre ranuras 4 y 5).
   - Balde → barra **19**.
   - Se mira la página 3/4 (pie malo, regularidad, lesiones). Dato extra: Raphinha dio la vuelta solo en la barra 27 entre el 11/4 y el 22/4.
 - Plan: `herramientas/palanca/plan_porteros_lentas_2026-10-10.json`.
+
+### 2026-10-10 06:34–06:51 · v0.17e: primera sesión en el juego — carga bien; las teclas y Activar siguen SIN probar
+- Leído del `sider.log` a las 08:55 (FRALEX abrió el juego por su cuenta): «v0.17e listo (… teclas de prueba B/K/L/P/U desactivadas; M = mirar la opción)», parches A/B/C aplicados solos a las 06:34:04, zona UNKNOWN → TITLE_DEMO_LOOP (06:34:30) → FIRST_SETTINGS (06:46:48) → TOP_MENU con «momento seguro: SÍ» (1 vez). Cierre a las 06:51:27 («All done»). phoenix.lua: 0 errores.
+- En esa sesión **no se pulsó ninguna tecla de prueba** (ninguna línea «tecla X ignorada») **ni se usó Activar** (ninguna recarga en modo 1). ⇒ Lo único probado es que la v0.17e carga y lee bien.
+- **Pendiente:** con el overlay abierto en el menú principal, pulsar K y L → [TECLAS] «última ignorada: L»; después Activar → mensaje de Konami y recarga.
+
+### 2026-10-10 08:57 · Estado y pendientes (resumen para la siguiente sesión o la otra cuenta)
+- **Instalado en el PC:** phoenix.lua **v0.17e** (114b6f2e…) en las dos carpetas `modules`. Respaldos: `.v017` (estable), `.v017m`, `.v017a`, `.v017d`.
+- **Hecho y probado:** dónde está la opción en vivo (doc 17); opción A «última recarga» ACTIVAR/NORMAL, confirmada con Vinícius (doc 19 §10.6); Fase D «zona» y «momento seguro», 9 de 9 (doc 22).
+- **Pendiente 1:** probar la v0.17e (teclas ignoradas + Activar).
+- **Pendiente 2 (objetivo original):** que phoenix.lua recargue solo cuando la última recarga fue ACTIVAR y el momento es seguro. Ya no es solo lectura: diseño y riesgos primero, y aprobación de FRALEX.
+- **Pendiente 3:** experimento B (sin el parche C).
+- **Pendiente 4:** `git pull --rebase` en `C:\dev\smash-soda-fork` (atrasada); versión limpia v0.18 sin código de pruebas; repetir la prueba de Vinícius; Entrenamiento (52) sin visitar.
+- **Ajeno:** `StadiumServer.lua` línea 705 da errores al preparar un partido. No se tocó.
+
