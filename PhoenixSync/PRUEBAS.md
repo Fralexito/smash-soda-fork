@@ -895,3 +895,13 @@ carnet del blob no cambia con la velocidad (cola idéntica entre ranuras 4 y 5).
   - Fermín (88): 2/2, 3, 2.
   - Balde (85): 3/2, 4, 2.
 - Datos: `herramientas/palanca/antes_porteros_lentas_2026-10-10.json`.
+
+### 2026-10-10 09:14 · ✅ Porteros y lentas, ronda 1: RESULTADO en pantalla (capturas DESPUÉS, página 3/4)
+- **Joan García** (barras 3 y 15 → 9.999): Actitud de portero **92→93**, Atajar **90→91**; lo demás igual.
+- **Szczęsny** (barras 15 y 16 → 0): Atajar **82→81**, Despejar **83→82**; lo demás igual. ✅ **Bajar una barra por debajo de 0 resta −1** (primera vez comprobado).
+- Decodificación: Atajar subió en Joan **y** bajó en Szczęsny → **barra 15 = Atajar**. Solo Joan → **barra 3 = Actitud de portero**. Solo Szczęsny → **barra 16 = Despejar**.
+- **Lamine** (barra 28): Resist. a lesiones **2→3** → **barra 28 = Resistencia a lesiones**. (Su media 90→91, por crecimiento natural de otras habilidades.)
+- **Fermín** (barra 27): Regularidad **3→4** → **barra 27 = Regularidad**.
+- **Balde** (barra 19): Prec. pie malo **2→3** → **barra 19 = Precisión con el pie malo**.
+- Ninguna otra habilidad de la página 3 cambió en los 5.
+- Pendiente: el guardado del DESPUÉS (ranura 11), para confirmar en el archivo que no hubo vueltas naturales. Quedan 17 y 18 (Reflejos / Cobertura) para la ronda 2. **Uso del pie malo no tiene barra conocida**: las únicas libres son la 29 y la 30, siempre en 0. Quizá no evoluciona. 🔎
