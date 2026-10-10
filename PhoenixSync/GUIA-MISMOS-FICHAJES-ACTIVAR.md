@@ -41,14 +41,17 @@ Pruebas:
 
 ## 5. Estado de cada pieza
 
+*(Actualizado el 10 oct 2026.)*
+
 | Pieza | Estado |
 |---|---|
-| Sync: detectar, subir y recibir fichajes | ✅ Hecho (simulado con dos PCs) |
-| Sync: escribir fichajes recibidos en la base | ✅ Hecho, **apagado** hasta `sync-base si` |
-| Sync: escribir **mis propios** fichajes en **mi** base | ⏳ Espera aprobación de FRALEX |
-| Link: aceptar `PlayerAssignment.bin` | ⏳ Prompt listo: `prompts/PROMPT-LINK-playerassignment.md` |
-| Web: rutas /v1/sync, SQL, grupo | ⏳ Confirmar que está publicado y crear el grupo |
-| phoenix.lua v0.17 (botón Activar) | ✅ Funciona |
+| Sync: detectar, subir y recibir fichajes | ✅ Hecho; exe recompilado el 10 oct con los comandos sync-* (369/369 pruebas) |
+| Sync: escribir fichajes recibidos en la base | ✅ Hecho, **apagado** hasta `sync-base si` (espera aprobación de FRALEX) |
+| Sync: escribir **mis propios** fichajes en **mi** base | ⏳ Sin construir; espera aprobación de FRALEX |
+| Link: aceptar `PlayerAssignment.bin` | ✅ Hecho en Link (10 oct) |
+| Web: rutas /v1/sync (config, operaciones, aplicada) | ✅ Publicadas (responden 401 sin token) |
+| Web: `GET /v1/sync/grupos` y grupo FRALEX + amigo en `automatico` | ⏳ PENDIENTE-WEB: `prompts/PROMPT-WEB-grupo-prueba-fichajes.md` |
+| phoenix.lua v0.18 (botón Activar, modo ACTIVAR) | ✅ Instalada y cargada en el juego de FRALEX (sider.log 11:59) |
 | Prueba real entre dos PCs | ⏳ Pendiente |
 
 ## 6. Guía paso a paso
