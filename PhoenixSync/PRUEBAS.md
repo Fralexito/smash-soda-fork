@@ -540,3 +540,7 @@ se puede cambiar un guardado con el juego abierto mientras no esté cargado (Fra
 - **20:00 · Mbappé al Barça en los dos sitios:** dorsal **28** (libre tanto en la base como en el option file; el 19 estaba ocupado en la base). PlayerAssignment de Phoenix-DB (1775e688…) en las dos carpetas + option file (3507ce35…). Copias en `db\PlayerAssignment_mbappeBarca.bin` y `db\EDIT00000000.mbappeBarca28`.
 - **20:06 · Prueba de fuente (Vinícius):** Vinícius (117047) Real Madrid → Barça, dorsal **29**, **solo** en el PlayerAssignment de Phoenix-DB (1d27f010…, con Mbappé incluido), en las dos carpetas. El option file NO se tocó (sigue 3507ce35…: Mbappé sí, Vinícius no). Si en el juego aparece Vinícius en el Barça ⇒ las plantillas que se ven salen de la base; si no aparece ⇒ salen del option file.
 - **20:08 · FRALEX: «funcionó»** → Vinícius aparece en el Barça. Con la configuración actual del juego, las plantillas en pantalla salen de la **base** (PlayerAssignment de Phoenix-DB), no del option file.
+
+### ✅ 2026-10-09 ~20:12 · CONFIRMADO: con «Activar», los fichajes entran por la BASE (PlayerAssignment.bin)
+- Vinícius → Barça (dorsal 29) **solo** en `PlayerAssignment.bin` de Phoenix-DB (las dos carpetas). Option file sin tocar (sin Vinícius). Con «Datos Actual. en vivo → Activar» **Vinícius apareció en el Barça** ✅ (Mbappé ya estaba de antes).
+- ⇒ Para fichar con Activar, Sync debe escribir cada fichaje también en `PlayerAssignment.bin` (siempre a partir del de olmos), y Link debe aceptar ese archivo en sus entregas.
