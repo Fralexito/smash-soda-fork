@@ -440,3 +440,4 @@ Guardados usados: r0 (4/8), g18 (19/8), g19 y juego (21/8), j9 y jA (31/8, antes
   buscando por la forma. Pruebas con 6 guardados reales: jornada 1 de cada liga con 1 sola jornada jugada cruzada con su tabla →
   35/35 (g19), 152/152 (jA), 38/38 (fD); hay siempre una lista de goleadores que suma exactamente los goles de esas tablas.
   Partidos leídos: 5.258–5.294 (City), 2.440 (Barça: otro reparto de competiciones).
+- Aclaración de §23 (9 oct, 23:40): varias de las «tablas de 40 filas» de esa zona son en realidad **listas de goleadores/asistencias** (§24): en la carrera del Barça, 0xcb5bf0 = goleadores de la Ligue 1 (Igamane, Édouard, Avom 8) y 0xcb5f1c = asistencias (João Neves 6).
