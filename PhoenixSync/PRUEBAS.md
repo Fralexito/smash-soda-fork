@@ -974,3 +974,10 @@ carnet del blob no cambia con la velocidad (cola idéntica entre ranuras 4 y 5).
 - phoenix.lua: 0 errores.
 - **Conclusión provisional:** sin el parche C la pantalla dice la verdad («Activar»), pero los equipos dependen del orden de lo que hagas (Activar, Editar, Desactivar) y aparece una tercera plantilla que no entendemos. Con el parche C (v0.17e) el comportamiento es más simple y ya está probado.
 
+### 2026-10-10 09:46 · CORRECCIÓN a la entrada anterior: no hay una «tercera versión» del Barça (al menos tras Desactivar)
+- FRALEX (09:45): en la captura de después de **Desactivar**, **Mbappé sí estaba en el Barça**, más abajo en la lista (suplente), y no se veía.
+- ⇒ Tras Desactivar el Barça es **con Mbappé y sin Vinícius = option file**. Desactivar vuelve a los equipos del option file.
+- El Barça **visitante** de las capturas de las 09:31 y 09:39 probablemente es el mismo caso (option file con Mbappé en el banquillo y otra alineación titular), pero no se vio la lista completa: ❓ sin confirmar. Si se confirma, la actualización en vivo solo se aplicó al equipo local en esos partidos Barça–Barça; también sin confirmar.
+- **Cuadro corregido (sin el parche C):** Activar → equipos de la base (Vinícius y Mbappé) · Editar → equipos del option file, aunque la pantalla siga en «Activar» · Desactivar → equipos del option file (Vinícius al Madrid), sin releer archivos.
+- **Error de Claude:** dio por hecha una tercera plantilla mirando solo la parte visible de la lista. Regla: para saber si un jugador está en un equipo, pedir la lista completa (bajar hasta el final).
+
