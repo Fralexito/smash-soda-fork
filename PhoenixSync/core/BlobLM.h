@@ -29,6 +29,9 @@ namespace mercado::lm {
 	public:
 		/// Lee y descomprime el blob de unos DATOS de Liga Máster. Valida toda la estructura.
 		static Resultado<BlobLM> leer(const std::vector<uint8_t>& datos);
+	private:
+		static Resultado<BlobLM> leerEn(const std::vector<uint8_t>& datos, size_t ofsTam);
+	public:
 
 		/// Contenido descomprimido (4.680.156 B en el ConmeGOL 26). Se puede modificar sin cambiar su tamaño.
 		std::vector<uint8_t>& contenido() { return _plano; }
@@ -40,7 +43,10 @@ namespace mercado::lm {
 		/// Ficha de Liga Máster de un jugador dentro del blob (156 B, empieza 2 B antes del campo `reg`). -1 si no está.
 		long long fichaDe(uint32_t reg, uint32_t pid) const;
 
+		/// Posición de la palabra de tamaño en el ConmeGOL 26. En otros parches se busca por la forma (ver `leer`).
 		static constexpr size_t kOfsTam = 0x11403a8;
+		/// Dónde se encontró en ESTE guardado.
+		size_t posicionTam() const { return _ofsTam; }
 		static constexpr size_t kTamTramo = 262144;
 		static constexpr size_t kTamFicha = 156;
 
@@ -53,6 +59,7 @@ namespace mercado::lm {
 		std::vector<uint8_t> _cabecera;   // los 0x1c bytes rel antes del primer separador
 		std::vector<Tramo> _tramos;
 		std::vector<uint8_t> _plano, _planoOriginal;
+		size_t _ofsTam = kOfsTam;         // posición de la palabra de tamaño en este guardado
 		size_t _finZona = 0;              // posición absoluta del primer byte tras el blob
 	};
 

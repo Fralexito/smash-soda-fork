@@ -33,14 +33,29 @@ namespace mercado::lm {
 	}
 
 	Resultado<BlobLM> BlobLM::leer(const std::vector<uint8_t>& d) {
+		// 1) Donde está en el ConmeGOL 26. 2) Multiparche: si no está ahí, se busca por su forma (la cabecera empieza
+		//    por 0x0007458c, justo después de la palabra de tamaño) y se valida entera. Gana el primer sitio que cuadre.
+		auto r = leerEn(d, kOfsTam);
+		if (r.ok()) return r;
+		static const uint8_t firma[4] = { 0x8c, 0x45, 0x07, 0x00 };
+		for (size_t p = 4; p + 4 <= d.size(); p++) {
+			if (std::memcmp(d.data() + p, firma, 4) != 0 || p - 4 == kOfsTam) continue;
+			auto otra = leerEn(d, p - 4);
+			if (otra.ok()) return otra;
+		}
+		return r;
+	}
+
+	Resultado<BlobLM> BlobLM::leerEn(const std::vector<uint8_t>& d, size_t ofsTam) {
 		using R = Resultado<BlobLM>;
-		if (d.size() < kOfsTam + 4 + kCab + kSep) return R::mal("BLOB_NO_HALLADO", "El guardado es demasiado corto");
-		const size_t base = kOfsTam + 4;
-		const uint32_t tam = le32(d, kOfsTam);
+		if (d.size() < ofsTam + 4 + kCab + kSep) return R::mal("BLOB_NO_HALLADO", "El guardado es demasiado corto");
+		const size_t base = ofsTam + 4;
+		const uint32_t tam = le32(d, ofsTam);
 		// La palabra de tamaño no cuenta los últimos 12 B (el último tramo termina 12 B después): zona real = tam + 12.
 		if (base + size_t(tam) + kSep > d.size() || tam < kCab + kSep) return R::mal("BLOB_NO_HALLADO", "Tamaño de la zona comprimida fuera de rango");
 		if (le32(d, base) != 0x0007458c) return R::mal("BLOB_NO_HALLADO", "La cabecera de la zona comprimida no es la esperada");
 		BlobLM b;
+		b._ofsTam = ofsTam;
 		b._cabecera.assign(d.begin() + long(base), d.begin() + long(base + kCab));
 		b._finZona = base + tam + kSep;
 		size_t pos = base + kCab;
@@ -98,7 +113,8 @@ namespace mercado::lm {
 		pBe32(zona, 0x14, uint32_t(sumaDesc)); pBe32(zona, 0x18, uint32_t(sumaComp));
 		std::vector<uint8_t> out;
 		out.reserve(d.size() + zona.size());
-		out.insert(out.end(), d.begin(), d.begin() + long(kOfsTam));
+		if (_ofsTam + 4 > d.size() || _finZona > d.size()) return R::mal("BLOB_TAMANO", "Los datos no son los del blob leído");
+		out.insert(out.end(), d.begin(), d.begin() + long(_ofsTam));
 		std::vector<uint8_t> tam(4); pLe32(tam, 0, uint32_t(zona.size() - kSep));
 		out.insert(out.end(), tam.begin(), tam.end());
 		out.insert(out.end(), zona.begin(), zona.end());

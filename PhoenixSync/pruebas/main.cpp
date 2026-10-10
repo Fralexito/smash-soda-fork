@@ -833,6 +833,24 @@ int main() {
 				}
 				std::printf("  fichas del blob: %zu con ficha, %zu sin ficha (%zu con reg 0xdb65)\n", conFicha, sinFicha, generados);
 				CHECK(conFicha > 0 && sinFicha == 0);
+				// Multiparche: si el blob está en OTRA posición (otro parche con más o menos datos antes), se encuentra por su
+				// forma, se lee igual y se puede reescribir (simulado metiendo 64 B antes del blob).
+				CHECK(bl.valor->posicionTam() == mercado::lm::BlobLM::kOfsTam);
+				std::vector<uint8_t> movido(dm.begin(), dm.begin() + 0x100000);
+				movido.insert(movido.end(), 64, 0x00);
+				movido.insert(movido.end(), dm.begin() + 0x100000, dm.end());
+				auto bm = mercado::lm::BlobLM::leer(movido);
+				CHECK(bm.ok() && bm.valor->posicionTam() == mercado::lm::BlobLM::kOfsTam + 64 && bm.valor->contenido() == bl.valor->contenido());
+				if (bm.ok()) {
+					bm.valor->contenido()[0x1e + 156 * 10 + 0x5a] ^= 1;   // un cambio mínimo en la ficha del reg 10
+					auto escrito = bm.valor->aplicar(movido);
+					CHECK(escrito.ok());
+					if (escrito.ok()) {
+						auto relee = mercado::lm::BlobLM::leer(*escrito.valor);
+						CHECK(relee.ok() && relee.valor->posicionTam() == mercado::lm::BlobLM::kOfsTam + 64 && relee.valor->contenido() == bm.valor->contenido());
+						CHECK(std::equal(movido.begin(), movido.begin() + long(mercado::lm::BlobLM::kOfsTam + 64), escrito.valor->begin()));
+					}
+				}
 			}
 		}
 		if (gm.ok()) {

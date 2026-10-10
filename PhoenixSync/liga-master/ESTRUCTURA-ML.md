@@ -383,3 +383,5 @@ Guardados usados: r0 (4/8), g18 (19/8), g19 y juego (21/8), j9 y jA (31/8, antes
 - **Experimentos que faltan (los hace Fralex):** (1) fichar a un agente libre en el juego y guardar en otra ranura (verdad del juego
   para programar el fichaje de libres); (2) guardar justo antes y justo después de un partido, el mismo día (calendario y resultados);
   (3) reiniciar el juego con un `Player.bin` cambiado y cargar una carrera (stats en la Liga Máster).
+- **(9 oct, 21:25) Actualización:** `BlobLM::leer` ya no depende solo de 0x11403a8: si ahí no está, busca la cabecera
+  (`8c 45 07 00`, única en el archivo) y valida la zona entera; `aplicar` reescribe en la posición encontrada (`posicionTam()`).

@@ -550,3 +550,9 @@ Con 6 guardados ya abiertos: el blob es **solo** el arreglo de fichas (30.000 pl
 se reconocen por un bit de su ficha (94 de Konami + Stones). Las fichas de los jugadores `0xdb65…` estaban justo después de las del
 parche: el programa no las encontraba y ya está corregido (0 jugadores sin ficha en 4 guardados reales; 211/211 sin archivos y
 225/225 con archivos). Detalle en ESTRUCTURA-ML §21. Faltan 3 pruebas en el juego (ver §21).
+
+**2026-10-09 21:11 · Pruebas automáticas · Blob encontrado «por su forma» (multiparche)** — ✅ (sin juego)
+El programa buscaba el blob en una posición fija del ConmeGOL 26. Ahora, si no está ahí, lo busca por su cabecera y lo valida
+entero. Prueba: se metieron 64 bytes de relleno antes del blob en 4 guardados reales (como si fuera otro parche) → lo encontró,
+lo leyó igual, lo reescribió y lo volvió a leer bien. Resultados: 211/211 sin archivos; 230/230 (r0, jA, fD) y 221/221 (g19) con
+archivos. Compila también para Windows (MinGW). ⏳ Falta probarlo con un guardado real de otro parche.
