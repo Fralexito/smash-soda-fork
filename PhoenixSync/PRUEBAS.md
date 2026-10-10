@@ -683,3 +683,24 @@ habilidades en cualquier orden alrededor de un 59→50; trozos de 8 B de su fich
 596 B, su ficha del blob (solo cambian sueldo +0x56 y +0x74). Zonas descartadas: 0x10c0000–0x1140000 es una **imagen** (bloques de
 textura de 8 B). Sí cambian entre las dos carreras: su curva de medias (tabla E: 84,85,86… frente a 82,83,84…), tabla F +4 (74/73) y
 números al azar de su tabla C/D (semillas, 0–9999). **Estado:** ⏳ copia sin localizar.
+
+### 2026-10-10 00:18 · phoenix.lua v0.17d (Fase D: «zona del juego» y «momento seguro», SOLO LECTURA) — INSTALADA con el OK de FRALEX
+- Decisión de FRALEX (00:09): primero la Fase D, luego el experimento B.
+- **Hallazgo en el exe (copia de solo lectura):** `0x149A470` devuelve el **gestor de modos** (`[exe+0x3704E38]`); el **modo actual** es el u32 de `[gestor+0xF0]` (lo lee `0x149F4F0`, 997 llamadores). La tabla `exe+0x34FC9C0` trae los 61 nombres: 7 = TOP_MENU, 8 = EXHIBITION, 13 = EDIT, 19 = UEFA_ML, 20 = UEFA_BL… Cambio de modo en curso: byte `[gestor+0x12C]`, modo siguiente en `[+0x130]`.
+- **Qué añade a la v0.17a:** línea **[ZONA]** en el overlay; muestra automática (como mucho 1 por segundo) al leer archivos; eventos `set_teams` y `context_reset` de Sider solo anotados (no devuelven nada); regla «momento seguro» = TOP_MENU + sin cambio de modo + gestor de edición inexistente + base quieta (estado 4). No recarga nada ni escribe en la memoria.
+- **Simulación:** 7 casos nuevos + 6 (v0.17m) + 5 (v0.17a) = 18 bien, 0 escrituras. `sider/pruebas/simular_v017d.py`.
+- **Instalación:** OK de FRALEX a las 00:14 con el juego abierto → se esperó; juego cerrado 00:17:45 («All done»); respaldo `phoenix.lua.v017a` en las dos carpetas `modules`; v0.17d copiada; sha256 en el PC = 9755c842…17ffad en las dos; respaldos v017, v017m y v017a intactos.
+
+### ✅ 2026-10-10 00:19–00:22 · Fase D PROBADA: el «cartel» de modos marca bien cada sitio y solo da «seguro» en el menú principal
+- Recorrido de FRALEX: abrir → menú principal → Partido → menú → Editar → salir sin Guardar → menú.
+- 00:19:36 UNKNOWN (0), base estado 1 → NO · 00:19:45 TITLE_DEMO_LOOP (5) → NO · 00:19:49 FIRST_SETTINGS (6) → NO (a las 00:19:51, segunda lectura de la base, modo 0).
+- **00:19:59 TOP_MENU (7) → «momento seguro: SÍ»** · **00:20:00 EXHIBITION (8) → NO** · 00:20:05 evento `context_reset`.
+- **00:20:09 EDIT (13)**, edición no → NO · 00:20:10 EDIT (13), edición ACTIVA → NO · 00:20:17 lectura de la base, modo 0 → «última recarga: NORMAL».
+- **00:21:07 TOP_MENU (7) → SÍ.** Captura de FRALEX a las 00:22:02 en el menú principal: «[ZONA] TOP_MENU (7) · edición no · base estado 4 · momento seguro: SÍ».
+- phoenix.lua: 0 errores; ningún «lua ERROR» de otros módulos en esta sesión. Option file idéntico (3507ce35…).
+- **Aclarado:** la segunda lectura de la base del arranque ocurre en FIRST_SETTINGS. Al entrar a Editar, el modo cambia a EDIT un segundo antes de que exista el gestor de edición.
+- **Visto de paso (no es de esta prueba):** entre las 23:57 y las 00:11 aparecieron `ML00000003` y `ML00000004`, y `SYSTEM00000000` y `GRAPHICS000000` se reescribieron a las 00:11:41 ⇒ `SYSTEM00000000` cambia al guardar una carrera de Liga Máster, no con «Datos Actual. en vivo».
+- **Límite de la prueba:** la muestra automática solo ocurre cuando el juego lee un archivo; la vuelta de Partido al menú (00:20:05–00:20:09) no quedó anotada. Con el overlay abierto se mira en cada cuadro.
+- **Sin probar:** Liga Máster (19), Ser una Leyenda (20), Entrenamiento (52) y dentro de un partido.
+- Documento: `base-conocimiento/22-ZONA-DEL-JUEGO-MOMENTO-SEGURO.md`.
+

@@ -38,7 +38,7 @@ def a2(L, g, m, reg):
     leer(L, g, reg, 1, 2100); leer(L, g, reg, 0, 2116); o.append(ult(reg))          # 2.ª recarga lenta (16 s): cuenta como normal
     return o
 def a3(L, g, m, reg):
-    codigo(L, ok=False); ptr(L, G); leer(L, g, reg, 1, 3000); r0 = g.CNT.rpm
+    codigo(L, ok=False); ptr(L, G); leer(L, g, reg, 1, 3000); leer(L, g, reg, 1, 3005); r0 = g.CNT.rpm   # (la v0.17d comprueba la zona una vez en la 2.ª lectura)
     leer(L, g, reg, 1, 3010); assert g.CNT.rpm == r0
     return [ult(reg)]
 def a4(L, g, m, reg):
