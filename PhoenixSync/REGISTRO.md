@@ -128,3 +128,4 @@ Protocolo: `COORDINACION.md` (raíz) → «Dos cuentas de Claude».
 2026-10-09 21:15 (Lima) | Cuenta B | SYNC | LM: calendario encontrado (registro de partido de 32 B, nº global, comp, jornada), validado en carreras City y Barça; resultados aún no | liga-master/ESTRUCTURA-ML.md §22, PRUEBAS.md | HECHO | Fralex confirma en pantalla; buscar resultados
 2026-10-09 21:16 (Lima) | Cuenta B | SYNC | Guía exacta 14: cómo se encontró el calendario de la LM (archivo nuevo; copia en Drive) | base-conocimiento/14-GUIA-CALENDARIO-LM.md | HECHO | —
 2026-10-09 21:19 (Lima) | Cuenta B | SYNC | LM: tablas de posiciones descifradas (fila de 20 B, campos empaquetados) y cruzadas 10/10 con el calendario | liga-master/ESTRUCTURA-ML.md §23, PRUEBAS.md | HECHO | Fralex confirma Ligue 1 en pantalla
+2026-10-09 21:19 (Lima) | Cuenta B | SYNC | Guía exacta 15: tablas de posiciones de la LM (archivo nuevo; copia en Drive) | base-conocimiento/15-GUIA-TABLAS-DE-POSICIONES.md | HECHO | —
