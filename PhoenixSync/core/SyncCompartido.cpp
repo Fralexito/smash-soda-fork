@@ -1,4 +1,5 @@
 #include "SyncCompartido.h"
+#include "AsignacionBase.h"
 #include "Entrega.h"
 #include "RutasJuego.h"
 #include "Sha256.h"
@@ -6,6 +7,7 @@
 #include <algorithm>
 #include <chrono>
 #include <filesystem>
+#include <map>
 
 namespace fs = std::filesystem;
 using json = nlohmann::json;
@@ -72,7 +74,13 @@ namespace mercado::sync {
 		const std::string juego = _en.carpetaJuego ? _en.carpetaJuego() : std::string();
 		const auto bases = rutas::buscarPlayerBin(juego);
 		if (bases.empty()) o.push_back({ "phoenix-db", "" });   // queda anotado como omitido en el manifiesto
-		for (const auto& b : bases) o.push_back({ "phoenix-db/" + rutas::etiquetaSegura(b.modo), b.playerBin });
+		for (const auto& b : bases) {
+			const std::string et = "phoenix-db/" + rutas::etiquetaSegura(b.modo);
+			o.push_back({ et, b.playerBin });
+			const fs::path pa = aRuta(b.playerBin).parent_path() / "PlayerAssignment.bin";
+			std::error_code ec;
+			if (fs::is_regular_file(pa, ec)) o.push_back({ et, deRuta(pa) });
+		}
 		return o;
 	}
 
@@ -113,6 +121,17 @@ namespace mercado::sync {
 	}
 	void Motor::ponerPublicar(bool si) { _e.publicar = si; }
 	void Motor::ponerPausa(bool si) { _e.pausado = si; }
+	void Motor::ponerBaseEnEntrega(bool si) { _e.baseEnEntrega = si; }
+
+	std::string Motor::asignacionBase() const {
+		const std::string juego = _en.carpetaJuego ? _en.carpetaJuego() : std::string();
+		for (const auto& b : rutas::buscarPlayerBin(juego)) {   // «principal» primero
+			const fs::path pa = aRuta(b.playerBin).parent_path() / "PlayerAssignment.bin";
+			std::error_code ec;
+			if (fs::is_regular_file(pa, ec)) return deRuta(pa);
+		}
+		return "";
+	}
 
 	std::vector<respaldos::Info> Motor::respaldos() const { return respaldos::listar(carpetaRespaldos()); }
 
@@ -195,8 +214,18 @@ namespace mercado::sync {
 		const std::string actual = editActivo();
 		if (!actual.empty() && fs::file_size(aRuta(actual), ec) != fs::file_size(edit, ec))
 			return R::mal("TAMANO_DISTINTO", "El option file del respaldo no mide lo mismo que el actual (Link lo rechazaría)");
+		std::vector<entrega::Archivo> archivos = { { "EDIT00000000", deRuta(edit) } };
+		if (_e.baseEnEntrega) {   // la base del mismo respaldo (si se guardó)
+			std::string paRespaldo;
+			for (const auto& a : respaldos::listar(carpetaRespaldos()))
+				if (a.nombre == _e.ultima.respaldo)
+					for (const auto& f : a.archivos)
+						if (paRespaldo.empty() && f.etiqueta.rfind("phoenix-db", 0) == 0 && aRuta(f.relativo).filename() == "PlayerAssignment.bin")
+							paRespaldo = deRuta(aRuta(a.carpeta) / aRuta(f.relativo));
+			if (!paRespaldo.empty()) archivos.push_back({ "PlayerAssignment.bin", paRespaldo });
+		}
 		const std::string id = entrega::nuevoId();
-		auto w = entrega::escribir(carpetaEntrega(), id, "Deshacer cambio del grupo", { { "EDIT00000000", deRuta(edit) } }, fechaIso());
+		auto w = entrega::escribir(carpetaEntrega(), id, "Deshacer cambio del grupo", archivos, fechaIso());
 		if (!w.ok()) return R{ std::nullopt, w.error };
 		const std::string h = sha256::deArchivo(deRuta(edit));
 		_e.anotarConocida(h);   // lo que vuelve no es un fichaje nuevo
@@ -444,48 +473,82 @@ namespace mercado::sync {
 		const auto& res = ap.valor->resultados;
 		const int escritas = ap.valor->escritas;
 		int conflictos = 0;
-		std::vector<std::string> hechas;
+		std::vector<std::string> hechas, aplicadasOp;
 		for (const auto& r : res) {
-			if (r.estado == "aplicada") { if (r.motivo.empty()) hechas.push_back(r.id); }
+			if (r.estado == "aplicada") { aplicadasOp.push_back(r.id); if (r.motivo.empty()) hechas.push_back(r.id); }
 			else conflictos++;
+		}
+
+		// 2b) La BASE (PlayerAssignment.bin), para que el fichaje entre con «Activar».
+		//     Solo si Link ya acepta ese archivo (interruptor local) y existe en Phoenix-DB.
+		std::string salidaBase;
+		std::map<std::string, std::string> notaBase;   // op → motivo si no se pudo en la base
+		if (_e.baseEnEntrega) {
+			const std::string pa = asignacionBase();
+			if (pa.empty()) avisar("No hay PlayerAssignment.bin en Phoenix-DB: el fichaje entrará solo con Editar → Cargar");
+			else if (auto a = base::Asignaciones::abrir(pa); !a.ok()) avisar("No se pudo leer PlayerAssignment.bin: " + a.error.codigo);
+			else {
+				std::vector<grupo::Operacion> paraBase;
+				for (const auto& op : ops) if (std::find(aplicadasOp.begin(), aplicadasOp.end(), op.id) != aplicadasOp.end()) paraBase.push_back(op);
+				int cambiosBase = 0;
+				for (const auto& r : base::aplicarOperaciones(*a.valor, paraBase)) {
+					if (r.estado == "aplicada" && r.motivo.empty()) cambiosBase++;
+					else if (r.estado != "aplicada") notaBase[r.id] = r.motivo;
+				}
+				if (cambiosBase) {
+					salidaBase = deRuta(dir / ("PlayerAssignment.bin." + entregaNueva));
+					auto g = a.valor->guardarComo(salidaBase);
+					if (!g.ok()) { avisar("No se pudo preparar PlayerAssignment.bin: " + g.error.codigo); salidaBase.clear(); }
+				}
+			}
 		}
 
 		// 3) Si algo cambió de verdad: entregar a Link.
 		std::string entregaId;
-		if (escritas) {
+		if (escritas || !salidaBase.empty()) {
 			entregaId = entregaNueva;
-			if (fs::file_size(aRuta(salida), ec) != fs::file_size(aRuta(edit), ec)) {
-				fs::remove(aRuta(salida), ec);
-				return R::mal("TAMANO_DISTINTO", "El option file nuevo no mide lo mismo que el tuyo; Link lo rechazaría. No se aplicó nada.");
+			std::vector<entrega::Archivo> archivos;
+			if (escritas) {
+				if (fs::file_size(aRuta(salida), ec) != fs::file_size(aRuta(edit), ec)) {
+					fs::remove(aRuta(salida), ec);
+					return R::mal("TAMANO_DISTINTO", "El option file nuevo no mide lo mismo que el tuyo; Link lo rechazaría. No se aplicó nada.");
+				}
+				if (sha256::deArchivo(edit) != h0) {
+					fs::remove(aRuta(salida), ec);
+					return R::mal("OPTION_CAMBIO", "Tu option file cambió mientras se preparaba el cambio; se reintenta");
+				}
+				archivos.push_back({ "EDIT00000000", salida });
 			}
-			if (sha256::deArchivo(edit) != h0) {
-				fs::remove(aRuta(salida), ec);
-				return R::mal("OPTION_CAMBIO", "Tu option file cambió mientras se preparaba el cambio; se reintenta");
-			}
+			if (!salidaBase.empty()) archivos.push_back({ "PlayerAssignment.bin", salidaBase });
 			std::string resumen;
-			if (escritas == 1) for (const auto& op : ops) if (op.id == hechas.front()) resumen = grupo::resumenDe(op, _en.nombreEquipo);
-			if (resumen.empty()) resumen = std::to_string(escritas) + " fichajes del grupo";
-			auto w = entrega::escribir(carpetaEntrega(), entregaId, resumen, { { "EDIT00000000", salida } }, fechaIso());
+			if (hechas.size() == 1) for (const auto& op : ops) if (op.id == hechas.front()) resumen = grupo::resumenDe(op, _en.nombreEquipo);
+			if (resumen.empty()) resumen = std::to_string(std::max<size_t>(hechas.size(), 1)) + " fichajes del grupo";
+			auto w = entrega::escribir(carpetaEntrega(), entregaId, resumen, archivos, fechaIso());
 			if (!w.ok()) return R::mal(w.error.codigo, "No se pudo dejar la entrega para Link: " + w.error.detalle);
-			_e.anotarConocida(sha256::deArchivo(salida));   // anti-bucle: cuando Link lo coloque, no es un fichaje mío
-			_e.foto = ap.valor->plantillasDespues; _e.hayFoto = true;
+			if (escritas) {
+				_e.anotarConocida(sha256::deArchivo(salida));   // anti-bucle: cuando Link lo coloque, no es un fichaje mío
+				_e.foto = ap.valor->plantillasDespues; _e.hayFoto = true;
+			}
 			_e.entregaEnCurso = entregaId;
 			_e.ultima = { entregaId, resp.valor->nombre, {}, fechaIso() };
-			// Limpieza: deja solo los 5 últimos archivos de trabajo.
+			// Limpieza: deja solo los 10 últimos archivos de trabajo.
 			std::vector<fs::path> viejos;
 			for (fs::directory_iterator it(dir, ec), fin; !ec && it != fin; it.increment(ec)) viejos.push_back(it->path());
-			std::sort(viejos.begin(), viejos.end());
-			for (size_t i = 0; i + 5 < viejos.size(); i++) fs::remove(viejos[i], ec);
+			std::sort(viejos.begin(), viejos.end(), [&](const fs::path& x, const fs::path& y) { std::error_code e1, e2; return fs::last_write_time(x, e1) < fs::last_write_time(y, e2); });
+			for (size_t i = 0; i + 10 < viejos.size(); i++) fs::remove(viejos[i], ec);
 		}
+		else if (fs::exists(aRuta(salida), ec)) fs::remove(aRuta(salida), ec);
 
 		// 4) Anotar cada operación.
 		for (const auto& r : res) {
 			auto it = std::find_if(_e.entrantes.begin(), _e.entrantes.end(), [&](const auto& x) { return x.op.id == r.id; });
 			if (it == _e.entrantes.end()) continue;
 			if (r.estado == "aplicada") {
-				historial(it->op, "aplicada", r.motivo.empty() ? (automatico ? "automático" : "autorizada") : r.motivo);
+				std::string nota = r.motivo.empty() ? (automatico ? "automático" : "autorizada") : r.motivo;
+				if (notaBase.count(r.id)) nota += " · base: " + notaBase[r.id];
+				historial(it->op, "aplicada", nota);
 				_e.aplicadas.insert(r.id);
-				if (!entregaId.empty() && r.motivo.empty()) _e.ultima.ops.push_back(r.id);
+				if (!entregaId.empty()) _e.ultima.ops.push_back(r.id);
 				confirmarLuego(r.id, "aplicada", r.motivo);
 				_e.entrantes.erase(it);
 			}
@@ -496,8 +559,9 @@ namespace mercado::sync {
 			}
 		}
 		if (conflictos) avisar(std::to_string(conflictos) + (conflictos == 1 ? " cambio omitido: conflicto" : " cambios omitidos: conflicto"));
-		if (escritas) avisar(std::to_string(escritas) + (escritas == 1 ? " fichaje del grupo listo" : " fichajes del grupo listos") + ": Phoenix Link lo coloca y avisa en el juego");
-		return R::bien(escritas);
+		const int listos = static_cast<int>(entregaId.empty() ? 0 : std::max<size_t>(hechas.size(), 1));
+		if (listos) avisar(std::to_string(listos) + (listos == 1 ? " fichaje del grupo listo" : " fichajes del grupo listos") + ": Phoenix Link lo coloca y avisa en el juego");
+		return R::bien(listos);
 	}
 
 	json Motor::resumen() const {

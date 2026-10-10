@@ -85,6 +85,10 @@ namespace mercado::sync {
 		void elegirGrupo(const std::string& grupoId);   ///< cambia de grupo (empieza desde 0)
 		void ponerPublicar(bool si);
 		void ponerPausa(bool si);
+		/// Escribir también PlayerAssignment.bin (para que los fichajes entren con «Activar»). Solo con Link que ya lo acepte.
+		void ponerBaseEnEntrega(bool si);
+		/// PlayerAssignment.bin de Phoenix-DB que se usa como base («principal» primero). Vacío si no hay.
+		std::string asignacionBase() const;
 		/// «Traer cambios del grupo»: pide ya las operaciones (respeta el ritmo de 5 s).
 		Resultado<int> traerAhora();
 		/// «Aplicar» (modo con autorización) o reintentar conflictos. Vacío = todas las pendientes.

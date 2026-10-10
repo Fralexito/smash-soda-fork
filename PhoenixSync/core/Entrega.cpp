@@ -14,7 +14,7 @@ using json = nlohmann::json;
 
 namespace mercado::entrega {
 
-	bool nombrePermitido(const std::string& n) { return n == "EDIT00000000" || n == "Player.bin"; }
+	bool nombrePermitido(const std::string& n) { return n == "EDIT00000000" || n == "Player.bin" || n == "PlayerAssignment.bin"; }
 
 	bool idValido(const std::string& id) {
 		if (id.empty() || id.size() > 64) return false;
@@ -78,7 +78,7 @@ namespace mercado::entrega {
 			json lista = json::array();
 			// 1) Datos primero.
 			for (const auto& a : archivos) {
-				if (a.nombre == "Player.bin") {   // Link exige «WESYS» en los primeros 16 bytes: mejor avisar aquí.
+				if (a.nombre == "Player.bin" || a.nombre == "PlayerAssignment.bin") {   // Link exige «WESYS» en los primeros 16 bytes: mejor avisar aquí.
 					std::ifstream f(aRuta(a.rutaOrigen), std::ios::binary);
 					char cab[16] = {};
 					f.read(cab, 16);

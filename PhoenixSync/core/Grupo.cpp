@@ -233,7 +233,7 @@ namespace mercado::grupo {
 		};
 		return {
 			{ "formato", "phoenix-sync/grupo-1" },
-			{ "grupo_id", e.grupoId }, { "publicar", e.publicar }, { "pausado", e.pausado },
+			{ "grupo_id", e.grupoId }, { "publicar", e.publicar }, { "pausado", e.pausado }, { "base_en_entrega", e.baseEnEntrega },
 			{ "ultima_seq", e.ultimaSeq }, { "etag_operaciones", e.etagOperaciones }, { "etag_config", e.etagConfig },
 			{ "config", { { "modo", aTexto(e.config.modo) }, { "actualizado_por", e.config.actualizadoPor },
 				{ "actualizado_en", e.config.actualizadoEn }, { "leida", e.config.leida }, { "motivo", e.config.motivoNoLeida } } },
@@ -252,6 +252,7 @@ namespace mercado::grupo {
 		e.grupoId = j.value("grupo_id", "");
 		e.publicar = j.value("publicar", true);
 		e.pausado = j.value("pausado", false);
+		e.baseEnEntrega = j.value("base_en_entrega", false);
 		e.ultimaSeq = j.value("ultima_seq", int64_t(0));
 		e.etagOperaciones = j.value("etag_operaciones", "");
 		e.etagConfig = j.value("etag_config", "");

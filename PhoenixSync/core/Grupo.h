@@ -133,6 +133,7 @@ namespace mercado::grupo {
 		std::string grupoId;
 		bool publicar = true;          ///< interruptor local «publicar mis fichajes»
 		bool pausado = false;          ///< pausa TODO en esta PC
+		bool baseEnEntrega = false;    ///< también escribir PlayerAssignment.bin (para «Activar»). Solo cuando Phoenix Link ya acepte ese archivo.
 		int64_t ultimaSeq = 0;         ///< hasta qué número se leyó de la web
 		std::string etagOperaciones, etagConfig;
 		Config config;                 ///< última lectura del interruptor (se guarda para mostrarla)

@@ -38,3 +38,4 @@ Fralex usa 2 cuentas; cuando una se queda sin tokens sigue la otra. **La memoria
 4. Web y base de datos: NO se tocan desde aquí. Se escribe un prompt para el chat WEB y se anota como `PENDIENTE-WEB`. Contratos: `claude/contrato-v1.md` (Link) y `claude/mercado-api.md` (Mercado) en el proyecto de Claude; endpoints publicados no cambian, solo ganan campos opcionales.
 5. Reglas de Fralex: «si algo se rompe, mejor no lo hagas»; compilar sin errores antes de cada commit; Windows 10 y 11; español; respuestas cortas; nunca pedir secretos; nada a `master` sin su permiso.
 6. Protocolo completo y prompts de arranque: `claude/PROTOCOLO-MULTICUENTA.md` (proyecto) o `docs/PROTOCOLO-MULTICUENTA.md` del repo web.
+- 2026-10-09 · (SYNC) **Pedido a LINK:** aceptar `PlayerAssignment.bin` en las entregas de Sync (mismas reglas que `Player.bin`). Prompt: `PhoenixSync/prompts/PROMPT-LINK-playerassignment.md`. Sync no lo manda hasta que se active `sync-base si`.

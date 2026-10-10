@@ -10,7 +10,9 @@
 #include <map>
 #include <string>
 
+#include "../core/AsignacionBase.h"
 #include "../core/ClienteSync.h"
+#include "../terceros/miniz/miniz.h"
 #include "../core/Entrega.h"
 #include "../core/Grupo.h"
 #include "../core/Respaldos.h"
@@ -31,6 +33,26 @@ static void escribir(const fs::path& p, const std::string& t) {
 	std::ofstream(p, std::ios::binary | std::ios::trunc) << t;
 }
 static std::string leer(const fs::path& p) { std::ifstream f(p, std::ios::binary); return std::string(std::istreambuf_iterator<char>(f), {}); }
+
+// --- PlayerAssignment.bin sintético (WESYS + zlib, filas de 16 B) -------------------
+struct FilaPA { uint32_t jug, eq; uint8_t dorsal, orden, banderas; };
+static std::string hacerPA(const std::vector<FilaPA>& filas) {
+	std::vector<uint8_t> plano(filas.size() * 16, 0);
+	for (size_t i = 0; i < filas.size(); i++) {
+		uint8_t* e = &plano[i * 16];
+		auto pon = [](uint8_t* p, uint32_t v) { for (int k = 0; k < 4; k++) p[k] = uint8_t(v >> (8 * k)); };
+		pon(e, uint32_t(i + 1)); pon(e + 4, filas[i].jug); pon(e + 8, filas[i].eq);
+		e[12] = uint8_t(filas[i].dorsal - 1); e[13] = uint8_t(filas[i].orden << 2); e[14] = filas[i].banderas;
+	}
+	mz_ulong n = mz_compressBound(mz_ulong(plano.size()));
+	std::vector<uint8_t> c(n);
+	mz_compress2(c.data(), &n, plano.data(), mz_ulong(plano.size()), 6);
+	std::string out("\xff\x10\x81WESYS", 8);
+	auto u32 = [&](uint32_t v) { for (int k = 0; k < 4; k++) out += char(uint8_t(v >> (8 * k))); };
+	u32(uint32_t(n)); u32(uint32_t(plano.size()));
+	out.append(reinterpret_cast<const char*>(c.data()), n);
+	return out;
+}
 
 // --- Option file FALSO: JSON de plantillas rellenado a 4096 bytes (mismo tamaño siempre) ---
 static const size_t kTam = 4096;
@@ -153,6 +175,8 @@ struct PC {
 		const json e = json::parse(leer(ent / "entrega.json"));
 		for (const auto& a : e["archivos"]) {
 			if (sha256::deArchivo(deRuta(ent / a["nombre"].get<std::string>())) != a["sha256"].get<std::string>()) return false;
+			if (a["nombre"] == "PlayerAssignment.bin")
+				fs::copy_file(ent / "PlayerAssignment.bin", juego / "SiderAddons" / "livecpk" / "Phoenix-DB" / "common" / "etc" / "pesdb" / "PlayerAssignment.bin", fs::copy_options::overwrite_existing);
 			if (a["nombre"] == "EDIT00000000") {
 				if (fs::file_size(ent / "EDIT00000000") != fs::file_size(edit())) return false;
 				fs::copy_file(ent / "EDIT00000000", edit(), fs::copy_options::overwrite_existing);
@@ -507,6 +531,91 @@ int main() {
 		web.existe = true;
 		pc.pasar(400);
 		CHECK(web.publicaciones == 1 && pc.motor.estado().porPublicar.empty());
+	}
+
+
+	// ---------------------------------------------------------------------------------
+	std::printf("PlayerAssignment.bin (base para «Activar»)\n");
+	{
+		// Barça 108: 3 jugadores (dorsales 10, 19, 28); Madrid 109: Vinícius (117047, dorsal 7, capitán)
+		const std::string pa = hacerPA({ { 1, 108, 10, 0, 0 }, { 2, 108, 19, 1, 0 }, { 3, 108, 28, 2, 0 }, { 117047, 109, 7, 0, 0x20 }, { 5, 109, 9, 1, 0 } });
+		auto a = base::Asignaciones::desdeBytes(std::vector<uint8_t>(pa.begin(), pa.end()));
+		CHECK(a.ok() && a.valor->filas().size() == 5);
+		if (a.ok()) {
+			auto pl = a.valor->plantillas();
+			CHECK(pl[108] == (std::vector<uint32_t>{ 1, 2, 3 }) && pl[109] == (std::vector<uint32_t>{ 117047, 5 }));
+			grupo::Operacion op; op.id = "v"; op.jugador = 117047; op.equipoOrigen = 109; op.equipoDestino = 108; op.dorsal = 19;   // 19 ocupado
+			auto r = base::aplicarOperaciones(*a.valor, { op });
+			CHECK(r[0].estado == "aplicada" && r[0].motivo.empty());
+			pl = a.valor->plantillas();
+			CHECK(pl[108].back() == 117047 && pl[109] == (std::vector<uint32_t>{ 5 }));
+			for (const auto& f : a.valor->filas()) {
+				if (f.jugador == 117047) CHECK(f.equipo == 108 && f.orden == 3 && f.dorsal == 99 && f.banderas == 0 && f.indice == 4);
+				if (f.jugador == 5) CHECK(f.orden == 0);   // subió un puesto en el Madrid
+			}
+			CHECK(base::aplicarOperaciones(*a.valor, { op })[0].motivo.size() > 0);   // idempotente: ya estaba
+			grupo::Operacion q = op; q.id = "q"; q.tipo = "quitar"; q.equipoOrigen = 108; q.equipoDestino = 0;
+			CHECK(base::aplicarOperaciones(*a.valor, { q })[0].estado == "conflicto");
+			auto b = a.valor->bytes();
+			CHECK(b.ok());
+			if (b.ok()) {
+				CHECK(std::string(b.valor->begin(), b.valor->begin() + 8) == pa.substr(0, 8));
+				auto re = base::Asignaciones::desdeBytes(*b.valor);
+				CHECK(re.ok() && re.valor->plantillas() == a.valor->plantillas());
+			}
+			// Plantilla llena
+			std::vector<FilaPA> llena; for (uint32_t i = 0; i < 40; i++) llena.push_back({ 1000 + i, 200, uint8_t(i + 1), uint8_t(i), 0 });
+			llena.push_back({ 77, 201, 5, 0, 0 });
+			const std::string pl2 = hacerPA(llena);
+			auto a2 = base::Asignaciones::desdeBytes(std::vector<uint8_t>(pl2.begin(), pl2.end()));
+			CHECK(a2.ok() && !a2.valor->mover(77, 200, 201, 0).ok());
+		}
+		CHECK(!base::Asignaciones::desdeBytes({ 1, 2, 3 }).ok());
+	}
+
+	// ---------------------------------------------------------------------------------
+	std::printf("Fichaje que entra con «Activar» (base en la entrega)\n");
+	{
+		WebFalsa web;
+		const grupo::Plantillas inicial = { { 108, { 1, 2, 3 } }, { 109, { 117047, 5 } } };
+		PC fralex(tmp / "pcs3", "FRALEX", web), amigo(tmp / "pcs3", "AMIGO", web);
+		const fs::path pesdb = fs::path("SiderAddons") / "livecpk" / "Phoenix-DB" / "common" / "etc" / "pesdb";
+		for (PC* p : { &fralex, &amigo }) {
+			escribirOption(p->edit(), inicial);
+			escribir(p->juego / pesdb / "Player.bin", "WESYS....");
+			escribir(p->juego / pesdb / "PlayerAssignment.bin", hacerPA({ { 1, 108, 10, 0, 0 }, { 2, 108, 19, 1, 0 }, { 3, 108, 28, 2, 0 }, { 117047, 109, 7, 0, 0x20 }, { 5, 109, 9, 1, 0 } }));
+			p->motor.cargar(); p->motor.elegirGrupo("g");
+		}
+		// Sin el interruptor: la entrega NO lleva PlayerAssignment (Link actual la rechazaría).
+		fralex.pasar(30); amigo.pasar(30);
+		fralex.fichar(117047, 109, 108);
+		fralex.pasar(40); 
+		const std::string antes = leer(amigo.juego / pesdb / "PlayerAssignment.bin");
+		amigo.pasar(30);
+		CHECK(amigo.esta(117047, 108));
+		CHECK(leer(amigo.juego / pesdb / "PlayerAssignment.bin") == antes);
+		// Con el interruptor: el siguiente fichaje va también a la base.
+		amigo.motor.ponerBaseEnEntrega(true);
+		fralex.fichar(5, 109, 108);
+		fralex.pasar(40); amigo.pasar(30);
+		CHECK(amigo.esta(5, 108));
+		auto pa = base::Asignaciones::abrir(deRuta(amigo.juego / pesdb / "PlayerAssignment.bin"));
+		CHECK(pa.ok());
+		if (pa.ok()) {
+			auto pl = pa.valor->plantillas();
+			CHECK(std::find(pl[108].begin(), pl[108].end(), 5u) != pl[108].end());
+			// El primero (antes del interruptor) no estaba en la base: queda donde estaba (es lo esperado).
+			CHECK(std::find(pl[109].begin(), pl[109].end(), 117047u) != pl[109].end());
+		}
+		// Respaldo con PlayerAssignment y deshacer que lo devuelve.
+		bool conPA = false;
+		for (const auto& r : amigo.motor.respaldos()) for (const auto& f : r.archivos) if (f.relativo.find("PlayerAssignment.bin") != std::string::npos) conPA = true;
+		CHECK(conPA);
+		CHECK(amigo.motor.deshacerUltimo().ok());
+		amigo.linkColoca();
+		auto pa2 = base::Asignaciones::abrir(deRuta(amigo.juego / pesdb / "PlayerAssignment.bin"));
+		CHECK(pa2.ok() && pa2.valor->plantillas()[109] == (std::vector<uint32_t>{ 117047, 5 }));
+		CHECK(!amigo.esta(5, 108));
 	}
 
 	fs::remove_all(tmp);

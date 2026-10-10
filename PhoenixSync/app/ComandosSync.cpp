@@ -11,6 +11,8 @@
 //  PhoenixSync sync-deshacer               «Deshacer último cambio del grupo»
 //  PhoenixSync sync-publicar si|no         interruptor local «publicar mis fichajes»
 //  PhoenixSync sync-pausa si|no            pausa todo en esta PC
+//  PhoenixSync sync-base si|no             también escribir PlayerAssignment.bin (fichajes con «Activar»).
+//                                          ¡Solo cuando Phoenix Link ya acepte ese archivo!
 //  PhoenixSync sync-respaldar              «Respaldar ahora»
 //  PhoenixSync sync-respaldos              lista de respaldos
 //  PhoenixSync sync-restaurar <nombre> [--aunque-juego-abierto]
@@ -101,6 +103,14 @@ int comandoSync(const std::vector<std::string>& a, ClienteHttp& http, FuenteToke
 	}
 	else if (c == "sync-rechazar" && a.size() >= 2) { auto r = m.rechazar(a[1]); if (!r.ok()) { err(r.error); return 2; } std::printf("Rechazado.\n"); }
 	else if (c == "sync-deshacer") { auto r = m.deshacerUltimo(); if (!r.ok()) { err(r.error); return 2; } std::printf("Listo: Phoenix Link vuelve a poner el option file anterior.\n"); }
+	else if (c == "sync-base" && a.size() >= 2) {
+		const bool si = a[1] == "si" || a[1] == "sí" || a[1] == "1";
+		m.ponerBaseEnEntrega(si);
+		m.guardar();
+		std::printf("Fichajes también en la base (PlayerAssignment.bin): %s\n", si ? "sí" : "no");
+		if (si) std::printf("Base que se usa: %s\nOjo: Phoenix Link debe aceptar PlayerAssignment.bin; si no, rechazará las entregas.\n",
+			m.asignacionBase().empty() ? "(no hay PlayerAssignment.bin en Phoenix-DB: usa sync-juego)" : m.asignacionBase().c_str());
+	}
 	else if ((c == "sync-publicar" || c == "sync-pausa") && a.size() >= 2) {
 		const bool si = a[1] == "si" || a[1] == "sí" || a[1] == "1";
 		if (c == "sync-publicar") m.ponerPublicar(si); else m.ponerPausa(si);

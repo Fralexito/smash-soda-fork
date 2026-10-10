@@ -60,6 +60,7 @@ add_library(PhoenixSyncCore STATIC
     core/Grupo.cpp
     core/ClienteSync.cpp
     core/SyncCompartido.cpp
+    core/AsignacionBase.cpp
 )
 target_link_libraries(PhoenixSyncCore PUBLIC PhoenixSyncTerceros)
 target_include_directories(PhoenixSyncCore PUBLIC

@@ -32,3 +32,10 @@
 2. Prueba real con dos PCs (sección 7 del encargo).
 3. Interfaz: hoy son comandos de consola; luego, tarjeta en la sección «Phoenix Sync» de Link (prompt al chat LINK).
 4. **Qué archivo manda en las plantillas (prueba de FRALEX, mañana del 2026-10-09):** cambiar `PlayerAssignment.bin` (Lamine → Real Madrid) NO movió a Lamine; cambiar el **option file** SÍ. ⇒ Sync aplica los fichajes al option file (correcto). Queda una duda abierta: la nota de las 06:54 (PRUEBAS.md) vio plantillas de la base al usar «Datos Actual. en vivo». Hay que repetir la prueba de fichaje usando ese botón para confirmar que también ahí manda el option file.
+
+## Actualización 2026-10-09 20:30 · Fichajes con «Activar» (PlayerAssignment.bin)
+- Confirmado por FRALEX: con «Activar» los equipos salen de `PlayerAssignment.bin` de Phoenix-DB.
+- Sync ya escribe cada fichaje recibido **también en `PlayerAssignment.bin`** (`core/AsignacionBase`): mueve el registro en su sitio (mismo índice), el jugador va al final del destino, dorsal pedido o el más alto libre, los de detrás en el origen suben un puesto, sin capitanía. «Quitar» (dejar libre) aún no se aplica en la base.
+- Se activa en cada PC con `PhoenixSync sync-base si` **solo cuando Link acepte ese archivo** (prompt `prompts/PROMPT-LINK-playerassignment.md`). Sin activar, todo sigue como antes.
+- Respaldos guardan también `PlayerAssignment.bin`; «deshacer» lo devuelve.
+- Pruebas: 158/158 (incluye el flujo completo con la base) + 211/211. Compila para Windows.
