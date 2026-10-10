@@ -657,3 +657,10 @@ ESTRUCTURA-ML §22–§24 pasan de 🔎 a ✅.
 - Guardado: foto de las 23:43 idéntica a la base (option file sha 3507ce35…, sin tocar).
 - Aparte, **no es de phoenix.lua**: durante la preparación del partido `sider.log` anotó 96 errores de otro módulo (`StadiumServer.lua` línea 705, «attempt to index a nil value»). phoenix.lua: 0 errores. No se tocó ese módulo; queda anotado por si interesa revisarlo.
 
+
+**2026-10-09 23:59 · Prueba en el juego · Experimento «dos carreras» — paso 1: carrera NUEVA con Phoenix-DB v99** — ✅
+Fralex creó una carrera nueva con el Barça: **Lamine Velocidad 99, media 90** (las demás habilidades = base: Pase raso 82, Contacto 76).
+Guardada en la **ranura 4** (`ML00000003`, 23:57, md5 6cbe94ff…). **Conclusión:** al CREAR una carrera, el juego copia las stats
+de la base que sirve Phoenix-DB; una carrera ya empezada conserva su copia (prueba de las 23:50).
+Paso 2 hecho por Claude: Phoenix-DB → **v90** (original, sha256 de702dff…) en las dos carpetas, con el juego cerrado; respaldo de la
+v99 = `_PhoenixMercado_prueba\db\Player_v99.bin` (sha256 2d1a854f…, idéntico). Falta: Fralex crea la MISMA carrera → ranura 5.
