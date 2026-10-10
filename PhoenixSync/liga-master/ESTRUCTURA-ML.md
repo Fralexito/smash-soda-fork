@@ -465,3 +465,7 @@ del juego cuadran con la segunda tabla (jornada anterior).
 - **(10 oct, 00:40) Confirmado en el juego:** la ranura 4 (creada con v99) cargada con la base v90 muestra Lamine 99 → la carrera
   guarda su copia, tomada al crearse. Búsquedas fallidas detalladas en PRUEBAS.md (10 oct, 00:40). La zona 0x10c0000–0x1140000 es
   una imagen (bloques de textura de 8 B), no datos de jugadores.
+- **(10 oct, 00:50) Misma carrera 1/1 → 16/3 (ranuras 4 y 6):** las fichas de 596 B son **fichas de partido** (n.º de partido,
+  competición, fecha, listas `[reg][pid][x][dato]` de quienes jugaron; 5.759 = partidos de la temporada). En la ficha de 368 B de
+  cada jugador del usuario, desde +54 (contando desde el campo antes de `reg`), ~30 u16 de 0 a 9.999 que suben con el tiempo; uno de
+  Lamine pasó 9.765 → 551. [HIPÓTESIS] contador de progreso por habilidad (+1 al pasar de 10.000).

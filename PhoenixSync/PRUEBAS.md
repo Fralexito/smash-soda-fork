@@ -704,3 +704,12 @@ números al azar de su tabla C/D (semillas, 0–9999). **Estado:** ⏳ copia sin
 - **Sin probar:** Liga Máster (19), Ser una Leyenda (20), Entrenamiento (52) y dentro de un partido.
 - Documento: `base-conocimiento/22-ZONA-DEL-JUEGO-MOMENTO-SEGURO.md`.
 
+
+**2026-10-10 00:28 · Análisis (sin juego) · Misma carrera, ranura 4 (1/1/2026) frente a ranura 6 (16/3/2026, md5 1feef3a4…)** — 🔎
+Comparar la MISMA carrera da mucho menos ruido (191.549 bytes distintos antes del blob, frente a 1,77 M entre dos carreras nuevas).
+1. **Fichas de 596 B (0x329b00, 5.759) = fichas de PARTIDO**, no de jugador: número de partido, competición, fecha y las listas de
+   jugadores que jugaron (`[reg][pid][x][dato]`). 5.759 = número de partidos de la temporada. → pista para resultados partido a partido.
+2. **Contadores de crecimiento:** en la ficha de 368 B de cada jugador de tu equipo (tabla C/D) hay ~30 números de 0 a 9.999 que
+   **suben** con el tiempo; el n.º 6 de Lamine pasó de 9.765 a 551 (dio la vuelta al llegar a 10.000). Hipótesis: barra de progreso
+   por habilidad; al llenarse, la habilidad sube +1. Los valores iniciales se sortean al crear la carrera.
+**Prueba pedida:** captura de Lamine en la ranura 6, para ver si exactamente una habilidad subió +1 respecto a la ranura 4.
