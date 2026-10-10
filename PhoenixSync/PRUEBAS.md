@@ -838,3 +838,14 @@ carnet del blob no cambia con la velocidad (cola idéntica entre ranuras 4 y 5).
 - Respaldo `phoenix.lua.v017d` en las dos carpetas; v0.17e copiada a las dos; sha256 en el PC = 114b6f2e…17c069 en las dos; respaldos v017, v017m, v017a y v017d intactos.
 - **Plan de prueba:** en el menú principal, con el overlay abierto en Phoenix, pulsar K y L → la línea [TECLAS] debe decir «última ignorada: …» y no debe pasar nada más; después, Activar debe seguir funcionando como siempre.
 
+
+### 2026-10-10 05:30 · Informe 27 para el instalador de Sider en Phoenix Link (pedido de FRALEX) — solo lectura del PC
+- Lectura en vivo (sin cambiar nada) de: `Conmegol Patch\SiderAddons`, las 3 variantes de `ConmeGol Extras`, `D:\SP2026` (los dos Sider), `sider.log`, huellas.
+- **Hallazgos para el instalador:**
+  - (1) las 3 variantes de ConmeGOL traen **solo** `content`, `livecpk`, `modules` y `sider.ini` (sin `sider.dll`); solo la variante 26 trae `olmosjr23`;
+  - (2) sus `CGP_database.cpk` son **distintos** (md5 d2d62b4d / f525fd4c / cfbad462);
+  - (3) Phoenix solo está instalado en la variante 26;
+  - (4) Sudamerican usa Sider **7.3.4** (dos carpetas) y su base va en `SP_Subs.cpk`, sin raíz de base en `sider.ini`;
+  - (5) ⚠️ hoy el `PlayerAssignment.bin` de Phoenix-DB (raíz y modo) es el **de prueba** (sha256 1d27f010…, Mbappé + Vinícius en el Barça), no el original (d1cf73c6…);
+  - (6) la copia `modules\phoenix.lua.v02` del PC = v0.2 probada (sha256 116b40a6…, commit 4683988).
+- El informe documenta la familia «avisos» (v0.2) y **no** las versiones que leen o escriben la memoria o modifican código del juego (v0.3–v0.17e).
