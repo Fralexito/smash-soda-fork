@@ -914,3 +914,7 @@ carnet del blob no cambia con la velocidad (cola idéntica entre ranuras 4 y 5).
 - **Ojo para interpretar la prueba:** los archivos de Phoenix-DB los cambió otro trabajo de hoy (`PlayerAssignment.bin` a las 01:04 y `Player.bin` a las 04:58; la huella de `player.bin` en las lecturas de hoy es la de v90). La comprobación con Vinícius de anoche puede no valer ya. No se tocaron.
 - Archivo: `sider/pruebas/phoenix-v0.17e-B-prueba.lua` (sha256 e276c72e…). En el PC sigue la v0.17e.
 
+### 2026-10-10 09:26 · Experimento B: v0.17e-B INSTALADA con el OK de FRALEX, falta probar
+- OK a las 09:25. Juego cerrado (Sider «All done» 09:25:48). Respaldo `phoenix.lua.v017e` (114b6f2e…) en las dos carpetas `modules`; v0.17e-B copiada; sha256 en el PC = e276c72e…a811 en las dos; respaldo `.v017` intacto.
+- **Plan de prueba:** abrir → en el registro debe salir «experimento B: parche C NO aplicado» → Partido → Datos Actual. en vivo → Activar → volver a entrar y mirar «Selección actual» → abrir el overlay y mirar [MODO] → entrar a Partido y mirar plantillas → Editar (sin Guardar) → [MODO] debería volver a 0. No entrar a Liga Máster ni guardar nada.
+
