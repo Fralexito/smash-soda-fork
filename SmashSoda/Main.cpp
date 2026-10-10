@@ -329,6 +329,8 @@ int CALLBACK WinMain(_In_ HINSTANCE hInstance, _In_ HINSTANCE hPrevInstance, _In
 
     // Interfaz nueva (HTML en WebView2). Si la PC no la soporta, todo sigue con ImGui.
     phoenix::web::InterfazWeb& webUi = phoenix::web::InterfazWeb::instancia();
+    static Texture logoCarga;   // logo de la pantalla de carga (si falta el archivo, sale solo el texto)
+    if (logoCarga.loadFromFile(g_pd3dDevice, "./icons/phoenix-logo.png")) webUi.fijarLogoCarga(logoCarga.texture);
     {
         phoenix::web::ContextoWeb contextoWeb;
         contextoWeb.hosting = &g_hosting;
@@ -462,6 +464,12 @@ int CALLBACK WinMain(_In_ HINSTANCE hInstance, _In_ HINSTANCE hPrevInstance, _In
         {
             // La interfaz web cubre la ventana: ImGui no dibuja, solo corre la lógica de cada frame
             phoenix::Shell::tickLogica();
+        }
+        else if (webUi.cargando())
+        {
+            // La interfaz nueva está abriendo: pantalla de carga (no se ve la interfaz antigua) y la lógica sigue
+            phoenix::Shell::tickLogica();
+            webUi.renderCarga();
         }
         else if (phoenix::PhoenixPrefs::get().interfazPhoenix)
         {

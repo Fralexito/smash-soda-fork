@@ -205,9 +205,10 @@ function ListaMod({ titulo, items, vacio, render }) {
 }
 
 // ---- Amigos de la web ---------------------------------------------------------------------------
+// Presencia de la web: disponible = activo en la plataforma; en_partida = jugando (partido o PES abierto); en_sala = dentro de una sala.
 const ESTADO_AMIGO = {
-  en_partida: ["warn", "JUGANDO UN PARTIDO", "IN A MATCH"], en_sala: ["acc", "EN UNA SALA", "IN A ROOM"],
-  disponible: ["ok", "DISPONIBLE", "AVAILABLE"], ausente: ["", "AUSENTE", "AWAY"], desconectado: ["", "DESCONECTADO", "OFFLINE"],
+  en_sala: ["acc", "EN SALA", "IN ROOM"], en_partida: ["mor vivo", "JUGANDO", "PLAYING"],
+  disponible: ["ok", "ACTIVO", "ACTIVE"], ausente: ["warn", "AUSENTE", "AWAY"], desconectado: ["", "DESCONECTADO", "OFFLINE"],
 };
 
 function Amigos({ m }) {
@@ -221,7 +222,11 @@ function Amigos({ m }) {
   const peso = { en_partida: 0, en_sala: 1, disponible: 2, ausente: 3, desconectado: 4 };
   const orden = [...a.lista].sort((x, y) => (peso[x.estado] ?? 5) - (peso[y.estado] ?? 5) || x.nombre.localeCompare(y.nombre));
   const invitar = (x) => accion("amigos.invitar", { usuarioId: x.usuarioId }, { ok: t(`Invitación enviada a ${x.nombre}.`, `Invite sent to ${x.nombre}.`) });
+  const cuenta = (k) => a.lista.filter((x) => x.estado === k).length;
   return html`<div class="col">
+    <div class="resumen-presencia">
+      ${["disponible", "en_partida", "en_sala"].map((k) => html`<span class="semaforo" key=${k}><span class=${cx("punto", ESTADO_AMIGO[k][0])}></span>${cuenta(k)} ${t(ESTADO_AMIGO[k][1], ESTADO_AMIGO[k][2])}</span>`)}
+    </div>
     ${!m.sala?.abierta ? html`<div class="caja" style="border-color:var(--warn)">${t("Abre tu sala para poder invitar.", "Open your room to invite.")}</div>` : null}
     ${orden.length === 0 ? html`<${Vacio} titulo=${t("Sin amigos todavía", "No friends yet")} texto=${t("Agrégalos desde tu perfil en la web de la liga.", "Add them from your profile on the website.")}/>` : null}
     <div class="rej3">${orden.map((x) => {

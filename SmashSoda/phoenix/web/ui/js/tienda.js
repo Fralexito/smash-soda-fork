@@ -14,10 +14,13 @@ let estado = {
   info: { idiomas: [], resoluciones: [], pantallas: [], gpus: [], wgc: false, temasOverlay: [] },
   chat: [],                // { id, texto, en }
   actividad: [],           // { id, texto, en }
-  noLeidos: 0,
+  noLeidos: 0,             // sin leer del chat de SALA
+  chatGlobal: { mensajes: [] },   // chat general (el mismo de la web): lista que manda el motor
+  chatPestana: "general",  // general | sala | registro
+  leidoGlobal: null,       // id del último mensaje general ya visto (null = aún sin historial)
   chatAbierto: false,
   seccion: "sala",
-  pestanas: { sala: "resumen", partido: "vivo", mandos: "puestos", gente: "sala", ajustes: "general" },
+  pestanas: { sala: "resumen", partido: "vivo", mandos: "puestos", gente: "sala", sync: "puente", ajustes: "general" },
   avisos: [],              // toasts
   dialogo: null,           // { titulo, texto, botones:[{texto, tipo, valor}], resolver }
   paleta: false,
@@ -120,9 +123,52 @@ function agregarLineas(clave, maximo, datos) {
   cambiar((s) => {
     const base = datos.reinicio ? [] : s[clave];
     const cambios = { [clave]: [...base, ...nuevas].slice(-maximo) };
-    if (clave === "chat" && !s.chatAbierto && !datos.reinicio) cambios.noLeidos = s.noLeidos + nuevas.length;
+    if (clave === "chat" && !datos.reinicio && !(s.chatAbierto && s.chatPestana === "sala")) cambios.noLeidos = s.noLeidos + nuevas.length;
     return cambios;
   });
+}
+
+// ---- Chat general (contrato §27) -----------------------------------------------------
+/** Mensajes del chat general sin leer (no cuenta los propios). */
+export function noLeidosGlobal(s) {
+  if (s.leidoGlobal == null) return 0;
+  let n = 0;
+  for (const m of s.chatGlobal.mensajes) if (!m.propio && m.id > s.leidoGlobal) n++;
+  return n;
+}
+function ultimoGlobal(g) { return g.mensajes.length ? g.mensajes[g.mensajes.length - 1].id : 0; }
+
+/** Llega la lista del chat general. El primer historial no cuenta como «sin leer». */
+function recibirGlobal(g) {
+  cambiar((s) => {
+    const nuevo = { ...g, mensajes: g.mensajes || [] };
+    const leido = s.leidoGlobal == null ? ultimoGlobal(nuevo) : s.leidoGlobal;
+    // viendo GENERAL con el panel abierto: todo queda leído
+    const viendo = s.chatAbierto && s.chatPestana === "general";
+    return { chatGlobal: nuevo, leidoGlobal: viendo ? Math.max(leido, ultimoGlobal(nuevo)) : leido };
+  });
+}
+
+/** Cambia de pestaña del chat y marca lo visible como leído. */
+export function elegirPestanaChat(pestana) {
+  cambiar((s) => ({
+    chatPestana: pestana,
+    noLeidos: pestana === "sala" ? 0 : s.noLeidos,
+    leidoGlobal: pestana === "general" && s.chatAbierto ? Math.max(s.leidoGlobal ?? 0, ultimoGlobal(s.chatGlobal)) : s.leidoGlobal,
+  }));
+}
+
+/** Sala abierta → SALA por defecto; sala cerrada → vuelve a GENERAL. */
+let _salaAbiertaPrevia = null;
+function vigilarSala(m) {
+  const abierta = !!m?.sala?.abierta;
+  if (_salaAbiertaPrevia === abierta) return;
+  const primera = _salaAbiertaPrevia === null;
+  _salaAbiertaPrevia = abierta;
+  const s = estado;
+  if (abierta && s.chatPestana !== "registro") elegirPestanaChat("sala");
+  else if (!abierta && s.chatPestana === "sala") elegirPestanaChat("general");
+  else if (primera && !abierta) { /* ya está en GENERAL */ }
 }
 
 // ---- Arranque ----------------------------------------------------------------------
@@ -138,9 +184,12 @@ export function conectarTienda() {
       actividad: (b.actividad || []).map((texto) => ({ id: idLinea++, texto, en: 0 })),
       motor: b.estado || null,
     });
+    if (b.chatGlobal) recibirGlobal(b.chatGlobal);
+    vigilarSala(b.estado);
     avisarSeccion();
   });
-  puente.on("estado", (e) => cambiar({ motor: e }));
+  puente.on("estado", (e) => { cambiar({ motor: e }); vigilarSala(e); });
+  puente.on("evento:chatglobal", (d) => recibirGlobal(d));
   puente.on("evento:chat", (d) => agregarLineas("chat", MAX_CHAT, d));
   puente.on("evento:actividad", (d) => agregarLineas("actividad", MAX_ACTIVIDAD, d));
 }

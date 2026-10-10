@@ -62,7 +62,7 @@ function General({ m }) {
         <div class="ayuda" style="margin-top:6px">${t("Cambia el esquema de colores de toda la app.", "Changes the whole app's colors.")}</div>
         <div class="rej2" style="margin-top:16px;gap:14px">
           <${TemaCarta} id="galaxy" actual=${tema} colores=${["#00e5ff", "#8000ff"]} nombre="GALAXY" sub=${t("CIAN · PÚRPURA", "CYAN · PURPLE")} fondo="linear-gradient(135deg,#0b1030,#1a0a3a)"/>
-          <${TemaCarta} id="sudario" actual=${tema} colores=${["#f5c451", "#3b82f6"]} nombre="SUDARIO" sub=${t("DORADO · AZUL", "GOLD · BLUE")} fondo="linear-gradient(135deg,#0c1634,#10244f)"/>
+          <${TemaCarta} id="sudario" actual=${tema} colores=${["#f5c451", "#3b82f6"]} nombre="LIGA B" sub=${t("DORADO · AZUL", "GOLD · BLUE")} fondo="linear-gradient(135deg,#0c1634,#10244f)"/>
         </div>
       </${Tarjeta}>
       <${Tarjeta} estilo="flex:1" interior="padding:22px 24px;display:flex;flex-direction:column;gap:4px">

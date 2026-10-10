@@ -4,9 +4,12 @@
 #include <cstdint>
 #include <map>
 #include <mutex>
+#include <set>
 #include <string>
 #include <thread>
 #include <vector>
+
+#include "BuzonJuego.h"
 
 // =============================================================================
 //  Phoenix Link · PhoenixLink: la app ↔ la web (API /v1, contrato 1.6.0)
@@ -39,9 +42,52 @@ namespace phoenix {
 
 	enum class EstadoLink { SinVincular, Vinculando, Conectado, SinConexion, Pausado };
 
+	/// Estado del puente con el juego (buzon de avisos web -> Sider).
+	enum class EstadoBuzon { Apagado, JuegoCerrado, NoInstalado, Conectado, SinConexion };
+	struct AvisoBuzon {
+		long long id = 0;
+		std::string texto, hora;   ///< hora hh:mm (Lima)
+		bool escrito = false;      ///< ya esta en el archivo del juego
+	};
+	struct InfoBuzon {
+		EstadoBuzon estado = EstadoBuzon::JuegoCerrado;
+		std::string ultimo;   ///< hora hh:mm (Lima) del aviso mas nuevo escrito
+		std::string juego;    ///< carpeta del juego detectado (UTF-8), vacia si esta cerrado
+		std::string parche;   ///< nombre del parche detectado (UTF-8), vacio si el juego esta cerrado
+		std::vector<AvisoBuzon> avisos;   ///< los 5 mas nuevos
+	};
+
+	/// Ultima entrega de datos (Phoenix Sync -> juego). estado: ninguna | esperando | colocada | rechazada | deshecha
+	struct InfoEntrega {
+		std::string estado = "ninguna";
+		std::string id, resumen, motivo, fecha;
+		bool puedeDeshacer = false;
+	};
+
 	/// Un amigo y su estado (GET /v1/presencia/amigos, contrato §19).
 	struct AmigoWeb {
 		std::string usuarioId, nombre, avatarUrl, estado, salaId, desde;
+	};
+
+	/// Un mensaje del chat general (contrato §27): el mismo chat global de la web.
+	struct MensajeGlobal {
+		long long id = 0;
+		std::string usuarioId, nombre, texto, hora, rol;   ///< hora hh:mm (Lima)
+		bool propio = false;
+	};
+	struct InfoChatGlobal {
+		bool cargado = false;      ///< ya llego al menos una respuesta
+		bool pausado = false;      ///< el staff apago chat_global
+		int esperaSeg = 0;         ///< anti-spam fijado por el admin (0 = sin espera)
+		long long rev = 0;         ///< sube cada vez que cambia la lista
+		std::string error;         ///< ultimo problema legible (vacio = todo bien)
+		std::vector<MensajeGlobal> mensajes;   ///< los ultimos 100, el mas viejo primero
+	};
+
+	/// Una noticia de «última hora» (GET /v1/noticias/ultima-hora, la escribe el staff en la web).
+	struct NoticiaWeb {
+		long long id = 0;
+		std::string texto, nivel, enlace, hora;   ///< nivel: info | importante | urgente; hora hh:mm (Lima)
 	};
 
 	/// Resultado de una petición pedida desde la interfaz (invitar, soltar rival).
@@ -94,6 +140,20 @@ namespace phoenix {
 		long long versionLiga();
 		std::string salaId();
 		int eventosEnCola();
+		/// Puente con el juego (contrato §25). Solo lectura de estado.
+		InfoBuzon buzon();
+		/// Repartidor de datos: estado de la ultima entrega y orden de deshacerla (la hace el hilo de Link).
+		InfoEntrega entrega();
+		void deshacerEntrega();
+		/// Barra de «última hora»: noticias vigentes que el staff publica en la web.
+		std::vector<NoticiaWeb> noticias();
+		bool noticiasCargadas();
+		/// Chat general (§27). Solo se pregunta con la ventana visible: rapido con el panel abierto, lento (para el contador) con el panel cerrado.
+		InfoChatGlobal chatGlobal();
+		void chatGlobalAbierto(bool abierto);
+		void enviarChatGlobal(uint64_t ticket, const std::string& texto);
+		/// PES2021.exe esta abierto (se mira cada ~5 s en el hilo de Link).
+		bool pesAbierto() const { return _pesAbierto.load(); }
 
 	private:
 		PhoenixLink() = default;
@@ -111,6 +171,12 @@ namespace phoenix {
 		bool pasoAmigos(const std::string& token);
 		bool pasoPerfiles(const std::string& token, const InstantaneaSala& foto);
 		bool pasoPedidos(const std::string& token, const std::string& salaId);
+		bool pasoBuzon(const std::string& token);
+		bool pasoChat(const std::string& token);
+		bool pasoNoticias(const std::string& token);
+		bool pasoEntrega();
+		void avisoLocal(const std::string& texto);
+		bool volcarBuzon(const std::filesystem::path& carpeta, std::vector<long long>* incluidosWeb);
 		void guardarEventos();   ///< con _mutex tomado
 		void cargarEventos();
 		void fallo(const std::string& codigo, const std::string& mensaje, int reintentarEn);
@@ -148,11 +214,47 @@ namespace phoenix {
 		std::string _etagAmigos;
 		std::vector<AmigoWeb> _amigos;
 		bool _amigosCargados = false;
+		// Última hora (protegido por _mutex)
+		std::vector<NoticiaWeb> _noticias;
+		bool _noticiasCargadas = false;
+		long long _proximoNoticiasMs = 0;
+		std::string _noticiasEtag;
+		// Chat general (protegido por _mutex)
+		std::vector<MensajeGlobal> _chatMsgs;
+		std::vector<std::pair<uint64_t, std::string>> _chatEnvios;   ///< ticket + texto por enviar
+		std::set<long long> _chatMios;
+		long long _chatUltimoId = 0, _chatRev = 0, _proximoChatMs = 0;
+		std::string _chatEtag, _chatError;
+		bool _chatAbierto = false, _chatCargado = false, _chatPausado = false;
+		int _chatEspera = 0, _chatSondeoSeg = 5;
 		struct Pedido { uint64_t ticket = 0; std::string tipo, usuarioId; };
 		std::vector<Pedido> _pedidos;
 		std::vector<ResultadoWeb> _resultados;
 		struct PerfilCache { std::string json; long long hastaMs = 0; };
 		std::map<uint32_t, PerfilCache> _perfiles;  ///< json vacío = sin cuenta vinculada
+		// Buzon del juego: el hilo de Link es el unico que toca estos; _buzonInfo se protege con _mutex
+		InfoBuzon _buzonInfo;
+		long long _buzonDetectaMs = 0;
+		long long _proximoBuzonMs = 0;
+		long long _buzonEntregaMs = 0;
+		int _buzonEspera = 0;
+		int _buzonSondeoSeg = 15;
+		std::string _buzonEtag;
+		std::string _buzonUltimoTexto;
+		std::vector<long long> _buzonPorEntregar;
+		std::wstring _buzonCarpeta;   ///< carpeta del buzon (solo si el juego esta abierto y el puente instalado)
+		int _buzonPuente = 0;        ///< 0 cerrado, 1 no instalado, 2 listo
+		std::vector<phoenix::buzon::Aviso> _buzonWeb;     ///< ultimos avisos que dio la web
+		std::vector<phoenix::buzon::Aviso> _buzonLocal;   ///< avisos propios de Link (entregas de datos), id negativo
+		long long _buzonLocalId = 0;
+		std::atomic<bool> _pesAbierto{ false };
+		long long _pesProximoMs = 0;
+		// Repartidor de datos: lo toca solo el hilo de Link; _entregaInfo se protege con _mutex
+		InfoEntrega _entregaInfo;
+		std::atomic<bool> _entregaDeshacer{ false };
+		long long _entregaProximoMs = 0;
+		bool _entregaCargada = false;
+		std::wstring _entregaCarpeta;
 		std::vector<uint32_t> _presentes;           ///< parsecIds en la sala (última foto)
 	};
 

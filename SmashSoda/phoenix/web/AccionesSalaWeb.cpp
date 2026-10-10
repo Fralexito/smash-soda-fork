@@ -192,6 +192,9 @@ namespace phoenix::web {
 
 		p.registrar("sala.abrir", [&in](const json&, uint64_t) -> std::optional<json> {
 			ProveedorSala& sala = salaObligatoria(in);
+			// Prueba «Solo PES 2021» (nivel estricto): sin PES abierto no se abre la sala
+			if (PhoenixPrefs::get().modoPes == "estricto" && phoenix::buzon::detectarJuego().puente == phoenix::buzon::Puente::JuegoCerrado)
+				throw ErrorAccion("PES_CERRADO", Tr(std::string("Abre PES 2021 primero: tienes activado «Solo PES 2021» (SYNC).")));
 			std::string error;
 			if (!sala.abrir(error)) throw ErrorAccion("NO_SE_PUDO_ABRIR", Tr(error.empty() ? std::string("No se pudo abrir la sala.") : error));
 			return json::object();
@@ -250,6 +253,19 @@ namespace phoenix::web {
 		});
 		p.registrar("web.desvincular", [](const json&, uint64_t) -> std::optional<json> {
 			PhoenixLink::instancia().desvincular();
+			return json::object();
+		});
+		// Chat general (contrato §27)
+		p.registrar("chatGlobal.enviar", [&in](const json& d, uint64_t id) -> std::optional<json> {
+			const std::string x = texto(d, "texto", 400);
+			if (x.empty()) throw ErrorAccion("DATOS_INVALIDOS", "Escribe un mensaje.");
+			const uint64_t ticket = in.siguienteTicket++;
+			in.pendientesWeb[ticket] = id;
+			PhoenixLink::instancia().enviarChatGlobal(ticket, x);
+			return std::nullopt; // responde cuando contesta la web
+		});
+		p.registrar("chatGlobal.abierto", [](const json& d, uint64_t) -> std::optional<json> {
+			PhoenixLink::instancia().chatGlobalAbierto(d.contains("abierto") && d["abierto"].is_boolean() && d["abierto"].get<bool>());
 			return json::object();
 		});
 		p.registrar("web.soltarRival", [&in](const json&, uint64_t id) -> std::optional<json> {

@@ -1,6 +1,6 @@
 /* =============================================================================
    Phoenix Link · Interfaz nueva (diseño v4)
-   Galaxy = cian + púrpura · Sudario = dorado + azul.
+   Galaxy = cian + púrpura · Liga B = dorado + azul.
    Movimiento: corto y firme (100–220 ms, solo transform/opacity); lo celebratorio
    puede rebotar. prefers-reduced-motion siempre respetado. Texto mínimo 12 px.
    ============================================================================= */
@@ -495,3 +495,85 @@ button.paso { cursor: pointer; }
 /* Descripción de la pestaña */
 .guia { display: flex; align-items: center; gap: 10px; color: var(--mut); font-size: 13px; margin-top: -6px; }
 .guia .acc { flex: none; }
+
+/* ---- Mandos › Bloqueo (mando dibujado) y Marionetas ------------------------------------------ */
+.mando-m { display: flex; flex-direction: column; gap: 22px; padding: 22px 18px; border: 1px solid var(--linea); border-radius: 28px; background: var(--hundido); max-width: 560px; width: 100%; margin: 0 auto; }
+.mm-fila { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.mm-sup { align-items: flex-start; }
+.mm-par { display: flex; flex-direction: column; gap: 8px; }
+.mm-centro { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.mm-bs { display: flex; gap: 8px; }
+.mm-grupo { display: flex; flex-direction: column; align-items: center; gap: 8px; flex: 1; }
+.mm-cruz { display: grid; grid-template-columns: repeat(3, 46px); grid-template-rows: repeat(3, 46px); gap: 3px; margin-top: 10px; }
+.mm-hueco { border-radius: 50%; background: rgba(255, 255, 255, .04); }
+.tecla-m { position: relative; min-width: 46px; min-height: 46px; padding: 0 12px; border-radius: 12px; border: 1.5px solid var(--linea-fuerte); background: var(--acc-suave); color: var(--fg); font: 600 13px/1 var(--f-mono); letter-spacing: .04em; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: transform .12s var(--ease), background .15s, border-color .15s; }
+.tecla-m:hover { transform: translateY(-1px); background: rgba(0, 229, 255, .22); }
+.tecla-m:active { transform: scale(.95); }
+.tecla-m.redondo { width: 96px; height: 96px; border-radius: 50%; font-size: 12px; }
+.tecla-m.bloq { border-color: var(--bad); background: rgba(255, 107, 128, .2); color: #ffd3da; box-shadow: 0 0 18px rgba(255, 107, 128, .25); }
+.tecla-m .cand { position: absolute; top: -7px; right: -7px; width: 20px; height: 20px; border-radius: 50%; background: var(--bad); color: #2a0610; display: inline-flex; align-items: center; justify-content: center; }
+.leyenda-m { display: flex; gap: 20px; justify-content: center; font: 500 12px var(--f-mono); color: var(--mut); }
+.leyenda-m .pt { display: inline-block; width: 12px; height: 12px; border-radius: 4px; margin-right: 8px; vertical-align: -2px; border: 1.5px solid var(--linea-fuerte); background: var(--acc-suave); }
+.leyenda-m .pt.bloq { border-color: var(--bad); background: rgba(255, 107, 128, .3); }
+.fila-mar { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 12px; border: 1px solid var(--tenue); background: rgba(0, 0, 0, .18); }
+.fila-mar.es { border-color: var(--acc); background: var(--acc-suave); }
+.fila-mar .luz { width: 12px; height: 12px; border-radius: 50%; background: rgba(255, 255, 255, .15); flex: none; transition: background .1s, box-shadow .1s; }
+.fila-mar .luz.on { background: var(--ok); box-shadow: 0 0 12px var(--ok); }
+.titere { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 6px; border-radius: 12px; border: 1.5px dashed rgba(255, 255, 255, .22); background: rgba(0, 0, 0, .2); color: var(--mut); cursor: pointer; transition: all .15s; }
+.titere.on { border: 1.5px solid var(--acc); background: var(--acc-suave); color: var(--fg); }
+.titere:disabled { opacity: .45; cursor: not-allowed; }
+
+/* ---- Mandos › Teclado (mapa de teclas) -------------------------------------------------------- */
+.tk { min-width: 62px; min-height: 54px; padding: 4px 8px; border-radius: 12px; border: 1.5px solid var(--linea-fuerte); background: var(--acc-suave); color: var(--fg); cursor: pointer; display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; transition: transform .12s var(--ease), background .15s, border-color .15s; }
+.tk:hover { transform: translateY(-1px); background: rgba(0, 229, 255, .22); }
+.tk .pad { font: 600 11px var(--f-mono); color: var(--mut); letter-spacing: .04em; }
+.tk .kc { font: 700 14px var(--f-mono); max-width: 78px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tk.vacio .kc { color: var(--mut); }
+.tk.esperando { border-color: var(--warn); background: rgba(255, 181, 71, .2); animation: tkparpadeo 1s ease-in-out infinite; }
+@keyframes tkparpadeo { 50% { box-shadow: 0 0 18px rgba(255, 181, 71, .45); } }
+.mm-cruz2 { display: grid; grid-template-columns: repeat(3, 62px); grid-template-rows: repeat(3, 54px); gap: 4px; }
+.mm-cruz2 > span { display: block; }
+.chip-perfil { padding: 7px 14px; border-radius: 999px; border: 1px solid var(--tenue); background: rgba(255, 255, 255, .04); color: var(--fg); font: 600 12px var(--f-mono); cursor: pointer; }
+.chip-perfil.on { border-color: var(--acc); background: var(--acc-suave); color: var(--acc); }
+/* Estados de presencia (ACTIVO / JUGANDO / EN SALA) */
+.punto.acc { background: var(--acc); box-shadow: 0 0 10px var(--acc); }
+.punto.mor { background: var(--acc2); box-shadow: 0 0 10px var(--acc2); }
+.resumen-presencia { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.resumen-presencia .semaforo { padding: 7px 12px; border-radius: 999px; border: 1px solid var(--tenue); background: rgba(255, 255, 255, .03); font-size: 13px; }
+/* Chat general (pestañas GENERAL / SALA) */
+.chat .seg button { position: relative; padding: 0 12px; }
+.chat .seg .cuenta { margin-left: 6px; min-width: 16px; height: 16px; padding: 0 4px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; background: var(--bad); color: #fff; font: 700 10px/1 var(--f-mono); letter-spacing: 0; }
+.chat .sub-chat { padding: 8px 14px 0; font-size: 12px; color: var(--mut); }
+.chat .aviso-chat { margin: 8px 14px 0; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--tenue); background: rgba(255, 181, 71, .1); color: var(--warn); font-size: 12px; line-height: 1.4; }
+.chat .linea.global .hora { color: var(--mut); font: 11px var(--f-mono); margin-right: 6px; }
+.chat .linea.global.propia .quien { color: var(--acc2); }
+.chat .campo:disabled, .chat .btn:disabled { opacity: .5; cursor: not-allowed; }
+/* Barra de última hora (cabecera): discreta; solo respira si es importante o urgente */
+.ultima-hueco { flex: 1 1 0; min-width: 0; display: flex; justify-content: center; padding: 0 8px; }
+@media (max-width: 1100px) { .ultima-hueco { display: none; } }
+.ultima-caja { position: relative; min-width: 0; max-width: 560px; width: 100%; }
+.ultima { display: flex; align-items: center; gap: 9px; width: 100%; min-width: 0; height: 30px; padding: 0 12px; border-radius: 15px; border: 1px solid transparent;
+  background: rgba(255, 255, 255, .025); color: var(--mut); cursor: pointer; font: 500 12px/1 var(--f-body, inherit); text-align: left;
+  animation: ultima-entra .9s var(--ease) both; transition: background .2s var(--ease), border-color .2s var(--ease), color .2s var(--ease); }
+.ultima:hover, .ultima[aria-expanded="true"] { background: rgba(255, 255, 255, .05); border-color: var(--tenue); color: var(--txt, #e8ecff); }
+.ultima .u-punto { flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--acc); opacity: .75; }
+.ultima .u-et { flex: none; font: 600 10px/1 var(--f-disp); letter-spacing: .16em; color: var(--acc); opacity: .85; }
+.ultima .u-texto { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ultima .u-n { flex: none; font: 500 10px/1 var(--f-mono); opacity: .5; }
+.ultima.nv-importante .u-punto, .ultima.nv-importante .u-et { color: var(--warn); background: var(--warn); }
+.ultima.nv-importante .u-et { background: none; }
+.ultima.nv-urgente .u-punto { background: var(--bad); }
+.ultima.nv-urgente .u-et { color: var(--bad); }
+.ultima.nv-importante .u-punto, .ultima.nv-urgente .u-punto { opacity: 1; animation: ultima-respira 2.8s ease-in-out infinite; }
+@keyframes ultima-entra { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+@keyframes ultima-respira { 0%, 100% { box-shadow: 0 0 0 0 transparent; opacity: .55; } 50% { box-shadow: 0 0 9px 1px currentColor; opacity: 1; } }
+.ultima.nv-importante .u-punto { color: var(--warn); }
+.ultima.nv-urgente .u-punto { color: var(--bad); }
+.ultima-detalle { position: absolute; z-index: 60; top: calc(100% + 10px); left: 50%; transform: translateX(-50%); width: min(420px, 90vw); padding: 14px 16px; border-radius: 14px;
+  border: 1px solid var(--linea); background: var(--panel); box-shadow: 0 18px 50px rgba(0, 0, 0, .55); animation: ultima-entra .22s var(--ease) both; }
+.ultima-detalle .u-cab { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.ultima-detalle .u-et { font: 600 10px/1 var(--f-disp); letter-spacing: .16em; color: var(--acc); }
+.ultima-detalle.nv-importante .u-et { color: var(--warn); }
+.ultima-detalle.nv-urgente .u-et { color: var(--bad); }
+.ultima-detalle .u-cuerpo { font-size: 14px; line-height: 1.5; user-select: text; word-break: break-word; }
+@media (prefers-reduced-motion: reduce) { .ultima, .ultima-detalle, .ultima .u-punto { animation: none !important; } }

@@ -17,6 +17,9 @@ export const PESTANAS_SALA = [
   { id: "actividad", es: "ACTIVIDAD", en: "ACTIVITY", d: ["Todo lo que pasó en la sala, del más nuevo al más viejo.", "Everything that happened in the room."] },
 ];
 
+// Parches conocidos. Para agregar uno nuevo basta con añadir su nombre aquí.
+export const PARCHES = ["Conmegol Patch 26", "Original (sin parche)"];
+
 export const PRESETS_CALIDAD = [
   { id: "ligero", es: "LIGERO", en: "LIGHT", fps: 60, mbps: 8, d: ["Internet modesto o muchos invitados.", "Modest internet or many guests."] },
   { id: "equilibrado", es: "EQUILIBRADO", en: "BALANCED", fps: 60, mbps: 15, d: ["Lo recomendado para la liga.", "Recommended for league play."] },
@@ -61,27 +64,41 @@ export async function cerrarSala(m) {
 function Heroe({ m }) {
   const sala = m.sala;
   useSegundos(sala.segundos);
-  const titulo = sala.phoenix?.juego || sala.opciones?.nombre || "eFootball PES 2021";
+  const titulo = sala.opciones?.nombre || sala.phoenix?.juego || "eFootball PES 2021";
+  const detalle = [sala.phoenix?.juego, sala.phoenix?.parche].filter((x) => x && x !== titulo).join(" · ");
   if (!sala.abierta) {
-    return html`<${Tarjeta} clase="heroe" estilo="min-height:236px" interior="padding:26px 30px;display:flex;justify-content:space-between;gap:24px">
-      <div style="display:flex;flex-direction:column;min-width:0;flex:1">
-        <div class="lab">${t("SALA CERRADA", "ROOM CLOSED")}</div>
-        <div class="grande degradado" style="margin-top:12px">${titulo}</div>
-        <div class="ayuda" style="margin-top:8px;font-size:14px">
-          ${sala.lista
-            ? t("Abre la sala y comparte el enlace. Tú decides quién juega y quién mira.", "Open the room and share the link. You decide who plays and who watches.")
-            : t("Parsec se está preparando. Si tarda, revisa Ajustes › Diagnóstico.", "Parsec is getting ready. If it takes long, check Settings › Diagnostics.")}
+    return html`<${Tarjeta} clase="heroe" estilo="flex:1;min-height:236px" interior="padding:26px 30px;display:flex;flex-direction:column;gap:18px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:24px;flex-wrap:wrap">
+        <div style="display:flex;flex-direction:column;min-width:0;flex:1 1 320px">
+          <div class="lab">${t("SALA CERRADA", "ROOM CLOSED")}</div>
+          <div class="grande degradado" style="margin-top:12px;font-size:56px">${titulo}</div>
+          ${detalle ? html`<div class="mono mut" style="margin-top:6px;font-size:13px;letter-spacing:.08em">${detalle}</div>` : null}
+          <div class="ayuda" style="margin-top:8px;font-size:14px">
+            ${sala.lista
+              ? t("Abre la sala y comparte el enlace. Tú decides quién juega y quién mira.", "Open the room and share the link. You decide who plays and who watches.")
+              : t("Parsec se está preparando. Si tarda, revisa Ajustes › Diagnóstico.", "Parsec is getting ready. If it takes long, check Settings › Diagnostics.")}
+          </div>
         </div>
-        <div style="margin-top:auto;padding-top:18px;display:flex;gap:10px;flex-wrap:wrap">
-          <${Boton} tipo="lleno enorme" deshabilitado=${!sala.lista} al=${abrirSala}><${Icono} n="rayo" t=${18}/>${t("ABRIR SALA", "OPEN ROOM")}</${Boton}>
-          <${Boton} tipo="suave enorme" al=${() => irA("sala", "opciones")}>${t("OPCIONES", "OPTIONS")}</${Boton}>
+        <div class="derecha" style="display:flex;gap:12px;flex:none">
+          <div class="caja" style="min-width:120px;display:flex;flex-direction:column;gap:4px">
+            <div class="lab">${t("PLAZAS", "SLOTS")}</div>
+            <div class="disp" style="font-size:40px;font-weight:700;line-height:1;margin-top:6px">${sala.plazas}</div>
+            <div class="mono mut" style="font-size:12px">${t("invitados a la vez", "guests at once")}</div>
+          </div>
+          <div class="caja" style="min-width:120px;display:flex;flex-direction:column;gap:4px">
+            <div class="lab">${t("VISIBILIDAD", "VISIBILITY")}</div>
+            <div class="disp" style="font-size:28px;font-weight:700;line-height:1.2;margin-top:10px">${textoVisibilidad(sala.phoenix?.visibilidad)}</div>
+            <div class="mono mut" style="font-size:12px">${t("quién ve tu sala", "who sees your room")}</div>
+          </div>
         </div>
-        <${ListaParaAbrir} m=${m}/>
       </div>
-      <div class="derecha" style="width:190px;display:flex;flex-direction:column;gap:10px;text-align:right">
-        <div class="lab">${t("PLAZAS", "SLOTS")}</div>
-        <div class="numeral">${dos(sala.plazas)}</div>
-        <div class="ayuda">${t("Visibilidad", "Visibility")}: <b>${textoVisibilidad(sala.phoenix?.visibilidad)}</b></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <${Boton} tipo="lleno enorme" deshabilitado=${!sala.lista} al=${abrirSala}><${Icono} n="rayo" t=${18}/>${t("ABRIR SALA", "OPEN ROOM")}</${Boton}>
+        <${Boton} tipo="suave enorme" al=${() => irA("sala", "opciones")}>${t("OPCIONES", "OPTIONS")}</${Boton}>
+      </div>
+      <div style="margin-top:auto">
+        <div class="lab acc" style="margin-bottom:10px">${t("ANTES DE ABRIR", "BEFORE OPENING")}</div>
+        <${ListaParaAbrir} m=${m}/>
       </div>
     </${Tarjeta}>`;
   }
@@ -90,7 +107,9 @@ function Heroe({ m }) {
     <div style="display:flex;flex-direction:column;min-width:0;flex:1">
       <div class="lab acc">${t("SALA EN VIVO", "LIVE ROOM")}</div>
       <div class="grande degradado" style="margin-top:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${titulo}</div>
+      ${detalle ? html`<div class="mono mut" style="margin-top:6px;font-size:13px;letter-spacing:.08em">${detalle}</div>` : null}
       <div class="ayuda" style="margin-top:8px;font-size:14px">${t("Los invitados entran con el enlace. Tú decides quién juega y quién mira.", "Guests join with the link. You decide who plays and who watches.")}</div>
+      <${PingSala} m=${m}/>
       <div style="margin-top:auto;padding-top:16px;display:flex;gap:10px;align-items:center">
         <div class="campo mono" style="flex:1;display:flex;align-items:center;height:44px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;user-select:text">${sala.enlace || t("Generando enlace…", "Generating link…")}</div>
         <${Boton} tipo="" estilo="height:44px" deshabilitado=${!sala.enlace} al=${copiar}>${t("COPIAR", "COPY")}</${Boton}>
@@ -105,6 +124,25 @@ function Heroe({ m }) {
   </${Tarjeta}>`;
 }
 
+// Ping de cada invitado a la vista: verde hasta 50 ms, naranja de 50 a 120, rojo de 120 para arriba.
+function PingSala({ m }) {
+  const lista = (m.red || []).filter((r) => r.presente);
+  if (lista.length === 0) return html`<div class="mono mut" style="margin-top:14px;font-size:12px;letter-spacing:.1em">${t("PING DE LA SALA · esperando invitados", "ROOM PING · waiting for guests")}</div>`;
+  return html`<div style="margin-top:14px;display:flex;flex-direction:column;gap:8px">
+    <div class="mono mut" style="font-size:12px;letter-spacing:.1em">${t("PING DE LA SALA", "ROOM PING")}</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">${lista.map((r) => {
+      const ms = r.ultimo >= 0 ? r.ultimo : r.media;
+      const c = colorPing(ms);
+      return html`<div key=${r.parsecId} title=${t("Media ", "Avg ") + (r.media >= 0 ? r.media : "—") + " ms"}
+        style=${`display:flex;align-items:center;gap:8px;padding:6px 12px;border-radius:999px;border:1px solid ${c};background:rgba(0,0,0,.25)`}>
+        <span style=${`width:8px;height:8px;border-radius:50%;background:${c}`}></span>
+        <span style="font-size:13px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.nombre || "—"}</span>
+        <span class="mono" style=${`font-size:13px;font-weight:600;color:${c}`}>${ms >= 0 ? ms + " ms" : "—"}</span>
+      </div>`;
+    })}</div>
+  </div>`;
+}
+
 function ListaParaAbrir({ m }) {
   const mandos = m.mandos?.lista || [];
   const conectados = mandos.filter((p) => p.conectado).length;
@@ -113,9 +151,9 @@ function ListaParaAbrir({ m }) {
     { ok: m.sala.lista, mal: !m.sala.lista, t: t("Parsec listo", "Parsec ready"), d: m.sala.lista ? (m.sala.cuentaHost || t("Sesión iniciada", "Signed in")) : t("Preparando…", "Starting…"), ir: ["ajustes", "diagnostico"] },
     { ok: conectados > 0, mal: mandos.length === 0, t: t("Mandos virtuales", "Virtual pads"), d: mandos.length ? `${conectados}/${mandos.length} ${t("conectados", "connected")}` : t("Falta ViGEmBus", "ViGEmBus missing"), ir: ["mandos", "puestos"] },
     { ok: web === "conectado", mal: web === "sin_conexion", t: t("Web de la liga", "League website"), d: web === "conectado" ? (m.web.usuario || t("Vinculada", "Linked")) : web === "sin_vincular" ? t("Toca para vincular", "Tap to link") : t("Sin conexión", "Offline"), ir: ["ajustes", "web"] },
-    { ok: (m.sala.plazas || 0) > 0, mal: false, t: t("Plazas", "Slots"), d: `${m.sala.plazas} ${t("invitados a la vez", "guests at once")}`, ir: ["sala", "opciones"] },
+    { ok: (m.sala.calidad?.fps || 0) > 0, mal: false, t: t("Conexión", "Connection"), d: `${m.sala.calidad?.fps ?? "—"} FPS · ${m.sala.calidad?.mbps ?? "—"} MBPS`, ir: ["sala", "red"] },
   ];
-  return html`<div class="pasos" style="margin-top:16px">${pasos.map((p) => html`
+  return html`<div class="pasos" style="margin-top:0">${pasos.map((p) => html`
     <button class=${cx("paso", p.ok ? "ok" : p.mal ? "mal" : "falta")} onClick=${() => irA(p.ir[0], p.ir[1])}>
       <span class="marca-paso">${p.ok ? "✓" : p.mal ? "×" : "!"}</span>
       <span style="min-width:0"><div class="t">${p.t}</div><div class="d">${p.d}</div></span>
@@ -131,28 +169,28 @@ function PuestosResumen({ m }) {
   const activos = lista.filter((x) => x.equipo !== "fuera");
   const visibles = (activos.length ? activos : lista).slice(0, 8);
   const ocupados = visibles.filter((x) => x.ocupado).length;
-  return html`<${Tarjeta} estilo="flex:1;min-height:220px" interior="padding:22px 26px;display:flex;flex-direction:column;gap:16px">
+  return html`<${Tarjeta} estilo="flex:none" interior="padding:18px 22px;display:flex;flex-direction:column;gap:12px">
     <div style="display:flex;justify-content:space-between;align-items:center">
       <div class="lab acc">${t("PUESTOS", "SEATS")}</div>
       <button class="mono mut" style="background:none;border:0;cursor:pointer;font-size:13px" onClick=${() => irA("mandos", "puestos")}>
-        ${ocupados} ${t("DE", "OF")} ${visibles.length} ${t("OCUPADOS", "TAKEN")} ›</button>
+        ${ocupados} ${t("DE", "OF")} ${visibles.length} ${t("OCUPADOS", "TAKEN")} › ${t("ver y arrastrar", "view and drag")}</button>
     </div>
     ${visibles.length === 0
       ? html`<div class="ayuda">${t("No hay mandos virtuales. Revisa Ajustes › Diagnóstico (ViGEmBus).", "No virtual pads. Check Settings › Diagnostics (ViGEmBus).")}</div>`
-      : html`<div class="rej4" style="flex:1">${visibles.map((p) => html`<${MiniPuesto} p=${p} key=${p.n}/>`)}</div>`}
+      : html`<div class="rej4">${visibles.map((p) => html`<${MiniPuesto} p=${p} key=${p.n}/>`)}</div>`}
   </${Tarjeta}>`;
 }
 
 function MiniPuesto({ p }) {
   const ping = p.ocupado && p.ping >= 0 ? p.ping : null;
-  const color = ping == null ? "rgba(255,255,255,.25)" : colorPing(ping);
-  return html`<div class=${cx("puesto", p.equipo, p.ocupado ? "ocupado" : "libre")} style="min-height:150px">
-    <div class="numeral">${dos(p.n)}</div>
-    <div class="nombre" style="margin-top:6px">${p.ocupado ? p.jugador : t("Puesto libre", "Free seat")}</div>
-    <div class="mono mut" style="font-size:12px">${p.ocupado ? `${p.equipo === "local" ? "LOCAL" : p.equipo === "visitante" ? t("VISITA", "AWAY") : "—"} · ${p.tipo === "ds4" ? "DS4" : "XBOX"}` : t("Esperando jugador", "Waiting for player")}${p.bloqueado ? " · 🔒" : ""}</div>
-    <div style="margin-top:auto">
-      <div class="mono" style=${`display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;color:${color}`}><span>PING</span><span>${ping == null ? "—" : ping + " ms"}</span></div>
-      <div class="medidor"><i style=${`width:${ping == null ? 0 : Math.min(100, ping * 0.9)}%;background:${color}`}></i></div>
+  return html`<div class=${cx("puesto", p.equipo, p.ocupado ? "ocupado" : "libre")}
+      style=${`min-height:0;flex-direction:row;align-items:center;gap:14px;padding:12px 14px;${p.ocupado ? "" : "border-style:dashed;border-width:1.5px;border-color:rgba(255,255,255,.2);background:rgba(0,0,0,.2)"}`}>
+    <div class="numeral" style="font-size:38px;flex:none">${dos(p.n)}</div>
+    <div style="min-width:0;flex:1">
+      <div class="nombre" style=${`font-size:15px;${p.ocupado ? "" : "color:var(--mut)"}`}>${p.ocupado ? p.jugador : t("Puesto libre", "Free seat")}</div>
+      <div class="mono mut" style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.ocupado
+        ? html`${p.equipo === "local" ? "LOCAL" : p.equipo === "visitante" ? t("VISITA", "AWAY") : "—"}${ping != null ? html` · <span style=${`color:${colorPing(ping)}`}>${ping} ms</span>` : null}${p.bloqueado ? " · 🔒" : ""}`
+        : t("esperando jugador", "waiting for player")}</div>
     </div>
   </div>`;
 }
@@ -185,7 +223,11 @@ function ActividadResumen({ s }) {
   return html`<${Tarjeta} estilo="flex:1;min-height:0" interior="padding:22px;display:flex;flex-direction:column;gap:14px;overflow:hidden">
     <div style="display:flex;justify-content:space-between"><div class="lab acc">${t("ACTIVIDAD", "ACTIVITY")}</div>
       <button class="mono mut" style="background:none;border:0;cursor:pointer;font-size:12px" onClick=${() => irA("sala", "actividad")}>${t("VER TODO", "SEE ALL")} ›</button></div>
-    ${ultimas.length === 0 ? html`<div class="ayuda">${t("Aquí aparecerá lo que pase en la sala.", "Room events will show up here.")}</div>` : null}
+    ${ultimas.length === 0 ? html`<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;padding:0 24px">
+      <span style="color:var(--mut);opacity:.7"><${Icono} n="rayo" t=${40} w=${1.3}/></span>
+      <div style="font:600 16px/1.2 var(--f-body)">${t("Todo tranquilo por ahora", "All quiet for now")}</div>
+      <div class="ayuda" style="font-size:14px">${t("Aquí verás quién entra, quién sale y los avisos de la sala en cuanto la abras.", "You will see who joins, who leaves and room notices here once the room is open.")}</div>
+    </div>` : null}
     ${ultimas.map((e) => html`<div key=${e.id} style="display:flex;gap:12px;align-items:flex-start;padding-bottom:12px;border-bottom:1px solid var(--tenue)">
       <span class="punto" style=${`margin-top:6px;background:${colorLinea(e.texto)}`}></span>
       <div style="min-width:0"><div style="font-size:14px;word-break:break-word">${e.texto}</div>
@@ -196,11 +238,11 @@ function ActividadResumen({ s }) {
 
 function ResumenSala({ s, m }) {
   return html`<div class="fila resumen" style="min-height:100%">
-    <div class="col" style="flex:1.6">
+    <div class="col" style="flex:1 1 0">
       <${Heroe} m=${m}/>
       <${PuestosResumen} m=${m}/>
     </div>
-    <div class="col" style="flex:1">
+    <div class="col" style="flex:0 0 clamp(360px,25vw,440px)">
       <${Indicadores} m=${m}/>
       <${ActividadResumen} s=${s}/>
     </div>
@@ -331,7 +373,13 @@ function JuegosSala({ m }) {
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
         ${["eFootball PES 2021", "SP Football Life 2026"].map((j) => html`<button class=${cx("tab", ph.juego === j && "on")} onClick=${() => phx({ juego: j })}>${j}</button>`)}
       </div>
-      <${Ajuste} bloque titulo=${t("Parche", "Patch")}><${Campo} valor=${ph.parche} max=${60} al=${(v) => phx({ parche: v })}/></${Ajuste}>
+      <${Ajuste} bloque titulo=${t("Parche", "Patch")} desc=${t("Elige uno de la lista. Si el tuyo no está, escríbelo abajo.", "Pick one from the list. If yours is missing, type it below.")}>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          ${[...PARCHES, ...(ph.parche && !PARCHES.includes(ph.parche) ? [ph.parche] : [])].map((p) => html`<button key=${p} class=${cx("tab", ph.parche === p && "on")} onClick=${() => phx({ parche: p })}>${p}</button>`)}
+        </div>
+        <div class="ayuda" style="margin:12px 0 6px">${t("Otro parche (extra, escríbelo)", "Other patch (extra, type it)")}</div>
+        <${Campo} valor=${PARCHES.includes(ph.parche) ? "" : ph.parche} max=${60} al=${(v) => v.trim() && phx({ parche: v.trim() })}/>
+      </${Ajuste}>
       <${Ajuste} bloque titulo=${t("Región", "Region")} desc=${t("Ayuda a que te encuentren rivales cercanos.", "Helps nearby rivals find you.")}>
         <${Campo} valor=${ph.region} max=${40} al=${(v) => phx({ region: v })}/></${Ajuste}>
     </${Tarjeta}>

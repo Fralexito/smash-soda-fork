@@ -191,6 +191,8 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 set_source_files_properties(
     "${CMAKE_CURRENT_SOURCE_DIR}/WGCapture.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/link/Http.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/link/BuzonJuego.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/link/Entrega.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/link/PhoenixLink.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/web/AnfitrionWeb.cpp"
     PROPERTIES

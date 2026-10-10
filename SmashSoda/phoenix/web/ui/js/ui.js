@@ -12,6 +12,7 @@ const TRAZOS = {
   partido: html`<path d="M6 21V4h11l-2 4 2 4H6"/>`,
   mandos: html`<rect x="2.5" y="7" width="19" height="10" rx="5"/><path d="M8 10v4M6 12h4M16 11h.01M18 13h.01"/>`,
   gente: html`<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-4 3-6 6.5-6s6.5 2 6.5 6M16 5a3.5 3.5 0 010 6.5M18 14c2.5.7 3.5 2.7 3.5 6"/>`,
+  sync: html`<path d="M4 12a8 8 0 0113.7-5.7L20 8M20 4v4h-4M20 12a8 8 0 01-13.7 5.7L4 16M4 20v-4h4"/>`,
   ajustes: html`<path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>`,
   chat: html`<path d="M4 5h16v11H9l-5 4z"/>`,
   copiar: html`<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 00-1-1H5a1 1 0 00-1 1v10a1 1 0 001 1h3"/>`,
@@ -39,10 +40,7 @@ export function Icono({ n, t = 20, w = 1.6, color = "currentColor" }) {
 }
 
 export function Logo({ t = 36 }) {
-  return html`<svg width=${t} height=${t} viewBox="0 0 36 36" fill="none" stroke="var(--acc)" stroke-width="2" aria-label="Phoenix Link">
-    <path d="M18 3l13 7.5v15L18 33 5 25.5v-15z"/>
-    <path d="M18 11c3 4 5 6 5 9a5 5 0 01-10 0c0-2 1-3 2-4 .5 2 1.5 2.5 2.5 2.5C17 15 17 13 18 11z" fill="var(--acc2)" stroke="none"/>
-  </svg>`;
+  return html`<img src="logo.png" width=${t} height=${t} alt="Phoenix Link" draggable="false" style="display:block;flex:none"/>`;
 }
 
 // ---- Contenedores ----------------------------------------------------------------
@@ -202,7 +200,7 @@ export function Avatar({ nombre = "?", url = "", t = 40, brillo = false, id = 0 
   </span>`;
 }
 
-export function colorPing(ms, umbral = [60, 100]) {
+export function colorPing(ms, umbral = [50, 120]) {
   if (ms == null || ms < 0) return "var(--mut)";
   if (ms <= umbral[0]) return "var(--ok)";
   if (ms <= umbral[1]) return "var(--warn)";

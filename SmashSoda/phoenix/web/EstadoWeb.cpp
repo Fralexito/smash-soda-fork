@@ -17,6 +17,7 @@
 #include "../core/ProveedorSala.h"
 #include "../core/Solicitudes.h"
 #include "../core/MandoHost.h"
+#include "../../core/MasterOfPuppets.h"
 #include "../link/PhoenixLink.h"
 
 namespace phoenix::web {
@@ -255,7 +256,59 @@ namespace phoenix::web {
 				{"bloqueoGlobal", gc.lock}, {"bloqueoBotones", gc.lockButtons}, {"esclavo", gc.isSlave},
 				{"xbox", Config::cfg.input.xboxPuppetCount}, {"ds4", Config::cfg.input.ds4PuppetCount},
 				{"reiniciando", in.reiniciandoMandos},
+				{"botonesBloq", {
+					{"mascara", static_cast<unsigned int>(h._lockedGamepad.wButtons)},
+					{"lt", h._lockedGamepad.bLeftTrigger}, {"rt", h._lockedGamepad.bRightTrigger},
+					{"lx", h._lockedGamepad.sThumbLX}, {"ly", h._lockedGamepad.sThumbLY},
+					{"rx", h._lockedGamepad.sThumbRX}, {"ry", h._lockedGamepad.sThumbRY},
+				}},
 			};
+
+			// Teclado: perfiles de teclas (qué tecla es cada botón del mando)
+			if (in.seccion == "mandos" && in.pestana == "teclado") {
+				KeyboardMap& km = gc.getKeyMap();
+				json perfiles = json::array();
+				for (const KeyboardProfile& pf : km.profiles) {
+					json teclas = json::array();
+					for (size_t i = 0; i < km.buttonNamesLower.size() && i < pf.keyMap.size(); i++) {
+						const uint16_t v = pf.keyMap[i];
+						teclas.push_back({ {"b", km.buttonNamesLower[i]}, {"v", static_cast<int>(v)}, {"e", v != 0 ? KeyboardMapsUtil::getKeyToString(v) : std::string()} });
+					}
+					perfiles.push_back({ {"userId", static_cast<int64_t>(pf.userID)}, {"nombre", pf.name}, {"teclas", teclas} });
+				}
+				e["teclado"] = { {"perfiles", perfiles} };
+			}
+
+			// Marionetas: un mando físico (maestro) maneja los mandos virtuales marcados (títeres)
+			if (in.seccion == "mandos" && in.pestana == "marionetas") {
+				MasterOfPuppets& mp = MasterOfPuppets::instance;
+				std::lock_guard<std::mutex> cierre(mp.inputMutex);
+				json maestros = json::array();
+				int maestro = mp.getMasterIndex();
+				if (mp.isSDLEngine) {
+					std::vector<SDLGamepad>& v = mp.getSDLGamepads();
+					for (size_t i = 0; i < v.size(); i++) {
+						const char* nombre = v[i].joystick != nullptr ? SDL_JoystickName(v[i].joystick) : nullptr;
+						const char* tipo = v[i].type == SDLGamepad::Type::DS4 ? "ds4" : (v[i].type == SDLGamepad::Type::DS ? "dualshock" : "xbox");
+						const bool activo = v[i].getGamepadState().state.Gamepad.wButtons != 0;
+						maestros.push_back({ {"n", static_cast<int>(i) + 1}, {"nombre", nombre != nullptr ? nombre : "Mando"}, {"tipo", tipo}, {"activo", activo} });
+					}
+					if (maestro >= static_cast<int>(v.size())) maestro = -1;
+				}
+				else {
+					std::vector<GamepadState>& v = mp.getXInputGamepads();
+					for (size_t i = 0; i < v.size(); i++) {
+						maestros.push_back({ {"n", static_cast<int>(i) + 1}, {"nombre", "Mando " + std::to_string(i + 1)}, {"tipo", "xinput"}, {"activo", v[i].state.Gamepad.wButtons != 0} });
+					}
+					if (maestro >= static_cast<int>(v.size())) maestro = -1;
+				}
+				json titeres = json::array();
+				for (size_t i = 0; i < gc.gamepads.size(); i++) {
+					if (gc.gamepads[i] == nullptr) continue;
+					titeres.push_back({ {"n", static_cast<int>(i) + 1}, {"activo", gc.gamepads[i]->isPuppet} });
+				}
+				e["marionetas"] = { {"motor", mp.isSDLEngine ? "sdl" : "xinput"}, {"maestro", maestro}, {"maestros", maestros}, {"titeres", titeres} };
+			}
 		}
 
 		// ---- Solicitudes y espera -------------------------------------------
@@ -324,6 +377,28 @@ namespace phoenix::web {
 		}
 		e["red"] = red;
 
+		{
+			const InfoBuzon bz = link.buzon();
+			const char* nombres[] = { "apagado", "cerrado", "noinstalado", "conectado", "sinconexion" };
+			json avisosBz = json::array();
+			for (const AvisoBuzon& a : bz.avisos) avisosBz.push_back({ {"id", a.id}, {"texto", a.texto}, {"hora", a.hora}, {"escrito", a.escrito} });
+			e["buzon"] = { {"activo", PhoenixPrefs::get().avisosEnJuego}, {"estado", nombres[static_cast<int>(bz.estado)]}, {"ultimo", bz.ultimo},
+				{"juego", bz.juego}, {"parche", bz.parche}, {"avisos", avisosBz} };
+			{
+				const InfoChatGlobal cg = link.chatGlobal();
+				e["chatGlobal"] = { {"cargado", cg.cargado}, {"pausado", cg.pausado}, {"esperaSeg", cg.esperaSeg}, {"rev", cg.rev}, {"error", cg.error} };
+			}
+			{
+				json ns = json::array();
+				for (const NoticiaWeb& n : link.noticias()) ns.push_back({ {"id", n.id}, {"texto", n.texto}, {"nivel", n.nivel}, {"enlace", n.enlace}, {"hora", n.hora} });
+				e["noticias"] = { {"cargado", link.noticiasCargadas()}, {"lista", ns} };
+			}
+			e["pes"] = { {"modo", PhoenixPrefs::get().modoPes}, {"abierto", link.pesAbierto()} };
+			const InfoEntrega en = link.entrega();
+			e["entrega"] = { {"estado", en.estado}, {"id", en.id}, {"resumen", en.resumen}, {"motivo", en.motivo},
+				{"fecha", en.fecha}, {"puedeDeshacer", en.puedeDeshacer} };
+		}
+
 		e["partido"] = in.partido.comoJson(ahora);
 		e["turnos"] = estadoTurnos();
 		if (in.seccion == "ajustes" && in.pestana == "audio") e["audio"] = estadoAudio(h);
@@ -339,6 +414,16 @@ namespace phoenix::web {
 	}
 
 	// =========================================================================
+	// Chat general (contrato §27) en JSON para la interfaz.
+	static json chatGlobalJson(const InfoChatGlobal& c) {
+		json ms = json::array();
+		for (const MensajeGlobal& m : c.mensajes) {
+			ms.push_back({ {"id", m.id}, {"usuarioId", m.usuarioId}, {"nombre", m.nombre}, {"texto", m.texto}, {"hora", m.hora}, {"rol", m.rol}, {"propio", m.propio} });
+		}
+		return { {"cargado", c.cargado}, {"pausado", c.pausado}, {"esperaSeg", c.esperaSeg}, {"rev", c.rev}, {"error", c.error}, {"mensajes", ms} };
+	}
+	static long long chatGlobalRevVista = -1;
+
 	json construirBienvenida(Interno& in) {
 		json b;
 		b["protocolo"] = 1;
@@ -351,6 +436,11 @@ namespace phoenix::web {
 		b["resoluciones"] = resoluciones;
 		b["chat"] = json::array();
 		b["actividad"] = json::array();
+		{
+			const InfoChatGlobal cg = PhoenixLink::instancia().chatGlobal();
+			chatGlobalRevVista = cg.rev;
+			b["chatGlobal"] = chatGlobalJson(cg);
+		}
 		if (in.ctx.hosting != nullptr) {
 			Hosting& h = *in.ctx.hosting;
 			if (in.listaPantallas.empty()) {
@@ -437,6 +527,15 @@ namespace phoenix::web {
 				h.audioOut.captureAudio();
 			}
 			catch (...) {}
+		}
+
+		// Chat general: solo se manda la lista cuando cambió (lo normal es nada)
+		if (web) {
+			const InfoChatGlobal cg = PhoenixLink::instancia().chatGlobal();
+			if (cg.rev != chatGlobalRevVista) {
+				chatGlobalRevVista = cg.rev;
+				in.puente->evento("chatglobal", chatGlobalJson(cg));
+			}
 		}
 
 		// Chat y actividad nuevos → eventos; aviso (parpadeo/sonido) si la web cubre la ventana

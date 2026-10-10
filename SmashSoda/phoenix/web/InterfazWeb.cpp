@@ -1,6 +1,8 @@
 #include "InterfazWebInterno.h"
 
 #include <algorithm>
+#include <cmath>
+#include <string>
 #include <chrono>
 #include <cstring>
 
@@ -286,6 +288,182 @@ namespace phoenix::web {
 	bool InterfazWeb::cubreVentana() const {
 		const Interno& in = interno();
 		return in.anfitrion != nullptr && in.anfitrion->visible() && in.permitida && !in.panelClasico;
+	}
+
+	namespace { void* gLogoCarga = nullptr; }
+	void InterfazWeb::fijarLogoCarga(void* textura) { gLogoCarga = textura; }
+
+	bool InterfazWeb::cargando() const {
+		const Interno& in = interno();
+		if (!in.iniciada || in.panelClasico || in.anfitrion == nullptr) return false;
+		if (!PhoenixPrefs::get().interfazWeb) return false;
+		const EstadoAnfitrion e = in.anfitrion->estado();
+		// Solo mientras arranca; si falla o se apaga, se vuelve a la interfaz de siempre
+		return (e == EstadoAnfitrion::Creando || e == EstadoAnfitrion::Cargando || e == EstadoAnfitrion::Listo) && !in.anfitrion->visible();
+	}
+
+	namespace {
+		// Número «al azar» fijo para cada n (sin estado): sirve para colocar estrellas y brasas siempre igual.
+		float azarFijo(int n) {
+			unsigned x = static_cast<unsigned>(n) * 747796405u + 2891336453u;
+			x = ((x >> ((x >> 28) + 4)) ^ x) * 277803737u;
+			x = (x >> 22) ^ x;
+			return static_cast<float>(x & 0xFFFFFFu) / 16777216.0f;
+		}
+		ImU32 color4(float r, float g, float b, float a) {
+			auto c = [](float v) { return static_cast<int>((std::max)(0.0f, (std::min)(1.0f, v)) * 255.0f + 0.5f); };
+			return IM_COL32(c(r), c(g), c(b), c(a));
+		}
+	}
+
+	void InterfazWeb::renderCarga() {
+		if (ImGui::GetCurrentContext() == nullptr) return;
+		try {
+			const ImGuiViewport* vp = ImGui::GetMainViewport();
+			ImGui::SetNextWindowPos(vp->WorkPos, ImGuiCond_Always);
+			ImGui::SetNextWindowSize(vp->WorkSize, ImGuiCond_Always);
+			ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.005f, 0.005f, 0.02f, 1.0f));
+			ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+			ImGui::Begin("##phx_carga", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings
+				| ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoBringToFrontOnFocus);
+			ImDrawList* dl = ImGui::GetWindowDrawList();
+			const ImVec2 o = vp->WorkPos;
+			const float W = vp->WorkSize.x, H = vp->WorkSize.y;
+			const float t = static_cast<float>(ImGui::GetTime());
+			const float esc = (std::max)(1.0f, H / 800.0f);
+			const float lado = (std::min)(W, H) * 0.26f;
+			const ImVec2 c(o.x + W * 0.5f, o.y + H * 0.5f - H * 0.03f);
+			const float R = (std::max)(W, H);
+			const float PI2 = 6.2831853f;
+
+			// Tiempo desde que empezó esta pantalla (para que todo «emerja» de la oscuridad)
+			static float ultima = -100.0f, inicio = 0.0f;
+			if (t - ultima > 0.5f) inicio = t;
+			ultima = t;
+			const float dentro = t - inicio;
+			auto suave = [](float a, float b, float x) { float k = (std::max)(0.0f, (std::min)(1.0f, (x - a) / (b - a))); return k * k * (3.0f - 2.0f * k); };
+
+			// Latido: dos golpes seguidos («tum-tum») cada 2,6 s, como algo vivo dormido
+			const float periodo = 2.6f;
+			const float p = fmodf(t, periodo) / periodo;
+			const float g1 = p * 14.0f, g2 = (p - 0.16f) * 14.0f;
+			const float latido = expf(-g1 * g1) + 0.6f * expf(-g2 * g2);
+
+			// 1) Fondo casi negro que baja a un índigo muy oscuro
+			dl->AddRectFilledMultiColor(o, ImVec2(o.x + W, o.y + H),
+				color4(0.005f, 0.005f, 0.02f, 1), color4(0.005f, 0.005f, 0.02f, 1), color4(0.045f, 0.02f, 0.10f, 1), color4(0.045f, 0.02f, 0.10f, 1));
+
+			// 2) Niebla lenta que se mueve entre las sombras
+			for (int k = 0; k < 7; k++) {
+				const float fk = static_cast<float>(k);
+				const float cx = o.x + W * (0.5f + 0.42f * sinf(t * (0.035f + 0.012f * fk) + fk * 1.7f));
+				const float cy = o.y + H * (0.58f + 0.28f * sinf(t * (0.028f + 0.010f * fk) + fk * 2.3f));
+				const bool fria = (k % 2) == 0;
+				for (int l = 0; l < 6; l++) {
+					const float r = R * (0.10f + 0.07f * static_cast<float>(l)) * (0.8f + 0.1f * fk * 0.3f);
+					dl->AddCircleFilled(ImVec2(cx, cy), r, fria ? color4(0.10f, 0.35f, 0.55f, 0.010f) : color4(0.40f, 0.12f, 0.70f, 0.012f), 48);
+				}
+			}
+
+			// 3) Resplandor oscuro detrás del logo, que se enciende con cada latido
+			const float brillo = 0.30f + 0.70f * (std::min)(1.0f, latido);
+			for (int k = 0; k < 9; k++) {
+				const float f = 1.0f - static_cast<float>(k) / 9.0f;
+				const float r = lado * (0.45f + static_cast<float>(k) * 0.20f) * (1.0f + 0.025f * latido);
+				dl->AddCircleFilled(c, r, k < 3 ? color4(0.30f, 0.75f, 1.0f, 0.05f * f * brillo) : color4(0.50f, 0.20f, 0.95f, 0.055f * f * brillo), 64);
+			}
+
+			// 4) Una sola onda tenue por latido
+			{
+				const float r = lado * 0.55f + p * R * 0.50f;
+				const float a = (1.0f - p) * (1.0f - p) * (1.0f - p) * 0.22f * suave(0.8f, 2.5f, dentro);
+				dl->AddCircle(c, r, color4(0.40f, 0.80f, 1.0f, a), 96, 1.5f * esc);
+			}
+
+			// 5) Arcos finos que giran en sentidos opuestos alrededor del logo (como un sello)
+			{
+				const float aparece = suave(1.0f, 3.0f, dentro);
+				for (int k = 0; k < 3; k++) {
+					const float a0 = t * 0.10f + static_cast<float>(k) * (PI2 / 3.0f);
+					dl->PathArcTo(c, lado * 0.74f, a0, a0 + 0.9f, 40);
+					dl->PathStroke(color4(0.45f, 0.85f, 1.0f, 0.22f * aparece), 0, 1.2f * esc);
+					const float b0 = -t * 0.07f + static_cast<float>(k) * (PI2 / 3.0f) + 0.6f;
+					dl->PathArcTo(c, lado * 0.86f, b0, b0 + 0.5f, 32);
+					dl->PathStroke(color4(0.65f, 0.40f, 1.0f, 0.18f * aparece), 0, 1.0f * esc);
+				}
+			}
+
+			// 6) Pocas brasas, muy lentas; casi todas frías y alguna cálida, brillan un poco con el latido
+			{
+				const float alto = H * 1.1f;
+				for (int i = 0; i < 30; i++) {
+					const float vel = (9.0f + azarFijo(i * 5 + 1) * 24.0f) * esc;
+					const float dist = fmodf(t * vel + azarFijo(i * 5 + 2) * alto, alto);
+					const float y = o.y + H - dist;
+					const float x = o.x + azarFijo(i * 5 + 3) * W + sinf(t * (0.25f + azarFijo(i * 5 + 4) * 0.4f) + static_cast<float>(i)) * 22.0f * esc;
+					const float vida = dist / alto;
+					const float a = sinf(vida * 3.14159f) * 0.55f * (0.75f + 0.45f * (std::min)(1.0f, latido)) * suave(0.3f, 2.0f, dentro);
+					const float r = (0.8f + azarFijo(i * 5 + 5) * 1.5f) * esc;
+					const bool calida = (i % 7) == 0;
+					const float cr = calida ? 1.0f : 0.45f, cg = calida ? 0.50f : 0.80f, cb = calida ? 0.25f : 1.0f;
+					dl->AddCircleFilled(ImVec2(x, y), r * 3.0f, color4(cr, cg, cb, a * 0.12f), 12);
+					dl->AddCircleFilled(ImVec2(x, y), r, color4(cr, cg, cb, a), 8);
+				}
+			}
+
+			// 7) Viñeta: los bordes se hunden en la oscuridad
+			{
+				const ImU32 negro = color4(0.0f, 0.0f, 0.01f, 0.88f), nada = color4(0.0f, 0.0f, 0.01f, 0.0f);
+				const float bh = H * 0.38f, bw = W * 0.28f;
+				dl->AddRectFilledMultiColor(o, ImVec2(o.x + W, o.y + bh), negro, negro, nada, nada);
+				dl->AddRectFilledMultiColor(ImVec2(o.x, o.y + H - bh), ImVec2(o.x + W, o.y + H), nada, nada, negro, negro);
+				dl->AddRectFilledMultiColor(o, ImVec2(o.x + bw, o.y + H), negro, nada, nada, negro);
+				dl->AddRectFilledMultiColor(ImVec2(o.x + W - bw, o.y), ImVec2(o.x + W, o.y + H), nada, negro, negro, nada);
+			}
+
+			// 8) El logo emerge despacio de la oscuridad y «late»
+			ImGui::PushFont(AppFonts::label);
+			const char* nombre = "PHOENIX LINK";
+			const float altoTxt = ImGui::CalcTextSize("A").y;
+			float yTexto = c.y;
+			if (gLogoCarga != nullptr) {
+				const float entra = suave(0.4f, 3.0f, dentro);
+				const float l = lado * (0.94f + 0.06f * entra) * (1.0f + 0.012f * latido);
+				const float alfa = entra * (0.90f + 0.10f * (std::min)(1.0f, latido));
+				const ImVec2 a(c.x - l * 0.5f, c.y - l * 0.5f - altoTxt * 1.2f);
+				dl->AddImage(reinterpret_cast<ImTextureID>(gLogoCarga), a, ImVec2(a.x + l, a.y + l), ImVec2(0, 0), ImVec2(1, 1),
+					IM_COL32(255, 255, 255, static_cast<int>(alfa * 255.0f)));
+				yTexto = a.y + l + altoTxt * 0.9f;
+			}
+
+			// 9) Nombre con letras muy separadas, tenue; y una línea fina con una luz que la recorre
+			{
+				const float sep = altoTxt * 0.45f;
+				float ancho = 0.0f;
+				for (const char* q = nombre; *q; ++q) ancho += ImGui::CalcTextSize(std::string(1, *q).c_str()).x + sep;
+				ancho -= sep;
+				const float aT = suave(1.6f, 3.4f, dentro);
+				float x = c.x - ancho * 0.5f;
+				for (const char* q = nombre; *q; ++q) {
+					const std::string s(1, *q);
+					dl->AddText(ImVec2(x, yTexto), color4(0.65f, 0.82f, 0.95f, 0.65f * aT), s.c_str());
+					x += ImGui::CalcTextSize(s.c_str()).x + sep;
+				}
+				const float yl = yTexto + altoTxt * 1.7f;
+				const float mitad = lado * 0.55f;
+				dl->AddLine(ImVec2(c.x - mitad, yl), ImVec2(c.x + mitad, yl), color4(0.5f, 0.7f, 0.9f, 0.14f * aT), 1.0f);
+				const float k = fmodf(t * 0.30f, 1.0f);
+				const float cx = c.x - mitad + 2.0f * mitad * k;
+				const float tr = mitad * 0.28f;
+				dl->AddRectFilledMultiColor(ImVec2((std::max)(c.x - mitad, cx - tr), yl - 1.0f), ImVec2(cx, yl + 1.0f),
+					color4(0.5f, 0.85f, 1.0f, 0.0f), color4(0.5f, 0.85f, 1.0f, 0.75f * aT), color4(0.5f, 0.85f, 1.0f, 0.75f * aT), color4(0.5f, 0.85f, 1.0f, 0.0f));
+			}
+			ImGui::PopFont();
+			ImGui::End();
+			ImGui::PopStyleVar();
+			ImGui::PopStyleColor();
+		}
+		catch (...) {}
 	}
 
 	bool InterfazWeb::disponible() const {

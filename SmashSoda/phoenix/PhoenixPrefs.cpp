@@ -45,6 +45,10 @@ namespace phoenix {
 			if (visibilidad != "publica" && visibilidad != "amigos" && visibilidad != "privada") visibilidad = "amigos";
 			espectadores = j.value("espectadores", espectadores);
 			entradaParsec = j.value("entradaParsec", entradaParsec);
+			avisosEnJuego = j.value("avisosEnJuego", avisosEnJuego);
+			carpetaJuego = j.value("carpetaJuego", carpetaJuego);
+			modoPes = j.value("modoPes", modoPes);
+			if (modoPes != "publicar" && modoPes != "estricto") modoPes = "off";
 			limiteEspectadores = j.value("limiteEspectadores", limiteEspectadores);
 			if (limiteEspectadores < 0) limiteEspectadores = 0;
 			if (limiteEspectadores > 16) limiteEspectadores = 16;
@@ -72,6 +76,9 @@ namespace phoenix {
 				{"visibilidad", visibilidad},
 				{"espectadores", espectadores},
 				{"entradaParsec", entradaParsec},
+				{"avisosEnJuego", avisosEnJuego},
+				{"carpetaJuego", carpetaJuego},
+				{"modoPes", modoPes},
 				{"limiteEspectadores", limiteEspectadores},
 				{"juego", juego},
 				{"parche", parche},

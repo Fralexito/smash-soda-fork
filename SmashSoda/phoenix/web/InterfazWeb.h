@@ -48,6 +48,14 @@ namespace phoenix::web {
 		/// La interfaz web cubre la ventana: ImGui no debe dibujar el shell.
 		bool cubreVentana() const;
 
+		/// La interfaz nueva está arrancando (WebView2 cargando): se muestra una pantalla de carga
+		/// en vez de la interfaz antigua, para que no «parpadee» al abrir.
+		bool cargando() const;
+		/// Pantalla de carga (fondo oscuro con el nombre del programa).
+		void renderCarga();
+		/// Logo para la pantalla de carga (ID3D11ShaderResourceView*; nullptr = solo texto).
+		void fijarLogoCarga(void* textura);
+
 		/// Dibuja (con ImGui) el botón «Volver a la interfaz nueva» cuando se está
 		/// en el panel clásico, o el aviso si la interfaz nueva no pudo abrirse.
 		void renderImGui();

@@ -28,6 +28,9 @@ namespace phoenix {
 		std::string parche = "Conmegol";
 		std::string region = "Lima";
 		int mandosActivos = 2;    ///< 2–8 mandos visibles en el tablero
+		bool avisosEnJuego = true; ///< escribir los avisos de la web en el juego (buzon de Sider)
+		std::string modoPes = "off";  ///< prueba «Solo PES 2021»: off | publicar (la sala solo se publica con PES abierto) | estricto (ademas no deja abrir la sala sin PES)
+		std::string carpetaJuego;  ///< ultima carpeta de PES2021.exe detectada (UTF-8), para el repartidor de datos
 		int equipoLocal = 1;      ///< cuántos mandos son del equipo local
 
 		static PhoenixPrefs& get();

@@ -4,6 +4,7 @@
 
 #include "../../Hosting.h"
 #include "../../core/Config.h"
+#include "../../core/MasterOfPuppets.h"
 #include "../../services/Hotseat.h"
 #include "../PhoenixPrefs.h"
 #include "../core/ProveedorSala.h"
@@ -95,6 +96,121 @@ namespace phoenix::web {
 			else if (que == "bloquearTodo") h.toggleGamepadLock();
 			else if (que == "bloquearBotones") h.toggleGamepadLockButtons();
 			else throw ErrorAccion("DATOS_INVALIDOS", "Herramienta desconocida.");
+			return json::object();
+		});
+
+		// ---- Elegir botones (bloqueo parcial): se guarda y se aplica al instante -----
+		p.registrar("mandos.botonesBloq", [&in](const json& d, uint64_t) -> std::optional<json> {
+			Hosting& h = hostingObligatorio(in);
+			const unsigned int validos = 0x0001 | 0x0002 | 0x0004 | 0x0008 | 0x0010 | 0x0020 | 0x0040 | 0x0080
+				| 0x0100 | 0x0200 | 0x0400 | 0x1000 | 0x2000 | 0x4000 | 0x8000;
+			const unsigned int mascara = static_cast<unsigned int>(entero(d, "mascara", 0, 0xFFFF)) & validos;
+			Config::cfg.input.lockedGamepadButtons = mascara;
+			Config::cfg.input.lockedGamepadLeftTrigger = booleano(d, "lt");
+			Config::cfg.input.lockedGamepadRightTrigger = booleano(d, "rt");
+			Config::cfg.input.lockedGamepadLX = booleano(d, "lx");
+			Config::cfg.input.lockedGamepadLY = booleano(d, "ly");
+			Config::cfg.input.lockedGamepadRX = booleano(d, "rx");
+			Config::cfg.input.lockedGamepadRY = booleano(d, "ry");
+			h._lockedGamepad.wButtons = mascara;
+			h._lockedGamepad.bLeftTrigger = Config::cfg.input.lockedGamepadLeftTrigger;
+			h._lockedGamepad.bRightTrigger = Config::cfg.input.lockedGamepadRightTrigger;
+			h._lockedGamepad.sThumbLX = Config::cfg.input.lockedGamepadLX;
+			h._lockedGamepad.sThumbLY = Config::cfg.input.lockedGamepadLY;
+			h._lockedGamepad.sThumbRX = Config::cfg.input.lockedGamepadRX;
+			h._lockedGamepad.sThumbRY = Config::cfg.input.lockedGamepadRY;
+			Config::cfg.Save();
+			return json::object();
+		});
+
+		// ---- Teclado: mapa de teclas por perfil (se guarda en cada cambio) ----------
+		p.registrar("teclado.asignar", [&in](const json& d, uint64_t) -> std::optional<json> {
+			KeyboardMap& km = hostingObligatorio(in).getGamepadClient().getKeyMap();
+			const uint32_t usuario = static_cast<uint32_t>(entero(d, "userId", 0, 2147483647));
+			const std::string boton = texto(d, "boton", 16);
+			if (!km.isValidButtonName(boton)) throw ErrorAccion("DATOS_INVALIDOS", "Botón desconocido.");
+			const int tecla = entero(d, "tecla", 0, 0x1FF);
+			if (tecla != 0) {
+				bool permitida = false;
+				for (uint16_t k : _allowedSettionKeys) if (k == tecla) { permitida = true; break; }
+				if (!permitida) throw ErrorAccion("TECLA_NO_PERMITIDA", "Esa tecla no se puede usar.");
+			}
+			const std::string nombre = d.contains("nombre") && d["nombre"].is_string() && !d["nombre"].get<std::string>().empty()
+				? texto(d, "nombre", 64) : std::string("Invitado ") + std::to_string(usuario);
+			if (!km.mapButton(nombre, usuario, boton, static_cast<uint16_t>(tecla))) throw ErrorAccion("SIN_PERFIL", "No se pudo guardar la tecla.");
+			return json::object();
+		});
+		p.registrar("teclado.crear", [&in](const json& d, uint64_t) -> std::optional<json> {
+			KeyboardMap& km = hostingObligatorio(in).getGamepadClient().getKeyMap();
+			const uint32_t usuario = static_cast<uint32_t>(entero(d, "userId", 1, 2147483647));
+			km.createProfile(texto(d, "nombre", 64), usuario);   // si ya existe no hace nada
+			return json::object();
+		});
+		p.registrar("teclado.reiniciar", [&in](const json& d, uint64_t) -> std::optional<json> {
+			KeyboardMap& km = hostingObligatorio(in).getGamepadClient().getKeyMap();
+			if (!km.resetProfile(static_cast<uint32_t>(entero(d, "userId", 0, 2147483647)))) throw ErrorAccion("SIN_PERFIL", "Ese perfil no existe.");
+			return json::object();
+		});
+		p.registrar("teclado.borrar", [&in](const json& d, uint64_t) -> std::optional<json> {
+			KeyboardMap& km = hostingObligatorio(in).getGamepadClient().getKeyMap();
+			const uint32_t usuario = static_cast<uint32_t>(entero(d, "userId", 0, 2147483647));
+			if (usuario == 0) throw ErrorAccion("NO_PERMITIDO", "El perfil predeterminado no se puede borrar.");
+			if (!km.deleteProfile(usuario)) throw ErrorAccion("SIN_PERFIL", "Ese perfil no existe.");
+			return json::object();
+		});
+
+		// ---- Marionetas: mando maestro y títeres (mismos pasos del panel original) ----
+		p.registrar("marionetas.motor", [&in](const json& d, uint64_t) -> std::optional<json> {
+			clienteMandos(in);
+			MasterOfPuppets& mp = MasterOfPuppets::instance;
+			const bool sdl = booleano(d, "sdl");
+			if (mp.isSDLEngine == sdl) return json::object();
+			mp.isSDLEngine = sdl;
+			if (sdl) mp.fetchSDLGamepads();
+			// los numeros de mando cambian de motor: se suelta el maestro para no dejar uno equivocado
+			mp.setMasterIndex(-1);
+			GamepadClient::instance.isPuppetMaster = false;
+			return json::object();
+		});
+		p.registrar("marionetas.actualizar", [&in](const json&, uint64_t) -> std::optional<json> {
+			clienteMandos(in);
+			if (MasterOfPuppets::instance.isSDLEngine) MasterOfPuppets::instance.fetchSDLGamepads();
+			return json::object();
+		});
+		p.registrar("marionetas.maestro", [&in](const json& d, uint64_t) -> std::optional<json> {
+			GamepadClient& gc = clienteMandos(in);
+			MasterOfPuppets& mp = MasterOfPuppets::instance;
+			const int i = entero(d, "indice", -1, 15);
+			if (i >= 0) {
+				std::lock_guard<std::mutex> cierre(mp.inputMutex);
+				const size_t total = mp.isSDLEngine ? mp.getSDLGamepads().size() : mp.getXInputGamepads().size();
+				if (static_cast<size_t>(i) >= total) throw ErrorAccion("MANDO_NO_ENCONTRADO", "Ese mando ya no está conectado.");
+			}
+			mp.setMasterIndex(i == mp.getMasterIndex() ? -1 : i);
+			gc.isPuppetMaster = mp.getMasterIndex() >= 0;
+			if (!gc.isPuppetMaster) {
+				for (AGamepad* g : gc.gamepads) if (g != nullptr && g->isPuppet) g->clearState();
+			}
+			return json::object();
+		});
+		p.registrar("marionetas.titere", [&in](const json& d, uint64_t) -> std::optional<json> {
+			GamepadClient& gc = clienteMandos(in);
+			const size_t i = static_cast<size_t>(entero(d, "indice", 0, 15));
+			if (i >= gc.gamepads.size() || gc.gamepads[i] == nullptr) throw ErrorAccion("SIN_MANDOS", "Ese mando virtual no existe.");
+			std::lock_guard<std::mutex> cierre(MasterOfPuppets::instance.inputMutex);
+			gc.gamepads[i]->isPuppet = booleano(d, "si");
+			if (!gc.gamepads[i]->isPuppet) gc.gamepads[i]->clearState();
+			return json::object();
+		});
+		p.registrar("marionetas.tipo", [&in](const json& d, uint64_t) -> std::optional<json> {
+			clienteMandos(in);
+			MasterOfPuppets& mp = MasterOfPuppets::instance;
+			if (!mp.isSDLEngine) return json::object();
+			std::lock_guard<std::mutex> cierre(mp.inputMutex);
+			std::vector<SDLGamepad>& v = mp.getSDLGamepads();
+			const size_t i = static_cast<size_t>(entero(d, "indice", 0, 15));
+			if (i >= v.size()) throw ErrorAccion("MANDO_NO_ENCONTRADO", "Ese mando ya no está conectado.");
+			v[i].cycleType();
 			return json::object();
 		});
 

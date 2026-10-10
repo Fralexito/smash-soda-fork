@@ -13,6 +13,11 @@ export function crearSimulador(enviar) {
     phoenix: { visibilidad: "amigos", espectadores: true, limiteEspectadores: 4, entradaParsec: true, juego: "eFootball PES 2021", parche: "Conmegol", region: "Lima" },
     calidad: { fps: 60, mbps: 15 },
     formacion: { local: 2, visitante: 2 },
+    botonesBloq: { mascara: 0x10 | 0x400, lt: false, rt: false, lx: false, ly: false, rx: false, ry: false },
+    perfilesTeclado: [
+      { userId: 0, nombre: "Default", teclas: [["lleft", 30, "A"], ["lright", 32, "D"], ["lup", 17, "W"], ["ldown", 31, "S"], ["rleft", 331, "←"], ["rright", 333, "→"], ["rup", 328, "↑"], ["rdown", 336, "↓"], ["dleft", 75, "Num 4"], ["dright", 77, "Num 6"], ["dup", 72, "Num 8"], ["ddown", 76, "Num 5"], ["a", 38, "L"], ["b", 24, "O"], ["x", 37, "K"], ["y", 23, "I"], ["lb", 16, "Q"], ["rb", 25, "P"], ["lt", 33, "F"], ["rt", 36, "J"], ["back", 14, "Retroceso"], ["start", 28, "Enter"], ["lthumb", 46, "C"], ["rthumb", 50, "M"]].map(([b, v, e]) => ({ b, v, e })) },
+    ],
+    marionetas: { motor: "sdl", maestro: -1, maestros: [{ n: 1, nombre: "Xbox Wireless Controller", tipo: "xbox", activo: true }, { n: 2, nombre: "Wireless Controller", tipo: "ds4", activo: false }], titeres: [1, 2, 3, 4, 5, 6, 7, 8].map((n) => ({ n, activo: false })) },
     xbox: 8, ds4: 0, bloqueoGlobal: false, bloqueoBotones: false, host: 0,
     invitados: [
       { parsecId: 1187, nombre: "Mirko", base: 18, mod: true, vip: false, teclado: false, raton: false, rolWeb: "jugador" },
@@ -28,6 +33,9 @@ export function crearSimulador(enviar) {
       { id: 2, inicioMs: Date.now() - 3600000, duracionSeg: 1180, a: { nombre: "ElTigre", jugadores: [{ parsecId: 3310, nombre: "ElTigre" }], goles: 2 }, b: { nombre: "Mirko", jugadores: [{ parsecId: 1187, nombre: "Mirko" }], goles: 2 }, ganador: "empate" },
     ],
     perfilesSala: [{ nombre: "Liga", valores: { plazas: 4, mbps: 15, local: 2, visitante: 2, visibilidad: "amigos" } }],
+    buzon: { activo: true, estado: "conectado", ultimo: "00:30", juego: "C:\\Juegos\\PES 2021 ConmeGOL", parche: "ConmeGOL Patch 26", avisos: [{ id: 12, texto: "hola causa", hora: "00:30", escrito: true }, { id: 11, texto: "Tu fichaje de Kaiser ya está listo ⚡", hora: "00:12", escrito: true }, { id: 10, texto: "Recuerda: partido de liga hoy 9 pm", hora: "23:40", escrito: false }] },
+    pes: { modo: "off", abierto: true },
+    entrega: { estado: "colocada", id: "demo-1", resumen: "Lamine Yamal: velocidad 99", motivo: "", fecha: "2026-10-09 06:12", puedeDeshacer: true },
     ajustes: {
       general: { flashWindow: true, ttsEnabled: false, bonkEnabled: true, messageNotification: true, disableGuideButton: true, disableKeyboard: false, autoIndex: false, parsecLogs: false, ipBan: true, blockVPN: false, devMode: false, chatbot: "PhoenixBot", discord: "https://discord.gg/phoenix", welcomeMessage: "¡Bienvenido _PLAYER_! Respeta los turnos y diviértete.", socketEnabled: true, socketPort: 9002, socketActivo: true },
       permisos: { guest: { useBB: false, useSFX: true, changeControls: true }, vip: { useBB: true, useSFX: true, changeControls: true }, moderator: { useBB: true, useSFX: true, changeControls: true } },
@@ -40,6 +48,15 @@ export function crearSimulador(enviar) {
     web: { estado: "conectado", usuario: "Fralex", mensaje: "Sala publicada en la web.", publicada: true },
     seccion: "sala", pestana: "resumen",
     sonidos: [{ ruta: "sfx/gol.wav", etiqueta: "gol", espera: 5 }, { ruta: "sfx/silbato.wav", etiqueta: "silbato", espera: 10 }, { ruta: "sfx/abucheo.wav", etiqueta: "abucheo", espera: 30 }],
+    noticias: [
+      { id: 7, nivel: "importante", texto: "Hoy 21:00 · Final de la Copa Galaxy en vivo. Entra a la sala del árbitro 10 minutos antes.", hora: "19:42", enlace: "" },
+      { id: 8, nivel: "info", texto: "Mantenimiento de la web mañana a las 03:00 (unos 10 minutos).", hora: "18:05", enlace: "" },
+    ],
+    chatGlobal: { esperaSeg: 3, pausado: false, ultimoEnvio: 0, nextId: 104, mensajes: [
+      { id: 101, usuarioId: "u1", nombre: "TU PAPI CHULO", texto: "hola", hora: "23:00", rol: "admin", propio: false },
+      { id: 102, usuarioId: "u2", nombre: "Mirko", texto: "¿quién juega hoy la liga?", hora: "23:01", rol: "jugador", propio: false },
+      { id: 103, usuarioId: "u3", nombre: "Lucía", texto: "yo, a las 9", hora: "23:02", rol: "moderador", propio: false },
+    ] },
     chat: ["Mirko: buenas!", "Kaiser: listos para la revancha", "[PhoenixBot] ElTigre entró a la sala."],
     actividad: ["[PhoenixBot] Sala abierta con eFootball PES 2021", "[PhoenixBot] Mirko joined.", "[PhoenixBot] Kaiser joined.", "[PhoenixBot] Mando 03 asignado a ElTigre"],
   };
@@ -96,15 +113,22 @@ export function crearSimulador(enviar) {
     const e = {
       v: 1,
       app: { version: "1.0.0", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
+      noticias: { cargado: true, lista: s.noticias },
+      chatGlobal: { cargado: true, pausado: s.chatGlobal.pausado, esperaSeg: s.chatGlobal.esperaSeg, rev: s.chatGlobal.mensajes.length, error: "" },
       web: { ...s.web, jugadoresLista: 3, versionLiga: "2026.10.08", eventosEnCola: 0 },
       ajustes: s.ajustes,
+      buzon: s.buzon,
+      entrega: s.entrega,
+      pes: s.pes,
+      marionetas: s.marionetas,
+      teclado: { perfiles: s.perfilesTeclado },
       sala: {
         abierta: s.abierta, lista: true, enlace: s.abierta ? "https://parsec.gg/g/7K2Qx9abcdef/phoenix" : "", nombre: s.opciones.nombre, plazas: s.opciones.plazas,
         invitados: s.abierta ? s.invitados.length : 0, cuentaHost: "Fralex#1234", hostId: 99, hostNombre: "Fralex",
         segundos: s.abierta ? Math.round(ahora() - s.abiertaEn) : -1, opciones: s.opciones, phoenix: s.phoenix, calidad: s.calidad,
         sesion: { pico: 5, entradas: 7, partidos: s.historial.length },
       },
-      mandos: { lista, formacion: s.formacion, host: s.host, bloqueoGlobal: s.bloqueoGlobal, bloqueoBotones: s.bloqueoBotones, esclavo: false, xbox: s.xbox, ds4: s.ds4, reiniciando: false },
+      mandos: { lista, formacion: s.formacion, host: s.host, bloqueoGlobal: s.bloqueoGlobal, bloqueoBotones: s.bloqueoBotones, botonesBloq: s.botonesBloq, esclavo: false, xbox: s.xbox, ds4: s.ds4, reiniciando: false },
       solicitudes: s.solicitudes, espera: s.espera,
       invitados: s.abierta ? s.invitados.map((g) => ({ parsecId: g.parsecId, nombre: g.nombre, ping: pingDe(g.parsecId), mando: s.mandos.indexOf(g.parsecId) + 1, mod: g.mod, vip: g.vip, teclado: g.teclado, raton: g.raton, rolWeb: g.rolWeb, cop: false, falso: false })) : [],
       perfiles,
@@ -122,6 +146,7 @@ export function crearSimulador(enviar) {
         { usuarioId: "6f1c2a10-0000-4000-8000-000000000001", nombre: "Mirko", avatar: null, estado: "en_sala", salaId: null, desde: new Date(Date.now() - 600000).toISOString() },
         { usuarioId: "6f1c2a10-0000-4000-8000-000000000002", nombre: "Lucho", avatar: null, estado: "disponible", salaId: null, desde: new Date(Date.now() - 3600000).toISOString() },
         { usuarioId: "6f1c2a10-0000-4000-8000-000000000003", nombre: "Pibe", avatar: null, estado: "desconectado", salaId: null, desde: "" },
+        { usuarioId: "6f1c2a10-0000-4000-8000-000000000004", nombre: "Zurdo", avatar: null, estado: "en_partida", salaId: null, desde: new Date(Date.now() - 900000).toISOString() },
       ] };
     }
     return e;
@@ -131,6 +156,12 @@ export function crearSimulador(enviar) {
   const chat = (linea) => { s.chat.push(linea); enviar({ t: "evento", nombre: "chat", datos: { reinicio: false, lineas: [linea] } }); };
   const act = (linea) => { s.actividad.push(linea); enviar({ t: "evento", nombre: "actividad", datos: { reinicio: false, lineas: [linea] } }); };
   const bot = (x) => chat("[PhoenixBot] " + x);
+  const globalJson = () => ({ cargado: true, pausado: s.chatGlobal.pausado, esperaSeg: s.chatGlobal.esperaSeg, rev: s.chatGlobal.mensajes.length, error: "", mensajes: s.chatGlobal.mensajes });
+  const global = (nombre, texto, rol = "jugador", propio = false) => {
+    const d = new Date();
+    s.chatGlobal.mensajes.push({ id: s.chatGlobal.nextId++, usuarioId: propio ? "yo" : "x" + nombre, nombre, texto, hora: String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"), rol, propio });
+    enviar({ t: "evento", nombre: "chatglobal", datos: globalJson() });
+  };
 
   const acciones = {
     "ui.seccion": (d) => { s.seccion = d.seccion; s.pestana = d.pestana || ""; },
@@ -160,6 +191,16 @@ export function crearSimulador(enviar) {
     "mandos.formacion": (d) => { s.formacion = { local: d.local, visitante: d.visitante }; },
     "mandos.tomar": (d) => { s.host = d.numero === s.host ? 0 : d.numero; return { activo: s.host }; },
     "mandos.herramienta": (d) => { if (d.nombre === "bloquearTodo") s.bloqueoGlobal = !s.bloqueoGlobal; else if (d.nombre === "bloquearBotones") s.bloqueoBotones = !s.bloqueoBotones; else if (d.nombre === "desconectarTodos") s.mandos = s.mandos.map(() => 0); else if (d.nombre === "ordenar") { const v = s.mandos.filter(Boolean); s.mandos = s.mandos.map((_, i) => v[i] || 0); } },
+    "teclado.asignar": (d) => { const p = s.perfilesTeclado.find((x) => x.userId === d.userId) || s.perfilesTeclado[0]; p.teclas.forEach((x) => { if (x.v === d.tecla) { x.v = 0; x.e = ""; } }); const k = p.teclas.find((x) => x.b === d.boton); k.v = d.tecla; k.e = "K" + d.tecla; },
+    "teclado.crear": (d) => { const base = s.perfilesTeclado[0]; s.perfilesTeclado.push({ userId: d.userId, nombre: d.nombre, teclas: base.teclas.map((x) => ({ ...x })) }); },
+    "teclado.reiniciar": () => {},
+    "teclado.borrar": (d) => { s.perfilesTeclado = s.perfilesTeclado.filter((x) => x.userId !== d.userId); },
+    "mandos.botonesBloq": (d) => { s.botonesBloq = { mascara: d.mascara, lt: d.lt, rt: d.rt, lx: d.lx, ly: d.ly, rx: d.rx, ry: d.ry }; },
+    "marionetas.motor": (d) => { s.marionetas.motor = d.sdl ? "sdl" : "xinput"; s.marionetas.maestro = -1; },
+    "marionetas.actualizar": () => {},
+    "marionetas.maestro": (d) => { s.marionetas.maestro = s.marionetas.maestro === d.indice ? -1 : d.indice; if (s.marionetas.maestro < 0) s.marionetas.titeres.forEach((x) => { x.activo = false; }); },
+    "marionetas.titere": (d) => { s.marionetas.titeres[d.indice].activo = d.si; },
+    "marionetas.tipo": (d) => { const x = s.marionetas.maestros[d.indice]; x.tipo = x.tipo === "xbox" ? "dualshock" : x.tipo === "dualshock" ? "ds4" : "xbox"; },
     "mandos.cantidad": (d) => { if (d.xbox + d.ds4 > 8) error("FUERA_DE_RANGO", "Máximo 8 mandos en total."); s.xbox = d.xbox; s.ds4 = d.ds4; },
     "solicitud.aceptar": (d) => { s.solicitudes = s.solicitudes.filter((x) => x.parsecId !== d.parsecId); },
     "solicitud.rechazar": (d) => { s.solicitudes = s.solicitudes.filter((x) => x.parsecId !== d.parsecId); },
@@ -179,7 +220,22 @@ export function crearSimulador(enviar) {
     "moderacion.banear": (d) => { s.baneados.push({ parsecId: d.parsecId, nombre: d.nombre || nombreDe(d.parsecId), motivo: "" }); },
     "moderacion.motivo": (d) => { const b = s.baneados.find((x) => x.parsecId === d.parsecId); if (b) b.motivo = d.motivo; },
     "chat.enviar": (d) => { chat("Fralex: " + d.texto); },
+    "chatGlobal.abierto": () => ({}),
+    "chatGlobal.enviar": (d) => {
+      const texto = String(d.texto || "").trim();
+      if (!texto || texto.length > 300) error("MENSAJE_INVALIDO", "El mensaje está vacío o pasa de 300 caracteres.");
+      if (s.chatGlobal.pausado) error("CHAT_PAUSADO", "El chat general está en pausa por el staff.");
+      const falta = s.chatGlobal.esperaSeg - (Date.now() - s.chatGlobal.ultimoEnvio) / 1000;
+      if (falta > 0) error("ESPERA", "Espera " + Math.ceil(falta) + " s para escribir otra vez.");
+      s.chatGlobal.ultimoEnvio = Date.now();
+      global("Fralex", texto, "admin", true);
+      setTimeout(() => global("Mirko", "jajaja bien ahí", "jugador"), 2500);
+      return {};
+    },
     "amigos.invitar": () => ({ mensaje: "Invitación enviada." }),
+    "ajustes.modoPes": (d) => { s.pes.modo = d.valor; },
+    "sync.deshacerEntrega": () => { s.entrega = { ...s.entrega, estado: "deshecha", puedeDeshacer: false, motivo: "" }; },
+    "ajustes.avisosJuego": (d) => { s.buzon.activo = d.valor; s.buzon.estado = d.valor ? "conectado" : "apagado"; },
     "ajustes.general": (d) => { s.ajustes.general[d.clave] = d.valor; },
     "ajustes.permisos": (d) => { s.ajustes.permisos[d.grupo][d.clave] = d.valor; },
     "ajustes.video": (d) => { s.ajustes.video[d.clave] = d.valor; },
@@ -224,6 +280,7 @@ export function crearSimulador(enviar) {
   setInterval(() => enviar({ t: "estado", datos: estado() }), 200);
   setInterval(tick, 1000);
   setTimeout(() => { s.solicitudes.push({ parsecId: 2041, nombre: "Kaiser", mando: 4 }); }, 9000);
+  setTimeout(() => global("Kaiser", "¿alguien para unas revanchas?", "jugador"), 11000);
 
   return {
     recibir(msg) {
@@ -232,7 +289,7 @@ export function crearSimulador(enviar) {
           protocolo: 1, idiomas: [{ codigo: "es", nombre: "Español" }, { codigo: "en", nombre: "English" }],
           resoluciones: ["Escritorio", "1920×1080", "1600×900", "1280×720"], chat: s.chat, actividad: s.actividad,
           pantallas: ["Pantalla 1 (1920×1080)", "Pantalla 2 (2560×1440)"], gpus: ["NVIDIA GeForce RTX 3060"], wgc: true,
-          temasOverlay: ["phoenix", "minimal"], estado: estado(),
+          temasOverlay: ["phoenix", "minimal"], estado: estado(), chatGlobal: globalJson(),
         } });
         return;
       }

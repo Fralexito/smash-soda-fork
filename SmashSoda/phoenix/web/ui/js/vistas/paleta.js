@@ -16,7 +16,7 @@ function opciones(m) {
   }
   r.push({ es: "Bloquear / desbloquear todos los mandos", en: "Lock / unlock all pads", icono: "candado", hacer: () => accion("mandos.herramienta", { nombre: "bloquearTodo" }) });
   r.push({ es: "Reiniciar mandos", en: "Reset pads", icono: "mandos", hacer: () => accion("mandos.herramienta", { nombre: "reiniciar" }) });
-  r.push({ es: "Cambiar tema (Galaxy / Sudario)", en: "Switch theme", icono: "ajustes", hacer: () => accion("ui.tema", { tema: m?.app?.tema === "sudario" ? "galaxy" : "sudario" }) });
+  r.push({ es: "Cambiar tema (Galaxy / Liga B)", en: "Switch theme", icono: "ajustes", hacer: () => accion("ui.tema", { tema: m?.app?.tema === "sudario" ? "galaxy" : "sudario" }) });
   r.push({ es: "Abrir chat", en: "Open chat", icono: "chat", k: "Ctrl+Espacio", hacer: () => cambiar({ chatAbierto: true, noLeidos: 0 }) });
   for (const [es, en, mb] of [["Calidad: ligera (8 Mbps)", "Quality: light (8 Mbps)", 8], ["Calidad: equilibrada (15 Mbps)", "Quality: balanced (15 Mbps)", 15], ["Calidad: máxima (30 Mbps)", "Quality: max (30 Mbps)", 30]]) {
     r.push({ es, en, icono: "rayo", hacer: () => accion("sala.calidad", { fps: 60, mbps: mb }, { ok: t("Calidad aplicada.", "Quality applied.") }) });

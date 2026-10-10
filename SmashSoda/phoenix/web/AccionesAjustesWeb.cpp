@@ -12,6 +12,7 @@
 #include "../../services/WebSocket.h"
 #include "../../services/OverlayService.h"
 #include "../PhoenixBuild.h"
+#include "../PhoenixPrefs.h"
 #include "../core/ProveedorSala.h"
 #include "../link/PhoenixLink.h"
 
@@ -148,6 +149,29 @@ namespace phoenix::web {
 		});
 
 		// ---- Permisos por rol (SettingsWidget → Permissions) --------------------
+		p.registrar("ajustes.avisosJuego", [](const json& d, uint64_t) -> std::optional<json> {
+			PhoenixPrefs& pr = PhoenixPrefs::get();
+			pr.avisosEnJuego = booleano(d, "valor");
+			pr.guardar();
+			return json::object();
+		});
+
+		// Prueba «Solo PES 2021»: off | publicar | estricto
+		p.registrar("ajustes.modoPes", [](const json& d, uint64_t) -> std::optional<json> {
+			const std::string v = texto(d, "valor", 16);
+			if (v != "off" && v != "publicar" && v != "estricto") throw ErrorAccion("VALOR_INVALIDO", "Modo no válido.");
+			PhoenixPrefs& pr = PhoenixPrefs::get();
+			pr.modoPes = v;
+			pr.guardar();
+			return json::object();
+		});
+
+		// Phoenix Sync: deshacer la ultima entrega de datos (lo hace el hilo de Link, nunca el de la interfaz)
+		p.registrar("sync.deshacerEntrega", [](const json&, uint64_t) -> std::optional<json> {
+			PhoenixLink::instancia().deshacerEntrega();
+			return json::object();
+		});
+
 		p.registrar("ajustes.permisos", [](const json& d, uint64_t) -> std::optional<json> {
 			const std::string grupo = texto(d, "grupo", 16);
 			const std::string clave = texto(d, "clave", 32);

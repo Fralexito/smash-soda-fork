@@ -52,6 +52,7 @@ END
 
 // Icon with lowest ID value placed first to ensure application icon
 // remains consistent on all systems.
+// Icono Phoenix (2026-10-09): icon.ico
 IDI_ICON1               ICON                    "icon.ico"
 
 #endif    // Portuguese (Brazil) resources

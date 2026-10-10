@@ -5,15 +5,17 @@ import { html, render, useEffect, useRef } from "./lib.js";
 import { puente } from "./puente.js";
 import { t, fijarIdioma } from "./i18n.js";
 import {
-  useTienda, conectarTienda, irA, elegirPestana, cambiar, avisar, quitarAviso, cerrarDialogo, accion, leer,
+  useTienda, conectarTienda, irA, elegirPestana, cambiar, avisar, quitarAviso, cerrarDialogo, accion, leer, elegirPestanaChat, noLeidosGlobal,
 } from "./tienda.js";
 import { Icono, Logo, cx } from "./ui.js";
 import { VistaSala, PESTANAS_SALA } from "./vistas/sala.js";
 import { VistaPartido, PESTANAS_PARTIDO } from "./vistas/partido.js";
 import { VistaMandos, PESTANAS_MANDOS, metaMandos } from "./vistas/mandos.js";
 import { VistaGente, PESTANAS_GENTE, metaGente } from "./vistas/gente.js";
+import { VistaSync, PESTANAS_SYNC, metaSync } from "./vistas/sync.js";
 import { VistaAjustes, PESTANAS_AJUSTES } from "./vistas/ajustes.js";
 import { PanelChat } from "./vistas/chat.js";
+import { UltimaHora } from "./vistas/ultimahora.js";
 import { Paleta } from "./vistas/paleta.js";
 import { vigilarCambios } from "./vigia.js";
 
@@ -22,6 +24,7 @@ const SECCIONES = [
   { id: "partido", es: "PARTIDO", en: "MATCH", vista: VistaPartido, pestanas: PESTANAS_PARTIDO },
   { id: "mandos", es: "MANDOS", en: "PADS", vista: VistaMandos, pestanas: PESTANAS_MANDOS, meta: metaMandos },
   { id: "gente", es: "GENTE", en: "PEOPLE", vista: VistaGente, pestanas: PESTANAS_GENTE, meta: metaGente },
+  { id: "sync", es: "SYNC", en: "SYNC", vista: VistaSync, pestanas: PESTANAS_SYNC, meta: metaSync },
   { id: "ajustes", es: "AJUSTES", en: "SETTINGS", vista: VistaAjustes, pestanas: PESTANAS_AJUSTES },
 ];
 
@@ -55,15 +58,16 @@ function Barra({ s }) {
       <${Logo}/>
       <div style="min-width:0">
         <div class="nombre">PHOENIX LINK</div>
-        <div class="liga">${tema === "sudario" ? "Liga Sudario" : "Galaxy League"}${puente.simulado ? t(" · VISTA PREVIA", " · PREVIEW") : ""}</div>
+        <div class="liga">${tema === "sudario" ? "Liga B" : "Galaxy League"}${puente.simulado ? t(" · VISTA PREVIA", " · PREVIEW") : ""}</div>
       </div>
     </div>
+    <div class="ultima-hueco"><${UltimaHora} s=${s}/></div>
     <div class="lado">
       <${PildoraSala} m=${m}/>
       <button class="pill web" onClick=${() => irA("ajustes", "web")} title=${m?.web?.mensaje || ""}>
         <span class=${cx("punto", w[0])}></span>${t(w[1], w[2])}</button>
       <button class=${cx("pill", s.chatAbierto && "acc")} onClick=${() => alternarChat()} title="Chat (Ctrl+Espacio)">
-        <${Icono} n="chat" t=${15}/>CHAT${s.noLeidos > 0 ? html`<span class="chip bad" style="height:20px">${s.noLeidos > 99 ? "99+" : s.noLeidos}</span>` : null}
+        <${Icono} n="chat" t=${15}/>CHAT${totalNoLeidos(s) > 0 ? html`<span class="chip bad" style="height:20px">${totalNoLeidos(s) > 99 ? "99+" : totalNoLeidos(s)}</span>` : null}
       </button>
       <button class="pill atajo" onClick=${() => cambiar({ paleta: true })} title=${t("Buscar acciones", "Search actions")}>
         <${Icono} n="buscar" t=${15}/><kbd>Ctrl K</kbd></button>
@@ -72,10 +76,14 @@ function Barra({ s }) {
   </header>`;
 }
 
+function totalNoLeidos(s) { return s.noLeidos + noLeidosGlobal(s); }
+
 export function alternarChat(abrir) {
   const s = leer();
   const nuevo = abrir ?? !s.chatAbierto;
-  cambiar({ chatAbierto: nuevo, noLeidos: nuevo ? 0 : s.noLeidos });
+  // Al abrir, queda leído lo de la pestaña que se ve
+  cambiar({ chatAbierto: nuevo });
+  if (nuevo) elegirPestanaChat(s.chatPestana);
 }
 
 // ---- Menú lateral ----------------------------------------------------------------

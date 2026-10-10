@@ -5,14 +5,18 @@
 import { html, useState } from "../lib.js";
 import { t } from "../i18n.js";
 import { accion, confirmar } from "../tienda.js";
+import { PuestosNuevo } from "./puestos.js";
+import { BloqueoNuevo } from "./botones.js";
+import { MarionetasNuevo } from "./marionetas.js";
+import { TecladoNuevo } from "./teclado.js";
 import { Tarjeta, Titulo, Boton, Interruptor, Ajuste, AjusteSw, Stepper, Icono, Vacio, Avatar, Chip, colorPing, cx, dos } from "../ui.js";
 
 export const PESTANAS_MANDOS = [
-  { id: "puestos", es: "PUESTOS", en: "SEATS", d: ["Toca «Asignar» para dar un mando o arrastra un puesto sobre otro para intercambiarlos.", "Tap Assign or drag a seat onto another to swap."] },
-  { id: "teclado", es: "TECLADO", en: "KEYBOARD", d: ["Quién puede jugar con teclado y qué tecla es cada botón.", "Who can play with keyboard and the key map."] },
+  { id: "puestos", es: "PUESTOS", en: "SEATS", d: ["Arrastra a cada persona a un puesto, o toca «Asignar». Lo que dejes en «Mirando» solo ve la partida.", "Drag each person to a seat, or tap Assign. Anyone in Watching only watches."] },
+  { id: "teclado", es: "TECLADO", en: "KEYBOARD", d: ["Quién puede jugar con teclado y qué tecla es cada botón del mando.", "Who can play with keyboard and which key is each pad button."] },
   { id: "turnos", es: "TURNOS", en: "HOTSEAT", d: ["Rotación automática: cada uno juega un rato y cede el mando.", "Automatic rotation of the pads."] },
-  { id: "marionetas", es: "MARIONETAS", en: "PUPPETS", d: ["Cuántos mandos virtuales ve el juego y los mandos físicos de esta PC.", "Virtual pads the game sees."] },
-  { id: "bloqueo", es: "BLOQUEO", en: "LOCK", d: ["Congela los mandos (pausas, revisión) o solo algunos botones.", "Freeze pads or some buttons."] },
+  { id: "marionetas", es: "MARIONETAS", en: "PUPPETS", d: ["Cuántos mandos virtuales ve el juego y qué mando físico maneja a los demás.", "Virtual pads the game sees and which physical pad drives the others."] },
+  { id: "bloqueo", es: "BLOQUEO", en: "LOCK", d: ["Congela los mandos (pausas, revisión) o bloquea solo los botones que elijas.", "Freeze pads or lock only the buttons you pick."] },
 ];
 
 export function metaMandos(s) {
@@ -28,11 +32,11 @@ export function VistaMandos({ s, pestana }) {
   const m = s.motor;
   if (!m || !m.mandos) return html`<${Vacio} titulo=${t("Conectando…", "Connecting…")} texto=""/>`;
   switch (pestana) {
-    case "teclado": return html`<${Teclado} m=${m}/>`;
+    case "teclado": return html`<${TecladoNuevo} m=${m}/>`;
     case "turnos": return html`<${Turnos} m=${m}/>`;
-    case "marionetas": return html`<${Marionetas} m=${m}/>`;
-    case "bloqueo": return html`<${Bloqueo} m=${m}/>`;
-    default: return html`<${Puestos} m=${m}/>`;
+    case "marionetas": return html`<${MarionetasNuevo} m=${m}/>`;
+    case "bloqueo": return html`<${BloqueoNuevo} m=${m}/>`;
+    default: return html`<${PuestosNuevo} m=${m}/>`;
   }
 }
 
