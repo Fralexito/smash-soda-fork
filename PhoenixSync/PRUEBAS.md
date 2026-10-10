@@ -905,3 +905,12 @@ carnet del blob no cambia con la velocidad (cola idéntica entre ranuras 4 y 5).
 - **Balde** (barra 19): Prec. pie malo **2→3** → **barra 19 = Precisión con el pie malo**.
 - Ninguna otra habilidad de la página 3 cambió en los 5.
 - Pendiente: el guardado del DESPUÉS (ranura 11), para confirmar en el archivo que no hubo vueltas naturales. Quedan 17 y 18 (Reflejos / Cobertura) para la ronda 2. **Uso del pie malo no tiene barra conocida**: las únicas libres son la 29 y la 30, siempre en 0. Quizá no evoluciona. 🔎
+
+### 2026-10-10 09:25 · Experimento B preparado: phoenix.lua v0.17e-B (botón nativo SOLO con los parches A y B) — simulado, SIN instalar
+- **Decisión de FRALEX (09:23):** hacer el B. Además dijo que la recarga automática le quitaría la gracia de recargar con «Activar», y que **le gustaría poder usar las dos formas** (Activar a mano y la recarga automática). Queda anotado como requisito para el diseño de la recarga automática.
+- **Qué cambia respecto a la v0.17e:** `EXPERIMENTO_B = true` → al arrancar se aplican A y B; **C no se escribe** (sus bytes sí se comprueban, para confirmar el exe). Si C ya estuviera puesto en la misma sesión, no se quita (aviso en el log). El overlay [BOTÓN] añade «EXPERIMENTO B: sin parche C».
+- **Hipótesis:** sin C, Activar recarga la base una sola vez (estado 22, modo 1) y la carga del EDIT del estado 26 va con 0x100 (sin base), así que el modo se queda en 1. Preguntas: ¿la pantalla dice «Selección actual: Activar»? ¿los equipos son los de la base? ¿siguen llegando las stats? ¿qué pasa al entrar a Partido, a Editar y al volver al menú?
+- **Simulación:** con bytes originales en memoria falsa, el arranque escribe solo en `0x20AF73B` (A) y `0x20AC6B9` (B); C queda original. La v0.17e, en la misma situación, escribe los tres. Con C ya puesto: no lo toca. Los 18 casos anteriores y la prueba de teclas, bien. `sider/pruebas/simular_expB.py`.
+- **Ojo para interpretar la prueba:** los archivos de Phoenix-DB los cambió otro trabajo de hoy (`PlayerAssignment.bin` a las 01:04 y `Player.bin` a las 04:58; la huella de `player.bin` en las lecturas de hoy es la de v90). La comprobación con Vinícius de anoche puede no valer ya. No se tocaron.
+- Archivo: `sider/pruebas/phoenix-v0.17e-B-prueba.lua` (sha256 e276c72e…). En el PC sigue la v0.17e.
+
