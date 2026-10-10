@@ -4,6 +4,9 @@
 #include <winhttp.h>
 #include <wincrypt.h>
 #include <shlobj.h>
+#include <tlhelp32.h>
+#include <cwctype>
+#include <algorithm>
 #include <fstream>
 #include <filesystem>
 
@@ -161,6 +164,36 @@ namespace mercado::windows {
 		GetComputerNameW(n, &t);
 		const std::string s = estrecho(n);
 		return s.empty() ? "Mi PC" : s.substr(0, 40);
+	}
+
+	std::vector<std::string> carpetasDocumentos() {
+		std::vector<std::string> r;
+		auto anadir = [&](const std::string& x) { if (!x.empty() && std::find(r.begin(), r.end(), x) == r.end()) r.push_back(x); };
+		PWSTR docs = nullptr;
+		if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_Documents, 0, nullptr, &docs)) && docs) anadir(estrecho(docs));
+		if (docs) CoTaskMemFree(docs);
+		auto env = [](const wchar_t* n) { wchar_t b[MAX_PATH] = {}; const DWORD k = GetEnvironmentVariableW(n, b, MAX_PATH); return (k && k < MAX_PATH) ? estrecho(b) : std::string(); };
+		const std::string perfil = env(L"USERPROFILE");
+		if (!perfil.empty()) { anadir(perfil + "\\Documents"); anadir(perfil + "\\OneDrive\\Documents"); anadir(perfil + "\\OneDrive\\Documentos"); }
+		for (const wchar_t* v : { L"OneDrive", L"OneDriveConsumer", L"OneDriveCommercial" }) {
+			const std::string od = env(v);
+			if (!od.empty()) { anadir(od + "\\Documents"); anadir(od + "\\Documentos"); }
+		}
+		return r;
+	}
+
+	bool juegoAbierto() {
+		HANDLE snap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+		if (snap == INVALID_HANDLE_VALUE) return false;
+		PROCESSENTRY32W e{}; e.dwSize = sizeof(e);
+		bool hay = false;
+		for (BOOL ok = Process32FirstW(snap, &e); ok && !hay; ok = Process32NextW(snap, &e)) {
+			std::wstring n = e.szExeFile;
+			for (auto& c : n) c = static_cast<wchar_t>(std::towlower(c));
+			hay = (n == L"pes2021.exe");
+		}
+		CloseHandle(snap);
+		return hay;
 	}
 
 }

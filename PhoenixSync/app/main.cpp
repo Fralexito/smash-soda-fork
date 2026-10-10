@@ -19,6 +19,8 @@
 //      Baja GET /liga/cambios?desde=N (firmado), verifica la firma, aplica al option file y/o a la Liga Máster
 //      y guarda SIEMPRE en archivos nuevos. --cambios usa un sobre firmado guardado en disco en vez de la web.
 //
+//  PhoenixSync sync-…  → option file compartido entre PCs (ver app/ComandosSync.cpp)
+//
 //  Modo de token: por defecto «compartido» (el de Phoenix Link).
 //  --manager usa el token propio de Mercado (segundo código).
 // =============================================================================
@@ -49,6 +51,8 @@
 
 using namespace mercado;
 
+int comandoSync(const std::vector<std::string>& a, ClienteHttp& http, FuenteToken& token);   // app/ComandosSync.cpp
+
 static std::string cmd0(const std::vector<std::string>& a) { return a.empty() ? std::string() : a[0]; }
 
 static void imprimirError(const Error& e) {
@@ -78,6 +82,7 @@ int main(int argc, char** argv) {
 			std::fprintf(stderr, "[%s] %s\n", n.c_str(), t.c_str());
 		});
 
+		if (const int rs = comandoSync(a, http, token); rs >= 0) return rs;   // sync-… (option file compartido)
 		const std::string& cmd = a[0];
 		if (cmd == "eco") {
 			auto r = api.eco();

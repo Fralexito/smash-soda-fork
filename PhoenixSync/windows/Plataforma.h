@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 #include "../core/Tipos.h"
 
 // =============================================================================
@@ -47,5 +48,9 @@ namespace mercado::windows {
 	std::string nombrePc();
 	/// %APPDATA%\Phoenix Mercado\  (la crea si falta; se mantiene el nombre antiguo por compatibilidad)
 	std::string carpetaDatos();
+	/// Carpetas «Documentos» candidatas: la de Windows (puede estar en OneDrive), %USERPROFILE%\Documents y las de OneDrive.
+	std::vector<std::string> carpetasDocumentos();
+	/// ¿Hay un PES2021.exe abierto?
+	bool juegoAbierto();
 
 }

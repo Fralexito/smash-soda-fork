@@ -54,6 +54,12 @@ add_library(PhoenixSyncCore STATIC
     core/Firma.cpp
     core/BlobLM.cpp
     core/Sincronizacion.cpp
+    core/RutasJuego.cpp
+    core/Respaldos.cpp
+    core/Entrega.cpp
+    core/Grupo.cpp
+    core/ClienteSync.cpp
+    core/SyncCompartido.cpp
 )
 target_link_libraries(PhoenixSyncCore PUBLIC PhoenixSyncTerceros)
 target_include_directories(PhoenixSyncCore PUBLIC
@@ -64,10 +70,12 @@ target_include_directories(PhoenixSyncCore PUBLIC
 # --- Pruebas: corren en cualquier sistema ------------------------------------
 add_executable(PhoenixSyncPruebas pruebas/main.cpp)
 target_link_libraries(PhoenixSyncPruebas PRIVATE PhoenixSyncCore)
+add_executable(PhoenixSyncPruebasCompartido pruebas/compartido.cpp)
+target_link_libraries(PhoenixSyncPruebasCompartido PRIVATE PhoenixSyncCore)
 
 # --- App de prueba: solo Windows ---------------------------------------------
 if(WIN32)
-    add_executable(PhoenixSync app/main.cpp windows/Plataforma.cpp)
+    add_executable(PhoenixSync app/main.cpp app/ComandosSync.cpp windows/Plataforma.cpp)
     target_compile_definitions(PhoenixSync PRIVATE UNICODE _UNICODE NOMINMAX)
     target_link_libraries(PhoenixSync PRIVATE PhoenixSyncCore winhttp crypt32 shell32 ole32 uuid)
 endif()
