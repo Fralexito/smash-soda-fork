@@ -757,3 +757,26 @@ carnet del blob no cambia con la velocidad (cola idéntica entre ranuras 4 y 5).
 - **Otras subidas en esos días (crecimiento normal):** Actitud ofensiva 83→84, Salto 71→72, Equilibrio 87→88. Media sigue en 90. Nada raro ni roto.
 - Encaje con las barras que estaban casi llenas en el 16/3: barra 1 = 9.969, barra 22 = 9.940, barra 25 = 9.690 (numeradas desde 1). Lo más probable: **barra 1 = Actitud ofensiva** (la más llena y la primera de la lista). Salto y Equilibrio serán las barras 22 y 25, en un orden todavía sin confirmar. 🔎 Para confirmarlo hace falta el guardado de DESPUÉS (pedido a FRALEX en una ranura nueva).
 - Respaldo del original sigue en `_PhoenixMercado_prueba\respaldos_ranuras\ML00000005_ranura6_original_16-3-2026`.
+
+### 2026-10-10 01:35 · Ranura 7 (11/4/2026) leída + prueba grande «mapeo de barras» PREPARADA en la ranura 8
+**A) Lectura de la ranura 7** (`ML00000006`, md5 `af613ecd…`, guardada por FRALEX tras la palanca; respaldo en `respaldos_ranuras\ML00000006_ranura7_11-4-2026`):
+- La tabla de 368 B no se movió (Lamine sigue en `0xc51228`; primera ficha en `0xc50818`, índice 7 = Lamine).
+- Lamine, barras que dieron la vuelta hacia arriba (16/3 → 11/4): **1** (9.969→595), **6** (9.999→327, la palanca), **22** (9.940→411), **25** (9.690→6). Son 4, y en pantalla subieron **4**: Actitud ofensiva, Conservación, Salto, Equilibrio. ✅ Encaja. **Barra 1 = Actitud ofensiva** (casi seguro); 22 y 25 = Salto / Equilibrio (sin saber cuál es cuál).
+- **Nuevo:** las barras también **bajan** (jugadores de 25+ años: Rodri, Raphinha, Koundé, Cancelo…). Si una barra baja de 0, previsiblemente la habilidad baja −1 (Koundé barra 1, Rodri 23, Szczęsny 7, Christensen 8, Cancelo 20 y 26). 🔎 sin mirar en pantalla.
+- **Nuevo:** la barra 20 de Lamine **no se mueve** (5.874 igual) y su Velocidad está en **99** (tope). 🔎 Pista: barra 20 = Velocidad. Barras 19, 27 y 28 crecen muy poco (decenas al mes); 3 y 15–18 solo se usan en porteros; 29–30 siempre 0.
+- Crecimiento típico de un joven: 300–1.000 por barra al mes (10–35 por día).
+
+**B) Prueba grande preparada (ranura 8, `ML00000007`, md5 `ac573b6b…`, sha256 `beca162c…`):**
+- Hecha desde la ranura 7. **60 barras** puestas en 9.999 en **7 jugadores jóvenes** (Bardghji, Caicedo, Gavi, Fermín, Lamine, Bernal, Cubarsí). Comprobado: 120 bytes distintos, todos dentro de lo planeado.
+- **Método «código»:** cada una de 20 barras (1, 2, 4–14, 20–26) va a **3 de los 7** jugadores, con una combinación distinta para cada barra. Al ver en qué 3 jugadores sube una habilidad, se sabe su barra. Si sale una combinación de 2 o de 4, se nota enseguida que algo raro pasó (tope 99 o una subida natural). Plan exacto: `herramientas/palanca/plan_mapeo_2026-10-10.json`.
+- | Jugador | Barras en 9.999 |
+  |---|---|
+  | Roony Bardghji | 2, 5, 8, 9, 10, 11, 12, 14, 26 |
+  | Josué Caicedo | 1, 2, 4, 7, 11, 14, 20, 23, 26 |
+  | Gavi | 7, 13, 20, 22, 23, 24, 25, 26 |
+  | Fermín López | 4, 6, 7, 8, 11, 12, 21, 22, 25 |
+  | Lamine Yamal | 5, 10, 12, 13, 14, 21, 23, 25 |
+  | Marc Bernal | 1, 2, 6, 8, 9, 10, 22, 24 |
+  | Pau Cubarsí | 1, 4, 5, 6, 9, 13, 20, 21, 24 |
+- Subidas naturales posibles (barras ya casi llenas, no puestas por nosotros): Fermín barra 14 (9.728), Bernal barra 25 (9.794). Se verán en el guardado de después.
+- Herramienta nueva: `herramientas/palanca/palanca_varias.cpp` (varios cambios, todo o nada, comprueba cada valor viejo, nunca más de 9.999).
