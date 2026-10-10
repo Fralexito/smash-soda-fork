@@ -530,3 +530,8 @@ se puede cambiar un guardado con el juego abierto mientras no esté cargado (Fra
 - ⇒ **Con la actualización en vivo activada, el juego usa las plantillas de la base (como hacía Konami con sus datos en vivo).** El option file solo manda con la opción desactivada (Editar → Cargar, prueba 04:47).
 - **Arreglo:** `PlayerAssignment.bin` propio en Phoenix-DB, con Julián 172 → 108, dorsal 19 (byte 18) y orden 24 (último del Barça). sha 7fb34a54…, en las dos carpetas Phoenix-DB (copia en `db\PlayerAssignment_julianBarca.bin`).
 - **Siguiente:** Activar otra vez → ¿Julián en el Barça?
+
+### 2026-10-09 ~19:43 · CONFIRMADO: «Activar» (v0.17, en el sitio) NO aplica las plantillas del option file
+- FRALEX: option file en disco con Lamine en el Real Madrid (juego abierto) → Partido → Datos Actual. en vivo → Activar → **Lamine no apareció en el Real Madrid**.
+- Coincide con la prueba de Julián (06:54). Con la recarga «en el sitio» (estado 26, `editLoadDataInLiveDataSet`) mandan las plantillas de la BASE. En cambio, la recarga al volver al menú principal (interruptor exe+0x37F5C39, tecla L) SÍ aplicó fichajes del option file (prueba 05:30).
+- **Siguiente:** tecla L → menú principal → Partido, para ver si el option file manda aun después de haber usado «Activar». Si sale bien, la v0.18 hará las dos cosas: el mensaje nativo y, además, encender el interruptor.
