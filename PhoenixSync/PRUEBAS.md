@@ -940,3 +940,14 @@ carnet del blob no cambia con la velocidad (cola idéntica entre ranuras 4 y 5).
   - Texto en «Cargar»: «PRUEBA PORTEROS RONDA 2 (Barca) / 2/5/2026 / 17 y 18 cruzadas».
   - Entregado al PC (con el arreglo del `.zip` de arriba) y huella comprobada igual: `4a9fafbb6b8f1df0d8eb13f550d57fef5573a5a797ec7c1fe9bf018be0d74375`.
 - **Pendiente:** FRALEX cargue la ranura 12, mire Reflejos y Cobertura de Joan García y Szczęsny (sin avanzar, para confirmar que cargó bien), avance unos días, y mande las capturas de antes y después.
+
+### ✅🏆 2026-10-10 09:28–09:32 · EXPERIMENTO B: sin el parche C el juego SE QUEDA en «Activar» — «Selección actual: Activar Actualización en vivo»
+- Sesión que arrancó a las 09:28:44 con la v0.17e-B. Log: «parche A aplicado», «parche B aplicado», «experimento B: parche C NO aplicado (a propósito)». phoenix.lua: 0 errores.
+- **09:29:14 Activar** → **una sola** recarga de la base (lectura n.º 3, 28 archivos) en **modo 1**. Ya no hay la segunda recarga en modo 0 que hacía el parche C.
+- **Captura de FRALEX (09:30:16):** el juego muestra **«Selección actual: Activar Actualización en vivo»** (por primera vez). Overlay: «[MODO] opción en vivo: ACTIVADA (1) · gestor estado 4», «[ÚLTIMA RECARGA] ACTIVAR → equipos de la base · 09:29:14», «[BOTÓN] … EXPERIMENTO B: sin parche C».
+- **Plantillas (captura, Barça vs Barça; `set_teams` 09:31:34 = 108 vs 108):** el Barça local tiene a **Vinícius y Mbappé** y muestra las **flechas de forma física** de la actualización en vivo (todas verdes hacia arriba) ⇒ equipos de la base. El Barça visitante sale distinto (sin Vinícius ni Mbappé, con Adeyemi de delantero): ❓ sin explicar todavía.
+- **09:32:21 Editar** → el juego releyó **solo 11 archivos** de la base (lectura n.º 4, la lista «tipo 2»: boots, glove, player, country, team, playerassignment, coach, competition…) y **el modo SIGUIÓ en 1**. Con el parche C, la entrada a Editar dejaba el modo en 0. ⇒ Sin C, entrar a Editar **no** desactiva el modo vivo. 🔎 Falta ver qué plantillas quedan después.
+- Stats: la huella de `player.bin` fue la misma en las 4 lecturas (la de v90), porque el archivo de Phoenix-DB no cambió durante la sesión. **No se puede saber todavía** si sin C llegan stats nuevas: haría falta cambiar `Player.bin` con el juego abierto y pulsar Activar.
+- Otros módulos: 64 errores de `StadiumServer.lua` (línea 705) al preparar partidos, como siempre.
+- **Pendiente:** (1) después de Editar, ¿Vinícius sigue en el Barça y la pantalla sigue en «Activar»? (2) ¿«Desactivar» funciona ahora (modo 0 y equipos del option file)? (3) ¿por qué el Barça visitante sale distinto? (4) stats con Activar sin C.
+
