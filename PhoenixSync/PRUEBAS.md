@@ -628,3 +628,13 @@ fichas de tu equipo (A–M), ni en su ficha de 596 B, ni empaquetadas en 5–8 b
 - **Plan de prueba:** Activar → overlay «ACTIVAR → equipos de la base»; Editar → Cargar (sin Guardar) → «NORMAL → equipos del option file». Comprobación con Vinícius si los archivos siguen como a las 20:08 (Barça con Activar, Real Madrid con Editar → Cargar).
 - **Corrección a la entrada de las 22:45:** el juego lee `[gestor+0x38]` en 12 sitios y en 11 de ellos lo compara con 1 (no en los 12).
 - Informe paso a paso de toda la sesión: `base-conocimiento/19-OPCION-EN-VIVO-PASO-A-PASO.md` (archivo nuevo).
+
+### ✅ 2026-10-09 23:34–23:37 · v0.17a (opción A) PROBADA en el juego: reconoce ACTIVAR y vuelve a NORMAL
+- Sesión que arrancó a las 23:34:11 (log: «v0.17a listo»). Sin errores de Lua.
+- 23:34:11 lectura n.º 1 (arranque), modo 0 → «última recarga: NORMAL». 23:34:39 lectura n.º 2, modo 0 → NORMAL.
+- **23:35:00 Activar**, lectura n.º 3, modo **1** → «última recarga: **ACTIVAR**». 23:35:03 lectura n.º 4, modo 0 → **no cambia** (2.ª recarga del mismo Activar, dentro de los 15 s).
+- Captura de FRALEX a las 23:35:38: «[ÚLTIMA RECARGA] ACTIVAR → equipos de la base · 23:35:00 · ¿fue Activar? true», con «[MODO] DESACTIVADA (0)».
+- **23:36:33** lectura n.º 5, modo 0 → «última recarga: **NORMAL**». FRALEX había entrado a Editar. Captura a las 23:36:46 (ya en el menú principal): «[ÚLTIMA RECARGA] NORMAL → equipos del option file · 23:36:33 · ¿fue Activar? false».
+- **Susto sin daño:** FRALEX avisó de que en Editar el cursor se fue sin querer a «Guardar». Foto de las 23:37: `EDIT00000000` idéntico (sha 3507ce35…, misma fecha 19:59:59) y el resto de la carpeta de guardado igual. No se guardó nada.
+- **Sin comprobar todavía:** que la etiqueta coincide con las plantillas en pantalla (Vinícius en el Barça tras Activar y en el Real Madrid tras la recarga normal), y Editar → Cargar pulsado a propósito.
+
