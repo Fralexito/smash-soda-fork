@@ -31,4 +31,4 @@
 1. **WEB**: publicar §26 (`prompts/PROMPT-WEB-sync-compartido.md`, con SQL).
 2. Prueba real con dos PCs (sección 7 del encargo).
 3. Interfaz: hoy son comandos de consola; luego, tarjeta en la sección «Phoenix Sync» de Link (prompt al chat LINK).
-4. ⚠ **Hallazgo de PRUEBAS.md (06:54):** con «Datos Actual. en vivo» el juego toma las plantillas de la **base** (`PlayerAssignment.bin`), no del option file. Con Editar → Cargar sí manda el option file. Si se confirma, habrá que aplicar las mismas operaciones también a `PlayerAssignment.bin` (y pedir a Link que acepte ese archivo). El diseño por operaciones ya lo permite.
+4. **Qué archivo manda en las plantillas (prueba de FRALEX, mañana del 2026-10-09):** cambiar `PlayerAssignment.bin` (Lamine → Real Madrid) NO movió a Lamine; cambiar el **option file** SÍ. ⇒ Sync aplica los fichajes al option file (correcto). Queda una duda abierta: la nota de las 06:54 (PRUEBAS.md) vio plantillas de la base al usar «Datos Actual. en vivo». Hay que repetir la prueba de fichaje usando ese botón para confirmar que también ahí manda el option file.
