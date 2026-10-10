@@ -886,3 +886,12 @@ carnet del blob no cambia con la velocidad (cola idéntica entre ranuras 4 y 5).
 - phoenix.lua: 0 errores.
 - ⇒ **La v0.17e queda como la versión recomendada.** Hace todo lo de la v0.17, lee la opción, la última recarga y la zona, y no se puede disparar nada por un toque accidental.
 
+
+### 2026-10-10 09:11 · Porteros y lentas: capturas ANTES (ranura 10 cargada, sin avanzar)
+- La ranura 10 carga bien. Página 3/4 de los 5:
+  - Joan García (media 84): Act. portero 92, Atajar 90, Despejar 89, Reflejos 92, Cobertura 91, pie malo 2/2, Regularidad 4, Lesiones 2.
+  - Szczęsny (80): 86/82/83/87/87, pie malo 2/2, Regularidad 6, Lesiones 2.
+  - Lamine (90): pie malo 3/3, Regularidad 5, Lesiones 2.
+  - Fermín (88): 2/2, 3, 2.
+  - Balde (85): 3/2, 4, 2.
+- Datos: `herramientas/palanca/antes_porteros_lentas_2026-10-10.json`.
