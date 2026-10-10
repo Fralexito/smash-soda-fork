@@ -825,3 +825,10 @@ carnet del blob no cambia con la velocidad (cola idéntica entre ranuras 4 y 5).
 - **Desempate:** barra **8 = Pase raso**, barra **12 = Agresividad**, barra **24 = Aceleración**, barra **13 = Balón parado**.
 - Comprobación cruzada en los 7 jugadores: con el mapa final, **cada** subida en pantalla tiene su barra que dio la vuelta en el archivo, y **cada** barra que dio la vuelta tiene su subida en pantalla (63 de 63, contando las 3 naturales de Lamine y la de Bernal). ✅
 - **Corrección (01:52):** la cuenta es **64 de 64** (9 + 9 + 8 + 9 + 11 + 9 + 9), no 63.
+
+### 2026-10-10 02:05 · Informe y guía completa n.º 26 (pedido de FRALEX: «súper completo, para humano y para IA»)
+- Junta las guías 21, 23, 24 y 25 y añade: glosario, especificación del registro de 368 B (barras en +54, fórmula reg+50+2·(k−1)), algoritmo y código de referencia, método del «código secreto», lista de comprobación de 0 errores, tabla multiparche, riesgos, huellas de todas las ranuras y anexo con datos crudos.
+- **Comprobaciones nuevas hechas para el informe:**
+  - (1) un programa contrastó las 28 capturas con las barras del archivo: **64/64**, y todas las diferencias de pantalla son 0 o +1;
+  - (2) `GuardadoLM::tablasDe` localiza sola la tabla D en la ranura 9 (equipo k = 122, stride 368, ofsReg0 `0xc5081c`) → el método general funciona sin posiciones fijas. ✅
+- Datos: `herramientas/palanca/antes_despues_mapeo_2026-10-10.json`.
