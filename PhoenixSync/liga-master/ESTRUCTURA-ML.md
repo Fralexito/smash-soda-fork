@@ -462,3 +462,6 @@ del juego cuadran con la segunda tabla (jornada anterior).
 - **(10 oct, 00:20) Experimento «dos carreras»:** carrera nueva con base v99 → Lamine 99 (ranura 4, md5 6cbe94ff…); la misma con v90 → 90
   (ranura 5, md5 006dd17a…). En el blob, su ficha difiere solo en sueldo (+0x56) y +0x74. Sin copia literal ni empaquetada de la
   velocidad fuera del blob. Pendiente: cargar la ranura 4 con la base v90 (¿copia guardada o cálculo al cargar?).
+- **(10 oct, 00:40) Confirmado en el juego:** la ranura 4 (creada con v99) cargada con la base v90 muestra Lamine 99 → la carrera
+  guarda su copia, tomada al crearse. Búsquedas fallidas detalladas en PRUEBAS.md (10 oct, 00:40). La zona 0x10c0000–0x1140000 es
+  una imagen (bloques de textura de 8 B), no datos de jugadores.

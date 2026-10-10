@@ -673,3 +673,13 @@ Fralex creó la misma carrera (Barça) con la base v90: **Lamine Velocidad 90, m
 - No hay ningún byte con 99/59 (ranura 4) frente a 90/50 (ranura 5) fuera del blob, salvo ruido en zonas muy cambiantes; ni trozos de
   8 B de su ficha de Player.bin (v99 o v90) en ninguna de las dos.
 **Duda abierta:** ¿la carrera guarda su copia o calcula al cargar? Prueba pedida: cargar la ranura 4 con la base v90 y mirar a Lamine.
+
+**2026-10-10 00:20 · Prueba en el juego · Experimento «dos carreras» — paso 4: cargar la ranura 4 (creada con v99) con la base v90** — ✅ CLAVE
+Fralex cargó la ranura 4 con Phoenix-DB en v90: **Lamine Velocidad 99, media 90**. **Conclusión firme:** la carrera **guarda su
+propia copia** de las habilidades, tomada de la base **al crearse**; después ya no lee la base.
+Búsqueda de esa copia comparando ranura 4 y ranura 5 (todo sin éxito, anotado para no repetirlo): bytes 99/90 y 59/50; u16 y float;
+campos de 6, 7 y 8 bits con desplazamientos 0/20/30/40 (antes y después del blob, alineando por el final del blob); grupos de
+habilidades en cualquier orden alrededor de un 59→50; trozos de 8 B de su ficha de Player.bin; su ficha M (idéntica), su ficha de
+596 B, su ficha del blob (solo cambian sueldo +0x56 y +0x74). Zonas descartadas: 0x10c0000–0x1140000 es una **imagen** (bloques de
+textura de 8 B). Sí cambian entre las dos carreras: su curva de medias (tabla E: 84,85,86… frente a 82,83,84…), tabla F +4 (74/73) y
+números al azar de su tabla C/D (semillas, 0–9999). **Estado:** ⏳ copia sin localizar.
