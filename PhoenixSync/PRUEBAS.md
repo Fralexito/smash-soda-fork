@@ -981,3 +981,9 @@ carnet del blob no cambia con la velocidad (cola idéntica entre ranuras 4 y 5).
 - **Cuadro corregido (sin el parche C):** Activar → equipos de la base (Vinícius y Mbappé) · Editar → equipos del option file, aunque la pantalla siga en «Activar» · Desactivar → equipos del option file (Vinícius al Madrid), sin releer archivos.
 - **Error de Claude:** dio por hecha una tercera plantilla mirando solo la parte visible de la lista. Regla: para saber si un jugador está en un equipo, pedir la lista completa (bajar hasta el final).
 
+
+### 2026-10-10 09:55 · Guía para replicar el experimento B + decisión de FRALEX
+- **Pedido de FRALEX (09:50):** quiere **dos modos en el mismo phoenix.lua** y **una tecla para elegir entre ellos**: (1) **automático** y (2) el que **hace los fichajes al pulsar Activar** (como la v0.17e; «no importa si después queda desactivado»). Además, guardar con todo detalle cómo se llega a la v0.17e-B, para que otra IA pueda replicarla.
+- Hecho: `base-conocimiento/30-EXPERIMENTO-B-COMO-REPLICAR.md` (bytes de A, B y C, los 3 cambios exactos sobre la v0.17e, sha256, simulación, instalación, prueba, cuadro corregido, problemas conocidos y cómo volver atrás). Índice actualizado.
+- Sin tocar el juego ni el PC. En el PC sigue instalada la v0.17e-B.
+- Siguiente: diseñar la v0.18 con los dos modos y la tecla (con la aprobación de FRALEX antes de escribir código).
