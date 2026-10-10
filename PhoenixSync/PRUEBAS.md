@@ -997,3 +997,23 @@ carnet del blob no cambia con la velocidad (cola idéntica entre ranuras 4 y 5).
 - **Simulación:** `sider/pruebas/simular_v018.py`, 9 de 9. Además pasan con la v0.18 las simulaciones de la v0.17m, la v0.17a, la v0.17d, la v0.17e y la del experimento B.
 - **Archivos:** `sider/pruebas/phoenix-v0.18-prueba.lua` (a39b54de…), `sider/PhoenixModo.bat`, `sider/PhoenixRecargar.bat`, guía `base-conocimiento/31-MODOS-DE-RECARGA.md`, prompt `prompts/PROMPT-LINK-modo-recarga.md`, contrato en `COORDINACION.md`.
 - **Pendiente:** instalar (con OK de FRALEX, juego cerrado, respaldo y sha256) y probar: ¿`display_frame` llega en el menú?, ACTIVAR como la v0.17e, AUTO-SIEMPRE y AUTO-FICHAJES con Partido (sin Liga Máster ni guardar), y qué equipos salen tras la recarga automática (lista completa).
+
+### 2026-10-10 14:40 · Reseteo del option file y de PlayerAssignment.bin — vuelta al estado original (pedido de FRALEX)
+- **Pedido de FRALEX (14:20 aprox.):** «resetea mi option como venia por defecto, cada fichaje en su respectivo lugar» — deshacer todos los fichajes de prueba (Lamine, Julián, Mbappé, Vinícius) hechos el 9 de octubre y dejar los 3 archivos como estaban antes de empezar las pruebas.
+- **Archivos tocados y sus huellas (sha256), antes de tocar nada:**
+  - `239200\save\EDIT00000000` (option file, 11.014.094 bytes): `3507ce3543fd7a7401117012e9ca04140830050faa193e9f589245b617444b7e` (estado de prueba, con el fichaje de Mbappé).
+  - `SiderAddons\livecpk\Phoenix-DB\common\etc\pesdb\PlayerAssignment.bin` (copia raíz) y la copia equivalente en `ConmeGol Extras\ConmeGOL Patch 26\SiderAddons\...\PlayerAssignment.bin` (155.320 bytes cada una): ambas con la misma huella `1d27f0107f2c1e77c8d7a47d0a7e3019437740a06a97eff421c5235def49e319` — es la del archivo de prueba conocido `PlayerAssignment_mbappe_vini.bin` (Mbappé + Vinícius). Confirma que las dos copias estaban sincronizadas y en estado de prueba.
+- **Comprobación cruzada del original antes de restaurar:** `EDIT00000000.barca-original` y `EDIT00000000.respaldo-fichaje-20261009` (dos respaldos independientes de antes de cualquier prueba) dieron la **misma huella** `cb6e176e3dcf0dfa6480479471eb044debdc060a7db466d1c4a94e220bb76371` — confirma que ese es el option file original verdadero, sin ningún fichaje de prueba.
+- **Respaldo del estado de prueba (por si se necesita volver), antes de restaurar nada:**
+  - `EDIT00000000.respaldo-antes-reset-20261010` (copia exacta del option file de prueba, huella `3507ce35…` verificada igual).
+  - `PlayerAssignment.respaldo-antes-reset-20261010.bin` (copia exacta de la copia raíz de PlayerAssignment.bin, huella `1d27f010…` verificada igual).
+  - Los dos guardados en `_PhoenixMercado_prueba\db\`.
+- **Restauración (copiando desde los originales ya verificados, sin tocar el juego ni el puente de archivos nube↔PC — todo se hizo con `cp` directamente en el PC):**
+  - `EDIT00000000` ← `EDIT00000000.barca-original`.
+  - `PlayerAssignment.bin` (copia raíz, `SiderAddons\...`) ← `PlayerAssignment_original.bin`.
+  - `PlayerAssignment.bin` (copia variante, `ConmeGol Extras\ConmeGOL Patch 26\SiderAddons\...`) ← `PlayerAssignment_original.bin`.
+- **Verificación final (huellas después de restaurar, comparadas contra lo esperado):**
+  - Option file: `cb6e176e3dcf0dfa6480479471eb044debdc060a7db466d1c4a94e220bb76371` ✅ igual al original.
+  - PlayerAssignment.bin (las dos copias): `d1cf73c627713a37a0ebebf77950960e21c7fc51ae2811aa01f01c8c9ed6ebff` ✅ igual al original, y las dos copias iguales entre sí (siguen sincronizadas).
+- **Resultado:** los 3 archivos quedaron exactamente como estaban antes de las pruebas de fichajes del 9 de octubre (Lamine, Julián, Mbappé, Vinícius). El option file y Phoenix-DB ya no tienen ningún fichaje de prueba. **No se tocaron las ranuras de Liga Máster** (`ML0000000x`) — esas son independientes del option file y de Phoenix-DB, y las barras de crecimiento documentadas en las guías 26–29 siguen en las ranuras donde quedaron (10, 11 y 12), sin verse afectadas por este reseteo.
+- **Pendiente para FRALEX:** la próxima vez que abra el juego, conviene entrar a Editar → Cargar (para que lea el option file ya restaurado) y, si usa la actualización en vivo, pulsar Activar de nuevo para que tome el PlayerAssignment.bin restaurado — así se confirma en pantalla que todo volvió a su lugar original.
