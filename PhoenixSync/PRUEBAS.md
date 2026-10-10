@@ -780,3 +780,9 @@ carnet del blob no cambia con la velocidad (cola idéntica entre ranuras 4 y 5).
   | Pau Cubarsí | 1, 4, 5, 6, 9, 13, 20, 21, 24 |
 - Subidas naturales posibles (barras ya casi llenas, no puestas por nosotros): Fermín barra 14 (9.728), Bernal barra 25 (9.794). Se verán en el guardado de después.
 - Herramienta nueva: `herramientas/palanca/palanca_varias.cpp` (varios cambios, todo o nada, comprueba cada valor viejo, nunca más de 9.999).
+
+### 2026-10-10 01:33 · Mapeo de barras: capturas «ANTES» recibidas (ranura 8 recién cargada)
+- FRALEX cargó la ranura 8 («PRUEBA MAPEO BARRAS») y mandó 12 capturas: páginas 2/4 y 3/4 de **Bardghji, Caicedo (dorsal 9, sí está en la plantilla), Gavi, Fermín, Lamine y Cubarsí**. Falta **Marc Bernal**.
+- La ranura cargó sin problemas y las habilidades son las mismas que en la ranura 7 (Lamine: igual que la captura de las 01:11). ✅ Poner barras en 9.999 no cambia nada hasta avanzar.
+- Página 3/4 = Actitud defensiva, Recup. de balón, Agresividad, 5 de portero (40 en jugadores de campo) y 4 de escala 1–8 (uso y precisión de pie malo, regularidad, resistencia a lesiones). Total: 17 + 3 + 5 = **25 habilidades** con número de 40–99, y ~28 barras usadas → sobran ~3 barras (19, 27, 28: crecen muy poco; ¿regularidad, pie malo…?). 🔎
+- Valores anotados en `herramientas/palanca/antes_mapeo_2026-10-10.json`.
