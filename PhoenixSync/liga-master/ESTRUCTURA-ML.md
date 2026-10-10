@@ -472,3 +472,9 @@ del juego cuadran con la segunda tabla (jornada anterior).
 - **(10 oct, 00:55) ✅ PROBADO:** los ~30 u16 de 0–9.999 de la ficha de 368 B son **barras de crecimiento**: entre la ranura 4 y la 6,
   solo la barra n.º 6 de Lamine dio la vuelta y en pantalla solo subió **Conservación del balón 92 → 93**. Barra 6 = Conservación del
   balón. El valor absoluto de las habilidades de la carrera sigue sin localizarse.
+- **(10 oct, 01:45) ✅ PROBADO — mapa de barras** (ficha de 368 B del equipo del usuario, u16 desde +54, barra n.º k en +54+2·(k−1)):
+  1 Actitud ofensiva · 2 Actitud defensiva · 4 Regate · 5 Control de balón · 6 Conservación · 7 Finalización · 9 Pase bombeado ·
+  10 Cabeceo · 11 Recuperación · 14 Efecto · 20 Velocidad · 21 Contacto físico · 22 Equilibrio · 23 Potencia de tiro · 25 Salto ·
+  26 Resistencia. Parejas: {8, 12} = {Pase raso, Agresividad}; {13, 24} = {Balón parado, Aceleración}. 3, 15–18: porteros.
+  19, 27, 28: crecen ~decenas al mes (¿escalas 1–8?). 29–30: siempre 0. Poner una barra en 9.999 → +1 a esa habilidad al avanzar
+  (60/60 en la prueba de la ranura 8). Las barras también bajan (veteranos); al pasar de 0 se espera −1. 🔎

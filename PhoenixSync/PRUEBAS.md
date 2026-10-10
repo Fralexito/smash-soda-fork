@@ -786,3 +786,35 @@ carnet del blob no cambia con la velocidad (cola idéntica entre ranuras 4 y 5).
 - La ranura cargó sin problemas y las habilidades son las mismas que en la ranura 7 (Lamine: igual que la captura de las 01:11). ✅ Poner barras en 9.999 no cambia nada hasta avanzar.
 - Página 3/4 = Actitud defensiva, Recup. de balón, Agresividad, 5 de portero (40 en jugadores de campo) y 4 de escala 1–8 (uso y precisión de pie malo, regularidad, resistencia a lesiones). Total: 17 + 3 + 5 = **25 habilidades** con número de 40–99, y ~28 barras usadas → sobran ~3 barras (19, 27, 28: crecen muy poco; ¿regularidad, pie malo…?). 🔎
 - Valores anotados en `herramientas/palanca/antes_mapeo_2026-10-10.json`.
+
+### 2026-10-10 01:45 · ✅ MAPEO DE BARRAS: resultado (ranura 8 → ranura 9, 11/4 → 22/4/2026)
+- FRALEX avanzó ~11 días (hasta el 22/4) y guardó en la **ranura 9** (`ML00000008`, md5 `e3eb8710…`). Capturas DESPUÉS de los 7 (páginas 2 y 3); de Bernal falta la captura ANTES.
+- **Archivo:** las 60 barras puestas en 9.999 **dieron la vuelta todas** (60/60). Subidas naturales extra: Lamine barras 4, 8 y 24; Bernal barra 25. Nada más.
+- **Pantalla vs archivo:** en Bardghji, Caicedo, Gavi, Fermín y Cubarsí, el **número de habilidades que subieron = número de barras puestas** (9, 9, 8, 9, 9), y Lamine 11 = 8 puestas + 3 naturales. ✅ Cada barra que da la vuelta = +1 a una habilidad, sin excepción.
+- **Decodificación (trío de jugadores donde subió cada habilidad):**
+
+  | Barra | Habilidad | Seguridad |
+  |---|---|---|
+  | 1 | Actitud ofensiva | ✅ |
+  | 2 | Actitud defensiva | ✅ |
+  | 4 | Regate | ✅ |
+  | 5 | Control de balón | ✅ |
+  | 6 | Conservación del balón | ✅ (2.ª vez) |
+  | 7 | Finalización | ✅ |
+  | 9 | Pase bombeado | ✅ |
+  | 10 | Cabeceo | ✅ |
+  | 11 | Recuperación de balón | ✅ |
+  | 14 | Efecto | ✅ |
+  | 20 | Velocidad | ✅ (y quieta en Lamine con 99) |
+  | 21 | Contacto físico | ✅ |
+  | 22 | Equilibrio | ✅ |
+  | 23 | Potencia de tiro | ✅ |
+  | 25 | Salto | ✅ |
+  | 26 | Resistencia | ✅ |
+  | 8 y 12 | Pase raso / Agresividad (una cada una) | 🔎 falta Bernal ANTES |
+  | 13 y 24 | Balón parado / Aceleración (una cada una) | 🔎 falta Bernal ANTES |
+  | 3, 15, 16, 17, 18 | solo porteros (las 5 de portero, orden sin saber) | ⏳ |
+  | 19, 27, 28 | crecen muy poco; ¿pie malo / regularidad / lesiones? | ⏳ |
+
+- Por qué 8/12 y 13/24 quedan en empate: Lamine subió por las dos barras de cada pareja (una puesta, otra natural), así que solo Bernal (que tenía 8 y 24, no 12 ni 13) las separa. Basta con 2 capturas de Bernal en la ranura 8.
+- Medias: Fermín 86→88, Cubarsí 87→88, Caicedo 58→59; las demás igual.
