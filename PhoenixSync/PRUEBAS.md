@@ -1017,3 +1017,13 @@ carnet del blob no cambia con la velocidad (cola idéntica entre ranuras 4 y 5).
   - PlayerAssignment.bin (las dos copias): `d1cf73c627713a37a0ebebf77950960e21c7fc51ae2811aa01f01c8c9ed6ebff` ✅ igual al original, y las dos copias iguales entre sí (siguen sincronizadas).
 - **Resultado:** los 3 archivos quedaron exactamente como estaban antes de las pruebas de fichajes del 9 de octubre (Lamine, Julián, Mbappé, Vinícius). El option file y Phoenix-DB ya no tienen ningún fichaje de prueba. **No se tocaron las ranuras de Liga Máster** (`ML0000000x`) — esas son independientes del option file y de Phoenix-DB, y las barras de crecimiento documentadas en las guías 26–29 siguen en las ranuras donde quedaron (10, 11 y 12), sin verse afectadas por este reseteo.
 - **Pendiente para FRALEX:** la próxima vez que abra el juego, conviene entrar a Editar → Cargar (para que lea el option file ya restaurado) y, si usa la actualización en vivo, pulsar Activar de nuevo para que tome el PlayerAssignment.bin restaurado — así se confirma en pantalla que todo volvió a su lugar original.
+
+## Prueba (9 oct, 22:40) — Calibración de Player.bin con capturas del juego (Vestuario Barça) — ✅ OBSERVADO
+- Método: por cada captura de las pantallas 1/9–9/9 se buscó el registro cuyos 20 stats coinciden (±1) y se listaron los bits 480–531 encendidos.
+- Resultado: stats, portero, pie malo/forma/lesión, posiciones y ~45 habilidades/COM mapeados. Detalle y pendientes (Cortada, bit 514, Centrador): `base-conocimiento/16-PLAYER-BIN-FICHA-COMPLETA.md`.
+- Nada se escribió en Player.bin ni en el juego (solo lectura).
+
+## Investigación (10 oct, 01:40) — ¿Más equipos por liga? — 🔎 OBSERVADO (solo lectura, sin pruebas en el juego)
+- Método: descomprimir `Competition.bin`, `CompetitionEntry.bin`, `Team.bin` (WESYS + zlib); contar filas por competición; abrir una copia de un guardado de LM con `dec` (ida y vuelta idéntica) y leer los bloques de 3.000 B con listas de equipos; comparar tres .exe por SHA-256 y por bytes; escanear el .exe buscando tablas de calendario (sin resultado para n ≥ 10).
+- Resultado: ConmeGOL 26 ya tiene Argentina 1.ª = 30, MLS = 30, Argentina 2.ª = 36, Copa Argentina = 66; coinciden con el guardado. El .exe actual es idéntico al de Sudamerican_Backup.
+- Nada se escribió en archivos del juego ni del parche. Detalle y plan de prueba: `base-conocimiento/19-INVESTIGACION-MAS-EQUIPOS-POR-LIGA.md`.
