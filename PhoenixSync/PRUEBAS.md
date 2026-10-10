@@ -849,3 +849,17 @@ carnet del blob no cambia con la velocidad (cola idéntica entre ranuras 4 y 5).
   - (5) ⚠️ hoy el `PlayerAssignment.bin` de Phoenix-DB (raíz y modo) es el **de prueba** (sha256 1d27f010…, Mbappé + Vinícius en el Barça), no el original (d1cf73c6…);
   - (6) la copia `modules\phoenix.lua.v02` del PC = v0.2 probada (sha256 116b40a6…, commit 4683988).
 - El informe documenta la familia «avisos» (v0.2) y **no** las versiones que leen o escriben la memoria o modifican código del juego (v0.3–v0.17e).
+
+### 2026-10-10 09:05 · Prueba «porteros y barras lentas» PREPARADA en la ranura 10 (`ML00000009`)
+- Base: ranura 9 (22/4/2026, md5 `e3eb8710…`), respaldada en `respaldos_ranuras\ML00000008_ranura9_22-4-2026`. Archivo nuevo: md5 `1ab8031d…` (sha256 `fd62691b…`). 14 bytes distintos = 7 barras, todas donde se planeó. Texto en Cargar: «PRUEBA PORTEROS Y LENTAS (Barca)».
+- **Por qué así:** de los dos porteros, solo Joan García (25 años) tiene barras de portero que **suben** (+50 a +80 en 11 días); las de Szczęsny (35) **bajan** (−15 a −180). Los jugadores de campo tienen las barras de portero en 0 y no se mueven. Con 2 porteros solo hay 3 «códigos», así que va en dos rondas.
+- **Ronda 1 (esta):**
+  - Joan García: barras **3 y 15** → 9.999 (subir).
+  - Szczęsny: barras **15 y 16** → **0** (bajar; prueba también si bajar de 0 resta **−1**).
+  - Lectura: la habilidad que suba en Joan **y** baje en Szczęsny = barra 15; la que suba solo en Joan = barra 3; la que baje solo en Szczęsny = barra 16. Las barras 17 y 18 quedan para la ronda 2.
+- **Barras lentas** (crecen ~15–80 cada 11 días), una por jugador para no confundir:
+  - Lamine → barra **28**;
+  - Fermín → barra **27**;
+  - Balde → barra **19**.
+  - Se mira la página 3/4 (pie malo, regularidad, lesiones). Dato extra: Raphinha dio la vuelta solo en la barra 27 entre el 11/4 y el 22/4.
+- Plan: `herramientas/palanca/plan_porteros_lentas_2026-10-10.json`.
