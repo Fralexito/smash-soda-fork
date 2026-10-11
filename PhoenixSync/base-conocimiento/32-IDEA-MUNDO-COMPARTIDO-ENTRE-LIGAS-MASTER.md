@@ -1,7 +1,9 @@
 # 32 · Idea: un "mundo compartido" entre varias Ligas Máster conectadas
 
-**Para FRALEX · 10 de octubre de 2026, 21:49 (Lima).**
-Esto **no está construido todavía** — es una idea pensada en conversación, para dejarla anotada antes de olvidarla. No se tocó ningún archivo del juego ni se escribió código. Cuando se decida construirla, hay que volver a leer esta guía y planear la implementación paso a paso (y pedir el OK de FRALEX antes de tocar nada).
+**Para FRALEX · 10 de octubre de 2026, 21:49 (Lima). Actualizado 22:23.**
+Esto **no está construido todavía para la Liga Máster** — es una idea pensada en conversación, para dejarla anotada antes de olvidarla. No se tocó ningún archivo del juego ni se escribió código nuevo en esta guía. Cuando se decida construirla, hay que volver a leer esta guía y planear la implementación paso a paso (y pedir el OK de FRALEX antes de tocar nada).
+
+> **⚠️ Aviso importante (añadido 22:23):** mientras se pensaba esta idea, **la otra cuenta/frente ya construyó y probó una base real** para exactamente este tipo de "mundo compartido", pero a nivel de **option file** (fuera de una carrera de Liga Máster ya empezada): ver `PhoenixSync/PLAN-CONTROL-TOTAL.md` y el motor `core/SyncCompartido.cpp` — grupos de varias PCs, fichajes que viajan de una PC a otra, una "foto oficial" que publica un admin, rechazo de cambios que no coinciden (muy parecido a la regla de "gana el que llega primero" de la sección 2 de aquí), y un comando para deshacer. **Esta guía 32 sigue siendo útil específicamente para la parte de Liga Máster** (una carrera ya empezada, con las barras de crecimiento) — esa parte sí sigue sin programarse, está anotada como pendiente en `PLAN-CONTROL-TOTAL.md` §2 y §4.4. Antes de construir nada de esta guía, hay que leer primero `PLAN-CONTROL-TOTAL.md` para no reinventar el motor de sincronización que ya existe — esta idea debería encajar **dentro** de `SyncCompartido`, no al lado.
 
 ---
 
@@ -73,6 +75,16 @@ Esto reduce muchísimo la cantidad de choques posibles, porque ya no se vigilan 
 ## 5. Importante: no es tiempo real como jugar un partido juntos
 
 No se va a ver el cambio en medio de un partido. Se va a ver la próxima vez que el juego revise los datos en vivo (por ejemplo, al entrar al menú o activar esa opción). Tampoco hace falta estar en la misma red de la casa — esto funciona por internet, a través de la web, igual que ya funciona el Mercado.
+
+---
+
+## 6. Idea extra (10 oct, 21:56–22:23): ¿y si la CPU no ficha sola?
+
+FRALEX preguntó si se podía **desactivar los fichajes automáticos de la CPU**, para no tener que resolver choques en absoluto. Se investigó:
+
+- El juego sí tiene un ajuste oficial al crear la Liga Máster, **"Transfer Frequency"**, con 5 niveles (Low, Fairly Low, Normal, Fairly High, High) — fuente: [evoweb.uk](https://evoweb.uk/threads/most-realistic-fun-ml-setup-pes-2021.93394). **No se confirmó** que exista un nivel "Ninguno/Apagado", ni que ese ajuste controle los traspasos **IA-contra-IA** (solo se documentó que afecta las ofertas que **te llegan a ti** por tus propios jugadores) — fuente: [pesmastery.com](https://pesmastery.com/pes-master-league-transfers/).
+- **Pendiente para FRALEX (toma 10 segundos, sin ningún riesgo):** abrir PES2021, ir a crear una Liga Máster nueva (sin terminar de crearla) y mirar qué opciones trae "Transfer Frequency" — si hay algún nivel que diga "Ninguno" o similar.
+- **Mientras tanto, no hace falta apagar nada:** la sección 3.3 de esta guía (la lista corta de jugadores "del mundo compartido") y la regla de "gana el que llega primero" ya resuelven el problema de los choques, sin necesitar ningún ajuste nuevo ni tocar la memoria del juego. Apagar los fichajes de la CPU sería un extra, no un requisito.
 
 ---
 
