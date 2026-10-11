@@ -37,6 +37,7 @@ Dos trabajos independientes dentro del mismo Phoenix Link:
   - si había otra versión, la guarda como `phoenix.lua.antes-v<versión>`.
 
   Las mismas reglas valen sin Link con `PhoenixJuego-instalar.bat` (raíz del repo). Guía: `docs/PREPARAR-JUEGO-AMIGO.md`. **SYNC:** cuando saquéis una versión nueva de `phoenix.lua`, pedid al chat LINK que la ponga en `SmashSoda/phoenix/sider/` y que actualice el sha256 del .bat.
+- 2026-10-10 · Hecho el pedido de Sync `PROMPT-LINK-modo-por-defecto.md`: Link lleva **phoenix.lua v0.18b** (sha256 `9ed74f45…` con LF; también en `PhoenixJuego-instalar.bat`) y el modo de recarga por defecto es **AUTO-SIEMPRE**, que va primero en la tarjeta. Un valor desconocido en las preferencias también pasa a AUTO-SIEMPRE. Si alguien ya había elegido otro modo, se respeta.
 
 ## Dos cuentas de Claude (A y B) — protocolo obligatorio
 Fralex usa 2 cuentas; cuando una se queda sin tokens sigue la otra. **La memoria es el repo, no el chat.**

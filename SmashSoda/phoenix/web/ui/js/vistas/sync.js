@@ -63,20 +63,21 @@ function SoloPes({ m }) {
   </${Tarjeta}>`;
 }
 
-// Modo de recarga de phoenix.lua v0.18 (Link escribe content\phoenix\modo.txt). Textos del pedido de Sync.
+// Modo de recarga de phoenix.lua v0.18b (Link escribe content\phoenix\modo.txt). Textos del pedido de Sync.
+// «Automático: siempre» va primero y por defecto (PROMPT-LINK-modo-por-defecto.md de Sync).
 const MODOS_RECARGA = {
   "ACTIVAR": ["Los fichajes se cargan solo cuando pulsas Partido → Datos Actual. en vivo → Activar.", "Transfers load only when you press Match → Live update → Activate."],
   "AUTO-FICHAJES": ["Activar sigue funcionando. Además, cuando haya fichajes nuevos, el juego los carga solo al volver al menú principal y entrar a un modo.", "Activate still works. Also, when there are new transfers, the game loads them by itself when you go back to the main menu and enter a mode."],
-  "AUTO-SIEMPRE": ["Activar sigue funcionando. Además, el juego recarga cada vez que vuelves al menú principal y entras a un modo (tarda un poco más).", "Activate still works. Also, the game reloads every time you go back to the main menu and enter a mode (a bit slower)."],
+  "AUTO-SIEMPRE": ["Los fichajes entran solos cada vez que vuelves al menú principal y entras a un modo. No hay que pulsar nada.", "Transfers come in by themselves every time you go back to the main menu and enter a mode. Nothing to press."],
 };
 function ModoRecarga({ m }) {
-  const v = m.arbitro?.modoRecarga || "ACTIVAR";
+  const v = m.arbitro?.modoRecarga || "AUTO-SIEMPRE";
   return html`<${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:12px">
     <${Titulo} texto=${t("MODO DE RECARGA DE FICHAJES", "TRANSFER RELOAD MODE")}/>
     <${Segmentos} valor=${v} al=${(x) => accion("sync.modoRecarga", { modo: x })}
-      opciones=${[{ valor: "ACTIVAR", texto: t("🟢 ACTIVAR ⭐", "🟢 ACTIVATE ⭐") }, { valor: "AUTO-FICHAJES", texto: t("🔵 AUTO: FICHAJES", "🔵 AUTO: TRANSFERS") }, { valor: "AUTO-SIEMPRE", texto: t("🟣 AUTO: SIEMPRE", "🟣 AUTO: ALWAYS") }]}/>
+      opciones=${[{ valor: "AUTO-SIEMPRE", texto: t("🟣 AUTO: SIEMPRE ⭐", "🟣 AUTO: ALWAYS ⭐") }, { valor: "AUTO-FICHAJES", texto: t("🔵 AUTO: FICHAJES", "🔵 AUTO: TRANSFERS") }, { valor: "ACTIVAR", texto: t("🟢 ACTIVAR", "🟢 ACTIVATE") }]}/>
     <div class="ayuda" style="font-size:14px">${t(MODOS_RECARGA[v][0], MODOS_RECARGA[v][1])}</div>
-    <div class="ayuda" style="font-size:13px">${t("Necesita phoenix.lua v0.18 en el juego. ACTIVAR viene por defecto y es el probado. El juego nota el cambio en unos 2 segundos.", "Needs phoenix.lua v0.18 in the game. ACTIVATE is the default and the tested one. The game notices the change in about 2 seconds.")}</div>
+    <div class="ayuda" style="font-size:13px">${t("⭐ Automático: siempre es el recomendado y viene por defecto. Necesita phoenix.lua v0.18b (instálala abajo, en Módulos del juego). Si lo automático falla 3 veces, el juego vuelve solo a Activar. El juego nota el cambio en unos 2 segundos.", "⭐ Auto: always is recommended and the default. Needs phoenix.lua v0.18b (install it below, in Game modules). If auto fails 3 times, the game falls back to Activate. The game notices the change in about 2 seconds.")}</div>
   </${Tarjeta}>`;
 }
 

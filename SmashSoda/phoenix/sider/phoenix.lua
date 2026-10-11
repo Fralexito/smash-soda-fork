@@ -18,8 +18,10 @@
 --                    lua.module = "phoenix.lua"  en sider.ini
 -- =============================================================================
 
-local m = { version = "0.18" }
+local m = { version = "0.18b" }
 
+-- v0.18b (2026-10-10, pedido de FRALEX: «pon esa opción de primero y que sea por defecto»): sin modo.txt (o
+-- con texto raro) el modo es AUTO-SIEMPRE, no ACTIVAR. Si lo automático falla 3 veces sigue cayendo a ACTIVAR.
 -- v0.18 (2026-10-10, pedido de FRALEX): la v0.17e (botón nativo con A+B+C, teclas de prueba apagadas)
 -- + TRES MODOS DE RECARGA elegibles desde Phoenix Link (content\phoenix\modo.txt) o con la tecla T:
 -- ACTIVAR (por defecto, igual que la v0.17e) · AUTO-FICHAJES · AUTO-SIEMPRE. Ver el bloque «v0.18»
@@ -986,23 +988,24 @@ end
 
 -- ─── v0.18 · TRES MODOS DE RECARGA (pedido de FRALEX, 2026-10-10 10:10) ──────────────────────
 -- Cada usuario elige el modo con un botón en Phoenix Link (Link escribe content\phoenix\modo.txt).
---   1 ACTIVAR (POR DEFECTO) = igual que la v0.17e: solo recarga cuando se pulsa «Activar» en
+--   1 ACTIVAR = igual que la v0.17e: solo recarga cuando se pulsa «Activar» en
 --     Partido → Datos Actual. en vivo. No escribe nada nuevo en la memoria.
 --   2 AUTO-FICHAJES = lo de ACTIVAR y además: cuando Phoenix Sync cambia content\phoenix\recargar.txt
 --     («hay fichajes nuevos»), en el próximo MOMENTO SEGURO (menú principal quieto, guía 22) se
 --     enciende el interruptor de recarga completa (lo mismo que hacía la tecla P, probada el
 --     2026-10-09 05:30). El juego recarga EDIT + base al entrar al siguiente modo.
---   3 AUTO-SIEMPRE = lo de ACTIVAR y además: cada vez que se vuelve al menú principal desde otro
+--   3 AUTO-SIEMPRE (POR DEFECTO desde la v0.18b) = lo de ACTIVAR y además: cada vez que se vuelve al menú principal desde otro
 --     modo, se enciende el interruptor en el momento seguro → cada entrada a un modo recarga.
 --     (La primera entrada tras abrir el juego no, porque la base se acaba de cargar.)
 -- modo.txt: una palabra, ACTIVAR / AUTO-FICHAJES / AUTO-SIEMPRE (mayúsculas o no). Si no existe o
--- dice otra cosa → ACTIVAR. Tecla T (overlay abierto) = cambiar de modo SOLO en esta sesión; si
+-- dice otra cosa → AUTO-SIEMPRE (v0.18b). Tecla T (overlay abierto) = cambiar de modo SOLO en esta sesión; si
 -- modo.txt cambia después (Link eligió otra vez), manda modo.txt.
 -- Seguridad: nunca se escribe en un partido ni en Editar: solo en el momento seguro. Se escribe
 -- lo mismo que L/P (1 byte de código exe+0xAEF78E y el interruptor exe+0x37F5C39), con todas sus
 -- comprobaciones de bytes. Si lo automático falla 3 veces, se apaga hasta reiniciar y queda ACTIVAR.
 local VK_T = 0x54
-local MODOS = { "ACTIVAR", "AUTO-FICHAJES", "AUTO-SIEMPRE" }
+local MODOS = { "AUTO-SIEMPRE", "AUTO-FICHAJES", "ACTIVAR" }
+local MODO_DEFECTO = "AUTO-SIEMPRE"   -- v0.18b (pedido de FRALEX 10 oct): automático siempre por defecto
 local EXPLICA_MODO = {
     ["ACTIVAR"] = "recarga solo cuando pulsas Activar",
     ["AUTO-FICHAJES"] = "Activar + recarga sola cuando Phoenix Sync avisa fichajes nuevos",
@@ -1030,7 +1033,7 @@ local function logAuto(s)
 end
 local function modoEfectivo()
     if autoApagado then return "ACTIVAR" end
-    return modoTecla or modoArchivo or "ACTIVAR"
+    return modoTecla or modoArchivo or MODO_DEFECTO
 end
 local function leerCorto(nombre, max)
     if not carpetaPhoenix then return nil end
@@ -1061,7 +1064,7 @@ local function leerArchivosModo()
         modoArchivoCrudo = crudo
         local mm = normalizarModo(crudo)
         if mm == nil then modoArchivo = nil; modoAvisoRaro = nil
-        elseif mm == false then modoArchivo = nil; modoAvisoRaro = "modo.txt dice algo raro: se usa ACTIVAR"
+        elseif mm == false then modoArchivo = nil; modoAvisoRaro = "modo.txt dice algo raro: se usa " .. MODO_DEFECTO
         else modoArchivo = mm; modoAvisoRaro = nil end
         if modoTecla and crudo ~= modoTeclaBase then modoTecla = nil end   -- Link eligió de nuevo: manda modo.txt
         logAuto("modo.txt " .. visible(crudo) .. " → modo " .. modoEfectivo() .. " (" .. os.date("%H:%M:%S") .. ")")
@@ -1142,7 +1145,7 @@ local function cambiarModoConTecla()
     for k, x in ipairs(MODOS) do if x == actual then i = k end end
     modoTecla = MODOS[i % #MODOS + 1]
     modoTeclaBase = modoArchivoCrudo
-    if modoTecla == "ACTIVAR" then modoTecla = (modoArchivo == nil) and nil or "ACTIVAR" end
+    if modoTecla == MODO_DEFECTO then modoTecla = (modoArchivo == nil) and nil or MODO_DEFECTO end
     logAuto("tecla T a las " .. os.date("%H:%M:%S") .. ": modo " .. actual .. " → " .. modoEfectivo() .. " (solo esta sesión)")
 end
 local function textoModoPhoenix()
@@ -1152,7 +1155,7 @@ local function textoModoPhoenix()
     elseif modoTecla then origen = "elegido con la tecla T (solo esta sesión)"
     elseif modoArchivo then origen = "elegido en Phoenix Link (modo.txt)"
     else origen = modoAvisoRaro or "por defecto (no hay modo.txt)" end
-    local t = "\n  [MODO PHOENIX] " .. modo .. (modo == "ACTIVAR" and " (el de por defecto)" or "") .. " · " .. origen .. " · T = cambiar"
+    local t = "\n  [MODO PHOENIX] " .. modo .. (modo == MODO_DEFECTO and " (el de por defecto)" or "") .. " · " .. origen .. " · T = cambiar"
         .. "\n      " .. EXPLICA_MODO[modo]
     if modo ~= "ACTIVAR" or autoArmado then
         t = t .. "\n  [AUTO] " .. (autoEstado or "esperando") .. (fichajesPendientes and " · fichajes nuevos pendientes" or "")

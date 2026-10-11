@@ -65,7 +65,7 @@ namespace phoenix {
 			marcadorAuto = j.value("marcadorAuto", marcadorAuto);
 			soloAutorizados = j.value("soloAutorizados", soloAutorizados);
 			modoRecarga = j.value("modoRecarga", modoRecarga);
-			if (modoRecarga != "AUTO-FICHAJES" && modoRecarga != "AUTO-SIEMPRE") modoRecarga = "ACTIVAR";
+			if (modoRecarga != "ACTIVAR" && modoRecarga != "AUTO-FICHAJES") modoRecarga = "AUTO-SIEMPRE";   // v0.18b: por defecto
 		}
 		catch (...) {
 			// Preferencias dañadas: se quedan los valores por defecto.

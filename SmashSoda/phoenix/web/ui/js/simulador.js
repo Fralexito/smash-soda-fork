@@ -75,7 +75,7 @@ export function crearSimulador(enviar) {
     actividad: ["[PhoenixBot] Sala abierta con eFootball PES 2021", "[PhoenixBot] Mirko joined.", "[PhoenixBot] Kaiser joined.", "[PhoenixBot] Mando 03 asignado a ElTigre"],
     // Árbitro: estado.json del juego (?estado=archivo.json lo lee cada segundo) y preferencias
     juego: { datos: false }, golesJuego: null,
-    arbitro: { competitivo: true, pausaAuto: false, marcadorAuto: true, soloAutorizados: true, modoRecarga: "ACTIVAR", ultimaPausa: "", conStart: false },
+    arbitro: { competitivo: true, pausaAuto: false, marcadorAuto: true, soloAutorizados: true, modoRecarga: "AUTO-SIEMPRE", ultimaPausa: "", conStart: false },
     golesAnunciados: -1,
   };
   // Prueba con un estado.json falso: ?estado=estado-prueba.json (junto a index.html). Sin archivo = «sin datos del juego».
@@ -244,8 +244,8 @@ export function crearSimulador(enviar) {
       juego: s.buzon.juego, pesAbierto: s.pes.abierto,
       modulos: [
         { archivo: "phoenix_estadio.lua", descripcion: "Partido ↔ Phoenix Link: marcador, goles con minuto, HUD del partido y árbitro (solo lectura).", gestionable: true, version: "1.0", estado: est, carga: "", destinos: est === "no_instalado" ? [] : destinos(est === "instalado", "1.0") },
-        { archivo: "phoenix.lua", descripcion: "Phoenix Sync: avisos de la web en el overlay, botón nativo «Datos Actual. en vivo» y modos de recarga de fichajes. Instala también la raíz Phoenix-DB y la carpeta de avisos.", gestionable: true, version: "0.18", estado: s.modPhx || "desactualizado", carga: "cargado",
-          destinos: [{ nombre: "Raíz del juego", carpeta: "a", archivo: true, igual: s.modPhx === "instalado", version: s.modPhx === "instalado" ? "0.18" : "0.17e", linea: true, comentada: false }, { nombre: "ConmeGOL Patch 26", carpeta: "b", archivo: true, igual: s.modPhx === "instalado", version: s.modPhx === "instalado" ? "0.18" : "0.17e", linea: true, comentada: false }] },
+        { archivo: "phoenix.lua", descripcion: "Phoenix Sync: avisos de la web en el overlay, botón nativo «Datos Actual. en vivo» y modos de recarga de fichajes. Instala también la raíz Phoenix-DB y la carpeta de avisos.", gestionable: true, version: "0.18b", estado: s.modPhx || "desactualizado", carga: "cargado",
+          destinos: [{ nombre: "Raíz del juego", carpeta: "a", archivo: true, igual: s.modPhx === "instalado", version: s.modPhx === "instalado" ? "0.18b" : "0.18", linea: true, comentada: false }, { nombre: "ConmeGOL Patch 26", carpeta: "b", archivo: true, igual: s.modPhx === "instalado", version: s.modPhx === "instalado" ? "0.18b" : "0.18", linea: true, comentada: false }] },
       ],
     };
   };

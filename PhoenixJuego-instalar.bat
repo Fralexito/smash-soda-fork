@@ -2,7 +2,7 @@
 setlocal
 title Phoenix - instalar phoenix.lua en PES 2021
 rem ============================================================================
-rem  Instala phoenix.lua v0.18 (Phoenix Sync) en PES 2021 + ConmeGOL Patch 26,
+rem  Instala phoenix.lua v0.18b (Phoenix Sync) en PES 2021 + ConmeGOL Patch 26,
 rem  igual que el boton "Modulos del juego" de Phoenix Link, sin necesitar Link:
 rem   - en <juego>\SiderAddons y en cada modo del parche (...\<modo>\SiderAddons)
 rem   - copia de sider.ini (sider.ini.phoenix-<fecha>) antes de tocarlo
@@ -27,14 +27,14 @@ function Hash($p) {   # sha256 sin Get-FileHash (no siempre esta)
 }
 function Main {
     $ErrorActionPreference = 'Stop'
-    $VERSION = '0.18'
-    $SHA = 'A39B54DE9F6A579D539ECDC432E14BBC2B32B982C14F82D16E1F304651E4F361'
+    $VERSION = '0.18b'
+    $SHA = '9ED74F457B4C2F407D4851B09B701A5FFB63E3A1F5707B322C13AAD6F95526AB'
     $URL = 'https://raw.githubusercontent.com/Fralexito/smash-soda-fork/redise%C3%B1o-phoenix-portal/SmashSoda/phoenix/sider/phoenix.lua'
     $L1 = [Text.Encoding]::GetEncoding(28591)   # lee y escribe los bytes tal cual
     $sello = Get-Date -Format 'yyyyMMdd-HHmmss'
 
     Write-Host ''
-    Write-Host '  PHOENIX - phoenix.lua v0.18 para PES 2021' -ForegroundColor Cyan
+    Write-Host '  PHOENIX - phoenix.lua v0.18b para PES 2021' -ForegroundColor Cyan
     Write-Host '  ------------------------------------------' -ForegroundColor Cyan
     Write-Host ''
 
@@ -72,25 +72,25 @@ function Main {
     $destinos | ForEach-Object { Write-Host "    - $_" }
     Write-Host ''
 
-    # 4) phoenix.lua v0.18: de esta carpeta o de GitHub, siempre con sha256
+    # 4) phoenix.lua v0.18b: de esta carpeta o de GitHub, siempre con sha256
     $lua = $null
     $local = Join-Path $env:PHX_DIR 'phoenix.lua'
     if ((Test-Path -LiteralPath $local) -and ((Hash $local) -eq $SHA)) {
         $lua = $local
-        Write-Host '  phoenix.lua v0.18: el de esta carpeta.'
+        Write-Host '  phoenix.lua v0.18b: el de esta carpeta.'
     } else {
-        Write-Host '  Bajando phoenix.lua v0.18 de GitHub...'
+        Write-Host '  Bajando phoenix.lua v0.18b de GitHub...'
         $tmp = Join-Path $env:TEMP "phoenix-$sello.lua"
         try {
             [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
             Invoke-WebRequest -Uri $URL -OutFile $tmp -UseBasicParsing
         } catch {
-            Write-Host '  [X] No se pudo bajar. Pon phoenix.lua (v0.18) junto a este .bat y repite.' -ForegroundColor Red
+            Write-Host '  [X] No se pudo bajar. Pon phoenix.lua (v0.18b) junto a este .bat y repite.' -ForegroundColor Red
             return
         }
         if ((Hash $tmp) -ne $SHA) {
             Remove-Item -LiteralPath $tmp -Force
-            Write-Host '  [X] El phoenix.lua bajado no es la v0.18 esperada. No se toca nada; avisa a Fralex.' -ForegroundColor Red
+            Write-Host '  [X] El phoenix.lua bajado no es la v0.18b esperada. No se toca nada; avisa a Fralex.' -ForegroundColor Red
             return
         }
         $lua = $tmp
@@ -177,7 +177,7 @@ function Main {
         }
         $dest = Join-Path $p.Dir 'modules\phoenix.lua'
         if (Test-Path -LiteralPath $dest) {
-            if ((Hash $dest) -eq $SHA) { Write-Host '      phoenix.lua v0.18 ya estaba'; $hechos++; continue }
+            if ((Hash $dest) -eq $SHA) { Write-Host '      phoenix.lua v0.18b ya estaba'; $hechos++; continue }
             $vieja = [regex]::Match([IO.File]::ReadAllText($dest, $L1), 'version\s*=\s*"([^"]+)"').Groups[1].Value
             $copia = if ($vieja) { "phoenix.lua.antes-v$vieja" } else { "phoenix.lua.antes-$sello" }
             if (Test-Path -LiteralPath (Join-Path $p.Dir "modules\$copia")) { $copia = "$copia-$sello" }
@@ -185,7 +185,7 @@ function Main {
             Write-Host "      version anterior guardada como modules\$copia"
         }
         Copy-Item -LiteralPath $lua -Destination $dest -Force
-        Write-Host '      phoenix.lua v0.18 copiado'
+        Write-Host '      phoenix.lua v0.18b copiado'
         $hechos++
     }
 

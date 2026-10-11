@@ -1,4 +1,4 @@
-# Preparar PES 2021 de un amigo para Phoenix (phoenix.lua v0.18)
+# Preparar PES 2021 de un amigo para Phoenix (phoenix.lua v0.18b)
 
 Esta guía es para cuando **tu amigo también hostea**, o sea, corre PES y Phoenix Link en su PC. Si solo entra a tu sala por Parsec, no necesita nada de esto: mira `PRUEBA-ONLINE-CON-AMIGO.md`.
 
@@ -10,7 +10,7 @@ Esta guía es para cuando **tu amigo también hostea**, o sea, corre PES y Phoen
 
 | Qué | Dónde |
 |---|---|
-| `phoenix.lua` v0.18 | `SiderAddons\modules\` |
+| `phoenix.lua` v0.18b | `SiderAddons\modules\` |
 | `lua.module = "phoenix.lua"` | `sider.ini`, debajo del último `lua.module` activo |
 | `cpk.root = ".\livecpk\Phoenix-DB"` | `sider.ini`, **justo antes** de `cpk.root = ".\olmosjr23\Database"` (la base del parche) |
 | carpeta `content\phoenix\` (vacía) | buzón de avisos de la web |
@@ -31,7 +31,7 @@ Cada vez que cambias de modo, el switcher copia la segunda encima de la primera.
 1. **Cierra PES.**
 2. Si es la primera vez, abre PES **una vez** con Link abierto, para que Link aprenda dónde está el juego. Después ciérralo.
 3. En Link ve a **SYNC › Puente › Módulos del juego**.
-4. En `phoenix.lua v0.18` pulsa **INSTALAR**. Si ya tenía otra versión, el botón dice **ACTUALIZAR**.
+4. En `phoenix.lua v0.18b` pulsa **INSTALAR**. Si ya tenía otra versión, el botón dice **ACTUALIZAR**.
 5. Debe decir **INSTALADO**, con ● en las dos carpetas.
 
 Link también:
@@ -43,11 +43,11 @@ Link también:
 1. Pásale `PhoenixJuego-instalar.bat`. Mejor junto con `phoenix.lua` en la misma carpeta; si no lo lleva, el .bat lo baja de GitHub.
 2. **Cierra PES.**
 3. Doble clic en el .bat y elige la carpeta del juego (la que tiene `PES2021.exe` y `SiderAddons`).
-4. Debe terminar con `LISTO: phoenix.lua v0.18 en 2 carpeta(s).`
+4. Debe terminar con `LISTO: phoenix.lua v0.18b en 2 carpeta(s).`
 
 El .bat:
 - hace exactamente lo mismo que el botón de Link (mismas copias de seguridad);
-- comprueba el sha256 de `phoenix.lua`; si no es la v0.18 exacta, **no toca nada**;
+- comprueba el sha256 de `phoenix.lua`; si no es la v0.18b exacta, **no toca nada**;
 - se puede ejecutar dos veces sin problema: la segunda no cambia nada.
 
 ## Opción 3 — A mano
@@ -55,7 +55,7 @@ El .bat:
 En **cada una** de las dos carpetas de Sider:
 
 1. Copia `sider.ini` a `sider.ini.respaldo` (por si acaso).
-2. Copia `phoenix.lua` (v0.18) en `modules\`. Si ya había uno, renómbralo antes a `phoenix.lua.viejo`.
+2. Copia `phoenix.lua` (v0.18b) en `modules\`. Si ya había uno, renómbralo antes a `phoenix.lua.viejo`.
 3. Abre `sider.ini` con el Bloc de notas:
    - busca la línea `cpk.root = ".\olmosjr23\Database"` y **justo encima** escribe:
      ```
@@ -80,7 +80,7 @@ Nunca dejes **dos** líneas de Phoenix-DB ni dos de `phoenix.lua`.
    - **no** debe decir `Module (phoenix.lua) is NOT activated`.
 3. En Link, **SYNC › Puente › Módulos del juego** debe decir «✅ Cargó en el último arranque del juego».
 4. En el juego, el panel de Sider (barra espaciadora) muestra los avisos de la web, y en Partido aparece el botón «Datos Actual. en vivo».
-5. **Modo de recarga:** queda en **ACTIVAR**, el probado. Se cambia en SYNC › Fichajes, que escribe `content\phoenix\modo.txt`.
+5. **Modo de recarga:** viene en **«Automático: siempre»**: los fichajes entran solos al volver al menú principal y entrar a un modo, sin pulsar nada. Se cambia en SYNC › Puente (escribe `contentphoenixmodo.txt`) o en el juego con la tecla T.
 
 ## Extra opcional: el módulo del partido
 

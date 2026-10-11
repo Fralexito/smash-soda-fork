@@ -40,7 +40,7 @@ namespace phoenix {
 		bool pausaAuto = false;   ///< árbitro: pausa si un jugador del partido se cae o pasa de 150 ms de ping 5 s (apagado hasta probarlo)
 		bool marcadorAuto = true; ///< árbitro: con datos del juego, el marcador arranca, relata los goles y termina solo
 		bool soloAutorizados = true;  ///< puestos: pulsar el mando solo da puesto a quien el host autorizó (los demás «quieren jugar»)
-		std::string modoRecarga = "ACTIVAR";  ///< phoenix.lua v0.18 (modo.txt): ACTIVAR | AUTO-FICHAJES | AUTO-SIEMPRE
+		std::string modoRecarga = "AUTO-SIEMPRE";  ///< phoenix.lua v0.18b (modo.txt): AUTO-SIEMPRE (por defecto) | AUTO-FICHAJES | ACTIVAR
 
 		static PhoenixPrefs& get();
 		void cargar();
