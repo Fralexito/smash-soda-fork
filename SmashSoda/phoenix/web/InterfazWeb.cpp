@@ -21,7 +21,6 @@
 #include "../I18n.h"
 #include "../ui/Shell.h"
 #include "../link/PhoenixLink.h"
-#include "../host/Cedido.h"
 
 namespace phoenix::web {
 
@@ -114,7 +113,6 @@ namespace phoenix::web {
 
 	void abrirEnlace(const std::string& url) {
 		if (url.rfind("https://", 0) != 0 || url.size() > 500) throw ErrorAccion("ENLACE_INVALIDO", "Solo se abren enlaces https.");
-		if (phoenix::cedido::activo()) throw ErrorAccion("PC_CEDIDA", "La PC está cedida: no se abre el navegador.");
 		const int n = MultiByteToWideChar(CP_UTF8, 0, url.c_str(), -1, nullptr, 0);
 		std::wstring w(static_cast<size_t>((std::max)(n, 1)), L'\0');
 		MultiByteToWideChar(CP_UTF8, 0, url.c_str(), -1, &w[0], n);
@@ -202,7 +200,6 @@ namespace phoenix::web {
 			registrarAccionesAjustes(in);
 			registrarAccionesPartido(in);
 			registrarAccionesModulos(in);
-			registrarAccionesCedido(in);
 
 			in.iniciada = true;
 			if (PhoenixPrefs::get().interfazWeb) crearVista(in);
@@ -230,7 +227,6 @@ namespace phoenix::web {
 			HWND h = static_cast<HWND>(in.ctx.ventana);
 			const bool ventanaVisible = h != nullptr && IsWindowVisible(h) && !IsIconic(h);
 			PhoenixLink::instancia().ventanaVisible(ventanaVisible);
-			tickCedido(in);
 
 			tickDatos(in);
 			tickEstadisticas(in);
