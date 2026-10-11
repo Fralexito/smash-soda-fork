@@ -21,7 +21,11 @@ void SDLGamepadReader::fetchGamepads(const vector<int>& xinputExcluidos, int vir
         if (SDL_JoystickGetDeviceVendor(i) == 0x045E && SDL_JoystickGetDeviceProduct(i) == 0x028E) x360++;
     const bool ocultar360 = virtualesXbox > 0 && x360 <= virtualesXbox;
     const auto excluido = [&](SDL_Joystick* joy) {
-        if (ocultar360 && SDL_JoystickGetVendor(joy) == 0x045E && SDL_JoystickGetProduct(joy) == 0x028E) return true;
+        const bool es360 = SDL_JoystickGetVendor(joy) == 0x045E && SDL_JoystickGetProduct(joy) == 0x028E;
+        if (ocultar360 && es360) return true;
+        // El número de jugador solo identifica a los mandos XInput (los de Link son Xbox 360). SDL también
+        // numera al DS4 y a otros mandos: comparar sin este filtro borraba el mando del anfitrión (Fralex, 0.2.11).
+        if (!es360) return false;
         const int jugador = SDL_JoystickGetPlayerIndex(joy);
         for (int x : xinputExcluidos) if (x == jugador && jugador >= 0) return true;
         return false;
