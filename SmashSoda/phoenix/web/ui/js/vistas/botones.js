@@ -1,12 +1,13 @@
 // =============================================================================
 //  MANDOS › BLOQUEO (rehecho): bloqueo general, bloqueo por mando y «Elegir
-//  botones» con un mando dibujado donde se toca cada botón para bloquearlo.
+//  botones» con un mando dibujado (mandoeditable.js) donde se toca cada botón para bloquearlo.
 //  Todo dentro de la interfaz nueva (ya no salta al panel clásico).
 // =============================================================================
 import { html } from "../lib.js";
 import { t } from "../i18n.js";
 import { accion } from "../tienda.js";
-import { Tarjeta, Titulo, Boton, AjusteSw, Icono, cx, dos } from "../ui.js";
+import { Tarjeta, Titulo, Boton, AjusteSw, Chip, dos } from "../ui.js";
+import { Lienzo, Pieza, Aro, POS, COLOR_CARA } from "./mandoeditable.js";
 
 // Máscara de bits de los botones (los mismos que usa el motor de mandos).
 const BIT = { arriba: 0x1, abajo: 0x2, izq: 0x4, der: 0x8, start: 0x10, back: 0x20, ls: 0x40, rs: 0x80, lb: 0x100, rb: 0x200, guia: 0x400, a: 0x1000, b: 0x2000, x: 0x4000, y: 0x8000 };
@@ -55,46 +56,29 @@ function conCambio(c, b, valor) {
 }
 const enviar = (n) => accion("mandos.botonesBloq", n);
 
-function Tecla({ id, b, estilo = "" }) {
-  const c = C[id];
-  const bl = bloqueado(c, b);
-  return html`<button class=${cx("tecla-m", bl && "bloq", c.redondo && "redondo")} style=${estilo}
-    title=${(bl ? t("Bloqueado: ", "Locked: ") : t("Libre: ", "Free: ")) + t(c.nom[0], c.nom[1])}
-    aria-pressed=${bl} onClick=${() => enviar(conCambio(c, b, !bl))}>
-    <span class="et">${c.et}</span>
-    ${bl ? html`<span class="cand"><${Icono} n="candado" t=${13} w=${2}/></span>` : null}
-  </button>`;
-}
-
 function MandoDibujado({ b }) {
-  const T = (id, estilo) => html`<${Tecla} id=${id} b=${b} estilo=${estilo || ""}/>`;
-  return html`<div class="mando-m">
-    <div class="mm-fila mm-sup">
-      <div class="mm-par">${T("lt")}${T("lb")}</div>
-      <div class="mm-centro">${T("guia")}<div class="mm-bs">${T("back")}${T("start")}</div></div>
-      <div class="mm-par">${T("rt")}${T("rb")}</div>
-    </div>
-    <div class="mm-fila mm-inf">
-      <div class="mm-grupo">
-        ${T("stickL")}
-        ${T("ls", "margin-top:6px")}
-        <div class="mm-cruz">
-          <span></span>${T("arriba")}<span></span>
-          ${T("izq")}<span class="mm-hueco"></span>${T("der")}
-          <span></span>${T("abajo")}<span></span>
-        </div>
-      </div>
-      <div class="mm-grupo">
-        ${T("stickR")}
-        ${T("rs", "margin-top:6px")}
-        <div class="mm-cruz">
-          <span></span>${T("y")}<span></span>
-          ${T("x")}<span class="mm-hueco"></span>${T("b")}
-          <span></span>${T("a")}<span></span>
-        </div>
-      </div>
-    </div>
-  </div>`;
+  const P = (id, props = {}) => {
+    const c = C[id], bl = bloqueado(c, b), [x, y] = POS[id] || POS[props.en];
+    return html`<${Pieza} key=${id} x=${x} y=${y} estado=${bl ? "bloq" : ""} candado=${bl} texto=${c.et}
+      titulo=${(bl ? t("Bloqueado: ", "Locked: ") : t("Libre: ", "Free: ")) + t(c.nom[0], c.nom[1])}
+      al=${() => enviar(conCambio(c, b, !bl))} ...${props}/>`;
+  };
+  const stick = (id, l3, r) => {
+    const c = C[id], bl = bloqueado(c, b), [x, y] = POS[id];
+    return html`<${Aro} x=${x} y=${y} r=${r} estado=${bl ? "bloq" : ""} titulo=${(bl ? t("Bloqueado: ", "Locked: ") : t("Libre: ", "Free: ")) + t(c.nom[0], c.nom[1])}
+        al=${() => enviar(conCambio(c, b, !bl))}/>
+      ${bl ? html`<text class="pz-nota bloq" x=${x} y=${y - r + 20} text-anchor="middle">${t("QUIETO", "FROZEN")}</text>` : html`<text class="pz-nota" x=${x} y=${y - r + 20} text-anchor="middle">${t("MOVER", "MOVE")}</text>`}
+      ${P(l3, { en: id, redonda: true, w: 40 })}`;
+  };
+  const cara = (id) => P(id, { redonda: true, w: 42, acento: COLOR_CARA[id] });
+  return html`<${Lienzo} etiqueta=${t("Mando: toca un botón para bloquearlo", "Pad: tap a button to lock it")}>
+    ${P("lt", { w: 64, h: 44 })}${P("rt", { w: 64, h: 44 })}
+    ${P("lb", { w: 110, h: 30 })}${P("rb", { w: 110, h: 30 })}
+    ${P("guia", { redonda: true, w: 48 })}${P("back", { w: 64, h: 30 })}${P("start", { w: 64, h: 30 })}
+    ${stick("stickL", "ls", 58)}${stick("stickR", "rs", 50)}
+    ${P("arriba", { w: 42 })}${P("abajo", { w: 42 })}${P("izq", { w: 42 })}${P("der", { w: 42 })}
+    ${cara("y")}${cara("x")}${cara("b")}${cara("a")}
+  </${Lienzo}>`;
 }
 
 function BotonesElegidos({ m }) {
@@ -124,6 +108,20 @@ function BotonesElegidos({ m }) {
       <${Boton} tipo="suave mini" al=${() => enviar(todo)}>${t("BLOQUEAR TODO", "LOCK ALL")}</${Boton}>
       <${Boton} tipo="suave mini" al=${() => enviar(VACIO)}>${t("LIBERAR TODO", "UNLOCK ALL")}</${Boton}>
     </div>
+  </${Tarjeta}>`;
+}
+
+// Bloqueo por mando: cada mando virtual por separado. Nada viene bloqueado: solo si el host lo enciende.
+function PorMando({ m }) {
+  const lista = m.mandos.lista || [];
+  const n = lista.filter((p) => p.bloqueado).length;
+  return html`<${Tarjeta} interior="padding:22px 24px">
+    <${Titulo} texto=${t("POR MANDO", "PER PAD")} derecha=${n ? html`<${Chip} tipo="warn">${n} ${t("BLOQUEADO" + (n > 1 ? "S" : ""), "LOCKED")}</${Chip}>` : null}/>
+    <div class="ayuda" style="margin-bottom:4px">${t("Congela un solo mando: ese jugador no mueve nada y sigue en su puesto. Todos vienen desbloqueados.", "Freeze a single pad: that player can't move and keeps the seat. All start unlocked.")}</div>
+    ${lista.length === 0 ? html`<div class="ayuda">${t("No hay mandos virtuales.", "No virtual pads.")}</div>` : null}
+    ${lista.map((p) => html`<${AjusteSw} key=${p.n} titulo=${`${t("Mando", "Pad")} ${dos(p.n)}`}
+      desc=${p.ocupado ? p.jugador : t("libre", "free")} valor=${!!p.bloqueado} deshabilitado=${m.mandos.esclavo}
+      al=${() => accion("mandos.bloquear", { indice: p.n - 1 })}/>`)}
   </${Tarjeta}>`;
 }
 
@@ -161,7 +159,7 @@ export function BloqueoNuevo({ m }) {
         <${AjusteSw} titulo=${t("Bloquear todos los mandos", "Lock all pads")} desc=${t("Nadie puede mover nada (pausas, árbitro, revisión).", "Nobody can move (pauses, review).")}
           valor=${m.mandos.bloqueoGlobal} deshabilitado=${m.mandos.esclavo} al=${() => accion("mandos.herramienta", { nombre: "bloquearTodo" })}/>
       </${Tarjeta}>
-      <div class="ayuda">${t("Para bloquear un solo mando usa el candado de su puesto en Mandos › Puestos.", "To lock a single pad use the padlock on its seat in Pads › Seats.")}</div>
+      <${PorMando} m=${m}/>
       <${Arbitro} m=${m}/>
     </div>
     <div class="col" style="flex:1.5 1 0;min-width:340px">

@@ -692,3 +692,28 @@ html.oculta *, html.oculta *::before, html.oculta *::after { animation-play-stat
 .resaltado { animation: resaltar 1.6s var(--ease); border-radius: 8px; }
 @keyframes resaltar { 0%, 60% { box-shadow: 0 0 0 2px var(--acc), 0 0 22px var(--acc-suave); background: var(--acc-suave); } 100% { box-shadow: none; background: transparent; } }
 @media (prefers-reduced-motion: reduce) { .resaltado { animation: none; box-shadow: 0 0 0 2px var(--acc); } .entra-persona, .panel-lateral, .velo-panel { animation: none; } }
+/* Mando editable (SVG) de Mandos › Bloqueo y Mandos › Teclado — vistas/mandoeditable.js */
+.mando-svg { display: block; width: 100%; max-width: 680px; height: auto; margin: 0 auto; overflow: visible; }
+.mando-cuerpo { fill: rgba(255, 255, 255, .035); stroke: var(--linea); stroke-width: 1.5; }
+.mando-aro { fill: rgba(255, 255, 255, .02); stroke: var(--tenue); stroke-width: 1.5; stroke-dasharray: 4 5; }
+.pz { cursor: pointer; outline: none; }
+.pz .fondo { fill: var(--acc-suave); stroke: var(--linea-fuerte); stroke-width: 1.5; transition: fill .15s, stroke .15s, filter .15s; }
+.pz.cara .fondo { stroke: var(--pz-acento); stroke-width: 2; }
+.pz.aro .fondo { fill: rgba(255, 255, 255, .03); stroke: var(--linea); }
+.pz:hover .fondo { filter: brightness(1.6); }
+.pz:focus-visible .fondo { stroke: var(--acc); stroke-width: 3; }
+.pz text { pointer-events: none; font-family: var(--f-mono); }
+.pz .t { fill: var(--fg); font-size: 13px; font-weight: 700; letter-spacing: .04em; }
+.pz .t1 { fill: var(--mut); font-size: 10px; font-weight: 600; letter-spacing: .06em; }
+.pz .t2 { fill: var(--fg); font-size: 13px; font-weight: 700; }
+.pz.cara .t, .pz.cara .t1 { fill: var(--pz-acento); }
+.pz.bloq .fondo { fill: rgba(255, 107, 128, .22); stroke: var(--bad); filter: drop-shadow(0 0 6px rgba(255, 107, 128, .35)); }
+.pz.bloq .t, .pz.bloq .t1, .pz.bloq .t2 { fill: #ffd3da; }
+.pz.vacio .fondo { fill: rgba(255, 255, 255, .03); stroke-dasharray: 4 3; }
+.pz.vacio .t2 { fill: var(--mut); }
+.pz.esperando .fondo { fill: rgba(255, 181, 71, .22); stroke: var(--warn); animation: latido 1s ease-in-out infinite; }
+.pz-cand circle { fill: var(--bad); }
+.pz-cand path { fill: none; stroke: #2a0610; stroke-width: 1.6; stroke-linejoin: round; }
+.pz-nota { pointer-events: none; fill: var(--mut); font: 600 10px var(--f-mono); letter-spacing: .1em; }
+.pz-nota.bloq { fill: var(--bad); }
+@media (prefers-reduced-motion: reduce) { .pz.esperando .fondo { animation: none; } }

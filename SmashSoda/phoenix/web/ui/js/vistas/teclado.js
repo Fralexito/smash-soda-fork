@@ -7,6 +7,7 @@ import { html, useState, useEffect } from "../lib.js";
 import { t } from "../i18n.js";
 import { accion, avisar, irA } from "../tienda.js";
 import { Tarjeta, Titulo, Boton, AjusteSw, Chip, cx } from "../ui.js";
+import { Lienzo, Pieza, Aro, POS, PASO_X, PASO_Y, COLOR_CARA } from "./mandoeditable.js";
 
 // KeyboardEvent.code → código de tecla del motor (los de Windows; 0x100 = tecla extendida).
 const CODIGOS = {
@@ -36,15 +37,42 @@ const BOTON = {
   a: ["A", "a"], b: ["B", "b"], x: ["X", "x"], y: ["Y", "y"],
 };
 
+// Nombre corto de una tecla para que quepa en la pieza (el nombre completo va en la ayuda al pasar).
+const CORTO = { backspace: "⌫", "back space": "⌫", enter: "ENTER", return: "ENTER", space: "SPACE", up: "↑", down: "↓", left: "←", right: "→", tab: "TAB", escape: "ESC", retroceso: "⌫", intro: "ENTER", espacio: "SPACE", arriba: "↑", abajo: "↓", izquierda: "←", derecha: "→" };
+function corto(e) {
+  const k = String(e || "").trim();
+  if (!k) return "—";
+  const c = CORTO[k.toLowerCase()];
+  if (c) return c;
+  return k.length > 6 ? k.slice(0, 5).toUpperCase() + "…" : k.toUpperCase();
+}
+
+// Dónde va cada botón del mapa de teclas: [x, y, ancho, alto, redondo, color]
+function sitio(id) {
+  const cruz = (c, dx, dy) => [c[0] + dx * PASO_X, c[1] + dy * PASO_Y];
+  const L = POS.stickL, R = POS.stickR;
+  const S = {
+    lt: [...POS.lt, 66, 46], rt: [...POS.rt, 66, 46], lb: [...POS.lb, 110, 34], rb: [...POS.rb, 110, 34],
+    back: [...POS.back, 66, 36], start: [...POS.start, 66, 36],
+    lup: [...cruz(L, 0, -1), 44, 32], ldown: [...cruz(L, 0, 1), 44, 32], lleft: [...cruz(L, -1, 0), 44, 32], lright: [...cruz(L, 1, 0), 44, 32], lthumb: [...L, 44, 32],
+    rup: [...cruz(R, 0, -1), 44, 32], rdown: [...cruz(R, 0, 1), 44, 32], rleft: [...cruz(R, -1, 0), 44, 32], rright: [...cruz(R, 1, 0), 44, 32], rthumb: [...R, 44, 32],
+    dup: [...POS.arriba, 44, 32], ddown: [...POS.abajo, 44, 32], dleft: [...POS.izq, 44, 32], dright: [...POS.der, 44, 32],
+    a: [...POS.a, 46, 46, true, COLOR_CARA.a], b: [...POS.b, 46, 46, true, COLOR_CARA.b], x: [...POS.x, 46, 46, true, COLOR_CARA.x], y: [...POS.y, 46, 46, true, COLOR_CARA.y],
+  };
+  return S[id];
+}
+
 function Tk({ id, perfil, esperando, alElegir }) {
   const [pad, nombre] = BOTON[id];
   const tc = (perfil?.teclas || []).find((x) => x.b === nombre);
-  const et = tc && tc.v ? (tc.e || "#" + tc.v) : "—";
+  const tiene = !!(tc && tc.v);
+  const nom = tiene ? (tc.e || "#" + tc.v) : "";
   const esta = esperando === nombre;
-  return html`<button class=${cx("tk", esta && "esperando", !(tc && tc.v) && "vacio")} onClick=${() => alElegir(esta ? null : nombre)}
-    title=${esta ? t("Pulsa la tecla nueva (Esc cancela)", "Press the new key (Esc cancels)") : t("Toca para cambiar su tecla", "Tap to change its key")}>
-    <span class="pad">${pad}</span><span class="kc">${esta ? "…" : et}</span>
-  </button>`;
+  const [x, y, w, h, redonda, color] = sitio(id);
+  return html`<${Pieza} x=${x} y=${y} w=${w} h=${h} redonda=${!!redonda} acento=${color || ""}
+    estado=${esta ? "esperando" : tiene ? "" : "vacio"} arriba=${pad} abajo=${esta ? "…" : tiene ? corto(nom) : "—"}
+    titulo=${`${pad}: ${esta ? t("pulsa la tecla nueva (Esc cancela)", "press the new key (Esc cancels)") : (nom || t("sin tecla", "no key")) + " · " + t("toca para cambiarla", "tap to change it")}`}
+    al=${() => alElegir(esta ? null : nombre)}/>`;
 }
 
 function MapaTeclas({ m, invitados }) {
@@ -71,7 +99,6 @@ function MapaTeclas({ m, invitados }) {
   if (!m.teclado) return html`<${Tarjeta} interior="padding:22px 24px"><${Titulo} texto=${t("MAPA DE TECLAS", "KEY MAP")}/><div class="ayuda">${t("Cargando…", "Loading…")}</div></${Tarjeta}>`;
 
   const sinPerfil = invitados.filter((x) => !perfiles.some((p) => p.userId === x.parsecId));
-  const T = (id) => html`<${Tk} id=${id} perfil=${perfil} esperando=${esperando} alElegir=${setEsperando}/>`;
   return html`<${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:16px">
     <${Titulo} texto=${t("MAPA DE TECLAS", "KEY MAP")}
       derecha=${esperando ? html`<${Chip} tipo="warn">${t("PULSA UNA TECLA…", "PRESS A KEY…")}</${Chip}>` : null}/>
@@ -87,26 +114,14 @@ function MapaTeclas({ m, invitados }) {
         <div style="display:flex;gap:8px;flex-wrap:wrap">${sinPerfil.map((x) => html`<${Boton} key=${x.parsecId} tipo="suave mini"
           al=${async () => { await accion("teclado.crear", { userId: x.parsecId, nombre: x.nombre }); setSel(x.parsecId); }}>+ ${x.nombre}</${Boton}>`)}</div>` : null}
     </div>
-    <div class="mando-m">
-      <div class="mm-fila mm-sup">
-        <div class="mm-par">${T("lt")}${T("lb")}</div>
-        <div class="mm-bs" style="margin-top:6px">${T("back")}${T("start")}</div>
-        <div class="mm-par">${T("rt")}${T("rb")}</div>
-      </div>
-      <div class="mm-fila mm-inf">
-        <div class="mm-grupo">
-          <div class="lab">${t("PALANCA IZQ.", "LEFT STICK")}</div>
-          <div class="mm-cruz2"><span></span>${T("lup")}<span></span>${T("lleft")}${T("lthumb")}${T("lright")}<span></span>${T("ldown")}<span></span></div>
-          <div class="lab" style="margin-top:6px">${t("CRUCETA", "D-PAD")}</div>
-          <div class="mm-cruz2"><span></span>${T("dup")}<span></span>${T("dleft")}<span class="mm-hueco"></span>${T("dright")}<span></span>${T("ddown")}<span></span></div>
-        </div>
-        <div class="mm-grupo">
-          <div class="lab">${t("PALANCA DER.", "RIGHT STICK")}</div>
-          <div class="mm-cruz2"><span></span>${T("rup")}<span></span>${T("rleft")}${T("rthumb")}${T("rright")}<span></span>${T("rdown")}<span></span></div>
-          <div class="lab" style="margin-top:6px">${t("BOTONES", "BUTTONS")}</div>
-          <div class="mm-cruz2"><span></span>${T("y")}<span></span>${T("x")}<span class="mm-hueco"></span>${T("b")}<span></span>${T("a")}<span></span></div>
-        </div>
-      </div>
+    <${Lienzo} etiqueta=${t("Mapa de teclas: toca un botón y pulsa su tecla", "Key map: tap a button and press its key")}>
+      <${Aro} x=${POS.stickL[0]} y=${POS.stickL[1]} r=${64}/>
+      <${Aro} x=${POS.stickR[0]} y=${POS.stickR[1]} r=${64}/>
+      ${Object.keys(BOTON).map((id) => html`<${Tk} key=${id} id=${id} perfil=${perfil} esperando=${esperando} alElegir=${setEsperando}/>`)}
+    </${Lienzo}>
+    <div class="leyenda-m">
+      <span>${t("Cruz izquierda: palanca izq. · centro L3", "Left cross: left stick · centre L3")}</span>
+      <span>${t("Cruz derecha: palanca der. · centro R3", "Right cross: right stick · centre R3")}</span>
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap">
       <${Boton} tipo="suave mini" al=${() => accion("teclado.reiniciar", { userId }, { ok: t("Teclas devueltas a las de fábrica.", "Keys reset to default.") })}>${t("VOLVER A LAS DE FÁBRICA", "RESET TO DEFAULT")}</${Boton}>
