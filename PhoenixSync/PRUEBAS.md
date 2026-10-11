@@ -1056,3 +1056,11 @@ carnet del blob no cambia con la velocidad (cola idéntica entre ranuras 4 y 5).
 - FRALEX mandó una captura de la pantalla real de "Opciones generales" del ConmeGOL Patch (al crear Liga Máster): **"Frecuencia de traspasos"**, niveles de **Muy baja** a **Muy alta**, sin ningún nivel "Ninguno/Apagado". Confirma lo que decía la investigación por internet de las 22:23.
 - Se anotó en la guía 32 (sección 6) la idea de investigar, más adelante y sin urgencia, si ese ajuste se guarda como un número pequeño (1–5) dentro de las opciones de la Liga Máster, y si se podría forzar un valor fuera de ese rango (como 0) editando el archivo directamente — con el mismo método de comparar byte a byte que ya usamos siempre. **No se probó nada todavía**, queda como experimento opcional.
 - Recomendación simple mientras tanto (sin ningún riesgo): usar "Muy baja" en las Ligas Máster que se quieran conectar, para que ya de por sí haya menos traspasos de la CPU.
+
+### 2026-10-11 16:39 · Herramienta nueva: mover jugadores en el option file (amistosos) desde la línea de comandos
+- Pedido de FRALEX: "mueve a yamal al arsenal y a havertz al barcelona". Al preguntar, aclaró que no se refería a su Liga Máster, sino al **option file** (el que se usa en amistosos, vía Editar → Cargar).
+- Se construyó `pruebas/mover_cli.cpp` (nuevo, agregado al build como `PhoenixSyncMoverOption` en CMakeLists.txt), usando el motor ya probado `core/OptionFile::mover` (el mismo de guía 09 y el comando `mover` del main.cpp de Windows, pero compilable y corrible en Linux para hacer varios movimientos encadenados en un solo archivo de salida). Compiló limpio en el build completo y **las 211/211 pruebas automáticas siguen pasando**.
+- Antes de tocar nada: se bajó el `EDIT00000000` actual del PC y se buscó a los dos jugadores con el nuevo comando `--buscar`:
+  - **Yamal (pid 162114):** equipo 7 (España) y equipo 108 (FC Barcelona, dorsal 10). Está en el Barça, como se esperaba.
+  - **Havertz (pid 114506):** equipo 14 (Alemania) y equipo 108 (FC Barcelona, dorsal 29). **No está en el Arsenal** — ya está en el Barça.
+- No se hizo ningún cambio en el archivo todavía: se le avisó a FRALEX de esta diferencia con lo que pidió, y se le preguntó cómo seguir (solo mover a Yamal; mover a Yamal y además mandar a Havertz al Arsenal; o que dé otro nombre).

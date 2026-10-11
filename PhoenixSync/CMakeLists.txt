@@ -75,6 +75,8 @@ add_executable(PhoenixSyncPruebas pruebas/main.cpp)
 target_link_libraries(PhoenixSyncPruebas PRIVATE PhoenixSyncCore)
 add_executable(PhoenixSyncPruebasCompartido pruebas/compartido.cpp)
 target_link_libraries(PhoenixSyncPruebasCompartido PRIVATE PhoenixSyncCore)
+add_executable(PhoenixSyncMoverOption pruebas/mover_cli.cpp)
+target_link_libraries(PhoenixSyncMoverOption PRIVATE PhoenixSyncCore)
 
 # --- App de prueba: solo Windows ---------------------------------------------
 if(WIN32)
