@@ -13,6 +13,7 @@ import { accion, confirmar, avisar } from "../tienda.js";
 import { Boton, Icono, Vacio, Avatar, Chip, Stepper, Interruptor, colorPing, cx, dos } from "../ui.js";
 import { Pendientes, ElegirJugador } from "./mandos.js";
 import { MandosEnVivo } from "./mandovivo.js";
+import { BotonJugar } from "./jugar.js";
 
 function Agarre() {
   return html`<svg width="12" height="20" viewBox="0 0 14 22" fill="currentColor" style="opacity:.55;flex:none" aria-hidden="true">
@@ -138,7 +139,7 @@ function Espectador({ g, m, arr, setArr }) {
       ${g.host ? html`<span class="chip acc" style="height:16px;font-size:10px;flex:none">${t("TÚ", "YOU")}</span>` : null}
       <span class="mono mut" style="font-size:11px;flex:none">${dato}</span>
     </div>
-    ${soloWeb ? null : html`<select class="campo" style="flex:none;width:auto;max-width:112px;height:28px;padding:0 24px 0 8px;font-size:11px"
+    ${g.host ? html`<${BotonJugar} m=${m}/>` : soloWeb ? null : html`<select class="campo" style="flex:none;width:auto;max-width:112px;height:28px;padding:0 24px 0 8px;font-size:11px"
       disabled=${libres.length === 0 || m.mandos?.esclavo || sinSala}
       title=${sinSala ? t("Abre la sala para tomar un puesto", "Open the room to take a seat") : libres.length ? "" : t("No hay puestos libres", "No free seats")}
       aria-label=${(g.host ? t("Ponerme en un puesto", "Take a seat") : t("Dar puesto a ", "Give a seat to ") + g.nombre)}
