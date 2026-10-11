@@ -22,8 +22,19 @@
 #include "MonitorRed.h"
 #include "Partido.h"
 #include "PerfilesSala.h"
+#include "../core/MedidorRetraso.h"
 
 namespace phoenix::web {
+
+	/// Medidor de retraso: un jugador evaluado (RetrasoWeb.cpp, 1 vez por segundo).
+	struct FilaRetraso {
+		std::string nombre;
+		phoenix::retraso::MedidaMando m;
+		bool hayMando = false;                     ///< ya movió el mando desde que entró
+		phoenix::retraso::DatosParsec p;
+		int colaFrames = 0;                        ///< fotogramas esperando a decodificarse en su PC
+		phoenix::retraso::Evaluacion e;
+	};
 
 	/// Todo el estado vivo de la interfaz web (un solo objeto, hilo de la ventana).
 	struct Interno {
@@ -53,6 +64,10 @@ namespace phoenix::web {
 		std::vector<std::string> listaGpus;
 
 		MonitorRed red;
+		std::map<uint32_t, FilaRetraso> retrasos;  ///< medidor de retraso por invitado (userID)
+		phoenix::retraso::PerdidaPaquetes perdidaRetraso;
+		phoenix::retraso::AvisosRetraso avisosRetraso;
+		double ultimoRetraso = 0.0;
 		Partido partido;
 		std::unique_ptr<HistorialPartidos> historial;
 		std::unique_ptr<PerfilesSala> perfilesSala;
@@ -138,6 +153,10 @@ namespace phoenix::web {
 	/// Modo cedido: atajo del anfitrión, invitado que sale, sala cerrada, interfaz oculta (≈ cada frame).
 	void tickCedido(Interno& in);
 	nlohmann::json estadoCedido(Interno& in);
+
+	/// Medidor de retraso del mando: evalúa a cada invitado y avisa en el chat (≈ cada frame; trabaja 1 vez por segundo).
+	void tickRetraso(Interno& in);
+	nlohmann::json estadoRetraso(Interno& in);
 
 	nlohmann::json construirEstado(Interno& in);
 	nlohmann::json construirBienvenida(Interno& in);

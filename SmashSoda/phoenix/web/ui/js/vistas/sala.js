@@ -9,6 +9,7 @@ import { GuiaInicio, Entrenador, useGuia } from "./guia.js";
 import { Pendientes } from "./mandos.js";
 import { EditorBiblioteca } from "./nativas.js";
 import { abrirFicha } from "./gente.js";
+import { BloqueRetraso, LeyendaRetraso, retrasoDe } from "./retraso.js";
 import {
   Cifra, Tarjeta, Titulo, Boton, Interruptor, Ajuste, AjusteSw, Stepper, Segmentos, Selector, Campo,
   Minigrafica, Chip, Icono, Vacio, colorPing, claseSemaforo, cx, dos,
@@ -514,6 +515,7 @@ function RedSala({ m }) {
       <span class="semaforo"><span class="punto bad"></span>${t("más que eso: lag probable", "worse: likely lag")}</span>
       <span class="mut" style="font-size:12px;margin-left:auto">${t("Medias de los últimos 30 s · gráfica de 2 min", "30 s averages · 2 min chart")}</span>
     </div>
+    ${red.length > 0 ? html`<${LeyendaRetraso}/>` : null}
     ${red.length === 0 ? html`<${Vacio} titulo=${t("Nadie en la sala", "Nobody here")} texto=${t("Cuando entren invitados aparecerán aquí.", "Guests will show up here.")}/>` : null}
     <div class="rej2">${red.map((r) => html`<${Tarjeta} key=${r.parsecId} suave interior="padding:18px 20px">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
@@ -529,6 +531,7 @@ function RedSala({ m }) {
         <div><div class="mut">JITTER</div><b>${r.jitter >= 0 ? r.jitter : "—"}</b></div>
         <div><div class="mut">${t("PICOS", "SPIKES")}</div><b>${r.picos}</b></div>
       </div>
+      ${r.presente ? html`<${BloqueRetraso} r=${retrasoDe(m, r.parsecId)}/>` : null}
     </${Tarjeta}>`)}</div>
   </div>`;
 }

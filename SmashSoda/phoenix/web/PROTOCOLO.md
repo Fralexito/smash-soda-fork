@@ -57,6 +57,9 @@
 - **Estado:** `juego{datos, fase, minuto, periodo, golesLocal, golesVisita, pkLocal, pkVisita, nombreLocal, nombreVisita, relojCorre, goles:[{m, local, jugador, propia}]}` (sin datos: `{datos:false}`) y `arbitro{competitivo, pausaAuto, marcadorAuto, activo, origen:"juego"|"marcador"|"", ultimaPausa, conStart}`. `mandos.bloqueoBotones` y `mandos.botonesBloq` muestran lo del anfitrión, sin lo que añade el modo competitivo.
 - **Simulador:** `?estado=estado-prueba.json` lee ese archivo (junto a `index.html`) cada segundo como si fuera `estado.json`.
 
+## Medidor de retraso del mando (`RetrasoWeb.cpp`, `core/MedidorRetraso`, `host/RetrasoMando`)
+- Estado `retraso:[{parsecId, nombre, total, semaforo:"verde"|"ambar"|"rojo"|"sin_datos", motivo, ping, codificar, decodificar, perdida, cola, mando?:{muestras, media, p95, jitter, saltos, ritmo, haceMs}}]` (1 vez por segundo; `total` = ping + codificar + decodificar + jitter del mando; umbrales 80/130 ms, pérdida 2/5 %, saltos 6/20 por min). El hilo de entrada mide la llegada de cada mensaje de mando (sin bloqueos). Durante un partido, rojo 10 s seguidos → aviso del bot en el chat (1 cada 3 min por jugador, 1 cada 30 s en total). Guía: `docs/MEDIDOR-RETRASO.md`.
+
 ## Archivos que crea en el PC
 - `%APPDATA%\Trybuchet\Smash Soda\phoenix-partidos.json` (historial, máx. 200), `phoenix-perfiles-sala.json` (máx. 20), `phoenix-eventos.json` (cola de eventos para la web, máx. 500).
 - `%APPDATA%\Trybuchet\Smash Soda\phoenix-mapeos.json`: perfiles de mapeo de mandos por persona (`{version:1, perfiles:{"<parsecId>":{nombre, actualizado, perfil}}}`, escritura atómica).

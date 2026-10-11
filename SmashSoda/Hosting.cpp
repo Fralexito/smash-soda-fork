@@ -7,6 +7,7 @@
 #include "services/OverlayService.h"
 #include "services/InputControlService.h"
 #include "phoenix/host/Cedido.h"
+#include "phoenix/host/RetrasoMando.h"
 #include "services/GuestStateStore.h"
 #include <deque>
 #include <thread>
@@ -1445,8 +1446,13 @@ void Hosting::pollInputs() {
 
 	while (_isRunning)
 	{
+		phoenix::retraso::alGirar();   // Phoenix: medidor de retraso del mando (publica 1 vez por segundo)
 		if (ParsecHostPollInput(_parsec, 4, &inputGuest, &inputGuestMsg))
 		{
+			// Phoenix: medidor de retraso del mando. Mide cómo LLEGA cada mensaje (antes de bloqueos y mapeos).
+			if (inputGuestMsg.type == MESSAGE_GAMEPAD_STATE || inputGuestMsg.type == MESSAGE_GAMEPAD_AXIS || inputGuestMsg.type == MESSAGE_GAMEPAD_BUTTON) {
+				phoenix::retraso::alMensajeMando(inputGuest.userID);
+			}
 			Guest guest;
 			bool hasGuest = GuestList::instance.find(inputGuest.userID, &guest);
 			bool allowKeyboard = inputGuest.perms.keyboard;

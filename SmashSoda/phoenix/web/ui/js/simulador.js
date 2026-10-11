@@ -193,6 +193,25 @@ export function crearSimulador(enviar) {
     return { parsecId: g.parsecId, nombre: g.nombre, presente: true, ultimo: serie[serie.length - 1] ?? -1, media, maximo: Math.max(-1, ...ult), jitter, picos: ult.filter((x) => x > 100).length, alerta: false, semaforo: ["verde", "ambar", "rojo"][peor], serie: todo ? serie : serie.slice(-30) };
   });
 
+  // Medidor de retraso del mando (como phoenix/core/MedidorRetraso: total = ping + vídeo + jitter; manda la peor regla)
+  const PERFIL_RETRASO = { 3310: { saltos: 9, jitter: 6 }, 6031: { perdida: 3.2, jitter: 9 }, 4420: { jitter: 4 } };
+  const resumenRetraso = () => s.invitados.map((g) => {
+    const pr = PERFIL_RETRASO[g.parsecId] || {};
+    const ping = pingDe(g.parsecId);
+    const conMando = s.mandos.indexOf(g.parsecId) >= 0;
+    const ruido = () => Math.round(Math.random() * 10) / 10;
+    const mando = conMando ? { muestras: 128, media: 8.3, p95: Math.round((9 + (pr.saltos ? 50 : 2) * Math.random()) * 10) / 10, jitter: Math.round(((pr.jitter || 1.2) + ruido()) * 10) / 10, saltos: pr.saltos ? pr.saltos + Math.round(Math.random() * 3) : 0, ritmo: 118 + Math.round(Math.random() * 6), haceMs: 12 } : null;
+    const codificar = 4.6, decodificar = Math.round((3 + (g.parsecId % 5)) * 10) / 10, perdida = pr.perdida || 0;
+    const total = ping >= 0 ? Math.round(ping + codificar + decodificar + (mando ? mando.jitter : 0)) : -1;
+    let nivel = -1, motivo = "";
+    const subir = (n, mo) => { if (n > nivel) { nivel = n; motivo = n > 0 ? mo : ""; } };
+    if (total >= 0) subir(total <= 80 ? 0 : total <= 130 ? 1 : 2, mando && mando.jitter >= ping ? "mando irregular" : "ping alto");
+    if (perdida >= 5) subir(2, "pierde paquetes"); else if (perdida >= 2) subir(1, "pierde paquetes");
+    if (mando) { if (mando.saltos >= 20) subir(2, "mando a saltos"); else if (mando.saltos >= 6) subir(1, "mando a saltos"); }
+    const semaforo = nivel < 0 ? "sin_datos" : ["verde", "ambar", "rojo"][nivel];
+    return { parsecId: g.parsecId, nombre: g.nombre, total, semaforo, motivo, ping, codificar, decodificar, perdida, cola: 0, ...(mando ? { mando } : {}) };
+  });
+
   // Mando en vivo de Mandos › Mapeo (como el motor: solo mirando esa pestaña y con un mando tomado)
   const vistaMapeo = () => {
     const mp = s.mapeo;
@@ -229,7 +248,7 @@ export function crearSimulador(enviar) {
     const p = s.partido;
     const e = {
       v: 1,
-      app: { version: "0.2.15", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
+      app: { version: "0.2.16", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
       noticias: { cargado: true, lista: s.noticias },
       chatGlobal: { cargado: true, pausado: s.chatGlobal.pausado, esperaSeg: s.chatGlobal.esperaSeg, rev: s.chatGlobal.mensajes.length, error: "" },
       web: { ...s.web, jugadoresLista: 3, versionLiga: "2026.10.08", eventosEnCola: 0 },
@@ -254,6 +273,7 @@ export function crearSimulador(enviar) {
       invitados: s.abierta ? s.invitados.map((g) => ({ parsecId: g.parsecId, nombre: g.nombre, ping: pingDe(g.parsecId), mando: s.mandos.indexOf(g.parsecId) + 1, mod: g.mod, vip: g.vip, teclado: g.teclado, raton: g.raton, rolWeb: g.rolWeb, cop: false, falso: false })) : [],
       perfiles,
       red: s.abierta ? resumenRed(verSerie) : [],
+      retraso: s.abierta ? resumenRetraso() : [],
       partido: { fase: p.fase, a: p.a, b: p.b, segundos: segundosPartido(), inicioMs: 0, invertido: p.invertido },
       juego: s.juego,
       liga: { ...s.liga, enVivo: s.liga.elegido > 0 && p.fase === "en_juego" },

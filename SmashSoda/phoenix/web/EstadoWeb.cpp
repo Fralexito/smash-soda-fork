@@ -511,6 +511,7 @@ namespace phoenix::web {
 			red.push_back(x);
 		}
 		e["red"] = red;
+		e["retraso"] = estadoRetraso(in);   // medidor de retraso del mando (RetrasoWeb.cpp)
 
 		{
 			const InfoBuzon bz = link.buzon();
@@ -682,6 +683,9 @@ namespace phoenix::web {
 
 		// Árbitro del partido (modo competitivo, pausa automática, goles del juego)
 		tickArbitro(in);
+
+		// Medidor de retraso del mando por jugador (1 vez por segundo)
+		tickRetraso(in);
 
 		// Previsualización de audio (igual que el panel de audio original mientras está a la vista)
 		if (web && in.seccion == "ajustes" && in.pestana == "audio" && !h.isRunning() && h.isReady()) {

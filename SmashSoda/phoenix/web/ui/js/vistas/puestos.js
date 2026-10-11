@@ -14,6 +14,7 @@ import { Boton, Icono, Vacio, Avatar, Chip, Stepper, Interruptor, colorPing, cx,
 import { Pendientes, ElegirJugador } from "./mandos.js";
 import { MandosEnVivo } from "./mandovivo.js";
 import { BotonJugar } from "./jugar.js";
+import { IndicadorRetraso, retrasoDe } from "./retraso.js";
 
 function Agarre() {
   return html`<svg width="12" height="20" viewBox="0 0 14 22" fill="currentColor" style="opacity:.55;flex:none" aria-hidden="true">
@@ -72,7 +73,7 @@ function Fila({ p, m, color, arr, setArr, alAsignar }) {
           <div class="mono mut" style="font-size:12px">
             ${esHost ? (m.mandos.miMando ? t("con tu mando · ", "with your pad · ") + m.mandos.miMando : t("con el teclado", "with the keyboard"))
               : html`${p.conectado ? t("conectado", "connected") : t("desconectado", "unplugged")}${p.bloqueado ? t(" · bloqueado", " · locked") : ""}`}
-            ${p.ping >= 0 ? html` · <span style=${`color:${colorPing(p.ping)}`}>${p.ping} ms</span>` : null}</div>
+            ${p.ping >= 0 ? html` · <span style=${`color:${colorPing(p.ping)}`}>${p.ping} ms</span>` : null}${!esHost ? html`<${IndicadorRetraso} r=${retrasoDe(m, p.parsecId)}/>` : null}</div>
         </div>`
       : html`<div style="flex:1;min-width:0">
           <div style="font:600 17px/1.2 var(--f-body);color:var(--mut)">${t("Puesto libre", "Free seat")}
