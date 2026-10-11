@@ -4,6 +4,7 @@
 #include "../link/BuzonJuego.h"
 #include "../link/Entrega.h"
 #include "../link/ModulosJuego.h"
+#include "../link/Doctor.h"
 
 // =============================================================================
 //  Acciones de la interfaz web: «Módulos del juego» (SYNC › Puente).
@@ -61,6 +62,18 @@ namespace phoenix::web {
 			pr.modoRecarga = modo;
 			pr.guardar();
 			return json::object();
+		});
+
+		// Phoenix Doctor (MODO INFORMATIVO: aún no hay parche oficial; no aprueba ni rechaza). Solo lee archivos.
+		// El informe queda guardado y viaja con el resultado oficial (detalle.doctor) para que el staff lo vea.
+		p.registrar("sync.doctor", [&in](const json&, uint64_t) -> std::optional<json> {
+			bool abierto = false;
+			const std::filesystem::path juego = carpetaJuego(abierto);
+			in.doctorJson = phoenix::doctor::comoJson(phoenix::doctor::revisar(juego));
+			json r = json::parse(in.doctorJson, nullptr, false);
+			if (r.is_discarded()) throw ErrorAccion("NO_SE_PUDO", "No se pudo revisar el juego.");
+			r["pesAbierto"] = abierto;
+			return r;
 		});
 
 		p.registrar("sync.modulos", [](const json&, uint64_t) -> std::optional<json> {

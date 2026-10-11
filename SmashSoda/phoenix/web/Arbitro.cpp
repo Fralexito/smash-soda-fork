@@ -275,6 +275,34 @@ namespace phoenix::web {
 				if (j.fase == "descanso" && a.faseJuego == "en_juego") mensajeDelBot(in, "Descanso: " + resumenMarcador(in) + ".");
 				if (j.fase == "final" && j.completo) {
 					const std::string goles = lineaGoles(in, j);
+					// Partido oficial: el resultado del juego sube a la web («propuesto»; lo valida el staff o el árbitro designado)
+					bool contraIa = false;   // contra la máquina nunca es un resultado oficial
+					for (const LadoPartido* l : { &in.partido.ladoA(), &in.partido.ladoB() })
+						for (const JugadorPartido& jp : l->jugadores) if (jp.parsecId == 0) contraIa = true;
+					if (contraIa && a.partidoOficial > 0) {
+						mensajeDelBot(in, "Partido contra la máquina: no se envía como resultado oficial.");
+						a.partidoOficial = 0;
+						a.oficialTexto.clear();
+					}
+					if (a.partidoOficial > 0) {
+						const bool inv = in.partido.mandosInvertidos();   // lado A = DT local del calendario
+						json gs = json::array();
+						for (const juego::GolJuego& g : j.goles) gs.push_back({ {"m", g.minuto}, {"l", (g.local != inv) ? "l" : "v"} });
+						// Ficha del Doctor (solo informativa: el staff la ve; no decide nada)
+						const json doc = in.doctorJson.empty() ? json() : json::parse(in.doctorJson, nullptr, false);
+						PhoenixLink::instancia().ligaResultado(json{
+							{"partido_id", a.partidoOficial}, {"completo", true},
+							{"doctor", doc.is_discarded() || doc.is_null() ? json() : json{ {"modo", doc.value("modo", std::string())},
+								{"huella", doc.value("huella", std::string())}, {"parche", doc.value("parche", std::string())},
+								{"generado", doc.value("generado", std::string())}, {"avisos", doc.value("avisos", json::array())} }},
+							{"goles_local", inv ? j.golesVisita : j.golesLocal}, {"goles_visita", inv ? j.golesLocal : j.golesVisita},
+							{"juego", { {"goles", gs}, {"pk_local", inv ? j.pkVisita : j.pkLocal}, {"pk_visita", inv ? j.pkLocal : j.pkVisita},
+								{"nombre_local", inv ? j.nombreVisita : j.nombreLocal}, {"nombre_visita", inv ? j.nombreLocal : j.nombreVisita} }},
+						}.dump());
+						mensajeDelBot(in, "Resultado enviado a la web (" + a.oficialTexto + "). Lo valida el staff.");
+						a.partidoOficial = 0;
+						a.oficialTexto.clear();
+					}
 					finalizarPartido(in, true, goles.empty() ? std::string() : " Goles: " + goles + ".");
 					vivo = false;
 				}
@@ -286,6 +314,34 @@ namespace phoenix::web {
 			if (j.valido) {
 				if (j.fase == "en_juego") a.avisoAbandono = false;
 				a.faseJuego = j.fase;
+			}
+
+			// 2d) Marcador EN VIVO en la web (función «liga» → tabla liga_vivo → Realtime). Partidos oficiales siempre;
+			//     amistosos solo si la sala no es privada. Se manda al cambiar goles o fase y cada 5 minutos de juego.
+			const bool publicable = a.partidoOficial > 0 || PhoenixPrefs::get().visibilidad != "privada";
+			if (vivo && j.valido && sala.abierta() && publicable) {
+				const bool inv = in.partido.mandosInvertidos();
+				const int gl = inv ? j.golesVisita : j.golesLocal, gv = inv ? j.golesLocal : j.golesVisita;
+				const std::string fase = j.fase == "menu" ? "previa" : j.fase;
+				const std::string firma = std::to_string(gl) + "-" + std::to_string(gv) + "|" + fase;
+				if (firma != a.vivoFirma || j.minuto >= a.vivoMinuto + 5) {
+					json gs = json::array();
+					for (const juego::GolJuego& g : j.goles) gs.push_back({ {"m", g.minuto}, {"l", (g.local != inv) ? "l" : "v"} });
+					json c = { {"local", in.partido.ladoA().nombre}, {"visitante", in.partido.ladoB().nombre},
+						{"goles_local", (std::max)(0, gl)}, {"goles_visita", (std::max)(0, gv)},
+						{"minuto", (std::max)(0, (std::min)(200, j.minuto))}, {"periodo", j.periodo}, {"fase", fase}, {"goles", gs} };
+					if (a.partidoOficial > 0) c["partido_id"] = a.partidoOficial;
+					PhoenixLink::instancia().ligaVivo(c.dump());
+					a.vivoFirma = firma;
+					a.vivoMinuto = j.minuto;
+					a.vivoMandado = true;
+				}
+			}
+			else if (!vivo && a.vivoMandado) {
+				PhoenixLink::instancia().ligaVivoTerminado();   // el partido terminó o se canceló: se quita de la web
+				a.vivoMandado = false;
+				a.vivoFirma.clear();
+				a.vivoMinuto = -100;
 			}
 
 			// 3) Pausa automática

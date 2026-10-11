@@ -353,7 +353,13 @@ Ver `SmashSoda/phoenix/sider/LEEME.md`.
    - Si un destino falla, los ya escritos vuelven a su copia.
 4. **Requisitos:** PES cerrado (lo comprueba la acción) y la carpeta del juego conocida (la del PES abierto, o la última guardada en `PhoenixPrefs::carpetaJuego`).
 
-**Apagar** (`quitar`): comenta la línea (`;lua.module = …`), con copia previa. El `.lua` se queda. Solo para los módulos que lleva Link: **`phoenix.lua` nunca se toca** (se muestra como «LO GESTIONA SYNC»).
+**Apagar** (`quitar`): comenta la línea (`;lua.module = …`), con copia previa. El `.lua` se queda. Solo para los módulos que lleva Link.
+> **Actualización (2026-10-10, commits 0fdbba1 y a3558b6, otra sesión de LINK, a pedido de Fralex):** Link ahora **también lleva e instala `phoenix.lua` v0.18** (en `SmashSoda/phoenix/sider/`), pensado para la PC de un amigo. Además:
+> - crea `content\phoenix` y `livecpk\Phoenix-DB\common\etc\pesdb` vacías;
+> - añade `cpk.root ".\livecpk\Phoenix-DB"` antes de la primera raíz con la base del parche (informe 27 de Sync);
+> - guarda `phoenix.lua.antes-<fecha>`.
+>
+> Ojo: la v0.18 aún no está probada en el juego y parchea código en memoria. Mejor con el modo ACTIVAR. El detalle está en `COORDINACION.md` y en `ModulosJuego.h`.
 
 **Estado que muestra la tarjeta:** `instalado`, `desactualizado` (Link lleva otra versión), `apagado`, `a_medias` (no está igual en todas las carpetas), `no_instalado` o `solo_lectura`. Detalle por carpeta: ● activo, ○ comentado, · sin línea. Además, lo que dijo el último `sider.log`: «Cargó» o «Module (…) is NOT activated».
 

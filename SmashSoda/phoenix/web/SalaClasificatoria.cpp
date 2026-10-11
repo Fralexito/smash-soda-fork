@@ -159,7 +159,7 @@ namespace phoenix::web {
 		const uint32_t idHost = idHostClas(in);
 		for (const LadoPartido* l : { &a, &b })
 			for (const JugadorPartido& j : l->jugadores)
-				if (j.parsecId != idHost && pl.cuentaWeb(j.parsecId) == 0)
+				if (j.parsecId != idHost && j.parsecId != 0 && pl.cuentaWeb(j.parsecId) == 0)   // 0 = la máquina (CPU)
 					throw ErrorAccion("SIN_CUENTA", j.nombre + " no tiene su Parsec vinculado a la web: en una sala clasificatoria no puede jugar.");
 	}
 

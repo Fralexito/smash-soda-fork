@@ -99,6 +99,22 @@ namespace phoenix {
 		std::string mensaje;   ///< texto para mostrar
 	};
 
+	/// Partido oficial por jugar (GET /v1/liga/partidos de la función «liga»).
+	struct PartidoOficial {
+		long long id = 0;
+		int fecha = 0;
+		std::string edicion, edicionNombre, estado;
+		std::string local, visitante, clubLocal, clubVisita;   ///< nombres de DT tal como salen en la web
+		bool mio = false;   ///< uno de los dos DT es el dueño de esta PC
+	};
+	struct InfoLiga {
+		bool cargado = false;
+		std::string error;          ///< último problema al pedir la lista ("" = bien)
+		std::vector<PartidoOficial> partidos;
+		std::string ultimoEnvio;    ///< texto del último resultado enviado (o por qué no)
+		int pendientes = 0;         ///< resultados esperando a la web (guardados en disco)
+	};
+
 	class PhoenixLink {
 	public:
 		static PhoenixLink& instancia();
@@ -169,7 +185,21 @@ namespace phoenix {
 		/// en content\phoenix\ cuando cambia (y cada 4 s con la hora, para que el juego sepa que Link sigue vivo).
 		void salaJuego(const std::string& texto);
 
+		// --- Liga automática (función «liga», autorizada 11-oct-2026) -------------------
+		/// Partidos oficiales por jugar; la interfaz pide refrescar al abrir Partido.
+		InfoLiga liga();
+		void ligaPedirPartidos();
+		/// Marcador en vivo para la web (objeto JSON sin sala_id: Link pone la sala). Se manda el último; terminado = borrar.
+		void ligaVivo(const std::string& cuerpoJson);
+		void ligaVivoTerminado();
+		/// Resultado oficial (JSON con partido_id, goles_local, goles_visita, completo, juego{…}). Se guarda en disco
+		/// hasta que la web lo acepte. Queda «propuesto»: lo valida el staff o el árbitro designado, nunca el host.
+		void ligaResultado(const std::string& cuerpoJson);
+
 	private:
+		bool pasoLiga(const std::string& token, const std::string& salaId);
+		void guardarLiga();   ///< con _mutex tomado
+		void cargarLiga();
 		PhoenixLink() = default;
 		void bucle();
 		void pasoEmparejar(const std::string& codigo);
@@ -291,6 +321,15 @@ namespace phoenix {
 		std::wstring _juegoCarpeta;   ///< carpeta de PES2021.exe (la última vista abierta)
 		std::string _modoEscrito;
 		long long _modoProximoMs = 0;
+		// Liga automática (protegido por _mutex)
+		InfoLiga _liga;
+		bool _ligaPedido = false;
+		long long _ligaProximoMs = 0;
+		std::string _ligaVivo;              ///< último marcador por mandar (JSON)
+		bool _ligaVivoPendiente = false, _ligaVivoBorrar = false;
+		long long _ligaVivoProximoMs = 0;
+		std::vector<std::string> _ligaResultados;   ///< cola persistente (phoenix-liga-resultados.json)
+		long long _ligaResProximoMs = 0;
 	};
 
 }

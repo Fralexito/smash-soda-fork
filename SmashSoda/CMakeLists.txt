@@ -195,6 +195,7 @@ set_source_files_properties(
     "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/link/Entrega.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/link/EstadoJuego.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/link/ModulosJuego.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/link/Doctor.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/link/PhoenixLink.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/web/AnfitrionWeb.cpp"
     PROPERTIES

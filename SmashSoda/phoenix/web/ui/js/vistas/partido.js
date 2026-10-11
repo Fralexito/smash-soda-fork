@@ -24,7 +24,7 @@ export function VistaPartido({ s, pestana }) {
 }
 
 // ---- Armar el partido ---------------------------------------------------------------------
-let borradorLados = { a: [], b: [], nombreA: "", nombreB: "", asignar: true };
+let borradorLados = { a: [], b: [], nombreA: "", nombreB: "", asignar: true, cpu: false };
 
 function participantes(m) {
   const r = [];
@@ -41,12 +41,13 @@ function Armar({ m }) {
   const sinCuenta = new Set((clas?.activa ? clas.sinCuenta : []).map((x) => x.parsecId));
   const presentes = new Set(gente.map((g) => g.parsecId));
   const a = b.a.filter((id) => presentes.has(id));
-  const bb = b.b.filter((id) => presentes.has(id));
+  const cpu = !!b.cpu;   // lado B = la máquina (CPU del juego): no cuenta para el ranking ni como resultado oficial
+  const bb = cpu ? [] : b.b.filter((id) => presentes.has(id));
   const lado = (id) => (a.includes(id) ? "a" : bb.includes(id) ? "b" : null);
   const mover = (id, destino) => {
     const na = a.filter((x) => x !== id), nb = bb.filter((x) => x !== id);
     if (destino === "a" && na.length < 4) na.push(id);
-    if (destino === "b" && nb.length < 4) nb.push(id);
+    if (destino === "b" && nb.length < 4 && !cpu) nb.push(id);
     fijar({ a: na, b: nb });
   };
   const desdeMandos = () => {
@@ -57,7 +58,9 @@ function Armar({ m }) {
     });
   };
   const preparar = () => accion("partido.preparar", {
-    a, b: bb, nombreA: b.nombreA.trim() || nombreDe(gente, a) || "Local", nombreB: b.nombreB.trim() || nombreDe(gente, bb) || t("Visitante", "Away"), asignar: b.asignar,
+    a, b: bb, nombreA: b.nombreA.trim() || nombreDe(gente, a) || "Local",
+    nombreB: b.nombreB.trim() || (cpu ? t("Máquina (CPU)", "CPU") : nombreDe(gente, bb) || t("Visitante", "Away")), asignar: b.asignar,
+    ...(cpu ? { cpu: "b" } : {}),
   });
   if (!m.sala.abierta) {
     return html`<${Vacio} titulo=${t("Abre la sala para armar un partido", "Open the room to set up a match")}
@@ -76,14 +79,14 @@ function Armar({ m }) {
           <button class=${cx("btn mini", lado(g.parsecId) === "b" && "lleno")} onClick=${() => mover(g.parsecId, lado(g.parsecId) === "b" ? null : "b")}>B</button>
         </div>`)}
       </${Tarjeta}>
-      <${Columna} id="b" ids=${bb} nombre=${b.nombreB} clave="nombreB" color="var(--eq-b)" gente=${gente} m=${m} fijar=${fijar} mover=${mover}/>
+      <${Columna} id="b" ids=${bb} nombre=${b.nombreB} clave="nombreB" color="var(--eq-b)" gente=${gente} m=${m} fijar=${fijar} mover=${mover} cpu=${cpu}/>
     </div>
     <${Clasificatoria} clas=${clas} poner=${ponerClas}/>
     <div class="caja" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
       <${Interruptor} valor=${b.asignar} al=${(v) => fijar({ asignar: v })} etiqueta="asignar"/>
       <div style="flex:1;min-width:220px"><b>${t("Sentar a cada uno en su mando", "Seat everyone on their pad")}</b>
         <div class="ayuda">${t("Ajusta la formación (A local, B visita) y asigna los mandos en orden.", "Sets the formation and assigns pads in order.")}</div></div>
-      <${Boton} tipo="lleno enorme" deshabilitado=${a.length === 0 || bb.length === 0} al=${preparar}><${Icono} n="partido" t=${18}/>${t("PREPARAR PARTIDO", "SET UP MATCH")}</${Boton}>
+      <${Boton} tipo="lleno enorme" deshabilitado=${a.length === 0 || (!cpu && bb.length === 0)} al=${preparar}><${Icono} n="partido" t=${18}/>${t("PREPARAR PARTIDO", "SET UP MATCH")}</${Boton}>
     </div>
   </div>`;
 }
@@ -120,11 +123,16 @@ function Clasificatoria({ clas, poner }) {
   </div>`;
 }
 
-function Columna({ id, ids, nombre, clave, color, gente, m, fijar, mover }) {
+function Columna({ id, ids, nombre, clave, color, gente, m, fijar, mover, cpu }) {
   return html`<${Tarjeta} estilo="flex:1;min-width:0" interior="padding:22px 24px;display:flex;flex-direction:column;gap:12px">
     <div class="lab" style=${`color:${color}`}>${id === "a" ? t("LADO A · LOCAL", "SIDE A · HOME") : t("LADO B · VISITA", "SIDE B · AWAY")}</div>
-    <${Campo} valor=${nombre} max=${40} placeholder=${t("Nombre del equipo (opcional)", "Team name (optional)")} al=${(v) => fijar({ [clave]: v })}/>
-    <div style="display:flex;flex-direction:column;gap:8px;min-height:120px">
+    <${Campo} valor=${nombre} max=${40} placeholder=${cpu ? t("Máquina (CPU)", "CPU") : t("Nombre del equipo (opcional)", "Team name (optional)")} al=${(v) => fijar({ [clave]: v })}/>
+    ${id === "b" ? html`<${Boton} tipo=${cx("mini", cpu ? "lleno" : "suave")} al=${() => fijar({ cpu: !cpu, b: [] })}
+      titulo=${t("Juegas contra la CPU del juego. Se guarda en el historial y se ve en la web, pero no cuenta para el ranking ni como resultado oficial.", "You play against the game's CPU. Saved and shown on the web, but not ranked nor official.")}>
+      🤖 ${cpu ? t("CONTRA LA MÁQUINA: SÍ", "VS CPU: ON") : t("CONTRA LA MÁQUINA (CPU)", "VS CPU")}</${Boton}>` : null}
+    ${cpu ? html`<div class="persona on" style="cursor:default"><span style="font-size:22px">🤖</span><div class="nom" style="flex:1">${t("La máquina (CPU del juego)", "The game's CPU")}</div></div>
+      <div class="ayuda">${t("No cuenta para el ranking ni como partido oficial. El marcador y el historial funcionan igual.", "Not ranked nor official. Score and history work the same.")}</div>` : null}
+    <div style=${`display:${cpu ? "none" : "flex"};flex-direction:column;gap:8px;min-height:120px`}>
       ${ids.length === 0 ? html`<div class="ayuda">${t("Toca a alguien de la lista para sumarlo (máx. 4).", "Tap someone to add them (max 4).")}</div>` : null}
       ${ids.map((pid) => { const g = gente.find((x) => x.parsecId === pid); return html`<button class="persona on" key=${pid} onClick=${() => mover(pid, null)}>
         <${Avatar} nombre=${g?.nombre} id=${pid} url=${m.perfiles?.[pid]?.avatar_url} t=${34}/><div class="nom" style="flex:1;text-align:left">${g?.nombre}</div><span class="mut">×</span></button>`; })}
@@ -211,11 +219,40 @@ function Marcador({ m }) {
         <${Boton} tipo="peligro" al=${cancelar}>${t("CANCELAR", "CANCEL")}</${Boton}>
       </div>
     </div>
+    <${PartidoOficial} m=${m}/>
     ${red.length ? html`<div class="rej4">${red.map((r) => html`<div class="caja" key=${r.parsecId}>
       <div style="display:flex;justify-content:space-between"><b style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.nombre}</b>
         <span class="mono" style=${`color:${colorPing(r.ultimo)}`}>${r.ultimo >= 0 ? r.ultimo + " ms" : "—"}</span></div>
       <${MiniSerie} serie=${r.serie}/>
     </div>`)}</div>` : null}
+  </div>`;
+}
+
+// Partido oficial (liga automática): elegir qué fecha del calendario de la web se juega. El lado LOCAL es el DT local
+// del calendario. Al terminar (con el módulo del juego) el resultado sube a la web y lo valida el staff o el árbitro.
+function PartidoOficial({ m }) {
+  const lg = m.liga || { partidos: [] };
+  useEffect(() => { accion("partido.oficiales", {}, { silencioso: true }); }, []);
+  const lista = lg.partidos || [];
+  const mios = lista.filter((x) => x.mio), resto = lista.filter((x) => !x.mio);
+  const op = (x) => html`<option value=${x.id}>${`F${x.fecha} · ${x.local} vs ${x.visitante}${x.estado === "disputa" ? " (en disputa)" : x.estado === "propuesto" ? " (ya enviado)" : ""}`}</option>`;
+  return html`<div class="caja" style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+    <b class="disp" style="font-size:13px;letter-spacing:.14em">${t("PARTIDO OFICIAL", "OFFICIAL MATCH")}</b>
+    <select class="campo" style="flex:1;min-width:240px" value=${lg.elegido || 0}
+      onChange=${(e) => accion("partido.oficial", { id: Number(e.target.value) })}>
+      <option value="0">${t("Amistoso (no cuenta para la liga)", "Friendly (not for the league)")}</option>
+      ${mios.length ? html`<optgroup label=${t("Tus partidos", "Your matches")}>${mios.map(op)}</optgroup>` : null}
+      ${resto.length ? html`<optgroup label=${lista[0]?.edicion || t("Liga", "League")}>${resto.map(op)}</optgroup>` : null}
+    </select>
+    <${Boton} tipo="mini suave" al=${() => accion("partido.oficiales", {}, { ok: t("Lista actualizada.", "List updated.") })}>${t("ACTUALIZAR", "REFRESH")}</${Boton}>
+    ${lg.enVivo ? html`<${Chip} tipo="acc"><span class="punto ok vivo"></span> ${t("EN LA WEB", "ON THE WEB")}</${Chip}>` : null}
+    <div class="ayuda" style="flex-basis:100%;font-size:13px">
+      ${lg.elegido
+        ? t("Pon al DT LOCAL del calendario en el lado Local. Al terminar, el resultado sube solo a la web y lo valida el staff o el árbitro designado.", "Put the calendar's HOME manager on the Local side. At full time the result goes to the web and staff or the assigned referee validates it.")
+        : t("Elige la fecha si es un partido de liga. El marcador se ve en vivo en la web (los amistosos solo si la sala no es privada).", "Pick the fixture if it's a league match. The score shows live on the web (friendlies only if the room isn't private).")}
+      ${lg.ultimoEnvio ? html`<div style="margin-top:4px"><b>${lg.ultimoEnvio}</b>${lg.pendientes ? ` (${lg.pendientes} ${t("por enviar", "queued")})` : ""}</div>` : null}
+      ${lg.error ? html`<div style="margin-top:4px;color:var(--warn)">${lg.error}</div>` : null}
+    </div>
   </div>`;
 }
 

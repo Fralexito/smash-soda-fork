@@ -459,7 +459,9 @@ export function crearSimulador(enviar) {
     ] }),
     "partido.preparar": (d) => {
       const lado = (ids, nombre) => ({ nombre, jugadores: ids.map((id) => ({ parsecId: id, nombre: nombreDe(id) })), goles: 0 });
-      s.partido = { ...s.partido, fase: "listo", a: lado(d.a, d.nombreA), b: lado(d.b, d.nombreB), acumulado: 0, invertido: false };
+      // Contra la máquina (CPU): ese lado lleva un solo «jugador» con parsecId 0 (como AccionesPartidoWeb.cpp)
+      const cpu = (nombre) => ({ nombre: nombre || "Máquina (CPU)", jugadores: [{ parsecId: 0, nombre: "Máquina" }], goles: 0 });
+      s.partido = { ...s.partido, fase: "listo", a: d.cpu === "a" ? cpu(d.nombreA) : lado(d.a, d.nombreA), b: d.cpu === "b" ? cpu(d.nombreB) : lado(d.b, d.nombreB), acumulado: 0, invertido: false };
     },
     "partido.iniciar": () => { s.partido.fase = "en_juego"; s.partido.inicio = ahora(); bot(`Partido: ${s.partido.a.nombre} vs ${s.partido.b.nombre}. ¡Suerte!`); },
     "partido.gol": (d) => { const l = s.partido[d.lado]; l.goles = Math.max(0, Math.min(99, l.goles + d.delta)); },

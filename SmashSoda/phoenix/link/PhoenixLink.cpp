@@ -32,6 +32,7 @@ namespace phoenix {
 
 	namespace {
 		const char* kBase = "https://fiibiyijojkxqlsrhcil.supabase.co/functions/v1/phoenix";
+		const char* kBaseLiga = "https://fiibiyijojkxqlsrhcil.supabase.co/functions/v1/liga";   // liga automática (resultado + en vivo)
 		const char* kVersionApp = "7.0.4";
 
 		long long ahoraMs() {
@@ -191,6 +192,7 @@ namespace phoenix {
 			_estado = _token.empty() ? EstadoLink::SinVincular : EstadoLink::Conectado;
 		}
 		cargarEventos();
+		cargarLiga();
 		_hilo = std::thread([this]() { bucle(); });
 	}
 
@@ -788,6 +790,7 @@ namespace phoenix {
 		// Orden: lo que pidió el host ya, luego lo que la web necesita, luego lo «bonito».
 		if (pasoPedidos(token, salaId)) return true;
 		if (pasoChat(token)) return true;
+		if (pasoLiga(token, salaId)) return true;   // resultado oficial y marcador en vivo (función «liga»)
 		if (pasoEventos(token, salaId)) return true;
 		if (pasoPerfiles(token, foto)) return true;
 		if (pasoPresencia(token, salaId)) return true;
@@ -796,6 +799,143 @@ namespace phoenix {
 	}
 
 	InfoBuzon PhoenixLink::buzon() { std::lock_guard<std::mutex> l(_mutex); return _buzonInfo; }
+
+	// ─── Liga automática (función «liga»): partidos oficiales, marcador en vivo y resultado ───────────────
+	InfoLiga PhoenixLink::liga() {
+		std::lock_guard<std::mutex> l(_mutex);
+		InfoLiga i = _liga;
+		i.pendientes = static_cast<int>(_ligaResultados.size());
+		return i;
+	}
+	void PhoenixLink::ligaPedirPartidos() { std::lock_guard<std::mutex> l(_mutex); _ligaPedido = true; }
+	void PhoenixLink::ligaVivo(const std::string& cuerpoJson) {
+		std::lock_guard<std::mutex> l(_mutex);
+		_ligaVivo = cuerpoJson; _ligaVivoPendiente = true; _ligaVivoBorrar = false;
+	}
+	void PhoenixLink::ligaVivoTerminado() {
+		std::lock_guard<std::mutex> l(_mutex);
+		_ligaVivo.clear(); _ligaVivoPendiente = true; _ligaVivoBorrar = true;
+	}
+	void PhoenixLink::ligaResultado(const std::string& cuerpoJson) {
+		std::lock_guard<std::mutex> l(_mutex);
+		if (_ligaResultados.size() >= 20) return;
+		_ligaResultados.push_back(cuerpoJson);
+		_ligaResProximoMs = 0;
+		_liga.ultimoEnvio = "Resultado listo para enviar a la web…";
+		guardarLiga();
+	}
+	void PhoenixLink::guardarLiga() {
+		try {
+			json arr = json::array();
+			for (const std::string& r : _ligaResultados) { const json x = json::parse(r, nullptr, false); if (!x.is_discarded()) arr.push_back(x); }
+			std::ofstream f(carpeta() + "phoenix-liga-resultados.json", std::ios::binary | std::ios::trunc);
+			f << arr.dump();
+		}
+		catch (...) {}
+	}
+	void PhoenixLink::cargarLiga() {
+		try {
+			std::ifstream f(carpeta() + "phoenix-liga-resultados.json", std::ios::binary);
+			if (!f) return;
+			std::string texto((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
+			const json arr = json::parse(texto, nullptr, false);
+			if (arr.is_discarded() || !arr.is_array()) return;
+			std::lock_guard<std::mutex> l(_mutex);
+			for (const json& r : arr) if (r.is_object() && r.contains("partido_id") && _ligaResultados.size() < 20) _ligaResultados.push_back(r.dump());
+		}
+		catch (...) {}
+	}
+
+	bool PhoenixLink::pasoLiga(const std::string& token, const std::string& salaId) {
+		const long long ahora = ahoraMs();
+		// 1) Resultados oficiales pendientes (lo más importante: se guardan en disco hasta que la web los acepte)
+		std::string res;
+		{
+			std::lock_guard<std::mutex> l(_mutex);
+			if (!_ligaResultados.empty() && ahora >= _ligaResProximoMs) res = _ligaResultados.front();
+		}
+		if (!res.empty()) {
+			json cuerpo = json::parse(res, nullptr, false);
+			if (cuerpo.is_discarded()) { std::lock_guard<std::mutex> l(_mutex); _ligaResultados.erase(_ligaResultados.begin()); guardarLiga(); return true; }
+			if (!salaId.empty() && !cuerpo.contains("sala_id")) cuerpo["sala_id"] = salaId;
+			cuerpo["version_link"] = kVersionApp;
+			const http::Respuesta r = http::peticion("POST", std::string(kBaseLiga) + "/v1/liga/resultado", cuerpo.dump(), cabecerasCon(token), 8000);
+			const json j = json::parse(r.cuerpo, nullptr, false);
+			std::lock_guard<std::mutex> l(_mutex);
+			if (r.estado == 200 && !j.is_discarded() && j.value("ok", false)) {
+				const std::string est = j.value("estado", std::string("propuesto"));
+				_liga.ultimoEnvio = est == "disputa"
+					? "Resultado enviado, pero no coincide con otro ya enviado: queda en disputa y lo decide el staff."
+					: "Resultado enviado a la web. Queda pendiente hasta que lo valide el staff o el árbitro designado.";
+				_ligaResultados.erase(_ligaResultados.begin());
+				guardarLiga();
+				_ligaPedido = true;   // refrescar la lista de partidos
+			}
+			else if (r.estado >= 400 && r.estado < 500 && r.estado != 429) {
+				const std::string msg = (!j.is_discarded() && j.contains("mensaje") && j["mensaje"].is_string()) ? j["mensaje"].get<std::string>() : ("error " + std::to_string(r.estado));
+				_liga.ultimoEnvio = "La web no aceptó el resultado: " + msg;
+				_ligaResultados.erase(_ligaResultados.begin());
+				guardarLiga();
+			}
+			else {
+				_liga.ultimoEnvio = "No se pudo enviar el resultado (sin conexión). Se reintenta solo.";
+				_ligaResProximoMs = ahora + 30000;
+			}
+			return true;
+		}
+		// 2) Marcador en vivo (solo con la sala publicada en la web; como mucho 1 envío cada 2 s)
+		std::string vivo; bool borrar = false, hayVivo = false;
+		{
+			std::lock_guard<std::mutex> l(_mutex);
+			if (_ligaVivoPendiente && !salaId.empty() && ahora >= _ligaVivoProximoMs) { hayVivo = true; vivo = _ligaVivo; borrar = _ligaVivoBorrar; _ligaVivoPendiente = false; _ligaVivoProximoMs = ahora + 2000; }
+		}
+		if (hayVivo) {
+			json cuerpo = borrar ? json{ {"terminado", true} } : json::parse(vivo, nullptr, false);
+			if (!cuerpo.is_discarded()) {
+				cuerpo["sala_id"] = salaId;
+				const http::Respuesta r = http::peticion("POST", std::string(kBaseLiga) + "/v1/liga/vivo", cuerpo.dump(), cabecerasCon(token), 5000);
+				if (r.estado == 0 || r.estado >= 500 || r.estado == 429) {
+					std::lock_guard<std::mutex> l(_mutex);
+					if (!_ligaVivoPendiente) { _ligaVivo = vivo; _ligaVivoBorrar = borrar; _ligaVivoPendiente = true; }   // se reintenta con lo más nuevo
+					_ligaVivoProximoMs = ahora + 10000;
+				}
+			}
+			return true;
+		}
+		// 3) Lista de partidos oficiales: al pedirla la interfaz o cada 2 min con la sala abierta y la ventana visible
+		bool pedir = false;
+		{
+			std::lock_guard<std::mutex> l(_mutex);
+			pedir = _ligaPedido || (_foto.abierta && _ventanaVisible && ahora >= _ligaProximoMs);
+			if (pedir) { _ligaPedido = false; _ligaProximoMs = ahora + 120000; }
+		}
+		if (!pedir) return false;
+		const http::Respuesta r = http::peticion("GET", std::string(kBaseLiga) + "/v1/liga/partidos", "", cabecerasCon(token), 8000);
+		const json j = json::parse(r.cuerpo, nullptr, false);
+		std::lock_guard<std::mutex> l(_mutex);
+		if (r.estado == 200 && !j.is_discarded() && j.value("ok", false) && j.contains("partidos") && j["partidos"].is_array()) {
+			_liga.partidos.clear();
+			for (const json& p : j["partidos"]) {
+				if (!p.is_object() || _liga.partidos.size() >= 60) continue;
+				PartidoOficial x;
+				x.id = p.value("id", 0LL);
+				x.fecha = p.value("fecha", 0);
+				x.edicion = p.value("edicion", std::string());
+				x.edicionNombre = p.value("edicion_nombre", std::string());
+				x.estado = p.value("estado", std::string());
+				if (p.contains("local") && p["local"].is_object()) { x.local = p["local"].value("nombre", std::string()); x.clubLocal = p["local"].value("club", std::string()); x.mio = p["local"].value("mio", false); }
+				if (p.contains("visitante") && p["visitante"].is_object()) { x.visitante = p["visitante"].value("nombre", std::string()); x.clubVisita = p["visitante"].value("club", std::string()); x.mio = x.mio || p["visitante"].value("mio", false); }
+				if (x.id > 0) _liga.partidos.push_back(x);
+			}
+			_liga.cargado = true;
+			_liga.error.clear();
+		}
+		else {
+			_liga.error = (!j.is_discarded() && j.contains("mensaje") && j["mensaje"].is_string()) ? j["mensaje"].get<std::string>()
+				: (r.estado == 0 ? std::string("Sin conexión con la web.") : "La web respondió " + std::to_string(r.estado) + ".");
+		}
+		return true;
+	}
 
 	void PhoenixLink::salaJuego(const std::string& texto) {
 		std::lock_guard<std::mutex> l(_mutex);

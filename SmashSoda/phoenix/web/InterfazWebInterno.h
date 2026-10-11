@@ -84,7 +84,16 @@ namespace phoenix::web {
 			bool avisoAbandono = false;            ///< ya se avisó de un partido abandonado en el juego
 			double startPendienteHasta = 0.0;      ///< pausa automática: Start espera a que el reloj del juego corra
 			double ultimoTick = 0.0;
+			// Liga automática: partido oficial elegido (0 = amistoso) y marcador en vivo enviado a la web
+			long long partidoOficial = 0;
+			std::string oficialTexto;              ///< «Fecha 10 · Degox vs Victor» (para la interfaz)
+			std::string vivoFirma;                 ///< último marcador mandado (goles|fase)
+			int vivoMinuto = -100;                 ///< minuto del último envío
+			bool vivoMandado = false;              ///< hay un «en vivo» en la web que habrá que borrar
 		} arbitro;
+
+		/// Último informe del Phoenix Doctor (JSON, modo informativo). Viaja con el resultado oficial.
+		std::string doctorJson;
 
 		// Cambios que no pueden hacerse dentro de un aviso del propio WebView (se hacen en tick)
 		std::string cambioInterfaz;                ///< "phoenix" | "clasica"

@@ -118,8 +118,40 @@ function Puente({ m }) {
             </div>`)}
       </${Tarjeta}>
       <${Modulos}/>
+      <${Doctor}/>
     </div>
   </div>`;
+}
+
+// ---- Phoenix Doctor (MODO INFORMATIVO): ficha del juego del anfitrión. Aún no hay parche oficial: no aprueba ni rechaza. ----
+function Doctor() {
+  const [d, setD] = useState(null);
+  const [ver, setVer] = useState(false);
+  const revisar = async () => { const r = await accion("sync.doctor", {}, { silencioso: true }); if (r) setD(r); };
+  useEffect(() => { revisar(); }, []);
+  const phoenixLuas = (d?.luaActivos || []).filter((x) => /phoenix/i.test(x));
+  const conDatos = (d?.archivos || []).filter((a) => a.sha256);
+  return html`<${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:12px">
+    <${Titulo} texto=${t("PHOENIX DOCTOR", "PHOENIX DOCTOR")}
+      derecha=${html`<div style="display:flex;gap:8px;align-items:center"><${Chip}>${t("INFORMATIVO", "INFO ONLY")}</${Chip}><${Boton} tipo="suave mini" al=${revisar}>${t("REVISAR", "CHECK")}</${Boton}></div>`}/>
+    <div class="ayuda" style="font-size:14px">
+      ${t("Ficha del juego de este anfitrión: parche, módulos y una huella de los archivos que deciden el partido. Aún no hay parche oficial, así que no aprueba ni rechaza nada: la huella viaja con cada resultado oficial para que el staff la vea.",
+          "This host's game sheet: patch, modules and a fingerprint of the files that decide the match. There is no official patch yet, so it approves or rejects nothing: the fingerprint travels with each official result for staff.")}
+    </div>
+    ${!d ? html`<div class="ayuda">${t("Revisando…", "Checking…")}</div>` : !d.juegoEncontrado
+      ? html`<div class="ayuda">${(d.avisos || [])[0] || t("No encuentro el juego.", "Game not found.")}</div>`
+      : html`<div class="col" style="gap:6px;font-size:14px">
+          <div><span class="mut">${t("Parche:", "Patch:")}</span> <b>${d.parche}</b> · ${(d.modos || []).length} ${t("carpetas de Sider", "Sider folders")}</div>
+          <div><span class="mut">${t("Módulos Phoenix activos:", "Active Phoenix modules:")}</span> <b>${phoenixLuas.length ? phoenixLuas.join(", ") : t("ninguno", "none")}</b> · ${(d.luaActivos || []).length} ${t("Luas en total", "Luas in total")}</div>
+          <div><span class="mut">${t("Raíces de la base:", "Database roots:")}</span> ${(d.cpkRoots || []).slice(0, 3).join(" → ")}${(d.cpkRoots || []).length > 3 ? " …" : ""}</div>
+          <div><span class="mut">${t("Huella del anfitrión:", "Host fingerprint:")}</span> <span class="mono" title=${d.huella}>${(d.huella || "").slice(0, 16)}…</span> <span class="mut">· ${d.generado}</span></div>
+          ${(d.avisos || []).map((x) => html`<div style="color:var(--warn)">⚠️ ${x}</div>`)}
+          <div><${Boton} tipo="mini suave" al=${() => setVer(!ver)}>${ver ? t("OCULTAR ARCHIVOS", "HIDE FILES") : t(`VER ARCHIVOS (${conDatos.length})`, `SHOW FILES (${conDatos.length})`)}</${Boton}></div>
+          ${ver ? html`<div class="mono mut" style="font-size:12px;display:flex;flex-direction:column;gap:2px">
+            ${(d.archivos || []).map((a) => html`<span key=${a.nombre}>${a.sha256 ? "●" : "·"} ${a.nombre}${a.sha256 ? " · " + a.sha256.slice(0, 12) + "…" : t(" · no está", " · missing")}</span>`)}
+          </div>` : null}
+        </div>`}
+  </${Tarjeta}>`;
 }
 
 // ---- Módulos del juego: el paquete de Luas de Sider que instala Phoenix Link (solo con PES cerrado) ----

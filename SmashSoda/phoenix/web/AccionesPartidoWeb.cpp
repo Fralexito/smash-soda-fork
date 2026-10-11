@@ -7,6 +7,8 @@
 #include "../core/ProveedorSala.h"
 #include "../core/AccionesSala.h"
 #include "../link/PhoenixLink.h"
+#include "../link/Doctor.h"
+#include "../link/Entrega.h"
 #include "EstadisticasPartido.h"
 #include "SalaClasificatoria.h"
 
@@ -34,6 +36,14 @@ namespace phoenix::web {
 		}
 
 		LadoPartido lado(Interno& in, const json& d, const char* clave, const char* claveNombre) {
+			// Contra la máquina: ese lado es la CPU del juego (parsecId 0, sin mando ni ranking)
+			if (d.contains("cpu") && d["cpu"].is_string() && d["cpu"].get<std::string>() == clave) {
+				LadoPartido l;
+				l.jugadores.push_back({ 0, "Máquina" });
+				l.nombre = d.contains(claveNombre) && d[claveNombre].is_string() && !d[claveNombre].get<std::string>().empty()
+					? texto(d, claveNombre, 40) : std::string("Máquina (CPU)");
+				return l;
+			}
 			if (!d.contains(clave) || !d[clave].is_array() || d[clave].empty() || d[clave].size() > 4) {
 				throw ErrorAccion("DATOS_INVALIDOS", "Cada lado necesita entre 1 y 4 jugadores.");
 			}
@@ -52,6 +62,12 @@ namespace phoenix::web {
 			return p.ladoA().nombre + " " + std::to_string(p.ladoA().goles) + "-" + std::to_string(p.ladoB().goles) + " " + p.ladoB().nombre;
 		}
 
+		/// ¿Ese lado es la máquina (CPU)?
+		bool contraLaMaquina(const LadoPartido& l) {
+			for (const JugadorPartido& j : l.jugadores) if (j.parsecId == 0) return true;
+			return false;
+		}
+
 		/// Mandos (índices desde 0) que ocupa hoy cada jugador del lado.
 		std::vector<int> mandosDe(ProveedorSala& sala, const LadoPartido& l) {
 			std::vector<int> r;
@@ -68,6 +84,7 @@ namespace phoenix::web {
 		json ladoWeb(Interno& in, const LadoPartido& l, uint32_t idHost, bool local, int64_t inicioMs) {
 			json jugadores = json::array();
 			for (const JugadorPartido& j : l.jugadores) {
+				if (j.parsecId == 0) { jugadores.push_back({ {"parsec_id", "0"}, {"nombre", j.nombre}, {"es_ia", true}, {"presente", true}, {"es_host", false} }); continue; }
 				jugadores.push_back({ {"parsec_id", std::to_string(j.parsecId)}, {"nombre", j.nombre},
 					{"presente", in.presentesAntes.count(j.parsecId) > 0 || (idHost != 0 && j.parsecId == idHost)},
 					{"es_host", idHost != 0 && j.parsecId == idHost} });
@@ -84,6 +101,7 @@ namespace phoenix::web {
 			uint32_t idHost = 0;
 			try { if (in.ctx.hosting != nullptr) idHost = hostingObligatorio(in).getHost().userID; } catch (...) {}
 			const bool unoContraUno = r.a.jugadores.size() == 1 && r.b.jugadores.size() == 1;
+			const bool contraIa = contraLaMaquina(r.a) || contraLaMaquina(r.b);
 			const bool completo = !cancelado && j.valido && j.fase == "final" && j.completo;
 			const bool golesDelJuego = j.valido && j.golesLocal >= 0 && j.golesVisita >= 0;
 			json d = {
@@ -94,7 +112,8 @@ namespace phoenix::web {
 				{"fin_ms", ahoraEpochMs()},
 				{"duracion_seg", r.duracionSeg},
 				{"cierre", cancelado ? "cancelado" : (completo ? "completo" : "manual")},
-				{"modo", unoContraUno ? "1v1" : "equipos"},
+				{"modo", contraIa ? "contra_ia" : (unoContraUno ? "1v1" : "equipos")},
+				{"contra_ia", contraIa},   // contra la máquina: se ve en el historial, NO cuenta para el ranking 1v1
 				{"ganador", cancelado ? "" : r.ganador},
 				{"a", ladoWeb(in, r.a, idHost, !invertido, r.inicioMs)},
 				{"b", ladoWeb(in, r.b, idHost, invertido, r.inicioMs)},
@@ -169,12 +188,12 @@ namespace phoenix::web {
 				const uint32_t idHost = hostingObligatorio(in).getHost().userID;
 				int mando = 0;
 				for (const JugadorPartido& j : in.partido.ladoA().jugadores) {
-					if (j.parsecId != idHost) AccionesSala::asignarConectando(sala, mando, j.parsecId);
+					if (j.parsecId != idHost && j.parsecId != 0) AccionesSala::asignarConectando(sala, mando, j.parsecId);   // la CPU no lleva mando
 					mando++;
 				}
 				mando = nA;
 				for (const JugadorPartido& j : in.partido.ladoB().jugadores) {
-					if (j.parsecId != idHost) AccionesSala::asignarConectando(sala, mando, j.parsecId);
+					if (j.parsecId != idHost && j.parsecId != 0) AccionesSala::asignarConectando(sala, mando, j.parsecId);
 					mando++;
 				}
 			}
@@ -250,6 +269,26 @@ namespace phoenix::web {
 		p.registrar("partido.clasificatoria", [&in](const json& d, uint64_t) -> std::optional<json> {
 			if (d.contains("si") && d["si"].is_boolean()) fijarClasificatoria(d["si"].get<bool>());
 			return estadoClasificatoria(in);
+		});
+
+		// Liga automática: elegir el partido oficial que se juega (0 = amistoso). El lado A (Local) es el DT local del calendario.
+		p.registrar("partido.oficial", [&in](const json& d, uint64_t) -> std::optional<json> {
+			const long long id = d.contains("id") && d["id"].is_number_integer() ? d["id"].get<long long>() : 0;
+			if (id <= 0) { in.arbitro.partidoOficial = 0; in.arbitro.oficialTexto.clear(); return json::object(); }
+			for (const PartidoOficial& po : PhoenixLink::instancia().liga().partidos) {
+				if (po.id != id) continue;
+				in.arbitro.partidoOficial = id;
+				in.arbitro.oficialTexto = "Fecha " + std::to_string(po.fecha) + " · " + po.local + " vs " + po.visitante;
+				// Phoenix Doctor (informativo): ficha del juego del anfitrión para adjuntar al resultado
+				const std::string carpeta = PhoenixPrefs::get().carpetaJuego;
+				if (!carpeta.empty()) in.doctorJson = phoenix::doctor::comoJson(phoenix::doctor::revisar(phoenix::entrega::deU8(carpeta)));
+				return json{ {"texto", in.arbitro.oficialTexto} };
+			}
+			throw ErrorAccion("NO_EXISTE", "Ese partido oficial ya no está en la lista: actualízala.");
+		});
+		p.registrar("partido.oficiales", [](const json&, uint64_t) -> std::optional<json> {
+			PhoenixLink::instancia().ligaPedirPartidos();
+			return json::object();
 		});
 
 		p.registrar("partido.historial", [&in](const json& d, uint64_t) -> std::optional<json> {
