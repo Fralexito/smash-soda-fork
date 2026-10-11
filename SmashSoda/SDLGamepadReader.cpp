@@ -53,7 +53,10 @@ void SDLGamepadReader::fetchGamepads(const vector<int>& xinputExcluidos, int vir
                 continue;
             }
 
-            _gamepads.push_back(SDLGamepad(joy));
+            // Phoenix: un mando de Sony (VID 054C) usa el esquema DS4 (L1=9, R1=10, L3=7, R3=8); con el de Xbox
+            // salían L1→R3, R1 nada, R3→L3 y L3→Options (Fralex, 0.2.13). El resto empieza como Xbox.
+            const bool sony = SDL_JoystickGetVendor(joy) == 0x054C;
+            _gamepads.push_back(SDLGamepad(joy, sony ? SDLGamepad::Type::DS4 : SDLGamepad::Type::XBox));
         }
     }
 }
