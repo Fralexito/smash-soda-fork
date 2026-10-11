@@ -1031,3 +1031,11 @@ carnet del blob no cambia con la velocidad (cola idéntica entre ranuras 4 y 5).
 ## Prueba (10 oct) — Mis fichajes en MI base + aviso recargar.txt — 🧪 SIMULADO
 - Dos PCs simuladas (web falsa): FRALEX ficha → su PlayerAssignment.bin cambia sin tocar su option file, recargar.txt aparece en la raíz y en el modo del switcher, se publica 1 vez; el amigo lo recibe en option file + base + recargar.txt; sin repetir (anti-bucle); con sync-base no, la base no se toca. 12 comprobaciones nuevas, 170/170.
 - Falta: prueba real en el PC (Link en AUTO-FICHAJES o botón Activar).
+
+### 2026-10-10 · phoenix.lua v0.18b (AUTO-SIEMPRE por defecto) — simulada 10/10 e INSTALADA, falta probar en el juego
+- **Pedido de FRALEX:** que nada dependa de botones; «Automático: siempre» de primero y por defecto.
+- **Cambio frente a la v0.18:** si no hay `modo.txt` o dice algo raro → AUTO-SIEMPRE (antes ACTIVAR). El orden de la tecla T es SIEMPRE → FICHAJES → ACTIVAR. La seguridad no cambia: 3 fallos → ACTIVAR hasta reiniciar, y nunca escribe fuera del momento seguro.
+- **Simulación:** `simular_v018b.py`, 10/10. S1 (sin modo.txt → recarga al volver al menú) y S1b (con ACTIVAR elegido no toca la memoria) son nuevos. También pasan v017m, v017a, v017d y v017e. La del experimento B da los mismos fallos que con la v0.18 (es para la variante sin parche C).
+- **Instalada** con PES cerrado: `SiderAddons\modules\phoenix.lua` y `ConmeGol Extras\ConmeGOL Patch 26\SiderAddons\modules\phoenix.lua` (LF, sha 9ed74f45…, verificado). Respaldo `phoenix.lua.v018` (a39b54de…) en las dos carpetas.
+- **Ojo:** Link escribe `modo.txt` con lo que el usuario tenga guardado (FRALEX: AUTO-FICHAJES). Hay que elegir «Automático: siempre» en Link; pedido a Link en `prompts/PROMPT-LINK-modo-por-defecto.md`.
+- **Prueba pendiente:** abrir el juego → menú → Partido (no recarga) → menú → Partido: el log debe decir «interruptor encendido» y «recarga automática hecha».
