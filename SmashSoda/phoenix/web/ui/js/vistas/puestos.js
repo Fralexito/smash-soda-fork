@@ -108,35 +108,42 @@ function Equipo({ nombre, desc, color, filas, m, arr, setArr, alAsignar, puedeMa
 }
 
 // ---- Persona que mira ---------------------------------------------------------------------
+// Una sola línea por persona (caben muchas): agarre, avatar pequeño, nombre con su dato al lado
+// (ping, «web» o tu mando) y un selector corto de puesto.
 function Espectador({ g, m, arr, setArr }) {
   const libres = (m.mandos?.lista || []).filter((p) => !p.ocupado);
   const soloWeb = g.rolWeb === "espectador";
   const perfil = m.perfiles?.[g.parsecId];
   const moviendo = arr && arr.tipo === "persona" && arr.valor === g.parsecId;
   if (moviendo) {
-    return html`<div style="height:58px;box-sizing:border-box;border:1.5px dashed rgba(255,255,255,.22);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--mut)">
+    return html`<div style="height:40px;box-sizing:border-box;border:1.5px dashed rgba(255,255,255,.22);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--mut)">
       ${g.nombre} ${t("se está moviendo…", "is moving…")}</div>`;
   }
-  return html`<div draggable=${!soloWeb}
+  const sinSala = g.host && !m.sala?.abierta;
+  const dato = g.host
+    ? (m.mandos.miMando ? t("tu mando", "your pad") : t("teclado", "keyboard"))
+    : soloWeb ? t("web", "web")
+    : g.ping >= 0 ? html`<span style=${`color:${colorPing(g.ping)}`}>${g.ping} ms</span>` : "—";
+  const titulo = g.host
+    ? (m.mandos.miMando ? t("Tú · tu mando: ", "You · your pad: ") + m.mandos.miMando : t("Tú · jugarás con el teclado", "You · keyboard"))
+    : soloWeb ? t("Solo espectador en la web", "Web spectator only") : t("Espectador por Parsec", "Parsec spectator");
+  return html`<div draggable=${!soloWeb} title=${titulo}
       onDragStart=${(e) => { e.dataTransfer.setData("text/plain", "persona:" + g.parsecId); e.dataTransfer.effectAllowed = "move"; setArr({ tipo: "persona", valor: g.parsecId }); }}
       onDragEnd=${() => setArr(null)}
-      style=${`display:flex;align-items:center;flex-wrap:wrap;gap:10px 12px;padding:10px 12px;border-radius:10px;border:1px solid ${g.host ? "var(--acc)" : "rgba(255,255,255,.14)"};background:var(--panel-2);cursor:${soloWeb ? "default" : "grab"};opacity:${soloWeb ? ".75" : "1"}`}>
-    ${soloWeb ? html`<span style="width:12px;flex:none"></span>` : html`<span style="color:var(--mut)"><${Agarre}/></span>`}
-    <${Avatar} nombre=${g.nombre} id=${g.parsecId} url=${perfil?.avatar_url} t=${38}/>
-    <div style="flex:1 1 120px;min-width:0">
-      <div style="font:600 15px/1.2 var(--f-body);color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.nombre}
-        ${g.host ? html`<span class="chip acc" style="height:18px;margin-left:6px;font-size:10px">${t("TÚ", "YOU")}</span>` : html`<span class="chip" style="height:18px;margin-left:6px;font-size:10px">${t("ESPECTADOR", "SPECTATOR")}</span>
-        <span class=${cx("chip", soloWeb ? "acc2" : "acc")} style="height:18px;margin-left:4px;font-size:10px">${soloWeb ? "WEB" : "PARSEC"}</span>`}</div>
-      <div class="mono mut" style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title=${g.host && m.mandos.miMando ? m.mandos.miMando : ""}>${g.host
-        ? (m.mandos.miMando ? t("tu mando: ", "your pad: ") + m.mandos.miMando : t("con teclado", "keyboard"))
-        : soloWeb
-        ? t("solo espectador en la web", "web spectator only")
-        : g.ping >= 0 ? html`<span style=${`color:${colorPing(g.ping)}`}>${g.ping} ms</span>` : "—"}</div>
+      style=${`display:flex;align-items:center;gap:8px;min-height:40px;padding:4px 8px;border-radius:8px;border:1px solid ${g.host ? "var(--linea)" : "rgba(255,255,255,.08)"};background:${g.host ? "var(--acc-suave)" : "rgba(255,255,255,.03)"};cursor:${soloWeb ? "default" : "grab"};opacity:${soloWeb ? ".7" : "1"}`}>
+    ${soloWeb ? html`<span style="width:12px;flex:none"></span>` : html`<span style="color:var(--mut);flex:none"><${Agarre}/></span>`}
+    <${Avatar} nombre=${g.nombre} id=${g.parsecId} url=${perfil?.avatar_url} t=${26}/>
+    <div style="flex:1;min-width:0;display:flex;align-items:baseline;gap:6px;white-space:nowrap;overflow:hidden">
+      <span style="font:600 14px/1.2 var(--f-body);color:#fff;overflow:hidden;text-overflow:ellipsis">${g.nombre}</span>
+      ${g.host ? html`<span class="chip acc" style="height:16px;font-size:10px;flex:none">${t("TÚ", "YOU")}</span>` : null}
+      <span class="mono mut" style="font-size:11px;flex:none">${dato}</span>
     </div>
-    ${soloWeb ? null : html`<select class="campo" style="flex:1 0 130px;max-width:100%;height:32px;font-size:12px" disabled=${libres.length === 0 || m.mandos?.esclavo || (g.host && !m.sala?.abierta)}
-      aria-label=${t("Dar puesto a ", "Give a seat to ") + g.nombre}
+    ${soloWeb ? null : html`<select class="campo" style="flex:none;width:auto;max-width:112px;height:28px;padding:0 24px 0 8px;font-size:11px"
+      disabled=${libres.length === 0 || m.mandos?.esclavo || sinSala}
+      title=${sinSala ? t("Abre la sala para tomar un puesto", "Open the room to take a seat") : libres.length ? "" : t("No hay puestos libres", "No free seats")}
+      aria-label=${(g.host ? t("Ponerme en un puesto", "Take a seat") : t("Dar puesto a ", "Give a seat to ") + g.nombre)}
       onChange=${(e) => { const v = Number(e.currentTarget.value); e.currentTarget.value = ""; if (!v) return; if (g.host) accion("mandos.tomar", { numero: v }); else accion("mandos.asignar", { indice: v - 1, parsecId: g.parsecId }); }}>
-      <option value="">${g.host && !m.sala?.abierta ? t("ABRE LA SALA", "OPEN THE ROOM") : libres.length ? (g.host ? t("PONERME EN…", "TAKE SEAT…") : t("DAR PUESTO…", "GIVE SEAT…")) : t("SIN LIBRES", "NONE FREE")}</option>
+      <option value="">${sinSala ? t("SALA CERRADA", "ROOM CLOSED") : libres.length ? t("PUESTO…", "SEAT…") : t("LLENO", "FULL")}</option>
       ${libres.map((p) => html`<option value=${p.n}>${dos(p.n)} · ${p.equipo === "local" ? "Local" : p.equipo === "visitante" ? t("Visita", "Away") : t("Fuera", "Off")}</option>`)}
     </select>`}
   </div>`;
@@ -253,7 +260,7 @@ export function PuestosNuevo({ m }) {
           onDragOver=${(e) => { if (recibeMirando) { e.preventDefault(); setSobreMirando(true); } }}
           onDragLeave=${() => setSobreMirando(false)}
           onDrop=${sueltaEnMirando}
-          style=${`flex:1;border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px;background:${sobreMirando ? "var(--acc-suave)" : "rgba(0,0,0,.3)"};border:1px solid ${sobreMirando ? "var(--acc)" : "rgba(255,255,255,.12)"};transition:background .15s,border-color .15s`}>
+          style=${`flex:1;border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:6px;background:${sobreMirando ? "var(--acc-suave)" : "rgba(0,0,0,.3)"};border:1px solid ${sobreMirando ? "var(--acc)" : "rgba(255,255,255,.12)"};transition:background .15s,border-color .15s`}>
           <div class="ayuda">${t("Están en la sala pero no tienen mando. Arrástralos a un puesto para que jueguen.", "They are in the room without a pad. Drag them to a seat to let them play.")}</div>
           ${mirando.map((g) => html`<${Espectador} key=${g.parsecId} g=${g} m=${m} arr=${arr} setArr=${setArr}/>`)}
           ${mirando.length === 0 ? html`<div class="ayuda" style="padding:6px 2px">${t("Nadie está mirando ahora.", "Nobody is watching right now.")}</div>` : null}
