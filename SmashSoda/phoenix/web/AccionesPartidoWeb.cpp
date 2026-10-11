@@ -7,6 +7,7 @@
 #include "../core/ProveedorSala.h"
 #include "../core/AccionesSala.h"
 #include "../link/PhoenixLink.h"
+#include "EstadisticasPartido.h"
 
 // =============================================================================
 //  Acciones de la interfaz web: Partido.
@@ -63,12 +64,14 @@ namespace phoenix::web {
 		}
 
 		/// Un lado para la web (ranking): ids Parsec como texto de dígitos, si sigue en la sala y si es el anfitrión.
-		json ladoWeb(Interno& in, const LadoPartido& l, uint32_t idHost, bool local) {
+		json ladoWeb(Interno& in, const LadoPartido& l, uint32_t idHost, bool local, int64_t inicioMs) {
 			json jugadores = json::array();
 			for (const JugadorPartido& j : l.jugadores) {
 				jugadores.push_back({ {"parsec_id", std::to_string(j.parsecId)}, {"nombre", j.nombre},
 					{"presente", in.presentesAntes.count(j.parsecId) > 0 || (idHost != 0 && j.parsecId == idHost)},
 					{"es_host", idHost != 0 && j.parsecId == idHost} });
+				json ficha = fichaJugador(inicioMs, j.parsecId);   // vacía con el sistema apagado
+				if (!ficha.empty()) jugadores.back()["ficha"] = std::move(ficha);
 			}
 			return { {"nombre", l.nombre}, {"goles", l.goles}, {"local", local}, {"jugadores", jugadores} };
 		}
@@ -92,8 +95,8 @@ namespace phoenix::web {
 				{"cierre", cancelado ? "cancelado" : (completo ? "completo" : "manual")},
 				{"modo", unoContraUno ? "1v1" : "equipos"},
 				{"ganador", cancelado ? "" : r.ganador},
-				{"a", ladoWeb(in, r.a, idHost, !invertido)},
-				{"b", ladoWeb(in, r.b, idHost, invertido)},
+				{"a", ladoWeb(in, r.a, idHost, !invertido, r.inicioMs)},
+				{"b", ladoWeb(in, r.b, idHost, invertido, r.inicioMs)},
 				{"correcciones", r.correcciones},
 				{"pausas", r.pausas},
 				{"host_parsec", idHost != 0 ? std::to_string(idHost) : std::string()},
@@ -120,6 +123,9 @@ namespace phoenix::web {
 			}
 			// El contrato limita `datos` a 4 KB: si no cabe, fuera la lista de goles (se queda el marcador)
 			if (d.dump(-1, ' ', false, json::error_handler_t::replace).size() > 3800 && d.contains("juego")) d["juego"].erase("goles");
+			// Y si aún no cabe, fuera las fichas de los jugadores (el resultado siempre llega)
+			if (d.dump(-1, ' ', false, json::error_handler_t::replace).size() > 3800)
+				for (const char* lado : { "a", "b" }) for (json& jj : d[lado]["jugadores"]) jj.erase("ficha");
 			return d;
 		}
 	}
