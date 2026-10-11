@@ -19,7 +19,13 @@ static std::string leer(const fs::path& p) { std::ifstream in(p, std::ios::binar
 static void escribir(const fs::path& p, const std::string& s) { fs::create_directories(p.parent_path()); std::ofstream(p, std::ios::binary) << s; }
 static int contar(const std::string& s, const std::string& sub) { int n = 0; for (size_t i = s.find(sub); i != std::string::npos; i = s.find(sub, i + 1)) n++; return n; }
 
+static int principal(int argc, char** argv);
 int main(int argc, char** argv) {
+	try { return principal(argc, argv); }
+	catch (const std::exception& e) { std::cerr << "EXCEPCION: " << e.what() << std::endl; return 3; }
+}
+
+static int principal(int argc, char** argv) {
 	if (argc < 3) { std::cerr << "uso: desinstalar_test <trabajo> <sider.ini>\n"; return 2; }
 	const fs::path base = argv[1];
 	const fs::path juego = base / "Juego", paquete = base / "paquete";
@@ -35,6 +41,7 @@ int main(int argc, char** argv) {
 	const fs::path sa[2] = { juego / "SiderAddons", juego / "ConmeGol Extras" / "ConmeGOL Patch 26" / "SiderAddons" };
 	for (const auto& d : sa) {
 		escribir(d / "olmosjr23" / "Database" / "common" / "etc" / "pesdb" / "Player.bin", "base");
+		fs::create_directories(d / "modules");
 		escribir(d / "sider.ini", limpio);
 	}
 	escribir(paquete / "phoenix.lua", "local m = { version = \"0.18b\" }\nreturn m\n");

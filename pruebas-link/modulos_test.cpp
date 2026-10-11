@@ -55,7 +55,9 @@ int main(int argc, char** argv) {
 		fs::create_directories(juego / "SiderAddons" / "modules");
 		fs::create_directories(juego / "ConmeGol Extras" / "ConmeGOL Patch 26" / "SiderAddons" / "modules");
 		fs::create_directories(paquete);
-		const std::string iniBase = argc >= 3 ? leer(argv[2]) : std::string("[sider]\r\nlua.module = \"phoenix.lua\"\r\n");
+		// El sider.ini real ya puede traer phoenix_estadio.lua instalado: se quita para partir de cero
+		std::string iniBase = argc >= 3 ? leer(argv[2]) : std::string("[sider]\r\nlua.module = \"phoenix.lua\"\r\n");
+		{ bool c = false; iniBase = quitarLineasModulo(iniBase, "phoenix_estadio.lua", c); }
 		escribir(juego / "SiderAddons" / "sider.ini", iniBase);
 		escribir(juego / "ConmeGol Extras" / "ConmeGOL Patch 26" / "SiderAddons" / "sider.ini", iniBase);
 		escribir(paquete / "phoenix_estadio.lua", "local m = { version = \"1.0\" }\nreturn m\n");

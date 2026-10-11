@@ -72,7 +72,7 @@ std::string comentarLinea(const std::string& ini, const std::string& archivo, bo
 /// ¿Hay una línea activa / comentada para el módulo?
 void buscarLinea(const std::string& ini, const std::string& archivo, bool& activa, bool& comentada);
 /// Devuelve el sider.ini con  cpk.root = ".\livecpk\Phoenix-DB"  justo antes de la primera raíz activa para la que
-/// tieneBase(ruta) es true (la que tiene common\etc\pesdb\Player.bin); si ninguna, antes de la primera cpk.root.
+/// tieneBase(ruta) es true (la que tiene common\etc\pesdb\Player.bin) o que es olmosjr23\Database; si no hay base, no se pone.
 /// `cambio` = false si ya estaba activa. "" + error si no hay ninguna cpk.root.
 std::string activarRaizPhoenixDB(const std::string& ini, const std::function<bool(const std::string&)>& tieneBase, bool& cambio, std::string& error);
 /// ¿Hay una cpk.root activa a Phoenix-DB?

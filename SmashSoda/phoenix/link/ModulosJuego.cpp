@@ -248,10 +248,17 @@ std::string activarRaizPhoenixDB(const std::string& ini, const std::function<boo
 		}
 		if (c) continue;
 		if (primera < 0) primera = static_cast<int>(i);
-		if (primeraBase < 0 && tieneBase && tieneBase(ruta)) primeraBase = static_cast<int>(i);
+		// La base del parche: la raíz con common\etc\pesdb\Player.bin o, en los modos del cambiador (que no traen
+		// la carpeta y la reciben al cambiar de modo), la raíz de olmosjr23\Database.
+		std::string rm = minus(ruta); std::replace(rm.begin(), rm.end(), '/', '\\');
+		const bool esOlmos = rm.size() >= 18 && rm.compare(rm.size() - 18, 18, "olmosjr23\\database") == 0;
+		if (primeraBase < 0 && ((tieneBase && tieneBase(ruta)) || esOlmos)) primeraBase = static_cast<int>(i);
 	}
-	int donde = primeraBase >= 0 ? primeraBase : primera;
-	if (donde < 0) { error = "sider.ini no tiene raíces cpk.root: no se toca"; return std::string(); }
+	// Sin la base del parche (p. ej. un modo «Clásicos» con otra base): Phoenix-DB NO se pone, porque sus
+	// Player.bin / PlayerAssignment.bin de ConmeGOL taparían los jugadores de ese modo (Fralex, 2026-10-11).
+	(void)primera;
+	int donde = primeraBase;
+	if (donde < 0) return ini;
 	if (comentadaPhx >= 0) {                                // se quita la comentada para no dejar dos
 		r.v.erase(r.v.begin() + comentadaPhx);
 		if (comentadaPhx < donde) donde--;
