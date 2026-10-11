@@ -52,7 +52,9 @@ namespace phoenix::web {
 			return json::object();
 		});
 		p.registrar("mandos.liberar", [&in](const json& d, uint64_t) -> std::optional<json> {
-			salaObligatoria(in).liberarMando(indiceMando(in, d));
+			const int indice = indiceMando(in, d);
+			if (MandoHost::activo() == indice + 1) { MandoHost::soltar(&salaObligatoria(in)); return json::object(); }   // el del anfitrión
+			salaObligatoria(in).liberarMando(indice);
 			return json::object();
 		});
 		p.registrar("mandos.asignar", [&in](const json& d, uint64_t) -> std::optional<json> {
@@ -63,7 +65,12 @@ namespace phoenix::web {
 			return json::object();
 		});
 		p.registrar("mandos.intercambiar", [&in](const json& d, uint64_t) -> std::optional<json> {
-			if (!AccionesSala::intercambiar(salaObligatoria(in), indiceMando(in, d, "a"), indiceMando(in, d, "b"))) {
+			const int ia = indiceMando(in, d, "a"), ib = indiceMando(in, d, "b");
+			const int mh = MandoHost::activo();
+			if (mh > 0 && (mh == ia + 1 || mh == ib + 1)) {   // el del anfitrión no tiene dueño en el motor: se cambia con «tomar»
+				throw ErrorAccion("MANDO_DEL_ANFITRION", "Ese es tu mando: cámbialo desde tu fila (EN LA SALA) o con Ctrl+Alt+número.");
+			}
+			if (!AccionesSala::intercambiar(salaObligatoria(in), ia, ib)) {
 				throw ErrorAccion("NADA_QUE_MOVER", "Los dos mandos están libres.");
 			}
 			return json::object();

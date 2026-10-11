@@ -267,9 +267,19 @@ namespace phoenix::web {
 				if (p == nullptr) continue;
 				tipos.push_back(p->type() == AGamepad::Type::DUALSHOCK ? "ds4" : "xbox");
 			}
+			// El mando que tomó el anfitrión (MandoHost) no tiene «dueño» en el motor: se publica como suyo,
+			// igual que en el simulador, para que salga con su nombre en Puestos, Resumen y Partido.
+			const int mandoHost = MandoHost::activo();
+			Guest& anfitrion = h.getHost();
 			for (size_t i = 0; i < asientos.size(); i++) {
-				const AsientoVista& a = asientos[i];
+				AsientoVista a = asientos[i];
 				const int n = a.numero;
+				if (n == mandoHost && !a.ocupado && anfitrion.isValid()) {
+					a.ocupado = true;
+					a.jugador = anfitrion.name;
+					a.parsecId = anfitrion.userID;
+					a.pingMs = -1;
+				}
 				const char* equipo = n <= pr.equipoLocal ? "local" : (n <= pr.mandosActivos ? "visitante" : "fuera");
 				if (a.ocupado && a.parsecId != 0) mandoDe[a.parsecId] = n;
 				lista.push_back({
