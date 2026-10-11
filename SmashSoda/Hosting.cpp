@@ -701,7 +701,9 @@ void Hosting::startHosting() {
 				// Phoenix: al cerrar la sala también se apaga el servidor del overlay. Al abrir otra sala hay que
 				// levantarlo de nuevo; si no, el overlay se abre pero nunca recibe datos (solo funcionaba la primera sala).
 				bool servidorNuevo = false;
-				if (Config::cfg.socket.enabled && !WebSocket::instance.isRunning()) {
+				// Phoenix (2026-10-11): el overlay recibe todo por el WebSocket; si el overlay está encendido,
+				// el servidor arranca aunque el interruptor WebSocket esté apagado (si no, el overlay salía vacío).
+				if ((Config::cfg.socket.enabled || Config::cfg.overlay.enabled) && !WebSocket::instance.isRunning()) {
 					WebSocket::instance.createServer(Config::cfg.socket.port);   // este también abre el overlay
 					servidorNuevo = true;
 				}

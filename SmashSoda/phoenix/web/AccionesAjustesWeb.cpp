@@ -140,13 +140,14 @@ namespace phoenix::web {
 				c.socket.enabled = booleano(d, "valor");
 				// Se aplica al momento (el panel original pedía reiniciar la app)
 				if (c.socket.enabled && !WebSocket::instance.isRunning()) WebSocket::instance.createServer(static_cast<uint16_t>(c.socket.port));
-				if (!c.socket.enabled && WebSocket::instance.isRunning()) WebSocket::instance.stopServer();
+				// Con el overlay encendido el servidor sigue: el overlay recibe todo por ahí.
+				if (!c.socket.enabled && !c.overlay.enabled && WebSocket::instance.isRunning()) WebSocket::instance.stopServer();
 			}
 			else if (clave == "socketPort") {
 				c.socket.port = entero(d, "valor", 1024, 65535);
 				if (WebSocket::instance.isRunning()) {
 					WebSocket::instance.stopServer();
-					if (c.socket.enabled) WebSocket::instance.createServer(static_cast<uint16_t>(c.socket.port));
+					if (c.socket.enabled || c.overlay.enabled) WebSocket::instance.createServer(static_cast<uint16_t>(c.socket.port));
 				}
 			}
 			else throw ErrorAccion("DATOS_INVALIDOS", "Ajuste desconocido.");

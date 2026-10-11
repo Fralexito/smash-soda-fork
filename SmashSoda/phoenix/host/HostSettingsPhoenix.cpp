@@ -8,6 +8,7 @@
 
 #include "../../widgets/HostSettingsWidget.h"
 #include "../../services/OverlayService.h"
+#include "../../services/WebSocket.h"
 #include "../PhoenixBuild.h"
 
 #include <algorithm>
@@ -129,7 +130,11 @@ void HostSettingsWidget::phoenixCambiarOverlay(bool activo) {
 	Config::cfg.overlay.enabled = activo;
 	Config::cfg.Save();
 	if (_hosting.isRunning()) {
-		if (activo) OverlayService::instance().start();
+		if (activo) {
+			// El overlay necesita el servidor WebSocket (al crearlo, él mismo abre el overlay).
+			if (!WebSocket::instance.isRunning()) WebSocket::instance.createServer(Config::cfg.socket.port);
+			else OverlayService::instance().start();
+		}
 		else OverlayService::instance().stop();
 	}
 }
