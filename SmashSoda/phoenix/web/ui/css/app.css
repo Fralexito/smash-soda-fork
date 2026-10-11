@@ -749,3 +749,9 @@ html.oculta *, html.oculta *::before, html.oculta *::after { animation-play-stat
 .rapido.ancho { left: 0; right: auto; width: 360px; }
 .enlace-mas { background: none; border: 0; padding: 4px 0; color: var(--acc); cursor: pointer; font: 600 13px/1 var(--f-body); }
 .enlace-mas:hover, .enlace-mas:focus-visible { text-decoration: underline; }
+
+/* Mandos en vivo: cada mando se puede pulsar para mapearlo */
+.mando-click { cursor: pointer; transition: border-color .15s, box-shadow .15s; }
+.mando-click:hover, .mando-click:focus-visible { border-color: var(--acc); box-shadow: 0 0 0 3px var(--acc-suave); outline: none; }
+.mando-click-pista { font-size: 11px; letter-spacing: .08em; text-align: right; color: var(--mut); }
+.mando-click:hover .mando-click-pista, .mando-click:focus-visible .mando-click-pista { color: var(--acc); }

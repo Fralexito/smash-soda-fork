@@ -5,9 +5,20 @@
 //  Datos: mandos.lista[i].entrada {b, lt, rt, lx, ly, rx, ry} (solo en Mandos › Puestos).
 // =============================================================================
 import { html, useState, useEffect } from "../lib.js";
-import { accion, oirVivo } from "../tienda.js";
+import { accion, oirVivo, irA } from "../tienda.js";
 import { t } from "../i18n.js";
 import { dos } from "../ui.js";
+
+// Clic en un mando de «Mandos en vivo» → Mandos › MAPEO con esa persona ya elegida (el tuyo → TU MANDO)
+let pendienteMapeo = 0;
+export function tomarPendienteMapeo() { const x = pendienteMapeo; pendienteMapeo = 0; return x; }
+function abrirMapeo(m, p) {
+  const esHost = m.mandos?.host === p.n || (p.parsecId && p.parsecId === m.sala?.hostId);
+  if (esHost) { irA("mandos", "marionetas"); return; }
+  if (!p.parsecId) return;
+  pendienteMapeo = p.parsecId;
+  irA("mandos", "mapeo");
+}
 
 // Máscara XInput (la misma de botones.js y del motor de mandos)
 const B = { arriba: 0x1, abajo: 0x2, izq: 0x4, der: 0x8, start: 0x10, back: 0x20, ls: 0x40, rs: 0x80, lb: 0x100, rb: 0x200, guia: 0x400, a: 0x1000, b: 0x2000, x: 0x4000, y: 0x8000 };
@@ -75,13 +86,16 @@ export function MandosEnVivo({ m }) {
     .map((p) => (vivo[p.n] ? { ...p, entrada: vivo[p.n] } : p));
   if (lista.length === 0) return html`<div class="ayuda">${t("No hay mandos en uso ahora mismo.", "No pads in use right now.")}</div>`;
   return html`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">
-    ${lista.map((p) => html`<div class="caja" key=${p.n} style="display:flex;flex-direction:column;gap:6px;padding:12px">
+    ${lista.map((p) => html`<div class="caja mando-click" key=${p.n} role="button" tabindex="0" style="display:flex;flex-direction:column;gap:6px;padding:12px"
+      title=${t("Clic para mapear este mando", "Click to map this pad")}
+      onClick=${() => abrirMapeo(m, p)} onKeyDown=${(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); abrirMapeo(m, p); } }}>
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
         <b style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.jugador || t("Libre", "Free")}</b>
         <span class="mono mut" style="font-size:12px">${t("MANDO", "PAD")} ${dos(p.n)}</span>
       </div>
       <${MandoVivo} e=${p.entrada}/>
       ${p.entrada ? null : html`<div class="ayuda" style="font-size:12px">${t("Sin datos de este mando.", "No data for this pad.")}</div>`}
+      <div class="mono mando-click-pista">${m.mandos?.host === p.n ? t("TU MANDO ›", "YOUR PAD ›") : t("MAPEAR ›", "MAP ›")}</div>
     </div>`)}
   </div>`;
 }

@@ -9,7 +9,7 @@ import { html, useState, useEffect, useRef } from "../lib.js";
 import { t } from "../i18n.js";
 import { accion, confirmar } from "../tienda.js";
 import { Tarjeta, Titulo, Boton, AjusteSw, Selector, Avatar, Chip, Vacio, cx, dos } from "../ui.js";
-import { MandoVivo } from "./mandovivo.js";
+import { MandoVivo, tomarPendienteMapeo } from "./mandovivo.js";
 import { FUENTES, ETIQUETA, ZONA_MAX, PASOS, normalizar, destinoDe, conDestino, esIdentidad, construirPerfil, encaja, zonaSugerida, limpiar } from "../mapeo.js";
 
 const NOMBRE = {
@@ -237,7 +237,7 @@ function Botones({ persona, perfil }) {
 // ---- Pestaña --------------------------------------------------------------------------------------
 export function MapeoNuevo({ m }) {
   const lista = personasDe(m);
-  const [elegido, setElegido] = useState(() => (lista.find((g) => g.mando) || lista[0])?.parsecId || 0);
+  const [elegido, setElegido] = useState(() => tomarPendienteMapeo() || (lista.find((g) => g.mando) || lista[0])?.parsecId || 0);
   const persona = lista.find((g) => g.parsecId === elegido) || null;
   useEffect(() => { accion("mapeo.ver", { parsecId: persona ? persona.parsecId : 0 }, { silencioso: true }); }, [persona?.parsecId]);
   useEffect(() => { if (!persona && lista.length) setElegido((lista.find((g) => g.mando) || lista[0]).parsecId); }, [lista.length, !!persona]);
