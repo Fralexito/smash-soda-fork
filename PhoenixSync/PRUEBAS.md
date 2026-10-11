@@ -1079,3 +1079,13 @@ carnet del blob no cambia con la velocidad (cola idéntica entre ranuras 4 y 5).
   3. Reemplazo de `EDIT00000000` por el archivo nuevo ya verificado; hash final confirmado en el PC = `ea0e42f012da235ed74bcf30cd97189e22982e3a129565b6c1b3d62b09605461` (coincide exacto).
   4. Quedó un `EDIT_salida.zip` suelto en esa carpeta (no se pudo borrar porque el borrado de archivos en esa carpeta no está permitido todavía); no afecta nada, FRALEX puede borrarlo cuando quiera.
 - **Pendiente para FRALEX:** entrar al juego → **Editar → Cargar** para que se vea el cambio (solo afecta amistosos/exhibición, no la Liga Máster).
+
+### 2026-10-11 21:53 (Lima) · ✅ Cambio de opinión de FRALEX: Yamal vuelve al Barça, Havertz pasa al Arsenal
+- Pedido: "Devuelve a yamal al barcelona y havertz a arsenal" (es decir: Yamal sale de Arsenal y vuelve a Barça; Havertz sale de Barça y va a Arsenal — distinto del estado original, donde Havertz estaba en Barça).
+- Antes de mover: `--buscar` confirmó el estado vigente — Yamal en España (7) + Arsenal (101, dorsal 99); Havertz en Alemania (14) + Barça (108, dorsal 29).
+- Movimiento (con `mover_cli` ya corregido, origen siempre explícito): `--mover 162114 108 101 10` (Yamal: Arsenal→Barça) y `--mover 114506 101 108 12` (Havertz: Barça→Arsenal), encadenados en un solo archivo de salida.
+- Verificado después: Yamal en España (sin tocar) + Barça (108, dorsal 99); Havertz en Alemania (sin tocar) + Arsenal (101, dorsal 29).
+- Aviso: al sacar a Yamal del Arsenal no se encontró un sustituto automático ahí (el programa avisó "Sustituto propuesto: 0"); no es un error, solo significa que el Arsenal se queda con una plaza menos en esa posición hasta que FRALEX la cubra manualmente si quiere. Al sacar a Havertz del Barça, el sustituto propuesto fue el propio Yamal (que entraba justo esa jugada), así que el Barça queda cubierto igual.
+- Hashes: antes `ea0e42f012da235ed74bcf30cd97189e22982e3a129565b6c1b3d62b09605461` (el de Yamal→Arsenal) → después `92d8fdcf294bf7df37d05b5259ecd827bfd87f616f3ba4b8d51acfc73ffe1382`, ambos 11 014 090 bytes.
+- Entrega: respaldo del archivo anterior como `EDIT00000000.respaldo-antes-yamal-barca-havertz-arsenal-20261011` (hash verificado idéntico), archivo nuevo llevado comprimido, descomprimido y verificado en el PC antes de reemplazar, y hash final confirmado en su lugar. Quedaron dos `.zip` sueltos en la carpeta (de este cambio y del anterior) sin poder borrarse todavía — no afectan nada.
+- Pendiente para FRALEX: **Editar → Cargar** en el juego para ver el cambio (solo amistosos).
