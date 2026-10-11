@@ -56,7 +56,7 @@ pause >nul
 :: --------- Config ----------
 set "BRANCH=rediseno-phoenix-portal"
 :: Version exacta de Phoenix Link (commit). La rama tiene una enie en el nombre y en .bat falla: se usa el SHA.
-set "COMMIT=7bc469b469ff8bc27cf557fc2da19d720d00d15f"
+set "COMMIT=abc891fc36957ed6adf82489efb0e380dd30f6a0"
 set "REPO_URL=https://github.com/Fralexito/smash-soda-fork.git"
 set "SMASH_GLASS_URL=https://github.com/trybuchet/smash-glass/releases/download/1.0.0/smash-glass-v1.00.zip"
 set "VIGEMBUS_URL=https://github.com/nefarius/ViGEmBus/releases/download/v1.22.0/ViGEmBus_1.22.0_x64_x86_arm64.exe"
