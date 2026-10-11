@@ -49,9 +49,7 @@ Está en **Mandos › Puestos › ORDEN DE MANDOS EN PES** (interruptor). Encend
 2. Abre Phoenix Link, ve a **Mandos › Puestos**, baja hasta **ORDEN DE MANDOS EN PES** y **enciéndelo**.
 3. Cierra PES y su Settings. En unos segundos la tarjeta debe decir **«Ordenado»**, con las 8 casillas en ✓.
 4. Abre la sala y luego PES. El puesto 1 de Link es el jugador 1, el 2 el jugador 2…
-5. **Para jugar con tu propio mando (anfitrión):**
-   - En **Mandos › Marionetas**, elige tu mando físico como **maestro** y marca un puesto como **títere**.
-   - PES no ve tu mando directamente, porque no está en ninguna casilla. Juegas a través de Link y te mueves de puesto como cualquiera. No hace falta HidHide.
+5. **Para jugar con tu propio mando (anfitrión):** ve a **Mandos › TU MANDO**, elige tu mando y arrástrate a un puesto en **Mandos › Puestos**. PES no ve tu mando directamente, porque no está en ninguna casilla: juegas a través de Link. No hace falta HidHide. Ver `TU-MANDO.md`.
 6. Si cambias algo con PES abierto (reabrir Link, enchufar o desenchufar mandos), la tarjeta avisa: cierra PES y Link vuelve a ordenar solo.
 
 **Volver atrás:** apaga el interruptor y restaura la copia `settings.dat.phoenix-<fecha>` (o abre Settings.exe y configúralo a mano).
