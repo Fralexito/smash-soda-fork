@@ -112,7 +112,7 @@ export function PanelPersona({ id, m, alCerrar }) {
         ${g.cop ? html`<${Chip} tipo="bad">${t("MOD OFICIAL", "OFFICIAL MOD")}</${Chip}>` : null}</div>
     </div>
     <div class="ficha-bloque"><div class="lab acc">${t("MANDO", "PAD")}</div><${SelectorPuesto} g=${g} m=${m}/>
-      ${g.host ? html`<div class="ayuda">${t("Tu mando físico pasa a ese puesto. Atajo: Ctrl+Alt+número.", "Your physical pad takes that seat. Shortcut: Ctrl+Alt+number.")}</div>` : null}</div>
+      ${g.host ? html`<div class="ayuda">${t("Lo manejas con el teclado: flechas, Enter = A, Retroceso = B, Espacio = Start (atajo: Ctrl+Alt+número). Para usar tu mando físico, ve a Mandos › Marionetas.", "You drive it with the keyboard: arrows, Enter = A, Backspace = B, Space = Start (shortcut: Ctrl+Alt+number). To use your physical pad, go to Pads › Puppets.")}</div>` : null}</div>
     ${g.host ? null : html`
     <div class="ficha-bloque"><div class="lab acc">${t("CONEXIÓN · 2 MIN", "CONNECTION · 2 MIN")}</div>
       <div style="display:flex;align-items:center;gap:10px"><${Ping} ms=${r ? r.ultimo : g.ping} semaforo=${r?.semaforo} grande/>
