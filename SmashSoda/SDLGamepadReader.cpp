@@ -10,10 +10,18 @@ void SDLGamepadReader::fetchGamepads()
     fetchGamepads(vector<int>());
 }
 
-void SDLGamepadReader::fetchGamepads(const vector<int>& xinputExcluidos)
+void SDLGamepadReader::fetchGamepads(const vector<int>& xinputExcluidos, int virtualesXbox)
 {
     // Phoenix: un mando virtual de Link nunca puede ser maestro (se copiaría a sí mismo o a otro puesto).
+    // Los de Link son «Xbox 360 Controller» (045E:028E). Windows solo da casilla XInput a 4, así que además:
+    // si hay tantos 045E:028E como mandos virtuales Xbox de Link, todos son de Link y se ocultan.
+    SDL_JoystickUpdate();
+    int x360 = 0;
+    for (int i = 0; i < SDL_NumJoysticks(); ++i)
+        if (SDL_JoystickGetDeviceVendor(i) == 0x045E && SDL_JoystickGetDeviceProduct(i) == 0x028E) x360++;
+    const bool ocultar360 = virtualesXbox > 0 && x360 <= virtualesXbox;
     const auto excluido = [&](SDL_Joystick* joy) {
+        if (ocultar360 && SDL_JoystickGetVendor(joy) == 0x045E && SDL_JoystickGetProduct(joy) == 0x028E) return true;
         const int jugador = SDL_JoystickGetPlayerIndex(joy);
         for (int x : xinputExcluidos) if (x == jugador && jugador >= 0) return true;
         return false;

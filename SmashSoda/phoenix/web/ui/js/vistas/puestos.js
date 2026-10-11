@@ -120,20 +120,20 @@ function Espectador({ g, m, arr, setArr }) {
   return html`<div draggable=${!soloWeb}
       onDragStart=${(e) => { e.dataTransfer.setData("text/plain", "persona:" + g.parsecId); e.dataTransfer.effectAllowed = "move"; setArr({ tipo: "persona", valor: g.parsecId }); }}
       onDragEnd=${() => setArr(null)}
-      style=${`display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.14);background:var(--panel-2);cursor:${soloWeb ? "default" : "grab"};opacity:${soloWeb ? ".75" : "1"}`}>
+      style=${`display:flex;align-items:center;flex-wrap:wrap;gap:10px 12px;padding:10px 12px;border-radius:10px;border:1px solid ${g.host ? "var(--acc)" : "rgba(255,255,255,.14)"};background:var(--panel-2);cursor:${soloWeb ? "default" : "grab"};opacity:${soloWeb ? ".75" : "1"}`}>
     ${soloWeb ? html`<span style="width:12px;flex:none"></span>` : html`<span style="color:var(--mut)"><${Agarre}/></span>`}
     <${Avatar} nombre=${g.nombre} id=${g.parsecId} url=${perfil?.avatar_url} t=${38}/>
-    <div style="flex:1;min-width:0">
+    <div style="flex:1 1 120px;min-width:0">
       <div style="font:600 15px/1.2 var(--f-body);color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.nombre}
         ${g.host ? html`<span class="chip acc" style="height:18px;margin-left:6px;font-size:10px">${t("TÚ", "YOU")}</span>` : html`<span class="chip" style="height:18px;margin-left:6px;font-size:10px">${t("ESPECTADOR", "SPECTATOR")}</span>
         <span class=${cx("chip", soloWeb ? "acc2" : "acc")} style="height:18px;margin-left:4px;font-size:10px">${soloWeb ? "WEB" : "PARSEC"}</span>`}</div>
-      <div class="mono mut" style="font-size:12px">${g.host
-        ? (m.mandos.miMando ? t("mirando · tu mando: ", "watching · your pad: ") + m.mandos.miMando : t("mirando · jugarás con el teclado", "watching · you'll use the keyboard"))
+      <div class="mono mut" style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title=${g.host && m.mandos.miMando ? m.mandos.miMando : ""}>${g.host
+        ? (m.mandos.miMando ? t("tu mando: ", "your pad: ") + m.mandos.miMando : t("con teclado", "keyboard"))
         : soloWeb
         ? t("solo espectador en la web", "web spectator only")
         : g.ping >= 0 ? html`<span style=${`color:${colorPing(g.ping)}`}>${g.ping} ms</span>` : "—"}</div>
     </div>
-    ${soloWeb ? null : html`<select class="campo" style="width:auto;height:32px;font-size:12px;flex:none" disabled=${libres.length === 0 || m.mandos?.esclavo || (g.host && !m.sala?.abierta)}
+    ${soloWeb ? null : html`<select class="campo" style="flex:1 0 130px;max-width:100%;height:32px;font-size:12px" disabled=${libres.length === 0 || m.mandos?.esclavo || (g.host && !m.sala?.abierta)}
       aria-label=${t("Dar puesto a ", "Give a seat to ") + g.nombre}
       onChange=${(e) => { const v = Number(e.currentTarget.value); e.currentTarget.value = ""; if (!v) return; if (g.host) accion("mandos.tomar", { numero: v }); else accion("mandos.asignar", { indice: v - 1, parsecId: g.parsecId }); }}>
       <option value="">${g.host && !m.sala?.abierta ? t("ABRE LA SALA", "OPEN THE ROOM") : libres.length ? (g.host ? t("PONERME EN…", "TAKE SEAT…") : t("DAR PUESTO…", "GIVE SEAT…")) : t("SIN LIBRES", "NONE FREE")}</option>
@@ -147,7 +147,8 @@ export function PuestosNuevo({ m }) {
   const [eligiendo, setEligiendo] = useState(null);
   const [arr, setArr] = useState(null);
   const [sobreMirando, setSobreMirando] = useState(false);
-  const [verVivo, setVerVivo] = useState(false);
+  const [verVivo, setVerVivoEstado] = useState(() => { try { return localStorage.getItem("phoenix.verVivo") !== "0"; } catch { return true; } });
+  const setVerVivo = (v) => { setVerVivoEstado(v); try { localStorage.setItem("phoenix.verVivo", v ? "1" : "0"); } catch { /* sin almacenamiento */ } };
   const lista = m.mandos.lista || [];
   const f = m.mandos.formacion || { local: 1, visitante: 1 };
   const total = lista.length;
@@ -202,7 +203,7 @@ export function PuestosNuevo({ m }) {
           ${m.arbitro?.soloAutorizados ? t("PUESTOS: SOLO AUTORIZADOS", "SEATS: AUTHORIZED ONLY") : t("PUESTOS: LIBRES", "SEATS: OPEN")}</${Boton}>
         <${Boton} tipo=${cx("mini", verVivo ? "acc" : "suave")} al=${() => setVerVivo(!verVivo)}
           titulo=${t("Muestra qué botón pulsa cada uno, sus sticks y gatillos, en vivo. Pídeles que prueben su mando antes del partido.", "Shows each player's buttons, sticks and triggers live. Ask them to test their pad before the match.")}>
-          ${verVivo ? t("OCULTAR MANDOS EN VIVO", "HIDE LIVE PADS") : t("VER MANDOS EN VIVO", "SHOW LIVE PADS")}</${Boton}>
+          ${verVivo ? t("▾ PLEGAR MANDOS EN VIVO", "▾ COLLAPSE LIVE PADS") : t("▸ MANDOS EN VIVO", "▸ LIVE PADS")}</${Boton}>
         <${Boton} tipo="mini suave" deshabilitado=${esclavo || m.mandos.reiniciando} al=${() => herramienta("ordenar")}>${t("ORDENAR", "SORT")}</${Boton}>
         <${Boton} tipo="mini suave" deshabilitado=${esclavo || m.mandos.reiniciando}
           al=${() => herramienta("reiniciar", [t("¿Reiniciar los mandos?", "Reset pads?"), t("Se desconectan y vuelven a conectar todos los mandos virtuales. Úsalo si el juego dejó de detectarlos.", "All virtual pads are re-plugged. Use it if the game stopped detecting them.")])}>

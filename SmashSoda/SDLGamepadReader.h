@@ -11,7 +11,7 @@ public:
 	vector<SDLGamepad>& getGamepads();
 	void fetchGamepads();
 	/// Phoenix: igual, pero sin los mandos virtuales de Link (casillas XInput que ocupan).
-	void fetchGamepads(const vector<int>& xinputExcluidos);
+	void fetchGamepads(const vector<int>& xinputExcluidos, int virtualesXbox = 0);
 
 private:
 	void eraseDetachedGamepads();

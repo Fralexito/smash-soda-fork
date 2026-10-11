@@ -42,14 +42,16 @@ function TuMando({ m }) {
     ${bloqueado ? html`<div class="caja" style="border-color:var(--warn)">${t("Con turnos o torneo activos no se puede cambiar.", "Can't change during hotseat or tournament.")}</div>` : null}
     ${!mar ? html`<div class="ayuda">${t("Buscando mandos…", "Looking for pads…")}</div>` : html`
       <div class="col" style="gap:8px">
-        ${mar.maestros.length === 0 ? html`<div class="ayuda">${t("No veo ningún mando físico. Conéctalo y pulsa «BUSCAR MANDOS».", "No physical pad found. Plug it in and press «FIND PADS».")}</div>` : null}
+        ${mar.maestros.length === 0 ? html`<div class="caja mut" style="font-size:13px">${t("No veo ningún mando físico. Conéctalo y pulsa «BUSCAR MANDOS».", "No physical pad found. Plug it in and press «FIND PADS».")}</div>` : null}
         ${mar.maestros.map((x) => {
           const es = actual === x.n - 1;
+          const ps = x.tipo === "ds4" || x.tipo === "dualshock";
           return html`<div class=${cx("fila-mar", es && "es")} key=${x.n}>
             <span class=${cx("luz", x.activo && "on")} title=${t("Se enciende al pulsar un botón", "Lights up when you press a button")}></span>
+            <span class=${cx("chip", ps ? "acc2" : "mod")} style="height:22px;font-size:11px;flex:none">${ps ? "PLAYSTATION" : "XBOX"}</span>
             <div style="flex:1;min-width:0">
               <div class="nombre" style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${x.nombre}</div>
-              <div class="mono mut" style="font-size:12px">${es ? t("es tu mando", "your pad") : t("pulsa un botón para reconocerlo", "press a button to spot it")}</div>
+              ${x.activo ? html`<div class="mono" style="font-size:12px;color:var(--acc)">${t("¡te estoy viendo!", "I see you!")}</div>` : null}
             </div>
             ${es && mar.motor === "sdl" ? html`<${Boton} tipo="suave mini" deshabilitado=${bloqueado} titulo=${t("Si los botones salen cambiados, prueba otra lectura (Xbox / PlayStation)", "If buttons come out swapped, try another reading")}
               al=${() => accion("marionetas.tipo", { indice: x.n - 1 })}>${t("¿BOTONES CAMBIADOS?", "BUTTONS SWAPPED?")}</${Boton}>` : null}
@@ -66,7 +68,7 @@ function TuMando({ m }) {
         </div>
       </div>
       <div><${Boton} tipo="suave mini" deshabilitado=${bloqueado} al=${() => accion("marionetas.actualizar", {}, { ok: t("Lista actualizada.", "List refreshed.") })}>${t("BUSCAR MANDOS", "FIND PADS")}</${Boton}></div>`}
-    <div class="ayuda" style="font-size:13px">${t("Para que PES no vea tu mando por su cuenta (y no controles dos jugadores), enciende «Orden de mandos en PES» en Mandos › Puestos.", "So PES doesn't also read your pad directly, turn on «Pad order in PES» in Pads › Seats.")}</div>
+    <div class="ayuda" style="font-size:13px">${t("Aquí solo salen tus mandos físicos: los 8 mandos virtuales de Link no se muestran. Para que PES no lea tu mando por su cuenta (y no manejes dos jugadores), enciende «Orden de mandos en PES» en Mandos › Puestos.", "Only your physical pads show here; Link's 8 virtual pads are hidden. So PES doesn't also read your pad directly, turn on «Pad order in PES» in Pads › Seats.")}</div>
   </${Tarjeta}>`;
 }
 
@@ -88,8 +90,11 @@ function lectura(g) {
   return partes;
 }
 
-function PruebaMando() {
-  const [pads, setPads] = useState([]);
+function PruebaMando({ m }) {
+  const [todos, setPads] = useState([]);
+  const virtuales = (m?.mandos?.lista || []).filter((p) => p.conectado && p.tipo !== "ds4").length;
+  const x360 = todos.filter((g) => /xbox 360/i.test(g.nombre)).length;
+  const pads = virtuales > 0 && x360 <= virtuales ? todos.filter((g) => !/xbox 360/i.test(g.nombre)) : todos;
   useEffect(() => {
     let vivo = true, id = 0, ultimo = 0;
     const leer = (ahora) => {
@@ -110,7 +115,7 @@ function PruebaMando() {
   return html`<${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:14px">
     <${Titulo} texto=${t("PRUEBA DE MANDO", "PAD TEST")}/>
     <div class="ayuda" style="font-size:14px">${t("Pulsa botones y mueve los sticks: se iluminan aquí. Sirve para reconocer tu mando y comprobar que todo responde.", "Press buttons and move the sticks: they light up here.")}</div>
-    ${pads.length === 0 ? html`<div class="caja mut" style="font-size:13px">${t("Todavía no veo ningún mando. Conéctalo y pulsa cualquier botón.", "No pad yet. Plug it in and press any button.")}</div>`
+    ${pads.length === 0 ? html`<div class="caja mut" style="font-size:13px">${t("Todavía no veo tu mando. Conéctalo y pulsa cualquier botón (los mandos virtuales de Link no salen aquí).", "No pad yet. Plug it in and press any button (Link's virtual pads don't show here).")}</div>`
       : pads.map((g) => html`<${MandoPrueba} key=${g.i} g=${g}/>`)}
   </${Tarjeta}>`;
 }
@@ -133,6 +138,6 @@ function MandoPrueba({ g }) {
 export function MarionetasNuevo({ m }) {
   return html`<div class="fila partible" style="align-items:flex-start">
     <div class="col" style="flex:1.5 1 0;min-width:340px"><${TuMando} m=${m}/></div>
-    <div class="col" style="flex:1 1 0;min-width:300px"><${PruebaMando}/><${MandosVirtuales} m=${m}/></div>
+    <div class="col" style="flex:1 1 0;min-width:300px"><${PruebaMando} m=${m}/><${MandosVirtuales} m=${m}/></div>
   </div>`;
 }

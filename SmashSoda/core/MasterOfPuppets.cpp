@@ -72,7 +72,10 @@ void MasterOfPuppets::internalFetchSDLGamepads()
 {
     if (isSDLEngine)
     {
-        _sdlReader.fetchGamepads(xinputDeLink());
+        int virtualesXbox = 0;
+        for (AGamepad* p : GamepadClient::instance.gamepads)
+            if (p != nullptr && p->isConnected() && p->type() == AGamepad::Type::XBOX) virtualesXbox++;
+        _sdlReader.fetchGamepads(xinputDeLink(), virtualesXbox);
         reubicarMaestro();
     }
 }
