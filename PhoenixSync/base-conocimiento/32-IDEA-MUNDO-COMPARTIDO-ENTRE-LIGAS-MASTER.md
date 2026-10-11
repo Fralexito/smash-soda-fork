@@ -78,20 +78,25 @@ No se va a ver el cambio en medio de un partido. Se va a ver la próxima vez que
 
 ---
 
-## 6. Idea extra (10 oct, 21:56–22:23): ¿y si la CPU no ficha sola?
+## 6. Idea extra (10 oct, 21:56–22:31): ¿y si la CPU no ficha sola?
 
 FRALEX preguntó si se podía **desactivar los fichajes automáticos de la CPU**, para no tener que resolver choques en absoluto. Se investigó:
 
-- El juego sí tiene un ajuste oficial al crear la Liga Máster, **"Transfer Frequency"**, con 5 niveles (Low, Fairly Low, Normal, Fairly High, High) — fuente: [evoweb.uk](https://evoweb.uk/threads/most-realistic-fun-ml-setup-pes-2021.93394). **No se confirmó** que exista un nivel "Ninguno/Apagado", ni que ese ajuste controle los traspasos **IA-contra-IA** (solo se documentó que afecta las ofertas que **te llegan a ti** por tus propios jugadores) — fuente: [pesmastery.com](https://pesmastery.com/pes-master-league-transfers/).
-- **Pendiente para FRALEX (toma 10 segundos, sin ningún riesgo):** abrir PES2021, ir a crear una Liga Máster nueva (sin terminar de crearla) y mirar qué opciones trae "Transfer Frequency" — si hay algún nivel que diga "Ninguno" o similar.
-- **Mientras tanto, no hace falta apagar nada:** la sección 3.3 de esta guía (la lista corta de jugadores "del mundo compartido") y la regla de "gana el que llega primero" ya resuelven el problema de los choques, sin necesitar ningún ajuste nuevo ni tocar la memoria del juego. Apagar los fichajes de la CPU sería un extra, no un requisito.
+- El juego sí tiene un ajuste oficial al crear la Liga Máster, **"Transfer Frequency"** (en el ConmeGOL Patch, en español: **"Frecuencia de traspasos"**, dentro de "Opciones generales"), con 5 niveles — fuente: [evoweb.uk](https://evoweb.uk/threads/most-realistic-fun-ml-setup-pes-2021.93394). **No se confirmó** por internet que ese ajuste controle los traspasos **IA-contra-IA** (solo se documentó que afecta las ofertas que **te llegan a ti** por tus propios jugadores) — fuente: [pesmastery.com](https://pesmastery.com/pes-master-league-transfers/).
+- **✅ Confirmado en el juego de FRALEX (22:30, captura de pantalla):** la pantalla real de "Opciones generales" del ConmeGOL Patch muestra **"Frecuencia de traspasos"** con niveles de **Muy baja** a **Muy alta** (5 niveles: Muy baja, Baja, Normal, Alta, Muy alta — por el patrón de la UI). **No hay ningún nivel "Ninguno" o "Apagado"** visible en el menú. El menú no deja elegir "cero" traspasos.
+- **Idea para ir más allá del menú (sin probar todavía, ⏳ pendiente):** el menú probablemente guarda ese ajuste como **un número pequeño** dentro de las opciones de la Liga Máster (por ejemplo 1 a 5, uno por cada nivel). El menú solo deja **elegir** entre esos 5, pero el número de adentro podría aceptar otros valores que el juego nunca ofrece, como un **0**. Esto se podría investigar con el mismo método de siempre:
+  1. Crear **dos Ligas Máster de prueba** (nunca la carrera real): una en "Muy baja" y otra en "Muy alta".
+  2. Comparar los dos archivos **byte a byte** para encontrar el número exacto que cambia entre niveles (misma técnica que ya usamos para las barras de crecimiento y para los traspasos).
+  3. Una vez encontrado, probar — **solo en una Liga Máster de prueba, con respaldo** — ponerle un valor fuera del rango normal (por ejemplo 0) y ver qué hace el juego: puede que funcione de verdad, puede que el juego lo ignore y lo corrija solo, o puede que dé un error al cargar esa ranura. **No se sabe hasta probarlo con cuidado.**
+- **No es necesario para seguir avanzando:** la sección 3.3 de esta guía (la lista corta de jugadores "del mundo compartido") y la regla de "gana el que llega primero" ya resuelven el problema de los choques, sin necesitar ningún ajuste nuevo ni tocar la memoria del juego. Esto es un experimento opcional, para más adelante, no un paso obligatorio. Mientras tanto, usar **"Muy baja"** en las Ligas Máster conectadas ya debería reducir bastante la cantidad de traspasos de la CPU, de forma simple y sin ningún riesgo.
 
 ---
 
-## 6. Pendiente (nada construido todavía)
+## 7. Pendiente (nada construido todavía)
 
 1. Decidir qué tan larga es la lista de "jugadores del mundo compartido" (¿solo los más famosos? ¿un número fijo por equipo?).
 2. Diseñar la tabla en Supabase para esta lista compartida (parecida a la del Mercado, pero con un "contador de versión" por jugador para la regla de choques).
 3. Decidir cada cuánto tiempo revisa Phoenix Sync si hay cambios (¿automático? ¿con un botón?).
 4. Diseñar el aviso/noticia que se le muestra a cada usuario cuando se aplica un cambio que vino de otra Liga Máster.
 5. Probarlo primero con solo 2 personas conectadas (bajo riesgo de choques) antes de pensar en más.
+6. (Opcional) Investigar si "Frecuencia de traspasos" se puede forzar más allá de "Muy baja" editando el archivo directamente (sección 6).
