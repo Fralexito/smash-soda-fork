@@ -8,6 +8,7 @@ import { html, useState, useEffect } from "../lib.js";
 import { t } from "../i18n.js";
 import { accion } from "../tienda.js";
 import { Tarjeta, Titulo, Boton, Ajuste, Stepper, Segmentos, Chip, Vacio, cx, dos } from "../ui.js";
+import { MandoVivo as Dibujo } from "./mandovivo.js";
 
 const TIPOS = { xbox: "XBOX", dualshock: "DUALSHOCK", ds4: "DS4", xinput: "XINPUT" };
 
@@ -69,7 +70,24 @@ function TuMando({ m }) {
   </${Tarjeta}>`;
 }
 
-// ---- Prueba de mando: dibuja tu mando en vivo (API de mandos del navegador). Solo trabaja con esta pestaña abierta. ----
+// ---- Prueba de mando: tu mando en vivo, con el mismo dibujo de «Mandos en vivo». ----
+// Lee la API de mandos del navegador (mapeo estándar W3C) y la pasa al formato XInput de mandovivo.js.
+const BIT = [0x1000, 0x2000, 0x4000, 0x8000, 0x100, 0x200, 0, 0, 0x20, 0x10, 0x40, 0x80, 0x1, 0x2, 0x4, 0x8, 0x400];
+const NOMBRE_BOTON = ["A", "B", "X", "Y", "LB", "RB", "LT", "RT", "Back", "Start", "L3", "R3", "↑", "↓", "←", "→", "Guía"];
+function aXInput(g) {
+  let b = 0;
+  g.botones.forEach((p, i) => { if (p && BIT[i]) b |= BIT[i]; });
+  const ej = (v) => Math.round(Math.max(-1, Math.min(1, v || 0)) * 32767);
+  return { b, lt: Math.round((g.valores[6] || 0) * 255), rt: Math.round((g.valores[7] || 0) * 255),
+    lx: ej(g.ejes[0]), ly: -ej(g.ejes[1]), rx: ej(g.ejes[2]), ry: -ej(g.ejes[3]) };
+}
+function lectura(g) {
+  const partes = g.botones.map((p, i) => (p ? NOMBRE_BOTON[i] || "B" + i : null)).filter(Boolean);
+  const pal = (x, y, n) => (Math.abs(x) > 0.25 || Math.abs(y) > 0.25 ? `${n} ${Math.round(x * 100)}/${Math.round(-y * 100)}` : null);
+  [pal(g.ejes[0] || 0, g.ejes[1] || 0, "L"), pal(g.ejes[2] || 0, g.ejes[3] || 0, "R")].forEach((x) => x && partes.push(x));
+  return partes;
+}
+
 function PruebaMando() {
   const [pads, setPads] = useState([]);
   useEffect(() => {
@@ -79,8 +97,8 @@ function PruebaMando() {
       if (!document.hidden && ahora - ultimo > 33) {   // ~30 lecturas por segundo, y nada con la ventana oculta
         ultimo = ahora;
         const lista = (navigator.getGamepads ? Array.from(navigator.getGamepads()) : []).filter(Boolean).map((g) => ({
-          i: g.index, nombre: g.id.replace(/\(.*?\)/g, "").trim() || "Mando",
-          b: g.buttons.map((x) => (x.pressed ? 1 : 0)), v: g.buttons.map((x) => x.value || 0), ejes: Array.from(g.axes),
+          i: g.index, nombre: g.id.replace(/\(.*?\)/g, "").trim() || "Mando", estandar: g.mapping === "standard",
+          botones: g.buttons.map((x) => x.pressed), valores: g.buttons.map((x) => x.value || 0), ejes: Array.from(g.axes),
         }));
         setPads((viejo) => (lista.length === 0 && viejo.length === 0 ? viejo : lista));
       }
@@ -91,32 +109,25 @@ function PruebaMando() {
   }, []);
   return html`<${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:14px">
     <${Titulo} texto=${t("PRUEBA DE MANDO", "PAD TEST")}/>
-    <div class="ayuda" style="font-size:14px">${t("Pulsa un botón de tu mando: se ilumina aquí. Así reconoces cuál es el tuyo y compruebas que todo responde.", "Press a button on your pad: it lights up here. That shows which one is yours and that everything responds.")}</div>
+    <div class="ayuda" style="font-size:14px">${t("Pulsa botones y mueve los sticks: se iluminan aquí. Sirve para reconocer tu mando y comprobar que todo responde.", "Press buttons and move the sticks: they light up here.")}</div>
     ${pads.length === 0 ? html`<div class="caja mut" style="font-size:13px">${t("Todavía no veo ningún mando. Conéctalo y pulsa cualquier botón.", "No pad yet. Plug it in and press any button.")}</div>`
-      : pads.map((g) => html`<${MandoVivo} key=${g.i} g=${g}/>`)}
+      : pads.map((g) => html`<${MandoPrueba} key=${g.i} g=${g}/>`)}
   </${Tarjeta}>`;
 }
 
-function MandoVivo({ g }) {
-  const on = (n) => (g.b[n] ? "var(--acc)" : "rgba(255,255,255,.14)");
-  const hay = g.b.some((x) => x) || g.ejes.some((e) => Math.abs(e) > 0.3);
-  const palo = (cx0, cy0, ax, ay, pres) => html`<g>
-    <circle cx=${cx0} cy=${cy0} r="17" fill="none" stroke=${pres ? "var(--acc)" : "rgba(255,255,255,.2)"} stroke-width="2"/>
-    <circle cx=${cx0 + (g.ejes[ax] || 0) * 11} cy=${cy0 + (g.ejes[ay] || 0) * 11} r="8" fill=${pres ? "var(--acc)" : "rgba(255,255,255,.35)"}/></g>`;
-  return html`<div class=${cx("caja", hay && "vivo-mando")} style=${hay ? "border-color:var(--acc)" : ""}>
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+function MandoPrueba({ g }) {
+  const partes = lectura(g);
+  const hay = partes.length > 0;
+  return html`<div class="caja" style=${`display:flex;flex-direction:column;gap:10px;padding:14px 16px;transition:border-color .15s,box-shadow .15s;${hay ? "border-color:var(--acc);box-shadow:0 0 0 3px var(--acc-suave)" : ""}`}>
+    <div style="display:flex;align-items:center;gap:10px;min-width:0">
       <span class=${cx("luz", hay && "on")}></span>
-      <div class="mono" style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${dos(g.i + 1)} · ${g.nombre}</div></div>
-    <svg viewBox="0 0 240 110" width="100%" style="max-width:340px;display:block;margin:0 auto" aria-hidden="true">
-      <rect x="60" y="2" width="30" height="9" rx="4" fill=${on(4)}/><rect x="150" y="2" width="30" height="9" rx="4" fill=${on(5)}/>
-      <rect x="62" y="14" width="26" height="4" rx="2" fill="rgba(255,255,255,.14)"/><rect x="62" y="14" width=${26 * (g.v[6] || 0)} height="4" rx="2" fill="var(--acc)"/>
-      <rect x="152" y="14" width="26" height="4" rx="2" fill="rgba(255,255,255,.14)"/><rect x="152" y="14" width=${26 * (g.v[7] || 0)} height="4" rx="2" fill="var(--acc)"/>
-      ${palo(60, 60, 0, 1, g.b[10])}${palo(150, 88, 2, 3, g.b[11])}
-      <g fill=${on(12)}><rect x="93" y="42" width="8" height="10" rx="2"/></g><g fill=${on(13)}><rect x="93" y="62" width="8" height="10" rx="2"/></g>
-      <g fill=${on(14)}><rect x="84" y="52" width="9" height="10" rx="2"/></g><g fill=${on(15)}><rect x="101" y="52" width="9" height="10" rx="2"/></g>
-      <circle cx="112" cy="40" r="5" fill=${on(8)}/><circle cx="128" cy="40" r="5" fill=${on(9)}/>
-      <circle cx="205" cy="58" r="8" fill=${on(0)}/><circle cx="220" cy="46" r="8" fill=${on(1)}/><circle cx="190" cy="46" r="8" fill=${on(2)}/><circle cx="205" cy="34" r="8" fill=${on(3)}/>
-    </svg></div>`;
+      <b style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${g.nombre}</b>
+      <${Chip} tipo=${hay ? "acc" : ""}>${hay ? t("RESPONDE", "RESPONDING") : t("EN ESPERA", "IDLE")}</${Chip}>
+    </div>
+    <div style="max-width:340px;width:100%;margin:0 auto"><${Dibujo} e=${aXInput(g)}/></div>
+    <div class="mono" style="font-size:12px;min-height:16px;text-align:center;color:${hay ? "var(--acc)" : "var(--mut)"}">${hay ? partes.join(" · ") : t("pulsa algo…", "press something…")}</div>
+    ${g.estandar ? null : html`<div class="ayuda" style="font-size:12px;color:var(--warn)">${t("Este mando no usa el mapeo estándar: puede que algunos botones salgan cambiados.", "This pad doesn't use the standard mapping: some buttons may be swapped.")}</div>`}
+  </div>`;
 }
 
 export function MarionetasNuevo({ m }) {
