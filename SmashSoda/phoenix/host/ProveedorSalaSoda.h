@@ -46,6 +46,9 @@ namespace phoenix {
 		void inyectar(int indice, uint16_t botones, int16_t lx, int16_t ly) override;
 		void titereUnico(int indice) override;
 		bool hayMandoPropio() override;
+		uint16_t botonesMandoPropio() override;
+		std::string idMandoPropio() override;
+		bool elegirMandoPropio(const std::string& id) override;
 		void aplicarVideo(int fps, int mbps) override;
 
 	private:

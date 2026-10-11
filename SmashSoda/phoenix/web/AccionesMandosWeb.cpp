@@ -285,7 +285,24 @@ namespace phoenix::web {
 				mp.setMasterIndex(i);
 			}
 			gc.isPuppetMaster = i >= 0;
+			// Se recuerda: al volver a abrir Link, ese mando queda elegido solo (MandoHost)
+			PhoenixPrefs& pr = PhoenixPrefs::get();
+			pr.miMando = (i >= 0 && in.ctx.sala != nullptr) ? in.ctx.sala->idMandoPropio() : std::string();
+			pr.guardar();
 			return json::object();   // MandoHost cambia de modo en su siguiente vuelta
+		});
+		// «Mi puesto al jugar»: dónde se sienta el anfitrión (botón JUGAR, al abrir la sala y al pulsar su mando)
+		p.registrar("mandos.miPuesto", [](const json& d, uint64_t) -> std::optional<json> {
+			PhoenixPrefs& pr = PhoenixPrefs::get();
+			if (d.contains("modo")) {
+				const std::string modo = texto(d, "modo", 16);
+				pr.miPuestoModo = (modo == "local" || modo == "visitante") ? modo : "fijo";
+			}
+			if (d.contains("numero")) pr.miPuestoNumero = entero(d, "numero", 1, 8);
+			if (d.contains("alAbrir")) pr.sentarmeAlAbrir = booleano(d, "alAbrir");
+			if (d.contains("pulsando")) pr.entrarPulsando = booleano(d, "pulsando");
+			pr.guardar();
+			return json::object();
 		});
 		p.registrar("marionetas.tipo", [&in](const json& d, uint64_t) -> std::optional<json> {
 			clienteMandos(in);

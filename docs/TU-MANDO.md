@@ -34,3 +34,12 @@ Con el orden de mandos en PES, **tu mando no va en Settings**: PES solo ve los 8
 ## Para sacar a alguien de un puesto
 - Botón **QUITAR** (rojo) en su fila, o arrástralo a **Mirando**.
 - Para sacarlo **de la sala**, ve a Gente.
+
+## Sentarte solo (desde 0.2.17)
+En **Mandos › TU MANDO › Mi puesto al jugar** hay dos interruptores (los dos encendidos por defecto):
+- **Empezar sentado**: al abrir la sala ya estás en tu puesto (el que elegiste: fijo, 1.º de Local o 1.º de Visita). Si no quieres jugar, arrástrate a **Mirando**.
+- **Entrar pulsando tu mando**: si no estás en un puesto, pulsa **A, B, X o Y** (✕ ○ □ △) y entras. Si tu puesto está ocupado, vas a otro libre de tu equipo; si no, a cualquiera libre. **Nunca saca a nadie**: si todo está lleno, no pasa nada.
+
+Link recuerda tu mando: al volver a abrirlo, el que elegiste con «USAR ESTE» queda elegido solo cuando está conectado. Con teclado no hay entrada automática: usa el botón **JUGAR** en Mirando.
+
+Los invitados funcionan igual: un jugador autorizado (aceptó el reto en la web, lo aceptaste tú o ya lo habías sentado) pulsa A/B/X/Y y cae en un puesto libre. A quien mandaste a Mirando no entra solo: te sale como «quiere jugar».

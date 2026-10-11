@@ -4,6 +4,9 @@
 #include <Xinput.h>
 
 #include "ProveedorSala.h"
+#include "../PhoenixPrefs.h"
+
+#include <algorithm>
 
 namespace phoenix {
 
@@ -20,6 +23,31 @@ namespace phoenix {
 		bool mhTeclaAntes[10] = {};
 
 		bool mhAbajo(int vk) { return (GetAsyncKeyState(vk) & 0x8000) != 0; }
+
+		// Sentarse solo: al abrir la sala y al pulsar A/B/X/Y en su mando sin puesto (solo con sitio libre; nunca saca a nadie)
+		bool mhAbiertaAntes = false;
+		bool mhBotonAntes = true;      // hay que soltar y volver a pulsar (no entra con un botón que ya estaba pulsado)
+		ULONGLONG mhUltimoIntento = 0;
+		ULONGLONG mhSentarHasta = 0;   // tras abrir la sala: hasta cuándo se intenta sentarlo (su mando puede tardar en aparecer)
+
+		/// Puesto libre según «Mi puesto al jugar»: el preferido; si está ocupado, otro libre de su equipo; si no, cualquiera.
+		int puestoLibre(ProveedorSala* sala) {
+			const PhoenixPrefs& pr = PhoenixPrefs::get();
+			const std::vector<AsientoVista> as = sala->asientos(8);
+			const int total = (std::min)(pr.mandosActivos, static_cast<int>(as.size()));
+			const int local = (std::min)(pr.equipoLocal, total);
+			const auto libre = [&](int n) { return n >= 1 && n <= total && !as[n - 1].ocupado && n != mhActivo; };
+			int desde = 1, hasta = local, destino = 1;
+			if (pr.miPuestoModo == "visitante") { desde = local + 1; hasta = total; destino = desde; }
+			else if (pr.miPuestoModo == "fijo") {
+				destino = (std::min)(pr.miPuestoNumero, total);
+				if (destino > local) { desde = local + 1; hasta = total; }
+			}
+			if (libre(destino)) return destino;
+			for (int n = desde; n <= hasta; n++) if (libre(n)) return n;
+			for (int n = 1; n <= total; n++) if (libre(n)) return n;
+			return 0;
+		}
 	}
 
 	int MandoHost::activo() { return mhActivo; }
@@ -57,7 +85,31 @@ namespace phoenix {
 				}
 				mhTeclaAntes[n] = ahora;
 			}
-			if (mhActivo == 0 || !sala->abierta()) { if (mhActivo) soltar(sala); return; }
+			// Su mando físico guardado vuelve a quedar elegido al abrir Link (cada 2 s mientras no esté)
+			const PhoenixPrefs& pr = PhoenixPrefs::get();
+			const ULONGLONG t = GetTickCount64();
+			if (!pr.miMando.empty() && !sala->hayMandoPropio() && t - mhUltimoIntento > 2000) {
+				mhUltimoIntento = t;
+				sala->elegirMandoPropio(pr.miMando);
+			}
+			const bool abierta = sala->abierta();
+			const bool conMando = sala->hayMandoPropio();
+			const uint16_t abxy = conMando ? (sala->botonesMandoPropio() & (XINPUT_GAMEPAD_A | XINPUT_GAMEPAD_B | XINPUT_GAMEPAD_X | XINPUT_GAMEPAD_Y)) : 0;
+			if (abierta && !mhAbiertaAntes) mhSentarHasta = pr.sentarmeAlAbrir ? t + 15000 : 0;
+			if (!abierta || mhActivo > 0) mhSentarHasta = 0;
+			if (abierta && mhActivo == 0 && conMando) {
+				const bool alAbrir = t < mhSentarHasta;
+				const bool pulsado = pr.entrarPulsando && abxy != 0 && !mhBotonAntes;
+				if (alAbrir || pulsado) {
+					const int n = puestoLibre(sala);
+					if (n > 0) tomar(sala, n);
+					mhSentarHasta = 0;
+				}
+			}
+			mhAbiertaAntes = abierta;
+			mhBotonAntes = abxy != 0;
+
+			if (mhActivo == 0 || !abierta) { if (mhActivo) soltar(sala); return; }
 
 			// Si el host elige o quita «Tu mando» mientras está en un puesto, se cambia de modo sin moverlo de puesto.
 			if (sala->hayMandoPropio() != mhConMando) {

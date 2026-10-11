@@ -64,6 +64,12 @@ namespace phoenix {
 			pausaAuto = j.value("pausaAuto", pausaAuto);
 			marcadorAuto = j.value("marcadorAuto", marcadorAuto);
 			soloAutorizados = j.value("soloAutorizados", soloAutorizados);
+			miMando = j.value("miMando", miMando);
+			miPuestoModo = j.value("miPuestoModo", miPuestoModo);
+			if (miPuestoModo != "local" && miPuestoModo != "visitante") miPuestoModo = "fijo";
+			miPuestoNumero = (std::max)(1, (std::min)(8, j.value("miPuestoNumero", miPuestoNumero)));
+			sentarmeAlAbrir = j.value("sentarmeAlAbrir", sentarmeAlAbrir);
+			entrarPulsando = j.value("entrarPulsando", entrarPulsando);
 			ordenPes = j.value("ordenPes", ordenPes);
 			modoRecarga = j.value("modoRecarga", modoRecarga);
 			cedidoExtras = j.value("cedidoExtras", cedidoExtras);
@@ -103,6 +109,11 @@ namespace phoenix {
 				{"pausaAuto", pausaAuto},
 				{"marcadorAuto", marcadorAuto},
 				{"soloAutorizados", soloAutorizados},
+				{"miMando", miMando},
+				{"miPuestoModo", miPuestoModo},
+				{"miPuestoNumero", miPuestoNumero},
+				{"sentarmeAlAbrir", sentarmeAlAbrir},
+				{"entrarPulsando", entrarPulsando},
 				{"ordenPes", ordenPes},
 				{"modoRecarga", modoRecarga},
 				{"cedidoExtras", cedidoExtras},

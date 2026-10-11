@@ -300,6 +300,70 @@ namespace phoenix {
 		return MasterOfPuppets::instance.getMasterIndex() >= 0;
 	}
 
+	uint16_t ProveedorSalaSoda::botonesMandoPropio() {
+		try {
+			MasterOfPuppets& mp = MasterOfPuppets::instance;
+			std::lock_guard<std::mutex> cierre(mp.inputMutex);
+			const int i = mp.getMasterIndex();
+			if (i < 0) return 0;
+			if (mp.isSDLEngine) {
+				std::vector<SDLGamepad>& v = mp.getSDLGamepads();
+				if (static_cast<size_t>(i) < v.size()) return v[i].getGamepadState().state.Gamepad.wButtons;
+			}
+			else {
+				std::vector<GamepadState>& v = mp.getXInputGamepads();
+				if (static_cast<size_t>(i) < v.size()) return v[i].state.Gamepad.wButtons;
+			}
+		}
+		catch (...) {}
+		return 0;
+	}
+
+	namespace {
+		std::string idDe(SDL_Joystick* j) {
+			if (j == nullptr) return "";
+			char t[16];
+			snprintf(t, sizeof(t), "%04X:%04X", SDL_JoystickGetVendor(j), SDL_JoystickGetProduct(j));
+			return t;
+		}
+	}
+
+	std::string ProveedorSalaSoda::idMandoPropio() {
+		try {
+			MasterOfPuppets& mp = MasterOfPuppets::instance;
+			std::lock_guard<std::mutex> cierre(mp.inputMutex);
+			const int i = mp.getMasterIndex();
+			if (i < 0 || !mp.isSDLEngine) return "";
+			std::vector<SDLGamepad>& v = mp.getSDLGamepads();
+			if (static_cast<size_t>(i) < v.size()) return idDe(v[i].joystick);
+		}
+		catch (...) {}
+		return "";
+	}
+
+	bool ProveedorSalaSoda::elegirMandoPropio(const std::string& id) {
+		if (id.empty()) return false;
+		try {
+			MasterOfPuppets& mp = MasterOfPuppets::instance;
+			GamepadClient& gc = _hosting.getGamepadClient();
+			{
+				std::lock_guard<std::mutex> cierre(mp.inputMutex);
+				if (mp.getMasterIndex() >= 0) return true;
+				if (!mp.isSDLEngine) return false;
+				std::vector<SDLGamepad>& v = mp.getSDLGamepads();
+				int encontrado = -1;
+				for (size_t i = 0; i < v.size(); i++) if (idDe(v[i].joystick) == id) { encontrado = static_cast<int>(i); break; }
+				if (encontrado < 0) return false;
+				for (AGamepad* g : gc.gamepads) if (g != nullptr && g->isPuppet) { g->isPuppet = false; g->clearState(); }
+				mp.setMasterIndex(encontrado);
+			}
+			gc.isPuppetMaster = true;
+			return true;
+		}
+		catch (...) {}
+		return false;
+	}
+
 	void ProveedorSalaSoda::inyectar(int i, uint16_t botones, int16_t lx, int16_t ly) {
 		try {
 			AGamepad* p = padEn(_hosting, i);

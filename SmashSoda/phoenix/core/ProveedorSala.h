@@ -86,6 +86,12 @@ namespace phoenix {
 		virtual void titereUnico(int indice) = 0;
 		/// ¿El anfitrión eligió su mando físico («Tu mando»)?
 		virtual bool hayMandoPropio() = 0;
+		/// Botones (máscara XInput) que pulsa ahora el mando físico del anfitrión; 0 si no tiene.
+		virtual uint16_t botonesMandoPropio() = 0;
+		/// «VID:PID» del mando físico elegido ("" si no hay o no se sabe).
+		virtual std::string idMandoPropio() = 0;
+		/// Vuelve a elegir el mando físico guardado si está conectado (al abrir Link). true si quedó elegido.
+		virtual bool elegirMandoPropio(const std::string& id) = 0;
 		/// Calidad de transmisión (se aplica al instante y se guarda).
 		virtual void aplicarVideo(int fps, int mbps) = 0;
 	};

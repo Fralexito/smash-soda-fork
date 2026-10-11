@@ -3,24 +3,34 @@
 //  Dinámico: un puesto fijo (1, 2…) o «el primero de Local / de Visita», que
 //  se adapta a la formación del momento. Si el puesto está ocupado, ese amigo
 //  pasa al primer puesto libre de su mismo equipo (o a cualquiera libre): nadie
-//  se queda sin mando. La preferencia se guarda en este PC.
+//  se queda sin mando. La preferencia la guarda el motor (phoenix-ui.json), que
+//  además sienta solo al anfitrión al abrir la sala y cuando pulsa A/B/X/Y en su
+//  mando sin puesto (solo si hay uno libre: ahí nunca saca a nadie).
 // =============================================================================
-import { html, useState } from "../lib.js";
+import { html, useState, useEffect } from "../lib.js";
 import { t } from "../i18n.js";
 import { accion, avisar } from "../tienda.js";
-import { Boton, Segmentos, Stepper, dos } from "../ui.js";
+import { Boton, Segmentos, Stepper, AjusteSw, dos } from "../ui.js";
 
 const CLAVE = "phoenix.miPuesto";
 const POR_DEFECTO = { modo: "fijo", numero: 1 };   // modo: fijo | local | visitante
 
-export function leerPreferencia() {
-  try { const p = JSON.parse(localStorage.getItem(CLAVE) || "null"); if (p && p.modo) return { ...POR_DEFECTO, ...p }; } catch { /* sin almacenamiento */ }
-  return { ...POR_DEFECTO };
+function leerLocal() {
+  try { const p = JSON.parse(localStorage.getItem(CLAVE) || "null"); if (p && p.modo) return p; } catch { /* sin almacenamiento */ }
+  return null;
 }
-function guardarPreferencia(p) { try { localStorage.setItem(CLAVE, JSON.stringify(p)); } catch { /* nada */ } }
+/** La del motor (si la publica); si no, la que quedó en este PC (versiones ≤ 0.2.15). */
+export function leerPreferencia(m) {
+  const motor = m?.mandos?.miPuesto;
+  return { ...POR_DEFECTO, alAbrir: true, pulsando: true, ...(motor || leerLocal() || {}) };
+}
+function guardarPreferencia(p) {
+  try { localStorage.setItem(CLAVE, JSON.stringify(p)); } catch { /* nada */ }
+  accion("mandos.miPuesto", p, { silencioso: true });
+}
 
 /** Puesto (1..8) que toca según la preferencia y la formación actual; 0 si no hay. */
-export function puestoDestino(m, pref = leerPreferencia()) {
+export function puestoDestino(m, pref = leerPreferencia(m)) {
   const lista = m.mandos?.lista || [];
   if (!lista.length) return 0;
   if (pref.modo === "fijo") return Math.min(Math.max(1, pref.numero || 1), lista.length);
@@ -55,8 +65,17 @@ export async function jugarYo(m) {
 
 /** Tarjeta de preferencia (va en Mandos › TU MANDO). */
 export function PreferenciaPuesto({ m }) {
-  const [pref, setPref] = useState(leerPreferencia);
-  const poner = (p) => { const n = { ...pref, ...p }; setPref(n); guardarPreferencia(n); };
+  const [local, setLocal] = useState(null);   // lo que acabas de tocar, hasta que el motor lo publique
+  const pref = { ...leerPreferencia(m), ...(local || {}) };
+  const poner = (p) => { const n = { ...pref, ...p }; setLocal(n); guardarPreferencia(n); };
+  // Antes se guardaba solo en este PC: se pasa al motor una vez
+  useEffect(() => {
+    const viejo = leerLocal();
+    if (viejo && m?.mandos?.miPuesto && (viejo.modo !== m.mandos.miPuesto.modo || viejo.numero !== m.mandos.miPuesto.numero) && !viejo.migrado) {
+      guardarPreferencia({ ...m.mandos.miPuesto, modo: viejo.modo, numero: viejo.numero, migrado: true });
+    }
+  }, []);
+  const sinMando = !m?.mandos?.miMando;
   const destino = puestoDestino(m, pref);
   const total = (m.mandos?.lista || []).length || 8;
   return html`<div style="display:flex;flex-direction:column;gap:10px">
@@ -70,6 +89,11 @@ export function PreferenciaPuesto({ m }) {
       <span class="ayuda">${t("Puesto", "Seat")}</span>
       <${Stepper} valor=${pref.numero} min=${1} max=${total} al=${(v) => poner({ numero: v })}/></div>` : null}
     <div class="mono mut" style="font-size:12px">${destino ? t(`Ahora mismo: puesto ${dos(destino)}`, `Right now: seat ${dos(destino)}`) : t("Ahora mismo: ese equipo no tiene puestos", "Right now: that team has no seats")}</div>
+    <${AjusteSw} titulo=${t("Empezar sentado", "Start seated")} valor=${pref.alAbrir !== false} al=${(v) => poner({ alAbrir: v })}
+      desc=${t("Al abrir la sala ya estás en tu puesto. Si no quieres jugar, sácate a «Mirando».", "When the room opens you are already seated. Not playing? Move yourself to «Watching».")}/>
+    <${AjusteSw} titulo=${t("Entrar pulsando tu mando", "Join by pressing your pad")} valor=${pref.pulsando !== false} al=${(v) => poner({ pulsando: v })}
+      desc=${t("Si no estás en un puesto, pulsa A, B, X o Y (✕ ○ □ △) y entras al libre que toque. Nunca saca a nadie: si está todo lleno, no pasa nada.", "Not seated? Press A, B, X or Y and you take the right free seat. Never kicks anyone out.")}/>
+    ${sinMando ? html`<div class="ayuda" style="font-size:13px;color:var(--warn)">${t("Las dos funcionan con tu mando elegido arriba («USAR ESTE»). Con teclado, usa el botón JUGAR.", "Both need your pad chosen above. With keyboard, use the PLAY button.")}</div>` : null}
   </div>`;
 }
 
