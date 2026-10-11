@@ -13,14 +13,20 @@ Idea: la web guarda la foto oficial (option file + base). **Solo el admin del gr
 
 **Almacenamiento:** un bucket privado de Supabase Storage, por ejemplo `sync-oficial`, con la ruta `<grupo_id>/<version>/<nombre>`. Nada público: se baja y se sube solo con URL firmadas de vida corta.
 
-**Tabla:** ya existe `public.sync_option_versiones` (vacía). Úsala o ajústala para guardar, por cada versión: `grupo_id`, `version` (1, 2, 3… por grupo), `seq` (hasta qué operación del grupo incluye), `parche`, `huella_bd`, `publicado_por`, `publicado_en` y `archivos jsonb` (`[{ nombre, sha256, tamano, ruta }]`). RLS activado; solo la función del servidor la toca.
+**Tabla:** ya existe `public.sync_option_versiones` (vacía). Úsala o ajústala para guardar, por cada versión: `grupo_id`, `version` (1, 2, 3… por grupo), `seq` (hasta qué operación del grupo incluye), `parche`, `huella_bd`, `base_datos`, `publicado_por`, `publicado_en` y `archivos jsonb` (`[{ nombre, sha256, tamano, ruta }]`). RLS activado; solo la función del servidor la toca.
 
 **Rutas:**
-1. `GET /v1/sync/oficial?grupo_id=…` (miembro del grupo) → `datos: { version, seq, parche, publicado_por, publicado_en, archivos:[{ nombre, sha256, tamano, url }] }`. `url` = URL firmada de descarga de unos 10 minutos (https). Si no hay ninguna: `404 { ok:false, error:{ codigo:"SIN_OFICIAL" } }`.
+1. `GET /v1/sync/oficial?grupo_id=…` (miembro del grupo) → `datos: { version, seq, parche, huella_bd, base_datos, publicado_por, publicado_en, archivos:[{ nombre, sha256, tamano, url }] }`. `url` = URL firmada de descarga de unos 10 minutos (https). Si no hay ninguna: `404 { ok:false, error:{ codigo:"SIN_OFICIAL" } }`.
 2. `POST /v1/sync/oficial/subida` `{ grupo_id, nombre, sha256, tamano }` (**solo admin**, si no `403 SOLO_ADMIN`) → `datos: { url, ruta }`. `url` = URL firmada de **subida** (Sync hace `PUT` con el archivo en bruto, `Content-Type: application/octet-stream`). `nombre` ∈ {`EDIT00000000`, `PlayerAssignment.bin`, `Player.bin`}. Tope de tamaño: 64 MB (el option file mide unos 11 MB).
-3. `POST /v1/sync/oficial` `{ grupo_id, parche, huella_bd, seq, archivos:[{ nombre, sha256, tamano, ruta }] }` (**solo admin**) → comprueba que cada `ruta` existe en el bucket, que su tamaño cuadra y, si puedes, su sha256 (`crypto.subtle.digest`) → crea `version = última + 1` → `datos: { version }`. Sin `EDIT00000000` → `400 FALTA_ARCHIVO`.
+3. `POST /v1/sync/oficial` `{ grupo_id, parche, huella_bd, base_datos, seq, archivos:[{ nombre, sha256, tamano, ruta }] }` (**solo admin**) → comprueba que cada `ruta` existe en el bucket, que su tamaño cuadra y, si puedes, su sha256 (`crypto.subtle.digest`) → crea `version = última + 1` → `datos: { version }`. Sin `EDIT00000000` → `400 FALTA_ARCHIVO`.
 
 Sync valida todo: https, sha de 64 caracteres, tamaño ≤ 64 MB y nombre permitido. Al bajar comprueba tamaño + sha256 y, si no cuadra, lo borra (`HUELLA_DISTINTA`). Si el parche es otro, lo rechaza (`INCOMPATIBLE`).
+
+### 1.1 · La base de datos es PROVISIONAL (importante)
+La base que usan hoy las PCs (Phoenix-DB) es **provisional**: una copia de la de olmosjr23 del ConmeGOL 26. Más adelante será la **oficial** del Phoenix Evolution Patch, con IDs propios. Para ese cambio:
+- Cada foto y cada operación llevan `base_datos`: hoy `"provisional-olmosjr23"`. La web lo guarda y lo devuelve tal cual.
+- Cuando FRALEX publique la foto con otra etiqueta (`sync-publicar-oficial --base phoenix-patch-26-v0.1`), las PCs entienden que es un **cambio de base**: exigen Player.bin y PlayerAssignment.bin en la foto y descartan lo pendiente de la base anterior. Una operación con otra `base_datos` se marca `incompatible`.
+- En el panel, muestra la base actual del grupo (la de la última foto) y ponla en cada operación que crees. **No guardes IDs de jugador/equipo «para siempre»** sin su `base_datos`: con la base oficial cambiarán. El catálogo (`mercado_*`) debe poder tener una versión por base.
 
 ## 2. Control total del admin: fichajes y stats («lo normal»)
 
@@ -41,7 +47,7 @@ Las PCs ya aplican tres tipos de operación de `/v1/sync/operaciones`:
    - Para buscar jugadores y equipos usa el catálogo que ya existe (`mercado_*`, `/catalogo`), con los IDs del parche.
    - **Historial:** quién hizo qué y el estado por PC (de `sync_confirmaciones`).
    - **Foto oficial:** versión actual, quién la publicó y cuándo. Botón «Pedir a mi PC que publique» = solo texto de ayuda: «en tu PC: `PhoenixSync sync-publicar-oficial`».
-4. Las operaciones que crea la web llevan `parche` y `huella_bd` **de la última foto oficial**, y `formato: 1`. Sin foto oficial, el panel no deja crear operaciones y avisa: «Publica antes la foto oficial desde tu PC». Sync rechaza las operaciones sin `huella_bd`, porque protege de mezclar parches.
+4. Las operaciones que crea la web llevan `parche`, `huella_bd` y `base_datos` **de la última foto oficial**, y `formato: 1`. Sin foto oficial, el panel no deja crear operaciones y avisa: «Publica antes la foto oficial desde tu PC». Sync rechaza las operaciones sin `huella_bd`, porque protege de mezclar parches.
 
 ## 3. Liga Máster (carrera guardada)
 

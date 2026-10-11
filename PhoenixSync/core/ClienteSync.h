@@ -53,6 +53,7 @@ namespace mercado::sync {
 		int64_t version = 0;               ///< sube en 1 con cada publicación
 		int64_t seq = 0;                   ///< operaciones del grupo ya incluidas (hasta esta seq)
 		std::string parche, publicadoPor, publicadoEn;
+		std::string baseDatos;             ///< etiqueta de la base (provisional hoy; la oficial del Phoenix Patch después)
 		std::vector<ArchivoOficial> archivos;   ///< EDIT00000000 (obligatorio), PlayerAssignment.bin, Player.bin
 	};
 
@@ -73,7 +74,7 @@ namespace mercado::sync {
 		/// PUT del archivo a la URL firmada (sin token: la URL ya lleva el permiso).
 		Resultado<bool> subirArchivo(const std::string& url, const std::string& rutaLocal);
 		/// POST /v1/sync/oficial → publica la foto con los archivos ya subidos (solo admin). Devuelve la versión.
-		Resultado<int64_t> publicarOficial(const std::string& grupoId, const std::string& parche, const std::string& huellaBd, int64_t seq, const std::vector<ArchivoOficial>& archivos);
+		Resultado<int64_t> publicarOficial(const std::string& grupoId, const std::string& parche, const std::string& huellaBd, const std::string& baseDatos, int64_t seq, const std::vector<ArchivoOficial>& archivos);
 		/// Baja un archivo de la foto y comprueba tamaño y sha256 (si no cuadra, lo borra).
 		Resultado<bool> descargar(const ArchivoOficial& a, const std::string& rutaDestino);
 

@@ -8,6 +8,7 @@
 #include "ClienteSync.h"
 #include "Grupo.h"
 #include "Respaldos.h"
+#include "RutasJuego.h"
 #include "Tipos.h"
 
 // =============================================================================
@@ -104,7 +105,9 @@ namespace mercado::sync {
 		/// Devuelve 1 si se preparó una entrega, 0 si ya estaba al día (forzar = aunque sea la misma versión).
 		Resultado<int> bajarOficial(bool forzar = false);
 		/// Solo el admin: sube el option file y la base de ESTA PC como la nueva foto oficial. Devuelve la versión.
-		Resultado<int64_t> publicarOficial();
+		/// `baseDatos` vacío = la de siempre; otra etiqueta = CAMBIO DE BASE (exige Player.bin y PlayerAssignment.bin).
+		Resultado<int64_t> publicarOficial(const std::string& baseDatos = "");
+		std::string baseDatos() const { return _e.baseDatos.empty() ? rutas::kBaseProvisional : _e.baseDatos; }
 		Resultado<respaldos::Info> respaldarAhora(const std::string& motivo = "manual");
 		std::vector<respaldos::Info> respaldos() const;
 		/// Restaura un respaldo. Con el juego abierto exige `aunqueJuegoAbierto` (la UI avisa antes).

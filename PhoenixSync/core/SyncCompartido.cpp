@@ -375,6 +375,7 @@ namespace mercado::sync {
 	}
 
 	bool Motor::calcularCompat() {
+		_compat.baseDatos = baseDatos();
 		const std::string edit = editActivo();
 		if (edit.empty()) return false;
 		auto of = _of.leer(edit);
@@ -406,6 +407,7 @@ namespace mercado::sync {
 		if (!of.ok()) { log("warn", "Option file ilegible (¿a medias?): " + of.error.codigo); return; }   // se reintenta en la próxima vuelta
 		_anTam = tam; _anFecha = fecha;
 		_compat.huellaBase = of.valor->huellaEquipos;
+		_compat.baseDatos = baseDatos();
 		const std::string juego = _en.carpetaJuego ? _en.carpetaJuego() : std::string();
 		_compat.parche = juego.empty() ? "desconocido" : rutas::nombreParche(juego);
 
@@ -825,6 +827,15 @@ namespace mercado::sync {
 		if (edit.empty()) return R::mal("SIN_OPTION_FILE", "No se encontró tu option file (Documentos\\KONAMI\\…\\save\\EDIT00000000)");
 		const bool hayBase = !asignacionBase().empty();
 		const bool hayPlayer = !rutas::buscarPlayerBin(juego).empty();
+		// ¿Cambio de base de datos (p. ej. de la provisional a la oficial del Phoenix Patch)?
+		const bool cambioDeBase = !o.baseDatos.empty() && o.baseDatos != baseDatos();
+		if (cambioDeBase) {
+			auto trae = [&](const char* n) { return std::any_of(o.archivos.begin(), o.archivos.end(), [&](const auto& a) { return a.nombre == n; }); };
+			if (!trae("Player.bin") || !trae("PlayerAssignment.bin"))
+				return R::mal("CAMBIO_DE_BASE_INCOMPLETO", "La foto cambia la base de datos a «" + o.baseDatos + "» pero no trae Player.bin y PlayerAssignment.bin");
+			if (!hayBase || !hayPlayer)
+				return R::mal("SIN_PHOENIX_DB", std::string("Para cambiar de base hace falta la carpeta ") + rutas::kCarpetaBase + " con Player.bin y PlayerAssignment.bin (Phoenix Link la instala)");
+		}
 
 		const fs::path dir = aRuta(carpetaTrabajo());
 		std::error_code ec;
@@ -859,6 +870,14 @@ namespace mercado::sync {
 		_e.entregaConBase = archivos.size() > 1;
 		_e.ultima = { id, resp.valor->nombre, false, {}, fechaIso() };
 		_e.versionOficial = o.version;
+		if (cambioDeBase) {   // lo pendiente era de la base anterior: no vale para la nueva
+			for (const auto& x : _e.entrantes) { historial(x.op, "omitida", "de la base anterior (" + baseDatos() + ")"); _e.aplicadas.insert(x.op.id); if (x.estado != "propia") confirmarLuego(x.op.id, "omitida", "cambio de base de datos"); }
+			_e.entrantes.clear();
+			for (const auto& op : _e.porPublicar) historial(op, "omitida", "no se publicó: cambió la base de datos");
+			_e.porPublicar.clear();
+			_e.anotarHistorial({ fechaIso(), "", "Cambio de base de datos: " + baseDatos() + " → " + o.baseDatos, _en.nombrePc, "aplicada", "" });
+		}
+		if (!o.baseDatos.empty()) { _e.baseDatos = o.baseDatos; _compat.baseDatos = o.baseDatos; }
 		if (o.seq > _e.ultimaSeq) { _e.ultimaSeq = o.seq; _e.etagOperaciones.clear(); }
 		_e.paraMiBase.clear();                           // la base oficial manda
 		for (auto it = _e.entrantes.begin(); it != _e.entrantes.end();) {   // lo que ya viene dentro de la foto
@@ -875,8 +894,11 @@ namespace mercado::sync {
 		return R::bien(1);
 	}
 
-	Resultado<int64_t> Motor::publicarOficial() {
+	Resultado<int64_t> Motor::publicarOficial(const std::string& baseNueva) {
 		using R = Resultado<int64_t>;
+		const std::string etiqueta = baseNueva.empty() ? baseDatos() : baseNueva;
+		if (etiqueta.size() > 64 || etiqueta.find_first_not_of("abcdefghijklmnopqrstuvwxyz0123456789-_.") != std::string::npos)
+			return R::mal("BASE_INVALIDA", "La etiqueta de base solo admite minúsculas, números, - _ . (máx. 64)");
 		if (_e.grupoId.empty()) return R::mal("SIN_GRUPO", "Esta PC no está en ningún grupo");
 		const std::string edit = editActivo();
 		if (edit.empty()) return R::mal("SIN_OPTION_FILE", "No se encontró tu option file");
@@ -884,6 +906,7 @@ namespace mercado::sync {
 		std::vector<std::pair<std::string, std::string>> locales = { { "EDIT00000000", edit } };
 		if (const std::string pa = asignacionBase(); !pa.empty()) locales.push_back({ "PlayerAssignment.bin", pa });
 		if (const auto pb = rutas::buscarPlayerBin(juego); !pb.empty()) locales.push_back({ "Player.bin", pb.front().playerBin });
+		if (etiqueta != baseDatos() && locales.size() < 3) return R::mal("CAMBIO_DE_BASE_INCOMPLETO", "Para cambiar de base hacen falta Player.bin y PlayerAssignment.bin en tu Phoenix-DB");
 		// Copia quieta de cada archivo (el juego podría estar escribiendo): se sube la copia.
 		const fs::path dir = aRuta(carpetaTrabajo());
 		std::error_code ec;
@@ -907,9 +930,10 @@ namespace mercado::sync {
 		std::string huella;
 		if (auto of = _of.leer(deRuta(dir / "EDIT00000000.subida")); of.ok()) huella = of.valor->huellaEquipos;
 		if (huella.empty()) return R::mal("OPTION_INVALIDO", "No se pudo leer tu option file para calcular la huella");
-		auto v = _web.publicarOficial(_e.grupoId, juego.empty() ? "desconocido" : rutas::nombreParche(juego), huella, _e.ultimaSeq, subidos);
+		auto v = _web.publicarOficial(_e.grupoId, juego.empty() ? "desconocido" : rutas::nombreParche(juego), huella, etiqueta, _e.ultimaSeq, subidos);
 		if (!v.ok()) return R{ std::nullopt, v.error };
 		_e.versionOficial = *v.valor;
+		_e.baseDatos = etiqueta; _compat.baseDatos = etiqueta;
 		_e.anotarHistorial({ fechaIso(), "", "Publicaste el option file oficial v" + std::to_string(*v.valor), _en.nombrePc, "publicada", "" });
 		guardar();
 		return R::bien(*v.valor);
@@ -934,7 +958,7 @@ namespace mercado::sync {
 			{ "ultima_seq", _e.ultimaSeq }, { "por_publicar", _e.porPublicar.size() }, { "por_confirmar", _e.porConfirmar.size() },
 			{ "entrantes", pend }, { "historial", hist },
 			{ "ultimo_cambio_aplicado", { { "fecha", _e.ultima.fecha }, { "ops", _e.ultima.ops.size() }, { "respaldo", _e.ultima.respaldo } } },
-			{ "entrega_en_curso", _e.entregaEnCurso }, { "version_oficial", _e.versionOficial } };
+			{ "entrega_en_curso", _e.entregaEnCurso }, { "version_oficial", _e.versionOficial }, { "base_datos", baseDatos() } };
 	}
 
 }

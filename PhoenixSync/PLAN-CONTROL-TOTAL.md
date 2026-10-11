@@ -21,6 +21,19 @@ Pedido de FRALEX: «un option file oficial en mi web; cuando alguien modifique a
 - **Cambios del día a día:** viajan como mensajes cortos (unos cientos de bytes, no 11 MB).
 - **Admin = acceso total:** desde el panel web (cuando exista) o desde su PC con Sync.
 
+## 1.1 La base de datos es PROVISIONAL
+
+- **Hoy:** Phoenix-DB es una copia **provisional** de la base de olmosjr23 (ConmeGOL 26), con etiqueta `provisional-olmosjr23` (`rutas::kBaseProvisional`).
+- **Mañana:** será la base **oficial** del Phoenix Evolution Patch, hecha desde la de Konami, con IDs propios (ver «Ruta de planificación v1»).
+- **Camino ya preparado (10 oct):**
+  1. Cada foto oficial y cada cambio llevan `base_datos`.
+  2. Para cambiar: deja la base oficial en tu Phoenix-DB y ejecuta `.\PhoenixSync sync-publicar-oficial --base phoenix-patch-26-v0.1`.
+  3. Cada PC baja la foto, comprueba que trae Player.bin y PlayerAssignment.bin, hace respaldo y descarta lo pendiente de la base vieja.
+  4. Los cambios con otra base se marcan `incompatible`, así nunca se aplica un ID viejo sobre la base nueva.
+- Si la base oficial vive en otra carpeta, se cambia solo `rutas::kCarpetaBase` (hoy `Phoenix-DB`).
+- El editor de stats (`FichasBase`) vale para cualquier base: los bits de Player.bin son del motor del juego, no del parche.
+- **No hay que reescribir nada al cambiar de base.** Solo hay que regenerar los catálogos de jugadores y equipos de la web con la base nueva.
+
 ## 2. Estado de cada pieza
 
 | Pieza | Estado | Dónde |

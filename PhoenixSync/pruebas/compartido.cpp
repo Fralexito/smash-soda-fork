@@ -156,7 +156,7 @@ struct HttpFalso : ClienteHttp {
 			const int64_t v = w.oficial.is_object() ? w.oficial["version"].get<int64_t>() + 1 : 1;
 			json arch = json::array();
 			for (auto a : j["archivos"]) { const std::string u = "https://almacen.falso/" + a["ruta"].get<std::string>(); if (!w.almacen.count(u)) return { 400, R"({"ok":false,"error":{"codigo":"FALTA_ARCHIVO"}})", "" }; a["url"] = u; arch.push_back(a); }
-			w.oficial = { { "version", v }, { "seq", j["seq"] }, { "parche", j["parche"] }, { "huella_bd", j["huella_bd"] }, { "publicado_por", pc }, { "publicado_en", "2026-10-10T22:00:00" }, { "archivos", arch } };
+			w.oficial = { { "version", v }, { "seq", j["seq"] }, { "parche", j["parche"] }, { "huella_bd", j["huella_bd"] }, { "base_datos", j["base_datos"] }, { "publicado_por", pc }, { "publicado_en", "2026-10-10T22:00:00" }, { "archivos", arch } };
 			return ok({ { "version", v } });
 		}
 		if (metodo == "GET" && url.find("/v1/sync/oficial") != std::string::npos) {
@@ -904,6 +904,60 @@ int main() {
 		web.oficial["parche"] = "PES 2021";
 		for (auto& a : web.oficial["archivos"]) if (a["nombre"] == "EDIT00000000") a["sha256"] = std::string(64, 'a');
 		CHECK(amigo.motor.bajarOficial().error.codigo == "HUELLA_DISTINTA");
+	}
+
+	std::printf("Cambio de base de datos (provisional → oficial del Phoenix Patch)\n");
+	{
+		WebFalsa web;
+		web.modo = "autorizacion";
+		const grupo::Plantillas pl = { { 108, { 1, 2, 117047 } }, { 109, { 3, 5 } } };
+		PC fralex(tmp / "pcs7", "FRALEX", web), amigo(tmp / "pcs7", "AMIGO", web);
+		const fs::path pesdb = fs::path("SiderAddons") / "livecpk" / rutas::kCarpetaBase / "common" / "etc" / "pesdb";
+		const auto plano = planoPB({ 1, 2, 3, 117047, 5 });
+		for (PC* p : { &fralex, &amigo }) {
+			escribirOption(p->edit(), pl);
+			escribir(p->juego / pesdb / "Player.bin", hacerPB(plano));
+			escribir(p->juego / pesdb / "PlayerAssignment.bin", hacerPA({ { 1, 108, 10, 0, 0 }, { 2, 108, 19, 1, 0 }, { 3, 109, 28, 2, 0 }, { 117047, 108, 7, 3, 0x20 }, { 5, 109, 9, 1, 0 } }));
+			p->motor.cargar(); p->motor.elegirGrupo("g");
+		}
+		CHECK(amigo.motor.baseDatos() == rutas::kBaseProvisional);            // hoy: base provisional
+		fralex.pasar(30); amigo.pasar(30);
+		CHECK(fralex.motor.publicarOficial().ok());
+		CHECK(web.oficial["base_datos"] == rutas::kBaseProvisional);
+		amigo.pasar(700);
+		CHECK(amigo.motor.resumen()["version_oficial"] == 1);
+		// Un cambio de la base provisional queda pendiente (modo autorización).
+		CHECK(fralex.motor.cambiarStats(117047, "velocidad", 91).ok());
+		fralex.pasar(20); amigo.pasar(20);
+		CHECK(amigo.motor.resumen()["entrantes"].size() == 1);
+		{ auto op = web.ops.back(); CHECK(op["base_datos"] == rutas::kBaseProvisional); }
+		CHECK(fralex.motor.publicarOficial("Mala Etiqueta").error.codigo == "BASE_INVALIDA");
+		// El admin pasa a la base OFICIAL: publica la foto con otra etiqueta.
+		CHECK(fralex.motor.publicarOficial("phoenix-patch-26-v0.1").ok());
+		CHECK(fralex.motor.baseDatos() == "phoenix-patch-26-v0.1");
+		CHECK(amigo.motor.bajarOficial().ok());
+		amigo.linkColoca(); amigo.pasar(3);
+		CHECK(amigo.motor.baseDatos() == "phoenix-patch-26-v0.1");
+		CHECK(amigo.motor.resumen()["entrantes"].empty());                     // lo pendiente de la base vieja se descarta
+		CHECK(amigo.motor.resumen()["base_datos"] == "phoenix-patch-26-v0.1");
+		// Un cambio que aún diga «provisional» ya no se aplica.
+		web.ops.push_back({ { "op_id", "vieja-1" }, { "tipo", "stats" }, { "jugador_id", 117047 }, { "campo", "velocidad" }, { "valor", 50 },
+			{ "parche", web.oficial["parche"] }, { "huella_bd", web.oficial["huella_bd"] }, { "base_datos", rutas::kBaseProvisional }, { "formato", 1 },
+			{ "autor_pc", "web" }, { "seq", (int64_t)web.ops.size() + 1 } });
+		amigo.pasar(40);
+		CHECK(web.confirmaciones["AMIGO|vieja-1"] == "incompatible");
+		// Los cambios nuevos ya llevan la base oficial.
+		CHECK(fralex.motor.cambiarStats(117047, "velocidad", 92).ok());
+		fralex.pasar(20);
+		CHECK(web.ops.back()["base_datos"] == "phoenix-patch-26-v0.1");
+		// Una foto que cambia de base sin traer la base completa se rechaza.
+		amigo.pasar(3);
+		web.oficial["base_datos"] = "otra-base"; web.oficial["version"] = 99;
+		json sinBase = json::array();
+		for (const auto& a : web.oficial["archivos"]) if (a["nombre"] == "EDIT00000000") sinBase.push_back(a);
+		web.oficial["archivos"] = sinBase;
+		CHECK(amigo.motor.bajarOficial().error.codigo == "CAMBIO_DE_BASE_INCOMPLETO");
+		CHECK(amigo.motor.baseDatos() == "phoenix-patch-26-v0.1");
 	}
 
 	fs::remove_all(tmp);

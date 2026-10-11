@@ -19,6 +19,14 @@
 
 namespace mercado::rutas {
 
+	/// Carpeta de NUESTRA base dentro de livecpk (la que Sider sirve antes que la del parche).
+	/// HOY es una base PROVISIONAL (copia de olmosjr23 del ConmeGOL 26). Cuando exista la base
+	/// OFICIAL del Phoenix Evolution Patch, si cambia de carpeta se cambia SOLO aquí.
+	inline constexpr const char* kCarpetaBase = "Phoenix-DB";
+	/// Etiqueta de la base actual (viaja en la foto oficial y en cada cambio: «base_datos»).
+	/// Al pasar a la oficial, el admin publica la foto con otra etiqueta (sync-publicar-oficial --base <etiqueta>).
+	inline constexpr const char* kBaseProvisional = "provisional-olmosjr23";
+
 	struct CarpetaSave {
 		std::string ruta;        ///< …\save
 		std::string edicion;     ///< nombre de la carpeta bajo KONAMI

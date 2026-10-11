@@ -141,6 +141,7 @@ namespace mercado::sync {
 		auto s = [&](const json& j, const char* k) { return j.contains(k) && j[k].is_string() ? j[k].get<std::string>() : std::string(); };
 		o.version = n(d, "version"); o.seq = n(d, "seq");
 		o.parche = s(d, "parche"); o.publicadoPor = s(d, "publicado_por"); o.publicadoEn = s(d, "publicado_en");
+		o.baseDatos = s(d, "base_datos");
 		for (const auto& a : d["archivos"]) {
 			ArchivoOficial x{ s(a, "nombre"), s(a, "sha256"), s(a, "url"), s(a, "ruta"), n(a, "tamano") };
 			if (!entrega::nombrePermitido(x.nombre) && x.nombre != "PlayerAssignment.bin") return R::mal("RESPUESTA_INVALIDA", "archivo no permitido: " + x.nombre);
@@ -173,10 +174,10 @@ namespace mercado::sync {
 		return Resultado<bool>::bien(true);
 	}
 
-	Resultado<int64_t> ClienteSync::publicarOficial(const std::string& grupoId, const std::string& parche, const std::string& huellaBd, int64_t seq, const std::vector<ArchivoOficial>& archivos) {
+	Resultado<int64_t> ClienteSync::publicarOficial(const std::string& grupoId, const std::string& parche, const std::string& huellaBd, const std::string& baseDatos, int64_t seq, const std::vector<ArchivoOficial>& archivos) {
 		json lista = json::array();
 		for (const auto& a : archivos) lista.push_back({ { "nombre", a.nombre }, { "sha256", a.sha256 }, { "tamano", a.tamano }, { "ruta", a.ruta } });
-		const json cuerpo = { { "grupo_id", grupoId }, { "parche", parche }, { "huella_bd", huellaBd }, { "seq", seq }, { "archivos", lista } };
+		const json cuerpo = { { "grupo_id", grupoId }, { "parche", parche }, { "huella_bd", huellaBd }, { "base_datos", baseDatos }, { "seq", seq }, { "archivos", lista } };
 		auto r = llamar("POST", "/v1/sync/oficial", cuerpo.dump(), "", nullptr);
 		if (!r.ok()) return Resultado<int64_t>{ std::nullopt, r.error };
 		const json& d = *r.valor;

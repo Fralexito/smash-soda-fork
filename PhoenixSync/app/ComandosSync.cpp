@@ -17,7 +17,9 @@
 //  PhoenixSync sync-respaldos              lista de respaldos
 //  PhoenixSync sync-restaurar <nombre> [--aunque-juego-abierto]
 //  PhoenixSync sync-oficial [--forzar]     baja la foto oficial del grupo (option file + base) si hay una nueva
-//  PhoenixSync sync-publicar-oficial      (admin) sube el option file y la base de esta PC como foto oficial
+//  PhoenixSync sync-publicar-oficial [--base <etiqueta>]   (admin) sube el option file y la base de esta PC como
+//                                          foto oficial. --base = CAMBIO DE BASE (hoy «provisional-olmosjr23»; p. ej.
+//                                          «phoenix-patch-26-v0.1» cuando exista la oficial)
 //  PhoenixSync sync-campos                lista de stats que se pueden cambiar (nombre, rango)
 //  PhoenixSync sync-ficha <jugador>        stats actuales del jugador en Player.bin (Phoenix-DB)
 //  PhoenixSync sync-stats <jugador> <campo> <valor>   cambia una stat aquí y, si hay grupo, la publica
@@ -155,9 +157,9 @@ int comandoSync(const std::vector<std::string>& a, ClienteHttp& http, FuenteToke
 		std::printf(*r.valor ? "Foto oficial preparada: Phoenix Link la coloca.\n" : "Ya tienes la foto oficial más reciente.\n");
 	}
 	else if (c == "sync-publicar-oficial") {
-		auto r = m.publicarOficial();
+		auto r = m.publicarOficial(a.size() >= 3 && a[1] == "--base" ? a[2] : std::string());
 		if (!r.ok()) { err(r.error); return 2; }
-		std::printf("Publicado: option file oficial versión %lld. Las demás PCs del grupo lo bajan solas.\n", (long long)*r.valor);
+		std::printf("Publicado: option file oficial versión %lld (base «%s»). Las demás PCs del grupo lo bajan solas.\n", (long long)*r.valor, m.baseDatos().c_str());
 	}
 	else if (c == "sync-respaldar") {
 		auto r = m.respaldarAhora("manual");

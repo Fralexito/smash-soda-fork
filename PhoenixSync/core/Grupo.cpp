@@ -38,6 +38,8 @@ namespace mercado::grupo {
 		if (remoto.formato != 1) return "formato de cambio desconocido (" + std::to_string(remoto.formato) + "): actualiza Phoenix Sync";
 		if (remoto.parche.empty() || remoto.huellaBase.empty()) return "el cambio no dice de qué parche viene";
 		if (local.huellaBase.empty()) return "no se pudo leer tu option file para comparar el parche";
+		if (!local.baseDatos.empty() && !remoto.baseDatos.empty() && local.baseDatos != remoto.baseDatos)
+			return "el cambio es de otra base de datos («" + remoto.baseDatos + "»; la tuya es «" + local.baseDatos + "»)";
 		if (local.huellaBase != remoto.huellaBase)
 			return "tu parche es distinto al de quien lo publicó (" + remoto.parche + ")";
 		return "";   // el nombre del parche puede variar (modo del switcher); manda la huella de la tabla de equipos
@@ -49,6 +51,7 @@ namespace mercado::grupo {
 			{ "equipo_destino", o.equipoDestino }, { "dorsal", o.dorsal }, { "autor_pc", o.autorPc }, { "creado_en", o.creadoEn },
 			{ "base_seq", o.baseSeq }, { "base", o.base }, { "sha_resultado", o.shaResultado }, { "resumen", o.resumen },
 			{ "parche", o.compat.parche }, { "huella_bd", o.compat.huellaBase }, { "formato", o.compat.formato } };
+		if (!o.compat.baseDatos.empty()) j["base_datos"] = o.compat.baseDatos;
 		if (o.tipo == "stats") { j["campo"] = o.campo; j["valor"] = o.valor; }
 		if (o.seq) j["seq"] = o.seq;
 		if (!o.autor.empty()) j["autor"] = o.autor;
@@ -77,6 +80,7 @@ namespace mercado::grupo {
 				o.compat.parche = s("parche");
 				o.compat.huellaBase = s("huella_bd");
 				o.compat.formato = j.contains("formato") && j["formato"].is_number_integer() ? j["formato"].get<int>() : 1;
+				o.compat.baseDatos = s("base_datos");
 			}
 			else if (j.contains("compat") && j["compat"].is_object()) {
 				const auto& c = j["compat"];
@@ -254,7 +258,7 @@ namespace mercado::grupo {
 			{ "hay_foto", e.hayFoto }, { "foto", plantillasAJson(e.foto) },
 			{ "por_publicar", pub }, { "entrantes", ent }, { "por_confirmar", conf }, { "historial", hist },
 			{ "ultima", { { "entrega", e.ultima.entregaId }, { "respaldo", e.ultima.respaldo }, { "ops", e.ultima.ops }, { "fecha", e.ultima.fecha }, { "stats", e.ultima.stats } } },
-			{ "entrega_en_curso", e.entregaEnCurso }, { "entrega_con_base", e.entregaConBase }, { "version_oficial", e.versionOficial }, { "para_mi_base", miBase } };
+			{ "entrega_en_curso", e.entregaEnCurso }, { "entrega_con_base", e.entregaConBase }, { "version_oficial", e.versionOficial }, { "base_datos", e.baseDatos }, { "para_mi_base", miBase } };
 	}
 
 	Estado estadoDeJson(const json& j) {
@@ -298,6 +302,7 @@ namespace mercado::grupo {
 		e.entregaEnCurso = j.value("entrega_en_curso", "");
 		e.entregaConBase = j.value("entrega_con_base", false);
 		e.versionOficial = j.value("version_oficial", int64_t(0));
+		e.baseDatos = j.value("base_datos", "");
 		for (const auto& o : j.value("para_mi_base", json::array())) if (auto r = deJson(o); r.ok()) e.paraMiBase.push_back(*r.valor);
 		return e;
 	}

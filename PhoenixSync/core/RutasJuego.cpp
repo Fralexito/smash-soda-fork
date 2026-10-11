@@ -87,7 +87,7 @@ namespace mercado::rutas {
 				if (nombre == "sideraddons") {
 					fs::path p = sub;
 					bool ok = true;
-					for (const char* parte : { "livecpk", "Phoenix-DB", "common", "etc", "pesdb", "Player.bin" }) {
+					for (const char* parte : { "livecpk", kCarpetaBase, "common", "etc", "pesdb", "Player.bin" }) {
 						auto h = hijo(p, parte);
 						if (!h) { ok = false; break; }
 						p = *h;

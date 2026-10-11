@@ -48,6 +48,7 @@ namespace mercado::grupo {
 		std::string parche;            ///< nombre detectado (RutasJuego::nombreParche)
 		std::string huellaBase;        ///< sha256 de la tabla de equipos (id|nombre) del option file
 		int formato = 1;
+		std::string baseDatos;         ///< etiqueta de la base de datos (rutas::kBaseProvisional hoy). Vacía = no se comprueba
 	};
 	/// Huella de la tabla de equipos del option file: igual en dos PCs con la misma base del parche.
 	std::string huellaEquipos(const OptionFile& of);
@@ -153,6 +154,7 @@ namespace mercado::grupo {
 		std::deque<LineaHistorial> historial;  ///< últimas 200
 		UltimaAplicacion ultima;
 		std::string entregaEnCurso;            ///< id de entrega escrita, esperando a Link
+		std::string baseDatos;                 ///< base de datos en uso en esta PC (la de la última foto oficial)
 		int64_t versionOficial = 0;            ///< última foto oficial puesta en esta PC (0 = ninguna)
 		bool entregaConBase = false;           ///< la entrega en curso lleva PlayerAssignment.bin (al colocarla: recargar.txt)
 		std::vector<Operacion> paraMiBase;     ///< mis propios fichajes que faltan en MI base (con baseEnEntrega)
