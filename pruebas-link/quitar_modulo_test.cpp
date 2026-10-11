@@ -1,5 +1,6 @@
 // Prueba de phoenix::modulos::desinstalar sobre una COPIA de juego (nunca el juego real).
-// Uso: desinstalar_test <carpeta vacía de trabajo> <sider.ini real (solo se copia)>
+// OJO: el .exe NO puede llevar «instal» en el nombre: Windows lo toma por un instalador y pide permisos.
+// Uso: quitar_modulo_test <carpeta vacía de trabajo> <sider.ini real (solo se copia)>
 #include "phoenix/link/ModulosJuego.h"
 
 #include <filesystem>
@@ -26,7 +27,7 @@ int main(int argc, char** argv) {
 }
 
 static int principal(int argc, char** argv) {
-	if (argc < 3) { std::cerr << "uso: desinstalar_test <trabajo> <sider.ini>\n"; return 2; }
+	if (argc < 3) { std::cerr << "uso: quitar_modulo_test <trabajo> <sider.ini>\n"; return 2; }
 	const fs::path base = argv[1];
 	const fs::path juego = base / "Juego", paquete = base / "paquete";
 	std::string limpio;
