@@ -34,7 +34,8 @@ namespace phoenix::web {
 
 	json RegistroPartido::comoJson() const {
 		return { {"id", id}, {"inicioMs", inicioMs}, {"duracionSeg", duracionSeg},
-			{"a", detalle_partido::ladoJson(a)}, {"b", detalle_partido::ladoJson(b)}, {"ganador", ganador} };
+			{"a", detalle_partido::ladoJson(a)}, {"b", detalle_partido::ladoJson(b)}, {"ganador", ganador},
+			{"correcciones", correcciones}, {"pausas", pausas}, {"cierre", cierre} };
 	}
 
 	std::optional<RegistroPartido> RegistroPartido::desdeJson(const json& j) {
@@ -50,6 +51,9 @@ namespace phoenix::web {
 			r.a = *a;
 			r.b = *b;
 			r.ganador = j.value("ganador", "");
+			r.correcciones = (std::max)(0, j.value("correcciones", 0));
+			r.pausas = (std::max)(0, j.value("pausas", 0));
+			r.cierre = j.value("cierre", "");
 			return r;
 		}
 		catch (...) {
@@ -90,6 +94,8 @@ namespace phoenix::web {
 		_inicioMs = epochMs;
 		_inicioSeg = ahoraSeg;
 		_pausaTotal = 0.0;
+		_correcciones = 0;
+		_pausas = 0;
 		_a.goles = 0;
 		_b.goles = 0;
 		return true;
@@ -99,6 +105,7 @@ namespace phoenix::web {
 		if (pausa && _fase == FasePartido::EnJuego) {
 			_fase = FasePartido::Pausado;
 			_pausadoDesde = ahoraSeg;
+			_pausas++;
 			return true;
 		}
 		if (!pausa && _fase == FasePartido::Pausado) {
@@ -113,7 +120,9 @@ namespace phoenix::web {
 		if (_fase != FasePartido::EnJuego && _fase != FasePartido::Pausado) return false;
 		if (lado != 0 && lado != 1) return false;
 		LadoPartido& l = lado == 0 ? _a : _b;
+		const int antes = l.goles;
 		l.goles = (std::max)(0, (std::min)(99, l.goles + delta));
+		if (l.goles != antes) _correcciones++;
 		return true;
 	}
 
@@ -140,6 +149,8 @@ namespace phoenix::web {
 		r.a = _a;
 		r.b = _b;
 		r.ganador = _a.goles > _b.goles ? "a" : (_b.goles > _a.goles ? "b" : "empate");
+		r.correcciones = _correcciones;
+		r.pausas = _pausas;
 		_fase = FasePartido::Libre;
 		_invertido = false;
 		return r;

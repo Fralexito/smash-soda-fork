@@ -39,6 +39,9 @@ namespace phoenix::web {
 		int duracionSeg = 0;
 		LadoPartido a, b;
 		std::string ganador;       ///< "a" | "b" | "empate"
+		int correcciones = 0;      ///< goles tocados a mano (partido.gol) durante el partido
+		int pausas = 0;            ///< veces que se pausó el marcador
+		std::string cierre;        ///< "completo" (el juego confirmó el final) | "manual" | "" (registros viejos)
 		json comoJson() const;
 		static std::optional<RegistroPartido> desdeJson(const json& j);
 	};
@@ -66,6 +69,9 @@ namespace phoenix::web {
 		const LadoPartido& ladoB() const { return _b; }
 		std::string marcador() const;
 		int segundosJugados(double ahoraSeg) const;
+		int64_t inicioMs() const { return _inicioMs; }
+		int correcciones() const { return _correcciones; }
+		int pausas() const { return _pausas; }
 		json comoJson(double ahoraSeg) const;
 		static const char* nombreFase(FasePartido f);
 
@@ -77,6 +83,8 @@ namespace phoenix::web {
 		double _pausadoDesde = 0.0;
 		double _pausaTotal = 0.0;
 		bool _invertido = false;
+		int _correcciones = 0;
+		int _pausas = 0;
 	};
 
 	class HistorialPartidos {

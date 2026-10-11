@@ -61,18 +61,82 @@ namespace phoenix::web {
 			}
 			return r;
 		}
+
+		/// Un lado para la web (ranking): ids Parsec como texto de dígitos, si sigue en la sala y si es el anfitrión.
+		json ladoWeb(Interno& in, const LadoPartido& l, uint32_t idHost, bool local) {
+			json jugadores = json::array();
+			for (const JugadorPartido& j : l.jugadores) {
+				jugadores.push_back({ {"parsec_id", std::to_string(j.parsecId)}, {"nombre", j.nombre},
+					{"presente", in.presentesAntes.count(j.parsecId) > 0 || (idHost != 0 && j.parsecId == idHost)},
+					{"es_host", idHost != 0 && j.parsecId == idHost} });
+			}
+			return { {"nombre", l.nombre}, {"goles", l.goles}, {"local", local}, {"jugadores", jugadores} };
+		}
+
+		/// `datos` de «partida_fin» v2 (docs/RANKING-1V1.md): todo lo que la web necesita para el ranking.
+		/// `invertido` = mandos cruzados al terminar (Partido::finalizar lo pone a false).
+		json datosResultado(Interno& in, const RegistroPartido& r, bool invertido, bool cancelado) {
+			const juego::EstadoPartidoJuego j = PhoenixLink::instancia().estadoJuego();
+			uint32_t idHost = 0;
+			try { if (in.ctx.hosting != nullptr) idHost = hostingObligatorio(in).getHost().userID; } catch (...) {}
+			const bool unoContraUno = r.a.jugadores.size() == 1 && r.b.jugadores.size() == 1;
+			const bool completo = !cancelado && j.valido && j.fase == "final" && j.completo;
+			const bool golesDelJuego = j.valido && j.golesLocal >= 0 && j.golesVisita >= 0;
+			json d = {
+				{"v", 2},
+				{"marcador", cancelado ? std::string("cancelado") : std::to_string(r.a.goles) + "-" + std::to_string(r.b.goles)},
+				{"partido_id", std::to_string(r.inicioMs)},
+				{"inicio_ms", r.inicioMs},
+				{"fin_ms", ahoraEpochMs()},
+				{"duracion_seg", r.duracionSeg},
+				{"cierre", cancelado ? "cancelado" : (completo ? "completo" : "manual")},
+				{"modo", unoContraUno ? "1v1" : "equipos"},
+				{"ganador", cancelado ? "" : r.ganador},
+				{"a", ladoWeb(in, r.a, idHost, !invertido)},
+				{"b", ladoWeb(in, r.b, idHost, invertido)},
+				{"correcciones", r.correcciones},
+				{"pausas", r.pausas},
+				{"host_parsec", idHost != 0 ? std::to_string(idHost) : std::string()},
+				{"abandono_juego", in.arbitro.avisoAbandono || (j.valido && j.fase == "menu")},
+			};
+			if (j.valido) {
+				// El lado A juega con el equipo local, salvo con los mandos cruzados
+				const int golesA = invertido ? j.golesVisita : j.golesLocal;
+				const int golesB = invertido ? j.golesLocal : j.golesVisita;
+				json info = { {"fase", j.fase}, {"minuto", j.minuto}, {"completo", j.completo},
+					{"equipo_a", invertido ? j.visita : j.local}, {"equipo_b", invertido ? j.local : j.visita},
+					{"nombre_equipo_a", invertido ? j.nombreVisita : j.nombreLocal},
+					{"nombre_equipo_b", invertido ? j.nombreLocal : j.nombreVisita},
+					{"coincide", golesDelJuego && golesA == r.a.goles && golesB == r.b.goles} };
+				if (golesDelJuego) { info["goles_a"] = golesA; info["goles_b"] = golesB; }
+				if (j.pkLocal >= 0 && j.pkVisita >= 0) {
+					info["penales_a"] = invertido ? j.pkVisita : j.pkLocal;
+					info["penales_b"] = invertido ? j.pkLocal : j.pkVisita;
+				}
+				json goles = json::array();
+				for (const juego::GolJuego& g : j.goles) goles.push_back({ {"m", g.minuto}, {"lado", g.local != invertido ? "a" : "b"} });
+				info["goles"] = goles;
+				d["juego"] = info;
+			}
+			// El contrato limita `datos` a 4 KB: si no cabe, fuera la lista de goles (se queda el marcador)
+			if (d.dump(-1, ' ', false, json::error_handler_t::replace).size() > 3800 && d.contains("juego")) d["juego"].erase("goles");
+			return d;
+		}
 	}
 
 	using namespace detalle_partido_web;
 
 	std::optional<json> finalizarPartido(Interno& in, bool anunciar, const std::string& extra) {
+		const bool invertido = in.partido.mandosInvertidos();
 		auto reg = in.partido.finalizar(ahoraSeg());
 		if (!reg) return std::nullopt;
 		const std::string marcador = std::to_string(reg->a.goles) + "-" + std::to_string(reg->b.goles);
+		const json datos = datosResultado(in, *reg, invertido, false);
+		reg->cierre = datos.value("cierre", "");
 		const bool guardado = in.historial && in.historial->agregar(*reg);
 		in.partidosSesion++;
 		PhoenixLink::instancia().marcarPartido(false);
-		PhoenixLink::instancia().evento("partida_fin", "", json{ {"marcador", marcador} }.dump());
+		PhoenixLink::instancia().evento("partida_fin", "", datos.dump(-1, ' ', false, json::error_handler_t::replace));
 		if (anunciar) {
 			const std::string res = reg->a.nombre + " " + marcador + " " + reg->b.nombre;
 			mensajeDelBot(in, "Final: " + res + (reg->ganador == "empate" ? ". ¡Empate!" : ". ¡Bien jugado!") + extra);
@@ -155,10 +219,22 @@ namespace phoenix::web {
 
 		p.registrar("partido.cancelar", [&in](const json&, uint64_t) -> std::optional<json> {
 			const bool enJuego = in.partido.fase() == FasePartido::EnJuego || in.partido.fase() == FasePartido::Pausado;
+			std::string datos;
+			if (enJuego) {
+				// Se guarda en la web (no cuenta para el ranking) para ver quién cancela partidos
+				RegistroPartido r;
+				r.id = r.inicioMs = in.partido.inicioMs();
+				r.duracionSeg = in.partido.segundosJugados(ahoraSeg());
+				r.a = in.partido.ladoA();
+				r.b = in.partido.ladoB();
+				r.correcciones = in.partido.correcciones();
+				r.pausas = in.partido.pausas();
+				datos = datosResultado(in, r, in.partido.mandosInvertidos(), true).dump(-1, ' ', false, json::error_handler_t::replace);
+			}
 			in.partido.cancelar();
 			if (enJuego) {
 				PhoenixLink::instancia().marcarPartido(false);
-				PhoenixLink::instancia().evento("partida_fin", "", json{ {"marcador", "cancelado"} }.dump());
+				PhoenixLink::instancia().evento("partida_fin", "", datos);
 			}
 			return in.partido.comoJson(ahoraSeg());
 		});
