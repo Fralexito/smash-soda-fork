@@ -73,7 +73,7 @@ namespace mercado::sync {
 		/// PUT del archivo a la URL firmada (sin token: la URL ya lleva el permiso).
 		Resultado<bool> subirArchivo(const std::string& url, const std::string& rutaLocal);
 		/// POST /v1/sync/oficial → publica la foto con los archivos ya subidos (solo admin). Devuelve la versión.
-		Resultado<int64_t> publicarOficial(const std::string& grupoId, const std::string& parche, int64_t seq, const std::vector<ArchivoOficial>& archivos);
+		Resultado<int64_t> publicarOficial(const std::string& grupoId, const std::string& parche, const std::string& huellaBd, int64_t seq, const std::vector<ArchivoOficial>& archivos);
 		/// Baja un archivo de la foto y comprueba tamaño y sha256 (si no cuadra, lo borra).
 		Resultado<bool> descargar(const ArchivoOficial& a, const std::string& rutaDestino);
 

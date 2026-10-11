@@ -902,7 +902,12 @@ namespace mercado::sync {
 			subidos.push_back(*s.valor);
 			if (nombre == "EDIT00000000") _e.anotarConocida(sha);
 		}
-		auto v = _web.publicarOficial(_e.grupoId, juego.empty() ? "desconocido" : rutas::nombreParche(juego), _e.ultimaSeq, subidos);
+		// La huella de la tabla de equipos va con la foto: la web la pone en los cambios que crea desde el panel,
+		// así las PCs comprueban que son del mismo parche (motivoIncompatible).
+		std::string huella;
+		if (auto of = _of.leer(deRuta(dir / "EDIT00000000.subida")); of.ok()) huella = of.valor->huellaEquipos;
+		if (huella.empty()) return R::mal("OPTION_INVALIDO", "No se pudo leer tu option file para calcular la huella");
+		auto v = _web.publicarOficial(_e.grupoId, juego.empty() ? "desconocido" : rutas::nombreParche(juego), huella, _e.ultimaSeq, subidos);
 		if (!v.ok()) return R{ std::nullopt, v.error };
 		_e.versionOficial = *v.valor;
 		_e.anotarHistorial({ fechaIso(), "", "Publicaste el option file oficial v" + std::to_string(*v.valor), _en.nombrePc, "publicada", "" });

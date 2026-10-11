@@ -156,7 +156,7 @@ struct HttpFalso : ClienteHttp {
 			const int64_t v = w.oficial.is_object() ? w.oficial["version"].get<int64_t>() + 1 : 1;
 			json arch = json::array();
 			for (auto a : j["archivos"]) { const std::string u = "https://almacen.falso/" + a["ruta"].get<std::string>(); if (!w.almacen.count(u)) return { 400, R"({"ok":false,"error":{"codigo":"FALTA_ARCHIVO"}})", "" }; a["url"] = u; arch.push_back(a); }
-			w.oficial = { { "version", v }, { "seq", j["seq"] }, { "parche", j["parche"] }, { "publicado_por", pc }, { "publicado_en", "2026-10-10T22:00:00" }, { "archivos", arch } };
+			w.oficial = { { "version", v }, { "seq", j["seq"] }, { "parche", j["parche"] }, { "huella_bd", j["huella_bd"] }, { "publicado_por", pc }, { "publicado_en", "2026-10-10T22:00:00" }, { "archivos", arch } };
 			return ok({ { "version", v } });
 		}
 		if (metodo == "GET" && url.find("/v1/sync/oficial") != std::string::npos) {
@@ -878,6 +878,25 @@ int main() {
 		amigo.linkColoca();
 		CHECK(amigo.esta(3, 108));
 		amigo.pasar(3);   // el motor nota que Link ya colocó la entrega
+		// Cambio creado en el PANEL WEB (autor_pc "web") con la huella de la foto oficial → el amigo lo aplica.
+		CHECK(!web.oficial["huella_bd"].get<std::string>().empty());
+		web.modo = "automatico";
+		amigo.pasar(33);   // el amigo lee el modo nuevo (cada 30 s)
+		auto opWeb = [&](const std::string& id, const std::string& huella, int valor) {
+			web.ops.push_back({ { "op_id", id }, { "tipo", "stats" }, { "jugador_id", 117047 }, { "campo", "velocidad" }, { "valor", valor },
+				{ "parche", web.oficial["parche"] }, { "huella_bd", huella }, { "formato", 1 }, { "autor_pc", "web" }, { "autor", "FRALEX" },
+				{ "seq", (int64_t)web.ops.size() + 1 } });
+		};
+		opWeb("web-1", web.oficial["huella_bd"].get<std::string>(), 70);
+		amigo.pasar(40);
+		{ auto f = base::FichasBase::abrir(deRuta(amigo.juego / pesdb / "Player.bin")); CHECK(f.ok() && *f.valor->leer(117047, "velocidad").valor == 70); }
+		CHECK(web.confirmaciones["AMIGO|web-1"] == "aplicada");
+		opWeb("web-2", "", 60);   // sin huella → incompatible, no se toca nada
+		amigo.pasar(40);
+		{ auto f = base::FichasBase::abrir(deRuta(amigo.juego / pesdb / "Player.bin")); CHECK(f.ok() && *f.valor->leer(117047, "velocidad").valor == 70); }
+		CHECK(web.confirmaciones["AMIGO|web-2"] == "incompatible");
+		web.modo = "autorizacion";
+		amigo.pasar(40);
 		// Parche distinto → se rechaza.
 		web.oficial["parche"] = "Otro Parche"; web.oficial["version"] = 9;
 		CHECK(amigo.motor.bajarOficial().error.codigo == "INCOMPATIBLE");

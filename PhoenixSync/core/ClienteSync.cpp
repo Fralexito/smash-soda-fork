@@ -173,10 +173,10 @@ namespace mercado::sync {
 		return Resultado<bool>::bien(true);
 	}
 
-	Resultado<int64_t> ClienteSync::publicarOficial(const std::string& grupoId, const std::string& parche, int64_t seq, const std::vector<ArchivoOficial>& archivos) {
+	Resultado<int64_t> ClienteSync::publicarOficial(const std::string& grupoId, const std::string& parche, const std::string& huellaBd, int64_t seq, const std::vector<ArchivoOficial>& archivos) {
 		json lista = json::array();
 		for (const auto& a : archivos) lista.push_back({ { "nombre", a.nombre }, { "sha256", a.sha256 }, { "tamano", a.tamano }, { "ruta", a.ruta } });
-		const json cuerpo = { { "grupo_id", grupoId }, { "parche", parche }, { "seq", seq }, { "archivos", lista } };
+		const json cuerpo = { { "grupo_id", grupoId }, { "parche", parche }, { "huella_bd", huellaBd }, { "seq", seq }, { "archivos", lista } };
 		auto r = llamar("POST", "/v1/sync/oficial", cuerpo.dump(), "", nullptr);
 		if (!r.ok()) return Resultado<int64_t>{ std::nullopt, r.error };
 		const json& d = *r.valor;
