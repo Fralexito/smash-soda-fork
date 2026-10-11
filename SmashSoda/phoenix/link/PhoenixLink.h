@@ -137,6 +137,10 @@ namespace phoenix {
 		std::vector<ResultadoWeb> tomarResultados();
 		/// Cartas de jugador (§23) de quienes están en la sala: parsecId → JSON en texto.
 		std::map<uint32_t, std::string> perfiles();
+		/// Cuenta web de alguien de la sala: 1 = Parsec vinculado, 0 = sin vincular, -1 = aún no se sabe (o esta PC no está vinculada).
+		int cuentaWeb(uint32_t parsecId);
+		/// Esta PC tiene token de la web (puede preguntar por cuentas).
+		bool pcVinculada();
 		/// Versión de la Liga Máster que informa la presencia (-1 = sin dato).
 		long long versionLiga();
 		std::string salaId();

@@ -23,6 +23,7 @@ namespace phoenix::web {
 	constexpr bool kFichaJugadorActiva = false;
 
 	/// ≈ cada frame; trabaja 20 veces por segundo y solo con el partido en juego.
+	/// También mueve la sala clasificatoria (SalaClasificatoria.h), que va siempre aunque la ficha esté apagada.
 	void tickEstadisticas(Interno& in);
 
 	/// Ficha de `parsecId` en el partido que empezó en `inicioMs` (objeto vacío si no hay).

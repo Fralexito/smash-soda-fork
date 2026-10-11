@@ -8,6 +8,7 @@
 #include "../core/AccionesSala.h"
 #include "../link/PhoenixLink.h"
 #include "EstadisticasPartido.h"
+#include "SalaClasificatoria.h"
 
 // =============================================================================
 //  Acciones de la interfaz web: Partido.
@@ -157,6 +158,7 @@ namespace phoenix::web {
 			ProveedorSala& sala = salaObligatoria(in);
 			LadoPartido a = lado(in, d, "a", "nombreA");
 			LadoPartido b = lado(in, d, "b", "nombreB");
+			comprobarLadosClasificatoria(in, a, b);
 			if (!in.partido.preparar(a, b)) throw ErrorAccion("NO_SE_PUDO", "Revisa los lados: nadie puede estar en los dos y hay un partido en juego.");
 
 			const bool asignar = d.contains("asignar") && d["asignar"].is_boolean() && d["asignar"].get<bool>();
@@ -243,6 +245,11 @@ namespace phoenix::web {
 				PhoenixLink::instancia().evento("partida_fin", "", datos);
 			}
 			return in.partido.comoJson(ahoraSeg());
+		});
+
+		p.registrar("partido.clasificatoria", [&in](const json& d, uint64_t) -> std::optional<json> {
+			if (d.contains("si") && d["si"].is_boolean()) fijarClasificatoria(d["si"].get<bool>());
+			return estadoClasificatoria(in);
 		});
 
 		p.registrar("partido.historial", [&in](const json& d, uint64_t) -> std::optional<json> {

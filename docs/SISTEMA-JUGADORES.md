@@ -46,7 +46,7 @@ Límites que ningún nivel supera:
 
 - El ID de Parsec no cambia. Una vez vinculado en la web (`cuentas_parsec`), Link y la web saben quién es en cualquier sala, entre por donde entre. Pasar cada vez por la página no añade seguridad y sí molestias: amigos que se pasan el enlace, reconexiones a mitad de partido, gente que solo quiere mirar.
 - Los partidos de quien no esté vinculado se guardan igual, pero no puntúan (motivo `sin_cuenta`). Si se vincula después, el staff puede reasignarlos.
-- **Más adelante (opcional): «Sala clasificatoria».** Un interruptor del anfitrión con dos efectos:
+- **HECHO (2026-10-11, apagada por defecto): «Sala clasificatoria»** (Partido › Armar; `SmashSoda/phoenix/web/SalaClasificatoria.*`, acción `partido.clasificatoria`, cuenta según `/v1/perfiles` con `PhoenixLink::cuentaWeb()`). Quien no tiene cuenta y toma un mando vuelve a «Mirando» (`liberarMando`) con un aviso en el chat (como mucho uno por minuto). `partido.preparar` no deja meterlo en un lado. Un partido ya empezado no se toca: solo se avisa de que no puntuará. Quien aún no se sabe puede jugar. Si alguien se vincula estando en la sala, Link lo nota en ≤ 10 min (caché de perfiles) o al volver a entrar. Diseño original: Un interruptor del anfitrión con dos efectos:
   1. Solo quien tenga cuenta vinculada puede tomar un mando. Los demás entran como espectadores y reciben un aviso con el enlace para vincularse.
   2. Al empezar, Link avisa en el chat si alguien no puntuará.
 

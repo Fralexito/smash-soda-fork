@@ -744,6 +744,16 @@ namespace phoenix {
 		return r;
 	}
 
+	int PhoenixLink::cuentaWeb(uint32_t parsecId) {
+		std::lock_guard<std::mutex> l(_mutex);
+		if (_token.empty()) return -1;
+		const auto it = _perfiles.find(parsecId);
+		if (it == _perfiles.end()) return -1;
+		return it->second.json.empty() ? 0 : 1;
+	}
+
+	bool PhoenixLink::pcVinculada() { std::lock_guard<std::mutex> l(_mutex); return !_token.empty(); }
+
 	void PhoenixLink::guardarEventos() {
 		// Llamar con _mutex tomado.
 		try {

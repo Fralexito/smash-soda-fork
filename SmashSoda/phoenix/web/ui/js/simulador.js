@@ -446,6 +446,11 @@ export function crearSimulador(enviar) {
     },
     "partido.cancelar": () => { s.partido.fase = "libre"; },
     "partido.historial": () => ({ partidos: s.historial }),
+    "partido.clasificatoria": (d) => {
+      if (typeof d.si === "boolean") s.clasificatoria = d.si;
+      const g = s.invitados.filter((x) => !x.falso);
+      return { activa: !!s.clasificatoria, pcVinculada: true, sinCuenta: g.filter((x) => !perfiles[x.parsecId]).map((x) => ({ parsecId: x.parsecId, nombre: x.nombre })), sinComprobar: [] };
+    },
   };
 
   // Estado cada 200 ms (como el motor real) y una muestra de red por segundo

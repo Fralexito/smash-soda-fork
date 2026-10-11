@@ -5,6 +5,7 @@
 #include <map>
 
 #include "InterfazWebInterno.h"
+#include "SalaClasificatoria.h"
 #include "../../Hosting.h"
 #include "../core/ProveedorSala.h"
 
@@ -58,6 +59,7 @@ namespace phoenix::web {
 	using namespace detalle_estadisticas;
 
 	void tickEstadisticas(Interno& in) {
+		tickClasificatoria(in);   // va aquí para no tocar otra vez el bucle de InterfazWeb
 		if (!kFichaJugadorActiva || in.ctx.sala == nullptr) return;
 		try {
 			const FasePartido fase = in.partido.fase();

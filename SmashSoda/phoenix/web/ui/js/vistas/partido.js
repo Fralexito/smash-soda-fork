@@ -37,6 +37,8 @@ function Armar({ m }) {
   const [b, setB] = useState(borradorLados);
   const fijar = (x) => { borradorLados = { ...b, ...x }; setB(borradorLados); };
   const gente = participantes(m);
+  const [clas, ponerClas] = useClasificatoria(m.sala.abierta);
+  const sinCuenta = new Set((clas?.activa ? clas.sinCuenta : []).map((x) => x.parsecId));
   const presentes = new Set(gente.map((g) => g.parsecId));
   const a = b.a.filter((id) => presentes.has(id));
   const bb = b.b.filter((id) => presentes.has(id));
@@ -68,7 +70,7 @@ function Armar({ m }) {
         <${Titulo} texto=${t("EN LA SALA", "IN THE ROOM")} derecha=${html`<${Boton} tipo="mini suave" al=${desdeMandos}>${t("SEGÚN MANDOS", "FROM PADS")}</${Boton}>`}/>
         ${gente.map((g) => html`<div class="persona" style="cursor:default" key=${g.parsecId}>
           <${Avatar} nombre=${g.nombre} id=${g.parsecId} url=${m.perfiles?.[g.parsecId]?.avatar_url} t=${34} brillo=${!!lado(g.parsecId)}/>
-          <div style="flex:1;min-width:0"><div class="nom">${g.nombre}${g.host ? html` <${Chip} tipo="acc">${t("TÚ", "YOU")}</${Chip}>` : null}</div>
+          <div style="flex:1;min-width:0"><div class="nom">${g.nombre}${g.host ? html` <${Chip} tipo="acc">${t("TÚ", "YOU")}</${Chip}>` : null}${sinCuenta.has(g.parsecId) ? html` <${Chip} tipo="bad">${t("SIN CUENTA", "NO ACCOUNT")}</${Chip}>` : null}</div>
             <div class="mono mut" style="font-size:12px">${g.mando ? `${t("MANDO", "PAD")} ${dos(g.mando)}` : t("sin mando", "no pad")}</div></div>
           <button class=${cx("btn mini", lado(g.parsecId) === "a" && "lleno")} onClick=${() => mover(g.parsecId, lado(g.parsecId) === "a" ? null : "a")}>A</button>
           <button class=${cx("btn mini", lado(g.parsecId) === "b" && "lleno")} onClick=${() => mover(g.parsecId, lado(g.parsecId) === "b" ? null : "b")}>B</button>
@@ -76,11 +78,44 @@ function Armar({ m }) {
       </${Tarjeta}>
       <${Columna} id="b" ids=${bb} nombre=${b.nombreB} clave="nombreB" color="var(--eq-b)" gente=${gente} m=${m} fijar=${fijar} mover=${mover}/>
     </div>
+    <${Clasificatoria} clas=${clas} poner=${ponerClas}/>
     <div class="caja" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
       <${Interruptor} valor=${b.asignar} al=${(v) => fijar({ asignar: v })} etiqueta="asignar"/>
       <div style="flex:1;min-width:220px"><b>${t("Sentar a cada uno en su mando", "Seat everyone on their pad")}</b>
         <div class="ayuda">${t("Ajusta la formación (A local, B visita) y asigna los mandos en orden.", "Sets the formation and assigns pads in order.")}</div></div>
       <${Boton} tipo="lleno enorme" deshabilitado=${a.length === 0 || bb.length === 0} al=${preparar}><${Icono} n="partido" t=${18}/>${t("PREPARAR PARTIDO", "SET UP MATCH")}</${Boton}>
+    </div>
+  </div>`;
+}
+
+// ---- Sala clasificatoria: solo juega quien tiene su Parsec vinculado a la web ----------------
+let ultimaClasificatoria = null;
+
+function useClasificatoria(abierta) {
+  const [c, setC] = useState(ultimaClasificatoria);
+  useEffect(() => {
+    if (!abierta) return undefined;
+    let vivo = true;
+    const leer = () => accion("partido.clasificatoria", {}, { silencioso: true }).then((r) => { if (vivo && r) { ultimaClasificatoria = r; setC(r); } });
+    leer();
+    const id = setInterval(leer, 5000);
+    return () => { vivo = false; clearInterval(id); };
+  }, [abierta]);
+  return [c, (r) => { ultimaClasificatoria = r; setC(r); }];
+}
+
+function Clasificatoria({ clas, poner }) {
+  if (!clas) return null;
+  const fijar = (si) => accion("partido.clasificatoria", { si }).then((r) => { if (r) poner(r); });
+  const nombres = (l) => l.map((x) => x.nombre).join(", ");
+  return html`<div class="caja" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+    <${Interruptor} valor=${!!clas.activa} al=${fijar} etiqueta="clasificatoria"/>
+    <div style="flex:1;min-width:220px"><b>${t("Sala clasificatoria", "Ranked room")}</b>
+      <div class="ayuda">${!clas.pcVinculada
+        ? t("Vincula esta PC con la web de Phoenix para usarla.", "Link this PC to the Phoenix website to use it.")
+        : t("Solo juega quien tiene su Parsec vinculado a su cuenta de la web; los demás miran. Así cada partido cuenta para el ranking.", "Only people with their Parsec linked to the website can play.")}</div>
+      ${clas.activa && clas.sinCuenta?.length ? html`<div class="ayuda" style="color:var(--bad)">${t("Sin cuenta (no pueden jugar): ", "No account: ")}${nombres(clas.sinCuenta)}</div>` : null}
+      ${clas.activa && clas.sinComprobar?.length ? html`<div class="ayuda">${t("Comprobando: ", "Checking: ")}${nombres(clas.sinComprobar)}</div>` : null}
     </div>
   </div>`;
 }
