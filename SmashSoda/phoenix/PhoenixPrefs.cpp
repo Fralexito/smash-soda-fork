@@ -36,7 +36,7 @@ namespace phoenix {
 			if (j.is_discarded() || !j.is_object()) return;
 
 			interfazPhoenix = j.value("interfaz", std::string("phoenix")) != "clasica";
-			interfazWeb = j.value("interfazWeb", interfazWeb);
+			interfazWeb = true;   // siempre la interfaz web (2026-10-11); las viejas solo si WebView2 falla
 			tema = j.value("tema", tema);
 			if (tema != "galaxy" && tema != "sudario") tema = "galaxy";
 			idioma = j.value("idioma", idioma);

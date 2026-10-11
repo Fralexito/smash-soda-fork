@@ -154,21 +154,8 @@ namespace phoenix::web {
 			return json::object();
 		});
 
-		p.registrar("ui.interfaz", [&in](const json& d, uint64_t) -> std::optional<json> {
-			const std::string modo = texto(d, "modo", 16);
-			if (modo != "phoenix" && modo != "clasica") throw ErrorAccion("DATOS_INVALIDOS", "Interfaz desconocida.");
-			in.cambioInterfaz = modo; // se aplica en el próximo frame
-			return json::object();
-		});
-
-		p.registrar("ui.panelClasico", [&in](const json& d, uint64_t) -> std::optional<json> {
-			const int seccion = entero(d, "seccion", 0, 3);
-			const int pestana = d.contains("pestana") ? entero(d, "pestana", 0, 10) : 0;
-			PhoenixPrefs::get().interfazPhoenix = true;
-			Shell::irA(seccion, pestana);
-			in.panelClasico = true;
-			return json::object();
-		});
+		// Fralex (2026-10-11): sin acceso a las interfaces viejas (panel clásico de Soda e ImGui de Phoenix).
+		// Solo quedan como respaldo automático si WebView2 no puede abrirse en ese PC.
 
 		p.registrar("ui.copiar", [](const json& d, uint64_t) -> std::optional<json> {
 			if (!copiarAlPortapapeles(texto(d, "texto", 4000))) throw ErrorAccion("PORTAPAPELES", "No se pudo copiar.");

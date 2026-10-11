@@ -254,7 +254,7 @@ export function crearSimulador(enviar) {
     "ui.seccion": (d) => { s.seccion = d.seccion; s.pestana = d.pestana || ""; },
     "ui.tema": (d) => { s.tema = d.tema; },
     "ui.idioma": (d) => { s.idioma = d.idioma; },
-    "ui.interfaz": () => ({}), "ui.panelClasico": () => error("SOLO_APP", "El panel clásico existe solo dentro de Phoenix Link."),
+
     "ui.copiar": (d) => { navigator.clipboard?.writeText(d.texto).catch(() => {}); }, "ui.abrir": () => ({}), "ui.recargar": () => location.reload(),
     "sala.abrir": () => { s.abierta = true; s.abiertaEn = ahora(); act("[PhoenixBot] Sala abierta."); },
     "sala.cerrar": () => { s.abierta = false; s.partido.fase = "libre"; act("[PhoenixBot] Sala cerrada."); },

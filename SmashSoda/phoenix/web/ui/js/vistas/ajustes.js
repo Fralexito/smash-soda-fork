@@ -34,7 +34,6 @@ export function VistaAjustes({ s, pestana }) {
 }
 
 const gen = (clave, valor) => accion("ajustes.general", { clave, valor });
-const clasico = (pestana) => accion("ui.panelClasico", { seccion: 3, pestana });
 
 // ---- General -------------------------------------------------------------------------------
 function TemaCarta({ id, actual, colores, nombre, sub, fondo }) {
@@ -326,23 +325,16 @@ export function CuentaWeb({ m }) {
 // ---- Interfaz --------------------------------------------------------------------------------------
 function Interfaz({ m, info }) {
   const idiomas = info.idiomas?.length ? info.idiomas : [{ codigo: "es", nombre: "Español" }, { codigo: "en", nombre: "English" }];
-  const cambiarInterfaz = async () => {
-    if (await confirmar({ titulo: t("¿Volver a la interfaz anterior?", "Go back to the previous interface?"), texto: t("Se usará la interfaz Phoenix dibujada con ImGui. Puedes volver desde Ajustes › Rápido › «Usar la interfaz nueva».", "The ImGui Phoenix interface will be used. Come back from Settings › Quick."), si: t("Cambiar", "Switch") })) {
-      await accion("ui.interfaz", { modo: "clasica" });
-    }
-  };
   return html`<div class="rej2">
     <${Tarjeta} interior="padding:22px 24px">
       <${Titulo} texto=${t("IDIOMA", "LANGUAGE")}/>
       <${Selector} valor=${m.app?.idioma || "es"} opciones=${idiomas.map((x) => ({ valor: x.codigo, texto: x.nombre }))} al=${(x) => accion("ui.idioma", { idioma: x })}/>
-      <div class="ayuda" style="margin-top:10px">${t("Cambia también los textos del panel clásico.", "Also changes the classic panel.")}</div>
     </${Tarjeta}>
     <${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:12px">
       <${Titulo} texto=${t("INTERFAZ", "INTERFACE")}/>
       <div class="ayuda">${t("Atajos: Ctrl+K busca cualquier acción · Ctrl+Espacio abre el chat · Alt+1…6 cambia de sección · Esc cierra.", "Shortcuts: Ctrl+K search · Ctrl+Space chat · Alt+1…6 sections · Esc close.")}</div>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
         <${Boton} al=${() => accion("ui.recargar")}>${t("RECARGAR INTERFAZ", "RELOAD INTERFACE")}</${Boton}>
-        <${Boton} tipo="peligro" al=${cambiarInterfaz}>${t("USAR LA INTERFAZ ANTERIOR", "USE PREVIOUS INTERFACE")}</${Boton}>
       </div>
     </${Tarjeta}>
     <${AtajosTeclado}/>
@@ -351,7 +343,7 @@ function Interfaz({ m, info }) {
 
 // ---- Diagnóstico -------------------------------------------------------------------------------------
 const diag = () => ({
-  webview2: [t("Motor de la interfaz (WebView2)", "Interface engine (WebView2)"), (d) => d.version ? `${t("Versión", "Version")} ${d.version}` : t("No instalado: la app usa la interfaz anterior.", "Missing: the app uses the previous interface.")],
+  webview2: [t("Motor de la interfaz (WebView2)", "Interface engine (WebView2)"), (d) => d.version ? `${t("Versión", "Version")} ${d.version}` : t("No instalado: instala WebView2 de Microsoft para ver Phoenix Link.", "Missing: install Microsoft WebView2 to see Phoenix Link.")],
   vigem: [t("Mandos virtuales (ViGEmBus)", "Virtual pads (ViGEmBus)"), (d) => d.instalado ? `${d.conectados}/${d.mandos} ${t("conectados", "connected")}` : t("Falta instalar ViGEmBus: sin él nadie puede jugar.", "ViGEmBus missing: nobody can play.")],
   parsec: [t("Cuenta de Parsec", "Parsec account"), (d) => d.cuenta ? `${d.nombre}${d.listo ? "" : t(" · preparando", " · starting")}` : t("Inicia sesión en Parsec.", "Sign in to Parsec.")],
   video: [t("Video", "Video"), (d) => `${d.gpus} GPU · ${d.pantallas} ${t("pantallas", "screens")}${d.wgc ? " · WGC" : ""}`],
@@ -394,7 +386,6 @@ function Avanzado({ m }) {
       <${Titulo} texto=${t("REGISTROS Y DESARROLLO", "LOGS AND DEVELOPMENT")}/>
       <${AjusteSw} titulo=${t("Registros de Parsec", "Parsec logs")} desc=${t("Muestra los registros de Parsec en el Registro.", "Shows Parsec logs in the log.")} valor=${g.parsecLogs} al=${(v) => gen("parsecLogs", v)}/>
       <${AjusteSw} titulo=${t("Modo desarrollador", "Developer mode")} desc=${t("Herramientas extra. Al reiniciar, permite inspeccionar esta interfaz con F12.", "Extra tools; after restart enables F12 here.")} valor=${g.devMode} al=${(v) => gen("devMode", v)}/>
-      <div style="margin-top:14px"><${Boton} al=${() => clasico(6)}>${t("MÁS OPCIONES AVANZADAS", "MORE ADVANCED OPTIONS")}</${Boton}></div>
     </${Tarjeta}>
   </div>`;
 }
