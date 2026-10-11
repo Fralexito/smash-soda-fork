@@ -43,6 +43,9 @@ namespace phoenix::web {
 		std::string pestana;
 
 		double ultimaFoto = 0.0;
+		bool vivoRapido = false;                   ///< Mandos en vivo abierto: canal «vivo» ~30/s (solo botones y sticks)
+		double ultimoVivo = 0.0;
+		std::string vivoAnterior;                  ///< último paquete «vivo» enviado (solo se manda si cambia)
 		double ultimaMuestraRed = 0.0;
 		size_t chatVistos = 0;
 		size_t actividadVistos = 0;

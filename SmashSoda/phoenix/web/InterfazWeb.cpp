@@ -21,6 +21,7 @@
 #include "../I18n.h"
 #include "../ui/Shell.h"
 #include "../link/PhoenixLink.h"
+#include "../core/ProveedorSala.h"
 #include "../host/Cedido.h"
 
 namespace phoenix::web {
@@ -284,6 +285,18 @@ namespace phoenix::web {
 				if (ahora - in.ultimaFoto >= 0.2) { // ~5 veces por segundo, solo si cambió
 					in.ultimaFoto = ahora;
 					in.puente->publicarEstado(construirEstado(in));
+				}
+				// Mandos en vivo en tiempo real: solo botones y sticks de cada puesto, ~30 veces por segundo,
+				// únicamente con la tarjeta abierta en Mandos y si algo cambió (la foto completa sigue a 5/s).
+				if (in.vivoRapido && in.seccion == "mandos" && in.ctx.sala != nullptr && ahora - in.ultimoVivo >= 0.033) {
+					in.ultimoVivo = ahora;
+					json v = json::array();
+					for (const AsientoVista& a : in.ctx.sala->asientos(8)) {
+						if (!a.conectado) continue;
+						v.push_back({ a.numero, a.botones, a.gatilloI, a.gatilloD, a.ejeLX, a.ejeLY, a.ejeRX, a.ejeRY });
+					}
+					std::string texto = v.dump();
+					if (texto != in.vivoAnterior) { in.vivoAnterior = std::move(texto); in.puente->evento("vivo", v); }
 				}
 			}
 		}

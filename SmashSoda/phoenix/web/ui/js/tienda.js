@@ -32,6 +32,10 @@ let idAviso = 1;
 
 export function leer() { return estado; }
 
+// Mandos en vivo en tiempo real: oyentes del canal «vivo» (no pasa por el estado global para no redibujar todo)
+const oyentesVivo = new Set();
+export function oirVivo(fn) { oyentesVivo.add(fn); return () => oyentesVivo.delete(fn); }
+
 export function cambiar(parcial) {
   estado = { ...estado, ...(typeof parcial === "function" ? parcial(estado) : parcial) };
   for (const fn of suscriptores) fn(estado);
@@ -201,6 +205,7 @@ export function conectarTienda() {
     avisarSeccion();
   });
   puente.on("estado", (e) => { cambiar({ motor: e }); vigilarSala(e); });
+  puente.on("evento:vivo", (d) => { for (const fn of oyentesVivo) fn(d); });
   puente.on("evento:chatglobal", (d) => recibirGlobal(d));
   puente.on("evento:chat", (d) => agregarLineas("chat", MAX_CHAT, d));
   puente.on("evento:actividad", (d) => agregarLineas("actividad", MAX_ACTIVIDAD, d));

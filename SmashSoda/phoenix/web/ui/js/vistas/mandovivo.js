@@ -4,7 +4,8 @@
 //  Sirve para comprobar antes del partido que cada invitado tiene bien su mando.
 //  Datos: mandos.lista[i].entrada {b, lt, rt, lx, ly, rx, ry} (solo en Mandos › Puestos).
 // =============================================================================
-import { html } from "../lib.js";
+import { html, useState, useEffect } from "../lib.js";
+import { accion, oirVivo } from "../tienda.js";
 import { t } from "../i18n.js";
 import { dos } from "../ui.js";
 
@@ -59,7 +60,19 @@ export function MandoVivo({ e }) {
 
 /** Rejilla con un mando por puesto ocupado (o conectado). */
 export function MandosEnVivo({ m }) {
-  const lista = (m.mandos?.lista || []).filter((p) => p.conectado && (p.ocupado || p.entrada?.b));
+  // Tiempo real: mientras esta tarjeta existe, el motor manda botones y sticks ~30 veces por segundo
+  const [vivo, setVivo] = useState({});
+  useEffect(() => {
+    accion("mandos.vivo", { si: true }, { silencioso: true });
+    const quitar = oirVivo((d) => {
+      const n = {};
+      for (const [num, b, lt, rt, lx, ly, rx, ry] of d || []) n[num] = { b, lt, rt, lx, ly, rx, ry };
+      setVivo(n);
+    });
+    return () => { quitar(); accion("mandos.vivo", { si: false }, { silencioso: true }); };
+  }, []);
+  const lista = (m.mandos?.lista || []).filter((p) => p.conectado && (p.ocupado || p.entrada?.b || vivo[p.n]?.b))
+    .map((p) => (vivo[p.n] ? { ...p, entrada: vivo[p.n] } : p));
   if (lista.length === 0) return html`<div class="ayuda">${t("No hay mandos en uso ahora mismo.", "No pads in use right now.")}</div>`;
   return html`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">
     ${lista.map((p) => html`<div class="caja" key=${p.n} style="display:flex;flex-direction:column;gap:6px;padding:12px">

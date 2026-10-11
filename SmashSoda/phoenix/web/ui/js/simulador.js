@@ -229,7 +229,7 @@ export function crearSimulador(enviar) {
     const p = s.partido;
     const e = {
       v: 1,
-      app: { version: "0.2.13", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
+      app: { version: "0.2.14", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
       noticias: { cargado: true, lista: s.noticias },
       chatGlobal: { cargado: true, pausado: s.chatGlobal.pausado, esperaSeg: s.chatGlobal.esperaSeg, rev: s.chatGlobal.mensajes.length, error: "" },
       web: { ...s.web, jugadoresLista: 3, versionLiga: "2026.10.08", eventosEnCola: 0 },
@@ -338,6 +338,7 @@ export function crearSimulador(enviar) {
     "mandos.ordenPes": (d) => { s.ordenPes = { activo: !!d.si, estado: d.si ? "ordenado" : "apagado", ultimo: d.si ? "00:15" : "", copia: d.si ? "settings.dat.phoenix-20261011-001500" : "", error: "",
       casillas: d.si ? Array.from({ length: 8 }, (_, i) => ({ n: i + 1, puesto: i + 1, ok: true })) : [] }; },
     "mandos.ordenarPes": () => { if (s.ordenPes?.activo) s.ordenPes.estado = "al_dia"; },
+    "mandos.vivo": () => ({}),
     "mandos.tomar": (d) => { s.host = d.numero === s.host ? 0 : d.numero; return { activo: s.host }; },
     "mandos.herramienta": (d) => { if (d.nombre === "bloquearTodo") s.bloqueoGlobal = !s.bloqueoGlobal; else if (d.nombre === "bloquearBotones") s.bloqueoBotones = !s.bloqueoBotones; else if (d.nombre === "desconectarTodos") s.mandos = s.mandos.map(() => 0); else if (d.nombre === "ordenar") { const v = s.mandos.filter(Boolean); s.mandos = s.mandos.map((_, i) => v[i] || 0); } },
     "teclado.asignar": (d) => { const p = s.perfilesTeclado.find((x) => x.userId === d.userId) || s.perfilesTeclado[0]; p.teclas.forEach((x) => { if (x.v === d.tecla) { x.v = 0; x.e = ""; } }); const k = p.teclas.find((x) => x.b === d.boton); k.v = d.tecla; k.e = "K" + d.tecla; },

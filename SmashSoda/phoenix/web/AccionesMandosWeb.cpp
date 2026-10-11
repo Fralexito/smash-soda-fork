@@ -160,6 +160,12 @@ namespace phoenix::web {
 			phoenix::ordenpes::revisarYa();
 			return json::object();
 		});
+		// Mandos en vivo en tiempo real (canal «vivo»): la tarjeta lo enciende al abrirse y lo apaga al cerrarse
+		p.registrar("mandos.vivo", [&in](const json& d, uint64_t) -> std::optional<json> {
+			in.vivoRapido = booleano(d, "si");
+			in.vivoAnterior.clear();
+			return json::object();
+		});
 		p.registrar("mandos.soloAutorizados", [](const json& d, uint64_t) -> std::optional<json> {
 			PhoenixPrefs& pr = PhoenixPrefs::get();
 			pr.soloAutorizados = booleano(d, "si");
