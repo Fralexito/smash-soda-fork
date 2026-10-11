@@ -68,12 +68,10 @@ function Fila({ p, m, color, arr, setArr, alAsignar }) {
             ${p.tipo ? html`<span class=${cx("chip", p.tipo === "ds4" ? "acc2" : "mod")} style="height:18px;margin-left:6px;font-size:10px;opacity:.8">${p.tipo === "ds4" ? "PLAYSTATION" : "XBOX"}</span>` : null}</div>
           <div style="font:400 13px/1.3 var(--f-body);color:var(--mut)">${arrastrando && recibe ? t("Suelta aquí", "Drop here") : t("Arrastra a alguien aquí", "Drag someone here")}</div>
         </div>`}
-    ${p.ocupado ? html`<button class="icono-btn" style="height:38px;width:38px;flex:none" data-tip=${p.bloqueado ? t("Desbloquear este mando", "Unlock this pad") : t("Bloquear este mando", "Lock this pad")}
-        onClick=${() => accion("mandos.bloquear", { indice: p.n - 1 })}><span style=${p.bloqueado ? "color:var(--warn)" : ""}><${Icono} n="candado" t=${17}/></span></button>
-      <button class="icono-btn" style="height:38px;width:38px;flex:none" data-tip=${p.conectado ? t("Desenchufar el mando virtual", "Unplug virtual pad") : t("Enchufar el mando virtual", "Plug virtual pad")}
-        onClick=${() => accion(p.conectado ? "mandos.desconectar" : "mandos.conectar", { indice: p.n - 1 })}><span style=${p.conectado ? "color:var(--ok)" : "color:var(--bad)"}><${Icono} n="enlace" t=${17}/></span></button>` : null}
+    ${p.ocupado ? html`<button class="icono-btn" style="height:38px;width:38px;flex:none" data-tip=${p.bloqueado ? t("Desbloquear: el jugador vuelve a mover su mando", "Unlock: the player can move again") : t("Bloquear: el jugador no puede mover este mando (sigue en su puesto)", "Lock: the player can't move this pad (keeps the seat)")}
+        onClick=${() => accion("mandos.bloquear", { indice: p.n - 1 })}><span style=${p.bloqueado ? "color:var(--warn)" : ""}><${Icono} n="candado" t=${17}/></span></button>` : null}
     ${p.ocupado
-      ? html`<${Boton} tipo="peligro mini" estilo="flex:none" al=${() => esHost ? accion("mandos.tomar", { numero: 0 }) : accion("mandos.liberar", { indice: p.n - 1 })}>${t("QUITAR", "REMOVE")}</${Boton}>`
+      ? html`<${Boton} tipo="peligro mini" estilo="flex:none" titulo=${t("Sale del puesto y pasa a mirar", "Leaves the seat and watches")} al=${() => esHost ? accion("mandos.tomar", { numero: 0 }) : accion("mandos.liberar", { indice: p.n - 1 })}>${t("QUITAR", "REMOVE")}</${Boton}>`
       : html`<${Boton} tipo="mini" estilo=${`flex:none;border-color:${color};color:${color}`} al=${() => alAsignar(p.n - 1)}>${t("ASIGNAR", "ASSIGN")}</${Boton}>`}
   </div>`;
 }
@@ -213,6 +211,7 @@ export function PuestosNuevo({ m }) {
         <div style="display:flex;align-items:center;gap:12px">
           <span class="disp" style="font-weight:700;font-size:15px;letter-spacing:.2em">${t("JUGANDO", "PLAYING")}</span>
           <span style="flex:1;height:1px;background:linear-gradient(90deg,var(--linea-fuerte),transparent)"></span>
+          <${TodosAMirar} m=${m} esclavo=${esclavo}/>
         </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:16px;align-items:stretch">
           <${Equipo} nombre="LOCAL" desc=${t("El equipo de quien abre la sala", "The room owner's team")} color="var(--acc)" filas=${locales}
@@ -253,6 +252,21 @@ export function PuestosNuevo({ m }) {
     <${OrdenPes} m=${m}/>
     ${eligiendo != null ? html`<${ElegirJugador} m=${m} indice=${eligiendo} alCerrar=${() => setEligiendo(null)}/>` : null}
   </div>`;
+}
+
+/** Saca a todos de sus puestos: pasan a «Mirando» (el anfitrión suelta el suyo). */
+function TodosAMirar({ m, esclavo }) {
+  const ocupados = (m.mandos.lista || []).filter((p) => p.ocupado);
+  if (!ocupados.length) return null;
+  const todos = async () => {
+    if (!(await confirmar({ titulo: t("¿Todos a espectador?", "Everyone to spectator?"), texto: t(`Los ${ocupados.length} jugadores salen de sus puestos y pasan a mirar. Nadie sale de la sala.`, `The ${ocupados.length} players leave their seats and watch. Nobody leaves the room.`), si: t("Todos a mirar", "Everyone watches") }))) return;
+    for (const p of ocupados) {
+      const esHost = m.mandos.host === p.n || (p.parsecId && p.parsecId === m.sala?.hostId);
+      if (esHost) await accion("mandos.tomar", { numero: 0 }, { silencioso: true });
+      else await accion("mandos.liberar", { indice: p.n - 1 }, { silencioso: true });
+    }
+  };
+  return html`<${Boton} tipo="mini suave" deshabilitado=${esclavo} al=${todos}><${Icono} n="ojo" t=${14}/>${t("TODOS A ESPECTADOR", "EVERYONE TO SPECTATOR")}</${Boton}>`;
 }
 
 // ---- Orden de mandos en PES (EXPERIMENTAL) ---------------------------------------------
