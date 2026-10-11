@@ -11,6 +11,7 @@
 #include "../core/AccionesSala.h"
 #include "../core/MandoHost.h"
 #include "../core/OrdenPes.h"
+#include "../core/PerfilesMapeo.h"
 
 // =============================================================================
 //  Acciones de la interfaz web: mandos, solicitudes, entrada por Parsec,
@@ -346,6 +347,26 @@ namespace phoenix::web {
 				Config::cfg.Save();
 				Hotseat::instance.applySettingsDelta(0, 0, Config::cfg.hotseat.reminderInterval);
 			}
+			return json::object();
+		});
+
+		// ---- Mapeo de mandos por persona (phoenix/core/MapeoMandos, PerfilesMapeo) ----
+		p.registrar("mapeo.ver", [&in](const json& d, uint64_t) -> std::optional<json> {
+			const auto it = d.find("parsecId");
+			const bool nadie = it == d.end() || it->is_null() || (it->is_number() && it->get<int64_t>() == 0);
+			in.mapeoVer = nadie ? 0u : idParsec(d);
+			return json::object();   // el estado lo aplica (observar) en su siguiente foto
+		});
+		p.registrar("mapeo.guardar", [](const json& d, uint64_t) -> std::optional<json> {
+			const uint32_t id = idParsec(d);
+			const auto it = d.find("perfil");
+			if (it == d.end() || !it->is_object()) throw ErrorAccion("DATOS_INVALIDOS", "Falta el perfil de mapeo.");
+			const phoenix::mapeo::Perfil perfil = phoenix::mapeo::deJson(*it);
+			phoenix::mapeo::poner(id, d.contains("nombre") ? texto(d, "nombre", 64) : std::string(), perfil);
+			return json{ {"identidad", perfil.esIdentidad()} };
+		});
+		p.registrar("mapeo.restablecer", [](const json& d, uint64_t) -> std::optional<json> {
+			phoenix::mapeo::quitar(idParsec(d));
 			return json::object();
 		});
 	}

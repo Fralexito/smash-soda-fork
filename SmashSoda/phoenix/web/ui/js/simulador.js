@@ -7,6 +7,33 @@
 //  1 en espera, pings variados y un partido en curso 2–1).
 // =============================================================================
 
+import { aplicar as aplicarMapeo, pulsacionNueva, limpiar as limpiarMapeo, esIdentidad as mapeoIdentidad } from "./mapeo.js";
+
+// Mandos › Mapeo: el «mando» del invitado observado tiene el stick izquierdo que camina solo,
+// A y B cambiados y el stick izquierdo al revés en vertical. El invitado «obedece» al chat:
+// AVISAR POR CHAT («@Mirko pulsa el botón que quieres que sea A») → pulsa B en su mando.
+// En la consola también: simPulsar("a") | simPulsar("lt") | simPulsar("lx+").
+const ETQ_SIM = { A: "a", B: "b", X: "x", Y: "y", LB: "lb", RB: "rb", LT: "lt", RT: "rt", BACK: "back", START: "start", "GUÍA": "guia", L3: "ls", R3: "rs", "▲": "arriba", "▼": "abajo", "◀": "izq", "▶": "der" };
+const FALLO_SIM = { a: "b", b: "a" };
+function respuestaChatMapeo(texto) {
+  const b = /(?:que sea|to be) (\S+)\s*$/.exec(texto);
+  if (b && ETQ_SIM[b[1]]) { const f = ETQ_SIM[b[1]]; return FALLO_SIM[f] || f; }
+  const izq = /IZQUIERDO|LEFT stick/.test(texto), horizontal = /DERECHA|stick RIGHT/.test(texto);
+  if (/stick/i.test(texto)) return horizontal ? (izq ? "lx+" : "rx+") : (izq ? "ly-" : "ry+");
+  return "";
+}
+const BITS_SIM = { arriba: 0x1, abajo: 0x2, izq: 0x4, der: 0x8, start: 0x10, back: 0x20, ls: 0x40, rs: 0x80, lb: 0x100, rb: 0x200, guia: 0x400, a: 0x1000, b: 0x2000, x: 0x4000, y: 0x8000 };
+function crudoSimulado(seg, manual) {
+  const e = { b: 0, lt: 0, rt: 0, lx: Math.round(2400 + Math.sin(seg * 3) * 500), ly: Math.round(-1700 + Math.cos(seg * 2) * 400), rx: 0, ry: 0 };
+  const f = manual || "";
+  if (!f) return e;
+  const m = /^([lr][xy])([+-])$/.exec(f);
+  if (m) e[m[1]] = m[2] === "+" ? 30000 : -30000;
+  else if (f === "lt" || f === "rt") e[f] = 255;
+  else e.b = BITS_SIM[f] || 0;
+  return e;
+}
+
 export function crearSimulador(enviar) {
   const ahora = () => Date.now() / 1000;
   const inicio = ahora();
@@ -61,6 +88,7 @@ export function crearSimulador(enviar) {
     baneados: [{ parsecId: 6666, nombre: "Troll", motivo: "Insultos" }],
     web: { estado: "conectado", usuario: "Fralex", mensaje: "Sala publicada en la web.", publicada: true },
     seccion: "sala", pestana: "resumen",
+    mapeo: { perfiles: { 2041: { nombre: "Kaiser", actualizado: Date.now() - 86400000, perfil: { botones: {}, invertir: [], cambiarSticks: false, zona: [12, 0] } } }, ver: 0, n: 0, ultima: "", antes: null, manual: null, desde: 0 },
     sonidos: [{ ruta: "sfx/gol.wav", etiqueta: "gol", espera: 5 }, { ruta: "sfx/silbato.wav", etiqueta: "silbato", espera: 10 }, { ruta: "sfx/abucheo.wav", etiqueta: "abucheo", espera: 30 }],
     noticias: [
       { id: 7, nivel: "importante", texto: "Hoy 21:00 · Final de la Copa Galaxy en vivo. Entra a la sala del árbitro 10 minutos antes.", hora: "19:42", enlace: "" },
@@ -155,6 +183,21 @@ export function crearSimulador(enviar) {
     return { parsecId: g.parsecId, nombre: g.nombre, presente: true, ultimo: serie[serie.length - 1] ?? -1, media, maximo: Math.max(-1, ...ult), jitter, picos: ult.filter((x) => x > 100).length, alerta: false, semaforo: ["verde", "ambar", "rojo"][peor], serie: todo ? serie : serie.slice(-30) };
   });
 
+  // Mando en vivo de Mandos › Mapeo (como el motor: solo mirando esa pestaña y con un mando tomado)
+  const vistaMapeo = () => {
+    const mp = s.mapeo;
+    if (s.seccion !== "mandos" || s.pestana !== "mapeo" || !mp.ver) return null;
+    if (!s.abierta || s.mandos.indexOf(mp.ver) < 0) return { parsecId: mp.ver, crudo: {}, salida: {}, ultima: "", n: mp.n, edadMs: -1 };
+    const seg = ahora() - mp.desde;
+    if (mp.manual && ahora() > mp.manual.hasta) mp.manual = null;
+    const crudo = crudoSimulado(seg, mp.manual?.f);
+    const p = pulsacionNueva(mp.antes || {}, crudo);
+    if (p) { mp.ultima = p; mp.n++; }
+    mp.antes = crudo;
+    return { parsecId: mp.ver, crudo, salida: aplicarMapeo(mp.perfiles[mp.ver]?.perfil, crudo), ultima: mp.ultima, n: mp.n, edadMs: 20 };
+  };
+  try { window.simPulsar = (f) => { s.mapeo.manual = { f, hasta: ahora() + 0.6 }; }; } catch { /* sin ventana */ }
+
   const estado = () => {
     const lista = s.mandos.slice(0, s.xbox + s.ds4).map((id, i) => {
       const n = i + 1;
@@ -193,6 +236,7 @@ export function crearSimulador(enviar) {
         sesion: { pico: 5, entradas: 7, partidos: s.historial.length },
       },
       mandos: { lista, miMando: s.marionetas.maestro >= 0 ? s.marionetas.maestros[s.marionetas.maestro]?.nombre || "" : "", ordenPes: s.ordenPes || { activo: false, estado: "apagado", casillas: [] }, formacion: s.formacion, host: s.host, bloqueoGlobal: s.bloqueoGlobal, bloqueoBotones: s.bloqueoBotones, botonesBloq: s.botonesBloq, esclavo: false, xbox: s.xbox, ds4: s.ds4, reiniciando: false },
+      mapeo: { perfiles: s.mapeo.perfiles, vista: vistaMapeo() },
       solicitudes: s.solicitudes, espera: s.espera,
       invitados: s.abierta ? s.invitados.map((g) => ({ parsecId: g.parsecId, nombre: g.nombre, ping: pingDe(g.parsecId), mando: s.mandos.indexOf(g.parsecId) + 1, mod: g.mod, vip: g.vip, teclado: g.teclado, raton: g.raton, rolWeb: g.rolWeb, cop: false, falso: false })) : [],
       perfiles,
@@ -298,6 +342,16 @@ export function crearSimulador(enviar) {
     "marionetas.titere": (d) => { s.marionetas.titeres[d.indice].activo = d.si; },
     "mandos.miMando": (d) => { s.marionetas.maestro = d.indice; s.marionetas.titeres.forEach((x) => { x.activo = false; }); },
     "marionetas.tipo": (d) => { const x = s.marionetas.maestros[d.indice]; x.tipo = x.tipo === "xbox" ? "dualshock" : x.tipo === "dualshock" ? "ds4" : "xbox"; },
+    "mapeo.ver": (d) => { const id = Number(d.parsecId) || 0; if (id !== s.mapeo.ver) { s.mapeo.ver = id; s.mapeo.antes = null; s.mapeo.ultima = ""; s.mapeo.desde = ahora(); } },
+    "mapeo.guardar": (d) => {
+      if (!d.parsecId) error("DATOS_INVALIDOS", "Falta el ID de Parsec.");
+      if (!d.perfil || typeof d.perfil !== "object") error("DATOS_INVALIDOS", "Falta el perfil de mapeo.");
+      const perfil = limpiarMapeo(d.perfil), identidad = mapeoIdentidad(perfil);
+      if (identidad) delete s.mapeo.perfiles[d.parsecId];
+      else s.mapeo.perfiles[d.parsecId] = { nombre: d.nombre || "", actualizado: Date.now(), perfil };
+      return { identidad };
+    },
+    "mapeo.restablecer": (d) => { delete s.mapeo.perfiles[d.parsecId]; },
     "mandos.cantidad": (d) => { if (d.xbox + d.ds4 > 8) error("FUERA_DE_RANGO", "Máximo 8 mandos en total."); s.xbox = d.xbox; s.ds4 = d.ds4; },
     "solicitud.aceptar": (d) => { s.solicitudes = s.solicitudes.filter((x) => x.parsecId !== d.parsecId); },
     "solicitud.rechazar": (d) => { s.solicitudes = s.solicitudes.filter((x) => x.parsecId !== d.parsecId); },
@@ -316,7 +370,13 @@ export function crearSimulador(enviar) {
     "moderacion.quitarVip": (d) => { const g = s.invitados.find((x) => x.parsecId === d.parsecId); if (g) g.vip = false; },
     "moderacion.banear": (d) => { s.baneados.push({ parsecId: d.parsecId, nombre: d.nombre || nombreDe(d.parsecId), motivo: "" }); },
     "moderacion.motivo": (d) => { const b = s.baneados.find((x) => x.parsecId === d.parsecId); if (b) b.motivo = d.motivo; },
-    "chat.enviar": (d) => { chat("Fralex: " + d.texto); },
+    "chat.enviar": (d) => {
+      chat("Fralex: " + d.texto);
+      // Mandos › Mapeo: el invitado aludido «pulsa» lo que se le pidió (con su mando mal mapeado)
+      const g = s.invitados.find((x) => d.texto.startsWith("@" + x.nombre + " "));
+      const f = g && g.parsecId === s.mapeo.ver ? respuestaChatMapeo(d.texto) : "";
+      if (f) setTimeout(() => { s.mapeo.manual = { f, hasta: ahora() + 0.6 }; }, 900);
+    },
     "chatGlobal.abierto": () => ({}),
     "chatGlobal.enviar": (d) => {
       const texto = String(d.texto || "").trim();

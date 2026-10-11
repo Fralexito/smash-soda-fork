@@ -9,10 +9,12 @@ import { PuestosNuevo } from "./puestos.js";
 import { BloqueoNuevo } from "./botones.js";
 import { MarionetasNuevo } from "./marionetas.js";
 import { TecladoNuevo } from "./teclado.js";
+import { MapeoNuevo } from "./mapeo.js";
 import { Tarjeta, Titulo, Boton, Interruptor, Ajuste, AjusteSw, Stepper, Icono, Vacio, Avatar, Chip, colorPing, cx, dos } from "../ui.js";
 
 export const PESTANAS_MANDOS = [
   { id: "puestos", es: "PUESTOS", en: "SEATS", d: ["Arrastra a cada persona a un puesto, o toca «Asignar». Lo que dejes en «Mirando» solo ve la partida.", "Drag each person to a seat, or tap Assign. Anyone in Watching only watches."] },
+  { id: "mapeo", es: "MAPEO", en: "MAPPING", d: ["Corrige el mando de cada invitado: botones cambiados, stick que camina solo, sticks al revés, gatillos raros.", "Fix each guest's pad: swapped buttons, drifting stick, inverted sticks, odd triggers."] },
   { id: "teclado", es: "TECLADO", en: "KEYBOARD", d: ["Quién puede jugar con teclado y qué tecla es cada botón del mando.", "Who can play with keyboard and which key is each pad button."] },
   { id: "turnos", es: "TURNOS", en: "HOTSEAT", d: ["Rotación automática: cada uno juega un rato y cede el mando.", "Automatic rotation of the pads."] },
   { id: "marionetas", es: "TU MANDO", en: "YOUR PAD", d: ["Elige el mando con el que juegas tú y cuántos mandos ve el juego.", "Pick the pad you play with and how many pads the game sees."] },
@@ -32,6 +34,7 @@ export function VistaMandos({ s, pestana }) {
   const m = s.motor;
   if (!m || !m.mandos) return html`<${Vacio} titulo=${t("Conectando…", "Connecting…")} texto=""/>`;
   switch (pestana) {
+    case "mapeo": return html`<${MapeoNuevo} m=${m}/>`;
     case "teclado": return html`<${TecladoNuevo} m=${m}/>`;
     case "turnos": return html`<${Turnos} m=${m}/>`;
     case "marionetas": return html`<${MarionetasNuevo} m=${m}/>`;

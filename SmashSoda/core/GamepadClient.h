@@ -117,6 +117,8 @@ private:
 	void setMirror(uint32_t guestUserID, bool mirror);
 	void setIgnoreDeviceID(uint32_t guestUserID, bool ignoreDeviceID);
 	bool tryAssignGamepad(Guest guest, uint32_t padId, int currentSlots, bool isKeyboard, GuestPreferences prefs = GuestPreferences());
+	/// Phoenix: aplica el perfil de mapeo de esa persona (y luego bloqueos). false = no tiene perfil.
+	bool phoenixMapear(AGamepad* pad, uint32_t userID, const XINPUT_STATE& crudo, XINPUT_STATE& salida);
 	bool isRequestState(ParsecMessage message);
 	bool isRequestButton(ParsecMessage message);
 	bool isRequestKeyboard(uint32_t userID, ParsecMessage message);

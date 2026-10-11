@@ -65,6 +65,7 @@ namespace phoenix::web {
 		std::map<uint64_t, uint64_t> pendientesWeb;
 		uint64_t siguienteTicket = 1;
 
+		uint32_t mapeoVer = 0;                    ///< Mandos › Mapeo: persona cuyo mando se mira en vivo (0 = nadie)
 		bool reiniciandoMandos = false;            ///< bandera de GamepadClient::resetAll
 
 		/// Árbitro del partido (Arbitro.cpp): modo competitivo, pausa automática y goles del juego.

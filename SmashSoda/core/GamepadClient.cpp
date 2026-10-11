@@ -2,7 +2,21 @@
 #include "Config.h"
 #include "../Hosting.h"
 #include "../phoenix/PhoenixRoles.h"
+#include "../phoenix/core/PerfilesMapeo.h"
 extern Hosting g_hosting;
+
+// Phoenix: mapeo de mandos por persona (phoenix/core/MapeoMandos.*)
+namespace {
+	phoenix::mapeo::Estado phoenixEstado(const XINPUT_STATE& x) {
+		phoenix::mapeo::Estado e;
+		e.b = x.Gamepad.wButtons; e.lt = x.Gamepad.bLeftTrigger; e.rt = x.Gamepad.bRightTrigger;
+		e.lx = x.Gamepad.sThumbLX; e.ly = x.Gamepad.sThumbLY; e.rx = x.Gamepad.sThumbRX; e.ry = x.Gamepad.sThumbRY;
+		return e;
+	}
+	inline void phoenixAnotar(uint32_t userID, const XINPUT_STATE& crudo, const XINPUT_STATE& salida) {
+		phoenix::mapeo::anotar(userID, phoenixEstado(crudo), phoenixEstado(salida));
+	}
+}
 
 // Singleton instance (Meyer's singleton pattern)
 static GamepadClient _gamepadClientInstance;
@@ -628,6 +642,11 @@ bool GamepadClient::sendGamepadStateMessage(ParsecGamepadStateMessage& gamepadSt
 			slots++;
 			if (!(isPuppetMaster && pad->isPuppet) && !pad->isLocked() && (prefs.ignoreDeviceID || gamepadState.id == pad->owner.deviceID))
 			{
+				// Phoenix: mapeo por persona (antes de bloqueos); sin perfil todo sigue como siempre
+				const XINPUT_STATE crudo = toXInput(gamepadState, pad->phoenixCrudo, prefs, guest.userID);
+				pad->phoenixCrudo = crudo;
+				XINPUT_STATE xstate;
+				if (!phoenixMapear(pad, guest.userID, crudo, xstate)) {
 				if (Config::cfg.input.disableGuideButton && (gamepadState.buttons & GAMEPAD_STATE_GUIDE))
 					gamepadState.buttons &= ~GAMEPAD_STATE_GUIDE;
 				if (pad->isLockedButtons() || lockButtons)
@@ -647,7 +666,10 @@ bool GamepadClient::sendGamepadStateMessage(ParsecGamepadStateMessage& gamepadSt
 					if (g_hosting._lockedGamepad.sThumbRY && gamepadState.thumbRY != 0)
 						gamepadState.thumbRY = 0;
 				}
-				pad->setStateSafe(toXInput(gamepadState, pad->getState(), prefs, guest.userID));
+				xstate = toXInput(gamepadState, pad->getState(), prefs, guest.userID);
+				}
+				phoenixAnotar(guest.userID, crudo, xstate);
+				pad->setStateSafe(xstate);
 				return true;
 			}
 		}
@@ -663,7 +685,16 @@ bool GamepadClient::sendGamepadAxisMessage(ParsecGamepadAxisMessage& gamepadAxis
 			slots++;
 			if (!(isPuppetMaster && pad->isPuppet) && !pad->isLocked() && (prefs.ignoreDeviceID || gamepadAxis.id == pad->owner.deviceID))
 			{
-				XINPUT_STATE xstate = toXInput(gamepadAxis, pad->getState(), prefs, guest.userID);
+				// Phoenix: mapeo por persona (antes de bloqueos); sin perfil todo sigue como siempre
+				const XINPUT_STATE crudo = toXInput(gamepadAxis, pad->phoenixCrudo, prefs, guest.userID);
+				pad->phoenixCrudo = crudo;
+				XINPUT_STATE xstate;
+				if (phoenixMapear(pad, guest.userID, crudo, xstate)) {
+					phoenixAnotar(guest.userID, crudo, xstate);
+					pad->setStateSafe(xstate);
+					return true;
+				}
+				xstate = toXInput(gamepadAxis, pad->getState(), prefs, guest.userID);
 				if (pad->isLockedButtons() || lockButtons) {
 					if (g_hosting._lockedGamepad.sThumbLX && gamepadAxis.axis == GAMEPAD_AXIS_LX)
 						xstate.Gamepad.sThumbLX = 0;
@@ -678,6 +709,7 @@ bool GamepadClient::sendGamepadAxisMessage(ParsecGamepadAxisMessage& gamepadAxis
 					else if (g_hosting._lockedGamepad.bRightTrigger && gamepadAxis.axis == GAMEPAD_AXIS_TRIGGERR)
 						xstate.Gamepad.bRightTrigger = 0;
 				}
+				phoenixAnotar(guest.userID, crudo, xstate);
 				pad->setStateSafe(xstate);
 				return true;
 			}
@@ -694,13 +726,20 @@ bool GamepadClient::sendGamepadButtonMessage(ParsecGamepadButtonMessage& gamepad
 			slots++;
 			if (!(isPuppetMaster && pad->isPuppet) && !pad->isLocked() && (prefs.ignoreDeviceID || gamepadButton.id == pad->owner.deviceID))
 			{
-				XINPUT_STATE xstate = toXInput(gamepadButton, pad->getState(), prefs, pad->owner.guest.userID);
+				// Phoenix: mapeo por persona (antes de bloqueos); sin perfil todo sigue como siempre
+				const XINPUT_STATE crudo = toXInput(gamepadButton, pad->phoenixCrudo, prefs, pad->owner.guest.userID);
+				pad->phoenixCrudo = crudo;
+				XINPUT_STATE xstate;
+				if (!phoenixMapear(pad, guest.userID, crudo, xstate)) {
+				xstate = toXInput(gamepadButton, pad->getState(), prefs, pad->owner.guest.userID);
 				if (g_hosting._disableGuideButton && (xstate.Gamepad.wButtons & GAMEPAD_STATE_GUIDE))
 					xstate.Gamepad.wButtons &= ~GAMEPAD_STATE_GUIDE;
 				if (pad->isLockedButtons() || lockButtons) {
 					if (xstate.Gamepad.wButtons & g_hosting._lockedGamepad.wButtons)
 						xstate.Gamepad.wButtons &= ~g_hosting._lockedGamepad.wButtons;
 				}
+				}
+				phoenixAnotar(guest.userID, crudo, xstate);
 				pad->setStateSafe(xstate);
 				return true;
 			}
@@ -833,6 +872,32 @@ void GamepadClient::setIgnoreDeviceID(uint32_t guestUserID, bool ignoreDeviceID)
 		GuestPreferences prefs = GuestPreferences(guestUserID, 1, false, ignoreDeviceID);
 		guestPreferences.push_back(prefs);
 	}
+}
+
+bool GamepadClient::phoenixMapear(AGamepad* pad, uint32_t userID, const XINPUT_STATE& crudo, XINPUT_STATE& salida)
+{
+	phoenix::mapeo::Perfil perfil;
+	if (!phoenix::mapeo::perfilDe(userID, perfil)) return false;
+	const phoenix::mapeo::Estado e = phoenix::mapeo::aplicar(perfil, phoenixEstado(crudo));
+	salida = crudo;
+	salida.Gamepad.wButtons = e.b;
+	salida.Gamepad.bLeftTrigger = e.lt; salida.Gamepad.bRightTrigger = e.rt;
+	salida.Gamepad.sThumbLX = e.lx; salida.Gamepad.sThumbLY = e.ly;
+	salida.Gamepad.sThumbRX = e.rx; salida.Gamepad.sThumbRY = e.ry;
+	// Los bloqueos van DESPUÉS del mapeo: reasignar un botón no puede saltarse el modo competitivo
+	if ((Config::cfg.input.disableGuideButton || g_hosting._disableGuideButton) && (salida.Gamepad.wButtons & GAMEPAD_STATE_GUIDE))
+		salida.Gamepad.wButtons &= ~GAMEPAD_STATE_GUIDE;
+	if (pad->isLockedButtons() || lockButtons) {
+		const LockedGamepadState& b = g_hosting._lockedGamepad;
+		salida.Gamepad.wButtons &= static_cast<WORD>(~b.wButtons);
+		if (b.bLeftTrigger) salida.Gamepad.bLeftTrigger = 0;
+		if (b.bRightTrigger) salida.Gamepad.bRightTrigger = 0;
+		if (b.sThumbLX) salida.Gamepad.sThumbLX = 0;
+		if (b.sThumbLY) salida.Gamepad.sThumbLY = 0;
+		if (b.sThumbRX) salida.Gamepad.sThumbRX = 0;
+		if (b.sThumbRY) salida.Gamepad.sThumbRY = 0;
+	}
+	return true;
 }
 
 bool GamepadClient::isRequestState(ParsecMessage message)

@@ -12,3 +12,5 @@ g++ -std=c++20 -O1 -Wall -Wextra -I"$R/SmashSoda" "$R/pruebas-link/buzon_test.cp
 /tmp/phx_pruebas/buzon_test
 g++ -std=c++20 -O1 -Wall -Wextra -I"$R/SmashSoda" -I"$R/external" "$R/pruebas-link/entrega_test.cpp" "$R/SmashSoda/phoenix/link/Entrega.cpp" -pthread -o /tmp/phx_pruebas/entrega_test
 /tmp/phx_pruebas/entrega_test
+g++ -std=c++17 -O2 -Wall -Wextra -I"$R/SmashSoda" -I"$R/external" "$R/pruebas-link/mapeo_test.cpp" "$R/SmashSoda/phoenix/core/MapeoMandos.cpp" -o /tmp/phx_pruebas/mapeo_test
+/tmp/phx_pruebas/mapeo_test

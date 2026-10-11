@@ -18,6 +18,7 @@
 #include "../core/Solicitudes.h"
 #include "../core/MandoHost.h"
 #include "../core/OrdenPes.h"
+#include "../core/PerfilesMapeo.h"
 #include "../../core/MasterOfPuppets.h"
 #include "../link/PhoenixLink.h"
 
@@ -362,6 +363,13 @@ namespace phoenix::web {
 					{"rx", h._lockedGamepad.sThumbRX}, {"ry", h._lockedGamepad.sThumbRY},
 				}},
 			};
+
+			// Mapeo por persona: perfiles siempre (pocos); lo que llega/sale solo mirando Mandos › Mapeo
+			{
+				const bool enMapeo = in.seccion == "mandos" && in.pestana == "mapeo";
+				phoenix::mapeo::observar(enMapeo ? in.mapeoVer : 0);
+				e["mapeo"] = { {"perfiles", phoenix::mapeo::listar()}, {"vista", enMapeo ? phoenix::mapeo::vista() : json(nullptr)} };
+			}
 
 			// Teclado: perfiles de teclas (qué tecla es cada botón del mando)
 			if (in.seccion == "mandos" && in.pestana == "teclado") {

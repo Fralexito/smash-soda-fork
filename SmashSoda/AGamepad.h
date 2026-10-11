@@ -92,6 +92,7 @@ public:
 
 	GuestDevice owner = GuestDevice();
 	bool isPuppet = false;
+	XINPUT_STATE phoenixCrudo = {};   ///< Phoenix: lo que mandó el invitado ANTES del mapeo por persona
 	ParsecDSO * parsec;
 
 protected:
