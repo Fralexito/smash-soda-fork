@@ -352,7 +352,10 @@ const diag = () => ({
   audio: [t("Audio", "Audio"), (d) => `${d.salidas} ${t("salidas", "outputs")} · ${d.entradas} ${t("entradas", "inputs")}`],
   config: [t("Carpeta de configuración", "Config folder"), (d) => d.ruta || ""],
   web: [t("Web de la liga", "League website"), (d) => d.usuario ? `${d.usuario} · ${d.mensaje || ""}` : (d.mensaje || t("Sin vincular", "Not linked"))],
-  overlay: [t("Overlay", "Overlay"), (d) => d.activo ? (d.websocket ? `WebSocket :${d.puerto}` : t("WebSocket apagado", "WebSocket off")) : t("Desactivado", "Off")],
+  overlay: [t("Overlay", "Overlay"), (d) => !d.activo ? t("Apagado (Ajustes › Overlay)", "Off (Settings › Overlay)")
+    : d.websocket ? t(`Funcionando · puerto ${d.puerto}`, `Running · port ${d.puerto}`)
+    : d.salaAbierta ? t("Arrancando… si no aparece, reabre la sala.", "Starting… if it doesn't show, reopen the room.")
+    : t("Listo: se enciende solo al abrir la sala.", "Ready: it starts when you open the room.")],
   sistema: [t("Sistema", "System"), (d) => `${d.windows || "Windows"} · Phoenix Link ${d.app}`],
 });
 

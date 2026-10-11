@@ -432,8 +432,11 @@ namespace phoenix::web {
 
 			const bool overlay = Config::cfg.overlay.enabled;
 			const bool socket = WebSocket::instance.isRunning();
-			lista.push_back(chequeo("overlay", !overlay ? "ok" : (socket ? "ok" : "aviso"),
-				{ {"activo", overlay}, {"websocket", socket}, {"puerto", Config::cfg.socket.port} }));
+			// El servidor del overlay solo corre con la sala abierta: cerrada no es un problema (antes salía «aviso»).
+			bool salaAbierta = false;
+			try { salaAbierta = hostingObligatorio(in).isRunning(); } catch (...) {}
+			lista.push_back(chequeo("overlay", !overlay || socket || !salaAbierta ? "ok" : "aviso",
+				{ {"activo", overlay}, {"websocket", socket}, {"puerto", Config::cfg.socket.port}, {"salaAbierta", salaAbierta} }));
 
 			lista.push_back(chequeo("sistema", "ok", { {"windows", versionWindows()}, {"app", kVersion}, {"soda", Cache::cache.version} }));
 			return json{ {"chequeos", lista} };
