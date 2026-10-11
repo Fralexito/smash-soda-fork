@@ -1,6 +1,7 @@
 #include "SyncCompartido.h"
 #include "AsignacionBase.h"
 #include "Entrega.h"
+#include "FichasBase.h"
 #include "RutasJuego.h"
 #include "Sha256.h"
 
@@ -210,6 +211,23 @@ namespace mercado::sync {
 		if (_e.ultima.respaldo.empty()) return R::mal("NADA_QUE_DESHACER", "No hay ningún cambio del grupo aplicado en esta PC");
 		if (entrega::hayPendiente(carpetaEntrega()) || !_e.entregaEnCurso.empty())
 			return R::mal("ENTREGA_PENDIENTE", "Phoenix Link todavía no colocó la entrega anterior; prueba en unos segundos");
+		if (_e.ultima.stats) {
+			std::string pb;
+			for (const auto& a : respaldos::listar(carpetaRespaldos()))
+				if (a.nombre == _e.ultima.respaldo)
+					for (const auto& f : a.archivos)
+						if (pb.empty() && f.etiqueta.rfind("phoenix-db", 0) == 0 && aRuta(f.relativo).filename() == "Player.bin")
+							pb = deRuta(aRuta(a.carpeta) / aRuta(f.relativo));
+			if (pb.empty()) return R::mal("RESPALDO_INVALIDO", "El respaldo " + _e.ultima.respaldo + " no tiene Player.bin");
+			const std::string id = entrega::nuevoId();
+			auto w = entrega::escribir(carpetaEntrega(), id, "Deshacer stats", { { "Player.bin", pb } }, fechaIso());
+			if (!w.ok()) return R{ std::nullopt, w.error };
+			_e.entregaEnCurso = id; _e.entregaConBase = true;
+			_e.anotarHistorial({ fechaIso(), "", "Deshecho: " + std::to_string(_e.ultima.ops.size()) + " cambio(s) de stats", _en.nombrePc, "deshecho", "" });
+			_e.ultima = {};
+			guardar();
+			return R::bien(id);
+		}
 		const fs::path edit = aRuta(carpetaRespaldos()) / aRuta(_e.ultima.respaldo) / "save" / "EDIT00000000";
 		std::error_code ec;
 		if (!fs::is_regular_file(edit, ec)) return R::mal("RESPALDO_INVALIDO", "El respaldo " + _e.ultima.respaldo + " ya no tiene el option file");
@@ -494,6 +512,9 @@ namespace mercado::sync {
 	}
 
 	void Motor::procesarEntrantes() {
+		std::vector<std::string> propias;
+		for (const auto& x : _e.entrantes) if (x.estado == "propia") propias.push_back(x.op.id);
+		if (!propias.empty() && ahora() >= _esperarAplicarHasta) { aplicarInterno(propias, false); return; }   // lo pidió el dueño de esta PC
 		std::vector<std::string> nuevos;
 		for (const auto& x : _e.entrantes) if (x.estado == "nuevo") nuevos.push_back(x.op.id);
 		if (nuevos.empty()) return;
@@ -529,6 +550,13 @@ namespace mercado::sync {
 			if (std::find(ids.begin(), ids.end(), x.op.id) != ids.end() && x.estado != "incompatible") ops.push_back(x.op);
 		if (ops.empty()) return R::bien(0);
 		std::sort(ops.begin(), ops.end(), [](const auto& a, const auto& b) { return a.seq < b.seq; });
+		// Las «stats» van a Player.bin, en una entrega propia. Primero las plantillas; las stats, en la siguiente vuelta.
+		{
+			std::vector<grupo::Operacion> plantilla, stats;
+			for (const auto& op : ops) (op.tipo == "stats" ? stats : plantilla).push_back(op);
+			if (plantilla.empty()) return aplicarStats(stats, automatico);
+			ops = std::move(plantilla);
+		}
 
 		if (entrega::hayPendiente(carpetaEntrega()) || !_e.entregaEnCurso.empty())
 			return R::mal("ENTREGA_PENDIENTE", "Phoenix Link todavía no colocó la entrega anterior; se reintenta solo");
@@ -613,7 +641,7 @@ namespace mercado::sync {
 			}
 			_e.entregaEnCurso = entregaId;
 			_e.entregaConBase = !salidaBase.empty();
-			_e.ultima = { entregaId, resp.valor->nombre, {}, fechaIso() };
+			_e.ultima = { entregaId, resp.valor->nombre, false, {}, fechaIso() };
 			// Limpieza: deja solo los 10 últimos archivos de trabajo.
 			std::vector<fs::path> viejos;
 			for (fs::directory_iterator it(dir, ec), fin; !ec && it != fin; it.increment(ec)) viejos.push_back(it->path());
@@ -645,6 +673,105 @@ namespace mercado::sync {
 		const int listos = static_cast<int>(entregaId.empty() ? 0 : std::max<size_t>(hechas.size(), 1));
 		if (listos) avisar(std::to_string(listos) + (listos == 1 ? " fichaje del grupo listo" : " fichajes del grupo listos") + ": Phoenix Link lo coloca y avisa en el juego");
 		return R::bien(listos);
+	}
+
+	void Motor::anotarResultado(const grupo::ResultadoOp& r, bool automatico, bool conEntrega) {
+		auto it = std::find_if(_e.entrantes.begin(), _e.entrantes.end(), [&](const auto& x) { return x.op.id == r.id; });
+		if (it == _e.entrantes.end()) return;
+		const bool propia = it->estado == "propia";
+		if (r.estado == "aplicada") {
+			historial(it->op, "aplicada", r.motivo.empty() ? (propia ? "pedido en esta PC" : automatico ? "automático" : "autorizada") : r.motivo);
+			_e.aplicadas.insert(r.id);
+			if (conEntrega) _e.ultima.ops.push_back(r.id);
+			if (!propia) confirmarLuego(r.id, "aplicada", r.motivo);
+			_e.entrantes.erase(it);
+		}
+		else {
+			historial(it->op, "conflicto", r.motivo);
+			if (!propia) confirmarLuego(r.id, "conflicto", r.motivo);
+			if (propia) { avisar("No se pudo: " + r.motivo); _e.aplicadas.insert(r.id); _e.entrantes.erase(it); }
+			else { it->estado = "conflicto"; it->motivo = r.motivo; }
+		}
+	}
+
+	// Stats: se escriben en una COPIA del Player.bin de Phoenix-DB y Link la coloca (con respaldo antes).
+	Resultado<int> Motor::aplicarStats(const std::vector<grupo::Operacion>& ops, bool automatico) {
+		using R = Resultado<int>;
+		if (ops.empty()) return R::bien(0);
+		if (entrega::hayPendiente(carpetaEntrega()) || !_e.entregaEnCurso.empty())
+			return R::mal("ENTREGA_PENDIENTE", "Phoenix Link todavía no colocó la entrega anterior; se reintenta solo");
+		const std::string juego = _en.carpetaJuego ? _en.carpetaJuego() : std::string();
+		const auto bases = rutas::buscarPlayerBin(juego);
+		if (bases.empty()) {
+			for (const auto& op : ops) anotarResultado({ op.id, "conflicto", "no hay Player.bin en Phoenix-DB (usa sync-juego)" }, automatico, false);
+			return R::mal("SIN_PLAYERBIN", "No hay Player.bin en Phoenix-DB");
+		}
+		auto fb = base::FichasBase::abrir(bases.front().playerBin);
+		if (!fb.ok()) return R::mal(fb.error.codigo, "No se pudo leer Player.bin: " + fb.error.detalle);
+		const auto antes = *fb.valor;
+
+		std::vector<grupo::ResultadoOp> res;
+		int cambios = 0;
+		for (const auto& op : ops) {
+			auto actual = fb.valor->leer(op.jugador, op.campo);
+			if (!actual.ok()) { res.push_back({ op.id, "conflicto", actual.error.codigo + (actual.error.detalle.empty() ? "" : ": " + actual.error.detalle) }); continue; }
+			if (*actual.valor == op.valor) { res.push_back({ op.id, "aplicada", "ya tenía ese valor" }); continue; }
+			auto p = fb.valor->poner(op.jugador, op.campo, op.valor);
+			if (!p.ok()) { res.push_back({ op.id, "conflicto", p.error.codigo + ": " + p.error.detalle }); continue; }
+			res.push_back({ op.id, "aplicada", "" });
+			cambios++;
+		}
+		// Comprobación: solo cambiaron los jugadores pedidos.
+		for (uint32_t j : fb.valor->distintos(antes))
+			if (std::none_of(ops.begin(), ops.end(), [&](const auto& o) { return o.jugador == j; }))
+				return R::mal("PLAYERBIN_VERIFICACION", "Cambió un jugador que no se pidió; no se aplicó nada");
+
+		std::string entregaId;
+		if (cambios) {
+			auto resp = respaldarAhora("antes de aplicar stats");
+			if (!resp.ok()) {
+				_esperarAplicarHasta = ahora() + 300;
+				avisar("No se pudo respaldar: " + resp.error.detalle + ". No se aplicó ningún cambio de stats.");
+				return R::mal("RESPALDO_FALLIDO", resp.error.detalle);
+			}
+			const std::string id = entrega::nuevoId();
+			const fs::path dir = aRuta(carpetaTrabajo());
+			std::error_code ec;
+			fs::create_directories(dir, ec);
+			const std::string salida = deRuta(dir / ("Player.bin." + id));
+			if (auto g = fb.valor->guardarComo(salida); !g.ok()) return R::mal(g.error.codigo, "No se pudo preparar Player.bin: " + g.error.detalle);
+			std::string resumen;
+			for (const auto& op : ops) if (resumen.empty()) resumen = grupo::resumenDe(op, _en.nombreEquipo);
+			if (cambios > 1) resumen = std::to_string(cambios) + " cambios de stats";
+			auto w = entrega::escribir(carpetaEntrega(), id, entrega::recortarResumen(resumen, 60), { { "Player.bin", salida } }, fechaIso());
+			if (!w.ok()) return R::mal(w.error.codigo, "No se pudo dejar la entrega para Link: " + w.error.detalle);
+			entregaId = id;
+			_e.entregaEnCurso = id; _e.entregaConBase = true;
+			_e.ultima = { id, resp.valor->nombre, true, {}, fechaIso() };
+		}
+		for (const auto& r : res) anotarResultado(r, automatico, !entregaId.empty());
+		if (cambios) avisar(std::to_string(cambios) + (cambios == 1 ? " cambio de stats listo" : " cambios de stats listos") + ": Phoenix Link lo coloca y avisa en el juego");
+		return R::bien(cambios);
+	}
+
+	Resultado<std::string> Motor::cambiarStats(uint32_t jugador, const std::string& campo, int valor) {
+		using R = Resultado<std::string>;
+		const auto* c = base::campoFicha(campo);
+		if (!c) return R::mal("CAMPO_DESCONOCIDO", campo);
+		if (valor < c->minimo || valor > c->maximo) return R::mal("VALOR_FUERA_DE_RANGO", std::string(c->texto) + ": " + std::to_string(c->minimo) + "–" + std::to_string(c->maximo));
+		if (!jugador) return R::mal("JUGADOR_NO_EXISTE", "0");
+		grupo::Operacion op;
+		op.id = "op-" + entrega::nuevoId().substr(5);
+		op.tipo = "stats"; op.jugador = jugador; op.campo = campo; op.valor = valor;
+		op.autorPc = _en.nombrePc; op.creadoEn = fechaIso(); op.baseSeq = _e.ultimaSeq;
+		if (_compat.huellaBase.empty()) calcularCompat();
+		op.compat = _compat;
+		op.resumen = entrega::recortarResumen(grupo::resumenDe(op, _en.nombreEquipo), 60);
+		_e.entrantes.push_back({ op, "propia", "" });   // se aplica aquí en la próxima vuelta (o ya, abajo)
+		if (!_e.grupoId.empty() && _e.publicar) { _e.porPublicar.push_back(op); _e.anotarHistorial({ fechaIso(), op.id, op.resumen, _en.nombrePc, "por publicar", "" }); }
+		procesarEntrantes();
+		guardar();
+		return R::bien(op.id);
 	}
 
 	json Motor::resumen() const {

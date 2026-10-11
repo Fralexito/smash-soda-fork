@@ -58,7 +58,7 @@ namespace mercado::grupo {
 	struct Operacion {
 		std::string id;                ///< único (lo pone quien publica)
 		int64_t seq = 0;               ///< lo pone la web
-		std::string tipo = "mover";    ///< "mover" | "quitar"
+		std::string tipo = "mover";    ///< "mover" | "quitar" | "stats"
 		uint32_t jugador = 0, equipoOrigen = 0, equipoDestino = 0;
 		uint16_t dorsal = 0;           ///< 0 = el que elija el programa
 		std::string autor, autorPc, creadoEn;
@@ -67,6 +67,8 @@ namespace mercado::grupo {
 		std::string shaResultado;      ///< sha256 del option file de origen DESPUÉS (informativo)
 		std::string resumen;
 		Compat compat;
+		std::string campo;             ///< solo «stats»: campo de Player.bin (FichasBase.h, p. ej. "velocidad")
+		int valor = 0;                 ///< solo «stats»: valor como se ve en el juego
 	};
 	json aJson(const Operacion& op);
 	Resultado<Operacion> deJson(const json& j);
@@ -125,6 +127,7 @@ namespace mercado::grupo {
 	struct Confirmacion { std::string id, estado, motivo; };   ///< aviso pendiente a la web (POST …/aplicada)
 	struct UltimaAplicacion {
 		std::string entregaId, respaldo;   ///< entrega a Link y respaldo hecho justo antes
+		bool stats = false;                ///< la última entrega cambió Player.bin (stats), no el option file
 		std::vector<std::string> ops;
 		std::string fecha;
 	};

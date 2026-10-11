@@ -96,6 +96,9 @@ namespace mercado::sync {
 		Resultado<bool> rechazar(const std::string& id);
 		/// «Deshacer último cambio del grupo»: entrega a Link el option file del respaldo previo.
 		Resultado<std::string> deshacerUltimo();
+		/// Cambia una stat de un jugador (Player.bin de Phoenix-DB) en ESTA PC y, si hay grupo, la publica para todos.
+		/// La web solo la reparte si quien publica es admin del grupo. Devuelve el id de la operación.
+		Resultado<std::string> cambiarStats(uint32_t jugador, const std::string& campo, int valor);
 		Resultado<respaldos::Info> respaldarAhora(const std::string& motivo = "manual");
 		std::vector<respaldos::Info> respaldos() const;
 		/// Restaura un respaldo. Con el juego abierto exige `aunqueJuegoAbierto` (la UI avisa antes).
@@ -148,6 +151,8 @@ namespace mercado::sync {
 		void enviarConfirmaciones();
 		bool calcularCompat();
 		Resultado<int> aplicarInterno(const std::vector<std::string>& ids, bool automatico);
+		Resultado<int> aplicarStats(const std::vector<grupo::Operacion>& ops, bool automatico);
+		void anotarResultado(const grupo::ResultadoOp& r, bool automatico, bool conEntrega);
 	};
 
 }

@@ -16,6 +16,10 @@
 //  PhoenixSync sync-respaldar              «Respaldar ahora»
 //  PhoenixSync sync-respaldos              lista de respaldos
 //  PhoenixSync sync-restaurar <nombre> [--aunque-juego-abierto]
+//  PhoenixSync sync-campos                lista de stats que se pueden cambiar (nombre, rango)
+//  PhoenixSync sync-ficha <jugador>        stats actuales del jugador en Player.bin (Phoenix-DB)
+//  PhoenixSync sync-stats <jugador> <campo> <valor>   cambia una stat aquí y, si hay grupo, la publica
+//                                          (la web solo la reparte si eres admin del grupo)
 // =============================================================================
 
 #include <windows.h>
@@ -25,6 +29,7 @@
 #include <fstream>
 #include <thread>
 
+#include "../core/FichasBase.h"
 #include "../core/RutasJuego.h"
 #include "../core/SyncCompartido.h"
 #include "../windows/Plataforma.h"
@@ -47,6 +52,23 @@ namespace {
 int comandoSync(const std::vector<std::string>& a, ClienteHttp& http, FuenteToken& token) {
 	if (a.empty() || a[0].rfind("sync-", 0) != 0) return -1;
 	const std::string& c = a[0];
+
+	if (c == "sync-campos") {
+		for (const auto& f : base::camposFicha()) std::printf("%-22s %-28s %d–%d\n", f.nombre, f.texto, f.minimo, f.maximo);
+		std::printf("(posiciones: 0 = C, 1 = B, 2 = A)\n");
+		return 0;
+	}
+	if (c == "sync-ficha" && a.size() >= 2) {
+		const auto bases = rutas::buscarPlayerBin(leerJuego());
+		if (bases.empty()) { std::printf("No hay Player.bin en Phoenix-DB (usa sync-juego).\n"); return 1; }
+		auto fb = base::FichasBase::abrir(bases.front().playerBin);
+		if (!fb.ok()) { err(fb.error); return 2; }
+		const uint32_t j = static_cast<uint32_t>(std::strtoul(a[1].c_str(), nullptr, 10));
+		if (!fb.valor->existe(j)) { std::printf("El jugador %u no está en %s\n", j, bases.front().playerBin.c_str()); return 1; }
+		std::printf("Jugador %u · %s\n", j, bases.front().playerBin.c_str());
+		for (const auto& f : base::camposFicha()) { auto v = fb.valor->leer(j, f.nombre); if (v.ok()) std::printf("  %-22s %-28s %d\n", f.nombre, f.texto, *v.valor); }
+		return 0;
+	}
 
 	if (c == "sync-juego" && a.size() >= 2) {
 		std::error_code ec;
@@ -116,6 +138,13 @@ int comandoSync(const std::vector<std::string>& a, ClienteHttp& http, FuenteToke
 		if (c == "sync-publicar") m.ponerPublicar(si); else m.ponerPausa(si);
 		m.guardar();
 		std::printf("%s: %s\n", c == "sync-publicar" ? "Publicar mis fichajes" : "Pausa", si ? "sí" : "no");
+	}
+	else if (c == "sync-stats" && a.size() >= 4) {
+		const uint32_t j = static_cast<uint32_t>(std::strtoul(a[1].c_str(), nullptr, 10));
+		auto r = m.cambiarStats(j, a[2], std::atoi(a[3].c_str()));
+		avisos(m);
+		if (!r.ok()) { err(r.error); return 2; }
+		std::printf("Pedido %s. Phoenix Link lo coloca; el juego lo carga al volver al menú y entrar a un modo.\n", r.valor->c_str());
 	}
 	else if (c == "sync-respaldar") {
 		auto r = m.respaldarAhora("manual");

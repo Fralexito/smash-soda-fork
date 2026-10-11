@@ -1,4 +1,5 @@
 #include "Grupo.h"
+#include "FichasBase.h"
 #include "Sha256.h"
 
 #include <algorithm>
@@ -48,6 +49,7 @@ namespace mercado::grupo {
 			{ "equipo_destino", o.equipoDestino }, { "dorsal", o.dorsal }, { "autor_pc", o.autorPc }, { "creado_en", o.creadoEn },
 			{ "base_seq", o.baseSeq }, { "base", o.base }, { "sha_resultado", o.shaResultado }, { "resumen", o.resumen },
 			{ "parche", o.compat.parche }, { "huella_bd", o.compat.huellaBase }, { "formato", o.compat.formato } };
+		if (o.tipo == "stats") { j["campo"] = o.campo; j["valor"] = o.valor; }
 		if (o.seq) j["seq"] = o.seq;
 		if (!o.autor.empty()) j["autor"] = o.autor;
 		return j;
@@ -84,7 +86,14 @@ namespace mercado::grupo {
 			}
 			else o.compat.formato = 0;
 			if (o.id.empty() || o.id.size() > 64) return R::mal("OPERACION_INVALIDA", "sin id");
-			if (o.tipo != "mover" && o.tipo != "quitar") return R::mal("OPERACION_INVALIDA", "tipo desconocido: " + o.tipo);
+			o.campo = s("campo");
+			o.valor = static_cast<int>(u("valor"));
+			if (o.tipo != "mover" && o.tipo != "quitar" && o.tipo != "stats") return R::mal("OPERACION_INVALIDA", "tipo desconocido: " + o.tipo);
+			if (o.tipo == "stats") {
+				const auto* c = base::campoFicha(o.campo);
+				if (!c) return R::mal("OPERACION_INVALIDA", "campo de stats desconocido: " + o.campo);
+				if (o.valor < c->minimo || o.valor > c->maximo) return R::mal("OPERACION_INVALIDA", "valor fuera de rango para " + o.campo);
+			}
 			if (!o.jugador) return R::mal("OPERACION_INVALIDA", "sin jugador");
 			if (o.tipo == "mover" && !o.equipoDestino) return R::mal("OPERACION_INVALIDA", "sin equipo destino");
 			if (o.tipo == "quitar" && !o.equipoOrigen) return R::mal("OPERACION_INVALIDA", "sin equipo origen");
@@ -244,7 +253,7 @@ namespace mercado::grupo {
 			{ "ultimo_hash_visto", e.ultimoHashVisto }, { "ultimo_hash_subido", e.ultimoHashSubido },
 			{ "hay_foto", e.hayFoto }, { "foto", plantillasAJson(e.foto) },
 			{ "por_publicar", pub }, { "entrantes", ent }, { "por_confirmar", conf }, { "historial", hist },
-			{ "ultima", { { "entrega", e.ultima.entregaId }, { "respaldo", e.ultima.respaldo }, { "ops", e.ultima.ops }, { "fecha", e.ultima.fecha } } },
+			{ "ultima", { { "entrega", e.ultima.entregaId }, { "respaldo", e.ultima.respaldo }, { "ops", e.ultima.ops }, { "fecha", e.ultima.fecha }, { "stats", e.ultima.stats } } },
 			{ "entrega_en_curso", e.entregaEnCurso }, { "entrega_con_base", e.entregaConBase }, { "para_mi_base", miBase } };
 	}
 
@@ -284,7 +293,7 @@ namespace mercado::grupo {
 			e.historial.push_back({ h.value("fecha", ""), h.value("op", ""), h.value("resumen", ""), h.value("autor", ""), h.value("estado", ""), h.value("motivo", "") });
 		if (j.contains("ultima")) {
 			const auto& u = j["ultima"];
-			e.ultima = { u.value("entrega", ""), u.value("respaldo", ""), u.value("ops", std::vector<std::string>{}), u.value("fecha", "") };
+			e.ultima = { u.value("entrega", ""), u.value("respaldo", ""), u.value("stats", false), u.value("ops", std::vector<std::string>{}), u.value("fecha", "") };
 		}
 		e.entregaEnCurso = j.value("entrega_en_curso", "");
 		e.entregaConBase = j.value("entrega_con_base", false);
@@ -322,6 +331,7 @@ namespace mercado::grupo {
 		auto eq = [&](uint32_t id) { std::string n = nombreEquipo ? nombreEquipo(id) : ""; return n.empty() ? "equipo " + std::to_string(id) : n; };
 		if (!op.resumen.empty()) return op.resumen;
 		if (op.tipo == "quitar") return "Jugador " + std::to_string(op.jugador) + " deja " + eq(op.equipoOrigen);
+		if (op.tipo == "stats") { const auto* c = base::campoFicha(op.campo); return "Jugador " + std::to_string(op.jugador) + ": " + (c ? c->texto : op.campo) + " = " + std::to_string(op.valor); }
 		return "Jugador " + std::to_string(op.jugador) + ": " + (op.equipoOrigen ? eq(op.equipoOrigen) : "libre") + " → " + eq(op.equipoDestino);
 	}
 

@@ -14,6 +14,8 @@
 #include "../core/ClienteSync.h"
 #include "../terceros/miniz/miniz.h"
 #include "../core/Entrega.h"
+#include "../core/BaseDatosParche.h"
+#include "../core/FichasBase.h"
 #include "../core/Grupo.h"
 #include "../core/Respaldos.h"
 #include "../core/RutasJuego.h"
@@ -52,6 +54,28 @@ static std::string hacerPA(const std::vector<FilaPA>& filas) {
 	u32(uint32_t(n)); u32(uint32_t(plano.size()));
 	out.append(reinterpret_cast<const char*>(c.data()), n);
 	return out;
+}
+
+// --- Player.bin sintético (WESYS + zlib, registros de 312 B; ID en +8) ------------------
+static std::vector<uint8_t> planoPB(const std::vector<uint32_t>& ids, uint8_t relleno = 0xA5) {
+	std::vector<uint8_t> p(ids.size() * 312, relleno);   // relleno distinto de 0 para ver si se toca algo de más
+	for (size_t i = 0; i < ids.size(); i++) for (int k = 0; k < 4; k++) p[i * 312 + 8 + k] = uint8_t(ids[i] >> (8 * k));
+	return p;
+}
+static std::string hacerPB(const std::vector<uint8_t>& plano) {
+	mz_ulong n = mz_compressBound(mz_ulong(plano.size()));
+	std::vector<uint8_t> c(n);
+	mz_compress2(c.data(), &n, plano.data(), mz_ulong(plano.size()), 6);
+	std::string out("\xff\x10\x81WESYS", 8);
+	auto u32 = [&](uint32_t v) { for (int k = 0; k < 4; k++) out += char(uint8_t(v >> (8 * k))); };
+	u32(uint32_t(n)); u32(uint32_t(plano.size()));
+	out.append(reinterpret_cast<const char*>(c.data()), n);
+	return out;
+}
+static std::vector<uint8_t> desPB(const fs::path& p) {
+	const std::string s = [&] { std::ifstream f(p, std::ios::binary); return std::string(std::istreambuf_iterator<char>(f), {}); }();
+	std::vector<uint8_t> d(s.begin(), s.end());
+	return *descomprimirWesys(d).valor;
 }
 
 // --- Option file FALSO: JSON de plantillas rellenado a 4096 bytes (mismo tamaño siempre) ---
@@ -175,6 +199,8 @@ struct PC {
 		const json e = json::parse(leer(ent / "entrega.json"));
 		for (const auto& a : e["archivos"]) {
 			if (sha256::deArchivo(deRuta(ent / a["nombre"].get<std::string>())) != a["sha256"].get<std::string>()) return false;
+			if (a["nombre"] == "Player.bin")
+				fs::copy_file(ent / "Player.bin", juego / "SiderAddons" / "livecpk" / "Phoenix-DB" / "common" / "etc" / "pesdb" / "Player.bin", fs::copy_options::overwrite_existing);
 			if (a["nombre"] == "PlayerAssignment.bin")
 				fs::copy_file(ent / "PlayerAssignment.bin", juego / "SiderAddons" / "livecpk" / "Phoenix-DB" / "common" / "etc" / "pesdb" / "PlayerAssignment.bin", fs::copy_options::overwrite_existing);
 			if (a["nombre"] == "EDIT00000000") {
@@ -664,6 +690,115 @@ int main() {
 		fralex.fichar(5, 109, 108);
 		fralex.pasar(40);
 		CHECK(!enBase(fralex, 5, 108));
+	}
+
+	std::printf("Stats en Player.bin (FichasBase): solo cambian los bits del campo\n");
+	{
+		const auto plano = planoPB({ 101, 202, 303 });
+		auto fb = base::FichasBase::desdeBytes(std::vector<uint8_t>(hacerPB(plano).begin(), hacerPB(plano).end()));
+		CHECK(fb.ok());
+		if (fb.ok()) {
+			CHECK(fb.valor->jugadores() == 3 && fb.valor->existe(202) && !fb.valor->existe(999));
+			int bien = 0, total_c = 0;
+			for (const auto& c : base::camposFicha()) {   // cada campo, uno por uno, sobre una copia limpia
+				auto f = *fb.valor;
+				const int v = *f.leer(202, c.nombre).valor == c.maximo ? c.minimo : c.maximo;   // siempre distinto del actual
+				total_c++;
+				if (!f.poner(202, c.nombre, v).ok()) continue;
+				auto l = f.leer(202, c.nombre);
+				auto b = f.bytes();
+				if (!l.ok() || *l.valor != v || !b.ok()) continue;
+				auto re = descomprimirWesys(*b.valor);
+				size_t bitsDistintos = 0;
+				for (size_t i = 0; i < plano.size(); i++) for (int k = 0; k < 8; k++)
+					if (((plano[i] ^ (*re.valor)[i]) >> k) & 1) {
+						const size_t bit = (i % 312) * 8 + size_t(k);
+						if (i / 312 != 1 || bit < size_t(c.bit) || bit >= size_t(c.bit + c.bits)) bitsDistintos += 1000;   // fuera del campo: MAL
+						else bitsDistintos++;
+					}
+				if (bitsDistintos < 1000 && f.distintos(*fb.valor) == std::vector<uint32_t>{ 202 }) bien++;
+			}
+			CHECK(bien == total_c);
+			std::printf("  %d de %d campos escriben solo sus bits\n", bien, total_c);
+			auto f = *fb.valor;
+			CHECK(f.poner(202, "velocidad", 100).error.codigo == "VALOR_FUERA_DE_RANGO");
+			CHECK(f.poner(202, "velocidad", 39).error.codigo == "VALOR_FUERA_DE_RANGO");
+			CHECK(f.poner(202, "vuelo", 80).error.codigo == "CAMPO_DESCONOCIDO");
+			CHECK(f.poner(999, "velocidad", 80).error.codigo == "JUGADOR_NO_EXISTE");
+			CHECK(f.poner(101, "velocidad", 40).ok() && *f.leer(101, "velocidad").valor == 40);
+			CHECK(f.poner(101, "forma", 8).ok() && *f.leer(101, "forma").valor == 8);
+			CHECK(f.poner(101, "pos_dc", 0).ok() && *f.leer(101, "pos_dc").valor == 0);
+			const fs::path sal = tmp / "pb" / "Player.bin.nuevo";
+			fs::create_directories(sal.parent_path());
+			CHECK(f.guardarComo(deRuta(sal)).ok());
+			CHECK(f.guardarComo(deRuta(sal)).error.codigo == "DESTINO_OCUPADO");   // nunca sobrescribe
+			auto re = base::FichasBase::abrir(deRuta(sal));
+			CHECK(re.ok() && *re.valor->leer(101, "forma").valor == 8 && re.valor->distintos(f).empty());
+		}
+		// Operación «stats»: ida y vuelta por JSON y validación.
+		grupo::Operacion op; op.id = "op-1"; op.tipo = "stats"; op.jugador = 202; op.campo = "velocidad"; op.valor = 99;
+		auto j = grupo::aJson(op);
+		auto back = grupo::deJson(j);
+		CHECK(back.ok() && back.valor->tipo == "stats" && back.valor->campo == "velocidad" && back.valor->valor == 99);
+		j["campo"] = "vuelo"; CHECK(!grupo::deJson(j).ok());
+		j["campo"] = "velocidad"; j["valor"] = 120; CHECK(!grupo::deJson(j).ok());
+	}
+
+	std::printf("Stats por el grupo: FRALEX cambia, el amigo lo recibe; deshacer\n");
+	{
+		WebFalsa web;
+		const grupo::Plantillas inicial = { { 108, { 1, 2, 3 } }, { 109, { 117047, 5 } } };
+		PC fralex(tmp / "pcs5", "FRALEX", web), amigo(tmp / "pcs5", "AMIGO", web);
+		const fs::path pesdb = fs::path("SiderAddons") / "livecpk" / "Phoenix-DB" / "common" / "etc" / "pesdb";
+		const fs::path buzon = fs::path("SiderAddons") / "content" / "phoenix";
+		const auto plano = planoPB({ 1, 2, 3, 117047, 5 });
+		for (PC* p : { &fralex, &amigo }) {
+			escribirOption(p->edit(), inicial);
+			escribir(p->juego / pesdb / "Player.bin", hacerPB(plano));
+			escribir(p->juego / pesdb / "PlayerAssignment.bin", hacerPA({ { 1, 108, 10, 0, 0 }, { 2, 108, 19, 1, 0 }, { 3, 108, 28, 2, 0 }, { 117047, 109, 7, 0, 0x20 }, { 5, 109, 9, 1, 0 } }));
+			fs::create_directories(p->juego / buzon);
+			p->motor.cargar(); p->motor.elegirGrupo("g");
+		}
+		auto vel = [&](PC& p, uint32_t j) { auto f = base::FichasBase::abrir(deRuta(p.juego / pesdb / "Player.bin")); return f.ok() ? *f.valor->leer(j, "velocidad").valor : -1; };
+		const int v0 = vel(fralex, 117047);
+		fralex.pasar(30); amigo.pasar(30);
+		const std::string editAntes = leer(fralex.edit());
+		auto r = fralex.motor.cambiarStats(117047, "velocidad", 99);
+		CHECK(r.ok());
+		fralex.pasar(20);
+		CHECK(vel(fralex, 117047) == 99);
+		CHECK(leer(fralex.edit()) == editAntes);                         // el option file no se toca
+		CHECK(fs::exists(fralex.juego / buzon / "recargar.txt"));      // aviso de recarga
+		CHECK(web.publicaciones == 1);
+		{ auto d = desPB(fralex.juego / pesdb / "Player.bin"); size_t n = 0; for (size_t i = 0; i < d.size(); i++) if (d[i] != plano[i]) n++; CHECK(n >= 1 && n <= 2); }
+		amigo.pasar(30);
+		CHECK(vel(amigo, 117047) == 99);
+		CHECK(fs::exists(amigo.juego / buzon / "recargar.txt"));
+		CHECK(web.confirmaciones["AMIGO|" + *r.valor] == "aplicada");
+		// No vuelve a publicarse ni a aplicarse (anti-bucle).
+		fralex.pasar(30); amigo.pasar(30);
+		CHECK(web.publicaciones == 1);
+		// Mismo valor otra vez: «ya tenía ese valor», sin entrega nueva.
+		CHECK(fralex.motor.cambiarStats(117047, "velocidad", 99).ok());
+		fralex.pasar(20);
+		CHECK(vel(fralex, 117047) == 99);
+		// Campo o valor malos: error, nada se publica.
+		CHECK(fralex.motor.cambiarStats(117047, "vuelo", 80).error.codigo == "CAMPO_DESCONOCIDO");
+		CHECK(fralex.motor.cambiarStats(117047, "velocidad", 100).error.codigo == "VALOR_FUERA_DE_RANGO");
+		// Deshacer en el amigo: vuelve su Player.bin del respaldo.
+		CHECK(amigo.motor.deshacerUltimo().ok());
+		amigo.linkColoca();
+		CHECK(vel(amigo, 117047) == v0);
+		// Sin grupo: el cambio es solo local.
+		PC solo(tmp / "pcs5", "SOLO", web);
+		escribirOption(solo.edit(), inicial);
+		escribir(solo.juego / pesdb / "Player.bin", hacerPB(plano));
+		solo.motor.cargar();
+		const int pubAntes = web.publicaciones;
+		CHECK(solo.motor.cambiarStats(5, "pt_reflejos", 80).ok());
+		solo.pasar(20);
+		{ auto f = base::FichasBase::abrir(deRuta(solo.juego / pesdb / "Player.bin")); CHECK(f.ok() && *f.valor->leer(5, "pt_reflejos").valor == 80); }
+		CHECK(web.publicaciones == pubAntes);
 	}
 
 	fs::remove_all(tmp);
