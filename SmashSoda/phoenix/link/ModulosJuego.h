@@ -55,6 +55,14 @@ std::vector<Modulo> estado(const fs::path& paquete, const fs::path& juego);
 Resultado instalar(const fs::path& paquete, const fs::path& juego, const std::string& archivo);
 /// Comenta su línea en sider.ini de todos los destinos (con copia previa). El .lua se queda.
 Resultado quitar(const fs::path& paquete, const fs::path& juego, const std::string& archivo);
+/// Desinstala: quita sus líneas de sider.ini (activas o comentadas; con phoenix.lua también la raíz Phoenix-DB)
+/// en la raíz y en cada modo, con copia de sider.ini, y renombra el .lua a <archivo>.desinstalado-<fecha>.
+/// No borra nada: se puede volver a instalar cuando se quiera.
+Resultado desinstalar(const fs::path& paquete, const fs::path& juego, const std::string& archivo);
+/// sider.ini sin las líneas lua.module de este archivo (activas o comentadas). `cambio` = si había alguna.
+std::string quitarLineasModulo(const std::string& ini, const std::string& archivo, bool& cambio);
+/// sider.ini sin la raíz cpk.root de Phoenix-DB (activa o comentada).
+std::string quitarRaizPhoenixDB(const std::string& ini, bool& cambio);
 
 // --- Lógica pura de sider.ini (se prueba sin Windows) --------------------------------------------
 /// Devuelve el sider.ini con la línea del módulo activa. `cambio` = false si ya estaba. "" + error si no hay lista de módulos.

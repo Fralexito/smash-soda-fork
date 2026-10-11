@@ -6,7 +6,7 @@
 // =============================================================================
 import { html, useState, useEffect } from "../lib.js";
 import { t } from "../i18n.js";
-import { accion, avisar, elegirPestana } from "../tienda.js";
+import { accion, avisar, elegirPestana, confirmar } from "../tienda.js";
 import { CuentaWeb } from "./ajustes.js";
 import { Tarjeta, Titulo, AjusteSw, Segmentos, Vacio, Chip, Icono, Boton, cx } from "../ui.js";
 
@@ -169,7 +169,11 @@ function Modulos() {
         </div>` : null}
         ${x.gestionable ? html`<div style="display:flex;gap:8px;flex-wrap:wrap">
           ${puedeInstalar ? html`<${Boton} tipo="lleno mini" deshabilitado=${bloqueado} al=${() => hacer(x.archivo, "instalar")}>${x.estado === "desactualizado" ? t("ACTUALIZAR", "UPDATE") : x.estado === "apagado" ? t("ENCENDER", "TURN ON") : t("INSTALAR", "INSTALL")}</${Boton}>` : null}
-          ${puedeQuitar ? html`<${Boton} tipo="suave mini" deshabilitado=${bloqueado} al=${() => hacer(x.archivo, "quitar")}>${t("APAGAR", "TURN OFF")}</${Boton}>` : null}
+          ${puedeQuitar ? html`<${Boton} tipo="suave mini" deshabilitado=${bloqueado} titulo=${t("Deja de cargarse en el juego; el archivo se queda para volver a encenderlo", "Stops loading in the game; the file stays")} al=${() => hacer(x.archivo, "quitar")}>${t("APAGAR", "TURN OFF")}</${Boton}>` : null}
+          ${x.gestionable && x.estado !== "no_instalado" ? html`<${Boton} tipo="peligro mini" deshabilitado=${bloqueado} titulo=${t("Lo quita del juego por completo (con copia de seguridad)", "Removes it from the game completely (with backup)")}
+            al=${async () => { if (await confirmar({ titulo: t(`¿Desinstalar ${x.archivo}?`, `Uninstall ${x.archivo}?`), texto: x.archivo === "phoenix.lua"
+              ? t("Se quita del juego y de sider.ini (también la carpeta Phoenix-DB deja de usarse: vuelves a los datos del parche). Se guarda copia de todo y puedes volver a instalarlo cuando quieras.", "Removed from the game and sider.ini (Phoenix-DB stops being used). Everything is backed up; reinstall any time.")
+              : t("Se quita del juego y de sider.ini. Se guarda copia de todo y puedes volver a instalarlo cuando quieras.", "Removed from the game and sider.ini. Everything is backed up; reinstall any time."), si: t("Desinstalar", "Uninstall"), peligro: true })) hacer(x.archivo, "desinstalar"); }}>${t("DESINSTALAR", "UNINSTALL")}</${Boton}>` : null}
         </div>` : null}
       </div>`;
     })}

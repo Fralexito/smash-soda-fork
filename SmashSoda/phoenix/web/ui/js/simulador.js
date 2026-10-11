@@ -228,7 +228,7 @@ export function crearSimulador(enviar) {
     const p = s.partido;
     const e = {
       v: 1,
-      app: { version: "0.2.4", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
+      app: { version: "0.2.6", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
       noticias: { cargado: true, lista: s.noticias },
       chatGlobal: { cargado: true, pausado: s.chatGlobal.pausado, esperaSeg: s.chatGlobal.esperaSeg, rev: s.chatGlobal.mensajes.length, error: "" },
       web: { ...s.web, jugadoresLista: 3, versionLiga: "2026.10.08", eventosEnCola: 0 },
@@ -425,7 +425,7 @@ export function crearSimulador(enviar) {
     }),
     "sync.modulo": (d) => {
       if (s.pes.abierto) throw Object.assign(new Error("Cierra PES 2021 primero: Sider lee los módulos al arrancar."), { codigo: "PES_ABIERTO" });
-      const nuevo = d.accion === "instalar" ? "instalado" : "apagado";
+      const nuevo = d.accion === "instalar" ? "instalado" : d.accion === "desinstalar" ? "no_instalado" : "apagado";
       if (d.archivo === "phoenix.lua") s.modPhx = nuevo; else s.modEstadio = nuevo;
       return { ...modulosSim(), mensaje: d.accion === "instalar" ? d.archivo + " instalado en 2 carpetas. Abre PES: en sider.log debe aparecer que cargó." : d.archivo + " apagado (línea comentada en sider.ini)." };
     },

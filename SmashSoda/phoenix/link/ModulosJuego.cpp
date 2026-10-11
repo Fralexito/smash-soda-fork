@@ -197,6 +197,35 @@ std::string comentarLinea(const std::string& ini, const std::string& archivo, bo
 	return cambio ? unir(r) : ini;
 }
 
+std::string quitarLineasModulo(const std::string& ini, const std::string& archivo, bool& cambio) {
+	cambio = false;
+	Lineas r = partir(ini);
+	const std::string buscado = minus(archivo);
+	std::vector<std::string> quedan;
+	for (const std::string& l : r.v) {
+		std::string a; bool c = false;
+		if (lineaModulo(l, a, c) && minus(a) == buscado) { cambio = true; continue; }
+		quedan.push_back(l);
+	}
+	if (!cambio) return ini;
+	r.v = quedan;
+	return unir(r);
+}
+
+std::string quitarRaizPhoenixDB(const std::string& ini, bool& cambio) {
+	cambio = false;
+	Lineas r = partir(ini);
+	std::vector<std::string> quedan;
+	for (const std::string& l : r.v) {
+		std::string ruta; bool c = false;
+		if (lineaRaiz(l, ruta, c) && esPhoenixDB(ruta)) { cambio = true; continue; }
+		quedan.push_back(l);
+	}
+	if (!cambio) return ini;
+	r.v = quedan;
+	return unir(r);
+}
+
 bool tieneRaizPhoenixDB(const std::string& ini) {
 	for (const std::string& l : partir(ini).v) {
 		std::string ruta; bool c = false;
@@ -447,6 +476,39 @@ Resultado quitar(const fs::path& paquete, const fs::path& juego, const std::stri
 	if (!escribirInis(inisNuevos, r)) return r;
 	r.ok = true;
 	r.mensaje = archivo + " apagado (línea comentada en sider.ini; el archivo se queda por si lo vuelves a activar).";
+	return r;
+}
+
+Resultado desinstalar(const fs::path& paquete, const fs::path& juego, const std::string& archivo) {
+	Resultado r;
+	std::error_code ec;
+	if (!nombreSeguro(archivo) || !fs::is_regular_file(paquete / archivo, ec)) { r.mensaje = "Phoenix Link solo desinstala los módulos que él instala."; return r; }
+	const auto ds = destinos(juego);
+	if (ds.empty()) { r.mensaje = "No encuentro las carpetas de Sider del juego: no se tocó nada."; return r; }
+	// 1) Comprobar y preparar TODOS los sider.ini antes de tocar ninguno
+	std::vector<std::pair<fs::path, std::string>> inisNuevos;
+	for (const auto& d : ds) {
+		std::string ini;
+		if (!leer(d.second / "sider.ini", ini, kMaxIni)) { r.mensaje = "No se pudo leer sider.ini en " + d.first + ": no se tocó nada."; return r; }
+		bool c1 = false, c2 = false;
+		std::string nuevo = quitarLineasModulo(ini, archivo, c1);
+		if (archivo == "phoenix.lua") nuevo = quitarRaizPhoenixDB(nuevo, c2);
+		if (c1 || c2) inisNuevos.push_back({ d.second, nuevo });
+	}
+	// 2) sider.ini (con copia y vuelta atrás si falla a medias)
+	if (!inisNuevos.empty() && !escribirInis(inisNuevos, r)) return r;
+	// 3) El .lua se aparta con otro nombre (Sider ya no lo carga y se puede recuperar)
+	int apartados = 0;
+	const std::string marca = ".desinstalado-" + sello();
+	for (const auto& d : ds) {
+		const fs::path f = d.second / "modules" / archivo;
+		if (!fs::is_regular_file(f, ec)) continue;
+		fs::rename(f, d.second / "modules" / (archivo + marca), ec);
+		if (!ec) apartados++;
+	}
+	if (inisNuevos.empty() && apartados == 0) { r.ok = true; r.mensaje = archivo + " no estaba instalado."; return r; }
+	r.ok = true;
+	r.mensaje = archivo + " desinstalado de " + std::to_string(ds.size()) + " carpeta(s). Se guardó copia de sider.ini y el archivo quedó como " + archivo + marca + " por si lo quieres recuperar.";
 	return r;
 }
 

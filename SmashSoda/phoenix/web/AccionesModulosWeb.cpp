@@ -70,13 +70,14 @@ namespace phoenix::web {
 		p.registrar("sync.modulo", [](const json& d, uint64_t) -> std::optional<json> {
 			const std::string archivo = texto(d, "archivo", 64);
 			const std::string que = texto(d, "accion", 16);
-			if (que != "instalar" && que != "quitar") throw ErrorAccion("DATOS_INVALIDOS", "Acción desconocida.");
+			if (que != "instalar" && que != "quitar" && que != "desinstalar") throw ErrorAccion("DATOS_INVALIDOS", "Acción desconocida.");
 			bool abierto = false;
 			const std::filesystem::path juego = carpetaJuego(abierto);
 			if (abierto) throw ErrorAccion("PES_ABIERTO", "Cierra PES 2021 primero: Sider lee los módulos al arrancar.");
 			if (juego.empty()) throw ErrorAccion("SIN_JUEGO", "Abre PES 2021 una vez para que Phoenix Link conozca su carpeta.");
 			const phoenix::modulos::Resultado r = que == "instalar"
 				? phoenix::modulos::instalar(phoenix::modulos::carpetaPaquete(), juego, archivo)
+				: que == "desinstalar" ? phoenix::modulos::desinstalar(phoenix::modulos::carpetaPaquete(), juego, archivo)
 				: phoenix::modulos::quitar(phoenix::modulos::carpetaPaquete(), juego, archivo);
 			if (!r.ok) throw ErrorAccion("NO_SE_PUDO", r.mensaje);
 			json res = listaModulos();
