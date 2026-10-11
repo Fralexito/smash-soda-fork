@@ -40,6 +40,10 @@ function TuMando({ m }) {
       <li>${t("Pulsa «USAR ESTE».", "Press «USE THIS».")}</li>
       <li>${t("En Mandos › Puestos, arrástrate (TÚ) al puesto que quieras. Tu mando mueve ese puesto y puedes cambiarte cuando quieras.", "In Pads › Seats, drag yourself (YOU) to any seat. Your pad drives that seat; switch any time.")}</li>
     </ol>
+    ${m.mandos?.ordenPes?.ds4windows ? html`<div class="caja" style="border-color:var(--warn);font-size:14px;display:flex;flex-direction:column;gap:6px">
+      <b class="warn">${t("DS4Windows está abierto: esconde tu mando a Link.", "DS4Windows is open: it hides your pad from Link.")}</b>
+      <span>${t("Por eso tu DS4 no sale aquí y aparece un «Xbox 360» de más. Ciérralo (clic derecho en su icono junto al reloj › Salir), quítalo del inicio de Windows (Administrador de tareas › Aplicaciones de inicio), reconecta tu mando y pulsa BUSCAR MANDOS.", "That's why your DS4 doesn't show and there's an extra «Xbox 360». Close it, remove it from Windows startup, reconnect your pad and press FIND PADS.")}</span>
+    </div>` : null}
     ${bloqueado ? html`<div class="caja" style="border-color:var(--warn)">${t("Con turnos o torneo activos no se puede cambiar.", "Can't change during hotseat or tournament.")}</div>` : null}
     ${!mar ? html`<div class="ayuda">${t("Buscando mandos…", "Looking for pads…")}</div>` : html`
       <div class="col" style="gap:8px">
