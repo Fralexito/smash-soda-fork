@@ -59,6 +59,11 @@ namespace phoenix::web {
 
 		void alSaludar(AlSaludar fn) { _alSaludar = std::move(fn); }
 
+		/// Portero opcional: si devuelve un texto, la acción no se ejecuta y responde
+		/// error `codigo` con ese mensaje (modo cedido: lo que no es de jugar queda cerrado).
+		using Portero = std::function<std::optional<std::string>(const std::string& accion, const json& datos)>;
+		void fijarPortero(Portero fn, std::string codigo) { _portero = std::move(fn); _codigoPortero = std::move(codigo); }
+
 		/// Mensaje que llega del WebView (JSON en texto). Nunca lanza.
 		void recibir(const std::string& texto);
 
@@ -86,6 +91,8 @@ namespace phoenix::web {
 
 		Enviar _enviar;
 		AlSaludar _alSaludar;
+		Portero _portero;
+		std::string _codigoPortero;
 		std::map<std::string, Accion> _acciones;
 		std::string _ultimoEstado;
 		bool _listo = false;

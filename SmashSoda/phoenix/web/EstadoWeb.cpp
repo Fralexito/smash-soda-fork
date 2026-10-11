@@ -229,6 +229,7 @@ namespace phoenix::web {
 			{"versionLiga", link.versionLiga()}, {"eventosEnCola", link.eventosEnCola()},
 		};
 		e["ajustes"] = estadoAjustes(in);
+		e["cedido"] = estadoCedido(in);
 
 		if (in.ctx.sala == nullptr || in.ctx.hosting == nullptr) {
 			e["sala"] = nullptr;

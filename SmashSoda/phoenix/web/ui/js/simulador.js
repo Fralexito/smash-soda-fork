@@ -74,6 +74,8 @@ export function crearSimulador(enviar) {
     perfilesSala: [{ nombre: "Liga", valores: { plazas: 4, mbps: 15, local: 2, visitante: 2, visibilidad: "amigos" } }],
     buzon: { activo: true, estado: "conectado", ultimo: "00:30", juego: "C:\\Juegos\\PES 2021 ConmeGOL", parche: "ConmeGOL Patch 26", avisos: [{ id: 12, texto: "hola causa", hora: "00:30", escrito: true }, { id: 11, texto: "Tu fichaje de Kaiser ya está listo ⚡", hora: "00:12", escrito: true }, { id: 10, texto: "Recuerda: partido de liga hoy 9 pm", hora: "23:40", escrito: false }] },
     pes: { modo: "off", abierto: true },
+    // Modo cedido (vista previa: el PIN vive solo en memoria; el motor guarda sal$sha256)
+    cedido: { activo: false, parsecId: 0, nombre: "", desde: 0, pin: "", fallos: 0, esperaHasta: 0, ultimoFin: "" },
     biblioteca: [{ id: 1, nombre: "PES 2021", ruta: "C:\\Juegos\\PES 2021 ConmeGOL\\PES2021.exe", parametros: "" }, { id: 2, nombre: "Football Life 2026", ruta: "D:\\FL26\\FL26.exe", parametros: "" }],
     atajos: [{ comando: "!lockall", tecla: 76, nombre: "L" }],
     entrega: { estado: "colocada", id: "demo-1", resumen: "Lamine Yamal: velocidad 99", motivo: "", fecha: "2026-10-09 06:12", puedeDeshacer: true },
@@ -227,6 +229,9 @@ export function crearSimulador(enviar) {
       buzon: s.buzon,
       entrega: s.entrega,
       pes: s.pes,
+      cedido: { activo: s.cedido.activo, parsecId: s.cedido.parsecId, nombre: s.cedido.nombre, desde: s.cedido.desde, pinGuardado: !!s.cedido.pin, atajo: "Ctrl+Alt+F12",
+        juego: s.opciones.biblioteca && s.opciones.biblioteca !== "Default" ? s.opciones.biblioteca : "", pesAbierto: !!s.pes.abierto,
+        espera: Math.max(0, Math.ceil((s.cedido.esperaHasta - Date.now()) / 1000)), ultimoFin: s.cedido.ultimoFin },
       marionetas: s.marionetas,
       teclado: { perfiles: s.perfilesTeclado },
       sala: {
@@ -451,7 +456,44 @@ export function crearSimulador(enviar) {
       const g = s.invitados.filter((x) => !x.falso);
       return { activa: !!s.clasificatoria, pcVinculada: true, sinCuenta: g.filter((x) => !perfiles[x.parsecId]).map((x) => ({ parsecId: x.parsecId, nombre: x.nombre })), sinComprobar: [] };
     },
+    // ---- Modo cedido (mismas reglas que phoenix/web/AccionesCedidoWeb.cpp)
+    "cedido.empezar": (d) => {
+      if (s.cedido.activo) error("YA_CEDIDA", "La PC ya está cedida.");
+      if (!s.abierta) error("SALA_CERRADA", "Abre la sala primero.");
+      const g = s.invitados.find((x) => x.parsecId === d.parsecId);
+      if (!g) error("NO_ESTA", "Esa persona no está en la sala.");
+      if (!s.cedido.pin) { if (!/^\d{4,8}$/.test(d.pinNuevo || "")) error("PIN_INVALIDO", "Elige un PIN de 4 a 8 números para poder recuperar la PC."); s.cedido.pin = d.pinNuevo; }
+      Object.assign(s.cedido, { activo: true, parsecId: g.parsecId, nombre: g.nombre, desde: Date.now(), fallos: 0, esperaHasta: 0, ultimoFin: "" });
+      bot(`Fralex cedió su PC a ${g.nombre}: maneja Phoenix Link y PES con teclado y ratón. Nada más de Windows.`);
+    },
+    "cedido.salir": (d) => {
+      if (!s.cedido.activo) return;
+      if (Date.now() < s.cedido.esperaHasta) error("PIN_ESPERA", "Demasiados intentos. Espera " + Math.ceil((s.cedido.esperaHasta - Date.now()) / 1000) + " s.");
+      if (d.pin !== s.cedido.pin) { if (++s.cedido.fallos >= 5) { s.cedido.fallos = 0; s.cedido.esperaHasta = Date.now() + 60000; } error("PIN_INCORRECTO", "PIN incorrecto."); }
+      finCedido("PIN del anfitrión");
+    },
+    "cedido.pin": (d) => {
+      if (s.cedido.activo) error("PC_CEDIDA", "Primero recupera la PC.");
+      if (s.cedido.pin && d.actual !== s.cedido.pin) error("PIN_INCORRECTO", "El PIN actual no es correcto.");
+      if (!/^\d{4,8}$/.test(d.nuevo || "")) error("PIN_INVALIDO", "El PIN nuevo debe tener de 4 a 8 números.");
+      s.cedido.pin = d.nuevo;
+    },
+    "cedido.abrirPes": () => { s.pes.abierto = true; },
   };
+  function finCedido(motivo) {
+    const g = s.invitados.find((x) => x.parsecId === s.cedido.parsecId);
+    if (g) { g.teclado = false; g.raton = false; }
+    bot(`La PC vuelve al anfitrión (${motivo}). ${s.cedido.nombre} ya no tiene teclado ni ratón.`);
+    Object.assign(s.cedido, { activo: false, parsecId: 0, nombre: "", desde: 0, ultimoFin: motivo });
+  }
+  // Portero: con la PC cedida, solo lo de jugar (copia de phoenix/core/ModoCedido.cpp)
+  const CEDIDO_PERMITIDAS = new Set(["ui.seccion", "ui.copiar", "ui.recargar", "sala.copiarEnlace", "chat.enviar", "chatGlobal.abierto",
+    "mandos.conectar", "mandos.desconectar", "mandos.bloquear", "mandos.liberar", "mandos.asignar", "mandos.intercambiar", "mandos.formacion",
+    "mandos.tomar", "mandos.herramienta", "solicitud.aceptar", "solicitud.rechazar", "partido.preparar", "partido.iniciar", "partido.gol",
+    "partido.pausa", "partido.cambiarLados", "partido.finalizar", "partido.cancelar", "partido.historial", "cedido.salir", "cedido.abrirPes"]);
+  const cedidoPermite = (a, d) => a === "espera.decidir" ? (d.como === "jugador" || d.como === "espectador") : CEDIDO_PERMITIDAS.has(a);
+  // Vista previa: Ctrl+Alt+F12 en el navegador simula el atajo físico del anfitrión
+  window.addEventListener("keydown", (e) => { if (e.ctrlKey && e.altKey && e.key === "F12" && s.cedido.activo) finCedido("el anfitrión pulsó Ctrl+Alt+F12"); });
 
   // Estado cada 200 ms (como el motor real) y una muestra de red por segundo
   setInterval(() => enviar({ t: "estado", datos: estado() }), 200);
@@ -473,6 +515,7 @@ export function crearSimulador(enviar) {
       const fn = acciones[msg.accion];
       try {
         if (!fn) error("ACCION_DESCONOCIDA", `La acción «${msg.accion}» no existe.`);
+        if (s.cedido.activo && !cedidoPermite(msg.accion, msg.datos || {})) error("PC_CEDIDA", "La PC está cedida: eso solo lo puede hacer el anfitrión.");
         const r = fn(msg.datos || {});
         setTimeout(() => enviar({ t: "resp", id: msg.id, ok: true, datos: r || {} }), 60 + Math.random() * 120);
       } catch (e) {

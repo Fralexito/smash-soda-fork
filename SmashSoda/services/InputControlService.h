@@ -31,6 +31,10 @@ public:
     void noteHostPhysicalInput();
     bool handleParsecMessage(const ParsecMessage& message) const;
 
+    // Phoenix (modo cedido): último toque físico del anfitrión y soltar lo que un invitado dejó pulsado.
+    ULONGLONG lastHostPhysicalInputMs() const { return _lastHostPhysicalInputMs.load(std::memory_order_relaxed); }
+    void soltarTodo() const { releaseGuestHeldInputs(); }
+
 private:
     InputControlService() = default;
 

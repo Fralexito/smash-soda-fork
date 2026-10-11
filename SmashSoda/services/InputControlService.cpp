@@ -1,5 +1,6 @@
 #include "InputControlService.h"
 #include "../core/Config.h"
+#include "../phoenix/host/Cedido.h"
 
 #include <algorithm>
 #include <cmath>
@@ -408,6 +409,11 @@ bool InputControlService::handleParsecKeyboard(const ParsecKeyboardMessage& keyb
         return false;
     }
 
+    // Phoenix: PC cedida → solo PES y Link, sin atajos de Windows (lo bloqueado no se inyecta).
+    if (phoenix::cedido::activo() && !phoenix::cedido::dejarTecla(translation.vk, keyboard.pressed)) {
+        return true;
+    }
+
     DWORD flags = keyboard.pressed ? 0 : KEYEVENTF_KEYUP;
     if (translation.extended) {
         flags |= KEYEVENTF_EXTENDEDKEY;
@@ -425,6 +431,10 @@ bool InputControlService::handleParsecMouseButton(const ParsecMouseButtonMessage
     MouseButton button;
     if (!parsecMouseToService(mouseButton.button, button)) {
         return false;
+    }
+
+    if (phoenix::cedido::activo() && !phoenix::cedido::dejarBoton(static_cast<int>(button), mouseButton.pressed)) {
+        return true;
     }
 
     const bool ok = mouseButton.pressed ? mouseButtonDown(button) : mouseButtonUp(button);
@@ -455,6 +465,10 @@ bool InputControlService::handleParsecMouseButton(const ParsecMouseButtonMessage
 }
 
 bool InputControlService::handleParsecMouseWheel(const ParsecMouseWheelMessage& mouseWheel) const {
+    if (phoenix::cedido::activo() && !phoenix::cedido::dejarRueda()) {
+        return true;
+    }
+
     bool ok = true;
 
     if (mouseWheel.x != 0) {

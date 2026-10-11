@@ -56,6 +56,7 @@
 #include "services/ThemeController.h"
 #include "services/ScreenshotService.h"
 #include "services/InputControlService.h"
+#include "phoenix/host/Cedido.h"
 
 using namespace std;
 
@@ -829,8 +830,13 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         if ((wParam & 0xfff0) == SC_KEYMENU) // Disable ALT application menu
             return 0;
         break;
+    case WM_CLOSE:
+        // PC cedida: el invitado no puede cerrar Link (la X de la ventana). El anfitrión sale antes con su PIN o Ctrl+Alt+F12.
+        if (g_hosting.mainWindow == hWnd && phoenix::cedido::activo()) return 0;
+        break;
     case WM_QUIT:
     case WM_DESTROY:
+        if (g_hosting.mainWindow == hWnd) phoenix::cedido::terminar();
         if (g_hosting.mainWindow == hWnd) phoenix::web::InterfazWeb::instancia().cerrar(); // antes de que se destruya la ventana hija
         g_hosting.release();
         RECT windowRect;
@@ -858,6 +864,8 @@ LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
             (keyboard->flags & LLKHF_INJECTED) == 0 &&
             (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN || wParam == WM_KEYUP || wParam == WM_SYSKEYUP)) {
             InputControlService::instance().noteHostPhysicalInput();
+            // Solo teclas físicas (lo que inyecta Link para los invitados llega con LLKHF_INJECTED): Ctrl+Alt+F12 recupera la PC cedida.
+            phoenix::cedido::teclaFisica(keyboard->vkCode, wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN);
         }
     }
 

@@ -9,6 +9,7 @@ import { t } from "../i18n.js";
 import { accion, confirmar, pedirVista } from "../tienda.js";
 import { Tarjeta, Titulo, Avatar, Chip, Boton, AjusteSw, Minigrafica, Ping, PanelLateral, nivelPing, cx, dos } from "../ui.js";
 import { Carta } from "./gente.js";
+import { BotonCeder } from "./cedido.js";
 
 /** El anfitrión primero y luego los invitados reales. */
 export function personasDeSala(m) {
@@ -124,16 +125,17 @@ export function PanelPersona({ id, m, alCerrar }) {
           <div><div class="mut">JITTER</div><b>${r.jitter >= 0 ? r.jitter : "—"}</b></div>
           <div><div class="mut">${t("PICOS", "SPIKES")}</div><b>${r.picos}</b></div></div>` : null}
     </div>
-    <div class="ficha-bloque"><div class="lab acc">${t("ROLES Y PERMISOS", "ROLES AND PERMISSIONS")}</div>
+    ${m?.cedido?.activo ? null : html`<div class="ficha-bloque"><div class="lab acc">${t("ROLES Y PERMISOS", "ROLES AND PERMISSIONS")}</div>
       <${AjusteSw} titulo="VIP" valor=${g.vip} al=${() => accion("gente.vip", { parsecId: g.parsecId, nombre: g.nombre })}/>
       <${AjusteSw} titulo=${t("Moderador", "Moderator")} valor=${g.mod} al=${() => accion("gente.mod", { parsecId: g.parsecId, nombre: g.nombre })}/>
       <${AjusteSw} titulo=${t("Permitir teclado", "Allow keyboard")} valor=${g.teclado} al=${(v) => accion("gente.teclado", { parsecId: g.parsecId, si: v })}/>
       <${AjusteSw} titulo=${t("Permitir ratón", "Allow mouse")} valor=${g.raton} al=${(v) => accion("gente.raton", { parsecId: g.parsecId, si: v })}/>
-    </div>
+    </div>`}
     ${perfil?.carta ? html`<div class="ficha-bloque"><div class="lab acc">${t("CARTA EN LA LIGA", "LEAGUE CARD")}</div><${Carta} perfil=${perfil}/></div>` : null}
-    <div class="ficha-bloque" style="flex-direction:row;gap:10px">
+    ${m?.cedido?.activo ? null : html`<div class="ficha-bloque" style="flex-direction:row;gap:10px;flex-wrap:wrap">
+      <${BotonCeder} g=${g} m=${m}/>
       <${Boton} tipo="warn" al=${expulsar}>${t("EXPULSAR", "KICK")}</${Boton}>
       <${Boton} tipo="peligro" deshabilitado=${g.cop} al=${banear}>${t("BANEAR", "BAN")}</${Boton}>
-    </div>`}
+    </div>`}`}
   </${PanelLateral}>`;
 }

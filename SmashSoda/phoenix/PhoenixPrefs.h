@@ -43,6 +43,9 @@ namespace phoenix {
 		bool soloAutorizados = true;  ///< puestos: pulsar el mando solo da puesto a quien el host autorizó (los demás «quieren jugar»)
 		std::string modoRecarga = "AUTO-SIEMPRE";  ///< phoenix.lua v0.18b (modo.txt): AUTO-SIEMPRE (por defecto) | AUTO-FICHAJES | ACTIVAR
 
+		std::string cedidoPin;     ///< modo cedido: "sal$sha256" del PIN del anfitrión ("" = sin PIN). Nunca el PIN.
+		std::string cedidoExtras;  ///< modo cedido: más ejecutables permitidos, separados por comas (solo a mano en el archivo)
+
 		static PhoenixPrefs& get();
 		void cargar();
 		void guardar() const;

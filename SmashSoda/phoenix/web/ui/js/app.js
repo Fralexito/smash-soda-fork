@@ -18,6 +18,7 @@ import { PanelChat } from "./vistas/chat.js";
 import { UltimaHora } from "./vistas/ultimahora.js";
 import { Paleta } from "./vistas/paleta.js";
 import { vigilarCambios } from "./vigia.js";
+import { BandaCedido, DialogoCeder, DialogoRecuperar, SECCIONES_CEDIDO, PESTANAS_CEDIDO, estaCedida, vigilarCedido } from "./vistas/cedido.js";
 
 const SECCIONES = [
   { id: "sala", es: "SALA", en: "ROOM", vista: VistaSala, pestanas: PESTANAS_SALA },
@@ -27,6 +28,10 @@ const SECCIONES = [
   { id: "sync", es: "SYNC", en: "SYNC", vista: VistaSync, pestanas: PESTANAS_SYNC, meta: metaSync },
   { id: "ajustes", es: "AJUSTES", en: "SETTINGS", vista: VistaAjustes, pestanas: PESTANAS_AJUSTES },
 ];
+
+// PC cedida (vistas/cedido.js): solo Sala, Partido y Mandos, y en ellas solo las pestañas de jugar.
+const seccionesVisibles = (s) => (estaCedida(s) ? SECCIONES.filter((x) => SECCIONES_CEDIDO.includes(x.id)) : SECCIONES);
+const pestanasVisibles = (s, sec) => (estaCedida(s) ? sec.pestanas.filter((p) => PESTANAS_CEDIDO[sec.id]?.includes(p.id)) : sec.pestanas);
 
 // Frase corta de «para qué sirve» cada sección (aparece al pasar el mouse por el menú)
 const PARA_QUE = {
@@ -73,13 +78,13 @@ function Barra({ s }) {
     </div>
     <div class="ultima-hueco"><${UltimaHora} s=${s}/></div>
     <div class="lado">
-      <${GrupoEstado} m=${m} w=${w} enSync=${s.seccion === "sync"}/>
+      <${GrupoEstado} m=${m} w=${w} enSync=${s.seccion === "sync" || estaCedida(s)}/>
       <button class=${cx("pill", s.chatAbierto && "acc")} onClick=${() => alternarChat()} title="Chat (Ctrl+Espacio)">
         <${Icono} n="chat" t=${15}/>CHAT${totalNoLeidos(s) > 0 ? html`<span class="chip bad" style="height:20px">${totalNoLeidos(s) > 99 ? "99+" : totalNoLeidos(s)}</span>` : null}
       </button>
-      <button class="pill atajo" onClick=${() => cambiar({ paleta: true })} title=${t("Buscar acciones", "Search actions")}>
+      ${estaCedida(s) ? null : html`<button class="pill atajo" onClick=${() => cambiar({ paleta: true })} title=${t("Buscar acciones", "Search actions")}>
         <${Icono} n="buscar" t=${15}/><kbd>Ctrl K</kbd></button>
-      <button class="pill acc" onClick=${cambiarTema} title=${t("Cambiar tema", "Switch theme")}>${tema === "sudario" ? "LIGA B" : "GALAXY"}</button>
+      <button class="pill acc" onClick=${cambiarTema} title=${t("Cambiar tema", "Switch theme")}>${tema === "sudario" ? "LIGA B" : "GALAXY"}</button>`}
     </div>
   </header>`;
 }
@@ -120,7 +125,7 @@ function Menu({ s }) {
   const enJuego = m?.partido?.fase === "en_juego" || m?.partido?.fase === "pausado";
   const chapas = { mandos: pendientesMandos, partido: enJuego ? "●" : 0 };
   return html`<nav class="menu" aria-label=${t("Secciones", "Sections")}>
-    ${SECCIONES.map((x) => html`
+    ${seccionesVisibles(s).map((x) => html`
       <button class=${cx("nv", s.seccion === x.id && "on")} title=${t(PARA_QUE[x.id][0], PARA_QUE[x.id][1])} onClick=${() => irA(x.id)} aria-current=${s.seccion === x.id ? "page" : null}>
         <${Icono} n=${x.id} t=${26}/><span>${t(x.es, x.en)}</span>
         ${chapas[x.id] ? html`<span class="chapa">${chapas[x.id]}</span>` : null}
@@ -131,15 +136,19 @@ function Menu({ s }) {
 
 // ---- Contenido -------------------------------------------------------------------
 function Contenido({ s }) {
-  const sec = SECCIONES.find((x) => x.id === s.seccion) || SECCIONES[0];
-  const pestana = s.pestanas[sec.id] || sec.pestanas[0].id;
+  const visibles = seccionesVisibles(s);
+  const sec = visibles.find((x) => x.id === s.seccion) || visibles[0];
+  const pestanas = pestanasVisibles(s, sec);
+  const pedida = s.pestanas[sec.id];
+  const pestana = pestanas.some((p) => p.id === pedida) ? pedida : pestanas[0].id;
   const Vista = sec.vista;
   const meta = sec.meta ? sec.meta(s) : null;
   const info = sec.pestanas.find((p) => p.id === pestana);
   return html`<main class="contenido">
+    <${BandaCedido} s=${s}/>
     <div class="cabecera">
       <div class="pestanas" role="tablist">
-        ${sec.pestanas.map((p) => html`
+        ${pestanas.map((p) => html`
           <button role="tab" aria-selected=${p.id === pestana} class=${cx("tab", p.id === pestana && "on")} onClick=${() => elegirPestana(p.id)}>
             ${t(p.es, p.en)}${p.cuenta ? html`<span class="n">${p.cuenta(s) || ""}</span>` : null}
           </button>`)}
@@ -188,19 +197,27 @@ function App() {
   const tema = m?.app?.tema === "sudario" ? "sudario" : "galaxy";
   useEffect(() => { document.documentElement.dataset.tema = tema; }, [tema]);
   fijarIdioma(m?.app?.idioma || "es");
+  const cedida = !!m?.cedido?.activo;
+  useEffect(() => {
+    vigilarCedido(m);
+    if (cedida) cambiar({ paleta: false, ceder: null });
+  }, [cedida, m?.cedido?.ultimoFin]);
 
   useEffect(() => {
     const tecla = (e) => {
-      if (e.ctrlKey && (e.key === "k" || e.key === "K")) { e.preventDefault(); cambiar({ paleta: !leer().paleta }); }
+      if (e.ctrlKey && (e.key === "k" || e.key === "K")) { e.preventDefault(); if (!estaCedida(leer())) cambiar({ paleta: !leer().paleta }); }
       else if (e.ctrlKey && e.code === "Space") { e.preventDefault(); alternarChat(); }
       else if (e.key === "Escape") {
         const st = leer();
-        if (st.dialogo) cerrarDialogo(false);
+        if (st.recuperar) cambiar({ recuperar: false });
+        else if (st.ceder) cambiar({ ceder: null });
+        else if (st.dialogo) cerrarDialogo(false);
         else if (st.paleta) cambiar({ paleta: false });
         else if (st.chatAbierto) alternarChat(false);
       } else if (e.altKey && !e.ctrlKey && /^[1-6]$/.test(e.key)) {   // Ctrl+Alt+número es «tomar mando» (MandoHost)
         e.preventDefault();
-        irA(SECCIONES[Number(e.key) - 1].id);
+        const x = seccionesVisibles(leer())[Number(e.key) - 1];
+        if (x) irA(x.id);
       }
     };
     window.addEventListener("keydown", tecla);
@@ -217,7 +234,9 @@ function App() {
     </div>
     <${Avisos} avisos=${s.avisos}/>
     <${Dialogo} d=${s.dialogo}/>
-    ${s.paleta ? html`<${Paleta} s=${s}/>` : null}
+    <${DialogoCeder} s=${s}/>
+    <${DialogoRecuperar} s=${s}/>
+    ${s.paleta && !cedida ? html`<${Paleta} s=${s}/>` : null}
     <div class=${cx("carga", s.conectado && "fuera")} aria-hidden=${s.conectado}>
       <${Logo} t=${64}/><div class="nombre">PHOENIX LINK</div><div class="giro"></div>
     </div>`;

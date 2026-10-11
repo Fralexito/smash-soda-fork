@@ -64,6 +64,15 @@ namespace phoenix::web {
 			responderError(id, "ACCION_DESCONOCIDA", "La acción «" + nombre + "» no existe.");
 			return;
 		}
+		if (_portero) {
+			std::optional<std::string> no;
+			try { no = _portero(nombre, datos); }
+			catch (...) { no = std::string("No disponible ahora."); }   // ante la duda, cerrado
+			if (no.has_value()) {
+				responderError(id, _codigoPortero, *no);
+				return;
+			}
+		}
 		try {
 			std::optional<json> r = it->second(datos, id);
 			if (r.has_value()) responder(id, *r);

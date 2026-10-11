@@ -121,6 +121,10 @@ namespace phoenix::web {
 	void registrarAccionesAjustes(Interno& in);
 	void registrarAccionesPartido(Interno& in);
 	void registrarAccionesModulos(Interno& in);
+	void registrarAccionesCedido(Interno& in);
+	/// Modo cedido: atajo del anfitrión, invitado que sale, sala cerrada, interfaz oculta (≈ cada frame).
+	void tickCedido(Interno& in);
+	nlohmann::json estadoCedido(Interno& in);
 
 	nlohmann::json construirEstado(Interno& in);
 	nlohmann::json construirBienvenida(Interno& in);

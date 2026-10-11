@@ -127,7 +127,7 @@ function Heroe({ m, conGuia, verGuia }) {
       <div style="text-align:right"><div class="lab">${t("TIEMPO EN VIVO", "LIVE TIME")}</div>
         <div class="reloj" style="margin-top:8px;font-size:34px">${duracion(sala.segundos)}</div></div>
       ${sala.opciones?.pendiente ? html`<${Boton} tipo="warn" al=${() => accion("sala.aplicar", {}, { ok: t("Cambios aplicados.", "Changes applied.") })}>${t("APLICAR CAMBIOS", "APPLY CHANGES")}</${Boton}>` : null}
-      <${Boton} tipo="peligro lleno enorme" al=${() => cerrarSala(m)}>${t("DETENER SALA", "STOP ROOM")}</${Boton}>
+      ${m?.cedido?.activo ? null : html`<${Boton} tipo="peligro lleno enorme" al=${() => cerrarSala(m)}>${t("DETENER SALA", "STOP ROOM")}</${Boton}>`}
     </div>
   </${Tarjeta}>`;
 }

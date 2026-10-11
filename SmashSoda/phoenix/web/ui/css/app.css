@@ -717,3 +717,9 @@ html.oculta *, html.oculta *::before, html.oculta *::after { animation-play-stat
 .pz-nota { pointer-events: none; fill: var(--mut); font: 600 10px var(--f-mono); letter-spacing: .1em; }
 .pz-nota.bloq { fill: var(--bad); }
 @media (prefers-reduced-motion: reduce) { .pz.esperando .fondo { animation: none; } }
+
+/* ---- Modo cedido (vistas/cedido.js) ---- */
+.banda-cedida { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 14px 18px; border-radius: 14px; border: 1px solid var(--acc); background: var(--acc-suave); }
+.banda-cedida .titulo { font-size: 18px; font-weight: 700; letter-spacing: .06em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.banda-cedida .ayuda { margin-top: 4px; }
+.lista-cedido { margin: 8px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; line-height: 1.4; }

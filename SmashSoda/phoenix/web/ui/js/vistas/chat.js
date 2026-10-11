@@ -13,7 +13,9 @@ export function PanelChat({ s }) {
   const m = s.motor;
   const enSala = !!m?.sala?.abierta;
   // Sala cerrada: GENERAL siempre. Sala abierta: SALA por defecto (el cambio automático lo hace la tienda).
-  const vista = s.chatPestana === "registro" ? "registro" : (enSala && s.chatPestana === "sala" ? "sala" : "general");
+  // PC cedida: el chat GENERAL (la web, con la cuenta del anfitrión) no se usa.
+  const cedida = !!m?.cedido?.activo;
+  const vista = s.chatPestana === "registro" ? "registro" : (enSala && (s.chatPestana === "sala" || cedida) ? "sala" : "general");
   const [texto, setTexto] = useState("");
   const [indice, setIndice] = useState(0);
   const [verCmd, setVerCmd] = useState(false);   // lista de comandos
@@ -81,7 +83,7 @@ export function PanelChat({ s }) {
   return html`<aside class="chat" aria-label="Chat" aria-hidden=${!s.chatAbierto}>
     <div class="cab">
       <div class="seg">
-        <button class=${vista === "general" ? "on" : ""} onClick=${() => elegirPestanaChat("general")}>${t("GENERAL", "GENERAL")}${noGlobal > 0 && vista !== "general" ? html`<span class="cuenta">${noGlobal > 99 ? "99+" : noGlobal}</span>` : null}</button>
+        <button class=${vista === "general" ? "on" : ""} hidden=${cedida} onClick=${() => elegirPestanaChat("general")}>${t("GENERAL", "GENERAL")}${noGlobal > 0 && vista !== "general" ? html`<span class="cuenta">${noGlobal > 99 ? "99+" : noGlobal}</span>` : null}</button>
         ${enSala ? html`<button class=${vista === "sala" ? "on" : ""} onClick=${() => elegirPestanaChat("sala")}>${t("SALA", "ROOM")}${s.noLeidos > 0 && vista !== "sala" ? html`<span class="cuenta">${s.noLeidos > 99 ? "99+" : s.noLeidos}</span>` : null}</button>` : null}
         <button class=${vista === "registro" ? "on" : ""} onClick=${() => elegirPestanaChat("registro")}>${t("REGISTRO", "LOG")}</button>
       </div>

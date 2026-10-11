@@ -13,6 +13,7 @@
 
 #include "WebView2.h"
 #include "AnfitrionWeb.h"
+#include "../host/Cedido.h"
 
 #include <algorithm>
 #include <atomic>
@@ -164,6 +165,7 @@ namespace phoenix::web {
 		/// Abre un enlace externo en el navegador del usuario (solo https).
 		void abrirFuera(const std::wstring& uri) {
 			if (uri.rfind(L"https://", 0) != 0 || uri.rfind(kBase, 0) == 0) return;
+			if (phoenix::cedido::activo()) return;   // PC cedida: nada de abrir el navegador
 			ShellExecuteW(nullptr, L"open", uri.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
 		}
 

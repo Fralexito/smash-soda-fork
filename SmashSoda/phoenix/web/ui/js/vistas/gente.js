@@ -6,6 +6,7 @@ import { html, useState, useEffect } from "../lib.js";
 import { t, fecha } from "../i18n.js";
 import { accion, confirmar, irA } from "../tienda.js";
 import { Permisos } from "./ajustes.js";
+import { BotonCeder } from "./cedido.js";
 import { Tarjeta, Titulo, Boton, AjusteSw, Campo, Avatar, Chip, Icono, Vacio, colorPing, cx, dos } from "../ui.js";
 
 export const PESTANAS_GENTE = [
@@ -156,6 +157,7 @@ function Ficha({ m, g }) {
             <option value="">${libres.length ? t("DAR MANDO…", "GIVE PAD…") : t("SIN MANDOS LIBRES", "NO FREE PADS")}</option>
             ${libres.map((p) => html`<option value=${p.n}>${t("Mando", "Pad")} ${dos(p.n)} · ${p.equipo === "local" ? "Local" : p.equipo === "visitante" ? t("Visita", "Away") : t("Fuera", "Off")}</option>`)}
           </select>`}
+      <${BotonCeder} g=${g} m=${m}/>
       <${Boton} tipo="warn" al=${expulsar}>${t("EXPULSAR", "KICK")}</${Boton}>
       <${Boton} tipo="peligro" deshabilitado=${g.cop} al=${banear}>${t("BANEAR", "BAN")}</${Boton}>
     </div>

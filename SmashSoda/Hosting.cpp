@@ -6,6 +6,7 @@
 #include "phoenix/core/Solicitudes.h"
 #include "services/OverlayService.h"
 #include "services/InputControlService.h"
+#include "phoenix/host/Cedido.h"
 #include "services/GuestStateStore.h"
 #include <deque>
 #include <thread>
@@ -1454,6 +1455,11 @@ void Hosting::pollInputs() {
 			if (hasGuest) {
 				allowKeyboard = guest.allowKeyboardInput;
 				allowMouse = guest.allowMouseInput;
+			}
+
+			// Phoenix · PC cedida: teclado y ratón solo para el invitado elegido (y filtrados en InputControlService).
+			if (phoenix::cedido::activo()) {
+				allowKeyboard = allowMouse = (inputGuest.userID == phoenix::cedido::invitado());
 			}
 
 			if ((inputGuestMsg.type == MESSAGE_MOUSE_BUTTON ||
