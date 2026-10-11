@@ -127,7 +127,7 @@ export function crearSimulador(enviar) {
           ? { datos: true, fase: j.fase, minuto: j.minuto | 0, periodo: j.periodo | 0, golesLocal: j.goles_local ?? -1, golesVisita: j.goles_visita ?? -1,
               pkLocal: j.pk_local ?? -1, pkVisita: j.pk_visita ?? -1, nombreLocal: j.nombre_local || "", nombreVisita: j.nombre_visita || "",
               relojCorre: j.reloj_corre !== false, completo: !!j.completo,
-              goles: (Array.isArray(j.goles) ? j.goles : []).slice(0, 40).map((x) => ({ m: x.m | 0, local: x.l !== "v" })) }
+              goles: (Array.isArray(j.goles) ? j.goles : []).slice(0, 40).map((x) => ({ m: x.m | 0, local: x.l !== "v", jugador: typeof x.j === "string" ? x.j.slice(0, 32) : "", propia: x.pp === true })) }
           : { datos: false };
       } catch { s.juego = { datos: false }; }
       // Goles del juego → marcador (solo cuando cambian en el juego; la corrección manual se respeta)
@@ -148,7 +148,8 @@ export function crearSimulador(enviar) {
         if (s.golesAnunciados < 0 || total < s.golesAnunciados) s.golesAnunciados = total;
         for (let i = s.golesAnunciados; i < total; i++) {
           const x = g.goles[i], lado = (x.local !== p.invertido ? p.a : p.b).nombre;
-          bot(`GOL ${x.m}' de ${lado}. ${p.a.nombre} ${p.a.goles}-${p.b.goles} ${p.b.nombre}`);
+          const quien = x.jugador ? ` (${x.jugador}${x.propia ? ", en propia" : ""})` : "";
+          bot(`GOL ${x.m}' de ${lado}${quien}. ${p.a.nombre} ${p.a.goles}-${p.b.goles} ${p.b.nombre}`);
         }
         s.golesAnunciados = total;
         if (g.fase === "final" && g.completo) acciones["partido.finalizar"]({ anunciar: true });

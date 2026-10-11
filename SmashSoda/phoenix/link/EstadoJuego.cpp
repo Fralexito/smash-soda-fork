@@ -36,13 +36,22 @@ bool parsear(const std::string& texto, EstadoPartidoJuego& e) {
 	e.pkVisita = num("pk_visita", -1, -1, 99);
 	e.relojCorre = !(j.contains("reloj_corre") && j["reloj_corre"].is_boolean() && !j["reloj_corre"].get<bool>());
 	e.completo = j.contains("completo") && j["completo"].is_boolean() && j["completo"].get<bool>();
-	auto nombre = [&j](const char* clave) {
-		if (!j.contains(clave) || !j[clave].is_string()) return std::string();
-		std::string s = j[clave].get<std::string>();
-		if (s.size() > 48) s.resize(48);
+	// Texto corto y limpio: sin saltos ni controles y cortado sin dejar una letra UTF-8 a medias
+	// (un UTF-8 roto haría fallar después el json::dump de lo que Link manda a la web).
+	auto limpiar = [](const nlohmann::json& v, size_t maximo) {
+		if (!v.is_string()) return std::string();
+		const std::string s = v.get<std::string>();
 		std::string limpio;
-		for (char c : s) if (static_cast<unsigned char>(c) >= 0x20) limpio += c;   // sin saltos ni controles
+		for (char c : s) if (static_cast<unsigned char>(c) >= 0x20) limpio += c;
+		if (limpio.size() > maximo) {
+			size_t fin = maximo;
+			while (fin > 0 && (static_cast<unsigned char>(limpio[fin]) & 0xC0) == 0x80) fin--;
+			limpio.resize(fin);
+		}
 		return limpio;
+	};
+	auto nombre = [&j, &limpiar](const char* clave) {
+		return j.contains(clave) ? limpiar(j[clave], 48) : std::string();
 	};
 	e.nombreLocal = nombre("nombre_local");
 	e.nombreVisita = nombre("nombre_visita");
@@ -52,8 +61,15 @@ bool parsear(const std::string& texto, EstadoPartidoJuego& e) {
 			if (e.goles.size() >= 40) break;
 			if (!g.is_object() || !g.contains("m") || !g["m"].is_number()) continue;
 			GolJuego gj;
-			gj.minuto = (std::max)(0, (std::min)(200, g["m"].get<int>()));
+			gj.minuto = static_cast<int>((std::max)(0.0, (std::min)(200.0, g["m"].get<double>())));
 			gj.local = !(g.contains("l") && g["l"].is_string() && g["l"].get<std::string>() == "v");
+			// Goleador (phoenix_estadio v1.1 con Sider 7.3.4+): opcional
+			if (g.contains("j")) gj.jugador = limpiar(g["j"], 32);
+			if (g.contains("id") && g["id"].is_number()) {
+				const double id = g["id"].get<double>();
+				if (id >= 0.0 && id <= 4294967295.0) gj.idJugador = static_cast<uint32_t>(id);
+			}
+			gj.propia = g.contains("pp") && g["pp"].is_boolean() && g["pp"].get<bool>();
 			e.goles.push_back(gj);
 		}
 	}

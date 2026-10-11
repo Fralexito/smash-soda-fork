@@ -130,6 +130,7 @@ Una línea, UTF-8, sin BOM:
 ```
 - `fase`: `menu` | `en_juego` | `pausado` | `descanso` | `final`. Link rechaza cualquier otra.
 - `goles[].l`: `"l"` = local del juego, `"v"` = visita. `m` = minuto (tope 45/90/105/120 según el periodo).
+- **v1.1 (Sider 7.3.4+):** cada gol puede traer también `"j"` (nombre de la camiseta, máx. 24 bytes UTF-8), `"id"` (id del jugador en el juego) y `"pp":true` (en propia puerta). Ver §17.
 - `completo`: solo cuenta con `fase:"final"`. Es `true` si se llegó al 89' de la 2.ª parte o a la prórroga o los penales.
 - **Validez en Link:** el archivo existe, tiene ≤ 5 s (fecha de modificación) y se entiende. Si no, «sin datos del juego» y todo vuelve a manual.
 - Link también entiende la **v1** (sin los campos nuevos).
@@ -370,6 +371,47 @@ Ver `SmashSoda/phoenix/sider/LEEME.md`.
 - **No se instaló nada en el juego real.**
 
 **Futuro:** actualizaciones automáticas desde la web, solo con módulos **firmados** (Ed25519, como `/liga/cambios`), porque un Lua ejecuta código dentro del juego.
+
+---
+
+## 17. Goleador del partido (phoenix_estadio v1.1 · Link 0.2.9 · 2026-10-11)
+
+**Qué se investigó** (para no adivinar direcciones de memoria):
+- La documentación oficial de Sider (`doc/scripting.html`) dice que `match.stats()` solo da el marcador, los penales, el periodo, el reloj y el añadido. **No da goleadores, tarjetas, cambios, posesión ni tiros.**
+- El código fuente oficial (`github.com/pes-modding/sider7`, `sider.cpp`) tiene desde la **7.3.4** (16-feb-2026) un evento nativo **`goal_scored(ctx, info)`**. Trae `player_id`, `player_offset`, `home_or_away` y `player_name_on_shirt` (leído en `player_info + 0x174`). No sale en el historial de versiones, pero está en el código de las etiquetas v7.3.4, v7.4.0 y v7.4.1, y no en la v7.3.3.
+- Comparando las etiquetas v7.3.3 y v7.4.1, el **único evento nuevo** es `goal_scored`. No hay eventos de tarjetas, cambios ni faltas.
+- En la PC de Fralex, Sider es la **7.3.3** (`sider.log`). Su `goalscreams.lua` ya registra `goal_scored` y el log dice `WARN: trying to register for unknown event: "goal_scored"`: hoy no funciona.
+- En 7.3.3, registrar un evento desconocido solo escribe ese WARN (código de `sider_context_register`); no rompe nada.
+
+**Qué hace ahora:**
+1. **Lua:**
+   - `ctx.register("goal_scored", …)`. El nombre se limpia (sin controles; UTF-8 válido o se descarta; máx. 24 bytes).
+   - Se junta con el gol que marca `match.stats()` dentro de una ventana de 12 s, llegue antes o después.
+   - Si en ese lado no hay un gol sin nombre, se busca en el otro y se marca `pp` (gol en propia puerta).
+   - En la tanda de penales se ignora.
+   - Además, corrige un fallo de la v1.0: pasados 60 goles el marcador dejaba de seguirse. Ahora el marcador siempre se sigue y solo se dejan de apuntar minutos pasados 40 goles.
+2. **Link:**
+   - `EstadoJuego` lee `j`, `id` y `pp`. Corta los nombres sin partir una letra UTF-8, porque un UTF-8 roto haría fallar el `json::dump` de lo que va a la web. El tope de lectura sube a 8 KB.
+   - El caso más grande que escribe el Lua (40 goles con nombre) ocupa 3.356 bytes: también cabe en un Link viejo, que lee 4 KB.
+3. **Chat:** «GOL 34' de Fralex (MESSI). Fralex 1-0 Mirko». Si falta el nombre, Link lo espera como mucho 3 s. Con Sider 7.3.3 sale igual, sin nombre.
+4. **Web:**
+   - `liga_vivo.goles`, `detalle.juego.goles` y `partida_fin.juego.goles` llevan `j`/`jugador` y `pp`/`propia`.
+   - El «en vivo» se reenvía cuando llega un nombre.
+   - Función `liga` v2 desplegada: guarda `j` cortado por letras (máx. 32) y `pp`.
+
+**Pruebas:**
+- `pruebas-link/estadojuego_test.cpp` (MSVC): TODO BIEN, sin avisos con /W4.
+- Simulador: goles con nombre y «en propia», y relato en el chat.
+- Build de Release sin errores.
+- **El Lua aún no se ha ejecutado en el juego** (ni hay intérprete Lua en la PC).
+
+**Para que funcione en el juego:**
+- Instalar `phoenix_estadio.lua` v1.1 desde Sync › Módulos del juego.
+- **Actualizar Sider a 7.3.4.** Es lo mínimo: solo trae la corrección de Windows 11 y este evento.
+- No se recomienda 7.4.x por ahora: rompe el truco de memoria de *colorsdemo* y los módulos `CGP_*` de ConmeGOL vienen compilados, así que no se puede comprobar si lo usan.
+- Con Sider 7.3.4, además empieza a funcionar `goalscreams.lua` de ConmeGOL, que ya está instalado.
+
+**Lo que sigue sin poderse saber** sin ingeniería inversa (direcciones de memoria por exe/parche, frágil): tarjetas, cambios, asistencias, posesión, tiros y faltas. Se haría con eventos personalizados de Sider (`custom-events.html`, x64dbg), y solo después de probar lo básico en el juego.
 
 ---
 

@@ -80,6 +80,7 @@ namespace phoenix::web {
 			double soltarEn = 0.0;
 			int golesJuegoL = -1, golesJuegoV = -1;   ///< últimos goles leídos del juego
 			int golesAnunciados = -1;              ///< goles del juego ya anunciados en el chat (-1 = aún sin sincronizar)
+			double golEsperaDesde = -1.0;          ///< gol nuevo aún sin goleador: se espera un poco su nombre (-1 = nada)
 			std::string faseJuego;                 ///< última fase vista en estado.json
 			bool avisoAbandono = false;            ///< ya se avisó de un partido abandonado en el juego
 			double startPendienteHasta = 0.0;      ///< pausa automática: Start espera a que el reloj del juego corra

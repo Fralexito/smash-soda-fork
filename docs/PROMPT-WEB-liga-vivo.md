@@ -20,7 +20,7 @@
     - `origen`: `copafacil | link | staff`;
     - otras columnas: `arbitro`, `detalle` (jsonb con goles y minuto, penales, `doctor`, `reclamo`), `resuelto_por`, `resuelto_en`.
   - `liga_vivo`: una fila por sala mientras dura el partido.
-    - Columnas: `partido_id` (null = amistoso), `local`, `visitante`, `goles_local`, `goles_visita`, `minuto`, `periodo`, `fase` (`previa | en_juego | descanso | pausado | final`), `goles` `[{m, l:"l"|"v"}]` y `actualizado`.
+    - Columnas: `partido_id` (null = amistoso), `local`, `visitante`, `goles_local`, `goles_visita`, `minuto`, `periodo`, `fase` (`previa | en_juego | descanso | pausado | final`), `goles` `[{m, l:"l"|"v", j?, pp?}]` y `actualizado`. `j` = goleador (nombre de la camiseta) y `pp:true` = en propia puerta; solo llegan con Sider 7.3.4+, si no, el gol va sin nombre. Muéstralo como «34′ MESSI» o «80′ ARAUJO (p.p.)». Lo mismo en `liga_partidos.detalle.juego.goles` y en `partida_fin` (`juego.goles[{m, lado, jugador?, propia?}]`).
     - La función la borra al terminar.
 - **Realtime** está activado en `liga_vivo` y `liga_partidos`. Se suscribe con la anon key; no hace falta consultar cada X segundos.
 - **Vista `liga_tabla`**: `edicion_id, nombre, club, pj, g, e, p, gf, gc, dg, pts`. Solo cuenta los resultados `confirmado`.

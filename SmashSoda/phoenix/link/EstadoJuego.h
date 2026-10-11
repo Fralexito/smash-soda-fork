@@ -2,6 +2,7 @@
 // Estado del partido que escribe phoenix.lua (Sider) en <juego>\SiderAddons\content\phoenix\estado.json
 // (cada ~1 s y solo durante el partido). Phoenix Link solo LEE este archivo: nunca lo crea ni lo borra.
 // Si no existe, no se entiende o tiene mas de 5 s, se considera «sin datos del juego» y todo sigue en manual.
+#include <cstdint>
 #include <filesystem>
 #include <string>
 #include <vector>
@@ -9,11 +10,14 @@
 namespace phoenix::juego {
 
 constexpr double kMaxEdadSeg = 5.0;     ///< mas viejo que esto = sin datos
-constexpr size_t kMaxBytes = 4096;      ///< nunca se lee mas que esto
+constexpr size_t kMaxBytes = 8192;      ///< nunca se lee mas que esto (40 goles con goleador caben de sobra)
 
 struct GolJuego {
 	int minuto = 0;
 	bool local = true;            ///< true = gol del equipo local
+	std::string jugador;          ///< nombre de la camiseta del goleador (vacío = no se sabe: Sider 7.3.3)
+	uint32_t idJugador = 0;       ///< id del jugador en el juego (0 = no se sabe)
+	bool propia = false;          ///< lo marcó un jugador del otro equipo (en propia puerta)
 };
 
 struct EstadoPartidoJuego {

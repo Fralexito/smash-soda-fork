@@ -137,7 +137,12 @@ namespace phoenix::web {
 					info["penales_b"] = invertido ? j.pkLocal : j.pkVisita;
 				}
 				json goles = json::array();
-				for (const juego::GolJuego& g : j.goles) goles.push_back({ {"m", g.minuto}, {"lado", g.local != invertido ? "a" : "b"} });
+				for (const juego::GolJuego& g : j.goles) {
+					json x = { {"m", g.minuto}, {"lado", g.local != invertido ? "a" : "b"} };
+					if (!g.jugador.empty()) x["jugador"] = g.jugador;   // goleador (Sider 7.3.4+); "propia" = en propia puerta
+					if (g.propia) x["propia"] = true;
+					goles.push_back(std::move(x));
+				}
 				info["goles"] = goles;
 				d["juego"] = info;
 			}

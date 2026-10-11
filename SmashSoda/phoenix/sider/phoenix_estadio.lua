@@ -17,15 +17,20 @@
 --      y tras 5 seguidos el módulo se apaga solo hasta reiniciar el juego (queda en sider.log).
 --      Sin os.rename no hay escritura atómica: Link descarta una lectura a medias y se queda con la anterior.
 --    · Necesita match-stats.enabled = 1 en sider.ini (ConmeGOL ya lo trae). Si no, no escribe nada.
+--    · v1.1 · GOLEADOR: usa el evento nativo «goal_scored» de Sider 7.3.4+ (player_id, nombre de la
+--      camiseta, local/visita). Con Sider 7.3.3 ese evento no existe: sider.log dice «WARN: trying to
+--      register for unknown event» y todo sigue igual que en la v1.0 (goles con minuto, sin nombre).
 --
 --  Instalar: copiar a SiderAddons\modules\ y añadir al final de la lista de módulos de sider.ini:
 --      lua.module = "phoenix_estadio.lua"
 --  (en la carpeta del modo de ConmeGOL, que es la que copia el switcher). Desinstalar = quitar la línea.
 -- =============================================================================
 
-local m = { version = "1.0" }
+local m = { version = "1.1" }
 
 local MAX_FALLOS   = 5
+local MAX_GOLES    = 40     -- goles que se guardan con su minuto (Link lee como mucho 40)
+local VENTANA_GOL  = 12.0   -- segundos para juntar el aviso «goal_scored» con el gol que marca match.stats()
 local CADA_SEG     = 0.5    -- cada cuánto se mira match.stats()
 local ESCRIBIR_SEG = 1.0    -- estado.json como mucho 1 vez por segundo (y al momento en un gol o un cambio de fase)
 local SALA_SEG     = 1.0    -- sala.txt se relee como mucho 1 vez por segundo (solo con el overlay abierto)
@@ -49,6 +54,8 @@ local estadoArchivo = "sin partido"
 
 local sala = nil             -- lo último leído de sala.txt
 local salaLeida = -1000
+
+local goleadorPendiente = nil   -- aviso «goal_scored» que llegó antes que el gol en match.stats(): { l, id, j, t }
 
 -- ─── utilidades ──────────────────────────────────────────────────────────────
 
@@ -138,7 +145,12 @@ local TOPE = { [1] = 45, [2] = 90, [3] = 105, [4] = 120 }
 local function jsonPartido(extra)
     local goles = {}
     for i, g in ipairs(p.goles) do
-        goles[i] = string.format('{"m":%d,"l":"%s"}', g.m, g.l)
+        -- "j" = nombre de la camiseta y "id" = jugador (solo con Sider 7.3.4+); "pp" = lo marcó uno del otro equipo
+        local extra = ""
+        if g.id then
+            extra = string.format(',"j":%s,"id":%d%s', jsonTexto(g.j), g.id, g.pp and ',"pp":true' or "")
+        end
+        goles[i] = string.format('{"m":%d,"l":"%s"%s}', g.m, g.l, extra)
     end
     return string.format(
         '{"v":2,"fase":"%s","minuto":%d,"segundo":%d,"periodo":%d,"anadido":%d,"reloj_corre":%s,'
@@ -169,6 +181,7 @@ local function empezar()
         maxPeriodo = 0, maxMinuto = 0,
         fase = "menu", completo = false,
     }
+    goleadorPendiente = nil
     log(string.format("[estadio] partido nuevo: %d (%s) vs %d (%s)", idLocal, nombreDe(idLocal), idVisita, nombreDe(idVisita)))
 end
 
@@ -190,11 +203,31 @@ local function terminar()
     estadoArchivo = "sin partido"
 end
 
+-- Pone el goleador al gol más reciente sin nombre (de los últimos VENTANA_GOL segundos):
+-- primero en el lado que dice Sider; si no hay, en el otro (gol en propia puerta).
+local function ponerGoleador(lado, id, nombre, t)
+    for _, intento in ipairs({ { lado, false }, { lado == "l" and "v" or "l", true } }) do
+        for i = #p.goles, 1, -1 do
+            local g = p.goles[i]
+            if t - g.t > VENTANA_GOL then break end
+            if g.l == intento[1] and not g.id then
+                g.id, g.j, g.pp = id, nombre, intento[2]
+                return true
+            end
+        end
+    end
+    return false
+end
+
 local function gol(lado)
+    if #p.goles >= MAX_GOLES then return end
     local tope = TOPE[p.periodo] or 999
     local min = p.minuto + 1
     if min > tope then min = tope end
-    p.goles[#p.goles + 1] = { m = min, l = lado }
+    p.goles[#p.goles + 1] = { m = min, l = lado, t = os.clock() }
+    -- ¿Sider ya avisó de quién lo marcó?
+    local q = goleadorPendiente
+    if q and os.clock() - q.t <= VENTANA_GOL and ponerGoleador(q.l, q.id, q.j, os.clock()) then goleadorPendiente = nil end
 end
 
 local function quitarGol(lado)
@@ -231,8 +264,9 @@ local function mirar()
     local hl = tonumber(st.home_score) or 0
     local al = tonumber(st.away_score) or 0
     local hubo = false
-    while hl > p.gl and #p.goles < 60 do p.gl = p.gl + 1; gol("l"); hubo = true end
-    while al > p.gv and #p.goles < 60 do p.gv = p.gv + 1; gol("v"); hubo = true end
+    -- (el marcador siempre se sigue; gol() deja de apuntar minutos pasados MAX_GOLES)
+    while hl > p.gl and p.gl < 99 do p.gl = p.gl + 1; gol("l"); hubo = true end
+    while al > p.gv and p.gv < 99 do p.gv = p.gv + 1; gol("v"); hubo = true end
     while hl < p.gl do p.gl = p.gl - 1; quitarGol("l"); hubo = true end
     while al < p.gv do p.gv = p.gv - 1; quitarGol("v"); hubo = true end
 
@@ -268,6 +302,27 @@ function m.display_frame(ctx)
     mirar()
     enCursoJuego = false
     fallos = 0
+end
+
+-- Sider 7.3.4+: quién marcó. Puede llegar un poco antes o después de que match.stats() suba el marcador:
+-- si el gol ya está, se le pone el nombre; si no, se guarda y lo recoge gol() (máx. VENTANA_GOL s).
+-- Sider llama a este evento dentro de su propio pcall: un error aquí solo deja una línea en sider.log.
+function m.goal_scored(ctx, info)
+    if apagado or type(info) ~= "table" then return end
+    if p and p.periodo == 5 then return end   -- tanda de penales: no son goles del partido
+    local id = math.floor(tonumber(info.player_id) or 0)
+    if id < 0 or id > 4294967295 then id = 0 end
+    local nombre = tostring(info.player_name_on_shirt or ""):gsub("%c", "")
+    if not esUtf8(nombre) then nombre = "" end   -- un nombre roto rompería el JSON: mejor sin nombre
+    nombre = cortarUtf8(nombre, 24)
+    local lado = (tonumber(info.home_or_away) or 0) ~= 0 and "v" or "l"
+    local t = os.clock()
+    log(string.format("[estadio] goleador: %s (id %d, %s)", nombre, id, lado == "l" and "local" or "visita"))
+    if p and ponerGoleador(lado, id, nombre, t) then
+        escribirEstado()
+    else
+        goleadorPendiente = { l = lado, id = id, j = nombre, t = t }
+    end
 end
 
 function m.set_teams(ctx, home, away)
@@ -345,7 +400,8 @@ local function textoHud()
             local g = {}
             for i, x in ipairs(p.goles) do
                 if i > 10 then g[#g + 1] = "…" break end
-                g[#g + 1] = x.m .. "' " .. (x.l == "l" and eqL or eqV)
+                local quien = (x.j and x.j ~= "") and (" (" .. x.j .. (x.pp and ", en propia" or "") .. ")") or ""
+                g[#g + 1] = x.m .. "' " .. (x.l == "l" and eqL or eqV) .. quien
             end
             L[#L + 1] = "  Goles: " .. table.concat(g, " · ")
         end
@@ -400,6 +456,7 @@ function m.init(ctx)
     ctx.register("set_teams", m.set_teams)
     ctx.register("display_frame", m.display_frame)
     ctx.register("overlay_on", m.overlay_on)
+    ctx.register("goal_scored", m.goal_scored)   -- Sider 7.3.4+ (en 7.3.3 solo deja un WARN en sider.log)
     log("[estadio] v" .. m.version .. " listo. Escribe estado.json/resultado.json y lee sala.txt en " .. carpeta)
 end
 

@@ -538,7 +538,7 @@ namespace phoenix::web {
 			// Partido según el juego (estado.json de phoenix.lua). Sin la edad del archivo: cambiaría en cada foto.
 			const juego::EstadoPartidoJuego ej = link.estadoJuego();
 			json golesJ = json::array();
-			for (const juego::GolJuego& g : ej.goles) golesJ.push_back({ {"m", g.minuto}, {"local", g.local} });
+			for (const juego::GolJuego& g : ej.goles) golesJ.push_back({ {"m", g.minuto}, {"local", g.local}, {"jugador", g.jugador}, {"propia", g.propia} });
 			e["juego"] = ej.valido ? json{ {"datos", true}, {"fase", ej.fase}, {"minuto", ej.minuto}, {"periodo", ej.periodo},
 				{"golesLocal", ej.golesLocal}, {"golesVisita", ej.golesVisita}, {"pkLocal", ej.pkLocal}, {"pkVisita", ej.pkVisita},
 				{"nombreLocal", ej.nombreLocal}, {"nombreVisita", ej.nombreVisita}, {"relojCorre", ej.relojCorre}, {"goles", golesJ} }

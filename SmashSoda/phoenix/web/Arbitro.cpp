@@ -107,12 +107,37 @@ namespace phoenix::web {
 				+ std::to_string(in.partido.ladoB().goles) + " " + in.partido.ladoB().nombre;
 		}
 
-		/// «12' Local, 34' Visita» (máx. 12 goles; el resto se resume).
+		/// « (MESSI)», « (MESSI, en propia)» o «» si el juego no dijo quién (Sider 7.3.3).
+		std::string quienMarco(const juego::GolJuego& g) {
+			if (g.jugador.empty()) return std::string();
+			return " (" + g.jugador + (g.propia ? ", en propia)" : ")");
+		}
+
+		/// Goles para la web: [{m, l, j?, pp?}] con «l» desde el lado A (local del calendario).
+		json golesParaWeb(const juego::EstadoPartidoJuego& j, bool invertido) {
+			json gs = json::array();
+			for (const juego::GolJuego& g : j.goles) {
+				json x = { {"m", g.minuto}, {"l", (g.local != invertido) ? "l" : "v"} };
+				if (!g.jugador.empty()) x["j"] = g.jugador;
+				if (g.propia) x["pp"] = true;
+				gs.push_back(std::move(x));
+			}
+			return gs;
+		}
+
+		/// Cuántos goles traen ya el nombre del goleador (para reenviar el «en vivo» cuando llega uno).
+		int golesConNombre(const juego::EstadoPartidoJuego& j) {
+			int n = 0;
+			for (const juego::GolJuego& g : j.goles) if (!g.jugador.empty()) n++;
+			return n;
+		}
+
+		/// «12' Local (MESSI), 34' Visita» (máx. 12 goles; el resto se resume).
 		std::string lineaGoles(Interno& in, const juego::EstadoPartidoJuego& j) {
 			std::string r;
 			for (size_t i = 0; i < j.goles.size() && i < 12; i++) {
 				if (!r.empty()) r += ", ";
-				r += std::to_string(j.goles[i].minuto) + "' " + nombreEquipo(in, j, j.goles[i].local);
+				r += std::to_string(j.goles[i].minuto) + "' " + nombreEquipo(in, j, j.goles[i].local) + quienMarco(j.goles[i]);
 			}
 			if (j.goles.size() > 12) r += " y " + std::to_string(j.goles.size() - 12) + " más";
 			return r;
@@ -242,6 +267,7 @@ namespace phoenix::web {
 				PhoenixLink::instancia().evento("partida_inicio", "", json{ {"marcador", in.partido.marcador()}, {"auto", true} }.dump());
 				mensajeDelBot(in, "¡Arrancó! " + in.partido.ladoA().nombre + " vs " + in.partido.ladoB().nombre + ". El marcador va solo con el juego.");
 				a.golesAnunciados = static_cast<int>(j.goles.size());
+				a.golEsperaDesde = -1.0;
 				a.golesJuegoL = a.golesJuegoV = -1;
 				vivo = true;
 			}
@@ -261,17 +287,33 @@ namespace phoenix::web {
 			}
 
 			// 2c) Relato en el chat: goles con minuto, descanso y final (marcador automático)
-			if (!vivo) a.golesAnunciados = -1;
+			if (!vivo) { a.golesAnunciados = -1; a.golEsperaDesde = -1.0; }
 			if (vivo && j.valido && pr.marcadorAuto) {
 				const int total = static_cast<int>(j.goles.size());
-				if (a.golesAnunciados < 0 || total < a.golesAnunciados) a.golesAnunciados = total;   // primera vez o gol anulado: sin anunciar
-				for (int i = a.golesAnunciados; i < total; i++) {
-					const juego::GolJuego& g = j.goles[static_cast<size_t>(i)];
-					mensajeDelBot(in, "GOL " + std::to_string(g.minuto) + "' de " + nombreEquipo(in, j, g.local) + ". "
-						+ in.partido.ladoA().nombre + " " + std::to_string(in.partido.ladoA().goles) + "-"
-						+ std::to_string(in.partido.ladoB().goles) + " " + in.partido.ladoB().nombre);
+				if (a.golesAnunciados < 0 || total < a.golesAnunciados) {   // primera vez o gol anulado: sin anunciar
+					a.golesAnunciados = total;
+					a.golEsperaDesde = -1.0;
 				}
-				a.golesAnunciados = total;
+				// Con Sider 7.3.4+ el nombre del goleador llega un poco después del gol: se espera como mucho
+				// kEsperaGoleadorSeg (con Sider 7.3.3 nunca llega y el gol se anuncia igual, sin nombre).
+				constexpr double kEsperaGoleadorSeg = 3.0;
+				if (a.golesAnunciados < total) {
+					bool faltaNombre = false;
+					for (int i = a.golesAnunciados; i < total; i++)
+						if (j.goles[static_cast<size_t>(i)].jugador.empty()) faltaNombre = true;
+					if (a.golEsperaDesde < 0.0) a.golEsperaDesde = ahora;
+					const bool anunciar = !faltaNombre || ahora - a.golEsperaDesde >= kEsperaGoleadorSeg || j.fase == "final";
+					if (anunciar) {
+						for (int i = a.golesAnunciados; i < total; i++) {
+							const juego::GolJuego& g = j.goles[static_cast<size_t>(i)];
+							mensajeDelBot(in, "GOL " + std::to_string(g.minuto) + "' de " + nombreEquipo(in, j, g.local) + quienMarco(g) + ". "
+								+ in.partido.ladoA().nombre + " " + std::to_string(in.partido.ladoA().goles) + "-"
+								+ std::to_string(in.partido.ladoB().goles) + " " + in.partido.ladoB().nombre);
+						}
+						a.golesAnunciados = total;
+						a.golEsperaDesde = -1.0;
+					}
+				}
 				if (j.fase == "descanso" && a.faseJuego == "en_juego") mensajeDelBot(in, "Descanso: " + resumenMarcador(in) + ".");
 				if (j.fase == "final" && j.completo) {
 					const std::string goles = lineaGoles(in, j);
@@ -286,8 +328,7 @@ namespace phoenix::web {
 					}
 					if (a.partidoOficial > 0) {
 						const bool inv = in.partido.mandosInvertidos();   // lado A = DT local del calendario
-						json gs = json::array();
-						for (const juego::GolJuego& g : j.goles) gs.push_back({ {"m", g.minuto}, {"l", (g.local != inv) ? "l" : "v"} });
+						const json gs = golesParaWeb(j, inv);
 						// Ficha del Doctor (solo informativa: el staff la ve; no decide nada)
 						const json doc = in.doctorJson.empty() ? json() : json::parse(in.doctorJson, nullptr, false);
 						PhoenixLink::instancia().ligaResultado(json{
@@ -323,10 +364,9 @@ namespace phoenix::web {
 				const bool inv = in.partido.mandosInvertidos();
 				const int gl = inv ? j.golesVisita : j.golesLocal, gv = inv ? j.golesLocal : j.golesVisita;
 				const std::string fase = j.fase == "menu" ? "previa" : j.fase;
-				const std::string firma = std::to_string(gl) + "-" + std::to_string(gv) + "|" + fase;
+				const std::string firma = std::to_string(gl) + "-" + std::to_string(gv) + "|" + fase + "|" + std::to_string(golesConNombre(j));
 				if (firma != a.vivoFirma || j.minuto >= a.vivoMinuto + 5) {
-					json gs = json::array();
-					for (const juego::GolJuego& g : j.goles) gs.push_back({ {"m", g.minuto}, {"l", (g.local != inv) ? "l" : "v"} });
+					const json gs = golesParaWeb(j, inv);
 					json c = { {"local", in.partido.ladoA().nombre}, {"visitante", in.partido.ladoB().nombre},
 						{"goles_local", (std::max)(0, gl)}, {"goles_visita", (std::max)(0, gv)},
 						{"minuto", (std::max)(0, (std::min)(200, j.minuto))}, {"periodo", j.periodo}, {"fase", fase}, {"goles", gs} };

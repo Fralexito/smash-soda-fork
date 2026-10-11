@@ -9,7 +9,7 @@ Documento completo (qué se hizo, cómo, por qué, cómo conviven con `phoenix.l
 - **En el juego** (overlay de Sider: Espacio, y con 1 / º hasta «PHOENIX ESTADIO»): marcador con los nombres reales de los equipos, minuto y tiempo, goles con su minuto, quién juega en cada lado con su mando y su ping (bien / justo / ALTO), el estado del árbitro y las últimas líneas del chat de la sala.
 - **En Link y en el chat de la sala**:
   - el marcador arranca solo cuando el balón echa a rodar (si los lados ya están elegidos);
-  - cada gol se anuncia con su minuto («GOL 34' de Mirko. Mirko 2-1 Kaiser»);
+  - cada gol se anuncia con su minuto y, con Sider 7.3.4+, el goleador («GOL 34' de Mirko (MESSI). Mirko 2-1 Kaiser»);
   - se anuncia el descanso;
   - al final, el partido se guarda en el historial y se avisa a la web, con los goles.
 - **Juego limpio**: mientras se juega, los invitados no pueden usar Start, Back ni Guía (modo competitivo). Si alguien se cae o tiene más de 150 ms de ping durante 5 s, el juego se pausa (pausa automática; viene apagada hasta probarla). La pausa nunca se pulsa durante una repetición o una celebración: espera a que el reloj vuelva a correr.
@@ -17,7 +17,7 @@ Documento completo (qué se hizo, cómo, por qué, cómo conviven con `phoenix.l
 ## Archivos (todos en `<juego>\SiderAddons\content\phoenix\`)
 | Archivo | Lo escribe | Cuándo | Contenido |
 |---|---|---|---|
-| `estado.json` | `phoenix_estadio.lua` | cada ~1 s **solo durante el partido**, y al momento en un gol o un cambio de fase | `{v:2, fase, minuto, segundo, periodo, anadido, reloj_corre, local, visita, nombre_local, nombre_visita, goles_local, goles_visita, pk_local, pk_visita, goles:[{m,l:"l"|"v"}], completo, torneo, seq}` |
+| `estado.json` | `phoenix_estadio.lua` | cada ~1 s **solo durante el partido**, y al momento en un gol o un cambio de fase | `{v:2, fase, minuto, segundo, periodo, anadido, reloj_corre, local, visita, nombre_local, nombre_visita, goles_local, goles_visita, pk_local, pk_visita, goles:[{m,l:"l"|"v",j?,id?,pp?}], completo, torneo, seq}` (`j`/`id`/`pp` = goleador, desde la v1.1 y solo con Sider 7.3.4+) |
 | `resultado.json` | `phoenix_estadio.lua` | una vez, al salir de un partido **completo** | igual que `estado.json` con `fase:"final"` + `fin` (hora Unix) |
 | `sala.txt` | Phoenix Link (atómico) | al cambiar, y cada 4 s con la hora `t=` | líneas `clave=valor`: `abierta`, `sala`, `local`, `visita`, `marcador`, `goles`, `ja=`/`jb=` `nombre\|ping\|mando` (local/visita), `arbitro`, `chat` (×4), `t` |
 | `avisos.txt` | Phoenix Link | ya existía (avisos de la web; lo muestra `phoenix.lua`) | — |
