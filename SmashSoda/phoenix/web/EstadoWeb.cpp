@@ -27,6 +27,22 @@ namespace phoenix::web {
 	using json = nlohmann::json;
 
 	namespace detalle_estado {
+
+		/// Hora en que se compiló el PhoenixLink.exe abierto (fecha de escritura del propio archivo).
+		std::string compiladoEn() {
+			static std::string cache;
+			if (!cache.empty()) return cache;
+			wchar_t ruta[MAX_PATH];
+			if (GetModuleFileNameW(nullptr, ruta, MAX_PATH) == 0) return cache;
+			WIN32_FILE_ATTRIBUTE_DATA a{};
+			if (!GetFileAttributesExW(ruta, GetFileExInfoStandard, &a)) return cache;
+			FILETIME local{}; SYSTEMTIME st{};
+			if (!FileTimeToLocalFileTime(&a.ftLastWriteTime, &local) || !FileTimeToSystemTime(&local, &st)) return cache;
+			char b[32];
+			snprintf(b, sizeof(b), "%02d/%02d %02d:%02d", st.wDay, st.wMonth, st.wHour, st.wMinute);
+			cache = b;
+			return cache;
+		}
 		/// «Tu mando»: nombre del mando físico que eligió el anfitrión ("" = ninguno, usa el teclado).
 		std::string nombreMiMando() {
 			try {
@@ -219,7 +235,7 @@ namespace phoenix::web {
 		json e;
 		e["v"] = 1;
 		e["app"] = {
-			{"version", kVersion}, {"idioma", I18n::actual()}, {"tema", pr.tema},
+			{"version", kVersion}, {"compilado", detalle_estado::compiladoEn()}, {"idioma", I18n::actual()}, {"tema", pr.tema},
 			{"dev", Config::cfg.general.devMode}, {"soda", Cache::cache.version},
 		};
 		PhoenixLink& link = PhoenixLink::instancia();

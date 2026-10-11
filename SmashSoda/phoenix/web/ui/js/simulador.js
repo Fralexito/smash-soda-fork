@@ -107,6 +107,13 @@ export function crearSimulador(enviar) {
     juego: { datos: false }, golesJuego: null,
     arbitro: { competitivo: true, pausaAuto: false, marcadorAuto: true, soloAutorizados: true, modoRecarga: "AUTO-SIEMPRE", ultimaPausa: "", conStart: false },
     golesAnunciados: -1,
+    // Liga automática: partidos oficiales por jugar (GET /v1/liga/partidos)
+    liga: { cargado: true, error: "", ultimoEnvio: "", pendientes: 0, elegido: 0, elegidoTexto: "", enVivo: false, partidos: [
+      { id: 55, fecha: 9, edicion: "Galaxy League · 1° Edición 2026", estado: "pendiente", local: "Fralex", visitante: "Morgado", clubLocal: "FC Barcelona", clubVisita: "AC Milan", mio: true },
+      { id: 51, fecha: 9, edicion: "Galaxy League · 1° Edición 2026", estado: "pendiente", local: "Roberto", visitante: "Degox", clubLocal: "Inter", clubVisita: "Atlético de Madrid", mio: false },
+      { id: 60, fecha: 10, edicion: "Galaxy League · 1° Edición 2026", estado: "pendiente", local: "Fralex", visitante: "Jeremi", clubLocal: "FC Barcelona", clubVisita: "Chelsea", mio: true },
+      { id: 56, fecha: 10, edicion: "Galaxy League · 1° Edición 2026", estado: "pendiente", local: "Jack", visitante: "Hugo", clubLocal: "Manchester United", clubVisita: "Arsenal", mio: false },
+    ] },
   };
   // Prueba con un estado.json falso: ?estado=estado-prueba.json (junto a index.html). Sin archivo = «sin datos del juego».
   try {
@@ -221,7 +228,7 @@ export function crearSimulador(enviar) {
     const p = s.partido;
     const e = {
       v: 1,
-      app: { version: "1.0.0", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
+      app: { version: "0.2.0", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
       noticias: { cargado: true, lista: s.noticias },
       chatGlobal: { cargado: true, pausado: s.chatGlobal.pausado, esperaSeg: s.chatGlobal.esperaSeg, rev: s.chatGlobal.mensajes.length, error: "" },
       web: { ...s.web, jugadoresLista: 3, versionLiga: "2026.10.08", eventosEnCola: 0 },
@@ -248,6 +255,7 @@ export function crearSimulador(enviar) {
       red: s.abierta ? resumenRed(verSerie) : [],
       partido: { fase: p.fase, a: p.a, b: p.b, segundos: segundosPartido(), inicioMs: 0, invertido: p.invertido },
       juego: s.juego,
+      liga: { ...s.liga, enVivo: s.liga.elegido > 0 && p.fase === "en_juego" },
       arbitro: {
         ...s.arbitro,
         activo: s.arbitro.competitivo && s.abierta && (s.juego.datos ? s.juego.fase === "en_juego" : p.fase === "en_juego"),
@@ -399,6 +407,22 @@ export function crearSimulador(enviar) {
     "sync.deshacerEntrega": () => { s.entrega = { ...s.entrega, estado: "deshecha", puedeDeshacer: false, motivo: "" }; },
     // Módulos del juego (instalador del paquete de Luas): imita ModulosJuego.cpp
     "sync.modulos": () => modulosSim(),
+    // Phoenix Doctor (modo informativo): como phoenix/link/Doctor.cpp
+    "sync.doctor": () => ({
+      modo: "informativo", generado: "2026-10-11 12:30", huella: "7c1e0b9a44d2f0a3b8e65d21c90a4e77f3b2a1c0d9e8f7a6b5c4d3e2f1a0b9c8",
+      juegoEncontrado: true, juego: s.buzon.juego, parche: "ConmeGOL Patch 26", exe: { bytes: 458190848, huellaInicio: "ab12…" },
+      modos: ["Raíz del juego", "Clasicos (No LM)", "ConmeGOL Patch 26", "ConmeGOL Patch 26 (Peru, Chile, Uruguay B)"],
+      luaActivos: ["lib\\CommonLib.lua", "kserv.lua", "sifflet.lua", "phoenix.lua", "phoenix_estadio.lua"],
+      cpkRoots: [".\\livecpk\\Phoenix-DB", ".\\olmosjr23\\Database", ".\\livecpk\\Kits"],
+      archivos: [
+        { nombre: "sider.ini (Raíz del juego)", sha256: "f00d1e…", bytes: 9120 },
+        { nombre: "modules/phoenix.lua (Raíz del juego)", sha256: "a39b54de9f6a…", bytes: 66120 },
+        { nombre: "Phoenix-DB/Player.bin (Raíz del juego)", sha256: "c0ffee12ab34…", bytes: 2401120 },
+        { nombre: "Phoenix-DB/PlayerAssignment.bin (Raíz del juego)", sha256: "d1cf73c6aa01…", bytes: 401220 },
+        { nombre: "option file (EDIT00000000)", sha256: "cb6e176e0b11…", bytes: 1176520 },
+      ],
+      avisos: ["phoenix.lua no es igual en todos los modos del switcher."], pesAbierto: s.pes.abierto,
+    }),
     "sync.modulo": (d) => {
       if (s.pes.abierto) throw Object.assign(new Error("Cierra PES 2021 primero: Sider lee los módulos al arrancar."), { codigo: "PES_ABIERTO" });
       const nuevo = d.accion === "instalar" ? "instalado" : "apagado";
@@ -451,6 +475,14 @@ export function crearSimulador(enviar) {
     },
     "partido.cancelar": () => { s.partido.fase = "libre"; },
     "partido.historial": () => ({ partidos: s.historial }),
+    // Liga automática (como AccionesPartidoWeb.cpp + función «liga»)
+    "partido.oficiales": () => { s.liga.cargado = true; },
+    "partido.oficial": (d) => {
+      const p = s.liga.partidos.find((x) => x.id === d.id);
+      s.liga.elegido = p ? p.id : 0;
+      s.liga.elegidoTexto = p ? `Fecha ${p.fecha} · ${p.local} vs ${p.visitante}` : "";
+      return { texto: s.liga.elegidoTexto };
+    },
     "partido.clasificatoria": (d) => {
       if (typeof d.si === "boolean") s.clasificatoria = d.si;
       const g = s.invitados.filter((x) => !x.falso);

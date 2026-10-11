@@ -41,6 +41,12 @@ Dos trabajos independientes dentro del mismo Phoenix Link:
 - 2026-10-11 · **PENDIENTE-WEB · Ranking 1v1:** Phoenix Link manda ahora `partida_fin` con `datos` v2: lados con `parsec_id`, goles, `cierre` (completo/manual/cancelado), `modo` (1v1/equipos), duración, correcciones, penales y goles con minuto. Es el mismo `POST /v1/eventos`, solo crecen los `datos`. La web tiene que guardarlo y calcular el ranking: `docs/PROMPT-WEB-ranking-1v1.md`. Diseño: `docs/RANKING-1V1.md`. Mercado no se ve afectado.
 - 2026-10-11 · **PENDIENTE-WEB (NO ENVIAR TODAVÍA, Fralex) · Sistema de jugadores:** rangos, prestigio/XP, fair play, logros, temporadas, ficha del jugador y cara a cara: `docs/PROMPT-WEB-sistema-jugadores.md` (va después del ranking 1v1). Link ya tiene el recolector de ficha por jugador (mando, pulsaciones, inactividad, ping, caídas), pero **apagado** (`kFichaJugadorActiva = false`). Diseño y techo de datos: `docs/SISTEMA-JUGADORES.md`.
 - 2026-10-11 · **PENDIENTE-WEB · Presencia:** «ACTIVO» solo con la página web abierta; «EN SALA» con Phoenix Link abierto (Fralex). Link manda ahora `POST /v1/presencia` con `estado: "en_sala"` (antes `disponible`) y `origen: "link"`; si la web responde 400 vuelve solo a `disponible` como antes. La web tiene que aceptar `en_sala`/`origen`, marcar `disponible` desde la propia página y mostrar el más fuerte: `docs/PROMPT-WEB-presencia.md`.
+- 2026-10-11 · **Excepción autorizada por Fralex («autorizo supabase»): el chat LINK aplicó cambios en la web y Supabase.**
+  - Migraciones **102 y 102b** (solo añaden tablas `liga_*`, `liga_vivo` con Realtime, la vista `liga_tabla` y las funciones `liga_resolver_resultado`, `liga_reclamar_resultado` y `liga_designar_arbitro`).
+  - Edge Function nueva **`liga`** v1. No se tocó la función `phoenix` ni nada existente.
+  - Código en el repo web, rama **`liga-automatica`** (5b69fad, sin publicar en `borrador` ni en `main`).
+  - Regla: el resultado lo valida **el staff o el árbitro designado, nunca el host**.
+  - **El chat WEB debe:** juntar la rama `liga-automatica`, usar la 103 para su próxima migración, y hacer las páginas (marcador en vivo con Realtime, panel de validación, «Reclamar», y Liga leyendo `liga_tabla`). Detalle en `docs/LIGA-AUTOMATICA.md` de esa rama.
 
 ## Dos cuentas de Claude (A y B) — protocolo obligatorio
 Fralex usa 2 cuentas; cuando una se queda sin tokens sigue la otra. **La memoria es el repo, no el chat.**
@@ -57,4 +63,5 @@ Fralex usa 2 cuentas; cuando una se queda sin tokens sigue la otra. **La memoria
 3. Si un cambio afecta al otro frente: una línea en la bitácora del otro frente (en su rama) además de la sección «Registro de cambios que afectan al otro chat» de este archivo.
 4. Web y base de datos: NO se tocan desde aquí. Se escribe un prompt para el chat WEB y se anota como `PENDIENTE-WEB`. Contratos: `claude/contrato-v1.md` (Link) y `claude/mercado-api.md` (Mercado) en el proyecto de Claude; endpoints publicados no cambian, solo ganan campos opcionales.
 5. Reglas de Fralex: «si algo se rompe, mejor no lo hagas»; compilar sin errores antes de cada commit; Windows 10 y 11; español; respuestas cortas; nunca pedir secretos; nada a `master` sin su permiso.
+5b. **Versión de Link en cada cambio (Fralex, 2026-10-11):** todo chat que cambie Phoenix Link sube `kVersion` en `SmashSoda/phoenix/PhoenixBuild.h` (0.2.0 → 0.2.1 → …) antes de compilar, y la nombra en su resumen. La barra lateral muestra la versión y la hora de compilación del .exe.
 6. Protocolo completo y prompts de arranque: `claude/PROTOCOLO-MULTICUENTA.md` (proyecto) o `docs/PROTOCOLO-MULTICUENTA.md` del repo web.
