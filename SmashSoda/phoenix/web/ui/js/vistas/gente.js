@@ -211,7 +211,7 @@ function ListaMod({ titulo, items, vacio, render }) {
 }
 
 // ---- Amigos de la web ---------------------------------------------------------------------------
-// Presencia de la web: disponible = activo en la plataforma; en_partida = jugando (partido o PES abierto); en_sala = dentro de una sala.
+// Presencia de la web: disponible = ACTIVO en la página web; en_sala = tiene Phoenix Link abierto; en_partida = jugando (partido o PES abierto).
 const ESTADO_AMIGO = {
   en_sala: ["acc", "EN SALA", "IN ROOM"], en_partida: ["mor vivo", "JUGANDO", "PLAYING"],
   disponible: ["ok", "ACTIVO", "ACTIVE"], ausente: ["warn", "AUSENTE", "AWAY"], desconectado: ["", "DESCONECTADO", "OFFLINE"],

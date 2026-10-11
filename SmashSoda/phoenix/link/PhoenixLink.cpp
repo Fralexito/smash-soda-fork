@@ -1334,9 +1334,13 @@ namespace phoenix {
 			if (ahoraMs() < _proximaPresenciaMs) return false;
 			enPartida = _enPartida;
 		}
-		// «Jugando» = un partido en curso o PES 2021 abierto en esta PC; si no, «disponible» (activo en la plataforma).
+		// «Jugando» = un partido en curso o PES 2021 abierto en esta PC; si no, «en_sala» (tiene Phoenix Link abierto).
+		// «disponible» (ACTIVO) es solo para quien está en la página web: lo marca la web, no Link (Fralex, 2026-10-11).
+		// Si la web todavía no acepta «en_sala», se vuelve a «disponible» para no perder la presencia.
 		const bool jugando = enPartida || _pesAbierto.load();
-		json cuerpo = { {"estado", jugando ? "en_partida" : "disponible"} };
+		const bool sinEnSala = _presenciaSinEnSala;
+		json cuerpo = { {"estado", jugando ? "en_partida" : (sinEnSala ? "disponible" : "en_sala")} };
+		if (!sinEnSala) cuerpo["origen"] = "link";
 		if (!salaId.empty()) cuerpo["sala_id"] = salaId;
 		const http::Respuesta resp = http::peticion("POST", std::string(kBase) + "/v1/presencia", cuerpo.dump(), cabecerasCon(token));
 		const json j = json::parse(resp.cuerpo, nullptr, false);
@@ -1349,6 +1353,10 @@ namespace phoenix {
 			const std::string codigo = j.is_discarded() ? "" : j.value("codigo", "");
 			if (codigo.rfind("TOKEN_", 0) == 0) fallo(codigo, j.value("mensaje", ""), 0);
 			_proximaPresenciaMs = ahoraMs() + 120000; // reintento tranquilo
+			if (resp.estado == 400 && !sinEnSala) {
+				_presenciaSinEnSala = true;            // la web rechazó «en_sala»: el siguiente va como antes
+				_proximaPresenciaMs = ahoraMs() + 5000;
+			}
 		}
 		return true;
 	}

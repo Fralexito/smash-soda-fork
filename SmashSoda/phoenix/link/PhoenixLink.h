@@ -218,6 +218,7 @@ namespace phoenix {
 		std::vector<std::string> _eventos;          ///< cada uno: objeto JSON en texto
 		long long _proximoEnvioEventosMs = 0;
 		long long _proximaPresenciaMs = 0;
+		bool _presenciaSinEnSala = false;   ///< la web aún no acepta «en_sala» desde Link: se manda «disponible» como antes
 		long long _proximoAmigosMs = 0;
 		long long _proximoPerfilesMs = 0;
 		long long _versionLiga = -1;
