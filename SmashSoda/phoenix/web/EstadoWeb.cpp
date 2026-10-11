@@ -340,7 +340,7 @@ namespace phoenix::web {
 				const phoenix::ordenpes::Estado op = phoenix::ordenpes::estado();
 				json casillas = json::array();
 				for (const auto& c : op.casillas) casillas.push_back({ {"n", c.n}, {"puesto", c.puesto}, {"ok", c.ok} });
-				ordenPes = { {"activo", op.activo}, {"estado", op.estado}, {"casillas", casillas}, {"ultimo", op.ultimo}, {"copia", op.copia}, {"error", op.error} };
+				ordenPes = { {"activo", op.activo}, {"estado", op.estado}, {"casillas", casillas}, {"ultimo", op.ultimo}, {"copia", op.copia}, {"error", op.error}, {"ds4windows", op.ds4windows} };
 			}
 			e["mandos"] = {
 				{"lista", lista},
@@ -532,6 +532,16 @@ namespace phoenix::web {
 				{"soloAutorizados", prA.soloAutorizados}, {"modoRecarga", prA.modoRecarga},
 				{"activo", in.arbitro.competitivoActivo}, {"origen", in.arbitro.origen},
 				{"ultimaPausa", in.arbitro.ultimaPausa}, {"conStart", in.arbitro.ultimaConStart} };
+			// Liga automática: partidos oficiales por jugar, el elegido y el último envío del resultado
+			const InfoLiga lg = link.liga();
+			json ofi = json::array();
+			for (const PartidoOficial& po : lg.partidos) {
+				ofi.push_back({ {"id", po.id}, {"fecha", po.fecha}, {"edicion", po.edicionNombre}, {"estado", po.estado},
+					{"local", po.local}, {"visitante", po.visitante}, {"clubLocal", po.clubLocal}, {"clubVisita", po.clubVisita}, {"mio", po.mio} });
+			}
+			e["liga"] = { {"cargado", lg.cargado}, {"error", lg.error}, {"partidos", ofi}, {"ultimoEnvio", lg.ultimoEnvio},
+				{"pendientes", lg.pendientes}, {"elegido", in.arbitro.partidoOficial}, {"elegidoTexto", in.arbitro.oficialTexto},
+				{"enVivo", in.arbitro.vivoMandado} };
 		}
 		e["turnos"] = estadoTurnos();
 		if (in.seccion == "ajustes" && in.pestana == "audio") e["audio"] = estadoAudio(h);

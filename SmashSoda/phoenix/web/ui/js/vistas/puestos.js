@@ -312,6 +312,7 @@ function OrdenPes({ m }) {
       <span class=${cx("punto", punto)}></span><span>${t(es, en)}</span>
       ${o.ultimo ? html`<span class="mono mut" style="font-size:12px">· ${t("último orden", "last sort")} ${o.ultimo}</span>` : null}
     </div>` : null}
+    ${o.activo && o.ds4windows ? html`<div class="caja" style="border-color:var(--warn);font-size:14px"><b class="warn">${t("DS4Windows está abierto.", "DS4Windows is open.")}</b> ${t("Mete su propio mando virtual y desordena los de Link. Ciérralo (y quítalo del inicio de Windows): tu DS4 entra por Mandos › TU MANDO.", "It adds its own virtual pad and shuffles Link's. Close it (and remove it from Windows startup): your DS4 goes through Pads › YOUR PAD.")}</div>` : null}
     ${o.activo && (o.casillas || []).length ? html`<div style="display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:6px">
       ${o.casillas.map((c) => html`<div key=${c.n} class="caja" title=${c.ok ? t("Coincide", "Matches") : t("Pendiente", "Pending")}
           style=${`padding:8px 4px;text-align:center;border-color:${c.ok ? "var(--ok)" : "var(--warn)"}`}>

@@ -37,6 +37,7 @@ namespace phoenix::ordenpes {
 		std::string ultimo;    ///< hora del último orden escrito (HH:MM)
 		std::string copia;     ///< nombre de la copia de seguridad de esta sesión
 		std::string error;
+		bool ds4windows = false;   ///< DS4Windows abierto: mete su propio mando virtual y desplaza a los de Link
 	};
 
 	/// Enciende o apaga el módulo (arranca el hilo la primera vez).

@@ -52,6 +52,18 @@ namespace phoenix::ordenpes {
 			return r + L"\\KONAMI\\eFootball PES 2021 SEASON UPDATE\\settings.dat";
 		}
 
+		bool procesoAbierto(const wchar_t* exe) {
+			HANDLE s = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+			if (s == INVALID_HANDLE_VALUE) return false;
+			PROCESSENTRY32W p{}; p.dwSize = sizeof(p);
+			bool hay = false;
+			for (BOOL ok = Process32FirstW(s, &p); ok; ok = Process32NextW(s, &p)) {
+				if (_wcsicmp(p.szExeFile, exe) == 0) { hay = true; break; }
+			}
+			CloseHandle(s);
+			return hay;
+		}
+
 		bool pesAbierto() {
 			HANDLE s = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
 			if (s == INVALID_HANDLE_VALUE) return false;
@@ -132,6 +144,7 @@ namespace phoenix::ordenpes {
 			std::vector<unsigned long> s;
 			{ std::lock_guard<std::mutex> l(mtx); s = series; }
 			Estado e; e.activo = true;
+			e.ds4windows = procesoAbierto(L"DS4Windows.exe");
 			{ std::lock_guard<std::mutex> l(mtx); e.ultimo = est.ultimo; e.copia = est.copia; }
 
 			const std::wstring ruta = rutaSettings();
