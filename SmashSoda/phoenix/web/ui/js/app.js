@@ -17,6 +17,7 @@ import { VistaAjustes, PESTANAS_AJUSTES } from "./vistas/ajustes.js";
 import { PanelChat } from "./vistas/chat.js";
 import { UltimaHora } from "./vistas/ultimahora.js";
 import { Paleta } from "./vistas/paleta.js";
+import { Tutorial } from "./vistas/tutorial.js";
 import { vigilarCambios } from "./vigia.js";
 import { BandaCedido, DialogoCeder, SECCIONES_CEDIDO, PESTANAS_CEDIDO, estaCedida, vigilarCedido } from "./vistas/cedido.js";
 
@@ -235,6 +236,7 @@ function App() {
     <${Dialogo} d=${s.dialogo}/>
     <${DialogoCeder} s=${s}/>
     ${s.paleta && !cedida ? html`<${Paleta} s=${s}/>` : null}
+    <${Tutorial} s=${s}/>
     <div class=${cx("carga", s.conectado && "fuera")} aria-hidden=${s.conectado}>
       <${Logo} t=${64}/><div class="nombre">PHOENIX LINK</div><div class="giro"></div>
     </div>`;

@@ -1,4 +1,5 @@
 // Paleta de acciones (Ctrl+K): ir a cualquier pantalla o ejecutar lo más usado.
+import { abrirTutorial } from "./tutorial.js";
 import { html, useState, useEffect, useRef, useMemo } from "../lib.js";
 import { t } from "../i18n.js";
 import { accion, cambiar, irA } from "../tienda.js";
@@ -29,6 +30,7 @@ function opciones(m) {
   const sala = m?.sala;
   const r = [];
   const ir = (sec, pes, es, en, icono) => r.push({ es, en, icono, k: t("IR", "GO"), hacer: () => irA(sec, pes) });
+  r.push({ es: "Ver el tutorial de Phoenix Link", en: "Show the Phoenix Link tutorial", icono: "rayo", hacer: abrirTutorial });
   if (sala && !sala.abierta && sala.lista) r.push({ es: "Abrir sala", en: "Open room", icono: "rayo", hacer: abrirSala });
   if (sala?.abierta) {
     r.push({ es: "Copiar enlace de la sala", en: "Copy room link", icono: "copiar", hacer: () => accion("sala.copiarEnlace", {}, { ok: t("Enlace copiado.", "Link copied.") }) });

@@ -126,10 +126,7 @@ export function Entrenador({ m }) {
       "People joined. Give a pad to whoever will play: in Pads › Seats drag each person to a seat. Anyone left in «Watching» only sees the screen.");
     botones = html`<${Boton} tipo="lleno" al=${() => irA("mandos", "puestos")}>${t("IR A PUESTOS", "GO TO SEATS")}</${Boton}>`;
   } else {
-    texto = t("Todo en marcha. Si alguien va con lag, mira Sala › Conexión. Para llevar el marcador del partido, usa Partido.",
-      "All running. If someone lags, check Room › Connection. To keep score, use Match.");
-    botones = html`<${Boton} tipo="suave" al=${() => irA("sala", "red")}>${t("CONEXIÓN", "CONNECTION")}</${Boton}>
-      <${Boton} tipo="suave" al=${() => irA("partido", "vivo")}>${t("PARTIDO", "MATCH")}</${Boton}>`;
+    return null;   // todo en marcha: el recuadro ya no hace falta (Fralex, 2026-10-11)
   }
   return html`<div class="entrenador">
     <span class="acc" style="flex:none"><${Icono} n="rayo" t=${22}/></span>

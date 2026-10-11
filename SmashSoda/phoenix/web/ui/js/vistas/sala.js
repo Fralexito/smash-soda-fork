@@ -85,16 +85,17 @@ function Heroe({ m, conGuia, verGuia }) {
           </div>
         </div>
         <div class="derecha" style="display:flex;gap:12px;flex:none">
-          <div class="caja" style="min-width:120px;display:flex;flex-direction:column;gap:4px">
-            <div class="lab">${t("PLAZAS", "SLOTS")}</div>
-            <div class="disp" style="font-size:40px;font-weight:700;line-height:1;margin-top:6px">${sala.plazas}</div>
-            <div class="mono mut" style="font-size:12px">${t("invitados a la vez", "guests at once")}</div>
-          </div>
-          <div class="caja" style="min-width:120px;display:flex;flex-direction:column;gap:4px">
-            <div class="lab">${t("VISIBILIDAD", "VISIBILITY")}</div>
-            <div class="disp" style="font-size:28px;font-weight:700;line-height:1.2;margin-top:10px">${textoVisibilidad(sala.phoenix?.visibilidad)}</div>
-            <div class="mono mut" style="font-size:12px">${t("quién ve tu sala", "who sees your room")}</div>
-          </div>
+          <${CajaRapida} lab=${t("PLAZAS", "SLOTS")} sub=${t("invitados a la vez", "guests at once")} ir=${["sala", "opciones"]}
+            valor=${html`<div class="disp" style="font-size:40px;font-weight:700;line-height:1;margin-top:6px">${sala.plazas}</div>`}>
+            <div class="ayuda">${t("Cuántos invitados pueden estar a la vez en tu sala.", "How many guests can be in your room at once.")}</div>
+            <${Stepper} valor=${sala.opciones?.plazas ?? sala.plazas ?? 0} min=${0} max=${20} al=${(v) => accion("sala.opciones", { plazas: v })}/>
+          </${CajaRapida}>
+          <${CajaRapida} lab=${t("VISIBILIDAD", "VISIBILITY")} sub=${t("quién ve tu sala", "who sees your room")} ir=${["sala", "opciones"]}
+            valor=${html`<div class="disp" style="font-size:28px;font-weight:700;line-height:1.2;margin-top:10px">${textoVisibilidad(sala.phoenix?.visibilidad)}</div>`}>
+            <div class="ayuda">${t("Quién ve tu sala en el radar de la web.", "Who sees your room on the website radar.")}</div>
+            <${Segmentos} valor=${sala.phoenix?.visibilidad} al=${(v) => accion("sala.phoenix", { visibilidad: v })} opciones=${[
+              { valor: "publica", texto: t("PÚBLICA", "PUBLIC") }, { valor: "amigos", texto: t("AMIGOS", "FRIENDS") }, { valor: "privada", texto: t("PRIVADA", "PRIVATE") }]}/>
+          </${CajaRapida}>
         </div>
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
@@ -165,6 +166,34 @@ function ListaParaAbrir({ m }) {
       <span class="marca-paso">${p.ok ? "✓" : p.mal ? "×" : "!"}</span>
       <span style="min-width:0"><div class="t">${p.t}</div><div class="d">${p.d}</div></span>
     </button>`)}</div>`;
+}
+
+/** Recuadro de la portada que se ajusta ahí mismo: al pulsarlo abre un panel rápido; «Más opciones ›» lleva al apartado. */
+function CajaRapida({ lab, valor, sub, ir, estilo = "min-width:120px", ancho = false, children }) {
+  const [abierto, setAbierto] = useState(false);
+  useEffect(() => {
+    if (!abierto) return undefined;
+    const fuera = (e) => { if (!e.target.closest?.(".caja-rapida")) setAbierto(false); };
+    const tecla = (e) => { if (e.key === "Escape") setAbierto(false); };
+    document.addEventListener("mousedown", fuera);
+    window.addEventListener("keydown", tecla);
+    return () => { document.removeEventListener("mousedown", fuera); window.removeEventListener("keydown", tecla); };
+  }, [abierto]);
+  return html`<div class="caja-rapida" style=${`position:relative;display:flex;${estilo}`}>
+    <button class=${cx("caja", "caja-boton", abierto && "on")} aria-expanded=${abierto} title=${t("Cambiar aquí", "Change here")}
+      style="flex:1;display:flex;flex-direction:column;gap:4px;text-align:left;font:inherit;color:inherit;cursor:pointer" onClick=${() => setAbierto(!abierto)}>
+      <div class="lab" style="display:flex;justify-content:space-between;gap:8px">${lab}<span class="mut" aria-hidden="true">✎</span></div>
+      ${valor}
+      <div class="mono mut" style="font-size:12px">${sub}</div>
+    </button>
+    ${abierto ? html`<div class=${cx("rapido", ancho && "ancho")} role="dialog" aria-label=${lab}>
+      ${children}
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:4px">
+        <button class="enlace-mas" onClick=${() => { setAbierto(false); irA(ir[0], ir[1]); }}>${t("Más opciones ›", "More options ›")}</button>
+        <${Boton} tipo="mini lleno" al=${() => setAbierto(false)}>${t("LISTO", "DONE")}</${Boton}>
+      </div>
+    </div>` : null}
+  </div>`;
 }
 
 function textoVisibilidad(v) {
@@ -275,11 +304,23 @@ function ResumenRed({ m }) {
     <div class="lab">${lab}</div>
     <div class="disp" style=${`font-size:24px;font-weight:700;margin-top:8px;${color ? "color:" + color : ""}`}>${val}</div>
     <div class="ayuda" style="margin-top:4px">${sub}</div></div>`;
+  const grande = (val, color) => html`<div class="disp" style=${`font-size:24px;font-weight:700;margin-top:8px;${color ? "color:" + color : ""}`}>${val}</div>`;
+  const mbps = c.mbps ?? 15;
   return html`<div style="margin-top:22px">
     <div class="lab acc" style="margin-bottom:10px">${t("TU RED PARA JUGAR", "YOUR NETWORK")}</div>
     <div style="display:flex;gap:10px;flex-wrap:wrap">
-      ${dato(t("CALIDAD", "QUALITY"), auto ? t("AUTOMÁTICA", "AUTO") : (c.mbps ?? 15) + " Mbps", auto ? por + " Mbps " + t("por persona", "per person") : t("manual", "manual"))}
-      ${dato(t("INVITADOS", "GUESTS"), aguanta ? "~" + aguanta : "—", aguanta ? t("aguanta tu subida", "your upload handles") : t("escribe tu subida en Opciones", "enter your upload in Options"), aguanta ? "var(--ok)" : null)}
+      <${CajaRapida} ancho estilo="flex:1;min-width:150px" lab=${t("CALIDAD", "QUALITY")} ir=${["sala", "opciones"]}
+        valor=${grande(auto ? t("AUTOMÁTICA", "AUTO") : mbps + " Mbps")} sub=${auto ? por + " Mbps " + t("por persona", "per person") : t("manual", "manual")}>
+        <${AjusteSw} titulo=${t("Calidad automática", "Auto quality")} desc=${t("Link reparte tu subida entre los invitados.", "Link splits your upload among guests.")} valor=${auto} al=${(v) => accion("sala.anchoAuto", { auto: v })}/>
+        ${auto ? html`<${Ajuste} titulo=${t("Por persona", "Per person")}><${Stepper} valor=${por} min=${1} max=${50} sufijo="Mbps" al=${(v) => accion("sala.anchoAuto", { porPersona: v })}/></${Ajuste}>`
+          : html`<div style="display:flex;gap:6px;flex-wrap:wrap">${PRESETS_CALIDAD.map((p) => html`<button key=${p.id} class=${cx("chip-perfil", c.fps === p.fps && mbps === p.mbps && "on")}
+              onClick=${() => accion("sala.calidad", { fps: p.fps, mbps: p.mbps })} title=${t(p.d[0], p.d[1])}>${t(p.es, p.en)} · ${p.mbps}</button>`)}</div>`}
+      </${CajaRapida}>
+      <${CajaRapida} ancho estilo="flex:1;min-width:150px" lab=${t("INVITADOS", "GUESTS")} ir=${["sala", "opciones"]}
+        valor=${grande(aguanta ? "~" + aguanta : "—", aguanta ? "var(--ok)" : null)} sub=${aguanta ? t("aguanta tu subida", "your upload handles") : t("toca para escribir tu subida", "tap to enter your upload")}>
+        <div class="ayuda">${t("Mide tu subida en fast.com («Más información») y escríbela: Link calcula cuántos aguanta tu internet.", "Measure your upload at fast.com and enter it: Link works out how many your internet handles.")}</div>
+        <${Ajuste} titulo=${t("Tu subida", "Your upload")}><${Stepper} valor=${subida} min=${0} max=${10000} ancho=${4} sufijo="Mbps" al=${(v) => accion("sala.anchoAuto", { subida: v })}/></${Ajuste}>
+      </${CajaRapida}>
       ${c.energia === "ahorro" ? dato(t("ENERGÍA", "POWER"), t("AHORRO", "SAVER"), t("cámbiala en Windows", "change it in Windows"), "var(--warn)") : null}
     </div>
   </div>`;
