@@ -264,6 +264,7 @@ namespace mercado::sync {
 		if (_e.pausado) { guardar(); return; }
 		respaldoDiario();
 		leerConfig(false);
+		revisarOficial();
 		detectarPropios();
 		entregarMiBase();
 		publicarPendientes();
@@ -774,6 +775,141 @@ namespace mercado::sync {
 		return R::bien(op.id);
 	}
 
+	// --- Option file oficial ---------------------------------------------------------------
+	void Motor::revisarOficial() {
+		if (_e.grupoId.empty()) return;
+		const int64_t t = ahora();
+		if (t - _ultimoOficial < _en.segundosOficial) return;
+		if (!_ritmo.puede("oficial", t)) return;
+		_ultimoOficial = t;
+		auto o = _web.oficial(_e.grupoId);
+		if (!o.ok()) {
+			_ritmo.fallo("oficial", t, (o.error.codigo == "RUTA_NO_ENCONTRADA" || o.error.codigo == "SIN_OFICIAL") ? 300 : _web.reintentarEn());
+			return;
+		}
+		_ritmo.exito("oficial", t);
+		if (o.valor->version <= _e.versionOficial) return;
+		// La primera foto (PC nueva en el grupo) siempre se pone; después, solo en modo automático.
+		const bool auto_ = _e.versionOficial == 0 || (_e.config.leida && _e.config.modo == grupo::Modo::Automatico);
+		if (!auto_) {
+			if (_avisadoOficial != o.valor->version) { avisar("Hay un option file oficial nuevo (versión " + std::to_string(o.valor->version) + "): PhoenixSync sync-oficial"); _avisadoOficial = o.valor->version; }
+			return;
+		}
+		auto r = ponerOficial(*o.valor);
+		if (!r.ok()) {
+			if (r.error.codigo == "ENTREGA_PENDIENTE") _ultimoOficial = t - _en.segundosOficial + 10;   // reintento pronto
+			else avisar("No se pudo poner el option file oficial: " + r.error.detalle);
+		}
+	}
+
+	Resultado<int> Motor::bajarOficial(bool forzar) {
+		using R = Resultado<int>;
+		if (_e.grupoId.empty()) return R::mal("SIN_GRUPO", "Esta PC no está en ningún grupo");
+		auto o = _web.oficial(_e.grupoId);
+		if (!o.ok()) return R{ std::nullopt, o.error };
+		if (!forzar && o.valor->version <= _e.versionOficial) return R::bien(0);
+		auto r = ponerOficial(*o.valor);
+		guardar();
+		return r;
+	}
+
+	Resultado<int> Motor::ponerOficial(const Oficial& o) {
+		using R = Resultado<int>;
+		if (entrega::hayPendiente(carpetaEntrega()) || !_e.entregaEnCurso.empty())
+			return R::mal("ENTREGA_PENDIENTE", "Phoenix Link todavía no colocó la entrega anterior; se reintenta solo");
+		const std::string juego = _en.carpetaJuego ? _en.carpetaJuego() : std::string();
+		const std::string parche = juego.empty() ? "desconocido" : rutas::nombreParche(juego);
+		if (!o.parche.empty() && o.parche != "desconocido" && parche != "desconocido" && o.parche != parche)
+			return R::mal("INCOMPATIBLE", "La foto oficial es del parche «" + o.parche + "» y tú tienes «" + parche + "»");
+		const std::string edit = editActivo();
+		if (edit.empty()) return R::mal("SIN_OPTION_FILE", "No se encontró tu option file (Documentos\\KONAMI\\…\\save\\EDIT00000000)");
+		const bool hayBase = !asignacionBase().empty();
+		const bool hayPlayer = !rutas::buscarPlayerBin(juego).empty();
+
+		const fs::path dir = aRuta(carpetaTrabajo());
+		std::error_code ec;
+		fs::create_directories(dir, ec);
+		std::vector<entrega::Archivo> archivos;
+		std::string rutaEdit, shaEdit;
+		for (const auto& a : o.archivos) {
+			if (a.nombre == "PlayerAssignment.bin" && !hayBase) { avisar("La foto oficial trae PlayerAssignment.bin pero no tienes Phoenix-DB: se omite"); continue; }
+			if (a.nombre == "Player.bin" && !hayPlayer) { avisar("La foto oficial trae Player.bin pero no tienes Phoenix-DB: se omite"); continue; }
+			const std::string destino = deRuta(dir / (a.nombre + ".oficial-v" + std::to_string(o.version)));
+			fs::remove(aRuta(destino), ec);
+			auto d = _web.descargar(a, destino);
+			if (!d.ok()) return R{ std::nullopt, d.error };
+			if (a.nombre == "EDIT00000000") { rutaEdit = destino; shaEdit = a.sha256; }
+			archivos.push_back({ a.nombre, destino });
+		}
+		if (rutaEdit.empty()) return R::mal("RESPUESTA_INVALIDA", "La foto oficial no trae el option file");
+		if (fs::file_size(aRuta(rutaEdit), ec) != fs::file_size(aRuta(edit), ec))
+			return R::mal("TAMANO_DISTINTO", "El option file oficial no mide lo mismo que el tuyo (¿otro parche?); Link lo rechazaría");
+		auto leido = _of.leer(rutaEdit);
+		if (!leido.ok()) return R::mal("OPTION_INVALIDO", "El option file oficial no se pudo leer: " + leido.error.codigo);
+
+		auto resp = respaldarAhora("antes de la foto oficial v" + std::to_string(o.version));
+		if (!resp.ok()) return R::mal("RESPALDO_FALLIDO", resp.error.detalle);
+		const std::string id = entrega::nuevoId();
+		auto w = entrega::escribir(carpetaEntrega(), id, "Option file oficial v" + std::to_string(o.version), archivos, fechaIso());
+		if (!w.ok()) return R::mal(w.error.codigo, "No se pudo dejar la entrega para Link: " + w.error.detalle);
+
+		_e.anotarConocida(shaEdit);                       // anti-bucle: no es un fichaje mío
+		_e.foto = leido.valor->plantillas; _e.hayFoto = true; _e.ultimoHashVisto = shaEdit;
+		_e.entregaEnCurso = id;
+		_e.entregaConBase = archivos.size() > 1;
+		_e.ultima = { id, resp.valor->nombre, false, {}, fechaIso() };
+		_e.versionOficial = o.version;
+		if (o.seq > _e.ultimaSeq) { _e.ultimaSeq = o.seq; _e.etagOperaciones.clear(); }
+		_e.paraMiBase.clear();                           // la base oficial manda
+		for (auto it = _e.entrantes.begin(); it != _e.entrantes.end();) {   // lo que ya viene dentro de la foto
+			if (it->op.seq > 0 && it->op.seq <= o.seq) {
+				historial(it->op, "aplicada", "incluida en la foto oficial v" + std::to_string(o.version));
+				_e.aplicadas.insert(it->op.id);
+				confirmarLuego(it->op.id, "aplicada", "incluida en la foto oficial");
+				it = _e.entrantes.erase(it);
+			}
+			else ++it;
+		}
+		_e.anotarHistorial({ fechaIso(), "", "Option file oficial v" + std::to_string(o.version) + (o.publicadoPor.empty() ? "" : " (de " + o.publicadoPor + ")"), _en.nombrePc, "aplicada", "" });
+		avisar("Option file oficial v" + std::to_string(o.version) + " listo: Phoenix Link lo coloca y avisa en el juego");
+		return R::bien(1);
+	}
+
+	Resultado<int64_t> Motor::publicarOficial() {
+		using R = Resultado<int64_t>;
+		if (_e.grupoId.empty()) return R::mal("SIN_GRUPO", "Esta PC no está en ningún grupo");
+		const std::string edit = editActivo();
+		if (edit.empty()) return R::mal("SIN_OPTION_FILE", "No se encontró tu option file");
+		const std::string juego = _en.carpetaJuego ? _en.carpetaJuego() : std::string();
+		std::vector<std::pair<std::string, std::string>> locales = { { "EDIT00000000", edit } };
+		if (const std::string pa = asignacionBase(); !pa.empty()) locales.push_back({ "PlayerAssignment.bin", pa });
+		if (const auto pb = rutas::buscarPlayerBin(juego); !pb.empty()) locales.push_back({ "Player.bin", pb.front().playerBin });
+		// Copia quieta de cada archivo (el juego podría estar escribiendo): se sube la copia.
+		const fs::path dir = aRuta(carpetaTrabajo());
+		std::error_code ec;
+		fs::create_directories(dir, ec);
+		std::vector<ArchivoOficial> subidos;
+		for (const auto& [nombre, ruta] : locales) {
+			const fs::path copia = dir / (nombre + ".subida");
+			fs::copy_file(aRuta(ruta), copia, fs::copy_options::overwrite_existing, ec);
+			if (ec) return R::mal("ARCHIVO_ERROR", "No se pudo copiar " + ruta);
+			const std::string sha = sha256::deArchivo(deRuta(copia));
+			const long long tam = static_cast<long long>(fs::file_size(copia, ec));
+			auto s = _web.pedirSubida(_e.grupoId, nombre, sha, tam);
+			if (!s.ok()) return R{ std::nullopt, s.error };
+			auto u = _web.subirArchivo(s.valor->url, deRuta(copia));
+			if (!u.ok()) return R{ std::nullopt, u.error };
+			subidos.push_back(*s.valor);
+			if (nombre == "EDIT00000000") _e.anotarConocida(sha);
+		}
+		auto v = _web.publicarOficial(_e.grupoId, juego.empty() ? "desconocido" : rutas::nombreParche(juego), _e.ultimaSeq, subidos);
+		if (!v.ok()) return R{ std::nullopt, v.error };
+		_e.versionOficial = *v.valor;
+		_e.anotarHistorial({ fechaIso(), "", "Publicaste el option file oficial v" + std::to_string(*v.valor), _en.nombrePc, "publicada", "" });
+		guardar();
+		return R::bien(*v.valor);
+	}
+
 	json Motor::resumen() const {
 		json pend = json::array(), hist = json::array();
 		for (const auto& x : _e.entrantes)
@@ -793,7 +929,7 @@ namespace mercado::sync {
 			{ "ultima_seq", _e.ultimaSeq }, { "por_publicar", _e.porPublicar.size() }, { "por_confirmar", _e.porConfirmar.size() },
 			{ "entrantes", pend }, { "historial", hist },
 			{ "ultimo_cambio_aplicado", { { "fecha", _e.ultima.fecha }, { "ops", _e.ultima.ops.size() }, { "respaldo", _e.ultima.respaldo } } },
-			{ "entrega_en_curso", _e.entregaEnCurso } };
+			{ "entrega_en_curso", _e.entregaEnCurso }, { "version_oficial", _e.versionOficial } };
 	}
 
 }

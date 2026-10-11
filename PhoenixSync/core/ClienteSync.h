@@ -47,6 +47,15 @@ namespace mercado::sync {
 		bool sinCambios = false;              ///< 304
 	};
 
+	/// «Foto oficial» del grupo (option file + base), publicada por el admin.
+	struct ArchivoOficial { std::string nombre, sha256, url, ruta; long long tamano = 0; };
+	struct Oficial {
+		int64_t version = 0;               ///< sube en 1 con cada publicación
+		int64_t seq = 0;                   ///< operaciones del grupo ya incluidas (hasta esta seq)
+		std::string parche, publicadoPor, publicadoEn;
+		std::vector<ArchivoOficial> archivos;   ///< EDIT00000000 (obligatorio), PlayerAssignment.bin, Player.bin
+	};
+
 	class ClienteSync {
 	public:
 		ClienteSync(ClienteHttp& http, FuenteToken& token, Registro registro = nullptr, std::string base = kBaseSync);
@@ -55,6 +64,18 @@ namespace mercado::sync {
 		Resultado<Lote> operaciones(const std::string& grupoId, int64_t desde, const std::string& etag);
 		Resultado<int64_t> publicar(const std::string& grupoId, const grupo::Operacion& op);
 		Resultado<bool> confirmar(const std::string& grupoId, const std::string& opId, const std::string& estado, const std::string& motivo);
+
+		// Option file oficial (contrato: prompts/PROMPT-WEB-oficial-y-control-total.md)
+		/// GET /v1/sync/oficial → la última foto oficial (SIN_OFICIAL si el admin aún no publicó ninguna).
+		Resultado<Oficial> oficial(const std::string& grupoId);
+		/// POST /v1/sync/oficial/subida → URL firmada para subir UN archivo (solo admin).
+		Resultado<ArchivoOficial> pedirSubida(const std::string& grupoId, const std::string& nombre, const std::string& sha256, long long tamano);
+		/// PUT del archivo a la URL firmada (sin token: la URL ya lleva el permiso).
+		Resultado<bool> subirArchivo(const std::string& url, const std::string& rutaLocal);
+		/// POST /v1/sync/oficial → publica la foto con los archivos ya subidos (solo admin). Devuelve la versión.
+		Resultado<int64_t> publicarOficial(const std::string& grupoId, const std::string& parche, int64_t seq, const std::vector<ArchivoOficial>& archivos);
+		/// Baja un archivo de la foto y comprueba tamaño y sha256 (si no cuadra, lo borra).
+		Resultado<bool> descargar(const ArchivoOficial& a, const std::string& rutaDestino);
 
 		/// Segundos que pidió esperar la web en el último 429 (0 si no).
 		int reintentarEn() const { return _reintentarEn; }

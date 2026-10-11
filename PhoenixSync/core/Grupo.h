@@ -153,6 +153,7 @@ namespace mercado::grupo {
 		std::deque<LineaHistorial> historial;  ///< últimas 200
 		UltimaAplicacion ultima;
 		std::string entregaEnCurso;            ///< id de entrega escrita, esperando a Link
+		int64_t versionOficial = 0;            ///< última foto oficial puesta en esta PC (0 = ninguna)
 		bool entregaConBase = false;           ///< la entrega en curso lleva PlayerAssignment.bin (al colocarla: recargar.txt)
 		std::vector<Operacion> paraMiBase;     ///< mis propios fichajes que faltan en MI base (con baseEnEntrega)
 

@@ -1,10 +1,14 @@
 #include "ClienteSync.h"
 #include "Entrega.h"
+#include "Sha256.h"
 
 #include <algorithm>
+#include <filesystem>
+#include <fstream>
 #include <regex>
 
 using json = nlohmann::json;
+namespace fs = std::filesystem;
 
 namespace mercado::sync {
 
@@ -124,6 +128,71 @@ namespace mercado::sync {
 		if (!r.ok()) return Resultado<int64_t>{ std::nullopt, r.error };
 		const json& d = *r.valor;
 		return Resultado<int64_t>::bien(d.is_object() && d.contains("seq") && d["seq"].is_number_integer() ? d["seq"].get<int64_t>() : 0);
+	}
+
+	Resultado<Oficial> ClienteSync::oficial(const std::string& grupoId) {
+		using R = Resultado<Oficial>;
+		auto r = llamar("GET", "/v1/sync/oficial?grupo_id=" + codificarUrl(grupoId), "", "", nullptr);
+		if (!r.ok()) return R{ std::nullopt, r.error };
+		const json& d = *r.valor;
+		if (!d.is_object() || !d.contains("archivos") || !d["archivos"].is_array()) return R::mal("RESPUESTA_INVALIDA", "Falta «archivos»");
+		Oficial o;
+		auto n = [&](const json& j, const char* k) -> int64_t { return j.contains(k) && j[k].is_number_integer() ? j[k].get<int64_t>() : 0; };
+		auto s = [&](const json& j, const char* k) { return j.contains(k) && j[k].is_string() ? j[k].get<std::string>() : std::string(); };
+		o.version = n(d, "version"); o.seq = n(d, "seq");
+		o.parche = s(d, "parche"); o.publicadoPor = s(d, "publicado_por"); o.publicadoEn = s(d, "publicado_en");
+		for (const auto& a : d["archivos"]) {
+			ArchivoOficial x{ s(a, "nombre"), s(a, "sha256"), s(a, "url"), s(a, "ruta"), n(a, "tamano") };
+			if (!entrega::nombrePermitido(x.nombre) && x.nombre != "PlayerAssignment.bin") return R::mal("RESPUESTA_INVALIDA", "archivo no permitido: " + x.nombre);
+			if (x.sha256.size() != 64 || x.tamano <= 0 || x.tamano > 64ll * 1024 * 1024 || x.url.rfind("https://", 0) != 0) return R::mal("RESPUESTA_INVALIDA", "archivo mal descrito: " + x.nombre);
+			o.archivos.push_back(x);
+		}
+		if (o.version <= 0 || std::none_of(o.archivos.begin(), o.archivos.end(), [](const auto& a) { return a.nombre == "EDIT00000000"; }))
+			return R::mal("RESPUESTA_INVALIDA", "La foto oficial no trae el option file");
+		return R::bien(std::move(o));
+	}
+
+	Resultado<ArchivoOficial> ClienteSync::pedirSubida(const std::string& grupoId, const std::string& nombre, const std::string& sha256, long long tamano) {
+		using R = Resultado<ArchivoOficial>;
+		const json cuerpo = { { "grupo_id", grupoId }, { "nombre", nombre }, { "sha256", sha256 }, { "tamano", tamano } };
+		auto r = llamar("POST", "/v1/sync/oficial/subida", cuerpo.dump(), "", nullptr);
+		if (!r.ok()) return R{ std::nullopt, r.error };
+		const json& d = *r.valor;
+		ArchivoOficial a{ nombre, sha256, d.value("url", ""), d.value("ruta", ""), tamano };
+		if (a.url.rfind("https://", 0) != 0 || a.ruta.empty()) return R::mal("RESPUESTA_INVALIDA", "Falta la URL de subida");
+		return R::bien(a);
+	}
+
+	Resultado<bool> ClienteSync::subirArchivo(const std::string& url, const std::string& rutaLocal) {
+		std::ifstream f(aRuta(rutaLocal), std::ios::binary);
+		if (!f) return Resultado<bool>::mal("ARCHIVO_NO_EXISTE", rutaLocal);
+		const std::string datos((std::istreambuf_iterator<char>(f)), {});
+		const RespuestaHttp r = _http.peticion("PUT", url, datos, { "Content-Type: application/octet-stream", "x-upsert: false" });
+		if (r.estado == 0) return Resultado<bool>::mal("RED", r.errorRed);
+		if (r.estado < 200 || r.estado >= 300) return Resultado<bool>::mal("SUBIDA_FALLIDA", "HTTP " + std::to_string(r.estado), r.estado);
+		return Resultado<bool>::bien(true);
+	}
+
+	Resultado<int64_t> ClienteSync::publicarOficial(const std::string& grupoId, const std::string& parche, int64_t seq, const std::vector<ArchivoOficial>& archivos) {
+		json lista = json::array();
+		for (const auto& a : archivos) lista.push_back({ { "nombre", a.nombre }, { "sha256", a.sha256 }, { "tamano", a.tamano }, { "ruta", a.ruta } });
+		const json cuerpo = { { "grupo_id", grupoId }, { "parche", parche }, { "seq", seq }, { "archivos", lista } };
+		auto r = llamar("POST", "/v1/sync/oficial", cuerpo.dump(), "", nullptr);
+		if (!r.ok()) return Resultado<int64_t>{ std::nullopt, r.error };
+		const json& d = *r.valor;
+		return Resultado<int64_t>::bien(d.is_object() && d.contains("version") && d["version"].is_number_integer() ? d["version"].get<int64_t>() : 0);
+	}
+
+	Resultado<bool> ClienteSync::descargar(const ArchivoOficial& a, const std::string& rutaDestino) {
+		std::string error;
+		std::error_code ec;
+		if (!_http.descargar(a.url, rutaDestino, a.tamano, error)) { fs::remove(aRuta(rutaDestino), ec); return Resultado<bool>::mal("DESCARGA_FALLIDA", a.nombre + ": " + error); }
+		const auto tam = static_cast<long long>(fs::file_size(aRuta(rutaDestino), ec));
+		if (ec || tam != a.tamano || sha256::deArchivo(rutaDestino) != a.sha256) {
+			fs::remove(aRuta(rutaDestino), ec);
+			return Resultado<bool>::mal("HUELLA_DISTINTA", a.nombre + ": lo descargado no coincide con lo publicado");
+		}
+		return Resultado<bool>::bien(true);
 	}
 
 	Resultado<bool> ClienteSync::confirmar(const std::string& grupoId, const std::string& opId, const std::string& estado, const std::string& motivo) {

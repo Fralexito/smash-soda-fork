@@ -254,7 +254,7 @@ namespace mercado::grupo {
 			{ "hay_foto", e.hayFoto }, { "foto", plantillasAJson(e.foto) },
 			{ "por_publicar", pub }, { "entrantes", ent }, { "por_confirmar", conf }, { "historial", hist },
 			{ "ultima", { { "entrega", e.ultima.entregaId }, { "respaldo", e.ultima.respaldo }, { "ops", e.ultima.ops }, { "fecha", e.ultima.fecha }, { "stats", e.ultima.stats } } },
-			{ "entrega_en_curso", e.entregaEnCurso }, { "entrega_con_base", e.entregaConBase }, { "para_mi_base", miBase } };
+			{ "entrega_en_curso", e.entregaEnCurso }, { "entrega_con_base", e.entregaConBase }, { "version_oficial", e.versionOficial }, { "para_mi_base", miBase } };
 	}
 
 	Estado estadoDeJson(const json& j) {
@@ -297,6 +297,7 @@ namespace mercado::grupo {
 		}
 		e.entregaEnCurso = j.value("entrega_en_curso", "");
 		e.entregaConBase = j.value("entrega_con_base", false);
+		e.versionOficial = j.value("version_oficial", int64_t(0));
 		for (const auto& o : j.value("para_mi_base", json::array())) if (auto r = deJson(o); r.ok()) e.paraMiBase.push_back(*r.valor);
 		return e;
 	}

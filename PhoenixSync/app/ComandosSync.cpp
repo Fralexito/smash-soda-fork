@@ -16,6 +16,8 @@
 //  PhoenixSync sync-respaldar              «Respaldar ahora»
 //  PhoenixSync sync-respaldos              lista de respaldos
 //  PhoenixSync sync-restaurar <nombre> [--aunque-juego-abierto]
+//  PhoenixSync sync-oficial [--forzar]     baja la foto oficial del grupo (option file + base) si hay una nueva
+//  PhoenixSync sync-publicar-oficial      (admin) sube el option file y la base de esta PC como foto oficial
 //  PhoenixSync sync-campos                lista de stats que se pueden cambiar (nombre, rango)
 //  PhoenixSync sync-ficha <jugador>        stats actuales del jugador en Player.bin (Phoenix-DB)
 //  PhoenixSync sync-stats <jugador> <campo> <valor>   cambia una stat aquí y, si hay grupo, la publica
@@ -145,6 +147,17 @@ int comandoSync(const std::vector<std::string>& a, ClienteHttp& http, FuenteToke
 		avisos(m);
 		if (!r.ok()) { err(r.error); return 2; }
 		std::printf("Pedido %s. Phoenix Link lo coloca; el juego lo carga al volver al menú y entrar a un modo.\n", r.valor->c_str());
+	}
+	else if (c == "sync-oficial") {
+		auto r = m.bajarOficial(a.size() >= 2 && a[1] == "--forzar");
+		avisos(m);
+		if (!r.ok()) { err(r.error); return 2; }
+		std::printf(*r.valor ? "Foto oficial preparada: Phoenix Link la coloca.\n" : "Ya tienes la foto oficial más reciente.\n");
+	}
+	else if (c == "sync-publicar-oficial") {
+		auto r = m.publicarOficial();
+		if (!r.ok()) { err(r.error); return 2; }
+		std::printf("Publicado: option file oficial versión %lld. Las demás PCs del grupo lo bajan solas.\n", (long long)*r.valor);
 	}
 	else if (c == "sync-respaldar") {
 		auto r = m.respaldarAhora("manual");

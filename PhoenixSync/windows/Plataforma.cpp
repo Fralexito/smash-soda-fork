@@ -67,7 +67,9 @@ namespace mercado::windows {
 			if (!solicitud.h) { error = "WinHttpOpenRequest"; return false; }
 
 			std::wstring todas;
-			if (!cuerpo.empty()) todas = L"Content-Type: application/json; charset=utf-8\r\n";
+			bool conTipo = false;
+			for (const auto& c : cabeceras) if (c.size() >= 13 && _strnicmp(c.c_str(), "Content-Type:", 13) == 0) conTipo = true;
+			if (!cuerpo.empty() && !conTipo) todas = L"Content-Type: application/json; charset=utf-8\r\n";
 			for (const auto& c : cabeceras) todas += ancho(c) + L"\r\n";
 			if (!WinHttpSendRequest(solicitud.h, todas.empty() ? WINHTTP_NO_ADDITIONAL_HEADERS : todas.c_str(), (DWORD)-1L,
 				cuerpo.empty() ? WINHTTP_NO_REQUEST_DATA : (LPVOID)cuerpo.data(), (DWORD)cuerpo.size(), (DWORD)cuerpo.size(), 0)
@@ -98,7 +100,8 @@ namespace mercado::windows {
 		RespuestaHttp r;
 		try {
 			Manija s, c, q; DWORD estado = 0;
-			if (!abrir(metodo, url, cuerpo, cabeceras, _timeoutMs, s, c, q, estado, r.errorRed)) return r;
+			const int espera = cuerpo.size() > (1u << 20) ? (std::max)(_timeoutMs, 180000) : _timeoutMs;   // subidas grandes (option file oficial)
+			if (!abrir(metodo, url, cuerpo, cabeceras, espera, s, c, q, estado, r.errorRed)) return r;
 			DWORD disp = 0;
 			while (WinHttpQueryDataAvailable(q.h, &disp) && disp > 0) {
 				std::string trozo(disp, '\0'); DWORD leidos = 0;

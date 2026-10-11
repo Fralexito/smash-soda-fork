@@ -66,6 +66,7 @@ namespace mercado::sync {
 		std::string nombrePc;
 		int segundosEstable = 10;                               ///< el EDIT debe quedarse quieto este tiempo antes de leerlo
 		int segundosConfig = 30;
+		int segundosOficial = 600;                              ///< cada cuánto se mira si hay foto oficial nueva
 		respaldos::Retencion retencion;
 		std::function<uint64_t(const std::string&)> espacioLibre;   ///< pruebas
 	};
@@ -99,6 +100,11 @@ namespace mercado::sync {
 		/// Cambia una stat de un jugador (Player.bin de Phoenix-DB) en ESTA PC y, si hay grupo, la publica para todos.
 		/// La web solo la reparte si quien publica es admin del grupo. Devuelve el id de la operación.
 		Resultado<std::string> cambiarStats(uint32_t jugador, const std::string& campo, int valor);
+		/// Baja la foto oficial del grupo (option file + base) y se la pasa a Link, con respaldo antes.
+		/// Devuelve 1 si se preparó una entrega, 0 si ya estaba al día (forzar = aunque sea la misma versión).
+		Resultado<int> bajarOficial(bool forzar = false);
+		/// Solo el admin: sube el option file y la base de ESTA PC como la nueva foto oficial. Devuelve la versión.
+		Resultado<int64_t> publicarOficial();
 		Resultado<respaldos::Info> respaldarAhora(const std::string& motivo = "manual");
 		std::vector<respaldos::Info> respaldos() const;
 		/// Restaura un respaldo. Con el juego abierto exige `aunqueJuegoAbierto` (la UI avisa antes).
@@ -153,6 +159,9 @@ namespace mercado::sync {
 		Resultado<int> aplicarInterno(const std::vector<std::string>& ids, bool automatico);
 		Resultado<int> aplicarStats(const std::vector<grupo::Operacion>& ops, bool automatico);
 		void anotarResultado(const grupo::ResultadoOp& r, bool automatico, bool conEntrega);
+		void revisarOficial();
+		Resultado<int> ponerOficial(const Oficial& o);
+		int64_t _ultimoOficial = -1000000, _avisadoOficial = 0;
 	};
 
 }

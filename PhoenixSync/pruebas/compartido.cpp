@@ -72,6 +72,7 @@ static std::string hacerPB(const std::vector<uint8_t>& plano) {
 	out.append(reinterpret_cast<const char*>(c.data()), n);
 	return out;
 }
+static std::vector<uint8_t> bytesDe(const std::string& s) { return std::vector<uint8_t>(s.begin(), s.end()); }
 static std::vector<uint8_t> desPB(const fs::path& p) {
 	const std::string s = [&] { std::ifstream f(p, std::ios::binary); return std::string(std::istreambuf_iterator<char>(f), {}); }();
 	std::vector<uint8_t> d(s.begin(), s.end());
@@ -128,6 +129,11 @@ struct WebFalsa {
 	std::vector<json> ops;           // con seq
 	std::map<std::string, std::string> confirmaciones;   // "pc|id" → estado
 	int publicaciones = 0;
+	// Foto oficial: almacén de archivos (url → bytes) y la última versión publicada.
+	std::map<std::string, std::string> almacen;
+	json oficial;                     // vacío = el admin aún no publicó
+	std::string admin = "FRALEX";
+	int subidas = 0, descargas = 0;
 };
 struct HttpFalso : ClienteHttp {
 	WebFalsa& w; std::string pc;
@@ -137,6 +143,26 @@ struct HttpFalso : ClienteHttp {
 		if (w.caida) return { 0, "", "sin red" };
 		if (!w.existe) return { 404, "Not Found", "" };
 		auto ok = [](const json& d) { return RespuestaHttp{ 200, json{ { "ok", true }, { "datos", d } }.dump(), "" }; };
+		if (metodo == "PUT" && url.rfind("https://almacen.falso/", 0) == 0) { w.almacen[url] = cuerpo; w.subidas++; return { 200, "{}", "" }; }
+		if (url.find("/v1/sync/oficial/subida") != std::string::npos) {
+			if (pc != w.admin) return { 403, R"({"ok":false,"error":{"codigo":"SOLO_ADMIN"}})", "" };
+			const json j = json::parse(cuerpo);
+			const std::string ruta = "g/" + j["nombre"].get<std::string>() + "-" + std::to_string(w.subidas + 1) + "-" + j["sha256"].get<std::string>().substr(0, 8);
+			return ok({ { "url", "https://almacen.falso/" + ruta }, { "ruta", ruta } });
+		}
+		if (metodo == "POST" && url.find("/v1/sync/oficial") != std::string::npos) {
+			if (pc != w.admin) return { 403, R"({"ok":false,"error":{"codigo":"SOLO_ADMIN"}})", "" };
+			json j = json::parse(cuerpo);
+			const int64_t v = w.oficial.is_object() ? w.oficial["version"].get<int64_t>() + 1 : 1;
+			json arch = json::array();
+			for (auto a : j["archivos"]) { const std::string u = "https://almacen.falso/" + a["ruta"].get<std::string>(); if (!w.almacen.count(u)) return { 400, R"({"ok":false,"error":{"codigo":"FALTA_ARCHIVO"}})", "" }; a["url"] = u; arch.push_back(a); }
+			w.oficial = { { "version", v }, { "seq", j["seq"] }, { "parche", j["parche"] }, { "publicado_por", pc }, { "publicado_en", "2026-10-10T22:00:00" }, { "archivos", arch } };
+			return ok({ { "version", v } });
+		}
+		if (metodo == "GET" && url.find("/v1/sync/oficial") != std::string::npos) {
+			if (!w.oficial.is_object()) return { 404, R"({"ok":false,"error":{"codigo":"SIN_OFICIAL"}})", "" };
+			return ok(w.oficial);
+		}
 		if (url.find("/v1/sync/config") != std::string::npos)
 			return ok({ { "modo", w.modo }, { "actualizado_por", "FRALEX" }, { "actualizado_en", "2026-10-09T19:00:00" }, { "etag", "c-" + w.modo } });
 		if (metodo == "GET" && url.find("/v1/sync/operaciones") != std::string::npos) {
@@ -159,7 +185,14 @@ struct HttpFalso : ClienteHttp {
 		}
 		return { 404, "", "" };
 	}
-	bool descargar(const std::string&, const std::string&, long long, std::string&) override { return false; }
+	bool descargar(const std::string& url, const std::string& destino, long long max, std::string& error) override {
+		auto it = w.almacen.find(url);
+		if (it == w.almacen.end()) { error = "HTTP 404"; return false; }
+		if ((long long)it->second.size() > max) { error = "más grande de lo anunciado"; return false; }
+		w.descargas++;
+		std::ofstream(fs::path(aRuta(destino)), std::ios::binary | std::ios::trunc) << it->second;
+		return true;
+	}
 };
 struct TokenFalso : FuenteToken {
 	std::string token() override { return "phx_secreto"; }
@@ -695,7 +728,7 @@ int main() {
 	std::printf("Stats en Player.bin (FichasBase): solo cambian los bits del campo\n");
 	{
 		const auto plano = planoPB({ 101, 202, 303 });
-		auto fb = base::FichasBase::desdeBytes(std::vector<uint8_t>(hacerPB(plano).begin(), hacerPB(plano).end()));
+		auto fb = base::FichasBase::desdeBytes(bytesDe(hacerPB(plano)));
 		CHECK(fb.ok());
 		if (fb.ok()) {
 			CHECK(fb.valor->jugadores() == 3 && fb.valor->existe(202) && !fb.valor->existe(999));
@@ -799,6 +832,59 @@ int main() {
 		solo.pasar(20);
 		{ auto f = base::FichasBase::abrir(deRuta(solo.juego / pesdb / "Player.bin")); CHECK(f.ok() && *f.valor->leer(5, "pt_reflejos").valor == 80); }
 		CHECK(web.publicaciones == pubAntes);
+	}
+
+	std::printf("Option file oficial: el admin publica, el amigo lo baja solo\n");
+	{
+		WebFalsa web;
+		web.modo = "autorizacion";   // la primera foto entra igual; las siguientes, solo en automático
+		const grupo::Plantillas oficialPl = { { 108, { 1, 2, 117047 } }, { 109, { 3, 5 } } };
+		const grupo::Plantillas otraPl = { { 108, { 1, 2, 3 } }, { 109, { 117047, 5 } } };
+		PC fralex(tmp / "pcs6", "FRALEX", web), amigo(tmp / "pcs6", "AMIGO", web);
+		const fs::path pesdb = fs::path("SiderAddons") / "livecpk" / "Phoenix-DB" / "common" / "etc" / "pesdb";
+		auto plano = planoPB({ 1, 2, 3, 117047, 5 });
+		escribirOption(fralex.edit(), oficialPl, "BASE-1");
+		escribirOption(amigo.edit(), otraPl, "BASE-1");
+		auto pbF = base::FichasBase::desdeBytes(bytesDe(hacerPB(plano)));
+		pbF.valor->poner(117047, "velocidad", 95);
+		{ auto b = pbF.valor->bytes(); escribir(fralex.juego / pesdb / "Player.bin", std::string(b.valor->begin(), b.valor->end())); }
+		escribir(amigo.juego / pesdb / "Player.bin", hacerPB(plano));
+		escribir(fralex.juego / pesdb / "PlayerAssignment.bin", hacerPA({ { 1, 108, 10, 0, 0 }, { 2, 108, 19, 1, 0 }, { 3, 109, 28, 2, 0 }, { 117047, 108, 7, 3, 0x20 }, { 5, 109, 9, 1, 0 } }));
+		escribir(amigo.juego / pesdb / "PlayerAssignment.bin", hacerPA({ { 1, 108, 10, 0, 0 }, { 2, 108, 19, 1, 0 }, { 3, 108, 28, 2, 0 }, { 117047, 109, 7, 0, 0x20 }, { 5, 109, 9, 1, 0 } }));
+		for (PC* p : { &fralex, &amigo }) { p->motor.cargar(); p->motor.elegirGrupo("g"); }
+		fralex.pasar(30); amigo.pasar(30);
+		CHECK(amigo.motor.bajarOficial().error.codigo == "SIN_OFICIAL");          // aún no hay foto
+		CHECK(amigo.motor.publicarOficial().error.codigo == "SOLO_ADMIN");       // solo el admin publica
+		auto v = fralex.motor.publicarOficial();
+		CHECK(v.ok() && *v.valor == 1);
+		CHECK(web.subidas == 3);
+		// El amigo la baja solo (primera foto) en su próxima revisión.
+		amigo.pasar(700);
+		CHECK(leer(amigo.edit()) == leer(fralex.edit()));
+		CHECK(leer(amigo.juego / pesdb / "PlayerAssignment.bin") == leer(fralex.juego / pesdb / "PlayerAssignment.bin"));
+		CHECK(leer(amigo.juego / pesdb / "Player.bin") == leer(fralex.juego / pesdb / "Player.bin"));
+		CHECK(amigo.motor.resumen()["version_oficial"] == 1);
+		CHECK(web.publicaciones == 0);                                           // no se tomó como fichajes del amigo (anti-bucle)
+		CHECK(!amigo.motor.respaldos().empty());                                 // respaldo antes
+		const int bajadas = web.descargas;
+		amigo.pasar(700);
+		CHECK(web.descargas == bajadas);                                         // ya al día: no vuelve a bajar
+		// Versión 2 en modo «autorización»: solo avisa; con sync-oficial se pone.
+		fralex.fichar(3, 109, 108); fralex.pasar(40);
+		CHECK(fralex.motor.publicarOficial().ok());
+		amigo.pasar(700);
+		CHECK(!amigo.esta(3, 108));
+		CHECK(amigo.motor.bajarOficial().ok());
+		amigo.linkColoca();
+		CHECK(amigo.esta(3, 108));
+		amigo.pasar(3);   // el motor nota que Link ya colocó la entrega
+		// Parche distinto → se rechaza.
+		web.oficial["parche"] = "Otro Parche"; web.oficial["version"] = 9;
+		CHECK(amigo.motor.bajarOficial().error.codigo == "INCOMPATIBLE");
+		// Huella falsa → se rechaza y se borra lo bajado.
+		web.oficial["parche"] = "PES 2021";
+		for (auto& a : web.oficial["archivos"]) if (a["nombre"] == "EDIT00000000") a["sha256"] = std::string(64, 'a');
+		CHECK(amigo.motor.bajarOficial().error.codigo == "HUELLA_DISTINTA");
 	}
 
 	fs::remove_all(tmp);
