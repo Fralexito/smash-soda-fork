@@ -411,6 +411,8 @@ Ver `SmashSoda/phoenix/sider/LEEME.md`.
 - No se recomienda 7.4.x por ahora: rompe el truco de memoria de *colorsdemo* y los módulos `CGP_*` de ConmeGOL vienen compilados, así que no se puede comprobar si lo usan.
 - Con Sider 7.3.4, además empieza a funcionar `goalscreams.lua` de ConmeGOL, que ya está instalado.
 
+**Instalado en la PC de Fralex (11-oct-2026, con su permiso):** Sider **7.3.4** oficial (`sider-7.3.4.zip`, sha256 `0fcb4b04…`, igual al que publica GitHub) en `D:FrankGames_Conmegol PatchSiderAddons`. Solo se cambiaron `sider.dll` y `sider.exe`. La copia de la 7.3.3 está en `SiderAddonssider-7.3.3-respaldo` (sha256 `5c77dd83…` y `5eb05e97…`). Para volver: `SiderAddonsVOLVER-A-SIDER-7.3.3.bat` (con PES cerrado). Falta comprobar en `sider.log` la primera vez que se abra el juego.
+
 **Lo que sigue sin poderse saber** sin ingeniería inversa (direcciones de memoria por exe/parche, frágil): tarjetas, cambios, asistencias, posesión, tiros y faltas. Se haría con eventos personalizados de Sider (`custom-events.html`, x64dbg), y solo después de probar lo básico en el juego.
 
 ---
