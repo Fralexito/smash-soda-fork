@@ -70,7 +70,35 @@ void MasterOfPuppets::fetchSDLGamepads()
 
 void MasterOfPuppets::internalFetchSDLGamepads()
 {
-    if (isSDLEngine) _sdlReader.fetchGamepads();
+    if (isSDLEngine)
+    {
+        _sdlReader.fetchGamepads(xinputDeLink());
+        reubicarMaestro();
+    }
+}
+
+vector<int> MasterOfPuppets::xinputDeLink()
+{
+    vector<int> r;
+    for (AGamepad* p : GamepadClient::instance.gamepads)
+    {
+        ULONG i = 0;
+        if (p != nullptr && p->indiceXInput(i)) r.push_back(static_cast<int>(i));
+    }
+    return r;
+}
+
+void MasterOfPuppets::reubicarMaestro()
+{
+    if (!isSDLEngine || _maestroSdl < 0) return;
+    vector<SDLGamepad>& v = _sdlReader.getGamepads();
+    int donde = -1;
+    for (size_t i = 0; i < v.size(); ++i)
+    {
+        if (SDL_JoystickInstanceID(v[i].joystick) == _maestroSdl) { donde = static_cast<int>(i); break; }
+    }
+    masterIndex = donde;   // si se desconectó, se deja de copiar (no salta a otro mando)
+    GamepadClient::instance.isPuppetMaster = (masterIndex >= 0) || _isVirtualPad;
 }
 
 void MasterOfPuppets::mapInputs()
@@ -82,6 +110,8 @@ void MasterOfPuppets::mapInputs()
 void MasterOfPuppets::setMasterIndex(int index)
 {
     masterIndex = index;
+    vector<SDLGamepad>& v = _sdlReader.getGamepads();
+    _maestroSdl = (isSDLEngine && index >= 0 && index < static_cast<int>(v.size())) ? SDL_JoystickInstanceID(v[index].joystick) : -1;
     GamepadClient::instance.isPuppetMaster = (index >= 0) || _isVirtualPad;
 }
 

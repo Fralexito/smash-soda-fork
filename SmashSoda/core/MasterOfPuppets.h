@@ -40,6 +40,9 @@ private:
 	void mapFromXInput();
 	bool isRunning = false;
 	bool _isVirtualPad = false;
+	int _maestroSdl = -1;          // Phoenix: SDL_JoystickID del maestro (la lista se reordena; el ID no)
+	vector<int> xinputDeLink();    // Phoenix: casillas XInput de los mandos virtuales de Link
+	void reubicarMaestro();        // Phoenix: masterIndex = posición actual del maestro
 	
 	int masterIndex;
 

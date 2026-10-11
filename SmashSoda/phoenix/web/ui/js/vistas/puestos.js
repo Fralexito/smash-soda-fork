@@ -10,7 +10,7 @@
 import { html, useState } from "../lib.js";
 import { t } from "../i18n.js";
 import { accion, confirmar } from "../tienda.js";
-import { Boton, Icono, Vacio, Avatar, Chip, Stepper, colorPing, cx, dos } from "../ui.js";
+import { Boton, Icono, Vacio, Avatar, Chip, Stepper, Interruptor, colorPing, cx, dos } from "../ui.js";
 import { Pendientes, ElegirJugador } from "./mandos.js";
 import { MandosEnVivo } from "./mandovivo.js";
 
@@ -250,7 +250,50 @@ export function PuestosNuevo({ m }) {
         </div>
       </div>
     </div>
+    <${OrdenPes} m=${m}/>
     ${eligiendo != null ? html`<${ElegirJugador} m=${m} indice=${eligiendo} alCerrar=${() => setEligiendo(null)}/>` : null}
+  </div>`;
+}
+
+// ---- Orden de mandos en PES (EXPERIMENTAL) ---------------------------------------------
+// Link escribe settings.dat de PES 2021 para que el puesto N sea el jugador N (ver phoenix/core/OrdenPes.h).
+const ESTADO_ORDEN = {
+  apagado: ["", ""],
+  esperando: ["", "Esperando a que Windows registre los mandos de Link…|Waiting for Windows to register Link's pads…"],
+  al_dia: ["ok", "PES y Link coinciden: el puesto N es el jugador N.|PES and Link match: seat N is player N."],
+  ordenado: ["ok", "Ordenado. Abre PES: ya coincide con los puestos.|Sorted. Open PES: it matches the seats now."],
+  pes_abierto: ["warn", "El orden cambió y PES está abierto. Ciérralo (y Settings) y Link lo arregla solo.|The order changed and PES is open. Close it (and Settings) and Link fixes it."],
+  sin_settings: ["warn", "No encuentro settings.dat de PES 2021. Abre Settings.exe del juego una vez y guarda.|Can't find PES 2021 settings.dat. Open the game's Settings.exe once and save."],
+  error: ["bad", ""],
+};
+function OrdenPes({ m }) {
+  const o = m.mandos.ordenPes || { activo: false, estado: "apagado", casillas: [] };
+  const [punto, texto] = ESTADO_ORDEN[o.estado] || ["", ""];
+  const [es, en] = (o.estado === "error" ? (o.error || "Error") + "|" + (o.error || "Error") : texto).split("|");
+  return html`<div class="caja" style="padding:16px 18px;display:flex;flex-direction:column;gap:12px">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <span class="disp" style="font-weight:700;font-size:14px;letter-spacing:.16em">${t("ORDEN DE MANDOS EN PES", "PAD ORDER IN PES")}</span>
+      <${Chip} tipo="vip">${t("EXPERIMENTAL", "EXPERIMENTAL")}</${Chip}>
+      <span style="flex:1"></span>
+      ${o.activo ? html`<${Boton} tipo="mini suave" al=${() => accion("mandos.ordenarPes", {})}>${t("REVISAR AHORA", "CHECK NOW")}</${Boton}>` : null}
+      <${Interruptor} valor=${o.activo} al=${(v) => accion("mandos.ordenPes", { si: v })} etiqueta=${t("Orden de mandos en PES", "Pad order in PES")}/>
+    </div>
+    <div class="ayuda" style="font-size:13px">${t(
+      "Link escribe el settings.dat de PES para que el puesto 1 sea el jugador 1, el 2 el jugador 2… Lo hace solo con PES cerrado y guarda una copia antes. Mientras esté encendido, los mandos de Link no se desconectan al cerrar la sala (así Windows no los vuelve a barajar). Tu mando físico no va en Settings: úsalo con Marionetas.",
+      "Link writes PES's settings.dat so seat 1 is player 1, seat 2 is player 2… Only with PES closed, with a backup first. While on, Link's pads stay plugged when the room closes (so Windows doesn't reshuffle them). Your physical pad doesn't go in Settings: use it with Puppets.")}</div>
+    ${o.activo && es ? html`<div style="display:flex;align-items:center;gap:10px;font-size:14px">
+      <span class=${cx("punto", punto)}></span><span>${t(es, en)}</span>
+      ${o.ultimo ? html`<span class="mono mut" style="font-size:12px">· ${t("último orden", "last sort")} ${o.ultimo}</span>` : null}
+    </div>` : null}
+    ${o.activo && (o.casillas || []).length ? html`<div style="display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:6px">
+      ${o.casillas.map((c) => html`<div key=${c.n} class="caja" title=${c.ok ? t("Coincide", "Matches") : t("Pendiente", "Pending")}
+          style=${`padding:8px 4px;text-align:center;border-color:${c.ok ? "var(--ok)" : "var(--warn)"}`}>
+        <div class="mono mut" style="font-size:11px">PES ${c.n}</div>
+        <div class="disp" style="font-weight:700;font-size:16px">${c.puesto ? "P" + c.puesto : "—"}</div>
+        <div style="font-size:12px">${c.ok ? "✓" : "…"}</div>
+      </div>`)}
+    </div>` : null}
+    ${o.activo && o.copia ? html`<div class="ayuda mono" style="font-size:12px">${t("Copia de seguridad:", "Backup:")} ${o.copia}</div>` : null}
   </div>`;
 }
 

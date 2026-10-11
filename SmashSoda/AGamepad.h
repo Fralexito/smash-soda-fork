@@ -63,6 +63,10 @@ public:
 	bool isAttached();
 	void setIndex(ULONG index);
 	ULONG getIndex() const;
+	/// Phoenix: número de serie en el bus ViGEm (USB\VID_045E&PID_028E\<serie>); 0 = desenchufado.
+	ULONG serieBus() const;
+	/// Phoenix: casilla XInput (0-3) que Windows dio a este mando virtual Xbox; false si no tiene.
+	bool indiceXInput(ULONG& indice) const;
 	XINPUT_STATE getState();
 	Keyboard& getKeyboard();
 

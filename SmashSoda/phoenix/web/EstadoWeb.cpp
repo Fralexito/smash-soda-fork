@@ -17,6 +17,7 @@
 #include "../core/ProveedorSala.h"
 #include "../core/Solicitudes.h"
 #include "../core/MandoHost.h"
+#include "../core/OrdenPes.h"
 #include "../../core/MasterOfPuppets.h"
 #include "../link/PhoenixLink.h"
 
@@ -293,8 +294,34 @@ namespace phoenix::web {
 						{"lx", a.ejeLX}, {"ly", a.ejeLY}, {"rx", a.ejeRX}, {"ry", a.ejeRY} };
 				}
 			}
+			// Orden de mandos en PES (EXPERIMENTAL): mandos siempre enchufados en orden y su serie al módulo.
+			{
+				const bool quiere = pr.ordenPes;
+				if (phoenix::ordenpes::estado().activo != quiere) phoenix::ordenpes::activar(quiere);
+				if (quiere && !in.reiniciandoMandos) {
+					static ULONGLONG ultimoEnchufe = 0;
+					const ULONGLONG ahora = GetTickCount64();
+					bool falta = false;
+					for (size_t i = 0; i < gc.gamepads.size() && i < 8; i++) if (gc.gamepads[i] && !gc.gamepads[i]->isConnected()) falta = true;
+					if (falta && ahora - ultimoEnchufe > 10000) {
+						ultimoEnchufe = ahora;
+						for (size_t i = 0; i < gc.gamepads.size() && i < 8; i++) if (gc.gamepads[i] && !gc.gamepads[i]->isConnected()) gc.gamepads[i]->connect();
+					}
+				}
+				std::vector<unsigned long> series;
+				for (size_t i = 0; i < gc.gamepads.size() && i < 8; i++) series.push_back(gc.gamepads[i] ? gc.gamepads[i]->serieBus() : 0);
+				phoenix::ordenpes::publicarSeries(series);
+			}
+			json ordenPes;
+			{
+				const phoenix::ordenpes::Estado op = phoenix::ordenpes::estado();
+				json casillas = json::array();
+				for (const auto& c : op.casillas) casillas.push_back({ {"n", c.n}, {"puesto", c.puesto}, {"ok", c.ok} });
+				ordenPes = { {"activo", op.activo}, {"estado", op.estado}, {"casillas", casillas}, {"ultimo", op.ultimo}, {"copia", op.copia}, {"error", op.error} };
+			}
 			e["mandos"] = {
 				{"lista", lista},
+				{"ordenPes", ordenPes},
 				{"formacion", { {"local", pr.equipoLocal}, {"visitante", pr.mandosActivos - pr.equipoLocal} }},
 				{"host", MandoHost::activo()},
 				{"bloqueoGlobal", gc.lock}, {"bloqueoBotones", bloqueoBotonesPropio(in)}, {"esclavo", gc.isSlave},

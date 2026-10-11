@@ -198,7 +198,7 @@ function App() {
         if (st.dialogo) cerrarDialogo(false);
         else if (st.paleta) cambiar({ paleta: false });
         else if (st.chatAbierto) alternarChat(false);
-      } else if (e.altKey && /^[1-6]$/.test(e.key)) {
+      } else if (e.altKey && !e.ctrlKey && /^[1-6]$/.test(e.key)) {   // Ctrl+Alt+número es «tomar mando» (MandoHost)
         e.preventDefault();
         irA(SECCIONES[Number(e.key) - 1].id);
       }

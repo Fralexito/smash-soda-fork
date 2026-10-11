@@ -64,6 +64,7 @@ namespace phoenix {
 			pausaAuto = j.value("pausaAuto", pausaAuto);
 			marcadorAuto = j.value("marcadorAuto", marcadorAuto);
 			soloAutorizados = j.value("soloAutorizados", soloAutorizados);
+			ordenPes = j.value("ordenPes", ordenPes);
 			modoRecarga = j.value("modoRecarga", modoRecarga);
 			if (modoRecarga != "ACTIVAR" && modoRecarga != "AUTO-FICHAJES") modoRecarga = "AUTO-SIEMPRE";   // v0.18b: por defecto
 		}
@@ -101,6 +102,7 @@ namespace phoenix {
 				{"pausaAuto", pausaAuto},
 				{"marcadorAuto", marcadorAuto},
 				{"soloAutorizados", soloAutorizados},
+				{"ordenPes", ordenPes},
 				{"modoRecarga", modoRecarga},
 			};
 			const std::string texto = j.dump(2);

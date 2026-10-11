@@ -7,6 +7,21 @@ vector<SDLGamepad>& SDLGamepadReader::getGamepads()
 
 void SDLGamepadReader::fetchGamepads()
 {
+    fetchGamepads(vector<int>());
+}
+
+void SDLGamepadReader::fetchGamepads(const vector<int>& xinputExcluidos)
+{
+    // Phoenix: un mando virtual de Link nunca puede ser maestro (se copiaría a sí mismo o a otro puesto).
+    const auto excluido = [&](SDL_Joystick* joy) {
+        const int jugador = SDL_JoystickGetPlayerIndex(joy);
+        for (int x : xinputExcluidos) if (x == jugador && jugador >= 0) return true;
+        return false;
+    };
+    for (size_t i = 0; i < _gamepads.size();) {
+        if (excluido(_gamepads[i].joystick)) _gamepads.erase(_gamepads.begin() + i);
+        else ++i;
+    }
     SDL_JoystickUpdate();
 
     eraseDetachedGamepads();
@@ -16,6 +31,11 @@ void SDLGamepadReader::fetchGamepads()
         SDL_Joystick* joy = SDL_JoystickOpen(i);
         if (SDL_JoystickGetAttached(joy))
         {
+            if (excluido(joy))
+            {
+                continue;
+            }
+
             if (contains(joy))
             {
                 continue;

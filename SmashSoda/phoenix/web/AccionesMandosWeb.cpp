@@ -10,6 +10,7 @@
 #include "../core/ProveedorSala.h"
 #include "../core/AccionesSala.h"
 #include "../core/MandoHost.h"
+#include "../core/OrdenPes.h"
 
 // =============================================================================
 //  Acciones de la interfaz web: mandos, solicitudes, entrada por Parsec,
@@ -143,6 +144,19 @@ namespace phoenix::web {
 			pr.pausaAuto = booleano(d, "si");
 			pr.guardar();
 			if (!pr.pausaAuto) in.arbitro.avisados.clear();
+			return json::object();
+		});
+		// Orden de mandos en PES (EXPERIMENTAL)
+		p.registrar("mandos.ordenPes", [](const json& d, uint64_t) -> std::optional<json> {
+			PhoenixPrefs& pr = PhoenixPrefs::get();
+			pr.ordenPes = booleano(d, "si");
+			pr.guardar();
+			phoenix::ordenpes::activar(pr.ordenPes);
+			return json::object();
+		});
+		p.registrar("mandos.ordenarPes", [](const json&, uint64_t) -> std::optional<json> {
+			if (!PhoenixPrefs::get().ordenPes) throw ErrorAccion("APAGADO", "Activa primero el orden de mandos en PES.");
+			phoenix::ordenpes::revisarYa();
 			return json::object();
 		});
 		p.registrar("mandos.soloAutorizados", [](const json& d, uint64_t) -> std::optional<json> {

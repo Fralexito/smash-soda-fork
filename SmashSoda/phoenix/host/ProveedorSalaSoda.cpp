@@ -6,6 +6,7 @@
 #include "../../core/Cache.h"
 #include "../../widgets/HostSettingsWidget.h"
 #include "../PhoenixRoles.h"
+#include "../PhoenixPrefs.h"
 
 namespace phoenix {
 
@@ -43,7 +44,9 @@ namespace phoenix {
 
 	void ProveedorSalaSoda::cerrar() {
 	_ajustes.phoenixCerrarSala();
-	// Phoenix: desenchufa los mandos al cerrar (limpieza)
+	// Phoenix: desenchufa los mandos al cerrar (limpieza). Con el orden de PES (experimental) se quedan
+	// enchufados: si no, Windows baraja otra vez los GUID y PES deja de coincidir con los puestos.
+	if (PhoenixPrefs::get().ordenPes) return;
 	try { for (int i = 0; i < 8; i++) if (AGamepad* p = padEn(_hosting, i)) p->disconnect(); }
 	catch (...) {}
 }

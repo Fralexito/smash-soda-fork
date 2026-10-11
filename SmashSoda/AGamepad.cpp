@@ -100,6 +100,16 @@ ULONG AGamepad::getIndex() const {
 	return _index;
 }
 
+ULONG AGamepad::serieBus() const {
+	if (_pad == nullptr || !_isConnected) return 0;
+	return vigem_target_get_index(_pad);
+}
+
+bool AGamepad::indiceXInput(ULONG& indice) const {
+	if (_client == nullptr || _pad == nullptr || !_isConnected || type() != AGamepad::Type::XBOX) return false;
+	return VIGEM_SUCCESS(vigem_target_x360_get_user_index(_client, _pad, &indice));
+}
+
 
 XINPUT_STATE AGamepad::getState() {
 	return _currentState;
