@@ -4,8 +4,13 @@
 //  en un solo archivo de salida. Usa el motor ya probado (core/OptionFile.*).
 //
 //  Uso:
-//    mover_cli <EDIT entrada> <EDIT salida> --mover <pid> <equipoDestino> [posicion] [--mover ...]
+//    mover_cli <EDIT entrada> <EDIT salida> --mover <pid> <equipoDestino> <equipoOrigen> [posicion] [--mover ...]
 //    mover_cli <EDIT entrada> --buscar <pid>          (solo informa en qué equipo está)
+//
+//  `equipoOrigen` es OBLIGATORIO y explícito (nunca se adivina): un jugador
+//  suele estar en dos plantillas a la vez (club + selección), y adivinar cuál
+//  de las dos es "el origen" puede sacarlo del equipo equivocado. Usa primero
+//  --buscar para ver los equipos exactos y sus IDs antes de mover a nadie.
 //
 //  `posicion` (opcional, 0-12, ver LigaMaster.h). Si no se da, -1.
 //  Nunca sobrescribe: falla si <EDIT salida> ya existe.
@@ -61,12 +66,12 @@ int main(int argc, char** argv) {
 	}
 
 	const std::string rutaSalida = a[1];
-	struct Mov { uint32_t pid; uint32_t destino; int pos; };
+	struct Mov { uint32_t pid; uint32_t destino; uint32_t origen; int pos; };
 	std::vector<Mov> movs;
 	for (size_t i = 2; i < a.size(); ++i) {
-		if (a[i] == "--mover" && i + 3 < a.size()) {
-			movs.push_back({ (uint32_t)std::stoul(a[i+1]), (uint32_t)std::stoul(a[i+2]), std::stoi(a[i+3]) });
-			i += 3;
+		if (a[i] == "--mover" && i + 4 < a.size()) {
+			movs.push_back({ (uint32_t)std::stoul(a[i+1]), (uint32_t)std::stoul(a[i+2]), (uint32_t)std::stoul(a[i+3]), std::stoi(a[i+4]) });
+			i += 4;
 		}
 	}
 	std::map<uint32_t, int> posiciones;
@@ -77,19 +82,18 @@ int main(int argc, char** argv) {
 	};
 
 	for (auto& m : movs) {
-		std::printf("Moviendo %u a %u (%s)...\n", m.pid, m.destino, nombreEquipo(of, m.destino).c_str());
-		// sugerirSustituto necesita el equipo de ORIGEN; lo buscamos primero.
-		uint32_t equipoOrigen = 0;
+		std::printf("Moviendo %u del equipo %u (%s) a %u (%s)...\n", m.pid, m.origen, nombreEquipo(of, m.origen).c_str(), m.destino, nombreEquipo(of, m.destino).c_str());
+		const uint32_t equipoOrigen = m.origen;
+		// Comprobación de seguridad: el jugador debe estar REALMENTE en ese equipo de origen.
+		bool enOrigen = false;
 		for (auto& [idEquipo, plantilla] : of.plantillas()) {
-			if (idEquipo == m.destino) continue;
-			for (auto& plaza : plantilla) if (plaza.jugador == m.pid) { equipoOrigen = idEquipo; break; }
-			if (equipoOrigen) break;
+			if (idEquipo != equipoOrigen) continue;
+			for (auto& plaza : plantilla) if (plaza.jugador == m.pid) enOrigen = true;
 		}
-		if (!equipoOrigen) {
-			std::printf("ERROR: %u no está en ninguna plantilla distinta de %u.\n", m.pid, m.destino);
+		if (!enOrigen) {
+			std::printf("ERROR: %u no está en la plantilla del equipo %u (%s). Nada escrito.\n", m.pid, equipoOrigen, nombreEquipo(of, equipoOrigen).c_str());
 			return 4;
 		}
-		std::printf("  (equipo de origen detectado: %u, %s)\n", equipoOrigen, nombreEquipo(of, equipoOrigen).c_str());
 		auto rSust2 = of.sugerirSustituto(equipoOrigen, m.pid, posicionDe);
 		uint32_t sustituto = rSust2.ok() ? *rSust2.valor : 0;
 		if (!rSust2.ok()) std::printf("  Aviso: sugerirSustituto: %s (se intenta sin sustituto)\n", rSust2.error.detalle.c_str());
