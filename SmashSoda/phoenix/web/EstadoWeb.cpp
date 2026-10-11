@@ -26,6 +26,26 @@ namespace phoenix::web {
 	using json = nlohmann::json;
 
 	namespace detalle_estado {
+		/// «Tu mando»: nombre del mando físico que eligió el anfitrión ("" = ninguno, usa el teclado).
+		std::string nombreMiMando() {
+			try {
+				MasterOfPuppets& mp = MasterOfPuppets::instance;
+				std::lock_guard<std::mutex> cierre(mp.inputMutex);
+				const int i = mp.getMasterIndex();
+				if (i < 0) return std::string();
+				if (mp.isSDLEngine) {
+					std::vector<SDLGamepad>& v = mp.getSDLGamepads();
+					if (i < static_cast<int>(v.size()) && v[i].joystick != nullptr) {
+						const char* n = SDL_JoystickName(v[i].joystick);
+						return n != nullptr ? n : "Mando";
+					}
+					return std::string();
+				}
+				return "Mando " + std::to_string(i + 1);
+			}
+			catch (...) { return std::string(); }
+		}
+
 
 		const char* textoEstadoLink(EstadoLink e) {
 			switch (e) {
@@ -281,6 +301,7 @@ namespace phoenix::web {
 					a.parsecId = anfitrion.userID;
 					a.pingMs = -1;
 				}
+				if (n == mandoHost) a.bloqueado = false;   // el bloqueo interno de «tomar mando» no es para el host
 				const char* equipo = n <= pr.equipoLocal ? "local" : (n <= pr.mandosActivos ? "visitante" : "fuera");
 				if (a.ocupado && a.parsecId != 0) mandoDe[a.parsecId] = n;
 				lista.push_back({
@@ -324,6 +345,7 @@ namespace phoenix::web {
 				{"ordenPes", ordenPes},
 				{"formacion", { {"local", pr.equipoLocal}, {"visitante", pr.mandosActivos - pr.equipoLocal} }},
 				{"host", MandoHost::activo()},
+				{"miMando", detalle_estado::nombreMiMando()},
 				{"bloqueoGlobal", gc.lock}, {"bloqueoBotones", bloqueoBotonesPropio(in)}, {"esclavo", gc.isSlave},
 				{"xbox", Config::cfg.input.xboxPuppetCount}, {"ds4", Config::cfg.input.ds4PuppetCount},
 				{"reiniciando", in.reiniciandoMandos},

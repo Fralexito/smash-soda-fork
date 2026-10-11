@@ -82,6 +82,10 @@ namespace phoenix {
 		virtual void tomarControl(int indice, bool activo) = 0;
 		/// Estado que el host envía al mando tomado (formato XInput: botones + stick izq.).
 		virtual void inyectar(int indice, uint16_t botones, int16_t lx, int16_t ly) = 0;
+		/// «Tu mando»: solo el puesto `indice` copia el mando físico del anfitrión (-1 = ninguno).
+		virtual void titereUnico(int indice) = 0;
+		/// ¿El anfitrión eligió su mando físico («Tu mando»)?
+		virtual bool hayMandoPropio() = 0;
 		/// Calidad de transmisión (se aplica al instante y se guarda).
 		virtual void aplicarVideo(int fps, int mbps) = 0;
 	};

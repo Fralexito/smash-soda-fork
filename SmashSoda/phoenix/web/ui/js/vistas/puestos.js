@@ -9,7 +9,7 @@
 // =============================================================================
 import { html, useState } from "../lib.js";
 import { t } from "../i18n.js";
-import { accion, confirmar } from "../tienda.js";
+import { accion, confirmar, avisar } from "../tienda.js";
 import { Boton, Icono, Vacio, Avatar, Chip, Stepper, Interruptor, colorPing, cx, dos } from "../ui.js";
 import { Pendientes, ElegirJugador } from "./mandos.js";
 import { MandosEnVivo } from "./mandovivo.js";
@@ -39,6 +39,15 @@ function Fila({ p, m, color, arr, setArr, alAsignar }) {
     const a = arr;
     setArr(null);
     if (!a || !recibe) return;
+    const hostId = m.sala?.hostId;
+    const origen = a.tipo === "puesto" ? m.mandos.lista[a.valor] : null;
+    const origenHost = origen && (m.mandos.host === origen.n || (origen.parsecId && origen.parsecId === hostId));
+    if ((a.tipo === "persona" && a.valor === hostId) || origenHost) {
+      // El anfitrión se mueve «tomando» el puesto (con su mando físico o el teclado)
+      if (p.ocupado && !esHost) return avisar(t("Ese puesto está ocupado: primero quita a quien está ahí.", "That seat is taken: remove that player first."), "warn");
+      return accion("mandos.tomar", { numero: p.n });
+    }
+    if (esHost) return avisar(t("Ese es tu puesto: muévete tú a otro, o arrástrate a «Mirando».", "That's your seat: move yourself or drag yourself to «Watching»."), "warn");
     if (a.tipo === "puesto") accion("mandos.intercambiar", { a: a.valor, b: p.n - 1 });
     else accion("mandos.asignar", { indice: p.n - 1, parsecId: a.valor });
   };
@@ -60,7 +69,8 @@ function Fila({ p, m, color, arr, setArr, alAsignar }) {
             ${esHost ? html` <${Chip} tipo="acc">${t("TÚ", "YOU")}</${Chip}>` : null}
             <span class=${cx("chip", p.tipo === "ds4" ? "acc2" : "mod")} style="height:20px;margin-left:6px;font-size:11px" title=${p.tipo === "ds4" ? t("Este puesto es un mando de PlayStation (DualShock 4)", "This seat is a PlayStation pad (DualShock 4)") : t("Este puesto es un mando de Xbox", "This seat is an Xbox pad")}>${p.tipo === "ds4" ? "PLAYSTATION" : "XBOX"}</span></div>
           <div class="mono mut" style="font-size:12px">
-            ${p.conectado ? t("conectado", "connected") : t("desconectado", "unplugged")}${p.bloqueado ? t(" · bloqueado", " · locked") : ""}
+            ${esHost ? (m.mandos.miMando ? t("con tu mando · ", "with your pad · ") + m.mandos.miMando : t("con el teclado", "with the keyboard"))
+              : html`${p.conectado ? t("conectado", "connected") : t("desconectado", "unplugged")}${p.bloqueado ? t(" · bloqueado", " · locked") : ""}`}
             ${p.ping >= 0 ? html` · <span style=${`color:${colorPing(p.ping)}`}>${p.ping} ms</span>` : null}</div>
         </div>`
       : html`<div style="flex:1;min-width:0">
@@ -68,7 +78,7 @@ function Fila({ p, m, color, arr, setArr, alAsignar }) {
             ${p.tipo ? html`<span class=${cx("chip", p.tipo === "ds4" ? "acc2" : "mod")} style="height:18px;margin-left:6px;font-size:10px;opacity:.8">${p.tipo === "ds4" ? "PLAYSTATION" : "XBOX"}</span>` : null}</div>
           <div style="font:400 13px/1.3 var(--f-body);color:var(--mut)">${arrastrando && recibe ? t("Suelta aquí", "Drop here") : t("Arrastra a alguien aquí", "Drag someone here")}</div>
         </div>`}
-    ${p.ocupado ? html`<button class="icono-btn" style="height:38px;width:38px;flex:none" data-tip=${p.bloqueado ? t("Desbloquear: el jugador vuelve a mover su mando", "Unlock: the player can move again") : t("Bloquear: el jugador no puede mover este mando (sigue en su puesto)", "Lock: the player can't move this pad (keeps the seat)")}
+    ${p.ocupado && !esHost ? html`<button class="icono-btn" style="height:38px;width:38px;flex:none" data-tip=${p.bloqueado ? t("Desbloquear: el jugador vuelve a mover su mando", "Unlock: the player can move again") : t("Bloquear: el jugador no puede mover este mando (sigue en su puesto)", "Lock: the player can't move this pad (keeps the seat)")}
         onClick=${() => accion("mandos.bloquear", { indice: p.n - 1 })}><span style=${p.bloqueado ? "color:var(--warn)" : ""}><${Icono} n="candado" t=${17}/></span></button>` : null}
     ${p.ocupado
       ? html`<${Boton} tipo="peligro mini" estilo="flex:none" titulo=${t("Sale del puesto y pasa a mirar", "Leaves the seat and watches")} al=${() => esHost ? accion("mandos.tomar", { numero: 0 }) : accion("mandos.liberar", { indice: p.n - 1 })}>${t("QUITAR", "REMOVE")}</${Boton}>`
@@ -115,16 +125,18 @@ function Espectador({ g, m, arr, setArr }) {
     <${Avatar} nombre=${g.nombre} id=${g.parsecId} url=${perfil?.avatar_url} t=${38}/>
     <div style="flex:1;min-width:0">
       <div style="font:600 15px/1.2 var(--f-body);color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.nombre}
-        <span class="chip" style="height:18px;margin-left:6px;font-size:10px">${t("ESPECTADOR", "SPECTATOR")}</span>
-        <span class=${cx("chip", soloWeb ? "acc2" : "acc")} style="height:18px;margin-left:4px;font-size:10px">${soloWeb ? "WEB" : "PARSEC"}</span></div>
-      <div class="mono mut" style="font-size:12px">${soloWeb
+        ${g.host ? html`<span class="chip acc" style="height:18px;margin-left:6px;font-size:10px">${t("TÚ", "YOU")}</span>` : html`<span class="chip" style="height:18px;margin-left:6px;font-size:10px">${t("ESPECTADOR", "SPECTATOR")}</span>
+        <span class=${cx("chip", soloWeb ? "acc2" : "acc")} style="height:18px;margin-left:4px;font-size:10px">${soloWeb ? "WEB" : "PARSEC"}</span>`}</div>
+      <div class="mono mut" style="font-size:12px">${g.host
+        ? (m.mandos.miMando ? t("mirando · tu mando: ", "watching · your pad: ") + m.mandos.miMando : t("mirando · jugarás con el teclado", "watching · you'll use the keyboard"))
+        : soloWeb
         ? t("solo espectador en la web", "web spectator only")
         : g.ping >= 0 ? html`<span style=${`color:${colorPing(g.ping)}`}>${g.ping} ms</span>` : "—"}</div>
     </div>
-    ${soloWeb ? null : html`<select class="campo" style="width:auto;height:32px;font-size:12px;flex:none" disabled=${libres.length === 0 || m.mandos?.esclavo}
+    ${soloWeb ? null : html`<select class="campo" style="width:auto;height:32px;font-size:12px;flex:none" disabled=${libres.length === 0 || m.mandos?.esclavo || (g.host && !m.sala?.abierta)}
       aria-label=${t("Dar puesto a ", "Give a seat to ") + g.nombre}
-      onChange=${(e) => { const v = Number(e.currentTarget.value); e.currentTarget.value = ""; if (v) accion("mandos.asignar", { indice: v - 1, parsecId: g.parsecId }); }}>
-      <option value="">${libres.length ? t("DAR PUESTO…", "GIVE SEAT…") : t("SIN LIBRES", "NONE FREE")}</option>
+      onChange=${(e) => { const v = Number(e.currentTarget.value); e.currentTarget.value = ""; if (!v) return; if (g.host) accion("mandos.tomar", { numero: v }); else accion("mandos.asignar", { indice: v - 1, parsecId: g.parsecId }); }}>
+      <option value="">${g.host && !m.sala?.abierta ? t("ABRE LA SALA", "OPEN THE ROOM") : libres.length ? (g.host ? t("PONERME EN…", "TAKE SEAT…") : t("DAR PUESTO…", "GIVE SEAT…")) : t("SIN LIBRES", "NONE FREE")}</option>
       ${libres.map((p) => html`<option value=${p.n}>${dos(p.n)} · ${p.equipo === "local" ? "Local" : p.equipo === "visitante" ? t("Visita", "Away") : t("Fuera", "Off")}</option>`)}
     </select>`}
   </div>`;
@@ -150,7 +162,9 @@ export function PuestosNuevo({ m }) {
   // Puestos que quedaron sin equipo pero tienen a alguien: se muestran para que nadie quede oculto.
   const sinEquipo = lista.filter((p) => p.equipo !== "local" && p.equipo !== "visitante" && p.ocupado);
   const sentados = new Set(lista.filter((p) => p.ocupado && p.parsecId).map((p) => p.parsecId));
-  const mirando = (m.invitados || []).filter((g) => !g.falso && !sentados.has(g.parsecId));
+  const hostSentado = !!m.mandos.host;
+  const anfitrion = m.sala?.hostId && !hostSentado ? [{ parsecId: m.sala.hostId, nombre: m.sala.hostNombre || t("Anfitrión", "Host"), host: true, ping: -1 }] : [];
+  const mirando = [...anfitrion, ...(m.invitados || []).filter((g) => !g.falso && !sentados.has(g.parsecId))];
 
   const formacion = (local, visitante) => accion("mandos.formacion", { local, visitante });
   const maxLocal = Math.max(1, Math.min(7, total - f.visitante));
@@ -193,8 +207,7 @@ export function PuestosNuevo({ m }) {
         <${Boton} tipo="mini suave" deshabilitado=${esclavo || m.mandos.reiniciando}
           al=${() => herramienta("reiniciar", [t("¿Reiniciar los mandos?", "Reset pads?"), t("Se desconectan y vuelven a conectar todos los mandos virtuales. Úsalo si el juego dejó de detectarlos.", "All virtual pads are re-plugged. Use it if the game stopped detecting them.")])}>
           ${m.mandos.reiniciando ? t("REINICIANDO…", "RESETTING…") : t("REINICIAR", "RESET")}</${Boton}>
-        <${Boton} tipo="mini peligro" deshabilitado=${esclavo}
-          al=${() => herramienta("desconectarTodos", [t("¿Quitar todos los mandos?", "Remove all pads?"), t("Nadie podrá jugar hasta que vuelvas a asignar.", "Nobody can play until you assign again.")])}>${t("QUITAR TODOS", "REMOVE ALL")}</${Boton}>
+        <${TodosAMirar} m=${m} esclavo=${esclavo}/>
       </div>
     </div>
 
@@ -211,7 +224,6 @@ export function PuestosNuevo({ m }) {
         <div style="display:flex;align-items:center;gap:12px">
           <span class="disp" style="font-weight:700;font-size:15px;letter-spacing:.2em">${t("JUGANDO", "PLAYING")}</span>
           <span style="flex:1;height:1px;background:linear-gradient(90deg,var(--linea-fuerte),transparent)"></span>
-          <${TodosAMirar} m=${m} esclavo=${esclavo}/>
         </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:16px;align-items:stretch">
           <${Equipo} nombre="LOCAL" desc=${t("El equipo de quien abre la sala", "The room owner's team")} color="var(--acc)" filas=${locales}
@@ -266,7 +278,7 @@ function TodosAMirar({ m, esclavo }) {
       else await accion("mandos.liberar", { indice: p.n - 1 }, { silencioso: true });
     }
   };
-  return html`<${Boton} tipo="mini suave" deshabilitado=${esclavo} al=${todos}><${Icono} n="ojo" t=${14}/>${t("TODOS A ESPECTADOR", "EVERYONE TO SPECTATOR")}</${Boton}>`;
+  return html`<${Boton} tipo="mini peligro" deshabilitado=${esclavo} titulo=${t("Todos salen de sus puestos y pasan a mirar", "Everyone leaves their seat and watches")} al=${todos}>${t("TODOS A ESPECTADOR", "EVERYONE TO SPECTATOR")}</${Boton}>`;
 }
 
 // ---- Orden de mandos en PES (EXPERIMENTAL) ---------------------------------------------

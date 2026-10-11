@@ -69,7 +69,7 @@ namespace phoenix::web {
 			const int ia = indiceMando(in, d, "a"), ib = indiceMando(in, d, "b");
 			const int mh = MandoHost::activo();
 			if (mh > 0 && (mh == ia + 1 || mh == ib + 1)) {   // el del anfitrión no tiene dueño en el motor: se cambia con «tomar»
-				throw ErrorAccion("MANDO_DEL_ANFITRION", "Ese es tu mando: cámbialo desde tu fila (EN LA SALA) o con Ctrl+Alt+número.");
+				throw ErrorAccion("MANDO_DEL_ANFITRION", "Para moverte, arrástrate a un puesto libre.");
 			}
 			if (!AccionesSala::intercambiar(salaObligatoria(in), ia, ib)) {
 				throw ErrorAccion("NADA_QUE_MOVER", "Los dos mandos están libres.");
@@ -250,6 +250,24 @@ namespace phoenix::web {
 			gc.gamepads[i]->isPuppet = booleano(d, "si");
 			if (!gc.gamepads[i]->isPuppet) gc.gamepads[i]->clearState();
 			return json::object();
+		});
+		// «Tu mando» (anfitrión): elige el mando físico (-1 = ninguno, teclado). El puesto lo pone MandoHost.
+		p.registrar("mandos.miMando", [&in](const json& d, uint64_t) -> std::optional<json> {
+			GamepadClient& gc = clienteMandos(in);
+			MasterOfPuppets& mp = MasterOfPuppets::instance;
+			const int i = entero(d, "indice", -1, 15);
+			{
+				std::lock_guard<std::mutex> cierre(mp.inputMutex);
+				if (i >= 0) {
+					const size_t total = mp.isSDLEngine ? mp.getSDLGamepads().size() : mp.getXInputGamepads().size();
+					if (static_cast<size_t>(i) >= total) throw ErrorAccion("MANDO_NO_ENCONTRADO", "Ese mando ya no está conectado.");
+				}
+				// Las marionetas viejas (varios títeres) se apagan: ahora solo se mueve el puesto del anfitrión.
+				for (AGamepad* g : gc.gamepads) if (g != nullptr && g->isPuppet) { g->isPuppet = false; g->clearState(); }
+				mp.setMasterIndex(i);
+			}
+			gc.isPuppetMaster = i >= 0;
+			return json::object();   // MandoHost cambia de modo en su siguiente vuelta
 		});
 		p.registrar("marionetas.tipo", [&in](const json& d, uint64_t) -> std::optional<json> {
 			clienteMandos(in);

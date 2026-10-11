@@ -7,6 +7,7 @@
 #include "../../widgets/HostSettingsWidget.h"
 #include "../PhoenixRoles.h"
 #include "../PhoenixPrefs.h"
+#include "../../core/MasterOfPuppets.h"
 
 namespace phoenix {
 
@@ -273,6 +274,30 @@ namespace phoenix {
 			if (!activo) p->clearState();
 		}
 		catch (...) {}
+	}
+
+	void ProveedorSalaSoda::titereUnico(int indice) {
+		try {
+			MasterOfPuppets& mp = MasterOfPuppets::instance;
+			std::lock_guard<std::mutex> cierre(mp.inputMutex);
+			std::vector<AGamepad*>& lista = _hosting.getGamepadClient().gamepads;
+			for (size_t i = 0; i < lista.size(); i++) {
+				AGamepad* p = lista[i];
+				if (p == nullptr) continue;
+				const bool quiere = static_cast<int>(i) == indice;
+				if (quiere && !p->isConnected()) p->connect();
+				if (quiere && p->isLocked()) p->setLocked(false);
+				if (p->isPuppet != quiere) {
+					p->isPuppet = quiere;
+					if (!quiere) p->clearState();
+				}
+			}
+		}
+		catch (...) {}
+	}
+
+	bool ProveedorSalaSoda::hayMandoPropio() {
+		return MasterOfPuppets::instance.getMasterIndex() >= 0;
 	}
 
 	void ProveedorSalaSoda::inyectar(int i, uint16_t botones, int16_t lx, int16_t ly) {

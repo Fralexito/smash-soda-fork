@@ -1,7 +1,8 @@
 // =============================================================================
-//  MANDOS › MARIONETAS (rehecho): cuántos mandos virtuales ve el juego, y un
-//  mando físico «maestro» que controla los mandos virtuales («títeres») que
-//  marques. Todo dentro de la interfaz nueva (ya no salta al panel clásico).
+//  MANDOS › TU MANDO: el anfitrión elige su mando físico una vez y, al ponerse
+//  en cualquier puesto (arrastrándose en Puestos), ese mando mueve ese puesto.
+//  Por dentro es una marioneta de un solo puesto que pone MandoHost; sin mando,
+//  el puesto del anfitrión se mueve con el teclado. (Antes: maestro y títeres.)
 // =============================================================================
 import { html, useState, useEffect } from "../lib.js";
 import { t } from "../i18n.js";
@@ -23,62 +24,48 @@ function MandosVirtuales({ m }) {
   </${Tarjeta}>`;
 }
 
-function Maestro({ m }) {
+function TuMando({ m }) {
   const mar = m.marionetas;
   const bloqueado = !!m.mandos.esclavo;
-  if (!mar) return html`<${Tarjeta} interior="padding:22px 24px"><${Titulo} texto=${t("MAESTRO Y TÍTERES", "MASTER AND PUPPETS")}/>
-    <div class="ayuda">${t("Buscando mandos…", "Looking for pads…")}</div></${Tarjeta}>`;
-  const hayMaestro = mar.maestro >= 0;
+  const actual = mar ? mar.maestro : -1;
+  const usar = (i) => accion("mandos.miMando", { indice: i }, { ok: i >= 0 ? t("Listo: ese es tu mando.", "Done: that's your pad.") : t("Listo: usarás el teclado.", "Done: you'll use the keyboard.") });
+  const nombre = actual >= 0 && mar?.maestros?.[actual] ? mar.maestros[actual].nombre : "";
   return html`<${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:16px">
-    <${Titulo} texto=${t("MAESTRO Y TÍTERES", "MASTER AND PUPPETS")}
-      derecha=${hayMaestro ? html`<${Chip} tipo="acc">${t("MAESTRO ACTIVO", "MASTER ON")}</${Chip}>` : html`<${Chip}>${t("SIN MAESTRO", "NO MASTER")}</${Chip}>`}/>
-    <div class="ayuda" style="font-size:14px">
-      ${t("Un mando físico de esta PC (el maestro) puede manejar varios mandos virtuales a la vez (los títeres). Sirve, por ejemplo, para que juegue alguien sentado a tu lado.",
-          "A physical pad on this PC (the master) can drive several virtual pads (the puppets) at once.")}
-    </div>
-    ${bloqueado ? html`<div class="caja" style="border-color:var(--warn)">${t("Con turnos o torneo activos no se pueden cambiar las marionetas.", "Puppets can't be changed during hotseat or tournament.")}</div>` : null}
-
-    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-      <div class="lab">${t("MOTOR DE LECTURA", "READING ENGINE")}</div>
-      <${Segmentos} valor=${mar.motor} al=${(v) => accion("marionetas.motor", { sdl: v === "sdl" })}
-        opciones=${[{ valor: "sdl", texto: "SDL" }, { valor: "xinput", texto: "XINPUT" }]}/>
-      ${mar.motor === "sdl" ? html`<${Boton} tipo="suave mini" deshabilitado=${bloqueado} al=${() => accion("marionetas.actualizar", {}, { ok: t("Lista actualizada.", "List refreshed.") })}>${t("ACTUALIZAR", "REFRESH")}</${Boton}>` : null}
-    </div>
-    <div class="ayuda">${mar.motor === "sdl"
-      ? t("SDL reconoce casi cualquier mando (Xbox, PlayStation, genéricos).", "SDL detects almost any pad.")
-      : t("XINPUT solo ve mandos Xbox y compatibles.", "XINPUT only sees Xbox-style pads.")}</div>
-
-    <div>
-      <div class="lab acc" style="margin-bottom:10px">${t("1 · ELIGE EL MAESTRO (MANDO FÍSICO)", "1 · PICK THE MASTER (PHYSICAL PAD)")}</div>
-      ${mar.maestros.length === 0
-        ? html`<div class="ayuda">${t("No se detecta ningún mando físico. Conéctalo y pulsa «Actualizar».", "No physical pad found. Plug one in and press Refresh.")}</div>`
-        : html`<div class="col" style="gap:8px">${mar.maestros.map((x) => {
-            const es = mar.maestro === x.n - 1;
-            return html`<div class=${cx("fila-mar", es && "es")} key=${x.n}>
-              <span class=${cx("luz", x.activo && "on")} title=${t("Se enciende al pulsar un botón", "Lights up when you press a button")}></span>
-              <div style="flex:1;min-width:0">
-                <div class="nombre" style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${dos(x.n)} · ${x.nombre}</div>
-                <div class="mono mut" style="font-size:12px">${TIPOS[x.tipo] || x.tipo}</div>
-              </div>
-              ${mar.motor === "sdl" ? html`<${Boton} tipo="suave mini" deshabilitado=${bloqueado} titulo=${t("Cambia cómo se leen sus botones (Xbox / DualShock / DS4)", "Changes how its buttons are read")}
-                al=${() => accion("marionetas.tipo", { indice: x.n - 1 })}>${t("MAPEO", "MAP")}</${Boton}>` : null}
-              <${Boton} tipo=${es ? "lleno mini" : "mini"} deshabilitado=${bloqueado} al=${() => accion("marionetas.maestro", { indice: x.n - 1 })}>
-                ${es ? t("MAESTRO ✓", "MASTER ✓") : t("SER MAESTRO", "MAKE MASTER")}</${Boton}>
-            </div>`;
-          })}</div>`}
-    </div>
-
-    <div>
-      <div class="lab acc" style="margin-bottom:10px">${t("2 · MARCA LOS TÍTERES (MANDOS VIRTUALES)", "2 · MARK THE PUPPETS (VIRTUAL PADS)")}</div>
-      ${mar.titeres.length === 0
-        ? html`<div class="ayuda">${t("No hay mandos virtuales. Revisa Sala › Conexión (ViGEmBus).", "No virtual pads. Check Settings › Diagnostics.")}</div>`
-        : html`<div class="rej4" style="gap:8px">${mar.titeres.map((p) => html`<button key=${p.n} class=${cx("titere", p.activo && "on")} disabled=${bloqueado || !hayMaestro}
-            aria-pressed=${p.activo} onClick=${() => accion("marionetas.titere", { indice: p.n - 1, si: !p.activo })}>
-            <span class="numeral" style="font-size:22px">${dos(p.n)}</span>
-            <span class="mono" style="font-size:11px">${p.activo ? t("OBEDECE", "FOLLOWS") : t("LIBRE", "FREE")}</span>
-          </button>`)}</div>`}
-      ${!hayMaestro && mar.titeres.length ? html`<div class="ayuda" style="margin-top:8px">${t("Primero elige un maestro para poder marcar títeres.", "Pick a master first.")}</div>` : null}
-    </div>
+    <${Titulo} texto=${t("TU MANDO (ANFITRIÓN)", "YOUR PAD (HOST)")}
+      derecha=${nombre ? html`<${Chip} tipo="acc">${nombre}</${Chip}>` : html`<${Chip}>${t("TECLADO", "KEYBOARD")}</${Chip}>`}/>
+    <ol class="ayuda" style="font-size:14px;margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px">
+      <li>${t("Conecta tu mando y pulsa un botón: su luz se enciende en la lista.", "Plug in your pad and press a button: its light turns on in the list.")}</li>
+      <li>${t("Pulsa «USAR ESTE».", "Press «USE THIS».")}</li>
+      <li>${t("En Mandos › Puestos, arrástrate (TÚ) al puesto que quieras. Tu mando mueve ese puesto y puedes cambiarte cuando quieras.", "In Pads › Seats, drag yourself (YOU) to any seat. Your pad drives that seat; switch any time.")}</li>
+    </ol>
+    ${bloqueado ? html`<div class="caja" style="border-color:var(--warn)">${t("Con turnos o torneo activos no se puede cambiar.", "Can't change during hotseat or tournament.")}</div>` : null}
+    ${!mar ? html`<div class="ayuda">${t("Buscando mandos…", "Looking for pads…")}</div>` : html`
+      <div class="col" style="gap:8px">
+        ${mar.maestros.length === 0 ? html`<div class="ayuda">${t("No veo ningún mando físico. Conéctalo y pulsa «BUSCAR MANDOS».", "No physical pad found. Plug it in and press «FIND PADS».")}</div>` : null}
+        ${mar.maestros.map((x) => {
+          const es = actual === x.n - 1;
+          return html`<div class=${cx("fila-mar", es && "es")} key=${x.n}>
+            <span class=${cx("luz", x.activo && "on")} title=${t("Se enciende al pulsar un botón", "Lights up when you press a button")}></span>
+            <div style="flex:1;min-width:0">
+              <div class="nombre" style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${x.nombre}</div>
+              <div class="mono mut" style="font-size:12px">${es ? t("es tu mando", "your pad") : t("pulsa un botón para reconocerlo", "press a button to spot it")}</div>
+            </div>
+            ${es && mar.motor === "sdl" ? html`<${Boton} tipo="suave mini" deshabilitado=${bloqueado} titulo=${t("Si los botones salen cambiados, prueba otra lectura (Xbox / PlayStation)", "If buttons come out swapped, try another reading")}
+              al=${() => accion("marionetas.tipo", { indice: x.n - 1 })}>${t("¿BOTONES CAMBIADOS?", "BUTTONS SWAPPED?")}</${Boton}>` : null}
+            <${Boton} tipo=${es ? "lleno mini" : "mini"} deshabilitado=${bloqueado || es} al=${() => usar(x.n - 1)}>${es ? t("✓ EN USO", "✓ IN USE") : t("USAR ESTE", "USE THIS")}</${Boton}>
+          </div>`;
+        })}
+        <div class=${cx("fila-mar", actual < 0 && "es")}>
+          <span class="luz"></span>
+          <div style="flex:1;min-width:0">
+            <div class="nombre" style="font-weight:600">${t("Sin mando: teclado", "No pad: keyboard")}</div>
+            <div class="mono mut" style="font-size:12px">${t("flechas · Enter = A · Retroceso = B · Espacio = Start", "arrows · Enter = A · Backspace = B · Space = Start")}</div>
+          </div>
+          <${Boton} tipo=${actual < 0 ? "lleno mini" : "mini"} deshabilitado=${bloqueado || actual < 0} al=${() => usar(-1)}>${actual < 0 ? t("✓ EN USO", "✓ IN USE") : t("USAR TECLADO", "USE KEYBOARD")}</${Boton}>
+        </div>
+      </div>
+      <div><${Boton} tipo="suave mini" deshabilitado=${bloqueado} al=${() => accion("marionetas.actualizar", {}, { ok: t("Lista actualizada.", "List refreshed.") })}>${t("BUSCAR MANDOS", "FIND PADS")}</${Boton}></div>`}
+    <div class="ayuda" style="font-size:13px">${t("Para que PES no vea tu mando por su cuenta (y no controles dos jugadores), enciende «Orden de mandos en PES» en Mandos › Puestos.", "So PES doesn't also read your pad directly, turn on «Pad order in PES» in Pads › Seats.")}</div>
   </${Tarjeta}>`;
 }
 
@@ -134,7 +121,7 @@ function MandoVivo({ g }) {
 
 export function MarionetasNuevo({ m }) {
   return html`<div class="fila partible" style="align-items:flex-start">
-    <div class="col" style="flex:1 1 0;min-width:300px"><${MandosVirtuales} m=${m}/><${PruebaMando}/></div>
-    <div class="col" style="flex:1.5 1 0;min-width:340px"><${Maestro} m=${m}/></div>
+    <div class="col" style="flex:1.5 1 0;min-width:340px"><${TuMando} m=${m}/></div>
+    <div class="col" style="flex:1 1 0;min-width:300px"><${PruebaMando}/><${MandosVirtuales} m=${m}/></div>
   </div>`;
 }

@@ -44,6 +44,8 @@ namespace phoenix {
 		void permitirRaton(uint32_t parsecId, bool si) override;
 		void tomarControl(int indice, bool activo) override;
 		void inyectar(int indice, uint16_t botones, int16_t lx, int16_t ly) override;
+		void titereUnico(int indice) override;
+		bool hayMandoPropio() override;
 		void aplicarVideo(int fps, int mbps) override;
 
 	private:

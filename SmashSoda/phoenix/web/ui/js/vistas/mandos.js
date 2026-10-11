@@ -15,7 +15,7 @@ export const PESTANAS_MANDOS = [
   { id: "puestos", es: "PUESTOS", en: "SEATS", d: ["Arrastra a cada persona a un puesto, o toca «Asignar». Lo que dejes en «Mirando» solo ve la partida.", "Drag each person to a seat, or tap Assign. Anyone in Watching only watches."] },
   { id: "teclado", es: "TECLADO", en: "KEYBOARD", d: ["Quién puede jugar con teclado y qué tecla es cada botón del mando.", "Who can play with keyboard and which key is each pad button."] },
   { id: "turnos", es: "TURNOS", en: "HOTSEAT", d: ["Rotación automática: cada uno juega un rato y cede el mando.", "Automatic rotation of the pads."] },
-  { id: "marionetas", es: "MARIONETAS", en: "PUPPETS", d: ["Cuántos mandos virtuales ve el juego y qué mando físico maneja a los demás.", "Virtual pads the game sees and which physical pad drives the others."] },
+  { id: "marionetas", es: "TU MANDO", en: "YOUR PAD", d: ["Elige el mando con el que juegas tú y cuántos mandos ve el juego.", "Pick the pad you play with and how many pads the game sees."] },
   { id: "bloqueo", es: "BLOQUEO", en: "LOCK", d: ["Congela los mandos (pausas, revisión) o bloquea solo los botones que elijas.", "Freeze pads or lock only the buttons you pick."] },
 ];
 

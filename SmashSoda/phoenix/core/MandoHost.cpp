@@ -9,6 +9,14 @@ namespace phoenix {
 
 	namespace {
 		int mhActivo = 0;              // 1..8, 0 = ninguno
+		bool mhConMando = false;       // true: lo mueve el mando físico del host («Tu mando»); false: el teclado
+
+		void aplicar(ProveedorSala* sala) {
+			if (mhActivo <= 0) return;
+			mhConMando = sala->hayMandoPropio();
+			if (mhConMando) sala->titereUnico(mhActivo - 1);   // sin bloquear: nadie más lo usa
+			else sala->tomarControl(mhActivo - 1, true);
+		}
 		bool mhTeclaAntes[10] = {};
 
 		bool mhAbajo(int vk) { return (GetAsyncKeyState(vk) & 0x8000) != 0; }
@@ -17,8 +25,12 @@ namespace phoenix {
 	int MandoHost::activo() { return mhActivo; }
 
 	void MandoHost::soltar(ProveedorSala* sala) {
-		if (mhActivo > 0 && sala != nullptr) sala->tomarControl(mhActivo - 1, false);
+		if (mhActivo > 0 && sala != nullptr) {
+			if (mhConMando) sala->titereUnico(-1);
+			else sala->tomarControl(mhActivo - 1, false);
+		}
 		mhActivo = 0;
+		mhConMando = false;
 	}
 
 	void MandoHost::tomar(ProveedorSala* sala, int n) {
@@ -27,7 +39,7 @@ namespace phoenix {
 			if (n == 0 || n == mhActivo) { soltar(sala); return; }
 			soltar(sala);
 			mhActivo = n;
-			sala->tomarControl(n - 1, true);
+			aplicar(sala);
 		}
 		catch (...) {}
 	}
@@ -41,15 +53,19 @@ namespace phoenix {
 				const bool ahora = mod && mhAbajo('0' + n);
 				if (ahora && !mhTeclaAntes[n]) {
 					if (n == 0 || n == mhActivo) soltar(sala);
-					else {
-						soltar(sala);
-						mhActivo = n;
-						sala->tomarControl(n - 1, true);
-					}
+					else tomar(sala, n);
 				}
 				mhTeclaAntes[n] = ahora;
 			}
 			if (mhActivo == 0 || !sala->abierta()) { if (mhActivo) soltar(sala); return; }
+
+			// Si el host elige o quita «Tu mando» mientras está en un puesto, se cambia de modo sin moverlo de puesto.
+			if (sala->hayMandoPropio() != mhConMando) {
+				if (mhConMando) sala->titereUnico(-1);
+				else sala->tomarControl(mhActivo - 1, false);
+				aplicar(sala);
+			}
+			if (mhConMando) return;   // lo mueve su mando físico: el teclado no se inyecta
 
 			// Teclado del host → mando tomado
 			uint16_t b = 0;
