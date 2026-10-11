@@ -1064,3 +1064,18 @@ carnet del blob no cambia con la velocidad (cola idéntica entre ranuras 4 y 5).
   - **Yamal (pid 162114):** equipo 7 (España) y equipo 108 (FC Barcelona, dorsal 10). Está en el Barça, como se esperaba.
   - **Havertz (pid 114506):** equipo 14 (Alemania) y equipo 108 (FC Barcelona, dorsal 29). **No está en el Arsenal** — ya está en el Barça.
 - No se hizo ningún cambio en el archivo todavía: se le avisó a FRALEX de esta diferencia con lo que pidió, y se le preguntó cómo seguir (solo mover a Yamal; mover a Yamal y además mandar a Havertz al Arsenal; o que dé otro nombre).
+
+### 2026-10-11 · ❌→✅ Bug encontrado y corregido: `mover_cli` adivinaba mal el equipo de origen — Yamal movido al Arsenal (amistosos)
+- FRALEX confirmó: "mueve a lamine al arsenal ahora" (solo Yamal; Havertz se deja como está, ya en el Barça).
+- **Primera corrida (con la versión vieja de `mover_cli`, que adivinaba el equipo de origen):** `--mover 162114 101 10` (sin dar el origen) sacó a Yamal de **España** (equipo 7) en vez del Barça, porque el código recorría las plantillas en orden numérico de ID y tomaba la primera que no fuera el destino — 7 (España) es menor que 108 (Barça), así que ganó por error. Resultado: Yamal quedó en Arsenal + Barça, **nunca salió del Barça**, y además perdió su lugar en la selección — justo lo contrario de lo pedido. **Se detectó antes de tocar el PC**, con el propio `--buscar` después del movimiento (la verificación de siempre, "0 errores").
+- **Corrección:** se cambió `mover_cli` para que `equipoOrigen` sea un argumento obligatorio y explícito (nunca adivinado) y se agregó una comprobación previa: si el jugador no está realmente en esa plantilla de origen, el programa aborta con un error claro y no escribe nada. Recompilado, **211/211 pruebas siguen pasando**.
+- **Corrida correcta:** `--mover 162114 101 108 10` (origen = 108, Barça, explícito). Resultado verificado con `--buscar` antes y después:
+  - Antes: Yamal en España (7) y Barça (108, dorsal 10). Havertz en Alemania (14) y Barça (108, dorsal 29).
+  - Después: **Yamal en España (7, sin tocar) y Arsenal (101)** — salió del Barça. **Havertz sin ningún cambio**, sigue en Alemania y Barça. El sistema eligió automáticamente a Havertz como sustituto de Yamal en la plantilla del Barça (misma zona ofensiva), sin que eso afecte su ficha ni su equipo.
+  - Hashes: `EDIT00000000` original en el PC = `0d8c4461c2e2a41c780a6443969aa84893a1f901ce94f46bc86dfd6de24058c2` (11 014 090 bytes) → nuevo `EDIT00000000` = `ea0e42f012da235ed74bcf30cd97189e22982e3a129565b6c1b3d62b09605461` (también 11 014 090 bytes).
+- **Entrega al PC (carpeta `save` del slot 239200):**
+  1. Respaldo del original con nuevo nombre: `EDIT00000000.respaldo-antes-yamal-arsenal-20261011` (hash verificado idéntico al original).
+  2. Archivo nuevo llevado comprimido (regla de siempre para archivos sin extensión, por el riesgo de corrupción silenciosa del puente), descomprimido en el PC y con el hash verificado **antes** de reemplazar nada.
+  3. Reemplazo de `EDIT00000000` por el archivo nuevo ya verificado; hash final confirmado en el PC = `ea0e42f012da235ed74bcf30cd97189e22982e3a129565b6c1b3d62b09605461` (coincide exacto).
+  4. Quedó un `EDIT_salida.zip` suelto en esa carpeta (no se pudo borrar porque el borrado de archivos en esa carpeta no está permitido todavía); no afecta nada, FRALEX puede borrarlo cuando quiera.
+- **Pendiente para FRALEX:** entrar al juego → **Editar → Cargar** para que se vea el cambio (solo afecta amistosos/exhibición, no la Liga Máster).
