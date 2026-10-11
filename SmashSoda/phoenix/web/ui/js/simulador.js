@@ -74,8 +74,8 @@ export function crearSimulador(enviar) {
     perfilesSala: [{ nombre: "Liga", valores: { plazas: 4, mbps: 15, local: 2, visitante: 2, visibilidad: "amigos" } }],
     buzon: { activo: true, estado: "conectado", ultimo: "00:30", juego: "C:\\Juegos\\PES 2021 ConmeGOL", parche: "ConmeGOL Patch 26", avisos: [{ id: 12, texto: "hola causa", hora: "00:30", escrito: true }, { id: 11, texto: "Tu fichaje de Kaiser ya está listo ⚡", hora: "00:12", escrito: true }, { id: 10, texto: "Recuerda: partido de liga hoy 9 pm", hora: "23:40", escrito: false }] },
     pes: { modo: "off", abierto: true },
-    // Modo cedido (vista previa: el PIN vive solo en memoria; el motor guarda sal$sha256)
-    cedido: { activo: false, parsecId: 0, nombre: "", desde: 0, pin: "", fallos: 0, esperaHasta: 0, ultimoFin: "" },
+    // Modo cedido (sin PIN: devolver la PC siempre le quita el control al invitado)
+    cedido: { activo: false, parsecId: 0, nombre: "", desde: 0, ultimoFin: "" },
     biblioteca: [{ id: 1, nombre: "PES 2021", ruta: "C:\\Juegos\\PES 2021 ConmeGOL\\PES2021.exe", parametros: "" }, { id: 2, nombre: "Football Life 2026", ruta: "D:\\FL26\\FL26.exe", parametros: "" }],
     atajos: [{ comando: "!lockall", tecla: 76, nombre: "L" }],
     entrega: { estado: "colocada", id: "demo-1", resumen: "Lamine Yamal: velocidad 99", motivo: "", fecha: "2026-10-09 06:12", puedeDeshacer: true },
@@ -229,9 +229,9 @@ export function crearSimulador(enviar) {
       buzon: s.buzon,
       entrega: s.entrega,
       pes: s.pes,
-      cedido: { activo: s.cedido.activo, parsecId: s.cedido.parsecId, nombre: s.cedido.nombre, desde: s.cedido.desde, pinGuardado: !!s.cedido.pin, atajo: "Ctrl+Alt+F12",
+      cedido: { activo: s.cedido.activo, parsecId: s.cedido.parsecId, nombre: s.cedido.nombre, desde: s.cedido.desde, atajo: "Ctrl+Alt+F12",
         juego: s.opciones.biblioteca && s.opciones.biblioteca !== "Default" ? s.opciones.biblioteca : "", pesAbierto: !!s.pes.abierto,
-        espera: Math.max(0, Math.ceil((s.cedido.esperaHasta - Date.now()) / 1000)), ultimoFin: s.cedido.ultimoFin },
+        ultimoFin: s.cedido.ultimoFin },
       marionetas: s.marionetas,
       teclado: { perfiles: s.perfilesTeclado },
       sala: {
@@ -462,22 +462,10 @@ export function crearSimulador(enviar) {
       if (!s.abierta) error("SALA_CERRADA", "Abre la sala primero.");
       const g = s.invitados.find((x) => x.parsecId === d.parsecId);
       if (!g) error("NO_ESTA", "Esa persona no está en la sala.");
-      if (!s.cedido.pin) { if (!/^\d{4,8}$/.test(d.pinNuevo || "")) error("PIN_INVALIDO", "Elige un PIN de 4 a 8 números para poder recuperar la PC."); s.cedido.pin = d.pinNuevo; }
-      Object.assign(s.cedido, { activo: true, parsecId: g.parsecId, nombre: g.nombre, desde: Date.now(), fallos: 0, esperaHasta: 0, ultimoFin: "" });
+      Object.assign(s.cedido, { activo: true, parsecId: g.parsecId, nombre: g.nombre, desde: Date.now(), ultimoFin: "" });
       bot(`Fralex cedió su PC a ${g.nombre}: maneja Phoenix Link y PES con teclado y ratón. Nada más de Windows.`);
     },
-    "cedido.salir": (d) => {
-      if (!s.cedido.activo) return;
-      if (Date.now() < s.cedido.esperaHasta) error("PIN_ESPERA", "Demasiados intentos. Espera " + Math.ceil((s.cedido.esperaHasta - Date.now()) / 1000) + " s.");
-      if (d.pin !== s.cedido.pin) { if (++s.cedido.fallos >= 5) { s.cedido.fallos = 0; s.cedido.esperaHasta = Date.now() + 60000; } error("PIN_INCORRECTO", "PIN incorrecto."); }
-      finCedido("PIN del anfitrión");
-    },
-    "cedido.pin": (d) => {
-      if (s.cedido.activo) error("PC_CEDIDA", "Primero recupera la PC.");
-      if (s.cedido.pin && d.actual !== s.cedido.pin) error("PIN_INCORRECTO", "El PIN actual no es correcto.");
-      if (!/^\d{4,8}$/.test(d.nuevo || "")) error("PIN_INVALIDO", "El PIN nuevo debe tener de 4 a 8 números.");
-      s.cedido.pin = d.nuevo;
-    },
+    "cedido.salir": () => { if (s.cedido.activo) finCedido("se devolvió desde Link"); },
     "cedido.abrirPes": () => { s.pes.abierto = true; },
   };
   function finCedido(motivo) {

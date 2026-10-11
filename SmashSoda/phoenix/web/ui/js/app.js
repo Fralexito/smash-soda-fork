@@ -18,7 +18,7 @@ import { PanelChat } from "./vistas/chat.js";
 import { UltimaHora } from "./vistas/ultimahora.js";
 import { Paleta } from "./vistas/paleta.js";
 import { vigilarCambios } from "./vigia.js";
-import { BandaCedido, DialogoCeder, DialogoRecuperar, SECCIONES_CEDIDO, PESTANAS_CEDIDO, estaCedida, vigilarCedido } from "./vistas/cedido.js";
+import { BandaCedido, DialogoCeder, SECCIONES_CEDIDO, PESTANAS_CEDIDO, estaCedida, vigilarCedido } from "./vistas/cedido.js";
 
 const SECCIONES = [
   { id: "sala", es: "SALA", en: "ROOM", vista: VistaSala, pestanas: PESTANAS_SALA },
@@ -209,8 +209,7 @@ function App() {
       else if (e.ctrlKey && e.code === "Space") { e.preventDefault(); alternarChat(); }
       else if (e.key === "Escape") {
         const st = leer();
-        if (st.recuperar) cambiar({ recuperar: false });
-        else if (st.ceder) cambiar({ ceder: null });
+        if (st.ceder) cambiar({ ceder: null });
         else if (st.dialogo) cerrarDialogo(false);
         else if (st.paleta) cambiar({ paleta: false });
         else if (st.chatAbierto) alternarChat(false);
@@ -235,7 +234,6 @@ function App() {
     <${Avisos} avisos=${s.avisos}/>
     <${Dialogo} d=${s.dialogo}/>
     <${DialogoCeder} s=${s}/>
-    <${DialogoRecuperar} s=${s}/>
     ${s.paleta && !cedida ? html`<${Paleta} s=${s}/>` : null}
     <div class=${cx("carga", s.conectado && "fuera")} aria-hidden=${s.conectado}>
       <${Logo} t=${64}/><div class="nombre">PHOENIX LINK</div><div class="giro"></div>

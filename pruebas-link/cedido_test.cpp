@@ -1,6 +1,6 @@
 // Prueba de la lógica pura del modo cedido (phoenix/core/ModoCedido) y del portero del Puente.
-// MSVC: cl /nologo /std:c++17 /EHsc /O2 /utf-8 /I SmashSoda /I external pruebas-link\cedido_test.cpp SmashSoda\phoenix\core\ModoCedido.cpp SmashSoda\phoenix\link\Entrega.cpp SmashSoda\phoenix\web\Puente.cpp
-// g++:  g++ -std=c++17 -O2 -I SmashSoda -I external pruebas-link/cedido_test.cpp SmashSoda/phoenix/core/ModoCedido.cpp SmashSoda/phoenix/link/Entrega.cpp SmashSoda/phoenix/web/Puente.cpp
+// MSVC: cl /nologo /std:c++17 /EHsc /O2 /utf-8 /I SmashSoda /I external pruebas-link\cedido_test.cpp SmashSoda\phoenix\core\ModoCedido.cpp SmashSoda\phoenix\web\Puente.cpp
+// g++:  g++ -std=c++17 -O2 -I SmashSoda -I external pruebas-link/cedido_test.cpp SmashSoda/phoenix/core/ModoCedido.cpp SmashSoda/phoenix/web/Puente.cpp
 #include "phoenix/core/ModoCedido.h"
 #include "phoenix/web/Puente.h"
 
@@ -25,7 +25,7 @@ int main() {
 		COMPROBAR(accionPermitida("cedido.salir", json::object()));
 		COMPROBAR(accionPermitida("chat.enviar", json::object()));
 		COMPROBAR(!accionPermitida("cedido.empezar", json::object()));
-		COMPROBAR(!accionPermitida("cedido.pin", json::object()));
+		COMPROBAR(!accionPermitida("cedido.pin", json::object()));   // ya no existe: cerrada
 		COMPROBAR(!accionPermitida("ajustes.general", json::object()));
 		COMPROBAR(!accionPermitida("web.desvincular", json::object()));
 		COMPROBAR(!accionPermitida("gente.banear", json::object()));
@@ -41,39 +41,6 @@ int main() {
 		COMPROBAR(accionPermitida("espera.decidir", json{ {"como", "espectador"} }));
 		COMPROBAR(!accionPermitida("espera.decidir", json{ {"como", "expulsar"} }));
 		COMPROBAR(!accionPermitida("espera.decidir", json::object()));
-	}
-
-	// 2. PIN
-	{
-		COMPROBAR(pinConFormato("1234"));
-		COMPROBAR(pinConFormato("12345678"));
-		COMPROBAR(!pinConFormato("123"));
-		COMPROBAR(!pinConFormato("123456789"));
-		COMPROBAR(!pinConFormato("12a4"));
-		COMPROBAR(!pinConFormato(""));
-		const std::string g = guardarPin("2580", "abcdef0123456789");
-		COMPROBAR(g.rfind("abcdef0123456789$", 0) == 0);
-		COMPROBAR(g.find("2580") == std::string::npos);   // nunca el PIN en claro
-		COMPROBAR(pinCorrecto("2580", g));
-		COMPROBAR(!pinCorrecto("2581", g));
-		COMPROBAR(!pinCorrecto("25800", g));
-		COMPROBAR(!pinCorrecto("2580", ""));
-		COMPROBAR(!pinCorrecto("2580", "sinDolar"));
-		COMPROBAR(guardarPin("2580", "otraSal") != g);    // la sal cambia el hash
-	}
-
-	// 3. Freno: 5 fallos → 60 s
-	{
-		Freno f;
-		for (int i = 0; i < 4; ++i) { COMPROBAR(f.puedeIntentar(100.0)); f.fallo(100.0); }
-		COMPROBAR(f.puedeIntentar(100.0));
-		f.fallo(100.0);
-		COMPROBAR(!f.puedeIntentar(100.0));
-		COMPROBAR(!f.puedeIntentar(159.0));
-		COMPROBAR(f.espera(130.0) > 29.0 && f.espera(130.0) < 31.0);
-		COMPROBAR(f.puedeIntentar(160.0));
-		f.acierto();
-		COMPROBAR(f.puedeIntentar(0.0));
 	}
 
 	// 4. Clasificar procesos

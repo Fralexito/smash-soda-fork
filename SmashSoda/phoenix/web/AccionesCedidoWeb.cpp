@@ -1,7 +1,5 @@
 #include "InterfazWebInterno.h"
 
-#include <random>
-
 #include "../PhoenixPrefs.h"
 #include "../core/ModoCedido.h"
 #include "../host/Cedido.h"
@@ -14,9 +12,11 @@
 //  El anfitrión cede su PC a un invitado: solo él tiene teclado y ratón, y solo
 //  dentro de Link y PES. Link queda limitado (Sala, Partido, Mandos) y el motor
 //  rechaza lo demás (portero del Puente, código PC_CEDIDA).
-//  Se sale con el PIN del anfitrión, con Ctrl+Alt+F12 en su teclado físico, o
-//  solo: si el invitado sale, la sala se cierra, la interfaz deja de verse o el
-//  guardián falla. Al salir, el invitado pierde teclado y ratón.
+//  Sin PIN (Fralex, 11 oct): salir siempre le QUITA el control al invitado, así
+//  que no hace falta protegerlo. Se sale con DEVOLVER LA PC (cualquiera, con
+//  confirmación), con Ctrl+Alt+F12 en el teclado físico, o solo: si el invitado
+//  sale, la sala se cierra, la interfaz deja de verse o el guardián falla.
+//  El anfitrión sigue usando su teclado y ratón físicos todo el tiempo.
 //  Guía: docs/MODO-CEDIDO.md · lógica pura: phoenix/core/ModoCedido.
 // =============================================================================
 
@@ -25,7 +25,6 @@ namespace phoenix::web {
 	using json = nlohmann::json;
 
 	namespace detalle_cedido {
-		cedido::Freno gFreno;
 		double gWebOcultaDesde = -1.0;
 		std::string gUltimoFin;
 		bool gPesAbierto = false;
@@ -55,14 +54,6 @@ namespace phoenix::web {
 				else if (c != ' ') actual += c;
 			}
 			return v;
-		}
-
-		std::string salAleatoria() {
-			std::random_device rd;   // en MSVC usa el generador seguro del sistema
-			static const char* hx = "0123456789abcdef";
-			std::string s;
-			for (int i = 0; i < 16; ++i) s += hx[rd() & 15];
-			return s;
 		}
 
 		const Guest* buscarInvitado(Hosting& h, uint32_t id) {
@@ -110,12 +101,6 @@ namespace phoenix::web {
 			Guest& host = h.getHost();
 			if (host.isValid() && host.userID == id) throw ErrorAccion("DATOS_INVALIDOS", "No puedes cederte la PC a ti mismo.");
 			PhoenixPrefs& pr = PhoenixPrefs::get();
-			if (pr.cedidoPin.empty()) {
-				const std::string nuevo = d.contains("pinNuevo") && d["pinNuevo"].is_string() ? d["pinNuevo"].get<std::string>() : "";
-				if (!cedido::pinConFormato(nuevo)) throw ErrorAccion("PIN_INVALIDO", "Elige un PIN de 4 a 8 números para poder recuperar la PC.");
-				pr.cedidoPin = cedido::guardarPin(nuevo, salAleatoria());
-				pr.guardar();
-			}
 			const Juego juego = juegoElegido(in);
 			cedido::Cesion c;
 			c.parsecId = id;
@@ -125,7 +110,6 @@ namespace phoenix::web {
 			c.exeJuego = juego.ruta;
 			c.extras = extras();
 			cedido::empezar(c);
-			gFreno.acierto();
 			gWebOcultaDesde = -1.0;
 			gUltimoFin.clear();
 			mensajeDelBot(in, " " + (host.isValid() ? host.name : std::string("El anfitrión")) + " cedió su PC a " + c.nombre
@@ -133,36 +117,9 @@ namespace phoenix::web {
 			return json{ {"ok", true} };
 		});
 
-		p.registrar("cedido.salir", [&in](const json& d, uint64_t) -> std::optional<json> {
-			if (!cedido::activo()) return json{ {"ok", true} };
-			const double ahora = ahoraSeg();
-			if (!gFreno.puedeIntentar(ahora)) {
-				throw ErrorAccion("PIN_ESPERA", "Demasiados intentos. Espera " + std::to_string(static_cast<int>(gFreno.espera(ahora)) + 1) + " s.");
-			}
-			const std::string pin = d.contains("pin") && d["pin"].is_string() ? d["pin"].get<std::string>() : "";
-			if (!cedido::pinCorrecto(pin, PhoenixPrefs::get().cedidoPin)) {
-				gFreno.fallo(ahora);
-				throw ErrorAccion("PIN_INCORRECTO", "PIN incorrecto.");
-			}
-			gFreno.acierto();
-			terminarCedido(in, "PIN del anfitrión");
-			return json{ {"ok", true} };
-		});
-
-		p.registrar("cedido.pin", [](const json& d, uint64_t) -> std::optional<json> {
-			if (cedido::activo()) throw ErrorAccion("PC_CEDIDA", "Primero recupera la PC.");
-			PhoenixPrefs& pr = PhoenixPrefs::get();
-			const std::string actual = d.contains("actual") && d["actual"].is_string() ? d["actual"].get<std::string>() : "";
-			const std::string nuevo = d.contains("nuevo") && d["nuevo"].is_string() ? d["nuevo"].get<std::string>() : "";
-			const double ahora = ahoraSeg();
-			if (!pr.cedidoPin.empty()) {
-				if (!gFreno.puedeIntentar(ahora)) throw ErrorAccion("PIN_ESPERA", "Demasiados intentos. Espera un minuto.");
-				if (!cedido::pinCorrecto(actual, pr.cedidoPin)) { gFreno.fallo(ahora); throw ErrorAccion("PIN_INCORRECTO", "El PIN actual no es correcto."); }
-			}
-			if (!cedido::pinConFormato(nuevo)) throw ErrorAccion("PIN_INVALIDO", "El PIN nuevo debe tener de 4 a 8 números.");
-			gFreno.acierto();
-			pr.cedidoPin = cedido::guardarPin(nuevo, salAleatoria());
-			pr.guardar();
+		// Devolver la PC: sin PIN, porque al salir el invitado se queda sin teclado ni ratón.
+		p.registrar("cedido.salir", [&in](const json&, uint64_t) -> std::optional<json> {
+			terminarCedido(in, "se devolvió desde Link");
 			return json{ {"ok", true} };
 		});
 
@@ -207,11 +164,9 @@ namespace phoenix::web {
 			{"parsecId", cedido::invitado()},
 			{"nombre", cedido::activo() ? cedido::nombreInvitado() : std::string()},
 			{"desde", cedido::activo() ? cedido::desdeMs() : 0},
-			{"pinGuardado", !PhoenixPrefs::get().cedidoPin.empty()},
 			{"atajo", cedido::ATAJO},
 			{"juego", j.nombre},
 			{"pesAbierto", gPesAbierto},
-			{"espera", static_cast<int>(gFreno.espera(ahora) + 0.999)},
 			{"ultimoFin", gUltimoFin},
 		};
 	}

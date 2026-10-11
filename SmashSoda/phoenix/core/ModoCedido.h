@@ -29,24 +29,6 @@ namespace phoenix::cedido {
 	/// Lista blanca: lo nuevo que no esté aquí queda bloqueado.
 	bool accionPermitida(const std::string& accion, const nlohmann::json& datos);
 
-	// ---- PIN del anfitrión ----------------------------------------------------
-	/// 4 a 8 dígitos.
-	bool pinConFormato(const std::string& pin);
-	/// "sal$sha256(sal:pin)" para guardar (nunca se guarda el PIN).
-	std::string guardarPin(const std::string& pin, const std::string& sal);
-	/// Compara sin cortar al primer carácter distinto.
-	bool pinCorrecto(const std::string& pin, const std::string& guardado);
-
-	/// Freno contra probar PINs: 5 fallos seguidos → 60 s sin poder intentar.
-	struct Freno {
-		int fallos = 0;
-		double bloqueadoHasta = 0.0;
-		bool puedeIntentar(double ahora) const { return ahora >= bloqueadoHasta; }
-		double espera(double ahora) const { return ahora >= bloqueadoHasta ? 0.0 : bloqueadoHasta - ahora; }
-		void fallo(double ahora);
-		void acierto() { fallos = 0; bloqueadoHasta = 0.0; }
-	};
-
 	// ---- Ventanas -----------------------------------------------------------
 	/// Nombre de archivo en minúsculas ("C:\\X\\PES2021.exe" → "pes2021.exe").
 	std::string nombreExe(const std::string& ruta);

@@ -4,8 +4,6 @@
 #include <cctype>
 #include <set>
 
-#include "../link/Entrega.h"   // sha256Hex
-
 namespace phoenix::cedido {
 
 	using json = nlohmann::json;
@@ -41,34 +39,6 @@ namespace phoenix::cedido {
 			return como == "jugador" || como == "espectador";
 		}
 		return permitidas.count(accion) > 0;
-	}
-
-	// ---- PIN -----------------------------------------------------------------------
-	bool pinConFormato(const std::string& pin) {
-		if (pin.size() < 4 || pin.size() > 8) return false;
-		return std::all_of(pin.begin(), pin.end(), [](char c) { return c >= '0' && c <= '9'; });
-	}
-
-	std::string guardarPin(const std::string& pin, const std::string& sal) {
-		const std::string base = sal + ":" + pin;
-		return sal + "$" + phoenix::entrega::sha256Hex(base.data(), base.size());
-	}
-
-	bool pinCorrecto(const std::string& pin, const std::string& guardado) {
-		const size_t d = guardado.find('$');
-		if (d == std::string::npos || d == 0 || !pinConFormato(pin)) return false;
-		const std::string esperado = guardarPin(pin, guardado.substr(0, d));
-		if (esperado.size() != guardado.size()) return false;
-		unsigned char dif = 0;
-		for (size_t i = 0; i < esperado.size(); ++i) dif |= static_cast<unsigned char>(esperado[i] ^ guardado[i]);
-		return dif == 0;
-	}
-
-	void Freno::fallo(double ahora) {
-		if (++fallos >= 5) {
-			bloqueadoHasta = ahora + 60.0;
-			fallos = 0;
-		}
 	}
 
 	// ---- Ventanas ----------------------------------------------------------------
