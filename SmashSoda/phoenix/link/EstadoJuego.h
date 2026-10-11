@@ -41,4 +41,15 @@ bool parsear(const std::string& texto, EstadoPartidoJuego& e);
 // Lee <carpetaBuzon>\estado.json con permisos compartidos (el juego puede reemplazarlo mientras tanto).
 EstadoPartidoJuego leer(const std::filesystem::path& carpetaBuzon);
 
+// Pantalla del juego (phoenix_referee.lua v1.2+, archivo pantalla.json, cada 2 s TAMBIÉN fuera del partido).
+// Va aparte de estado.json a propósito: así el árbitro (modo competitivo, abandono…) sigue igual que antes.
+// Solo sirve para mostrar en la web «eligiendo equipos», «saliendo al campo», etc.
+constexpr double kMaxEdadPantallaSeg = 6.0;
+struct PantallaJuego {
+	bool valida = false;
+	std::string pantalla;         ///< menu | equipos | ajustes | cargando | saliendo | en_juego | descanso | pausa | final
+};
+bool parsearPantalla(const std::string& texto, PantallaJuego& p);
+PantallaJuego leerPantalla(const std::filesystem::path& carpetaBuzon);
+
 } // namespace phoenix::juego

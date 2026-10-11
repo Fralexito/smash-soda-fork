@@ -449,3 +449,48 @@ Ver `SmashSoda/phoenix/sider/LEEME.md`.
 - `AccionesAjustesWeb.cpp` (`ajustes.overlayMenu`, otra sesión);
 - los demás `ui/js/*` (mejoras de la interfaz original);
 - `docs/REDISEÑO-UI.md` y `docs/rediseño-capturas/`.
+
+---
+
+## 18. Phoenix Referee y pantalla del juego (v1.2 · Link 0.2.19 · web ronda 225 · 2026-10-11)
+
+**Nombre nuevo.** Fralex pidió que el Lua se llame «referee», porque hace de árbitro. Ahora es `SmashSoda/phoenix/sider/phoenix_referee.lua` (v1.2); antes era `phoenix_estadio.lua`. El resto del documento conserva el nombre viejo como historia.
+- **Al instalar desde «Módulos del juego»** (`ModulosJuego.cpp`, mapa `kReemplaza`), en la misma escritura del `sider.ini` (con copia):
+  - se quita la línea del viejo;
+  - después se aparta su `.lua` como `phoenix_estadio.lua.reemplazado-<fecha>`.
+  - Nunca corren los dos: escribirían el mismo `estado.json`.
+- **Paquete de Link:** al compilar, la carpeta `sider\` se vacía antes de copiar (`CMakeLists.txt`), así no queda el viejo.
+- **Phoenix Doctor:** revisa `phoenix_referee.lua`, y `phoenix_estadio.lua` solo si sigue ahí.
+- **Prueba:** `pruebas-link/modulos_test.cpp`, sobre una copia del `sider.ini` real: instalar el nuevo quita la línea vieja, aparta el archivo y el viejo deja de salir en la lista. TODO OK.
+
+**Pantalla del juego.** Fralex quiere que la web diga en qué parte del juego están.
+- **Lo que da Sider** (documentación oficial, `doc/scripting.html`):
+  - `context_reset` → vuelta al menú principal;
+  - `set_stadium_choice` / `set_teams` → eligiendo equipos;
+  - `set_match_settings` → ajustes del partido;
+  - `after_set_conditions` → cargando.
+  - Ninguno de los manejadores devuelve nada, así que no cambian lo que eligen otros módulos (StadiumServer, kserv…).
+- **Dentro del partido**, la pantalla sale del reloj:
+  - `saliendo` = periodo 0, o 1.er tiempo con el reloj aún sin correr;
+  - luego `en_juego`, `descanso`, `pausa` y `final`.
+- **El Lua escribe `pantalla.json`** (`{v:1, pantalla, t}`) cada 2 s y al momento si cambia, **también fuera del partido**.
+  - Va **aparte** de `estado.json` a propósito. Si `estado.json` existiera en los menús, cambiaría el árbitro: el modo competitivo sigue «estado válido» y `abandono_juego` usa `fase:"menu"`.
+- **Link** (`EstadoJuego::leerPantalla`, `PhoenixLink::pantallaJuego`):
+  - la da por perdida a los 6 s;
+  - una lectura a medias deja la última buena durante 3 s.
+- **El árbitro** (`Arbitro.cpp` 2d):
+  - manda `pantalla` con el «en vivo»;
+  - con los lados ya elegidos en Link (`Listo`), antes del pitazo, manda la previa (`fase:"previa"`, 0-0) con su pantalla.
+  - Se borra de la web si se cancela.
+- **Web:**
+  - migración **103** (`liga_vivo.pantalla`) y Edge `liga` v3;
+  - la tarjeta dice «Eligiendo equipos», «Ajustes del partido», «Cargando el partido», «Saliendo al campo», «34′ · 2.º tiempo», «67′ · En pausa», «Descanso» o «Final», y muestra «VS» antes del pitazo.
+
+**Sin evento (investigación pendiente):** «viendo estrategia» y «pausa haciendo formación o cambios».
+- La idea es una sesión de prueba con un Lua espía que anote los archivos que lee el juego (`livecpk_make_key`) al entrar en cada pantalla.
+- Si hay archivos propios de esas pantallas, se pueden detectar. Si no, haría falta leer la memoria del juego, que es frágil.
+
+**Sin probar en el juego todavía:**
+- el orden real de los eventos en cada pantalla;
+- si `match.stats()` ya existe mientras sale el equipo al campo.
+- El Lua solo anota la pantalla y escribe un archivo: si algo sale en otro orden, la web muestra otra etiqueta, pero no se rompe nada.

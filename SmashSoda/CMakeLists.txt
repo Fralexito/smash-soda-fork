@@ -226,7 +226,9 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E remove_directory $<TARGET_FILE_DIR:${PROJECT_NAME}>/ui
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         "${CMAKE_SOURCE_DIR}/SmashSoda/phoenix/web/ui" $<TARGET_FILE_DIR:${PROJECT_NAME}>/ui
-    # Phoenix: paquete de módulos Lua de Sider que instala «Módulos del juego» (SYNC › Puente)
+    # Phoenix: paquete de módulos Lua de Sider que instala «Módulos del juego» (SYNC › Puente).
+    # Se vacía antes: un módulo que cambió de nombre (phoenix_estadio → phoenix_referee) no debe quedarse en el paquete.
+    COMMAND ${CMAKE_COMMAND} -E remove_directory $<TARGET_FILE_DIR:${PROJECT_NAME}>/sider
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         "${CMAKE_SOURCE_DIR}/SmashSoda/phoenix/sider" $<TARGET_FILE_DIR:${PROJECT_NAME}>/sider
     COMMAND ${CMAKE_COMMAND} -E copy_if_different

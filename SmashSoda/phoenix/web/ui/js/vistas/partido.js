@@ -265,7 +265,7 @@ function LineaJuego({ j, a, p }) {
   // Equipos del juego (kit-server) y goles con minuto; el local del juego es el lado A salvo tras «Cambiar lados»
   const equipos = hay && (j.nombreLocal || j.nombreVisita) ? `${j.nombreLocal || "Local"} vs ${j.nombreVisita || "Visita"}` : "";
   const ladoDe = (local) => (local !== !!p?.invertido ? p?.a?.nombre : p?.b?.nombre) || (local ? "Local" : "Visita");
-  // Goleador (Sider 7.3.4+ con phoenix_estadio v1.1): «34' Fralex (MESSI)»; sin él, solo el minuto
+  // Goleador (Sider 7.3.4+ con phoenix_referee v1.1+): «34' Fralex (MESSI)»; sin él, solo el minuto
   const quien = (g) => (g.jugador ? ` (${g.jugador}${g.propia ? t(", en propia", ", own goal") : ""})` : "");
   const goles = hay ? (j.goles || []).map((g) => `${g.m}' ${ladoDe(g.local)}${quien(g)}`) : [];
   return html`<div class="mono mut" style="margin-top:14px;display:flex;flex-direction:column;gap:6px;align-items:center;font-size:13px;text-align:center">

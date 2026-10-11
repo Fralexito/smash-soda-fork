@@ -120,4 +120,29 @@ EstadoPartidoJuego leer(const std::filesystem::path& carpetaBuzon) {
 	return e;
 }
 
+bool parsearPantalla(const std::string& texto, PantallaJuego& p) {
+	static const char* const kValidas[] = { "menu", "equipos", "ajustes", "cargando", "saliendo", "en_juego", "descanso", "pausa", "final" };
+	const nlohmann::json j = nlohmann::json::parse(texto, nullptr, false);
+	if (j.is_discarded() || !j.is_object() || !j.contains("pantalla") || !j["pantalla"].is_string()) return false;
+	const std::string s = j["pantalla"].get<std::string>();
+	for (const char* v : kValidas) if (s == v) { p.pantalla = s; return true; }
+	return false;
+}
+
+PantallaJuego leerPantalla(const std::filesystem::path& carpetaBuzon) {
+	PantallaJuego p;
+	if (carpetaBuzon.empty()) return p;
+	const std::filesystem::path ruta = carpetaBuzon / "pantalla.json";
+	std::error_code ec;
+	const auto cuando = std::filesystem::last_write_time(ruta, ec);
+	if (ec) return p;
+	const double edad = std::chrono::duration<double>(std::filesystem::file_time_type::clock::now() - cuando).count();
+	if (edad > kMaxEdadPantallaSeg) return p;   // el juego se cerró o el módulo no está: sin dato
+	std::string texto;
+	if (!leerTexto(ruta, texto)) return p;
+	if (texto.size() >= 3 && static_cast<unsigned char>(texto[0]) == 0xEF) texto.erase(0, 3);
+	p.valida = parsearPantalla(texto, p);
+	return p;
+}
+
 } // namespace phoenix::juego

@@ -57,7 +57,7 @@ int main(int argc, char** argv) {
 		fs::create_directories(paquete);
 		// El sider.ini real ya puede traer phoenix_estadio.lua instalado: se quita para partir de cero
 		std::string iniBase = argc >= 3 ? leer(argv[2]) : std::string("[sider]\r\nlua.module = \"phoenix.lua\"\r\n");
-		{ bool c = false; iniBase = quitarLineasModulo(iniBase, "phoenix_estadio.lua", c); }
+		{ bool c = false; iniBase = quitarLineasModulo(iniBase, "phoenix_estadio.lua", c); iniBase = quitarLineasModulo(iniBase, "phoenix_referee.lua", c); }
 		escribir(juego / "SiderAddons" / "sider.ini", iniBase);
 		escribir(juego / "ConmeGol Extras" / "ConmeGOL Patch 26" / "SiderAddons" / "sider.ini", iniBase);
 		escribir(paquete / "phoenix_estadio.lua", "local m = { version = \"1.0\" }\nreturn m\n");
@@ -95,6 +95,27 @@ int main(int argc, char** argv) {
 		est = estado(paquete, juego);
 		OK(est[0].estado == "instalado" && est[0].version == "1.1");
 		for (const auto& d : destinos(juego)) OK(contar(leer(d.second / "sider.ini"), "phoenix_estadio.lua") == 1);
+
+		// Cambio de nombre (2026-10-11): instalar phoenix_referee.lua quita la línea de phoenix_estadio.lua y aparta el viejo
+		escribir(paquete / "phoenix_referee.lua", "local m = { version = \"1.2\" }\nreturn m\n");
+		fs::remove(paquete / "phoenix_estadio.lua");   // Link ya no lleva el viejo
+		r = instalar(paquete, juego, "phoenix_referee.lua");
+		std::cout << "reemplazo: " << r.mensaje << "\n";
+		OK(r.ok && r.respaldos.size() == 2);
+		for (const auto& d : destinos(juego)) {
+			const std::string ini = leer(d.second / "sider.ini");
+			OK(contar(ini, "phoenix_estadio.lua") == 0);
+			OK(contar(ini, "lua.module = \"phoenix_referee.lua\"") == 1);
+			OK(!fs::exists(d.second / "modules" / "phoenix_estadio.lua"));
+			bool aparte = false;
+			for (const auto& e : fs::directory_iterator(d.second / "modules")) if (e.path().filename().string().rfind("phoenix_estadio.lua.reemplazado-", 0) == 0) aparte = true;
+			OK(aparte);
+		}
+		est = estado(paquete, juego);
+		OK(est.size() >= 1 && est[0].archivo == "phoenix_referee.lua" && est[0].estado == "instalado" && est[0].version == "1.2");
+		for (const auto& m : est) OK(m.archivo != "phoenix_estadio.lua");   // el viejo ya no aparece
+		r = instalar(paquete, juego, "phoenix_referee.lua");      // segunda vez: nada que cambiar
+		OK(r.ok && r.respaldos.empty());
 
 		r = quitar(paquete, juego, "phoenix.lua");                // no es suyo: no lo toca
 		OK(!r.ok);

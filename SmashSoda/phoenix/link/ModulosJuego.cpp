@@ -22,8 +22,15 @@ namespace {
 
 	// Módulos que Link conoce: descripción para la interfaz. Los que no estén aquí se muestran con su nombre.
 	const std::map<std::string, std::string> kDescripciones = {
-		{ "phoenix_estadio.lua", "Partido ↔ Phoenix Link: marcador, goles con minuto, HUD del partido y árbitro (solo lectura)." },
+		{ "phoenix_referee.lua", "Phoenix Referee: marcador, goles con minuto y goleador, pantalla del juego para la web, HUD del partido y árbitro (solo lectura)." },
+		{ "phoenix_estadio.lua", "Versión anterior de Phoenix Referee: al instalar Phoenix Referee se apaga sola." },
 		{ "phoenix.lua", "Phoenix Sync: avisos de la web en el overlay, botón nativo «Datos Actual. en vivo» y modos de recarga de fichajes. Instala también la raíz Phoenix-DB y la carpeta de avisos." },
+	};
+
+	// Módulos que cambiaron de nombre: al instalar el nuevo se quita la línea del viejo y su .lua se aparta
+	// (si quedaran los dos, escribirían el mismo estado.json a la vez).
+	const std::map<std::string, std::string> kReemplaza = {
+		{ "phoenix_referee.lua", "phoenix_estadio.lua" },   // 2026-10-11: «estadio» pasó a llamarse «referee»
 	};
 
 	std::string minus(std::string s) { std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) { return (char)std::tolower(c); }); return s; }
@@ -417,6 +424,11 @@ Resultado instalar(const fs::path& paquete, const fs::path& juego, const std::st
 		std::string nuevo = activarLinea(ini, archivo, cambio, error);
 		if (!error.empty()) { r.mensaje = error + " (" + d.first + ")."; return r; }
 		if (!cambio) nuevo = ini;
+		if (const auto rz = kReemplaza.find(archivo); rz != kReemplaza.end()) {
+			bool cambioViejo = false;
+			const std::string sinViejo = quitarLineasModulo(nuevo, rz->second, cambioViejo);
+			if (cambioViejo) { nuevo = sinViejo; cambio = true; }
+		}
 		if (archivo == "phoenix.lua") {
 			bool cambioRaiz = false;
 			const fs::path sider = d.second;
@@ -460,9 +472,21 @@ Resultado instalar(const fs::path& paquete, const fs::path& juego, const std::st
 
 	// 3) Una línea en cada sider.ini (con copia previa y vuelta atrás si algo falla)
 	if (!escribirInis(inisNuevos, r)) return r;
+	// 4) El módulo viejo con otro nombre se aparta (Sider ya no lo carga: su línea se quitó arriba; se puede recuperar)
+	std::string apartado;
+	if (const auto rz = kReemplaza.find(archivo); rz != kReemplaza.end()) {
+		const std::string marca = ".reemplazado-" + sello();
+		for (const auto& d : ds) {
+			std::error_code ec;
+			const fs::path viejo = d.second / "modules" / rz->second;
+			if (!fs::is_regular_file(viejo, ec)) continue;
+			fs::rename(viejo, d.second / "modules" / (rz->second + marca), ec);
+			if (!ec) apartado = " " + rz->second + " se apagó y quedó como " + rz->second + marca + ".";
+		}
+	}
 	r.ok = true;
 	r.mensaje = archivo + " instalado en " + std::to_string(ds.size()) + (ds.size() == 1 ? " carpeta" : " carpetas")
-		+ ". Abre PES: en sider.log debe aparecer que cargó.";
+		+ ". Abre PES: en sider.log debe aparecer que cargó." + apartado;
 	return r;
 }
 

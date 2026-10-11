@@ -1,4 +1,4 @@
-# Phoenix Estadio — módulo de Sider + árbitro de Phoenix Link
+# Phoenix Referee (antes «Phoenix Estadio») — módulo de Sider + árbitro de Phoenix Link
 
 Une el partido de PES 2021 con Phoenix Link (Parsec: PES corre solo en la PC del anfitrión).
 Documento completo (qué se hizo, cómo, por qué, cómo conviven con `phoenix.lua` en el mismo paquete de Luas y cómo replicarlo): `docs/PHOENIX-ESTADIO-ARBITRO.md`.
@@ -6,7 +6,7 @@ Documento completo (qué se hizo, cómo, por qué, cómo conviven con `phoenix.l
 > Esta carpeta también lleva **`phoenix.lua` v0.18b** (el de Phoenix Sync), para instalarlo en la PC de un amigo desde «Módulos del juego» o con `PhoenixJuego-instalar.bat`. Guía: `docs/PREPARAR-JUEGO-AMIGO.md`. Es copia exacta del de Sync (sha256 `9ed74f45…`, con LF): no editarlo aquí.
 
 ## Qué se vive
-- **En el juego** (overlay de Sider: Espacio, y con 1 / º hasta «PHOENIX ESTADIO»): marcador con los nombres reales de los equipos, minuto y tiempo, goles con su minuto, quién juega en cada lado con su mando y su ping (bien / justo / ALTO), el estado del árbitro y las últimas líneas del chat de la sala.
+- **En el juego** (overlay de Sider: Espacio, y con 1 / º hasta «PHOENIX REFEREE»): marcador con los nombres reales de los equipos, minuto y tiempo, goles con su minuto, quién juega en cada lado con su mando y su ping (bien / justo / ALTO), el estado del árbitro y las últimas líneas del chat de la sala.
 - **En Link y en el chat de la sala**:
   - el marcador arranca solo cuando el balón echa a rodar (si los lados ya están elegidos);
   - cada gol se anuncia con su minuto y, con Sider 7.3.4+, el goleador («GOL 34' de Mirko (MESSI). Mirko 2-1 Kaiser»);
@@ -17,8 +17,9 @@ Documento completo (qué se hizo, cómo, por qué, cómo conviven con `phoenix.l
 ## Archivos (todos en `<juego>\SiderAddons\content\phoenix\`)
 | Archivo | Lo escribe | Cuándo | Contenido |
 |---|---|---|---|
-| `estado.json` | `phoenix_estadio.lua` | cada ~1 s **solo durante el partido**, y al momento en un gol o un cambio de fase | `{v:2, fase, minuto, segundo, periodo, anadido, reloj_corre, local, visita, nombre_local, nombre_visita, goles_local, goles_visita, pk_local, pk_visita, goles:[{m,l:"l"|"v",j?,id?,pp?}], completo, torneo, seq}` (`j`/`id`/`pp` = goleador, desde la v1.1 y solo con Sider 7.3.4+) |
-| `resultado.json` | `phoenix_estadio.lua` | una vez, al salir de un partido **completo** | igual que `estado.json` con `fase:"final"` + `fin` (hora Unix) |
+| `estado.json` | `phoenix_referee.lua` | cada ~1 s **solo durante el partido**, y al momento en un gol o un cambio de fase | `{v:2, fase, minuto, segundo, periodo, anadido, reloj_corre, local, visita, nombre_local, nombre_visita, goles_local, goles_visita, pk_local, pk_visita, goles:[{m,l:"l"|"v",j?,id?,pp?}], completo, torneo, seq}` (`j`/`id`/`pp` = goleador, desde la v1.1 y solo con Sider 7.3.4+) |
+| `resultado.json` | `phoenix_referee.lua` | una vez, al salir de un partido **completo** | igual que `estado.json` con `fase:"final"` + `fin` (hora Unix) |
+| `pantalla.json` | `phoenix_referee.lua` (v1.2+) | **siempre**, también en los menús: cada 2 s y al momento si cambia | `{v:1, pantalla, t}`. `pantalla`: `menu` · `equipos` (eligiendo equipos) · `ajustes` (ajustes del partido) · `cargando` · `saliendo` (al campo, antes del pitazo) · `en_juego` · `descanso` · `pausa` · `final`. Va aparte de `estado.json` para no cambiar el árbitro; solo sirve para la web |
 | `sala.txt` | Phoenix Link (atómico) | al cambiar, y cada 4 s con la hora `t=` | líneas `clave=valor`: `abierta`, `sala`, `local`, `visita`, `marcador`, `goles`, `ja=`/`jb=` `nombre\|ping\|mando` (local/visita), `arbitro`, `chat` (×4), `t` |
 | `avisos.txt` | Phoenix Link | ya existía (avisos de la web; lo muestra `phoenix.lua`) | — |
 
@@ -44,9 +45,9 @@ Link solo bloquea con `en_juego` y solo cierra el marcador con `final` + `comple
 **Con un botón (recomendado):** Phoenix Link › SYNC › Puente › «MÓDULOS DEL JUEGO» › INSTALAR. Hace los pasos de abajo en las dos carpetas, guarda una copia de `sider.ini` y comprueba que el archivo copiado es idéntico. APAGAR comenta la línea.
 
 **A mano:**
-1. Copiar `phoenix_estadio.lua` a `ConmeGol Extras\ConmeGOL Patch 26\SiderAddons\modules\` (la carpeta que copia el switcher) **y** a `<juego>\SiderAddons\modules\`.
+1. Copiar `phoenix_referee.lua` a `ConmeGol Extras\ConmeGOL Patch 26\SiderAddons\modules\` (la carpeta que copia el switcher) **y** a `<juego>\SiderAddons\modules\`.
 2. Guardar una copia de `sider.ini` y añadir al final de la lista de módulos, debajo de `lua.module = "phoenix.lua"`:
-   `lua.module = "phoenix_estadio.lua"`
+   `lua.module = "phoenix_referee.lua"`
 3. Abrir el juego. En `sider.log` debe salir `[estadio] v1.0 listo`.
 
 **Desinstalar:** quitar esa línea (o poner `;` delante).

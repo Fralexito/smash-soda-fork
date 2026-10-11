@@ -321,7 +321,7 @@ export function crearSimulador(enviar) {
     return {
       juego: s.buzon.juego, pesAbierto: s.pes.abierto,
       modulos: [
-        { archivo: "phoenix_estadio.lua", descripcion: "Partido ↔ Phoenix Link: marcador, goles con minuto, HUD del partido y árbitro (solo lectura).", gestionable: true, version: "1.0", estado: est, carga: "", destinos: est === "no_instalado" ? [] : destinos(est === "instalado", "1.0") },
+        { archivo: "phoenix_referee.lua", descripcion: "Phoenix Referee: marcador, goles con minuto y goleador, pantalla del juego para la web, HUD del partido y árbitro (solo lectura).", gestionable: true, version: "1.2", estado: est, carga: "", destinos: est === "no_instalado" ? [] : destinos(est === "instalado", "1.2") },
         { archivo: "phoenix.lua", descripcion: "Phoenix Sync: avisos de la web en el overlay, botón nativo «Datos Actual. en vivo» y modos de recarga de fichajes. Instala también la raíz Phoenix-DB y la carpeta de avisos.", gestionable: true, version: "0.18b", estado: s.modPhx || "desactualizado", carga: "cargado",
           destinos: [{ nombre: "Raíz del juego", carpeta: "a", archivo: true, igual: s.modPhx === "instalado", version: s.modPhx === "instalado" ? "0.18b" : "0.18", linea: true, comentada: false }, { nombre: "ConmeGOL Patch 26", carpeta: "b", archivo: true, igual: s.modPhx === "instalado", version: s.modPhx === "instalado" ? "0.18b" : "0.18", linea: true, comentada: false }] },
       ],
@@ -436,7 +436,7 @@ export function crearSimulador(enviar) {
       modo: "informativo", generado: "2026-10-11 12:30", huella: "7c1e0b9a44d2f0a3b8e65d21c90a4e77f3b2a1c0d9e8f7a6b5c4d3e2f1a0b9c8",
       juegoEncontrado: true, juego: s.buzon.juego, parche: "ConmeGOL Patch 26", exe: { bytes: 458190848, huellaInicio: "ab12…" },
       modos: ["Raíz del juego", "Clasicos (No LM)", "ConmeGOL Patch 26", "ConmeGOL Patch 26 (Peru, Chile, Uruguay B)"],
-      luaActivos: ["lib\\CommonLib.lua", "kserv.lua", "sifflet.lua", "phoenix.lua", "phoenix_estadio.lua"],
+      luaActivos: ["lib\\CommonLib.lua", "kserv.lua", "sifflet.lua", "phoenix.lua", "phoenix_referee.lua"],
       cpkRoots: [".\\livecpk\\Phoenix-DB", ".\\olmosjr23\\Database", ".\\livecpk\\Kits"],
       archivos: [
         { nombre: "sider.ini (Raíz del juego)", sha256: "f00d1e…", bytes: 9120 },

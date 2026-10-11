@@ -181,6 +181,8 @@ namespace phoenix {
 		/// Partido según phoenix.lua (estado.json, leído ~1 vez por segundo en el hilo de Link).
 		/// valido = false si no hay archivo, tiene más de 5 s o el hilo lleva más de 3 s sin leerlo.
 		juego::EstadoPartidoJuego estadoJuego();
+		/// Pantalla del juego (pantalla.json de phoenix_referee v1.2+: menú, eligiendo equipos, saliendo al campo…). Solo para la web.
+		juego::PantallaJuego pantallaJuego();
 		/// Texto de sala.txt para el HUD del juego (lineas clave=valor). El hilo de Link lo escribe atómico
 		/// en content\phoenix\ cuando cambia (y cada 4 s con la hora, para que el juego sepa que Link sigue vivo).
 		void salaJuego(const std::string& texto);
@@ -314,6 +316,8 @@ namespace phoenix {
 		juego::EstadoPartidoJuego _estadoJuego;
 		long long _estadoLeidoMs = 0;
 		long long _estadoValidoMs = 0;
+		juego::PantallaJuego _pantallaJuego;      ///< con _mutex
+		long long _pantallaValidaMs = 0;
 		// sala.txt (HUD del juego): _salaJuegoTexto con _mutex; el resto solo el hilo de Link
 		std::string _salaJuegoTexto, _salaJuegoEscrito;
 		long long _salaJuegoProximoMs = 0, _salaJuegoEscritoMs = 0;

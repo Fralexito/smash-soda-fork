@@ -1,12 +1,12 @@
 -- =============================================================================
---  Phoenix Evolution · PHOENIX ESTADIO (módulo de Sider para PES 2021)
+--  Phoenix Evolution · PHOENIX REFEREE (módulo de Sider para PES 2021)
 --  Une el partido con Phoenix Link (Parsec, PES corre solo en la PC del anfitrión):
 --    · Juego → Link: content\phoenix\estado.json  (cada ~1 s y SOLO durante el partido)
 --                    content\phoenix\resultado.json (una vez, al terminar un partido completo)
 --      Link lo usa para: bloquear Start/Back/Guía a los invitados mientras se juega, arrancar y
 --      cerrar el marcador solo, anunciar cada gol con su minuto en el chat y pausar si alguien se cae.
 --    · Link → juego: content\phoenix\sala.txt (lo escribe Link; aquí SOLO se lee)
---    · Overlay (Espacio, y con 1 / º hasta «PHOENIX ESTADIO»): marcador con nombres, minuto,
+--    · Overlay (Espacio, y con 1 / º hasta «PHOENIX REFEREE»): marcador con nombres, minuto,
 --      goles con minuto, quién juega en cada lado con su ping, el árbitro y el chat de la sala.
 --
 --  Seguridad (ver PhoenixSync/sider/RIESGOS-SIDER.md):
@@ -21,17 +21,25 @@
 --      camiseta, local/visita). Con Sider 7.3.3 ese evento no existe: sider.log dice «WARN: trying to
 --      register for unknown event» y todo sigue igual que en la v1.0 (goles con minuto, sin nombre).
 --
+--    · v1.2 · PHOENIX REFEREE (antes «phoenix_estadio.lua»; el instalador de Link apaga el viejo al poner este).
+--      PANTALLA del juego para la web: content\phoenix\pantalla.json, siempre (también en los menús), cada 2 s
+--      y al momento si cambia: {"v":1,"pantalla":…,"t":hora}. Valores: menu | equipos | ajustes | cargando |
+--      saliendo | en_juego | descanso | pausa | final. Fuera del partido sale de eventos de Sider (context_reset,
+--      set_stadium_choice, set_teams, set_match_settings, after_set_conditions); dentro, del reloj. Ningún
+--      evento devuelve nada: no cambia estadio, equipos ni ajustes. estado.json sigue igual que en la v1.1.
+--
 --  Instalar: copiar a SiderAddons\modules\ y añadir al final de la lista de módulos de sider.ini:
---      lua.module = "phoenix_estadio.lua"
+--      lua.module = "phoenix_referee.lua"
 --  (en la carpeta del modo de ConmeGOL, que es la que copia el switcher). Desinstalar = quitar la línea.
 -- =============================================================================
 
-local m = { version = "1.1" }
+local m = { version = "1.2" }
 
 local MAX_FALLOS   = 5
 local MAX_GOLES    = 40     -- goles que se guardan con su minuto (Link lee como mucho 40)
 local VENTANA_GOL  = 12.0   -- segundos para juntar el aviso «goal_scored» con el gol que marca match.stats()
 local CADA_SEG     = 0.5    -- cada cuánto se mira match.stats()
+local PANTALLA_SEG = 2.0    -- pantalla.json se reescribe cada 2 s aunque no cambie (Link la da por perdida a los 6 s)
 local ESCRIBIR_SEG = 1.0    -- estado.json como mucho 1 vez por segundo (y al momento en un gol o un cambio de fase)
 local SALA_SEG     = 1.0    -- sala.txt se relee como mucho 1 vez por segundo (solo con el overlay abierto)
 local MAX_SALA     = 4096
@@ -54,6 +62,9 @@ local estadoArchivo = "sin partido"
 
 local sala = nil             -- lo último leído de sala.txt
 local salaLeida = -1000
+
+local pantalla = "menu"      -- en qué parte del juego se está (ver la cabecera)
+local pantallaEscrita, pantallaEscritaEn = "", -1000
 
 local goleadorPendiente = nil   -- aviso «goal_scored» que llegó antes que el gol en match.stats(): { l, id, j, t }
 
@@ -173,6 +184,15 @@ local function escribirEstado()
     end
 end
 
+-- pantalla.json (siempre, también fuera del partido): para que la web diga «eligiendo equipos», «saliendo al campo»…
+local function escribirPantalla()
+    local t = os.clock()
+    if pantalla == pantallaEscrita and t - pantallaEscritaEn < PANTALLA_SEG then return end
+    if escribir("pantalla.json", string.format('{"v":1,"pantalla":"%s","t":%d}', pantalla, os.time())) then
+        pantallaEscrita, pantallaEscritaEn = pantalla, t
+    end
+end
+
 local function empezar()
     p = {
         goles = {}, gl = 0, gv = 0, pkl = 0, pkv = 0,
@@ -182,7 +202,7 @@ local function empezar()
         fase = "menu", completo = false,
     }
     goleadorPendiente = nil
-    log(string.format("[estadio] partido nuevo: %d (%s) vs %d (%s)", idLocal, nombreDe(idLocal), idVisita, nombreDe(idVisita)))
+    log(string.format("[referee] partido nuevo: %d (%s) vs %d (%s)", idLocal, nombreDe(idLocal), idVisita, nombreDe(idVisita)))
 end
 
 local function terminar()
@@ -198,7 +218,8 @@ local function terminar()
     else
         ultimoResultado = "Último partido (a medias): " .. marcador
     end
-    log("[estadio] fin del partido: " .. marcador .. (p.completo and "" or " · abandonado"))
+    pantalla = p.completo and "final" or "menu"
+    log("[referee] fin del partido: " .. marcador .. (p.completo and "" or " · abandonado"))
     p = nil
     estadoArchivo = "sin partido"
 end
@@ -280,6 +301,13 @@ local function mirar()
     local cambioFase = fase ~= p.fase
     p.fase = fase
 
+    -- Pantalla para la web: antes del pitazo inicial (periodo 0, o 1.er tiempo con el reloj aún sin correr) = saliendo al campo
+    if per >= 1 and mi * 60 + se > 0 then p.corrio = true end
+    if per == 0 or not p.corrio then pantalla = "saliendo"
+    elseif fase == "descanso" then pantalla = "descanso"
+    elseif fase == "pausado" then pantalla = "pausa"
+    else pantalla = "en_juego" end
+
     if hubo or cambioFase or t - ultimoEscrito >= ESCRIBIR_SEG then escribirEstado() end
 end
 
@@ -290,16 +318,17 @@ function m.display_frame(ctx)
     ultimoMirar = t
     if enCursoJuego then
         fallos = fallos + 1
-        log("[estadio] la vez anterior hubo un error (" .. fallos .. "/" .. MAX_FALLOS .. ")")
+        log("[referee] la vez anterior hubo un error (" .. fallos .. "/" .. MAX_FALLOS .. ")")
         if fallos >= MAX_FALLOS then
             apagado = true
-            log("[estadio] demasiados errores seguidos: el módulo se detiene hasta reiniciar el juego")
+            log("[referee] demasiados errores seguidos: el módulo se detiene hasta reiniciar el juego")
             return
         end
     end
     enCursoJuego = true
     torneo = tonumber(ctx.tournament_id) or torneo
     mirar()
+    escribirPantalla()
     enCursoJuego = false
     fallos = 0
 end
@@ -317,7 +346,7 @@ function m.goal_scored(ctx, info)
     nombre = cortarUtf8(nombre, 24)
     local lado = (tonumber(info.home_or_away) or 0) ~= 0 and "v" or "l"
     local t = os.clock()
-    log(string.format("[estadio] goleador: %s (id %d, %s)", nombre, id, lado == "l" and "local" or "visita"))
+    log(string.format("[referee] goleador: %s (id %d, %s)", nombre, id, lado == "l" and "local" or "visita"))
     if p and ponerGoleador(lado, id, nombre, t) then
         escribirEstado()
     else
@@ -328,7 +357,14 @@ end
 function m.set_teams(ctx, home, away)
     idLocal = tonumber(home) or tonumber(ctx.home_team) or 0
     idVisita = tonumber(away) or tonumber(ctx.away_team) or 0
+    if not p then pantalla = "equipos" end
 end
+
+-- Pantallas fuera del partido (solo se anotan: ninguno devuelve nada, así que no cambian lo que eligen otros módulos)
+function m.context_reset(ctx) if not p then pantalla = "menu" end end
+function m.set_stadium_choice(ctx, estadio) if not p then pantalla = "equipos" end end
+function m.set_match_settings(ctx, opciones) if not p then pantalla = "ajustes" end end
+function m.after_set_conditions(ctx) if not p then pantalla = "cargando" end end
 
 -- ─── Link → juego (sala.txt) ─────────────────────────────────────────────────
 
@@ -383,7 +419,7 @@ local function textoHud()
     local L = {}
     local vivo = sala and sala.edad <= 10
     local enlace = vivo and (sala.abierta == "1" and ("sala «" .. (sala.sala or "") .. "»") or "sala cerrada") or "Phoenix Link sin datos"
-    L[#L + 1] = string.format("PHOENIX ESTADIO v%s  ·  %s", m.version, enlace)
+    L[#L + 1] = string.format("PHOENIX REFEREE v%s  ·  %s", m.version, enlace)
     L[#L + 1] = ""
 
     local nl = (vivo and sala["local"]) or ""
@@ -433,14 +469,14 @@ local function textoHud()
 end
 
 function m.overlay_on(ctx)
-    if apagado then return "PHOENIX ESTADIO · módulo detenido por seguridad (ver sider.log)" end
+    if apagado then return "PHOENIX REFEREE · módulo detenido por seguridad (ver sider.log)" end
     if enCursoHud then
         fallos = fallos + 1
-        log("[estadio] el HUD falló la vez anterior (" .. fallos .. "/" .. MAX_FALLOS .. ")")
+        log("[referee] el HUD falló la vez anterior (" .. fallos .. "/" .. MAX_FALLOS .. ")")
         if fallos >= MAX_FALLOS then
             apagado = true
-            log("[estadio] demasiados errores seguidos: el módulo se detiene hasta reiniciar el juego")
-            return "PHOENIX ESTADIO · módulo detenido por seguridad (ver sider.log)"
+            log("[referee] demasiados errores seguidos: el módulo se detiene hasta reiniciar el juego")
+            return "PHOENIX REFEREE · módulo detenido por seguridad (ver sider.log)"
         end
     end
     enCursoHud = true
@@ -456,8 +492,12 @@ function m.init(ctx)
     ctx.register("set_teams", m.set_teams)
     ctx.register("display_frame", m.display_frame)
     ctx.register("overlay_on", m.overlay_on)
+    ctx.register("context_reset", m.context_reset)
+    ctx.register("set_stadium_choice", m.set_stadium_choice)
+    ctx.register("set_match_settings", m.set_match_settings)
+    ctx.register("after_set_conditions", m.after_set_conditions)
     ctx.register("goal_scored", m.goal_scored)   -- Sider 7.3.4+ (en 7.3.3 solo deja un WARN en sider.log)
-    log("[estadio] v" .. m.version .. " listo. Escribe estado.json/resultado.json y lee sala.txt en " .. carpeta)
+    log("[referee] v" .. m.version .. " listo. Escribe estado.json/resultado.json y lee sala.txt en " .. carpeta)
 end
 
 return m

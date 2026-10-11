@@ -359,21 +359,40 @@ namespace phoenix::web {
 
 			// 2d) Marcador EN VIVO en la web (función «liga» → tabla liga_vivo → Realtime). Partidos oficiales siempre;
 			//     amistosos solo si la sala no es privada. Se manda al cambiar goles o fase y cada 5 minutos de juego.
+			//     Con phoenix_referee v1.2+ va también la PANTALLA del juego («pantalla»), y ANTES del pitazo (lados ya
+			//     elegidos en Link = «Listo») se manda como «previa»: la web dice «Eligiendo equipos», «Saliendo al campo»…
 			const bool publicable = a.partidoOficial > 0 || PhoenixPrefs::get().visibilidad != "privada";
+			const juego::PantallaJuego pj = PhoenixLink::instancia().pantallaJuego();
+			const std::string pantalla = pj.valida ? pj.pantalla : std::string();
+			const bool previa = !vivo && fp == FasePartido::Listo && pj.valida && sala.abierta() && publicable;
 			if (vivo && j.valido && sala.abierta() && publicable) {
 				const bool inv = in.partido.mandosInvertidos();
 				const int gl = inv ? j.golesVisita : j.golesLocal, gv = inv ? j.golesLocal : j.golesVisita;
 				const std::string fase = j.fase == "menu" ? "previa" : j.fase;
-				const std::string firma = std::to_string(gl) + "-" + std::to_string(gv) + "|" + fase + "|" + std::to_string(golesConNombre(j));
+				const std::string firma = std::to_string(gl) + "-" + std::to_string(gv) + "|" + fase + "|" + std::to_string(golesConNombre(j)) + "|" + pantalla;
 				if (firma != a.vivoFirma || j.minuto >= a.vivoMinuto + 5) {
 					const json gs = golesParaWeb(j, inv);
 					json c = { {"local", in.partido.ladoA().nombre}, {"visitante", in.partido.ladoB().nombre},
 						{"goles_local", (std::max)(0, gl)}, {"goles_visita", (std::max)(0, gv)},
 						{"minuto", (std::max)(0, (std::min)(200, j.minuto))}, {"periodo", j.periodo}, {"fase", fase}, {"goles", gs} };
+					if (!pantalla.empty()) c["pantalla"] = pantalla;
 					if (a.partidoOficial > 0) c["partido_id"] = a.partidoOficial;
 					PhoenixLink::instancia().ligaVivo(c.dump());
 					a.vivoFirma = firma;
 					a.vivoMinuto = j.minuto;
+					a.vivoMandado = true;
+				}
+			}
+			else if (previa) {
+				const std::string firma = "previa|" + pantalla;
+				if (firma != a.vivoFirma) {
+					json c = { {"local", in.partido.ladoA().nombre}, {"visitante", in.partido.ladoB().nombre},
+						{"goles_local", 0}, {"goles_visita", 0}, {"minuto", 0}, {"periodo", 0}, {"fase", "previa"},
+						{"goles", json::array()}, {"pantalla", pantalla} };
+					if (a.partidoOficial > 0) c["partido_id"] = a.partidoOficial;
+					PhoenixLink::instancia().ligaVivo(c.dump());
+					a.vivoFirma = firma;
+					a.vivoMinuto = 0;
 					a.vivoMandado = true;
 				}
 			}

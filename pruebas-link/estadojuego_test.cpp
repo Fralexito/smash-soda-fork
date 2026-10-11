@@ -93,6 +93,23 @@ int main() {
 		COMPROBAR(!parsear("{\"fase\":\"otra\"}", e));
 		COMPROBAR(!parsear("{roto", e));
 	}
+	// 9) pantalla.json (phoenix_referee v1.2)
+	{
+		using phoenix::juego::PantallaJuego;
+		using phoenix::juego::parsearPantalla;
+		PantallaJuego p;
+		COMPROBAR(parsearPantalla(R"({"v":1,"pantalla":"equipos","t":1760140000})", p) && p.pantalla == "equipos");
+		for (const char* v : { "menu", "ajustes", "cargando", "saliendo", "en_juego", "descanso", "pausa", "final" }) {
+			PantallaJuego q;
+			COMPROBAR(parsearPantalla(std::string("{\"pantalla\":\"") + v + "\"}", q) && q.pantalla == v);
+		}
+		PantallaJuego r;
+		COMPROBAR(!parsearPantalla(R"({"pantalla":"otra"})", r));
+		COMPROBAR(!parsearPantalla(R"({"pantalla":3})", r));
+		COMPROBAR(!parsearPantalla("{roto", r));
+		COMPROBAR(!parsearPantalla("[]", r));
+		COMPROBAR(!phoenix::juego::leerPantalla("Z:/no/existe").valida);
+	}
 	std::printf(fallos == 0 ? "TODO BIEN\n" : "%d FALLOS\n", fallos);
 	return fallos == 0 ? 0 : 1;
 }

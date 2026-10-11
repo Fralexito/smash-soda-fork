@@ -139,7 +139,11 @@ Informe revisar(const fs::path& juego) {
 		const Archivo pl = ficha("modules/phoenix.lua" + tras, d.second / "modules" / "phoenix.lua");
 		inf.archivos.push_back(pl);
 		if (!pl.sha256.empty()) phoenixLua[d.first] = pl.sha256;
-		inf.archivos.push_back(ficha("modules/phoenix_estadio.lua" + tras, d.second / "modules" / "phoenix_estadio.lua"));
+		inf.archivos.push_back(ficha("modules/phoenix_referee.lua" + tras, d.second / "modules" / "phoenix_referee.lua"));
+		{   // nombre anterior (antes del 11-oct-2026): solo si sigue ahí
+			const Archivo viejo = ficha("modules/phoenix_estadio.lua" + tras, d.second / "modules" / "phoenix_estadio.lua");
+			if (!viejo.sha256.empty()) inf.archivos.push_back(viejo);
+		}
 		const fs::path pesdb = d.second / "livecpk" / "Phoenix-DB" / "common" / "etc" / "pesdb";
 		inf.archivos.push_back(ficha("Phoenix-DB/Player.bin" + tras, pesdb / "Player.bin"));
 		inf.archivos.push_back(ficha("Phoenix-DB/PlayerAssignment.bin" + tras, pesdb / "PlayerAssignment.bin"));

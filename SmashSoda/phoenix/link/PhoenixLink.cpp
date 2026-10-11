@@ -332,6 +332,14 @@ namespace phoenix {
 					if (ej.valido) _estadoValidoMs = ahoraMs();
 					_estadoLeidoMs = ahoraMs();
 				}
+				// Pantalla del juego (pantalla.json): si se leyó a medio escribir, se queda la última buena (máx. 3 s)
+				{
+					const juego::PantallaJuego pj = _estadoCarpeta.empty() ? juego::PantallaJuego()
+						: juego::leerPantalla(std::filesystem::path(_estadoCarpeta));
+					std::lock_guard<std::mutex> lock(_mutex);
+					if (pj.valida) { _pantallaJuego = pj; _pantallaValidaMs = ahoraMs(); }
+					else if (ahoraMs() - _pantallaValidaMs >= 3000) _pantallaJuego = pj;
+				}
 				// Link → juego: sala.txt para el HUD de phoenix_estadio.lua (solo con PES abierto y el puente instalado)
 				if (!_estadoCarpeta.empty() && ahoraMs() >= _salaJuegoProximoMs) {
 					std::string texto;
@@ -940,6 +948,13 @@ namespace phoenix {
 	void PhoenixLink::salaJuego(const std::string& texto) {
 		std::lock_guard<std::mutex> l(_mutex);
 		_salaJuegoTexto = texto;
+	}
+
+	juego::PantallaJuego PhoenixLink::pantallaJuego() {
+		std::lock_guard<std::mutex> l(_mutex);
+		juego::PantallaJuego p = _pantallaJuego;
+		if (ahoraMs() - _estadoLeidoMs > 4000) p.valida = false;   // el hilo se quedó esperando a la web: dato no fiable
+		return p;
 	}
 
 	juego::EstadoPartidoJuego PhoenixLink::estadoJuego() {
