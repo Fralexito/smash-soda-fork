@@ -7,7 +7,6 @@ import { accion, confirmar, irA, avisar } from "../tienda.js";
 import { Diagnostico } from "./ajustes.js";
 import { GuiaInicio, Entrenador, useGuia } from "./guia.js";
 import { Pendientes } from "./mandos.js";
-import { PersonasSala } from "./personas.js";
 import { EditorBiblioteca } from "./nativas.js";
 import { abrirFicha } from "./gente.js";
 import {
@@ -254,7 +253,6 @@ function ResumenSala({ s, m }) {
     <div class="col" style="flex:1 1 0">
       <${Heroe} m=${m} conGuia=${verGuia} verGuia=${mostrarGuia}/>
       <${PuestosResumen} m=${m}/>
-      ${m.sala.abierta ? html`<${PersonasSala} m=${m}/>` : null}
     </div>
     <div class="col" style="flex:0 0 clamp(360px,25vw,440px)">
       ${m.sala.abierta ? html`<${Pendientes} m=${m}/>` : null}
