@@ -28,6 +28,7 @@ public:
 
 	vector<SDLGamepad>& getSDLGamepads();
 	vector<GamepadState>& getXInputGamepads();
+	SDLGamepadReader& lectorSdl() { return _sdlReader; }   // Phoenix: mostrar360 / ocultos360
 
 	mutex inputMutex;
 	Stopwatch stopwatch;

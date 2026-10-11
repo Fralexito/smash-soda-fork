@@ -72,7 +72,14 @@ function TuMando({ m }) {
           <${Boton} tipo=${actual < 0 ? "lleno mini" : "mini"} deshabilitado=${bloqueado || actual < 0} al=${() => usar(-1)}>${actual < 0 ? t("✓ EN USO", "✓ IN USE") : t("USAR TECLADO", "USE KEYBOARD")}</${Boton}>
         </div>
       </div>
-      <div><${Boton} tipo="suave mini" deshabilitado=${bloqueado} al=${() => accion("marionetas.actualizar", {}, { ok: t("Lista actualizada.", "List refreshed.") })}>${t("BUSCAR MANDOS", "FIND PADS")}</${Boton}></div>`}
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <${Boton} tipo="suave mini" deshabilitado=${bloqueado} al=${() => accion("marionetas.actualizar", {}, { ok: t("Lista actualizada.", "List refreshed.") })}>${t("BUSCAR MANDOS", "FIND PADS")}</${Boton}>
+        ${mar.ocultos360 > 0 || mar.mostrar360 ? html`<span class="mono mut" style="font-size:12px">${mar.mostrar360
+          ? t("Mostrando también los «Xbox 360».", "Also showing «Xbox 360» pads.")
+          : t(`${mar.ocultos360} «Xbox 360» ocultos (son los de Link).`, `${mar.ocultos360} «Xbox 360» hidden (Link's own).`)}</span>
+          <button class="enlace-mas" onClick=${() => accion("marionetas.mostrar360", { si: !mar.mostrar360 })}>${mar.mostrar360
+          ? t("OCULTARLOS", "HIDE THEM") : t("¿JUEGAS CON UN XBOX 360? MOSTRARLOS", "PLAYING WITH A REAL XBOX 360? SHOW THEM")}</button>` : null}
+      </div>`}
     <div style="height:1px;background:var(--tenue)"></div>
     <${PreferenciaPuesto} m=${m}/>
     <div class="ayuda" style="font-size:13px">${t("Aquí solo salen tus mandos físicos: los 8 mandos virtuales de Link no se muestran. Para que PES no lea tu mando por su cuenta (y no manejes dos jugadores), enciende «Orden de mandos en PES» en Mandos › Puestos.", "Only your physical pads show here; Link's 8 virtual pads are hidden. So PES doesn't also read your pad directly, turn on «Pad order in PES» in Pads › Seats.")}</div>
@@ -101,7 +108,8 @@ function PruebaMando({ m }) {
   const [todos, setPads] = useState([]);
   const virtuales = (m?.mandos?.lista || []).filter((p) => p.conectado && p.tipo !== "ds4").length;
   const x360 = todos.filter((g) => /xbox 360/i.test(g.nombre)).length;
-  const pads = virtuales > 0 && x360 <= virtuales ? todos.filter((g) => !/xbox 360/i.test(g.nombre)) : todos;
+  // Igual que en el motor: con mandos de Link enchufados, los «Xbox 360» son suyos (la cuenta no siempre cuadra)
+  const pads = virtuales > 0 && x360 > 0 && !m?.marionetas?.mostrar360 ? todos.filter((g) => !/xbox 360/i.test(g.nombre)) : todos;
   useEffect(() => {
     let vivo = true, id = 0, ultimo = 0;
     const leer = (ahora) => {

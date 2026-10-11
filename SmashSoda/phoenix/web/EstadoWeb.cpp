@@ -431,7 +431,8 @@ namespace phoenix::web {
 					if (gc.gamepads[i] == nullptr) continue;
 					titeres.push_back({ {"n", static_cast<int>(i) + 1}, {"activo", gc.gamepads[i]->isPuppet} });
 				}
-				e["marionetas"] = { {"motor", mp.isSDLEngine ? "sdl" : "xinput"}, {"maestro", maestro}, {"maestros", maestros}, {"titeres", titeres} };
+				e["marionetas"] = { {"motor", mp.isSDLEngine ? "sdl" : "xinput"}, {"maestro", maestro}, {"maestros", maestros}, {"titeres", titeres},
+					{"ocultos360", mp.lectorSdl().ocultos360}, {"mostrar360", mp.lectorSdl().mostrar360} };
 			}
 		}
 

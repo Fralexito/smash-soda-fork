@@ -50,7 +50,7 @@ export function crearSimulador(enviar) {
     perfilesTeclado: [
       { userId: 0, nombre: "Default", teclas: [["lleft", 30, "A"], ["lright", 32, "D"], ["lup", 17, "W"], ["ldown", 31, "S"], ["rleft", 331, "←"], ["rright", 333, "→"], ["rup", 328, "↑"], ["rdown", 336, "↓"], ["dleft", 75, "Num 4"], ["dright", 77, "Num 6"], ["dup", 72, "Num 8"], ["ddown", 76, "Num 5"], ["a", 38, "L"], ["b", 24, "O"], ["x", 37, "K"], ["y", 23, "I"], ["lb", 16, "Q"], ["rb", 25, "P"], ["lt", 33, "F"], ["rt", 36, "J"], ["back", 14, "Retroceso"], ["start", 28, "Enter"], ["lthumb", 46, "C"], ["rthumb", 50, "M"]].map(([b, v, e]) => ({ b, v, e })) },
     ],
-    marionetas: { motor: "sdl", maestro: -1, maestros: [{ n: 1, nombre: "Xbox Wireless Controller", tipo: "xbox", activo: true }, { n: 2, nombre: "Wireless Controller", tipo: "ds4", activo: false }], titeres: [1, 2, 3, 4, 5, 6, 7, 8].map((n) => ({ n, activo: false })) },
+    marionetas: { motor: "sdl", maestro: -1, maestros: [{ n: 1, nombre: "Xbox Wireless Controller", tipo: "xbox", activo: true }, { n: 2, nombre: "Wireless Controller", tipo: "ds4", activo: false }], titeres: [1, 2, 3, 4, 5, 6, 7, 8].map((n) => ({ n, activo: false })), ocultos360: 8, mostrar360: false },
     xbox: 8, ds4: 0, bloqueoGlobal: false, bloqueoBotones: false, host: 0,
     invitados: escenario === "vacia" ? [] : [
       { parsecId: 1187, nombre: "Mirko", base: 18, mod: true, vip: false, teclado: false, raton: false, rolWeb: "jugador" },
@@ -229,7 +229,7 @@ export function crearSimulador(enviar) {
     const p = s.partido;
     const e = {
       v: 1,
-      app: { version: "0.2.14", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
+      app: { version: "0.2.15", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
       noticias: { cargado: true, lista: s.noticias },
       chatGlobal: { cargado: true, pausado: s.chatGlobal.pausado, esperaSeg: s.chatGlobal.esperaSeg, rev: s.chatGlobal.mensajes.length, error: "" },
       web: { ...s.web, jugadoresLista: 3, versionLiga: "2026.10.08", eventosEnCola: 0 },
@@ -353,6 +353,7 @@ export function crearSimulador(enviar) {
     "mandos.botonesBloq": (d) => { s.botonesBloq = { mascara: d.mascara, lt: d.lt, rt: d.rt, lx: d.lx, ly: d.ly, rx: d.rx, ry: d.ry }; },
     "marionetas.motor": (d) => { s.marionetas.motor = d.sdl ? "sdl" : "xinput"; s.marionetas.maestro = -1; },
     "marionetas.actualizar": () => {},
+    "marionetas.mostrar360": (d) => { s.marionetas.mostrar360 = !!d.si; s.marionetas.ocultos360 = d.si ? 0 : 8; },
     "marionetas.maestro": (d) => { s.marionetas.maestro = s.marionetas.maestro === d.indice ? -1 : d.indice; if (s.marionetas.maestro < 0) s.marionetas.titeres.forEach((x) => { x.activo = false; }); },
     "marionetas.titere": (d) => { s.marionetas.titeres[d.indice].activo = d.si; },
     "mandos.miMando": (d) => { s.marionetas.maestro = d.indice; s.marionetas.titeres.forEach((x) => { x.activo = false; }); },

@@ -233,6 +233,17 @@ namespace phoenix::web {
 			if (MasterOfPuppets::instance.isSDLEngine) MasterOfPuppets::instance.fetchSDLGamepads();
 			return json::object();
 		});
+		// TU MANDO: los «Xbox 360 Controller» son los mandos de Link y se ocultan; quien juegue con un 360 real los muestra
+		p.registrar("marionetas.mostrar360", [&in](const json& d, uint64_t) -> std::optional<json> {
+			clienteMandos(in);
+			MasterOfPuppets& mp = MasterOfPuppets::instance;
+			{
+				std::lock_guard<std::mutex> cierre(mp.inputMutex);
+				mp.lectorSdl().mostrar360 = booleano(d, "si");
+			}
+			if (mp.isSDLEngine) mp.fetchSDLGamepads();
+			return json::object();
+		});
 		p.registrar("marionetas.maestro", [&in](const json& d, uint64_t) -> std::optional<json> {
 			GamepadClient& gc = clienteMandos(in);
 			MasterOfPuppets& mp = MasterOfPuppets::instance;
