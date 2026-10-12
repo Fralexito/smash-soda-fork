@@ -55,31 +55,44 @@ namespace phoenix::web {
 			return hay;
 		}
 
+		// Carpeta KONAMI de los Documentos de Windows (puede estar en OneDrive o en otro disco: se pregunta a Windows, no se fija).
 		fs::path carpetaKonamiPerfiles() {
 			fs::path r;
 			PWSTR docs = nullptr;
 			if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_Documents, 0, nullptr, &docs)) && docs) r = docs;
 			if (docs) CoTaskMemFree(docs);
-			return r / L"KONAMI" / L"eFootball PES 2021 SEASON UPDATE";
+			return r / L"KONAMI";
 		}
 
 		struct CandidatoPerfiles { std::string ruta; int64_t modificado = 0; };
 
-		// Documentos\KONAMI\eFootball PES 2021 SEASON UPDATE\<id>\save\SYSTEM00000000 que sean un guardado válido
+		// Busca KONAMI/eFootball PES 2021*/.../save/SYSTEM00000000 (hasta 3 niveles: SteamID/save, parche/año/save...).
+		// Cualquier PC, cualquier SteamID y cualquier parche: solo cuenta lo que se abre como guardado SYSTEM válido de PES 2021.
+		void buscarEn(const fs::path& dir, int nivel, std::vector<CandidatoPerfiles>& v) {
+			std::error_code ec;
+			for (auto& e : fs::directory_iterator(dir, ec)) {
+				if (!e.is_directory(ec)) continue;
+				const fs::path f = e.path() / L"save" / L"SYSTEM00000000";
+				if (fs::is_regular_file(f, ec)) {
+					pp::Guardado g; std::string err;
+					if (pp::Guardado::abrir(aUtf8Perfiles(f), g, err)) {
+						CandidatoPerfiles c; c.ruta = aUtf8Perfiles(f);
+						c.modificado = static_cast<int64_t>(fs::last_write_time(f, ec).time_since_epoch().count());
+						v.push_back(std::move(c));
+					}
+				}
+				if (nivel < 3 && e.path().filename() != L"save") buscarEn(e.path(), nivel + 1, v);
+			}
+		}
+
 		std::vector<CandidatoPerfiles> buscarGuardadosPerfiles() {
 			std::vector<CandidatoPerfiles> v;
 			std::error_code ec;
-			const fs::path base = carpetaKonamiPerfiles();
-			if (!fs::is_directory(base, ec)) return v;
-			for (auto& e : fs::directory_iterator(base, ec)) {
-				if (!e.is_directory(ec)) continue;
-				const fs::path f = e.path() / L"save" / L"SYSTEM00000000";
-				if (!fs::is_regular_file(f, ec)) continue;
-				pp::Guardado g; std::string err;
-				if (!pp::Guardado::abrir(aUtf8Perfiles(f), g, err)) continue;
-				CandidatoPerfiles c; c.ruta = aUtf8Perfiles(f);
-				c.modificado = static_cast<int64_t>(fs::last_write_time(f, ec).time_since_epoch().count());
-				v.push_back(std::move(c));
+			const fs::path konami = carpetaKonamiPerfiles();
+			if (!fs::is_directory(konami, ec)) return v;
+			for (auto& e : fs::directory_iterator(konami, ec)) {
+				const std::wstring n = e.path().filename().wstring();
+				if (e.is_directory(ec) && n.rfind(L"eFootball PES 2021", 0) == 0) buscarEn(e.path(), 1, v);
 			}
 			std::sort(v.begin(), v.end(), [](const CandidatoPerfiles& a, const CandidatoPerfiles& b) { return a.modificado > b.modificado; });
 			return v;
