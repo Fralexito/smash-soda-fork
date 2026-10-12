@@ -158,3 +158,9 @@ Método: en la pantalla de edición (tecla C = cuadrado, Z = Atrás, flechas = D
 
 - ❓ Pendiente de identificar: los valores de otros textos de «Tipo de cursor», el valor 0 de «Cambiar cursor» y de «Entrada automática», y los presets «Alternativa/Personalizado» de la configuración de comandos (bytes +0x34…+0x47).
 - Consecuencia para el editor de Link: un perfil nuevo se construye **copiando un registro base real** (p. ej. el de cualquier Usuario sin nombre) y cambiando solo estos bytes y el nombre; así los campos desconocidos quedan como PES los espera.
+
+### 11.1 Configuración de comandos (subpantalla, 12 oct) — pedido de Fralex
+- ✅ **+0x32 = Desplazamiento de jugadores** (0 = stick izquierdo, 1 = cruceta). **+0x33 = preajuste** (0 = Normal, 1 = Alternativa; «Personalizado» se espera = 2 y usaría el mapa de +0x34…+0x47; sin comprobar). Cambiar a «Alternativa» NO toca los bytes +0x34…+0x47: el preajuste solo cambia +0x33.
+- Mapa de botones (+0x34…+0x47): códigos × = 0, ○ = 1, □ = 2, △ = 3, L1 = 4, R1 = 5, L2 = 6, R2 = 7, 8 = ninguno. Primer bloque (Ataque) de «Normal»: `01 03 02 00 04 06 05 07 08 08` = Pase bombeado ○, Pase en profundidad △, Disparo □, Pase raso ×, Cambiar cursor L1, Controles manuales L2, Esprintar R1, Controles especiales R2. Segundo bloque (Defensa): `01 03 02 00 07 05 04 06 07 07` (los 4 primeros = Entrada deslizante ○, Salir con el portero △, Presión compañeros COM □, Presión ×; el resto sin decodificar).
+- Nota de uso del teclado en PES (mi método): en el cuadro del NOMBRE el teclado escribe letras (la Z se añadió al nombre; se borró con retroceso); la primera pulsación tras cambiar de pantalla a veces se pierde; hay que comprobar la fila resaltada antes de Enter.
+- Nota de Fralex: los nombres de las opciones pueden variar de un PES o parche a otro (idioma/versión): el editor de Link debe trabajar con los BYTES y tener sus etiquetas por parche, no fiarse de los textos.
