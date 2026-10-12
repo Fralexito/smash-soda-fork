@@ -45,3 +45,6 @@
 - **Ayuda plegable:** «¿QUÉ SON A Y B?» en la cabecera de JUGANDO.
 - **Candado de puesto (solo a quien tú fijes):** el icono de chincheta en la fila de un jugador **fija su puesto**. Cuando vuelva a la sala y tú lo aceptes como jugador (JUEGA), o él pulse su mando, cae en ese puesto; **si está ocupado, en el siguiente libre** (dando la vuelta, solo puestos de un equipo). Quien no tiene candado entra como siempre. Se guarda en `phoenix-ui.json` (`puestosFijados`, id de Parsec → puesto) y sobrevive a cerrar Link. En «Mirando» se ve «PUESTO 0N» junto a quien lo tiene fijado.
 - Detalle técnico: acción `mandos.fijarPuesto{parsecId, puesto 0–8}` (0 = soltar), estado `mandos.fijados`; el gancho al pulsar el mando está en `GamepadClient::tryAssignGamepad` y la aceptación del host en `AccionesSala::decidirEspera`. Con turnos (hotseat) manda su propia lógica.
+
+## Ajuste de 0.2.35 (a pedido de Fralex)
+Se vuelve al aspecto de siempre de Puestos: la fila con su barrita de arrastre, sin bandeja de «puestos sin usar» ni recuadros en el número. **Se arrastra la fila entera a la columna del otro equipo** (se ilumina «Suelta aquí: el puesto 0N pasa a EQUIPO X») y el puesto se va **con su mando y su número**. Soltar sobre otra fila sigue intercambiando personas, como antes. Se quitaron los botones «→ A / → B». «+ AÑADIR PUESTO» mete el primer puesto libre en ese equipo.
