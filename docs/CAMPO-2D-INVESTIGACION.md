@@ -94,3 +94,27 @@ float4(b+208) = (x,y,z,w): w == 1.0, 0 < y < 3, |x| < 80, |z| < 60
 - El proceso **se pausa/minimiza solo** si pierde el foco (no corre con la ventana minimizada): hace falta que esté al frente.
 - Teclado: en el menú funcionan Enter/flechas; en el campo el teclado no controla al equipo (solo el mando).
 - Sider overlay: la barra espaciadora lo muestra/oculta.
+
+## 7. Hallazgos del 11 oct por la noche (equipo y balón: aún sin cerrar)
+
+Comprobado con un saque de centro congelado (captura + memoria en el mismo instante, 0:00, Barça–City):
+
+- Cada lista de «equipo de IA» (códigos 44 y 67) trae **23 actores = 20 jugadores de campo + el árbitro + 2 asistentes**
+  (los asistentes van pegados a la banda, z = ±35.4). Los **porteros NO están en esas listas**: son actores aparte
+  (código distinto, `+312 = 1`, `+492 = 0x80001`, uno por portero; en el saque salió el del Barça en x = −47).
+  Para tener los 22 hay que sumar los porteros.
+- Posiciones verificadas contra la pantalla: el que saca (cursor «FRALEX») está en (0.6, 0.0); los demás caen donde se ven.
+  En el saque inicial el local ocupa x < 0 (excepto quien saca).
+- **El equipo NO está en el actor.** Probado: +312 (es la «lista», no el equipo), +228, +440 (lista), punteros +16/+24
+  (enlaces entre actores), tabla de registros de +416 y contexto de +400. Ningún campo parte los 21 en dos equipos.
+  Siguen abiertas: (a) fijar el equipo con el saque de centro (por lado y pidiendo al que saca) y mantenerlo por
+  identidad de objeto, (b) seguir buscando dónde guarda PES la plantilla en pantalla.
+- **Balón: candidatos, sin confirmar.** Hay actores «tipo 0» (`kind=0`, código 5/8/1045) con y ≈ 0.10–0.11 (el radio del
+  balón) y varias copias idénticas; ejemplo (−20.0, 0.11, 6.1) en cuatro direcciones. Falta verlos moverse con el juego
+  en marcha (cuando se probó, el juego estaba pausado por minimizado).
+- Los actores de un partido anterior pueden quedar en memoria con códigos viejos; el lector se queda con la lista que tiene 18–24 miembros.
+- Mecánica útil: tecla **Z** = «Atrás» y **X** = «Confirmar» en los menús del juego; Enter/flechas también.
+  Con X se saca de centro. El juego **se pausa solo si se minimiza** y a veces el Explorador pasa al frente.
+- Penales: en Opciones gener. (antes del partido) «Pen.» y «Prórroga» están en «Sí», así que con un 0–0 y 5 min se llega a una tanda
+  (el balón queda quieto en el punto penal = referencia perfecta para el balón); no se llegó a probar.
+- Herramientas nuevas en `tools/radar/`: `vigilante.cpp` (congela el juego al detectar un saque), `entes3.cpp` (firma relajada: porteros, árbitro, balón).
