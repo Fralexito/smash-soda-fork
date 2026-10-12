@@ -67,6 +67,7 @@ Mismo endpoint y mismo tipo (`POST /v1/eventos`, tipo `partida_fin`). Solo crece
   "b": { "nombre": "Kaiser", "goles": 1, "local": false,
          "jugadores": [ { "parsec_id": "222", "nombre": "Kaiser", "presente": true, "es_host": false } ] },
   "correcciones": 0, "pausas": 1,
+  "lados": { "origen": "host", "correcciones": 0 },   // host = los eligió el anfitrión; mandos = Link los armó solo al pitazo
   "host_parsec": "111",
   "abandono_juego": false,
   "juego": {                         // solo si había estado.json fresco al cerrar
@@ -104,6 +105,7 @@ Excluido (se guarda, no cuenta):
 
 Por revisar (no cuenta hasta que lo apruebe el staff):
 - `cierre` = `manual` (el juego no confirmó el final).
+- `lados.origen` = `mandos` y `lados.correcciones` = 0: Link armó los lados según la formación y nadie los confirmó (pueden estar al revés). Esta regla se quita cuando Link detecte el lado de cada mando en el juego (llegará `origen: "juego"`).
 - `correcciones` > 0, `juego.coincide` = false o `abandono_juego`.
 - Algún jugador con `presente` = false.
 - Más de 3 partidos válidos de la misma pareja en 24 h (anti-farmeo): del 4.º en adelante.

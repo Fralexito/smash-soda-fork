@@ -42,6 +42,8 @@ namespace phoenix::web {
 		int correcciones = 0;      ///< goles tocados a mano (partido.gol) durante el partido
 		int pausas = 0;            ///< veces que se pausó el marcador
 		std::string cierre;        ///< "completo" (el juego confirmó el final) | "manual" | "" (registros viejos)
+		std::string origenLados;   ///< "host" (los eligió el anfitrión) | "mandos" (Link los armó solo al pitazo)
+		int correccionesLados = 0; ///< veces que se corrigió quién es local (CORREGIR LADOS)
 		json comoJson() const;
 		static std::optional<RegistroPartido> desdeJson(const json& j);
 	};
@@ -63,6 +65,12 @@ namespace phoenix::web {
 		/// Los lados juegan con los mandos del otro (tras «Cambiar lados»).
 		void invertirMandos() { _invertido = !_invertido; }
 		bool mandosInvertidos() const { return _invertido; }
+		/// Solo cambia quién es local en Link (no mueve mandos): para cuando en el juego se eligió el otro lado.
+		bool corregirLados();
+		/// "host" por defecto al preparar; el árbitro pone "mandos" cuando arma los lados solo.
+		void origenLados(const std::string& o) { _origenLados = o; }
+		const std::string& origenLados() const { return _origenLados; }
+		int correccionesLados() const { return _correccionesLados; }
 
 		FasePartido fase() const { return _fase; }
 		const LadoPartido& ladoA() const { return _a; }
@@ -85,6 +93,8 @@ namespace phoenix::web {
 		bool _invertido = false;
 		int _correcciones = 0;
 		int _pausas = 0;
+		std::string _origenLados = "host";
+		int _correccionesLados = 0;
 	};
 
 	class HistorialPartidos {

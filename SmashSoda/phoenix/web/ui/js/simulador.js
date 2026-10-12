@@ -494,6 +494,7 @@ export function crearSimulador(enviar) {
     "partido.gol": (d) => { const l = s.partido[d.lado]; l.goles = Math.max(0, Math.min(99, l.goles + d.delta)); },
     "partido.pausa": (d) => { const p = s.partido; if (d.si && p.fase === "en_juego") { p.acumulado += ahora() - p.inicio; p.fase = "pausado"; } else if (!d.si && p.fase === "pausado") { p.inicio = ahora(); p.fase = "en_juego"; } },
     "partido.cambiarLados": () => { s.partido.invertido = !s.partido.invertido; },
+    "partido.corregirLados": () => { s.partido.invertido = !s.partido.invertido; bot("Lados corregidos."); },
     "partido.finalizar": () => {
       const p = s.partido;
       const reg = { id: siguienteId++, inicioMs: Date.now() - segundosPartido() * 1000, duracionSeg: segundosPartido(), a: p.a, b: p.b, ganador: p.a.goles > p.b.goles ? "a" : p.b.goles > p.a.goles ? "b" : "empate" };

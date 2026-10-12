@@ -20,6 +20,7 @@ Al terminar cada partido, Link manda el evento `partida_fin` por el `POST /v1/ev
   "b": { "nombre": "Kaiser", "goles": 1, "local": false,
          "jugadores": [ { "parsec_id": "222", "nombre": "Kaiser", "presente": true, "es_host": false } ] },
   "correcciones": 0, "pausas": 1, "host_parsec": "111", "abandono_juego": false,
+  "lados": { "origen": "host", "correcciones": 0 },   // host | mandos (Link los armó solo) | juego (futuro: detectado en el juego)
   "juego": { "fase": "final", "minuto": 90, "completo": true,
              "equipo_a": 101, "equipo_b": 102, "nombre_equipo_a": "Real Madrid", "nombre_equipo_b": "Barcelona",
              "goles_a": 2, "goles_b": 1, "coincide": true, "penales_a": 4, "penales_b": 3,
@@ -97,7 +98,7 @@ RLS: activado en las cuatro tablas. Solo `service_role` escribe (la función edg
 - `juego.goles[]` → `partidos_link_goles` (en 1v1 con el `usuario_id` del lado).
 - Calcula `estado_ranking` y `motivos`:
   - **excluido**: `modo` ≠ `1v1` (`equipos`), `cierre = 'cancelado'` (`cancelado`), un jugador sin `usuario_id` (`sin_cuenta`), el mismo `usuario_id` en los dos lados (`misma_persona`), `duracion_seg < 180` (`muy_corto`).
-  - **revisar** (si no está excluido): `cierre = 'manual'` (`cierre_manual`), `correcciones > 0` (`marcador_tocado`), `juego.coincide = false` (`no_coincide_juego`), `abandono_juego` (`abandono`), algún `presente = false` (`jugador_ausente`), ya hay 3 o más partidos `valido` de la misma pareja en las 24 h anteriores (`farmeo`).
+  - **revisar** (si no está excluido): `lados.origen = 'mandos'` con `lados.correcciones = 0` (`lados_sin_confirmar`: Link armó los lados solo y pueden estar al revés; `origen = 'juego'` llegará más adelante y vale como `host`), `cierre = 'manual'` (`cierre_manual`), `correcciones > 0` (`marcador_tocado`), `juego.coincide = false` (`no_coincide_juego`), `abandono_juego` (`abandono`), algún `presente = false` (`jugador_ausente`), ya hay 3 o más partidos `valido` de la misma pareja en las 24 h anteriores (`farmeo`).
   - **valido**: el resto.
 - Si es 1v1 y no `excluido` → `perform recalcular_ranking_1v1()`.
 

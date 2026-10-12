@@ -119,6 +119,7 @@ namespace phoenix::web {
 				{"b", ladoWeb(in, r.b, idHost, invertido, r.inicioMs)},
 				{"correcciones", r.correcciones},
 				{"pausas", r.pausas},
+				{"lados", { {"origen", r.origenLados.empty() ? std::string("host") : r.origenLados}, {"correcciones", r.correccionesLados} }},
 				{"host_parsec", idHost != 0 ? std::to_string(idHost) : std::string()},
 				{"abandono_juego", in.arbitro.avisoAbandono || (j.valido && j.fase == "menu")},
 			};
@@ -240,6 +241,19 @@ namespace phoenix::web {
 			for (size_t i = 0; i < ma.size(); i++) AccionesSala::intercambiar(sala, ma[i], mb[i]);
 			in.partido.invertirMandos();
 			if (d.value("anunciar", true)) mensajeDelBot(in, "Cambio de lados: cada uno toma el mando del otro.");
+			return in.partido.comoJson(ahoraSeg());
+		});
+
+		// En el juego se eligió el otro lado: solo cambia quién es local en Link (no mueve ningún mando)
+		p.registrar("partido.corregirLados", [&in](const json& d, uint64_t) -> std::optional<json> {
+			if (!in.partido.corregirLados()) throw ErrorAccion("NO_LISTO", "Primero elige los dos lados.");
+			in.arbitro.golesJuegoL = in.arbitro.golesJuegoV = -1;   // el marcador se vuelve a leer del juego con los lados nuevos
+			if (d.value("anunciar", true)) {
+				const bool inv = in.partido.mandosInvertidos();
+				const LadoPartido& local = inv ? in.partido.ladoB() : in.partido.ladoA();
+				const LadoPartido& visita = inv ? in.partido.ladoA() : in.partido.ladoB();
+				mensajeDelBot(in, "Lados corregidos: " + local.nombre + " es el local y " + visita.nombre + " la visita.");
+			}
 			return in.partido.comoJson(ahoraSeg());
 		});
 

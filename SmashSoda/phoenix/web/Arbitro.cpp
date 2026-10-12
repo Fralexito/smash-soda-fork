@@ -38,6 +38,7 @@ namespace phoenix::web {
 		constexpr size_t kSegundosPing = 5;  // muestras seguidas (1 por segundo)
 		constexpr double kLatidoVivoSeg = 120.0;   // el marcador en vivo se reenvía al menos cada 2 min (la web oculta los de >10 min sin noticias)
 		double vivoEnviadoSeg = -1e9;              // último envío del marcador en vivo (ahoraSeg)
+		double autoArmarEsperaHasta = 0.0;         // armar lados solo al pitazo: no reintentar antes de esto
 
 		/// Copia la máscara del anfitrión (Config) y le suma lo del modo competitivo si está activo.
 		void aplicarBloqueo(Interno& in, Hosting& h) {
@@ -261,13 +262,38 @@ namespace phoenix::web {
 			// HUD del juego (sala.txt): quién juega en cada lado, su ping, el árbitro y el chat
 			PhoenixLink::instancia().salaJuego(textoSalaJuego(in, sala, h));
 
+			// 2a0) Sin lados elegidos: al pitazo inicial (reloj en marcha, minuto 0–1) Link los arma solo con quien tiene
+			//      mando, según la formación (los primeros «equipoLocal» mandos son el local; un lado vacío = la CPU).
+			//      Si en el juego se eligió el otro lado, CORREGIR LADOS lo arregla sin mover mandos.
+			if (pr.marcadorAuto && fp == FasePartido::Libre && sala.abierta() && j.valido && j.fase == "en_juego" && j.relojCorre
+				&& j.minuto <= 1 && ahora >= autoArmarEsperaHasta) {
+				autoArmarEsperaHasta = ahora + 10.0;   // si no se puede (nadie con mando), se vuelve a mirar en 10 s
+				LadoPartido la, lb;
+				const std::vector<AsientoVista> asientos = sala.asientos(8);
+				const int activos = (std::min)(static_cast<int>(asientos.size()), pr.mandosActivos);
+				for (int i = 0; i < activos; i++) {
+					const AsientoVista& s = asientos[static_cast<size_t>(i)];
+					if (!s.ocupado || s.parsecId == 0) continue;
+					LadoPartido& l = i < pr.equipoLocal ? la : lb;
+					bool repetido = false;
+					for (const LadoPartido* x : { &la, &lb }) for (const JugadorPartido& jp : x->jugadores) if (jp.parsecId == s.parsecId) repetido = true;
+					if (!repetido && l.jugadores.size() < 4) l.jugadores.push_back({ s.parsecId, s.jugador });
+				}
+				if (!la.jugadores.empty() || !lb.jugadores.empty()) {
+					if (la.jugadores.empty()) { la.nombre = "CPU"; la.jugadores.push_back({ 0, "CPU" }); }
+					if (lb.jugadores.empty()) { lb.nombre = "CPU"; lb.jugadores.push_back({ 0, "CPU" }); }
+					if (in.partido.preparar(la, lb)) in.partido.origenLados("mandos");
+				}
+			}
+
 			// 2a) Arranque automático: lados ya elegidos (Listo) y el reloj del juego echa a andar
 			bool vivo = marcadorVivo;
-			if (pr.marcadorAuto && fp == FasePartido::Listo && sala.abierta() && j.valido && j.fase == "en_juego" && j.relojCorre
+			if (pr.marcadorAuto && in.partido.fase() == FasePartido::Listo && sala.abierta() && j.valido && j.fase == "en_juego" && j.relojCorre
 				&& in.partido.iniciar(ahoraEpochMs(), ahora)) {
 				PhoenixLink::instancia().marcarPartido(true);
 				PhoenixLink::instancia().evento("partida_inicio", "", json{ {"marcador", in.partido.marcador()}, {"auto", true} }.dump());
-				mensajeDelBot(in, "¡Arrancó! " + in.partido.ladoA().nombre + " vs " + in.partido.ladoB().nombre + ". El marcador va solo con el juego.");
+				mensajeDelBot(in, "¡Arrancó! " + in.partido.ladoA().nombre + " vs " + in.partido.ladoB().nombre + ". El marcador va solo con el juego."
+					+ (in.partido.origenLados() == "mandos" ? std::string(" Lados según los mandos: si en el juego es al revés, CORREGIR LADOS en Partido.") : std::string()));
 				a.golesAnunciados = static_cast<int>(j.goles.size());
 				a.golEsperaDesde = -1.0;
 				a.golesJuegoL = a.golesJuegoV = -1;

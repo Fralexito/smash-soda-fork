@@ -194,6 +194,7 @@ function Marcador({ m }) {
     }
   };
   const cambiarLados = () => accion("partido.cambiarLados", { anunciar: true }, { ok: t("Mandos cruzados.", "Pads swapped.") });
+  const corregirLados = () => accion("partido.corregirLados", { anunciar: true }, { ok: t("Lados corregidos (los mandos no se movieron).", "Sides fixed.") });
   const ids = [...p.a.jugadores, ...p.b.jugadores].map((j) => j.parsecId);
   const red = (m.red || []).filter((r) => ids.includes(r.parsecId));
   return html`<div class="col">
@@ -217,6 +218,8 @@ function Marcador({ m }) {
       ${p.fase === "en_juego" ? html`<${Boton} tipo="warn" al=${() => accion("partido.pausa", { si: true })}>${t("PAUSA", "PAUSE")}</${Boton}>` : null}
       ${p.fase === "pausado" ? html`<${Boton} tipo="lleno" al=${() => accion("partido.pausa", { si: false })}>${t("REANUDAR", "RESUME")}</${Boton}>` : null}
       <${Boton} al=${cambiarLados}><${Icono} n="intercambio" t=${16}/>${t("CAMBIAR LADOS", "SWAP SIDES")}</${Boton}>
+      <${Boton} tipo="suave" al=${corregirLados}>${t("CORREGIR LADOS", "FIX SIDES")}</${Boton}>
+      ${p.origenLados === "mandos" ? html`<span class="ayuda">${t("Lados armados solos según los mandos. Si en el juego es al revés: CORREGIR LADOS (no mueve mandos).", "Sides set from pads. If reversed in game: FIX SIDES.")}</span>` : null}
       <div style="margin-left:auto;display:flex;gap:10px">
         ${enJuego ? html`<${Boton} tipo="ok" al=${finalizar}><${Icono} n="trofeo" t=${16}/>${t("TERMINAR", "FINISH")}</${Boton}>` : null}
         <${Boton} tipo="peligro" al=${cancelar}>${t("CANCELAR", "CANCEL")}</${Boton}>

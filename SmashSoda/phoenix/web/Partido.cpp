@@ -35,7 +35,8 @@ namespace phoenix::web {
 	json RegistroPartido::comoJson() const {
 		return { {"id", id}, {"inicioMs", inicioMs}, {"duracionSeg", duracionSeg},
 			{"a", detalle_partido::ladoJson(a)}, {"b", detalle_partido::ladoJson(b)}, {"ganador", ganador},
-			{"correcciones", correcciones}, {"pausas", pausas}, {"cierre", cierre} };
+			{"correcciones", correcciones}, {"pausas", pausas}, {"cierre", cierre},
+			{"origenLados", origenLados}, {"correccionesLados", correccionesLados} };
 	}
 
 	std::optional<RegistroPartido> RegistroPartido::desdeJson(const json& j) {
@@ -54,6 +55,8 @@ namespace phoenix::web {
 			r.correcciones = (std::max)(0, j.value("correcciones", 0));
 			r.pausas = (std::max)(0, j.value("pausas", 0));
 			r.cierre = j.value("cierre", "");
+			r.origenLados = j.value("origenLados", "");
+			r.correccionesLados = (std::max)(0, j.value("correccionesLados", 0));
 			return r;
 		}
 		catch (...) {
@@ -85,6 +88,16 @@ namespace phoenix::web {
 		_b = std::move(b);
 		_fase = FasePartido::Listo;
 		_pausaTotal = 0.0;
+		_invertido = false;
+		_origenLados = "host";
+		_correccionesLados = 0;
+		return true;
+	}
+
+	bool Partido::corregirLados() {
+		if (_fase == FasePartido::Libre) return false;
+		_invertido = !_invertido;
+		_correccionesLados++;
 		return true;
 	}
 
@@ -151,6 +164,8 @@ namespace phoenix::web {
 		r.ganador = _a.goles > _b.goles ? "a" : (_b.goles > _a.goles ? "b" : "empate");
 		r.correcciones = _correcciones;
 		r.pausas = _pausas;
+		r.origenLados = _origenLados;
+		r.correccionesLados = _correccionesLados;
 		_fase = FasePartido::Libre;
 		_invertido = false;
 		return r;
@@ -175,6 +190,7 @@ namespace phoenix::web {
 			{"segundos", segundosJugados(ahoraSeg)},
 			{"inicioMs", _inicioMs},
 			{"invertido", _invertido},
+			{"origenLados", _origenLados},
 		};
 	}
 
