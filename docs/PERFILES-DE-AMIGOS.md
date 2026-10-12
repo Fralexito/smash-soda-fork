@@ -164,3 +164,16 @@ Método: en la pantalla de edición (tecla C = cuadrado, Z = Atrás, flechas = D
 - Mapa de botones (+0x34…+0x47): códigos × = 0, ○ = 1, □ = 2, △ = 3, L1 = 4, R1 = 5, L2 = 6, R2 = 7, 8 = ninguno. Primer bloque (Ataque) de «Normal»: `01 03 02 00 04 06 05 07 08 08` = Pase bombeado ○, Pase en profundidad △, Disparo □, Pase raso ×, Cambiar cursor L1, Controles manuales L2, Esprintar R1, Controles especiales R2. Segundo bloque (Defensa): `01 03 02 00 07 05 04 06 07 07` (los 4 primeros = Entrada deslizante ○, Salir con el portero △, Presión compañeros COM □, Presión ×; el resto sin decodificar).
 - Nota de uso del teclado en PES (mi método): en el cuadro del NOMBRE el teclado escribe letras (la Z se añadió al nombre; se borró con retroceso); la primera pulsación tras cambiar de pantalla a veces se pierde; hay que comprobar la fila resaltada antes de Enter.
 - Nota de Fralex: los nombres de las opciones pueden variar de un PES o parche a otro (idioma/versión): el editor de Link debe trabajar con los BYTES y tener sus etiquetas por parche, no fiarse de los textos.
+
+
+## 12. Usuario automático (Link 0.2.59)
+
+Objetivo: que quien se siente en un puesto tenga SU nombre y SU configuración en el Usuario de su mando, sin hacer nada más.
+
+- **Vínculo**: cada perfil de Link puede ligarse a una persona por su **identificador de Parsec** (no por el nombre de cuenta; Fralex: el nombre real lo decide la propia persona). Se guarda en `perfiles-amigos.json` (`parsecId`). Una persona tiene un solo perfil: ligar otro quita el anterior. La interfaz está en GENTE › PERFILES PES › USUARIO AUTOMÁTICO (select por cada sentado, o por ID manual).
+- **Vigilante** (`tickPerfilesAuto`, 1 vez por segundo, solo con PES abierto y en la pantalla de elegir lados, que es cuando existe la lista de mandos): para cada sentado con perfil, escribe el perfil en el Usuario de su mando (puesto N = mando N). Antes guarda lo que había como perfil si no estaba. Al levantarse o cambiar de persona o de Usuario, devuelve el registro original (con relectura). Si la persona cambió sus opciones en PES, ese cambio se guarda en SU perfil en vez de pisarlo.
+- **Interruptor** ACTIVAR/APAGAR AUTOMÁTICO (`perfiles.auto`, ajuste `autoUsuarios`, activo por defecto). Si hay Usuarios pisados al apagarlo, los devuelve.
+- **Sentados de prueba** (`perfiles.simular {puesto, parsecId}`): simulan a alguien sentado sin gente de verdad; sirven para probar.
+- **Prueba real (12 oct 2026, PC de Fralex)**: perfil «Usuario 2» ligado a un ID falso, sentado de prueba en el puesto 1 → PES mostró «Usuario 2» en el mando 1 a los ~2 s; al quitar el sentado volvió «FRALEX» idéntico.
+- Acciones nuevas: `perfiles.vincular {id, parsecId}`, `perfiles.auto {si}`, `perfiles.simular {puesto?, parsecId?}`. `perfiles.estado` añade `auto`, `autoLog`, `sentados`, `autoAplicados` y `parsecId` por perfil.
+- Pendiente: «Mi perfil de PES» (editor de nombre y opciones por bytes, etiquetas por parche) y que el perfil viaje con la persona a otros anfitriones.

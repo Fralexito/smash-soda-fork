@@ -163,6 +163,8 @@ namespace phoenix::web {
 	void registrarAccionesCedido(Interno& in);
 	/// Modo cedido: atajo del anfitrión, invitado que sale, sala cerrada, interfaz oculta (≈ cada frame).
 	void tickCedido(Interno& in);
+	/// Usuario automático de PES: pone el perfil de quien se sienta (trabaja 1 vez por segundo).
+	void tickPerfilesAuto(Interno& in);
 	nlohmann::json estadoCedido(Interno& in);
 
 	/// Medidor de retraso del mando: evalúa a cada invitado y avisa en el chat (≈ cada frame; trabaja 1 vez por segundo).

@@ -29,6 +29,7 @@ namespace phoenix::perfilespes {
 		std::string anterior;           // registro anterior (por si el cambio no gustó)
 		std::string actualizado;        // sello «20261012-141500»
 		bool sinNombre = false;
+		uint32_t parsecId = 0;          // persona a la que pertenece (0 = ninguna): al sentarse se le pone este perfil solo
 	};
 
 	struct Asignacion {
@@ -67,6 +68,9 @@ namespace phoenix::perfilespes {
 
 		const PerfilAmigo* porId(const std::string& id) const;
 		const PerfilAmigo* porNombre(const std::string& nombre) const;
+		const PerfilAmigo* porParsec(uint32_t parsecId) const;      ///< el perfil de esa persona (nullptr si no tiene)
+		/// Liga un perfil a una persona (parsecId 0 = quitar). Una persona tiene UN perfil: si ya tenía otro, se le quita.
+		bool vincular(const std::string& id, uint32_t parsecId);
 		bool protegido(int hueco) const;
 		void proteger(int hueco, bool si);
 		bool borrar(const std::string& id);

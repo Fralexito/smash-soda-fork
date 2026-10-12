@@ -66,6 +66,21 @@ namespace phoenix::perfilespes {
 		return nullptr;
 	}
 
+	const PerfilAmigo* Base::porParsec(uint32_t parsecId) const {
+		if (!parsecId) return nullptr;
+		for (auto& p : datos.perfiles) if (p.parsecId == parsecId) return &p;
+		return nullptr;
+	}
+
+	bool Base::vincular(const std::string& id, uint32_t parsecId) {
+		PerfilAmigo* destino = nullptr;
+		for (auto& p : datos.perfiles) if (p.id == id) destino = &p;
+		if (!destino) return false;
+		if (parsecId) for (auto& p : datos.perfiles) if (p.parsecId == parsecId) p.parsecId = 0;   // una persona, un perfil
+		destino->parsecId = parsecId;
+		return true;
+	}
+
 	bool Base::protegido(int hueco) const {
 		return std::find(datos.protegidos.begin(), datos.protegidos.end(), hueco) != datos.protegidos.end();
 	}
@@ -91,7 +106,7 @@ namespace phoenix::perfilespes {
 		j["version"] = 1;
 		j["perfiles"] = nlohmann::json::array();
 		for (auto& p : datos.perfiles)
-			j["perfiles"].push_back({ {"id", p.id}, {"nombre", p.nombre}, {"registro", p.registro}, {"anterior", p.anterior}, {"actualizado", p.actualizado}, {"sinNombre", p.sinNombre} });
+			j["perfiles"].push_back({ {"id", p.id}, {"nombre", p.nombre}, {"registro", p.registro}, {"anterior", p.anterior}, {"actualizado", p.actualizado}, {"sinNombre", p.sinNombre}, {"parsecId", p.parsecId} });
 		j["protegidos"] = datos.protegidos;
 		j["seleccion"] = datos.seleccion;
 		j["ultima"] = nlohmann::json::array();
@@ -113,6 +128,7 @@ namespace phoenix::perfilespes {
 				p.anterior = x.value("anterior", std::string());
 				p.actualizado = x.value("actualizado", std::string());
 				p.sinNombre = x.value("sinNombre", false);
+				p.parsecId = x.value("parsecId", uint32_t(0));
 				std::vector<uint8_t> b;
 				if (p.id.empty() || !ids.insert(p.id).second || !deHex(p.registro, b) || b.size() != kTamUsuario) { error = "un perfil de perfiles-amigos.json está dañado (" + p.id + ")"; return false; }
 				d.perfiles.push_back(std::move(p));

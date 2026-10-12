@@ -20,6 +20,8 @@ export function PerfilesPes() {
   const [puestoV, setPuestoV] = useState(1);   // prueba en vivo: puesto 1…8
   const [perfilV, setPerfilV] = useState("");  // prueba en vivo: perfil elegido
   const [mandos, setMandos] = useState(null);  // prueba en vivo: Usuario que tiene cada mando
+  const [perfilL, setPerfilL] = useState("");  // ligar por ID: perfil elegido
+  const [idL, setIdL] = useState("");          // ligar por ID: ID de Parsec
 
   const cargar = async () => { const r = await accion("perfiles.estado", {}, { silencioso: true }); if (r) { setD(r); setSel((s) => s || r.seleccion || []); } };
   useEffect(() => { cargar(); const id = setInterval(cargar, 3000); return () => clearInterval(id); }, []);
@@ -122,6 +124,39 @@ export function PerfilesPes() {
         ${elegidos.length > caben ? html`<span class="ayuda" style="font-size:13px;color:var(--bad, #ff6b6b)">${t(`Solo caben ${caben} (hay ${protegidos} huecos protegidos).`, `Only ${caben} fit (${protegidos} slots are protected).`)}</span>` : null}
       </div>
       ${d.informe && d.informe.puestos?.length ? html`<div class="ayuda" style="font-size:13px">${t(`Hecho: ${d.informe.puestos.length} amigos en PES, ${d.informe.escritos} huecos escritos.`, `Done: ${d.informe.puestos.length} friends in PES, ${d.informe.escritos} slots written.`)}${d.informe.copia ? html` <span class="mono" style="font-size:11px;overflow-wrap:anywhere">${t("Copia: ", "Backup: ")}${d.informe.copia}</span>` : ""}</div>` : null}
+    </${Tarjeta}>
+
+    <${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:12px">
+      <${Titulo} texto=${t("USUARIO AUTOMÁTICO", "AUTOMATIC USER")} derecha=${html`<${Chip} tipo=${d.auto ? "ok" : "warn"}>${d.auto ? t("ACTIVADO", "ON") : t("APAGADO", "OFF")}</${Chip}>`}/>
+      <div class="ayuda" style="font-size:14px">${t("Liga a cada persona con su perfil. Cuando se siente en un puesto (en la pantalla de elegir lados de PES), Link le pone SU nombre y SU configuración en el Usuario de su mando, sin que haga nada. Al levantarse, Link devuelve lo que había. Si la persona cambia sus opciones en PES, Link lo guarda en su perfil.", "Link each person to their profile. When they take a seat (on PES's side-selection screen), Link puts THEIR name and THEIR settings on their controller's user automatically. When they leave, Link gives back what was there. If they change their options in PES, Link saves it to their profile.")}</div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <${Boton} tipo=${d.auto ? "suave" : "lleno"} deshabilitado=${ocupado} al=${async () => { const r = await accion("perfiles.auto", { si: !d.auto }); if (r) setD(r); }}>${d.auto ? t("APAGAR AUTOMÁTICO", "TURN OFF") : t("ACTIVAR AUTOMÁTICO", "TURN ON")}</${Boton}>
+        ${d.autoLog ? html`<span class="ayuda" style="font-size:13px">${d.autoLog}</span>` : null}
+      </div>
+      <div class="mono mut" style="font-size:12px">${t("QUIÉN ESTÁ SENTADO", "WHO IS SEATED")}</div>
+      ${(d.sentados || []).length ? html`<div style="display:flex;flex-direction:column;gap:6px">${d.sentados.map((s) => html`<div key=${s.puesto} class="caja" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:6px 10px">
+        <span class="mono mut" style="font-size:12px">${t("P", "S")}${s.puesto}</span>
+        <span style="font-size:13px;flex:1;min-width:120px;overflow-wrap:anywhere">${s.nombre}${s.simulado ? "" : ""} <span class="mono mut" style="font-size:11px">#${s.parsecId}</span></span>
+        <select class="campo" value=${s.perfil || ""} style="max-width:200px" onChange=${async (e) => { const id = e.currentTarget.value; const r = id ? await accion("perfiles.vincular", { id, parsecId: s.parsecId }) : (s.perfil ? await accion("perfiles.vincular", { id: s.perfil, parsecId: 0 }) : null); if (r) setD(r); }}>
+          <option value="">${t("— sin perfil —", "— no profile —")}</option>
+          ${perfiles.map((p) => html`<option key=${p.id} value=${p.id}>${p.nombre}</option>`)}
+        </select>
+        ${s.simulado ? html`<${Boton} tipo="suave mini" al=${async () => { const r = await accion("perfiles.simular", { puesto: s.puesto, parsecId: 0 }); if (r) setD(r); }}>${t("QUITAR", "REMOVE")}</${Boton}>` : null}
+      </div>`)}</div>` : html`<div class="ayuda" style="font-size:13px">${t("Nadie sentado ahora.", "Nobody seated right now.")}</div>`}
+      ${perfiles.filter((p) => p.parsecId).length ? html`<div class="mono mut" style="font-size:12px">${t("PERFILES LIGADOS", "LINKED PROFILES")}</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">${perfiles.filter((p) => p.parsecId).map((p) => html`<${Chip} key=${p.id}>${p.nombre} · #${p.parsecId} <a style="cursor:pointer;margin-left:6px" title=${t("Quitar vínculo", "Unlink")} onClick=${async () => { const r = await accion("perfiles.vincular", { id: p.id, parsecId: 0 }); if (r) setD(r); }}>✕</a></${Chip}>`)}</div>` : null}
+      <details class="sec-detalle"><summary>${t("Ligar a alguien que no está sentado / probar sin gente", "Link someone who isn't seated / test without people")}</summary>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px">
+          <select class="campo" value=${perfilL} onChange=${(e) => setPerfilL(e.currentTarget.value)} style="flex:1;min-width:150px">
+            <option value="">${t("Perfil…", "Profile…")}</option>
+            ${perfiles.map((p) => html`<option key=${p.id} value=${p.id}>${p.nombre}</option>`)}
+          </select>
+          <input type="number" class="campo" min="1" value=${idL} placeholder=${t("ID de Parsec", "Parsec ID")} onInput=${(e) => setIdL(e.currentTarget.value)} style="max-width:150px"/>
+          <${Boton} tipo="suave mini" deshabilitado=${!perfilL || !Number(idL)} al=${async () => { const r = await accion("perfiles.vincular", { id: perfilL, parsecId: Number(idL) }); if (r) setD(r); }}>${t("LIGAR", "LINK")}</${Boton}>
+          <${Boton} tipo="suave mini" deshabilitado=${!Number(idL)} al=${async () => { const r = await accion("perfiles.simular", { puesto: puestoV, parsecId: Number(idL) }); if (r) setD(r); }}>${t("SENTAR DE PRUEBA EN P", "TEST-SEAT AT S")}${puestoV}</${Boton}>
+        </div>
+        <div class="ayuda" style="font-size:12px;margin-top:6px">${t("El puesto se elige abajo, en «Prueba en vivo». Un sentado de prueba no es gente de verdad: sirve para ver cómo Link le pone el perfil.", "The slot is chosen below, in «Live test». A test seat isn't a real person: it shows how Link applies the profile.")}</div>
+      </details>
     </${Tarjeta}>
 
     <${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:12px">

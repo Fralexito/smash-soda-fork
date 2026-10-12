@@ -8,6 +8,8 @@
 #include <ctime>
 #include <filesystem>
 #include <fstream>
+#include <map>
+#include <memory>
 #include <mutex>
 
 #include "../core/PerfilesAmigos.h"
@@ -102,14 +104,14 @@ namespace phoenix::web {
 		std::string carpetaBasePerfiles() { return rutaConfig("phoenix-perfiles-amigos"); }
 		std::string archivoAjustesPerfiles() { return carpetaBasePerfiles() + "\\ajustes.json"; }
 
-		struct AjustesPerfiles { std::string ruta; bool autoRecoger = true; };
+		struct AjustesPerfiles { std::string ruta; bool autoRecoger = true; bool autoUsuarios = true; };
 
 		AjustesPerfiles leerAjustesPerfiles() {
 			AjustesPerfiles a;
 			try {
 				std::ifstream in(fs::u8path(archivoAjustesPerfiles()));
 				const auto j = json::parse(in, nullptr, false);
-				if (j.is_object()) { a.ruta = j.value("ruta", std::string()); a.autoRecoger = j.value("autoRecoger", true); }
+				if (j.is_object()) { a.ruta = j.value("ruta", std::string()); a.autoRecoger = j.value("autoRecoger", true); a.autoUsuarios = j.value("autoUsuarios", true); }
 			}
 			catch (...) {}
 			return a;
@@ -119,7 +121,7 @@ namespace phoenix::web {
 			std::error_code ec;
 			fs::create_directories(fs::u8path(carpetaBasePerfiles()), ec);
 			std::ofstream o(fs::u8path(archivoAjustesPerfiles()), std::ios::trunc);
-			o << json{ {"ruta", a.ruta}, {"autoRecoger", a.autoRecoger} }.dump(1);
+			o << json{ {"ruta", a.ruta}, {"autoRecoger", a.autoRecoger}, {"autoUsuarios", a.autoUsuarios} }.dump(1);
 		}
 
 		// El guardado que se usa: el elegido a mano si existe y es válido; si no, el más reciente.
@@ -131,6 +133,23 @@ namespace phoenix::web {
 		// Perfiles puestos EN VIVO en la memoria de PES (prueba): puesto 1…8, Usuario 0…31 y el registro original para restaurarlo
 		struct AplicadoVivo { int puesto = 0; int usuario = 0; std::string perfilId; std::vector<uint8_t> original; };
 		std::vector<AplicadoVivo> aplicadosVivo;
+
+		// ---- USUARIO AUTOMÁTICO: cuando alguien con perfil vinculado se sienta, Link le pone su perfil en el Usuario de su mando ----
+		struct SentadoAuto { int puesto = 0; uint32_t parsecId = 0; std::string nombre; bool simulado = false; };
+		struct AplicadoAuto { int puesto = 0; int usuario = 0; uint32_t parsecId = 0; std::string perfilId; std::vector<uint8_t> original; std::string escrito; };
+		std::vector<SentadoAuto> sentadosAuto;            // lo último que vio el vigilante (para la interfaz)
+		std::vector<AplicadoAuto> aplicadosAuto;          // lo que Link pisó y debe devolver
+		std::map<int, uint32_t> simuladosAuto;            // puesto -> parsecId: sentados de PRUEBA (sin gente de verdad)
+		std::string logAuto;                              // último aviso del vigilante
+		std::unique_ptr<pp::vivo::Conexion> conexionAuto;
+		double ultimoAuto = 0;
+
+		bool nombreDeRegistroValido(const std::vector<uint8_t>& reg, std::string& nombre) {
+			size_t n = 0; while (n < pp::kTamNombre && reg[4 + n]) n++;
+			nombre.assign(reinterpret_cast<const char*>(&reg[4]), n);
+			if (!pp::utf8Valido(nombre)) { nombre.clear(); return false; }
+			return !nombre.empty();
+		}
 
 		bool pesFueAbiertoPerfiles = false;     // para «recoger solo al cerrar PES»
 		std::string avisoAutoPerfiles;          // lo último que hizo Link solo
@@ -184,10 +203,16 @@ namespace phoenix::web {
 			for (auto& p : base.datos.perfiles) {
 				int donde = 0;
 				for (auto& h : r["huecos"]) if (h["perfil"] == p.id) { donde = h["n"].get<int>(); break; }
-				r["perfiles"].push_back({ {"id", p.id}, {"nombre", p.nombre}, {"sinNombre", p.sinNombre}, {"actualizado", p.actualizado}, {"enHueco", donde}, {"tieneAnterior", !p.anterior.empty()} });
+				r["perfiles"].push_back({ {"id", p.id}, {"nombre", p.nombre}, {"sinNombre", p.sinNombre}, {"actualizado", p.actualizado}, {"enHueco", donde}, {"tieneAnterior", !p.anterior.empty()}, {"parsecId", p.parsecId} });
 			}
 			r["vivo"] = json::array();
 			for (auto& a : aplicadosVivo) r["vivo"].push_back({ {"puesto", a.puesto}, {"usuario", a.usuario + 1}, {"perfil", a.perfilId} });
+			r["auto"] = aj.autoUsuarios;
+			r["autoLog"] = logAuto;
+			r["sentados"] = json::array();
+			for (auto& s : sentadosAuto) r["sentados"].push_back({ {"puesto", s.puesto}, {"parsecId", s.parsecId}, {"nombre", s.nombre}, {"simulado", s.simulado}, {"perfil", base.porParsec(s.parsecId) ? base.porParsec(s.parsecId)->id : std::string()} });
+			r["autoAplicados"] = json::array();
+			for (auto& a : aplicadosAuto) r["autoAplicados"].push_back({ {"puesto", a.puesto}, {"usuario", a.usuario + 1}, {"perfil", a.perfilId} });
 			r["seleccion"] = base.datos.seleccion;
 			r["ultimaSala"] = base.datos.ultimaSala;
 			return r;
@@ -383,6 +408,37 @@ namespace phoenix::web {
 			return estadoPerfiles();
 		});
 
+		// Liga un perfil a una persona (parsecId): cuando se siente en un puesto, Link le pone ese perfil solo. parsecId 0 = quitar.
+		p.registrar("perfiles.vincular", [](const json& d, uint64_t) -> std::optional<json> {
+			std::lock_guard<std::mutex> g(mtxPerfiles);
+			pp::Base base(carpetaBasePerfiles());
+			std::string err;
+			if (!base.cargar(err)) throw ErrorAccion("BASE_DANADA", err);
+			const uint32_t pid = d.contains("parsecId") && d["parsecId"].is_number_unsigned() ? d["parsecId"].get<uint32_t>() : 0;
+			if (!base.vincular(texto(d, "id", 20), pid)) throw ErrorAccion("NO_EXISTE", "Ese perfil ya no existe.");
+			if (!base.guardar(selloPerfiles(), err)) throw ErrorAccion("NO_SE_PUDO", err);
+			return estadoPerfiles();
+		});
+
+		p.registrar("perfiles.auto", [](const json& d, uint64_t) -> std::optional<json> {
+			std::lock_guard<std::mutex> g(mtxPerfiles);
+			AjustesPerfiles a = leerAjustesPerfiles();
+			a.autoUsuarios = booleano(d, "si");
+			guardarAjustesPerfiles(a);
+			if (!a.autoUsuarios) logAuto = "Automático apagado: Link ya no pone perfiles solo.";
+			return estadoPerfiles();
+		});
+
+		// Sentados de PRUEBA (sin gente de verdad): {puesto, parsecId}; parsecId 0 quita ese puesto; sin puesto quita todos.
+		p.registrar("perfiles.simular", [](const json& d, uint64_t) -> std::optional<json> {
+			std::lock_guard<std::mutex> g(mtxPerfiles);
+			if (!d.contains("puesto")) { simuladosAuto.clear(); return estadoPerfiles(); }
+			const int puesto = entero(d, "puesto", 1, pp::vivo::kMandos);
+			const uint32_t pid = d.contains("parsecId") && d["parsecId"].is_number_unsigned() ? d["parsecId"].get<uint32_t>() : 0;
+			if (pid) simuladosAuto[puesto] = pid; else simuladosAuto.erase(puesto);
+			return estadoPerfiles();
+		});
+
 		p.registrar("perfiles.ruta", [](const json& d, uint64_t) -> std::optional<json> {
 			std::lock_guard<std::mutex> g(mtxPerfiles);
 			AjustesPerfiles a = leerAjustesPerfiles();
@@ -396,5 +452,127 @@ namespace phoenix::web {
 			guardarAjustesPerfiles(a);
 			return estadoPerfiles();
 		});
+	}
+
+	// Vigilante del Usuario automático: una vez por segundo mira quién está sentado y, si tiene perfil vinculado,
+	// se lo pone en el Usuario de su mando (solo en la pantalla de elegir lados, que es cuando existe la lista de mandos).
+	// Al levantarse (o cambiar de persona) devuelve lo que había. Si la persona edita su Usuario en PES, el cambio se
+	// guarda en SU perfil (no se pisa). Cada paso es un solo Usuario, con relectura (Conexion::escribirUsuario).
+	void tickPerfilesAuto(Interno& in) {
+		const double ahora = static_cast<double>(GetTickCount64()) / 1000.0;
+		if (ahora - ultimoAuto < 1.0) return;
+		ultimoAuto = ahora;
+		std::unique_lock<std::mutex> cerrojo(mtxPerfiles, std::try_to_lock);
+		if (!cerrojo.owns_lock()) return;
+		try {
+			std::vector<SentadoAuto> sent;
+			if (in.ctx.sala != nullptr) {
+				for (const AsientoVista& a : in.ctx.sala->asientos(pp::vivo::kMandos))
+					if (a.ocupado && a.parsecId != 0) sent.push_back({ a.numero, a.parsecId, a.jugador, false });
+			}
+			for (const auto& kv : simuladosAuto) {
+				sent.erase(std::remove_if(sent.begin(), sent.end(), [&](const SentadoAuto& s) { return s.puesto == kv.first; }), sent.end());
+				sent.push_back({ kv.first, kv.second, "(prueba)", true });
+			}
+			sentadosAuto = sent;
+
+			const bool activo = leerAjustesPerfiles().autoUsuarios;
+			const bool pes = pesAbiertoPerfiles();
+			if (!pes) {
+				// PES se cerró: los originales ya están en Link como perfiles; no hay nada vivo que devolver
+				conexionAuto.reset();
+				aplicadosAuto.clear();
+				return;
+			}
+			if (!activo && aplicadosAuto.empty()) { conexionAuto.reset(); return; }
+			if (activo && sent.empty() && aplicadosAuto.empty()) return;
+
+			if (!conexionAuto) conexionAuto = std::make_unique<pp::vivo::Conexion>();
+			std::string err;
+			if (!conexionAuto->abierta() && !conexionAuto->abrir(err)) { conexionAuto.reset(); return; }   // PES abierto pero sin pantalla de lados
+			int mandos[pp::vivo::kMandos];
+			if (!conexionAuto->leerMandos(mandos, err)) { conexionAuto.reset(); return; }
+
+			pp::Base base(carpetaBasePerfiles());
+			if (!base.cargar(err)) { logAuto = "Automático: la base de perfiles está dañada (" + err + ")"; return; }
+
+			// 1) devolver lo que había a quien ya no está sentado, o cambió de persona o de Usuario
+			for (size_t i = 0; i < aplicadosAuto.size();) {
+				AplicadoAuto& a = aplicadosAuto[i];
+				const bool sigue = activo && std::any_of(sent.begin(), sent.end(), [&](const SentadoAuto& s) { return s.puesto == a.puesto && s.parsecId == a.parsecId; })
+					&& a.puesto >= 1 && a.puesto <= pp::vivo::kMandos && mandos[a.puesto - 1] == a.usuario;
+				if (sigue) { i++; continue; }
+				std::vector<uint8_t> actual;
+				if (!conexionAuto->leerUsuario(a.usuario, actual, err)) { i++; continue; }
+				// si cambió (la persona lo editó) y no se levantó por error, ese cambio es suyo: se guarda en su perfil antes de devolver
+				if (pp::aHex(actual) != a.escrito) {
+					for (auto& pf : base.datos.perfiles) if (pf.id == a.perfilId && pp::aHex(actual) != pf.registro) {
+						pf.anterior = pf.registro; pf.registro = pp::aHex(actual); pf.actualizado = selloPerfiles();
+						std::string nom; if (nombreDeRegistroValido(actual, nom)) { pf.nombre = nom; pf.sinNombre = false; }
+						std::string e2; base.guardar(selloPerfiles(), e2);
+						break;
+					}
+				}
+				std::vector<uint8_t> ant;
+				if (conexionAuto->escribirUsuario(a.usuario, a.original, ant, err)) {
+					logAuto = "Devolví el Usuario " + std::to_string(a.usuario + 1) + " a como estaba (el puesto " + std::to_string(a.puesto) + " quedó libre).";
+					aplicadosAuto.erase(aplicadosAuto.begin() + i);
+				}
+				else { logAuto = "No pude devolver el Usuario " + std::to_string(a.usuario + 1) + ": " + err; i++; }
+			}
+			if (!activo) return;
+
+			// 2) poner el perfil a quien se acaba de sentar
+			for (const SentadoAuto& s : sent) {
+				if (s.puesto < 1 || s.puesto > pp::vivo::kMandos) continue;
+				const pp::PerfilAmigo* perfil = base.porParsec(s.parsecId);
+				const int usuario = mandos[s.puesto - 1];
+				if (!perfil || usuario < 0) continue;
+				std::vector<uint8_t> nuevo, actual;
+				if (!pp::deHex(perfil->registro, nuevo) || nuevo.size() != static_cast<size_t>(pp::kTamUsuario)) continue;
+				if (!conexionAuto->leerUsuario(usuario, actual, err)) continue;
+				const std::string hexActual = pp::aHex(actual);
+				auto ya = std::find_if(aplicadosAuto.begin(), aplicadosAuto.end(), [&](const AplicadoAuto& a) { return a.usuario == usuario; });
+				if (hexActual == perfil->registro) { if (ya != aplicadosAuto.end()) ya->escrito = hexActual; continue; }
+				if (ya != aplicadosAuto.end()) {
+					// ya se le puso y la persona lo está cambiando en PES: se guarda en su perfil, no se vuelve a pisar
+					if (hexActual != ya->escrito) {
+						for (auto& pf : base.datos.perfiles) if (pf.id == perfil->id) {
+							pf.anterior = pf.registro; pf.registro = hexActual; pf.actualizado = selloPerfiles();
+							std::string nom; if (nombreDeRegistroValido(actual, nom)) { pf.nombre = nom; pf.sinNombre = false; }
+							break;
+						}
+						std::string e2; base.guardar(selloPerfiles(), e2);
+						ya->escrito = hexActual;
+						logAuto = "Guardé los cambios que hizo el puesto " + std::to_string(s.puesto) + " en su perfil.";
+					}
+					continue;
+				}
+				// primera vez: nada se pierde, lo que había se guarda como perfil si no lo estaba
+				const bool guardado = std::any_of(base.datos.perfiles.begin(), base.datos.perfiles.end(), [&](const pp::PerfilAmigo& x) { return x.registro == hexActual; });
+				if (!guardado) {
+					int mx = 0;
+					for (auto& x : base.datos.perfiles) if (x.id.size() > 1 && x.id[0] == 'p') mx = (std::max)(mx, atoi(x.id.c_str() + 1));
+					pp::PerfilAmigo n; n.id = "p" + std::to_string(mx + 1); n.registro = hexActual; n.actualizado = selloPerfiles();
+					std::string nom; nombreDeRegistroValido(actual, nom);
+					n.sinNombre = nom.empty();
+					if (nom.empty() || base.porNombre(nom)) nom = "Usuario " + std::to_string(usuario + 1) + " (antes del automático)";
+					while (base.porNombre(nom)) nom += "+";
+					n.nombre = nom;
+					base.datos.perfiles.push_back(n);
+					if (!base.guardar(selloPerfiles(), err)) { logAuto = "No pude guardar una copia de lo que había: " + err; continue; }
+					perfil = base.porParsec(s.parsecId);   // el vector pudo moverse
+					if (!perfil) continue;
+				}
+				std::vector<uint8_t> anterior;
+				if (!conexionAuto->escribirUsuario(usuario, nuevo, anterior, err)) { logAuto = "No pude poner el perfil en el Usuario " + std::to_string(usuario + 1) + ": " + err; continue; }
+				AplicadoAuto a; a.puesto = s.puesto; a.usuario = usuario; a.parsecId = s.parsecId; a.perfilId = perfil->id; a.original = anterior; a.escrito = perfil->registro;
+				aplicadosAuto.push_back(std::move(a));
+				logAuto = "Puse el perfil «" + perfil->nombre + "» en el Usuario " + std::to_string(usuario + 1) + " (puesto " + std::to_string(s.puesto) + ").";
+			}
+		}
+		catch (...) {
+			logAuto = "Automático: error inesperado (no se tocó nada más).";
+		}
 	}
 }

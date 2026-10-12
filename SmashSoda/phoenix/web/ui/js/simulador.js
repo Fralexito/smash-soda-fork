@@ -257,7 +257,7 @@ export function crearSimulador(enviar) {
     const p = s.partido;
     const e = {
       v: 1,
-      app: { version: "0.2.58", etapa: "beta 1", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
+      app: { version: "0.2.59", etapa: "beta 1", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
       noticias: { cargado: true, lista: s.noticias },
       chatGlobal: { cargado: true, pausado: s.chatGlobal.pausado, esperaSeg: s.chatGlobal.esperaSeg, rev: s.chatGlobal.mensajes.length, error: "" },
       web: { ...s.web, jugadoresLista: 3, versionLiga: "2026.10.08", eventosEnCola: 0 },
@@ -342,7 +342,9 @@ export function crearSimulador(enviar) {
     const idN = (id) => Number(id.slice(1));
     return { ruta: "D:/Users/Alexander/Documents/KONAMI/eFootball PES 2021 SEASON UPDATE/239200/save/SYSTEM00000000", candidatos: [], pesAbierto: p.pesAbierto, autoRecoger: true,
       huecos: p.huecos.map((pid, i) => ({ n: i + 1, protegido: p.protegidos.includes(i + 1), nombre: pid ? (p.perfiles.find((x) => idN(x.id) === pid) || {}).nombre || "" : "", perfil: pid ? "p" + pid : null })),
-      perfiles: p.perfiles.map((x) => ({ ...x, enHueco: p.huecos.indexOf(idN(x.id)) + 1 })), seleccion: p.seleccion, ultimaSala: p.ultima, ...(informe ? { informe } : {}) };
+      perfiles: p.perfiles.map((x) => ({ ...x, parsecId: x.parsecId || 0, enHueco: p.huecos.indexOf(idN(x.id)) + 1 })), seleccion: p.seleccion, ultimaSala: p.ultima, ...(informe ? { informe } : {}),
+      auto: p.auto !== false, autoLog: "", autoAplicados: [],
+      sentados: Object.keys(p.sim || {}).map((k) => ({ puesto: Number(k), parsecId: p.sim[k], nombre: "(prueba)", simulado: true, perfil: (p.perfiles.find((x) => x.parsecId === p.sim[k]) || {}).id || "" })) };
   };
   // Fichajes como cambios (lo que devuelve fichajes.estado en el motor real)
   const fichajesSim = () => {
@@ -530,6 +532,10 @@ export function crearSimulador(enviar) {
     "perfiles.borrar": (d) => { perfilesSim(); const p = s.perfilesPes; p.perfiles = p.perfiles.filter((x) => x.id !== d.id); p.huecos = p.huecos.map((h) => (h === Number(d.id.slice(1)) ? 0 : h)); p.seleccion = p.seleccion.filter((x) => x !== d.id); return perfilesSim(); },
     "perfiles.renombrar": (d) => { perfilesSim(); const x = s.perfilesPes.perfiles.find((y) => y.id === d.id); if (x) { x.nombre = d.nombre; x.sinNombre = false; } return perfilesSim(); },
     "perfiles.ruta": () => perfilesSim(),
+    // Usuario automático (simulado): sentados de prueba, vínculos persona→perfil y el interruptor
+    "perfiles.auto": (d) => { perfilesSim(); s.perfilesPes.auto = !!d.si; return perfilesSim(); },
+    "perfiles.vincular": (d) => { perfilesSim(); const p = s.perfilesPes; p.perfiles.forEach((x) => { if (x.id === d.id) x.parsecId = d.parsecId || 0; else if (d.parsecId && x.parsecId === d.parsecId) x.parsecId = 0; }); return perfilesSim(); },
+    "perfiles.simular": (d) => { perfilesSim(); const p = s.perfilesPes; p.sim = p.sim || {}; if (d.puesto === undefined) p.sim = {}; else if (d.parsecId) p.sim[d.puesto] = d.parsecId; else delete p.sim[d.puesto]; return perfilesSim(); },
     "perfiles.preparar": (d) => {
       perfilesSim(); const p = s.perfilesPes; const ids = d.ids || [];
       if (!ids.length) error("NO_SE_PUDO", "elige al menos un amigo");

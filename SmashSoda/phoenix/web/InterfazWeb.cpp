@@ -240,6 +240,7 @@ namespace phoenix::web {
 			const bool ventanaVisible = h != nullptr && IsWindowVisible(h) && !IsIconic(h);
 			PhoenixLink::instancia().ventanaVisible(ventanaVisible);
 			tickCedido(in);
+			tickPerfilesAuto(in);
 
 			tickDatos(in);
 			tickEstadisticas(in);

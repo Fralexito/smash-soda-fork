@@ -157,6 +157,17 @@ int main(int argc, char** argv) {
 		CHECK(b.guardar(s(), err), "la base se guarda con un Usuario de nombre 0xFF: " + err);
 		CHECK(!utf8Valido(std::string("\xFF")) && utf8Valido(std::string("Jos\xC3\xA9")), "utf8Valido");
 	}
+	// 11) vincular un perfil a una persona (parsecId): una persona = un perfil, se guarda y se vuelve a leer
+	{
+		CHECK(b.vincular(idsSint[1], 777) && b.porParsec(777) && b.porParsec(777)->id == idsSint[1], "vincular perfil a persona");
+		CHECK(b.vincular(idsSint[2], 777) && b.porParsec(777)->id == idsSint[2] && b.porId(idsSint[1])->parsecId == 0, "una persona tiene un solo perfil: el anterior se desvincula");
+		CHECK(b.vincular(idsSint[2], 0) && b.porParsec(777) == nullptr, "desvincular");
+		CHECK(!b.vincular("p-no-existe", 5), "vincular a un perfil inexistente falla");
+		CHECK(b.vincular(idsSint[3], 4242), "vincular otra persona");
+		CHECK(b.guardar(s(), err), "guardar con parsecId: " + err);
+		Base b3(dirBase);
+		CHECK(b3.cargar(err) && b3.porParsec(4242) && b3.porParsec(4242)->id == idsSint[3], "el vinculo se conserva al recargar: " + err);
+	}
 	CHECK(leer(orig) == bytesOrig, "el original no se toco");
 	std::cout << (fallos ? "FALLAS: " + std::to_string(fallos) : std::string("TODO OK")) << "\n";
 	return fallos ? 1 : 0;
