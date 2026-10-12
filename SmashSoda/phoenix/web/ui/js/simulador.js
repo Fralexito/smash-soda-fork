@@ -248,7 +248,7 @@ export function crearSimulador(enviar) {
     const p = s.partido;
     const e = {
       v: 1,
-      app: { version: "0.2.18", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
+      app: { version: "0.2.20", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
       noticias: { cargado: true, lista: s.noticias },
       chatGlobal: { cargado: true, pausado: s.chatGlobal.pausado, esperaSeg: s.chatGlobal.esperaSeg, rev: s.chatGlobal.mensajes.length, error: "" },
       web: { ...s.web, jugadoresLista: 3, versionLiga: "2026.10.08", eventosEnCola: 0 },
@@ -260,6 +260,7 @@ export function crearSimulador(enviar) {
         juego: s.opciones.biblioteca && s.opciones.biblioteca !== "Default" ? s.opciones.biblioteca : "", pesAbierto: !!s.pes.abierto,
         ultimoFin: s.cedido.ultimoFin },
       marionetas: s.marionetas,
+      campo: { estado: s.campoVivo ? "activo" : "esperando", motivo: "", jugadores: s.campoVivo ? 22 : 0, balon: !!s.campoVivo },
       teclado: { perfiles: s.perfilesTeclado },
       sala: {
         abierta: s.abierta, lista: true, enlace: s.abierta ? "https://parsec.gg/g/7K2Qx9abcdef/phoenix" : "", nombre: s.opciones.nombre, plazas: s.opciones.plazas,
@@ -359,6 +360,7 @@ export function crearSimulador(enviar) {
       casillas: d.si ? Array.from({ length: 8 }, (_, i) => ({ n: i + 1, puesto: i + 1, ok: true })) : [] }; },
     "mandos.ordenarPes": () => { if (s.ordenPes?.activo) s.ordenPes.estado = "al_dia"; },
     "mandos.vivo": () => ({}),
+    "campo.vivo": (d) => { s.campoVivo = !!d.si; },
     "mandos.tomar": (d) => { s.host = d.numero === s.host ? 0 : d.numero; return { activo: s.host }; },
     "mandos.herramienta": (d) => { if (d.nombre === "bloquearTodo") s.bloqueoGlobal = !s.bloqueoGlobal; else if (d.nombre === "bloquearBotones") s.bloqueoBotones = !s.bloqueoBotones; else if (d.nombre === "desconectarTodos") s.mandos = s.mandos.map(() => 0); else if (d.nombre === "ordenar") { const v = s.mandos.filter(Boolean); s.mandos = s.mandos.map((_, i) => v[i] || 0); } },
     "teclado.asignar": (d) => { const p = s.perfilesTeclado.find((x) => x.userId === d.userId) || s.perfilesTeclado[0]; p.teclas.forEach((x) => { if (x.v === d.tecla) { x.v = 0; x.e = ""; } }); const k = p.teclas.find((x) => x.b === d.boton); k.v = d.tecla; k.e = "K" + d.tecla; },
@@ -544,6 +546,24 @@ export function crearSimulador(enviar) {
   // Estado cada 200 ms (como el motor real) y una muestra de red por segundo
   setInterval(() => enviar({ t: "estado", datos: estado() }), 200);
   setInterval(tick, 1000);
+
+  // Campo 2D en vivo (como el motor: solo si la tarjeta lo pide con campo.vivo). 4-4-2 vs 4-3-3 que se mueven con el balón.
+  const FORM_L = [[-48, 0], [-36, -22], [-38, -8], [-38, 8], [-36, 22], [-24, -24], [-26, -8], [-26, 8], [-24, 24], [-12, -10], [-12, 10]];
+  const FORM_V = [[48, 0], [36, -22], [38, -8], [38, 8], [36, 22], [26, -16], [24, 0], [26, 16], [14, -22], [12, 0], [14, 22]];
+  const campoSim = () => {
+    const tt = ahora();
+    const bx = Math.sin(tt * 0.35) * 34, bz = Math.sin(tt * 0.9 + 1) * 20;      // balón: va y viene por el campo
+    const mover = (f, lado, i) => {
+      const [x, z] = f[i], desp = i === 0 ? 0.15 : 0.45;                       // el portero apenas se mueve
+      const px = x + (bx - x) * desp + Math.sin(tt * 0.8 + i * 1.7) * 2.2;
+      const pz = z + (bz - z) * desp * 0.7 + Math.cos(tt * 0.7 + i * 2.3) * 2.2;
+      return [Math.round(px * 10) / 10, Math.round(pz * 10) / 10, lado];
+    };
+    const j = [...FORM_L.map((_, i) => mover(FORM_L, 0, i)), ...FORM_V.map((_, i) => mover(FORM_V, 1, i))];
+    j.push([Math.round((bx * 0.5) * 10) / 10, 35.2, 2], [Math.round((-bx * 0.3) * 10) / 10, -35.2, 2]); // los dos asistentes en la banda
+    return { j, b: [Math.round(bx * 10) / 10, Math.round(bz * 10) / 10, 0.11] };
+  };
+  setInterval(() => { if (s.campoVivo) enviar({ t: "evento", nombre: "campo", datos: campoSim() }); }, 50);
   setTimeout(() => global("Kaiser", "¿alguien para unas revanchas?", "jugador"), 11000);
 
   return {

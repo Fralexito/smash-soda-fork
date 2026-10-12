@@ -12,6 +12,7 @@
 #include "../core/MandoHost.h"
 #include "../core/OrdenPes.h"
 #include "../core/PerfilesMapeo.h"
+#include "../host/CampoVivo.h"
 
 // =============================================================================
 //  Acciones de la interfaz web: mandos, solicitudes, entrada por Parsec,
@@ -164,6 +165,14 @@ namespace phoenix::web {
 		p.registrar("mandos.vivo", [&in](const json& d, uint64_t) -> std::optional<json> {
 			in.vivoRapido = booleano(d, "si");
 			in.vivoAnterior.clear();
+			return json::object();
+		});
+		// Campo 2D en vivo: la tarjeta Partido › Campo enciende el lector del juego (solo lectura) al abrirse y lo apaga al cerrarse
+		p.registrar("campo.vivo", [&in](const json& d, uint64_t) -> std::optional<json> {
+			in.campoRapido = booleano(d, "si");
+			in.campoSeq = 0;
+			if (in.campoRapido) phoenix::campo::iniciar();
+			phoenix::campo::pedirVivo(in.campoRapido);
 			return json::object();
 		});
 		p.registrar("mandos.soloAutorizados", [](const json& d, uint64_t) -> std::optional<json> {

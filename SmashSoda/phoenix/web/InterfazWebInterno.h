@@ -57,6 +57,9 @@ namespace phoenix::web {
 		bool vivoRapido = false;                   ///< Mandos en vivo abierto: canal «vivo» ~30/s (solo botones y sticks)
 		double ultimoVivo = 0.0;
 		std::string vivoAnterior;                  ///< último paquete «vivo» enviado (solo se manda si cambia)
+		bool campoRapido = false;                  ///< Partido › Campo abierto: lector del juego encendido y canal «campo» ~20/s
+		double ultimoCampo = 0.0;
+		uint32_t campoSeq = 0;                     ///< última lectura del campo que ya se mandó
 		double ultimaMuestraRed = 0.0;
 		size_t chatVistos = 0;
 		size_t actividadVistos = 0;

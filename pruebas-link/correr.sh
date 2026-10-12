@@ -18,3 +18,5 @@ g++ -std=c++17 -O2 -Wall -Wextra -I"$R/SmashSoda" -I"$R/external" "$R/pruebas-li
 /tmp/phx_pruebas/cedido_test
 g++ -std=c++17 -O2 -Wall -Wextra -I"$R/SmashSoda" "$R/pruebas-link/retraso_test.cpp" "$R/SmashSoda/phoenix/core/MedidorRetraso.cpp" -o /tmp/phx_pruebas/retraso_test
 /tmp/phx_pruebas/retraso_test
+g++ -std=c++17 -O2 -Wall -Wextra -I"$R/SmashSoda" "$R/pruebas-link/campo_test.cpp" "$R/SmashSoda/phoenix/core/CampoVivo.cpp" -o /tmp/phx_pruebas/campo_test
+/tmp/phx_pruebas/campo_test

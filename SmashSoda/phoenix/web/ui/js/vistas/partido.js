@@ -8,9 +8,11 @@ import { html, useState, useEffect, useRef } from "../lib.js";
 import { t, duracion, fecha } from "../i18n.js";
 import { accion, confirmar, avisar } from "../tienda.js";
 import { Tarjeta, Titulo, Boton, Interruptor, Campo, Avatar, Chip, Icono, Vacio, colorPing, cx, dos } from "../ui.js";
+import { CampoEnVivo } from "./campo.js";
 
 export const PESTANAS_PARTIDO = [
   { id: "vivo", es: "EN VIVO", en: "LIVE", d: ["Arma los dos lados, lleva el marcador y el reloj. Al terminar se guarda y se avisa en el chat y la web.", "Set up sides, keep score and time."] },
+  { id: "campo", es: "CAMPO", en: "PITCH", d: ["Las 22 fichitas y el balón del partido en vivo, como el radar del modo entrenador (solo lee el juego).", "The 22 players and the ball live, like the coach-mode radar (read-only)."] },
   { id: "historial", es: "HISTORIAL", en: "HISTORY", d: ["Partidos jugados en esta PC y la tabla de la sala (3 puntos por victoria).", "Matches played on this PC and the room table."] },
 ];
 
@@ -18,6 +20,7 @@ export function VistaPartido({ s, pestana }) {
   const m = s.motor;
   if (!m || !m.sala) return html`<${Vacio} titulo=${t("Conectando…", "Connecting…")} texto=""/>`;
   if (pestana === "historial") return html`<${Historial}/>`;
+  if (pestana === "campo") return html`<${CampoEnVivo} m=${m}/>`;
   const fase = m.partido?.fase || "libre";
   if (fase === "libre") return html`<${Armar} m=${m}/>`;
   return html`<${Marcador} m=${m}/>`;

@@ -8,6 +8,7 @@
 #include "../../core/Config.h"
 #include "../../services/Hotseat.h"
 #include "../../services/WebSocket.h"
+#include "../host/CampoVivo.h"
 #include "../../services/OverlayService.h"
 #include "../../widgets/HostSettingsWidget.h"
 #include "../PhoenixBuild.h"
@@ -435,6 +436,19 @@ namespace phoenix::web {
 				e["marionetas"] = { {"motor", mp.isSDLEngine ? "sdl" : "xinput"}, {"maestro", maestro}, {"maestros", maestros}, {"titeres", titeres},
 					{"ocultos360", mp.lectorSdl().ocultos360}, {"mostrar360", mp.lectorSdl().mostrar360} };
 			}
+		}
+
+		// ---- Campo 2D en vivo (solo con la tarjeta Partido › Campo abierta; si no, apagado y sin coste) ----
+		{
+			json c = { {"estado", "apagado"}, {"motivo", ""}, {"jugadores", 0}, {"balon", false} };
+			if (in.campoRapido) {
+				using phoenix::campo::EstadoCampo;
+				const phoenix::campo::FotoCampo fc = phoenix::campo::instantanea();
+				const char* nombre = fc.estado == EstadoCampo::Activo ? "activo" : fc.estado == EstadoCampo::Buscando ? "buscando"
+					: fc.estado == EstadoCampo::Esperando ? "esperando" : fc.estado == EstadoCampo::NoCompatible ? "no_compatible" : "apagado";
+				c = { {"estado", nombre}, {"motivo", fc.motivo}, {"jugadores", static_cast<int>(fc.j.size())}, {"balon", fc.hayBola} };
+			}
+			e["campo"] = c;
 		}
 
 		// ---- Solicitudes y espera -------------------------------------------

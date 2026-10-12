@@ -23,6 +23,7 @@
 #include "../link/PhoenixLink.h"
 #include "../core/ProveedorSala.h"
 #include "../host/Cedido.h"
+#include "../host/CampoVivo.h"
 
 namespace phoenix::web {
 
@@ -297,6 +298,20 @@ namespace phoenix::web {
 					}
 					std::string texto = v.dump();
 					if (texto != in.vivoAnterior) { in.vivoAnterior = std::move(texto); in.puente->evento("vivo", v); }
+				}
+				// Campo 2D en vivo: solo con Partido abierto y la tarjeta Campo pidiéndolo; ~20/s, solo si hay lectura nueva.
+				// Si la interfaz cambió de sección sin avisar, el lector se apaga solo (coste cero fuera de la tarjeta).
+				if (in.campoRapido && in.seccion != "partido") { in.campoRapido = false; phoenix::campo::pedirVivo(false); }
+				if (in.campoRapido && ahora - in.ultimoCampo >= 0.05) {
+					in.ultimoCampo = ahora;
+					const phoenix::campo::FotoCampo fc = phoenix::campo::instantanea();
+					if (fc.estado == phoenix::campo::EstadoCampo::Activo && fc.seq != in.campoSeq) {
+						in.campoSeq = fc.seq;
+						json j = json::array();
+						for (const phoenix::campo::Pieza& p : fc.j) j.push_back({ std::round(p.x * 10.0f) / 10.0f, std::round(p.z * 10.0f) / 10.0f, p.eq });
+						json ev = { {"j", j}, {"b", fc.hayBola ? json::array({ std::round(fc.bx * 10.0f) / 10.0f, std::round(fc.bz * 10.0f) / 10.0f, std::round(fc.by * 100.0f) / 100.0f }) : json(nullptr)} };
+						in.puente->evento("campo", ev);
+					}
 				}
 			}
 		}

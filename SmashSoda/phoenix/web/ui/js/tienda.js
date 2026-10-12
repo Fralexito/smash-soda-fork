@@ -36,6 +36,10 @@ export function leer() { return estado; }
 const oyentesVivo = new Set();
 export function oirVivo(fn) { oyentesVivo.add(fn); return () => oyentesVivo.delete(fn); }
 
+// Campo 2D en vivo: oyentes del canal «campo» (~20/s, tampoco pasa por el estado global)
+const oyentesCampo = new Set();
+export function oirCampo(fn) { oyentesCampo.add(fn); return () => oyentesCampo.delete(fn); }
+
 export function cambiar(parcial) {
   estado = { ...estado, ...(typeof parcial === "function" ? parcial(estado) : parcial) };
   for (const fn of suscriptores) fn(estado);
@@ -206,6 +210,7 @@ export function conectarTienda() {
   });
   puente.on("estado", (e) => { cambiar({ motor: e }); vigilarSala(e); });
   puente.on("evento:vivo", (d) => { for (const fn of oyentesVivo) fn(d); });
+  puente.on("evento:campo", (d) => { for (const fn of oyentesCampo) fn(d); });
   puente.on("evento:chatglobal", (d) => recibirGlobal(d));
   puente.on("evento:chat", (d) => agregarLineas("chat", MAX_CHAT, d));
   puente.on("evento:actividad", (d) => agregarLineas("actividad", MAX_ACTIVIDAD, d));
