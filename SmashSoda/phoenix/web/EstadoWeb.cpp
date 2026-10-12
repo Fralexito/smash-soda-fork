@@ -566,6 +566,17 @@ namespace phoenix::web {
 		}
 
 		e["partido"] = in.partido.comoJson(ahora);
+		if (in.partido.fase() == FasePartido::Libre) {
+			// Cómo quedarán los lados si se arman solos al pitazo (Partido › Armar los muestra sin pedir clics)
+			LadoPartido la, lb;
+			const bool hay = armarLadosSegunMandos(in, la, lb);
+			auto lista = [](const LadoPartido& l) {
+				json r = json::array();
+				for (const JugadorPartido& j : l.jugadores) r.push_back({ {"parsecId", j.parsecId}, {"nombre", j.nombre} });
+				return r;
+			};
+			e["partido"]["previa"] = hay ? json{ {"a", lista(la)}, {"b", lista(lb)} } : json(nullptr);
+		}
 		{
 			// Partido según el juego (estado.json de phoenix.lua). Sin la edad del archivo: cambiaría en cada foto.
 			const juego::EstadoPartidoJuego ej = link.estadoJuego();

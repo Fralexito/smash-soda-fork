@@ -36,7 +36,39 @@ function participantes(m) {
   return r;
 }
 
+let armarAMano = false;   // el anfitrión abrió el armado manual (se recuerda mientras la interfaz siga abierta)
+
+// Lados automáticos: no hay que armar nada; se ve cómo quedarán y al pitazo se arman (y se corrigen) solos según el juego
+function ArmarAuto({ m, aMano }) {
+  const pv = m.partido?.previa;
+  const fila = (j) => html`<div class="persona on" style="cursor:default" key=${j.parsecId || "cpu"}>
+    ${j.parsecId ? html`<${Avatar} nombre=${j.nombre} id=${j.parsecId} url=${m.perfiles?.[j.parsecId]?.avatar_url} t=${34}/>` : html`<span style="font-size:22px">🤖</span>`}
+    <div class="nom" style="flex:1">${j.parsecId ? j.nombre : t("La máquina (CPU)", "The CPU")}</div></div>`;
+  const col = (id, color, l) => html`<${Tarjeta} estilo="flex:1;min-width:0" interior="padding:22px 24px;display:flex;flex-direction:column;gap:10px">
+    <div class="lab" style=${`color:${color}`}>${id === "a" ? t("EQUIPO A", "TEAM A") : t("EQUIPO B", "TEAM B")}</div>
+    ${(l || []).length ? l.map(fila) : html`<div class="ayuda">${t("Nadie todavía.", "Nobody yet.")}</div>`}
+  </${Tarjeta}>`;
+  return html`<div class="col">
+    <div class="caja" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+      <${Icono} n="rayo" t=${22}/>
+      <div style="flex:1;min-width:220px"><b>${t("Los lados se arman solos al empezar el partido", "Sides are set automatically at kick-off")}</b>
+        <div class="ayuda">${t("No hace falta tocar nada: al pitazo Link pone a cada uno con su mando y, en el primer minuto, mira en el juego en qué lado juega cada uno y lo corrige solo si hace falta.", "Nothing to do: at kick-off Link sets everyone by their pad and, in the first minute, checks each side in the game and fixes it if needed.")}</div></div>
+      <${Boton} tipo="mini suave" al=${aMano}>${t("ARMAR A MANO", "SET UP MANUALLY")}</${Boton}>
+    </div>
+    ${pv ? html`<div class="fila partible">${col("a", "var(--acc)", pv.a)}${col("b", "var(--eq-b)", pv.b)}</div>`
+      : html`<${Vacio} titulo=${t("Nadie tiene mando todavía", "Nobody has a pad yet")} texto=${t("Cuando cada uno tenga su mando (o tú toques el tuyo), aparece aquí en su equipo.", "Once everyone has a pad (or you touch yours), they show up here.")}/>`}
+    <div class="ayuda">${t("Así quedan ahora según el equipo de cada puesto (Mandos › Puestos). Si en el juego alguien se pone del otro lado, Link lo ve y lo corrige.", "This is how they stand now by seat team (Pads › Seats). If someone picks the other side in the game, Link fixes it.")}</div>
+  </div>`;
+}
+
 function Armar({ m }) {
+  const [manual, setManual] = useState(armarAMano);
+  const auto = !!(m.arbitro && m.arbitro.ladosAuto && m.arbitro.marcadorAuto);
+  if (auto && !manual && m.sala.abierta) return html`<${ArmarAuto} m=${m} aMano=${() => { armarAMano = true; setManual(true); }}/>`;
+  return html`<${ArmarManual} m=${m} volver=${auto ? () => { armarAMano = false; setManual(false); } : null}/>`;
+}
+
+function ArmarManual({ m, volver }) {
   const [b, setB] = useState(borradorLados);
   const fijar = (x) => { borradorLados = { ...b, ...x }; setB(borradorLados); };
   const gente = participantes(m);
@@ -70,6 +102,10 @@ function Armar({ m }) {
       texto=${t("El marcador, el reloj y el historial funcionan con la gente que está en la sala.", "Score, clock and history work with people in the room.")}/>`;
   }
   return html`<div class="col">
+    ${volver ? html`<div class="caja" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+      <div style="flex:1;min-width:220px" class="ayuda">${t("Armado a mano: los lados que elijas aquí mandan (al pitazo Link igual comprueba el juego).", "Manual setup: your sides here are used (Link still checks the game at kick-off).")}</div>
+      <${Boton} tipo="mini suave" al=${volver}>${t("VOLVER A AUTOMÁTICO", "BACK TO AUTO")}</${Boton}>
+    </div>` : null}
     <div class="fila partible">
       <${Columna} id="a" ids=${a} nombre=${b.nombreA} clave="nombreA" color="var(--acc)" gente=${gente} m=${m} fijar=${fijar} mover=${mover}/>
       <${Tarjeta} estilo="width:min(360px,34%);flex:none" interior="padding:22px 24px;display:flex;flex-direction:column;gap:10px">

@@ -121,3 +121,18 @@ durante esos minutos. Si en la prueba se notan tirones, apagar «LADOS AUTO».
 **Lo que falta probar con el juego real** (pedido a Fralex): un partido contra la CPU de LOCAL y otro de VISITANTE,
 mirando que Link deja (o corrige a) los lados correctos y el aviso del chat. Eso valida a la vez el detector, la
 hipótesis del saque y el aviso. Si falla la hipótesis del saque, se quita esa ancla y queda solo la del gol.
+
+## 6. Partido › Armar sin clics (0.2.42)
+
+Con «LADOS AUTO» y el marcador automático encendidos, **Armar ya no pide elegir A/B**: muestra «Los lados se arman
+solos al empezar el partido» y, en vivo, cómo quedarán los dos equipos (`partido.previa` del estado, calculada con
+`armarLadosSegunMandos`, la MISMA función que usa el árbitro al pitazo: equipo de cada puesto + anfitrión sentado o
+que tocó su mando; lado vacío = CPU). Al pitazo se arman solos (`origenLados = "mandos"`) y en el primer minuto
+LadosAuto los comprueba en el juego y los corrige si hace falta (§5). El armado manual sigue disponible plegado
+(«ARMAR A MANO», con «VOLVER A AUTOMÁTICO»); el contrato con la web no cambia (lados «a»/«b»).
+
+**Antes del pitazo todavía no se lee el lado del juego.** La sesión «Leer el lado de cada mando en la pantalla de PES»
+(`tools/radar/ladomando.cpp`) encontró 3 posiciones de memoria que valen 0/1/2 con el mando a izquierda/centro/derecha
+en la pantalla de mandos, pero falta confirmarlas (dos mandos, varios arranques, firma estable, casilla ↔ puesto).
+Cuando estén confirmadas, la vista previa de Armar usará ese lado directamente (local = izquierda) y la corrección
+del primer minuto quedará solo como comprobación.

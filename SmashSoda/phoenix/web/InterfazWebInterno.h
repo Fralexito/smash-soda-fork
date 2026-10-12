@@ -172,6 +172,8 @@ namespace phoenix::web {
 	void tickDatos(Interno& in);
 	/// Árbitro del partido: modo competitivo, pausa automática y goles del juego (≈ cada frame; trabaja 2 veces por segundo).
 	void tickArbitro(Interno& in);
+	/// Lados según los mandos (equipo de cada puesto + anfitrión), como los arma el árbitro al pitazo. false si no hay nadie.
+	bool armarLadosSegunMandos(Interno& in, LadoPartido& la, LadoPartido& lb);
 	/// Valores del bloqueo de botones del anfitrión (sin lo que añade el modo competitivo).
 	unsigned int mascaraBotonesPropia(Interno& in);
 	bool bloqueoBotonesPropio(Interno& in);

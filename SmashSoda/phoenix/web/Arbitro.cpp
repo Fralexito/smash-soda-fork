@@ -241,6 +241,52 @@ namespace phoenix::web {
 		if (in.ctx.hosting != nullptr && in.arbitro.competitivoActivo) aplicarBloqueo(in, *in.ctx.hosting);
 	}
 
+	bool armarLadosSegunMandos(Interno& in, LadoPartido& la, LadoPartido& lb) {
+		la = LadoPartido(); lb = LadoPartido();
+		if (in.ctx.sala == nullptr || in.ctx.hosting == nullptr) return false;
+		ProveedorSala& sala = *in.ctx.sala;
+		Hosting& h = *in.ctx.hosting;
+		const PhoenixPrefs& pr = PhoenixPrefs::get();
+		const double ahora = ahoraSeg();
+		const std::vector<AsientoVista> asientos = sala.asientos(8);
+		const int activos = (std::min)(static_cast<int>(asientos.size()), pr.mandosActivos);
+		for (int i = 0; i < activos; i++) {
+			const AsientoVista& s = asientos[static_cast<size_t>(i)];
+			if (!s.ocupado || s.parsecId == 0 || pr.equipoDe(i) == '-') continue;
+			LadoPartido& l = pr.equipoDe(i) == 'A' ? la : lb;
+			bool repetido = false;
+			for (const LadoPartido* x : { &la, &lb }) for (const JugadorPartido& jp : x->jugadores) if (jp.parsecId == s.parsecId) repetido = true;
+			if (!repetido && l.jugadores.size() < 4) l.jugadores.push_back({ s.parsecId, s.jugador });
+		}
+		// El anfitrión: si juega con su mando de Link (MandoHost no deja «dueño» en el motor y por eso no sale arriba)
+		// cuenta en el lado de su puesto. Si lo pidió («Contarme como jugador»), también sin puesto, en su lado habitual
+		// (el de «Mi puesto al jugar»): juega directo en PES. Así un anfitrión contra un invitado es un 1v1, no «contra la CPU».
+		try {
+			Guest& anf = h.getHost();
+			const int tomado = MandoHost::activo() - 1;
+			int local = -1;   // 1 = lado a (Equipo A), 0 = lado b (Equipo B), -1 = no cuenta
+			if (anf.isValid() && anf.userID != 0) {
+				if (tomado >= 0 && tomado < activos && pr.equipoDe(tomado) != '-') local = pr.equipoDe(tomado) == 'A' ? 1 : 0;   // lado de SU puesto
+				else if (pr.anfitrionCuenta && ahora - anfitrionPulsoSeg < 120.0) {   // automático: tocó su mando en los últimos 2 min
+					if (pr.miPuestoModo == "a") local = 1;
+					else if (pr.miPuestoModo == "b") local = 0;
+					else if (pr.equipoDe(pr.miPuestoNumero - 1) != '-') local = pr.equipoDe(pr.miPuestoNumero - 1) == 'A' ? 1 : 0;   // puesto fijo: el equipo de ese puesto
+				}
+			}
+			if (local >= 0) {
+				bool repetido = false;
+				for (const LadoPartido* x : { &la, &lb }) for (const JugadorPartido& jp : x->jugadores) if (jp.parsecId == anf.userID) repetido = true;
+				LadoPartido& l = local == 1 ? la : lb;
+				if (!repetido && l.jugadores.size() < 4) l.jugadores.insert(l.jugadores.begin(), { anf.userID, anf.name });
+			}
+		}
+		catch (...) {}
+		if (la.jugadores.empty() && lb.jugadores.empty()) return false;
+		if (la.jugadores.empty()) { la.nombre = "CPU"; la.jugadores.push_back({ 0, "CPU" }); }
+		if (lb.jugadores.empty()) { lb.nombre = "CPU"; lb.jugadores.push_back({ 0, "CPU" }); }
+		return true;
+	}
+
 	void tickArbitro(Interno& in) {
 		if (in.ctx.sala == nullptr || in.ctx.hosting == nullptr) return;
 		ProveedorSala& sala = *in.ctx.sala;
@@ -313,44 +359,7 @@ namespace phoenix::web {
 				&& j.minuto <= 1 && ahora >= autoArmarEsperaHasta) {
 				autoArmarEsperaHasta = ahora + 10.0;   // si no se puede (nadie con mando), se vuelve a mirar en 10 s
 				LadoPartido la, lb;
-				const std::vector<AsientoVista> asientos = sala.asientos(8);
-				const int activos = (std::min)(static_cast<int>(asientos.size()), pr.mandosActivos);
-				for (int i = 0; i < activos; i++) {
-					const AsientoVista& s = asientos[static_cast<size_t>(i)];
-					if (!s.ocupado || s.parsecId == 0 || pr.equipoDe(i) == '-') continue;
-					LadoPartido& l = pr.equipoDe(i) == 'A' ? la : lb;
-					bool repetido = false;
-					for (const LadoPartido* x : { &la, &lb }) for (const JugadorPartido& jp : x->jugadores) if (jp.parsecId == s.parsecId) repetido = true;
-					if (!repetido && l.jugadores.size() < 4) l.jugadores.push_back({ s.parsecId, s.jugador });
-				}
-				// El anfitrión: si juega con su mando de Link (MandoHost no deja «dueño» en el motor y por eso no sale arriba)
-				// cuenta en el lado de su puesto. Si lo pidió («Contarme como jugador»), también sin puesto, en su lado habitual
-				// (el de «Mi puesto al jugar»): juega directo en PES. Así un anfitrión contra un invitado es un 1v1, no «contra la CPU».
-				try {
-					Guest& anf = h.getHost();
-					const int tomado = MandoHost::activo() - 1;
-					int local = -1;   // 1 = lado a (Equipo A), 0 = lado b (Equipo B), -1 = no cuenta
-					if (anf.isValid() && anf.userID != 0) {
-						if (tomado >= 0 && tomado < activos && pr.equipoDe(tomado) != '-') local = pr.equipoDe(tomado) == 'A' ? 1 : 0;   // lado de SU puesto
-						else if (pr.anfitrionCuenta && ahora - anfitrionPulsoSeg < 120.0) {   // automático: tocó su mando en los últimos 2 min
-							if (pr.miPuestoModo == "a") local = 1;
-							else if (pr.miPuestoModo == "b") local = 0;
-							else if (pr.equipoDe(pr.miPuestoNumero - 1) != '-') local = pr.equipoDe(pr.miPuestoNumero - 1) == 'A' ? 1 : 0;   // puesto fijo: el equipo de ese puesto
-						}
-					}
-					if (local >= 0) {
-						bool repetido = false;
-						for (const LadoPartido* x : { &la, &lb }) for (const JugadorPartido& jp : x->jugadores) if (jp.parsecId == anf.userID) repetido = true;
-						LadoPartido& l = local == 1 ? la : lb;
-						if (!repetido && l.jugadores.size() < 4) l.jugadores.insert(l.jugadores.begin(), { anf.userID, anf.name });
-					}
-				}
-				catch (...) {}
-				if (!la.jugadores.empty() || !lb.jugadores.empty()) {
-					if (la.jugadores.empty()) { la.nombre = "CPU"; la.jugadores.push_back({ 0, "CPU" }); }
-					if (lb.jugadores.empty()) { lb.nombre = "CPU"; lb.jugadores.push_back({ 0, "CPU" }); }
-					if (in.partido.preparar(la, lb)) in.partido.origenLados("mandos");
-				}
+				if (armarLadosSegunMandos(in, la, lb) && in.partido.preparar(la, lb)) in.partido.origenLados("mandos");
 			}
 
 			// 2a) Arranque automático: lados ya elegidos (Listo) y el reloj del juego echa a andar

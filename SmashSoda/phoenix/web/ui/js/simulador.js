@@ -251,7 +251,7 @@ export function crearSimulador(enviar) {
     const p = s.partido;
     const e = {
       v: 1,
-      app: { version: "0.2.41", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
+      app: { version: "0.2.42", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
       noticias: { cargado: true, lista: s.noticias },
       chatGlobal: { cargado: true, pausado: s.chatGlobal.pausado, esperaSeg: s.chatGlobal.esperaSeg, rev: s.chatGlobal.mensajes.length, error: "" },
       web: { ...s.web, jugadoresLista: 3, versionLiga: "2026.10.08", eventosEnCola: 0 },
@@ -278,7 +278,8 @@ export function crearSimulador(enviar) {
       perfiles,
       red: s.abierta ? resumenRed(verSerie) : [],
       retraso: s.abierta ? resumenRetraso() : [],
-      partido: { fase: p.fase, a: p.a, b: p.b, segundos: segundosPartido(), inicioMs: 0, invertido: p.invertido },
+      partido: { fase: p.fase, a: p.a, b: p.b, segundos: segundosPartido(), inicioMs: 0, invertido: p.invertido,
+        previa: p.fase === "libre" ? { a: [{ parsecId: 1001, nombre: "Fralex" }], b: [{ parsecId: 0, nombre: "CPU" }] } : null },
       juego: s.juego,
       liga: { ...s.liga, enVivo: s.liga.elegido > 0 && p.fase === "en_juego" },
       arbitro: {
