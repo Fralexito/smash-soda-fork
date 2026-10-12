@@ -44,9 +44,10 @@ Link recuerda tu mando: al volver a abrirlo, el que elegiste con «USAR ESTE» q
 
 Los invitados funcionan igual: un jugador autorizado (aceptó el reto en la web, lo aceptaste tú o ya lo habías sentado) pulsa A/B/X/Y y cae en un puesto libre. A quien mandaste a Mirando no entra solo: te sale como «quiere jugar».
 
-## Salir como jugador en la web (desde 0.2.23)
-Antes, si jugabas tú con tu mando de Link, el partido que Link mandaba a la web **no te incluía**: contra un invitado parecía «invitado contra la CPU» y no puntuaba. Ahora:
-- **Sentado en un puesto:** al pitazo inicial Link te apunta en el lado de tu puesto (1.º–«equipoLocal» = Local, el resto = Visita). Ya no hace falta nada.
-- **Sin puesto, pero jugando directo en PES:** en **TU MANDO › Mi puesto al jugar** enciende **«Contarme como jugador en la web»** (apagado por defecto). Link te apunta en tu lado habitual, el de «Mi puesto al jugar» (puesto fijo, 1.º de Local o 1.º de Visita).
-- Si solo miras la partida, déjalo apagado: así no sales en el ranking sin jugar.
-- Funciona al armarse los lados solo al pitazo. Si ya los elegiste a mano en Partido › Armar, ahí mandas tú.
+## Salir como jugador en la web (desde 0.2.23, automático desde 0.2.24)
+Antes, si jugabas tú con tu mando de Link, el partido que Link mandaba a la web **no te incluía**: contra un invitado parecía «invitado contra la CPU» y no puntuaba. Ahora es **automático**, sin tocar nada:
+- **Sentado en un puesto:** al pitazo inicial Link te apunta en el lado de tu puesto (1.º–«equipoLocal» = Local, el resto = Visita).
+- **Sin puesto, pero jugando directo en PES:** si Link ve que tocaste tu mando en los 2 minutos antes del pitazo (cuando eliges equipos en los menús), te apunta en tu lado habitual, el de «Mi puesto al jugar» (puesto fijo, 1.º de Local o 1.º de Visita).
+- **Si solo miras y no tocas tu mando:** no sales.
+- Interruptor «Contarme como jugador en la web (automático)» en **TU MANDO › Mi puesto al jugar**, encendido por defecto. Apágalo si nunca quieres salir sin puesto.
+- Funciona al armarse los lados solos al pitazo. Si ya los elegiste a mano en Partido › Armar, ahí mandas tú.

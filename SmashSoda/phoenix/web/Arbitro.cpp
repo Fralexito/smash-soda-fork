@@ -39,6 +39,7 @@ namespace phoenix::web {
 		constexpr double kLatidoVivoSeg = 120.0;   // el marcador en vivo se reenvía al menos cada 2 min (la web oculta los de >10 min sin noticias)
 		double vivoEnviadoSeg = -1e9;              // último envío del marcador en vivo (ahoraSeg)
 		double autoArmarEsperaHasta = 0.0;         // armar lados solo al pitazo: no reintentar antes de esto
+		double anfitrionPulsoSeg = -1e9;           // última vez que el anfitrión tocó su mando físico (ahoraSeg)
 
 		/// Copia la máscara del anfitrión (Config) y le suma lo del modo competitivo si está activo.
 		void aplicarBloqueo(Interno& in, Hosting& h) {
@@ -239,6 +240,9 @@ namespace phoenix::web {
 			const bool enJuego = j.valido ? j.fase == "en_juego" : fp == FasePartido::EnJuego;
 			a.origen = j.valido ? "juego" : (marcadorVivo ? "marcador" : "");
 
+			// El anfitrión usa su mando físico (TU MANDO)? Se anota cuándo, para saber si juega aunque no esté en un puesto
+			if (sala.hayMandoPropio() && sala.botonesMandoPropio() != 0) anfitrionPulsoSeg = ahora;
+
 			// 0) Puestos: quien está sentado (por el host, turnos o torneo) queda autorizado para volver a su mando
 			PhoenixRoles::instancia().soloAutorizados(pr.soloAutorizados);
 			for (const AsientoVista& s : sala.asientos(8)) if (s.ocupado) PhoenixRoles::instancia().autorizar(s.parsecId);
@@ -288,7 +292,7 @@ namespace phoenix::web {
 					int local = -1;   // 1 = lado local, 0 = visita, -1 = no cuenta
 					if (anf.isValid() && anf.userID != 0) {
 						if (tomado >= 0 && tomado < activos) local = tomado < pr.equipoLocal ? 1 : 0;
-						else if (pr.anfitrionCuenta) {
+						else if (pr.anfitrionCuenta && ahora - anfitrionPulsoSeg < 120.0) {   // automático: tocó su mando en los últimos 2 min
 							if (pr.miPuestoModo == "local") local = 1;
 							else if (pr.miPuestoModo == "visitante") local = 0;
 							else local = pr.miPuestoNumero <= pr.equipoLocal ? 1 : 0;
