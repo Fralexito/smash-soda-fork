@@ -128,4 +128,28 @@ namespace phoenix::campo {
 		void terminar(bool gol, double t);
 	};
 
+	/// Un jugador para decidir quién lleva el balón (árbitros y asistentes no son elegibles).
+	struct PuntoCampo { float x = 0, z = 0; bool elegible = true; };
+
+	/// Quién tiene el balón, con histéresis (sin parpadeos): distancia al balón + altura del balón + velocidad del balón.
+	///  · Lo adquiere el más cercano a ≤ 1,4 m, con el balón a menos de 2,4 m de altura y sin ir lanzado, y que se mantenga ≥ 80 ms.
+	///  · Lo conserva mientras siga a ≤ 2,8 m; si se aleja, o el balón sube o sale disparado (pase, tiro), lo «sostiene» 350 ms y,
+	///    si no vuelve el contacto, el balón queda LIBRE (-1).
+	///  · Otro jugador se lo quita solo si está a ≤ 1,0 m y el poseedor ya está a más de 1,8 m (disputa).
+	///  · Sin balón visible (repetición, aparcado) conserva 350 ms y luego libre.
+	class Poseedor {
+	public:
+		/// Una lectura. t en segundos (creciente). Devuelve el índice en `j` del poseedor, o -1 (balón libre).
+		int actualizar(const std::vector<PuntoCampo>& j, bool hayBola, float bx, float by, float bz, double t);
+		int actual() const { return poseedor_; }
+		void reiniciar() { *this = Poseedor(); }
+
+	private:
+		int poseedor_ = -1;
+		int candidato_ = -1;
+		double tCandidato_ = 0, tUltimo_ = 0, sinContacto_ = 0;
+		bool previo_ = false;
+		float px_ = 0, pz_ = 0;
+	};
+
 }

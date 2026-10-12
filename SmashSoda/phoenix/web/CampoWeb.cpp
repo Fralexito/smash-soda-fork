@@ -12,7 +12,8 @@ namespace phoenix::web {
 	using json = nlohmann::json;
 
 	namespace detalle_campo_web {
-		constexpr double kCampoWebCadaSeg = 1.0;    // envío a la web: 1 por segundo es de sobra para un tablero
+		constexpr double kCampoWebCadaSeg = 1.0;    // envío a la web sin nadie mirando con sesión: 1 por segundo
+		constexpr double kCampoWebCadaSegMirando = 0.25;   // con alguien viendo el tablero (liga_mirando): 4 por segundo
 		constexpr float kCampoWebAlcance = 2.0f;    // metros: el jugador más cercano al balón a esta distancia lo «tiene»
 
 		struct EstadoCampoWeb {
@@ -53,18 +54,12 @@ namespace phoenix::web {
 				e = EstadoCampoWeb();
 				e.partido = in.partido.inicioMs();
 			}
-			// Posesión aproximada: el equipo del jugador más cercano al balón (si está a ≤ 2 m y el balón en juego)
-			if (fc.fase == "vivo" && fc.equiposListos && fc.hayBola && std::fabs(fc.bz) < 40.0f && fc.by < 2.0f && in.partido.fase() == FasePartido::EnJuego) {
-				float mejor = kCampoWebAlcance * kCampoWebAlcance;
-				int eq = -1;
-				for (const phoenix::campo::Pieza& p : fc.j) {
-					if (p.eq != 0 && p.eq != 1) continue;
-					const float dx = p.x - fc.bx, dz = p.z - fc.bz, d2 = dx * dx + dz * dz;
-					if (d2 < mejor) { mejor = d2; eq = p.eq; }
-				}
+			// Posesión: el equipo de quien lleva el balón (core/CampoVivo: Poseedor, con histéresis), solo en juego en vivo
+			if (fc.fase == "vivo" && fc.equiposListos && fc.poseedor >= 0 && fc.poseedor < static_cast<int>(fc.j.size()) && in.partido.fase() == FasePartido::EnJuego) {
+				const int eq = fc.j[static_cast<size_t>(fc.poseedor)].eq;
 				if (eq == 0 || eq == 1) e.conBalon[eq]++;
 			}
-			if (ahora - e.ultimoEnvio < kCampoWebCadaSeg) return;
+			if (ahora - e.ultimoEnvio < (in.mirandoWeb.empty() ? kCampoWebCadaSeg : kCampoWebCadaSegMirando)) return;
 			e.ultimoEnvio = ahora;
 			json c = ev;   // {j:[[x,z,eq]…], b:[x,z,y]|null, t?:tanda}
 			c["v"] = 1;

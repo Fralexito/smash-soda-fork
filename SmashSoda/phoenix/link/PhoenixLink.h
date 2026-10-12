@@ -107,6 +107,9 @@ namespace phoenix {
 		std::string local, visitante, clubLocal, clubVisita;   ///< nombres de DT tal como salen en la web
 		bool mio = false;   ///< uno de los dos DT es el dueño de esta PC
 	};
+	/// Diagnóstico del envío del campo 2D a la web (POST /v1/liga/campo): cuánto tarda cada envío, cuántos por segundo y fallos.
+	struct CampoWebStats { double ultimoMs = 0, mediaMs = 0, porSeg = 0; int errores = 0; };
+
 	struct InfoLiga {
 		bool cargado = false;
 		std::string error;          ///< último problema al pedir la lista ("" = bien)
@@ -198,6 +201,7 @@ namespace phoenix {
 		void ligaCampo(const std::string& cuerpoJson);
 		/// Quién ve el partido de esta sala desde la web (nombres de perfil; Link lo pide cada ~10 s mientras la web tiene el marcador en vivo).
 		std::vector<std::string> mirandoWeb();
+		CampoWebStats campoWebStats();
 		/// Resultado oficial (JSON con partido_id, goles_local, goles_visita, completo, juego{…}). Se guarda en disco
 		/// hasta que la web lo acepte. Queda «propuesto»: lo valida el staff o el árbitro designado, nunca el host.
 		void ligaResultado(const std::string& cuerpoJson);
@@ -342,6 +346,8 @@ namespace phoenix {
 		long long _ligaCampoProximoMs = 0;
 		std::vector<std::string> _mirandoWeb;   ///< espectadores de la web (nombres), de la última respuesta de /v1/liga/mirando
 		long long _mirandoProximoMs = 0;
+		CampoWebStats _campoStats;
+		long long _campoVentanaMs = 0; int _campoVentanaN = 0;
 		std::vector<std::string> _ligaResultados;   ///< cola persistente (phoenix-liga-resultados.json)
 		long long _ligaResProximoMs = 0;
 	};

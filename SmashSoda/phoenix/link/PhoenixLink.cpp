@@ -839,6 +839,10 @@ namespace phoenix {
 		std::lock_guard<std::mutex> l(_mutex);
 		_ligaCampo = cuerpoJson; _ligaCampoPendiente = true;
 	}
+	CampoWebStats PhoenixLink::campoWebStats() {
+		std::lock_guard<std::mutex> l(_mutex);
+		return _campoStats;
+	}
 	std::vector<std::string> PhoenixLink::mirandoWeb() {
 		std::lock_guard<std::mutex> l(_mutex);
 		return _mirandoWeb;
@@ -939,13 +943,24 @@ namespace phoenix {
 		std::string campo; bool hayCampo = false;
 		{
 			std::lock_guard<std::mutex> l(_mutex);
-			if (_ligaCampoPendiente && !salaId.empty() && ahora >= _ligaCampoProximoMs) { hayCampo = true; campo = _ligaCampo; _ligaCampoPendiente = false; _ligaCampoProximoMs = ahora + 1000; }
+			if (_ligaCampoPendiente && !salaId.empty() && ahora >= _ligaCampoProximoMs) { hayCampo = true; campo = _ligaCampo; _ligaCampoPendiente = false; _ligaCampoProximoMs = ahora + 200; }   // el ritmo lo manda CampoWeb (1/s o 4/s si alguien mira)
 		}
 		if (hayCampo) {
 			json cuerpo = json::parse(campo, nullptr, false);
 			if (!cuerpo.is_discarded() && cuerpo.is_object()) {
 				cuerpo["sala_id"] = salaId;
+				const auto tPost = std::chrono::steady_clock::now();
 				const http::Respuesta r = http::peticion("POST", std::string(kBaseLiga) + "/v1/liga/campo", cuerpo.dump(-1, ' ', false, json::error_handler_t::replace), cabecerasCon(token), 3000);
+				{
+					const double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - tPost).count();
+					std::lock_guard<std::mutex> l(_mutex);
+					_campoStats.ultimoMs = ms;
+					_campoStats.mediaMs = _campoStats.mediaMs <= 0 ? ms : _campoStats.mediaMs * 0.8 + ms * 0.2;
+					if (r.estado != 200) _campoStats.errores++;
+					_campoVentanaN++;
+					if (_campoVentanaMs == 0) _campoVentanaMs = ahora;
+					else if (ahora - _campoVentanaMs >= 3000) { _campoStats.porSeg = _campoVentanaN * 1000.0 / static_cast<double>(ahora - _campoVentanaMs); _campoVentanaMs = ahora; _campoVentanaN = 0; }
+				}
 				if (r.estado == 404 || r.estado == 0 || r.estado >= 500 || r.estado == 429) {
 					std::lock_guard<std::mutex> l(_mutex);
 					_ligaCampoProximoMs = ahora + (r.estado == 404 ? 300000 : 15000);   // 404 = la web aún no tiene la ruta: se vuelve a probar en 5 min

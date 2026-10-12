@@ -220,4 +220,52 @@ namespace phoenix::campo {
 		}
 	}
 
+	// ---- Poseedor del balón (histéresis) ----
+	namespace {
+		constexpr float kAdquirir = 1.4f, kSoltar = 2.8f, kDisputa = 1.0f, kDisputaActual = 1.8f;
+		constexpr float kAlturaMax = 2.4f;     // por encima el balón va por el aire: nadie lo «lleva»
+		constexpr float kVelLanzado = 13.0f;   // m/s: más rápido es un pase largo o un tiro
+		constexpr double kSosten = 0.35, kContactoMin = 0.08;
+	}
+
+	int Poseedor::actualizar(const std::vector<PuntoCampo>& j, bool hayBola, float bx, float by, float bz, double t) {
+		const double dt = (tUltimo_ > 0 && t > tUltimo_) ? (t - tUltimo_) : 0.0;
+		tUltimo_ = t;
+		if (poseedor_ >= static_cast<int>(j.size())) poseedor_ = -1;
+		if (!hayBola) {
+			previo_ = false; candidato_ = -1;
+			if (poseedor_ >= 0) { sinContacto_ += dt; if (sinContacto_ > kSosten) poseedor_ = -1; }
+			return poseedor_;
+		}
+		// velocidad horizontal del balón (la lectura anterior debe ser reciente)
+		float vb = 0;
+		if (previo_ && dt > 0 && dt < 0.5) vb = std::sqrt((bx - px_) * (bx - px_) + (bz - pz_) * (bz - pz_)) / static_cast<float>(dt);
+		previo_ = true; px_ = bx; pz_ = bz;
+
+		auto dist = [&](int i) { const float dx = j[static_cast<size_t>(i)].x - bx, dz = j[static_cast<size_t>(i)].z - bz; return std::sqrt(dx * dx + dz * dz); };
+		int mejor = -1; float dMejor = 1e9f;
+		for (size_t i = 0; i < j.size(); i++) {
+			if (!j[i].elegible) continue;
+			const float d = dist(static_cast<int>(i));
+			if (d < dMejor) { dMejor = d; mejor = static_cast<int>(i); }
+		}
+		const bool aire = by > kAlturaMax;
+		const bool lanzado = vb > kVelLanzado;
+
+		if (poseedor_ >= 0) {
+			const float dh = dist(poseedor_);
+			if (aire || (lanzado && dh > 1.6f) || dh > kSoltar) sinContacto_ += dt; else sinContacto_ = 0;
+			if (mejor >= 0 && mejor != poseedor_ && dMejor <= kDisputa && dh > kDisputaActual && !aire) { poseedor_ = mejor; sinContacto_ = 0; candidato_ = -1; }
+			else if (sinContacto_ > kSosten) { poseedor_ = -1; candidato_ = -1; }
+			return poseedor_;
+		}
+		// balón libre: ¿alguien lo controla de forma sostenida?
+		if (mejor >= 0 && dMejor <= kAdquirir && !aire && !lanzado) {
+			if (candidato_ != mejor) { candidato_ = mejor; tCandidato_ = t; }
+			if (t - tCandidato_ >= kContactoMin) { poseedor_ = mejor; sinContacto_ = 0; candidato_ = -1; }
+		}
+		else candidato_ = -1;
+		return poseedor_;
+	}
+
 }

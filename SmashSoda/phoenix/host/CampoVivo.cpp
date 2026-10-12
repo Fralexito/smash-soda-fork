@@ -12,6 +12,8 @@
 #define NOMINMAX
 #include <windows.h>
 #include <tlhelp32.h>
+#include <timeapi.h>
+#pragma comment(lib, "winmm.lib")
 
 #include "../core/CampoVivo.h"
 #include "../link/Entrega.h"
@@ -86,6 +88,7 @@ namespace phoenix::campo {
 
 		void bucle() {
 			SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_BELOW_NORMAL);
+			struct Resolucion { Resolucion() { timeBeginPeriod(1); } ~Resolucion() { timeEndPeriod(1); } } resolucion;   // sueño de 1 ms (por defecto 15,6 ms: la lectura iba a ~16/s)
 			DWORD pidVerificado = 0;      // pid cuyo exe ya se comprobó (tamaño + SHA-256)
 			bool compatible = false;
 			std::string motivoNo;
@@ -95,12 +98,17 @@ namespace phoenix::campo {
 			std::vector<float> antes;     // posiciones de la lectura anterior (para detectar el saque: todos quietos)
 			std::vector<Candidato> balones;
 			Tanda tanda;                  // tanda de penales (lógica pura)
-			double reloj = 0;             // segundos (aprox.) desde el arranque del hilo
+			double reloj = 0;             // segundos reales desde el arranque del hilo
+			const auto tInicio = std::chrono::steady_clock::now();
+			auto proximaLectura = tInicio;
+			Poseedor poseedor;            // quién lleva el balón (histéresis)
+			// diagnóstico: ventana de ~1 s
+			auto ventanaDesde = tInicio; int ventanaN = 0; double ventanaSuma = 0, ventanaMax = 0, lps = 0, pasadaMedia = 0, pasadaMax = 0;
 			uint32_t seq = 0;
 			FotoCampo ultima;             // última lectura en vivo buena (se congela en repeticiones y cortes de lectura)
 			int fallos = 0, sinBola = 0, quietos = 0;   // lecturas seguidas sin fichitas válidas / sin balón en juego / sin movimiento
 			bool enRepe = false;
-			auto cerrar = [&] { if (h) { CloseHandle(h); h = nullptr; } pidAbierto = 0; lista.clear(); equipos.clear(); antes.clear(); balones.clear(); tanda.reiniciar(); ultima = FotoCampo(); fallos = sinBola = quietos = 0; enRepe = false; };
+			auto cerrar = [&] { if (h) { CloseHandle(h); h = nullptr; } pidAbierto = 0; lista.clear(); equipos.clear(); antes.clear(); balones.clear(); tanda.reiniciar(); poseedor.reiniciar(); ultima = FotoCampo(); fallos = sinBola = quietos = 0; enRepe = false; };
 
 			while (!g_parar.load()) {
 				FotoCampo f;
@@ -148,7 +156,8 @@ namespace phoenix::campo {
 						for (const Actor& b : hz.balones) { Candidato c; c.a = b; c.ux = b.x; c.uz = b.z; balones.push_back(c); }
 					}
 
-					// 4) leer posiciones (~20/s): 16 bytes por actor. Si más de 3 dejan de ser válidas, se vuelve a buscar.
+					const auto tPasada = std::chrono::steady_clock::now();
+					// 4) leer posiciones (~30/s): 16 bytes por actor. Si más de 3 dejan de ser válidas, se vuelve a buscar.
 					int malos = 0; float maxDesp = 0;
 					std::vector<Actor> ahora = lista;
 					for (size_t i = 0; i < lista.size(); i++) {
@@ -174,7 +183,7 @@ namespace phoenix::campo {
 					if (sinEquipos && habiaAntes && !enRepe && esSaqueDeCentro(ahora, maxDesp)) equipos = repartirEquipos(ahora);
 
 					// 6) balón: el candidato que se ha movido hace menos tiempo (los de los recogepelotas no se mueven)
-					reloj += 0.05;
+					reloj = std::chrono::duration<double>(std::chrono::steady_clock::now() - tInicio).count();
 					const Candidato* mejor = nullptr;
 					bool bolaEnJuego = balones.empty();   // sin candidatos no hay información: no se declara repetición
 					for (Candidato& c : balones) {
@@ -202,13 +211,34 @@ namespace phoenix::campo {
 						f.j.push_back(p);
 					}
 					tanda.alimentar(f.hayBola, f.bx, f.by, f.bz, ahora, equipos, reloj);
+					{
+						std::vector<PuntoCampo> pc; pc.reserve(f.j.size());
+						for (const Pieza& p : f.j) { PuntoCampo c; c.x = p.x; c.z = p.z; c.elegible = p.eq != kEqArbitro; pc.push_back(c); }
+						f.poseedor = poseedor.actualizar(pc, f.hayBola, f.bx, f.by, f.bz, reloj);
+					}
 					f.tanda = tanda.estado();
 					f.equiposListos = !sinEquipos;
 					f.estado = EstadoCampo::Activo; f.seq = ++seq;
 					f.fase = quietos >= 80 ? "pausa" : "vivo";
+					// diagnóstico del lector: pasadas por segundo y duración de cada una (jitter)
+					{
+						const auto fin = std::chrono::steady_clock::now();
+						const double ms = std::chrono::duration<double, std::milli>(fin - tPasada).count();
+						ventanaN++; ventanaSuma += ms; ventanaMax = (std::max)(ventanaMax, ms);
+						const double seg = std::chrono::duration<double>(fin - ventanaDesde).count();
+						if (seg >= 1.0) { lps = ventanaN / seg; pasadaMedia = ventanaSuma / ventanaN; pasadaMax = ventanaMax; ventanaDesde = fin; ventanaN = 0; ventanaSuma = 0; ventanaMax = 0; }
+						f.lecturasPorSeg = lps; f.pasadaMediaMs = pasadaMedia; f.pasadaMaxMs = pasadaMax;
+						f.tMs = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+					}
 					ultima = f;
 					publicar(f);
-					dormir(50);
+					// siguiente lectura a un ritmo fijo de ~30/s (hora de reloj, no «dormir 50 ms» acumulando retraso)
+					proximaLectura += std::chrono::milliseconds(33);
+					{
+						const auto ya = std::chrono::steady_clock::now();
+						if (proximaLectura < ya) proximaLectura = ya;   // si nos atrasamos no se intenta recuperar a ráfagas
+						while (!g_parar.load() && std::chrono::steady_clock::now() < proximaLectura) std::this_thread::sleep_for(std::chrono::milliseconds(2));
+					}
 				}
 				catch (...) {
 					// Cualquier error: se apaga esta pasada y se reintenta con calma. Nunca debe tocar el juego ni a Link.

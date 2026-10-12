@@ -47,7 +47,7 @@ const COLOR = { 0: "var(--acc)", 1: "var(--eq-b, #b07bff)", 2: "#f5c451", "-1": 
 const NOMBRE_EQ = { 0: ["Equipo A", "Team A"], 1: ["Equipo B", "Team B"] };
 
 /** Dibuja el campo y mueve las fichitas con suavidad (animación directa sobre el SVG, sin redibujar Preact). */
-export function CampoSvg({ alTanda, alColores }) {
+export function CampoSvg({ alTanda, alColores, alDiag }) {
   const refs = useRef({ puntos: [], bola: null, obj: { j: [], b: null }, cur: { j: [], b: null }, t0: 0 });
   const [n, setN] = useState(0);
   const [clave, setClave] = useState("");
@@ -55,7 +55,9 @@ export function CampoSvg({ alTanda, alColores }) {
   useEffect(() => {
     const R = refs.current;
     const quitar = oirCampo((d) => {
-      R.obj = { j: d.j || [], b: d.b || null };
+      R.obj = { j: d.j || [], b: d.b || null, p: Number.isInteger(d.p) ? d.p : -1 };   // p = quién lleva el balón (índice en j; -1 = libre)
+      if (d.ts) { const l = Date.now() - d.ts; R.lat = R.lat == null ? l : R.lat * 0.9 + l * 0.1; }   // retraso lectura → interfaz (mismo PC: mismo reloj)
+      R.nEv = (R.nEv || 0) + 1;
       setFase(d.f || "vivo");
       R.col = Array.isArray(d.c) && d.c.length === 2 && d.c.every((x) => /^#[0-9a-fA-F]{6}$/.test(x)) ? d.c : null;   // colores de camiseta (Link ≥ 0.2.30)
       if (alColores) alColores(R.col);
@@ -64,11 +66,12 @@ export function CampoSvg({ alTanda, alColores }) {
       if (k !== clave) { setClave(k); setN((d.j || []).length); }
       if (alTanda) alTanda(d.t || null);
     });
-    let raf = 0, ultimo = performance.now();
+    let raf = 0, ultimo = performance.now(), tDiag = ultimo, nDiag = 0;
     const paso = (ahora) => {
       raf = requestAnimationFrame(paso);
       const dt = Math.min(0.1, (ahora - ultimo) / 1000); ultimo = ahora;
-      const k = 1 - Math.exp(-dt / 0.07); // ~70 ms de suavizado: sigue el ritmo de ~20 envíos/s sin saltos
+      const k = 1 - Math.exp(-dt / 0.045); // ~45 ms de suavizado: con ~30 envíos/s se ve fluido y el retraso añadido es mínimo
+      if (alDiag && ahora - tDiag >= 500) { alDiag({ retrasoMs: R.lat == null ? null : Math.round(R.lat), eventosPorSeg: Math.round(((R.nEv || 0) - nDiag) * 1000 / (ahora - tDiag) * 10) / 10 }); nDiag = R.nEv || 0; tDiag = ahora; }
       const { obj, cur, puntos } = R;
       for (let i = 0; i < obj.j.length; i++) {
         const o = obj.j[i];
@@ -79,6 +82,12 @@ export function CampoSvg({ alTanda, alColores }) {
         if (el) { el.setAttribute("cx", c[0].toFixed(2)); el.setAttribute("cy", c[1].toFixed(2)); }
       }
       cur.j.length = obj.j.length;
+      // halo del poseedor del balón
+      const hp = R.halo;
+      if (hp) {
+        const cp = obj.p >= 0 ? cur.j[obj.p] : null;
+        if (cp) { hp.setAttribute("cx", cp[0].toFixed(2)); hp.setAttribute("cy", cp[1].toFixed(2)); hp.setAttribute("opacity", "1"); } else hp.setAttribute("opacity", "0");
+      }
       const b = obj.b, el = R.bola;
       if (el) {
         if (!b) el.setAttribute("opacity", "0");
@@ -111,6 +120,7 @@ export function CampoSvg({ alTanda, alColores }) {
     <rect x=${-LARGO / 2} y=${-ANCHO / 2} width=${LARGO} height=${ANCHO} fill="url(#cesped)"/>
     <${Lineas}/>
     <g>${pts}</g>
+    <circle ref=${(el) => { R.halo = el; }} r="2.5" fill="none" stroke="#fff" stroke-width="0.55" opacity="0" style="filter:drop-shadow(0 0 1.2px #fff)"/>
     <g ref=${(el) => { R.bola = el; }} opacity="0"><circle r="1.5" fill="rgba(0,0,0,.35)" cx="0.3" cy="0.4"/><circle r="0.95" fill="#fff" stroke="#111" stroke-width="0.25"/></g>
   </svg>
   ${et ? html`<div style="position:absolute;top:10px;left:50%;transform:translateX(-50%);padding:5px 14px;border-radius:999px;background:rgba(6,16,26,.82);border:1px solid var(--acc);font-size:12px;letter-spacing:.12em;font-weight:700;pointer-events:none">${t(et[0], et[1])}</div>` : null}
@@ -149,6 +159,8 @@ export function CampoEnVivo({ m }) {
   const c = m.campo || { estado: "apagado", motivo: "" };
   const [tanda, setTanda] = useState(null);
   const [cols, setCols] = useState(null);
+  const [dg, setDg] = useState({ retrasoMs: null, eventosPorSeg: 0 });
+  const alDiag = (x) => setDg(x);
   const colorEq = (i) => (cols ? cols[i] : COLOR[i]);
   const alColores = (c) => setCols((prev) => ((prev ? prev.join() : "") === (c ? c.join() : "") ? prev : c));
   useEffect(() => {
@@ -176,7 +188,12 @@ export function CampoEnVivo({ m }) {
         </span>` : null}
       </div>
       <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
-        <div style="flex:1 1 420px;max-width:680px;min-width:0"><${CampoSvg} alTanda=${alTanda} alColores=${alColores}/></div>
+        <div style="flex:1 1 420px;max-width:680px;min-width:0"><${CampoSvg} alTanda=${alTanda} alColores=${alColores} alDiag=${alDiag}/>
+        ${activo && c.diag ? html`<div class="ayuda mono" style="margin-top:8px;font-size:12px;display:flex;gap:6px 18px;flex-wrap:wrap" title=${t("Diagnóstico del campo: sirve para comparar antes y después de cualquier cambio", "Pitch diagnostics: compare before/after any change")}>
+          <span>${t("lecturas del juego", "game reads")}: <b>${c.diag.lecturas}/s</b> (${t("pasada", "pass")} ${c.diag.pasadaMs} ms · ${t("máx", "max")} ${c.diag.pasadaMaxMs} ms)</span>
+          <span>${t("retraso del campo hasta aquí", "pitch delay to here")}: <b>${dg.retrasoMs == null ? "—" : dg.retrasoMs + " ms"}</b> · ${dg.eventosPorSeg}/s</span>
+          <span>${t("envío a la web", "web upload")}: <b>${c.diag.webEnviosPorSeg}/s</b> (${c.diag.webPostMediaMs} ms ${t("por envío", "each")}${c.diag.webErrores ? ` · ${c.diag.webErrores} ${t("fallos", "errors")}` : ""})${c.diag.mirando ? ` · ${c.diag.mirando} ${t("mirando", "watching")}` : ""}</span>
+        </div>` : null}</div>
         <div style="flex:1 1 220px;min-width:200px;border:1px dashed var(--tenue);border-radius:12px;padding:14px">
           <b>${t("Estadísticas del partido", "Match stats")}</b>
           <div class="ayuda" style="margin-top:6px;font-size:12px">${t("Aquí irán disparos, córners, faltas, tarjetas, cambios y más cuando Link los pueda leer.", "Shots, corners, fouls, cards, subs and more will go here once Link can read them.")}</div>

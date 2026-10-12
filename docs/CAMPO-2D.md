@@ -84,3 +84,36 @@ Fralex: al tocar un partido en la web se ve el tablero (y las estadísticas) sin
 - **Web** (repo `pes-liga-automatica`, ronda 237): el tablero de «En vivo» / «Ahora mismo» / Inicio tiene el botón **Entrar a la sala** (lee `salas_enlace`, que la base solo da a quien puede ver esa sala) y un panel de estadísticas. Con sesión, avisa cada ~30 s que alguien mira (tabla `liga_mirando`, migración 104; el nombre sale del perfil en el servidor).
 - **Link:** el hilo de la liga pregunta cada ~10 s `GET /v1/liga/mirando?sala_id=` (Edge `liga` 1.4.0), solo con el marcador de la sala publicado. Resultado: (1) lista «Viendo desde la web» en **Gente**, (2) un mensaje del bot en el chat de la sala por persona («X está viendo el partido desde la web.»), que se vuelve a decir si se va y vuelve. Código: `link/PhoenixLink.cpp` (`mirandoWeb()`), `web/InterfazWeb.cpp`, `web/EstadoWeb.cpp` (`mirandoWeb`), `ui/js/vistas/gente.js`.
 - Límites: los visitantes sin sesión no aparecen (no hay nombre que mostrar). Los espectadores de la web no entran al Parsec salvo que pulsen «Entrar a la sala».
+
+## 0.2.37 · Poseedor del balón y retraso del campo (medición y arreglos)
+
+Fralex: «a veces no aparece marcado el jugador que tiene el balón» y «a veces se tarda». Método: medir cada tramo, atacar el que más aporta, probar la lógica con pruebas puras y verificar con un partido real.
+
+### Tramos del retraso y qué se encontró (por lectura del código; las cifras reales se rellenan con el diagnóstico)
+| Tramo | Antes | Ahora |
+|---|---|---|
+| Lector de memoria | `dormir(50)` en rebanadas de 25 ms con el temporizador de Windows a 15,6 ms → cada pasada de ≈ 62 ms (≈ 16 lecturas/s) con tirones; `reloj` sumaba 0,05 fijo | `timeBeginPeriod(1)` + horario fijo de 33 ms (≈ 30 lecturas/s) y reloj real |
+| Publicación a la interfaz de Link | evento ≤ 20/s, atado al fotograma de Link | evento ≤ 30/s |
+| Suavizado en la interfaz | 70 ms | 45 ms |
+| Envío a la web | 1 mensaje/s, y cada envío pasaba por 3 consultas en la Edge (≈ 100–300 ms) | 1/s sin espectadores con sesión, **4/s si alguien mira** (liga_mirando); la Edge guarda en caché la PC (60 s) y la sala (30 s) |
+| Suavizado en el navegador | 0,3 s fijo | ≈ medio intervalo de llegada (60–500 ms) |
+
+El tramo que más aportaba era el **envío a la web a 1/s** (el tablero siempre iba ≥ 1 s por detrás por diseño). Un envío a 4/s lo deja en ≈ 0,25–0,4 s + red.
+Coste: cada mensaje es una invocación de la función (plan FREE ≈ 500 000 al mes). Por eso solo se sube a 4/s mientras alguien mira con sesión; un visitante sin sesión ve 1/s.
+
+### Diagnóstico visible
+- **Link › Partido › CAMPO** (bajo el campo): lecturas del juego por segundo y duración de la pasada (media y máxima = tirones del lector), retraso del campo hasta la interfaz (hora de la lectura en el evento `ts` frente al reloj de la interfaz; mismo PC, así que es exacto), eventos/s, envíos a la web por segundo, ms por envío, fallos y cuántos miran.
+- **Web:** añadir `?diag` a la dirección del tablero enseña mensajes/s y retraso desde la lectura (`ts`; solo es exacto si el visor y el host tienen la hora bien puesta).
+
+### Poseedor del balón (`core/CampoVivo` → clase `Poseedor`)
+La heurística vieja (el más cercano a ≤ 2 m, calculada solo para la posesión de la web) no marcaba nada en el campo y fallaba con balón alto, pases y disputas. Reglas nuevas, con histéresis:
+- Lo **adquiere** el más cercano a ≤ 1,4 m, con el balón a ≤ 2,4 m de altura y sin ir lanzado (> 13 m/s), sostenido ≥ 80 ms.
+- Lo **conserva** mientras esté a ≤ 2,8 m; si se aleja, el balón sube o sale disparado, lo sostiene 350 ms y luego el balón queda **libre** (-1).
+- **Disputa:** otro se lo quita solo si está a ≤ 1,0 m y el poseedor ya está a más de 1,8 m. Dos casi empatados no parpadean.
+- Sin balón visible (repetición/pausa) conserva 350 ms y luego libre. Árbitros y asistentes no cuentan.
+- Se dibuja un **halo blanco** sobre el poseedor en Link y en la web; el protocolo lleva `p` (índice en `j`; -1 = libre; ausente = Link viejo). La posesión % de la web usa ahora al poseedor.
+- Casos cubiertos por `pruebas-link/campo_test.cpp` (sintéticos): regate sin parpadeo, pase y recepción, balón por el aire, balón libre, disputa con histéresis, repetición, árbitros, cambio de número de fichas.
+- **No resuelto con datos reales todavía:** si PES guarda en memoria quién controla el balón (un puntero o bandera), sería mejor que la heurística; se busca con un partido real (ver abajo). Mientras tanto, el estado «libre» y el halo salen de la geometría.
+
+### Pendiente de verificar con un partido real (3–5 min contra la CPU)
+Comparar captura del juego frente al tablero (balón en el aire, saques, córners, repeticiones, pausa y vuelta al juego) y rellenar las cifras de retraso medidas.

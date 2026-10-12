@@ -157,6 +157,89 @@ int main() {
 		int asistentes = 0; for (auto& r : l) if (pareceAsistente(r)) asistentes++;
 		std::printf("lista de %zu, asistentes por pegar a la banda: %d\n", l.size(), asistentes);
 	}
+	// ---- Poseedor del balón ----
+	{
+		auto jug = [](std::initializer_list<std::pair<float, float>> ps) {
+			std::vector<PuntoCampo> v; for (auto& p : ps) { PuntoCampo c; c.x = p.first; c.z = p.second; v.push_back(c); } return v; };
+		// 1) Regate: A corre a 6 m/s con el balón 0,8 m por delante; B lo persigue a 3 m. Nunca parpadea.
+		{
+			Poseedor p; int cambios = 0, ult = -2; bool sinPos = false;
+			for (int i = 0; i < 80; i++) {
+				const double t = 1.0 + i * 0.05; const float ax = static_cast<float>(i * 0.3);
+				auto j = jug({ { ax, 0.f }, { ax - 3.f, 1.f }, { 30.f, 20.f } });
+				const int r = p.actualizar(j, true, ax + 0.8f, 0.1f, 0.f, t);
+				if (r != ult) { cambios++; ult = r; }
+				if (i > 4 && r != 0) sinPos = true;
+			}
+			CHEQUEA(!sinPos); CHEQUEA(cambios <= 2);   // -1 → 0 una sola vez
+		}
+		// 2) Pase de A a B (20 m): libre en el aire y B lo recibe; nadie más lo «lleva» por el camino
+		{
+			Poseedor p; std::vector<int> seq;
+			auto j = jug({ { 0.f, 0.f }, { 20.f, 0.f }, { 10.f, 15.f } });
+			double t = 1.0;
+			for (int i = 0; i < 6; i++, t += 0.05) p.actualizar(j, true, 0.6f, 0.1f, 0.f, t);
+			CHEQUEA(p.actual() == 0);
+			float bx = 0.6f;
+			for (int i = 0; i < 20; i++, t += 0.05) { bx += 0.9f; seq.push_back(p.actualizar(j, true, bx, 0.3f, 0.f, t)); }   // 18 m/s
+			for (int i = 0; i < 12; i++, t += 0.05) { seq.push_back(p.actualizar(j, true, 20.5f, 0.1f, 0.f, t)); }
+			CHEQUEA(seq.back() == 1);
+			for (int v : seq) CHEQUEA(v != 2);
+			bool huboLibre = false; for (int v : seq) if (v == -1) huboLibre = true;
+			CHEQUEA(huboLibre);
+		}
+		// 3) Balón alto que pasa por encima de C: C no lo lleva nunca
+		{
+			Poseedor p; auto j = jug({ { 5.f, 0.f } });
+			bool lo_llevo = false;
+			for (int i = 0; i < 30; i++) if (p.actualizar(j, true, 5.2f, 5.0f, 0.f, 1.0 + i * 0.05) == 0) lo_llevo = true;
+			CHEQUEA(!lo_llevo);
+		}
+		// 4) Balón libre lejos de todos: -1 · cerca pero sin tiempo mínimo no se adquiere de golpe
+		{
+			Poseedor p; auto j = jug({ { 10.f, 10.f }, { -10.f, -10.f } });
+			CHEQUEA(p.actualizar(j, true, 0.f, 0.1f, 0.f, 1.0) == -1);
+			CHEQUEA(p.actualizar(j, true, 9.5f, 0.1f, 10.f, 1.05) == -1);
+			CHEQUEA(p.actualizar(j, true, 9.5f, 0.1f, 10.f, 1.10) == -1);
+			CHEQUEA(p.actualizar(j, true, 9.5f, 0.1f, 10.f, 1.20) == 0);
+		}
+		// 5) Disputa y sin parpadeo: A (1,0 m) y B (1,1 m) casi empatados → se queda A; B solo gana cuando A ya está lejos
+		{
+			Poseedor p; auto j = jug({ { 0.f, 0.f }, { 0.f, 1.4f } });
+			for (int i = 0; i < 6; i++) p.actualizar(j, true, 0.f, 0.1f, 0.5f, 1.0 + i * 0.05);   // el balón está a 0,5 de A
+			CHEQUEA(p.actual() == 0);
+			for (int i = 0; i < 20; i++) {
+				auto k = jug({ { 0.f, 0.f }, { 0.f, (i % 2) ? 0.9f : 1.1f } });   // B se pega, alterna 0,9/1,1 m del balón (en z=0,5+…)
+				p.actualizar(k, true, 0.f, 0.1f, 1.f, 1.3 + i * 0.05);
+			}
+			CHEQUEA(p.actual() == 0);                                              // A a 1,0 m: lo conserva
+			// A queda atrás a 2,0 m y B a 0,8 m del balón: cambia
+			auto m = jug({ { 0.f, 0.f }, { 0.f, 2.8f } });
+			int r = -9; for (int i = 0; i < 4; i++) r = p.actualizar(m, true, 0.f, 0.1f, 2.0f, 2.5 + i * 0.05);
+			CHEQUEA(r == 1);
+		}
+		// 6) Repetición (balón no visible): se conserva 350 ms y luego libre
+		{
+			Poseedor p; auto j = jug({ { 0.f, 0.f } });
+			for (int i = 0; i < 6; i++) p.actualizar(j, true, 0.5f, 0.1f, 0.f, 1.0 + i * 0.05);
+			CHEQUEA(p.actual() == 0);
+			CHEQUEA(p.actualizar(j, false, 0, 0, 0, 1.40) == 0);
+			CHEQUEA(p.actualizar(j, false, 0, 0, 0, 1.80) == -1);
+		}
+		// 7) Árbitros y asistentes no son elegibles
+		{
+			Poseedor p; std::vector<PuntoCampo> j(2); j[0].x = 0.3f; j[0].z = 0; j[0].elegible = false; j[1].x = 3.f; j[1].z = 3.f;
+			for (int i = 0; i < 6; i++) p.actualizar(j, true, 0.f, 0.1f, 0.f, 1.0 + i * 0.05);
+			CHEQUEA(p.actual() == -1);
+		}
+		// 8) Índice fuera de rango (menos fichas que antes): sin caída
+		{
+			Poseedor p; auto j = jug({ { 0.f, 0.f }, { 1.f, 1.f } });
+			for (int i = 0; i < 6; i++) p.actualizar(j, true, 1.f, 0.1f, 1.f, 1.0 + i * 0.05);
+			auto k = jug({ { 50.f, 0.f } });
+			CHEQUEA(p.actualizar(k, true, 1.f, 0.1f, 1.f, 2.0) == -1);
+		}
+	}
 	std::printf(fallos ? "campo_test: %d FALLOS\n" : "campo_test: todo bien\n", fallos);
 	return fallos ? 1 : 0;
 }

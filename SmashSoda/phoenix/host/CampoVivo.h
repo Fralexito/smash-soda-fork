@@ -36,6 +36,11 @@ namespace phoenix::campo {
 		/// la última buena; «otro» = las fichitas dejaron de leerse un rato (también congeladas); «pausa» = todo quieto ≥ 4 s
 		/// (posiciones reales, solo informativo).
 		std::string fase = "vivo";
+		int poseedor = -1;          ///< índice en `j` de quien lleva el balón (-1 = balón libre o sin balón)
+		/// Diagnóstico del lector (ventana de ~1 s): lecturas por segundo, duración de una pasada (media y máxima, ms) y
+		/// hora (ms desde 1970) a la que se publicó esta lectura: la interfaz y la web restan para medir el retraso.
+		double lecturasPorSeg = 0, pasadaMediaMs = 0, pasadaMaxMs = 0;
+		long long tMs = 0;
 	};
 
 	void iniciar();                 ///< arranca el hilo (idempotente)
