@@ -40,7 +40,7 @@ namespace phoenix {
 		bool pausaAuto = false;   ///< árbitro: pausa si un jugador del partido se cae o pasa de 150 ms de ping 5 s (apagado hasta probarlo)
 		bool marcadorAuto = true; ///< árbitro: con datos del juego, el marcador arranca, relata los goles y termina solo
 		bool ordenPes = false;        ///< EXPERIMENTAL: Link ordena settings.dat de PES (casilla N = puesto N) y no desenchufa sus mandos al cerrar la sala
-		bool radarOverlay = false;    ///< mini-radar del campo en el overlay (enciende el lector de PES mientras la sala esté abierta)
+		bool campoWeb = false;        ///< Campo 2D en vivo en el tablero de la web (lee PES solo con un partido publicado en juego)
 		// Anfitrión: su puesto al jugar (Mandos › TU MANDO)
 		std::string miMando;             ///< «VID:PID» de su mando físico; Link lo vuelve a elegir al abrirse ("" = teclado)
 		std::string miPuestoModo = "fijo";  ///< fijo | local | visitante (primero de ese equipo)

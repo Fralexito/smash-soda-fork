@@ -260,7 +260,7 @@ export function crearSimulador(enviar) {
         juego: s.opciones.biblioteca && s.opciones.biblioteca !== "Default" ? s.opciones.biblioteca : "", pesAbierto: !!s.pes.abierto,
         ultimoFin: s.cedido.ultimoFin },
       marionetas: s.marionetas,
-      campo: { estado: s.campoVivo ? "activo" : "esperando", motivo: "", jugadores: s.campoVivo ? 24 : 0, balon: !!s.campoVivo, equipos: !!s.campoVivo, radarOverlay: !!s.radarOverlay, tanda: !!s.campoVivo && ahora() - (s.campoDesde || ahora()) >= 40 },
+      campo: { estado: s.campoVivo ? "activo" : "esperando", motivo: "", jugadores: s.campoVivo ? 24 : 0, balon: !!s.campoVivo, equipos: !!s.campoVivo, campoWeb: !!s.campoWeb, tanda: !!s.campoVivo && ahora() - (s.campoDesde || ahora()) >= 40 },
       teclado: { perfiles: s.perfilesTeclado },
       sala: {
         abierta: s.abierta, lista: true, enlace: s.abierta ? "https://parsec.gg/g/7K2Qx9abcdef/phoenix" : "", nombre: s.opciones.nombre, plazas: s.opciones.plazas,
@@ -361,7 +361,7 @@ export function crearSimulador(enviar) {
     "mandos.ordenarPes": () => { if (s.ordenPes?.activo) s.ordenPes.estado = "al_dia"; },
     "mandos.vivo": () => ({}),
     "campo.vivo": (d) => { s.campoVivo = !!d.si; s.campoDesde = ahora(); },
-    "campo.radarOverlay": (d) => { s.radarOverlay = !!d.si; },
+    "campo.web": (d) => { s.campoWeb = !!d.si; },
     "mandos.tomar": (d) => { s.host = d.numero === s.host ? 0 : d.numero; return { activo: s.host }; },
     "mandos.herramienta": (d) => { if (d.nombre === "bloquearTodo") s.bloqueoGlobal = !s.bloqueoGlobal; else if (d.nombre === "bloquearBotones") s.bloqueoBotones = !s.bloqueoBotones; else if (d.nombre === "desconectarTodos") s.mandos = s.mandos.map(() => 0); else if (d.nombre === "ordenar") { const v = s.mandos.filter(Boolean); s.mandos = s.mandos.map((_, i) => v[i] || 0); } },
     "teclado.asignar": (d) => { const p = s.perfilesTeclado.find((x) => x.userId === d.userId) || s.perfilesTeclado[0]; p.teclas.forEach((x) => { if (x.v === d.tecla) { x.v = 0; x.e = ""; } }); const k = p.teclas.find((x) => x.b === d.boton); k.v = d.tecla; k.e = "K" + d.tecla; },

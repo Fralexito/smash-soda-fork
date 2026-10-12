@@ -71,7 +71,7 @@ namespace phoenix {
 			sentarmeAlAbrir = j.value("sentarmeAlAbrir", sentarmeAlAbrir);
 			entrarPulsando = j.value("entrarPulsando", entrarPulsando);
 			ordenPes = j.value("ordenPes", ordenPes);
-			radarOverlay = j.value("radarOverlay", radarOverlay);
+			campoWeb = j.value("campoWeb", campoWeb);
 			modoRecarga = j.value("modoRecarga", modoRecarga);
 			cedidoExtras = j.value("cedidoExtras", cedidoExtras);
 			if (modoRecarga != "ACTIVAR" && modoRecarga != "AUTO-FICHAJES") modoRecarga = "AUTO-SIEMPRE";   // v0.18b: por defecto
@@ -116,7 +116,7 @@ namespace phoenix {
 				{"sentarmeAlAbrir", sentarmeAlAbrir},
 				{"entrarPulsando", entrarPulsando},
 				{"ordenPes", ordenPes},
-				{"radarOverlay", radarOverlay},
+				{"campoWeb", campoWeb},
 				{"modoRecarga", modoRecarga},
 				{"cedidoExtras", cedidoExtras},
 			};

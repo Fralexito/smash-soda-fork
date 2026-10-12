@@ -168,9 +168,9 @@ export function CampoEnVivo({ m }) {
       ${!activo && msg ? html`<div class="ayuda" style="margin-top:10px">${t(msg[0], msg[1])}${c.motivo ? html` <span class="mono mut">(${c.motivo})</span>` : null}</div>` : null}
       ${activo ? html`<${Tanda} tanda=${tanda}/>` : null}
       <div style="margin-top:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-        <${Interruptor} valor=${!!c.radarOverlay} al=${(v) => accion("campo.radarOverlay", { si: v })} etiqueta=${t("Mini-radar en el overlay", "Mini-radar on the overlay")}/>
-        <div><b>${t("Mini-radar en el overlay", "Mini-radar on the overlay")}</b>
-          <div class="ayuda" style="font-size:12px">${t("Se ve sobre el juego, en una esquina. Actívalo también en el overlay › Widgets › Mini-radar. Mientras esté encendido Link lee el juego aunque esta tarjeta esté cerrada.", "Shown over the game in a corner. Also enable it in overlay › Widgets › Mini-radar. While it's on, Link reads the game even with this card closed.")}</div></div>
+        <${Interruptor} valor=${!!c.campoWeb} al=${(v) => accion("campo.web", { si: v })} etiqueta=${t("Campo en vivo en la web", "Live pitch on the website")}/>
+        <div><b>${t("Campo en vivo en la web", "Live pitch on the website")}</b>
+          <div class="ayuda" style="font-size:12px">${t("Al tocar el partido en «En vivo ahora» de la web se abre el tablero con este campo y la posesión. Solo con un partido en juego que ya salga en la web (oficial, o amistoso en sala no privada); mientras tanto Link lee el juego aunque esta tarjeta esté cerrada.", "On the website, tapping the live match opens a board with this pitch and possession. Only while a published match is being played.")}</div></div>
       </div>
       <div class="ayuda" style="margin-top:10px;font-size:12px">${t("Solo lee la memoria del juego (no escribe ni cambia nada). Si la versión del juego no coincide, se apaga sola.", "Read-only: it never writes to or changes the game. If the game version doesn't match it switches itself off.")}</div>
     </${Tarjeta}>

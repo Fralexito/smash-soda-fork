@@ -1,4 +1,5 @@
 #include "InterfazWebInterno.h"
+#include "CampoWeb.h"
 
 #include <algorithm>
 
@@ -172,17 +173,15 @@ namespace phoenix::web {
 			in.campoRapido = booleano(d, "si");
 			in.campoSeq = 0;
 			if (in.campoRapido) phoenix::campo::iniciar();
-			phoenix::campo::pedirVivo(in.campoRapido || PhoenixPrefs::get().radarOverlay);
+			phoenix::campo::pedirVivo(in.campoRapido || campoWebQuiere(in));
 			return json::object();
 		});
-		// Mini-radar del overlay: Link manda el campo al overlay (WebSocket) aunque la tarjeta Campo esté cerrada
-		p.registrar("campo.radarOverlay", [&in](const json& d, uint64_t) -> std::optional<json> {
+		// Campo en vivo en la web: con un partido publicado en juego, Link manda el campo al tablero de la web (CampoWeb.cpp)
+		p.registrar("campo.web", [&in](const json& d, uint64_t) -> std::optional<json> {
 			PhoenixPrefs& pr = PhoenixPrefs::get();
-			pr.radarOverlay = booleano(d, "si");
+			pr.campoWeb = booleano(d, "si");
 			pr.guardar();
-			if (pr.radarOverlay) phoenix::campo::iniciar();
-			phoenix::campo::pedirVivo(in.campoRapido || pr.radarOverlay);
-			return json::object();
+			return json::object();   // el bucle de la interfaz enciende o apaga el lector en su siguiente vuelta
 		});
 		p.registrar("mandos.soloAutorizados", [](const json& d, uint64_t) -> std::optional<json> {
 			PhoenixPrefs& pr = PhoenixPrefs::get();

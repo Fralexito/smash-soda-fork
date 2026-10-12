@@ -50,3 +50,7 @@ Colores: cian = local, violeta = visitante, amarillo = asistentes de línea, gri
 - En el **overlay › Widgets › Mini-radar** se enciende el widget y se elige la esquina (apagado por defecto). Se puede mover/redimensionar como los demás. Si dejan de llegar datos (juego cerrado, repetición larga) se esconde solo a los 4 s.
 - Coste: lo mismo que la tarjeta (≈ 20 lecturas/s de 16 bytes por actor) y solo mientras el interruptor esté encendido.
 - Código: overlay `frontend/src/components/overlay/widgets/OverlayRadarWidgetView.vue` + `models/widgets/RadarWidget.ts` (commit `2f740db` en `phoenix-overlay`, sin push); Link `web/InterfazWeb.cpp` (envío) y `PhoenixPrefs.radarOverlay`.
+
+## 2026-10-11 · El campo va a la web, no al overlay
+
+Fralex: «en el overlay no tiene que aparecer el campo 2D; debe aparecer en la web». El mini-radar del overlay (0.2.22, `campo.radarOverlay`) se quitó. Su interruptor ahora es **«Campo en vivo en la web»** (`campo.web`, preferencia `campoWeb`, apagada por defecto). Con un partido publicado en juego, `web/CampoWeb.cpp` manda el campo y la posesión a `POST /v1/liga/campo` como mucho 1/s, y la web lo enseña en el tablero que se abre al tocar «En vivo ahora» (`docs/PROMPT-WEB-tablero-partido.md`). El overlay ya no recibe `phoenix:campo`.

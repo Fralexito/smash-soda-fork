@@ -448,7 +448,7 @@ namespace phoenix::web {
 					: fc.estado == EstadoCampo::Esperando ? "esperando" : fc.estado == EstadoCampo::NoCompatible ? "no_compatible" : "apagado";
 				c = { {"estado", nombre}, {"motivo", fc.motivo}, {"jugadores", static_cast<int>(fc.j.size())}, {"balon", fc.hayBola}, {"equipos", fc.equiposListos}, {"tanda", fc.tanda.activa} };
 			}
-			c["radarOverlay"] = PhoenixPrefs::get().radarOverlay;
+			c["campoWeb"] = PhoenixPrefs::get().campoWeb;
 			e["campo"] = c;
 		}
 

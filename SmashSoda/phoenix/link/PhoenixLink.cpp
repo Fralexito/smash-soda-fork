@@ -517,6 +517,7 @@ namespace phoenix {
 			_ligaVivoEnWeb = false;
 			_ligaVivoPendiente = false;   // lo pendiente era de esta sala: no se manda a la siguiente
 			_ligaVivo.clear();
+			_ligaCampoPendiente = false;
 		}
 		if (quitarVivo) {
 			const json fin = { {"sala_id", salaId}, {"terminado", true} };
@@ -833,6 +834,10 @@ namespace phoenix {
 		std::lock_guard<std::mutex> l(_mutex);
 		_ligaVivo = cuerpoJson; _ligaVivoPendiente = true; _ligaVivoBorrar = false;
 	}
+	void PhoenixLink::ligaCampo(const std::string& cuerpoJson) {
+		std::lock_guard<std::mutex> l(_mutex);
+		_ligaCampo = cuerpoJson; _ligaCampoPendiente = true;
+	}
 	void PhoenixLink::ligaVivoTerminado() {
 		std::lock_guard<std::mutex> l(_mutex);
 		_ligaVivo.clear(); _ligaVivoPendiente = true; _ligaVivoBorrar = true;
@@ -920,6 +925,25 @@ namespace phoenix {
 				if (r.estado == 0 || r.estado >= 500 || r.estado == 429) {
 					if (!_ligaVivoPendiente) { _ligaVivo = vivo; _ligaVivoBorrar = borrar; _ligaVivoPendiente = true; }   // se reintenta con lo más nuevo
 					_ligaVivoProximoMs = ahora + 10000;
+				}
+			}
+			return true;
+		}
+		// 2b) Campo 2D en vivo para el tablero de la web (como mucho 1 por segundo; siempre lo último, sin cola).
+		//     La web lo reparte por Realtime Broadcast: no se guarda en la base.
+		std::string campo; bool hayCampo = false;
+		{
+			std::lock_guard<std::mutex> l(_mutex);
+			if (_ligaCampoPendiente && !salaId.empty() && ahora >= _ligaCampoProximoMs) { hayCampo = true; campo = _ligaCampo; _ligaCampoPendiente = false; _ligaCampoProximoMs = ahora + 1000; }
+		}
+		if (hayCampo) {
+			json cuerpo = json::parse(campo, nullptr, false);
+			if (!cuerpo.is_discarded() && cuerpo.is_object()) {
+				cuerpo["sala_id"] = salaId;
+				const http::Respuesta r = http::peticion("POST", std::string(kBaseLiga) + "/v1/liga/campo", cuerpo.dump(-1, ' ', false, json::error_handler_t::replace), cabecerasCon(token), 3000);
+				if (r.estado == 404 || r.estado == 0 || r.estado >= 500 || r.estado == 429) {
+					std::lock_guard<std::mutex> l(_mutex);
+					_ligaCampoProximoMs = ahora + (r.estado == 404 ? 300000 : 15000);   // 404 = la web aún no tiene la ruta: se vuelve a probar en 5 min
 				}
 			}
 			return true;

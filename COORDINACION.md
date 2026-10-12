@@ -48,6 +48,7 @@ Dos trabajos independientes dentro del mismo Phoenix Link:
   - Regla: el resultado lo valida **el staff o el árbitro designado, nunca el host**.
   - **El chat WEB debe:** juntar la rama `liga-automatica`, usar la 103 para su próxima migración, y hacer las páginas (marcador en vivo con Realtime, panel de validación, «Reclamar», y Liga leyendo `liga_tabla`). Detalle en `docs/LIGA-AUTOMATICA.md` de esa rama.
 - 2026-10-11 · **PENDIENTE-WEB · «En vivo ahora» colgado:** `liga_vivo` no se borraba al cerrar la sala ni Link. Link ya manda `terminado` al cerrar y un latido cada 2 min. La web tiene que limpiar las filas viejas, borrarlas en `sala/cerrar` y en las salas caídas, y ocultar las que lleven más de 10 min sin noticias: `docs/PROMPT-WEB-liga-vivo-huerfano.md`.
+- 2026-10-11 · **PENDIENTE-WEB · Tablero del partido (campo 2D en la web):** Fralex quiere el Campo 2D en la web y no en el overlay. Link manda `POST /v1/liga/campo` como mucho 1/s (fichitas, balón, tanda y posesión) con «Campo en vivo en la web» encendido (`campoWeb`, apagado por defecto). La web tiene que crear la ruta (Realtime Broadcast, sin escribir en la base) y el tablero que se abre al tocar la tarjeta «En vivo ahora»: `docs/PROMPT-WEB-tablero-partido.md`.
 
 ## Dos cuentas de Claude (A y B) — protocolo obligatorio
 Fralex usa 2 cuentas; cuando una se queda sin tokens sigue la otra. **La memoria es el repo, no el chat.**
