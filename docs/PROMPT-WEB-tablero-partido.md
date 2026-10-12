@@ -3,6 +3,12 @@
 > Repo `Fralexito/phoenixevolution`, rama `borrador`. Origen: chat LINK, 2026-10-11.
 > Fralex: «en el overlay no tiene que aparecer el campo 2D, debe aparecer en la web: por encima sale la tarjeta como ahora y, al darle clic, se abre el tablero con las demás estadísticas del partido».
 
+> **CAMBIO (Fralex, 2026-10-12): «donde se verán los resultados del partido en tiempo real, ponlo en la sección de En vivo».** El tablero NO es un modal suelto: vive **dentro de la sección «En vivo»** de la web (la página/pestaña donde hoy salen las tarjetas de «En vivo ahora»). Concretamente:
+> - En la sección «En vivo», cada partido en juego se muestra como la tarjeta de siempre; al pulsarla **se despliega en el mismo sitio** (acordeón o panel a ancho completo de esa sección, sin salir de la página) con el tablero: cabecera, campo 2D, posesión, goles y penales. Se puede plegar otra vez.
+> - Si solo hay **un** partido en vivo, el tablero aparece **ya desplegado** al entrar en la sección (sin tener que pulsar); con varios, desplegado el primero y los demás plegados.
+> - Todo se actualiza en tiempo real en esa misma sección (marcador, minuto, goles y campo). En el móvil, el panel ocupa el ancho y el campo se adapta.
+> - Se mantiene lo demás de este prompt (ruta `POST /v1/liga/campo`, canal Broadcast, suscripción solo con el panel desplegado, rendimiento y criterios). Donde abajo dice «modal / hoja a pantalla completa», léase «panel desplegable dentro de la sección En vivo».
+
 ## Qué ya hace Phoenix Link (rama `rediseño-phoenix-portal`)
 - La tarjeta sigue igual: `liga_vivo` vía `POST /v1/liga/vivo` (marcador, minuto, fase, pantalla, goles con goleador).
 - **Nuevo:** con «Campo en vivo en la web» encendido en Link (Partido › CAMPO, apagado por defecto) y el partido en juego en una sala que ya sale en «En vivo ahora», Link manda **como mucho 1 vez por segundo**:
@@ -28,7 +34,7 @@
 - Respuesta `{ ok: true }`. Contrato: documentarla en `docs/LIGA-AUTOMATICA.md`; sube la versión de la función.
 - Canal **público de solo lectura** (cualquiera que vea la tarjeta puede mirar el tablero; son datos del partido, sin nombres de cuentas ni Parsec).
 
-### 2) Tarjeta → tablero
+### 2) Tarjeta → tablero (dentro de la sección «En vivo»)
 - `src/components/MarcadorVivo.astro` y `src/js/features/liga/vivo.js`: toda la tarjeta se puede pulsar (y con teclado: `role="button"`, Enter/Espacio). Abre un **tablero** (modal en escritorio, hoja a pantalla completa en el móvil; cerrar con ✕, Esc o deslizando) con:
   1. **Cabecera** igual que la tarjeta: tipo (amistoso u oficial), equipos, marcador, minuto y fase o pantalla, en vivo con la misma suscripción a `liga_vivo`.
   2. **Campo 2D en vivo:** SVG del campo (105 × 68 con líneas, áreas y círculo central). Las fichitas con los colores del equipo A, el B y los árbitros, y el balón un poco más grande (si `y > 2`, con sombra). Interpola entre mensajes (~1 s) para que se mueva suave, sin saltos.
@@ -40,7 +46,7 @@
 - Rendimiento: un solo `requestAnimationFrame` para la interpolación; nada de re-render por cada mensaje si el tablero está oculto.
 
 ## Criterios de aceptación
-1. La tarjeta se ve igual que hoy y, al pulsarla, abre el tablero (escritorio y móvil).
+1. La tarjeta se ve igual que hoy y, al pulsarla, se despliega el tablero dentro de la sección «En vivo» (escritorio y móvil); con un solo partido en vivo ya sale desplegado.
 2. Con Link enviando, las fichitas y el balón se mueven suaves (1 mensaje/s interpolado) y la posesión se actualiza.
 3. `POST /v1/liga/campo` no escribe en la base (comprobar que no crece ninguna tabla) y rechaza a quien no es dueño de la sala.
 4. Sin campo (Link viejo o interruptor apagado), el tablero muestra la cabecera, los goles y el aviso.
