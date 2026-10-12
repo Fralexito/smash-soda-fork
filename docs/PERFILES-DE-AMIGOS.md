@@ -202,3 +202,15 @@ Reagrupado a pedido de Fralex (GENTE era un cajón de sastre). Solo cambia dónd
 - **GENTE:** En sala · Moderación · Amigos · Permisos.
 - PARTIDO, SYNC y AJUSTES igual.
 - Donde en este documento dice «GENTE › PERFILES PES» o «GENTE › SALAS ABIERTAS», ahora es **MANDOS › PERFILES PES** y **SALA › SALAS ABIERTAS**. El estado `salasAbiertas` llega con la sección Sala visible.
+
+### 12.4 Sección nueva JUGAR (Link 0.2.65, reemplaza el reagrupamiento de 12.3)
+
+A pedido de Fralex: salas abiertas no encajaba en SALA (es «tu sala») ni en GENTE (administración), así que hay una sección nueva, **JUGAR**, con lo que se busca rápido al ir a jugar. Va en el menú justo después de SALA.
+
+- **JUGAR:** Salas abiertas · Amigos · Perfil PES · Mi puesto.
+- **SALA:** Resumen · Opciones de sala · Juegos · Conexión · Actividad (el Resumen con la sala cerrada tiene un botón «SALAS ABIERTAS (N)» que lleva a JUGAR).
+- **MANDOS:** Puestos · Tu mando · Mapeo · Teclado · Turnos · Bloqueo.
+- **GENTE:** En sala · Moderación · Permisos.
+- PARTIDO, SYNC y AJUSTES igual. La sección no existe en el modo «PC cedida» (solo se ven Sala, Partido y Mandos).
+- Archivos: `vistas/seccionjugar.js` (solo compone vistas que ya existían), `app.js` (menú), `ui.js` (icono), `tienda.js` (pestaña por defecto), `paleta.js` (Ctrl+K), `tutorial.js` (los pasos que señalan el menú por posición se corrieron un lugar y hay un paso nuevo). El estado `amigos` y `salasAbiertas` llega también con JUGAR visible.
+- Donde este documento dice «GENTE › PERFILES PES» o «MANDOS › PERFILES PES» ahora es **JUGAR › PERFIL PES**.

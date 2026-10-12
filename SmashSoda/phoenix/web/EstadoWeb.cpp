@@ -615,7 +615,7 @@ namespace phoenix::web {
 		}
 		e["turnos"] = estadoTurnos();
 		if (in.seccion == "ajustes" && in.pestana == "audio") e["audio"] = estadoAudio(h);
-		if (in.seccion == "gente" || in.seccion == "partido") {
+		if (in.seccion == "gente" || in.seccion == "partido" || in.seccion == "jugar") {
 			json amigos = json::array();
 			for (const AmigoWeb& a : link.amigos()) {
 				amigos.push_back({ {"usuarioId", a.usuarioId}, {"nombre", a.nombre}, {"avatar", a.avatarUrl},
@@ -623,8 +623,8 @@ namespace phoenix::web {
 			}
 			e["amigos"] = { {"cargados", link.amigosCargados()}, {"lista", amigos} };
 		}
-		// Salas abiertas que puedo ver: viven en la sección Sala (pestaña Salas abiertas y botón del resumen)
-		if (in.seccion == "sala") {
+		// Salas abiertas que puedo ver: pestaña de la sección Jugar y botón del resumen de Sala
+		if (in.seccion == "sala" || in.seccion == "jugar") {
 			json salas = json::array();
 			for (const SalaAbierta& s : link.salasAbiertas()) {
 				salas.push_back({ {"salaId", s.salaId}, {"hostNombre", s.hostNombre}, {"hostAvatar", s.hostAvatar}, {"hostAmigo", s.hostAmigo}, {"soyHost", s.soyHost}, {"invitado", s.invitado},

@@ -8,7 +8,7 @@ import { Diagnostico } from "./ajustes.js";
 import { GuiaInicio, Entrenador, useGuia } from "./guia.js";
 import { Pendientes } from "./mandos.js";
 import { EditorBiblioteca } from "./nativas.js";
-import { abrirFicha, SalasAbiertas } from "./gente.js";
+import { abrirFicha } from "./gente.js";
 import { BloqueRetraso, LeyendaRetraso, retrasoDe } from "./retraso.js";
 import {
   Cifra, Tarjeta, Titulo, Boton, Interruptor, Ajuste, AjusteSw, Stepper, Segmentos, Selector, Campo,
@@ -17,7 +17,6 @@ import {
 
 export const PESTANAS_SALA = [
   { id: "resumen", es: "RESUMEN", en: "OVERVIEW", d: ["Tu sala de un vistazo: enlace, tiempo en vivo, quién juega y cómo va la conexión.", "Your room at a glance."] },
-  { id: "salas", es: "SALAS ABIERTAS", en: "OPEN ROOMS", d: ["Las mismas salas que ves en la web de la liga. Entra con un clic.", "The same rooms you see on the league website. Join with one click."] },
   { id: "opciones", es: "OPCIONES DE SALA", en: "ROOM OPTIONS", d: ["Nombre, plazas, quién puede entrar y la calidad de la imagen. Se guarda al instante.", "Name, slots, who can join and image quality."] },
   { id: "juegos", es: "JUEGOS", en: "GAMES", d: ["Qué se juega (se muestra en la web de la liga) y el juego que abre el modo quiosco.", "What is being played and the kiosk game."] },
   { id: "red", es: "CONEXIÓN", en: "CONNECTION", d: ["¿Tu PC está lista para hostear? Y el ping de cada invitado: verde va bien, ámbar aguanta, rojo es lag.", "Is your PC ready to host? And each guest's ping: green is fine, amber holds, red is lag."] },
@@ -37,7 +36,6 @@ export function VistaSala({ s, pestana }) {
   const m = s.motor;
   if (!m || !m.sala) return html`<${Vacio} titulo=${t("Conectando con el motor…", "Connecting to the engine…")} texto=""/>`;
   switch (pestana) {
-    case "salas": return html`<${SalasAbiertas} m=${m}/>`;
     case "opciones": return html`<${OpcionesSala} m=${m}/>`;
     case "juegos": return html`<${JuegosSala} m=${m}/>`;
     case "red": return html`<${ConexionSala} m=${m}/>`;
@@ -106,7 +104,7 @@ function Heroe({ m, conGuia, verGuia }) {
       <div style="display:flex;gap:10px;flex-wrap:wrap">
         <${Boton} tipo="lleno enorme" deshabilitado=${!sala.lista} al=${abrirSala}><${Icono} n="rayo" t=${18}/>${t("ABRIR SALA", "OPEN ROOM")}</${Boton}>
         <${Boton} tipo="suave enorme" al=${() => irA("sala", "opciones")}>${t("OPCIONES", "OPTIONS")}</${Boton}>
-        ${hayAbiertas > 0 ? html`<${Boton} tipo="suave enorme" al=${() => irA("sala", "salas")}>${t(`SALAS ABIERTAS (${hayAbiertas})`, `OPEN ROOMS (${hayAbiertas})`)}</${Boton}>` : null}
+        ${hayAbiertas > 0 ? html`<${Boton} tipo="suave enorme" al=${() => irA("jugar", "salas")}>${t(`SALAS ABIERTAS (${hayAbiertas})`, `OPEN ROOMS (${hayAbiertas})`)}</${Boton}>` : null}
         ${conGuia ? null : html`<${Boton} tipo="suave enorme" al=${verGuia}>${t("CÓMO EMPEZAR", "HOW TO START")}</${Boton}>`}
       </div>
       <${ResumenRed} m=${m}/>

@@ -1,6 +1,7 @@
 // =============================================================================
-//  GENTE: En sala (lista + ficha, diseño v4, con la carta de la web),
-//  Moderación (baneados, moderadores, VIP, historial) y Amigos de la web.
+//  GENTE: En sala (lista + ficha, diseño v4, con la carta de la web), Moderación (baneados,
+//  moderadores, VIP, historial) y Permisos. Los componentes Amigos y SalasAbiertas se definen aquí
+//  pero se ven en la sección JUGAR (vistas/seccionjugar.js).
 // =============================================================================
 import { html, useState, useEffect } from "../lib.js";
 import { t, fecha } from "../i18n.js";
@@ -12,7 +13,6 @@ import { Tarjeta, Titulo, Boton, AjusteSw, Campo, Avatar, Chip, Icono, Vacio, co
 export const PESTANAS_GENTE = [
   { id: "sala", es: "EN SALA", en: "IN ROOM", d: ["Elige a alguien de la lista para ver su ficha, su carta de la liga y sus permisos.", "Pick someone to see their card and permissions."] },
   { id: "moderacion", es: "MODERACIÓN", en: "MODERATION", d: ["Baneados, moderadores, VIP y quién pasó por tu sala.", "Bans, mods, VIPs and visit history."] },
-  { id: "amigos", es: "AMIGOS", en: "FRIENDS", d: ["Tus amigos de la web de la liga. Invítalos a tu sala con un clic.", "Your league friends. Invite them in one click."] },
   { id: "permisos", es: "PERMISOS", en: "PERMISSIONS", d: ["Qué puede hacer cada rol (invitado, VIP, moderador) desde el chat.", "What each role (guest, VIP, moderator) can do from chat."] },
 ];
 
@@ -25,7 +25,6 @@ export function VistaGente({ s, pestana }) {
   const m = s.motor;
   if (!m) return html`<${Vacio} titulo=${t("Conectando…", "Connecting…")} texto=""/>`;
   if (pestana === "moderacion") return html`<${Moderacion}/>`;
-  if (pestana === "amigos") return html`<${Amigos} m=${m}/>`;
   if (pestana === "permisos") return html`<${Permisos} m=${m}/>`;
   return html`<${EnSala} m=${m}/>`;
 }
@@ -256,7 +255,7 @@ export function SalasAbiertas({ m }) {
   </div>`;
 }
 
-function Amigos({ m }) {
+export function Amigos({ m }) {
   const web = m.web || {};
   if (web.estado === "sin_vincular") {
     return html`<${Vacio} titulo=${t("Vincula la app con la web", "Link the app to the website")} texto=${t("Con tu cuenta de la liga verás a tus amigos conectados y podrás invitarlos a tu sala con un clic.", "See your friends online and invite them in one click.")}>

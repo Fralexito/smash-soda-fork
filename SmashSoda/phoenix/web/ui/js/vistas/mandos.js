@@ -10,12 +10,10 @@ import { BloqueoNuevo } from "./botones.js";
 import { MarionetasNuevo } from "./marionetas.js";
 import { TecladoNuevo } from "./teclado.js";
 import { MapeoNuevo } from "./mapeo.js";
-import { PerfilesPes } from "./perfiles.js";
 import { Tarjeta, Titulo, Boton, Interruptor, Ajuste, AjusteSw, Stepper, Icono, Vacio, Avatar, Chip, colorPing, cx, dos } from "../ui.js";
 
 export const PESTANAS_MANDOS = [
   { id: "puestos", es: "PUESTOS", en: "SEATS", d: ["Arrastra a cada persona a un puesto, o toca «Asignar». Lo que dejes en «Mirando» solo ve la partida.", "Drag each person to a seat, or tap Assign. Anyone in Watching only watches."] },
-  { id: "perfiles", es: "PERFILES PES", en: "PES PROFILES", d: ["El nombre y la configuración de cada persona en PES (comandos, cursor, pases…). Cuando se sienta, Link se lo pone solo.", "Each person's name and settings in PES (buttons, cursor, passing…). When they sit, Link applies them automatically."] },
   { id: "marionetas", es: "TU MANDO", en: "YOUR PAD", d: ["Elige el mando con el que juegas tú y cuántos mandos ve el juego.", "Pick the pad you play with and how many pads the game sees."] },
   { id: "mapeo", es: "MAPEO", en: "MAPPING", d: ["Corrige el mando de cada invitado: botones cambiados, stick que camina solo, sticks al revés, gatillos raros.", "Fix each guest's pad: swapped buttons, drifting stick, inverted sticks, odd triggers."] },
   { id: "teclado", es: "TECLADO", en: "KEYBOARD", d: ["Quién puede jugar con teclado y qué tecla es cada botón del mando.", "Who can play with keyboard and which key is each pad button."] },
@@ -36,7 +34,6 @@ export function VistaMandos({ s, pestana }) {
   const m = s.motor;
   if (!m || !m.mandos) return html`<${Vacio} titulo=${t("Conectando…", "Connecting…")} texto=""/>`;
   switch (pestana) {
-    case "perfiles": return html`<${PerfilesPes}/>`;
     case "mapeo": return html`<${MapeoNuevo} m=${m}/>`;
     case "teclado": return html`<${TecladoNuevo} m=${m}/>`;
     case "turnos": return html`<${Turnos} m=${m}/>`;

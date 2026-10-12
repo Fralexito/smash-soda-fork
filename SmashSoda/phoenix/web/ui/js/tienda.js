@@ -20,7 +20,7 @@ let estado = {
   leidoGlobal: null,       // id del último mensaje general ya visto (null = aún sin historial)
   chatAbierto: false,
   seccion: "sala",
-  pestanas: { sala: "resumen", partido: "vivo", mandos: "puestos", gente: "sala", sync: "puente", ajustes: "general" },
+  pestanas: { sala: "resumen", jugar: "salas", partido: "vivo", mandos: "puestos", gente: "sala", sync: "puente", ajustes: "general" },
   avisos: [],              // toasts
   dialogo: null,           // { titulo, texto, botones:[{texto, tipo, valor}], resolver }
   paleta: false,

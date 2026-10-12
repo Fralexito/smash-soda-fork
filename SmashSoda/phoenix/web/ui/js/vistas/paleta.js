@@ -47,6 +47,10 @@ function opciones(m) {
   ir("sala", "opciones", "Sala · Opciones", "Room · Options", "sala");
   ir("sala", "juegos", "Sala · Juegos", "Room · Games", "sala");
   ir("sala", "red", "Sala · Conexión (diagnóstico y ping)", "Room · Connection (diagnostics & ping)", "red");
+  ir("jugar", "salas", "Jugar · Salas abiertas", "Play · Open rooms", "sala");
+  ir("jugar", "amigos", "Jugar · Amigos de la web", "Play · Friends", "web");
+  ir("jugar", "perfiles", "Jugar · Perfil PES (nombre y opciones)", "Play · PES profile (name and options)", "mandos");
+  ir("jugar", "puesto", "Jugar · Mi puesto al jugar", "Play · My seat when playing", "mandos");
   ir("partido", "vivo", "Partido · Marcador", "Match · Scoreboard", "partido");
   ir("partido", "historial", "Partido · Historial y tabla", "Match · History", "trofeo");
   ir("mandos", "puestos", "Mandos · Puestos", "Pads · Seats", "mandos");
@@ -56,7 +60,6 @@ function opciones(m) {
   ir("mandos", "bloqueo", "Mandos · Bloqueo", "Pads · Lock", "candado");
   ir("gente", "sala", "Gente · En sala", "People · In room", "gente");
   ir("gente", "moderacion", "Gente · Moderación y baneos", "People · Moderation", "gente");
-  ir("gente", "amigos", "Gente · Amigos de la web", "People · Friends", "web");
   ir("gente", "permisos", "Gente · Permisos por rol", "People · Permissions", "gente");
   ir("sync", "puente", "Sync · Puente con el juego", "Sync · Game bridge", "web");
   ir("sync", "web", "Sync · Cuenta web (vincular)", "Sync · Web account (link)", "web");
