@@ -71,9 +71,9 @@ Para elegir el Usuario correcto al sentarse alguien en vivo haría falta tocar l
 ❓ No localizado. Pistas verificadas: clases/menús `PDSelect`, `OnlineGuestUserPDSelect`, `MatchPDSettingSelectUser`, `ExhibitionUserDataDoalog`; el `pad_no` y `side` viajan juntos con `personal_data` en el mensaje `CMD_USER_DATA_SYNC`. Buen punto de partida para buscar estructuras con `pad_no`/`side`/índice de usuario (0–31) durante la pantalla de asignación.
 
 ### Prueba segura que se pide a Fralex (nada se escribe en PES)
-1. Con PES cerrado: ejecutar `toolsprueba-zztestANTES.bat` (respaldo con sello + listado de todas las carpetas de guardado).
+1. Con PES cerrado: ejecutar `tools/prueba-zztest/ANTES.bat` (respaldo con sello + listado de todas las carpetas de guardado).
 2. Abrir PES, ir a Datos personales, editar un Usuario libre (p. ej. el 32): ponerle nombre **ZZTEST** y cambiar un botón reconocible (p. ej. pase ↔ disparo). Salir de PES por completo.
-3. Repetir el `dir` (`despues.txt`) y pasar ambos: el archivo cuya hora/tamaño cambió es el de los Usuarios. Con una copia de él se busca «ZZTEST» y se determina formato, tamaño de entrada y si el 32 es un tamaño de tabla.
+3. Ejecutar `tools/prueba-zztest/DESPUES.bat`: escribe `INFORME.txt` en el Escritorio (carpeta ZZTEST) con los archivos cambiados. Con una copia del archivo cambiado se busca «ZZTEST» y se determina formato, tamaño de entrada y si el 32 es un tamaño de tabla.
 
 ---
 
