@@ -147,6 +147,16 @@ int main(int argc, char** argv) {
 		std::vector<std::string> con = { idsSint[39], idsSint[20] };
 		CHECK(prepararSala(real, b, con, s(), ib, err) && !ib.avisos.empty(), "un id que ya no existe se avisa y se sigue");
 	}
+	// 10) un Usuario con 0xFF en el nombre (PES lo deja en huecos sin usar): se trata como «sin nombre» y la base se sigue pudiendo guardar
+	{
+		Guardado gc; Guardado::abrir(real, gc, err);
+		auto u = gc.usuario(20); u.bytes[4] = 0xFF; u.bytes[5] = 0;
+		CHECK(gc.ponerUsuario(20, u.bytes, err) && gc.reemplazar(real, s(), err), "simular nombre 0xFF: " + err);
+		Informe ix;
+		CHECK(traerDePes(real, b, s(), ix, err), "traer con un nombre 0xFF: " + err);
+		CHECK(b.guardar(s(), err), "la base se guarda con un Usuario de nombre 0xFF: " + err);
+		CHECK(!utf8Valido(std::string("\xFF")) && utf8Valido(std::string("Jos\xC3\xA9")), "utf8Valido");
+	}
 	CHECK(leer(orig) == bytesOrig, "el original no se toco");
 	std::cout << (fallos ? "FALLAS: " + std::to_string(fallos) : std::string("TODO OK")) << "\n";
 	return fallos ? 1 : 0;

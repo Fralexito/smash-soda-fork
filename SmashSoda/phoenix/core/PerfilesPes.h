@@ -73,6 +73,9 @@ namespace phoenix::perfilespes {
 		std::vector<uint8_t> _datos;
 	};
 
+	/// ¿Es texto UTF-8 válido? (PES deja a veces bytes 0xFF en nombres de huecos sin usar: no sirven como nombre ni para JSON)
+	bool utf8Valido(const std::string& texto);
+
 	/// ¿Tiene un registro forma de Usuario? (u32 inicial 0/1, nombre imprimible terminado en 0, tamaño exacto)
 	bool registroValido(const std::vector<uint8_t>& registro, std::string& motivo);
 

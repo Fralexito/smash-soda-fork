@@ -56,6 +56,23 @@ namespace phoenix::perfilespes {
 		}
 	}
 
+	bool utf8Valido(const std::string& s) {
+		size_t i = 0;
+		while (i < s.size()) {
+			const unsigned char c = static_cast<unsigned char>(s[i]);
+			size_t n = 0;
+			if (c < 0x80) n = 1;
+			else if (c >= 0xC2 && c <= 0xDF) n = 2;
+			else if (c >= 0xE0 && c <= 0xEF) n = 3;
+			else if (c >= 0xF0 && c <= 0xF4) n = 4;
+			else return false;
+			if (i + n > s.size()) return false;
+			for (size_t k = 1; k < n; k++) if ((static_cast<unsigned char>(s[i + k]) & 0xC0) != 0x80) return false;
+			i += n;
+		}
+		return true;
+	}
+
 	bool registroValido(const std::vector<uint8_t>& r, std::string& motivo) {
 		if (r.size() != kTamUsuario) { motivo = "el registro debe medir " + std::to_string(kTamUsuario) + " bytes"; return false; }
 		// +0 es una marca pequeña (0 o 1 en los 32 Usuarios vistos); el nombre termina en 0 y PES puede dejar restos detrás (p. ej. «JOAO\0N»).
@@ -110,6 +127,7 @@ namespace phoenix::perfilespes {
 		const size_t ini = kInicioTabla + size_t(indice) * kTamUsuario;
 		u.bytes.assign(_datos.begin() + ini, _datos.begin() + ini + kTamUsuario);
 		u.nombre = textoHasta0(u.bytes.data() + 4, kTamNombre);
+		if (!utf8Valido(u.nombre)) u.nombre.clear();   // p. ej. 0xFF en huecos sin usar: se trata como «sin nombre»
 		return u;
 	}
 

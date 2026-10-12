@@ -302,7 +302,7 @@ namespace phoenix::web {
 		// ---- EN VIVO (prueba, beta): poner el perfil de un amigo en el Usuario que tiene un mando, con PES ABIERTO ----
 		// Usa la memoria de PES (core/UsuariosEnVivo.h). Solo escribe el registro de UN Usuario; guarda antes lo que había (en Link y aquí)
 		// y lo restaura con perfiles.restaurar. Nunca toca archivos de guardado.
-		auto nombreDeRegistro = [](const std::vector<uint8_t>& reg) { size_t n = 0; while (n < pp::kTamNombre && reg[4 + n]) n++; return std::string(reinterpret_cast<const char*>(&reg[4]), n); };
+		auto nombreDeRegistro = [](const std::vector<uint8_t>& reg) { size_t n = 0; while (n < pp::kTamNombre && reg[4 + n]) n++; std::string s(reinterpret_cast<const char*>(&reg[4]), n); return pp::utf8Valido(s) ? s : std::string(); };
 
 		p.registrar("perfiles.mandos", [nombreDeRegistro](const json&, uint64_t) -> std::optional<json> {
 			std::lock_guard<std::mutex> g(mtxPerfiles);
