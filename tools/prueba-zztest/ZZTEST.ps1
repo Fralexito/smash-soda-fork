@@ -21,6 +21,9 @@ $roots = @(
 foreach($u in Get-ChildItem (Split-Path $env:USERPROFILE) -Directory -ErrorAction SilentlyContinue){
   $roots += "$($u.FullName)\Documents\KONAMI","$($u.FullName)\OneDrive\Documents\KONAMI","$($u.FullName)\AppData\Roaming\CPY_SAVES"
 }
+# Documentos reales de Windows (pueden estar redirigidos a otro disco, p. ej. D:\Users\...\Documents) y carpetas Users de todos los discos
+$roots += (Join-Path ([Environment]::GetFolderPath('MyDocuments')) 'KONAMI')
+foreach($dr in (Get-PSDrive -PSProvider FileSystem).Root){ $ud = Join-Path $dr 'Users'; if(Test-Path $ud){ foreach($u in Get-ChildItem $ud -Directory -ErrorAction SilentlyContinue){ $roots += "$($u.FullName)\Documents\KONAMI","$($u.FullName)\OneDrive\Documents\KONAMI" } } }
 $roots = $roots | ?{ $_ } | select -Unique | ?{ Test-Path $_ }
 # Carpeta del juego (se pide una vez y se recuerda): solo se mira, p. ej. settings.dat o save\
 $cfg = "$out\ruta-juego.txt"
@@ -46,7 +49,7 @@ $snap = Foto
 if($Fase -eq 'antes'){
   $sello = Get-Date -Format 'yyyy-MM-dd_HH-mm-ss'
   $dest = "$out\respaldo-$sello"
-  foreach($f in $snap){ $rel = $f.Path -replace '^[A-Za-z]:','' -replace '^[\\/]',''; $d = Join-Path $dest $rel; New-Item -ItemType Directory -Force (Split-Path $d) | Out-Null; Copy-Item $f.Path $d -Force -ErrorAction SilentlyContinue }
+  foreach($f in ($snap | ?{ $_.Size -lt 25MB -and $_.Path -notmatch '\.(rar|zip)$' })){ $rel = $f.Path -replace '^[A-Za-z]:','' -replace '^[\\/]',''; $d = Join-Path $dest $rel; New-Item -ItemType Directory -Force (Split-Path $d) | Out-Null; Copy-Item $f.Path $d -Force -ErrorAction SilentlyContinue }
   $snap | Export-Csv "$out\antes.csv" -NoTypeInformation -Encoding UTF8
   $snap | select Time,Size,Path | Sort-Object Path | Format-Table -AutoSize | Out-String -Width 300 | Set-Content "$out\listado-antes.txt"
   "Carpetas revisadas:`n$($roots -join "`n")" | Set-Content "$out\carpetas.txt"

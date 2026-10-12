@@ -90,3 +90,16 @@ Esto confirma que el Usuario = **perfil de ajustes + nombre**, no datos de parti
 ### Consecuencia práctica
 - **El nombre** (lo más importante para Fralex) se puede resolver **fuera de PES**: Link ya sabe quién ocupa cada puesto; basta mostrar «puesto N = nombre del amigo» en la UI de Link/overlay/web. Eso no depende de los 32 ni toca el juego.
 - **La configuración de botones/ayudas** de cada amigo es lo que sí vive en PES. Con >32 amigos, la vía segura es (B) rotación con PES cerrado (si la prueba ZZTEST confirma que está en un archivo), guardando los perfiles en la base de Link por Parsec ID.
+
+---
+
+## 8. Resultado de la primera prueba (12 oct, ~13:17) y hallazgos
+
+- ✅ La carpeta real de guardado de Fralex **no** está en `C:\Users\...`: es `D:\Users\Alexander\Documents\KONAMI\eFootball PES 2021 SEASON UPDATE\<SteamID>\save` (239200, 239201, 239202…) y `settings.dat` está un nivel arriba. **El primer ANTES/DESPUES miró solo `C:\Users` y por eso salió vacío** (INFORME sin cambios). Corregido en `ZZTEST.ps1` (usa la carpeta Documentos real de Windows y las carpetas Users de todos los discos).
+- ✅ Ese mismo día PES estuvo abierto (13:17–13:19, según `sider.log`) y **ningún archivo de `D:\Users` cambió** (solo `settings.dat`, a las 12:34, que es de Link). Es decir: la edición del Usuario no llegó a escribirse en disco, o se guarda solo en otro momento. ❓ Pendiente preguntar a Fralex si pulsó Confirmar y si vio «Guardando».
+- ✅ Archivos de `save\`: `EDIT`, `ML`, `CUP`, `BL`, `REPLAY`, `FILELIST`, `GRAPHICS000000` (19 B) y **`SYSTEM00000000`** (239.764 B, tamaño fijo en todos los perfiles = tabla fija).
+- ✅ `SYSTEM00000000` se abre con el mismo cifrado que EDIT/ML (probado con `SobrePes`, en COPIAS en el scratchpad): tipo `SYSTEM`, 219.568 B de datos. Contiene el **nombre del perfil de Steam/jugador («FRALEX», offset 84)** y datos de equipo favorito («FC Barcelona»…). Cabecera `10, 0x50, 0x35960, 0x29CE, 700, 700` (misma familia que `ML`).
+- ❌ La cadena «Usuario» y «ZZTEST» **no están** en el `SYSTEM00000000` de 239200/239201 (datos descifrados). Así que o los Datos personales se guardan en otro sitio o están en binario/UTF-16 distinto, o el SYSTEM de hoy no se escribió.
+- ✅ Los `SYSTEM00000000` de IDs distintos (239200 y 239201) difieren en ~6.900 bytes: hay datos propios por perfil.
+
+Pendiente: repetir la prueba con el script corregido y confirmando el guardado en PES.
