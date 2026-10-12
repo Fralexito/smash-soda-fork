@@ -57,3 +57,11 @@ Admin (HidHide, cfgmgr32), estabilidad (pads deshabilitados al cerrarse mal Link
 ## 5. Fuentes y límites
 - Búsqueda web amplia: poca información útil para PES 2021 multi-mando; todo lo de comportamiento queda como suposición hasta las pruebas.
 - Docs previos: `ORDEN-MANDOS-PES.md`, `INVESTIGACION-CURSOR-MANDO.md`, `DETECCION-LADOS.md`.
+
+## 6. Ronda 2 de búsqueda (12 oct): ¿existe alguna manera?
+
+- **[EVIDENCIA]** Existe una herramienta pública con la misma idea que Link: <https://github.com/KOUFU-DIY/PES2021-Setting-Pro> (8 mandos Xbox virtuales persistentes con ViGEmBus + escribe `settings.dat`, copia `.bak`, juego y Settings cerrados). Ofrece «desactivar un número concreto» y reordenar, pero **no** oculta/muestra pads en vivo ni habla de colores. Confirma que el enfoque de Link (pads fijos + casillas) es el camino que sigue la comunidad.
+- **[EVIDENCIA]** Parsec crea el mando del invitado cuando este pulsa botones (<https://support.parsec.app/hc/en-us/articles/32381826078868-Controller-Isn-t-Working-in-the-Game>): es el comportamiento «aparece al ocuparse» de Parsec puro, pero es justo lo que reordena los GUID; Link lo evita a propósito.
+- **[EVIDENCIA indirecta, baja]** Reportes de PES 2018/2020 dicen que hay que reenchufar el pad dentro del juego tras configurarlo (<https://steamcommunity.com/app/592580/discussions/0/2765630416809431049>): sugiere que PES no re-enumera bien en caliente. Nada específico de PES 2021.
+- **Color:** no apareció ningún offset ni textura documentada del cursor 1P/2P. Solo guías de color de texto del `.exe` y el pack de cursores de moukos13 (3 cursores de colores numerados 1-3 «para varios jugadores»; la página no dice si el número es por mando o por lado). Ver <https://www.pesmodding.com/2023/01/new-pes-2021-ingame-cursors-retro-pack.html>.
+- **Conclusión de la ronda 2:** no existe una vía documentada mejor que la de §1b. La única pista abierta para color es que el pack de cursores usa texturas numeradas: si la prueba B muestra que el color sigue al número de jugador, un pack de texturas propio daría «mando 1 rojo, mando 2 azul» sin tocar memoria.
