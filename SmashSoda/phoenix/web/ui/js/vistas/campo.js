@@ -47,7 +47,7 @@ const COLOR = { 0: "var(--acc)", 1: "var(--eq-b, #b07bff)", 2: "#f5c451", "-1": 
 const NOMBRE_EQ = { 0: ["Equipo A", "Team A"], 1: ["Equipo B", "Team B"] };
 
 /** Dibuja el campo y mueve las fichitas con suavidad (animación directa sobre el SVG, sin redibujar Preact). */
-export function CampoSvg({ alTanda }) {
+export function CampoSvg({ alTanda, alColores }) {
   const refs = useRef({ puntos: [], bola: null, obj: { j: [], b: null }, cur: { j: [], b: null }, t0: 0 });
   const [n, setN] = useState(0);
   const [clave, setClave] = useState("");
@@ -57,8 +57,10 @@ export function CampoSvg({ alTanda }) {
     const quitar = oirCampo((d) => {
       R.obj = { j: d.j || [], b: d.b || null };
       setFase(d.f || "vivo");
+      R.col = Array.isArray(d.c) && d.c.length === 2 && d.c.every((x) => /^#[0-9a-fA-F]{6}$/.test(x)) ? d.c : null;   // colores de camiseta (Link ≥ 0.2.30)
+      if (alColores) alColores(R.col);
       // Solo se redibuja con Preact si cambia el número de fichitas o algún equipo (colores); el movimiento va aparte
-      const k = (d.j || []).map((p) => p[2]).join(",");
+      const k = (d.j || []).map((p) => p[2]).join(",") + "|" + (R.col ? R.col.join() : "");
       if (k !== clave) { setClave(k); setN((d.j || []).length); }
       if (alTanda) alTanda(d.t || null);
     });
@@ -97,7 +99,7 @@ export function CampoSvg({ alTanda }) {
   for (let i = 0; i < Math.max(n, 0); i++) {
     const eq = R.obj.j[i] ? R.obj.j[i][2] : -1;
     const ref = (el) => { R.puntos[i] = el; };
-    pts.push(html`<circle key=${i} ref=${ref} r=${eq === 2 ? 0.9 : 1.35} fill=${COLOR[eq] || COLOR[-1]}
+    pts.push(html`<circle key=${i} ref=${ref} r=${eq === 2 ? 0.9 : 1.35} fill=${(eq === 0 || eq === 1) && R.col ? R.col[eq] : COLOR[eq] || COLOR[-1]}
       stroke="rgba(0,0,0,.55)" stroke-width="0.25" cx="0" cy="0"/>`);
   }
   const ETIQ = { repeticion: ["REPETICIÓN", "REPLAY"], otro: ["SIN LECTURA EN VIVO", "NO LIVE READING"], pausa: ["PAUSA", "PAUSED"] };
@@ -146,6 +148,9 @@ function Tanda({ tanda }) {
 export function CampoEnVivo({ m }) {
   const c = m.campo || { estado: "apagado", motivo: "" };
   const [tanda, setTanda] = useState(null);
+  const [cols, setCols] = useState(null);
+  const colorEq = (i) => (cols ? cols[i] : COLOR[i]);
+  const alColores = (c) => setCols((prev) => ((prev ? prev.join() : "") === (c ? c.join() : "") ? prev : c));
   useEffect(() => {
     accion("campo.vivo", { si: true }, { silencioso: true });
     return () => { accion("campo.vivo", { si: false }, { silencioso: true }); };
@@ -165,13 +170,13 @@ export function CampoEnVivo({ m }) {
         ${!activo && msg ? html`<span class="mut" style="font-size:12px">${t(msg[0], msg[1])}${c.estado === "buscando" ? t(" (la primera vez tarda ~20 s)", " (the first time takes ~20 s)") : ""}${c.motivo ? html` <span class="mono">(${c.motivo})</span>` : null}</span>` : null}
         ${c.jugadores ? html`<span class="mut mono" style="font-size:12px">${c.jugadores} ${t("fichitas", "pieces")}${c.balon ? " · " + t("balón", "ball") : ""}</span>` : null}
         ${activo ? html`<span style="display:flex;gap:12px;align-items:center;margin-left:auto;font-size:12px" class="mut">
-          <span><span style=${`display:inline-block;width:10px;height:10px;border-radius:50%;background:${COLOR[0]};vertical-align:-1px;margin-right:5px`}></span>${t("Equipo A (izq. al empezar)", "Team A (left at kick-off)")}</span>
-          <span><span style=${`display:inline-block;width:10px;height:10px;border-radius:50%;background:${COLOR[1]};vertical-align:-1px;margin-right:5px`}></span>${t("Equipo B", "Team B")}</span>
+          <span><span style=${`display:inline-block;width:10px;height:10px;border-radius:50%;background:${colorEq(0)};vertical-align:-1px;margin-right:5px`}></span>${t("Equipo A (izq. al empezar)", "Team A (left at kick-off)")}</span>
+          <span><span style=${`display:inline-block;width:10px;height:10px;border-radius:50%;background:${colorEq(1)};vertical-align:-1px;margin-right:5px`}></span>${t("Equipo B", "Team B")}</span>
           <span><span style=${`display:inline-block;width:10px;height:10px;border-radius:50%;background:${COLOR[2]};vertical-align:-1px;margin-right:5px`}></span>${t("Árbitros", "Officials")}</span>
         </span>` : null}
       </div>
       <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
-        <div style="flex:1 1 420px;max-width:680px;min-width:0"><${CampoSvg} alTanda=${alTanda}/></div>
+        <div style="flex:1 1 420px;max-width:680px;min-width:0"><${CampoSvg} alTanda=${alTanda} alColores=${alColores}/></div>
         <div style="flex:1 1 220px;min-width:200px;border:1px dashed var(--tenue);border-radius:12px;padding:14px">
           <b>${t("Estadísticas del partido", "Match stats")}</b>
           <div class="ayuda" style="margin-top:6px;font-size:12px">${t("Aquí irán disparos, córners, faltas, tarjetas, cambios y más cuando Link los pueda leer.", "Shots, corners, fouls, cards, subs and more will go here once Link can read them.")}</div>

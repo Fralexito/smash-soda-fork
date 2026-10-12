@@ -27,6 +27,7 @@
 #include "../core/ProveedorSala.h"
 #include "../host/Cedido.h"
 #include "../host/CampoVivo.h"
+#include "../core/ColoresClub.h"
 
 namespace phoenix::web {
 
@@ -319,6 +320,16 @@ namespace phoenix::web {
 						json j = json::array();
 						for (const phoenix::campo::Pieza& p : fc.j) j.push_back({ std::round(p.x * 10.0f) / 10.0f, std::round(p.z * 10.0f) / 10.0f, p.eq });
 						json ev = { {"j", j}, {"b", fc.hayBola ? json::array({ std::round(fc.bx * 10.0f) / 10.0f, std::round(fc.bz * 10.0f) / 10.0f, std::round(fc.by * 100.0f) / 100.0f }) : json(nullptr)} };
+						{
+							// Colores de cada equipo según su camiseta (nombre que da el juego; A = local del juego). Se recalculan cada 2 s.
+							static std::string nomA, nomB; static phoenix::campo::ColoresPartido col; static double tCol = -100.0;
+							if (ahora - tCol >= 2.0) {
+								tCol = ahora;
+								const juego::EstadoPartidoJuego ej = PhoenixLink::instancia().estadoJuego();
+								if (ej.nombreLocal != nomA || ej.nombreVisita != nomB) { nomA = ej.nombreLocal; nomB = ej.nombreVisita; col = phoenix::campo::coloresDelPartido(nomA, nomB); }
+							}
+							if (col.conocidoA || col.conocidoB) ev["c"] = json::array({ col.a, col.b });
+						}
 						if (fc.fase != "vivo") ev["f"] = fc.fase;   // repeticion | otro | pausa: la web/tarjeta ponen etiqueta; las posiciones van congeladas
 						if (fc.tanda.activa) {
 							json l = json::array();

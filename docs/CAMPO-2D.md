@@ -68,3 +68,12 @@ Problema (Fralex, repetición de un gol): las fichitas desaparecían. Causa: dur
 - Web: el tablero debe hacer lo mismo con `fase` (≠ `vivo`: congelar y mostrar la etiqueta). La posesión no se calcula fuera de `vivo`.
 - Lados automáticos no reciben lecturas de `repeticion`/`otro`.
 - La celebración de gol no tiene fase propia: si el balón sigue en juego (|z| ≤ 40) se ve como `vivo` con las posiciones reales; si el juego lo aparca, como `repeticion`. No verificado con partido real (pendiente probar con una repetición y celebración en vivo).
+
+## 0.2.30 · Colores de camiseta por equipo
+
+Fralex: «adapta el color de cada equipo según su color referente». Cada equipo se pinta con el color de su camiseta principal, sacado del **nombre del equipo que da el juego** (`phoenix_referee`: `nombreLocal`/`nombreVisita`).
+- Tabla en `core/ColoresClub.{h,cpp}` (≈100 entradas: selecciones de CONMEBOL y grandes, clubes peruanos, sudamericanos y europeos; color principal + secundario; busca por trozo del nombre sin tildes, y por palabra entera si la clave es corta: «usa», «roma», «inter»). Prueba: `pruebas-link/colores_test.cpp`.
+- Reglas: un color demasiado oscuro (negro, azul marino) se sustituye por el secundario o por gris azulado; si los dos equipos quedan parecidos (distancia RGB < 110) el segundo usa su secundario y, si sigue parecido, el violeta/cian/amarillo más lejano; nombre desconocido = cian (A) / violeta (B) de siempre. Árbitros siguen amarillos.
+- **A = local del juego** (se asume; si Link detectara que A es en realidad el visitante, los colores irían cruzados: es el mismo asunto abierto que «lados» y «eq_local»).
+- Protocolo: el evento `campo` y `POST /v1/liga/campo` traen `c:["#rrggbb","#rrggbb"]` (A, B) solo si al menos un nombre se reconoce. Tarjeta de Link: fichitas y leyenda con esos colores. Web: Edge `liga` 1.3.1 (v5) deja pasar `c` y el tablero (`features/liga/campoVivo.js`) los usa (repo `pes-liga-automatica`, commit `7f2b9c2`).
+- Para añadir un club: una línea en `kTabla` (clave normalizada en minúsculas sin tildes, principal, secundario) y un caso en la prueba.
