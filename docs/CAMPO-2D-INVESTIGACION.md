@@ -118,3 +118,27 @@ Comprobado con un saque de centro congelado (captura + memoria en el mismo insta
 - Penales: en Opciones gener. (antes del partido) «Pen.» y «Prórroga» están en «Sí», así que con un 0–0 y 5 min se llega a una tanda
   (el balón queda quieto en el punto penal = referencia perfecta para el balón); no se llegó a probar.
 - Herramientas nuevas en `tools/radar/`: `vigilante.cpp` (congela el juego al detectar un saque), `entes3.cpp` (firma relajada: porteros, árbitro, balón).
+
+## 8. 11 oct por la noche (segunda tanda): balón, porteros, equipo y TANDA DE PENALES — cerrado
+
+Partido Barça–City en ventana (0:00 → 1-1 → tanda de penales), con captura congelada del saque y 3 minutos de grabación
+de la tanda a 20 lecturas/s (`tools/radar/sondaL.cpp`, capturas cada 4 s).
+
+- **Balón del partido = un actor fijo todo el partido**: `+248 = 0`, `+312 = 1`, `+492 = 0x10001`, posición en +208 con
+  `y ≈ 0.11` (radio) y hasta ~1 m al golpearlo. Se **aparca en z = 100** durante las repeticiones y vuelve a (0, 0.11, 0)
+  en el saque. Hay otros balones (`code` 6 y 9, de los recogepelotas) con la misma forma: el del partido es **el que se mueve**.
+- **Porteros**: actores aparte de las listas (`+248 = 0x18`, `+312 = 1`, `+492 = 0x80001` o `0x10001`), dos copias por
+  portero; en el saque están en x = ±47.
+- **Equipo**: no está en el actor; se reparte en el saque de centro (izquierda → A, derecha → B; los del círculo central
+  → el equipo que saca = el que tiene menos jugadores en su mitad) y se recuerda por dirección. Comprobado con la foto del
+  saque: los rivales se pegan a la línea de medio campo (x ≈ 1–2 m), por eso «centro» es solo el círculo del balón (< 2.5 m).
+- **Árbitro**: en el saque se coloca clavado en (±4.8, ±10.0) (dos partidos, misma décima). Un rival puede quedar cerca
+  ((4.0, −9.3)): tolerancia de 0.7 m en total y, si hay varios, el más exacto.
+- **Tras el pitido / en la tanda** `+312` de los jugadores pasa de 2 a **0** (y el de los porteros de 1 a 0): la firma lo admite.
+  Los que esperan se colocan en el círculo central o **fuera de la banda (z ≈ 40–45)**: el límite de posición válida sube a |z| ≤ 50.
+- **Tanda de penales** (4 lanzamientos grabados, todos gol): el balón se queda en el punto penal (−41.6, 0.11, 0.0); el pateador
+  es un actor normal que camina desde el círculo (su identidad se mantiene → su equipo); el portero que ataja es el que está
+  en la línea (|x| > 50, |z| < 4) y los dos se alternan; al golpear, el balón cruza x ≤ −52.5 con |z| < 3.66 y y < 2.44 (gol)
+  y vuelve al punto para el siguiente. En Link: `core/CampoVivo.h` clase `Tanda` (probada con un penal real en `campo_test`).
+- **Nombres de los lanzadores**: aún no (no hay nombre ni dorsal reconocible en el actor; la tabla de registros de +416 no
+  lo separa). Pendiente.

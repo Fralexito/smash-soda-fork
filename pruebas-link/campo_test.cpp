@@ -1,10 +1,10 @@
 // Prueba de la lógica pura del campo 2D (core/CampoVivo). Con la variable PHX_CAMPO_RAW apuntando a un volcado
 // «RAW <dir> <160 palabras en hex>» (salida de tools/radar/entes.exe raw) también prueba con objetos reales del juego.
 #include <cstdio>
-#include <limits>
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
+#include <limits>
 #include <sstream>
 #include <vector>
 
@@ -18,44 +18,124 @@ static int fallos = 0;
 static void poner32(std::vector<uint8_t>& o, uint32_t off, uint32_t v) { std::memcpy(o.data() + off, &v, 4); }
 static void ponerF(std::vector<uint8_t>& o, uint32_t off, float v) { std::memcpy(o.data() + off, &v, 4); }
 
-static std::vector<uint8_t> actor(uint32_t equipoIA, float x, float y, float z) {
+static std::vector<uint8_t> base(uint32_t codigo, uint32_t tipo, uint32_t lado, uint32_t marca, float x, float y, float z) {
 	std::vector<uint8_t> o(kBytesObjeto, 0);
-	poner32(o, kOffTipo, 0x18); poner32(o, kOffLado, 1); poner32(o, kOffMarca, 0x80001);
-	poner32(o, kOffCodigo, (equipoIA << 16) | 3);
+	poner32(o, kOffTipo, tipo); poner32(o, kOffLado, lado); poner32(o, kOffMarca, marca);
+	poner32(o, kOffCodigo, (codigo << 16) | 3);
 	poner32(o, kOffReg0, 0x10); poner32(o, kOffReg3, 0xDEAD);
 	ponerF(o, kOffPosicion, x); ponerF(o, kOffPosicion + 4, y); ponerF(o, kOffPosicion + 8, z); ponerF(o, kOffPosicion + 12, 1.0f);
 	return o;
 }
+static std::vector<uint8_t> actor(uint32_t equipoIA, float x, float y, float z) { return base(equipoIA, 0x18, 2, 0x80002, x, y, z); }
+static std::vector<uint8_t> portero(float x) { return base(431, 0x18, 1, 0x80001, x, 1.1f, 0.2f); }
+static std::vector<uint8_t> balon(float x, float y, float z) { return base(280, 0, 1, 0x10001, x, y, z); }
+
+static Actor A(uint64_t dir, float x, float z, Clase c = Clase::Campo) { Actor a; a.dir = dir; a.x = x; a.y = 0.9f; a.z = z; a.clase = c; return a; }
 
 int main() {
-	// --- firma sintética ---
+	// --- firmas sintéticas ---
 	Actor a;
 	CHEQUEA(leerActor(actor(44, 10.5f, 0.9f, -3.2f).data(), a));
-	CHEQUEA(a.codigo == 44 && a.x == 10.5f && a.z == -3.2f);
+	CHEQUEA(a.codigo == 44 && a.x == 10.5f && a.z == -3.2f && a.clase == Clase::Campo);
 	{ auto o = actor(44, 1, 0.9f, 1); poner32(o, kOffTipo, 0x8); CHEQUEA(!leerActor(o.data(), a)); }          // otro tipo
-	{ auto o = actor(44, 1, 0.9f, 1); poner32(o, kOffMarca, 0x80002); CHEQUEA(!leerActor(o.data(), a)); }      // marca no cuadra
+	{ auto o = actor(44, 1, 0.9f, 1); poner32(o, kOffMarca, 0x80001); CHEQUEA(!leerActor(o.data(), a)); }      // marca de portero, no de campo
 	{ auto o = actor(44, 1, 0.9f, 1); poner32(o, kOffReg3, 0x55EF); CHEQUEA(!leerActor(o.data(), a)); }        // actor obsoleto
 	{ auto o = actor(44, 1, 0.9f, 1); ponerF(o, kOffPosicion + 12, 0.0f); CHEQUEA(!leerActor(o.data(), a)); }  // w != 1
 	{ auto o = actor(44, 99.0f, 0.9f, 1); CHEQUEA(!leerActor(o.data(), a)); }                                   // fuera del campo
 	{ auto o = actor(44, 1, 0.9f, 1); ponerF(o, kOffPosicion, std::numeric_limits<float>::quiet_NaN()); CHEQUEA(!leerActor(o.data(), a)); } // NaN
 	{ auto o = actor(44, 1, 0.0f, 1); CHEQUEA(!leerActor(o.data(), a)); }                                       // y = 0 (cerebro de IA)
+	CHEQUEA(leerPortero(portero(-47.0f).data(), a) && a.clase == Clase::Portero && a.x == -47.0f);
+	CHEQUEA(!leerPortero(actor(44, 1, 0.9f, 1).data(), a));                                                      // un jugador de campo no es portero
+	CHEQUEA(!leerActor(portero(-47.0f).data(), a));                                                               // ni al revés
+	CHEQUEA(leerBalon(balon(0, 0.11f, 0).data(), a) && a.clase == Clase::Balon);
+	CHEQUEA(leerBalon(balon(0, 0.11f, 100.0f).data(), a));                                                        // aparcado en la repetición: sigue siendo candidato
+	CHEQUEA(leerBalon(balon(10, 6.5f, 3).data(), a));                                                             // en el aire
+	CHEQUEA(!leerBalon(balon(0, 0.11f, 60.0f).data(), a));                                                        // ni en el campo ni aparcado
+	CHEQUEA(!leerBalon(actor(44, 0, 0.9f, 0).data(), a));
 	float x, y, z;
 	{ auto o = actor(44, -20.0f, 1.1f, 7.0f); CHEQUEA(leerPosicion(o.data() + kOffPosicion, x, y, z) && x == -20.0f && z == 7.0f); }
 	CHEQUEA(!leerPosicion(std::vector<uint8_t>(16, 0).data(), x, y, z));
+	{ auto o = balon(0, 0.11f, 100.0f); CHEQUEA(leerPosicionBalon(o.data() + kOffPosicion, x, y, z) && z == 100.0f); }
 
-	// --- elegir lista ---
+	// --- elegir lista y porteros ---
 	std::vector<Actor> todos;
-	for (int i = 0; i < 22; i++) { Actor t; t.dir = 1000 + i * 0x500; t.codigo = 44; t.x = float(i); t.y = 0.9f; todos.push_back(t); }
-	for (int i = 0; i < 22; i++) { Actor t; t.dir = 1000 + i * 0x500 + 0x280; t.codigo = 67; t.x = float(i); t.y = 0.9f; todos.push_back(t); }
-	for (int i = 0; i < 2; i++) { Actor t; t.dir = 9999 + i; t.codigo = 1718 + i * 20; t.y = 0.9f; todos.push_back(t); }
+	for (int i = 0; i < 22; i++) { Actor t = A(1000 + i * 0x500, float(i), 0); t.codigo = 44; todos.push_back(t); }
+	for (int i = 0; i < 22; i++) { Actor t = A(1000 + i * 0x500 + 0x280, float(i), 0); t.codigo = 67; todos.push_back(t); }
+	for (int i = 0; i < 2; i++) { Actor t = A(9999 + i, 0, 0); t.codigo = 1718 + i * 20; todos.push_back(t); }
 	auto lista = elegirLista(todos);
 	CHEQUEA(lista.size() == 22 && lista[0].codigo == 44);
 	CHEQUEA(elegirLista({}).empty());
 	{ std::vector<Actor> pocos(todos.begin(), todos.begin() + 10); CHEQUEA(elegirLista(pocos).empty()); }       // lista incompleta: se apaga
+	{
+		std::vector<Actor> gk = { A(10, -47.0f, -0.4f, Clase::Portero), A(11, -47.1f, 0.1f, Clase::Portero), A(12, 46.9f, 0.3f, Clase::Portero), A(13, 46.9f, -0.3f, Clase::Portero) };
+		auto p = elegirPorteros(gk);
+		CHEQUEA(p.size() == 2 && p[0].x < 0 && p[1].x > 0);                                                   // una copia por lado
+	}
 	Actor asis; asis.z = -35.2f; CHEQUEA(pareceAsistente(asis)); asis.z = 20.0f; CHEQUEA(!pareceAsistente(asis));
 	CHEQUEA(exeConocido(458806784ull, "5E27A78246DBE4F1E66CB60EC56E86A739303708B02D4048F6FEC6B570BC224A"));
 	CHEQUEA(!exeConocido(458806785ull, "5E27A78246DBE4F1E66CB60EC56E86A739303708B02D4048F6FEC6B570BC224A"));
 	CHEQUEA(!exeConocido(458806784ull, "AAAA"));
+
+	// --- saque de centro real (Barça–City, 11 oct 2026, 0:00: saca el Barça, que ocupa la izquierda) ---
+	// Lista de IA 44 tal cual la leyó entes.exe (22 actores: faltaba un jugador del Barça en ese barrido) + los dos porteros.
+	const float saque[][2] = {
+		{ -19.2f, -35.4f }, { -4.8f, -10.0f }, { -5.5f, -25.2f }, { -9.7f, 8.2f }, { 4.0f, -9.3f }, { 1.1f, 10.0f }, { 15.7f, -22.7f }, { 19.2f, 35.4f },
+		{ 11.0f, 0.3f }, { -15.6f, 22.8f }, { -19.6f, -6.3f }, { 15.4f, 23.1f }, { -5.7f, 23.8f }, { -19.5f, 5.9f }, { -9.1f, -8.7f }, { 1.8f, -24.3f },
+		{ 9.2f, 8.6f }, { -15.2f, -23.0f }, { 19.3f, 6.2f }, { 19.4f, -5.7f }, { 0.5f, 0.0f }, { 1.4f, 24.4f },
+	};
+	std::vector<Actor> ko;
+	for (size_t i = 0; i < sizeof(saque) / sizeof(saque[0]); i++) ko.push_back(A(100 + i, saque[i][0], saque[i][1]));
+	ko.push_back(A(500, -47.0f, -0.4f, Clase::Portero)); ko.push_back(A(501, 46.9f, 0.3f, Clase::Portero));
+	CHEQUEA(esSaqueDeCentro(ko, 0.0f));
+	CHEQUEA(!esSaqueDeCentro(ko, 0.3f));                                                                        // alguien se mueve: no es el saque
+	{ std::vector<Actor> corro = ko; for (auto& c : corro) if (c.clase == Clase::Campo && !pareceAsistente(c)) c.z = 0; CHEQUEA(!esSaqueDeCentro(corro, 0.0f)); } // todos en una línea: no es formación
+	auto eq = repartirEquipos(ko);
+	CHEQUEA(eq.size() == ko.size());
+	CHEQUEA(eq[0] == kEqArbitro && eq[7] == kEqArbitro);                                                      // asistentes
+	CHEQUEA(eq[1] == kEqArbitro);                                                                              // árbitro en (-4.8, -10)
+	CHEQUEA(eq[20] == kEqA);                                                                                   // el que saca, en el círculo, es del Barça (izquierda)
+	CHEQUEA(eq[2] == kEqA && eq[3] == kEqA && eq[9] == kEqA);
+	CHEQUEA(eq[4] == kEqB && eq[8] == kEqB && eq[21] == kEqB);
+	CHEQUEA(eq[22] == kEqA && eq[23] == kEqB);                                                                 // porteros por su lado
+	int nA = 0, nB = 0; for (size_t i = 0; i < eq.size(); i++) if (eq[i] == kEqA) nA++; else if (eq[i] == kEqB) nB++;
+	CHEQUEA(nA == 10 && nB == 11);                                                                             // 9 + portero (faltaba uno) y 10 + portero
+	{ std::vector<Actor> espejo = ko; for (auto& c : espejo) c.x = -c.x; auto e2 = repartirEquipos(espejo); CHEQUEA(e2[20] == kEqB && e2[1] == kEqArbitro && e2[22] == kEqB); } // saca el de la derecha
+
+
+	// --- tanda de penales: un penal real muestreado (balón, pateador, portero), cada 0,2 s ---
+	{
+		const float pen[][7] = { // bx, by, bz, kx, kz, gx, gz
+			{ -41.6f, 0.11f, 0.0f, -43.2f, -1.5f, -52.4f, -0.8f }, { -41.6f, 0.11f, 0.0f, -43.2f, -1.5f, -52.5f, -0.4f }, { -41.6f, 0.11f, 0.0f, -43.2f, -1.5f, -52.5f, -0.4f },
+			{ -41.6f, 0.11f, 0.0f, -43.2f, -1.5f, -52.4f, -0.5f }, { -41.6f, 0.11f, 0.0f, -43.2f, -1.5f, -52.4f, -0.5f }, { -41.6f, 0.11f, 0.0f, -43.2f, -1.5f, -52.3f, -0.4f },
+			{ -45.6f, 0.56f, -0.9f, -43.2f, -1.5f, -51.4f, 1.2f }, { -50.4f, 0.58f, -2.1f, -43.2f, -1.5f, -52.0f, 2.0f }, { -54.7f, 0.12f, -3.1f, -43.2f, -1.5f, -51.8f, 3.0f },
+			{ -54.7f, 1.09f, -2.8f, -43.2f, -1.5f, -52.3f, 3.6f }, { -53.4f, 0.46f, -2.2f, -43.2f, -1.5f, -51.6f, 4.0f }, { -52.3f, 0.23f, -1.6f, -43.2f, -1.5f, -52.1f, 4.9f },
+			{ -51.5f, 0.11f, -1.1f, -43.2f, -1.5f, -52.1f, 4.9f }, { -51.2f, 0.11f, -0.9f, -43.2f, -1.5f, -51.5f, 4.5f }, { -41.6f, 0.11f, 0.0f, -43.2f, -1.5f, -51.7f, -20.6f },
+		};
+		std::vector<Actor> l; std::vector<int> eqs;
+		for (int i = 0; i < 14; i++) { l.push_back(A(700 + i, (i % 2 ? 3.0f : -3.0f), float(i - 7))); eqs.push_back(i % 2 ? kEqB : kEqA); } // los demás esperan en el círculo
+		l.push_back(A(800, -43.2f, -1.5f)); eqs.push_back(kEqA);                                       // pateador (equipo A)
+		l.push_back(A(801, -52.4f, -0.8f, Clase::Portero)); eqs.push_back(kEqB);
+		Tanda tanda; double t = 100.0;
+		for (size_t s = 0; s < sizeof(pen) / sizeof(pen[0]); s++) {
+			l[14].x = pen[s][3]; l[14].z = pen[s][4]; l[15].x = pen[s][5]; l[15].z = pen[s][6];
+			tanda.alimentar(true, pen[s][0], pen[s][1], pen[s][2], l, eqs, t); t += 0.2;
+			if (s == 4) { CHEQUEA(tanda.estado().activa && tanda.estado().listo && tanda.estado().turnoEq == kEqA); }
+			if (s == 8) { CHEQUEA(tanda.estado().enVuelo && !tanda.estado().listo); }
+		}
+		for (int i = 0; i < 8; i++) { tanda.alimentar(true, -41.6f, 0.11f, 0.0f, l, eqs, t); t += 0.2; } // de vuelta en el punto
+		CHEQUEA(tanda.estado().lanzamientos.size() == 1 && tanda.estado().lanzamientos[0].gol && tanda.estado().lanzamientos[0].eq == kEqA);
+		CHEQUEA(tanda.estado().listo && tanda.estado().activa);
+		// un fallo: el balón sale por fuera del palo y se aparca
+		for (int i = 0; i < 4; i++) { tanda.alimentar(true, -48.0f - i * 2, 0.5f, -4.5f - i * 0.3f, l, eqs, t); t += 0.2; }
+		tanda.alimentar(true, -56.0f, 0.5f, -5.8f, l, eqs, t); t += 0.2;
+		tanda.alimentar(true, 0.0f, 0.11f, 100.0f, l, eqs, t); t += 0.2;
+		CHEQUEA(tanda.estado().lanzamientos.size() == 2 && !tanda.estado().lanzamientos[1].gol);
+		// un penal en pleno partido (nadie espera en el círculo) no cuenta como tanda
+		Tanda t2; std::vector<Actor> l2; std::vector<int> e2;
+		for (int i = 0; i < 16; i++) { l2.push_back(A(900 + i, -30.0f - (i % 5), float(i * 2 - 15))); e2.push_back(i % 2); }
+		for (int i = 0; i < 10; i++) t2.alimentar(true, -41.6f, 0.11f, 0.0f, l2, e2, 200.0 + i * 0.2);
+		CHEQUEA(!t2.estado().activa);
+	}
 
 	// --- objetos reales (opcional) ---
 	if (const char* ruta = std::getenv("PHX_CAMPO_RAW")) {
@@ -73,7 +153,7 @@ int main() {
 		std::printf("reales: %d objetos, %zu actores validos\n", objetos, reales.size());
 		CHEQUEA(reales.size() >= 40);
 		auto l = elegirLista(reales);
-		CHEQUEA(l.size() == 22);
+		CHEQUEA(l.size() >= 21);
 		int asistentes = 0; for (auto& r : l) if (pareceAsistente(r)) asistentes++;
 		std::printf("lista de %zu, asistentes por pegar a la banda: %d\n", l.size(), asistentes);
 	}

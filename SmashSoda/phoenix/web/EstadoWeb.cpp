@@ -446,7 +446,7 @@ namespace phoenix::web {
 				const phoenix::campo::FotoCampo fc = phoenix::campo::instantanea();
 				const char* nombre = fc.estado == EstadoCampo::Activo ? "activo" : fc.estado == EstadoCampo::Buscando ? "buscando"
 					: fc.estado == EstadoCampo::Esperando ? "esperando" : fc.estado == EstadoCampo::NoCompatible ? "no_compatible" : "apagado";
-				c = { {"estado", nombre}, {"motivo", fc.motivo}, {"jugadores", static_cast<int>(fc.j.size())}, {"balon", fc.hayBola} };
+				c = { {"estado", nombre}, {"motivo", fc.motivo}, {"jugadores", static_cast<int>(fc.j.size())}, {"balon", fc.hayBola}, {"equipos", fc.equiposListos}, {"tanda", fc.tanda.activa} };
 			}
 			e["campo"] = c;
 		}

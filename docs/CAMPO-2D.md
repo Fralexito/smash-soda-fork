@@ -36,3 +36,10 @@ Colores: cian = local, violeta = visitante, amarillo = asistentes de línea, gri
 - **Equipo de cada fichita** (hoy salen en gris salvo los asistentes): se fija con el saque de centro.
 - **Balón** (hoy la bolita no se dibuja con datos reales; en el simulador sí).
 - Mini-radar en el overlay PhoenixGlass (opcional).
+
+## 0.2.21 — equipos, porteros, balón y tanda de penales
+
+- **Colores por equipo**: A (cian) = el que ocupaba la izquierda en el primer saque de centro que vio Link; B (violeta); árbitros en amarillo. Como en el descanso se cambian los lados, A/B se mantienen por identidad (no por lado). Si abres Link a mitad de un tiempo, las fichitas van en gris hasta el siguiente saque (gol o descanso).
+- **Balón**: la bolita blanca; se agranda un poco cuando va por el aire. Desaparece durante las repeticiones (el juego la aparca).
+- **Porteros**: ya cuentan (24 fichitas: 22 + 2 árbitros… y el árbitro principal cuando el saque lo identifica).
+- **Tanda de penales**: debajo del campo aparece la tanda en vivo: una fila por equipo con sus lanzamientos (✓ gol, ✗ fallo o parada), el marcador de la tanda y «A punto de patear: Equipo A/B». Los nombres de los lanzadores todavía no se leen del juego (pendiente).

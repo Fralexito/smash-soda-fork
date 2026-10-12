@@ -14,7 +14,8 @@ int main() {
 	for (int i = 0; i < 120; i++) {
 		std::this_thread::sleep_for(std::chrono::milliseconds(500));
 		FotoCampo f = instantanea();
-		std::printf("[%2d] %-13s %zu piezas seq=%u %s\n", i, nombres[static_cast<int>(f.estado)], f.j.size(), f.seq, f.motivo.c_str());
+		std::printf("[%2d] %-13s %zu piezas seq=%u equipos=%d balon=%s(%.1f,%.2f,%.1f) %s\n", i, nombres[static_cast<int>(f.estado)], f.j.size(), f.seq,
+			(int)f.equiposListos, f.hayBola ? "si" : "no", f.bx, f.by, f.bz, f.motivo.c_str());
 		if (f.estado == EstadoCampo::Activo && i % 4 == 0)
 			for (size_t k = 0; k < f.j.size() && k < 6; k++) std::printf("      #%zu (%.1f, %.1f) eq=%d\n", k, f.j[k].x, f.j[k].z, f.j[k].eq);
 	}

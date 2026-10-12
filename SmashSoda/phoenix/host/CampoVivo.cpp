@@ -9,6 +9,7 @@
 #include <mutex>
 #include <thread>
 
+#define NOMINMAX
 #include <windows.h>
 #include <tlhelp32.h>
 
@@ -49,9 +50,11 @@ namespace phoenix::campo {
 			return true;
 		}
 
-		/// Busca todos los actores con la firma en la memoria privada escribible del juego (el montón) (~3-5 GB, unos 5 s, con pausas para no robar CPU).
-		std::vector<Actor> escanear(HANDLE h) {
-			std::vector<Actor> hallados;
+		/// Busca jugadores de campo, porteros y balones por su firma en la memoria privada escribible del juego
+		/// (el montón, ~3-5 GB, unos 12 s, con pausas para no robar CPU).
+		struct Hallazgos { std::vector<Actor> campo, porteros, balones; };
+		Hallazgos escanear(HANDLE h) {
+			Hallazgos r;
 			const size_t trozo = 1u << 20;
 			std::vector<uint8_t> buf(trozo + kBytesObjeto);
 			uint64_t a = 0; MEMORY_BASIC_INFORMATION m; int n = 0;
@@ -65,16 +68,21 @@ namespace phoenix::campo {
 						SIZE_T leidos = 0;
 						if (!ReadProcessMemory(h, reinterpret_cast<LPCVOID>(p), buf.data(), quiero, &leidos) || leidos < kBytesObjeto) continue;
 						for (SIZE_T i = 0; i + kBytesObjeto <= leidos && i < trozo; i += 16) {
-							Actor r;
-							if (leerActor(buf.data() + i, r)) { r.dir = p + i; hallados.push_back(r); }
+							Actor x;
+							if (leerActor(buf.data() + i, x)) { x.dir = p + i; r.campo.push_back(x); }
+							else if (leerPortero(buf.data() + i, x)) { x.dir = p + i; r.porteros.push_back(x); }
+							else if (leerBalon(buf.data() + i, x)) { x.dir = p + i; r.balones.push_back(x); }
 						}
 						if ((++n & 31) == 0) dormir(1);
 					}
 				}
 				a = base + m.RegionSize;
 			}
-			return hallados;
+			return r;
 		}
+
+		/// Un balón candidato: el del partido es el que se mueve (los de los recogepelotas no).
+		struct Candidato { Actor a; float ux = 0, uz = 0; double ultimoCambio = 0; };
 
 		void bucle() {
 			SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_BELOW_NORMAL);
@@ -82,9 +90,14 @@ namespace phoenix::campo {
 			bool compatible = false;
 			std::string motivoNo;
 			HANDLE h = nullptr; DWORD pidAbierto = 0;
-			std::vector<Actor> lista;     // actores de UNA lista (direcciones fijas todo el partido)
+			std::vector<Actor> lista;     // jugadores de campo + porteros (direcciones fijas todo el partido)
+			std::vector<int> equipos;     // equipo por índice de lista (kEqDesconocido hasta ver un saque)
+			std::vector<float> antes;     // posiciones de la lectura anterior (para detectar el saque: todos quietos)
+			std::vector<Candidato> balones;
+			Tanda tanda;                  // tanda de penales (lógica pura)
+			double reloj = 0;             // segundos (aprox.) desde el arranque del hilo
 			uint32_t seq = 0;
-			auto cerrar = [&] { if (h) { CloseHandle(h); h = nullptr; } pidAbierto = 0; lista.clear(); };
+			auto cerrar = [&] { if (h) { CloseHandle(h); h = nullptr; } pidAbierto = 0; lista.clear(); equipos.clear(); antes.clear(); balones.clear(); tanda.reiniciar(); };
 
 			while (!g_parar.load()) {
 				FotoCampo f;
@@ -120,23 +133,60 @@ namespace phoenix::campo {
 						pidAbierto = pid;
 					}
 
-					if (lista.empty()) {            // 3) buscar a los jugadores por su firma
+					if (lista.empty()) {            // 3) buscar a todos por su firma
 						f.estado = EstadoCampo::Buscando; publicar(f);
-						lista = elegirLista(escanear(h));
+						const Hallazgos hz = escanear(h);
+						lista = elegirLista(hz.campo);
 						if (lista.empty()) { dormir(3000); continue; }
+						for (const Actor& p : elegirPorteros(hz.porteros)) lista.push_back(p);
+						equipos.assign(lista.size(), kEqDesconocido);
+						antes.clear();
+						balones.clear();
+						for (const Actor& b : hz.balones) { Candidato c; c.a = b; c.ux = b.x; c.uz = b.z; balones.push_back(c); }
 					}
 
-					// 4) leer posiciones (~20/s): 16 bytes por jugador. Si más de 3 dejan de ser válidas, se vuelve a buscar.
-					int malos = 0;
-					std::vector<Pieza> piezas; piezas.reserve(lista.size());
-					for (const Actor& a : lista) {
+					// 4) leer posiciones (~20/s): 16 bytes por actor. Si más de 3 dejan de ser válidas, se vuelve a buscar.
+					int malos = 0; float maxDesp = 0;
+					std::vector<Actor> ahora = lista;
+					for (size_t i = 0; i < lista.size(); i++) {
 						uint8_t b[16]; SIZE_T g = 0; float x, y, z;
-						if (!ReadProcessMemory(h, reinterpret_cast<LPCVOID>(a.dir + kOffPosicion), b, 16, &g) || g != 16 || !leerPosicion(b, x, y, z)) { malos++; continue; }
-						Pieza p; p.x = x; p.z = z; p.eq = pareceAsistente(a) ? 2 : -1;
-						piezas.push_back(p);
+						if (!ReadProcessMemory(h, reinterpret_cast<LPCVOID>(lista[i].dir + kOffPosicion), b, 16, &g) || g != 16 || !leerPosicion(b, x, y, z)) { malos++; ahora[i].x = 1e9f; continue; }
+						ahora[i].x = x; ahora[i].y = y; ahora[i].z = z;
+						if (antes.size() == lista.size() * 2) maxDesp = (std::max)(maxDesp, (std::max)(std::fabs(x - antes[i * 2]), std::fabs(z - antes[i * 2 + 1])));
 					}
 					if (malos > 3) { lista.clear(); f.estado = EstadoCampo::Buscando; publicar(f); dormir(1500); continue; }
-					f.estado = EstadoCampo::Activo; f.j = std::move(piezas); f.seq = ++seq;
+					const bool habiaAntes = antes.size() == lista.size() * 2;
+					antes.resize(lista.size() * 2);
+					for (size_t i = 0; i < lista.size(); i++) { antes[i * 2] = ahora[i].x; antes[i * 2 + 1] = ahora[i].z; }
+
+					// 5) equipos: en el primer saque de centro que se vea (todos quietos y en formación) se reparten y se recuerdan
+					const bool sinEquipos = std::count(equipos.begin(), equipos.end(), kEqDesconocido) > 4;
+					if (sinEquipos && habiaAntes && esSaqueDeCentro(ahora, maxDesp)) equipos = repartirEquipos(ahora);
+
+					// 6) balón: el candidato que se ha movido hace menos tiempo (los de los recogepelotas no se mueven)
+					reloj += 0.05;
+					const Candidato* mejor = nullptr;
+					for (Candidato& c : balones) {
+						uint8_t b[16]; SIZE_T g = 0; float x, y, z;
+						if (!ReadProcessMemory(h, reinterpret_cast<LPCVOID>(c.a.dir + kOffPosicion), b, 16, &g) || g != 16 || !leerPosicionBalon(b, x, y, z)) continue;
+						if (std::fabs(x - c.ux) > 0.01f || std::fabs(z - c.uz) > 0.01f) { c.ultimoCambio = reloj; c.ux = x; c.uz = z; }
+						c.a.x = x; c.a.y = y; c.a.z = z;
+						if (std::fabs(z) > 40.0f) continue; // aparcado (repetición)
+						if (!mejor || c.ultimoCambio > mejor->ultimoCambio) mejor = &c;
+					}
+					if (mejor && reloj - mejor->ultimoCambio < 120.0) { f.hayBola = true; f.bx = mejor->a.x; f.by = mejor->a.y; f.bz = mejor->a.z; }
+
+					f.j.reserve(lista.size());
+					for (size_t i = 0; i < lista.size(); i++) {
+						if (ahora[i].x > 1e8f) continue;
+						Pieza p; p.x = ahora[i].x; p.z = ahora[i].z;
+						p.eq = pareceAsistente(ahora[i]) ? kEqArbitro : equipos[i];
+						f.j.push_back(p);
+					}
+					tanda.alimentar(f.hayBola, f.bx, f.by, f.bz, ahora, equipos, reloj);
+					f.tanda = tanda.estado();
+					f.equiposListos = !sinEquipos;
+					f.estado = EstadoCampo::Activo; f.seq = ++seq;
 					publicar(f);
 					dormir(50);
 				}

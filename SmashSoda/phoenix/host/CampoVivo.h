@@ -14,6 +14,8 @@
 #include <string>
 #include <vector>
 
+#include "../core/CampoVivo.h"
+
 namespace phoenix::campo {
 
 	enum class EstadoCampo { Apagado, Esperando, Buscando, Activo, NoCompatible };
@@ -27,6 +29,8 @@ namespace phoenix::campo {
 		std::vector<Pieza> j;
 		bool hayBola = false;
 		float bx = 0, bz = 0, by = 0;
+		bool equiposListos = false; ///< ya se vio un saque de centro y cada fichita tiene equipo
+		EstadoTanda tanda;          ///< tanda de penales (activa = en marcha)
 		uint32_t seq = 0;           ///< sube con cada lectura nueva
 	};
 

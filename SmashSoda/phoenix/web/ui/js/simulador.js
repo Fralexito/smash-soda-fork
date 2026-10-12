@@ -248,7 +248,7 @@ export function crearSimulador(enviar) {
     const p = s.partido;
     const e = {
       v: 1,
-      app: { version: "0.2.20", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
+      app: { version: "0.2.21", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
       noticias: { cargado: true, lista: s.noticias },
       chatGlobal: { cargado: true, pausado: s.chatGlobal.pausado, esperaSeg: s.chatGlobal.esperaSeg, rev: s.chatGlobal.mensajes.length, error: "" },
       web: { ...s.web, jugadoresLista: 3, versionLiga: "2026.10.08", eventosEnCola: 0 },
@@ -260,7 +260,7 @@ export function crearSimulador(enviar) {
         juego: s.opciones.biblioteca && s.opciones.biblioteca !== "Default" ? s.opciones.biblioteca : "", pesAbierto: !!s.pes.abierto,
         ultimoFin: s.cedido.ultimoFin },
       marionetas: s.marionetas,
-      campo: { estado: s.campoVivo ? "activo" : "esperando", motivo: "", jugadores: s.campoVivo ? 22 : 0, balon: !!s.campoVivo },
+      campo: { estado: s.campoVivo ? "activo" : "esperando", motivo: "", jugadores: s.campoVivo ? 24 : 0, balon: !!s.campoVivo, equipos: !!s.campoVivo, tanda: !!s.campoVivo && ahora() - (s.campoDesde || ahora()) >= 40 },
       teclado: { perfiles: s.perfilesTeclado },
       sala: {
         abierta: s.abierta, lista: true, enlace: s.abierta ? "https://parsec.gg/g/7K2Qx9abcdef/phoenix" : "", nombre: s.opciones.nombre, plazas: s.opciones.plazas,
@@ -360,7 +360,7 @@ export function crearSimulador(enviar) {
       casillas: d.si ? Array.from({ length: 8 }, (_, i) => ({ n: i + 1, puesto: i + 1, ok: true })) : [] }; },
     "mandos.ordenarPes": () => { if (s.ordenPes?.activo) s.ordenPes.estado = "al_dia"; },
     "mandos.vivo": () => ({}),
-    "campo.vivo": (d) => { s.campoVivo = !!d.si; },
+    "campo.vivo": (d) => { s.campoVivo = !!d.si; s.campoDesde = ahora(); },
     "mandos.tomar": (d) => { s.host = d.numero === s.host ? 0 : d.numero; return { activo: s.host }; },
     "mandos.herramienta": (d) => { if (d.nombre === "bloquearTodo") s.bloqueoGlobal = !s.bloqueoGlobal; else if (d.nombre === "bloquearBotones") s.bloqueoBotones = !s.bloqueoBotones; else if (d.nombre === "desconectarTodos") s.mandos = s.mandos.map(() => 0); else if (d.nombre === "ordenar") { const v = s.mandos.filter(Boolean); s.mandos = s.mandos.map((_, i) => v[i] || 0); } },
     "teclado.asignar": (d) => { const p = s.perfilesTeclado.find((x) => x.userId === d.userId) || s.perfilesTeclado[0]; p.teclas.forEach((x) => { if (x.v === d.tecla) { x.v = 0; x.e = ""; } }); const k = p.teclas.find((x) => x.b === d.boton); k.v = d.tecla; k.e = "K" + d.tecla; },
@@ -563,7 +563,16 @@ export function crearSimulador(enviar) {
     j.push([Math.round((bx * 0.5) * 10) / 10, 35.2, 2], [Math.round((-bx * 0.3) * 10) / 10, -35.2, 2]); // los dos asistentes en la banda
     return { j, b: [Math.round(bx * 10) / 10, Math.round(bz * 10) / 10, 0.11] };
   };
-  setInterval(() => { if (s.campoVivo) enviar({ t: "evento", nombre: "campo", datos: campoSim() }); }, 50);
+  // Tanda de penales simulada: tras 40 s con el campo abierto, un lanzamiento cada 9 s (alternando equipos; 1 de cada 4 falla)
+  const tandaSim = () => {
+    const seg = ahora() - (s.campoDesde || ahora());
+    if (seg < 40) return null;
+    const n = Math.floor((seg - 40) / 9), fase = (seg - 40) % 9;            // n = lanzamientos ya hechos
+    const l = []; for (let i = 0; i < Math.min(n, 10); i++) l.push([i % 2, i % 4 !== 3]);
+    const eq = n % 2;
+    return { l, e: eq, listo: fase < 6, vuelo: fase >= 6 && fase < 7.5 };
+  };
+  setInterval(() => { if (s.campoVivo) { const d = campoSim(); const tt = tandaSim(); if (tt) d.t = tt; enviar({ t: "evento", nombre: "campo", datos: d }); } }, 50);
   setTimeout(() => global("Kaiser", "¿alguien para unas revanchas?", "jugador"), 11000);
 
   return {

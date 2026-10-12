@@ -310,6 +310,11 @@ namespace phoenix::web {
 						json j = json::array();
 						for (const phoenix::campo::Pieza& p : fc.j) j.push_back({ std::round(p.x * 10.0f) / 10.0f, std::round(p.z * 10.0f) / 10.0f, p.eq });
 						json ev = { {"j", j}, {"b", fc.hayBola ? json::array({ std::round(fc.bx * 10.0f) / 10.0f, std::round(fc.bz * 10.0f) / 10.0f, std::round(fc.by * 100.0f) / 100.0f }) : json(nullptr)} };
+						if (fc.tanda.activa) {
+							json l = json::array();
+							for (const phoenix::campo::Lanzamiento& x : fc.tanda.lanzamientos) l.push_back({ x.eq, x.gol });
+							ev["t"] = { {"l", l}, {"e", fc.tanda.turnoEq}, {"listo", fc.tanda.listo}, {"vuelo", fc.tanda.enVuelo} };
+						}
 						in.puente->evento("campo", ev);
 					}
 				}
