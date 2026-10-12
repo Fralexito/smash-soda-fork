@@ -76,6 +76,7 @@ function EnSala({ m }) {
   return html`<div class="fila partible" style="min-height:100%">
     <div class="col" style="width:min(470px,42%);flex:none;gap:12px">
       <input class="campo" style="height:44px" placeholder=${t("Filtrar por nombre o ID", "Filter by name or ID")} value=${filtro} onInput=${(e) => setFiltro(e.currentTarget.value)}/>
+      ${(m.mirandoWeb || []).length ? html`<div class="ayuda" style="padding:2px 4px"><b>${t("Viendo desde la web", "Watching from the web")}</b> · ${m.mirandoWeb.join(", ")}</div>` : null}
       <div style="display:flex;flex-direction:column;gap:8px">
         ${lista.length === 0 ? html`<div class="ayuda" style="padding:10px">${gente.length ? t("Nadie coincide.", "No matches.") : t("Aún no hay invitados.", "No guests yet.")}</div>` : null}
         ${lista.map((g) => {
@@ -155,7 +156,7 @@ function Ficha({ m, g }) {
         : html`<select class="campo" style="width:auto;height:38px" disabled=${libres.length === 0}
             onChange=${(e) => { const v = Number(e.currentTarget.value); e.currentTarget.value = ""; if (v) accion("mandos.asignar", { indice: v - 1, parsecId: g.parsecId }); }}>
             <option value="">${libres.length ? t("DAR MANDO…", "GIVE PAD…") : t("SIN MANDOS LIBRES", "NO FREE PADS")}</option>
-            ${libres.map((p) => html`<option value=${p.n}>${t("Mando", "Pad")} ${dos(p.n)} · ${p.equipo === "local" ? "Local" : p.equipo === "visitante" ? t("Visita", "Away") : t("Fuera", "Off")}</option>`)}
+            ${libres.map((p) => html`<option value=${p.n}>${t("Mando", "Pad")} ${dos(p.n)} · ${p.equipo === "a" ? t("Equipo A", "Team A") : p.equipo === "b" ? t("Equipo B", "Team B") : t("Fuera", "Off")}</option>`)}
           </select>`}
       <${BotonCeder} g=${g} m=${m}/>
       <${Boton} tipo="warn" al=${expulsar}>${t("EXPULSAR", "KICK")}</${Boton}>

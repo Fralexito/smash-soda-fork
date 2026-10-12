@@ -17,7 +17,7 @@ namespace phoenix {
 	/// Versión propia de Phoenix (independiente de la versión del autor).
 	/// REGLA (Fralex, 2026-10-11): subirla en CADA cambio de Link (0.2.0 → 0.2.1 → …), para saber
 	/// a simple vista si el .exe abierto ya trae el cambio. La UI muestra además la hora de compilación.
-	inline constexpr const char* kVersion = "0.2.31";
+	inline constexpr const char* kVersion = "0.2.32";
 
 	/// Soda Arcade: su licencia de API prohíbe que los forks la usen sin permiso
 	/// escrito. En la build Phoenix queda apagada por completo (login, publicar

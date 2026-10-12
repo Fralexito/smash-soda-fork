@@ -518,6 +518,7 @@ namespace phoenix {
 			_ligaVivoPendiente = false;   // lo pendiente era de esta sala: no se manda a la siguiente
 			_ligaVivo.clear();
 			_ligaCampoPendiente = false;
+			_mirandoWeb.clear();
 		}
 		if (quitarVivo) {
 			const json fin = { {"sala_id", salaId}, {"terminado", true} };
@@ -838,6 +839,10 @@ namespace phoenix {
 		std::lock_guard<std::mutex> l(_mutex);
 		_ligaCampo = cuerpoJson; _ligaCampoPendiente = true;
 	}
+	std::vector<std::string> PhoenixLink::mirandoWeb() {
+		std::lock_guard<std::mutex> l(_mutex);
+		return _mirandoWeb;
+	}
 	void PhoenixLink::ligaVivoTerminado() {
 		std::lock_guard<std::mutex> l(_mutex);
 		_ligaVivo.clear(); _ligaVivoPendiente = true; _ligaVivoBorrar = true;
@@ -946,6 +951,25 @@ namespace phoenix {
 					_ligaCampoProximoMs = ahora + (r.estado == 404 ? 300000 : 15000);   // 404 = la web aún no tiene la ruta: se vuelve a probar en 5 min
 				}
 			}
+			return true;
+		}
+		// 2c) Quién ve el partido desde la web (tabla liga_mirando; solo mientras la web tiene el marcador de esta sala): cada ~10 s
+		bool pedirMirando = false;
+		{
+			std::lock_guard<std::mutex> l(_mutex);
+			pedirMirando = _ligaVivoEnWeb && !salaId.empty() && ahora >= _mirandoProximoMs;
+			if (pedirMirando) _mirandoProximoMs = ahora + 10000;
+			if (!_ligaVivoEnWeb && !_mirandoWeb.empty()) _mirandoWeb.clear();
+		}
+		if (pedirMirando) {
+			const http::Respuesta r = http::peticion("GET", std::string(kBaseLiga) + "/v1/liga/mirando?sala_id=" + salaId, "", cabecerasCon(token), 4000);
+			const json j = json::parse(r.cuerpo, nullptr, false);
+			std::lock_guard<std::mutex> l(_mutex);
+			if (r.estado == 200 && !j.is_discarded() && j.value("ok", false) && j.contains("mirando") && j["mirando"].is_array()) {
+				_mirandoWeb.clear();
+				for (const json& n : j["mirando"]) if (n.is_string() && _mirandoWeb.size() < 30) _mirandoWeb.push_back(n.get<std::string>());
+			}
+			else if (r.estado == 404 || r.estado == 0 || r.estado >= 500 || r.estado == 429) _mirandoProximoMs = ahora + (r.estado == 404 ? 300000 : 30000);
 			return true;
 		}
 		// 3) Lista de partidos oficiales: al pedirla la interfaz o cada 2 min con la sala abierta y la ventana visible

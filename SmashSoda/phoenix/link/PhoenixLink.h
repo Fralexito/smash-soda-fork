@@ -196,6 +196,8 @@ namespace phoenix {
 		void ligaVivoTerminado();
 		/// Campo 2D en vivo para el tablero de la web (JSON sin sala_id). Se manda solo lo último, como mucho 1/s.
 		void ligaCampo(const std::string& cuerpoJson);
+		/// Quién ve el partido de esta sala desde la web (nombres de perfil; Link lo pide cada ~10 s mientras la web tiene el marcador en vivo).
+		std::vector<std::string> mirandoWeb();
 		/// Resultado oficial (JSON con partido_id, goles_local, goles_visita, completo, juego{…}). Se guarda en disco
 		/// hasta que la web lo acepte. Queda «propuesto»: lo valida el staff o el árbitro designado, nunca el host.
 		void ligaResultado(const std::string& cuerpoJson);
@@ -338,6 +340,8 @@ namespace phoenix {
 		std::string _ligaCampo;             ///< último campo 2D por mandar (JSON)
 		bool _ligaCampoPendiente = false;
 		long long _ligaCampoProximoMs = 0;
+		std::vector<std::string> _mirandoWeb;   ///< espectadores de la web (nombres), de la última respuesta de /v1/liga/mirando
+		long long _mirandoProximoMs = 0;
 		std::vector<std::string> _ligaResultados;   ///< cola persistente (phoenix-liga-resultados.json)
 		long long _ligaResProximoMs = 0;
 	};

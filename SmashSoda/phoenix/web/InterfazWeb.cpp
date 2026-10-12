@@ -306,6 +306,17 @@ namespace phoenix::web {
 				// Campo 2D en vivo. El lector del juego (solo lectura) trabaja si la tarjeta Partido › Campo lo pide o si hay
 				// un partido publicado en juego con «Campo en vivo en la web» encendido; si no, no hay hilo leyendo (coste cero).
 				// Si la interfaz cambió de sección sin avisar, la tarjeta se da por cerrada. (El overlay ya no recibe el campo.)
+				// Quién ve el partido desde la web (lo pide el hilo de la liga cada ~10 s): se anuncia en el chat de la sala una vez por persona
+				if (ahora - in.ultimoMirando >= 1.0) {
+					in.ultimoMirando = ahora;
+					in.mirandoWeb = PhoenixLink::instancia().mirandoWeb();
+					for (const std::string& n : in.mirandoWeb) {
+						if (n.empty() || !in.mirandoAvisados.insert(n).second) continue;
+						mensajeDelBot(in, n + " está viendo el partido desde la web.");
+					}
+					for (auto it = in.mirandoAvisados.begin(); it != in.mirandoAvisados.end();)
+						it = std::find(in.mirandoWeb.begin(), in.mirandoWeb.end(), *it) == in.mirandoWeb.end() ? in.mirandoAvisados.erase(it) : std::next(it);
+				}
 				if (in.campoRapido && in.seccion != "partido") in.campoRapido = false;
 				const bool web = campoWebQuiere(in);
 				const bool lados = ladosQuiere(in);   // lados automáticos: los primeros minutos del partido (LadosAuto.cpp)

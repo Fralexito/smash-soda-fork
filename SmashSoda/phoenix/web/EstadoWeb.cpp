@@ -322,7 +322,8 @@ namespace phoenix::web {
 					a.pingMs = -1;
 				}
 				if (n == mandoHost) a.bloqueado = false;   // el bloqueo interno de «tomar mando» no es para el host
-				const char* equipo = n <= pr.equipoLocal ? "local" : (n <= pr.mandosActivos ? "visitante" : "fuera");
+				const char eqPuesto = pr.equipoDe(n - 1);   // el equipo es del PUESTO (mapa equipoPuesto), no de su número
+				const char* equipo = eqPuesto == 'A' ? "a" : (eqPuesto == 'B' ? "b" : "fuera");
 				if (a.ocupado && a.parsecId != 0) mandoDe[a.parsecId] = n;
 				lista.push_back({
 					{"n", n}, {"conectado", a.conectado}, {"ocupado", a.ocupado}, {"bloqueado", a.bloqueado},
@@ -363,7 +364,7 @@ namespace phoenix::web {
 			e["mandos"] = {
 				{"lista", lista},
 				{"ordenPes", ordenPes},
-				{"formacion", { {"local", pr.equipoLocal}, {"visitante", pr.mandosActivos - pr.equipoLocal} }},
+				{"formacion", { {"a", equipos::cuenta(pr.equipoPuesto, 'A')}, {"b", equipos::cuenta(pr.equipoPuesto, 'B')}, {"mapa", pr.equipoPuesto} }},
 				{"host", MandoHost::activo()},
 				{"miMando", detalle_estado::nombreMiMando()},
 				{"miPuesto", { {"modo", pr.miPuestoModo}, {"numero", pr.miPuestoNumero}, {"alAbrir", pr.sentarmeAlAbrir}, {"pulsando", pr.entrarPulsando}, {"cuenta", pr.anfitrionCuenta}, {"mandoRecordado", !pr.miMando.empty()} }},
@@ -451,6 +452,7 @@ namespace phoenix::web {
 			}
 			c["campoWeb"] = PhoenixPrefs::get().campoWeb;
 			e["campo"] = c;
+			e["mirandoWeb"] = in.mirandoWeb;   // quién ve el partido desde la web (nombres de perfil)
 		}
 
 		// ---- Solicitudes y espera -------------------------------------------

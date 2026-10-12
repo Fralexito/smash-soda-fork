@@ -77,3 +77,10 @@ Fralex: «adapta el color de cada equipo según su color referente». Cada equip
 - **A = local del juego** (se asume; si Link detectara que A es en realidad el visitante, los colores irían cruzados: es el mismo asunto abierto que «lados» y «eq_local»).
 - Protocolo: el evento `campo` y `POST /v1/liga/campo` traen `c:["#rrggbb","#rrggbb"]` (A, B) solo si al menos un nombre se reconoce. Tarjeta de Link: fichitas y leyenda con esos colores. Web: Edge `liga` 1.3.1 (v5) deja pasar `c` y el tablero (`features/liga/campoVivo.js`) los usa (repo `pes-liga-automatica`, commit `7f2b9c2`).
 - Para añadir un club: una línea en `kTabla` (clave normalizada en minúsculas sin tildes, principal, secundario) y un caso en la prueba.
+
+## 0.2.31 · «Viendo desde la web» en la sala
+
+Fralex: al tocar un partido en la web se ve el tablero (y las estadísticas) sin entrar a la sala; quien quiera puede entrar; y en la sala debe verse quién mira desde la web.
+- **Web** (repo `pes-liga-automatica`, ronda 237): el tablero de «En vivo» / «Ahora mismo» / Inicio tiene el botón **Entrar a la sala** (lee `salas_enlace`, que la base solo da a quien puede ver esa sala) y un panel de estadísticas. Con sesión, avisa cada ~30 s que alguien mira (tabla `liga_mirando`, migración 104; el nombre sale del perfil en el servidor).
+- **Link:** el hilo de la liga pregunta cada ~10 s `GET /v1/liga/mirando?sala_id=` (Edge `liga` 1.4.0), solo con el marcador de la sala publicado. Resultado: (1) lista «Viendo desde la web» en **Gente**, (2) un mensaje del bot en el chat de la sala por persona («X está viendo el partido desde la web.»), que se vuelve a decir si se va y vuelve. Código: `link/PhoenixLink.cpp` (`mirandoWeb()`), `web/InterfazWeb.cpp`, `web/EstadoWeb.cpp` (`mirandoWeb`), `ui/js/vistas/gente.js`.
+- Límites: los visitantes sin sesión no aparecen (no hay nombre que mostrar). Los espectadores de la web no entran al Parsec salvo que pulsen «Entrar a la sala».
