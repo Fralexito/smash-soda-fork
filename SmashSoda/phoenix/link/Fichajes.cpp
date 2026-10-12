@@ -892,7 +892,26 @@ namespace {
 		std::set<uint32_t> jugadores;
 		std::string jugadoresSha;
 		Nombres nombres;
+		std::map<uint32_t, std::string> jugadorLegible, equipoLegible;
 	};
+
+	/// Texto de un campo de PES (UTF-8 o Latin-1) → UTF-8 legible.
+	std::string aUtf8(const char* d, size_t max) {
+		std::string s(d, max);
+		s = s.substr(0, s.find('\0'));
+		bool utf8 = true;
+		for (size_t i = 0; i < s.size() && utf8;) {
+			const unsigned char c = static_cast<unsigned char>(s[i]);
+			const size_t n = c < 0x80 ? 1 : (c >> 5) == 0x6 ? 2 : (c >> 4) == 0xE ? 3 : (c >> 3) == 0x1E ? 4 : 0;
+			if (n == 0 || i + n > s.size()) { utf8 = false; break; }
+			for (size_t k = 1; k < n; k++) if ((static_cast<unsigned char>(s[i + k]) & 0xC0) != 0x80) utf8 = false;
+			i += n;
+		}
+		if (utf8) return s;
+		std::string r;
+		for (unsigned char c : s) { if (c < 0x80) r.push_back(static_cast<char>(c)); else { r.push_back(static_cast<char>(0xC0 | (c >> 6))); r.push_back(static_cast<char>(0x80 | (c & 0x3F))); } }
+		return r;
+	}
 
 	struct Huella { const char* sha; const char* nombre; };
 	const Huella kHuellas[] = {
@@ -964,11 +983,16 @@ namespace {
 		if (!leerJugadores(crudoJug, b.jugadores, e, necesitaNombres ? &b.nombres.jugador : nullptr)) { b.error = "La base no tiene el formato esperado: " + e + "."; b.queHacer = "No se crea nada."; return b; }
 		b.asignacionSha = sha(crudoAsig);
 		b.jugadoresSha = sha(crudoJug);
+		if (necesitaNombres)
+			for (size_t o = 8; o + 243 + 61 <= crudoJug.size(); o += 312) { const uint32_t id = le32(crudoJug, o); if (id) b.jugadorLegible[id] = aUtf8(crudoJug.data() + o + 243, 61); }
 		b.evidencias.push_back("PlayerAssignment.bin: " + std::to_string(b.filas.size()) + " filas de 16 bytes; Player.bin: " + std::to_string(b.jugadores.size()) + " jugadores (cabecera " + std::to_string(le32(crudoJug, 0)) + ").");
 		if (necesitaNombres) {
 			const Fuente ft = resolver(x, "Team.bin");
 			std::string crudoEq, e2;
-			if (ft.hay && ft.error.empty() && leerFuente(x, ft, "Team.bin", crudoEq, e2) && leerEquipos(crudoEq, b.nombres.equipo, e2) && !b.nombres.jugador.empty()) b.nombresOk = true;
+			if (ft.hay && ft.error.empty() && leerFuente(x, ft, "Team.bin", crudoEq, e2) && leerEquipos(crudoEq, b.nombres.equipo, e2) && !b.nombres.jugador.empty()) {
+				b.nombresOk = true;
+				for (size_t o = 0; o + 1532 <= crudoEq.size(); o += 1532) { const uint32_t id = le32(crudoEq, o); if (id) b.equipoLegible[id] = aUtf8(crudoEq.data() + o + 368, 70); }
+			}
 			else b.evidencias.push_back("No pude leer los nombres de los equipos (Team.bin): los cambios por nombre se saltarán.");
 		}
 		identificar(b, fa, x);
@@ -1051,6 +1075,24 @@ namespace {
 		}
 		return res;
 	}
+}
+
+BaseNombres leerNombresDeBase(const fs::path& juego, const std::string& modo) {
+	BaseNombres r;
+	Cache cache;
+	r.error = "No hay ningún sitio con base reconocida.";
+	for (const Objetivo& o : objetivos(juego)) {
+		if (!modo.empty() && o.nombre != modo) continue;
+		Contexto x(cache);
+		x.juego = juego; x.o = o;
+		const Base b = resolverBase(x, true);
+		if (!b.ok) { r.error = b.error; if (!modo.empty()) return r; continue; }
+		if (!b.nombresOk) { r.error = "No se pudieron leer los nombres de la base."; if (!modo.empty()) return r; continue; }
+		r.ok = true; r.error.clear(); r.parche = b.parche; r.baseSha = b.asignacionSha;
+		r.plegados = b.nombres; r.jugadorLegible = b.jugadorLegible; r.equipoLegible = b.equipoLegible;
+		return r;
+	}
+	return r;
 }
 
 std::vector<Analisis> analizar(const fs::path& juego, const Lista& lista) {

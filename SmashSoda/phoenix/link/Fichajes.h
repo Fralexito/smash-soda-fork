@@ -144,6 +144,17 @@ struct Analisis {
 /// Solo lee. Calcula qué pasaría en cada sitio.
 std::vector<Analisis> analizar(const fs::path& juego, const Lista& lista);
 
+/// Nombres de la base REAL de un modo (solo lectura), para poner nombre de jugador/equipo a un traspaso.
+struct BaseNombres {
+	bool ok = false;
+	std::string parche, baseSha, error;
+	Nombres plegados;                                  ///< para comparar (plegarNombre)
+	std::map<uint32_t, std::string> jugadorLegible;    ///< player_id → nombre completo en UTF-8
+	std::map<uint32_t, std::string> equipoLegible;     ///< team_id → nombre del equipo en UTF-8
+};
+/// `modo` = nombre del objetivo («Raíz del juego» o el modo); "" = el primer sitio con base reconocida.
+BaseNombres leerNombresDeBase(const fs::path& juego, const std::string& modo);
+
 struct Informe {
 	bool ok = false;
 	std::string mensaje;

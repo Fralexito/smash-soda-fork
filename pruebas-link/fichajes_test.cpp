@@ -530,6 +530,9 @@ static void pruebaDeteccion(const fs::path& tmp) {
 		const Informe inf = aplicarAlJuego(j, l);
 		std::string crudo; std::vector<Fila> filas;
 		CHECK(inf.ok && leerBin(leer(pa(j / "SiderAddons")), crudo, err) && leerAsignacion(crudo, filas, err) && fila(filas, 5000, 1002) && fila(filas, 5031, 1001), "nombres: el resultado tiene al Messi de «Equipo 1000» en el FC Barcelona (equipo 1002) y el otro intacto");
+		const BaseNombres bn = leerNombresDeBase(j, "");
+		CHECK(bn.ok && bn.jugadorLegible.at(5000) == "Lionel Messi" && bn.equipoLegible.at(1003) == "Atl\xC3\xA9tico de Madrid" && bn.plegados.equipo.at(1001) == "realmadridcf", "leerNombresDeBase: nombres legibles (UTF-8) y plegados de la base real del PC");
+		CHECK(!leerNombresDeBase(tmp / "d_nada", "").ok, "leerNombresDeBase: sin base devuelve ok=false con motivo");
 	}
 }
 
