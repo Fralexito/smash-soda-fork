@@ -1,5 +1,7 @@
 # PROMPT para el chat WEB · Tablero del partido al tocar «En vivo ahora» (campo 2D + estadísticas)
 
+> **HECHO (2026-10-12, hecho por el chat LINK en `pes-liga-automatica`, rama `borrador`, commit `39658cb`, ronda 236):** Edge `liga` 1.3.0 desplegada (v4) con `POST /v1/liga/campo` (Broadcast `campo:<sala_id>`, sin escribir en la base) y tablero desplegable en las tarjetas de «En vivo» (campo, posesión, penales, fases REPETICIÓN/PAUSA). Este prompt queda solo como referencia; no hay nada que pedirle al chat web.
+
 > Repo `Fralexito/phoenixevolution`, rama `borrador`. Origen: chat LINK, 2026-10-11.
 > Fralex: «en el overlay no tiene que aparecer el campo 2D, debe aparecer en la web: por encima sale la tarjeta como ahora y, al darle clic, se abre el tablero con las demás estadísticas del partido».
 
