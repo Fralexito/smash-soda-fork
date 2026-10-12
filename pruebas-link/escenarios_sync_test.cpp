@@ -271,8 +271,12 @@ int main(int argc, char** argv) {
 		sider(j, FACES + "cpk.root = \".\\livecpk\\Phoenix-DB\"\r\n" + MODS, false);
 		escribir(j / "version_actual.txt", "ConmeGOL Patch 27");
 		escribir(j / "ConmeGol Extras" / "ConmeGOL Patch 27" / "SiderAddons" / "x.txt", "x");
+		// Solo tapa a los jugadores del parche nuevo si Phoenix-DB trae un Player.bin (los fichajes generados por Link solo llevan PlayerAssignment.bin)
+		escribir(j / "SiderAddons" / "livecpk" / "Phoenix-DB" / "common" / "etc" / "pesdb" / "PlayerAssignment.bin", "generado por Link");
+		CHECK(infoParche(j).advertencias.empty(), "sin Player.bin en Phoenix-DB (fichajes como cambios): no hay advertencia");
+		escribir(j / "SiderAddons" / "livecpk" / "Phoenix-DB" / "common" / "etc" / "pesdb" / "Player.bin", "copia vieja de una base 26");
 		const Parche p = infoParche(j);
-		CHECK(!p.advertencias.empty(), "advertencia: " + (p.advertencias.empty() ? std::string("(ninguna)") : p.advertencias.front().substr(0, 70)));
+		CHECK(!p.advertencias.empty(), "con un Player.bin viejo en Phoenix-DB, advertencia: " + (p.advertencias.empty() ? std::string("(ninguna)") : p.advertencias.front().substr(0, 70)));
 	}
 
 	std::cout << "E14 nombre de módulo peligroso\n";

@@ -307,6 +307,34 @@ std::string activarRaizPhoenixDB(const std::string& ini, const std::function<boo
 	return unir(r);
 }
 
+std::vector<std::string> raicesActivas(const std::string& ini) {
+	std::vector<std::string> v;
+	for (const std::string& l : partir(ini).v) {
+		std::string ruta; bool c = false;
+		if (lineaRaiz(l, ruta, c) && !c) v.push_back(ruta);
+	}
+	return v;
+}
+
+std::string activarRaizPhoenixDBSiempre(const std::string& ini, const std::function<bool(const std::string&)>& tieneBase, bool& cambio, std::string& error) {
+	std::string r = activarRaizPhoenixDB(ini, tieneBase, cambio, error);
+	if (cambio || !error.empty()) return r;
+	if (tieneRaizPhoenixDB(ini)) return ini;
+	Lineas l = partir(ini);
+	int primera = -1, comentada = -1;
+	for (size_t i = 0; i < l.v.size(); i++) {
+		std::string ruta; bool c = false;
+		if (!lineaRaiz(l.v[i], ruta, c)) continue;
+		if (esPhoenixDB(ruta)) { if (c && comentada < 0) comentada = static_cast<int>(i); continue; }
+		if (!c && primera < 0) primera = static_cast<int>(i);
+	}
+	if (primera < 0) { error = "sider.ini no tiene ninguna cpk.root: no se toca"; return std::string(); }
+	if (comentada >= 0) { l.v.erase(l.v.begin() + comentada); if (comentada < primera) primera--; }
+	l.v.insert(l.v.begin() + primera, "cpk.root = \".\\livecpk\\Phoenix-DB\"");
+	cambio = true;
+	return unir(l);
+}
+
 std::string versionDe(const std::string& lua) {
 	const size_t i = lua.find("version");
 	if (i == std::string::npos || i > 4096) return "";
@@ -339,6 +367,15 @@ std::vector<std::pair<std::string, fs::path>> destinos(const fs::path& juego) {
 	return v;
 }
 
+std::vector<fs::path> carpetasModos(const fs::path& juego) {
+	if (juego.empty()) return {};
+	std::vector<fs::path> v = modos(juego, true);
+	const std::vector<fs::path> sin = modos(juego, false);
+	v.insert(v.end(), sin.begin(), sin.end());
+	std::sort(v.begin(), v.end());
+	return v;
+}
+
 Parche infoParche(const fs::path& juego) {
 	Parche p;
 	if (juego.empty()) return p;
@@ -354,8 +391,10 @@ Parche infoParche(const fs::path& juego) {
 	if (leer(juego / "SiderAddons" / "sider.ini", ini, kMaxIni) && !p.modoActual.empty()
 		&& std::find(p.modosRaiz.begin(), p.modosRaiz.end(), p.modoActual) != p.modosRaiz.end()) {
 		// Se juega un modo del parche 27 (sin sider.ini propio): manda el de la raíz
-		if (tieneRaizPhoenixDB(ini))
-			p.advertencias.push_back("El modo " + p.modoActual + " usa el sider.ini de la raíz y este tiene Phoenix-DB (fichajes sobre la base del parche 26): taparía los jugadores del parche nuevo. Desinstala phoenix.lua y vuelve a instalarlo para que se quite.");
+		std::error_code ecPb;
+		// Solo tapa a los jugadores del parche nuevo si Phoenix-DB trae un Player.bin (los fichajes generados por Link solo llevan PlayerAssignment.bin)
+		if (tieneRaizPhoenixDB(ini) && fs::is_regular_file(juego / "SiderAddons" / "livecpk" / "Phoenix-DB" / "common" / "etc" / "pesdb" / "Player.bin", ecPb))
+			p.advertencias.push_back("El modo " + p.modoActual + " usa el sider.ini de la raíz y este tiene Phoenix-DB con un Player.bin (fichajes sobre la base del parche 26): taparía los jugadores del parche nuevo. Pulsa «Aplicar fichajes» en SYNC › Puente (aparta ese Player.bin) o desinstala phoenix.lua y vuelve a instalarlo.");
 		else if (hayBaseParche(ini, tieneBaseEn(juego / "SiderAddons")))
 			p.advertencias.push_back("El sider.ini de la raíz trae la base de un modo viejo (olmosjr23\\Database) aunque el modo actual es " + p.modoActual + ": lo dejó el lanzador al iniciar un modo 26.");
 	}
@@ -596,6 +635,23 @@ Resultado instalar(const fs::path& paquete, const fs::path& juego, const std::st
 	r.mensaje = archivo + " instalado en " + std::to_string(ds.size()) + (ds.size() == 1 ? " carpeta" : " carpetas")
 		+ ". Abre PES: en sider.log debe aparecer que cargó." + apartado
 		+ (archivo == "phoenix.lua" && !sinBase.empty() ? " Phoenix-DB no se puso en: " + sinBase + " (no tienen una base del parche reconocida; sus datos no se tapan)." : "");
+	return r;
+}
+
+Resultado asegurarRaizPhoenixDB(const std::vector<fs::path>& carpetasSider) {
+	Resultado r;
+	std::vector<std::pair<fs::path, std::string>> cambios;
+	for (const fs::path& c : carpetasSider) {
+		std::string ini, error;
+		if (!leer(c / "sider.ini", ini, kMaxIni)) { r.mensaje = "No se pudo leer sider.ini en " + phoenix::entrega::aU8(c) + ": no se tocó nada."; return r; }
+		bool cambio = false;
+		const std::string nuevo = activarRaizPhoenixDBSiempre(ini, tieneBaseEn(c), cambio, error);
+		if (!error.empty()) { r.mensaje = error + " (" + phoenix::entrega::aU8(c) + ")."; return r; }
+		if (cambio) cambios.push_back({ c, nuevo });
+	}
+	if (!cambios.empty() && !escribirInis(cambios, r)) return r;
+	r.ok = true;
+	r.mensaje = cambios.empty() ? "sider.ini ya tenía la raíz Phoenix-DB." : "Se añadió la raíz Phoenix-DB a sider.ini (con copia).";
 	return r;
 }
 

@@ -1,95 +1,61 @@
-# Fichajes como CAMBIOS (en vez de una copia de la base 26)
+# Fichajes como CAMBIOS (generados en cada PC sobre SU base)
 
-Investigación de solo lectura, 12 oct 2026. No se tocó el juego ni `PhoenixSync/`. Los scripts de análisis (Python) quedaron en el scratchpad de la sesión; no se commitean.
+Estado: **implementado en Phoenix Link 0.2.46** (2026-10-12). Probado con bases falsas y con COPIAS de las bases reales de Fralex; **sin probar todavía dentro de PES** (ver §7). Este documento sustituye al informe de investigación de la mañana del 12-oct, cuya conclusión principal estaba equivocada (§2).
 
-## 1. Formato de las bases (verificado)
+## 0. En una frase
+Link ya no lleva ni copia ninguna base de datos. Lee la base REAL del PC (la del modo/parche activo), le aplica una lista corta de cambios «jugador → equipo» (`fichajes.json`) y deja solo `PlayerAssignment.bin` en `SiderAddons\livecpk\Phoenix-DB\…\pesdb\`. Player.bin queda el de la base. Se quita en un clic.
 
-Cada `.bin` de `CGP_database.cpk` (CPK sin comprimir, tabla `@UTF` enmascarada) y de `Phoenix-DB` tiene una cabecera de 16 bytes `FF 10 81 'WESYS'` + `u32 tamaño comprimido` + `u32 tamaño real`, y detrás un flujo **zlib** normal (`78 DA`): `zlib.decompress(d[16:])`. (`Country.bin` va sin esa cabecera.)
+## 1. Formato de las bases (verificado con las bases reales)
+Cada `.bin` de `CGP_database.cpk` (CPK sin comprimir, tabla `@UTF` enmascarada; el tamaño del bloque va en **little endian**) y de las carpetas `olmosjr23\Database` / `Phoenix-DB` tiene cabecera de 16 bytes `FF 10 81 'WESYS'` + `u32 tamaño comprimido` + `u32 tamaño real` + flujo **zlib** (`78 DA`). `Country.bin` va sin esa cabecera.
 
-**PlayerAssignment.bin** (lo único que dice «jugador → equipo»): sin cabecera, registros de **16 bytes** = `u32 ×4`:
+**PlayerAssignment.bin**: sin cabecera, filas de **16 bytes** = 4 × `u32` little endian:
 
 | campo | significado |
 |---|---|
-| 0 | id de fila (1…21942; único; no es estable entre bases) |
-| 1 | **player_id** (1697…235644; un jugador puede salir en 2 filas: club + selección) |
+| 0 | id de fila (único; no es estable entre bases) |
+| 1 | **player_id** (un jugador puede salir en 2 filas: club + selección) |
 | 2 | **team_id** |
-| 3 | empaquetado: `>>10` = puesto en la plantilla (0…39, único por equipo), `&1023` = otro número único por equipo (probablemente dorsal). Interpretación probable, sin confirmar |
+| 3 | empaquetado: `>>10` = puesto en la plantilla (único por equipo), `&1023` = número bajo (no siempre único; probable dorsal, sin confirmar) |
 
-Filas: 26 = 20.398, 27 = 19.612, UEFAGOL 27 = 19.489, Clásicos = 15.562, Phoenix-DB = 19.747. Máx. 40 jugadores por equipo.
+Filas: 26 (olmosjr23) = 19.747, CPK 26 = 20.398, 27 = 19.612, UEFAGOL 27 = 19.489, Clásicos = 15.562. En ninguna base hay un equipo con más de 40 filas.
 
-**Player.bin**: cabecera de 8 bytes (`u32` 0 en la 26 / 1250 en 27, Phoenix y UEFA; `u32` 0) + **29.997 huecos de 312 bytes**. Los 4 primeros bytes de cada registro = player_id (0 = hueco vacío). No lleva el equipo, así que un fichaje es solo un cambio en PlayerAssignment.
+**Player.bin**: cabecera de 8 bytes + registros de 312 bytes (id = primeros 4 bytes; 0 = hueco); el archivo termina con el último registro recortado. **Team.bin** no se decodifica: un equipo es válido si la base le da al menos una fila.
 
-**Team.bin**: tiene secciones, no es de registro fijo; no se decodificó. Para «equipo válido» sirve que el `team_id` exista en la PlayerAssignment de la base destino.
+## 2. Corrección: Phoenix-DB no tenía fichajes
+La investigación inicial comparó Phoenix-DB con la CPK del 26 y encontró 175 «cambios de Fralex» (12 altas reales, 37 «Player Identidad», 126 bajas). **Era un error de base:** los modos 26 no usan la CPK, usan `olmosjr23\Database` (esa raíz va en su `sider.ini`). Comparado con esa base, el `PlayerAssignment.bin` de Phoenix-DB es **idéntico** (mismo md5 `7958bbaf…`) y su `Player.bin` también (idéntico al descomprimir; solo cambia la compresión: 1.769.252 vs 1.777.004 bytes). Es decir: Phoenix-DB es una **copia de la base de olmosjr23**, sin ningún fichaje. El único fichaje que pasó por Sync fue una prueba («Jugador 114506: equipo 101», 10-oct) que se deshizo.
 
-## 2. Qué diferencia hay entre la 26 y Phoenix-DB
+Consecuencias:
+- La lista de fichajes que lleva Link va **vacía** (`SmashSoda\phoenix\fichajes\fichajes.json`). Los fichajes reales los pondrá Fralex (o vendrán de la web/Mercado, §5).
+- Las 175 diferencias eran solo la distancia entre la CPK 26 y olmosjr23: no hay que guardarlas.
+- La base «real» que ve el juego depende del modo: **26 → olmosjr23\Database**; **27, UEFAGOL 27, Clásicos → el CGP_database.cpk del modo**.
 
-Hallazgo importante: **Phoenix-DB NO es «la 26 + fichajes»**. Es un híbrido:
+## 3. Diseño implementado
+- **Código:** `SmashSoda\phoenix\link\Fichajes.h/.cpp` (inflate propio, lector de CPK, formato `.bin`, reglas, aplicar/quitar), `web\AccionesFichajesWeb.cpp` (acciones `fichajes.estado` y `fichajes.accion`), `ModulosJuego` (`raicesActivas`, `carpetasModos`, `asegurarRaizPhoenixDB`), UI en SYNC › Puente › «Fichajes de Phoenix».
+- **Sitios:** la raíz del juego y cada modo del cambiador (`ConmeGol Extras\<modo>`). El lanzador copia `SiderAddons` del modo sobre la raíz al iniciar, así que el resultado de cada modo viaja con él.
+- **Base de cada sitio:** la primera `cpk.root` activa del `sider.ini` que manda ahí (sin Phoenix-DB) que trae `PlayerAssignment.bin` (olmosjr23 en los 26); si no hay, el `download\CGP_database.cpk` del modo. Si no se lee o no tiene el formato esperado: **no se crea nada** (regla «sin base reconocida, no se pone Phoenix-DB», que ahora se aplica a cada modo).
+- **Qué escribe:** solo `PlayerAssignment.bin` (cabecera WESYS y zlib «almacenado», válido para cualquier lector zlib) y `fichajes_aplicados.json` (estado: fecha, huella de la base, de la lista y de lo escrito). Si Phoenix-DB tiene un `Player.bin` que **no** es el de la base (p. ej. la copia vieja del 26 en un modo 27), se **aparta** a `Phoenix-DB\_antes-de-fichajes-<sello>\` (no se borra) para no tapar a los jugadores del parche.
+- **sider.ini:** si falta, añade una línea `cpk.root = ".\livecpk\Phoenix-DB"` (antes de la base si la hay; si no, antes de la primera `cpk.root`), con copia `sider.ini.phoenix-<sello>` y vuelta atrás.
 
-- `Player.bin` de Phoenix: 24.038 de 29.932 registros idénticos a la 26; en otros hay campos con valor del 27 (bytes 12/13/19/43) y la cabecera es la del 27. 2.725 jugadores no coinciden ni con la 26 ni con la 27.
-- `PlayerAssignment`: 3.677 pares (jugador, equipo) distintos de la 26 y 6.119 distintos de la 27. 2.531 jugadores cambian de equipo respecto a la 26 y **2.356 de ellos ya están igual que en la 27**. Casi todo lo «distinto» es deriva de base (una 26 parcialmente actualizada), no fichajes de Fralex.
-
-Lo que queda **fuera de la 27** (lo que parece de Fralex): **175 jugadores**.
-
-| grupo | n | qué es |
-|---|---|---|
-| Altas en equipo real | 12 | p. ej. 200050 → 1258, 201930 → 2725, 208123 → 2661, 208750 y 208799 → 139, 208912 → 2195, 208914 → 2651, 150927 → 5373, 160723 → 5370, 167093 → 5001, 164757 → 5503, 129375 → 2208 |
-| «Player Identidad» aparcados en los equipos 9107/9108 | 37 | marcadores de posición; esos equipos **no existen en la 27** (0 jugadores) |
-| Bajas (jugador sin equipo en Phoenix) | 126 | quedan libres; sin pruebas de que sean intencionadas |
-
-Los 37 de Identidad y la mayoría de las bajas tienen `Player.bin` igual al de la 26: el fichaje no toca Player.bin.
-
-## 3. Cuántos se reaplican limpios sobre la base 27
-
-Regla estricta (jugador existe + origen igual que en la 26 + destino válido): **solo 2 de 175**. En la 27 el jugador ya cambió de equipo (134 casos) o el destino no existe (37).
-
-Regla relajada (jugador existe, destino válido, **gana el cambio de Fralex** aunque el origen sea otro):
-
-| base | altas reales aplicables (de 12) | falta jugador | falta equipo |
-|---|---|---|---|
-| ConmeGOL 27 | **10** (8 con origen cambiado por el parche) | 2 | 0 |
-| UEFAGOL 27 | 7 (6 con origen cambiado) | 4 | 1 |
-
-Los 37 «Identidad» no tienen sitio en la 27: no se aplican. Las 126 bajas parecen deriva y no conviene guardarlas como cambios sin confirmarlo con Fralex.
-
-**Conclusión:** los fichajes reales son ~12 filas, no una base de 19.747. La copia completa arrastra miles de cambios ajenos y tapa a los jugadores nuevos del 27.
-
-## 4. Diseño propuesto
-
-**Formato** (`fichajes.json`, versión 1; operaciones, no filas):
-
+## 4. Lista de cambios (`fichajes.json`, versión 1)
 ```json
-{ "version": 1, "creado": "2026-10-12T…", "autor": "Fralex",
-  "baseOrigen": { "modo": "ConmeGOL 26", "sha1PlayerAssignment": "…" },
-  "cambios": [
-    { "op": "mover", "jugador": 208750, "nombre": "…", "de": 9103, "a": 139 },
-    { "op": "alta",  "jugador": 200050, "a": 1258 },
-    { "op": "baja",  "jugador": 150927, "de": 2504 }
-  ] }
+{ "version": 1, "regla": "relajada",
+  "cambios": [ { "player_id": 114506, "team_id": 101, "origen": 0, "nota": "texto opcional" } ] }
 ```
+- Orden de búsqueda: `%APPDATA%\Phoenix Mercado\fichajes\fichajes.json` (punto de entrada para Sync/Mercado) y, si no existe, `<exe>\fichajes\fichajes.json` (el que lleva Link).
+- **Reglas** por cada cambio: el jugador debe existir en `Player.bin` de la base y el equipo en ella; máximo 40 por equipo; si ya está en el equipo destino no hace nada; sin `origen` mueve su única fila (si tiene dos, se salta por ambiguo); con `origen` mueve esa fila. **Relajada** (por defecto): si el jugador ya no está en `origen`, gana el cambio de la lista; **estricta**: se salta. No hay bajas (no se puede sacar a un jugador de un equipo) ni se usan equipos que no existan (p. ej. 9107/9108 del 26).
+- Fila movida: conserva su id; puesto = primer hueco libre del equipo destino; número bajo = el suyo si está libre, si no el primero libre. Altas: id = máximo+1.
+- **Validación antes de escribir (todo o nada):** ids de fila únicos, sin pares (jugador, equipo) repetidos, puesto único por equipo, ≤ 40 por equipo; después de escribir se vuelve a leer y se comprueba el sha256.
 
-- `mover` = quitar la fila (jugador, `de`) y crear (jugador, `a`). `alta` = sin equipo previo. `baja` = solo si Fralex la pide a propósito.
-- La clave es siempre `player_id` (estable entre bases); `nombre` es solo para mostrar.
+## 5. Quién guarda y quién aplica
+- **Link aplica** (esto). **Quién guarda la lista:** Sync/Mercado deberá dejar `fichajes.json` en `%APPDATA%\Phoenix Mercado\fichajes\`; el formato y las reglas están en `docs/PROMPT-WEB-fichajes-lista.md` (para pegar en el chat WEB/Sync). Mientras tanto la lista se edita a mano. La entrega antigua de Sync (`PlayerAssignment.bin` ya hecho dentro de Phoenix-DB) sigue funcionando; si pisa un archivo generado por Link, el estado pasa a «lo cambió otra herramienta» y Link no lo borra al quitar.
 
-**Quién guarda y quién aplica**
-- **Sync** (guarda): compara la base reconocida del modo con la edición de Fralex y publica **solo** estas operaciones (unos KB) en vez de los `.bin` completos de `sync-publicar-oficial --base`. Hay que comparar contra la base real de cada modo, no una 26 asumida; si no, la deriva se cuela como fichaje.
-- **Link** (aplica): al iniciar un modo, lee la `PlayerAssignment.bin` del CPK ACTIVO, aplica la lista y escribe el resultado en `Phoenix-DB\common\etc\pesdb\PlayerAssignment.bin` (cabecera WESYS + zlib). Phoenix-DB ya no lleva `Player.bin`: se usa el del parche. Así Phoenix-DB sí se puede poner en el 27 (sustituye la regla «sin base reconocida no se pone»).
+## 6. Seguridad, copia y vuelta atrás
+- Solo con PES y `sider.exe` cerrados. Copia de lo que había antes (`_antes-de-fichajes-<sello>`) y de cada `sider.ini`. Escritura atómica (`.tmp` + reemplazo).
+- **Quitar** (un clic): borra solo lo que generó Link (si su sha coincide con el estado guardado), deja la copia y el juego vuelve a la base original del parche. El `sider.ini` conserva su línea Phoenix-DB (inofensiva sin archivos).
+- **Doctor / diagnóstico:** el informe para depurar y el diagnóstico en claro llevan «Fichajes: N aplicados, M saltados en K sitios» y una línea por modo con los motivos de lo saltado.
 
-**Comprobaciones previas (cada cambio)**
-1. El jugador existe en `Player.bin` del parche activo.
-2. El equipo destino existe en esa base.
-3. El destino tiene sitio (< 40). Fila nueva: id = máx+1; empaquetado = siguiente puesto libre `(n<<10)|número libre`.
-4. Si hay `de`: ¿sigue ahí el jugador? Si no → conflicto.
-
-**Conflictos** (el parche ya movió al jugador, o el equipo no existe): por defecto **se salta y se avisa** con la lista («208750: en el 27 ya está en 5050»). Opción por jugador «forzar el de Fralex». Nunca se inventan equipos ni se deja una fila inválida.
-
-**Copia de seguridad y vuelta atrás**
-- Antes de aplicar: guardar la `PlayerAssignment.bin` anterior (patrón `.anterior` ya existente) y un `aplicado.json` (qué entró, qué se saltó, hash de la base).
-- Idempotente: se reaplica solo si cambia el hash del CPK activo o el `fichajes.json`.
-- Vuelta atrás: restaurar `.anterior` o quitar la raíz Phoenix-DB; el juego vuelve a la base pura del parche. Nunca se toca el CPK del parche.
-- Escribir con PES cerrado, igual que con `sider.ini`.
-
-**Por verificar / límites**
-- Significado exacto de los 10 bits bajos del campo 3: probar un fichaje en el juego.
-- Team.bin sin decodificar; el equipo se valida por PlayerAssignment.
-- Clásicos usa ids distintos (240001…); la lista debe llevar el modo de origen y no aplicarse allí.
-- Jugadores nuevos que no existen en la base requieren `Player.bin`: fuera de este diseño.
+## 7. Pruebas
+- `pruebas-link\correr_fichajes.bat` (MSVC; el .exe se llama `fichajes_test`, sin «instal»): **88/88 bien** con las copias reales de las bases de Fralex (CPK 26/27/UEFAGOL 27/Clásicos y olmosjr23): zlib real con códigos dinámicos, bin, CPK, reglas, 40 por equipo, idempotente (aplicar dos veces = mismos bytes), quitar, base dañada o ilegible → no se crea nada. El juego real solo se lee; todo se copia a una carpeta temporal.
+- `correr_escenarios.bat`: 55/55 (se actualizó E13: la advertencia de «Phoenix-DB sobre una base 27» ahora exige un Player.bin dentro de Phoenix-DB).
+- `modulos_test`, `parche27_test` y `quitar_modulo_test` ya fallaban igual antes de este cambio (12, 21 y 8 fallos con el código del último commit y con el nuevo): pendientes de ponerlos al día.
+- **Sin probar en PES (pendiente de Fralex):** que el juego acepte el `.bin` generado (zlib sin compresión), que Sider cargue la raíz Phoenix-DB que se añade al `sider.ini` del 27, y el significado de puesto/número bajo (un fichaje de prueba: ver `docs/BETA-1-GUIA-AMIGO.md`, «Probar un fichaje»).

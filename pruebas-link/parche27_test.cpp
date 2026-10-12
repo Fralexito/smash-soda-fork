@@ -118,7 +118,8 @@ static int principal(int argc, char** argv) {
 	{
 		const std::string ini = leer(raiz / "sider.ini");
 		escribir(raiz / "sider.ini", ini26);
-		OK(!infoParche(juego).advertencias.empty());          // Phoenix-DB activa en un modo 27
+		escribir(raiz / "livecpk" / "Phoenix-DB" / "common" / "etc" / "pesdb" / "Player.bin", "copia vieja de una base 26");
+		OK(!infoParche(juego).advertencias.empty());          // Phoenix-DB (con un Player.bin del 26) activa en un modo 27
 		bool c = false;
 		escribir(raiz / "sider.ini", quitarRaizPhoenixDB(ini26, c));
 		OK(infoParche(juego).advertencias.size() == 1);       // solo la base de olmosjr23

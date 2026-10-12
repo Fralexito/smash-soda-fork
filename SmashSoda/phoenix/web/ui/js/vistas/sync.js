@@ -72,10 +72,8 @@ const MODOS_RECARGA = {
 };
 function ModoRecarga({ m, mods }) {
   const v = m.arbitro?.modoRecarga || "AUTO-SIEMPRE";
-  const fich = fichajesEstado(mods);
   return html`<${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:12px">
-    <${Titulo} texto=${t("MODO DE RECARGA DE FICHAJES", "TRANSFER RELOAD MODE")} derecha=${fich.estado === "inactivo" ? html`<${Chip}>${t("SIN EFECTO EN ESTE PARCHE", "NO EFFECT ON THIS PATCH")}</${Chip}>` : null}/>
-    ${fich.estado === "inactivo" ? html`<div class="caja" style="font-size:14px"><span class="punto warn"></span> ${t("Los fichajes de Phoenix están desactivados en este parche (próximamente): tus jugadores y equipos son los del parche, sin tocar. Puedes dejar este modo como está.", "Phoenix transfers are off on this patch (coming soon): your players and teams are the patch's own. You can leave this mode as is.")}</div>` : null}
+    <${Titulo} texto=${t("MODO DE RECARGA DE FICHAJES", "TRANSFER RELOAD MODE")}/>
     <${Segmentos} valor=${v} al=${(x) => accion("sync.modoRecarga", { modo: x })}
       opciones=${[{ valor: "AUTO-SIEMPRE", texto: t("🟣 AUTO: SIEMPRE ⭐", "🟣 AUTO: ALWAYS ⭐") }, { valor: "AUTO-FICHAJES", texto: t("🔵 AUTO: FICHAJES", "🔵 AUTO: TRANSFERS") }, { valor: "ACTIVAR", texto: t("🟢 ACTIVAR", "🟢 ACTIVATE") }]}/>
     <div class="ayuda" style="font-size:14px">${t(MODOS_RECARGA[v][0], MODOS_RECARGA[v][1])}</div>
@@ -87,11 +85,15 @@ function Puente({ m }) {
   const [mods, setMods] = useState(null);
   const cargarMods = async () => { const r = await accion("sync.modulos", {}, { silencioso: true }); if (r) setMods(r); };
   useEffect(() => { cargarMods(); }, []);
+  const [fich, setFich] = useState(null);
+  const cargarFich = async () => { const r = await accion("fichajes.estado", {}, { silencioso: true }); if (r) setFich(r); };
+  useEffect(() => { cargarFich(); }, []);
   const b = m.buzon || { activo: true, estado: "cerrado", ultimo: "", juego: "", avisos: [] };
   const [texto, punto, ayuda] = ESTADOS(b);
   return html`<div class="fila partible" style="align-items:flex-start">
     <div class="col" style="flex:1 1 0;min-width:320px">
-      <${ResumenSync} mods=${mods} cargar=${cargarMods}/>
+      <${ResumenSync} mods=${mods} fich=${fich} cargar=${() => { cargarMods(); cargarFich(); }}/>
+      <${Fichajes} d=${fich} setD=${setFich} cargar=${cargarFich}/>
       <${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:14px">
         <${Titulo} texto=${t("ESTADO DEL PUENTE", "BRIDGE STATUS")}/>
         <div style="display:flex;align-items:center;gap:12px">
@@ -130,17 +132,6 @@ function Puente({ m }) {
 }
 
 // ---- Que funciona en este juego (se calcula a partir de Modulos del juego) ----
-// Fichajes de Phoenix (Phoenix-DB): solo donde el sider.ini tiene una base de parche reconocida (parche 26). Sin ella, desactivados.
-function fichajesEstado(d) {
-  const m = (d?.modulos || []).find((x) => x.archivo === "phoenix.lua");
-  const ds = m?.destinos || [];
-  if (!m || !m.gestionable || !ds.length) return { estado: "desconocido", sin: [] };
-  const sin = ds.filter((x) => x.sinBase).map((x) => x.nombre);
-  if (sin.length === ds.length) return { estado: "inactivo", sin };
-  if (sin.length) return { estado: "parcial", sin };
-  return { estado: "activo", sin };
-}
-
 function FilaResumen({ punto, titulo, texto }) {
   return html`<div style="display:flex;gap:12px;align-items:flex-start">
     <span class=${cx("punto", punto)} style="width:12px;height:12px;margin-top:5px;flex:none"></span>
@@ -148,13 +139,12 @@ function FilaResumen({ punto, titulo, texto }) {
   </div>`;
 }
 
-function ResumenSync({ mods, cargar }) {
+function ResumenSync({ mods, fich: fichajes, cargar }) {
   if (!mods) return null;
   const lista = (mods.modulos || []).filter((x) => x.gestionable);
   const pend = lista.filter((x) => x.estado !== "instalado");
   const perdidos = lista.filter((x) => x.estado === "perdido");
   const nuevos = lista.filter((x) => x.estado === "desactualizado");
-  const fich = fichajesEstado(mods);
   const sinJuego = !mods.juego;
   const luaErr = lista.filter((x) => x.carga === "error");
   const nombres = (v) => v.map((x) => x.archivo).join(", ");
@@ -171,11 +161,8 @@ function ResumenSync({ mods, cargar }) {
     <${FilaResumen} punto=${sinJuego ? "warn" : "ok"} titulo=${t("Tu juego", "Your game")} texto=${sinJuego ? t("Aún no sé dónde está. Abre PES 2021 con Link abierto, o pega su carpeta abajo.", "I don't know where it is yet. Open PES 2021 with Link running, or paste its folder below.") : mods.juego}/>
     <${FilaResumen} punto=${modPunto} titulo=${t("Módulos de Phoenix en el juego", "Phoenix modules in the game")} texto=${modTxt}/>
     <${FilaResumen} punto=${avisosOk ? "ok" : "warn"} titulo=${t("Avisos de la web dentro del juego", "Web notices inside the game")} texto=${avisosOk ? t("Listos: salen en el panel de Sider (barra espaciadora).", "Ready: they show in the Sider panel (space bar).") : t("Necesitan phoenix.lua instalado.", "They need phoenix.lua installed.")}/>
-    <${FilaResumen} punto=${fich.estado === "activo" ? "ok" : fich.estado === "desconocido" ? "warn" : ""} titulo=${t("Fichajes de Phoenix", "Phoenix transfers")}
-      texto=${fich.estado === "activo" ? t("Activos (el parche tiene una base reconocida).", "On (the patch has a recognised base).")
-        : fich.estado === "parcial" ? t(`Activos solo en algunos modos; desactivados en: ${fich.sin.join(", ")}.`, `On only in some modes; off in: ${fich.sin.join(", ")}.`)
-        : fich.estado === "inactivo" ? t("Desactivados en este parche (próximamente): no se toca ningún jugador ni equipo de tu juego.", "Off on this patch (coming soon): none of your game's players or teams are touched.")
-        : t("Se sabrá al instalar phoenix.lua.", "Known once phoenix.lua is installed.")}/>
+    <${FilaResumen} punto=${!fichajes ? "warn" : (fichajes.objetivos || []).some((x) => x.estado === "aplicado") ? "ok" : ""} titulo=${t("Fichajes de Phoenix", "Phoenix transfers")}
+      texto=${fichajes ? fichajes.texto + " " + t("Se generan sobre la base de TU juego; no se copia ninguna base.", "They are built on top of YOUR game's base; no database is copied.") : t("Revisando…", "Checking…")}/>
   </${Tarjeta}>`;
 }
 
@@ -224,6 +211,60 @@ function Doctor() {
             ${(d.archivos || []).map((a) => html`<span key=${a.nombre}>${a.sha256 ? "●" : "·"} ${a.nombre}${a.sha256 ? " · " + a.sha256.slice(0, 12) + "…" : t(" · no está", " · missing")}</span>`)}
           </div>` : null}
         </div>`}
+  </${Tarjeta}>`;
+}
+
+// ---- Fichajes de Phoenix: Link genera Phoenix-DB sobre TU base (la del parche/modo activo) + una lista de cambios ----
+const ESTADO_FICH = {
+  sin_base: [["BASE NO RECONOCIDA", "BASE NOT RECOGNISED"], ""],
+  nada: [["NADA QUE APLICAR", "NOTHING TO APPLY"], ""],
+  sin_aplicar: [["LISTO PARA APLICAR", "READY TO APPLY"], "vip"],
+  aplicado: [["APLICADO", "APPLIED"], "acc"],
+  desfasado: [["HAY QUE VOLVER A APLICAR", "RE-APPLY NEEDED"], "vip"],
+  cambiado: [["LO CAMBIÓ OTRA HERRAMIENTA", "CHANGED BY ANOTHER TOOL"], "vip"],
+};
+function Fichajes({ d, setD, cargar }) {
+  const [ocupado, setOcupado] = useState(false);
+  const hacer = async (que) => {
+    setOcupado(true);
+    const r = await accion("fichajes.accion", { accion: que });
+    setOcupado(false);
+    if (r) { setD(r); if (r.mensaje) avisar(r.mensaje, "ok", 9000); }
+  };
+  const obj = d?.objetivos || [];
+  const n = d?.lista?.cambios ?? 0;
+  const hayGenerado = obj.some((x) => x.estado === "aplicado" || x.estado === "desfasado" || x.estado === "cambiado");
+  const bloqueado = ocupado || !d || !!d.pesAbierto || !d.juego || !!d.lista?.error;
+  return html`<${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:12px">
+    <${Titulo} texto=${t("FICHAJES DE PHOENIX", "PHOENIX TRANSFERS")} derecha=${html`<${Boton} tipo="suave mini" al=${cargar}>${t("REVISAR", "CHECK")}</${Boton}>`}/>
+    <div class="ayuda" style="font-size:14px">
+      ${t("Esto genera tus fichajes sobre TU base: Link lee la base de cada modo de tu juego, le aplica la lista de cambios (jugador → equipo) y deja solo PlayerAssignment.bin en Phoenix-DB. No copia bases de nadie ni toca Player.bin. Se puede quitar en un clic.",
+          "This builds your transfers on top of YOUR base: Link reads each mode's database in your game, applies the change list (player → team) and leaves only PlayerAssignment.bin in Phoenix-DB. It copies nobody's database and never touches Player.bin. One click to remove.")}
+    </div>
+    ${d?.pesAbierto ? html`<div class="caja" style="font-size:14px"><span class="punto warn"></span> ${t("Cierra PES 2021 (y Sider) para aplicar o quitar: lee los datos al arrancar.", "Close PES 2021 (and Sider) to apply or remove: it reads the data at startup.")}</div>` : null}
+    ${!d ? html`<div class="ayuda">${t("Revisando…", "Checking…")}</div>` : html`
+      <div class="ayuda" style="font-size:13px">${t(`Lista: ${n} ${n === 1 ? "cambio" : "cambios"} · regla ${d.lista?.regla === "estricta" ? "estricta" : "relajada"} · `, `List: ${n} ${n === 1 ? "change" : "changes"} · ${d.lista?.regla === "estricta" ? "strict" : "relaxed"} rule · `)}<span class="mono">${d.lista?.fuente || ""}</span></div>
+      ${d.lista?.error ? html`<div class="caja" style="font-size:14px"><span class="punto bad"></span> ${d.lista.error}</div>` : null}
+      ${n === 0 && !d.lista?.error ? html`<div class="ayuda" style="font-size:14px">${t("La lista de fichajes está vacía: no hay nada que aplicar y el juego queda con la base original del parche.", "The transfer list is empty: nothing to apply and the game keeps the patch's original database.")}</div>` : null}
+      ${obj.map((x) => {
+        const [et, tipo] = ESTADO_FICH[x.estado] || [[x.estado, x.estado], ""];
+        return html`<div class="caja" key=${x.nombre} style="display:flex;flex-direction:column;gap:6px">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+            <b style="font-size:14px">${x.nombre}</b>
+            <${Chip} tipo=${tipo}>${t(et[0], et[1])}</${Chip}>
+          </div>
+          <div class="ayuda mono" style="font-size:12px">${x.baseOk ? t(`Base: ${x.baseOrigen} · ${x.filasBase} filas`, `Base: ${x.baseOrigen} · ${x.filasBase} rows`) : x.error}</div>
+          ${x.baseOk && n > 0 ? html`<div class="ayuda" style="font-size:13px">${t(`Fichajes: ${x.aplicados} se aplican, ${x.yaEstaban} ya estaban, ${x.saltados.length} se saltan.`, `Transfers: ${x.aplicados} apply, ${x.yaEstaban} already there, ${x.saltados.length} skipped.`)}${x.playerBinAjeno ? t(" Phoenix-DB tiene un Player.bin que no es el de la base: se apartará (con copia) para no tapar a los jugadores del parche.", " Phoenix-DB has a Player.bin that is not the base's: it will be set aside (with a backup) so it does not cover the patch's players.") : ""}</div>` : null}
+          ${(x.saltados || []).slice(0, 3).map((s) => html`<div class="mono mut" style="font-size:12px" key=${s.jugador + "-" + s.equipo}>· ${s.jugador} → ${s.equipo}: ${s.motivo}</div>`)}
+          ${(x.saltados || []).length > 3 ? html`<div class="mono mut" style="font-size:12px">… ${t(`y ${x.saltados.length - 3} más (están en el informe de diagnóstico)`, `and ${x.saltados.length - 3} more (in the diagnostic report)`)}</div>` : null}
+        </div>`;
+      })}
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <${Boton} tipo="lleno mini" deshabilitado=${bloqueado || n === 0} titulo=${t("Genera los fichajes sobre la base de cada modo (con copia de seguridad)", "Builds the transfers on each mode's base (with backup)")}
+          al=${async () => { if (await confirmar({ titulo: t("¿Aplicar los fichajes de Phoenix?", "Apply Phoenix transfers?"), texto: t("Link generará PlayerAssignment.bin en Phoenix-DB de cada modo con base reconocida, sobre tu base, y añadirá la raíz Phoenix-DB a sider.ini si falta (con copia). Todo o nada; puedes quitarlo cuando quieras.", "Link will build PlayerAssignment.bin in each recognised mode's Phoenix-DB on top of your base and add the Phoenix-DB root to sider.ini if missing (with backup). All or nothing; remove any time."), si: t("Aplicar", "Apply") })) hacer("aplicar"); }}>${t("APLICAR FICHAJES DE PHOENIX", "APPLY PHOENIX TRANSFERS")}</${Boton}>
+        <${Boton} tipo="suave mini" deshabilitado=${bloqueado || !hayGenerado} titulo=${t("Vuelve a la base original del parche (la copia de seguridad se queda)", "Back to the patch's original database (backup stays)")}
+          al=${() => hacer("quitar")}>${t("QUITAR", "REMOVE")}</${Boton}>
+      </div>`}
   </${Tarjeta}>`;
 }
 

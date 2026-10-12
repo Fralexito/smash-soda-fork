@@ -33,7 +33,17 @@ Sin Link (solo los módulos): doble clic en `PhoenixJuego-instalar.bat`, elige l
 | Abrir sala, mandos, puestos, equipos A/B | Listo (lo usa Fralex; con otra persona, esta sesión lo comprueba) |
 | Avisos de la web dentro del juego | Listo |
 | Marcador, goles, HUD y árbitro | Listo, a probar contigo |
-| **Fichajes de Phoenix** | **Desactivados en el parche 27 (próximamente).** No tocan tus jugadores |
+| **Fichajes de Phoenix** | **Se generan sobre TU base** (Link 0.2.46): SYNC › Puente › «Fichajes de Phoenix». No copia bases de nadie ni toca Player.bin; se quitan en un clic. Hoy la lista va vacía: no cambia nada hasta que haya fichajes. Sin probar aún dentro de PES |
+
+## Fichajes de Phoenix: cómo funcionan y cómo probar uno
+Link lee la base de datos de **tu** juego (la del modo que juegas), le aplica una lista corta de cambios «jugador → equipo» y deja solo `PlayerAssignment.bin` en `SiderAddons\livecpk\Phoenix-DB`. Funciona igual con ConmeGOL 26, 27, UEFAGOL 27 y Clásicos: si no entiende tu base, no crea nada. Detalle: `docs/FICHAJES-COMO-CAMBIOS.md`.
+
+**Probar un fichaje (con PES cerrado y tu juego con copia hecha):**
+1. Crea la carpeta `%APPDATA%\Phoenix Mercadoichajes` y dentro `fichajes.json` con un solo cambio de prueba (un jugador que conozcas y un equipo que existe en tu modo):
+   `{ "version": 1, "cambios": [ { "player_id": 208750, "team_id": 139, "nota": "prueba" } ] }`
+2. Link → SYNC → Puente → **Fichajes de Phoenix** → REVISAR: cada modo dice «Listo para aplicar» (o por qué salta el cambio).
+3. **APLICAR FICHAJES DE PHOENIX**. Abre PES con el lanzador, ve a Editar equipos y mira si el jugador está en su equipo nuevo.
+4. Si algo se ve raro: Link → **QUITAR** (vuelve a la base original) y manda el informe (Sala › Conexión › Diagnóstico del PC › COPIAR INFORME).
 
 ## Quitar Phoenix
 - Del juego: Link → SYNC → Módulos del juego → **DESINSTALAR**. Sin Link: abre una consola en la carpeta del .bat y ejecuta `PhoenixJuego-instalar.bat desinstalar`. No borra nada: aparta los `.lua` y guarda copias de `sider.ini`.

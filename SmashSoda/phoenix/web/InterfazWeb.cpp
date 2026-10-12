@@ -208,6 +208,7 @@ namespace phoenix::web {
 			registrarAccionesAjustes(in);
 			registrarAccionesPartido(in);
 			registrarAccionesModulos(in);
+			registrarAccionesFichajes(in);
 			registrarAccionesCedido(in);
 
 			in.iniciada = true;

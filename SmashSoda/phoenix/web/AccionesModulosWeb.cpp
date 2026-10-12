@@ -68,6 +68,10 @@ namespace phoenix::web {
 
 	using namespace detalle_modulos;
 
+	namespace detalle_fichajes {
+		std::string textoFichajes(const std::filesystem::path& juego, bool conDetalle);   // AccionesFichajesWeb.cpp
+	}
+
 	namespace {
 		/// Texto seguro para JSON: los bytes que no son UTF-8 válido se cambian por «?» (sider.log puede venir en Latin-1).
 		std::string utf8Seguro(const std::string& s) {
@@ -185,8 +189,12 @@ namespace phoenix::web {
 				if (m.archivo == "phoenix.lua") {
 					std::string sin;
 					for (const auto& x : m.destinos) if (x.sinBase) sin += (sin.empty() ? "" : ", ") + x.nombre;
-					if (!sin.empty()) di("i", "Phoenix-DB (fichajes) NO se puso en: " + sin + ".", "Es normal, no es un error: esa carpeta no tiene una base de parche reconocida (parche 27 u otro) y así no se tapan tus jugadores. Los fichajes están desactivados ahí (próximamente).");
+					if (!sin.empty()) di("i", "Phoenix-DB (fichajes) NO se puso en: " + sin + ".", "Es normal, no es un error: esa carpeta no tiene una base de parche reconocida en su sider.ini, y así no se tapan tus jugadores. Los fichajes de Phoenix no usan esa raíz: SYNC › Puente › «Fichajes de Phoenix» los genera sobre la base de cada modo.");
 				}
+			}
+			{
+				const std::string f = detalle_fichajes::textoFichajes(juego, false);
+				if (!f.empty()) di("i", f, "Mira SYNC › Puente › Fichajes de Phoenix para el detalle por modo.");
 			}
 			const phoenix::modulos::Parche pa = phoenix::modulos::infoParche(juego);
 			for (const std::string& w : pa.advertencias) di("!", w, "Desinstala phoenix.lua desde Link y vuelve a instalarlo.");
@@ -220,6 +228,7 @@ namespace phoenix::web {
 					t += "   · " + x.nombre + ": archivo=" + (x.archivo ? "sí" : "no") + (x.version.empty() ? "" : " v" + x.version) + " igual=" + (x.igual ? "sí" : "no")
 						+ " línea=" + (x.linea ? "sí" : "no") + (x.perdida ? " PERDIDA" : "") + (x.sinBase ? " sinBase" : "") + "\n";
 			}
+			t += "\n-- Fichajes de Phoenix --\n" + detalle_fichajes::textoFichajes(juego, true);
 			t += "\n-- Archivos que deciden los datos (sha256 corto) --\n";
 			for (const phoenix::doctor::Archivo& a : d.archivos) t += a.nombre + ": " + (a.sha256.empty() ? std::string("no está") : a.sha256.substr(0, 12) + " · " + std::to_string(a.bytes) + " bytes") + "\n";
 			const auto destinos = phoenix::modulos::destinos(juego);

@@ -195,6 +195,7 @@ set_source_files_properties(
     "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/link/Entrega.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/link/EstadoJuego.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/link/ModulosJuego.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/link/Fichajes.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/link/Doctor.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/link/PhoenixLink.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/web/AnfitrionWeb.cpp"
@@ -231,6 +232,10 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E remove_directory $<TARGET_FILE_DIR:${PROJECT_NAME}>/sider
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         "${CMAKE_SOURCE_DIR}/SmashSoda/phoenix/sider" $<TARGET_FILE_DIR:${PROJECT_NAME}>/sider
+    # Phoenix: lista de fichajes que lleva Link (fichajes como CAMBIOS sobre la base de tu juego; docs/FICHAJES-COMO-CAMBIOS.md).
+    COMMAND ${CMAKE_COMMAND} -E remove_directory $<TARGET_FILE_DIR:${PROJECT_NAME}>/fichajes
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_SOURCE_DIR}/SmashSoda/phoenix/fichajes" $<TARGET_FILE_DIR:${PROJECT_NAME}>/fichajes
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${CMAKE_SOURCE_DIR}/external/webview2/${TARGET_ARCH}/WebView2Loader.dll" $<TARGET_FILE_DIR:${PROJECT_NAME}>
     COMMAND ${CMAKE_COMMAND} -E copy_if_different

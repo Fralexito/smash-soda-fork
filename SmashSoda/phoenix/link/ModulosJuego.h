@@ -95,6 +95,17 @@ bool hayBaseParche(const std::string& ini, const std::function<bool(const std::s
 /// ¿Hay una cpk.root activa a Phoenix-DB?
 bool tieneRaizPhoenixDB(const std::string& ini);
 
+/// Raíces cpk.root ACTIVAS del sider.ini, en orden (rutas tal cual, p. ej. ".\livecpk\Faces").
+std::vector<std::string> raicesActivas(const std::string& ini);
+/// Carpetas de los modos de un cambiador de parches (con o sin sider.ini propio): <juego>\<carpeta>\<modo>.
+std::vector<fs::path> carpetasModos(const fs::path& juego);
+/// Como activarRaizPhoenixDB, pero si el sider.ini no tiene base reconocida la pone antes de la primera cpk.root activa
+/// (para los fichajes generados sobre la base del parche: docs/FICHAJES-COMO-CAMBIOS.md). "" + error si no hay ninguna cpk.root.
+std::string activarRaizPhoenixDBSiempre(const std::string& ini, const std::function<bool(const std::string&)>& tieneBase, bool& cambio, std::string& error);
+/// Asegura cpk.root = ".\livecpk\Phoenix-DB" en el sider.ini de cada carpeta SiderAddons dada (una línea, con copia previa
+/// sider.ini.phoenix-<sello> y vuelta atrás si algo falla). El que llama comprueba que PES está cerrado.
+Resultado asegurarRaizPhoenixDB(const std::vector<fs::path>& carpetasSider);
+
 /// Versión declarada en el .lua (`version = "x"`) o "".
 std::string versionDe(const std::string& lua);
 

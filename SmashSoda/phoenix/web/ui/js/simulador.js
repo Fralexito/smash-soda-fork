@@ -251,7 +251,7 @@ export function crearSimulador(enviar) {
     const p = s.partido;
     const e = {
       v: 1,
-      app: { version: "0.2.45", etapa: "beta 1", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
+      app: { version: "0.2.46", etapa: "beta 1", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
       noticias: { cargado: true, lista: s.noticias },
       chatGlobal: { cargado: true, pausado: s.chatGlobal.pausado, esperaSeg: s.chatGlobal.esperaSeg, rev: s.chatGlobal.mensajes.length, error: "" },
       web: { ...s.web, jugadoresLista: 3, versionLiga: "2026.10.08", eventosEnCola: 0 },
@@ -317,6 +317,16 @@ export function crearSimulador(enviar) {
     enviar({ t: "evento", nombre: "chatglobal", datos: globalJson() });
   };
 
+  // Fichajes como cambios (lo que devuelve fichajes.estado en el motor real)
+  const fichajesSim = () => {
+    const est = s.fichajesAplicado ? "aplicado" : "sin_aplicar";
+    const base = (nombre, origen, filas, aplic, ya, salt) => ({ nombre, baseOk: true, baseOrigen: origen, error: "", filasBase: filas, aplicados: aplic, yaEstaban: ya, estado: est, playerBinAjeno: false,
+      saltados: Array.from({ length: salt }, (_, i) => ({ jugador: 999999 - i, equipo: 139, codigo: "jugador_no_existe", motivo: "El jugador " + (999999 - i) + " no existe en la base de este parche." })) });
+    return { juego: s.buzon.juego, pesAbierto: s.pes.abierto, texto: s.fichajesAplicado ? "Fichajes: 6 aplicados, 3 saltados en 3 sitios." : "Fichajes: sin aplicar (4 en la lista).",
+      lista: { fuente: "%APPDATA%/Phoenix Mercado/fichajes/fichajes.json", nombre: "Simulador", regla: "relajada", cambios: 4, error: "" },
+      objetivos: [base("Raíz del juego", "CGP_database.cpk", 19612, 2, 1, 1), base("ConmeGOL Patch 27", "CGP_database.cpk", 19612, 2, 1, 1), base("UEFAGOL 27", "CGP_database.cpk", 19489, 2, 1, 1),
+        { nombre: "ConmeGOL Clasicos", baseOk: true, baseOrigen: "CGP_database.cpk", error: "", filasBase: 15562, aplicados: 0, yaEstaban: 0, estado: "nada", playerBinAjeno: false, saltados: [] }] };
+  };
   // Lista de «Módulos del juego» (lo que devuelve sync.modulos en el motor real)
   const modulosSim = () => {
     const est = s.modEstadio || "no_instalado";
@@ -471,6 +481,13 @@ export function crearSimulador(enviar) {
       ],
       avisos: ["phoenix.lua no es igual en todos los modos del switcher."], pesAbierto: s.pes.abierto,
     }),
+    // Fichajes de Phoenix como CAMBIOS (imita link/Fichajes.cpp): se generan sobre la base de cada modo, nunca se copia una base
+    "fichajes.estado": () => fichajesSim(),
+    "fichajes.accion": (d) => {
+      if (s.pes.abierto) throw Object.assign(new Error("Cierra PES 2021 primero: Sider lee los datos al arrancar."), { codigo: "PES_ABIERTO" });
+      s.fichajesAplicado = d.accion === "aplicar";
+      return { ...fichajesSim(), mensaje: d.accion === "aplicar" ? "Fichajes generados sobre tu base en 3 sitios: 6 aplicados, 3 saltados. Abre PES: se ven al cargar los datos del juego." : "Fichajes quitados en 3 sitios: el juego vuelve a la base original del parche (la copia queda en una carpeta _antes-de-fichajes-… dentro de Phoenix-DB)." };
+    },
     "sync.modulo": (d) => {
       if (s.pes.abierto) throw Object.assign(new Error("Cierra PES 2021 primero: Sider lee los módulos al arrancar."), { codigo: "PES_ABIERTO" });
       const nuevo = d.accion === "instalar" ? "instalado" : d.accion === "desinstalar" ? "no_instalado" : "apagado";
@@ -484,7 +501,7 @@ export function crearSimulador(enviar) {
       s.buzon.juego = r;
       return { ...modulosSim(), mensaje: "Carpeta del juego guardada." };
     },
-    "diag.informe": () => ({ texto: "== PHOENIX LINK · INFORME PARA DEPURAR ==\nPhoenix Link 0.2.45 (beta 1)\n(simulador: sin datos reales)\n" }),
+    "diag.informe": () => ({ texto: "== PHOENIX LINK · INFORME PARA DEPURAR ==\nPhoenix Link 0.2.46 (beta 1)\n(simulador: sin datos reales)\n" }),
     "ajustes.avisoEntrada": (d) => { s.ajustes.avisoEntrada[d.campo] = !!d.valor; },
     "ajustes.probarAvisoEntrada": () => ({}),
     "ajustes.avisosJuego": (d) => { s.buzon.activo = d.valor; s.buzon.estado = d.valor ? "conectado" : "apagado"; },
