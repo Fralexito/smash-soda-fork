@@ -338,6 +338,75 @@ static void copias(int argc, char** argv) {
 	say("«%s»: %d copias fuera de la tabla -> usuariopad_copias.txt", argv[4], hits);
 }
 
+// ---- SOLO LEE: pares <nombre existente> <su casilla> <A1> <A2> <B1> <B2> ----
+// Busca el sitio donde PES guarda «el Usuario de cada mando» (u32). Estado A: mando 1 en el Usuario A1 y mando 2 en A2.
+// Estado B: mando 1 en B1 y mando 2 en B2 (los 4 Usuarios con nombre y distintos). Numpad 1 = foto del estado A, Numpad 2 = foto del B,
+// Numpad 9 = salir. Un candidato es una pareja (x, x+salto) que vale (A1, A2) en A y (B1, B2) en B. Escribe usuariopad_pares.txt.
+struct Par { uint64_t x; uint32_t salto; };
+static std::vector<Par> gPares;
+static void paresFoto(int estado, uint32_t v1, uint32_t v2) {
+	size_t total = 0;
+	if (estado == 1) gPares.clear();
+	std::vector<Par> nuevos;
+	for (auto& r : regiones()) {
+		std::vector<uint8_t> b(r.tam); SIZE_T got = 0;
+		if (!ReadProcessMemory(gH, (LPCVOID)r.base, b.data(), r.tam, &got) || got != r.tam) continue;
+		auto u32 = [&](uint64_t addr, uint32_t& out) -> bool { if (addr < r.base || addr + 4 > r.base + r.tam) return false; memcpy(&out, &b[addr - r.base], 4); return true; };
+		if (estado == 1) {
+			for (size_t i = 0; i + 4 <= r.tam; i += 4) {
+				uint32_t a; memcpy(&a, &b[i], 4); if (a != v1) continue;
+				for (uint32_t s = 4; s <= 0x400; s += 4) { uint32_t c; if (i + s + 4 > r.tam) break; memcpy(&c, &b[i + s], 4); if (c == v2) nuevos.push_back({ r.base + i, s }); }
+			}
+		}
+	}
+	if (estado == 1) { gPares = std::move(nuevos); say("foto A: %zu parejas candidatas. Ahora pon los Usuarios del estado B y pulsa Numpad 2", gPares.size()); return; }
+	// estado B: se filtra con lecturas directas (rapido)
+	std::vector<Par> sobreviven;
+	for (auto& p : gPares) {
+		uint32_t a = 0, c = 0; SIZE_T g1 = 0, g2 = 0;
+		if (ReadProcessMemory(gH, (LPCVOID)p.x, &a, 4, &g1) && ReadProcessMemory(gH, (LPCVOID)(p.x + p.salto), &c, 4, &g2) && g1 == 4 && g2 == 4 && a == v1 && c == v2) sobreviven.push_back(p);
+	}
+	gPares = std::move(sobreviven); (void)total;
+	say("foto B: quedan %zu parejas", gPares.size());
+	FILE* f = fopen("usuariopad_pares.txt", "w");
+	fprintf(f, "parejas que valen (A1,A2) en A y (B1,B2) en B: %zu\n", gPares.size());
+	size_t n = 0;
+	for (auto& p : gPares) {
+		if (n++ >= 300) break;
+		fprintf(f, "%llX  +%u%s  contexto:", (unsigned long long)p.x, p.salto, (p.x >= gExeBase && p.x < gExeBase + gExeTam) ? " [EXE]" : "");
+		uint8_t b[96] = {}; SIZE_T g = 0; ReadProcessMemory(gH, (LPCVOID)(p.x - 16), b, 96, &g);
+		for (int k = 0; k < 96; k++) fprintf(f, " %02X", b[k]);
+		fprintf(f, "\n");
+	}
+	fclose(f);
+}
+
+static void pares(int argc, char** argv) {
+	if (argc < 8) { say("uso: pares <nombre existente> <su casilla> <A1> <A2> <B1> <B2>"); return; }
+	const uint64_t tabla = localizarTabla(argv[2], atoi(argv[3]));
+	if (!tabla) { say("No encuentro la tabla de Usuarios con certeza. No hago nada."); return; }
+	std::vector<uint8_t> t(32 * kRegU); SIZE_T g = 0;
+	if (!ReadProcessMemory(gH, (LPCVOID)tabla, t.data(), t.size(), &g) || g != t.size()) { say("No pude leer la tabla."); return; }
+	int idx[4];
+	for (int k = 0; k < 4; k++) {
+		idx[k] = -1;
+		for (int u = 0; u < 32; u++) if (strncmp((const char*)&t[u * kRegU + kNomOff], argv[4 + k], kNomLen) == 0) { idx[k] = u; break; }
+		if (idx[k] < 0) { say("No encuentro el Usuario «%s» en la tabla.", argv[4 + k]); return; }
+		say("«%s» = indice %d", argv[4 + k], idx[k]);
+	}
+	say("Estado A: mando 1 = %s, mando 2 = %s. Pulsa Numpad 1 (foto A). Luego cambia a B (%s / %s) y pulsa Numpad 2.", argv[4], argv[5], argv[6], argv[7]);
+	bool p1 = false, p2 = false, p9 = false;
+	for (;;) {
+		const bool d1 = (GetAsyncKeyState(VK_NUMPAD1) & 0x8000) != 0, d2 = (GetAsyncKeyState(VK_NUMPAD2) & 0x8000) != 0, d9 = (GetAsyncKeyState(VK_NUMPAD9) & 0x8000) != 0;
+		if (d1 && !p1) { Beep(800, 100); paresFoto(1, idx[0], idx[1]); Beep(1200, 150); }
+		if (d2 && !p2) { Beep(800, 100); paresFoto(2, idx[2], idx[3]); Beep(1500, 200); }
+		if (d9 && !p9) return;
+		p1 = d1; p2 = d2; p9 = d9;
+		Sleep(30);
+		if (WaitForSingleObject(gH, 0) == WAIT_OBJECT_0) { say("El juego se cerro."); return; }
+	}
+}
+
 static void ver(int argc, char** argv) {
 	std::vector<uint64_t> as; for (int i = 2; i < argc; i++) as.push_back(strtoull(argv[i], nullptr, 16));
 	std::string antes; DWORD t0 = GetTickCount();
@@ -361,6 +430,7 @@ int main(int argc, char** argv) {
 	if (argc >= 2 && std::string(argv[1]) == "escribir") { escribirPrueba(argc, argv, pid); return 0; }
 	if (argc >= 2 && std::string(argv[1]) == "punteros") { punteros(argc, argv); return 0; }
 	if (argc >= 2 && std::string(argv[1]) == "copias") { copias(argc, argv); return 0; }
+	if (argc >= 2 && std::string(argv[1]) == "pares") { pares(argc, argv); return 0; }
 	say("Conectado a PES2021.exe (pid %lu). Numpad 5=foto (tras R2) 4=foto (tras L2) 3=informe 0=de cero 9=salir", pid);
 	bool prev[10] = {};
 	for (;;) {
