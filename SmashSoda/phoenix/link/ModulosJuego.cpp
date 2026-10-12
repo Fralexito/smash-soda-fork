@@ -2,6 +2,7 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#include <tlhelp32.h>
 #endif
 #include <algorithm>
 #include <cctype>
@@ -109,7 +110,8 @@ namespace {
 	}
 
 	// Modos de un cambiador de parches: <juego>\<carpeta>\<modo>\SiderAddons (limitado, solo lectura).
-	std::vector<fs::path> modos(const fs::path& juego) {
+	// conIni = true: los que traen su propio sider.ini (parche 26); false: los que NO lo traen (parche 27: usan el de la raíz).
+	std::vector<fs::path> modos(const fs::path& juego, bool conIni = true) {
 		std::vector<fs::path> v;
 		std::error_code ec;
 		int a = 0;
@@ -119,7 +121,8 @@ namespace {
 			int b = 0;
 			for (fs::directory_iterator it2(it->path(), e2), fin2; !e2 && it2 != fin2 && b < 80; it2.increment(e2), ++b) {
 				std::error_code e3;
-				if (it2->is_directory(e3) && fs::is_regular_file(it2->path() / "SiderAddons" / "sider.ini", e3)) v.push_back(it2->path());
+				if (!it2->is_directory(e3) || !fs::is_directory(it2->path() / "SiderAddons", e3)) continue;
+				if (fs::is_regular_file(it2->path() / "SiderAddons" / "sider.ini", e3) == conIni) v.push_back(it2->path());
 			}
 		}
 		std::sort(v.begin(), v.end());
@@ -142,6 +145,19 @@ namespace {
 		if (fin == std::string::npos) return false;
 		ruta = l.substr(i + 1, fin - i - 1);
 		return true;
+	}
+	/// ¿Esta cpk.root es la base del parche? La raíz con common\etc\pesdb\Player.bin o la de olmosjr23\Database
+	/// (los modos del cambiador del parche 26 no traen la carpeta y la reciben al cambiar de modo).
+	bool esRaizBase(const std::string& ruta, const std::function<bool(const std::string&)>& tieneBase) {
+		std::string rm = minus(ruta); std::replace(rm.begin(), rm.end(), '/', '\\');
+		const bool esOlmos = rm.size() >= 18 && rm.compare(rm.size() - 18, 18, "olmosjr23\\database") == 0;
+		return (tieneBase && tieneBase(ruta)) || esOlmos;
+	}
+	std::function<bool(const std::string&)> tieneBaseEn(const fs::path& sider) {
+		return [sider](const std::string& ruta) {
+			std::error_code e2;
+			return fs::is_regular_file(sider / phoenix::entrega::deU8(ruta) / "common" / "etc" / "pesdb" / "Player.bin", e2);
+		};
 	}
 	bool esPhoenixDB(const std::string& ruta) {
 		std::string m = minus(ruta);
@@ -233,6 +249,14 @@ std::string quitarRaizPhoenixDB(const std::string& ini, bool& cambio) {
 	return unir(r);
 }
 
+bool hayBaseParche(const std::string& ini, const std::function<bool(const std::string&)>& tieneBase) {
+	for (const std::string& l : partir(ini).v) {
+		std::string ruta; bool c = false;
+		if (lineaRaiz(l, ruta, c) && !c && !esPhoenixDB(ruta) && esRaizBase(ruta, tieneBase)) return true;
+	}
+	return false;
+}
+
 bool tieneRaizPhoenixDB(const std::string& ini) {
 	for (const std::string& l : partir(ini).v) {
 		std::string ruta; bool c = false;
@@ -255,11 +279,8 @@ std::string activarRaizPhoenixDB(const std::string& ini, const std::function<boo
 		}
 		if (c) continue;
 		if (primera < 0) primera = static_cast<int>(i);
-		// La base del parche: la raíz con common\etc\pesdb\Player.bin o, en los modos del cambiador (que no traen
-		// la carpeta y la reciben al cambiar de modo), la raíz de olmosjr23\Database.
-		std::string rm = minus(ruta); std::replace(rm.begin(), rm.end(), '/', '\\');
-		const bool esOlmos = rm.size() >= 18 && rm.compare(rm.size() - 18, 18, "olmosjr23\\database") == 0;
-		if (primeraBase < 0 && ((tieneBase && tieneBase(ruta)) || esOlmos)) primeraBase = static_cast<int>(i);
+		// La base del parche (ver esRaizBase)
+		if (primeraBase < 0 && esRaizBase(ruta, tieneBase)) primeraBase = static_cast<int>(i);
 	}
 	// Sin la base del parche (p. ej. un modo «Clásicos» con otra base): Phoenix-DB NO se pone, porque sus
 	// Player.bin / PlayerAssignment.bin de ConmeGOL taparían los jugadores de ese modo (Fralex, 2026-10-11).
@@ -307,7 +328,61 @@ std::vector<std::pair<std::string, fs::path>> destinos(const fs::path& juego) {
 	return v;
 }
 
+Parche infoParche(const fs::path& juego) {
+	Parche p;
+	if (juego.empty()) return p;
+	std::string va;
+	if (leer(juego / "version_actual.txt", va, 1024)) {
+		if (va.rfind("\xEF\xBB\xBF", 0) == 0) va.erase(0, 3);
+		p.modoActual = va.substr(0, va.find_first_of("\r\n"));
+		while (!p.modoActual.empty() && (p.modoActual.back() == ' ' || p.modoActual.back() == '\t')) p.modoActual.pop_back();
+	}
+	for (const fs::path& m : modos(juego, false)) p.modosRaiz.push_back(phoenix::entrega::aU8(m.filename()));
+	for (const fs::path& m : modos(juego, true)) p.modosPropios.push_back(phoenix::entrega::aU8(m.filename()));
+	std::string ini;
+	if (leer(juego / "SiderAddons" / "sider.ini", ini, kMaxIni) && !p.modoActual.empty()
+		&& std::find(p.modosRaiz.begin(), p.modosRaiz.end(), p.modoActual) != p.modosRaiz.end()) {
+		// Se juega un modo del parche 27 (sin sider.ini propio): manda el de la raíz
+		if (tieneRaizPhoenixDB(ini))
+			p.advertencias.push_back("El modo " + p.modoActual + " usa el sider.ini de la raíz y este tiene Phoenix-DB (fichajes sobre la base del parche 26): taparía los jugadores del parche nuevo. Desinstala phoenix.lua y vuelve a instalarlo para que se quite.");
+		else if (hayBaseParche(ini, tieneBaseEn(juego / "SiderAddons")))
+			p.advertencias.push_back("El sider.ini de la raíz trae la base de un modo viejo (olmosjr23\\Database) aunque el modo actual es " + p.modoActual + ": lo dejó el lanzador al iniciar un modo 26.");
+	}
+	return p;
+}
+
+std::vector<std::string> procesosAbiertos() {
+	std::vector<std::string> v;
+#ifdef _WIN32
+	HANDLE snap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+	if (snap == INVALID_HANDLE_VALUE) return v;
+	PROCESSENTRY32W pe{};
+	pe.dwSize = sizeof(pe);
+	if (Process32FirstW(snap, &pe)) {
+		do {
+			if (_wcsicmp(pe.szExeFile, L"PES2021.exe") == 0) v.push_back("PES2021.exe");
+			else if (_wcsicmp(pe.szExeFile, L"sider.exe") == 0) v.push_back("sider.exe");
+		} while (Process32NextW(snap, &pe));
+	}
+	CloseHandle(snap);
+#endif
+	return v;
+}
+
 // ─── estado ──────────────────────────────────────────────────────────────────────────────────────
+
+namespace {
+	/// ¿Hay copias de sider.ini hechas por Phoenix en esta carpeta? (prueba de que Link o el .bat ya tocaron este destino)
+	bool hayRespaldoPhoenix(const fs::path& dir) {
+		std::error_code ec;
+		int n = 0;
+		for (fs::directory_iterator it(dir, ec), fin; !ec && it != fin && n < 2000; it.increment(ec), ++n) {
+			const std::string f = minus(phoenix::entrega::aU8(it->path().filename()));
+			if (f.rfind("sider.ini.phoenix-", 0) == 0 || f.rfind("sider.ini.respaldo-phoenix", 0) == 0) return true;
+		}
+		return false;
+	}
+}
 
 std::vector<Modulo> estado(const fs::path& paquete, const fs::path& juego) {
 	std::vector<Modulo> lista;
@@ -339,6 +414,7 @@ std::vector<Modulo> estado(const fs::path& paquete, const fs::path& juego) {
 		const std::string shaFuente = m.gestionable ? sha(fuente[a]) : std::string();
 		if (m.gestionable) m.version = versionDe(fuente[a]);
 		int conArchivo = 0, iguales = 0, conLinea = 0, comentadas = 0;
+		bool algunaPerdida = false;
 		for (const auto& d : ds) {
 			Destino x;
 			x.nombre = d.first;
@@ -349,19 +425,35 @@ std::vector<Modulo> estado(const fs::path& paquete, const fs::path& juego) {
 				x.version = versionDe(s);
 				x.igual = m.gestionable && sha(s) == shaFuente;
 			}
-			if (inis.count(d.second)) buscarLinea(inis[d.second], a, x.linea, x.comentada);
+			if (inis.count(d.second)) {
+				buscarLinea(inis[d.second], a, x.linea, x.comentada);
+				x.sinBase = !hayBaseParche(inis[d.second], tieneBaseEn(d.second));
+			}
 			conArchivo += x.archivo; iguales += x.igual; conLinea += x.linea; comentadas += (!x.linea && x.comentada);
 			m.destinos.push_back(x);
 		}
 		const int n = static_cast<int>(ds.size());
+		if (m.gestionable) {
+			// «Perdida»: el .lua está pero su línea no (ni comentada). Solo se afirma si hay pruebas de que Phoenix ya estuvo
+			// cargado ahí: otro destino sí la tiene, o hay copias de sider.ini hechas por Phoenix en esa carpeta.
+			for (size_t i = 0; i < ds.size(); i++) {
+				Destino& x = m.destinos[i];
+				if (!x.archivo || x.linea || x.comentada || !inis.count(ds[i].second)) continue;
+				bool otro = false;
+				for (size_t j = 0; j < ds.size(); j++) if (j != i && m.destinos[j].linea) otro = true;
+				if (otro || hayRespaldoPhoenix(ds[i].second)) { x.perdida = true; algunaPerdida = true; }
+			}
+		}
 		if (!m.gestionable) m.estado = (conArchivo || conLinea) ? "solo_lectura" : "no_instalado";
 		else if (n == 0 || (conArchivo == 0 && conLinea == 0)) m.estado = "no_instalado";
 		else if (iguales == n && conLinea == n) m.estado = "instalado";
 		else if (conArchivo == n && conLinea == 0 && comentadas > 0) m.estado = "apagado";
 		else if (conLinea == n && conArchivo == n) m.estado = "desactualizado";
 		else m.estado = "a_medias";
-		if (a == "phoenix.lua" && m.gestionable && m.estado == "instalado")   // sin su raíz Phoenix-DB no está completo
-			for (const auto& d : ds) if (!inis.count(d.second) || !tieneRaizPhoenixDB(inis[d.second])) { m.estado = "a_medias"; break; }
+		if (algunaPerdida) m.estado = "perdido";   // una actualización del parche borró la línea: hay que reinstalar
+		// Sin su raíz Phoenix-DB no está completo, salvo en un sider.ini sin base reconocida (ahí no debe ponerse)
+		if (a == "phoenix.lua" && m.gestionable && m.estado == "instalado")
+			for (const auto& d : ds) if (!inis.count(d.second) || (hayBaseParche(inis[d.second], tieneBaseEn(d.second)) && !tieneRaizPhoenixDB(inis[d.second]))) { m.estado = "a_medias"; break; }
 		if (!log.empty()) {
 			if (log.find("Module (" + a + ") is NOT activated") != std::string::npos) m.carga = "error";
 			else if (log.find("[" + a + "]") != std::string::npos) m.carga = "cargado";
@@ -381,8 +473,10 @@ namespace {
 		for (const auto& c : cambios) {
 			std::error_code ec;
 			const fs::path ini = c.first / "sider.ini";
-			const fs::path resp = c.first / ("sider.ini.phoenix-" + s);
-			if (!fs::copy_file(ini, resp, fs::copy_options::overwrite_existing, ec)) {
+			fs::path resp = c.first / ("sider.ini.phoenix-" + s);
+			// Una copia de seguridad nunca se pisa (dos cambios en el mismo segundo): se añade -2, -3…
+			for (int k = 2; fs::exists(resp, ec) && k < 100; k++) resp = c.first / ("sider.ini.phoenix-" + s + "-" + std::to_string(k));
+			if (!fs::copy_file(ini, resp, fs::copy_options::skip_existing, ec)) {
 				r.mensaje = "No se pudo guardar la copia de sider.ini en " + phoenix::entrega::aU8(c.first);
 			}
 			else if (!phoenix::buzon::escribirAtomicoComo(c.first, "sider", ".ini", c.second)) {
@@ -415,6 +509,8 @@ Resultado instalar(const fs::path& paquete, const fs::path& juego, const std::st
 
 	// 1) Comprobar TODO antes de escribir nada
 	std::vector<std::pair<fs::path, std::string>> inisNuevos;
+	std::vector<fs::path> conBase;   // destinos con base del parche reconocida: ahí sí va (y se crea) Phoenix-DB
+	std::string sinBase;             // nombres de los destinos sin base (para avisar)
 	for (const auto& d : ds) {
 		std::error_code ec;
 		if (!fs::is_directory(d.second / "modules", ec)) { r.mensaje = "Falta la carpeta modules en " + d.first + ": no se tocó nada."; return r; }
@@ -431,14 +527,14 @@ Resultado instalar(const fs::path& paquete, const fs::path& juego, const std::st
 		}
 		if (archivo == "phoenix.lua") {
 			bool cambioRaiz = false;
-			const fs::path sider = d.second;
-			const auto tieneBase = [&](const std::string& ruta) {
-				std::error_code e2;
-				return fs::is_regular_file(sider / phoenix::entrega::deU8(ruta) / "common" / "etc" / "pesdb" / "Player.bin", e2);
-			};
+			const auto tieneBase = tieneBaseEn(d.second);
 			const std::string conRaiz = activarRaizPhoenixDB(nuevo, tieneBase, cambioRaiz, error);
 			if (!error.empty()) { r.mensaje = error + " (" + d.first + ")."; return r; }
 			if (cambioRaiz) { nuevo = conRaiz; cambio = true; }
+			// Sin base reconocida (p. ej. la raíz con el sider.ini del parche 27, cuya base va dentro de download\CGP_database.cpk)
+			// Phoenix-DB NO se pone ni se crea su carpeta: sus Player.bin son del parche 26 y taparían los del 27.
+			if (!hayBaseParche(nuevo, tieneBase)) sinBase += (sinBase.empty() ? "" : ", ") + d.first;
+			else conBase.push_back(d.second);
 		}
 		if (cambio) inisNuevos.push_back({ d.second, nuevo });
 	}
@@ -449,6 +545,7 @@ Resultado instalar(const fs::path& paquete, const fs::path& juego, const std::st
 			std::error_code ec;
 			fs::create_directories(d.second / "content" / "phoenix", ec);
 			if (ec) { r.mensaje = "No se pudo crear content\\phoenix en " + d.first + "."; return r; }
+			if (std::find(conBase.begin(), conBase.end(), d.second) == conBase.end()) continue;   // sin base: no se crea Phoenix-DB
 			fs::create_directories(d.second / "livecpk" / "Phoenix-DB" / "common" / "etc" / "pesdb", ec);
 			if (ec) { r.mensaje = "No se pudo crear livecpk\\Phoenix-DB en " + d.first + "."; return r; }
 		}
@@ -486,7 +583,8 @@ Resultado instalar(const fs::path& paquete, const fs::path& juego, const std::st
 	}
 	r.ok = true;
 	r.mensaje = archivo + " instalado en " + std::to_string(ds.size()) + (ds.size() == 1 ? " carpeta" : " carpetas")
-		+ ". Abre PES: en sider.log debe aparecer que cargó." + apartado;
+		+ ". Abre PES: en sider.log debe aparecer que cargó." + apartado
+		+ (archivo == "phoenix.lua" && !sinBase.empty() ? " Phoenix-DB no se puso en: " + sinBase + " (no tienen una base del parche reconocida; sus datos no se tapan)." : "");
 	return r;
 }
 

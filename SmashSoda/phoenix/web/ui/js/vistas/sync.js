@@ -160,6 +160,7 @@ const ESTADO_MODULO = {
   desactualizado: [["HAY VERSIÓN NUEVA", "UPDATE AVAILABLE"], "vip"],
   apagado: [["APAGADO", "OFF"], ""],
   a_medias: [["A MEDIAS", "PARTIAL"], "vip"],
+  perdido: [["QUEDÓ SIN CARGAR TRAS UNA ACTUALIZACIÓN: REINSTALAR", "NOT LOADING AFTER A PATCH UPDATE: REINSTALL"], "vip"],
   no_instalado: [["NO INSTALADO", "NOT INSTALLED"], ""],
   solo_lectura: [["LO GESTIONA SYNC", "MANAGED BY SYNC"], ""],
 };
@@ -182,12 +183,18 @@ function Modulos() {
       ${t("El paquete de Luas de Phoenix para Sider. Se instala en la raíz del juego y en cada modo del parche, con copia de sider.ini antes de cada cambio.",
           "Phoenix's Lua pack for Sider. Installed in the game root and in every patch mode, backing up sider.ini before each change.")}
     </div>
-    ${d?.pesAbierto ? html`<div class="caja" style="font-size:14px"><span class="punto warn"></span> ${t("Cierra PES 2021 para instalar o apagar: Sider lee los módulos al arrancar.", "Close PES 2021 to install or turn off: Sider loads modules at startup.")}</div>` : null}
+    ${d?.pesAbierto ? html`<div class="caja" style="font-size:14px"><span class="punto warn"></span> ${t("Cierra PES 2021 (y Sider) para instalar o apagar: Sider lee los módulos al arrancar.", "Close PES 2021 (and Sider) to install or turn off: Sider loads modules at startup.")}</div>` : null}
+    ${d?.parche && (d.parche.modosRaiz?.length || d.parche.modosPropios?.length) ? html`<div class="ayuda" style="font-size:13px">
+      ${d.parche.modoActual ? t(`Último modo lanzado: ${d.parche.modoActual}. `, `Last mode launched: ${d.parche.modoActual}. `) : null}
+      ${d.parche.modosRaiz?.length ? t(`Usan el sider.ini de la raíz: ${d.parche.modosRaiz.join(", ")}. `, `Use the root sider.ini: ${d.parche.modosRaiz.join(", ")}. `) : null}
+      ${d.parche.modosPropios?.length ? t(`Con sider.ini propio: ${d.parche.modosPropios.join(", ")}.`, `With their own sider.ini: ${d.parche.modosPropios.join(", ")}.`) : null}
+    </div>` : null}
+    ${(d?.parche?.advertencias || []).map((w) => html`<div class="caja" key=${w} style="font-size:14px"><span class="punto warn"></span> ${w}</div>`)}
     ${d && !d.juego ? html`<div class="ayuda">${t("Abre PES 2021 una vez para que Phoenix Link conozca la carpeta del juego.", "Open PES 2021 once so Phoenix Link learns the game folder.")}</div>` : null}
     ${!d ? html`<div class="ayuda">${t("Revisando…", "Checking…")}</div>` : lista.map((x) => {
       const [et, tipo] = ESTADO_MODULO[x.estado] || [[x.estado, x.estado], ""];
       const puedeInstalar = x.gestionable && x.estado !== "instalado";
-      const puedeQuitar = x.gestionable && (x.estado === "instalado" || x.estado === "desactualizado" || x.estado === "a_medias");
+      const puedeQuitar = x.gestionable && (x.estado === "instalado" || x.estado === "desactualizado" || x.estado === "a_medias" || x.estado === "perdido");
       const bloqueado = !!d.pesAbierto || !d.juego || !!ocupado;
       return html`<div class="caja" key=${x.archivo} style="display:flex;flex-direction:column;gap:8px">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
@@ -197,10 +204,10 @@ function Modulos() {
         <div class="ayuda" style="font-size:13px">${x.descripcion}</div>
         ${x.carga ? html`<div class="ayuda" style="font-size:13px">${x.carga === "cargado" ? t("✅ Cargó en el último arranque del juego.", "✅ Loaded on the last game start.") : t("⚠️ Sider no lo pudo cargar en el último arranque (mira sider.log).", "⚠️ Sider could not load it on the last start (see sider.log).")}</div>` : null}
         ${(x.destinos || []).length ? html`<div class="mono mut" style="font-size:12px;display:flex;flex-direction:column;gap:2px">
-          ${x.destinos.map((ds) => html`<span key=${ds.carpeta}>${ds.linea ? "●" : ds.comentada ? "○" : "·"} ${ds.nombre}${ds.version ? " · v" + ds.version : ""}${ds.archivo && x.gestionable && !ds.igual ? t(" · distinto", " · different") : ""}</span>`)}
+          ${x.destinos.map((ds) => html`<span key=${ds.carpeta}>${ds.linea ? "●" : ds.comentada ? "○" : "·"} ${ds.nombre}${ds.version ? " · v" + ds.version : ""}${ds.archivo && x.gestionable && !ds.igual ? t(" · distinto", " · different") : ""}${ds.perdida ? t(" · SIN CARGAR (falta su línea en sider.ini)", " · NOT LOADING (its sider.ini line is gone)") : ""}${x.archivo === "phoenix.lua" && ds.sinBase ? t(" · sin base reconocida: Phoenix-DB no se pone", " · no recognised base: Phoenix-DB is not added") : ""}</span>`)}
         </div>` : null}
         ${x.gestionable ? html`<div style="display:flex;gap:8px;flex-wrap:wrap">
-          ${puedeInstalar ? html`<${Boton} tipo="lleno mini" deshabilitado=${bloqueado} al=${() => hacer(x.archivo, "instalar")}>${x.estado === "desactualizado" ? t("ACTUALIZAR", "UPDATE") : x.estado === "apagado" ? t("ENCENDER", "TURN ON") : t("INSTALAR", "INSTALL")}</${Boton}>` : null}
+          ${puedeInstalar ? html`<${Boton} tipo="lleno mini" deshabilitado=${bloqueado} al=${() => hacer(x.archivo, "instalar")}>${x.estado === "desactualizado" ? t("ACTUALIZAR", "UPDATE") : x.estado === "apagado" ? t("ENCENDER", "TURN ON") : x.estado === "perdido" ? t("REINSTALAR", "REINSTALL") : t("INSTALAR", "INSTALL")}</${Boton}>` : null}
           ${puedeQuitar ? html`<${Boton} tipo="suave mini" deshabilitado=${bloqueado} titulo=${t("Deja de cargarse en el juego; el archivo se queda para volver a encenderlo", "Stops loading in the game; the file stays")} al=${() => hacer(x.archivo, "quitar")}>${t("APAGAR", "TURN OFF")}</${Boton}>` : null}
           ${x.gestionable && x.estado !== "no_instalado" ? html`<${Boton} tipo="peligro mini" deshabilitado=${bloqueado} titulo=${t("Lo quita del juego por completo (con copia de seguridad)", "Removes it from the game completely (with backup)")}
             al=${async () => { if (await confirmar({ titulo: t(`¿Desinstalar ${x.archivo}?`, `Uninstall ${x.archivo}?`), texto: x.archivo === "phoenix.lua"

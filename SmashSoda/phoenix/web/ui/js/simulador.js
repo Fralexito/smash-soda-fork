@@ -248,7 +248,7 @@ export function crearSimulador(enviar) {
     const p = s.partido;
     const e = {
       v: 1,
-      app: { version: "0.2.24", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
+      app: { version: "0.2.26", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
       noticias: { cargado: true, lista: s.noticias },
       chatGlobal: { cargado: true, pausado: s.chatGlobal.pausado, esperaSeg: s.chatGlobal.esperaSeg, rev: s.chatGlobal.mensajes.length, error: "" },
       web: { ...s.web, jugadoresLista: 3, versionLiga: "2026.10.08", eventosEnCola: 0 },
@@ -320,7 +320,8 @@ export function crearSimulador(enviar) {
       { nombre: "ConmeGOL Patch 26", carpeta: "C:\\Juegos\\PES 2021 ConmeGOL\\ConmeGol Extras\\ConmeGOL Patch 26\\SiderAddons", archivo: est !== "no_instalado", igual: true, version, linea: activo, comentada: !activo && est === "apagado" },
     ];
     return {
-      juego: s.buzon.juego, pesAbierto: s.pes.abierto,
+      juego: s.buzon.juego, pesAbierto: s.pes.abierto, abiertos: [],
+      parche: { modoActual: "ConmeGOL Patch 27", modosRaiz: ["ConmeGOL Clasicos", "ConmeGOL Patch 27", "UEFAGOL 27"], modosPropios: ["ConmeGOL Patch 26"], advertencias: [] },
       modulos: [
         { archivo: "phoenix_referee.lua", descripcion: "Phoenix Referee: marcador, goles con minuto y goleador, pantalla del juego para la web, HUD del partido y árbitro (solo lectura).", gestionable: true, version: "1.2", estado: est, carga: "", destinos: est === "no_instalado" ? [] : destinos(est === "instalado", "1.2") },
         { archivo: "phoenix.lua", descripcion: "Phoenix Sync: avisos de la web en el overlay, botón nativo «Datos Actual. en vivo» y modos de recarga de fichajes. Instala también la raíz Phoenix-DB y la carpeta de avisos.", gestionable: true, version: "0.18b", estado: s.modPhx || "desactualizado", carga: "cargado",

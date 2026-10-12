@@ -27,6 +27,16 @@ struct Destino {
 	std::string version;         ///< versión del .lua instalado ("" si no se sabe)
 	bool linea = false;          ///< lua.module activo en sider.ini
 	bool comentada = false;      ///< hay una línea ;lua.module comentada
+	bool perdida = false;        ///< el .lua está pero la línea ya no: una actualización del parche la borró (hay copias phoenix de sider.ini o otro destino la tiene)
+	bool sinBase = false;        ///< su sider.ini no tiene una base del parche reconocida: Phoenix-DB NO se pone (y no se exige)
+};
+
+/// Lo que se sabe del cambiador de parches (ConmeGOL Extras\<modo>\): quién usa qué sider.ini.
+struct Parche {
+	std::string modoActual;                  ///< version_actual.txt (último modo lanzado con el lanzador) o ""
+	std::vector<std::string> modosRaiz;      ///< modos cuyo SiderAddons NO trae sider.ini (parche 27): usan el sider.ini de la raíz
+	std::vector<std::string> modosPropios;   ///< modos con su propio sider.ini (parche 26): el lanzador lo copia sobre la raíz al iniciar
+	std::vector<std::string> advertencias;   ///< cosas raras que el usuario debe saber (legible)
 };
 
 struct Modulo {
@@ -49,6 +59,11 @@ struct Resultado {
 fs::path carpetaPaquete();
 /// Carpetas SiderAddons con sider.ini: la raíz del juego y cada modo de un cambiador de parches.
 std::vector<std::pair<std::string, fs::path>> destinos(const fs::path& juego);
+/// Modos del cambiador y modo actual (solo lectura). Con el lanzador del parche 27, «Iniciar» hace
+/// robocopy "ConmeGol Extras\<modo>" sobre la raíz (/E /IS /IT, sin borrar): un modo sin sider.ini propio deja el de la raíz.
+Parche infoParche(const fs::path& juego);
+/// Procesos del juego que impiden tocar sider.ini / modules (PES2021.exe, sider.exe). Vacío si todo está cerrado.
+std::vector<std::string> procesosAbiertos();
 /// Estado de todos los módulos del paquete (y de phoenix.lua, solo lectura) en el juego.
 std::vector<Modulo> estado(const fs::path& paquete, const fs::path& juego);
 /// Instala o actualiza un módulo del paquete en todos los destinos. El que llama comprueba que PES está cerrado.
@@ -75,6 +90,8 @@ void buscarLinea(const std::string& ini, const std::string& archivo, bool& activ
 /// tieneBase(ruta) es true (la que tiene common\etc\pesdb\Player.bin) o que es olmosjr23\Database; si no hay base, no se pone.
 /// `cambio` = false si ya estaba activa. "" + error si no hay ninguna cpk.root.
 std::string activarRaizPhoenixDB(const std::string& ini, const std::function<bool(const std::string&)>& tieneBase, bool& cambio, std::string& error);
+/// ¿Este sider.ini tiene una base del parche reconocida (cpk.root activa con Player.bin u olmosjr23\Database)? Sin ella Phoenix-DB no va.
+bool hayBaseParche(const std::string& ini, const std::function<bool(const std::string&)>& tieneBase);
 /// ¿Hay una cpk.root activa a Phoenix-DB?
 bool tieneRaizPhoenixDB(const std::string& ini);
 

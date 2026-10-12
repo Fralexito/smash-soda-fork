@@ -39,12 +39,17 @@ namespace phoenix::web {
 				json ds = json::array();
 				for (const phoenix::modulos::Destino& d : m.destinos) {
 					ds.push_back({ {"nombre", d.nombre}, {"carpeta", d.carpeta}, {"archivo", d.archivo}, {"igual", d.igual},
-						{"version", d.version}, {"linea", d.linea}, {"comentada", d.comentada} });
+						{"version", d.version}, {"linea", d.linea}, {"comentada", d.comentada}, {"perdida", d.perdida}, {"sinBase", d.sinBase} });
 				}
 				lista.push_back({ {"archivo", m.archivo}, {"descripcion", m.descripcion}, {"gestionable", m.gestionable},
 					{"version", m.version}, {"estado", m.estado}, {"carga", m.carga}, {"destinos", ds} });
 			}
-			return json{ {"juego", phoenix::entrega::aU8(juego)}, {"pesAbierto", abierto}, {"modulos", lista} };
+			// Cambiador de parches: qué modos usan el sider.ini de la raíz (parche 27) y cuáles traen el suyo (parche 26)
+			const phoenix::modulos::Parche pa = phoenix::modulos::infoParche(juego);
+			const std::vector<std::string> otros = phoenix::modulos::procesosAbiertos();
+			json parche = { {"modoActual", pa.modoActual}, {"modosRaiz", pa.modosRaiz}, {"modosPropios", pa.modosPropios}, {"advertencias", pa.advertencias} };
+			return json{ {"juego", phoenix::entrega::aU8(juego)}, {"pesAbierto", abierto || !otros.empty()}, {"abiertos", otros},
+				{"parche", parche}, {"modulos", lista} };
 		}
 	}
 
@@ -87,6 +92,7 @@ namespace phoenix::web {
 			bool abierto = false;
 			const std::filesystem::path juego = carpetaJuego(abierto);
 			if (abierto) throw ErrorAccion("PES_ABIERTO", "Cierra PES 2021 primero: Sider lee los módulos al arrancar.");
+			if (!phoenix::modulos::procesosAbiertos().empty()) throw ErrorAccion("PES_ABIERTO", "Cierra PES 2021 y Sider (sider.exe sigue abierto) antes de tocar sider.ini.");
 			if (juego.empty()) throw ErrorAccion("SIN_JUEGO", "Abre PES 2021 una vez para que Phoenix Link conozca su carpeta.");
 			const phoenix::modulos::Resultado r = que == "instalar"
 				? phoenix::modulos::instalar(phoenix::modulos::carpetaPaquete(), juego, archivo)
