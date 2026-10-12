@@ -34,7 +34,7 @@ function Hash($p) {   # sha256 sin Get-FileHash (no siempre esta)
 function Main {
     $ErrorActionPreference = 'Stop'
     $desinstalar = ($env:PHX_MODO -ieq 'desinstalar')
-    $COMMIT = '4102fd7badc0994ebe29d9d43959ab0ff6027d7f'   # version fija de Phoenix Link de donde salen los modulos
+    $COMMIT = 'd0ae1b61a51ab82bd5dfe818daad7ab10fe7c676'   # version fija de Phoenix Link de donde salen los modulos
     $BASE = "https://raw.githubusercontent.com/Fralexito/smash-soda-fork/$COMMIT/SmashSoda/phoenix/sider/"
     $MODULOS = @(
         @{ N = 'phoenix.lua';         V = '0.18b'; S = '9ED74F457B4C2F407D4851B09B701A5FFB63E3A1F5707B322C13AAD6F95526AB'; Db = $true;  Viejo = '' },
@@ -44,7 +44,7 @@ function Main {
     $sello = Get-Date -Format 'yyyyMMdd-HHmmss'
 
     Write-Host ''
-    Write-Host $(if ($desinstalar) { '  PHOENIX - quitar los modulos Lua de PES 2021' } else { '  PHOENIX - modulos Lua para PES 2021 (beta 1)' }) -ForegroundColor Cyan
+    Write-Host $(if ($desinstalar) { '  PHOENIX - quitar los modulos Lua de PES 2021' } else { '  PHOENIX - modulos Lua para PES 2021 (beta 2)' }) -ForegroundColor Cyan
     Write-Host '  ------------------------------------------' -ForegroundColor Cyan
     Write-Host ''
 

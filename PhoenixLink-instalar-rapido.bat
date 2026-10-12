@@ -1,6 +1,6 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
-title Phoenix Link - Instalador rapido (beta 1)
+title Phoenix Link - Instalador rapido (beta 2)
 
 :: Instala Phoenix Link ya compilado (unos 17 MB). No compila nada: son 2 o 3 minutos.
 :: Si prefieres compilarlo en tu PC, usa PhoenixLink-instalar.bat (tarda mucho mas).
@@ -33,7 +33,7 @@ if not "%SKIP_ADMIN_CHECK%"=="1" (
 
 echo.
 echo ==========================================================
-echo  Phoenix Link - Instalador rapido (beta 1)
+echo  Phoenix Link - Instalador rapido (beta 2)
 echo ==========================================================
 echo Herramienta NO oficial para abrir salas en Parsec con mas
 echo control de invitados y mandos. Baja Phoenix Link ya
@@ -45,8 +45,8 @@ echo Pulsa una tecla para continuar...
 pause >nul
 
 :: --------- Configuracion ----------
-if not defined PHX_ZIP_URL set "PHX_ZIP_URL=https://github.com/Fralexito/smash-soda-fork/releases/download/beta-1/PhoenixLink-0.2.45-beta1.zip"
-if not defined PHX_ZIP_SHA set "PHX_ZIP_SHA=501DE3A7FFF0DDB42A2CB4E7D2A0CAAC277B612184BEB8CDB16E734DBBB40545"
+if not defined PHX_ZIP_URL set "PHX_ZIP_URL=https://github.com/Fralexito/smash-soda-fork/releases/download/beta-2/PhoenixLink-0.2.67-beta2.zip"
+if not defined PHX_ZIP_SHA set "PHX_ZIP_SHA=151420705DFDFDC6BE2905188AF9E5251B618BD1707383CAF0B0631647AC7A57"
 if not defined PHX_OVERLAY_URL set "PHX_OVERLAY_URL=https://github.com/Fralexito/phoenix-overlay/releases/download/v1.0.0-beta1/PhoenixGlass.exe"
 if not defined PHX_OVERLAY_SHA set "PHX_OVERLAY_SHA=DFD0BB6AC8513C8189A10E39DA4A85E4A12D1A70873340F84C271CF299BE2E94"
 set "VIGEMBUS_URL=https://github.com/nefarius/ViGEmBus/releases/download/v1.22.0/ViGEmBus_1.22.0_x64_x86_arm64.exe"
@@ -224,7 +224,7 @@ echo [%time%] webview2 ok >> "%LOG%"
 :: --------- Phoenix Link ----------
 echo.
 echo [4/6] Descargando Phoenix Link...
-call :download "%PHX_ZIP_URL%" "%ZIP%" "Phoenix Link beta 1"
+call :download "%PHX_ZIP_URL%" "%ZIP%" "Phoenix Link beta 2"
 if errorlevel 1 (
   call :fallo "No se pudo bajar Phoenix Link. Si el enlace aun no esta publicado, pidele a Fralex el archivo."
   exit /b 1

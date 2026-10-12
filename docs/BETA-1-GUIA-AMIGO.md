@@ -1,3 +1,5 @@
+> **Esta guía es de la beta 1. La vigente es `docs/BETA-2-GUIA-AMIGO.md`.**
+
 # Phoenix Link · beta 1 — Guía para instalar (una página)
 
 Para quien va a **hostear** con su propia PC (PES 2021 + ConmeGOL + Parsec). Si solo entras a la sala de otro por Parsec, no necesitas nada de esto.

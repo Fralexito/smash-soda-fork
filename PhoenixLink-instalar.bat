@@ -1,6 +1,6 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
-title Phoenix Link - Instalador (beta 1)
+title Phoenix Link - Instalador (beta 2)
 
 :: Registro de lo que hace este instalador (para depurar sin acceso a tu PC).
 set "LOG=%TEMP%\PhoenixLink-instalador.log"
@@ -38,7 +38,7 @@ if not "%SKIP_ADMIN_CHECK%"=="1" (
 
 echo.
 echo ==========================================================
-echo  Phoenix Link - Instalador (beta 1)
+echo  Phoenix Link - Instalador (beta 2)
 echo ==========================================================
 echo Phoenix Link es una herramienta NO oficial para abrir salas
 echo en Parsec con mas control de invitados y mandos. No tiene
@@ -60,7 +60,7 @@ pause >nul
 
 :: --------- Configuracion ----------
 :: Version exacta de Phoenix Link (commit). La rama tiene una enie en el nombre y en .bat falla: se usa el SHA.
-if not defined PHX_COMMIT set "PHX_COMMIT=4102fd7badc0994ebe29d9d43959ab0ff6027d7f"
+if not defined PHX_COMMIT set "PHX_COMMIT=d0ae1b61a51ab82bd5dfe818daad7ab10fe7c676"
 set "COMMIT=%PHX_COMMIT%"
 set "REPO_URL=https://github.com/Fralexito/smash-soda-fork.git"
 :: Overlay PhoenixGlass (repo Fralexito/phoenix-overlay). Con sha256: si no coincide, no se instala.
