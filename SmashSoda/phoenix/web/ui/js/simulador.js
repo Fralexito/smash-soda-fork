@@ -257,7 +257,7 @@ export function crearSimulador(enviar) {
     const p = s.partido;
     const e = {
       v: 1,
-      app: { version: "0.2.52", etapa: "beta 1", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
+      app: { version: "0.2.53", etapa: "beta 1", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
       noticias: { cargado: true, lista: s.noticias },
       chatGlobal: { cargado: true, pausado: s.chatGlobal.pausado, esperaSeg: s.chatGlobal.esperaSeg, rev: s.chatGlobal.mensajes.length, error: "" },
       web: { ...s.web, jugadoresLista: 3, versionLiga: "2026.10.08", eventosEnCola: 0 },
@@ -519,7 +519,11 @@ export function crearSimulador(enviar) {
       return { ...fichajesSim(), mensaje: d.accion === "aplicar" ? "Fichajes generados sobre tu base en 3 sitios: 6 aplicados, 3 saltados. Abre PES: se ven al cargar los datos del juego." : "Fichajes quitados en 3 sitios: el juego vuelve a la base original del parche (la copia queda en una carpeta _antes-de-fichajes-… dentro de Phoenix-DB)." };
     },
     // Perfiles de amigos (imita web/AccionesPerfilesWeb.cpp)
-    "perfiles.estado": () => perfilesSim(),
+    "perfiles.estado": () => ({ ...perfilesSim(), vivo: (s.perfilesPes && s.perfilesPes.vivo) || [] }),
+    "perfiles.mandos": () => { perfilesSim(); const p = s.perfilesPes; return { mandos: Array.from({ length: 8 }, (_, i) => { const u = [2, 31, 1, 3, 30, 5, 6, 7][i]; const x = p.perfiles.find((y) => y.id === "p" + u); return { puesto: i + 1, usuario: u + 1, nombre: (s.vivoSim && s.vivoSim[i + 1]) || (x ? x.nombre : "") }; }) }; },
+    "perfiles.aplicar": (d) => { perfilesSim(); const p = s.perfilesPes; const x = p.perfiles.find((y) => y.id === d.id); if (!x) error("NO_EXISTE", "Ese perfil ya no existe."); s.vivoSim = s.vivoSim || {}; s.vivoSim[d.puesto] = x.nombre; p.vivo = (p.vivo || []).filter((v) => v.puesto !== d.puesto); p.vivo.push({ puesto: d.puesto, usuario: d.puesto, perfil: d.id }); return { ...perfilesSim({ vivoAplicado: { puesto: d.puesto, usuario: d.puesto, nombre: x.nombre } }), vivo: p.vivo }; },
+    "perfiles.restaurar": () => { perfilesSim(); const p = s.perfilesPes; p.vivo = []; s.vivoSim = {}; return { ...perfilesSim(), vivo: [] }; },
+
     "perfiles.traer": () => perfilesSim({ nuevos: 0, actualizados: 0, iguales: 8, escritos: 0, copia: "", avisos: [], puestos: [] }),
     "perfiles.seleccion": (d) => { perfilesSim(); s.perfilesPes.seleccion = (d.ids || []).filter((id) => s.perfilesPes.perfiles.some((x) => x.id === id)); return perfilesSim(); },
     "perfiles.proteger": (d) => { perfilesSim(); const p = s.perfilesPes; p.protegidos = p.protegidos.filter((h) => h !== d.hueco); if (d.si) p.protegidos.push(d.hueco); return perfilesSim(); },
@@ -565,7 +569,7 @@ export function crearSimulador(enviar) {
       s.buzon.juego = r;
       return { ...modulosSim(), mensaje: "Carpeta del juego guardada." };
     },
-    "diag.informe": () => ({ texto: "== PHOENIX LINK · INFORME PARA DEPURAR ==\nPhoenix Link 0.2.52 (beta 1)\n(simulador: sin datos reales)\n" }),
+    "diag.informe": () => ({ texto: "== PHOENIX LINK · INFORME PARA DEPURAR ==\nPhoenix Link 0.2.53 (beta 1)\n(simulador: sin datos reales)\n" }),
     "ajustes.avisoEntrada": (d) => { s.ajustes.avisoEntrada[d.campo] = !!d.valor; },
     "ajustes.probarAvisoEntrada": () => ({}),
     "ajustes.avisosJuego": (d) => { s.buzon.activo = d.valor; s.buzon.estado = d.valor ? "conectado" : "apagado"; },

@@ -12,6 +12,7 @@
 
 #include "../core/PerfilesAmigos.h"
 #include "../core/PerfilesPes.h"
+#include "../core/UsuariosEnVivo.h"
 
 // =============================================================================
 //  Acciones de la interfaz web: «Perfiles de amigos» (GENTE › PERFILES PES).
@@ -127,6 +128,10 @@ namespace phoenix::web {
 			return c.empty() ? std::string() : c.front().ruta;
 		}
 
+		// Perfiles puestos EN VIVO en la memoria de PES (prueba): puesto 1…8, Usuario 0…31 y el registro original para restaurarlo
+		struct AplicadoVivo { int puesto = 0; int usuario = 0; std::string perfilId; std::vector<uint8_t> original; };
+		std::vector<AplicadoVivo> aplicadosVivo;
+
 		bool pesFueAbiertoPerfiles = false;     // para «recoger solo al cerrar PES»
 		std::string avisoAutoPerfiles;          // lo último que hizo Link solo
 
@@ -181,6 +186,8 @@ namespace phoenix::web {
 				for (auto& h : r["huecos"]) if (h["perfil"] == p.id) { donde = h["n"].get<int>(); break; }
 				r["perfiles"].push_back({ {"id", p.id}, {"nombre", p.nombre}, {"sinNombre", p.sinNombre}, {"actualizado", p.actualizado}, {"enHueco", donde}, {"tieneAnterior", !p.anterior.empty()} });
 			}
+			r["vivo"] = json::array();
+			for (auto& a : aplicadosVivo) r["vivo"].push_back({ {"puesto", a.puesto}, {"usuario", a.usuario + 1}, {"perfil", a.perfilId} });
 			r["seleccion"] = base.datos.seleccion;
 			r["ultimaSala"] = base.datos.ultimaSala;
 			return r;
@@ -289,6 +296,86 @@ namespace phoenix::web {
 			std::copy(nombre.begin(), nombre.end(), reg.begin() + 4);
 			it->anterior = it->registro; it->registro = pp::aHex(reg); it->nombre = nombre; it->sinNombre = false; it->actualizado = selloPerfiles();
 			if (!base.guardar(selloPerfiles(), err)) throw ErrorAccion("NO_SE_PUDO", err);
+			return estadoPerfiles();
+		});
+
+		// ---- EN VIVO (prueba, beta): poner el perfil de un amigo en el Usuario que tiene un mando, con PES ABIERTO ----
+		// Usa la memoria de PES (core/UsuariosEnVivo.h). Solo escribe el registro de UN Usuario; guarda antes lo que había (en Link y aquí)
+		// y lo restaura con perfiles.restaurar. Nunca toca archivos de guardado.
+		auto nombreDeRegistro = [](const std::vector<uint8_t>& reg) { size_t n = 0; while (n < pp::kTamNombre && reg[4 + n]) n++; return std::string(reinterpret_cast<const char*>(&reg[4]), n); };
+
+		p.registrar("perfiles.mandos", [nombreDeRegistro](const json&, uint64_t) -> std::optional<json> {
+			std::lock_guard<std::mutex> g(mtxPerfiles);
+			pp::vivo::Conexion c; std::string err;
+			if (!c.abrir(err)) throw ErrorAccion("PES_NO_LISTO", err);
+			int m[pp::vivo::kMandos];
+			if (!c.leerMandos(m, err)) throw ErrorAccion("NO_SE_PUDO", err);
+			json r = { {"mandos", json::array()} };
+			for (int i = 0; i < pp::vivo::kMandos; i++) {
+				std::vector<uint8_t> reg; std::string e;
+				r["mandos"].push_back({ {"puesto", i + 1}, {"usuario", m[i] + 1}, {"nombre", c.leerUsuario(m[i], reg, e) ? nombreDeRegistro(reg) : std::string()} });
+			}
+			return r;
+		});
+
+		p.registrar("perfiles.aplicar", [nombreDeRegistro](const json& d, uint64_t) -> std::optional<json> {
+			std::lock_guard<std::mutex> g(mtxPerfiles);
+			const int puesto = entero(d, "puesto", 1, pp::vivo::kMandos);
+			const std::string id = texto(d, "id", 20);
+			pp::Base base(carpetaBasePerfiles());
+			std::string err;
+			if (!base.cargar(err)) throw ErrorAccion("BASE_DANADA", err);
+			const pp::PerfilAmigo* perfil = base.porId(id);
+			if (!perfil) throw ErrorAccion("NO_EXISTE", "Ese perfil ya no existe.");
+			std::vector<uint8_t> nuevo;
+			if (!pp::deHex(perfil->registro, nuevo)) throw ErrorAccion("NO_SE_PUDO", "El perfil está dañado.");
+			const std::string nombrePerfil = perfil->nombre;
+			pp::vivo::Conexion c;
+			if (!c.abrir(err)) throw ErrorAccion("PES_NO_LISTO", err);
+			int m[pp::vivo::kMandos];
+			if (!c.leerMandos(m, err)) throw ErrorAccion("NO_SE_PUDO", err);
+			const int usuario = m[puesto - 1];
+			std::vector<uint8_t> actual;
+			if (!c.leerUsuario(usuario, actual, err)) throw ErrorAccion("NO_SE_PUDO", err);
+			// nada se pierde: lo que hay ahora en ese Usuario se guarda como perfil si no lo estaba (salvo que ya lo hubiéramos pisado antes)
+			auto ya = std::find_if(aplicadosVivo.begin(), aplicadosVivo.end(), [&](const AplicadoVivo& a) { return a.usuario == usuario; });
+			const std::string hexActual = pp::aHex(actual);
+			const bool guardado = std::any_of(base.datos.perfiles.begin(), base.datos.perfiles.end(), [&](const pp::PerfilAmigo& x) { return x.registro == hexActual; });
+			if (!guardado && ya == aplicadosVivo.end()) {
+				int mx = 0;
+				for (auto& x : base.datos.perfiles) if (x.id.size() > 1 && x.id[0] == 'p') mx = (std::max)(mx, atoi(x.id.c_str() + 1));
+				pp::PerfilAmigo n; n.id = "p" + std::to_string(mx + 1); n.registro = hexActual; n.actualizado = selloPerfiles();
+				std::string nom = nombreDeRegistro(actual);
+				n.sinNombre = nom.empty();
+				if (nom.empty() || base.porNombre(nom)) nom = "Usuario " + std::to_string(usuario + 1) + " (antes del vivo)";
+				while (base.porNombre(nom)) nom += "+";
+				n.nombre = nom;
+				base.datos.perfiles.push_back(n);
+				if (!base.guardar(selloPerfiles(), err)) throw ErrorAccion("NO_SE_PUDO", "No pude guardar una copia de lo que había: " + err);
+			}
+			std::vector<uint8_t> anterior;
+			if (!c.escribirUsuario(usuario, nuevo, anterior, err)) throw ErrorAccion("NO_SE_PUDO", err);
+			if (ya != aplicadosVivo.end()) { ya->puesto = puesto; ya->perfilId = id; }
+			else { AplicadoVivo a; a.puesto = puesto; a.usuario = usuario; a.perfilId = id; a.original = anterior; aplicadosVivo.push_back(std::move(a)); }
+			return estadoPerfiles(json{ {"vivoAplicado", { {"puesto", puesto}, {"usuario", usuario + 1}, {"nombre", nombrePerfil} }} });
+		});
+
+		p.registrar("perfiles.restaurar", [](const json&, uint64_t) -> std::optional<json> {
+			std::lock_guard<std::mutex> g(mtxPerfiles);
+			if (aplicadosVivo.empty()) return estadoPerfiles();
+			pp::vivo::Conexion c; std::string err;
+			if (!c.abrir(err)) {
+				// PES ya se cerró: los originales están guardados como perfiles en Link; no hay nada que restaurar en memoria
+				aplicadosVivo.clear();
+				return estadoPerfiles(json{ {"vivoAviso", "PES está cerrado: lo que había quedó guardado en Link (Preparar la sala lo vuelve a poner)."} });
+			}
+			std::vector<AplicadoVivo> fallidos; std::string errores;
+			for (auto& a : aplicadosVivo) {
+				std::vector<uint8_t> ant; std::string e;
+				if (!c.escribirUsuario(a.usuario, a.original, ant, e)) { fallidos.push_back(a); errores += "Usuario " + std::to_string(a.usuario + 1) + ": " + e + " "; }
+			}
+			aplicadosVivo = fallidos;
+			if (!errores.empty()) throw ErrorAccion("NO_SE_PUDO", errores);
 			return estadoPerfiles();
 		});
 

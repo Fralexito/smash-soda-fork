@@ -105,3 +105,11 @@ Paso 1: `tools/radar/usuariopad.cpp` (compilar con `tools/radar/compilar_usuario
 - ✅ **Escribir en la tabla se ve al instante** (prueba ZZMEM, 15:07).
 - ❓ Sin probar: que un REGISTRO COMPLETO escrito en la tabla cambie también las OPCIONES en el partido (cursor, tipo de pase…), no solo el nombre; que el orden de entradas = puesto N de Link (probable por «Orden de mandos en PES»: casilla N = puesto N); qué pasa con la tabla al guardar PES (se guardaría el Usuario sobrescrito en SYSTEM00000000: por eso hay que restaurar el original al terminar).
 - Plan seguro de «Usuario automático»: (1) Link hace TRAER (copia de todo). (2) En la pantalla de elegir lados, para cada puesto con un amigo con perfil: leer el índice de su mando (ancla + entrada N-1) y escribir su perfil en ese registro de la tabla (todo o nada: leer, escribir, releer). (3) Al terminar o salir el amigo, restaurar el registro original. Solo en la pantalla de lados (señal de `LadoPantalla`).
+
+## 10. Prueba en vivo en Link 0.2.53 (beta): «Usuario automático», primer paso
+- `core/UsuariosEnVivo.*`: se engancha a PES2021.exe, lee el Usuario de cada mando (ancla `exe+0x36F5820`), localiza la tabla de 32 Usuarios y escribe el registro de UN Usuario con relectura (si no coincide, lo deja como estaba).
+- Acciones: `perfiles.mandos` (solo lee), `perfiles.aplicar {puesto, id}` y `perfiles.restaurar`. Antes de pisar un Usuario guarda lo que había como perfil de Link y en memoria (para restaurar).
+- Interfaz: GENTE › PERFILES PES › «PRUEBA EN VIVO (BETA)»: elegir puesto y perfil → PONER EN EL MANDO; VER USUARIO DE CADA MANDO; RESTAURAR LO ANTERIOR.
+- Prueba manual de solo lectura: `pruebas-link/correr_usuarios_vivo.bat` (con PES abierto).
+- ❓ Sin probar con el PES real: que el registro COMPLETO cambie las opciones del partido; que puesto N de Link = mando N de PES.
+- Falta: aplicarlo solo al sentarse el amigo (señal de la pantalla de lados), el perfil del amigo nuevo que viene de su cuenta (web) y el editor de la configuración.

@@ -17,6 +17,9 @@ export function PerfilesPes() {
   const [editando, setEditando] = useState(null);
   const [nuevo, setNuevo] = useState("");
   const [ocupado, setOcupado] = useState(false);
+  const [puestoV, setPuestoV] = useState(1);   // prueba en vivo: puesto 1…8
+  const [perfilV, setPerfilV] = useState("");  // prueba en vivo: perfil elegido
+  const [mandos, setMandos] = useState(null);  // prueba en vivo: Usuario que tiene cada mando
 
   const cargar = async () => { const r = await accion("perfiles.estado", {}, { silencioso: true }); if (r) { setD(r); setSel((s) => s || r.seleccion || []); } };
   useEffect(() => { cargar(); const id = setInterval(cargar, 3000); return () => clearInterval(id); }, []);
@@ -49,6 +52,18 @@ export function PerfilesPes() {
     if (r) { setD(r); avisar(t(`Listo: ${elegidos.length} amigos en PES. Abre PES y elige tu nombre con L2/R2 en la pantalla de mandos.`, `Done: ${elegidos.length} friends in PES. Open PES and pick your name with L2/R2 on the controller screen.`), "ok", 8000); }
   };
   const proteger = async (n, si) => { const r = await accion("perfiles.proteger", { hueco: n, si }); if (r) setD(r); };
+  // ---- PRUEBA EN VIVO (beta): poner un perfil en el Usuario que tiene un mando, con PES ABIERTO ----
+  const verMandos = async () => { const r = await accion("perfiles.mandos", {}); if (r) setMandos(r.mandos || []); };
+  const aplicarVivo = async () => {
+    if (!perfilV) return;
+    const p = perfiles.find((x) => x.id === perfilV);
+    if (!(await confirmar({ titulo: t("¿Poner este perfil en el mando?", "Put this profile on the controller?"), texto: t(`Link escribirá «${p?.nombre || ""}» en el Usuario que tiene el mando ${puestoV} de PES, con PES abierto. Lo que había queda guardado en Link y se puede restaurar.`, `Link will write «${p?.nombre || ""}» into the user controller ${puestoV} has in PES, with PES open. What was there stays saved in Link and can be restored.`) }))) return;
+    setOcupado(true);
+    const r = await accion("perfiles.aplicar", { puesto: puestoV, id: perfilV });
+    setOcupado(false);
+    if (r) { setD(r); verMandos(); avisar(t(`Listo: el mando ${puestoV} ahora usa «${r.informe?.vivoAplicado?.nombre || p?.nombre || ""}». Míralo en la pantalla de elegir lados.`, `Done: controller ${puestoV} now uses «${p?.nombre || ""}». Check the side-selection screen.`), "ok", 7000); }
+  };
+  const restaurarVivo = async () => { setOcupado(true); const r = await accion("perfiles.restaurar", {}); setOcupado(false); if (r) { setD(r); verMandos(); avisar(r.vivoAviso || t("Usuarios restaurados como estaban.", "Users restored as they were."), "ok", 6000); } };
   const borrar = async (p) => {
     if (!(await confirmar({ titulo: t("¿Borrar este perfil de Link?", "Delete this profile from Link?"), texto: t(`«${p.nombre}» se quita de Link (queda una copia en la carpeta de respaldos). No toca PES.`, `«${p.nombre}» is removed from Link (a copy stays in the backups folder). PES is not touched.`) }))) return;
     const r = await accion("perfiles.borrar", { id: p.id });
@@ -107,6 +122,26 @@ export function PerfilesPes() {
         ${elegidos.length > caben ? html`<span class="ayuda" style="font-size:13px;color:var(--bad, #ff6b6b)">${t(`Solo caben ${caben} (hay ${protegidos} huecos protegidos).`, `Only ${caben} fit (${protegidos} slots are protected).`)}</span>` : null}
       </div>
       ${d.informe && d.informe.puestos?.length ? html`<div class="ayuda" style="font-size:13px">${t(`Hecho: ${d.informe.puestos.length} amigos en PES, ${d.informe.escritos} huecos escritos.`, `Done: ${d.informe.puestos.length} friends in PES, ${d.informe.escritos} slots written.`)}${d.informe.copia ? html` <span class="mono" style="font-size:11px;overflow-wrap:anywhere">${t("Copia: ", "Backup: ")}${d.informe.copia}</span>` : ""}</div>` : null}
+    </${Tarjeta}>
+
+    <${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:12px">
+      <${Titulo} texto=${t("PRUEBA EN VIVO (BETA)", "LIVE TEST (BETA)")} derecha=${html`<${Chip} tipo=${d.pesAbierto ? "ok" : "warn"}>${d.pesAbierto ? t("PES ABIERTO", "PES OPEN") : t("ABRE PES", "OPEN PES")}</${Chip}>`}/>
+      <div class="ayuda" style="font-size:14px">${t("Con PES abierto en la pantalla de elegir lados, pon el perfil de un amigo en el Usuario que tiene un mando. Se ve al instante, sin reiniciar. Lo que había en ese Usuario queda guardado en Link y lo puedes restaurar.", "With PES open on the side-selection screen, put a friend's profile into the user a controller has. It shows instantly, no restart. What was in that user stays saved in Link and can be restored.")}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <select class="campo" value=${puestoV} onChange=${(e) => setPuestoV(Number(e.currentTarget.value))} style="max-width:130px">
+          ${[1, 2, 3, 4, 5, 6, 7, 8].map((n) => html`<option key=${n} value=${n}>${t("Puesto ", "Slot ")}${n}</option>`)}
+        </select>
+        <select class="campo" value=${perfilV} onChange=${(e) => setPerfilV(e.currentTarget.value)} style="flex:1;min-width:160px">
+          <option value="">${t("Elige el perfil…", "Choose the profile…")}</option>
+          ${perfiles.map((p) => html`<option key=${p.id} value=${p.id}>${p.nombre}</option>`)}
+        </select>
+        <${Boton} tipo="lleno" deshabilitado=${!d.pesAbierto || !perfilV || ocupado} al=${aplicarVivo}>${t("PONER EN EL MANDO", "PUT ON CONTROLLER")}</${Boton}>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <${Boton} tipo="suave mini" deshabilitado=${!d.pesAbierto || ocupado} al=${verMandos}>${t("VER USUARIO DE CADA MANDO", "SHOW EACH CONTROLLER'S USER")}</${Boton}>
+        <${Boton} tipo="suave mini" deshabilitado=${!(d.vivo || []).length || ocupado} al=${restaurarVivo}>${t("RESTAURAR LO ANTERIOR", "RESTORE PREVIOUS")}${(d.vivo || []).length ? " (" + d.vivo.length + ")" : ""}</${Boton}>
+      </div>
+      ${mandos ? html`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:6px">${mandos.map((m) => html`<div key=${m.puesto} class="caja" style="display:flex;gap:8px;align-items:center;padding:6px 10px"><span class="mono mut" style="font-size:12px">${t("P", "S")}${m.puesto}</span><span style="font-size:13px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.nombre || t("Usuario ", "User ") + m.usuario}</span><span class="mono mut" style="font-size:11px">#${m.usuario}</span></div>`)}</div>` : null}
     </${Tarjeta}>
 
     <${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:10px">
