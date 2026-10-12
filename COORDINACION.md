@@ -47,6 +47,7 @@ Dos trabajos independientes dentro del mismo Phoenix Link:
   - Código en el repo web, rama **`liga-automatica`** (5b69fad, sin publicar en `borrador` ni en `main`).
   - Regla: el resultado lo valida **el staff o el árbitro designado, nunca el host**.
   - **El chat WEB debe:** juntar la rama `liga-automatica`, usar la 103 para su próxima migración, y hacer las páginas (marcador en vivo con Realtime, panel de validación, «Reclamar», y Liga leyendo `liga_tabla`). Detalle en `docs/LIGA-AUTOMATICA.md` de esa rama.
+- 2026-10-11 · **PENDIENTE-WEB · «En vivo ahora» colgado:** `liga_vivo` no se borraba al cerrar la sala ni Link. Link ya manda `terminado` al cerrar y un latido cada 2 min. La web tiene que limpiar las filas viejas, borrarlas en `sala/cerrar` y en las salas caídas, y ocultar las que lleven más de 10 min sin noticias: `docs/PROMPT-WEB-liga-vivo-huerfano.md`.
 
 ## Dos cuentas de Claude (A y B) — protocolo obligatorio
 Fralex usa 2 cuentas; cuando una se queda sin tokens sigue la otra. **La memoria es el repo, no el chat.**

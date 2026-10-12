@@ -36,6 +36,8 @@ namespace phoenix::web {
 		constexpr uint16_t kBotonStart = 0x0010;
 		constexpr int kPingAlto = 150;      // ms
 		constexpr size_t kSegundosPing = 5;  // muestras seguidas (1 por segundo)
+		constexpr double kLatidoVivoSeg = 120.0;   // el marcador en vivo se reenvía al menos cada 2 min (la web oculta los de >10 min sin noticias)
+		double vivoEnviadoSeg = -1e9;              // último envío del marcador en vivo (ahoraSeg)
 
 		/// Copia la máscara del anfitrión (Config) y le suma lo del modo competitivo si está activo.
 		void aplicarBloqueo(Interno& in, Hosting& h) {
@@ -370,7 +372,7 @@ namespace phoenix::web {
 				const int gl = inv ? j.golesVisita : j.golesLocal, gv = inv ? j.golesLocal : j.golesVisita;
 				const std::string fase = j.fase == "menu" ? "previa" : j.fase;
 				const std::string firma = std::to_string(gl) + "-" + std::to_string(gv) + "|" + fase + "|" + std::to_string(golesConNombre(j)) + "|" + pantalla;
-				if (firma != a.vivoFirma || j.minuto >= a.vivoMinuto + 5) {
+				if (firma != a.vivoFirma || j.minuto >= a.vivoMinuto + 5 || ahora - vivoEnviadoSeg >= kLatidoVivoSeg) {
 					const json gs = golesParaWeb(j, inv);
 					json c = { {"local", in.partido.ladoA().nombre}, {"visitante", in.partido.ladoB().nombre},
 						{"goles_local", (std::max)(0, gl)}, {"goles_visita", (std::max)(0, gv)},
@@ -378,6 +380,7 @@ namespace phoenix::web {
 					if (!pantalla.empty()) c["pantalla"] = pantalla;
 					if (a.partidoOficial > 0) c["partido_id"] = a.partidoOficial;
 					PhoenixLink::instancia().ligaVivo(c.dump());
+					vivoEnviadoSeg = ahora;
 					a.vivoFirma = firma;
 					a.vivoMinuto = j.minuto;
 					a.vivoMandado = true;
@@ -385,12 +388,13 @@ namespace phoenix::web {
 			}
 			else if (previa) {
 				const std::string firma = "previa|" + pantalla;
-				if (firma != a.vivoFirma) {
+				if (firma != a.vivoFirma || ahora - vivoEnviadoSeg >= kLatidoVivoSeg) {
 					json c = { {"local", in.partido.ladoA().nombre}, {"visitante", in.partido.ladoB().nombre},
 						{"goles_local", 0}, {"goles_visita", 0}, {"minuto", 0}, {"periodo", 0}, {"fase", "previa"},
 						{"goles", json::array()}, {"pantalla", pantalla} };
 					if (a.partidoOficial > 0) c["partido_id"] = a.partidoOficial;
 					PhoenixLink::instancia().ligaVivo(c.dump());
+					vivoEnviadoSeg = ahora;
 					a.vivoFirma = firma;
 					a.vivoMinuto = 0;
 					a.vivoMandado = true;

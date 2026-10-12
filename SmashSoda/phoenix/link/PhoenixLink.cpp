@@ -509,6 +509,19 @@ namespace phoenix {
 		std::string token;
 		{ std::lock_guard<std::mutex> lock(_mutex); token = _token; }
 		if (token.empty()) return;
+		// Antes de cerrar: quitar el marcador EN VIVO de la web (si no, la tarjeta se queda colgada para siempre)
+		bool quitarVivo = false;
+		{
+			std::lock_guard<std::mutex> lock(_mutex);
+			quitarVivo = _ligaVivoEnWeb || (_ligaVivoPendiente && !_ligaVivoBorrar);
+			_ligaVivoEnWeb = false;
+			_ligaVivoPendiente = false;   // lo pendiente era de esta sala: no se manda a la siguiente
+			_ligaVivo.clear();
+		}
+		if (quitarVivo) {
+			const json fin = { {"sala_id", salaId}, {"terminado", true} };
+			http::peticion("POST", std::string(kBaseLiga) + "/v1/liga/vivo", fin.dump(), cabecerasCon(token), 3000);
+		}
 		const json cuerpo = { {"sala_id", salaId}, {"motivo", "cierre desde Phoenix Link"} };
 		http::peticion("POST", std::string(kBase) + "/v1/sala/cerrar", cuerpo.dump(),
 			{ "Authorization: Bearer " + token, std::string("X-Phoenix-Version: ") + kVersionApp, "X-Phoenix-Build: " + huellaExe() });
@@ -902,8 +915,9 @@ namespace phoenix {
 			if (!cuerpo.is_discarded()) {
 				cuerpo["sala_id"] = salaId;
 				const http::Respuesta r = http::peticion("POST", std::string(kBaseLiga) + "/v1/liga/vivo", cuerpo.dump(), cabecerasCon(token), 5000);
+				std::lock_guard<std::mutex> l(_mutex);
+				if (r.estado == 200) _ligaVivoEnWeb = !borrar;
 				if (r.estado == 0 || r.estado >= 500 || r.estado == 429) {
-					std::lock_guard<std::mutex> l(_mutex);
 					if (!_ligaVivoPendiente) { _ligaVivo = vivo; _ligaVivoBorrar = borrar; _ligaVivoPendiente = true; }   // se reintenta con lo más nuevo
 					_ligaVivoProximoMs = ahora + 10000;
 				}

@@ -331,6 +331,7 @@ namespace phoenix {
 		long long _ligaProximoMs = 0;
 		std::string _ligaVivo;              ///< último marcador por mandar (JSON)
 		bool _ligaVivoPendiente = false, _ligaVivoBorrar = false;
+		bool _ligaVivoEnWeb = false;        ///< la web tiene un marcador en vivo de esta sala (hay que borrarlo al cerrar)
 		long long _ligaVivoProximoMs = 0;
 		std::vector<std::string> _ligaResultados;   ///< cola persistente (phoenix-liga-resultados.json)
 		long long _ligaResProximoMs = 0;
