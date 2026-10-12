@@ -257,7 +257,7 @@ export function crearSimulador(enviar) {
     const p = s.partido;
     const e = {
       v: 1,
-      app: { version: "0.2.50", etapa: "beta 1", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
+      app: { version: "0.2.51", etapa: "beta 1", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
       noticias: { cargado: true, lista: s.noticias },
       chatGlobal: { cargado: true, pausado: s.chatGlobal.pausado, esperaSeg: s.chatGlobal.esperaSeg, rev: s.chatGlobal.mensajes.length, error: "" },
       web: { ...s.web, jugadoresLista: 3, versionLiga: "2026.10.08", eventosEnCola: 0 },
@@ -329,6 +329,20 @@ export function crearSimulador(enviar) {
     return { ajustes: { ...tr.ajustes, transporte: "carpeta" }, activo: tr.ajustes.publicar || tr.ajustes.recibir, mensaje: tr.mensaje, juego: s.buzon.juego, transporteListo: !!tr.ajustes.carpeta, webDisponible: false,
       publicar: tr.ajustes.publicar, recibir: tr.ajustes.recibir, confirmarAntes: tr.ajustes.confirmarAntes, transporte: tr.ajustes.carpeta ? "carpeta " + tr.ajustes.carpeta : "", modoRecarga: s.modoRecarga || "AUTO-SIEMPRE", pesAbierto: s.pes.abierto,
       anfitrion: tr.anfitrion, amigo: tr.amigo };
+  };
+  // Perfiles de amigos (imita web/AccionesPerfilesWeb.cpp con 32 huecos de ejemplo; nombres inventados)
+  const perfilesSim = (informe) => {
+    if (!s.perfilesPes) {
+      const nom = ["FRALEX", "AMIGO UNO", "AMIGO DOS", "AMIGO TRES", "AMIGO CUATRO", "AMIGO CINCO", "AMIGO SEIS", "AMIGO SIETE"];
+      s.perfilesPes = { pesAbierto: false, protegidos: [1], seleccion: [], ultima: "", perfiles: nom.map((n, i) => ({ id: "p" + (i + 1), nombre: n, sinNombre: false, actualizado: "20261012-140000", tieneAnterior: false })),
+        huecos: Array.from({ length: 32 }, (_, i) => (i < nom.length ? i + 1 : 0)) };
+      for (let i = 9; i <= 40; i++) s.perfilesPes.perfiles.push({ id: "p" + i, nombre: "AMIGO " + (i + 2), sinNombre: false, actualizado: "20261012-140000", tieneAnterior: false });
+    }
+    const p = s.perfilesPes;
+    const idN = (id) => Number(id.slice(1));
+    return { ruta: "D:/Users/Alexander/Documents/KONAMI/eFootball PES 2021 SEASON UPDATE/239200/save/SYSTEM00000000", candidatos: [], pesAbierto: p.pesAbierto, autoRecoger: true,
+      huecos: p.huecos.map((pid, i) => ({ n: i + 1, protegido: p.protegidos.includes(i + 1), nombre: pid ? (p.perfiles.find((x) => idN(x.id) === pid) || {}).nombre || "" : "", perfil: pid ? "p" + pid : null })),
+      perfiles: p.perfiles.map((x) => ({ ...x, enHueco: p.huecos.indexOf(idN(x.id)) + 1 })), seleccion: p.seleccion, ultimaSala: p.ultima, ...(informe ? { informe } : {}) };
   };
   // Fichajes como cambios (lo que devuelve fichajes.estado en el motor real)
   const fichajesSim = () => {
@@ -504,6 +518,24 @@ export function crearSimulador(enviar) {
       s.fichajesAplicado = d.accion === "aplicar";
       return { ...fichajesSim(), mensaje: d.accion === "aplicar" ? "Fichajes generados sobre tu base en 3 sitios: 6 aplicados, 3 saltados. Abre PES: se ven al cargar los datos del juego." : "Fichajes quitados en 3 sitios: el juego vuelve a la base original del parche (la copia queda en una carpeta _antes-de-fichajes-… dentro de Phoenix-DB)." };
     },
+    // Perfiles de amigos (imita web/AccionesPerfilesWeb.cpp)
+    "perfiles.estado": () => perfilesSim(),
+    "perfiles.traer": () => perfilesSim({ nuevos: 0, actualizados: 0, iguales: 8, escritos: 0, copia: "", avisos: [], puestos: [] }),
+    "perfiles.seleccion": (d) => { perfilesSim(); s.perfilesPes.seleccion = (d.ids || []).filter((id) => s.perfilesPes.perfiles.some((x) => x.id === id)); return perfilesSim(); },
+    "perfiles.proteger": (d) => { perfilesSim(); const p = s.perfilesPes; p.protegidos = p.protegidos.filter((h) => h !== d.hueco); if (d.si) p.protegidos.push(d.hueco); return perfilesSim(); },
+    "perfiles.borrar": (d) => { perfilesSim(); const p = s.perfilesPes; p.perfiles = p.perfiles.filter((x) => x.id !== d.id); p.huecos = p.huecos.map((h) => (h === Number(d.id.slice(1)) ? 0 : h)); p.seleccion = p.seleccion.filter((x) => x !== d.id); return perfilesSim(); },
+    "perfiles.renombrar": (d) => { perfilesSim(); const x = s.perfilesPes.perfiles.find((y) => y.id === d.id); if (x) { x.nombre = d.nombre; x.sinNombre = false; } return perfilesSim(); },
+    "perfiles.ruta": () => perfilesSim(),
+    "perfiles.preparar": (d) => {
+      perfilesSim(); const p = s.perfilesPes; const ids = d.ids || [];
+      if (!ids.length) error("NO_SE_PUDO", "elige al menos un amigo");
+      const libres = []; for (let i = 31; i >= 0; i--) if (!p.protegidos.includes(i + 1)) libres.push(i);
+      if (ids.length > libres.length) error("NO_SE_PUDO", "no caben");
+      const puestos = [];
+      ids.forEach((id, k) => { const ya = p.huecos.indexOf(Number(id.slice(1))); if (ya >= 0) { puestos.push({ hueco: ya + 1, perfil: id }); return; } const i = libres.shift(); p.huecos[i] = Number(id.slice(1)); puestos.push({ hueco: i + 1, perfil: id }); });
+      p.seleccion = ids; p.ultima = "20261012-141500";
+      return perfilesSim({ nuevos: 0, actualizados: 0, iguales: 8, escritos: puestos.length, copia: "…/SYSTEM00000000.phoenix-20261012-141500", avisos: [], puestos });
+    },
     // Traspasos en vivo (imita link/ServicioTraspasos.cpp): anfitrión publica lo que hace en Editar; amigo lo aplica sobre su base
     "traspasos.estado": () => traspasosSim(),
     "traspasos.config": (d) => {
@@ -533,7 +565,7 @@ export function crearSimulador(enviar) {
       s.buzon.juego = r;
       return { ...modulosSim(), mensaje: "Carpeta del juego guardada." };
     },
-    "diag.informe": () => ({ texto: "== PHOENIX LINK · INFORME PARA DEPURAR ==\nPhoenix Link 0.2.50 (beta 1)\n(simulador: sin datos reales)\n" }),
+    "diag.informe": () => ({ texto: "== PHOENIX LINK · INFORME PARA DEPURAR ==\nPhoenix Link 0.2.51 (beta 1)\n(simulador: sin datos reales)\n" }),
     "ajustes.avisoEntrada": (d) => { s.ajustes.avisoEntrada[d.campo] = !!d.valor; },
     "ajustes.probarAvisoEntrada": () => ({}),
     "ajustes.avisosJuego": (d) => { s.buzon.activo = d.valor; s.buzon.estado = d.valor ? "conectado" : "apagado"; },

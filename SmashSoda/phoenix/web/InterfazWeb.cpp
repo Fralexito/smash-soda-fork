@@ -210,6 +210,7 @@ namespace phoenix::web {
 			registrarAccionesModulos(in);
 			registrarAccionesFichajes(in);
 			registrarAccionesTraspasos(in);
+			registrarAccionesPerfiles(in);
 			registrarAccionesCedido(in);
 
 			in.iniciada = true;

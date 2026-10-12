@@ -6,6 +6,7 @@ import { html, useState, useEffect } from "../lib.js";
 import { t, fecha } from "../i18n.js";
 import { accion, confirmar, irA } from "../tienda.js";
 import { Permisos } from "./ajustes.js";
+import { PerfilesPes } from "./perfiles.js";
 import { BotonCeder } from "./cedido.js";
 import { Tarjeta, Titulo, Boton, AjusteSw, Campo, Avatar, Chip, Icono, Vacio, colorPing, cx, dos } from "../ui.js";
 
@@ -14,6 +15,7 @@ export const PESTANAS_GENTE = [
   { id: "moderacion", es: "MODERACIÓN", en: "MODERATION", d: ["Baneados, moderadores, VIP y quién pasó por tu sala.", "Bans, mods, VIPs and visit history."] },
   { id: "amigos", es: "AMIGOS", en: "FRIENDS", d: ["Tus amigos de la web de la liga. Invítalos a tu sala con un clic.", "Your league friends. Invite them in one click."] },
   { id: "permisos", es: "PERMISOS", en: "PERMISSIONS", d: ["Qué puede hacer cada rol (invitado, VIP, moderador) desde el chat.", "What each role (guest, VIP, moderator) can do from chat."] },
+  { id: "perfiles", es: "PERFILES PES", en: "PES PROFILES", d: ["Más de 32 amigos con su nombre y sus botones: Link guarda los de todos y pone en PES solo los de hoy.", "More than 32 friends with their name and buttons: Link keeps everyone's and puts only today's in PES."] },
 ];
 
 export function metaGente(s) {
@@ -27,6 +29,7 @@ export function VistaGente({ s, pestana }) {
   if (pestana === "moderacion") return html`<${Moderacion}/>`;
   if (pestana === "amigos") return html`<${Amigos} m=${m}/>`;
   if (pestana === "permisos") return html`<${Permisos} m=${m}/>`;
+  if (pestana === "perfiles") return html`<${PerfilesPes}/>`;
   return html`<${EnSala} m=${m}/>`;
 }
 
