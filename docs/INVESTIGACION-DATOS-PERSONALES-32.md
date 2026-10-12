@@ -74,3 +74,19 @@ Para elegir el Usuario correcto al sentarse alguien en vivo haría falta tocar l
 1. Con PES cerrado: ejecutar en cmd `dir /s /a /tn "%USERPROFILE%\Documents\KONAMI\eFootball PES 2021 SEASON UPDATE" > antes.txt` (y lo mismo en `OneDrive\Documents` si existe), y copiar toda esa carpeta a otro sitio como respaldo.
 2. Abrir PES, ir a Datos personales, editar un Usuario libre (p. ej. el 32): ponerle nombre **ZZTEST** y cambiar un botón reconocible (p. ej. pase ↔ disparo). Salir de PES por completo.
 3. Repetir el `dir` (`despues.txt`) y pasar ambos: el archivo cuya hora/tamaño cambió es el de los Usuarios. Con una copia de él se busca «ZZTEST» y se determina formato, tamaño de entrada y si el 32 es un tamaño de tabla.
+
+---
+
+## 7. Contenido de un «Usuario» (capturas de Fralex, ✅ visto en pantalla)
+
+Pantalla «Editar Datos personales» → «Elige un nombre para tus Datos personales»: cada Usuario guarda
+- **Nombre** («Usuario 27», editable; es lo que Fralex usa para saber quién controla a cada jugador).
+- **Configuración de comandos**: Normal / Alternativa / **Personalizado** (mapa completo de botones por contexto: Ataque 1/2, Defensa…, más «Desplazamiento de jugadores» L/R).
+- Cambiar cursor, cursor de siguiente jugador, tipo de cursor, nv. de ayuda en pases, tipo de pase en profundidad, tipo de disparo, guía de dirección / objetivo / posicionamiento, amago automático, entrada automática, controles de compañero (y posiblemente más filas por debajo de la captura).
+- ❓ Estadísticas por usuario: no aparecen en estas pantallas (no confirmado que existan).
+
+Esto confirma que el Usuario = **perfil de ajustes + nombre**, no datos de partida. Sigue sin saberse en qué archivo está (ver §6): pendiente la prueba ZZTEST.
+
+### Consecuencia práctica
+- **El nombre** (lo más importante para Fralex) se puede resolver **fuera de PES**: Link ya sabe quién ocupa cada puesto; basta mostrar «puesto N = nombre del amigo» en la UI de Link/overlay/web. Eso no depende de los 32 ni toca el juego.
+- **La configuración de botones/ayudas** de cada amigo es lo que sí vive en PES. Con >32 amigos, la vía segura es (B) rotación con PES cerrado (si la prueba ZZTEST confirma que está en un archivo), guardando los perfiles en la base de Link por Parsec ID.
