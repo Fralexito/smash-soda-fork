@@ -164,7 +164,13 @@ export function CampoEnVivo({ m }) {
           <span><span style=${`display:inline-block;width:10px;height:10px;border-radius:50%;background:${COLOR[2]};vertical-align:-1px;margin-right:5px`}></span>${t("Árbitros", "Officials")}</span>
         </span>` : null}
       </div>
-      <${CampoSvg} alTanda=${alTanda}/>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
+        <div style="flex:1 1 420px;max-width:680px;min-width:0"><${CampoSvg} alTanda=${alTanda}/></div>
+        <div style="flex:1 1 220px;min-width:200px;border:1px dashed var(--tenue);border-radius:12px;padding:14px">
+          <b>${t("Estadísticas del partido", "Match stats")}</b>
+          <div class="ayuda" style="margin-top:6px;font-size:12px">${t("Aquí irán disparos, córners, faltas, tarjetas, cambios y más cuando Link los pueda leer.", "Shots, corners, fouls, cards, subs and more will go here once Link can read them.")}</div>
+        </div>
+      </div>
       ${activo && c.equipos === false ? html`<div class="ayuda" style="margin-top:10px">${t("Los equipos se colorean en el siguiente saque de centro (gol o descanso).", "Teams get their colours at the next kick-off (goal or half-time).")}</div>` : null}
       ${activo ? html`<${Tanda} tanda=${tanda}/>` : null}
       <div style="margin-top:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
