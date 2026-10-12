@@ -24,5 +24,10 @@ namespace phoenix::web {
 	void ladosRevisar(Interno& in, const juego::EstadoPartidoJuego& j, double ahora);
 	/// Para la interfaz: "" (apagado o nada que hacer) | midiendo | coinciden | corregidos | dudas
 	const char* ladosEstado();
+	/// Lado del puesto i (0-7) en la pantalla de mandos de PES, ya estable: 'A' izquierda, 'B' derecha, '-' centro
+	/// (Mirando) o '?' (sin lector, sin lectura reciente o LADOS AUTO apagado). Ver core/LadoPantalla.h.
+	char ladoPantallaPuesto(int i);
+	/// ¿Llegan lecturas de la pantalla de mandos ahora?
+	bool ladoPantallaVivo();
 
 }

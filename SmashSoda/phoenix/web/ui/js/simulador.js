@@ -108,7 +108,7 @@ export function crearSimulador(enviar) {
     actividad: ["[PhoenixBot] Sala abierta con eFootball PES 2021", "[PhoenixBot] Mirko joined.", "[PhoenixBot] Kaiser joined.", "[PhoenixBot] Mando 03 asignado a ElTigre"],
     // Árbitro: estado.json del juego (?estado=archivo.json lo lee cada segundo) y preferencias
     juego: { datos: false }, golesJuego: null,
-    arbitro: { competitivo: true, pausaAuto: false, marcadorAuto: true, soloAutorizados: true, modoRecarga: "AUTO-SIEMPRE", ultimaPausa: "", conStart: false, ladosAuto: true, ladosEstado: "" },
+    arbitro: { competitivo: true, pausaAuto: false, marcadorAuto: true, soloAutorizados: true, modoRecarga: "AUTO-SIEMPRE", ultimaPausa: "", conStart: false, ladosAuto: true, ladosEstado: "", mirandoAuto: true, pantallaLados: true },
     golesAnunciados: -1,
     // Liga automática: partidos oficiales por jugar (GET /v1/liga/partidos)
     liga: { cargado: true, error: "", ultimoEnvio: "", pendientes: 0, elegido: 0, elegidoTexto: "", enVivo: false, partidos: [
@@ -251,7 +251,7 @@ export function crearSimulador(enviar) {
     const p = s.partido;
     const e = {
       v: 1,
-      app: { version: "0.2.42", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
+      app: { version: "0.2.43", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
       noticias: { cargado: true, lista: s.noticias },
       chatGlobal: { cargado: true, pausado: s.chatGlobal.pausado, esperaSeg: s.chatGlobal.esperaSeg, rev: s.chatGlobal.mensajes.length, error: "" },
       web: { ...s.web, jugadoresLista: 3, versionLiga: "2026.10.08", eventosEnCola: 0 },
@@ -279,7 +279,7 @@ export function crearSimulador(enviar) {
       red: s.abierta ? resumenRed(verSerie) : [],
       retraso: s.abierta ? resumenRetraso() : [],
       partido: { fase: p.fase, a: p.a, b: p.b, segundos: segundosPartido(), inicioMs: 0, invertido: p.invertido,
-        previa: p.fase === "libre" ? { a: [{ parsecId: 1001, nombre: "Fralex" }], b: [{ parsecId: 0, nombre: "CPU" }] } : null },
+        previa: p.fase === "libre" ? { fuente: "juego", a: [{ parsecId: 1001, nombre: "Fralex" }], b: [{ parsecId: 1002, nombre: "Kaiser" }], mirando: s.arbitro.mirandoAuto ? [{ parsecId: 1003, nombre: "Lucho" }] : [] } : null },
       juego: s.juego,
       liga: { ...s.liga, enVivo: s.liga.elegido > 0 && p.fase === "en_juego" },
       arbitro: {
@@ -519,6 +519,7 @@ export function crearSimulador(enviar) {
     "partido.cambiarLados": () => { s.partido.invertido = !s.partido.invertido; },
     "partido.corregirLados": () => { s.partido.invertido = !s.partido.invertido; bot("Lados corregidos."); },
     "partido.ladosAuto": (d) => { s.arbitro.ladosAuto = !!d.si; },
+    "partido.mirandoAuto": (d) => { s.arbitro.mirandoAuto = !!d.si; },
     "partido.finalizar": () => {
       const p = s.partido;
       const reg = { id: siguienteId++, inicioMs: Date.now() - segundosPartido() * 1000, duracionSeg: segundosPartido(), a: p.a, b: p.b, ganador: p.a.goles > p.b.goles ? "a" : p.b.goles > p.a.goles ? "b" : "empate" };

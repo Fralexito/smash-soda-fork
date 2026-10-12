@@ -57,7 +57,19 @@ function ArmarAuto({ m, aMano }) {
     </div>
     ${pv ? html`<div class="fila partible">${col("a", "var(--acc)", pv.a)}${col("b", "var(--eq-b)", pv.b)}</div>`
       : html`<${Vacio} titulo=${t("Nadie tiene mando todavía", "Nobody has a pad yet")} texto=${t("Cuando cada uno tenga su mando (o tú toques el tuyo), aparece aquí en su equipo.", "Once everyone has a pad (or you touch yours), they show up here.")}/>`}
-    <div class="ayuda">${t("Así quedan ahora según el equipo de cada puesto (Mandos › Puestos). Si en el juego alguien se pone del otro lado, Link lo ve y lo corrige.", "This is how they stand now by seat team (Pads › Seats). If someone picks the other side in the game, Link fixes it.")}</div>
+    ${pv && (pv.mirando || []).length ? html`<${Tarjeta} interior="padding:18px 24px;display:flex;flex-direction:column;gap:10px">
+      <div class="lab mut">${t("MIRANDO (mando en el centro del juego)", "WATCHING (pad in the middle)")}</div>
+      ${pv.mirando.map(fila)}
+      <div class="ayuda">${t("No juegan este partido pero conservan su puesto: si mueven su mando a un lado, vuelven a jugar.", "Not playing this match but they keep their seat: moving the pad to a side brings them back.")}</div>
+    </${Tarjeta}>` : null}
+    <div class="ayuda">${pv && pv.fuente === "juego"
+      ? t("Así quedan ahora según la pantalla de mandos del juego (izquierda = Equipo A, derecha = Equipo B, centro = Mirando).", "As picked on the game's controller screen (left = Team A, right = Team B, middle = Watching).")
+      : t("Así quedan ahora según el equipo de cada puesto (Mandos › Puestos). Si en el juego alguien se pone del otro lado, Link lo ve y lo corrige.", "This is how they stand now by seat team (Pads › Seats). If someone picks the other side in the game, Link fixes it.")}</div>
+    ${m.arbitro && m.arbitro.pantallaLados ? html`<div class="caja" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <${Interruptor} valor=${!!m.arbitro.mirandoAuto} al=${(v) => accion("partido.mirandoAuto", { si: v })} etiqueta=${t("Mirando automático", "Auto watching")}/>
+      <div style="flex:1;min-width:220px"><b>${t("Mirando automático", "Auto watching")}</b>
+        <div class="ayuda">${t("Quien deja su mando en el centro de la pantalla de mandos no juega (sigue en su puesto).", "Whoever leaves their pad in the middle doesn't play (keeps the seat).")}</div></div>
+    </div>` : null}
   </div>`;
 }
 

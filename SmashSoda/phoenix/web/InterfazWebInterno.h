@@ -173,7 +173,8 @@ namespace phoenix::web {
 	/// Árbitro del partido: modo competitivo, pausa automática y goles del juego (≈ cada frame; trabaja 2 veces por segundo).
 	void tickArbitro(Interno& in);
 	/// Lados según los mandos (equipo de cada puesto + anfitrión), como los arma el árbitro al pitazo. false si no hay nadie.
-	bool armarLadosSegunMandos(Interno& in, LadoPartido& la, LadoPartido& lb);
+	/// mirando: quien tiene su mando en el centro de la pantalla de mandos (no juega). delJuego: todos los lados salen del juego.
+	bool armarLadosSegunMandos(Interno& in, LadoPartido& la, LadoPartido& lb, std::vector<JugadorPartido>* mirando = nullptr, bool* delJuego = nullptr);
 	/// Valores del bloqueo de botones del anfitrión (sin lo que añade el modo competitivo).
 	unsigned int mascaraBotonesPropia(Interno& in);
 	bool bloqueoBotonesPropio(Interno& in);

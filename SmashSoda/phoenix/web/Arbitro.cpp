@@ -241,8 +241,10 @@ namespace phoenix::web {
 		if (in.ctx.hosting != nullptr && in.arbitro.competitivoActivo) aplicarBloqueo(in, *in.ctx.hosting);
 	}
 
-	bool armarLadosSegunMandos(Interno& in, LadoPartido& la, LadoPartido& lb) {
+	bool armarLadosSegunMandos(Interno& in, LadoPartido& la, LadoPartido& lb, std::vector<JugadorPartido>* mirando, bool* delJuego) {
 		la = LadoPartido(); lb = LadoPartido();
+		if (mirando) mirando->clear();
+		if (delJuego) *delJuego = false;
 		if (in.ctx.sala == nullptr || in.ctx.hosting == nullptr) return false;
 		ProveedorSala& sala = *in.ctx.sala;
 		Hosting& h = *in.ctx.hosting;
@@ -250,13 +252,33 @@ namespace phoenix::web {
 		const double ahora = ahoraSeg();
 		const std::vector<AsientoVista> asientos = sala.asientos(8);
 		const int activos = (std::min)(static_cast<int>(asientos.size()), pr.mandosActivos);
+		int humanos = 0, segunJuego = 0;   // para saber si TODOS salen de la pantalla de mandos del juego
+		// Equipo de un puesto: el lado que tiene ese mando en la pantalla de mandos de PES (LADOS AUTO, si se lee),
+		// o el del puesto (Mandos › Puestos). 'A', 'B', '-' (centro = Mirando, con «Mirando automático») o 0 (no cuenta).
+		auto equipoDe = [&](int i) -> char {
+			const char p = ladoPantallaPuesto(i);
+			if (p == 'A' || p == 'B') { segunJuego++; return p; }
+			if (p == '-') { segunJuego++; return pr.mirandoAuto ? '-' : 0; }
+			return pr.equipoDe(i) == '-' ? 0 : pr.equipoDe(i);
+		};
+		auto ya = [&](uint32_t id) {
+			for (const LadoPartido* x : { &la, &lb }) for (const JugadorPartido& jp : x->jugadores) if (jp.parsecId == id) return true;
+			if (mirando) for (const JugadorPartido& jp : *mirando) if (jp.parsecId == id) return true;
+			return false;
+		};
+		auto poner = [&](char eq, const JugadorPartido& j, bool alPrincipio) {
+			if (eq == '-') { if (mirando && !ya(j.parsecId)) mirando->push_back(j); return; }
+			LadoPartido& l = eq == 'A' ? la : lb;
+			if (ya(j.parsecId) || l.jugadores.size() >= 4) return;
+			if (alPrincipio) l.jugadores.insert(l.jugadores.begin(), j); else l.jugadores.push_back(j);
+		};
 		for (int i = 0; i < activos; i++) {
 			const AsientoVista& s = asientos[static_cast<size_t>(i)];
-			if (!s.ocupado || s.parsecId == 0 || pr.equipoDe(i) == '-') continue;
-			LadoPartido& l = pr.equipoDe(i) == 'A' ? la : lb;
-			bool repetido = false;
-			for (const LadoPartido* x : { &la, &lb }) for (const JugadorPartido& jp : x->jugadores) if (jp.parsecId == s.parsecId) repetido = true;
-			if (!repetido && l.jugadores.size() < 4) l.jugadores.push_back({ s.parsecId, s.jugador });
+			if (!s.ocupado || s.parsecId == 0) continue;
+			const char eq = equipoDe(i);
+			if (eq == 0) continue;
+			humanos++;
+			poner(eq, { s.parsecId, s.jugador }, false);
 		}
 		// El anfitrión: si juega con su mando de Link (MandoHost no deja «dueño» en el motor y por eso no sale arriba)
 		// cuenta en el lado de su puesto. Si lo pidió («Contarme como jugador»), también sin puesto, en su lado habitual
@@ -264,23 +286,19 @@ namespace phoenix::web {
 		try {
 			Guest& anf = h.getHost();
 			const int tomado = MandoHost::activo() - 1;
-			int local = -1;   // 1 = lado a (Equipo A), 0 = lado b (Equipo B), -1 = no cuenta
+			char eq = 0;
 			if (anf.isValid() && anf.userID != 0) {
-				if (tomado >= 0 && tomado < activos && pr.equipoDe(tomado) != '-') local = pr.equipoDe(tomado) == 'A' ? 1 : 0;   // lado de SU puesto
+				if (tomado >= 0 && tomado < activos) eq = equipoDe(tomado);   // lado de SU puesto (o el del juego)
 				else if (pr.anfitrionCuenta && ahora - anfitrionPulsoSeg < 120.0) {   // automático: tocó su mando en los últimos 2 min
-					if (pr.miPuestoModo == "a") local = 1;
-					else if (pr.miPuestoModo == "b") local = 0;
-					else if (pr.equipoDe(pr.miPuestoNumero - 1) != '-') local = pr.equipoDe(pr.miPuestoNumero - 1) == 'A' ? 1 : 0;   // puesto fijo: el equipo de ese puesto
+					if (pr.miPuestoModo == "a") eq = 'A';
+					else if (pr.miPuestoModo == "b") eq = 'B';
+					else if (pr.equipoDe(pr.miPuestoNumero - 1) != '-') eq = pr.equipoDe(pr.miPuestoNumero - 1);   // puesto fijo: el equipo de ese puesto
 				}
 			}
-			if (local >= 0) {
-				bool repetido = false;
-				for (const LadoPartido* x : { &la, &lb }) for (const JugadorPartido& jp : x->jugadores) if (jp.parsecId == anf.userID) repetido = true;
-				LadoPartido& l = local == 1 ? la : lb;
-				if (!repetido && l.jugadores.size() < 4) l.jugadores.insert(l.jugadores.begin(), { anf.userID, anf.name });
-			}
+			if (eq != 0) { humanos++; poner(eq, { anf.userID, anf.name }, true); }
 		}
 		catch (...) {}
+		if (delJuego) *delJuego = humanos > 0 && segunJuego == humanos;
 		if (la.jugadores.empty() && lb.jugadores.empty()) return false;
 		if (la.jugadores.empty()) { la.nombre = "CPU"; la.jugadores.push_back({ 0, "CPU" }); }
 		if (lb.jugadores.empty()) { lb.nombre = "CPU"; lb.jugadores.push_back({ 0, "CPU" }); }
@@ -359,7 +377,8 @@ namespace phoenix::web {
 				&& j.minuto <= 1 && ahora >= autoArmarEsperaHasta) {
 				autoArmarEsperaHasta = ahora + 10.0;   // si no se puede (nadie con mando), se vuelve a mirar en 10 s
 				LadoPartido la, lb;
-				if (armarLadosSegunMandos(in, la, lb) && in.partido.preparar(la, lb)) in.partido.origenLados("mandos");
+				bool delJuego = false;
+				if (armarLadosSegunMandos(in, la, lb, nullptr, &delJuego) && in.partido.preparar(la, lb)) in.partido.origenLados(delJuego ? "juego" : "mandos");   // juego = leídos de la pantalla de mandos de PES
 			}
 
 			// 2a) Arranque automático: lados ya elegidos (Listo) y el reloj del juego echa a andar

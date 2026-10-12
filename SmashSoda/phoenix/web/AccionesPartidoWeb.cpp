@@ -262,6 +262,13 @@ namespace phoenix::web {
 		});
 
 		// Lados automáticos (LadosAuto.cpp): Link mira en el juego en qué lado juega cada mando y corrige solo si están al revés
+		// Mirando automático: con el mando en el centro de la pantalla de mandos de PES no juega (conserva su puesto)
+		p.registrar("partido.mirandoAuto", [](const json& d, uint64_t) -> std::optional<json> {
+			PhoenixPrefs& pr = PhoenixPrefs::get();
+			pr.mirandoAuto = booleano(d, "si");
+			pr.guardar();
+			return json::object();
+		});
 		p.registrar("partido.ladosAuto", [](const json& d, uint64_t) -> std::optional<json> {
 			PhoenixPrefs& pr = PhoenixPrefs::get();
 			pr.ladosAuto = booleano(d, "si");

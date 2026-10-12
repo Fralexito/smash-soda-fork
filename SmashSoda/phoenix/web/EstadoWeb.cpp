@@ -573,13 +573,17 @@ namespace phoenix::web {
 		if (in.partido.fase() == FasePartido::Libre) {
 			// Cómo quedarán los lados si se arman solos al pitazo (Partido › Armar los muestra sin pedir clics)
 			LadoPartido la, lb;
-			const bool hay = armarLadosSegunMandos(in, la, lb);
-			auto lista = [](const LadoPartido& l) {
+			std::vector<JugadorPartido> mirando;
+			bool delJuego = false;
+			const bool hay = armarLadosSegunMandos(in, la, lb, &mirando, &delJuego);
+			auto lista = [](const std::vector<JugadorPartido>& v) {
 				json r = json::array();
-				for (const JugadorPartido& j : l.jugadores) r.push_back({ {"parsecId", j.parsecId}, {"nombre", j.nombre} });
+				for (const JugadorPartido& j : v) r.push_back({ {"parsecId", j.parsecId}, {"nombre", j.nombre} });
 				return r;
 			};
-			e["partido"]["previa"] = hay ? json{ {"a", lista(la)}, {"b", lista(lb)} } : json(nullptr);
+			// fuente: «juego» = todos según la pantalla de mandos de PES; «puestos» = según Mandos › Puestos
+			e["partido"]["previa"] = hay || !mirando.empty() ? json{ {"a", lista(la.jugadores)}, {"b", lista(lb.jugadores)},
+				{"mirando", lista(mirando)}, {"fuente", delJuego ? "juego" : "puestos"} } : json(nullptr);
 		}
 		{
 			// Partido según el juego (estado.json de phoenix.lua). Sin la edad del archivo: cambiaría en cada foto.
@@ -592,7 +596,7 @@ namespace phoenix::web {
 				: json{ {"datos", false} };
 			const PhoenixPrefs& prA = PhoenixPrefs::get();
 			e["arbitro"] = { {"competitivo", prA.competitivo}, {"pausaAuto", prA.pausaAuto}, {"marcadorAuto", prA.marcadorAuto},
-				{"soloAutorizados", prA.soloAutorizados}, {"modoRecarga", prA.modoRecarga}, {"ladosAuto", prA.ladosAuto}, {"ladosEstado", ladosEstado()},
+				{"soloAutorizados", prA.soloAutorizados}, {"modoRecarga", prA.modoRecarga}, {"ladosAuto", prA.ladosAuto}, {"ladosEstado", ladosEstado()}, {"mirandoAuto", prA.mirandoAuto}, {"pantallaLados", ladoPantallaVivo()},
 				{"activo", in.arbitro.competitivoActivo}, {"origen", in.arbitro.origen},
 				{"ultimaPausa", in.arbitro.ultimaPausa}, {"conStart", in.arbitro.ultimaConStart} };
 			// Liga automática: partidos oficiales por jugar, el elegido y el último envío del resultado

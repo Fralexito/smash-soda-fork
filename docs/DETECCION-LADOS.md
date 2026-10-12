@@ -136,3 +136,29 @@ LadosAuto los comprueba en el juego y los corrige si hace falta (§5). El armado
 en la pantalla de mandos, pero falta confirmarlas (dos mandos, varios arranques, firma estable, casilla ↔ puesto).
 Cuando estén confirmadas, la vista previa de Armar usará ese lado directamente (local = izquierda) y la corrección
 del primer minuto quedará solo como comprobación.
+
+## 7. Equipo dinámico según la pantalla de mandos de PES (0.2.43, preparado; falta el lector)
+
+Pedido de Fralex: «si en el juego me pongo a la izquierda, en Link Equipo A; a la derecha, Equipo B; en el medio, Mirando».
+
+**Ya está en Link (sin efecto hasta que haya lector confirmado):**
+- `core/LadoPantalla.{h,cpp}` (lógica pura, `pruebas-link/ladopantalla_test.cpp`): `Lectura` = lado por casilla PES 1-8
+  (−1 izquierda, 0 centro, +1 derecha, 2 sin mando). `Estabilizador`: un lado cuenta solo si se lee igual **1,5 s seguidos**
+  (sin parpadeos); lecturas no válidas o con valores raros no cuentan; sin lecturas 3 s → todo «desconocido».
+  Enganche: `ladopantalla::fijarProveedor(fn)`; **sin proveedor no cambia nada** (hoy no hay ninguno).
+- `web/LadosAuto.cpp`: lee 2/s con el proveedor (solo con LADOS AUTO) y recuerda el último lado estable 5 min, porque
+  al pitazo la pantalla de mandos ya no está. `ladoPantallaPuesto(i)` → 'A' / 'B' / '-' / '?'.
+- `armarLadosSegunMandos` (Arbitro.cpp): el equipo de cada puesto ocupado (y del anfitrión sentado con su mando de Link)
+  sale de la pantalla si se conoce; si no, del puesto (Mandos › Puestos). Si TODOS salen de la pantalla, el partido arranca
+  con `origenLados = "juego"`. Lo usan Armar (vista previa) y el árbitro al pitazo.
+- **Mirando** (interruptor «Mirando automático», encendido, solo visible cuando llegan lecturas): mando en el centro = no juega
+  este partido (sale en una tarjeta MIRANDO de Armar), **pero conserva su puesto y su mando**. Decisión a propósito: si se le
+  quitara el puesto, su mando virtual desaparecería de PES y no podría volver a un lado moviendo el icono. Nadie se mueve de
+  puesto ni se expulsa; no se pisa lo que el anfitrión sentó a mano.
+- No cubierto: el anfitrión que juega **directo en PES con su mando físico** (sin puesto): su casilla en PES no se sabe;
+  sigue con «Mi puesto al jugar» y la comprobación por stick (§5).
+
+**Falta (sesión «Leer el lado de cada mando en la pantalla de PES», `tools/radar/ladomando.cpp`):** confirmar las 3 posiciones
+de memoria que valen 0/1/2 con el mando izquierda/centro/derecha (otro arranque, dos mandos, firma estable, qué casilla es cada
+una) y escribir el proveedor (solo lectura con ReadProcessMemory, mismo cuidado que el Campo 2D, solo con el exe conocido).
+Ojo al traducir: esa lectura da 0/1/2 → hay que pasarlo a −1/0/+1.

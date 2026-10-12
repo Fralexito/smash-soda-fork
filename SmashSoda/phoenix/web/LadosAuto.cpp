@@ -6,6 +6,7 @@
 #include "../../Hosting.h"
 #include "../PhoenixPrefs.h"
 #include "../core/DeteccionLados.h"
+#include "../core/LadoPantalla.h"
 #include "../core/MandoHost.h"
 #include "../core/ProveedorSala.h"
 #include "../link/PhoenixLink.h"
@@ -67,6 +68,37 @@ namespace phoenix::web {
 
 	using namespace detalle_lados_auto;
 
+	// ---- Pantalla de mandos de PES (antes del pitazo): lado de cada casilla = puesto ----------------------
+	namespace detalle_lados_auto {
+		ladopantalla::Estabilizador& estabilizador() {
+			static ladopantalla::Estabilizador e;
+			return e;
+		}
+		// Al pitazo la pantalla de mandos ya no está: se recuerda el último lado estable que se leyó (kRecuerdoSeg)
+		constexpr double kRecuerdoSeg = 300.0;
+		char recuerdo[ladopantalla::kCasillas] = { '?', '?', '?', '?', '?', '?', '?', '?' };
+		double tRecuerdo = -1e9;
+
+		void pantallaTick(double ahora) {
+			if (!PhoenixPrefs::get().ladosAuto) return;
+			ladopantalla::Lectura l;
+			if (ladopantalla::leer(l)) estabilizador().alimentar(ahora, l);   // sin lector (o lectura dudosa) no hace nada
+			if (estabilizador().vivo(ahora)) {
+				for (int i = 0; i < ladopantalla::kCasillas; i++) recuerdo[i] = estabilizador().lado(i, ahora);
+				tRecuerdo = ahora;
+			}
+		}
+	}
+
+	char ladoPantallaPuesto(int i) {
+		if (!PhoenixPrefs::get().ladosAuto || i < 0 || i >= ladopantalla::kCasillas) return '?';
+		const double ahora = ahoraSeg();
+		if (estabilizador().vivo(ahora)) return estabilizador().lado(i, ahora);
+		return ahora - tRecuerdo <= kRecuerdoSeg ? recuerdo[i] : '?';
+	}
+
+	bool ladoPantallaVivo() { return PhoenixPrefs::get().ladosAuto && estabilizador().vivo(ahoraSeg()); }
+
 	bool ladosQuiere(Interno& in) {
 		try {
 			const PhoenixPrefs& pr = PhoenixPrefs::get();
@@ -107,6 +139,7 @@ namespace phoenix::web {
 	void ladosRevisar(Interno& in, const juego::EstadoPartidoJuego& j, double ahora) {
 		try {
 			EstadoLados& e = estadoLados();
+			pantallaTick(ahora);   // lado de cada mando en la pantalla de mandos (antes del pitazo), si hay lector
 			if (!PhoenixPrefs::get().ladosAuto) { if (e.partido != 0 || e.golesVistos >= 0) reiniciar(); return; }
 			// Partido nuevo: al salir al campo, o si cambia el partido de Link
 			const juego::PantallaJuego pj = PhoenixLink::instancia().pantallaJuego();

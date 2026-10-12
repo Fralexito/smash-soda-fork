@@ -96,6 +96,7 @@ namespace phoenix {
 			ordenPes = j.value("ordenPes", ordenPes);
 			campoWeb = j.value("campoWeb", campoWeb);
 			ladosAuto = j.value("ladosAuto", ladosAuto);
+			mirandoAuto = j.value("mirandoAuto", mirandoAuto);
 			modoRecarga = j.value("modoRecarga", modoRecarga);
 			cedidoExtras = j.value("cedidoExtras", cedidoExtras);
 			if (modoRecarga != "ACTIVAR" && modoRecarga != "AUTO-FICHAJES") modoRecarga = "AUTO-SIEMPRE";   // v0.18b: por defecto
@@ -151,6 +152,7 @@ namespace phoenix {
 				{"ordenPes", ordenPes},
 				{"campoWeb", campoWeb},
 				{"ladosAuto", ladosAuto},
+				{"mirandoAuto", mirandoAuto},
 				{"modoRecarga", modoRecarga},
 				{"cedidoExtras", cedidoExtras},
 			};
