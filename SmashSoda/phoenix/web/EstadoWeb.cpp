@@ -237,7 +237,7 @@ namespace phoenix::web {
 		json e;
 		e["v"] = 1;
 		e["app"] = {
-			{"version", kVersion}, {"compilado", detalle_estado::compiladoEn()}, {"idioma", I18n::actual()}, {"tema", pr.tema},
+			{"version", kVersion}, {"etapa", kEtapa}, {"compilado", detalle_estado::compiladoEn()}, {"idioma", I18n::actual()}, {"tema", pr.tema},
 			{"dev", Config::cfg.general.devMode}, {"soda", Cache::cache.version},
 		};
 		PhoenixLink& link = PhoenixLink::instancia();

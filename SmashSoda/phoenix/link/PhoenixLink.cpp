@@ -302,7 +302,13 @@ namespace phoenix {
 					_pesAbierto = abierto;
 					const std::string parche = abierto ? phoenix::entrega::nombreParche(g.carpetaJuego) : std::string();
 					_estadoCarpeta = g.puente == phoenix::buzon::Puente::Listo ? g.carpetaBuzon.wstring() : std::wstring();
-					if (abierto && !g.carpetaJuego.empty()) _juegoCarpeta = g.carpetaJuego.wstring();
+					if (abierto && !g.carpetaJuego.empty()) {
+						_juegoCarpeta = g.carpetaJuego.wstring();
+						// Se recuerda la carpeta en cuanto se ve PES (antes solo al abrir «Módulos del juego»): así Sync la conoce sin pasos extra.
+						const std::string rutaJuego = phoenix::entrega::aU8(g.carpetaJuego);
+						PhoenixPrefs& prefsJuego = PhoenixPrefs::get();
+						if (prefsJuego.carpetaJuego != rutaJuego) { prefsJuego.carpetaJuego = rutaJuego; prefsJuego.guardar(); }
+					}
 					std::lock_guard<std::mutex> lock(_mutex);
 					_buzonInfo.parche = parche;
 				}

@@ -251,7 +251,7 @@ export function crearSimulador(enviar) {
     const p = s.partido;
     const e = {
       v: 1,
-      app: { version: "0.2.43", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
+      app: { version: "0.2.44", etapa: "beta 1", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
       noticias: { cargado: true, lista: s.noticias },
       chatGlobal: { cargado: true, pausado: s.chatGlobal.pausado, esperaSeg: s.chatGlobal.esperaSeg, rev: s.chatGlobal.mensajes.length, error: "" },
       web: { ...s.web, jugadoresLista: 3, versionLiga: "2026.10.08", eventosEnCola: 0 },
@@ -477,6 +477,14 @@ export function crearSimulador(enviar) {
       if (d.archivo === "phoenix.lua") s.modPhx = nuevo; else s.modEstadio = nuevo;
       return { ...modulosSim(), mensaje: d.accion === "instalar" ? d.archivo + " instalado en 2 carpetas. Abre PES: en sider.log debe aparecer que cargó." : d.archivo + " apagado (línea comentada en sider.ini)." };
     },
+    "sync.carpetaJuego": (d) => {
+      const r = String(d.ruta || "").trim().replace(/^["']+|["'\\/]+$/g, "");
+      if (!r) throw Object.assign(new Error("Pega la carpeta de PES 2021 (la que tiene PES2021.exe)."), { codigo: "DATOS_INVALIDOS" });
+      if (/windows|system32/i.test(r)) throw Object.assign(new Error("Esa carpeta no tiene PES2021.exe. Pega la carpeta principal del juego (la de PES2021.exe)."), { codigo: "CARPETA_INVALIDA" });
+      s.buzon.juego = r;
+      return { ...modulosSim(), mensaje: "Carpeta del juego guardada." };
+    },
+    "diag.informe": () => ({ texto: "== PHOENIX LINK · INFORME PARA DEPURAR ==\nPhoenix Link 0.2.44 (beta 1)\n(simulador: sin datos reales)\n" }),
     "ajustes.avisoEntrada": (d) => { s.ajustes.avisoEntrada[d.campo] = !!d.valor; },
     "ajustes.probarAvisoEntrada": () => ({}),
     "ajustes.avisosJuego": (d) => { s.buzon.activo = d.valor; s.buzon.estado = d.valor ? "conectado" : "apagado"; },

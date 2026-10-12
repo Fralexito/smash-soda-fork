@@ -162,7 +162,7 @@ namespace phoenix::web {
 		// Solo quedan como respaldo automático si WebView2 no puede abrirse en ese PC.
 
 		p.registrar("ui.copiar", [](const json& d, uint64_t) -> std::optional<json> {
-			if (!copiarAlPortapapeles(texto(d, "texto", 4000))) throw ErrorAccion("PORTAPAPELES", "No se pudo copiar.");
+			if (!copiarAlPortapapeles(texto(d, "texto", 16000))) throw ErrorAccion("PORTAPAPELES", "No se pudo copiar.");
 			return json::object();
 		});
 

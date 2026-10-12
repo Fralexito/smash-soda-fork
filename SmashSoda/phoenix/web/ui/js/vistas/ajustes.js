@@ -373,9 +373,20 @@ export function Diagnostico() {
   const [r, setR] = useState(null);
   const correr = async () => { setR(null); const x = await accion("diag.ejecutar"); setR(x?.chequeos || []); };
   useEffect(() => { correr(); }, []);
+  // Informe de texto para mandar a quien te ayuda (versión de Link, juego, parche, módulos, final de sider.log y esta revisión del PC).
+  const copiarInforme = async () => {
+    const x = await accion("diag.informe", {});
+    if (!x) return;
+    const lineas = (r || []).map((c) => {
+      const d = diag()[c.id] || [c.id, () => JSON.stringify(c.datos)];
+      return `${c.estado === "ok" ? "[OK]" : c.estado === "aviso" ? "[!]" : "[X]"} ${d[0]}: ${d[1](c.datos || {})}`;
+    });
+    const texto = x.texto + "\n\n-- Revisión del PC --\n" + lineas.join("\n") + "\n";
+    await accion("ui.copiar", { texto }, { ok: t("Informe copiado. Pégalo en un chat y mándaselo a Fralex.", "Report copied. Paste it in a chat and send it to Fralex.") });
+  };
   const errores = (r || []).filter((c) => c.estado === "error").length;
   return html`<${Tarjeta} interior="padding:22px 24px">
-    <${Titulo} texto=${t("DIAGNÓSTICO DEL PC", "PC DIAGNOSTICS")} derecha=${html`<${Boton} tipo="mini" al=${correr}>${t("REVISAR DE NUEVO", "RUN AGAIN")}</${Boton}>`}/>
+    <${Titulo} texto=${t("DIAGNÓSTICO DEL PC", "PC DIAGNOSTICS")} derecha=${html`<div style="display:flex;gap:8px"><${Boton} tipo="mini suave" titulo=${t("Copia un informe con versiones, juego, parche y módulos para mandárselo a Fralex", "Copies a report with versions, game, patch and modules to send to Fralex")} al=${copiarInforme}>${t("COPIAR INFORME", "COPY REPORT")}</${Boton}><${Boton} tipo="mini" al=${correr}>${t("REVISAR DE NUEVO", "RUN AGAIN")}</${Boton}></div>`}/>
     ${!r ? html`<div class="ayuda">${t("Revisando…", "Checking…")}</div>` : html`
       <div class=${cx("caja")} style=${`margin-bottom:6px;border-color:${errores ? "var(--bad)" : "var(--ok)"}`}>
         <b class=${errores ? "bad" : "ok"}>${errores ? t(`${errores} problema(s) para resolver`, `${errores} problem(s)`) : t("Todo listo para hostear.", "All set to host.")}</b></div>

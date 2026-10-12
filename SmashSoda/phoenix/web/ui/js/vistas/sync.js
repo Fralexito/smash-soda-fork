@@ -70,10 +70,12 @@ const MODOS_RECARGA = {
   "AUTO-FICHAJES": ["Activar sigue funcionando. Además, cuando haya fichajes nuevos, el juego los carga solo al volver al menú principal y entrar a un modo.", "Activate still works. Also, when there are new transfers, the game loads them by itself when you go back to the main menu and enter a mode."],
   "AUTO-SIEMPRE": ["Los fichajes entran solos cada vez que vuelves al menú principal y entras a un modo. No hay que pulsar nada.", "Transfers come in by themselves every time you go back to the main menu and enter a mode. Nothing to press."],
 };
-function ModoRecarga({ m }) {
+function ModoRecarga({ m, mods }) {
   const v = m.arbitro?.modoRecarga || "AUTO-SIEMPRE";
+  const fich = fichajesEstado(mods);
   return html`<${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:12px">
-    <${Titulo} texto=${t("MODO DE RECARGA DE FICHAJES", "TRANSFER RELOAD MODE")}/>
+    <${Titulo} texto=${t("MODO DE RECARGA DE FICHAJES", "TRANSFER RELOAD MODE")} derecha=${fich.estado === "inactivo" ? html`<${Chip}>${t("SIN EFECTO EN ESTE PARCHE", "NO EFFECT ON THIS PATCH")}</${Chip}>` : null}/>
+    ${fich.estado === "inactivo" ? html`<div class="caja" style="font-size:14px"><span class="punto warn"></span> ${t("Los fichajes de Phoenix están desactivados en este parche (próximamente): tus jugadores y equipos son los del parche, sin tocar. Puedes dejar este modo como está.", "Phoenix transfers are off on this patch (coming soon): your players and teams are the patch's own. You can leave this mode as is.")}</div>` : null}
     <${Segmentos} valor=${v} al=${(x) => accion("sync.modoRecarga", { modo: x })}
       opciones=${[{ valor: "AUTO-SIEMPRE", texto: t("🟣 AUTO: SIEMPRE ⭐", "🟣 AUTO: ALWAYS ⭐") }, { valor: "AUTO-FICHAJES", texto: t("🔵 AUTO: FICHAJES", "🔵 AUTO: TRANSFERS") }, { valor: "ACTIVAR", texto: t("🟢 ACTIVAR", "🟢 ACTIVATE") }]}/>
     <div class="ayuda" style="font-size:14px">${t(MODOS_RECARGA[v][0], MODOS_RECARGA[v][1])}</div>
@@ -82,10 +84,14 @@ function ModoRecarga({ m }) {
 }
 
 function Puente({ m }) {
+  const [mods, setMods] = useState(null);
+  const cargarMods = async () => { const r = await accion("sync.modulos", {}, { silencioso: true }); if (r) setMods(r); };
+  useEffect(() => { cargarMods(); }, []);
   const b = m.buzon || { activo: true, estado: "cerrado", ultimo: "", juego: "", avisos: [] };
   const [texto, punto, ayuda] = ESTADOS(b);
   return html`<div class="fila partible" style="align-items:flex-start">
     <div class="col" style="flex:1 1 0;min-width:320px">
+      <${ResumenSync} mods=${mods} cargar=${cargarMods}/>
       <${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:14px">
         <${Titulo} texto=${t("ESTADO DEL PUENTE", "BRIDGE STATUS")}/>
         <div style="display:flex;align-items:center;gap:12px">
@@ -103,7 +109,7 @@ function Puente({ m }) {
           desc=${t("Con PES 2021 abierto, los avisos salen en el panel de Sider (barra espaciadora). Si lo apagas, no se consulta ni se escribe nada.", "With PES 2021 open, notices show in the Sider panel (space bar). If off, nothing is fetched or written.")}
           valor=${b.activo} al=${(v) => accion("ajustes.avisosJuego", { valor: v })}/>
       </${Tarjeta}>
-      <${ModoRecarga} m=${m}/>
+      <${ModoRecarga} m=${m} mods=${mods}/>
       <${SoloPes} m=${m}/>
     </div>
     <div class="col" style="flex:1 1 0;min-width:320px">
@@ -117,9 +123,76 @@ function Puente({ m }) {
               ${a.escrito ? html`<${Chip} tipo="acc">✅ ${t("EN EL JUEGO", "IN GAME")}</${Chip}>` : html`<${Chip}>${t("PENDIENTE", "PENDING")}</${Chip}>`}
             </div>`)}
       </${Tarjeta}>
-      <${Modulos}/>
+      <${Modulos} d=${mods} setD=${setMods} cargar=${cargarMods}/>
       <${Doctor}/>
     </div>
+  </div>`;
+}
+
+// ---- Que funciona en este juego (se calcula a partir de Modulos del juego) ----
+// Fichajes de Phoenix (Phoenix-DB): solo donde el sider.ini tiene una base de parche reconocida (parche 26). Sin ella, desactivados.
+function fichajesEstado(d) {
+  const m = (d?.modulos || []).find((x) => x.archivo === "phoenix.lua");
+  const ds = m?.destinos || [];
+  if (!m || !m.gestionable || !ds.length) return { estado: "desconocido", sin: [] };
+  const sin = ds.filter((x) => x.sinBase).map((x) => x.nombre);
+  if (sin.length === ds.length) return { estado: "inactivo", sin };
+  if (sin.length) return { estado: "parcial", sin };
+  return { estado: "activo", sin };
+}
+
+function FilaResumen({ punto, titulo, texto }) {
+  return html`<div style="display:flex;gap:12px;align-items:flex-start">
+    <span class=${cx("punto", punto)} style="width:12px;height:12px;margin-top:5px;flex:none"></span>
+    <div style="min-width:0"><div style="font-weight:600">${titulo}</div><div class="ayuda" style="font-size:13px;word-break:break-word">${texto}</div></div>
+  </div>`;
+}
+
+function ResumenSync({ mods, cargar }) {
+  if (!mods) return null;
+  const lista = (mods.modulos || []).filter((x) => x.gestionable);
+  const pend = lista.filter((x) => x.estado !== "instalado");
+  const perdidos = lista.filter((x) => x.estado === "perdido");
+  const nuevos = lista.filter((x) => x.estado === "desactualizado");
+  const fich = fichajesEstado(mods);
+  const sinJuego = !mods.juego;
+  const luaErr = lista.filter((x) => x.carga === "error");
+  const nombres = (v) => v.map((x) => x.archivo).join(", ");
+  let modTxt, modPunto;
+  if (sinJuego) { modPunto = "warn"; modTxt = t("Primero hay que saber dónde está tu juego (abajo, en Módulos del juego).", "First Link needs to know where your game is (below, in Game modules)."); }
+  else if (perdidos.length) { modPunto = "bad"; modTxt = t(`Se perdieron tras una actualización del parche: ${nombres(perdidos)}. Cierra PES y pulsa REINSTALAR abajo.`, `Lost after a patch update: ${nombres(perdidos)}. Close PES and press REINSTALL below.`); }
+  else if (luaErr.length) { modPunto = "bad"; modTxt = t(`Sider no pudo cargar: ${nombres(luaErr)}. Mira sider.log o manda el informe (Sala › Conexión › Diagnóstico del PC).`, `Sider could not load: ${nombres(luaErr)}. See sider.log or send the report (Room › Connection › PC diagnostics).`); }
+  else if (nuevos.length) { modPunto = "warn"; modTxt = t(`Hay versión nueva de: ${nombres(nuevos)}. Cierra PES y pulsa ACTUALIZAR abajo.`, `New version of: ${nombres(nuevos)}. Close PES and press UPDATE below.`); }
+  else if (pend.length) { modPunto = "warn"; modTxt = t(`Falta instalar: ${nombres(pend)}. Cierra PES y pulsa INSTALAR abajo.`, `Not installed: ${nombres(pend)}. Close PES and press INSTALL below.`); }
+  else { modPunto = "ok"; modTxt = t("Instalados y al día en todas las carpetas del juego.", "Installed and up to date in every game folder."); }
+  const avisosOk = lista.some((x) => x.archivo === "phoenix.lua" && x.estado === "instalado");
+  return html`<${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:14px">
+    <${Titulo} texto=${t("QUÉ FUNCIONA EN TU JUEGO", "WHAT WORKS IN YOUR GAME")} derecha=${html`<${Boton} tipo="suave mini" al=${cargar}>${t("REVISAR", "CHECK")}</${Boton}>`}/>
+    <${FilaResumen} punto=${sinJuego ? "warn" : "ok"} titulo=${t("Tu juego", "Your game")} texto=${sinJuego ? t("Aún no sé dónde está. Abre PES 2021 con Link abierto, o pega su carpeta abajo.", "I don't know where it is yet. Open PES 2021 with Link running, or paste its folder below.") : mods.juego}/>
+    <${FilaResumen} punto=${modPunto} titulo=${t("Módulos de Phoenix en el juego", "Phoenix modules in the game")} texto=${modTxt}/>
+    <${FilaResumen} punto=${avisosOk ? "ok" : "warn"} titulo=${t("Avisos de la web dentro del juego", "Web notices inside the game")} texto=${avisosOk ? t("Listos: salen en el panel de Sider (barra espaciadora).", "Ready: they show in the Sider panel (space bar).") : t("Necesitan phoenix.lua instalado.", "They need phoenix.lua installed.")}/>
+    <${FilaResumen} punto=${fich.estado === "activo" ? "ok" : fich.estado === "desconocido" ? "warn" : ""} titulo=${t("Fichajes de Phoenix", "Phoenix transfers")}
+      texto=${fich.estado === "activo" ? t("Activos (el parche tiene una base reconocida).", "On (the patch has a recognised base).")
+        : fich.estado === "parcial" ? t(`Activos solo en algunos modos; desactivados en: ${fich.sin.join(", ")}.`, `On only in some modes; off in: ${fich.sin.join(", ")}.`)
+        : fich.estado === "inactivo" ? t("Desactivados en este parche (próximamente): no se toca ningún jugador ni equipo de tu juego.", "Off on this patch (coming soon): none of your game's players or teams are touched.")
+        : t("Se sabrá al instalar phoenix.lua.", "Known once phoenix.lua is installed.")}/>
+  </${Tarjeta}>`;
+}
+
+// Carpeta del juego: la que vio Link, o la que pegues a mano si no la ha visto (solo se valida y se recuerda; no escribe en el juego).
+function CarpetaJuego({ d, setD }) {
+  const [editar, setEditar] = useState(false);
+  const [ruta, setRuta] = useState("");
+  const guardar = async () => {
+    const r = await accion("sync.carpetaJuego", { ruta });
+    if (r) { setD(r); setEditar(false); setRuta(""); if (r.mensaje) avisar(r.mensaje, "ok", 5000); }
+  };
+  const abierto = editar || !d.juego;
+  return html`<div class="col" style="gap:6px">
+    ${d.juego ? html`<div class="ayuda" style="font-size:13px">${t("Carpeta del juego:", "Game folder:")} <span class="mono">${d.juego}</span> <button style="background:none;border:0;color:inherit;text-decoration:underline;cursor:pointer;font:inherit" onClick=${() => setEditar(!editar)}>${editar ? t("cancelar", "cancel") : t("cambiar", "change")}</button></div>` : null}
+    ${abierto ? html`<div class="ayuda" style="font-size:13px">${d.juego ? t("Pega la carpeta de PES 2021 (la que tiene PES2021.exe y SiderAddons):", "Paste the PES 2021 folder (the one with PES2021.exe and SiderAddons):")
+        : t("Link aún no ha visto tu juego. Abre PES 2021 una vez con Link abierto, o pega aquí su carpeta (la que tiene PES2021.exe y SiderAddons). Truco: en el Explorador, clic en la barra de arriba, copia y pega aquí.", "Link hasn't seen your game yet. Open PES 2021 once with Link running, or paste its folder here (the one with PES2021.exe and SiderAddons). Tip: in Explorer, click the top bar, copy and paste here.")}</div>
+      <div style="display:flex;gap:8px;align-items:center"><div style="flex:1;min-width:0"><input type="text" class="campo mono" maxLength=${500} value=${ruta} placeholder="D:\\Juegos\\PES 2021" onInput=${(e) => setRuta(e.currentTarget.value)} onKeyDown=${(e) => { if (e.key === "Enter") { if (ruta.trim()) guardar(); } }}/></div><${Boton} tipo="lleno mini" deshabilitado=${!ruta.trim()} al=${guardar}>${t("GUARDAR", "SAVE")}</${Boton}></div>` : null}
   </div>`;
 }
 
@@ -164,11 +237,8 @@ const ESTADO_MODULO = {
   no_instalado: [["NO INSTALADO", "NOT INSTALLED"], ""],
   solo_lectura: [["LO GESTIONA SYNC", "MANAGED BY SYNC"], ""],
 };
-function Modulos() {
-  const [d, setD] = useState(null);
+function Modulos({ d, setD, cargar }) {
   const [ocupado, setOcupado] = useState("");
-  const cargar = async () => { const r = await accion("sync.modulos", {}, { silencioso: true }); if (r) setD(r); };
-  useEffect(() => { cargar(); }, []);
   const hacer = async (archivo, que) => {
     setOcupado(archivo);
     const r = await accion("sync.modulo", { archivo, accion: que });
@@ -190,7 +260,7 @@ function Modulos() {
       ${d.parche.modosPropios?.length ? t(`Con sider.ini propio: ${d.parche.modosPropios.join(", ")}.`, `With their own sider.ini: ${d.parche.modosPropios.join(", ")}.`) : null}
     </div>` : null}
     ${(d?.parche?.advertencias || []).map((w) => html`<div class="caja" key=${w} style="font-size:14px"><span class="punto warn"></span> ${w}</div>`)}
-    ${d && !d.juego ? html`<div class="ayuda">${t("Abre PES 2021 una vez para que Phoenix Link conozca la carpeta del juego.", "Open PES 2021 once so Phoenix Link learns the game folder.")}</div>` : null}
+    ${d ? html`<${CarpetaJuego} d=${d} setD=${setD}/>` : null}
     ${!d ? html`<div class="ayuda">${t("Revisando…", "Checking…")}</div>` : lista.map((x) => {
       const [et, tipo] = ESTADO_MODULO[x.estado] || [[x.estado, x.estado], ""];
       const puedeInstalar = x.gestionable && x.estado !== "instalado";

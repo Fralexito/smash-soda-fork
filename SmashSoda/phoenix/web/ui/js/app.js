@@ -131,7 +131,7 @@ function Menu({ s }) {
         <${Icono} n=${x.id} t=${26}/><span>${t(x.es, x.en)}</span>
         ${chapas[x.id] ? html`<span class="chapa">${chapas[x.id]}</span>` : null}
       </button>`)}
-    <div class="pie" title=${m?.app?.compilado ? t("Compilado el ", "Built on ") + m.app.compilado : ""}>PHOENIX<br/>LINK ${m?.app?.version || ""}${m?.app?.compilado ? html`<br/><span style="opacity:.65;font-size:10.5px">${m.app.compilado}</span>` : null}</div>
+    <div class="pie" title=${m?.app?.compilado ? t("Compilado el ", "Built on ") + m.app.compilado : ""}>PHOENIX<br/>LINK ${m?.app?.version || ""}${m?.app?.etapa ? html`<br/><span style="opacity:.8;font-size:10.5px;letter-spacing:.08em">${String(m.app.etapa).toUpperCase()}</span>` : null}${m?.app?.compilado ? html`<br/><span style="opacity:.65;font-size:10.5px">${m.app.compilado}</span>` : null}</div>
   </nav>`;
 }
 

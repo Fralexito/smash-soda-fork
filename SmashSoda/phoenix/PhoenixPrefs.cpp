@@ -1,6 +1,7 @@
 ﻿#include "PhoenixPrefs.h"
 
 #include <algorithm>
+#include <filesystem>
 
 #include <nlohmann/json.hpp>
 
@@ -24,16 +25,22 @@ namespace phoenix {
 	void PhoenixPrefs::cargar() {
 		try {
 			const std::string r = ruta();
-			if (r.empty() || !MTY_FileExists(r.c_str())) return;
+			if (r.empty()) return;
 
-			size_t tam = 0;
-			void* datos = MTY_ReadFile(r.c_str(), &tam);
-			if (datos == nullptr) return;
-			const std::string texto(static_cast<const char*>(datos), tam);
-			MTY_Free(datos);
-
-			const json j = json::parse(texto, nullptr, false);
-			if (j.is_discarded() || !j.is_object()) return;
+			// El archivo; si está dañado (corte de luz a mitad de guardar), la copia .bak del guardado anterior.
+			json j;
+			bool leido = false;
+			for (const std::string& p : { r, r + ".bak" }) {
+				if (!MTY_FileExists(p.c_str())) continue;
+				size_t tam = 0;
+				void* datos = MTY_ReadFile(p.c_str(), &tam);
+				if (datos == nullptr) continue;
+				const std::string texto(static_cast<const char*>(datos), tam);
+				MTY_Free(datos);
+				j = json::parse(texto, nullptr, false);
+				if (!j.is_discarded() && j.is_object()) { leido = true; break; }
+			}
+			if (!leido) return;
 
 			interfazPhoenix = j.value("interfaz", std::string("phoenix")) != "clasica";
 			interfazWeb = true;   // siempre la interfaz web (2026-10-11); las viejas solo si WebView2 falla
@@ -157,7 +164,14 @@ namespace phoenix {
 				{"cedidoExtras", cedidoExtras},
 			};
 			const std::string texto = j.dump(2);
-			MTY_WriteFile(r.c_str(), texto.c_str(), texto.size());
+			// Atómico: se escribe aparte, se guarda copia del anterior (.bak) y se cambia de nombre. Si algo falla, queda el archivo de antes.
+			const std::string tmp = r + ".tmp";
+			if (!MTY_WriteFile(tmp.c_str(), texto.c_str(), texto.size())) return;
+			std::error_code ec;
+			const std::filesystem::path pr = std::filesystem::u8path(r);
+			if (std::filesystem::exists(pr, ec)) std::filesystem::copy_file(pr, std::filesystem::u8path(r + ".bak"), std::filesystem::copy_options::overwrite_existing, ec);
+			std::filesystem::rename(std::filesystem::u8path(tmp), pr, ec);
+			if (ec) std::filesystem::remove(std::filesystem::u8path(tmp), ec);
 		}
 		catch (...) {
 			// Si no se puede guardar, la app sigue funcionando.
