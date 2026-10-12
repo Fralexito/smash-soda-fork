@@ -28,12 +28,17 @@
 --      set_stadium_choice, set_teams, set_match_settings, after_set_conditions); dentro, del reloj. Ningún
 --      evento devuelve nada: no cambia estadio, equipos ni ajustes. estado.json sigue igual que en la v1.1.
 --
+--    · v1.3 · ESCENAS (experimento, solo lectura): anota en content\phoenix\escenas.log los archivos de escena («demo»:
+--      tarjetas, faltas, cambios, córners…) que el juego pide durante el partido, con la hora (os.time). Sirve para saber
+--      QUÉ pasó (amarilla, roja, cambio…) sin leer memoria. Solo escucha livecpk_rewrite y no devuelve nada (no cambia ningún
+--      archivo). Se vacía en cada partido (set_teams) y se detiene a las 4000 líneas.
+--
 --  Instalar: copiar a SiderAddons\modules\ y añadir al final de la lista de módulos de sider.ini:
 --      lua.module = "phoenix_referee.lua"
 --  (en la carpeta del modo de ConmeGOL, que es la que copia el switcher). Desinstalar = quitar la línea.
 -- =============================================================================
 
-local m = { version = "1.2" }
+local m = { version = "1.3" }
 
 local MAX_FALLOS   = 5
 local MAX_GOLES    = 40     -- goles que se guardan con su minuto (Link lee como mucho 40)
@@ -45,6 +50,13 @@ local SALA_SEG     = 1.0    -- sala.txt se relee como mucho 1 vez por segundo (s
 local MAX_SALA     = 4096
 
 local carpeta = nil          -- <SiderAddons>\content\phoenix\
+
+-- ESCENAS (v1.3)
+local escenasRuta = nil
+local escenasLineas = 0
+local escenasVisto = {}        -- nombre en minúsculas → hora de la última anotación (no se repite en 3 s)
+local ESC_MAX = 4000
+local ESC_PATRONES = { "demo", "foul", "card", "corner", "throw", "offside", "change", "subst", "injur", "penal", "kick", "var_" }
 local mapaKits = nil         -- <SiderAddons>\content\kit-server\map.txt
 local apagado, fallos = false, 0
 local enCursoJuego, enCursoHud = false, false
@@ -354,7 +366,59 @@ function m.goal_scored(ctx, info)
     end
 end
 
+function m.livecpk_rewrite(ctx, filename)
+    if not escenasRuta or escenasLineas >= ESC_MAX or type(filename) ~= "string" then return nil end
+    local f = string.lower(filename)
+    local interesa = false
+    for i = 1, #ESC_PATRONES do
+        if string.find(f, ESC_PATRONES[i], 1, true) then interesa = true; break end
+    end
+    if not interesa then return nil end
+    local t = os.time()
+    local ult = escenasVisto[f]
+    if ult and t - ult < 3 then return nil end
+    escenasVisto[f] = t
+    local fh = io.open(escenasRuta, "a")
+    if fh then
+        fh:write(t .. "|" .. filename .. "\n")
+        fh:close()
+        escenasLineas = escenasLineas + 1
+    end
+    return nil
+end
+
+-- ESCENAS por selector (v1.3, ConmeGOL): su módulo FoulScenes.lua ya engancha el selector de escenas del juego y emite el
+-- evento «custom:pk_var_supersub_redirect» (RCX = código de escena, RBX = lado). Aquí SOLO nos apuntamos a ese evento (no se
+-- engancha nada nuevo ni se escribe memoria) y no devolvemos nada, así que no cambia la escena. Sin FoulScenes no llega nada.
+local escenasSelVisto = {}
+function m.escena_selector(ctx, event_id, registers)
+    if not escenasRuta or escenasLineas >= ESC_MAX or not registers or not registers.rcx then return nil end
+    local sel = memory.unpack("u32", registers.rcx:sub(1, 4))
+    local idx = registers.rsi and memory.unpack("u32", registers.rsi:sub(1, 4)) or -1
+    local rbx = registers.rbx and memory.unpack("u32", registers.rbx:sub(1, 4)) or -1
+    local clave = sel .. ":" .. idx .. ":" .. rbx
+    local t = os.time()
+    local ult = escenasSelVisto[clave]
+    if ult and t - ult < 3 then return nil end
+    escenasSelVisto[clave] = t
+    local fh = io.open(escenasRuta, "a")
+    if fh then
+        fh:write(t .. "|SEL|" .. string.format("0x%08X", sel) .. "|rsi=" .. idx .. "|rbx=" .. rbx .. "\n")
+        fh:close()
+        escenasLineas = escenasLineas + 1
+    end
+    return nil
+end
+
 function m.set_teams(ctx, home, away)
+    escenasSelVisto = {}
+    -- partido nuevo: el registro de escenas empieza vacío
+    escenasLineas = 0
+    escenasVisto = {}
+    if escenasRuta then
+        local fh = io.open(escenasRuta, "w")
+        if fh then fh:close() end
+    end
     idLocal = tonumber(home) or tonumber(ctx.home_team) or 0
     idVisita = tonumber(away) or tonumber(ctx.away_team) or 0
     if not p then pantalla = "equipos" end
@@ -496,6 +560,9 @@ function m.init(ctx)
     ctx.register("set_stadium_choice", m.set_stadium_choice)
     ctx.register("set_match_settings", m.set_match_settings)
     ctx.register("after_set_conditions", m.after_set_conditions)
+    escenasRuta = carpeta .. "escenas.log"
+    ctx.register("custom:pk_var_supersub_redirect", m.escena_selector)   -- v1.3: solo escucha (ConmeGOL)
+    ctx.register("livecpk_rewrite", m.livecpk_rewrite)   -- v1.3: solo anota nombres de escenas; no devuelve nada
     ctx.register("goal_scored", m.goal_scored)   -- Sider 7.3.4+ (en 7.3.3 solo deja un WARN en sider.log)
     log("[referee] v" .. m.version .. " listo. Escribe estado.json/resultado.json y lee sala.txt en " .. carpeta)
 end

@@ -137,3 +137,19 @@ El juego no deja leer sus estadísticas (la pantalla «Datos del jugador» solo 
 El lado que defiende A se saca de dónde está su portero (cambia en el descanso). Pruebas sintéticas en `pruebas-link/campo_test.cpp` (posesión por tiempo, pase, pérdida, tiro/desvío, córner, saque de puerta, banda, gol, lado desconocido).
 **No se pueden leer todavía:** faltas, tarjetas amarillas y rojas, cambios (quién entra y quién sale), asistencias, fueras de juego. Opciones: (a) un módulo de Sider que observe los archivos de escena que carga el juego (`foul_pk_card_y01`…) — requiere tocar `sider.ini` con PES cerrado, decisión de Fralex; (b) buscar el almacén de estadísticas en memoria comparando antes/después de un evento con el juego congelado (necesita partido real).
 Protocolo: el evento `campo` y `POST /v1/liga/campo` traen `est:{pos,pas,per,rec,tir,pue,cor,ban,met}` (pares [A,B]); la web lo pinta en una tabla bajo el campo (Edge `liga` 1.6.0; repo web, commit `456d58e`).
+
+## 0.2.39 · Prueba de las dos vías para faltas, tarjetas y cambios
+
+Fralex: «probemos ambas cosas para encontrar lo más eficiente». Hallazgos antes de probar (leyendo la instalación de ConmeGOL, solo lectura):
+- Sider es la 7.3.4. El parche trae `modules\FoulScenes.lua`, que engancha el **selector de escenas** del juego y recibe en cada escena `RCX` = código de escena y `RBX` = lado (0 = visita, 1 = local). Códigos que usa: `0x0002000F` amarilla, `0x00020010` roja, `0x00020011`/`0x00020014` falta sin tarjeta, `0x00020012` aviso, `0x00020013` roja (alt.), `0x00050001` cambio real, `0x00050006` cambio (VAR). Además el juego pide por nombre los archivos de escena (`foul_pk_card_y01.fdc`, `foul_pk_card_r01.fdc`…) y `FoulScenes.lua` los intercepta con `livecpk_rewrite`.
+- `FoulScenes.lua` solo está activo en el sider.ini del modo **ConmeGOL Patch 26**, no en el 27 (el modo actual de Fralex).
+
+Dos vías, ambas **solo lectura** y metidas en `phoenix_referee.lua` v1.3 (el módulo que Link ya instala; no se toca sider.ini):
+| Vía | Qué anota | Alcance |
+|---|---|---|
+| **A · nombres de escena** (`livecpk_rewrite`) | cada archivo «demo/foul/card/corner/throw/offside/change/subst/injur/penal/kick/var_» que el juego pide, con la hora | cualquier parche con Sider 7.3.x (también el modo 27) |
+| **C · selector** (evento `custom:pk_var_supersub_redirect`) | código de escena + lado (RBX) | solo si `FoulScenes.lua` está activo (modo 26) |
+Ambas escriben `<juego>\SiderAddons\content\phoenix\escenas.log` (`hora|archivo` o `hora|SEL|0xCÓDIGO|rsi=..|rbx=..`), se vacía en cada partido y se detiene a las 4000 líneas.
+**Cómo se prueba:** (1) cerrar PES; (2) en Link, SYNC › Puente › Módulos del juego → actualizar (copia el nuevo `phoenix_referee.lua` en la raíz y en cada modo, con copia de seguridad); (3) jugar 5 min contra la CPU provocando faltas, una amarilla, una roja, un cambio, un córner, un saque de banda y un fuera de juego, anotando la hora de cada uno; (4) leer `escenas.log` y cruzar con las horas anotadas.
+**Cómo se decide la más eficiente:** la que dé nombre de evento fiable para los 3 casos (amarilla/roja/cambio) con menos falsos positivos, sin leer memoria y en todos los modos. Si A solo da los archivos pero no el lado, el equipo se infiere con la posesión (el que cometió la falta suele ser el que no llevaba el balón); si C da el lado, se usa C donde exista.
+Vía de memoria (buscar el almacén de estadísticas comparando antes/después) queda como tercera opción, solo si ninguna de las dos basta: necesita partido real y comparar volcados de varios GB.
