@@ -313,7 +313,8 @@ namespace phoenix::web {
 			json r = { {"mandos", json::array()} };
 			for (int i = 0; i < pp::vivo::kMandos; i++) {
 				std::vector<uint8_t> reg; std::string e;
-				r["mandos"].push_back({ {"puesto", i + 1}, {"usuario", m[i] + 1}, {"nombre", c.leerUsuario(m[i], reg, e) ? nombreDeRegistro(reg) : std::string()} });
+				// usuario 0 = ese mando todavía no tiene Usuario en PES
+				r["mandos"].push_back({ {"puesto", i + 1}, {"usuario", m[i] + 1}, {"nombre", m[i] >= 0 && c.leerUsuario(m[i], reg, e) ? nombreDeRegistro(reg) : std::string()} });
 			}
 			return r;
 		});
@@ -335,6 +336,7 @@ namespace phoenix::web {
 			int m[pp::vivo::kMandos];
 			if (!c.leerMandos(m, err)) throw ErrorAccion("NO_SE_PUDO", err);
 			const int usuario = m[puesto - 1];
+			if (usuario < 0) throw ErrorAccion("MANDO_SIN_USUARIO", "El mando " + std::to_string(puesto) + " todavía no tiene Usuario en PES. Entra con ese mando a la pantalla de elegir lados y vuelve a probar.");
 			std::vector<uint8_t> actual;
 			if (!c.leerUsuario(usuario, actual, err)) throw ErrorAccion("NO_SE_PUDO", err);
 			// nada se pierde: lo que hay ahora en ese Usuario se guarda como perfil si no lo estaba (salvo que ya lo hubiéramos pisado antes)

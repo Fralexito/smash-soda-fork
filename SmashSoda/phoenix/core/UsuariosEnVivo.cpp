@@ -61,7 +61,12 @@ namespace phoenix::perfilespes::vivo {
 			std::vector<uint8_t> r(t.begin() + size_t(u) * kTamUsuario, t.begin() + size_t(u + 1) * kTamUsuario);
 			std::string motivo;
 			if (!registroValido(r, motivo)) return false;
-			if (r[4]) algunNombre = true;
+			// firma de un Usuario REAL: el nombre es texto válido (no 0xFF) y el mapa de botones (20 B desde +0x34) tiene valores pequeños (0…8 en los 32 de Fralex)
+			size_t fin = 0;
+			while (fin < kTamNombre && r[4 + fin]) fin++;
+			if (!utf8Valido(std::string(reinterpret_cast<const char*>(&r[4]), fin))) return false;
+			for (size_t k = 0x34; k < 0x34 + 20; k++) if (r[k] > 0x10) return false;
+			if (fin >= 2) algunNombre = true;
 			if (u > 0 && std::memcmp(t.data(), r.data(), kTamUsuario) != 0) distintos = true;
 		}
 		return algunNombre && distintos;
@@ -106,8 +111,9 @@ namespace phoenix::perfilespes::vivo {
 		uint32_t v[kMandos];
 		if (!leer(puntero, v, sizeof v)) { error = "no pude leer el Usuario de los mandos"; return false; }
 		for (int i = 0; i < kMandos; i++) {
-			if (v[i] >= uint32_t(kUsuarios)) { error = "la lista de mandos tiene un valor imposible (" + std::to_string(v[i]) + ")"; return false; }
-			usuarios[i] = static_cast<int>(v[i]);
+			// 32 = «este mando todavía no tiene Usuario» (se ve en PES al reconectarse los mandos); se devuelve -1
+			if (v[i] > uint32_t(kUsuarios)) { error = "la lista de mandos tiene un valor imposible (" + std::to_string(v[i]) + ")"; return false; }
+			usuarios[i] = v[i] == uint32_t(kUsuarios) ? -1 : static_cast<int>(v[i]);
 		}
 		return true;
 	}

@@ -113,3 +113,9 @@ Paso 1: `tools/radar/usuariopad.cpp` (compilar con `tools/radar/compilar_usuario
 - Prueba manual de solo lectura: `pruebas-link/correr_usuarios_vivo.bat` (con PES abierto).
 - ❓ Sin probar con el PES real: que el registro COMPLETO cambie las opciones del partido; que puesto N de Link = mando N de PES.
 - Falta: aplicarlo solo al sentarse el amigo (señal de la pantalla de lados), el perfil del amigo nuevo que viene de su cuenta (web) y el editor de la configuración.
+
+### 10.1 Prueba REAL con PES abierto (12 oct, 16:40, Link 0.2.57, hecha por Claude sobre el PC de Fralex con su permiso)
+- ✅ «VER USUARIO DE CADA MANDO» lee bien: P1 FRALEX, P3 ARENZ… coincide con lo que PES muestra sobre cada mando. Hubo dos fallos reales, ya corregidos: (1) Link elegía una **tabla falsa** (región con 0xFF en los nombres): `tablaValida` ahora exige nombres UTF-8 válidos y mapa de botones con valores ≤ 0x10; (2) el valor **32 en la lista de mandos = «ese mando todavía no tiene Usuario»** (aparece al reconectarse los mandos virtuales de Link): se trata como -1, no como error.
+- ✅ **PONER EN EL MANDO (puesto 1, perfil AXEL): PES mostró «AXEL» sobre el mando 1 en la pantalla de elegir lados**, sin reiniciar. «RESTAURAR LO ANTERIOR» devolvió FRALEX (comprobado leyendo la memoria: un solo registro FRALEX, AXEL solo en su casilla).
+- ❓ NO comprobado: que las OPCIONES (tipo de pase, disparo, guías, botones) se vean/apliquen — hace falta abrir «Editar Datos personales» (□) con ese mando; con el teclado no se encontró la tecla del cuadrado (la S cambió de Usuario). El registro escrito es el completo (2.432 B) y Link verifica por relectura que quedó idéntico al perfil.
+- Observaciones: al reiniciar Link, PES reasigna los Usuarios de los mandos (el orden de la lista de mandos cambió: 0,5,1,2,32,3,6,4). Hay que releer la lista siempre antes de escribir (ya se hace). PES no deja dos mandos con el mismo Usuario.

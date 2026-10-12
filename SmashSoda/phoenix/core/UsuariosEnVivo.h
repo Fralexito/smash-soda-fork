@@ -36,7 +36,7 @@ namespace phoenix::perfilespes::vivo {
 		void cerrar();
 		bool abierta() const { return _h != nullptr; }
 
-		/// Índice de Usuario (0…31) de cada mando (8 entradas).
+		/// Índice de Usuario (0…31) de cada mando (8 entradas); -1 = ese mando todavía no tiene Usuario (PES guarda 32).
 		bool leerMandos(int (&usuarios)[kMandos], std::string& error);
 		/// Registro completo (2.432 B) del Usuario `indice` (0…31).
 		bool leerUsuario(int indice, std::vector<uint8_t>& registro, std::string& error);
