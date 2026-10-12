@@ -10,7 +10,7 @@
 import { html, useState, useEffect, useRef } from "../lib.js";
 import { t } from "../i18n.js";
 import { accion, oirCampo } from "../tienda.js";
-import { Tarjeta, Titulo, Chip, Icono } from "../ui.js";
+import { Tarjeta, Titulo, Chip, Icono, Interruptor } from "../ui.js";
 
 const LARGO = 105, ANCHO = 68;
 const MX = 7, MZ = 13; // margen alrededor del campo (en la tanda de penales los que esperan se ponen fuera de la banda)
@@ -167,6 +167,11 @@ export function CampoEnVivo({ m }) {
       ${activo && c.equipos === false ? html`<div class="ayuda" style="margin-top:10px">${t("Los equipos se colorean en el siguiente saque de centro (gol o descanso).", "Teams get their colours at the next kick-off (goal or half-time).")}</div>` : null}
       ${!activo && msg ? html`<div class="ayuda" style="margin-top:10px">${t(msg[0], msg[1])}${c.motivo ? html` <span class="mono mut">(${c.motivo})</span>` : null}</div>` : null}
       ${activo ? html`<${Tanda} tanda=${tanda}/>` : null}
+      <div style="margin-top:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <${Interruptor} valor=${!!c.radarOverlay} al=${(v) => accion("campo.radarOverlay", { si: v })} etiqueta=${t("Mini-radar en el overlay", "Mini-radar on the overlay")}/>
+        <div><b>${t("Mini-radar en el overlay", "Mini-radar on the overlay")}</b>
+          <div class="ayuda" style="font-size:12px">${t("Se ve sobre el juego, en una esquina. Actívalo también en el overlay › Widgets › Mini-radar. Mientras esté encendido Link lee el juego aunque esta tarjeta esté cerrada.", "Shown over the game in a corner. Also enable it in overlay › Widgets › Mini-radar. While it's on, Link reads the game even with this card closed.")}</div></div>
+      </div>
       <div class="ayuda" style="margin-top:10px;font-size:12px">${t("Solo lee la memoria del juego (no escribe ni cambia nada). Si la versión del juego no coincide, se apaga sola.", "Read-only: it never writes to or changes the game. If the game version doesn't match it switches itself off.")}</div>
     </${Tarjeta}>
   </div>`;

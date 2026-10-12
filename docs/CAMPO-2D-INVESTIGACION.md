@@ -142,3 +142,19 @@ de la tanda a 20 lecturas/s (`tools/radar/sondaL.cpp`, capturas cada 4 s).
   y vuelve al punto para el siguiente. En Link: `core/CampoVivo.h` clase `Tanda` (probada con un penal real en `campo_test`).
 - **Nombres de los lanzadores**: aún no (no hay nombre ni dorsal reconocible en el actor; la tabla de registros de +416 no
   lo separa). Pendiente.
+
+## 9. 11 oct (noche tardía): identidad de cada jugador y estadísticas — lo que se probó y las pistas abiertas
+
+**Objetivo pedido**: al hacer clic en una fichita, ver su dorsal y nombre; y contar disparos a puerta, córners, faltas, tarjetas, cambios (quién entra/sale), asistencias, etc.
+
+Lo que NO funcionó (para no repetirlo):
+- **Campos del actor**: ninguno de los 640 bytes distingue equipo ni jugador (probado con 3 saques/2 listas, con partición por lado conocida). Los punteros `+16/+24` son enlaces entre actores (marcaje/vecinos), no identidad.
+- **Quién apunta al actor** (`tools/radar/identidad.cpp`): ~500 punteros por 42 actores; las ventanas de ±0x100 bytes alrededor traen tablas de IA con enteros pequeños (formación/zonas), ningún id de jugador distinto por actor.
+- **Registros de jugador con nombre** (`buscatexto.exe`): hay estructuras con **dorsal en +0x8C, nombre en +0x90** y el id de jugador en +0x08/+0x30 (p. ej. LAMINE YAMAL, dorsal 99, id 162114 = el `player_id` que da Sider en `goal_scored`), pero están en pools estáticos de la pantalla de alineación/intro y **no tienen puntero al actor** ni cerca de él. También hay una caché de textos de nombres (64 bytes por registro) usada para dibujar.
+- **Estadísticas del equipo** (las del menú de pausa): buscadas por valores exactos (posesión, tiros, pases…) como u8/u16/u32 (`buscaserie.exe`) sin éxito: el juego no las guarda como enteros planos contiguos (o las calcula al mostrarlas).
+
+Pistas abiertas (en orden de probabilidad):
+1. **Sider `goal_scored`** entrega `player_id`, `player_offset` y un puntero `player_info` (visto en las cadenas de `sider.dll`): `player_offset` parece el índice del jugador dentro de su equipo. Un módulo Lua que registre ese evento y escriba `player_offset` junto al gol dejaría ver el hueco de la plantilla; con la plantilla (Phoenix-DB / `PlayerAssignment`) saldría el nombre. No sirve para los 22 en general.
+2. **Eventos por nombre de escena**: ConmeGOL ya intercepta `livecpk_get_filepath` para escenas de falta (`common\demo\fixdemo\foul\cut_data\foul_pk_card_y01.fdc` = amarilla, `..._r01` = roja, `foul_beJudged` = falta…). Un módulo observador que **solo registre** los nombres de los `.fdc` que el juego pide permitiría contar faltas, tarjetas, lesiones y cambios por los nombres de escena (hay que listarlos en un partido real). Requiere activar un módulo en `sider.ini` (lo hace el instalador de módulos de Link, con PES cerrado).
+3. **Identidad por geometría en el saque**: emparejar cada actor con el jugador de la alineación por su posición base de formación (la alineación se ve en la pantalla de «Estrategia»); necesita la formación del equipo y el orden de la plantilla.
+4. **Estadísticas derivadas de lo que ya se lee** (posiciones + balón): posesión por cercanía, distancia recorrida, velocidad máxima, tiros por velocidad/dirección del balón, saques de banda/esquina por salida del balón. Se pueden construir y validar contra la pantalla de estadísticas finales (ya hay un partido de referencia: Barça 7-0 City, posesión 56/44, tiros 12(8)/0(0), córners 1/0, faltas 2/0).

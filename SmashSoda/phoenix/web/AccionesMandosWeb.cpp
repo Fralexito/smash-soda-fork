@@ -172,7 +172,16 @@ namespace phoenix::web {
 			in.campoRapido = booleano(d, "si");
 			in.campoSeq = 0;
 			if (in.campoRapido) phoenix::campo::iniciar();
-			phoenix::campo::pedirVivo(in.campoRapido);
+			phoenix::campo::pedirVivo(in.campoRapido || PhoenixPrefs::get().radarOverlay);
+			return json::object();
+		});
+		// Mini-radar del overlay: Link manda el campo al overlay (WebSocket) aunque la tarjeta Campo esté cerrada
+		p.registrar("campo.radarOverlay", [&in](const json& d, uint64_t) -> std::optional<json> {
+			PhoenixPrefs& pr = PhoenixPrefs::get();
+			pr.radarOverlay = booleano(d, "si");
+			pr.guardar();
+			if (pr.radarOverlay) phoenix::campo::iniciar();
+			phoenix::campo::pedirVivo(in.campoRapido || pr.radarOverlay);
 			return json::object();
 		});
 		p.registrar("mandos.soloAutorizados", [](const json& d, uint64_t) -> std::optional<json> {

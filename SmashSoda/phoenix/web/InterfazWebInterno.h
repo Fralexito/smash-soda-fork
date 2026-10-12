@@ -60,6 +60,7 @@ namespace phoenix::web {
 		bool campoRapido = false;                  ///< Partido › Campo abierto: lector del juego encendido y canal «campo» ~20/s
 		double ultimoCampo = 0.0;
 		uint32_t campoSeq = 0;                     ///< última lectura del campo que ya se mandó
+		double ultimoRadar = 0.0;                  ///< último envío del mini-radar al overlay
 		double ultimaMuestraRed = 0.0;
 		size_t chatVistos = 0;
 		size_t actividadVistos = 0;

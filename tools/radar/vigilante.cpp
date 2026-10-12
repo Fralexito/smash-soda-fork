@@ -36,7 +36,7 @@ int main(int argc, char** argv) {
 		}
 		double sz = 0, sz2 = 0; int nz = 0; for (size_t i = 0; i < d.size(); i++) if (cur[i*2] < 1e8f && std::fabs(cur[i*2+1]) <= 34.8f) { sz += cur[i*2+1]; sz2 += (double)cur[i*2+1] * cur[i*2+1]; nz++; }
 		double sdz = nz ? std::sqrt(std::max(0.0, sz2 / nz - (sz / nz) * (sz / nz))) : 0;
-		bool forma = validos >= 16 && izq >= 7 && izq <= 11 && der >= 7 && der <= 11 && centro <= 2 && sdz >= 9.0;
+		bool forma = validos >= 16 && izq >= 7 && izq <= 11 && der >= 7 && der <= 11 && centro <= 4 && sdz >= 8.0;
 		quietas = (forma && maxd < 0.05f) ? quietas + 1 : 0;
 		prev = cur;
 		if (quietas >= 3) {

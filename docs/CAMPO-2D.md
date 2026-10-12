@@ -43,3 +43,10 @@ Colores: cian = local, violeta = visitante, amarillo = asistentes de línea, gri
 - **Balón**: la bolita blanca; se agranda un poco cuando va por el aire. Desaparece durante las repeticiones (el juego la aparca).
 - **Porteros**: ya cuentan (24 fichitas: 22 + 2 árbitros… y el árbitro principal cuando el saque lo identifica).
 - **Tanda de penales**: debajo del campo aparece la tanda en vivo: una fila por equipo con sus lanzamientos (✓ gol, ✗ fallo o parada), el marcador de la tanda y «A punto de patear: Equipo A/B». Los nombres de los lanzadores todavía no se leen del juego (pendiente).
+
+## 0.2.22 — mini-radar en el overlay
+
+- En **Partido › CAMPO** hay un interruptor «Mini-radar en el overlay». Encendido, Link lee el juego aunque esa tarjeta esté cerrada y manda el campo al overlay (WebSocket, evento `phoenix:campo`, ~10/s).
+- En el **overlay › Widgets › Mini-radar** se enciende el widget y se elige la esquina (apagado por defecto). Se puede mover/redimensionar como los demás. Si dejan de llegar datos (juego cerrado, repetición larga) se esconde solo a los 4 s.
+- Coste: lo mismo que la tarjeta (≈ 20 lecturas/s de 16 bytes por actor) y solo mientras el interruptor esté encendido.
+- Código: overlay `frontend/src/components/overlay/widgets/OverlayRadarWidgetView.vue` + `models/widgets/RadarWidget.ts` (commit `2f740db` en `phoenix-overlay`, sin push); Link `web/InterfazWeb.cpp` (envío) y `PhoenixPrefs.radarOverlay`.

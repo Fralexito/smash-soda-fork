@@ -18,6 +18,7 @@
 #include "../../globals/AppFonts.h"
 #include "../../services/ThemeController.h"
 #include "../PhoenixPrefs.h"
+#include "../../services/WebSocket.h"
 #include "../I18n.h"
 #include "../ui/Shell.h"
 #include "../link/PhoenixLink.h"
@@ -299,10 +300,15 @@ namespace phoenix::web {
 					std::string texto = v.dump();
 					if (texto != in.vivoAnterior) { in.vivoAnterior = std::move(texto); in.puente->evento("vivo", v); }
 				}
-				// Campo 2D en vivo: solo con Partido abierto y la tarjeta Campo pidiéndolo; ~20/s, solo si hay lectura nueva.
-				// Si la interfaz cambió de sección sin avisar, el lector se apaga solo (coste cero fuera de la tarjeta).
-				if (in.campoRapido && in.seccion != "partido") { in.campoRapido = false; phoenix::campo::pedirVivo(false); }
-				if (in.campoRapido && ahora - in.ultimoCampo >= 0.05) {
+				// Campo 2D en vivo. El lector del juego (solo lectura) trabaja si la tarjeta Partido › Campo lo pide o si el
+				// anfitrión encendió el mini-radar del overlay; con ambos apagados no hay hilo leyendo (coste cero).
+				// Si la interfaz cambió de sección sin avisar, la tarjeta se da por cerrada.
+				if (in.campoRapido && in.seccion != "partido") in.campoRapido = false;
+				const bool radar = PhoenixPrefs::get().radarOverlay && WebSocket::instance.isRunning();
+				const bool leer = in.campoRapido || radar;
+				if (leer) phoenix::campo::iniciar();   // idempotente
+				phoenix::campo::pedirVivo(leer);
+				if (leer && ahora - in.ultimoCampo >= 0.05) {
 					in.ultimoCampo = ahora;
 					const phoenix::campo::FotoCampo fc = phoenix::campo::instantanea();
 					if (fc.estado == phoenix::campo::EstadoCampo::Activo && fc.seq != in.campoSeq) {
@@ -315,7 +321,12 @@ namespace phoenix::web {
 							for (const phoenix::campo::Lanzamiento& x : fc.tanda.lanzamientos) l.push_back({ x.eq, x.gol });
 							ev["t"] = { {"l", l}, {"e", fc.tanda.turnoEq}, {"listo", fc.tanda.listo}, {"vuelo", fc.tanda.enVuelo} };
 						}
-						in.puente->evento("campo", ev);
+						if (in.campoRapido) in.puente->evento("campo", ev);
+						if (radar && ahora - in.ultimoRadar >= 0.1) {   // overlay: ~10/s es de sobra para un mini-radar
+							in.ultimoRadar = ahora;
+							json m; m["event"] = "phoenix:campo"; m["data"] = ev;
+							WebSocket::instance.sendMessageToAll(m.dump(-1, ' ', false, json::error_handler_t::replace));
+						}
 					}
 				}
 			}
