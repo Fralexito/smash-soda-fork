@@ -67,3 +67,9 @@ Qué se guarda: `perfiles-amigos.json` y `ajustes.json` en `%APPDATA%/Trybuchet/
 - **Probarlo en el PES real** (Fralex lo autoriza y se hace con copia previa): que PES acepte un `SYSTEM00000000` escrito por Link y que el Usuario con ese nombre aparezca en la lista.
 - Vincular un perfil a un Parsec ID (hoy se identifica por nombre).
 - Que PES lo recargue en vivo (hoy solo con PES cerrado).
+
+## 9. Siguiente paso: que el Usuario se ponga solo al sentarse el amigo (investigación)
+
+Lo que quiere Fralex: si el amigo «Erfuzz» se sienta en el mando 7, el mando 7 usa su Usuario de PES (nombre, tipo de pase, de disparo, guías...) sin hacer nada.
+Camino seguro (sin escribir en la memoria de PES): (1) encontrar en la memoria, **solo leyendo**, el número de Usuario que tiene cada mando en la pantalla de elegir lados; (2) Link, que controla el mando virtual de cada puesto, pulsa **L2/R2** en ese mando hasta que el número coincida con el hueco del amigo (lo que dejó «Preparar la sala»), y se detiene.
+Paso 1: `tools/radar/usuariopad.cpp` (compilar con `tools/radar/compilar_usuariopad.bat`): foto, R2, foto, R2... y deja los bytes que suben +1 cada vez. Sin resultados todavía.
