@@ -181,14 +181,14 @@ export function CampoEnVivo({ m }) {
   };
   return html`<div class="col">
     <${Tarjeta} vivo=${activo}>
-      <${Titulo} texto=${t("CAMPO EN VIVO", "LIVE PITCH")}/>
+      <${Titulo} texto=${c.nombres && c.nombres[0] && c.nombres[1] ? `${c.nombres[0]} vs ${c.nombres[1]}`.toUpperCase() : t("CAMPO EN VIVO", "LIVE PITCH")}/>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
         <${Chip} tipo=${activo ? "acc" : ""}>${activo ? t("EN VIVO", "LIVE") : c.estado === "buscando" ? t("BUSCANDO…", "SEARCHING…") : c.estado === "esperando" ? t("ESPERANDO", "WAITING") : t("SIN SEÑAL", "NO SIGNAL")}</${Chip}>
         ${!activo && msg ? html`<span class="mut" style="font-size:12px">${t(msg[0], msg[1])}${c.estado === "buscando" ? t(" (la primera vez tarda ~20 s)", " (the first time takes ~20 s)") : ""}${c.motivo ? html` <span class="mono">(${c.motivo})</span>` : null}</span>` : null}
         ${c.jugadores ? html`<span class="mut mono" style="font-size:12px">${c.jugadores} ${t("fichitas", "pieces")}${c.balon ? " · " + t("balón", "ball") : ""}</span>` : null}
         ${activo ? html`<span style="display:flex;gap:12px;align-items:center;margin-left:auto;font-size:12px" class="mut">
-          <span><span style=${`display:inline-block;width:10px;height:10px;border-radius:50%;background:${colorEq(0)};vertical-align:-1px;margin-right:5px`}></span>${t("Equipo A (izq. al empezar)", "Team A (left at kick-off)")}</span>
-          <span><span style=${`display:inline-block;width:10px;height:10px;border-radius:50%;background:${colorEq(1)};vertical-align:-1px;margin-right:5px`}></span>${t("Equipo B", "Team B")}</span>
+          <span><span style=${`display:inline-block;width:10px;height:10px;border-radius:50%;background:${colorEq(0)};vertical-align:-1px;margin-right:5px`}></span>${c.nombres && c.nombres[0] ? c.nombres[0] : t("Equipo A (izq. al empezar)", "Team A (left at kick-off)")}</span>
+          <span><span style=${`display:inline-block;width:10px;height:10px;border-radius:50%;background:${colorEq(1)};vertical-align:-1px;margin-right:5px`}></span>${c.nombres && c.nombres[1] ? c.nombres[1] : t("Equipo B", "Team B")}</span>
           <span><span style=${`display:inline-block;width:10px;height:10px;border-radius:50%;background:${COLOR[2]};vertical-align:-1px;margin-right:5px`}></span>${t("Árbitros", "Officials")}</span>
         </span>` : null}
       </div>
