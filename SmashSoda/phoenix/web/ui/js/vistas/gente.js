@@ -6,7 +6,6 @@ import { html, useState, useEffect } from "../lib.js";
 import { t, fecha } from "../i18n.js";
 import { accion, confirmar, irA } from "../tienda.js";
 import { Permisos } from "./ajustes.js";
-import { PerfilesPes } from "./perfiles.js";
 import { BotonCeder } from "./cedido.js";
 import { Tarjeta, Titulo, Boton, AjusteSw, Campo, Avatar, Chip, Icono, Vacio, colorPing, cx, dos } from "../ui.js";
 
@@ -14,9 +13,7 @@ export const PESTANAS_GENTE = [
   { id: "sala", es: "EN SALA", en: "IN ROOM", d: ["Elige a alguien de la lista para ver su ficha, su carta de la liga y sus permisos.", "Pick someone to see their card and permissions."] },
   { id: "moderacion", es: "MODERACIÓN", en: "MODERATION", d: ["Baneados, moderadores, VIP y quién pasó por tu sala.", "Bans, mods, VIPs and visit history."] },
   { id: "amigos", es: "AMIGOS", en: "FRIENDS", d: ["Tus amigos de la web de la liga. Invítalos a tu sala con un clic.", "Your league friends. Invite them in one click."] },
-  { id: "salas", es: "SALAS ABIERTAS", en: "OPEN ROOMS", d: ["Las mismas salas que ves en la web de la liga. Entra con un clic.", "The same rooms you see on the league website. Join with one click."] },
   { id: "permisos", es: "PERMISOS", en: "PERMISSIONS", d: ["Qué puede hacer cada rol (invitado, VIP, moderador) desde el chat.", "What each role (guest, VIP, moderator) can do from chat."] },
-  { id: "perfiles", es: "PERFILES PES", en: "PES PROFILES", d: ["Más de 32 amigos con su nombre y sus botones: Link guarda los de todos y pone en PES solo los de hoy.", "More than 32 friends with their name and buttons: Link keeps everyone's and puts only today's in PES."] },
 ];
 
 export function metaGente(s) {
@@ -29,9 +26,7 @@ export function VistaGente({ s, pestana }) {
   if (!m) return html`<${Vacio} titulo=${t("Conectando…", "Connecting…")} texto=""/>`;
   if (pestana === "moderacion") return html`<${Moderacion}/>`;
   if (pestana === "amigos") return html`<${Amigos} m=${m}/>`;
-  if (pestana === "salas") return html`<${SalasAbiertas} m=${m}/>`;
   if (pestana === "permisos") return html`<${Permisos} m=${m}/>`;
-  if (pestana === "perfiles") return html`<${PerfilesPes}/>`;
   return html`<${EnSala} m=${m}/>`;
 }
 
@@ -227,7 +222,7 @@ const ESTADO_AMIGO = {
 
 // ---- Salas abiertas: las mismas que ve el usuario en la web (GET /v1/salas). Solo para ver y entrar. ----
 const PUNTO_SEMAFORO = { verde: "ok", amarillo: "warn", rojo: "bad" };
-function SalasAbiertas({ m }) {
+export function SalasAbiertas({ m }) {
   const web = m.web || {};
   if (web.estado === "sin_vincular") {
     return html`<${Vacio} titulo=${t("Vincula la app con la web", "Link the app to the website")} texto=${t("Con tu cuenta de la liga verás las salas abiertas y podrás entrar con un clic.", "With your league account you will see open rooms and join with one click.")}>

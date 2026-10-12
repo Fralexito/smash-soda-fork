@@ -192,3 +192,13 @@ Objetivo: que quien se siente en un puesto tenga SU nombre y SU configuración e
 - Pedido de Fralex: ver en Link las mismas salas que muestra la web, para entrar sin salir de la app. GENTE › **SALAS ABIERTAS**: tarjetas con anfitrión, juego/parche/región, plazas libres, calidad (semáforo y ping), etiquetas TE INVITARON / AMIGO / EN PARTIDA / INESTABLE y botón **UNIRME** (abre el enlace de Parsec; apagado si es tu sala, está llena o no tienes acceso).
 - Datos: `GET /v1/salas` (contrato §17 de la web: mismas reglas de visibilidad que la página). `PhoenixLink::pasoSalas` sondea cada `sondeo_seg` (25 s) con ETag y SOLO con la ventana visible (§21, por el coste de llamadas). Solo se ofrece entrar con un enlace `https://`. Estado de la interfaz: `salasAbiertas{cargadas, lista[]}`.
 - No se creó ninguna acción nueva: UNIRME usa `ui.abrir`.
+
+### 12.3 Nuevo orden de pestañas (Link 0.2.63)
+
+Reagrupado a pedido de Fralex (GENTE era un cajón de sastre). Solo cambia dónde cuelga cada pestaña; los nombres internos y las acciones no cambian.
+
+- **SALA:** Resumen · **Salas abiertas** · Opciones de sala · Juegos · Conexión · Actividad. El Resumen con la sala cerrada muestra el botón «SALAS ABIERTAS (N)» si hay salas donde entrar.
+- **MANDOS:** Puestos · **Perfiles PES** · Tu mando · Mapeo · Teclado · Turnos · Bloqueo.
+- **GENTE:** En sala · Moderación · Amigos · Permisos.
+- PARTIDO, SYNC y AJUSTES igual.
+- Donde en este documento dice «GENTE › PERFILES PES» o «GENTE › SALAS ABIERTAS», ahora es **MANDOS › PERFILES PES** y **SALA › SALAS ABIERTAS**. El estado `salasAbiertas` llega con la sección Sala visible.

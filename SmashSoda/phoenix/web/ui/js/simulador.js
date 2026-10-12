@@ -257,7 +257,7 @@ export function crearSimulador(enviar) {
     const p = s.partido;
     const e = {
       v: 1,
-      app: { version: "0.2.62", etapa: "beta 1", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
+      app: { version: "0.2.63", etapa: "beta 1", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
       noticias: { cargado: true, lista: s.noticias },
       chatGlobal: { cargado: true, pausado: s.chatGlobal.pausado, esperaSeg: s.chatGlobal.esperaSeg, rev: s.chatGlobal.mensajes.length, error: "" },
       web: { ...s.web, jugadoresLista: 3, versionLiga: "2026.10.08", eventosEnCola: 0 },
@@ -307,6 +307,8 @@ export function crearSimulador(enviar) {
         { usuarioId: "6f1c2a10-0000-4000-8000-000000000003", nombre: "Pibe", avatar: null, estado: "desconectado", salaId: null, desde: "" },
         { usuarioId: "6f1c2a10-0000-4000-8000-000000000004", nombre: "Zurdo", avatar: null, estado: "en_partida", salaId: null, desde: new Date(Date.now() - 900000).toISOString() },
       ] };
+    }
+    if (s.seccion === "sala") {
       // Salas abiertas (simuladas; nombres inventados)
       e.salasAbiertas = { cargadas: true, lista: [
         { salaId: "s1", hostNombre: "Mirko", hostAvatar: "", hostAmigo: true, soyHost: false, invitado: true, juego: "eFootball PES 2021", parche: "Conmegol", region: "Lima", modo: "amistoso", visibilidad: "amigos", estado: "abierta", salud: "viva", plazasTotal: 4, plazasLibres: 2, semaforo: "verde", pingMs: 38, enlace: "https://parsec.gg/g/ejemplo" },

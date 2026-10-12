@@ -622,15 +622,16 @@ namespace phoenix::web {
 					{"estado", a.estado}, {"salaId", a.salaId}, {"desde", a.desde} });
 			}
 			e["amigos"] = { {"cargados", link.amigosCargados()}, {"lista", amigos} };
-			if (in.seccion == "gente") {
-				json salas = json::array();
-				for (const SalaAbierta& s : link.salasAbiertas()) {
-					salas.push_back({ {"salaId", s.salaId}, {"hostNombre", s.hostNombre}, {"hostAvatar", s.hostAvatar}, {"hostAmigo", s.hostAmigo}, {"soyHost", s.soyHost}, {"invitado", s.invitado},
-						{"juego", s.juego}, {"parche", s.parche}, {"region", s.region}, {"modo", s.modo}, {"visibilidad", s.visibilidad}, {"estado", s.estado}, {"salud", s.salud},
-						{"plazasTotal", s.plazasTotal}, {"plazasLibres", s.plazasLibres}, {"semaforo", s.semaforo}, {"pingMs", s.pingMs}, {"enlace", s.enlace} });
-				}
-				e["salasAbiertas"] = { {"cargadas", link.salasCargadas()}, {"lista", salas} };
+		}
+		// Salas abiertas que puedo ver: viven en la sección Sala (pestaña Salas abiertas y botón del resumen)
+		if (in.seccion == "sala") {
+			json salas = json::array();
+			for (const SalaAbierta& s : link.salasAbiertas()) {
+				salas.push_back({ {"salaId", s.salaId}, {"hostNombre", s.hostNombre}, {"hostAvatar", s.hostAvatar}, {"hostAmigo", s.hostAmigo}, {"soyHost", s.soyHost}, {"invitado", s.invitado},
+					{"juego", s.juego}, {"parche", s.parche}, {"region", s.region}, {"modo", s.modo}, {"visibilidad", s.visibilidad}, {"estado", s.estado}, {"salud", s.salud},
+					{"plazasTotal", s.plazasTotal}, {"plazasLibres", s.plazasLibres}, {"semaforo", s.semaforo}, {"pingMs", s.pingMs}, {"enlace", s.enlace} });
 			}
+			e["salasAbiertas"] = { {"cargadas", link.salasCargadas()}, {"lista", salas} };
 		}
 		return e;
 	}
