@@ -749,6 +749,8 @@ namespace phoenix {
 
 	std::vector<AmigoWeb> PhoenixLink::amigos() { std::lock_guard<std::mutex> l(_mutex); return _amigos; }
 	bool PhoenixLink::amigosCargados() { std::lock_guard<std::mutex> l(_mutex); return _amigosCargados; }
+	std::vector<SalaAbierta> PhoenixLink::salasAbiertas() { std::lock_guard<std::mutex> l(_mutex); return _salas; }
+	bool PhoenixLink::salasCargadas() { std::lock_guard<std::mutex> l(_mutex); return _salasCargadas; }
 	long long PhoenixLink::versionLiga() { std::lock_guard<std::mutex> l(_mutex); return _versionLiga; }
 	std::string PhoenixLink::salaId() { std::lock_guard<std::mutex> l(_mutex); return _salaId; }
 	int PhoenixLink::eventosEnCola() { std::lock_guard<std::mutex> l(_mutex); return static_cast<int>(_eventos.size()); }
@@ -829,7 +831,8 @@ namespace phoenix {
 		if (pasoPerfiles(token, foto)) return true;
 		if (pasoPresencia(token, salaId)) return true;
 		if (pasoNoticias(token)) return true;
-		return pasoAmigos(token);
+		if (pasoAmigos(token)) return true;
+		return pasoSalas(token);
 	}
 
 	InfoBuzon PhoenixLink::buzon() { std::lock_guard<std::mutex> l(_mutex); return _buzonInfo; }
@@ -1658,6 +1661,62 @@ namespace phoenix {
 		const std::string codigo = j.is_discarded() ? "" : j.value("codigo", "");
 		if (codigo.rfind("TOKEN_", 0) == 0) fallo(codigo, j.value("mensaje", ""), 0);
 		_proximoAmigosMs = ahoraMs() + 60000;
+		return true;
+	}
+
+	// Salas abiertas que puedo ver (contrato §17). Sondeo barato con ETag y solo con la ventana visible (§21).
+	bool PhoenixLink::pasoSalas(const std::string& token) {
+		std::string etag;
+		{
+			std::lock_guard<std::mutex> l(_mutex);
+			if (!_ventanaVisible || ahoraMs() < _proximoSalasMs) return false;
+			etag = _etagSalas;
+		}
+		std::vector<std::string> cab = cabecerasCon(token);
+		if (!etag.empty()) cab.push_back("If-None-Match: " + etag);
+		const http::Respuesta resp = http::peticion("GET", std::string(kBase) + "/v1/salas", "", cab);
+		const json j = json::parse(resp.cuerpo, nullptr, false);
+		std::lock_guard<std::mutex> l(_mutex);
+		if (resp.estado == 304) {
+			_proximoSalasMs = ahoraMs() + 25000;
+			_salasCargadas = true;
+			return true;
+		}
+		if (resp.estado == 200 && !j.is_discarded() && j.value("ok", false)) {
+			const auto entero = [](const json& o, const char* k, int def) { return o.is_object() && o.contains(k) && o[k].is_number() ? o[k].get<int>() : def; };
+			const auto logico = [](const json& o, const char* k) { return o.is_object() && o.contains(k) && o[k].is_boolean() && o[k].get<bool>(); };
+			_salas.clear();
+			if (j.contains("salas") && j["salas"].is_array()) {
+				for (const json& s : j["salas"]) {
+					SalaAbierta x;
+					x.salaId = textoDe(s, "sala_id");
+					x.juego = textoDe(s, "juego"); x.parche = textoDe(s, "parche"); x.region = textoDe(s, "region");
+					x.modo = textoDe(s, "modo"); x.visibilidad = textoDe(s, "visibilidad"); x.estado = textoDe(s, "estado");
+					x.salud = textoDe(s, "salud");
+					x.enlace = textoDe(s, "enlace");
+					if (x.enlace.rfind("https://", 0) != 0) x.enlace.clear();   // solo se ofrece entrar con un enlace seguro
+					x.soyHost = logico(s, "soy_host"); x.invitado = logico(s, "invitado");
+					x.plazasTotal = entero(s, "plazas_total", 0); x.plazasLibres = entero(s, "plazas_libres", 0);
+					if (s.contains("host") && s["host"].is_object()) {
+						const json& h = s["host"];
+						x.hostId = textoDe(h, "id"); x.hostNombre = textoDe(h, "nombre"); x.hostAvatar = textoDe(h, "avatar_url");
+						x.hostAmigo = logico(h, "amigo");
+					}
+					if (s.contains("calidad") && s["calidad"].is_object()) {
+						x.semaforo = textoDe(s["calidad"], "semaforo");
+						x.pingMs = entero(s["calidad"], "ping_mediana_ms", -1);
+					}
+					if (!x.salaId.empty()) _salas.push_back(std::move(x));
+				}
+			}
+			_etagSalas = j.value("etag", "");
+			_salasCargadas = true;
+			_proximoSalasMs = ahoraMs() + (std::max)(15, j.value("sondeo_seg", 25)) * 1000LL;
+			return true;
+		}
+		const std::string codigo = j.is_discarded() ? "" : j.value("codigo", "");
+		if (codigo.rfind("TOKEN_", 0) == 0) fallo(codigo, j.value("mensaje", ""), 0);
+		_proximoSalasMs = ahoraMs() + 60000;
 		return true;
 	}
 

@@ -186,3 +186,9 @@ Objetivo: que quien se siente en un puesto tenga SU nombre y SU configuración e
 - Si se edita el perfil de alguien que ya está sentado, el vigilante le pone la versión nueva.
 - **Prueba real (12 oct 2026)**: perfil «PRUEBA LINK» ligado a un ID falso y sentado de prueba en el puesto 1 → PES mostró ese nombre en el mando 1 y, en Editar Datos personales, las opciones elegidas; al quitar el sentado volvió FRALEX; el perfil de prueba se borró. Los valores de FRALEX en el formulario coincidieron con su pantalla de PES.
 - Sin comprobar aún: «Cambiar cursor» = 0, «Entrada automática» = 0 y el preajuste Personalizado (=2) con su mapa de botones; las etiquetas de los botones de defensa a partir del 5.º.
+
+### 12.2 Salas abiertas dentro de Link (0.2.62)
+
+- Pedido de Fralex: ver en Link las mismas salas que muestra la web, para entrar sin salir de la app. GENTE › **SALAS ABIERTAS**: tarjetas con anfitrión, juego/parche/región, plazas libres, calidad (semáforo y ping), etiquetas TE INVITARON / AMIGO / EN PARTIDA / INESTABLE y botón **UNIRME** (abre el enlace de Parsec; apagado si es tu sala, está llena o no tienes acceso).
+- Datos: `GET /v1/salas` (contrato §17 de la web: mismas reglas de visibilidad que la página). `PhoenixLink::pasoSalas` sondea cada `sondeo_seg` (25 s) con ETag y SOLO con la ventana visible (§21, por el coste de llamadas). Solo se ofrece entrar con un enlace `https://`. Estado de la interfaz: `salasAbiertas{cargadas, lista[]}`.
+- No se creó ninguna acción nueva: UNIRME usa `ui.abrir`.

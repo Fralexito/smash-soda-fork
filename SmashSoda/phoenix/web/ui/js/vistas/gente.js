@@ -14,6 +14,7 @@ export const PESTANAS_GENTE = [
   { id: "sala", es: "EN SALA", en: "IN ROOM", d: ["Elige a alguien de la lista para ver su ficha, su carta de la liga y sus permisos.", "Pick someone to see their card and permissions."] },
   { id: "moderacion", es: "MODERACIÓN", en: "MODERATION", d: ["Baneados, moderadores, VIP y quién pasó por tu sala.", "Bans, mods, VIPs and visit history."] },
   { id: "amigos", es: "AMIGOS", en: "FRIENDS", d: ["Tus amigos de la web de la liga. Invítalos a tu sala con un clic.", "Your league friends. Invite them in one click."] },
+  { id: "salas", es: "SALAS ABIERTAS", en: "OPEN ROOMS", d: ["Las mismas salas que ves en la web de la liga. Entra con un clic.", "The same rooms you see on the league website. Join with one click."] },
   { id: "permisos", es: "PERMISOS", en: "PERMISSIONS", d: ["Qué puede hacer cada rol (invitado, VIP, moderador) desde el chat.", "What each role (guest, VIP, moderator) can do from chat."] },
   { id: "perfiles", es: "PERFILES PES", en: "PES PROFILES", d: ["Más de 32 amigos con su nombre y sus botones: Link guarda los de todos y pone en PES solo los de hoy.", "More than 32 friends with their name and buttons: Link keeps everyone's and puts only today's in PES."] },
 ];
@@ -28,6 +29,7 @@ export function VistaGente({ s, pestana }) {
   if (!m) return html`<${Vacio} titulo=${t("Conectando…", "Connecting…")} texto=""/>`;
   if (pestana === "moderacion") return html`<${Moderacion}/>`;
   if (pestana === "amigos") return html`<${Amigos} m=${m}/>`;
+  if (pestana === "salas") return html`<${SalasAbiertas} m=${m}/>`;
   if (pestana === "permisos") return html`<${Permisos} m=${m}/>`;
   if (pestana === "perfiles") return html`<${PerfilesPes}/>`;
   return html`<${EnSala} m=${m}/>`;
@@ -222,6 +224,42 @@ const ESTADO_AMIGO = {
   en_sala: ["acc", "EN SALA", "IN ROOM"], en_partida: ["mor vivo", "JUGANDO", "PLAYING"],
   disponible: ["ok", "ACTIVO", "ACTIVE"], ausente: ["warn", "AUSENTE", "AWAY"], desconectado: ["", "DESCONECTADO", "OFFLINE"],
 };
+
+// ---- Salas abiertas: las mismas que ve el usuario en la web (GET /v1/salas). Solo para ver y entrar. ----
+const PUNTO_SEMAFORO = { verde: "ok", amarillo: "warn", rojo: "bad" };
+function SalasAbiertas({ m }) {
+  const web = m.web || {};
+  if (web.estado === "sin_vincular") {
+    return html`<${Vacio} titulo=${t("Vincula la app con la web", "Link the app to the website")} texto=${t("Con tu cuenta de la liga verás las salas abiertas y podrás entrar con un clic.", "With your league account you will see open rooms and join with one click.")}>
+      <${Boton} tipo="lleno" al=${() => irA("sync", "web")}><${Icono} n="web" t=${16}/>${t("VINCULAR", "LINK")}</${Boton}></${Vacio}>`;
+  }
+  const a = m.salasAbiertas || { cargadas: false, lista: [] };
+  if (!a.cargadas) return html`<${Vacio} titulo=${t("Buscando salas…", "Looking for rooms…")} texto=${t("Se actualizan solas mientras esta ventana está a la vista.", "They refresh automatically while this window is visible.")}/>`;
+  if (a.lista.length === 0) return html`<${Vacio} titulo=${t("No hay salas abiertas ahora", "No open rooms right now")} texto=${t("Cuando alguien abra una sala pública o de amigos, saldrá aquí.", "When someone opens a public or friends room, it will show up here.")}/>`;
+  const unirme = (x) => accion("ui.abrir", { url: x.enlace });
+  const SALUD = { en_partida: [t("EN PARTIDA", "IN A MATCH"), ""], inestable: [t("INESTABLE", "UNSTABLE"), "warn"] };
+  return html`<div class="col">
+    <div class="rej3">${a.lista.map((x) => {
+      const sal = SALUD[x.salud];
+      const llena = x.plazasTotal > 0 && x.plazasLibres <= 0;
+      const motivo = x.soyHost ? t("Es tu propia sala.", "It's your own room.") : !x.enlace ? t("No tienes acceso para entrar a esta sala.", "You can't join this room.") : llena ? t("La sala está llena.", "The room is full.") : "";
+      return html`<${Tarjeta} key=${x.salaId} suave interior="padding:18px 20px;display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;gap:12px;align-items:center"><${Avatar} nombre=${x.hostNombre || "?"} url=${String(x.hostAvatar || "").startsWith("https://") ? x.hostAvatar : ""} t=${46}/>
+          <div style="min-width:0;flex:1"><div style="font-weight:600;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x.soyHost ? t("Tu sala", "Your room") : x.hostNombre}</div>
+            <div class="mono mut" style="font-size:12px;margin-top:2px">${[x.juego, x.parche, x.region].filter(Boolean).join(" · ")}</div></div></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+          ${x.invitado ? html`<${Chip} tipo="ok">${t("TE INVITARON", "INVITED")}</${Chip}>` : null}
+          ${x.hostAmigo ? html`<${Chip} tipo="ok">${t("AMIGO", "FRIEND")}</${Chip}>` : null}
+          ${sal ? html`<${Chip} tipo=${sal[1]}>${sal[0]}</${Chip}>` : null}
+          <${Chip}>${x.visibilidad === "publica" ? t("PÚBLICA", "PUBLIC") : x.visibilidad === "amigos" ? t("AMIGOS", "FRIENDS") : t("PRIVADA", "PRIVATE")}</${Chip}>
+          <span class="semaforo" style="margin-left:auto">${x.semaforo ? html`<span class=${cx("punto", PUNTO_SEMAFORO[x.semaforo] || "")}></span>` : null}${x.pingMs >= 0 ? x.pingMs + " ms" : ""}</span>
+        </div>
+        <div class="mono" style="font-size:13px">${x.plazasTotal > 0 ? t(`${x.plazasLibres} de ${x.plazasTotal} libres`, `${x.plazasLibres} of ${x.plazasTotal} free`) : ""}</div>
+        <${Boton} tipo="lleno" deshabilitado=${!!motivo} titulo=${motivo} al=${() => unirme(x)}><${Icono} n="enviar" t=${15}/>${t("UNIRME", "JOIN")}</${Boton}>
+      </${Tarjeta}>`;
+    })}</div>
+  </div>`;
+}
 
 function Amigos({ m }) {
   const web = m.web || {};

@@ -65,6 +65,13 @@ namespace phoenix {
 		bool puedeDeshacer = false;
 	};
 
+	/// Una sala abierta que este usuario puede ver (GET /v1/salas, contrato §17): las mismas que muestra la web.
+	struct SalaAbierta {
+		std::string salaId, hostId, hostNombre, hostAvatar, juego, parche, region, modo, visibilidad, estado, salud, semaforo, enlace;
+		bool hostAmigo = false, soyHost = false, invitado = false;
+		int plazasTotal = 0, plazasLibres = 0, pingMs = -1;
+	};
+
 	/// Un amigo y su estado (GET /v1/presencia/amigos, contrato §19).
 	struct AmigoWeb {
 		std::string usuarioId, nombre, avatarUrl, estado, salaId, desde;
@@ -151,6 +158,9 @@ namespace phoenix {
 		void avisoLocalDiferido(const std::string& texto);
 		std::vector<AmigoWeb> amigos();
 		bool amigosCargados();
+		/// Salas abiertas que puedo ver (§17). Se sondean solo con la ventana visible; `salasCargadas` = ya llegó una respuesta.
+		std::vector<SalaAbierta> salasAbiertas();
+		bool salasCargadas();
 		/// Invita a un amigo a la sala abierta (§20). El resultado llega por tomarResultados().
 		void invitar(uint64_t ticket, const std::string& usuarioId);
 		/// Libera el puesto de rival que aceptó en el radar (§22).
@@ -225,6 +235,7 @@ namespace phoenix {
 		bool pasoEventos(const std::string& token, const std::string& salaId);
 		bool pasoPresencia(const std::string& token, const std::string& salaId);
 		bool pasoAmigos(const std::string& token);
+		bool pasoSalas(const std::string& token);
 		bool pasoPerfiles(const std::string& token, const InstantaneaSala& foto);
 		bool pasoPedidos(const std::string& token, const std::string& salaId);
 		bool pasoBuzon(const std::string& token);
@@ -271,6 +282,10 @@ namespace phoenix {
 		std::string _etagAmigos;
 		std::vector<AmigoWeb> _amigos;
 		bool _amigosCargados = false;
+		long long _proximoSalasMs = 0;
+		std::string _etagSalas;
+		std::vector<SalaAbierta> _salas;
+		bool _salasCargadas = false;
 		// Última hora (protegido por _mutex)
 		std::vector<NoticiaWeb> _noticias;
 		bool _noticiasCargadas = false;
