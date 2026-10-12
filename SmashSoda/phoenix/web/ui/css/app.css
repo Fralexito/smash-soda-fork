@@ -760,3 +760,16 @@ html.oculta *, html.oculta *::before, html.oculta *::after { animation-play-stat
 .btn-sutil { opacity: .4; transition: opacity .15s var(--ease); }
 .btn-sutil:hover:not(:disabled) { opacity: 1; }
 .btn-sutil:disabled { opacity: .15; }
+
+/* Sync › Puente: secciones plegables (una línea con título y resumen; el detalle al abrir) */
+.sec-cab { display: flex; align-items: center; gap: 12px; padding: 15px 22px; cursor: pointer; min-height: 52px; }
+.sec-cab:hover, .sec-cab:focus-visible { background: var(--acc-suave); outline: none; }
+.sec-flecha { flex: none; width: 14px; color: var(--acc); font-size: 14px; }
+.sec-titulo { flex: none; white-space: nowrap; }
+.sec-resumen { flex: 1; min-width: 0; font-size: 13px; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sec-acciones { flex: none; }
+.sec-cuerpo { padding: 4px 22px 20px; display: flex; flex-direction: column; gap: 12px; }
+.sec-detalle { font-size: 13px; }
+.sec-detalle > summary { cursor: pointer; color: var(--acc); font-size: 12px; padding: 2px 0; }
+.sec-detalle[open] > summary { margin-bottom: 6px; }
+@media (max-width: 720px) { .sec-resumen { display: none; } }

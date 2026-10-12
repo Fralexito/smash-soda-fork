@@ -10,6 +10,24 @@ import { accion, avisar, elegirPestana, confirmar } from "../tienda.js";
 import { CuentaWeb } from "./ajustes.js";
 import { Tarjeta, Titulo, AjusteSw, Segmentos, Vacio, Chip, Icono, Boton, cx } from "../ui.js";
 
+/** Sección plegable: una línea con el título y un resumen; el detalle solo se ve al abrirla (se recuerda por sección en este PC). */
+function Seccion({ id, titulo, resumen = null, punto = null, acciones = null, abierta = false, children }) {
+  const clave = "phoenix.sync." + id;
+  const [abierto, setAbierto] = useState(() => { try { const v = localStorage.getItem(clave); return v === null ? abierta : v === "1"; } catch { return abierta; } });
+  const poner = (v) => { setAbierto(v); try { localStorage.setItem(clave, v ? "1" : "0"); } catch { /* sin almacenamiento */ } };
+  return html`<${Tarjeta} interior="padding:0">
+    <div class="sec-cab" role="button" tabindex="0" aria-expanded=${abierto} onClick=${() => poner(!abierto)}
+      onKeyDown=${(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); poner(!abierto); } }}>
+      <span class="sec-flecha">${abierto ? "▾" : "▸"}</span>
+      <span class="lab acc sec-titulo">${titulo}</span>
+      ${punto != null ? html`<span class=${cx("punto", punto)} style="flex:none"></span>` : null}
+      <span class="sec-resumen ayuda">${resumen}</span>
+      ${acciones ? html`<span class="sec-acciones" onClick=${(e) => e.stopPropagation()}>${acciones}</span>` : null}
+    </div>
+    ${abierto ? html`<div class="sec-cuerpo">${children}</div>` : null}
+  </${Tarjeta}>`;
+}
+
 export const PESTANAS_SYNC = [
   { id: "puente", es: "PUENTE", en: "BRIDGE", d: ["Los avisos de la web salen dentro del juego mientras juegas.", "Web notices show up inside the game while you play."] },
   { id: "web", es: "CUENTA WEB", en: "WEB ACCOUNT", d: ["Vincula esta PC con tu cuenta de la liga para aparecer en el radar y ver a tus amigos.", "Link this PC to your league account to show on the radar and see your friends."] },
@@ -50,8 +68,8 @@ function ESTADOS(b) {
 function SoloPes({ m }) {
   const p = m.pes || { modo: "off", abierto: false };
   const oculta = p.modo !== "off" && !p.abierto;
-  return html`<${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:12px">
-    <${Titulo} texto=${t("SOLO PES 2021 (PRUEBA)", "PES 2021 ONLY (TEST)")}/>
+  return html`<${Seccion} id="solopes" titulo=${t("SOLO PES 2021 (PRUEBA)", "PES 2021 ONLY (TEST)")}
+    resumen=${p.modo === "off" ? t("Apagado: Link funciona con cualquier juego", "Off: Link works with any game") : p.modo === "publicar" ? t("Solo publicar con PES abierto", "Publish only with PES open") : t("Estricto", "Strict")}>
     <${Segmentos} valor=${p.modo} al=${(v) => accion("ajustes.modoPes", { valor: v })}
       opciones=${[{ valor: "off", texto: t("APAGADO", "OFF") }, { valor: "publicar", texto: t("SOLO PUBLICAR", "PUBLISH ONLY") }, { valor: "estricto", texto: t("ESTRICTO", "STRICT") }]}/>
     <div class="ayuda" style="font-size:14px">${p.modo === "off"
@@ -60,7 +78,7 @@ function SoloPes({ m }) {
         ? t("Tu sala solo aparece en la web mientras PES 2021 está abierto.", "Your room only shows on the web while PES 2021 is open.")
         : t("Además, Link no te deja abrir la sala si PES 2021 está cerrado.", "Also, Link won't let you open the room while PES 2021 is closed.")}</div>
     ${oculta ? html`<div class="ayuda" style="font-size:14px;color:var(--warn, #ffb347)">${t("PES 2021 está cerrado: tu sala no se publica.", "PES 2021 is closed: your room is not published.")}</div>` : null}
-  </${Tarjeta}>`;
+  </${Seccion}>`;
 }
 
 // Modo de recarga de phoenix.lua v0.18b (Link escribe content\phoenix\modo.txt). Textos del pedido de Sync.
@@ -72,13 +90,13 @@ const MODOS_RECARGA = {
 };
 function ModoRecarga({ m, mods }) {
   const v = m.arbitro?.modoRecarga || "AUTO-SIEMPRE";
-  return html`<${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:12px">
-    <${Titulo} texto=${t("MODO DE RECARGA DE FICHAJES", "TRANSFER RELOAD MODE")}/>
+  return html`<${Seccion} id="recarga" titulo=${t("MODO DE RECARGA DE FICHAJES", "TRANSFER RELOAD MODE")}
+    resumen=${v === "AUTO-SIEMPRE" ? t("Automático: siempre ⭐", "Auto: always ⭐") : v === "AUTO-FICHAJES" ? t("Automático: solo con fichajes nuevos", "Auto: only with new transfers") : t("A mano: pulsas Activar en el juego", "Manual: press Activate in the game")}>
     <${Segmentos} valor=${v} al=${(x) => accion("sync.modoRecarga", { modo: x })}
       opciones=${[{ valor: "AUTO-SIEMPRE", texto: t("🟣 AUTO: SIEMPRE ⭐", "🟣 AUTO: ALWAYS ⭐") }, { valor: "AUTO-FICHAJES", texto: t("🔵 AUTO: FICHAJES", "🔵 AUTO: TRANSFERS") }, { valor: "ACTIVAR", texto: t("🟢 ACTIVAR", "🟢 ACTIVATE") }]}/>
     <div class="ayuda" style="font-size:14px">${t(MODOS_RECARGA[v][0], MODOS_RECARGA[v][1])}</div>
     <div class="ayuda" style="font-size:13px">${t("⭐ Automático: siempre es el recomendado y viene por defecto. Necesita phoenix.lua v0.18b (instálala abajo, en Módulos del juego). Si lo automático falla 3 veces, el juego vuelve solo a Activar. El juego nota el cambio en unos 2 segundos.", "⭐ Auto: always is recommended and the default. Needs phoenix.lua v0.18b (install it below, in Game modules). If auto fails 3 times, the game falls back to Activate. The game notices the change in about 2 seconds.")}</div>
-  </${Tarjeta}>`;
+  </${Seccion}>`;
 }
 
 function Puente({ m }) {
@@ -94,12 +112,7 @@ function Puente({ m }) {
     <div class="col" style="flex:1 1 0;min-width:320px">
       <${ResumenSync} mods=${mods} fich=${fich} cargar=${() => { cargarMods(); cargarFich(); }}/>
       <${Fichajes} d=${fich} setD=${setFich} cargar=${cargarFich}/>
-      <${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:14px">
-        <${Titulo} texto=${t("ESTADO DEL PUENTE", "BRIDGE STATUS")}/>
-        <div style="display:flex;align-items:center;gap:12px">
-          <span class=${cx("punto", punto)} style="width:14px;height:14px"></span>
-          <span class="disp" style="font-size:22px;font-weight:700">${texto}</span>
-        </div>
+      <${Seccion} id="puente" titulo=${t("ESTADO DEL PUENTE", "BRIDGE STATUS")} punto=${punto} resumen=${texto}>
         <div class="ayuda" style="font-size:14px">${ayuda}</div>
         <div>
           <div class="lab" style="margin-bottom:6px">${t("JUEGO DETECTADO", "DETECTED GAME")}</div>
@@ -110,13 +123,13 @@ function Puente({ m }) {
         <${AjusteSw} titulo=${t("Mostrar avisos de la web en el juego", "Show web notices in the game")}
           desc=${t("Con PES 2021 abierto, los avisos salen en el panel de Sider (barra espaciadora). Si lo apagas, no se consulta ni se escribe nada.", "With PES 2021 open, notices show in the Sider panel (space bar). If off, nothing is fetched or written.")}
           valor=${b.activo} al=${(v) => accion("ajustes.avisosJuego", { valor: v })}/>
-      </${Tarjeta}>
+      </${Seccion}>
       <${ModoRecarga} m=${m} mods=${mods}/>
       <${SoloPes} m=${m}/>
     </div>
     <div class="col" style="flex:1 1 0;min-width:320px">
-      <${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:10px">
-        <${Titulo} texto=${t("ÚLTIMOS AVISOS", "LATEST NOTICES")} derecha=${html`<span class="mono mut">${(b.avisos || []).length} / 5</span>`}/>
+      <${Seccion} id="avisos" titulo=${t("ÚLTIMOS AVISOS", "LATEST NOTICES")}
+        resumen=${(b.avisos || []).length === 0 ? t("Aún no hay avisos", "No notices yet") : t(`${(b.avisos || []).length} de 5`, `${(b.avisos || []).length} of 5`)}>
         ${(b.avisos || []).length === 0
           ? html`<div class="ayuda">${t("Aún no hay avisos. Los que mandes desde la web aparecerán aquí.", "No notices yet. Anything you send from the web shows up here.")}</div>`
           : (b.avisos || []).map((a) => html`<div class="fila-mar" key=${a.id} style="align-items:flex-start">
@@ -124,7 +137,7 @@ function Puente({ m }) {
               <div style="flex:1;min-width:0;word-break:break-word">${a.texto}</div>
               ${a.escrito ? html`<${Chip} tipo="acc">✅ ${t("EN EL JUEGO", "IN GAME")}</${Chip}>` : html`<${Chip}>${t("PENDIENTE", "PENDING")}</${Chip}>`}
             </div>`)}
-      </${Tarjeta}>
+      </${Seccion}>
       <${Modulos} d=${mods} setD=${setMods} cargar=${cargarMods}/>
       <${Doctor}/>
     </div>
@@ -162,7 +175,7 @@ function ResumenSync({ mods, fich: fichajes, cargar }) {
     <${FilaResumen} punto=${modPunto} titulo=${t("Módulos de Phoenix en el juego", "Phoenix modules in the game")} texto=${modTxt}/>
     <${FilaResumen} punto=${avisosOk ? "ok" : "warn"} titulo=${t("Avisos de la web dentro del juego", "Web notices inside the game")} texto=${avisosOk ? t("Listos: salen en el panel de Sider (barra espaciadora).", "Ready: they show in the Sider panel (space bar).") : t("Necesitan phoenix.lua instalado.", "They need phoenix.lua installed.")}/>
     <${FilaResumen} punto=${!fichajes ? "warn" : (fichajes.objetivos || []).some((x) => x.estado === "aplicado") ? "ok" : ""} titulo=${t("Fichajes de Phoenix", "Phoenix transfers")}
-      texto=${fichajes ? fichajes.texto + " " + t("Se generan sobre la base de TU juego; no se copia ninguna base.", "They are built on top of YOUR game's base; no database is copied.") : t("Revisando…", "Checking…")}/>
+      texto=${fichajes ? fichajes.texto : t("Revisando…", "Checking…")}/>
   </${Tarjeta}>`;
 }
 
@@ -191,9 +204,9 @@ function Doctor() {
   useEffect(() => { revisar(); }, []);
   const phoenixLuas = (d?.luaActivos || []).filter((x) => /phoenix/i.test(x));
   const conDatos = (d?.archivos || []).filter((a) => a.sha256);
-  return html`<${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:12px">
-    <${Titulo} texto=${t("PHOENIX DOCTOR", "PHOENIX DOCTOR")}
-      derecha=${html`<div style="display:flex;gap:8px;align-items:center"><${Chip}>${t("INFORMATIVO", "INFO ONLY")}</${Chip}><${Boton} tipo="suave mini" al=${revisar}>${t("REVISAR", "CHECK")}</${Boton}></div>`}/>
+  return html`<${Seccion} id="doctor" titulo=${t("PHOENIX DOCTOR", "PHOENIX DOCTOR")}
+    resumen=${!d ? t("Revisando…", "Checking…") : !d.juegoEncontrado ? t("No encuentro el juego", "Game not found") : t(`Informativo · parche ${d.parche}`, `Info only · patch ${d.parche}`)}
+    acciones=${html`<${Boton} tipo="suave mini" al=${revisar}>${t("REVISAR", "CHECK")}</${Boton}>`}>
     <div class="ayuda" style="font-size:14px">
       ${t("Ficha del juego de este anfitrión: parche, módulos y una huella de los archivos que deciden el partido. Aún no hay parche oficial, así que no aprueba ni rechaza nada: la huella viaja con cada resultado oficial para que el staff la vea.",
           "This host's game sheet: patch, modules and a fingerprint of the files that decide the match. There is no official patch yet, so it approves or rejects nothing: the fingerprint travels with each official result for staff.")}
@@ -211,7 +224,7 @@ function Doctor() {
             ${(d.archivos || []).map((a) => html`<span key=${a.nombre}>${a.sha256 ? "●" : "·"} ${a.nombre}${a.sha256 ? " · " + a.sha256.slice(0, 12) + "…" : t(" · no está", " · missing")}</span>`)}
           </div>` : null}
         </div>`}
-  </${Tarjeta}>`;
+  </${Seccion}>`;
 }
 
 // ---- Fichajes de Phoenix: Link genera Phoenix-DB sobre TU base (la del parche/modo activo) + una lista de cambios ----
@@ -235,8 +248,12 @@ function Fichajes({ d, setD, cargar }) {
   const n = d?.lista?.cambios ?? 0;
   const hayGenerado = obj.some((x) => x.estado === "aplicado" || x.estado === "desfasado" || x.estado === "cambiado");
   const bloqueado = ocupado || !d || !!d.pesAbierto || !d.juego || !!d.lista?.error;
-  return html`<${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:12px">
-    <${Titulo} texto=${t("FICHAJES DE PHOENIX", "PHOENIX TRANSFERS")} derecha=${html`<${Boton} tipo="suave mini" al=${cargar}>${t("REVISAR", "CHECK")}</${Boton}>`}/>
+  const aplicados = obj.filter((x) => x.estado === "aplicado").length;
+  return html`<${Seccion} id="fichajes" titulo=${t("FICHAJES DE PHOENIX", "PHOENIX TRANSFERS")}
+    resumen=${!d ? t("Revisando…", "Checking…") : d.lista?.error ? t("Hay un problema con la lista", "There is a problem with the list")
+      : n === 0 ? t("Lista vacía: nada que aplicar", "Empty list: nothing to apply")
+      : t(`${n} ${n === 1 ? "cambio" : "cambios"} · aplicados en ${aplicados} de ${obj.length} modos`, `${n} ${n === 1 ? "change" : "changes"} · applied in ${aplicados} of ${obj.length} modes`)}
+    acciones=${html`<${Boton} tipo="suave mini" al=${cargar}>${t("REVISAR", "CHECK")}</${Boton}>`}>
     <div class="ayuda" style="font-size:14px">
       ${t("Esto genera tus fichajes sobre TU base: Link lee la base de cada modo de tu juego, le aplica la lista de cambios (jugador → equipo) y deja solo PlayerAssignment.bin en Phoenix-DB. No copia bases de nadie ni toca Player.bin. Se puede quitar en un clic.",
           "This builds your transfers on top of YOUR base: Link reads each mode's database in your game, applies the change list (player → team) and leaves only PlayerAssignment.bin in Phoenix-DB. It copies nobody's database and never touches Player.bin. One click to remove.")}
@@ -254,6 +271,7 @@ function Fichajes({ d, setD, cargar }) {
             <${Chip} tipo=${tipo}>${t(et[0], et[1])}</${Chip}>
           </div>
           <div class="ayuda" style="font-size:13px">${x.parche ? t(`Parche detectado: ${x.parche}${x.baseGenerica ? " (base genérica)" : ""}`, `Detected patch: ${x.parche}${x.baseGenerica ? " (generic base)" : ""}`) : t("Parche: no se pudo detectar", "Patch: could not be detected")}</div>
+          <details class="sec-detalle"><summary>${t("Ver detalle", "Details")}</summary>
           <div class="ayuda mono" style="font-size:12px">${x.baseOk ? t(`Base: ${x.baseOrigen} · ${x.filasBase} filas`, `Base: ${x.baseOrigen} · ${x.filasBase} rows`) : x.error}</div>
           ${!x.baseOk && x.queHacer ? html`<div class="ayuda" style="font-size:13px">${t("Qué hacer: ", "What to do: ")}${x.queHacer}</div>` : null}
           ${(x.comoLoSupe || []).length ? html`<details class="ayuda" style="font-size:12px"><summary>${t("Cómo lo supe", "How I know")}</summary>${x.comoLoSupe.map((e, i) => html`<div key=${i} class="mono mut">· ${e}</div>`)}</details>` : null}
@@ -261,6 +279,7 @@ function Fichajes({ d, setD, cargar }) {
           ${x.baseOk && n > 0 ? html`<div class="ayuda" style="font-size:13px">${x.playerBinAjeno ? t(" Phoenix-DB tiene un Player.bin que no es el de la base: se apartará (con copia) para no tapar a los jugadores del parche.", " Phoenix-DB has a Player.bin that is not the base's: it will be set aside (with a backup) so it does not cover the patch's players.") : ""}</div>` : null}
           ${(x.saltados || []).slice(0, 3).map((s) => html`<div class="mono mut" style="font-size:12px" key=${s.jugador + "-" + s.equipo}>· ${s.jugador} → ${s.equipo}: ${s.motivo}</div>`)}
           ${(x.saltados || []).length > 3 ? html`<div class="mono mut" style="font-size:12px">… ${t(`y ${x.saltados.length - 3} más (están en el informe de diagnóstico)`, `and ${x.saltados.length - 3} more (in the diagnostic report)`)}</div>` : null}
+          </details>
         </div>`;
       })}
       <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -269,7 +288,7 @@ function Fichajes({ d, setD, cargar }) {
         <${Boton} tipo="suave mini" deshabilitado=${bloqueado || !hayGenerado} titulo=${t("Vuelve a la base original del parche (la copia de seguridad se queda)", "Back to the patch's original database (backup stays)")}
           al=${() => hacer("quitar")}>${t("QUITAR", "REMOVE")}</${Boton}>
       </div>`}
-  </${Tarjeta}>`;
+  </${Seccion}>`;
 }
 
 // ---- Módulos del juego: el paquete de Luas de Sider que instala Phoenix Link (solo con PES cerrado) ----
@@ -291,9 +310,12 @@ function Modulos({ d, setD, cargar }) {
     if (r) { setD(r); if (r.mensaje) avisar(r.mensaje, "ok", 7000); }
   };
   const lista = d?.modulos || [];
-  return html`<${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:12px">
-    <${Titulo} texto=${t("MÓDULOS DEL JUEGO", "GAME MODULES")}
-      derecha=${html`<${Boton} tipo="suave mini" al=${cargar}>${t("REVISAR", "CHECK")}</${Boton}>`}/>
+  const gest = lista.filter((x) => x.gestionable);
+  const hayPend = !!d && (!d.juego || gest.some((x) => x.estado !== "instalado"));
+  return html`<${Seccion} id="modulos" titulo=${t("MÓDULOS DEL JUEGO", "GAME MODULES")} abierta=${hayPend}
+    punto=${!d ? null : hayPend ? "warn" : "ok"}
+    resumen=${!d ? t("Revisando…", "Checking…") : !d.juego ? t("No sé dónde está tu juego", "I don't know where your game is") : hayPend ? t("Hay módulos por instalar o actualizar", "Some modules need installing or updating") : t("Instalados y al día", "Installed and up to date")}
+    acciones=${html`<${Boton} tipo="suave mini" al=${cargar}>${t("REVISAR", "CHECK")}</${Boton}>`}>
     <div class="ayuda" style="font-size:14px">
       ${t("El paquete de Luas de Phoenix para Sider. Se instala en la raíz del juego y en cada modo del parche, con copia de sider.ini antes de cada cambio.",
           "Phoenix's Lua pack for Sider. Installed in the game root and in every patch mode, backing up sider.ini before each change.")}
@@ -331,7 +353,7 @@ function Modulos({ d, setD, cargar }) {
         </div>` : null}
       </div>`;
     })}
-  </${Tarjeta}>`;
+  </${Seccion}>`;
 }
 
 function Entrega({ m }) {
