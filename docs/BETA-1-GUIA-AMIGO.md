@@ -61,6 +61,6 @@ Sin Link (solo los módulos): doble clic en `PhoenixJuego-instalar.bat`, elige l
 2. La hora aproximada.
 3. Una foto de la pantalla de Link.
 4. El informe: **Sala › Conexión › Diagnóstico del PC › COPIAR INFORME** y pégalo en el chat.
-   (Lleva versiones, parche, módulos y el final de `sider.log`. Incluye rutas de tu PC; no lleva contraseñas.)
+   (Lleva versiones, parche, módulos y el final de `sider.log`. Tapa tu nombre de usuario de Windows y no lleva contraseñas ni claves; trae una sección «Qué pasa y qué hacer» en lenguaje claro.)
 
 **Reglas de oro:** no abras PES mientras instalas módulos; si dudas, no cambies nada y manda el informe.

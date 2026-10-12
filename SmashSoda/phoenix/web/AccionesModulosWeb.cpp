@@ -7,7 +7,14 @@
 #include "../link/Doctor.h"
 #include "../PhoenixBuild.h"
 
+#ifdef _WIN32
+#include <windows.h>
+#include <tlhelp32.h>
+#endif
 #include <cctype>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <fstream>
 #include <iterator>
 #include <vector>
@@ -102,6 +109,92 @@ namespace phoenix::web {
 			return r;
 		}
 
+		bool soloLectura(const std::filesystem::path& p) {
+#ifdef _WIN32
+			const DWORD a = GetFileAttributesW(p.c_str());
+			return a != INVALID_FILE_ATTRIBUTES && (a & FILE_ATTRIBUTE_READONLY) != 0;
+#else
+			(void)p; return false;
+#endif
+		}
+
+		int copiasDeLink() {
+			int n = 0;
+#ifdef _WIN32
+			HANDLE snap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+			if (snap == INVALID_HANDLE_VALUE) return 0;
+			PROCESSENTRY32W pe{};
+			pe.dwSize = sizeof(pe);
+			if (Process32FirstW(snap, &pe)) do { if (_wcsicmp(pe.szExeFile, L"PhoenixLink.exe") == 0) n++; } while (Process32NextW(snap, &pe));
+			CloseHandle(snap);
+#endif
+			return n;
+		}
+
+		std::string minusculas(std::string s) { for (char& c : s) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c))); return s; }
+
+		/// Versión de Sider según la primera línea «Sider DLL: version 7.3.4 (0)» de sider.log ("" si no se sabe).
+		std::string versionSider(const std::string& log) {
+			const size_t i = log.find("Sider DLL: version ");
+			if (i == std::string::npos) return std::string();
+			size_t j = i + 19, k = j;
+			while (k < log.size() && (std::isdigit(static_cast<unsigned char>(log[k])) || log[k] == '.')) k++;
+			return log.substr(j, k - j);
+		}
+		bool siderMenorQue734(const std::string& v) {
+			int a = 0, b = 0, c = 0;
+			if (std::sscanf(v.c_str(), "%d.%d.%d", &a, &b, &c) < 2) return false;
+			return a < 7 || (a == 7 && (b < 3 || (b == 3 && c < 4)));
+		}
+
+		/// Qué pasa y qué hacer, en lenguaje claro, para cada caso conocido (solo lee). Cada línea: «[nivel] Qué pasa → Qué hacer».
+		std::vector<std::string> diagnosticoClaro(const std::filesystem::path& juego, bool pesAbierto) {
+			std::vector<std::string> d;
+			auto di = [&](const char* nivel, const std::string& pasa, const std::string& hacer) { d.push_back(std::string("[") + nivel + "] " + pasa + " → " + hacer); };
+			if (juego.empty()) { di("X", "Link no sabe dónde está tu juego.", "Abre PES 2021 con Link abierto, o pega la carpeta (la de PES2021.exe) en SYNC › Módulos del juego."); return d; }
+			const auto ds = phoenix::modulos::destinos(juego);
+			if (ds.empty()) { di("X", "No hay SiderAddons\\sider.ini en esa carpeta: ese juego no usa Sider.", "Phoenix necesita Sider (el ConmeGOL ya lo trae). Comprueba que la carpeta es la de PES2021.exe y que abres el juego con el lanzador del parche."); return d; }
+			if (pesAbierto || !phoenix::modulos::procesosAbiertos().empty()) di("!", "PES 2021 (o Sider) está abierto.", "Ciérralo del todo antes de instalar o cambiar módulos: Sider los lee al arrancar.");
+			const std::string rj = minusculas(phoenix::entrega::aU8(juego));
+			if (rj.find("\\program files") != std::string::npos || rj.find("\\archivos de programa") != std::string::npos)
+				di("!", "El juego está en Archivos de programa (carpeta protegida).", "Si Link no puede escribir, ábrelo como administrador o mueve el juego a otra carpeta, p. ej. C:\\Juegos.");
+			if (rj.find("onedrive") != std::string::npos)
+				di("!", "El juego está dentro de OneDrive.", "OneDrive puede bloquear archivos mientras sincroniza: si falla, pausa la sincronización o mueve el juego fuera de OneDrive.");
+			for (const auto& x : ds) {
+				if (soloLectura(x.second / "sider.ini")) di("X", "El sider.ini de «" + x.first + "» está marcado como solo lectura.", "Quítale la marca (clic derecho › Propiedades) y vuelve a instalar. Link no lo pisa.");
+				if (soloLectura(x.second / "modules")) di("!", "La carpeta modules de «" + x.first + "» está en solo lectura.", "Quítale la marca de solo lectura.");
+			}
+			std::string log;
+			{
+				std::ifstream f(ds.front().second / "sider.log", std::ios::binary);
+				if (f) log.assign(std::istreambuf_iterator<char>(f), std::istreambuf_iterator<char>());
+			}
+			const std::string vs = versionSider(log);
+			if (log.empty()) di("i", "Todavía no hay sider.log: el juego aún no se abrió con Sider.", "Abre PES con el lanzador del parche una vez y vuelve a revisar.");
+			else if (vs.empty()) di("i", "No se pudo leer la versión de Sider en sider.log.", "Si algo no carga, manda este informe.");
+			else if (siderMenorQue734(vs)) di("!", "Tu Sider es la versión " + vs + " (anterior a 7.3.4).", "El marcador y el HUD funcionan, pero el nombre del goleador (goal_scored) no llega. Con el ConmeGOL actualizado se arregla.");
+			else di("OK", "Sider " + vs + ".", "Nada que hacer.");
+			for (const phoenix::modulos::Modulo& m : phoenix::modulos::estado(phoenix::modulos::carpetaPaquete(), juego)) {
+				if (!m.gestionable) continue;
+				if (m.estado == "perdido") di("X", m.archivo + " se perdió: el parche reescribió sider.ini.", "Cierra PES y pulsa REINSTALAR en SYNC › Módulos del juego.");
+				else if (m.estado == "desactualizado") di("!", m.archivo + " tiene una versión vieja.", "Cierra PES y pulsa ACTUALIZAR.");
+				else if (m.estado == "no_instalado") di("!", m.archivo + " no está instalado.", "Cierra PES y pulsa INSTALAR.");
+				else if (m.estado == "a_medias") di("!", m.archivo + " está instalado solo en algunas carpetas.", "Cierra PES y pulsa INSTALAR otra vez: completa lo que falte.");
+				else if (m.estado == "apagado") di("i", m.archivo + " está apagado (línea comentada).", "Pulsa ENCENDER si lo quieres.");
+				if (m.carga == "error") di("X", "Sider no pudo cargar " + m.archivo + " en el último arranque.", "Mira sider.log (al final de este informe) y manda el informe completo.");
+				if (m.archivo == "phoenix.lua") {
+					std::string sin;
+					for (const auto& x : m.destinos) if (x.sinBase) sin += (sin.empty() ? "" : ", ") + x.nombre;
+					if (!sin.empty()) di("i", "Phoenix-DB (fichajes) NO se puso en: " + sin + ".", "Es normal, no es un error: esa carpeta no tiene una base de parche reconocida (parche 27 u otro) y así no se tapan tus jugadores. Los fichajes están desactivados ahí (próximamente).");
+				}
+			}
+			const phoenix::modulos::Parche pa = phoenix::modulos::infoParche(juego);
+			for (const std::string& w : pa.advertencias) di("!", w, "Desinstala phoenix.lua desde Link y vuelve a instalarlo.");
+			const int copias = copiasDeLink();
+			if (copias > 1) di("!", "Hay " + std::to_string(copias) + " copias de Phoenix Link abiertas.", "Cierra las demás: dos copias se pelean por los mandos y la sala.");
+			return d;
+		}
+
 		/// Informe de texto para mandar a quien depura sin acceso a este PC: versiones, juego, parche, módulos y el final de sider.log.
 		/// Solo lee archivos. Lleva rutas de este PC (pueden incluir el nombre de usuario de Windows).
 		std::string informeTexto(const std::filesystem::path& juego, bool pesAbierto) {
@@ -118,7 +211,9 @@ namespace phoenix::web {
 			for (const std::string& a : d.avisos) t += "Aviso del Doctor: " + a + "\n";
 			t += "Raíces de la base (cpk.root, primeras 6):";
 			for (size_t i = 0; i < d.cpkRoots.size() && i < 6; i++) t += "\n  " + d.cpkRoots[i];
-			t += "\n\n-- Módulos de Phoenix --\n";
+			t += "\n\n-- Qué pasa y qué hacer (en claro) --\n";
+			for (const std::string& l : diagnosticoClaro(juego, pesAbierto)) t += l + "\n";
+			t += "\n-- Módulos de Phoenix --\n";
 			for (const phoenix::modulos::Modulo& m : phoenix::modulos::estado(phoenix::modulos::carpetaPaquete(), juego)) {
 				t += m.archivo + " (Link lleva v" + m.version + ") estado=" + m.estado + " carga=" + (m.carga.empty() ? "?" : m.carga) + "\n";
 				for (const phoenix::modulos::Destino& x : m.destinos)
@@ -130,6 +225,12 @@ namespace phoenix::web {
 			const auto destinos = phoenix::modulos::destinos(juego);
 			if (!destinos.empty()) {
 				t += "\n-- Final de sider.log (raíz) --\n" + ultimasLineas(destinos.front().second / "sider.log", 30);
+			}
+			// Sin datos personales: el nombre de usuario de Windows se tapa en las rutas.
+			if (const char* usuario = std::getenv("USERNAME")) {
+				const std::string quien = std::string("\\Users\\") + usuario, tapa = "\\Users\\<usuario>";
+				if (std::strlen(usuario) > 0)
+					for (size_t i = 0; (i = t.find(quien, i)) != std::string::npos; i += tapa.size()) t.replace(i, quien.size(), tapa);
 			}
 			if (t.size() > 15000) t = t.substr(0, 15000) + "\n...(recortado)\n";
 			return utf8Seguro(t);

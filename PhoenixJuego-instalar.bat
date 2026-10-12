@@ -89,6 +89,14 @@ function Main {
         }
     }
 
+    # 3b) Un sider.ini de solo lectura es una decision tuya: no se pisa. Se avisa antes de tocar nada.
+    foreach ($d in $destinos) {
+        if ((Get-Item -LiteralPath (Join-Path $d 'sider.ini')).IsReadOnly) {
+            Write-Host "  [X] El sider.ini de $d esta marcado como SOLO LECTURA. Quitale esa marca (clic derecho > Propiedades) y repite. No se toca nada." -ForegroundColor Red
+            return
+        }
+    }
+
     # 4) Los .lua: de esta carpeta o de GitHub, siempre con sha256 (solo al instalar)
     $fuente = @{}
     if (-not $desinstalar) {
@@ -285,4 +293,8 @@ function Main {
         if ($sinBase.Count -lt $planes.Count) { Write-Host '  Phoenix-DB queda vacia: los datos llegan desde Phoenix Sync / Phoenix Link.' }
     }
 }
-Main
+try { Main } catch {
+    Write-Host ""
+    Write-Host ("  [X] No se pudo completar: " + $_.Exception.Message) -ForegroundColor Red
+    Write-Host "  Si un archivo esta en uso, cierra PES, Sider y los programas que lo tengan abierto (antivirus, editor) y repite. Si lo hizo a medias, los sider.ini ya cambiados se restauraron." -ForegroundColor Yellow
+}

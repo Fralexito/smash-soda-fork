@@ -251,7 +251,7 @@ export function crearSimulador(enviar) {
     const p = s.partido;
     const e = {
       v: 1,
-      app: { version: "0.2.44", etapa: "beta 1", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
+      app: { version: "0.2.45", etapa: "beta 1", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
       noticias: { cargado: true, lista: s.noticias },
       chatGlobal: { cargado: true, pausado: s.chatGlobal.pausado, esperaSeg: s.chatGlobal.esperaSeg, rev: s.chatGlobal.mensajes.length, error: "" },
       web: { ...s.web, jugadoresLista: 3, versionLiga: "2026.10.08", eventosEnCola: 0 },
@@ -484,7 +484,7 @@ export function crearSimulador(enviar) {
       s.buzon.juego = r;
       return { ...modulosSim(), mensaje: "Carpeta del juego guardada." };
     },
-    "diag.informe": () => ({ texto: "== PHOENIX LINK · INFORME PARA DEPURAR ==\nPhoenix Link 0.2.44 (beta 1)\n(simulador: sin datos reales)\n" }),
+    "diag.informe": () => ({ texto: "== PHOENIX LINK · INFORME PARA DEPURAR ==\nPhoenix Link 0.2.45 (beta 1)\n(simulador: sin datos reales)\n" }),
     "ajustes.avisoEntrada": (d) => { s.ajustes.avisoEntrada[d.campo] = !!d.valor; },
     "ajustes.probarAvisoEntrada": () => ({}),
     "ajustes.avisosJuego": (d) => { s.buzon.activo = d.valor; s.buzon.estado = d.valor ? "conectado" : "apagado"; },

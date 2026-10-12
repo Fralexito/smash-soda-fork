@@ -65,6 +65,7 @@ namespace {
 	/// ¿Es una línea lua.module (activa o comentada con ; o #)? Devuelve el archivo entre comillas.
 	bool lineaModulo(const std::string& l, std::string& archivo, bool& comentada) {
 		size_t i = 0;
+		if (l.compare(0, 3, "\xEF\xBB\xBF") == 0) i = 3;   // sider.ini guardado con BOM (UTF-8)
 		auto blancos = [&]() { while (i < l.size() && (l[i] == ' ' || l[i] == '\t')) i++; };
 		blancos();
 		comentada = false;
@@ -84,12 +85,14 @@ namespace {
 		std::vector<std::string> v;   // sin fin de línea
 		std::string eol = "\r\n";
 		bool eolFinal = true;
+		bool bom = false;           // el archivo empieza con BOM UTF-8: se conserva al principio aunque se inserte una línea arriba
 	};
 	Lineas partir(const std::string& s) {
 		Lineas r;
 		r.eol = s.find("\r\n") != std::string::npos ? "\r\n" : (s.find('\n') != std::string::npos ? "\n" : "\r\n");
 		r.eolFinal = !s.empty() && s.back() == '\n';
 		size_t i = 0;
+		if (s.compare(0, 3, "\xEF\xBB\xBF") == 0) { r.bom = true; i = 3; }
 		while (i <= s.size()) {
 			const size_t j = s.find('\n', i);
 			if (j == std::string::npos) { if (i < s.size()) r.v.push_back(s.substr(i)); break; }
@@ -101,7 +104,7 @@ namespace {
 		return r;
 	}
 	std::string unir(const Lineas& r) {
-		std::string s;
+		std::string s = r.bom ? std::string("\xEF\xBB\xBF") : std::string();
 		for (size_t i = 0; i < r.v.size(); i++) {
 			s += r.v[i];
 			if (i + 1 < r.v.size() || r.eolFinal) s += r.eol;
@@ -132,6 +135,7 @@ namespace {
 	/// ¿Es una línea cpk.root (activa o comentada)? Devuelve la ruta entre comillas.
 	bool lineaRaiz(const std::string& l, std::string& ruta, bool& comentada) {
 		size_t i = 0;
+		if (l.compare(0, 3, "\xEF\xBB\xBF") == 0) i = 3;   // sider.ini guardado con BOM (UTF-8)
 		auto blancos = [&]() { while (i < l.size() && (l[i] == ' ' || l[i] == '\t')) i++; };
 		blancos();
 		comentada = false;
@@ -188,15 +192,22 @@ std::string activarLinea(const std::string& ini, const std::string& archivo, boo
 	Lineas r = partir(ini);
 	const std::string buscado = minus(archivo);
 	int ultimaActiva = -1, ultimaCualquiera = -1, comentada = -1;
+	std::vector<size_t> activas;   // líneas activas de este módulo
 	for (size_t i = 0; i < r.v.size(); i++) {
 		std::string a; bool c = false;
 		if (!lineaModulo(r.v[i], a, c)) continue;
 		if (minus(a) == buscado) {
-			if (!c) return ini;                       // ya está activa: nada que hacer
-			if (comentada < 0) comentada = static_cast<int>(i);
+			if (!c) activas.push_back(i);
+			else if (comentada < 0) comentada = static_cast<int>(i);
 		}
 		ultimaCualquiera = static_cast<int>(i);
 		if (!c) ultimaActiva = static_cast<int>(i);
+	}
+	if (!activas.empty()) {   // ya está activa: nada que hacer; si hay líneas repetidas (Sider las cargaría dos veces), queda una sola
+		if (activas.size() == 1) return ini;
+		for (size_t k = activas.size(); k-- > 1;) r.v.erase(r.v.begin() + static_cast<std::ptrdiff_t>(activas[k]));
+		cambio = true;
+		return unir(r);
 	}
 	const std::string nueva = "lua.module = \"" + archivo + "\"";
 	if (comentada >= 0) r.v[static_cast<size_t>(comentada)] = nueva;
@@ -477,10 +488,10 @@ namespace {
 			// Una copia de seguridad nunca se pisa (dos cambios en el mismo segundo): se añade -2, -3…
 			for (int k = 2; fs::exists(resp, ec) && k < 100; k++) resp = c.first / ("sider.ini.phoenix-" + s + "-" + std::to_string(k));
 			if (!fs::copy_file(ini, resp, fs::copy_options::skip_existing, ec)) {
-				r.mensaje = "No se pudo guardar la copia de sider.ini en " + phoenix::entrega::aU8(c.first);
+				r.mensaje = "No se pudo guardar la copia de sider.ini en " + phoenix::entrega::aU8(c.first) + " (¿sin permisos o disco lleno?)";
 			}
 			else if (!phoenix::buzon::escribirAtomicoComo(c.first, "sider", ".ini", c.second)) {
-				r.mensaje = "No se pudo escribir sider.ini en " + phoenix::entrega::aU8(c.first) + " (¿PES abierto?)";
+				r.mensaje = "No se pudo escribir sider.ini en " + phoenix::entrega::aU8(c.first) + " (¿PES abierto, el antivirus lo bloquea, el disco está lleno o la carpeta es de solo lectura? Prueba a abrir Link como administrador)";
 			}
 			else {
 				hechos.push_back({ c.first, resp });
