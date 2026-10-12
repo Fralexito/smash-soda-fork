@@ -175,14 +175,22 @@ namespace phoenix::web {
 			t += "visita=" + (hayLados && !lv.nombre.empty() ? limpioSala(lv.nombre, 24) : std::string("Visita")) + "\n";
 			t += std::string("marcador=") + Partido::nombreFase(fp) + "\n";
 			if (hayLados) t += "goles=" + std::to_string(ll.goles) + "-" + std::to_string(lv.goles) + "\n";
-			// Jugadores por mando: los primeros «equipoLocal» mandos son del local (como la formación del juego)
+			// Jugadores por mando. Con partido: el lado del partido (ya corregido por CORREGIR LADOS o por los lados
+			// automáticos, que miran en el juego). Sin partido, o si no está en él: los primeros «equipoLocal» mandos son del local.
+			auto enLado = [](const LadoPartido& l, uint32_t id) {
+				for (const JugadorPartido& jp : l.jugadores) if (id != 0 && jp.parsecId == id) return true;
+				return false;
+			};
 			const std::vector<AsientoVista> asientos = sala.asientos(8);
 			const int activos = (std::min)(static_cast<int>(asientos.size()), pr.mandosActivos);
 			for (int i = 0; i < activos; i++) {
 				const AsientoVista& s = asientos[static_cast<size_t>(i)];
 				if (!s.ocupado) continue;
+				bool local = i < pr.equipoLocal;
+				if (hayLados && enLado(ll, s.parsecId)) local = true;
+				else if (hayLados && enLado(lv, s.parsecId)) local = false;
 				const int ping = s.pingMs < 0 ? -1 : (s.pingMs + 5) / 10 * 10;   // a 10 ms: el archivo no cambia por nada
-				t += (i < pr.equipoLocal ? "ja=" : "jb=") + limpioSala(s.jugador, 20) + "|" + std::to_string(ping) + "|" + std::to_string(s.numero) + "\n";
+				t += (local ? "ja=" : "jb=") + limpioSala(s.jugador, 20) + "|" + std::to_string(ping) + "|" + std::to_string(s.numero) + "\n";
 			}
 			std::string arb;
 			if (in.arbitro.competitivoActivo) arb = "Start/Back/Guía bloqueados a los invitados";
