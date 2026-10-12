@@ -73,3 +73,10 @@ Qué se guarda: `perfiles-amigos.json` y `ajustes.json` en `%APPDATA%/Trybuchet/
 Lo que quiere Fralex: si el amigo «Erfuzz» se sienta en el mando 7, el mando 7 usa su Usuario de PES (nombre, tipo de pase, de disparo, guías...) sin hacer nada.
 Camino seguro (sin escribir en la memoria de PES): (1) encontrar en la memoria, **solo leyendo**, el número de Usuario que tiene cada mando en la pantalla de elegir lados; (2) Link, que controla el mando virtual de cada puesto, pulsa **L2/R2** en ese mando hasta que el número coincida con el hueco del amigo (lo que dejó «Preparar la sala»), y se detiene.
 Paso 1: `tools/radar/usuariopad.cpp` (compilar con `tools/radar/compilar_usuariopad.bat`): foto, R2, foto, R2... y deja los bytes que suben +1 cada vez. Sin resultados todavía.
+
+### 9.1 Resultado de la investigación del número de Usuario (12 oct, 14:50, PC de Fralex)
+- ✅ `PES2021.exe+0x37F18E4` (dirección fija 0x1437F18E4 con el exe en 0x140000000; igual en dos arranques) vale el **número de Usuario de 0 a 31** de la pantalla de elegir lados: R2 suma 1 y de 31 pasa a 0. Empezó en 21 = Usuario 22 y acabó en el Usuario 32 (DEGOX), como se anotó en pantalla.
+- Estructura vecina (u16): `+0 = 7`, `+2 = 7`, `+4 = índice actual`, `+6 = índice anterior`, `+8 = 32 (nº de Usuarios)`. Parece el estado de la lista de Usuarios de la interfaz.
+- ❓ Falta probar con DOS mandos si ese valor es el Usuario del mando que acaba de pulsar (lo necesario para el bucle «pulsar R2 hasta llegar al hueco») o solo de uno.
+- Las otras dos posiciones (0x1437F1844 y 0x143AAC364) son contadores que no dan la vuelta; no sirven.
+- Plan seguro: Link solo LEE esa posición y pulsa L2/R2 con el mando virtual del puesto hasta que coincida con el hueco del amigo (el que dejó «Preparar la sala»). Solo en la pantalla de elegir lados (si no, R2/L2 hacen cosas en el partido): hace falta una señal fiable de esa pantalla.
