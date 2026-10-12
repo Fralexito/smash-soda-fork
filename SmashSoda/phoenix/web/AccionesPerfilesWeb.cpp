@@ -367,6 +367,8 @@ namespace phoenix::web {
 			if (aplicadosVivo.empty()) return estadoPerfiles();
 			pp::vivo::Conexion c; std::string err;
 			if (!c.abrir(err)) {
+				// PES está abierto pero la lista de mandos solo existe en la pantalla de elegir lados: NO se olvida lo pendiente
+				if (pesAbiertoPerfiles()) throw ErrorAccion("PES_NO_LISTO", "Para restaurar, vuelve en PES a la pantalla de elegir lados y pulsa otra vez. (" + err + ")");
 				// PES ya se cerró: los originales están guardados como perfiles en Link; no hay nada que restaurar en memoria
 				aplicadosVivo.clear();
 				return estadoPerfiles(json{ {"vivoAviso", "PES está cerrado: lo que había quedó guardado en Link (Preparar la sala lo vuelve a poner)."} });
