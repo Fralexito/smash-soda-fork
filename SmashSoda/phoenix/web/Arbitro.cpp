@@ -40,6 +40,7 @@ namespace phoenix::web {
 		constexpr double kLatidoVivoSeg = 120.0;   // el marcador en vivo se reenvía al menos cada 2 min (la web oculta los de >10 min sin noticias)
 		double vivoEnviadoSeg = -1e9;              // último envío del marcador en vivo (ahoraSeg)
 		double autoArmarEsperaHasta = 0.0;         // armar lados solo al pitazo: no reintentar antes de esto
+		double pesCerradoDesde = -1.0;             // desde cuándo PES está cerrado con un partido de Link abierto (ahoraSeg)
 		double anfitrionPulsoSeg = -1e9;           // última vez que el anfitrión tocó su mando físico (ahoraSeg)
 
 		/// Copia la máscara del anfitrión (Config) y le suma lo del modo competitivo si está activo.
@@ -243,6 +244,23 @@ namespace phoenix::web {
 			a.ultimoTick = ahora;
 
 			const PhoenixPrefs& pr = PhoenixPrefs::get();
+			// PES cerrado con un partido de Link abierto (Listo, en juego o pausado): el partido ya no puede seguir.
+			// A los 15 s se cancela solo (sin registro, como al cerrar la sala) y la web quita el marcador en vivo.
+			{
+				const FasePartido f0 = in.partido.fase();
+				if (PhoenixLink::instancia().pesAbierto() || f0 == FasePartido::Libre) pesCerradoDesde = -1.0;
+				else if (pesCerradoDesde < 0.0) pesCerradoDesde = ahora;
+				else if (ahora - pesCerradoDesde >= 15.0) {
+					pesCerradoDesde = -1.0;
+					const bool jugando = f0 == FasePartido::EnJuego || f0 == FasePartido::Pausado;
+					in.partido.cancelar();
+					if (jugando) {
+						PhoenixLink::instancia().marcarPartido(false);
+						mensajeDelBot(in, "Se cerró PES: el partido de Link se canceló solo.");
+					}
+				}
+			}
+
 			const juego::EstadoPartidoJuego j = PhoenixLink::instancia().estadoJuego();
 			const FasePartido fp = in.partido.fase();
 			const bool marcadorVivo = fp == FasePartido::EnJuego || fp == FasePartido::Pausado;
