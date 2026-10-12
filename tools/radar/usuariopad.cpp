@@ -13,6 +13,7 @@
 //       Numpad 9 = salir
 //     Tambien acepta un archivo cmd.txt con 5/4/3/0/9.
 //   usuariopad.exe ver <hexaddr> [...]  -> muestra en vivo esos bytes (para confirmar)
+//   usuariopad.exe buscar <texto>       -> donde aparece ese texto (ej. un nombre de Usuario) en la memoria de PES
 //
 // Compilar:  cl /O2 /EHsc /std:c++17 usuariopad.cpp /Fe:usuariopad.exe
 #define WIN32_LEAN_AND_MEAN
@@ -151,6 +152,32 @@ static void informe() {
 	say("informe: %zu candidatos -> usuariopad.txt", gC.size());
 }
 
+
+// buscar <texto>: lista donde aparece ese texto (ASCII) en la memoria de PES, con el registro de 2432 B si cuadra con un Usuario
+static void buscarTexto(const char* txt) {
+	const size_t n = strlen(txt); int hallazgos = 0;
+	FILE* f = fopen("usuariopad_buscar.txt", "w");
+	for (auto& r : regiones()) {
+		std::vector<uint8_t> b(r.tam); SIZE_T got = 0;
+		if (!ReadProcessMemory(gH, (LPCVOID)r.base, b.data(), r.tam, &got) || got != r.tam) continue;
+		for (size_t i = 0; i + n < r.tam; i++) {
+			if (memcmp(&b[i], txt, n) != 0) continue;
+			const uint64_t a = r.base + i; hallazgos++;
+			const bool enExe = a >= gExeBase && a < gExeBase + gExeTam;
+			// un registro de Usuario empieza 4 bytes antes del nombre (u32 0/1) y la cola del nombre (48 B) esta a cero
+			const bool pareceUsuario = i >= 4 && b[i - 1] == 0 && b[i - 2] == 0 && b[i - 3] == 0 && b[i - 4] <= 1;
+			if (f) fprintf(f, "%llX%s%s  inicio_de_registro_si_Usuario=%llX\n", (unsigned long long)a, enExe ? " [EXE]" : "", pareceUsuario ? " [PARECE USUARIO]" : "", (unsigned long long)(a - 4));
+			if (f && pareceUsuario) {
+				fprintf(f, "    siguiente bloque de 32 bytes a +0x34 (configuracion):");
+				for (int k = 0x34; k < 0x34 + 24 && i - 4 + k < r.tam; k++) fprintf(f, " %02X", b[i - 4 + k]);
+				fprintf(f, "\n");
+			}
+		}
+	}
+	if (f) fclose(f);
+	say("buscar «%s»: %d sitios -> usuariopad_buscar.txt", txt, hallazgos);
+}
+
 static void ver(int argc, char** argv) {
 	std::vector<uint64_t> as; for (int i = 2; i < argc; i++) as.push_back(strtoull(argv[i], nullptr, 16));
 	std::string antes; DWORD t0 = GetTickCount();
@@ -170,6 +197,7 @@ int main(int argc, char** argv) {
 	if (!gH) { say("No se pudo abrir el proceso (error %lu).", GetLastError()); return 1; }
 	buscarExe(pid);
 	if (argc >= 3 && std::string(argv[1]) == "ver") { ver(argc, argv); return 0; }
+	if (argc >= 3 && std::string(argv[1]) == "buscar") { buscarTexto(argv[2]); return 0; }
 	say("Conectado a PES2021.exe (pid %lu). Numpad 5=foto (tras R2) 4=foto (tras L2) 3=informe 0=de cero 9=salir", pid);
 	bool prev[10] = {};
 	for (;;) {
