@@ -3,15 +3,15 @@
 Para quien va a **hostear** con su propia PC (PES 2021 + ConmeGOL + Parsec). Si solo entras a la sala de otro por Parsec, no necesitas nada de esto.
 
 ## Antes de empezar
-- Windows 10 u 11 de 64 bits, internet y **12 GB libres** en el disco C.
+- Windows 10 u 11 de 64 bits e internet. Con el instalador rápido hacen falta **menos de 1 GB**; con el instalador que compila, **12 GB**.
 - PES 2021 con ConmeGOL **funcionando** (ábrelo una vez con su lanzador, como siempre) y una cuenta de Parsec.
-- Los dos archivos que te pasa Fralex: `PhoenixLink-instalar.bat` y `PhoenixJuego-instalar.bat`.
-- Tiempo: de **30 a 90 minutos** la primera vez (Link se compila en tu PC). Después abre en segundos.
+- Los archivos que te pasa Fralex: `PhoenixLink-instalar-rapido.bat` (recomendado) y `PhoenixJuego-instalar.bat`. El `PhoenixLink-instalar.bat` compila Link en tu PC y solo sirve si el rápido no está disponible.
+- Tiempo: **unos 3 minutos** con el instalador rápido (de 30 a 90 si compilas).
 
 ## Paso 1 · Instalar Link
-1. Doble clic en `PhoenixLink-instalar.bat`. Si Windows pide permiso, pulsa **Sí**.
+1. Doble clic en `PhoenixLink-instalar-rapido.bat`. Si Windows pide permiso, pulsa **Sí**.
 2. Lee el aviso, pulsa una tecla y elige dónde instalar (o cierra la ventanita para usar `C:\Program Files`).
-3. **Espera.** Baja e instala las herramientas y compila. Aunque parezca quieto, no cierres la ventana.
+3. **Espera.** Baja Link (17 MB) y solo los componentes que le falten a tu PC (runtime de Visual C++, ViGEmBus, WebView2). Si Windows pide reiniciar, reinicia y repite.
 4. Termina con **INSTALACION TERMINADA**. Acepta el acceso directo del escritorio.
 
 Si sale **NO SE PUDO TERMINAR**: tu juego no se tocó. Manda a Fralex una foto de la ventana o el archivo `PhoenixLink-instalador.log` (está en `%TEMP%`: pega eso en la barra del Explorador).
