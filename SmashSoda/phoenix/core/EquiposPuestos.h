@@ -98,6 +98,19 @@ namespace phoenix::equipos {
 		return poner(m, i, e == 'A' ? 'B' : 'A', maxPuestos);
 	}
 
+	/// Intercambia los equipos de dos puestos (uno del A y otro del B): cada puesto conserva su número y su mando.
+	/// Falso si alguno está fuera, no existen o son del mismo equipo. Nunca deja a un equipo vacío.
+	inline bool intercambiarEquipos(Mapa& m, int i, int j, int maxPuestos) {
+		if (maxPuestos > kPuestos) maxPuestos = kPuestos;
+		if (i < 0 || j < 0 || i >= maxPuestos || j >= maxPuestos || i == j) return false;
+		m = normalizar(m);
+		const char a = de(m, i), b = de(m, j);
+		if (a == '-' || b == '-' || a == b) return false;
+		m[static_cast<size_t>(i)] = b;
+		m[static_cast<size_t>(j)] = a;
+		return true;
+	}
+
 	/// Primer puesto fuera (0-based) dentro de los mandos que existen; -1 si no queda ninguno.
 	inline int primeroFuera(const Mapa& m, int maxPuestos) {
 		if (maxPuestos > kPuestos) maxPuestos = kPuestos;

@@ -100,6 +100,19 @@ namespace phoenix::web {
 			pr.guardar();
 			return json::object();
 		});
+		// Cruza los equipos de dos puestos de equipos distintos (el 5 del A y el 6 del B): cada puesto conserva su número y su mando
+		p.registrar("mandos.equipoIntercambiar", [&in](const json& d, uint64_t) -> std::optional<json> {
+			const int a = indiceMando(in, d, "a");
+			const int b = indiceMando(in, d, "b");
+			PhoenixPrefs& pr = PhoenixPrefs::get();
+			equipos::Mapa mapa = pr.equipoPuesto;
+			const int maxPuestos = static_cast<int>(salaObligatoria(in).asientos(8).size());
+			if (!equipos::intercambiarEquipos(mapa, a, b, maxPuestos)) throw ErrorAccion("NADA_QUE_MOVER", "Solo se cruzan dos puestos de equipos distintos.");
+			pr.equipoPuesto = mapa;
+			pr.sincronizarEquipos();
+			pr.guardar();
+			return json::object();
+		});
 		// Candado de puesto: fija el puesto de un jugador (1–8) o lo suelta (0). Al volver, cae en ese puesto o en el siguiente libre.
 		p.registrar("mandos.fijarPuesto", [](const json& d, uint64_t) -> std::optional<json> {
 			const uint32_t id = idParsec(d);

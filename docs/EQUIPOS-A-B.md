@@ -48,3 +48,8 @@
 
 ## Ajuste de 0.2.35 (a pedido de Fralex)
 Se vuelve al aspecto de siempre de Puestos: la fila con su barrita de arrastre, sin bandeja de «puestos sin usar» ni recuadros en el número. **Se arrastra la fila entera a la columna del otro equipo** (se ilumina «Suelta aquí: el puesto 0N pasa a EQUIPO X») y el puesto se va **con su mando y su número**. Soltar sobre otra fila sigue intercambiando personas, como antes. Se quitaron los botones «→ A / → B». «+ AÑADIR PUESTO» mete el primer puesto libre en ese equipo.
+
+## Ajuste de 0.2.36
+- **Cruzar dos puestos:** arrastra la fila de un puesto **encima de una fila del otro equipo** y los dos puestos intercambian de equipo (el 5 del A y el 6 del B pasan a B y A), cada uno con su mando y su número. Si uno de los dos es **tu** puesto, se mantiene lo de antes: os cruzáis de asiento tú y tu amigo.
+- **Botoncito ⇄ (muy sutil)** en cada fila: pasa ese puesto al otro equipo con un clic (se aclara al pasar el ratón; apagado si es el único puesto de su equipo).
+- Acción nueva `mandos.equipoIntercambiar{a,b}` (permitida en modo cedido). La chincheta (candado de puesto) sigue igual y ahora se explica en «¿QUÉ SON A Y B?».

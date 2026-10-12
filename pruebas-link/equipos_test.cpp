@@ -84,6 +84,18 @@ int main() {
 	k = "BA------";
 	CHEQUEA(ajustarCuentas(k, 1, 1, 8) && k == "BA------");             // ya estaba: respeta el orden de Fralex
 
+	// ---- intercambiarEquipos: el 5 del A y el 6 del B se cruzan, cada uno con su número ----
+	k = "AABBAB--";
+	CHEQUEA(intercambiarEquipos(k, 4, 5, 8) && k == "AABBBA--");
+	CHEQUEA(intercambiarEquipos(k, 4, 5, 8) && k == "AABBAB--");           // y de vuelta
+	k = "AB------";
+	CHEQUEA(intercambiarEquipos(k, 0, 1, 8) && k == "BA------");           // aunque cada equipo tenga un solo puesto
+	k = "AABB----";
+	CHEQUEA(intercambiarEquipos(k, 0, 1, 8) == false && k == "AABB----");  // mismo equipo: nada que cruzar
+	CHEQUEA(intercambiarEquipos(k, 0, 5, 8) == false);                      // el 6 está fuera
+	CHEQUEA(intercambiarEquipos(k, 0, 2, 2) == false);                      // el 3 no existe con 2 mandos
+	CHEQUEA(intercambiarEquipos(k, 2, 2, 8) == false);
+
 	// ---- recortar (menos mandos virtuales que puestos) ----
 	CHEQUEA(recortar("AABBAABB", 4) == "AABB----");
 	CHEQUEA(recortar("BA-BAB--", 4) == "BA-B----");

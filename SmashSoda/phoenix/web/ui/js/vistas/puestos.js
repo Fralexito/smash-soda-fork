@@ -70,6 +70,10 @@ function Fila({ p, m, color, arr, setArr, alAsignar }) {
       }
       return accion("mandos.tomar", { numero: p.n });
     }
+    // Dos puestos de equipos distintos (ninguno es el tuyo): se cruzan los equipos; cada puesto conserva su número y su mando
+    if (a.tipo === "puesto" && origen && !origenHost && !esHost && (origen.equipo === "a" || origen.equipo === "b") && (p.equipo === "a" || p.equipo === "b") && origen.equipo !== p.equipo) {
+      return accion("mandos.equipoIntercambiar", { a: a.valor, b: p.n - 1 });
+    }
     if (esHost) return avisar(t("Ese es tu puesto: muévete tú a otro, o arrástrate a «Mirando».", "That's your seat: move yourself or drag yourself to «Watching»."), "warn");
     if (a.tipo === "puesto") accion("mandos.intercambiar", { a: a.valor, b: p.n - 1 });
     else accion("mandos.asignar", { indice: p.n - 1, parsecId: a.valor });
@@ -108,7 +112,11 @@ function Fila({ p, m, color, arr, setArr, alAsignar }) {
           : fijado ? t(`Tiene fijado el ${dos(fijado)}. Clic para fijarlo aquí (${dos(p.n)}).`, `Pinned to ${dos(fijado)}. Click to pin here (${dos(p.n)}).`)
           : t(`Fijar este puesto: al volver, ${p.jugador} cae en el ${dos(p.n)} (o en el siguiente libre).`, `Pin this seat: when ${p.jugador} returns they land on ${dos(p.n)} (or the next free one).`)}
         onClick=${() => accion("mandos.fijarPuesto", { parsecId: p.parsecId, puesto: fijado === p.n ? 0 : p.n })}><span style=${fijado ? "color:var(--acc)" : ""}><${Icono} n="pin" t=${17}/></span></button>` : null}
-    ${p.equipo === "a" || p.equipo === "b" ? null
+    ${p.equipo === "a" || p.equipo === "b"
+      ? html`<button class="icono-btn btn-sutil" style="height:34px;width:34px;flex:none;background:none;border-color:transparent" disabled=${!!m.mandos.esclavo || (m.mandos.formacion?.[p.equipo] ?? 2) <= 1}
+          data-tip=${(m.mandos.formacion?.[p.equipo] ?? 2) <= 1 ? t("Es el único puesto de su equipo", "It's the only seat on its team")
+            : (p.equipo === "a" ? t("Pasar este puesto al Equipo B", "Move this seat to Team B") : t("Pasar este puesto al Equipo A", "Move this seat to Team A")) + t(" (con su mando y su número). También puedes arrastrar la fila.", " (with its pad and number). You can also drag the row.")}
+          onClick=${() => accion("mandos.equipo", { indice: p.n - 1, equipo: p.equipo === "a" ? "b" : "a" })}><${Icono} n="intercambio" t=${16}/></button>`
       : html`<${Boton} tipo="mini suave" estilo="flex:none" deshabilitado=${!!m.mandos.esclavo} titulo=${t("Meter este puesto en el Equipo A", "Put this seat on Team A")} al=${() => accion("mandos.equipo", { indice: p.n - 1, equipo: "a" })}>A</${Boton}>
         <${Boton} tipo="mini suave" estilo="flex:none" deshabilitado=${!!m.mandos.esclavo} titulo=${t("Meter este puesto en el Equipo B", "Put this seat on Team B")} al=${() => accion("mandos.equipo", { indice: p.n - 1, equipo: "b" })}>B</${Boton}>`}
     ${p.ocupado
@@ -293,8 +301,8 @@ export function PuestosNuevo({ m }) {
           <button class="mono mut" style="background:none;border:0;cursor:pointer;font-size:12px" onClick=${() => setAyudaAB(!ayudaAB)}>${ayudaAB ? "▾" : "▸"} ${t("¿QUÉ SON A Y B?", "WHAT ARE A AND B?")}</button>
         </div>
         ${ayudaAB ? html`<div class="ayuda" style="font-size:13px">${t(
-          "Equipo A y Equipo B son los equipos de Link: no tienen por qué coincidir con local y visita del juego (A = el que estaba a la izquierda en el saque, según el Campo 2D). El número del puesto es el mando de Link y no cambia: con «Orden de mandos en PES» el puesto N es el jugador N. Para pasar un puesto de equipo arrastra su fila al hueco del otro equipo: el puesto se va con su mando y su número. Por ejemplo, tú en el 01 siendo del Equipo B.",
-          "Team A and Team B are Link's teams: they don't have to match the game's home and away (A = the one on the left at kick-off, per the 2D Pitch). The seat number is Link's pad and never changes: with «Pad order in PES», seat N is player N. To move a seat to the other team drag its row onto the other team's empty area: the seat goes with its pad and number. For example, you on 01 as Team B.")}</div>` : null}
+          "Equipo A y Equipo B son los equipos de Link: no tienen por qué coincidir con local y visita del juego (A = el que estaba a la izquierda en el saque, según el Campo 2D). El número del puesto es el mando de Link y no cambia: con «Orden de mandos en PES» el puesto N es el jugador N. Para pasar un puesto de equipo arrastra su fila al hueco del otro equipo (o usa el botoncito ⇄ de la fila): el puesto se va con su mando y su número. Si la sueltas sobre una fila del otro equipo, los dos puestos se cruzan. La chincheta fija el puesto de un jugador: al volver cae ahí (o en el siguiente libre). Por ejemplo, tú en el 01 siendo del Equipo B.",
+          "Team A and Team B are Link's teams: they don't have to match the game's home and away (A = the one on the left at kick-off, per the 2D Pitch). The seat number is Link's pad and never changes: with «Pad order in PES», seat N is player N. To move a seat to the other team drag its row onto the other team's empty area (or use the small ⇄ button on the row): the seat goes with its pad and number. Dropped on a row of the other team, the two seats swap. The pin fixes a player's seat: when they return they land there (or on the next free one). For example, you on 01 as Team B.")}</div>` : null}
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:16px;align-items:stretch">
           <${Equipo} equipo="a" nombre=${t("EQUIPO A", "TEAM A")} desc=${t("Un equipo de Link: el que estaba a la izquierda en el saque", "A Link team: the one on the left at kick-off")} color="var(--acc)" filas=${equipoA}
             m=${m} arr=${arr} setArr=${setArr} alAsignar=${setEligiendo} esclavo=${esclavo}

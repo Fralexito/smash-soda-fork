@@ -250,7 +250,7 @@ export function crearSimulador(enviar) {
     const p = s.partido;
     const e = {
       v: 1,
-      app: { version: "0.2.35", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
+      app: { version: "0.2.36", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
       noticias: { cargado: true, lista: s.noticias },
       chatGlobal: { cargado: true, pausado: s.chatGlobal.pausado, esperaSeg: s.chatGlobal.esperaSeg, rev: s.chatGlobal.mensajes.length, error: "" },
       web: { ...s.web, jugadoresLista: 3, versionLiga: "2026.10.08", eventosEnCola: 0 },
@@ -361,6 +361,11 @@ export function crearSimulador(enviar) {
     "mandos.intercambiar": (d) => { const x = s.mandos[d.a]; s.mandos[d.a] = s.mandos[d.b]; s.mandos[d.b] = x; },
     // Formación por cuentas (local = puestos del Equipo A, visitante = del B): si el mapa ya las tiene se respeta; si no, A primero y luego B
     "mandos.formacion": (d) => { if (eqCuenta("A") !== d.local || eqCuenta("B") !== d.visitante) s.mapa = ("A".repeat(d.local) + "B".repeat(d.visitante)).padEnd(8, "-").slice(0, 8); },
+    "mandos.equipoIntercambiar": (d) => {
+      const x = s.mapa[d.a], y = s.mapa[d.b];
+      if (x === "-" || y === "-" || x === y || d.a === d.b) error("NADA_QUE_MOVER", "Solo se cruzan dos puestos de equipos distintos.");
+      const l = [...s.mapa]; l[d.a] = y; l[d.b] = x; s.mapa = l.join("");
+    },
     "mandos.fijarPuesto": (d) => { if (!d.puesto) delete s.fijados[d.parsecId]; else s.fijados[d.parsecId] = d.puesto; },
     // Equipo de un puesto (como mandos.equipo del motor): el número del puesto no cambia; cada equipo conserva al menos un puesto
     "mandos.equipo": (d) => {
@@ -553,7 +558,7 @@ export function crearSimulador(enviar) {
   }
   // Portero: con la PC cedida, solo lo de jugar (copia de phoenix/core/ModoCedido.cpp)
   const CEDIDO_PERMITIDAS = new Set(["ui.seccion", "ui.copiar", "ui.recargar", "sala.copiarEnlace", "chat.enviar", "chatGlobal.abierto",
-    "mandos.conectar", "mandos.desconectar", "mandos.bloquear", "mandos.liberar", "mandos.asignar", "mandos.intercambiar", "mandos.formacion", "mandos.equipo", "mandos.fijarPuesto",
+    "mandos.conectar", "mandos.desconectar", "mandos.bloquear", "mandos.liberar", "mandos.asignar", "mandos.intercambiar", "mandos.formacion", "mandos.equipo", "mandos.equipoIntercambiar", "mandos.fijarPuesto",
     "mandos.tomar", "mandos.herramienta", "solicitud.aceptar", "solicitud.rechazar", "partido.preparar", "partido.iniciar", "partido.gol",
     "partido.pausa", "partido.cambiarLados", "partido.finalizar", "partido.cancelar", "partido.historial", "cedido.salir", "cedido.abrirPes"]);
   const cedidoPermite = (a, d) => a === "espera.decidir" ? (d.como === "jugador" || d.como === "espectador") : CEDIDO_PERMITIDAS.has(a);

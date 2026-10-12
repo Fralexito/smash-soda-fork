@@ -755,3 +755,8 @@ html.oculta *, html.oculta *::before, html.oculta *::after { animation-play-stat
 .mando-click:hover, .mando-click:focus-visible { border-color: var(--acc); box-shadow: 0 0 0 3px var(--acc-suave); outline: none; }
 .mando-click-pista { font-size: 11px; letter-spacing: .08em; text-align: right; color: var(--mut); }
 .mando-click:hover .mando-click-pista, .mando-click:focus-visible .mando-click-pista { color: var(--acc); }
+
+/* Botón sutil de las filas de Puestos: casi invisible hasta pasar el ratón */
+.btn-sutil { opacity: .4; transition: opacity .15s var(--ease); }
+.btn-sutil:hover:not(:disabled) { opacity: 1; }
+.btn-sutil:disabled { opacity: .15; }
