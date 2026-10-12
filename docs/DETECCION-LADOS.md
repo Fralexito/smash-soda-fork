@@ -1,7 +1,7 @@
 # Detección automática del lado (local/visita) de cada mando
 
-Frente LINK · 11 oct 2026 · estado: **método listo y probado en simulación; falta la prueba con PES y mandos reales.
-Link todavía NO lo usa** (el árbitro sigue armando los lados por la formación de mandos y CORREGIR LADOS es a mano).
+Frente LINK · 11 oct 2026 · estado: **integrado en Link 0.2.25 (interruptor «LADOS AUTO» en Partido, encendido por defecto);
+probado en simulación; falta la prueba con PES y mandos reales** (§4). Ante la duda no toca nada y queda el botón CORREGIR LADOS.
 
 ## 1. El problema
 
@@ -93,19 +93,31 @@ afinar sin repetir el partido.
 
 **Volver atrás:** no hay nada que deshacer (no instala nada; cerrar la consola la para).
 
-## 5. Integración en Link (solo cuando §3.2 salga bien en varios partidos)
+## 5. Cómo está integrado en Link (0.2.25)
 
-En `web/Arbitro.cpp`, con el partido arrancado por los mandos (`origenLados == "mandos"`) y sin CORREGIR LADOS:
+Por petición de Fralex («si juego de local y luego de visitante, que lo detecte y me ponga en la posición adecuada solo»)
+se conectó ya, con guardas. Archivos: `web/LadosAuto.{h,cpp}` (nuevo), ganchos en `web/Arbitro.cpp` (2a2),
+`web/InterfazWeb.cpp` (enciende el lector y alimenta el detector), `web/AccionesMandosWeb.cpp`, acción
+`partido.ladosAuto` y estado `arbitro.ladosAuto/ladosEstado`, `PhoenixPrefs.ladosAuto` (encendido por defecto),
+`ProveedorSala::ejesMandoPropio()` (stick del mando físico del anfitrión), interruptor «LADOS AUTO» en Partido.
 
-1. Durante los primeros 60 s de juego, encender el lector del Campo (`campo::pedirVivo`, como hace el mini-radar) y
-   alimentar `lados::Detector` con la foto del Campo y los sticks de `sala.asientos(8)` (asiento = puesto).
-2. En cada gol que dé `estado.json`, mirar la portería con `porteriaDelGol` + `LadoDefendido` → equipo A/B del local.
-   (Si la hipótesis del saque se confirma, también al arrancar: equipo que defiende x < 0 en el primer tiempo = local.)
-3. Con mandos decididos y ancla: si los mandos del lado A de Link juegan en realidad con el visitante (y todos los
-   decididos están de acuerdo), `in.partido.corregirLados()` + `origenLados("juego")` y aviso en el chat
-   («Link vio en el juego que X juega de visita: lados corregidos»). Si hay dudas, no tocar nada.
-4. `origen = "juego"` ya cuenta como «lados confirmados» para la web (no deja el partido «por revisar»); confirmar
-   con el chat WEB (`docs/PROMPT-WEB-ranking-1v1.md`) que lo acepta igual que una corrección a mano.
+1. **Cuándo lee el juego:** con la sala abierta, desde que `pantalla.json` dice «saliendo» (antes del pitazo, para
+   ver el saque inicial y repartir equipos) y hasta 5 min después del pitazo o hasta resolver. Fuera de eso, nada.
+2. **Mandos que mira:** los 8 puestos (`asientos(8)`: invitados, y el anfitrión sentado con su mando de Link) y el
+   mando físico del anfitrión (`ejesMandoPropio`, cuando juega directo en PES sin puesto). Persona: dueño del puesto,
+   el anfitrión si es el puesto que maneja (`MandoHost`) o su mando físico.
+3. **Ancla:** el gol (seguro) o, si no hay, el 1.er tiempo: el equipo que defiende x < 0 es el local (hipótesis del
+   saque, §2.2-2). Si las dos se contradicen, no hace nada.
+4. **Decisión** (`lados::decidir`, probado): solo con veredictos firmes de jugadores que están en los lados de Link.
+   Si TODOS están al revés → `Partido::corregirLados()` (no mueve mandos), `origenLados("juego")`, relee el marcador
+   del juego y avisa una vez en el chat: «Link vio en el juego los lados: X es el local y Y la visita (corregido
+   solo).». Si todos coinciden → `origenLados("juego")` sin aviso. Mezcla, sin ancla o sin veredicto → nada.
+5. **No actúa** si alguien ya pulsó CORREGIR LADOS (`correccionesLados > 0`), con el interruptor apagado o pasados 5 min.
+6. Para la web: `lados.origen = "juego"` ya está previsto en el ranking y vale como `host` (`PROMPT-WEB-ranking-1v1.md`).
 
-Coste: el escaneo inicial del Campo (~12 s de lectura de memoria a prioridad baja, como al abrir la tarjeta CAMPO) y
-~20 lecturas/s de 16 bytes por jugador. Regla de Fralex: si en la prueba se notan tirones, no se integra.
+Coste: el del lector del Campo (escaneo inicial de ~12 s a prioridad baja y ~20 lecturas/s de 16 bytes por jugador)
+durante esos minutos. Si en la prueba se notan tirones, apagar «LADOS AUTO».
+
+**Lo que falta probar con el juego real** (pedido a Fralex): un partido contra la CPU de LOCAL y otro de VISITANTE,
+mirando que Link deja (o corrige a) los lados correctos y el aviso del chat. Eso valida a la vez el detector, la
+hipótesis del saque y el aviso. Si falla la hipótesis del saque, se quita esa ancla y queda solo la del gol.

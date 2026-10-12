@@ -319,6 +319,29 @@ namespace phoenix {
 		return 0;
 	}
 
+	bool ProveedorSalaSoda::ejesMandoPropio(int16_t& lx, int16_t& ly) {
+		lx = ly = 0;
+		try {
+			MasterOfPuppets& mp = MasterOfPuppets::instance;
+			std::lock_guard<std::mutex> cierre(mp.inputMutex);
+			const int i = mp.getMasterIndex();
+			if (i < 0) return false;
+			if (mp.isSDLEngine) {
+				std::vector<SDLGamepad>& v = mp.getSDLGamepads();
+				if (static_cast<size_t>(i) >= v.size()) return false;
+				const XINPUT_GAMEPAD g = v[i].getGamepadState().state.Gamepad;
+				lx = g.sThumbLX; ly = g.sThumbLY;
+				return true;
+			}
+			std::vector<GamepadState>& v = mp.getXInputGamepads();
+			if (static_cast<size_t>(i) >= v.size()) return false;
+			lx = v[i].state.Gamepad.sThumbLX; ly = v[i].state.Gamepad.sThumbLY;
+			return true;
+		}
+		catch (...) {}
+		return false;
+	}
+
 	namespace {
 		std::string idDe(SDL_Joystick* j) {
 			if (j == nullptr) return "";

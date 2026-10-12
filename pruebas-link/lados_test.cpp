@@ -104,6 +104,16 @@ int main() {
 	// Sin datos de portero no se adivina
 	LadoDefendido vacio; CHEQUEA(equipoQueMarco(1, vacio) == -1);
 
+	// Anclas: el gol manda; si el saque dice lo contrario, no se sabe
+	CHEQUEA(equipoLocal(0, -1) == 0 && equipoLocal(-1, 1) == 1 && equipoLocal(1, 1) == 1 && equipoLocal(0, 1) == -1 && equipoLocal(-1, -1) == -1);
+	// Decisión: el local del Campo es el equipo 0
+	CHEQUEA(decidir({ { 0, true } }, 0) == Decision::Coinciden);                 // 1v1 de local y Link también lo tiene de local
+	CHEQUEA(decidir({ { 1, true } }, 0) == Decision::Corregir);                  // juega de visita y Link lo tiene de local
+	CHEQUEA(decidir({ { 1, true }, { 0, false } }, 0) == Decision::Corregir);    // los dos al revés
+	CHEQUEA(decidir({ { 1, true }, { 1, false } }, 0) == Decision::Nada);        // mezcla: no se toca
+	CHEQUEA(decidir({ { -1, true } }, 0) == Decision::Nada);                     // sin veredicto
+	CHEQUEA(decidir({ { 1, true } }, -1) == Decision::Nada);                     // sin ancla
+
 	std::printf(fallos ? "HAY FALLOS: %d\n" : "lados_test OK\n", fallos);
 	return fallos ? 1 : 0;
 }

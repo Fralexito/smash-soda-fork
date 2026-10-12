@@ -1,6 +1,7 @@
 #include "InterfazWebInterno.h"
 #include "EstadisticasPartido.h"
 #include "CampoWeb.h"
+#include "LadosAuto.h"
 
 #include <algorithm>
 #include <cmath>
@@ -306,7 +307,8 @@ namespace phoenix::web {
 				// Si la interfaz cambió de sección sin avisar, la tarjeta se da por cerrada. (El overlay ya no recibe el campo.)
 				if (in.campoRapido && in.seccion != "partido") in.campoRapido = false;
 				const bool web = campoWebQuiere(in);
-				const bool leer = in.campoRapido || web;
+				const bool lados = ladosQuiere(in);   // lados automáticos: los primeros minutos del partido (LadosAuto.cpp)
+				const bool leer = in.campoRapido || web || lados;
 				if (leer) phoenix::campo::iniciar();   // idempotente
 				phoenix::campo::pedirVivo(leer);
 				if (leer && ahora - in.ultimoCampo >= 0.05) {
@@ -324,6 +326,7 @@ namespace phoenix::web {
 						}
 						if (in.campoRapido) in.puente->evento("campo", ev);
 						if (web) campoWebFoto(in, fc, ev, ahora);   // tablero de la web: posesión y envío 1/s
+						if (lados) ladosFoto(in, fc, ahora);
 					}
 				}
 			}

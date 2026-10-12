@@ -88,6 +88,8 @@ namespace phoenix {
 		virtual bool hayMandoPropio() = 0;
 		/// Botones (máscara XInput) que pulsa ahora el mando físico del anfitrión; 0 si no tiene.
 		virtual uint16_t botonesMandoPropio() = 0;
+		/// Stick izquierdo del mando físico del anfitrión (−32768…32767). false si no tiene.
+		virtual bool ejesMandoPropio(int16_t& lx, int16_t& ly) { lx = ly = 0; return false; }
 		/// «VID:PID» del mando físico elegido ("" si no hay o no se sabe).
 		virtual std::string idMandoPropio() = 0;
 		/// Vuelve a elegir el mando físico guardado si está conectado (al abrir Link). true si quedó elegido.

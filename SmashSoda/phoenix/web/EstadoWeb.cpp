@@ -1,4 +1,5 @@
 #include "InterfazWebInterno.h"
+#include "LadosAuto.h"
 
 #include <algorithm>
 
@@ -563,7 +564,7 @@ namespace phoenix::web {
 				: json{ {"datos", false} };
 			const PhoenixPrefs& prA = PhoenixPrefs::get();
 			e["arbitro"] = { {"competitivo", prA.competitivo}, {"pausaAuto", prA.pausaAuto}, {"marcadorAuto", prA.marcadorAuto},
-				{"soloAutorizados", prA.soloAutorizados}, {"modoRecarga", prA.modoRecarga},
+				{"soloAutorizados", prA.soloAutorizados}, {"modoRecarga", prA.modoRecarga}, {"ladosAuto", prA.ladosAuto}, {"ladosEstado", ladosEstado()},
 				{"activo", in.arbitro.competitivoActivo}, {"origen", in.arbitro.origen},
 				{"ultimaPausa", in.arbitro.ultimaPausa}, {"conStart", in.arbitro.ultimaConStart} };
 			// Liga automática: partidos oficiales por jugar, el elegido y el último envío del resultado

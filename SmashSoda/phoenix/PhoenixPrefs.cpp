@@ -73,6 +73,7 @@ namespace phoenix {
 			anfitrionCuenta = j.value("anfitrionCuenta", anfitrionCuenta);
 			ordenPes = j.value("ordenPes", ordenPes);
 			campoWeb = j.value("campoWeb", campoWeb);
+			ladosAuto = j.value("ladosAuto", ladosAuto);
 			modoRecarga = j.value("modoRecarga", modoRecarga);
 			cedidoExtras = j.value("cedidoExtras", cedidoExtras);
 			if (modoRecarga != "ACTIVAR" && modoRecarga != "AUTO-FICHAJES") modoRecarga = "AUTO-SIEMPRE";   // v0.18b: por defecto
@@ -119,6 +120,7 @@ namespace phoenix {
 				{"anfitrionCuenta", anfitrionCuenta},
 				{"ordenPes", ordenPes},
 				{"campoWeb", campoWeb},
+				{"ladosAuto", ladosAuto},
 				{"modoRecarga", modoRecarga},
 				{"cedidoExtras", cedidoExtras},
 			};

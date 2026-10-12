@@ -1,5 +1,6 @@
 #include "InterfazWebInterno.h"
 #include "CampoWeb.h"
+#include "LadosAuto.h"
 
 #include <algorithm>
 
@@ -173,7 +174,7 @@ namespace phoenix::web {
 			in.campoRapido = booleano(d, "si");
 			in.campoSeq = 0;
 			if (in.campoRapido) phoenix::campo::iniciar();
-			phoenix::campo::pedirVivo(in.campoRapido || campoWebQuiere(in));
+			phoenix::campo::pedirVivo(in.campoRapido || campoWebQuiere(in) || ladosQuiere(in));
 			return json::object();
 		});
 		// Campo en vivo en la web: con un partido publicado en juego, Link manda el campo al tablero de la web (CampoWeb.cpp)

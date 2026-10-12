@@ -1,4 +1,5 @@
 #include "InterfazWebInterno.h"
+#include "LadosAuto.h"
 
 #include <algorithm>
 
@@ -255,6 +256,14 @@ namespace phoenix::web {
 				mensajeDelBot(in, "Lados corregidos: " + local.nombre + " es el local y " + visita.nombre + " la visita.");
 			}
 			return in.partido.comoJson(ahoraSeg());
+		});
+
+		// Lados automáticos (LadosAuto.cpp): Link mira en el juego en qué lado juega cada mando y corrige solo si están al revés
+		p.registrar("partido.ladosAuto", [](const json& d, uint64_t) -> std::optional<json> {
+			PhoenixPrefs& pr = PhoenixPrefs::get();
+			pr.ladosAuto = booleano(d, "si");
+			pr.guardar();
+			return json::object();
 		});
 
 		p.registrar("partido.finalizar", [&in](const json& d, uint64_t) -> std::optional<json> {

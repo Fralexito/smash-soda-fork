@@ -142,3 +142,25 @@ namespace phoenix::lados {
 	}
 
 }
+
+namespace phoenix::lados {
+
+	int equipoLocal(int anclaGol, int anclaSaque) {
+		const bool g = anclaGol == 0 || anclaGol == 1, s = anclaSaque == 0 || anclaSaque == 1;
+		if (g && s && anclaGol != anclaSaque) return -1;
+		return g ? anclaGol : s ? anclaSaque : -1;
+	}
+
+	Decision decidir(const std::vector<Participante>& ps, int eqLocal) {
+		if (eqLocal != 0 && eqLocal != 1) return Decision::Nada;
+		int bien = 0, mal = 0;
+		for (const Participante& p : ps) {
+			if (p.eqCampo != 0 && p.eqCampo != 1) continue;
+			if ((p.eqCampo == eqLocal) == p.linkLocal) bien++; else mal++;
+		}
+		if (bien > 0 && mal == 0) return Decision::Coinciden;
+		if (mal > 0 && bien == 0) return Decision::Corregir;
+		return Decision::Nada;
+	}
+
+}

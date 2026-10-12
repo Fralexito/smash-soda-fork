@@ -93,3 +93,19 @@ namespace phoenix::lados {
 	int porteriaDelGol(float bx, float by, float bz);
 
 }
+
+namespace phoenix::lados {
+
+	/// Ancla A/B → local: devuelve el equipo del Campo (0/1) que es el local, o −1 si no hay ancla o se contradicen.
+	/// anclaGol: deducida de un gol (segura). anclaSaque: el equipo que defiende x < 0 en el 1.er tiempo (PES pone ahí al local).
+	int equipoLocal(int anclaGol, int anclaSaque);
+
+	/// Un jugador del partido con lado detectado: equipo del Campo (0/1) y si Link lo tiene como local.
+	struct Participante { int eqCampo = -1; bool linkLocal = false; };
+
+	enum class Decision { Nada, Coinciden, Corregir };
+	/// Con el equipo local del Campo: Corregir si TODOS los detectados están al revés en Link, Coinciden si todos
+	/// están bien, Nada si no hay ninguno o hay mezcla (ante la duda no se toca).
+	Decision decidir(const std::vector<Participante>& ps, int eqLocal);
+
+}

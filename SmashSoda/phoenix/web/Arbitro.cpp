@@ -1,4 +1,5 @@
 #include "InterfazWebInterno.h"
+#include "LadosAuto.h"
 
 #include <algorithm>
 
@@ -320,12 +321,15 @@ namespace phoenix::web {
 				PhoenixLink::instancia().marcarPartido(true);
 				PhoenixLink::instancia().evento("partida_inicio", "", json{ {"marcador", in.partido.marcador()}, {"auto", true} }.dump());
 				mensajeDelBot(in, "¡Arrancó! " + in.partido.ladoA().nombre + " vs " + in.partido.ladoB().nombre + ". El marcador va solo con el juego."
-					+ (in.partido.origenLados() == "mandos" ? std::string(" Lados según los mandos: si en el juego es al revés, CORREGIR LADOS en Partido.") : std::string()));
+					+ (in.partido.origenLados() != "mandos" ? std::string() : pr.ladosAuto ? std::string(" Lados según los mandos: Link los comprueba en el juego en el primer minuto.") : std::string(" Lados según los mandos: si en el juego es al revés, CORREGIR LADOS en Partido.")));
 				a.golesAnunciados = static_cast<int>(j.goles.size());
 				a.golEsperaDesde = -1.0;
 				a.golesJuegoL = a.golesJuegoV = -1;
 				vivo = true;
 			}
+
+			// 2a2) Lados automáticos: en los primeros minutos Link mira en el juego en qué lado juega cada mando (LadosAuto.cpp)
+			ladosRevisar(in, j, ahora);
 
 			// 2b) Goles que da el juego (solo cuando cambian allí; la corrección manual se respeta)
 			if (vivo && j.valido && j.golesLocal >= 0 && j.golesVisita >= 0) {

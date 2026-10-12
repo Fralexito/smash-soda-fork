@@ -105,7 +105,7 @@ export function crearSimulador(enviar) {
     actividad: ["[PhoenixBot] Sala abierta con eFootball PES 2021", "[PhoenixBot] Mirko joined.", "[PhoenixBot] Kaiser joined.", "[PhoenixBot] Mando 03 asignado a ElTigre"],
     // Árbitro: estado.json del juego (?estado=archivo.json lo lee cada segundo) y preferencias
     juego: { datos: false }, golesJuego: null,
-    arbitro: { competitivo: true, pausaAuto: false, marcadorAuto: true, soloAutorizados: true, modoRecarga: "AUTO-SIEMPRE", ultimaPausa: "", conStart: false },
+    arbitro: { competitivo: true, pausaAuto: false, marcadorAuto: true, soloAutorizados: true, modoRecarga: "AUTO-SIEMPRE", ultimaPausa: "", conStart: false, ladosAuto: true, ladosEstado: "" },
     golesAnunciados: -1,
     // Liga automática: partidos oficiales por jugar (GET /v1/liga/partidos)
     liga: { cargado: true, error: "", ultimoEnvio: "", pendientes: 0, elegido: 0, elegidoTexto: "", enVivo: false, partidos: [
@@ -495,6 +495,7 @@ export function crearSimulador(enviar) {
     "partido.pausa": (d) => { const p = s.partido; if (d.si && p.fase === "en_juego") { p.acumulado += ahora() - p.inicio; p.fase = "pausado"; } else if (!d.si && p.fase === "pausado") { p.inicio = ahora(); p.fase = "en_juego"; } },
     "partido.cambiarLados": () => { s.partido.invertido = !s.partido.invertido; },
     "partido.corregirLados": () => { s.partido.invertido = !s.partido.invertido; bot("Lados corregidos."); },
+    "partido.ladosAuto": (d) => { s.arbitro.ladosAuto = !!d.si; },
     "partido.finalizar": () => {
       const p = s.partido;
       const reg = { id: siguienteId++, inicioMs: Date.now() - segundosPartido() * 1000, duracionSeg: segundosPartido(), a: p.a, b: p.b, ganador: p.a.goles > p.b.goles ? "a" : p.b.goles > p.a.goles ? "b" : "empate" };

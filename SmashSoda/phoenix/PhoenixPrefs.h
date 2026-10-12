@@ -41,6 +41,7 @@ namespace phoenix {
 		bool marcadorAuto = true; ///< árbitro: con datos del juego, el marcador arranca, relata los goles y termina solo
 		bool ordenPes = false;        ///< EXPERIMENTAL: Link ordena settings.dat de PES (casilla N = puesto N) y no desenchufa sus mandos al cerrar la sala
 		bool campoWeb = false;        ///< Campo 2D en vivo en el tablero de la web (lee PES solo con un partido publicado en juego)
+		bool ladosAuto = true;        ///< partido: Link mira en el juego (stick + Campo 2D) el lado de cada mando y corrige los lados solo si están al revés
 		// Anfitrión: su puesto al jugar (Mandos › TU MANDO)
 		std::string miMando;             ///< «VID:PID» de su mando físico; Link lo vuelve a elegir al abrirse ("" = teclado)
 		std::string miPuestoModo = "fijo";  ///< fijo | local | visitante (primero de ese equipo)

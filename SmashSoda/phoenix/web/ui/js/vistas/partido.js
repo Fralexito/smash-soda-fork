@@ -219,7 +219,13 @@ function Marcador({ m }) {
       ${p.fase === "pausado" ? html`<${Boton} tipo="lleno" al=${() => accion("partido.pausa", { si: false })}>${t("REANUDAR", "RESUME")}</${Boton}>` : null}
       <${Boton} al=${cambiarLados}><${Icono} n="intercambio" t=${16}/>${t("CAMBIAR LADOS", "SWAP SIDES")}</${Boton}>
       <${Boton} tipo="suave" al=${corregirLados}>${t("CORREGIR LADOS", "FIX SIDES")}</${Boton}>
-      ${p.origenLados === "mandos" ? html`<span class="ayuda">${t("Lados armados solos según los mandos. Si en el juego es al revés: CORREGIR LADOS (no mueve mandos).", "Sides set from pads. If reversed in game: FIX SIDES.")}</span>` : null}
+      <span style="display:inline-flex;gap:8px;align-items:center" title=${t("Link mira en el juego en qué lado juega cada mando y corrige los lados solo si están al revés.", "Link checks each pad's side in game and fixes sides if reversed.")}>
+        <span class="ayuda">${t("LADOS AUTO", "AUTO SIDES")}</span>
+        <${Interruptor} valor=${!!(m.arbitro && m.arbitro.ladosAuto)} al=${(v) => accion("partido.ladosAuto", { si: v })} etiqueta=${t("Lados automáticos", "Auto sides")}/>
+      </span>
+      ${p.origenLados === "juego" ? html`<span class="ayuda">${t("Lados comprobados en el juego.", "Sides checked in game.")}</span>`
+        : m.arbitro && m.arbitro.ladosEstado === "midiendo" ? html`<span class="ayuda">${t("Mirando en el juego en qué lado juega cada mando…", "Checking each pad's side in game…")}</span>`
+        : p.origenLados === "mandos" ? html`<span class="ayuda">${t("Lados armados solos según los mandos. Si en el juego es al revés: CORREGIR LADOS (no mueve mandos).", "Sides set from pads. If reversed in game: FIX SIDES.")}</span>` : null}
       <div style="margin-left:auto;display:flex;gap:10px">
         ${enJuego ? html`<${Boton} tipo="ok" al=${finalizar}><${Icono} n="trofeo" t=${16}/>${t("TERMINAR", "FINISH")}</${Boton}>` : null}
         <${Boton} tipo="peligro" al=${cancelar}>${t("CANCELAR", "CANCEL")}</${Boton}>
