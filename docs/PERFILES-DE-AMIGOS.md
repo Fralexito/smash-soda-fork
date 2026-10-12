@@ -80,3 +80,9 @@ Paso 1: `tools/radar/usuariopad.cpp` (compilar con `tools/radar/compilar_usuario
 - ❓ Falta probar con DOS mandos si ese valor es el Usuario del mando que acaba de pulsar (lo necesario para el bucle «pulsar R2 hasta llegar al hueco») o solo de uno.
 - Las otras dos posiciones (0x1437F1844 y 0x143AAC364) son contadores que no dan la vuelta; no sirven.
 - Plan seguro: Link solo LEE esa posición y pulsa L2/R2 con el mando virtual del puesto hasta que coincida con el hueco del amigo (el que dejó «Preparar la sala»). Solo en la pantalla de elegir lados (si no, R2/L2 hacen cosas en el partido): hace falta una señal fiable de esa pantalla.
+
+### 9.2 Prueba con DOS mandos (12 oct, ~15:00): 0x1437F18E4 NO es el Usuario de cada mando
+- R2 alternando mando 1 y mando 2 hizo subir `0x1437F18E4` siempre +1 (16, 17 … 25), sin saltar entre dos valores. Los Usuarios finales fueron AXEL y JACK (casillas 15 y 16, valores 14 y 15), no el 25.
+- Conclusión: es el cursor de la lista de la pantalla, COMPARTIDO entre mandos; no sirve para saber el Usuario de cada uno. Además PES salta los Usuarios que ya usa otro mando.
+- Para el modo automático haría falta la posición propia de cada mando (dos búsquedas más, moviendo solo un mando cada vez: lo que cambia en ambas es el cursor compartido; lo que cambia solo en una es de ese mando).
+- Alternativa sin riesgo, ya disponible: «Preparar la sala» deja el Usuario de cada amigo listo en PES y cada uno pulsa R2 hasta ver su nombre.
