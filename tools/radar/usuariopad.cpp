@@ -407,6 +407,32 @@ static void pares(int argc, char** argv) {
 	}
 }
 
+// ---- SOLO LEE: refs <hexaddr> [margen] ----
+// Lista los sitios de la memoria de PES que contienen un puntero a una direccion entre (hexaddr - margen) y hexaddr
+// (por defecto 0x400): son las referencias al objeto que contiene esa direccion. Marca las que estan dentro del exe (fijas entre arranques).
+static void refs(int argc, char** argv) {
+	if (argc < 3) { say("uso: refs <hexaddr> [margen]"); return; }
+	const uint64_t objetivo = strtoull(argv[2], nullptr, 16), margen = argc >= 4 ? strtoull(argv[3], nullptr, 16) : 0x400;
+	FILE* f = fopen("usuariopad_refs.txt", "w");
+	int hits = 0;
+	for (auto& r : regiones()) {
+		std::vector<uint8_t> b(r.tam); SIZE_T got = 0;
+		if (!ReadProcessMemory(gH, (LPCVOID)r.base, b.data(), r.tam, &got) || got != r.tam) continue;
+		for (size_t i = 0; i + 8 <= r.tam; i += 8) {
+			uint64_t v; memcpy(&v, &b[i], 8);
+			if (v > objetivo || v + margen < objetivo) continue;
+			const uint64_t ad = r.base + i;
+			hits++;
+			fprintf(f, "%llX%s -> %llX (objetivo -%llX)  contexto:", (unsigned long long)ad, (ad >= gExeBase && ad < gExeBase + gExeTam) ? " [EXE]" : "", (unsigned long long)v, (unsigned long long)(objetivo - v));
+			for (int k = -16; k < 32 && (int64_t)i + k >= 0 && i + k < r.tam; k++) fprintf(f, " %02X", b[i + k]);
+			fprintf(f, "\n");
+		}
+	}
+	fprintf(f, "-> %d referencias\n", hits);
+	fclose(f);
+	say("refs a %llX (margen %llX): %d referencias -> usuariopad_refs.txt", (unsigned long long)objetivo, (unsigned long long)margen, hits);
+}
+
 static void ver(int argc, char** argv) {
 	std::vector<uint64_t> as; for (int i = 2; i < argc; i++) as.push_back(strtoull(argv[i], nullptr, 16));
 	std::string antes; DWORD t0 = GetTickCount();
@@ -431,6 +457,7 @@ int main(int argc, char** argv) {
 	if (argc >= 2 && std::string(argv[1]) == "punteros") { punteros(argc, argv); return 0; }
 	if (argc >= 2 && std::string(argv[1]) == "copias") { copias(argc, argv); return 0; }
 	if (argc >= 2 && std::string(argv[1]) == "pares") { pares(argc, argv); return 0; }
+	if (argc >= 2 && std::string(argv[1]) == "refs") { refs(argc, argv); return 0; }
 	say("Conectado a PES2021.exe (pid %lu). Numpad 5=foto (tras R2) 4=foto (tras L2) 3=informe 0=de cero 9=salir", pid);
 	bool prev[10] = {};
 	for (;;) {
