@@ -51,3 +51,7 @@ Antes, si jugabas tú con tu mando de Link, el partido que Link mandaba a la web
 - **Si solo miras y no tocas tu mando:** no sales.
 - Interruptor «Contarme como jugador en la web (automático)» en **TU MANDO › Mi puesto al jugar**, encendido por defecto. Apágalo si nunca quieres salir sin puesto.
 - Funciona al armarse los lados solos al pitazo. Si ya los elegiste a mano en Partido › Armar, ahí mandas tú.
+
+## Cruzarte con un amigo (desde 0.2.31)
+Si estás sentado (por ejemplo en el puesto 02) y arrastras tu fila a un puesto que ya ocupa un amigo (el 01), **os cruzáis**: tú pasas al 01 y él al 02. Nadie se queda sin mando ni va a Mirando. Link muestra el aviso «Te sentaste en el 01 y Fulano pasó al 02».
+Si aún no estás sentado, sigue valiendo el aviso de siempre (el puesto está ocupado): sentarte en un puesto libre, y luego cruzarte.

@@ -35,6 +35,19 @@ function Fila({ p, m, color, arr, setArr, alAsignar }) {
   const opacidad = arrastrando && !recibe && arr.valor !== p.n - 1 ? ".55" : "1";
   const perfil = p.ocupado ? m.perfiles?.[p.parsecId] : null;
 
+  // Me siento en un puesto que ocupa un amigo: él pasa a MI puesto (se cruzan), nadie se queda sin mando
+  const cruzarConAmigo = async (mio) => {
+    const amigo = p.jugador || t("Tu amigo", "Your friend");
+    if (!(await accion("mandos.tomar", { numero: 0 }, { silencioso: true }))) return;   // suelto mi puesto
+    if (!(await accion("mandos.intercambiar", { a: p.n - 1, b: mio - 1 }, { silencioso: true }))) {
+      await accion("mandos.tomar", { numero: mio }, { silencioso: true });              // no se pudo: vuelvo a mi puesto
+      return;
+    }
+    if (await accion("mandos.tomar", { numero: p.n }, { silencioso: true })) {
+      avisar(t(`Te sentaste en el ${dos(p.n)} y ${amigo} pasó al ${dos(mio)}.`, `You took seat ${dos(p.n)} and ${amigo} moved to ${dos(mio)}.`), "ok");
+    }
+  };
+
   const soltar = (e) => {
     e.preventDefault();
     setSobre(false);
@@ -46,7 +59,11 @@ function Fila({ p, m, color, arr, setArr, alAsignar }) {
     const origenHost = origen && (m.mandos.host === origen.n || (origen.parsecId && origen.parsecId === hostId));
     if ((a.tipo === "persona" && a.valor === hostId) || origenHost) {
       // El anfitrión se mueve «tomando» el puesto (con su mando físico o el teclado)
-      if (p.ocupado && !esHost) return avisar(t("Ese puesto está ocupado: primero quita a quien está ahí.", "That seat is taken: remove that player first."), "warn");
+      if (p.ocupado && !esHost) {
+        const mio = m.mandos.host;   // el puesto donde estoy sentado (0 = ninguno)
+        if (mio > 0 && mio !== p.n) return cruzarConAmigo(mio);
+        return avisar(t("Ese puesto está ocupado: primero quita a quien está ahí.", "That seat is taken: remove that player first."), "warn");
+      }
       return accion("mandos.tomar", { numero: p.n });
     }
     if (esHost) return avisar(t("Ese es tu puesto: muévete tú a otro, o arrástrate a «Mirando».", "That's your seat: move yourself or drag yourself to «Watching»."), "warn");
