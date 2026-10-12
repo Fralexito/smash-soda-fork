@@ -193,6 +193,19 @@ namespace phoenix::web {
 				const int ping = s.pingMs < 0 ? -1 : (s.pingMs + 5) / 10 * 10;   // a 10 ms: el archivo no cambia por nada
 				t += (local ? "ja=" : "jb=") + limpioSala(s.jugador, 20) + "|" + std::to_string(ping) + "|" + std::to_string(s.numero) + "\n";
 			}
+			// El anfitrión con su mando de Link (MandoHost) no tiene «dueño» en el motor y arriba se saltaba: el HUD decía
+			// «nadie con mando todavía» aunque jugara (Fralex, 0.2.41). Se apunta en su puesto y en su lado.
+			try {
+				const int mh = MandoHost::activo();   // 1..8, 0 = ninguno
+				Guest& anf = h.getHost();
+				if (mh > 0 && mh <= activos && anf.isValid() && pr.equipoDe(mh - 1) != '-') {
+					bool local = pr.equipoDe(mh - 1) == 'A';
+					if (hayLados && enLado(ll, anf.userID)) local = true;
+					else if (hayLados && enLado(lv, anf.userID)) local = false;
+					t += (local ? "ja=" : "jb=") + limpioSala(anf.name, 20) + "|-1|" + std::to_string(mh) + "\n";
+				}
+			}
+			catch (...) {}
 			std::string arb;
 			if (in.arbitro.competitivoActivo) arb = "Start/Back/Guía bloqueados a los invitados";
 			if (pr.pausaAuto) arb += std::string(arb.empty() ? "" : " · ") + "pausa automática";
