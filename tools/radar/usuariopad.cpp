@@ -303,6 +303,41 @@ static void punteros(int argc, char** argv) {
 	say("listo -> usuariopad_punteros.txt");
 }
 
+// ---- SOLO LEE: copias <nombre existente> <su casilla> <Usuario a buscar> ----
+// Busca en toda la memoria de PES COPIAS de la configuracion (bytes +0x34..+0x134 del registro) de ese Usuario fuera de la tabla:
+// si PES usa una copia por mando, aparece ahi.
+static void copias(int argc, char** argv) {
+	if (argc < 5) { say("uso: copias <nombre existente> <su casilla 1..32> <Usuario a buscar>"); return; }
+	const uint64_t tabla = localizarTabla(argv[2], atoi(argv[3]));
+	if (!tabla) { say("No encuentro la tabla de Usuarios con certeza. No hago nada."); return; }
+	std::vector<uint8_t> t(32 * kRegU); SIZE_T g = 0;
+	if (!ReadProcessMemory(gH, (LPCVOID)tabla, t.data(), t.size(), &g) || g != t.size()) { say("No pude leer la tabla."); return; }
+	int idx = -1;
+	for (int u = 0; u < 32; u++) if (strncmp((const char*)&t[u * kRegU + kNomOff], argv[4], kNomLen) == 0) { idx = u; break; }
+	if (idx < 0) { say("No encuentro el Usuario «%s».", argv[4]); return; }
+	const uint8_t* reg = &t[idx * kRegU];
+	const size_t sigIni = 0x34, sigLen = 0x100;
+	FILE* f = fopen("usuariopad_copias.txt", "w");
+	fprintf(f, "tabla %llX; Usuario «%s» = casilla %d, registro %llX; firma = bytes +0x%zX..+0x%zX\n", (unsigned long long)tabla, argv[4], idx + 1, (unsigned long long)(tabla + idx * kRegU), sigIni, sigIni + sigLen);
+	int hits = 0;
+	for (auto& r : regiones()) {
+		std::vector<uint8_t> b(r.tam); SIZE_T got = 0;
+		if (!ReadProcessMemory(gH, (LPCVOID)r.base, b.data(), r.tam, &got) || got != r.tam) continue;
+		for (size_t i = sigIni; i + sigLen <= r.tam; i++) {
+			if (b[i] != reg[sigIni] || memcmp(&b[i], reg + sigIni, sigLen) != 0) continue;
+			const uint64_t ad = r.base + i;
+			if (ad >= tabla && ad < tabla + t.size()) { fprintf(f, "%llX  (en la TABLA, casilla %llu)\n", (unsigned long long)ad, (unsigned long long)((ad - tabla) / kRegU + 1)); continue; }
+			hits++;
+			fprintf(f, "%llX%s  COPIA fuera de la tabla. 0x40 bytes antes:", (unsigned long long)ad, (ad >= gExeBase && ad < gExeBase + gExeTam) ? " [EXE]" : "");
+			for (size_t k = 0x40; k >= 1; k--) if (i >= k) fprintf(f, " %02X", b[i - k]);
+			fprintf(f, "\n");
+		}
+	}
+	fprintf(f, "-> %d copias fuera de la tabla\n", hits);
+	fclose(f);
+	say("«%s»: %d copias fuera de la tabla -> usuariopad_copias.txt", argv[4], hits);
+}
+
 static void ver(int argc, char** argv) {
 	std::vector<uint64_t> as; for (int i = 2; i < argc; i++) as.push_back(strtoull(argv[i], nullptr, 16));
 	std::string antes; DWORD t0 = GetTickCount();
@@ -325,6 +360,7 @@ int main(int argc, char** argv) {
 	if (argc >= 3 && std::string(argv[1]) == "buscar") { buscarTexto(argv[2]); return 0; }
 	if (argc >= 2 && std::string(argv[1]) == "escribir") { escribirPrueba(argc, argv, pid); return 0; }
 	if (argc >= 2 && std::string(argv[1]) == "punteros") { punteros(argc, argv); return 0; }
+	if (argc >= 2 && std::string(argv[1]) == "copias") { copias(argc, argv); return 0; }
 	say("Conectado a PES2021.exe (pid %lu). Numpad 5=foto (tras R2) 4=foto (tras L2) 3=informe 0=de cero 9=salir", pid);
 	bool prev[10] = {};
 	for (;;) {
