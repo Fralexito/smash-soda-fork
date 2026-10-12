@@ -1,5 +1,6 @@
 // Prueba de phoenix::perfilespes::Base / traerDePes / prepararSala con una COPIA de SYSTEM00000000.
 // Uso: perfiles_amigos_test <carpeta temporal> <copia de SYSTEM00000000>     (nunca toca el archivo original)
+#include "phoenix/core/OpcionesUsuario.h"
 #include "phoenix/core/PerfilesAmigos.h"
 #include "phoenix/core/PerfilesPes.h"
 
@@ -167,6 +168,37 @@ int main(int argc, char** argv) {
 		CHECK(b.guardar(s(), err), "guardar con parsecId: " + err);
 		Base b3(dirBase);
 		CHECK(b3.cargar(err) && b3.porParsec(4242) && b3.porParsec(4242)->id == idsSint[3], "el vinculo se conserva al recargar: " + err);
+	}
+	// 12) opciones personales (nombre, comandos, cursor, pases, guías, amago, entrada, compañero): se leen, se cambian sin tocar nada más y se validan
+	{
+		Guardado gc; Guardado::abrir(real, gc, err);
+		const std::vector<uint8_t> base0 = gc.usuario(5).bytes;
+		OpcionesUsuario o0;
+		CHECK(leerOpciones(base0, o0), "leer opciones");
+		OpcionesUsuario o = o0;
+		o.cambiarCursor = 2; o.nivelPases = 2; o.amago = 0; o.entrada = 2; o.companero = 1; o.tipoCursor = 4; o.preajuste = 1; o.desplazamiento = 1;
+		o.botones[0] = 3; o.botones[19] = 8;
+		std::vector<uint8_t> r = base0; std::string mot;
+		CHECK(ponerOpciones(r, o, mot) && ponerNombre(r, "Jos\xC3\xA9 Luis", mot), "poner opciones y nombre: " + mot);
+		OpcionesUsuario o2;
+		CHECK(leerOpciones(r, o2) && o2.cambiarCursor == 2 && o2.nivelPases == 2 && o2.amago == 0 && o2.entrada == 2 && o2.companero == 1 && o2.preajuste == 1 && o2.desplazamiento == 1 && o2.botones[0] == 3 && o2.botones[19] == 8, "las opciones se leen igual que se pusieron");
+		// solo cambian los bytes conocidos: el resto del registro queda idéntico
+		const size_t conocidos[] = { 0x32, 0x33, 0x48, 0x4B, 0x4C, 0x4D, 0x4E, 0x4F, 0x50, 0x51, 0x52, 0x53, 0x54, 0x55 };
+		bool resto = true;
+		for (size_t i = 0; i < r.size(); i++) {
+			const bool esNombre = i >= 4 && i < 4 + 48, esMapa = i >= 0x34 && i < 0x34 + 20;
+			const bool esConocido = std::find(std::begin(conocidos), std::end(conocidos), i) != std::end(conocidos);
+			if (!esNombre && !esMapa && !esConocido && r[i] != base0[i]) resto = false;
+		}
+		CHECK(resto, "el resto del registro no se toco");
+		CHECK(registroValido(r, mot), "el registro editado sigue siendo valido: " + mot);
+		std::vector<uint8_t> malo = base0; OpcionesUsuario ob = o; ob.entrada = 9;
+		CHECK(!ponerOpciones(malo, ob, mot) && malo == base0, "un valor fuera de rango se rechaza y no cambia nada");
+		ob = o; ob.botones[3] = 12;
+		CHECK(!ponerOpciones(malo, ob, mot) && malo == base0, "un boton fuera de rango se rechaza");
+		CHECK(!ponerNombre(malo, "   ", mot) && !ponerNombre(malo, std::string(32, 'A'), mot) && !ponerNombre(malo, "a\nb", mot) && malo == base0, "nombres vacios, largos o con control se rechazan");
+		std::vector<uint8_t> corto(100);
+		CHECK(!leerOpciones(corto, o2) && !ponerOpciones(corto, o, mot), "un registro de tamano raro se rechaza");
 	}
 	CHECK(leer(orig) == bytesOrig, "el original no se toco");
 	std::cout << (fallos ? "FALLAS: " + std::to_string(fallos) : std::string("TODO OK")) << "\n";

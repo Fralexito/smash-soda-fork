@@ -177,3 +177,12 @@ Objetivo: que quien se siente en un puesto tenga SU nombre y SU configuración e
 - **Prueba real (12 oct 2026, PC de Fralex)**: perfil «Usuario 2» ligado a un ID falso, sentado de prueba en el puesto 1 → PES mostró «Usuario 2» en el mando 1 a los ~2 s; al quitar el sentado volvió «FRALEX» idéntico.
 - Acciones nuevas: `perfiles.vincular {id, parsecId}`, `perfiles.auto {si}`, `perfiles.simular {puesto?, parsecId?}`. `perfiles.estado` añade `auto`, `autoLog`, `sentados`, `autoAplicados` y `parsecId` por perfil.
 - Pendiente: «Mi perfil de PES» (editor de nombre y opciones por bytes, etiquetas por parche) y que el perfil viaje con la persona a otros anfitriones.
+
+### 12.1 Mi perfil de PES: formulario con nombre y opciones (Link 0.2.61)
+
+- En GENTE › PERFILES PES › MIS PERFILES: botones **+ NUEVO PERFIL** y **EDITAR**. El formulario es el «Editar Datos personales» de PES: nombre, **configuración de comandos** (preajuste, desplazamiento y, si es Personalizado, los 20 botones), **cambiar cursor**, cursor de siguiente jugador, **tipo de cursor** (siempre «Datos personales», fijo), nivel de ayuda en pases, pase en profundidad, tipo de disparo, guías, **amago automático**, **entrada automática**, **controles de compañero**, y el ID de Parsec opcional para ligarlo.
+- Lógica en `core/OpcionesUsuario.{h,cpp}` (solo bytes; las etiquetas viven en `vistas/perfiles.js`, por parche). Acciones `perfiles.opciones{id?}` y `perfiles.editar{id?, nombre, parsecId?, opciones}`. Un perfil nuevo parte de un registro real de la base y cambia SOLO el nombre y los bytes conocidos (el resto se conserva).
+- **Corrección importante**: el campo del nombre (48 B desde +0x04) comparte sus 2 últimos bytes con las opciones +0x32 (desplazamiento) y +0x33 (preajuste). Antes, poner un nombre los borraba. Ahora solo se borran los primeros 46 bytes (`ponerNombre`, `renombrar` y `Guardado::rotular`).
+- Si se edita el perfil de alguien que ya está sentado, el vigilante le pone la versión nueva.
+- **Prueba real (12 oct 2026)**: perfil «PRUEBA LINK» ligado a un ID falso y sentado de prueba en el puesto 1 → PES mostró ese nombre en el mando 1 y, en Editar Datos personales, las opciones elegidas; al quitar el sentado volvió FRALEX; el perfil de prueba se borró. Los valores de FRALEX en el formulario coincidieron con su pantalla de PES.
+- Sin comprobar aún: «Cambiar cursor» = 0, «Entrada automática» = 0 y el preajuste Personalizado (=2) con su mapa de botones; las etiquetas de los botones de defensa a partir del 5.º.

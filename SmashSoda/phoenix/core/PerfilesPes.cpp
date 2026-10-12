@@ -150,7 +150,7 @@ namespace phoenix::perfilespes {
 		if (nombre.size() > kMaxNombre) { error = "el nombre no puede pasar de " + std::to_string(kMaxNombre) + " bytes"; return false; }
 		Usuario u = usuario(indice);
 		if (u.bytes.size() != kTamUsuario) { error = "guardado no abierto"; return false; }
-		std::memset(u.bytes.data() + 4, 0, kTamNombre);
+		std::memset(u.bytes.data() + 4, 0, kTamNombre - 2);   // los 2 últimos bytes del campo son opciones (+0x32 desplazamiento, +0x33 preajuste): no se borran
 		std::memcpy(u.bytes.data() + 4, nombre.data(), nombre.size());
 		return ponerUsuario(indice, u.bytes, error);
 	}

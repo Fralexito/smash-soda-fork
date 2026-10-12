@@ -12,6 +12,7 @@
 #include <memory>
 #include <mutex>
 
+#include "../core/OpcionesUsuario.h"
 #include "../core/PerfilesAmigos.h"
 #include "../core/PerfilesPes.h"
 #include "../core/UsuariosEnVivo.h"
@@ -317,8 +318,8 @@ namespace phoenix::web {
 			if (it == base.datos.perfiles.end()) throw ErrorAccion("NO_EXISTE", "Ese perfil ya no existe.");
 			std::vector<uint8_t> reg;
 			if (!pp::deHex(it->registro, reg) || reg.size() != pp::kTamUsuario) throw ErrorAccion("NO_SE_PUDO", "El perfil está dañado.");
-			std::fill(reg.begin() + 4, reg.begin() + 4 + pp::kTamNombre, uint8_t(0));
-			std::copy(nombre.begin(), nombre.end(), reg.begin() + 4);
+			std::string motivoNombre;
+			if (!pp::ponerNombre(reg, nombre, motivoNombre)) throw ErrorAccion("DATOS_INVALIDOS", motivoNombre);   // no pisa las opciones que comparten el campo
 			it->anterior = it->registro; it->registro = pp::aHex(reg); it->nombre = nombre; it->sinNombre = false; it->actualizado = selloPerfiles();
 			if (!base.guardar(selloPerfiles(), err)) throw ErrorAccion("NO_SE_PUDO", err);
 			return estadoPerfiles();
@@ -439,6 +440,93 @@ namespace phoenix::web {
 			return estadoPerfiles();
 		});
 
+		// ---- MI PERFIL DE PES: el formulario de nombre + opciones (todo por BYTES; las etiquetas viven en la interfaz, por parche) ----
+		// perfiles.opciones{id?} → las opciones de ese perfil; sin id, las de partida para uno nuevo (las de un registro real de la base).
+		p.registrar("perfiles.opciones", [](const json& d, uint64_t) -> std::optional<json> {
+			std::lock_guard<std::mutex> g(mtxPerfiles);
+			pp::Base base(carpetaBasePerfiles());
+			std::string err;
+			if (!base.cargar(err)) throw ErrorAccion("BASE_DANADA", err);
+			const std::string id = d.contains("id") ? texto(d, "id", 20) : std::string();
+			std::vector<uint8_t> reg;
+			std::string nombre;
+			if (!id.empty()) {
+				const pp::PerfilAmigo* pf = base.porId(id);
+				if (!pf) throw ErrorAccion("NO_EXISTE", "Ese perfil ya no existe.");
+				if (!pp::deHex(pf->registro, reg)) throw ErrorAccion("NO_SE_PUDO", "El perfil está dañado.");
+				nombre = pf->sinNombre ? std::string() : pf->nombre;
+			}
+			else {
+				for (auto& pf : base.datos.perfiles) if (pp::deHex(pf.registro, reg) && reg.size() == pp::kTamUsuario) break; else reg.clear();
+				if (reg.empty()) throw ErrorAccion("SIN_PERFILES", "Primero trae los Usuarios de PES (Avanzado › Traer de PES): sirven de base para un perfil nuevo.");
+			}
+			pp::OpcionesUsuario o;
+			if (!pp::leerOpciones(reg, o)) throw ErrorAccion("NO_SE_PUDO", "El perfil está dañado.");
+			if (id.empty()) o.tipoCursor = 4;
+			json op = { {"desplazamiento", o.desplazamiento}, {"preajuste", o.preajuste}, {"botones", json::array()}, {"cambiarCursor", o.cambiarCursor}, {"cursorSiguiente", o.cursorSiguiente}, {"tipoCursor", o.tipoCursor},
+				{"nivelPases", o.nivelPases}, {"paseProfundidad", o.paseProfundidad}, {"disparo", o.disparo}, {"guiaDireccion", o.guiaDireccion}, {"guiaObjetivo", o.guiaObjetivo}, {"guiaPosicion", o.guiaPosicion},
+				{"amago", o.amago}, {"entrada", o.entrada}, {"companero", o.companero} };
+			for (int b : o.botones) op["botones"].push_back(b);
+			return json{ {"id", id}, {"nombre", nombre}, {"opciones", op} };
+		});
+
+		// perfiles.editar{id?, nombre, parsecId?, opciones{…}} → crea (sin id) o actualiza un perfil. Parte del registro real del perfil
+		// (o de uno de la base si es nuevo) y cambia SOLO el nombre y los bytes de opciones conocidos. «Tipo de cursor» siempre «Datos personales».
+		p.registrar("perfiles.editar", [](const json& d, uint64_t) -> std::optional<json> {
+			std::lock_guard<std::mutex> g(mtxPerfiles);
+			const std::string id = d.contains("id") ? texto(d, "id", 20) : std::string();
+			const std::string nombre = texto(d, "nombre", 64);
+			if (!d.contains("opciones") || !d["opciones"].is_object()) throw ErrorAccion("DATOS_INVALIDOS", "Faltan las opciones.");
+			const json& op = d["opciones"];
+			auto num = [&](const char* k, int def) { return op.contains(k) && op[k].is_number_integer() ? op[k].get<int>() : def; };
+			pp::Base base(carpetaBasePerfiles());
+			std::string err;
+			if (!base.cargar(err)) throw ErrorAccion("BASE_DANADA", err);
+			std::vector<uint8_t> reg;
+			pp::PerfilAmigo* destino = nullptr;
+			if (!id.empty()) {
+				auto it = std::find_if(base.datos.perfiles.begin(), base.datos.perfiles.end(), [&](const pp::PerfilAmigo& x) { return x.id == id; });
+				if (it == base.datos.perfiles.end()) throw ErrorAccion("NO_EXISTE", "Ese perfil ya no existe.");
+				destino = &*it;
+				if (!pp::deHex(it->registro, reg) || reg.size() != pp::kTamUsuario) throw ErrorAccion("NO_SE_PUDO", "El perfil está dañado.");
+			}
+			else {
+				if (base.datos.perfiles.size() >= pp::Base::kMaxPerfiles) throw ErrorAccion("DEMASIADOS", "Ya hay demasiados perfiles en Link.");
+				for (auto& pf : base.datos.perfiles) if (pp::deHex(pf.registro, reg) && reg.size() == pp::kTamUsuario) break; else reg.clear();
+				if (reg.empty()) throw ErrorAccion("SIN_PERFILES", "Primero trae los Usuarios de PES (Avanzado › Traer de PES): sirven de base para un perfil nuevo.");
+			}
+			pp::OpcionesUsuario o;
+			pp::leerOpciones(reg, o);   // lo que no venga en el formulario se queda como estaba
+			o.desplazamiento = num("desplazamiento", o.desplazamiento); o.preajuste = num("preajuste", o.preajuste);
+			if (op.contains("botones") && op["botones"].is_array() && op["botones"].size() == o.botones.size())
+				for (size_t i = 0; i < o.botones.size(); i++) o.botones[i] = op["botones"][i].is_number_integer() ? op["botones"][i].get<int>() : o.botones[i];
+			o.cambiarCursor = num("cambiarCursor", o.cambiarCursor); o.cursorSiguiente = num("cursorSiguiente", o.cursorSiguiente);
+			o.tipoCursor = 4;   // pedido de Fralex: siempre «Datos personales»
+			o.nivelPases = num("nivelPases", o.nivelPases); o.paseProfundidad = num("paseProfundidad", o.paseProfundidad); o.disparo = num("disparo", o.disparo);
+			o.guiaDireccion = num("guiaDireccion", o.guiaDireccion); o.guiaObjetivo = num("guiaObjetivo", o.guiaObjetivo); o.guiaPosicion = num("guiaPosicion", o.guiaPosicion);
+			o.amago = num("amago", o.amago); o.entrada = num("entrada", o.entrada); o.companero = num("companero", o.companero);
+			std::string motivo;
+			if (!pp::ponerOpciones(reg, o, motivo) || !pp::ponerNombre(reg, nombre, motivo)) throw ErrorAccion("DATOS_INVALIDOS", motivo);
+			if (!pp::registroValido(reg, motivo)) throw ErrorAccion("NO_SE_PUDO", "El perfil que salió no es válido para PES (" + motivo + "). No se guardó.");
+			const pp::PerfilAmigo* ex = base.porNombre(nombre);
+			if (ex && ex->id != id) throw ErrorAccion("DATOS_INVALIDOS", "Ya hay otro perfil con ese nombre.");
+			std::string idFinal = id;
+			if (destino) {
+				if (destino->registro != pp::aHex(reg)) destino->anterior = destino->registro;
+				destino->registro = pp::aHex(reg); destino->nombre = nombre; destino->sinNombre = false; destino->actualizado = selloPerfiles();
+			}
+			else {
+				int mx = 0;
+				for (auto& x : base.datos.perfiles) if (x.id.size() > 1 && x.id[0] == 'p') mx = (std::max)(mx, atoi(x.id.c_str() + 1));
+				pp::PerfilAmigo n; n.id = "p" + std::to_string(mx + 1); n.nombre = nombre; n.registro = pp::aHex(reg); n.actualizado = selloPerfiles();
+				idFinal = n.id;
+				base.datos.perfiles.push_back(std::move(n));
+			}
+			if (d.contains("parsecId") && d["parsecId"].is_number_unsigned() && !base.vincular(idFinal, d["parsecId"].get<uint32_t>())) throw ErrorAccion("NO_SE_PUDO", "No pude ligar el perfil.");
+			if (!base.guardar(selloPerfiles(), err)) throw ErrorAccion("NO_SE_PUDO", err);
+			return estadoPerfiles(json{ {"editado", idFinal} });
+		});
+
 		p.registrar("perfiles.ruta", [](const json& d, uint64_t) -> std::optional<json> {
 			std::lock_guard<std::mutex> g(mtxPerfiles);
 			AjustesPerfiles a = leerAjustesPerfiles();
@@ -535,6 +623,12 @@ namespace phoenix::web {
 				auto ya = std::find_if(aplicadosAuto.begin(), aplicadosAuto.end(), [&](const AplicadoAuto& a) { return a.usuario == usuario; });
 				if (hexActual == perfil->registro) { if (ya != aplicadosAuto.end()) ya->escrito = hexActual; continue; }
 				if (ya != aplicadosAuto.end()) {
+					// el perfil cambió en Link (se editó con la persona sentada) y PES aún tiene la versión que Link puso: se pone la nueva
+					if (hexActual == ya->escrito) {
+						std::vector<uint8_t> ant2;
+						if (conexionAuto->escribirUsuario(usuario, nuevo, ant2, err)) { ya->escrito = perfil->registro; logAuto = "Actualicé el perfil «" + perfil->nombre + "» en el Usuario " + std::to_string(usuario + 1) + "."; }
+						continue;
+					}
 					// ya se le puso y la persona lo está cambiando en PES: se guarda en su perfil, no se vuelve a pisar
 					if (hexActual != ya->escrito) {
 						for (auto& pf : base.datos.perfiles) if (pf.id == perfil->id) {

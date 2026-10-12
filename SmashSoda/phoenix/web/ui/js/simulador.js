@@ -257,7 +257,7 @@ export function crearSimulador(enviar) {
     const p = s.partido;
     const e = {
       v: 1,
-      app: { version: "0.2.60", etapa: "beta 1", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
+      app: { version: "0.2.61", etapa: "beta 1", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
       noticias: { cargado: true, lista: s.noticias },
       chatGlobal: { cargado: true, pausado: s.chatGlobal.pausado, esperaSeg: s.chatGlobal.esperaSeg, rev: s.chatGlobal.mensajes.length, error: "" },
       web: { ...s.web, jugadoresLista: 3, versionLiga: "2026.10.08", eventosEnCola: 0 },
@@ -532,6 +532,9 @@ export function crearSimulador(enviar) {
     "perfiles.borrar": (d) => { perfilesSim(); const p = s.perfilesPes; p.perfiles = p.perfiles.filter((x) => x.id !== d.id); p.huecos = p.huecos.map((h) => (h === Number(d.id.slice(1)) ? 0 : h)); p.seleccion = p.seleccion.filter((x) => x !== d.id); return perfilesSim(); },
     "perfiles.renombrar": (d) => { perfilesSim(); const x = s.perfilesPes.perfiles.find((y) => y.id === d.id); if (x) { x.nombre = d.nombre; x.sinNombre = false; } return perfilesSim(); },
     "perfiles.ruta": () => perfilesSim(),
+    // Mi perfil de PES (simulado): opciones de ejemplo y guardado en memoria
+    "perfiles.opciones": (d) => { perfilesSim(); const x = d.id ? s.perfilesPes.perfiles.find((y) => y.id === d.id) : null; return { id: d.id || "", nombre: x ? x.nombre : "", opciones: (x && x.opciones) || { desplazamiento: 0, preajuste: 0, botones: [1, 3, 2, 0, 4, 6, 5, 7, 8, 8, 1, 3, 2, 0, 7, 5, 4, 6, 7, 7], cambiarCursor: 1, cursorSiguiente: 0, tipoCursor: 4, nivelPases: 1, paseProfundidad: 0, disparo: 0, guiaDireccion: 0, guiaObjetivo: 0, guiaPosicion: 0, amago: 1, entrada: 1, companero: 0 } }; },
+    "perfiles.editar": (d) => { perfilesSim(); const p = s.perfilesPes; let x = d.id ? p.perfiles.find((y) => y.id === d.id) : null; if (!x) { x = { id: "p" + (Math.max(...p.perfiles.map((y) => Number(y.id.slice(1)))) + 1), sinNombre: false, actualizado: "20261012-140000", tieneAnterior: false }; p.perfiles.push(x); } x.nombre = d.nombre; x.opciones = { ...d.opciones, tipoCursor: 4 }; if (d.parsecId !== undefined) { p.perfiles.forEach((y) => { if (y !== x && d.parsecId && y.parsecId === d.parsecId) y.parsecId = 0; }); x.parsecId = d.parsecId || 0; } return perfilesSim({ editado: x.id }); },
     // Usuario automático (simulado): sentados de prueba, vínculos persona→perfil y el interruptor
     "perfiles.auto": (d) => { perfilesSim(); s.perfilesPes.auto = !!d.si; return perfilesSim(); },
     "perfiles.vincular": (d) => { perfilesSim(); const p = s.perfilesPes; p.perfiles.forEach((x) => { if (x.id === d.id) x.parsecId = d.parsecId || 0; else if (d.parsecId && x.parsecId === d.parsecId) x.parsecId = 0; }); return perfilesSim(); },

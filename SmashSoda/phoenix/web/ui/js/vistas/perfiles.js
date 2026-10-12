@@ -10,6 +10,33 @@ import { t } from "../i18n.js";
 import { accion, avisar, confirmar } from "../tienda.js";
 import { Tarjeta, Titulo, Boton, Chip, cx } from "../ui.js";
 
+// Etiquetas de «Editar Datos personales» (PES 2021 ConmeGOL). Los valores son los BYTES que guarda PES; otros parches pueden
+// llamar distinto a las opciones, por eso el texto vive aquí y no en el código de Link.
+const SINO = [[0, "Sí"], [1, "No"]];
+const BASICO = [[0, "Básico"], [1, "Avanzado"]];
+const GRUPOS = [
+  { titulo: "Cursor", campos: [
+    ["cambiarCursor", "Cambiar cursor", [[1, "Semiasistido"], [2, "Sin ayuda"], [0, "Asistido (sin comprobar)"]]],
+    ["cursorSiguiente", "Cursor de siguiente jugador", SINO],
+  ] },
+  { titulo: "Pases y disparo", campos: [
+    ["nivelPases", "Nv. de ayuda en pases", [[1, "Nivel 1"], [2, "Nivel 2"]]],
+    ["paseProfundidad", "Tipo de pase en profundidad", BASICO],
+    ["disparo", "Tipo de disparo", BASICO],
+  ] },
+  { titulo: "Ayudas", campos: [
+    ["guiaDireccion", "Guía de dirección", SINO],
+    ["guiaObjetivo", "Guía de objetivo", SINO],
+    ["guiaPosicion", "Guía de posicionamiento", SINO],
+    ["amago", "Amago automático", SINO],
+    ["entrada", "Entrada automática", [[1, "Semiautomático"], [2, "No"], [0, "Automático (sin comprobar)"]]],
+    ["companero", "Controles de compañero", [[0, "Asistido"], [1, "Manual"]]],
+  ] },
+];
+const BOTONES = ["×", "○", "□", "△", "L1", "R1", "L2", "R2", "Ninguno"];
+const ETIQ_ATAQUE = ["Pase bombeado", "Pase en profundidad", "Disparo", "Pase raso", "Cambiar cursor", "Controles manuales", "Esprintar", "Controles especiales", "Botón 9", "Botón 10"];
+const ETIQ_DEFENSA = ["Entrada deslizante", "Salir con el portero", "Presión de compañeros", "Presión", "Botón 5", "Botón 6", "Botón 7", "Botón 8", "Botón 9", "Botón 10"];
+
 export function PerfilesPes() {
   const [d, setD] = useState(null);
   const [sel, setSel] = useState(null);       // ids elegidos «para hoy» (se inicializa con lo guardado)
@@ -22,6 +49,7 @@ export function PerfilesPes() {
   const [mandos, setMandos] = useState(null);  // prueba en vivo: Usuario que tiene cada mando
   const [perfilL, setPerfilL] = useState("");  // ligar por ID: perfil elegido
   const [idL, setIdL] = useState("");          // ligar por ID: ID de Parsec
+  const [form, setForm] = useState(null);   // formulario «Mi perfil de PES»: {id, nombre, parsecId, opciones}
 
   const cargar = async () => { const r = await accion("perfiles.estado", {}, { silencioso: true }); if (r) { setD(r); setSel((s) => s || r.seleccion || []); } };
   useEffect(() => { cargar(); const id = setInterval(cargar, 3000); return () => clearInterval(id); }, []);
@@ -76,6 +104,25 @@ export function PerfilesPes() {
     if (r) { setD(r); setEditando(null); setNuevo(""); avisar(t("Nombre cambiado.", "Name changed."), "ok", 4000); }
   };
 
+  const abrirForm = async (id) => {
+    const r = await accion("perfiles.opciones", id ? { id } : {});
+    if (r) { const pf = perfiles.find((x) => x.id === id); setForm({ id: id || "", nombre: r.nombre || "", parsecId: pf && pf.parsecId ? String(pf.parsecId) : "", opciones: r.opciones }); }
+  };
+  const setOp = (k, v) => setForm((f) => ({ ...f, opciones: { ...f.opciones, [k]: v } }));
+  const setBoton = (i, v) => setForm((f) => ({ ...f, opciones: { ...f.opciones, botones: f.opciones.botones.map((b, j) => (j === i ? v : b)) } }));
+  const guardarForm = async () => {
+    const pid = Number(form.parsecId);
+    const datos = { id: form.id || undefined, nombre: form.nombre.trim(), opciones: form.opciones };
+    if (form.parsecId !== "" && pid > 0) datos.parsecId = pid; else if (form.id) datos.parsecId = 0;
+    setOcupado(true);
+    const r = await accion("perfiles.editar", datos);
+    setOcupado(false);
+    if (r) { setD(r); setForm(null); avisar(t("Perfil guardado. Si esa persona se sienta, Link se lo pone solo.", "Profile saved. If that person sits, Link applies it automatically."), "ok", 6000); }
+  };
+  const fila = (etiqueta, control) => html`<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span style="font-size:13px;flex:1;min-width:170px">${etiqueta}</span>${control}</div>`;
+  const selOp = (k, lista) => html`<select class="campo" style="max-width:230px" value=${form.opciones[k]} onChange=${(e) => setOp(k, Number(e.currentTarget.value))}>${lista.map(([v, tx]) => html`<option key=${v} value=${v}>${tx}</option>`)}</select>`;
+  const bloqueBotones = (titulo, etiquetas, desde) => html`<div class="mono mut" style="font-size:12px;margin-top:6px">${titulo}</div>${etiquetas.map((e, i) => fila(e, html`<select class="campo" style="max-width:120px" value=${form.opciones.botones[desde + i]} onChange=${(ev) => setBoton(desde + i, Number(ev.currentTarget.value))}>${BOTONES.map((b, v) => html`<option key=${v} value=${v}>${b}</option>`)}</select>`))}`;
+
   return html`<div class="col" style="gap:14px">
     <${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:12px">
       <${Titulo} texto=${t("USUARIO AUTOMÁTICO", "AUTOMATIC USER")} derecha=${html`<${Chip} tipo=${d.auto ? "ok" : "warn"}>${d.auto ? t("ACTIVADO", "ON") : t("APAGADO", "OFF")}</${Chip}>`}/>
@@ -115,19 +162,33 @@ export function PerfilesPes() {
       <${Titulo} texto=${t("MIS PERFILES", "MY PROFILES")} derecha=${html`<span class="mono mut" style="font-size:13px">${perfiles.length}</span>`}/>
       <div class="ayuda" style="font-size:14px">${t("Cada perfil es el nombre y la configuración de una persona. Ligado = Link se lo pone solo cuando se siente.", "Each profile is a person's name and settings. Linked = Link applies it automatically when they sit.")}</div>
       ${d.error ? html`<div class="caja" style="font-size:13px"><span class="punto bad"></span> ${d.error}</div>` : null}
+      ${form ? html`<div class="caja" style="display:flex;flex-direction:column;gap:10px;padding:14px 16px;border:1px solid var(--accent, #22d3ee)">
+        <div class="mono" style="font-size:13px">${form.id ? t("EDITAR PERFIL", "EDIT PROFILE") : t("PERFIL NUEVO", "NEW PROFILE")}</div>
+        <div class="ayuda" style="font-size:13px">${t("Es lo mismo que «Editar Datos personales» de PES. Escribe el nombre como quiere aparecer la persona y elige sus opciones. Cuando se siente, Link se lo pone solo.", "Same as PES's «Edit personal data». Type the name as the person wants to appear and choose their options. When they sit, Link applies it automatically.")}</div>
+        ${fila(t("Datos personales (nombre)", "Personal data (name)"), html`<input type="text" class="campo" style="max-width:260px" maxLength=${31} value=${form.nombre} placeholder=${t("Nombre real (máx. 31)", "Real name (max 31)")} onInput=${(e) => { const v = e.currentTarget.value; setForm((f) => ({ ...f, nombre: v })); }}/>`)}
+        ${fila(t("ID de Parsec de la persona (opcional)", "Person's Parsec ID (optional)"), html`<input type="number" class="campo" min="1" style="max-width:170px" value=${form.parsecId} placeholder="ID" onInput=${(e) => { const v = e.currentTarget.value; setForm((f) => ({ ...f, parsecId: v })); }}/>`)}
+        <div class="mono mut" style="font-size:12px;margin-top:6px">${t("CONFIGURACIÓN DE COMANDOS", "BUTTON CONFIGURATION")}</div>
+        ${fila(t("Preajuste", "Preset"), selOp("preajuste", [[0, "Normal"], [1, "Alternativa"], [2, "Personalizado (sin comprobar)"]]))}
+        ${fila(t("Desplazamiento de jugadores", "Player movement"), selOp("desplazamiento", [[0, "Stick izquierdo"], [1, "Cruceta"]]))}
+        ${form.opciones.preajuste === 2 ? html`<div class="ayuda" style="font-size:12px">${t("Botones del preajuste Personalizado. Los nombres de las acciones pueden variar según el parche; los botones son ×, ○, □, △ (C del teclado = □).", "Buttons for the Custom preset. Action names may vary by patch.")}</div>${bloqueBotones(t("ATAQUE", "ATTACK"), ETIQ_ATAQUE, 0)}${bloqueBotones(t("DEFENSA", "DEFENSE"), ETIQ_DEFENSA, 10)}` : null}
+        ${GRUPOS.map((g) => html`<div key=${g.titulo}><div class="mono mut" style="font-size:12px;margin:6px 0">${g.titulo.toUpperCase()}</div><div style="display:flex;flex-direction:column;gap:6px">${g.campos.map(([k, e, lista]) => html`<div key=${k}>${fila(e, selOp(k, lista))}</div>`)}${g.titulo === "Cursor" ? fila(t("Tipo de cursor", "Cursor type"), html`<span class="mut" style="font-size:13px">${t("Datos personales (fijo)", "Personal data (fixed)")}</span>`) : null}</div></div>`)}
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px">
+          <${Boton} tipo="suave" al=${() => setForm(null)}>${t("CANCELAR", "CANCEL")}</${Boton}>
+          <${Boton} tipo="lleno" deshabilitado=${ocupado || !form.nombre.trim()} al=${guardarForm}>${t("GUARDAR PERFIL", "SAVE PROFILE")}</${Boton}>
+        </div>
+      </div>` : null}
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
         <div style="flex:1;min-width:160px"><input type="text" class="campo" maxLength=${40} value=${buscar} placeholder=${t("Buscar amigo…", "Search friend…")} onInput=${(e) => setBuscar(e.currentTarget.value)}/></div>
+        <${Boton} tipo="lleno mini" deshabilitado=${ocupado} al=${() => abrirForm("")}>${t("+ NUEVO PERFIL", "+ NEW PROFILE")}</${Boton}>
       </div>
       ${perfiles.length ? html`<div style="display:flex;flex-direction:column;gap:6px;max-height:420px;overflow:auto">
         ${perfiles.filter((p) => !q || p.nombre.toLowerCase().includes(q)).sort((a, b) => (!!b.parsecId - !!a.parsecId) || a.nombre.localeCompare(b.nombre)).map((p) => html`<div key=${p.id} class="caja" style="display:flex;flex-direction:column;gap:6px;padding:8px 12px">
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
             <b style="font-size:15px;overflow-wrap:anywhere;flex:1;min-width:0">${p.nombre}</b>
             ${p.parsecId ? html`<${Chip} tipo="ok">${t("LIGADO · #", "LINKED · #")}${p.parsecId}</${Chip}>` : html`<${Chip}>${t("SIN LIGAR", "NOT LINKED")}</${Chip}>`}
-            <${Boton} tipo="suave mini" al=${() => { setEditando(editando === p.id ? null : p.id); setNuevo(p.sinNombre ? "" : p.nombre); }}>${t("NOMBRE", "NAME")}</${Boton}>
+            <${Boton} tipo="suave mini" al=${() => abrirForm(p.id)}>${t("EDITAR", "EDIT")}</${Boton}>
             <${Boton} tipo="suave mini" al=${() => borrar(p)}>${t("BORRAR", "DELETE")}</${Boton}>
           </div>
-          ${editando === p.id ? html`<div style="display:flex;gap:8px;align-items:center"><div style="flex:1;min-width:0"><input type="text" class="campo" maxLength=${31} value=${nuevo} placeholder=${t("Nombre del amigo (máx. 31)", "Friend's name (max 31)")} onInput=${(e) => setNuevo(e.currentTarget.value)}/></div>
-            <${Boton} tipo="lleno mini" deshabilitado=${!nuevo.trim()} al=${renombrar}>${t("GUARDAR", "SAVE")}</${Boton}></div>` : null}
         </div>`)}
       </div>` : html`<div class="ayuda" style="font-size:13px">${t("Aún no hay perfiles. Abre «Avanzado» y pulsa «Traer de PES».", "No profiles yet. Open «Advanced» and press «Bring from PES».")}</div>`}
     </${Tarjeta}>

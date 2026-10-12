@@ -13,7 +13,7 @@ set "RUN=%T%\corrida-%RANDOM%"
 cl /nologo /c /TC /W1 "%C%\crypt.c" "%C%\masterkey.c" "%C%\mt19937ar.c" "%C%\pesxvalidar.c" /Fo"%T%\\" || exit /b 1
 set "OBJ=%T%\crypt.obj %T%\masterkey.obj %T%\mt19937ar.obj %T%\pesxvalidar.obj"
 cl /nologo /std:c++17 /EHsc /utf-8 /I"%R%\SmashSoda" /I"%R%\SmashSoda\phoenix" /I"%R%\external" "%R%\pruebas-link\perfiles_test.cpp" "%R%\SmashSoda\phoenix\core\PerfilesPes.cpp" %OBJ% /Fo"%T%\\" /Fe"%T%\perfiles_test.exe" || exit /b 1
-cl /nologo /std:c++17 /EHsc /utf-8 /I"%R%\SmashSoda" /I"%R%\SmashSoda\phoenix" /I"%R%\external" "%R%\pruebas-link\perfiles_amigos_test.cpp" "%R%\SmashSoda\phoenix\core\PerfilesAmigos.cpp" "%R%\SmashSoda\phoenix\core\PerfilesPes.cpp" %OBJ% /Fo"%T%\\" /Fe"%T%\perfiles_amigos_test.exe" || exit /b 1
+cl /nologo /std:c++17 /EHsc /utf-8 /I"%R%\SmashSoda" /I"%R%\SmashSoda\phoenix" /I"%R%\external" "%R%\pruebas-link\perfiles_amigos_test.cpp" "%R%\SmashSoda\phoenix\core\PerfilesAmigos.cpp" "%R%\SmashSoda\phoenix\core\OpcionesUsuario.cpp" "%R%\SmashSoda\phoenix\core\PerfilesPes.cpp" %OBJ% /Fo"%T%\\" /Fe"%T%\perfiles_amigos_test.exe" || exit /b 1
 "%T%\perfiles_test.exe" "%RUN%-a" %1 | findstr /v /b "Usuario" || exit /b 1
 "%T%\perfiles_amigos_test.exe" "%RUN%-b" %1
 exit /b %errorlevel%
