@@ -20,6 +20,8 @@ namespace phoenix::web {
 
 	/// ¿Hay que leer el juego y mandar el campo a la web ahora mismo?
 	bool campoWebQuiere(Interno& in);
+	/// Estadísticas derivadas del partido como JSON: {pos:[%,%], pas, per, rec, tir, pue, cor, ban, met} (pares [A,B]).
+	nlohmann::json estadisticasJson(const phoenix::campo::EstadisticasPartido& e);
 	/// Con cada lectura nueva del juego: acumula la posesión y, como mucho 1/s, la manda con las fichitas (`ev`).
 	void campoWebFoto(Interno& in, const phoenix::campo::FotoCampo& fc, const nlohmann::json& ev, double ahora);
 

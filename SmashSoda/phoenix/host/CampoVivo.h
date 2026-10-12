@@ -41,6 +41,8 @@ namespace phoenix::campo {
 		/// hora (ms desde 1970) a la que se publicó esta lectura: la interfaz y la web restan para medir el retraso.
 		double lecturasPorSeg = 0, pasadaMediaMs = 0, pasadaMaxMs = 0;
 		long long tMs = 0;
+		EstadisticasPartido est;   ///< estadísticas derivadas (posesión, pases, tiros, córners…; aproximadas)
+		int portCopias = 0, portPuestos = 0;   ///< porteros: copias encontradas en el juego / puestos (uno por lado) que se están leyendo
 	};
 
 	void iniciar();                 ///< arranca el hilo (idempotente)

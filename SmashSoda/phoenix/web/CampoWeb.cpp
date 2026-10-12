@@ -32,6 +32,16 @@ namespace phoenix::web {
 
 	using namespace detalle_campo_web;
 
+	nlohmann::json estadisticasJson(const phoenix::campo::EstadisticasPartido& e) {
+		json j;
+		const double total = e.tPosesion[0] + e.tPosesion[1];
+		if (total >= 2.0) { const double a = std::round(1000.0 * e.tPosesion[0] / total) / 10.0; j["pos"] = json::array({ a, std::round((100.0 - a) * 10.0) / 10.0 }); }
+		auto par = [&](const char* k, const int* v) { j[k] = json::array({ v[0], v[1] }); };
+		par("pas", e.pases); par("per", e.perdidas); par("rec", e.recuperaciones); par("tir", e.tiros); par("pue", e.tirosPuerta);
+		par("cor", e.corners); par("ban", e.saquesBanda); par("met", e.saquesMeta);
+		return j;
+	}
+
 	bool campoWebQuiere(Interno& in) {
 		try {
 			const PhoenixPrefs& pr = PhoenixPrefs::get();
@@ -63,6 +73,7 @@ namespace phoenix::web {
 			e.ultimoEnvio = ahora;
 			json c = ev;   // {j:[[x,z,eq]…], b:[x,z,y]|null, t?:tanda}
 			c["v"] = 1;
+			c["est"] = estadisticasJson(fc.est);   // estadísticas derivadas (aproximadas)
 			c["fase"] = fc.fase;   // vivo | pausa | repeticion | otro (en repeticion las posiciones van congeladas)
 			c["equipos"] = fc.equiposListos;   // false = aún sin colores (se ponen en el siguiente saque de centro)
 			const long long total = e.conBalon[0] + e.conBalon[1];

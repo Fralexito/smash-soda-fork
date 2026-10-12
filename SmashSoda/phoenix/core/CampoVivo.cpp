@@ -268,4 +268,64 @@ namespace phoenix::campo {
 		return poseedor_;
 	}
 
+	// ---- Estadísticas derivadas ----
+	void Estadisticas::alimentar(double t, bool hayBola, float bx, float by, float bz, int poseedor, const std::vector<int>& eq, const std::vector<PuntoCampo>& j, int ladoDefensaA) {
+		const double dt = (tUltimo_ > 0 && t > tUltimo_) ? (t - tUltimo_) : 0.0;
+		tUltimo_ = t;
+		if (!hayBola) { previo_ = false; return; }
+		float vx = 0, vz = 0;
+		if (previo_ && dt > 0 && dt < 0.5) { vx = (bx - px_) / static_cast<float>(dt); vz = (bz - pz_) / static_cast<float>(dt); }
+		previo_ = true; px_ = bx; pz_ = bz;
+		const float vel = std::sqrt(vx * vx + vz * vz);
+
+		const int eqPos = (poseedor >= 0 && poseedor < static_cast<int>(eq.size())) ? eq[static_cast<size_t>(poseedor)] : -1;
+		const int eqP = (eqPos == 0 || eqPos == 1) ? eqPos : -1;
+		// posesión, pases, pérdidas y recuperaciones
+		if (eqP >= 0) {
+			e_.tPosesion[eqP] += dt;
+			if (poseedor != piezaAnterior_) {
+				if (eqAnterior_ >= 0 && t - tSoltado_ <= 3.0) {
+					if (eqAnterior_ == eqP) e_.pases[eqP]++;
+					else { e_.perdidas[eqAnterior_]++; e_.recuperaciones[eqP]++; }
+				}
+				piezaAnterior_ = poseedor; eqAnterior_ = eqP;
+			}
+			ultimoEq_ = eqP;
+			tSoltado_ = t;   // mientras lo lleva, «el momento en que lo soltó» es ahora
+		}
+		// tiro: balón lanzado hacia la portería rival, poco después de que lo llevara alguien
+		if (eqP < 0 && ultimoEq_ >= 0 && ladoDefensaA != 0 && vel > 14.0f && t - tSoltado_ < 0.6 && t - tTiro_ > 3.0 && std::fabs(vx) > 1e-3f) {
+			const int ataca = ultimoEq_ == 0 ? -ladoDefensaA : ladoDefensaA;   // +1 = ataca hacia x > 0
+			const float golX = 52.5f * static_cast<float>(ataca);
+			if (vx * static_cast<float>(ataca) > 0 && std::fabs(golX - bx) <= 32.0f) {
+				const float zLinea = bz + vz * ((golX - bx) / vx);
+				if (std::fabs(zLinea) < 7.0f) {
+					e_.tiros[ultimoEq_]++;
+					if (std::fabs(zLinea) < 4.2f) e_.tirosPuerta[ultimoEq_]++;
+					tTiro_ = t;
+				}
+			}
+		}
+		// balón fuera: córner, saque de puerta, saque de banda (un gol no cuenta)
+		const bool golPosible = std::fabs(bz) < 3.7f && by < 2.6f && std::fabs(bx) > 52.4f;
+		const bool saleFondo = std::fabs(bx) > 52.8f, saleBanda = std::fabs(bz) > 34.3f;
+		if (!fuera_ && (saleFondo || saleBanda) && !golPosible && ultimoEq_ >= 0 && ladoDefensaA != 0) {
+			fuera_ = true;
+			const int otro = 1 - ultimoEq_;
+			if (saleFondo) {
+				// ¿de quién es la portería por la que sale? A defiende x = 52,5 * ladoDefensaA
+				const int equipoDefensor = (bx * static_cast<float>(ladoDefensaA) > 0) ? 0 : 1;
+				if (ultimoEq_ == equipoDefensor) e_.corners[otro]++;       // lo tocó el que defiende: córner para el rival
+				else e_.saquesMeta[equipoDefensor]++;                      // lo tocó el atacante: saque de puerta
+			}
+			else e_.saquesBanda[otro]++;
+		}
+		else if (fuera_ && std::fabs(bx) < 52.0f && std::fabs(bz) < 33.8f) {
+			tDentro_ += dt;
+			if (tDentro_ > 0.5) { fuera_ = false; tDentro_ = 0; }
+		}
+		else if (fuera_) tDentro_ = 0;
+		(void)j;
+	}
+
 }

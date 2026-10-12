@@ -152,4 +152,36 @@ namespace phoenix::campo {
 		float px_ = 0, pz_ = 0;
 	};
 
+	/// Estadísticas del partido DERIVADAS de las posiciones y del poseedor del balón (aproximadas: el juego no las da).
+	/// Índice 0 = equipo A, 1 = equipo B.
+	struct EstadisticasPartido {
+		double tPosesion[2] = { 0, 0 };   ///< segundos con el balón
+		int pases[2] = { 0, 0 };          ///< pases completados (el balón pasa a otro jugador del mismo equipo en <= 3 s)
+		int perdidas[2] = { 0, 0 };       ///< pérdidas (el balón pasa al otro equipo en <= 3 s)
+		int recuperaciones[2] = { 0, 0 }; ///< recuperaciones (las pérdidas del otro equipo)
+		int tiros[2] = { 0, 0 };          ///< tiros: balón lanzado > 14 m/s hacia la portería rival, a <= 32 m, que apunta al marco ampliado (|z| < 7)
+		int tirosPuerta[2] = { 0, 0 };    ///< tiros cuya trayectoria entra por el marco (|z| < 4,2 al llegar a la línea)
+		int corners[2] = { 0, 0 };        ///< córners a favor
+		int saquesBanda[2] = { 0, 0 };    ///< saques de banda a favor
+		int saquesMeta[2] = { 0, 0 };     ///< saques de puerta a favor
+	};
+
+	class Estadisticas {
+	public:
+		/// Una lectura en juego en vivo (no en repeticiones). t en segundos (creciente). eq por ficha (0/1/2/-1), poseedor = índice en j o -1.
+		/// ladoDefensaA: -1 = A defiende la portería de x < 0 (ataca hacia x > 0), +1 = al revés, 0 = aún no se sabe.
+		void alimentar(double t, bool hayBola, float bx, float by, float bz, int poseedor, const std::vector<int>& eq, const std::vector<PuntoCampo>& j, int ladoDefensaA);
+		const EstadisticasPartido& estado() const { return e_; }
+		void reiniciar() { *this = Estadisticas(); }
+
+	private:
+		EstadisticasPartido e_;
+		double tUltimo_ = 0, tSoltado_ = -10, tTiro_ = -10, tDentro_ = 0;
+		int ultimoEq_ = -1;        ///< equipo del último que llevó el balón
+		int eqAnterior_ = -1;      ///< equipo del poseedor anterior (para pases/pérdidas)
+		int piezaAnterior_ = -1;   ///< índice (en j) del poseedor anterior
+		bool fuera_ = false;
+		bool previo_ = false; float px_ = 0, pz_ = 0;
+	};
+
 }

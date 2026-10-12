@@ -250,7 +250,7 @@ export function crearSimulador(enviar) {
     const p = s.partido;
     const e = {
       v: 1,
-      app: { version: "0.2.37", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
+      app: { version: "0.2.38", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
       noticias: { cargado: true, lista: s.noticias },
       chatGlobal: { cargado: true, pausado: s.chatGlobal.pausado, esperaSeg: s.chatGlobal.esperaSeg, rev: s.chatGlobal.mensajes.length, error: "" },
       web: { ...s.web, jugadoresLista: 3, versionLiga: "2026.10.08", eventosEnCola: 0 },
@@ -594,7 +594,7 @@ export function crearSimulador(enviar) {
     const eq = n % 2;
     return { l, e: eq, listo: fase < 6, vuelo: fase >= 6 && fase < 7.5 };
   };
-  setInterval(() => { if (s.campoVivo) { const d = campoSim(); if (Math.floor(Date.now() / 4000) % 8 === 7) d.f = "repeticion"; d.c = ["#75aadb", "#f6d90f"]; d.p = Math.floor(Date.now() / 1500) % 22; d.ts = Date.now(); const tt = tandaSim(); if (tt) d.t = tt; enviar({ t: "evento", nombre: "campo", datos: d }); } }, 50);
+  setInterval(() => { if (s.campoVivo) { const d = campoSim(); if (Math.floor(Date.now() / 4000) % 8 === 7) d.f = "repeticion"; d.c = ["#75aadb", "#f6d90f"]; d.p = Math.floor(Date.now() / 1500) % 22; d.ts = Date.now(); if (Math.floor(Date.now() / 1000) % 2 === 0) d.est = { pos: [58.3, 41.7], pas: [41, 29], tir: [6, 3], pue: [3, 1], cor: [2, 1], ban: [9, 11], met: [2, 3], rec: [12, 15], per: [15, 12] }; const tt = tandaSim(); if (tt) d.t = tt; enviar({ t: "evento", nombre: "campo", datos: d }); } }, 50);
   setTimeout(() => global("Kaiser", "¿alguien para unas revanchas?", "jugador"), 11000);
 
   return {

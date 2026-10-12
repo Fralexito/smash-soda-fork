@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
@@ -85,6 +86,9 @@ namespace phoenix::campo {
 
 		/// Un balón candidato: el del partido es el que se mueve (los de los recogepelotas no).
 		struct Candidato { Actor a; float ux = 0, uz = 0; double ultimoCambio = 0; };
+		/// Los porteros tienen DOS copias en el juego (una se mueve, la otra se queda en el sitio del saque): por cada lado hay que
+		/// leer la que se mueve. «slot» es el puesto en la lista de lectura; «cs» las copias; «elegido» la que se lee ahora.
+		struct GrupoPortero { size_t slot = 0; std::vector<Candidato> cs; size_t elegido = 0; };
 
 		void bucle() {
 			SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_BELOW_NORMAL);
@@ -102,13 +106,16 @@ namespace phoenix::campo {
 			const auto tInicio = std::chrono::steady_clock::now();
 			auto proximaLectura = tInicio;
 			Poseedor poseedor;            // quién lleva el balón (histéresis)
+			std::vector<GrupoPortero> grupos;   // porteros: un grupo por lado (con sus copias)
+			int portCopias = 0;
+			Estadisticas estad;           // estadísticas derivadas del partido
 			// diagnóstico: ventana de ~1 s
 			auto ventanaDesde = tInicio; int ventanaN = 0; double ventanaSuma = 0, ventanaMax = 0, lps = 0, pasadaMedia = 0, pasadaMax = 0;
 			uint32_t seq = 0;
 			FotoCampo ultima;             // última lectura en vivo buena (se congela en repeticiones y cortes de lectura)
 			int fallos = 0, sinBola = 0, quietos = 0;   // lecturas seguidas sin fichitas válidas / sin balón en juego / sin movimiento
 			bool enRepe = false;
-			auto cerrar = [&] { if (h) { CloseHandle(h); h = nullptr; } pidAbierto = 0; lista.clear(); equipos.clear(); antes.clear(); balones.clear(); tanda.reiniciar(); poseedor.reiniciar(); ultima = FotoCampo(); fallos = sinBola = quietos = 0; enRepe = false; };
+			auto cerrar = [&] { if (h) { CloseHandle(h); h = nullptr; } pidAbierto = 0; lista.clear(); equipos.clear(); antes.clear(); balones.clear(); tanda.reiniciar(); poseedor.reiniciar(); grupos.clear(); portCopias = 0; estad.reiniciar(); ultima = FotoCampo(); fallos = sinBola = quietos = 0; enRepe = false; };
 
 			while (!g_parar.load()) {
 				FotoCampo f;
@@ -149,7 +156,28 @@ namespace phoenix::campo {
 						const Hallazgos hz = escanear(h);
 						lista = elegirLista(hz.campo);
 						if (lista.empty()) { dormir(3000); continue; }
-						for (const Actor& p : elegirPorteros(hz.porteros)) lista.push_back(p);
+						// porteros: por cada lado, todas sus copias; se empieza por la de menor dirección y se pasa a la que se mueva
+						grupos.clear(); portCopias = static_cast<int>(hz.porteros.size());
+						for (const bool izquierda : { true, false }) {
+							GrupoPortero g;
+							for (const Actor& p : hz.porteros) if ((p.x < 0) == izquierda) { Candidato c; c.a = p; c.ux = p.x; c.uz = p.z; g.cs.push_back(c); }
+							if (g.cs.empty()) continue;
+							std::sort(g.cs.begin(), g.cs.end(), [](const Candidato& a, const Candidato& b) { return a.a.dir < b.a.dir; });
+							g.slot = lista.size(); g.elegido = 0;
+							lista.push_back(g.cs.front().a);
+							grupos.push_back(std::move(g));
+						}
+						{   // volcado del escaneo para diagnóstico (se sobrescribe en cada escaneo)
+							try {
+								FILE* fd = nullptr;
+								if (fopen_s(&fd, (std::filesystem::temp_directory_path() / "phoenix-campo-escaneo.txt").string().c_str(), "w") == 0 && fd) {
+									fprintf(fd, "jugadores de campo encontrados: %zu, lista elegida: %zu, porteros (copias): %zu, balones: %zu\n", hz.campo.size(), lista.size() - grupos.size(), hz.porteros.size(), hz.balones.size());
+									for (const Actor& p : hz.porteros) fprintf(fd, "portero dir=%llX cod=%u x=%.1f y=%.2f z=%.1f\n", static_cast<unsigned long long>(p.dir), p.codigo, p.x, p.y, p.z);
+									for (const GrupoPortero& g : grupos) fprintf(fd, "grupo lado %s: %zu copias\n", g.cs.front().a.x < 0 ? "izquierdo" : "derecho", g.cs.size());
+									fclose(fd);
+								}
+							} catch (...) {}
+						}
 						equipos.assign(lista.size(), kEqDesconocido);
 						antes.clear();
 						balones.clear();
@@ -157,6 +185,21 @@ namespace phoenix::campo {
 					}
 
 					const auto tPasada = std::chrono::steady_clock::now();
+					{   // porteros: ¿qué copia se mueve? (la otra se queda donde el saque y no sirve)
+						const double ahoraS = std::chrono::duration<double>(tPasada - tInicio).count();
+						for (GrupoPortero& g : grupos) {
+							for (Candidato& c : g.cs) {
+								uint8_t b[16]; SIZE_T gg = 0; float x, y, z;
+								if (!ReadProcessMemory(h, reinterpret_cast<LPCVOID>(c.a.dir + kOffPosicion), b, 16, &gg) || gg != 16 || !leerPosicion(b, x, y, z)) continue;
+								if (std::fabs(x - c.ux) > 0.02f || std::fabs(z - c.uz) > 0.02f) { c.ultimoCambio = ahoraS; c.ux = x; c.uz = z; }
+								c.a.x = x; c.a.y = y; c.a.z = z;
+							}
+							size_t mejor = g.elegido;
+							for (size_t k = 0; k < g.cs.size(); k++) if (g.cs[k].ultimoCambio > g.cs[mejor].ultimoCambio) mejor = k;
+							// cambia solo si la elegida lleva > 1 s quieta y la otra se movió hace menos de 0,4 s (sin parpadeo entre dos copias vivas)
+							if (mejor != g.elegido && ahoraS - g.cs[g.elegido].ultimoCambio > 1.0 && ahoraS - g.cs[mejor].ultimoCambio < 0.4) { g.elegido = mejor; lista[g.slot].dir = g.cs[mejor].a.dir; }
+						}
+					}
 					// 4) leer posiciones (~30/s): 16 bytes por actor. Si más de 3 dejan de ser válidas, se vuelve a buscar.
 					int malos = 0; float maxDesp = 0;
 					std::vector<Actor> ahora = lista;
@@ -215,6 +258,18 @@ namespace phoenix::campo {
 						std::vector<PuntoCampo> pc; pc.reserve(f.j.size());
 						for (const Pieza& p : f.j) { PuntoCampo c; c.x = p.x; c.z = p.z; c.elegible = p.eq != kEqArbitro; pc.push_back(c); }
 						f.poseedor = poseedor.actualizar(pc, f.hayBola, f.bx, f.by, f.bz, reloj);
+						// estadísticas: A defiende el lado donde está su portero (cambia en el descanso)
+						int ladoA = 0;
+						for (const GrupoPortero& g : grupos) {
+							if (g.slot >= equipos.size() || ahora[g.slot].x > 1e8f) continue;
+							const int e = equipos[g.slot];
+							if (e == kEqA) { ladoA = ahora[g.slot].x < 0 ? -1 : 1; break; }
+							if (e == kEqB) { ladoA = ahora[g.slot].x < 0 ? 1 : -1; break; }
+						}
+						std::vector<int> eqs; eqs.reserve(f.j.size());
+						for (const Pieza& p : f.j) eqs.push_back(p.eq);
+						if (f.fase == "vivo" || f.fase == "pausa") estad.alimentar(reloj, f.hayBola, f.bx, f.by, f.bz, f.poseedor, eqs, pc, ladoA);
+						f.est = estad.estado();
 					}
 					f.tanda = tanda.estado();
 					f.equiposListos = !sinEquipos;
@@ -228,6 +283,7 @@ namespace phoenix::campo {
 						const double seg = std::chrono::duration<double>(fin - ventanaDesde).count();
 						if (seg >= 1.0) { lps = ventanaN / seg; pasadaMedia = ventanaSuma / ventanaN; pasadaMax = ventanaMax; ventanaDesde = fin; ventanaN = 0; ventanaSuma = 0; ventanaMax = 0; }
 						f.lecturasPorSeg = lps; f.pasadaMediaMs = pasadaMedia; f.pasadaMaxMs = pasadaMax;
+						f.portCopias = portCopias; f.portPuestos = static_cast<int>(grupos.size());
 						f.tMs = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 					}
 					ultima = f;

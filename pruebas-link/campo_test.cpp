@@ -240,6 +240,78 @@ int main() {
 			CHEQUEA(p.actualizar(k, true, 1.f, 0.1f, 1.f, 2.0) == -1);
 		}
 	}
+	// ---- Estadísticas derivadas ----
+	{
+		auto fichas = [](int n) { std::vector<PuntoCampo> v(static_cast<size_t>(n)); return v; };
+		const std::vector<int> eq = { 0, 0, 1, 1 };   // piezas 0,1 = A; 2,3 = B
+		// 1) posesión por tiempo: A 5 s, B 3 s
+		{
+			Estadisticas e; double t = 1.0;
+			for (int i = 0; i < 100; i++, t += 0.05) e.alimentar(t, true, 0.f, 0.1f, 0.f, 0, eq, fichas(4), -1);
+			for (int i = 0; i < 60; i++, t += 0.05) e.alimentar(t, true, 0.f, 0.1f, 0.f, 2, eq, fichas(4), -1);
+			const auto& s = e.estado();
+			const double a = s.tPosesion[0], b = s.tPosesion[1];
+			CHEQUEA(a > 4.8 && a < 5.2); CHEQUEA(b > 2.8 && b < 3.2);
+		}
+		// 2) pase completado A→A en 1 s; pérdida A→B; pase tras >3 s libre no cuenta
+		{
+			Estadisticas e; double t = 1.0;
+			for (int i = 0; i < 10; i++, t += 0.05) e.alimentar(t, true, 0.f, 0.1f, 0.f, 0, eq, fichas(4), -1);
+			for (int i = 0; i < 20; i++, t += 0.05) e.alimentar(t, true, 5.f, 0.1f, 0.f, -1, eq, fichas(4), -1);   // en el aire 1 s
+			for (int i = 0; i < 10; i++, t += 0.05) e.alimentar(t, true, 10.f, 0.1f, 0.f, 1, eq, fichas(4), -1);
+			CHEQUEA(e.estado().pases[0] == 1);
+			for (int i = 0; i < 20; i++, t += 0.05) e.alimentar(t, true, 12.f, 0.1f, 0.f, -1, eq, fichas(4), -1);
+			for (int i = 0; i < 10; i++, t += 0.05) e.alimentar(t, true, 14.f, 0.1f, 0.f, 2, eq, fichas(4), -1);   // lo coge B
+			CHEQUEA(e.estado().perdidas[0] == 1); CHEQUEA(e.estado().recuperaciones[1] == 1);
+			for (int i = 0; i < 80; i++, t += 0.05) e.alimentar(t, true, 20.f, 0.1f, 0.f, -1, eq, fichas(4), -1);   // 4 s libre
+			for (int i = 0; i < 10; i++, t += 0.05) e.alimentar(t, true, 20.f, 0.1f, 0.f, 3, eq, fichas(4), -1);
+			CHEQUEA(e.estado().pases[1] == 0 && e.estado().recuperaciones[0] == 0);   // no cuenta: demasiado tiempo libre
+		}
+		// 3) tiro a puerta de A (A defiende x<0, ataca hacia +x) y tiro desviado
+		{
+			Estadisticas e; double t = 1.0;
+			for (int i = 0; i < 8; i++, t += 0.05) e.alimentar(t, true, 30.f, 0.1f, 1.f, 0, eq, fichas(4), -1);
+			float bx = 30.f;
+			for (int i = 0; i < 12; i++, t += 0.05) { bx += 1.1f; e.alimentar(t, true, bx, 0.5f, 1.f, i < 3 ? 0 : -1, eq, fichas(4), -1); }   // 22 m/s hacia la portería derecha
+			CHEQUEA(e.estado().tiros[0] == 1); CHEQUEA(e.estado().tirosPuerta[0] == 1);
+			t += 4.0;
+			for (int i = 0; i < 8; i++, t += 0.05) e.alimentar(t, true, 30.f, 0.1f, 8.f, 0, eq, fichas(4), -1);
+			bx = 30.f; float bz = 8.f;
+			for (int i = 0; i < 12; i++, t += 0.05) { bx += 1.1f; bz += 0.15f; e.alimentar(t, true, bx, 0.5f, bz, i < 3 ? 0 : -1, eq, fichas(4), -1); }   // se va a +11 m: no es tiro ni a puerta
+			CHEQUEA(e.estado().tiros[0] == 1);
+		}
+		// 4) córner / saque de puerta / banda / gol
+		{
+			Estadisticas e; double t = 1.0;
+			// A defiende x<0; B defiende x>0. Lo toca B y sale por el fondo derecho (z=15): córner para A
+			for (int i = 0; i < 8; i++, t += 0.05) e.alimentar(t, true, 50.f, 0.1f, 15.f, 2, eq, fichas(4), -1);
+			for (int i = 0; i < 10; i++, t += 0.05) e.alimentar(t, true, 53.5f, 0.1f, 15.f, -1, eq, fichas(4), -1);
+			CHEQUEA(e.estado().corners[0] == 1);
+			for (int i = 0; i < 30; i++, t += 0.05) e.alimentar(t, true, 45.f, 0.1f, 5.f, -1, eq, fichas(4), -1);   // vuelve al campo
+			// Lo toca A y sale por el mismo fondo: saque de puerta para B
+			for (int i = 0; i < 8; i++, t += 0.05) e.alimentar(t, true, 50.f, 0.1f, 15.f, 0, eq, fichas(4), -1);
+			for (int i = 0; i < 10; i++, t += 0.05) e.alimentar(t, true, 53.5f, 0.1f, 15.f, -1, eq, fichas(4), -1);
+			CHEQUEA(e.estado().saquesMeta[1] == 1);
+			for (int i = 0; i < 30; i++, t += 0.05) e.alimentar(t, true, 45.f, 0.1f, 5.f, -1, eq, fichas(4), -1);
+			// Banda: lo tocó A y sale por z=35: saque de banda para B
+			for (int i = 0; i < 8; i++, t += 0.05) e.alimentar(t, true, 10.f, 0.1f, 33.f, 0, eq, fichas(4), -1);
+			for (int i = 0; i < 10; i++, t += 0.05) e.alimentar(t, true, 10.f, 0.1f, 35.f, -1, eq, fichas(4), -1);
+			CHEQUEA(e.estado().saquesBanda[1] == 1);
+			for (int i = 0; i < 30; i++, t += 0.05) e.alimentar(t, true, 10.f, 0.1f, 20.f, -1, eq, fichas(4), -1);
+			// Gol (red de la portería derecha): no es córner ni saque
+			const auto antes = e.estado();
+			for (int i = 0; i < 8; i++, t += 0.05) e.alimentar(t, true, 50.f, 0.1f, 1.f, 0, eq, fichas(4), -1);
+			for (int i = 0; i < 6; i++, t += 0.05) e.alimentar(t, true, 53.f, 1.0f, 0.5f, -1, eq, fichas(4), -1);
+			CHEQUEA(e.estado().corners[0] == antes.corners[0] && e.estado().saquesMeta[1] == antes.saquesMeta[1]);
+		}
+		// 5) sin saber el lado de defensa: no inventa tiros ni córners, pero sí posesión
+		{
+			Estadisticas e; double t = 1.0;
+			for (int i = 0; i < 20; i++, t += 0.05) e.alimentar(t, true, 53.5f, 0.1f, 15.f, i < 5 ? 2 : -1, eq, fichas(4), 0);
+			CHEQUEA(e.estado().corners[0] + e.estado().corners[1] + e.estado().saquesMeta[0] + e.estado().saquesMeta[1] == 0);
+			CHEQUEA(e.estado().tPosesion[1] > 0);
+		}
+	}
 	std::printf(fallos ? "campo_test: %d FALLOS\n" : "campo_test: todo bien\n", fallos);
 	return fallos ? 1 : 0;
 }

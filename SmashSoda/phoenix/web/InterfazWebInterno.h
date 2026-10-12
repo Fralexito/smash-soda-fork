@@ -60,6 +60,7 @@ namespace phoenix::web {
 		bool campoRapido = false;                  ///< Partido › Campo abierto: lector del juego encendido y canal «campo» ~20/s
 		double ultimoCampo = 0.0;
 		uint32_t campoSeq = 0;                     ///< última lectura del campo que ya se mandó
+		double ultimoEst = 0.0;                    ///< último envío de estadísticas del campo a la interfaz
 		double ultimoMirando = 0.0;                ///< última vez que se miró quién ve el partido desde la web
 		std::vector<std::string> mirandoWeb;       ///< quién ve el partido desde la web (nombres)
 		std::set<std::string> mirandoAvisados;     ///< a quién ya se avisó en el chat de la sala (se olvida al irse)

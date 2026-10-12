@@ -454,7 +454,8 @@ namespace phoenix::web {
 				c = { {"estado", nombre}, {"motivo", fc.motivo}, {"jugadores", static_cast<int>(fc.j.size())}, {"balon", fc.hayBola}, {"equipos", fc.equiposListos}, {"tanda", fc.tanda.activa} };
 				const phoenix::CampoWebStats cw = PhoenixLink::instancia().campoWebStats();
 				c["diag"] = { {"lecturas", std::round(fc.lecturasPorSeg * 10.0) / 10.0}, {"pasadaMs", std::round(fc.pasadaMediaMs * 100.0) / 100.0}, {"pasadaMaxMs", std::round(fc.pasadaMaxMs * 100.0) / 100.0},
-					{"webPostMs", std::round(cw.ultimoMs)}, {"webPostMediaMs", std::round(cw.mediaMs)}, {"webEnviosPorSeg", std::round(cw.porSeg * 10.0) / 10.0}, {"webErrores", cw.errores}, {"mirando", static_cast<int>(in.mirandoWeb.size())} };
+					{"webPostMs", std::round(cw.ultimoMs)}, {"webPostMediaMs", std::round(cw.mediaMs)}, {"webEnviosPorSeg", std::round(cw.porSeg * 10.0) / 10.0}, {"webErrores", cw.errores}, {"mirando", static_cast<int>(in.mirandoWeb.size())},
+					{"portCopias", fc.portCopias}, {"portPuestos", fc.portPuestos} };
 			}
 			c["campoWeb"] = PhoenixPrefs::get().campoWeb;
 			e["campo"] = c;

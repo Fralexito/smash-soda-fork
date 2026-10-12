@@ -117,3 +117,23 @@ La heurística vieja (el más cercano a ≤ 2 m, calculada solo para la posesió
 
 ### Pendiente de verificar con un partido real (3–5 min contra la CPU)
 Comparar captura del juego frente al tablero (balón en el aire, saques, córners, repeticiones, pausa y vuelta al juego) y rellenar las cifras de retraso medidas.
+
+## 0.2.38 · Porteros y estadísticas del partido
+
+### Porteros
+Fralex: «no me reconocía los porteros». Los volcados reales (`ko_entes.txt`, `entes_raw.txt`) enseñan que el juego guarda **dos copias de cada portero** (a 640 bytes una de otra, `+312 = 1`, `+492 = 0x80001`) y que, hasta ahora, Link cogía la de menor dirección y un solo portero por lado. Si esa copia es la que se queda quieta en el sitio del saque, el portero salía parado (o no salía). Ahora, por cada lado, Link lee **todas las copias** y se queda con la que **se mueve** (cambia solo si la elegida lleva > 1 s quieta y la otra se movió hace < 0,4 s: sin parpadeo). También escribe `phoenix-campo-escaneo.txt` en la carpeta temporal (jugadores, copias de porteros con su posición y dirección) para diagnosticar sin volver a abrir el juego, y la tarjeta CAMPO enseña «porteros: N/2 (X copias)».
+Aún **no verificado con un partido real**: los volcados antiguos solo traen las copias del portero izquierdo; el derecho no aparece en ellos. Si con partido real sale «porteros 1/2», pásame `phoenix-campo-escaneo.txt`.
+
+### Estadísticas derivadas (`core/CampoVivo` → `Estadisticas`)
+El juego no deja leer sus estadísticas (la pantalla «Datos del jugador» solo existe al final del partido y no se encontró su almacén en memoria). Se calculan con las posiciones y el poseedor del balón; son **aproximadas** y se rotulan así:
+| Estadística | Cómo se calcula |
+|---|---|
+| Posesión | segundos con el balón por equipo |
+| Pases completados | el balón pasa a otro jugador del mismo equipo en ≤ 3 s |
+| Pérdidas / recuperaciones | pasa al otro equipo en ≤ 3 s |
+| Tiros / a puerta | balón lanzado > 14 m/s hacia la portería rival, a ≤ 32 m, que apunta a |z| < 7 (a puerta: < 4,2 al llegar a la línea); un pase largo muy tenso hacia el área puede contarse como tiro |
+| Córners / saques de puerta | el balón sale por la línea de fondo (no es gol): si lo tocó el defensor, córner del rival; si lo tocó el atacante, saque de puerta |
+| Saques de banda | sale por la banda: saque para el equipo que no lo tocó |
+El lado que defiende A se saca de dónde está su portero (cambia en el descanso). Pruebas sintéticas en `pruebas-link/campo_test.cpp` (posesión por tiempo, pase, pérdida, tiro/desvío, córner, saque de puerta, banda, gol, lado desconocido).
+**No se pueden leer todavía:** faltas, tarjetas amarillas y rojas, cambios (quién entra y quién sale), asistencias, fueras de juego. Opciones: (a) un módulo de Sider que observe los archivos de escena que carga el juego (`foul_pk_card_y01`…) — requiere tocar `sider.ini` con PES cerrado, decisión de Fralex; (b) buscar el almacén de estadísticas en memoria comparando antes/después de un evento con el juego congelado (necesita partido real).
+Protocolo: el evento `campo` y `POST /v1/liga/campo` traen `est:{pos,pas,per,rec,tir,pue,cor,ban,met}` (pares [A,B]); la web lo pinta en una tabla bajo el campo (Edge `liga` 1.6.0; repo web, commit `456d58e`).

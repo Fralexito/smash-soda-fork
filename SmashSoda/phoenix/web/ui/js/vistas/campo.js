@@ -7,7 +7,7 @@
 //  -1 sin equipo aún; t = tanda de penales, solo cuando hay una).
 //  Estado m.campo: { estado: apagado | esperando | buscando | activo | no_compatible, motivo, equipos, balon, tanda }.
 // =============================================================================
-import { html, useState, useEffect, useRef } from "../lib.js";
+import { html, Fragment, useState, useEffect, useRef } from "../lib.js";
 import { t } from "../i18n.js";
 import { accion, oirCampo } from "../tienda.js";
 import { Tarjeta, Titulo, Chip, Icono, Interruptor } from "../ui.js";
@@ -47,7 +47,9 @@ const COLOR = { 0: "var(--acc)", 1: "var(--eq-b, #b07bff)", 2: "#f5c451", "-1": 
 const NOMBRE_EQ = { 0: ["Equipo A", "Team A"], 1: ["Equipo B", "Team B"] };
 
 /** Dibuja el campo y mueve las fichitas con suavidad (animación directa sobre el SVG, sin redibujar Preact). */
-export function CampoSvg({ alTanda, alColores, alDiag }) {
+const FILAS_EST = [["pos", "Posesión", "Possession"], ["pas", "Pases completados", "Completed passes"], ["tir", "Tiros", "Shots"], ["pue", "Tiros a puerta", "Shots on target"], ["cor", "Córners", "Corners"], ["ban", "Saques de banda", "Throw-ins"], ["met", "Saques de puerta", "Goal kicks"], ["rec", "Recuperaciones", "Recoveries"], ["per", "Pérdidas", "Turnovers"]];
+
+export function CampoSvg({ alTanda, alColores, alDiag, alEst }) {
   const refs = useRef({ puntos: [], bola: null, obj: { j: [], b: null }, cur: { j: [], b: null }, t0: 0 });
   const [n, setN] = useState(0);
   const [clave, setClave] = useState("");
@@ -58,6 +60,7 @@ export function CampoSvg({ alTanda, alColores, alDiag }) {
       R.obj = { j: d.j || [], b: d.b || null, p: Number.isInteger(d.p) ? d.p : -1 };   // p = quién lleva el balón (índice en j; -1 = libre)
       if (d.ts) { const l = Date.now() - d.ts; R.lat = R.lat == null ? l : R.lat * 0.9 + l * 0.1; }   // retraso lectura → interfaz (mismo PC: mismo reloj)
       R.nEv = (R.nEv || 0) + 1;
+      if (d.est && alEst) alEst(d.est);
       setFase(d.f || "vivo");
       R.col = Array.isArray(d.c) && d.c.length === 2 && d.c.every((x) => /^#[0-9a-fA-F]{6}$/.test(x)) ? d.c : null;   // colores de camiseta (Link ≥ 0.2.30)
       if (alColores) alColores(R.col);
@@ -161,6 +164,8 @@ export function CampoEnVivo({ m }) {
   const [cols, setCols] = useState(null);
   const [dg, setDg] = useState({ retrasoMs: null, eventosPorSeg: 0 });
   const alDiag = (x) => setDg(x);
+  const [est, setEst] = useState(null);
+  const alEst = (e) => setEst(e);
   const colorEq = (i) => (cols ? cols[i] : COLOR[i]);
   const alColores = (c) => setCols((prev) => ((prev ? prev.join() : "") === (c ? c.join() : "") ? prev : c));
   useEffect(() => {
@@ -188,15 +193,20 @@ export function CampoEnVivo({ m }) {
         </span>` : null}
       </div>
       <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
-        <div style="flex:1 1 420px;max-width:680px;min-width:0"><${CampoSvg} alTanda=${alTanda} alColores=${alColores} alDiag=${alDiag}/>
+        <div style="flex:1 1 420px;max-width:680px;min-width:0"><${CampoSvg} alTanda=${alTanda} alColores=${alColores} alDiag=${alDiag} alEst=${alEst}/>
         ${activo && c.diag ? html`<div class="ayuda mono" style="margin-top:8px;font-size:12px;display:flex;gap:6px 18px;flex-wrap:wrap" title=${t("Diagnóstico del campo: sirve para comparar antes y después de cualquier cambio", "Pitch diagnostics: compare before/after any change")}>
+          <span>${t("porteros", "keepers")}: <b>${c.diag.portPuestos}/2</b> (${c.diag.portCopias} ${t("copias", "copies")})</span>
           <span>${t("lecturas del juego", "game reads")}: <b>${c.diag.lecturas}/s</b> (${t("pasada", "pass")} ${c.diag.pasadaMs} ms · ${t("máx", "max")} ${c.diag.pasadaMaxMs} ms)</span>
           <span>${t("retraso del campo hasta aquí", "pitch delay to here")}: <b>${dg.retrasoMs == null ? "—" : dg.retrasoMs + " ms"}</b> · ${dg.eventosPorSeg}/s</span>
           <span>${t("envío a la web", "web upload")}: <b>${c.diag.webEnviosPorSeg}/s</b> (${c.diag.webPostMediaMs} ms ${t("por envío", "each")}${c.diag.webErrores ? ` · ${c.diag.webErrores} ${t("fallos", "errors")}` : ""})${c.diag.mirando ? ` · ${c.diag.mirando} ${t("mirando", "watching")}` : ""}</span>
         </div>` : null}</div>
         <div style="flex:1 1 220px;min-width:200px;border:1px dashed var(--tenue);border-radius:12px;padding:14px">
           <b>${t("Estadísticas del partido", "Match stats")}</b>
-          <div class="ayuda" style="margin-top:6px;font-size:12px">${t("Aquí irán disparos, córners, faltas, tarjetas, cambios y más cuando Link los pueda leer.", "Shots, corners, fouls, cards, subs and more will go here once Link can read them.")}</div>
+          ${est ? html`<div style="margin-top:8px;display:grid;grid-template-columns:1fr auto auto;gap:4px 12px;font-size:13px;align-items:center">
+            <span></span><b style=${`color:${colorEq(0)}`}>A</b><b style=${`color:${colorEq(1)}`}>B</b>
+            ${FILAS_EST.map(([k, es, en]) => est[k] ? html`<${Fragment}><span class="mut">${t(es, en)}</span><span class="mono">${est[k][0]}${k === "pos" ? " %" : ""}</span><span class="mono">${est[k][1]}${k === "pos" ? " %" : ""}</span></${Fragment}>` : null)}
+          </div>` : null}
+          <div class="ayuda" style="margin-top:6px;font-size:12px">${t("Calculadas con las posiciones del campo (aproximadas). Faltas, tarjetas, cambios y asistencias todavía no se pueden leer del juego.", "Computed from pitch positions (approximate). Fouls, cards, subs and assists can't be read from the game yet.")}</div>
         </div>
       </div>
       ${activo && c.equipos === false ? html`<div class="ayuda" style="margin-top:10px">${t("Los equipos se colorean en el siguiente saque de centro (gol o descanso).", "Teams get their colours at the next kick-off (goal or half-time).")}</div>` : null}
