@@ -46,6 +46,7 @@ namespace phoenix {
 		std::string miPuestoModo = "fijo";  ///< fijo | local | visitante (primero de ese equipo)
 		int miPuestoNumero = 1;          ///< con modo fijo
 		bool sentarmeAlAbrir = true;     ///< al abrir la sala, el anfitrión ya queda sentado (si tiene su mando y hay sitio)
+		bool anfitrionCuenta = false;    ///< partido: contarlo como jugador en la web aunque no esté en un puesto (en su lado habitual: el de «Mi puesto al jugar»)
 		bool entrarPulsando = true;      ///< sin puesto, A/B/X/Y en su mando lo sienta en un puesto libre
 		bool soloAutorizados = true;  ///< puestos: pulsar el mando solo da puesto a quien el host autorizó (los demás «quieren jugar»)
 		std::string modoRecarga = "AUTO-SIEMPRE";  ///< phoenix.lua v0.18b (modo.txt): AUTO-SIEMPRE (por defecto) | AUTO-FICHAJES | ACTIVAR

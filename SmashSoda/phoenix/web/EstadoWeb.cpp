@@ -365,7 +365,7 @@ namespace phoenix::web {
 				{"formacion", { {"local", pr.equipoLocal}, {"visitante", pr.mandosActivos - pr.equipoLocal} }},
 				{"host", MandoHost::activo()},
 				{"miMando", detalle_estado::nombreMiMando()},
-				{"miPuesto", { {"modo", pr.miPuestoModo}, {"numero", pr.miPuestoNumero}, {"alAbrir", pr.sentarmeAlAbrir}, {"pulsando", pr.entrarPulsando}, {"mandoRecordado", !pr.miMando.empty()} }},
+				{"miPuesto", { {"modo", pr.miPuestoModo}, {"numero", pr.miPuestoNumero}, {"alAbrir", pr.sentarmeAlAbrir}, {"pulsando", pr.entrarPulsando}, {"cuenta", pr.anfitrionCuenta}, {"mandoRecordado", !pr.miMando.empty()} }},
 				{"bloqueoGlobal", gc.lock}, {"bloqueoBotones", bloqueoBotonesPropio(in)}, {"esclavo", gc.isSlave},
 				{"xbox", Config::cfg.input.xboxPuppetCount}, {"ds4", Config::cfg.input.ds4PuppetCount},
 				{"reiniciando", in.reiniciandoMandos},

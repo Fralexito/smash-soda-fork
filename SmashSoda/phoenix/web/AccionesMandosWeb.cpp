@@ -318,6 +318,7 @@ namespace phoenix::web {
 			if (d.contains("numero")) pr.miPuestoNumero = entero(d, "numero", 1, 8);
 			if (d.contains("alAbrir")) pr.sentarmeAlAbrir = booleano(d, "alAbrir");
 			if (d.contains("pulsando")) pr.entrarPulsando = booleano(d, "pulsando");
+			if (d.contains("cuenta")) pr.anfitrionCuenta = booleano(d, "cuenta");
 			pr.guardar();
 			return json::object();
 		});

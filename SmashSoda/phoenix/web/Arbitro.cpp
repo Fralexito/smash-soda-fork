@@ -279,6 +279,29 @@ namespace phoenix::web {
 					for (const LadoPartido* x : { &la, &lb }) for (const JugadorPartido& jp : x->jugadores) if (jp.parsecId == s.parsecId) repetido = true;
 					if (!repetido && l.jugadores.size() < 4) l.jugadores.push_back({ s.parsecId, s.jugador });
 				}
+				// El anfitrión: si juega con su mando de Link (MandoHost no deja «dueño» en el motor y por eso no sale arriba)
+				// cuenta en el lado de su puesto. Si lo pidió («Contarme como jugador»), también sin puesto, en su lado habitual
+				// (el de «Mi puesto al jugar»): juega directo en PES. Así un anfitrión contra un invitado es un 1v1, no «contra la CPU».
+				try {
+					Guest& anf = h.getHost();
+					const int tomado = MandoHost::activo() - 1;
+					int local = -1;   // 1 = lado local, 0 = visita, -1 = no cuenta
+					if (anf.isValid() && anf.userID != 0) {
+						if (tomado >= 0 && tomado < activos) local = tomado < pr.equipoLocal ? 1 : 0;
+						else if (pr.anfitrionCuenta) {
+							if (pr.miPuestoModo == "local") local = 1;
+							else if (pr.miPuestoModo == "visitante") local = 0;
+							else local = pr.miPuestoNumero <= pr.equipoLocal ? 1 : 0;
+						}
+					}
+					if (local >= 0) {
+						bool repetido = false;
+						for (const LadoPartido* x : { &la, &lb }) for (const JugadorPartido& jp : x->jugadores) if (jp.parsecId == anf.userID) repetido = true;
+						LadoPartido& l = local == 1 ? la : lb;
+						if (!repetido && l.jugadores.size() < 4) l.jugadores.insert(l.jugadores.begin(), { anf.userID, anf.name });
+					}
+				}
+				catch (...) {}
 				if (!la.jugadores.empty() || !lb.jugadores.empty()) {
 					if (la.jugadores.empty()) { la.nombre = "CPU"; la.jugadores.push_back({ 0, "CPU" }); }
 					if (lb.jugadores.empty()) { lb.nombre = "CPU"; lb.jugadores.push_back({ 0, "CPU" }); }

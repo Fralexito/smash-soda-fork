@@ -70,6 +70,7 @@ namespace phoenix {
 			miPuestoNumero = (std::max)(1, (std::min)(8, j.value("miPuestoNumero", miPuestoNumero)));
 			sentarmeAlAbrir = j.value("sentarmeAlAbrir", sentarmeAlAbrir);
 			entrarPulsando = j.value("entrarPulsando", entrarPulsando);
+			anfitrionCuenta = j.value("anfitrionCuenta", anfitrionCuenta);
 			ordenPes = j.value("ordenPes", ordenPes);
 			campoWeb = j.value("campoWeb", campoWeb);
 			modoRecarga = j.value("modoRecarga", modoRecarga);
@@ -115,6 +116,7 @@ namespace phoenix {
 				{"miPuestoNumero", miPuestoNumero},
 				{"sentarmeAlAbrir", sentarmeAlAbrir},
 				{"entrarPulsando", entrarPulsando},
+				{"anfitrionCuenta", anfitrionCuenta},
 				{"ordenPes", ordenPes},
 				{"campoWeb", campoWeb},
 				{"modoRecarga", modoRecarga},

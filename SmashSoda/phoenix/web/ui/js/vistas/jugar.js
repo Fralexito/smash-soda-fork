@@ -93,6 +93,8 @@ export function PreferenciaPuesto({ m }) {
       desc=${t("Al abrir la sala ya estás en tu puesto. Si no quieres jugar, sácate a «Mirando».", "When the room opens you are already seated. Not playing? Move yourself to «Watching».")}/>
     <${AjusteSw} titulo=${t("Entrar pulsando tu mando", "Join by pressing your pad")} valor=${pref.pulsando !== false} al=${(v) => poner({ pulsando: v })}
       desc=${t("Si no estás en un puesto, pulsa A, B, X o Y (✕ ○ □ △) y entras al libre que toque. Nunca saca a nadie: si está todo lleno, no pasa nada.", "Not seated? Press A, B, X or Y and you take the right free seat. Never kicks anyone out.")}/>
+    <${AjusteSw} titulo=${t("Contarme como jugador en la web", "Count me as a player on the web")} valor=${!!pref.cuenta} al=${(v) => poner({ cuenta: v })}
+      desc=${t("Si hay partido y no estás en un puesto, Link te apunta como jugador en tu lado habitual (el de tu puesto de arriba). Úsalo si juegas directo en PES; si solo miras, apágalo para no salir en el ranking sin jugar. Si estás sentado, ya cuentas siempre.", "In a match and not seated, Link lists you as a player on your usual side (your seat above). Use it if you play straight in PES; if you only watch, turn it off. If you are seated you always count.")}/>
     ${sinMando ? html`<div class="ayuda" style="font-size:13px;color:var(--warn)">${t("Las dos funcionan con tu mando elegido arriba («USAR ESTE»). Con teclado, usa el botón JUGAR.", "Both need your pad chosen above. With keyboard, use the PLAY button.")}</div>` : null}
   </div>`;
 }
