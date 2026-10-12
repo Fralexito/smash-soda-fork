@@ -127,3 +127,9 @@ Paso 1: `tools/radar/usuariopad.cpp` (compilar con `tools/radar/compilar_usuario
 - Aprendido: la lista de 8 mandos solo existe en la pantalla de ELEGIR LADOS (en «Editar Datos personales» el puntero es 0). Link 0.2.58: si PES está abierto pero esa lista no existe, «Restaurar» NO olvida lo pendiente (antes lo habría olvidado) y pide volver a esa pantalla.
 - ❓ Sin comprobar: el efecto de esas opciones DENTRO de un partido (el juego las lee de la tabla al empezar; es lo esperable). Tampoco el puesto N de Link = mando N de PES con mandos reales de amigos.
 - Falta: aplicarlo solo al sentarse el amigo (señal de pantalla de lados) y de dónde sale el perfil del amigo nuevo (su cuenta/web) + editor de la configuración.
+
+### 10.3 Puesto 2 = mando 2 (12 oct, 16:57, Link 0.2.58, prueba hecha por Claude con el mando 2 de Fralex en el lado Visitante)
+- ✅ «PONER EN EL MANDO» con Puesto 2 y perfil JACK: PES mostró «JACK» sobre el **segundo mando** (el rosa, columna Visitante); el mando 1 siguió en FRALEX. **Puesto N de Link = entrada N-1 de la lista de mandos = mando N de PES** (con el orden que deja «Orden de mandos en PES»).
+- ✅ Restaurar OK. La lista de mandos cuenta con el mando fuera del lado Local también (los Usuarios siguen por número de mando, no por lado).
+- Nota de uso de la interfaz: la primera pulsación en Link tras dar foco a su ventana a veces solo da foco; si «Poner en el mando» no abre el aviso, pulsar otra vez.
+- Siguiente: aplicarlo SOLO al sentarse el amigo (ver §9.5, plan) y el vínculo persona → perfil.
