@@ -155,7 +155,8 @@ export function CampoEnVivo({ m }) {
     <${Tarjeta} vivo=${activo}>
       <${Titulo} texto=${t("CAMPO EN VIVO", "LIVE PITCH")}/>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
-        <${Chip} tipo=${activo ? "acc" : ""}>${activo ? t("EN VIVO", "LIVE") : t("SIN SEÑAL", "NO SIGNAL")}</${Chip}>
+        <${Chip} tipo=${activo ? "acc" : ""}>${activo ? t("EN VIVO", "LIVE") : c.estado === "buscando" ? t("BUSCANDO…", "SEARCHING…") : c.estado === "esperando" ? t("ESPERANDO", "WAITING") : t("SIN SEÑAL", "NO SIGNAL")}</${Chip}>
+        ${!activo && msg ? html`<span class="mut" style="font-size:12px">${t(msg[0], msg[1])}${c.estado === "buscando" ? t(" (la primera vez tarda ~20 s)", " (the first time takes ~20 s)") : ""}${c.motivo ? html` <span class="mono">(${c.motivo})</span>` : null}</span>` : null}
         ${c.jugadores ? html`<span class="mut mono" style="font-size:12px">${c.jugadores} ${t("fichitas", "pieces")}${c.balon ? " · " + t("balón", "ball") : ""}</span>` : null}
         ${activo ? html`<span style="display:flex;gap:12px;align-items:center;margin-left:auto;font-size:12px" class="mut">
           <span><span style=${`display:inline-block;width:10px;height:10px;border-radius:50%;background:${COLOR[0]};vertical-align:-1px;margin-right:5px`}></span>${t("Equipo A (izq. al empezar)", "Team A (left at kick-off)")}</span>
@@ -165,7 +166,6 @@ export function CampoEnVivo({ m }) {
       </div>
       <${CampoSvg} alTanda=${alTanda}/>
       ${activo && c.equipos === false ? html`<div class="ayuda" style="margin-top:10px">${t("Los equipos se colorean en el siguiente saque de centro (gol o descanso).", "Teams get their colours at the next kick-off (goal or half-time).")}</div>` : null}
-      ${!activo && msg ? html`<div class="ayuda" style="margin-top:10px">${t(msg[0], msg[1])}${c.motivo ? html` <span class="mono mut">(${c.motivo})</span>` : null}</div>` : null}
       ${activo ? html`<${Tanda} tanda=${tanda}/>` : null}
       <div style="margin-top:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
         <${Interruptor} valor=${!!c.campoWeb} al=${(v) => accion("campo.web", { si: v })} etiqueta=${t("Campo en vivo en la web", "Live pitch on the website")}/>
