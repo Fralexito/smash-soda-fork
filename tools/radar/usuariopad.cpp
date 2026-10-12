@@ -178,6 +178,74 @@ static void buscarTexto(const char* txt) {
 	say("buscar «%s»: %d sitios -> usuariopad_buscar.txt", txt, hallazgos);
 }
 
+// ---- PRUEBA DE ESCRITURA (reversible): cambia SOLO el nombre (48 bytes) de un Usuario VACIO en la copia que PES tiene en memoria ----
+// escribir <nombre de un Usuario existente> <su casilla 1..32> <casilla VACIA a probar> [texto]
+// Localiza la tabla de 32 Usuarios (2432 B cada uno) por el nombre existente, la valida entera, comprueba que la casilla
+// de prueba esta vacia, escribe el texto y espera Numpad 8 (o cerrar la ventana / cerrar PES) para RESTAURAR los 48 bytes.
+// No toca ningun archivo. Si la tabla no se reconoce con certeza, no escribe nada.
+static const size_t kRegU = 2432, kNomOff = 4, kNomLen = 48;
+static HANDLE gHW = nullptr;
+static uint64_t gDirNombre = 0; static uint8_t gOrig[48]; static bool gEscrito = false;
+
+static void restaurar() {
+	if (!gEscrito || !gHW) return;
+	SIZE_T w = 0; WriteProcessMemory(gHW, (LPVOID)gDirNombre, gOrig, kNomLen, &w);
+	say("RESTAURADO el nombre original (%zu bytes).", (size_t)w); gEscrito = false;
+}
+static BOOL WINAPI alCerrar(DWORD) { restaurar(); return FALSE; }
+
+static bool registroUsuarioValido(const uint8_t* r) {
+	if (r[1] || r[2] || r[3] || r[0] > 1) return false;
+	size_t fin = 0; while (fin < kNomLen && r[kNomOff + fin]) fin++;
+	if (fin == kNomLen) return false;
+	for (size_t i = 0; i < fin; i++) if (r[kNomOff + i] < 0x20 || r[kNomOff + i] == 0x7F) return false;
+	return true;
+}
+
+static void escribirPrueba(int argc, char** argv, DWORD pid) {
+	if (argc < 5) { say("uso: escribir <nombre existente> <su casilla 1..32> <casilla vacia a probar> [texto]"); return; }
+	const std::string nombre = argv[2]; const int casilla = atoi(argv[3]), prueba = atoi(argv[4]);
+	const std::string texto = argc >= 6 ? argv[5] : "ZZMEM";
+	if (casilla < 1 || casilla > 32 || prueba < 1 || prueba > 32 || texto.size() > 30) { say("casillas 1..32 y texto de 30 letras como maximo"); return; }
+	std::vector<uint64_t> tablas;
+	for (auto& r : regiones()) {
+		std::vector<uint8_t> b(r.tam); SIZE_T got = 0;
+		if (!ReadProcessMemory(gH, (LPCVOID)r.base, b.data(), r.tam, &got) || got != r.tam) continue;
+		for (size_t i = kNomOff; i + nombre.size() < r.tam; i++) {
+			if (memcmp(&b[i], nombre.data(), nombre.size()) != 0) continue;
+			const int64_t ini = (int64_t)i - kNomOff - (int64_t)(casilla - 1) * kRegU;   // inicio de la tabla dentro de la region
+			if (ini < 0 || (size_t)ini + 32 * kRegU > r.tam) continue;
+			bool ok = true;
+			for (int u = 0; u < 32 && ok; u++) ok = registroUsuarioValido(&b[ini + u * kRegU]);
+			if (ok) tablas.push_back(r.base + ini);
+		}
+	}
+	if (tablas.size() != 1) { say("Tabla de Usuarios: %zu candidatas (debe haber exactamente 1). No escribo nada.", tablas.size()); for (auto t : tablas) say("  candidata %llX", (unsigned long long)t); return; }
+	const uint64_t tabla = tablas[0];
+	const uint64_t reg = tabla + (uint64_t)(prueba - 1) * kRegU;
+	uint8_t nom[48]; SIZE_T g = 0;
+	if (!ReadProcessMemory(gH, (LPCVOID)(reg + kNomOff), nom, kNomLen, &g) || g != kNomLen) { say("No pude leer la casilla de prueba."); return; }
+	if (nom[0] != 0) { say("La casilla %d NO esta vacia (tiene un nombre). Elige otra casilla vacia. No escribo nada.", prueba); return; }
+	say("Tabla de Usuarios encontrada en %llX (32 registros validos). Casilla %d vacia.", (unsigned long long)tabla, prueba);
+	gHW = OpenProcess(PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_VM_OPERATION | PROCESS_QUERY_INFORMATION | SYNCHRONIZE, FALSE, pid);
+	if (!gHW) { say("No pude abrir PES con permiso de escritura (error %lu).", GetLastError()); return; }
+	memcpy(gOrig, nom, kNomLen); gDirNombre = reg + kNomOff;
+	uint8_t nuevo[48] = {}; memcpy(nuevo, texto.data(), texto.size());
+	SetConsoleCtrlHandler(alCerrar, TRUE);
+	SIZE_T w = 0;
+	if (!WriteProcessMemory(gHW, (LPVOID)gDirNombre, nuevo, kNomLen, &w) || w != kNomLen) { say("No se pudo escribir (error %lu).", GetLastError()); return; }
+	gEscrito = true;
+	say("ESCRITO «%s» en el Usuario %d (solo el nombre, en memoria). Mira la lista de Usuarios en PES (R2/L2 hasta el %d).", texto.c_str(), prueba, prueba);
+	say("Cuando acabes pulsa Numpad 8 (o cierra esta ventana) y se RESTAURA el nombre original.");
+	for (;;) {
+		if (GetAsyncKeyState(VK_NUMPAD8) & 0x8000) { restaurar(); Beep(900, 150); return; }
+		if (WaitForSingleObject(gH, 0) == WAIT_OBJECT_0) { say("El juego se cerro."); gEscrito = false; return; }
+		uint8_t v[48]; SIZE_T gg = 0;   // por si PES lo repone solo, se informa
+		if (ReadProcessMemory(gH, (LPCVOID)gDirNombre, v, kNomLen, &gg) && gg == kNomLen && memcmp(v, nuevo, kNomLen) != 0) { say("PES cambio ese nombre por su cuenta (ya no es el de la prueba)."); gEscrito = false; return; }
+		Sleep(100);
+	}
+}
+
 static void ver(int argc, char** argv) {
 	std::vector<uint64_t> as; for (int i = 2; i < argc; i++) as.push_back(strtoull(argv[i], nullptr, 16));
 	std::string antes; DWORD t0 = GetTickCount();
@@ -198,6 +266,7 @@ int main(int argc, char** argv) {
 	buscarExe(pid);
 	if (argc >= 3 && std::string(argv[1]) == "ver") { ver(argc, argv); return 0; }
 	if (argc >= 3 && std::string(argv[1]) == "buscar") { buscarTexto(argv[2]); return 0; }
+	if (argc >= 2 && std::string(argv[1]) == "escribir") { escribirPrueba(argc, argv, pid); return 0; }
 	say("Conectado a PES2021.exe (pid %lu). Numpad 5=foto (tras R2) 4=foto (tras L2) 3=informe 0=de cero 9=salir", pid);
 	bool prev[10] = {};
 	for (;;) {

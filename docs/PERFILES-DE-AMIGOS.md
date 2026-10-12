@@ -86,3 +86,8 @@ Paso 1: `tools/radar/usuariopad.cpp` (compilar con `tools/radar/compilar_usuario
 - Conclusión: es el cursor de la lista de la pantalla, COMPARTIDO entre mandos; no sirve para saber el Usuario de cada uno. Además PES salta los Usuarios que ya usa otro mando.
 - Para el modo automático haría falta la posición propia de cada mando (dos búsquedas más, moviendo solo un mando cada vez: lo que cambia en ambas es el cursor compartido; lo que cambia solo en una es de ese mando).
 - Alternativa sin riesgo, ya disponible: «Preparar la sala» deja el Usuario de cada amigo listo en PES y cada uno pulsa R2 hasta ver su nombre.
+
+### 9.3 La copia de los Usuarios que PES tiene en memoria (12 oct, ~15:05)
+- ✅ `usuariopad.exe buscar FRALEX` encontró UNA copia real: el registro del Usuario 1 con su configuración (`01 03 02 00 04 06 05 07 08 08 …`) en una región de memoria RW (dirección alta tipo 0x7FF4…, cambia en cada arranque). Es la tabla de 32 registros de 2.432 B tal como está en el archivo SYSTEM00000000 descifrado.
+- Prueba de escritura REVERSIBLE (con permiso expreso de Fralex): `usuariopad.exe escribir <nombre> <casilla> <casilla vacía> [texto]` localiza la tabla por el nombre, valida los 32 registros, escribe un texto SOLO en el nombre (48 B) de una casilla vacía y lo restaura al pulsar Numpad 8, al cerrar la ventana o al cerrarse PES. No toca ningún archivo.
+- ❓ Resultado pendiente: si PES muestra ese nombre en la lista de Usuarios sin reiniciar.
