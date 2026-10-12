@@ -4,7 +4,7 @@ if(NOT CMAKE_HOST_WIN32)
     message(FATAL_ERROR "Smash Soda can only be built on Windows.")
 endif()
 
-project(SmashSoda LANGUAGES CXX)
+project(SmashSoda LANGUAGES CXX C)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # --------------------------
@@ -29,7 +29,10 @@ file(GLOB_RECURSE ALL_SOURCES CONFIGURE_DEPENDS "*.cpp" "*.cxx" "*.cc")
 set(RESOURCE_FILE "${CMAKE_CURRENT_SOURCE_DIR}/Resource.rc")
 
 # Combine all files
-set(ALL_FILES ${ALL_HEADERS} ${ALL_SOURCES} ${RESOURCE_FILE})
+# libpesXcrypter (dominio publico, para leer el option file: traspasos en vivo): C puro, fuera de unity y sin pch.h
+file(GLOB PESX_C "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/terceros/pesxcrypter/*.c")
+set_source_files_properties(${PESX_C} PROPERTIES LANGUAGE C SKIP_UNITY_BUILD_INCLUSION ON SKIP_PRECOMPILE_HEADERS ON)
+set(ALL_FILES ${ALL_HEADERS} ${ALL_SOURCES} ${PESX_C} ${RESOURCE_FILE})
 
 # Visual Studio friendly grouping
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${ALL_FILES})
@@ -196,6 +199,9 @@ set_source_files_properties(
     "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/link/EstadoJuego.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/link/ModulosJuego.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/link/Fichajes.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/link/Captura.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/link/Traspasos.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/link/ServicioTraspasos.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/link/Doctor.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/link/PhoenixLink.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/web/AnfitrionWeb.cpp"

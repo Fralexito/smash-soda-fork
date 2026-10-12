@@ -158,6 +158,7 @@ namespace phoenix::web {
 	void registrarAccionesPartido(Interno& in);
 	void registrarAccionesModulos(Interno& in);
 	void registrarAccionesFichajes(Interno& in);
+	void registrarAccionesTraspasos(Interno& in);
 	void registrarAccionesCedido(Interno& in);
 	/// Modo cedido: atajo del anfitrión, invitado que sale, sala cerrada, interfaz oculta (≈ cada frame).
 	void tickCedido(Interno& in);

@@ -42,6 +42,12 @@ export function crearSimulador(enviar) {
   const llena = escenario === "llena";
   const s = {
     tema: "galaxy", idioma: "es", abierta: escenario !== "cerrada", abiertaEn: inicio - 6128,
+    traspasos: { mensaje: "", ajustes: { publicar: false, recibir: false, confirmarAntes: true, carpeta: "", autor: "", optionFile: "" },
+      anfitrion: { estado: "apagado", optionFile: "C:/Users/Fralex/Documents/KONAMI/eFootball PES 2021 SEASON UPDATE/239200/save", ultimaRevision: "", hayReferencia: true, publicados: 0, ultimoLote: "", masivo: false, ignorados: { altas: 0, bajas: 0, otros: 0 },
+        pendientes: [{ jugador_id: 162114, jugador: "Lamine Yamal", desde_id: 108, desde: "FC Barcelona", hasta_id: 101, hasta: "Arsenal FC" }] },
+      amigo: { estado: "al_dia", mensaje: "", ultimoSeq: 2, ilegibles: 0, puedeDeshacer: true, historial: [
+        { id: "9f8e7d6c5b4a39281716f5e4", seq: 2, autor: "Fralex", creado: "2026-10-12T17:30:00Z", recibido: "", aplicadoEn: "", estado: "aplicado", modo: "ids", motivo: "", cambios: [{ jugador: 114506, jugadorNombre: "Julián Álvarez", desde: 108, hasta: 101, hastaNombre: "Arsenal FC", estado: "aplicado", motivo: "" }, { jugador: 7777, jugadorNombre: "Jugador Libre", desde: 1, hasta: 2, hastaNombre: "Real Madrid CF", estado: "saltado", motivo: "El jugador 7777 no existe en la base de este parche." }] },
+        { id: "1a2b3c4d5e6f708192a3b4c5", seq: 1, autor: "Fralex", creado: "2026-10-12T16:10:00Z", recibido: "", aplicadoEn: "", estado: "aplicado", modo: "ids", motivo: "", cambios: [{ jugador: 162114, jugadorNombre: "Lamine Yamal", desde: 101, hasta: 108, hastaNombre: "FC Barcelona", estado: "aplicado", motivo: "" }] }] } },
     opciones: { nombre: "Phoenix · Galaxy League", plazas: 4, limitador: false, limite: 30, biblioteca: "Default", juegos: ["PES 2021", "Football Life 2026"], pendiente: false, turnos: false, quiosco: false, overlay: true },
     phoenix: { visibilidad: "amigos", espectadores: true, limiteEspectadores: 4, entradaParsec: true, juego: "eFootball PES 2021", parche: "Conmegol", region: "Lima" },
     calidad: { fps: 60, mbps: 15, auto: true, porPersona: 10, subida: 0, perdida: 0, energia: "ok" },
@@ -251,7 +257,7 @@ export function crearSimulador(enviar) {
     const p = s.partido;
     const e = {
       v: 1,
-      app: { version: "0.2.48", etapa: "beta 1", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
+      app: { version: "0.2.49", etapa: "beta 1", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
       noticias: { cargado: true, lista: s.noticias },
       chatGlobal: { cargado: true, pausado: s.chatGlobal.pausado, esperaSeg: s.chatGlobal.esperaSeg, rev: s.chatGlobal.mensajes.length, error: "" },
       web: { ...s.web, jugadoresLista: 3, versionLiga: "2026.10.08", eventosEnCola: 0 },
@@ -317,6 +323,13 @@ export function crearSimulador(enviar) {
     enviar({ t: "evento", nombre: "chatglobal", datos: globalJson() });
   };
 
+  // Traspasos en vivo (lo que devuelve traspasos.estado en el motor real)
+  const traspasosSim = () => {
+    const tr = s.traspasos;
+    return { ajustes: { ...tr.ajustes, transporte: "carpeta" }, activo: tr.ajustes.publicar || tr.ajustes.recibir, mensaje: tr.mensaje, juego: s.buzon.juego, transporteListo: !!tr.ajustes.carpeta, webDisponible: false,
+      publicar: tr.ajustes.publicar, recibir: tr.ajustes.recibir, confirmarAntes: tr.ajustes.confirmarAntes, transporte: tr.ajustes.carpeta ? "carpeta " + tr.ajustes.carpeta : "", modoRecarga: s.modoRecarga || "AUTO-SIEMPRE", pesAbierto: s.pes.abierto,
+      anfitrion: tr.anfitrion, amigo: tr.amigo };
+  };
   // Fichajes como cambios (lo que devuelve fichajes.estado en el motor real)
   const fichajesSim = () => {
     const est = s.fichajesAplicado ? "aplicado" : "sin_aplicar";
@@ -491,6 +504,22 @@ export function crearSimulador(enviar) {
       s.fichajesAplicado = d.accion === "aplicar";
       return { ...fichajesSim(), mensaje: d.accion === "aplicar" ? "Fichajes generados sobre tu base en 3 sitios: 6 aplicados, 3 saltados. Abre PES: se ven al cargar los datos del juego." : "Fichajes quitados en 3 sitios: el juego vuelve a la base original del parche (la copia queda en una carpeta _antes-de-fichajes-… dentro de Phoenix-DB)." };
     },
+    // Traspasos en vivo (imita link/ServicioTraspasos.cpp): anfitrión publica lo que hace en Editar; amigo lo aplica sobre su base
+    "traspasos.estado": () => traspasosSim(),
+    "traspasos.config": (d) => {
+      const a = s.traspasos.ajustes;
+      for (const k of ["publicar", "recibir", "confirmarAntes"]) if (typeof d[k] === "boolean") a[k] = d[k];
+      for (const k of ["carpeta", "autor", "optionFile"]) if (typeof d[k] === "string") a[k] = d[k];
+      return traspasosSim();
+    },
+    "traspasos.accion": (d) => {
+      const tr = s.traspasos;
+      if (d.accion === "publicar") { tr.anfitrion.pendientes = []; tr.anfitrion.estado = "publicado"; tr.anfitrion.publicados++; tr.mensaje = "1 traspaso publicado (lote 1a2b3c4d)."; }
+      else if (d.accion === "descartar") { tr.anfitrion.pendientes = []; tr.anfitrion.estado = "descartado"; tr.mensaje = "Descartado: esos traspasos no se enviaron."; }
+      else if (d.accion === "deshacer") { const l = tr.amigo.historial.find((x) => x.estado === "aplicado"); if (l) { l.estado = "deshecho"; tr.mensaje = "Lote " + l.id.slice(0, 8) + " deshecho."; } tr.amigo.puedeDeshacer = tr.amigo.historial.some((x) => x.estado === "aplicado"); }
+      else if (d.accion === "olvidarReferencia") { tr.anfitrion.estado = "referencia_borrada"; tr.mensaje = "Listo."; }
+      return traspasosSim();
+    },
     "sync.modulo": (d) => {
       if (s.pes.abierto) throw Object.assign(new Error("Cierra PES 2021 primero: Sider lee los módulos al arrancar."), { codigo: "PES_ABIERTO" });
       const nuevo = d.accion === "instalar" ? "instalado" : d.accion === "desinstalar" ? "no_instalado" : "apagado";
@@ -504,7 +533,7 @@ export function crearSimulador(enviar) {
       s.buzon.juego = r;
       return { ...modulosSim(), mensaje: "Carpeta del juego guardada." };
     },
-    "diag.informe": () => ({ texto: "== PHOENIX LINK · INFORME PARA DEPURAR ==\nPhoenix Link 0.2.47 (beta 1)\n(simulador: sin datos reales)\n" }),
+    "diag.informe": () => ({ texto: "== PHOENIX LINK · INFORME PARA DEPURAR ==\nPhoenix Link 0.2.49 (beta 1)\n(simulador: sin datos reales)\n" }),
     "ajustes.avisoEntrada": (d) => { s.ajustes.avisoEntrada[d.campo] = !!d.valor; },
     "ajustes.probarAvisoEntrada": () => ({}),
     "ajustes.avisosJuego": (d) => { s.buzon.activo = d.valor; s.buzon.estado = d.valor ? "conectado" : "apagado"; },

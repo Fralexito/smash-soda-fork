@@ -8,6 +8,7 @@ import { html, useState, useEffect } from "../lib.js";
 import { t } from "../i18n.js";
 import { accion, avisar, elegirPestana, confirmar } from "../tienda.js";
 import { CuentaWeb } from "./ajustes.js";
+import { Traspasos } from "./traspasos.js";
 import { Tarjeta, Titulo, AjusteSw, Segmentos, Vacio, Chip, Icono, Boton, cx } from "../ui.js";
 
 /** Sección plegable: una línea con el título y un resumen; el detalle solo se ve al abrirla (se recuerda por sección en este PC). */
@@ -32,6 +33,7 @@ export const PESTANAS_SYNC = [
   { id: "puente", es: "PUENTE", en: "BRIDGE", d: ["Los avisos de la web salen dentro del juego mientras juegas.", "Web notices show up inside the game while you play."] },
   { id: "web", es: "CUENTA WEB", en: "WEB ACCOUNT", d: ["Vincula esta PC con tu cuenta de la liga para aparecer en el radar y ver a tus amigos.", "Link this PC to your league account to show on the radar and see your friends."] },
   { id: "fichajes", es: "FICHAJES", en: "TRANSFERS", d: ["Los datos y fichajes que Phoenix Sync dejó en tu juego.", "The data and transfers Phoenix Sync placed in your game."] },
+  { id: "traspasos", es: "TRASPASOS EN VIVO", en: "LIVE TRANSFERS", d: ["Un traspaso que haces en Editar se refleja en el PES de tu amigo.", "A transfer you make in Edit shows up in your friend's PES."] },
 ];
 
 const CUENTA = { conectado: ["ok", "CONECTADA", "CONNECTED"], vinculando: ["warn", "VINCULANDO", "LINKING"], sin_conexion: ["bad", "SIN CONEXIÓN", "OFFLINE"], pausado: ["warn", "EN PAUSA", "PAUSED"], sin_vincular: ["", "SIN VINCULAR", "NOT LINKED"] };
@@ -388,5 +390,6 @@ export function VistaSync({ s, pestana }) {
   if (!m) return html`<${Vacio} titulo=${t("Conectando…", "Connecting…")} texto=""/>`;
   if (pestana === "web") return html`<${CuentaWeb} m=${m}/>`;
   if (pestana === "fichajes") return html`<${Entrega} m=${m}/>`;
+  if (pestana === "traspasos") return html`<${Traspasos}/>`;
   return html`<${Puente} m=${m}/>`;
 }

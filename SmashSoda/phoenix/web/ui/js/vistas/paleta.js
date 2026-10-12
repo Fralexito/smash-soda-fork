@@ -61,6 +61,7 @@ function opciones(m) {
   ir("sync", "puente", "Sync · Puente con el juego", "Sync · Game bridge", "web");
   ir("sync", "web", "Sync · Cuenta web (vincular)", "Sync · Web account (link)", "web");
   ir("sync", "fichajes", "Sync · Fichajes", "Sync · Transfers", "web");
+  ir("sync", "traspasos", "Sync · Traspasos en vivo", "Sync · Live transfers", "web");
   for (const [p, es, en] of [["general", "General", "General"], ["video", "Video", "Video"], ["audio", "Audio", "Audio"], ["sonidos", "Sonidos (!sfx)", "Sounds (!sfx)"], ["overlay", "Overlay", "Overlay"],
     ["interfaz", "Interfaz e idioma", "Interface"], ["avanzado", "Avanzado", "Advanced"]]) {
     ir("ajustes", p, `Ajustes · ${es}`, `Settings · ${en}`, "ajustes");
