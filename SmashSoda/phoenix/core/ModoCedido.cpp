@@ -27,7 +27,7 @@ namespace phoenix::cedido {
 			"ui.seccion", "ui.copiar", "ui.recargar",
 			"sala.copiarEnlace", "chat.enviar", "chatGlobal.abierto",
 			"mandos.conectar", "mandos.desconectar", "mandos.bloquear", "mandos.liberar", "mandos.asignar",
-			"mandos.intercambiar", "mandos.formacion", "mandos.equipo", "mandos.tomar", "mandos.herramienta",
+			"mandos.intercambiar", "mandos.formacion", "mandos.equipo", "mandos.fijarPuesto", "mandos.tomar", "mandos.herramienta",
 			"solicitud.aceptar", "solicitud.rechazar",
 			"partido.preparar", "partido.iniciar", "partido.gol", "partido.pausa", "partido.cambiarLados",
 			"partido.finalizar", "partido.cancelar", "partido.historial",

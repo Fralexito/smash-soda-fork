@@ -62,6 +62,17 @@ namespace phoenix {
 				? equipos::normalizar(j["equipoPuesto"].get<std::string>())
 				: equipos::migrar(mandosActivos, equipoLocal);
 			sincronizarEquipos();
+			puestosFijados.clear();
+			if (j.contains("puestosFijados") && j["puestosFijados"].is_object()) {
+				for (const auto& par : j["puestosFijados"].items()) {
+					try {
+						const unsigned long id = std::stoul(par.key());
+						const int puesto = par.value().is_number_integer() ? par.value().get<int>() : 0;
+						if (id != 0 && puesto >= 1 && puesto <= 8) puestosFijados[static_cast<uint32_t>(id)] = puesto;
+					}
+					catch (...) {}
+				}
+			}
 			anchoAuto = j.value("anchoAuto", anchoAuto);
 			anchoPorPersona = (std::max)(1, (std::min)(50, j.value("anchoPorPersonaV2", anchoPorPersona)));
 			subidaMbps = (std::max)(0, (std::min)(10000, j.value("subidaMbps", subidaMbps)));
@@ -94,7 +105,10 @@ namespace phoenix {
 		try {
 			const std::string r = ruta();
 			if (r.empty()) return;
+			json fijados = json::object();
+			for (const auto& par : puestosFijados) fijados[std::to_string(par.first)] = par.second;
 			const json j = {
+				{"puestosFijados", fijados},
 				{"interfaz", interfazPhoenix ? "phoenix" : "clasica"},
 				{"interfazWeb", interfazWeb},
 				{"tema", tema},

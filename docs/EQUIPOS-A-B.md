@@ -38,3 +38,10 @@
 - `pruebas-link/equipos_test.cpp` (lógica pura: migración, mover puestos, caso 01 en el B, reglas, recortes): **todo bien**.
 - Simulador (`?escenario=cruzado`): el 01 es del Equipo B (tú) y el 02 del A; mover puestos, añadir y quitar sin errores en la consola. `?escenario=llena` sin errores.
 - Compilado con `cmake --build` (Release), sin errores.
+
+## Cambios de 0.2.34: más intuitivo y candado de puesto
+- **Arrastrar el puesto entre equipos:** se toma la tarjeta por su **número** y se suelta en el otro equipo (se ilumina «Suelta aquí…»). El botón «→ A» / «→ B» sigue como alternativa.
+- **Puestos sin usar:** una bandeja con solo los números; se arrastran al equipo que se quiera.
+- **Ayuda plegable:** «¿QUÉ SON A Y B?» en la cabecera de JUGANDO.
+- **Candado de puesto (solo a quien tú fijes):** el icono de chincheta en la fila de un jugador **fija su puesto**. Cuando vuelva a la sala y tú lo aceptes como jugador (JUEGA), o él pulse su mando, cae en ese puesto; **si está ocupado, en el siguiente libre** (dando la vuelta, solo puestos de un equipo). Quien no tiene candado entra como siempre. Se guarda en `phoenix-ui.json` (`puestosFijados`, id de Parsec → puesto) y sobrevive a cerrar Link. En «Mirando» se ve «PUESTO 0N» junto a quien lo tiene fijado.
+- Detalle técnico: acción `mandos.fijarPuesto{parsecId, puesto 0–8}` (0 = soltar), estado `mandos.fijados`; el gancho al pulsar el mando está en `GamepadClient::tryAssignGamepad` y la aceptación del host en `AccionesSala::decidirEspera`. Con turnos (hotseat) manda su propia lógica.

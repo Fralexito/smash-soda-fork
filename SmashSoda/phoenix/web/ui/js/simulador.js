@@ -47,6 +47,7 @@ export function crearSimulador(enviar) {
     calidad: { fps: 60, mbps: 15, auto: true, porPersona: 10, subida: 0, perdida: 0, energia: "ok" },
     // Equipo de cada puesto (como equipoPuesto del motor): A, B o - (fuera). «cruzado»: el 01 es del Equipo B y el 02 del A.
     mapa: escenario === "cruzado" ? "BABA----" : "AABB----",
+    fijados: {},   // candado de puesto: id de Parsec → puesto
     botonesBloq: { mascara: 0x10 | 0x400, lt: false, rt: false, lx: false, ly: false, rx: false, ry: false },
     perfilesTeclado: [
       { userId: 0, nombre: "Default", teclas: [["lleft", 30, "A"], ["lright", 32, "D"], ["lup", 17, "W"], ["ldown", 31, "S"], ["rleft", 331, "←"], ["rright", 333, "→"], ["rup", 328, "↑"], ["rdown", 336, "↓"], ["dleft", 75, "Num 4"], ["dright", 77, "Num 6"], ["dup", 72, "Num 8"], ["ddown", 76, "Num 5"], ["a", 38, "L"], ["b", 24, "O"], ["x", 37, "K"], ["y", 23, "I"], ["lb", 16, "Q"], ["rb", 25, "P"], ["lt", 33, "F"], ["rt", 36, "J"], ["back", 14, "Retroceso"], ["start", 28, "Enter"], ["lthumb", 46, "C"], ["rthumb", 50, "M"]].map(([b, v, e]) => ({ b, v, e })) },
@@ -249,7 +250,7 @@ export function crearSimulador(enviar) {
     const p = s.partido;
     const e = {
       v: 1,
-      app: { version: "0.2.33", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
+      app: { version: "0.2.34", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
       noticias: { cargado: true, lista: s.noticias },
       chatGlobal: { cargado: true, pausado: s.chatGlobal.pausado, esperaSeg: s.chatGlobal.esperaSeg, rev: s.chatGlobal.mensajes.length, error: "" },
       web: { ...s.web, jugadoresLista: 3, versionLiga: "2026.10.08", eventosEnCola: 0 },
@@ -269,7 +270,7 @@ export function crearSimulador(enviar) {
         segundos: s.abierta ? Math.round(ahora() - s.abiertaEn) : -1, opciones: s.opciones, phoenix: s.phoenix, calidad: s.calidad,
         sesion: { pico: 5, entradas: 7, partidos: s.historial.length },
       },
-      mandos: { lista, miMando: s.marionetas.maestro >= 0 ? s.marionetas.maestros[s.marionetas.maestro]?.nombre || "" : "", ordenPes: s.ordenPes || { activo: false, estado: "apagado", casillas: [] }, miPuesto: s.miPuesto || (s.miPuesto = { modo: "fijo", numero: 1, alAbrir: true, pulsando: true, cuenta: true, mandoRecordado: false }), formacion: { a: eqCuenta("A"), b: eqCuenta("B"), mapa: s.mapa }, host: s.host, bloqueoGlobal: s.bloqueoGlobal, bloqueoBotones: s.bloqueoBotones, botonesBloq: s.botonesBloq, esclavo: false, xbox: s.xbox, ds4: s.ds4, reiniciando: false },
+      mandos: { lista, miMando: s.marionetas.maestro >= 0 ? s.marionetas.maestros[s.marionetas.maestro]?.nombre || "" : "", ordenPes: s.ordenPes || { activo: false, estado: "apagado", casillas: [] }, miPuesto: s.miPuesto || (s.miPuesto = { modo: "fijo", numero: 1, alAbrir: true, pulsando: true, cuenta: true, mandoRecordado: false }), formacion: { a: eqCuenta("A"), b: eqCuenta("B"), mapa: s.mapa }, fijados: s.fijados, host: s.host, bloqueoGlobal: s.bloqueoGlobal, bloqueoBotones: s.bloqueoBotones, botonesBloq: s.botonesBloq, esclavo: false, xbox: s.xbox, ds4: s.ds4, reiniciando: false },
       mapeo: { perfiles: s.mapeo.perfiles, vista: vistaMapeo() },
       solicitudes: s.solicitudes, espera: s.espera,
       invitados: s.abierta ? s.invitados.map((g) => ({ parsecId: g.parsecId, nombre: g.nombre, ping: pingDe(g.parsecId), mando: s.mandos.indexOf(g.parsecId) + 1, mod: g.mod, vip: g.vip, teclado: g.teclado, raton: g.raton, rolWeb: g.rolWeb, cop: false, falso: false })) : [],
@@ -360,6 +361,7 @@ export function crearSimulador(enviar) {
     "mandos.intercambiar": (d) => { const x = s.mandos[d.a]; s.mandos[d.a] = s.mandos[d.b]; s.mandos[d.b] = x; },
     // Formación por cuentas (local = puestos del Equipo A, visitante = del B): si el mapa ya las tiene se respeta; si no, A primero y luego B
     "mandos.formacion": (d) => { if (eqCuenta("A") !== d.local || eqCuenta("B") !== d.visitante) s.mapa = ("A".repeat(d.local) + "B".repeat(d.visitante)).padEnd(8, "-").slice(0, 8); },
+    "mandos.fijarPuesto": (d) => { if (!d.puesto) delete s.fijados[d.parsecId]; else s.fijados[d.parsecId] = d.puesto; },
     // Equipo de un puesto (como mandos.equipo del motor): el número del puesto no cambia; cada equipo conserva al menos un puesto
     "mandos.equipo": (d) => {
       const i = d.indice, nuevo = d.equipo === "a" ? "A" : d.equipo === "b" ? "B" : d.equipo === "fuera" ? "-" : "";
@@ -551,7 +553,7 @@ export function crearSimulador(enviar) {
   }
   // Portero: con la PC cedida, solo lo de jugar (copia de phoenix/core/ModoCedido.cpp)
   const CEDIDO_PERMITIDAS = new Set(["ui.seccion", "ui.copiar", "ui.recargar", "sala.copiarEnlace", "chat.enviar", "chatGlobal.abierto",
-    "mandos.conectar", "mandos.desconectar", "mandos.bloquear", "mandos.liberar", "mandos.asignar", "mandos.intercambiar", "mandos.formacion", "mandos.equipo",
+    "mandos.conectar", "mandos.desconectar", "mandos.bloquear", "mandos.liberar", "mandos.asignar", "mandos.intercambiar", "mandos.formacion", "mandos.equipo", "mandos.fijarPuesto",
     "mandos.tomar", "mandos.herramienta", "solicitud.aceptar", "solicitud.rechazar", "partido.preparar", "partido.iniciar", "partido.gol",
     "partido.pausa", "partido.cambiarLados", "partido.finalizar", "partido.cancelar", "partido.historial", "cedido.salir", "cedido.abrirPes"]);
   const cedidoPermite = (a, d) => a === "espera.decidir" ? (d.como === "jugador" || d.como === "espectador") : CEDIDO_PERMITIDAS.has(a);

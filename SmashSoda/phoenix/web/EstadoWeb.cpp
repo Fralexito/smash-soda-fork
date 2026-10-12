@@ -361,8 +361,11 @@ namespace phoenix::web {
 				for (const auto& c : op.casillas) casillas.push_back({ {"n", c.n}, {"puesto", c.puesto}, {"ok", c.ok} });
 				ordenPes = { {"activo", op.activo}, {"estado", op.estado}, {"casillas", casillas}, {"ultimo", op.ultimo}, {"copia", op.copia}, {"error", op.error}, {"ds4windows", op.ds4windows} };
 			}
+			json fijados = json::object();   // candado de puesto: id de Parsec → puesto
+			for (const auto& par : pr.puestosFijados) fijados[std::to_string(par.first)] = par.second;
 			e["mandos"] = {
 				{"lista", lista},
+				{"fijados", fijados},
 				{"ordenPes", ordenPes},
 				{"formacion", { {"a", equipos::cuenta(pr.equipoPuesto, 'A')}, {"b", equipos::cuenta(pr.equipoPuesto, 'B')}, {"mapa", pr.equipoPuesto} }},
 				{"host", MandoHost::activo()},

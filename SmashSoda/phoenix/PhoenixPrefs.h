@@ -1,6 +1,8 @@
 ﻿#pragma once
 
 #include <atomic>
+#include <cstdint>
+#include <map>
 #include <string>
 
 #include "core/EquiposPuestos.h"
@@ -58,6 +60,14 @@ namespace phoenix {
 		std::string modoRecarga = "AUTO-SIEMPRE";  ///< phoenix.lua v0.18b (modo.txt): AUTO-SIEMPRE (por defecto) | AUTO-FICHAJES | ACTIVAR
 
 		std::string cedidoExtras;  ///< modo cedido: más ejecutables permitidos, separados por comas (solo a mano en el archivo)
+
+		/// Puesto fijado de cada jugador (id de Parsec → puesto 1–8): al volver a entrar, el host lo acepta o él pulsa su mando y cae en ese
+		/// puesto; si está ocupado, en el siguiente libre. Solo quien tiene el candado; el resto entra como siempre.
+		std::map<uint32_t, int> puestosFijados;
+		int puestoFijadoDe(uint32_t parsecId) const {
+			const auto it = puestosFijados.find(parsecId);
+			return it == puestosFijados.end() ? 0 : it->second;
+		}
 
 		/// Equipo del puesto i (0-based): 'A', 'B' o '-' (fuera).
 		char equipoDe(int i) const { return equipos::de(equipoPuesto, i); }

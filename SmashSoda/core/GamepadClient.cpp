@@ -1,6 +1,7 @@
 ﻿#include "GamepadClient.h"
 #include "Config.h"
 #include "../Hosting.h"
+#include "../phoenix/PhoenixPrefs.h"
 #include "../phoenix/PhoenixRoles.h"
 #include "../phoenix/core/PerfilesMapeo.h"
 extern Hosting g_hosting;
@@ -822,6 +823,29 @@ bool GamepadClient::tryAssignGamepad(Guest guest, uint32_t deviceID, int current
 		return false;
 	}
 	
+	// Phoenix: puesto fijado (candado) del jugador: su puesto si está libre; si no, el siguiente libre (dando la vuelta).
+	// Sin candado no cambia nada: sigue el camino de siempre (el primer libre).
+	const int fijado = phoenix::PhoenixPrefs::get().puestoFijadoDe(guest.userID);
+	if (fijado >= 1) {
+		const int total = static_cast<int>(gamepads.size());
+		for (int k = 0; k < total; k++) {
+			const int idx = (fijado - 1 + k) % total;
+			AGamepad* g = gamepads[idx];
+			if (g == nullptr || (isPuppetMaster && g->isPuppet)) continue;
+			if (k > 0 && phoenix::PhoenixPrefs::get().equipoDe(idx) == '-') continue;   // el «siguiente» solo entre puestos de un equipo
+			if (!g->isLocked() && g->isAttached() && !g->owner.guest.isValid()
+				&& phoenix::PhoenixRoles::instancia().puedeTomarMando(guest.userID, idx)) {
+				if (!Config::cfg.hotseat.enabled || Hotseat::instance.checkUser(guest.userID, guest.name)) {
+					if (Config::cfg.hotseat.enabled) {
+						Hotseat::instance.seatUser(guest.userID, guest.name);
+					}
+					g->setOwner(guest, deviceID, isKeyboard);
+				}
+				return true;
+			}
+		}
+	}
+
 	int i = 0;
 	return reduceUntilFirst([&](AGamepad* gamepad) {
 		if (!(isPuppetMaster && gamepad->isPuppet) && (!gamepad->isLocked() && gamepad->isAttached() && !gamepad->owner.guest.isValid())

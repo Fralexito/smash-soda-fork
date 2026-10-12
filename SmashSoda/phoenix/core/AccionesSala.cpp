@@ -72,11 +72,21 @@ namespace phoenix {
 				PhoenixRoles::instancia().admitir(parsecId, true);
 				const std::vector<AsientoVista> asientos = sala.asientos(8);
 				const PhoenixPrefs& pr = PhoenixPrefs::get();
-				for (int i = 0; i < pr.mandosActivos && i < static_cast<int>(asientos.size()); i++) {
-					if (asientos[i].ocupado || pr.equipoDe(i) == '-') continue;   // un puesto fuera de los equipos no se da
-					if (!asientos[i].conectado) sala.conectarMando(i);
-					sala.asignarMando(i, parsecId);
-					break;
+				const int n = (std::min)(pr.mandosActivos, static_cast<int>(asientos.size()));
+				const auto sirve = [&](int i) { return i >= 0 && i < n && !asientos[i].ocupado && pr.equipoDe(i) != '-'; };   // un puesto fuera de los equipos no se da
+				int destino = -1;
+				// Puesto fijado (candado): el suyo; si está ocupado, el siguiente libre (dando la vuelta)
+				const int fijado = pr.puestoFijadoDe(parsecId);
+				if (fijado >= 1) {
+					for (int k = 0; k < n && destino < 0; k++) {
+						const int i = (fijado - 1 + k) % n;
+						if (sirve(i)) destino = i;
+					}
+				}
+				for (int i = 0; i < n && destino < 0; i++) if (sirve(i)) destino = i;
+				if (destino >= 0) {
+					if (!asientos[destino].conectado) sala.conectarMando(destino);
+					sala.asignarMando(destino, parsecId);
 				}
 				break;
 			}

@@ -100,6 +100,16 @@ namespace phoenix::web {
 			pr.guardar();
 			return json::object();
 		});
+		// Candado de puesto: fija el puesto de un jugador (1–8) o lo suelta (0). Al volver, cae en ese puesto o en el siguiente libre.
+		p.registrar("mandos.fijarPuesto", [](const json& d, uint64_t) -> std::optional<json> {
+			const uint32_t id = idParsec(d);
+			const int puesto = entero(d, "puesto", 0, 8);
+			PhoenixPrefs& pr = PhoenixPrefs::get();
+			if (puesto == 0) pr.puestosFijados.erase(id);
+			else pr.puestosFijados[id] = puesto;
+			pr.guardar();
+			return json::object();
+		});
 		p.registrar("mandos.tomar", [&in](const json& d, uint64_t) -> std::optional<json> {
 			ProveedorSala& sala = salaObligatoria(in);
 			const int n = entero(d, "numero", 0, 8);

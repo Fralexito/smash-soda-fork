@@ -37,6 +37,7 @@ const TRAZOS = {
   menos: html`<path d="M5 12h14"/>`,
   intercambio: html`<path d="M7 7h12l-3-3M17 17H5l3 3"/>`,
   rayo: html`<path d="M13 3L5 14h6l-1 7 8-11h-6z"/>`,
+  pin: html`<path d="M12 17v5M9 3h6l-1 6 3 3v2H7v-2l3-3z"/>`,
   web: html`<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18"/>`,
   trofeo: html`<path d="M8 4h8v5a4 4 0 01-8 0zM8 6H5a3 3 0 003 4M16 6h3a3 3 0 01-3 4M12 13v4M8 21h8M9 17h6"/>`,
   ojo: html`<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>`,
