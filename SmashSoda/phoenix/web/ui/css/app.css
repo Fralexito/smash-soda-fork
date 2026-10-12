@@ -310,9 +310,9 @@ input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 18p
 
 /* ---------- Puestos / mandos ---------- */
 .puesto { position: relative; border-radius: 14px; border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.03); padding: 14px; display: flex; flex-direction: column; gap: 6px; min-height: 160px; overflow: hidden; transition: border-color .15s var(--ease), transform .15s var(--ease), background .15s var(--ease); }
-.puesto.local { --eq: var(--acc); }
-.puesto.visitante { --eq: var(--acc2); }
-:root[data-tema="galaxy"] .puesto.visitante { --eq: #b07bff; }
+.puesto.a { --eq: var(--acc); }
+.puesto.b { --eq: var(--acc2); }
+:root[data-tema="galaxy"] .puesto.b { --eq: #b07bff; }
 .puesto.fuera { --eq: var(--mut); opacity: .7; }
 .puesto .numeral { color: var(--eq); }
 .puesto.libre .numeral { color: rgba(255,255,255,.2); }

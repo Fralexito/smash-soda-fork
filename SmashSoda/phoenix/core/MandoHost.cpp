@@ -35,16 +35,17 @@ namespace phoenix {
 			const PhoenixPrefs& pr = PhoenixPrefs::get();
 			const std::vector<AsientoVista> as = sala->asientos(8);
 			const int total = (std::min)(pr.mandosActivos, static_cast<int>(as.size()));
-			const int local = (std::min)(pr.equipoLocal, total);
-			const auto libre = [&](int n) { return n >= 1 && n <= total && !as[n - 1].ocupado && n != mhActivo; };
-			int desde = 1, hasta = local, destino = 1;
-			if (pr.miPuestoModo == "visitante") { desde = local + 1; hasta = total; destino = desde; }
+			// Un puesto con equipo (A o B) y libre; los «fuera» no se usan. Los equipos son los del mapa por puesto, no «los primeros N».
+			const auto libre = [&](int n) { return n >= 1 && n <= total && pr.equipoDe(n - 1) != '-' && !as[n - 1].ocupado && n != mhActivo; };
+			int destino = 0;   // 0 = el primer puesto libre de su equipo
+			char equipo = 'A';
+			if (pr.miPuestoModo == "b") equipo = 'B';
 			else if (pr.miPuestoModo == "fijo") {
-				destino = (std::min)(pr.miPuestoNumero, total);
-				if (destino > local) { desde = local + 1; hasta = total; }
+				destino = (std::max)(1, (std::min)(pr.miPuestoNumero, total));
+				equipo = pr.equipoDe(destino - 1) == 'B' ? 'B' : 'A';
 			}
-			if (libre(destino)) return destino;
-			for (int n = desde; n <= hasta; n++) if (libre(n)) return n;
+			if (destino > 0 && libre(destino)) return destino;
+			for (int n = 1; n <= total; n++) if (pr.equipoDe(n - 1) == equipo && libre(n)) return n;
 			for (int n = 1; n <= total; n++) if (libre(n)) return n;
 			return 0;
 		}

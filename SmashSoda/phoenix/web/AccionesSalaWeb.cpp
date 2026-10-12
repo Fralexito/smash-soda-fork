@@ -73,9 +73,13 @@ namespace phoenix::web {
 		if (local < 1 || visitante < 1 || local + visitante > maximo) {
 			throw ErrorAccion("FUERA_DE_RANGO", "Cada equipo necesita al menos un mando y en total máximo " + std::to_string(maximo) + ".");
 		}
+		// «local» = puestos del Equipo A y «visitante» = del Equipo B (los nombres del protocolo no cambian). Si el mapa
+		// ya tiene esas cuentas se respeta tal cual (puede haber puestos salteados); si no, la formación de siempre.
 		PhoenixPrefs& pr = PhoenixPrefs::get();
-		pr.equipoLocal = local;
-		pr.mandosActivos = local + visitante;
+		if (equipos::cuenta(pr.equipoPuesto, 'A') != local || equipos::cuenta(pr.equipoPuesto, 'B') != visitante) {
+			pr.equipoPuesto = equipos::desdeFormacion(local, visitante);
+		}
+		pr.sincronizarEquipos();
 		pr.guardar();
 	}
 
@@ -88,7 +92,7 @@ namespace phoenix::web {
 			{"visibilidad", pr.visibilidad}, {"espectadores", pr.espectadores},
 			{"limiteEspectadores", pr.limiteEspectadores}, {"entradaParsec", pr.entradaParsec},
 			{"juego", pr.juego}, {"parche", pr.parche}, {"region", pr.region},
-			{"local", pr.equipoLocal}, {"visitante", pr.mandosActivos - pr.equipoLocal},
+			{"local", equipos::cuenta(pr.equipoPuesto, 'A')}, {"visitante", equipos::cuenta(pr.equipoPuesto, 'B')},   // cuentas del Equipo A y del B
 			{"fps", Config::cfg.video.fps}, {"mbps", Config::cfg.video.bandwidth},
 		};
 		if (in.ctx.ajustesSala != nullptr) {

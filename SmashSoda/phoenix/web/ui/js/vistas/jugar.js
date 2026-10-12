@@ -1,6 +1,6 @@
 // =============================================================================
 //  «MI PUESTO AL JUGAR»: dónde se sienta el anfitrión cuando pulsa JUGAR.
-//  Dinámico: un puesto fijo (1, 2…) o «el primero de Local / de Visita», que
+//  Dinámico: un puesto fijo (1, 2…) o «el primero del Equipo A / del Equipo B», que
 //  se adapta a la formación del momento. Si el puesto está ocupado, ese amigo
 //  pasa al primer puesto libre de su mismo equipo (o a cualquiera libre): nadie
 //  se queda sin mando. La preferencia la guarda el motor (phoenix-ui.json), que
@@ -13,16 +13,21 @@ import { accion, avisar } from "../tienda.js";
 import { Boton, Segmentos, Stepper, AjusteSw, dos } from "../ui.js";
 
 const CLAVE = "phoenix.miPuesto";
-const POR_DEFECTO = { modo: "fijo", numero: 1 };   // modo: fijo | local | visitante
+const POR_DEFECTO = { modo: "fijo", numero: 1 };   // modo: fijo | a | b  (los viejos «local» y «visitante» se leen como a y b)
 
+/** «local» → a, «visitante» → b (versiones anteriores a 0.2.31). */
+function modoActual(modo) {
+  return modo === "local" ? "a" : modo === "visitante" ? "b" : modo;
+}
 function leerLocal() {
-  try { const p = JSON.parse(localStorage.getItem(CLAVE) || "null"); if (p && p.modo) return p; } catch { /* sin almacenamiento */ }
+  try { const p = JSON.parse(localStorage.getItem(CLAVE) || "null"); if (p && p.modo) return { ...p, modo: modoActual(p.modo) }; } catch { /* sin almacenamiento */ }
   return null;
 }
 /** La del motor (si la publica); si no, la que quedó en este PC (versiones ≤ 0.2.15). */
 export function leerPreferencia(m) {
   const motor = m?.mandos?.miPuesto;
-  return { ...POR_DEFECTO, alAbrir: true, pulsando: true, ...(motor || leerLocal() || {}) };
+  const pref = { ...POR_DEFECTO, alAbrir: true, pulsando: true, ...(motor || leerLocal() || {}) };
+  return { ...pref, modo: modoActual(pref.modo) };
 }
 function guardarPreferencia(p) {
   try { localStorage.setItem(CLAVE, JSON.stringify(p)); } catch { /* nada */ }
@@ -51,7 +56,7 @@ export async function jugarYo(m) {
     // Primer libre de su mismo equipo; si no hay, uno sin equipo; y solo en último caso el otro equipo (avisando)
     const libres = lista.filter((x) => !x.ocupado && x.n !== destino);
     const mismo = libres.find((x) => x.equipo === p.equipo);
-    const fuera = libres.find((x) => x.equipo !== "local" && x.equipo !== "visitante");
+    const fuera = libres.find((x) => x.equipo !== "a" && x.equipo !== "b");
     const libre = mismo || fuera || libres[0];
     if (!libre) { avisar(t(`El puesto ${dos(destino)} está ocupado y no queda ninguno libre: quita a alguien primero.`, `Seat ${dos(destino)} is taken and none is free: remove someone first.`), "warn"); return; }
     if (!(await accion("mandos.intercambiar", { a: destino - 1, b: libre.n - 1 }, { silencioso: true }))) return;
@@ -81,10 +86,11 @@ export function PreferenciaPuesto({ m }) {
   return html`<div style="display:flex;flex-direction:column;gap:10px">
     <div class="lab acc">${t("MI PUESTO AL JUGAR", "MY SEAT WHEN PLAYING")}</div>
     <div class="ayuda" style="font-size:13px">${t("Dónde te sienta el botón JUGAR. Si está ocupado, ese amigo pasa a un puesto libre de su equipo.", "Where the PLAY button seats you. If taken, that friend moves to a free seat on their team.")}</div>
+    <div class="ayuda" style="font-size:13px">${t("Equipo A y B son equipos de Link, no el local y la visita del juego. ¿Quieres ser siempre el 01 aunque juegues del otro lado? Elige PUESTO FIJO 1 y en Mandos › Puestos pasa el puesto 01 al equipo que toque: tu número de mando no cambia.", "Team A and B are Link's teams, not the game's home and away. Want to always be pad 01 even when you play the other side? Pick FIXED SEAT 1 and, in Pads › Seats, move seat 01 to the team you need: your pad number doesn't change.")}</div>
     <${Segmentos} valor=${pref.modo} al=${(v) => poner({ modo: v })} opciones=${[
       { valor: "fijo", texto: t("PUESTO FIJO", "FIXED SEAT") },
-      { valor: "local", texto: t("1.º DE LOCAL", "1ST HOME") },
-      { valor: "visitante", texto: t("1.º DE VISITA", "1ST AWAY") }]}/>
+      { valor: "a", texto: t("1.º DE A", "1ST OF A") },
+      { valor: "b", texto: t("1.º DE B", "1ST OF B") }]}/>
     ${pref.modo === "fijo" ? html`<div style="display:flex;align-items:center;gap:10px">
       <span class="ayuda">${t("Puesto", "Seat")}</span>
       <${Stepper} valor=${pref.numero} min=${1} max=${total} al=${(v) => poner({ numero: v })}/></div>` : null}

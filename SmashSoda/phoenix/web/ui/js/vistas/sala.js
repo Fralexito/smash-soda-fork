@@ -226,7 +226,7 @@ function MiniPuesto({ p }) {
     <div style="min-width:0;flex:1">
       <div class="nombre" style=${`font-size:15px;${p.ocupado ? "" : "color:var(--mut)"}`}>${p.ocupado ? p.jugador : t("Puesto libre", "Free seat")}</div>
       <div class="mono mut" style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.ocupado
-        ? html`${p.equipo === "local" ? "LOCAL" : p.equipo === "visitante" ? t("VISITA", "AWAY") : "—"}${ping != null ? html` · <span style=${`color:${colorPing(ping)}`}>${ping} ms</span>` : null}${p.bloqueado ? " · 🔒" : ""}`
+        ? html`${p.equipo === "a" ? t("EQUIPO A", "TEAM A") : p.equipo === "b" ? t("EQUIPO B", "TEAM B") : "—"}${ping != null ? html` · <span style=${`color:${colorPing(ping)}`}>${ping} ms</span>` : null}${p.bloqueado ? " · 🔒" : ""}`
         : t("esperando jugador", "waiting for player")}</div>
     </div>
   </div>`;

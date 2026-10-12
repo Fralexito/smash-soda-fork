@@ -1,5 +1,7 @@
 // =============================================================================
-//  PUESTOS (diseño aprobado 2026-10-08): «Jugando» (Local / Visita) y «Mirando».
+//  PUESTOS (diseño aprobado 2026-10-08): «Jugando» (Equipo A / Equipo B) y «Mirando».
+//  Cada puesto (mando virtual de Link, número fijo) pertenece al Equipo A, al B o está fuera
+//  (acción mandos.equipo): el número del puesto nunca cambia, solo su equipo.
 //  Se arrastra a cada persona al puesto que se quiera; lo que se suelta en
 //  «Mirando» solo ve la partida. Usa las MISMAS acciones que la pantalla anterior
 //  (mandos.asignar, mandos.intercambiar, mandos.liberar, mandos.tomar,
@@ -78,12 +80,12 @@ function Fila({ p, m, color, arr, setArr, alAsignar }) {
       onDragOver=${(e) => { if (recibe) { e.preventDefault(); setSobre(true); } }}
       onDragLeave=${() => setSobre(false)}
       onDrop=${soltar}
-      style=${`display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:10px;border:${p.ocupado ? "1px solid" : "1.5px dashed"} ${borde};background:${fondo};box-shadow:${sombra};opacity:${opacidad};cursor:${p.ocupado ? "grab" : "default"};transition:border-color .15s,background .15s,box-shadow .15s,opacity .15s`}>
+      style=${`display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:12px 14px;border-radius:10px;border:${p.ocupado ? "1px solid" : "1.5px dashed"} ${borde};background:${fondo};box-shadow:${sombra};opacity:${opacidad};cursor:${p.ocupado ? "grab" : "default"};transition:border-color .15s,background .15s,box-shadow .15s,opacity .15s`}>
     ${p.ocupado ? html`<span style="color:var(--mut)"><${Agarre}/></span>` : html`<span style="width:12px;flex:none"></span>`}
     <div class="disp" style=${`font-weight:700;font-size:40px;line-height:1;width:56px;flex:none;color:${p.ocupado ? color : "rgba(255,255,255,.22)"}`}>${dos(p.n)}</div>
     ${p.ocupado
       ? html`<${Avatar} nombre=${p.jugador} id=${p.parsecId} url=${perfil?.avatar_url} t=${44}/>
-        <div style="flex:1;min-width:0">
+        <div style="flex:1 1 110px;min-width:110px">
           <div style="font:600 17px/1.2 var(--f-body);color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.jugador}
             ${esHost ? html` <${Chip} tipo="acc">${t("TÚ", "YOU")}</${Chip}>` : null}
             <span class=${cx("chip", p.tipo === "ds4" ? "acc2" : "mod")} style="height:20px;margin-left:6px;font-size:11px" title=${p.tipo === "ds4" ? t("Este puesto es un mando de PlayStation (DualShock 4)", "This seat is a PlayStation pad (DualShock 4)") : t("Este puesto es un mando de Xbox", "This seat is an Xbox pad")}>${p.tipo === "ds4" ? "PLAYSTATION" : "XBOX"}</span></div>
@@ -92,13 +94,20 @@ function Fila({ p, m, color, arr, setArr, alAsignar }) {
               : html`${p.conectado ? t("conectado", "connected") : t("desconectado", "unplugged")}${p.bloqueado ? t(" · bloqueado", " · locked") : ""}`}
             ${p.ping >= 0 ? html` · <span style=${`color:${colorPing(p.ping)}`}>${p.ping} ms</span>` : null}${!esHost ? html`<${IndicadorRetraso} r=${retrasoDe(m, p.parsecId)}/>` : null}</div>
         </div>`
-      : html`<div style="flex:1;min-width:0">
+      : html`<div style="flex:1 1 110px;min-width:110px">
           <div style="font:600 17px/1.2 var(--f-body);color:var(--mut)">${t("Puesto libre", "Free seat")}
             ${p.tipo ? html`<span class=${cx("chip", p.tipo === "ds4" ? "acc2" : "mod")} style="height:18px;margin-left:6px;font-size:10px;opacity:.8">${p.tipo === "ds4" ? "PLAYSTATION" : "XBOX"}</span>` : null}</div>
           <div style="font:400 13px/1.3 var(--f-body);color:var(--mut)">${arrastrando && recibe ? t("Suelta aquí", "Drop here") : t("Arrastra a alguien aquí", "Drag someone here")}</div>
         </div>`}
     ${p.ocupado && !esHost ? html`<button class="icono-btn" style="height:38px;width:38px;flex:none" data-tip=${p.bloqueado ? t("Desbloquear: el jugador vuelve a mover su mando", "Unlock: the player can move again") : t("Bloquear: el jugador no puede mover este mando (sigue en su puesto)", "Lock: the player can't move this pad (keeps the seat)")}
         onClick=${() => accion("mandos.bloquear", { indice: p.n - 1 })}><span style=${p.bloqueado ? "color:var(--warn)" : ""}><${Icono} n="candado" t=${17}/></span></button>` : null}
+    ${p.equipo === "a" || p.equipo === "b" ? html`<${Boton} tipo="mini suave" estilo="flex:none"
+        deshabilitado=${!!m.mandos.esclavo || (m.mandos.formacion?.[p.equipo] ?? 2) <= 1}
+        titulo=${(m.mandos.formacion?.[p.equipo] ?? 2) <= 1 ? t("Es el único puesto de su equipo: cada equipo necesita al menos uno", "It's the only seat on its team: each team needs at least one")
+          : (p.equipo === "a" ? t("PASAR A EQUIPO B", "MOVE TO TEAM B") : t("PASAR A EQUIPO A", "MOVE TO TEAM A")) + " · " + t("el puesto mantiene su número; solo cambia de equipo", "the seat keeps its number; only its team changes")}
+        al=${() => accion("mandos.equipo", { indice: p.n - 1, equipo: p.equipo === "a" ? "b" : "a" })}>${p.equipo === "a" ? "→ B" : "→ A"}</${Boton}>`
+      : html`<${Boton} tipo="mini suave" estilo="flex:none" deshabilitado=${!!m.mandos.esclavo} titulo=${t("Meter este puesto en el Equipo A", "Put this seat on Team A")} al=${() => accion("mandos.equipo", { indice: p.n - 1, equipo: "a" })}>A</${Boton}>
+        <${Boton} tipo="mini suave" estilo="flex:none" deshabilitado=${!!m.mandos.esclavo} titulo=${t("Meter este puesto en el Equipo B", "Put this seat on Team B")} al=${() => accion("mandos.equipo", { indice: p.n - 1, equipo: "b" })}>B</${Boton}>`}
     ${p.ocupado
       ? html`<${Boton} tipo="peligro mini" estilo="flex:none" titulo=${t("Sale del puesto y pasa a mirar", "Leaves the seat and watches")} al=${() => esHost ? accion("mandos.tomar", { numero: 0 }) : accion("mandos.liberar", { indice: p.n - 1 })}>${t("QUITAR", "REMOVE")}</${Boton}>`
       : html`<${Boton} tipo="mini" estilo=${`flex:none;border-color:${color};color:${color}`} al=${() => alAsignar(p.n - 1)}>${t("ASIGNAR", "ASSIGN")}</${Boton}>`}
@@ -163,7 +172,7 @@ function Espectador({ g, m, arr, setArr }) {
       aria-label=${(g.host ? t("Ponerme en un puesto", "Take a seat") : t("Dar puesto a ", "Give a seat to ") + g.nombre)}
       onChange=${(e) => { const v = Number(e.currentTarget.value); e.currentTarget.value = ""; if (!v) return; if (g.host) accion("mandos.tomar", { numero: v }); else accion("mandos.asignar", { indice: v - 1, parsecId: g.parsecId }); }}>
       <option value="">${sinSala ? t("SALA CERRADA", "ROOM CLOSED") : libres.length ? t("PUESTO…", "SEAT…") : t("LLENO", "FULL")}</option>
-      ${libres.map((p) => html`<option value=${p.n}>${dos(p.n)} · ${p.equipo === "local" ? "Local" : p.equipo === "visitante" ? t("Visita", "Away") : t("Fuera", "Off")}</option>`)}
+      ${libres.map((p) => html`<option value=${p.n}>${dos(p.n)} · ${p.equipo === "a" ? t("Equipo A", "Team A") : p.equipo === "b" ? t("Equipo B", "Team B") : t("Fuera", "Off")}</option>`)}
     </select>`}
   </div>`;
 }
@@ -176,7 +185,6 @@ export function PuestosNuevo({ m }) {
   const [verVivo, setVerVivoEstado] = useState(() => { try { return localStorage.getItem("phoenix.verVivo") !== "0"; } catch { return true; } });
   const setVerVivo = (v) => { setVerVivoEstado(v); try { localStorage.setItem("phoenix.verVivo", v ? "1" : "0"); } catch { /* sin almacenamiento */ } };
   const lista = m.mandos.lista || [];
-  const f = m.mandos.formacion || { local: 1, visitante: 1 };
   const total = lista.length;
   const esclavo = !!m.mandos.esclavo;
 
@@ -184,18 +192,27 @@ export function PuestosNuevo({ m }) {
     return html`<${Vacio} titulo=${t("No hay mandos virtuales", "No virtual pads")} texto=${t("Instala ViGEmBus o revisa Sala › Conexión.", "Install ViGEmBus or check Room › Connection.")}/>`;
   }
 
-  const locales = lista.filter((p) => p.equipo === "local");
-  const visitas = lista.filter((p) => p.equipo === "visitante");
+  const equipoA = lista.filter((p) => p.equipo === "a");
+  const equipoB = lista.filter((p) => p.equipo === "b");
   // Puestos que quedaron sin equipo pero tienen a alguien: se muestran para que nadie quede oculto.
-  const sinEquipo = lista.filter((p) => p.equipo !== "local" && p.equipo !== "visitante" && p.ocupado);
+  const sinEquipo = lista.filter((p) => p.equipo !== "a" && p.equipo !== "b" && p.ocupado);
+  // Puestos sin usar (fuera de los dos equipos y libres): se pueden meter en el equipo que se quiera, con su número de siempre
+  const sinUsar = lista.filter((p) => p.equipo !== "a" && p.equipo !== "b" && !p.ocupado);
   const sentados = new Set(lista.filter((p) => p.ocupado && p.parsecId).map((p) => p.parsecId));
   const hostSentado = !!m.mandos.host;
   const anfitrion = m.sala?.hostId && !hostSentado ? [{ parsecId: m.sala.hostId, nombre: m.sala.hostNombre || t("Anfitrión", "Host"), host: true, ping: -1 }] : [];
   const mirando = [...anfitrion, ...(m.invitados || []).filter((g) => !g.falso && !sentados.has(g.parsecId))];
 
-  const formacion = (local, visitante) => accion("mandos.formacion", { local, visitante });
-  const maxLocal = Math.max(1, Math.min(7, total - f.visitante));
-  const maxVisita = Math.max(1, Math.min(7, total - f.local));
+  // El equipo es del PUESTO: se cambia el equipo de un puesto, nunca su número ni su mando
+  const ponerEquipo = (p, equipo) => accion("mandos.equipo", { indice: p.n - 1, equipo });
+  const masDe = (equipo) => { const libre = sinUsar[0]; if (libre) ponerEquipo(libre, equipo); };
+  const menosDe = async (filas) => {
+    // Quita el último puesto libre de ese equipo; si todos están ocupados, pregunta (la persona sigue sentada, sin equipo)
+    const p = [...filas].reverse().find((x) => !x.ocupado) || filas[filas.length - 1];
+    if (!p) return;
+    if (p.ocupado && !(await confirmar({ titulo: t(`¿Quitar el puesto ${dos(p.n)} del equipo?`, `Remove seat ${dos(p.n)} from the team?`), texto: t(`${p.jugador} sigue sentado, pero sin equipo: no cuenta en el partido hasta que lo pases a un equipo.`, `${p.jugador} stays seated without a team: not counted in the match until moved to a team.`), si: t("Quitar", "Remove"), peligro: true }))) return;
+    return ponerEquipo(p, "fuera");
+  };
   const herramienta = async (nombre, pregunta) => {
     if (pregunta && !(await confirmar({ titulo: pregunta[0], texto: pregunta[1], si: t("Sí", "Yes"), peligro: true }))) return;
     return accion("mandos.herramienta", { nombre });
@@ -253,18 +270,29 @@ export function PuestosNuevo({ m }) {
           <span style="flex:1;height:1px;background:linear-gradient(90deg,var(--linea-fuerte),transparent)"></span>
         </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:16px;align-items:stretch">
-          <${Equipo} nombre="LOCAL" desc=${t("El equipo de quien abre la sala", "The room owner's team")} color="var(--acc)" filas=${locales}
+          <${Equipo} nombre=${t("EQUIPO A", "TEAM A")} desc=${t("Un equipo de Link: el que estaba a la izquierda en el saque", "A Link team: the one on the left at kick-off")} color="var(--acc)" filas=${equipoA}
             m=${m} arr=${arr} setArr=${setArr} alAsignar=${setEligiendo} esclavo=${esclavo}
-            puedeMas=${f.local < maxLocal} puedeMenos=${f.local > 1}
-            mas=${() => formacion(f.local + 1, f.visitante)} menos=${() => formacion(f.local - 1, f.visitante)}/>
-          <${Equipo} nombre=${t("VISITA", "AWAY")} desc=${t("El equipo rival", "The rival team")} color="var(--eq-b)" filas=${visitas}
+            puedeMas=${sinUsar.length > 0} puedeMenos=${equipoA.length > 1}
+            mas=${() => masDe("a")} menos=${() => menosDe(equipoA)}/>
+          <${Equipo} nombre=${t("EQUIPO B", "TEAM B")} desc=${t("El equipo rival", "The rival team")} color="var(--eq-b)" filas=${equipoB}
             m=${m} arr=${arr} setArr=${setArr} alAsignar=${setEligiendo} esclavo=${esclavo}
-            puedeMas=${f.visitante < maxVisita} puedeMenos=${f.visitante > 1}
-            mas=${() => formacion(f.local, f.visitante + 1)} menos=${() => formacion(f.local, f.visitante - 1)}/>
+            puedeMas=${sinUsar.length > 0} puedeMenos=${equipoB.length > 1}
+            mas=${() => masDe("b")} menos=${() => menosDe(equipoB)}/>
         </div>
+        <div class="ayuda" style="font-size:13px">${t(
+          "Equipo A y Equipo B son los equipos de Link: no tienen por qué coincidir con local y visita del juego (A = el que estaba a la izquierda en el saque, según el Campo 2D). El número del puesto es el mando de Link y no cambia: con «Orden de mandos en PES» el puesto N es el jugador N. Pasa un puesto al otro equipo con su botón «→ A» / «→ B» (PASAR A EQUIPO A / B); por ejemplo, tú en el 01 siendo del Equipo B.",
+          "Team A and Team B are Link's teams: they don't have to match the game's home and away (A = the one on the left at kick-off, per the 2D Pitch). The seat number is Link's pad and never changes: with «Pad order in PES», seat N is player N. Move a seat to the other team with its «→ A» / «→ B» button (MOVE TO TEAM A / B); for example, you on 01 as Team B.")}</div>
+        ${sinUsar.length ? html`<div class="caja" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 16px">
+          <span class="lab" style="margin:0">${t("PUESTOS SIN USAR", "UNUSED SEATS")}</span>
+          ${sinUsar.map((p) => html`<span key=${p.n} style="display:inline-flex;align-items:center;gap:6px">
+            <span class="disp" style="font-weight:700;font-size:18px;color:var(--mut)">${dos(p.n)}</span>
+            <${Boton} tipo="mini suave" deshabilitado=${esclavo} titulo=${t(`Meter el puesto ${dos(p.n)} en el Equipo A`, `Put seat ${dos(p.n)} on Team A`)} al=${() => ponerEquipo(p, "a")}>A</${Boton}>
+            <${Boton} tipo="mini suave" deshabilitado=${esclavo} titulo=${t(`Meter el puesto ${dos(p.n)} en el Equipo B`, `Put seat ${dos(p.n)} on Team B`)} al=${() => ponerEquipo(p, "b")}>B</${Boton}>
+          </span>`)}
+        </div>` : null}
         ${sinEquipo.length ? html`<div class="caja" style="display:flex;flex-direction:column;gap:10px">
           <div class="lab">${t("MANDOS SIN EQUIPO", "PADS WITHOUT TEAM")}</div>
-          <div class="ayuda">${t("Estos puestos quedaron fuera de Local y Visita. Añade puestos a un equipo o quítales el mando.", "These seats are outside both teams. Add seats to a team or remove their pad.")}</div>
+          <div class="ayuda">${t("Estos puestos quedaron fuera del Equipo A y del B. Pásalos a un equipo (botones A / B) o quítales el mando.", "These seats are outside both teams. Move them to a team (A / B buttons) or remove their pad.")}</div>
           ${sinEquipo.map((p) => html`<${Fila} key=${p.n} p=${p} m=${m} color="var(--mut)" arr=${arr} setArr=${setArr} alAsignar=${setEligiendo}/>`)}
         </div>` : null}
       </div>

@@ -37,7 +37,7 @@ Con el orden de mandos en PES, **tu mando no va en Settings**: PES solo ve los 8
 
 ## Sentarte solo (desde 0.2.17)
 En **Mandos › TU MANDO › Mi puesto al jugar** hay dos interruptores (los dos encendidos por defecto):
-- **Empezar sentado**: al abrir la sala ya estás en tu puesto (el que elegiste: fijo, 1.º de Local o 1.º de Visita). Si no quieres jugar, arrástrate a **Mirando**.
+- **Empezar sentado**: al abrir la sala ya estás en tu puesto (el que elegiste: fijo, 1.º de A o 1.º de B). Si no quieres jugar, arrástrate a **Mirando**.
 - **Entrar pulsando tu mando**: si no estás en un puesto, pulsa **A, B, X o Y** (✕ ○ □ △) y entras. Si tu puesto está ocupado, vas a otro libre de tu equipo; si no, a cualquiera libre. **Nunca saca a nadie**: si todo está lleno, no pasa nada.
 
 Link recuerda tu mando: al volver a abrirlo, el que elegiste con «USAR ESTE» queda elegido solo cuando está conectado. Con teclado no hay entrada automática: usa el botón **JUGAR** en Mirando.
@@ -46,8 +46,8 @@ Los invitados funcionan igual: un jugador autorizado (aceptó el reto en la web,
 
 ## Salir como jugador en la web (desde 0.2.23, automático desde 0.2.24)
 Antes, si jugabas tú con tu mando de Link, el partido que Link mandaba a la web **no te incluía**: contra un invitado parecía «invitado contra la CPU» y no puntuaba. Ahora es **automático**, sin tocar nada:
-- **Sentado en un puesto:** al pitazo inicial Link te apunta en el lado de tu puesto (1.º–«equipoLocal» = Local, el resto = Visita).
-- **Sin puesto, pero jugando directo en PES:** si Link ve que tocaste tu mando en los 2 minutos antes del pitazo (cuando eliges equipos en los menús), te apunta en tu lado habitual, el de «Mi puesto al jugar» (puesto fijo, 1.º de Local o 1.º de Visita).
+- **Sentado en un puesto:** al pitazo inicial Link te apunta en el lado de tu puesto (el equipo de tu puesto: Equipo A o Equipo B, según el mapa de Mandos › Puestos).
+- **Sin puesto, pero jugando directo en PES:** si Link ve que tocaste tu mando en los 2 minutos antes del pitazo (cuando eliges equipos en los menús), te apunta en tu lado habitual, el de «Mi puesto al jugar» (puesto fijo, 1.º de A o 1.º de B).
 - **Si solo miras y no tocas tu mando:** no sales.
 - Interruptor «Contarme como jugador en la web (automático)» en **TU MANDO › Mi puesto al jugar**, encendido por defecto. Apágalo si nunca quieres salir sin puesto.
 - Funciona al armarse los lados solos al pitazo. Si ya los elegiste a mano en Partido › Armar, ahí mandas tú.
@@ -55,3 +55,9 @@ Antes, si jugabas tú con tu mando de Link, el partido que Link mandaba a la web
 ## Cruzarte con un amigo (desde 0.2.31)
 Si estás sentado (por ejemplo en el puesto 02) y arrastras tu fila a un puesto que ya ocupa un amigo (el 01), **os cruzáis**: tú pasas al 01 y él al 02. Nadie se queda sin mando ni va a Mirando. Link muestra el aviso «Te sentaste en el 01 y Fulano pasó al 02».
 Si aún no estás sentado, sigue valiendo el aviso de siempre (el puesto está ocupado): sentarte en un puesto libre, y luego cruzarte.
+
+## Ser siempre el mando 01 aunque juegues del otro lado (desde 0.2.33)
+Los puestos ya no se reparten «los primeros N son Local»: **cada puesto tiene su equipo (Equipo A o Equipo B)** y tú lo eliges. Para ser siempre el **mando 01** aunque tu equipo sea el B:
+1. **Mandos › TU MANDO › Mi puesto al jugar** → **PUESTO FIJO** y puesto **1**.
+2. **Mandos › Puestos** → en la fila del 01, botón **→ B** (PASAR A EQUIPO B). El número 01 no cambia; solo cambia su equipo.
+Al pitazo, Link te apunta en el lado de tu puesto (Equipo B) y a tu rival en el A. Detalle en `docs/EQUIPOS-A-B.md`.

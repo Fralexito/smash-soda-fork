@@ -24,3 +24,5 @@ g++ -std=c++17 -O2 -Wall -Wextra -I"$R/SmashSoda" "$R/pruebas-link/lados_test.cp
 /tmp/phx_pruebas/lados_test
 g++ -std=c++17 -O2 -Wall -Wextra -I"$R/SmashSoda" "$R/pruebas-link/colores_test.cpp" "$R/SmashSoda/phoenix/core/ColoresClub.cpp" -o /tmp/phx_pruebas/colores_test
 /tmp/phx_pruebas/colores_test
+g++ -std=c++17 -O2 -Wall -Wextra -I"$R/SmashSoda" "$R/pruebas-link/equipos_test.cpp" -o /tmp/phx_pruebas/equipos_test
+/tmp/phx_pruebas/equipos_test

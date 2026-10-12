@@ -57,6 +57,11 @@ namespace phoenix {
 			region = j.value("region", region).substr(0, 40);
 			mandosActivos = (std::max)(2, (std::min)(8, j.value("mandosActivos", mandosActivos)));
 			equipoLocal = (std::max)(1, (std::min)(mandosActivos - 1, j.value("equipoLocal", equipoLocal)));
+			// Equipo de cada puesto; un archivo anterior (sin equipoPuesto) migra: los primeros equipoLocal = A, el resto hasta mandosActivos = B
+			equipoPuesto = j.contains("equipoPuesto") && j["equipoPuesto"].is_string()
+				? equipos::normalizar(j["equipoPuesto"].get<std::string>())
+				: equipos::migrar(mandosActivos, equipoLocal);
+			sincronizarEquipos();
 			anchoAuto = j.value("anchoAuto", anchoAuto);
 			anchoPorPersona = (std::max)(1, (std::min)(50, j.value("anchoPorPersonaV2", anchoPorPersona)));
 			subidaMbps = (std::max)(0, (std::min)(10000, j.value("subidaMbps", subidaMbps)));
@@ -66,7 +71,9 @@ namespace phoenix {
 			soloAutorizados = j.value("soloAutorizados", soloAutorizados);
 			miMando = j.value("miMando", miMando);
 			miPuestoModo = j.value("miPuestoModo", miPuestoModo);
-			if (miPuestoModo != "local" && miPuestoModo != "visitante") miPuestoModo = "fijo";
+			if (miPuestoModo == "local") miPuestoModo = "a";   // archivos viejos: Local → Equipo A, Visitante → Equipo B
+			else if (miPuestoModo == "visitante") miPuestoModo = "b";
+			else if (miPuestoModo != "a" && miPuestoModo != "b") miPuestoModo = "fijo";
 			miPuestoNumero = (std::max)(1, (std::min)(8, j.value("miPuestoNumero", miPuestoNumero)));
 			sentarmeAlAbrir = j.value("sentarmeAlAbrir", sentarmeAlAbrir);
 			entrarPulsando = j.value("entrarPulsando", entrarPulsando);
@@ -105,6 +112,7 @@ namespace phoenix {
 				{"region", region},
 				{"mandosActivos", mandosActivos},
 				{"equipoLocal", equipoLocal},
+				{"equipoPuesto", equipoPuesto},
 				{"anchoAuto", anchoAuto},
 				{"anchoPorPersonaV2", anchoPorPersona},
 				{"subidaMbps", subidaMbps},

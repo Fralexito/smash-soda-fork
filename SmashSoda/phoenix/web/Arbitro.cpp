@@ -176,7 +176,7 @@ namespace phoenix::web {
 			t += std::string("marcador=") + Partido::nombreFase(fp) + "\n";
 			if (hayLados) t += "goles=" + std::to_string(ll.goles) + "-" + std::to_string(lv.goles) + "\n";
 			// Jugadores por mando. Con partido: el lado del partido (ya corregido por CORREGIR LADOS o por los lados
-			// automáticos, que miran en el juego). Sin partido, o si no está en él: los primeros «equipoLocal» mandos son del local.
+			// automáticos, que miran en el juego). Sin partido, o si no está en él: los puestos del Equipo A van arriba (como el local del juego).
 			auto enLado = [](const LadoPartido& l, uint32_t id) {
 				for (const JugadorPartido& jp : l.jugadores) if (id != 0 && jp.parsecId == id) return true;
 				return false;
@@ -185,8 +185,8 @@ namespace phoenix::web {
 			const int activos = (std::min)(static_cast<int>(asientos.size()), pr.mandosActivos);
 			for (int i = 0; i < activos; i++) {
 				const AsientoVista& s = asientos[static_cast<size_t>(i)];
-				if (!s.ocupado) continue;
-				bool local = i < pr.equipoLocal;
+				if (!s.ocupado || pr.equipoDe(i) == '-') continue;
+				bool local = pr.equipoDe(i) == 'A';
 				if (hayLados && enLado(ll, s.parsecId)) local = true;
 				else if (hayLados && enLado(lv, s.parsecId)) local = false;
 				const int ping = s.pingMs < 0 ? -1 : (s.pingMs + 5) / 10 * 10;   // a 10 ms: el archivo no cambia por nada
@@ -276,7 +276,7 @@ namespace phoenix::web {
 			PhoenixLink::instancia().salaJuego(textoSalaJuego(in, sala, h));
 
 			// 2a0) Sin lados elegidos: al pitazo inicial (reloj en marcha, minuto 0–1) Link los arma solo con quien tiene
-			//      mando, según la formación (los primeros «equipoLocal» mandos son el local; un lado vacío = la CPU).
+			//      mando, según el equipo de cada puesto (Equipo A = lado a, Equipo B = lado b; un lado vacío = la CPU).
 			//      Si en el juego se eligió el otro lado, CORREGIR LADOS lo arregla sin mover mandos.
 			if (pr.marcadorAuto && fp == FasePartido::Libre && sala.abierta() && j.valido && j.fase == "en_juego" && j.relojCorre
 				&& j.minuto <= 1 && ahora >= autoArmarEsperaHasta) {
@@ -286,8 +286,8 @@ namespace phoenix::web {
 				const int activos = (std::min)(static_cast<int>(asientos.size()), pr.mandosActivos);
 				for (int i = 0; i < activos; i++) {
 					const AsientoVista& s = asientos[static_cast<size_t>(i)];
-					if (!s.ocupado || s.parsecId == 0) continue;
-					LadoPartido& l = i < pr.equipoLocal ? la : lb;
+					if (!s.ocupado || s.parsecId == 0 || pr.equipoDe(i) == '-') continue;
+					LadoPartido& l = pr.equipoDe(i) == 'A' ? la : lb;
 					bool repetido = false;
 					for (const LadoPartido* x : { &la, &lb }) for (const JugadorPartido& jp : x->jugadores) if (jp.parsecId == s.parsecId) repetido = true;
 					if (!repetido && l.jugadores.size() < 4) l.jugadores.push_back({ s.parsecId, s.jugador });
@@ -298,13 +298,13 @@ namespace phoenix::web {
 				try {
 					Guest& anf = h.getHost();
 					const int tomado = MandoHost::activo() - 1;
-					int local = -1;   // 1 = lado local, 0 = visita, -1 = no cuenta
+					int local = -1;   // 1 = lado a (Equipo A), 0 = lado b (Equipo B), -1 = no cuenta
 					if (anf.isValid() && anf.userID != 0) {
-						if (tomado >= 0 && tomado < activos) local = tomado < pr.equipoLocal ? 1 : 0;
+						if (tomado >= 0 && tomado < activos && pr.equipoDe(tomado) != '-') local = pr.equipoDe(tomado) == 'A' ? 1 : 0;   // lado de SU puesto
 						else if (pr.anfitrionCuenta && ahora - anfitrionPulsoSeg < 120.0) {   // automático: tocó su mando en los últimos 2 min
-							if (pr.miPuestoModo == "local") local = 1;
-							else if (pr.miPuestoModo == "visitante") local = 0;
-							else local = pr.miPuestoNumero <= pr.equipoLocal ? 1 : 0;
+							if (pr.miPuestoModo == "a") local = 1;
+							else if (pr.miPuestoModo == "b") local = 0;
+							else if (pr.equipoDe(pr.miPuestoNumero - 1) != '-') local = pr.equipoDe(pr.miPuestoNumero - 1) == 'A' ? 1 : 0;   // puesto fijo: el equipo de ese puesto
 						}
 					}
 					if (local >= 0) {

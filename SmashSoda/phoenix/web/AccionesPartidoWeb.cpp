@@ -189,20 +189,23 @@ namespace phoenix::web {
 
 			const bool asignar = d.contains("asignar") && d["asignar"].is_boolean() && d["asignar"].get<bool>();
 			if (asignar) {
-				// La formación sigue a los lados (los mandos de A primero, luego los de B)
+				// La formación sigue a los lados: los jugadores del lado a van a los puestos del Equipo A (en orden) y los del
+				// lado b a los del Equipo B. Si el mapa de puestos no tiene esas cuentas, se rehace como siempre (A primero, luego B).
 				const int nA = static_cast<int>(a.jugadores.size()), nB = static_cast<int>(b.jugadores.size());
 				aplicarFormacion(in, nA, nB);
+				const PhoenixPrefs& pr = PhoenixPrefs::get();
 				const uint32_t idHost = hostingObligatorio(in).getHost().userID;
-				int mando = 0;
-				for (const JugadorPartido& j : in.partido.ladoA().jugadores) {
-					if (j.parsecId != idHost && j.parsecId != 0) AccionesSala::asignarConectando(sala, mando, j.parsecId);   // la CPU no lleva mando
-					mando++;
-				}
-				mando = nA;
-				for (const JugadorPartido& j : in.partido.ladoB().jugadores) {
-					if (j.parsecId != idHost && j.parsecId != 0) AccionesSala::asignarConectando(sala, mando, j.parsecId);
-					mando++;
-				}
+				const auto repartir = [&](const std::vector<JugadorPartido>& jugadores, char equipo) {
+					int mando = 0;
+					for (const JugadorPartido& j : jugadores) {
+						while (mando < equipos::kPuestos && pr.equipoDe(mando) != equipo) mando++;
+						if (mando >= equipos::kPuestos) break;
+						if (j.parsecId != idHost && j.parsecId != 0) AccionesSala::asignarConectando(sala, mando, j.parsecId);   // la CPU no lleva mando
+						mando++;
+					}
+				};
+				repartir(in.partido.ladoA().jugadores, 'A');
+				repartir(in.partido.ladoB().jugadores, 'B');
 			}
 			return in.partido.comoJson(ahoraSeg());
 		});

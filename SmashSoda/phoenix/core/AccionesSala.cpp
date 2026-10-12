@@ -44,11 +44,12 @@ namespace phoenix {
 				for (size_t i = 0; i < asientos.size(); i++) {
 					if (asientos[i].ocupado && asientos[i].parsecId == sol.parsecId) actual = static_cast<int>(i);
 				}
-				const bool esLocal = actual >= 0 && actual < pr.equipoLocal;
-				const int desde = esLocal ? pr.equipoLocal : 0;
-				const int hasta = esLocal ? pr.mandosActivos : pr.equipoLocal;
-				destino = desde;
-				for (int i = desde; i < hasta && i < static_cast<int>(asientos.size()); i++) {
+				// El otro equipo según el mapa por puesto (quien no está sentado pasa al A)
+				const char otro = (actual >= 0 && pr.equipoDe(actual) == 'A') ? 'B' : 'A';
+				destino = -1;
+				for (int i = 0; i < static_cast<int>(asientos.size()); i++) {
+					if (pr.equipoDe(i) != otro) continue;
+					if (destino < 0) destino = i;   // por si están todos ocupados: el primero de ese equipo
 					if (!asientos[i].ocupado) { destino = i; break; }
 				}
 			}
@@ -72,7 +73,7 @@ namespace phoenix {
 				const std::vector<AsientoVista> asientos = sala.asientos(8);
 				const PhoenixPrefs& pr = PhoenixPrefs::get();
 				for (int i = 0; i < pr.mandosActivos && i < static_cast<int>(asientos.size()); i++) {
-					if (asientos[i].ocupado) continue;
+					if (asientos[i].ocupado || pr.equipoDe(i) == '-') continue;   // un puesto fuera de los equipos no se da
 					if (!asientos[i].conectado) sala.conectarMando(i);
 					sala.asignarMando(i, parsecId);
 					break;

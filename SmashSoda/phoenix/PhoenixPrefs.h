@@ -3,6 +3,8 @@
 #include <atomic>
 #include <string>
 
+#include "core/EquiposPuestos.h"
+
 // =============================================================================
 //  Phoenix Link · Preferencias de interfaz
 // -----------------------------------------------------------------------------
@@ -28,11 +30,14 @@ namespace phoenix {
 		std::string juego = "eFootball PES 2021";
 		std::string parche = "Conmegol";
 		std::string region = "Lima";
-		int mandosActivos = 2;    ///< 2–8 mandos visibles en el tablero
+		int mandosActivos = 2;    ///< tramo de puestos visibles (último puesto con equipo, 2–8); lo calcula sincronizarEquipos()
 		bool avisosEnJuego = true; ///< escribir los avisos de la web en el juego (buzon de Sider)
 		std::string modoPes = "off";  ///< prueba «Solo PES 2021»: off | publicar (la sala solo se publica con PES abierto) | estricto (ademas no deja abrir la sala sin PES)
 		std::string carpetaJuego;  ///< ultima carpeta de PES2021.exe detectada (UTF-8), para el repartidor de datos
-		int equipoLocal = 1;      ///< cuántos mandos son del equipo local
+		int equipoLocal = 1;      ///< cuántos puestos son del Equipo A (informativo y para versiones viejas; manda equipoPuesto)
+		/// Equipo de cada puesto (mando virtual de Link, 1–8): una letra por puesto, 'A' (Equipo A), 'B' (Equipo B) o '-' (fuera).
+		/// "BA------" = el puesto 01 es del Equipo B y el 02 del A. Migra desde mandosActivos/equipoLocal. Ver core/EquiposPuestos.h.
+		std::string equipoPuesto = "AB------";
 		bool anchoAuto = true;    ///< ancho de banda automático: sube y baja solo según los invitados conectados
 		int anchoPorPersona = 10;  ///< Mbps por persona cuando el ancho automático está activo (1–50)
 		int subidaMbps = 0;       ///< subida de internet del anfitrión en Mbps (0 = no la sabe); el automático no pasa del 80 %
@@ -44,7 +49,7 @@ namespace phoenix {
 		bool ladosAuto = true;        ///< partido: Link mira en el juego (stick + Campo 2D) el lado de cada mando y corrige los lados solo si están al revés
 		// Anfitrión: su puesto al jugar (Mandos › TU MANDO)
 		std::string miMando;             ///< «VID:PID» de su mando físico; Link lo vuelve a elegir al abrirse ("" = teclado)
-		std::string miPuestoModo = "fijo";  ///< fijo | local | visitante (primero de ese equipo)
+		std::string miPuestoModo = "fijo";  ///< fijo | a | b (primero de ese equipo); los archivos viejos dicen local | visitante
 		int miPuestoNumero = 1;          ///< con modo fijo
 		bool sentarmeAlAbrir = true;     ///< al abrir la sala, el anfitrión ya queda sentado (si tiene su mando y hay sitio)
 		bool anfitrionCuenta = true;     ///< partido: automático: si no está en un puesto pero toca su mando (últimos 2 min), cuenta como jugador en su lado habitual («Mi puesto al jugar»)
@@ -53,6 +58,15 @@ namespace phoenix {
 		std::string modoRecarga = "AUTO-SIEMPRE";  ///< phoenix.lua v0.18b (modo.txt): AUTO-SIEMPRE (por defecto) | AUTO-FICHAJES | ACTIVAR
 
 		std::string cedidoExtras;  ///< modo cedido: más ejecutables permitidos, separados por comas (solo a mano en el archivo)
+
+		/// Equipo del puesto i (0-based): 'A', 'B' o '-' (fuera).
+		char equipoDe(int i) const { return equipos::de(equipoPuesto, i); }
+		/// Tras cambiar equipoPuesto: lo deja válido y recalcula mandosActivos y equipoLocal.
+		void sincronizarEquipos() {
+			equipoPuesto = equipos::normalizar(equipoPuesto);
+			mandosActivos = equipos::activos(equipoPuesto);
+			equipoLocal = equipos::cuenta(equipoPuesto, 'A');
+		}
 
 		static PhoenixPrefs& get();
 		void cargar();

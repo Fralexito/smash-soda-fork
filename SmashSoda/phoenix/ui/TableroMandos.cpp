@@ -156,13 +156,13 @@ namespace phoenix {
 			ImGui::PopID();
 		}
 
-		void tabColumna(ProveedorSala& sala, const std::vector<AsientoVista>& asientos, int desde, int hasta,
+		void tabColumna(ProveedorSala& sala, const std::vector<AsientoVista>& asientos, char equipo,
 			const char* titulo, const ImVec4& color, ImVec2 origen, float ancho, Theme* tema, float s, bool compacto, float& altoUsado) {
 
 			ImDrawList* dl = ImGui::GetWindowDrawList();
 			dl->AddText(AppFonts::label, AppFonts::label->FontSize, origen, vis::col(color), titulo);
 			char cuenta[16];
-			snprintf(cuenta, sizeof(cuenta), "%d", hasta - desde);
+			snprintf(cuenta, sizeof(cuenta), "%d", equipos::cuenta(PhoenixPrefs::get().equipoPuesto, equipo));
 			const ImVec2 tt = AppFonts::label->CalcTextSizeA(AppFonts::label->FontSize, FLT_MAX, 0, titulo);
 			dl->AddText(AppFonts::label, AppFonts::label->FontSize, ImVec2(origen.x + tt.x + 8 * s, origen.y), vis::col(tema->textMuted), cuenta);
 
@@ -172,7 +172,8 @@ namespace phoenix {
 			const float anchoT = (ancho - sep * (columnas - 1)) / columnas;
 			const float y0 = origen.y + 30 * s;
 			int n = 0;
-			for (int i = desde; i < hasta && i < static_cast<int>(asientos.size()); i++, n++) {
+			for (int i = 0; i < static_cast<int>(asientos.size()); i++) {
+				if (PhoenixPrefs::get().equipoDe(i) != equipo) continue;   // los puestos de este equipo, con su número de siempre
 				const int f = n / columnas, c = n % columnas;
 				tabTarjeta(sala, asientos[i], i, ImVec2(origen.x + c * (anchoT + sep), y0 + f * (altoTarjeta + sep)),
 					ImVec2(anchoT, altoTarjeta), color, tema, s, compacto);
@@ -288,10 +289,10 @@ namespace phoenix {
 
 		// Formación: cuántos mandos y cómo se reparten
 		{
-			const int antesMandos = pr.mandosActivos, antesLocal = pr.equipoLocal;
-			// Cada equipo con su propio contador: «Local [-] 3 [+]  VS  Visitante [-] 3 [+]»
-			int local = (std::max)(1, (std::min)(pr.equipoLocal, maximo - 1));
-			int visita = (std::max)(1, (std::min)(pr.mandosActivos - pr.equipoLocal, maximo - local));
+			const std::string antesMapa = pr.equipoPuesto;
+			// Cada equipo con su propio contador: «Equipo A [-] 3 [+]  VS  Equipo B [-] 3 [+]» (cuántos puestos tiene cada uno)
+			int local = (std::max)(1, (std::min)(equipos::cuenta(pr.equipoPuesto, 'A'), maximo - 1));
+			int visita = (std::max)(1, (std::min)(equipos::cuenta(pr.equipoPuesto, 'B'), maximo - local));
 			const ImVec2 o = ImGui::GetCursorScreenPos();
 			local = tabStepper("local", o, local, 1, maximo - visita, T("mandos.equipo_local"), tema, s);
 			ImFont* ft = AppFonts::title;
@@ -315,21 +316,25 @@ namespace phoenix {
 			}
 			ImGui::PopFont();
 
-			pr.equipoLocal = local;
-			pr.mandosActivos = local + visita;
+			// Solo se toca el mapa si cambió una cuenta: se quitan los últimos puestos que sobran y se añaden los primeros libres
+			if (local != equipos::cuenta(pr.equipoPuesto, 'A') || visita != equipos::cuenta(pr.equipoPuesto, 'B')) {
+				equipos::Mapa nuevo = pr.equipoPuesto;
+				if (equipos::ajustarCuentas(nuevo, local, visita, maximo)) pr.equipoPuesto = nuevo;
+			}
+			pr.sincronizarEquipos();
 			ImGui::SetCursorScreenPos(ImVec2(o.x, o.y + (abajo ? 76 : 34) * s));
 			ImGui::Dummy(ImVec2(ancho, 1));
-			cambio = antesMandos != pr.mandosActivos || antesLocal != pr.equipoLocal;
+			cambio = antesMapa != pr.equipoPuesto;
 		}
 		ImGui::Dummy(ImVec2(0, 10 * s));
 
-		// Dos columnas: LOCAL (cian) y VISITANTE (púrpura)
+		// Dos columnas: EQUIPO A (cian) y EQUIPO B (púrpura), cada una con los puestos que el mapa le asigna
 		const float sep = 16 * s;
 		const float anchoCol = (ancho - sep) * 0.5f;
 		const ImVec2 origen = ImGui::GetCursorScreenPos();
 		float altoA = 0, altoB = 0;
-		tabColumna(sala, asientos, 0, pr.equipoLocal, T("mandos.equipo_local"), tema->primary, origen, anchoCol, tema, s, compacto, altoA);
-		tabColumna(sala, asientos, pr.equipoLocal, pr.mandosActivos, T("mandos.equipo_visitante"), tema->secondary,
+		tabColumna(sala, asientos, 'A', T("mandos.equipo_local"), tema->primary, origen, anchoCol, tema, s, compacto, altoA);
+		tabColumna(sala, asientos, 'B', T("mandos.equipo_visitante"), tema->secondary,
 			ImVec2(origen.x + anchoCol + sep, origen.y), anchoCol, tema, s, compacto, altoB);
 		ImGui::SetCursorScreenPos(ImVec2(origen.x, origen.y + (std::max)(altoA, altoB)));
 		ImGui::Dummy(ImVec2(ancho, 2 * s));

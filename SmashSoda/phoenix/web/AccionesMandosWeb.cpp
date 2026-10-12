@@ -84,6 +84,22 @@ namespace phoenix::web {
 			aplicarFormacion(in, entero(d, "local", 1, 7), entero(d, "visitante", 1, 7));
 			return json::object();
 		});
+		// Equipo de UN puesto (el número de mando no cambia): equipo = "a" | "b" | "fuera". Cada equipo conserva al menos un puesto.
+		p.registrar("mandos.equipo", [&in](const json& d, uint64_t) -> std::optional<json> {
+			const int i = indiceMando(in, d);
+			const std::string e = texto(d, "equipo", 8);
+			if (e != "a" && e != "b" && e != "fuera") throw ErrorAccion("DATOS_INVALIDOS", "El equipo es a, b o fuera.");
+			PhoenixPrefs& pr = PhoenixPrefs::get();
+			equipos::Mapa mapa = pr.equipoPuesto;
+			const int maxPuestos = static_cast<int>(salaObligatoria(in).asientos(8).size());
+			if (!equipos::poner(mapa, i, e == "a" ? 'A' : (e == "b" ? 'B' : '-'), maxPuestos)) {
+				throw ErrorAccion("FUERA_DE_RANGO", "Cada equipo necesita al menos un puesto.");
+			}
+			pr.equipoPuesto = mapa;
+			pr.sincronizarEquipos();
+			pr.guardar();
+			return json::object();
+		});
 		p.registrar("mandos.tomar", [&in](const json& d, uint64_t) -> std::optional<json> {
 			ProveedorSala& sala = salaObligatoria(in);
 			const int n = entero(d, "numero", 0, 8);
@@ -314,7 +330,8 @@ namespace phoenix::web {
 			PhoenixPrefs& pr = PhoenixPrefs::get();
 			if (d.contains("modo")) {
 				const std::string modo = texto(d, "modo", 16);
-				pr.miPuestoModo = (modo == "local" || modo == "visitante") ? modo : "fijo";
+				// a | b = «1.º de A / 1.º de B»; «local» y «visitante» son los nombres viejos (versiones anteriores a 0.2.31)
+				pr.miPuestoModo = (modo == "a" || modo == "local") ? "a" : ((modo == "b" || modo == "visitante") ? "b" : "fijo");
 			}
 			if (d.contains("numero")) pr.miPuestoNumero = entero(d, "numero", 1, 8);
 			if (d.contains("alAbrir")) pr.sentarmeAlAbrir = booleano(d, "alAbrir");
@@ -349,8 +366,8 @@ namespace phoenix::web {
 			PhoenixPrefs& pr = PhoenixPrefs::get();
 			const int total = xbox + ds4;
 			if (pr.mandosActivos > total) {
-				pr.mandosActivos = (std::max)(2, total);
-				pr.equipoLocal = (std::max)(1, (std::min)(pr.equipoLocal, pr.mandosActivos - 1));
+				pr.equipoPuesto = equipos::recortar(pr.equipoPuesto, (std::max)(2, total));   // los puestos que ya no existen quedan fuera
+				pr.sincronizarEquipos();
 				pr.guardar();
 			}
 			return json::object();
