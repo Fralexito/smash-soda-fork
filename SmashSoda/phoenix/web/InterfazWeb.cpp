@@ -319,6 +319,7 @@ namespace phoenix::web {
 						json j = json::array();
 						for (const phoenix::campo::Pieza& p : fc.j) j.push_back({ std::round(p.x * 10.0f) / 10.0f, std::round(p.z * 10.0f) / 10.0f, p.eq });
 						json ev = { {"j", j}, {"b", fc.hayBola ? json::array({ std::round(fc.bx * 10.0f) / 10.0f, std::round(fc.bz * 10.0f) / 10.0f, std::round(fc.by * 100.0f) / 100.0f }) : json(nullptr)} };
+						if (fc.fase != "vivo") ev["f"] = fc.fase;   // repeticion | otro | pausa: la web/tarjeta ponen etiqueta; las posiciones van congeladas
 						if (fc.tanda.activa) {
 							json l = json::array();
 							for (const phoenix::campo::Lanzamiento& x : fc.tanda.lanzamientos) l.push_back({ x.eq, x.gol });
@@ -326,7 +327,7 @@ namespace phoenix::web {
 						}
 						if (in.campoRapido) in.puente->evento("campo", ev);
 						if (web) campoWebFoto(in, fc, ev, ahora);   // tablero de la web: posesión y envío 1/s
-						if (lados) ladosFoto(in, fc, ahora);
+						if (lados && fc.fase != "repeticion" && fc.fase != "otro") ladosFoto(in, fc, ahora);
 					}
 				}
 			}

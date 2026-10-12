@@ -54,3 +54,17 @@ Colores: cian = local, violeta = visitante, amarillo = asistentes de línea, gri
 ## 2026-10-11 · El campo va a la web, no al overlay
 
 Fralex: «en el overlay no tiene que aparecer el campo 2D; debe aparecer en la web». El mini-radar del overlay (0.2.22, `campo.radarOverlay`) se quitó. Su interruptor ahora es **«Campo en vivo en la web»** (`campo.web`, preferencia `campoWeb`, apagada por defecto). Con un partido publicado en juego, `web/CampoWeb.cpp` manda el campo y la posesión a `POST /v1/liga/campo` como mucho 1/s, y la web lo enseña en el tablero que se abre al tocar «En vivo ahora» (`docs/PROMPT-WEB-tablero-partido.md`). El overlay ya no recibe `phoenix:campo`.
+
+## 0.2.29 · Repeticiones, cinemáticas y pausas (fase del campo)
+
+Problema (Fralex, repetición de un gol): las fichitas desaparecían. Causa: durante la repetición el juego aparca el balón (z = 100) y las posiciones que se leen son de la película, y si dejaban de leerse el lector se daba por perdido y volvía a buscar (~20 s «sin señal»).
+
+- El lector clasifica cada lectura en una **fase** (`FotoCampo.fase`, evento `campo` campo `f`, solo si ≠ vivo; en `POST /v1/liga/campo` siempre como `fase`):
+  - `vivo`: juego en directo.
+  - `repeticion`: el balón lleva ≥ 0,5 s aparcado (|z| > 40 en todos los candidatos). Se **congelan las últimas posiciones buenas**, el balón se oculta, no se asignan equipos ni se cuenta posesión ni se alimenta la tanda. Vuelve a `vivo` en la primera lectura con balón en juego (< 0,1 s; si hay salto grande las fichitas se colocan sin deslizar).
+  - `otro`: más de 3 fichitas dejaron de leerse; se congela igual y se reintenta hasta 30 s antes de volver a escanear (antes: escaneo inmediato).
+  - `pausa`: todo quieto ≥ 4 s; solo informativo (posiciones reales).
+- Tarjeta Campo: etiqueta sobre el campo «REPETICIÓN», «SIN LECTURA EN VIVO» o «PAUSA». El simulador muestra «REPETICIÓN» 4 s cada 32 s.
+- Web: el tablero debe hacer lo mismo con `fase` (≠ `vivo`: congelar y mostrar la etiqueta). La posesión no se calcula fuera de `vivo`.
+- Lados automáticos no reciben lecturas de `repeticion`/`otro`.
+- La celebración de gol no tiene fase propia: si el balón sigue en juego (|z| ≤ 40) se ve como `vivo` con las posiciones reales; si el juego lo aparca, como `repeticion`. No verificado con partido real (pendiente probar con una repetición y celebración en vivo).

@@ -54,7 +54,7 @@ namespace phoenix::web {
 				e.partido = in.partido.inicioMs();
 			}
 			// Posesión aproximada: el equipo del jugador más cercano al balón (si está a ≤ 2 m y el balón en juego)
-			if (fc.equiposListos && fc.hayBola && std::fabs(fc.bz) < 40.0f && fc.by < 2.0f && in.partido.fase() == FasePartido::EnJuego) {
+			if (fc.fase == "vivo" && fc.equiposListos && fc.hayBola && std::fabs(fc.bz) < 40.0f && fc.by < 2.0f && in.partido.fase() == FasePartido::EnJuego) {
 				float mejor = kCampoWebAlcance * kCampoWebAlcance;
 				int eq = -1;
 				for (const phoenix::campo::Pieza& p : fc.j) {
@@ -68,6 +68,7 @@ namespace phoenix::web {
 			e.ultimoEnvio = ahora;
 			json c = ev;   // {j:[[x,z,eq]…], b:[x,z,y]|null, t?:tanda}
 			c["v"] = 1;
+			c["fase"] = fc.fase;   // vivo | pausa | repeticion | otro (en repeticion las posiciones van congeladas)
 			c["equipos"] = fc.equiposListos;   // false = aún sin colores (se ponen en el siguiente saque de centro)
 			const long long total = e.conBalon[0] + e.conBalon[1];
 			if (total >= 40) {   // ~2 s de lecturas con balón: antes no significa nada

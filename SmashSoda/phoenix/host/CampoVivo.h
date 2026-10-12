@@ -32,6 +32,10 @@ namespace phoenix::campo {
 		bool equiposListos = false; ///< ya se vio un saque de centro y cada fichita tiene equipo
 		EstadoTanda tanda;          ///< tanda de penales (activa = en marcha)
 		uint32_t seq = 0;           ///< sube con cada lectura nueva
+		/// «vivo» = juego en directo; «repeticion» = el balón está aparcado (repetición/cinemática): las posiciones se congelan en
+		/// la última buena; «otro» = las fichitas dejaron de leerse un rato (también congeladas); «pausa» = todo quieto ≥ 4 s
+		/// (posiciones reales, solo informativo).
+		std::string fase = "vivo";
 	};
 
 	void iniciar();                 ///< arranca el hilo (idempotente)

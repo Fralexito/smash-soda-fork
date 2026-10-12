@@ -97,7 +97,10 @@ namespace phoenix::campo {
 			Tanda tanda;                  // tanda de penales (lógica pura)
 			double reloj = 0;             // segundos (aprox.) desde el arranque del hilo
 			uint32_t seq = 0;
-			auto cerrar = [&] { if (h) { CloseHandle(h); h = nullptr; } pidAbierto = 0; lista.clear(); equipos.clear(); antes.clear(); balones.clear(); tanda.reiniciar(); };
+			FotoCampo ultima;             // última lectura en vivo buena (se congela en repeticiones y cortes de lectura)
+			int fallos = 0, sinBola = 0, quietos = 0;   // lecturas seguidas sin fichitas válidas / sin balón en juego / sin movimiento
+			bool enRepe = false;
+			auto cerrar = [&] { if (h) { CloseHandle(h); h = nullptr; } pidAbierto = 0; lista.clear(); equipos.clear(); antes.clear(); balones.clear(); tanda.reiniciar(); ultima = FotoCampo(); fallos = sinBola = quietos = 0; enRepe = false; };
 
 			while (!g_parar.load()) {
 				FotoCampo f;
@@ -154,28 +157,43 @@ namespace phoenix::campo {
 						ahora[i].x = x; ahora[i].y = y; ahora[i].z = z;
 						if (antes.size() == lista.size() * 2) maxDesp = (std::max)(maxDesp, (std::max)(std::fabs(x - antes[i * 2]), std::fabs(z - antes[i * 2 + 1])));
 					}
-					if (malos > 3) { lista.clear(); f.estado = EstadoCampo::Buscando; publicar(f); dormir(1500); continue; }
+					if (malos > 3) {
+						// Repetición o cinemática: las fichitas dejan de leerse un rato. Se congela la última posición buena (los actores
+						// suelen volver solos) y solo si dura más de 30 s se vuelve a buscar.
+						if (++fallos > 600 || ultima.estado != EstadoCampo::Activo) { lista.clear(); ultima = FotoCampo(); fallos = 0; f.estado = EstadoCampo::Buscando; publicar(f); dormir(1500); continue; }
+						f = ultima; f.fase = "otro"; f.seq = ++seq; publicar(f); dormir(50); continue;
+					}
+					fallos = 0;
 					const bool habiaAntes = antes.size() == lista.size() * 2;
 					antes.resize(lista.size() * 2);
 					for (size_t i = 0; i < lista.size(); i++) { antes[i * 2] = ahora[i].x; antes[i * 2 + 1] = ahora[i].z; }
 
 					// 5) equipos: en el primer saque de centro que se vea (todos quietos y en formación) se reparten y se recuerdan
 					const bool sinEquipos = std::count(equipos.begin(), equipos.end(), kEqDesconocido) > 4;
-					if (sinEquipos && habiaAntes && esSaqueDeCentro(ahora, maxDesp)) equipos = repartirEquipos(ahora);
+					quietos = (habiaAntes && maxDesp < 0.02f) ? quietos + 1 : 0;
+					if (sinEquipos && habiaAntes && !enRepe && esSaqueDeCentro(ahora, maxDesp)) equipos = repartirEquipos(ahora);
 
 					// 6) balón: el candidato que se ha movido hace menos tiempo (los de los recogepelotas no se mueven)
 					reloj += 0.05;
 					const Candidato* mejor = nullptr;
+					bool bolaEnJuego = balones.empty();   // sin candidatos no hay información: no se declara repetición
 					for (Candidato& c : balones) {
 						uint8_t b[16]; SIZE_T g = 0; float x, y, z;
 						if (!ReadProcessMemory(h, reinterpret_cast<LPCVOID>(c.a.dir + kOffPosicion), b, 16, &g) || g != 16 || !leerPosicionBalon(b, x, y, z)) continue;
 						if (std::fabs(x - c.ux) > 0.01f || std::fabs(z - c.uz) > 0.01f) { c.ultimoCambio = reloj; c.ux = x; c.uz = z; }
 						c.a.x = x; c.a.y = y; c.a.z = z;
 						if (std::fabs(z) > 40.0f) continue; // aparcado (repetición)
+						bolaEnJuego = true;
 						if (!mejor || c.ultimoCambio > mejor->ultimoCambio) mejor = &c;
 					}
 					if (mejor && reloj - mejor->ultimoCambio < 120.0) { f.hayBola = true; f.bx = mejor->a.x; f.by = mejor->a.y; f.bz = mejor->a.z; }
 
+					sinBola = bolaEnJuego ? 0 : sinBola + 1;
+					enRepe = sinBola >= 10;   // ~0,5 s con el balón aparcado: repetición; vuelve en la primera lectura con balón en juego
+					if (enRepe && ultima.estado == EstadoCampo::Activo) {
+						// Repetición: las posiciones que se leen son de la película, no del juego. Se dejan las últimas buenas.
+						f = ultima; f.fase = "repeticion"; f.hayBola = false; f.seq = ++seq; publicar(f); dormir(50); continue;
+					}
 					f.j.reserve(lista.size());
 					for (size_t i = 0; i < lista.size(); i++) {
 						if (ahora[i].x > 1e8f) continue;
@@ -187,6 +205,8 @@ namespace phoenix::campo {
 					f.tanda = tanda.estado();
 					f.equiposListos = !sinEquipos;
 					f.estado = EstadoCampo::Activo; f.seq = ++seq;
+					f.fase = quietos >= 80 ? "pausa" : "vivo";
+					ultima = f;
 					publicar(f);
 					dormir(50);
 				}

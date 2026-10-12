@@ -51,10 +51,12 @@ export function CampoSvg({ alTanda }) {
   const refs = useRef({ puntos: [], bola: null, obj: { j: [], b: null }, cur: { j: [], b: null }, t0: 0 });
   const [n, setN] = useState(0);
   const [clave, setClave] = useState("");
+  const [fase, setFase] = useState("vivo");
   useEffect(() => {
     const R = refs.current;
     const quitar = oirCampo((d) => {
       R.obj = { j: d.j || [], b: d.b || null };
+      setFase(d.f || "vivo");
       // Solo se redibuja con Preact si cambia el número de fichitas o algún equipo (colores); el movimiento va aparte
       const k = (d.j || []).map((p) => p[2]).join(",");
       if (k !== clave) { setClave(k); setN((d.j || []).length); }
@@ -98,7 +100,9 @@ export function CampoSvg({ alTanda }) {
     pts.push(html`<circle key=${i} ref=${ref} r=${eq === 2 ? 0.9 : 1.35} fill=${COLOR[eq] || COLOR[-1]}
       stroke="rgba(0,0,0,.55)" stroke-width="0.25" cx="0" cy="0"/>`);
   }
-  return html`<svg viewBox=${`${-LARGO / 2 - MX} ${-ANCHO / 2 - MZ} ${LARGO + MX * 2} ${ANCHO + MZ * 2}`} role="img"
+  const ETIQ = { repeticion: ["REPETICIÓN", "REPLAY"], otro: ["SIN LECTURA EN VIVO", "NO LIVE READING"], pausa: ["PAUSA", "PAUSED"] };
+  const et = ETIQ[fase];
+  return html`<div style="position:relative"><svg viewBox=${`${-LARGO / 2 - MX} ${-ANCHO / 2 - MZ} ${LARGO + MX * 2} ${ANCHO + MZ * 2}`} role="img"
       aria-label=${t("Campo con los jugadores en vivo", "Pitch with live players")} style="width:100%;height:auto;display:block;border-radius:10px;background:#0b3320">
     <defs><pattern id="cesped" width="8.75" height="1" patternUnits="userSpaceOnUse"><rect width="4.375" height="1" fill="rgba(255,255,255,.035)"/></pattern></defs>
     <rect x=${-LARGO / 2} y=${-ANCHO / 2} width=${LARGO} height=${ANCHO} fill="#0d3b24"/>
@@ -106,7 +110,9 @@ export function CampoSvg({ alTanda }) {
     <${Lineas}/>
     <g>${pts}</g>
     <g ref=${(el) => { R.bola = el; }} opacity="0"><circle r="1.5" fill="rgba(0,0,0,.35)" cx="0.3" cy="0.4"/><circle r="0.95" fill="#fff" stroke="#111" stroke-width="0.25"/></g>
-  </svg>`;
+  </svg>
+  ${et ? html`<div style="position:absolute;top:10px;left:50%;transform:translateX(-50%);padding:5px 14px;border-radius:999px;background:rgba(6,16,26,.82);border:1px solid var(--acc);font-size:12px;letter-spacing:.12em;font-weight:700;pointer-events:none">${t(et[0], et[1])}</div>` : null}
+  </div>`;
 }
 
 /** Tanda de penales en vivo: quién va, quién anotó y quién falló. */
