@@ -126,7 +126,7 @@ namespace phoenix::web {
 		p.registrar("mandos.tomar", [&in](const json& d, uint64_t) -> std::optional<json> {
 			ProveedorSala& sala = salaObligatoria(in);
 			const int n = entero(d, "numero", 0, 8);
-			if (n > 0 && !sala.abierta()) throw ErrorAccion("SALA_CERRADA", "Abre la sala para tomar un mando.");
+			// Sin sala abierta también se puede tomar un puesto (jugar solo, probar, mapear): ya no se exige SALA ABIERTA.
 			MandoHost::tomar(&sala, n);
 			return json{ {"activo", MandoHost::activo()} };
 		});

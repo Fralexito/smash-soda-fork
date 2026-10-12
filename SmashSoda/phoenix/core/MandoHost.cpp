@@ -28,6 +28,7 @@ namespace phoenix {
 		bool mhAbiertaAntes = false;
 		bool mhBotonAntes = true;      // hay que soltar y volver a pulsar (no entra con un botón que ya estaba pulsado)
 		ULONGLONG mhUltimoIntento = 0;
+		ULONGLONG mhUltimoReenganche = 0;   // con la sala cerrada Link puede desenchufar los mandos: se vuelve a enchufar el del anfitrión
 		ULONGLONG mhSentarHasta = 0;   // tras abrir la sala: hasta cuándo se intenta sentarlo (su mando puede tardar en aparecer)
 
 		/// Puesto libre según «Mi puesto al jugar»: el preferido; si está ocupado, otro libre de su equipo; si no, cualquiera.
@@ -110,7 +111,13 @@ namespace phoenix {
 			mhAbiertaAntes = abierta;
 			mhBotonAntes = abxy != 0;
 
-			if (mhActivo == 0 || !abierta) { if (mhActivo) soltar(sala); return; }
+			// Con la sala cerrada el anfitrión mantiene su puesto (jugar solo, probar el mando): no se suelta al cerrar.
+			if (mhActivo == 0) return;
+			if (t - mhUltimoReenganche > 1000) {
+				mhUltimoReenganche = t;
+				const std::vector<AsientoVista> as = sala->asientos(8);
+				if (static_cast<size_t>(mhActivo - 1) < as.size() && !as[static_cast<size_t>(mhActivo - 1)].conectado) aplicar(sala);
+			}
 
 			// Si el host elige o quita «Tu mando» mientras está en un puesto, se cambia de modo sin moverlo de puesto.
 			if (sala->hayMandoPropio() != mhConMando) {

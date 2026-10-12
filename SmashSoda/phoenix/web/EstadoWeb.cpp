@@ -26,6 +26,9 @@
 
 namespace phoenix::web {
 
+	/// Id del anfitrión cuando aún no hay sala (Parsec no lo conoce): permite verlo y sentarlo en Puestos con la sala cerrada.
+	constexpr uint32_t kHostSinSala = 4294967294u;
+
 	using json = nlohmann::json;
 
 	namespace detalle_estado {
@@ -273,8 +276,8 @@ namespace phoenix::web {
 		s["cuentaHost"] = sala.cuentaHost();
 		{
 			Guest& host = h.getHost();
-			s["hostId"] = host.isValid() ? host.userID : 0u;
-			s["hostNombre"] = host.isValid() ? host.name : std::string();
+			s["hostId"] = host.isValid() ? host.userID : kHostSinSala;   // sin sala Parsec no lo conoce: id propio para que salga en Puestos
+			s["hostNombre"] = host.isValid() ? host.name : std::string("Anfitrión");
 		}
 		s["segundos"] = in.salaAbiertaDesde >= 0.0 ? static_cast<int>(ahora - in.salaAbiertaDesde) : -1;
 		if (in.ctx.ajustesSala != nullptr) {
@@ -319,10 +322,10 @@ namespace phoenix::web {
 			for (size_t i = 0; i < asientos.size(); i++) {
 				AsientoVista a = asientos[i];
 				const int n = a.numero;
-				if (n == mandoHost && !a.ocupado && anfitrion.isValid()) {
+				if (n == mandoHost && !a.ocupado) {
 					a.ocupado = true;
-					a.jugador = anfitrion.name;
-					a.parsecId = anfitrion.userID;
+					a.jugador = anfitrion.isValid() ? anfitrion.name : std::string("Anfitrión");
+					a.parsecId = anfitrion.isValid() ? anfitrion.userID : kHostSinSala;
 					a.pingMs = -1;
 				}
 				if (n == mandoHost) a.bloqueado = false;   // el bloqueo interno de «tomar mando» no es para el host

@@ -45,7 +45,6 @@ export function puestoDestino(m, pref = leerPreferencia(m)) {
 
 /** Sienta al anfitrión según su preferencia, moviendo a quien ocupe ese puesto a uno libre. */
 export async function jugarYo(m) {
-  if (!m.sala?.abierta) { avisar(t("Abre la sala para tomar un puesto.", "Open the room to take a seat."), "warn"); return; }
   const lista = m.mandos?.lista || [];
   const destino = puestoDestino(m);
   if (!destino) { avisar(t("No hay puestos en ese equipo: añade uno en Mandos › Puestos.", "No seats on that team: add one in Pads › Seats."), "warn"); return; }
@@ -108,7 +107,7 @@ export function PreferenciaPuesto({ m }) {
 /** Botón JUGAR (fila del anfitrión en «Mirando»). */
 export function BotonJugar({ m }) {
   const destino = puestoDestino(m);
-  return html`<${Boton} tipo="mini lleno" deshabilitado=${!m.sala?.abierta || !!m.mandos?.esclavo}
-    titulo=${m.sala?.abierta ? t(`Te sienta en el puesto ${dos(destino)} (cámbialo en TU MANDO)`, `Seats you on ${dos(destino)} (change it in YOUR PAD)`) : t("Abre la sala para jugar", "Open the room to play")}
+  return html`<${Boton} tipo="mini lleno" deshabilitado=${!!m.mandos?.esclavo}
+    titulo=${t(`Te sienta en el puesto ${dos(destino)} (cámbialo en TU MANDO)`, `Seats you on ${dos(destino)} (change it in YOUR PAD)`)}
     al=${() => jugarYo(m)}>${t("JUGAR", "PLAY")}${destino ? " · " + dos(destino) : ""}</${Boton}>`;
 }

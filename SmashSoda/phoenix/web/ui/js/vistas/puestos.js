@@ -175,7 +175,7 @@ function Espectador({ g, m, arr, setArr }) {
     return html`<div style="height:40px;box-sizing:border-box;border:1.5px dashed rgba(255,255,255,.22);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--mut)">
       ${g.nombre} ${t("se está moviendo…", "is moving…")}</div>`;
   }
-  const sinSala = g.host && !m.sala?.abierta;
+  const sinSala = false;   // ya se puede tomar un puesto con la sala cerrada
   const dato = g.host
     ? (m.mandos.miMando ? t("tu mando", "your pad") : t("teclado", "keyboard"))
     : soloWeb ? t("web", "web")
