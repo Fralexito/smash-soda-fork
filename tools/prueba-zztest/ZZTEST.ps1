@@ -2,7 +2,7 @@
 # ANTES.bat  -> respaldo con sello + listado.   DESPUES.bat -> compara y escribe INFORME.txt
 param([ValidateSet('antes','despues')][string]$Fase)
 $ErrorActionPreference = 'Continue'
-$out = Join-Path $env:USERPROFILE 'Desktop\ZZTEST'
+$out = Join-Path ([Environment]::GetFolderPath('Desktop')) 'ZZTEST'
 New-Item -ItemType Directory -Force $out | Out-Null
 
 # Rutas donde PES / el emulador CPY / Steam pueden guardar. Solo se usan las que existen.
