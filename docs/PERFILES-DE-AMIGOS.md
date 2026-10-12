@@ -1,6 +1,6 @@
 # Perfiles de amigos: más de 32 «Datos personales» en PES 2021
 
-12 de octubre de 2026 · Frente LINK · Estado: **FASE 1 hecha (módulo y pruebas con copias); Fase 2 y 3 sin hacer; NADA probado todavía en el juego real.**
+12 de octubre de 2026 · Frente LINK · Estado: **FASES 1, 2 y 3 hechas (motor, base de perfiles e interfaz); compila y enlaza (0.2.51); pruebas con COPIAS; NADA probado todavía con el PES real.**
 
 ## 1. El problema
 
@@ -24,8 +24,8 @@ Link guarda un **perfil por amigo** (nombre + configuración) en su propia base 
 |---|---|---|
 | 0 | Localizar el archivo (ZZTEST) | ✅ |
 | 1 | Módulo de Link `core/PerfilesPes`: leer los 32, exportar/importar un Usuario, escritura segura | ✅ con COPIAS (`pruebas-link/correr_perfiles.bat`) |
-| 2 | Base de perfiles por Parsec ID, huecos protegidos/rotativos, «volcar» y «recoger» | pendiente |
-| 3 | Interfaz «Perfiles de amigos» en Link | pendiente |
+| 2 | Base de perfiles (por nombre), huecos protegidos, traer (PES a Link) y preparar sala (Link a PES): `core/PerfilesAmigos` | ✅ con COPIAS (`pruebas-link/perfiles_amigos_test.cpp`) |
+| 3 | Interfaz GENTE › PERFILES PES (`web/AccionesPerfilesWeb.cpp`, `ui/js/vistas/perfiles.js`, simulador) | ✅ vista probada en el simulador |
 | 4 | Pruebas en el juego (con permiso de Fralex) y guía | pendiente |
 
 ## 4. Fase 1: qué hace el módulo (`SmashSoda/phoenix/core/PerfilesPes.*`)
@@ -51,3 +51,19 @@ Link guarda un **perfil por amigo** (nombre + configuración) en su propia base 
 pruebas-link\correr_perfiles.bat "<copia de SYSTEM00000000>"
 ```
 Trabaja solo sobre una copia en una carpeta temporal. Resultado esperado: 32 líneas «Usuario N» y `TODO OK`.
+
+## 7. Cómo se usa (GENTE › PERFILES PES)
+
+1. **TRAER DE PES** (solo lee PES): guarda en Link cada Usuario de PES. Hazlo al principio y cuando cambies algo en PES. Link también lo hace solo cuando PES se cierra (mientras esa pestaña esté abierta).
+2. Marca el candado 🔒 en tu(s) hueco(s): Link no los toca.
+3. **¿QUIÉNES JUEGAN HOY?**: marca a los amigos (Link recuerda la última elección). Caben tantos como huecos sin proteger.
+4. Con **PES cerrado**, **PREPARAR LA SALA**: Link trae primero (nada se pierde), hace copia con sello del guardado (`SYSTEM00000000.phoenix-<sello>`) y pone a los elegidos en los huecos libres de atrás hacia delante. Si ya estaban en un hueco con el mismo contenido, no escribe nada.
+5. Abre PES y, en la pantalla de elegir mandos, elige tu nombre con L2/R2.
+
+Qué se guarda: `perfiles-amigos.json` y `ajustes.json` en `%APPDATA%/Trybuchet/Smash Soda/phoenix-perfiles-amigos/` (+ carpeta `respaldos` con las 20 últimas copias). Un perfil se identifica por su NOMBRE; un Usuario sin nombre se guarda como «Usuario N».
+
+## 8. Lo que falta
+
+- **Probarlo en el PES real** (Fralex lo autoriza y se hace con copia previa): que PES acepte un `SYSTEM00000000` escrito por Link y que el Usuario con ese nombre aparezca en la lista.
+- Vincular un perfil a un Parsec ID (hoy se identifica por nombre).
+- Que PES lo recargue en vivo (hoy solo con PES cerrado).
