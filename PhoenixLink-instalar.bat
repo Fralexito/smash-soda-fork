@@ -60,7 +60,7 @@ pause >nul
 
 :: --------- Configuracion ----------
 :: Version exacta de Phoenix Link (commit). La rama tiene una enie en el nombre y en .bat falla: se usa el SHA.
-if not defined PHX_COMMIT set "PHX_COMMIT=a59c4b115461b52f27ad85762ae2040cae27282f"
+if not defined PHX_COMMIT set "PHX_COMMIT=4102fd7badc0994ebe29d9d43959ab0ff6027d7f"
 set "COMMIT=%PHX_COMMIT%"
 set "REPO_URL=https://github.com/Fralexito/smash-soda-fork.git"
 :: Overlay PhoenixGlass (repo Fralexito/phoenix-overlay). Con sha256: si no coincide, no se instala.

@@ -34,7 +34,7 @@ function Hash($p) {   # sha256 sin Get-FileHash (no siempre esta)
 function Main {
     $ErrorActionPreference = 'Stop'
     $desinstalar = ($env:PHX_MODO -ieq 'desinstalar')
-    $COMMIT = 'a59c4b115461b52f27ad85762ae2040cae27282f'   # version fija de Phoenix Link de donde salen los modulos
+    $COMMIT = '4102fd7badc0994ebe29d9d43959ab0ff6027d7f'   # version fija de Phoenix Link de donde salen los modulos
     $BASE = "https://raw.githubusercontent.com/Fralexito/smash-soda-fork/$COMMIT/SmashSoda/phoenix/sider/"
     $MODULOS = @(
         @{ N = 'phoenix.lua';         V = '0.18b'; S = '9ED74F457B4C2F407D4851B09B701A5FFB63E3A1F5707B322C13AAD6F95526AB'; Db = $true;  Viejo = '' },
