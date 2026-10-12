@@ -82,6 +82,7 @@ export function crearSimulador(enviar) {
     atajos: [{ comando: "!lockall", tecla: 76, nombre: "L" }],
     entrega: { estado: "colocada", id: "demo-1", resumen: "Lamine Yamal: velocidad 99", motivo: "", fecha: "2026-10-09 06:12", puedeDeshacer: true },
     ajustes: {
+      avisoEntrada: { general: true, sonido: true, notif: true, juego: true },
       general: { flashWindow: true, ttsEnabled: false, bonkEnabled: true, messageNotification: true, disableGuideButton: true, disableKeyboard: false, autoIndex: false, parsecLogs: false, ipBan: true, blockVPN: false, devMode: false, chatbot: "PhoenixBot", discord: "https://discord.gg/phoenix", welcomeMessage: "¡Bienvenido _PLAYER_! Respeta los turnos y diviértete.", socketEnabled: true, socketPort: 9002, socketActivo: true, autoMute: true, autoMuteTime: 500, muteTime: 5, hostBonkProof: false, sfxEnabled: true },
       permisos: { guest: { useBB: false, useSFX: true, changeControls: true }, vip: { useBB: true, useSFX: true, changeControls: true }, moderator: { useBB: true, useSFX: true, changeControls: true } },
       video: { monitor: 0, gpu: 0, captura: 0, resolucion: 0, lanczos: false, ritmo: true, fps: 60, mbps: 15 },
@@ -250,7 +251,7 @@ export function crearSimulador(enviar) {
     const p = s.partido;
     const e = {
       v: 1,
-      app: { version: "0.2.38", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
+      app: { version: "0.2.39", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
       noticias: { cargado: true, lista: s.noticias },
       chatGlobal: { cargado: true, pausado: s.chatGlobal.pausado, esperaSeg: s.chatGlobal.esperaSeg, rev: s.chatGlobal.mensajes.length, error: "" },
       web: { ...s.web, jugadoresLista: 3, versionLiga: "2026.10.08", eventosEnCola: 0 },
@@ -475,6 +476,8 @@ export function crearSimulador(enviar) {
       if (d.archivo === "phoenix.lua") s.modPhx = nuevo; else s.modEstadio = nuevo;
       return { ...modulosSim(), mensaje: d.accion === "instalar" ? d.archivo + " instalado en 2 carpetas. Abre PES: en sider.log debe aparecer que cargó." : d.archivo + " apagado (línea comentada en sider.ini)." };
     },
+    "ajustes.avisoEntrada": (d) => { s.ajustes.avisoEntrada[d.campo] = !!d.valor; },
+    "ajustes.probarAvisoEntrada": () => ({}),
     "ajustes.avisosJuego": (d) => { s.buzon.activo = d.valor; s.buzon.estado = d.valor ? "conectado" : "apagado"; },
     "ajustes.general": (d) => { s.ajustes.general[d.clave] = d.valor; },
     "ajustes.permisos": (d) => { s.ajustes.permisos[d.grupo][d.clave] = d.valor; },

@@ -247,6 +247,10 @@ namespace phoenix::web {
 			{"versionLiga", link.versionLiga()}, {"eventosEnCola", link.eventosEnCola()},
 		};
 		e["ajustes"] = estadoAjustes(in);
+		{
+			const PhoenixPrefs& pa = PhoenixPrefs::get();
+			e["ajustes"]["avisoEntrada"] = { {"general", pa.avisoEntrada}, {"sonido", pa.avisoEntradaSonido}, {"notif", pa.avisoEntradaNotif}, {"juego", pa.avisoEntradaJuego} };
+		}
 		e["cedido"] = estadoCedido(in);
 
 		if (in.ctx.sala == nullptr || in.ctx.hosting == nullptr) {

@@ -2,6 +2,7 @@
 
 #include "../PhoenixPrefs.h"
 #include "../core/ModoCedido.h"
+#include "../core/ProveedorSala.h"
 #include "../host/Cedido.h"
 #include "../../Hosting.h"
 #include "../../core/Cache.h"

@@ -80,6 +80,10 @@ namespace phoenix {
 			pausaAuto = j.value("pausaAuto", pausaAuto);
 			marcadorAuto = j.value("marcadorAuto", marcadorAuto);
 			soloAutorizados = j.value("soloAutorizados", soloAutorizados);
+			avisoEntrada = j.value("avisoEntrada", avisoEntrada);
+			avisoEntradaSonido = j.value("avisoEntradaSonido", avisoEntradaSonido);
+			avisoEntradaNotif = j.value("avisoEntradaNotif", avisoEntradaNotif);
+			avisoEntradaJuego = j.value("avisoEntradaJuego", avisoEntradaJuego);
 			miMando = j.value("miMando", miMando);
 			miPuestoModo = j.value("miPuestoModo", miPuestoModo);
 			if (miPuestoModo == "local") miPuestoModo = "a";   // archivos viejos: Local → Equipo A, Visitante → Equipo B
@@ -134,6 +138,10 @@ namespace phoenix {
 				{"pausaAuto", pausaAuto},
 				{"marcadorAuto", marcadorAuto},
 				{"soloAutorizados", soloAutorizados},
+				{"avisoEntrada", avisoEntrada},
+				{"avisoEntradaSonido", avisoEntradaSonido},
+				{"avisoEntradaNotif", avisoEntradaNotif},
+				{"avisoEntradaJuego", avisoEntradaJuego},
 				{"miMando", miMando},
 				{"miPuestoModo", miPuestoModo},
 				{"miPuestoNumero", miPuestoNumero},

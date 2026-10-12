@@ -14,6 +14,7 @@
 #include "../PhoenixBuild.h"
 #include "../PhoenixPrefs.h"
 #include "../core/ProveedorSala.h"
+#include "../core/AvisoEntrada.h"
 #include "../link/PhoenixLink.h"
 
 // =============================================================================
@@ -160,6 +161,24 @@ namespace phoenix::web {
 			PhoenixPrefs& pr = PhoenixPrefs::get();
 			pr.avisosEnJuego = booleano(d, "valor");
 			pr.guardar();
+			return json::object();
+		});
+
+		// Aviso cuando alguien entra: campo = general | sonido | notif | juego
+		p.registrar("ajustes.avisoEntrada", [](const json& d, uint64_t) -> std::optional<json> {
+			PhoenixPrefs& pr = PhoenixPrefs::get();
+			const std::string campo = texto(d, "campo", 16);
+			const bool v = booleano(d, "valor");
+			if (campo == "general") pr.avisoEntrada = v;
+			else if (campo == "sonido") pr.avisoEntradaSonido = v;
+			else if (campo == "notif") pr.avisoEntradaNotif = v;
+			else if (campo == "juego") pr.avisoEntradaJuego = v;
+			else throw ErrorAccion("DATOS_INVALIDOS", "Campo desconocido.");
+			pr.guardar();
+			return json::object();
+		});
+		p.registrar("ajustes.probarAvisoEntrada", [](const json&, uint64_t) -> std::optional<json> {
+			phoenix::aviso::probar();
 			return json::object();
 		});
 

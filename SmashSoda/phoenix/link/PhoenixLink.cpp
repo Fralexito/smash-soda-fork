@@ -277,6 +277,11 @@ namespace phoenix {
 	void PhoenixLink::bucle() {
 		while (_corriendo) {
 			try {
+				{   // avisos del juego pedidos desde otros hilos (p. ej. alguien entró a la sala)
+					std::vector<std::string> pend;
+					{ std::lock_guard<std::mutex> l(_mutexDiferidos); pend.swap(_avisosDiferidos); }
+					for (const std::string& t : pend) avisoLocal(t);
+				}
 				std::string codigo, token, salaId;
 				InstantaneaSala foto;
 				bool pausado;
@@ -1396,6 +1401,11 @@ namespace phoenix {
 		const EstadoJuego g = detectarJuego();
 		if (g.puente != Puente::Listo) return;
 		volcarBuzon(g.carpetaBuzon, nullptr);
+	}
+
+	void PhoenixLink::avisoLocalDiferido(const std::string& texto) {
+		std::lock_guard<std::mutex> l(_mutexDiferidos);
+		if (_avisosDiferidos.size() < 8) _avisosDiferidos.push_back(texto);
 	}
 
 	InfoEntrega PhoenixLink::entrega() { std::lock_guard<std::mutex> l(_mutex); return _entregaInfo; }

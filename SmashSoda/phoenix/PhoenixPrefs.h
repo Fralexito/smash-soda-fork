@@ -56,6 +56,11 @@ namespace phoenix {
 		bool sentarmeAlAbrir = true;     ///< al abrir la sala, el anfitrión ya queda sentado (si tiene su mando y hay sitio)
 		bool anfitrionCuenta = true;     ///< partido: automático: si no está en un puesto pero toca su mando (últimos 2 min), cuenta como jugador en su lado habitual («Mi puesto al jugar»)
 		bool entrarPulsando = true;      ///< sin puesto, A/B/X/Y en su mando lo sienta en un puesto libre
+		// Aviso cuando alguien entra a la sala (Ajustes › Sonidos)
+		bool avisoEntrada = true;        ///< interruptor general
+		bool avisoEntradaSonido = true;  ///< campanita (o SFX\entrada.wav si existe)
+		bool avisoEntradaNotif = true;   ///< notificación de Windows
+		bool avisoEntradaJuego = true;   ///< aviso en el overlay del juego (si el puente está instalado)
 		bool soloAutorizados = true;  ///< puestos: pulsar el mando solo da puesto a quien el host autorizó (los demás «quieren jugar»)
 		std::string modoRecarga = "AUTO-SIEMPRE";  ///< phoenix.lua v0.18b (modo.txt): AUTO-SIEMPRE (por defecto) | AUTO-FICHAJES | ACTIVAR
 

@@ -229,7 +229,17 @@ function Sonidos({ m }) {
   const p = m.ajustes.permisos;
   const permiso = (g, v) => accion("ajustes.permisos", { grupo: g, clave: "useSFX", valor: v });
   const vis = (lista || []).filter((x) => !filtro || x.etiqueta.toLowerCase().includes(filtro.toLowerCase()));
-  return html`<div class="fila partible">
+  const av = m.ajustes.avisoEntrada || { general: true, sonido: true, notif: true, juego: true };
+  const poner = (campo, valor) => accion("ajustes.avisoEntrada", { campo, valor }, { silencioso: true });
+  return html`<div class="col" style="gap:16px"><${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:10px">
+      <${Titulo} texto=${t("CUANDO ALGUIEN ENTRA", "WHEN SOMEONE JOINS")} derecha=${html`<${Boton} tipo="mini" al=${() => accion("ajustes.probarAvisoEntrada", {}, { silencioso: true })}>${t("PROBAR", "TEST")}</${Boton}>`}/>
+      <div class="ayuda">${t("Para enterarte de que alguien se unió aunque no mires Link.", "So you notice when someone joins even if you are not looking at Link.")}</div>
+      <${AjusteSw} titulo=${t("Avisarme cuando alguien entra", "Alert me when someone joins")} valor=${av.general} al=${(v) => poner("general", v)}/>
+      <${AjusteSw} titulo=${t("Sonido", "Sound")} desc=${t("Una campanita corta. Para usar tu propio sonido, guarda un archivo llamado entrada.wav en la carpeta SFX de Link.", "A short chime. For your own sound, save a file named entrada.wav in Link's SFX folder.")} valor=${av.sonido} deshabilitado=${!av.general} al=${(v) => poner("sonido", v)}/>
+      <${AjusteSw} titulo=${t("Notificación de Windows", "Windows notification")} desc=${t("Un globo en la esquina con el nombre de quien entró.", "A pop-up with the name of who joined.")} valor=${av.notif} deshabilitado=${!av.general} al=${(v) => poner("notif", v)}/>
+      <${AjusteSw} titulo=${t("Aviso dentro del juego", "In-game notice")} desc=${t("Sale en el overlay de PES (necesita el puente de Phoenix instalado y los avisos en el juego encendidos).", "Shows in the PES overlay (needs the Phoenix bridge installed).")} valor=${av.juego} deshabilitado=${!av.general} al=${(v) => poner("juego", v)}/>
+    </${Tarjeta}>
+    <div class="fila partible">
     <${Tarjeta} estilo="flex:1.4;min-width:0" interior="padding:22px 24px;display:flex;flex-direction:column;gap:12px">
       <${Titulo} texto=${t("SONIDOS DEL CHAT", "CHAT SOUNDS")} derecha=${html`<span class="mono mut">${lista ? lista.length : "…"}</span>`}/>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
@@ -253,7 +263,7 @@ function Sonidos({ m }) {
       <div class="ayuda" style="font-size:14px">${[p.guest.useSFX && t("Invitados", "Guests"), p.vip.useSFX && "VIP", p.moderator.useSFX && t("Moderadores", "Moderators")].filter(Boolean).join(" · ") || t("Nadie", "Nobody")}</div>
       <div style="margin-top:14px"><${Boton} al=${() => irA("gente", "permisos")}>${t("CAMBIAR EN GENTE › PERMISOS", "CHANGE IN PEOPLE › PERMISSIONS")}</${Boton}></div>
     </${Tarjeta}>
-  </div>`;
+  </div></div>`;
 }
 
 // ---- Permisos por rol ---------------------------------------------------------------------------

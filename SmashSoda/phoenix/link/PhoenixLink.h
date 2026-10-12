@@ -147,6 +147,8 @@ namespace phoenix {
 		/// Encola un evento de sala (§6). `datosJson` = objeto JSON en texto ("{}" si nada).
 		/// Se guarda en disco hasta poder enviarlo. Sin vínculo con la web se ignora.
 		void evento(const std::string& tipo, const std::string& actorParsec, const std::string& datosJson);
+		/// Aviso para el overlay del juego desde CUALQUIER hilo: se encola y el hilo de Link lo escribe en su siguiente vuelta.
+		void avisoLocalDiferido(const std::string& texto);
 		std::vector<AmigoWeb> amigos();
 		bool amigosCargados();
 		/// Invita a un amigo a la sala abierta (§20). El resultado llega por tomarResultados().
@@ -310,6 +312,8 @@ namespace phoenix {
 		std::vector<phoenix::buzon::Aviso> _buzonWeb;     ///< ultimos avisos que dio la web
 		std::vector<phoenix::buzon::Aviso> _buzonLocal;   ///< avisos propios de Link (entregas de datos), id negativo
 		long long _buzonLocalId = 0;
+		std::mutex _mutexDiferidos;
+		std::vector<std::string> _avisosDiferidos;   ///< avisos pedidos desde otros hilos (los vuelca el hilo de Link)
 		std::atomic<bool> _pesAbierto{ false };
 		long long _pesProximoMs = 0;
 		// Repartidor de datos: lo toca solo el hilo de Link; _entregaInfo se protege con _mutex

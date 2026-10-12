@@ -4,6 +4,7 @@
 #include "phoenix/PhoenixPrefs.h"
 #include <map>
 #include "phoenix/core/Solicitudes.h"
+#include "phoenix/core/AvisoEntrada.h"
 #include "services/OverlayService.h"
 #include "services/InputControlService.h"
 #include "phoenix/host/Cedido.h"
@@ -1706,6 +1707,7 @@ void Hosting::processNewGuestConnection(Guest& guest) {
 
 	// 5. Send Welcome Message & Play Sound
 	addNewGuest(guest);
+	if (_host.userID != guest.userID) phoenix::aviso::entro(guest.name);   // Phoenix: sonido + notificación + aviso en el juego
 	string welcomeMsg = Config::cfg.chat.welcomeMessage;
 	welcomeMsg = regex_replace(welcomeMsg, regex("_PLAYER_"), guest.name);
 	ParsecHostSendUserData(_parsec, guest.id, HOSTING_CHAT_MSG_ID, welcomeMsg.c_str());
