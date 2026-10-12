@@ -5,7 +5,7 @@ $out = Join-Path $env:USERPROFILE 'Desktop\ZZTEST'
 New-Item -ItemType Directory -Force $out | Out-Null
 $roots = @("$env:USERPROFILE\Documents\KONAMI","$env:USERPROFILE\OneDrive\Documents\KONAMI","$env:APPDATA\CPY_SAVES","$env:ProgramData\KONAMI","${env:ProgramFiles(x86)}\Steam\userdata")
 $game = Get-ItemPropertyValue 'HKCU:\Software\Valve\Steam' SteamPath -ErrorAction SilentlyContinue
-$files = foreach($r in $roots){ if(Test-Path $r){ Get-ChildItem $r -Recurse -File -Force -ErrorAction SilentlyContinue | ?{ $_.FullName -notmatch '\Download\' } } }
+$files = foreach($r in $roots){ if(Test-Path $r){ Get-ChildItem $r -Recurse -File -Force -ErrorAction SilentlyContinue | ?{ $_.FullName -notmatch '[\\/]Download[\\/]' } } }
 $snap = $files | %{ [pscustomobject]@{ Path=$_.FullName; Size=$_.Length; Time=$_.LastWriteTimeUtc.ToString('o'); Sha=(Get-FileHash $_.FullName -Algorithm SHA1).Hash } }
 $snap | Export-Csv "$out\$Fase.csv" -NoTypeInformation
 if($Fase -eq 'antes'){
