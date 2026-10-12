@@ -24,6 +24,7 @@ namespace phoenix::web {
 			for (const phoenix::fichajes::Salto& s : a.saltados)
 				saltados.push_back({ {"jugador", s.cambio.jugador}, {"equipo", s.cambio.equipo}, {"codigo", s.codigo}, {"motivo", s.motivo} });
 			return { {"nombre", a.objetivo.nombre}, {"baseOk", a.baseOk}, {"baseOrigen", a.baseOrigen}, {"error", a.error}, {"filasBase", a.filasBase},
+				{"parche", a.parche}, {"baseGenerica", a.baseGenerica}, {"comoLoSupe", a.comoLoSupe}, {"queHacer", a.queHacer}, {"nombresDisponibles", a.nombresDisponibles},
 				{"aplicados", a.aplicados}, {"yaEstaban", a.yaEstaban}, {"saltados", saltados}, {"estado", a.estado}, {"playerBinAjeno", a.conPlayerBinAjeno} };
 		}
 
@@ -69,8 +70,9 @@ namespace phoenix::web {
 			if (!conDetalle) return t;
 			t += "\nLista: " + lista.fuente + " (" + std::to_string(lista.cambios.size()) + " cambios, regla " + (lista.estricta ? "estricta" : "relajada") + ")\n";
 			for (const phoenix::fichajes::Analisis& a : an) {
-				t += "  · " + a.objetivo.nombre + ": " + a.estado + (a.baseOk ? " · base " + a.baseOrigen + " (" + std::to_string(a.filasBase) + " filas)" : " · " + a.error)
+				t += "  · " + a.objetivo.nombre + ": " + a.estado + " · parche detectado: " + (a.parche.empty() ? std::string("(ninguno)") : a.parche) + (a.baseGenerica ? " (base genérica)" : "") + (a.baseOk ? " · base " + a.baseOrigen + " (" + std::to_string(a.filasBase) + " filas)" : " · " + a.error + (a.queHacer.empty() ? "" : " → " + a.queHacer))
 					+ " · aplicables " + std::to_string(a.aplicados) + ", ya estaban " + std::to_string(a.yaEstaban) + ", saltados " + std::to_string(a.saltados.size()) + (a.conPlayerBinAjeno ? " · Phoenix-DB tiene un Player.bin ajeno" : "") + "\n";
+				for (const std::string& e : a.comoLoSupe) t += "      cómo lo supe: " + e + "\n";
 				for (const phoenix::fichajes::Salto& s : a.saltados) t += "      salta " + std::to_string(s.cambio.jugador) + " → " + std::to_string(s.cambio.equipo) + ": " + s.motivo + "\n";
 			}
 			return t;

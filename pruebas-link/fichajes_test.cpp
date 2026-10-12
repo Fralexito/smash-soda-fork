@@ -7,7 +7,7 @@
 #include "phoenix/link/ModulosJuego.h"
 #include "phoenix/link/Entrega.h"
 
-#include <algorithm>
+#include <algorithm>`n#include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <map>
@@ -119,7 +119,7 @@ static void pruebaLista() {
 	CHECK(leerLista(R"({"version":1,"regla":"relajada","cambios":[{"player_id":114506,"team_id":101,"origen":5,"nota":"prueba"},{"player_id":2,"team_id":3}]})", l, err) && l.cambios.size() == 2 && l.cambios[0].origen == 5 && !l.estricta, "lista válida (relajada por defecto)");
 	CHECK(leerLista(R"({"version":1,"regla":"estricta","cambios":[]})", l, err) && l.estricta && l.cambios.empty(), "regla estricta y lista vacía");
 	CHECK(!leerLista("{no json", l, err), "JSON roto se rechaza");
-	CHECK(!leerLista(R"({"version":2,"cambios":[]})", l, err), "versión desconocida se rechaza (" + err + ")");
+	CHECK(!leerLista(R"({"version":3,"cambios":[]})", l, err), "versión desconocida se rechaza (" + err + ")");
 	CHECK(!leerLista(R"({"version":1,"cambios":[{"player_id":0,"team_id":3}]})", l, err), "player_id 0 se rechaza");
 	CHECK(!leerLista(R"({"version":1,"cambios":[{"player_id":"x","team_id":3}]})", l, err), "player_id que no es número se rechaza");
 	CHECK(!leerLista(R"({"version":1,"regla":"loca","cambios":[]})", l, err), "regla desconocida se rechaza");
@@ -241,6 +241,298 @@ static void pruebaJuegoFalso(const fs::path& tmp) {
 	CHECK(inf.ok && !fs::exists(pa(raiz)), "si ya no aplica ningún cambio, se retira lo que generó Link");
 }
 
+// ─── nombres (lista versión 2) ───────────────────────────────────────────────────────────────────
+static std::string playerBinConNombres(const std::map<uint32_t, std::string>& nombres, const std::set<uint32_t>& ids) {
+	std::string r(8, '\0');
+	for (uint32_t j : ids) {
+		std::string rec(312, '\0');
+		for (int i = 0; i < 4; i++) rec[static_cast<size_t>(i)] = static_cast<char>((j >> (8 * i)) & 0xFF);
+		const auto n = nombres.find(j);
+		if (n != nombres.end()) rec.replace(243, (std::min<size_t>)(n->second.size(), 60), n->second.substr(0, 60));
+		r += rec;
+	}
+	return r;
+}
+static std::string teamBinFalso(const std::map<uint32_t, std::string>& equipos) {
+	std::string r;
+	for (const auto& e : equipos) {
+		std::string rec(1532, '\0');
+		for (int i = 0; i < 4; i++) { rec[static_cast<size_t>(i)] = static_cast<char>((e.first >> (8 * i)) & 0xFF); rec[static_cast<size_t>(8 + i)] = static_cast<char>((e.first >> (8 * i)) & 0xFF); }
+		rec.replace(368, (std::min<size_t>)(e.second.size(), 60), e.second.substr(0, 60));
+		r += rec;
+	}
+	return r;
+}
+static std::map<uint32_t, std::string> equiposFalsos() {
+	std::map<uint32_t, std::string> m;
+	for (uint32_t e = 1000; e < 1150; e++) m[e] = "Equipo " + std::to_string(e);
+	m[1001] = "Real Madrid CF"; m[1002] = "FC Barcelona"; m[1003] = "Atl\xE9tico de Madrid";   // Latin-1
+	m[1010] = "Club Repetido"; m[1011] = "Club Repetido";
+	return m;
+}
+
+static void pruebaNombres() {
+	std::cout << "[nombres: lista versión 2]\n";
+	CHECK(plegarNombre("Kylian Mbapp\xE9") == "kylianmbappe" && plegarNombre("Kylian Mbapp\xC3\xA9") == "kylianmbappe", "plegar: Latin-1 y UTF-8 dan lo mismo («Mbappé» = mbappe)");
+	CHECK(plegarNombre("R. CRUZ") == plegarNombre("r cruz") && plegarNombre("Real Madrid CF") == "realmadridcf", "plegar: mayúsculas, espacios y signos no cuentan");
+	CHECK(plegarNombre("Atl\xE9tico de Madrid") != plegarNombre("Real Madrid CF"), "plegar: nombres distintos siguen siendo distintos");
+	const BaseFalsa b = baseFalsa();
+	std::map<uint32_t, std::string> nombres;
+	for (uint32_t j : b.jugadores) nombres[j] = "Jugador " + std::to_string(j);
+	nombres[5000] = "Lionel Messi"; nombres[5031] = "Lionel Messi"; nombres[100010] = "Lionel Messi";   // 5000 en 1000, 5031 en 1001, 100010 sin equipo
+	nombres[5062] = "Ni\xF1o Unico";
+	std::set<uint32_t> ids; std::map<uint32_t, std::string> leidos; std::string err;
+	CHECK(leerJugadores(playerBinConNombres(nombres, b.jugadores), ids, err, &leidos) && leidos[5000] == "lionelmessi" && leidos[5062] == "ninounico" && ids == b.jugadores, "Player.bin: lee los nombres completos (a +243)");
+	std::map<uint32_t, std::string> eq;
+	CHECK(leerEquipos(teamBinFalso(equiposFalsos()), eq, err) && eq[1001] == "realmadridcf" && eq[1003] == "atleticodemadrid", "Team.bin: lee los nombres de equipo (registros de 1532, nombre a +368)");
+	Nombres nm; nm.jugador = leidos; nm.equipo = eq;
+
+	Lista l;
+	CHECK(leerLista(R"({"version":2,"cambios":[{"jugador":"Niño Unico","equipo_destino":"Real Madrid CF"},{"player_id":5000,"equipo_destino":"FC Barcelona","equipo_origen":"Equipo 1000"},{"jugador":"X","team_id":3}]})", l, err) && l.cambios.size() == 3 && l.usaNombres(), "lista v2: acepta nombres, ids y mezcla");
+	CHECK(!leerLista(R"({"version":1,"cambios":[{"jugador":"X","equipo_destino":"Y"}]})", l, err), "lista v1: los nombres se rechazan («version»: 2) (" + err + ")");
+	CHECK(!leerLista(R"({"version":2,"cambios":[{"player_id":5,"jugador":"X","team_id":3}]})", l, err), "lista v2: id y nombre del mismo campo a la vez se rechaza");
+	CHECK(!leerLista(R"({"version":2,"cambios":[{"jugador":"X"}]})", l, err), "lista v2: falta el equipo destino");
+	CHECK(leerLista(R"({"version":1,"cambios":[{"player_id":5000,"team_id":1003}]})", l, err) && !l.usaNombres(), "lista v1 sigue siendo válida");
+
+	auto cam = [](const char* jug, const char* dest, const char* ori = "") { Cambio c; c.jugadorNombre = jug; c.equipoNombre = dest; c.origenNombre = ori; return c; };
+	Resultado r = aplicar(b.filas, b.jugadores, lista({ cam("Niño Unico", "Real Madrid CF") }), &nm);
+	CHECK(r.aplicados.size() == 1 && fila(r.filas, 5062, 1001), "nombre único: el jugador (con ñ) pasa al Real Madrid CF (equipo 1001)");
+	r = aplicar(b.filas, b.jugadores, lista({ cam("niño unico", "REAL MADRID cf") }), &nm);
+	CHECK(r.aplicados.size() == 1, "mayúsculas y acentos no estorban");
+	r = aplicar(b.filas, b.jugadores, lista({ cam("Lionel Messi", "FC Barcelona") }), &nm);
+	CHECK(r.aplicados.empty() && r.saltados.size() == 1 && r.saltados[0].codigo == "jugador_ambiguo", "jugador con el mismo nombre 3 veces y sin origen: ambiguo, no se toca");
+	r = aplicar(b.filas, b.jugadores, lista({ cam("Lionel Messi", "FC Barcelona", "Equipo 1000") }), &nm);
+	CHECK(r.aplicados.size() == 1 && fila(r.filas, 5000, 1002) && fila(r.filas, 5031, 1001), "el equipo de origen desambigua: mueve al Messi de «Equipo 1000»");
+	r = aplicar(b.filas, b.jugadores, lista({ cam("Lionel Messi", "FC Barcelona", "Equipo 1020") }), &nm);
+	CHECK(r.saltados.size() == 1 && r.saltados[0].codigo == "jugador_no_encontrado", "origen donde no está ese jugador: no se encuentra");
+	r = aplicar(b.filas, b.jugadores, lista({ cam("Niño Unico", "Club Repetido") }), &nm);
+	CHECK(r.saltados.size() == 1 && r.saltados[0].codigo == "equipo_ambiguo", "dos equipos con el mismo nombre: ambiguo");
+	r = aplicar(b.filas, b.jugadores, lista({ cam("Niño Unico", "Equipo Inventado") }), &nm);
+	CHECK(r.saltados.size() == 1 && r.saltados[0].codigo == "equipo_no_encontrado", "equipo que no existe: no se encuentra");
+	r = aplicar(b.filas, b.jugadores, lista({ cam("Nadie Conocido", "FC Barcelona") }), &nm);
+	CHECK(r.saltados.size() == 1 && r.saltados[0].codigo == "jugador_no_encontrado", "jugador que no existe: no se encuentra");
+	r = aplicar(b.filas, b.jugadores, lista({ cam("Niño Unico", "FC Barcelona") }), nullptr);
+	CHECK(r.saltados.size() == 1 && r.saltados[0].codigo == "nombres_no_disponibles", "sin nombres en la base: se salta con motivo");
+	CHECK(validar(b.filas, aplicar(b.filas, b.jugadores, lista({ cam("Niño Unico", "Real Madrid CF"), cam("Lionel Messi", "FC Barcelona", "Equipo 1000") }), &nm).filas, err), "nombres: el resultado pasa la validación");
+}
+
+// ─── CPK falso (sin comprimir, tabla @UTF enmascarada) y DpFileList ─────────────────────────────
+struct ColUtf { std::string nombre; int tipo; };   // tipo: 4 = u32, 6 = u64, 0xA = texto
+struct ValUtf { unsigned long long n = 0; std::string s; };
+static void be32(std::string& s, uint32_t v) { for (int i = 3; i >= 0; i--) s.push_back(static_cast<char>((v >> (8 * i)) & 0xFF)); }
+static void be64(std::string& s, unsigned long long v) { for (int i = 7; i >= 0; i--) s.push_back(static_cast<char>((v >> (8 * i)) & 0xFF)); }
+static void le64s(std::string& s, unsigned long long v) { for (int i = 0; i < 8; i++) s.push_back(static_cast<char>((v >> (8 * i)) & 0xFF)); }
+static std::string tablaUtf(const std::vector<ColUtf>& cols, const std::vector<std::vector<ValUtf>>& filas) {
+	std::string cad = "T"; cad.push_back('\0');
+	std::map<std::string, uint32_t> offs;
+	auto off = [&](const std::string& s) { auto i = offs.find(s); if (i != offs.end()) return i->second; const uint32_t o = static_cast<uint32_t>(cad.size()); cad += s; cad.push_back('\0'); offs[s] = o; return o; };
+	std::string colsB;
+	for (const ColUtf& c : cols) { colsB.push_back(static_cast<char>((5 << 4) | c.tipo)); be32(colsB, off(c.nombre)); }
+	int ancho = 0;
+	for (const ColUtf& c : cols) ancho += c.tipo == 6 ? 8 : 4;
+	std::string rows;
+	for (const auto& f : filas) for (size_t i = 0; i < cols.size(); i++) {
+		if (cols[i].tipo == 0xA) be32(rows, off(f[i].s)); else if (cols[i].tipo == 6) be64(rows, f[i].n); else be32(rows, static_cast<uint32_t>(f[i].n));
+	}
+	const uint32_t rowsOff = static_cast<uint32_t>(24 + colsB.size()), strOff = static_cast<uint32_t>(rowsOff + rows.size()), dataOff = static_cast<uint32_t>(strOff + cad.size());
+	std::string t = "@UTF";
+	be32(t, 0);   // tamaño: se rellena al final
+	t.push_back(0); t.push_back(0);
+	t.push_back(static_cast<char>(rowsOff >> 8)); t.push_back(static_cast<char>(rowsOff & 0xFF));
+	be32(t, strOff); be32(t, dataOff); be32(t, 0);
+	t.push_back(static_cast<char>(cols.size() >> 8)); t.push_back(static_cast<char>(cols.size() & 0xFF));
+	t.push_back(static_cast<char>(ancho >> 8)); t.push_back(static_cast<char>(ancho & 0xFF));
+	be32(t, static_cast<uint32_t>(filas.size()));
+	t += colsB; t += rows; t += cad;
+	const uint32_t tam = static_cast<uint32_t>(t.size() - 8);
+	for (int i = 0; i < 4; i++) t[static_cast<size_t>(4 + i)] = static_cast<char>((tam >> (8 * (3 - i))) & 0xFF);
+	return t;
+}
+static std::string enmascarar(std::string t) {
+	unsigned k = 0x655F;
+	for (char& c : t) { c = static_cast<char>(static_cast<unsigned char>(c) ^ (k & 0xFF)); k = (k * 0x4115) & 0xFFFF; }
+	return t;
+}
+struct ArchivoCpk { std::string carpeta, nombre, datos; };
+static std::string construirCpk(const std::vector<ArchivoCpk>& archivos) {
+	const unsigned long long contenido = 2048;
+	std::string datos;
+	std::vector<std::vector<ValUtf>> filas;
+	for (const ArchivoCpk& a : archivos) {
+		ValUtf d, n, fs, es, fo;
+		d.s = a.carpeta; n.s = a.nombre; fs.n = es.n = a.datos.size(); fo.n = datos.size();
+		filas.push_back({ d, n, fs, es, fo });
+		datos += a.datos;
+		while (datos.size() % 16) datos.push_back('\0');
+	}
+	const std::string toc = tablaUtf({ { "DirName", 0xA }, { "FileName", 0xA }, { "FileSize", 4 }, { "ExtractSize", 4 }, { "FileOffset", 6 } }, filas);
+	const unsigned long long tocOff = contenido + datos.size();
+	ValUtf c, t;
+	c.n = contenido; t.n = tocOff;
+	const std::string cab = tablaUtf({ { "ContentOffset", 6 }, { "TocOffset", 6 } }, { { c, t } });
+	std::string r = "CPK "; be32(r, 0xFF); le64s(r, cab.size()); r += enmascarar(cab);
+	r.resize(static_cast<size_t>(contenido), '\0');
+	r += datos;
+	r += "TOC "; be32(r, 0xFF); le64s(r, toc.size()); r += enmascarar(toc);
+	return r;
+}
+static std::string dpFileList(const std::vector<std::pair<std::string, int>>& v) {
+	std::string r;
+	for (const auto& e : v) {
+		std::string rec(48, '\0');
+		rec[4] = static_cast<char>(e.second);
+		rec.replace(16, (std::min<size_t>)(31, e.first.size()), e.first.substr(0, 31));
+		r += rec;
+	}
+	return r;
+}
+static std::vector<ArchivoCpk> archivosBase(const BaseFalsa& b, const std::map<uint32_t, std::string>& nombres = {}, bool conTeam = true) {
+	std::vector<ArchivoCpk> v = {
+		{ "common/etc/pesdb", "PlayerAssignment.bin", escribirBin(escribirAsignacion(b.filas)) },
+		{ "common/etc/pesdb", "Player.bin", escribirBin(playerBinConNombres(nombres, b.jugadores)) } };
+	if (conTeam) v.push_back({ "common/etc/pesdb", "Team.bin", escribirBin(teamBinFalso(equiposFalsos())) });
+	return v;
+}
+static BaseFalsa baseOtra() {   // otra base: menos jugadores en equipos y otros equipos
+	BaseFalsa b = baseFalsa();
+	b.filas.erase(b.filas.begin() + 100, b.filas.begin() + 140);
+	return b;
+}
+static const Analisis* por(const std::vector<Analisis>& v, const std::string& nombre) { for (const Analisis& a : v) if (a.objetivo.nombre == nombre) return &a; return nullptr; }
+static std::string unir(const std::vector<std::string>& v) { std::string r; for (const std::string& s : v) r += s + " | "; return r; }
+
+static void pruebaCpk() {
+	std::cout << "[CPK falso: tabla @UTF enmascarada, lectura sin cargar el archivo]\n";
+	const BaseFalsa b = baseFalsa();
+	const std::string cpk = construirCpk(archivosBase(b));
+	std::string bytes, err;
+	CHECK(extraerDeCpk(cpk, "common/etc/pesdb", "PlayerAssignment.bin", bytes, err) && bytes == escribirBin(escribirAsignacion(b.filas)), "CPK: extrae un archivo de la carpeta pesdb");
+	CHECK(!extraerDeCpk(cpk, "common/etc/pesdb", "NoExiste.bin", bytes, err), "CPK: archivo que no está");
+	std::vector<EntradaCpk> es;
+	const LectorCpk lector = [&cpk](uint64_t d, size_t n, std::string& out) { if (d + n > cpk.size()) return false; out = cpk.substr(static_cast<size_t>(d), n); return true; };
+	CHECK(entradasCpk(lector, cpk.size(), "common/etc/pesdb", es, err) && es.size() == 3, "CPK: la tabla lista 3 archivos sin leer el contenido");
+	CHECK(!entradasCpk(lector, 10, "x", es, err) && !extraerDeCpk("CPK basura", "a", "b", bytes, err), "CPK: basura se rechaza");
+	const auto rg = leerDpFileList(dpFileList({ { "dt80_100E_x64.cpk", 8 }, { "CGP_database.cpk", 1 } }));
+	CHECK(rg.size() == 2 && rg.at("cgp_database.cpk") == 1 && rg.at("dt80_100e_x64.cpk") == 8, "DpFileList.bin: nombre → prioridad");
+}
+
+// ─── detector de base por evidencia: estructuras falsas ─────────────────────────────────────────
+static fs::path juegoNuevo(const fs::path& tmp, const std::string& n, const std::string& ini) {
+	const fs::path j = tmp / n;
+	escribir(j / "PES2021.exe", "MZ");
+	escribir(j / "SiderAddons" / "sider.ini", ini);
+	return j;
+}
+static const Lista kLista = lista({ { 5000, 1003, 0, "" } });
+
+static void pruebaDeteccion(const fs::path& tmp) {
+	std::cout << "[detector de parche/base: estructuras falsas]\n";
+	const BaseFalsa b = baseFalsa(), otra = baseOtra();
+	const std::string vanilla = construirCpk({ { "common/etc/pesdb", "PlayerAssignment.bin", std::string(151729, 'v') }, { "common/etc/pesdb", "Player.bin", std::string(1724196, 'v') } });
+	const std::string nombresIni = FACES + MODS;
+
+	{   // 1) PES vanilla: solo dt*.cpk con datos propios del juego (sin formato WESYS)
+		const fs::path j = juegoNuevo(tmp, "d_vanilla", nombresIni);
+		escribir(j / "download" / "dt80_100E_x64.cpk", vanilla); escribir(j / "download" / "dt80_700E_x64.cpk", vanilla);
+		escribir(j / "download" / "DpFileList.bin", dpFileList({ { "dt80_100E_x64.cpk", 8 }, { "dt80_700E_x64.cpk", 2 } }));
+		const auto an = analizar(j, kLista);
+		CHECK(an.size() == 1 && !an[0].baseOk && an[0].parche == "PES 2021 original" && an[0].estado == "sin_base", "vanilla: se reconoce «PES 2021 original» pero su base no se lee (" + (an.empty() ? std::string() : an[0].error.substr(0, 90)) + ")");
+		CHECK(!an.empty() && an[0].error.find("dt80_700E") != std::string::npos && !an[0].queHacer.empty(), "vanilla: dice qué detectó (usa dt80_700E, la de más prioridad) y qué hacer");
+		const Informe inf = aplicarAlJuego(j, kLista);
+		CHECK(inf.ok && inf.escritos == 0 && !fs::exists(j / "SiderAddons" / "livecpk"), "vanilla: no se crea nada");
+	}
+	{   // 2) parche con CPK propio que gana al vanilla por prioridad (DpFileList)
+		const fs::path j = juegoNuevo(tmp, "d_cpkpropio", nombresIni);
+		escribir(j / "download" / "dt80_700E_x64.cpk", vanilla);
+		escribir(j / "download" / "MiParche.cpk", construirCpk(archivosBase(b)));
+		escribir(j / "download" / "DpFileList.bin", dpFileList({ { "dt80_700E_x64.cpk", 2 }, { "MiParche.cpk", 1 } }));
+		const auto an = analizar(j, kLista);
+		CHECK(an.size() == 1 && an[0].baseOk && an[0].aplicados == 1 && an[0].baseOrigen.find("MiParche.cpk") != std::string::npos, "CPK propio: gana por prioridad sobre el CPK original (" + (an.empty() ? std::string() : an[0].baseOrigen) + ")");
+		CHECK(!an.empty() && an[0].baseGenerica && an[0].parche.find("parche desconocido") == 0 && !an[0].comoLoSupe.empty(), "CPK propio: «parche desconocido» pero se usa como base genérica, con la evidencia (" + (an.empty() ? std::string() : unir(an[0].comoLoSupe).substr(0, 120)) + ")");
+		const Informe inf = aplicarAlJuego(j, kLista);
+		std::string crudo, err; std::vector<Fila> filas;
+		CHECK(inf.ok && inf.escritos == 1 && leerBin(leer(pa(j / "SiderAddons")), crudo, err) && leerAsignacion(crudo, filas, err) && fila(filas, 5000, 1003), "CPK propio: genera el PlayerAssignment sobre ESA base");
+	}
+	{   // 3) parche con la base en una carpeta (cpk.root con otro nombre) y un CPK por debajo
+		const fs::path j = juegoNuevo(tmp, "d_carpeta", "cpk.root = \".\\livecpk\\Mi Base Rara\"\r\n" + FACES + MODS);
+		escribir(j / "download" / "OtroParche.cpk", construirCpk(archivosBase(otra)));
+		const fs::path d = j / "SiderAddons" / "livecpk" / "Mi Base Rara" / "common" / "etc" / "pesdb";
+		escribir(d / "PlayerAssignment.bin", escribirBin(escribirAsignacion(b.filas)));
+		escribir(d / "Player.bin", escribirBin(playerBinFalso(b.jugadores)));
+		const auto an = analizar(j, kLista);
+		CHECK(an.size() == 1 && an[0].baseOk && an[0].baseOrigen.find("Mi Base Rara") != std::string::npos && an[0].filasBase == static_cast<int>(b.filas.size()), "base en carpeta: gana la cpk.root sobre el CPK (nombre de carpeta cualquiera)");
+	}
+	{   // 4) varias cpk.root con base: manda la primera
+		const fs::path j = juegoNuevo(tmp, "d_varias", "cpk.root = \".\\livecpk\\Primera\"\r\ncpk.root = \".\\livecpk\\Segunda\"\r\n" + MODS);
+		for (const auto& e : std::vector<std::pair<std::string, BaseFalsa>>{ { "Primera", otra }, { "Segunda", b } }) {
+			const fs::path d = j / "SiderAddons" / "livecpk" / e.first / "common" / "etc" / "pesdb";
+			escribir(d / "PlayerAssignment.bin", escribirBin(escribirAsignacion(e.second.filas)));
+			escribir(d / "Player.bin", escribirBin(playerBinFalso(e.second.jugadores)));
+		}
+		const auto an = analizar(j, kLista);
+		CHECK(an.size() == 1 && an[0].baseOk && an[0].filasBase == static_cast<int>(otra.filas.size()) && an[0].baseOrigen.find("Primera") != std::string::npos, "varias bases en cpk.root: gana la de más prioridad (la primera)");
+	}
+	{   // 5) dos CPK con la misma prioridad y bases distintas: no se adivina
+		const fs::path j = juegoNuevo(tmp, "d_empate", nombresIni);
+		escribir(j / "download" / "A.cpk", construirCpk(archivosBase(b)));
+		escribir(j / "download" / "B.cpk", construirCpk(archivosBase(otra)));
+		const auto an = analizar(j, kLista);
+		CHECK(an.size() == 1 && !an[0].baseOk && an[0].error.find("misma prioridad") != std::string::npos, "empate de prioridad entre dos CPK: no se adivina (" + (an.empty() ? std::string() : an[0].error.substr(0, 80)) + ")");
+		CHECK(aplicarAlJuego(j, kLista).escritos == 0 && !fs::exists(j / "SiderAddons" / "livecpk"), "empate: no se crea nada");
+	}
+	{   // 6) cambiador con varios modos, cada uno con su CPK (bases distintas) y uno dañado
+		const fs::path j = juegoNuevo(tmp, "d_cambiador", nombresIni);
+		for (const auto& e : std::vector<std::pair<std::string, BaseFalsa>>{ { "Parche Uno", b }, { "Parche Dos", otra } }) {
+			const fs::path m = j / "ConmeGol Extras" / e.first;
+			escribir(m / "download" / "CGP_database.cpk", construirCpk(archivosBase(e.second)));
+			escribir(m / "SiderAddons" / "x.txt", "x");
+		}
+		escribir(j / "ConmeGol Extras" / "Parche Roto" / "download" / "CGP_database.cpk", "esto no es un cpk");
+		escribir(j / "ConmeGol Extras" / "Parche Roto" / "SiderAddons" / "x.txt", "x");
+		escribir(j / "version_actual.txt", "Parche Dos");
+		escribir(j / "download" / "CGP_database.cpk", construirCpk(archivosBase(otra)));
+		const auto an = analizar(j, kLista);
+		const Analisis *u = por(an, "Parche Uno"), *d = por(an, "Parche Dos"), *r = por(an, "Parche Roto"), *raiz = por(an, "Raíz del juego");
+		CHECK(u && d && r && raiz, "cambiador: raíz + 3 modos detectados");
+		CHECK(u && u->baseOk && u->parche == "Parche Uno" && u->filasBase == static_cast<int>(b.filas.size()), "cambiador: cada modo usa SU base y se llama como su carpeta");
+		CHECK(d && d->baseOk && d->filasBase == static_cast<int>(otra.filas.size()), "cambiador: el otro modo usa otra base");
+		CHECK(r && !r->baseOk && !r->error.empty(), "cambiador: el modo con la base dañada no se toca (" + (r ? r->error.substr(0, 60) : std::string()) + ")");
+		CHECK(raiz && raiz->baseOk && raiz->parche == "Parche Dos", "cambiador: la raíz se identifica por version_actual.txt («Parche Dos»)");
+		const Informe inf = aplicarAlJuego(j, kLista);
+		CHECK(inf.ok && inf.escritos == 3 && fs::exists(pa(j / "ConmeGol Extras" / "Parche Uno" / "SiderAddons")) && !fs::exists(pa(j / "ConmeGol Extras" / "Parche Roto" / "SiderAddons")), "cambiador: escribe en los que tienen base y no en el roto");
+		std::string crudo, err; std::vector<Fila> f1, f2;
+		leerBin(leer(pa(j / "ConmeGol Extras" / "Parche Uno" / "SiderAddons")), crudo, err); leerAsignacion(crudo, f1, err);
+		leerBin(leer(pa(j / "ConmeGol Extras" / "Parche Dos" / "SiderAddons")), crudo, err); leerAsignacion(crudo, f2, err);
+		CHECK(f1.size() == b.filas.size() && f2.size() == otra.filas.size(), "cambiador: cada resultado conserva el tamaño de SU base (no se mezclan)");
+		const std::string antes = leer(pa(j / "ConmeGol Extras" / "Parche Uno" / "SiderAddons"));
+		aplicarAlJuego(j, kLista);
+		CHECK(leer(pa(j / "ConmeGol Extras" / "Parche Uno" / "SiderAddons")) == antes, "cambiador: idempotente");
+		quitarDelJuego(j);
+		CHECK(!fs::exists(pa(j / "ConmeGol Extras" / "Parche Uno" / "SiderAddons")) && !fs::exists(pa(j / "SiderAddons")), "cambiador: quitar deja todo en la base original");
+	}
+	{   // 7) sin ninguna base
+		const fs::path j = juegoNuevo(tmp, "d_nada", nombresIni);
+		const auto an = analizar(j, kLista);
+		CHECK(an.size() == 1 && !an[0].baseOk && an[0].error.find("No encontré PlayerAssignment.bin") != std::string::npos && !an[0].queHacer.empty(), "sin ninguna base: «qué detecté» y «qué hacer»");
+		CHECK(aplicarAlJuego(j, kLista).escritos == 0 && !fs::exists(j / "SiderAddons" / "livecpk"), "sin base: no se crea nada");
+	}
+	{   // 8) lista por nombres sobre una base con Team.bin y Player.bin con nombres, dentro de un CPK
+		const fs::path j = juegoNuevo(tmp, "d_nombres", nombresIni);
+		std::map<uint32_t, std::string> nombres;
+		for (uint32_t id : b.jugadores) nombres[id] = "Jugador " + std::to_string(id);
+		nombres[5000] = "Lionel Messi"; nombres[5031] = "Lionel Messi";
+		escribir(j / "download" / "CGP_database.cpk", construirCpk(archivosBase(b, nombres)));
+		Lista l;
+		std::string err;
+		leerLista(R"({"version":2,"cambios":[{"jugador":"Lionel Messi","equipo_origen":"Equipo 1000","equipo_destino":"FC Barcelona"},{"jugador":"Lionel Messi","equipo_destino":"Real Madrid CF"}]})", l, err);
+		const auto an = analizar(j, l);
+		CHECK(an.size() == 1 && an[0].baseOk && an[0].nombresDisponibles && an[0].aplicados == 1 && an[0].saltados.size() == 1 && an[0].saltados[0].codigo == "jugador_ambiguo", "nombres sobre un CPK: 1 se aplica (con origen) y 1 se salta por ambiguo");
+		const Informe inf = aplicarAlJuego(j, l);
+		std::string crudo; std::vector<Fila> filas;
+		CHECK(inf.ok && leerBin(leer(pa(j / "SiderAddons")), crudo, err) && leerAsignacion(crudo, filas, err) && fila(filas, 5000, 1002) && fila(filas, 5031, 1001), "nombres: el resultado tiene al Messi de «Equipo 1000» en el FC Barcelona (equipo 1002) y el otro intacto");
+	}
+}
+
 static void pruebaSinBase(const fs::path& tmp) {
 	std::cout << "[sin base reconocida: no se crea nada]\n";
 	const fs::path juego = tmp / "juegoRaro";
@@ -315,6 +607,43 @@ static void pruebaReal(const fs::path& tmp, const fs::path& real) {
 	CHECK(!quedan, "quitar: ningún PlayerAssignment.bin generado queda");
 }
 
+// Más pruebas con COPIAS de las bases reales: nombres del parche detectados, lista por nombres y data original (solo lectura).
+static void pruebaRealExtra(const fs::path& tmp, const fs::path& real) {
+	std::cout << "[bases reales: parche detectado, lista por nombres y data original]\n";
+	const fs::path juego = tmp / "juegoReal";   // lo dejó pruebaReal (copias de CPK, sider.ini y olmosjr23)
+	std::error_code ec;
+	if (!fs::is_directory(juego, ec)) { std::cout << "  (no hay copia: se salta)\n"; return; }
+	// la raíz también necesita volver a tener su CPK/base para esta pasada
+	Lista l; std::string err;
+	leerLista(R"({"version":2,"cambios":[{"jugador":"Cristiano Ronaldo","equipo_origen":"Al-Nassr FC","equipo_destino":"Real Madrid CF"},{"jugador":"Erling Haaland","equipo_destino":"FC Barcelona"}]})", l, err);
+	const auto an = analizar(juego, l);
+	for (const Analisis& a : an) {
+		std::cout << "  · " << a.objetivo.nombre << ": parche «" << a.parche << "»" << (a.baseGenerica ? " (genérico)" : "") << ", base " << a.baseOrigen << ", nombres " << (a.nombresDisponibles ? "sí" : "no") << ", aplicados " << a.aplicados << ", saltados " << a.saltados.size() << "\n";
+		for (const std::string& e : a.comoLoSupe) std::cout << "      - " << e << "\n";
+		for (const Salto& s : a.saltados) std::cout << "      salto: " << s.codigo << ": " << s.motivo << "\n";
+		CHECK(a.baseOk && a.nombresDisponibles, "«" + a.objetivo.nombre + "»: base reconocida y con nombres de jugadores y equipos");
+	}
+	const Analisis* p26 = por(an, "ConmeGOL Patch 26"); const Analisis* p27 = por(an, "ConmeGOL Patch 27"); const Analisis* u27 = por(an, "UEFAGOL 27"); const Analisis* cla = por(an, "ConmeGOL Clasicos");
+	CHECK(p26 && p26->parche.find("olmosjr23") != std::string::npos && p26->baseOrigen.find("olmosjr23") != std::string::npos, "26: parche detectado por huella y base = olmosjr23\Database (por cpk.root)");
+	CHECK(p27 && p27->parche == "ConmeGOL Patch 27" && p27->baseOrigen.find("CGP_database.cpk") != std::string::npos, "27: parche detectado por huella y base = su CGP_database.cpk");
+	CHECK(u27 && u27->parche == "UEFAGOL 27", "UEFAGOL 27: detectado");
+	CHECK(cla && cla->parche.find("Cl") != std::string::npos, "Clásicos: detectado");
+	CHECK(p26 && p26->aplicados >= 1, "por nombres sobre la base del 26 (olmosjr23): Cristiano Ronaldo de «Al-Nassr FC» a «Real Madrid CF» se resuelve y se aplica");
+	// data original: solo la carpeta Data real (junction de solo lectura): sin parche, la base es cifrada → no se crea nada
+	const fs::path vj = tmp / "juegoVanilla";
+	fs::create_directories(vj / "SiderAddons", ec);
+	escribir(vj / "PES2021.exe", "MZ"); escribir(vj / "SiderAddons" / "sider.ini", FACES + MODS);
+	const std::string cmd = "cmd /c mklink /J \"" + (vj / "Data").string() + "\" \"" + (real / "Data").string() + "\" >nul 2>&1";
+	if (std::system(cmd.c_str()) == 0 && fs::is_directory(vj / "Data", ec)) {
+		const auto av = analizar(vj, kLista);
+		std::cout << "  · data original (Data\dt*.cpk, solo lectura): " << (av.empty() ? std::string("sin sitios") : av[0].parche + " · " + av[0].error.substr(0, 110)) << "\n";
+		CHECK(av.size() == 1 && !av[0].baseOk, "data original de PES (cifrada o sin prioridad clara): no se reconoce y no se crea nada");
+		CHECK(aplicarAlJuego(vj, kLista).escritos == 0 && !fs::exists(vj / "SiderAddons" / "livecpk"), "data original: aplicar no escribe nada");
+		std::system(("cmd /c rmdir \"" + (vj / "Data").string() + "\" >nul 2>&1").c_str());   // quita solo el enlace, no el contenido real
+	}
+	else std::cout << "  (no se pudo crear el enlace a Data: se salta)\n";
+}
+
 int main(int argc, char** argv) {
 	if (argc < 2) { std::cout << "uso: fichajes_test <carpeta temporal vacía> [carpeta del juego real]\n"; return 2; }
 	const fs::path tmp = deU8(argv[1]);
@@ -323,8 +652,12 @@ int main(int argc, char** argv) {
 	pruebaLista();
 	pruebaAplicar();
 	pruebaJuegoFalso(tmp);
+	pruebaNombres();
+	pruebaCpk();
+	pruebaDeteccion(tmp);
 	pruebaSinBase(tmp);
-	if (argc >= 3) pruebaReal(tmp, deU8(argv[2]));
+	if (argc >= 3) { pruebaReal(tmp, deU8(argv[2])); pruebaRealExtra(tmp, deU8(argv[2])); }
 	std::cout << "\n" << (total - fallos) << "/" << total << " comprobaciones bien" << (fallos ? " — HAY FALLOS" : " — TODO OK") << "\n";
 	return fallos ? 1 : 0;
 }
+

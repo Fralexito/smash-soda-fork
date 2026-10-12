@@ -316,7 +316,7 @@ namespace {
 		unsigned long long rowsOff, strOff, dataOff, ncol, rowW, nrows;
 		if (!be(t, 10, 2, rowsOff) || !be(t, 12, 4, strOff) || !be(t, 16, 4, dataOff) || !be(t, 24, 2, ncol) || !be(t, 26, 2, rowW) || !be(t, 28, 4, nrows)) { error = "tabla del CPK cortada"; return false; }
 		const size_t base = 8;
-		if (ncol > 200 || nrows > 200000) { error = "tabla del CPK demasiado grande"; return false; }
+		if (ncol > 200 || nrows > 400000) { error = "tabla del CPK demasiado grande"; return false; }
 		struct Col { std::string nombre; int st, ty; Val cte; };
 		std::vector<Col> cols;
 		size_t p = base + 24;
@@ -367,29 +367,72 @@ namespace {
 	}
 }
 
-bool extraerDeCpk(const std::string& d, const std::string& carpeta, const std::string& nombre, std::string& bytes, std::string& error) {
-	if (d.size() < 64 || d.compare(0, 4, "CPK ") != 0) { error = "no es un archivo CPK"; return false; }
-	std::vector<FilaUtf> cab;
-	if (!leerUtf(d, 16, cab, error)) return false;
-	if (cab.empty() || !cab[0].count("TocOffset") || !cab[0].count("ContentOffset")) { error = "CPK sin tabla de archivos"; return false; }
-	const unsigned long long toc = static_cast<unsigned long long>(cab[0]["TocOffset"].n), contenido = static_cast<unsigned long long>(cab[0]["ContentOffset"].n);
-	if (toc + 16 >= d.size() || d.compare(static_cast<size_t>(toc), 4, "TOC ") != 0) { error = "CPK: tabla de archivos no encontrada"; return false; }
+bool entradasCpk(const LectorCpk& leer, uint64_t tam, const std::string& carpeta, std::vector<EntradaCpk>& entradas, std::string& error) {
+	entradas.clear();
+	std::string cab;
+	if (tam < 64 || !leer(0, 16, cab) || cab.size() < 16 || cab.compare(0, 4, "CPK ") != 0) { error = "no es un archivo CPK"; return false; }
+	const unsigned long long tcab = le64(cab, 8);
+	if (tcab < 32 || tcab > 16ull * 1024 * 1024 || 16 + tcab > tam) { error = "CPK: cabecera no válida"; return false; }
+	std::string h;
+	if (!leer(0, static_cast<size_t>(16 + tcab), h) || h.size() != 16 + tcab) { error = "CPK: no se pudo leer la cabecera"; return false; }
+	std::vector<FilaUtf> cabf;
+	if (!leerUtf(h, 16, cabf, error)) return false;
+	if (cabf.empty() || !cabf[0].count("TocOffset") || !cabf[0].count("ContentOffset")) { error = "CPK sin tabla de archivos"; return false; }
+	const unsigned long long toc = static_cast<unsigned long long>(cabf[0]["TocOffset"].n), contenido = static_cast<unsigned long long>(cabf[0]["ContentOffset"].n);
+	std::string t16;
+	if (toc + 32 > tam || !leer(toc, 16, t16) || t16.size() < 16 || t16.compare(0, 4, "TOC ") != 0) { error = "CPK: tabla de archivos no encontrada"; return false; }
+	const unsigned long long ttoc = le64(t16, 8);
+	if (ttoc < 32 || ttoc > 256ull * 1024 * 1024 || toc + 16 + ttoc > tam) { error = "CPK: tabla de archivos no válida"; return false; }
+	std::string tb;
+	if (!leer(toc, static_cast<size_t>(16 + ttoc), tb) || tb.size() != 16 + ttoc) { error = "CPK: no se pudo leer la tabla de archivos"; return false; }
 	std::vector<FilaUtf> filas;
-	if (!leerUtf(d, static_cast<size_t>(toc) + 16, filas, error)) return false;
+	if (!leerUtf(tb, 16, filas, error)) return false;
 	for (FilaUtf& f : filas) {
-		if (f["FileName"].s != nombre || f["DirName"].s != carpeta) continue;
-		const long long tam = f["FileSize"].n, ext = f["ExtractSize"].n, off = f["FileOffset"].n;
-		if (tam != ext) { error = "el CPK guarda " + nombre + " comprimido (no soportado)"; return false; }
-		const unsigned long long ini = contenido + static_cast<unsigned long long>(off);
-		if (tam <= 0 || ini + static_cast<unsigned long long>(tam) > d.size()) { error = "CPK: " + nombre + " fuera de rango"; return false; }
-		bytes = d.substr(static_cast<size_t>(ini), static_cast<size_t>(tam));
+		if (f["DirName"].s != carpeta) continue;
+		EntradaCpk e;
+		e.carpeta = carpeta; e.nombre = f["FileName"].s;
+		e.desde = contenido + static_cast<unsigned long long>(f["FileOffset"].n);
+		e.tam = static_cast<uint64_t>(f["FileSize"].n); e.tamReal = static_cast<uint64_t>(f["ExtractSize"].n);
+		entradas.push_back(e);
+	}
+	return true;
+}
+
+bool extraerDeCpk(const std::string& d, const std::string& carpeta, const std::string& nombre, std::string& bytes, std::string& error) {
+	const LectorCpk lector = [&d](uint64_t desde, size_t cuanto, std::string& out) {
+		if (desde > d.size() || desde + cuanto > d.size()) return false;
+		out = d.substr(static_cast<size_t>(desde), cuanto);
+		return true;
+	};
+	std::vector<EntradaCpk> es;
+	if (!entradasCpk(lector, d.size(), carpeta, es, error)) return false;
+	for (const EntradaCpk& e : es) {
+		if (e.nombre != nombre) continue;
+		if (e.tam != e.tamReal) { error = "el CPK guarda " + nombre + " comprimido (no soportado)"; return false; }
+		if (e.tam == 0 || e.desde + e.tam > d.size()) { error = "CPK: " + nombre + " fuera de rango"; return false; }
+		bytes = d.substr(static_cast<size_t>(e.desde), static_cast<size_t>(e.tam));
 		return true;
 	}
 	error = "el CPK no tiene " + carpeta + "/" + nombre;
 	return false;
 }
 
-// ─── PlayerAssignment / Player ───────────────────────────────────────────────────────────────────
+std::map<std::string, int> leerDpFileList(const std::string& b) {
+	std::map<std::string, int> r;
+	// registros de 48 bytes: la prioridad (u32) va 12 bytes antes del nombre y el nombre del CPK en +16 (32 bytes)
+	for (size_t off = 16; off + 32 <= b.size(); off += 48) {
+		const size_t fin = b.find('\0', off);
+		const std::string nombre = b.substr(off, (fin == std::string::npos || fin > off + 32 ? off + 32 : fin) - off);
+		if (nombre.size() < 5) continue;
+		std::string m = nombre;
+		for (char& c : m) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+		if (m.compare(m.size() - 4, 4, ".cpk") != 0) continue;
+		r[m] = static_cast<int>(le32(b, off - 12));
+	}
+	return r;
+}
+
+// ─── PlayerAssignment / Player / Team ────────────────────────────────────────────────────────────
 bool leerAsignacion(const std::string& crudo, std::vector<Fila>& filas, std::string& error) {
 	filas.clear();
 	if (crudo.size() % 16 != 0 || crudo.size() < 16 * 1000 || crudo.size() > 16 * 400000) { error = "PlayerAssignment.bin con un tamaño que no es de PES 2021"; return false; }
@@ -410,12 +453,75 @@ std::string escribirAsignacion(const std::vector<Fila>& filas) {
 	return r;
 }
 
-bool leerJugadores(const std::string& crudo, std::set<uint32_t>& ids, std::string& error) {
+std::string plegarNombre(const std::string& s) {
+	// ¿UTF-8 válido? Si no, se toma como Latin-1.
+	bool utf8 = true;
+	for (size_t i = 0; i < s.size() && utf8;) {
+		const unsigned char c = static_cast<unsigned char>(s[i]);
+		const size_t n = c < 0x80 ? 1 : (c >> 5) == 0x6 ? 2 : (c >> 4) == 0xE ? 3 : (c >> 3) == 0x1E ? 4 : 0;
+		if (n == 0 || i + n > s.size()) { utf8 = false; break; }
+		for (size_t k = 1; k < n; k++) if ((static_cast<unsigned char>(s[i + k]) & 0xC0) != 0x80) utf8 = false;
+		i += n;
+	}
+	std::vector<uint32_t> cps;
+	if (utf8) {
+		for (size_t i = 0; i < s.size();) {
+			const unsigned char c = static_cast<unsigned char>(s[i]);
+			uint32_t cp; size_t n;
+			if (c < 0x80) { cp = c; n = 1; }
+			else if ((c >> 5) == 0x6) { cp = c & 0x1F; n = 2; }
+			else if ((c >> 4) == 0xE) { cp = c & 0x0F; n = 3; }
+			else { cp = c & 0x07; n = 4; }
+			for (size_t k = 1; k < n; k++) cp = (cp << 6) | (static_cast<unsigned char>(s[i + k]) & 0x3F);
+			cps.push_back(cp); i += n;
+		}
+	}
+	else for (unsigned char c : s) cps.push_back(c);
+	static const char* const lat1 = "aaaaaaaceeeeiiiidnooooo*ouuuuyts" "aaaaaaaceeeeiiiidnooooo/ouuuuyty";   // U+00C0…U+00FF
+	std::string r;
+	for (uint32_t cp : cps) {
+		if (cp < 0x80) { if (std::isalnum(static_cast<int>(cp))) r.push_back(static_cast<char>(std::tolower(static_cast<int>(cp)))); }
+		else if (cp >= 0xC0 && cp <= 0xFF) { const char c = lat1[cp - 0xC0]; if (c != '*' && c != '/') r.push_back(c); }
+		else if (cp == 0x141 || cp == 0x142) r.push_back('l');
+		else if (cp == 0x110 || cp == 0x111) r.push_back('d');
+		else if (cp == 0x15E || cp == 0x15F || cp == 0x160 || cp == 0x161) r.push_back('s');
+		else if (cp == 0x130 || cp == 0x131) r.push_back('i');
+		else if (cp == 0x11E || cp == 0x11F) r.push_back('g');
+		else if (cp == 0x10C || cp == 0x10D || cp == 0x106 || cp == 0x107) r.push_back('c');
+		else if (cp == 0x17D || cp == 0x17E || cp == 0x179 || cp == 0x17A || cp == 0x17B || cp == 0x17C) r.push_back('z');
+	}
+	return r;
+}
+
+bool leerJugadores(const std::string& crudo, std::set<uint32_t>& ids, std::string& error, std::map<uint32_t, std::string>* nombres) {
 	ids.clear();
+	if (nombres) nombres->clear();
 	// cabecera de 8 bytes + registros de 312 bytes; el archivo real termina con el último registro recortado (8 bytes menos)
 	if (crudo.size() < 8 + 312 * 1000 || ((crudo.size() - 8) % 312 != 0 && (crudo.size() - 8) % 312 != 304)) { error = "Player.bin con un tamaño que no es de PES 2021"; return false; }
-	for (size_t o = 8; o + 4 <= crudo.size(); o += 312) { const uint32_t id = le32(crudo, o); if (id) ids.insert(id); }
+	for (size_t o = 8; o + 4 <= crudo.size(); o += 312) {
+		const uint32_t id = le32(crudo, o);
+		if (!id) continue;
+		ids.insert(id);
+		if (nombres && o + 243 + 61 <= crudo.size()) {
+			const std::string n(crudo.data() + o + 243, 61);
+			(*nombres)[id] = plegarNombre(n.substr(0, n.find('\0')));
+		}
+	}
 	if (ids.size() < 1000) { error = "Player.bin con muy pocos jugadores"; return false; }
+	return true;
+}
+
+bool leerEquipos(const std::string& crudo, std::map<uint32_t, std::string>& nombres, std::string& error) {
+	nombres.clear();
+	const size_t R = 1532;
+	if (crudo.size() < R * 100 || crudo.size() % R != 0) { error = "Team.bin con un tamaño que no es de PES 2021"; return false; }
+	for (size_t o = 0; o + R <= crudo.size(); o += R) {
+		const uint32_t id = le32(crudo, o);
+		const std::string n(crudo.data() + o + 368, 70);
+		const std::string f = plegarNombre(n.substr(0, n.find('\0')));
+		if (id && !f.empty()) nombres[id] = f;
+	}
+	if (nombres.size() < 50) { error = "Team.bin con muy pocos equipos"; return false; }
 	return true;
 }
 
@@ -427,7 +533,7 @@ bool leerLista(const std::string& texto, Lista& lista, std::string& error) {
 	if (j.is_discarded() || !j.is_object()) { error = "fichajes.json no es un JSON válido"; return false; }
 	if (!j.contains("version") || !j["version"].is_number_integer()) { error = "fichajes.json: falta «version»"; return false; }
 	lista.version = j["version"].get<int>();
-	if (lista.version != kVersionLista) { error = "fichajes.json: versión " + std::to_string(lista.version) + " no soportada (esta Link entiende la " + std::to_string(kVersionLista) + ")"; return false; }
+	if (lista.version < 1 || lista.version > kVersionLista) { error = "fichajes.json: versión " + std::to_string(lista.version) + " no soportada (esta Link entiende la 1 y la " + std::to_string(kVersionLista) + ")"; return false; }
 	if (j.contains("regla")) {
 		const std::string r = j["regla"].is_string() ? j["regla"].get<std::string>() : std::string();
 		if (r == "estricta") lista.estricta = true;
@@ -437,21 +543,36 @@ bool leerLista(const std::string& texto, Lista& lista, std::string& error) {
 	if (j.contains("nombre") && j["nombre"].is_string()) lista.nombre = j["nombre"].get<std::string>().substr(0, 80);
 	if (!j.contains("cambios") || !j["cambios"].is_array()) { error = "fichajes.json: falta la lista «cambios»"; return false; }
 	if (j["cambios"].size() > kMaxCambios) { error = "fichajes.json: demasiados cambios"; return false; }
-	auto id = [](const nlohmann::json& o, const char* k, bool obligatorio, uint32_t& out) {
-		if (!o.contains(k)) return !obligatorio;
+	auto id = [](const nlohmann::json& o, const char* k, uint32_t& out, bool& hay) {
+		hay = o.contains(k);
+		if (!hay) return true;
 		if (!o[k].is_number_integer()) return false;
 		const long long v = o[k].get<long long>();
-		if (v < 0 || v > kMaxId || (obligatorio && v == 0)) return false;
+		if (v < 0 || v > kMaxId) return false;
 		out = static_cast<uint32_t>(v);
 		return true;
 	};
+	auto nombre = [](const nlohmann::json& o, const char* k, std::string& out, bool& hay) {
+		hay = o.contains(k);
+		if (!hay) return true;
+		if (!o[k].is_string()) return false;
+		out = o[k].get<std::string>();
+		return !out.empty() && out.size() <= 80;
+	};
 	for (size_t i = 0; i < j["cambios"].size(); i++) {
 		const nlohmann::json& o = j["cambios"][i];
+		const std::string donde = "fichajes.json: el cambio " + std::to_string(i + 1);
 		Cambio c;
-		if (!o.is_object() || !id(o, "player_id", true, c.jugador) || !id(o, "team_id", true, c.equipo) || !id(o, "origen", false, c.origen)) {
-			error = "fichajes.json: el cambio " + std::to_string(i + 1) + " no tiene player_id y team_id numéricos válidos";
-			return false;
-		}
+		if (!o.is_object()) { error = donde + " no es un objeto"; return false; }
+		bool hJug = false, hEq = false, hOri = false, hNJug = false, hNEq = false, hNOri = false, hNEq2 = false;
+		if (!id(o, "player_id", c.jugador, hJug) || !id(o, "team_id", c.equipo, hEq) || !id(o, "origen", c.origen, hOri)) { error = donde + " tiene ids que no son números válidos"; return false; }
+		if ((hJug && c.jugador == 0) || (hEq && c.equipo == 0)) { error = donde + ": player_id y team_id no pueden ser 0"; return false; }
+		if (!nombre(o, "jugador", c.jugadorNombre, hNJug) || !nombre(o, "equipo_destino", c.equipoNombre, hNEq) || !nombre(o, "equipo_origen", c.origenNombre, hNOri)) { error = donde + " tiene nombres vacíos o demasiado largos"; return false; }
+		if (!hNEq && !nombre(o, "equipo", c.equipoNombre, hNEq2)) { error = donde + " tiene un nombre de equipo no válido"; return false; }
+		hNEq = hNEq || hNEq2;
+		if (lista.version == 1 && (hNJug || hNEq || hNOri)) { error = donde + ": los nombres necesitan «version»: 2"; return false; }
+		if ((!hJug && !hNJug) || (!hEq && !hNEq)) { error = donde + " necesita jugador (player_id o «jugador») y equipo destino (team_id o «equipo_destino»)"; return false; }
+		if ((hJug && hNJug) || (hEq && hNEq) || (hOri && hNOri)) { error = donde + ": usa o el id o el nombre, no los dos"; return false; }
 		if (o.contains("nota") && o["nota"].is_string()) c.nota = o["nota"].get<std::string>().substr(0, 120);
 		lista.cambios.push_back(c);
 	}
@@ -465,17 +586,50 @@ namespace {
 		puestos.clear(); numeros.clear(); cuantos = 0;
 		for (const Fila& x : f) if (x.equipo == equipo) { puestos.insert(x.empaq >> 10); numeros.insert(x.empaq & 1023); cuantos++; }
 	}
+	/// ids cuyo nombre plegado coincide EXACTAMENTE.
+	std::vector<uint32_t> porNombre(const std::map<uint32_t, std::string>& m, const std::string& plegado) {
+		std::vector<uint32_t> r;
+		if (plegado.empty()) return r;
+		for (const auto& e : m) if (e.second == plegado) r.push_back(e.first);
+		return r;
+	}
 }
 
-Resultado aplicar(const std::vector<Fila>& base, const std::set<uint32_t>& jugadores, const Lista& lista) {
+Resultado aplicar(const std::vector<Fila>& base, const std::set<uint32_t>& jugadores, const Lista& lista, const Nombres* nombres) {
 	Resultado r;
 	r.filas = base;
 	std::set<uint32_t> equipos;
 	for (const Fila& f : base) equipos.insert(f.equipo);
 	uint32_t maxId = 0;
 	for (const Fila& f : base) maxId = (std::max)(maxId, f.id);
-	for (const Cambio& c : lista.cambios) {
+	for (const Cambio& original : lista.cambios) {
+		Cambio c = original;
 		auto salto = [&](const char* cod, const std::string& mot) { r.saltados.push_back({ c, cod, mot }); };
+		// Versión 2: nombres → ids, contra la base de ESTE PC (coincidencia exacta; si hay duda, se salta)
+		if (c.jugador == 0 || c.equipo == 0 || (c.origen == 0 && !c.origenNombre.empty())) {
+			if (!nombres || nombres->jugador.empty() || nombres->equipo.empty()) { salto("nombres_no_disponibles", "Este cambio se indica por nombre y no se pudieron leer los nombres de jugadores y equipos de la base de este parche."); continue; }
+			bool fallo = false;
+			auto equipoPorNombre = [&](const std::string& nom, const char* que, uint32_t& destino) {
+				const std::vector<uint32_t> v = porNombre(nombres->equipo, plegarNombre(nom));
+				if (v.empty()) { salto("equipo_no_encontrado", std::string("No hay ningún equipo llamado «") + nom + "» (" + que + ") en la base de este parche."); fallo = true; }
+				else if (v.size() > 1) { salto("equipo_ambiguo", std::string("Hay ") + std::to_string(v.size()) + " equipos llamados «" + nom + "» (" + que + "): no sé cuál es."); fallo = true; }
+				else destino = v[0];
+			};
+			if (c.equipo == 0) equipoPorNombre(c.equipoNombre, "destino", c.equipo);
+			if (!fallo && c.origen == 0 && !c.origenNombre.empty()) equipoPorNombre(c.origenNombre, "origen", c.origen);
+			if (fallo) continue;
+			if (c.jugador == 0) {
+				std::vector<uint32_t> v = porNombre(nombres->jugador, plegarNombre(c.jugadorNombre));
+				if (c.origen != 0) {
+					std::vector<uint32_t> en;
+					for (uint32_t id : v) for (const Fila& f : r.filas) if (f.jugador == id && f.equipo == c.origen) { en.push_back(id); break; }
+					v = en;
+				}
+				if (v.empty()) { salto("jugador_no_encontrado", "No hay ningún jugador llamado «" + c.jugadorNombre + "»" + (c.origen ? " en el equipo de origen indicado" : "") + " en la base de este parche."); continue; }
+				if (v.size() > 1) { salto("jugador_ambiguo", "Hay " + std::to_string(v.size()) + " jugadores llamados «" + c.jugadorNombre + "»" + (c.origen ? " en ese equipo" : "") + ": indica el equipo de origen o usa player_id."); continue; }
+				c.jugador = v[0];
+			}
+		}
 		if (!jugadores.count(c.jugador)) { salto("jugador_no_existe", "El jugador " + std::to_string(c.jugador) + " no existe en la base de este parche."); continue; }
 		if (!equipos.count(c.equipo)) { salto("equipo_no_existe", "El equipo " + std::to_string(c.equipo) + " no existe en la base de este parche."); continue; }
 		std::vector<size_t> suyas;
@@ -493,7 +647,7 @@ Resultado aplicar(const std::vector<Fila>& base, const std::set<uint32_t>& jugad
 			}
 		}
 		else {
-			if (suyas.size() > 1) { salto("ambiguo", "Tiene varios equipos: indica el equipo de origen (campo «origen»)."); continue; }
+			if (suyas.size() > 1) { salto("ambiguo", "Tiene varios equipos: indica el equipo de origen (campo «origen» o «equipo_origen»)."); continue; }
 			if (suyas.size() == 1) fila = static_cast<long long>(suyas[0]);
 		}
 		if (fila < 0) que = "alta";
@@ -530,7 +684,7 @@ bool validar(const std::vector<Fila>& base, const std::vector<Fila>& nuevas, std
 	return true;
 }
 
-// ─── juego real ──────────────────────────────────────────────────────────────────────────────────
+// ─── juego real: detector de base por evidencia ──────────────────────────────────────────────────
 namespace {
 	const char* const kCarpetaPesdb = "common/etc/pesdb";
 
@@ -539,92 +693,285 @@ namespace {
 
 	std::string minus(std::string s) { std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); }); return s; }
 
-	/// ".\livecpk\X" → livecpk/X
+	/// ".\livecpk\X" → livecpk/X (o una ruta absoluta tal cual)
 	fs::path rutaRaiz(const std::string& r) {
 		std::string x = r;
 		std::replace(x.begin(), x.end(), '\\', '/');
 		while (x.compare(0, 2, "./") == 0) x.erase(0, 2);
 		return phoenix::entrega::deU8(x);
 	}
-	bool esPhoenixDB(const std::string& r) { std::string m = minus(r); std::replace(m.begin(), m.end(), '/', '\\'); return m.size() >= 10 && m.compare(m.size() - 10, 10, "phoenix-db") == 0; }
+	bool esPhoenixDB(const std::string& r) { std::string m = minus(r); std::replace(m.begin(), m.end(), '/', '\\'); while (!m.empty() && m.back() == '\\') m.pop_back(); return m.size() >= 10 && m.compare(m.size() - 10, 10, "phoenix-db") == 0; }
+	bool esWesys(const std::string& b) { return b.size() >= 8 && static_cast<unsigned char>(b[0]) == 0xFF && b.compare(3, 5, "WESYS") == 0; }
 
-	struct Base {
+	struct InfoCpk {
 		bool ok = false;
-		std::string origen, error, filaSha;
-		std::string asignacionCrudo, jugadoresCrudoSha;
-		std::vector<Fila> filas;
-		std::set<uint32_t> jugadores;
+		std::string error;
+		std::map<std::string, EntradaCpk> pesdb;   // nombre → entrada
 	};
+	struct Crudo { bool ok = false; std::string datos; };
 
 	/// Caché de lecturas pesadas dentro de una misma pasada (varios modos comparten la misma base).
 	struct Cache {
-		std::map<std::string, std::pair<bool, std::string>> crudos;   // ruta|nombre → (ok, crudo o error)
+		std::map<std::string, Crudo> crudos;     // clave → bytes reales (o error)
+		std::map<std::string, InfoCpk> cpks;     // ruta|tamaño|fecha → tabla del CPK
 	};
 
-	bool crudoDeCarpeta(Cache& c, const fs::path& dir, const char* nombre, std::string& crudo, std::string& error) {
-		const std::string clave = phoenix::entrega::aU8(dir) + "|" + nombre;
-		auto it = c.crudos.find(clave);
-		if (it == c.crudos.end()) {
-			std::string bytes, e, out;
-			bool ok = leerArchivo(dir / nombre, bytes);
-			if (!ok) e = std::string("no se pudo leer ") + nombre;
-			else ok = leerBin(bytes, out, e);
-			it = c.crudos.emplace(clave, std::make_pair(ok, ok ? out : e)).first;
-		}
-		if (!it->second.first) { error = it->second.second; return false; }
-		crudo = it->second.second;
-		return true;
+	std::string claveArchivo(const fs::path& p) {
+		std::error_code ec;
+		const uintmax_t n = fs::file_size(p, ec);
+		const auto t = fs::last_write_time(p, ec);
+		return phoenix::entrega::aU8(p) + "|" + std::to_string(ec ? 0 : n) + "|" + std::to_string(static_cast<long long>(t.time_since_epoch().count()));
 	}
-	bool crudoDeCpk(Cache& c, const fs::path& cpk, const char* nombre, std::string& crudo, std::string& error) {
-		const std::string clave = phoenix::entrega::aU8(cpk) + "|cpk|" + nombre;
-		auto it = c.crudos.find(clave);
-		if (it == c.crudos.end()) {
-			std::string cpkBytes, bytes, e, out;
-			bool ok = leerArchivo(cpk, cpkBytes);
-			if (!ok) e = "no se pudo leer " + phoenix::entrega::aU8(cpk.filename());
-			else ok = extraerDeCpk(cpkBytes, kCarpetaPesdb, nombre, bytes, e) && leerBin(bytes, out, e);
-			it = c.crudos.emplace(clave, std::make_pair(ok, ok ? out : e)).first;
+
+	const InfoCpk& escanearCpk(Cache& c, const fs::path& ruta) {
+		const std::string k = claveArchivo(ruta);
+		auto it = c.cpks.find(k);
+		if (it != c.cpks.end()) return it->second;
+		InfoCpk info;
+		std::error_code ec;
+		const uintmax_t tam = fs::file_size(ruta, ec);
+		std::ifstream f(ruta, std::ios::binary);
+		if (ec || !f) info.error = "no se pudo abrir";
+		else {
+			const LectorCpk lector = [&f](uint64_t desde, size_t cuanto, std::string& out) {
+				f.clear(); f.seekg(static_cast<std::streamoff>(desde));
+				out.assign(cuanto, '\0');
+				f.read(&out[0], static_cast<std::streamsize>(cuanto));
+				return static_cast<size_t>(f.gcount()) == cuanto;
+			};
+			std::vector<EntradaCpk> es;
+			if (entradasCpk(lector, tam, kCarpetaPesdb, es, info.error)) { info.ok = true; for (const EntradaCpk& e : es) info.pesdb[e.nombre] = e; }
 		}
-		if (!it->second.first) { error = it->second.second; return false; }
-		crudo = it->second.second;
+		return c.cpks.emplace(k, info).first->second;
+	}
+
+	/// Dónde está un archivo de la base, tal como lo buscaría el juego.
+	struct Fuente {
+		bool hay = false;
+		bool esCpk = false;
+		fs::path ruta;           // carpeta pesdb (cpk.root) o el CPK
+		EntradaCpk ent;
+		std::string etiqueta;    // «cpk.root #2 «.\olmosjr23\Database»» | «CGP_database.cpk (prioridad 1)»
+		std::string error;       // hay varias bases con la misma prioridad…
+	};
+
+	struct CandCpk { fs::path ruta; long rango = 0; EntradaCpk ent; std::string nota; };
+
+	struct Contexto {
+		Cache& cache;
+		fs::path juego;
+		Objetivo o;
+		std::vector<std::pair<std::string, fs::path>> raices;   // (etiqueta, carpeta pesdb) en orden de prioridad, solo las que existen
+		bool cpksListos = false;
+		std::vector<fs::path> cpkRutas; std::vector<long> cpkRangos; std::vector<std::string> cpkNotas;
+		explicit Contexto(Cache& c) : cache(c) {}
+	};
+
+	void prepararRaices(Contexto& x) {
+		std::string ini;
+		leerArchivo(x.o.ini, ini, 512 * 1024);
+		std::error_code ec;
+		int n = 0;
+		for (const std::string& r : phoenix::modulos::raicesActivas(ini)) {
+			n++;
+			if (esPhoenixDB(r)) continue;
+			const fs::path rel = rutaRaiz(r);
+			std::vector<fs::path> bases;
+			if (rel.is_absolute()) bases.push_back(rel);
+			else { bases.push_back(x.o.siderAddons / rel); if (!x.o.esRaiz) bases.push_back(x.juego / "SiderAddons" / rel); }
+			for (const fs::path& b : bases) {
+				const fs::path p = b / "common" / "etc" / "pesdb";
+				if (fs::is_directory(p, ec)) { x.raices.push_back({ "cpk.root #" + std::to_string(n) + " «" + r + "»" + (b == bases[0] ? "" : " (de la raíz del juego)"), p }); break; }
+			}
+		}
+	}
+
+	void prepararCpks(Contexto& x) {
+		if (x.cpksListos) return;
+		x.cpksListos = true;
+		std::error_code ec;
+		auto listar = [&](const fs::path& dir, long rangoDefecto, bool propio, const std::set<std::string>& excluir, const std::map<std::string, int>& rangos) {
+			int n = 0;
+			for (fs::directory_iterator it(dir, ec), fin; !ec && it != fin && n < 400; it.increment(ec), ++n) {
+				std::error_code e2;
+				if (!it->is_regular_file(e2)) continue;
+				const std::string nombre = minus(phoenix::entrega::aU8(it->path().filename()));
+				if (nombre.size() < 5 || nombre.compare(nombre.size() - 4, 4, ".cpk") != 0 || excluir.count(nombre)) continue;
+				long rango = rangoDefecto;
+				std::string nota = "sin prioridad en DpFileList.bin";
+				const auto r = rangos.find(nombre);
+				if (r != rangos.end()) { rango = r->second; nota = "prioridad " + std::to_string(r->second) + " en DpFileList.bin"; }
+				else if (propio) { rango = -1000; nota = "CPK propio del modo"; }
+				x.cpkRutas.push_back(it->path()); x.cpkRangos.push_back(rango); x.cpkNotas.push_back(nota);
+			}
+		};
+		auto rangosDe = [&](const fs::path& dir) {
+			std::string b;
+			if (leerArchivo(dir / "DpFileList.bin", b, 1024 * 1024)) return leerDpFileList(b);
+			return std::map<std::string, int>();
+		};
+		std::set<std::string> propios;
+		if (!x.o.esRaiz) {
+			const fs::path dirModo = x.o.cpk.parent_path();
+			listar(dirModo, -1000, true, {}, rangosDe(dirModo));
+			for (const fs::path& p : x.cpkRutas) propios.insert(minus(phoenix::entrega::aU8(p.filename())));
+		}
+		listar(x.juego / "download", 500, false, propios, rangosDe(x.juego / "download"));
+		listar(x.juego / "Data", 5000, false, {}, {});
+	}
+
+	/// Resuelve un archivo de la base como lo haría el juego: primero las cpk.root (en orden), luego los CPK (el de mejor prioridad).
+	Fuente resolver(Contexto& x, const char* nombre) {
+		Fuente f;
+		std::error_code ec;
+		for (const auto& r : x.raices) {
+			if (fs::is_regular_file(r.second / nombre, ec)) { f.hay = true; f.ruta = r.second; f.etiqueta = r.first; return f; }
+		}
+		prepararCpks(x);
+		std::vector<CandCpk> cands;
+		for (size_t i = 0; i < x.cpkRutas.size(); i++) {
+			const InfoCpk& info = escanearCpk(x.cache, x.cpkRutas[i]);
+			if (!info.ok) continue;
+			const auto e = info.pesdb.find(nombre);
+			if (e == info.pesdb.end()) continue;
+			cands.push_back({ x.cpkRutas[i], x.cpkRangos[i], e->second, x.cpkNotas[i] });
+		}
+		if (cands.empty()) return f;
+		long mejor = cands[0].rango;
+		for (const CandCpk& c : cands) mejor = (std::min)(mejor, c.rango);
+		std::vector<const CandCpk*> top;
+		for (const CandCpk& c : cands) if (c.rango == mejor) top.push_back(&c);
+		if (top.size() > 1) {
+			std::string nombres;
+			for (const CandCpk* c : top) nombres += (nombres.empty() ? "" : ", ") + phoenix::entrega::aU8(c->ruta.filename());
+			f.hay = true; f.error = "Hay varios CPK con " + std::string(nombre) + " y la misma prioridad (" + nombres + "): no sé cuál usa el juego.";
+			return f;
+		}
+		f.hay = true; f.esCpk = true; f.ruta = top[0]->ruta; f.ent = top[0]->ent;
+		f.etiqueta = phoenix::entrega::aU8(top[0]->ruta.filename()) + " (" + top[0]->nota + ")";
+		return f;
+	}
+
+	/// Bytes reales de un archivo de la base (descomprimido por el formato WESYS).
+	bool leerFuente(Contexto& x, const Fuente& f, const char* nombre, std::string& crudo, std::string& error) {
+		const std::string clave = (f.esCpk ? phoenix::entrega::aU8(f.ruta) + "|cpk|" + std::to_string(f.ent.desde) : phoenix::entrega::aU8(f.ruta / nombre)) + "|" + claveArchivo(f.esCpk ? f.ruta : f.ruta / nombre);
+		auto it = x.cache.crudos.find(clave);
+		if (it == x.cache.crudos.end()) {
+			Crudo c;
+			std::string bytes, e;
+			if (f.esCpk) {
+				if (f.ent.tam != f.ent.tamReal) e = std::string("el CPK guarda ") + nombre + " comprimido (formato que Link no lee)";
+				else if (f.ent.tam == 0 || f.ent.tam > kMaxArchivo) e = "tamaño imposible";
+				else {
+					std::ifstream in(f.ruta, std::ios::binary);
+					in.seekg(static_cast<std::streamoff>(f.ent.desde));
+					bytes.assign(static_cast<size_t>(f.ent.tam), '\0');
+					in.read(&bytes[0], static_cast<std::streamsize>(bytes.size()));
+					if (static_cast<uint64_t>(in.gcount()) != f.ent.tam) e = "no se pudo leer del CPK";
+				}
+			}
+			else if (!leerArchivo(f.ruta / nombre, bytes)) e = std::string("no se pudo leer ") + nombre;
+			if (e.empty()) {
+				if (!esWesys(bytes)) e = std::string(nombre) + " no tiene el formato de PES de los parches (cabecera WESYS): son datos cifrados o de otro formato";
+				else c.ok = leerBin(bytes, c.datos, e);
+			}
+			if (!c.ok) c.datos = e;
+			it = x.cache.crudos.emplace(clave, c).first;
+		}
+		if (!it->second.ok) { error = it->second.datos; return false; }
+		crudo = it->second.datos;
 		return true;
 	}
 
-	/// La base que usa el juego en este sitio: la primera cpk.root (sin Phoenix-DB) que trae PlayerAssignment.bin; si no hay, el CPK del modo.
-	Base resolverBase(Cache& cache, const fs::path& juego, const Objetivo& o) {
+	struct Base {
+		bool ok = false;
+		std::string parche, origen, error, queHacer, asignacionSha;
+		bool generica = false, nombresOk = false;
+		std::vector<std::string> evidencias;
+		std::vector<Fila> filas;
+		std::set<uint32_t> jugadores;
+		std::string jugadoresSha;
+		Nombres nombres;
+	};
+
+	struct Huella { const char* sha; const char* nombre; };
+	const Huella kHuellas[] = {
+		{ "358c51b8ef11", "ConmeGOL 26 (base olmosjr23)" },
+		{ "2f9a1776b74f", "ConmeGOL Patch 26 (CPK)" },
+		{ "6e050ede4ec7", "ConmeGOL Patch 27" },
+		{ "19dafb11bfa3", "UEFAGOL 27" },
+		{ "b00403cb0527", "ConmeGOL Clásicos" },
+	};
+
+	std::string primeraLinea(const fs::path& p) {
+		std::string t;
+		if (!leerArchivo(p, t, 4096)) return std::string();
+		if (t.compare(0, 3, "\xEF\xBB\xBF") == 0) t.erase(0, 3);
+		t = t.substr(0, t.find_first_of("\r\n"));
+		while (!t.empty() && (t.back() == ' ' || t.back() == '\t')) t.pop_back();
+		return t;
+	}
+
+	/// Identifica el parche por señales (no por una lista cerrada): huella de la base, carpeta del modo, último modo lanzado, nombre del CPK.
+	void identificar(Base& b, const Fuente& fuenteAsig, const Contexto& x) {
+		const std::string huella = b.asignacionSha.substr(0, 12);
+		for (const Huella& h : kHuellas) if (huella == h.sha) { b.parche = h.nombre; b.evidencias.push_back("La huella de PlayerAssignment.bin (" + huella + ") coincide con la conocida de «" + std::string(h.nombre) + "»."); }
+		const std::string cpkNombre = fuenteAsig.esCpk ? minus(phoenix::entrega::aU8(fuenteAsig.ruta.filename())) : std::string();
+		if (b.parche.empty() && !x.o.esRaiz) { b.parche = x.o.nombre; b.evidencias.push_back("Es el modo «" + x.o.nombre + "» del cambiador de parches (nombre de su carpeta)."); }
+		if (b.parche.empty() && x.o.esRaiz) {
+			const std::string va = primeraLinea(x.juego / "version_actual.txt");
+			if (!va.empty()) {
+				for (const fs::path& m : phoenix::modulos::carpetasModos(x.juego)) if (phoenix::entrega::aU8(m.filename()) == va) { b.parche = va; break; }
+				if (!b.parche.empty()) b.evidencias.push_back("version_actual.txt dice que el último modo lanzado fue «" + va + "» y existe su carpeta.");
+			}
+		}
+		if (b.parche.empty() && cpkNombre.compare(0, 2, "dt") == 0) { b.parche = "PES 2021 original"; b.evidencias.push_back("La base sale de un CPK oficial del juego («" + cpkNombre + "»)."); }
+		if (b.parche.empty()) {
+			b.parche = cpkNombre.empty() ? "parche desconocido (base en carpeta)" : "parche desconocido (" + cpkNombre + ")";
+			b.generica = true;
+			b.evidencias.push_back("No reconozco este parche por nombre ni huella, pero su base se lee y cumple el formato: la uso como base genérica.");
+		}
+	}
+
+	Base resolverBase(Contexto& x, bool necesitaNombres) {
 		Base b;
-		std::string ini;
-		leerArchivo(o.ini, ini, 512 * 1024);
-		fs::path dirPesdb;
-		std::error_code ec;
-		for (const std::string& r : phoenix::modulos::raicesActivas(ini)) {
-			if (esPhoenixDB(r)) continue;
-			const fs::path rel = rutaRaiz(r);
-			for (const fs::path& sider : { o.siderAddons, juego / "SiderAddons" }) {
-				const fs::path cand = sider / rel / "common" / "etc" / "pesdb";
-				if (fs::is_regular_file(cand / "PlayerAssignment.bin", ec)) { dirPesdb = cand; b.origen = phoenix::entrega::aU8(rel) + (sider == o.siderAddons ? "" : " (de la raíz del juego)"); break; }
-			}
-			if (!dirPesdb.empty()) break;
+		prepararRaices(x);
+		const Fuente fa = resolver(x, "PlayerAssignment.bin");
+		const Fuente fj = resolver(x, "Player.bin");
+		if (!fa.hay) {
+			b.error = "No encontré PlayerAssignment.bin ni en las cpk.root del sider.ini ni en ningún CPK del juego (download, Data).";
+			b.queHacer = "Comprueba que la carpeta del juego es la correcta y que el parche trae su base de datos. No se crea nada.";
+			return b;
 		}
-		std::string crudoPlayer;
-		if (!dirPesdb.empty()) {
-			if (!crudoDeCarpeta(cache, dirPesdb, "PlayerAssignment.bin", b.asignacionCrudo, b.error)) { b.error = "No se reconoce la base de " + b.origen + ": " + b.error; return b; }
-			if (!crudoDeCarpeta(cache, dirPesdb, "Player.bin", crudoPlayer, b.error)) {
-				// esa carpeta solo trae PlayerAssignment: los jugadores se leen del CPK
-				std::string e2;
-				if (!crudoDeCpk(cache, o.cpk, "Player.bin", crudoPlayer, e2)) { b.error = "No se pueden leer los jugadores de la base: " + e2; return b; }
-				b.error.clear();
-			}
+		if (!fa.error.empty()) { b.error = fa.error; b.queHacer = "Link no adivina: no se crea nada. Deja un solo CPK con la base o ponle la prioridad en DpFileList.bin."; return b; }
+		if (!fj.hay || !fj.error.empty()) { b.error = fj.hay ? fj.error : "No encontré Player.bin junto a PlayerAssignment.bin."; b.queHacer = "No se crea nada."; return b; }
+		b.origen = fa.etiqueta;
+		b.evidencias.push_back(std::string(fa.esCpk ? "Ninguna cpk.root trae PlayerAssignment.bin; lo trae el CPK " : "Lo trae la ") + fa.etiqueta + (fa.esCpk ? ", el de mejor prioridad." : ", la de más prioridad en sider.ini."));
+		if (fj.etiqueta != fa.etiqueta) b.evidencias.push_back("Player.bin sale de " + fj.etiqueta + ".");
+		std::string crudoAsig, crudoJug, e;
+		const bool vanilla = fa.esCpk && minus(phoenix::entrega::aU8(fa.ruta.filename())).compare(0, 2, "dt") == 0;
+		if (!leerFuente(x, fa, "PlayerAssignment.bin", crudoAsig, e)) {
+			b.error = "La base de «" + fa.etiqueta + "» no se puede leer: " + e + ".";
+			b.queHacer = vanilla
+				? "Es la data original cifrada de PES 2021: los fichajes necesitan un parche cuya base (CGP_database.cpk, olmosjr23\\Database…) esté en el formato de los parches. No se crea nada."
+				: "Si es un parche distinto, mándame el informe (Sala › Conexión › Diagnóstico del PC). No se crea nada.";
+			if (vanilla) { b.parche = "PES 2021 original"; b.evidencias.push_back("La base sale de un CPK oficial del juego («" + phoenix::entrega::aU8(fa.ruta.filename()) + "»)."); }
+			else b.parche = "parche desconocido";
+			return b;
 		}
-		else {
-			fs::path cpk = o.cpk;
-			if (!fs::is_regular_file(cpk, ec)) cpk = juego / "download" / "CGP_database.cpk";
-			b.origen = "CGP_database.cpk";
-			if (!crudoDeCpk(cache, cpk, "PlayerAssignment.bin", b.asignacionCrudo, b.error) || !crudoDeCpk(cache, cpk, "Player.bin", crudoPlayer, b.error)) { b.error = "No se reconoce la base (" + b.error + ")"; return b; }
+		if (!leerFuente(x, fj, "Player.bin", crudoJug, e)) { b.error = "Player.bin de «" + fj.etiqueta + "» no se puede leer: " + e + "."; b.queHacer = "No se crea nada."; return b; }
+		if (!leerAsignacion(crudoAsig, b.filas, e)) { b.error = "La base no tiene el formato esperado: " + e + "."; b.queHacer = "No se crea nada."; return b; }
+		if (!leerJugadores(crudoJug, b.jugadores, e, necesitaNombres ? &b.nombres.jugador : nullptr)) { b.error = "La base no tiene el formato esperado: " + e + "."; b.queHacer = "No se crea nada."; return b; }
+		b.asignacionSha = sha(crudoAsig);
+		b.jugadoresSha = sha(crudoJug);
+		b.evidencias.push_back("PlayerAssignment.bin: " + std::to_string(b.filas.size()) + " filas de 16 bytes; Player.bin: " + std::to_string(b.jugadores.size()) + " jugadores (cabecera " + std::to_string(le32(crudoJug, 0)) + ").");
+		if (necesitaNombres) {
+			const Fuente ft = resolver(x, "Team.bin");
+			std::string crudoEq, e2;
+			if (ft.hay && ft.error.empty() && leerFuente(x, ft, "Team.bin", crudoEq, e2) && leerEquipos(crudoEq, b.nombres.equipo, e2) && !b.nombres.jugador.empty()) b.nombresOk = true;
+			else b.evidencias.push_back("No pude leer los nombres de los equipos (Team.bin): los cambios por nombre se saltarán.");
 		}
-		if (!leerAsignacion(b.asignacionCrudo, b.filas, b.error) || !leerJugadores(crudoPlayer, b.jugadores, b.error)) { b.error = "No se reconoce la base: " + b.error; return b; }
-		b.filaSha = sha(b.asignacionCrudo);
-		b.jugadoresCrudoSha = sha(crudoPlayer);
+		identificar(b, fa, x);
 		b.ok = true;
 		return b;
 	}
@@ -663,27 +1010,32 @@ std::vector<Objetivo> objetivos(const fs::path& juego) {
 namespace {
 	std::vector<Analisis> analizarCon(Cache& cache, const fs::path& juego, const Lista& lista) {
 		std::vector<Analisis> res;
+		const bool nombres = lista.usaNombres();
 		for (const Objetivo& o : objetivos(juego)) {
 			Analisis a;
 			a.objetivo = o;
-			const Base b = resolverBase(cache, juego, o);
-			a.baseOk = b.ok; a.baseOrigen = b.origen; a.error = b.error;
+			Contexto x(cache);
+			x.juego = juego; x.o = o;
+			const Base b = resolverBase(x, nombres);
+			a.baseOk = b.ok; a.baseOrigen = b.origen; a.error = b.error; a.queHacer = b.queHacer;
+			a.parche = b.parche; a.baseGenerica = b.generica; a.comoLoSupe = b.evidencias; a.nombresDisponibles = b.nombresOk;
 			if (!b.ok) { a.estado = "sin_base"; res.push_back(std::move(a)); continue; }
 			a.filasBase = static_cast<int>(b.filas.size());
-			a.baseSha = b.filaSha;
-			Resultado r = aplicar(b.filas, b.jugadores, lista);
+			a.baseSha = b.asignacionSha;
+			Nombres nm = b.nombres;
+			Resultado r = aplicar(b.filas, b.jugadores, lista, b.nombresOk ? &nm : nullptr);
 			a.aplicados = static_cast<int>(r.aplicados.size());
 			a.yaEstaban = r.yaEstaban;
 			a.hechos = r.aplicados;
 			a.saltados = r.saltados;
 			std::string e;
-			if (!validar(b.filas, r.filas, e)) { a.baseOk = false; a.error = "El resultado no pasa la validación: " + e; a.estado = "sin_base"; res.push_back(std::move(a)); continue; }
+			if (!validar(b.filas, r.filas, e)) { a.baseOk = false; a.error = "El resultado no pasa la validación: " + e; a.queHacer = "No se crea nada."; a.estado = "sin_base"; res.push_back(std::move(a)); continue; }
 			if (a.aplicados > 0) { a.salida = escribirBin(escribirAsignacion(r.filas)); a.salidaSha = sha(a.salida); }
 			// ¿Phoenix-DB tiene un Player.bin que no es el de la base? Taparía a los jugadores del parche.
 			std::string pb;
 			if (leerArchivo(dePesdb(o.siderAddons) / "Player.bin", pb)) {
 				std::string crudo, e2;
-				a.conPlayerBinAjeno = !(leerBin(pb, crudo, e2) && sha(crudo) == b.jugadoresCrudoSha);
+				a.conPlayerBinAjeno = !(leerBin(pb, crudo, e2) && sha(crudo) == b.jugadoresSha);
 			}
 			// Estado respecto a lo que Link generó antes
 			nlohmann::json st;
@@ -693,7 +1045,7 @@ namespace {
 			if (shaGuardada.empty()) a.estado = a.aplicados > 0 ? "sin_aplicar" : "nada";
 			else if (!hayArchivo || sha(actual) != shaGuardada) a.estado = "cambiado";
 			else if (a.aplicados == 0) a.estado = "desfasado";
-			else if (a.salidaSha == shaGuardada && st.value("baseSha", std::string()) == b.filaSha && st.value("listaSha", std::string()) == lista.sha256) a.estado = "aplicado";
+			else if (a.salidaSha == shaGuardada && st.value("baseSha", std::string()) == b.asignacionSha && st.value("listaSha", std::string()) == lista.sha256) a.estado = "aplicado";
 			else a.estado = "desfasado";
 			res.push_back(std::move(a));
 		}

@@ -251,7 +251,7 @@ export function crearSimulador(enviar) {
     const p = s.partido;
     const e = {
       v: 1,
-      app: { version: "0.2.46", etapa: "beta 1", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
+      app: { version: "0.2.47", etapa: "beta 1", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
       noticias: { cargado: true, lista: s.noticias },
       chatGlobal: { cargado: true, pausado: s.chatGlobal.pausado, esperaSeg: s.chatGlobal.esperaSeg, rev: s.chatGlobal.mensajes.length, error: "" },
       web: { ...s.web, jugadoresLista: 3, versionLiga: "2026.10.08", eventosEnCola: 0 },
@@ -320,12 +320,15 @@ export function crearSimulador(enviar) {
   // Fichajes como cambios (lo que devuelve fichajes.estado en el motor real)
   const fichajesSim = () => {
     const est = s.fichajesAplicado ? "aplicado" : "sin_aplicar";
-    const base = (nombre, origen, filas, aplic, ya, salt) => ({ nombre, baseOk: true, baseOrigen: origen, error: "", filasBase: filas, aplicados: aplic, yaEstaban: ya, estado: est, playerBinAjeno: false,
+    const base = (nombre, origen, filas, aplic, ya, salt, parche = nombre) => ({ nombre, baseOk: true, baseOrigen: origen, error: "", filasBase: filas, aplicados: aplic, yaEstaban: ya, estado: est, playerBinAjeno: false,
+      parche, baseGenerica: false, nombresDisponibles: true, queHacer: "",
+      comoLoSupe: ["Ninguna cpk.root trae PlayerAssignment.bin; lo trae el CPK CGP_database.cpk (CPK propio del modo), el de mejor prioridad.", "PlayerAssignment.bin: " + filas + " filas de 16 bytes; Player.bin: 29997 jugadores (cabecera 1250).", "La huella de PlayerAssignment.bin coincide con la conocida de «" + parche + "»."],
       saltados: Array.from({ length: salt }, (_, i) => ({ jugador: 999999 - i, equipo: 139, codigo: "jugador_no_existe", motivo: "El jugador " + (999999 - i) + " no existe en la base de este parche." })) });
     return { juego: s.buzon.juego, pesAbierto: s.pes.abierto, texto: s.fichajesAplicado ? "Fichajes: 6 aplicados, 3 saltados en 3 sitios." : "Fichajes: sin aplicar (4 en la lista).",
       lista: { fuente: "%APPDATA%/Phoenix Mercado/fichajes/fichajes.json", nombre: "Simulador", regla: "relajada", cambios: 4, error: "" },
-      objetivos: [base("Raíz del juego", "CGP_database.cpk", 19612, 2, 1, 1), base("ConmeGOL Patch 27", "CGP_database.cpk", 19612, 2, 1, 1), base("UEFAGOL 27", "CGP_database.cpk", 19489, 2, 1, 1),
-        { nombre: "ConmeGOL Clasicos", baseOk: true, baseOrigen: "CGP_database.cpk", error: "", filasBase: 15562, aplicados: 0, yaEstaban: 0, estado: "nada", playerBinAjeno: false, saltados: [] }] };
+      objetivos: [base("Raíz del juego", "CGP_database.cpk", 19612, 2, 1, 1, "ConmeGOL Patch 27"), base("ConmeGOL Patch 27", "CGP_database.cpk", 19612, 2, 1, 1), base("UEFAGOL 27", "CGP_database.cpk", 19489, 2, 1, 1),
+        { nombre: "ConmeGOL Clasicos", baseOk: true, baseOrigen: "CGP_database.cpk", error: "", filasBase: 15562, aplicados: 0, yaEstaban: 0, estado: "nada", playerBinAjeno: false, saltados: [], parche: "ConmeGOL Clásicos", baseGenerica: false, nombresDisponibles: true, queHacer: "", comoLoSupe: ["La base sale de su CGP_database.cpk."] },
+        { nombre: "Otro parche (ejemplo)", baseOk: false, baseOrigen: "", error: "La base de «dt10_x64.cpk» no se puede leer: PlayerAssignment.bin no tiene el formato de PES de los parches (cabecera WESYS): son datos cifrados o de otro formato.", queHacer: "Es la data original cifrada de PES 2021: los fichajes necesitan un parche cuya base esté en el formato de los parches. No se crea nada.", filasBase: 0, aplicados: 0, yaEstaban: 0, estado: "sin_base", playerBinAjeno: false, saltados: [], parche: "PES 2021 original", baseGenerica: false, nombresDisponibles: false, comoLoSupe: ["La base sale de un CPK oficial del juego («dt10_x64.cpk»)."] }] };
   };
   // Lista de «Módulos del juego» (lo que devuelve sync.modulos en el motor real)
   const modulosSim = () => {
@@ -501,7 +504,7 @@ export function crearSimulador(enviar) {
       s.buzon.juego = r;
       return { ...modulosSim(), mensaje: "Carpeta del juego guardada." };
     },
-    "diag.informe": () => ({ texto: "== PHOENIX LINK · INFORME PARA DEPURAR ==\nPhoenix Link 0.2.46 (beta 1)\n(simulador: sin datos reales)\n" }),
+    "diag.informe": () => ({ texto: "== PHOENIX LINK · INFORME PARA DEPURAR ==\nPhoenix Link 0.2.47 (beta 1)\n(simulador: sin datos reales)\n" }),
     "ajustes.avisoEntrada": (d) => { s.ajustes.avisoEntrada[d.campo] = !!d.valor; },
     "ajustes.probarAvisoEntrada": () => ({}),
     "ajustes.avisosJuego": (d) => { s.buzon.activo = d.valor; s.buzon.estado = d.valor ? "conectado" : "apagado"; },

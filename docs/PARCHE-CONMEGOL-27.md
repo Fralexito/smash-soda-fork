@@ -41,8 +41,8 @@ Solo ofrece 3 tarjetas: Patch 27, UEFAGOL 27 y Clásicos. Los modos 26 siguen en
 | **Phoenix-DB** (los fichajes de Fralex, hechos sobre la base 26) | 1.769.252 |
 
 - Cada modo tiene su propia base. Phoenix-DB sale de la 26: si se pusiera en el 27, **taparía a los jugadores del parche nuevo** con los del viejo.
-- Por eso la regla se mantiene: **sin una base reconocida en ese `sider.ini`, Phoenix-DB NO se pone.** La raíz del 27 no tiene ninguna `cpk.root` con `Player.bin` ni la de `olmosjr23\Database`, así que no se puso. No se copió ningún `Player.bin` de Fralex a otros sitios.
-- Para tener fichajes sobre el parche 27 hace falta una base propia por parche. Es el trabajo futuro de «perfiles de parche».
+- **Actualizado (Link 0.2.46/0.2.47):** ya no se copia ninguna base. Los fichajes se generan sobre la base real de cada PC, que Link detecta sola (ver `docs/FICHAJES-COMO-CAMBIOS.md`); Phoenix-DB solo lleva un `PlayerAssignment.bin` generado, nunca un `Player.bin`. Lo que sigue es el estado anterior (hasta la 0.2.45): la regla era que **sin una base reconocida en ese `sider.ini`, Phoenix-DB NO se pone.** La raíz del 27 no tiene ninguna `cpk.root` con `Player.bin` ni la de `olmosjr23\Database`, así que no se puso. No se copió ningún `Player.bin` de Fralex a otros sitios.
+- ~~Para tener fichajes sobre el parche 27 hace falta una base propia por parche~~: ya no hace falta; los fichajes son cambios sobre la base del parche activo (0.2.46).
 
 ## 4. Qué cambió en Phoenix Link (0.2.26)
 
