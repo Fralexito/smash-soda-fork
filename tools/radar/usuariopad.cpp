@@ -246,6 +246,63 @@ static void escribirPrueba(int argc, char** argv, DWORD pid) {
 	}
 }
 
+// ---- SOLO LEE: punteros <nombre existente> <su casilla> <Usuario del mando 1> <Usuario del mando 2> ----
+// Localiza la tabla de Usuarios (igual que escribir), busca el registro de cada Usuario nombrado y lista en la memoria de PES
+// los sitios que contienen la DIRECCION de ese registro (o de su nombre): son las referencias «este mando usa este Usuario».
+static uint64_t localizarTabla(const std::string& nombre, int casilla) {
+	std::vector<uint64_t> tablas;
+	for (auto& r : regiones()) {
+		std::vector<uint8_t> b(r.tam); SIZE_T got = 0;
+		if (!ReadProcessMemory(gH, (LPCVOID)r.base, b.data(), r.tam, &got) || got != r.tam) continue;
+		for (size_t i = kNomOff; i + nombre.size() < r.tam; i++) {
+			if (memcmp(&b[i], nombre.data(), nombre.size()) != 0) continue;
+			const int64_t ini = (int64_t)i - kNomOff - (int64_t)(casilla - 1) * kRegU;
+			if (ini < 0 || (size_t)ini + 32 * kRegU > r.tam) continue;
+			bool ok = true;
+			for (int u = 0; u < 32 && ok; u++) ok = registroUsuarioValido(&b[ini + u * kRegU]);
+			if (ok) tablas.push_back(r.base + ini);
+		}
+	}
+	return tablas.size() == 1 ? tablas[0] : 0;
+}
+
+static void punteros(int argc, char** argv) {
+	if (argc < 6) { say("uso: punteros <nombre existente> <su casilla 1..32> <Usuario mando 1> <Usuario mando 2>"); return; }
+	const uint64_t tabla = localizarTabla(argv[2], atoi(argv[3]));
+	if (!tabla) { say("No encuentro la tabla de Usuarios con certeza. No hago nada."); return; }
+	std::vector<uint8_t> t(32 * kRegU); SIZE_T g = 0;
+	if (!ReadProcessMemory(gH, (LPCVOID)tabla, t.data(), t.size(), &g) || g != t.size()) { say("No pude leer la tabla."); return; }
+	FILE* f = fopen("usuariopad_punteros.txt", "w");
+	fprintf(f, "tabla de Usuarios en %llX\n", (unsigned long long)tabla);
+	std::vector<std::pair<std::string, uint64_t>> objetivos;
+	for (int a = 4; a <= 5; a++) {
+		const std::string n = argv[a]; int hallado = -1;
+		for (int u = 0; u < 32; u++) if (strncmp((const char*)&t[u * kRegU + kNomOff], n.c_str(), kNomLen) == 0) { hallado = u; break; }
+		if (hallado < 0) { say("No encuentro el Usuario «%s» en la tabla.", n.c_str()); fprintf(f, "NO ENCONTRADO: %s\n", n.c_str()); continue; }
+		const uint64_t reg = tabla + (uint64_t)hallado * kRegU;
+		say("«%s» = casilla %d (indice %d), registro en %llX", n.c_str(), hallado + 1, hallado, (unsigned long long)reg);
+		fprintf(f, "\n== «%s» = casilla %d, indice %d, registro %llX ==\n", n.c_str(), hallado + 1, hallado, (unsigned long long)reg);
+		int hits = 0;
+		for (auto& r : regiones()) {
+			std::vector<uint8_t> b(r.tam); SIZE_T got = 0;
+			if (!ReadProcessMemory(gH, (LPCVOID)r.base, b.data(), r.tam, &got) || got != r.tam) continue;
+			for (size_t i = 0; i + 8 <= r.tam; i += 4) {
+				uint64_t v; memcpy(&v, &b[i], 8);
+				if (v != reg && v != reg + kNomOff) continue;
+				const uint64_t ad = r.base + i; if (ad >= tabla && ad < tabla + t.size()) continue;   // la propia tabla no cuenta
+				hits++;
+				fprintf(f, "%llX%s apunta a %s\n   alrededor:", (unsigned long long)ad, (ad >= gExeBase && ad < gExeBase + gExeTam) ? " [EXE]" : "", v == reg ? "el REGISTRO" : "el NOMBRE");
+				for (int k = -16; k < 48 && (int64_t)i + k >= 0 && i + k < r.tam; k++) fprintf(f, " %02X", b[i + k]);
+				fprintf(f, "\n");
+			}
+		}
+		fprintf(f, "-> %d referencias a «%s»\n", hits, n.c_str());
+		say("«%s»: %d referencias", n.c_str(), hits);
+	}
+	fclose(f);
+	say("listo -> usuariopad_punteros.txt");
+}
+
 static void ver(int argc, char** argv) {
 	std::vector<uint64_t> as; for (int i = 2; i < argc; i++) as.push_back(strtoull(argv[i], nullptr, 16));
 	std::string antes; DWORD t0 = GetTickCount();
@@ -267,6 +324,7 @@ int main(int argc, char** argv) {
 	if (argc >= 3 && std::string(argv[1]) == "ver") { ver(argc, argv); return 0; }
 	if (argc >= 3 && std::string(argv[1]) == "buscar") { buscarTexto(argv[2]); return 0; }
 	if (argc >= 2 && std::string(argv[1]) == "escribir") { escribirPrueba(argc, argv, pid); return 0; }
+	if (argc >= 2 && std::string(argv[1]) == "punteros") { punteros(argc, argv); return 0; }
 	say("Conectado a PES2021.exe (pid %lu). Numpad 5=foto (tras R2) 4=foto (tras L2) 3=informe 0=de cero 9=salir", pid);
 	bool prev[10] = {};
 	for (;;) {

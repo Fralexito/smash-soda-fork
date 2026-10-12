@@ -91,3 +91,8 @@ Paso 1: `tools/radar/usuariopad.cpp` (compilar con `tools/radar/compilar_usuario
 - ✅ `usuariopad.exe buscar FRALEX` encontró UNA copia real: el registro del Usuario 1 con su configuración (`01 03 02 00 04 06 05 07 08 08 …`) en una región de memoria RW (dirección alta tipo 0x7FF4…, cambia en cada arranque). Es la tabla de 32 registros de 2.432 B tal como está en el archivo SYSTEM00000000 descifrado.
 - Prueba de escritura REVERSIBLE (con permiso expreso de Fralex): `usuariopad.exe escribir <nombre> <casilla> <casilla vacía> [texto]` localiza la tabla por el nombre, valida los 32 registros, escribe un texto SOLO en el nombre (48 B) de una casilla vacía y lo restaura al pulsar Numpad 8, al cerrar la ventana o al cerrarse PES. No toca ningún archivo.
 - ❓ Resultado pendiente: si PES muestra ese nombre en la lista de Usuarios sin reiniciar.
+
+### 9.4 RESULTADO: la escritura en vivo FUNCIONA (12 oct, ~15:20)
+- ✅ `usuariopad.exe escribir FRALEX 1 31 ZZMEM`: se escribió «ZZMEM» en el nombre del Usuario 31 en la copia que PES tiene en memoria y **apareció al instante sobre el mando en la pantalla de elegir lados**; al restaurar (Numpad 8) desapareció. No se guardó nada en archivos. Tabla en 0x7FF4FBD60010 en ese arranque (cambia en cada arranque; se localiza buscando un nombre conocido y validando los 32 registros).
+- Conclusión: PES lee los Usuarios en vivo de esa tabla. Un módulo (o Link) puede poner el perfil de un amigo (registro de 2.432 B) en un Usuario con PES abierto.
+- Falta: saber qué Usuario tiene cada mando (para elegir el hueco). Siguiente paso: `usuariopad.exe punteros` (solo lee) busca las referencias a cada registro.
