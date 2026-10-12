@@ -214,3 +214,12 @@ A pedido de Fralex: salas abiertas no encajaba en SALA (es «tu sala») ni en GE
 - PARTIDO, SYNC y AJUSTES igual. La sección no existe en el modo «PC cedida» (solo se ven Sala, Partido y Mandos).
 - Archivos: `vistas/seccionjugar.js` (solo compone vistas que ya existían), `app.js` (menú), `ui.js` (icono), `tienda.js` (pestaña por defecto), `paleta.js` (Ctrl+K), `tutorial.js` (los pasos que señalan el menú por posición se corrieron un lugar y hay un paso nuevo). El estado `amigos` y `salasAbiertas` llega también con JUGAR visible.
 - Donde este documento dice «GENTE › PERFILES PES» o «MANDOS › PERFILES PES» ahora es **JUGAR › PERFIL PES**.
+
+### 12.5 Orden final del menú (Link 0.2.66)
+
+Ajuste pedido por Fralex: primero las secciones del anfitrión, luego lo de jugar en salas de otros.
+
+- Menú: **SALA · PARTIDO · MANDOS · GENTE · JUGAR · SYNC · AJUSTES**.
+- **JUGAR** (salas de otros): Salas abiertas · Amigos · Perfil PES.
+- **SALA:** Resumen · **Mi puesto** · Opciones de sala · Juegos · Conexión · Actividad («Mi puesto al jugar» vuelve a Sala).
+- MANDOS y GENTE como en 12.4. El tutorial se reajustó a las posiciones nuevas del menú (JUGAR va después de GENTE).

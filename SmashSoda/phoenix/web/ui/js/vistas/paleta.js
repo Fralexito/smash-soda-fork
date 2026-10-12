@@ -44,13 +44,13 @@ function opciones(m) {
     r.push({ es, en, icono: "rayo", hacer: () => accion("sala.calidad", { fps: 60, mbps: mb }, { ok: t("Calidad aplicada.", "Quality applied.") }) });
   }
   ir("sala", "resumen", "Sala · Resumen", "Room · Overview", "sala");
+  ir("sala", "puesto", "Sala · Mi puesto al jugar", "Room · My seat when playing", "mandos");
   ir("sala", "opciones", "Sala · Opciones", "Room · Options", "sala");
   ir("sala", "juegos", "Sala · Juegos", "Room · Games", "sala");
   ir("sala", "red", "Sala · Conexión (diagnóstico y ping)", "Room · Connection (diagnostics & ping)", "red");
   ir("jugar", "salas", "Jugar · Salas abiertas", "Play · Open rooms", "sala");
   ir("jugar", "amigos", "Jugar · Amigos de la web", "Play · Friends", "web");
   ir("jugar", "perfiles", "Jugar · Perfil PES (nombre y opciones)", "Play · PES profile (name and options)", "mandos");
-  ir("jugar", "puesto", "Jugar · Mi puesto al jugar", "Play · My seat when playing", "mandos");
   ir("partido", "vivo", "Partido · Marcador", "Match · Scoreboard", "partido");
   ir("partido", "historial", "Partido · Historial y tabla", "Match · History", "trofeo");
   ir("mandos", "puestos", "Mandos · Puestos", "Pads · Seats", "mandos");

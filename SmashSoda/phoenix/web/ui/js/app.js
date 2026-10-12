@@ -24,10 +24,10 @@ import { BandaCedido, DialogoCeder, SECCIONES_CEDIDO, PESTANAS_CEDIDO, estaCedid
 
 const SECCIONES = [
   { id: "sala", es: "SALA", en: "ROOM", vista: VistaSala, pestanas: PESTANAS_SALA },
-  { id: "jugar", es: "JUGAR", en: "PLAY", vista: VistaJugar, pestanas: PESTANAS_JUGAR, meta: metaJugar },
   { id: "partido", es: "PARTIDO", en: "MATCH", vista: VistaPartido, pestanas: PESTANAS_PARTIDO },
   { id: "mandos", es: "MANDOS", en: "PADS", vista: VistaMandos, pestanas: PESTANAS_MANDOS, meta: metaMandos },
   { id: "gente", es: "GENTE", en: "PEOPLE", vista: VistaGente, pestanas: PESTANAS_GENTE, meta: metaGente },
+  { id: "jugar", es: "JUGAR", en: "PLAY", vista: VistaJugar, pestanas: PESTANAS_JUGAR, meta: metaJugar },
   { id: "sync", es: "SYNC", en: "SYNC", vista: VistaSync, pestanas: PESTANAS_SYNC, meta: metaSync },
   { id: "ajustes", es: "AJUSTES", en: "SETTINGS", vista: VistaAjustes, pestanas: PESTANAS_AJUSTES },
 ];
@@ -39,7 +39,7 @@ const pestanasVisibles = (s, sec) => (estaCedida(s) ? sec.pestanas.filter((p) =>
 // Frase corta de «para qué sirve» cada sección (aparece al pasar el mouse por el menú)
 const PARA_QUE = {
   sala: ["Abrir tu sala, compartir el enlace y ver cómo va la conexión.", "Open your room, share the link and watch the connection."],
-  jugar: ["Salas abiertas, amigos, tu perfil de PES y tu puesto: lo que buscas al ir a jugar.", "Open rooms, friends, your PES profile and your seat: what you look for when going to play."],
+  jugar: ["Para jugar en salas de otros: salas abiertas, tus amigos y tu perfil de PES.", "To play in other people's rooms: open rooms, your friends and your PES profile."],
   partido: ["Armar los equipos y llevar el marcador del partido.", "Set up teams and keep the score."],
   mandos: ["Repartir los mandos: quién juega y quién mira.", "Hand out the pads: who plays, who watches."],
   gente: ["Ver a los invitados, moderar y revisar permisos.", "See guests, moderate and set permissions."],

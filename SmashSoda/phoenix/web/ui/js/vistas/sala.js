@@ -9,6 +9,7 @@ import { GuiaInicio, Entrenador, useGuia } from "./guia.js";
 import { Pendientes } from "./mandos.js";
 import { EditorBiblioteca } from "./nativas.js";
 import { abrirFicha } from "./gente.js";
+import { PreferenciaPuesto } from "./jugar.js";
 import { BloqueRetraso, LeyendaRetraso, retrasoDe } from "./retraso.js";
 import {
   Cifra, Tarjeta, Titulo, Boton, Interruptor, Ajuste, AjusteSw, Stepper, Segmentos, Selector, Campo,
@@ -17,6 +18,7 @@ import {
 
 export const PESTANAS_SALA = [
   { id: "resumen", es: "RESUMEN", en: "OVERVIEW", d: ["Tu sala de un vistazo: enlace, tiempo en vivo, quién juega y cómo va la conexión.", "Your room at a glance."] },
+  { id: "puesto", es: "MI PUESTO", en: "MY SEAT", d: ["Dónde te sientas tú cuando pulsas JUGAR: un puesto fijo o el primero de un equipo.", "Where you sit when you press PLAY: a fixed seat or the first one of a team."] },
   { id: "opciones", es: "OPCIONES DE SALA", en: "ROOM OPTIONS", d: ["Nombre, plazas, quién puede entrar y la calidad de la imagen. Se guarda al instante.", "Name, slots, who can join and image quality."] },
   { id: "juegos", es: "JUEGOS", en: "GAMES", d: ["Qué se juega (se muestra en la web de la liga) y el juego que abre el modo quiosco.", "What is being played and the kiosk game."] },
   { id: "red", es: "CONEXIÓN", en: "CONNECTION", d: ["¿Tu PC está lista para hostear? Y el ping de cada invitado: verde va bien, ámbar aguanta, rojo es lag.", "Is your PC ready to host? And each guest's ping: green is fine, amber holds, red is lag."] },
@@ -36,6 +38,7 @@ export function VistaSala({ s, pestana }) {
   const m = s.motor;
   if (!m || !m.sala) return html`<${Vacio} titulo=${t("Conectando con el motor…", "Connecting to the engine…")} texto=""/>`;
   switch (pestana) {
+    case "puesto": return html`<${PreferenciaPuesto} m=${m}/>`;
     case "opciones": return html`<${OpcionesSala} m=${m}/>`;
     case "juegos": return html`<${JuegosSala} m=${m}/>`;
     case "red": return html`<${ConexionSala} m=${m}/>`;
