@@ -433,6 +433,23 @@ static void refs(int argc, char** argv) {
 	say("refs a %llX (margen %llX): %d referencias -> usuariopad_refs.txt", (unsigned long long)objetivo, (unsigned long long)margen, hits);
 }
 
+// ---- SOLO LEE: registro <nombre existente> <su casilla> <indice 0..31> [archivo] ----
+// Vuelca en hexadecimal el registro (2.432 B) de un Usuario de la tabla en la memoria de PES (para ver qué bytes cambia cada opción).
+static void registroHex(int argc, char** argv) {
+	if (argc < 5) { say("uso: registro <nombre existente> <su casilla 1..32> <indice 0..31> [archivo]"); return; }
+	const uint64_t tabla = localizarTabla(argv[2], atoi(argv[3]));
+	if (!tabla) { say("No encuentro la tabla de Usuarios con certeza."); return; }
+	const int idx = atoi(argv[4]);
+	if (idx < 0 || idx > 31) { say("indice 0..31"); return; }
+	std::vector<uint8_t> r(kRegU); SIZE_T g = 0;
+	if (!ReadProcessMemory(gH, (LPCVOID)(tabla + (uint64_t)idx * kRegU), r.data(), r.size(), &g) || g != r.size()) { say("No pude leer el registro."); return; }
+	FILE* f = fopen(argc >= 6 ? argv[5] : "usuariopad_registro.txt", "w");
+	for (size_t i = 0; i < r.size(); i++) fprintf(f, "%02X", r[i]);
+	fprintf(f, "\n");
+	fclose(f);
+	say("registro del Usuario %d volcado (%zu bytes)", idx, r.size());
+}
+
 static void ver(int argc, char** argv) {
 	std::vector<uint64_t> as; for (int i = 2; i < argc; i++) as.push_back(strtoull(argv[i], nullptr, 16));
 	std::string antes; DWORD t0 = GetTickCount();
@@ -458,6 +475,7 @@ int main(int argc, char** argv) {
 	if (argc >= 2 && std::string(argv[1]) == "copias") { copias(argc, argv); return 0; }
 	if (argc >= 2 && std::string(argv[1]) == "pares") { pares(argc, argv); return 0; }
 	if (argc >= 2 && std::string(argv[1]) == "refs") { refs(argc, argv); return 0; }
+	if (argc >= 2 && std::string(argv[1]) == "registro") { registroHex(argc, argv); return 0; }
 	say("Conectado a PES2021.exe (pid %lu). Numpad 5=foto (tras R2) 4=foto (tras L2) 3=informe 0=de cero 9=salir", pid);
 	bool prev[10] = {};
 	for (;;) {

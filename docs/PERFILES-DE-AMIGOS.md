@@ -133,3 +133,28 @@ Paso 1: `tools/radar/usuariopad.cpp` (compilar con `tools/radar/compilar_usuario
 - ✅ Restaurar OK. La lista de mandos cuenta con el mando fuera del lado Local también (los Usuarios siguen por número de mando, no por lado).
 - Nota de uso de la interfaz: la primera pulsación en Link tras dar foco a su ventana a veces solo da foco; si «Poner en el mando» no abre el aviso, pulsar otra vez.
 - Siguiente: aplicarlo SOLO al sentarse el amigo (ver §9.5, plan) y el vínculo persona → perfil.
+
+## 11. MAPA DE OPCIONES de un Usuario de PES 2021 (registro de 2.432 B) — decodificado el 12 oct con «Editar Datos personales» + volcado de memoria
+Método: en la pantalla de edición (tecla C = cuadrado, Z = Atrás, flechas = D-pad) se cambia una opción, se SALE de la pantalla (PES guarda la edición al salir; dentro no cambia la memoria) y se vuelca el registro con `usuariopad registro` comparando con el anterior. Verificado cambiando las 12 opciones de FRALEX y restaurándolo (registro idéntico al original).
+
+| Offset | Opción en pantalla | Valores vistos |
+|---|---|---|
+| +0x00 | marca | 0 / 1 |
+| +0x04 (48 B) | **Datos personales (nombre)** | texto UTF-8 terminado en 0 |
+| +0x34…+0x47 | **Configuración de comandos** (mapa de botones, 2×10 B) | Normal = `01 03 02 00 04 06 05 07 08 08 / 01 03 02 00 07 05 04 06 07 07` |
+| +0x48 | Cambiar cursor | 1 = Semiasistido, 2 = Sin ayuda (0 = ¿Asistido?) |
+| +0x4B | Cursor de siguiente jugador | 0 = Sí, 1 = No |
+| +0x4C | Tipo de cursor | 4 = «Datos personales», 0 = Nombre del jugador |
+| +0x4D | Nv. de ayuda en pases | 1 = Nivel 1, 2 = Nivel 2 |
+| +0x4E | Tipo pase en profundidad | 0 = Básico, 1 = Avanzado |
+| +0x4F | Tipo de disparo | 0 = Básico, 1 = Avanzado |
+| +0x50 | Guía de dirección | 0 = Sí, 1 = No |
+| +0x51 | Guía de objetivo | 0 = Sí, 1 = No |
+| +0x52 | Guía de posicionamiento | 0 = Sí, 1 = No |
+| +0x53 | Amago automático | 0 = Sí, 1 = No |
+| +0x54 | Entrada automática | 1 = Semiautomático, 2 = No (0 = ¿Automático?) |
+| +0x55 | Controles de compañero | 0 = Asistido, 1 = Manual |
+| +0x49, +0x4A, +0x56… | sin identificar (valores 1,1 / 0 / 1…) | no tocar: se conservan al copiar el registro |
+
+- ❓ Pendiente de identificar: los valores de otros textos de «Tipo de cursor», el valor 0 de «Cambiar cursor» y de «Entrada automática», y los presets «Alternativa/Personalizado» de la configuración de comandos (bytes +0x34…+0x47).
+- Consecuencia para el editor de Link: un perfil nuevo se construye **copiando un registro base real** (p. ej. el de cualquier Usuario sin nombre) y cambiando solo estos bytes y el nombre; así los campos desconocidos quedan como PES los espera.
