@@ -161,7 +161,7 @@ namespace phoenix::campo {
 						grupos.clear(); portCopias = static_cast<int>(hz.porteros.size());
 						for (const bool izquierda : { true, false }) {
 							GrupoPortero g;
-							for (const Actor& p : hz.porteros) if ((p.x < 0) == izquierda) { Candidato c; c.a = p; c.ux = p.x; c.uz = p.z; g.cs.push_back(c); }
+							for (const Actor& p : hz.porteros) if ((p.x < 0) == izquierda && std::fabs(p.x) >= 30.0f && std::fabs(p.z) <= 22.0f) {   /* solo cerca de la portería: en el juego hay actores con la misma firma (mismo +492) que NO son porteros */ Candidato c; c.a = p; c.ux = p.x; c.uz = p.z; g.cs.push_back(c); }
 							if (g.cs.empty()) continue;
 							std::sort(g.cs.begin(), g.cs.end(), [](const Candidato& a, const Candidato& b) { return a.a.dir < b.a.dir; });
 							g.slot = lista.size(); g.elegido = 0;
