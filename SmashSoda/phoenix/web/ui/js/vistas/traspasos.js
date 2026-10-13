@@ -90,6 +90,37 @@ export function Traspasos() {
     : w.estado === "web_sin_endpoints" || d.webDisponible === false ? ["vip", t("LA WEB AÚN NO LO TIENE", "THE WEB DOESN'T HAVE IT YET")]
     : w.estado !== "ok" ? ["vip", t("REVISAR", "CHECK")]
     : d.webDisponible === true ? ["acc", t("CONECTADO", "CONNECTED")] : ["", t("COMPROBANDO…", "CHECKING…")];
+  // ── «Antes de la prueba»: lista de comprobaciones según el rol (se actualiza sola con cada lectura del estado)
+  const diag = d.diag || {};
+  const sitiosSider = (diag.sitios || []).filter((x) => x.sider);
+  const sinRaiz = sitiosSider.filter((x) => !x.raiz).map((x) => x.nombre);
+  const arch = a.archivo || {};
+  const modoTxtCorto = modo === "ACTIVAR" ? t("recarga MANUAL (Partido → Datos Actual. en vivo → Activar)", "MANUAL reload (Match → Live update → Activate)") : t("recarga AUTOMÁTICA al volver al menú y entrar a un modo", "AUTOMATIC reload when you return to the menu and enter a mode");
+  const F = (ok, titulo, detalle, pista, boton) => ({ ok, titulo, detalle, pista, boton });
+  const irWeb = { texto: t("IR A SYNC › CUENTA WEB", "GO TO SYNC › WEB ACCOUNT"), al: () => elegirPestana("web") };
+  const filasHost = [
+    F(!!w.vinculada, t("Cuenta vinculada", "Account linked"), w.vinculada ? t("Esta PC está vinculada a tu cuenta de la web.", "This PC is linked to your web account.") : "", t("Vincula esta PC con tu cuenta de la web para poder enviar traspasos.", "Link this PC to your web account to send transfers."), irWeb),
+    F(!!canal, t("Cuenta aprobada como anfitrión (código obtenido)", "Account approved as host (code received)"), canal ? t(`Tu código: ${canal.codigo}`, `Your code: ${canal.codigo}`) : "",
+      !w.vinculada ? t("Primero vincula la cuenta.", "Link the account first.") : w.estado === "sin_permiso" ? t("La web no aprueba esta cuenta como anfitrión: pídele al staff que la apruebe como host.", "The web doesn't approve this account as a host: ask the staff to approve it.") : w.estado === "web_sin_endpoints" ? t("La web aún no tiene los traspasos en vivo.", "The web doesn't have live transfers yet.") : t("Pidiendo tu código… si tarda, pulsa «Volver a comprobar».", "Getting your code… if it takes long, press «Check again».")),
+    F(!!arch.existe, t("Option file detectado", "Option file found"), arch.existe ? `${arch.ruta} · ${t("modificado", "modified")} ${arch.fecha}` : "", t("No encuentro tu EDIT00000000: pega su ruta en «Ajustes del anfitrión» (más abajo).", "I can't find your EDIT00000000: paste its path in «Host settings» (below).")),
+    F(!!a.hayReferencia, t("Foto de partida hecha", "Starting snapshot taken"), a.hayReferencia ? t("Link ya sabe cómo está tu option file: solo enviará lo que cambies desde ahora.", "Link knows how your option file is: it will only send what you change from now on.") : "", t("Se hace sola en unos segundos al leer el option file; si no, guarda una vez en PES y vuelve a mirar.", "It happens by itself in a few seconds when the option file is read; if not, save once in PES and check again.")),
+    F(esWeb ? (w.estado === "ok" && d.webDisponible === true) : !!aj.carpeta, esWeb ? t("Conectado a la web", "Connected to the web") : t("Carpeta compartida elegida", "Shared folder chosen"), "",
+      esWeb ? (w.vinculada ? t(CONEXION[w.estado]?.[1] || "Comprobando…", CONEXION[w.estado]?.[2] || "Checking…") : t("Primero vincula la cuenta.", "Link the account first.")) : t("Elige la carpeta en «Avanzado» (paso 1).", "Choose the folder under «Advanced» (step 1).")),
+  ];
+  const filasAmigo = [
+    F(!!w.vinculada, t("Cuenta vinculada", "Account linked"), w.vinculada ? t("Esta PC está vinculada a tu cuenta de la web.", "This PC is linked to your web account.") : "", t("Vincula esta PC con tu cuenta de la web para recibir traspasos.", "Link this PC to your web account to receive transfers."), irWeb),
+    F(rol === "prueba" || sig.length > 0 || !esWeb, rol === "prueba" ? t("Modo Prueba (te recibes a ti mismo)", "Test mode (you receive yourself)") : t("Siguiendo a un anfitrión", "Following a host"),
+      sig.length ? sig.map((x) => x.anfitrionNombre || "?").join(", ") : "", t("Escribe el código de tu anfitrión en el paso 1 («¿A qué anfitrión sigues?»).", "Type your host's code in step 1 («Which host do you follow?»).")),
+    F(!!diag.ok, t("Juego encontrado", "Game found"), diag.ok ? diag.juego : "", t("Abre PES 2021 una vez con Link abierto o indica su carpeta en Sync › Puente.", "Open PES 2021 once with Link running, or set its folder in Sync › Bridge.")),
+    F(!!diag.ok && sitiosSider.length > 0 && sinRaiz.length === 0, t("Phoenix-DB en el sider.ini", "Phoenix-DB in sider.ini"), diag.ok && sinRaiz.length === 0 && sitiosSider.length ? t(`Presente en ${sitiosSider.length} ${sitiosSider.length === 1 ? "sitio" : "sitios"}.`, `Present in ${sitiosSider.length} ${sitiosSider.length === 1 ? "place" : "places"}.`) : "",
+      !diag.ok ? t("Primero necesito la carpeta del juego.", "I need the game folder first.") : !sitiosSider.length ? t("No encuentro ningún sider.ini: ¿tiene Sider el juego?", "I can't find any sider.ini: does the game have Sider?") : t(`Falta en: ${sinRaiz.join(", ")}. Se añade solo al aplicar el primer lote con PES cerrado, o instala «Módulos del juego» (Sync › Puente).`, `Missing in: ${sinRaiz.join(", ")}. It is added by itself when the first batch is applied with PES closed, or install «Game modules» (Sync › Bridge).`)),
+    F(!!diag.lua && diag.lua.estado === "instalado", t("phoenix.lua instalado", "phoenix.lua installed"), diag.lua && diag.lua.version ? `v${diag.lua.version}` : "",
+      diag.lua && diag.lua.estado === "desactualizado" ? t("Hay una versión nueva: actualízala en Sync › Puente › Módulos del juego (con PES cerrado).", "A newer version exists: update it in Sync › Bridge › Game modules (with PES closed).") : t("Instálalo en Sync › Puente › Módulos del juego (con PES cerrado): es lo que recarga los fichajes en el juego.", "Install it in Sync › Bridge › Game modules (with PES closed): it reloads transfers in the game.")),
+  ];
+  const infoPes = d.pesAbierto ? t(`PES está ABIERTO: el lote se escribe en Phoenix-DB sin tocar el sider.ini; para verlo cierra y vuelve a abrir PES, o ${modoTxtCorto}.`, `PES is OPEN: the batch is written to Phoenix-DB without touching sider.ini; to see it close and reopen PES, or ${modoTxtCorto}.`)
+    : t("PES está CERRADO: el lote se aplica al momento y lo verás al abrir PES.", "PES is CLOSED: the batch is applied right away and you will see it when you open PES.");
+  const chequeo = rol === "apagado" ? [] : [...(quiereCanal ? filasHost.map((f) => ({ ...f, grupo: t("ANFITRIÓN", "HOST") })) : []), ...((rol === "amigo" || rol === "prueba") ? filasAmigo.map((f) => ({ ...f, grupo: t("AMIGO", "FRIEND") })) : [])];
+  const faltan = chequeo.filter((f) => !f.ok).length;
   return html`<div class="col" style="gap:14px">
     <${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:14px">
       <${Titulo} texto=${t("TRASPASOS EN VIVO", "LIVE TRANSFERS")} derecha=${html`<${Chip} tipo=${aj.publicar || aj.recibir ? "acc" : ""}>${aj.publicar || aj.recibir ? t("ENCENDIDO", "ON") : t("APAGADO", "OFF")}</${Chip}>`}/>
@@ -111,6 +142,19 @@ export function Traspasos() {
         : t("Haces y recibes con tu propia cuenta: sirve para ver que todo funciona (tus lotes salen como «TUYO»).", "You make and receive with your own account: to check everything works (your batches show as «YOURS»).")}</div>
       <div class="caja" style="font-size:13px"><span class="punto warn"></span> ${t("Se envía cuando PES GUARDA (al guardar o salir de Editar). Hasta entonces no hay nada que enviar. Solo viajan cambios «jugador → equipo», sin datos personales. Función BETA, apagada por defecto.", "It is sent when PES SAVES (on save or leaving Edit). Until then there is nothing to send. Only «player → team» changes travel, no personal data. BETA, off by default.")}</div>
     </${Tarjeta}>
+
+    ${rol !== "apagado" ? html`<${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:10px">
+      <${Titulo} texto=${t("ANTES DE LA PRUEBA", "BEFORE THE TEST")} derecha=${html`<${Chip} tipo=${faltan === 0 ? "acc" : "vip"}>${faltan === 0 ? t("TODO LISTO", "ALL SET") : t(`FALTA ${faltan}`, `${faltan} MISSING`)}</${Chip}>`}/>
+      <div class="ayuda" style="font-size:13px">${t("Se actualiza sola cada pocos segundos. Si algo sale ✗, la frase de abajo dice qué hacer.", "It updates by itself every few seconds. If something shows ✗, the line under it says what to do.")}</div>
+      ${chequeo.map((f, i) => html`<div key=${i} style="display:flex;flex-direction:column;gap:2px;padding:6px 0;border-top:1px solid var(--line, rgba(255,255,255,.08))">
+        <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap"><span class="mono" style=${"flex:none;width:18px;font-weight:700;color:" + (f.ok ? "var(--ok, #4ade80)" : "var(--bad, #ff6b6b)")}>${f.ok ? "✓" : "✗"}</span>
+          <span class="mono mut" style="font-size:11px;flex:none">${f.grupo}</span><span style="font-size:14px;flex:1 1 200px">${f.titulo}</span>
+          ${!f.ok && f.boton && !(f.boton.texto === "" ) ? html`<${Boton} tipo="suave mini" al=${f.boton.al}>${f.boton.texto}</${Boton}>` : null}</div>
+        ${f.ok && f.detalle ? html`<div class="ayuda mono" style="font-size:12px;margin-left:28px;word-break:break-all">${f.detalle}</div>` : null}
+        ${!f.ok && f.pista ? html`<div class="ayuda" style="font-size:13px;margin-left:28px">${f.pista}</div>` : null}
+      </div>`)}
+      ${rol === "amigo" || rol === "prueba" ? html`<div class="caja" style="font-size:13px;margin-top:4px"><span class="mono acc">ℹ</span> ${infoPes}</div>` : null}
+    </${Tarjeta}>` : null}
 
     ${rol !== "apagado" ? html`<${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:12px">
       <${Titulo} texto=${t("PASO 1 · CONEXIÓN", "STEP 1 · CONNECTION")} derecha=${html`<${Chip} tipo=${conexionChip[0]}>${conexionChip[1]}</${Chip}>`}/>
@@ -192,6 +236,7 @@ export function Traspasos() {
       <div class="ayuda" style="font-size:13px">${t(MODO_TXT[modo]?.[0] || "", MODO_TXT[modo]?.[1] || "")}</div>
       ${aj.recibir ? html`<div style="display:flex;align-items:center;gap:10px"><span class=${cx("punto", m.estado === "al_dia" || m.estado === "aplicado" ? "ok" : CONEXION[m.estado] ? CONEXION[m.estado][0] : m.estado === "esperando" ? "warn" : "")}></span>
         <span style="font-size:14px">${m.estado === "al_dia" ? t("Al día", "Up to date") : m.estado === "aplicado" ? t("Último lote aplicado", "Last batch applied") : m.estado === "esperando" ? t("Esperando: ", "Waiting: ") + (m.mensaje || "") : m.estado === "sin_transporte" ? t("Falta resolver la conexión (paso 1)", "Fix the connection first (step 1)") : CONEXION[m.estado] ? t(CONEXION[m.estado][1], CONEXION[m.estado][2]) : m.estado}</span></div>` : null}
+      ${m.ultimoAplicado ? html`<div class="caja" style="display:flex;flex-direction:column;gap:4px;border-color:var(--ok, #4ade80)"><b style="font-size:14px">✓ ${m.ultimoAplicado.texto}</b><span style="font-size:13px">${m.ultimoAplicado.accion}</span></div>` : null}
       ${d.pesAbierto ? html`<div class="ayuda" style="font-size:12px">${t("PES está abierto.", "PES is open.")}</div>` : null}
       ${lista.length ? html`<div style="display:flex;flex-direction:column;gap:8px">
         ${lista.slice(0, 8).map((l) => {

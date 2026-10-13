@@ -50,7 +50,8 @@ namespace {
 		fs::path tmp = p; tmp += ".tmp";
 		{ std::ofstream f(tmp, std::ios::binary | std::ios::trunc); f << t; if (!f.good()) return false; }
 		fs::rename(tmp, p, ec);
-		return !ec;
+		if (ec) { std::error_code e2; fs::remove(tmp, e2); return false; }   // no deja un .tmp huerfano si no pudo reemplazar
+		return true;
 	}
 	long long ahoraMs() { return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count(); }
 	json aJson(const CanalWeb& c) { return { {"codigo", c.codigo}, {"seguidores", c.seguidores} }; }
@@ -80,6 +81,8 @@ struct Servicio::Impl {
 	std::string errorWeb;
 	bool webVisto = false;               // alguna respuesta buena de las rutas de traspasos
 	long long proximoRefrescoWeb = 0;
+	json diag;                           // autodiagnostico del juego (sider.ini, Phoenix-DB, phoenix.lua): lista «Antes de la prueba»
+	long long proximoDiag = 0;
 
 	fs::path ajustesArchivo() const { return carpetaAjustes() / "ajustes.json"; }
 
@@ -88,15 +91,16 @@ struct Servicio::Impl {
 		escribir(ajustesArchivo(), j.dump(1));
 	}
 	void cargar() {
-		std::ifstream f(ajustesArchivo(), std::ios::binary);
-		if (!f) return;
-		const std::string t((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
-		const json j = json::parse(t, nullptr, false);
-		if (!j.is_object()) return;
-		publicar = j.value("publicar", false); recibir = j.value("recibir", false); confirmarAntes = j.value("confirmarAntes", true);
-		transporte = j.value("transporte", std::string("web")); carpeta = j.value("carpeta", std::string()); autor = j.value("autor", std::string()); optionFile = j.value("optionFile", std::string());
-		if (transporte != "web" && transporte != "carpeta") transporte = "web";
-		if (transporte == "carpeta" && carpeta.empty()) transporte = "web";
+		std::string t;
+		{   // el archivo se CIERRA antes de guardar: con el flujo abierto Windows no deja reemplazarlo y la migracion no se guardaba
+			std::ifstream f(ajustesArchivo(), std::ios::binary);
+			if (!f) return;
+			t.assign((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
+		}
+		const AjustesGuardados a = leerAjustes(t);   // logica pura (probada): la web es el transporte por defecto
+		publicar = a.publicar; recibir = a.recibir; confirmarAntes = a.confirmarAntes;
+		transporte = a.transporte; carpeta = a.carpeta; autor = a.autor; optionFile = a.optionFile;
+		if (a.migrado) guardar();   // deja el archivo ya migrado a la web
 	}
 
 	std::shared_ptr<Transporte> crearTransporte() {   // m tomado
@@ -246,8 +250,16 @@ struct Servicio::Impl {
 			mensaje = (ok ? "" : "No se pudo: ") + msg;
 		}
 		refrescarWeb(refrescar, pub, rec);
+		if (ahoraMs() >= proximoDiag || !orden.que.empty()) {   // el diagnostico solo LEE archivos del juego: sirve con PES abierto
+			const json dj = diagAJson(diagnosticarJuego(juego, phoenix::modulos::carpetaPaquete()));
+			std::lock_guard<std::mutex> g(m);
+			diag = dj; proximoDiag = ahoraMs() + 10000;
+		}
 		if (pub) mo->pasoPublicar();
 		if (rec) mo->pasoRecibir();
+		const std::string aviso = mo->tomarAviso();   // «Fichaje aplicado: X pasa de A a B. …» → overlay del juego (solo si PES esta abierto; si no, lo ve en Link)
+		if (!aviso.empty() && (!phoenix::modulos::procesosAbiertos().empty() || phoenix::buzon::detectarJuego().puente != phoenix::buzon::Puente::JuegoCerrado))
+			phoenix::PhoenixLink::instancia().avisoLocalDiferido(phoenix::buzon::cortarUtf8(aviso, 230));
 		const std::string est = mo->estadoJson();
 		std::lock_guard<std::mutex> g(m);
 		cache = est;
@@ -314,6 +326,7 @@ json Servicio::estado() {
 	for (const SiguiendoWeb& s : _i->siguiendo) w["siguiendo"].push_back({ {"anfitrionId", s.anfitrionId}, {"anfitrionNombre", s.anfitrionNombre} });
 	if (_i->canal.hay) w["canal"] = aJson(_i->canal);
 	j["web"] = w;
+	j["diag"] = _i->diag.is_object() ? _i->diag : json(nullptr);
 	j["carpetaPrueba"] = phoenix::entrega::aU8(carpetaAjustes() / "carpeta-de-prueba");   // para probar en una sola PC sin elegir nada
 	return j;
 }

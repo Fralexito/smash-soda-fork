@@ -150,7 +150,7 @@ private:
 // ─── Lo que guarda el receptor ───────────────────────────────────────────────────────────────────
 struct Detalle {
 	uint32_t jugador = 0, desde = 0, hasta = 0;
-	std::string jugadorNombre, hastaNombre;
+	std::string jugadorNombre, desdeNombre, hastaNombre;
 	std::string estado;   ///< aplicado | ya_estaba | saltado | reemplazado (otro lote posterior lo movio de nuevo) | pendiente
 	std::string motivo;   ///< legible cuando se salta
 };
@@ -201,6 +201,8 @@ public:
 	bool descartarPendientes(std::string& mensaje);
 	/// Deshace el ultimo lote aplicado (vuelve a generar Phoenix-DB sin el).
 	bool deshacerUltimo(std::string& mensaje);
+	/// Aviso para el overlay del juego tras aplicar un lote nuevo («Fichaje aplicado: X pasa de A a B. …»); se entrega UNA vez y queda vacio.
+	std::string tomarAviso();
 	/// Olvida la foto de referencia: la proxima lectura del option file solo la guarda (no publica nada).
 	void reiniciarReferencia();
 	/// «Volver a comprobar»: olvida las esperas del transporte y de la aplicacion.
@@ -223,6 +225,7 @@ private:
 	int _ignAltas = 0, _ignBajas = 0, _ignRaros = 0;
 	int _publicados = 0;
 	std::string _ultimoPublicado;
+	std::string _avisoPendiente;
 	// amigo
 	long long _ultimoSeq = 0;                  ///< ultimo seq visto en el buzon actual
 	std::map<std::string, long long> _seqPorOrigen;   ///< ultimo seq visto en cada buzon (carpeta o canal de la web)
@@ -245,10 +248,45 @@ private:
 	bool publicarLote(const std::vector<CambioLote>& cambios, const std::string& parche, const std::string& huella, std::string& mensaje);
 	bool aplicar(bool deshaciendo, std::string& mensaje);   // _m tomado
 	void avisarJuego(const std::string& texto) const;
+	nlohmann::json archivoOption() const;   // _m tomado: ruta, fecha y tamano del EDIT00000000 que vigila
 	void fijarOrigen();                     // _m tomado: sincroniza _ultimoSeq con el buzon del transporte actual
 	long long ordenDe(const std::string& origen, long long seq);
 	friend struct Pruebas;
 };
+
+/// Que ve el amigo en su PC al aplicarse un lote: texto corto de lo que paso («Lamine Yamal pasa de FC Barcelona a Arsenal FC») y que hacer para verlo
+/// segun PES este abierto o cerrado y su modo de recarga (ACTIVAR | AUTO-FICHAJES | AUTO-SIEMPRE).
+std::string textoAccionRecarga(bool pesAbierto, const std::string& modoRecarga);
+
+// ─── Ajustes guardados (ajustes.json) ────────────────────────────────────────────────────────────
+struct AjustesGuardados {
+	bool publicar = false, recibir = false, confirmarAntes = true;
+	std::string transporte = "web", carpeta, autor, optionFile;
+	bool migrado = false;   ///< el archivo decia «carpeta» sin carpeta (una prueba vieja): ahora usa la web
+};
+/// Lee el ajustes.json. Siempre devuelve algo usable: si el texto no se entiende, los valores por defecto (todo apagado, transporte web).
+/// La web es el transporte por defecto; «carpeta» solo se respeta si trae una carpeta de verdad.
+AjustesGuardados leerAjustes(const std::string& texto);
+
+// ─── Autodiagnostico del juego (lo que mira la lista «Antes de la prueba» del amigo) ──────────────
+struct SitioDiag {
+	std::string nombre;       ///< «Raíz del juego» o el modo del cambiador de parches
+	bool sider = false;       ///< hay sider.ini
+	bool raiz = false;        ///< el sider.ini lleva la raiz de Phoenix-DB (cpk.root)
+	bool carpeta = false;     ///< existe SiderAddons\livecpk\Phoenix-DB
+	bool archivo = false;     ///< ya hay un PlayerAssignment.bin dentro (lo genero Link)
+};
+struct DiagJuego {
+	bool ok = false;          ///< Link conoce la carpeta del juego
+	std::string juego;
+	std::vector<SitioDiag> sitios;
+	std::string luaEstado = "no_instalado";   ///< estado de phoenix.lua segun «Módulos del juego»
+	std::string luaVersion;   ///< version instalada en el juego ("" = no se sabe / no esta)
+	std::string luaVersionLink;   ///< la que lleva este Link
+};
+/// Solo lee archivos del juego (sider.ini, carpetas, modules): seguro con PES abierto.
+DiagJuego diagnosticarJuego(const fs::path& juego, const fs::path& paquete);
+nlohmann::json diagAJson(const DiagJuego& d);
 
 /// Pone nombre de jugador y de equipo (y parche y huella de la base) a cada cambio, leyendolos de la base REAL de este juego (solo lectura).
 /// Si la base no se lee, deja los cambios como estan (solo con ids/nombres del option file).

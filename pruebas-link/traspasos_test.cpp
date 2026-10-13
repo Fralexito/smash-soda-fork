@@ -525,6 +525,34 @@ static void pruebaCadena(const fs::path& tmp, const std::string& plantilla) {
 	CHECK(!fb.empty() && equiposDe(fb, js[0].jug) == std::set<uint32_t>{ js[0].a }, "amigo: el jugador esta en el equipo nuevo en su Phoenix-DB");
 	CHECK(fb.size() == mundo.filas.size(), "amigo: el resto de la base queda intacto (mismo numero de filas)");
 	CHECK(fs::exists(recargarTxt(jb)) && leer(recargarTxt(jb)).find("traspasos") == 0, "amigo: Link avisa a phoenix.lua (recargar.txt)");
+	// aviso claro tras aplicar («Fichaje aplicado: X pasa de A a B. …») + autodiagnostico del juego del amigo
+	{
+		const std::string aviso = B.tomarAviso();
+		const std::string esperado = "Fichaje aplicado: Jugador " + std::to_string(js[0].jug) + " pasa de Equipo " + std::to_string(js[0].de) + " a Equipo " + std::to_string(js[0].a) + ".";
+		CHECK(aviso.find(esperado) == 0, "aviso tras aplicar: «" + aviso.substr(0, 90) + "…»");
+		CHECK(aviso.find("Abre PES para verlo.") != std::string::npos, "aviso con PES cerrado: dice que abra PES");
+		CHECK(B.tomarAviso().empty(), "el aviso se entrega UNA sola vez");
+		json ua = est(B)["amigo"]["ultimoAplicado"];
+		CHECK(ua.is_object() && ua["texto"] == esperado && ua["accion"] == "Abre PES para verlo.", "estado: «último aplicado» con el texto y qué hacer (PES cerrado)");
+		bAbierto = true;
+		CHECK(est(B)["amigo"]["ultimoAplicado"]["accion"].get<std::string>().find("Cierra y vuelve a abrir PES") == 0, "estado: con PES abierto la acción pasa a «cierra y vuelve a abrir PES…» sin recalcular el lote");
+		bAbierto = false;
+		CHECK(textoAccionRecarga(true, "ACTIVAR").find("Activar") != std::string::npos && textoAccionRecarga(true, "AUTO-SIEMPRE").find("solo al volver al menú") != std::string::npos && textoAccionRecarga(true, "AUTO-FICHAJES").find("solo al volver al menú") != std::string::npos,
+			"modo ACTIVAR habla del botón Activar; los modos AUTO dicen que se recarga solo al volver al menú");
+		json ho = est(A)["anfitrion"]["archivo"];
+		CHECK(ho["existe"] == true && ho["ruta"].get<std::string>().find("EDIT00000000") != std::string::npos && ho["fecha"].get<std::string>().size() == 16 && ho["bytes"].get<long long>() > 1000, "anfitrion: el estado dice qué EDIT00000000 vigila (ruta, fecha " + ho["fecha"].get<std::string>() + " y tamaño)");
+		DiagJuego dg = diagnosticarJuego(jb, tmp / "no-hay-paquete");
+		bool todasRaiz = !dg.sitios.empty(); bool algunArchivo = false;
+		for (const SitioDiag& s : dg.sitios) { if (!s.raiz) todasRaiz = false; if (s.archivo) algunArchivo = true; }
+		CHECK(dg.ok && todasRaiz && algunArchivo && dg.luaEstado == "no_instalado", "autodiagnóstico tras aplicar: Phoenix-DB en el sider.ini y archivo generado; phoenix.lua sin instalar (paquete vacío)");
+		const fs::path jvirgen = juegoFalso(tmp, "juego-diag-virgen", mundo);
+		DiagJuego dv = diagnosticarJuego(jvirgen, tmp / "no-hay-paquete");
+		CHECK(dv.ok && !dv.sitios.empty() && !dv.sitios[0].raiz && !dv.sitios[0].carpeta && !dv.sitios[0].archivo && dv.sitios[0].sider, "autodiagnóstico de un juego sin tocar: hay sider.ini pero ni Phoenix-DB ni archivo");
+		CHECK(!diagnosticarJuego(tmp / "no-existe-este-juego", tmp).ok && !diagnosticarJuego(fs::path(), tmp).ok, "autodiagnóstico sin carpeta de juego: no ok (sin romper)");
+		const json dj = diagAJson(dg);
+		CHECK(dj["ok"] == true && dj["sitios"].size() == dg.sitios.size() && dj["lua"]["estado"] == "no_instalado", "el autodiagnóstico sale en JSON para la interfaz");
+	}
+
 	json eb = est(B);
 	CHECK(eb["amigo"]["historial"][0]["estado"] == "aplicado" && eb["amigo"]["puedeDeshacer"] == true, "amigo: historial «aplicado» y se puede deshacer");
 	const std::string bytes1 = leer(pa(jb)), aviso1 = leer(recargarTxt(jb));
@@ -1059,12 +1087,30 @@ static void pruebaCadenaWeb(const fs::path& tmp, const std::string& plantilla) {
 	}
 }
 
+static void pruebaAjustes() {
+	std::cout << "[ajustes guardados: migración a la web, defaults, archivo roto]\n";
+	// el ajustes.json que dejó Fralex en sus pruebas de carpeta (publicar+recibir, transporte «carpeta», carpeta vacía)
+	AjustesGuardados v = leerAjustes("{\n \"autor\": \"\",\n \"carpeta\": \"\",\n \"confirmarAntes\": true,\n \"optionFile\": \"\",\n \"publicar\": true,\n \"recibir\": true,\n \"transporte\": \"carpeta\"\n}");
+	CHECK(v.transporte == "web" && v.migrado && v.publicar && v.recibir && v.confirmarAntes, "el ajustes.json viejo (carpeta vacía) pasa a «web» y conserva el rol y la confirmación");
+	AjustesGuardados c = leerAjustes("{\"transporte\":\"carpeta\",\"carpeta\":\"D:/Drive/Traspasos\",\"recibir\":true}");
+	CHECK(c.transporte == "carpeta" && !c.migrado && c.carpeta == "D:/Drive/Traspasos" && c.recibir && !c.publicar, "una carpeta de verdad se respeta (alternativa avanzada)");
+	AjustesGuardados vacio = leerAjustes("{}");
+	CHECK(vacio.transporte == "web" && !vacio.publicar && !vacio.recibir && vacio.confirmarAntes, "sin nada guardado: web, todo apagado y confirmación activa");
+	AjustesGuardados roto = leerAjustes("esto no es json {{{");
+	CHECK(roto.transporte == "web" && !roto.publicar && !roto.recibir && !roto.migrado, "archivo roto: valores por defecto (todo apagado), sin romper");
+	AjustesGuardados raro = leerAjustes("{\"transporte\":\"ftp\",\"publicar\":\"si\",\"autor\":42}");
+	CHECK(raro.transporte == "web" && !raro.publicar && raro.autor.empty(), "valores de tipo raro o transporte desconocido: se ignoran");
+	AjustesGuardados largo = leerAjustes("{\"carpeta\":\"" + std::string(900, 'x') + "\",\"transporte\":\"carpeta\"}");
+	CHECK(largo.transporte == "web" && largo.carpeta.empty(), "una ruta absurdamente larga se descarta");
+}
+
 int main(int argc, char** argv) {
 	if (argc < 2) { std::cout << "uso: traspasos_test <carpeta temporal vacia> [EDIT00000000 de plantilla]\n"; return 2; }
 	std::cout << std::unitbuf;
 	const fs::path tmp = fs::path(argv[1]);
 	fs::create_directories(tmp);
 	pruebaLote(tmp);
+	pruebaAjustes();
 	pruebaWeb();
 	pruebaLista();
 	if (argc >= 3 && fs::exists(argv[2])) { pruebaCadena(tmp, leer(argv[2])); pruebaCadenaWeb(tmp, leer(argv[2])); }

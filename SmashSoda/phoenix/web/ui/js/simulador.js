@@ -257,7 +257,7 @@ export function crearSimulador(enviar) {
     const p = s.partido;
     const e = {
       v: 1,
-      app: { version: "0.2.72", etapa: "beta 2", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
+      app: { version: "0.2.79", etapa: "beta 2", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
       noticias: { cargado: true, lista: s.noticias },
       chatGlobal: { cargado: true, pausado: s.chatGlobal.pausado, esperaSeg: s.chatGlobal.esperaSeg, rev: s.chatGlobal.mensajes.length, error: "" },
       web: { ...s.web, jugadoresLista: 3, versionLiga: "2026.10.08", eventosEnCola: 0 },
@@ -340,13 +340,18 @@ export function crearSimulador(enviar) {
         canal: { codigo: "K7M2QX4P" }, meSiguen: ["Beto", "Degox"], siguiendo: [] };
     }
     const w = tr.web, esWeb = (tr.ajustes.transporte || "web") === "web";
+    const sinDiag = typeof location !== "undefined" && /traspasosdiag/.test(location.search);   // ?traspasosdiag imita un juego sin Phoenix-DB ni phoenix.lua
+    tr.anfitrion.archivo = tr.anfitrion.archivo || { existe: true, ruta: "C:/Users/TuUsuario/Documents/KONAMI/eFootball PES 2021 SEASON UPDATE/239200/save/EDIT00000000", bytes: 11014090, fecha: "2026-10-13 09:41" };
+    tr.amigo.ultimoAplicado = tr.amigo.ultimoAplicado || { id: "9f8e7d6c5b4a39281716f5e4", texto: "Fichaje aplicado: Julián Álvarez pasa de FC Barcelona a Arsenal FC.", accion: s.pes.abierto ? "Cierra y vuelve a abrir PES para verlo, o espera: el juego lo recarga solo al volver al menú principal y entrar a un modo." : "Abre PES para verlo.", cuando: "2026-10-13T14:41:00Z" };
+    const diag = { ok: true, juego: "D:/Juegos/PES 2021", sitios: [{ nombre: "Raíz del juego", sider: true, raiz: !sinDiag, carpeta: !sinDiag, archivo: false }, { nombre: "ConmeGOL Patch 26", sider: true, raiz: !sinDiag, carpeta: !sinDiag, archivo: false }],
+      lua: { estado: sinDiag ? "no_instalado" : "instalado", version: sinDiag ? "" : "0.18b", versionLink: "0.18b" } };
     const estado = esWeb ? w.estado : "ok";
     return { ajustes: { ...tr.ajustes, transporte: tr.ajustes.transporte || "web" }, activo: tr.ajustes.publicar || tr.ajustes.recibir, mensaje: tr.mensaje, juego: s.buzon.juego,
       transporteListo: esWeb ? w.vinculada : !!tr.ajustes.carpeta, carpetaPrueba: "C:/Users/TuUsuario/AppData/Roaming/Trybuchet/Smash Soda/phoenix-traspasos/carpeta-de-prueba",
       webDisponible: !esWeb ? null : w.estado === "web_sin_endpoints" ? false : w.visto ? true : null,
       web: { transporte: tr.ajustes.transporte || "web", vinculada: w.vinculada, estado, texto: "", esperaSeg: estado === "web_sin_endpoints" ? 287 : 0, error: "",
         siguiendo: w.siguiendo, meSiguen: w.meSiguen, canal: tr.ajustes.publicar ? { codigo: w.canal.codigo, seguidores: w.meSiguen } : null },
-      publicar: tr.ajustes.publicar, recibir: tr.ajustes.recibir, confirmarAntes: tr.ajustes.confirmarAntes, transporte: esWeb ? "web de Phoenix" : "carpeta " + tr.ajustes.carpeta,
+      diag, publicar: tr.ajustes.publicar, recibir: tr.ajustes.recibir, confirmarAntes: tr.ajustes.confirmarAntes, transporte: esWeb ? "web de Phoenix" : "carpeta " + tr.ajustes.carpeta,
       transporteEstado: { clave: estado, texto: "", esperaSeg: 0, tipo: esWeb ? "web" : "carpeta" },
       modoRecarga: s.modoRecarga || "AUTO-SIEMPRE", pesAbierto: s.pes.abierto, anfitrion: tr.anfitrion, amigo: tr.amigo };
   };

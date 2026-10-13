@@ -368,6 +368,53 @@ bool ClienteTraspasosWeb::dejar(const std::string& anfitrionId, std::string& err
 	return llamar("POST", "/traspasos/dejar", json{ {"anfitrion_id", anfitrionId} }.dump(), j, error);
 }
 
+// ─── Ajustes guardados ───────────────────────────────────────────────────────────────────────────
+AjustesGuardados leerAjustes(const std::string& texto) {
+	AjustesGuardados a;
+	const json j = json::parse(texto, nullptr, false);
+	if (!j.is_object()) return a;
+	auto b = [&](const char* k, bool def) { return j.contains(k) && j[k].is_boolean() ? j[k].get<bool>() : def; };
+	auto s = [&](const char* k, size_t max) { std::string t = j.contains(k) && j[k].is_string() ? j[k].get<std::string>() : std::string(); if (t.size() > max) t.clear(); return t; };
+	a.publicar = b("publicar", false); a.recibir = b("recibir", false); a.confirmarAntes = b("confirmarAntes", true);
+	a.transporte = s("transporte", 12); a.carpeta = s("carpeta", 500); a.autor = s("autor", 40); a.optionFile = s("optionFile", 500);
+	if (a.transporte != "web" && a.transporte != "carpeta") a.transporte = "web";
+	if (a.transporte == "carpeta" && a.carpeta.empty()) { a.transporte = "web"; a.migrado = true; }   // prueba vieja con carpeta vacia: la web
+	return a;
+}
+
+// ─── Autodiagnostico del juego ───────────────────────────────────────────────────────────────────
+DiagJuego diagnosticarJuego(const fs::path& juego, const fs::path& paquete) {
+	DiagJuego d;
+	if (juego.empty()) return d;
+	std::error_code ec;
+	if (!fs::is_directory(juego, ec)) { d.juego = juego.string(); return d; }
+	d.ok = true; d.juego = juego.string();
+	for (const fichajes::Objetivo& o : fichajes::objetivos(juego)) {
+		SitioDiag s;
+		s.nombre = o.nombre;
+		std::string ini;
+		s.sider = leerTexto(o.ini, ini, 4u * 1024u * 1024u);
+		s.raiz = s.sider && phoenix::modulos::tieneRaizPhoenixDB(ini);
+		const fs::path phx = o.siderAddons / "livecpk" / "Phoenix-DB";
+		s.carpeta = fs::is_directory(phx, ec);
+		s.archivo = fs::is_regular_file(phx / "common" / "etc" / "pesdb" / "PlayerAssignment.bin", ec);
+		d.sitios.push_back(s);
+	}
+	for (const phoenix::modulos::Modulo& m : phoenix::modulos::estado(paquete, juego)) {
+		if (m.archivo != "phoenix.lua") continue;
+		d.luaEstado = m.estado.empty() ? "no_instalado" : m.estado;
+		d.luaVersionLink = m.version;
+		for (const phoenix::modulos::Destino& x : m.destinos) if (x.archivo && d.luaVersion.empty()) d.luaVersion = x.version;
+	}
+	return d;
+}
+
+json diagAJson(const DiagJuego& d) {
+	json s = json::array();
+	for (const SitioDiag& x : d.sitios) s.push_back({ {"nombre", x.nombre}, {"sider", x.sider}, {"raiz", x.raiz}, {"carpeta", x.carpeta}, {"archivo", x.archivo} });
+	return { {"ok", d.ok}, {"juego", d.juego}, {"sitios", s}, {"lua", { {"estado", d.luaEstado}, {"version", d.luaVersion}, {"versionLink", d.luaVersionLink} }} };
+}
+
 // ─── Lista efectiva ──────────────────────────────────────────────────────────────────────────────
 namespace {
 	/// Orden de aplicacion: por buzon (en orden de aparicion) y dentro de cada buzon por seq. Sin buzon anotado, por seq.
@@ -486,7 +533,7 @@ void Motor::guardarRegistros() const {
 	json j = { {"version", 2}, {"seqPorOrigen", porOrigen}, {"origenes", _origenes}, {"registros", json::array()} };
 	for (const Registro& r : _reg) {
 		json d = json::array();
-		for (const Detalle& x : r.detalle) d.push_back({ {"jugador", x.jugador}, {"desde", x.desde}, {"hasta", x.hasta}, {"jugadorNombre", x.jugadorNombre}, {"hastaNombre", x.hastaNombre}, {"estado", x.estado}, {"motivo", x.motivo} });
+		for (const Detalle& x : r.detalle) d.push_back({ {"jugador", x.jugador}, {"desde", x.desde}, {"hasta", x.hasta}, {"jugadorNombre", x.jugadorNombre}, {"desdeNombre", x.desdeNombre}, {"hastaNombre", x.hastaNombre}, {"estado", x.estado}, {"motivo", x.motivo} });
 		j["registros"].push_back({ {"lote", json::parse(loteAJson(r.lote, true))}, {"estado", r.estado}, {"modo", r.modo}, {"recibido", r.recibido}, {"aplicadoEn", r.aplicadoEn}, {"motivo", r.motivo}, {"origen", r.origen}, {"orden", r.orden}, {"detalle", d} });
 	}
 	escribirAtomico(_c.dirEstado / "recibidos.json", j.dump(1));
@@ -539,7 +586,7 @@ void Motor::cargarEstado() {
 					for (const json& d : r["detalle"]) {
 						Detalle y;
 						y.jugador = d.value("jugador", 0u); y.desde = d.value("desde", 0u); y.hasta = d.value("hasta", 0u);
-						y.jugadorNombre = d.value("jugadorNombre", std::string()); y.hastaNombre = d.value("hastaNombre", std::string());
+						y.jugadorNombre = d.value("jugadorNombre", std::string()); y.desdeNombre = d.value("desdeNombre", std::string()); y.hastaNombre = d.value("hastaNombre", std::string());
 						y.estado = d.value("estado", std::string()); y.motivo = d.value("motivo", std::string());
 						x.detalle.push_back(y);
 					}
@@ -750,6 +797,34 @@ void Motor::pasoRecibir() {
 	else { _estadoAmigo = "esperando"; _mensajeAmigo = msg; _reintentoAplicar = ahoraMs() + _c.esperaReintentoMs; }
 }
 
+namespace {
+	std::string nombreJugador(const Detalle& d) { return d.jugadorNombre.empty() ? "el jugador " + std::to_string(d.jugador) : d.jugadorNombre; }
+	std::string nombreEquipo(const std::string& n, uint32_t id) { return n.empty() ? "el equipo " + std::to_string(id) : n; }
+	/// «Fichaje aplicado: X pasa de A a B.» / «3 fichajes aplicados: X (A → B); …»
+	std::string resumenAplicado(const std::vector<const Registro*>& rs) {
+		std::vector<std::string> items, cortos;
+		for (const Registro* r : rs)
+			for (const Detalle& d : r->detalle)
+				if (d.estado == "aplicado") {
+					items.push_back(nombreJugador(d) + " pasa de " + nombreEquipo(d.desdeNombre, d.desde) + " a " + nombreEquipo(d.hastaNombre, d.hasta));
+					cortos.push_back(nombreJugador(d) + " (" + nombreEquipo(d.desdeNombre, d.desde) + " → " + nombreEquipo(d.hastaNombre, d.hasta) + ")");
+				}
+		if (items.empty()) return std::string();
+		if (items.size() == 1) return "Fichaje aplicado: " + items[0] + ".";
+		std::string s = std::to_string(items.size()) + " fichajes aplicados: " + cortos[0] + "; " + cortos[1];
+		if (items.size() > 2) s += "; y " + std::to_string(items.size() - 2) + " más";
+		return s + ".";
+	}
+}
+
+std::string textoAccionRecarga(bool pesAbierto, const std::string& modo) {
+	if (!pesAbierto) return "Abre PES para verlo.";
+	if (modo == "ACTIVAR") return "Cierra y vuelve a abrir PES para verlo, o sin cerrar: Partido → Datos Actual. en vivo → Activar.";
+	return "Cierra y vuelve a abrir PES para verlo, o espera: el juego lo recarga solo al volver al menú principal y entrar a un modo.";
+}
+
+std::string Motor::tomarAviso() { std::lock_guard<std::mutex> g(_m); std::string a; a.swap(_avisoPendiente); return a; }
+
 bool Motor::aplicar(bool deshaciendo, std::string& mensaje) {
 	if (_c.juego.empty()) { mensaje = "Link aun no sabe donde esta tu juego."; return false; }
 	const bool abierto = _c.pesAbierto ? _c.pesAbierto() : false;
@@ -805,13 +880,15 @@ bool Motor::aplicar(bool deshaciendo, std::string& mensaje) {
 		for (const CambioLote& c : r.lote.cambios) ultimoSeqDe[c.jugador] = (std::max)(ultimoSeqDe[c.jugador], claveOrden(r));
 	}
 	const std::string hora = ahora();
+	std::set<std::string> eranNuevos;   // lotes que estaban «pendiente» al entrar: de ellos es el aviso «Fichaje aplicado…»
+	for (const Registro& r : _reg) if (r.estado == "pendiente") eranNuevos.insert(r.lote.id);
 	for (Registro& r : _reg) {
 		if (r.estado == "deshecho" || r.estado == "propio" || r.estado == "error") continue;
 		r.detalle.clear();
 		int ok = 0, no = 0;
 		for (const CambioLote& c : r.lote.cambios) {
 			Detalle d;
-			d.jugador = c.jugador; d.desde = c.desde; d.hasta = c.hasta; d.jugadorNombre = c.jugadorNombre; d.hastaNombre = c.hastaNombre;
+			d.jugador = c.jugador; d.desde = c.desde; d.hasta = c.hasta; d.jugadorNombre = c.jugadorNombre; d.desdeNombre = c.desdeNombre; d.hastaNombre = c.hastaNombre;
 			const std::string nota = std::to_string(c.jugador);
 			if (r.modo == "nada") { d.estado = "saltado"; d.motivo = "Tu parche es otro y el lote no trae nombres: no se adivina."; no++; }
 			else if (ultimoSeqDe[c.jugador] > claveOrden(r)) { d.estado = "reemplazado"; d.motivo = "Un lote posterior lo movio de nuevo."; ok++; }
@@ -826,6 +903,12 @@ bool Motor::aplicar(bool deshaciendo, std::string& mensaje) {
 	}
 	guardarRegistros();
 	if (algoAplicado || deshaciendo) avisarJuego("traspasos " + hora);
+	if (!deshaciendo) {
+		std::vector<const Registro*> rs;
+		for (const Registro& r : _reg) if (eranNuevos.count(r.lote.id) && (r.estado == "aplicado" || r.estado == "parcial")) rs.push_back(&r);
+		const std::string res = resumenAplicado(rs);
+		if (!res.empty()) _avisoPendiente = res + " " + textoAccionRecarga(_c.pesAbierto ? _c.pesAbierto() : false, _c.modoRecarga ? _c.modoRecarga() : std::string("AUTO-SIEMPRE"));
+	}
 	mensaje = inf.mensaje;
 	return true;
 }
@@ -843,6 +926,32 @@ bool Motor::deshacerUltimo(std::string& mensaje) {
 	return true;
 }
 
+json Motor::archivoOption() const {
+	json r = { {"existe", false}, {"ruta", ""}, {"bytes", 0}, {"fecha", ""} };
+	fs::path archivo = _c.optionFile;
+	std::error_code ec;
+	if (archivo.empty()) return r;
+	if (fs::is_directory(archivo, ec)) archivo /= "EDIT00000000";
+	r["ruta"] = archivo.string();
+	if (!fs::is_regular_file(archivo, ec)) return r;
+	const auto tam = fs::file_size(archivo, ec);
+	const auto ft = fs::last_write_time(archivo, ec);
+	if (ec) return r;
+	r["existe"] = true; r["bytes"] = static_cast<long long>(tam);
+	const auto sc = std::chrono::time_point_cast<std::chrono::system_clock::duration>(ft - fs::file_time_type::clock::now() + std::chrono::system_clock::now());
+	const std::time_t t = std::chrono::system_clock::to_time_t(sc);
+	std::tm lt{};
+#ifdef _WIN32
+	localtime_s(&lt, &t);
+#else
+	localtime_r(&t, &lt);
+#endif
+	char b[32];
+	std::strftime(b, sizeof(b), "%Y-%m-%d %H:%M", &lt);
+	r["fecha"] = b;
+	return r;
+}
+
 std::string Motor::estadoJson() const {
 	std::lock_guard<std::mutex> g(_m);
 	json j;
@@ -852,7 +961,7 @@ std::string Motor::estadoJson() const {
 	j["anfitrionId"] = _anfitrionId;
 	j["modoRecarga"] = _c.modoRecarga ? _c.modoRecarga() : std::string("AUTO-SIEMPRE");
 	j["pesAbierto"] = _c.pesAbierto ? _c.pesAbierto() : false;
-	json a = { {"estado", _estadoAnfitrion}, {"optionFile", _c.optionFile.string()}, {"ultimaRevision", _ultimaRevision}, {"hayReferencia", _hayBase},
+	json a = { {"estado", _estadoAnfitrion}, {"optionFile", _c.optionFile.string()}, {"ultimaRevision", _ultimaRevision}, {"hayReferencia", _hayBase}, {"archivo", archivoOption()},
 		{"publicados", _publicados}, {"ultimoLote", _ultimoPublicado}, {"masivo", _masivo}, {"ignorados", { {"altas", _ignAltas}, {"bajas", _ignBajas}, {"otros", _ignRaros} }}, {"pendientes", json::array()} };
 	for (const CambioLote& c : _pendientes) a["pendientes"].push_back(cambioAJson(c));
 	j["anfitrion"] = a;
@@ -865,10 +974,17 @@ std::string Motor::estadoJson() const {
 		for (const Detalle& d : r.detalle) cs.push_back({ {"jugador", d.jugador}, {"jugadorNombre", d.jugadorNombre}, {"desde", d.desde}, {"hasta", d.hasta}, {"hastaNombre", d.hastaNombre}, {"estado", d.estado}, {"motivo", d.motivo} });
 		if (cs.empty()) for (const CambioLote& c : r.lote.cambios) cs.push_back({ {"jugador", c.jugador}, {"jugadorNombre", c.jugadorNombre}, {"desde", c.desde}, {"hasta", c.hasta}, {"hastaNombre", c.hastaNombre}, {"estado", "pendiente"}, {"motivo", ""} });
 		m["historial"].push_back({ {"id", r.lote.id}, {"seq", r.lote.seq}, {"autor", r.lote.autor}, {"creado", r.lote.creado}, {"recibido", r.recibido}, {"aplicadoEn", r.aplicadoEn},
-			{"estado", r.estado}, {"modo", r.modo}, {"motivo", r.motivo}, {"cambios", cs} });
+			{"estado", r.estado}, {"modo", r.modo}, {"motivo", r.motivo}, {"resumen", resumenAplicado({ &r })}, {"cambios", cs} });
 		if (m["historial"].size() >= 50) break;
 	}
 	m["puedeDeshacer"] = puedeDeshacer;
+	for (auto it = _reg.rbegin(); it != _reg.rend(); ++it) {   // el ultimo lote que de verdad cambio algo, con lo que hay que hacer AHORA para verlo
+		const std::string res = (it->estado == "aplicado" || it->estado == "parcial") ? resumenAplicado({ &*it }) : std::string();
+		if (res.empty()) continue;
+		const bool abierto = _c.pesAbierto ? _c.pesAbierto() : false;
+		m["ultimoAplicado"] = { {"id", it->lote.id}, {"texto", res}, {"accion", textoAccionRecarga(abierto, j["modoRecarga"].get<std::string>())}, {"cuando", it->aplicadoEn} };
+		break;
+	}
 	j["amigo"] = m;
 	return j.dump();
 }
