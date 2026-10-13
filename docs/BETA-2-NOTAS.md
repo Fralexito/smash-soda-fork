@@ -28,12 +28,12 @@
    - *Title*: `Phoenix Link beta 2 (0.2.68)`.
    - Arrastra `C:\dev\phoenix-beta2-dist\PhoenixLink-0.2.68-beta2.zip` a «Attach binaries».
    - Marca **Set as a pre-release** y pulsa **Publish release**.
-2. **Overlay.** Abre https://github.com/Fralexito/phoenix-overlay/releases/new
+2. **Overlay (en zip, 6,6 MB, para caber en el límite de subida).** Abre https://github.com/Fralexito/phoenix-overlay/releases/new
    - Tag nuevo `v1.0.0-beta1`, título `PhoenixGlass 1.0.0 beta 1`.
-   - Arrastra `C:\dev\phoenix-overlay\bin\PhoenixGlass.exe` (SHA256 `DFD0BB6AC8513C8189A10E39DA4A85E4A12D1A70873340F84C271CF299BE2E94`), pre-release, **Publish release**.
+   - Arrastra `C:\dev\phoenix-beta2-dist\PhoenixGlass-1.0.0-beta1.zip` (SHA256 `A83455807EA145E8ACCF77F81A7A5ABA5A47501AE981E988F68131A3C4A632E5`; dentro va el `PhoenixGlass.exe` con SHA256 `DFD0BB6AC8513C8189A10E39DA4A85E4A12D1A70873340F84C271CF299BE2E94`), pre-release, **Publish release**.
 3. Avísame (o a la sesión que te lo pidió): comprobaré con `curl` que ambos enlaces responden 200 y que los SHA256 coinciden. Los enlaces que espera el instalador son:
    - `https://github.com/Fralexito/smash-soda-fork/releases/download/beta-2/PhoenixLink-0.2.68-beta2.zip`
-   - `https://github.com/Fralexito/phoenix-overlay/releases/download/v1.0.0-beta1/PhoenixGlass.exe`
+   - `https://github.com/Fralexito/phoenix-overlay/releases/download/v1.0.0-beta1/PhoenixGlass-1.0.0-beta1.zip`
 4. Pásale al amigo `PhoenixLink-instalar-rapido.bat` y `PhoenixJuego-instalar.bat` (como archivos, no copiados de la web) y `docs/BETA-2-GUIA-AMIGO.md`.
 
 ## Riesgos conocidos
