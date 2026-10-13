@@ -34,7 +34,8 @@ struct Lote {
 	std::string huella;      ///< sha256 del contenido de `cambios` (el receptor la recalcula)
 	std::string creado;      ///< ISO UTC "2026-10-12T17:30:00Z"
 	std::string autor;       ///< nombre que se muestra
-	std::string anfitrion;   ///< id estable del Link que lo publico (evita aplicarse a si mismo)
+	std::string anfitrion;   ///< quien lo publico: id estable del Link (carpeta) o uuid de su cuenta (web; la web lo manda como anfitrion_id)
+	std::string anfitrionNombre;   ///< nombre visible del anfitrion (solo lo manda la web)
 	std::string parche, baseHuella;   ///< parche y huella (12 hex) de la base del anfitrion; vacio = no se sabe
 	long long seq = 0;       ///< orden de llegada al transporte (lo asigna el transporte; 0 = aun no publicado)
 	std::vector<CambioLote> cambios;
@@ -44,6 +45,8 @@ std::string huellaDeCambios(const std::vector<CambioLote>& c);
 Lote crearLote(const std::string& autor, const std::string& anfitrion, const std::string& creado, const std::string& parche,
 	const std::string& baseHuella, std::vector<CambioLote> cambios);
 std::string loteAJson(const Lote& l, bool conSeq = true);
+/// El cuerpo EXACTO que espera la web en POST /traspasos: {id, huella, creado, autor, parche, base_huella, cambios[…]}.
+std::string loteAJsonWeb(const Lote& l);
 /// Entiende y VALIDA un lote (formato, ids > 0, origen != destino, limite de cambios, huella e id coherentes).
 bool loteDeJson(const std::string& json, Lote& l, std::string& error);
 
@@ -84,64 +87,61 @@ private:
 	std::mutex _m;
 };
 
-/// Peticion HTTP autenticada a la web (la inyecta quien crea el transporte; en Link real es PhoenixLink::peticionLiga).
+/// Peticion HTTP autenticada a la web (la inyecta quien crea el transporte; en Link real es PhoenixLink::peticionTraspasos).
 /// `estado`: codigo HTTP; 0 = sin red/timeout; -1 = esta PC no esta vinculada a una cuenta de la web. Devuelve false si no hubo respuesta.
 using PeticionWeb = std::function<bool(const std::string& metodo, const std::string& ruta, const std::string& cuerpo, int& estado, std::string& respuesta)>;
-/// Transporte por la web (Supabase, funcion «liga»): rutas /v1/traspasos/*. Contrato en docs/PROMPT-WEB-traspasos-vivo.md.
-/// Respeta 404 (la web aun no lo tiene: espera 5 min), 401, 403, 429 (reintentar_en) y red caida (backoff 10 s → 2 min).
+/// Transporte por la web (Supabase, funcion «traspasos»: base .../functions/v1/traspasos/v1). Contrato: C:\dev\pes-liga-automatica\docs\TRASPASOS-EN-VIVO.md
+/// (rutas /traspasos, /traspasos/codigo, /seguir, /dejar, /siguiendo). Respeta 404 (la web aun no lo tiene: espera 5 min), 401, 403, 429
+/// (reintentar_en), 503 LIGA_PAUSADA y red caida (backoff 10 s → 2 min). El `seq` es GLOBAL de la web: un solo buzon («web»).
 class TransporteWeb : public Transporte {
 public:
-	/// `canal` = canal del que se leen los lotes (el del anfitrion al que sigues; el tuyo si eres anfitrion). Vacio = aun no se sabe.
-	TransporteWeb(PeticionWeb peticion, std::string canal = std::string(), std::function<long long()> reloj = nullptr);
-	void ponerCanal(const std::string& canal) { std::lock_guard<std::mutex> g(_m); _canal = canal; }
-	std::string descripcion() const override;
-	std::string identidad() const override;
+	TransporteWeb(PeticionWeb peticion, std::function<long long()> reloj = nullptr);
+	/// ¿Tiene sentido leer? (false = un amigo que aun no sigue a nadie: no se llama a la web). Lo pone quien sabe a quien se sigue.
+	void ponerPuedeLeer(bool si) { std::lock_guard<std::mutex> g(_m); _puedeLeer = si; }
+	std::string descripcion() const override { return "web de Phoenix"; }
+	std::string identidad() const override { return "web"; }
 	bool publicar(Lote& l, bool& ya, std::string& error) override;
 	bool traer(long long despuesDe, std::vector<Lote>& lotes, int& ilegibles, std::string& error) override;
 	long long esperaMs() const override;
 	bool hayMas() const override { std::lock_guard<std::mutex> g(_m); return _hayMas; }
-	long long intervaloMs() const override { std::lock_guard<std::mutex> g(_m); return _sondeoMs; }
+	long long intervaloMs() const override { return 8000; }
 	std::string estadoClave() const override { std::lock_guard<std::mutex> g(_m); return _clave; }
 	std::string estadoTexto() const override { std::lock_guard<std::mutex> g(_m); return _texto; }
 	void reintentarYa() override { std::lock_guard<std::mutex> g(_m); _hastaMs = 0; _fallos = 0; }
-	/// Lotes que la web ya purgo (retencion) y este PC no llego a ver: > 0 = se perdio historial antiguo.
-	long long purgadoHasta() const { std::lock_guard<std::mutex> g(_m); return _purgadoHasta; }
-	bool hay() const { return static_cast<bool>(_p); }
+	/// Una peticion con TODA la clasificacion de errores y esperas. true = respuesta buena (200/201 con un objeto JSON y sin ok:false).
+	/// Si falla, `ultimoError()` trae el texto para el usuario (los errores de la accion, como un codigo incorrecto, no cambian el estado del transporte).
 	bool pedir(const std::string& metodo, const std::string& ruta, const std::string& cuerpo, int& estado, std::string& respuesta);
+	std::string ultimoError() const { std::lock_guard<std::mutex> g(_m); return _error; }
 private:
 	PeticionWeb _p;
 	std::function<long long()> _reloj;
 	mutable std::mutex _m;
-	std::string _canal, _clave = "ok", _texto;
-	long long _hastaMs = 0, _sondeoMs = 8000, _purgadoHasta = 0;
+	std::string _clave = "ok", _texto, _error;
+	long long _hastaMs = 0;
 	int _fallos = 0;
-	bool _hayMas = false;
+	bool _hayMas = false, _puedeLeer = true;
 	long long ahora() const;
-	void esperar(long long ms) { _hastaMs = ahora() + ms; }
 	void marcar(const std::string& clave, const std::string& texto, long long espera);
 };
 
-// ─── Administrar el canal (anfitrion) y a quien sigues (amigo) por la web ────────────────────────
-struct Seguidor { std::string usuarioId, nombre, estado, desde; };   ///< estado: activo | pendiente
+// ─── Mi codigo (anfitrion) y a quien sigo (amigo) por la web ─────────────────────────────────────
 struct CanalWeb {
 	bool hay = false;
-	std::string id, codigo;
-	bool activo = true;
-	int max = 0;
-	std::vector<Seguidor> seguidores;
+	std::string codigo;                 ///< 8 caracteres A-Z2-9 que el anfitrion comparte
+	std::vector<std::string> seguidores;   ///< nombres de quienes lo siguen
 };
-struct SiguiendoWeb { std::string canalId, anfitrionId, anfitrionNombre, estado, desde; };   ///< estado: activo | pendiente
+struct SiguiendoWeb { std::string anfitrionId, anfitrionNombre; };
 class ClienteTraspasosWeb {
 public:
 	explicit ClienteTraspasosWeb(TransporteWeb& t) : _t(t) {}
-	/// accion: obtener | rotar_codigo | pausar | reanudar. Crea el canal si no existe (idempotente).
-	bool canal(const std::string& accion, CanalWeb& c, std::string& error);
-	/// accion: aprobar | quitar
-	bool seguidor(const std::string& usuarioId, const std::string& accion, CanalWeb& c, std::string& error);
-	/// Seguir a un anfitrion por su codigo (entra al momento) o por ser amigo (queda «pendiente» hasta que el anfitrion apruebe).
-	bool seguir(const std::string& codigo, const std::string& anfitrionUsuarioId, SiguiendoWeb& s, std::string& error);
-	bool siguiendo(std::vector<SiguiendoWeb>& v, std::string& error);
-	bool dejar(const std::string& canalId, std::string& error);
+	/// POST /traspasos/codigo {rotar}: pide (o rota) mi codigo. Solo hosts aprobados (403 HOST_NO_AUTORIZADO si no).
+	bool codigo(bool rotar, CanalWeb& c, std::string& error);
+	/// POST /traspasos/seguir {codigo, prueba?}: me uno a un anfitrion con su codigo. `prueba` = seguirme a mi mismo (modo Prueba).
+	bool seguir(const std::string& codigo, bool prueba, SiguiendoWeb& s, std::string& error);
+	/// GET /traspasos/siguiendo: a quien sigo y quien me sigue.
+	bool siguiendo(std::vector<SiguiendoWeb>& sigo, std::vector<std::string>& meSiguen, std::string& error);
+	/// POST /traspasos/dejar {anfitrion_id}
+	bool dejar(const std::string& anfitrionId, std::string& error);
 private:
 	TransporteWeb& _t;
 	bool llamar(const std::string& metodo, const std::string& ruta, const std::string& cuerpo, nlohmann::json& j, std::string& error);

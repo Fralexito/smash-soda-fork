@@ -223,198 +223,169 @@ static void pruebaLote(const fs::path& tmp) {
 	CHECK(vacio.traer(0, v, ileg, e) && v.empty(), "carpeta que aun no existe = nada nuevo");
 }
 
-// Hub falso que cumple el contrato de docs/PROMPT-WEB-traspasos-vivo.md: cuentas, canal por anfitrion, seguidores (codigo / amigo con aprobacion),
-// lotes idempotentes por id con seq por canal, y fallos inyectables (404, 401, 429, timeout, 500, respuesta corrupta).
+// Hub falso que cumple el contrato REAL de la web (funcion «traspasos»: C:\dev\pes-liga-automatica\docs\TRASPASOS-EN-VIVO.md): lotes con seq GLOBAL,
+// un codigo por anfitrion aprobado, seguir con codigo (prueba:true para seguirse a uno mismo), idempotencia por (anfitrion, id) y fallos inyectables.
 struct HubFalso {
-	struct Canal { std::string id, codigo; bool activo = true; long long ultimoSeq = 0, seqMin = 1; std::vector<json> lotes; std::map<std::string, std::string> seguidores; };   // seguidores: usuario -> activo|pendiente
-	std::map<std::string, std::string> nombres;           // usuario -> nombre
-	std::set<std::pair<std::string, std::string>> amigos; // amistades (en los dos sentidos)
-	std::map<std::string, Canal> canales;                  // usuario anfitrion -> canal
-	std::string fallo;                                     // "" | 404 | 401 | 429 | timeout | 500 | corrupto
-	int peticiones = 0, limitePagina = 100;
-	int contador = 0;
-	bool esAmigo(const std::string& a, const std::string& b) const { return amigos.count({ a, b }) || amigos.count({ b, a }); }
-	std::string nuevoId(const char* pre) { char b[64]; std::snprintf(b, sizeof(b), "%s%03d-0000-4000-8000-000000000000", pre, ++contador); return b; }
-	Canal& canalDe(const std::string& u) {
-		auto it = canales.find(u);
-		if (it == canales.end()) { Canal c; c.id = nuevoId("c"); char b[16]; std::snprintf(b, sizeof(b), "PHX-%04d", 1000 + contador); c.codigo = b; it = canales.emplace(u, c).first; }
+	struct Lote1 { long long seq; std::string anfitrion; json lote; };
+	std::map<std::string, std::string> nombres;     // usuario -> nombre visible
+	std::set<std::string> hosts;                    // anfitriones aprobados
+	std::map<std::string, std::string> codigos;     // anfitrion -> codigo (8 caracteres)
+	std::set<std::pair<std::string, std::string>> sigue;   // (seguidor, anfitrion)
+	std::vector<Lote1> lotes;
+	long long ultimoSeq = 0;
+	std::string fallo;                              // "" | 404 | 401 | 429 | timeout | 500 | 503 | corrupto
+	int peticiones = 0, limitePagina = 50, contador = 0;
+	std::string codigoDe(const std::string& u) {
+		auto it = codigos.find(u);
+		if (it == codigos.end()) { char b[16]; std::snprintf(b, sizeof(b), "K%02dM2QX4", ++contador); it = codigos.emplace(u, b).first; }
 		return it->second;
 	}
-	Canal* porId(const std::string& id) { for (auto& [u, c] : canales) if (c.id == id) return &c; return nullptr; }
-	std::string duenoDe(const std::string& id) { for (auto& [u, c] : canales) if (c.id == id) return u; return ""; }
-	json jCanal(const std::string& u) {
-		Canal& c = canalDe(u);
-		json s = json::array();
-		for (auto& [x, e] : c.seguidores) s.push_back({ {"usuario_id", x}, {"nombre", nombres[x]}, {"estado", e}, {"desde", "2026-10-12T10:00:00Z"} });
-		return { {"ok", true}, {"canal", { {"id", c.id}, {"codigo", c.codigo}, {"activo", c.activo}, {"seguidores_max", 25} }}, {"seguidores", s} };
-	}
-	json jSig(const std::string& u, Canal& c) { std::string d = duenoDe(c.id); return { {"canal_id", c.id}, {"anfitrion", { {"usuario_id", d}, {"nombre", nombres[d]} }}, {"estado", c.seguidores[u]}, {"desde", "2026-10-12T10:00:00Z"} }; }
-	static std::string param(const std::string& ruta, const std::string& k) {
-		const size_t p = ruta.find(k + "=");
-		if (p == std::string::npos) return "";
-		const size_t f = ruta.find('&', p);
-		return ruta.substr(p + k.size() + 1, f == std::string::npos ? std::string::npos : f - p - k.size() - 1);
-	}
+	json meSiguen(const std::string& u) { json a = json::array(); for (const auto& p : sigue) if (p.second == u) a.push_back({ {"nombre", nombres[p.first]} }); return a; }
 	bool manejar(const std::string& u, const std::string& metodo, const std::string& ruta, const std::string& cuerpo, int& estado, std::string& resp) {
 		peticiones++;
+		auto err = [&](int e, const char* cod, const char* msg) { estado = e; resp = json{ {"ok", false}, {"codigo", cod}, {"mensaje", msg}, {"reintentable", false} }.dump(); return true; };
 		if (fallo == "timeout") { estado = 0; return false; }
-		if (fallo == "404") { estado = 404; resp = "{\"ok\":false,\"codigo\":\"RUTA_NO_EXISTE\"}"; return true; }
-		if (fallo == "401") { estado = 401; resp = "{\"ok\":false,\"codigo\":\"TOKEN_INVALIDO\"}"; return true; }
-		if (fallo == "429") { estado = 429; resp = "{\"ok\":false,\"codigo\":\"LIMITE\",\"reintentar_en\":7}"; return true; }
+		if (fallo == "404") { estado = 404; resp = "{\"ok\":false,\"codigo\":\"RUTA_NO_EXISTE\",\"mensaje\":\"x\"}"; return true; }
+		if (fallo == "401") return err(401, "TOKEN_INVALIDO", "token");
+		if (fallo == "429") { estado = 429; resp = "{\"ok\":false,\"codigo\":\"DEMASIADOS_INTENTOS\",\"mensaje\":\"x\",\"reintentar_en\":7}"; return true; }
 		if (fallo == "500") { estado = 500; resp = "oops"; return true; }
+		if (fallo == "503") return err(503, "LIGA_PAUSADA", "La liga está en pausa.");
 		if (fallo == "corrupto") { estado = 200; resp = "<html>no soy json</html>"; return true; }
 		const json b = json::parse(cuerpo.empty() ? "{}" : cuerpo, nullptr, false);
-		auto ok = [&](int e, json j) { estado = e; resp = j.dump(); return true; };
-		auto err = [&](int e, const char* cod, const char* msg) { return ok(e, json{ {"ok", false}, {"codigo", cod}, {"mensaje", msg} }); };
-		if (metodo == "POST" && ruta == "/v1/traspasos/canal") {
-			Canal& c = canalDe(u);
-			const std::string a = b.value("accion", std::string("obtener"));
-			if (a == "rotar_codigo") { char x[16]; std::snprintf(x, sizeof(x), "PHX-%04d", 2000 + ++contador); c.codigo = x; }
-			else if (a == "pausar") c.activo = false;
-			else if (a == "reanudar") c.activo = true;
-			return ok(200, jCanal(u));
+		auto ok = [&](int e, json j) { j["ok"] = true; estado = e; resp = j.dump(); return true; };
+		if (metodo == "POST" && ruta == "/traspasos") {
+			if (!hosts.count(u)) return err(403, "HOST_NO_AUTORIZADO", "Esta cuenta no es un host aprobado.");
+			if (!b.is_object() || !b.contains("id") || !b["id"].is_string() || b["id"].get<std::string>().size() != 24) return err(400, "CAMPO_INVALIDO", "id");
+			if (!b.contains("cambios") || !b["cambios"].is_array() || b["cambios"].empty() || b["cambios"].size() > 60) return err(400, "CAMPO_INVALIDO", "cambios");
+			if (b.value("autor", std::string()).size() > 40 || b.value("parche", std::string()).size() > 60 || b.value("base_huella", std::string()).size() > 64) return err(400, "CAMPO_INVALIDO", "textos");
+			for (const json& c : b["cambios"]) if (c.value("jugador", std::string()).size() > 48 || c.value("desde", std::string()).size() > 48 || c.value("hasta", std::string()).size() > 48) return err(400, "CAMPO_INVALIDO", "nombre largo");
+			if (b.contains("anfitrion") || b.contains("formato")) return err(400, "CAMPO_INVALIDO", "campo que no existe en el contrato");
+			for (const Lote1& l : lotes) if (l.anfitrion == u && l.lote["id"] == b["id"]) return ok(200, json{ {"seq", l.seq}, {"repetido", true} });
+			lotes.push_back({ ++ultimoSeq, u, b });
+			return ok(200, json{ {"seq", ultimoSeq}, {"repetido", false} });
 		}
-		if (metodo == "POST" && ruta == "/v1/traspasos/seguidores") {
-			Canal& c = canalDe(u);
-			const std::string x = b.value("usuario_id", std::string()), a = b.value("accion", std::string());
-			if (!c.seguidores.count(x)) return err(404, "CANAL_NO_EXISTE", "Ese usuario no te sigue.");
-			if (a == "aprobar") c.seguidores[x] = "activo"; else if (a == "quitar") c.seguidores.erase(x); else return err(400, "DATOS_INVALIDOS", "accion");
-			return ok(200, jCanal(u));
-		}
-		if (metodo == "POST" && ruta == "/v1/traspasos/seguir") {
-			Canal* c = nullptr; std::string estadoSeg;
-			if (b.contains("codigo")) { for (auto& [d, k] : canales) if (k.codigo == b["codigo"] && k.activo) c = &k; estadoSeg = "activo"; if (!c) return err(404, "CANAL_NO_EXISTE", "Código incorrecto."); }
-			else { const std::string d = b.value("anfitrion_usuario_id", std::string()); if (!esAmigo(u, d)) return err(403, "NO_ES_AMIGO", "Solo puedes seguir a un amigo o con su código."); c = &canalDe(d); estadoSeg = "pendiente"; }
-			if (c->seguidores.size() >= 25) return err(403, "LIMITE", "El canal está lleno.");
-			if (!c->seguidores.count(u)) c->seguidores[u] = estadoSeg;
-			return ok(200, json{ {"ok", true}, {"siguiendo", jSig(u, *c)} });
-		}
-		if (metodo == "GET" && ruta == "/v1/traspasos/siguiendo") {
+		if (metodo == "GET" && ruta.rfind("/traspasos?", 0) == 0) {
+			const size_t pd = ruta.find("desde="), pl = ruta.find("limite=");
+			const long long desde = std::stoll(ruta.substr(pd + 6));
+			const int limite = (std::min)(limitePagina, std::stoi(ruta.substr(pl + 7)));
 			json a = json::array();
-			for (auto& [d, c] : canales) if (c.seguidores.count(u)) a.push_back(jSig(u, c));
-			return ok(200, json{ {"ok", true}, {"siguiendo", a} });
-		}
-		if (metodo == "POST" && ruta == "/v1/traspasos/dejar") {
-			Canal* c = porId(b.value("canal_id", std::string()));
-			if (!c || !c->seguidores.count(u)) return err(404, "CANAL_NO_EXISTE", "No sigues ese canal.");
-			c->seguidores.erase(u);
-			return ok(200, json{ {"ok", true} });
-		}
-		if (metodo == "POST" && ruta == "/v1/traspasos/lotes") {
-			Canal& c = canalDe(u);
-			if (!b.contains("lote") || !b["lote"].is_object()) return err(400, "LOTE_INVALIDO", "falta el lote");
-			for (const json& l : c.lotes) if (l["id"] == b["lote"]["id"]) return ok(409, json{ {"ok", true}, {"ya", true}, {"seq", l["seq"]}, {"canal_id", c.id} });
-			json l = b["lote"]; l["seq"] = ++c.ultimoSeq;
-			c.lotes.push_back(l);
-			return ok(201, json{ {"ok", true}, {"seq", l["seq"]}, {"canal_id", c.id} });
-		}
-		if (metodo == "GET" && ruta.rfind("/v1/traspasos/lotes?", 0) == 0) {
-			Canal* c = porId(param(ruta, "canal_id"));
-			if (!c) return err(404, "CANAL_NO_EXISTE", "Ese canal no existe.");
-			const std::string dueno = duenoDe(c->id);
-			if (u != dueno) {
-				auto it = c->seguidores.find(u);
-				if (it == c->seguidores.end()) return err(403, "SIN_PERMISO", "No sigues a este anfitrión.");
-				if (it->second == "pendiente") return err(403, "PENDIENTE_APROBACION", "Aún no te ha aprobado.");
+			for (const Lote1& l : lotes) {
+				if (l.seq <= desde) continue;
+				if (l.anfitrion != u && !sigue.count({ u, l.anfitrion })) continue;
+				if (static_cast<int>(a.size()) >= limite) break;
+				json x = l.lote; x["seq"] = l.seq; x["anfitrion"] = nombres[l.anfitrion]; x["anfitrion_id"] = l.anfitrion;
+				a.push_back(x);
 			}
-			if (!c->activo) return ok(200, json{ {"ok", true}, {"canal_id", c->id}, {"lotes", json::array()}, {"hay_mas", false}, {"seq_max", c->ultimoSeq}, {"seq_min", c->seqMin}, {"purgado", false}, {"sondeo_seg", 10} });
-			const long long desde = std::stoll(param(ruta, "desde"));
+			return ok(200, json{ {"lotes", a}, {"ultimo_seq", ultimoSeq} });
+		}
+		if (metodo == "POST" && ruta == "/traspasos/codigo") {
+			if (!hosts.count(u)) return err(403, "HOST_NO_AUTORIZADO", "Esta cuenta no es un host aprobado.");
+			if (b.value("rotar", false)) { char x[16]; std::snprintf(x, sizeof(x), "R%02dN7ZQ3", ++contador); codigos[u] = x; }
+			return ok(200, json{ {"codigo", codigoDe(u)}, {"seguidores", meSiguen(u)} });
+		}
+		if (metodo == "POST" && ruta == "/traspasos/seguir") {
+			const std::string cod = b.value("codigo", std::string());
+			std::string host;
+			for (const auto& [h, c] : codigos) if (c == cod) host = h;
+			if (host.empty()) return err(404, "CODIGO_INVALIDO", "Código incorrecto.");
+			if (host == u && !b.value("prueba", false)) return err(409, "SEGUIR_A_UNO_MISMO", "Ese es tu propio código.");
+			sigue.insert({ u, host });
+			return ok(200, json{ {"anfitrion", nombres[host]}, {"anfitrion_id", host} });
+		}
+		if (metodo == "POST" && ruta == "/traspasos/dejar") { sigue.erase({ u, b.value("anfitrion_id", std::string()) }); return ok(200, json::object()); }
+		if (metodo == "GET" && ruta == "/traspasos/siguiendo") {
 			json a = json::array();
-			bool mas = false;
-			for (const json& l : c->lotes) if (l["seq"].get<long long>() > desde && l["seq"].get<long long>() >= c->seqMin) { if (static_cast<int>(a.size()) >= limitePagina) { mas = true; break; } a.push_back(l); }
-			return ok(200, json{ {"ok", true}, {"canal_id", c->id}, {"lotes", a}, {"hay_mas", mas}, {"seq_max", c->ultimoSeq}, {"seq_min", c->seqMin}, {"purgado", desde + 1 < c->seqMin}, {"sondeo_seg", 10} });
+			for (const auto& p : sigue) if (p.first == u) a.push_back({ {"anfitrion_id", p.second}, {"nombre", nombres[p.second]} });
+			return ok(200, json{ {"sigo", a}, {"me_siguen", meSiguen(u)} });
 		}
 		return err(404, "RUTA_NO_EXISTE", "ruta");
 	}
 	PeticionWeb como(const std::string& u) { return [this, u](const std::string& m, const std::string& r, const std::string& c, int& e, std::string& s) { return manejar(u, m, r, c, e, s); }; }
 };
+static const char* UH = "a1000000-0000-4000-8000-000000000001";   // anfitrion
+static const char* UA = "a2000000-0000-4000-8000-000000000002";   // amigo
+static const char* UI = "a4000000-0000-4000-8000-000000000004";   // intruso (no sigue a nadie)
 
 static void pruebaWeb() {
-	std::cout << "[web: transporte, esperas (404/401/429/timeout/500/corrupto), canal, seguidores, hub falso con el contrato]\n";
+	std::cout << "[web real: transporte, esperas (404/401/429/503/timeout/500/corrupto), codigo, seguir, hub falso con el contrato]\n";
 	HubFalso hub;
-	hub.nombres = { {"a1000000-0000-4000-8000-000000000001", "Fralex"}, {"a2000000-0000-4000-8000-000000000002", "Amigo"}, {"a4000000-0000-4000-8000-000000000004", "Intruso"} };
-	hub.amigos.insert({ "a1000000-0000-4000-8000-000000000001", "a2000000-0000-4000-8000-000000000002" });
+	hub.nombres = { {UH, "Fralex"}, {UA, "Amigo"}, {UI, "Intruso"} };
+	hub.hosts = { UH };
 	long long reloj = 1000;
 	auto relojf = [&]() { return reloj; };
-	TransporteWeb th(hub.como("a1000000-0000-4000-8000-000000000001"), "", relojf), ta(hub.como("a2000000-0000-4000-8000-000000000002"), "", relojf), ti(hub.como("a4000000-0000-4000-8000-000000000004"), "", relojf);
+	TransporteWeb th(hub.como(UH), relojf), ta(hub.como(UA), relojf), ti(hub.como(UI), relojf);
 	ClienteTraspasosWeb ch(th), ca(ta), ci(ti);
 	std::string e;
 	CanalWeb c1, c2;
-	CHECK(ch.canal("obtener", c1, e) && c1.hay && !c1.id.empty() && !c1.codigo.empty() && c1.activo, "anfitrion: «obtener» crea su canal y su código");
-	CHECK(ch.canal("obtener", c2, e) && c2.id == c1.id && c2.codigo == c1.codigo, "anfitrion: «obtener» otra vez es idempotente (mismo canal y código)");
-	CHECK(ch.canal("rotar_codigo", c2, e) && c2.codigo != c1.codigo && c2.id == c1.id, "anfitrion: rotar el código cambia el código y no el canal");
-	CHECK(!ch.canal("borrar_todo", c2, e), "anfitrion: una acción desconocida se rechaza sin llamar a la web");
-	// seguir
-	SiguiendoWeb s;
-	CHECK(!ca.seguir("PHX-9999", "", s, e) && e.find("Código") != std::string::npos, "amigo: un código incorrecto da un error claro");
-	CHECK(!ca.seguir("'; drop table", "", s, e), "amigo: un código con caracteres raros se rechaza antes de llamar");
-	const int antes = hub.peticiones;
-	CHECK(!ci.seguir("", "a1000000-0000-4000-8000-000000000001", s, e), "intruso: no es amigo y no tiene código → la web lo rechaza");
-	(void)antes;
-	CHECK(ca.seguir("", "a1000000-0000-4000-8000-000000000001", s, e) && s.estado == "pendiente" && s.canalId == c1.id && s.anfitrionNombre == "Fralex", "amigo: seguir al anfitrión por ser amigo queda «pendiente»");
-	std::vector<Lote> lotes; int ileg = 0;
-	ta.ponerCanal(c1.id);
-	CHECK(!ta.traer(0, lotes, ileg, e) && ta.estadoClave() == "pendiente_aprobacion", "amigo pendiente: no puede leer lotes todavía (pendiente_aprobacion)");
-	CHECK(ta.esperaMs() > 0, "amigo pendiente: espera antes de volver a preguntar");
+	CHECK(ch.codigo(false, c1, e) && c1.hay && c1.codigo.size() == 8, "anfitrion: pide su código de 8 caracteres");
+	CHECK(ch.codigo(false, c2, e) && c2.codigo == c1.codigo, "anfitrion: pedirlo otra vez da el mismo (estable)");
+	CHECK(ch.codigo(true, c2, e) && c2.codigo != c1.codigo, "anfitrion: rotar cambia el código");
 	CanalWeb c3;
-	CHECK(ch.seguidor("a2000000-0000-4000-8000-000000000002", "aprobar", c3, e) && c3.seguidores.size() == 1 && c3.seguidores[0].estado == "activo", "anfitrion: aprueba al amigo");
-	reloj += 40000;
-	std::vector<SiguiendoWeb> sg;
-	CHECK(ca.siguiendo(sg, e) && sg.size() == 1 && sg[0].estado == "activo" && sg[0].anfitrionNombre == "Fralex", "amigo: ahora sale «activo» en la lista de a quién sigue");
-	CHECK(ta.traer(0, lotes, ileg, e) && lotes.empty() && ta.estadoClave() == "ok", "amigo aprobado: lee el canal (vacío)");
+	CHECK(!ca.codigo(false, c3, e) && e.find("host") != std::string::npos && ta.estadoClave() == "sin_permiso", "amigo (no es host): no puede pedir código (HOST_NO_AUTORIZADO → sin_permiso)");
+	reloj += 100000; ta.reintentarYa();
+	SiguiendoWeb s;
+	const std::string k0 = ta.estadoClave();
+	CHECK(!ca.seguir("ZZZZZZZZ", false, s, e) && e.find("incorrecto") != std::string::npos && ta.estadoClave() == k0, "amigo: un código incorrecto da un error claro y NO estropea el estado del transporte");
+	CHECK(!ca.seguir("'; drop table", false, s, e), "amigo: un código con caracteres raros se rechaza antes de llamar");
+	CHECK(!ca.seguir(c1.codigo, false, s, e), "amigo: el código viejo (antes de rotarlo) ya no sirve");
+	std::vector<Lote> lotes; int ileg = 0;
+	ta.ponerPuedeLeer(false);
+	CHECK(!ta.traer(0, lotes, ileg, e) && ta.estadoClave() == "sin_anfitrion", "amigo que aún no sigue a nadie: «escribe su código», sin llamar a la web");
+	ta.ponerPuedeLeer(true);
+	CHECK(ca.seguir(c2.codigo, false, s, e) && s.anfitrionNombre == "Fralex" && s.anfitrionId == UH, "amigo: se une con el código vigente");
+	std::vector<SiguiendoWeb> sg; std::vector<std::string> ms;
+	CHECK(ca.siguiendo(sg, ms, e) && sg.size() == 1 && sg[0].anfitrionNombre == "Fralex", "amigo: sale en «a quién sigo»");
+	CHECK(ch.siguiendo(sg, ms, e) && ms.size() == 1 && ms[0] == "Amigo", "anfitrion: sale el amigo en «me siguen»");
+	CHECK(!ch.seguir(c2.codigo, false, s, e) && e.find("propio") != std::string::npos, "anfitrion: seguirse a sí mismo exige modo prueba (409 SEGUIR_A_UNO_MISMO)");
+	CHECK(ch.seguir(c2.codigo, true, s, e), "anfitrion: en modo prueba sí se sigue a sí mismo");
 	// publicar y leer
-	Lote a = crearLote("Fralex", "h1", "2026-10-12T10:00:00Z", "ConmeGOL", "358c51b8ef11", { cl(1, 2, 3) });
+	Lote a = crearLote("Fralex", "h1", "2026-10-12T10:00:00Z", "ConmeGOL", "358c51b8ef11", { cl(1, 0, 3) });   // desde_id 0 = sin equipo, lo admite la web
 	Lote b = crearLote("Fralex", "h1", "2026-10-12T10:05:00Z", "ConmeGOL", "358c51b8ef11", { cl(4, 5, 6) });
 	bool ya = false;
-	CHECK(th.publicar(a, ya, e) && a.seq == 1 && !ya, "anfitrion: publicar da seq 1");
+	CHECK(th.publicar(a, ya, e) && a.seq == 1 && !ya, "anfitrion: publicar da seq 1 (la web NO recibe campos que no existen en su contrato)");
 	Lote a2 = a; a2.seq = 0;
-	CHECK(th.publicar(a2, ya, e) && ya && a2.seq == 1 && hub.canalDe("a1000000-0000-4000-8000-000000000001").lotes.size() == 1, "anfitrion: reenviar el mismo lote (409) no duplica y devuelve su seq");
+	CHECK(th.publicar(a2, ya, e) && ya && a2.seq == 1 && hub.lotes.size() == 1, "anfitrion: reenviar el mismo lote (repetido:true) no duplica y devuelve su seq");
 	th.publicar(b, ya, e);
-	CHECK(ta.traer(0, lotes, ileg, e) && lotes.size() == 2 && lotes[1].seq == 2 && lotes[0].cambios[0].jugador == 1, "amigo: trae los 2 lotes en orden");
+	CHECK(ta.traer(0, lotes, ileg, e) && lotes.size() == 2 && lotes[1].seq == 2 && lotes[0].cambios[0].desde == 0 && lotes[0].anfitrion == UH && lotes[0].anfitrionNombre == "Fralex", "amigo: trae los 2 lotes en orden, con desde_id 0, el anfitrion_id y su nombre visible");
 	CHECK(ta.traer(1, lotes, ileg, e) && lotes.size() == 1 && lotes[0].id == b.id, "amigo: desde seq 1 solo trae el nuevo");
-	ti.ponerCanal(c1.id);
-	CHECK(!ti.traer(0, lotes, ileg, e) && ti.estadoClave() == "sin_permiso", "intruso: no puede leer el canal (sin_permiso)");
-	// duplicados / desordenados / corruptos que entrega el hub
-	hub.canalDe("a1000000-0000-4000-8000-000000000001").lotes.push_back(hub.canalDe("a1000000-0000-4000-8000-000000000001").lotes[0]);          // un duplicado (mismo seq)
-	std::swap(hub.canalDe("a1000000-0000-4000-8000-000000000001").lotes[0], hub.canalDe("a1000000-0000-4000-8000-000000000001").lotes[1]);      // desordenados
-	CHECK(ta.traer(0, lotes, ileg, e) && lotes.size() == 3 && lotes[0].seq <= lotes[1].seq && lotes[1].seq <= lotes[2].seq, "hub entrega desordenado y duplicado: el transporte los ordena por seq");
-	hub.canalDe("a1000000-0000-4000-8000-000000000001").lotes.pop_back();
-	const json huellaBuena = hub.canalDe("a1000000-0000-4000-8000-000000000001").lotes[0]["huella"];
-	hub.canalDe("a1000000-0000-4000-8000-000000000001").lotes[0]["huella"] = "0000";
-	CHECK(ta.traer(0, lotes, ileg, e) && lotes.size() == 1 && ileg == 1, "un lote alterado por el camino (huella) se rechaza y se cuenta; el bueno pasa");
-	hub.canalDe("a1000000-0000-4000-8000-000000000001").lotes[0]["huella"] = huellaBuena;
-	// paginas
+	ti.ponerPuedeLeer(true);
+	CHECK(ti.traer(0, lotes, ileg, e) && lotes.empty(), "intruso: no sigue a nadie → no recibe nada (la web filtra)");
+	// nombres largos y acentos se recortan a los limites de la web ANTES de la huella
+	CambioLote largo = cl(77, 8, 9);
+	largo.jugadorNombre = std::string(70, 'x'); largo.hastaNombre = "Atl\xC3\xA9tico de Madrid con un nombre muy muy largo para el limite de la web";
+	Lote ll = crearLote(std::string(60, 'A'), "h1", "2026-10-12T11:00:00Z", std::string(90, 'p'), "358c51b8ef11", { largo });
+	CHECK(ll.autor.size() <= 40 && ll.parche.size() <= 60 && ll.cambios[0].jugadorNombre.size() <= 48 && ll.cambios[0].hastaNombre.size() <= 48, "crearLote recorta a los límites de la web (autor 40, parche 60, nombres 48)");
+	CHECK(th.publicar(ll, ya, e) && ta.traer(2, lotes, ileg, e) && lotes.size() == 1 && ileg == 0, "un lote con nombres largos (recortados) llega y su huella cuadra");
+	// duplicados / alterados / corruptos que entrega el hub
+	json dup = hub.lotes[0].lote; hub.lotes.push_back({ 99, UH, dup });   // mismo id con otro seq (un hub torpe)
+	CHECK(ta.traer(0, lotes, ileg, e) && lotes.size() == 4, "el hub repite un lote con otro seq: el transporte lo entrega y el Motor lo descartará por id");
+	hub.lotes.pop_back();
+	const json huellaBuena = hub.lotes[0].lote["huella"];
+	hub.lotes[0].lote["huella"] = "0000";
+	CHECK(ta.traer(0, lotes, ileg, e) && lotes.size() == 2 && ileg == 1, "un lote alterado por el camino (huella) se rechaza y se cuenta; los buenos pasan");
+	hub.lotes[0].lote["huella"] = huellaBuena;
+	// paginas: la pagina llena avisa de que hay mas
 	hub.limitePagina = 1;
-	CHECK(ta.traer(0, lotes, ileg, e) && lotes.size() == 1 && ta.hayMas(), "paginas: con limite 1 el transporte avisa de que hay más");
-	hub.limitePagina = 100;
-	// pausa del canal
-	CHECK(ch.canal("pausar", c3, e) && !c3.activo, "anfitrion: pausar el canal");
-	CHECK(ta.traer(0, lotes, ileg, e) && lotes.empty(), "canal en pausa: el amigo no recibe nada");
-	ch.canal("reanudar", c3, e);
-	// purga
-	hub.canalDe("a1000000-0000-4000-8000-000000000001").seqMin = 2;
-	CHECK(ta.traer(0, lotes, ileg, e) && ta.purgadoHasta() == 2, "retención: si la web purgó lotes antiguos, el transporte lo dice (purgadoHasta)");
-	hub.canalDe("a1000000-0000-4000-8000-000000000001").seqMin = 1;
-	// quitar / dejar
-	CHECK(ch.seguidor("a2000000-0000-4000-8000-000000000002", "quitar", c3, e) && c3.seguidores.empty(), "anfitrion: quita al amigo");
-	reloj += 40000;
-	CHECK(!ta.traer(0, lotes, ileg, e) && ta.estadoClave() == "sin_permiso", "amigo quitado: ya no lee");
-	CHECK(!ch.seguidor("a2000000-0000-4000-8000-000000000002", "aprobar", c3, e), "anfitrion: aprobar a quien no lo sigue da error");
-	reloj += 100000;
-	CHECK(!ca.seguir(c1.codigo, "", s, e), "el código viejo (antes de rotarlo) ya no sirve");
-	CHECK(ca.seguir(c3.codigo, "", s, e) && s.estado == "activo", "con el código vigente se entra al momento (activo)");
+	CHECK(ta.traer(0, lotes, ileg, e) && lotes.size() == 1 && ta.hayMas(), "la web pagina más corto de lo pedido: Link sabe que debe volver a preguntar (hayMas)");
+	hub.limitePagina = 50;
+	// dejar de seguir
+	CHECK(ca.dejar(UH, e), "amigo: deja de seguir");
+	CHECK(ta.traer(0, lotes, ileg, e) && lotes.empty(), "amigo que dejó de seguir: ya no recibe");
+	CHECK(!ca.dejar("no-es-un-id!", e), "amigo: un id raro se rechaza antes de llamar");
+	ca.seguir(c2.codigo, false, s, e);
 	// esperas
 	reloj += 100000; ta.reintentarYa();
-	const int p0 = hub.peticiones;
 	hub.fallo = "404";
-	CHECK(!ta.traer(0, lotes, ileg, e) && ta.estadoClave() == "web_sin_endpoints" && ta.esperaMs() >= 299000 && ta.esperaMs() <= 300000, "404: «la web aún no tiene los traspasos» y espera 5 min");
-	CHECK(e.find("PROMPT") != std::string::npos || e.find("prompt") != std::string::npos, "404: el texto dice que hay que pegar el prompt WEB");
+	CHECK(!ta.traer(0, lotes, ileg, e) && ta.estadoClave() == "web_sin_endpoints" && ta.esperaMs() >= 299000 && ta.esperaMs() <= 300000, "404 sin código: «la web aún no tiene los traspasos» y espera 5 min");
+	CHECK(e.find("web aún no tiene") != std::string::npos, "404: el texto lo explica");
 	reloj += 301000;
 	CHECK(ta.esperaMs() == 0, "404: pasados 5 min se puede volver a probar");
 	hub.fallo = "401"; ta.reintentarYa();
-	CHECK(!ta.traer(0, lotes, ileg, e) && ta.estadoClave() == "sin_cuenta" && ta.esperaMs() >= 59000, "401: «vuelve a vincular tu cuenta», espera 60 s");
+	CHECK(!ta.traer(0, lotes, ileg, e) && ta.estadoClave() == "sin_cuenta" && ta.esperaMs() >= 59000, "401 TOKEN_*: «vuelve a vincular tu cuenta», espera 60 s");
 	hub.fallo = "429"; ta.reintentarYa();
-	CHECK(!ta.traer(0, lotes, ileg, e) && ta.estadoClave() == "limite" && ta.esperaMs() >= 6000 && ta.esperaMs() <= 7000, "429: respeta reintentar_en (7 s)");
+	CHECK(!ta.traer(0, lotes, ileg, e) && ta.estadoClave() == "limite" && ta.esperaMs() >= 6000 && ta.esperaMs() <= 7000, "429 DEMASIADOS_INTENTOS: respeta reintentar_en (7 s)");
+	hub.fallo = "503"; ta.reintentarYa();
+	CHECK(!ta.traer(0, lotes, ileg, e) && ta.estadoClave() == "liga_pausada" && ta.esperaMs() >= 59000, "503 LIGA_PAUSADA: «la web tiene la liga en pausa», espera 60 s (no es un fallo de red)");
 	hub.fallo = "timeout"; ta.reintentarYa();
 	std::vector<long long> esperas;
 	for (int i = 0; i < 7; i++) { reloj += 200000; ta.traer(0, lotes, ileg, e); esperas.push_back(ta.esperaMs() / 1000); }
@@ -425,20 +396,17 @@ static void pruebaWeb() {
 	CHECK(!ta.traer(0, lotes, ileg, e) && ta.estadoClave() == "respuesta_rara", "respuesta corrupta (HTML): «no se entiende», no rompe nada");
 	hub.fallo = ""; ta.reintentarYa();
 	CHECK(ta.traer(0, lotes, ileg, e) && ta.estadoClave() == "ok" && ta.esperaMs() == 0, "la web vuelve: todo normal y sin esperas");
-	(void)p0;
-	// sin cuenta vinculada (estado -1) y sin canal
-	TransporteWeb sinCuenta([](const std::string&, const std::string&, const std::string&, int& est, std::string&) { est = -1; return true; }, "c001-0000-4000-8000-000000000000", relojf);
+	// publicar con la web mal: no se pierde nada, se explica
+	hub.fallo = "429"; th.reintentarYa();
+	Lote c = crearLote("Fralex", "h1", "2026-10-12T12:00:00Z", "", "", { cl(8, 1, 2) });
+	CHECK(!th.publicar(c, ya, e) && th.estadoClave() == "limite", "publicar con 429: falla limpio (el Motor lo reintenta después)");
+	hub.fallo = ""; th.reintentarYa();
+	CHECK(!ci.seguir("", false, s, e), "seguir sin código: error antes de llamar");
+	Lote d = crearLote("Intruso", "h9", "2026-10-12T12:00:00Z", "", "", { cl(9, 1, 2) });
+	CHECK(!ti.publicar(d, ya, e) && ti.estadoClave() == "sin_permiso" && e.find("host") != std::string::npos, "un amigo que NO es host no puede publicar (HOST_NO_AUTORIZADO → sin_permiso)");
+	// PC sin vincular y sin conexion
+	TransporteWeb sinCuenta([](const std::string&, const std::string&, const std::string&, int& est, std::string&) { est = -1; return true; }, relojf);
 	CHECK(!sinCuenta.traer(0, lotes, ileg, e) && sinCuenta.estadoClave() == "sin_cuenta", "PC sin vincular: «vincula tu cuenta», no se manda nada");
-	TransporteWeb sinCanal(hub.como("a2000000-0000-4000-8000-000000000002"), "", relojf);
-	CHECK(!sinCanal.traer(0, lotes, ileg, e) && sinCanal.estadoClave() == "sin_anfitrion", "sin elegir anfitrión: «elige a quién sigues», sin llamar a la web");
-	TransporteWeb canalRaro(hub.como("a2000000-0000-4000-8000-000000000002"), "../../etc", relojf);
-	CHECK(!canalRaro.traer(0, lotes, ileg, e) && canalRaro.estadoClave() == "sin_anfitrion", "un canal con caracteres raros nunca llega a la ruta");
-	// dejar de seguir
-	reloj += 400000;
-	SiguiendoWeb s2;
-	ca.seguir("", "a1000000-0000-4000-8000-000000000001", s2, e);
-	CHECK(ca.dejar(s2.canalId, e), "amigo: deja de seguir");
-	CHECK(!ca.dejar("no-es-un-id!", e), "amigo: un id raro se rechaza antes de llamar");
 }
 
 static void pruebaLista() {
@@ -882,10 +850,10 @@ static void pruebaReal(const fs::path& tmp, const std::string& plantilla, const 
 	CHECK(!quedan, "deshacer: la base del amigo vuelve a ser la original (no queda archivo generado)");
 }
 
-// Cadena completa POR LA WEB (hub falso): anfitrion y amigo son cuentas distintas; el amigo sigue al anfitrion por código o por amistad (con aprobación);
-// un intruso no lee; 404/web caída no rompen nada; se pone al día; cambiar de carpeta a web no mezcla las numeraciones.
+// Cadena completa POR LA WEB (hub falso con el contrato real): anfitrion y amigo son cuentas distintas; el amigo sigue al anfitrion con su código; un intruso
+// no recibe nada; 404/web caída no rompen nada; se pone al día; cambiar de carpeta a web no mezcla las numeraciones.
 static void pruebaCadenaWeb(const fs::path& tmp, const std::string& plantilla) {
-	std::cout << "[cadena completa POR LA WEB (hub falso): cuentas, seguir por código/amistad, aprobar, intruso, 404, ponerse al día, carpeta → web]\n";
+	std::cout << "[cadena completa POR LA WEB (hub falso con el contrato real): código, seguir, intruso, 404, ponerse al día, carpeta → web]\n";
 	Foto f0; std::string e;
 	if (!leerFoto(plantilla, f0, e)) { CHECK(false, "la plantilla se lee"); return; }
 	std::set<uint32_t> ya;
@@ -895,14 +863,14 @@ static void pruebaCadenaWeb(const fs::path& tmp, const std::string& plantilla) {
 	const Mundo mundo = mundoDesde(f0, 0, 0);
 
 	HubFalso hub;
-	hub.nombres = { {"a1000000-0000-4000-8000-000000000001", "Fralex"}, {"a2000000-0000-4000-8000-000000000002", "Amigo"}, {"a3000000-0000-4000-8000-000000000003", "Pendiente"}, {"a4000000-0000-4000-8000-000000000004", "Intruso"} };
-	hub.amigos.insert({ "a1000000-0000-4000-8000-000000000001", "a2000000-0000-4000-8000-000000000002" }); hub.amigos.insert({ "a1000000-0000-4000-8000-000000000001", "a3000000-0000-4000-8000-000000000003" });
+	hub.nombres = { {UH, "Fralex"}, {UA, "Amigo"}, {UI, "Intruso"} };
+	hub.hosts = { UH };
 	long long reloj = 1000;
 	auto relojf = [&]() { return reloj; };
-	auto tHost = std::make_shared<TransporteWeb>(hub.como("a1000000-0000-4000-8000-000000000001"), "", relojf);
+	auto tHost = std::make_shared<TransporteWeb>(hub.como(UH), relojf);
 	CanalWeb canal;
 	ClienteTraspasosWeb cliH(*tHost);
-	CHECK(cliH.canal("obtener", canal, e) && canal.hay, "anfitrion: tiene su canal en la web");
+	CHECK(cliH.codigo(false, canal, e) && canal.hay, "anfitrion: tiene su código en la web");
 
 	const fs::path optDir = tmp / "web-anfitrion-docs";
 	const fs::path opt = optDir / "EDIT00000000";
@@ -918,66 +886,66 @@ static void pruebaCadenaWeb(const fs::path& tmp, const std::string& plantilla) {
 	auto cambiar = [&](const std::function<void(std::vector<uint8_t>&)>& f, int seg) { escribir(opt, editarOption(plantilla, f)); tocar(opt, seg); };
 	anfitrion(A);
 
-	// amigo: entra con el código (activo al momento)
-	auto tAmigo = std::make_shared<TransporteWeb>(hub.como("a2000000-0000-4000-8000-000000000002"), "", relojf);
+	// amigo: aun no sigue a nadie → no llama a la web; luego entra con el código
+	auto tAmigo = std::make_shared<TransporteWeb>(hub.como(UA), relojf);
 	ClienteTraspasosWeb cliA(*tAmigo);
-	SiguiendoWeb sig;
-	CHECK(cliA.seguir(canal.codigo, "", sig, e) && sig.estado == "activo", "amigo: se une con el código del anfitrión");
-	tAmigo->ponerCanal(sig.canalId);
+	tAmigo->ponerPuedeLeer(false);
 	const fs::path jb = juegoFalso(tmp, "web-juego-amigo", mundo);
 	Config cb = configBase(tmp / "web-estado-amigo", jb, "Amigo", &cerrado);
 	cb.recibir = true; cb.listaManual = []() { return fj::Lista(); };
 	Motor B(cb, tAmigo);
+	const int p0 = hub.peticiones;
+	B.pasoRecibir();
+	CHECK(hub.peticiones == p0 && est(B)["amigo"]["estado"] == "sin_anfitrion", "amigo que aún no sigue a nadie: la interfaz dice «elige a quién sigues» y no se llama a la web");
+	SiguiendoWeb sig;
+	CHECK(cliA.seguir(canal.codigo, false, sig, e) && sig.anfitrionNombre == "Fralex", "amigo: se une con el código del anfitrión");
+	tAmigo->ponerPuedeLeer(true);
 
 	cambiar([&](std::vector<uint8_t>& d) { sacar(d, js[0].jug, js[0].de); meter(d, js[0].jug, js[0].a); }, 5);
 	anfitrion(A);
-	CHECK(est(A)["anfitrion"]["estado"] == "publicado" && hub.canalDe("a1000000-0000-4000-8000-000000000001").lotes.size() == 1, "anfitrion: el traspaso llega a la web como un lote");
+	CHECK(est(A)["anfitrion"]["estado"] == "publicado" && hub.lotes.size() == 1, "anfitrion: el traspaso llega a la web como un lote");
 	B.pasoRecibir();
 	CHECK(equiposDe(filasDe(jb), js[0].jug) == std::set<uint32_t>{ js[0].a }, "amigo: lo recibe por la web y lo aplica en su Phoenix-DB");
 	CHECK(est(B)["amigo"]["estado"] == "aplicado" && est(B)["transporteEstado"]["clave"] == "ok" && est(B)["transporteEstado"]["tipo"] == "web", "amigo: estado «aplicado» y transporte web «ok»");
+	CHECK(B.registros()[0].lote.anfitrionNombre == "Fralex", "amigo: el historial sabe el nombre visible del anfitrión");
 
 	// intruso: no sigue a nadie
 	{
-		auto tI = std::make_shared<TransporteWeb>(hub.como("a4000000-0000-4000-8000-000000000004"), canal.id, relojf);
+		auto tI = std::make_shared<TransporteWeb>(hub.como(UI), relojf);
 		const fs::path ji = juegoFalso(tmp, "web-juego-intruso", mundo);
 		Config ci = configBase(tmp / "web-estado-intruso", ji, "Intruso", &cerrado);
 		ci.recibir = true; ci.listaManual = []() { return fj::Lista(); };
 		Motor I(ci, tI);
 		I.pasoRecibir();
-		CHECK(filasDe(ji).empty() && est(I)["amigo"]["estado"] == "sin_permiso", "intruso: conoce el canal pero la web no le deja leer: no se aplica nada (sin_permiso)");
+		CHECK(filasDe(ji).empty() && I.registros().empty(), "intruso (sin el código): la web no le entrega nada y no se aplica nada");
 	}
-	// amigo por amistad: queda pendiente hasta que el anfitrion apruebe
+	// un amigo que NO es host no puede publicar
 	{
-		auto tP = std::make_shared<TransporteWeb>(hub.como("a3000000-0000-4000-8000-000000000003"), "", relojf);
-		ClienteTraspasosWeb cliP(*tP);
-		SiguiendoWeb sp;
-		CHECK(cliP.seguir("", "a1000000-0000-4000-8000-000000000001", sp, e) && sp.estado == "pendiente", "amigo 2: pide seguir por ser amigo: queda pendiente");
-		tP->ponerCanal(sp.canalId);
-		const fs::path jp = juegoFalso(tmp, "web-juego-pend", mundo);
-		Config cp = configBase(tmp / "web-estado-pend", jp, "Pendiente", &cerrado);
-		cp.recibir = true; cp.listaManual = []() { return fj::Lista(); };
-		Motor P(cp, tP);
-		P.pasoRecibir();
-		CHECK(filasDe(jp).empty() && est(P)["amigo"]["estado"] == "pendiente_aprobacion", "amigo 2 pendiente: no recibe nada y la interfaz sabe por qué (pendiente_aprobacion)");
-		CanalWeb cc;
-		CHECK(cliH.seguidor("a3000000-0000-4000-8000-000000000003", "aprobar", cc, e), "anfitrion: aprueba a amigo 2");
-		P.reintentarYa();
-		P.pasoRecibir();
-		CHECK(equiposDe(filasDe(jp), js[0].jug) == std::set<uint32_t>{ js[0].a } && est(P)["amigo"]["estado"] == "aplicado", "amigo 2 aprobado: se pone al día con lo ya publicado");
-		cliH.seguidor("a3000000-0000-4000-8000-000000000003", "quitar", cc, e);
+		auto tX = std::make_shared<TransporteWeb>(hub.como(UA), relojf);
+		const fs::path od = tmp / "web-nohost-docs";
+		escribir(od / "EDIT00000000", plantilla);
+		Config cx = configBase(tmp / "web-estado-nohost", fs::path(), "Amigo", &cerrado);
+		cx.publicar = true; cx.confirmarAntes = false; cx.optionFile = od; cx.sondeoMs = 1;
+		cx.enriquecer = ca.enriquecer;
+		Motor X(cx, tX);
+		anfitrion(X);
+		escribir(od / "EDIT00000000", editarOption(plantilla, [&](std::vector<uint8_t>& d) { sacar(d, js[5].jug, js[5].de); meter(d, js[5].jug, js[5].a); }));
+		tocar(od / "EDIT00000000", 10);
+		anfitrion(X);
+		CHECK(est(X)["anfitrion"]["estado"] == "transporte:sin_permiso" && hub.lotes.size() == 1, "cuenta que no es host aprobado intenta publicar: «sin permiso», no se publica nada y no se pierde el traspaso");
 	}
 
 	// 404: la web aún no tiene los endpoints → no falla nada, no insiste, y se recupera con «volver a comprobar»
 	{
 		Config c404 = ca; c404.dirEstado = tmp / "web-estado-404"; c404.optionFile = tmp / "web-404-docs"; c404.sondeoMs = 1;
 		escribir(c404.optionFile / "EDIT00000000", plantilla);
-		auto t404 = std::make_shared<TransporteWeb>(hub.como("a1000000-0000-4000-8000-000000000001"), "", relojf);
+		auto t404 = std::make_shared<TransporteWeb>(hub.como(UH), relojf);
 		Motor H(c404, t404);
 		anfitrion(H);
 		escribir(c404.optionFile / "EDIT00000000", editarOption(plantilla, [&](std::vector<uint8_t>& d) { sacar(d, js[1].jug, js[1].de); meter(d, js[1].jug, js[1].a); }));
 		tocar(c404.optionFile / "EDIT00000000", 10);
 		hub.fallo = "404";
-		const size_t lotesAntes = hub.canalDe("a1000000-0000-4000-8000-000000000001").lotes.size();
+		const size_t lotesAntes = hub.lotes.size();
 		anfitrion(H);
 		json eh = est(H);
 		CHECK(eh["anfitrion"]["estado"] == "transporte:web_sin_endpoints" && eh["transporteEstado"]["clave"] == "web_sin_endpoints", "404 al publicar: estado «la web aún no tiene los traspasos» y no se pierde el traspaso");
@@ -987,14 +955,14 @@ static void pruebaCadenaWeb(const fs::path& tmp, const std::string& plantilla) {
 		hub.fallo = "";
 		H.reintentarYa();
 		anfitrion(H);
-		CHECK(hub.canalDe("a1000000-0000-4000-8000-000000000001").lotes.size() == lotesAntes + 1 && est(H)["anfitrion"]["estado"] == "publicado", "«volver a comprobar»: con la web ya lista se publica el traspaso que estaba esperando");
+		CHECK(hub.lotes.size() == lotesAntes + 1 && est(H)["anfitrion"]["estado"] == "publicado", "«volver a comprobar»: con la web ya lista se publica el traspaso que estaba esperando");
 		B.pasoRecibir();
 		CHECK(equiposDe(filasDe(jb), js[1].jug) == std::set<uint32_t>{ js[1].a }, "amigo: recibe también ese segundo lote");
 		// el amigo con 404 / timeout: tampoco insiste ni se rompe
 		Config c2 = cb; c2.dirEstado = tmp / "web-estado-amigo404"; c2.sondeoMs = 1;
 		const fs::path j404 = juegoFalso(tmp, "web-juego-amigo404", mundo);
 		c2.juego = j404;
-		auto t2 = std::make_shared<TransporteWeb>(hub.como("a2000000-0000-4000-8000-000000000002"), sig.canalId, relojf);
+		auto t2 = std::make_shared<TransporteWeb>(hub.como(UA), relojf);
 		Motor M(c2, t2);
 		hub.fallo = "404";
 		M.pasoRecibir();
@@ -1008,7 +976,7 @@ static void pruebaCadenaWeb(const fs::path& tmp, const std::string& plantilla) {
 		CHECK(equiposDe(filasDe(j404), js[0].jug) == std::set<uint32_t>{ js[0].a } && equiposDe(filasDe(j404), js[1].jug) == std::set<uint32_t>{ js[1].a }, "la web vuelve: se pone al día con los 2 lotes (amigo que no había recibido ninguno)");
 	}
 
-	// ponerse al día al abrir (amigo apagado mientras se publicaban varios lotes) + paginas + duplicados + desordenados
+	// ponerse al día al abrir (amigo apagado mientras se publicaban varios lotes) + páginas + duplicado
 	{
 		cambiar([&](std::vector<uint8_t>& d) { sacar(d, js[0].jug, js[0].de); meter(d, js[0].jug, js[0].a); sacar(d, js[1].jug, js[1].de); meter(d, js[1].jug, js[1].a);
 			sacar(d, js[2].jug, js[2].de); meter(d, js[2].jug, js[2].a); }, 20);
@@ -1016,26 +984,26 @@ static void pruebaCadenaWeb(const fs::path& tmp, const std::string& plantilla) {
 		cambiar([&](std::vector<uint8_t>& d) { sacar(d, js[0].jug, js[0].de); meter(d, js[0].jug, js[0].a); sacar(d, js[1].jug, js[1].de); meter(d, js[1].jug, js[1].a);
 			sacar(d, js[2].jug, js[2].de); meter(d, js[2].jug, js[2].a); sacar(d, js[3].jug, js[3].de); meter(d, js[3].jug, js[3].a); }, 30);
 		anfitrion(A);
-		CHECK(hub.canalDe("a1000000-0000-4000-8000-000000000001").lotes.size() >= 4, "anfitrion: publicó más lotes mientras el amigo estaba apagado (" + std::to_string(hub.canalDe("a1000000-0000-4000-8000-000000000001").lotes.size()) + ")");
-		auto& ls = hub.canalDe("a1000000-0000-4000-8000-000000000001").lotes;
-		ls.push_back(ls[0]); ls.back()["seq"] = hub.canalDe("a1000000-0000-4000-8000-000000000001").ultimoSeq + 1;   // el hub se equivoca y repite un lote con otro seq
+		CHECK(hub.lotes.size() >= 4, "anfitrion: publicó más lotes mientras el amigo estaba apagado (" + std::to_string(hub.lotes.size()) + ")");
+		const size_t n0 = hub.lotes.size();
+		hub.lotes.push_back({ hub.ultimoSeq + 1, UH, hub.lotes[0].lote }); hub.ultimoSeq++;   // el hub se equivoca y repite un lote con otro seq
 		hub.limitePagina = 2;
 		const fs::path jn = juegoFalso(tmp, "web-juego-alday", mundo);
 		Config cn = configBase(tmp / "web-estado-alday", jn, "Amigo", &cerrado);
 		cn.recibir = true; cn.listaManual = []() { return fj::Lista(); };
-		auto tN = std::make_shared<TransporteWeb>(hub.como("a2000000-0000-4000-8000-000000000002"), sig.canalId, relojf);
+		auto tN = std::make_shared<TransporteWeb>(hub.como(UA), relojf);
 		Motor N(cn, tN);
 		N.pasoRecibir();
-		hub.limitePagina = 100;
+		hub.limitePagina = 50;
 		const std::vector<Registro> rg = N.registros();
 		std::set<std::string> ids; for (const Registro& r : rg) ids.insert(r.lote.id);
-		CHECK(ids.size() == rg.size() && rg.size() >= 4, "ponerse al día: un solo paso trae todas las páginas (" + std::to_string(rg.size()) + " lotes) sin duplicados");
-		CHECK(equiposDe(filasDe(jn), js[3].jug) == std::set<uint32_t>{ js[3].a } && equiposDe(filasDe(jn), js[0].jug) == std::set<uint32_t>{ js[0].a }, "ponerse al día: el resultado final es el correcto aunque llegaran desordenados y repetidos");
+		CHECK(ids.size() == rg.size() && rg.size() >= n0, "ponerse al día: los lotes llegan sin duplicados (" + std::to_string(rg.size()) + " lotes)");
+		CHECK(equiposDe(filasDe(jn), js[3].jug) == std::set<uint32_t>{ js[3].a } && equiposDe(filasDe(jn), js[0].jug) == std::set<uint32_t>{ js[0].a }, "ponerse al día: el resultado final es correcto aunque el hub repitiera un lote");
 		Motor N2(cn, tN);   // reabrir Link: recuerda hasta dónde leyó
 		const int pa0 = hub.peticiones;
 		N2.pasoRecibir();
 		CHECK(N2.registros().size() == rg.size() && hub.peticiones == pa0 + 1, "reabrir Link: solo pregunta lo nuevo (1 petición) y no duplica nada");
-		ls.pop_back();
+		hub.lotes.pop_back(); hub.ultimoSeq--;
 	}
 
 	// carpeta → web: cada buzón tiene su numeración; no se salta ni se mezcla nada
@@ -1052,10 +1020,10 @@ static void pruebaCadenaWeb(const fs::path& tmp, const std::string& plantilla) {
 		Motor M(cm, tc);
 		M.pasoRecibir();
 		CHECK(equiposDe(filasDe(jm), js[4].jug) == std::set<uint32_t>{ js[4].a } && M.registros().size() == 2, "carpeta: recibe sus 2 lotes (seq 1 y 2 de la carpeta)");
-		auto tw = std::make_shared<TransporteWeb>(hub.como("a2000000-0000-4000-8000-000000000002"), sig.canalId, relojf);
+		auto tw = std::make_shared<TransporteWeb>(hub.como(UA), relojf);
 		M.cambiarTransporte(tw);
 		M.pasoRecibir();
-		CHECK(M.registros().size() >= 6 && equiposDe(filasDe(jm), js[0].jug) == std::set<uint32_t>{ js[0].a }, "cambia a la web: lee los lotes del canal desde el seq 1 de la web (no se salta ninguno por el seq de la carpeta)");
+		CHECK(M.registros().size() >= 6 && equiposDe(filasDe(jm), js[0].jug) == std::set<uint32_t>{ js[0].a }, "cambia a la web: lee los lotes de la web desde su seq 1 (no se salta ninguno por el seq de la carpeta)");
 		const size_t n = M.registros().size();
 		M.cambiarTransporte(tc);
 		M.pasoRecibir();
@@ -1073,8 +1041,12 @@ static void pruebaCadenaWeb(const fs::path& tmp, const std::string& plantilla) {
 		Config cq = configBase(tmp / "web-estado-prueba", jq, "Fralex", &cerrado);
 		cq.publicar = true; cq.recibir = true; cq.confirmarAntes = false; cq.optionFile = od; cq.listaManual = []() { return fj::Lista(); };
 		cq.enriquecer = ca.enriquecer;
-		escribir(cq.dirEstado / "identidad.txt", leer(ca.dirEstado / "identidad.txt"));   // el mismo Link (misma identidad) que publicó los lotes anteriores
-		auto tq = std::make_shared<TransporteWeb>(hub.como("a1000000-0000-4000-8000-000000000001"), canal.id, relojf);
+		auto tq = std::make_shared<TransporteWeb>(hub.como(UH), relojf);
+		ClienteTraspasosWeb cliQ(*tq);
+		SiguiendoWeb sq;
+		CanalWeb cq2;
+		cliQ.codigo(false, cq2, e);
+		CHECK(!cliQ.seguir(cq2.codigo, false, sq, e) && cliQ.seguir(cq2.codigo, true, sq, e), "prueba: seguirse a sí mismo solo vale con prueba:true");
 		Motor Q(cq, tq);
 		anfitrion(Q);
 		escribir(od / "EDIT00000000", editarOption(plantilla, [&](std::vector<uint8_t>& d) { sacar(d, js[6 % js.size()].jug, js[6 % js.size()].de); meter(d, js[6 % js.size()].jug, js[6 % js.size()].a); }));

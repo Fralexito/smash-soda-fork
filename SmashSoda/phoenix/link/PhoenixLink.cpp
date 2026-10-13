@@ -33,6 +33,7 @@ namespace phoenix {
 	namespace {
 		const char* kBase = "https://fiibiyijojkxqlsrhcil.supabase.co/functions/v1/phoenix";
 		const char* kBaseLiga = "https://fiibiyijojkxqlsrhcil.supabase.co/functions/v1/liga";   // liga automática (resultado + en vivo)
+		const char* kBaseTraspasos = "https://fiibiyijojkxqlsrhcil.supabase.co/functions/v1/traspasos/v1";   // traspasos en vivo (funcion aparte, no toca «liga»)
 		const char* kVersionApp = "7.0.4";
 
 		long long ahoraMs() {
@@ -792,14 +793,14 @@ namespace phoenix {
 
 	bool PhoenixLink::pcVinculada() { std::lock_guard<std::mutex> l(_mutex); return !_token.empty(); }
 
-	bool PhoenixLink::peticionLiga(const std::string& metodo, const std::string& ruta, const std::string& cuerpo, int& estado, std::string& respuesta, int timeoutMs) {
+	bool PhoenixLink::peticionTraspasos(const std::string& metodo, const std::string& ruta, const std::string& cuerpo, int& estado, std::string& respuesta, int timeoutMs) {
 		std::string token;
 		{ std::lock_guard<std::mutex> l(_mutex); token = _token; }
 		if (token.empty()) { estado = -1; respuesta.clear(); return true; }   // sin vínculo con la web no se manda nada
 		if (ruta.empty() || ruta[0] != '/' || ruta.size() > 400) { estado = 0; respuesta.clear(); return false; }
 		std::vector<std::string> cab = cabecerasCon(token);
 		if (!cuerpo.empty()) cab.push_back("Content-Type: application/json");
-		const http::Respuesta r = http::peticion(metodo, std::string(kBaseLiga) + ruta, cuerpo, cab, timeoutMs);
+		const http::Respuesta r = http::peticion(metodo, std::string(kBaseTraspasos) + ruta, cuerpo, cab, timeoutMs);
 		estado = r.estado;
 		respuesta = r.cuerpo;
 		return r.estado != 0;

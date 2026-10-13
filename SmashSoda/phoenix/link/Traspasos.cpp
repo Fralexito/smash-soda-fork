@@ -91,8 +91,11 @@ std::string huellaDeCambios(const std::vector<CambioLote>& c) {
 Lote crearLote(const std::string& autor, const std::string& anfitrion, const std::string& creado, const std::string& parche,
 	const std::string& baseHuella, std::vector<CambioLote> cambios) {
 	std::sort(cambios.begin(), cambios.end(), [](const CambioLote& a, const CambioLote& b) { return a.jugador != b.jugador ? a.jugador < b.jugador : a.hasta < b.hasta; });
+	for (CambioLote& x : cambios) {   // limites de la web: nombres <= 48; se recorta antes de la huella para que cuadre en todos lados
+		x.jugadorNombre = phoenix::buzon::cortarUtf8(x.jugadorNombre, 48); x.desdeNombre = phoenix::buzon::cortarUtf8(x.desdeNombre, 48); x.hastaNombre = phoenix::buzon::cortarUtf8(x.hastaNombre, 48);
+	}
 	Lote l;
-	l.autor = autor; l.anfitrion = anfitrion; l.creado = creado; l.parche = parche; l.baseHuella = baseHuella;
+	l.autor = phoenix::buzon::cortarUtf8(autor, 40); l.anfitrion = anfitrion; l.creado = creado; l.parche = phoenix::buzon::cortarUtf8(parche, 60); l.baseHuella = phoenix::buzon::cortarUtf8(baseHuella, 64);
 	l.cambios = std::move(cambios);
 	l.huella = huellaDeCambios(l.cambios);
 	l.id = sha(anfitrion + "|" + l.huella + "|" + creado).substr(0, 24);
@@ -107,15 +110,23 @@ std::string loteAJson(const Lote& l, bool conSeq) {
 	return j.dump(1);
 }
 
+std::string loteAJsonWeb(const Lote& l) {
+	json j = { {"id", l.id}, {"huella", l.huella}, {"creado", l.creado}, {"autor", l.autor}, {"parche", l.parche}, {"base_huella", l.baseHuella}, {"cambios", json::array()} };
+	for (const CambioLote& c : l.cambios) j["cambios"].push_back(cambioAJson(c));
+	return j.dump();
+}
+
 bool loteDeJson(const std::string& texto, Lote& l, std::string& error) {
 	l = Lote();
 	json j = json::parse(texto, nullptr, false);
 	if (j.is_discarded() || !j.is_object()) { error = "no es JSON"; return false; }
-	if (!j.contains("formato") || !j["formato"].is_number_integer() || j["formato"].get<int>() != kFormatoLote) { error = "formato de lote desconocido"; return false; }
+	if (j.contains("formato") && (!j["formato"].is_number_integer() || j["formato"].get<int>() != kFormatoLote)) { error = "formato de lote desconocido"; return false; }   // la web no manda «formato»
 	l.formato = kFormatoLote;
 	l.id = textoCorto(j, "id", 64); l.huella = textoCorto(j, "huella", 80);
-	l.creado = textoCorto(j, "creado", 40); l.autor = textoCorto(j, "autor", 60); l.anfitrion = textoCorto(j, "anfitrion", 64);
-	l.parche = textoCorto(j, "parche", 80); l.baseHuella = textoCorto(j, "base_huella", 16);
+	l.creado = textoCorto(j, "creado", 40); l.autor = textoCorto(j, "autor", 40);
+	if (j.contains("anfitrion_id") && j["anfitrion_id"].is_string() && !j["anfitrion_id"].get<std::string>().empty()) { l.anfitrion = textoCorto(j, "anfitrion_id", 64); l.anfitrionNombre = textoCorto(j, "anfitrion", 60); }   // lote de la web
+	else l.anfitrion = textoCorto(j, "anfitrion", 64);
+	l.parche = textoCorto(j, "parche", 60); l.baseHuella = textoCorto(j, "base_huella", 64);
 	if (j.contains("seq") && j["seq"].is_number_integer()) l.seq = j["seq"].get<long long>();
 	if (!esHex(l.id) || l.id.size() != 24) { error = "id de lote no valido"; return false; }
 	if (l.anfitrion.empty()) { error = "falta el anfitrion"; return false; }
@@ -124,9 +135,10 @@ bool loteDeJson(const std::string& texto, Lote& l, std::string& error) {
 	if (j["cambios"].size() > 5000) { error = "demasiados cambios"; return false; }
 	for (const json& c : j["cambios"]) {
 		CambioLote x;
-		if (!c.is_object() || !entero(c, "jugador_id", x.jugador) || !entero(c, "desde_id", x.desde) || !entero(c, "hasta_id", x.hasta)) { error = "un cambio no tiene ids validos"; return false; }
+		const bool desdeCero = c.is_object() && c.contains("desde_id") && c["desde_id"].is_number_integer() && c["desde_id"].get<long long>() == 0;   // la web admite desde_id = 0 (sin equipo)
+		if (!c.is_object() || !entero(c, "jugador_id", x.jugador) || !(desdeCero || entero(c, "desde_id", x.desde)) || !entero(c, "hasta_id", x.hasta)) { error = "un cambio no tiene ids validos"; return false; }
 		if (x.desde == x.hasta) { error = "un cambio tiene el mismo equipo de origen y destino"; return false; }
-		x.jugadorNombre = textoCorto(c, "jugador", 80); x.desdeNombre = textoCorto(c, "desde", 80); x.hastaNombre = textoCorto(c, "hasta", 80);
+		x.jugadorNombre = textoCorto(c, "jugador", 48); x.desdeNombre = textoCorto(c, "desde", 48); x.hastaNombre = textoCorto(c, "hasta", 48);
 		l.cambios.push_back(x);
 	}
 	if (huellaDeCambios(l.cambios) != l.huella) { error = "la huella no coincide con el contenido (lote alterado o de otro orden)"; return false; }
@@ -203,27 +215,24 @@ bool TransporteCarpeta::traer(long long despuesDe, std::vector<Lote>& lotes, int
 
 // ─── Transporte por la web ───────────────────────────────────────────────────────────────────────
 namespace {
-	bool idSeguro(const std::string& s) {   // ids de la web (uuid / hex): nada que se pueda colar en una ruta
+	bool idSeguro(const std::string& s) {   // ids de la web (uuid): nada que se pueda colar en una peticion
 		if (s.empty() || s.size() > 64) return false;
 		return std::all_of(s.begin(), s.end(), [](unsigned char c) { return std::isxdigit(c) || c == '-'; });
 	}
 	long long relojReal() { return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count(); }
+	std::string cadena(const json& j, const char* k) { return j.is_object() && j.contains(k) && j[k].is_string() ? j[k].get<std::string>() : std::string(); }
 }
 
-TransporteWeb::TransporteWeb(PeticionWeb peticion, std::string canal, std::function<long long()> reloj)
-	: _p(std::move(peticion)), _reloj(std::move(reloj)), _canal(std::move(canal)) {}
+TransporteWeb::TransporteWeb(PeticionWeb peticion, std::function<long long()> reloj) : _p(std::move(peticion)), _reloj(std::move(reloj)) {}
 
 long long TransporteWeb::ahora() const { return _reloj ? _reloj() : relojReal(); }
-std::string TransporteWeb::descripcion() const { std::lock_guard<std::mutex> g(_m); return std::string("web de Phoenix") + (_canal.empty() ? "" : " (canal " + _canal.substr(0, 8) + ")"); }
-std::string TransporteWeb::identidad() const { std::lock_guard<std::mutex> g(_m); return "web:" + _canal; }
 long long TransporteWeb::esperaMs() const { std::lock_guard<std::mutex> g(_m); const long long r = _hastaMs - ahora(); return r > 0 ? r : 0; }
 
 void TransporteWeb::marcar(const std::string& clave, const std::string& texto, long long espera) {
-	_clave = clave; _texto = texto;
+	_clave = clave; _texto = texto; _error = texto;
 	if (espera > 0) _hastaMs = ahora() + espera;
 }
 
-// Una peticion con TODA la clasificacion de errores y esperas. true = respuesta buena (2xx, o 409) con su cuerpo.
 bool TransporteWeb::pedir(const std::string& metodo, const std::string& ruta, const std::string& cuerpo, int& estado, std::string& respuesta) {
 	estado = 0; respuesta.clear();
 	std::lock_guard<std::mutex> g(_m);
@@ -232,8 +241,9 @@ bool TransporteWeb::pedir(const std::string& metodo, const std::string& ruta, co
 	try { hubo = _p(metodo, ruta, cuerpo, estado, respuesta); }
 	catch (...) { hubo = false; estado = 0; }
 	const json j = json::parse(respuesta, nullptr, false);
-	const std::string codigo = j.is_object() && j.contains("codigo") && j["codigo"].is_string() ? j["codigo"].get<std::string>() : std::string();
-	const std::string msg = j.is_object() && j.contains("mensaje") && j["mensaje"].is_string() ? j["mensaje"].get<std::string>().substr(0, 160) : std::string();
+	const std::string codigo = cadena(j, "codigo");
+	std::string msg = cadena(j, "mensaje");
+	if (msg.size() > 160) msg.resize(160);
 	auto atras = [&](const char* clave, const std::string& texto) {   // red caida o 5xx: 10 s, 20 s, 40 s, 80 s, 120 s
 		_fallos++;
 		const long long e = (std::min)(120000LL, 10000LL << (std::min)(_fallos - 1, 4));
@@ -241,148 +251,121 @@ bool TransporteWeb::pedir(const std::string& metodo, const std::string& ruta, co
 	};
 	if (estado == -1) { marcar("sin_cuenta", "Esta PC no está vinculada a una cuenta de la web: vincúlala en Sync › Cuenta web.", 15000); return false; }
 	if (!hubo || estado == 0) { atras("sin_conexion", "No hay conexión con la web."); return false; }
+	if (estado == 503 && codigo == "LIGA_PAUSADA") { marcar("liga_pausada", msg.empty() ? "La web tiene la liga en pausa." : msg, 60000); return false; }
 	if (estado >= 500) { atras("sin_conexion", "La web tiene un problema (" + std::to_string(estado) + ")."); return false; }
-	if (estado == 404 && codigo != "CANAL_NO_EXISTE" && codigo != "LOTE_NO_EXISTE") {
-		marcar("web_sin_endpoints", "La web aún no tiene los traspasos en vivo: pega el prompt WEB (docs/PROMPT-WEB-traspasos-vivo.md).", 300000); return false;
+	if (estado == 401 || codigo.rfind("TOKEN_", 0) == 0 || codigo == "DISPOSITIVO_SUSPENDIDO") {
+		marcar("sin_cuenta", "La web no reconoce este Link: vuelve a vincular tu cuenta (Sync › Cuenta web).", 60000); return false;
 	}
-	if (estado == 404) { marcar("sin_anfitrion", msg.empty() ? "Ese anfitrión o canal ya no existe." : msg, 60000); return false; }
-	if (estado == 401) { marcar("sin_cuenta", "La web no reconoce este Link: vuelve a vincular tu cuenta (Sync › Cuenta web).", 60000); return false; }
-	if (estado == 403) {
-		if (codigo == "PENDIENTE_APROBACION") marcar("pendiente_aprobacion", "Tu anfitrión aún no te ha aprobado.", 30000);
-		else marcar("sin_permiso", msg.empty() ? "La web no te da permiso para esto." : msg, 60000);
-		return false;
+	if (estado == 404 && (codigo.empty() || codigo == "RUTA_NO_EXISTE")) {
+		marcar("web_sin_endpoints", "La web aún no tiene los traspasos en vivo (se está desplegando): Link vuelve a probar solo cada 5 minutos.", 300000); return false;
 	}
-	if (estado == 429) {
+	if (estado == 429 || codigo == "DEMASIADOS_INTENTOS") {
 		long long s = j.is_object() && j.contains("reintentar_en") && j["reintentar_en"].is_number() ? j["reintentar_en"].get<long long>() : 30;
 		s = (std::max)(5LL, (std::min)(600LL, s));
 		marcar("limite", "Demasiadas peticiones: espero " + std::to_string(s) + " s.", s * 1000); return false;
 	}
-	const bool bueno = (estado == 200 || estado == 201 || estado == 409);
-	if (!bueno) { marcar("respuesta_rara", "La web rechazó la petición (" + std::to_string(estado) + (codigo.empty() ? "" : " " + codigo) + (msg.empty() ? "" : ": " + msg) + ").", 30000); return false; }
-	if (!j.is_object()) { marcar("respuesta_rara", "La respuesta de la web no se entiende.", 30000); return false; }
-	_fallos = 0; _clave = "ok"; _texto.clear();
+	if (codigo == "HOST_NO_AUTORIZADO" || codigo == "SIN_PERMISO_TRASPASOS" || estado == 403) {
+		marcar("sin_permiso", msg.empty() ? "Esta cuenta no está aprobada como anfitrión." : msg, 60000); return false;
+	}
+	const bool bueno = (estado == 200 || estado == 201) && j.is_object() && !(j.contains("ok") && j["ok"].is_boolean() && !j["ok"].get<bool>());
+	if (!bueno) {
+		// error de la accion (codigo incorrecto, seguirse a uno mismo, datos invalidos…): se lo decimos al usuario sin tocar el estado del transporte
+		if (j.is_object() && !codigo.empty()) { _error = msg.empty() ? codigo : msg; }
+		else { marcar("respuesta_rara", "La respuesta de la web no se entiende (" + std::to_string(estado) + ").", 30000); }
+		return false;
+	}
+	_fallos = 0; _clave = "ok"; _texto.clear(); _error.clear();
 	return true;
 }
 
 bool TransporteWeb::publicar(Lote& l, bool& ya, std::string& error) {
 	ya = false;
 	int estado = 0; std::string r;
-	if (!pedir("POST", "/v1/traspasos/lotes", json{ {"lote", json::parse(loteAJson(l, false))} }.dump(), estado, r)) { error = estadoTexto(); return false; }
+	if (!pedir("POST", "/traspasos", loteAJsonWeb(l), estado, r)) { error = ultimoError(); return false; }
 	const json j = json::parse(r, nullptr, false);
-	if (!j.contains("seq") || !j["seq"].is_number_integer() || j["seq"].get<long long>() <= 0 || (j.contains("ok") && j["ok"].is_boolean() && !j["ok"].get<bool>())) {
+	if (!j.contains("seq") || !j["seq"].is_number_integer() || j["seq"].get<long long>() <= 0) {
 		std::lock_guard<std::mutex> g(_m); marcar("respuesta_rara", "La respuesta de la web al publicar no se entiende.", 30000); error = _texto; return false;
 	}
 	l.seq = j["seq"].get<long long>();
-	ya = estado == 409 || (j.contains("ya") && j["ya"].is_boolean() && j["ya"].get<bool>());
+	ya = j.contains("repetido") && j["repetido"].is_boolean() && j["repetido"].get<bool>();
 	return true;
 }
 
 bool TransporteWeb::traer(long long despuesDe, std::vector<Lote>& lotes, int& ilegibles, std::string& error) {
 	lotes.clear(); ilegibles = 0;
-	std::string canal;
 	{
 		std::lock_guard<std::mutex> g(_m);
 		_hayMas = false;
-		canal = _canal;
-		if (!idSeguro(canal)) { marcar("sin_anfitrion", "Elige a qué anfitrión sigues.", 0); error = _texto; return false; }
+		if (!_puedeLeer) { marcar("sin_anfitrion", "Elige a qué anfitrión sigues (escribe su código).", 0); error = _texto; return false; }
 	}
+	constexpr int kPagina = 30;
 	int estado = 0; std::string r;
-	if (!pedir("GET", "/v1/traspasos/lotes?canal_id=" + canal + "&desde=" + std::to_string(despuesDe) + "&limite=100", "", estado, r)) { error = estadoTexto(); return false; }
+	if (!pedir("GET", "/traspasos?desde=" + std::to_string(despuesDe) + "&limite=" + std::to_string(kPagina), "", estado, r)) { error = ultimoError(); return false; }
 	const json j = json::parse(r, nullptr, false);
-	if (estado != 200 || !j.contains("lotes") || !j["lotes"].is_array()) {
+	if (!j.contains("lotes") || !j["lotes"].is_array()) {
 		std::lock_guard<std::mutex> g(_m); marcar("respuesta_rara", "La respuesta de la web no se entiende.", 30000); error = _texto; return false;
 	}
+	size_t recibidos = 0;
 	for (const json& x : j["lotes"]) {
+		recibidos++;
 		Lote l; std::string e;
 		if (!loteDeJson(x.dump(), l, e) || l.seq <= despuesDe) { ilegibles++; continue; }   // alterado, corrupto o ya visto
 		lotes.push_back(std::move(l));
 	}
 	std::sort(lotes.begin(), lotes.end(), [](const Lote& a, const Lote& b) { return a.seq < b.seq; });
 	std::lock_guard<std::mutex> g(_m);
-	_hayMas = j.contains("hay_mas") && j["hay_mas"].is_boolean() && j["hay_mas"].get<bool>() && !lotes.empty();
-	if (j.contains("sondeo_seg") && j["sondeo_seg"].is_number()) _sondeoMs = (std::max)(5LL, (std::min)(120LL, j["sondeo_seg"].get<long long>())) * 1000;
-	if (j.contains("purgado") && j["purgado"].is_boolean() && j["purgado"].get<bool>() && j.contains("seq_min") && j["seq_min"].is_number_integer()) _purgadoHasta = j["seq_min"].get<long long>();
+	_hayMas = !lotes.empty();   // si llegaron lotes se vuelve a preguntar enseguida: asi se trae todo aunque la web pagine mas corto de lo pedido (la ultima respuesta vacia corta el bucle)
 	return true;
 }
 
-// ─── Administrar el canal / a quien sigues ───────────────────────────────────────────────────────
+// ─── Mi codigo / a quien sigo ────────────────────────────────────────────────────────────────────
 bool ClienteTraspasosWeb::llamar(const std::string& metodo, const std::string& ruta, const std::string& cuerpo, json& j, std::string& error) {
 	int estado = 0; std::string r;
-	if (!_t.pedir(metodo, ruta, cuerpo, estado, r)) { error = _t.estadoTexto(); return false; }
+	if (!_t.pedir(metodo, ruta, cuerpo, estado, r)) { error = _t.ultimoError(); return false; }
 	j = json::parse(r, nullptr, false);
-	if (!j.is_object() || (j.contains("ok") && j["ok"].is_boolean() && !j["ok"].get<bool>())) { error = "La respuesta de la web no se entiende."; return false; }
+	if (!j.is_object()) { error = "La respuesta de la web no se entiende."; return false; }
 	return true;
 }
 namespace {
-	std::string txt(const json& o, const char* k, size_t max = 80) {
-		if (!o.is_object() || !o.contains(k) || !o[k].is_string()) return std::string();
-		std::string t = o[k].get<std::string>();
-		if (t.size() > max) t.resize(max);
-		return t;
-	}
-	bool leerCanal(const json& j, CanalWeb& c) {
-		c = CanalWeb();
-		if (!j.contains("canal") || !j["canal"].is_object()) return false;
-		const json& k = j["canal"];
-		c.id = txt(k, "id", 64); c.codigo = txt(k, "codigo", 16);
-		c.activo = !(k.contains("activo") && k["activo"].is_boolean() && !k["activo"].get<bool>());
-		c.max = k.contains("seguidores_max") && k["seguidores_max"].is_number_integer() ? k["seguidores_max"].get<int>() : 0;
-		if (!idSeguro(c.id)) return false;
-		if (j.contains("seguidores") && j["seguidores"].is_array())
-			for (const json& s : j["seguidores"]) {
-				Seguidor x; x.usuarioId = txt(s, "usuario_id", 64); x.nombre = txt(s, "nombre", 60); x.estado = txt(s, "estado", 12); x.desde = txt(s, "desde", 40);
-				if (!x.usuarioId.empty() && (x.estado == "activo" || x.estado == "pendiente") && c.seguidores.size() < 100) c.seguidores.push_back(x);
-			}
-		c.hay = true;
-		return true;
-	}
-	bool leerSiguiendo(const json& s, SiguiendoWeb& x) {
-		x = SiguiendoWeb();
-		x.canalId = txt(s, "canal_id", 64); x.estado = txt(s, "estado", 12); x.desde = txt(s, "desde", 40);
-		if (s.contains("anfitrion") && s["anfitrion"].is_object()) { x.anfitrionId = txt(s["anfitrion"], "usuario_id", 64); x.anfitrionNombre = txt(s["anfitrion"], "nombre", 60); }
-		return idSeguro(x.canalId) && (x.estado == "activo" || x.estado == "pendiente");
-	}
+	std::string nombreCorto(const json& o, const char* k) { std::string t = cadena(o, k); if (t.size() > 60) t.resize(60); return t; }
 }
-bool ClienteTraspasosWeb::canal(const std::string& accion, CanalWeb& c, std::string& error) {
-	if (accion != "obtener" && accion != "rotar_codigo" && accion != "pausar" && accion != "reanudar") { error = "accion desconocida"; return false; }
+bool ClienteTraspasosWeb::codigo(bool rotar, CanalWeb& c, std::string& error) {
+	c = CanalWeb();
 	json j;
-	if (!llamar("POST", "/v1/traspasos/canal", json{ {"accion", accion} }.dump(), j, error)) return false;
-	if (!leerCanal(j, c)) { error = "La respuesta de la web no trae el canal."; return false; }
+	if (!llamar("POST", "/traspasos/codigo", json{ {"rotar", rotar} }.dump(), j, error)) return false;
+	const std::string cod = cadena(j, "codigo");
+	if (cod.empty() || cod.size() > 16 || !std::all_of(cod.begin(), cod.end(), [](unsigned char x) { return std::isalnum(x) != 0; })) { error = "La respuesta de la web no trae un código válido."; return false; }
+	c.codigo = cod;
+	if (j.contains("seguidores") && j["seguidores"].is_array())
+		for (const json& s : j["seguidores"]) { const std::string n = nombreCorto(s, "nombre"); if (!n.empty() && c.seguidores.size() < 100) c.seguidores.push_back(n); }
+	c.hay = true;
 	return true;
 }
-bool ClienteTraspasosWeb::seguidor(const std::string& usuarioId, const std::string& accion, CanalWeb& c, std::string& error) {
-	if ((accion != "aprobar" && accion != "quitar") || !idSeguro(usuarioId)) { error = "datos no validos"; return false; }
+bool ClienteTraspasosWeb::seguir(const std::string& codigo, bool prueba, SiguiendoWeb& s, std::string& error) {
+	s = SiguiendoWeb();
+	if (codigo.empty() || codigo.size() > 16 || !std::all_of(codigo.begin(), codigo.end(), [](unsigned char c) { return std::isalnum(c) || c == '-'; })) { error = "El código no es válido."; return false; }
+	json cuerpo = { {"codigo", codigo} };
+	if (prueba) cuerpo["prueba"] = true;
 	json j;
-	if (!llamar("POST", "/v1/traspasos/seguidores", json{ {"usuario_id", usuarioId}, {"accion", accion} }.dump(), j, error)) return false;
-	if (!leerCanal(j, c)) { error = "La respuesta de la web no trae el canal."; return false; }
+	if (!llamar("POST", "/traspasos/seguir", cuerpo.dump(), j, error)) return false;
+	s.anfitrionId = cadena(j, "anfitrion_id"); s.anfitrionNombre = nombreCorto(j, "anfitrion");
+	if (!idSeguro(s.anfitrionId)) { error = "La respuesta de la web no trae el anfitrión."; return false; }
 	return true;
 }
-bool ClienteTraspasosWeb::seguir(const std::string& codigo, const std::string& anfitrionUsuarioId, SiguiendoWeb& s, std::string& error) {
-	json cuerpo = json::object();
-	if (!codigo.empty()) {
-		if (codigo.size() > 16 || !std::all_of(codigo.begin(), codigo.end(), [](unsigned char c) { return std::isalnum(c) || c == '-'; })) { error = "El código no es válido."; return false; }
-		cuerpo["codigo"] = codigo;
-	}
-	else if (idSeguro(anfitrionUsuarioId)) cuerpo["anfitrion_usuario_id"] = anfitrionUsuarioId;
-	else { error = "Falta el código o el anfitrión."; return false; }
+bool ClienteTraspasosWeb::siguiendo(std::vector<SiguiendoWeb>& sigo, std::vector<std::string>& meSiguen, std::string& error) {
+	sigo.clear(); meSiguen.clear();
 	json j;
-	if (!llamar("POST", "/v1/traspasos/seguir", cuerpo.dump(), j, error)) return false;
-	if (!j.contains("siguiendo") || !leerSiguiendo(j["siguiendo"], s)) { error = "La respuesta de la web no trae el anfitrión."; return false; }
+	if (!llamar("GET", "/traspasos/siguiendo", "", j, error)) return false;
+	if (!j.contains("sigo") || !j["sigo"].is_array()) { error = "La respuesta de la web no se entiende."; return false; }
+	for (const json& s : j["sigo"]) { SiguiendoWeb x; x.anfitrionId = cadena(s, "anfitrion_id"); x.anfitrionNombre = nombreCorto(s, "nombre"); if (idSeguro(x.anfitrionId) && sigo.size() < 20) sigo.push_back(x); }
+	if (j.contains("me_siguen") && j["me_siguen"].is_array())
+		for (const json& s : j["me_siguen"]) { const std::string n = nombreCorto(s, "nombre"); if (!n.empty() && meSiguen.size() < 100) meSiguen.push_back(n); }
 	return true;
 }
-bool ClienteTraspasosWeb::siguiendo(std::vector<SiguiendoWeb>& v, std::string& error) {
-	v.clear();
-	int estado = 0; std::string r;
-	if (!_t.pedir("GET", "/v1/traspasos/siguiendo", "", estado, r)) { error = _t.estadoTexto(); return false; }
-	const json j = json::parse(r, nullptr, false);
-	if (!j.is_object() || !j.contains("siguiendo") || !j["siguiendo"].is_array()) { error = "La respuesta de la web no se entiende."; return false; }
-	for (const json& s : j["siguiendo"]) { SiguiendoWeb x; if (leerSiguiendo(s, x) && v.size() < 20) v.push_back(x); }
-	return true;
-}
-bool ClienteTraspasosWeb::dejar(const std::string& canalId, std::string& error) {
-	if (!idSeguro(canalId)) { error = "datos no validos"; return false; }
+bool ClienteTraspasosWeb::dejar(const std::string& anfitrionId, std::string& error) {
+	if (!idSeguro(anfitrionId)) { error = "datos no validos"; return false; }
 	json j;
-	return llamar("POST", "/v1/traspasos/dejar", json{ {"canal_id", canalId} }.dump(), j, error);
+	return llamar("POST", "/traspasos/dejar", json{ {"anfitrion_id", anfitrionId} }.dump(), j, error);
 }
 
 // ─── Lista efectiva ──────────────────────────────────────────────────────────────────────────────
@@ -865,7 +848,7 @@ std::string Motor::estadoJson() const {
 	json j;
 	j["publicar"] = _c.publicar; j["recibir"] = _c.recibir; j["confirmarAntes"] = _c.confirmarAntes;
 	j["transporte"] = _t ? _t->descripcion() : std::string();
-	j["transporteEstado"] = { {"clave", _t ? _t->estadoClave() : std::string("sin_transporte")}, {"texto", _t ? _t->estadoTexto() : std::string()}, {"esperaSeg", _t ? _t->esperaMs() / 1000 : 0LL}, {"tipo", _t ? (_t->identidad().rfind("web:", 0) == 0 ? "web" : "carpeta") : ""} };
+	j["transporteEstado"] = { {"clave", _t ? _t->estadoClave() : std::string("sin_transporte")}, {"texto", _t ? _t->estadoTexto() : std::string()}, {"esperaSeg", _t ? _t->esperaMs() / 1000 : 0LL}, {"tipo", _t ? (_t->identidad().rfind("web", 0) == 0 ? "web" : "carpeta") : ""} };
 	j["anfitrionId"] = _anfitrionId;
 	j["modoRecarga"] = _c.modoRecarga ? _c.modoRecarga() : std::string("AUTO-SIEMPRE");
 	j["pesAbierto"] = _c.pesAbierto ? _c.pesAbierto() : false;

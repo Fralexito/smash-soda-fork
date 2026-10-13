@@ -257,7 +257,7 @@ export function crearSimulador(enviar) {
     const p = s.partido;
     const e = {
       v: 1,
-      app: { version: "0.2.70", etapa: "beta 2", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
+      app: { version: "0.2.71", etapa: "beta 2", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
       noticias: { cargado: true, lista: s.noticias },
       chatGlobal: { cargado: true, pausado: s.chatGlobal.pausado, esperaSeg: s.chatGlobal.esperaSeg, rev: s.chatGlobal.mensajes.length, error: "" },
       web: { ...s.web, jugadoresLista: 3, versionLiga: "2026.10.08", eventosEnCola: 0 },
@@ -337,18 +337,15 @@ export function crearSimulador(enviar) {
     if (!tr.web) {
       const sin = typeof location !== "undefined" && /traspasos404/.test(location.search);
       tr.web = { vinculada: true, estado: sin ? "web_sin_endpoints" : "ok", visto: !sin,
-        canal: { id: "c0000001-0000-4000-8000-000000000001", codigo: "PHX-4821", activo: true, max: 25,
-          seguidores: [{ usuarioId: "a2000000-0000-4000-8000-000000000002", nombre: "Beto", estado: "activo", desde: "2026-10-12T10:00:00Z" }, { usuarioId: "a3000000-0000-4000-8000-000000000003", nombre: "Degox", estado: "pendiente", desde: "2026-10-12T11:00:00Z" }] },
-        siguiendo: [],
-        amigos: [{ usuarioId: "a1000000-0000-4000-8000-000000000001", nombre: "Fralex", estado: "en_sala" }, { usuarioId: "a2000000-0000-4000-8000-000000000002", nombre: "Beto", estado: "disponible" }] };
+        canal: { codigo: "K7M2QX4P" }, meSiguen: ["Beto", "Degox"], siguiendo: [] };
     }
     const w = tr.web, esWeb = (tr.ajustes.transporte || "web") === "web";
     const estado = esWeb ? w.estado : "ok";
     return { ajustes: { ...tr.ajustes, transporte: tr.ajustes.transporte || "web" }, activo: tr.ajustes.publicar || tr.ajustes.recibir, mensaje: tr.mensaje, juego: s.buzon.juego,
       transporteListo: esWeb ? w.vinculada : !!tr.ajustes.carpeta, carpetaPrueba: "C:/Users/TuUsuario/AppData/Roaming/Trybuchet/Smash Soda/phoenix-traspasos/carpeta-de-prueba",
       webDisponible: !esWeb ? null : w.estado === "web_sin_endpoints" ? false : w.visto ? true : null,
-      web: { transporte: tr.ajustes.transporte || "web", vinculada: w.vinculada, estado, texto: "", esperaSeg: estado === "web_sin_endpoints" ? 287 : 0, error: "", purgadoHasta: 0, amigos: w.amigos,
-        siguiendo: w.siguiendo, canal: tr.ajustes.publicar ? w.canal : null },
+      web: { transporte: tr.ajustes.transporte || "web", vinculada: w.vinculada, estado, texto: "", esperaSeg: estado === "web_sin_endpoints" ? 287 : 0, error: "",
+        siguiendo: w.siguiendo, meSiguen: w.meSiguen, canal: tr.ajustes.publicar ? { codigo: w.canal.codigo, seguidores: w.meSiguen } : null },
       publicar: tr.ajustes.publicar, recibir: tr.ajustes.recibir, confirmarAntes: tr.ajustes.confirmarAntes, transporte: esWeb ? "web de Phoenix" : "carpeta " + tr.ajustes.carpeta,
       transporteEstado: { clave: estado, texto: "", esperaSeg: 0, tipo: esWeb ? "web" : "carpeta" },
       modoRecarga: s.modoRecarga || "AUTO-SIEMPRE", pesAbierto: s.pes.abierto, anfitrion: tr.anfitrion, amigo: tr.amigo };
@@ -589,12 +586,8 @@ export function crearSimulador(enviar) {
       else if (d.accion === "deshacer") { const l = tr.amigo.historial.find((x) => x.estado === "aplicado"); if (l) { l.estado = "deshecho"; tr.mensaje = "Lote " + l.id.slice(0, 8) + " deshecho."; } tr.amigo.puedeDeshacer = tr.amigo.historial.some((x) => x.estado === "aplicado"); }
       else if (d.accion === "olvidarReferencia") { tr.anfitrion.estado = "referencia_borrada"; tr.mensaje = "Listo."; }
       else if (d.accion === "reintentar") { w.estado = "ok"; w.visto = true; tr.mensaje = "Volviendo a comprobar la web…"; }
-      else if (d.accion === "rotarCodigo") { w.canal.codigo = "PHX-" + (1000 + Math.floor(Math.random() * 9000)); tr.mensaje = "Código nuevo: el anterior ya no sirve para unirse."; }
-      else if (d.accion === "pausarCanal" || d.accion === "reanudarCanal") w.canal.activo = d.accion === "reanudarCanal";
-      else if (d.accion === "aprobar") { const x = w.canal.seguidores.find((q) => q.usuarioId === d.usuario_id); if (x) x.estado = "activo"; tr.mensaje = "Aprobado: ya recibe tus traspasos."; }
-      else if (d.accion === "quitarSeguidor") { w.canal.seguidores = w.canal.seguidores.filter((q) => q.usuarioId !== d.usuario_id); tr.mensaje = "Quitado: ya no recibe tus traspasos."; }
-      else if (d.accion === "seguirAmigo") { const x = w.amigos.find((q) => q.usuarioId === d.usuario_id); w.siguiendo = [{ canalId: "c0000009-0000-4000-8000-000000000009", anfitrionId: d.usuario_id, anfitrionNombre: x ? x.nombre : "?", estado: "pendiente", desde: "2026-10-12T12:00:00Z" }]; tr.mensaje = "Pedido enviado: " + (x ? x.nombre : "?") + " tiene que aprobarte."; }
-      else if (d.accion === "seguirCodigo") { w.siguiendo = [{ canalId: "c0000009-0000-4000-8000-000000000009", anfitrionId: "a1000000-0000-4000-8000-000000000001", anfitrionNombre: "Fralex", estado: "activo", desde: "2026-10-12T12:00:00Z" }]; tr.mensaje = "Listo: sigues a Fralex."; }
+      else if (d.accion === "rotarCodigo") { w.canal.codigo = Math.random().toString(36).slice(2, 10).toUpperCase().replace(/[01OIL]/g, "7"); tr.mensaje = "Código nuevo: el anterior ya no sirve para unirse (quienes ya te siguen siguen)."; }
+      else if (d.accion === "seguirCodigo") { w.siguiendo = [{ anfitrionId: "a1000000-0000-4000-8000-000000000001", anfitrionNombre: "Fralex" }]; tr.mensaje = "Listo: sigues a Fralex."; }
       else if (d.accion === "dejarDeSeguir") { w.siguiendo = []; tr.mensaje = "Dejaste de seguir a ese anfitrión."; }
       return traspasosSim();
     },

@@ -53,11 +53,7 @@ namespace {
 		return !ec;
 	}
 	long long ahoraMs() { return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count(); }
-	json aJson(const CanalWeb& c) {
-		json s = json::array();
-		for (const Seguidor& x : c.seguidores) s.push_back({ {"usuarioId", x.usuarioId}, {"nombre", x.nombre}, {"estado", x.estado}, {"desde", x.desde} });
-		return { {"id", c.id}, {"codigo", c.codigo}, {"activo", c.activo}, {"max", c.max}, {"seguidores", s} };
-	}
+	json aJson(const CanalWeb& c) { return { {"codigo", c.codigo}, {"seguidores", c.seguidores} }; }
 }
 
 struct Servicio::Impl {
@@ -77,8 +73,10 @@ struct Servicio::Impl {
 	fs::path juegoActual, optionFileEfectivo;
 	long long proximaBusquedaOption = 0;
 	// lo que se sabe de la web (canal propio, a quien sigo)
-	CanalWeb canal;
-	std::vector<SiguiendoWeb> siguiendo;
+	CanalWeb canal;                       // mi codigo (si soy anfitrion)
+	std::vector<SiguiendoWeb> siguiendo;  // a quien sigo
+	std::vector<std::string> meSiguen;    // nombres de quienes me siguen
+	bool pruebaOk = false;                // en modo Prueba ya me segui a mi mismo
 	std::string errorWeb;
 	bool webVisto = false;               // alguna respuesta buena de las rutas de traspasos
 	long long proximoRefrescoWeb = 0;
@@ -105,7 +103,7 @@ struct Servicio::Impl {
 		if (transporte == "carpeta" && !carpeta.empty()) { web.reset(); return std::make_shared<TransporteCarpeta>(phoenix::entrega::deU8(carpeta)); }
 		if (!web) {
 			web = std::make_shared<TransporteWeb>([](const std::string& metodo, const std::string& ruta, const std::string& cuerpo, int& estado, std::string& resp) {
-				return phoenix::PhoenixLink::instancia().peticionLiga(metodo, ruta, cuerpo, estado, resp);
+				return phoenix::PhoenixLink::instancia().peticionTraspasos(metodo, ruta, cuerpo, estado, resp);
 			});
 		}
 		return web;
@@ -150,7 +148,7 @@ struct Servicio::Impl {
 		optionFileEfectivo = option;
 	}
 
-	/// Refresca lo que sabe la web (mi canal si publico, a quien sigo si recibo) y apunta el transporte al canal correcto.
+	/// Refresca lo que sabe la web (mi código si publico, a quién sigo y quién me sigue) y le dice al transporte si tiene sentido leer.
 	/// Respeta las esperas del transporte (404 = 5 min, 429…): no insiste.
 	void refrescarWeb(bool forzar, bool pub, bool rec) {
 		std::shared_ptr<TransporteWeb> w;
@@ -162,24 +160,26 @@ struct Servicio::Impl {
 		bool ok = true;
 		CanalWeb c;
 		std::vector<SiguiendoWeb> sig;
-		if (pub) ok = cli.canal("obtener", c, e);
-		if (ok && rec && !pub) ok = cli.siguiendo(sig, e);
+		std::vector<std::string> meSig;
+		if (pub) ok = cli.codigo(false, c, e);
+		if (ok && (pub || rec)) ok = cli.siguiendo(sig, meSig, e);
+		bool prueba;
+		{ std::lock_guard<std::mutex> g(m); prueba = pruebaOk; }
+		if (ok && pub && rec && !prueba && c.hay) {   // modo Prueba: me sigo a mi mismo con mi propio codigo (la web lo exige con prueba:true)
+			SiguiendoWeb s;
+			std::string e2;
+			if (cli.seguir(c.codigo, true, s, e2)) { std::lock_guard<std::mutex> g(m); pruebaOk = true; }
+			else { std::lock_guard<std::mutex> g(m); errorWeb = e2; }
+			cli.siguiendo(sig, meSig, e);
+		}
 		std::lock_guard<std::mutex> g(m);
 		proximoRefrescoWeb = ahoraMs() + 20000;
 		if (!ok) { errorWeb = e; return; }
-		errorWeb.clear(); webVisto = true;
+		if (errorWeb == e || !pub || ok) errorWeb.clear();
+		webVisto = true;
 		if (pub) canal = c;
-		if (rec && !pub) siguiendo = sig;
-		aplicarCanalAlTransporte(pub, rec);
-	}
-	void aplicarCanalAlTransporte(bool pub, bool rec) {   // m tomado
-		if (!web) return;
-		if (pub && rec) web->ponerCanal(canal.hay ? canal.id : std::string());          // prueba: leo mi propio canal
-		else if (rec) {                                                                  // amigo: el primer anfitrion que ya me aprobo
-			std::string id;
-			for (const SiguiendoWeb& s : siguiendo) if (s.estado == "activo") { id = s.canalId; break; }
-			web->ponerCanal(id);
-		}
+		siguiendo = sig; meSiguen = meSig;
+		w->ponerPuedeLeer(!rec || pub || !sig.empty());   // un amigo que aun no sigue a nadie no llama a la web
 	}
 
 	std::string accionWeb(const Orden& o, bool& ok) {   // sin m tomado
@@ -188,36 +188,30 @@ struct Servicio::Impl {
 		if (!w) { ok = false; return "Esto solo funciona con la web de Phoenix como transporte."; }
 		ClienteTraspasosWeb cli(*w);
 		std::string e;
-		CanalWeb c;
-		SiguiendoWeb s;
 		ok = false;
-		if (o.que == "rotarCodigo" || o.que == "pausarCanal" || o.que == "reanudarCanal") {
-			const char* a = o.que == "rotarCodigo" ? "rotar_codigo" : o.que == "pausarCanal" ? "pausar" : "reanudar";
-			if (!cli.canal(a, c, e)) return e;
-			std::lock_guard<std::mutex> g(m); canal = c; webVisto = true; ok = true;
-			return o.que == "rotarCodigo" ? "Código nuevo: el anterior ya no sirve para unirse." : o.que == "pausarCanal" ? "Canal en pausa: no se entrega nada a nadie." : "Canal activo otra vez.";
+		if (o.que == "rotarCodigo") {
+			CanalWeb c;
+			if (!cli.codigo(true, c, e)) return e;
+			std::lock_guard<std::mutex> g(m); canal = c; webVisto = true; pruebaOk = false; ok = true;
+			return "Código nuevo: el anterior ya no sirve para unirse (quienes ya te siguen siguen).";
 		}
-		if (o.que == "aprobar" || o.que == "quitarSeguidor") {
-			if (!cli.seguidor(o.dato, o.que == "aprobar" ? "aprobar" : "quitar", c, e)) return e;
-			std::lock_guard<std::mutex> g(m); canal = c; webVisto = true; ok = true;
-			return o.que == "aprobar" ? "Aprobado: ya recibe tus traspasos." : "Quitado: ya no recibe tus traspasos.";
-		}
-		if (o.que == "seguirAmigo" || o.que == "seguirCodigo") {
-			if (!cli.seguir(o.que == "seguirCodigo" ? o.dato : std::string(), o.que == "seguirAmigo" ? o.dato : std::string(), s, e)) return e;
-			std::vector<SiguiendoWeb> sig;
-			cli.siguiendo(sig, e);
+		if (o.que == "seguirCodigo") {
+			SiguiendoWeb s;
+			if (!cli.seguir(o.dato, false, s, e)) return e;
+			std::vector<SiguiendoWeb> sig; std::vector<std::string> meSig;
+			cli.siguiendo(sig, meSig, e);
 			std::lock_guard<std::mutex> g(m);
 			siguiendo = sig.empty() ? std::vector<SiguiendoWeb>{ s } : sig; webVisto = true; ok = true;
-			aplicarCanalAlTransporte(publicar, recibir);
-			return s.estado == "activo" ? "Listo: sigues a " + s.anfitrionNombre + "." : "Pedido enviado: " + s.anfitrionNombre + " tiene que aprobarte.";
+			w->ponerPuedeLeer(true);
+			return "Listo: sigues a " + (s.anfitrionNombre.empty() ? std::string("ese anfitrión") : s.anfitrionNombre) + ".";
 		}
 		if (o.que == "dejarDeSeguir") {
 			if (!cli.dejar(o.dato, e)) return e;
-			std::vector<SiguiendoWeb> sig;
-			cli.siguiendo(sig, e);
+			std::vector<SiguiendoWeb> sig; std::vector<std::string> meSig;
+			cli.siguiendo(sig, meSig, e);
 			std::lock_guard<std::mutex> g(m);
-			siguiendo = sig; webVisto = true; ok = true;
-			aplicarCanalAlTransporte(publicar, recibir);
+			siguiendo = sig; meSiguen = meSig; webVisto = true; ok = true; pruebaOk = false;
+			w->ponerPuedeLeer(!recibir || publicar || !sig.empty());
 			return "Dejaste de seguir a ese anfitrión.";
 		}
 		return "Acción desconocida.";
@@ -299,15 +293,6 @@ void Servicio::iniciar() {
 void Servicio::detener() { _i->frenar(); }
 
 json Servicio::estado() {
-	// amigos de la web (solo lectura de lo que Link ya tiene; sin llamar a la red)
-	json amigos = json::array();
-	{
-		int n = 0;
-		for (const phoenix::AmigoWeb& a : phoenix::PhoenixLink::instancia().amigos()) {
-			if (n++ >= 60) break;
-			amigos.push_back({ {"usuarioId", a.usuarioId}, {"nombre", a.nombre}, {"estado", a.estado} });
-		}
-	}
 	const bool vinculada = phoenix::PhoenixLink::instancia().pcVinculada();
 	std::lock_guard<std::mutex> g(_i->m);
 	if (!_i->iniciado) { _i->iniciado = true; _i->cargar(); }
@@ -325,8 +310,8 @@ json Servicio::estado() {
 	const std::string clave = _i->web ? _i->web->estadoClave() : std::string("ok");
 	j["webDisponible"] = !esWeb ? json(nullptr) : clave == "web_sin_endpoints" ? json(false) : _i->webVisto ? json(true) : json(nullptr);
 	json w = { {"transporte", _i->transporte}, {"vinculada", vinculada}, {"estado", esWeb ? clave : std::string("ok")}, {"texto", esWeb && _i->web ? _i->web->estadoTexto() : std::string()},
-		{"esperaSeg", esWeb && _i->web ? _i->web->esperaMs() / 1000 : 0LL}, {"error", _i->errorWeb}, {"purgadoHasta", _i->web ? _i->web->purgadoHasta() : 0LL}, {"amigos", amigos}, {"siguiendo", json::array()}, {"canal", nullptr} };
-	for (const SiguiendoWeb& s : _i->siguiendo) w["siguiendo"].push_back({ {"canalId", s.canalId}, {"anfitrionId", s.anfitrionId}, {"anfitrionNombre", s.anfitrionNombre}, {"estado", s.estado}, {"desde", s.desde} });
+		{"esperaSeg", esWeb && _i->web ? _i->web->esperaMs() / 1000 : 0LL}, {"error", _i->errorWeb}, {"siguiendo", json::array()}, {"meSiguen", _i->meSiguen}, {"canal", nullptr} };
+	for (const SiguiendoWeb& s : _i->siguiendo) w["siguiendo"].push_back({ {"anfitrionId", s.anfitrionId}, {"anfitrionNombre", s.anfitrionNombre} });
 	if (_i->canal.hay) w["canal"] = aJson(_i->canal);
 	j["web"] = w;
 	j["carpetaPrueba"] = phoenix::entrega::aU8(carpetaAjustes() / "carpeta-de-prueba");   // para probar en una sola PC sin elegir nada
@@ -382,7 +367,7 @@ void Servicio::poner(const json& d) {
 }
 
 std::string Servicio::accion(const std::string& que, const std::string& dato) {
-	static const char* validas[] = { "publicar", "descartar", "deshacer", "olvidarReferencia", "reintentar", "rotarCodigo", "pausarCanal", "reanudarCanal", "aprobar", "quitarSeguidor", "seguirAmigo", "seguirCodigo", "dejarDeSeguir" };
+	static const char* validas[] = { "publicar", "descartar", "deshacer", "olvidarReferencia", "reintentar", "rotarCodigo", "seguirCodigo", "dejarDeSeguir" };
 	bool ok = false;
 	for (const char* v : validas) if (que == v) ok = true;
 	if (!ok) throw std::runtime_error("Accion desconocida.");

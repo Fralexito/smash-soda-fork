@@ -26,14 +26,15 @@ const ANFITRION = {
 // Estado de la conexión (web o carpeta): lo mismo para el anfitrión («transporte:<clave>») y para el amigo (la clave sola)
 const CONEXION = {
   ok: ["ok", "Conectado a la web", "Connected to the web"],
-  web_sin_endpoints: ["warn", "La web aún no tiene los traspasos en vivo: pega el prompt WEB y vuelve a comprobar", "The web doesn't have live transfers yet: paste the WEB prompt and check again"],
+  web_sin_endpoints: ["warn", "La web aún no tiene los traspasos en vivo: vuelve a comprobar en unos minutos", "The web doesn't have live transfers yet: check again in a few minutes"],
   sin_cuenta: ["bad", "Esta PC no está vinculada a tu cuenta de la web", "This PC isn't linked to your web account"],
-  sin_permiso: ["bad", "La web no te da permiso (¿te aprobó el anfitrión?)", "The web doesn't give you permission (did the host approve you?)"],
+  sin_permiso: ["bad", "La web no te da permiso (para ser anfitrión la cuenta debe estar aprobada como host)", "The web doesn't give you permission (to host, the account must be approved as a host)"],
   pendiente_aprobacion: ["warn", "Tu anfitrión aún no te ha aprobado", "Your host hasn't approved you yet"],
   limite: ["warn", "Demasiadas peticiones: espero un momento", "Too many requests: waiting a moment"],
   sin_conexion: ["warn", "Sin conexión con la web: reintento solo", "No connection to the web: retrying by itself"],
   respuesta_rara: ["warn", "La web contestó algo raro: reintento solo", "The web answered something odd: retrying by itself"],
-  sin_anfitrion: ["warn", "Elige a qué anfitrión sigues", "Choose which host you follow"],
+  sin_anfitrion: ["warn", "Elige a qué anfitrión sigues: escribe su código", "Choose which host you follow: type their code"],
+  liga_pausada: ["warn", "La web tiene la liga en pausa: espero", "The web has the league paused: waiting"],
 };
 const ESTADO_LOTE = { pendiente: ["warn", "PENDIENTE", "PENDING"], aplicado: ["ok", "APLICADO", "APPLIED"], parcial: ["vip", "PARCIAL", "PARTIAL"], saltado: ["bad", "SALTADO", "SKIPPED"], deshecho: ["", "DESHECHO", "UNDONE"], propio: ["", "TUYO", "YOURS"], error: ["bad", "ERROR", "ERROR"] };
 const ESTADO_CAMBIO = { aplicado: ["ok", "aplicado", "applied"], ya_estaba: ["", "ya estaba", "already there"], saltado: ["bad", "saltado", "skipped"], reemplazado: ["", "reemplazado por uno posterior", "replaced by a later one"], pendiente: ["warn", "pendiente", "pending"], publicado: ["ok", "publicado", "published"] };
@@ -114,41 +115,35 @@ export function Traspasos() {
     ${rol !== "apagado" ? html`<${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:12px">
       <${Titulo} texto=${t("PASO 1 · CONEXIÓN", "STEP 1 · CONNECTION")} derecha=${html`<${Chip} tipo=${conexionChip[0]}>${conexionChip[1]}</${Chip}>`}/>
       ${esWeb ? html`
-        <div class="ayuda" style="font-size:14px">${t("Los traspasos viajan por la web de Phoenix: el anfitrión tiene un canal con su código y sus amigos lo siguen. Solo reciben quienes él aprueba.", "Transfers travel through the Phoenix web: the host has a channel with a code and their friends follow it. Only people they approve receive anything.")}</div>
+        <div class="ayuda" style="font-size:14px">${t("Los traspasos viajan por la web de Phoenix: el anfitrión tiene un código y sus amigos lo escriben para seguirlo. Solo reciben quienes tienen su código (puede cambiarlo cuando quiera).", "Transfers travel through the Phoenix web: the host has a code and their friends type it to follow them. Only people with their code receive anything (they can change it any time).")}</div>
         ${!w.vinculada ? html`<div class="caja" style="display:flex;flex-direction:column;gap:8px"><div style="font-size:14px"><span class="punto bad"></span> ${t("Esta PC aún no está vinculada a tu cuenta de la web. Vincúlala para usar los traspasos.", "This PC isn't linked to your web account yet. Link it to use transfers.")}</div>
           <div><${Boton} tipo="lleno mini" al=${() => elegirPestana("web")}>${t("IR A SYNC › CUENTA WEB", "GO TO SYNC › WEB ACCOUNT")}</${Boton}></div></div>`
         : html`<div style="display:flex;align-items:center;gap:10px"><span class=${cx("punto", cp)}></span><span style="font-size:14px">${t(ct, cen)}${w.esperaSeg > 0 && w.estado !== "ok" ? t(` (reintento en ${w.esperaSeg} s)`, ` (retry in ${w.esperaSeg} s)`) : ""}</span></div>`}
         ${w.vinculada && (w.estado === "web_sin_endpoints" || d.webDisponible === false) ? html`<div class="caja" style="display:flex;flex-direction:column;gap:8px">
-          <div style="font-size:14px">${t("La web aún no tiene los traspasos en vivo. Fralex debe pegar el prompt «PROMPT-WEB-traspasos-vivo» (carpeta docs) en el chat WEB. Mientras tanto no se rompe nada: Link vuelve a probar solo cada 5 minutos.", "The web doesn't have live transfers yet. Fralex has to paste the «PROMPT-WEB-traspasos-vivo» prompt (docs folder) into the WEB chat. Nothing breaks meanwhile: Link tries again by itself every 5 minutes.")}</div>
+          <div style="font-size:14px">${t("La web aún no tiene los traspasos en vivo (se está desplegando). Mientras tanto no se rompe nada: Link vuelve a probar solo cada 5 minutos.", "The web doesn't have live transfers yet (it is being deployed). Nothing breaks meanwhile: Link tries again by itself every 5 minutes.")}</div>
           <div><${Boton} tipo="suave mini" al=${() => hacer("reintentar")}>${t("VOLVER A COMPROBAR", "CHECK AGAIN")}</${Boton}></div></div>` : null}
         ${w.purgadoHasta > 0 ? html`<div class="ayuda" style="font-size:12px">${t("La web ya borró lotes antiguos que esta PC no llegó a ver (por la retención); lo reciente sí está.", "The web already deleted old batches this PC never saw (retention); recent ones are there.")}</div>` : null}
 
         ${quiereCanal && w.vinculada ? html`<div class="caja" style="display:flex;flex-direction:column;gap:8px">
-          <b style="font-size:14px">${t("TU CANAL (para tus amigos)", "YOUR CHANNEL (for your friends)")}</b>
+          <b style="font-size:14px">${t("TU CÓDIGO (para tus amigos)", "YOUR CODE (for your friends)")}</b>
           ${canal ? html`
-            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span class="ayuda" style="font-size:13px">${t("Tu código:", "Your code:")}</span><span class="mono acc" style="font-size:18px;letter-spacing:1px">${canal.codigo}</span>
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span class="ayuda" style="font-size:13px">${t("Tu código:", "Your code:")}</span><span class="mono acc" style="font-size:18px;letter-spacing:2px">${canal.codigo}</span>
               <${Boton} tipo="suave mini" al=${() => copiar(canal.codigo)}>${t("COPIAR", "COPY")}</${Boton}>
-              <${Boton} tipo="suave mini" titulo=${t("El código anterior deja de servir; quienes ya te siguen siguen igual", "The old code stops working; people already following stay")} al=${() => hacer("rotarCodigo")}>${t("CÓDIGO NUEVO", "NEW CODE")}</${Boton}>
-              <${Boton} tipo="suave mini" al=${() => hacer(canal.activo ? "pausarCanal" : "reanudarCanal")}>${canal.activo ? t("PAUSAR", "PAUSE") : t("REANUDAR", "RESUME")}</${Boton}></div>
-            <div class="ayuda" style="font-size:12px">${t("Pásale el código a tu amigo: lo pone en su Link («Sigo a un anfitrión») y entra al momento. Si te sigue por ser amigo, tú lo apruebas aquí.", "Give the code to your friend: they enter it in their Link («I follow a host») and join right away. If they follow you as a friend, you approve them here.")}</div>
-            ${(canal.seguidores || []).length ? html`<div style="display:flex;flex-direction:column;gap:6px">${canal.seguidores.map((s) => html`<div key=${s.usuarioId} style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-              <span style="font-size:14px;flex:1 1 140px">${s.nombre || s.usuarioId}</span><${Chip} tipo=${s.estado === "activo" ? "acc" : "vip"}>${s.estado === "activo" ? t("RECIBE", "RECEIVES") : t("PIDE ENTRAR", "WANTS IN")}</${Chip}>
-              ${s.estado === "pendiente" ? html`<${Boton} tipo="lleno mini" al=${() => hacer("aprobar", { usuario_id: s.usuarioId })}>${t("APROBAR", "APPROVE")}</${Boton}>` : null}
-              <${Boton} tipo="suave mini" al=${() => hacer("quitarSeguidor", { usuario_id: s.usuarioId })}>${s.estado === "pendiente" ? t("RECHAZAR", "REJECT") : t("QUITAR", "REMOVE")}</${Boton}></div>`)}</div>`
+              <${Boton} tipo="suave mini" titulo=${t("El código anterior deja de servir para unirse; quienes ya te siguen siguen", "The old code stops working for joining; people already following stay")} al=${() => hacer("rotarCodigo")}>${t("CÓDIGO NUEVO", "NEW CODE")}</${Boton}></div>
+            <div class="ayuda" style="font-size:12px">${t("Pásale el código a tu amigo: lo escribe en su Link («¿A qué anfitrión sigues?») y empieza a recibir tus traspasos.", "Give the code to your friend: they type it in their Link («Which host do you follow?») and start receiving your transfers.")}</div>
+            ${(w.meSiguen || []).length ? html`<div class="ayuda" style="font-size:13px">${t("Te siguen: ", "Following you: ")}${w.meSiguen.join(", ")}</div>`
               : html`<div class="ayuda" style="font-size:13px">${t("Nadie te sigue todavía.", "Nobody follows you yet.")}</div>`}`
-            : html`<div class="ayuda" style="font-size:13px">${t("Creando tu canal…", "Creating your channel…")}</div>`}
+            : html`<div class="ayuda" style="font-size:13px">${w.estado === "sin_permiso" ? t("Esta cuenta aún no está aprobada como anfitrión en la web (pídeselo al staff).", "This account isn't approved as a host on the web yet (ask the staff).") : t("Pidiendo tu código…", "Getting your code…")}</div>`}
         </div>` : null}
 
         ${quiereSeguir && w.vinculada ? html`<div class="caja" style="display:flex;flex-direction:column;gap:8px">
           <b style="font-size:14px">${t("¿A QUÉ ANFITRIÓN SIGUES?", "WHICH HOST DO YOU FOLLOW?")}</b>
-          ${sig.length ? sig.map((s) => html`<div key=${s.canalId} style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-            <span style="font-size:14px;flex:1 1 140px">${s.anfitrionNombre || "?"}</span><${Chip} tipo=${s.estado === "activo" ? "acc" : "vip"}>${s.estado === "activo" ? t("SIGUIENDO", "FOLLOWING") : t("ESPERANDO QUE TE APRUEBE", "WAITING FOR APPROVAL")}</${Chip}>
-            <${Boton} tipo="suave mini" al=${() => hacer("dejarDeSeguir", { canal_id: s.canalId })}>${t("DEJAR DE SEGUIR", "UNFOLLOW")}</${Boton}></div>`)
-            : html`<div class="ayuda" style="font-size:13px">${t("Aún no sigues a nadie. Elige a tu anfitrión entre tus amigos de Phoenix (te tiene que aprobar) o escribe su código (entras al momento).", "You don't follow anyone yet. Pick your host among your Phoenix friends (they have to approve you) or type their code (you join right away).")}</div>`}
-          ${!sig.length && (w.amigos || []).length ? html`<div style="display:flex;flex-direction:column;gap:6px">${w.amigos.slice(0, 12).map((x) => html`<div key=${x.usuarioId} style="display:flex;align-items:center;gap:10px"><span style="font-size:14px;flex:1">${x.nombre}</span>
-            <${Boton} tipo="suave mini" al=${() => hacer("seguirAmigo", { usuario_id: x.usuarioId })}>${t("SEGUIR", "FOLLOW")}</${Boton}></div>`)}</div>` : null}
-          ${!sig.length ? html`<div style="display:flex;gap:8px;align-items:center"><div style="flex:1;min-width:0"><input type="text" class="campo mono" maxLength=${16} value=${codigo} placeholder=${t("Código del anfitrión (PHX-…)", "Host code (PHX-…)")} onInput=${(e) => setCodigo(e.currentTarget.value)}/></div>
-            <${Boton} tipo="lleno mini" deshabilitado=${!codigo.trim()} al=${async () => { await hacer("seguirCodigo", { codigo: codigo.trim() }); setCodigo(""); }}>${t("UNIRME", "JOIN")}</${Boton}></div>` : null}
+          ${sig.length ? sig.map((x) => html`<div key=${x.anfitrionId} style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <span style="font-size:14px;flex:1 1 140px">${x.anfitrionNombre || "?"}</span><${Chip} tipo="acc">${t("SIGUIENDO", "FOLLOWING")}</${Chip}>
+            <${Boton} tipo="suave mini" al=${() => hacer("dejarDeSeguir", { anfitrion_id: x.anfitrionId })}>${t("DEJAR DE SEGUIR", "UNFOLLOW")}</${Boton}></div>`)
+            : html`<div class="ayuda" style="font-size:13px">${t("Aún no sigues a nadie. Pídele su código a tu anfitrión y escríbelo aquí: empiezas a recibir sus traspasos al momento.", "You don't follow anyone yet. Ask your host for their code and type it here: you start receiving their transfers right away.")}</div>`}
+          <div style="display:flex;gap:8px;align-items:center"><div style="flex:1;min-width:0"><input type="text" class="campo mono" maxLength=${16} value=${codigo} placeholder=${t("Código del anfitrión", "Host code")} onInput=${(e) => setCodigo(e.currentTarget.value.toUpperCase())}/></div>
+            <${Boton} tipo="lleno mini" deshabilitado=${!codigo.trim()} al=${async () => { await hacer("seguirCodigo", { codigo: codigo.trim() }); setCodigo(""); }}>${sig.length ? t("SEGUIR A OTRO", "FOLLOW ANOTHER") : t("UNIRME", "JOIN")}</${Boton}></div>
         </div>` : null}` : html`
         <div class="ayuda" style="font-size:14px">${t("Estás usando una carpeta compartida en vez de la web.", "You are using a shared folder instead of the web.")}</div>
         <div><${Boton} tipo="lleno mini" al=${() => poner({ transporte: "web" }, t("Vuelves a usar la web de Phoenix.", "Back to the Phoenix web."))}>${t("VOLVER A USAR LA WEB DE PHOENIX", "BACK TO THE PHOENIX WEB")}</${Boton}></div>`}

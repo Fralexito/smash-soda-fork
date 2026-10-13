@@ -29,11 +29,11 @@ namespace phoenix::web {
 		});
 
 		// publicar | descartar (lo detectado en espera de confirmar) | deshacer (el ultimo lote aplicado) | olvidarReferencia | reintentar (volver a comprobar la web)
-		// con la web: rotarCodigo | pausarCanal | reanudarCanal | aprobar{usuario_id} | quitarSeguidor{usuario_id} | seguirAmigo{usuario_id} | seguirCodigo{codigo} | dejarDeSeguir{canal_id}
+		// con la web: rotarCodigo | seguirCodigo{codigo} | dejarDeSeguir{anfitrion_id}
 		p.registrar("traspasos.accion", [](const json& d, uint64_t) -> std::optional<json> {
 			const std::string que = texto(d, "accion", 20);
 			std::string dato;
-			for (const char* k : { "usuario_id", "codigo", "canal_id" }) if (d.contains(k) && d[k].is_string()) dato = texto(d, k, 64);
+			for (const char* k : { "usuario_id", "codigo", "canal_id", "anfitrion_id" }) if (d.contains(k) && d[k].is_string()) dato = texto(d, k, 64);
 			try { phoenix::traspasos::Servicio::get().accion(que, dato); }
 			catch (const std::exception& e) { throw ErrorAccion("NO_SE_PUDO", e.what()); }
 			return phoenix::traspasos::Servicio::get().estado();
