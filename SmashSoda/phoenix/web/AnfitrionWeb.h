@@ -61,6 +61,10 @@ namespace phoenix::web {
 		/// ¿Hay WebView2 Runtime instalado? Devuelve su versión o "" (no crea nada).
 		static std::string runtimeInstalado();
 
+		/// Cierra los msedgewebview2.exe que quedaron vivos usando esa carpeta de datos (típico tras un cierre inesperado del
+		/// programa): con ellos vivos, WebView2 falla al crear la vista (0x80080005). Devuelve cuántos cerró. No toca otras carpetas.
+		static int limpiarHuerfanos(const std::wstring& carpetaDatos);
+
 		struct Impl;
 	private:
 		std::shared_ptr<Impl> _impl;

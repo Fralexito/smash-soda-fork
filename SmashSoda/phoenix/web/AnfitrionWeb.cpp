@@ -10,6 +10,7 @@
 #include <shellapi.h>
 #include <shlobj.h>
 #include <shlwapi.h>
+#include <tlhelp32.h>
 
 #include "WebView2.h"
 #include "AnfitrionWeb.h"
@@ -497,6 +498,50 @@ namespace phoenix::web {
 		cerrar();
 	}
 
+	int AnfitrionWeb::limpiarHuerfanos(const std::wstring& carpetaDatos) {
+		int cerrados = 0;
+		try {
+			if (carpetaDatos.empty()) return 0;
+			auto minusculas = [](std::wstring s) { for (wchar_t& c : s) c = static_cast<wchar_t>(towlower(c)); return s; };
+			const std::wstring carpeta = minusculas(carpetaDatos);
+
+			using FnNtQ = LONG(NTAPI*)(HANDLE, ULONG, PVOID, ULONG, PULONG);
+			const HMODULE nt = GetModuleHandleW(L"ntdll.dll");
+			const FnNtQ consulta = nt ? reinterpret_cast<FnNtQ>(GetProcAddress(nt, "NtQueryInformationProcess")) : nullptr;
+			if (consulta == nullptr) return 0;
+
+			const HANDLE foto = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+			if (foto == INVALID_HANDLE_VALUE) return 0;
+			PROCESSENTRY32W e{};
+			e.dwSize = sizeof(e);
+			for (BOOL ok = Process32FirstW(foto, &e); ok; ok = Process32NextW(foto, &e)) {
+				if (_wcsicmp(e.szExeFile, L"msedgewebview2.exe") != 0) continue;
+				const HANDLE h = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ | PROCESS_TERMINATE, FALSE, e.th32ProcessID);
+				if (h == nullptr) continue;   // de otro usuario o sin permiso: no es nuestro
+				bool nuestro = false;
+				struct Basico { PVOID a; PVOID peb; PVOID b[2]; ULONG_PTR pid; PVOID c; } pbi{};
+				PVOID parametros = nullptr;
+				struct Texto { USHORT largo, maximo; ULONG relleno; PVOID datos; } linea{};
+				if (consulta(h, 0, &pbi, sizeof(pbi), nullptr) == 0 && pbi.peb != nullptr
+					&& ReadProcessMemory(h, static_cast<PBYTE>(pbi.peb) + 0x20, &parametros, sizeof(parametros), nullptr) && parametros != nullptr
+					&& ReadProcessMemory(h, static_cast<PBYTE>(parametros) + 0x70, &linea, sizeof(linea), nullptr)
+					&& linea.datos != nullptr && linea.largo > 0 && linea.largo <= 32768) {
+					std::wstring cmd(linea.largo / 2, L'\0');
+					if (ReadProcessMemory(h, linea.datos, cmd.data(), linea.largo, nullptr)) {
+						cmd = minusculas(cmd);
+						const size_t p = cmd.find(L"--user-data-dir=");
+						nuestro = p != std::wstring::npos && cmd.find(carpeta, p) != std::wstring::npos;
+					}
+				}
+				if (nuestro && TerminateProcess(h, 0)) cerrados++;
+				CloseHandle(h);
+			}
+			CloseHandle(foto);
+		}
+		catch (...) {}
+		return cerrados;
+	}
+
 	std::string AnfitrionWeb::runtimeInstalado() {
 		Cargador& c = cargador();
 		if (c.version == nullptr) return std::string();
@@ -544,6 +589,8 @@ namespace phoenix::web {
 				return false;
 			}
 
+			// Si Link se cerró de golpe, su motor web puede seguir vivo y bloquear la carpeta: se limpia antes de crear (y «Reintentar» vuelve a pasar por aquí).
+			limpiarHuerfanos(carpetaDatos);
 			SHCreateDirectoryExW(nullptr, carpetaDatos.c_str(), nullptr);
 			// Fondo oscuro mientras carga (sin destello blanco).
 			SetEnvironmentVariableW(L"WEBVIEW2_DEFAULT_BACKGROUND_COLOR", L"FF05060F");

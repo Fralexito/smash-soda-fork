@@ -4,6 +4,16 @@ extern Hosting g_hosting;
 #include "OverlayService.h"
 #include "WebSocket.h"
 #include <shlwapi.h>
+#include "../phoenix/web/AnfitrionWeb.h"
+
+namespace {
+    // Carpeta de datos del motor web del overlay (Wails la crea con el nombre del exe)
+    void limpiarMotorWebOverlay() {
+        wchar_t appdata[MAX_PATH] = {};
+        if (GetEnvironmentVariableW(L"APPDATA", appdata, MAX_PATH) == 0) return;
+        phoenix::web::AnfitrionWeb::limpiarHuerfanos(std::wstring(appdata) + L"\\PhoenixGlass.exe");
+    }
+}
 
 OverlayService& OverlayService::instance() {
     static OverlayService s_instance;
@@ -111,6 +121,7 @@ std::wstring OverlayService::buildOverlayPath() const {
 
 bool OverlayService::launchProcess() {
     std::wstring path = buildOverlayPath();
+    limpiarMotorWebOverlay();   // restos de un overlay anterior que se cerró de golpe
 
     STARTUPINFOW si;
     PROCESS_INFORMATION pi;
@@ -149,6 +160,7 @@ void OverlayService::killProcess() {
         CloseHandle(hProcess);
     }
     _pid = 0;
+    limpiarMotorWebOverlay();   // sus procesos hijos de WebView2 no se cierran con él
 }
 
 bool OverlayService::processIsAlive() const {
