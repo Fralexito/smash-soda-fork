@@ -689,6 +689,29 @@ namespace phoenix {
 		return v != 0 && ahoraMs() - v < 10000;
 	}
 
+	void PhoenixLink::panelOverlay(bool abierto) {
+		if (abierto) {
+			if (!panelOverlayAbierto()) { std::lock_guard<std::mutex> l(_mutex); _proximoAmigosMs = 0; }   // al abrir el panel: sondeo ya
+			_overlayPanelMs = ahoraMs();
+		}
+		else _overlayPanelMs = 0;
+	}
+	bool PhoenixLink::panelOverlayAbierto() const {
+		const long long v = _overlayPanelMs.load();
+		return v != 0 && ahoraMs() - v < 10000;
+	}
+	void PhoenixLink::invitarDesdeOverlay(const std::string& usuarioId) {
+		std::lock_guard<std::mutex> l(_mutex);
+		if (_overlayInvitaciones.size() > 32) return;   // el overlay no manda más de unas pocas a la vez
+		const uint64_t ticket = (1ull << 62) | (++_overlayTicketN);
+		_overlayInvitaciones[ticket] = usuarioId;
+		_pedidos.push_back({ ticket, "invitar", usuarioId });
+	}
+	void PhoenixLink::overlayPartido(const std::string& jsonTexto) {
+		std::lock_guard<std::mutex> l(_mutex);
+		_overlayPartidoTexto = jsonTexto;
+	}
+
 	// Lo que se manda al overlay (PhoenixGlass) por el WebSocket local: noticias de ultima hora y mensajes nuevos del chat general.
 	std::vector<std::string> PhoenixLink::mensajesOverlay() {
 		std::vector<std::string> salida;
@@ -696,8 +719,46 @@ namespace phoenix {
 			const long long ahora = ahoraMs();
 			_overlayVistoMs = ahora;
 			std::lock_guard<std::mutex> l(_mutex);
+			// Marcador del partido: cuando cambia (un gol no puede esperar 3 s) o cada 5 s por si el overlay se abrió después
+			if (_overlayPartidoTexto != _overlayPartidoEnviado || (!_overlayPartidoTexto.empty() && ahora - _overlayPartidoEnviadoMs > 5000)) {
+				_overlayPartidoEnviado = _overlayPartidoTexto;
+				_overlayPartidoEnviadoMs = ahora;
+				const json datos = _overlayPartidoTexto.empty() ? json{ {"fase", "libre"} } : json::parse(_overlayPartidoTexto, nullptr, false);
+				if (!datos.is_discarded()) {
+					json j; j["event"] = "phoenix:partido"; j["data"] = datos;
+					salida.push_back(j.dump(-1, ' ', false, json::error_handler_t::replace));
+				}
+			}
+			// Resultado de las invitaciones pedidas desde el overlay
+			for (auto it = _resultados.begin(); it != _resultados.end();) {
+				auto inv = _overlayInvitaciones.find(it->ticket);
+				if (inv == _overlayInvitaciones.end()) { ++it; continue; }
+				json j; j["event"] = "phoenix:invitacion";
+				j["data"] = { {"usuarioId", inv->second}, {"ok", it->ok}, {"mensaje", it->mensaje} };
+				salida.push_back(j.dump(-1, ' ', false, json::error_handler_t::replace));
+				_overlayInvitaciones.erase(inv);
+				it = _resultados.erase(it);
+			}
 			if (ahora < _overlayProximoMs) return salida;
 			_overlayProximoMs = ahora + 3000;
+
+			// Amigos para el panel del overlay: solo con el panel abierto, cuando cambian o cada 10 s
+			if (panelOverlayAbierto()) {
+				json items = json::array();
+				std::string firma = _amigosCargados ? "c;" : "n;";
+				for (const AmigoWeb& a : _amigos) {
+					items.push_back({ {"usuarioId", a.usuarioId}, {"nombre", a.nombre}, {"estado", a.estado} });
+					firma += a.usuarioId + "|" + a.nombre + "|" + a.estado + ";";
+				}
+				if (firma != _overlayFirmaAmigos || ahora - _overlayAmigosMs > 10000) {
+					_overlayFirmaAmigos = firma;
+					_overlayAmigosMs = ahora;
+					json j; j["event"] = "phoenix:amigos";
+					j["data"] = { {"cargados", _amigosCargados}, {"salaAbierta", _foto.abierta}, {"lista", items} };
+					salida.push_back(j.dump(-1, ' ', false, json::error_handler_t::replace));
+				}
+			}
+			else _overlayFirmaAmigos.clear();
 
 			// Ticker: solo si cambio o cada 10 s (por si el overlay se abrio o reconecto despues)
 			if (_noticiasCargadas) {
@@ -768,8 +829,9 @@ namespace phoenix {
 
 	std::vector<ResultadoWeb> PhoenixLink::tomarResultados() {
 		std::lock_guard<std::mutex> l(_mutex);
-		std::vector<ResultadoWeb> r;
-		r.swap(_resultados);
+		std::vector<ResultadoWeb> r, quedan;
+		for (ResultadoWeb& x : _resultados) (_overlayInvitaciones.count(x.ticket) ? quedan : r).push_back(x);   // los del overlay se los lleva mensajesOverlay()
+		_resultados.swap(quedan);
 		return r;
 	}
 
@@ -1640,7 +1702,7 @@ namespace phoenix {
 		std::string etag;
 		{
 			std::lock_guard<std::mutex> l(_mutex);
-			if (!_ventanaVisible || ahoraMs() < _proximoAmigosMs) return false;
+			if ((!_ventanaVisible && !panelOverlayAbierto()) || ahoraMs() < _proximoAmigosMs) return false;
 			etag = _etagAmigos;
 		}
 		std::vector<std::string> cab = cabecerasCon(token);

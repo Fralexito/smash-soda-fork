@@ -2,6 +2,7 @@
 extern Hosting g_hosting;
 #include "WebSocket.h"
 #include "OverlayService.h"
+#include "../phoenix/link/PhoenixLink.h"
 
 WebSocket WebSocket::instance;
 
@@ -144,6 +145,17 @@ void WebSocket::onMessage(websocketpp::connection_hdl hdl, server::message_ptr m
                 return;
             }
             g_hosting.sendHostMessage(message.c_str());
+        }
+        // Phoenix: panel de amigos del overlay (avisa que está abierto y pide invitar a un amigo)
+        else if (j["event"] == "phoenix:panel") {
+            const bool abierto = j.contains("data") && j["data"].is_object() && j["data"].value("abierto", false);
+            phoenix::PhoenixLink::instancia().panelOverlay(abierto);
+        }
+        else if (j["event"] == "phoenix:invitar") {
+            if (j.contains("data") && j["data"].is_object() && j["data"].contains("usuarioId") && j["data"]["usuarioId"].is_string()) {
+                const string usuario = j["data"]["usuarioId"].get<string>();
+                if (usuario.size() == 36) phoenix::PhoenixLink::instancia().invitarDesdeOverlay(usuario);   // id de usuario de la web (uuid)
+            }
         }
     }
     catch (...) {}

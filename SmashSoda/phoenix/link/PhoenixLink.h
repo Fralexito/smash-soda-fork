@@ -194,6 +194,12 @@ namespace phoenix {
 
 		/// Para el overlay (PhoenixGlass): textos JSON listos para el WebSocket local (ticker y mensajes nuevos del chat general).
 		std::vector<std::string> mensajesOverlay();
+		/// El panel de amigos del overlay está abierto (el overlay avisa cada pocos segundos mientras lo está): se sondean los amigos aunque la ventana de Link no se vea.
+		void panelOverlay(bool abierto);
+		/// Invitar a un amigo desde el overlay (misma petición que la interfaz); el resultado vuelve al overlay en «phoenix:invitacion».
+		void invitarDesdeOverlay(const std::string& usuarioId);
+		/// Marcador para el overlay (json ya armado por el árbitro; "" = sin partido). Se envía cuando cambia.
+		void overlayPartido(const std::string& jsonTexto);
 		void enviarChatGlobal(uint64_t ticket, const std::string& texto);
 		/// PES2021.exe esta abierto (se mira cada ~5 s en el hilo de Link).
 		bool pesAbierto() const { return _pesAbierto.load(); }
@@ -303,6 +309,14 @@ namespace phoenix {
 		long long _overlayUltimoChat = 0;
 		bool _overlayChatIniciado = false;
 		bool overlayReciente() const;
+		std::atomic<long long> _overlayPanelMs{ 0 };   ///< última vez que el overlay dijo «panel de amigos abierto»
+		bool panelOverlayAbierto() const;
+		std::string _overlayPartidoTexto, _overlayPartidoEnviado;
+		long long _overlayPartidoEnviadoMs = 0;
+		std::map<uint64_t, std::string> _overlayInvitaciones;   ///< ticket → amigo invitado desde el overlay
+		uint64_t _overlayTicketN = 0;
+		std::string _overlayFirmaAmigos;
+		long long _overlayAmigosMs = 0;
 		// Chat general (protegido por _mutex)
 		std::vector<MensajeGlobal> _chatMsgs;
 		std::vector<std::pair<uint64_t, std::string>> _chatEnvios;   ///< ticket + texto por enviar

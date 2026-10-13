@@ -108,6 +108,27 @@ namespace phoenix::web {
 				: (j.nombreVisita.empty() ? std::string("Visita") : j.nombreVisita);
 		}
 
+		// Marcador para el overlay (phoenix:partido): lo que dice el juego, con el nombre que Link da a cada lado. "" = sin partido que mostrar.
+		std::string marcadorOverlay(Interno& in, const juego::EstadoPartidoJuego& j) {
+			if (!j.valido || !(j.fase == "en_juego" || j.fase == "pausado" || j.fase == "descanso" || j.fase == "final")) return std::string();
+			json gs = json::array();
+			for (const juego::GolJuego& g : j.goles) {
+				json x = { {"m", g.minuto}, {"l", g.local} };
+				if (!g.jugador.empty()) x["j"] = g.jugador;
+				if (g.propia) x["pp"] = true;
+				gs.push_back(std::move(x));
+			}
+			const int gl = j.golesLocal >= 0 ? j.golesLocal : static_cast<int>(std::count_if(j.goles.begin(), j.goles.end(), [](const juego::GolJuego& g) { return g.local; }));
+			const int gv = j.golesVisita >= 0 ? j.golesVisita : static_cast<int>(j.goles.size()) - gl;
+			const json d = {
+				{"fase", j.fase}, {"minuto", j.minuto}, {"segundo", j.segundo}, {"anadido", j.anadido}, {"periodo", j.periodo}, {"reloj", j.relojCorre},
+				{"local", { {"nombre", nombreEquipo(in, j, true)}, {"goles", gl} }},
+				{"visita", { {"nombre", nombreEquipo(in, j, false)}, {"goles", gv} }},
+				{"goles", gs}
+			};
+			return d.dump(-1, ' ', false, json::error_handler_t::replace);
+		}
+
 		std::string resumenMarcador(Interno& in) {
 			return in.partido.ladoA().nombre + " " + std::to_string(in.partido.ladoA().goles) + "-"
 				+ std::to_string(in.partido.ladoB().goles) + " " + in.partido.ladoB().nombre;
@@ -369,6 +390,7 @@ namespace phoenix::web {
 
 			// HUD del juego (sala.txt): quién juega en cada lado, su ping, el árbitro y el chat
 			PhoenixLink::instancia().salaJuego(textoSalaJuego(in, sala, h));
+			PhoenixLink::instancia().overlayPartido(sala.abierta() ? marcadorOverlay(in, j) : std::string());   // marcador del overlay
 
 			// 2a0) Sin lados elegidos: al pitazo inicial (reloj en marcha, minuto 0–1) Link los arma solo con quien tiene
 			//      mando, según el equipo de cada puesto (Equipo A = lado a, Equipo B = lado b; un lado vacío = la CPU).
