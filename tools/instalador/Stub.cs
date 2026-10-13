@@ -156,6 +156,85 @@ public static class Instalador
 
     public delegate void Avance(int porcentaje, string texto);
 
+    // ---- desinstalar -----------------------------------------------------------------------------------------
+    public const string ClaveDesinstalar = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\PhoenixLink";
+
+    /// Deja Desinstalar.exe (copia de este mismo programa) en la carpeta y lo apunta en Configuración › Aplicaciones.
+    static void RegistrarDesinstalador(string carpeta)
+    {
+        string destino = Path.Combine(carpeta, "Desinstalar.exe");
+        File.Copy(Application.ExecutablePath, destino, true);
+        using (RegistryKey k = Registry.LocalMachine.CreateSubKey(ClaveDesinstalar))
+        {
+            k.SetValue("DisplayName", "Phoenix Link");
+            k.SetValue("DisplayVersion", Dato("PHX_VERSION"));
+            k.SetValue("Publisher", "Phoenix");
+            k.SetValue("InstallLocation", carpeta);
+            k.SetValue("DisplayIcon", Path.Combine(carpeta, "PhoenixLink.exe"));
+            k.SetValue("UninstallString", "\"" + destino + "\" /desinstalar");
+            k.SetValue("NoModify", 1, RegistryValueKind.DWord);
+            k.SetValue("NoRepair", 1, RegistryValueKind.DWord);
+            k.SetValue("EstimatedSize", 40000, RegistryValueKind.DWord);
+        }
+    }
+
+    /// ¿Es una carpeta de Phoenix Link que se puede borrar? (nunca una raíz, ni sin PhoenixLink.exe dentro)
+    public static bool CarpetaDeLink(string carpeta)
+    {
+        try
+        {
+            string c = Path.GetFullPath(carpeta).TrimEnd('\\');
+            if (c.Length < 6 || Path.GetPathRoot(c).TrimEnd('\\').Equals(c, StringComparison.OrdinalIgnoreCase)) return false;
+            return File.Exists(Path.Combine(c, "PhoenixLink.exe"));
+        }
+        catch { return false; }
+    }
+
+    static void BorrarSiExiste(string carpeta)
+    {
+        try { if (Directory.Exists(carpeta)) Directory.Delete(carpeta, true); } catch (Exception e) { Log("no se pudo borrar " + carpeta + ": " + e.Message); }
+    }
+
+    /// Borra los archivos de la instalación. Lo que no se pueda (el propio Desinstalar.exe en marcha) se borra justo después de salir.
+    public static void BorrarInstalacion(string carpeta)
+    {
+        if (!CarpetaDeLink(carpeta)) throw new InvalidOperationException("Esa carpeta no parece una instalación de Phoenix Link; no se borra nada.");
+        try { Directory.Delete(carpeta, true); return; }
+        catch (Exception e) { Log("borrado inmediato incompleto: " + e.Message); }
+        ProcessStartInfo psi = new ProcessStartInfo("cmd.exe", "/c ping 127.0.0.1 -n 3 >nul & rmdir /s /q \"" + Path.GetFullPath(carpeta).TrimEnd('\\') + "\"");
+        psi.UseShellExecute = false; psi.CreateNoWindow = true;
+        Process.Start(psi);
+    }
+
+    public static void Desinstalar(string carpeta, bool borrarDatos, Avance avance)
+    {
+        if (!CarpetaDeLink(carpeta)) throw new InvalidOperationException("No encuentro una instalación de Phoenix Link en " + carpeta + ".");
+        Log("desinstalar " + carpeta + " datos=" + borrarDatos);
+        avance(5, "Cerrando Phoenix Link…");
+        foreach (string n in new string[] { "PhoenixLink", "PhoenixGlass" })
+            foreach (Process p in Process.GetProcessesByName(n)) { try { p.Kill(); p.WaitForExit(4000); } catch { } }
+
+        avance(25, "Quitando los accesos directos…");
+        try { File.Delete(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonDesktopDirectory), "Phoenix Link.lnk")); } catch { }
+        BorrarSiExiste(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonPrograms), "Phoenix Link"));
+
+        if (borrarDatos)
+        {
+            avance(45, "Borrando tus datos y ajustes…");
+            BorrarSiExiste(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"Trybuchet\Smash Soda"));
+            BorrarSiExiste(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PhoenixLink"));
+            BorrarSiExiste(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PhoenixGlass.exe"));
+        }
+
+        avance(70, "Quitándolo de la lista de programas…");
+        try { Registry.LocalMachine.DeleteSubKeyTree(ClaveDesinstalar, false); } catch (Exception e) { Log("registro: " + e.Message); }
+
+        avance(85, "Borrando los archivos…");
+        BorrarInstalacion(carpeta);
+        avance(100, "Listo.");
+        Log("desinstalado");
+    }
+
     /// Todo el proceso. Lanza excepción con un mensaje legible si algo imprescindible falla.
     public static void InstalarTodo(string carpeta, bool escritorio, Avance avance, Func<bool> cancelado)
     {
@@ -227,6 +306,9 @@ public static class Instalador
                 if (escritorio) AccesoDirecto(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonDesktopDirectory), "Phoenix Link.lnk"), exeLink, carpeta);
             }
             catch (Exception e) { Log("accesos directos: " + e.Message); }
+
+            try { RegistrarDesinstalador(carpeta); }
+            catch (Exception e) { Log("desinstalador: " + e.Message); }
 
             avance(100, "Listo.");
             Log("fin correcto");
@@ -541,6 +623,160 @@ public class Asistente : Form
     }
 }
 
+// ---- el asistente de desinstalación -------------------------------------------------------------------------
+public class AsistenteDesinstalar : Form
+{
+    static readonly Color Fondo = Color.FromArgb(10, 15, 38), Lateral = Color.FromArgb(14, 21, 48), Texto = Color.FromArgb(233, 239, 255),
+        Tenue = Color.FromArgb(139, 149, 184), Acento = Color.FromArgb(25, 230, 255), Cesped = Color.FromArgb(47, 224, 138), Linea = Color.FromArgb(40, 52, 100);
+
+    Panel[] paginas = new Panel[3];
+    Button btnPrincipal, btnCancelar;
+    CheckBox chkDatos;
+    Label lblPaso, lblFinTitulo, lblFinTexto;
+    BarraPhoenix barra;
+    Icon icono;
+    string carpeta;
+    int pagina;
+    bool trabajando, fallo;
+
+    public AsistenteDesinstalar(string carpetaInstalacion)
+    {
+        carpeta = carpetaInstalacion;
+        try { using (Stream s = Instalador.Recurso("icono.ico")) { icono = new Icon(s, 128, 128); Icon = new Icon(Instalador.Recurso("icono.ico"), 32, 32); } } catch { }
+        AutoScaleDimensions = new SizeF(96f, 96f);
+        AutoScaleMode = AutoScaleMode.Dpi;
+        Text = "Desinstalar Phoenix Link";
+        ClientSize = new Size(660, 440);
+        FormBorderStyle = FormBorderStyle.FixedSingle;
+        MaximizeBox = false;
+        StartPosition = FormStartPosition.CenterScreen;
+        BackColor = Fondo; ForeColor = Texto; Font = new Font("Segoe UI", 9.5f); DoubleBuffered = true;
+
+        Panel lateral = new Panel(); lateral.SetBounds(0, 0, 210, 440); lateral.BackColor = Lateral; lateral.Paint += PintarLateral; Controls.Add(lateral);
+        for (int i = 0; i < paginas.Length; i++)
+        {
+            paginas[i] = new Panel(); paginas[i].SetBounds(240, 30, 395, 330); paginas[i].BackColor = Fondo; Controls.Add(paginas[i]);
+        }
+
+        Etiqueta(paginas[0], "Desinstalar Phoenix Link", 0, 0, 395, 40, 18f, true, Texto);
+        Etiqueta(paginas[0], "Se quitará Phoenix Link y su overlay de este PC.", 0, 54, 395, 24, 10f, false, Tenue);
+        Etiqueta(paginas[0], carpeta, 0, 80, 395, 40, 9f, false, Acento);
+        chkDatos = new CheckBox();
+        chkDatos.Text = "Borrar también mis datos y ajustes (cuenta vinculada, perfiles de amigos, configuración)";
+        chkDatos.SetBounds(0, 135, 395, 50); chkDatos.ForeColor = Texto; chkDatos.BackColor = Fondo;
+        paginas[0].Controls.Add(chkDatos);
+        Etiqueta(paginas[0], "Si dejas esto sin marcar y vuelves a instalar Link, lo encontrarás como lo dejaste.", 0, 190, 395, 40, 9f, false, Tenue);
+        Etiqueta(paginas[0], "El módulo del juego que Link puso en la carpeta de PES NO se toca (PES sigue funcionando igual). Si quieres quitarlo, hazlo antes desde Link: SYNC › Módulos del juego.", 0, 240, 395, 70, 9f, false, Tenue);
+
+        Etiqueta(paginas[1], "Desinstalando…", 0, 0, 395, 40, 18f, true, Texto);
+        lblPaso = Etiqueta(paginas[1], "Preparando…", 0, 56, 395, 26, 10f, false, Texto);
+        barra = new BarraPhoenix(); barra.SetBounds(0, 90, 395, 14); paginas[1].Controls.Add(barra);
+
+        lblFinTitulo = Etiqueta(paginas[2], "Phoenix Link se desinstaló", 0, 0, 395, 40, 18f, true, Cesped);
+        lblFinTexto = Etiqueta(paginas[2], "", 0, 56, 395, 220, 10f, false, Texto);
+
+        Panel separador = new Panel(); separador.SetBounds(210, 372, 450, 1); separador.BackColor = Linea; Controls.Add(separador);
+        btnCancelar = Boton("Cancelar", 400, false); btnCancelar.Click += delegate { Close(); };
+        btnPrincipal = Boton("Desinstalar", 530, true); btnPrincipal.Click += PrincipalClick;
+        Controls.AddRange(new Control[] { btnCancelar, btnPrincipal });
+        FormClosing += delegate (object s, FormClosingEventArgs e) { if (trabajando) e.Cancel = true; };
+        Ir(0);
+    }
+
+    Button Boton(string texto, int x, bool principal)
+    {
+        Button b = new Button();
+        b.Text = texto; b.SetBounds(x, 388, principal ? 105 : 120, 34); b.FlatStyle = FlatStyle.Flat; b.Cursor = Cursors.Hand;
+        b.Font = new Font("Segoe UI Semibold", 9.5f);
+        b.FlatAppearance.BorderColor = principal ? Acento : Linea;
+        b.BackColor = principal ? Acento : Lateral;
+        b.ForeColor = principal ? Color.FromArgb(4, 18, 42) : Texto;
+        return b;
+    }
+
+    Label Etiqueta(Panel p, string texto, int x, int y, int ancho, int alto, float tam, bool negrita, Color color)
+    {
+        Label l = new Label();
+        l.Text = texto; l.SetBounds(x, y, ancho, alto); l.ForeColor = color; l.BackColor = Color.Transparent;
+        l.Font = new Font(negrita ? "Segoe UI Semibold" : "Segoe UI", tam);
+        p.Controls.Add(l);
+        return l;
+    }
+
+    void PintarLateral(object sender, PaintEventArgs e)
+    {
+        Graphics g = e.Graphics;
+        g.SmoothingMode = SmoothingMode.AntiAlias; g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+        using (LinearGradientBrush b = new LinearGradientBrush(new Rectangle(0, 0, 210, 440), Color.FromArgb(18, 28, 70), Color.FromArgb(8, 12, 30), 90f)) g.FillRectangle(b, 0, 0, 210, 440);
+        if (icono != null) g.DrawIcon(icono, new Rectangle(57, 50, 96, 96));
+        StringFormat centro = new StringFormat(); centro.Alignment = StringAlignment.Center;
+        using (Font f = new Font("Segoe UI", 20f, FontStyle.Bold)) using (SolidBrush b = new SolidBrush(Texto)) g.DrawString("PHOENIX", f, b, new RectangleF(0, 160, 210, 40), centro);
+        using (Font f = new Font("Segoe UI", 12f, FontStyle.Bold)) using (SolidBrush b = new SolidBrush(Acento)) g.DrawString("L  I  N  K", f, b, new RectangleF(0, 198, 210, 28), centro);
+        using (Pen pen = new Pen(Color.FromArgb(60, 47, 224, 138), 2f)) g.DrawLine(pen, 40, 236, 170, 236);
+    }
+
+    void Ir(int n)
+    {
+        pagina = n;
+        for (int i = 0; i < paginas.Length; i++) paginas[i].Visible = i == pagina;
+        btnCancelar.Visible = pagina == 0;
+        btnPrincipal.Enabled = pagina != 1;
+        btnPrincipal.Text = pagina == 0 ? "Desinstalar" : pagina == 1 ? "Un momento…" : "Cerrar";
+    }
+
+    void PrincipalClick(object sender, EventArgs e)
+    {
+        if (pagina == 2) { Close(); return; }
+        trabajando = true; fallo = false;
+        bool datos = chkDatos.Checked;
+        Ir(1);
+        Thread hilo = new Thread(delegate ()
+        {
+            string error = null;
+            try { Instalador.Desinstalar(carpeta, datos, delegate (int pct, string txt) { BeginInvoke(new Action(delegate { barra.Valor = pct; lblPaso.Text = txt; })); }); }
+            catch (Exception ex) { error = ex.Message; Instalador.Log("ERROR desinstalando: " + ex); }
+            BeginInvoke(new Action(delegate { Terminar(error, datos); }));
+        });
+        hilo.IsBackground = true;
+        hilo.Start();
+    }
+
+    void Terminar(string error, bool datos)
+    {
+        trabajando = false; fallo = error != null;
+        if (!fallo)
+        {
+            lblFinTitulo.Text = "Phoenix Link se desinstaló"; lblFinTitulo.ForeColor = Cesped;
+            lblFinTexto.Text = "Se quitó el programa, el overlay y los accesos directos." + (datos ? "\r\nTambién se borraron tus datos y ajustes." : "\r\nTus datos y ajustes se conservan por si lo instalas de nuevo.")
+                + "\r\n\r\nSi instalaste el módulo del juego, sigue en la carpeta de PES (no afecta al juego).";
+        }
+        else
+        {
+            lblFinTitulo.Text = "No se pudo terminar"; lblFinTitulo.ForeColor = Color.FromArgb(255, 77, 109);
+            lblFinTexto.Text = error + "\r\n\r\nRegistro: " + Instalador.LogRuta;
+        }
+        Ir(2);
+    }
+
+    // Para revisar el aspecto sin desinstalar nada (lo usan las pruebas)
+    public void GuardarCaptura(int n, string png, string error)
+    {
+        if (n == 1) { barra.Valor = 70; lblPaso.Text = "Quitándolo de la lista de programas…"; }
+        if (n == 2) Terminar(error, chkDatos.Checked); else Ir(n);
+        ShowInTaskbar = false; StartPosition = FormStartPosition.Manual; Location = new Point(-4000, -4000);
+        Show();
+        for (int i = 0; i < 5; i++) { Application.DoEvents(); Thread.Sleep(40); }
+        using (Bitmap bmp = new Bitmap(Width, Height))
+        {
+            DrawToBitmap(bmp, new Rectangle(0, 0, Width, Height));
+            Rectangle cli = RectangleToScreen(ClientRectangle);
+            using (Bitmap recorte = bmp.Clone(new Rectangle(cli.X - Left, cli.Y - Top, ClientSize.Width, ClientSize.Height), bmp.PixelFormat))
+                recorte.Save(png, System.Drawing.Imaging.ImageFormat.Png);
+        }
+        Hide();
+    }
+}
+
 public static class Programa
 {
     [STAThread]
@@ -548,7 +784,16 @@ public static class Programa
     {
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
-        try { Application.Run(new Asistente()); return 0; }
+        try
+        {
+            if (args.Length > 0 && args[0].Equals("/desinstalar", StringComparison.OrdinalIgnoreCase))
+            {
+                Application.Run(new AsistenteDesinstalar(Path.GetDirectoryName(Application.ExecutablePath)));
+                return 0;
+            }
+            Application.Run(new Asistente());
+            return 0;
+        }
         catch (Exception e)
         {
             Instalador.Log("fallo general: " + e);
