@@ -861,10 +861,10 @@ namespace phoenix {
 		if (token.empty()) { estado = -1; respuesta.clear(); return true; }   // sin vínculo con la web no se manda nada
 		if (ruta.empty() || ruta[0] != '/' || ruta.size() > 400) { estado = 0; respuesta.clear(); return false; }
 		std::vector<std::string> cab = cabecerasCon(token);
-		if (!cuerpo.empty()) cab.push_back("Content-Type: application/json");
+		// (http::peticion ya manda Content-Type: application/json; repetirlo lo duplicaba)
 		const http::Respuesta r = http::peticion(metodo, std::string(kBaseTraspasos) + ruta, cuerpo, cab, timeoutMs);
 		estado = r.estado;
-		respuesta = r.cuerpo;
+		respuesta = r.estado == 0 ? "ERR:" + r.error : r.cuerpo;   // sin respuesta: el motivo técnico para mostrarlo en pantalla
 		return r.estado != 0;
 	}
 

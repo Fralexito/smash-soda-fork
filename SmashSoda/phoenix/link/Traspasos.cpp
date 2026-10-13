@@ -250,7 +250,12 @@ bool TransporteWeb::pedir(const std::string& metodo, const std::string& ruta, co
 		marcar(clave, texto + " (reintento en " + std::to_string(e / 1000) + " s)", e);
 	};
 	if (estado == -1) { marcar("sin_cuenta", "Esta PC no está vinculada a una cuenta de la web: vincúlala en Sync › Cuenta web.", 15000); return false; }
-	if (!hubo || estado == 0) { atras("sin_conexion", "No hay conexión con la web."); return false; }
+	if (!hubo || estado == 0) {
+		std::string detalle = respuesta.rfind("ERR:", 0) == 0 ? respuesta.substr(4) : std::string();
+		if (detalle.size() > 80) detalle.resize(80);
+		atras("sin_conexion", "No hay conexión con la web" + (detalle.empty() ? std::string() : " [" + detalle + "]") + ".");
+		return false;
+	}
 	if (estado == 503 && codigo == "LIGA_PAUSADA") { marcar("liga_pausada", msg.empty() ? "La web tiene la liga en pausa." : msg, 60000); return false; }
 	if (estado >= 500) { atras("sin_conexion", "La web tiene un problema (" + std::to_string(estado) + ")."); return false; }
 	if (estado == 401 || codigo.rfind("TOKEN_", 0) == 0 || codigo == "DISPOSITIVO_SUSPENDIDO") {
