@@ -45,8 +45,8 @@ echo Pulsa una tecla para continuar...
 pause >nul
 
 :: --------- Configuracion ----------
-if not defined PHX_ZIP_URL set "PHX_ZIP_URL=https://github.com/Fralexito/smash-soda-fork/releases/download/beta-2/PhoenixLink-0.2.67-beta2.zip"
-if not defined PHX_ZIP_SHA set "PHX_ZIP_SHA=151420705DFDFDC6BE2905188AF9E5251B618BD1707383CAF0B0631647AC7A57"
+if not defined PHX_ZIP_URL set "PHX_ZIP_URL=https://github.com/Fralexito/smash-soda-fork/releases/download/beta-2/PhoenixLink-0.2.68-beta2.zip"
+if not defined PHX_ZIP_SHA set "PHX_ZIP_SHA=DA03A6245896BFE50E08B27804547BE9D174F2ABA95994706BDF321B9482EA6C"
 if not defined PHX_OVERLAY_URL set "PHX_OVERLAY_URL=https://github.com/Fralexito/phoenix-overlay/releases/download/v1.0.0-beta1/PhoenixGlass.exe"
 if not defined PHX_OVERLAY_SHA set "PHX_OVERLAY_SHA=DFD0BB6AC8513C8189A10E39DA4A85E4A12D1A70873340F84C271CF299BE2E94"
 set "VIGEMBUS_URL=https://github.com/nefarius/ViGEmBus/releases/download/v1.22.0/ViGEmBus_1.22.0_x64_x86_arm64.exe"

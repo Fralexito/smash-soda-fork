@@ -6,7 +6,8 @@
 param(
     [Parameter(Mandatory = $true)][string]$Release,
     [Parameter(Mandatory = $true)][string]$Salida,
-    [string]$Nombre = ''
+    [string]$Nombre = '',
+    [string]$Raiz = ''
 )
 $ErrorActionPreference = 'Stop'
 if (-not (Test-Path -LiteralPath (Join-Path $Release 'PhoenixLink.exe'))) { throw "No hay PhoenixLink.exe en ${Release}" }
@@ -14,7 +15,9 @@ foreach ($f in 'parsec.dll', 'SDL2.dll', 'WebView2Loader.dll', 'ui\index.html', 
     if (-not (Test-Path -LiteralPath (Join-Path $Release $f))) { throw "Falta ${f} en ${Release} (¿compilación incompleta?)" }
 }
 if (-not $Nombre) {
-    $h = Join-Path $PSScriptRoot '..\SmashSoda\phoenix\PhoenixBuild.h'
+    # -Raiz = la carpeta (worktree) de donde se compilo; si no se da, la de este script. Asi el nombre sale de la version COMPILADA.
+    if (-not $Raiz) { $Raiz = Join-Path $PSScriptRoot '..' }
+    $h = Join-Path $Raiz 'SmashSoda\phoenix\PhoenixBuild.h'
     $v = (Select-String -Path $h -Pattern 'kVersion = "([^"]+)"').Matches[0].Groups[1].Value
     $e = (Select-String -Path $h -Pattern 'kEtapa = "([^"]+)"').Matches[0].Groups[1].Value -replace '\s', ''
     $Nombre = "PhoenixLink-$v-$e.zip"
@@ -22,7 +25,7 @@ if (-not $Nombre) {
 New-Item -ItemType Directory -Force -Path $Salida | Out-Null
 $stage = Join-Path $Salida ('stage-' + [guid]::NewGuid().ToString('N').Substring(0, 8))
 New-Item -ItemType Directory -Path $stage | Out-Null
-robocopy $Release $stage /E /XF *.pdb imgui.ini /XD overlay /NFL /NDL /NJH /NJS | Out-Null
+robocopy $Release $stage /E /XF *.pdb imgui.ini NotoSansSC*.ttf /XD overlay /NFL /NDL /NJH /NJS | Out-Null
 $zip = Join-Path $Salida $Nombre
 if (Test-Path -LiteralPath $zip) { throw "Ya existe ${zip}: elige otro nombre o borralo a mano." }
 Compress-Archive -Path (Join-Path $stage '*') -DestinationPath $zip -CompressionLevel Optimal

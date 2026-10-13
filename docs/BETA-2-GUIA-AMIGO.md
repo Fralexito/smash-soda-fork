@@ -36,7 +36,7 @@ Sin Link (solo los módulos): doble clic en `PhoenixJuego-instalar.bat`, elige l
 | Marcador, goles, HUD y árbitro | PARTIDO | Listo, a probar contigo |
 | Avisos de la web dentro del juego | SYNC | Listo |
 | Fichajes de Phoenix | SYNC | Se aplican sobre **tu** base; la lista va vacía: no cambia nada |
-| **Traspasos en vivo** | SYNC | **Apagado**. No lo enciendas en esta sesión |
+| **Traspasos en vivo** | SYNC | **Apagado**: deja «¿Qué eres tú?» en «Apagado». No lo enciendas en esta sesión |
 
 ## Quitar Phoenix
 - Del juego: Link → SYNC → Módulos del juego → **DESINSTALAR**. Sin Link: ejecuta `PhoenixJuego-instalar.bat desinstalar` desde una consola. No borra nada: aparta los `.lua` y guarda copias de `sider.ini`.
