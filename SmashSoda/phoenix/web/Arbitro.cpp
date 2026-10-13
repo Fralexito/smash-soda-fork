@@ -199,19 +199,13 @@ namespace phoenix::web {
 			if (hayLados) t += "goles=" + std::to_string(ll.goles) + "-" + std::to_string(lv.goles) + "\n";
 			// Jugadores por mando. Con partido: el lado del partido (ya corregido por CORREGIR LADOS o por los lados
 			// automáticos, que miran en el juego). Sin partido, o si no está en él: los puestos del Equipo A van arriba (como el local del juego).
-			auto enLado = [](const LadoPartido& l, uint32_t id) {
-				for (const JugadorPartido& jp : l.jugadores) if (id != 0 && jp.parsecId == id) return true;
-				return false;
-			};
 			const std::vector<AsientoVista> asientos = sala.asientos(8);
 			const int activos = (std::min)(static_cast<int>(asientos.size()), pr.mandosActivos);
 			for (int i = 0; i < activos; i++) {
 				const AsientoVista& s = asientos[static_cast<size_t>(i)];
 				if (!s.ocupado || pr.equipoDe(i) == '-') continue;
-				bool local = pr.equipoDe(i) == 'A';
-				if (hayLados && enLado(ll, s.parsecId)) local = true;
-				else if (hayLados && enLado(lv, s.parsecId)) local = false;
-				const int ping = s.pingMs < 0 ? -1 : (s.pingMs + 5) / 10 * 10;   // a 10 ms: el archivo no cambia por nada
+				const bool local = (pr.equipoDe(i) == 'A') != (hayLados && inv);   // sigue al PUESTO actual: si cambia de mando o se pasa al centro, el HUD lo refleja
+												const int ping = s.pingMs < 0 ? -1 : s.pingMs;   // exacto: el HUD lo relee cada segundo y debe verse moverse
 				t += (local ? "ja=" : "jb=") + limpioSala(s.jugador, 20) + "|" + std::to_string(ping) + "|" + std::to_string(s.numero) + "\n";
 			}
 			// El anfitrión con su mando de Link (MandoHost) no tiene «dueño» en el motor y arriba se saltaba: el HUD decía
@@ -220,10 +214,8 @@ namespace phoenix::web {
 				const int mh = MandoHost::activo();   // 1..8, 0 = ninguno
 				Guest& anf = h.getHost();
 				if (mh > 0 && mh <= activos && anf.isValid() && pr.equipoDe(mh - 1) != '-') {
-					bool local = pr.equipoDe(mh - 1) == 'A';
-					if (hayLados && enLado(ll, anf.userID)) local = true;
-					else if (hayLados && enLado(lv, anf.userID)) local = false;
-					t += (local ? "ja=" : "jb=") + limpioSala(anf.name, 20) + "|-1|" + std::to_string(mh) + "\n";
+					const bool local = (pr.equipoDe(mh - 1) == 'A') != (hayLados && inv);
+															t += (local ? "ja=" : "jb=") + limpioSala(anf.name, 20) + "|-1|" + std::to_string(mh) + "\n";
 				}
 			}
 			catch (...) {}

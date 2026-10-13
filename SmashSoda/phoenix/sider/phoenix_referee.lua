@@ -38,7 +38,7 @@
 --  (en la carpeta del modo de ConmeGOL, que es la que copia el switcher). Desinstalar = quitar la línea.
 -- =============================================================================
 
-local m = { version = "1.3" }
+local m = { version = "1.4" }
 
 local MAX_FALLOS   = 5
 local MAX_GOLES    = 40     -- goles que se guardan con su minuto (Link lee como mucho 40)
@@ -497,13 +497,20 @@ local function textoHud()
         L[#L + 1] = linea
         if nl ~= "" or nv ~= "" then L[#L + 1] = "  Phoenix: " .. nl .. " (local) vs " .. nv .. " (visita)" end
         if #p.goles > 0 then
-            local g = {}
+            -- Goles en dos columnas, como la tabla de jugadores: los del local a la izquierda y los de la visita a la derecha
+            local gl, gv = {}, {}
             for i, x in ipairs(p.goles) do
-                if i > 10 then g[#g + 1] = "…" break end
-                local quien = (x.j and x.j ~= "") and (" (" .. x.j .. (x.pp and ", en propia" or "") .. ")") or ""
-                g[#g + 1] = x.m .. "' " .. (x.l == "l" and eqL or eqV) .. quien
+                if i > 10 then break end
+                local quien = (x.j and x.j ~= "") and (" " .. x.j .. (x.pp and " (en propia)" or "")) or ""
+                if x.l == "l" then gl[#gl + 1] = "(G) " .. x.m .. "'" .. quien
+                else gv[#gv + 1] = x.m .. "'" .. quien .. " (G)" end
             end
-            L[#L + 1] = "  Goles: " .. table.concat(g, " · ")
+            L[#L + 1] = ""
+            L[#L + 1] = "  " .. columna("GOLES LOCAL " .. eqL, 36) .. "GOLES VISITA " .. eqV
+            for i = 1, math.max(#gl, #gv) do
+                L[#L + 1] = "  " .. columna(gl[i] or "", 36) .. (gv[i] or "")
+            end
+            if #p.goles > 10 then L[#L + 1] = "  … y " .. (#p.goles - 10) .. " más" end
         end
     else
         L[#L + 1] = "  Sin partido en curso. " .. (ultimoResultado ~= "" and ultimoResultado or "Al empezar uno, el marcador sale aquí.")
