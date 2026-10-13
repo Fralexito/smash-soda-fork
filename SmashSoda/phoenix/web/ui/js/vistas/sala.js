@@ -165,7 +165,7 @@ function ListaParaAbrir({ m }) {
   const pasos = [
     { ok: m.sala.lista, mal: !m.sala.lista, t: t("Parsec listo", "Parsec ready"), d: m.sala.lista ? (m.sala.cuentaHost || t("Sesión iniciada", "Signed in")) : t("Preparando…", "Starting…"), ir: ["sala", "red"] },
     { ok: conectados > 0, mal: mandos.length === 0, t: t("Mandos virtuales", "Virtual pads"), d: mandos.length ? `${conectados}/${mandos.length} ${t("conectados", "connected")}` : t("Falta ViGEmBus", "ViGEmBus missing"), ir: ["mandos", "puestos"] },
-    { ok: web === "conectado", mal: web === "sin_conexion", t: t("Web de la liga", "League website"), d: web === "conectado" ? (m.web.usuario || t("Vinculada", "Linked")) : web === "sin_vincular" ? t("Toca para vincular", "Tap to link") : t("Sin conexión", "Offline"), ir: ["sync", "web"] },
+    { ok: web === "conectado", mal: web === "sin_conexion", t: t("Web de la liga", "League website"), d: web === "conectado" ? (m.web.usuario || t("Vinculada", "Linked")) : web === "sin_vincular" ? t("Toca para vincular", "Tap to link") : t("Sin conexión", "Offline"), ir: ["sync", "mipc"] },
     { ok: (m.sala.calidad?.fps || 0) > 0, mal: false, t: t("Conexión", "Connection"), d: `${m.sala.calidad?.fps ?? "—"} FPS · ${m.sala.calidad?.mbps ?? "—"} MBPS`, ir: ["sala", "red"] },
   ];
   return html`<div class="pasos" style="margin-top:0">${pasos.map((p) => html`

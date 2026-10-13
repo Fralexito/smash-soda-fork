@@ -1,8 +1,9 @@
 // =============================================================================
-//  PHOENIX SYNC: el puente entre la web y el juego. Muestra si el juego está
-//  abierto, si el puente de Sider está instalado, los últimos avisos de la web
-//  y deja apagar el envío. «Fichajes» muestra la última entrega de datos que
-//  Phoenix Sync dejó en el juego (con botón para deshacerla).
+//  SYNC (3 pestañas, siempre en este orden):
+//    MI PC       «¿Está listo mi PC?»: la lista ✓/✗ y ARREGLAR TODO (vistas/preparar.js).
+//    TRASPASOS   «Pasar un fichaje a un amigo»: asistente de 3 pasos (vistas/traspasos.js).
+//    AVANZADO    todo lo técnico, agrupado, cada bloque con su para qué sirve (este archivo).
+//  Un solo sitio para cada cosa: lo que sale en MI PC o en TRASPASOS no se repite aquí.
 // =============================================================================
 import { html, useState, useEffect } from "../lib.js";
 import { t } from "../i18n.js";
@@ -31,37 +32,31 @@ function Seccion({ id, titulo, resumen = null, punto = null, acciones = null, ab
 }
 
 export const PESTANAS_SYNC = [
-  { id: "preparar", es: "PREPARAR TODO", en: "GET READY", d: ["Todo lo necesario para jugar con fichajes, en una lista y con un botón que lo arregla.", "Everything needed to play with transfers, in one list with a button that fixes it."] },
-  { id: "puente", es: "PUENTE", en: "BRIDGE", d: ["Los avisos de la web salen dentro del juego mientras juegas.", "Web notices show up inside the game while you play."] },
-  { id: "web", es: "CUENTA WEB", en: "WEB ACCOUNT", d: ["Vincula esta PC con tu cuenta de la liga para aparecer en el radar y ver a tus amigos.", "Link this PC to your league account to show on the radar and see your friends."] },
-  { id: "fichajes", es: "FICHAJES", en: "TRANSFERS", d: ["Los datos y fichajes que Phoenix Sync dejó en tu juego.", "The data and transfers Phoenix Sync placed in your game."] },
-  { id: "traspasos", es: "TRASPASOS EN VIVO", en: "LIVE TRANSFERS", d: ["Un traspaso que haces en Editar se refleja en el PES de tu amigo.", "A transfer you make in Edit shows up in your friend's PES."] },
+  { id: "mipc", es: "MI PC", en: "MY PC", d: ["¿Está listo mi PC? Cuenta, juego y archivos de Phoenix en una lista, con un botón que lo arregla.", "Is my PC ready? Account, game and Phoenix files in one list, with a button that fixes it."] },
+  { id: "traspasos", es: "TRASPASOS", en: "TRANSFERS", d: ["Pasar un fichaje a un amigo: lo que haces en Editar aparece en el PES de tu amigo.", "Pass a transfer to a friend: what you do in Edit shows up in your friend's PES."] },
+  { id: "avanzado", es: "AVANZADO", en: "ADVANCED", d: ["Opciones avanzadas: solo para cuando algo no va bien o quieres ajustar algo.", "Advanced options: only for when something goes wrong or you want to tweak something."] },
 ];
 
-const CUENTA = { conectado: ["ok", "CONECTADA", "CONNECTED"], vinculando: ["warn", "VINCULANDO", "LINKING"], sin_conexion: ["bad", "SIN CONEXIÓN", "OFFLINE"], pausado: ["warn", "EN PAUSA", "PAUSED"], sin_vincular: ["", "SIN VINCULAR", "NOT LINKED"] };
-const DATOS = { ninguna: ["", "SIN ENTREGAS", "NO DELIVERIES"], esperando: ["warn", "ESPERANDO AL JUEGO", "WAITING FOR GAME"], colocada: ["ok", "EN EL JUEGO", "IN GAME"], rechazada: ["bad", "RECHAZADA", "REJECTED"], deshecha: ["warn", "DESHECHA", "UNDONE"] };
-
-/** Tres pastillas: cuenta de la liga · puente con el juego · últimos datos entregados. */
+/** Una sola pastilla: «todo bien» o «atención». Lleva a MI PC. */
 export function metaSync(s) {
   const m = s.motor || {};
   const b = m.buzon;
-  const c = CUENTA[m.web?.estado] || CUENTA.sin_vincular;
-  const j = b?.estado === "conectado" ? "ok" : b?.estado === "noinstalado" ? "warn" : b?.estado === "sinconexion" ? "bad" : "";
-  const d = DATOS[m.entrega?.estado] || DATOS.ninguna;
-  const p = (estado, et, texto, pes) => html`<button class="pill" onClick=${() => elegirPestana(pes)}><span class=${cx("punto", estado, estado === "ok" && "vivo")}></span><span class="mut">${et}</span>${texto}</button>`;
+  const cuenta = m.web?.estado;
+  const mal = cuenta === "sin_conexion" || b?.estado === "sinconexion";
+  const ok = cuenta === "conectado" && !mal && b?.estado !== "noinstalado";
+  const punto = ok ? "ok" : mal ? "bad" : "warn";
   return html`<div class="grupo-estado">
-    ${p(c[0], t("CUENTA ·", "ACCOUNT ·"), t(c[1], c[2]), "web")}
-    ${p(j, t("JUEGO ·", "GAME ·"), ESTADOS(b)[0].toUpperCase(), "puente")}
-    ${p(d[0], t("DATOS ·", "DATA ·"), t(d[1], d[2]), "fichajes")}
+    <button class="pill" title=${ok ? t("Tu cuenta está unida y el juego recibe los avisos.", "Your account is linked and the game gets the notices.") : t("Falta algo o hay un aviso. Mira «Mi PC».", "Something is missing or there is a notice. See «My PC».")} onClick=${() => elegirPestana("mipc")}>
+      <span class=${cx("punto", punto, ok && "vivo")}></span>${ok ? t("TODO BIEN", "ALL GOOD") : t("ATENCIÓN", "ATTENTION")}</button>
   </div>`;
 }
 
 function ESTADOS(b) {
   const e = b?.estado || "cerrado";
   const tabla = {
-    apagado: [t("Apagado", "Off"), "", t("Tú apagaste el envío de avisos al juego.", "You turned off notices to the game.")],
+    apagado: [t("Apagado", "Off"), "", t("Apagaste los avisos de la web dentro del juego.", "You turned off web notices inside the game.")],
     cerrado: [t("Juego cerrado", "Game closed"), "", t("Abre PES 2021 y Phoenix Link lo detecta solo.", "Open PES 2021 and Phoenix Link finds it by itself.")],
-    noinstalado: [t("Puente Sider no instalado", "Sider bridge not installed"), "warn", t("El juego está abierto, pero su parche no trae el módulo «phoenix» de Sider. No se escribe nada.", "The game is open but its patch has no Sider «phoenix» module. Nothing is written.")],
+    noinstalado: [t("Falta el archivo de Phoenix en el juego", "Phoenix file missing in the game"), "warn", t("El juego está abierto, pero no tiene el archivo de Phoenix. No se escribe nada. Míralo en «Mi PC».", "The game is open but has no Phoenix file. Nothing is written. See «My PC».")],
     conectado: [b?.ultimo ? t(`Conectado · último aviso ${b.ultimo}`, `Connected · last notice ${b.ultimo}`) : t("Conectado", "Connected"), "ok vivo", t("Los avisos de la web llegan al juego en pocos segundos.", "Web notices reach the game within seconds.")],
     sinconexion: [t("Sin conexión", "No connection"), "bad", t("No se pudo hablar con la web. Se reintenta solo, con calma.", "Couldn't reach the web. Retrying by itself.")],
   };
@@ -74,6 +69,7 @@ function SoloPes({ m }) {
   const oculta = p.modo !== "off" && !p.abierto;
   return html`<${Seccion} id="solopes" titulo=${t("SOLO PES 2021 (PRUEBA)", "PES 2021 ONLY (TEST)")}
     resumen=${p.modo === "off" ? t("Apagado: Link funciona con cualquier juego", "Off: Link works with any game") : p.modo === "publicar" ? t("Solo publicar con PES abierto", "Publish only with PES open") : t("Estricto", "Strict")}>
+    <${Para}>${t("Para qué sirve: que tu sala solo salga en la web mientras PES 2021 está abierto.", "What it's for: your room only shows on the web while PES 2021 is open.")}</${Para}>
     <${Segmentos} valor=${p.modo} al=${(v) => accion("ajustes.modoPes", { valor: v })}
       opciones=${[{ valor: "off", texto: t("APAGADO", "OFF") }, { valor: "publicar", texto: t("SOLO PUBLICAR", "PUBLISH ONLY") }, { valor: "estricto", texto: t("ESTRICTO", "STRICT") }]}/>
     <div class="ayuda" style="font-size:14px">${p.modo === "off"
@@ -96,6 +92,7 @@ function ModoRecarga({ m, mods }) {
   const v = m.arbitro?.modoRecarga || "AUTO-SIEMPRE";
   return html`<${Seccion} id="recarga" titulo=${t("MODO DE RECARGA DE FICHAJES", "TRANSFER RELOAD MODE")}
     resumen=${v === "AUTO-SIEMPRE" ? t("Automático: siempre ⭐", "Auto: always ⭐") : v === "AUTO-FICHAJES" ? t("Automático: solo con fichajes nuevos", "Auto: only with new transfers") : t("A mano: pulsas Activar en el juego", "Manual: press Activate in the game")}>
+    <${Para}>${t("Para qué sirve: elegir cómo carga el juego los fichajes nuevos. Lo normal es «Automático: siempre».", "What it's for: choose how the game loads new transfers. Normally «Auto: always».")}</${Para}>
     <${Segmentos} valor=${v} al=${(x) => accion("sync.modoRecarga", { modo: x })}
       opciones=${[{ valor: "AUTO-SIEMPRE", texto: t("🟣 AUTO: SIEMPRE ⭐", "🟣 AUTO: ALWAYS ⭐") }, { valor: "AUTO-FICHAJES", texto: t("🔵 AUTO: FICHAJES", "🔵 AUTO: TRANSFERS") }, { valor: "ACTIVAR", texto: t("🟢 ACTIVAR", "🟢 ACTIVATE") }]}/>
     <div class="ayuda" style="font-size:14px">${t(MODOS_RECARGA[v][0], MODOS_RECARGA[v][1])}</div>
@@ -103,84 +100,71 @@ function ModoRecarga({ m, mods }) {
   </${Seccion}>`;
 }
 
-function Puente({ m }) {
+const Para = ({ children }) => html`<div class="ayuda" style="font-size:14px">${children}</div>`;
+
+function Avanzado({ m }) {
   const [mods, setMods] = useState(null);
   const cargarMods = async () => { const r = await accion("sync.modulos", {}, { silencioso: true }); if (r) setMods(r); };
-  useEffect(() => { cargarMods(); }, []);
   const [fich, setFich] = useState(null);
   const cargarFich = async () => { const r = await accion("fichajes.estado", {}, { silencioso: true }); if (r) setFich(r); };
-  useEffect(() => { cargarFich(); }, []);
+  const [tr, setTr] = useState(null);
+  const cargarTr = async () => { const r = await accion("traspasos.estado", {}, { silencioso: true }); if (r) setTr(r); };
+  useEffect(() => { cargarMods(); cargarFich(); cargarTr(); const id = setInterval(cargarTr, 6000); return () => clearInterval(id); }, []);
   const b = m.buzon || { activo: true, estado: "cerrado", ultimo: "", juego: "", avisos: [] };
   const [texto, punto, ayuda] = ESTADOS(b);
-  return html`<div class="fila partible" style="align-items:flex-start">
-    <div class="col" style="flex:1 1 0;min-width:320px">
-      <${ResumenSync} mods=${mods} fich=${fich} cargar=${() => { cargarMods(); cargarFich(); }}/>
-      <${Fichajes} d=${fich} setD=${setFich} cargar=${cargarFich}/>
-      <${Seccion} id="puente" titulo=${t("ESTADO DEL PUENTE", "BRIDGE STATUS")} punto=${punto} resumen=${texto}>
-        <div class="ayuda" style="font-size:14px">${ayuda}</div>
-        <div>
-          <div class="lab" style="margin-bottom:6px">${t("JUEGO DETECTADO", "DETECTED GAME")}</div>
-          ${b.juego ? html`<div class="caja mono" style="font-size:13px;word-break:break-all">${b.juego}</div>`
-                    : html`<div class="ayuda">${t("Ninguno por ahora.", "None right now.")}</div>`}
-          ${b.parche ? html`<div class="ayuda" style="margin-top:6px">${t("Parche detectado:", "Detected patch:")} <b>${b.parche}</b></div>` : null}
-        </div>
-        <${AjusteSw} titulo=${t("Mostrar avisos de la web en el juego", "Show web notices in the game")}
-          desc=${t("Con PES 2021 abierto, los avisos salen en el panel de Sider (barra espaciadora). Si lo apagas, no se consulta ni se escribe nada.", "With PES 2021 open, notices show in the Sider panel (space bar). If off, nothing is fetched or written.")}
-          valor=${b.activo} al=${(v) => accion("ajustes.avisosJuego", { valor: v })}/>
-      </${Seccion}>
-      <${ModoRecarga} m=${m} mods=${mods}/>
-      <${SoloPes} m=${m}/>
-    </div>
-    <div class="col" style="flex:1 1 0;min-width:320px">
-      <${Seccion} id="avisos" titulo=${t("ÚLTIMOS AVISOS", "LATEST NOTICES")}
-        resumen=${(b.avisos || []).length === 0 ? t("Aún no hay avisos", "No notices yet") : t(`${(b.avisos || []).length} de 5`, `${(b.avisos || []).length} of 5`)}>
-        ${(b.avisos || []).length === 0
-          ? html`<div class="ayuda">${t("Aún no hay avisos. Los que mandes desde la web aparecerán aquí.", "No notices yet. Anything you send from the web shows up here.")}</div>`
-          : (b.avisos || []).map((a) => html`<div class="fila-mar" key=${a.id} style="align-items:flex-start">
-              <span class="mono mut" style="font-size:13px;flex:none;padding-top:2px">${a.hora}</span>
-              <div style="flex:1;min-width:0;word-break:break-word">${a.texto}</div>
-              ${a.escrito ? html`<${Chip} tipo="acc">✅ ${t("EN EL JUEGO", "IN GAME")}</${Chip}>` : html`<${Chip}>${t("PENDIENTE", "PENDING")}</${Chip}>`}
-            </div>`)}
-      </${Seccion}>
-      <${Modulos} d=${mods} setD=${setMods} cargar=${cargarMods}/>
-      <${Doctor}/>
-    </div>
-  </div>`;
-}
+  const web = tr?.web || {};
+  return html`<div class="col" style="gap:14px">
+    <${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:8px">
+      <${Titulo} texto=${t("OPCIONES AVANZADAS", "ADVANCED OPTIONS")}/>
+      <div style="font-size:15px">${t("Solo para cuando algo no va bien o quieres ajustar algo. Lo normal está en «Mi PC» y «Traspasos».", "Only for when something goes wrong or you want to tweak something. The normal things are in «My PC» and «Transfers».")}</div>
+    </${Tarjeta}>
 
-// ---- Que funciona en este juego (se calcula a partir de Modulos del juego) ----
-function FilaResumen({ punto, titulo, texto }) {
-  return html`<div style="display:flex;gap:12px;align-items:flex-start">
-    <span class=${cx("punto", punto)} style="width:12px;height:12px;margin-top:5px;flex:none"></span>
-    <div style="min-width:0"><div style="font-weight:600">${titulo}</div><div class="ayuda" style="font-size:13px;word-break:break-word">${texto}</div></div>
+    <${Seccion} id="puente" titulo=${t("CONEXIÓN CON EL JUEGO", "GAME CONNECTION")} punto=${punto} resumen=${texto}>
+      <${Para}>${t("Para qué sirve: que los avisos de la web salgan dentro del juego (panel de Sider, barra espaciadora).", "What it's for: so web notices show inside the game (Sider panel, space bar).")}</${Para}>
+      <div class="ayuda" style="font-size:14px">${ayuda}</div>
+      <div>
+        <div class="lab" style="margin-bottom:6px">${t("JUEGO DETECTADO", "DETECTED GAME")}</div>
+        ${b.juego ? html`<div class="caja mono" style="font-size:13px;word-break:break-all">${b.juego}</div>`
+                  : html`<div class="ayuda">${t("Ninguno por ahora.", "None right now.")}</div>`}
+        ${b.parche ? html`<div class="ayuda" style="margin-top:6px">${t("Parche detectado:", "Detected patch:")} <b>${b.parche}</b></div>` : null}
+      </div>
+      <${AjusteSw} titulo=${t("Mostrar avisos de la web en el juego", "Show web notices in the game")}
+        desc=${t("Con PES 2021 abierto, los avisos salen en el panel de Sider (barra espaciadora). Si lo apagas, no se consulta ni se escribe nada.", "With PES 2021 open, notices show in the Sider panel (space bar). If off, nothing is fetched or written.")}
+        valor=${b.activo} al=${(v) => accion("ajustes.avisosJuego", { valor: v })}/>
+    </${Seccion}>
+    <${ModoRecarga} m=${m} mods=${mods}/>
+    <${Fichajes} d=${fich} setD=${setFich} cargar=${cargarFich}/>
+    <${Entrega} m=${m}/>
+    <${Modulos} d=${mods} setD=${setMods} cargar=${cargarMods}/>
+    <${Doctor}/>
+    <${SoloPes} m=${m}/>
+    <${Seccion} id="avisos" titulo=${t("ÚLTIMOS AVISOS", "LATEST NOTICES")}
+      resumen=${(b.avisos || []).length === 0 ? t("Aún no hay avisos", "No notices yet") : t(`${(b.avisos || []).length} de 5`, `${(b.avisos || []).length} of 5`)}>
+      <${Para}>${t("Para qué sirve: ver los últimos avisos que la web mandó al juego.", "What it's for: see the latest notices the web sent to the game.")}</${Para}>
+      ${(b.avisos || []).length === 0
+        ? html`<div class="ayuda">${t("Aún no hay avisos. Los que mandes desde la web aparecerán aquí.", "No notices yet. Anything you send from the web shows up here.")}</div>`
+        : (b.avisos || []).map((a) => html`<div class="fila-mar" key=${a.id} style="align-items:flex-start">
+            <span class="mono mut" style="font-size:13px;flex:none;padding-top:2px">${a.hora}</span>
+            <div style="flex:1;min-width:0;word-break:break-word">${a.texto}</div>
+            ${a.escrito ? html`<${Chip} tipo="acc">✅ ${t("EN EL JUEGO", "IN GAME")}</${Chip}>` : html`<${Chip}>${t("PENDIENTE", "PENDING")}</${Chip}>`}
+          </div>`)}
+    </${Seccion}>
+    <${Seccion} id="cuentaweb" titulo=${t("CUENTA WEB DETALLADA", "WEB ACCOUNT IN DETAIL")} resumen=${m.web?.usuario || t("Sin unir", "Not linked")}>
+      <${Para}>${t("Para qué sirve: ver el estado de la unión con tu cuenta, reintentar, soltar al rival del radar o separar esta PC. Unir la cuenta se hace en «Mi PC».", "What it's for: see the account link status, retry, release the rival from the radar or unlink this PC. Linking is done in «My PC».")}</${Para}>
+      <${CuentaWeb} m=${m}/>
+    </${Seccion}>
+    <${Seccion} id="tecnicos" titulo=${t("DETALLES TÉCNICOS", "TECHNICAL DETAILS")} resumen=${m.app?.version ? "Phoenix Link " + m.app.version : ""}>
+      <${Para}>${t("Para qué sirve: datos para quien te ayude a revisar un problema. No hace falta tocar nada aquí.", "What it's for: data for whoever helps you check a problem. Nothing to touch here.")}</${Para}>
+      <div class="mono mut" style="display:flex;flex-direction:column;gap:4px;font-size:12px;word-break:break-all">
+        ${m.app?.version ? html`<span>Phoenix Link ${m.app.version}${m.app.compilado ? " · " + m.app.compilado : ""}</span>` : null}
+        ${mods?.juego ? html`<span>${t("Carpeta del juego: ", "Game folder: ")}${mods.juego}</span>` : null}
+        ${tr ? html`<span>${t("Modo de recarga: ", "Reload mode: ")}${tr.modoRecarga || "AUTO-SIEMPRE"} · PES ${tr.pesAbierto ? t("abierto", "open") : t("cerrado", "closed")}</span>` : null}
+        ${tr ? html`<span>${t("Conexión de traspasos: ", "Live transfers connection: ")}${web.estado || "—"}${web.texto ? " · " + web.texto : ""}</span>` : null}
+        ${web.tecnico ? html`<span>${t("Web (técnico): ", "Web (technical): ")}${JSON.stringify(web.tecnico)}</span>` : null}
+        ${tr?.anfitrion?.archivo?.ruta ? html`<span>${t("Archivo de guardado: ", "Save file: ")}${tr.anfitrion.archivo.ruta}</span>` : null}
+      </div>
+    </${Seccion}>
   </div>`;
-}
-
-function ResumenSync({ mods, fich: fichajes, cargar }) {
-  if (!mods) return null;
-  const lista = (mods.modulos || []).filter((x) => x.gestionable);
-  const pend = lista.filter((x) => x.estado !== "instalado");
-  const perdidos = lista.filter((x) => x.estado === "perdido");
-  const nuevos = lista.filter((x) => x.estado === "desactualizado");
-  const sinJuego = !mods.juego;
-  const luaErr = lista.filter((x) => x.carga === "error");
-  const nombres = (v) => v.map((x) => x.archivo).join(", ");
-  let modTxt, modPunto;
-  if (sinJuego) { modPunto = "warn"; modTxt = t("Primero hay que saber dónde está tu juego (abajo, en Módulos del juego).", "First Link needs to know where your game is (below, in Game modules)."); }
-  else if (perdidos.length) { modPunto = "bad"; modTxt = t(`Se perdieron tras una actualización del parche: ${nombres(perdidos)}. Cierra PES y pulsa REINSTALAR abajo.`, `Lost after a patch update: ${nombres(perdidos)}. Close PES and press REINSTALL below.`); }
-  else if (luaErr.length) { modPunto = "bad"; modTxt = t(`Sider no pudo cargar: ${nombres(luaErr)}. Mira sider.log o manda el informe (Sala › Conexión › Diagnóstico del PC).`, `Sider could not load: ${nombres(luaErr)}. See sider.log or send the report (Room › Connection › PC diagnostics).`); }
-  else if (nuevos.length) { modPunto = "warn"; modTxt = t(`Hay versión nueva de: ${nombres(nuevos)}. Cierra PES y pulsa ACTUALIZAR abajo.`, `New version of: ${nombres(nuevos)}. Close PES and press UPDATE below.`); }
-  else if (pend.length) { modPunto = "warn"; modTxt = t(`Falta instalar: ${nombres(pend)}. Cierra PES y pulsa INSTALAR abajo.`, `Not installed: ${nombres(pend)}. Close PES and press INSTALL below.`); }
-  else { modPunto = "ok"; modTxt = t("Instalados y al día en todas las carpetas del juego.", "Installed and up to date in every game folder."); }
-  const avisosOk = lista.some((x) => x.archivo === "phoenix.lua" && x.estado === "instalado");
-  return html`<${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:14px">
-    <${Titulo} texto=${t("QUÉ FUNCIONA EN TU JUEGO", "WHAT WORKS IN YOUR GAME")} derecha=${html`<${Boton} tipo="suave mini" al=${cargar}>${t("REVISAR", "CHECK")}</${Boton}>`}/>
-    <${FilaResumen} punto=${sinJuego ? "warn" : "ok"} titulo=${t("Tu juego", "Your game")} texto=${sinJuego ? t("Aún no sé dónde está. Abre PES 2021 con Link abierto, o pega su carpeta abajo.", "I don't know where it is yet. Open PES 2021 with Link running, or paste its folder below.") : mods.juego}/>
-    <${FilaResumen} punto=${modPunto} titulo=${t("Módulos de Phoenix en el juego", "Phoenix modules in the game")} texto=${modTxt}/>
-    <${FilaResumen} punto=${avisosOk ? "ok" : "warn"} titulo=${t("Avisos de la web dentro del juego", "Web notices inside the game")} texto=${avisosOk ? t("Listos: salen en el panel de Sider (barra espaciadora).", "Ready: they show in the Sider panel (space bar).") : t("Necesitan phoenix.lua instalado.", "They need phoenix.lua installed.")}/>
-    <${FilaResumen} punto=${!fichajes ? "warn" : (fichajes.objetivos || []).some((x) => x.estado === "aplicado") ? "ok" : ""} titulo=${t("Fichajes de Phoenix", "Phoenix transfers")}
-      texto=${fichajes ? fichajes.texto : t("Revisando…", "Checking…")}/>
-  </${Tarjeta}>`;
 }
 
 // Carpeta del juego: la que vio Link, o la que pegues a mano si no la ha visto (solo se valida y se recuerda; no escribe en el juego).
@@ -208,12 +192,12 @@ function Doctor() {
   useEffect(() => { revisar(); }, []);
   const phoenixLuas = (d?.luaActivos || []).filter((x) => /phoenix/i.test(x));
   const conDatos = (d?.archivos || []).filter((a) => a.sha256);
-  return html`<${Seccion} id="doctor" titulo=${t("PHOENIX DOCTOR", "PHOENIX DOCTOR")}
+  return html`<${Seccion} id="doctor" titulo=${t("REVISIÓN DEL PARCHE", "PATCH CHECK")}
     resumen=${!d ? t("Revisando…", "Checking…") : !d.juegoEncontrado ? t("No encuentro el juego", "Game not found") : t(`Informativo · parche ${d.parche}`, `Info only · patch ${d.parche}`)}
     acciones=${html`<${Boton} tipo="suave mini" al=${revisar}>${t("REVISAR", "CHECK")}</${Boton}>`}>
     <div class="ayuda" style="font-size:14px">
-      ${t("Ficha del juego de este anfitrión: parche, módulos y una huella de los archivos que deciden el partido. Aún no hay parche oficial, así que no aprueba ni rechaza nada: la huella viaja con cada resultado oficial para que el staff la vea.",
-          "This host's game sheet: patch, modules and a fingerprint of the files that decide the match. There is no official patch yet, so it approves or rejects nothing: the fingerprint travels with each official result for staff.")}
+      ${t("Para qué sirve: una ficha de tu juego (qué parche tienes y una huella de sus archivos clave). Viaja con los resultados oficiales para que el staff la vea. No aprueba ni rechaza nada.",
+          "What it's for: a sheet of your game (which patch you have and a fingerprint of its key files). It travels with official results so the staff can see it. It approves or rejects nothing.")}
     </div>
     ${!d ? html`<div class="ayuda">${t("Revisando…", "Checking…")}</div>` : !d.juegoEncontrado
       ? html`<div class="ayuda">${(d.avisos || [])[0] || t("No encuentro el juego.", "Game not found.")}</div>`
@@ -253,14 +237,14 @@ function Fichajes({ d, setD, cargar }) {
   const hayGenerado = obj.some((x) => x.estado === "aplicado" || x.estado === "desfasado" || x.estado === "cambiado");
   const bloqueado = ocupado || !d || !!d.pesAbierto || !d.juego || !!d.lista?.error;
   const aplicados = obj.filter((x) => x.estado === "aplicado").length;
-  return html`<${Seccion} id="fichajes" titulo=${t("FICHAJES DE PHOENIX", "PHOENIX TRANSFERS")}
+  return html`<${Seccion} id="fichajes" titulo=${t("FICHAJES ANTIGUOS (LISTA DE PHOENIX SYNC)", "OLD TRANSFERS (PHOENIX SYNC LIST)")}
     resumen=${!d ? t("Revisando…", "Checking…") : d.lista?.error ? t("Hay un problema con la lista", "There is a problem with the list")
       : n === 0 ? t("Lista vacía: nada que aplicar", "Empty list: nothing to apply")
       : t(`${n} ${n === 1 ? "cambio" : "cambios"} · aplicados en ${aplicados} de ${obj.length} modos`, `${n} ${n === 1 ? "change" : "changes"} · applied in ${aplicados} of ${obj.length} modes`)}
     acciones=${html`<${Boton} tipo="suave mini" al=${cargar}>${t("REVISAR", "CHECK")}</${Boton}>`}>
     <div class="ayuda" style="font-size:14px">
-      ${t("Esto genera tus fichajes sobre TU base: Link lee la base de cada modo de tu juego, le aplica la lista de cambios (jugador → equipo) y deja solo PlayerAssignment.bin en Phoenix-DB. No copia bases de nadie ni toca Player.bin. Se puede quitar en un clic.",
-          "This builds your transfers on top of YOUR base: Link reads each mode's database in your game, applies the change list (player → team) and leaves only PlayerAssignment.bin in Phoenix-DB. It copies nobody's database and never touches Player.bin. One click to remove.")}
+      ${t("Para qué sirve: pone en tu juego la lista de fichajes que dejó Phoenix Sync (no son los «Traspasos en vivo»). Se hace sobre TU base, con copia, y se puede quitar con un clic.",
+          "What it's for: puts in your game the transfer list Phoenix Sync left (not the «Live transfers»). It's done on YOUR database, with a backup, and can be removed with one click.")}
     </div>
     ${d?.pesAbierto ? html`<div class="caja" style="font-size:14px"><span class="punto warn"></span> ${t("Cierra PES 2021 (y Sider) para aplicar o quitar: lee los datos al arrancar.", "Close PES 2021 (and Sider) to apply or remove: it reads the data at startup.")}</div>` : null}
     ${!d ? html`<div class="ayuda">${t("Revisando…", "Checking…")}</div>` : html`
@@ -316,13 +300,13 @@ function Modulos({ d, setD, cargar }) {
   const lista = d?.modulos || [];
   const gest = lista.filter((x) => x.gestionable);
   const hayPend = !!d && (!d.juego || gest.some((x) => x.estado !== "instalado"));
-  return html`<${Seccion} id="modulos" titulo=${t("MÓDULOS DEL JUEGO", "GAME MODULES")} abierta=${hayPend}
+  return html`<${Seccion} id="modulos" titulo=${t("ARCHIVOS DE PHOENIX EN EL JUEGO", "PHOENIX FILES IN THE GAME")} abierta=${hayPend}
     punto=${!d ? null : hayPend ? "warn" : "ok"}
-    resumen=${!d ? t("Revisando…", "Checking…") : !d.juego ? t("No sé dónde está tu juego", "I don't know where your game is") : hayPend ? t("Hay módulos por instalar o actualizar", "Some modules need installing or updating") : t("Instalados y al día", "Installed and up to date")}
+    resumen=${!d ? t("Revisando…", "Checking…") : !d.juego ? t("No sé dónde está tu juego", "I don't know where your game is") : hayPend ? t("Hay archivos por instalar o actualizar", "Some files need installing or updating") : t("Instalados y al día", "Installed and up to date")}
     acciones=${html`<${Boton} tipo="suave mini" al=${cargar}>${t("REVISAR", "CHECK")}</${Boton}>`}>
     <div class="ayuda" style="font-size:14px">
-      ${t("Las piezas de Phoenix que se ponen dentro de tu juego. Antes de cada cambio se guarda una copia.",
-          "Phoenix pieces placed inside your game. A backup is saved before every change.")}
+      ${t("Para qué sirve: instalar, actualizar, apagar o quitar uno por uno los archivos de Phoenix. Lo normal es hacerlo todo con ARREGLAR TODO en «Mi PC». Antes de cada cambio se guarda una copia.",
+          "What it's for: install, update, turn off or remove Phoenix's files one by one. Normally you do it all with FIX EVERYTHING in «My PC». A backup is saved before every change.")}
     </div>
     ${d?.pesAbierto ? html`<div class="caja" style="font-size:14px"><span class="punto warn"></span> ${t("Cierra PES 2021 para instalar o apagar: el juego lee estas piezas al arrancar.", "Close PES 2021 to install or turn off: the game reads these pieces at startup.")}</div>` : null}
     ${d?.parche && (d.parche.modosRaiz?.length || d.parche.modosPropios?.length) ? html`<div class="ayuda" style="font-size:13px">
@@ -371,7 +355,7 @@ function Entrega({ m }) {
   };
   const [texto, punto, ayuda] = tabla[en.estado] || tabla.ninguna;
   return html`<${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:14px">
-    <${Titulo} texto=${t("ÚLTIMA ENTREGA", "LAST DELIVERY")} derecha=${en.fecha ? html`<span class="mono mut">${en.fecha}</span>` : null}/>
+    <${Titulo} texto=${t("ÚLTIMA ENTREGA DE PHOENIX SYNC", "LAST PHOENIX SYNC DELIVERY")} derecha=${en.fecha ? html`<span class="mono mut">${en.fecha}</span>` : null}/>
     <div style="display:flex;align-items:center;gap:12px">
       <span class=${cx("punto", punto)} style="width:14px;height:14px"></span>
       <span class="disp" style="font-size:22px;font-weight:700">${texto}</span>
@@ -390,10 +374,7 @@ function Entrega({ m }) {
 export function VistaSync({ s, pestana }) {
   const m = s.motor;
   if (!m) return html`<${Vacio} titulo=${t("Conectando…", "Connecting…")} texto=""/>`;
-  if (pestana === "preparar") return html`<${Preparar} s=${s}/>`;
-  if (pestana === "web") return html`<${CuentaWeb} m=${m}/>`;
-  if (pestana === "fichajes") return html`<${Entrega} m=${m}/>`;
   if (pestana === "traspasos") return html`<${Traspasos}/>`;
-  if (pestana === "puente") return html`<${Puente} m=${m}/>`;
+  if (pestana === "avanzado") return html`<${Avanzado} m=${m}/>`;
   return html`<${Preparar} s=${s}/>`;
 }

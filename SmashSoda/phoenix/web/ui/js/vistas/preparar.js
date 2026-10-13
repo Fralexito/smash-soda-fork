@@ -1,12 +1,13 @@
 // =============================================================================
-//  SYNC › PREPARAR TODO. Una sola lista de lo que hace falta para jugar con fichajes y traspasos en vivo, cada punto con su botón,
-//  y un botón grande «ARREGLAR TODO» que hace en orden lo que se puede sin riesgo y se detiene si necesita algo de la persona.
+//  SYNC › MI PC («¿Está listo mi PC?»). Una sola lista de lo que hace falta para jugar con fichajes y traspasos en vivo, cada punto con su botón,
+//  un mensaje arriba («Todo listo» / «Falta algo: N cosas») y un botón grande «ARREGLAR TODO» que hace en orden lo que se puede sin riesgo
+//  y se detiene si necesita algo de la persona. El papel (anfitrión/amigo) NO se elige aquí: solo hay un enlace a la pestaña Traspasos.
 //  Nada nuevo en el motor: usa las mismas acciones que el resto de Sync (sync.modulos, sync.modulo, sync.detectarJuego,
 //  sync.modoRecarga, traspasos.estado/config/accion). Con PES abierto no se escribe nada en el juego.
 // =============================================================================
 import { html, useState, useEffect, useRef } from "../lib.js";
 import { t } from "../i18n.js";
-import { accion, avisar, elegirPestana } from "../tienda.js";
+import { accion, avisar, elegirPestana, confirmar } from "../tienda.js";
 import { Tarjeta, Titulo, Boton, cx } from "../ui.js";
 
 const espera = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -20,6 +21,7 @@ export function Preparar({ s }) {
   const [raiz, setRaiz] = useState(null);      // sync.raizPhoenixDB: modos cuyo sider.ini no lee Phoenix-DB
   const [busca, setBusca] = useState(null);    // candidatos del juego si hay varios
   const [haciendo, setHaciendo] = useState(false);
+  const [codigoCta, setCodigoCta] = useState("");   // los 6 dígitos para unir la cuenta
   const [informe, setInforme] = useState([]);  // lo que hizo «ARREGLAR TODO»: [{ok, texto}]
   const vivo = useRef(true);
   useEffect(() => () => { vivo.current = false; }, []);
@@ -76,20 +78,31 @@ export function Preparar({ s }) {
     return !!r;
   };
   const ponerRecarga = async () => { const r = await accion("sync.modoRecarga", { modo: "AUTO-SIEMPRE" }); await leer(); return !!r; };
-  const ponerRol = async (r) => { await accion("traspasos.config", { publicar: r === "anfitrion", recibir: r === "amigo" }); await leer(); };
-  const reintentarWeb = async () => { await accion("traspasos.accion", { accion: "reintentar" }); await leer(); };
+  const unirCuenta = async () => {
+    const c = codigoCta.replace(/\D/g, "");
+    if (c.length !== 6) { avisar(t("El código tiene 6 dígitos.", "The code has 6 digits."), "warn"); return; }
+    if (await accion("web.vincular", { codigo: c })) setCodigoCta("");
+  };
+  const soltarCuenta = async () => {
+    if (await confirmar({ titulo: t("¿Separar esta PC de tu cuenta?", "Unlink this PC from your account?"), texto: t("Tu sala dejará de salir en la web hasta que la unas otra vez con un código nuevo.", "Your room won't show on the web until you link it again with a new code."), si: t("Separar", "Unlink"), peligro: true })) await accion("web.desvincular");
+  };
 
   // ---- Las filas: ok = true | false | "espera" ----
   const filas = [];
   filas.push({
     id: "cuenta", ok: cuenta === "conectado" ? true : cuenta === "vinculando" || cuenta === "pausado" ? "espera" : false,
     titulo: t("Tu cuenta de la liga", "Your league account"),
-    frase: cuenta === "conectado" ? t("Esta PC ya está unida a tu cuenta.", "This PC is already linked to your account.")
+    frase: cuenta === "conectado" ? t(`Esta PC está unida a tu cuenta${m.web?.usuario ? ": " + m.web.usuario : ""}.`, `This PC is linked to your account${m.web?.usuario ? ": " + m.web.usuario : ""}.`)
       : cuenta === "vinculando" ? t("Uniendo esta PC a tu cuenta… espera un momento.", "Linking this PC to your account… wait a moment.")
       : cuenta === "pausado" ? t("La unión está en pausa.", "The link is paused.")
-      : cuenta === "sin_conexion" ? t("No hay conexión con la web ahora mismo. Se reintenta sola.", "No connection to the web right now. It retries by itself.")
-      : t("Esta PC todavía no está unida a tu cuenta. Es lo único que debes hacer tú.", "This PC isn't linked to your account yet. It's the only thing you must do yourself."),
-    boton: cuenta === "conectado" ? null : [t("UNIR MI CUENTA", "LINK MY ACCOUNT"), () => elegirPestana("web")],
+      : cuenta === "sin_conexion" ? t("No hay conexión con la web ahora. Se reintenta sola.", "No connection to the web right now. It retries by itself.")
+      : t("Une esta PC a tu cuenta con un código de la web. Es lo único que haces tú.", "Link this PC to your account with a code from the web. It's the only thing you do yourself."),
+    extra: cuenta === "sin_vincular" ? html`<div style="display:flex;flex-direction:column;gap:6px;margin-top:6px">
+      <div class="ayuda" style="font-size:13px">${t("En la web: Mi perfil › vincular PC. Copia los 6 dígitos y escríbelos aquí.", "On the web: My profile › link PC. Copy the 6 digits and type them here.")}</div>
+      <div style="display:flex;gap:8px;align-items:center;max-width:360px"><input class="campo mono" inputmode="numeric" maxLength="6" placeholder="123456" value=${codigoCta} style="font-size:18px;letter-spacing:.25em;text-align:center;height:40px"
+        onInput=${(e) => setCodigoCta(e.currentTarget.value.replace(/[^\d]/g, "").slice(0, 6))} onKeyDown=${(e) => e.key === "Enter" && unirCuenta()}/>
+        <${Boton} tipo="lleno mini" deshabilitado=${codigoCta.length !== 6} al=${unirCuenta}>${t("UNIR", "LINK")}</${Boton}></div></div>` : null,
+    boton: cuenta === "conectado" ? [t("SEPARAR", "UNLINK"), soltarCuenta] : cuenta === "sin_conexion" ? [t("REINTENTAR", "RETRY"), () => accion("web.reintentar", {}, { ok: t("Reintentando…", "Retrying…") })] : null,
   });
   filas.push({
     id: "juego", ok: !mods ? "espera" : !!mods.juego,
@@ -100,57 +113,39 @@ export function Preparar({ s }) {
   });
   filas.push({
     id: "modulos", ok: !mods ? "espera" : !mods.juego ? false : faltan.length === 0,
-    titulo: t("Piezas de Phoenix en el juego", "Phoenix pieces in the game"),
+    titulo: t("Archivos de Phoenix en el juego", "Phoenix files in the game"),
     frase: !mods ? t("Revisando…", "Checking…") : !mods.juego ? t("Primero hace falta la carpeta del juego.", "The game folder is needed first.")
       : faltan.length === 0 ? t("Todo instalado y al día.", "Everything installed and up to date.")
-      : pesAbierto ? t("Hay piezas por instalar o actualizar. Cierra PES y pulsa el botón.", "Some pieces need installing or updating. Close PES and press the button.")
-      : t("Hay piezas por instalar o actualizar. Se hace una copia antes de tocar nada.", "Some pieces need installing or updating. A backup is made before touching anything."),
+      : pesAbierto ? t("Faltan archivos o hay versión nueva. Cierra PES y pulsa el botón.", "Files are missing or outdated. Close PES and press the button.")
+      : t("Faltan archivos o hay versión nueva. Antes se hace una copia.", "Files are missing or outdated. A backup is made first."),
     boton: !mods || !mods.juego || faltan.length === 0 ? null : [t("INSTALAR AHORA", "INSTALL NOW"), instalar, pesAbierto],
   });
   const faltaRaiz = raiz?.faltan || [];
   filas.push({
     id: "raiz", ok: !raiz ? "espera" : faltaRaiz.length === 0,
     titulo: t("Que el juego lea los traspasos", "Game reads the transfers"),
-    frase: !raiz ? t("Revisando…", "Checking…") : faltaRaiz.length === 0 ? t("El juego está listo para leer los fichajes de Phoenix.", "The game is ready to read Phoenix transfers.")
-      : raiz.pesAbierto ? t("Hay fichajes puestos, pero el juego aún no los lee. Cierra PES y pulsa el botón.", "Transfers are in place but the game doesn't read them yet. Close PES and press the button.")
-      : t("Hay fichajes puestos, pero el juego aún no los lee: falta una línea de configuración. Se arregla sola, con copia antes.", "Transfers are in place but the game doesn't read them yet: a setting line is missing. It fixes itself, with a backup first."),
+    frase: !raiz ? t("Revisando…", "Checking…") : faltaRaiz.length === 0 ? t("El juego está listo para leer los fichajes.", "The game is ready to read the transfers.")
+      : raiz.pesAbierto ? t("Hay fichajes puestos pero el juego no los lee. Cierra PES y pulsa el botón.", "Transfers are in place but the game doesn't read them. Close PES and press the button.")
+      : t("Hay fichajes puestos pero el juego no los lee. Se arregla con copia antes.", "Transfers are in place but the game doesn't read them. Fixed with a backup first."),
     boton: !raiz || faltaRaiz.length === 0 ? null : [t("ARREGLAR", "FIX"), arreglarRaiz, raiz.pesAbierto],
     detalle: faltaRaiz.join(", "),
   });
   filas.push({
     id: "recarga", ok: !tr ? "espera" : modo !== "ACTIVAR",
-    titulo: t("Que los fichajes se pongan solos", "Transfers apply by themselves"),
-    frase: !tr ? t("Revisando…", "Checking…") : modo === "ACTIVAR" ? t("Ahora tienes que pulsar «Activar» en el juego cada vez. Lo mejor es que se haga solo.", "Right now you must press «Activate» in the game each time. It's best if it happens by itself.")
+    titulo: t("Recarga automática de fichajes", "Automatic transfer reload"),
+    frase: !tr ? t("Revisando…", "Checking…") : modo === "ACTIVAR" ? t("Ahora debes pulsar «Activar» en el juego cada vez. Mejor que sea solo.", "Right now you must press «Activate» in the game each time. Better automatic.")
       : t("El juego recarga solo, en un momento seguro.", "The game reloads by itself, at a safe moment."),
     boton: !tr || modo !== "ACTIVAR" ? null : [t("PONER AUTOMÁTICO", "MAKE AUTOMATIC"), ponerRecarga],
   });
   filas.push({
-    id: "rol", ok: !tr ? "espera" : rol !== "apagado",
-    titulo: t("Traspasos en vivo: tu papel", "Live transfers: your role"),
-    frase: !tr ? t("Revisando…", "Checking…") : rol === "anfitrion" ? t("Eres el anfitrión: tus traspasos le llegan a tus amigos.", "You're the host: your transfers reach your friends.")
-      : rol === "amigo" ? t("Eres el amigo: recibes los traspasos del anfitrión.", "You're the friend: you receive the host's transfers.")
-      : rol === "prueba" ? t("Modo de prueba: te mandas los traspasos a ti mismo.", "Test mode: you send transfers to yourself.")
-      : t("Elige si haces los traspasos o los recibes. Si solo quieres fichajes normales, puedes dejarlo así.", "Choose whether you make the transfers or receive them. If you only want normal transfers, you can leave this."),
-    extra: tr && rol === "apagado" ? html`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
-      <${Boton} tipo="suave mini" al=${() => ponerRol("anfitrion")}>${t("SOY EL ANFITRIÓN", "I'M THE HOST")}</${Boton}>
-      <${Boton} tipo="suave mini" al=${() => ponerRol("amigo")}>${t("SOY EL AMIGO", "I'M THE FRIEND")}</${Boton}></div>` : null,
-    opcional: true,
+    id: "rol", ok: !tr ? "espera" : rol !== "apagado" ? true : "apagado", opcional: true,
+    titulo: t("Traspasos en vivo", "Live transfers"),
+    frase: !tr ? t("Revisando…", "Checking…") : rol === "anfitrion" ? t("Tu papel: anfitrión. Tus fichajes le llegan a tus amigos.", "Your role: host. Your transfers reach your friends.")
+      : rol === "amigo" ? t("Tu papel: amigo. Recibes los fichajes de tu anfitrión.", "Your role: friend. You receive your host's transfers.")
+      : rol === "prueba" ? t("Modo prueba: te mandas los fichajes a ti mismo.", "Test mode: you send transfers to yourself.")
+      : t("Apagados. Actívalos solo si vas a pasar fichajes a un amigo.", "Off. Turn them on only to pass transfers to a friend."),
+    boton: [t("ELEGIR PAPEL →", "CHOOSE ROLE →"), () => elegirPestana("traspasos")],
   });
-  if (tr && rol !== "apagado") {
-    const lista = esWeb && cuenta === "conectado";
-    filas.push({
-      id: "web", ok: !esWeb ? true : !lista ? false : w.estado === "ok" && tr.webDisponible !== false ? true : w.estado === "ok" ? "espera" : false,
-      titulo: t("Conexión de los traspasos", "Live transfers connection"),
-      frase: !esWeb ? t("Usas la carpeta compartida.", "You use the shared folder.")
-        : !lista ? t("Necesita tu cuenta unida (el primer punto).", "It needs your linked account (the first point).")
-        : w.estado === "ok" ? t("Conectado: los traspasos viajan por la web.", "Connected: transfers travel through the web.")
-        : w.estado === "sin_conexion" ? t("No consigo hablar con la web. Se reintenta sola; también puedes reintentar ahora.", "I can't reach the web. It retries by itself; you can also retry now.")
-        : w.estado === "sin_anfitrion" ? t("Falta el código de tu anfitrión (se escribe en «Traspasos en vivo»).", "Your host's code is missing (type it in «Live transfers»).")
-        : w.estado === "pendiente_aprobacion" ? t("Tu anfitrión todavía tiene que aceptarte.", "Your host still has to accept you.")
-        : t("La web no está lista todavía. Se reintenta sola.", "The web isn't ready yet. It retries by itself."),
-      boton: !esWeb || !lista || w.estado === "ok" ? null : w.estado === "sin_anfitrion" ? [t("IR A ESCRIBIRLO", "GO TYPE IT"), () => elegirPestana("traspasos")] : [t("REINTENTAR AHORA", "RETRY NOW"), reintentarWeb],
-    });
-  }
 
   const malas = filas.filter((f) => f.ok === false && !f.opcional);
   const cargando = !mods || !tr;
@@ -182,10 +177,10 @@ export function Preparar({ s }) {
           const r = await accion("sync.modulo", { archivo: x.archivo, accion: "instalar" });
           if (!r) { bien = false; break; }
         }
-        if (!bien) { nota(false, t("No pude instalar una pieza. Tu juego no se ha roto: hay copia de lo que se tocó.", "I couldn't install a piece. Your game isn't broken: what was touched is backed up.")); return; }
-        nota(true, t("Instalé las piezas de Phoenix en el juego (con copia antes).", "Installed Phoenix's pieces in the game (backed up first)."));
+        if (!bien) { nota(false, t("No pude instalar un archivo. Tu juego no se rompió: hay copia de lo que se tocó.", "I couldn't install a file. Your game isn't broken: what was touched is backed up.")); return; }
+        nota(true, t("Instalé los archivos de Phoenix en el juego (con copia antes).", "Installed Phoenix's files in the game (backed up first)."));
         [a, b] = await leer();
-      } else nota(true, t("Las piezas de Phoenix ya estaban al día.", "Phoenix's pieces were already up to date."));
+      } else nota(true, t("Los archivos de Phoenix ya estaban al día.", "Phoenix's files were already up to date."));
       // 2b. que el juego lea los fichajes ya puestos (línea de Phoenix-DB en sider.ini)
       const cr = await accion("sync.raizPhoenixDB", {}, { silencioso: true });
       if (cr && cr.faltan && cr.faltan.length) {
@@ -199,45 +194,47 @@ export function Preparar({ s }) {
         else nota(false, t("No pude cambiar la recarga automática.", "I couldn't change the automatic reload."));
       } else nota(true, t("La recarga ya era automática.", "The reload was already automatic."));
       // 4. cuenta: solo la persona puede
-      if ((s.motor?.web?.estado || "sin_vincular") !== "conectado") { nota(false, t("Falta unir tu cuenta de la liga. Pulsa «UNIR MI CUENTA» en la lista: es lo único que debes hacer tú.", "Your league account isn't linked. Press «LINK MY ACCOUNT» in the list: it's the only thing you must do yourself.")); return; }
+      if ((s.motor?.web?.estado || "sin_vincular") !== "conectado") { nota(false, t("Falta unir tu cuenta de la liga. Escribe el código de la web en «Tu cuenta de la liga»: es lo único que haces tú.", "Your league account isn't linked. Type the web code in «Your league account»: it's the only thing you do yourself.")); return; }
       // 5. conexión de traspasos
       if (b.ajustes && (b.ajustes.publicar || b.ajustes.recibir) && (b.ajustes.transporte || "web") === "web" && b.web?.estado !== "ok") {
         await accion("traspasos.accion", { accion: "reintentar" }, { silencioso: true });
         await espera(2500);
         [a, b] = await leer();
         if (b?.web?.estado === "ok") nota(true, t("La conexión de los traspasos funciona.", "The live transfers connection works."));
-        else nota(false, t("Los traspasos todavía no conectan; se reintenta sola. Mira el punto «Conexión de los traspasos».", "Live transfers aren't connected yet; it retries by itself. See the «Live transfers connection» point."));
+        else nota(false, t("Los traspasos todavía no conectan. Se reintenta sola; mira «Traspasos» para ver el motivo.", "Live transfers aren't connected yet. It retries by itself; see «Transfers» for the reason."));
       }
-      if (!(b?.ajustes && (b.ajustes.publicar || b.ajustes.recibir))) nota(true, t("Los traspasos en vivo siguen apagados. Si los quieres, elige tu papel en la lista.", "Live transfers are still off. If you want them, pick your role in the list."));
+      if (!(b?.ajustes && (b.ajustes.publicar || b.ajustes.recibir))) nota(true, t("Los traspasos en vivo siguen apagados. Si los quieres, elige tu papel en «Traspasos».", "Live transfers are still off. If you want them, choose your role in «Transfers»."));
     } finally {
       if (vivo.current) setHaciendo(false);
     }
   };
 
-  const simbolo = (ok) => ok === true ? "✓" : ok === "espera" ? "…" : "✗";
+  const simbolo = (ok) => ok === true ? "✓" : ok === "espera" ? "…" : ok === "apagado" ? "–" : "✗";
   const todoBien = !cargando && malas.length === 0;
   const detalle = [];
   if (mods?.juego) detalle.push(t("Carpeta del juego: ", "Game folder: ") + mods.juego);
   for (const x of gest) detalle.push(`${x.archivo}${x.version ? " v" + x.version : ""}: ${x.estado}`);
   detalle.push(t("Modo de recarga: ", "Reload mode: ") + modo);
-  if (tr) detalle.push(t("Conexión de traspasos: ", "Live transfers connection: ") + (w.estado || "—"));
+  if (tr) detalle.push(t("Conexión de traspasos: ", "Live transfers connection: ") + (w.estado || "—") + (w.texto ? " · " + w.texto : ""));
   const tec = w.tecnico;
   if (tec) detalle.push(t("Datos técnicos de la web: ", "Web technical data: ") + JSON.stringify(tec));
 
   return html`<div style="display:flex;flex-direction:column;gap:16px">
-    <${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:16px">
-      <${Titulo} texto=${t("PREPARAR TODO", "GET EVERYTHING READY")}/>
-      <div class="ayuda" style="font-size:14px">${t("Aquí ves, de un vistazo, si todo está listo para jugar con fichajes. Pulsa el botón grande y Phoenix hace lo que pueda por ti.", "See at a glance whether everything is ready to play with transfers. Press the big button and Phoenix does what it can for you.")}</div>
-      <${Boton} tipo="lleno" deshabilitado=${haciendo || cargando} al=${arreglarTodo}>
-        ${haciendo ? t("ARREGLANDO…", "FIXING…") : todoBien ? t("TODO LISTO · REVISAR OTRA VEZ", "ALL SET · CHECK AGAIN") : t("ARREGLAR TODO", "FIX EVERYTHING")}</${Boton}>
+    <${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:14px">
+      <${Titulo} texto=${t("¿ESTÁ LISTO MI PC?", "IS MY PC READY?")}/>
+      <div style="display:flex;align-items:center;gap:12px"><span class=${cx("punto", cargando ? "" : todoBien ? "ok" : "warn")} style="width:16px;height:16px;flex:none"></span>
+        <span class="disp" style="font-size:26px;font-weight:700;color:${cargando ? "inherit" : todoBien ? "var(--ok, #4ade80)" : "var(--warn, #ffb347)"}">${cargando ? t("Revisando…", "Checking…") : todoBien ? t("Todo listo", "All set") : t(`Falta algo: ${malas.length} ${malas.length === 1 ? "cosa" : "cosas"}`, `Something's missing: ${malas.length} ${malas.length === 1 ? "thing" : "things"}`)}</span></div>
+      <div class="ayuda" style="font-size:14px">${todoBien ? t("Tu PC está lista para jugar con fichajes.", "Your PC is ready to play with transfers.") : t("Pulsa el botón y Phoenix arregla lo que pueda. Antes cierra PES.", "Press the button and Phoenix fixes what it can. Close PES first.")}</div>
+      <${Boton} tipo=${todoBien ? "suave" : "lleno"} deshabilitado=${haciendo || cargando} al=${arreglarTodo}>
+        ${haciendo ? t("ARREGLANDO…", "FIXING…") : todoBien ? t("REVISAR OTRA VEZ", "CHECK AGAIN") : t("ARREGLAR TODO", "FIX EVERYTHING")}</${Boton}>
       ${informe.length ? html`<div class="caja" style="display:flex;flex-direction:column;gap:6px;font-size:14px">
         ${informe.map((i, k) => html`<div key=${k} style="display:flex;gap:8px"><span class=${cx("punto", i.ok ? "ok" : "warn")} style="flex:none;margin-top:7px"></span><span>${i.texto}</span></div>`)}
       </div>` : null}
     </${Tarjeta}>
     <${Tarjeta} interior="padding:8px 20px;display:flex;flex-direction:column">
-      ${filas.map((f) => html`<div key=${f.id} style="display:flex;gap:14px;align-items:flex-start;padding:14px 0;border-bottom:1px solid var(--linea, rgba(255,255,255,.08))">
+      ${filas.map((f) => html`<div key=${f.id} style="display:flex;gap:10px 14px;align-items:flex-start;flex-wrap:wrap;padding:14px 0;border-bottom:1px solid var(--linea, rgba(255,255,255,.08))">
         <span class=${cx("disp", f.ok === true ? "acc" : "")} style=${"flex:none;width:30px;font-size:22px;font-weight:700;text-align:center;" + (f.ok === false && !f.opcional ? "color:var(--bad, #ff6b6b)" : "")}>${simbolo(f.ok)}</span>
-        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px">
+        <div style="flex:1 1 140px;min-width:0;display:flex;flex-direction:column;gap:3px">
           <b style="font-size:15px">${f.titulo}</b>
           <span class="ayuda" style="font-size:14px">${f.frase}</span>
           ${f.detalle ? html`<span class="mut mono" style="font-size:12px">${f.detalle}</span>` : null}

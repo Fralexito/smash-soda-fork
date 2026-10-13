@@ -1,48 +1,56 @@
 // =============================================================================
-//  TRASPASOS EN VIVO (SYNC › TRASPASOS). Lo que haces en Editar de PES (un jugador cambia de equipo) se refleja, ya guardado,
-//  en el PES de tu amigo. Anfitrión: Link vigila el option file y publica los traspasos. Amigo: Link los recibe, los aplica
-//  sobre SU base (Phoenix-DB) y avisa a phoenix.lua, que recarga solo en un momento seguro según su modo de recarga.
-//  Viajan por la WEB de Phoenix (Supabase): el anfitrión tiene un canal con su código y el amigo lo sigue. La carpeta compartida
-//  queda como alternativa avanzada. Todo APAGADO por defecto. Guía: docs/TRASPASOS-EN-VIVO.md
+//  SYNC › TRASPASOS. «Pasar un fichaje a un amigo»: un asistente de 3 pasos, siempre en el mismo orden.
+//    1. ¿Qué vas a hacer?  (hago los traspasos = anfitrión · los recibo = amigo; «Más opciones»: prueba, apagar, carpeta compartida)
+//    2. Anfitrión: TU CÓDIGO (copiar / cambiar). Amigo: escribe el código y pulsa SEGUIR.
+//    3. Estado en vivo en frases cortas.  «¿Algo no funciona?»: la lista de comprobaciones, abierta sola si hay un ✗.
+//  La lógica (traspasos.estado / config / accion) no cambia: solo cómo se presenta. Guía: docs/TRASPASOS-EN-VIVO.md
 // =============================================================================
 import { html, useState, useEffect } from "../lib.js";
 import { t } from "../i18n.js";
 import { accion, avisar, confirmar, elegirPestana } from "../tienda.js";
-import { Tarjeta, Titulo, AjusteSw, Segmentos, Chip, Boton, cx } from "../ui.js";
+import { Tarjeta, Titulo, AjusteSw, Chip, Boton, cx } from "../ui.js";
 
-const ANFITRION = {
-  apagado: ["", "Apagado", "Off"],
-  referencia_borrada: ["warn", "Referencia olvidada: la próxima vez que PES guarde, solo se toma la foto de partida", "Reference forgotten: the next time PES saves, only the starting snapshot is taken"],
-  esperando_que_termine_de_guardar: ["warn", "PES está guardando… espero a que termine", "PES is saving… waiting for it to finish"],
-  referencia_guardada: ["ok", "Listo: guardé la foto de partida. Haz un traspaso en Editar y guarda", "Ready: starting snapshot saved. Make a transfer in Edit and save"],
-  sin_cambios: ["ok", "Vigilando. No hay cambios desde la última vez", "Watching. No changes since last time"],
-  sin_traspasos: ["ok", "Vigilando. El último guardado no tenía traspasos nuevos", "Watching. The last save had no new transfers"],
-  publicado: ["ok", "Traspaso publicado", "Transfer published"],
-  descartado: ["warn", "Descartado: no se envió", "Discarded: not sent"],
-  pendiente_de_confirmar: ["warn", "Detecté traspasos: confírmalos para enviarlos", "Transfers detected: confirm to send them"],
-  pendiente_masivo: ["warn", "Demasiados cambios a la vez (¿cargaste otro option file?): no se envía solo", "Too many changes at once (did you load another option file?): not sent automatically"],
-  sin_option_file: ["bad", "No encuentro tu option file (EDIT00000000). Indícalo abajo", "I can't find your option file (EDIT00000000). Set it below"],
-};
 // Estado de la conexión (web o carpeta): lo mismo para el anfitrión («transporte:<clave>») y para el amigo (la clave sola)
 const CONEXION = {
-  ok: ["ok", "Conectado a la web", "Connected to the web"],
-  web_sin_endpoints: ["warn", "La web aún no tiene los traspasos en vivo: vuelve a comprobar en unos minutos", "The web doesn't have live transfers yet: check again in a few minutes"],
-  sin_cuenta: ["bad", "Esta PC no está vinculada a tu cuenta de la web", "This PC isn't linked to your web account"],
-  sin_permiso: ["bad", "La web no te da permiso (para ser anfitrión la cuenta debe estar aprobada como host)", "The web doesn't give you permission (to host, the account must be approved as a host)"],
-  pendiente_aprobacion: ["warn", "Tu anfitrión aún no te ha aprobado", "Your host hasn't approved you yet"],
-  limite: ["warn", "Demasiadas peticiones: espero un momento", "Too many requests: waiting a moment"],
-  sin_conexion: ["warn", "Sin conexión con la web: reintento solo", "No connection to the web: retrying by itself"],
-  respuesta_rara: ["warn", "La web contestó algo raro: reintento solo", "The web answered something odd: retrying by itself"],
-  sin_anfitrion: ["warn", "Elige a qué anfitrión sigues: escribe su código", "Choose which host you follow: type their code"],
-  liga_pausada: ["warn", "La web tiene la liga en pausa: espero", "The web has the league paused: waiting"],
+  ok: ["ok", "Conectado a la web.", "Connected to the web."],
+  web_sin_endpoints: ["warn", "La web todavía no tiene esta función. Se vuelve a probar sola.", "The web doesn't have this feature yet. It retries by itself."],
+  sin_cuenta: ["bad", "Esta PC no está unida a tu cuenta de la liga.", "This PC isn't linked to your league account."],
+  sin_permiso: ["bad", "La web no te deja ser anfitrión. Pídele al staff que apruebe tu cuenta.", "The web doesn't let you host. Ask the staff to approve your account."],
+  pendiente_aprobacion: ["warn", "Tu anfitrión todavía no te ha aceptado.", "Your host hasn't accepted you yet."],
+  limite: ["warn", "Hay demasiadas peticiones. Espero un momento.", "Too many requests. Waiting a moment."],
+  sin_conexion: ["warn", "No hay conexión con la web. Se reintenta sola.", "No connection to the web. It retries by itself."],
+  respuesta_rara: ["warn", "La web contestó algo raro. Se reintenta sola.", "The web answered something odd. It retries by itself."],
+  sin_anfitrion: ["warn", "Escribe el código de tu anfitrión para seguirlo.", "Type your host's code to follow them."],
+  liga_pausada: ["warn", "La liga está en pausa. Espero.", "The league is paused. Waiting."],
 };
-const ESTADO_LOTE = { pendiente: ["warn", "PENDIENTE", "PENDING"], aplicado: ["ok", "APLICADO", "APPLIED"], parcial: ["vip", "PARCIAL", "PARTIAL"], saltado: ["bad", "SALTADO", "SKIPPED"], deshecho: ["", "DESHECHO", "UNDONE"], propio: ["", "TUYO", "YOURS"], error: ["bad", "ERROR", "ERROR"] };
-const ESTADO_CAMBIO = { aplicado: ["ok", "aplicado", "applied"], ya_estaba: ["", "ya estaba", "already there"], saltado: ["bad", "saltado", "skipped"], reemplazado: ["", "reemplazado por uno posterior", "replaced by a later one"], pendiente: ["warn", "pendiente", "pending"], publicado: ["ok", "publicado", "published"] };
+const ESTADO_LOTE = { pendiente: ["warn", "PENDIENTE", "PENDING"], aplicado: ["ok", "PUESTO", "APPLIED"], parcial: ["vip", "A MEDIAS", "PARTIAL"], saltado: ["bad", "NO SE PUDO", "SKIPPED"], deshecho: ["", "DESHECHO", "UNDONE"], propio: ["", "TUYO", "YOURS"], error: ["bad", "ERROR", "ERROR"] };
+const ESTADO_CAMBIO = { aplicado: ["ok", "puesto", "applied"], ya_estaba: ["", "ya estaba", "already there"], saltado: ["bad", "no se pudo", "skipped"], reemplazado: ["", "lo cambió un fichaje posterior", "replaced by a later one"], pendiente: ["warn", "pendiente", "pending"], publicado: ["ok", "enviado", "sent"] };
 const MODO_TXT = {
-  "AUTO-SIEMPRE": ["Tu modo es AUTOMÁTICO: el juego recarga solo al volver al menú principal y entrar a un modo (nunca en un partido ni en Editar).", "Your mode is AUTOMATIC: the game reloads by itself when you return to the main menu and enter a mode (never in a match or in Edit)."],
-  "AUTO-FICHAJES": ["Tu modo es AUTOMÁTICO CON AVISO: el juego recarga solo al volver al menú y entrar a un modo, porque Link le avisa de cada lote nuevo.", "Your mode is AUTO WITH NOTICE: the game reloads by itself at the menu because Link notifies it of each new batch."],
-  "ACTIVAR": ["Tu modo es MANUAL: Link deja el traspaso listo, pero el juego lo carga cuando pulses Partido → Datos Actual. en vivo → Activar.", "Your mode is MANUAL: Link leaves the transfer ready, but the game loads it when you press Match → Live update → Activate."],
+  "AUTO-SIEMPRE": ["El juego carga el fichaje solo al volver al menú principal y entrar a un modo.", "The game loads the transfer by itself when you go back to the main menu and enter a mode."],
+  "AUTO-FICHAJES": ["El juego carga el fichaje solo al volver al menú principal y entrar a un modo.", "The game loads the transfer by itself when you go back to the main menu and enter a mode."],
+  "ACTIVAR": ["Para verlo pulsa en el juego: Partido → Datos Actual. en vivo → Activar.", "To see it press in the game: Match → Live data update → Activate."],
 };
+
+/** Frase corta del anfitrión según lo que hace Link ahora: [color, frase]. */
+function estadoAnfitrion(a, w, pend) {
+  const est = a.estado || "";
+  if (est.startsWith("transporte:")) { const c = CONEXION[est.slice(11)]; return c ? [c[0], t(c[1], c[2])] : ["warn", est]; }
+  if (pend.length) return ["warn", a.masivo ? t("Son demasiados cambios de golpe. Si cargaste otro archivo de guardado, descártalos.", "That's too many changes at once. If you loaded another save file, discard them.") : t("Fichaje detectado: pulsa PUBLICAR.", "Transfer detected: press PUBLISH.")];
+  const clave = est.split(":")[0];
+  switch (clave) {
+    case "publicado": return ["ok", t("Fichaje enviado. Tu amigo lo recibe en unos segundos.", "Transfer sent. Your friend gets it in a few seconds.")];
+    case "descartado": return ["", t("Descartaste ese fichaje: no se envió.", "You discarded that transfer: it wasn't sent.")];
+    case "esperando_que_termine_de_guardar": return ["warn", t("PES está guardando. Espero a que termine.", "PES is saving. Waiting for it to finish.")];
+    case "referencia_borrada": return ["warn", t("Empiezo de cero: la próxima vez que PES guarde, solo anoto cómo está todo.", "Starting over: the next time PES saves, I only note how everything is.")];
+    case "sin_option_file": return ["bad", t("No encuentro tu archivo de guardado. Indícalo en «Más opciones».", "I can't find your save file. Set it under «More options».")];
+    case "apagado": return ["", t("Apagado.", "Off.")];
+    case "pendiente_masivo": return ["warn", t("Son demasiados cambios de golpe. Si cargaste otro archivo de guardado, descártalos.", "That's too many changes at once. If you loaded another save file, discard them.")];
+    case "pendiente_de_confirmar": return ["warn", t("Fichaje detectado: pulsa PUBLICAR.", "Transfer detected: press PUBLISH.")];
+    default:
+      if (est.startsWith("no_se_pudo_leer")) return ["warn", t("No pude leer tu archivo de guardado (quizá se está guardando). Reintento solo.", "I couldn't read your save file (maybe it's saving). Retrying by itself.")];
+      return ["ok", t("Esperando tu fichaje: haz el traspaso en Editar y guarda.", "Waiting for your transfer: make it in Edit and save.")];
+  }
+}
 
 export function Traspasos() {
   const [d, setD] = useState(null);
@@ -54,209 +62,219 @@ export function Traspasos() {
   const poner = async (campos, ok) => { const r = await accion("traspasos.config", campos); if (r) { setD(r); if (ok) avisar(ok, "ok", 5000); } };
   const hacer = async (que, extra = {}) => { const r = await accion("traspasos.accion", { accion: que, ...extra }); if (r) setD(r); };
   if (!d) return html`<${Tarjeta} interior="padding:22px 24px"><div class="ayuda">${t("Revisando…", "Checking…")}</div></${Tarjeta}>`;
+
   const aj = d.ajustes || {};
   const a = d.anfitrion || {};
   const m = d.amigo || {};
   const w = d.web || {};
   const esWeb = (aj.transporte || "web") === "web";
-  const [punto, et] = (() => {
-    const est = a.estado || "";
-    if (est.startsWith("transporte:")) { const c = CONEXION[est.slice(11)]; return c ? [c[0], t(c[1], c[2])] : ["warn", est]; }
-    const x = ANFITRION[est.split(":")[0]];
-    if (x) return [x[0], t(x[1], x[2])];
-    if (est.startsWith("no_se_pudo_leer")) return ["warn", t("No pude leer el option file (puede estar guardándose); reintento solo", "I couldn't read the option file (it may be saving); retrying by itself")];
-    return ["", est];
-  })();
   const pend = a.pendientes || [];
   const lista = m.historial || [];
   const nombre = (c) => c.jugadorNombre || ("#" + c.jugador);
   const modo = d.modoRecarga || "AUTO-SIEMPRE";
-  // «¿Qué eres tú?»: un solo selector. Anfitrión y amigo son cuentas distintas; «Prueba» = los dos en tu cuenta.
   const rol = aj.publicar && aj.recibir ? "prueba" : aj.publicar ? "anfitrion" : aj.recibir ? "amigo" : "apagado";
-  const ponerRol = (r) => poner({ publicar: r === "anfitrion" || r === "prueba", recibir: r === "amigo" || r === "prueba" },
-    r === "apagado" ? null : r === "anfitrion" ? t("Anfitrión: la primera lectura solo toma la foto de partida.", "Host: the first read only takes the starting snapshot.") : r === "amigo" ? t("Amigo: recibirás los traspasos.", "Friend: you will receive transfers.") : t("Prueba: publicas y recibes con tu propia cuenta.", "Test: you publish and receive with your own account."));
-  const Paso = ({ n, texto }) => html`<div style="display:flex;gap:10px;align-items:flex-start;flex:1 1 180px;min-width:180px">
-    <span class="mono acc" style="flex:none;width:26px;height:26px;border-radius:50%;border:1.5px solid var(--acc);display:flex;align-items:center;justify-content:center;font-size:13px">${n}</span>
-    <span style="font-size:14px">${texto}</span></div>`;
-  const copiar = async (texto) => { try { await navigator.clipboard.writeText(texto); avisar(t("Copiado.", "Copied."), "ok", 2500); } catch { avisar(t("No pude copiar: selecciónalo y copia a mano.", "Couldn't copy: select it and copy by hand."), "bad", 4000); } };
   const quiereCanal = rol === "anfitrion" || rol === "prueba";
   const quiereSeguir = rol === "amigo";
-  const sig = (w.siguiendo || []);
+  const sig = w.siguiendo || [];
   const canal = w.canal;
   const [cp, ct, cen] = CONEXION[w.estado || "ok"] || ["", w.estado || "", w.estado || ""];
-  // estado de la conexión para el chip del paso 1
-  const conexionChip = !esWeb ? [aj.carpeta ? "acc" : "vip", aj.carpeta ? t("CARPETA", "FOLDER") : t("FALTA LA CARPETA", "FOLDER MISSING")]
-    : !w.vinculada ? ["bad", t("SIN CUENTA VINCULADA", "NO LINKED ACCOUNT")]
-    : w.estado === "web_sin_endpoints" || d.webDisponible === false ? ["vip", t("LA WEB AÚN NO LO TIENE", "THE WEB DOESN'T HAVE IT YET")]
-    : w.estado !== "ok" ? ["vip", t("REVISAR", "CHECK")]
-    : d.webDisponible === true ? ["acc", t("CONECTADO", "CONNECTED")] : ["", t("COMPROBANDO…", "CHECKING…")];
-  // ── «Antes de la prueba»: lista de comprobaciones según el rol (se actualiza sola con cada lectura del estado)
+  const ponerRol = (r) => poner({ publicar: r === "anfitrion" || r === "prueba", recibir: r === "amigo" || r === "prueba" });
+  const copiar = async (texto) => { try { await navigator.clipboard.writeText(texto); avisar(t("Copiado.", "Copied."), "ok", 2500); } catch { avisar(t("No pude copiar: selecciónalo y cópialo a mano.", "Couldn't copy: select it and copy by hand."), "bad", 4000); } };
+  const irMiPc = () => elegirPestana("mipc");
+
+  // ── Qué paso toca: el primero que no está hecho ──
+  const hecho1 = rol !== "apagado";
+  const hecho2 = hecho1 && (!esWeb ? !!aj.carpeta : (quiereCanal ? !!canal : sig.length > 0));
+  const actual = !hecho1 ? 1 : !hecho2 ? 2 : 3;
+
+  // ── «¿Algo no funciona?»: lista de comprobaciones según el papel ──
   const diag = d.diag || {};
   const sitiosSider = (diag.sitios || []).filter((x) => x.sider);
   const sinRaiz = sitiosSider.filter((x) => !x.raiz).map((x) => x.nombre);
   const arch = a.archivo || {};
-  const modoTxtCorto = modo === "ACTIVAR" ? t("recarga MANUAL (Partido → Datos Actual. en vivo → Activar)", "MANUAL reload (Match → Live update → Activate)") : t("recarga AUTOMÁTICA al volver al menú y entrar a un modo", "AUTOMATIC reload when you return to the menu and enter a mode");
   const F = (ok, titulo, detalle, pista, boton) => ({ ok, titulo, detalle, pista, boton });
-  const irWeb = { texto: t("IR A SYNC › CUENTA WEB", "GO TO SYNC › WEB ACCOUNT"), al: () => elegirPestana("web") };
+  const aMiPc = { texto: t("IR A MI PC", "GO TO MY PC"), al: irMiPc };
   const filasHost = [
-    F(!!w.vinculada, t("Cuenta vinculada", "Account linked"), w.vinculada ? t("Esta PC está vinculada a tu cuenta de la web.", "This PC is linked to your web account.") : "", t("Vincula esta PC con tu cuenta de la web para poder enviar traspasos.", "Link this PC to your web account to send transfers."), irWeb),
-    F(!!canal, t("Cuenta aprobada como anfitrión (código obtenido)", "Account approved as host (code received)"), canal ? t(`Tu código: ${canal.codigo}`, `Your code: ${canal.codigo}`) : "",
-      !w.vinculada ? t("Primero vincula la cuenta.", "Link the account first.") : w.estado === "sin_permiso" ? t("La web no aprueba esta cuenta como anfitrión: pídele al staff que la apruebe como host.", "The web doesn't approve this account as a host: ask the staff to approve it.") : w.estado === "web_sin_endpoints" ? t("La web aún no tiene los traspasos en vivo.", "The web doesn't have live transfers yet.") : t("Pidiendo tu código… si tarda, pulsa «Volver a comprobar».", "Getting your code… if it takes long, press «Check again».")),
-    F(!!arch.existe, t("Option file detectado", "Option file found"), arch.existe ? `${arch.ruta} · ${t("modificado", "modified")} ${arch.fecha}` : "", t("No encuentro tu EDIT00000000: pega su ruta en «Ajustes del anfitrión» (más abajo).", "I can't find your EDIT00000000: paste its path in «Host settings» (below).")),
-    F(!!a.hayReferencia, t("Foto de partida hecha", "Starting snapshot taken"), a.hayReferencia ? t("Link ya sabe cómo está tu option file: solo enviará lo que cambies desde ahora.", "Link knows how your option file is: it will only send what you change from now on.") : "", t("Se hace sola en unos segundos al leer el option file; si no, guarda una vez en PES y vuelve a mirar.", "It happens by itself in a few seconds when the option file is read; if not, save once in PES and check again.")),
-    F(esWeb ? (w.estado === "ok" && d.webDisponible === true) : !!aj.carpeta, esWeb ? t("Conectado a la web", "Connected to the web") : t("Carpeta compartida elegida", "Shared folder chosen"), "",
-      esWeb ? (w.vinculada ? t(CONEXION[w.estado]?.[1] || "Comprobando…", CONEXION[w.estado]?.[2] || "Checking…") : t("Primero vincula la cuenta.", "Link the account first.")) : t("Elige la carpeta en «Avanzado» (paso 1).", "Choose the folder under «Advanced» (step 1).")),
+    F(!!w.vinculada, t("Cuenta de la liga unida", "League account linked"), "", t("Une esta PC a tu cuenta en «Mi PC».", "Link this PC to your account in «My PC»."), aMiPc),
+    F(!!canal, t("Cuenta aprobada como anfitrión", "Account approved as host"), canal ? t(`Tu código: ${canal.codigo}`, `Your code: ${canal.codigo}`) : "",
+      !w.vinculada ? t("Primero une la cuenta.", "Link the account first.") : w.estado === "sin_permiso" ? t("La web no aprueba esta cuenta como anfitrión: pídeselo al staff.", "The web doesn't approve this account as host: ask the staff.") : w.estado === "web_sin_endpoints" ? t("La web todavía no tiene esta función.", "The web doesn't have this feature yet.") : t("Pidiendo tu código… si tarda, pulsa «Volver a comprobar».", "Getting your code… if it takes long, press «Check again».")),
+    F(!!arch.existe, t("Archivo de guardado encontrado", "Save file found"), arch.existe ? `${arch.ruta} · ${t("cambió el", "changed on")} ${arch.fecha}` : "", t("No encuentro tu archivo EDIT00000000: indícalo en «Más opciones» del paso 3.", "I can't find your EDIT00000000 file: set it under «More options» in step 3.")),
+    F(!!a.hayReferencia, t("Punto de partida anotado", "Starting point noted"), a.hayReferencia ? t("Solo se enviará lo que cambies desde ahora.", "Only what you change from now on will be sent.") : "", t("Se anota sola en unos segundos. Si no, guarda una vez en PES.", "It's noted by itself in a few seconds. If not, save once in PES.")),
+    F(esWeb ? (w.estado === "ok" && d.webDisponible === true) : !!aj.carpeta, esWeb ? t("Conexión con la web", "Connection to the web") : t("Carpeta compartida elegida", "Shared folder chosen"), "",
+      esWeb ? (w.vinculada ? t(CONEXION[w.estado]?.[1] || "Comprobando…", CONEXION[w.estado]?.[2] || "Checking…") : t("Primero une la cuenta.", "Link the account first.")) : t("Elige la carpeta en «Más opciones» del paso 1.", "Choose the folder under «More options» in step 1.")),
   ];
   const filasAmigo = [
-    F(!!w.vinculada, t("Cuenta vinculada", "Account linked"), w.vinculada ? t("Esta PC está vinculada a tu cuenta de la web.", "This PC is linked to your web account.") : "", t("Vincula esta PC con tu cuenta de la web para recibir traspasos.", "Link this PC to your web account to receive transfers."), irWeb),
-    F(rol === "prueba" || sig.length > 0 || !esWeb, rol === "prueba" ? t("Modo Prueba (te recibes a ti mismo)", "Test mode (you receive yourself)") : t("Siguiendo a un anfitrión", "Following a host"),
-      sig.length ? sig.map((x) => x.anfitrionNombre || "?").join(", ") : "", t("Escribe el código de tu anfitrión en el paso 1 («¿A qué anfitrión sigues?»).", "Type your host's code in step 1 («Which host do you follow?»).")),
-    F(!!diag.ok, t("Juego encontrado", "Game found"), diag.ok ? diag.juego : "", t("Abre PES 2021 una vez con Link abierto o indica su carpeta en Sync › Puente.", "Open PES 2021 once with Link running, or set its folder in Sync › Bridge.")),
-    F(!!diag.ok && sitiosSider.length > 0 && sinRaiz.length === 0, t("Phoenix-DB en el sider.ini", "Phoenix-DB in sider.ini"), diag.ok && sinRaiz.length === 0 && sitiosSider.length ? t(`Presente en ${sitiosSider.length} ${sitiosSider.length === 1 ? "sitio" : "sitios"}.`, `Present in ${sitiosSider.length} ${sitiosSider.length === 1 ? "place" : "places"}.`) : "",
-      !diag.ok ? t("Primero necesito la carpeta del juego.", "I need the game folder first.") : !sitiosSider.length ? t("No encuentro ningún sider.ini: ¿tiene Sider el juego?", "I can't find any sider.ini: does the game have Sider?") : t(`Falta en: ${sinRaiz.join(", ")}. Se añade solo al aplicar el primer lote con PES cerrado, o instala «Módulos del juego» (Sync › Puente).`, `Missing in: ${sinRaiz.join(", ")}. It is added by itself when the first batch is applied with PES closed, or install «Game modules» (Sync › Bridge).`)),
-    F(!!diag.lua && diag.lua.estado === "instalado", t("phoenix.lua instalado", "phoenix.lua installed"), diag.lua && diag.lua.version ? `v${diag.lua.version}` : "",
-      diag.lua && diag.lua.estado === "desactualizado" ? t("Hay una versión nueva: actualízala en Sync › Puente › Módulos del juego (con PES cerrado).", "A newer version exists: update it in Sync › Bridge › Game modules (with PES closed).") : t("Instálalo en Sync › Puente › Módulos del juego (con PES cerrado): es lo que recarga los fichajes en el juego.", "Install it in Sync › Bridge › Game modules (with PES closed): it reloads transfers in the game.")),
+    F(!!w.vinculada, t("Cuenta de la liga unida", "League account linked"), "", t("Une esta PC a tu cuenta en «Mi PC».", "Link this PC to your account in «My PC»."), aMiPc),
+    F(rol === "prueba" || sig.length > 0 || !esWeb, rol === "prueba" ? t("Modo prueba: te recibes a ti mismo", "Test mode: you receive yourself") : t("Sigues a un anfitrión", "You follow a host"),
+      sig.length ? sig.map((x) => x.anfitrionNombre || "?").join(", ") : "", t("Escribe el código de tu anfitrión en el paso 2.", "Type your host's code in step 2.")),
+    F(!!diag.ok, t("Juego encontrado", "Game found"), diag.ok ? diag.juego : "", t("Pulsa ARREGLAR TODO en «Mi PC»: busca el juego solo.", "Press FIX EVERYTHING in «My PC»: it finds the game by itself."), aMiPc),
+    F(!!diag.ok && sitiosSider.length > 0 && sinRaiz.length === 0, t("El juego lee los traspasos", "The game reads the transfers"), diag.ok && sinRaiz.length === 0 && sitiosSider.length ? t(`Listo en ${sitiosSider.length} ${sitiosSider.length === 1 ? "sitio" : "sitios"}.`, `Ready in ${sitiosSider.length} ${sitiosSider.length === 1 ? "place" : "places"}.`) : "",
+      !diag.ok ? t("Primero hace falta saber dónde está el juego.", "The game folder is needed first.") : !sitiosSider.length ? t("No veo la configuración de Sider en el juego.", "I can't see Sider's setup in the game.") : t(`Falta en: ${sinRaiz.join(", ")}. Con PES cerrado, pulsa ARREGLAR TODO en «Mi PC».`, `Missing in: ${sinRaiz.join(", ")}. With PES closed, press FIX EVERYTHING in «My PC».`), aMiPc),
+    F(!!diag.lua && diag.lua.estado === "instalado", t("Archivo de Phoenix instalado en el juego", "Phoenix file installed in the game"), diag.lua && diag.lua.version ? `v${diag.lua.version}` : "",
+      diag.lua && diag.lua.estado === "desactualizado" ? t("Hay una versión nueva. Con PES cerrado, pulsa ARREGLAR TODO en «Mi PC».", "A newer version exists. With PES closed, press FIX EVERYTHING in «My PC».") : t("Con PES cerrado, pulsa ARREGLAR TODO en «Mi PC».", "With PES closed, press FIX EVERYTHING in «My PC»."), aMiPc),
   ];
-  const infoPes = d.pesAbierto ? t(`PES está ABIERTO: el lote se escribe en Phoenix-DB sin tocar el sider.ini; para verlo cierra y vuelve a abrir PES, o ${modoTxtCorto}.`, `PES is OPEN: the batch is written to Phoenix-DB without touching sider.ini; to see it close and reopen PES, or ${modoTxtCorto}.`)
-    : t("PES está CERRADO: el lote se aplica al momento y lo verás al abrir PES.", "PES is CLOSED: the batch is applied right away and you will see it when you open PES.");
   const chequeo = rol === "apagado" ? [] : [...(quiereCanal ? filasHost.map((f) => ({ ...f, grupo: t("ANFITRIÓN", "HOST") })) : []), ...((rol === "amigo" || rol === "prueba") ? filasAmigo.map((f) => ({ ...f, grupo: t("AMIGO", "FRIEND") })) : [])];
   const faltan = chequeo.filter((f) => !f.ok).length;
+
+  // ── Piezas de cada paso ──
+  const marco = (n) => "padding:20px 22px;display:flex;flex-direction:column;gap:12px;" + (actual === n ? "outline:1.5px solid var(--acc);outline-offset:-1.5px" : "");
+  const conexionMsg = () => !w.vinculada ? html`<div class="caja" style="display:flex;flex-direction:column;gap:8px">
+      <div style="font-size:14px"><span class="punto bad"></span> ${t("Esta PC todavía no está unida a tu cuenta de la liga.", "This PC isn't linked to your league account yet.")}</div>
+      <div><${Boton} tipo="lleno mini" al=${irMiPc}>${t("UNIR MI CUENTA", "LINK MY ACCOUNT")}</${Boton}></div></div>`
+    : (w.estado !== "ok" || d.webDisponible === false) ? html`<div class="caja" style="display:flex;flex-direction:column;gap:8px">
+      <div style="font-size:14px"><span class=${cx("punto", cp)}></span> ${t(ct, cen)}${w.esperaSeg > 0 && w.estado !== "ok" ? t(` Reintento en ${w.esperaSeg} s.`, ` Retry in ${w.esperaSeg} s.`) : ""}</div>
+      ${w.texto ? html`<div class="ayuda mono" style="font-size:12px;word-break:break-word">${w.texto}</div>` : null}
+      <div><${Boton} tipo="suave mini" al=${() => hacer("reintentar")}>${t("VOLVER A COMPROBAR", "CHECK AGAIN")}</${Boton}></div></div>` : null;
+
+  const [pA, fraseA] = estadoAnfitrion(a, w, pend);
+  const amigoEstado = (() => {
+    if (!aj.recibir) return null;
+    if (m.ultimoAplicado && (m.estado === "al_dia" || m.estado === "aplicado")) return ["ok", m.ultimoAplicado.texto, m.ultimoAplicado.accion];
+    if (m.estado === "al_dia" || m.estado === "aplicado") return ["ok", t("Esperando fichajes. Cuando tu anfitrión envíe uno, aparece aquí.", "Waiting for transfers. When your host sends one, it shows up here."), ""];
+    if (m.estado === "esperando") return ["warn", m.mensaje || t("Hay un fichaje esperando.", "A transfer is waiting."), d.pesAbierto ? t("PES está abierto: cierra PES y se pone solo.", "PES is open: close PES and it's applied by itself.") : ""];
+    if (m.estado === "sin_transporte") return ["warn", t("Primero hay que resolver la conexión (paso 2).", "The connection must be fixed first (step 2)."), ""];
+    const c = CONEXION[m.estado];
+    if (c) return [c[0], t(c[1], c[2]), ""];
+    return ["", m.estado || "", ""];
+  })();
+  const infoPes = d.pesAbierto ? t("PES está abierto. Cierra y abre PES para ver el cambio, o espera la recarga automática.", "PES is open. Close and reopen PES to see the change, or wait for the automatic reload.") : t("PES está cerrado: se pone al momento y lo ves al abrir PES.", "PES is closed: it's applied right away and you'll see it when you open PES.");
+
   return html`<div class="col" style="gap:14px">
-    <${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:14px">
-      <${Titulo} texto=${t("TRASPASOS EN VIVO", "LIVE TRANSFERS")} derecha=${html`<${Chip} tipo=${aj.publicar || aj.recibir ? "acc" : ""}>${aj.publicar || aj.recibir ? t("ENCENDIDO", "ON") : t("APAGADO", "OFF")}</${Chip}>`}/>
-      <div style="font-size:15px">${t("Haces un traspaso en tu PES y aparece solo en el PES de tu amigo.", "You make a transfer in your PES and it shows up by itself in your friend's PES.")}</div>
-      <div style="display:flex;gap:16px;flex-wrap:wrap">
-        <${Paso} n="1" texto=${t("Haces el traspaso en Editar y GUARDAS.", "You make the transfer in Edit and SAVE.")}/>
-        <${Paso} n="2" texto=${t("Link lo envía por la web de Phoenix a quien te sigue.", "Link sends it through the Phoenix web to whoever follows you.")}/>
-        <${Paso} n="3" texto=${t("El Link de tu amigo lo aplica y su juego lo carga solo.", "Your friend's Link applies it and their game loads it by itself.")}/>
-      </div>
-      <div class="lab" style="margin-top:4px">${t("¿QUÉ ERES TÚ?", "WHAT ARE YOU?")}</div>
-      <${Segmentos} valor=${rol} al=${ponerRol} opciones=${[
-        { valor: "apagado", texto: t("APAGADO", "OFF") },
-        { valor: "anfitrion", texto: t("ANFITRIÓN · HAGO LOS TRASPASOS", "HOST · I MAKE TRANSFERS") },
-        { valor: "amigo", texto: t("AMIGO · LOS RECIBO", "FRIEND · I RECEIVE") },
-        { valor: "prueba", texto: t("PRUEBA (LOS DOS)", "TEST (BOTH)") }]}/>
-      <div class="ayuda" style="font-size:13px">${rol === "apagado" ? t("Elige tu papel. El anfitrión y su amigo son dos cuentas distintas, cada uno en su PC. Para probarlo tú solo, usa «Prueba».", "Pick your role. The host and their friend are two different accounts, each on their own PC. To try it alone, use «Test».")
-        : rol === "anfitrion" ? t("Link mira tu archivo de edición y envía tus traspasos a quienes te siguen.", "Link watches your edit file and sends your transfers to whoever follows you.")
-        : rol === "amigo" ? t("Link recibe los traspasos del anfitrión al que sigues y los pone en tu juego.", "Link receives the transfers of the host you follow and puts them in your game.")
-        : t("Haces y recibes con tu propia cuenta: sirve para ver que todo funciona (tus lotes salen como «TUYO»).", "You make and receive with your own account: to check everything works (your batches show as «YOURS»).")}</div>
-      <div class="caja" style="font-size:13px"><span class="punto warn"></span> ${t("Se envía cuando PES GUARDA (al guardar o salir de Editar). Hasta entonces no hay nada que enviar. Solo viajan cambios «jugador → equipo», sin datos personales. Función BETA, apagada por defecto.", "It is sent when PES SAVES (on save or leaving Edit). Until then there is nothing to send. Only «player → team» changes travel, no personal data. BETA, off by default.")}</div>
+    <${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:10px">
+      <${Titulo} texto=${t("PASAR UN FICHAJE A UN AMIGO", "PASS A TRANSFER TO A FRIEND")} derecha=${html`<${Chip} tipo=${rol !== "apagado" ? "acc" : ""}>${rol !== "apagado" ? t("ENCENDIDO", "ON") : t("APAGADO", "OFF")}</${Chip}>`}/>
+      <div style="font-size:15px">${t("Haces un traspaso en tu PES y aparece solo en el PES de tu amigo. Son 3 pasos, siempre en este orden.", "You make a transfer in your PES and it shows up by itself in your friend's PES. 3 steps, always in this order.")}</div>
     </${Tarjeta}>
 
-    ${rol !== "apagado" ? html`<${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:10px">
-      <${Titulo} texto=${t("ANTES DE LA PRUEBA", "BEFORE THE TEST")} derecha=${html`<${Chip} tipo=${faltan === 0 ? "acc" : "vip"}>${faltan === 0 ? t("TODO LISTO", "ALL SET") : t(`FALTA ${faltan}`, `${faltan} MISSING`)}</${Chip}>`}/>
-      <div class="ayuda" style="font-size:13px">${t("Se actualiza sola cada pocos segundos. Si algo sale ✗, la frase de abajo dice qué hacer.", "It updates by itself every few seconds. If something shows ✗, the line under it says what to do.")}</div>
-      ${chequeo.map((f, i) => html`<div key=${i} style="display:flex;flex-direction:column;gap:2px;padding:6px 0;border-top:1px solid var(--line, rgba(255,255,255,.08))">
-        <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap"><span class="mono" style=${"flex:none;width:18px;font-weight:700;color:" + (f.ok ? "var(--ok, #4ade80)" : "var(--bad, #ff6b6b)")}>${f.ok ? "✓" : "✗"}</span>
-          <span class="mono mut" style="font-size:11px;flex:none">${f.grupo}</span><span style="font-size:14px;flex:1 1 200px">${f.titulo}</span>
-          ${!f.ok && f.boton && !(f.boton.texto === "" ) ? html`<${Boton} tipo="suave mini" al=${f.boton.al}>${f.boton.texto}</${Boton}>` : null}</div>
-        ${f.ok && f.detalle ? html`<div class="ayuda mono" style="font-size:12px;margin-left:28px;word-break:break-all">${f.detalle}</div>` : null}
-        ${!f.ok && f.pista ? html`<div class="ayuda" style="font-size:13px;margin-left:28px">${f.pista}</div>` : null}
-      </div>`)}
-      ${rol === "amigo" || rol === "prueba" ? html`<div class="caja" style="font-size:13px;margin-top:4px"><span class="mono acc">ℹ</span> ${infoPes}</div>` : null}
-    </${Tarjeta}>` : null}
-
-    ${rol !== "apagado" ? html`<${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:12px">
-      <${Titulo} texto=${t("PASO 1 · CONEXIÓN", "STEP 1 · CONNECTION")} derecha=${html`<${Chip} tipo=${conexionChip[0]}>${conexionChip[1]}</${Chip}>`}/>
-      ${esWeb ? html`
-        <div class="ayuda" style="font-size:14px">${t("Los traspasos viajan por la web de Phoenix: el anfitrión tiene un código y sus amigos lo escriben para seguirlo. Solo reciben quienes tienen su código (puede cambiarlo cuando quiera).", "Transfers travel through the Phoenix web: the host has a code and their friends type it to follow them. Only people with their code receive anything (they can change it any time).")}</div>
-        ${!w.vinculada ? html`<div class="caja" style="display:flex;flex-direction:column;gap:8px"><div style="font-size:14px"><span class="punto bad"></span> ${t("Esta PC aún no está vinculada a tu cuenta de la web. Vincúlala para usar los traspasos.", "This PC isn't linked to your web account yet. Link it to use transfers.")}</div>
-          <div><${Boton} tipo="lleno mini" al=${() => elegirPestana("web")}>${t("IR A SYNC › CUENTA WEB", "GO TO SYNC › WEB ACCOUNT")}</${Boton}></div></div>`
-        : html`<div style="display:flex;align-items:center;gap:10px"><span class=${cx("punto", cp)}></span><span style="font-size:14px">${t(ct, cen)}${w.esperaSeg > 0 && w.estado !== "ok" ? t(` (reintento en ${w.esperaSeg} s)`, ` (retry in ${w.esperaSeg} s)`) : ""}</span></div>`}
-        ${w.vinculada && (w.estado === "web_sin_endpoints" || d.webDisponible === false) ? html`<div class="caja" style="display:flex;flex-direction:column;gap:8px">
-          <div style="font-size:14px">${t("La web aún no tiene los traspasos en vivo (se está desplegando). Mientras tanto no se rompe nada: Link vuelve a probar solo cada 5 minutos.", "The web doesn't have live transfers yet (it is being deployed). Nothing breaks meanwhile: Link tries again by itself every 5 minutes.")}</div>
-          <div><${Boton} tipo="suave mini" al=${() => hacer("reintentar")}>${t("VOLVER A COMPROBAR", "CHECK AGAIN")}</${Boton}></div></div>` : null}
-        ${w.purgadoHasta > 0 ? html`<div class="ayuda" style="font-size:12px">${t("La web ya borró lotes antiguos que esta PC no llegó a ver (por la retención); lo reciente sí está.", "The web already deleted old batches this PC never saw (retention); recent ones are there.")}</div>` : null}
-
-        ${quiereCanal && w.vinculada ? html`<div class="caja" style="display:flex;flex-direction:column;gap:8px">
-          <b style="font-size:14px">${t("TU CÓDIGO (para tus amigos)", "YOUR CODE (for your friends)")}</b>
-          ${canal ? html`
-            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span class="ayuda" style="font-size:13px">${t("Tu código:", "Your code:")}</span><span class="mono acc" style="font-size:18px;letter-spacing:2px">${canal.codigo}</span>
-              <${Boton} tipo="suave mini" al=${() => copiar(canal.codigo)}>${t("COPIAR", "COPY")}</${Boton}>
-              <${Boton} tipo="suave mini" titulo=${t("El código anterior deja de servir para unirse; quienes ya te siguen siguen", "The old code stops working for joining; people already following stay")} al=${() => hacer("rotarCodigo")}>${t("CÓDIGO NUEVO", "NEW CODE")}</${Boton}></div>
-            <div class="ayuda" style="font-size:12px">${t("Pásale el código a tu amigo: lo escribe en su Link («¿A qué anfitrión sigues?») y empieza a recibir tus traspasos.", "Give the code to your friend: they type it in their Link («Which host do you follow?») and start receiving your transfers.")}</div>
-            ${(w.meSiguen || []).length ? html`<div class="ayuda" style="font-size:13px">${t("Te siguen: ", "Following you: ")}${w.meSiguen.join(", ")}</div>`
-              : html`<div class="ayuda" style="font-size:13px">${t("Nadie te sigue todavía.", "Nobody follows you yet.")}</div>`}`
-            : html`<div class="ayuda" style="font-size:13px">${w.estado === "sin_permiso" ? t("Esta cuenta aún no está aprobada como anfitrión en la web (pídeselo al staff).", "This account isn't approved as a host on the web yet (ask the staff).") : t("Pidiendo tu código…", "Getting your code…")}</div>`}
-        </div>` : null}
-
-        ${quiereSeguir && w.vinculada ? html`<div class="caja" style="display:flex;flex-direction:column;gap:8px">
-          <b style="font-size:14px">${t("¿A QUÉ ANFITRIÓN SIGUES?", "WHICH HOST DO YOU FOLLOW?")}</b>
-          ${sig.length ? sig.map((x) => html`<div key=${x.anfitrionId} style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-            <span style="font-size:14px;flex:1 1 140px">${x.anfitrionNombre || "?"}</span><${Chip} tipo="acc">${t("SIGUIENDO", "FOLLOWING")}</${Chip}>
-            <${Boton} tipo="suave mini" al=${() => hacer("dejarDeSeguir", { anfitrion_id: x.anfitrionId })}>${t("DEJAR DE SEGUIR", "UNFOLLOW")}</${Boton}></div>`)
-            : html`<div class="ayuda" style="font-size:13px">${t("Aún no sigues a nadie. Pídele su código a tu anfitrión y escríbelo aquí: empiezas a recibir sus traspasos al momento.", "You don't follow anyone yet. Ask your host for their code and type it here: you start receiving their transfers right away.")}</div>`}
-          <div style="display:flex;gap:8px;align-items:center"><div style="flex:1;min-width:0"><input type="text" class="campo mono" maxLength=${16} value=${codigo} placeholder=${t("Código del anfitrión", "Host code")} onInput=${(e) => setCodigo(e.currentTarget.value.toUpperCase())}/></div>
-            <${Boton} tipo="lleno mini" deshabilitado=${!codigo.trim()} al=${async () => { await hacer("seguirCodigo", { codigo: codigo.trim() }); setCodigo(""); }}>${sig.length ? t("SEGUIR A OTRO", "FOLLOW ANOTHER") : t("UNIRME", "JOIN")}</${Boton}></div>
-        </div>` : null}` : html`
-        <div class="ayuda" style="font-size:14px">${t("Estás usando una carpeta compartida en vez de la web.", "You are using a shared folder instead of the web.")}</div>
-        <div><${Boton} tipo="lleno mini" al=${() => poner({ transporte: "web" }, t("Vuelves a usar la web de Phoenix.", "Back to the Phoenix web."))}>${t("VOLVER A USAR LA WEB DE PHOENIX", "BACK TO THE PHOENIX WEB")}</${Boton}></div>`}
-
-      <details class="sec-detalle"><summary>${t("Avanzado: usar una carpeta compartida en vez de la web", "Advanced: use a shared folder instead of the web")}</summary>
-        <div class="ayuda" style="font-size:13px">${t("Alternativa sin la web: una carpeta de Google Drive u OneDrive que ven los dos Link (pega su ruta completa; los dos usáis la misma). Solo para PROBAR en tu PC: pulsa el primer botón.", "Alternative without the web: a Google Drive or OneDrive folder both Link can see (paste its full path; you both use the same one). Just to TEST on your PC: press the first button.")}</div>
-        ${d.carpetaPrueba && !(aj.carpeta === d.carpetaPrueba && !esWeb) ? html`<div><${Boton} tipo="suave mini" al=${() => poner({ carpeta: d.carpetaPrueba, transporte: "carpeta" }, t("Listo: carpeta de prueba elegida.", "Done: test folder chosen."))}>${t("USAR UNA CARPETA DE PRUEBA (SOLO EN ESTA PC)", "USE A TEST FOLDER (THIS PC ONLY)")}</${Boton}></div>` : null}
-        ${aj.carpeta ? html`<div class="ayuda mono" style="font-size:12px">${t("Carpeta guardada: ", "Saved folder: ")}${aj.carpeta}</div>` : null}
-        <div style="display:flex;gap:8px;align-items:center"><div style="flex:1;min-width:0"><input type="text" class="campo mono" maxLength=${500} value=${carpeta} placeholder="D:\\Drive\\PhoenixTraspasos" onInput=${(e) => setCarpeta(e.currentTarget.value)}/></div>
-          <${Boton} tipo="lleno mini" deshabilitado=${!carpeta.trim()} al=${async () => { await poner({ carpeta: carpeta.trim(), transporte: "carpeta" }, t("Ahora usas esa carpeta en vez de la web.", "You now use that folder instead of the web.")); setCarpeta(""); }}>${t("USAR ESTA CARPETA", "USE THIS FOLDER")}</${Boton}></div>
-      </details>
-      ${d.mensaje ? html`<div class="caja" style="font-size:13px">${d.mensaje}</div>` : null}
-    </${Tarjeta}>` : null}
-
-    ${rol === "anfitrion" || rol === "prueba" ? html`<${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:12px">
-      <${Titulo} texto=${t("PASO 2 · TUS TRASPASOS (ANFITRIÓN)", "STEP 2 · YOUR TRANSFERS (HOST)")}/>
-      <div style="display:flex;align-items:center;gap:10px"><span class=${cx("punto", punto)}></span><span style="font-size:14px">${et}</span></div>
-      <${AjusteSw} titulo=${t("Pedirme confirmación antes de enviar", "Ask me before sending")} desc=${t("Verás los traspasos detectados y pulsas PUBLICAR. Recomendado al empezar.", "You'll see the detected transfers and press PUBLISH. Recommended at first.")}
-        valor=${!!aj.confirmarAntes} al=${(v) => poner({ confirmarAntes: v })}/>
-      ${a.optionFile ? html`<div class="ayuda mono" style="font-size:12px">${t("Option file:", "Option file:")} ${a.optionFile}</div>` : null}
-      ${pend.length ? html`<div class="caja" style="display:flex;flex-direction:column;gap:6px">
-        <b style="font-size:14px">${t(`${pend.length} ${pend.length === 1 ? "traspaso detectado" : "traspasos detectados"}`, `${pend.length} ${pend.length === 1 ? "transfer detected" : "transfers detected"}`)}</b>
-        ${a.masivo ? html`<div class="ayuda" style="font-size:13px;color:var(--bad, #ff6b6b)">${t("Son demasiados de golpe. Si cargaste otro option file, descártalos.", "That's too many at once. If you loaded another option file, discard them.")}</div>` : null}
-        ${pend.slice(0, 12).map((c) => html`<div class="mono" style="font-size:13px" key=${c.jugador_id + "-" + c.hasta_id}>· ${c.jugador || ("#" + c.jugador_id)}: ${c.desde || c.desde_id} → ${c.hasta || c.hasta_id}</div>`)}
-        ${pend.length > 12 ? html`<div class="mono mut" style="font-size:12px">… ${t(`y ${pend.length - 12} más`, `and ${pend.length - 12} more`)}</div>` : null}
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <${Boton} tipo="lleno mini" deshabilitado=${!d.transporteListo} titulo=${d.transporteListo ? "" : t("Antes resuelve la conexión (paso 1)", "Fix the connection first (step 1)")}
-            al=${async () => { if (await confirmar({ titulo: t("¿Publicar estos traspasos?", "Publish these transfers?"), texto: t("Se enviarán a quienes te siguen, y sus Link los aplicarán sobre sus bases.", "They will be sent to whoever follows you, and their Link will apply them to their databases."), si: t("Publicar", "Publish") })) hacer("publicar"); }}>${t("PUBLICAR", "PUBLISH")}</${Boton}>
-          <${Boton} tipo="suave mini" al=${() => hacer("descartar")}>${t("DESCARTAR", "DISCARD")}</${Boton}>
-        </div>
-      </div>` : null}
-      ${aj.publicar && a.ignorados && (a.ignorados.altas || a.ignorados.bajas || a.ignorados.otros) ? html`<div class="ayuda" style="font-size:12px">${t(`Ignorados en el último guardado (no son traspasos): ${a.ignorados.altas} altas/convocatorias, ${a.ignorados.bajas} bajas, ${a.ignorados.otros} otros.`, `Ignored in the last save (not transfers): ${a.ignorados.altas} additions/call-ups, ${a.ignorados.bajas} releases, ${a.ignorados.otros} other.`)}</div>` : null}
-      ${a.publicados ? html`<div class="ayuda" style="font-size:13px">${t(`Lotes publicados en esta sesión: ${a.publicados}`, `Batches published this session: ${a.publicados}`)}</div>` : null}
-      <details class="sec-detalle"><summary>${t("Ajustes del anfitrión", "Host settings")}</summary>
-        <div class="ayuda" style="font-size:13px">${t("Si Link no encuentra tu option file solo, pega su ruta (el archivo EDIT00000000 o su carpeta «save»):", "If Link can't find your option file, paste its path (the EDIT00000000 file or its «save» folder):")}</div>
-        <div style="display:flex;gap:8px;align-items:center"><div style="flex:1;min-width:0"><input type="text" class="campo mono" maxLength=${500} value=${opt} placeholder="C:\\Users\\…\\Documents\\KONAMI\\…\\save" onInput=${(e) => setOpt(e.currentTarget.value)}/></div>
-          <${Boton} tipo="lleno mini" deshabilitado=${!opt.trim()} al=${async () => { await poner({ optionFile: opt.trim() }, t("Option file guardado.", "Option file saved.")); setOpt(""); }}>${t("GUARDAR", "SAVE")}</${Boton}></div>
-        ${aj.optionFile ? html`<div class="ayuda mono" style="font-size:12px">${aj.optionFile} <button style="background:none;border:0;color:inherit;text-decoration:underline;cursor:pointer;font:inherit" onClick=${() => poner({ optionFile: "" }, t("Vuelve a la búsqueda automática.", "Back to automatic search."))}>${t("quitar", "clear")}</button></div>` : null}
-        <div style="margin-top:6px"><${Boton} tipo="suave mini" titulo=${t("La próxima lectura solo toma la foto de partida", "The next read only takes the starting snapshot")} al=${() => hacer("olvidarReferencia")}>${t("OLVIDAR LA FOTO DE PARTIDA", "FORGET STARTING SNAPSHOT")}</${Boton}></div>
-      </details>
-    </${Tarjeta}>` : null}
-
-    ${rol === "amigo" || rol === "prueba" ? html`<${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:12px">
-      <${Titulo} texto=${rol === "prueba" ? t("PASO 3 · LO QUE RECIBES (AMIGO)", "STEP 3 · WHAT YOU RECEIVE (FRIEND)") : t("PASO 2 · LO QUE RECIBES (AMIGO)", "STEP 2 · WHAT YOU RECEIVE (FRIEND)")}/>
-      <div class="ayuda" style="font-size:13px">${t("Link los aplica sobre TU base (Phoenix-DB). Si PES está abierto solo cambia ese archivo; si falta algo, espera a que cierres PES. Se pone al día solo si Link estuvo apagado.", "Link applies them to YOUR database (Phoenix-DB). With PES open it only replaces that file; if something's missing it waits until you close PES. It catches up by itself if Link was off.")}</div>
-      <div class="ayuda" style="font-size:13px">${t(MODO_TXT[modo]?.[0] || "", MODO_TXT[modo]?.[1] || "")}</div>
-      ${aj.recibir ? html`<div style="display:flex;align-items:center;gap:10px"><span class=${cx("punto", m.estado === "al_dia" || m.estado === "aplicado" ? "ok" : CONEXION[m.estado] ? CONEXION[m.estado][0] : m.estado === "esperando" ? "warn" : "")}></span>
-        <span style="font-size:14px">${m.estado === "al_dia" ? t("Al día", "Up to date") : m.estado === "aplicado" ? t("Último lote aplicado", "Last batch applied") : m.estado === "esperando" ? t("Esperando: ", "Waiting: ") + (m.mensaje || "") : m.estado === "sin_transporte" ? t("Falta resolver la conexión (paso 1)", "Fix the connection first (step 1)") : CONEXION[m.estado] ? t(CONEXION[m.estado][1], CONEXION[m.estado][2]) : m.estado}</span></div>` : null}
-      ${m.ultimoAplicado ? html`<div class="caja" style="display:flex;flex-direction:column;gap:4px;border-color:var(--ok, #4ade80)"><b style="font-size:14px">✓ ${m.ultimoAplicado.texto}</b><span style="font-size:13px">${m.ultimoAplicado.accion}</span></div>` : null}
-      ${d.pesAbierto ? html`<div class="ayuda" style="font-size:12px">${t("PES está abierto.", "PES is open.")}</div>` : null}
-      ${lista.length ? html`<div style="display:flex;flex-direction:column;gap:8px">
-        ${lista.slice(0, 8).map((l) => {
-          const [tp, es, en] = ESTADO_LOTE[l.estado] || ["", l.estado, l.estado];
-          return html`<div class="caja" key=${l.id} style="display:flex;flex-direction:column;gap:4px">
-            <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
-              <span class="mono" style="font-size:13px">#${l.seq} · ${l.autor || "?"} · ${(l.creado || "").replace("T", " ").replace("Z", " UTC")}</span>
-              <${Chip} tipo=${tp}>${t(es, en)}</${Chip}>
-            </div>
-            ${l.motivo ? html`<div class="ayuda" style="font-size:12px">${l.motivo}</div>` : null}
-            ${(l.cambios || []).slice(0, 6).map((c, i) => { const [ct2, ce, cen2] = ESTADO_CAMBIO[c.estado] || ["", c.estado, c.estado];
-              return html`<div class="mono" style="font-size:12px" key=${i}><span class=${cx("punto", ct2)} style="display:inline-block;width:8px;height:8px;margin-right:6px"></span>${nombre(c)} → ${c.hastaNombre || c.hasta} · ${t(ce, cen2)}${c.motivo ? " — " + c.motivo : ""}</div>`; })}
-            ${(l.cambios || []).length > 6 ? html`<div class="mono mut" style="font-size:12px">… ${t(`y ${l.cambios.length - 6} más`, `and ${l.cambios.length - 6} more`)}</div>` : null}
-          </div>`; })}
-        ${lista.length > 8 ? html`<div class="ayuda" style="font-size:12px">${t(`Mostrando los 8 últimos de ${lista.length}.`, `Showing the latest 8 of ${lista.length}.`)}</div>` : null}
-      </div>` : html`<div class="ayuda" style="font-size:13px">${t("Aún no ha llegado ningún lote.", "No batch has arrived yet.")}</div>`}
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <${Boton} tipo="suave mini" deshabilitado=${!m.puedeDeshacer} titulo=${t("Quita el último lote aplicado y deja Phoenix-DB como estaba antes de él", "Removes the last applied batch and leaves Phoenix-DB as it was before it")}
-          al=${async () => { if (await confirmar({ titulo: t("¿Deshacer el último lote?", "Undo the last batch?"), texto: t("Link volverá a generar Phoenix-DB sin ese lote y avisará al juego para que recargue.", "Link will rebuild Phoenix-DB without that batch and notify the game to reload."), si: t("Deshacer", "Undo") })) hacer("deshacer"); }}>${t("DESHACER EL ÚLTIMO LOTE", "UNDO LAST BATCH")}</${Boton}>
+    <${Tarjeta} interior=${marco(1)}>
+      <${Cabecera} n="1" titulo=${t("¿Qué vas a hacer?", "What are you going to do?")} hecho=${hecho1} activo=${actual === 1}/>
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <${Opcion} sel=${rol === "anfitrion"} al=${() => ponerRol("anfitrion")} titulo=${t("Hago los traspasos", "I make the transfers")} texto=${t("Eres el anfitrión: tus fichajes le llegan a tus amigos.", "You're the host: your transfers reach your friends.")}/>
+        <${Opcion} sel=${rol === "amigo"} al=${() => ponerRol("amigo")} titulo=${t("Los recibo", "I receive them")} texto=${t("Eres el amigo: los fichajes de tu anfitrión llegan a tu juego.", "You're the friend: your host's transfers reach your game.")}/>
       </div>
+      ${rol === "prueba" ? html`<div class="caja" style="font-size:13px"><span class="punto warn"></span> ${t("Modo prueba: haces y recibes con tu propia cuenta. Sirve para ver que todo funciona.", "Test mode: you make and receive with your own account. It's to check that everything works.")}</div>` : null}
+      <details class="sec-detalle"><summary>${t("Más opciones", "More options")}</summary>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0">
+          <${Boton} tipo=${rol === "prueba" ? "lleno mini" : "suave mini"} al=${() => ponerRol("prueba")}>${t("MODO PRUEBA (LOS DOS EN MI CUENTA)", "TEST MODE (BOTH ON MY ACCOUNT)")}</${Boton}>
+          <${Boton} tipo=${rol === "apagado" ? "lleno mini" : "suave mini"} al=${() => ponerRol("apagado")}>${t("APAGAR TRASPASOS", "TURN OFF TRANSFERS")}</${Boton}>
+        </div>
+        <div class="ayuda" style="font-size:13px">${t("Por defecto viajan por la web de Phoenix. Si lo prefieres, puedes usar una carpeta compartida (Google Drive u OneDrive) que vean los dos.", "By default they travel through the Phoenix web. If you prefer, you can use a shared folder (Google Drive or OneDrive) both of you can see.")}</div>
+        ${esWeb ? null : html`<div class="caja" style="margin:6px 0;display:flex;flex-direction:column;gap:6px"><span class="ayuda" style="font-size:13px">${t("Ahora usas una carpeta compartida en vez de la web.", "You're using a shared folder instead of the web.")}</span>
+          <div><${Boton} tipo="lleno mini" al=${() => poner({ transporte: "web" }, t("Vuelves a usar la web de Phoenix.", "Back to the Phoenix web."))}>${t("VOLVER A USAR LA WEB", "BACK TO THE WEB")}</${Boton}></div></div>`}
+        ${d.carpetaPrueba && !(aj.carpeta === d.carpetaPrueba && !esWeb) ? html`<div><${Boton} tipo="suave mini" al=${() => poner({ carpeta: d.carpetaPrueba, transporte: "carpeta" }, t("Listo: carpeta de prueba elegida.", "Done: test folder chosen."))}>${t("USAR UNA CARPETA DE PRUEBA (SOLO EN ESTA PC)", "USE A TEST FOLDER (THIS PC ONLY)")}</${Boton}></div>` : null}
+        <div style="display:flex;gap:8px;align-items:center;margin-top:6px"><div style="flex:1;min-width:0"><input type="text" class="campo mono" maxLength=${500} value=${carpeta} placeholder="D:\\Drive\\PhoenixTraspasos" onInput=${(e) => setCarpeta(e.currentTarget.value)}/></div>
+          <${Boton} tipo="suave mini" deshabilitado=${!carpeta.trim()} al=${async () => { await poner({ carpeta: carpeta.trim(), transporte: "carpeta" }, t("Ahora usas esa carpeta en vez de la web.", "You now use that folder instead of the web.")); setCarpeta(""); }}>${t("USAR ESTA CARPETA", "USE THIS FOLDER")}</${Boton}></div>
+        ${aj.carpeta ? html`<div class="ayuda mono" style="font-size:12px">${t("Carpeta guardada: ", "Saved folder: ")}${aj.carpeta}</div>` : null}
+      </details>
+    </${Tarjeta}>
+
+    <${Tarjeta} interior=${marco(2)}>
+      <${Cabecera} n="2" titulo=${quiereSeguir ? t("Escribe el código de tu anfitrión", "Type your host's code") : t("Tu código", "Your code")} hecho=${hecho2} activo=${actual === 2}/>
+      ${!hecho1 ? html`<div class="ayuda" style="font-size:14px">${t("Primero elige qué vas a hacer (paso 1).", "First choose what you're going to do (step 1).")}</div>` : html`
+        ${esWeb ? conexionMsg() : html`<div class="ayuda" style="font-size:14px">${t("Usas una carpeta compartida: no hace falta código.", "You use a shared folder: no code needed.")}</div>`}
+        ${esWeb && quiereCanal && w.vinculada ? (canal ? html`
+          <div class="ayuda" style="font-size:14px">${t("Pásale este código a tu amigo. Él lo escribe en su Link.", "Give this code to your friend. They type it in their Link.")}</div>
+          <div class="mono acc" style="font-size:38px;letter-spacing:6px;font-weight:700;word-break:break-all">${canal.codigo}</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <${Boton} tipo="lleno" al=${() => copiar(canal.codigo)}>${t("COPIAR CÓDIGO", "COPY CODE")}</${Boton}>
+            <${Boton} tipo="suave mini" titulo=${t("El código anterior deja de servir para unirse. Quienes ya te siguen siguen.", "The old code stops working for joining. People already following stay.")} al=${() => hacer("rotarCodigo")}>${t("CAMBIAR CÓDIGO", "CHANGE CODE")}</${Boton}>
+          </div>
+          <div class="ayuda" style="font-size:13px">${(w.meSiguen || []).length ? t("Te siguen: ", "Following you: ") + w.meSiguen.join(", ") : t("Todavía nadie te sigue.", "Nobody follows you yet.")}</div>`
+          : html`<div class="ayuda" style="font-size:14px">${w.estado === "sin_permiso" ? t("Tu cuenta todavía no está aprobada como anfitrión. Pídeselo al staff.", "Your account isn't approved as a host yet. Ask the staff.") : t("Pidiendo tu código a la web…", "Getting your code from the web…")}</div>`) : null}
+        ${esWeb && quiereSeguir && w.vinculada ? html`
+          ${sig.length ? sig.map((x) => html`<div key=${x.anfitrionId} style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <span style="font-size:15px;flex:1 1 140px"><b>${x.anfitrionNombre || "?"}</b></span><${Chip} tipo="acc">${t("SIGUIENDO", "FOLLOWING")}</${Chip}>
+            <${Boton} tipo="suave mini" al=${() => hacer("dejarDeSeguir", { anfitrion_id: x.anfitrionId })}>${t("DEJAR DE SEGUIR", "UNFOLLOW")}</${Boton}></div>`)
+            : html`<div class="ayuda" style="font-size:14px">${t("Pídele el código a tu anfitrión y escríbelo aquí.", "Ask your host for their code and type it here.")}</div>`}
+          ${sig.length ? html`<details class="sec-detalle"><summary>${t("Seguir a otro anfitrión", "Follow another host")}</summary><div style="margin-top:6px">${CampoCodigo({ codigo, setCodigo, hacer, etiqueta: t("SEGUIR", "FOLLOW") })}</div></details>`
+            : CampoCodigo({ codigo, setCodigo, hacer, etiqueta: t("SEGUIR", "FOLLOW"), principal: true })}` : null}
+        ${d.mensaje ? html`<div class="caja" style="font-size:13px">${d.mensaje}</div>` : null}`}
+    </${Tarjeta}>
+
+    <${Tarjeta} interior=${marco(3)}>
+      <${Cabecera} n="3" titulo=${t("Qué está pasando ahora", "What's happening now")} hecho=${false} activo=${actual === 3}/>
+      ${actual < 3 ? html`<div class="ayuda" style="font-size:14px">${t("Aquí verás el estado en cuanto termines el paso " + actual + ".", "You'll see the status here once you finish step " + actual + ".")}</div>` : html`
+        ${quiereCanal ? html`
+          <div style="display:flex;align-items:flex-start;gap:10px"><span class=${cx("punto", pA)} style="margin-top:6px"></span><span style="font-size:16px">${fraseA}</span></div>
+          ${pend.length ? html`<div class="caja" style="display:flex;flex-direction:column;gap:6px">
+            ${pend.slice(0, 12).map((c) => html`<div class="mono" style="font-size:13px" key=${c.jugador_id + "-" + c.hasta_id}>· ${c.jugador || ("#" + c.jugador_id)}: ${c.desde || c.desde_id} → ${c.hasta || c.hasta_id}</div>`)}
+            ${pend.length > 12 ? html`<div class="mono mut" style="font-size:12px">… ${t(`y ${pend.length - 12} más`, `and ${pend.length - 12} more`)}</div>` : null}
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+              <${Boton} tipo="lleno" deshabilitado=${!d.transporteListo} titulo=${d.transporteListo ? "" : t("Antes resuelve la conexión (paso 2)", "Fix the connection first (step 2)")}
+                al=${async () => { if (await confirmar({ titulo: t("¿Enviar estos fichajes?", "Send these transfers?"), texto: t("Se envían a quienes te siguen y su Link los pone en su juego.", "They're sent to whoever follows you and their Link puts them in their game."), si: t("Publicar", "Publish") })) hacer("publicar"); }}>${t("PUBLICAR", "PUBLISH")}</${Boton}>
+              <${Boton} tipo="suave mini" al=${() => hacer("descartar")}>${t("DESCARTAR", "DISCARD")}</${Boton}>
+            </div></div>` : null}
+          ${a.publicados ? html`<div class="ayuda" style="font-size:13px">${t(`Enviados en esta sesión: ${a.publicados}`, `Sent this session: ${a.publicados}`)}</div>` : null}
+          <div class="ayuda" style="font-size:13px">${t("Se envía cuando PES guarda: al guardar o al salir de Editar.", "It's sent when PES saves: on saving or leaving Edit.")}</div>` : null}
+        ${rol === "prueba" ? html`<div style="height:1px;background:var(--line, rgba(255,255,255,.1))"></div>` : null}
+        ${amigoEstado ? html`
+          ${rol === "prueba" ? html`<div class="lab">${t("COMO AMIGO", "AS FRIEND")}</div>` : null}
+          <div style="display:flex;align-items:flex-start;gap:10px"><span class=${cx("punto", amigoEstado[0])} style="margin-top:6px"></span><span style="font-size:16px">${amigoEstado[1]}</span></div>
+          ${amigoEstado[2] ? html`<div class="ayuda" style="font-size:14px">${amigoEstado[2]}</div>` : null}
+          ${m.ultimoAplicado ? html`<div class="ayuda" style="font-size:14px">${infoPes} ${t(MODO_TXT[modo]?.[0] || "", MODO_TXT[modo]?.[1] || "")}</div>` : null}` : null}
+        ${quiereCanal || amigoEstado ? html`<details class="sec-detalle"><summary>${t("Más opciones", "More options")}</summary>
+          ${quiereCanal ? html`
+            <${AjusteSw} titulo=${t("Preguntarme antes de enviar", "Ask me before sending")} desc=${t("Verás los fichajes detectados y pulsas PUBLICAR. Recomendado al empezar.", "You'll see the detected transfers and press PUBLISH. Recommended at first.")}
+              valor=${!!aj.confirmarAntes} al=${(v) => poner({ confirmarAntes: v })}/>
+            <div class="ayuda" style="font-size:13px;margin-top:6px">${t("Si Link no encuentra tu archivo de guardado, pega su ruta (el archivo EDIT00000000 o su carpeta «save»):", "If Link can't find your save file, paste its path (the EDIT00000000 file or its «save» folder):")}</div>
+            <div style="display:flex;gap:8px;align-items:center"><div style="flex:1;min-width:0"><input type="text" class="campo mono" maxLength=${500} value=${opt} placeholder="C:\\Users\\…\\Documents\\KONAMI\\…\\save" onInput=${(e) => setOpt(e.currentTarget.value)}/></div>
+              <${Boton} tipo="suave mini" deshabilitado=${!opt.trim()} al=${async () => { await poner({ optionFile: opt.trim() }, t("Archivo de guardado anotado.", "Save file noted.")); setOpt(""); }}>${t("GUARDAR", "SAVE")}</${Boton}></div>
+            ${aj.optionFile ? html`<div class="ayuda mono" style="font-size:12px;word-break:break-all">${aj.optionFile} <button style="background:none;border:0;color:inherit;text-decoration:underline;cursor:pointer;font:inherit" onClick=${() => poner({ optionFile: "" }, t("Vuelve a la búsqueda automática.", "Back to automatic search."))}>${t("quitar", "clear")}</button></div>` : null}
+            ${a.optionFile ? html`<div class="ayuda mono" style="font-size:12px;word-break:break-all">${t("Archivo que vigilo: ", "File I watch: ")}${a.optionFile}</div>` : null}
+            ${aj.publicar && a.ignorados && (a.ignorados.altas || a.ignorados.bajas || a.ignorados.otros) ? html`<div class="ayuda" style="font-size:12px">${t(`Cambios que no son traspasos y se ignoran: ${a.ignorados.altas} altas, ${a.ignorados.bajas} bajas, ${a.ignorados.otros} otros.`, `Changes that aren't transfers and are ignored: ${a.ignorados.altas} additions, ${a.ignorados.bajas} releases, ${a.ignorados.otros} other.`)}</div>` : null}
+            <div style="margin-top:6px"><${Boton} tipo="suave mini" titulo=${t("La próxima vez que PES guarde, solo anoto cómo está todo", "The next time PES saves, I only note how everything is")} al=${() => hacer("olvidarReferencia")}>${t("EMPEZAR DE CERO EL PUNTO DE PARTIDA", "RESET THE STARTING POINT")}</${Boton}></div>` : null}
+          ${amigoEstado ? html`
+            <div class="lab" style="margin-top:10px">${t("FICHAJES RECIBIDOS", "RECEIVED TRANSFERS")}</div>
+            ${lista.length ? lista.slice(0, 8).map((l) => {
+              const [tp, es, en] = ESTADO_LOTE[l.estado] || ["", l.estado, l.estado];
+              return html`<div class="caja" key=${l.id} style="display:flex;flex-direction:column;gap:4px;margin-top:6px">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+                  <span class="mono" style="font-size:13px">#${l.seq} · ${l.autor || "?"} · ${(l.creado || "").replace("T", " ").replace("Z", " UTC")}</span>
+                  <${Chip} tipo=${tp}>${t(es, en)}</${Chip}></div>
+                ${l.motivo ? html`<div class="ayuda" style="font-size:12px">${l.motivo}</div>` : null}
+                ${(l.cambios || []).slice(0, 6).map((c, i) => { const [ct2, ce, cen2] = ESTADO_CAMBIO[c.estado] || ["", c.estado, c.estado];
+                  return html`<div class="mono" style="font-size:12px" key=${i}><span class=${cx("punto", ct2)} style="display:inline-block;width:8px;height:8px;margin-right:6px"></span>${nombre(c)} → ${c.hastaNombre || c.hasta} · ${t(ce, cen2)}${c.motivo ? " — " + c.motivo : ""}</div>`; })}
+                ${(l.cambios || []).length > 6 ? html`<div class="mono mut" style="font-size:12px">… ${t(`y ${l.cambios.length - 6} más`, `and ${l.cambios.length - 6} more`)}</div>` : null}
+              </div>`; }) : html`<div class="ayuda" style="font-size:13px">${t("Todavía no ha llegado ningún fichaje.", "No transfer has arrived yet.")}</div>`}
+            <div style="margin-top:8px"><${Boton} tipo="suave mini" deshabilitado=${!m.puedeDeshacer} titulo=${t("Quita el último fichaje puesto y deja el juego como estaba antes", "Removes the last transfer and leaves the game as it was before")}
+              al=${async () => { if (await confirmar({ titulo: t("¿Deshacer el último fichaje?", "Undo the last transfer?"), texto: t("Link quita ese fichaje de tu juego y avisa para que se recargue.", "Link removes that transfer from your game and notifies it to reload."), si: t("Deshacer", "Undo") })) hacer("deshacer"); }}>${t("DESHACER EL ÚLTIMO FICHAJE", "UNDO LAST TRANSFER")}</${Boton}></div>` : null}
+        </details>` : null}`}
+    </${Tarjeta}>
+
+    ${rol !== "apagado" ? html`<${Tarjeta} interior="padding:16px 22px">
+      <details class="sec-detalle" open=${faltan > 0}><summary style="font-weight:600">${t("¿Algo no funciona?", "Something not working?")} <${Chip} tipo=${faltan === 0 ? "acc" : "vip"}>${faltan === 0 ? t("TODO BIEN", "ALL GOOD") : t(`FALTA ${faltan}`, `${faltan} MISSING`)}</${Chip}></summary>
+        <div class="ayuda" style="font-size:13px;margin:6px 0">${t("Se revisa sola cada pocos segundos. Si algo sale ✗, la frase de abajo dice qué hacer.", "It's checked by itself every few seconds. If something shows ✗, the line under it says what to do.")}</div>
+        ${chequeo.map((f, i) => html`<div key=${i} style="display:flex;flex-direction:column;gap:2px;padding:6px 0;border-top:1px solid var(--line, rgba(255,255,255,.08))">
+          <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap"><span class="mono" style=${"flex:none;width:18px;font-weight:700;color:" + (f.ok ? "var(--ok, #4ade80)" : "var(--bad, #ff6b6b)")}>${f.ok ? "✓" : "✗"}</span>
+            <span class="mono mut" style="font-size:11px;flex:none">${f.grupo}</span><span style="font-size:14px;flex:1 1 200px">${f.titulo}</span>
+            ${!f.ok && f.boton ? html`<${Boton} tipo="suave mini" al=${f.boton.al}>${f.boton.texto}</${Boton}>` : null}</div>
+          ${f.ok && f.detalle ? html`<div class="ayuda mono" style="font-size:12px;margin-left:28px;word-break:break-all">${f.detalle}</div>` : null}
+          ${!f.ok && f.pista ? html`<div class="ayuda" style="font-size:13px;margin-left:28px">${f.pista}</div>` : null}
+        </div>`)}
+      </details>
     </${Tarjeta}>` : null}
   </div>`;
+}
+
+/** Cabecera de un paso: círculo con el número (✓ si está hecho), título y «AHORA» si es el que toca. */
+function Cabecera({ n, titulo, hecho, activo }) {
+  return html`<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+    <span class="mono" style=${"flex:none;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;border:1.5px solid " + (hecho ? "var(--ok, #4ade80)" : activo ? "var(--acc)" : "var(--line, rgba(255,255,255,.2))") + ";color:" + (hecho ? "var(--ok, #4ade80)" : activo ? "var(--acc)" : "inherit")}>${hecho ? "✓" : n}</span>
+    <b style="font-size:17px;flex:1 1 200px">${titulo}</b>
+    ${activo ? html`<${Chip} tipo="acc">${t("AHORA", "NOW")}</${Chip}>` : null}
+  </div>`;
+}
+/** Opción elegible del paso 1 (una tarjeta con título y frase). */
+function Opcion({ sel, al, titulo, texto }) {
+  return html`<button type="button" aria-pressed=${sel} onClick=${() => { if (!sel) al(); }}
+    style=${"flex:1 1 230px;min-width:220px;text-align:left;cursor:pointer;font:inherit;color:inherit;border-radius:12px;padding:14px 16px;background:" + (sel ? "rgba(120,200,255,.10)" : "transparent") + ";border:1.5px solid " + (sel ? "var(--acc)" : "var(--line, rgba(255,255,255,.18))")}>
+    <div style="display:flex;align-items:center;gap:8px"><span style=${"font-weight:700;color:" + (sel ? "var(--acc)" : "inherit")}>${sel ? "● " : "○ "}${titulo}</span></div>
+    <div class="ayuda" style="font-size:13px;margin-top:4px">${texto}</div></button>`;
+}
+
+/** Caja para escribir el código del anfitrión + botón SEGUIR. */
+function CampoCodigo({ codigo, setCodigo, hacer, etiqueta, principal = false }) {
+  const seguir = async () => { if (!codigo.trim()) return; await hacer("seguirCodigo", { codigo: codigo.trim() }); setCodigo(""); };
+  return html`<div style="display:flex;gap:8px;align-items:center"><div style="flex:1;min-width:0"><input type="text" class="campo mono" maxLength=${16} value=${codigo} placeholder=${t("Código del anfitrión", "Host code")}
+      style=${principal ? "font-size:20px;letter-spacing:3px;height:48px" : ""} onInput=${(e) => setCodigo(e.currentTarget.value.toUpperCase())} onKeyDown=${(e) => { if (e.key === "Enter") seguir(); }}/></div>
+    <${Boton} tipo=${principal ? "lleno" : "suave mini"} deshabilitado=${!codigo.trim()} al=${seguir}>${etiqueta}</${Boton}></div>`;
 }

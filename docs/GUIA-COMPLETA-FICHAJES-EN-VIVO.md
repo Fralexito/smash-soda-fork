@@ -35,26 +35,30 @@ No hace falta instalar nada a mano: el instalador pone lo que falte (Visual C++,
 5. Si ya tenías Phoenix Link, el instalador lo **actualiza** y no toca tus datos ni tu configuración.
 
 ## 4. Primer arranque: dejar todo listo (los dos)
+Sync tiene **3 pestañas**, siempre en este orden: **MI PC** (¿está listo mi PC?), **TRASPASOS** (pasar un fichaje a un amigo) y **AVANZADO** (opciones técnicas, solo si algo falla).
+
 Hazlo con **PES 2021 cerrado**.
-1. Abre Phoenix Link.
-2. Si pide cuenta, vincúlala con la web: **SYNC › PREPARAR TODO › UNIR MI CUENTA** y sigue lo que indique la web.
-3. Ve a **SYNC › PREPARAR TODO**. Verás una lista con ✓ (bien) y ✗ (falta algo). Cada ✗ trae una frase que dice qué pasa y un botón.
+1. Abre Phoenix Link y entra en **SYNC › MI PC**.
+2. Arriba verás un mensaje: **«Todo listo»** (verde) o **«Falta algo: N cosas»** (ámbar). Debajo, una lista con ✓ (bien) y ✗ (falta algo). Cada ✗ trae una frase corta y un botón.
+3. Si **Tu cuenta de la liga** está en ✗: en la web de la liga entra a *Mi perfil › vincular PC*, copia los 6 dígitos, escríbelos en esa fila y pulsa **UNIR**. Es lo único que haces tú.
 4. Pulsa **ARREGLAR TODO**. Hace en orden, solo lo que es seguro:
    - busca tu juego (solo lee nombres de carpetas; si hay varios, te pregunta cuál);
-   - instala las piezas de Phoenix en el juego (con copia previa de lo que cambia);
+   - instala los archivos de Phoenix en el juego (con copia previa de lo que cambia);
+   - deja que el juego lea los fichajes (repone una línea de configuración, con copia);
    - deja la recarga automática activada.
-5. Cuando todo esté en ✓, sigue. Si algo se queda en ✗, mira la sección 9.
+5. Cuando arriba diga **«Todo listo»**, sigue. Si algo se queda en ✗, mira la sección 9.
 
 ## 5. El anfitrión: obtener el código
-1. **SYNC › Traspasos en vivo**, en «¿Qué eres tú?» elige **Anfitrión**.
-2. Mira la lista **ANTES DE LA PRUEBA**. Debe tener ✓ en: cuenta vinculada, aprobada como anfitrión, archivo de edición detectado (ruta y fecha de `EDIT00000000`), foto de partida hecha y web conectada.
-3. En **Paso 1 · Conexión** aparece **TU CÓDIGO** (8 letras y números). Cópialo y mándaselo a tu amigo por WhatsApp o donde quieras.
-4. El código se puede **cambiar** cuando quieras (el viejo deja de servir; quien ya te sigue sigue recibiendo).
+En **SYNC › TRASPASOS** hay un asistente de 3 pasos (siempre el mismo orden; el paso que toca sale marcado **AHORA** y los hechos con ✓).
+1. **Paso 1 · ¿Qué vas a hacer?** Elige **«Hago los traspasos»** (eres el anfitrión). Aquí es el único sitio donde se elige el papel. El modo prueba y apagar están en «Más opciones».
+2. **Paso 2 · Tu código.** Aparece **tu código en grande** (8 letras y números). Pulsa **COPIAR CÓDIGO** y mándaselo a tu amigo por WhatsApp o donde quieras. **CAMBIAR CÓDIGO** pone uno nuevo (el viejo deja de servir; quien ya te sigue sigue recibiendo).
+3. Si no sale el código, la pantalla dice por qué: cuenta sin unir (botón **UNIR MI CUENTA**, te lleva a Mi PC), cuenta sin aprobar como anfitrión (pídeselo al staff) o la web sin conexión (botón **VOLVER A COMPROBAR**; el motivo técnico sale debajo).
+4. Abajo hay un bloque plegado **«¿Algo no funciona?»**: la lista de comprobaciones. Se abre sola si hay un ✗.
 
 ## 6. El amigo: seguir al anfitrión
-1. **SYNC › Traspasos en vivo**, en «¿Qué eres tú?» elige **Amigo**.
-2. Escribe el código del anfitrión y pulsa seguir.
-3. Revisa **ANTES DE LA PRUEBA**: cuenta vinculada, siguiendo a (nombre del anfitrión), juego, línea Phoenix-DB en `sider.ini` y `phoenix.lua` instalado, todo en ✓.
+1. **SYNC › TRASPASOS › Paso 1:** elige **«Los recibo»** (eres el amigo).
+2. **Paso 2 · Escribe el código de tu anfitrión:** pégalo en la caja y pulsa **SEGUIR**. Verás el nombre del anfitrión con la etiqueta **SIGUIENDO** y el botón **DEJAR DE SEGUIR**.
+3. Si «¿Algo no funciona?» se abre con ✗, suele ser: cuenta sin unir, juego sin encontrar o archivos de Phoenix sin instalar. Todo eso se arregla con **ARREGLAR TODO** en **MI PC**.
 4. Link consulta la web cada unos 8 segundos. Si el anfitrión ya publicó fichajes antes, **los recibirá al seguirlo** (la web los guarda 30 días, hasta 200 por anfitrión).
 
 ## 7. Hacer el fichaje (anfitrión)
@@ -96,21 +100,22 @@ Reglas del traspaso (para entender qué detecta Link):
 | Link se cierra solo | Fallo interno (hubo varios antes de la 0.2.78) | Manda el archivo `%APPDATA%\Trybuchet\Smash Soda\phoenix-fallos.log`; Link anota ahí la causa y las funciones implicadas |
 | El overlay no aparece | La sala está cerrada, o PES va en pantalla completa «de verdad» | Abre la sala, pon PES en ventana o sin bordes. Panel de amigos: **Ctrl+Alt+A** |
 
-### En Sync › PREPARAR TODO
+### En Sync › MI PC
 | Qué ves | Por qué pasa | Qué hacer |
 |---|---|---|
 | ✗ carpeta del juego | Link no encontró PES o hay varios | Elige la carpeta en la lista (por ejemplo la de tu parche) |
 | ARREGLAR TODO se detiene: «cierra PES» | Escribir en el juego con PES abierto es peligroso | Cierra PES y pulsa de nuevo |
-| ✗ piezas de Phoenix o «perdido» | Actualizaste el parche pegando carpetas encima y se borraron las líneas de Phoenix en `sider.ini` | Pulsa **ARREGLAR TODO**; repone las líneas |
+| ✗ archivos de Phoenix o «perdido» | Actualizaste el parche pegando carpetas encima y se borraron las líneas de Phoenix en `sider.ini` | Pulsa **ARREGLAR TODO**; repone las líneas |
+| ✗ «Que el juego lea los traspasos» | El `sider.ini` no tiene la línea que lee la carpeta de fichajes (pasa si pegaste una actualización del parche encima) | Con PES cerrado, pulsa **ARREGLAR** o **ARREGLAR TODO**; Link hace copia antes |
 | Faltan archivos del módulo | Copia incompleta | **ARREGLAR TODO** de nuevo; Link guarda copia de `sider.ini` antes de tocarlo |
 
-### En Traspasos en vivo (anfitrión)
+### En Sync › Traspasos (anfitrión)
 | Qué ves | Por qué pasa | Qué hacer |
 |---|---|---|
 | ✗ «sin permiso» / «aprobada como anfitrión» | Tu cuenta no está aprobada como host | Pídele al staff que apruebe tu cuenta como host en la web |
-| «La web no reconoce este Link» | Cuenta no vinculada o token vencido | **Sync › Cuenta web**: vuelve a vincular |
-| «Sin conexión con la web [motivo]» | Internet, cortafuegos, antivirus o la web caída. El motivo técnico va entre corchetes | Link reintenta solo (10, 20, 40, 80 y 120 s). Si persiste, manda una captura del Paso 1 |
-| «La web aún no tiene los traspasos en vivo» | La función de la web no estaba disponible | Link prueba de nuevo cada 5 minutos; botón **Volver a comprobar** |
+| «La web no reconoce este Link» | Cuenta no vinculada o token vencido | **Sync › Mi PC › Tu cuenta de la liga**: vuelve a unirla con un código nuevo (o mira el detalle en Avanzado › Cuenta web detallada) |
+| «Sin conexión con la web [motivo]» | Internet, cortafuegos, antivirus o la web caída. El motivo técnico va entre corchetes | Link reintenta solo (10, 20, 40, 80 y 120 s). Si persiste, manda una captura del Paso 2 de Traspasos y de Avanzado › Detalles técnicos |
+| «La web aún no tiene los traspasos en vivo» | La función de la web no estaba disponible | Link prueba de nuevo cada 5 minutos; botón **VOLVER A COMPROBAR** |
 | La liga está en pausa | El staff apagó los resultados/traspasos | Espera a que la reactiven |
 | Guardas en Editar y no sale nada | No saliste de Editar o no guardaste; la carpeta vigilada no es la tuya (hay varias carpetas de guardado) | Guarda y sal de Editar; mira la ruta del archivo en la lista y corrígela si no es la tuya |
 | «Cambio masivo, pendiente» | Más de 60 traspasos de golpe | Descártalo; no se publica solo |
@@ -131,7 +136,7 @@ Reglas del traspaso (para entender qué detecta Link):
 ### Desinstalar
 - **Configuración › Aplicaciones › Phoenix Link › Desinstalar**, o `Desinstalar.exe` dentro de la carpeta.
 - Casilla opcional: **borrar también mis datos y ajustes** (cuenta vinculada, perfiles de amigos, configuración).
-- No toca la carpeta de PES. Si instalaste el módulo del juego y quieres quitarlo, hazlo **antes** desde Link: SYNC › Módulos del juego.
+- No toca la carpeta de PES. Si instalaste el módulo del juego y quieres quitarlo, hazlo **antes** desde Link: SYNC › Avanzado › Archivos de Phoenix en el juego.
 
 ## 10. Qué está probado y qué no
 **Probado de verdad (13 oct 2026):**
@@ -148,7 +153,7 @@ Reglas del traspaso (para entender qué detecta Link):
 - ARREGLAR TODO con varios candidatos de juego.
 
 ## 11. Si algo falla, manda esto
-1. Una captura de **SYNC › PREPARAR TODO** y de **Traspasos en vivo › ANTES DE LA PRUEBA** y **Paso 1**.
+1. Una captura de **SYNC › MI PC** y de **SYNC › TRASPASOS** (los 3 pasos y «¿Algo no funciona?» abierto). Si hay un error de la web, también **Avanzado › Detalles técnicos**.
 2. El archivo `%TEMP%\PhoenixLink-instalador.log` (si falló al instalar).
 3. El archivo `%APPDATA%\Trybuchet\Smash Soda\phoenix-fallos.log` (si Link se cerró).
 4. El archivo `%APPDATA%\Trybuchet\Smash Soda\phoenix-traspasos\estado-actual.json` (estado de los traspasos; no lleva contraseñas).

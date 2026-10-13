@@ -39,7 +39,7 @@ const PASOS = [
   { ir: ["jugar", "salas"], foco: nav(4), titulo: ["Jugar", "Play"],
     texto: ["Para jugar en las salas de otros: las salas abiertas (entras con un clic), tus amigos y dónde están, y tu perfil de PES (tu nombre y tus opciones).", "To play in other people's rooms: open rooms (join with one click), your friends and where they are, and your PES profile (your name and options)."] },
   { ir: ["sync"], foco: nav(5), titulo: ["Sync", "Sync"],
-    texto: ["Tu cuenta de la liga, el puente con el juego (avisos dentro de PES) y los fichajes de Phoenix Sync.", "Your league account, the game bridge (notices inside PES) and Phoenix Sync transfers."] },
+    texto: ["Tu PC lista para jugar con fichajes, pasar un fichaje a un amigo y las opciones avanzadas.", "Your PC ready to play with transfers, passing a transfer to a friend and the advanced options."] },
   { ir: ["ajustes"], foco: nav(6), titulo: ["Ajustes", "Settings"],
     texto: ["Todo lo demás: bot del chat, video, audio, overlay e interfaz. En Ajustes › Interfaz puedes volver a ver este tutorial.", "Everything else: chat bot, video, audio, overlay and interface. Replay this tutorial from Settings › Interface."] },
   { foco: () => document.querySelector(".pill.atajo"), titulo: ["Buscar con Ctrl+K", "Search with Ctrl+K"],
