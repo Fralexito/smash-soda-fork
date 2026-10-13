@@ -4,6 +4,7 @@
 #include <fstream>
 
 #include <windows.h>
+#include <tlhelp32.h>
 
 #include "../../Hosting.h"
 #include "../../core/Cache.h"
@@ -25,6 +26,56 @@
 namespace phoenix::web {
 
 	using json = nlohmann::json;
+
+	namespace {
+		/// ¿Cómo está la ventana de PES? Solo lee (lista de procesos y ventanas). Sirve para explicar por qué el overlay (una ventana
+		/// transparente encima del juego) no se ve cuando PES va a pantalla completa «de verdad».
+		struct VentanaPes { bool abierta = false; bool conBorde = false; bool llenaPantalla = false; int ancho = 0; int alto = 0; };
+		struct CtxVentana { DWORD pid = 0; HWND mejor = nullptr; long long area = 0; };
+		BOOL CALLBACK buscarVentanaPes(HWND h, LPARAM lp) {
+			CtxVentana* c = reinterpret_cast<CtxVentana*>(lp);
+			DWORD p = 0;
+			GetWindowThreadProcessId(h, &p);
+			if (p != c->pid || !IsWindowVisible(h)) return TRUE;
+			RECT r = {};
+			if (!GetWindowRect(h, &r)) return TRUE;
+			const long long area = static_cast<long long>(r.right - r.left) * (r.bottom - r.top);
+			if (area > c->area) { c->area = area; c->mejor = h; }
+			return TRUE;
+		}
+		VentanaPes leerVentanaPes() {
+			VentanaPes v;
+			try {
+				DWORD pid = 0;
+				HANDLE snap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+				if (snap == INVALID_HANDLE_VALUE) return v;
+				PROCESSENTRY32W pe = {};
+				pe.dwSize = sizeof(pe);
+				if (Process32FirstW(snap, &pe)) {
+					do { if (_wcsicmp(pe.szExeFile, L"PES2021.exe") == 0) { pid = pe.th32ProcessID; break; } } while (Process32NextW(snap, &pe));
+				}
+				CloseHandle(snap);
+				if (pid == 0) return v;
+				v.abierta = true;
+				CtxVentana c;
+				c.pid = pid;
+				EnumWindows(buscarVentanaPes, reinterpret_cast<LPARAM>(&c));
+				if (c.mejor == nullptr) return v;
+				RECT r = {};
+				GetWindowRect(c.mejor, &r);
+				v.ancho = r.right - r.left;
+				v.alto = r.bottom - r.top;
+				v.conBorde = (GetWindowLongW(c.mejor, GWL_STYLE) & WS_CAPTION) == WS_CAPTION;
+				MONITORINFO mi = {};
+				mi.cbSize = sizeof(mi);
+				if (GetMonitorInfoW(MonitorFromWindow(c.mejor, MONITOR_DEFAULTTONEAREST), &mi)) {
+					v.llenaPantalla = r.left <= mi.rcMonitor.left && r.top <= mi.rcMonitor.top && r.right >= mi.rcMonitor.right && r.bottom >= mi.rcMonitor.bottom;
+				}
+			}
+			catch (...) {}
+			return v;
+		}
+	}
 
 	namespace detalle_ajustes {
 
@@ -456,6 +507,13 @@ namespace phoenix::web {
 			try { salaAbierta = hostingObligatorio(in).isRunning(); } catch (...) {}
 			lista.push_back(chequeo("overlay", !overlay || socket || !salaAbierta ? "ok" : "aviso",
 				{ {"activo", overlay}, {"websocket", socket}, {"puerto", Config::cfg.socket.port}, {"salaAbierta", salaAbierta} }));
+
+			{
+				const VentanaPes vp = leerVentanaPes();
+				// Pantalla completa (o sin bordes cubriendo todo): si es completa «de verdad», el overlay no se ve encima. Windows no deja saberlo con certeza.
+				lista.push_back(chequeo("ventanaPes", overlay && vp.abierta && vp.llenaPantalla && !vp.conBorde ? "aviso" : "ok",
+					{ {"abierta", vp.abierta}, {"conBorde", vp.conBorde}, {"llenaPantalla", vp.llenaPantalla}, {"ancho", vp.ancho}, {"alto", vp.alto}, {"overlay", overlay} }));
+			}
 
 			lista.push_back(chequeo("sistema", "ok", { {"windows", versionWindows()}, {"app", kVersion}, {"soda", Cache::cache.version} }));
 			return json{ {"chequeos", lista} };

@@ -257,7 +257,7 @@ export function crearSimulador(enviar) {
     const p = s.partido;
     const e = {
       v: 1,
-      app: { version: "0.2.71", etapa: "beta 2", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
+      app: { version: "0.2.72", etapa: "beta 2", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
       noticias: { cargado: true, lista: s.noticias },
       chatGlobal: { cargado: true, pausado: s.chatGlobal.pausado, esperaSeg: s.chatGlobal.esperaSeg, rev: s.chatGlobal.mensajes.length, error: "" },
       web: { ...s.web, jugadoresLista: 3, versionLiga: "2026.10.08", eventosEnCola: 0 },
@@ -633,6 +633,7 @@ export function crearSimulador(enviar) {
       { id: "config", estado: "ok", datos: { ruta: "C:\\Users\\…\\AppData\\Roaming\\Trybuchet\\Smash Soda\\" } },
       { id: "web", estado: "ok", datos: { usuario: "Fralex", mensaje: "Conectado", eventosEnCola: 0 } },
       { id: "overlay", estado: "ok", datos: { activo: true, websocket: true, puerto: 9002 } },
+      { id: "ventanaPes", estado: "aviso", datos: { abierta: true, conBorde: false, llenaPantalla: true, ancho: 1920, alto: 1080, overlay: true } },
       { id: "sistema", estado: "ok", datos: { windows: "Windows 11 (compilación 22631)", app: "1.0.0", soda: "7.0.4" } },
     ] }),
     "partido.preparar": (d) => {

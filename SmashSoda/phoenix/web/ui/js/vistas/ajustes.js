@@ -194,6 +194,15 @@ function Overlay({ m, info }) {
       <${Titulo} texto="OVERLAY" derecha=${html`<${Interruptor} valor=${activo} al=${(x) => accion("sala.opciones", { overlay: x })} etiqueta="Overlay"/>`}/>
       <div class="ayuda">${t("Muestra chat, mandos e invitados encima del juego, para ti y para quien mira la transmisión.", "Shows chat, pads and guests over the game.")}
         ${activo ? html` <${Chip} tipo=${o.corriendo ? "mod" : "vip"}>${o.corriendo ? t("FUNCIONANDO", "RUNNING") : t("INICIANDO", "STARTING")}</${Chip}>` : null}</div>
+      <details class="sec-detalle"><summary>${t("¿No ves el overlay encima de PES?", "Can't see the overlay over PES?")}</summary>
+        <div class="ayuda" style="line-height:1.6">
+          <b>1.</b> ${t("La sala tiene que estar abierta y este interruptor encendido: el overlay se enciende solo con la sala.", "The room must be open and this switch on: the overlay starts with the room.")}<br/>
+          <b>2.</b> ${t("El overlay es una ventana transparente encima del juego. Si PES va en pantalla completa «de verdad», Windows no la deja ver. Pon PES en ventana o sin bordes (Settings.exe del parche, o Alt+Enter si tu PES lo permite).", "The overlay is a transparent window over the game. If PES is in true fullscreen, Windows will not show it. Put PES in windowed or borderless mode.")}<br/>
+          <b>3.</b> ${t("«Pantalla» abajo debe ser la misma donde está PES.", "«Screen» below must be the one PES is on.")}<br/>
+          <b>4.</b> ${t("Sin tocar nada: dentro de PES pulsa la barra espaciadora y sale el panel de Sider con los jugadores de cada lado, el ping, los avisos y el chat. Ese siempre se ve, también en pantalla completa.", "No setup needed: in PES press the space bar and the Sider panel shows players per side, ping, notices and chat. It always shows, even in fullscreen.")}<br/>
+          <b>5.</b> ${t("El Diagnóstico del PC te dice cómo está la ventana de PES ahora mismo.", "PC diagnostics tells you how the PES window is right now.")}
+        </div>
+      </details>
       <${Ajuste} bloque titulo=${t("Pantalla", "Screen")}>
         <${Selector} valor=${o.monitor} opciones=${(info.pantallas.length ? info.pantallas : ["#1"]).map((x, i) => ({ valor: i, texto: x }))} al=${(x) => ov("monitor", Number(x))}/></${Ajuste}>
       <${Ajuste} bloque titulo=${t("Tema del overlay", "Overlay theme")} desc=${t("Carpeta overlay/themes.", "overlay/themes folder.")}>
@@ -366,6 +375,10 @@ const diag = () => ({
     : d.websocket ? t(`Funcionando · puerto ${d.puerto}`, `Running · port ${d.puerto}`)
     : d.salaAbierta ? t("Arrancando… si no aparece, reabre la sala.", "Starting… if it doesn't show, reopen the room.")
     : t("Listo: se enciende solo al abrir la sala.", "Ready: it starts when you open the room.")],
+  ventanaPes: [t("Ventana de PES (para el overlay)", "PES window (for the overlay)"), (d) => !d.abierta ? t("PES está cerrado.", "PES is closed.")
+    : d.conBorde ? t(`En ventana (${d.ancho}×${d.alto}): el overlay se ve encima.`, `Windowed (${d.ancho}×${d.alto}): the overlay shows on top.`)
+    : d.llenaPantalla ? (d.overlay ? t("PES ocupa toda la pantalla. Si es pantalla completa «de verdad», el overlay NO se ve encima: pon el juego en ventana o sin bordes, o mira el panel de Sider (barra espaciadora).", "PES fills the screen. If it is true fullscreen, the overlay will NOT show on top: use windowed or borderless, or the Sider panel (space bar).") : t("PES ocupa toda la pantalla.", "PES fills the screen."))
+    : t(`Ventana sin bordes (${d.ancho}×${d.alto}).`, `Borderless window (${d.ancho}×${d.alto}).`)],
   sistema: [t("Sistema", "System"), (d) => `${d.windows || "Windows"} · Phoenix Link ${d.app}`],
 });
 
