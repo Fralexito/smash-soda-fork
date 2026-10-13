@@ -17,6 +17,11 @@
 #include <cstdio>
 #include <string>
 #include <SDL.h>
+#include <atomic>
+#include <csignal>
+#include <exception>
+#include <dbghelp.h>
+#pragma comment(lib, "dbghelp.lib")
 #include "resource.h"
 #include "Hosting.h"
 #include "Texture.h"
@@ -192,8 +197,83 @@ static void phoenixSinFrenos() {
     catch (...) {}
 }
 
+// ─── Registro de cierres inesperados ─────────────────────────────────────────────────────────────────────
+// Link se cerraba de golpe (abort() del sistema, código 0xc0000409) sin dejar rastro. Ahora, antes de morir,
+// apunta en %APPDATA%\Trybuchet\Smash Soda\phoenix-fallos.log qué pasó y en qué funciones estaba (la pila).
+namespace {
+    std::atomic<bool> g_registrandoFallo{ false };
+
+    void registrarFallo(const char* motivo, const std::string& detalle) {
+        if (g_registrandoFallo.exchange(true)) return;   // ya hay uno en curso (abort() vuelve a pasar por aquí)
+        try {
+            char appdata[MAX_PATH] = {};
+            if (!GetEnvironmentVariableA("APPDATA", appdata, MAX_PATH)) return;
+            const std::string archivo = std::string(appdata) + "\\Trybuchet\\Smash Soda\\phoenix-fallos.log";
+            FILE* f = nullptr;
+            fopen_s(&f, archivo.c_str(), "ab");
+            if (!f) return;
+            SYSTEMTIME t; GetLocalTime(&t);
+            fprintf(f, "\n=== %04d-%02d-%02d %02d:%02d:%02d · Link %s · hilo %lu · %s ===\n", t.wYear, t.wMonth, t.wDay, t.wHour, t.wMinute, t.wSecond,
+                phoenix::kVersion, GetCurrentThreadId(), motivo);
+            if (!detalle.empty()) fprintf(f, "%s\n", detalle.c_str());
+            const HANDLE proceso = GetCurrentProcess();
+            SymSetOptions(SYMOPT_UNDNAME | SYMOPT_DEFERRED_LOADS | SYMOPT_LOAD_LINES);
+            SymInitialize(proceso, nullptr, TRUE);
+            void* pila[48];
+            const USHORT n = CaptureStackBackTrace(0, 48, pila, nullptr);
+            alignas(SYMBOL_INFO) char memoria[sizeof(SYMBOL_INFO) + 256] = {};
+            SYMBOL_INFO* simbolo = reinterpret_cast<SYMBOL_INFO*>(memoria);
+            simbolo->SizeOfStruct = sizeof(SYMBOL_INFO);
+            simbolo->MaxNameLen = 255;
+            for (USHORT i = 0; i < n; i++) {
+                DWORD64 desplazamiento = 0;
+                if (SymFromAddr(proceso, reinterpret_cast<DWORD64>(pila[i]), &desplazamiento, simbolo))
+                    fprintf(f, "  #%u %s +0x%llx\n", i, simbolo->Name, static_cast<unsigned long long>(desplazamiento));
+                else
+                    fprintf(f, "  #%u 0x%p\n", i, pila[i]);
+            }
+            fclose(f);
+        }
+        catch (...) {}
+    }
+
+    void alTerminar() {
+        std::string detalle = "terminate() sin excepción activa";
+        try {
+            if (std::current_exception()) std::rethrow_exception(std::current_exception());
+        }
+        catch (const std::exception& e) { detalle = std::string("excepción no controlada: ") + e.what(); }
+        catch (...) { detalle = "excepción no controlada (tipo desconocido)"; }
+        registrarFallo("std::terminate", detalle);
+        std::abort();
+    }
+
+    void alAbortar(int) { registrarFallo("abort()", ""); }
+
+    void alParametroInvalido(const wchar_t*, const wchar_t*, const wchar_t*, unsigned, uintptr_t) {
+        registrarFallo("parámetro inválido en la librería de C", "");
+        std::abort();
+    }
+
+    LONG WINAPI alExcepcionSinControl(EXCEPTION_POINTERS* ep) {
+        char d[160];
+        snprintf(d, sizeof(d), "excepción 0x%08lX en 0x%p", ep && ep->ExceptionRecord ? ep->ExceptionRecord->ExceptionCode : 0UL,
+            ep && ep->ExceptionRecord ? ep->ExceptionRecord->ExceptionAddress : nullptr);
+        registrarFallo("excepción sin controlar", d);
+        return EXCEPTION_CONTINUE_SEARCH;   // Windows sigue haciendo su volcado como siempre
+    }
+
+    void instalarRegistroDeFallos() {
+        std::set_terminate(alTerminar);
+        signal(SIGABRT, alAbortar);
+        _set_invalid_parameter_handler(alParametroInvalido);
+        SetUnhandledExceptionFilter(alExcepcionSinControl);
+    }
+}
+
 int CALLBACK WinMain(_In_ HINSTANCE hInstance, _In_ HINSTANCE hPrevInstance, _In_ LPSTR lpCmdLine, _In_ int nShowCmd)
 {
+    instalarRegistroDeFallos();
     phoenixSinFrenos();
 
     // Create application window
