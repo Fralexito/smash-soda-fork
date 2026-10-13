@@ -7,7 +7,7 @@
 import { html, useState, useEffect } from "../lib.js";
 import { t } from "../i18n.js";
 import { accion, avisar, confirmar } from "../tienda.js";
-import { Tarjeta, Titulo, AjusteSw, Chip, Boton, cx } from "../ui.js";
+import { Tarjeta, Titulo, AjusteSw, Segmentos, Chip, Boton, cx } from "../ui.js";
 
 const ANFITRION = {
   apagado: ["", "Apagado", "Off"],
@@ -52,21 +52,49 @@ export function Traspasos() {
   const lista = m.historial || [];
   const nombre = (c) => c.jugadorNombre || ("#" + c.jugador);
   const modo = d.modoRecarga || "AUTO-SIEMPRE";
+  // «¿Qué eres tú?»: un solo selector en vez de dos interruptores sueltos
+  const rol = aj.publicar && aj.recibir ? "prueba" : aj.publicar ? "anfitrion" : aj.recibir ? "amigo" : "apagado";
+  const ponerRol = (r) => poner({ publicar: r === "anfitrion" || r === "prueba", recibir: r === "amigo" || r === "prueba" },
+    r === "apagado" ? null : r === "anfitrion" ? t("Anfitrión: la primera lectura solo toma la foto de partida.", "Host: the first read only takes the starting snapshot.") : r === "amigo" ? t("Amigo: recibirás los traspasos.", "Friend: you will receive transfers.") : t("Prueba: publicas y recibes en esta misma PC.", "Test: you publish and receive on this same PC."));
+  const Paso = ({ n, texto }) => html`<div style="display:flex;gap:10px;align-items:flex-start;flex:1 1 180px;min-width:180px">
+    <span class="mono acc" style="flex:none;width:26px;height:26px;border-radius:50%;border:1.5px solid var(--acc);display:flex;align-items:center;justify-content:center;font-size:13px">${n}</span>
+    <span style="font-size:14px">${texto}</span></div>`;
   return html`<div class="col" style="gap:14px">
-    <${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:12px">
+    <${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:14px">
       <${Titulo} texto=${t("TRASPASOS EN VIVO", "LIVE TRANSFERS")} derecha=${html`<${Chip} tipo=${aj.publicar || aj.recibir ? "acc" : ""}>${aj.publicar || aj.recibir ? t("ENCENDIDO", "ON") : t("APAGADO", "OFF")}</${Chip}>`}/>
-      <div class="ayuda" style="font-size:14px">${t("Haces un traspaso en Editar de PES (base normal) y lo GUARDAS: Link lo detecta y lo envía. En el PC de tu amigo, Link lo aplica sobre su propia base y el juego lo recarga solo en un momento seguro. Solo viajan cambios «jugador → equipo», nunca bases. Liga Máster no está incluida.",
-        "You make a transfer in PES Edit (normal database) and SAVE: Link detects and sends it. On your friend's PC, Link applies it to their own database and the game reloads it by itself at a safe moment. Only «player → team» changes travel, never databases. Master League is not included.")}</div>
-      <div class="caja" style="font-size:13px"><span class="punto warn"></span> ${t("«Al toque» = cuando PES guarda el option file (al guardar / salir de Editar). Mientras no guardes, no hay nada que enviar. BETA: apagado por defecto.", "«Instantly» = when PES saves the option file (on save / leaving Edit). Until you save there is nothing to send. BETA: off by default.")}</div>
+      <div style="font-size:15px">${t("Haces un traspaso en tu PES y aparece solo en el PES de tu amigo.", "You make a transfer in your PES and it shows up by itself in your friend's PES.")}</div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap">
+        <${Paso} n="1" texto=${t("Haces el traspaso en Editar y GUARDAS.", "You make the transfer in Edit and SAVE.")}/>
+        <${Paso} n="2" texto=${t("Link lo envía por una carpeta que compartís.", "Link sends it through a folder you share.")}/>
+        <${Paso} n="3" texto=${t("El Link de tu amigo lo aplica y su juego lo carga solo.", "Your friend's Link applies it and their game loads it by itself.")}/>
+      </div>
+      <div class="lab" style="margin-top:4px">${t("¿QUÉ ERES TÚ?", "WHAT ARE YOU?")}</div>
+      <${Segmentos} valor=${rol} al=${ponerRol} opciones=${[
+        { valor: "apagado", texto: t("APAGADO", "OFF") },
+        { valor: "anfitrion", texto: t("ANFITRIÓN · HAGO LOS TRASPASOS", "HOST · I MAKE TRANSFERS") },
+        { valor: "amigo", texto: t("AMIGO · LOS RECIBO", "FRIEND · I RECEIVE") },
+        { valor: "prueba", texto: t("PRUEBA (LOS DOS)", "TEST (BOTH)") }]}/>
+      <div class="ayuda" style="font-size:13px">${rol === "apagado" ? t("Elige tu papel. Para probarlo tú solo en tu PC, usa «Prueba».", "Pick your role. To try it alone on your PC, use «Test».")
+        : rol === "anfitrion" ? t("Link mira tu archivo de edición y envía tus traspasos.", "Link watches your edit file and sends your transfers.")
+        : rol === "amigo" ? t("Link recibe los traspasos de tu anfitrión y los pone en tu juego.", "Link receives your host's transfers and puts them in your game.")
+        : t("Haces y recibes en la misma PC, con una carpeta de prueba: sirve para ver que todo funciona.", "You make and receive on the same PC with a test folder: to check everything works.")}</div>
+      <div class="caja" style="font-size:13px"><span class="punto warn"></span> ${t("Se envía cuando PES GUARDA (al guardar o salir de Editar). Hasta entonces no hay nada que enviar. Solo viajan cambios «jugador → equipo». Función BETA, apagada por defecto.", "It is sent when PES SAVES (on save or leaving Edit). Until then there is nothing to send. Only «player → team» changes travel. BETA, off by default.")}</div>
     </${Tarjeta}>
 
-    <${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:12px">
-      <${Titulo} texto=${t("SOY EL ANFITRIÓN · PUBLICO MIS TRASPASOS", "I'M THE HOST · I PUBLISH MY TRANSFERS")}/>
-      <${AjusteSw} titulo=${t("Publicar mis traspasos de Editar", "Publish my Edit transfers")} desc=${t("Link mira tu option file cada pocos segundos (solo lectura). Un jugador que sale de un equipo y entra en otro = traspaso; lo demás se ignora.", "Link checks your option file every few seconds (read-only). A player leaving one team and joining another = transfer; everything else is ignored.")}
-        valor=${!!aj.publicar} al=${(v) => poner({ publicar: v }, v ? t("Publicación encendida: la primera lectura solo toma la foto de partida.", "Publishing on: the first read only takes the starting snapshot.") : null)}/>
-      <${AjusteSw} titulo=${t("Pedirme confirmación antes de publicar", "Ask me before publishing")} desc=${t("Verás los traspasos detectados y pulsas PUBLICAR. Recomendado al empezar.", "You'll see the detected transfers and press PUBLISH. Recommended at first.")}
+    ${rol !== "apagado" ? html`<${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:10px">
+      <${Titulo} texto=${t("PASO 1 · LA CARPETA COMPARTIDA", "STEP 1 · THE SHARED FOLDER")} derecha=${html`<${Chip} tipo=${aj.carpeta ? "acc" : "vip"}>${aj.carpeta ? t("ELEGIDA", "CHOSEN") : t("FALTA", "MISSING")}</${Chip}>`}/>
+      <div class="ayuda" style="font-size:14px">${t("Una carpeta que vean los dos PC (Google Drive, OneDrive o red local). Pega su ruta completa; el anfitrión y el amigo deben usar la misma carpeta.", "A folder both PCs can see (Google Drive, OneDrive or local network). Paste its full path; host and friend must use the same folder.")}</div>
+      ${aj.carpeta ? html`<div class="ayuda mono" style="font-size:12px">${t("Carpeta actual: ", "Current folder: ")}${aj.carpeta}</div>` : null}
+      <div style="display:flex;gap:8px;align-items:center"><div style="flex:1;min-width:0"><input type="text" class="campo mono" maxLength=${500} value=${carpeta} placeholder="D:\\Drive\\PhoenixTraspasos" onInput=${(e) => setCarpeta(e.currentTarget.value)}/></div>
+        <${Boton} tipo="lleno mini" deshabilitado=${!carpeta.trim()} al=${async () => { await poner({ carpeta: carpeta.trim(), transporte: "carpeta" }, t("Carpeta guardada.", "Folder saved.")); setCarpeta(""); }}>${t("GUARDAR", "SAVE")}</${Boton}></div>
+      ${d.mensaje ? html`<div class="caja" style="font-size:13px">${d.mensaje}</div>` : null}
+    </${Tarjeta}>` : null}
+
+    ${rol === "anfitrion" || rol === "prueba" ? html`<${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:12px">
+      <${Titulo} texto=${t("PASO 2 · TUS TRASPASOS (ANFITRIÓN)", "STEP 2 · YOUR TRANSFERS (HOST)")}/>
+      <div style="display:flex;align-items:center;gap:10px"><span class=${cx("punto", punto)}></span><span style="font-size:14px">${et}</span></div>
+      <${AjusteSw} titulo=${t("Pedirme confirmación antes de enviar", "Ask me before sending")} desc=${t("Verás los traspasos detectados y pulsas PUBLICAR. Recomendado al empezar.", "You'll see the detected transfers and press PUBLISH. Recommended at first.")}
         valor=${!!aj.confirmarAntes} al=${(v) => poner({ confirmarAntes: v })}/>
-      ${aj.publicar ? html`<div style="display:flex;align-items:center;gap:10px"><span class=${cx("punto", punto)}></span><span style="font-size:14px">${et}</span></div>` : null}
       ${a.optionFile ? html`<div class="ayuda mono" style="font-size:12px">${t("Option file:", "Option file:")} ${a.optionFile}</div>` : null}
       ${pend.length ? html`<div class="caja" style="display:flex;flex-direction:column;gap:6px">
         <b style="font-size:14px">${t(`${pend.length} ${pend.length === 1 ? "traspaso detectado" : "traspasos detectados"}`, `${pend.length} ${pend.length === 1 ? "transfer detected" : "transfers detected"}`)}</b>
@@ -88,12 +116,11 @@ export function Traspasos() {
         ${aj.optionFile ? html`<div class="ayuda mono" style="font-size:12px">${aj.optionFile} <button style="background:none;border:0;color:inherit;text-decoration:underline;cursor:pointer;font:inherit" onClick=${() => poner({ optionFile: "" }, t("Vuelve a la búsqueda automática.", "Back to automatic search."))}>${t("quitar", "clear")}</button></div>` : null}
         <div style="margin-top:6px"><${Boton} tipo="suave mini" titulo=${t("La próxima lectura solo toma la foto de partida", "The next read only takes the starting snapshot")} al=${() => hacer("olvidarReferencia")}>${t("OLVIDAR LA FOTO DE PARTIDA", "FORGET STARTING SNAPSHOT")}</${Boton}></div>
       </details>
-    </${Tarjeta}>
+    </${Tarjeta}>` : null}
 
-    <${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:12px">
-      <${Titulo} texto=${t("SOY EL AMIGO · RECIBO TRASPASOS", "I'M THE FRIEND · I RECEIVE TRANSFERS")}/>
-      <${AjusteSw} titulo=${t("Recibir los traspasos de mi anfitrión", "Receive my host's transfers")} desc=${t("Link los aplica sobre TU base (Phoenix-DB) y avisa a phoenix.lua. Si PES está abierto solo cambia el archivo de Phoenix-DB (nunca el sider.ini); si falta algo, espera a que cierres PES. Se pone al día solo si Link estuvo apagado.", "Link applies them to YOUR database (Phoenix-DB) and notifies phoenix.lua. With PES open it only replaces the Phoenix-DB file (never sider.ini); if something's missing it waits until you close PES. It catches up by itself if Link was off.")}
-        valor=${!!aj.recibir} al=${(v) => poner({ recibir: v }, v ? t("Recepción encendida.", "Receiving on.") : null)}/>
+    ${rol === "amigo" || rol === "prueba" ? html`<${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:12px">
+      <${Titulo} texto=${rol === "prueba" ? t("PASO 3 · LO QUE RECIBES (AMIGO)", "STEP 3 · WHAT YOU RECEIVE (FRIEND)") : t("PASO 2 · LO QUE RECIBES (AMIGO)", "STEP 2 · WHAT YOU RECEIVE (FRIEND)")}/>
+      <div class="ayuda" style="font-size:13px">${t("Link los aplica sobre TU base (Phoenix-DB). Si PES está abierto solo cambia ese archivo; si falta algo, espera a que cierres PES. Se pone al día solo si Link estuvo apagado.", "Link applies them to YOUR database (Phoenix-DB). With PES open it only replaces that file; if something's missing it waits until you close PES. It catches up by itself if Link was off.")}</div>
       <div class="ayuda" style="font-size:13px">${t(MODO_TXT[modo]?.[0] || "", MODO_TXT[modo]?.[1] || "")}</div>
       ${aj.recibir ? html`<div style="display:flex;align-items:center;gap:10px"><span class=${cx("punto", m.estado === "al_dia" || m.estado === "aplicado" ? "ok" : m.estado === "esperando" ? "warn" : "")}></span>
         <span style="font-size:14px">${m.estado === "al_dia" ? t("Al día", "Up to date") : m.estado === "aplicado" ? t("Último lote aplicado", "Last batch applied") : m.estado === "esperando" ? t("Esperando: ", "Waiting: ") + (m.mensaje || "") : m.estado === "sin_transporte" ? t("Falta elegir la carpeta de recepción (abajo)", "Choose the receive folder (below)") : m.estado}</span></div>` : null}
@@ -117,16 +144,6 @@ export function Traspasos() {
         <${Boton} tipo="suave mini" deshabilitado=${!m.puedeDeshacer} titulo=${t("Quita el último lote aplicado y deja Phoenix-DB como estaba antes de él", "Removes the last applied batch and leaves Phoenix-DB as it was before it")}
           al=${async () => { if (await confirmar({ titulo: t("¿Deshacer el último lote?", "Undo the last batch?"), texto: t("Link volverá a generar Phoenix-DB sin ese lote y avisará al juego para que recargue.", "Link will rebuild Phoenix-DB without that batch and notify the game to reload."), si: t("Deshacer", "Undo") })) hacer("deshacer"); }}>${t("DESHACER EL ÚLTIMO LOTE", "UNDO LAST BATCH")}</${Boton}>
       </div>
-    </${Tarjeta}>
-
-    <${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:10px">
-      <${Titulo} texto=${t("POR DÓNDE VIAJAN", "HOW THEY TRAVEL")}/>
-      <div class="ayuda" style="font-size:14px">${t("Hoy: una carpeta compartida (Google Drive, OneDrive, red local) que ven los dos Link; cada lote es un archivito. Más adelante: la web de Phoenix como centro (falta pegar su prompt en el chat WEB).", "Today: a shared folder (Google Drive, OneDrive, local network) that both Link can see; each batch is a tiny file. Later: the Phoenix website as the hub (its prompt still has to be pasted into the WEB chat).")}</div>
-      <div class="ayuda mono" style="font-size:12px">${aj.carpeta ? t("Carpeta actual: ", "Current folder: ") + aj.carpeta : t("Sin carpeta elegida", "No folder chosen")}</div>
-      <div style="display:flex;gap:8px;align-items:center"><div style="flex:1;min-width:0"><input type="text" class="campo mono" maxLength=${500} value=${carpeta} placeholder="D:\\Drive\\PhoenixTraspasos" onInput=${(e) => setCarpeta(e.currentTarget.value)}/></div>
-        <${Boton} tipo="lleno mini" deshabilitado=${!carpeta.trim()} al=${async () => { await poner({ carpeta: carpeta.trim(), transporte: "carpeta" }, t("Carpeta guardada.", "Folder saved.")); setCarpeta(""); }}>${t("GUARDAR", "SAVE")}</${Boton}></div>
-      <div class="ayuda" style="font-size:12px">${t("Ruta completa. Los dos (anfitrión y amigo) deben apuntar a la misma carpeta compartida.", "Full path. Both (host and friend) must point to the same shared folder.")}</div>
-      ${d.mensaje ? html`<div class="caja" style="font-size:13px">${d.mensaje}</div>` : null}
-    </${Tarjeta}>
+    </${Tarjeta}>` : null}
   </div>`;
 }
