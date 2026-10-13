@@ -64,8 +64,9 @@ if not defined PHX_COMMIT set "PHX_COMMIT=d0ae1b61a51ab82bd5dfe818daad7ab10fe7c6
 set "COMMIT=%PHX_COMMIT%"
 set "REPO_URL=https://github.com/Fralexito/smash-soda-fork.git"
 :: Overlay PhoenixGlass (repo Fralexito/phoenix-overlay). Con sha256: si no coincide, no se instala.
-if not defined PHX_OVERLAY_URL set "PHX_OVERLAY_URL=https://github.com/Fralexito/phoenix-overlay/releases/download/v1.0.0-beta1/PhoenixGlass.exe"
-if not defined PHX_OVERLAY_SHA set "PHX_OVERLAY_SHA=DFD0BB6AC8513C8189A10E39DA4A85E4A12D1A70873340F84C271CF299BE2E94"
+if not defined PHX_OVERLAY_URL set "PHX_OVERLAY_URL=https://github.com/Fralexito/phoenix-overlay/releases/download/v1.0.0-beta1/PhoenixGlass-1.0.0-beta1.zip"
+if not defined PHX_OVERLAY_SHA set "PHX_OVERLAY_SHA=A83455807EA145E8ACCF77F81A7A5ABA5A47501AE981E988F68131A3C4A632E5"
+if not defined PHX_OVERLAY_EXE_SHA set "PHX_OVERLAY_EXE_SHA=DFD0BB6AC8513C8189A10E39DA4A85E4A12D1A70873340F84C271CF299BE2E94"
 set "VIGEMBUS_URL=https://github.com/nefarius/ViGEmBus/releases/download/v1.22.0/ViGEmBus_1.22.0_x64_x86_arm64.exe"
 :: WebView2 (motor de la interfaz): instalador oficial de Microsoft
 set "WEBVIEW2_URL=https://go.microsoft.com/fwlink/p/?LinkId=2124703"
@@ -161,7 +162,7 @@ set "SRC=%WORK%\src"
 set "BUILD=%WORK%\build"
 set "SRC_DIR=%SRC%\smash-soda"
 set "DEPS_DIR=%SRC_DIR%\dependencies"
-set "OVERLAY_TMP=%WORK%\PhoenixGlass.exe.descarga"
+set "OVERLAY_TMP=%WORK%\PhoenixGlass.zip"
 set "VIGEMBUS_SETUP=%WORK%\ViGEmBus_1.22.0_x64_x86_arm64.exe"
 set "WEBVIEW2_SETUP=%WORK%\MicrosoftEdgeWebview2Setup.exe"
 set "VS_BOOTSTRAP=%WORK%\vs_BuildTools.exe"
@@ -727,12 +728,13 @@ mkdir "%OVERLAY_DIR%\plugins" 2>nul
 mkdir "%OVERLAY_DIR%\themes" 2>nul
 :: Descarga a un archivo temporal, comprueba el sha256 y solo entonces lo pone en su sitio.
 %PS% -NoProfile -ExecutionPolicy Bypass -Command ^
-  "$u=$env:PHX_OVERLAY_URL; $s=$env:PHX_OVERLAY_SHA; $t='%OVERLAY_TMP%'; $d='%OVERLAY_DIR%\PhoenixGlass.exe'; " ^
+  "$u=$env:PHX_OVERLAY_URL; $s=$env:PHX_OVERLAY_SHA; $es=$env:PHX_OVERLAY_EXE_SHA; $t='%OVERLAY_TMP%'; $x='%OVERLAY_TMP%.dir'; $d='%OVERLAY_DIR%\PhoenixGlass.exe'; " ^
   "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; " ^
   "try { Invoke-WebRequest -Uri $u -OutFile $t -UseBasicParsing } catch { Write-Host ('No se pudo bajar: ' + $_.Exception.Message); exit 1 }; " ^
-  "$h=(Get-FileHash -Algorithm SHA256 -LiteralPath $t).Hash; " ^
-  "if ($h -ne $s) { Remove-Item -LiteralPath $t -Force; Write-Host 'El archivo bajado no es el esperado.'; exit 2 }; " ^
-  "Move-Item -LiteralPath $t -Destination $d -Force; Unblock-File -LiteralPath $d; exit 0"
+  "if ((Get-FileHash -Algorithm SHA256 -LiteralPath $t).Hash -ne $s) { Write-Host 'El archivo bajado no es el esperado.'; exit 2 }; " ^
+  "Expand-Archive -LiteralPath $t -DestinationPath $x -Force; $e=Join-Path $x 'PhoenixGlass.exe'; " ^
+  "if (-not (Test-Path -LiteralPath $e) -or (Get-FileHash -Algorithm SHA256 -LiteralPath $e).Hash -ne $es) { Write-Host 'El overlay descomprimido no es el esperado.'; exit 3 }; " ^
+  "Move-Item -LiteralPath $e -Destination $d -Force; Unblock-File -LiteralPath $d; exit 0"
 set "OVERLAY_RC=!errorlevel!"
 if "!OVERLAY_RC!"=="0" (
   set "OVERLAY_ESTADO=instalado"
