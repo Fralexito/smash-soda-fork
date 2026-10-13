@@ -5,7 +5,7 @@ Qué protege y qué no: un programa que corre en el PC de otra persona no se pue
 ## 1. Antes de repartir (una sola vez)
 1. **Pon los repos en privado** (GitHub › cada repo › Settings › Danger Zone › Change visibility): `Fralexito/smash-soda-fork` y `Fralexito/phoenix-overlay`. Hoy son públicos. Mientras sigan así, **no se sube nada nuevo** (los cambios se guardan solo en tu PC con `git commit`).
 2. Decide la **fecha de caducidad** de la beta: constante `kCaduca` en `SmashSoda/phoenix/PhoenixBuild.h` (formato `AAAA-MM-DD`). Pasada esa fecha Link no abre y pide la versión nueva; 7 días antes avisa al arrancar. Para renovar: cambia la fecha, compila y reparte los instaladores nuevos.
-3. Tu PC está **exento** de la caducidad mientras exista el archivo vacío `%APPDATA%\Trybuchet\Smash Soda\phoenix-dueno.flag`. Los testers no lo tienen.
+3. Tu PC está **exento** de la caducidad mientras exista el archivo marca que define `esDueno()` en `PhoenixBeta.h` (en la carpeta de configuración de Link). No lo nombres en ningún sitio público. Los testers no lo tienen.
 
 ## 2. Un instalador distinto por persona
 ```

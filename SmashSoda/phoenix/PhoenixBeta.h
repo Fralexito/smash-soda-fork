@@ -7,8 +7,9 @@
 //    programa, no en un archivo que se pueda borrar.
 //  - Identificador de tester: el instalador de cada persona deja «tester.id» junto a PhoenixLink.exe.
 //    Link lo manda a la web en la cabecera X-Phoenix-Tester y sirve para saber de quién salió una copia.
-//  - Exento: si existe «phoenix-dueno.flag» en %APPDATA%\Trybuchet\Smash Soda, la build no caduca
-//    (es el PC de quien desarrolla; los testers no tienen ese archivo).
+//  - Exento: si existe el archivo marca PHOENIX_SELLO_DUENO en %APPDATA%\Trybuchet\Smash Soda, la build no caduca
+//    (es el PC de quien desarrolla; el nombre vive en PhoenixBetaSello.h, solo en ese PC y fuera de git;
+//    sin ese archivo ningún PC queda exento).
 //  Esto desincentiva y deja rastro; no es una protección absoluta (el reloj del PC se puede cambiar).
 // =============================================================================
 
@@ -18,6 +19,14 @@
 #include <fstream>
 #include <string>
 #include "PhoenixBuild.h"
+
+// Nombre secreto del archivo marca del dueño: solo existe en su PC (PhoenixBetaSello.h está en .gitignore).
+#if __has_include("PhoenixBetaSello.h")
+#include "PhoenixBetaSello.h"
+#endif
+#ifndef PHOENIX_SELLO_DUENO
+#define PHOENIX_SELLO_DUENO ""
+#endif
 
 namespace phoenix {
 namespace beta {
@@ -31,9 +40,10 @@ namespace beta {
 	}
 
 	inline bool esDueno() {
+		if (PHOENIX_SELLO_DUENO[0] == '\0') return false;
 		char appdata[MAX_PATH] = {};
 		if (!GetEnvironmentVariableA("APPDATA", appdata, MAX_PATH)) return false;
-		const std::string f = std::string(appdata) + "\\Trybuchet\\Smash Soda\\phoenix-dueno.flag";
+		const std::string f = std::string(appdata) + "\\Trybuchet\\Smash Soda\\" + PHOENIX_SELLO_DUENO;
 		return GetFileAttributesA(f.c_str()) != INVALID_FILE_ATTRIBUTES;
 	}
 
