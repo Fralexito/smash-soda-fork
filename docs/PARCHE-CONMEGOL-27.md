@@ -72,3 +72,13 @@ Con PES2021.exe, sider.exe, Settings.exe y «PES2021 Start.exe» cerrados (compr
 - `pruebas-link/parche27_test.cpp` imita la estructura 27 en una copia y también corre con copias de los `sider.ini` reales (el 27 y el de un modo 26): TODO OK.
 - `modulos_test` y `quitar_modulo_test` siguen en TODO OK.
 - `pruebas-link/phoenix_en_juego_real.cpp`: herramienta para ver o aplicar el paquete en el juego real con el mismo código del instalador.
+
+## 6. Actualizar el parche pegando una carpeta nueva (observado el 2026-10-13)
+
+Fralex pegó una carpeta **ConmeGol Extras** nueva sin borrar la anterior y reemplazó archivos de la raíz. Lo que se vio en su PC (solo lectura):
+
+- **Extras** quedó con **3 modos** (ConmeGOL Clasicos, ConmeGOL Patch 27, UEFAGOL 27); los modos 26 desaparecieron. Ya no hay destinos de modos 26: solo la raíz.
+- El **sider.ini de la raíz volvió al del paquete** (3455 bytes, fecha 09-oct 22:17): **sin las líneas de Phoenix**. Los .lua seguían en `modules`, así que Link los marcó «perdido». Es decir: **pegar una actualización encima borra las líneas de Phoenix del sider.ini**, aunque el lanzador por sí solo no lo haga. Se arregla con Sync › PREPARAR TODO › ARREGLAR TODO (PES y Sider cerrados, con copia de sider.ini).
+- La raíz y el modo Patch 27 tienen el mismo CGP_database.cpk (md5 igual); UEFAGOL 27 y Clásicos tienen otro cada uno.
+- El Phoenix-DB de la raíz (Player.bin 9-oct y PlayerAssignment.bin 10-oct) **no lo generó el motor actual** (no hay fichajes_aplicados.json): no se activa sin más.
+- Recomendación para quien actualiza: borrar `ConmeGol Extras` antes de pegar la nueva, y después pulsar ARREGLAR TODO.
