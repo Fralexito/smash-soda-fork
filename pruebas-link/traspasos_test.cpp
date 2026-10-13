@@ -870,6 +870,8 @@ static void pruebaReal(const fs::path& tmp, const std::string& plantilla, const 
 		std::cout << "\n";
 		CHECK(carga && eqs.size() >= 1, "«" + x.objetivo.nombre + "»: el PlayerAssignment.bin generado carga con el formato exacto y Yamal sigue en la base");
 		if (eqs.count(a)) sitios++;
+		{ std::string iniTxt; std::ifstream fi(x.objetivo.ini, std::ios::binary); iniTxt.assign((std::istreambuf_iterator<char>(fi)), std::istreambuf_iterator<char>());
+		  CHECK(phoenix::modulos::tieneRaizPhoenixDB(iniTxt), "«" + x.objetivo.nombre + "»: tras aplicar el lote, el sider.ini ya carga Phoenix-DB (sin eso el juego no ve el traspaso)"); }
 	}
 	CHECK(sitios >= 1, "el traspaso de Yamal quedo aplicado en al menos un modo real del amigo (" + std::to_string(sitios) + ")");
 	CHECK(est(B)["amigo"]["historial"][0]["estado"] == "aplicado" || est(B)["amigo"]["historial"][0]["estado"] == "parcial", "el lote queda aplicado/parcial en el historial");

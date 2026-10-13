@@ -17,6 +17,7 @@ export function Preparar({ s }) {
   const m = s.motor || {};
   const [mods, setMods] = useState(null);      // sync.modulos
   const [tr, setTr] = useState(null);          // traspasos.estado
+  const [raiz, setRaiz] = useState(null);      // sync.raizPhoenixDB: modos cuyo sider.ini no lee Phoenix-DB
   const [busca, setBusca] = useState(null);    // candidatos del juego si hay varios
   const [haciendo, setHaciendo] = useState(false);
   const [informe, setInforme] = useState([]);  // lo que hizo «ARREGLAR TODO»: [{ok, texto}]
@@ -27,9 +28,11 @@ export function Preparar({ s }) {
     const a = await accion("sync.modulos", {}, { silencioso: true });
     const b = await accion("traspasos.estado", {}, { silencioso: true });
     if (!vivo.current) return [a, b];
+    const c = await accion("sync.raizPhoenixDB", {}, { silencioso: true });
     if (a) setMods(a);
     if (b) setTr(b);
-    return [a, b];
+    if (c) setRaiz(c);
+    return [a, b, c];
   };
   useEffect(() => { leer(); const id = setInterval(leer, 5000); return () => clearInterval(id); }, []);
 
@@ -67,6 +70,11 @@ export function Preparar({ s }) {
     await leer();
     return true;
   };
+  const arreglarRaiz = async () => {
+    const r = await accion("sync.raizPhoenixDB", { accion: "arreglar" });
+    await leer();
+    return !!r;
+  };
   const ponerRecarga = async () => { const r = await accion("sync.modoRecarga", { modo: "AUTO-SIEMPRE" }); await leer(); return !!r; };
   const ponerRol = async (r) => { await accion("traspasos.config", { publicar: r === "anfitrion", recibir: r === "amigo" }); await leer(); };
   const reintentarWeb = async () => { await accion("traspasos.accion", { accion: "reintentar" }); await leer(); };
@@ -98,6 +106,16 @@ export function Preparar({ s }) {
       : pesAbierto ? t("Hay piezas por instalar o actualizar. Cierra PES y pulsa el botón.", "Some pieces need installing or updating. Close PES and press the button.")
       : t("Hay piezas por instalar o actualizar. Se hace una copia antes de tocar nada.", "Some pieces need installing or updating. A backup is made before touching anything."),
     boton: !mods || !mods.juego || faltan.length === 0 ? null : [t("INSTALAR AHORA", "INSTALL NOW"), instalar, pesAbierto],
+  });
+  const faltaRaiz = raiz?.faltan || [];
+  filas.push({
+    id: "raiz", ok: !raiz ? "espera" : faltaRaiz.length === 0,
+    titulo: t("Que el juego lea los traspasos", "Game reads the transfers"),
+    frase: !raiz ? t("Revisando…", "Checking…") : faltaRaiz.length === 0 ? t("El juego está listo para leer los fichajes de Phoenix.", "The game is ready to read Phoenix transfers.")
+      : raiz.pesAbierto ? t("Hay fichajes puestos, pero el juego aún no los lee. Cierra PES y pulsa el botón.", "Transfers are in place but the game doesn't read them yet. Close PES and press the button.")
+      : t("Hay fichajes puestos, pero el juego aún no los lee: falta una línea de configuración. Se arregla sola, con copia antes.", "Transfers are in place but the game doesn't read them yet: a setting line is missing. It fixes itself, with a backup first."),
+    boton: !raiz || faltaRaiz.length === 0 ? null : [t("ARREGLAR", "FIX"), arreglarRaiz, raiz.pesAbierto],
+    detalle: faltaRaiz.join(", "),
   });
   filas.push({
     id: "recarga", ok: !tr ? "espera" : modo !== "ACTIVAR",
@@ -168,6 +186,13 @@ export function Preparar({ s }) {
         nota(true, t("Instalé las piezas de Phoenix en el juego (con copia antes).", "Installed Phoenix's pieces in the game (backed up first)."));
         [a, b] = await leer();
       } else nota(true, t("Las piezas de Phoenix ya estaban al día.", "Phoenix's pieces were already up to date."));
+      // 2b. que el juego lea los fichajes ya puestos (línea de Phoenix-DB en sider.ini)
+      const cr = await accion("sync.raizPhoenixDB", {}, { silencioso: true });
+      if (cr && cr.faltan && cr.faltan.length) {
+        if (cr.pesAbierto) { nota(false, t("Cierra PES 2021 y vuelve a pulsar: falta que el juego lea los fichajes y con el juego abierto no toco nada.", "Close PES 2021 and press again: the game doesn't read the transfers yet and I touch nothing while it's open.")); return; }
+        if (await arreglarRaiz()) nota(true, t(`Dejé al juego leyendo los fichajes (${cr.faltan.join(", ")}).`, `The game now reads the transfers (${cr.faltan.join(", ")}).`));
+        else { nota(false, t("No pude dejar al juego leyendo los fichajes. No se rompió nada.", "I couldn't make the game read the transfers. Nothing was broken.")); return; }
+      }
       // 3. recarga automática
       if ((b.modoRecarga || "AUTO-SIEMPRE") === "ACTIVAR") {
         if (await ponerRecarga()) nota(true, t("Dejé la recarga automática.", "Set the automatic reload."));
@@ -215,6 +240,7 @@ export function Preparar({ s }) {
         <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px">
           <b style="font-size:15px">${f.titulo}</b>
           <span class="ayuda" style="font-size:14px">${f.frase}</span>
+          ${f.detalle ? html`<span class="mut mono" style="font-size:12px">${f.detalle}</span>` : null}
           ${f.extra || null}
         </div>
         ${f.boton ? html`<${Boton} tipo=${f.ok === false ? "lleno mini" : "suave mini"} deshabilitado=${haciendo || f.boton[2]} titulo=${f.boton[2] ? t("Cierra PES 2021 primero", "Close PES 2021 first") : ""} al=${f.boton[1]}>${f.boton[0]}</${Boton}>` : null}

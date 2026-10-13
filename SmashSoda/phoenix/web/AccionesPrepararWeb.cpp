@@ -3,6 +3,10 @@
 #include "../PhoenixPrefs.h"
 #include "../link/BuscarJuego.h"
 #include "../link/Entrega.h"
+#include "../link/Fichajes.h"
+#include "../link/ModulosJuego.h"
+#include <fstream>
+#include <set>
 
 // =============================================================================
 //  SYNC › PREPARAR TODO: busca la carpeta del juego sin pedirle nada al usuario.
@@ -15,6 +19,29 @@ namespace phoenix::web {
 
 	namespace detalle_modulos {
 		std::filesystem::path carpetaJuego(bool& abierto);   // AccionesModulosWeb.cpp
+	}
+
+
+	namespace {
+		/// sider.ini que cargan los traspasos/fichajes generados (hay PlayerAssignment.bin en su Phoenix-DB) pero que no tienen la línea de Phoenix-DB:
+		/// sin ella Sider no lee el archivo y el juego no cambia. Ocurre, por ejemplo, si el cambiador de parches reescribe el sider.ini.
+		std::vector<std::filesystem::path> carpetasSinRaiz(const std::filesystem::path& juego, std::vector<std::string>& nombres) {
+			std::vector<std::filesystem::path> r;
+			std::set<std::string> vistas;
+			// Solo donde Phoenix-DB tiene un PlayerAssignment.bin que GENERÓ Link y sigue siendo ese (estado aplicado/desfasado): un archivo viejo o ajeno no se activa.
+			for (const phoenix::fichajes::Analisis& a : phoenix::fichajes::analizar(juego, phoenix::fichajes::Lista())) {
+				if (!a.baseOk || (a.estado != "aplicado" && a.estado != "desfasado")) continue;
+				const std::filesystem::path carpeta = a.objetivo.ini.parent_path();
+				if (!vistas.insert(carpeta.string()).second) continue;
+				std::ifstream f(a.objetivo.ini, std::ios::binary);
+				if (!f) continue;
+				const std::string ini((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
+				if (phoenix::modulos::tieneRaizPhoenixDB(ini)) continue;
+				r.push_back(carpeta);
+				nombres.push_back(a.objetivo.nombre);
+			}
+			return r;
+		}
 	}
 
 	void registrarAccionesPreparar(Interno& in) {
@@ -44,6 +71,29 @@ namespace phoenix::web {
 					pr.guardar();
 					r["conocido"] = true; r["ruta"] = pr.carpetaJuego;
 				}
+			}
+			return r;
+		});
+
+		// accion: "estado" (por defecto) | "arreglar". Repone la línea cpk.root de Phoenix-DB en los sider.ini que la perdieron.
+		// «arreglar» exige PES cerrado, hace copia de cada sider.ini (sider.ini.phoenix-<sello>) y solo toca sitios donde ya hay un PlayerAssignment.bin generado.
+		p.registrar("sync.raizPhoenixDB", [](const json& d, uint64_t) -> std::optional<json> {
+			const std::string que = d.contains("accion") && d["accion"].is_string() ? texto(d, "accion", 10) : std::string("estado");
+			if (que != "estado" && que != "arreglar") throw ErrorAccion("DATOS_INVALIDOS", "Acción desconocida.");
+			bool abierto = false;
+			const std::filesystem::path juego = detalle_modulos::carpetaJuego(abierto);
+			if (juego.empty()) return json{ {"juego", false}, {"pesAbierto", abierto}, {"faltan", json::array()}, {"arreglado", false}, {"mensaje", "Todavía no sé dónde está tu juego."} };
+			std::vector<std::string> nombres;
+			std::vector<std::filesystem::path> carpetas = carpetasSinRaiz(juego, nombres);
+			json r = { {"juego", true}, {"pesAbierto", abierto}, {"faltan", nombres}, {"arreglado", false}, {"mensaje", ""} };
+			if (que == "arreglar" && !carpetas.empty()) {
+				if (abierto) throw ErrorAccion("PES_ABIERTO", "Cierra PES 2021 (y Sider) primero: Sider lee su configuración al arrancar.");
+				const phoenix::modulos::Resultado m = phoenix::modulos::asegurarRaizPhoenixDB(carpetas);
+				if (!m.ok) throw ErrorAccion("NO_SE_PUDO", m.mensaje);
+				std::vector<std::string> quedan;
+				r["faltan"] = carpetasSinRaiz(juego, quedan).empty() ? json::array() : json(quedan);
+				r["arreglado"] = true;
+				r["mensaje"] = m.mensaje;
 			}
 			return r;
 		});

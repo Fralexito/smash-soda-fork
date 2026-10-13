@@ -257,7 +257,7 @@ export function crearSimulador(enviar) {
     const p = s.partido;
     const e = {
       v: 1,
-      app: { version: "0.2.81", etapa: "beta 2", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
+      app: { version: "0.2.82", etapa: "beta 2", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
       noticias: { cargado: true, lista: s.noticias },
       chatGlobal: { cargado: true, pausado: s.chatGlobal.pausado, esperaSeg: s.chatGlobal.esperaSeg, rev: s.chatGlobal.mensajes.length, error: "" },
       web: { ...s.web, jugadoresLista: 3, versionLiga: "2026.10.08", eventosEnCola: 0 },
@@ -601,6 +601,10 @@ export function crearSimulador(enviar) {
       const nuevo = d.accion === "instalar" ? "instalado" : d.accion === "desinstalar" ? "no_instalado" : "apagado";
       if (d.archivo === "phoenix.lua") s.modPhx = nuevo; else s.modEstadio = nuevo;
       return { ...modulosSim(), mensaje: d.accion === "instalar" ? d.archivo + " instalado en 2 carpetas. Abre PES: en sider.log debe aparecer que cargó." : d.archivo + " apagado (línea comentada en sider.ini)." };
+    },
+    "sync.raizPhoenixDB": (d) => {
+      if (d.accion === "arreglar") { if (s.pes.abierto) throw Object.assign(new Error("Cierra PES 2021 (y Sider) primero."), { codigo: "PES_ABIERTO" }); s._raizOk = true; }
+      return { juego: true, pesAbierto: !!s.pes.abierto, faltan: s._raizOk ? [] : ["Raíz del juego", "ConmeGOL Patch 27"], arreglado: d.accion === "arreglar", mensaje: "" };
     },
     "sync.detectarJuego": (d) => {
       if (s.buzon.juego) return { conocido: true, ruta: s.buzon.juego, buscando: false, terminada: true, candidatos: [] };
