@@ -112,6 +112,8 @@ public:
 	/// Si falla, `ultimoError()` trae el texto para el usuario (los errores de la accion, como un codigo incorrecto, no cambian el estado del transporte).
 	bool pedir(const std::string& metodo, const std::string& ruta, const std::string& cuerpo, int& estado, std::string& respuesta);
 	std::string ultimoError() const { std::lock_guard<std::mutex> g(_m); return _error; }
+	/// Datos tecnicos para diagnosticar (en «detalles»): cuanto tardo la ultima peticion, la mas lenta y los ultimos fallos con su motivo.
+	nlohmann::json tecnico() const;
 private:
 	PeticionWeb _p;
 	std::function<long long()> _reloj;
@@ -120,6 +122,9 @@ private:
 	long long _hastaMs = 0;
 	int _fallos = 0;
 	bool _hayMas = false, _puedeLeer = true;
+	long long _ultimaMs = 0, _maxMs = 0;
+	int _peticiones = 0, _fallosTotales = 0;
+	std::vector<std::string> _ultimosFallos;   // los ultimos 8, el mas nuevo al final
 	long long ahora() const;
 	void marcar(const std::string& clave, const std::string& texto, long long espera);
 };

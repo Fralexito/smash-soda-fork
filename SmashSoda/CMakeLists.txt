@@ -202,6 +202,7 @@ set_source_files_properties(
     "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/link/Captura.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/link/Traspasos.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/link/ServicioTraspasos.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/link/BuscarJuego.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/link/Doctor.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/link/PhoenixLink.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/web/AnfitrionWeb.cpp"

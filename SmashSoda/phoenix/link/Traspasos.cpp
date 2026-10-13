@@ -238,8 +238,22 @@ bool TransporteWeb::pedir(const std::string& metodo, const std::string& ruta, co
 	std::lock_guard<std::mutex> g(_m);
 	if (!_p) { marcar("sin_conexion", "Sin conexión con la web.", 10000); return false; }
 	bool hubo = false;
+	const auto t0 = std::chrono::steady_clock::now();
 	try { hubo = _p(metodo, ruta, cuerpo, estado, respuesta); }
 	catch (...) { hubo = false; estado = 0; }
+	if (!hubo && estado == 0) {   // un fallo de red suelto (DNS, proxy, WinHTTP al arrancar) se reintenta UNA vez enseguida antes de avisar
+		if (!_reloj) std::this_thread::sleep_for(std::chrono::milliseconds(1500));
+		try { hubo = _p(metodo, ruta, cuerpo, estado, respuesta); }
+		catch (...) { hubo = false; estado = 0; }
+	}
+	_ultimaMs = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count();
+	_maxMs = (std::max)(_maxMs, _ultimaMs); _peticiones++;
+	if (!hubo || estado == 0 || estado >= 500) {   // se recuerda el fallo con su motivo tecnico (sin token ni cuerpos)
+		_fallosTotales++;
+		std::string det = respuesta.rfind("ERR:", 0) == 0 ? respuesta.substr(4, 80) : (estado >= 500 ? "HTTP " + std::to_string(estado) : std::string("sin detalle"));
+		_ultimosFallos.push_back(horaUtcIso().substr(11, 8) + " " + metodo + " " + ruta.substr(0, ruta.find('?')) + " → " + det + " (" + std::to_string(_ultimaMs) + " ms)");
+		if (_ultimosFallos.size() > 8) _ultimosFallos.erase(_ultimosFallos.begin());
+	}
 	const json j = json::parse(respuesta, nullptr, false);
 	const std::string codigo = cadena(j, "codigo");
 	std::string msg = cadena(j, "mensaje");
@@ -281,6 +295,11 @@ bool TransporteWeb::pedir(const std::string& metodo, const std::string& ruta, co
 	}
 	_fallos = 0; _clave = "ok"; _texto.clear(); _error.clear();
 	return true;
+}
+
+json TransporteWeb::tecnico() const {
+	std::lock_guard<std::mutex> g(_m);
+	return { {"ultimaMs", _ultimaMs}, {"maxMs", _maxMs}, {"peticiones", _peticiones}, {"fallos", _fallosTotales}, {"ultimosFallos", _ultimosFallos} };
 }
 
 bool TransporteWeb::publicar(Lote& l, bool& ya, std::string& error) {
@@ -786,7 +805,7 @@ void Motor::pasoRecibir() {
 		}
 		_proximoTraerMs = _c.sondeoMs == 0 ? 0 : ahoraM + (std::max)(_c.sondeoMs, _t->intervaloMs());
 	}
-	else if (_t->esperaMs() > 0) estadoTransporte = _t->estadoClave() == "ok" ? std::string() : _t->estadoClave();
+	else estadoTransporte = _t->estadoClave() == "ok" ? std::string() : _t->estadoClave();   // entre sondeos tambien se ve el problema (no vuelve a «al dia»)
 	std::stable_sort(_reg.begin(), _reg.end(), [](const Registro& a, const Registro& b) { return claveOrden(a) < claveOrden(b); });
 	if (cambio) guardarRegistros();
 	bool hayPend = false;

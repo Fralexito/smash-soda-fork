@@ -9,6 +9,7 @@ import { t } from "../i18n.js";
 import { accion, avisar, elegirPestana, confirmar } from "../tienda.js";
 import { CuentaWeb } from "./ajustes.js";
 import { Traspasos } from "./traspasos.js";
+import { Preparar } from "./preparar.js";
 import { Tarjeta, Titulo, AjusteSw, Segmentos, Vacio, Chip, Icono, Boton, cx } from "../ui.js";
 
 /** Sección plegable: una línea con el título y un resumen; el detalle solo se ve al abrirla (se recuerda por sección en este PC). */
@@ -30,6 +31,7 @@ function Seccion({ id, titulo, resumen = null, punto = null, acciones = null, ab
 }
 
 export const PESTANAS_SYNC = [
+  { id: "preparar", es: "PREPARAR TODO", en: "GET READY", d: ["Todo lo necesario para jugar con fichajes, en una lista y con un botón que lo arregla.", "Everything needed to play with transfers, in one list with a button that fixes it."] },
   { id: "puente", es: "PUENTE", en: "BRIDGE", d: ["Los avisos de la web salen dentro del juego mientras juegas.", "Web notices show up inside the game while you play."] },
   { id: "web", es: "CUENTA WEB", en: "WEB ACCOUNT", d: ["Vincula esta PC con tu cuenta de la liga para aparecer en el radar y ver a tus amigos.", "Link this PC to your league account to show on the radar and see your friends."] },
   { id: "fichajes", es: "FICHAJES", en: "TRANSFERS", d: ["Los datos y fichajes que Phoenix Sync dejó en tu juego.", "The data and transfers Phoenix Sync placed in your game."] },
@@ -299,7 +301,7 @@ const ESTADO_MODULO = {
   desactualizado: [["HAY VERSIÓN NUEVA", "UPDATE AVAILABLE"], "vip"],
   apagado: [["APAGADO", "OFF"], ""],
   a_medias: [["A MEDIAS", "PARTIAL"], "vip"],
-  perdido: [["QUEDÓ SIN CARGAR TRAS UNA ACTUALIZACIÓN: REINSTALAR", "NOT LOADING AFTER A PATCH UPDATE: REINSTALL"], "vip"],
+  perdido: [["SE DESACTIVÓ TRAS UNA ACTUALIZACIÓN: REINSTALAR", "TURNED OFF AFTER A PATCH UPDATE: REINSTALL"], "vip"],
   no_instalado: [["NO INSTALADO", "NOT INSTALLED"], ""],
   solo_lectura: [["LO GESTIONA SYNC", "MANAGED BY SYNC"], ""],
 };
@@ -319,10 +321,10 @@ function Modulos({ d, setD, cargar }) {
     resumen=${!d ? t("Revisando…", "Checking…") : !d.juego ? t("No sé dónde está tu juego", "I don't know where your game is") : hayPend ? t("Hay módulos por instalar o actualizar", "Some modules need installing or updating") : t("Instalados y al día", "Installed and up to date")}
     acciones=${html`<${Boton} tipo="suave mini" al=${cargar}>${t("REVISAR", "CHECK")}</${Boton}>`}>
     <div class="ayuda" style="font-size:14px">
-      ${t("El paquete de Luas de Phoenix para Sider. Se instala en la raíz del juego y en cada modo del parche, con copia de sider.ini antes de cada cambio.",
-          "Phoenix's Lua pack for Sider. Installed in the game root and in every patch mode, backing up sider.ini before each change.")}
+      ${t("Las piezas de Phoenix que se ponen dentro de tu juego. Antes de cada cambio se guarda una copia.",
+          "Phoenix pieces placed inside your game. A backup is saved before every change.")}
     </div>
-    ${d?.pesAbierto ? html`<div class="caja" style="font-size:14px"><span class="punto warn"></span> ${t("Cierra PES 2021 (y Sider) para instalar o apagar: Sider lee los módulos al arrancar.", "Close PES 2021 (and Sider) to install or turn off: Sider loads modules at startup.")}</div>` : null}
+    ${d?.pesAbierto ? html`<div class="caja" style="font-size:14px"><span class="punto warn"></span> ${t("Cierra PES 2021 para instalar o apagar: el juego lee estas piezas al arrancar.", "Close PES 2021 to install or turn off: the game reads these pieces at startup.")}</div>` : null}
     ${d?.parche && (d.parche.modosRaiz?.length || d.parche.modosPropios?.length) ? html`<div class="ayuda" style="font-size:13px">
       ${d.parche.modoActual ? t(`Último modo lanzado: ${d.parche.modoActual}. `, `Last mode launched: ${d.parche.modoActual}. `) : null}
       ${d.parche.modosRaiz?.length ? t(`Usan el sider.ini de la raíz: ${d.parche.modosRaiz.join(", ")}. `, `Use the root sider.ini: ${d.parche.modosRaiz.join(", ")}. `) : null}
@@ -388,8 +390,10 @@ function Entrega({ m }) {
 export function VistaSync({ s, pestana }) {
   const m = s.motor;
   if (!m) return html`<${Vacio} titulo=${t("Conectando…", "Connecting…")} texto=""/>`;
+  if (pestana === "preparar") return html`<${Preparar} s=${s}/>`;
   if (pestana === "web") return html`<${CuentaWeb} m=${m}/>`;
   if (pestana === "fichajes") return html`<${Entrega} m=${m}/>`;
   if (pestana === "traspasos") return html`<${Traspasos}/>`;
-  return html`<${Puente} m=${m}/>`;
+  if (pestana === "puente") return html`<${Puente} m=${m}/>`;
+  return html`<${Preparar} s=${s}/>`;
 }

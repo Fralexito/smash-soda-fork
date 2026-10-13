@@ -11,6 +11,6 @@ if errorlevel 1 call "%ProgramFiles(x86)%\Microsoft Visual Studio\18\BuildTools\
 if not exist "%T%" mkdir "%T%"
 set "RUN=%T%\corrida-%RANDOM%"
 cl /nologo /c /TC /W1 "%C%\crypt.c" "%C%\masterkey.c" "%C%\mt19937ar.c" "%C%\pesxvalidar.c" /Fo"%T%\\" || exit /b 1
-cl /nologo /std:c++17 /EHsc /utf-8 /I"%R%\SmashSoda" /I"%R%\SmashSoda\phoenix" /I"%R%\external" "%R%\pruebas-link\traspasos_test.cpp" "%R%\SmashSoda\phoenix\link\Captura.cpp" "%R%\SmashSoda\phoenix\link\Traspasos.cpp" "%R%\SmashSoda\phoenix\link\Fichajes.cpp" "%R%\SmashSoda\phoenix\link\ModulosJuego.cpp" "%R%\SmashSoda\phoenix\link\Entrega.cpp" "%R%\SmashSoda\phoenix\link\BuzonJuego.cpp" "%T%\crypt.obj" "%T%\masterkey.obj" "%T%\mt19937ar.obj" "%T%\pesxvalidar.obj" /Fo"%T%\\" /Fe"%T%\traspasos_test.exe" || exit /b 1
+cl /nologo /std:c++17 /EHsc /utf-8 /I"%R%\SmashSoda" /I"%R%\SmashSoda\phoenix" /I"%R%\external" "%R%\pruebas-link\traspasos_test.cpp" "%R%\SmashSoda\phoenix\link\BuscarJuego.cpp" "%R%\SmashSoda\phoenix\link\Captura.cpp" "%R%\SmashSoda\phoenix\link\Traspasos.cpp" "%R%\SmashSoda\phoenix\link\Fichajes.cpp" "%R%\SmashSoda\phoenix\link\ModulosJuego.cpp" "%R%\SmashSoda\phoenix\link\Entrega.cpp" "%R%\SmashSoda\phoenix\link\BuzonJuego.cpp" "%T%\crypt.obj" "%T%\masterkey.obj" "%T%\mt19937ar.obj" "%T%\pesxvalidar.obj" /Fo"%T%\\" /Fe"%T%\traspasos_test.exe" || exit /b 1
 "%T%\traspasos_test.exe" "%RUN%" %1 %2
 exit /b %errorlevel%

@@ -77,12 +77,14 @@ struct Servicio::Impl {
 	CanalWeb canal;                       // mi codigo (si soy anfitrion)
 	std::vector<SiguiendoWeb> siguiendo;  // a quien sigo
 	std::vector<std::string> meSiguen;    // nombres de quienes me siguen
+	std::string errorPrueba;              // por que no pudo seguirse a si mismo (modo Prueba)
 	bool pruebaOk = false;                // en modo Prueba ya me segui a mi mismo
 	std::string errorWeb;
 	bool webVisto = false;               // alguna respuesta buena de las rutas de traspasos
 	long long proximoRefrescoWeb = 0;
 	json diag;                           // autodiagnostico del juego (sider.ini, Phoenix-DB, phoenix.lua): lista «Antes de la prueba»
 	long long proximoDiag = 0;
+	std::string ultimoVolcado;
 
 	fs::path ajustesArchivo() const { return carpetaAjustes() / "ajustes.json"; }
 
@@ -172,8 +174,8 @@ struct Servicio::Impl {
 		if (ok && pub && rec && !prueba && c.hay) {   // modo Prueba: me sigo a mi mismo con mi propio codigo (la web lo exige con prueba:true)
 			SiguiendoWeb s;
 			std::string e2;
-			if (cli.seguir(c.codigo, true, s, e2)) { std::lock_guard<std::mutex> g(m); pruebaOk = true; }
-			else { std::lock_guard<std::mutex> g(m); errorWeb = e2; }
+			if (cli.seguir(c.codigo, true, s, e2)) { std::lock_guard<std::mutex> g(m); pruebaOk = true; errorPrueba.clear(); }
+			else { std::lock_guard<std::mutex> g(m); errorPrueba = e2; }
 			cli.siguiendo(sig, meSig, e);
 		}
 		std::lock_guard<std::mutex> g(m);
@@ -261,6 +263,12 @@ struct Servicio::Impl {
 		if (!aviso.empty() && (!phoenix::modulos::procesosAbiertos().empty() || phoenix::buzon::detectarJuego().puente != phoenix::buzon::Puente::JuegoCerrado))
 			phoenix::PhoenixLink::instancia().avisoLocalDiferido(phoenix::buzon::cortarUtf8(aviso, 230));
 		const std::string est = mo->estadoJson();
+		{   // una copia legible del estado para diagnosticar sin abrir la interfaz (estado-actual.json); solo se reescribe si cambia
+			json w;
+			{ std::lock_guard<std::mutex> g(m); w = json{ {"web", {{"estado", web ? web->estadoClave() : std::string()}, {"texto", web ? web->estadoTexto() : std::string()}, {"error", errorWeb}, {"visto", webVisto}, {"errorPrueba", errorPrueba}, {"pruebaOk", pruebaOk}, {"tecnico", web ? web->tecnico() : json(nullptr)}, {"codigoObtenido", canal.hay}, {"codigo", canal.hay ? canal.codigo.substr(0, 3) + "…" : std::string()}, {"sigo", siguiendo.size()}, {"meSiguen", meSiguen.size()}}} }; }
+			const std::string vol = json{ {"motor", json::parse(est, nullptr, false)}, {"servicio", w} }.dump(1);
+			if (vol != ultimoVolcado) { ultimoVolcado = vol; escribir(carpetaAjustes() / "estado-actual.json", vol); }
+		}
 		std::lock_guard<std::mutex> g(m);
 		cache = est;
 	}
@@ -322,7 +330,7 @@ json Servicio::estado() {
 	const std::string clave = _i->web ? _i->web->estadoClave() : std::string("ok");
 	j["webDisponible"] = !esWeb ? json(nullptr) : clave == "web_sin_endpoints" ? json(false) : _i->webVisto ? json(true) : json(nullptr);
 	json w = { {"transporte", _i->transporte}, {"vinculada", vinculada}, {"estado", esWeb ? clave : std::string("ok")}, {"texto", esWeb && _i->web ? _i->web->estadoTexto() : std::string()},
-		{"esperaSeg", esWeb && _i->web ? _i->web->esperaMs() / 1000 : 0LL}, {"error", _i->errorWeb}, {"siguiendo", json::array()}, {"meSiguen", _i->meSiguen}, {"canal", nullptr} };
+		{"esperaSeg", esWeb && _i->web ? _i->web->esperaMs() / 1000 : 0LL}, {"error", _i->errorWeb}, {"tecnico", _i->web ? _i->web->tecnico() : json(nullptr)}, {"siguiendo", json::array()}, {"meSiguen", _i->meSiguen}, {"canal", nullptr} };
 	for (const SiguiendoWeb& s : _i->siguiendo) w["siguiendo"].push_back({ {"anfitrionId", s.anfitrionId}, {"anfitrionNombre", s.anfitrionNombre} });
 	if (_i->canal.hay) w["canal"] = aJson(_i->canal);
 	j["web"] = w;

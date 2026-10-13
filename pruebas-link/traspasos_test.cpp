@@ -2,6 +2,7 @@
 // aplicacion en juegos FALSOS con la base derivada del option file y el flujo completo anfitrion -> carpeta -> amigo.
 // Con un argumento (un EDIT00000000 real, p. ej. una COPIA del de Fralex) se prueba la cadena de punta a punta; sin el, solo la logica pura.
 // Nunca escribe en un juego real: todo en la carpeta temporal.   Uso: traspasos_test <carpeta temporal vacia> [EDIT00000000 de plantilla]
+#include "phoenix/link/BuscarJuego.h"
 #include "phoenix/link/Captura.h"
 #include "phoenix/link/Entrega.h"
 #include "phoenix/link/Fichajes.h"
@@ -1104,6 +1105,44 @@ static void pruebaAjustes() {
 	CHECK(largo.transporte == "web" && largo.carpeta.empty(), "una ruta absurdamente larga se descarta");
 }
 
+static void pruebaBuscar(const fs::path& tmp) {
+	std::cout << "[buscar el juego: carpetas con PES2021.exe, Steam, límites]\n";
+	namespace b = phoenix::buscar;
+	const fs::path raiz = tmp / "busqueda";
+	escribir(raiz / "Juegos" / "Conmegol Patch" / "PES2021.exe", "MZ");
+	escribir(raiz / "Juegos" / "Conmegol Patch" / "SiderAddons" / "sider.ini", "");
+	escribir(raiz / "Otros" / "PES sin sider" / "PES2021.exe", "MZ");
+	escribir(raiz / "Windows" / "Sistema" / "PES2021.exe", "MZ");            // carpeta del sistema: se salta
+	escribir(raiz / "a" / "b" / "c" / "d" / "e" / "PES2021.exe", "MZ");      // demasiado profundo
+	escribir(raiz / "Juegos" / "Conmegol Patch" / "dentro" / "PES2021.exe", "MZ");   // dentro de un juego no se busca otro
+	auto r = b::buscarJuegos({ raiz }, 3, 5000);
+	CHECK(r.size() == 2 && r[0].conSider && r[0].carpeta.filename() == "Conmegol Patch" && !r[1].conSider, "encuentra el juego con Sider primero y el que no lo tiene después; salta Windows, lo muy profundo y lo de dentro de un juego");
+	CHECK(b::buscarJuegos({ raiz }, 1, 5000).empty(), "con profundidad 1 no llega a esas carpetas");
+	CHECK(b::buscarJuegos({ raiz }, 3, 0).empty(), "límite de tiempo 0: no busca nada");
+	bool cancelado = true;
+	CHECK(b::buscarJuegos({ raiz }, 3, 5000, [&]() { return cancelado; }).empty(), "se puede cancelar");
+	CHECK(b::buscarJuegos({ tmp / "no-existe", raiz }, 3, 5000).size() == 2, "una raíz que no existe se salta y sigue con las demás");
+	CHECK(b::buscarJuegos({ raiz, raiz }, 3, 5000).size() == 2, "la misma carpeta dos veces no sale repetida");
+	const std::string vdf = R"("libraryfolders"
+{
+	"0"
+	{
+		"path"		"C:\\Program Files (x86)\\Steam"
+		"label"		""
+	}
+	"1"
+	{
+		"path"		"D:\\SteamLibrary"
+	}
+}
+)";
+	const auto rutas = b::rutasDeBibliotecasSteam(vdf);
+	CHECK(rutas.size() == 2 && rutas[0] == R"(C:\Program Files (x86)\Steam)" && rutas[1] == R"(D:\SteamLibrary)", "lee las bibliotecas de Steam del libraryfolders.vdf (barras dobles)");
+	CHECK(b::rutasDeBibliotecasSteam("basura \"path\" sin comillas").empty() && b::rutasDeBibliotecasSteam("").empty(), "un vdf raro o vacío no da nada ni rompe");
+	const auto reales = b::raicesDeBusqueda();
+	CHECK(!reales.empty(), "en este PC hay sitios donde buscar (" + std::to_string(reales.size()) + " raíces)");
+}
+
 int main(int argc, char** argv) {
 	if (argc < 2) { std::cout << "uso: traspasos_test <carpeta temporal vacia> [EDIT00000000 de plantilla]\n"; return 2; }
 	std::cout << std::unitbuf;
@@ -1111,6 +1150,7 @@ int main(int argc, char** argv) {
 	fs::create_directories(tmp);
 	pruebaLote(tmp);
 	pruebaAjustes();
+	pruebaBuscar(tmp);
 	pruebaWeb();
 	pruebaLista();
 	if (argc >= 3 && fs::exists(argv[2])) { pruebaCadena(tmp, leer(argv[2])); pruebaCadenaWeb(tmp, leer(argv[2])); }

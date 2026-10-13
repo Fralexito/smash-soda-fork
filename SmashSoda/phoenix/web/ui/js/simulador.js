@@ -257,7 +257,7 @@ export function crearSimulador(enviar) {
     const p = s.partido;
     const e = {
       v: 1,
-      app: { version: "0.2.79", etapa: "beta 2", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
+      app: { version: "0.2.81", etapa: "beta 2", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
       noticias: { cargado: true, lista: s.noticias },
       chatGlobal: { cargado: true, pausado: s.chatGlobal.pausado, esperaSeg: s.chatGlobal.esperaSeg, rev: s.chatGlobal.mensajes.length, error: "" },
       web: { ...s.web, jugadoresLista: 3, versionLiga: "2026.10.08", eventosEnCola: 0 },
@@ -353,7 +353,7 @@ export function crearSimulador(enviar) {
         siguiendo: w.siguiendo, meSiguen: w.meSiguen, canal: tr.ajustes.publicar ? { codigo: w.canal.codigo, seguidores: w.meSiguen } : null },
       diag, publicar: tr.ajustes.publicar, recibir: tr.ajustes.recibir, confirmarAntes: tr.ajustes.confirmarAntes, transporte: esWeb ? "web de Phoenix" : "carpeta " + tr.ajustes.carpeta,
       transporteEstado: { clave: estado, texto: "", esperaSeg: 0, tipo: esWeb ? "web" : "carpeta" },
-      modoRecarga: s.modoRecarga || "AUTO-SIEMPRE", pesAbierto: s.pes.abierto, anfitrion: tr.anfitrion, amigo: tr.amigo };
+      modoRecarga: s.arbitro.modoRecarga || "AUTO-SIEMPRE", pesAbierto: s.pes.abierto, anfitrion: tr.anfitrion, amigo: tr.amigo };
   };
   // Perfiles de amigos (imita web/AccionesPerfilesWeb.cpp con 32 huecos de ejemplo; nombres inventados)
   const perfilesSim = (informe) => {
@@ -601,6 +601,13 @@ export function crearSimulador(enviar) {
       const nuevo = d.accion === "instalar" ? "instalado" : d.accion === "desinstalar" ? "no_instalado" : "apagado";
       if (d.archivo === "phoenix.lua") s.modPhx = nuevo; else s.modEstadio = nuevo;
       return { ...modulosSim(), mensaje: d.accion === "instalar" ? d.archivo + " instalado en 2 carpetas. Abre PES: en sider.log debe aparecer que cargó." : d.archivo + " apagado (línea comentada en sider.ini)." };
+    },
+    "sync.detectarJuego": (d) => {
+      if (s.buzon.juego) return { conocido: true, ruta: s.buzon.juego, buscando: false, terminada: true, candidatos: [] };
+      if (d.accion === "iniciar") s._busca = Date.now();
+      if (Date.now() - (s._busca || 0) < 1200) return { conocido: false, ruta: "", buscando: true, terminada: false, candidatos: [] };
+      s.buzon.juego = "D:\Juegos\Conmegol Patch";
+      return { conocido: true, ruta: s.buzon.juego, buscando: false, terminada: true, candidatos: [] };
     },
     "sync.carpetaJuego": (d) => {
       const r = String(d.ruta || "").trim().replace(/^["']+|["'\\/]+$/g, "");

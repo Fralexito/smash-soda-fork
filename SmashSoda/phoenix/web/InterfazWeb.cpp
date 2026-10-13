@@ -210,6 +210,7 @@ namespace phoenix::web {
 			registrarAccionesModulos(in);
 			registrarAccionesFichajes(in);
 			registrarAccionesTraspasos(in);
+			registrarAccionesPreparar(in);
 			registrarAccionesPerfiles(in);
 			registrarAccionesCedido(in);
 
