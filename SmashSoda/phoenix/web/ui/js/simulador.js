@@ -257,7 +257,7 @@ export function crearSimulador(enviar) {
     const p = s.partido;
     const e = {
       v: 1,
-      app: { version: "0.2.69", etapa: "beta 2", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
+      app: { version: "0.2.70", etapa: "beta 2", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
       noticias: { cargado: true, lista: s.noticias },
       chatGlobal: { cargado: true, pausado: s.chatGlobal.pausado, esperaSeg: s.chatGlobal.esperaSeg, rev: s.chatGlobal.mensajes.length, error: "" },
       web: { ...s.web, jugadoresLista: 3, versionLiga: "2026.10.08", eventosEnCola: 0 },
@@ -331,12 +331,27 @@ export function crearSimulador(enviar) {
     enviar({ t: "evento", nombre: "chatglobal", datos: globalJson() });
   };
 
-  // Traspasos en vivo (lo que devuelve traspasos.estado en el motor real)
+  // Traspasos en vivo (lo que devuelve traspasos.estado en el motor real). Con ?traspasos404 imita una web que aún no tiene los endpoints.
   const traspasosSim = () => {
     const tr = s.traspasos;
-    return { ajustes: { ...tr.ajustes, transporte: "carpeta" }, activo: tr.ajustes.publicar || tr.ajustes.recibir, mensaje: tr.mensaje, juego: s.buzon.juego, transporteListo: !!tr.ajustes.carpeta, carpetaPrueba: "C:\Users\TuUsuario\AppData\Roaming\Trybuchet\Smash Soda\phoenix-traspasos\carpeta-de-prueba", webDisponible: false,
-      publicar: tr.ajustes.publicar, recibir: tr.ajustes.recibir, confirmarAntes: tr.ajustes.confirmarAntes, transporte: tr.ajustes.carpeta ? "carpeta " + tr.ajustes.carpeta : "", modoRecarga: s.modoRecarga || "AUTO-SIEMPRE", pesAbierto: s.pes.abierto,
-      anfitrion: tr.anfitrion, amigo: tr.amigo };
+    if (!tr.web) {
+      const sin = typeof location !== "undefined" && /traspasos404/.test(location.search);
+      tr.web = { vinculada: true, estado: sin ? "web_sin_endpoints" : "ok", visto: !sin,
+        canal: { id: "c0000001-0000-4000-8000-000000000001", codigo: "PHX-4821", activo: true, max: 25,
+          seguidores: [{ usuarioId: "a2000000-0000-4000-8000-000000000002", nombre: "Beto", estado: "activo", desde: "2026-10-12T10:00:00Z" }, { usuarioId: "a3000000-0000-4000-8000-000000000003", nombre: "Degox", estado: "pendiente", desde: "2026-10-12T11:00:00Z" }] },
+        siguiendo: [],
+        amigos: [{ usuarioId: "a1000000-0000-4000-8000-000000000001", nombre: "Fralex", estado: "en_sala" }, { usuarioId: "a2000000-0000-4000-8000-000000000002", nombre: "Beto", estado: "disponible" }] };
+    }
+    const w = tr.web, esWeb = (tr.ajustes.transporte || "web") === "web";
+    const estado = esWeb ? w.estado : "ok";
+    return { ajustes: { ...tr.ajustes, transporte: tr.ajustes.transporte || "web" }, activo: tr.ajustes.publicar || tr.ajustes.recibir, mensaje: tr.mensaje, juego: s.buzon.juego,
+      transporteListo: esWeb ? w.vinculada : !!tr.ajustes.carpeta, carpetaPrueba: "C:/Users/TuUsuario/AppData/Roaming/Trybuchet/Smash Soda/phoenix-traspasos/carpeta-de-prueba",
+      webDisponible: !esWeb ? null : w.estado === "web_sin_endpoints" ? false : w.visto ? true : null,
+      web: { transporte: tr.ajustes.transporte || "web", vinculada: w.vinculada, estado, texto: "", esperaSeg: estado === "web_sin_endpoints" ? 287 : 0, error: "", purgadoHasta: 0, amigos: w.amigos,
+        siguiendo: w.siguiendo, canal: tr.ajustes.publicar ? w.canal : null },
+      publicar: tr.ajustes.publicar, recibir: tr.ajustes.recibir, confirmarAntes: tr.ajustes.confirmarAntes, transporte: esWeb ? "web de Phoenix" : "carpeta " + tr.ajustes.carpeta,
+      transporteEstado: { clave: estado, texto: "", esperaSeg: 0, tipo: esWeb ? "web" : "carpeta" },
+      modoRecarga: s.modoRecarga || "AUTO-SIEMPRE", pesAbierto: s.pes.abierto, anfitrion: tr.anfitrion, amigo: tr.amigo };
   };
   // Perfiles de amigos (imita web/AccionesPerfilesWeb.cpp con 32 huecos de ejemplo; nombres inventados)
   const perfilesSim = (informe) => {
@@ -557,20 +572,30 @@ export function crearSimulador(enviar) {
       p.seleccion = ids; p.ultima = "20261012-141500";
       return perfilesSim({ nuevos: 0, actualizados: 0, iguales: 8, escritos: puestos.length, copia: "…/SYSTEM00000000.phoenix-20261012-141500", avisos: [], puestos });
     },
-    // Traspasos en vivo (imita link/ServicioTraspasos.cpp): anfitrión publica lo que hace en Editar; amigo lo aplica sobre su base
+    // Traspasos en vivo (imita link/ServicioTraspasos.cpp): el anfitrión publica lo que hace en Editar por la web; el amigo lo aplica sobre su base
     "traspasos.estado": () => traspasosSim(),
     "traspasos.config": (d) => {
       const a = s.traspasos.ajustes;
       for (const k of ["publicar", "recibir", "confirmarAntes"]) if (typeof d[k] === "boolean") a[k] = d[k];
-      for (const k of ["carpeta", "autor", "optionFile"]) if (typeof d[k] === "string") a[k] = d[k];
+      for (const k of ["carpeta", "autor", "optionFile", "transporte"]) if (typeof d[k] === "string") a[k] = d[k];
       return traspasosSim();
     },
     "traspasos.accion": (d) => {
       const tr = s.traspasos;
+      traspasosSim();
+      const w = tr.web;
       if (d.accion === "publicar") { tr.anfitrion.pendientes = []; tr.anfitrion.estado = "publicado"; tr.anfitrion.publicados++; tr.mensaje = "1 traspaso publicado (lote 1a2b3c4d)."; }
       else if (d.accion === "descartar") { tr.anfitrion.pendientes = []; tr.anfitrion.estado = "descartado"; tr.mensaje = "Descartado: esos traspasos no se enviaron."; }
       else if (d.accion === "deshacer") { const l = tr.amigo.historial.find((x) => x.estado === "aplicado"); if (l) { l.estado = "deshecho"; tr.mensaje = "Lote " + l.id.slice(0, 8) + " deshecho."; } tr.amigo.puedeDeshacer = tr.amigo.historial.some((x) => x.estado === "aplicado"); }
       else if (d.accion === "olvidarReferencia") { tr.anfitrion.estado = "referencia_borrada"; tr.mensaje = "Listo."; }
+      else if (d.accion === "reintentar") { w.estado = "ok"; w.visto = true; tr.mensaje = "Volviendo a comprobar la web…"; }
+      else if (d.accion === "rotarCodigo") { w.canal.codigo = "PHX-" + (1000 + Math.floor(Math.random() * 9000)); tr.mensaje = "Código nuevo: el anterior ya no sirve para unirse."; }
+      else if (d.accion === "pausarCanal" || d.accion === "reanudarCanal") w.canal.activo = d.accion === "reanudarCanal";
+      else if (d.accion === "aprobar") { const x = w.canal.seguidores.find((q) => q.usuarioId === d.usuario_id); if (x) x.estado = "activo"; tr.mensaje = "Aprobado: ya recibe tus traspasos."; }
+      else if (d.accion === "quitarSeguidor") { w.canal.seguidores = w.canal.seguidores.filter((q) => q.usuarioId !== d.usuario_id); tr.mensaje = "Quitado: ya no recibe tus traspasos."; }
+      else if (d.accion === "seguirAmigo") { const x = w.amigos.find((q) => q.usuarioId === d.usuario_id); w.siguiendo = [{ canalId: "c0000009-0000-4000-8000-000000000009", anfitrionId: d.usuario_id, anfitrionNombre: x ? x.nombre : "?", estado: "pendiente", desde: "2026-10-12T12:00:00Z" }]; tr.mensaje = "Pedido enviado: " + (x ? x.nombre : "?") + " tiene que aprobarte."; }
+      else if (d.accion === "seguirCodigo") { w.siguiendo = [{ canalId: "c0000009-0000-4000-8000-000000000009", anfitrionId: "a1000000-0000-4000-8000-000000000001", anfitrionNombre: "Fralex", estado: "activo", desde: "2026-10-12T12:00:00Z" }]; tr.mensaje = "Listo: sigues a Fralex."; }
+      else if (d.accion === "dejarDeSeguir") { w.siguiendo = []; tr.mensaje = "Dejaste de seguir a ese anfitrión."; }
       return traspasosSim();
     },
     "sync.modulo": (d) => {

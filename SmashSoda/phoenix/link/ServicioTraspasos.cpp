@@ -16,6 +16,7 @@
 #include "BuzonJuego.h"
 #include "Entrega.h"
 #include "ModulosJuego.h"
+#include "PhoenixLink.h"
 #include "Traspasos.h"
 
 namespace phoenix::traspasos {
@@ -51,23 +52,36 @@ namespace {
 		fs::rename(tmp, p, ec);
 		return !ec;
 	}
+	long long ahoraMs() { return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count(); }
+	json aJson(const CanalWeb& c) {
+		json s = json::array();
+		for (const Seguidor& x : c.seguidores) s.push_back({ {"usuarioId", x.usuarioId}, {"nombre", x.nombre}, {"estado", x.estado}, {"desde", x.desde} });
+		return { {"id", c.id}, {"codigo", c.codigo}, {"activo", c.activo}, {"max", c.max}, {"seguidores", s} };
+	}
 }
 
 struct Servicio::Impl {
+	struct Orden { std::string que, dato; };
 	std::mutex m;                       // ajustes y cache
 	std::condition_variable cv;
 	bool publicar = false, recibir = false, confirmarAntes = true;
-	std::string transporte = "carpeta", carpeta, autor, optionFile;
+	std::string transporte = "web", carpeta, autor, optionFile;   // la web (Supabase) es el transporte por defecto; la carpeta es la alternativa
 	std::shared_ptr<Motor> motor;
+	std::shared_ptr<TransporteWeb> web;   // el mismo objeto que usa el motor cuando el transporte es la web
 	std::thread hilo;
 	std::atomic<bool> parar{ false }, corriendo{ false };
 	bool iniciado = false;
 	std::string cache;                  // ultimo estado del motor (JSON): la interfaz nunca espera al motor
 	std::string mensaje;                // resultado de la ultima accion
-	std::deque<std::string> acciones;   // las ejecuta el hilo del servicio
+	std::deque<Orden> acciones;         // las ejecuta el hilo del servicio
 	fs::path juegoActual, optionFileEfectivo;
-	std::string errorOptionFile;
 	long long proximaBusquedaOption = 0;
+	// lo que se sabe de la web (canal propio, a quien sigo)
+	CanalWeb canal;
+	std::vector<SiguiendoWeb> siguiendo;
+	std::string errorWeb;
+	bool webVisto = false;               // alguna respuesta buena de las rutas de traspasos
+	long long proximoRefrescoWeb = 0;
 
 	fs::path ajustesArchivo() const { return carpetaAjustes() / "ajustes.json"; }
 
@@ -82,12 +96,19 @@ struct Servicio::Impl {
 		const json j = json::parse(t, nullptr, false);
 		if (!j.is_object()) return;
 		publicar = j.value("publicar", false); recibir = j.value("recibir", false); confirmarAntes = j.value("confirmarAntes", true);
-		transporte = j.value("transporte", std::string("carpeta")); carpeta = j.value("carpeta", std::string()); autor = j.value("autor", std::string()); optionFile = j.value("optionFile", std::string());
+		transporte = j.value("transporte", std::string("web")); carpeta = j.value("carpeta", std::string()); autor = j.value("autor", std::string()); optionFile = j.value("optionFile", std::string());
+		if (transporte != "web" && transporte != "carpeta") transporte = "web";
+		if (transporte == "carpeta" && carpeta.empty()) transporte = "web";
 	}
 
-	std::shared_ptr<Transporte> crearTransporte() const {
-		if (transporte == "carpeta" && !carpeta.empty()) return std::make_shared<TransporteCarpeta>(phoenix::entrega::deU8(carpeta));
-		return nullptr;   // "web": pendiente de que la web tenga el contrato (docs/PROMPT-WEB-traspasos-vivo.md)
+	std::shared_ptr<Transporte> crearTransporte() {   // m tomado
+		if (transporte == "carpeta" && !carpeta.empty()) { web.reset(); return std::make_shared<TransporteCarpeta>(phoenix::entrega::deU8(carpeta)); }
+		if (!web) {
+			web = std::make_shared<TransporteWeb>([](const std::string& metodo, const std::string& ruta, const std::string& cuerpo, int& estado, std::string& resp) {
+				return phoenix::PhoenixLink::instancia().peticionLiga(metodo, ruta, cuerpo, estado, resp);
+			});
+		}
+		return web;
 	}
 
 	void asegurarMotor() {   // m tomado
@@ -121,7 +142,7 @@ struct Servicio::Impl {
 		std::string manual;
 		{ std::lock_guard<std::mutex> g2(m); manual = optionFile; }
 		if (!manual.empty()) { option = phoenix::entrega::deU8(manual); return; }
-		const auto ahora = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+		const long long ahora = ahoraMs();
 		if (!optionFileEfectivo.empty()) { option = optionFileEfectivo; return; }
 		if (ahora < proximaBusquedaOption) return;
 		proximaBusquedaOption = ahora + 30000;
@@ -129,30 +150,108 @@ struct Servicio::Impl {
 		optionFileEfectivo = option;
 	}
 
+	/// Refresca lo que sabe la web (mi canal si publico, a quien sigo si recibo) y apunta el transporte al canal correcto.
+	/// Respeta las esperas del transporte (404 = 5 min, 429…): no insiste.
+	void refrescarWeb(bool forzar, bool pub, bool rec) {
+		std::shared_ptr<TransporteWeb> w;
+		{ std::lock_guard<std::mutex> g(m); w = web; if (transporte != "web" || !w) return; }
+		if (!forzar && ahoraMs() < proximoRefrescoWeb) return;
+		if (w->esperaMs() > 0) return;
+		ClienteTraspasosWeb cli(*w);
+		std::string e;
+		bool ok = true;
+		CanalWeb c;
+		std::vector<SiguiendoWeb> sig;
+		if (pub) ok = cli.canal("obtener", c, e);
+		if (ok && rec && !pub) ok = cli.siguiendo(sig, e);
+		std::lock_guard<std::mutex> g(m);
+		proximoRefrescoWeb = ahoraMs() + 20000;
+		if (!ok) { errorWeb = e; return; }
+		errorWeb.clear(); webVisto = true;
+		if (pub) canal = c;
+		if (rec && !pub) siguiendo = sig;
+		aplicarCanalAlTransporte(pub, rec);
+	}
+	void aplicarCanalAlTransporte(bool pub, bool rec) {   // m tomado
+		if (!web) return;
+		if (pub && rec) web->ponerCanal(canal.hay ? canal.id : std::string());          // prueba: leo mi propio canal
+		else if (rec) {                                                                  // amigo: el primer anfitrion que ya me aprobo
+			std::string id;
+			for (const SiguiendoWeb& s : siguiendo) if (s.estado == "activo") { id = s.canalId; break; }
+			web->ponerCanal(id);
+		}
+	}
+
+	std::string accionWeb(const Orden& o, bool& ok) {   // sin m tomado
+		std::shared_ptr<TransporteWeb> w;
+		{ std::lock_guard<std::mutex> g(m); w = web; }
+		if (!w) { ok = false; return "Esto solo funciona con la web de Phoenix como transporte."; }
+		ClienteTraspasosWeb cli(*w);
+		std::string e;
+		CanalWeb c;
+		SiguiendoWeb s;
+		ok = false;
+		if (o.que == "rotarCodigo" || o.que == "pausarCanal" || o.que == "reanudarCanal") {
+			const char* a = o.que == "rotarCodigo" ? "rotar_codigo" : o.que == "pausarCanal" ? "pausar" : "reanudar";
+			if (!cli.canal(a, c, e)) return e;
+			std::lock_guard<std::mutex> g(m); canal = c; webVisto = true; ok = true;
+			return o.que == "rotarCodigo" ? "Código nuevo: el anterior ya no sirve para unirse." : o.que == "pausarCanal" ? "Canal en pausa: no se entrega nada a nadie." : "Canal activo otra vez.";
+		}
+		if (o.que == "aprobar" || o.que == "quitarSeguidor") {
+			if (!cli.seguidor(o.dato, o.que == "aprobar" ? "aprobar" : "quitar", c, e)) return e;
+			std::lock_guard<std::mutex> g(m); canal = c; webVisto = true; ok = true;
+			return o.que == "aprobar" ? "Aprobado: ya recibe tus traspasos." : "Quitado: ya no recibe tus traspasos.";
+		}
+		if (o.que == "seguirAmigo" || o.que == "seguirCodigo") {
+			if (!cli.seguir(o.que == "seguirCodigo" ? o.dato : std::string(), o.que == "seguirAmigo" ? o.dato : std::string(), s, e)) return e;
+			std::vector<SiguiendoWeb> sig;
+			cli.siguiendo(sig, e);
+			std::lock_guard<std::mutex> g(m);
+			siguiendo = sig.empty() ? std::vector<SiguiendoWeb>{ s } : sig; webVisto = true; ok = true;
+			aplicarCanalAlTransporte(publicar, recibir);
+			return s.estado == "activo" ? "Listo: sigues a " + s.anfitrionNombre + "." : "Pedido enviado: " + s.anfitrionNombre + " tiene que aprobarte.";
+		}
+		if (o.que == "dejarDeSeguir") {
+			if (!cli.dejar(o.dato, e)) return e;
+			std::vector<SiguiendoWeb> sig;
+			cli.siguiendo(sig, e);
+			std::lock_guard<std::mutex> g(m);
+			siguiendo = sig; webVisto = true; ok = true;
+			aplicarCanalAlTransporte(publicar, recibir);
+			return "Dejaste de seguir a ese anfitrión.";
+		}
+		return "Acción desconocida.";
+	}
+
 	void paso() {
 		std::shared_ptr<Motor> mo;
 		bool pub, rec, conf;
-		std::string aut, accion;
+		std::string aut;
+		Orden orden;
 		{
 			std::lock_guard<std::mutex> g(m);
 			asegurarMotor();
 			mo = motor; pub = publicar; rec = recibir; conf = confirmarAntes; aut = autor;
-			if (!acciones.empty()) { accion = acciones.front(); acciones.pop_front(); }
+			if (!acciones.empty()) { orden = acciones.front(); acciones.pop_front(); }
 		}
 		fs::path juego, option;
 		entorno(juego, option);
 		{ std::lock_guard<std::mutex> g(m); juegoActual = juego; }
 		mo->ajustar(juego, option, pub, rec, conf, aut);
-		std::string msg;
-		if (!accion.empty()) {
+		bool refrescar = false;
+		if (!orden.que.empty()) {
 			bool ok = false;
-			if (accion == "publicar") ok = mo->publicarPendientes(msg);
-			else if (accion == "descartar") ok = mo->descartarPendientes(msg);
-			else if (accion == "deshacer") ok = mo->deshacerUltimo(msg);
-			else if (accion == "olvidarReferencia") { mo->reiniciarReferencia(); msg = "Listo: la proxima vez que PES guarde, Link solo tomara la foto de partida (no publica nada)."; ok = true; }
+			std::string msg;
+			if (orden.que == "publicar") ok = mo->publicarPendientes(msg);
+			else if (orden.que == "descartar") ok = mo->descartarPendientes(msg);
+			else if (orden.que == "deshacer") ok = mo->deshacerUltimo(msg);
+			else if (orden.que == "olvidarReferencia") { mo->reiniciarReferencia(); msg = "Listo: la proxima vez que PES guarde, Link solo tomara la foto de partida (no publica nada)."; ok = true; }
+			else if (orden.que == "reintentar") { mo->reintentarYa(); msg = "Volviendo a comprobar la web…"; ok = true; refrescar = true; }
+			else { msg = accionWeb(orden, ok); refrescar = ok; }
 			std::lock_guard<std::mutex> g(m);
 			mensaje = (ok ? "" : "No se pudo: ") + msg;
 		}
+		refrescarWeb(refrescar, pub, rec);
 		if (pub) mo->pasoPublicar();
 		if (rec) mo->pasoRecibir();
 		const std::string est = mo->estadoJson();
@@ -183,7 +282,7 @@ struct Servicio::Impl {
 	}
 };
 
-Servicio::Servicio() : _i(new Impl()) { PhoenixPrefs::get(); }   // PhoenixPrefs se crea antes y se destruye despues que el servicio
+Servicio::Servicio() : _i(new Impl()) { PhoenixPrefs::get(); phoenix::PhoenixLink::instancia(); }   // se crean antes y se destruyen despues que el servicio
 Servicio::~Servicio() { _i->frenar(); delete _i; }
 Servicio& Servicio::get() { static Servicio s; return s; }
 
@@ -200,6 +299,16 @@ void Servicio::iniciar() {
 void Servicio::detener() { _i->frenar(); }
 
 json Servicio::estado() {
+	// amigos de la web (solo lectura de lo que Link ya tiene; sin llamar a la red)
+	json amigos = json::array();
+	{
+		int n = 0;
+		for (const phoenix::AmigoWeb& a : phoenix::PhoenixLink::instancia().amigos()) {
+			if (n++ >= 60) break;
+			amigos.push_back({ {"usuarioId", a.usuarioId}, {"nombre", a.nombre}, {"estado", a.estado} });
+		}
+	}
+	const bool vinculada = phoenix::PhoenixLink::instancia().pcVinculada();
 	std::lock_guard<std::mutex> g(_i->m);
 	if (!_i->iniciado) { _i->iniciado = true; _i->cargar(); }
 	json j = json::object();
@@ -210,8 +319,16 @@ json Servicio::estado() {
 	j["activo"] = _i->publicar || _i->recibir;
 	j["mensaje"] = _i->mensaje;
 	j["juego"] = phoenix::entrega::aU8(_i->juegoActual);
-	j["transporteListo"] = _i->transporte == "carpeta" && !_i->carpeta.empty();
-	j["webDisponible"] = false;   // hasta que la web tenga el contrato
+	const bool esWeb = _i->transporte == "web";
+	j["transporteListo"] = esWeb ? vinculada : !_i->carpeta.empty();
+	// ¿la web ya tiene los traspasos? true = ya contestó bien; false = 404 (falta pegar el prompt); null = aún no se sabe
+	const std::string clave = _i->web ? _i->web->estadoClave() : std::string("ok");
+	j["webDisponible"] = !esWeb ? json(nullptr) : clave == "web_sin_endpoints" ? json(false) : _i->webVisto ? json(true) : json(nullptr);
+	json w = { {"transporte", _i->transporte}, {"vinculada", vinculada}, {"estado", esWeb ? clave : std::string("ok")}, {"texto", esWeb && _i->web ? _i->web->estadoTexto() : std::string()},
+		{"esperaSeg", esWeb && _i->web ? _i->web->esperaMs() / 1000 : 0LL}, {"error", _i->errorWeb}, {"purgadoHasta", _i->web ? _i->web->purgadoHasta() : 0LL}, {"amigos", amigos}, {"siguiendo", json::array()}, {"canal", nullptr} };
+	for (const SiguiendoWeb& s : _i->siguiendo) w["siguiendo"].push_back({ {"canalId", s.canalId}, {"anfitrionId", s.anfitrionId}, {"anfitrionNombre", s.anfitrionNombre}, {"estado", s.estado}, {"desde", s.desde} });
+	if (_i->canal.hay) w["canal"] = aJson(_i->canal);
+	j["web"] = w;
 	j["carpetaPrueba"] = phoenix::entrega::aU8(carpetaAjustes() / "carpeta-de-prueba");   // para probar en una sola PC sin elegir nada
 	return j;
 }
@@ -233,22 +350,29 @@ void Servicio::poner(const json& d) {
 			dest = d[k].get<bool>();
 		};
 		const std::string transporteAntes = _i->transporte, carpetaAntes = _i->carpeta, optionAntes = _i->optionFile;
+		const bool pubAntes = _i->publicar, recAntes = _i->recibir;
 		interruptor("publicar", _i->publicar); interruptor("recibir", _i->recibir); interruptor("confirmarAntes", _i->confirmarAntes);
 		texto("transporte", _i->transporte, 12); texto("carpeta", _i->carpeta, 500); texto("autor", _i->autor, 40); texto("optionFile", _i->optionFile, 500);
-		if (_i->transporte != "carpeta" && _i->transporte != "web") { _i->transporte = transporteAntes; throw std::runtime_error("Transporte desconocido."); }
-		if (_i->transporte == "web") { _i->transporte = transporteAntes; throw std::runtime_error("La web aun no tiene los traspasos en vivo (falta pegar docs/PROMPT-WEB-traspasos-vivo.md en el chat WEB). Usa una carpeta compartida por ahora."); }
-		if (!_i->carpeta.empty()) {   // la carpeta debe existir o poder crearse; no se acepta una ruta rara
-			std::error_code ec;
+		auto deshacerCambios = [&]() { _i->transporte = transporteAntes; _i->carpeta = carpetaAntes; _i->optionFile = optionAntes; _i->publicar = pubAntes; _i->recibir = recAntes; };
+		if (_i->transporte != "carpeta" && _i->transporte != "web") { deshacerCambios(); throw std::runtime_error("Transporte desconocido."); }
+		if (_i->transporte == "carpeta") {
 			const fs::path c = phoenix::entrega::deU8(_i->carpeta);
-			if (!c.is_absolute()) { _i->carpeta = carpetaAntes; throw std::runtime_error("La carpeta del transporte debe ser una ruta completa."); }
+			if (_i->carpeta.empty() || !c.is_absolute()) { deshacerCambios(); throw std::runtime_error("Para usar una carpeta compartida pon su ruta completa."); }
+		}
+		else if (!_i->carpeta.empty()) {   // la carpeta se guarda aunque se use la web (por si luego se prueba), pero tiene que ser una ruta completa
+			if (!phoenix::entrega::deU8(_i->carpeta).is_absolute()) { deshacerCambios(); throw std::runtime_error("La carpeta debe ser una ruta completa."); }
 		}
 		if (!_i->optionFile.empty()) {
 			std::error_code ec;
 			const fs::path o = phoenix::entrega::deU8(_i->optionFile);
-			if (!o.is_absolute() || !(fs::is_regular_file(o, ec) || fs::is_regular_file(o / "EDIT00000000", ec))) { _i->optionFile = optionAntes; throw std::runtime_error("No encuentro ese option file (EDIT00000000)."); }
+			if (!o.is_absolute() || !(fs::is_regular_file(o, ec) || fs::is_regular_file(o / "EDIT00000000", ec))) { deshacerCambios(); throw std::runtime_error("No encuentro ese option file (EDIT00000000)."); }
 		}
 		_i->guardar();
-		if (_i->carpeta != carpetaAntes || _i->transporte != transporteAntes) _i->motor.reset();   // otro transporte: motor nuevo (conserva su estado en disco)
+		if (_i->motor && (_i->carpeta != carpetaAntes || _i->transporte != transporteAntes)) {
+			_i->motor->cambiarTransporte(_i->crearTransporte());   // otro buzon: el motor recuerda hasta donde leyo en cada uno
+			_i->proximoRefrescoWeb = 0;
+		}
+		if (_i->publicar != pubAntes || _i->recibir != recAntes) _i->proximoRefrescoWeb = 0;
 		_i->optionFileEfectivo.clear(); _i->proximaBusquedaOption = 0;
 	}
 	bool algo;
@@ -257,12 +381,16 @@ void Servicio::poner(const json& d) {
 	else _i->frenar();
 }
 
-std::string Servicio::accion(const std::string& que) {
-	if (que != "publicar" && que != "descartar" && que != "deshacer" && que != "olvidarReferencia") throw std::runtime_error("Accion desconocida.");
+std::string Servicio::accion(const std::string& que, const std::string& dato) {
+	static const char* validas[] = { "publicar", "descartar", "deshacer", "olvidarReferencia", "reintentar", "rotarCodigo", "pausarCanal", "reanudarCanal", "aprobar", "quitarSeguidor", "seguirAmigo", "seguirCodigo", "dejarDeSeguir" };
+	bool ok = false;
+	for (const char* v : validas) if (que == v) ok = true;
+	if (!ok) throw std::runtime_error("Accion desconocida.");
+	if (dato.size() > 64) throw std::runtime_error("Dato demasiado largo.");
 	{
 		std::lock_guard<std::mutex> g(_i->m);
-		if (_i->acciones.size() >= 2) throw std::runtime_error("Hay otra accion en curso; espera unos segundos.");
-		_i->acciones.push_back(que);
+		if (_i->acciones.size() >= 3) throw std::runtime_error("Hay otras acciones en curso; espera unos segundos.");
+		_i->acciones.push_back({ que, dato });
 		_i->mensaje = "En curso…";
 	}
 	_i->arrancar();   // si estaba apagado, el hilo hace la accion y sigue (solo mira lo que este encendido)

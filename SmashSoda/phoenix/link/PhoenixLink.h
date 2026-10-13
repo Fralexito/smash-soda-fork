@@ -172,6 +172,10 @@ namespace phoenix {
 		int cuentaWeb(uint32_t parsecId);
 		/// Esta PC tiene token de la web (puede preguntar por cuentas).
 		bool pcVinculada();
+		/// Petición autenticada a la función «liga» de la web (token de Link + X-Phoenix-Version/Build): <kBaseLiga><ruta>. BLOQUEANTE:
+		/// llamar solo desde un hilo propio (nunca desde la interfaz). Devuelve false si no hubo respuesta; `estado` = código HTTP (0 = red/timeout,
+		/// -1 = esta PC no está vinculada: no se manda nada sin token). Lo usan los traspasos en vivo.
+		bool peticionLiga(const std::string& metodo, const std::string& ruta, const std::string& cuerpo, int& estado, std::string& respuesta, int timeoutMs = 8000);
 		/// Versión de la Liga Máster que informa la presencia (-1 = sin dato).
 		long long versionLiga();
 		std::string salaId();

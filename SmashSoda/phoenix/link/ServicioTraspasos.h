@@ -16,8 +16,8 @@ public:
 	nlohmann::json estado();
 	/// Cambia ajustes (campos opcionales: publicar, recibir, confirmarAntes, transporte, carpeta, autor, optionFile). Lanza std::runtime_error con texto legible.
 	void poner(const nlohmann::json& datos);
-	/// publicar | descartar | deshacer | olvidarReferencia. Devuelve el mensaje. Lanza std::runtime_error.
-	std::string accion(const std::string& que);
+	/// publicar|descartar|deshacer|olvidarReferencia|reintentar (propias) y, con la web: rotarCodigo|pausarCanal|reanudarCanal|aprobar{usuario}|quitarSeguidor{usuario}|seguirAmigo{usuario}|seguirCodigo{codigo}|dejarDeSeguir{canal}. `dato` = el usuario, código o canal. Lanza std::runtime_error.
+	std::string accion(const std::string& que, const std::string& dato = std::string());
 	~Servicio();
 
 private:
