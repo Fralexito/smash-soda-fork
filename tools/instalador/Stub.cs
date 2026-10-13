@@ -596,7 +596,7 @@ public class Asistente : Form
         else
         {
             lblFinTitulo.Text = "No se pudo terminar"; lblFinTitulo.ForeColor = Color.FromArgb(255, 77, 109);
-            lblFinTexto.Text = error + "\r\n\r\nSi no sabes qué hacer, manda a Fralex este archivo:\r\n" + Instalador.LogRuta;
+            lblFinTexto.Text = error + "\r\n\r\nSi no sabes qué hacer, manda este archivo a quien te pasó el instalador:\r\n" + Instalador.LogRuta;
             chkAbrir.Visible = false;
         }
         Ir(3);
