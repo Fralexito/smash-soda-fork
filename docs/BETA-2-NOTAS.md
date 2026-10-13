@@ -41,5 +41,5 @@
 - El zip es una versión fija: cada cambio de Link que el amigo deba recibir exige regenerar el zip y su SHA256 en el `.bat`.
 - `parsec.dll` en un release público: confirmar que el permiso de Parsec lo cubre.
 - Interfaz y funciones nuevas (JUGAR, perfiles, campo 2D, lados automáticos) se probaron sobre todo en el PC de Fralex; en otro PC o parche pueden fallar. El informe (Sala › Conexión › Diagnóstico del PC › COPIAR INFORME) sirve para depurar.
-- **Traspasos en vivo** está apagado a propósito: no se prueba con el amigo todavía.
+- **Traspasos en vivo** viene apagado: ya habla con la web real (0.2.71) pero no se ha probado con el amigo; encenderlo solo de común acuerdo.
 - Los `.bat` fijan el SHA256 de `phoenix.lua` y `phoenix_referee.lua`: si se editan, hay que actualizar el `.bat`.
