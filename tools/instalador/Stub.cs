@@ -154,6 +154,20 @@ public static class Instalador
         if (!File.Exists(Path.Combine(overlay, "PhoenixGlass.exe"))) throw new InvalidOperationException("No se pudo instalar el overlay.");
     }
 
+    public static string TextoLicencia()
+    {
+        try { using (StreamReader r = new StreamReader(Recurso("licencia.txt"), System.Text.Encoding.UTF8)) return r.ReadToEnd().Replace("\r\n", "\n").Replace("\n", "\r\n"); }
+        catch { return "Versión de prueba privada de Phoenix Link. Uso personal, sin redistribuir."; }
+    }
+
+    /// Beta privada: deja junto a Link el identificador de este tester y el texto de la licencia.
+    static void MarcasDeBeta(string carpeta)
+    {
+        string tester = Dato("PHX_TESTER");
+        if (tester.Length > 0) File.WriteAllText(Path.Combine(carpeta, "tester.id"), tester);
+        File.WriteAllText(Path.Combine(carpeta, "LICENCIA-BETA.txt"), TextoLicencia(), System.Text.Encoding.UTF8);
+    }
+
     public delegate void Avance(int porcentaje, string texto);
 
     // ---- desinstalar -----------------------------------------------------------------------------------------
@@ -293,7 +307,7 @@ public static class Instalador
             if (cancelado()) throw new OperationCanceledException();
 
             avance(55, "Instalando Phoenix Link…");
-            try { InstalarArchivos(carpeta); }
+            try { InstalarArchivos(carpeta); MarcasDeBeta(carpeta); }
             catch (IOException e) { throw new InvalidOperationException("No se pudieron copiar los archivos. ¿Phoenix Link está abierto? Ciérralo y vuelve a intentarlo. (" + e.Message + ")"); }
             catch (UnauthorizedAccessException e) { throw new InvalidOperationException("Sin permiso para escribir en esa carpeta. (" + e.Message + ")"); }
 
@@ -356,7 +370,8 @@ public class Asistente : Form
     static readonly Color Fondo = Color.FromArgb(10, 15, 38), Lateral = Color.FromArgb(14, 21, 48), Texto = Color.FromArgb(233, 239, 255),
         Tenue = Color.FromArgb(139, 149, 184), Acento = Color.FromArgb(25, 230, 255), Cesped = Color.FromArgb(47, 224, 138), Linea = Color.FromArgb(40, 52, 100);
 
-    Panel[] paginas = new Panel[4];
+    Panel[] paginas = new Panel[5];
+    CheckBox chkAcepto;
     Button btnSiguiente, btnAtras, btnCancelar;
     TextBox txtCarpeta, txtLog;
     CheckBox chkEscritorio, chkAbrir;
@@ -400,10 +415,11 @@ public class Asistente : Form
         ConstruirCarpeta(paginas[1]);
         ConstruirProgreso(paginas[2]);
         ConstruirFin(paginas[3]);
+        ConstruirLicencia(paginas[4]);
 
         Panel separador = new Panel(); separador.SetBounds(210, 372, 450, 1); separador.BackColor = Linea; Controls.Add(separador);
         btnCancelar = Boton("Cancelar", 240, false); btnCancelar.Click += delegate { Cerrar(); };
-        btnAtras = Boton("Atrás", 400, false); btnAtras.Click += delegate { Ir(pagina - 1); };
+        btnAtras = Boton("Atrás", 400, false); btnAtras.Click += delegate { Ir(pagina == 1 ? 4 : 0); };
         btnSiguiente = Boton("Siguiente", 530, true); btnSiguiente.Click += SiguienteClick;
         Controls.AddRange(new Control[] { btnCancelar, btnAtras, btnSiguiente });
         FormClosing += AlCerrar;
@@ -428,6 +444,25 @@ public class Asistente : Form
         l.Font = new Font(negrita ? "Segoe UI Semibold" : "Segoe UI", tam);
         p.Controls.Add(l);
         return l;
+    }
+
+    void ConstruirLicencia(Panel p)
+    {
+        Etiqueta(p, "Licencia de la versión de prueba", 0, 0, 395, 36, 16f, true, Texto);
+        Etiqueta(p, "Lee esto antes de instalar. Es corto.", 0, 40, 395, 22, 9.5f, false, Tenue);
+        TextBox caja = new TextBox();
+        caja.SetBounds(0, 68, 395, 200); caja.Multiline = true; caja.ReadOnly = true; caja.ScrollBars = ScrollBars.Vertical;
+        caja.BackColor = Lateral; caja.ForeColor = Texto; caja.BorderStyle = BorderStyle.None; caja.Font = new Font("Segoe UI", 9f);
+        caja.Text = Instalador.TextoLicencia();
+        caja.TabStop = false;
+        caja.Select(0, 0);
+        caja.Enter += delegate { caja.Select(0, 0); };
+        p.Controls.Add(caja);
+        chkAcepto = new CheckBox();
+        chkAcepto.Text = "He leído y acepto estas condiciones"; chkAcepto.SetBounds(0, 282, 395, 28);
+        chkAcepto.ForeColor = Texto; chkAcepto.BackColor = Fondo;
+        chkAcepto.CheckedChanged += delegate { if (pagina == 4) { btnSiguiente.Enabled = chkAcepto.Checked; PintarSiguiente(); } };
+        p.Controls.Add(chkAcepto);
     }
 
     void ConstruirBienvenida(Panel p)
@@ -515,19 +550,29 @@ public class Asistente : Form
     // ---- navegación -------------------------------------------------------------------------------------
     void Ir(int n)
     {
-        pagina = Math.Max(0, Math.Min(3, n));
+        pagina = Math.Max(0, Math.Min(4, n));   // 0 bienvenida, 4 licencia (va justo después), 1 carpeta, 2 progreso, 3 final
         for (int i = 0; i < paginas.Length; i++) paginas[i].Visible = i == pagina;
-        btnAtras.Visible = pagina == 1;
-        btnCancelar.Visible = pagina < 2;
+        btnAtras.Visible = pagina == 1 || pagina == 4;
+        btnCancelar.Visible = pagina < 2 || pagina == 4;
         if (pagina == 1 && txtCarpeta != null) { txtCarpeta.SelectionStart = txtCarpeta.TextLength; txtCarpeta.SelectionLength = 0; }
         btnSiguiente.Enabled = !instalando;
-        btnSiguiente.Text = pagina == 0 ? "Siguiente" : pagina == 1 ? "Instalar" : pagina == 2 ? "Instalando…" : (fallo ? "Cerrar" : "Finalizar");
+        btnSiguiente.Text = pagina == 0 ? "Siguiente" : pagina == 4 ? "Acepto y sigo" : pagina == 1 ? "Instalar" : pagina == 2 ? "Instalando…" : (fallo ? "Cerrar" : "Finalizar");
         if (pagina == 2) btnSiguiente.Enabled = false;
+        if (pagina == 4) btnSiguiente.Enabled = chkAcepto != null && chkAcepto.Checked;
+        PintarSiguiente();
+    }
+
+    void PintarSiguiente()
+    {
+        btnSiguiente.BackColor = btnSiguiente.Enabled ? Acento : Color.FromArgb(34, 48, 80);
+        btnSiguiente.ForeColor = btnSiguiente.Enabled ? Color.FromArgb(4, 18, 42) : Tenue;
+        btnSiguiente.FlatAppearance.BorderColor = btnSiguiente.Enabled ? Acento : Linea;
     }
 
     void SiguienteClick(object sender, EventArgs e)
     {
-        if (pagina == 0) { Ir(1); return; }
+        if (pagina == 0) { Ir(4); return; }
+        if (pagina == 4) { Ir(1); return; }
         if (pagina == 1) { Empezar(); return; }
         if (pagina == 3)
         {

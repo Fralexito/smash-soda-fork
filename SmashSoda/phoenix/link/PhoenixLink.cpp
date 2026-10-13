@@ -1,4 +1,5 @@
 ﻿#include "PhoenixLink.h"
+#include "../PhoenixBeta.h"
 
 #include <windows.h>
 #include <wincrypt.h>
@@ -151,7 +152,9 @@ namespace phoenix {
 		}
 
 		std::vector<std::string> cabecerasCon(const std::string& token) {
-			return { "Authorization: Bearer " + token, std::string("X-Phoenix-Version: ") + kVersionApp, "X-Phoenix-Build: " + huellaExe() };
+			std::vector<std::string> cab = { "Authorization: Bearer " + token, std::string("X-Phoenix-Version: ") + kVersionApp, "X-Phoenix-Build: " + huellaExe() };
+			if (!phoenix::beta::idTester().empty()) cab.push_back("X-Phoenix-Tester: " + phoenix::beta::idTester());   // beta privada: de quién es esta copia
+			return cab;
 		}
 
 		/// Mensaje en español para cada código estable del contrato.

@@ -1,0 +1,32 @@
+PHOENIX LINK · VERSIÓN DE PRUEBA PRIVADA
+
+Gracias por ayudar a probar Phoenix Link. Esta versión es una prueba privada, no un producto terminado. Al instalarla aceptas lo siguiente.
+
+1. QUÉ PUEDES HACER
+- Instalarla en tu propio PC y usarla para probarla y dar tu opinión.
+- Mostrarle el funcionamiento a quien tú quieras, sin darle copias.
+
+2. QUÉ NO PUEDES HACER
+- Copiar, enviar, subir o publicar el instalador o los archivos de Phoenix Link (por Drive, mensajes, redes, foros ni ningún otro sitio).
+- Venderla, alquilarla o usarla para ofrecer servicios a terceros.
+- Intentar sacar o publicar su código, modificarla para redistribuirla o quitarle las marcas de esta versión de prueba (identificador de tester y fecha de caducidad).
+Quien te pasó el instalador sigue siendo el titular de Phoenix Link y de sus partes propias.
+
+3. CADUCIDAD Y ACCESO
+- Esta versión de prueba caduca en la fecha que muestra el programa; después hay que instalar la versión nueva.
+- El acceso a las funciones conectadas (liga, traspasos, sala) puede cancelarse en cualquier momento, para todos o para una persona.
+
+4. IDENTIFICADOR DE TESTER Y DATOS
+- Tu copia lleva un identificador de tester (archivo tester.id junto al programa). Sirve para saber de quién es cada copia. Si una copia aparece en un sitio donde no debe, se sabrá de quién era.
+- Link envía a la web de Phoenix la versión de la app, la huella de esta build y ese identificador cuando usas funciones conectadas. No lee tu correo, tus archivos personales ni tus contraseñas.
+- Los traspasos en vivo solo envían nombres e identificadores de jugador y de equipo.
+
+5. SIN GARANTÍA
+- Es una prueba: puede fallar, cerrarse o dejar de funcionar. Se ofrece tal cual, sin garantía. Haz copia de tus partidas y de tus archivos de edición antes de probar.
+- Phoenix Link modifica solo lo que tú le pides en tu juego, con copia previa, pero tú eres responsable de tu instalación.
+
+6. CÓDIGO DE TERCEROS
+- Phoenix Link parte de Smash Soda (licencia MIT, © Flávio Freitas y Soda Arcade). Usa componentes de terceros que mantienen sus propias licencias: Parsec, ViGEmBus, SDL, WebView2 y otros. Esta licencia no cambia las suyas.
+- Phoenix Link no es un producto oficial de Parsec ni de Konami.
+
+Si no estás de acuerdo con algo de esto, no instales la versión de prueba.

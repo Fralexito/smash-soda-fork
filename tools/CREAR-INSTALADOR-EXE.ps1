@@ -6,8 +6,11 @@
 # Requiere que Phoenix Link y el overlay estén compilados y que Link esté CERRADO si hay que recompilar.
 param(
     [string]$Release = '',
-    [string]$Salida = 'C:\dev\phoenix-beta2-dist'
+    [string]$Salida = 'C:\dev\phoenix-beta2-dist',
+    # Beta privada: un instalador distinto por persona (nombre corto, sin espacios: Mirko, Lalo2…). Queda anotado en testers.csv.
+    [string]$Tester = ''
 )
+if ($Tester -and $Tester -notmatch '^[A-Za-z0-9_-]{1,32}$') { throw 'El nombre del tester solo puede llevar letras, números, guion y guion bajo (máx. 32).' }
 $ErrorActionPreference = 'Stop'
 $raiz = Split-Path -Parent $PSScriptRoot
 if (-not $Release) { $Release = Join-Path $raiz 'x64\Release' }
@@ -37,6 +40,7 @@ try {
     $datos = Join-Path $trabajo 'datos.txt'
     @(
         ('PHX_VERSION=' + $ver),
+        ('PHX_TESTER=' + $Tester),
         ('PHX_ZIP_SHA=' + (Get-FileHash -LiteralPath $zipLink -Algorithm SHA256).Hash),
         ('PHX_OVERLAY_SHA=' + (Get-FileHash -LiteralPath $zipOv -Algorithm SHA256).Hash),
         ('PHX_OVERLAY_EXE_SHA=' + (Get-FileHash -LiteralPath $exeOv -Algorithm SHA256).Hash)
@@ -56,16 +60,24 @@ try {
 
     # 5) Compilar el lanzador con todo incrustado
     New-Item -ItemType Directory -Force -Path $Salida | Out-Null
-    $exe = Join-Path $Salida "PhoenixLink-Setup-$ver.exe"
+    $sufijo = if ($Tester) { "-$Tester" } else { '' }
+    $exe = Join-Path $Salida "PhoenixLink-Setup-$ver$sufijo.exe"
     if (Test-Path -LiteralPath $exe) { Remove-Item -LiteralPath $exe -Force }
     $icono = Join-Path $raiz 'SmashSoda\icon.ico'
     & $csc /nologo /target:winexe /platform:x64 "/out:$exe" "/win32icon:$icono" "/win32manifest:$manifiesto" `
         /r:System.Windows.Forms.dll /r:System.Drawing.dll /r:System.IO.Compression.dll /r:System.IO.Compression.FileSystem.dll `
-        "/resource:$zipLink,PhoenixLink.zip" "/resource:$zipOv,PhoenixGlass.zip" "/resource:$datos,datos.txt" "/resource:$icono,icono.ico" `
+        "/resource:$zipLink,PhoenixLink.zip" "/resource:$zipOv,PhoenixGlass.zip" "/resource:$datos,datos.txt" "/resource:$icono,icono.ico" "/resource:$(Join-Path $PSScriptRoot 'instalador\LICENCIA-BETA.txt'),licencia.txt" `
         (Join-Path $PSScriptRoot 'instalador\Stub.cs')
     if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $exe)) { throw 'No se pudo compilar el instalador.' }
     $sha = (Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash
     Set-Content -LiteralPath "$exe.sha256.txt" -Value "$sha  $(Split-Path -Leaf $exe)" -Encoding ascii
+    # Registro privado de quién recibió qué (el SHA256 de cada instalador es distinto): sirve para rastrear una copia filtrada.
+    if ($Tester) {
+        $caduca = (Select-String -Path $h -Pattern 'kCaduca = "([^"]*)"').Matches[0].Groups[1].Value
+        $csv = Join-Path $Salida 'testers.csv'
+        if (-not (Test-Path -LiteralPath $csv)) { Set-Content -LiteralPath $csv -Value 'tester,fecha,version,caduca,sha256,archivo' -Encoding utf8 }
+        Add-Content -LiteralPath $csv -Value ("{0},{1},{2},{3},{4},{5}" -f $Tester, (Get-Date -Format 'yyyy-MM-dd HH:mm'), $ver, $caduca, $sha, (Split-Path -Leaf $exe)) -Encoding utf8
+    }
     Write-Host ("Instalador: " + $exe + "  (" + [math]::Round((Get-Item $exe).Length / 1MB, 1) + " MB)")
     Write-Host "SHA256: $sha"
 }

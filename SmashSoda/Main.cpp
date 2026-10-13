@@ -30,6 +30,7 @@
 #include "Globals/AppColors.h"
 #include "Widgets/LoginWidget.h"
 #include "phoenix/PhoenixBuild.h"
+#include "phoenix/PhoenixBeta.h"
 #include "phoenix/PhoenixPrefs.h"
 #include "phoenix/I18n.h"
 #include "phoenix/ui/Shell.h"
@@ -274,6 +275,7 @@ namespace {
 int CALLBACK WinMain(_In_ HINSTANCE hInstance, _In_ HINSTANCE hPrevInstance, _In_ LPSTR lpCmdLine, _In_ int nShowCmd)
 {
     instalarRegistroDeFallos();
+    if (!phoenix::beta::comprobarAlArrancar()) return 0;   // beta privada caducada: no se abre
     phoenixSinFrenos();
 
     // Create application window
