@@ -36,6 +36,7 @@ try {
     # 3) Datos de verificación que lee el lanzador
     $datos = Join-Path $trabajo 'datos.txt'
     @(
+        ('PHX_VERSION=' + $ver),
         ('PHX_ZIP_SHA=' + (Get-FileHash -LiteralPath $zipLink -Algorithm SHA256).Hash),
         ('PHX_OVERLAY_SHA=' + (Get-FileHash -LiteralPath $zipOv -Algorithm SHA256).Hash),
         ('PHX_OVERLAY_EXE_SHA=' + (Get-FileHash -LiteralPath $exeOv -Algorithm SHA256).Hash)
@@ -49,6 +50,7 @@ try {
   <trustInfo xmlns="urn:schemas-microsoft-com:asm.v3">
     <security><requestedPrivileges><requestedExecutionLevel level="requireAdministrator" uiAccess="false"/></requestedPrivileges></security>
   </trustInfo>
+  <application xmlns="urn:schemas-microsoft-com:asm.v3"><windowsSettings><dpiAware xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">true</dpiAware></windowsSettings></application>
 </assembly>
 '@ | Set-Content -LiteralPath $manifiesto -Encoding utf8
 
@@ -57,9 +59,9 @@ try {
     $exe = Join-Path $Salida "PhoenixLink-Setup-$ver.exe"
     if (Test-Path -LiteralPath $exe) { Remove-Item -LiteralPath $exe -Force }
     $icono = Join-Path $raiz 'SmashSoda\icon.ico'
-    & $csc /nologo /target:winexe "/out:$exe" "/win32icon:$icono" "/win32manifest:$manifiesto" `
-        "/resource:$(Join-Path $raiz 'PhoenixLink-instalar-rapido.bat'),instalador.bat" `
-        "/resource:$zipLink,PhoenixLink.zip" "/resource:$zipOv,PhoenixGlass.zip" "/resource:$datos,datos.txt" `
+    & $csc /nologo /target:winexe /platform:x64 "/out:$exe" "/win32icon:$icono" "/win32manifest:$manifiesto" `
+        /r:System.Windows.Forms.dll /r:System.Drawing.dll /r:System.IO.Compression.dll /r:System.IO.Compression.FileSystem.dll `
+        "/resource:$zipLink,PhoenixLink.zip" "/resource:$zipOv,PhoenixGlass.zip" "/resource:$datos,datos.txt" "/resource:$icono,icono.ico" `
         (Join-Path $PSScriptRoot 'instalador\Stub.cs')
     if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $exe)) { throw 'No se pudo compilar el instalador.' }
     $sha = (Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash
