@@ -45,8 +45,8 @@ echo Pulsa una tecla para continuar...
 pause >nul
 
 :: --------- Configuracion ----------
-if not defined PHX_ZIP_URL set "PHX_ZIP_URL=https://github.com/Fralexito/smash-soda-fork/releases/download/beta-2/PhoenixLink-0.2.68-beta2.zip"
-if not defined PHX_ZIP_SHA set "PHX_ZIP_SHA=DA03A6245896BFE50E08B27804547BE9D174F2ABA95994706BDF321B9482EA6C"
+if not defined PHX_ZIP_URL set "PHX_ZIP_URL=https://github.com/Fralexito/smash-soda-fork/releases/download/beta-2/PhoenixLink-0.2.71-beta2.zip"
+if not defined PHX_ZIP_SHA set "PHX_ZIP_SHA=93CEE03BF1A34BA6256F7239E464CFF4E3AE152B4BEAC140EA6AAF02C01FD909"
 if not defined PHX_OVERLAY_URL set "PHX_OVERLAY_URL=https://github.com/Fralexito/phoenix-overlay/releases/download/v1.0.0-beta1/PhoenixGlass-1.0.0-beta1.zip"
 if not defined PHX_OVERLAY_SHA set "PHX_OVERLAY_SHA=A83455807EA145E8ACCF77F81A7A5ABA5A47501AE981E988F68131A3C4A632E5"
 :: SHA256 del PhoenixGlass.exe que va dentro del zip del overlay

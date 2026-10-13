@@ -36,7 +36,7 @@ Sin Link (solo los módulos): doble clic en `PhoenixJuego-instalar.bat`, elige l
 | Marcador, goles, HUD y árbitro | PARTIDO | Listo, a probar contigo |
 | Avisos de la web dentro del juego | SYNC | Listo |
 | Fichajes de Phoenix | SYNC | Se aplican sobre **tu** base; la lista va vacía: no cambia nada |
-| **Traspasos en vivo** | SYNC | **Apagado**: deja «¿Qué eres tú?» en «Apagado». No lo enciendas en esta sesión |
+| **Traspasos en vivo** | SYNC | **Apagado por defecto** («¿Qué eres tú?» = «Apagado»). Ya funciona con la web; enciéndelo solo si Fralex te lo pide |
 
 ## Quitar Phoenix
 - Del juego: Link → SYNC → Módulos del juego → **DESINSTALAR**. Sin Link: ejecuta `PhoenixJuego-instalar.bat desinstalar` desde una consola. No borra nada: aparta los `.lua` y guarda copias de `sider.ini`.
@@ -70,4 +70,4 @@ Sin Link (solo los módulos): doble clic en `PhoenixJuego-instalar.bat`, elige l
 2. Una foto de la pantalla de Link.
 3. El informe: **Sala › Conexión › Diagnóstico del PC › COPIAR INFORME**, y pégalo en el chat. Trae versiones, parche, módulos y el final de `sider.log` con una sección «Qué pasa y qué hacer». Tapa tu nombre de usuario de Windows y no lleva contraseñas ni claves.
 
-**Reglas de oro:** no abras PES mientras instalas módulos; no enciendas «Traspasos en vivo»; si dudas, no cambies nada y manda el informe.
+**Reglas de oro:** no abras PES mientras instalas módulos; no enciendas «Traspasos en vivo» salvo que Fralex te lo pida; si dudas, no cambies nada y manda el informe.
