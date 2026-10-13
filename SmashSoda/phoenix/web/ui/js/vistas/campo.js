@@ -114,7 +114,7 @@ export function CampoSvg({ alTanda, alColores, alDiag, alEst }) {
     pts.push(html`<circle key=${i} ref=${ref} r=${eq === 2 ? 0.9 : 1.35} fill=${(eq === 0 || eq === 1) && R.col ? R.col[eq] : COLOR[eq] || COLOR[-1]}
       stroke="rgba(0,0,0,.55)" stroke-width="0.25" cx="0" cy="0"/>`);
   }
-  const ETIQ = { repeticion: ["REPETICIÓN", "REPLAY"], otro: ["SIN LECTURA EN VIVO", "NO LIVE READING"], pausa: ["PAUSA", "PAUSED"] };
+  const ETIQ = { repeticion: ["REPETICIÓN", "REPLAY"], otro: ["SIN LECTURA EN VIVO", "NO LIVE READING"], pausa: ["PAUSA", "PAUSED"], detenido: ["REPETICIÓN O PAUSA", "REPLAY OR PAUSED"], descanso: ["DESCANSO", "HALF-TIME"] };
   const et = ETIQ[fase];
   return html`<div style="position:relative"><svg viewBox=${`${-LARGO / 2 - MX} ${-ANCHO / 2 - MZ} ${LARGO + MX * 2} ${ANCHO + MZ * 2}`} role="img"
       aria-label=${t("Campo con los jugadores en vivo", "Pitch with live players")} style="width:100%;height:auto;display:block;border-radius:10px;background:#0b3320">

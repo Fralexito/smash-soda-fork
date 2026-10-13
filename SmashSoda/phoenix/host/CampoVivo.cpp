@@ -24,6 +24,7 @@ namespace phoenix::campo {
 	namespace {
 		std::atomic<bool> g_vivo{ false };
 		std::atomic<bool> g_parar{ false };
+		std::atomic<int> g_detenido{ 0 };   // 0 = en juego, 1 = reloj parado, 2 = descanso
 		std::thread g_hilo;
 		std::mutex g_mutex;
 		FotoCampo g_foto;
@@ -242,6 +243,11 @@ namespace phoenix::campo {
 
 					sinBola = bolaEnJuego ? 0 : sinBola + 1;
 					enRepe = sinBola >= 10;   // ~0,5 s con el balón aparcado: repetición; vuelve en la primera lectura con balón en juego
+					const int detenido = g_detenido.load();
+					if (detenido != 0 && !enRepe && ultima.estado == EstadoCampo::Activo) {
+						// El reloj del juego está parado: lo que se lee es una repetición, una celebración o una pausa. Se congela lo último en vivo.
+						f = ultima; f.fase = detenido == 2 ? "descanso" : "detenido"; f.hayBola = false; f.seq = ++seq; publicar(f); dormir(50); continue;
+					}
 					if (enRepe && ultima.estado == EstadoCampo::Activo) {
 						// Repetición: las posiciones que se leen son de la película, no del juego. Se dejan las últimas buenas.
 						f = ultima; f.fase = "repeticion"; f.hayBola = false; f.seq = ++seq; publicar(f); dormir(50); continue;
@@ -322,6 +328,7 @@ namespace phoenix::campo {
 	}
 
 	void pedirVivo(bool si) { g_vivo = si; }
+	void fijarDetenido(bool detenido, bool descanso) { g_detenido = descanso ? 2 : (detenido ? 1 : 0); }
 
 	FotoCampo instantanea() { std::lock_guard<std::mutex> l(g_mutex); return g_foto; }
 

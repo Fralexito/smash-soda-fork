@@ -321,6 +321,18 @@ namespace phoenix::web {
 					for (auto it = in.mirandoAvisados.begin(); it != in.mirandoAvisados.end();)
 						it = std::find(in.mirandoWeb.begin(), in.mirandoWeb.end(), *it) == in.mirandoWeb.end() ? in.mirandoAvisados.erase(it) : std::next(it);
 				}
+				// Reloj del juego parado (repetición, celebración, pausa, descanso): el campo congela lo último en vivo y pone cartel.
+				// Se exige > 0,8 s seguidos para no parpadear en las paradas normales; sin datos frescos del juego no se congela nada.
+				if (ahora - in.ultimoParado >= 0.2) {
+					in.ultimoParado = ahora;
+					const juego::EstadoPartidoJuego ejp = PhoenixLink::instancia().estadoJuego();
+					const bool enPartido = ejp.valido && (ejp.fase == "en_juego" || ejp.fase == "pausado" || ejp.fase == "descanso");
+					const bool parado = enPartido && (!ejp.relojCorre || ejp.fase == "pausado" || ejp.fase == "descanso");
+					if (!parado) in.relojParadoDesde = 0.0;
+					else if (in.relojParadoDesde == 0.0) in.relojParadoDesde = ahora;
+					const bool firme = parado && in.relojParadoDesde > 0.0 && ahora - in.relojParadoDesde >= 0.8;
+					phoenix::campo::fijarDetenido(firme, firme && ejp.fase == "descanso");
+				}
 				if (in.campoRapido && in.seccion != "partido") in.campoRapido = false;
 				const bool web = campoWebQuiere(in);
 				const bool lados = ladosQuiere(in);   // lados automáticos: los primeros minutos del partido (LadosAuto.cpp)

@@ -47,6 +47,9 @@ namespace phoenix::campo {
 
 	void iniciar();                 ///< arranca el hilo (idempotente)
 	void detener();                 ///< lo para (al cerrar Link)
+	/// El reloj del partido está parado (repetición, celebración, pausa, descanso): lo dice Link con estado.json del juego. El lector
+	/// congela las últimas posiciones buenas y publica fase «detenido» (o «descanso»).
+	void fijarDetenido(bool detenido, bool descanso);
 	void pedirVivo(bool si);        ///< la interfaz lo enciende al abrir la tarjeta y lo apaga al cerrarla
 	FotoCampo instantanea();        ///< cualquier hilo: la última lectura
 
