@@ -212,6 +212,7 @@ json Servicio::estado() {
 	j["juego"] = phoenix::entrega::aU8(_i->juegoActual);
 	j["transporteListo"] = _i->transporte == "carpeta" && !_i->carpeta.empty();
 	j["webDisponible"] = false;   // hasta que la web tenga el contrato
+	j["carpetaPrueba"] = phoenix::entrega::aU8(carpetaAjustes() / "carpeta-de-prueba");   // para probar en una sola PC sin elegir nada
 	return j;
 }
 

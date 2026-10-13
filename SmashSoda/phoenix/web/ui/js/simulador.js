@@ -257,7 +257,7 @@ export function crearSimulador(enviar) {
     const p = s.partido;
     const e = {
       v: 1,
-      app: { version: "0.2.68", etapa: "beta 2", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
+      app: { version: "0.2.69", etapa: "beta 2", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
       noticias: { cargado: true, lista: s.noticias },
       chatGlobal: { cargado: true, pausado: s.chatGlobal.pausado, esperaSeg: s.chatGlobal.esperaSeg, rev: s.chatGlobal.mensajes.length, error: "" },
       web: { ...s.web, jugadoresLista: 3, versionLiga: "2026.10.08", eventosEnCola: 0 },
@@ -334,7 +334,7 @@ export function crearSimulador(enviar) {
   // Traspasos en vivo (lo que devuelve traspasos.estado en el motor real)
   const traspasosSim = () => {
     const tr = s.traspasos;
-    return { ajustes: { ...tr.ajustes, transporte: "carpeta" }, activo: tr.ajustes.publicar || tr.ajustes.recibir, mensaje: tr.mensaje, juego: s.buzon.juego, transporteListo: !!tr.ajustes.carpeta, webDisponible: false,
+    return { ajustes: { ...tr.ajustes, transporte: "carpeta" }, activo: tr.ajustes.publicar || tr.ajustes.recibir, mensaje: tr.mensaje, juego: s.buzon.juego, transporteListo: !!tr.ajustes.carpeta, carpetaPrueba: "C:\Users\TuUsuario\AppData\Roaming\Trybuchet\Smash Soda\phoenix-traspasos\carpeta-de-prueba", webDisponible: false,
       publicar: tr.ajustes.publicar, recibir: tr.ajustes.recibir, confirmarAntes: tr.ajustes.confirmarAntes, transporte: tr.ajustes.carpeta ? "carpeta " + tr.ajustes.carpeta : "", modoRecarga: s.modoRecarga || "AUTO-SIEMPRE", pesAbierto: s.pes.abierto,
       anfitrion: tr.anfitrion, amigo: tr.amigo };
   };
