@@ -45,6 +45,8 @@ int main() {
 	{ auto o = actor(44, 1, 0.9f, 1); ponerF(o, kOffPosicion, std::numeric_limits<float>::quiet_NaN()); CHEQUEA(!leerActor(o.data(), a)); } // NaN
 	{ auto o = actor(44, 1, 0.0f, 1); CHEQUEA(!leerActor(o.data(), a)); }                                       // y = 0 (cerebro de IA)
 	CHEQUEA(leerPortero(portero(-47.0f).data(), a) && a.clase == Clase::Portero && a.x == -47.0f);
+	{ auto p2 = base(1011, 0x18, 1, 0x10002, -42.5f, 1.1f, 5.4f); CHEQUEA(leerPortero(p2.data(), a) && a.clase == Clase::Portero && a.x == -42.5f); }   // portero con la marca 0x10002 (partido real, 14-oct)
+	{ auto p3 = base(1011, 0x18, 1, 0x10003, -42.5f, 1.1f, 5.4f); CHEQUEA(!leerPortero(p3.data(), a)); }                                       // otra marca: no
 	CHEQUEA(!leerPortero(actor(44, 1, 0.9f, 1).data(), a));                                                      // un jugador de campo no es portero
 	CHEQUEA(!leerActor(portero(-47.0f).data(), a));                                                               // ni al revés
 	CHEQUEA(leerBalon(balon(0, 0.11f, 0).data(), a) && a.clase == Clase::Balon);

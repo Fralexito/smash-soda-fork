@@ -85,6 +85,34 @@ namespace phoenix::campo {
 			return r;
 		}
 
+		/// El juego deja en memoria los actores de los partidos ANTERIORES (con la misma firma y quietos): tras varios partidos hay 59
+		/// en lugar de 46 y las listas ya no tienen 18–24 miembros. Se observa unos segundos y se descartan los que no se mueven.
+		/// Devuelve false si en el tiempo dado no se mueven al menos 18 jugadores (el partido aún no corre).
+		bool soloLosQueSeMueven(HANDLE h, Hallazgos& hz, double maxSeg) {
+			std::vector<Actor*> todos;
+			for (Actor& a : hz.campo) todos.push_back(&a);
+			std::vector<float> ux(todos.size(), 1e9f), uz(todos.size(), 1e9f); std::vector<char> movido(todos.size(), 0);
+			const auto t0 = std::chrono::steady_clock::now();
+			while (!g_parar.load() && g_vivo.load() && std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count() < maxSeg) {
+				int n = 0;
+				for (size_t i = 0; i < todos.size(); i++) {
+					uint8_t b[16]; SIZE_T g = 0; float x, y, z;
+					if (!ReadProcessMemory(h, reinterpret_cast<LPCVOID>(todos[i]->dir + kOffPosicion), b, 16, &g) || g != 16 || !leerPosicion(b, x, y, z)) continue;
+					if (ux[i] < 1e8f && (std::fabs(x - ux[i]) > 0.02f || std::fabs(z - uz[i]) > 0.02f)) movido[i] = 1;
+					ux[i] = x; uz[i] = z;
+					if (movido[i]) n++;
+				}
+				if (n >= 18) {
+					std::vector<Actor> vivos;
+					for (size_t i = 0; i < todos.size(); i++) if (movido[i]) vivos.push_back(*todos[i]);
+					hz.campo = vivos;
+					return true;
+				}
+				std::this_thread::sleep_for(std::chrono::milliseconds(40));
+			}
+			return false;
+		}
+
 		/// Un balón candidato: el del partido es el que se mueve (los de los recogepelotas no).
 		struct Candidato { Actor a; float ux = 0, uz = 0; double ultimoCambio = 0; };
 		/// Los porteros tienen DOS copias en el juego (una se mueve, la otra se queda en el sitio del saque): por cada lado hay que
@@ -155,7 +183,8 @@ namespace phoenix::campo {
 
 					if (lista.empty()) {            // 3) buscar a todos por su firma
 						f.estado = EstadoCampo::Buscando; publicar(f);
-						const Hallazgos hz = escanear(h);
+						Hallazgos hz = escanear(h);
+						if (!soloLosQueSeMueven(h, hz, 30.0)) { f.estado = EstadoCampo::Buscando; f.motivo = "esperando a que el partido se mueva"; publicar(f); dormir(1000); continue; }
 						lista = elegirLista(hz.campo);
 						if (lista.empty()) { dormir(3000); continue; }
 						// Cada jugador existe dos veces en el juego (una por lista de equipo de IA): objetos contiguos que difieren ≈ 0,6 m sin

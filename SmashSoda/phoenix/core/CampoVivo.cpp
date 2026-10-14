@@ -48,7 +48,7 @@ namespace phoenix::campo {
 		const uint32_t ladoP = u32(obj, kOffLado);
 		if (ladoP != 1 && ladoP != 0) return false;   // 1 durante el partido, 0 en la tanda de penales
 		const uint32_t marca = u32(obj, kOffMarca);
-		if (marca != 0x80001u && marca != 0x10001u) return false;
+		if (marca != 0x80001u && marca != 0x10001u && marca != 0x10002u) return false;   // 0x10002: visto en un partido real (14-oct)
 		if (!vivo(obj)) return false;
 		float x, y, z;
 		if (!vec4(obj + kOffPosicion, x, y, z) || !posicionValida(x, y, z)) return false;
