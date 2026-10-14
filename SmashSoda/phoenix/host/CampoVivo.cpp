@@ -109,6 +109,7 @@ namespace phoenix::campo {
 			Poseedor poseedor;            // quién lleva el balón (histéresis)
 			std::vector<GrupoPortero> grupos;   // porteros: un grupo por lado (con sus copias)
 			int portCopias = 0;
+			std::vector<uint64_t> gemelos;   // por ficha de la lista: dirección de su «gemelo» en la otra lista del juego (0 = sin gemelo)
 			Estadisticas estad;           // estadísticas derivadas del partido
 			// diagnóstico: ventana de ~1 s
 			auto ventanaDesde = tInicio; int ventanaN = 0; double ventanaSuma = 0, ventanaMax = 0, lps = 0, pasadaMedia = 0, pasadaMax = 0;
@@ -116,7 +117,7 @@ namespace phoenix::campo {
 			FotoCampo ultima;             // última lectura en vivo buena (se congela en repeticiones y cortes de lectura)
 			int fallos = 0, sinBola = 0, quietos = 0;   // lecturas seguidas sin fichitas válidas / sin balón en juego / sin movimiento
 			bool enRepe = false;
-			auto cerrar = [&] { if (h) { CloseHandle(h); h = nullptr; } pidAbierto = 0; lista.clear(); equipos.clear(); antes.clear(); balones.clear(); tanda.reiniciar(); poseedor.reiniciar(); grupos.clear(); portCopias = 0; estad.reiniciar(); ultima = FotoCampo(); fallos = sinBola = quietos = 0; enRepe = false; };
+			auto cerrar = [&] { if (h) { CloseHandle(h); h = nullptr; } pidAbierto = 0; lista.clear(); equipos.clear(); antes.clear(); balones.clear(); tanda.reiniciar(); poseedor.reiniciar(); grupos.clear(); portCopias = 0; gemelos.clear(); estad.reiniciar(); ultima = FotoCampo(); fallos = sinBola = quietos = 0; enRepe = false; };
 
 			while (!g_parar.load()) {
 				FotoCampo f;
@@ -157,6 +158,17 @@ namespace phoenix::campo {
 						const Hallazgos hz = escanear(h);
 						lista = elegirLista(hz.campo);
 						if (lista.empty()) { dormir(3000); continue; }
+						// Cada jugador existe dos veces en el juego (una por lista de equipo de IA): objetos contiguos que difieren ≈ 0,6 m sin
+						// sentido fijo (medido con partido real: ninguna es siempre la buena). Se leen las dos y se promedian.
+						gemelos.assign(lista.size(), 0);
+						for (size_t i = 0; i < lista.size(); i++) {
+							for (const Actor& b : hz.campo) {
+								if (b.codigo == lista[i].codigo) continue;
+								const uint64_t d1 = b.dir > lista[i].dir ? b.dir - lista[i].dir : lista[i].dir - b.dir;
+								if (d1 != 0x280) continue;
+								if (std::hypot(b.x - lista[i].x, b.z - lista[i].z) < 3.0f) { gemelos[i] = b.dir; break; }
+							}
+						}
 						// porteros: por cada lado, todas sus copias; se empieza por la de menor dirección y se pasa a la que se mueva
 						grupos.clear(); portCopias = static_cast<int>(hz.porteros.size());
 						for (const bool izquierda : { true, false }) {
@@ -208,6 +220,12 @@ namespace phoenix::campo {
 						uint8_t b[16]; SIZE_T g = 0; float x, y, z;
 						if (!ReadProcessMemory(h, reinterpret_cast<LPCVOID>(lista[i].dir + kOffPosicion), b, 16, &g) || g != 16 || !leerPosicion(b, x, y, z)) { malos++; ahora[i].x = 1e9f; continue; }
 						ahora[i].x = x; ahora[i].y = y; ahora[i].z = z;
+						if (i < gemelos.size() && gemelos[i] != 0) {   // promedio con el gemelo (si lo lee bien y está cerca)
+							uint8_t b2[16]; SIZE_T g2 = 0; float x2, y2, z2;
+							if (ReadProcessMemory(h, reinterpret_cast<LPCVOID>(gemelos[i] + kOffPosicion), b2, 16, &g2) && g2 == 16 && leerPosicion(b2, x2, y2, z2) && std::hypot(x2 - x, z2 - z) < 3.0f) {
+								ahora[i].x = (x + x2) * 0.5f; ahora[i].y = (y + y2) * 0.5f; ahora[i].z = (z + z2) * 0.5f;
+							}
+						}
 						if (antes.size() == lista.size() * 2) maxDesp = (std::max)(maxDesp, (std::max)(std::fabs(x - antes[i * 2]), std::fabs(z - antes[i * 2 + 1])));
 					}
 					if (malos > 3) {

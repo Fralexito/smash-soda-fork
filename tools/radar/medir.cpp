@@ -23,6 +23,7 @@ using namespace phoenix::campo;
 using Reloj = std::chrono::steady_clock;
 
 struct Muestra { double t; float x, z; };
+struct RawVivo { uint64_t dir; uint32_t lado, marca, cod; float x, z; };
 
 int main(int argc, char** argv) {
 	const int segundos = argc > 1 ? std::atoi(argv[1]) : 20;
@@ -31,7 +32,7 @@ int main(int argc, char** argv) {
 	CloseHandle(s); if (!pid) { std::printf("PES2021 no esta abierto\n"); return 1; }
 	HANDLE h = OpenProcess(PROCESS_VM_READ | PROCESS_QUERY_INFORMATION, FALSE, pid); if (!h) return 2;
 	timeBeginPeriod(1);
-	std::vector<Actor> campo, porteros;
+	std::vector<Actor> campo, porteros; std::vector<RawVivo> otros;
 	{ const size_t trozo = 1u << 20; std::vector<uint8_t> buf(trozo + kBytesObjeto); uint64_t a = 0; MEMORY_BASIC_INFORMATION m;
 	  while (VirtualQueryEx(h, (LPCVOID)a, &m, sizeof m)) {
 		const uint64_t base = (uint64_t)m.BaseAddress, fin = base + m.RegionSize;
@@ -43,6 +44,8 @@ int main(int argc, char** argv) {
 				Actor x;
 				if (leerActor(buf.data() + i, x)) { x.dir = p + i; campo.push_back(x); }
 				else if (leerPortero(buf.data() + i, x)) { x.dir = p + i; porteros.push_back(x); }
+				else { const uint8_t* o = buf.data() + i; uint32_t tipo, r0, r3; std::memcpy(&tipo, o + 248, 4); std::memcpy(&r0, o + 624, 4); std::memcpy(&r3, o + 636, 4);
+					if (tipo == 0x18 && r0 == 0x10 && r3 == 0xDEAD) { RawVivo rv; rv.dir = p + i; std::memcpy(&rv.lado, o + 312, 4); std::memcpy(&rv.marca, o + 492, 4); std::memcpy(&rv.cod, o + 440, 4); std::memcpy(&rv.x, o + 208, 4); std::memcpy(&rv.z, o + 216, 4); otros.push_back(rv); } }
 			}
 		}
 		a = base + m.RegionSize; } }
@@ -51,6 +54,8 @@ int main(int argc, char** argv) {
 	std::printf("actores de campo: %zu en %zu listas; porteros (copias): %zu\n", campo.size(), porCodigo.size(), porteros.size());
 	for (auto& kv : porCodigo) std::printf("  lista cod=%u: %zu actores\n", kv.first, kv.second.size());
 	for (const Actor& p : porteros) std::printf("  portero dir=%llX cod=%u x=%.1f z=%.1f\n", (unsigned long long)p.dir, p.codigo, p.x, p.z);
+	std::printf("objetos vivos tipo 0x18 que NO son jugador ni portero: %zu\n", otros.size());
+	for (const RawVivo& r : otros) std::printf("  dir=%llX lado=%u marca=%X cod=%u x=%.1f z=%.1f\n", (unsigned long long)r.dir, r.lado, r.marca, r.cod >> 16, r.x, r.z);
 	if (campo.empty()) { std::printf("no hay partido en juego (o no se encontraron jugadores)\n"); return 3; }
 	// seguimiento
 	std::vector<Actor> todos = campo; for (const Actor& p : porteros) todos.push_back(p);
@@ -70,6 +75,10 @@ int main(int argc, char** argv) {
 	}
 	const double dur = std::chrono::duration<double>(Reloj::now() - t0).count();
 	std::printf("medido %.1f s: %ld vueltas (%.0f lecturas/s de cada actor)\n", dur, vueltas, vueltas / dur);
+	for (size_t i = campo.size(); i < todos.size(); i++) {   // cada copia de portero: ¿se mueve?
+		auto& v = serie[i]; float mnx = 99, mxx = -99, mnz = 99, mxz = -99; for (auto& m : v) { mnx = std::min(mnx, m.x); mxx = std::max(mxx, m.x); mnz = std::min(mnz, m.z); mxz = std::max(mxz, m.z); }
+		std::printf("  portero dir=%llX: %zu cambios en %.0f s, x %.1f..%.1f, z %.1f..%.1f\n", (unsigned long long)todos[i].dir, v.size(), dur, v.empty() ? 0.f : mnx, v.empty() ? 0.f : mxx, v.empty() ? 0.f : mnz, v.empty() ? 0.f : mxz);
+	}
 	// 1) ritmo de cambios
 	std::vector<double> medianas, huecosMax, saltos; int quietos = 0, conMov = 0; double sumaCamb = 0;
 	for (size_t i = 0; i < todos.size(); i++) {
