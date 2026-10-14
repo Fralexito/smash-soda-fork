@@ -68,6 +68,28 @@ namespace phoenix::lados {
 		}
 	}
 
+	std::vector<std::pair<int, int>> Detector::controlados(const std::vector<Ficha>& fichas) const {
+		std::vector<std::pair<int, int>> r;
+		const int o = orientacion();
+		for (const auto& par : asientos_) {
+			const auto& S = par.second.S[o];
+			int mejorId = -1; double mejorS = 0.45;   // correlación sostenida mínima para decir «este mando lleva a esta fichita»
+			for (const auto& kv : S) if (kv.second > mejorS) { mejorS = kv.second; mejorId = kv.first; }
+			if (mejorId < 0) continue;
+			const Pista* pista = nullptr;
+			for (const Pista& p : pistas_) if (p.id == mejorId) { pista = &p; break; }
+			if (!pista) continue;
+			int idx = -1; float dm = 0.6f;
+			for (size_t i = 0; i < fichas.size(); i++) {
+				if (fichas[i].eq != pista->eq) continue;
+				const float d = std::hypot(fichas[i].x - pista->x, fichas[i].z - pista->z);
+				if (d < dm) { dm = d; idx = static_cast<int>(i); }
+			}
+			if (idx >= 0) r.push_back({ idx, par.first });
+		}
+		return r;
+	}
+
 	int Detector::orientacion() const {
 		int mejor = 0; double q[4] = {};
 		for (const auto& par : asientos_) for (int o = 0; o < 4; o++) q[o] += par.second.votos[o][0] + par.second.votos[o][1];   // la orientación buena es la que más votos da

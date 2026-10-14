@@ -17,6 +17,7 @@
 #include <cstdint>
 #include <deque>
 #include <map>
+#include <utility>
 #include <vector>
 
 namespace phoenix::lados {
@@ -42,6 +43,9 @@ namespace phoenix::lados {
 		void alimentar(double t, const std::vector<Ficha>& fichas, const std::vector<Stick>& sticks);
 		/// Veredicto por asiento con la orientación de cámara que mejor encaja.
 		std::vector<Veredicto> veredictos() const;
+		/// Fichitas que ahora mismo maneja cada mando: pares (índice en `fichas`, asiento). Solo con correlación sostenida alta del
+		/// stick con la carrera de esa fichita (con la orientación de cámara que mejor encaja). Pensado para colorear la luz del poseedor.
+		std::vector<std::pair<int, int>> controlados(const std::vector<Ficha>& fichas) const;
 		/// Orientación elegida (bit 0: x invertida, bit 1: z invertida) y si gana con margen claro.
 		int orientacion() const;
 		bool orientacionClara() const;

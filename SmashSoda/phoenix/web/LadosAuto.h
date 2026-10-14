@@ -3,6 +3,9 @@
 #include "../host/CampoVivo.h"
 #include "../link/EstadoJuego.h"
 
+#include <utility>
+#include <vector>
+
 // =============================================================================
 //  Phoenix Link · Lados automáticos: Link mira en el juego en qué lado (local/visita) juega cada mando
 // -----------------------------------------------------------------------------
@@ -22,6 +25,10 @@ namespace phoenix::web {
 	void ladosFoto(Interno& in, const phoenix::campo::FotoCampo& fc, double ahora);
 	/// Desde el árbitro (2/s): anclas con el estado del juego, decisión y corrección.
 	void ladosRevisar(Interno& in, const juego::EstadoPartidoJuego& j, double ahora);
+	/// Con cada lectura del Campo: alimenta un detector aparte (no depende de «lados automáticos») para saber qué mando lleva a qué fichita.
+	void controlFoto(Interno& in, const phoenix::campo::FotoCampo& fc, double ahora);
+	/// Última lectura de controlFoto: pares (índice de ficha, asiento 1-8; 9 = mando físico del anfitrión).
+	const std::vector<std::pair<int, int>>& controlActual();
 	/// Para la interfaz: "" (apagado o nada que hacer) | midiendo | coinciden | corregidos | dudas
 	const char* ladosEstado();
 	/// Lado del puesto i (0-7) en la pantalla de mandos de PES, ya estable: 'A' izquierda, 'B' derecha, '-' centro

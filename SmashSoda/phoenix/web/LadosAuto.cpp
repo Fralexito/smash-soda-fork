@@ -113,6 +113,33 @@ namespace phoenix::web {
 		catch (...) { return false; }
 	}
 
+	namespace {
+		lados::Detector& detectorControl() { static lados::Detector d; return d; }
+		std::vector<std::pair<int, int>>& controlGuardado() { static std::vector<std::pair<int, int>> v; return v; }
+		int64_t& controlPartido() { static int64_t p = -1; return p; }
+	}
+
+	const std::vector<std::pair<int, int>>& controlActual() { return controlGuardado(); }
+
+	void controlFoto(Interno& in, const phoenix::campo::FotoCampo& fc, double ahora) {
+		try {
+			if (in.ctx.sala == nullptr || fc.estado != phoenix::campo::EstadoCampo::Activo || !fc.equiposListos || fc.fase != "vivo") { controlGuardado().clear(); return; }
+			if (controlPartido() != in.partido.inicioMs()) { controlPartido() = in.partido.inicioMs(); detectorControl().reiniciar(); controlGuardado().clear(); }
+			std::vector<lados::Ficha> fichas;
+			fichas.reserve(fc.j.size());
+			for (const phoenix::campo::Pieza& p : fc.j) fichas.push_back({ p.x, p.z, p.eq });
+			std::vector<lados::Stick> sticks;
+			for (const AsientoVista& a : in.ctx.sala->asientos(8))
+				if (a.conectado) sticks.push_back({ a.numero, a.ejeLX / 32767.0f, a.ejeLY / 32767.0f });
+			int16_t lx = 0, ly = 0;
+			if (in.ctx.sala->hayMandoPropio() && in.ctx.sala->ejesMandoPropio(lx, ly)) sticks.push_back({ kAsientoAnfitrion, lx / 32767.0f, ly / 32767.0f });
+			if (sticks.empty()) { controlGuardado().clear(); return; }
+			detectorControl().alimentar(ahora, fichas, sticks);
+			controlGuardado() = detectorControl().controlados(fichas);
+		}
+		catch (...) { controlGuardado().clear(); }
+	}
+
 	void ladosFoto(Interno& in, const phoenix::campo::FotoCampo& fc, double ahora) {
 		try {
 			EstadoLados& e = estadoLados();

@@ -47,9 +47,13 @@ const COLOR = { 0: "var(--acc)", 1: "var(--eq-b, #b07bff)", 2: "#f5c451", "-1": 
 const NOMBRE_EQ = { 0: ["Equipo A", "Team A"], 1: ["Equipo B", "Team B"] };
 
 /** Dibuja el campo y mueve las fichitas con suavidad (animación directa sobre el SVG, sin redibujar Preact). */
+// Luz del mando (como el lightbar del DualShock): mando 1 azul, 2 rojo, 3 verde, 4 rosa, 5 naranja, 6 morado, 7 blanco, 8 celeste; 9 = mando físico del anfitrión
+const COLOR_MANDO = [null, "#3b82f6", "#ef4444", "#22c55e", "#ec4899", "#f97316", "#a855f7", "#f1f5f9", "#38bdf8", "#facc15"];
+const colorMando = (a) => COLOR_MANDO[a] || null;
+
 const FILAS_EST = [["pos", "Posesión", "Possession"], ["pas", "Pases completados", "Completed passes"], ["tir", "Tiros", "Shots"], ["pue", "Tiros a puerta", "Shots on target"], ["cor", "Córners", "Corners"], ["ban", "Saques de banda", "Throw-ins"], ["met", "Saques de puerta", "Goal kicks"], ["rec", "Recuperaciones", "Recoveries"], ["per", "Pérdidas", "Turnovers"]];
 
-export function CampoSvg({ alTanda, alColores, alDiag, alEst }) {
+export function CampoSvg({ alTanda, alColores, alDiag, alEst, alMandos }) {
   const refs = useRef({ puntos: [], bola: null, obj: { j: [], b: null }, cur: { j: [], b: null }, t0: 0 });
   const [n, setN] = useState(0);
   const [clave, setClave] = useState("");
@@ -60,6 +64,8 @@ export function CampoSvg({ alTanda, alColores, alDiag, alEst }) {
       R.obj = { j: d.j || [], b: d.b || null, p: Number.isInteger(d.p) ? d.p : -1 };   // p = quién lleva el balón (índice en j; -1 = libre)
       if (d.ts) { const l = Date.now() - d.ts; R.lat = R.lat == null ? l : R.lat * 0.9 + l * 0.1; }   // retraso lectura → interfaz (mismo PC: mismo reloj)
       R.nEv = (R.nEv || 0) + 1;
+      R.ctl = Array.isArray(d.m) ? d.m.filter((x) => Array.isArray(x)) : [];   // [[ficha, asiento], …]: qué mando maneja a qué fichita
+      if (alMandos) alMandos(R.ctl.map((x) => x[1]));
       if (d.est && alEst) alEst(d.est);
       setFase(d.f || "vivo");
       R.col = Array.isArray(d.c) && d.c.length === 2 && d.c.every((x) => /^#[0-9a-fA-F]{6}$/.test(x)) ? d.c : null;   // colores de camiseta (Link ≥ 0.2.30)
@@ -89,7 +95,18 @@ export function CampoSvg({ alTanda, alColores, alDiag, alEst }) {
       const hp = R.halo;
       if (hp) {
         const cp = obj.p >= 0 ? cur.j[obj.p] : null;
-        if (cp) { hp.setAttribute("cx", cp[0].toFixed(2)); hp.setAttribute("cy", cp[1].toFixed(2)); hp.setAttribute("opacity", "1"); } else hp.setAttribute("opacity", "0");
+        if (cp) {
+          const dueno = (R.ctl || []).find((x) => x[0] === obj.p);   // ¿lo maneja un mando? su luz es el color de ese mando
+          const col = dueno ? colorMando(dueno[1]) : null;
+          hp.setAttribute("cx", cp[0].toFixed(2)); hp.setAttribute("cy", cp[1].toFixed(2)); hp.setAttribute("opacity", "1");
+          hp.setAttribute("stroke", col || "#fff"); hp.style.filter = `drop-shadow(0 0 ${col ? 2.2 : 1.2}px ${col || "#fff"})`;
+        } else hp.setAttribute("opacity", "0");
+      }
+      // anillo fino del color de cada mando sobre la fichita que maneja (como el cursor de PES)
+      const an = R.anillos || [];
+      for (let k = 0; k < an.length; k++) {
+        const e2 = (R.ctl || [])[k], c2 = e2 ? cur.j[e2[0]] : null, col2 = e2 ? colorMando(e2[1]) : null;
+        if (an[k]) { if (c2 && col2) { an[k].setAttribute("cx", c2[0].toFixed(2)); an[k].setAttribute("cy", c2[1].toFixed(2)); an[k].setAttribute("stroke", col2); an[k].setAttribute("opacity", "0.9"); } else an[k].setAttribute("opacity", "0"); }
       }
       const b = obj.b, el = R.bola;
       if (el) {
@@ -123,6 +140,7 @@ export function CampoSvg({ alTanda, alColores, alDiag, alEst }) {
     <rect x=${-LARGO / 2} y=${-ANCHO / 2} width=${LARGO} height=${ANCHO} fill="url(#cesped)"/>
     <${Lineas}/>
     <g>${pts}</g>
+    ${[0, 1, 2, 3, 4, 5, 6, 7, 8].map((k) => html`<circle key=${"an" + k} ref=${(el) => { (R.anillos = R.anillos || [])[k] = el; }} r="1.9" fill="none" stroke-width="0.3" opacity="0"/>`)}
     <circle ref=${(el) => { R.halo = el; }} r="2.5" fill="none" stroke="#fff" stroke-width="0.55" opacity="0" style="filter:drop-shadow(0 0 1.2px #fff)"/>
     <g ref=${(el) => { R.bola = el; }} opacity="0"><circle r="1.5" fill="rgba(0,0,0,.35)" cx="0.3" cy="0.4"/><circle r="0.95" fill="#fff" stroke="#111" stroke-width="0.25"/></g>
   </svg>
@@ -165,6 +183,8 @@ export function CampoEnVivo({ m }) {
   const [dg, setDg] = useState({ retrasoMs: null, eventosPorSeg: 0 });
   const alDiag = (x) => setDg(x);
   const [est, setEst] = useState(null);
+  const [mandos, setMandos] = useState([]);
+  const alMandos = (l) => setMandos((prev) => (prev.join() === l.join() ? prev : l));
   const alEst = (e) => setEst(e);
   const colorEq = (i) => (cols ? cols[i] : COLOR[i]);
   const alColores = (c) => setCols((prev) => ((prev ? prev.join() : "") === (c ? c.join() : "") ? prev : c));
@@ -193,7 +213,8 @@ export function CampoEnVivo({ m }) {
         </span>` : null}
       </div>
       <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
-        <div style="flex:1 1 420px;max-width:680px;min-width:0"><${CampoSvg} alTanda=${alTanda} alColores=${alColores} alDiag=${alDiag} alEst=${alEst}/>
+        <div style="flex:1 1 420px;max-width:680px;min-width:0"><${CampoSvg} alTanda=${alTanda} alColores=${alColores} alDiag=${alDiag} alEst=${alEst} alMandos=${alMandos}/>
+        ${mandos.length ? html`<div class="ayuda" style="margin-top:6px;font-size:12px;display:flex;gap:10px;flex-wrap:wrap">${t("Luz del balón:", "Ball glow:")} ${[...new Set(mandos)].sort().map((a) => html`<span><span style=${`display:inline-block;width:10px;height:10px;border-radius:50%;background:${colorMando(a) || "#fff"};vertical-align:-1px;margin-right:4px`}></span>${a === 9 ? t("Anfitrión", "Host") : t("Mando ", "Pad ") + a}</span>`)}</div>` : null}
         ${activo && c.diag ? html`<div class="ayuda mono" style="margin-top:8px;font-size:12px;display:flex;gap:6px 18px;flex-wrap:wrap" title=${t("Diagnóstico del campo: sirve para comparar antes y después de cualquier cambio", "Pitch diagnostics: compare before/after any change")}>
           <span>${t("porteros", "keepers")}: <b>${c.diag.portPuestos}/2</b> (${c.diag.portCopias} ${t("copias", "copies")})</span>
           <span>${t("lecturas del juego", "game reads")}: <b>${c.diag.lecturas}/s</b> (${t("pasada", "pass")} ${c.diag.pasadaMs} ms · ${t("máx", "max")} ${c.diag.pasadaMaxMs} ms)</span>

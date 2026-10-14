@@ -359,6 +359,12 @@ namespace phoenix::web {
 							if (col.conocidoA || col.conocidoB) ev["c"] = json::array({ col.a, col.b });
 						}
 						if (ahora - in.ultimoEst >= 1.0) { in.ultimoEst = ahora; ev["est"] = estadisticasJson(fc.est); }   // estadísticas derivadas: 1 vez por segundo
+						if (in.campoRapido || web) {
+							controlFoto(in, fc, ahora);   // qué mando lleva a qué fichita (para el color de la luz del poseedor)
+							json m = json::array();
+							for (const auto& par : controlActual()) m.push_back({ par.first, par.second });
+							if (!m.empty()) ev["m"] = m;
+						}
 						ev["p"] = fc.poseedor;     // índice en j de quien lleva el balón (-1 = libre)
 						ev["ts"] = fc.tMs;         // hora de la lectura (ms desde 1970): quien recibe resta para medir el retraso
 						ev["d"] = json::array({ std::round(fc.lecturasPorSeg * 10.0) / 10.0, std::round(fc.pasadaMediaMs * 100.0) / 100.0, std::round(fc.pasadaMaxMs * 100.0) / 100.0 });   // diagnóstico: lecturas/s, pasada media y máx (ms)
