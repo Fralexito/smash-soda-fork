@@ -1,7 +1,7 @@
 // =============================================================================
 //  Phoenix Link · interfaz nueva. Arranque, barra, menú, avisos y diálogos.
 // =============================================================================
-import { html, render, useEffect, useRef } from "./lib.js";
+import { html, render, useEffect, useRef, useState } from "./lib.js";
 import { puente } from "./puente.js";
 import { t, fijarIdioma } from "./i18n.js";
 import {
@@ -27,7 +27,7 @@ const SECCIONES = [
   { id: "partido", es: "PARTIDO", en: "MATCH", vista: VistaPartido, pestanas: PESTANAS_PARTIDO },
   { id: "mandos", es: "MANDOS", en: "PADS", vista: VistaMandos, pestanas: PESTANAS_MANDOS, meta: metaMandos },
   { id: "gente", es: "GENTE", en: "PEOPLE", vista: VistaGente, pestanas: PESTANAS_GENTE, meta: metaGente },
-  { id: "jugar", es: "JUGAR", en: "PLAY", vista: VistaJugar, pestanas: PESTANAS_JUGAR, meta: metaJugar },
+  { id: "jugar", es: "OTRAS SALAS", en: "OTHER ROOMS", vista: VistaJugar, pestanas: PESTANAS_JUGAR, meta: metaJugar },
   { id: "sync", es: "SYNC", en: "SYNC", vista: VistaSync, pestanas: PESTANAS_SYNC, meta: metaSync },
   { id: "ajustes", es: "AJUSTES", en: "SETTINGS", vista: VistaAjustes, pestanas: PESTANAS_AJUSTES },
 ];
@@ -148,14 +148,22 @@ function Contenido({ s }) {
   const Vista = sec.vista;
   const meta = sec.meta ? sec.meta(s) : null;
   const info = sec.pestanas.find((p) => p.id === pestana);
+  // Pestañas poco usadas (mas: true) quedan detrás de «MÁS»; la elegida se ve siempre
+  const [verMas, setVerMas] = useState({});
+  const abierto = !!verMas[sec.id];
+  const ocultas = pestanas.filter((p) => p.mas && p.id !== pestana);
+  const mostradas = abierto ? pestanas : pestanas.filter((p) => !p.mas || p.id === pestana);
   return html`<main class="contenido">
     <${BandaCedido} s=${s}/>
     <div class="cabecera">
       <div class="pestanas" role="tablist">
-        ${pestanas.map((p) => html`
+        ${mostradas.map((p) => html`
           <button role="tab" aria-selected=${p.id === pestana} class=${cx("tab", p.id === pestana && "on")} onClick=${() => elegirPestana(p.id)}>
             ${t(p.es, p.en)}${p.cuenta ? html`<span class="n">${p.cuenta(s) || ""}</span>` : null}
           </button>`)}
+        ${ocultas.length ? html`<button class="tab mas" aria-expanded=${abierto} onClick=${() => setVerMas({ ...verMas, [sec.id]: !abierto })}
+          title=${abierto ? t("Ocultar las opciones menos usadas", "Hide the less used options") : ocultas.map((p) => t(p.es, p.en)).join(" · ")}>
+          ${abierto ? t("MENOS ▴", "LESS ▴") : t(`MÁS (${ocultas.length}) ▾`, `MORE (${ocultas.length}) ▾`)}</button>` : null}
       </div>
       ${meta}
     </div>

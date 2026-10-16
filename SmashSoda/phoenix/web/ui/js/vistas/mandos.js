@@ -16,9 +16,9 @@ export const PESTANAS_MANDOS = [
   { id: "puestos", es: "PUESTOS", en: "SEATS", d: ["Arrastra a cada persona a un puesto, o toca «Asignar». Lo que dejes en «Mirando» solo ve la partida.", "Drag each person to a seat, or tap Assign. Anyone in Watching only watches."] },
   { id: "marionetas", es: "TU MANDO", en: "YOUR PAD", d: ["Elige el mando con el que juegas tú y cuántos mandos ve el juego.", "Pick the pad you play with and how many pads the game sees."] },
   { id: "mapeo", es: "MAPEO", en: "MAPPING", d: ["Corrige el mando de cada invitado: botones cambiados, stick que camina solo, sticks al revés, gatillos raros.", "Fix each guest's pad: swapped buttons, drifting stick, inverted sticks, odd triggers."] },
-  { id: "teclado", es: "TECLADO", en: "KEYBOARD", d: ["Quién puede jugar con teclado y qué tecla es cada botón del mando.", "Who can play with keyboard and which key is each pad button."] },
-  { id: "turnos", es: "TURNOS", en: "HOTSEAT", d: ["Rotación automática: cada uno juega un rato y cede el mando.", "Automatic rotation of the pads."] },
-  { id: "bloqueo", es: "BLOQUEO", en: "LOCK", d: ["Congela los mandos (pausas, revisión) o bloquea solo los botones que elijas.", "Freeze pads or lock only the buttons you pick."] },
+  { id: "teclado", mas: true, es: "TECLADO", en: "KEYBOARD", d: ["Quién puede jugar con teclado y qué tecla es cada botón del mando.", "Who can play with keyboard and which key is each pad button."] },
+  { id: "turnos", mas: true, es: "TURNOS", en: "HOTSEAT", d: ["Rotación automática: cada uno juega un rato y cede el mando.", "Automatic rotation of the pads."] },
+  { id: "bloqueo", mas: true, es: "BLOQUEO", en: "LOCK", d: ["Congela los mandos (pausas, revisión) o bloquea solo los botones que elijas.", "Freeze pads or lock only the buttons you pick."] },
 ];
 
 export function metaMandos(s) {
@@ -87,7 +87,7 @@ export function ElegirJugador({ m, indice, alCerrar }) {
         <button class="persona" onClick=${tomarYo}>
           <${Avatar} nombre=${m.sala?.hostNombre || "Yo"} brillo t=${38}/>
           <div style="flex:1;text-align:left"><div class="nom">${t("Yo (anfitrión)", "Me (host)")}</div>
-            <div class="sub mut" style="font-size:12px">${t("Lo manejas con el teclado: flechas, Enter = A, Retroceso = B, Espacio = Start (atajo: Ctrl+Alt+número). Para usar tu mando físico, ve a Mandos › Marionetas.", "You drive it with the keyboard: arrows, Enter = A, Backspace = B, Space = Start (shortcut: Ctrl+Alt+number). To use your physical pad, go to Pads › Puppets.")}</div></div>
+            <div class="sub mut" style="font-size:12px">${t("Lo manejas con el teclado: flechas, Enter = A, Retroceso = B, Espacio = Start (atajo: Ctrl+Alt+número). Para usar tu mando físico, ve a Mandos › Tu mando.", "You drive it with the keyboard: arrows, Enter = A, Backspace = B, Space = Start (shortcut: Ctrl+Alt+number). To use your physical pad, go to Pads › Your pad.")}</div></div>
         </button>
         ${invitados.map((g) => html`<button class="persona" key=${g.parsecId} onClick=${() => elegir(g)} disabled=${g.rolWeb === "espectador"}>
           <${Avatar} nombre=${g.nombre} id=${g.parsecId} url=${m.perfiles?.[g.parsecId]?.avatar_url} t=${38}/>

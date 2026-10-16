@@ -212,7 +212,7 @@ export function PuestosNuevo({ m }) {
   const [arr, setArr] = useState(null);
   const [sobreMirando, setSobreMirando] = useState(false);
   const [ayudaAB, setAyudaAB] = useState(false);
-  const [verVivo, setVerVivoEstado] = useState(() => { try { return localStorage.getItem("phoenix.verVivo") !== "0"; } catch { return true; } });
+  const [verVivo, setVerVivoEstado] = useState(() => { try { return localStorage.getItem("phoenix.verVivo") === "1"; } catch { return false; } });
   const setVerVivo = (v) => { setVerVivoEstado(v); try { localStorage.setItem("phoenix.verVivo", v ? "1" : "0"); } catch { /* sin almacenamiento */ } };
   const lista = m.mandos.lista || [];
   const total = lista.length;
@@ -285,14 +285,6 @@ export function PuestosNuevo({ m }) {
       </div>
     </div>
 
-    ${verVivo ? html`<div class="caja" style="padding:14px 16px;display:flex;flex-direction:column;gap:10px">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
-        <span class="disp" style="font-weight:700;font-size:14px;letter-spacing:.16em">${t("MANDOS EN VIVO", "LIVE PADS")}</span>
-        <span class="ayuda" style="font-size:13px">${t("Lo que el juego recibe ahora mismo. Se actualiza unas 5 veces por segundo.", "What the game receives right now. Updates about 5 times per second.")}</span>
-      </div>
-      <${MandosEnVivo} m=${m}/>
-    </div>` : null}
-
     <div style="display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:20px;flex:1;align-items:stretch">
       <div style="display:flex;flex-direction:column;gap:14px;min-width:0">
         <div style="display:flex;align-items:center;gap:12px">
@@ -339,6 +331,13 @@ export function PuestosNuevo({ m }) {
         </div>
       </div>
     </div>
+    ${verVivo ? html`<div class="caja" style="padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+        <span class="disp" style="font-weight:700;font-size:14px;letter-spacing:.16em">${t("MANDOS EN VIVO", "LIVE PADS")}</span>
+        <span class="ayuda" style="font-size:13px">${t("Lo que el juego recibe ahora mismo. Se actualiza unas 5 veces por segundo.", "What the game receives right now. Updates about 5 times per second.")}</span>
+      </div>
+      <${MandosEnVivo} m=${m}/>
+    </div>` : null}
     <${OrdenPes} m=${m}/>
     ${eligiendo != null ? html`<${ElegirJugador} m=${m} indice=${eligiendo} alCerrar=${() => setEligiendo(null)}/>` : null}
   </div>`;

@@ -180,6 +180,7 @@ button.pill:active { transform: scale(.96); }
 .tab:active { transform: scale(.97); }
 .tab.on { background: var(--acc); color: var(--sobre-acc); border-color: var(--acc); }
 .tab .n { font-family: var(--f-mono); opacity: .8; }
+.tab.mas { border-style: dashed; }
 @media (hover: hover) { .tab:not(.on):hover { color: var(--fg); border-color: var(--linea-fuerte); } }
 
 .vista { flex: 1; min-height: 0; overflow: auto; padding-right: 4px; animation: entrar .2s var(--ease); }

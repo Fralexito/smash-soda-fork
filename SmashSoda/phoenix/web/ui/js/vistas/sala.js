@@ -18,11 +18,11 @@ import {
 
 export const PESTANAS_SALA = [
   { id: "resumen", es: "RESUMEN", en: "OVERVIEW", d: ["Tu sala de un vistazo: enlace, tiempo en vivo, quién juega y cómo va la conexión.", "Your room at a glance."] },
-  { id: "puesto", es: "MI PUESTO", en: "MY SEAT", d: ["Dónde te sientas tú cuando pulsas JUGAR: un puesto fijo o el primero de un equipo.", "Where you sit when you press PLAY: a fixed seat or the first one of a team."] },
+  { id: "puesto", es: "DÓNDE JUEGO YO", en: "WHERE I PLAY", d: ["Dónde te sientas tú cuando pulsas JUGAR: un puesto fijo o el primero de un equipo.", "Where you sit when you press PLAY: a fixed seat or the first one of a team."] },
   { id: "opciones", es: "OPCIONES DE SALA", en: "ROOM OPTIONS", d: ["Nombre, plazas, quién puede entrar y la calidad de la imagen. Se guarda al instante.", "Name, slots, who can join and image quality."] },
-  { id: "juegos", es: "JUEGOS", en: "GAMES", d: ["Qué se juega (se muestra en la web de la liga) y el juego que abre el modo quiosco.", "What is being played and the kiosk game."] },
-  { id: "red", es: "CONEXIÓN", en: "CONNECTION", d: ["¿Tu PC está lista para hostear? Y el ping de cada invitado: verde va bien, ámbar aguanta, rojo es lag.", "Is your PC ready to host? And each guest's ping: green is fine, amber holds, red is lag."] },
-  { id: "actividad", es: "ACTIVIDAD", en: "ACTIVITY", d: ["Todo lo que pasó en la sala, del más nuevo al más viejo.", "Everything that happened in the room."] },
+  { id: "juegos", mas: true, es: "JUEGOS", en: "GAMES", d: ["Qué se juega (se muestra en la web de la liga) y el juego que abre el modo quiosco.", "What is being played and the kiosk game."] },
+  { id: "red", mas: true, es: "CONEXIÓN", en: "CONNECTION", d: ["¿Tu PC está lista para hostear? Y el ping de cada invitado: verde va bien, ámbar aguanta, rojo es lag.", "Is your PC ready to host? And each guest's ping: green is fine, amber holds, red is lag."] },
+  { id: "actividad", mas: true, es: "ACTIVIDAD", en: "ACTIVITY", d: ["Todo lo que pasó en la sala, del más nuevo al más viejo.", "Everything that happened in the room."] },
 ];
 
 // Parches conocidos. Para agregar uno nuevo basta con añadir su nombre aquí.

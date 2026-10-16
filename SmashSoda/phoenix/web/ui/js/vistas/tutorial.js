@@ -36,7 +36,7 @@ const PASOS = [
     texto: ["Marcador, Equipo A y Equipo B, modo competitivo (Start bloqueado) y el historial de partidos.", "Score, Team A and Team B, competitive mode (Start locked) and match history."] },
   { ir: ["gente"], foco: nav(3), titulo: ["Gente", "People"],
     texto: ["Quién está en tu sala, su ficha, permisos, moderadores y baneos.", "Who's in your room, their card, permissions, moderators and bans."] },
-  { ir: ["jugar", "salas"], foco: nav(4), titulo: ["Jugar", "Play"],
+  { ir: ["jugar", "salas"], foco: nav(4), titulo: ["Otras salas", "Other rooms"],
     texto: ["Para jugar en las salas de otros: las salas abiertas (entras con un clic), tus amigos y dónde están, y tu perfil de PES (tu nombre y tus opciones).", "To play in other people's rooms: open rooms (join with one click), your friends and where they are, and your PES profile (your name and options)."] },
   { ir: ["sync"], foco: nav(5), titulo: ["Sync", "Sync"],
     texto: ["Tu PC lista para jugar con fichajes, pasar un fichaje a un amigo y las opciones avanzadas.", "Your PC ready to play with transfers, passing a transfer to a friend and the advanced options."] },

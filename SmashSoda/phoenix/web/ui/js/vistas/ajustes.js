@@ -14,10 +14,10 @@ export const PESTANAS_AJUSTES = [
   { id: "general", es: "GENERAL", en: "GENERAL", d: ["Tema, bot del chat y seguridad de la sala.", "Theme, chat bot and room security."] },
   { id: "video", es: "VIDEO", en: "VIDEO", d: ["Qué pantalla y tarjeta de video se transmiten, y con qué calidad.", "Screen, GPU and quality."] },
   { id: "audio", es: "AUDIO", en: "AUDIO", d: ["Sonido del juego y micrófono, con medidor en vivo.", "Game sound and microphone."] },
-  { id: "sonidos", es: "SONIDOS CHAT", en: "CHAT SOUNDS", d: ["Los sonidos del comando !sfx y cuánto esperar entre uno y otro.", "Sounds for !sfx and their cooldown."] },
-  { id: "overlay", es: "OVERLAY", en: "OVERLAY", d: ["Chat, mandos e invitados encima del juego.", "Chat, pads and guests over the game."] },
-  { id: "interfaz", es: "INTERFAZ", en: "INTERFACE", d: ["Idioma, atajos de teclado y recarga de la interfaz.", "Language, shortcuts and reload."] },
-  { id: "avanzado", es: "AVANZADO", en: "ADVANCED", d: ["WebSocket, registros y modo desarrollador.", "WebSocket, logs and developer mode."] },
+  { id: "sonidos", mas: true, es: "SONIDOS CHAT", en: "CHAT SOUNDS", d: ["Los sonidos del comando !sfx y cuánto esperar entre uno y otro.", "Sounds for !sfx and their cooldown."] },
+  { id: "overlay", mas: true, es: "OVERLAY", en: "OVERLAY", d: ["Chat, mandos e invitados encima del juego.", "Chat, pads and guests over the game."] },
+  { id: "interfaz", mas: true, es: "INTERFAZ", en: "INTERFACE", d: ["Idioma, atajos de teclado y recarga de la interfaz.", "Language, shortcuts and reload."] },
+  { id: "avanzado", mas: true, es: "AVANZADO", en: "ADVANCED", d: ["WebSocket, registros y modo desarrollador.", "WebSocket, logs and developer mode."] },
 ];
 
 export function VistaAjustes({ s, pestana }) {
