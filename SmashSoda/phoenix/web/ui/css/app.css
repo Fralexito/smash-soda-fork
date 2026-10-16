@@ -763,7 +763,7 @@ html.oculta *, html.oculta *::before, html.oculta *::after { animation-play-stat
 .btn-sutil:disabled { opacity: .15; }
 
 /* Sync › Puente: secciones plegables (una línea con título y resumen; el detalle al abrir) */
-.sec-cab { display: flex; align-items: center; gap: 12px; padding: 15px 22px; cursor: pointer; min-height: 52px; }
+.sec-cab { display: flex; align-items: center; gap: 12px; padding: 10px 22px; cursor: pointer; min-height: 42px; }
 .sec-cab:hover, .sec-cab:focus-visible { background: var(--acc-suave); outline: none; }
 .sec-flecha { flex: none; width: 14px; color: var(--acc); font-size: 14px; }
 .sec-titulo { flex: none; white-space: nowrap; }

@@ -13,11 +13,24 @@ import { Traspasos } from "./traspasos.js";
 import { Preparar } from "./preparar.js";
 import { Tarjeta, Titulo, AjusteSw, Segmentos, Vacio, Chip, Icono, Boton, cx } from "../ui.js";
 
-/** Sección plegable: una línea con el título y un resumen; el detalle solo se ve al abrirla (se recuerda por sección en este PC). */
+// Un solo bloque abierto a la vez en AVANZADO (se recuerda cuál en este PC; null = nunca se eligió)
+const CLAVE_ABIERTO = "phoenix.sync.avanzado.abierto";
+let seccionAbierta = (() => { try { return localStorage.getItem(CLAVE_ABIERTO); } catch { return null; } })();
+const oyentesSeccion = new Set();
+function abrirSeccion(id) {
+  seccionAbierta = id;
+  try { localStorage.setItem(CLAVE_ABIERTO, id); } catch { /* sin almacenamiento */ }
+  oyentesSeccion.forEach((f) => f(id));
+}
+
+/** Sección plegable: una línea con el título y un resumen; el detalle solo se ve al abrirla. Al abrir una se cierra la que estaba abierta. */
 function Seccion({ id, titulo, resumen = null, punto = null, acciones = null, abierta = false, children }) {
-  const clave = "phoenix.sync." + id;
-  const [abierto, setAbierto] = useState(() => { try { const v = localStorage.getItem(clave); return v === null ? abierta : v === "1"; } catch { return abierta; } });
-  const poner = (v) => { setAbierto(v); try { localStorage.setItem(clave, v ? "1" : "0"); } catch { /* sin almacenamiento */ } };
+  const [actual, setActual] = useState(seccionAbierta);
+  useEffect(() => { oyentesSeccion.add(setActual); return () => oyentesSeccion.delete(setActual); }, []);
+  // «abierta»: se abre sola solo si nunca elegiste ninguna (p. ej. faltan archivos de Phoenix)
+  useEffect(() => { if (abierta && seccionAbierta === null) abrirSeccion(id); }, [abierta]);
+  const abierto = actual === id;
+  const poner = (v) => abrirSeccion(v ? id : "");
   return html`<${Tarjeta} interior="padding:0">
     <div class="sec-cab" role="button" tabindex="0" aria-expanded=${abierto} onClick=${() => poner(!abierto)}
       onKeyDown=${(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); poner(!abierto); } }}>
@@ -101,6 +114,7 @@ function ModoRecarga({ m, mods }) {
 }
 
 const Para = ({ children }) => html`<div class="ayuda" style="font-size:14px">${children}</div>`;
+const Grupo = ({ texto }) => html`<div class="lab" style="margin:10px 4px 0">${texto}</div>`;
 
 function Avanzado({ m }) {
   const [mods, setMods] = useState(null);
@@ -113,12 +127,8 @@ function Avanzado({ m }) {
   const b = m.buzon || { activo: true, estado: "cerrado", ultimo: "", juego: "", avisos: [] };
   const [texto, punto, ayuda] = ESTADOS(b);
   const web = tr?.web || {};
-  return html`<div class="col" style="gap:14px">
-    <${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:8px">
-      <${Titulo} texto=${t("OPCIONES AVANZADAS", "ADVANCED OPTIONS")}/>
-      <div style="font-size:15px">${t("Solo para cuando algo no va bien o quieres ajustar algo. Lo normal está en «Mi PC» y «Traspasos».", "Only for when something goes wrong or you want to tweak something. The normal things are in «My PC» and «Transfers».")}</div>
-    </${Tarjeta}>
-
+  return html`<div class="col" style="gap:10px">
+    <${Grupo} texto=${t("TU JUEGO", "YOUR GAME")}/>
     <${Seccion} id="puente" titulo=${t("CONEXIÓN CON EL JUEGO", "GAME CONNECTION")} punto=${punto} resumen=${texto}>
       <${Para}>${t("Para qué sirve: que los avisos de la web salgan dentro del juego (panel de Sider, barra espaciadora).", "What it's for: so web notices show inside the game (Sider panel, space bar).")}</${Para}>
       <div class="ayuda" style="font-size:14px">${ayuda}</div>
@@ -132,12 +142,14 @@ function Avanzado({ m }) {
         desc=${t("Con PES 2021 abierto, los avisos salen en el panel de Sider (barra espaciadora). Si lo apagas, no se consulta ni se escribe nada.", "With PES 2021 open, notices show in the Sider panel (space bar). If off, nothing is fetched or written.")}
         valor=${b.activo} al=${(v) => accion("ajustes.avisosJuego", { valor: v })}/>
     </${Seccion}>
-    <${ModoRecarga} m=${m} mods=${mods}/>
-    <${Fichajes} d=${fich} setD=${setFich} cargar=${cargarFich}/>
-    <${Entrega} m=${m}/>
     <${Modulos} d=${mods} setD=${setMods} cargar=${cargarMods}/>
     <${Doctor}/>
     <${SoloPes} m=${m}/>
+    <${Grupo} texto=${t("FICHAJES", "TRANSFERS")}/>
+    <${ModoRecarga} m=${m} mods=${mods}/>
+    <${Entrega} m=${m}/>
+    <${Fichajes} d=${fich} setD=${setFich} cargar=${cargarFich}/>
+    <${Grupo} texto=${t("CUENTA Y AYUDA", "ACCOUNT AND HELP")}/>
     <${Seccion} id="avisos" titulo=${t("ÚLTIMOS AVISOS", "LATEST NOTICES")}
       resumen=${(b.avisos || []).length === 0 ? t("Aún no hay avisos", "No notices yet") : t(`${(b.avisos || []).length} de 5`, `${(b.avisos || []).length} of 5`)}>
       <${Para}>${t("Para qué sirve: ver los últimos avisos que la web mandó al juego.", "What it's for: see the latest notices the web sent to the game.")}</${Para}>
@@ -354,12 +366,9 @@ function Entrega({ m }) {
     deshecha: [t("Deshecha", "Undone"), "warn", t("Se restauraron los datos anteriores. Pulsa Activar en el juego para recargarlos.", "Previous data restored. Press Activate in the game to reload it.")],
   };
   const [texto, punto, ayuda] = tabla[en.estado] || tabla.ninguna;
-  return html`<${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:14px">
-    <${Titulo} texto=${t("ÚLTIMA ENTREGA DE PHOENIX SYNC", "LAST PHOENIX SYNC DELIVERY")} derecha=${en.fecha ? html`<span class="mono mut">${en.fecha}</span>` : null}/>
-    <div style="display:flex;align-items:center;gap:12px">
-      <span class=${cx("punto", punto)} style="width:14px;height:14px"></span>
-      <span class="disp" style="font-size:22px;font-weight:700">${texto}</span>
-    </div>
+  return html`<${Seccion} id="entrega" titulo=${t("ÚLTIMA ENTREGA DE PHOENIX SYNC", "LAST PHOENIX SYNC DELIVERY")} punto=${punto || null}
+    resumen=${texto + (en.fecha ? " · " + en.fecha : "")}>
+    <${Para}>${t("Para qué sirve: ver el último cambio que Phoenix Sync puso en tu juego y deshacerlo si hace falta.", "What it's for: see the last change Phoenix Sync put in your game and undo it if needed.")}</${Para}>
     ${en.resumen ? html`<div class="caja" style="font-size:14px;word-break:break-word">${en.resumen}</div>` : null}
     ${en.motivo ? html`<div class="ayuda" style="font-size:14px;color:var(--bad, #ff6b6b);word-break:break-word">${en.motivo}</div>` : null}
     ${ayuda ? html`<div class="ayuda" style="font-size:14px">${ayuda}</div>` : null}
@@ -368,7 +377,7 @@ function Entrega({ m }) {
         titulo=${t("Restaura el option file y el Player.bin anteriores", "Restores the previous option file and Player.bin")}
         al=${() => accion("sync.deshacerEntrega", {}, { ok: t("Orden enviada: se deshace en unos segundos.", "Sent: it will be undone in a few seconds.") })}>${t("Deshacer última entrega", "Undo last delivery")}</${Boton}>
     </div>
-  </${Tarjeta}>`;
+  </${Seccion}>`;
 }
 
 export function VistaSync({ s, pestana }) {
