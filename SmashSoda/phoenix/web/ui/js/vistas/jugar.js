@@ -47,7 +47,7 @@ export function puestoDestino(m, pref = leerPreferencia(m)) {
 export async function jugarYo(m) {
   const lista = m.mandos?.lista || [];
   const destino = puestoDestino(m);
-  if (!destino) { avisar(t("No hay puestos en ese equipo: añade uno en Jugando › Puestos.", "No seats on that team: add one in Playing › Seats."), "warn"); return; }
+  if (!destino) { avisar(t("No hay puestos en ese equipo: añade uno en Partido › Puestos.", "No seats on that team: add one in Match › Seats."), "warn"); return; }
   if (m.mandos.host === destino) { avisar(t(`Ya estás en el puesto ${dos(destino)}.`, `You're already on seat ${dos(destino)}.`), "ok"); return; }
   const p = lista[destino - 1];
   const esMio = (x) => m.mandos.host === x.n || (x.parsecId && x.parsecId === m.sala?.hostId);
@@ -67,7 +67,7 @@ export async function jugarYo(m) {
   await accion("mandos.tomar", { numero: destino });
 }
 
-/** Tarjeta de preferencia (va en Jugando › Tu mando). */
+/** Tarjeta de preferencia (va en Partido › Tu mando). */
 export function PreferenciaPuesto({ m }) {
   const [local, setLocal] = useState(null);   // lo que acabas de tocar, hasta que el motor lo publique
   const pref = { ...leerPreferencia(m), ...(local || {}) };
@@ -85,7 +85,7 @@ export function PreferenciaPuesto({ m }) {
   return html`<div style="display:flex;flex-direction:column;gap:10px">
     <div class="lab acc">${t("MI PUESTO AL JUGAR", "MY SEAT WHEN PLAYING")}</div>
     <div class="ayuda" style="font-size:13px">${t("Dónde te sienta el botón JUGAR. Si está ocupado, ese amigo pasa a un puesto libre de su equipo.", "Where the PLAY button seats you. If taken, that friend moves to a free seat on their team.")}</div>
-    <div class="ayuda" style="font-size:13px">${t("Equipo A y B son equipos de Link, no el local y la visita del juego. ¿Quieres ser siempre el 01 aunque juegues del otro lado? Elige PUESTO FIJO 1 y en Jugando › Puestos pasa el puesto 01 al equipo que toque: tu número de mando no cambia.", "Team A and B are Link's teams, not the game's home and away. Want to always be pad 01 even when you play the other side? Pick FIXED SEAT 1 and, in Playing › Seats, move seat 01 to the team you need: your pad number doesn't change.")}</div>
+    <div class="ayuda" style="font-size:13px">${t("Equipo A y B son equipos de Link, no el local y la visita del juego. ¿Quieres ser siempre el 01 aunque juegues del otro lado? Elige PUESTO FIJO 1 y en Partido › Puestos pasa el puesto 01 al equipo que toque: tu número de mando no cambia.", "Team A and B are Link's teams, not the game's home and away. Want to always be pad 01 even when you play the other side? Pick FIXED SEAT 1 and, in Match › Seats, move seat 01 to the team you need: your pad number doesn't change.")}</div>
     <${Segmentos} valor=${pref.modo} al=${(v) => poner({ modo: v })} opciones=${[
       { valor: "fijo", texto: t("PUESTO FIJO", "FIXED SEAT") },
       { valor: "a", texto: t("1.º DE A", "1ST OF A") },

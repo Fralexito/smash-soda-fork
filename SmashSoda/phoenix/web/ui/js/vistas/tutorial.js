@@ -10,7 +10,7 @@ import { t } from "../i18n.js";
 import { irA } from "../tienda.js";
 import { Boton } from "../ui.js";
 
-const CLAVE = "phoenix.tutorial.visto.menu2";   // menú nuevo (0.3.4): se vuelve a enseñar una vez
+const CLAVE = "phoenix.tutorial.visto.menu3";   // menú SALA · PARTIDO · OTRAS SALAS · SYNC · AJUSTES (0.3.7): se enseña una vez
 const EVENTO = "phoenix:tutorial";
 
 /** Abre el tutorial desde cualquier sitio (botón de Ajustes, paleta Ctrl+K…). */
@@ -22,26 +22,26 @@ const nav = (n) => () => document.querySelectorAll(".menu .nv")[n];
 const PASOS = [
   { titulo: ["Bienvenido a Phoenix Link", "Welcome to Phoenix Link"],
     texto: ["En un minuto te enseño dónde está cada cosa. Puedes omitirlo y volver a verlo cuando quieras desde Ajustes › Más › Interfaz.", "In one minute I'll show you where everything is. Skip it and replay it any time from Settings › More › Interface."] },
-  { ir: ["sala", "resumen"], foco: nav(0), titulo: ["Antes del partido", "Before the match"],
-    texto: ["El menú va en el orden en que lo usas: ANTES, JUGANDO y DESPUÉS. En ANTES preparas todo: tu sala de Parsec, la transmisión, las opciones y tu PC (Mi PC, para los fichajes).", "The menu follows the order you use it: BEFORE, PLAYING and AFTER. In BEFORE you get everything ready: your Parsec room, the stream, the options and your PC (My PC, for transfers)."] },
+  { ir: ["sala", "resumen"], foco: nav(0), titulo: ["Sala", "Room"],
+    texto: ["Aquí abres tu sala de Parsec, copias el enlace para tus amigos y ves quién entra. También la transmisión, la gente de tu sala y las opciones.", "Open your Parsec room, copy the link for your friends and see who joins. Also the stream, the people in your room and the options."] },
   { ir: ["sala", "resumen"], foco: porTexto("main button", /^(ABRIR SALA|DETENER SALA|OPEN ROOM|STOP ROOM)$/), titulo: ["Abrir la sala", "Open the room"],
     texto: ["Este botón crea tu sala. Después, «Copiar enlace» y lo mandas por Discord o WhatsApp.", "This button creates your room. Then «Copy link» and send it on Discord or WhatsApp."] },
-  { ir: ["mandos", "puestos"], foco: nav(1), titulo: ["Jugando › Puestos", "Playing › Seats"],
+  { ir: ["mandos", "puestos"], foco: nav(1), titulo: ["Partido › Puestos", "Match › Seats"],
     texto: ["Cada puesto es un mando del juego. Arrastra a cada persona a un puesto; quien quede en «Mirando» solo ve la pantalla. Cada puesto es del Equipo A o del B y puedes pasarlo de uno a otro sin cambiar su número. Tú también apareces como TÚ.", "Each seat is a game pad. Drag each person to a seat; anyone in «Watching» only sees the screen. Each seat belongs to Team A or B and you can move it to the other without changing its number. You show up as YOU."] },
   { ir: ["mandos", "puestos"], foco: porTexto(".caja", /^ORDEN DE MANDOS EN PES/), titulo: ["Orden de mandos en PES", "Pad order in PES"],
     texto: ["Enciéndelo y Link ordena el settings.dat de PES solo: el puesto 1 es el jugador 1, el 2 el jugador 2… Cierra DS4Windows mientras usas Link.", "Turn it on and Link sorts PES's settings.dat: seat 1 is player 1, seat 2 is player 2… Close DS4Windows while using Link."] },
-  { ir: ["partido", "vivo"], foco: porTexto(".pestanas .tab", /^(MARCADOR|SCORE)$/), titulo: ["Marcador y gente", "Score and people"],
-    texto: ["También en JUGANDO: el MARCADOR (equipos, goles, modo competitivo), la GENTE de tu sala con su ficha y TU MANDO. Lo que se usa menos (mapeo, bloqueo, turnos, teclado, campo) está en MÁS.", "Also in PLAYING: the SCORE (teams, goals, competitive mode), the PEOPLE in your room with their card and YOUR PAD. Less used things (mapping, lock, hotseat, keyboard, pitch) are under MORE."] },
-  { ir: ["partido", "historial"], foco: nav(2), titulo: ["Después del partido", "After the match"],
-    texto: ["El historial de partidos y la tabla, los traspasos para pasar un fichaje a un amigo y todo lo que pasó en la sala.", "Match history and table, transfers to pass a signing to a friend and everything that happened in the room."] },
-  { ir: ["jugar", "salas"], foco: nav(3), titulo: ["Otras salas", "Other rooms"],
+  { ir: ["partido", "vivo"], foco: porTexto(".pestanas .tab", /^(MARCADOR|SCORE)$/), titulo: ["Marcador, tu mando e historial", "Score, your pad and history"],
+    texto: ["También en PARTIDO: el MARCADOR (equipos, goles, modo competitivo), TU MANDO y el HISTORIAL. Lo que se usa menos (campo, mapeo, bloqueo, turnos, teclado) está en MÁS.", "Also in MATCH: the SCORE (teams, goals, competitive mode), YOUR PAD and the HISTORY. Less used things (pitch, mapping, lock, hotseat, keyboard) are under MORE."] },
+  { ir: ["jugar", "salas"], foco: nav(2), titulo: ["Otras salas", "Other rooms"],
     texto: ["Para jugar en las salas de otros: las salas abiertas (entras con un clic), tus amigos y dónde están, y tu perfil de PES (tu nombre y tus opciones).", "To play in other people's rooms: open rooms (join with one click), your friends and where they are, and your PES profile (your name and options)."] },
+  { ir: ["sync", "mipc"], foco: nav(3), titulo: ["Sync", "Sync"],
+    texto: ["Tu PC lista para jugar con fichajes, pasar un fichaje a un amigo y las opciones avanzadas.", "Your PC ready to play with transfers, passing a transfer to a friend and the advanced options."] },
   { ir: ["ajustes", "general"], foco: nav(4), titulo: ["Ajustes", "Settings"],
-    texto: ["Todo lo demás: general, overlay, moderación y las opciones avanzadas de Sync. En Ajustes › Más › Interfaz puedes volver a ver este tutorial.", "Everything else: general, overlay, moderation and advanced Sync options. Replay this tutorial from Settings › More › Interface."] },
+    texto: ["Todo lo demás: general, overlay, moderación y sonidos del chat. En Ajustes › Más › Interfaz puedes volver a ver este tutorial.", "Everything else: general, overlay, moderation and chat sounds. Replay this tutorial from Settings › More › Interface."] },
   { foco: () => document.querySelector(".pill.atajo"), titulo: ["Buscar con Ctrl+K", "Search with Ctrl+K"],
     texto: ["¿No sabes dónde está algo? Pulsa Ctrl+K y escribe: te lleva directo a cualquier ajuste o acción.", "Can't find something? Press Ctrl+K and type: it takes you straight to any setting or action."] },
   { titulo: ["¡Listo!", "All set!"],
-    texto: ["Ya conoces Phoenix Link. Empieza por Antes › Sala › Abrir sala. Si alguna vez te pierdes, Ctrl+K o este tutorial te ayudan.", "You know Phoenix Link now. Start with Before › Room › Open room. If you ever get lost, Ctrl+K or this tutorial help."] },
+    texto: ["Ya conoces Phoenix Link. Empieza por Sala › Abrir sala. Si alguna vez te pierdes, Ctrl+K o este tutorial te ayudan.", "You know Phoenix Link now. Start with Room › Open room. If you ever get lost, Ctrl+K or this tutorial help."] },
 ];
 
 export function Tutorial({ s }) {

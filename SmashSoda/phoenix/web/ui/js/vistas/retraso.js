@@ -3,9 +3,9 @@
 //  segundo `m.retraso` (phoenix/web/RetrasoWeb.cpp): ping, codificar y
 //  decodificar de Parsec, paquetes reenviados y cómo LLEGAN los mensajes del
 //  mando (intervalo medio, p95, jitter, saltos, ritmo). Aquí se pinta:
-//  - BloqueRetraso: dentro de cada tarjeta de Antes › Conexión.
+//  - BloqueRetraso: dentro de cada tarjeta de Sala › Conexión.
 //  - LeyendaRetraso: cómo se calcula y qué NO se puede medir.
-//  - IndicadorRetraso: punto pequeño junto a cada puesto en Jugando › Puestos.
+//  - IndicadorRetraso: punto pequeño junto a cada puesto en Partido › Puestos.
 // =============================================================================
 import { html, useState } from "../lib.js";
 import { t } from "../i18n.js";
@@ -36,7 +36,7 @@ function resumenTexto(r) {
   return partes.join("\n");
 }
 
-/** Jugando › Puestos: punto + «~84» junto al ping (los detalles, en el globo). */
+/** Partido › Puestos: punto + «~84» junto al ping (los detalles, en el globo). */
 export function IndicadorRetraso({ r }) {
   if (!r || r.semaforo === "sin_datos") return null;
   const color = r.semaforo === "verde" ? "var(--ok)" : r.semaforo === "ambar" ? "var(--warn)" : "var(--bad)";
@@ -44,7 +44,7 @@ export function IndicadorRetraso({ r }) {
     <span class=${cx("punto", claseSemaforo(r.semaforo))} style="width:7px;height:7px"></span>${r.total >= 0 ? "~" + r.total : "!"}</span>`;
 }
 
-/** Antes › Conexión: bloque dentro de la tarjeta de cada invitado. */
+/** Sala › Conexión: bloque dentro de la tarjeta de cada invitado. */
 export function BloqueRetraso({ r }) {
   if (!r) return null;
   const md = r.mando;
@@ -72,7 +72,7 @@ export function BloqueRetraso({ r }) {
   </div>`;
 }
 
-/** Antes › Conexión: cómo se calcula (plegable). */
+/** Sala › Conexión: cómo se calcula (plegable). */
 export function LeyendaRetraso() {
   const [abierta, setAbierta] = useState(false);
   const u = UMBRALES_RETRASO;

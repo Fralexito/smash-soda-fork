@@ -56,7 +56,7 @@ const ROL_WEB = {
 // ---- En sala ----------------------------------------------------------------------------
 let elegidoGuardado = 0;
 
-/** Abre Jugando › Gente con la ficha de esa persona (desde la portada u otra pantalla). */
+/** Abre Sala › Gente con la ficha de esa persona (desde la portada u otra pantalla). */
 export function abrirFicha(parsecId) { elegidoGuardado = parsecId; irA("gente", "sala"); }
 
 function EnSala({ m }) {

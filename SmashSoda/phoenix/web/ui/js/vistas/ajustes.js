@@ -97,7 +97,7 @@ function General({ m }) {
   </div>`;
 }
 
-// ---- Captura (vive en Antes › Transmisión, junto a la calidad y el audio) ----------------------
+// ---- Captura (vive en Sala › Transmisión, junto a la calidad y el audio) ----------------------
 export function TarjetaCaptura({ m, info }) {
   const v = m.ajustes?.video;
   if (!v) return null;

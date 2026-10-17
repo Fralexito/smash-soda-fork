@@ -51,8 +51,8 @@ export function DialogoCeder({ s }) {
       <li>${t("Tú sigues usando tu teclado y tu ratón cuando quieras.", "You can still use your own keyboard and mouse anytime.")}</li>
       <li>${t("Para recuperarla: DEVOLVER LA PC, o Ctrl+Alt+F12 en tu teclado. Si sale de la sala, vuelve sola.", "To take it back: GIVE BACK THE PC, or Ctrl+Alt+F12 on your keyboard. If they leave, it comes back on its own.")}</li>
       <li>${c.juego
-        ? t(`El botón ABRIR PES abre «${c.juego}» (Antes › Juegos).`, `OPEN PES launches “${c.juego}” (Before › Games).`)
-        : html`<span style="color:var(--warn)">${t("No hay juego elegido en Antes › Juegos: ABRIR PES no podrá abrirlo (solo traerlo al frente si ya está abierto).", "No game picked in Before › Games: OPEN PES can only bring it to front.")}</span>`}</li>
+        ? t(`El botón ABRIR PES abre «${c.juego}» (Sala › Juegos).`, `OPEN PES launches “${c.juego}” (Room › Games).`)
+        : html`<span style="color:var(--warn)">${t("No hay juego elegido en Sala › Juegos: ABRIR PES no podrá abrirlo (solo traerlo al frente si ya está abierto).", "No game picked in Room › Games: OPEN PES can only bring it to front.")}</span>`}</li>
     </ul>
     <div class="botones">
       <button class="btn suave" onClick=${cerrar}>${t("Cancelar", "Cancel")}</button>

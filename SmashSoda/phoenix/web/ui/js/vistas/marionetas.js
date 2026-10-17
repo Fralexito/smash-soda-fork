@@ -1,5 +1,5 @@
 // =============================================================================
-//  JUGANDO › TU MANDO: el anfitrión elige su mando físico una vez y, al ponerse
+//  PARTIDO › TU MANDO: el anfitrión elige su mando físico una vez y, al ponerse
 //  en cualquier puesto (arrastrándose en Puestos), ese mando mueve ese puesto.
 //  Por dentro es una marioneta de un solo puesto que pone MandoHost; sin mando,
 //  el puesto del anfitrión se mueve con el teclado. (Antes: maestro y títeres.)
@@ -38,7 +38,7 @@ function TuMando({ m }) {
     <ol class="ayuda" style="font-size:14px;margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px">
       <li>${t("Conecta tu mando y pulsa un botón: su luz se enciende en la lista.", "Plug in your pad and press a button: its light turns on in the list.")}</li>
       <li>${t("Pulsa «USAR ESTE».", "Press «USE THIS».")}</li>
-      <li>${t("En Jugando › Puestos, arrástrate (TÚ) al puesto que quieras. Tu mando mueve ese puesto y puedes cambiarte cuando quieras.", "In Playing › Seats, drag yourself (YOU) to any seat. Your pad drives that seat; switch any time.")}</li>
+      <li>${t("En Partido › Puestos, arrástrate (TÚ) al puesto que quieras. Tu mando mueve ese puesto y puedes cambiarte cuando quieras.", "In Match › Seats, drag yourself (YOU) to any seat. Your pad drives that seat; switch any time.")}</li>
     </ol>
     ${m.mandos?.ordenPes?.ds4windows ? html`<div class="caja" style="border-color:var(--warn);font-size:14px;display:flex;flex-direction:column;gap:6px">
       <b class="warn">${t("DS4Windows está abierto: esconde tu mando a Link.", "DS4Windows is open: it hides your pad from Link.")}</b>
@@ -82,7 +82,7 @@ function TuMando({ m }) {
       </div>`}
     <div style="height:1px;background:var(--tenue)"></div>
     <${PreferenciaPuesto} m=${m}/>
-    <div class="ayuda" style="font-size:13px">${t("Aquí solo salen tus mandos físicos: los 8 mandos virtuales de Link no se muestran. Para que PES no lea tu mando por su cuenta (y no manejes dos jugadores), enciende «Orden de mandos en PES» en Jugando › Puestos.", "Only your physical pads show here; Link's 8 virtual pads are hidden. So PES doesn't also read your pad directly, turn on «Pad order in PES» in Playing › Seats.")}</div>
+    <div class="ayuda" style="font-size:13px">${t("Aquí solo salen tus mandos físicos: los 8 mandos virtuales de Link no se muestran. Para que PES no lea tu mando por su cuenta (y no manejes dos jugadores), enciende «Orden de mandos en PES» en Partido › Puestos.", "Only your physical pads show here; Link's 8 virtual pads are hidden. So PES doesn't also read your pad directly, turn on «Pad order in PES» in Match › Seats.")}</div>
   </${Tarjeta}>`;
 }
 

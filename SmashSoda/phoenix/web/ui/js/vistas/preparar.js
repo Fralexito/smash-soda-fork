@@ -1,5 +1,5 @@
 // =============================================================================
-//  ANTES › MI PC («¿Está listo mi PC?»). Una sola lista de lo que hace falta para jugar con fichajes y traspasos en vivo, cada punto con su botón,
+//  SYNC › MI PC («¿Está listo mi PC?»). Una sola lista de lo que hace falta para jugar con fichajes y traspasos en vivo, cada punto con su botón,
 //  un mensaje arriba («Todo listo» / «Falta algo: N cosas») y un botón grande «ARREGLAR TODO» que hace en orden lo que se puede sin riesgo
 //  y se detiene si necesita algo de la persona. El papel (anfitrión/amigo) NO se elige aquí: solo hay un enlace a la pestaña Traspasos.
 //  Nada nuevo en el motor: usa las mismas acciones que el resto de Sync (sync.modulos, sync.modulo, sync.detectarJuego,

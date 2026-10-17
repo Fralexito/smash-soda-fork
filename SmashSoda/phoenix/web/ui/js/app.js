@@ -140,7 +140,7 @@ function Menu({ s }) {
   const m = s.motor;
   const pendientesMandos = (m?.solicitudes?.length || 0) + (m?.espera?.length || 0);
   const enJuego = m?.partido?.fase === "en_juego" || m?.partido?.fase === "pausado";
-  const chapas = { jugando: pendientesMandos || (enJuego ? "●" : 0) };
+  const chapas = { partido: pendientesMandos || (enJuego ? "●" : 0) };
   const { sec, pestana } = pantallaActual(s);
   const activo = grupoDe(sec.id, pestana).id;
   return html`<nav class="menu" aria-label=${t("Secciones", "Sections")}>

@@ -87,7 +87,7 @@ export function ElegirJugador({ m, indice, alCerrar }) {
         <button class="persona" onClick=${tomarYo}>
           <${Avatar} nombre=${m.sala?.hostNombre || "Yo"} brillo t=${38}/>
           <div style="flex:1;text-align:left"><div class="nom">${t("Yo (anfitrión)", "Me (host)")}</div>
-            <div class="sub mut" style="font-size:12px">${t("Lo manejas con el teclado: flechas, Enter = A, Retroceso = B, Espacio = Start (atajo: Ctrl+Alt+número). Para usar tu mando físico, ve a Jugando › Tu mando.", "You drive it with the keyboard: arrows, Enter = A, Backspace = B, Space = Start (shortcut: Ctrl+Alt+number). To use your physical pad, go to Playing › Your pad.")}</div></div>
+            <div class="sub mut" style="font-size:12px">${t("Lo manejas con el teclado: flechas, Enter = A, Retroceso = B, Espacio = Start (atajo: Ctrl+Alt+número). Para usar tu mando físico, ve a Partido › Tu mando.", "You drive it with the keyboard: arrows, Enter = A, Backspace = B, Space = Start (shortcut: Ctrl+Alt+number). To use your physical pad, go to Match › Your pad.")}</div></div>
         </button>
         ${invitados.map((g) => html`<button class="persona" key=${g.parsecId} onClick=${() => elegir(g)} disabled=${g.rolWeb === "espectador"}>
           <${Avatar} nombre=${g.nombre} id=${g.parsecId} url=${m.perfiles?.[g.parsecId]?.avatar_url} t=${38}/>
