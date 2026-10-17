@@ -22,6 +22,7 @@ export const cx = (...c) => c.filter(Boolean).join(" ");
 const TRAZOS = {
   sala: html`<circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8" stroke-dasharray="3 3"/>`,
   jugar: html`<path d="M8 5v14l11-7z"/>`,
+  antes: html`<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M9 12.5l2 2 4-4.5"/>`,
   partido: html`<path d="M6 21V4h11l-2 4 2 4H6"/>`,
   mandos: html`<rect x="2.5" y="7" width="19" height="10" rx="5"/><path d="M8 10v4M6 12h4M16 11h.01M18 13h.01"/>`,
   gente: html`<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-4 3-6 6.5-6s6.5 2 6.5 6M16 5a3.5 3.5 0 010 6.5M18 14c2.5.7 3.5 2.7 3.5 6"/>`,

@@ -5,6 +5,7 @@ import { t } from "../i18n.js";
 import { accion, cambiar, irA } from "../tienda.js";
 import { Icono, cx } from "../ui.js";
 import { INDICE_AJUSTES } from "../indice-ajustes.js";
+import { GRUPOS, rutaDe } from "../grupos.js";
 
 const limpio = (x) => String(x || "").replace(/\s+/g, " ").trim().toLowerCase();
 /** Tras ir a la pestaña: despliega la tarjeta si estaba plegada y resalta el ajuste. */
@@ -43,38 +44,34 @@ function opciones(m) {
   for (const [es, en, mb] of [["Calidad: ligera (8 Mbps)", "Quality: light (8 Mbps)", 8], ["Calidad: equilibrada (15 Mbps)", "Quality: balanced (15 Mbps)", 15], ["Calidad: máxima (30 Mbps)", "Quality: max (30 Mbps)", 30]]) {
     r.push({ es, en, icono: "rayo", hacer: () => aplicarPresetCalidad(m, mb) });
   }
-  ir("sala", "resumen", "Sala · Resumen", "Room · Overview", "sala");
-  ir("sala", "puesto", "Sala · Dónde juego yo (mi puesto al pulsar JUGAR)", "Room · Where I play (my seat when pressing PLAY)", "mandos");
-  ir("sala", "transmision", "Sala · Transmisión (calidad, FPS, pantalla, audio)", "Room · Stream (quality, FPS, screen, audio)", "sala");
-  ir("sala", "opciones", "Sala · Opciones", "Room · Options", "sala");
-  ir("sala", "juegos", "Sala · Juegos", "Room · Games", "sala");
-  ir("sala", "red", "Sala · Conexión (diagnóstico y ping)", "Room · Connection (diagnostics & ping)", "red");
-  ir("jugar", "salas", "Otras salas · Salas abiertas", "Other rooms · Open rooms", "sala");
-  ir("jugar", "amigos", "Otras salas · Amigos de la web", "Other rooms · Friends", "web");
-  ir("jugar", "perfiles", "Otras salas · Perfil PES (nombre y opciones)", "Other rooms · PES profile (name and options)", "mandos");
-  ir("partido", "vivo", "Partido · Marcador", "Match · Scoreboard", "partido");
-  ir("partido", "historial", "Partido · Historial y tabla", "Match · History", "trofeo");
-  ir("mandos", "puestos", "Mandos · Puestos", "Pads · Seats", "mandos");
-  ir("mandos", "teclado", "Mandos · Teclado (mapa de teclas)", "Pads · Keyboard (key map)", "mandos");
-  ir("mandos", "turnos", "Mandos · Turnos", "Pads · Hotseat", "mandos");
-  ir("mandos", "marionetas", "Mandos · Marionetas (cantidad de mandos)", "Pads · Puppets (pad count)", "mandos");
-  ir("mandos", "bloqueo", "Mandos · Bloqueo", "Pads · Lock", "candado");
-  ir("gente", "sala", "Gente · En sala", "People · In room", "gente");
-  ir("gente", "moderacion", "Gente · Moderación y baneos", "People · Moderation", "gente");
-  ir("gente", "permisos", "Gente · Permisos por rol", "People · Permissions", "gente");
-  ir("sync", "mipc", "Sync · Mi PC (¿está listo?)", "Sync · My PC (is it ready?)", "web");
-  ir("sync", "traspasos", "Sync · Traspasos (pasar un fichaje)", "Sync · Transfers (pass a transfer)", "web");
-  ir("sync", "avanzado", "Sync · Opciones avanzadas", "Sync · Advanced options", "web");
-  for (const [p, es, en] of [["general", "General", "General"], ["sonidos", "Sonidos (!sfx)", "Sounds (!sfx)"], ["overlay", "Overlay", "Overlay"],
-    ["interfaz", "Interfaz e idioma", "Interface"], ["avanzado", "Avanzado", "Advanced"]]) {
-    ir("ajustes", p, `Ajustes · ${es}`, `Settings · ${en}`, "ajustes");
+  // Todas las pantallas, con su sitio en el menú nuevo y una pista de qué hay (también sirve para buscar)
+  const PISTA = {
+    "sala/resumen": ["abrir sala, enlace, ping", "open room, link, ping", "sala"], "sala/transmision": ["calidad, FPS, pantalla, audio", "quality, FPS, screen, audio", "sala"],
+    "sala/opciones": ["nombre, plazas, web de la liga", "name, slots, league website", "sala"], "sync/mipc": ["Sync: ¿está listo mi PC?", "Sync: is my PC ready?", "web"],
+    "sala/red": ["diagnóstico y ping", "diagnostics & ping", "red"], "sala/juegos": ["qué se juega, biblioteca", "what is played, library", "sala"],
+    "mandos/puestos": ["mandos, quién juega y quién mira", "pads, who plays and who watches", "mandos"], "partido/vivo": ["partido, equipos y goles", "match, teams and goals", "partido"],
+    "gente/sala": ["invitados y su ficha", "guests and their card", "gente"], "mandos/marionetas": ["tu mando físico, cantidad de mandos", "your physical pad, pad count", "mandos"],
+    "partido/campo": ["campo 2D en vivo", "live 2D pitch", "partido"], "mandos/mapeo": ["botones cambiados, stick que camina", "swapped buttons, drifting stick", "mandos"],
+    "mandos/bloqueo": ["congelar mandos, bloquear botones", "freeze pads, lock buttons", "candado"], "mandos/turnos": ["hotseat", "hotseat", "mandos"],
+    "mandos/teclado": ["mapa de teclas", "key map", "mandos"], "sala/puesto": ["mi puesto al pulsar JUGAR", "my seat when pressing PLAY", "mandos"],
+    "partido/historial": ["historial y tabla", "history and table", "trofeo"], "sync/traspasos": ["pasar un fichaje", "pass a transfer", "web"],
+    "sala/actividad": ["registro de la sala", "room log", "sala"], "jugar/salas": ["salas de otros", "other people's rooms", "sala"],
+    "jugar/amigos": ["amigos de la web", "website friends", "web"], "jugar/perfiles": ["nombre y opciones de PES", "PES name and options", "mandos"],
+    "ajustes/general": ["tema, chat y bot, avisos", "theme, chat and bot, notices", "ajustes"], "ajustes/overlay": ["overlay en PES", "overlay in PES", "ajustes"],
+    "gente/moderacion": ["baneos, moderadores, VIP", "bans, moderators, VIP", "gente"], "sync/avanzado": ["opciones avanzadas de Sync", "advanced Sync options", "web"],
+    "ajustes/sonidos": ["!sfx", "!sfx", "ajustes"], "ajustes/interfaz": ["idioma, atajos, tutorial", "language, shortcuts, tutorial", "ajustes"],
+    "gente/permisos": ["permisos por rol", "permissions by role", "gente"], "ajustes/avanzado": ["websocket, registros", "websocket, logs", "ajustes"],
+  };
+  for (const g of GRUPOS) for (const x of g.pestanas) {
+    const pista = PISTA[x.p.join("/")] || ["", "", g.icono];
+    ir(x.p[0], x.p[1], `${rutaDe(x.p[0], x.p[1])}${pista[0] ? ` (${pista[0]})` : ""}`, `${rutaDe(x.p[0], x.p[1], true)}${pista[1] ? ` (${pista[1]})` : ""}`, pista[2]);
   }
   return r;
 }
 
 // Cada ajuste de la interfaz (índice generado de las vistas): solo aparece al escribir
 const AJUSTES = INDICE_AJUSTES.map((x) => ({
-  es: `${x.es} — ${x.donde[0]} › ${x.pestana}`, en: `${x.en} — ${x.donde[1]} › ${x.pestana}`, icono: "ajustes", k: t("AJUSTE", "SETTING"), ajuste: true,
+  es: `${x.es} — ${rutaDe(x.seccion, x.pestana)}`, en: `${x.en} — ${rutaDe(x.seccion, x.pestana, true)}`, icono: "ajustes", k: t("AJUSTE", "SETTING"), ajuste: true,
   hacer: () => { irA(x.seccion, x.pestana); resaltar(t(x.es, x.en), x.tarjeta); },
 }));
 

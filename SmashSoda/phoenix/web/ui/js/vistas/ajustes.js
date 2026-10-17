@@ -97,7 +97,7 @@ function General({ m }) {
   </div>`;
 }
 
-// ---- Captura (vive en Sala › Transmisión, junto a la calidad y el audio) ----------------------
+// ---- Captura (vive en Antes › Transmisión, junto a la calidad y el audio) ----------------------
 export function TarjetaCaptura({ m, info }) {
   const v = m.ajustes?.video;
   if (!v) return null;
@@ -261,7 +261,7 @@ function Sonidos({ m }) {
       <${Titulo} texto=${t("QUIÉN PUEDE USAR !SFX", "WHO CAN USE !SFX")}/>
       <${AjusteSw} titulo=${t("Sonidos !sfx activados", "!sfx sounds on")} desc=${t("Apágalo para que nadie pueda reproducir sonidos.", "Turn off so nobody can play sounds.")} valor=${m.ajustes.general.sfxEnabled ?? true} al=${(v) => gen("sfxEnabled", v)}/>
       <div class="ayuda" style="font-size:14px">${[p.guest.useSFX && t("Invitados", "Guests"), p.vip.useSFX && "VIP", p.moderator.useSFX && t("Moderadores", "Moderators")].filter(Boolean).join(" · ") || t("Nadie", "Nobody")}</div>
-      <div style="margin-top:14px"><${Boton} al=${() => irA("gente", "permisos")}>${t("CAMBIAR EN GENTE › PERMISOS", "CHANGE IN PEOPLE › PERMISSIONS")}</${Boton}></div>
+      <div style="margin-top:14px"><${Boton} al=${() => irA("gente", "permisos")}>${t("CAMBIAR EN AJUSTES › PERMISOS", "CHANGE IN SETTINGS › PERMISSIONS")}</${Boton}></div>
     </${Tarjeta}>
   </div></div>`;
 }

@@ -2,14 +2,14 @@
 //  MANDO EN VIVO (2D): lo que el juego recibe ahora mismo de cada mando virtual.
 //  Botones que se iluminan, sticks que se mueven y gatillos que se llenan.
 //  Sirve para comprobar antes del partido que cada invitado tiene bien su mando.
-//  Datos: mandos.lista[i].entrada {b, lt, rt, lx, ly, rx, ry} (solo en Mandos › Puestos).
+//  Datos: mandos.lista[i].entrada {b, lt, rt, lx, ly, rx, ry} (solo en Jugando › Puestos).
 // =============================================================================
 import { html, useState, useEffect } from "../lib.js";
 import { accion, oirVivo, irA } from "../tienda.js";
 import { t } from "../i18n.js";
 import { dos } from "../ui.js";
 
-// Clic en un mando de «Mandos en vivo» → Mandos › MAPEO con esa persona ya elegida (el tuyo → TU MANDO)
+// Clic en un mando de «Mandos en vivo» → Jugando › Más › Mapeo con esa persona ya elegida (el tuyo → TU MANDO)
 let pendienteMapeo = 0;
 export function tomarPendienteMapeo() { const x = pendienteMapeo; pendienteMapeo = 0; return x; }
 function abrirMapeo(m, p) {

@@ -778,3 +778,31 @@ html.sin-foco .peldano.sig::after, html.sin-foco .u-punto, html.sin-foco .punto.
 .sec-detalle > summary { cursor: pointer; color: var(--acc); font-size: 12px; padding: 2px 0; }
 .sec-detalle[open] > summary { margin-bottom: 6px; }
 @media (max-width: 720px) { .sec-resumen { display: none; } }
+
+/* ---------- Orden visual en ventana estrecha (0.3.4) ----------
+   Barra: solo logo + sala + chat (la web y el juego siguen en Antes › Mi PC).
+   Pestañas: una sola fila que se desliza de lado, en vez de 4-5 filas. */
+.barra .pill { white-space: nowrap; flex: none; }
+@media (max-width: 720px) {
+  .barra { padding: 0 16px; gap: 10px; }
+  .marca .nombre { display: none; }
+  .barra .pill.juego, .barra .lado > .pill.acc:last-child { display: none; }
+  .contenido { padding: 16px; gap: 14px; }
+  .pestanas { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; max-width: 100%; padding-bottom: 2px; }
+  .pestanas::-webkit-scrollbar { display: none; }
+  .tab { flex: none; padding: 0 14px; }
+}
+/* Ventana estrecha: las filas de tarjetas se apilan y lo ancho (tablas) se desliza dentro de su tarjeta */
+@media (max-width: 720px) {
+  .vista .fila { flex-wrap: wrap; }
+  .vista .fila > * { flex: 1 1 100% !important; min-width: 0 !important; max-width: 100%; }
+  .vista table { display: block; overflow-x: auto; max-width: 100%; }
+  .vista .rej2, .vista .rej3, .vista .rej4 { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 720px) {
+  .vista .btn, .vista .chip { max-width: 100%; white-space: normal; height: auto; min-height: 30px; line-height: 1.25; text-align: center; }
+  .vista .btn { padding-top: 7px; padding-bottom: 7px; }
+  .vista .seg { flex-wrap: wrap; height: auto; }
+  .vista .lab, .vista .sec-titulo { white-space: normal; }
+  .vista .sec-cab { flex-wrap: wrap; }
+}

@@ -1,5 +1,5 @@
 // =============================================================================
-//  SYNC › TRASPASOS. «Pasar un fichaje a un amigo»: un asistente de 3 pasos, siempre en el mismo orden.
+//  DESPUÉS › TRASPASOS. «Pasar un fichaje a un amigo»: un asistente de 3 pasos, siempre en el mismo orden.
 //    1. ¿Qué vas a hacer?  (hago los traspasos = anfitrión · los recibo = amigo; «Más opciones»: prueba, apagar, carpeta compartida)
 //    2. Anfitrión: TU CÓDIGO (copiar / cambiar). Amigo: escribe el código y pulsa SEGUIR.
 //    3. Estado en vivo en frases cortas.  «¿Algo no funciona?»: la lista de comprobaciones, abierta sola si hay un ✗.

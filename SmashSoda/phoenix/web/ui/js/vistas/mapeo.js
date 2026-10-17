@@ -1,5 +1,5 @@
 // =============================================================================
-//  MANDOS › MAPEO: corrige el mando de cada invitado (genérico o mal mapeado).
+//  JUGANDO › MAPEO: corrige el mando de cada invitado (genérico o mal mapeado).
 //  Lista de personas · su mando en vivo (lo que LLEGA y lo que SALE al juego,
 //  con el dibujo de mandovivo.js) · asistente paso a paso · sticks (invertir,
 //  cambiar, zona muerta con vista en vivo) · botones uno a uno · restablecer.

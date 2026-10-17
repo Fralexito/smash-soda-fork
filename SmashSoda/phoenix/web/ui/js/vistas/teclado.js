@@ -1,5 +1,5 @@
 // =============================================================================
-//  MANDOS › TECLADO (rehecho): permisos de teclado por invitado y el mapa de
+//  JUGANDO › TECLADO (rehecho): permisos de teclado por invitado y el mapa de
 //  teclas (qué tecla del teclado es cada botón del mando). Se toca un botón del
 //  mando dibujado y se pulsa la tecla nueva. Todo dentro de la interfaz nueva.
 // =============================================================================
@@ -139,7 +139,7 @@ export function TecladoNuevo({ m }) {
         <${Titulo} texto=${t("TECLADO DE LOS INVITADOS", "GUEST KEYBOARD")}/>
         <${AjusteSw} titulo=${t("Desactivar teclado para todos", "Disable keyboard for everyone")} desc=${t("Nadie juega con teclado aunque tenga permiso.", "Nobody plays with keyboard even if allowed.")}
           valor=${g.disableKeyboard} al=${(v) => accion("ajustes.general", { clave: "disableKeyboard", valor: v })}/>
-        <div class="ayuda" style="margin-top:10px">${t("El permiso de teclado de cada invitado está en su ficha (Gente › En sala).", "Each guest's keyboard permission is on their card (People › In room).")}</div>
+        <div class="ayuda" style="margin-top:10px">${t("El permiso de teclado de cada invitado está en su ficha (Jugando › Gente).", "Each guest's keyboard permission is on their card (Playing › People).")}</div>
         <div><${Boton} tipo="mini suave" al=${() => irA("gente", "sala")}>${t("IR A GENTE", "GO TO PEOPLE")}</${Boton}></div>
       </${Tarjeta}>
     </div>

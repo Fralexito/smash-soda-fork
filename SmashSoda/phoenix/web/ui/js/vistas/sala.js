@@ -102,7 +102,7 @@ function Heroe({ m, conGuia, verGuia }) {
           <div class="ayuda" style="margin-top:8px;font-size:14px">
             ${sala.lista
               ? t("Abre la sala y comparte el enlace. Tú decides quién juega y quién mira.", "Open the room and share the link. You decide who plays and who watches.")
-              : t("Parsec se está preparando. Si tarda, revisa Sala › Conexión.", "Parsec is getting ready. If it takes long, check Room › Connection.")}
+              : t("Parsec se está preparando. Si tarda, revisa Antes › Conexión.", "Parsec is getting ready. If it takes long, check Before › Connection.")}
           </div>
         </div>
         <div class="derecha" style="display:flex;gap:12px;flex:none">
@@ -234,7 +234,7 @@ function PuestosResumen({ m }) {
         ${ocupados} ${t("DE", "OF")} ${visibles.length} ${t("OCUPADOS", "TAKEN")} › ${t("ver y arrastrar", "view and drag")}</button>
     </div>
     ${visibles.length === 0
-      ? html`<div class="ayuda">${t("No hay mandos virtuales. Revisa Sala › Conexión (ViGEmBus).", "No virtual pads. Check Room › Connection (ViGEmBus).")}</div>`
+      ? html`<div class="ayuda">${t("No hay mandos virtuales. Revisa Antes › Conexión (ViGEmBus).", "No virtual pads. Check Before › Connection (ViGEmBus).")}</div>`
       : html`<div class="rej4">${visibles.map((p) => html`<${MiniPuesto} p=${p} key=${p.n}/>`)}</div>`}
   </${Tarjeta}>`;
 }
@@ -503,7 +503,7 @@ function OpcionesSala({ m }) {
         </${Tarjeta}>
         <${Tarjeta} interior="padding:22px 24px">
           <${Titulo} texto=${t("CALIDAD, PANTALLA Y AUDIO", "QUALITY, SCREEN AND AUDIO")}/>
-          <div class="ayuda" style="font-size:14px">${t("Todo lo de la transmisión está junto en Sala › Transmisión.", "Everything about the stream is together in Room › Stream.")}</div>
+          <div class="ayuda" style="font-size:14px">${t("Todo lo de la transmisión está junto en Antes › Transmisión.", "Everything about the stream is together in Before › Stream.")}</div>
           <div style="margin-top:12px"><${Boton} al=${() => irA("sala", "transmision")}>${t("IR A TRANSMISIÓN", "GO TO STREAM")}</${Boton}></div>
         </${Tarjeta}>
       </div>

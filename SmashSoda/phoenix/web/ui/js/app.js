@@ -5,7 +5,7 @@ import { html, render, useEffect, useRef, useState } from "./lib.js";
 import { puente } from "./puente.js";
 import { t, fijarIdioma } from "./i18n.js";
 import {
-  useTienda, conectarTienda, irA, elegirPestana, cambiar, avisar, quitarAviso, cerrarDialogo, accion, leer, elegirPestanaChat, noLeidosGlobal,
+  useTienda, conectarTienda, irA, cambiar, avisar, quitarAviso, cerrarDialogo, accion, leer, elegirPestanaChat, noLeidosGlobal,
 } from "./tienda.js";
 import { Icono, Logo, cx } from "./ui.js";
 import { VistaSala, PESTANAS_SALA } from "./vistas/sala.js";
@@ -20,6 +20,7 @@ import { UltimaHora } from "./vistas/ultimahora.js";
 import { Paleta } from "./vistas/paleta.js";
 import { Tutorial } from "./vistas/tutorial.js";
 import { vigilarCambios } from "./vigia.js";
+import { GRUPOS, grupoDe } from "./grupos.js";
 import { BandaCedido, DialogoCeder, SECCIONES_CEDIDO, PESTANAS_CEDIDO, estaCedida, vigilarCedido } from "./vistas/cedido.js";
 
 const SECCIONES = [
@@ -36,16 +37,28 @@ const SECCIONES = [
 const seccionesVisibles = (s) => (estaCedida(s) ? SECCIONES.filter((x) => SECCIONES_CEDIDO.includes(x.id)) : SECCIONES);
 const pestanasVisibles = (s, sec) => (estaCedida(s) ? sec.pestanas.filter((p) => PESTANAS_CEDIDO[sec.id]?.includes(p.id)) : sec.pestanas);
 
-// Frase corta de «para qué sirve» cada sección (aparece al pasar el mouse por el menú)
-const PARA_QUE = {
-  sala: ["Abrir tu sala, compartir el enlace y ver cómo va la conexión.", "Open your room, share the link and watch the connection."],
-  jugar: ["Para jugar en salas de otros: salas abiertas, tus amigos y tu perfil de PES.", "To play in other people's rooms: open rooms, your friends and your PES profile."],
-  partido: ["Armar los equipos y llevar el marcador del partido.", "Set up teams and keep the score."],
-  mandos: ["Repartir los mandos: quién juega y quién mira.", "Hand out the pads: who plays, who watches."],
-  gente: ["Ver a los invitados, moderar y revisar permisos.", "See guests, moderate and set permissions."],
-  sync: ["Conectar tu cuenta de la liga y el juego con la web.", "Connect your league account and the game with the website."],
-  ajustes: ["Bot del chat, overlay, idioma y tema. La transmisión está en Sala › Transmisión.", "Chat bot, overlay, language and theme. The stream is in Room › Stream."],
-};
+// ---- Menú por momento de uso (grupos.js) -------------------------------------------
+// Cada pestaña del menú es una pantalla de siempre: [sección, pestaña].
+const infoPantalla = (sec, pes) => SECCIONES.find((x) => x.id === sec)?.pestanas.find((p) => p.id === pes);
+const pantallaVisible = (s, [sec, pes]) => !!infoPantalla(sec, pes) && (!estaCedida(s) || (SECCIONES_CEDIDO.includes(sec) && PESTANAS_CEDIDO[sec]?.includes(pes)));
+const pestanasGrupo = (s, g) => g.pestanas.filter((x) => pantallaVisible(s, x.p));
+const gruposVisibles = (s) => GRUPOS.filter((g) => pestanasGrupo(s, g).length);
+// Última pantalla vista de cada grupo: al volver al grupo se abre esa
+const ultimaDeGrupo = {};
+function irAGrupo(s, g) {
+  const lista = pestanasGrupo(s, g);
+  const u = ultimaDeGrupo[g.id];
+  const x = (u && lista.find((y) => y.p[0] === u[0] && y.p[1] === u[1])) || lista[0];
+  if (x) irA(x.p[0], x.p[1]);
+}
+// Pantalla que se ve ahora (la pedida, o la primera visible de su sección)
+function pantallaActual(s) {
+  const visibles = seccionesVisibles(s);
+  const sec = visibles.find((x) => x.id === s.seccion) || visibles[0];
+  const pestanas = pestanasVisibles(s, sec);
+  const pedida = s.pestanas[sec.id];
+  return { sec, pestana: pestanas.some((p) => p.id === pedida) ? pedida : pestanas[0].id };
+}
 
 // ---- Barra superior --------------------------------------------------------------
 function PildoraSala({ m }) {
@@ -127,12 +140,14 @@ function Menu({ s }) {
   const m = s.motor;
   const pendientesMandos = (m?.solicitudes?.length || 0) + (m?.espera?.length || 0);
   const enJuego = m?.partido?.fase === "en_juego" || m?.partido?.fase === "pausado";
-  const chapas = { mandos: pendientesMandos, partido: enJuego ? "●" : 0 };
+  const chapas = { jugando: pendientesMandos || (enJuego ? "●" : 0) };
+  const { sec, pestana } = pantallaActual(s);
+  const activo = grupoDe(sec.id, pestana).id;
   return html`<nav class="menu" aria-label=${t("Secciones", "Sections")}>
-    ${seccionesVisibles(s).map((x) => html`
-      <button class=${cx("nv", s.seccion === x.id && "on")} title=${t(PARA_QUE[x.id][0], PARA_QUE[x.id][1])} onClick=${() => irA(x.id)} aria-current=${s.seccion === x.id ? "page" : null}>
-        <${Icono} n=${x.id} t=${26}/><span>${t(x.es, x.en)}</span>
-        ${chapas[x.id] ? html`<span class="chapa">${chapas[x.id]}</span>` : null}
+    ${gruposVisibles(s).map((g) => html`
+      <button class=${cx("nv", activo === g.id && "on")} title=${t(g.d[0], g.d[1])} onClick=${() => irAGrupo(s, g)} aria-current=${activo === g.id ? "page" : null}>
+        <${Icono} n=${g.icono} t=${26}/><span>${t(g.es, g.en)}</span>
+        ${chapas[g.id] ? html`<span class="chapa">${chapas[g.id]}</span>` : null}
       </button>`)}
     <div class="pie" title=${m?.app?.compilado ? t("Compilado el ", "Built on ") + m.app.compilado : ""}>PHOENIX<br/>LINK ${m?.app?.version || ""}${m?.app?.etapa ? html`<br/><span style="opacity:.8;font-size:10.5px;letter-spacing:.08em">${String(m.app.etapa).toUpperCase()}</span>` : null}${m?.app?.compilado ? html`<br/><span style="opacity:.65;font-size:10.5px">${m.app.compilado}</span>` : null}</div>
   </nav>`;
@@ -140,29 +155,31 @@ function Menu({ s }) {
 
 // ---- Contenido -------------------------------------------------------------------
 function Contenido({ s }) {
-  const visibles = seccionesVisibles(s);
-  const sec = visibles.find((x) => x.id === s.seccion) || visibles[0];
-  const pestanas = pestanasVisibles(s, sec);
-  const pedida = s.pestanas[sec.id];
-  const pestana = pestanas.some((p) => p.id === pedida) ? pedida : pestanas[0].id;
+  const { sec, pestana } = pantallaActual(s);
   const Vista = sec.vista;
   const meta = sec.meta ? sec.meta(s) : null;
   const info = sec.pestanas.find((p) => p.id === pestana);
-  // Pestañas poco usadas (mas: true) quedan detrás de «MÁS»; la elegida se ve siempre
+  // Pestañas del grupo (pueden ser de varias secciones). Las poco usadas (mas: true)
+  // quedan detrás de «MÁS»; la que se ve, siempre a la vista.
+  const g = grupoDe(sec.id, pestana);
+  useEffect(() => { ultimaDeGrupo[g.id] = [sec.id, pestana]; }, [g.id, sec.id, pestana]);
+  const pestanas = pestanasGrupo(s, g);
+  const esActual = (x) => x.p[0] === sec.id && x.p[1] === pestana;
   const [verMas, setVerMas] = useState({});
-  const abierto = !!verMas[sec.id];
-  const ocultas = pestanas.filter((p) => p.mas && p.id !== pestana);
-  const mostradas = abierto ? pestanas : pestanas.filter((p) => !p.mas || p.id === pestana);
+  const abierto = !!verMas[g.id];
+  const ocultas = pestanas.filter((x) => x.mas && !esActual(x));
+  const mostradas = abierto ? pestanas : pestanas.filter((x) => !x.mas || esActual(x));
+  const nombre = (x) => { const p = infoPantalla(x.p[0], x.p[1]); return t(x.es || p.es, x.en || p.en); };
   return html`<main class="contenido">
     <${BandaCedido} s=${s}/>
     <div class="cabecera">
       <div class="pestanas" role="tablist">
-        ${mostradas.map((p) => html`
-          <button role="tab" aria-selected=${p.id === pestana} class=${cx("tab", p.id === pestana && "on")} onClick=${() => elegirPestana(p.id)}>
-            ${t(p.es, p.en)}${p.cuenta ? html`<span class="n">${p.cuenta(s) || ""}</span>` : null}
-          </button>`)}
-        ${ocultas.length ? html`<button class="tab mas" aria-expanded=${abierto} onClick=${() => setVerMas({ ...verMas, [sec.id]: !abierto })}
-          title=${abierto ? t("Ocultar las opciones menos usadas", "Hide the less used options") : ocultas.map((p) => t(p.es, p.en)).join(" · ")}>
+        ${mostradas.map((x) => { const p = infoPantalla(x.p[0], x.p[1]); return html`
+          <button role="tab" aria-selected=${esActual(x)} class=${cx("tab", esActual(x) && "on")} onClick=${() => irA(x.p[0], x.p[1])}>
+            ${nombre(x)}${p.cuenta ? html`<span class="n">${p.cuenta(s) || ""}</span>` : null}
+          </button>`; })}
+        ${ocultas.length ? html`<button class="tab mas" aria-expanded=${abierto} onClick=${() => setVerMas({ ...verMas, [g.id]: !abierto })}
+          title=${abierto ? t("Ocultar las opciones menos usadas", "Hide the less used options") : ocultas.map(nombre).join(" · ")}>
           ${abierto ? t("MENOS ▴", "LESS ▴") : t(`MÁS (${ocultas.length}) ▾`, `MORE (${ocultas.length}) ▾`)}</button>` : null}
       </div>
       ${meta}
@@ -227,8 +244,9 @@ function App() {
         else if (st.chatAbierto) alternarChat(false);
       } else if (e.altKey && !e.ctrlKey && /^[1-6]$/.test(e.key)) {   // Ctrl+Alt+número es «tomar mando» (MandoHost)
         e.preventDefault();
-        const x = seccionesVisibles(leer())[Number(e.key) - 1];
-        if (x) irA(x.id);
+        const st = leer();
+        const g = gruposVisibles(st)[Number(e.key) - 1];
+        if (g) irAGrupo(st, g);
       }
     };
     window.addEventListener("keydown", tecla);
