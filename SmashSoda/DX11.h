@@ -38,6 +38,8 @@ public:
 	void enumGPUS();
 	bool init();
 	bool captureScreen(ParsecDSO *ps);
+	/// Phoenix: espera hasta `ms` a que llegue un cuadro nuevo de la pantalla (solo con la captura de Windows).
+	bool waitForFrame(unsigned ms);
 	
 	vector<string> listScreens();
 	void setScreen(UINT index);

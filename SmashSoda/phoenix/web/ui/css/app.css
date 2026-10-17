@@ -595,6 +595,10 @@ button.paso { cursor: pointer; }
 
 /* Ventana oculta o minimizada: se congelan todas las animaciones (0 % de trabajo) */
 html.oculta *, html.oculta *::before, html.oculta *::after { animation-play-state: paused !important; }
+/* Link sin foco (estás jugando en PES): se paran solo los adornos que nunca terminan (aurora del fondo, brillos, latidos).
+   Así la ventana deja de redibujarse al ritmo del monitor mientras juegas. Lo que entra nuevo (chat, avisos) sí se anima. */
+html.sin-foco .fondo::after, html.sin-foco .cut.vivo, html.sin-foco .chip.acc::after, html.sin-foco .chip.mod::after,
+html.sin-foco .peldano.sig::after, html.sin-foco .u-punto, html.sin-foco .punto.vivo { animation-play-state: paused !important; }
 @media (prefers-reduced-motion: reduce) { .caja, .btn { transition: none; } .caja:hover, .btn:hover { transform: none; } .chip.acc::after, .chip.mod::after, .tab.on { animation: none !important; } }
 
 /* ---------- Comandos del chat y redes sociales ---------- */

@@ -1002,8 +1002,18 @@ void Hosting::liveStreamMedia() {
 			uint32_t targetFps = Config::cfg.video.fps;
 			if (targetFps < minFps) targetFps = minFps;
 			if (targetFps > maxFps) targetFps = maxFps;
-			frameIntervalSec = 1.0 / static_cast<double>(targetFps);
-			_mediaClock.setDuration(static_cast<uint32_t>(1000.0 * frameIntervalSec));
+			// Phoenix: ritmo pegado a los cuadros del juego. Antes se capturaba con un reloj fijo de 1/FPS que, por los
+			// retrasos del Sleep, iba algo más lento que el juego (≈58 en vez de 60): se perdía un cuadro cada medio
+			// segundo y los amigos veían tirones. Ahora se descansa el 90 % del intervalo y luego se espera a que
+			// Windows entregue un cuadro nuevo (como mucho hasta que el audio lo permite) y se manda en cuanto llega.
+			// Con pantalla quieta se reenvía el último, como antes. El tope de FPS de Parsec sigue mandando.
+			const double intervaloCompleto = 1.0 / static_cast<double>(targetFps);
+			frameIntervalSec = intervaloCompleto * 0.9;
+			_mediaClock.setDuration(static_cast<uint32_t>(1000.0 * intervaloCompleto));
+			int esperaMs = 55 - static_cast<int>(frameIntervalSec * 1000.0);
+			if (esperaMs > 34) esperaMs = 34;
+			if (esperaMs < 1) esperaMs = 1;
+			_dx11.waitForFrame(static_cast<unsigned>(esperaMs));
 			frameStart = std::chrono::steady_clock::now();
 		} else {
 			_mediaClock.setDuration(4);
@@ -1160,6 +1170,8 @@ void Hosting::pollEvents() {
 			ParsecGuest parsecGuest = event.guestStateChange.guest;
 			ParsecGuestState state = parsecGuest.state;
 			Guest guest = Guest(parsecGuest.name, parsecGuest.userID, parsecGuest.id);
+			// Phoenix: la lista anterior se libera antes de pedir otra (antes se perdía memoria en cada evento)
+			if (guests != nullptr) { ParsecFree(_parsec, guests); guests = nullptr; }
 			guestCount = ParsecHostGetGuests(_parsec, GUEST_CONNECTED, &guests);
 			GuestList::instance.setGuests(guests, guestCount);
 			//logMessage("event: " + to_string(event.type) + " guest: " + guest.name + " state: " + to_string(state) + " status: " + to_string(event.guestStateChange.status));
@@ -1183,7 +1195,7 @@ void Hosting::pollEvents() {
 		}
 	}
 
-	ParsecFree(_parsec, guests);
+	if (guests != nullptr) ParsecFree(_parsec, guests);
 	_isEventThreadRunning = false;
 	_eventMutex.unlock();
 	_eventThread.detach();
@@ -1202,6 +1214,8 @@ void Hosting::pollLatency() {
 	while (_isRunning)
 	{
 		Sleep(2000);
+		// Phoenix: la lista anterior se libera antes de pedir otra (antes se perdía memoria cada 2 s)
+		if (guests != nullptr) { ParsecFree(_parsec, guests); guests = nullptr; }
 		guestCount = ParsecHostGetGuests(_parsec, GUEST_CONNECTED, &guests);
 
 		// Phoenix: ancho de banda automatico. X Mbps por persona conectada (el SDK reparte el total entre los invitados).
@@ -1292,6 +1306,7 @@ void Hosting::pollLatency() {
 		}
 		
 	}
+	if (guests != nullptr) ParsecFree(_parsec, guests);
 	_isLatencyThreadRunning = false;
 	_latencyMutex.unlock();
 	_latencyThread.detach();

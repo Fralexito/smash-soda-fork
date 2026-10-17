@@ -363,14 +363,19 @@ bool DX11::captureScreenWGC(ParsecDSO* ps)
 		if (scaled) frameToSubmit = scaled;
 	}
 
-	D3D11_TEXTURE2D_DESC submitDesc;
-	frameToSubmit->GetDesc(&submitDesc);
+	// Phoenix: aquí no se copia a _lastSubmittedTexture: WGCapture ya guarda el último cuadro (stagingTexture) y lo
+	// devuelve aunque no haya uno nuevo. Esa copia de pantalla completa en cada cuadro no servía para nada.
 	ParsecHostD3D11SubmitFrame(ps, 0, _device, _context, frameToSubmit);
-	if (ensureLastSubmittedTexture(submitDesc.Width, submitDesc.Height, submitDesc.Format))
-		_context->CopyResource(_lastSubmittedTexture, frameToSubmit);
 
 	_mutex.unlock();
 	return true;
+}
+
+bool DX11::waitForFrame(unsigned ms)
+{
+	// Solo la captura de Windows (WGC) avisa de cuadros nuevos; la duplicación ya espera dentro de AcquireNextFrame.
+	if (!_wgCapture.isActive()) return false;
+	return _wgCapture.waitFrame(ms);
 }
 
 bool DX11::captureScreenDupl(ParsecDSO* ps)

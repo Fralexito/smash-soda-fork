@@ -14,6 +14,7 @@
 
 #include <dxgi.h>
 #include <atomic>
+#include <chrono>
 
 MIDL_INTERFACE("A9B3D012-3DF2-4EE3-B8D1-8695F457D3C1")
 IDirect3DDxgiInterfaceAccess : public IUnknown
@@ -76,9 +77,21 @@ struct WGCapture::Impl
 
 	std::atomic<bool> active{ false };
 
+	// Phoenix: aviso de «cuadro nuevo» (lo pone el hilo de Windows que entrega los cuadros)
+	Direct3D11CaptureFramePool::FrameArrived_revoker frameRevoker;
+	HANDLE frameEvent = CreateEventW(nullptr, FALSE, FALSE, nullptr);
+	std::atomic<int> framesPending{ 0 };
+
+	~Impl()
+	{
+		if (frameEvent) CloseHandle(frameEvent);
+	}
+
 	void release()
 	{
 		active = false;
+		frameRevoker.revoke();
+		framesPending = 0;
 		closedRevoker.revoke();
 		if (session)
 		{
@@ -191,6 +204,10 @@ bool WGCapture::start(ID3D11Device* device, ID3D11DeviceContext* context, HMONIT
 		_impl->closedRevoker = _impl->item.Closed(auto_revoke,
 			[this](auto&&, auto&&) { _impl->active = false; });
 
+		Impl* impl = _impl;
+		_impl->frameRevoker = _impl->framePool.FrameArrived(auto_revoke,
+			[impl](auto&&, auto&&) { impl->framesPending++; if (impl->frameEvent) SetEvent(impl->frameEvent); });
+
 		_impl->session.StartCapture();
 		_impl->active = true;
 		return true;
@@ -218,9 +235,18 @@ ID3D11Texture2D* WGCapture::acquireFrame()
 
 	try
 	{
+		_impl->framesPending = 0;
 		auto frame = _impl->framePool.TryGetNextFrame();
 		if (!frame)
 			return _impl->stagingTexture;
+		// Phoenix: si hay varios en cola se usa el MÁS NUEVO (antes salía el más viejo: hasta 2 cuadros de retraso y saltos)
+		for (;;)
+		{
+			auto newer = _impl->framePool.TryGetNextFrame();
+			if (!newer) break;
+			frame.Close();
+			frame = newer;
+		}
 
 		auto surface = frame.Surface();
 		auto contentSize = frame.ContentSize();
@@ -275,6 +301,22 @@ ID3D11Texture2D* WGCapture::acquireFrame()
 		_impl->active = false;
 		return nullptr;
 	}
+}
+
+bool WGCapture::waitFrame(unsigned ms)
+{
+	if (!_impl->active || !_impl->frameEvent) return false;
+	const auto end = std::chrono::steady_clock::now() + std::chrono::milliseconds(ms);
+	while (_impl->framesPending.load() == 0)
+	{
+		const auto now = std::chrono::steady_clock::now();
+		if (now >= end) return false;
+		DWORD left = static_cast<DWORD>(std::chrono::duration_cast<std::chrono::milliseconds>(end - now).count());
+		if (left == 0) left = 1;
+		WaitForSingleObject(_impl->frameEvent, left);
+		if (!_impl->active) return false;
+	}
+	return true;
 }
 
 void WGCapture::getFrameSize(int& width, int& height) const

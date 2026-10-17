@@ -547,6 +547,7 @@ int CALLBACK WinMain(_In_ HINSTANCE hInstance, _In_ HINSTANCE hPrevInstance, _In
         // 
         // =====================================================================
         ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
+        bool tapadaPorWeb = false;
 
         if (!phoenix::PhoenixPrefs::get().interfazPhoenix) versionWidget.render();
         
@@ -565,6 +566,7 @@ int CALLBACK WinMain(_In_ HINSTANCE hInstance, _In_ HINSTANCE hPrevInstance, _In
         {
             // La interfaz web cubre la ventana: ImGui no dibuja, solo corre la lógica de cada frame
             phoenix::Shell::tickLogica();
+            tapadaPorWeb = true;
         }
         else if (webUi.cargando())
         {
@@ -649,6 +651,15 @@ int CALLBACK WinMain(_In_ HINSTANCE hInstance, _In_ HINSTANCE hPrevInstance, _In
         // =====================================================================
         // Rendering
         ImGui::Render();
+        static UINT presentFlags = 0;
+        if (tapadaPorWeb) {
+            // Phoenix: la interfaz web tapa toda la ventana, así que lo que pinta ImGui nunca se ve. Antes se pintaba y
+            // presentaba igual al ritmo del monitor (144 veces/s en un monitor de 144 Hz). Ahora no se pinta nada y la
+            // lógica corre ~60 veces/s; un mensaje de Windows (ratón, teclado, cambio de tamaño) despierta al instante.
+            presentFlags = 0;
+            MsgWaitForMultipleObjects(0, NULL, FALSE, 16, QS_ALLINPUT);
+            continue;
+        }
         const float clear_color_with_alpha[4] = { clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w };
         g_pd3dDeviceContext->OMSetRenderTargets(1, &g_mainRenderTargetView, NULL);
         g_pd3dDeviceContext->ClearRenderTargetView(g_mainRenderTargetView, clear_color_with_alpha);
@@ -656,7 +667,6 @@ int CALLBACK WinMain(_In_ HINSTANCE hInstance, _In_ HINSTANCE hPrevInstance, _In
 
         //g_pSwapChain->Present(1, 0); // Present with vsync
         //g_pSwapChain->Present(0, 0); // Present without vsync
-        static UINT presentFlags = 0;
         if (g_pSwapChain->Present(1, presentFlags) == DXGI_STATUS_OCCLUDED) {
             presentFlags = DXGI_PRESENT_TEST;
             // Ventana tapada o minimizada (p. ej. detras del juego): antes giraba ~250 veces/s

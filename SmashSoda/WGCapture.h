@@ -15,6 +15,8 @@ public:
 	bool isActive() const;
 
 	ID3D11Texture2D* acquireFrame();
+	/// Phoenix: espera hasta `ms` a que Windows entregue un cuadro nuevo. true = hay uno listo para acquireFrame().
+	bool waitFrame(unsigned ms);
 	void getFrameSize(int& width, int& height) const;
 
 private:

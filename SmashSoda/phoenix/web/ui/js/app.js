@@ -272,4 +272,9 @@ try {
   const marcar = () => document.documentElement.classList.toggle("oculta", document.hidden);
   document.addEventListener("visibilitychange", marcar);
   marcar();
+  // Sin foco (otra ventana delante, p. ej. PES): se paran los adornos infinitos (ver .sin-foco en app.css)
+  const foco = () => document.documentElement.classList.toggle("sin-foco", !document.hasFocus());
+  window.addEventListener("focus", foco);
+  window.addEventListener("blur", foco);
+  foco();
 } catch (e) { /* nada */ }
