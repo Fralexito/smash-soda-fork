@@ -292,6 +292,23 @@ function ActividadResumen({ s }) {
   </${Tarjeta}>`;
 }
 
+/** Tu ID de Parsec en grande: para que te agreguen como amigo en la app de Parsec. */
+const HOST_SIN_SALA = 4294967294;   // EstadoWeb kHostSinSala: Parsec aún no dio la cuenta
+function MiIdParsec({ m }) {
+  const id = m.sala?.hostId;
+  if (!id || id === HOST_SIN_SALA) return null;
+  const nombre = m.sala?.hostNombre && m.sala.hostNombre !== "Anfitrión" ? m.sala.hostNombre : "";
+  return html`<div class="caja" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:14px 18px">
+    <div style="flex:1;min-width:170px">
+      <div class="lab">${t("MI ID DE PARSEC", "MY PARSEC ID")}</div>
+      <div class="disp acc" style="font-size:32px;font-weight:700;line-height:1.1;margin-top:6px;letter-spacing:.04em;word-break:break-all">${id}</div>
+      ${nombre ? html`<div class="mono mut" style="font-size:12px;margin-top:2px">${nombre}#${id}</div>` : null}
+      <div class="ayuda" style="margin-top:6px">${t("Para agregarte: en Parsec › Amigos › «Añadir amigo» pegan este número.", "To add you: in Parsec › Friends › Add friend they paste this number.")}</div>
+    </div>
+    <${Boton} tipo="suave" al=${() => accion("ui.copiar", { texto: String(id) }, { ok: t("ID copiado.", "ID copied.") })}><${Icono} n="copiar" t=${15}/>${t("COPIAR", "COPY")}</${Boton}>
+  </div>`;
+}
+
 /** ANTES DEL PARTIDO: solo sale si algo va a dar lag o problemas; cada cosa con su botón para arreglarla. */
 function AntesDelPartido({ m }) {
   const c = m.sala?.calidad || {};
@@ -335,6 +352,7 @@ function ResumenSala({ s, m }) {
     </div>
     <div class="col" style="flex:0 0 clamp(360px,25vw,440px)">
       ${m.sala.abierta ? html`<${Pendientes} m=${m}/>` : null}
+      <${MiIdParsec} m=${m}/>
       <${Indicadores} m=${m}/>
       <${ActividadResumen} s=${s}/>
     </div>
