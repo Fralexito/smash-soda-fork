@@ -62,6 +62,7 @@ struct Servicio::Impl {
 	std::mutex m;                       // ajustes y cache
 	std::condition_variable cv;
 	bool publicar = false, recibir = false, confirmarAntes = true;
+	bool prueba = false;                // modo Prueba: me sigo a mí mismo (aparte de publicar/recibir, que pueden ir juntos)
 	std::string transporte = "web", carpeta, autor, optionFile;   // la web (Supabase) es el transporte por defecto; la carpeta es la alternativa
 	std::shared_ptr<Motor> motor;
 	std::shared_ptr<TransporteWeb> web;   // el mismo objeto que usa el motor cuando el transporte es la web
@@ -89,7 +90,7 @@ struct Servicio::Impl {
 	fs::path ajustesArchivo() const { return carpetaAjustes() / "ajustes.json"; }
 
 	void guardar() {
-		json j = { {"publicar", publicar}, {"recibir", recibir}, {"confirmarAntes", confirmarAntes}, {"transporte", transporte}, {"carpeta", carpeta}, {"autor", autor}, {"optionFile", optionFile} };
+		json j = { {"publicar", publicar}, {"recibir", recibir}, {"confirmarAntes", confirmarAntes}, {"prueba", prueba}, {"transporte", transporte}, {"carpeta", carpeta}, {"autor", autor}, {"optionFile", optionFile} };
 		escribir(ajustesArchivo(), j.dump(1));
 	}
 	void cargar() {
@@ -100,7 +101,7 @@ struct Servicio::Impl {
 			t.assign((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
 		}
 		const AjustesGuardados a = leerAjustes(t);   // logica pura (probada): la web es el transporte por defecto
-		publicar = a.publicar; recibir = a.recibir; confirmarAntes = a.confirmarAntes;
+		publicar = a.publicar; recibir = a.recibir; confirmarAntes = a.confirmarAntes; prueba = a.prueba;
 		transporte = a.transporte; carpeta = a.carpeta; autor = a.autor; optionFile = a.optionFile;
 		if (a.migrado) guardar();   // deja el archivo ya migrado a la web
 	}
@@ -169,9 +170,9 @@ struct Servicio::Impl {
 		std::vector<std::string> meSig;
 		if (pub) ok = cli.codigo(false, c, e);
 		if (ok && (pub || rec)) ok = cli.siguiendo(sig, meSig, e);
-		bool prueba;
-		{ std::lock_guard<std::mutex> g(m); prueba = pruebaOk; }
-		if (ok && pub && rec && !prueba && c.hay) {   // modo Prueba: me sigo a mi mismo con mi propio codigo (la web lo exige con prueba:true)
+		bool yaPrueba, quierePrueba;
+		{ std::lock_guard<std::mutex> g(m); yaPrueba = pruebaOk; quierePrueba = prueba; }
+		if (ok && pub && rec && quierePrueba && !yaPrueba && c.hay) {   // modo Prueba: me sigo a mi mismo con mi propio codigo (la web lo exige con prueba:true)
 			SiguiendoWeb s;
 			std::string e2;
 			if (cli.seguir(c.codigo, true, s, e2)) { std::lock_guard<std::mutex> g(m); pruebaOk = true; errorPrueba.clear(); }
@@ -320,7 +321,7 @@ json Servicio::estado() {
 	if (_i->cache.empty() && !_i->corriendo) { _i->asegurarMotor(); _i->cache = _i->motor->estadoJson(); }   // apagado: solo se enseña el historial guardado
 	if (!_i->cache.empty()) j = json::parse(_i->cache, nullptr, false);
 	if (!j.is_object()) j = json::object();
-	j["ajustes"] = { {"publicar", _i->publicar}, {"recibir", _i->recibir}, {"confirmarAntes", _i->confirmarAntes}, {"transporte", _i->transporte}, {"carpeta", _i->carpeta}, {"autor", _i->autor}, {"optionFile", _i->optionFile} };
+	j["ajustes"] = { {"publicar", _i->publicar}, {"recibir", _i->recibir}, {"confirmarAntes", _i->confirmarAntes}, {"prueba", _i->prueba}, {"transporte", _i->transporte}, {"carpeta", _i->carpeta}, {"autor", _i->autor}, {"optionFile", _i->optionFile} };
 	j["activo"] = _i->publicar || _i->recibir;
 	j["mensaje"] = _i->mensaje;
 	j["juego"] = phoenix::entrega::aU8(_i->juegoActual);
@@ -357,7 +358,7 @@ void Servicio::poner(const json& d) {
 		};
 		const std::string transporteAntes = _i->transporte, carpetaAntes = _i->carpeta, optionAntes = _i->optionFile;
 		const bool pubAntes = _i->publicar, recAntes = _i->recibir;
-		interruptor("publicar", _i->publicar); interruptor("recibir", _i->recibir); interruptor("confirmarAntes", _i->confirmarAntes);
+		interruptor("publicar", _i->publicar); interruptor("recibir", _i->recibir); interruptor("confirmarAntes", _i->confirmarAntes); interruptor("prueba", _i->prueba);
 		texto("transporte", _i->transporte, 12); texto("carpeta", _i->carpeta, 500); texto("autor", _i->autor, 40); texto("optionFile", _i->optionFile, 500);
 		auto deshacerCambios = [&]() { _i->transporte = transporteAntes; _i->carpeta = carpetaAntes; _i->optionFile = optionAntes; _i->publicar = pubAntes; _i->recibir = recAntes; };
 		if (_i->transporte != "carpeta" && _i->transporte != "web") { deshacerCambios(); throw std::runtime_error("Transporte desconocido."); }

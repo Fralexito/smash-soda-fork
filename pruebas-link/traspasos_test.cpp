@@ -1105,6 +1105,10 @@ static void pruebaAjustes() {
 	CHECK(raro.transporte == "web" && !raro.publicar && raro.autor.empty(), "valores de tipo raro o transporte desconocido: se ignoran");
 	AjustesGuardados largo = leerAjustes("{\"carpeta\":\"" + std::string(900, 'x') + "\",\"transporte\":\"carpeta\"}");
 	CHECK(largo.transporte == "web" && largo.carpeta.empty(), "una ruta absurdamente larga se descarta");
+	// enviar y recibir a la vez ya no es «modo prueba»: la prueba (seguirme a mí mismo) va aparte
+	CHECK(!v.prueba && !vacio.prueba, "publicar+recibir sin «prueba» no activa el modo prueba");
+	AjustesGuardados pr = leerAjustes("{\"publicar\":true,\"recibir\":true,\"prueba\":true}");
+	CHECK(pr.prueba && pr.publicar && pr.recibir, "el modo prueba se guarda y se lee aparte");
 }
 
 static void pruebaBuscar(const fs::path& tmp) {

@@ -400,6 +400,7 @@ AjustesGuardados leerAjustes(const std::string& texto) {
 	auto b = [&](const char* k, bool def) { return j.contains(k) && j[k].is_boolean() ? j[k].get<bool>() : def; };
 	auto s = [&](const char* k, size_t max) { std::string t = j.contains(k) && j[k].is_string() ? j[k].get<std::string>() : std::string(); if (t.size() > max) t.clear(); return t; };
 	a.publicar = b("publicar", false); a.recibir = b("recibir", false); a.confirmarAntes = b("confirmarAntes", true);
+	a.prueba = b("prueba", false);
 	a.transporte = s("transporte", 12); a.carpeta = s("carpeta", 500); a.autor = s("autor", 40); a.optionFile = s("optionFile", 500);
 	if (a.transporte != "web" && a.transporte != "carpeta") a.transporte = "web";
 	if (a.transporte == "carpeta" && a.carpeta.empty()) { a.transporte = "web"; a.migrado = true; }   // prueba vieja con carpeta vacia: la web

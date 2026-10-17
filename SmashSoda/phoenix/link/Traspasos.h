@@ -266,6 +266,7 @@ std::string textoAccionRecarga(bool pesAbierto, const std::string& modoRecarga);
 // ─── Ajustes guardados (ajustes.json) ────────────────────────────────────────────────────────────
 struct AjustesGuardados {
 	bool publicar = false, recibir = false, confirmarAntes = true;
+	bool prueba = false;    ///< modo Prueba: seguirme a mí mismo (antes era «publicar y recibir a la vez»; ahora las dos cosas pueden ir juntas sin esto)
 	std::string transporte = "web", carpeta, autor, optionFile;
 	bool migrado = false;   ///< el archivo decia «carpeta» sin carpeta (una prueba vieja): ahora usa la web
 };

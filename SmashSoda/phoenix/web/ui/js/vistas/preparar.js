@@ -1,7 +1,7 @@
 // =============================================================================
 //  SYNC › MI PC («¿Está listo mi PC?»). Una sola lista de lo que hace falta para jugar con fichajes y traspasos en vivo, cada punto con su botón,
 //  un mensaje arriba («Todo listo» / «Falta algo: N cosas») y un botón grande «ARREGLAR TODO» que hace en orden lo que se puede sin riesgo
-//  y se detiene si necesita algo de la persona. El papel (anfitrión/amigo) NO se elige aquí: solo hay un enlace a la pestaña Traspasos.
+//  y se detiene si necesita algo de la persona. Los traspasos (enviar y recibir, sin papel) se ven en la pestaña Traspasos: aquí solo hay un enlace.
 //  Nada nuevo en el motor: usa las mismas acciones que el resto de Sync (sync.modulos, sync.modulo, sync.detectarJuego,
 //  sync.modoRecarga, traspasos.estado/config/accion). Con PES abierto no se escribe nada en el juego.
 // =============================================================================
@@ -43,7 +43,7 @@ export function Preparar({ s }) {
   const modo = tr?.modoRecarga || "AUTO-SIEMPRE";
   const gest = (mods?.modulos || []).filter((x) => x.gestionable);
   const faltan = gest.filter((x) => x.estado !== "instalado");
-  const rol = aj.publicar && aj.recibir ? "prueba" : aj.publicar ? "anfitrion" : aj.recibir ? "amigo" : "apagado";
+  const rol = aj.prueba ? "prueba" : (aj.publicar || aj.recibir) ? "encendido" : "apagado";   // sin papel: enviar y recibir van juntos
   const esWeb = (aj.transporte || "web") === "web";
   const cuenta = m.web?.estado || "sin_vincular";
   const pesAbierto = !!mods?.pesAbierto;
@@ -140,11 +140,10 @@ export function Preparar({ s }) {
   filas.push({
     id: "rol", ok: !tr ? "espera" : rol !== "apagado" ? true : "apagado", opcional: true,
     titulo: t("Traspasos en vivo", "Live transfers"),
-    frase: !tr ? t("Revisando…", "Checking…") : rol === "anfitrion" ? t("Tu papel: anfitrión. Tus fichajes le llegan a tus amigos.", "Your role: host. Your transfers reach your friends.")
-      : rol === "amigo" ? t("Tu papel: amigo. Recibes los fichajes de tu anfitrión.", "Your role: friend. You receive your host's transfers.")
+    frase: !tr ? t("Revisando…", "Checking…") : rol === "encendido" ? t("Encendidos: envías tus fichajes con tu código y recibes los de quien te dé el suyo.", "On: you send your transfers with your code and receive those of whoever gives you theirs.")
       : rol === "prueba" ? t("Modo prueba: te mandas los fichajes a ti mismo.", "Test mode: you send transfers to yourself.")
       : t("Apagados. Actívalos solo si vas a pasar fichajes a un amigo.", "Off. Turn them on only to pass transfers to a friend."),
-    boton: [t("ELEGIR PAPEL →", "CHOOSE ROLE →"), () => elegirPestana("traspasos")],
+    boton: [t("IR A TRASPASOS →", "GO TO TRANSFERS →"), () => elegirPestana("traspasos")],
   });
 
   const malas = filas.filter((f) => f.ok === false && !f.opcional);
@@ -203,7 +202,7 @@ export function Preparar({ s }) {
         if (b?.web?.estado === "ok") nota(true, t("La conexión de los traspasos funciona.", "The live transfers connection works."));
         else nota(false, t("Los traspasos todavía no conectan. Se reintenta sola; mira «Traspasos» para ver el motivo.", "Live transfers aren't connected yet. It retries by itself; see «Transfers» for the reason."));
       }
-      if (!(b?.ajustes && (b.ajustes.publicar || b.ajustes.recibir))) nota(true, t("Los traspasos en vivo siguen apagados. Si los quieres, elige tu papel en «Traspasos».", "Live transfers are still off. If you want them, choose your role in «Transfers»."));
+      if (!(b?.ajustes && (b.ajustes.publicar || b.ajustes.recibir))) nota(true, t("Los traspasos en vivo siguen apagados. Si los quieres, enciéndelos en «Traspasos».", "Live transfers are still off. If you want them, turn them on in «Transfers»."));
     } finally {
       if (vivo.current) setHaciendo(false);
     }

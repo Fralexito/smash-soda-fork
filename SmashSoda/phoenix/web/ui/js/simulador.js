@@ -581,7 +581,7 @@ export function crearSimulador(enviar) {
     "traspasos.estado": () => traspasosSim(),
     "traspasos.config": (d) => {
       const a = s.traspasos.ajustes;
-      for (const k of ["publicar", "recibir", "confirmarAntes"]) if (typeof d[k] === "boolean") a[k] = d[k];
+      for (const k of ["publicar", "recibir", "confirmarAntes", "prueba"]) if (typeof d[k] === "boolean") a[k] = d[k];
       for (const k of ["carpeta", "autor", "optionFile", "transporte"]) if (typeof d[k] === "string") a[k] = d[k];
       return traspasosSim();
     },

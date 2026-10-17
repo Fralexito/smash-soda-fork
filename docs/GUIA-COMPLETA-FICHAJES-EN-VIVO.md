@@ -1,4 +1,4 @@
-# Guía completa de Phoenix Link: instalar y pasar un fichaje de un PES a otro (versión 0.2.82)
+# Guía completa de Phoenix Link: instalar y pasar un fichaje de un PES a otro (versión 0.3.12)
 
 Probado de verdad el 13 de octubre de 2026: un anfitrión hizo fichajes en Editar de PES 2021, los guardó, Link los publicó y el PES de su amigo los recibió. Esta guía junta todo el recorrido, paso a paso, y los errores que pueden salir con la forma de evitarlos.
 
@@ -48,18 +48,16 @@ Hazlo con **PES 2021 cerrado**.
    - deja la recarga automática activada.
 5. Cuando arriba diga **«Todo listo»**, sigue. Si algo se queda en ✗, mira la sección 9.
 
-## 5. El anfitrión: obtener el código
-En **SYNC › TRASPASOS** hay un asistente de 3 pasos (siempre el mismo orden; el paso que toca sale marcado **AHORA** y los hechos con ✓).
-1. **Paso 1 · ¿Qué vas a hacer?** Elige **«Hago los traspasos»** (eres el anfitrión). Aquí es el único sitio donde se elige el papel. El modo prueba y apagar están en «Más opciones».
-2. **Paso 2 · Tu código.** Aparece **tu código en grande** (8 letras y números). Pulsa **COPIAR CÓDIGO** y mándaselo a tu amigo por WhatsApp o donde quieras. **CAMBIAR CÓDIGO** pone uno nuevo (el viejo deja de servir; quien ya te sigue sigue recibiendo).
-3. Si no sale el código, la pantalla dice por qué: cuenta sin unir (botón **UNIR MI CUENTA**, te lleva a Mi PC), cuenta sin aprobar como anfitrión (pídeselo al staff) o la web sin conexión (botón **VOLVER A COMPROBAR**; el motivo técnico sale debajo).
-4. Abajo hay un bloque plegado **«¿Algo no funciona?»**: la lista de comprobaciones. Se abre sola si hay un ✗.
+## 5. Tu código (para enviar tus fichajes)
+Desde la 0.3.12 **no hay que elegir papel**: en **SYNC › TRASPASOS** enviar y recibir van juntos y se encienden solos.
+1. En el bloque **ENVIAR MIS FICHAJES** sale **tu código en grande** (8 letras y números). Pulsa **COPIAR CÓDIGO** y mándaselo a tu amigo. **CAMBIAR CÓDIGO** pone uno nuevo (el viejo deja de servir para unirse; quien ya lo recibe sigue).
+2. Si no sale el código, la pantalla dice por qué: cuenta sin unir (botón **UNIR MI CUENTA**), cuenta no aprobada como anfitrión (puedes recibir igual; para enviar, pídeselo al staff) o la web sin conexión (**VOLVER A COMPROBAR**).
+3. Debajo hay **«¿Algo no funciona?»** (se abre sola si hay un ✗) y **«Más opciones»** (modo prueba, carpeta compartida, apagar).
 
-## 6. El amigo: seguir al anfitrión
-1. **SYNC › TRASPASOS › Paso 1:** elige **«Los recibo»** (eres el amigo).
-2. **Paso 2 · Escribe el código de tu anfitrión:** pégalo en la caja y pulsa **SEGUIR**. Verás el nombre del anfitrión con la etiqueta **SIGUIENDO** y el botón **DEJAR DE SEGUIR**.
-3. Si «¿Algo no funciona?» se abre con ✗, suele ser: cuenta sin unir, juego sin encontrar o archivos de Phoenix sin instalar. Todo eso se arregla con **ARREGLAR TODO** en **MI PC**.
-4. Link consulta la web cada unos 8 segundos. Si el anfitrión ya publicó fichajes antes, **los recibirá al seguirlo** (la web los guarda 30 días, hasta 200 por anfitrión).
+## 6. Recibir los fichajes de un amigo
+1. En el bloque **RECIBIR FICHAJES DE UN AMIGO**, pega el código de tu amigo y pulsa **RECIBIR**. Verás su nombre con **RECIBIENDO** y el botón **DEJAR DE RECIBIR**.
+2. Puedes recibir de varios amigos («Recibir también de otro amigo») y a la vez enviar los tuyos.
+3. Link consulta la web cada unos 8 segundos. Si tu amigo ya envió fichajes antes, **los recibirás al pegar su código** (la web los guarda 30 días, hasta 200 por persona).
 
 ## 7. Hacer el fichaje (anfitrión)
 1. Abre PES 2021 y entra a **Editar**.
