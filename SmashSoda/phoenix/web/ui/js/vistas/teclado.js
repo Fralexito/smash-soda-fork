@@ -1,5 +1,5 @@
 // =============================================================================
-//  PARTIDO › TECLADO (rehecho): permisos de teclado por invitado y el mapa de
+//  MANDOS › TECLADO (rehecho): permisos de teclado por invitado y el mapa de
 //  teclas (qué tecla del teclado es cada botón del mando). Se toca un botón del
 //  mando dibujado y se pulsa la tecla nueva. Todo dentro de la interfaz nueva.
 // =============================================================================

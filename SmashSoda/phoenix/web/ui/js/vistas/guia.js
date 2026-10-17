@@ -122,8 +122,8 @@ export function Entrenador({ m }) {
       "Your room is open. Next: copy the link and send it on Discord or WhatsApp. When someone joins, they appear here.");
     botones = html`<${Boton} tipo="lleno" deshabilitado=${!sala.enlace} al=${() => accion("sala.copiarEnlace", {}, { ok: t("Enlace copiado. Pégalo en Discord o WhatsApp.", "Link copied.") })}>${t("COPIAR ENLACE", "COPY LINK")}</${Boton}>`;
   } else if (sentados < 2) {
-    texto = t("Ya entró gente. Dale mando a quien va a jugar: en Partido › Puestos arrastra a cada persona a un puesto. Quien dejes en «Mirando» solo ve la pantalla.",
-      "People joined. Give a pad to whoever will play: in Match › Seats drag each person to a seat. Anyone left in «Watching» only sees the screen.");
+    texto = t("Ya entró gente. Dale mando a quien va a jugar: en Mandos › Puestos arrastra a cada persona a un puesto. Quien dejes en «Mirando» solo ve la pantalla.",
+      "People joined. Give a pad to whoever will play: in Pads › Seats drag each person to a seat. Anyone left in «Watching» only sees the screen.");
     botones = html`<${Boton} tipo="lleno" al=${() => irA("mandos", "puestos")}>${t("IR A PUESTOS", "GO TO SEATS")}</${Boton}>`;
   } else {
     return null;   // todo en marcha: el recuadro ya no hace falta (Fralex, 2026-10-11)

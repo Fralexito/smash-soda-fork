@@ -1,5 +1,6 @@
 // =============================================================================
-//  Menú de Phoenix Link (0.3.7): SALA · PARTIDO · OTRAS SALAS · SYNC · AJUSTES.
+//  Menú de Phoenix Link (0.3.8): SALA · PARTIDO · MANDOS · OTRAS SALAS · SYNC · AJUSTES.
+//  PARTIDO junta todo lo del partido en vivo (Fralex: «en una sola seccion todo lo del partido en vivo»).
 //  Nombres de cosas, no de momentos (Fralex: «no me gusta que diga antes y después»),
 //  y SYNC siempre con su sección propia (regla fija: nunca dentro de Ajustes ni de otra).
 //  Cada pestaña del menú apunta a una pantalla de siempre (sección + pestaña de
@@ -22,17 +23,22 @@ export const GRUPOS = [
       { p: ["sala", "actividad"], es: "ACTIVIDAD", en: "ACTIVITY", mas: true },
     ] },
   { id: "partido", es: "PARTIDO", en: "MATCH", icono: "partido",
-    d: ["El partido: puestos y mandos, marcador e historial.", "The match: seats and pads, score and history."],
+    d: ["Todo el partido en vivo: marcador y equipos, campo, mandos en vivo, árbitro y bloqueo.", "The whole live match: score and teams, pitch, live pads, referee and lock."],
+    pestanas: [
+      { p: ["partido", "vivo"], es: "MARCADOR", en: "SCORE" },
+      { p: ["partido", "campo"], es: "CAMPO", en: "PITCH" },
+      { p: ["mandos", "vivo"], es: "MANDOS EN VIVO", en: "LIVE PADS" },
+      { p: ["mandos", "bloqueo"], es: "ÁRBITRO Y BLOQUEO", en: "REFEREE & LOCK" },
+      { p: ["partido", "historial"], es: "HISTORIAL", en: "HISTORY", mas: true },
+    ] },
+  { id: "mandos", es: "MANDOS", en: "PADS", icono: "mandos",
+    d: ["Preparar los mandos: quién juega en cada puesto, tu mando, mapeo y teclado.", "Set up the pads: who plays in each seat, your pad, mapping and keyboard."],
     pestanas: [
       { p: ["mandos", "puestos"], es: "PUESTOS", en: "SEATS" },
-      { p: ["partido", "vivo"], es: "MARCADOR", en: "SCORE" },
       { p: ["mandos", "marionetas"], es: "TU MANDO", en: "YOUR PAD" },
-      { p: ["partido", "historial"], es: "HISTORIAL", en: "HISTORY" },
-      { p: ["partido", "campo"], es: "CAMPO", en: "PITCH", mas: true },
-      { p: ["mandos", "mapeo"], es: "MAPEO", en: "MAPPING", mas: true },
-      { p: ["mandos", "bloqueo"], es: "BLOQUEO", en: "LOCK", mas: true },
+      { p: ["mandos", "mapeo"], es: "MAPEO", en: "MAPPING" },
+      { p: ["mandos", "teclado"], es: "TECLADO", en: "KEYBOARD" },
       { p: ["mandos", "turnos"], es: "TURNOS", en: "HOTSEAT", mas: true },
-      { p: ["mandos", "teclado"], es: "TECLADO", en: "KEYBOARD", mas: true },
       { p: ["sala", "puesto"], es: "DÓNDE JUEGO YO", en: "WHERE I PLAY", mas: true },
     ] },
   { id: "otras", es: "OTRAS SALAS", en: "OTHER ROOMS", icono: "jugar",

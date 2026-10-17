@@ -12,7 +12,7 @@ import { Icono, Boton, cx } from "../ui.js";
 
 // Lo que se ve mientras la PC está cedida (lo demás se oculta y el motor lo rechaza)
 export const SECCIONES_CEDIDO = ["sala", "partido", "mandos"];
-export const PESTANAS_CEDIDO = { sala: ["resumen", "red", "actividad"], partido: ["vivo", "historial"], mandos: ["puestos", "bloqueo"] };
+export const PESTANAS_CEDIDO = { sala: ["resumen", "red", "actividad"], partido: ["vivo", "historial"], mandos: ["puestos", "bloqueo", "vivo"] };
 export const estaCedida = (s) => !!s?.motor?.cedido?.activo;
 
 // ---- Botón en la ficha de una persona ------------------------------------------------

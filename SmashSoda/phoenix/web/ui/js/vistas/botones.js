@@ -1,5 +1,5 @@
 // =============================================================================
-//  PARTIDO › BLOQUEO (rehecho): bloqueo general, bloqueo por mando y «Elegir
+//  PARTIDO › ÁRBITRO Y BLOQUEO (rehecho): bloqueo general, bloqueo por mando y «Elegir
 //  botones» con un mando dibujado (mandoeditable.js) donde se toca cada botón para bloquearlo.
 //  Todo dentro de la interfaz nueva (ya no salta al panel clásico).
 // =============================================================================
@@ -129,7 +129,7 @@ function PorMando({ m }) {
 function Arbitro({ m }) {
   const a = m.arbitro || {};
   const juego = m.juego?.datos;
-  return html`<${Tarjeta} secundaria interior="padding:22px 24px">
+  return html`<${Tarjeta} interior="padding:22px 24px">
     <${Titulo} texto=${t("ÁRBITRO DEL PARTIDO", "MATCH REFEREE")}
       derecha=${a.activo ? html`<span class="mono" style="color:var(--ok)">${t("START BLOQUEADO", "START LOCKED")}</span>` : null}/>
     <${AjusteSw} titulo=${t("Modo competitivo", "Competitive mode")}
@@ -154,13 +154,13 @@ export function BloqueoNuevo({ m }) {
   const lista = m.mandos.lista || [];
   return html`<div class="fila partible" style="align-items:flex-start">
     <div class="col" style="flex:1 1 0;min-width:300px">
+      <${Arbitro} m=${m}/>
       <${Tarjeta} interior="padding:22px 24px">
         <${Titulo} texto=${t("BLOQUEO GENERAL", "GLOBAL LOCK")}/>
         <${AjusteSw} titulo=${t("Bloquear todos los mandos", "Lock all pads")} desc=${t("Nadie puede mover nada (pausas, árbitro, revisión).", "Nobody can move (pauses, review).")}
           valor=${m.mandos.bloqueoGlobal} deshabilitado=${m.mandos.esclavo} al=${() => accion("mandos.herramienta", { nombre: "bloquearTodo" })}/>
       </${Tarjeta}>
       <${PorMando} m=${m}/>
-      <${Arbitro} m=${m}/>
     </div>
     <div class="col" style="flex:1.5 1 0;min-width:340px">
       <${BotonesElegidos} m=${m}/>

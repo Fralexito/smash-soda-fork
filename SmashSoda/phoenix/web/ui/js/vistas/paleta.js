@@ -52,7 +52,7 @@ function opciones(m) {
     "mandos/puestos": ["mandos, quién juega y quién mira", "pads, who plays and who watches", "mandos"], "partido/vivo": ["partido, equipos y goles", "match, teams and goals", "partido"],
     "gente/sala": ["invitados y su ficha", "guests and their card", "gente"], "mandos/marionetas": ["tu mando físico, cantidad de mandos", "your physical pad, pad count", "mandos"],
     "partido/campo": ["campo 2D en vivo", "live 2D pitch", "partido"], "mandos/mapeo": ["botones cambiados, stick que camina", "swapped buttons, drifting stick", "mandos"],
-    "mandos/bloqueo": ["congelar mandos, bloquear botones", "freeze pads, lock buttons", "candado"], "mandos/turnos": ["hotseat", "hotseat", "mandos"],
+    "mandos/bloqueo": ["modo competitivo, pausa y marcador automáticos, congelar mandos, bloquear botones", "competitive mode, auto pause and scoreboard, freeze pads, lock buttons", "candado"], "mandos/vivo": ["qué pulsa cada jugador ahora", "what each player is pressing now", "mandos"], "mandos/turnos": ["hotseat", "hotseat", "mandos"],
     "mandos/teclado": ["mapa de teclas", "key map", "mandos"], "sala/puesto": ["mi puesto al pulsar JUGAR", "my seat when pressing PLAY", "mandos"],
     "partido/historial": ["historial y tabla", "history and table", "trofeo"], "sync/traspasos": ["pasar un fichaje", "pass a transfer", "web"],
     "sala/actividad": ["registro de la sala", "room log", "sala"], "jugar/salas": ["salas de otros", "other people's rooms", "sala"],

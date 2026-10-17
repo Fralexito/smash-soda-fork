@@ -64,7 +64,7 @@ function ArmarAuto({ m, aMano }) {
     </${Tarjeta}>` : null}
     <div class="ayuda">${pv && pv.fuente === "juego"
       ? t("Así quedan ahora según la pantalla de mandos del juego (izquierda = Equipo A, derecha = Equipo B, centro = Mirando).", "As picked on the game's controller screen (left = Team A, right = Team B, middle = Watching).")
-      : t("Así quedan ahora según el equipo de cada puesto (Partido › Puestos). Si en el juego alguien se pone del otro lado, Link lo ve y lo corrige.", "This is how they stand now by seat team (Match › Seats). If someone picks the other side in the game, Link fixes it.")}</div>
+      : t("Así quedan ahora según el equipo de cada puesto (Mandos › Puestos). Si en el juego alguien se pone del otro lado, Link lo ve y lo corrige.", "This is how they stand now by seat team (Pads › Seats). If someone picks the other side in the game, Link fixes it.")}</div>
     ${m.arbitro && m.arbitro.pantallaLados ? html`<div class="caja" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
       <${Interruptor} valor=${!!m.arbitro.mirandoAuto} al=${(v) => accion("partido.mirandoAuto", { si: v })} etiqueta=${t("Mirando automático", "Auto watching")}/>
       <div style="flex:1;min-width:220px"><b>${t("Mirando automático", "Auto watching")}</b>
@@ -136,7 +136,7 @@ function ArmarManual({ m, volver }) {
     <div class="caja" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
       <${Interruptor} valor=${b.asignar} al=${(v) => fijar({ asignar: v })} etiqueta="asignar"/>
       <div style="flex:1;min-width:220px"><b>${t("Sentar a cada uno en su mando", "Seat everyone on their pad")}</b>
-        <div class="ayuda">${t("Cada uno va a un puesto de su equipo (A o B, los de Partido › Puestos), en orden. A y B son equipos de Link: no tienen por qué coincidir con local y visita del juego.", "Everyone goes to a seat of their team (A or B, as set in Match › Seats), in order. A and B are Link's teams: they don't have to match the game's home and away.")}</div></div>
+        <div class="ayuda">${t("Cada uno va a un puesto de su equipo (A o B, los de Mandos › Puestos), en orden. A y B son equipos de Link: no tienen por qué coincidir con local y visita del juego.", "Everyone goes to a seat of their team (A or B, as set in Pads › Seats), in order. A and B are Link's teams: they don't have to match the game's home and away.")}</div></div>
       <${Boton} tipo="lleno enorme" deshabilitado=${a.length === 0 || (!cpu && bb.length === 0)} al=${preparar}><${Icono} n="partido" t=${18}/>${t("PREPARAR PARTIDO", "SET UP MATCH")}</${Boton}>
     </div>
   </div>`;

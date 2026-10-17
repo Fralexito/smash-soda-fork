@@ -246,7 +246,7 @@ export function crearSimulador(enviar) {
         equipo: s.mapa[i] === "A" ? "a" : s.mapa[i] === "B" ? "b" : "fuera",
         tipo: i < s.xbox ? "xbox" : "ds4",
         // Mando en vivo (solo en Mandos › Puestos, como el motor): cada mando «pulsa» algo distinto con el tiempo
-        ...(s.seccion === "mandos" && (s.pestana === "puestos" || !s.pestana) && (id || hostAqui) ? { entrada: (() => {
+        ...(s.seccion === "mandos" && (s.pestana === "puestos" || s.pestana === "vivo" || !s.pestana) && (id || hostAqui) ? { entrada: (() => {
           const k = Math.floor(ahora() * 2 + i * 3), bits = [0x1000, 0x2000, 0x4000, 0x8000, 0x1, 0x8, 0x100, 0x10, 0];
           return { b: bits[k % bits.length], lt: (k % 5) * 60, rt: ((k + 2) % 5) * 60,
             lx: Math.round(Math.cos(ahora() + i) * 30000), ly: Math.round(Math.sin(ahora() + i) * 30000), rx: 0, ry: (k % 3 - 1) * 25000 };

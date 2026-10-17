@@ -5,7 +5,7 @@
 //  mando (intervalo medio, p95, jitter, saltos, ritmo). Aquí se pinta:
 //  - BloqueRetraso: dentro de cada tarjeta de Sala › Conexión.
 //  - LeyendaRetraso: cómo se calcula y qué NO se puede medir.
-//  - IndicadorRetraso: punto pequeño junto a cada puesto en Partido › Puestos.
+//  - IndicadorRetraso: punto pequeño junto a cada puesto en Mandos › Puestos.
 // =============================================================================
 import { html, useState } from "../lib.js";
 import { t } from "../i18n.js";
@@ -36,7 +36,7 @@ function resumenTexto(r) {
   return partes.join("\n");
 }
 
-/** Partido › Puestos: punto + «~84» junto al ping (los detalles, en el globo). */
+/** Mandos › Puestos: punto + «~84» junto al ping (los detalles, en el globo). */
 export function IndicadorRetraso({ r }) {
   if (!r || r.semaforo === "sin_datos") return null;
   const color = r.semaforo === "verde" ? "var(--ok)" : r.semaforo === "ambar" ? "var(--warn)" : "var(--bad)";

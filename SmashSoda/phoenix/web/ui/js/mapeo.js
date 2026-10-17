@@ -4,7 +4,7 @@
 //    { botones: { fuente: [salidas…] } (solo lo que cambia; [] = desactivado),
 //      invertir: ["lx"|"ly"|"rx"|"ry"], cambiarSticks: bool, zona: [izq%, der%] }
 //  Fuentes/salidas: los 16 bits XInput por nombre + "lt" y "rt".
-//  La usan la pestaña Partido › Más › Mapeo (asistente y vista previa) y el simulador.
+//  La usan la pestaña Mandos › Mapeo (asistente y vista previa) y el simulador.
 // =============================================================================
 
 export const BIT = { arriba: 0x1, abajo: 0x2, izq: 0x4, der: 0x8, start: 0x10, back: 0x20, ls: 0x40, rs: 0x80, lb: 0x100, rb: 0x200, guia: 0x400, a: 0x1000, b: 0x2000, x: 0x4000, y: 0x8000 };

@@ -10,6 +10,7 @@ import { BloqueoNuevo } from "./botones.js";
 import { MarionetasNuevo } from "./marionetas.js";
 import { TecladoNuevo } from "./teclado.js";
 import { MapeoNuevo } from "./mapeo.js";
+import { MandosEnVivo } from "./mandovivo.js";
 import { Tarjeta, Titulo, Boton, Interruptor, Ajuste, AjusteSw, Stepper, Icono, Vacio, Avatar, Chip, colorPing, cx, dos } from "../ui.js";
 
 export const PESTANAS_MANDOS = [
@@ -18,7 +19,8 @@ export const PESTANAS_MANDOS = [
   { id: "mapeo", es: "MAPEO", en: "MAPPING", d: ["Corrige el mando de cada invitado: botones cambiados, stick que camina solo, sticks al revés, gatillos raros.", "Fix each guest's pad: swapped buttons, drifting stick, inverted sticks, odd triggers."] },
   { id: "teclado", mas: true, es: "TECLADO", en: "KEYBOARD", d: ["Quién puede jugar con teclado y qué tecla es cada botón del mando.", "Who can play with keyboard and which key is each pad button."] },
   { id: "turnos", mas: true, es: "TURNOS", en: "HOTSEAT", d: ["Rotación automática: cada uno juega un rato y cede el mando.", "Automatic rotation of the pads."] },
-  { id: "bloqueo", mas: true, es: "BLOQUEO", en: "LOCK", d: ["Congela los mandos (pausas, revisión) o bloquea solo los botones que elijas.", "Freeze pads or lock only the buttons you pick."] },
+  { id: "bloqueo", es: "ÁRBITRO Y BLOQUEO", en: "REFEREE & LOCK", d: ["El árbitro del partido (modo competitivo, marcador y pausa automáticos) y el bloqueo de mandos o de botones.", "The match referee (competitive mode, auto scoreboard and pause) and locking pads or buttons."] },
+  { id: "vivo", es: "MANDOS EN VIVO", en: "LIVE PADS", d: ["Lo que pulsa cada jugador ahora mismo. Toca un mando para mapearlo.", "What each player is pressing right now. Tap a pad to map it."] },
 ];
 
 export function metaMandos(s) {
@@ -39,6 +41,7 @@ export function VistaMandos({ s, pestana }) {
     case "turnos": return html`<${Turnos} m=${m}/>`;
     case "marionetas": return html`<${MarionetasNuevo} m=${m}/>`;
     case "bloqueo": return html`<${BloqueoNuevo} m=${m}/>`;
+    case "vivo": return html`<${Tarjeta} interior="padding:22px 24px"><${Titulo} texto=${t("MANDOS EN VIVO", "LIVE PADS")}/><${MandosEnVivo} m=${m}/></${Tarjeta}>`;
     default: return html`<${PuestosNuevo} m=${m}/>`;
   }
 }
@@ -87,7 +90,7 @@ export function ElegirJugador({ m, indice, alCerrar }) {
         <button class="persona" onClick=${tomarYo}>
           <${Avatar} nombre=${m.sala?.hostNombre || "Yo"} brillo t=${38}/>
           <div style="flex:1;text-align:left"><div class="nom">${t("Yo (anfitrión)", "Me (host)")}</div>
-            <div class="sub mut" style="font-size:12px">${t("Lo manejas con el teclado: flechas, Enter = A, Retroceso = B, Espacio = Start (atajo: Ctrl+Alt+número). Para usar tu mando físico, ve a Partido › Tu mando.", "You drive it with the keyboard: arrows, Enter = A, Backspace = B, Space = Start (shortcut: Ctrl+Alt+number). To use your physical pad, go to Match › Your pad.")}</div></div>
+            <div class="sub mut" style="font-size:12px">${t("Lo manejas con el teclado: flechas, Enter = A, Retroceso = B, Espacio = Start (atajo: Ctrl+Alt+número). Para usar tu mando físico, ve a Mandos › Tu mando.", "You drive it with the keyboard: arrows, Enter = A, Backspace = B, Space = Start (shortcut: Ctrl+Alt+number). To use your physical pad, go to Pads › Your pad.")}</div></div>
         </button>
         ${invitados.map((g) => html`<button class="persona" key=${g.parsecId} onClick=${() => elegir(g)} disabled=${g.rolWeb === "espectador"}>
           <${Avatar} nombre=${g.nombre} id=${g.parsecId} url=${m.perfiles?.[g.parsecId]?.avatar_url} t=${38}/>
