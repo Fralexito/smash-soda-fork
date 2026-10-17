@@ -581,8 +581,12 @@ export function crearSimulador(enviar) {
     "traspasos.estado": () => traspasosSim(),
     "traspasos.config": (d) => {
       const a = s.traspasos.ajustes;
-      for (const k of ["publicar", "recibir", "confirmarAntes", "prueba"]) if (typeof d[k] === "boolean") a[k] = d[k];
+      for (const k of ["publicar", "recibir", "confirmarAntes", "prueba", "aprobarRecibidos"]) if (typeof d[k] === "boolean") a[k] = d[k];
       for (const k of ["carpeta", "autor", "optionFile", "transporte"]) if (typeof d[k] === "string") a[k] = d[k];
+      if (d.aprobarRecibidos === true && !s.traspasos.amigo.historial.some((l) => l.estado === "por_aprobar")) {   // muestra: llega un fichaje que espera aprobación
+        s.traspasos.amigo.historial.unshift({ id: "sim-por-aprobar", seq: 9, autor: "Arensz", creado: "2026-10-17T02:10:00Z", estado: "por_aprobar", modo: "ids", motivo: "", cambios: [{ jugador: 1, jugadorNombre: "Kylian Mbappé", desde: 101, hasta: 102, hastaNombre: "FC Barcelona", estado: "pendiente", motivo: "" }] });
+        s.traspasos.amigo.estado = "por_aprobar";
+      }
       return traspasosSim();
     },
     "traspasos.accion": (d) => {
@@ -591,6 +595,7 @@ export function crearSimulador(enviar) {
       const w = tr.web;
       if (d.accion === "publicar") { tr.anfitrion.pendientes = []; tr.anfitrion.estado = "publicado"; tr.anfitrion.publicados++; tr.mensaje = "1 traspaso publicado (lote 1a2b3c4d)."; }
       else if (d.accion === "descartar") { tr.anfitrion.pendientes = []; tr.anfitrion.estado = "descartado"; tr.mensaje = "Descartado: esos traspasos no se enviaron."; }
+      else if (d.accion === "aceptarRecibidos" || d.accion === "rechazarRecibidos") { const acepta = d.accion === "aceptarRecibidos"; let n = 0; for (const l of tr.amigo.historial) if (l.estado === "por_aprobar") { l.estado = acepta ? "aplicado" : "rechazado"; n++; } tr.amigo.estado = "al_dia"; tr.mensaje = n ? (acepta ? n + " fichaje(s) aceptado(s)." : n + " fichaje(s) rechazado(s).") : "No hay fichajes esperando tu aprobación."; }
       else if (d.accion === "deshacer") { const l = tr.amigo.historial.find((x) => x.estado === "aplicado"); if (l) { l.estado = "deshecho"; tr.mensaje = "Lote " + l.id.slice(0, 8) + " deshecho."; } tr.amigo.puedeDeshacer = tr.amigo.historial.some((x) => x.estado === "aplicado"); }
       else if (d.accion === "olvidarReferencia") { tr.anfitrion.estado = "referencia_borrada"; tr.mensaje = "Listo."; }
       else if (d.accion === "reintentar") { w.estado = "ok"; w.visto = true; tr.mensaje = "Volviendo a comprobar la web…"; }

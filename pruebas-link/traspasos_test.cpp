@@ -709,6 +709,35 @@ static void pruebaCadena(const fs::path& tmp, const std::string& plantilla) {
 		CHECK(eC2["historial"][0]["estado"] == "aplicado", "PES abierto: el lote nuevo queda «aplicado» (estado: " + eC2["historial"][0]["estado"].get<std::string>() + ")");
 	}
 
+	// 8a) «aprobar antes de poner»: lo que llega espera; RECHAZAR no lo pone nunca y ACEPTAR lo pone
+	{
+		bool abierto = false;
+		const fs::path ja = juegoFalso(tmp, "juego-aprobar", mundo);
+		Config ca = configBase(tmp / "estado-aprobar", ja, "Amigo6", &abierto);
+		ca.recibir = true; ca.aprobarRecibidos = true; ca.listaManual = []() { return fj::Lista(); };
+		Motor A(ca, tr);
+		A.pasoRecibir();
+		json eA = est(A)["amigo"];
+		CHECK(filasDe(ja).empty() && eA["porAprobar"].get<int>() > 0 && eA["estado"] == "por_aprobar", "aprobar antes de poner: lo que llega queda «por aprobar» y NO toca el juego");
+		CHECK(construirLista(fj::Lista(), A.registros()).cambios.empty(), "lotes por aprobar no entran en la lista del juego");
+		std::string msg;
+		CHECK(A.rechazarRecibidos(msg), "RECHAZAR responde: " + msg);
+		A.pasoRecibir(); A.pasoRecibir();
+		CHECK(filasDe(ja).empty() && est(A)["amigo"]["porAprobar"].get<int>() == 0, "RECHAZAR: esos fichajes no se ponen nunca en el juego");
+
+		const fs::path jb = juegoFalso(tmp, "juego-aprobar2", mundo);
+		Config cb = configBase(tmp / "estado-aprobar2", jb, "Amigo7", &abierto);
+		cb.recibir = true; cb.aprobarRecibidos = true; cb.listaManual = []() { return fj::Lista(); };
+		Motor B2(cb, tr);
+		B2.pasoRecibir();
+		CHECK(filasDe(jb).empty(), "otro amigo con aprobar: antes de aceptar no se pone nada");
+		CHECK(B2.aceptarRecibidos(msg), "ACEPTAR responde: " + msg);
+		B2.pasoRecibir();
+		CHECK(!filasDe(jb).empty() && est(B2)["amigo"]["porAprobar"].get<int>() == 0, "ACEPTAR: los fichajes se ponen en el juego");
+		std::string msg2;
+		CHECK(!B2.aceptarRecibidos(msg2), "sin nada esperando, ACEPTAR lo dice: " + msg2);
+	}
+
 	// 8b) un jugador que no existe en la base del amigo: se salta con motivo y el resto sigue
 	{
 		const fs::path jd = juegoFalso(tmp, "juego-faltante", mundo);

@@ -23,7 +23,7 @@ const CONEXION = {
   sin_anfitrion: ["warn", "Escribe el código de tu anfitrión para seguirlo.", "Type your host's code to follow them."],
   liga_pausada: ["warn", "La liga está en pausa. Espero.", "The league is paused. Waiting."],
 };
-const ESTADO_LOTE = { pendiente: ["warn", "PENDIENTE", "PENDING"], aplicado: ["ok", "PUESTO", "APPLIED"], parcial: ["vip", "A MEDIAS", "PARTIAL"], saltado: ["bad", "NO SE PUDO", "SKIPPED"], deshecho: ["", "DESHECHO", "UNDONE"], propio: ["", "TUYO", "YOURS"], error: ["bad", "ERROR", "ERROR"] };
+const ESTADO_LOTE = { por_aprobar: ["warn", "POR APROBAR", "TO APPROVE"], rechazado: ["", "RECHAZADO", "REJECTED"], pendiente: ["warn", "PENDIENTE", "PENDING"], aplicado: ["ok", "PUESTO", "APPLIED"], parcial: ["vip", "A MEDIAS", "PARTIAL"], saltado: ["bad", "NO SE PUDO", "SKIPPED"], deshecho: ["", "DESHECHO", "UNDONE"], propio: ["", "TUYO", "YOURS"], error: ["bad", "ERROR", "ERROR"] };
 const ESTADO_CAMBIO = { aplicado: ["ok", "puesto", "applied"], ya_estaba: ["", "ya estaba", "already there"], saltado: ["bad", "no se pudo", "skipped"], reemplazado: ["", "lo cambió un fichaje posterior", "replaced by a later one"], pendiente: ["warn", "pendiente", "pending"], publicado: ["ok", "enviado", "sent"] };
 const MODO_TXT = {
   "AUTO-SIEMPRE": ["El juego carga el fichaje solo al volver al menú principal y entrar a un modo.", "The game loads the transfer by itself when you go back to the main menu and enter a mode."],
@@ -80,6 +80,7 @@ export function Traspasos() {
   const esWeb = (aj.transporte || "web") === "web";
   const pend = a.pendientes || [];
   const lista = m.historial || [];
+  const porAprobar = lista.filter((l) => l.estado === "por_aprobar");
   const nombre = (c) => c.jugadorNombre || ("#" + c.jugador);
   const modo = d.modoRecarga || "AUTO-SIEMPRE";
   // Sin «papel»: enviar y recibir van siempre juntos (el motor lo permite). El modo prueba (seguirme a mí mismo) va aparte.
@@ -136,6 +137,7 @@ export function Traspasos() {
     if (m.ultimoAplicado && (m.estado === "al_dia" || m.estado === "aplicado")) return ["ok", m.ultimoAplicado.texto, m.ultimoAplicado.accion];
     if (m.estado === "al_dia" || m.estado === "aplicado") return ["ok", t("Esperando fichajes. Cuando tu amigo envíe uno, aparece aquí.", "Waiting for transfers. When your friend sends one, it shows up here."), ""];
     if (m.estado === "esperando") return ["warn", m.mensaje || t("Hay un fichaje esperando.", "A transfer is waiting."), d.pesAbierto ? t("PES está abierto: cierra PES y se pone solo.", "PES is open: close PES and it's applied by itself.") : ""];
+    if (m.estado === "por_aprobar") return ["warn", t("Llegaron fichajes: acéptalos o recházalos.", "Transfers arrived: accept or reject them."), ""];
     if (m.estado === "sin_transporte" || m.estado === "sin_anfitrion") return null;
     const c = CONEXION[m.estado];
     if (c) return [c[0], t(c[1], c[2]), ""];
@@ -199,6 +201,19 @@ export function Traspasos() {
 
       <${Tarjeta} interior=${tarjeta}>
         <${Titulo} texto=${t("RECIBIR FICHAJES DE UN AMIGO", "RECEIVE A FRIEND'S TRANSFERS")}/>
+        <${AjusteSw} titulo=${t("Aprobar cada fichaje antes de ponerlo en mi juego", "Approve each transfer before it goes into my game")}
+          desc=${aj.aprobarRecibidos ? t("Encendido: lo que llega espera a que pulses ACEPTAR o RECHAZAR.", "On: what arrives waits until you press ACCEPT or REJECT.") : t("Apagado: lo que llega se pone solo en tu juego.", "Off: what arrives goes into your game by itself.")}
+          valor=${!!aj.aprobarRecibidos} al=${(v) => poner({ aprobarRecibidos: v })}/>
+        ${porAprobar.length ? html`<div class="caja" style="border-color:var(--warn);display:flex;flex-direction:column;gap:8px">
+          <b class="warn">${porAprobar.length === 1 ? t("1 envío esperando tu aprobación", "1 batch awaiting your approval") : t(`${porAprobar.length} envíos esperando tu aprobación`, `${porAprobar.length} batches awaiting your approval`)}</b>
+          ${porAprobar.slice(0, 5).map((l) => html`<div key=${l.id} style="display:flex;flex-direction:column;gap:2px">
+            <span class="mono mut" style="font-size:12px">${l.autor || "?"} · ${(l.creado || "").replace("T", " ").replace("Z", " UTC")}</span>
+            ${(l.cambios || []).slice(0, 8).map((c, i) => html`<div class="mono" style="font-size:13px" key=${i}>· ${nombre(c)} → ${c.hastaNombre || c.hasta}</div>`)}
+            ${(l.cambios || []).length > 8 ? html`<div class="mono mut" style="font-size:12px">… ${t(`y ${l.cambios.length - 8} más`, `and ${l.cambios.length - 8} more`)}</div>` : null}</div>`)}
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <${Boton} tipo="lleno" al=${() => hacer("aceptarRecibidos")}>${t("ACEPTAR", "ACCEPT")}</${Boton}>
+            <${Boton} tipo="suave mini" al=${async () => { if (await confirmar({ titulo: t("¿Rechazar estos fichajes?", "Reject these transfers?"), texto: t("No se pondrán en tu juego.", "They won't go into your game."), si: t("Rechazar", "Reject"), peligro: true })) hacer("rechazarRecibidos"); }}>${t("RECHAZAR", "REJECT")}</${Boton}>
+          </div></div>` : null}
         ${esWeb && w.vinculada ? html`
           ${sig.length ? sig.map((x) => html`<div key=${x.anfitrionId} style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
             <span style="font-size:15px;flex:1 1 140px"><b>${x.anfitrionNombre || "?"}</b></span><${Chip} tipo="acc">${t("RECIBIENDO", "RECEIVING")}</${Chip}>

@@ -177,6 +177,7 @@ struct Config {
 	bool publicar = false;          ///< este PC publica los traspasos que hace en Editar
 	bool recibir = false;           ///< este PC aplica los traspasos de otros
 	bool confirmarAntes = true;     ///< anfitrion: ver los traspasos detectados y pulsar «Publicar»
+	bool aprobarRecibidos = false;  ///< amigo: lo que llega queda «por_aprobar» hasta que se acepte (ACEPTAR) o se rechace
 	fs::path dirEstado;             ///< donde guarda su estado (foto, historial, identidad)
 	fs::path optionFile;            ///< EDIT00000000 (archivo) o la carpeta que lo contiene
 	fs::path juego;                 ///< carpeta del juego (para aplicar)
@@ -206,6 +207,10 @@ public:
 	bool descartarPendientes(std::string& mensaje);
 	/// Deshace el ultimo lote aplicado (vuelve a generar Phoenix-DB sin el).
 	bool deshacerUltimo(std::string& mensaje);
+	/// Amigo con «aprobar antes de poner»: los lotes «por_aprobar» pasan a «pendiente» (se aplican) o a «rechazado» (nunca se aplican).
+	void aprobarRecibidos(bool si);
+	bool aceptarRecibidos(std::string& mensaje);
+	bool rechazarRecibidos(std::string& mensaje);
 	/// Aviso para el overlay del juego tras aplicar un lote nuevo («Fichaje aplicado: X pasa de A a B. …»); se entrega UNA vez y queda vacio.
 	std::string tomarAviso();
 	/// Olvida la foto de referencia: la proxima lectura del option file solo la guarda (no publica nada).
@@ -266,6 +271,7 @@ std::string textoAccionRecarga(bool pesAbierto, const std::string& modoRecarga);
 // ─── Ajustes guardados (ajustes.json) ────────────────────────────────────────────────────────────
 struct AjustesGuardados {
 	bool publicar = false, recibir = false, confirmarAntes = true;
+	bool aprobarRecibidos = false;   ///< lo que llega espera a ACEPTAR / RECHAZAR antes de ponerse en el juego
 	bool prueba = false;    ///< modo Prueba: seguirme a mí mismo (antes era «publicar y recibir a la vez»; ahora las dos cosas pueden ir juntas sin esto)
 	std::string transporte = "web", carpeta, autor, optionFile;
 	bool migrado = false;   ///< el archivo decia «carpeta» sin carpeta (una prueba vieja): ahora usa la web

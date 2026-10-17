@@ -63,6 +63,7 @@ struct Servicio::Impl {
 	std::condition_variable cv;
 	bool publicar = false, recibir = false, confirmarAntes = true;
 	bool prueba = false;                // modo Prueba: me sigo a mí mismo (aparte de publicar/recibir, que pueden ir juntos)
+	bool aprobarRecibidos = false;      // lo que llega espera a que lo acepte (ACEPTAR / RECHAZAR) antes de ponerse en el juego
 	std::string transporte = "web", carpeta, autor, optionFile;   // la web (Supabase) es el transporte por defecto; la carpeta es la alternativa
 	std::shared_ptr<Motor> motor;
 	std::shared_ptr<TransporteWeb> web;   // el mismo objeto que usa el motor cuando el transporte es la web
@@ -90,7 +91,7 @@ struct Servicio::Impl {
 	fs::path ajustesArchivo() const { return carpetaAjustes() / "ajustes.json"; }
 
 	void guardar() {
-		json j = { {"publicar", publicar}, {"recibir", recibir}, {"confirmarAntes", confirmarAntes}, {"prueba", prueba}, {"transporte", transporte}, {"carpeta", carpeta}, {"autor", autor}, {"optionFile", optionFile} };
+		json j = { {"publicar", publicar}, {"recibir", recibir}, {"confirmarAntes", confirmarAntes}, {"prueba", prueba}, {"aprobarRecibidos", aprobarRecibidos}, {"transporte", transporte}, {"carpeta", carpeta}, {"autor", autor}, {"optionFile", optionFile} };
 		escribir(ajustesArchivo(), j.dump(1));
 	}
 	void cargar() {
@@ -101,7 +102,7 @@ struct Servicio::Impl {
 			t.assign((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
 		}
 		const AjustesGuardados a = leerAjustes(t);   // logica pura (probada): la web es el transporte por defecto
-		publicar = a.publicar; recibir = a.recibir; confirmarAntes = a.confirmarAntes; prueba = a.prueba;
+		publicar = a.publicar; recibir = a.recibir; confirmarAntes = a.confirmarAntes; prueba = a.prueba; aprobarRecibidos = a.aprobarRecibidos;
 		transporte = a.transporte; carpeta = a.carpeta; autor = a.autor; optionFile = a.optionFile;
 		if (a.migrado) guardar();   // deja el archivo ya migrado a la web
 	}
@@ -226,19 +227,20 @@ struct Servicio::Impl {
 
 	void paso() {
 		std::shared_ptr<Motor> mo;
-		bool pub, rec, conf;
+		bool pub, rec, conf, aprobar;
 		std::string aut;
 		Orden orden;
 		{
 			std::lock_guard<std::mutex> g(m);
 			asegurarMotor();
-			mo = motor; pub = publicar; rec = recibir; conf = confirmarAntes; aut = autor;
+			mo = motor; pub = publicar; rec = recibir; conf = confirmarAntes; aprobar = aprobarRecibidos; aut = autor;
 			if (!acciones.empty()) { orden = acciones.front(); acciones.pop_front(); }
 		}
 		fs::path juego, option;
 		entorno(juego, option);
 		{ std::lock_guard<std::mutex> g(m); juegoActual = juego; }
 		mo->ajustar(juego, option, pub, rec, conf, aut);
+		mo->aprobarRecibidos(aprobar);
 		bool refrescar = false;
 		if (!orden.que.empty()) {
 			bool ok = false;
@@ -246,6 +248,8 @@ struct Servicio::Impl {
 			if (orden.que == "publicar") ok = mo->publicarPendientes(msg);
 			else if (orden.que == "descartar") ok = mo->descartarPendientes(msg);
 			else if (orden.que == "deshacer") ok = mo->deshacerUltimo(msg);
+			else if (orden.que == "aceptarRecibidos") ok = mo->aceptarRecibidos(msg);
+			else if (orden.que == "rechazarRecibidos") ok = mo->rechazarRecibidos(msg);
 			else if (orden.que == "olvidarReferencia") { mo->reiniciarReferencia(); msg = "Listo: la proxima vez que PES guarde, Link solo tomara la foto de partida (no publica nada)."; ok = true; }
 			else if (orden.que == "reintentar") { mo->reintentarYa(); msg = "Volviendo a comprobar la web…"; ok = true; refrescar = true; }
 			else { msg = accionWeb(orden, ok); refrescar = ok; }
@@ -321,7 +325,7 @@ json Servicio::estado() {
 	if (_i->cache.empty() && !_i->corriendo) { _i->asegurarMotor(); _i->cache = _i->motor->estadoJson(); }   // apagado: solo se enseña el historial guardado
 	if (!_i->cache.empty()) j = json::parse(_i->cache, nullptr, false);
 	if (!j.is_object()) j = json::object();
-	j["ajustes"] = { {"publicar", _i->publicar}, {"recibir", _i->recibir}, {"confirmarAntes", _i->confirmarAntes}, {"prueba", _i->prueba}, {"transporte", _i->transporte}, {"carpeta", _i->carpeta}, {"autor", _i->autor}, {"optionFile", _i->optionFile} };
+	j["ajustes"] = { {"publicar", _i->publicar}, {"recibir", _i->recibir}, {"confirmarAntes", _i->confirmarAntes}, {"prueba", _i->prueba}, {"aprobarRecibidos", _i->aprobarRecibidos}, {"transporte", _i->transporte}, {"carpeta", _i->carpeta}, {"autor", _i->autor}, {"optionFile", _i->optionFile} };
 	j["activo"] = _i->publicar || _i->recibir;
 	j["mensaje"] = _i->mensaje;
 	j["juego"] = phoenix::entrega::aU8(_i->juegoActual);
@@ -358,7 +362,7 @@ void Servicio::poner(const json& d) {
 		};
 		const std::string transporteAntes = _i->transporte, carpetaAntes = _i->carpeta, optionAntes = _i->optionFile;
 		const bool pubAntes = _i->publicar, recAntes = _i->recibir;
-		interruptor("publicar", _i->publicar); interruptor("recibir", _i->recibir); interruptor("confirmarAntes", _i->confirmarAntes); interruptor("prueba", _i->prueba);
+		interruptor("publicar", _i->publicar); interruptor("recibir", _i->recibir); interruptor("confirmarAntes", _i->confirmarAntes); interruptor("prueba", _i->prueba); interruptor("aprobarRecibidos", _i->aprobarRecibidos);
 		texto("transporte", _i->transporte, 12); texto("carpeta", _i->carpeta, 500); texto("autor", _i->autor, 40); texto("optionFile", _i->optionFile, 500);
 		auto deshacerCambios = [&]() { _i->transporte = transporteAntes; _i->carpeta = carpetaAntes; _i->optionFile = optionAntes; _i->publicar = pubAntes; _i->recibir = recAntes; };
 		if (_i->transporte != "carpeta" && _i->transporte != "web") { deshacerCambios(); throw std::runtime_error("Transporte desconocido."); }
@@ -389,7 +393,7 @@ void Servicio::poner(const json& d) {
 }
 
 std::string Servicio::accion(const std::string& que, const std::string& dato) {
-	static const char* validas[] = { "publicar", "descartar", "deshacer", "olvidarReferencia", "reintentar", "rotarCodigo", "seguirCodigo", "dejarDeSeguir" };
+	static const char* validas[] = { "publicar", "descartar", "deshacer", "aceptarRecibidos", "rechazarRecibidos", "olvidarReferencia", "reintentar", "rotarCodigo", "seguirCodigo", "dejarDeSeguir" };
 	bool ok = false;
 	for (const char* v : validas) if (que == v) ok = true;
 	if (!ok) throw std::runtime_error("Accion desconocida.");

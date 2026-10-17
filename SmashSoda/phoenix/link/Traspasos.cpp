@@ -400,7 +400,7 @@ AjustesGuardados leerAjustes(const std::string& texto) {
 	auto b = [&](const char* k, bool def) { return j.contains(k) && j[k].is_boolean() ? j[k].get<bool>() : def; };
 	auto s = [&](const char* k, size_t max) { std::string t = j.contains(k) && j[k].is_string() ? j[k].get<std::string>() : std::string(); if (t.size() > max) t.clear(); return t; };
 	a.publicar = b("publicar", false); a.recibir = b("recibir", false); a.confirmarAntes = b("confirmarAntes", true);
-	a.prueba = b("prueba", false);
+	a.prueba = b("prueba", false); a.aprobarRecibidos = b("aprobarRecibidos", false);
 	a.transporte = s("transporte", 12); a.carpeta = s("carpeta", 500); a.autor = s("autor", 40); a.optionFile = s("optionFile", 500);
 	if (a.transporte != "web" && a.transporte != "carpeta") a.transporte = "web";
 	if (a.transporte == "carpeta" && a.carpeta.empty()) { a.transporte = "web"; a.migrado = true; }   // prueba vieja con carpeta vacia: la web
@@ -446,13 +446,18 @@ namespace {
 	long long claveOrden(const Registro& r) { return r.orden ? r.orden : r.lote.seq; }
 }
 
+/// Lotes que NO cuentan para el juego: deshechos, propios, con error, sin aprobar todavía o rechazados.
+static bool loteInactivo(const std::string& e) {
+	return e == "deshecho" || e == "propio" || e == "error" || e == "por_aprobar" || e == "rechazado";
+}
+
 fichajes::Lista construirLista(const fichajes::Lista& manual, const std::vector<Registro>& registros) {
 	fichajes::Lista l = manual;
 	l.version = fichajes::kVersionLista;
 	l.fuente = "Traspasos en vivo" + std::string(manual.cambios.empty() ? "" : " + lista manual");
 	std::vector<const Registro*> activos;
 	for (const Registro& r : registros) {
-		if (r.estado == "deshecho" || r.estado == "propio" || r.estado == "error" || r.modo == "nada") continue;
+		if (loteInactivo(r.estado) || r.modo == "nada") continue;
 		activos.push_back(&r);
 	}
 	std::stable_sort(activos.begin(), activos.end(), [](const Registro* a, const Registro* b) { return claveOrden(*a) < claveOrden(*b); });
@@ -707,7 +712,7 @@ void Motor::pasoPublicar() {
 	for (const Movimiento& m : d.traspasos) {
 		bool recibido = false;
 		for (const Registro& r : _reg) {
-			if (r.estado == "deshecho" || r.estado == "propio" || r.estado == "error") continue;
+			if (loteInactivo(r.estado)) continue;
 			for (const CambioLote& c : r.lote.cambios) if (c.jugador == m.jugador && c.hasta == m.hasta) recibido = true;
 		}
 		if (!recibido) movs.push_back(m);
@@ -799,7 +804,7 @@ void Motor::pasoRecibir() {
 				Registro r;
 				r.lote = l; r.recibido = ahora(); r.origen = _origenActual; r.orden = ordenDe(_origenActual, l.seq);
 				if (l.anfitrion == _anfitrionId) { r.estado = "propio"; r.modo = "nada"; }
-				else r.estado = "pendiente";
+				else r.estado = _c.aprobarRecibidos ? "por_aprobar" : "pendiente";
 				_reg.push_back(std::move(r));
 			}
 			if (!_t->hayMas()) break;
@@ -809,10 +814,10 @@ void Motor::pasoRecibir() {
 	else estadoTransporte = _t->estadoClave() == "ok" ? std::string() : _t->estadoClave();   // entre sondeos tambien se ve el problema (no vuelve a «al dia»)
 	std::stable_sort(_reg.begin(), _reg.end(), [](const Registro& a, const Registro& b) { return claveOrden(a) < claveOrden(b); });
 	if (cambio) guardarRegistros();
-	bool hayPend = false;
-	for (const Registro& r : _reg) if (r.estado == "pendiente") hayPend = true;
+	bool hayPend = false, hayPorAprobar = false;
+	for (const Registro& r : _reg) { if (r.estado == "pendiente") hayPend = true; if (r.estado == "por_aprobar") hayPorAprobar = true; }
 	if (!hayPend) {
-		_estadoAmigo = estadoTransporte.empty() ? "al_dia" : estadoTransporte;
+		_estadoAmigo = !estadoTransporte.empty() ? estadoTransporte : hayPorAprobar ? "por_aprobar" : "al_dia";
 		if (estadoTransporte.empty()) _mensajeAmigo.clear();
 		return;
 	}
@@ -901,14 +906,14 @@ bool Motor::aplicar(bool deshaciendo, std::string& mensaje) {
 	}
 	std::map<uint32_t, long long> ultimoSeqDe;   // jugador -> seq del ultimo lote activo que lo mueve
 	for (const Registro& r : _reg) {
-		if (r.estado == "deshecho" || r.estado == "propio" || r.estado == "error" || r.modo == "nada") continue;
+		if (loteInactivo(r.estado) || r.modo == "nada") continue;
 		for (const CambioLote& c : r.lote.cambios) ultimoSeqDe[c.jugador] = (std::max)(ultimoSeqDe[c.jugador], claveOrden(r));
 	}
 	const std::string hora = ahora();
 	std::set<std::string> eranNuevos;   // lotes que estaban «pendiente» al entrar: de ellos es el aviso «Fichaje aplicado…»
 	for (const Registro& r : _reg) if (r.estado == "pendiente") eranNuevos.insert(r.lote.id);
 	for (Registro& r : _reg) {
-		if (r.estado == "deshecho" || r.estado == "propio" || r.estado == "error") continue;
+		if (loteInactivo(r.estado)) continue;
 		r.detalle.clear();
 		int ok = 0, no = 0;
 		for (const CambioLote& c : r.lote.cambios) {
@@ -935,6 +940,29 @@ bool Motor::aplicar(bool deshaciendo, std::string& mensaje) {
 		if (!res.empty()) _avisoPendiente = res + " " + textoAccionRecarga(_c.pesAbierto ? _c.pesAbierto() : false, _c.modoRecarga ? _c.modoRecarga() : std::string("AUTO-SIEMPRE"));
 	}
 	mensaje = inf.mensaje;
+	return true;
+}
+
+void Motor::aprobarRecibidos(bool si) { std::lock_guard<std::mutex> g(_m); _c.aprobarRecibidos = si; }
+
+bool Motor::aceptarRecibidos(std::string& mensaje) {
+	std::lock_guard<std::mutex> g(_m);
+	int n = 0;
+	for (Registro& r : _reg) if (r.estado == "por_aprobar") { r.estado = "pendiente"; n++; }
+	if (n == 0) { mensaje = "No hay fichajes esperando tu aprobación."; return false; }
+	guardarRegistros();
+	_reintentoAplicar = 0;
+	mensaje = n == 1 ? "Aceptado: el fichaje se pone en tu juego." : std::to_string(n) + " fichajes aceptados: se ponen en tu juego.";
+	return true;
+}
+
+bool Motor::rechazarRecibidos(std::string& mensaje) {
+	std::lock_guard<std::mutex> g(_m);
+	int n = 0;
+	for (Registro& r : _reg) if (r.estado == "por_aprobar") { r.estado = "rechazado"; n++; }
+	if (n == 0) { mensaje = "No hay fichajes esperando tu aprobación."; return false; }
+	guardarRegistros();
+	mensaje = n == 1 ? "Rechazado: ese fichaje no se pone en tu juego." : std::to_string(n) + " fichajes rechazados: no se ponen en tu juego.";
 	return true;
 }
 
@@ -1003,6 +1031,10 @@ std::string Motor::estadoJson() const {
 		if (m["historial"].size() >= 50) break;
 	}
 	m["puedeDeshacer"] = puedeDeshacer;
+	int porAprobar = 0;
+	for (const Registro& r : _reg) if (r.estado == "por_aprobar") porAprobar++;
+	m["porAprobar"] = porAprobar;
+	m["aprobarRecibidos"] = _c.aprobarRecibidos;
 	for (auto it = _reg.rbegin(); it != _reg.rend(); ++it) {   // el ultimo lote que de verdad cambio algo, con lo que hay que hacer AHORA para verlo
 		const std::string res = (it->estado == "aplicado" || it->estado == "parcial") ? resumenAplicado({ &*it }) : std::string();
 		if (res.empty()) continue;
