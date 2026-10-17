@@ -347,6 +347,7 @@ function ResumenSala({ s, m }) {
     ${verGuia ? html`<${GuiaInicio} m=${m} ocultar=${ocultarGuia} abrir=${abrirSala}/>` : null}
     ${m.sala.abierta ? html`<${Entrenador} m=${m}/>` : null}
     <${AntesDelPartido} m=${m}/>
+    <${FranjaJuego} m=${m}/>
     <div class="fila resumen" style="flex:1 0 auto">
     <div class="col" style="flex:1 1 0">
       <${Heroe} m=${m} conGuia=${verGuia} verGuia=${mostrarGuia}/>
@@ -564,16 +565,10 @@ function PerfilesSala() {
 }
 
 // ---- Juegos --------------------------------------------------------------------------
-function JuegosSala({ m }) {
-  const [gestionar, setGestionar] = useState(false);
-  const o = m.sala.opciones || {};
-  const ph = m.sala.phoenix || {};
-  const juegos = o.juegos || [];
+/** Juego, parche y región (se ven en la web de la liga). Lo usan la franja de Antes › Sala y Antes › Juegos. */
+function EditorLoQueSeJuega({ ph }) {
   const phx = (d) => accion("sala.phoenix", d);
-  return html`<div class="rej2">
-    <${Tarjeta} interior="padding:22px 24px">
-      <${Titulo} texto=${t("LO QUE SE JUEGA", "WHAT'S BEING PLAYED")}/>
-      <div class="ayuda" style="margin-bottom:6px">${t("Se muestra en la web de la liga y en el resumen de la sala.", "Shown on the league website and the room overview.")}</div>
+  return html`
       <${Ajuste} bloque titulo=${t("Juego", "Game")}><${Campo} valor=${ph.juego} max=${60} al=${(v) => phx({ juego: v })}/></${Ajuste}>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
         ${["eFootball PES 2021", "SP Football Life 2026"].map((j) => html`<button class=${cx("tab", ph.juego === j && "on")} onClick=${() => phx({ juego: j })}>${j}</button>`)}
@@ -586,7 +581,34 @@ function JuegosSala({ m }) {
         <${Campo} valor=${PARCHES.includes(ph.parche) ? "" : ph.parche} max=${60} al=${(v) => v.trim() && phx({ parche: v.trim() })}/>
       </${Ajuste}>
       <${Ajuste} bloque titulo=${t("Región", "Region")} desc=${t("Ayuda a que te encuentren rivales cercanos.", "Helps nearby rivals find you.")}>
-        <${Campo} valor=${ph.region} max=${40} al=${(v) => phx({ region: v })}/></${Ajuste}>
+        <${Campo} valor=${ph.region} max=${40} al=${(v) => phx({ region: v })}/></${Ajuste}>`;
+}
+
+/** Franja fina arriba de Antes › Sala: qué se juega en una línea; CAMBIAR la despliega ahí mismo. */
+function FranjaJuego({ m }) {
+  const [abierta, setAbierta] = useState(false);
+  const ph = m.sala.phoenix || {};
+  const partes = [ph.juego, ph.parche, ph.region].filter((x) => x && String(x).trim());
+  return html`<div class=${cx("franja-juego", abierta && "abierta")}>
+    <div class="fj-linea">
+      <span class="lab">${t("SE JUEGA", "PLAYING")}</span>
+      <span class="fj-texto">${partes.length ? partes.join(" · ") : t("Sin elegir: dilo para que te encuentren en la web de la liga", "Not set: tell the league website what you play")}</span>
+      <button class="btn mini suave" aria-expanded=${abierta} onClick=${() => setAbierta(!abierta)}>${abierta ? t("LISTO", "DONE") : t("CAMBIAR", "CHANGE")}</button>
+    </div>
+    ${abierta ? html`<div class="fj-editor"><${EditorLoQueSeJuega} ph=${ph}/></div>` : null}
+  </div>`;
+}
+
+function JuegosSala({ m }) {
+  const [gestionar, setGestionar] = useState(false);
+  const o = m.sala.opciones || {};
+  const ph = m.sala.phoenix || {};
+  const juegos = o.juegos || [];
+  return html`<div class="rej2">
+    <${Tarjeta} interior="padding:22px 24px">
+      <${Titulo} texto=${t("LO QUE SE JUEGA", "WHAT'S BEING PLAYED")}/>
+      <div class="ayuda" style="margin-bottom:6px">${t("Se muestra en la web de la liga y en el resumen de la sala (también se cambia arriba en Antes › Sala).", "Shown on the league website and the room overview (also editable at the top of Before › Room).")}</div>
+      <${EditorLoQueSeJuega} ph=${ph}/>
     </${Tarjeta}>
     <${Tarjeta} secundaria interior="padding:22px 24px;display:flex;flex-direction:column">
       <${Titulo} texto=${t("BIBLIOTECA", "LIBRARY")} derecha=${html`<${Boton} tipo=${gestionar ? "mini lleno" : "mini"} al=${() => setGestionar(!gestionar)}>${gestionar ? t("LISTO", "DONE") : t("GESTIONAR", "MANAGE")}</${Boton}>`}/>

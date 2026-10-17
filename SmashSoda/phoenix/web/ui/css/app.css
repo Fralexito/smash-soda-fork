@@ -806,3 +806,10 @@ html.sin-foco .peldano.sig::after, html.sin-foco .u-punto, html.sin-foco .punto.
   .vista .lab, .vista .sec-titulo { white-space: normal; }
   .vista .sec-cab { flex-wrap: wrap; }
 }
+
+/* Antes › Sala: qué se juega en una línea fina (0.3.6) */
+.franja-juego { border: 1px solid var(--tenue); border-radius: 12px; background: rgba(255, 255, 255, .02); }
+.franja-juego .fj-linea { display: flex; align-items: center; gap: 12px; padding: 8px 10px 8px 16px; min-height: 44px; }
+.franja-juego .fj-texto { flex: 1; min-width: 0; font-size: 13.5px; color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.franja-juego.abierta { border-color: var(--linea-fuerte); }
+.franja-juego .fj-editor { padding: 4px 16px 16px; border-top: 1px solid var(--tenue); }
