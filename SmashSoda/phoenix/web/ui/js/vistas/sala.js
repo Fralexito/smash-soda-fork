@@ -379,8 +379,11 @@ export function TarjetaCalidad({ m }) {
         <div class="disp" style="font-size:22px;font-weight:700;margin-top:8px">${p.mbps} <span class="mut" style="font-size:12px">${auto ? t("MBPS / PERSONA", "MBPS / PERSON") : "MBPS"}</span></div>
         <div class="ayuda" style="margin-top:4px">${t(...p.d)}</div>
       </button>`)}</div>
-    <${Ajuste} titulo=${t("Fotogramas por segundo", "Frames per second")} desc=${t("60 es lo ideal para PES. Los botones de arriba no lo cambian.", "60 is ideal for PES. The buttons above don't change it.")}>
-      <${Stepper} valor=${fps} min=${10} max=${250} paso=${5} al=${(v) => aplicar(v, mbps)}/></${Ajuste}>
+    <${Ajuste} titulo=${t("Fotogramas por segundo", "Frames per second")} desc=${t("Los de la transmisión, no los de tu pantalla (tu monitor sigue igual). Los botones de arriba no los cambian.", "The stream's, not your screen's (your monitor stays the same). The buttons above don't change them.")}>
+      <${Stepper} valor=${fps} min=${10} max=${250} paso=${1} al=${(v) => aplicar(v, mbps)}/></${Ajuste}>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin:-4px 0 6px">${[30, 60, 120, 144].map((f) => html`<button key=${f} class=${cx("chip-perfil", fps === f && "on")} onClick=${() => aplicar(f, mbps)}>${f} FPS</button>`)}</div>
+    ${fps > 60 ? html`<div class="caja" style="border-color:var(--warn);margin-bottom:10px"><b class="warn">${t(`Transmitir a ${fps} FPS no mejora PES 2021`, `Streaming at ${fps} FPS doesn't improve PES 2021`)}</b>
+      <div class="ayuda">${t("El juego se mueve a 60 FPS. Por encima de 60 solo gasta más internet y la imagen de tus amigos sale más borrosa o con tirones. Para PES, usa 60.", "The game runs at 60 FPS. Above 60 it only uses more internet and your friends' picture gets blurrier or choppy. For PES, use 60.")}</div></div>` : null}
     <div style=${auto ? "opacity:.4;pointer-events:none" : ""}>
     <${Ajuste} titulo=${t("Ancho de banda (Mbps)", "Bandwidth (Mbps)")} desc=${auto ? t("Lo pone el automático. Apágalo para escribirlo tú.", "Set by auto mode. Turn it off to type it yourself.") : t("Escribe el valor que quieras (1–1000) o usa − / +. Más alto = mejor imagen, pero exige más a tu internet.", "Type any value (1–1000) or use − / +.")}>
       <${Stepper} valor=${mbps} min=${1} max=${1000} ancho=${4} al=${(v) => aplicar(fps, v)}/></${Ajuste}>
