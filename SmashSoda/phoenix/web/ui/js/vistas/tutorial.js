@@ -10,7 +10,7 @@ import { t } from "../i18n.js";
 import { irA } from "../tienda.js";
 import { Boton } from "../ui.js";
 
-const CLAVE = "phoenix.tutorial.visto.menu4";   // menú SALA · PARTIDO · MANDOS · OTRAS SALAS · SYNC · AJUSTES (0.3.8): se enseña una vez
+const CLAVE = "phoenix.tutorial.visto.menu5";   // menú 0.3.11 (en vivo, árbitro y bloqueo en MANDOS): se enseña una vez
 const EVENTO = "phoenix:tutorial";
 
 /** Abre el tutorial desde cualquier sitio (botón de Ajustes, paleta Ctrl+K…). */
@@ -26,14 +26,14 @@ const PASOS = [
     texto: ["Aquí abres tu sala de Parsec, copias el enlace para tus amigos y ves quién entra. También la transmisión, la gente de tu sala y las opciones.", "Open your Parsec room, copy the link for your friends and see who joins. Also the stream, the people in your room and the options."] },
   { ir: ["sala", "resumen"], foco: porTexto("main button", /^(ABRIR SALA|DETENER SALA|OPEN ROOM|STOP ROOM)$/), titulo: ["Abrir la sala", "Open the room"],
     texto: ["Este botón crea tu sala. Después, «Copiar enlace» y lo mandas por Discord o WhatsApp.", "This button creates your room. Then «Copy link» and send it on Discord or WhatsApp."] },
-  { ir: ["partido", "vivo"], foco: nav(1), titulo: ["Partido: todo lo del partido en vivo", "Match: everything about the live match"],
-    texto: ["Marcador y equipos, el campo en vivo, los mandos en vivo y el árbitro (modo competitivo, pausa y marcador automáticos) con el bloqueo de mandos. Mientras se juega no hace falta ir a otro sitio.", "Score and teams, the live pitch, live pads and the referee (competitive mode, auto pause and scoreboard) with pad locking. While playing you don't need to go anywhere else."] },
+  { ir: ["partido", "vivo"], foco: nav(1), titulo: ["Partido", "Match"],
+    texto: ["El marcador con los equipos y los lados, el campo en vivo y el historial de partidos.", "The scoreboard with teams and sides, the live pitch and the match history."] },
   { ir: ["mandos", "puestos"], foco: nav(2), titulo: ["Mandos › Puestos", "Pads › Seats"],
     texto: ["Antes de jugar: cada puesto es un mando del juego. Arrastra a cada persona a un puesto; quien quede en «Mirando» solo ve la pantalla. Cada puesto es del Equipo A o del B. Tú también apareces como TÚ.", "Before playing: each seat is a game pad. Drag each person to a seat; anyone in «Watching» only sees the screen. Each seat belongs to Team A or B. You show up as YOU."] },
   { ir: ["mandos", "puestos"], foco: porTexto(".caja", /^ORDEN DE MANDOS EN PES/), titulo: ["Orden de mandos en PES", "Pad order in PES"],
     texto: ["Enciéndelo y Link ordena el settings.dat de PES solo: el puesto 1 es el jugador 1, el 2 el jugador 2… Cierra DS4Windows mientras usas Link.", "Turn it on and Link sorts PES's settings.dat: seat 1 is player 1, seat 2 is player 2… Close DS4Windows while using Link."] },
-  { ir: ["mandos", "marionetas"], foco: porTexto(".pestanas .tab", /^(TU MANDO|YOUR PAD)$/), titulo: ["Tu mando, mapeo y teclado", "Your pad, mapping and keyboard"],
-    texto: ["También en MANDOS: el mando con el que juegas tú, el mapeo para corregir el mando de un invitado y el teclado.", "Also in PADS: the pad you play with, mapping to fix a guest's pad and the keyboard."] },
+  { ir: ["mandos", "bloqueo"], foco: porTexto(".pestanas .tab", /^(ÁRBITRO Y BLOQUEO|REFEREE & LOCK)$/), titulo: ["En vivo, árbitro y bloqueo", "Live, referee and lock"],
+    texto: ["También en MANDOS: EN VIVO (qué pulsa cada jugador ahora mismo), ÁRBITRO Y BLOQUEO (modo competitivo, pausa y marcador automáticos, congelar mandos o botones) y TU MANDO. Mapeo y teclado están en MÁS.", "Also in PADS: LIVE (what each player is pressing right now), REFEREE & LOCK (competitive mode, auto pause and scoreboard, freezing pads or buttons) and YOUR PAD. Mapping and keyboard are under MORE."] },
   { ir: ["jugar", "salas"], foco: nav(3), titulo: ["Otras salas", "Other rooms"],
     texto: ["Para jugar en las salas de otros: las salas abiertas (entras con un clic), tus amigos y dónde están, y tu perfil de PES (tu nombre y tus opciones).", "To play in other people's rooms: open rooms (join with one click), your friends and where they are, and your PES profile (your name and options)."] },
   { ir: ["sync", "mipc"], foco: nav(4), titulo: ["Sync", "Sync"],

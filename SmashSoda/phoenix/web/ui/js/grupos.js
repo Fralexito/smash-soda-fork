@@ -1,6 +1,7 @@
 // =============================================================================
-//  Menú de Phoenix Link (0.3.8): SALA · PARTIDO · MANDOS · OTRAS SALAS · SYNC · AJUSTES.
-//  PARTIDO junta todo lo del partido en vivo (Fralex: «en una sola seccion todo lo del partido en vivo»).
+//  Menú de Phoenix Link (0.3.11): SALA · PARTIDO · MANDOS · OTRAS SALAS · SYNC · AJUSTES.
+//  PARTIDO: marcador, campo e historial. MANDOS: puestos, mandos en vivo, árbitro y bloqueo, tu mando
+//  (Fralex, 0.3.11: «esto podria en mandos, pero mejor organizado»).
 //  Nombres de cosas, no de momentos (Fralex: «no me gusta que diga antes y después»),
 //  y SYNC siempre con su sección propia (regla fija: nunca dentro de Ajustes ni de otra).
 //  Cada pestaña del menú apunta a una pantalla de siempre (sección + pestaña de
@@ -23,21 +24,21 @@ export const GRUPOS = [
       { p: ["sala", "actividad"], es: "ACTIVIDAD", en: "ACTIVITY", mas: true },
     ] },
   { id: "partido", es: "PARTIDO", en: "MATCH", icono: "partido",
-    d: ["Todo el partido en vivo: marcador y equipos, campo, mandos en vivo, árbitro y bloqueo.", "The whole live match: score and teams, pitch, live pads, referee and lock."],
+    d: ["El partido: marcador, equipos y lados, campo en vivo e historial.", "The match: score, teams and sides, live pitch and history."],
     pestanas: [
       { p: ["partido", "vivo"], es: "MARCADOR", en: "SCORE" },
       { p: ["partido", "campo"], es: "CAMPO", en: "PITCH" },
-      { p: ["mandos", "vivo"], es: "MANDOS EN VIVO", en: "LIVE PADS" },
-      { p: ["mandos", "bloqueo"], es: "ÁRBITRO Y BLOQUEO", en: "REFEREE & LOCK" },
-      { p: ["partido", "historial"], es: "HISTORIAL", en: "HISTORY", mas: true },
+      { p: ["partido", "historial"], es: "HISTORIAL", en: "HISTORY" },
     ] },
   { id: "mandos", es: "MANDOS", en: "PADS", icono: "mandos",
-    d: ["Preparar los mandos: quién juega en cada puesto, tu mando, mapeo y teclado.", "Set up the pads: who plays in each seat, your pad, mapping and keyboard."],
+    d: ["Los mandos: quién juega en cada puesto, qué pulsa cada uno en vivo, árbitro y bloqueo, y tu mando.", "The pads: who plays in each seat, what each one presses live, referee and lock, and your pad."],
     pestanas: [
       { p: ["mandos", "puestos"], es: "PUESTOS", en: "SEATS" },
+      { p: ["mandos", "vivo"], es: "EN VIVO", en: "LIVE" },
+      { p: ["mandos", "bloqueo"], es: "ÁRBITRO Y BLOQUEO", en: "REFEREE & LOCK" },
       { p: ["mandos", "marionetas"], es: "TU MANDO", en: "YOUR PAD" },
-      { p: ["mandos", "mapeo"], es: "MAPEO", en: "MAPPING" },
-      { p: ["mandos", "teclado"], es: "TECLADO", en: "KEYBOARD" },
+      { p: ["mandos", "mapeo"], es: "MAPEO", en: "MAPPING", mas: true },
+      { p: ["mandos", "teclado"], es: "TECLADO", en: "KEYBOARD", mas: true },
       { p: ["mandos", "turnos"], es: "TURNOS", en: "HOTSEAT", mas: true },
       { p: ["sala", "puesto"], es: "DÓNDE JUEGO YO", en: "WHERE I PLAY", mas: true },
     ] },

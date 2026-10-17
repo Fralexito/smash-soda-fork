@@ -1,6 +1,6 @@
 // =============================================================================
 //  MANDO EDITABLE (SVG): la silueta de un mando con piezas que se tocan.
-//  Lo usan Partido › Árbitro y bloqueo (tocar = bloquear) y Mandos › Teclado (tocar =
+//  Lo usan Mandos › Árbitro y bloqueo (tocar = bloquear) y Mandos › Más › Teclado (tocar =
 //  cambiar su tecla). Mismo estilo que el mando en vivo (mandovivo.js).
 //  Coordenadas en un lienzo de 640×400; POS da el centro de cada pieza.
 // =============================================================================

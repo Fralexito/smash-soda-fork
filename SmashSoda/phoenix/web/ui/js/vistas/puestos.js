@@ -11,10 +11,9 @@
 // =============================================================================
 import { html, useState } from "../lib.js";
 import { t } from "../i18n.js";
-import { accion, confirmar, avisar } from "../tienda.js";
+import { accion, confirmar, avisar, irA } from "../tienda.js";
 import { Boton, Icono, Vacio, Avatar, Chip, Stepper, Interruptor, colorPing, cx, dos } from "../ui.js";
 import { Pendientes, ElegirJugador } from "./mandos.js";
-import { MandosEnVivo } from "./mandovivo.js";
 import { BotonJugar } from "./jugar.js";
 import { IndicadorRetraso, retrasoDe } from "./retraso.js";
 
@@ -212,8 +211,6 @@ export function PuestosNuevo({ m }) {
   const [arr, setArr] = useState(null);
   const [sobreMirando, setSobreMirando] = useState(false);
   const [ayudaAB, setAyudaAB] = useState(false);
-  const [verVivo, setVerVivoEstado] = useState(() => { try { return localStorage.getItem("phoenix.verVivo") === "1"; } catch { return false; } });
-  const setVerVivo = (v) => { setVerVivoEstado(v); try { localStorage.setItem("phoenix.verVivo", v ? "1" : "0"); } catch { /* sin almacenamiento */ } };
   const lista = m.mandos.lista || [];
   const total = lista.length;
   const esclavo = !!m.mandos.esclavo;
@@ -274,9 +271,9 @@ export function PuestosNuevo({ m }) {
           titulo=${t("Encendido: pulsar el mando solo da puesto a quien tú ya sentaste. Los demás aparecen como «quiere jugar» y decides tú.", "On: pressing a pad only seats people you already seated. Others show up as «wants to play» and you decide.")}
           al=${() => accion("mandos.soloAutorizados", { si: !m.arbitro?.soloAutorizados })}>
           ${m.arbitro?.soloAutorizados ? t("PUESTOS: SOLO AUTORIZADOS", "SEATS: AUTHORIZED ONLY") : t("PUESTOS: LIBRES", "SEATS: OPEN")}</${Boton}>
-        <${Boton} tipo=${cx("mini", verVivo ? "acc" : "suave")} al=${() => setVerVivo(!verVivo)}
-          titulo=${t("Muestra qué botón pulsa cada uno, sus sticks y gatillos, en vivo. Pídeles que prueben su mando antes del partido.", "Shows each player's buttons, sticks and triggers live. Ask them to test their pad before the match.")}>
-          ${verVivo ? t("▾ PLEGAR MANDOS EN VIVO", "▾ COLLAPSE LIVE PADS") : t("▸ MANDOS EN VIVO", "▸ LIVE PADS")}</${Boton}>
+        <${Boton} tipo="mini suave" al=${() => irA("mandos", "vivo")}
+          titulo=${t("Muestra qué botón pulsa cada uno, sus sticks y gatillos, en vivo. Pídeles que prueben su mando antes del partido.", "Shows each player's buttons, sticks and triggers live. Ask them to test their pad before the match.")}>>
+          ${t("MANDOS EN VIVO ›", "LIVE PADS ›")}</${Boton}>
         <${Boton} tipo="mini suave" deshabilitado=${esclavo || m.mandos.reiniciando} al=${() => herramienta("ordenar")}>${t("ORDENAR", "SORT")}</${Boton}>
         <${Boton} tipo="mini suave" deshabilitado=${esclavo || m.mandos.reiniciando}
           al=${() => herramienta("reiniciar", [t("¿Reiniciar los mandos?", "Reset pads?"), t("Se desconectan y vuelven a conectar todos los mandos virtuales. Úsalo si el juego dejó de detectarlos.", "All virtual pads are re-plugged. Use it if the game stopped detecting them.")])}>
@@ -331,13 +328,6 @@ export function PuestosNuevo({ m }) {
         </div>
       </div>
     </div>
-    ${verVivo ? html`<div class="caja" style="padding:14px 16px;display:flex;flex-direction:column;gap:10px">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
-        <span class="disp" style="font-weight:700;font-size:14px;letter-spacing:.16em">${t("MANDOS EN VIVO", "LIVE PADS")}</span>
-        <span class="ayuda" style="font-size:13px">${t("Lo que el juego recibe ahora mismo. Se actualiza unas 5 veces por segundo.", "What the game receives right now. Updates about 5 times per second.")}</span>
-      </div>
-      <${MandosEnVivo} m=${m}/>
-    </div>` : null}
     <${OrdenPes} m=${m}/>
     ${eligiendo != null ? html`<${ElegirJugador} m=${m} indice=${eligiendo} alCerrar=${() => setEligiendo(null)}/>` : null}
   </div>`;

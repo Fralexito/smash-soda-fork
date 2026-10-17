@@ -1,5 +1,5 @@
 // =============================================================================
-//  PARTIDO › ÁRBITRO Y BLOQUEO (rehecho): bloqueo general, bloqueo por mando y «Elegir
+//  MANDOS › ÁRBITRO Y BLOQUEO (rehecho): bloqueo general, bloqueo por mando y «Elegir
 //  botones» con un mando dibujado (mandoeditable.js) donde se toca cada botón para bloquearlo.
 //  Todo dentro de la interfaz nueva (ya no salta al panel clásico).
 // =============================================================================

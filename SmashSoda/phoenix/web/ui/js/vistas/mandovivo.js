@@ -9,7 +9,7 @@ import { accion, oirVivo, irA } from "../tienda.js";
 import { t } from "../i18n.js";
 import { dos } from "../ui.js";
 
-// Clic en un mando de «Mandos en vivo» → Mandos › Mapeo con esa persona ya elegida (el tuyo → TU MANDO)
+// Clic en un mando de «Mandos en vivo» → Mandos › Más › Mapeo con esa persona ya elegida (el tuyo → TU MANDO)
 let pendienteMapeo = 0;
 export function tomarPendienteMapeo() { const x = pendienteMapeo; pendienteMapeo = 0; return x; }
 function abrirMapeo(m, p) {
