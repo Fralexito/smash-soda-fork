@@ -295,7 +295,7 @@ export function crearSimulador(enviar) {
       },
       turnos: s.turnos,
     };
-    if (s.seccion === "ajustes" && s.pestana === "audio") {
+    if ((s.seccion === "ajustes" && s.pestana === "audio") || (s.seccion === "sala" && s.pestana === "transmision")) {
       e.audio = JSON.parse(JSON.stringify(s.audio));
       e.audio.parlantes.nivel = s.audio.parlantes.activo ? 0.35 + Math.random() * 0.4 : 0;
       e.audio.mic.nivel = s.audio.mic.activo ? Math.random() * 0.3 : 0;

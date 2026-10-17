@@ -4,7 +4,7 @@
 import { html, useState, useEffect } from "../lib.js";
 import { t, duracion, haceCuanto } from "../i18n.js";
 import { accion, confirmar, irA, avisar } from "../tienda.js";
-import { Diagnostico } from "./ajustes.js";
+import { Diagnostico, TarjetaCaptura, Audio } from "./ajustes.js";
 import { GuiaInicio, Entrenador, useGuia } from "./guia.js";
 import { Pendientes } from "./mandos.js";
 import { EditorBiblioteca } from "./nativas.js";
@@ -18,6 +18,7 @@ import {
 
 export const PESTANAS_SALA = [
   { id: "resumen", es: "RESUMEN", en: "OVERVIEW", d: ["Tu sala de un vistazo: enlace, tiempo en vivo, quién juega y cómo va la conexión.", "Your room at a glance."] },
+  { id: "transmision", es: "TRANSMISIÓN", en: "STREAM", d: ["Todo lo de la imagen y el sonido que reciben tus amigos, en un solo sitio: calidad, FPS, pantalla y audio.", "Everything about the picture and sound your friends get, in one place: quality, FPS, screen and audio."] },
   { id: "puesto", es: "DÓNDE JUEGO YO", en: "WHERE I PLAY", d: ["Dónde te sientas tú cuando pulsas JUGAR: un puesto fijo o el primero de un equipo.", "Where you sit when you press PLAY: a fixed seat or the first one of a team."] },
   { id: "opciones", es: "OPCIONES DE SALA", en: "ROOM OPTIONS", d: ["Nombre, plazas, quién puede entrar y la calidad de la imagen. Se guarda al instante.", "Name, slots, who can join and image quality."] },
   { id: "juegos", mas: true, es: "JUEGOS", en: "GAMES", d: ["Qué se juega (se muestra en la web de la liga) y el juego que abre el modo quiosco.", "What is being played and the kiosk game."] },
@@ -51,6 +52,7 @@ export function VistaSala({ s, pestana }) {
   const m = s.motor;
   if (!m || !m.sala) return html`<${Vacio} titulo=${t("Conectando con el motor…", "Connecting to the engine…")} texto=""/>`;
   switch (pestana) {
+    case "transmision": return html`<${TransmisionSala} m=${m} info=${s.info}/>`;
     case "puesto": return html`<${PreferenciaPuesto} m=${m}/>`;
     case "opciones": return html`<${OpcionesSala} m=${m}/>`;
     case "juegos": return html`<${JuegosSala} m=${m}/>`;
@@ -377,20 +379,32 @@ function ResumenRed({ m }) {
   return html`<div style="margin-top:22px">
     <div class="lab acc" style="margin-bottom:10px">${t("TU RED PARA JUGAR", "YOUR NETWORK")}</div>
     <div style="display:flex;gap:10px;flex-wrap:wrap">
-      <${CajaRapida} ancho estilo="flex:1;min-width:150px" lab=${t("CALIDAD", "QUALITY")} ir=${["sala", "opciones"]}
+      <${CajaRapida} ancho estilo="flex:1;min-width:150px" lab=${t("CALIDAD", "QUALITY")} ir=${["sala", "transmision"]}
         valor=${grande(auto ? t("AUTOMÁTICA", "AUTO") : mbps + " Mbps")} sub=${auto ? por + " Mbps " + t("por persona", "per person") : t("manual", "manual")}>
         <${AjusteSw} titulo=${t("Calidad automática", "Auto quality")} desc=${t("Link reparte tu subida entre los invitados.", "Link splits your upload among guests.")} valor=${auto} al=${(v) => accion("sala.anchoAuto", { auto: v })}/>
         ${auto ? html`<${Ajuste} titulo=${t("Por persona", "Per person")}><${Stepper} valor=${por} min=${1} max=${50} sufijo="Mbps" al=${(v) => accion("sala.anchoAuto", { porPersona: v })}/></${Ajuste}>` : null}
         <div style="display:flex;gap:6px;flex-wrap:wrap">${PRESETS_CALIDAD.map((p) => html`<button key=${p.id} class=${cx("chip-perfil", presetActual(m)?.id === p.id && "on")}
             onClick=${() => aplicarPresetCalidad(m, p.mbps)} title=${t(p.d[0], p.d[1])}>${t(p.es, p.en)} · ${p.mbps}</button>`)}</div>
       </${CajaRapida}>
-      <${CajaRapida} ancho estilo="flex:1;min-width:150px" lab=${t("INVITADOS", "GUESTS")} ir=${["sala", "opciones"]}
+      <${CajaRapida} ancho estilo="flex:1;min-width:150px" lab=${t("INVITADOS", "GUESTS")} ir=${["sala", "transmision"]}
         valor=${grande(aguanta ? "~" + aguanta : "—", aguanta ? "var(--ok)" : null)} sub=${aguanta ? t("aguanta tu subida", "your upload handles") : t("toca para escribir tu subida", "tap to enter your upload")}>
         <div class="ayuda">${t("Mide tu subida en fast.com («Más información») y escríbela: Link calcula cuántos aguanta tu internet.", "Measure your upload at fast.com and enter it: Link works out how many your internet handles.")}</div>
         <${Ajuste} titulo=${t("Tu subida", "Your upload")}><${Stepper} valor=${subida} min=${0} max=${10000} ancho=${4} sufijo="Mbps" al=${(v) => accion("sala.anchoAuto", { subida: v })}/></${Ajuste}>
       </${CajaRapida}>
       ${c.energia === "ahorro" ? dato(t("ENERGÍA", "POWER"), t("AHORRO", "SAVER"), t("cámbiala en Windows", "change it in Windows"), "var(--warn)") : null}
     </div>
+  </div>`;
+}
+
+/** TRANSMISIÓN: todo lo que reciben los amigos (calidad, FPS, pantalla, captura y audio) en un solo sitio. */
+function TransmisionSala({ m, info }) {
+  return html`<div class="col">
+    <${AntesDelPartido} m=${m}/>
+    <div class="rej2" style="align-items:start">
+      <${TarjetaCalidad} m=${m}/>
+      <${TarjetaCaptura} m=${m} info=${info}/>
+    </div>
+    <${Audio} m=${m}/>
   </div>`;
 }
 
@@ -469,7 +483,11 @@ function OpcionesSala({ m }) {
           <${AjusteSw} titulo=${t("Modo quiosco", "Kiosk mode")} desc=${t("Abre y vigila el juego de la biblioteca.", "Launches and watches the library game.")}
             valor=${o.quiosco} al=${(v) => op({ quiosco: v })}/>
         </${Tarjeta}>
-        <${TarjetaCalidad} m=${m}/>
+        <${Tarjeta} interior="padding:22px 24px">
+          <${Titulo} texto=${t("CALIDAD, PANTALLA Y AUDIO", "QUALITY, SCREEN AND AUDIO")}/>
+          <div class="ayuda" style="font-size:14px">${t("Todo lo de la transmisión está junto en Sala › Transmisión.", "Everything about the stream is together in Room › Stream.")}</div>
+          <div style="margin-top:12px"><${Boton} al=${() => irA("sala", "transmision")}>${t("IR A TRANSMISIÓN", "GO TO STREAM")}</${Boton}></div>
+        </${Tarjeta}>
       </div>
       <div class="col">
         <${Tarjeta} interior="padding:22px 24px">

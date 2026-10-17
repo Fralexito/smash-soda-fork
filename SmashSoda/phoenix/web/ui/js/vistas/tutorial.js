@@ -41,7 +41,7 @@ const PASOS = [
   { ir: ["sync"], foco: nav(5), titulo: ["Sync", "Sync"],
     texto: ["Tu PC lista para jugar con fichajes, pasar un fichaje a un amigo y las opciones avanzadas.", "Your PC ready to play with transfers, passing a transfer to a friend and the advanced options."] },
   { ir: ["ajustes"], foco: nav(6), titulo: ["Ajustes", "Settings"],
-    texto: ["Todo lo demás: bot del chat, video, audio, overlay e interfaz. En Ajustes › Interfaz puedes volver a ver este tutorial.", "Everything else: chat bot, video, audio, overlay and interface. Replay this tutorial from Settings › Interface."] },
+    texto: ["Todo lo demás: bot del chat, overlay e interfaz. La calidad, la pantalla y el audio de la transmisión están juntos en Sala › Transmisión. En Ajustes › Interfaz puedes volver a ver este tutorial.", "Everything else: chat bot, overlay and interface. Stream quality, screen and audio are together in Room › Stream. Replay this tutorial from Settings › Interface."] },
   { foco: () => document.querySelector(".pill.atajo"), titulo: ["Buscar con Ctrl+K", "Search with Ctrl+K"],
     texto: ["¿No sabes dónde está algo? Pulsa Ctrl+K y escribe: te lleva directo a cualquier ajuste o acción.", "Can't find something? Press Ctrl+K and type: it takes you straight to any setting or action."] },
   { titulo: ["¡Listo!", "All set!"],

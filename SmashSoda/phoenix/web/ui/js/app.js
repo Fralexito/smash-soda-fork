@@ -44,7 +44,7 @@ const PARA_QUE = {
   mandos: ["Repartir los mandos: quién juega y quién mira.", "Hand out the pads: who plays, who watches."],
   gente: ["Ver a los invitados, moderar y revisar permisos.", "See guests, moderate and set permissions."],
   sync: ["Conectar tu cuenta de la liga y el juego con la web.", "Connect your league account and the game with the website."],
-  ajustes: ["Video, audio, overlay, idioma y tema.", "Video, audio, overlay, language and theme."],
+  ajustes: ["Bot del chat, overlay, idioma y tema. La transmisión está en Sala › Transmisión.", "Chat bot, overlay, language and theme. The stream is in Room › Stream."],
 };
 
 // ---- Barra superior --------------------------------------------------------------

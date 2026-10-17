@@ -63,7 +63,7 @@ export function GuiaInicio({ m, ocultar, abrir }) {
       n: 3, ok: subida > 0, reco: true, titulo: t("Tu internet", "Your internet"),
       texto: subida > 0 ? t(`Subida ${subida} Mbps: Link cuida la calidad solo.`, `Upload ${subida} Mbps: Link manages quality for you.`)
         : t("Mide tu subida en fast.com y escríbela. Así Link cuida la calidad solo.", "Measure your upload at fast.com and enter it. Link then manages quality for you."),
-      boton: subida > 0 ? t("CAMBIAR", "CHANGE") : t("ESCRIBIR", "ENTER"), al: () => irA("sala", "opciones"),
+      boton: subida > 0 ? t("CAMBIAR", "CHANGE") : t("ESCRIBIR", "ENTER"), al: () => irA("sala", "transmision"),
     },
     {
       n: 4, ok: false, titulo: t("Abre la sala", "Open the room"),

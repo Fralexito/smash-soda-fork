@@ -45,6 +45,7 @@ function opciones(m) {
   }
   ir("sala", "resumen", "Sala · Resumen", "Room · Overview", "sala");
   ir("sala", "puesto", "Sala · Dónde juego yo (mi puesto al pulsar JUGAR)", "Room · Where I play (my seat when pressing PLAY)", "mandos");
+  ir("sala", "transmision", "Sala · Transmisión (calidad, FPS, pantalla, audio)", "Room · Stream (quality, FPS, screen, audio)", "sala");
   ir("sala", "opciones", "Sala · Opciones", "Room · Options", "sala");
   ir("sala", "juegos", "Sala · Juegos", "Room · Games", "sala");
   ir("sala", "red", "Sala · Conexión (diagnóstico y ping)", "Room · Connection (diagnostics & ping)", "red");
@@ -64,7 +65,7 @@ function opciones(m) {
   ir("sync", "mipc", "Sync · Mi PC (¿está listo?)", "Sync · My PC (is it ready?)", "web");
   ir("sync", "traspasos", "Sync · Traspasos (pasar un fichaje)", "Sync · Transfers (pass a transfer)", "web");
   ir("sync", "avanzado", "Sync · Opciones avanzadas", "Sync · Advanced options", "web");
-  for (const [p, es, en] of [["general", "General", "General"], ["video", "Video", "Video"], ["audio", "Audio", "Audio"], ["sonidos", "Sonidos (!sfx)", "Sounds (!sfx)"], ["overlay", "Overlay", "Overlay"],
+  for (const [p, es, en] of [["general", "General", "General"], ["sonidos", "Sonidos (!sfx)", "Sounds (!sfx)"], ["overlay", "Overlay", "Overlay"],
     ["interfaz", "Interfaz e idioma", "Interface"], ["avanzado", "Avanzado", "Advanced"]]) {
     ir("ajustes", p, `Ajustes · ${es}`, `Settings · ${en}`, "ajustes");
   }

@@ -12,11 +12,9 @@ import { abrirTutorial } from "./tutorial.js";
 
 export const PESTANAS_AJUSTES = [
   { id: "general", es: "GENERAL", en: "GENERAL", d: ["Tema, bot del chat y seguridad de la sala.", "Theme, chat bot and room security."] },
-  { id: "video", es: "VIDEO", en: "VIDEO", d: ["Qué pantalla y tarjeta de video se transmiten, y con qué calidad.", "Screen, GPU and quality."] },
-  { id: "audio", es: "AUDIO", en: "AUDIO", d: ["Sonido del juego y micrófono, con medidor en vivo.", "Game sound and microphone."] },
   { id: "sonidos", mas: true, es: "SONIDOS CHAT", en: "CHAT SOUNDS", d: ["Los sonidos del comando !sfx y cuánto esperar entre uno y otro.", "Sounds for !sfx and their cooldown."] },
-  { id: "overlay", mas: true, es: "OVERLAY", en: "OVERLAY", d: ["Chat, mandos e invitados encima del juego.", "Chat, pads and guests over the game."] },
-  { id: "interfaz", mas: true, es: "INTERFAZ", en: "INTERFACE", d: ["Idioma, atajos de teclado y recarga de la interfaz.", "Language, shortcuts and reload."] },
+  { id: "overlay", es: "OVERLAY", en: "OVERLAY", d: ["Chat, mandos e invitados encima del juego.", "Chat, pads and guests over the game."] },
+  { id: "interfaz", es: "INTERFAZ", en: "INTERFACE", d: ["Idioma, atajos de teclado y recarga de la interfaz.", "Language, shortcuts and reload."] },
   { id: "avanzado", mas: true, es: "AVANZADO", en: "ADVANCED", d: ["WebSocket, registros y modo desarrollador.", "WebSocket, logs and developer mode."] },
 ];
 
@@ -24,8 +22,6 @@ export function VistaAjustes({ s, pestana }) {
   const m = s.motor;
   if (!m || !m.ajustes) return html`<${Vacio} titulo=${t("Conectando…", "Connecting…")} texto=""/>`;
   switch (pestana) {
-    case "video": return html`<${Video} m=${m} info=${s.info}/>`;
-    case "audio": return html`<${Audio} m=${m}/>`;
     case "overlay": return html`<${Overlay} m=${m} info=${s.info}/>`;
     case "sonidos": return html`<${Sonidos} m=${m}/>`;
     case "interfaz": return html`<${Interfaz} m=${m} info=${s.info}/>`;
@@ -101,16 +97,17 @@ function General({ m }) {
   </div>`;
 }
 
-// ---- Video ----------------------------------------------------------------------------------
-function Video({ m, info }) {
-  const v = m.ajustes.video;
+// ---- Captura (vive en Sala › Transmisión, junto a la calidad y el audio) ----------------------
+export function TarjetaCaptura({ m, info }) {
+  const v = m.ajustes?.video;
+  if (!v) return null;
   const vid = (clave, valor) => accion("ajustes.video", { clave, valor });
   const refrescar = async () => {
     const r = await accion("ajustes.videoListas", {}, { ok: t("Listas actualizadas.", "Lists refreshed.") });
     if (r) actualizarInfo({ pantallas: r.pantallas || [], gpus: r.gpus || [], wgc: !!r.wgc });
   };
-  const op = (lista) => (lista.length ? lista : [t("(sin datos)", "(no data)")]).map((x, i) => ({ valor: i, texto: x }));
-  return html`<div class="rej2">
+  const op = (lista) => (lista?.length ? lista : [t("(sin datos)", "(no data)")]).map((x, i) => ({ valor: i, texto: x }));
+  return html`
     <${Tarjeta} interior="padding:22px 24px">
       <${Titulo} texto=${t("CAPTURA", "CAPTURE")} derecha=${html`<${Boton} tipo="mini suave" al=${refrescar}>${t("ACTUALIZAR", "REFRESH")}</${Boton}>`}/>
       <${Ajuste} bloque titulo=${t("Tarjeta de video", "Graphics card")}>
@@ -125,13 +122,7 @@ function Video({ m, info }) {
         <${Selector} valor=${v.resolucion} opciones=${op(info.resoluciones)} al=${(x) => vid("resolucion", Number(x))}/></${Ajuste}>
       <${AjusteSw} titulo=${t("Escalado Lanczos", "Lanczos scaling")} desc=${t("Imagen más nítida al reducir resolución (usa más GPU).", "Sharper downscaling (more GPU).")} valor=${v.lanczos} al=${(x) => vid("lanczos", x)}/>
       <${AjusteSw} titulo=${t("Ritmo de fotogramas", "Frame pacing")} desc=${t("Movimiento más parejo; puede sumar un poco de retraso.", "Smoother motion; may add a bit of delay.")} valor=${v.ritmo} al=${(x) => vid("ritmo", x)}/>
-    </${Tarjeta}>
-    <${Tarjeta} interior="padding:22px 24px">
-      <${Titulo} texto=${t("CALIDAD DE TRANSMISIÓN", "STREAM QUALITY")}/>
-      <div class="ayuda" style="font-size:14px">${t("Los FPS, los Mbps y la calidad automática se ajustan en un solo sitio: Sala › Opciones de sala.", "FPS, Mbps and automatic quality live in one place: Room › Room options.")}</div>
-      <div style="margin-top:14px"><${Boton} al=${() => irA("sala", "opciones")}>${t("IR A OPCIONES DE SALA", "GO TO ROOM OPTIONS")}</${Boton}></div>
-    </${Tarjeta}>
-  </div>`;
+    </${Tarjeta}>`;
 }
 
 // ---- Audio ----------------------------------------------------------------------------------
@@ -154,7 +145,7 @@ function Canal({ c, canal, titulo, desc }) {
   </${Tarjeta}>`;
 }
 
-function Audio({ m }) {
+export function Audio({ m }) {
   const a = m.audio;
   if (!a) return html`<${Vacio} titulo=${t("Cargando audio…", "Loading audio…")} texto=""/>`;
   return html`<div class="rej2">

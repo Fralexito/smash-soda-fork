@@ -639,7 +639,7 @@ namespace phoenix::web {
 				{"enVivo", in.arbitro.vivoMandado} };
 		}
 		e["turnos"] = estadoTurnos();
-		if (in.seccion == "ajustes" && in.pestana == "audio") e["audio"] = estadoAudio(h);
+		if ((in.seccion == "sala" && in.pestana == "transmision") || (in.seccion == "ajustes" && in.pestana == "audio")) e["audio"] = estadoAudio(h);
 		if (in.seccion == "gente" || in.seccion == "partido" || in.seccion == "jugar") {
 			json amigos = json::array();
 			for (const AmigoWeb& a : link.amigos()) {
@@ -775,7 +775,7 @@ namespace phoenix::web {
 		tickRetraso(in);
 
 		// Previsualización de audio (igual que el panel de audio original mientras está a la vista)
-		if (web && in.seccion == "ajustes" && in.pestana == "audio" && !h.isRunning() && h.isReady()) {
+		if (web && ((in.seccion == "sala" && in.pestana == "transmision") || (in.seccion == "ajustes" && in.pestana == "audio")) && !h.isRunning() && h.isReady()) {
 			try {
 				h.audioIn.captureAudio();
 				h.audioOut.captureAudio();
