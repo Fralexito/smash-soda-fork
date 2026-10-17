@@ -34,6 +34,19 @@ export const PRESETS_CALIDAD = [
   { id: "maxima", es: "MÁXIMA", en: "MAX", fps: 60, mbps: 30, d: ["Fibra y pocos invitados.", "Fiber and few guests."] },
 ];
 
+/** Aplica un preset SIN tocar los FPS: con el automático cambia los Mbps por persona; sin él, el ancho total. */
+export function aplicarPresetCalidad(m, mbps) {
+  const c = m?.sala?.calidad || {};
+  if (c.auto ?? true) return accion("sala.anchoAuto", { porPersona: mbps }, { ok: t("Calidad aplicada.", "Quality applied.") });
+  return accion("sala.calidad", { fps: c.fps ?? m?.ajustes?.video?.fps ?? 60, mbps }, { ok: t("Calidad aplicada.", "Quality applied.") });
+}
+/** Preset elegido ahora: con el automático, el de los Mbps por persona; sin él, el del ancho total. */
+export function presetActual(m) {
+  const c = m?.sala?.calidad || {};
+  const valor = (c.auto ?? true) ? (c.porPersona ?? 10) : (c.mbps ?? 15);
+  return PRESETS_CALIDAD.find((p) => p.mbps === valor) || null;
+}
+
 export function VistaSala({ s, pestana }) {
   const m = s.motor;
   if (!m || !m.sala) return html`<${Vacio} titulo=${t("Conectando con el motor…", "Connecting to the engine…")} texto=""/>`;
@@ -319,9 +332,9 @@ function ResumenRed({ m }) {
       <${CajaRapida} ancho estilo="flex:1;min-width:150px" lab=${t("CALIDAD", "QUALITY")} ir=${["sala", "opciones"]}
         valor=${grande(auto ? t("AUTOMÁTICA", "AUTO") : mbps + " Mbps")} sub=${auto ? por + " Mbps " + t("por persona", "per person") : t("manual", "manual")}>
         <${AjusteSw} titulo=${t("Calidad automática", "Auto quality")} desc=${t("Link reparte tu subida entre los invitados.", "Link splits your upload among guests.")} valor=${auto} al=${(v) => accion("sala.anchoAuto", { auto: v })}/>
-        ${auto ? html`<${Ajuste} titulo=${t("Por persona", "Per person")}><${Stepper} valor=${por} min=${1} max=${50} sufijo="Mbps" al=${(v) => accion("sala.anchoAuto", { porPersona: v })}/></${Ajuste}>`
-          : html`<div style="display:flex;gap:6px;flex-wrap:wrap">${PRESETS_CALIDAD.map((p) => html`<button key=${p.id} class=${cx("chip-perfil", c.fps === p.fps && mbps === p.mbps && "on")}
-              onClick=${() => accion("sala.calidad", { fps: p.fps, mbps: p.mbps })} title=${t(p.d[0], p.d[1])}>${t(p.es, p.en)} · ${p.mbps}</button>`)}</div>`}
+        ${auto ? html`<${Ajuste} titulo=${t("Por persona", "Per person")}><${Stepper} valor=${por} min=${1} max=${50} sufijo="Mbps" al=${(v) => accion("sala.anchoAuto", { porPersona: v })}/></${Ajuste}>` : null}
+        <div style="display:flex;gap:6px;flex-wrap:wrap">${PRESETS_CALIDAD.map((p) => html`<button key=${p.id} class=${cx("chip-perfil", presetActual(m)?.id === p.id && "on")}
+            onClick=${() => aplicarPresetCalidad(m, p.mbps)} title=${t(p.d[0], p.d[1])}>${t(p.es, p.en)} · ${p.mbps}</button>`)}</div>
       </${CajaRapida}>
       <${CajaRapida} ancho estilo="flex:1;min-width:150px" lab=${t("INVITADOS", "GUESTS")} ir=${["sala", "opciones"]}
         valor=${grande(aguanta ? "~" + aguanta : "—", aguanta ? "var(--ok)" : null)} sub=${aguanta ? t("aguanta tu subida", "your upload handles") : t("toca para escribir tu subida", "tap to enter your upload")}>
@@ -336,7 +349,7 @@ function ResumenRed({ m }) {
 export function TarjetaCalidad({ m }) {
   const fps = m.sala?.calidad?.fps ?? m.ajustes?.video?.fps ?? 60;
   const mbps = m.sala?.calidad?.mbps ?? m.ajustes?.video?.mbps ?? 15;
-  const actual = PRESETS_CALIDAD.find((p) => p.fps === fps && p.mbps === mbps);
+  const actual = presetActual(m);
   const aplicar = (f, b) => accion("sala.calidad", { fps: f, mbps: b });
   const auto = m.sala?.calidad?.auto ?? true;
   const porPersona = m.sala?.calidad?.porPersona ?? 10;
@@ -359,17 +372,17 @@ export function TarjetaCalidad({ m }) {
       ? t("Aguanta unos ", "Handles about ") + Math.max(1, Math.floor(subida * 0.8 / porPersona)) + t(" invitados a ", " guests at ") + porPersona + " Mbps. " + t("El automático nunca pasa del 80 %.", "Auto never exceeds 80%.")
       : t("0 = no lo sé. Míde tu subida en fast.com o speedtest.net y escríbela aquí.", "0 = unknown. Measure it at fast.com or speedtest.net.")}>
       <${Stepper} valor=${subida} min=${0} max=${10000} ancho=${4} al=${(v) => accion("sala.anchoAuto", { subida: v })}/></${Ajuste}>
-    <div style=${auto ? "opacity:.4;pointer-events:none" : ""}>
     <div class="rej3" style="gap:10px">${PRESETS_CALIDAD.map((p) => html`
       <button class="caja" style=${`cursor:pointer;text-align:left;border-color:${actual?.id === p.id ? "var(--acc)" : "var(--tenue)"};background:${actual?.id === p.id ? "var(--acc-suave)" : ""}`}
-        onClick=${() => aplicar(p.fps, p.mbps)}>
+        onClick=${() => aplicarPresetCalidad(m, p.mbps)} title=${auto ? t("Mbps por persona (no cambia los FPS)", "Mbps per person (FPS unchanged)") : t("Ancho total (no cambia los FPS)", "Total bandwidth (FPS unchanged)")}>
         <div class="lab" style=${actual?.id === p.id ? "color:var(--acc)" : ""}>${t(p.es, p.en)}</div>
-        <div class="disp" style="font-size:22px;font-weight:700;margin-top:8px">${p.mbps} <span class="mut" style="font-size:12px">MBPS</span></div>
+        <div class="disp" style="font-size:22px;font-weight:700;margin-top:8px">${p.mbps} <span class="mut" style="font-size:12px">${auto ? t("MBPS / PERSONA", "MBPS / PERSON") : "MBPS"}</span></div>
         <div class="ayuda" style="margin-top:4px">${t(...p.d)}</div>
       </button>`)}</div>
-    <${Ajuste} titulo=${t("Fotogramas por segundo", "Frames per second")} desc=${t("60 es lo ideal para PES.", "60 is ideal for PES.")}>
+    <${Ajuste} titulo=${t("Fotogramas por segundo", "Frames per second")} desc=${t("60 es lo ideal para PES. Los botones de arriba no lo cambian.", "60 is ideal for PES. The buttons above don't change it.")}>
       <${Stepper} valor=${fps} min=${10} max=${250} paso=${5} al=${(v) => aplicar(v, mbps)}/></${Ajuste}>
-    <${Ajuste} titulo=${t("Ancho de banda (Mbps)", "Bandwidth (Mbps)")} desc=${t("Escribe el valor que quieras (1–1000) o usa − / +. Más alto = mejor imagen, pero exige más a tu internet.", "Type any value (1–1000) or use − / +.")}>
+    <div style=${auto ? "opacity:.4;pointer-events:none" : ""}>
+    <${Ajuste} titulo=${t("Ancho de banda (Mbps)", "Bandwidth (Mbps)")} desc=${auto ? t("Lo pone el automático. Apágalo para escribirlo tú.", "Set by auto mode. Turn it off to type it yourself.") : t("Escribe el valor que quieras (1–1000) o usa − / +. Más alto = mejor imagen, pero exige más a tu internet.", "Type any value (1–1000) or use − / +.")}>
       <${Stepper} valor=${mbps} min=${1} max=${1000} ancho=${4} al=${(v) => aplicar(fps, v)}/></${Ajuste}>
     </div>
   </${Tarjeta}>`;
