@@ -151,7 +151,12 @@ namespace phoenix::campo {
 				FotoCampo f;
 				try {
 					if (!g_vivo.load()) { cerrar(); f.estado = EstadoCampo::Apagado; publicar(f); dormir(250); continue; }
-					const DWORD pid = buscarPes();
+					// Con el juego ya abierto basta preguntar a su handle si sigue vivo: la foto de procesos cuesta ~7 ms y aquí
+					// se hacía 30 veces por segundo (~20 % de un núcleo con el campo en marcha).
+					DWORD pid = 0;
+					DWORD codigoSalida = 0;
+					if (h && pidAbierto && GetExitCodeProcess(h, &codigoSalida) && codigoSalida == STILL_ACTIVE) pid = pidAbierto;
+					else pid = buscarPes();
 					if (!pid) { cerrar(); pidVerificado = 0; f.estado = EstadoCampo::Esperando; publicar(f); dormir(1000); continue; }
 
 					if (pid != pidVerificado) {   // 1) versión del juego: tamaño + SHA-256 (una vez por proceso)

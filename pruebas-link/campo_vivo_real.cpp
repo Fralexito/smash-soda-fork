@@ -1,5 +1,5 @@
 // Prueba manual con el juego abierto: enciende el lector y escribe lo que lee ~2 veces por segundo (20 s).
-// Compilar con MSVC: cl /EHsc /std:c++20 /I SmashSoda pruebas-link\campo_vivo_real.cpp SmashSoda\phoenix\host\CampoVivo.cpp SmashSoda\phoenix\core\CampoVivo.cpp SmashSoda\phoenix\link\Entrega.cpp bcrypt.lib
+// Compilar con MSVC: cl /EHsc /std:c++20 /I SmashSoda pruebas-link\campo_vivo_real.cpp SmashSoda\phoenix\host\CampoVivoHost.cpp SmashSoda\phoenix\core\CampoVivo.cpp SmashSoda\phoenix\link\Entrega.cpp bcrypt.lib
 #include <chrono>
 #include <cstdio>
 #include <thread>

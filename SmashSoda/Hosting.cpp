@@ -1210,6 +1210,7 @@ void Hosting::pollLatency() {
 	int guestCount = 0;
 	ParsecGuest* guests = nullptr;
 	int bwBajarVeces = 0; // sondeos seguidos pidiendo bajar (evita subir y bajar a cada rato)
+	int bwFactor = 100, bwPerdidaVeces = 0, bwLimpioVeces = 0; // freno por pérdida (% del ancho por persona)
 	std::map<uint32_t, std::pair<uint32_t, uint32_t>> bwPrev; // por invitado: paquetes enviados y retransmisiones
 	while (_isRunning)
 	{
@@ -1239,11 +1240,25 @@ void Hosting::pollLatency() {
 			else bwPrev.clear();
 			phoenix::g_perdidaPorMil = peor;
 
+			// Phoenix: freno por pérdida con memoria. Antes se bajaba un 20 % solo mientras había pérdida y en el sondeo
+			// siguiente sin pérdida se volvía de golpe al 100 %: la pérdida volvía y la calidad daba tumbos cada ~8 s.
+			// Ahora: 2 sondeos seguidos con > 5 % de pérdida → 20 % menos (hasta el 40 %); 10 s seguidos con < 2 % → 10 % más.
+			bool frenoCambio = false;
+			if (guestCount <= 0) { bwFactor = 100; bwPerdidaVeces = bwLimpioVeces = 0; }
+			else if (peor >= 50) {
+				bwLimpioVeces = 0;
+				if (++bwPerdidaVeces >= 2) { bwPerdidaVeces = 0; const int f = (std::max)(40, bwFactor * 8 / 10); frenoCambio = f != bwFactor; bwFactor = f; }
+			}
+			else if (peor < 20) {
+				bwPerdidaVeces = 0;
+				if (++bwLimpioVeces >= 5) { bwLimpioVeces = 0; const int f = (std::min)(100, bwFactor + 10); frenoCambio = f != bwFactor; bwFactor = f; }
+			}
+			else { bwPerdidaVeces = 0; bwLimpioVeces = 0; }
+
 			const phoenix::PhoenixPrefs& pp = phoenix::PhoenixPrefs::get();
 			if (pp.anchoAuto && guestCount > 0) {   // sin invitados no se toca la calidad
 				const int personas = guestCount > 0 ? guestCount : 1;
-				int objetivo = pp.anchoPorPersona * personas;
-				if (peor >= 50) objetivo = objetivo * 8 / 10;
+				int objetivo = pp.anchoPorPersona * personas * bwFactor / 100;
 				if (pp.subidaMbps > 0) { int tope = pp.subidaMbps * 8 / 10; if (tope < 1) tope = 1; if (objetivo > tope) objetivo = tope; }
 				if (objetivo < 1) objetivo = 1;
 				if (objetivo > 200) objetivo = 200;
@@ -1254,7 +1269,8 @@ void Hosting::pollLatency() {
 					applyHostConfig();
 				}
 				else if (objetivo < actual) {
-					if (++bwBajarVeces >= 3) {
+					// por pérdida se baja ya (el freno ya esperó 2 sondeos); si se fue alguien, tras 3 sondeos
+					if (frenoCambio || ++bwBajarVeces >= 3) {
 						bwBajarVeces = 0;
 						setHostVideoConfig(Config::cfg.video.fps, (uint32_t)objetivo);
 						applyHostConfig();

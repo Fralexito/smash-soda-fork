@@ -44,7 +44,7 @@ Congelar y capturar a mano (PowerShell): `NtSuspendProcess` → `CopyFromScreen`
 2. `escaner.exe` → `echo 0 > cmd.txt` (espera «Escaneo inicial») → `echo 6 > cmd.txt` (≈ 1 min) → `echo 8 > cmd.txt`.
 3. En `punteros.txt` busca bloques con 22–24 valores `(x, ~0.9, z, 1.0)` en el mismo desplazamiento: sale el array en `0x4631D540` (en tu sesión será otra) con `+208` = posición.
 4. Comprueba con `sonda` que se mueven suave (2–3 m/s). Confirma con una captura congelada.
-5. Para uso real: no hace falta nada de lo anterior; Link ya trae la firma (`core/CampoVivo.cpp`) y `host/CampoVivo.cpp`.
+5. Para uso real: no hace falta nada de lo anterior; Link ya trae la firma (`core/CampoVivo.cpp`) y `host/CampoVivoHost.cpp`.
 
 ## 4. Errores que ya nos costaron tiempo (evítalos)
 

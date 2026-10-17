@@ -5,7 +5,7 @@
 // No toca el juego ni Link: no escribe memoria, no manda nada a los mandos.
 // Uso: lados_real.exe [segundos=240]
 // Compilar con MSVC: cl /EHsc /std:c++20 /I SmashSoda pruebas-link\lados_real.cpp SmashSoda\phoenix\core\DeteccionLados.cpp
-//   SmashSoda\phoenix\host\CampoVivo.cpp SmashSoda\phoenix\core\CampoVivo.cpp SmashSoda\phoenix\link\Entrega.cpp bcrypt.lib xinput.lib
+//   SmashSoda\phoenix\host\CampoVivoHost.cpp SmashSoda\phoenix\core\CampoVivo.cpp SmashSoda\phoenix\link\Entrega.cpp bcrypt.lib xinput.lib
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>

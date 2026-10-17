@@ -292,7 +292,15 @@ namespace phoenix::web {
 			if (lista) {
 				tickResultadosWeb(in);
 				const double ahora = ahoraSeg();
-				if (ahora - in.ultimaFoto >= 0.2) { // ~5 veces por segundo, solo si cambió
+				// Phoenix: ~5 veces por segundo con Link delante; 1 por segundo si estás en otra ventana (PES) o minimizado.
+				// Con invitados la foto cambia casi siempre (latencias), así que antes se rehacía y mandaba entera 5/s
+				// también mientras jugabas. Al volver a Link se manda en el acto.
+				HWND fg = GetForegroundWindow();
+				const bool delante = ventanaVisible && fg != nullptr && GetAncestor(fg, GA_ROOTOWNER) == GetAncestor(h, GA_ROOTOWNER);
+				static bool delanteAntes = true;
+				const bool volvio = delante && !delanteAntes;
+				delanteAntes = delante;
+				if (volvio || ahora - in.ultimaFoto >= (delante ? 0.2 : 1.0)) { // solo se manda si cambió
 					in.ultimaFoto = ahora;
 					in.puente->publicarEstado(construirEstado(in));
 				}
