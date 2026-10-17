@@ -315,6 +315,11 @@ function MiIdParsec({ m }) {
 // (el servicio de Parsec suele volver a abrir la app solo).
 let parsecYaCerrado = false;
 
+// Avisos que el anfitrión cerró con ✕: se recuerdan en este PC por «id:valor», así vuelven solo si el problema cambia.
+const CLAVE_AVISOS = "phoenix.avisosCerrados";
+const leerCerrados = () => { try { return new Set(JSON.parse(localStorage.getItem(CLAVE_AVISOS) || "[]")); } catch { return new Set(); } };
+const guardarCerrados = (set) => { try { localStorage.setItem(CLAVE_AVISOS, JSON.stringify([...set].slice(-40))); } catch { /* sin almacenamiento */ } };
+
 /** ANTES DEL PARTIDO: solo sale si algo va a dar lag o problemas; cada cosa con su botón para arreglarla. */
 function AntesDelPartido({ m }) {
   const c = m.sala?.calidad || {};
@@ -326,19 +331,25 @@ function AntesDelPartido({ m }) {
     }
   };
   const items = [];
-  if (c.parsecApp && !parsecYaCerrado) items.push({ id: "parsec", t: t("La app de Parsec está abierta", "The Parsec app is open"), d: t("Compite con Link por la tarjeta de video y el internet: puede dar tirones.", "It competes with Link for the GPU and internet: it can cause stutter."), boton: t("CERRAR PARSEC", "CLOSE PARSEC"), al: cerrarParsec });
-  if (!auto) items.push({ id: "auto", t: t(`Ancho de banda automático apagado (${mbps} Mbps para todos)`, `Auto bandwidth off (${mbps} Mbps for everyone)`), d: t("Se reparte entre todos los que entran: con varios amigos, a cada uno le llega poca calidad.", "It's split among everyone: with several friends each gets low quality."), boton: t("ENCENDER · 15 POR PERSONA", "TURN ON · 15 PER PERSON"), al: () => accion("sala.anchoAuto", { auto: true, porPersona: Math.max(por, 15) }) });
-  else if (por < 10) items.push({ id: "por", t: t(`Poca calidad por persona (${por} Mbps)`, `Low quality per person (${por} Mbps)`), d: t("PES se ve borroso por debajo de 10 Mbps por persona.", "PES looks blurry below 10 Mbps per person."), boton: t("SUBIR A 15", "RAISE TO 15"), al: () => accion("sala.anchoAuto", { porPersona: 15 }) });
-  if (c.energia === "ahorro") items.push({ id: "energia", t: t("Windows está en «Ahorro de energía»", "Windows is on Power Saver"), d: t("Cámbialo a «Equilibrado» o «Alto rendimiento» (Configuración › Sistema › Energía) para que no haya tirones.", "Switch to Balanced or High performance (Settings › System › Power).") });
-  if ((c.perdida ?? 0) >= 50) items.push({ id: "perdida", t: t(`Un amigo pierde paquetes (${((c.perdida ?? 0) / 10).toFixed(1)} %)`, `A friend is losing packets (${((c.perdida ?? 0) / 10).toFixed(1)} %)`), d: t("Su internet no aguanta: que use cable o WiFi de 5 GHz.", "Their internet can't keep up: cable or 5 GHz WiFi.") });
-  if (!items.length) return null;
-  const arreglables = items.filter((x) => x.al && x.id !== "parsec");
+  if (c.parsecApp && !parsecYaCerrado) items.push({ id: "parsec", firma: "parsec", t: t("La app de Parsec está abierta", "The Parsec app is open"), d: t("Compite con Link por la tarjeta de video y el internet: puede dar tirones.", "It competes with Link for the GPU and internet: it can cause stutter."), boton: t("CERRAR PARSEC", "CLOSE PARSEC"), al: cerrarParsec });
+  if (!auto) items.push({ id: "auto", firma: `auto:${mbps}`, t: t(`Ancho de banda automático apagado (${mbps} Mbps para todos)`, `Auto bandwidth off (${mbps} Mbps for everyone)`), d: t("Se reparte entre todos los que entran: con varios amigos, a cada uno le llega poca calidad.", "It's split among everyone: with several friends each gets low quality."), boton: t("ENCENDER · 15 POR PERSONA", "TURN ON · 15 PER PERSON"), al: () => accion("sala.anchoAuto", { auto: true, porPersona: Math.max(por, 15) }) });
+  else if (por < 10) items.push({ id: "por", firma: `por:${por}`, t: t(`Poca calidad por persona (${por} Mbps)`, `Low quality per person (${por} Mbps)`), d: t("PES se ve borroso por debajo de 10 Mbps por persona.", "PES looks blurry below 10 Mbps per person."), boton: t("SUBIR A 15", "RAISE TO 15"), al: () => accion("sala.anchoAuto", { porPersona: 15 }) });
+  if (c.energia === "ahorro") items.push({ id: "energia", firma: "energia", t: t("Windows está en «Ahorro de energía»", "Windows is on Power Saver"), d: t("Cámbialo a «Equilibrado» o «Alto rendimiento» (Configuración › Sistema › Energía) para que no haya tirones.", "Switch to Balanced or High performance (Settings › System › Power).") });
+  if ((c.perdida ?? 0) >= 50) items.push({ id: "perdida", firma: "perdida", t: t(`Un amigo pierde paquetes (${((c.perdida ?? 0) / 10).toFixed(1)} %)`, `A friend is losing packets (${((c.perdida ?? 0) / 10).toFixed(1)} %)`), d: t("Su internet no aguanta: que use cable o WiFi de 5 GHz.", "Their internet can't keep up: cable or 5 GHz WiFi.") });
+  const cerrados = leerCerrados();
+  const visibles = items.filter((x) => !cerrados.has(x.firma));
+  if (!visibles.length) return null;
+  const cerrar = () => { for (const x of visibles) cerrados.add(x.firma); guardarCerrados(cerrados); refrescar((n) => n + 1); };
+  const arreglables = visibles.filter((x) => x.al && x.id !== "parsec");
   return html`<div class="caja" style="border-color:var(--warn);display:flex;flex-direction:column;gap:10px;margin-bottom:12px">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
-      <b class="warn">${t("ANTES DEL PARTIDO", "BEFORE THE MATCH")} · ${items.length} ${items.length === 1 ? t("cosa puede dar lag", "thing can cause lag") : t("cosas pueden dar lag", "things can cause lag")}</b>
-      ${arreglables.length > 1 ? html`<${Boton} tipo="lleno mini" al=${async () => { for (const x of arreglables) await x.al(); }}>${t("ARREGLAR TODO", "FIX ALL")}</${Boton}>` : null}
+      <b class="warn">${t("ANTES DEL PARTIDO", "BEFORE THE MATCH")} · ${visibles.length} ${visibles.length === 1 ? t("cosa puede dar lag", "thing can cause lag") : t("cosas pueden dar lag", "things can cause lag")}</b>
+      <div style="display:flex;gap:8px;align-items:center">
+        ${arreglables.length > 1 ? html`<${Boton} tipo="lleno mini" al=${async () => { for (const x of arreglables) await x.al(); }}>${t("ARREGLAR TODO", "FIX ALL")}</${Boton}>` : null}
+        <button class="icono-btn" title=${t("Cerrar este aviso (vuelve solo si el problema cambia)", "Close this notice (it comes back only if the problem changes)")} aria-label=${t("Cerrar", "Close")} onClick=${cerrar}>✕</button>
+      </div>
     </div>
-    ${items.map((x) => html`<div key=${x.id} style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+    ${visibles.map((x) => html`<div key=${x.id} style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
       <div style="flex:1;min-width:220px"><b>${x.t}</b><div class="ayuda">${x.d}</div></div>
       ${x.al ? html`<${Boton} tipo="suave mini" al=${x.al}>${x.boton}</${Boton}>` : null}
     </div>`)}
@@ -442,24 +453,10 @@ export function TarjetaCalidad({ m }) {
   const auto = m.sala?.calidad?.auto ?? true;
   const porPersona = m.sala?.calidad?.porPersona ?? 10;
   const subida = m.sala?.calidad?.subida ?? 0;
-  const perdida = m.sala?.calidad?.perdida ?? 0;
-  const energia = m.sala?.calidad?.energia ?? "ok";
   return html`<${Tarjeta} interior="padding:22px 24px">
     <${Titulo} texto=${t("CALIDAD DE TRANSMISIÓN", "STREAM QUALITY")} derecha=${actual
       ? html`<span class="mono mut" style="font-size:12px">${fps} FPS · ${mbps} MBPS</span>`
       : html`<span class="chip acc2">${t("PERSONALIZADA", "CUSTOM")} · ${mbps} MBPS</span>`}/>
-    ${perdida >= 50 ? html`<div class="caja" style="border-color:var(--warn);margin-bottom:12px"><b class="warn">${t("Un invitado está perdiendo paquetes", "A guest is losing packets")} (${(perdida / 10).toFixed(1)} %).</b>
-      <div class="ayuda">${auto ? t("El automático ya bajó la calidad un poco. Si sigue, pídele cable o WiFi de 5 GHz.", "Auto mode already lowered quality. If it continues, ask for a cable or 5 GHz WiFi.") : t("Baja los Mbps o activa el automático.", "Lower the Mbps or turn on auto.")}</div></div>` : null}
-    ${energia === "ahorro" ? html`<div class="caja" style="border-color:var(--warn);margin-bottom:12px"><b class="warn">${t("Tu PC está en «Ahorro de energía».", "Your PC is on Power Saver.")}</b>
-      <div class="ayuda">${t("Cámbiala a «Alto rendimiento» o «Equilibrado» en Windows para que no haya tirones.", "Switch to High performance or Balanced in Windows.")}</div></div>` : null}
-    <${AjusteSw} titulo=${t("Ancho de banda automático", "Automatic bandwidth")} desc=${t("Sube y baja solo según cuántas personas hay conectadas. Apágalo para poner el valor tú.", "Raises and lowers itself with the people connected. Turn off to set it yourself.")}
-      valor=${auto} al=${(v) => accion("sala.anchoAuto", { auto: v })}/>
-    ${auto ? html`<${Ajuste} titulo=${t("Mbps por persona", "Mbps per person")} desc=${t("Ahora mismo: ", "Right now: ") + mbps + " Mbps"}>
-      <${Stepper} valor=${porPersona} min=${1} max=${50} al=${(v) => accion("sala.anchoAuto", { porPersona: v })}/></${Ajuste}>` : null}
-    <${Ajuste} titulo=${t("Mi subida de internet (Mbps)", "My upload speed (Mbps)")} desc=${subida > 0
-      ? t("Aguanta unos ", "Handles about ") + Math.max(1, Math.floor(subida * 0.8 / porPersona)) + t(" invitados a ", " guests at ") + porPersona + " Mbps. " + t("El automático nunca pasa del 80 %.", "Auto never exceeds 80%.")
-      : t("0 = no lo sé. Míde tu subida en fast.com o speedtest.net y escríbela aquí.", "0 = unknown. Measure it at fast.com or speedtest.net.")}>
-      <${Stepper} valor=${subida} min=${0} max=${10000} ancho=${4} al=${(v) => accion("sala.anchoAuto", { subida: v })}/></${Ajuste}>
     <div class="rej3" style="gap:10px">${PRESETS_CALIDAD.map((p) => html`
       <button class="caja" style=${`cursor:pointer;text-align:left;border-color:${actual?.id === p.id ? "var(--acc)" : "var(--tenue)"};background:${actual?.id === p.id ? "var(--acc-suave)" : ""}`}
         onClick=${() => aplicarPresetCalidad(m, p.mbps)} title=${auto ? t("Mbps por persona (no cambia los FPS)", "Mbps per person (FPS unchanged)") : t("Ancho total (no cambia los FPS)", "Total bandwidth (FPS unchanged)")}>
@@ -470,6 +467,14 @@ export function TarjetaCalidad({ m }) {
     <${Ajuste} titulo=${t("Fotogramas por segundo", "Frames per second")} desc=${t("Los de la transmisión, no los de tu pantalla (tu monitor sigue igual). Los botones de arriba no los cambian.", "The stream's, not your screen's (your monitor stays the same). The buttons above don't change them.")}>
       <${Stepper} valor=${fps} min=${10} max=${250} paso=${1} al=${(v) => aplicar(v, mbps)}/></${Ajuste}>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin:-4px 0 6px">${[30, 60, 120, 144].map((f) => html`<button key=${f} class=${cx("chip-perfil", fps === f && "on")} onClick=${() => aplicar(f, mbps)}>${f} FPS</button>`)}</div>
+    <${AjusteSw} titulo=${t("Ancho de banda automático", "Automatic bandwidth")} desc=${t("Sube y baja solo según cuántas personas hay conectadas. Apágalo para poner el valor tú.", "Raises and lowers itself with the people connected. Turn off to set it yourself.")}
+      valor=${auto} al=${(v) => accion("sala.anchoAuto", { auto: v })}/>
+    ${auto ? html`<${Ajuste} titulo=${t("Mbps por persona", "Mbps per person")} desc=${t("Ahora mismo: ", "Right now: ") + mbps + " Mbps"}>
+      <${Stepper} valor=${porPersona} min=${1} max=${50} al=${(v) => accion("sala.anchoAuto", { porPersona: v })}/></${Ajuste}>` : null}
+    <${Ajuste} titulo=${t("Mi subida de internet (Mbps)", "My upload speed (Mbps)")} desc=${subida > 0
+      ? t("Aguanta unos ", "Handles about ") + Math.max(1, Math.floor(subida * 0.8 / porPersona)) + t(" invitados a ", " guests at ") + porPersona + " Mbps. " + t("El automático nunca pasa del 80 %.", "Auto never exceeds 80%.")
+      : t("0 = no lo sé. Míde tu subida en fast.com o speedtest.net y escríbela aquí.", "0 = unknown. Measure it at fast.com or speedtest.net.")}>
+      <${Stepper} valor=${subida} min=${0} max=${10000} ancho=${4} al=${(v) => accion("sala.anchoAuto", { subida: v })}/></${Ajuste}>
     <div style=${auto ? "opacity:.4;pointer-events:none" : ""}>
     <${Ajuste} titulo=${t("Ancho de banda (Mbps)", "Bandwidth (Mbps)")} desc=${auto ? t("Lo pone el automático. Apágalo para escribirlo tú.", "Set by auto mode. Turn it off to type it yourself.") : t("Escribe el valor que quieras (1–1000) o usa − / +. Más alto = mejor imagen, pero exige más a tu internet.", "Type any value (1–1000) or use − / +.")}>
       <${Stepper} valor=${mbps} min=${1} max=${1000} ancho=${4} al=${(v) => aplicar(fps, v)}/></${Ajuste}>
