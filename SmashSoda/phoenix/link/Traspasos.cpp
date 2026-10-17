@@ -400,7 +400,7 @@ AjustesGuardados leerAjustes(const std::string& texto) {
 	auto b = [&](const char* k, bool def) { return j.contains(k) && j[k].is_boolean() ? j[k].get<bool>() : def; };
 	auto s = [&](const char* k, size_t max) { std::string t = j.contains(k) && j[k].is_string() ? j[k].get<std::string>() : std::string(); if (t.size() > max) t.clear(); return t; };
 	a.publicar = b("publicar", false); a.recibir = b("recibir", false); a.confirmarAntes = b("confirmarAntes", true);
-	a.prueba = b("prueba", false); a.aprobarRecibidos = b("aprobarRecibidos", false);
+	a.prueba = b("prueba", false); a.aprobarRecibidos = b("aprobarRecibidos", false); a.aplicarPropios = b("aplicarPropios", true);
 	a.transporte = s("transporte", 12); a.carpeta = s("carpeta", 500); a.autor = s("autor", 40); a.optionFile = s("optionFile", 500);
 	if (a.transporte != "web" && a.transporte != "carpeta") a.transporte = "web";
 	if (a.transporte == "carpeta" && a.carpeta.empty()) { a.transporte = "web"; a.migrado = true; }   // prueba vieja con carpeta vacia: la web
@@ -564,7 +564,7 @@ void Motor::guardarRegistros() const {
 	for (const Registro& r : _reg) {
 		json d = json::array();
 		for (const Detalle& x : r.detalle) d.push_back({ {"jugador", x.jugador}, {"desde", x.desde}, {"hasta", x.hasta}, {"jugadorNombre", x.jugadorNombre}, {"desdeNombre", x.desdeNombre}, {"hastaNombre", x.hastaNombre}, {"estado", x.estado}, {"motivo", x.motivo} });
-		j["registros"].push_back({ {"lote", json::parse(loteAJson(r.lote, true))}, {"estado", r.estado}, {"modo", r.modo}, {"recibido", r.recibido}, {"aplicadoEn", r.aplicadoEn}, {"motivo", r.motivo}, {"origen", r.origen}, {"orden", r.orden}, {"detalle", d} });
+		j["registros"].push_back({ {"lote", json::parse(loteAJson(r.lote, true))}, {"estado", r.estado}, {"propio", r.propio}, {"modo", r.modo}, {"recibido", r.recibido}, {"aplicadoEn", r.aplicadoEn}, {"motivo", r.motivo}, {"origen", r.origen}, {"orden", r.orden}, {"detalle", d} });
 	}
 	escribirAtomico(_c.dirEstado / "recibidos.json", j.dump(1));
 }
@@ -610,6 +610,7 @@ void Motor::cargarEstado() {
 				std::string e;
 				if (!r.contains("lote") || !loteDeJson(r["lote"].dump(), x.lote, e)) continue;
 				x.estado = r.value("estado", std::string("pendiente")); x.modo = r.value("modo", std::string("ids"));
+				x.propio = r.contains("propio") && r["propio"].is_boolean() ? r["propio"].get<bool>() : x.estado == "propio";
 				x.origen = r.value("origen", std::string()); x.orden = r.value("orden", 0LL);
 				x.recibido = r.value("recibido", std::string()); x.aplicadoEn = r.value("aplicadoEn", std::string()); x.motivo = r.value("motivo", std::string());
 				if (r.contains("detalle") && r["detalle"].is_array())
@@ -670,12 +671,12 @@ bool Motor::publicarLote(const std::vector<CambioLote>& cambios, const std::stri
 	if (!_t->publicar(l, ya, e)) { mensaje = "No se pudo publicar: " + e; return false; }
 	_publicados++;
 	_ultimoPublicado = l.id;
-	// el anfitrion tambien guarda lo que publico (historial; no se aplica a si mismo)
+	// el anfitrion tambien guarda lo que publico; con «mantener mis fichajes» tambien se pone en su propio juego (Phoenix-DB)
 	bool conocido = false;
 	for (const Registro& r : _reg) if (r.lote.id == l.id) conocido = true;
 	if (!conocido) {
 		Registro r;
-		r.lote = l; r.estado = "propio"; r.modo = "nada"; r.recibido = ahora(); r.origen = _origenActual; r.orden = ordenDe(_origenActual, l.seq);
+		r.lote = l; r.propio = true; r.estado = _c.aplicarPropios ? "pendiente" : "propio"; r.modo = _c.aplicarPropios ? "ids" : "nada"; r.recibido = ahora(); r.origen = _origenActual; r.orden = ordenDe(_origenActual, l.seq);
 		for (const CambioLote& c : l.cambios) r.detalle.push_back({ c.jugador, c.desde, c.hasta, c.jugadorNombre, c.hastaNombre, "publicado", "" });
 		_reg.push_back(std::move(r));
 		guardarRegistros();
@@ -803,7 +804,7 @@ void Motor::pasoRecibir() {
 				if (conocido) continue;   // lote repetido: idempotente
 				Registro r;
 				r.lote = l; r.recibido = ahora(); r.origen = _origenActual; r.orden = ordenDe(_origenActual, l.seq);
-				if (l.anfitrion == _anfitrionId) { r.estado = "propio"; r.modo = "nada"; }
+				if (l.anfitrion == _anfitrionId) { r.propio = true; r.estado = _c.aplicarPropios ? "pendiente" : "propio"; r.modo = _c.aplicarPropios ? "ids" : "nada"; }
 				else r.estado = _c.aprobarRecibidos ? "por_aprobar" : "pendiente";
 				_reg.push_back(std::move(r));
 			}
@@ -941,6 +942,21 @@ bool Motor::aplicar(bool deshaciendo, std::string& mensaje) {
 	}
 	mensaje = inf.mensaje;
 	return true;
+}
+
+void Motor::aplicarPropios(bool si) {
+	std::lock_guard<std::mutex> g(_m);
+	_c.aplicarPropios = si;
+	int cambiados = 0;
+	for (Registro& r : _reg) {
+		if (!r.propio) continue;
+		if (si && r.estado == "propio") { r.estado = "pendiente"; r.modo = "ids"; cambiados++; }
+		else if (!si && (r.estado == "pendiente" || r.estado == "aplicado" || r.estado == "parcial" || r.estado == "saltado")) { r.estado = "propio"; r.modo = "nada"; cambiados++; }
+	}
+	if (cambiados == 0) return;
+	guardarRegistros();
+	_reintentoAplicar = 0;
+	if (!si) { std::string msg; aplicar(false, msg); }   // vuelve a generar Phoenix-DB sin mis fichajes
 }
 
 void Motor::aprobarRecibidos(bool si) { std::lock_guard<std::mutex> g(_m); _c.aprobarRecibidos = si; }

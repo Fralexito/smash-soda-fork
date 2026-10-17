@@ -161,7 +161,8 @@ struct Detalle {
 };
 struct Registro {
 	Lote lote;
-	std::string estado;      ///< pendiente | aplicado | parcial | saltado | deshecho | propio | error
+	std::string estado;      ///< pendiente | aplicado | parcial | saltado | deshecho | propio | error | por_aprobar | rechazado
+	bool propio = false;     ///< lo publiqué yo (con «mantener mis fichajes» también se pone en mi juego)
 	std::string modo = "ids";   ///< como se aplica en ESTE PC: ids (misma base que el anfitrion) | nombres (otro parche) | nada (no se puede)
 	std::string recibido, aplicadoEn, motivo;
 	std::string origen;      ///< buzon (identidad del transporte) del que llego: cada buzon tiene su propia numeracion seq
@@ -177,6 +178,7 @@ struct Config {
 	bool publicar = false;          ///< este PC publica los traspasos que hace en Editar
 	bool recibir = false;           ///< este PC aplica los traspasos de otros
 	bool confirmarAntes = true;     ///< anfitrion: ver los traspasos detectados y pulsar «Publicar»
+	bool aplicarPropios = true;     ///< mis propios fichajes también van a mi Phoenix-DB: siguen en mi juego al cerrar y abrir PES (sin «Activar»)
 	bool aprobarRecibidos = false;  ///< amigo: lo que llega queda «por_aprobar» hasta que se acepte (ACEPTAR) o se rechace
 	fs::path dirEstado;             ///< donde guarda su estado (foto, historial, identidad)
 	fs::path optionFile;            ///< EDIT00000000 (archivo) o la carpeta que lo contiene
@@ -209,6 +211,8 @@ public:
 	bool deshacerUltimo(std::string& mensaje);
 	/// Amigo con «aprobar antes de poner»: los lotes «por_aprobar» pasan a «pendiente» (se aplican) o a «rechazado» (nunca se aplican).
 	void aprobarRecibidos(bool si);
+	/// «Mantener mis fichajes en mi juego»: mis lotes publicados se aplican (o se quitan) en mi Phoenix-DB. Idempotente: se llama en cada vuelta.
+	void aplicarPropios(bool si);
 	bool aceptarRecibidos(std::string& mensaje);
 	bool rechazarRecibidos(std::string& mensaje);
 	/// Aviso para el overlay del juego tras aplicar un lote nuevo («Fichaje aplicado: X pasa de A a B. …»); se entrega UNA vez y queda vacio.
@@ -271,6 +275,7 @@ std::string textoAccionRecarga(bool pesAbierto, const std::string& modoRecarga);
 // ─── Ajustes guardados (ajustes.json) ────────────────────────────────────────────────────────────
 struct AjustesGuardados {
 	bool publicar = false, recibir = false, confirmarAntes = true;
+	bool aplicarPropios = true;      ///< mis fichajes también en mi juego (Phoenix-DB): no se pierden al cerrar PES
 	bool aprobarRecibidos = false;   ///< lo que llega espera a ACEPTAR / RECHAZAR antes de ponerse en el juego
 	bool prueba = false;    ///< modo Prueba: seguirme a mí mismo (antes era «publicar y recibir a la vez»; ahora las dos cosas pueden ir juntas sin esto)
 	std::string transporte = "web", carpeta, autor, optionFile;

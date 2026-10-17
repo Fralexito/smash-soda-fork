@@ -63,6 +63,7 @@ struct Servicio::Impl {
 	std::condition_variable cv;
 	bool publicar = false, recibir = false, confirmarAntes = true;
 	bool prueba = false;                // modo Prueba: me sigo a mí mismo (aparte de publicar/recibir, que pueden ir juntos)
+	bool aplicarPropios = true;         // mis fichajes tambien en mi juego (Phoenix-DB): no se pierden al cerrar PES
 	bool aprobarRecibidos = false;      // lo que llega espera a que lo acepte (ACEPTAR / RECHAZAR) antes de ponerse en el juego
 	std::string transporte = "web", carpeta, autor, optionFile;   // la web (Supabase) es el transporte por defecto; la carpeta es la alternativa
 	std::shared_ptr<Motor> motor;
@@ -91,7 +92,7 @@ struct Servicio::Impl {
 	fs::path ajustesArchivo() const { return carpetaAjustes() / "ajustes.json"; }
 
 	void guardar() {
-		json j = { {"publicar", publicar}, {"recibir", recibir}, {"confirmarAntes", confirmarAntes}, {"prueba", prueba}, {"aprobarRecibidos", aprobarRecibidos}, {"transporte", transporte}, {"carpeta", carpeta}, {"autor", autor}, {"optionFile", optionFile} };
+		json j = { {"publicar", publicar}, {"recibir", recibir}, {"confirmarAntes", confirmarAntes}, {"prueba", prueba}, {"aprobarRecibidos", aprobarRecibidos}, {"aplicarPropios", aplicarPropios}, {"transporte", transporte}, {"carpeta", carpeta}, {"autor", autor}, {"optionFile", optionFile} };
 		escribir(ajustesArchivo(), j.dump(1));
 	}
 	void cargar() {
@@ -102,7 +103,7 @@ struct Servicio::Impl {
 			t.assign((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
 		}
 		const AjustesGuardados a = leerAjustes(t);   // logica pura (probada): la web es el transporte por defecto
-		publicar = a.publicar; recibir = a.recibir; confirmarAntes = a.confirmarAntes; prueba = a.prueba; aprobarRecibidos = a.aprobarRecibidos;
+		publicar = a.publicar; recibir = a.recibir; confirmarAntes = a.confirmarAntes; prueba = a.prueba; aprobarRecibidos = a.aprobarRecibidos; aplicarPropios = a.aplicarPropios;
 		transporte = a.transporte; carpeta = a.carpeta; autor = a.autor; optionFile = a.optionFile;
 		if (a.migrado) guardar();   // deja el archivo ya migrado a la web
 	}
@@ -227,13 +228,13 @@ struct Servicio::Impl {
 
 	void paso() {
 		std::shared_ptr<Motor> mo;
-		bool pub, rec, conf, aprobar;
+		bool pub, rec, conf, aprobar, propios;
 		std::string aut;
 		Orden orden;
 		{
 			std::lock_guard<std::mutex> g(m);
 			asegurarMotor();
-			mo = motor; pub = publicar; rec = recibir; conf = confirmarAntes; aprobar = aprobarRecibidos; aut = autor;
+			mo = motor; pub = publicar; rec = recibir; conf = confirmarAntes; aprobar = aprobarRecibidos; propios = aplicarPropios; aut = autor;
 			if (!acciones.empty()) { orden = acciones.front(); acciones.pop_front(); }
 		}
 		fs::path juego, option;
@@ -241,6 +242,7 @@ struct Servicio::Impl {
 		{ std::lock_guard<std::mutex> g(m); juegoActual = juego; }
 		mo->ajustar(juego, option, pub, rec, conf, aut);
 		mo->aprobarRecibidos(aprobar);
+		mo->aplicarPropios(propios);
 		bool refrescar = false;
 		if (!orden.que.empty()) {
 			bool ok = false;
@@ -325,7 +327,7 @@ json Servicio::estado() {
 	if (_i->cache.empty() && !_i->corriendo) { _i->asegurarMotor(); _i->cache = _i->motor->estadoJson(); }   // apagado: solo se enseña el historial guardado
 	if (!_i->cache.empty()) j = json::parse(_i->cache, nullptr, false);
 	if (!j.is_object()) j = json::object();
-	j["ajustes"] = { {"publicar", _i->publicar}, {"recibir", _i->recibir}, {"confirmarAntes", _i->confirmarAntes}, {"prueba", _i->prueba}, {"aprobarRecibidos", _i->aprobarRecibidos}, {"transporte", _i->transporte}, {"carpeta", _i->carpeta}, {"autor", _i->autor}, {"optionFile", _i->optionFile} };
+	j["ajustes"] = { {"publicar", _i->publicar}, {"recibir", _i->recibir}, {"confirmarAntes", _i->confirmarAntes}, {"prueba", _i->prueba}, {"aprobarRecibidos", _i->aprobarRecibidos}, {"aplicarPropios", _i->aplicarPropios}, {"transporte", _i->transporte}, {"carpeta", _i->carpeta}, {"autor", _i->autor}, {"optionFile", _i->optionFile} };
 	j["activo"] = _i->publicar || _i->recibir;
 	j["mensaje"] = _i->mensaje;
 	j["juego"] = phoenix::entrega::aU8(_i->juegoActual);
@@ -362,7 +364,7 @@ void Servicio::poner(const json& d) {
 		};
 		const std::string transporteAntes = _i->transporte, carpetaAntes = _i->carpeta, optionAntes = _i->optionFile;
 		const bool pubAntes = _i->publicar, recAntes = _i->recibir;
-		interruptor("publicar", _i->publicar); interruptor("recibir", _i->recibir); interruptor("confirmarAntes", _i->confirmarAntes); interruptor("prueba", _i->prueba); interruptor("aprobarRecibidos", _i->aprobarRecibidos);
+		interruptor("publicar", _i->publicar); interruptor("recibir", _i->recibir); interruptor("confirmarAntes", _i->confirmarAntes); interruptor("prueba", _i->prueba); interruptor("aprobarRecibidos", _i->aprobarRecibidos); interruptor("aplicarPropios", _i->aplicarPropios);
 		texto("transporte", _i->transporte, 12); texto("carpeta", _i->carpeta, 500); texto("autor", _i->autor, 40); texto("optionFile", _i->optionFile, 500);
 		auto deshacerCambios = [&]() { _i->transporte = transporteAntes; _i->carpeta = carpetaAntes; _i->optionFile = optionAntes; _i->publicar = pubAntes; _i->recibir = recAntes; };
 		if (_i->transporte != "carpeta" && _i->transporte != "web") { deshacerCambios(); throw std::runtime_error("Transporte desconocido."); }

@@ -1114,8 +1114,16 @@ static void pruebaCadenaWeb(const fs::path& tmp, const std::string& plantilla) {
 		anfitrion(Q);
 		Q.pasoRecibir();
 		bool propio = false;
-		for (const Registro& r : Q.registros()) if (r.estado == "propio") propio = true;
-		CHECK(propio && equiposDe(filasDe(jq), js[6 % js.size()].jug).count(js[6 % js.size()].a) == 0, "prueba (los dos) por la web: el lote que publicó vuelve como «TUYO» y no se aplica a sí mismo");
+		for (const Registro& r : Q.registros()) if (r.propio) propio = true;
+		// «Mantener mis fichajes en mi juego» (por defecto): el fichaje propio también va a su Phoenix-DB y sigue al reabrir PES
+		CHECK(propio && equiposDe(filasDe(jq), js[6 % js.size()].jug).count(js[6 % js.size()].a) == 1, "mantener mis fichajes: el lote que publicó se pone también en su propio juego (Phoenix-DB)");
+		// apagado: se quita de su Phoenix-DB y vuelve a «TUYO» (no se aplica a sí mismo)
+		Q.aplicarPropios(false);
+		bool soloTuyo = true;
+		for (const Registro& r : Q.registros()) if (r.propio && r.estado != "propio") soloTuyo = false;
+		CHECK(soloTuyo && equiposDe(filasDe(jq), js[6 % js.size()].jug).count(js[6 % js.size()].a) == 0, "mantener mis fichajes APAGADO: se quita de su Phoenix-DB y queda como «TUYO»");
+		Q.aplicarPropios(true); Q.pasoRecibir();
+		CHECK(equiposDe(filasDe(jq), js[6 % js.size()].jug).count(js[6 % js.size()].a) == 1, "mantener mis fichajes otra vez ENCENDIDO: vuelve a ponerse");
 	}
 }
 

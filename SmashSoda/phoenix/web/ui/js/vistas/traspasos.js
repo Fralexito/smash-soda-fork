@@ -177,6 +177,9 @@ export function Traspasos() {
           <${AjusteSw} titulo=${t("Aprobar cada fichaje antes de enviarlo", "Approve each transfer before sending it")}
             desc=${aj.confirmarAntes ? t("Encendido: ves el fichaje y tú pulsas PUBLICAR.", "On: you see the transfer and press PUBLISH.") : t("Apagado: se envía solo al guardar en Editar.", "Off: it's sent by itself when you save in Edit.")}
             valor=${!!aj.confirmarAntes} al=${(v) => poner({ confirmarAntes: v })}/>
+          <${AjusteSw} titulo=${t("Mantener mis fichajes en mi juego", "Keep my transfers in my game")}
+            desc=${aj.aplicarPropios !== false ? t("Encendido: lo que fichas se queda en tu PES aunque lo cierres y lo abras (sin pulsar Activar).", "On: what you sign stays in your PES even after closing and reopening it (no Activate).") : t("Apagado: tus fichajes solo se envían; en tu PES no se guardan aparte.", "Off: your transfers are only sent; they aren't kept separately in your PES.")}
+            valor=${aj.aplicarPropios !== false} al=${(v) => poner({ aplicarPropios: v })}/>
           <div style="display:flex;align-items:flex-start;gap:10px"><span class=${cx("punto", pA)} style="margin-top:6px"></span><span style="font-size:15px">${fraseA}</span></div>
           ${pend.length ? html`<div class="caja" style="display:flex;flex-direction:column;gap:6px">
             ${pend.slice(0, 12).map((c) => html`<div class="mono" style="font-size:13px" key=${c.jugador_id + "-" + c.hasta_id}>· ${c.jugador || ("#" + c.jugador_id)}: ${c.desde || c.desde_id} → ${c.hasta || c.hasta_id}</div>`)}
