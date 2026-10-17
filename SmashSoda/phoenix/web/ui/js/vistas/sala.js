@@ -396,6 +396,23 @@ function ResumenRed({ m }) {
   </div>`;
 }
 
+/** ÚLTIMA PARTIDA: el resumen que Link guarda al cerrar la sala (ping, pérdida y Mbps de cada amigo, CPU de tu PC). */
+function UltimaPartida() {
+  const [r, setR] = useState(null);
+  const cargar = async () => { const x = await accion("sesiones.ultima", {}, { silencioso: true }); if (x) setR(x); };
+  useEffect(() => { cargar(); }, []);
+  return html`<${Tarjeta} interior="padding:22px 24px">
+    <${Titulo} texto=${t("ÚLTIMA PARTIDA", "LAST MATCH")} derecha=${html`<div style="display:flex;gap:6px">
+      <${Boton} tipo="mini suave" al=${cargar}>${t("ACTUALIZAR", "REFRESH")}</${Boton}>
+      ${r?.hay ? html`<${Boton} tipo="mini suave" al=${() => accion("ui.copiar", { texto: r.texto }, { ok: t("Resumen copiado.", "Summary copied.") })}><${Icono} n="copiar" t=${14}/>${t("COPIAR", "COPY")}</${Boton}>` : null}
+      <${Boton} tipo="mini suave" al=${() => accion("sesiones.abrirCarpeta", {})}>${t("ABRIR CARPETA", "OPEN FOLDER")}</${Boton}></div>`}/>
+    <div class="ayuda" style="font-size:14px;margin-bottom:10px">${t("Link guarda solo, cada 2 segundos, el ping, la pérdida y los Mbps de cada amigo, y al cerrar la sala escribe este resumen. Sirve para saber si el lag fue de su internet o de tu PC.", "Link saves each friend's ping, loss and Mbps every 2 seconds and writes this summary when the room closes.")}</div>
+    ${!r ? html`<div class="ayuda">${t("Cargando…", "Loading…")}</div>`
+      : !r.hay ? html`<div class="ayuda">${t("Aún no hay partidas guardadas. Se guarda la próxima vez que abras la sala con amigos.", "No matches saved yet.")}</div>`
+      : html`<pre class="mono" style="white-space:pre-wrap;font-size:12.5px;line-height:1.5;margin:0;max-height:320px;overflow:auto">${r.texto}</pre>`}
+  </${Tarjeta}>`;
+}
+
 /** TRANSMISIÓN: todo lo que reciben los amigos (calidad, FPS, pantalla, captura y audio) en un solo sitio. */
 function TransmisionSala({ m, info }) {
   return html`<div class="col">
@@ -405,6 +422,7 @@ function TransmisionSala({ m, info }) {
       <${TarjetaCaptura} m=${m} info=${info}/>
     </div>
     <${Audio} m=${m}/>
+    <${UltimaPartida}/>
   </div>`;
 }
 

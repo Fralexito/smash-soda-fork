@@ -2,7 +2,10 @@
 
 #include <algorithm>
 #include <windows.h>
+#include <shellapi.h>
 #include <tlhelp32.h>
+#include <cstdio>
+#include <filesystem>
 
 #include "../../Hosting.h"
 #include "../../core/Config.h"
@@ -12,6 +15,7 @@
 #include "../ui/Shell.h"
 #include "../core/ProveedorSala.h"
 #include "../link/PhoenixLink.h"
+#include "../host/RegistroSesion.h"
 
 // =============================================================================
 //  Acciones de la interfaz web: aplicación (tema, idioma, interfaz) y Sala.
@@ -239,6 +243,31 @@ namespace phoenix::web {
 			if (d.contains("porPersona")) pp.anchoPorPersona = entero(d, "porPersona", 1, 50);
 			if (d.contains("subida")) pp.subidaMbps = entero(d, "subida", 0, 10000);
 			pp.guardar();
+			return json::object();
+		});
+
+		// Registro de partidas (phoenix/host/RegistroSesion): resumen de la última y abrir la carpeta
+		p.registrar("sesiones.ultima", [](const json&, uint64_t) -> std::optional<json> {
+			std::wstring mejor;
+			try {
+				for (const auto& en : std::filesystem::directory_iterator(registro::carpeta()))
+					if (en.is_regular_file() && en.path().extension() == L".txt" && en.path().filename().wstring() > mejor) mejor = en.path().filename().wstring();
+			}
+			catch (...) {}
+			if (mejor.empty()) return json{ {"hay", false} };
+			std::string texto;
+			FILE* f = nullptr;
+			if (_wfopen_s(&f, (registro::carpeta() + L"\\" + mejor).c_str(), L"rb") == 0 && f != nullptr) {
+				char buf[4096]; size_t n;
+				while ((n = fread(buf, 1, sizeof(buf), f)) > 0 && texto.size() < 8000) texto.append(buf, n);
+				fclose(f);
+			}
+			return json{ {"hay", true}, {"texto", texto.substr(0, 8000)} };
+		});
+		p.registrar("sesiones.abrirCarpeta", [](const json&, uint64_t) -> std::optional<json> {
+			const std::wstring dir = registro::carpeta();
+			if (dir.empty()) throw ErrorAccion("NO_SE_PUDO", "No encuentro la carpeta de datos de Link.");
+			ShellExecuteW(nullptr, L"open", dir.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
 			return json::object();
 		});
 

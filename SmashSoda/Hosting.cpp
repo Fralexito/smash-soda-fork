@@ -2,6 +2,7 @@
 #include "phoenix/PhoenixRoles.h"
 #include "phoenix/link/PhoenixLink.h"
 #include "phoenix/PhoenixPrefs.h"
+#include "phoenix/host/RegistroSesion.h"
 #include <map>
 #include "phoenix/core/Solicitudes.h"
 #include "phoenix/core/AvisoEntrada.h"
@@ -1281,6 +1282,9 @@ void Hosting::pollLatency() {
 		}
 		catch (...) {}
 
+		// Phoenix: registro de la partida (una línea por invitado cada sondeo; ver phoenix/host/RegistroSesion)
+		if (guestCount > 0) phoenix::registro::anotar(guests, guestCount, Config::cfg.video.bandwidth, Config::cfg.video.fps, bwFactor);
+
 		if (guestCount > 0) {
 			GuestList::instance.updateMetrics(guests, guestCount);
 
@@ -1320,8 +1324,9 @@ void Hosting::pollLatency() {
 			}
 			catch (...) {}
 		}
-		
+
 	}
+	phoenix::registro::cerrarSesion();   // sala cerrada: resumen de la partida
 	if (guests != nullptr) ParsecFree(_parsec, guests);
 	_isLatencyThreadRunning = false;
 	_latencyMutex.unlock();

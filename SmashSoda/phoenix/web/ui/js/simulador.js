@@ -415,6 +415,8 @@ export function crearSimulador(enviar) {
     "sala.aplicar": () => { s.opciones.pendiente = false; },
     "sala.phoenix": (d) => { Object.assign(s.phoenix, d); },
     "sala.calidad": (d) => { s.calidad = { ...s.calidad, fps: d.fps, mbps: d.mbps }; },
+    "sesiones.ultima": () => ({ hay: true, texto: "RESUMEN DE LA PARTIDA (Phoenix Link)\n16/10/2026 21:04 · 16 min · 470 sondeos (cada ~2 s)\n\nTU PC: CPU media 34 % (pico 61 %) · Link 2.1 % · codificar la imagen 4.2 ms de media\nAncho total usado: entre 30 y 45 Mbps\n\nArensz (#11542790): BIEN\n  ping 38 ms (pico 71) · pérdida 0.4 % (pico 3.1, 0 de 470 sondeos con > 5 %) · 14.6 Mbps · decodificar 3.9 ms · cola máx 1\n\nerfuzz (#19707881): MAL: pierde paquetes (su internet o WiFi)\n  ping 96 ms (pico 210) · pérdida 7.8 % (pico 22.0, 140 de 470 sondeos con > 5 %) · 9.1 Mbps · decodificar 6.2 ms · cola máx 4\n" }),
+    "sesiones.abrirCarpeta": () => ({}),
     "sala.cerrarParsec": () => { s.calidad.parsecApp = false; return { cerrados: 1 }; },
     "sala.anchoAuto": (d) => { if (typeof d.auto === "boolean") s.calidad.auto = d.auto; if (d.porPersona) s.calidad.porPersona = d.porPersona; if (typeof d.subida === "number") s.calidad.subida = d.subida; if (s.calidad.auto) s.calidad.mbps = s.calidad.porPersona * Math.max(1, s.invitados?.length || 1); },
     "web.vincular": (d) => { s.web = { estado: "conectado", usuario: "Fralex", mensaje: "Vinculado con el código " + d.codigo, publicada: s.abierta }; },
