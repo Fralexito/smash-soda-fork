@@ -172,6 +172,9 @@ export function Traspasos() {
           <div class="ayuda" style="font-size:13px">${(w.meSiguen || []).length ? t("Lo reciben: ", "Receiving: ") + w.meSiguen.join(", ") : t("Todavía nadie recibe tus fichajes.", "Nobody receives your transfers yet.")}</div>`
           : html`<div class="ayuda" style="font-size:14px">${noAprobado ? t("Tu cuenta todavía no puede enviar fichajes (no está aprobada como anfitrión). Recibir sí puedes. Si quieres enviar, pídeselo al staff.", "Your account can't send transfers yet (not approved as host). You can still receive. To send, ask the staff.") : t("Pidiendo tu código a la web…", "Getting your code from the web…")}</div>`) : null}
         ${!noAprobado ? html`
+          <${AjusteSw} titulo=${t("Aprobar cada fichaje antes de enviarlo", "Approve each transfer before sending it")}
+            desc=${aj.confirmarAntes ? t("Encendido: ves el fichaje y tú pulsas PUBLICAR.", "On: you see the transfer and press PUBLISH.") : t("Apagado: se envía solo al guardar en Editar.", "Off: it's sent by itself when you save in Edit.")}
+            valor=${!!aj.confirmarAntes} al=${(v) => poner({ confirmarAntes: v })}/>
           <div style="display:flex;align-items:flex-start;gap:10px"><span class=${cx("punto", pA)} style="margin-top:6px"></span><span style="font-size:15px">${fraseA}</span></div>
           ${pend.length ? html`<div class="caja" style="display:flex;flex-direction:column;gap:6px">
             ${pend.slice(0, 12).map((c) => html`<div class="mono" style="font-size:13px" key=${c.jugador_id + "-" + c.hasta_id}>· ${c.jugador || ("#" + c.jugador_id)}: ${c.desde || c.desde_id} → ${c.hasta || c.hasta_id}</div>`)}
@@ -184,8 +187,6 @@ export function Traspasos() {
           ${a.publicados ? html`<div class="ayuda" style="font-size:13px">${t(`Enviados en esta sesión: ${a.publicados}`, `Sent this session: ${a.publicados}`)}</div>` : null}
           <div class="ayuda" style="font-size:13px">${t("Se envía cuando guardas y sales de Editar en PES.", "It's sent when you save and leave Edit in PES.")}</div>
           <details class="sec-detalle"><summary>${t("Más opciones", "More options")}</summary>
-            <${AjusteSw} titulo=${t("Preguntarme antes de enviar", "Ask me before sending")} desc=${t("Verás los fichajes detectados y pulsas PUBLICAR. Recomendado al empezar.", "You'll see the detected transfers and press PUBLISH. Recommended at first.")}
-              valor=${!!aj.confirmarAntes} al=${(v) => poner({ confirmarAntes: v })}/>
             <div class="ayuda" style="font-size:13px;margin-top:6px">${t("Si Link no encuentra tu archivo de guardado, pega su ruta (el archivo EDIT00000000 o su carpeta «save»):", "If Link can't find your save file, paste its path (the EDIT00000000 file or its «save» folder):")}</div>
             <div style="display:flex;gap:8px;align-items:center"><div style="flex:1;min-width:0"><input type="text" class="campo mono" maxLength=${500} value=${opt} placeholder="C:\\Users\\…\\Documents\\KONAMI\\…\\save" onInput=${(e) => setOpt(e.currentTarget.value)}/></div>
               <${Boton} tipo="suave mini" deshabilitado=${!opt.trim()} al=${async () => { await poner({ optionFile: opt.trim() }, t("Archivo de guardado anotado.", "Save file noted.")); setOpt(""); }}>${t("GUARDAR", "SAVE")}</${Boton}></div>
