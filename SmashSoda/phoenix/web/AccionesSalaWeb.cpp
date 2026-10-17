@@ -1,6 +1,8 @@
 #include "InterfazWebInterno.h"
 
 #include <algorithm>
+#include <windows.h>
+#include <tlhelp32.h>
 
 #include "../../Hosting.h"
 #include "../../core/Config.h"
@@ -238,6 +240,27 @@ namespace phoenix::web {
 			if (d.contains("subida")) pp.subidaMbps = entero(d, "subida", 0, 10000);
 			pp.guardar();
 			return json::object();
+		});
+
+		// Cerrar la app normal de Parsec (parsecd.exe): compite con Link. Solo procesos de este usuario; Link no la usa.
+		p.registrar("sala.cerrarParsec", [](const json&, uint64_t) -> std::optional<json> {
+			int cerrados = 0, fallos = 0;
+			HANDLE snap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+			if (snap != INVALID_HANDLE_VALUE) {
+				PROCESSENTRY32W pe = {};
+				pe.dwSize = sizeof(pe);
+				if (Process32FirstW(snap, &pe)) {
+					do {
+						if (_wcsicmp(pe.szExeFile, L"parsecd.exe") != 0) continue;
+						HANDLE h = OpenProcess(PROCESS_TERMINATE, FALSE, pe.th32ProcessID);
+						if (h != nullptr && TerminateProcess(h, 0)) cerrados++; else fallos++;
+						if (h != nullptr) CloseHandle(h);
+					} while (Process32NextW(snap, &pe));
+				}
+				CloseHandle(snap);
+			}
+			if (cerrados == 0 && fallos > 0) throw ErrorAccion("NO_SE_PUDO", "Windows no dejó cerrar Parsec. Ciérralo desde el ícono junto al reloj (clic derecho › Salir).");
+			return json{ {"cerrados", cerrados} };
 		});
 
 		// ---- Vínculo con la web ------------------------------------------------

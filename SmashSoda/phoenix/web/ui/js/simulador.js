@@ -50,7 +50,7 @@ export function crearSimulador(enviar) {
         { id: "1a2b3c4d5e6f708192a3b4c5", seq: 1, autor: "Fralex", creado: "2026-10-12T16:10:00Z", recibido: "", aplicadoEn: "", estado: "aplicado", modo: "ids", motivo: "", cambios: [{ jugador: 162114, jugadorNombre: "Lamine Yamal", desde: 101, hasta: 108, hastaNombre: "FC Barcelona", estado: "aplicado", motivo: "" }] }] } },
     opciones: { nombre: "Phoenix · Galaxy League", plazas: 4, limitador: false, limite: 30, biblioteca: "Default", juegos: ["PES 2021", "Football Life 2026"], pendiente: false, turnos: false, quiosco: false, overlay: true },
     phoenix: { visibilidad: "amigos", espectadores: true, limiteEspectadores: 4, entradaParsec: true, juego: "eFootball PES 2021", parche: "Conmegol", region: "Lima" },
-    calidad: { fps: 60, mbps: 15, auto: true, porPersona: 10, subida: 0, perdida: 0, energia: "ok" },
+    calidad: { fps: 60, mbps: 15, auto: true, porPersona: 10, subida: 0, perdida: 0, energia: "ok", parsecApp: escenario === "lag" },
     // Equipo de cada puesto (como equipoPuesto del motor): A, B o - (fuera). «cruzado»: el 01 es del Equipo B y el 02 del A.
     mapa: escenario === "cruzado" ? "BABA----" : "AABB----",
     fijados: {},   // candado de puesto: id de Parsec → puesto
@@ -415,6 +415,7 @@ export function crearSimulador(enviar) {
     "sala.aplicar": () => { s.opciones.pendiente = false; },
     "sala.phoenix": (d) => { Object.assign(s.phoenix, d); },
     "sala.calidad": (d) => { s.calidad = { ...s.calidad, fps: d.fps, mbps: d.mbps }; },
+    "sala.cerrarParsec": () => { s.calidad.parsecApp = false; return { cerrados: 1 }; },
     "sala.anchoAuto": (d) => { if (typeof d.auto === "boolean") s.calidad.auto = d.auto; if (d.porPersona) s.calidad.porPersona = d.porPersona; if (typeof d.subida === "number") s.calidad.subida = d.subida; if (s.calidad.auto) s.calidad.mbps = s.calidad.porPersona * Math.max(1, s.invitados?.length || 1); },
     "web.vincular": (d) => { s.web = { estado: "conectado", usuario: "Fralex", mensaje: "Vinculado con el código " + d.codigo, publicada: s.abierta }; },
     "web.reintentar": () => ({}), "web.desvincular": () => { s.web = { estado: "sin_vincular", usuario: "", mensaje: "Escribe el código de 6 dígitos de la web.", publicada: false }; },

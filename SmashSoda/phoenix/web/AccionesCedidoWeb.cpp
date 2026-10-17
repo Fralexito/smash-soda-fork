@@ -112,10 +112,8 @@ namespace phoenix::web {
 			c.extras = extras();
 			cedido::empezar(c);
 			// Teclado y ratón también en Parsec: sin esto el Parsec del invitado no los envía y la PC cedida no sirve
-			if (in.ctx.sala != nullptr) {
-				in.ctx.sala->permitirTeclado(id, true);
-				in.ctx.sala->permitirRaton(id, true);
-			}
+			// (sin guardar en disco: si Link se cierra de golpe, el invitado no vuelve con teclado la próxima vez)
+			h.setGuestInputPermissions(id, true, true, /*persistir=*/false);
 			gWebOcultaDesde = -1.0;
 			gUltimoFin.clear();
 			mensajeDelBot(in, " " + (host.isValid() ? host.name : std::string("El anfitrión")) + " cedió su PC a " + c.nombre

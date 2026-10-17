@@ -408,7 +408,7 @@ vector<Guest>& Hosting::getGuests() {
 	return GuestList::instance.getGuests();
 }
 
-bool Hosting::setGuestInputPermissions(uint32_t userID, bool allowKeyboard, bool allowMouse) {
+bool Hosting::setGuestInputPermissions(uint32_t userID, bool allowKeyboard, bool allowMouse, bool persistir) {
 	Guest guest;
 	if (!GuestList::instance.find(userID, &guest)) {
 		return false;
@@ -426,8 +426,10 @@ bool Hosting::setGuestInputPermissions(uint32_t userID, bool allowKeyboard, bool
 		logMessage("Failed to update SDK input permissions for " + guest.name + " (status " + to_string(status) + "). Using local permission state.");
 	}
 
-	GuestStateStore::instance().setGuestInputPermissions(userID, perms.gamepad, perms.keyboard, perms.mouse);
-	GuestStateStore::instance().save();
+	if (persistir) {
+		GuestStateStore::instance().setGuestInputPermissions(userID, perms.gamepad, perms.keyboard, perms.mouse);
+		GuestStateStore::instance().save();
+	}
 
 	return status == PARSEC_OK;
 }

@@ -292,12 +292,42 @@ function ActividadResumen({ s }) {
   </${Tarjeta}>`;
 }
 
+/** ANTES DEL PARTIDO: solo sale si algo va a dar lag o problemas; cada cosa con su botón para arreglarla. */
+function AntesDelPartido({ m }) {
+  const c = m.sala?.calidad || {};
+  const auto = c.auto ?? true, por = c.porPersona ?? 10, fps = c.fps ?? 60, mbps = c.mbps ?? 15;
+  const cerrarParsec = async () => {
+    if (await confirmar({ titulo: t("¿Cerrar la app de Parsec?", "Close the Parsec app?"), texto: t("Se cierra la app normal de Parsec (no Link). Tu sala sigue abierta.", "The normal Parsec app closes (not Link). Your room stays open."), si: t("Cerrar Parsec", "Close Parsec") }))
+      accion("sala.cerrarParsec", {}, { ok: t("Parsec cerrado.", "Parsec closed.") });
+  };
+  const items = [];
+  if (c.parsecApp) items.push({ id: "parsec", t: t("La app de Parsec está abierta", "The Parsec app is open"), d: t("Compite con Link por la tarjeta de video y el internet: puede dar tirones.", "It competes with Link for the GPU and internet: it can cause stutter."), boton: t("CERRAR PARSEC", "CLOSE PARSEC"), al: cerrarParsec });
+  if (!auto) items.push({ id: "auto", t: t(`Ancho de banda automático apagado (${mbps} Mbps para todos)`, `Auto bandwidth off (${mbps} Mbps for everyone)`), d: t("Se reparte entre todos los que entran: con varios amigos, a cada uno le llega poca calidad.", "It's split among everyone: with several friends each gets low quality."), boton: t("ENCENDER · 15 POR PERSONA", "TURN ON · 15 PER PERSON"), al: () => accion("sala.anchoAuto", { auto: true, porPersona: Math.max(por, 15) }) });
+  else if (por < 10) items.push({ id: "por", t: t(`Poca calidad por persona (${por} Mbps)`, `Low quality per person (${por} Mbps)`), d: t("PES se ve borroso por debajo de 10 Mbps por persona.", "PES looks blurry below 10 Mbps per person."), boton: t("SUBIR A 15", "RAISE TO 15"), al: () => accion("sala.anchoAuto", { porPersona: 15 }) });
+  if (fps > 60) items.push({ id: "fps", t: t(`Transmisión a ${fps} FPS`, `Streaming at ${fps} FPS`), d: t("PES va a 60: más FPS solo gasta internet y empeora la imagen de tus amigos. Tu pantalla no cambia.", "PES runs at 60: more FPS only uses internet and worsens your friends' picture. Your screen doesn't change."), boton: t("PONER 60", "SET 60"), al: () => accion("sala.calidad", { fps: 60, mbps }) });
+  if (c.energia === "ahorro") items.push({ id: "energia", t: t("Windows está en «Ahorro de energía»", "Windows is on Power Saver"), d: t("Cámbialo a «Equilibrado» o «Alto rendimiento» (Configuración › Sistema › Energía) para que no haya tirones.", "Switch to Balanced or High performance (Settings › System › Power).") });
+  if ((c.perdida ?? 0) >= 50) items.push({ id: "perdida", t: t(`Un amigo pierde paquetes (${((c.perdida ?? 0) / 10).toFixed(1)} %)`, `A friend is losing packets (${((c.perdida ?? 0) / 10).toFixed(1)} %)`), d: t("Su internet no aguanta: que use cable o WiFi de 5 GHz.", "Their internet can't keep up: cable or 5 GHz WiFi.") });
+  if (!items.length) return null;
+  const arreglables = items.filter((x) => x.al && x.id !== "parsec");
+  return html`<div class="caja" style="border-color:var(--warn);display:flex;flex-direction:column;gap:10px;margin-bottom:12px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+      <b class="warn">${t("ANTES DEL PARTIDO", "BEFORE THE MATCH")} · ${items.length} ${items.length === 1 ? t("cosa puede dar lag", "thing can cause lag") : t("cosas pueden dar lag", "things can cause lag")}</b>
+      ${arreglables.length > 1 ? html`<${Boton} tipo="lleno mini" al=${async () => { for (const x of arreglables) await x.al(); }}>${t("ARREGLAR TODO", "FIX ALL")}</${Boton}>` : null}
+    </div>
+    ${items.map((x) => html`<div key=${x.id} style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <div style="flex:1;min-width:220px"><b>${x.t}</b><div class="ayuda">${x.d}</div></div>
+      ${x.al ? html`<${Boton} tipo="suave mini" al=${x.al}>${x.boton}</${Boton}>` : null}
+    </div>`)}
+  </div>`;
+}
+
 function ResumenSala({ s, m }) {
   const [guia, ocultarGuia, mostrarGuia] = useGuia(m.sala.abierta);
   const verGuia = guia && !m.sala.abierta;
   return html`<div class="col" style="min-height:100%">
     ${verGuia ? html`<${GuiaInicio} m=${m} ocultar=${ocultarGuia} abrir=${abrirSala}/>` : null}
     ${m.sala.abierta ? html`<${Entrenador} m=${m}/>` : null}
+    <${AntesDelPartido} m=${m}/>
     <div class="fila resumen" style="flex:1 0 auto">
     <div class="col" style="flex:1 1 0">
       <${Heroe} m=${m} conGuia=${verGuia} verGuia=${mostrarGuia}/>

@@ -2,6 +2,8 @@
 #include "LadosAuto.h"
 
 #include <algorithm>
+#include <windows.h>
+#include <tlhelp32.h>
 
 #include "../../Hosting.h"
 #include "../../AudioTools.h"
@@ -124,6 +126,28 @@ namespace phoenix::web {
 				}
 			}
 			catch (...) {}
+			return cache;
+		}
+
+		/// ¿Está abierta la app normal de Parsec (parsecd.exe)? Compite con Link por la tarjeta de video y la red.
+		/// Se mira como mucho cada 5 s.
+		bool appParsecAbierta() {
+			static bool cache = false;
+			static ULONGLONG hasta = 0;
+			const ULONGLONG ahora = GetTickCount64();
+			if (ahora < hasta) return cache;
+			hasta = ahora + 5000;
+			bool hay = false;
+			HANDLE snap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+			if (snap != INVALID_HANDLE_VALUE) {
+				PROCESSENTRY32W pe = {};
+				pe.dwSize = sizeof(pe);
+				if (Process32FirstW(snap, &pe)) {
+					do { if (_wcsicmp(pe.szExeFile, L"parsecd.exe") == 0) { hay = true; break; } } while (Process32NextW(snap, &pe));
+				}
+				CloseHandle(snap);
+			}
+			cache = hay;
 			return cache;
 		}
 
@@ -300,7 +324,8 @@ namespace phoenix::web {
 		};
 		s["calidad"] = { {"fps", Config::cfg.video.fps}, {"mbps", Config::cfg.video.bandwidth},
 			{"auto", PhoenixPrefs::get().anchoAuto}, {"porPersona", PhoenixPrefs::get().anchoPorPersona},
-			{"subida", PhoenixPrefs::get().subidaMbps}, {"perdida", g_perdidaPorMil.load()}, {"energia", planEnergia()} };
+			{"subida", PhoenixPrefs::get().subidaMbps}, {"perdida", g_perdidaPorMil.load()}, {"energia", planEnergia()},
+			{"parsecApp", appParsecAbierta()} };
 		s["sesion"] = { {"pico", in.picoInvitados}, {"entradas", in.entradasSesion}, {"partidos", in.partidosSesion} };
 		e["sala"] = s;
 

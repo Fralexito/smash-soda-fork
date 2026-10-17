@@ -80,7 +80,8 @@ public:
 	vector<string>& getCommandLog();
 	vector<Guest>& getGuests();
 	ParsecDSO* getParsec() { return _parsec; }   // Phoenix: expulsar desde la UI
-	bool setGuestInputPermissions(uint32_t userID, bool allowKeyboard, bool allowMouse);
+	/// persistir=false: no se guarda en disco (PC cedida: si Link se cierra de golpe, el invitado no vuelve con teclado).
+	bool setGuestInputPermissions(uint32_t userID, bool allowKeyboard, bool allowMouse, bool persistir = true);
 	vector<Guest> getPlayingGuests();
 	vector<Guest> getRandomGuests();
 	Guest& getGuest(uint32_t id);
