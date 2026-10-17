@@ -311,19 +311,24 @@ function MiIdParsec({ m }) {
   </div>`;
 }
 
+// Una vez que el anfitrión cerró Parsec desde aquí, el aviso no vuelve mientras Link siga abierto
+// (el servicio de Parsec suele volver a abrir la app solo).
+let parsecYaCerrado = false;
+
 /** ANTES DEL PARTIDO: solo sale si algo va a dar lag o problemas; cada cosa con su botón para arreglarla. */
 function AntesDelPartido({ m }) {
   const c = m.sala?.calidad || {};
-  const auto = c.auto ?? true, por = c.porPersona ?? 10, fps = c.fps ?? 60, mbps = c.mbps ?? 15;
+  const auto = c.auto ?? true, por = c.porPersona ?? 10, mbps = c.mbps ?? 15;
+  const [, refrescar] = useState(0);
   const cerrarParsec = async () => {
-    if (await confirmar({ titulo: t("¿Cerrar la app de Parsec?", "Close the Parsec app?"), texto: t("Se cierra la app normal de Parsec (no Link). Tu sala sigue abierta.", "The normal Parsec app closes (not Link). Your room stays open."), si: t("Cerrar Parsec", "Close Parsec") }))
-      accion("sala.cerrarParsec", {}, { ok: t("Parsec cerrado.", "Parsec closed.") });
+    if (await confirmar({ titulo: t("¿Cerrar la app de Parsec?", "Close the Parsec app?"), texto: t("Se cierra la app normal de Parsec (no Link). Tu sala sigue abierta.", "The normal Parsec app closes (not Link). Your room stays open."), si: t("Cerrar Parsec", "Close Parsec") })) {
+      if (await accion("sala.cerrarParsec", {}, { ok: t("Parsec cerrado.", "Parsec closed.") })) { parsecYaCerrado = true; refrescar((x) => x + 1); }
+    }
   };
   const items = [];
-  if (c.parsecApp) items.push({ id: "parsec", t: t("La app de Parsec está abierta", "The Parsec app is open"), d: t("Compite con Link por la tarjeta de video y el internet: puede dar tirones.", "It competes with Link for the GPU and internet: it can cause stutter."), boton: t("CERRAR PARSEC", "CLOSE PARSEC"), al: cerrarParsec });
+  if (c.parsecApp && !parsecYaCerrado) items.push({ id: "parsec", t: t("La app de Parsec está abierta", "The Parsec app is open"), d: t("Compite con Link por la tarjeta de video y el internet: puede dar tirones.", "It competes with Link for the GPU and internet: it can cause stutter."), boton: t("CERRAR PARSEC", "CLOSE PARSEC"), al: cerrarParsec });
   if (!auto) items.push({ id: "auto", t: t(`Ancho de banda automático apagado (${mbps} Mbps para todos)`, `Auto bandwidth off (${mbps} Mbps for everyone)`), d: t("Se reparte entre todos los que entran: con varios amigos, a cada uno le llega poca calidad.", "It's split among everyone: with several friends each gets low quality."), boton: t("ENCENDER · 15 POR PERSONA", "TURN ON · 15 PER PERSON"), al: () => accion("sala.anchoAuto", { auto: true, porPersona: Math.max(por, 15) }) });
   else if (por < 10) items.push({ id: "por", t: t(`Poca calidad por persona (${por} Mbps)`, `Low quality per person (${por} Mbps)`), d: t("PES se ve borroso por debajo de 10 Mbps por persona.", "PES looks blurry below 10 Mbps per person."), boton: t("SUBIR A 15", "RAISE TO 15"), al: () => accion("sala.anchoAuto", { porPersona: 15 }) });
-  if (fps > 60) items.push({ id: "fps", t: t(`Transmisión a ${fps} FPS`, `Streaming at ${fps} FPS`), d: t("PES va a 60: más FPS solo gasta internet y empeora la imagen de tus amigos. Tu pantalla no cambia.", "PES runs at 60: more FPS only uses internet and worsens your friends' picture. Your screen doesn't change."), boton: t("PONER 60", "SET 60"), al: () => accion("sala.calidad", { fps: 60, mbps }) });
   if (c.energia === "ahorro") items.push({ id: "energia", t: t("Windows está en «Ahorro de energía»", "Windows is on Power Saver"), d: t("Cámbialo a «Equilibrado» o «Alto rendimiento» (Configuración › Sistema › Energía) para que no haya tirones.", "Switch to Balanced or High performance (Settings › System › Power).") });
   if ((c.perdida ?? 0) >= 50) items.push({ id: "perdida", t: t(`Un amigo pierde paquetes (${((c.perdida ?? 0) / 10).toFixed(1)} %)`, `A friend is losing packets (${((c.perdida ?? 0) / 10).toFixed(1)} %)`), d: t("Su internet no aguanta: que use cable o WiFi de 5 GHz.", "Their internet can't keep up: cable or 5 GHz WiFi.") });
   if (!items.length) return null;
@@ -465,8 +470,6 @@ export function TarjetaCalidad({ m }) {
     <${Ajuste} titulo=${t("Fotogramas por segundo", "Frames per second")} desc=${t("Los de la transmisión, no los de tu pantalla (tu monitor sigue igual). Los botones de arriba no los cambian.", "The stream's, not your screen's (your monitor stays the same). The buttons above don't change them.")}>
       <${Stepper} valor=${fps} min=${10} max=${250} paso=${1} al=${(v) => aplicar(v, mbps)}/></${Ajuste}>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin:-4px 0 6px">${[30, 60, 120, 144].map((f) => html`<button key=${f} class=${cx("chip-perfil", fps === f && "on")} onClick=${() => aplicar(f, mbps)}>${f} FPS</button>`)}</div>
-    ${fps > 60 ? html`<div class="caja" style="border-color:var(--warn);margin-bottom:10px"><b class="warn">${t(`Transmitir a ${fps} FPS no mejora PES 2021`, `Streaming at ${fps} FPS doesn't improve PES 2021`)}</b>
-      <div class="ayuda">${t("El juego se mueve a 60 FPS. Por encima de 60 solo gasta más internet y la imagen de tus amigos sale más borrosa o con tirones. Para PES, usa 60.", "The game runs at 60 FPS. Above 60 it only uses more internet and your friends' picture gets blurrier or choppy. For PES, use 60.")}</div></div>` : null}
     <div style=${auto ? "opacity:.4;pointer-events:none" : ""}>
     <${Ajuste} titulo=${t("Ancho de banda (Mbps)", "Bandwidth (Mbps)")} desc=${auto ? t("Lo pone el automático. Apágalo para escribirlo tú.", "Set by auto mode. Turn it off to type it yourself.") : t("Escribe el valor que quieras (1–1000) o usa − / +. Más alto = mejor imagen, pero exige más a tu internet.", "Type any value (1–1000) or use − / +.")}>
       <${Stepper} valor=${mbps} min=${1} max=${1000} ancho=${4} al=${(v) => aplicar(fps, v)}/></${Ajuste}>
