@@ -16,7 +16,7 @@ const TIPOS = { xbox: "XBOX", dualshock: "DUALSHOCK", ds4: "DS4", xinput: "XINPU
 function MandosVirtuales({ m }) {
   const xbox = m.mandos.xbox ?? 0, ds4 = m.mandos.ds4 ?? 0;
   const cantidad = (x, d) => accion("mandos.cantidad", { xbox: x, ds4: d });
-  return html`<${Tarjeta} interior="padding:22px 24px">
+  return html`<${Tarjeta} secundaria interior="padding:22px 24px">
     <${Titulo} texto=${t("MANDOS VIRTUALES", "VIRTUAL PADS")} derecha=${html`<span class="mono mut">${xbox + ds4} / 8</span>`}/>
     <div class="ayuda" style="margin-bottom:6px">${t("Son los mandos que ve PES. Máximo 8 en total; con 4 por equipo alcanza para un 4 vs 4.", "Pads PES sees. Max 8 in total.")}</div>
     <${Ajuste} titulo="Xbox (XInput)" desc=${t("Los más compatibles con PES.", "Most compatible with PES.")}>
@@ -127,7 +127,7 @@ function PruebaMando({ m }) {
     id = requestAnimationFrame(leer);
     return () => { vivo = false; cancelAnimationFrame(id); };
   }, []);
-  return html`<${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:14px">
+  return html`<${Tarjeta} secundaria interior="padding:22px 24px;display:flex;flex-direction:column;gap:14px">
     <${Titulo} texto=${t("PRUEBA DE MANDO", "PAD TEST")}/>
     <div class="ayuda" style="font-size:14px">${t("Pulsa botones y mueve los sticks: se iluminan aquí. Sirve para reconocer tu mando y comprobar que todo responde.", "Press buttons and move the sticks: they light up here.")}</div>
     ${pads.length === 0 ? html`<div class="caja mut" style="font-size:13px">${t("Todavía no veo tu mando. Conéctalo y pulsa cualquier botón (los mandos virtuales de Link no salen aquí).", "No pad yet. Plug it in and press any button (Link's virtual pads don't show here).")}</div>`

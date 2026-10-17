@@ -198,7 +198,7 @@ function Sticks({ persona, perfil, vista }) {
   const cambiar = (f) => guardar(persona, f(normalizar(perfil)));
   const inv = (k) => (v) => cambiar((x) => ({ ...x, invertir: v ? [...x.invertir, k] : x.invertir.filter((y) => y !== k) }));
   const zona = (i) => (v) => cambiar((x) => { const z = [...x.zona]; z[i] = v; return { ...x, zona: z }; });
-  return html`<${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:6px">
+  return html`<${Tarjeta} secundaria interior="padding:22px 24px;display:flex;flex-direction:column;gap:6px">
     <${Titulo} texto=${t("STICKS", "STICKS")}/>
     <${AjusteSw} titulo=${t("Cambiar stick izquierdo por derecho", "Swap left and right sticks")} desc=${t("Para mandos que mandan un stick por el otro.", "For pads that send one stick as the other.")} valor=${p.cambiarSticks} al=${(v) => cambiar((x) => ({ ...x, cambiarSticks: v }))}/>
     <${AjusteSw} titulo=${t("Invertir stick izq. horizontal (LX)", "Invert left stick X")} valor=${p.invertir.includes("lx")} al=${inv("lx")}/>
@@ -217,7 +217,7 @@ function Sticks({ persona, perfil, vista }) {
 function Botones({ persona, perfil }) {
   const p = normalizar(perfil);
   const opciones = [...FUENTES.map((f) => ({ valor: f, texto: nom(f) })), { valor: "", texto: t("— nada (desactivado)", "— nothing (disabled)") }];
-  return html`<${Tarjeta} interior="padding:22px 24px">
+  return html`<${Tarjeta} secundaria interior="padding:22px 24px">
     <${Titulo} texto=${t("BOTONES UNO A UNO", "BUTTONS ONE BY ONE")}/>
     <div class="ayuda" style="margin-bottom:10px">${t("Izquierda: lo que pulsa en su mando. Derecha: lo que recibe el juego. Un gatillo puede ser un botón y al revés.", "Left: what they press. Right: what the game gets. A trigger can be a button and vice versa.")}</div>
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(250px,100%),1fr));gap:8px">

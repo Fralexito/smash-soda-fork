@@ -419,9 +419,11 @@ function TransmisionSala({ m, info }) {
     <${AntesDelPartido} m=${m}/>
     <div class="rej2" style="align-items:start">
       <${TarjetaCalidad} m=${m}/>
-      <${TarjetaCaptura} m=${m} info=${info}/>
+      <div class="col">
+        <${Audio} m=${m}/>
+        <${TarjetaCaptura} m=${m} info=${info}/>
+      </div>
     </div>
-    <${Audio} m=${m}/>
     <${UltimaPartida}/>
   </div>`;
 }
@@ -540,7 +542,7 @@ function PerfilesSala() {
       if (await accion("perfilesSala.borrar", { nombre: n })) cargar();
     }
   };
-  return html`<${Tarjeta} interior="padding:22px 24px">
+  return html`<${Tarjeta} secundaria interior="padding:22px 24px">
     <${Titulo} texto=${t("PERFILES DE SALA", "ROOM PROFILES")}/>
     <div class="ayuda" style="margin-bottom:12px">${t("Guarda la configuración actual (sala, web, calidad y formación) y vuelve a ella con un clic: «Liga», «Amistoso», «Torneo»…",
       "Save the current setup (room, web, quality, formation) and restore it in one click.")}</div>
@@ -586,7 +588,7 @@ function JuegosSala({ m }) {
       <${Ajuste} bloque titulo=${t("Región", "Region")} desc=${t("Ayuda a que te encuentren rivales cercanos.", "Helps nearby rivals find you.")}>
         <${Campo} valor=${ph.region} max=${40} al=${(v) => phx({ region: v })}/></${Ajuste}>
     </${Tarjeta}>
-    <${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column">
+    <${Tarjeta} secundaria interior="padding:22px 24px;display:flex;flex-direction:column">
       <${Titulo} texto=${t("BIBLIOTECA", "LIBRARY")} derecha=${html`<${Boton} tipo=${gestionar ? "mini lleno" : "mini"} al=${() => setGestionar(!gestionar)}>${gestionar ? t("LISTO", "DONE") : t("GESTIONAR", "MANAGE")}</${Boton}>`}/>
       <div class="ayuda" style="margin-bottom:12px">${t("Juego que se abre con el modo quiosco. Con GESTIONAR añades, editas o quitas juegos.", "Game launched by kiosk mode. MANAGE to add, edit or remove games.")}</div>
       ${gestionar ? html`<div style="margin-bottom:14px"><${EditorBiblioteca}/></div>` : null}
@@ -603,8 +605,8 @@ function JuegosSala({ m }) {
 
 // ---- Conexión: ¿está lista mi PC? + ping de cada invitado ----------------------------
 function ConexionSala({ m }) {
-  // Sala abierta: primero el ping de cada invitado. Cerrada: primero ¿mi PC está lista?
-  return html`<div class="col">${m.sala.abierta ? html`<${RedSala} m=${m}/><${Diagnostico}/>` : html`<${Diagnostico}/><${RedSala} m=${m}/>`}</div>`;
+  // ¿Mi PC está lista? arriba (plegado en una línea si no hay errores) y debajo el ping de cada invitado
+  return html`<div class="col"><${Diagnostico}/><${RedSala} m=${m}/></div>`;
 }
 
 // ---- Red ----------------------------------------------------------------------------

@@ -108,7 +108,7 @@ export function TarjetaCaptura({ m, info }) {
   };
   const op = (lista) => (lista?.length ? lista : [t("(sin datos)", "(no data)")]).map((x, i) => ({ valor: i, texto: x }));
   return html`
-    <${Tarjeta} interior="padding:22px 24px">
+    <${Tarjeta} secundaria interior="padding:22px 24px">
       <${Titulo} texto=${t("CAPTURA", "CAPTURE")} derecha=${html`<${Boton} tipo="mini suave" al=${refrescar}>${t("ACTUALIZAR", "REFRESH")}</${Boton}>`}/>
       <${Ajuste} bloque titulo=${t("Tarjeta de video", "Graphics card")}>
         <${Selector} valor=${v.gpu} opciones=${op(info.gpus)} al=${(x) => vid("gpu", Number(x))}/></${Ajuste}>
@@ -148,7 +148,7 @@ function Canal({ c, canal, titulo, desc }) {
 export function Audio({ m }) {
   const a = m.audio;
   if (!a) return html`<${Vacio} titulo=${t("Cargando audio…", "Loading audio…")} texto=""/>`;
-  return html`<div class="rej2">
+  return html`<div class="col">
     <${Canal} c=${a.parlantes} canal="parlantes" titulo=${t("SONIDO DEL JUEGO", "GAME SOUND")} desc=${t("Lo que escuchan los invitados (los parlantes de esta PC).", "What guests hear (this PC's speakers).")}/>
     <${Canal} c=${a.mic} canal="mic" titulo=${t("MICRÓFONO", "MICROPHONE")} desc=${t("Tu voz para los invitados. Apágalo si no lo usas.", "Your voice for guests. Turn it off if unused.")}/>
   </div>`;
@@ -389,7 +389,7 @@ export function Diagnostico() {
     await accion("ui.copiar", { texto }, { ok: t("Informe copiado. Pégalo en un chat y mándaselo a Fralex.", "Report copied. Paste it in a chat and send it to Fralex.") });
   };
   const errores = (r || []).filter((c) => c.estado === "error").length;
-  return html`<${Tarjeta} interior="padding:22px 24px">
+  return html`<${Tarjeta} secundaria=${!errores} interior="padding:22px 24px">
     <${Titulo} texto=${t("DIAGNÓSTICO DEL PC", "PC DIAGNOSTICS")} derecha=${html`<div style="display:flex;gap:8px"><${Boton} tipo="mini suave" titulo=${t("Copia un informe con versiones, juego, parche y módulos para mandárselo a Fralex", "Copies a report with versions, game, patch and modules to send to Fralex")} al=${copiarInforme}>${t("COPIAR INFORME", "COPY REPORT")}</${Boton}><${Boton} tipo="mini" al=${correr}>${t("REVISAR DE NUEVO", "RUN AGAIN")}</${Boton}></div>`}/>
     ${!r ? html`<div class="ayuda">${t("Revisando…", "Checking…")}</div>` : html`
       <div class=${cx("caja")} style=${`margin-bottom:6px;border-color:${errores ? "var(--bad)" : "var(--ok)"}`}>

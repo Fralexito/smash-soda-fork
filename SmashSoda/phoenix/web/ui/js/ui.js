@@ -11,8 +11,14 @@ import { leer } from "./tienda.js";
 // Toda tarjeta con <Titulo> se pliega tocando el título; se recuerda en este PC.
 const CLAVE_PLEGADAS = "phoenix.plegadas";
 let plegadas = new Set();
+// Las «secundarias» empiezan plegadas: aquí van las que abriste a propósito
+const CLAVE_ABIERTAS = "phoenix.abiertas";
+let abiertas = new Set();
 try { plegadas = new Set(JSON.parse(localStorage.getItem(CLAVE_PLEGADAS) || "[]")); } catch { /* sin almacenamiento */ }
-function guardarPlegadas() { try { localStorage.setItem(CLAVE_PLEGADAS, JSON.stringify([...plegadas])); } catch { /* nada */ } }
+try { abiertas = new Set(JSON.parse(localStorage.getItem(CLAVE_ABIERTAS) || "[]")); } catch { /* sin almacenamiento */ }
+function guardarPlegadas() {
+  try { localStorage.setItem(CLAVE_PLEGADAS, JSON.stringify([...plegadas])); localStorage.setItem(CLAVE_ABIERTAS, JSON.stringify([...abiertas])); } catch { /* nada */ }
+}
 const Pliegue = createContext(null);
 function hijos(c) { return (Array.isArray(c) ? c : [c]).flat(Infinity).filter((x) => x != null && x !== false && x !== ""); }
 
@@ -70,19 +76,20 @@ export function Logo({ t = 36 }) {
 }
 
 // ---- Contenedores ----------------------------------------------------------------
-export function Tarjeta({ children, clase = "", estilo = "", interior = "", vivo = false, suave = false }) {
+// secundaria: lo que se usa poco. Borde suave y plegada de entrada hasta que la abras (se recuerda).
+export function Tarjeta({ children, clase = "", estilo = "", interior = "", vivo = false, suave = false, secundaria = false }) {
   const lista = hijos(children);
   const titulo = lista.find((x) => x && x.type === Titulo && typeof x.props.texto === "string");
   const st = leer();
   const clave = titulo ? `${st.seccion}/${st.pestanas?.[st.seccion] || ""}/${titulo.props.texto}` : null;
-  const [plegada, setPlegada] = useState(() => !!clave && plegadas.has(clave));
+  const [plegada, setPlegada] = useState(() => !!clave && (plegadas.has(clave) || (secundaria && !abiertas.has(clave))));
   const alternar = () => {
     const v = !plegada; setPlegada(v);
-    if (v) plegadas.add(clave); else plegadas.delete(clave);
+    if (v) { plegadas.add(clave); abiertas.delete(clave); } else { plegadas.delete(clave); abiertas.add(clave); }
     guardarPlegadas();
   };
   const contenido = plegada ? lista.filter((x) => x === titulo) : children;
-  return html`<div class=${cx("cut", vivo && "vivo", suave && "suave", plegada && "plegada", clase)} style=${estilo}>
+  return html`<div class=${cx("cut", vivo && "vivo", (suave || secundaria) && "suave", plegada && "plegada", clase)} style=${estilo}>
     <div class="in" style=${plegada ? interior + ";padding-top:14px;padding-bottom:14px" : interior}>
       <${Pliegue.Provider} value=${clave ? { plegada, alternar } : null}>${contenido}</${Pliegue.Provider}>
     </div>

@@ -115,7 +115,7 @@ function BotonesElegidos({ m }) {
 function PorMando({ m }) {
   const lista = m.mandos.lista || [];
   const n = lista.filter((p) => p.bloqueado).length;
-  return html`<${Tarjeta} interior="padding:22px 24px">
+  return html`<${Tarjeta} secundaria interior="padding:22px 24px">
     <${Titulo} texto=${t("POR MANDO", "PER PAD")} derecha=${n ? html`<${Chip} tipo="warn">${n} ${t("BLOQUEADO" + (n > 1 ? "S" : ""), "LOCKED")}</${Chip}>` : null}/>
     <div class="ayuda" style="margin-bottom:4px">${t("Congela un solo mando: ese jugador no mueve nada y sigue en su puesto. Todos vienen desbloqueados.", "Freeze a single pad: that player can't move and keeps the seat. All start unlocked.")}</div>
     ${lista.length === 0 ? html`<div class="ayuda">${t("No hay mandos virtuales.", "No virtual pads.")}</div>` : null}
@@ -129,7 +129,7 @@ function PorMando({ m }) {
 function Arbitro({ m }) {
   const a = m.arbitro || {};
   const juego = m.juego?.datos;
-  return html`<${Tarjeta} interior="padding:22px 24px">
+  return html`<${Tarjeta} secundaria interior="padding:22px 24px">
     <${Titulo} texto=${t("ÁRBITRO DEL PARTIDO", "MATCH REFEREE")}
       derecha=${a.activo ? html`<span class="mono" style="color:var(--ok)">${t("START BLOQUEADO", "START LOCKED")}</span>` : null}/>
     <${AjusteSw} titulo=${t("Modo competitivo", "Competitive mode")}
