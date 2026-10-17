@@ -71,7 +71,7 @@ function ESTADOS(b) {
     cerrado: [t("Juego cerrado", "Game closed"), "", t("Abre PES 2021 y Phoenix Link lo detecta solo.", "Open PES 2021 and Phoenix Link finds it by itself.")],
     noinstalado: [t("Falta el archivo de Phoenix en el juego", "Phoenix file missing in the game"), "warn", t("El juego está abierto, pero no tiene el archivo de Phoenix. No se escribe nada. Míralo en «Mi PC».", "The game is open but has no Phoenix file. Nothing is written. See «My PC».")],
     conectado: [b?.ultimo ? t(`Conectado · último aviso ${b.ultimo}`, `Connected · last notice ${b.ultimo}`) : t("Conectado", "Connected"), "ok vivo", t("Los avisos de la web llegan al juego en pocos segundos.", "Web notices reach the game within seconds.")],
-    sinconexion: [t("Sin conexión", "No connection"), "bad", t("No se pudo hablar con la web. Se reintenta solo, con calma.", "Couldn't reach the web. Retrying by itself.")],
+    sinconexion: [t("Sin conexión", "No connection"), "bad", t("No se pudo hablar con la web. Se reintenta solo, con calma.", "Couldn't reach the web. Retrying by itself.") + (b?.motivo ? ` · ${t("Motivo", "Reason")}: ${b.motivo}` : "")],
   };
   return tabla[e] || tabla.cerrado;
 }

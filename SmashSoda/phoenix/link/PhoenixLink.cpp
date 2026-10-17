@@ -1310,7 +1310,7 @@ namespace phoenix {
 	bool PhoenixLink::pasoBuzon(const std::string& token) {
 		using namespace phoenix::buzon;
 		const long long ahora = ahoraMs();
-		auto poner = [this](EstadoBuzon e) { std::lock_guard<std::mutex> l(_mutex); _buzonInfo.estado = e; };
+		auto poner = [this](EstadoBuzon e) { std::lock_guard<std::mutex> l(_mutex); _buzonInfo.estado = e; if (e != EstadoBuzon::SinConexion) _buzonInfo.motivo.clear(); };
 		auto olvidar = [this]() {
 			_buzonEtag.clear(); _buzonUltimoTexto.clear(); _buzonPorEntregar.clear();
 			_buzonEspera = 0; _proximoBuzonMs = 0;
@@ -1427,6 +1427,15 @@ namespace phoenix {
 
 		// Cualquier otra cosa: la web no tiene la ruta todavia, red caida o error. Nunca romper nada.
 		poner(EstadoBuzon::SinConexion);
+		{   // el motivo real, en una frase, para que no haya que adivinar
+			std::string motivo;
+			if (r.estado == 0) motivo = "La web no contesta (" + (r.error.empty() ? std::string("sin respuesta") : r.error.substr(0, 120)) + "). Revisa tu internet, el Firewall o el antivirus.";
+			else if (r.estado == 429) motivo = "La web pide esperar un momento (demasiadas consultas).";
+			else if (r.estado == 404) motivo = "La web aun no tiene esta funcion (404).";
+			else if (codigo.rfind("TOKEN_", 0) == 0) motivo = "Tu PC ya no esta unida a la cuenta (" + codigo + "). Vuelve a vincularla en Mi PC.";
+			else motivo = "La web respondio " + std::to_string(r.estado) + (codigo.empty() ? std::string() : " (" + codigo + ")") + ".";
+			std::lock_guard<std::mutex> l(_mutex); _buzonInfo.motivo = motivo;
+		}
 		_buzonEtag.clear();
 		if (r.estado == 404 || codigo == "RUTA_NO_ENCONTRADA") {
 			_proximoBuzonMs = ahora + 300000;

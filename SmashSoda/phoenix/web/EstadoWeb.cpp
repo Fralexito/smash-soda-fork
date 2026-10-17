@@ -581,7 +581,7 @@ namespace phoenix::web {
 			json avisosBz = json::array();
 			for (const AvisoBuzon& a : bz.avisos) avisosBz.push_back({ {"id", a.id}, {"texto", a.texto}, {"hora", a.hora}, {"escrito", a.escrito} });
 			e["buzon"] = { {"activo", PhoenixPrefs::get().avisosEnJuego}, {"estado", nombres[static_cast<int>(bz.estado)]}, {"ultimo", bz.ultimo},
-				{"juego", bz.juego}, {"parche", bz.parche}, {"avisos", avisosBz} };
+				{"juego", bz.juego}, {"parche", bz.parche}, {"motivo", bz.motivo}, {"avisos", avisosBz} };
 			{
 				const InfoChatGlobal cg = link.chatGlobal();
 				e["chatGlobal"] = { {"cargado", cg.cargado}, {"pausado", cg.pausado}, {"esperaSeg", cg.esperaSeg}, {"rev", cg.rev}, {"error", cg.error} };

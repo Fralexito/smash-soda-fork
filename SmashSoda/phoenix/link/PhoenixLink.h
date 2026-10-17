@@ -55,6 +55,7 @@ namespace phoenix {
 		std::string ultimo;   ///< hora hh:mm (Lima) del aviso mas nuevo escrito
 		std::string juego;    ///< carpeta del juego detectado (UTF-8), vacia si esta cerrado
 		std::string parche;   ///< nombre del parche detectado (UTF-8), vacio si el juego esta cerrado
+		std::string motivo;   ///< por que esta «sin conexion» (frase corta para la persona); vacio si no aplica
 		std::vector<AvisoBuzon> avisos;   ///< los 5 mas nuevos
 	};
 
