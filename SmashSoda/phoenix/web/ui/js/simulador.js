@@ -461,7 +461,7 @@ export function crearSimulador(enviar) {
     "mandos.marcadorAuto": (d) => { s.arbitro.marcadorAuto = !!d.si; },
     "mandos.soloAutorizados": (d) => { s.arbitro.soloAutorizados = !!d.si; },
     "sync.modoRecarga": (d) => { s.arbitro.modoRecarga = d.modo; },
-    "mandos.botonesBloq": (d) => { s.botonesBloq = { mascara: d.mascara, lt: d.lt, rt: d.rt, lx: d.lx, ly: d.ly, rx: d.rx, ry: d.ry }; },
+    "mandos.botonesBloq": (d) => { s.botonesBloq = { mascara: d.mascara, lt: d.lt, rt: d.rt, lx: d.lx, ly: d.ly, rx: d.rx, ry: d.ry }; if (d.mascara || d.lt || d.rt || d.lx || d.ly || d.rx || d.ry) s.bloqueoBotones = true; },
     "marionetas.motor": (d) => { s.marionetas.motor = d.sdl ? "sdl" : "xinput"; s.marionetas.maestro = -1; },
     "marionetas.actualizar": () => {},
     "mandos.miPuesto": (d) => { const p = s.miPuesto; for (const k of ["modo", "numero", "alAbrir", "pulsando", "cuenta"]) if (k in d) p[k] = d[k]; },

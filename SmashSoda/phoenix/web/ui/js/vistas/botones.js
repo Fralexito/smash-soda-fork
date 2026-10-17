@@ -91,8 +91,8 @@ function BotonesElegidos({ m }) {
     <${Titulo} texto=${t("ELEGIR BOTONES", "CHOOSE BUTTONS")}
       derecha=${html`<span class="mono mut">${n} ${t("DE", "OF")} ${TOTAL} ${t("BLOQUEADOS", "LOCKED")}</span>`}/>
     <div class="ayuda" style="font-size:14px">
-      ${t("Toca un botón del mando para bloquearlo (rojo con candado). Un botón bloqueado deja de funcionar para todos, pero solo cuando el bloqueo está encendido.",
-          "Tap a button to lock it (red with a padlock). A locked button stops working for everyone, only while the lock is on.")}
+      ${t("Toca un botón del mando para bloquearlo (rojo con candado): el bloqueo se enciende solo y ese botón deja de funcionar para todos. Con el interruptor de abajo lo apagas sin perder lo marcado.",
+          "Tap a button to lock it (red with a padlock): the lock turns on by itself and that button stops working for everyone. The switch below turns it off without losing your marks.")}
     </div>
     <${AjusteSw} titulo=${t("Bloqueo de botones encendido", "Button lock on")}
       desc=${aplicado ? t("Ahora mismo los botones en rojo NO funcionan.", "Right now the red buttons do NOT work.")

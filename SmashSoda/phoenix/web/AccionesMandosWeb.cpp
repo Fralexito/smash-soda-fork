@@ -170,6 +170,12 @@ namespace phoenix::web {
 			h._lockedGamepad.sThumbLY = Config::cfg.input.lockedGamepadLY;
 			h._lockedGamepad.sThumbRX = Config::cfg.input.lockedGamepadRX;
 			h._lockedGamepad.sThumbRY = Config::cfg.input.lockedGamepadRY;
+			// Elegir un botón enciende el bloqueo de botones: con el interruptor apagado la elección no hacía nada
+			// (y en modo competitivo solo quedaban Start/Back/Guía). Liberar todo no lo apaga.
+			const auto& ci = Config::cfg.input;
+			const bool algo = mascara != 0 || ci.lockedGamepadLeftTrigger || ci.lockedGamepadRightTrigger
+				|| ci.lockedGamepadLX || ci.lockedGamepadLY || ci.lockedGamepadRX || ci.lockedGamepadRY;
+			if (algo && !bloqueoBotonesPropio(in)) alternarBloqueoBotones(in);
 			reaplicarArbitro(in);   // con el partido en juego, Start/Back/Guía siguen bloqueados
 			Config::cfg.Save();
 			return json::object();
