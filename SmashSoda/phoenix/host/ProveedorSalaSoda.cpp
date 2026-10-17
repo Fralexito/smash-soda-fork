@@ -251,16 +251,22 @@ namespace phoenix {
 		return false;
 	}
 
+	// Teclado y ratón: también se avisa a Parsec (ParsecHostSetPermissions). Si solo se cambiaba el dato
+	// local, el Parsec del invitado no enviaba su teclado y el permiso (o la PC cedida) no servía de nada.
 	void ProveedorSalaSoda::permitirTeclado(uint32_t parsecId, bool si) {
 		try {
-			for (Guest& g : _hosting.getGuests()) if (g.userID == parsecId) { g.allowKeyboardInput = si; return; }
+			bool hay = false, raton = false;
+			for (Guest& g : _hosting.getGuests()) if (g.userID == parsecId) { g.allowKeyboardInput = si; raton = g.allowMouseInput; hay = true; break; }
+			if (hay) _hosting.setGuestInputPermissions(parsecId, si, raton);
 		}
 		catch (...) {}
 	}
 
 	void ProveedorSalaSoda::permitirRaton(uint32_t parsecId, bool si) {
 		try {
-			for (Guest& g : _hosting.getGuests()) if (g.userID == parsecId) { g.allowMouseInput = si; return; }
+			bool hay = false, teclado = false;
+			for (Guest& g : _hosting.getGuests()) if (g.userID == parsecId) { g.allowMouseInput = si; teclado = g.allowKeyboardInput; hay = true; break; }
+			if (hay) _hosting.setGuestInputPermissions(parsecId, teclado, si);
 		}
 		catch (...) {}
 	}

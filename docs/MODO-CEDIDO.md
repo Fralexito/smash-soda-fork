@@ -16,7 +16,7 @@
 ## 2. Ceder la PC
 
 1. Entra en **Gente › En sala** y toca a tu amigo. También puedes tocarlo en la lista de Sala. Puede estar **jugando o mirando**: da igual.
-2. Pulsa **CEDER MI PC** y confirma. En el chat de la sala sale: «Fralex cedió su PC a …».
+2. Pulsa **CEDER MI PC** y confirma. En el chat de la sala sale: «Fralex cedió su PC a …». Link le da teclado y ratón a tu amigo también en Parsec (desde 0.2.96; antes su Parsec no los enviaba).
 
 No hay PIN. Devolver la PC siempre le quita el control a tu amigo, así que no hace falta protegerlo.
 
@@ -30,7 +30,7 @@ No hay PIN. Devolver la PC siempre le quita el control a tu amigo, así que no h
 
 **En Windows, el guardián de Link:**
 - Solo deja pasar los clics que caen sobre PES o Link. La barra de tareas, el escritorio y otras ventanas no reciben clics.
-- Bloquea la tecla Windows (y todos sus atajos), Alt+Tab, Alt+Esc, Alt+Espacio, Ctrl+Esc, Ctrl+Shift+Esc, Impr Pant, Shift+Tab (overlay de Steam), las teclas que abren programas y los atajos del navegador interno de Link (Ctrl+P, Ctrl+N, F12…).
+- La tecla Windows **sola** (pulsar y soltar) minimiza PES y muestra Link; nunca abre el menú Inicio (desde 0.2.96). Sus atajos (Win+D, Win+R…) siguen bloqueados. También bloquea Alt+Tab, Alt+Esc, Alt+Espacio, Ctrl+Esc, Ctrl+Shift+Esc, Impr Pant, Shift+Tab (overlay de Steam), las teclas que abren programas y los atajos del navegador interno de Link (Ctrl+P, Ctrl+N, F12…).
 - Alt+F4 sí cierra PES (se vuelve a abrir con ABRIR PES), pero nunca Link.
 - **Link no se puede minimizar, cerrar, mover ni cambiar de tamaño** desde la entrada de tu amigo (botones de la ventana, Alt+F4, Alt+Espacio). Si Link se minimiza por otra vía, vuelve a mostrarse solo. Tú sí puedes hacerlo con tu ratón o teclado físico (desde 0.2.93).
 - Si otra ventana se pone delante, la devuelve a PES (o a Link) en menos de un segundo. Esto no pasa si tú estás usando tu teclado o ratón (espera 15 s sin que los toques).

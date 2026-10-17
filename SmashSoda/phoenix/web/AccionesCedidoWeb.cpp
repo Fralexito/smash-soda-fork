@@ -111,6 +111,11 @@ namespace phoenix::web {
 			c.exeJuego = juego.ruta;
 			c.extras = extras();
 			cedido::empezar(c);
+			// Teclado y ratón también en Parsec: sin esto el Parsec del invitado no los envía y la PC cedida no sirve
+			if (in.ctx.sala != nullptr) {
+				in.ctx.sala->permitirTeclado(id, true);
+				in.ctx.sala->permitirRaton(id, true);
+			}
 			gWebOcultaDesde = -1.0;
 			gUltimoFin.clear();
 			mensajeDelBot(in, " " + (host.isValid() ? host.name : std::string("El anfitrión")) + " cedió su PC a " + c.nombre

@@ -34,6 +34,11 @@ namespace phoenix::cedido {
 		// Teclas físicas del anfitrión (solo las mira el gancho)
 		std::atomic<bool> gCtrlFis{ false }, gAltFis{ false };
 
+		// Tecla Windows del invitado: nunca llega a Windows (no abre Inicio). Pulsada y soltada sola = «ir a Link»:
+		// el guardián minimiza PES y trae Link al frente.
+		std::atomic<bool> gWinSolo{ false };
+		std::atomic<bool> gIrALink{ false };
+
 		int64_t cedEpochMs() {
 			return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 		}
@@ -162,6 +167,14 @@ namespace phoenix::cedido {
 						gCache.clear();
 						ultimoHijos = ahora;
 					}
+					// Tecla Windows del invitado: minimizar PES y mostrar Link
+					if (gIrALink.exchange(false)) {
+						HWND pes = ventanaPes();
+						if (pes != nullptr && !IsIconic(pes)) ShowWindow(pes, SW_MINIMIZE);
+						HWND link = nullptr;
+						{ std::lock_guard<std::mutex> l(gMx); link = static_cast<HWND>(gCfg.ventanaLink); }
+						traerAlFrente(link);
+					}
 					const ULONGLONG fisico = InputControlService::instance().lastHostPhysicalInputMs();
 					const uint64_t desdeFisico = fisico == 0 || ahora < fisico ? UINT64_MAX : ahora - fisico;
 					const Ventana foco = claseVentana(GetForegroundWindow());
@@ -174,7 +187,7 @@ namespace phoenix::cedido {
 						}
 						traerAlFrente(destino);
 					}
-					std::this_thread::sleep_for(std::chrono::milliseconds(250));
+					std::this_thread::sleep_for(std::chrono::milliseconds(100));
 				}
 			}
 			catch (const std::exception& e) {
@@ -256,6 +269,12 @@ namespace phoenix::cedido {
 
 	bool dejarTecla(uint16_t vk, bool pulsada) {
 		filtroAlDia();
+		// Windows sola (pulsar y soltar sin otra tecla en medio) = ir a Link. El filtro la sigue tragando (y sus atajos).
+		if (vk == VK_LWIN || vk == VK_RWIN) {
+			if (pulsada) gWinSolo = true;
+			else if (gWinSolo.exchange(false)) gIrALink = true;
+		}
+		else if (pulsada) gWinSolo = false;
 		return gFiltro.tecla(vk, pulsada, claseVentana(GetForegroundWindow()));
 	}
 
