@@ -40,6 +40,9 @@ namespace phoenix::cedido {
 	bool tomarFallo(std::string& motivo);
 	/// El anfitrión pulsó Ctrl+Alt+F12 en su teclado físico: true una vez.
 	bool tomarAtajo();
+	/// ¿El anfitrión tocó su teclado o ratón físico hace menos de `ventanaMs`? En ese rato la entrada
+	/// del invitado está en pausa (InputControlService, 300 ms), así que lo que pase en la ventana es suyo.
+	bool anfitrionTocando(uint64_t ventanaMs = 300);
 	/// ¿Hay un proceso de PES abierto? (por nombre y carpeta)
 	bool pesAbierto(const std::string& carpetaJuego, const std::string& exeJuego);
 	/// Trae PES al frente o lo abre. false + error si no se pudo.

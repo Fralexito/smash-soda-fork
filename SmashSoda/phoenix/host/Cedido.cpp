@@ -239,6 +239,12 @@ namespace phoenix::cedido {
 
 	bool tomarAtajo() { return gAtajo.exchange(false); }
 
+	bool anfitrionTocando(uint64_t ventanaMs) {
+		const ULONGLONG fisico = InputControlService::instance().lastHostPhysicalInputMs();
+		const ULONGLONG ahora = GetTickCount64();
+		return fisico != 0 && ahora >= fisico && ahora - fisico <= ventanaMs;
+	}
+
 	void teclaFisica(unsigned long vk, bool pulsada) {
 		switch (vk) {
 		case VK_CONTROL: case VK_LCONTROL: case VK_RCONTROL: gCtrlFis = pulsada; return;

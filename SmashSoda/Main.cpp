@@ -868,6 +868,10 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         break;
     case WM_SIZE:
         if (wParam == SIZE_MINIMIZED) {
+            // PC cedida: si Link se minimizó por otra vía (no la mano del anfitrión), vuelve a mostrarse
+            if (g_hosting.mainWindow == hWnd && phoenix::cedido::activo() && !phoenix::cedido::anfitrionTocando(1000)) {
+                ::ShowWindowAsync(hWnd, SW_RESTORE);
+            }
             if (g_hosting.mainWindow == hWnd) phoenix::web::InterfazWeb::instancia().alRedimensionar(true);
             return 0; // Don't resize or persist while minimized.
         }
@@ -911,10 +915,15 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     case WM_SYSCOMMAND:
         if ((wParam & 0xfff0) == SC_KEYMENU) // Disable ALT application menu
             return 0;
+        // PC cedida: minimizar, cerrar, mover o cambiar el tamaño de Link solo con el teclado/ratón físico del anfitrión
+        if (g_hosting.mainWindow == hWnd && phoenix::cedido::activo() && !phoenix::cedido::anfitrionTocando()) {
+            const WPARAM sc = wParam & 0xfff0;
+            if (sc == SC_MINIMIZE || sc == SC_CLOSE || sc == SC_MOVE || sc == SC_SIZE) return 0;
+        }
         break;
     case WM_CLOSE:
-        // PC cedida: el invitado no puede cerrar Link (la X de la ventana). El anfitrión sale antes con su PIN o Ctrl+Alt+F12.
-        if (g_hosting.mainWindow == hWnd && phoenix::cedido::activo()) return 0;
+        // PC cedida: el invitado no puede cerrar Link (la X, Alt+F4). El anfitrión sí, con su ratón o teclado físico, o tras Ctrl+Alt+F12.
+        if (g_hosting.mainWindow == hWnd && phoenix::cedido::activo() && !phoenix::cedido::anfitrionTocando()) return 0;
         break;
     case WM_QUIT:
     case WM_DESTROY:
