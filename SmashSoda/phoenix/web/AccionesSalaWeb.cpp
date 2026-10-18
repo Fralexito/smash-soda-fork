@@ -15,6 +15,7 @@
 #include "../ui/Shell.h"
 #include "../core/ProveedorSala.h"
 #include "../link/PhoenixLink.h"
+#include "../core/ModoCedido.h"
 #include "../host/RegistroSesion.h"
 
 // =============================================================================
@@ -179,6 +180,20 @@ namespace phoenix::web {
 
 		p.registrar("ui.recargar", [&in](const json&, uint64_t) -> std::optional<json> {
 			in.recargarPendiente = true;
+			return json::object();
+		});
+
+		// Auto-actualización: el botón ACTUALIZAR del aviso de arriba. Baja y comprueba en otro hilo; Main.cpp instala
+		// cuando está lista y no hay sala abierta ni partido (aquí se avisa antes para que no espere en vano).
+		p.registrar("app.actualizar", [&in](const json&, uint64_t) -> std::optional<json> {
+			if (phoenix::cedido::activo()) throw ErrorAccion("PC_CEDIDA", Tr(std::string("Devuelve la PC antes de actualizar.")));
+			std::string motivo;
+			if (!PhoenixLink::instancia().actualizacionPedir(motivo)) throw ErrorAccion("NO_SE_PUEDE", Tr(motivo));
+			const bool salaAbierta = in.ctx.sala != nullptr && in.ctx.sala->abierta();
+			return json{ {"esperaSala", salaAbierta} };
+		});
+		p.registrar("app.actualizacionVisto", [](const json&, uint64_t) -> std::optional<json> {
+			PhoenixLink::instancia().actualizacionVisto();
 			return json::object();
 		});
 	}

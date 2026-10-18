@@ -32,7 +32,15 @@ set(RESOURCE_FILE "${CMAKE_CURRENT_SOURCE_DIR}/Resource.rc")
 # libpesXcrypter (dominio publico, para leer el option file: traspasos en vivo): C puro, fuera de unity y sin pch.h
 file(GLOB PESX_C "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/terceros/pesxcrypter/*.c")
 set_source_files_properties(${PESX_C} PROPERTIES LANGUAGE C SKIP_UNITY_BUILD_INCLUSION ON SKIP_PRECOMPILE_HEADERS ON)
-set(ALL_FILES ${ALL_HEADERS} ${ALL_SOURCES} ${PESX_C} ${RESOURCE_FILE})
+# ed25519 (orlp, zlib; la misma que Phoenix Sync): solo verificar la firma de las actualizaciones (phoenix/link/Actualizacion.cpp)
+set(ED25519_C
+    "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/terceros/ed25519/fe.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/terceros/ed25519/ge.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/terceros/ed25519/sc.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/terceros/ed25519/sha512.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/terceros/ed25519/verify.c")
+set_source_files_properties(${ED25519_C} PROPERTIES LANGUAGE C SKIP_UNITY_BUILD_INCLUSION ON SKIP_PRECOMPILE_HEADERS ON)
+set(ALL_FILES ${ALL_HEADERS} ${ALL_SOURCES} ${PESX_C} ${ED25519_C} ${RESOURCE_FILE})
 
 # Visual Studio friendly grouping
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${ALL_FILES})
@@ -208,6 +216,7 @@ set_source_files_properties(
     "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/link/BuscarJuego.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/link/Doctor.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/link/PhoenixLink.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/link/Actualizacion.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/phoenix/web/AnfitrionWeb.cpp"
     PROPERTIES
         SKIP_UNITY_BUILD_INCLUSION ON
