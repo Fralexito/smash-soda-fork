@@ -40,6 +40,13 @@ export function crearSimulador(enviar) {
   let escenario = "llena";
   try { escenario = new URLSearchParams(location.search).get("escenario") || "llena"; } catch { /* sin URL */ }
   const llena = escenario === "llena";
+  // Auto-actualización: ?actualizacion=1 (versión nueva) · ?actualizacion=obligatoria
+  let modoAct = "";
+  try { modoAct = new URLSearchParams(location.search).get("actualizacion") || ""; } catch { /* sin URL */ }
+  const simActualizacion = modoAct
+    ? { estado: "disponible", version: "0.3.20", etapa: "beta 2", notas: "Arreglos en los fichajes entre amigos.\nEl marcador del overlay ya no parpadea.",
+      obligatoria: modoAct === "obligatoria", bajado: 0, total: 6973034, mensaje: "", resultado: "", resultadoTipo: "" }
+    : { estado: "nada", version: "", etapa: "", notas: "", obligatoria: false, bajado: 0, total: 0, mensaje: "", resultado: "", resultadoTipo: "" };
   const s = {
     tema: "galaxy", idioma: "es", abierta: escenario !== "cerrada", abiertaEn: inicio - 6128,
     traspasos: { mensaje: "", ajustes: { publicar: false, recibir: false, confirmarAntes: true, carpeta: "", autor: "", optionFile: "" },
@@ -259,6 +266,7 @@ export function crearSimulador(enviar) {
       v: 1,
       app: { version: "0.2.84", etapa: "beta 2", compilado: "11/10 04:00", idioma: s.idioma, tema: s.tema, dev: false, soda: "7.0.4" },
       noticias: { cargado: true, lista: s.noticias },
+      actualizacion: simActualizacion,
       chatGlobal: { cargado: true, pausado: s.chatGlobal.pausado, esperaSeg: s.chatGlobal.esperaSeg, rev: s.chatGlobal.mensajes.length, error: "" },
       web: { ...s.web, jugadoresLista: 3, versionLiga: "2026.10.08", eventosEnCola: 0 },
       ajustes: s.ajustes,
@@ -408,6 +416,16 @@ export function crearSimulador(enviar) {
     "ui.idioma": (d) => { s.idioma = d.idioma; },
 
     "ui.copiar": (d) => { navigator.clipboard?.writeText(d.texto).catch(() => {}); }, "ui.abrir": () => ({}), "ui.recargar": () => location.reload(),
+    // Auto-actualización (?actualizacion=1 | obligatoria): baja en 3 s y queda «instalando» (el de verdad cierra Link)
+    "app.actualizar": () => {
+      simActualizacion.estado = "descargando"; simActualizacion.bajado = 0;
+      const t = setInterval(() => {
+        simActualizacion.bajado = Math.min(simActualizacion.total, simActualizacion.bajado + 700000);
+        if (simActualizacion.bajado >= simActualizacion.total) { clearInterval(t); simActualizacion.estado = "instalando"; }
+      }, 300);
+      return { esperaSala: false };
+    },
+    "app.actualizacionVisto": () => { simActualizacion.resultado = ""; },
     "sala.abrir": () => { s.abierta = true; s.abiertaEn = ahora(); act("[PhoenixBot] Sala abierta."); },
     "sala.cerrar": () => { s.abierta = false; s.partido.fase = "libre"; act("[PhoenixBot] Sala cerrada."); },
     "sala.copiarEnlace": () => ({ enlace: "https://parsec.gg/g/7K2Qx9abcdef/phoenix" }),

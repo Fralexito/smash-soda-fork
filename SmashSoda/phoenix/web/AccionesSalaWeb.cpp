@@ -15,7 +15,7 @@
 #include "../ui/Shell.h"
 #include "../core/ProveedorSala.h"
 #include "../link/PhoenixLink.h"
-#include "../core/ModoCedido.h"
+#include "../host/Cedido.h"
 #include "../host/RegistroSesion.h"
 
 // =============================================================================
