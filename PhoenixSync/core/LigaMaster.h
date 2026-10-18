@@ -172,6 +172,13 @@ namespace mercado::lm {
 		/// El presupuesto salarial de pantalla sale solo: tope − sueldos. Todo o nada.
 		Resultado<Finanzas> fijarFinanzas(int kUsuario, uint64_t presupuestoFichajesEur, uint64_t topeSalarialEur);
 
+		/// Valor de mercado de un jugador en esta carrera (ficha de Liga Máster del blob, +0x5a, u32 ×100 €; ESTRUCTURA-ML §15:
+		/// la lectura coincide con la pantalla). Busca al jugador en las plantillas y, si no tiene club, en todas las fichas.
+		Resultado<uint64_t> valorMercado(uint32_t pid) const;
+		/// Fija el valor de mercado (múltiplo de 100 €, máx. 40.000 millones). Solo cambia esos 4 bytes del blob. Todo o nada.
+		/// [escritura sin ver todavía en el juego]
+		Resultado<uint64_t> fijarValorMercado(uint32_t pid, uint64_t eur);
+
 		const std::vector<uint8_t>& datos() const { return _datos; }
 
 		/// Cifra y escribe en `rutaNueva` (falla si existe; verifica releyendo). `textoInfo` vacío = conserva el original.

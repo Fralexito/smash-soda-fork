@@ -1,0 +1,85 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="18.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="C:\dev\ws-lm-sync\PhoenixSync\core\Sha256.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\dev\ws-lm-sync\PhoenixSync\core\Copias.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\dev\ws-lm-sync\PhoenixSync\core\ClienteMercado.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\dev\ws-lm-sync\PhoenixSync\core\OptionFile.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\dev\ws-lm-sync\PhoenixSync\core\BaseDatosParche.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\dev\ws-lm-sync\PhoenixSync\core\Catalogo.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\dev\ws-lm-sync\PhoenixSync\core\Emparejamiento.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\dev\ws-lm-sync\PhoenixSync\core\Integridad.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\dev\ws-lm-sync\PhoenixSync\core\SobrePes.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\dev\ws-lm-sync\PhoenixSync\core\LigaMaster.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\dev\ws-lm-sync\PhoenixSync\core\Firma.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\dev\ws-lm-sync\PhoenixSync\core\BlobLM.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\dev\ws-lm-sync\PhoenixSync\core\TemporadaLM.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\dev\ws-lm-sync\PhoenixSync\core\Sincronizacion.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\dev\ws-lm-sync\PhoenixSync\core\RutasJuego.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\dev\ws-lm-sync\PhoenixSync\core\Respaldos.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\dev\ws-lm-sync\PhoenixSync\core\Entrega.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\dev\ws-lm-sync\PhoenixSync\core\Grupo.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\dev\ws-lm-sync\PhoenixSync\core\ClienteSync.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\dev\ws-lm-sync\PhoenixSync\core\SyncCompartido.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\dev\ws-lm-sync\PhoenixSync\core\AsignacionBase.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\dev\ws-lm-sync\PhoenixSync\core\FichasBase.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\dev\ws-lm-sync\PhoenixSync\core\CambiosLM.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\dev\ws-lm-sync\PhoenixSync\core\PartidasLM.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="C:\dev\ws-lm-sync\PhoenixSync\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{B6F8C9D8-9449-326A-A0B9-4803C09A77EE}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

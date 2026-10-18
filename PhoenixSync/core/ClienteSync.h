@@ -24,7 +24,7 @@
 namespace mercado::sync {
 
 	inline constexpr const char* kBaseSync = "https://fiibiyijojkxqlsrhcil.supabase.co/functions/v1/phoenix";
-	inline constexpr const char* kVersionSync = "0.2.0";
+	inline constexpr const char* kVersionSync = "0.2.1";   // 0.2.1: Liga Máster desde la web (127, lm-sincronizar)
 
 	/// Cuándo se puede volver a llamar a cada ruta (segundos de reloj, inyectable para pruebas).
 	class Ritmo {

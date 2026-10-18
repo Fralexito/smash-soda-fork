@@ -44,6 +44,10 @@ namespace mercado {
 		Resultado<std::string> plantillas();
 		/// GET /liga/cambios?desde=<versión> → sobre firmado (igual que plantillasFirmadas). Sincronizacion.h lo aplica.
 		Resultado<std::string> ligaCambiosFirmados(long long desde);
+		/// GET /liga/cambios?ambito=pc&desde=<versión> → sobre firmado con los cambios de Liga Máster de ESTE usuario (127, CambiosLM.h).
+		Resultado<std::string> ligaCambiosPcFirmados(long long desde);
+		/// POST /liga/aplicado-pc (informe phoenix-lm/aplicado-1, PartidasLM.h) → JSON de «datos».
+		Resultado<std::string> ligaAplicadoPc(const std::string& cuerpo);
 		/// POST /liga/aplicado { version, huella_plantillas } → { version_actual, al_dia, coincide } (JSON de «datos»).
 		Resultado<std::string> ligaAplicado(const std::string& cuerpo);
 		/// POST /equivalencias (solo staff). Máx. 3000 filas por llamada.

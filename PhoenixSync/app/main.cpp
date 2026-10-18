@@ -19,6 +19,10 @@
 //      Baja GET /liga/cambios?desde=N (firmado), verifica la firma, aplica al option file y/o a la Liga Máster
 //      y guarda SIEMPRE en archivos nuevos. --cambios usa un sobre firmado guardado en disco en vez de la web.
 //
+//  PhoenixSync lm-sincronizar [--saves <carpeta>] [--cambios <sobre.json>] [--sin-informe]
+//      Liga Máster desde la web (127): baja los cambios firmados de ESTE usuario y, con PES cerrado, los aplica
+//      en cada partida ML0000000N con respaldo; informa a la web (app/LigaMasterWeb.cpp).
+//
 //  PhoenixSync sync-…  → option file compartido entre PCs (ver app/ComandosSync.cpp)
 //
 //  Modo de token: por defecto «compartido» (el de Phoenix Link).
@@ -52,6 +56,7 @@
 using namespace mercado;
 
 int comandoSync(const std::vector<std::string>& a, ClienteHttp& http, FuenteToken& token);   // app/ComandosSync.cpp
+int vueltaLigaMaster(ClienteMercado& api, const std::vector<std::string>& saves, const std::string& rutaSobre, bool informar, bool callado);   // app/LigaMasterWeb.cpp
 
 static std::string cmd0(const std::vector<std::string>& a) { return a.empty() ? std::string() : a[0]; }
 
@@ -84,6 +89,16 @@ int main(int argc, char** argv) {
 
 		if (const int rs = comandoSync(a, http, token); rs >= 0) return rs;   // sync-… (option file compartido)
 		const std::string& cmd = a[0];
+		if (cmd == "lm-sincronizar") {   // Liga Máster desde la web (127): app/LigaMasterWeb.cpp
+			std::vector<std::string> saves; std::string sobre; bool informar = true;
+			for (size_t i = 1; i < a.size(); i++) {
+				if (a[i] == "--saves" && i + 1 < a.size()) saves.push_back(a[++i]);
+				else if (a[i] == "--cambios" && i + 1 < a.size()) sobre = a[++i];
+				else if (a[i] == "--sin-informe") informar = false;
+				else { std::printf("Opción desconocida: %s\n", a[i].c_str()); return 1; }
+			}
+			return vueltaLigaMaster(api, saves, sobre, informar, false);
+		}
 		if (cmd == "eco") {
 			auto r = api.eco();
 			if (!r.ok()) { imprimirError(r.error); return 2; }

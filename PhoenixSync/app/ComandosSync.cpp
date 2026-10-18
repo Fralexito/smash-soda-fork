@@ -35,10 +35,13 @@
 
 #include "../core/FichasBase.h"
 #include "../core/RutasJuego.h"
+#include "../core/ClienteMercado.h"
 #include "../core/SyncCompartido.h"
 #include "../windows/Plataforma.h"
 
 using namespace mercado;
+
+int vueltaLigaMaster(ClienteMercado& api, const std::vector<std::string>& saves, const std::string& rutaSobre, bool informar, bool callado);   // app/LigaMasterWeb.cpp
 
 namespace {
 	std::string rutaJuegoTxt() { return windows::carpetaDatos() + "sync\\juego.txt"; }
@@ -107,9 +110,16 @@ int comandoSync(const std::vector<std::string>& a, ClienteHttp& http, FuenteToke
 		const int minutos = a.size() >= 2 ? std::max(1, std::atoi(a[1].c_str())) : 60;
 		std::printf("Vigilando %d min (Ctrl+C para salir)…\n", minutos);
 		const auto fin = std::chrono::steady_clock::now() + std::chrono::minutes(minutos);
+		ClienteMercado api(http, token);
+		auto proximaLM = std::chrono::steady_clock::now();
 		while (std::chrono::steady_clock::now() < fin) {
 			m.ciclo();
 			avisos(m);
+			// Liga Máster desde la web (127): cada 2 min y solo con PES cerrado (si está abierto, ni se intenta).
+			if (std::chrono::steady_clock::now() >= proximaLM && !windows::juegoAbierto()) {
+				vueltaLigaMaster(api, {}, "", true, true);
+				proximaLM = std::chrono::steady_clock::now() + std::chrono::minutes(2);
+			}
 			std::this_thread::sleep_for(std::chrono::seconds(3));
 		}
 	}

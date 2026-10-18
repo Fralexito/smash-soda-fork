@@ -1,0 +1,9 @@
+C:/dev/ws-lm-sync/build-sync/CMakeFiles/PhoenixSyncTerceros.dir
+C:/dev/ws-lm-sync/build-sync/CMakeFiles/PhoenixSyncCore.dir
+C:/dev/ws-lm-sync/build-sync/CMakeFiles/PhoenixSyncPruebas.dir
+C:/dev/ws-lm-sync/build-sync/CMakeFiles/PhoenixSyncPruebasCompartido.dir
+C:/dev/ws-lm-sync/build-sync/CMakeFiles/PhoenixSyncMoverOption.dir
+C:/dev/ws-lm-sync/build-sync/CMakeFiles/PhoenixSyncPruebasLM.dir
+C:/dev/ws-lm-sync/build-sync/CMakeFiles/PhoenixSync.dir
+C:/dev/ws-lm-sync/build-sync/CMakeFiles/ALL_BUILD.dir
+C:/dev/ws-lm-sync/build-sync/CMakeFiles/ZERO_CHECK.dir

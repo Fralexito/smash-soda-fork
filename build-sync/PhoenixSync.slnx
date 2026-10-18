@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Solution>
+	<Configurations>
+		<BuildType Name="Debug"/>
+		<BuildType Name="Release"/>
+		<BuildType Name="MinSizeRel"/>
+		<BuildType Name="RelWithDebInfo"/>
+		<Platform Name="x64"/>
+	</Configurations>
+	<Project Path="ALL_BUILD.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="0732fb34-64cd-3307-b7df-7b20ae4d7a86" DefaultStartup="true">
+		<BuildDependency Project="PhoenixSync.vcxproj"/>
+		<BuildDependency Project="PhoenixSyncCore.vcxproj"/>
+		<BuildDependency Project="PhoenixSyncMoverOption.vcxproj"/>
+		<BuildDependency Project="PhoenixSyncPruebas.vcxproj"/>
+		<BuildDependency Project="PhoenixSyncPruebasCompartido.vcxproj"/>
+		<BuildDependency Project="PhoenixSyncPruebasLM.vcxproj"/>
+		<BuildDependency Project="PhoenixSyncTerceros.vcxproj"/>
+		<BuildDependency Project="ZERO_CHECK.vcxproj"/>
+		<Build Solution="Debug|*" Project="false"/>
+		<Build Solution="Release|*" Project="false"/>
+		<Build Solution="MinSizeRel|*" Project="false"/>
+		<Build Solution="RelWithDebInfo|*" Project="false"/>
+	</Project>
+	<Project Path="PhoenixSync.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="7fa30971-ae2b-35ef-ac33-607a0d2a4aa5">
+		<BuildDependency Project="PhoenixSyncCore.vcxproj"/>
+		<BuildDependency Project="PhoenixSyncTerceros.vcxproj"/>
+		<BuildDependency Project="ZERO_CHECK.vcxproj"/>
+	</Project>
+	<Project Path="PhoenixSyncCore.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="70431106-f852-3ed1-a7b2-add2efd9fa3d">
+		<BuildDependency Project="PhoenixSyncTerceros.vcxproj"/>
+		<BuildDependency Project="ZERO_CHECK.vcxproj"/>
+	</Project>
+	<Project Path="PhoenixSyncMoverOption.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="23587ebf-49be-3afa-8c6e-11232c3f617e">
+		<BuildDependency Project="PhoenixSyncCore.vcxproj"/>
+		<BuildDependency Project="PhoenixSyncTerceros.vcxproj"/>
+		<BuildDependency Project="ZERO_CHECK.vcxproj"/>
+	</Project>
+	<Project Path="PhoenixSyncPruebas.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="315c5381-2817-3fda-a588-74450c36b357">
+		<BuildDependency Project="PhoenixSyncCore.vcxproj"/>
+		<BuildDependency Project="PhoenixSyncTerceros.vcxproj"/>
+		<BuildDependency Project="ZERO_CHECK.vcxproj"/>
+	</Project>
+	<Project Path="PhoenixSyncPruebasCompartido.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="1bb825c6-0312-35d9-a92b-2022f3710175">
+		<BuildDependency Project="PhoenixSyncCore.vcxproj"/>
+		<BuildDependency Project="PhoenixSyncTerceros.vcxproj"/>
+		<BuildDependency Project="ZERO_CHECK.vcxproj"/>
+	</Project>
+	<Project Path="PhoenixSyncPruebasLM.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="d4fb2ca4-b308-367a-b3ea-41846aacdb47">
+		<BuildDependency Project="PhoenixSyncCore.vcxproj"/>
+		<BuildDependency Project="PhoenixSyncTerceros.vcxproj"/>
+		<BuildDependency Project="ZERO_CHECK.vcxproj"/>
+	</Project>
+	<Project Path="PhoenixSyncTerceros.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="75d731b3-27a3-3c88-80d6-ce61d338a110">
+		<BuildDependency Project="ZERO_CHECK.vcxproj"/>
+	</Project>
+	<Project Path="ZERO_CHECK.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="2cac35bd-f27e-3550-9d9a-7fc04046c155"/>
+</Solution>

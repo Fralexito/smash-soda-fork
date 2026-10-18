@@ -1,0 +1,46 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="18.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="C:\dev\ws-lm-sync\PhoenixSync\terceros\pesxcrypter\crypt.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\dev\ws-lm-sync\PhoenixSync\terceros\pesxcrypter\masterkey.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\dev\ws-lm-sync\PhoenixSync\terceros\pesxcrypter\mt19937ar.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\dev\ws-lm-sync\PhoenixSync\terceros\miniz\miniz.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\dev\ws-lm-sync\PhoenixSync\terceros\ed25519\fe.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\dev\ws-lm-sync\PhoenixSync\terceros\ed25519\ge.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\dev\ws-lm-sync\PhoenixSync\terceros\ed25519\sc.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\dev\ws-lm-sync\PhoenixSync\terceros\ed25519\sha512.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\dev\ws-lm-sync\PhoenixSync\terceros\ed25519\verify.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\dev\ws-lm-sync\PhoenixSync\terceros\ed25519\sign.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\dev\ws-lm-sync\PhoenixSync\terceros\ed25519\keypair.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="C:\dev\ws-lm-sync\PhoenixSync\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{B6F8C9D8-9449-326A-A0B9-4803C09A77EE}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

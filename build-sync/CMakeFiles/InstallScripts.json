@@ -1,0 +1,7 @@
+{
+	"InstallScripts" : 
+	[
+		"C:/dev/ws-lm-sync/build-sync/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

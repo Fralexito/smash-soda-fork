@@ -63,6 +63,8 @@ add_library(PhoenixSyncCore STATIC
     core/SyncCompartido.cpp
     core/AsignacionBase.cpp
     core/FichasBase.cpp
+    core/CambiosLM.cpp
+    core/PartidasLM.cpp
 )
 target_link_libraries(PhoenixSyncCore PUBLIC PhoenixSyncTerceros)
 target_include_directories(PhoenixSyncCore PUBLIC
@@ -77,10 +79,12 @@ add_executable(PhoenixSyncPruebasCompartido pruebas/compartido.cpp)
 target_link_libraries(PhoenixSyncPruebasCompartido PRIVATE PhoenixSyncCore)
 add_executable(PhoenixSyncMoverOption pruebas/mover_cli.cpp)
 target_link_libraries(PhoenixSyncMoverOption PRIVATE PhoenixSyncCore)
+add_executable(PhoenixSyncPruebasLM pruebas/lm127.cpp)   # PM_ML=<COPIA de una ranura ML> para las pruebas con partida
+target_link_libraries(PhoenixSyncPruebasLM PRIVATE PhoenixSyncCore)
 
 # --- App de prueba: solo Windows ---------------------------------------------
 if(WIN32)
-    add_executable(PhoenixSync app/main.cpp app/ComandosSync.cpp windows/Plataforma.cpp)
+    add_executable(PhoenixSync app/main.cpp app/ComandosSync.cpp app/LigaMasterWeb.cpp windows/Plataforma.cpp)
     target_compile_definitions(PhoenixSync PRIVATE UNICODE _UNICODE NOMINMAX)
     target_link_libraries(PhoenixSync PRIVATE PhoenixSyncCore winhttp crypt32 shell32 ole32 uuid)
 endif()
