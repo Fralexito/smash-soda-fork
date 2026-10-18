@@ -38,8 +38,12 @@ struct Lote {
 	std::string anfitrionNombre;   ///< nombre visible del anfitrion (solo lo manda la web)
 	std::string parche, baseHuella;   ///< parche y huella (12 hex) de la base del anfitrion; vacio = no se sabe
 	long long seq = 0;       ///< orden de llegada al transporte (lo asigna el transporte; 0 = aun no publicado)
+	bool oficial = false;    ///< lote del canal OFICIAL de Phoenix (la web, docs/CONTRATO-WEB-PES.md): lo reciben todos sin codigo
+	std::string cambioId;    ///< uuid del cambio oficial de la web (para informar el resultado); vacio si no es oficial
 	std::vector<CambioLote> cambios;
 };
+/// Anfitrion fijo del canal oficial (contrato §3a): no es ningun usuario, asi el PC del admin tambien lo aplica.
+inline constexpr const char* kAnfitrionOficial = "00000000-0000-4000-8000-0000000f0e11";
 std::string huellaDeCambios(const std::vector<CambioLote>& c);
 /// Crea el lote con huella e id. Los cambios se ordenan por jugador para que el mismo contenido de la misma huella.
 Lote crearLote(const std::string& autor, const std::string& anfitrion, const std::string& creado, const std::string& parche,
@@ -98,6 +102,8 @@ public:
 	TransporteWeb(PeticionWeb peticion, std::function<long long()> reloj = nullptr);
 	/// ¿Tiene sentido leer? (false = un amigo que aun no sigue a nadie: no se llama a la web). Lo pone quien sabe a quien se sigue.
 	void ponerPuedeLeer(bool si) { std::lock_guard<std::mutex> g(_m); _puedeLeer = si; }
+	/// Solo el canal oficial (`&solo_oficial=1`): un PC con «Recibir de amigos» apagado pero con los cambios oficiales encendidos.
+	void ponerSoloOficial(bool si) { std::lock_guard<std::mutex> g(_m); _soloOficial = si; }
 	std::string descripcion() const override { return "web de Phoenix"; }
 	std::string identidad() const override { return "web"; }
 	bool publicar(Lote& l, bool& ya, std::string& error) override;
@@ -121,7 +127,7 @@ private:
 	std::string _clave = "ok", _texto, _error;
 	long long _hastaMs = 0;
 	int _fallos = 0;
-	bool _hayMas = false, _puedeLeer = true;
+	bool _hayMas = false, _puedeLeer = true, _soloOficial = false;
 	long long _ultimaMs = 0, _maxMs = 0;
 	int _peticiones = 0, _fallosTotales = 0;
 	std::vector<std::string> _ultimosFallos;   // los ultimos 8, el mas nuevo al final
@@ -161,7 +167,7 @@ struct Detalle {
 };
 struct Registro {
 	Lote lote;
-	std::string estado;      ///< pendiente | aplicado | parcial | saltado | deshecho | propio | error | por_aprobar | rechazado
+	std::string estado;      ///< pendiente | aplicado | parcial | saltado | deshecho | propio | error | por_aprobar | rechazado | ignorado (oficial con «cambios oficiales» apagado)
 	bool propio = false;     ///< lo publiqué yo (con «mantener mis fichajes» también se pone en mi juego)
 	std::string modo = "ids";   ///< como se aplica en ESTE PC: ids (misma base que el anfitrion) | nombres (otro parche) | nada (no se puede)
 	std::string recibido, aplicadoEn, motivo;
@@ -169,6 +175,38 @@ struct Registro {
 	long long orden = 0;     ///< (indice del buzon << 40) + seq: asi lotes de buzones distintos no se mezclan por su seq
 	std::vector<Detalle> detalle;
 };
+// ─── Registro de este PC en la web (docs/CONTRATO-WEB-PES.md §4) ─────────────────────────────────
+/// Qué pasó en ESTE PC con un cambio oficial (un lote oficial = un cambio).
+struct ResultadoOficial {
+	std::string cambioId;    ///< uuid del cambio en la web
+	std::string resultado;   ///< aplicado | ya_estaba | reemplazado | parcial | saltado | error | deshecho | pendiente | por_aprobar
+	std::string motivo;      ///< por que se salto (legible, <= 200 bytes)
+	std::string cuando;      ///< ISO UTC
+	int jugadores = 0;
+};
+/// Lo que el PC cuenta de si mismo: version, parche y huella corta de su base (nada personal ni rutas).
+struct DatosPc {
+	std::string version, parche, baseHuella;
+	bool juego = false, pesAbierto = false, oficial = true, recibir = false, publicar = false;
+};
+/// Cuerpo de POST /pc/informe (como mucho 50 resultados).
+std::string cuerpoInforme(const DatosPc& d, const std::vector<ResultadoOficial>& r);
+/// Decide CUANDO informar: al arrancar, cuando cambia el resultado de un cambio oficial o los datos del PC, y un latido cada `latidoMs`.
+/// Solo manda lo que cambio desde el ultimo envio bueno; si falla, reintenta con espera creciente (1 → 10 min). Logica pura (probada).
+class Informador {
+public:
+	explicit Informador(long long latidoMs = 10LL * 60 * 1000) : _latido(latidoMs) {}
+	/// true = toca mandar ahora; `aMandar` = los resultados que cambiaron (puede ir vacio: latido o datos del PC nuevos).
+	bool toca(long long ahoraMs, const DatosPc& d, const std::vector<ResultadoOficial>& todos, std::vector<ResultadoOficial>& aMandar);
+	void enviado(long long ahoraMs, const DatosPc& d, const std::vector<ResultadoOficial>& mandados);
+	void fallo(long long ahoraMs);
+	long long proximoMs() const { return _proximo; }
+private:
+	long long _latido, _ultimo = -1, _proximo = 0, _espera = 0;
+	std::map<std::string, std::string> _enviado;   // cambioId -> resultado ya contado a la web
+	std::string _datosEnviados;
+};
+
 /// Lista efectiva de cambios para Fichajes: la lista manual + todos los lotes no deshechos (por orden de seq),
 /// colapsando varias mudanzas del mismo jugador en una (primer origen -> ultimo destino).
 fichajes::Lista construirLista(const fichajes::Lista& manual, const std::vector<Registro>& registros);
@@ -180,7 +218,8 @@ struct Config {
 	bool confirmarAntes = true;     ///< anfitrion: ver los traspasos detectados y pulsar «Publicar»
 	bool aplicarPropios = true;     ///< mis propios fichajes también van a mi Phoenix-DB: siguen en mi juego al cerrar y abrir PES (sin «Activar»)
 	bool aprobarRecibidos = false;  ///< amigo: lo que llega queda «por_aprobar» hasta que se acepte (ACEPTAR) o se rechace
-	fs::path dirEstado;             ///< donde guarda su estado (foto, historial, identidad)
+	bool oficial = true;            ///< recibir los cambios OFICIALES de Phoenix (la web) aunque «recibir» de amigos este apagado; nunca piden aprobacion
+	fs::path dirEstado;            ///< donde guarda su estado (foto, historial, identidad)
 	fs::path optionFile;            ///< EDIT00000000 (archivo) o la carpeta que lo contiene
 	fs::path juego;                 ///< carpeta del juego (para aplicar)
 	std::string autor = "Anfitrion";
@@ -213,6 +252,10 @@ public:
 	void aprobarRecibidos(bool si);
 	/// «Mantener mis fichajes en mi juego»: mis lotes publicados se aplican (o se quitan) en mi Phoenix-DB. Idempotente: se llama en cada vuelta.
 	void aplicarPropios(bool si);
+	/// «Recibir los cambios oficiales de Phoenix»: apagado, los lotes oficiales quedan «ignorado» (y se quitan del juego); encendido, vuelven. Idempotente.
+	void oficial(bool si);
+	/// Resultado de cada cambio OFICIAL recibido, para el registro de la web (POST /pc/informe).
+	std::vector<ResultadoOficial> resultadosOficiales() const;
 	bool aceptarRecibidos(std::string& mensaje);
 	bool rechazarRecibidos(std::string& mensaje);
 	/// Aviso para el overlay del juego tras aplicar un lote nuevo («Fichaje aplicado: X pasa de A a B. …»); se entrega UNA vez y queda vacio.
@@ -277,7 +320,8 @@ struct AjustesGuardados {
 	bool publicar = false, recibir = false, confirmarAntes = true;
 	bool aplicarPropios = true;      ///< mis fichajes también en mi juego (Phoenix-DB): no se pierden al cerrar PES
 	bool aprobarRecibidos = false;   ///< lo que llega espera a ACEPTAR / RECHAZAR antes de ponerse en el juego
-	bool prueba = false;    ///< modo Prueba: seguirme a mí mismo (antes era «publicar y recibir a la vez»; ahora las dos cosas pueden ir juntas sin esto)
+	bool oficial = true;             ///< recibir los cambios oficiales de Phoenix (encendido por defecto, sin codigo)
+	bool prueba = false;   ///< modo Prueba: seguirme a mí mismo (antes era «publicar y recibir a la vez»; ahora las dos cosas pueden ir juntas sin esto)
 	std::string transporte = "web", carpeta, autor, optionFile;
 	bool migrado = false;   ///< el archivo decia «carpeta» sin carpeta (una prueba vieja): ahora usa la web
 };

@@ -236,6 +236,16 @@ struct HubFalso {
 	long long ultimoSeq = 0;
 	std::string fallo;                              // "" | 404 | 401 | 429 | timeout | 500 | 503 | corrupto
 	int peticiones = 0, limitePagina = 50, contador = 0;
+	bool pidioSoloOficial = false;
+	std::vector<json> informes;                     // cuerpos recibidos en POST /pc/informe
+	/// Lo que hace la web al crear un cambio oficial (pes_cambio_crear): un lote con anfitrion fijo, base_huella vacia y cambio_id.
+	void oficial(const std::string& cambioId, const CambioLote& c) {
+		const std::string huella = huellaDeCambios({ c });
+		json l = { {"id", huella.substr(0, 24)}, {"huella", huella}, {"creado", "2026-10-17T20:00:00Z"}, {"autor", "Phoenix (oficial)"}, {"parche", ""}, {"base_huella", ""},
+			{"anfitrion", "Phoenix (oficial)"}, {"anfitrion_id", kAnfitrionOficial}, {"oficial", true}, {"cambio_id", cambioId},
+			{"cambios", json::array({ { {"jugador_id", c.jugador}, {"jugador", c.jugadorNombre}, {"desde_id", c.desde}, {"desde", c.desdeNombre}, {"hasta_id", c.hasta}, {"hasta", c.hastaNombre} } })} };
+		lotes.push_back({ ++ultimoSeq, "OFICIAL", l });
+	}
 	std::string codigoDe(const std::string& u) {
 		auto it = codigos.find(u);
 		if (it == codigos.end()) { char b[16]; std::snprintf(b, sizeof(b), "K%02dM2QX4", ++contador); it = codigos.emplace(u, b).first; }
@@ -269,12 +279,17 @@ struct HubFalso {
 			const size_t pd = ruta.find("desde="), pl = ruta.find("limite=");
 			const long long desde = std::stoll(ruta.substr(pd + 6));
 			const int limite = (std::min)(limitePagina, std::stoi(ruta.substr(pl + 7)));
+			const bool solo = ruta.find("solo_oficial=1") != std::string::npos;   // migracion 125: solo el canal oficial
+			if (solo) pidioSoloOficial = true;
 			json a = json::array();
 			for (const Lote1& l : lotes) {
 				if (l.seq <= desde) continue;
-				if (l.anfitrion != u && !sigue.count({ u, l.anfitrion })) continue;
+				const bool ofi = l.lote.value("oficial", false);   // los OFICIALES los recibe todo PC vinculado, sin seguir a nadie
+				if (solo && !ofi) continue;
+				if (!ofi && l.anfitrion != u && !sigue.count({ u, l.anfitrion })) continue;
 				if (static_cast<int>(a.size()) >= limite) break;
-				json x = l.lote; x["seq"] = l.seq; x["anfitrion"] = nombres[l.anfitrion]; x["anfitrion_id"] = l.anfitrion;
+				json x = l.lote; x["seq"] = l.seq;
+				if (!ofi) { x["anfitrion"] = nombres[l.anfitrion]; x["anfitrion_id"] = l.anfitrion; }
 				a.push_back(x);
 			}
 			return ok(200, json{ {"lotes", a}, {"ultimo_seq", ultimoSeq} });
@@ -292,6 +307,11 @@ struct HubFalso {
 			if (host == u && !b.value("prueba", false)) return err(409, "SEGUIR_A_UNO_MISMO", "Ese es tu propio código.");
 			sigue.insert({ u, host });
 			return ok(200, json{ {"anfitrion", nombres[host]}, {"anfitrion_id", host} });
+		}
+		if (metodo == "POST" && ruta == "/pc/informe") {
+			if (!b.is_object() || !b.contains("resultados") || !b["resultados"].is_array() || b["resultados"].size() > 50) return err(400, "CAMPO_INVALIDO", "resultados");
+			informes.push_back(b);
+			return ok(200, json{ {"guardados", b["resultados"].size()}, {"ignorados", 0} });
 		}
 		if (metodo == "POST" && ruta == "/traspasos/dejar") { sigue.erase({ u, b.value("anfitrion_id", std::string()) }); return ok(200, json::object()); }
 		if (metodo == "GET" && ruta == "/traspasos/siguiendo") {
@@ -1148,6 +1168,127 @@ static void pruebaAjustes() {
 	CHECK(pr.prueba && pr.publicar && pr.recibir, "el modo prueba se guarda y se lee aparte");
 }
 
+// Canal OFICIAL de Phoenix (migración 125, docs/CONTRATO-WEB-PES.md): llega solo a todo PC vinculado, sin código, se aplica por NOMBRES
+// en la base de cada PC (sirve en cualquier parche), y cada PC informa su resultado (POST /pc/informe). No necesita el option file real.
+static void pruebaOficial(const fs::path& tmp) {
+	std::cout << "[canal oficial de Phoenix: sin código, por nombres, interruptor, registro del PC]\n";
+	Foto f;   // un mundo hecho a mano con el mínimo que Fichajes acepta como base de PES: 110 equipos de 10 jugadores (1.100)
+	for (uint32_t eq = 101; eq <= 210; eq++) for (uint32_t k = 0; k < 10; k++) f.plantillas[eq].push_back((eq - 101) * 10 + k + 1);
+	const Mundo mundo = mundoDesde(f, 0, 0);
+	// el cambio que hace la web: nombres reales de la base + ids SINTÉTICOS (≥ 90.000.000: «no es un id real»)
+	CambioLote c; c.jugador = 90000005; c.desde = 90000101; c.hasta = 90000102; c.jugadorNombre = "Jugador 5"; c.desdeNombre = "Equipo 101"; c.hastaNombre = "Equipo 102";
+	const std::string CID = "c0ffee00-0000-4000-8000-000000000125";
+
+	// 1) el lote oficial: ida y vuelta por JSON, cambio_id malo se descarta sin romper
+	{
+		Lote l = crearLote("Phoenix (oficial)", kAnfitrionOficial, "2026-10-17T20:00:00Z", "", "", { c });
+		l.oficial = true; l.cambioId = CID; l.seq = 3;
+		Lote r; std::string e;
+		CHECK(loteDeJson(loteAJson(l), r, e) && r.oficial && r.cambioId == CID && r.baseHuella.empty(), "lote oficial: guarda y lee «oficial» y «cambio_id»");
+		json j = json::parse(loteAJson(l)); j["cambio_id"] = "'; drop";
+		CHECK(loteDeJson(j.dump(), r, e) && r.oficial && r.cambioId.empty(), "un cambio_id raro se descarta (el lote sigue valiendo)");
+		CHECK(loteDeJson(loteAJson(crearLote("x", "y", "2026-10-17T20:00:00Z", "", "", { c })), r, e) && !r.oficial, "un lote normal no es oficial");
+	}
+
+	// 2) PC con «recibir de amigos» APAGADO y sin seguir a nadie: el oficial llega solo y se aplica por nombres
+	HubFalso hub;
+	hub.nombres = { {UH, "Fralex"}, {UA, "Amigo"} };
+	hub.hosts = { UH };
+	hub.oficial(CID, c);
+	auto tr = std::make_shared<TransporteWeb>(hub.como(UA));
+	tr->ponerSoloOficial(true);
+	const fs::path jb = juegoFalso(tmp, "juego-oficial", mundo);
+	bool abierto = false;
+	Config cb = configBase(tmp / "estado-oficial", jb, "Amigo", &abierto);
+	cb.recibir = false; cb.oficial = true; cb.listaManual = []() { return fj::Lista(); };
+	{
+		Motor B(cb, tr);
+		B.pasoRecibir();
+		auto fb = filasDe(jb);
+		CHECK(hub.pidioSoloOficial, "con «recibir» apagado pide solo el canal oficial (solo_oficial=1)");
+		CHECK(!fb.empty() && equiposDe(fb, 5) == std::set<uint32_t>{ 102 }, "el fichaje oficial entra en Phoenix-DB buscando por NOMBRE (los ids de la web son sintéticos)");
+		const json h = est(B)["amigo"]["historial"];
+		CHECK(h.size() == 1 && h[0]["oficial"] == true && h[0]["estado"] == "aplicado" && h[0]["modo"] == "nombres", "historial: lote oficial, aplicado, por nombres");
+		const auto ro = B.resultadosOficiales();
+		CHECK(ro.size() == 1 && ro[0].cambioId == CID && ro[0].resultado == "aplicado" && ro[0].jugadores == 1, "resultado para el registro de la web: aplicado");
+
+		// 3) informe: cuerpo según el contrato
+		DatosPc d; d.version = "0.3.17"; d.parche = "Mundo falso"; d.baseHuella = mundo.asigSha12; d.juego = true; d.oficial = true;
+		const json cuerpo = json::parse(cuerpoInforme(d, ro));
+		CHECK(cuerpo["link_version"] == "0.3.17" && cuerpo["link_build"] == 317 && cuerpo["base_huella"] == mundo.asigSha12 && cuerpo["resultados"][0]["destino"] == "base" && cuerpo["resultados"][0]["cambio_id"] == CID, "cuerpo de /pc/informe: versión, build, huella de la base y resultado del cambio");
+		std::vector<ResultadoOficial> muchos(70, ro[0]);
+		CHECK(json::parse(cuerpoInforme(d, muchos))["resultados"].size() == 50, "como mucho 50 resultados por informe");
+		DatosPc raro = d; raro.baseHuella = "no-es-hex"; raro.version = "basura";
+		CHECK(json::parse(cuerpoInforme(raro, {}))["base_huella"] == "" && json::parse(cuerpoInforme(raro, {}))["link_build"] == 0, "huella rara o versión rara: no se manda basura");
+
+		// 4) informador: cuándo toca
+		Informador inf(600000);
+		std::vector<ResultadoOficial> am;
+		CHECK(inf.toca(0, d, ro, am) && am.size() == 1, "informador: al arrancar toca, con el resultado nuevo");
+		int estado = 0; std::string resp;
+		CHECK(hub.manejar(UA, "POST", "/pc/informe", cuerpoInforme(d, am), estado, resp) && estado == 200 && hub.informes.size() == 1, "el hub (contrato) acepta el informe");
+		inf.enviado(0, d, am);
+		CHECK(!inf.toca(5000, d, ro, am), "informador: no repite antes de 10 s");
+		CHECK(!inf.toca(60000, d, ro, am), "informador: mismo resultado y mismos datos = no manda nada");
+		std::vector<ResultadoOficial> cambiado = ro; cambiado[0].resultado = "saltado";
+		CHECK(inf.toca(60000, d, cambiado, am) && am.size() == 1 && am[0].resultado == "saltado", "informador: si cambia el resultado, lo manda (solo ese)");
+		DatosPc d2 = d; d2.version = "0.3.18";
+		CHECK(inf.toca(60000, d2, ro, am), "informador: si cambia la versión o el parche del PC, manda");
+		inf.enviado(60000, d2, ro);
+		CHECK(inf.toca(60000 + 600000, d2, ro, am) && am.empty(), "informador: latido cada 10 min aunque no haya nada nuevo");
+		inf.fallo(700000);
+		CHECK(!inf.toca(700000 + 59000, d2, ro, am) && inf.toca(700000 + 60000, d2, ro, am), "informador: si la web falla, espera 1 min (y luego más)");
+		inf.fallo(760000);
+		CHECK(inf.proximoMs() == 760000 + 120000, "informador: segunda falla, 2 min");
+
+		// 5) interruptor apagado: el oficial queda «ignorado» y sale del juego; encendido: vuelve
+		B.oficial(false);
+		CHECK(filasDe(jb).empty() && est(B)["amigo"]["historial"][0]["estado"] == "ignorado", "apagar «cambios oficiales»: se quita del juego (queda «ignorado»)");
+		const auto ro2 = B.resultadosOficiales();
+		CHECK(ro2.size() == 1 && ro2[0].resultado == "saltado" && ro2[0].motivo.find("apagado") != std::string::npos, "y la web lo ve como «saltado» con el motivo");
+		B.oficial(true);
+		B.pasoRecibir();
+		CHECK(equiposDe(filasDe(jb), 5) == std::set<uint32_t>{ 102 }, "volver a encenderlo: el fichaje oficial vuelve al juego");
+	}
+	// 6) reabrir Link: el registro oficial se recuerda (para seguir informando)
+	{
+		Motor B2(cb, tr);
+		const auto r = B2.resultadosOficiales();
+		CHECK(r.size() == 1 && r[0].cambioId == CID, "al reabrir Link el lote oficial sigue marcado como oficial");
+	}
+	// 7) un lote de AMIGO no entra si «recibir» está apagado (web vieja sin solo_oficial); con «recibir» encendido sí, y los oficiales no piden aprobación
+	{
+		HubFalso h2;
+		h2.nombres = { {UH, "Fralex"}, {UA, "Amigo"} };
+		h2.hosts = { UH };
+		h2.sigue.insert({ UA, UH });
+		Lote amigo = crearLote("Fralex", UH, "2026-10-17T20:01:00Z", "", "", { cl(25, 103, 104) });
+		bool ya; std::string e;
+		TransporteWeb(h2.como(UH)).publicar(amigo, ya, e);
+		CambioLote c2 = c; c2.jugador = 90000045; c2.jugadorNombre = "Jugador 45"; c2.desde = 90000105; c2.desdeNombre = "Equipo 105"; c2.hasta = 90000101; c2.hastaNombre = "Equipo 101";
+		h2.oficial("c0ffee00-0000-4000-8000-000000000126", c2);
+		auto t2 = std::make_shared<TransporteWeb>(h2.como(UA));   // sin solo_oficial: como una web que aún no lo tiene
+		const fs::path jc = juegoFalso(tmp, "juego-oficial2", mundo);
+		Config cc = configBase(tmp / "estado-oficial2", jc, "Amigo", &abierto);
+		cc.recibir = false; cc.oficial = true; cc.aprobarRecibidos = true; cc.listaManual = []() { return fj::Lista(); };
+		Motor C(cc, t2);
+		C.pasoRecibir();
+		const json h = est(C)["amigo"]["historial"];
+		CHECK(h.size() == 1 && h[0]["oficial"] == true && h[0]["estado"] == "aplicado", "con «recibir» apagado el lote del amigo NO entra; el oficial sí y no pide aprobación");
+		CHECK(equiposDe(filasDe(jc), 45) == std::set<uint32_t>{ 101 } && equiposDe(filasDe(jc), 25) == std::set<uint32_t>{ 103 }, "en el juego: solo el oficial");
+		Config cd = configBase(tmp / "estado-oficial3", juegoFalso(tmp, "juego-oficial3", mundo), "Amigo", &abierto);
+		cd.recibir = true; cd.oficial = false; cd.listaManual = []() { return fj::Lista(); };
+		Motor D(cd, std::make_shared<TransporteWeb>(h2.como(UA)));
+		D.pasoRecibir();
+		int ign = 0, apl = 0;
+		const json hd = est(D)["amigo"]["historial"];
+		for (const json& x : hd) { if (x["oficial"] == true && x["estado"] == "ignorado") ign++; if (x["oficial"] == false && x["estado"] == "aplicado") apl++; }
+		CHECK(ign == 1 && apl == 1,"con «cambios oficiales» apagado: el oficial queda ignorado y el del amigo se aplica");
+	}
+	// 8) ajustes: los cambios oficiales vienen encendidos por defecto
+	CHECK(leerAjustes("").oficial && leerAjustes("{}").oficial && !leerAjustes("{\"oficial\":false}").oficial && leerAjustes("{\"oficial\":\"no\"}").oficial, "ajustes: «oficial» encendido por defecto; se puede apagar");
+}
+
 static void pruebaBuscar(const fs::path& tmp) {
 	std::cout << "[buscar el juego: carpetas con PES2021.exe, Steam, límites]\n";
 	namespace b = phoenix::buscar;
@@ -1196,6 +1337,7 @@ int main(int argc, char** argv) {
 	pruebaBuscar(tmp);
 	pruebaWeb();
 	pruebaLista();
+	pruebaOficial(tmp);
 	if (argc >= 3 && fs::exists(argv[2])) { pruebaCadena(tmp, leer(argv[2])); pruebaCadenaWeb(tmp, leer(argv[2])); }
 	if (argc >= 4 && fs::exists(argv[2]) && fs::is_directory(argv[3])) pruebaReal(tmp, leer(argv[2]), fs::path(argv[3]));
 	else std::cout << "[cadena completa] SALTADA: falta una copia de EDIT00000000 como 2.o argumento\n";

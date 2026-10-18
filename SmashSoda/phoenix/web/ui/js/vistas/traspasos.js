@@ -146,7 +146,20 @@ export function Traspasos() {
   const infoPes = d.pesAbierto ? t("PES está abierto. Cierra y abre PES para ver el cambio, o espera la recarga automática.", "PES is open. Close and reopen PES to see the change, or wait for the automatic reload.") : t("PES está cerrado: se pone al momento y lo ves al abrir PES.", "PES is closed: it's applied right away and you'll see it when you open PES.");
   const tarjeta = "padding:20px 22px;display:flex;flex-direction:column;gap:12px";
 
+  // ── Cambios OFICIALES de Phoenix (la web, docs/CONTRATO-WEB-PES.md): llegan solos a todos, sin código; aparte de amigos ──
+  const oficiales = lista.filter((l) => l.oficial).slice(0, 5);
+  const tarjetaOficial = html`<${Tarjeta} interior=${tarjeta}>
+      <${Titulo} texto=${t("CAMBIOS OFICIALES DE PHOENIX", "OFFICIAL PHOENIX CHANGES")} derecha=${html`<${Chip} tipo=${aj.oficial !== false ? "acc" : ""}>${aj.oficial !== false ? t("ENCENDIDO", "ON") : t("APAGADO", "OFF")}</${Chip}>`}/>
+      <${AjusteSw} titulo=${t("Recibir los cambios oficiales de Phoenix", "Receive official Phoenix changes")}
+        desc=${aj.oficial !== false ? t("Encendido: los fichajes que el staff hace en la web llegan solos a tu PES (no hace falta código).", "On: the transfers the staff makes on the web reach your PES by themselves (no code needed).") : t("Apagado: no recibes los cambios oficiales y se quitan de tu juego.", "Off: you don't receive official changes and they're removed from your game.")}
+        valor=${aj.oficial !== false} al=${(v) => poner({ oficial: v })}/>
+      ${aj.oficial !== false && !w.vinculada ? html`<div class="ayuda" style="font-size:13px">${t("Para recibirlos, une esta PC a tu cuenta en «Mi PC».", "To receive them, link this PC to your account in «My PC».")}</div>` : null}
+      ${oficiales.length ? html`<div class="col" style="gap:4px">${oficiales.map((l) => html`<div style="font-size:13px"><span class=${cx("punto", l.estado === "aplicado" ? "ok" : l.estado === "saltado" || l.estado === "error" ? "bad" : "warn")}></span> ${(l.cambios || []).map((c) => `${nombre(c)} → ${c.hastaNombre || "#" + c.hasta}`).join(", ")} <span class="ayuda">· ${l.estado}${l.motivo ? " · " + l.motivo : ""}</span></div>`)}</div>`
+        : aj.oficial !== false ? html`<div class="ayuda" style="font-size:13px">${t("Todavía no llegó ningún cambio oficial.", "No official change has arrived yet.")}</div>` : null}
+    </${Tarjeta}>`;
+
   if (!encendido) return html`<div class="col" style="gap:14px">
+    ${tarjetaOficial}
     <${Tarjeta} interior=${tarjeta}>
       <${Titulo} texto=${t("PASAR FICHAJES ENTRE AMIGOS", "PASS TRANSFERS BETWEEN FRIENDS")} derecha=${html`<${Chip}>${t("APAGADO", "OFF")}</${Chip}>`}/>
       <div style="font-size:15px">${t("Lo que fichas en tu PES llega al PES de tus amigos, y lo que fichan ellos al tuyo, con un código.", "What you sign in your PES reaches your friends' PES, and theirs reaches yours, with a code.")}</div>
@@ -160,6 +173,7 @@ export function Traspasos() {
       ${esWeb ? conexionMsg() : html`<div class="ayuda" style="font-size:13px">${t("Usas una carpeta compartida en vez de la web: no hace falta código.", "You use a shared folder instead of the web: no code needed.")}</div>`}
       ${d.mensaje ? html`<div class="caja" style="font-size:13px">${d.mensaje}</div>` : null}
     </${Tarjeta}>
+    ${tarjetaOficial}
 
     <div class="rej2" style="align-items:start">
       <${Tarjeta} interior=${tarjeta}>

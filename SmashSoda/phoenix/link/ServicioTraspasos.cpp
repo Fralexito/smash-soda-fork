@@ -12,6 +12,7 @@
 #include <mutex>
 #include <thread>
 
+#include "../PhoenixBuild.h"
 #include "../PhoenixPrefs.h"
 #include "BuzonJuego.h"
 #include "Entrega.h"
@@ -65,6 +66,10 @@ struct Servicio::Impl {
 	bool prueba = false;                // modo Prueba: me sigo a mí mismo (aparte de publicar/recibir, que pueden ir juntos)
 	bool aplicarPropios = true;         // mis fichajes tambien en mi juego (Phoenix-DB): no se pierden al cerrar PES
 	bool aprobarRecibidos = false;      // lo que llega espera a que lo acepte (ACEPTAR / RECHAZAR) antes de ponerse en el juego
+	bool oficial = true;                // cambios oficiales de Phoenix (la web, CONTRATO-WEB-PES): llegan solos, sin codigo; el hilo corre aunque lo demas este apagado
+	Informador informador;              // registro de este PC en la web (POST /pc/informe)
+	std::string parcheCache, huellaCache; fs::path juegoCache; long long proximaBase = 0;   // parche y huella de la base: se leen como mucho cada 10 min
+	std::string ultimoInforme;          // resultado del ultimo informe (para «detalles»)
 	std::string transporte = "web", carpeta, autor, optionFile;   // la web (Supabase) es el transporte por defecto; la carpeta es la alternativa
 	std::shared_ptr<Motor> motor;
 	std::shared_ptr<TransporteWeb> web;   // el mismo objeto que usa el motor cuando el transporte es la web
@@ -92,18 +97,18 @@ struct Servicio::Impl {
 	fs::path ajustesArchivo() const { return carpetaAjustes() / "ajustes.json"; }
 
 	void guardar() {
-		json j = { {"publicar", publicar}, {"recibir", recibir}, {"confirmarAntes", confirmarAntes}, {"prueba", prueba}, {"aprobarRecibidos", aprobarRecibidos}, {"aplicarPropios", aplicarPropios}, {"transporte", transporte}, {"carpeta", carpeta}, {"autor", autor}, {"optionFile", optionFile} };
+		json j = { {"publicar", publicar}, {"recibir", recibir}, {"confirmarAntes", confirmarAntes}, {"prueba", prueba}, {"aprobarRecibidos", aprobarRecibidos}, {"aplicarPropios", aplicarPropios}, {"oficial", oficial}, {"transporte", transporte}, {"carpeta", carpeta}, {"autor", autor}, {"optionFile", optionFile} };
 		escribir(ajustesArchivo(), j.dump(1));
 	}
 	void cargar() {
 		std::string t;
 		{   // el archivo se CIERRA antes de guardar: con el flujo abierto Windows no deja reemplazarlo y la migracion no se guardaba
 			std::ifstream f(ajustesArchivo(), std::ios::binary);
-			if (!f) return;
+			if (!f) return;   // sin archivo: valores por defecto (los cambios oficiales, encendidos)
 			t.assign((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
 		}
 		const AjustesGuardados a = leerAjustes(t);   // logica pura (probada): la web es el transporte por defecto
-		publicar = a.publicar; recibir = a.recibir; confirmarAntes = a.confirmarAntes; prueba = a.prueba; aprobarRecibidos = a.aprobarRecibidos; aplicarPropios = a.aplicarPropios;
+		publicar = a.publicar; recibir = a.recibir; confirmarAntes = a.confirmarAntes; prueba = a.prueba; aprobarRecibidos = a.aprobarRecibidos; aplicarPropios = a.aplicarPropios; oficial = a.oficial;
 		transporte = a.transporte; carpeta = a.carpeta; autor = a.autor; optionFile = a.optionFile;
 		if (a.migrado) guardar();   // deja el archivo ya migrado a la web
 	}
@@ -188,7 +193,7 @@ struct Servicio::Impl {
 		webVisto = true;
 		if (pub) canal = c;
 		siguiendo = sig; meSiguen = meSig;
-		w->ponerPuedeLeer(!rec || pub || !sig.empty());   // un amigo que aun no sigue a nadie no llama a la web
+		w->ponerPuedeLeer(!rec || pub || !sig.empty() || oficial);   // un amigo que aun no sigue a nadie no llama a la web (salvo por el canal oficial)
 	}
 
 	std::string accionWeb(const Orden& o, bool& ok) {   // sin m tomado
@@ -220,21 +225,49 @@ struct Servicio::Impl {
 			cli.siguiendo(sig, meSig, e);
 			std::lock_guard<std::mutex> g(m);
 			siguiendo = sig; meSiguen = meSig; webVisto = true; ok = true; pruebaOk = false;
-			w->ponerPuedeLeer(!recibir || publicar || !sig.empty());
+			w->ponerPuedeLeer(!recibir || publicar || !sig.empty() || oficial);
 			return "Dejaste de seguir a ese anfitrión.";
 		}
 		return "Acción desconocida.";
 	}
 
+	/// Registro de este PC en la web (CONTRATO-WEB-PES §4): versión, parche, huella de su base y resultado de cada cambio oficial.
+	/// Va por una petición APARTE del transporte: si la web aún no tiene la ruta (404) no frena los traspasos. Sin m tomado; solo desde el hilo.
+	void informar(bool pub, bool rec, bool ofi, const fs::path& juego, bool pesAbierto) {
+		std::shared_ptr<Motor> mo;
+		{ std::lock_guard<std::mutex> g(m); mo = motor; if (transporte != "web" || !mo) return; }
+		const long long ahora = ahoraMs();
+		if (ahora < informador.proximoMs() || !phoenix::PhoenixLink::instancia().pcVinculada()) return;
+		if (juego != juegoCache || ahora >= proximaBase) {   // leer la base cuesta: como mucho cada 10 min o al cambiar de juego
+			parcheCache.clear(); huellaCache.clear();
+			if (!juego.empty()) {
+				const phoenix::fichajes::BaseNombres bn = phoenix::fichajes::leerNombresDeBase(juego, std::string());
+				if (bn.ok) { parcheCache = bn.parche; huellaCache = bn.baseSha.substr(0, 12); }
+			}
+			juegoCache = juego; proximaBase = ahora + 10LL * 60 * 1000;
+		}
+		DatosPc d;
+		d.version = phoenix::kVersion; d.parche = parcheCache; d.baseHuella = huellaCache;
+		d.juego = !juego.empty(); d.pesAbierto = pesAbierto; d.oficial = ofi; d.recibir = rec; d.publicar = pub;
+		std::vector<ResultadoOficial> aMandar;
+		if (!informador.toca(ahora, d, mo->resultadosOficiales(), aMandar)) return;
+		int estado = 0; std::string resp;
+		const bool ok = phoenix::PhoenixLink::instancia().peticionTraspasos("POST", "/pc/informe", cuerpoInforme(d, aMandar), estado, resp) && (estado == 200 || estado == 201);
+		if (ok) informador.enviado(ahora, d, aMandar); else informador.fallo(ahora);
+		std::lock_guard<std::mutex> g(m);
+		ultimoInforme = ok ? "ok (" + std::to_string(aMandar.size()) + " resultados)" : "falló (HTTP " + std::to_string(estado) + ")";
+	}
+
 	void paso() {
 		std::shared_ptr<Motor> mo;
-		bool pub, rec, conf, aprobar, propios;
+		bool pub, rec, conf, aprobar, propios, ofi;
 		std::string aut;
 		Orden orden;
 		{
 			std::lock_guard<std::mutex> g(m);
 			asegurarMotor();
-			mo = motor; pub = publicar; rec = recibir; conf = confirmarAntes; aprobar = aprobarRecibidos; propios = aplicarPropios; aut = autor;
+			mo = motor; pub = publicar; rec = recibir; conf = confirmarAntes; aprobar = aprobarRecibidos; propios = aplicarPropios; ofi = oficial; aut = autor;
+			if (web) web->ponerSoloOficial(ofi && !rec);   // solo el canal oficial: la web no manda lo de amigos
 			if (!acciones.empty()) { orden = acciones.front(); acciones.pop_front(); }
 		}
 		fs::path juego, option;
@@ -243,6 +276,7 @@ struct Servicio::Impl {
 		mo->ajustar(juego, option, pub, rec, conf, aut);
 		mo->aprobarRecibidos(aprobar);
 		mo->aplicarPropios(propios);
+		mo->oficial(ofi);
 		bool refrescar = false;
 		if (!orden.que.empty()) {
 			bool ok = false;
@@ -265,14 +299,16 @@ struct Servicio::Impl {
 			diag = dj; proximoDiag = ahoraMs() + 10000;
 		}
 		if (pub) mo->pasoPublicar();
-		if (rec) mo->pasoRecibir();
+		if (rec || ofi) mo->pasoRecibir();   // el canal oficial se sigue aunque «recibir de amigos» este apagado
+		const bool pesAbierto = !phoenix::modulos::procesosAbiertos().empty() || phoenix::buzon::detectarJuego().puente != phoenix::buzon::Puente::JuegoCerrado;
 		const std::string aviso = mo->tomarAviso();   // «Fichaje aplicado: X pasa de A a B. …» → overlay del juego (solo si PES esta abierto; si no, lo ve en Link)
-		if (!aviso.empty() && (!phoenix::modulos::procesosAbiertos().empty() || phoenix::buzon::detectarJuego().puente != phoenix::buzon::Puente::JuegoCerrado))
+		if (!aviso.empty() && pesAbierto)
 			phoenix::PhoenixLink::instancia().avisoLocalDiferido(phoenix::buzon::cortarUtf8(aviso, 230));
+		try { informar(pub, rec, ofi, juego, pesAbierto); } catch (...) {}   // el registro nunca frena los traspasos
 		const std::string est = mo->estadoJson();
 		{   // una copia legible del estado para diagnosticar sin abrir la interfaz (estado-actual.json); solo se reescribe si cambia
 			json w;
-			{ std::lock_guard<std::mutex> g(m); w = json{ {"web", {{"estado", web ? web->estadoClave() : std::string()}, {"texto", web ? web->estadoTexto() : std::string()}, {"error", errorWeb}, {"visto", webVisto}, {"errorPrueba", errorPrueba}, {"pruebaOk", pruebaOk}, {"tecnico", web ? web->tecnico() : json(nullptr)}, {"codigoObtenido", canal.hay}, {"codigo", canal.hay ? canal.codigo.substr(0, 3) + "…" : std::string()}, {"sigo", siguiendo.size()}, {"meSiguen", meSiguen.size()}}} }; }
+			{ std::lock_guard<std::mutex> g(m); w = json{ {"web", {{"estado", web ? web->estadoClave() : std::string()}, {"texto", web ? web->estadoTexto() : std::string()}, {"error", errorWeb}, {"visto", webVisto}, {"errorPrueba", errorPrueba}, {"pruebaOk", pruebaOk}, {"tecnico", web ? web->tecnico() : json(nullptr)}, {"codigoObtenido", canal.hay}, {"codigo", canal.hay ? canal.codigo.substr(0, 3) + "…" : std::string()}, {"sigo", siguiendo.size()}, {"meSiguen", meSiguen.size()}, {"oficial", oficial}, {"informe", ultimoInforme}}} }; }
 			const std::string vol = json{ {"motor", json::parse(est, nullptr, false)}, {"servicio", w} }.dump(1);
 			if (vol != ultimoVolcado) { ultimoVolcado = vol; escribir(carpetaAjustes() / "estado-actual.json", vol); }
 		}
@@ -283,7 +319,7 @@ struct Servicio::Impl {
 	void bucle() {
 		while (!parar) {
 			try { paso(); } catch (...) {}   // un fallo no tumba Link: se vuelve a intentar en el siguiente paso
-			{ std::lock_guard<std::mutex> g(m); if (!publicar && !recibir && acciones.empty()) break; }   // nada encendido: el hilo termina
+			{ std::lock_guard<std::mutex> g(m); if (!publicar && !recibir && !oficial && acciones.empty()) break; }   // nada encendido: el hilo termina
 			std::unique_lock<std::mutex> l(m);
 			cv.wait_for(l, std::chrono::seconds(3), [this]() { return parar.load() || !acciones.empty(); });
 		}
@@ -312,7 +348,7 @@ void Servicio::iniciar() {
 	{
 		std::lock_guard<std::mutex> g(_i->m);
 		if (!_i->iniciado) { _i->iniciado = true; _i->cargar(); }
-		algo = _i->publicar || _i->recibir;
+		algo = _i->publicar || _i->recibir || _i->oficial;   // los cambios oficiales vienen encendidos: el hilo arranca solo con Link
 	}
 	if (algo) _i->arrancar();
 }
@@ -327,8 +363,9 @@ json Servicio::estado() {
 	if (_i->cache.empty() && !_i->corriendo) { _i->asegurarMotor(); _i->cache = _i->motor->estadoJson(); }   // apagado: solo se enseña el historial guardado
 	if (!_i->cache.empty()) j = json::parse(_i->cache, nullptr, false);
 	if (!j.is_object()) j = json::object();
-	j["ajustes"] = { {"publicar", _i->publicar}, {"recibir", _i->recibir}, {"confirmarAntes", _i->confirmarAntes}, {"prueba", _i->prueba}, {"aprobarRecibidos", _i->aprobarRecibidos}, {"aplicarPropios", _i->aplicarPropios}, {"transporte", _i->transporte}, {"carpeta", _i->carpeta}, {"autor", _i->autor}, {"optionFile", _i->optionFile} };
+	j["ajustes"] = { {"publicar", _i->publicar}, {"recibir", _i->recibir}, {"confirmarAntes", _i->confirmarAntes}, {"prueba", _i->prueba}, {"aprobarRecibidos", _i->aprobarRecibidos}, {"aplicarPropios", _i->aplicarPropios}, {"oficial", _i->oficial}, {"transporte", _i->transporte}, {"carpeta", _i->carpeta}, {"autor", _i->autor}, {"optionFile", _i->optionFile} };
 	j["activo"] = _i->publicar || _i->recibir;
+	j["informe"] = _i->ultimoInforme;
 	j["mensaje"] = _i->mensaje;
 	j["juego"] = phoenix::entrega::aU8(_i->juegoActual);
 	const bool esWeb = _i->transporte == "web";
@@ -364,7 +401,7 @@ void Servicio::poner(const json& d) {
 		};
 		const std::string transporteAntes = _i->transporte, carpetaAntes = _i->carpeta, optionAntes = _i->optionFile;
 		const bool pubAntes = _i->publicar, recAntes = _i->recibir;
-		interruptor("publicar", _i->publicar); interruptor("recibir", _i->recibir); interruptor("confirmarAntes", _i->confirmarAntes); interruptor("prueba", _i->prueba); interruptor("aprobarRecibidos", _i->aprobarRecibidos); interruptor("aplicarPropios", _i->aplicarPropios);
+		interruptor("publicar", _i->publicar); interruptor("recibir", _i->recibir); interruptor("confirmarAntes", _i->confirmarAntes); interruptor("prueba", _i->prueba); interruptor("aprobarRecibidos", _i->aprobarRecibidos); interruptor("aplicarPropios", _i->aplicarPropios); interruptor("oficial", _i->oficial);
 		texto("transporte", _i->transporte, 12); texto("carpeta", _i->carpeta, 500); texto("autor", _i->autor, 40); texto("optionFile", _i->optionFile, 500);
 		auto deshacerCambios = [&]() { _i->transporte = transporteAntes; _i->carpeta = carpetaAntes; _i->optionFile = optionAntes; _i->publicar = pubAntes; _i->recibir = recAntes; };
 		if (_i->transporte != "carpeta" && _i->transporte != "web") { deshacerCambios(); throw std::runtime_error("Transporte desconocido."); }
@@ -389,7 +426,7 @@ void Servicio::poner(const json& d) {
 		_i->optionFileEfectivo.clear(); _i->proximaBusquedaOption = 0;
 	}
 	bool algo;
-	{ std::lock_guard<std::mutex> g(_i->m); algo = _i->publicar || _i->recibir; }
+	{ std::lock_guard<std::mutex> g(_i->m); algo = _i->publicar || _i->recibir || _i->oficial; }
 	if (algo) { _i->arrancar(); _i->cv.notify_all(); }
 	else _i->frenar();
 }

@@ -106,6 +106,7 @@ std::string loteAJson(const Lote& l, bool conSeq) {
 	json j = { {"formato", l.formato}, {"id", l.id}, {"huella", l.huella}, {"creado", l.creado}, {"autor", l.autor}, {"anfitrion", l.anfitrion},
 		{"parche", l.parche}, {"base_huella", l.baseHuella}, {"cambios", json::array()} };
 	if (conSeq) j["seq"] = l.seq;
+	if (l.oficial) { j["oficial"] = true; j["cambio_id"] = l.cambioId; }
 	for (const CambioLote& c : l.cambios) j["cambios"].push_back(cambioAJson(c));
 	return j.dump(1);
 }
@@ -128,6 +129,12 @@ bool loteDeJson(const std::string& texto, Lote& l, std::string& error) {
 	else l.anfitrion = textoCorto(j, "anfitrion", 64);
 	l.parche = textoCorto(j, "parche", 60); l.baseHuella = textoCorto(j, "base_huella", 64);
 	if (j.contains("seq") && j["seq"].is_number_integer()) l.seq = j["seq"].get<long long>();
+	l.oficial = j.contains("oficial") && j["oficial"].is_boolean() && j["oficial"].get<bool>();   // canal oficial de Phoenix (CONTRATO-WEB-PES §3a)
+	if (l.oficial) {
+		l.cambioId = textoCorto(j, "cambio_id", 36);
+		const bool uuidOk = l.cambioId.size() == 36 && std::all_of(l.cambioId.begin(), l.cambioId.end(), [](unsigned char c) { return std::isxdigit(c) != 0 || c == '-'; });
+		if (!uuidOk) l.cambioId.clear();   // sin id se aplica igual; solo no se puede informar su resultado
+	}
 	if (!esHex(l.id) || l.id.size() != 24) { error = "id de lote no valido"; return false; }
 	if (l.anfitrion.empty()) { error = "falta el anfitrion"; return false; }
 	if (!l.baseHuella.empty() && !esHex(l.baseHuella)) { error = "huella de base no valida"; return false; }
@@ -324,7 +331,9 @@ bool TransporteWeb::traer(long long despuesDe, std::vector<Lote>& lotes, int& il
 	}
 	constexpr int kPagina = 30;
 	int estado = 0; std::string r;
-	if (!pedir("GET", "/traspasos?desde=" + std::to_string(despuesDe) + "&limite=" + std::to_string(kPagina), "", estado, r)) { error = ultimoError(); return false; }
+	bool solo;
+	{ std::lock_guard<std::mutex> g(_m); solo = _soloOficial; }
+	if (!pedir("GET", "/traspasos?desde=" + std::to_string(despuesDe) + "&limite=" + std::to_string(kPagina) + (solo ? "&solo_oficial=1" : ""), "", estado, r)) { error = ultimoError(); return false; }
 	const json j = json::parse(r, nullptr, false);
 	if (!j.contains("lotes") || !j["lotes"].is_array()) {
 		std::lock_guard<std::mutex> g(_m); marcar("respuesta_rara", "La respuesta de la web no se entiende.", 30000); error = _texto; return false;
@@ -401,6 +410,7 @@ AjustesGuardados leerAjustes(const std::string& texto) {
 	auto s = [&](const char* k, size_t max) { std::string t = j.contains(k) && j[k].is_string() ? j[k].get<std::string>() : std::string(); if (t.size() > max) t.clear(); return t; };
 	a.publicar = b("publicar", false); a.recibir = b("recibir", false); a.confirmarAntes = b("confirmarAntes", true);
 	a.prueba = b("prueba", false); a.aprobarRecibidos = b("aprobarRecibidos", false); a.aplicarPropios = b("aplicarPropios", true);
+	a.oficial = b("oficial", true);   // los cambios oficiales de Phoenix llegan solos salvo que el usuario los apague
 	a.transporte = s("transporte", 12); a.carpeta = s("carpeta", 500); a.autor = s("autor", 40); a.optionFile = s("optionFile", 500);
 	if (a.transporte != "web" && a.transporte != "carpeta") a.transporte = "web";
 	if (a.transporte == "carpeta" && a.carpeta.empty()) { a.transporte = "web"; a.migrado = true; }   // prueba vieja con carpeta vacia: la web
@@ -448,7 +458,7 @@ namespace {
 
 /// Lotes que NO cuentan para el juego: deshechos, propios, con error, sin aprobar todavía o rechazados.
 static bool loteInactivo(const std::string& e) {
-	return e == "deshecho" || e == "propio" || e == "error" || e == "por_aprobar" || e == "rechazado";
+	return e == "deshecho" || e == "propio" || e == "error" || e == "por_aprobar" || e == "rechazado" || e == "ignorado";
 }
 
 fichajes::Lista construirLista(const fichajes::Lista& manual, const std::vector<Registro>& registros) {
@@ -778,7 +788,7 @@ void Motor::avisarJuego(const std::string& texto) const {
 
 void Motor::pasoRecibir() {
 	std::lock_guard<std::mutex> g(_m);
-	if (!_c.recibir) { _estadoAmigo = "apagado"; return; }
+	if (!_c.recibir && !_c.oficial) { _estadoAmigo = "apagado"; return; }
 	if (!_t) { _estadoAmigo = "sin_transporte"; return; }
 	fijarOrigen();
 	const long long ahoraM = ahoraMs();
@@ -802,9 +812,11 @@ void Motor::pasoRecibir() {
 				bool conocido = false;
 				for (Registro& r : _reg) if (r.lote.id == l.id) { conocido = true; if (r.lote.seq == 0) r.lote.seq = l.seq; }
 				if (conocido) continue;   // lote repetido: idempotente
+				if (!l.oficial && !_c.recibir) continue;   // solo sigo el canal oficial: lo de amigos no me toca (la web ya no lo manda con solo_oficial)
 				Registro r;
 				r.lote = l; r.recibido = ahora(); r.origen = _origenActual; r.orden = ordenDe(_origenActual, l.seq);
-				if (l.anfitrion == _anfitrionId) { r.propio = true; r.estado = _c.aplicarPropios ? "pendiente" : "propio"; r.modo = _c.aplicarPropios ? "ids" : "nada"; }
+				if (l.oficial) r.estado = _c.oficial ? "pendiente" : "ignorado";   // los oficiales de Phoenix no piden aprobacion
+				else if (l.anfitrion == _anfitrionId) { r.propio = true; r.estado = _c.aplicarPropios ? "pendiente" : "propio"; r.modo = _c.aplicarPropios ? "ids" : "nada"; }
 				else r.estado = _c.aprobarRecibidos ? "por_aprobar" : "pendiente";
 				_reg.push_back(std::move(r));
 			}
@@ -961,6 +973,93 @@ void Motor::aplicarPropios(bool si) {
 
 void Motor::aprobarRecibidos(bool si) { std::lock_guard<std::mutex> g(_m); _c.aprobarRecibidos = si; }
 
+void Motor::oficial(bool si) {
+	std::lock_guard<std::mutex> g(_m);
+	_c.oficial = si;
+	int cambiados = 0;
+	for (Registro& r : _reg) {
+		if (!r.lote.oficial) continue;
+		if (si && r.estado == "ignorado") { r.estado = "pendiente"; cambiados++; }
+		else if (!si && (r.estado == "pendiente" || r.estado == "aplicado" || r.estado == "parcial" || r.estado == "saltado")) { r.estado = "ignorado"; cambiados++; }
+	}
+	if (cambiados == 0) return;
+	guardarRegistros();
+	_reintentoAplicar = 0;
+	if (!si) { std::string msg; aplicar(false, msg); }   // vuelve a generar Phoenix-DB sin los cambios oficiales
+}
+
+std::vector<ResultadoOficial> Motor::resultadosOficiales() const {
+	std::lock_guard<std::mutex> g(_m);
+	std::vector<ResultadoOficial> v;
+	for (const Registro& r : _reg) {
+		if (!r.lote.oficial || r.lote.cambioId.empty()) continue;
+		ResultadoOficial x;
+		x.cambioId = r.lote.cambioId;
+		x.jugadores = static_cast<int>(r.lote.cambios.size());
+		x.cuando = r.aplicadoEn.empty() ? r.recibido : r.aplicadoEn;
+		x.motivo = r.motivo;
+		for (const Detalle& d : r.detalle) if (x.motivo.empty() && !d.motivo.empty() && d.estado == "saltado") x.motivo = d.motivo;
+		if (r.estado == "aplicado") {
+			bool todosYa = !r.detalle.empty(), todosReempl = !r.detalle.empty();
+			for (const Detalle& d : r.detalle) { if (d.estado != "ya_estaba") todosYa = false; if (d.estado != "reemplazado") todosReempl = false; }
+			x.resultado = todosYa ? "ya_estaba" : todosReempl ? "reemplazado" : "aplicado";
+		}
+		else if (r.estado == "ignorado") { x.resultado = "saltado"; x.motivo = "Este PC tiene apagado «Recibir los cambios oficiales de Phoenix»."; }
+		else if (r.estado == "parcial" || r.estado == "saltado" || r.estado == "pendiente" || r.estado == "por_aprobar" || r.estado == "deshecho" || r.estado == "error") x.resultado = r.estado;
+		else if (r.estado == "rechazado") x.resultado = "deshecho";
+		else continue;
+		if (x.resultado == "pendiente" && x.motivo.empty()) x.motivo = _mensajeAmigo;   // p. ej. «PES está abierto y Phoenix-DB aún no está en el sider.ini…»
+		x.motivo = phoenix::buzon::cortarUtf8(x.motivo, 200);
+		v.push_back(std::move(x));
+	}
+	return v;
+}
+
+// ─── Registro de este PC en la web ───────────────────────────────────────────────────────────────
+std::string cuerpoInforme(const DatosPc& d, const std::vector<ResultadoOficial>& r) {
+	int build = 0;
+	{   // 0.3.17 → 317 (mayor*10000 + menor*100 + parche): solo para ordenar en la web
+		int a = 0, b = 0, c = 0;
+		if (std::sscanf(d.version.c_str(), "%d.%d.%d", &a, &b, &c) >= 1) build = a * 10000 + b * 100 + c;
+	}
+	json j = { {"link_version", phoenix::buzon::cortarUtf8(d.version, 20)}, {"link_build", build}, {"parche", phoenix::buzon::cortarUtf8(d.parche, 60)},
+		{"base_huella", esHex(d.baseHuella) ? d.baseHuella.substr(0, 64) : std::string()}, {"juego", d.juego}, {"pes_abierto", d.pesAbierto},
+		{"oficial", d.oficial}, {"recibir", d.recibir}, {"publicar", d.publicar}, {"resultados", json::array()} };
+	for (size_t i = 0; i < r.size() && i < 50; i++)
+		j["resultados"].push_back({ {"cambio_id", r[i].cambioId}, {"destino", "base"}, {"resultado", r[i].resultado}, {"motivo", r[i].motivo}, {"jugadores", r[i].jugadores}, {"cuando", r[i].cuando} });
+	return j.dump();
+}
+
+namespace {
+	std::string firmaDatos(const DatosPc& d) {
+		return d.version + "|" + d.parche + "|" + d.baseHuella + "|" + (d.juego ? "1" : "0") + (d.oficial ? "1" : "0") + (d.recibir ? "1" : "0") + (d.publicar ? "1" : "0");
+	}
+}
+
+bool Informador::toca(long long ahoraMs, const DatosPc& d, const std::vector<ResultadoOficial>& todos, std::vector<ResultadoOficial>& aMandar) {
+	aMandar.clear();
+	if (ahoraMs < _proximo) return false;
+	for (const ResultadoOficial& r : todos) {
+		auto it = _enviado.find(r.cambioId);
+		if (it == _enviado.end() || it->second != r.resultado) aMandar.push_back(r);
+		if (aMandar.size() >= 50) break;
+	}
+	const bool latido = _ultimo < 0 || ahoraMs - _ultimo >= _latido;
+	return latido || !aMandar.empty() || firmaDatos(d) != _datosEnviados;
+}
+
+void Informador::enviado(long long ahoraMs, const DatosPc& d, const std::vector<ResultadoOficial>& mandados) {
+	for (const ResultadoOficial& r : mandados) _enviado[r.cambioId] = r.resultado;
+	_datosEnviados = firmaDatos(d);
+	_ultimo = ahoraMs; _espera = 0;
+	_proximo = ahoraMs + 10000;   // como mucho un informe cada 10 s (la web deja 10/min)
+}
+
+void Informador::fallo(long long ahoraMs) {
+	_espera = _espera == 0 ? 60000 : (std::min)(_espera * 2, 10LL * 60 * 1000);
+	_proximo = ahoraMs + _espera;
+}
+
 bool Motor::aceptarRecibidos(std::string& mensaje) {
 	std::lock_guard<std::mutex> g(_m);
 	int n = 0;
@@ -1043,7 +1142,7 @@ std::string Motor::estadoJson() const {
 		for (const Detalle& d : r.detalle) cs.push_back({ {"jugador", d.jugador}, {"jugadorNombre", d.jugadorNombre}, {"desde", d.desde}, {"hasta", d.hasta}, {"hastaNombre", d.hastaNombre}, {"estado", d.estado}, {"motivo", d.motivo} });
 		if (cs.empty()) for (const CambioLote& c : r.lote.cambios) cs.push_back({ {"jugador", c.jugador}, {"jugadorNombre", c.jugadorNombre}, {"desde", c.desde}, {"hasta", c.hasta}, {"hastaNombre", c.hastaNombre}, {"estado", "pendiente"}, {"motivo", ""} });
 		m["historial"].push_back({ {"id", r.lote.id}, {"seq", r.lote.seq}, {"autor", r.lote.autor}, {"creado", r.lote.creado}, {"recibido", r.recibido}, {"aplicadoEn", r.aplicadoEn},
-			{"estado", r.estado}, {"modo", r.modo}, {"motivo", r.motivo}, {"resumen", resumenAplicado({ &r })}, {"cambios", cs} });
+			{"estado", r.estado}, {"modo", r.modo}, {"motivo", r.motivo}, {"resumen", resumenAplicado({ &r })}, {"oficial", r.lote.oficial}, {"cambios", cs} });
 		if (m["historial"].size() >= 50) break;
 	}
 	m["puedeDeshacer"] = puedeDeshacer;

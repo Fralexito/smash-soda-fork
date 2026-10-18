@@ -581,7 +581,11 @@ export function crearSimulador(enviar) {
     "traspasos.estado": () => traspasosSim(),
     "traspasos.config": (d) => {
       const a = s.traspasos.ajustes;
-      for (const k of ["publicar", "recibir", "confirmarAntes", "prueba", "aprobarRecibidos", "aplicarPropios"]) if (typeof d[k] === "boolean") a[k] = d[k];
+      for (const k of ["publicar", "recibir", "confirmarAntes", "prueba", "aprobarRecibidos", "aplicarPropios", "oficial"]) if (typeof d[k] === "boolean") a[k] = d[k];
+      if (a.oficial !== false && !s.traspasos.amigo.historial.some((l) => l.oficial)) {   // muestra: un cambio OFICIAL de la web (CONTRATO-WEB-PES)
+        s.traspasos.amigo.historial.unshift({ id: "sim-oficial", seq: 10, autor: "Phoenix (oficial)", creado: "2026-10-17T20:00:00Z", estado: "aplicado", modo: "nombres", motivo: "", oficial: true, cambios: [{ jugador: 90012345, jugadorNombre: "Lamine Yamal", desde: 101, hasta: 102, hastaNombre: "Arsenal FC", estado: "aplicado", motivo: "" }] });
+      }
+      for (const l of s.traspasos.amigo.historial) if (l.oficial) l.estado = a.oficial === false ? "ignorado" : "aplicado";
       for (const k of ["carpeta", "autor", "optionFile", "transporte"]) if (typeof d[k] === "string") a[k] = d[k];
       if (d.aprobarRecibidos === true && !s.traspasos.amigo.historial.some((l) => l.estado === "por_aprobar")) {   // muestra: llega un fichaje que espera aprobación
         s.traspasos.amigo.historial.unshift({ id: "sim-por-aprobar", seq: 9, autor: "Arensz", creado: "2026-10-17T02:10:00Z", estado: "por_aprobar", modo: "ids", motivo: "", cambios: [{ jugador: 1, jugadorNombre: "Kylian Mbappé", desde: 101, hasta: 102, hastaNombre: "FC Barcelona", estado: "pendiente", motivo: "" }] });
