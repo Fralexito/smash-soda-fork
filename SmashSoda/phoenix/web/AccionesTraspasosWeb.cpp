@@ -1,6 +1,7 @@
 #include "InterfazWebInterno.h"
 
 #include "../link/ServicioTraspasos.h"
+#include "../link/ServicioFichas.h"
 
 // =============================================================================
 //  Acciones de la interfaz web: «Traspasos en vivo» (SYNC › Traspasos).
@@ -37,6 +38,18 @@ namespace phoenix::web {
 			try { phoenix::traspasos::Servicio::get().accion(que, dato); }
 			catch (const std::exception& e) { throw ErrorAccion("NO_SE_PUDO", e.what()); }
 			return phoenix::traspasos::Servicio::get().estado();
+		});
+
+		// Estadísticas e información oficiales de la web (migración 126): siempre encendido si el PC está vinculado.
+		phoenix::fichas::Servicio::get().iniciar();
+		p.registrar("fichas.estado", [](const json&, uint64_t) -> std::optional<json> {
+			return phoenix::fichas::Servicio::get().estado();
+		});
+		// reintentar (bajar todo de la web y aplicar ya) | quitar (el juego vuelve a las stats de la base)
+		p.registrar("fichas.accion", [](const json& d, uint64_t) -> std::optional<json> {
+			try { phoenix::fichas::Servicio::get().accion(texto(d, "accion", 20)); }
+			catch (const std::exception& e) { throw ErrorAccion("NO_SE_PUDO", e.what()); }
+			return phoenix::fichas::Servicio::get().estado();
 		});
 	}
 

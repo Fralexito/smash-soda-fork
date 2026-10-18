@@ -155,6 +155,18 @@ struct BaseNombres {
 /// `modo` = nombre del objetivo («Raíz del juego» o el modo); "" = el primer sitio con base reconocida.
 BaseNombres leerNombresDeBase(const fs::path& juego, const std::string& modo);
 
+/// Player.bin REAL de la base de un sitio (solo lectura; nunca el de Phoenix-DB). Lo usa link/Fichas (stats e información).
+struct BaseJugadores {
+	bool ok = false;
+	std::string crudo;                 ///< bytes reales (descomprimidos)
+	std::string sha;                   ///< sha256 de `crudo`
+	std::string parche, origen, error, queHacer;
+	std::vector<std::string> comoLoSupe;
+};
+BaseJugadores leerPlayerBinDeBase(const fs::path& juego, const Objetivo& objetivo);
+/// sha256 de los bytes reales del Player.bin que generó link/Fichas en ese SiderAddons («» si no hay): no es «ajeno».
+std::string shaPlayerBinDeFichas(const fs::path& siderAddons);
+
 struct Informe {
 	bool ok = false;
 	std::string mensaje;

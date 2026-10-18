@@ -1059,7 +1059,10 @@ namespace {
 			std::string pb;
 			if (leerArchivo(dePesdb(o.siderAddons) / "Player.bin", pb)) {
 				std::string crudo, e2;
-				a.conPlayerBinAjeno = !(leerBin(pb, crudo, e2) && sha(crudo) == b.jugadoresSha);
+				const bool legible = leerBin(pb, crudo, e2);
+				const std::string s = legible ? sha(crudo) : std::string();
+				// El de la base, o el que generó link/Fichas (stats e información sobre esta misma base), no es ajeno.
+				a.conPlayerBinAjeno = !(legible && (s == b.jugadoresSha || s == shaPlayerBinDeFichas(o.siderAddons)));
 			}
 			// Estado respecto a lo que Link generó antes
 			nlohmann::json st;
@@ -1093,6 +1096,30 @@ BaseNombres leerNombresDeBase(const fs::path& juego, const std::string& modo) {
 		return r;
 	}
 	return r;
+}
+
+BaseJugadores leerPlayerBinDeBase(const fs::path& juego, const Objetivo& objetivo) {
+	BaseJugadores r;
+	Cache cache;
+	Contexto x(cache);
+	x.juego = juego; x.o = objetivo;
+	const Base b = resolverBase(x, false);   // misma regla que los fichajes: nunca lee Phoenix-DB
+	r.parche = b.parche; r.origen = b.origen; r.comoLoSupe = b.evidencias;
+	if (!b.ok) { r.error = b.error; r.queHacer = b.queHacer; return r; }
+	const Fuente fj = resolver(x, "Player.bin");
+	std::string e;
+	if (!fj.hay || !fj.error.empty() || !leerFuente(x, fj, "Player.bin", r.crudo, e)) { r.error = e.empty() ? "No se pudo leer Player.bin de la base." : e; r.queHacer = "No se crea nada."; r.crudo.clear(); return r; }
+	r.sha = b.jugadoresSha;
+	r.ok = true;
+	return r;
+}
+
+std::string shaPlayerBinDeFichas(const fs::path& siderAddons) {
+	std::string t;
+	if (!leerArchivo(dePhoenixDB(siderAddons) / "fichas_aplicadas.json", t, 4 * 1024 * 1024)) return std::string();
+	const nlohmann::json j = nlohmann::json::parse(t, nullptr, false);
+	if (j.is_discarded() || !j.is_object()) return std::string();
+	return j.value("salidaSha", std::string());
 }
 
 std::vector<Analisis> analizar(const fs::path& juego, const Lista& lista) {

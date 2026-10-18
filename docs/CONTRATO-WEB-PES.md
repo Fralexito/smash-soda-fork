@@ -70,6 +70,29 @@ igual que la parte `lm`); cada motor marca su resultado con `public.pes_cambio_m
 ### `stats`, `info`, `dinero`, `valor`
 Los define cada sesión en este mismo archivo (añadir una sección `### <tipo> (v1)`), sin tocar lo de arriba.
 
+### `stats` y `info` (v1) — sesión 126 (estadísticas e información, Player.bin)
+```json
+{ "jugador_id": 162114, "jugador": "Lamine Yamal",
+  "valores": { "velocidad": 95, "finalizacion": 90 },
+  "antes":   { "velocidad": 90 },
+  "deshace": "<uuid de otro cambio>",
+  "lm": { "jugador_id": 57 } }
+```
+- `jugador` obligatorio (1–48 bytes). `jugador_id` opcional (id de PES, entero 1–99.999.999; ≥ 90.000.000 = sintético → por nombre).
+  Cada PC usa el id **solo si en su base ese id tiene ese nombre**; si no, busca el nombre (único). Nunca toca a un jugador distinto.
+- `valores`: 1–46 campos; claves y rangos en `public.pes_fichas_campos` (copia en Link `link/Fichas.cpp` y en la web `core/fichasCampos.js`).
+  `stats` = 20 de campo + 5 de portero (40–99). `info` = pie malo uso/precisión (1–4), forma (1–8), resistencia a lesiones (1–3),
+  13 posiciones `pos_*` (0 = C, 1 = B, 2 = A), `altura` (150–210), `peso` (45–110), `edad` (15–45), `posicion_registrada` (0–12: PT DFC LI LD MCD MC MI MD MO EI ED SD DC).
+  Valor `null` = «vuelve al valor de la base del parche» (lo usa el deshacer).
+- `antes` (opcional): lo que la web tenía antes, solo para el historial. `deshace` (opcional): este cambio deshace a otro (que queda `anulado`).
+- La web valida los datos al crear (trigger de la 126) y deja `estado_base = 'publicado'`, `base_ref = 'v1/cambios'` al instante:
+  la parte base **no** viaja por `liga_traspasos`, cada Link la baja de **§3c** (`GET /v1/cambios?destino=base`).
+- **Cómo lo aplica cada Link (≥ 0.3.18):** junta todos los `stats`/`info` activos en orden de `seq` (el último valor de cada jugador+campo gana; `null` lo quita)
+  y genera `Phoenix-DB\common\etc\pesdb\Player.bin` = Player.bin de **su** base + esa lista (solo cambian los bits de esos campos; copia antes; todo o nada).
+  Quitar o deshacer = el campo vuelve al de la base. Informa por §4 con `destino: "base"` y `motivo` = «campo antes→después, …» (o el código del salto).
+- **Destino `lm`:** el motor 127 lee `estado_lm = 'pendiente'` como para cualquier tipo. En Liga Máster las stats no salen de Player.bin: se suben/bajan
+  con las barras de crecimiento de la partida (PhoenixSync, guías 24–29). Un `null` en `lm` = devolver el valor que 127 guardó como «antes» al aplicar el cambio de `deshace`.
+
 ## 3. Cómo lo baja cada PC
 
 ### 3a. Destino `base` de un `fichaje` (amistosos) → canal OFICIAL de traspasos
