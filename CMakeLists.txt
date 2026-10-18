@@ -36,5 +36,9 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/Dependencies/CMakeLists.txt")
     add_subdirectory(Dependencies)
 endif()
 
+# Phoenix: actualizador (exe aparte, va en la misma carpeta que PhoenixLink.exe)
+add_subdirectory(PhoenixActualizador)
+
 # Add main project
 add_subdirectory(SmashSoda)
+add_dependencies(SmashSoda PhoenixActualizador)

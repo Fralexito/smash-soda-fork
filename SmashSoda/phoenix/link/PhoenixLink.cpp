@@ -36,6 +36,7 @@ namespace phoenix {
 		const char* kBaseLiga = "https://fiibiyijojkxqlsrhcil.supabase.co/functions/v1/liga";   // liga automática (resultado + en vivo)
 		const char* kBaseTraspasos = "https://fiibiyijojkxqlsrhcil.supabase.co/functions/v1/traspasos/v1";   // traspasos en vivo (funcion aparte, no toca «liga»)
 		const char* kVersionApp = "7.0.4";
+		const char* kBaseMercado = "https://fiibiyijojkxqlsrhcil.supabase.co/functions/v1/mercado/v1";   // auto-actualización (migración 128)
 
 		long long ahoraMs() {
 			using namespace std::chrono;
@@ -197,12 +198,31 @@ namespace phoenix {
 		}
 		cargarEventos();
 		cargarLiga();
+		{   // ¿Qué pasó con la última actualización? (lo deja PhoenixActualizador.exe)
+			actualizacion::Resultado r;
+			if (actualizacion::tomarResultado(r)) {
+				std::lock_guard<std::mutex> lock(_mutex);
+				if (r.estado == "instalada" && actualizacion::compararVersion(kVersion, r.version) == 0) {
+					_act.resultado = "¡Listo! Ya tienes Phoenix Link " + r.version + "."; _act.resultadoTipo = "ok";
+				}
+				else if (r.estado == "restaurada") {
+					_act.resultado = "La versión " + r.version + " no arrancó bien en esta PC y volviste sola a la " + r.anterior + ". Avisa a Fralex.";
+					_act.resultadoTipo = "bad";
+				}
+				else {
+					_act.resultado = "No se pudo instalar la versión " + r.version + (r.detalle.empty() ? "" : " (" + r.detalle + ")") + ". Sigues con la que tenías.";
+					_act.resultadoTipo = "bad";
+				}
+				informeActualizacion(r.version, r.estado == "instalada" ? "instalada" : r.estado == "restaurada" ? "restaurada" : "fallo", r.detalle);
+			}
+		}
 		_hilo = std::thread([this]() { bucle(); });
 	}
 
 	void PhoenixLink::detener() {
 		if (!_corriendo.exchange(false)) return;
 		if (_hilo.joinable()) _hilo.join();
+		if (_actHilo.joinable()) _actHilo.join();
 		std::string sala;
 		{
 			std::lock_guard<std::mutex> lock(_mutex);
@@ -402,6 +422,8 @@ namespace phoenix {
 					// Buzon del juego: independiente de la sala; solo consulta con PES2021 abierto
 					if (sigue) pasoBuzon(token);
 				}
+				// Auto-actualización: aparte de la pausa (si la web pausa a Link por versión vieja, justo así se arregla)
+				if (codigo.empty() && !token.empty()) pasoActualizacion(token);
 				// Repartidor de datos: es local (no necesita la web) y solo trabaja si Sync dejo una entrega
 				pasoEntrega();
 			}
@@ -915,6 +937,112 @@ namespace phoenix {
 	}
 
 	InfoBuzon PhoenixLink::buzon() { std::lock_guard<std::mutex> l(_mutex); return _buzonInfo; }
+
+	// ─── Auto-actualización (función «mercado», migración 128; ver Actualizacion.h) ─────────────────────────
+	InfoActualizacion PhoenixLink::actualizacion() { std::lock_guard<std::mutex> l(_mutex); return _act; }
+	void PhoenixLink::actualizacionVisto() { std::lock_guard<std::mutex> l(_mutex); _act.resultado.clear(); _act.resultadoTipo.clear(); }
+
+	void PhoenixLink::informeActualizacion(const std::string& version, const std::string& estado, const std::string& detalle) {
+		// Llamar con _mutex tomado. Se manda en la siguiente vuelta del hilo de Link (si no hay red, se pierde: es solo un aviso).
+		if (!actualizacion::versionValida(version) || _actInformes.size() >= 10) return;
+		_actInformes.push_back(json{ {"version", version}, {"estado", estado}, {"detalle", detalle.substr(0, 290)} }.dump(-1, ' ', false, json::error_handler_t::replace));
+	}
+
+	bool PhoenixLink::pasoActualizacion(const std::string& token) {
+		std::string informe;
+		{
+			std::lock_guard<std::mutex> l(_mutex);
+			if (!_actInformes.empty()) informe = _actInformes.front();
+		}
+		if (!informe.empty()) {
+			const http::Respuesta r = http::peticion("POST", std::string(kBaseMercado) + "/link/actualizacion/informe", informe, cabecerasCon(token), 6000);
+			if (r.estado != 0 && r.estado < 500) { std::lock_guard<std::mutex> l(_mutex); if (!_actInformes.empty()) _actInformes.erase(_actInformes.begin()); }
+			return true;
+		}
+		if (_actTrabajando) return false;
+		{
+			std::lock_guard<std::mutex> l(_mutex);
+			if (ahoraMs() < _actProximoMs || _act.estado == "lista" || _act.estado == "instalando") return false;
+			_actProximoMs = ahoraMs() + 60LL * 60 * 1000;   // cada hora
+		}
+		const http::Respuesta r = http::peticion("GET", std::string(kBaseMercado) + "/link/actualizacion?version=" + kVersion, "", cabecerasCon(token), 8000);
+		if (r.estado != 200) {
+			std::lock_guard<std::mutex> l(_mutex);
+			// 404 = la web aún no tiene la ruta (sin migración 128): se pregunta poco
+			_actProximoMs = ahoraMs() + (r.estado == 404 ? 6LL * 60 * 60 * 1000 : 10LL * 60 * 1000);
+			return true;
+		}
+		const json j = json::parse(r.cuerpo, nullptr, false);
+		const json datos = !j.is_discarded() && j.is_object() && j.contains("datos") ? j["datos"] : json();
+		actualizacion::Manifiesto m;
+		std::string cod;
+		const bool hay = datos.is_object() && datos.value("hay", false) && datos.contains("sobre")
+			&& actualizacion::abrirSobre(datos["sobre"].dump(), actualizacion::claveWeb(), m, cod)
+			&& actualizacion::compararVersion(m.version, kVersion) > 0;
+		std::lock_guard<std::mutex> l(_mutex);
+		if (!hay) { if (_act.estado != "error" || datos.is_object()) { _act.estado = "nada"; _act.version.clear(); } return true; }
+		if (_act.estado == "error" && _act.version == m.version) return true;   // ya falló esta: el botón «reintentar» sigue ahí
+		_act.estado = "disponible";
+		_act.version = m.version; _act.etapa = m.etapa; _act.notas = m.notas; _act.obligatoria = m.obligatoria;
+		_act.mensaje.clear();
+		return true;
+	}
+
+	bool PhoenixLink::actualizacionPedir(std::string& motivo) {
+		std::lock_guard<std::mutex> l(_mutex);
+		if (_token.empty()) { motivo = "Vincula esta PC con la web primero."; return false; }
+		if (_act.estado != "disponible" && _act.estado != "error") { motivo = _act.estado == "nada" ? "No hay versión nueva." : "Ya se está actualizando."; return false; }
+		if (_actTrabajando.exchange(true)) { motivo = "Ya se está actualizando."; return false; }
+		_act.estado = "descargando"; _act.bajado = 0; _act.total = 0; _act.mensaje.clear();
+		informeActualizacion(_act.version, "descargando", "");
+		if (_actHilo.joinable()) _actHilo.join();   // el anterior ya terminó (_actTrabajando era false)
+		_actHilo = std::thread([this]() { hiloActualizacion(); });
+		return true;
+	}
+
+	void PhoenixLink::hiloActualizacion() {
+		std::string token, version;
+		{ std::lock_guard<std::mutex> l(_mutex); token = _token; version = _act.version; }
+		std::string cod;
+		actualizacion::Preparada p;
+		// La URL firmada dura 10 min: se pide una nueva justo ahora
+		const http::Respuesta r = http::peticion("GET", std::string(kBaseMercado) + "/link/actualizacion?version=" + kVersion, "", cabecerasCon(token), 10000);
+		const json j = json::parse(r.cuerpo, nullptr, false);
+		bool ok = false;
+		if (r.estado != 200 || j.is_discarded() || !j.contains("datos")) cod = "DESCARGA_FALLO";
+		else {
+			actualizacion::Opciones o;
+			o.versionActual = kVersion;
+			o.progreso = [this](uint64_t n, uint64_t t) { std::lock_guard<std::mutex> l(_mutex); _act.bajado = n; _act.total = t; };
+			ok = actualizacion::preparar(j["datos"].dump(), o, p, cod);
+		}
+		{
+			std::lock_guard<std::mutex> l(_mutex);
+			if (ok) { _actLista = p; _act.estado = "lista"; _act.version = p.m.version; _act.mensaje.clear(); }
+			else { _act.estado = cod == "SIN_DATOS" || cod == "VERSION_VIEJA" ? "nada" : "error"; _act.mensaje = actualizacion::mensajeDe(cod); informeActualizacion(version, "fallo", cod); }
+		}
+		_actTrabajando = false;
+	}
+
+	bool PhoenixLink::actualizacionReiniciar() {
+		actualizacion::Preparada p;
+		{
+			std::lock_guard<std::mutex> l(_mutex);
+			if (_act.estado != "lista") return false;
+			// Nunca con la sala abierta ni con un partido en marcha: espera y lo dice
+			if (_foto.abierta || _enPartida) { _act.mensaje = _enPartida ? "Termina el partido: al acabar se instala sola." : "Cierra la sala para terminar de actualizar."; return false; }
+			p = _actLista;
+			_act.estado = "instalando"; _act.mensaje.clear();
+		}
+		std::string cod;
+		if (!actualizacion::lanzarActualizador(p, kVersion, cod)) {
+			std::lock_guard<std::mutex> l(_mutex);
+			_act.estado = "error"; _act.mensaje = actualizacion::mensajeDe(cod);
+			informeActualizacion(p.m.version, "fallo", cod);
+			return false;
+		}
+		return true;
+	}
 
 	// ─── Liga automática (función «liga»): partidos oficiales, marcador en vivo y resultado ───────────────
 	InfoLiga PhoenixLink::liga() {

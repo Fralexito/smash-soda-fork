@@ -536,6 +536,20 @@ int CALLBACK WinMain(_In_ HINSTANCE hInstance, _In_ HINSTANCE hPrevInstance, _In
         // Interfaz nueva: estado y visibilidad (las pantallas propias de ImGui van primero)
         webUi.tick(!(Cache::cache.showParsecLogin || versionWidget.showUpdate || Config::cfg.arcade.showLogin));
 
+        // Auto-actualización: a los 8 s de andar bien se avisa al actualizador (si nos abrió él); y si el usuario pulsó
+        // ACTUALIZAR y ya está bajada y comprobada, se cierra Link para instalarla (nunca con sala abierta ni partido).
+        {
+            static const ULONGLONG arranque = GetTickCount64();
+            static bool okAvisado = false;
+            static ULONGLONG proximaMirada = 0;
+            const ULONGLONG ahora = GetTickCount64();
+            if (!okAvisado && ahora - arranque > 8000) { okAvisado = true; phoenix::actualizacion::avisarArranqueOk(); }
+            if (ahora >= proximaMirada) {
+                proximaMirada = ahora + 1000;
+                if (!phoenix::cedido::activo() && phoenix::PhoenixLink::instancia().actualizacionReiniciar()) ::PostMessage(hwnd, WM_CLOSE, 0, 0);
+            }
+        }
+
         // Start the Dear ImGui frame
         ImGui_ImplDX11_NewFrame();
         ImGui_ImplWin32_NewFrame();

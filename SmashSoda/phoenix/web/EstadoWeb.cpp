@@ -273,6 +273,11 @@ namespace phoenix::web {
 			{"publicada", link.salaPublicada()}, {"jugadoresLista", link.jugadoresEnLista()},
 			{"versionLiga", link.versionLiga()}, {"eventosEnCola", link.eventosEnCola()},
 		};
+		{
+			const InfoActualizacion a = link.actualizacion();
+			e["actualizacion"] = { {"estado", a.estado}, {"version", a.version}, {"etapa", a.etapa}, {"notas", a.notas}, {"obligatoria", a.obligatoria},
+				{"bajado", a.bajado}, {"total", a.total}, {"mensaje", a.mensaje}, {"resultado", a.resultado}, {"resultadoTipo", a.resultadoTipo} };
+		}
 		e["ajustes"] = estadoAjustes(in);
 		{
 			const PhoenixPrefs& pa = PhoenixPrefs::get();

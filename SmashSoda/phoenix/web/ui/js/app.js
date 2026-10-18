@@ -22,6 +22,7 @@ import { Tutorial } from "./vistas/tutorial.js";
 import { vigilarCambios } from "./vigia.js";
 import { GRUPOS, grupoDe } from "./grupos.js";
 import { BandaCedido, DialogoCeder, SECCIONES_CEDIDO, PESTANAS_CEDIDO, estaCedida, vigilarCedido } from "./vistas/cedido.js";
+import { BandaActualizacion } from "./vistas/actualizacion.js";
 
 const SECCIONES = [
   { id: "sala", es: "SALA", en: "ROOM", vista: VistaSala, pestanas: PESTANAS_SALA },
@@ -172,6 +173,7 @@ function Contenido({ s }) {
   const nombre = (x) => { const p = infoPantalla(x.p[0], x.p[1]); return t(x.es || p.es, x.en || p.en); };
   return html`<main class="contenido">
     <${BandaCedido} s=${s}/>
+    ${estaCedida(s) ? null : html`<${BandaActualizacion} s=${s}/>`}
     <div class="cabecera">
       <div class="pestanas" role="tablist">
         ${mostradas.map((x) => { const p = infoPantalla(x.p[0], x.p[1]); return html`

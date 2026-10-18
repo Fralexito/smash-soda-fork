@@ -9,6 +9,7 @@
 #include <thread>
 #include <vector>
 
+#include "Actualizacion.h"
 #include "BuzonJuego.h"
 #include "EstadoJuego.h"
 
@@ -117,6 +118,16 @@ namespace phoenix {
 	};
 	/// Diagnóstico del envío del campo 2D a la web (POST /v1/liga/campo): cuánto tarda cada envío, cuántos por segundo y fallos.
 	struct CampoWebStats { double ultimoMs = 0, mediaMs = 0, porSeg = 0; int errores = 0; };
+
+	/// Auto-actualización (Actualizacion.h). estado: nada | disponible | descargando | lista | instalando | error
+	struct InfoActualizacion {
+		std::string estado = "nada";
+		std::string version, etapa, notas;
+		bool obligatoria = false;
+		uint64_t bajado = 0, total = 0;
+		std::string mensaje;                 ///< por qué falló, o por qué espera (sala abierta, partido)
+		std::string resultado, resultadoTipo; ///< lo que pasó en la última actualización (ok | bad), para avisar una vez
+	};
 
 	struct InfoLiga {
 		bool cargado = false;
@@ -229,7 +240,20 @@ namespace phoenix {
 		/// hasta que la web lo acepte. Queda «propuesto»: lo valida el staff o el árbitro designado, nunca el host.
 		void ligaResultado(const std::string& cuerpoJson);
 
+		// --- Auto-actualización (función «mercado», migración 128) -------------------
+		/// Al abrir y cada hora se pregunta a la web si hay versión nueva publicada.
+		InfoActualizacion actualizacion();
+		/// Botón ACTUALIZAR: baja y comprueba en un hilo aparte. false + motivo si ahora no se puede.
+		bool actualizacionPedir(std::string& motivo);
+		/// Desde el hilo de la interfaz (cada vuelta): si ya está lista y no hay sala abierta ni partido, lanza el
+		/// actualizador y devuelve true → hay que cerrar Link (el actualizador lo vuelve a abrir).
+		bool actualizacionReiniciar();
+		void actualizacionVisto();   ///< la interfaz ya mostró el resultado de la última actualización
+
 	private:
+		bool pasoActualizacion(const std::string& token);
+		void hiloActualizacion();
+		void informeActualizacion(const std::string& version, const std::string& estado, const std::string& detalle);   ///< con _mutex tomado
 		bool pasoLiga(const std::string& token, const std::string& salaId);
 		void guardarLiga();   ///< con _mutex tomado
 		void cargarLiga();
@@ -388,6 +412,13 @@ namespace phoenix {
 		long long _campoVentanaMs = 0; int _campoVentanaN = 0;
 		std::vector<std::string> _ligaResultados;   ///< cola persistente (phoenix-liga-resultados.json)
 		long long _ligaResProximoMs = 0;
+		// Auto-actualización (protegido por _mutex salvo _actTrabajando)
+		InfoActualizacion _act;
+		long long _actProximoMs = 0;
+		std::thread _actHilo;
+		std::atomic<bool> _actTrabajando{ false };
+		actualizacion::Preparada _actLista;
+		std::vector<std::string> _actInformes;   ///< cuerpos JSON por mandar a /link/actualizacion/informe
 	};
 
 }
