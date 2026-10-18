@@ -59,7 +59,7 @@ igual que la parte `lm`); cada motor marca su resultado con `public.pes_cambio_m
   "hasta_id": 102,  "hasta": "Arsenal FC",
   "lm": { "jugador_id": 57, "club_id": 3 } }
 ```
-- Nombres: obligatorios (1–48 letras). Es lo que de verdad usa cada PC, porque **la base de cada PC puede ser otra** (otro parche, otro PC).
+- Nombres: obligatorios (1–48 **bytes** UTF-8: Link los corta por bytes al leer y, si no, la huella no cuadra; una tilde cuenta doble). Es lo que de verdad usa cada PC, porque **la base de cada PC puede ser otra** (otro parche, otro PC).
 - `jugador_id` / `desde_id` / `hasta_id`: el id de PES si se sabe (la web lo saca de `lm_jugadores.pes_id`). **Si no se sabe**, se pone un
   **id sintético** `90000000 + (número sacado del sha256 del nombre en minúsculas, entre 0 y 9.999.998)`; ids ≥ 90.000.000 significan «no es un id real, aplícalo por nombre».
   Lo calcula la función SQL `public.pes_id_sintetico(nombre)`: la web no tiene que hacerlo.
@@ -136,11 +136,11 @@ La 125 **no** manda nada al PC por este lado: deja `estado_lm = 'pendiente'`. El
 - `resultado`: `aplicado` · `ya_estaba` · `parcial` · `saltado` · `error` · `deshecho` · `pendiente` · `por_aprobar` · `reemplazado`.
 - Se manda: al arrancar, cada ~10 min (latido) y en cuanto cambia el resultado de un lote oficial. Máx. 50 resultados por informe.
 - **Ningún dato personal ni ruta de disco**: versión, parche, huella corta de la base (12 hex) y resultados. El usuario ya es el dueño del token.
-- La web (función SQL `private.pes_registrar_informe(p_dispositivo, p_usuario, p_informe)`):
+- La web (función SQL `public.pes_registrar_informe(p_dispositivo, p_usuario, p_informe)`, solo `service_role`):
   - `public.pes_pcs` — una fila por PC (`dispositivo` = `dispositivos_host.id`): usuario, versión, build, parche, huella de base, último contacto, primer contacto, contadores aplicados/saltados/errores.
   - `public.pes_eventos` — historial **solo-añadir**: una fila por cada `(PC, cambio, destino)` cuyo resultado **cambió** (repetir el mismo resultado no añade fila), más eventos `contacto` cuando cambia la versión, el parche o la base del PC.
   - Contesta `{ ok, guardados, ignorados }`. Resultados con `cambio_id` que no existe se ignoran (cuentan en `ignorados`).
-- El motor LM (127) informa sus resultados por la **misma ruta** con `destino: "lm"` (su PC tiene el mismo token de dispositivo) o, desde el servidor, con `private.pes_registrar_informe`.
+- El motor LM (127) informa sus resultados por la **misma ruta** con `destino: "lm"` (su PC tiene el mismo token de dispositivo) o, desde el servidor, con `public.pes_registrar_informe` (solo service_role).
 
 ## 5. Quién ve qué (RLS)
 | Tabla | admin / moderador | el dueño | resto |
@@ -148,7 +148,7 @@ La 125 **no** manda nada al PC por este lado: deja `estado_lm = 'pendiente'`. El
 | `pes_cambios`, `pes_tipos_cambio` | leer | — | — |
 | `pes_pcs`, `pes_eventos` | leer todo | leer los suyos | nada |
 
-Escribir: solo por las funciones (`pes_cambio_crear`, `pes_cambio_anular`, `pes_cambio_marcar`, `private.pes_registrar_informe`).
+Escribir: solo por las funciones (`pes_cambio_crear`, `pes_cambio_anular`, `pes_cambio_marcar`, `public.pes_registrar_informe` (solo service_role)).
 Páginas web: **/cambios-oficiales/** (formulario único + historial) y **/usuarios-pes/** (PCs, versión, último contacto, historial por usuario y PC).
 
 ## 6. Enchufes del formulario (para 126 y 127)
