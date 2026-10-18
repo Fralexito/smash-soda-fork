@@ -1141,6 +1141,49 @@ namespace mercado::lm {
 		catch (const std::exception& e) { return R::mal("ML_ERROR", e.what()); }
 	}
 
+	// =========================================================================
+	//  Valor de mercado (ficha de LM del blob, §15)
+	// =========================================================================
+	namespace {
+		constexpr size_t kFichaValor = 0x5a;
+		/// Posición de la ficha de `pid` en el blob: por su `reg` de plantilla y, si no tiene club, recorriendo las fichas.
+		long long fichaPorPid(const GuardadoLM& g, const BlobLM& b, uint32_t pid) {
+			for (int k : g.equiposDe(pid)) {
+				auto e = g.equipo(k);
+				if (!e.ok()) continue;
+				for (const auto& p : e.valor->plantilla)
+					if (p.pid == pid) { const long long f = b.fichaDe(p.reg, pid); if (f >= 0) return f; }
+			}
+			const auto& q = b.contenido();
+			for (size_t o = 0x1e; o + BlobLM::kTamFicha <= q.size(); o += BlobLM::kTamFicha)
+				if (u32(q, o + 6) == pid && regPlausible(u32(q, o + 2))) return (long long)o;
+			return -1;
+		}
+	}
+
+	Resultado<uint64_t> GuardadoLM::valorMercado(uint32_t pid) const {
+		using R = Resultado<uint64_t>;
+		auto b = BlobLM::leer(_datos);
+		if (!b.ok()) return R::mal(b.error.codigo, b.error.detalle);
+		const long long f = fichaPorPid(*this, *b.valor, pid);
+		if (f < 0) return R::mal("JUGADOR_NO_ESTA", "El jugador " + std::to_string(pid) + " no tiene ficha en esta Liga Máster");
+		return R::bien(uint64_t(u32(b.valor->contenido(), size_t(f) + kFichaValor)) * 100);
+	}
+
+	Resultado<uint64_t> GuardadoLM::fijarValorMercado(uint32_t pid, uint64_t eur) {
+		using R = Resultado<uint64_t>;
+		if (eur > kMaxEuros || eur % 100) return R::mal("IMPORTE_INVALIDO", "El valor tiene que ser múltiplo de 100 € y no pasar de 40.000 millones");
+		auto b = BlobLM::leer(_datos);
+		if (!b.ok()) return R::mal(b.error.codigo, b.error.detalle);
+		const long long f = fichaPorPid(*this, *b.valor, pid);
+		if (f < 0) return R::mal("JUGADOR_NO_ESTA", "El jugador " + std::to_string(pid) + " no tiene ficha en esta Liga Máster");
+		p32(b.valor->contenido(), size_t(f) + kFichaValor, uint32_t(eur / 100));
+		auto nd = b.valor->aplicar(_datos);
+		if (!nd.ok()) return R::mal(nd.error.codigo, nd.error.detalle);
+		_datos = std::move(*nd.valor);
+		return valorMercado(pid);
+	}
+
 	Resultado<std::string> GuardadoLM::guardarComo(const std::string& rutaNueva, const std::string& textoInfo) const {
 		using R = Resultado<std::string>;
 		if (!_sobre) return R::mal("SIN_SOBRE", "Este guardado vino de datos sueltos: no hay envoltura para cifrar");

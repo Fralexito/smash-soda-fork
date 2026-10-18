@@ -127,6 +127,8 @@ namespace mercado {
 	Resultado<std::string> ClienteMercado::plantillasFirmadas() { return llamar("GET", "/plantillas", "", true); }
 	Resultado<std::string> ClienteMercado::ligaCambiosFirmados(long long desde) { return llamar("GET", "/liga/cambios?desde=" + std::to_string(desde < 0 ? 0 : desde), "", true); }
 	Resultado<std::string> ClienteMercado::ligaAplicado(const std::string& cuerpo) { return llamar("POST", "/liga/aplicado", cuerpo, true); }
+	Resultado<std::string> ClienteMercado::ligaCambiosPcFirmados(long long desde) { return llamar("GET", "/liga/cambios?ambito=pc&desde=" + std::to_string(desde < 0 ? 0 : desde), "", true); }
+	Resultado<std::string> ClienteMercado::ligaAplicadoPc(const std::string& cuerpo) { return llamar("POST", "/liga/aplicado-pc", cuerpo, true); }
 	Resultado<std::string> ClienteMercado::plantillas() {
 		auto r = llamar("GET", "/plantillas", "", true);
 		if (!r.ok()) return r;
