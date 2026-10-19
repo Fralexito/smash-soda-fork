@@ -13,8 +13,9 @@ import { PreferenciaPuesto } from "./jugar.js";
 import { BloqueRetraso, LeyendaRetraso, retrasoDe } from "./retraso.js";
 import {
   Cifra, Tarjeta, Titulo, Boton, Interruptor, Ajuste, AjusteSw, Stepper, Segmentos, Selector, Campo,
-  Minigrafica, Chip, Icono, Vacio, colorPing, claseSemaforo, cx, dos,
+  Minigrafica, Chip, Icono, Vacio, BotonIr, colorPing, claseSemaforo, cx, dos,
 } from "../ui.js";
+import { instalarVigem } from "./arreglos.js";
 
 export const PESTANAS_SALA = [
   { id: "resumen", es: "RESUMEN", en: "OVERVIEW", d: ["Tu sala de un vistazo: enlace, tiempo en vivo, quién juega y cómo va la conexión.", "Your room at a glance."] },
@@ -102,8 +103,9 @@ function Heroe({ m, conGuia, verGuia }) {
           <div class="ayuda" style="margin-top:8px;font-size:14px">
             ${sala.lista
               ? t("Abre la sala y comparte el enlace. Tú decides quién juega y quién mira.", "Open the room and share the link. You decide who plays and who watches.")
-              : t("Parsec se está preparando. Si tarda, revisa Sala › Conexión.", "Parsec is getting ready. If it takes long, check Room › Connection.")}
+              : t("Parsec se está preparando. Si tarda más de un minuto, mira qué pasa en Conexión.", "Parsec is getting ready. If it takes over a minute, see what's wrong in Connection.")}
           </div>
+          ${sala.lista ? null : html`<div style="margin-top:10px"><${BotonIr} ir=${["sala", "red"]}>${t("VER CONEXIÓN", "SEE CONNECTION")}</${BotonIr}></div>`}
         </div>
         <div class="derecha" style="display:flex;gap:12px;flex:none">
           <${CajaRapida} lab=${t("PLAZAS", "SLOTS")} sub=${t("invitados a la vez", "guests at once")} ir=${["sala", "opciones"]}
@@ -234,7 +236,8 @@ function PuestosResumen({ m }) {
         ${ocupados} ${t("DE", "OF")} ${visibles.length} ${t("OCUPADOS", "TAKEN")} › ${t("ver y arrastrar", "view and drag")}</button>
     </div>
     ${visibles.length === 0
-      ? html`<div class="ayuda">${t("No hay mandos virtuales. Revisa Sala › Conexión (ViGEmBus).", "No virtual pads. Check Room › Connection (ViGEmBus).")}</div>`
+      ? html`<div class="linea-info" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span class="ayuda" style="flex:1;min-width:200px">${t("No hay mandos virtuales: falta ViGEmBus, el controlador que crea los mandos de tus amigos.", "No virtual pads: ViGEmBus is missing, the driver that creates your friends' pads.")}</span>
+          <${Boton} tipo="mini lleno" al=${instalarVigem}>${t("INSTALAR VIGEMBUS", "INSTALL VIGEMBUS")}</${Boton}><${BotonIr} ir=${["sala", "red"]}>${t("VER CONEXIÓN", "SEE CONNECTION")}</${BotonIr}></div>`
       : html`<div class="rej4">${visibles.map((p) => html`<${MiniPuesto} p=${p} key=${p.n}/>`)}</div>`}
   </${Tarjeta}>`;
 }

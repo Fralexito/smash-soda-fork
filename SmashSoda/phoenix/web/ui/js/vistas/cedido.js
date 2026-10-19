@@ -7,7 +7,7 @@
 // =============================================================================
 import { html, useState } from "../lib.js";
 import { t } from "../i18n.js";
-import { accion, cambiar, avisar, confirmar } from "../tienda.js";
+import { accion, cambiar, avisar, confirmar, irA } from "../tienda.js";
 import { Icono, Boton, cx } from "../ui.js";
 
 // Lo que se ve mientras la PC está cedida (lo demás se oculta y el motor lo rechaza)
@@ -52,7 +52,8 @@ export function DialogoCeder({ s }) {
       <li>${t("Para recuperarla: DEVOLVER LA PC, o Ctrl+Alt+F12 en tu teclado. Si sale de la sala, vuelve sola.", "To take it back: GIVE BACK THE PC, or Ctrl+Alt+F12 on your keyboard. If they leave, it comes back on its own.")}</li>
       <li>${c.juego
         ? t(`El botón ABRIR PES abre «${c.juego}» (Sala › Juegos).`, `OPEN PES launches “${c.juego}” (Room › Games).`)
-        : html`<span style="color:var(--warn)">${t("No hay juego elegido en Sala › Juegos: ABRIR PES no podrá abrirlo (solo traerlo al frente si ya está abierto).", "No game picked in Room › Games: OPEN PES can only bring it to front.")}</span>`}</li>
+        : html`<span style="color:var(--warn)">${t("No hay juego elegido en Sala › Juegos: ABRIR PES no podrá abrirlo (solo traerlo al frente si ya está abierto).", "No game picked in Room › Games: OPEN PES can only bring it to front.")}</span>
+          <button class="enlace-mas" style="margin-left:6px" onClick=${() => { cerrar(); irA("sala", "juegos"); }}>${t("ELEGIR EL JUEGO ›", "PICK THE GAME ›")}</button>`}</li>
     </ul>
     <div class="botones">
       <button class="btn suave" onClick=${cerrar}>${t("Cancelar", "Cancel")}</button>

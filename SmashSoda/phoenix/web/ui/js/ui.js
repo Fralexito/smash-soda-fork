@@ -5,7 +5,7 @@
 import { html, useState, useEffect, useRef } from "./lib.js";
 import { createContext } from "./vendor/preact.mjs";
 import { useContext } from "./vendor/hooks.mjs";
-import { leer } from "./tienda.js";
+import { leer, irA } from "./tienda.js";
 
 // ---- Tarjetas plegables -------------------------------------------------------------
 // Toda tarjeta con <Titulo> se pliega tocando el título; se recuerda en este PC.
@@ -123,6 +123,11 @@ export function Boton({ children, tipo = "", al, deshabilitado = false, titulo =
     }
   };
   return html`<button class=${cx("btn", tipo)} disabled=${deshabilitado || ocupado} title=${titulo} style=${estilo} onClick=${clic}>${children}</button>`;
+}
+
+/** Botón que abre la pantalla exacta de la que habla un mensaje (nada de «revisa Sala › Conexión» sin llevar ahí). */
+export function BotonIr({ ir, children, tipo = "mini suave", titulo = "" }) {
+  return html`<${Boton} tipo=${tipo} titulo=${titulo} al=${() => irA(ir[0], ir[1])}>${children}</${Boton}>`;
 }
 
 export function Interruptor({ valor, al, deshabilitado = false, etiqueta = "" }) {

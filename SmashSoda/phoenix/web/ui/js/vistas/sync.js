@@ -11,7 +11,7 @@ import { accion, avisar, elegirPestana, confirmar } from "../tienda.js";
 import { CuentaWeb } from "./ajustes.js";
 import { Traspasos } from "./traspasos.js";
 import { Preparar } from "./preparar.js";
-import { Tarjeta, Titulo, AjusteSw, Segmentos, Vacio, Chip, Icono, Boton, cx } from "../ui.js";
+import { Tarjeta, Titulo, AjusteSw, Segmentos, Vacio, Chip, Icono, Boton, BotonIr, cx } from "../ui.js";
 
 // Un solo bloque abierto a la vez en AVANZADO (se recuerda cuál en este PC; null = nunca se eligió)
 const CLAVE_ABIERTO = "phoenix.sync.avanzado.abierto";
@@ -132,6 +132,8 @@ function Avanzado({ m }) {
     <${Seccion} id="puente" titulo=${t("CONEXIÓN CON EL JUEGO", "GAME CONNECTION")} punto=${punto} resumen=${texto}>
       <${Para}>${t("Para qué sirve: que los avisos de la web salgan dentro del juego (panel de Sider, barra espaciadora).", "What it's for: so web notices show inside the game (Sider panel, space bar).")}</${Para}>
       <div class="ayuda" style="font-size:14px">${ayuda}</div>
+      ${b.estado === "noinstalado" ? html`<div><${BotonIr} tipo="mini lleno" ir=${["sync", "mipc"]}>${t("ARREGLARLO EN MI PC", "FIX IT IN MY PC")}</${BotonIr}></div>` : null}
+      ${b.estado === "sinconexion" ? html`<div><${Boton} tipo="mini suave" al=${() => accion("web.reintentar", {}, { ok: t("Reintentando…", "Retrying…") })}>${t("REINTENTAR AHORA", "RETRY NOW")}</${Boton}></div>` : null}
       <div>
         <div class="lab" style="margin-bottom:6px">${t("JUEGO DETECTADO", "DETECTED GAME")}</div>
         ${b.juego ? html`<div class="caja mono" style="font-size:13px;word-break:break-all">${b.juego}</div>`

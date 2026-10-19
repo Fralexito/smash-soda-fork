@@ -9,6 +9,7 @@ import { Tarjeta, Titulo, Boton, Interruptor, Ajuste, AjusteSw, Stepper, Selecto
 import { TarjetaCalidad } from "./sala.js";
 import { AtajosTeclado } from "./nativas.js";
 import { abrirTutorial } from "./tutorial.js";
+import { instalarVigem } from "./arreglos.js";
 
 export const PESTANAS_AJUSTES = [
   { id: "general", es: "GENERAL", en: "GENERAL", d: ["Tema, bot del chat y seguridad de la sala.", "Theme, chat bot and room security."] },
@@ -261,7 +262,7 @@ function Sonidos({ m }) {
       <${Titulo} texto=${t("QUIÉN PUEDE USAR !SFX", "WHO CAN USE !SFX")}/>
       <${AjusteSw} titulo=${t("Sonidos !sfx activados", "!sfx sounds on")} desc=${t("Apágalo para que nadie pueda reproducir sonidos.", "Turn off so nobody can play sounds.")} valor=${m.ajustes.general.sfxEnabled ?? true} al=${(v) => gen("sfxEnabled", v)}/>
       <div class="ayuda" style="font-size:14px">${[p.guest.useSFX && t("Invitados", "Guests"), p.vip.useSFX && "VIP", p.moderator.useSFX && t("Moderadores", "Moderators")].filter(Boolean).join(" · ") || t("Nadie", "Nobody")}</div>
-      <div style="margin-top:14px"><${Boton} al=${() => irA("gente", "permisos")}>${t("CAMBIAR EN AJUSTES › PERMISOS", "CHANGE IN SETTINGS › PERMISSIONS")}</${Boton}></div>
+      <div style="margin-top:14px"><${Boton} al=${() => irA("gente", "permisos")}>${t("CAMBIAR PERMISOS", "CHANGE PERMISSIONS")}</${Boton}></div>
     </${Tarjeta}>
   </div></div>`;
 }
@@ -373,6 +374,18 @@ const diag = () => ({
   sistema: [t("Sistema", "System"), (d) => `${d.windows || "Windows"} · Phoenix Link ${d.app}`],
 });
 
+/** El botón que arregla (o lleva a arreglar) cada chequeo que no está bien. null = no hay nada que pulsar. */
+function arregloDiag(c) {
+  const d = c.datos || {};
+  switch (c.id) {
+    case "vigem": return d.instalado ? [t("VER PUESTOS", "SEE SEATS"), () => irA("mandos", "puestos")] : [t("INSTALAR VIGEMBUS", "INSTALL VIGEMBUS"), instalarVigem];
+    case "web": return [t("CONECTAR MI CUENTA", "CONNECT MY ACCOUNT"), () => irA("sync", "mipc")];
+    case "overlay": return [t("IR A OVERLAY", "GO TO OVERLAY"), () => irA("ajustes", "overlay")];
+    case "ventanaPes": return d.overlay ? [t("IR A OVERLAY", "GO TO OVERLAY"), () => irA("ajustes", "overlay")] : null;
+    default: return null;
+  }
+}
+
 export function Diagnostico() {
   const [r, setR] = useState(null);
   const correr = async () => { setR(null); const x = await accion("diag.ejecutar"); setR(x?.chequeos || []); };
@@ -394,9 +407,10 @@ export function Diagnostico() {
     ${!r ? html`<div class="ayuda">${t("Revisando…", "Checking…")}</div>` : html`
       <div class=${cx("caja")} style=${`margin-bottom:6px;border-color:${errores ? "var(--bad)" : "var(--ok)"}`}>
         <b class=${errores ? "bad" : "ok"}>${errores ? t(`${errores} problema(s) para resolver`, `${errores} problem(s)`) : t("Todo listo para hostear.", "All set to host.")}</b></div>
-      ${r.map((c) => { const d = diag()[c.id] || [c.id, () => JSON.stringify(c.datos)]; return html`<div class="chequeo" key=${c.id}>
+      ${r.map((c) => { const d = diag()[c.id] || [c.id, () => JSON.stringify(c.datos)]; const arreglo = c.estado === "ok" ? null : arregloDiag(c); return html`<div class="chequeo" key=${c.id}>
         <span class=${cx("icono", c.estado)}>${c.estado === "ok" ? "✓" : c.estado === "aviso" ? "!" : "×"}</span>
-        <div style="min-width:0"><div style="font-weight:600">${d[0]}</div><div class="ayuda" style="word-break:break-word">${d[1](c.datos || {})}</div></div>
+        <div style="min-width:0;flex:1"><div style="font-weight:600">${d[0]}</div><div class="ayuda" style="word-break:break-word">${d[1](c.datos || {})}</div></div>
+        ${arreglo ? html`<${Boton} tipo=${c.estado === "error" ? "mini lleno" : "mini suave"} al=${arreglo[1]}>${arreglo[0]}</${Boton}>` : null}
       </div>`; })}`}
   </${Tarjeta}>`;
 }

@@ -6,7 +6,7 @@
 // =============================================================================
 import { html, useState, useEffect } from "../lib.js";
 import { t } from "../i18n.js";
-import { accion } from "../tienda.js";
+import { accion, irA } from "../tienda.js";
 import { Tarjeta, Titulo, Boton, Ajuste, Stepper, Segmentos, Chip, Vacio, cx, dos } from "../ui.js";
 import { MandoVivo as Dibujo } from "./mandovivo.js";
 import { PreferenciaPuesto } from "./jugar.js";
@@ -82,7 +82,8 @@ function TuMando({ m }) {
       </div>`}
     <div style="height:1px;background:var(--tenue)"></div>
     <${PreferenciaPuesto} m=${m}/>
-    <div class="ayuda" style="font-size:13px">${t("Aquí solo salen tus mandos físicos: los 8 mandos virtuales de Link no se muestran. Para que PES no lea tu mando por su cuenta (y no manejes dos jugadores), enciende «Orden de mandos en PES» en Mandos › Puestos.", "Only your physical pads show here; Link's 8 virtual pads are hidden. So PES doesn't also read your pad directly, turn on «Pad order in PES» in Pads › Seats.")}</div>
+    <div class="ayuda" style="font-size:13px">${t("Aquí solo salen tus mandos físicos: los 8 mandos virtuales de Link no se muestran. Para que PES no lea tu mando por su cuenta (y no manejes dos jugadores), enciende «Orden de mandos en PES» en Mandos › Puestos.", "Only your physical pads show here; Link's 8 virtual pads are hidden. So PES doesn't also read your pad directly, turn on «Pad order in PES» in Pads › Seats.")}
+      <button class="enlace-mas" style="margin-left:6px" onClick=${() => irA("mandos", "puestos")}>${t("IR A PUESTOS ›", "GO TO SEATS ›")}</button></div>
   </${Tarjeta}>`;
 }
 

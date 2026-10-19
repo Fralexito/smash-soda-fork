@@ -9,7 +9,7 @@
 // =============================================================================
 import { html, useState, useEffect } from "../lib.js";
 import { t } from "../i18n.js";
-import { accion, avisar } from "../tienda.js";
+import { accion, avisar, irA } from "../tienda.js";
 import { Boton, Segmentos, Stepper, AjusteSw, dos } from "../ui.js";
 
 const CLAVE = "phoenix.miPuesto";
@@ -47,7 +47,7 @@ export function puestoDestino(m, pref = leerPreferencia(m)) {
 export async function jugarYo(m) {
   const lista = m.mandos?.lista || [];
   const destino = puestoDestino(m);
-  if (!destino) { avisar(t("No hay puestos en ese equipo: añade uno en Mandos › Puestos.", "No seats on that team: add one in Pads › Seats."), "warn"); return; }
+  if (!destino) { avisar(t("No hay puestos en ese equipo: añade uno en Mandos › Puestos.", "No seats on that team: add one in Pads › Seats."), "warn", 8000, { texto: t("IR A PUESTOS", "GO TO SEATS"), al: () => irA("mandos", "puestos") }); return; }
   if (m.mandos.host === destino) { avisar(t(`Ya estás en el puesto ${dos(destino)}.`, `You're already on seat ${dos(destino)}.`), "ok"); return; }
   const p = lista[destino - 1];
   const esMio = (x) => m.mandos.host === x.n || (x.parsecId && x.parsecId === m.sala?.hostId);

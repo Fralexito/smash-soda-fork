@@ -12,7 +12,8 @@
 import { html, useState } from "../lib.js";
 import { t } from "../i18n.js";
 import { accion, confirmar, avisar, irA } from "../tienda.js";
-import { Boton, Icono, Vacio, Avatar, Chip, Stepper, Interruptor, colorPing, cx, dos } from "../ui.js";
+import { Boton, BotonIr, Icono, Vacio, Avatar, Chip, Stepper, Interruptor, colorPing, cx, dos } from "../ui.js";
+import { instalarVigem } from "./arreglos.js";
 import { Pendientes, ElegirJugador } from "./mandos.js";
 import { BotonJugar } from "./jugar.js";
 import { IndicadorRetraso, retrasoDe } from "./retraso.js";
@@ -216,7 +217,11 @@ export function PuestosNuevo({ m }) {
   const esclavo = !!m.mandos.esclavo;
 
   if (total === 0) {
-    return html`<${Vacio} titulo=${t("No hay mandos virtuales", "No virtual pads")} texto=${t("Instala ViGEmBus o revisa Sala › Conexión.", "Install ViGEmBus or check Room › Connection.")}/>`;
+    return html`<${Vacio} titulo=${t("No hay mandos virtuales", "No virtual pads")} texto=${t("Falta ViGEmBus, el controlador que crea los mandos de tus amigos. Sin él nadie puede jugar.", "ViGEmBus is missing, the driver that creates your friends' pads. Nobody can play without it.")}>
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+        <${Boton} tipo="lleno" al=${instalarVigem}>${t("INSTALAR VIGEMBUS", "INSTALL VIGEMBUS")}</${Boton}>
+        <${BotonIr} tipo="suave" ir=${["sala", "red"]}>${t("VER CONEXIÓN", "SEE CONNECTION")}</${BotonIr}>
+      </div></${Vacio}>`;
   }
 
   const equipoA = lista.filter((p) => p.equipo === "a");
@@ -378,7 +383,8 @@ function OrdenPes({ m }) {
       <span class=${cx("punto", punto)}></span><span>${t(es, en)}</span>
       ${o.ultimo ? html`<span class="mono mut" style="font-size:12px">· ${t("último orden", "last sort")} ${o.ultimo}</span>` : null}
     </div>` : null}
-    ${o.activo && o.ds4windows ? html`<div class="caja" style="border-color:var(--warn);font-size:14px"><b class="warn">${t("DS4Windows está abierto.", "DS4Windows is open.")}</b> ${t("Mete su propio mando virtual y desordena los de Link. Ciérralo (y quítalo del inicio de Windows): tu DS4 entra por Mandos › Tu mando.", "It adds its own virtual pad and shuffles Link's. Close it (and remove it from Windows startup): your DS4 goes through Pads › Your pad.")}</div>` : null}
+    ${o.activo && o.ds4windows ? html`<div class="caja" style="border-color:var(--warn);font-size:14px"><b class="warn">${t("DS4Windows está abierto.", "DS4Windows is open.")}</b> ${t("Mete su propio mando virtual y desordena los de Link. Ciérralo (y quítalo del inicio de Windows): tu DS4 entra por Mandos › Tu mando.", "It adds its own virtual pad and shuffles Link's. Close it (and remove it from Windows startup): your DS4 goes through Pads › Your pad.")}
+      <div style="margin-top:8px"><${BotonIr} ir=${["mandos", "marionetas"]}>${t("IR A TU MANDO", "GO TO YOUR PAD")}</${BotonIr}></div></div>` : null}
     ${o.activo && (o.casillas || []).length ? html`<div style="display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:6px">
       ${o.casillas.map((c) => html`<div key=${c.n} class="caja" title=${c.ok ? t("Coincide", "Matches") : t("Pendiente", "Pending")}
           style=${`padding:8px 4px;text-align:center;border-color:${c.ok ? "var(--ok)" : "var(--warn)"}`}>
