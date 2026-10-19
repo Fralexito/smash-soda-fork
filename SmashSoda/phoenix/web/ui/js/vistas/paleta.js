@@ -48,7 +48,7 @@ function opciones(m) {
   const PISTA = {
     "sala/resumen": ["abrir sala, enlace, ping", "open room, link, ping", "sala"], "sala/transmision": ["calidad, FPS, pantalla, audio", "quality, FPS, screen, audio", "sala"],
     "sala/opciones": ["nombre, plazas, web de la liga", "name, slots, league website", "sala"], "sync/mipc": ["Sync: ¿está listo mi PC?", "Sync: is my PC ready?", "web"],
-    "sala/red": ["diagnóstico y ping", "diagnostics & ping", "red"], "sala/juegos": ["qué se juega, biblioteca", "what is played, library", "sala"],
+    "sala/red": ["semáforo, diagnóstico y ping", "check, diagnostics & ping", "red"], "sala/juegos": ["qué se juega, biblioteca", "what is played, library", "sala"],
     "mandos/puestos": ["mandos, quién juega y quién mira", "pads, who plays and who watches", "mandos"], "partido/vivo": ["partido, equipos y goles", "match, teams and goals", "partido"],
     "gente/sala": ["invitados y su ficha", "guests and their card", "gente"], "mandos/marionetas": ["tu mando físico, cantidad de mandos", "your physical pad, pad count", "mandos"],
     "partido/campo": ["campo 2D en vivo", "live 2D pitch", "partido"], "mandos/mapeo": ["botones cambiados, stick que camina", "swapped buttons, drifting stick", "mandos"],

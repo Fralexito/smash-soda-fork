@@ -8,11 +8,25 @@
 import { html, useState, useEffect, useRef } from "../lib.js";
 import { t } from "../i18n.js";
 import { accion, avisar, elegirPestana, confirmar } from "../tienda.js";
-import { Tarjeta, Titulo, Boton, cx } from "../ui.js";
+import { Tarjeta, Titulo, Boton, BotonIr, cx } from "../ui.js";
+import { useSemaforo } from "./semaforo.js";
 
 const espera = (ms) => new Promise((r) => setTimeout(r, ms));
 /** Nombre corto de una ruta para la pantalla; la ruta entera queda en «detalles». */
 const corto = (ruta) => { const p = String(ruta || "").replace(/[\\/]+$/, "").split(/[\\/]/); return p[p.length - 1] || ruta; };
+
+/** Esta pantalla es el punto «Mi juego» del Semáforo Phoenix: arriba, cómo está todo lo demás y un botón al semáforo entero. */
+function EnElSemaforo({ m }) {
+  const { lista, resumen } = useSemaforo(m);
+  const otros = lista.filter((x) => x.id !== "juego" && (x.nivel === "falta" || x.nivel === "aviso"));
+  return html`<div class="caja" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+    <span class=${cx("punto", resumen.color)} style="width:12px;height:12px;border-radius:6px"></span>
+    <div style="flex:1;min-width:220px"><b>${t("Semáforo Phoenix", "Phoenix check")}: ${resumen.texto}</b>
+      <div class="ayuda">${otros.length ? t(`Aparte de tu juego: ${otros.map((x) => x.titulo).join(" · ")}.`, `Besides your game: ${otros.map((x) => x.titulo).join(" · ")}.`)
+        : t("Esta pantalla es la parte «Mi juego» del semáforo. Parsec, mandos y transmisión están en Sala › Conexión.", "This screen is the «My game» part of the check. Parsec, pads and stream are in Room › Connection.")}</div></div>
+    <${BotonIr} ir=${["sala", "red"]}>${t("VER SEMÁFORO COMPLETO", "SEE FULL CHECK")}</${BotonIr}>
+  </div>`;
+}
 
 export function Preparar({ s }) {
   const m = s.motor || {};
@@ -219,10 +233,11 @@ export function Preparar({ s }) {
   if (tec) detalle.push(t("Datos técnicos de la web: ", "Web technical data: ") + JSON.stringify(tec));
 
   return html`<div style="display:flex;flex-direction:column;gap:16px">
+    <${EnElSemaforo} m=${m}/>
     <${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:14px">
-      <${Titulo} texto=${t("¿ESTÁ LISTO MI PC?", "IS MY PC READY?")}/>
+      <${Titulo} texto=${t("¿ESTÁ LISTO MI JUEGO PARA LOS FICHAJES?", "IS MY GAME READY FOR TRANSFERS?")}/>
       <div style="display:flex;align-items:center;gap:12px"><span class=${cx("punto", cargando ? "" : todoBien ? "ok" : "warn")} style="width:16px;height:16px;flex:none"></span>
-        <span class="disp" style="font-size:26px;font-weight:700;color:${cargando ? "inherit" : todoBien ? "var(--ok, #4ade80)" : "var(--warn, #ffb347)"}">${cargando ? t("Revisando…", "Checking…") : todoBien ? t("Todo listo", "All set") : t(`Falta algo: ${malas.length} ${malas.length === 1 ? "cosa" : "cosas"}`, `Something's missing: ${malas.length} ${malas.length === 1 ? "thing" : "things"}`)}</span></div>
+        <span class="disp" style="font-size:26px;font-weight:700;color:${cargando ? "inherit" : todoBien ? "var(--ok, #4ade80)" : "var(--warn, #ffb347)"}">${cargando ? t("Revisando…", "Checking…") : todoBien ? t("Listo para los fichajes", "Ready for transfers") : t(`Para los fichajes falta: ${malas.length} ${malas.length === 1 ? "cosa" : "cosas"}`, `Missing for transfers: ${malas.length}`)}</span></div>
       <div class="ayuda" style="font-size:14px">${todoBien ? t("Tu PC está lista para jugar con fichajes.", "Your PC is ready to play with transfers.") : t("Pulsa el botón y Phoenix arregla lo que pueda. Antes cierra PES.", "Press the button and Phoenix fixes what it can. Close PES first.")}</div>
       <${Boton} tipo=${todoBien ? "suave" : "lleno"} deshabilitado=${haciendo || cargando} al=${arreglarTodo}>
         ${haciendo ? t("ARREGLANDO…", "FIXING…") : todoBien ? t("REVISAR OTRA VEZ", "CHECK AGAIN") : t("ARREGLAR TODO", "FIX EVERYTHING")}</${Boton}>

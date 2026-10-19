@@ -7,6 +7,7 @@ import { html, useState, useEffect } from "../lib.js";
 import { t } from "../i18n.js";
 import { accion, irA } from "../tienda.js";
 import { Tarjeta, Boton, Chip, Icono, cx } from "../ui.js";
+import { useSemaforo } from "./semaforo.js";
 
 const CLAVE = "phoenix.guia.oculta";
 
@@ -39,8 +40,11 @@ export function GuiaInicio({ m, ocultar, abrir }) {
   const sala = m.sala;
   const ph = sala.phoenix || {};
   const c = sala.calidad || {};
-  const mandos = m.mandos?.lista || [];
-  const pcOk = !!sala.lista && mandos.length > 0;
+  // Paso 1 = lo rojo del Semáforo Phoenix (Parsec y mandos virtuales): una sola respuesta en toda la app
+  const { lista: semaforo } = useSemaforo(m);
+  const rojos = semaforo.filter((x) => (x.id === "parsec" || x.id === "mandos") && x.nivel !== "ok");
+  const pcOk = rojos.length === 0;
+  const arreglo = rojos.find((x) => x.arreglo)?.arreglo || [t("REVISAR", "CHECK"), () => irA("sala", "red")];
   const juegoOk = !!(ph.juego && ph.parche);
   const subida = c.subida || 0;
   const web = m.web || {};
@@ -49,10 +53,8 @@ export function GuiaInicio({ m, ocultar, abrir }) {
   const pasos = [
     {
       n: 1, ok: pcOk, titulo: t("Revisa tu PC", "Check your PC"),
-      texto: pcOk ? t("Parsec y los mandos virtuales funcionan.", "Parsec and the virtual pads work.")
-        : !sala.lista ? t("Parsec se está preparando. Si tarda, toca Revisar.", "Parsec is starting. If it takes long, tap Check.")
-        : t("Falta ViGEmBus: sin él nadie puede jugar. Toca Revisar.", "ViGEmBus is missing: nobody can play without it. Tap Check."),
-      boton: t("REVISAR", "CHECK"), al: () => irA("sala", "red"),
+      texto: pcOk ? t("Parsec y los mandos virtuales funcionan.", "Parsec and the virtual pads work.") : rojos[0].frase,
+      boton: pcOk ? t("VER SEMÁFORO", "SEE CHECK") : arreglo[0], al: pcOk ? () => irA("sala", "red") : arreglo[1],
     },
     {
       n: 2, ok: juegoOk, titulo: t("Elige tu juego", "Pick your game"),

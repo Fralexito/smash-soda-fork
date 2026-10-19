@@ -4,7 +4,8 @@
 //  para poder revisar el diseño y probar la interfaz sin Windows.
 //  Escenarios (en la URL): ?escenario=cerrada · ?escenario=vacia (sala abierta
 //  sin nadie) · ?escenario=cruzado (el puesto 01 es del Equipo B y el 02 del A; tú en el 01) · ?escenario=llena (por defecto: 6 personas, 2 solicitudes,
-//  1 en espera, pings variados y un partido en curso 2–1).
+//  1 en espera, pings variados y un partido en curso 2–1) · ?escenario=novato (PC recién instalada: sala cerrada, sin ViGEmBus,
+//  sin cuenta, sin juego encontrado) · ?escenario=pausado (sala cerrada y la web en pausa: cuenta sin aprobar como anfitrión).
 // =============================================================================
 
 import { aplicar as aplicarMapeo, pulsacionNueva, limpiar as limpiarMapeo, esIdentidad as mapeoIdentidad } from "./mapeo.js";
@@ -40,6 +41,8 @@ export function crearSimulador(enviar) {
   let escenario = "llena";
   try { escenario = new URLSearchParams(location.search).get("escenario") || "llena"; } catch { /* sin URL */ }
   const llena = escenario === "llena";
+  const novato = escenario === "novato";
+  const cerrada = escenario === "cerrada" || novato || escenario === "pausado";
   // Auto-actualización: ?actualizacion=1 (versión nueva) · ?actualizacion=obligatoria
   let modoAct = "";
   try { modoAct = new URLSearchParams(location.search).get("actualizacion") || ""; } catch { /* sin URL */ }
@@ -48,7 +51,7 @@ export function crearSimulador(enviar) {
       obligatoria: modoAct === "obligatoria", bajado: 0, total: 6973034, mensaje: "", resultado: "", resultadoTipo: "" }
     : { estado: "nada", version: "", etapa: "", notas: "", obligatoria: false, bajado: 0, total: 0, mensaje: "", resultado: "", resultadoTipo: "" };
   const s = {
-    tema: "galaxy", idioma: "es", abierta: escenario !== "cerrada", abiertaEn: inicio - 6128,
+    tema: "galaxy", idioma: "es", abierta: !cerrada, abiertaEn: inicio - 6128,
     traspasos: { mensaje: "", ajustes: { publicar: false, recibir: false, confirmarAntes: true, carpeta: "", autor: "", optionFile: "" },
       anfitrion: { estado: "apagado", optionFile: "C:/Users/Fralex/Documents/KONAMI/eFootball PES 2021 SEASON UPDATE/239200/save", ultimaRevision: "", hayReferencia: true, publicados: 0, ultimoLote: "", masivo: false, ignorados: { altas: 0, bajas: 0, otros: 0 },
         pendientes: [{ jugador_id: 162114, jugador: "Lamine Yamal", desde_id: 108, desde: "FC Barcelona", hasta_id: 101, hasta: "Arsenal FC" }] },
@@ -56,7 +59,7 @@ export function crearSimulador(enviar) {
         { id: "9f8e7d6c5b4a39281716f5e4", seq: 2, autor: "Fralex", creado: "2026-10-12T17:30:00Z", recibido: "", aplicadoEn: "", estado: "aplicado", modo: "ids", motivo: "", cambios: [{ jugador: 114506, jugadorNombre: "Julián Álvarez", desde: 108, hasta: 101, hastaNombre: "Arsenal FC", estado: "aplicado", motivo: "" }, { jugador: 7777, jugadorNombre: "Jugador Libre", desde: 1, hasta: 2, hastaNombre: "Real Madrid CF", estado: "saltado", motivo: "El jugador 7777 no existe en la base de este parche." }] },
         { id: "1a2b3c4d5e6f708192a3b4c5", seq: 1, autor: "Fralex", creado: "2026-10-12T16:10:00Z", recibido: "", aplicadoEn: "", estado: "aplicado", modo: "ids", motivo: "", cambios: [{ jugador: 162114, jugadorNombre: "Lamine Yamal", desde: 101, hasta: 108, hastaNombre: "FC Barcelona", estado: "aplicado", motivo: "" }] }] } },
     opciones: { nombre: "Phoenix · Galaxy League", plazas: 4, limitador: false, limite: 30, biblioteca: "Default", juegos: ["PES 2021", "Football Life 2026"], pendiente: false, turnos: false, quiosco: false, overlay: true },
-    phoenix: { visibilidad: "amigos", espectadores: true, limiteEspectadores: 4, entradaParsec: true, juego: "eFootball PES 2021", parche: "Conmegol", region: "Lima" },
+    phoenix: { visibilidad: "amigos", espectadores: true, limiteEspectadores: 4, entradaParsec: true, juego: novato ? "" : "eFootball PES 2021", parche: novato ? "" : "Conmegol", region: novato ? "" : "Lima" },
     calidad: { fps: 60, mbps: 15, auto: true, porPersona: 10, subida: 0, perdida: 0, energia: "ok", parsecApp: escenario === "lag" },
     // Equipo de cada puesto (como equipoPuesto del motor): A, B o - (fuera). «cruzado»: el 01 es del Equipo B y el 02 del A.
     mapa: escenario === "cruzado" ? "BABA----" : "AABB----",
@@ -66,8 +69,8 @@ export function crearSimulador(enviar) {
       { userId: 0, nombre: "Default", teclas: [["lleft", 30, "A"], ["lright", 32, "D"], ["lup", 17, "W"], ["ldown", 31, "S"], ["rleft", 331, "←"], ["rright", 333, "→"], ["rup", 328, "↑"], ["rdown", 336, "↓"], ["dleft", 75, "Num 4"], ["dright", 77, "Num 6"], ["dup", 72, "Num 8"], ["ddown", 76, "Num 5"], ["a", 38, "L"], ["b", 24, "O"], ["x", 37, "K"], ["y", 23, "I"], ["lb", 16, "Q"], ["rb", 25, "P"], ["lt", 33, "F"], ["rt", 36, "J"], ["back", 14, "Retroceso"], ["start", 28, "Enter"], ["lthumb", 46, "C"], ["rthumb", 50, "M"]].map(([b, v, e]) => ({ b, v, e })) },
     ],
     marionetas: { motor: "sdl", maestro: -1, maestros: [{ n: 1, nombre: "Xbox Wireless Controller", tipo: "xbox", activo: true }, { n: 2, nombre: "Wireless Controller", tipo: "ds4", activo: false }], titeres: [1, 2, 3, 4, 5, 6, 7, 8].map((n) => ({ n, activo: false })), ocultos360: 8, mostrar360: false },
-    xbox: 8, ds4: 0, bloqueoGlobal: false, bloqueoBotones: false, host: escenario === "cruzado" ? 1 : 0,
-    invitados: escenario === "vacia" ? [] : [
+    xbox: novato ? 0 : 8, ds4: 0, bloqueoGlobal: false, bloqueoBotones: false, host: escenario === "cruzado" ? 1 : 0,
+    invitados: escenario === "vacia" || novato || escenario === "pausado" ? [] : [
       { parsecId: 1187, nombre: "Mirko", base: 18, mod: true, vip: false, teclado: false, raton: false, rolWeb: "jugador" },
       { parsecId: 2041, nombre: "Kaiser", base: 27, mod: false, vip: true, teclado: false, raton: false, rolWeb: "jugador" },
       { parsecId: 3310, nombre: "ElTigre", base: 58, mod: false, vip: false, teclado: true, raton: false, rolWeb: "jugador" },
@@ -75,7 +78,7 @@ export function crearSimulador(enviar) {
       { parsecId: 6031, nombre: "Pibe", base: 132, mod: false, vip: false, teclado: false, raton: false, rolWeb: "no_listado" },
       { parsecId: 5126, nombre: "Zurdo10", base: 41, mod: false, vip: false, teclado: false, raton: false, rolWeb: "espectador" },
     ],
-    mandos: escenario === "vacia" ? [0, 0, 0, 0, 0, 0, 0, 0] : escenario === "cruzado" ? [0, 3310, 2041, 4420, 0, 0, 0, 0] : [1187, 3310, 2041, 4420, 0, 0, 0, 0], bloqueados: new Set(), desconectados: new Set(),
+    mandos: escenario === "vacia" || novato || escenario === "pausado" ? [0, 0, 0, 0, 0, 0, 0, 0] : escenario === "cruzado" ? [0, 3310, 2041, 4420, 0, 0, 0, 0] : [1187, 3310, 2041, 4420, 0, 0, 0, 0], bloqueados: new Set(), desconectados: new Set(),
     solicitudes: llena ? [{ parsecId: 6031, nombre: "Pibe", mando: 5 }, { parsecId: 4420, nombre: "Lucho", mando: 2 }, { parsecId: 9911, nombre: "Zurdo10", mando: -1 }] : [],
     espera: llena ? [{ parsecId: 7777, nombre: "Visitante99", ping: 66 }] : [],
     series: {},
@@ -87,7 +90,7 @@ export function crearSimulador(enviar) {
       { id: 2, inicioMs: Date.now() - 3600000, duracionSeg: 1180, a: { nombre: "ElTigre", jugadores: [{ parsecId: 3310, nombre: "ElTigre" }], goles: 2 }, b: { nombre: "Mirko", jugadores: [{ parsecId: 1187, nombre: "Mirko" }], goles: 2 }, ganador: "empate" },
     ],
     perfilesSala: [{ nombre: "Liga", valores: { plazas: 4, mbps: 15, local: 2, visitante: 2, visibilidad: "amigos" } }],
-    buzon: { activo: true, estado: "conectado", ultimo: "00:30", juego: "C:\\Juegos\\PES 2021 ConmeGOL", parche: "ConmeGOL Patch 26", avisos: [{ id: 12, texto: "hola causa", hora: "00:30", escrito: true }, { id: 11, texto: "Tu fichaje de Kaiser ya está listo ⚡", hora: "00:12", escrito: true }, { id: 10, texto: "Recuerda: partido de liga hoy 9 pm", hora: "23:40", escrito: false }] },
+    buzon: { activo: true, estado: novato ? "cerrado" : "conectado", ultimo: "00:30", juego: novato ? "" : "C:\\Juegos\\PES 2021 ConmeGOL", parche: "ConmeGOL Patch 26", avisos: [{ id: 12, texto: "hola causa", hora: "00:30", escrito: true }, { id: 11, texto: "Tu fichaje de Kaiser ya está listo ⚡", hora: "00:12", escrito: true }, { id: 10, texto: "Recuerda: partido de liga hoy 9 pm", hora: "23:40", escrito: false }] },
     pes: { modo: "off", abierto: true },
     // Modo cedido (sin PIN: devolver la PC siempre le quita el control al invitado)
     cedido: { activo: false, parsecId: 0, nombre: "", desde: 0, ultimoFin: "" },
@@ -104,7 +107,9 @@ export function crearSimulador(enviar) {
     audio: { mic: { activo: false, volumen: 80, dispositivo: 0, dispositivos: ["Micrófono (USB)"], mic: true }, parlantes: { activo: true, volumen: 100, dispositivo: 0, dispositivos: ["Altavoces (Realtek)", "Auriculares"], mic: false } },
     turnos: { activo: false, corriendo: false, usuarios: [], juegoMin: 10, reinicioMin: 30, recordatorioMin: 2 },
     baneados: [{ parsecId: 6666, nombre: "Troll", motivo: "Insultos" }],
-    web: { estado: "conectado", usuario: "Fralex", mensaje: "Sala publicada en la web.", publicada: true },
+    web: novato ? { estado: "sin_vincular", usuario: "", mensaje: "Escribe el código de 6 dígitos de la web.", publicada: false }
+      : escenario === "pausado" ? { estado: "pausado", codigo: "HOST_NO_AUTORIZADO", usuario: "Fralex", mensaje: "Tu cuenta aún no está aprobada como host.", publicada: false }
+      : { estado: "conectado", usuario: "Fralex", mensaje: "Sala publicada en la web.", publicada: true },
     seccion: "sala", pestana: "resumen",
     mapeo: { perfiles: { 2041: { nombre: "Kaiser", actualizado: Date.now() - 86400000, perfil: { botones: {}, invertir: [], cambiarSticks: false, zona: [12, 0] } } }, ver: 0, n: 0, ultima: "", antes: null, manual: null, desde: 0 },
     sonidos: [{ ruta: "sfx/gol.wav", etiqueta: "gol", espera: 5 }, { ruta: "sfx/silbato.wav", etiqueta: "silbato", espera: 10 }, { ruta: "sfx/abucheo.wav", etiqueta: "abucheo", espera: 30 }],
@@ -672,7 +677,7 @@ export function crearSimulador(enviar) {
     "sfx.espera": (d) => { const x = s.sonidos.find((y) => y.ruta === d.ruta); if (!x) error("NO_EXISTE", "Ese sonido ya no está."); x.espera = d.segundos; },
     "diag.ejecutar": () => ({ chequeos: [
       { id: "webview2", estado: "ok", datos: { version: "130.0.2849.80" } },
-      { id: "vigem", estado: "ok", datos: { instalado: true, mandos: 8, conectados: 8 } },
+      s.xbox + s.ds4 > 0 ? { id: "vigem", estado: "ok", datos: { instalado: true, mandos: 8, conectados: 8 } } : { id: "vigem", estado: "error", datos: { instalado: false, mandos: 0, conectados: 0 } },
       { id: "parsec", estado: "ok", datos: { listo: true, cuenta: true, nombre: "Fralex" } },
       { id: "video", estado: "ok", datos: { gpus: 1, pantallas: 2, wgc: true } },
       { id: "audio", estado: "ok", datos: { entradas: 1, salidas: 2 } },

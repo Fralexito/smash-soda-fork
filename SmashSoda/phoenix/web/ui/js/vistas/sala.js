@@ -16,6 +16,7 @@ import {
   Minigrafica, Chip, Icono, Vacio, BotonIr, colorPing, claseSemaforo, cx, dos,
 } from "../ui.js";
 import { instalarVigem } from "./arreglos.js";
+import { SemaforoPhoenix, avisosTransmision, leerCerrados, guardarCerrados } from "./semaforo.js";
 
 export const PESTANAS_SALA = [
   { id: "resumen", es: "RESUMEN", en: "OVERVIEW", d: ["Tu sala de un vistazo: enlace, tiempo en vivo, quién juega y cómo va la conexión.", "Your room at a glance."] },
@@ -129,8 +130,8 @@ function Heroe({ m, conGuia, verGuia }) {
       </div>
       <${ResumenRed} m=${m}/>
       ${conGuia ? null : html`<div style="margin-top:auto">
-        <div class="lab acc" style="margin-bottom:10px">${t("ANTES DE ABRIR", "BEFORE OPENING")}</div>
-        <${ListaParaAbrir} m=${m}/>
+        <div class="lab acc" style="margin-bottom:10px">${t("SEMÁFORO PHOENIX", "PHOENIX CHECK")}</div>
+        <${SemaforoPhoenix} m=${m} compacto enTarjeta=${false}/>
       </div>`}
     </${Tarjeta}>`;
   }
@@ -173,23 +174,6 @@ function PingSala({ m }) {
       </button>`;
     })}</div>
   </div>`;
-}
-
-function ListaParaAbrir({ m }) {
-  const mandos = m.mandos?.lista || [];
-  const conectados = mandos.filter((p) => p.conectado).length;
-  const web = m.web?.estado;
-  const pasos = [
-    { ok: m.sala.lista, mal: !m.sala.lista, t: t("Parsec listo", "Parsec ready"), d: m.sala.lista ? (m.sala.cuentaHost || t("Sesión iniciada", "Signed in")) : t("Preparando…", "Starting…"), ir: ["sala", "red"] },
-    { ok: conectados > 0, mal: mandos.length === 0, t: t("Mandos virtuales", "Virtual pads"), d: mandos.length ? `${conectados}/${mandos.length} ${t("conectados", "connected")}` : t("Falta ViGEmBus", "ViGEmBus missing"), ir: ["mandos", "puestos"] },
-    { ok: web === "conectado", mal: web === "sin_conexion", t: t("Web de la liga", "League website"), d: web === "conectado" ? (m.web.usuario || t("Vinculada", "Linked")) : web === "sin_vincular" ? t("Toca para vincular", "Tap to link") : t("Sin conexión", "Offline"), ir: ["sync", "mipc"] },
-    { ok: (m.sala.calidad?.fps || 0) > 0, mal: false, t: t("Conexión", "Connection"), d: `${m.sala.calidad?.fps ?? "—"} FPS · ${m.sala.calidad?.mbps ?? "—"} MBPS`, ir: ["sala", "red"] },
-  ];
-  return html`<div class="pasos" style="margin-top:0">${pasos.map((p) => html`
-    <button class=${cx("paso", p.ok ? "ok" : p.mal ? "mal" : "falta")} onClick=${() => irA(p.ir[0], p.ir[1])}>
-      <span class="marca-paso">${p.ok ? "✓" : p.mal ? "×" : "!"}</span>
-      <span style="min-width:0"><div class="t">${p.t}</div><div class="d">${p.d}</div></span>
-    </button>`)}</div>`;
 }
 
 /** Recuadro de la portada que se ajusta ahí mismo: al pulsarlo abre un panel rápido; «Más opciones ›» lleva al apartado. */
@@ -314,30 +298,11 @@ function MiIdParsec({ m }) {
   </div>`;
 }
 
-// Una vez que el anfitrión cerró Parsec desde aquí, el aviso no vuelve mientras Link siga abierto
-// (el servicio de Parsec suele volver a abrir la app solo).
-let parsecYaCerrado = false;
-
-// Avisos que el anfitrión cerró con ✕: se recuerdan en este PC por «id:valor», así vuelven solo si el problema cambia.
-const CLAVE_AVISOS = "phoenix.avisosCerrados";
-const leerCerrados = () => { try { return new Set(JSON.parse(localStorage.getItem(CLAVE_AVISOS) || "[]")); } catch { return new Set(); } };
-const guardarCerrados = (set) => { try { localStorage.setItem(CLAVE_AVISOS, JSON.stringify([...set].slice(-40))); } catch { /* sin almacenamiento */ } };
-
-/** ANTES DEL PARTIDO: solo sale si algo va a dar lag o problemas; cada cosa con su botón para arreglarla. */
+/** ANTES DEL PARTIDO: solo sale si algo va a dar lag o problemas; cada cosa con su botón para arreglarla.
+ *  Los avisos salen del Semáforo Phoenix (semaforo.js: avisosTransmision), así no se cuentan distinto en dos sitios. */
 function AntesDelPartido({ m }) {
-  const c = m.sala?.calidad || {};
-  const auto = c.auto ?? true, por = c.porPersona ?? 10, mbps = c.mbps ?? 15;
   const [, refrescar] = useState(0);
-  const cerrarParsec = async () => {
-    if (await confirmar({ titulo: t("¿Cerrar la app de Parsec?", "Close the Parsec app?"), texto: t("Se cierra la app normal de Parsec (no Link). Tu sala sigue abierta.", "The normal Parsec app closes (not Link). Your room stays open."), si: t("Cerrar Parsec", "Close Parsec") })) {
-      if (await accion("sala.cerrarParsec", {}, { ok: t("Parsec cerrado.", "Parsec closed.") })) { parsecYaCerrado = true; refrescar((x) => x + 1); }
-    }
-  };
-  const items = [];
-  if (c.parsecApp && !parsecYaCerrado) items.push({ id: "parsec", firma: "parsec", t: t("La app de Parsec está abierta", "The Parsec app is open"), d: t("Compite con Link por la tarjeta de video y el internet: puede dar tirones.", "It competes with Link for the GPU and internet: it can cause stutter."), boton: t("CERRAR PARSEC", "CLOSE PARSEC"), al: cerrarParsec });
-  if (!auto) items.push({ id: "auto", firma: `auto:${mbps}`, t: t(`Ancho de banda automático apagado (${mbps} Mbps para todos)`, `Auto bandwidth off (${mbps} Mbps for everyone)`), d: t("Se reparte entre todos los que entran: con varios amigos, a cada uno le llega poca calidad.", "It's split among everyone: with several friends each gets low quality."), boton: t("ENCENDER · 15 POR PERSONA", "TURN ON · 15 PER PERSON"), al: () => accion("sala.anchoAuto", { auto: true, porPersona: Math.max(por, 15) }) });
-  if (c.energia === "ahorro") items.push({ id: "energia", firma: "energia", t: t("Windows está en «Ahorro de energía»", "Windows is on Power Saver"), d: t("Cámbialo a «Equilibrado» o «Alto rendimiento» (Configuración › Sistema › Energía) para que no haya tirones.", "Switch to Balanced or High performance (Settings › System › Power).") });
-  if ((c.perdida ?? 0) >= 50) items.push({ id: "perdida", firma: "perdida", t: t(`Un amigo pierde paquetes (${((c.perdida ?? 0) / 10).toFixed(1)} %)`, `A friend is losing packets (${((c.perdida ?? 0) / 10).toFixed(1)} %)`), d: t("Su internet no aguanta: que use cable o WiFi de 5 GHz.", "Their internet can't keep up: cable or 5 GHz WiFi.") });
+  const items = avisosTransmision(m).map((x) => (x.id === "parsec" ? { ...x, al: async () => { if (await x.al()) refrescar((n) => n + 1); } } : x));
   const cerrados = leerCerrados();
   const visibles = items.filter((x) => !cerrados.has(x.firma));
   if (!visibles.length) return null;
@@ -637,8 +602,9 @@ function JuegosSala({ m }) {
 
 // ---- Conexión: ¿está lista mi PC? + ping de cada invitado ----------------------------
 function ConexionSala({ m }) {
-  // ¿Mi PC está lista? arriba (plegado en una línea si no hay errores) y debajo el ping de cada invitado
-  return html`<div class="col"><${Diagnostico}/><${RedSala} m=${m}/></div>`;
+  // Semáforo Phoenix arriba (todo lo que hace falta para jugar, con su botón), los detalles técnicos del PC
+  // (plegados si no hay errores) y debajo el ping de cada invitado
+  return html`<div class="col"><${SemaforoPhoenix} m=${m}/><${Diagnostico}/><${RedSala} m=${m}/></div>`;
 }
 
 // ---- Red ----------------------------------------------------------------------------
