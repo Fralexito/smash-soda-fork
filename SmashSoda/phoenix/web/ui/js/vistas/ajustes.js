@@ -312,7 +312,6 @@ export function CuentaWeb({ m }) {
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
         <${Boton} al=${() => accion("web.reintentar", {}, { ok: t("Reintentando…", "Retrying…") })}>${t("REINTENTAR AHORA", "RETRY NOW")}</${Boton}>
-        ${m.sala?.abierta && w.publicada ? html`<${Boton} tipo="warn" al=${() => accion("web.soltarRival", {}, { ok: t("Rival liberado: la sala vuelve al radar.", "Rival released.") })}>${t("SOLTAR RIVAL DEL RADAR", "RELEASE RADAR RIVAL")}</${Boton}>` : null}
         <${Boton} tipo="peligro" al=${desvincular}>${t("DESVINCULAR", "UNLINK")}</${Boton}>
       </div>` : null}
     </${Tarjeta}>

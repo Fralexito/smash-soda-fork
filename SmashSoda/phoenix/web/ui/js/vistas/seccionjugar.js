@@ -8,7 +8,8 @@ import { html } from "../lib.js";
 import { t } from "../i18n.js";
 import { SalasAbiertas, Amigos } from "./gente.js";
 import { PerfilesPes } from "./perfiles.js";
-import { Vacio } from "../ui.js";
+import { accion } from "../tienda.js";
+import { Vacio, Boton } from "../ui.js";
 
 export const PESTANAS_JUGAR = [
   { id: "salas", es: "SALAS ABIERTAS", en: "OPEN ROOMS", d: ["Las mismas salas que ves en la web de la liga. Entra con un clic.", "The same rooms you see on the league website. Join with one click."] },
@@ -27,5 +28,15 @@ export function VistaJugar({ s, pestana }) {
   if (!m) return html`<${Vacio} titulo=${t("Conectando…", "Connecting…")} texto=""/>`;
   if (pestana === "amigos") return html`<${Amigos} m=${m}/>`;
   if (pestana === "perfiles") return html`<${PerfilesPes}/>`;
-  return html`<${SalasAbiertas} m=${m}/>`;
+  return html`<div class="col"><${TuSalaEnRadar} m=${m}/><${SalasAbiertas} m=${m}/></div>`;
+}
+
+/** «Soltar rival» (antes en Sync › Avanzado): con tu sala publicada, libera al rival que la web dejó apuntado para que vuelva al radar. */
+function TuSalaEnRadar({ m }) {
+  if (!m.sala?.abierta || !m.web?.publicada) return null;
+  return html`<div class="caja" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+    <div style="flex:1;min-width:240px"><b>${t("Tu sala está en el radar de la web", "Your room is on the website radar")}</b>
+      <div class="ayuda">${t("Si un rival quedó apuntado a tu sala y no va a venir, suéltalo: tu sala vuelve a salir libre para otros.", "If a rival is held on your room and isn't coming, release them: your room shows as free again.")}</div></div>
+    <${Boton} tipo="warn mini" al=${() => accion("web.soltarRival", {}, { ok: t("Rival liberado: la sala vuelve al radar.", "Rival released.") })}>${t("SOLTAR RIVAL", "RELEASE RIVAL")}</${Boton}>
+  </div>`;
 }

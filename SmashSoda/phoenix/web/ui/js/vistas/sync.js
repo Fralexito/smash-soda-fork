@@ -164,7 +164,7 @@ function Avanzado({ m }) {
           </div>`)}
     </${Seccion}>
     <${Seccion} id="cuentaweb" titulo=${t("CUENTA WEB DETALLADA", "WEB ACCOUNT IN DETAIL")} resumen=${m.web?.usuario || t("Sin unir", "Not linked")}>
-      <${Para}>${t("Para qué sirve: ver el estado de la unión con tu cuenta, reintentar, soltar al rival del radar o separar esta PC. Unir la cuenta se hace en «Mi PC».", "What it's for: see the account link status, retry, release the rival from the radar or unlink this PC. Linking is done in «My PC».")}</${Para}>
+      <${Para}>${t("Para qué sirve: ver el estado de la unión con tu cuenta, reintentar o separar esta PC. Unir la cuenta se hace en «Mi PC». «Soltar rival» está ahora en Otras salas.", "What it's for: see the account link status, retry or unlink this PC. Linking is done in «My PC». «Release rival» is now in Other rooms.")}</${Para}>
       <${CuentaWeb} m=${m}/>
     </${Seccion}>
     <${Seccion} id="tecnicos" titulo=${t("DETALLES TÉCNICOS", "TECHNICAL DETAILS")} resumen=${m.app?.version ? "Phoenix Link " + m.app.version : ""}>
