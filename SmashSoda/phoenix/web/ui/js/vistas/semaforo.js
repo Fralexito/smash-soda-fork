@@ -12,7 +12,7 @@
 import { html, useState, useEffect } from "../lib.js";
 import { t } from "../i18n.js";
 import { accion, confirmar, irA } from "../tienda.js";
-import { Tarjeta, Titulo, Boton, cx } from "../ui.js";
+import { Tarjeta, Titulo, Boton, cx, useDestello } from "../ui.js";
 import { instalarVigem } from "./arreglos.js";
 
 // ---- Datos que no vienen en el estado: se comparten entre todos los semáforos a la vista ----
@@ -166,7 +166,8 @@ function Fila({ x, alIr }) {
 
 /** La línea de arriba: punto de color + «Todo listo / Listo, con un aviso / Falta algo». */
 export function CabeceraSemaforo({ resumen, derecha = null, grande = false }) {
-  return html`<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+  const destello = useDestello(resumen.color);   // cambia de color: destella
+  return html`<div class=${cx("semaforo-cab", destello && "destello")} style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
     <span class=${cx("punto", resumen.color, resumen.color === "ok" && "vivo")} style=${grande ? "width:16px;height:16px;border-radius:8px" : "width:12px;height:12px;border-radius:6px"}></span>
     <span class="disp" style=${`font-size:${grande ? 26 : 19}px;font-weight:700;flex:1;min-width:0;color:${resumen.color === "ok" ? "var(--ok)" : resumen.color === "warn" ? "var(--warn)" : resumen.color === "bad" ? "var(--bad)" : "inherit"}`}>${resumen.texto}</span>
     ${derecha}

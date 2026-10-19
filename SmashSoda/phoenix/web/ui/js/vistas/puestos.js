@@ -12,7 +12,7 @@
 import { html, useState } from "../lib.js";
 import { t } from "../i18n.js";
 import { accion, confirmar, avisar, irA } from "../tienda.js";
-import { Boton, BotonIr, Icono, Vacio, Avatar, Chip, Stepper, Interruptor, colorPing, cx, dos } from "../ui.js";
+import { Boton, BotonIr, Icono, Vacio, Avatar, Chip, Stepper, Interruptor, colorPing, cx, dos, useDestello } from "../ui.js";
 import { instalarVigem } from "./arreglos.js";
 import { Pendientes, ElegirJugador } from "./mandos.js";
 import { BotonJugar } from "./jugar.js";
@@ -37,6 +37,7 @@ function Fila({ p, m, color, arr, setArr, alAsignar }) {
   const opacidad = arrastrando && !recibe && arr.tipo !== "asiento" && arr.valor !== p.n - 1 ? ".55" : "1";
   const perfil = p.ocupado ? m.perfiles?.[p.parsecId] : null;
   const fijado = p.ocupado && p.parsecId ? m.mandos.fijados?.[p.parsecId] || 0 : 0;   // candado: puesto fijado de este jugador (0 = ninguno)
+  const destello = useDestello(p.ocupado ? p.parsecId || p.jugador : 0);   // alguien se sentó o se fue: el puesto destella
 
   // Me siento en un puesto que ocupa un amigo: él pasa a MI puesto (se cruzan), nadie se queda sin mando
   const cruzarConAmigo = async (mio) => {
@@ -79,7 +80,7 @@ function Fila({ p, m, color, arr, setArr, alAsignar }) {
     else accion("mandos.asignar", { indice: p.n - 1, parsecId: a.valor });
   };
 
-  return html`<div
+  return html`<div class=${destello ? "destello" : ""}
       draggable=${p.ocupado || (p.equipo === "a" || p.equipo === "b")}
       onDragStart=${(e) => { e.dataTransfer.setData("text/plain", "puesto:" + (p.n - 1)); e.dataTransfer.effectAllowed = "move"; setArr({ tipo: "puesto", valor: p.n - 1 }); }}
       onDragEnd=${() => { setArr(null); setSobre(false); }}

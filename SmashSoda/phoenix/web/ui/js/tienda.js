@@ -99,7 +99,10 @@ export function avisar(texto, tipo = "info", ms = 4200, boton = null) {
   return id;
 }
 export function quitarAviso(id) {
-  cambiar((s) => ({ avisos: s.avisos.filter((a) => a.id !== id) }));
+  // Sale con animación (.aviso.saliendo) y se quita al terminar
+  if (!estado.avisos.some((a) => a.id === id && !a.saliendo)) return;
+  cambiar((s) => ({ avisos: s.avisos.map((a) => (a.id === id ? { ...a, saliendo: true } : a)) }));
+  setTimeout(() => cambiar((s) => ({ avisos: s.avisos.filter((a) => a.id !== id) })), 220);
 }
 
 // ---- Diálogo de confirmación (nunca confirm() nativo) --------------------------

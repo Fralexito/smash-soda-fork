@@ -202,7 +202,7 @@ function Contenido({ s }) {
 // ---- Avisos y diálogo -------------------------------------------------------------
 function Avisos({ avisos }) {
   return html`<div class="avisos" aria-live="polite">${avisos.map((a) => html`
-    <div class=${cx("aviso", a.tipo)} key=${a.id}>
+    <div class=${cx("aviso", a.tipo, a.saliendo && "saliendo")} key=${a.id}>
       <span style=${`color:var(--${a.tipo === "ok" ? "ok" : a.tipo === "bad" ? "bad" : a.tipo === "warn" ? "warn" : "acc"})`}>
         <${Icono} n=${a.tipo === "ok" ? "check" : a.tipo === "info" ? "rayo" : "alerta"} t=${18}/></span>
       <div>${a.texto}</div>

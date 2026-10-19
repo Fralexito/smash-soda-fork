@@ -850,3 +850,26 @@ html.sin-foco .peldano.sig::after, html.sin-foco .u-punto, html.sin-foco .punto.
 @keyframes esq-brillo { from { background-position: 120% 0; } to { background-position: -120% 0; } }
 html.sin-foco .esq-linea { animation-play-state: paused; }
 @media (prefers-reduced-motion: reduce) { .esq-linea { animation: none; } }
+
+/* ---- Movimiento con sentido (segunda pasada visual) ----
+   Avisos que salen, estados que destellan al cambiar, microinteracciones en botones e interruptores.
+   Todo corto (≤ 0,9 s), solo transform/opacity/box-shadow; nada infinito salvo lo que ya existía. */
+.aviso.saliendo { animation: aviso-sale .22s var(--ease) forwards; }
+@keyframes aviso-sale { to { opacity: 0; transform: translateX(24px) scale(.96); } }
+.punto, .ping i { transition: background .35s var(--ease), box-shadow .35s var(--ease); }
+.destello { animation: destello .9s var(--ease); border-radius: 10px; }
+@keyframes destello { 0% { box-shadow: 0 0 0 0 var(--acc); } 30% { box-shadow: 0 0 0 4px var(--acc-suave), 0 0 26px var(--acc-suave); } 100% { box-shadow: 0 0 0 0 transparent; } }
+.semaforo-cab.destello { border-radius: 10px; }
+/* Botones: brillo que cruza al pasar el ratón y anillo claro con el teclado */
+.btn { position: relative; overflow: hidden; }
+.btn.lleno::after { content: ""; position: absolute; inset: 0; background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, .35) 50%, transparent 70%); transform: translateX(-120%); pointer-events: none; }
+@media (hover: hover) { .btn.lleno:not(:disabled):hover::after { transform: translateX(120%); transition: transform .6s var(--ease); } .btn:not(:disabled):hover { box-shadow: 0 0 18px var(--acc-suave); } }
+.btn:focus-visible, .tab:focus-visible, .nv:focus-visible, .inicio-boton:focus-visible, .sw:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
+/* Interruptor: el botón se estira al pulsar (como en el móvil) */
+.sw:not(:disabled):active::after { width: 24px; }
+.sw.on:not(:disabled):active::after { transform: translateX(14px); }
+@media (prefers-reduced-motion: reduce) {
+  .aviso.saliendo { animation: none; opacity: 0; } .destello { animation: none; }
+  .btn.lleno::after { display: none; } .punto, .ping i { transition: none; }
+}
+html.sin-foco .destello { animation: none; }

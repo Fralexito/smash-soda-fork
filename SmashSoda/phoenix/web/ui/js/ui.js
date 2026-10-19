@@ -24,6 +24,20 @@ function hijos(c) { return (Array.isArray(c) ? c : [c]).flat(Infinity).filter((x
 
 export const cx = (...c) => c.filter(Boolean).join(" ");
 
+/** true durante `ms` cada vez que `valor` cambia (no al montar): para que un estado nuevo «destelle» (clase .destello). */
+export function useDestello(valor, ms = 1100) {
+  const previo = useRef(valor);
+  const [on, setOn] = useState(false);
+  useEffect(() => {
+    if (previo.current === valor) return undefined;
+    previo.current = valor;
+    setOn(true);
+    const id = setTimeout(() => setOn(false), ms);
+    return () => clearTimeout(id);
+  }, [valor]);
+  return on;
+}
+
 // ---- Iconos (trazos del diseño) ---------------------------------------------------
 const TRAZOS = {
   sala: html`<circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8" stroke-dasharray="3 3"/>`,
@@ -309,7 +323,8 @@ export function nivelPing(ms, semaforo = null) {
 /** Punto de color + ms (el color cambia con transición). */
 export function Ping({ ms, semaforo = null, grande = false }) {
   const n = nivelPing(ms, semaforo);
-  return html`<span class=${cx("ping", n, grande && "grande")}><i aria-hidden="true"></i><span class="mono">${ms >= 0 ? ms + " ms" : "—"}</span></span>`;
+  const destello = useDestello(n);
+  return html`<span class=${cx("ping", n, grande && "grande", destello && "destello")}><i aria-hidden="true"></i><span class="mono">${ms >= 0 ? ms + " ms" : "—"}</span></span>`;
 }
 /** Pastilla de estado con punto vivo (estilo de la barra). `al` opcional la vuelve un botón. */
 export function Pastilla({ estado = "", texto, titulo = "", al = null, vivo = false }) {
