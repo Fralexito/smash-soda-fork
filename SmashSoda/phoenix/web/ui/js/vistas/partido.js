@@ -6,7 +6,7 @@
 // =============================================================================
 import { html, useState, useEffect, useRef } from "../lib.js";
 import { t, duracion, fecha } from "../i18n.js";
-import { accion, confirmar, avisar } from "../tienda.js";
+import { accion, confirmar, avisar, irA } from "../tienda.js";
 import { Tarjeta, Titulo, Boton, Interruptor, Campo, Avatar, Chip, Icono, Vacio, colorPing, cx, dos } from "../ui.js";
 import { CampoEnVivo } from "./campo.js";
 
@@ -22,8 +22,14 @@ export function VistaPartido({ s, pestana }) {
   if (pestana === "historial") return html`<${Historial}/>`;
   if (pestana === "campo") return html`<${CampoEnVivo} m=${m}/>`;
   const fase = m.partido?.fase || "libre";
-  if (fase === "libre") return html`<${Armar} m=${m}/>`;
+  if (fase === "libre") return html`<${ResultadoYArmar} m=${m}/>`;
   return html`<${Marcador} m=${m}/>`;
+}
+
+/** Sin partido en marcha: si acaba de terminar uno, primero su resultado con REVANCHA; debajo, armar el siguiente. */
+function ResultadoYArmar({ m }) {
+  const r = useUltimoPartido(m);
+  return html`<div class="col">${r?.reciente ? html`<${TarjetaResultado} m=${m} r=${r}/>` : null}<${Armar} m=${m}/></div>`;
 }
 
 // ---- Armar el partido ---------------------------------------------------------------------
@@ -358,6 +364,81 @@ function MiniSerie({ serie }) {
   return html`<svg class="spark" viewBox="0 0 100 30" preserveAspectRatio="none" style="height:30px;margin-top:8px">
     <polyline fill="none" stroke="var(--acc)" stroke-width="1.6" vector-effect="non-scaling-stroke"
       points=${d.map((v, i) => `${(i / (d.length - 1)) * 100},${29 - (v / max) * 28}`).join(" ")}/></svg>`;
+}
+
+// ---- Tarjeta de resultado y Revancha (plan UX, fase 2) -----------------------------------------
+// El último partido guardado (partido.historial max 1): se vuelve a pedir cada vez que un partido termina.
+let ultimo = null, faseVista = null;
+const oyentesUltimo = new Set();
+async function cargarUltimo() {
+  const r = await accion("partido.historial", { max: 1 }, { silencioso: true });
+  ultimo = r?.partidos?.[0] || null;
+  oyentesUltimo.forEach((f) => f(ultimo));
+}
+/** El último partido; null si no hay. `reciente` = terminó hace menos de 30 min. */
+export function useUltimoPartido(m) {
+  const [r, setR] = useState(ultimo);
+  useEffect(() => { oyentesUltimo.add(setR); if (!ultimo) cargarUltimo(); return () => oyentesUltimo.delete(setR); }, []);
+  const fase = m?.partido?.fase;
+  useEffect(() => {
+    if ((faseVista === "en_juego" || faseVista === "pausado" || faseVista === "listo") && fase === "libre") cargarUltimo();
+    faseVista = fase;
+  }, [fase]);
+  if (!r) return null;
+  const fin = (r.inicioMs || 0) + (r.duracionSeg || 0) * 1000;
+  return { ...r, reciente: Date.now() - fin < 30 * 60 * 1000 };
+}
+
+/** REVANCHA (mismos lados) o CAMBIAR LADOS. Con los lados automáticos basta con jugar otro partido en PES. */
+async function revancha(m, r, cruzar) {
+  const auto = !!(m.arbitro && m.arbitro.ladosAuto && m.arbitro.marcadorAuto);
+  if (m.sala?.abierta) await accion("chat.enviar", { texto: cruzar ? t("🔁 ¡Revancha cambiando de lado!", "🔁 Rematch, switching sides!") : t("🔁 ¡Revancha!", "🔁 Rematch!") }, { silencioso: true });
+  if (auto) {
+    avisar(t("¡Revancha! Empezad otro partido en PES: Link arma los lados solo al pitazo.", "Rematch! Start another match in PES: Link sets the sides at kick-off."), "ok", 8000);
+    return;
+  }
+  const presentes = new Set(participantes(m).map((g) => g.parsecId));
+  const ids = (l) => l.jugadores.map((j) => j.parsecId).filter((id) => presentes.has(id));
+  const cpuA = r.a.jugadores.some((j) => !j.parsecId), cpuB = r.b.jugadores.some((j) => !j.parsecId);
+  let a = { ids: ids(r.a), nombre: r.a.nombre, cpu: cpuA }, b = { ids: ids(r.b), nombre: r.b.nombre, cpu: cpuB };
+  if (cruzar) [a, b] = [b, a];
+  if (a.cpu) { avisar(t("Contra la máquina, la máquina va siempre en el Equipo B: arma el partido a mano.", "Against the CPU, the CPU is always Team B: set it up manually."), "warn"); irA("partido", "vivo"); return; }
+  if (!a.ids.length || (!b.cpu && !b.ids.length)) { avisar(t("Alguien del partido ya no está en la sala: arma el partido a mano.", "Someone from the match left the room: set it up manually."), "warn"); irA("partido", "vivo"); return; }
+  if (await accion("partido.preparar", { a: a.ids, b: b.cpu ? [] : b.ids, nombreA: a.nombre, nombreB: b.nombre, asignar: true, ...(b.cpu ? { cpu: "b" } : {}) }, { ok: t("Revancha lista: pulsa ¡EMPEZAR! o arranca en PES.", "Rematch ready: press KICK OFF or start in PES.") })) irA("partido", "vivo");
+}
+
+/** La tarjeta del último resultado con REVANCHA y CAMBIAR LADOS. compacto = una línea (INICIO). */
+export function TarjetaResultado({ m, r, compacto = false }) {
+  if (!r) return null;
+  const gana = r.ganador === "empate" ? t("Empate", "Draw") : t(`Ganó ${r.ganador === "a" ? r.a.nombre : r.b.nombre}`, `${r.ganador === "a" ? r.a.nombre : r.b.nombre} won`);
+  const puedeJugar = !!m.sala?.abierta;
+  const botones = html`<div style="display:flex;gap:8px;flex-wrap:wrap">
+    <${Boton} tipo=${compacto ? "mini lleno" : "lleno"} deshabilitado=${!puedeJugar} titulo=${puedeJugar ? "" : t("Abre la sala para jugar la revancha", "Open the room to play the rematch")} al=${() => revancha(m, r, false)}><${Icono} n="rayo" t=${15}/>${t("REVANCHA", "REMATCH")}</${Boton}>
+    <${Boton} tipo=${compacto ? "mini suave" : "suave"} deshabilitado=${!puedeJugar} al=${() => revancha(m, r, true)}><${Icono} n="intercambio" t=${15}/>${t("CAMBIAR LADOS", "SWITCH SIDES")}</${Boton}>
+    ${compacto ? null : html`<${Boton} tipo="suave" al=${() => irA("partido", "historial")}>${t("HISTORIAL", "HISTORY")}</${Boton}>`}
+  </div>`;
+  if (compacto) {
+    return html`<div class="caja" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <span class="lab acc" style="flex:none">${r.reciente ? t("TU ÚLTIMO PARTIDO", "YOUR LAST MATCH") : t("ÚLTIMO PARTIDO", "LAST MATCH")}</span>
+      <b style="flex:1;min-width:200px">${r.a.nombre} <span class="disp acc">${r.a.goles} : ${r.b.goles}</span> ${r.b.nombre} <span class="mut" style="font-weight:400">· ${gana}</span></b>
+      ${botones}
+    </div>`;
+  }
+  return html`<${Tarjeta} vivo=${r.reciente} interior="padding:24px 28px;display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+      <span class="lab acc">${t("RESULTADO FINAL", "FULL TIME")}</span>
+      <span class="mono mut" style="font-size:12px">${fecha(r.inicioMs)} · ${duracion(r.duracionSeg)}</span>
+    </div>
+    <div class="marcador">
+      <div class="equipo a"><div class="lab" style="color:var(--acc)">${t("EQUIPO A", "TEAM A")}</div><div class="nom">${r.a.nombre}</div></div>
+      <div class="goles"><div class="num a">${r.a.goles}</div><span class="sep">:</span><div class="num b">${r.b.goles}</div></div>
+      <div class="equipo b"><div class="lab" style="color:var(--eq-b)">${t("EQUIPO B", "TEAM B")}</div><div class="nom">${r.b.nombre}</div></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+      <b class="disp" style="font-size:20px">${gana}</b>
+      ${botones}
+    </div>
+  </${Tarjeta}>`;
 }
 
 // ---- Historial y tabla ------------------------------------------------------------------------

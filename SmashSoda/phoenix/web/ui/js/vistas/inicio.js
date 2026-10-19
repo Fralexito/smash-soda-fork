@@ -16,6 +16,7 @@ import { accion, avisar, irA, leer } from "../tienda.js";
 import { Tarjeta, Titulo, Boton, Avatar, Chip, Icono, PanelLateral, cx } from "../ui.js";
 import { useSemaforo, CabeceraSemaforo, comprobaciones, revisarSemaforo } from "./semaforo.js";
 import { mejorSala, unirmeASala } from "./gente.js";
+import { useUltimoPartido, TarjetaResultado } from "./partido.js";
 
 export const PESTANAS_INICIO = [
   { id: "inicio", es: "INICIO", en: "HOME", d: ["Jugar en dos clics: con un amigo o contra quien esté libre. Todo lo demás sigue en el menú.", "Play in two clicks: with a friend or against whoever is free. Everything else is still in the menu."] },
@@ -66,6 +67,7 @@ export function VistaInicio({ s }) {
   const { resumen } = useSemaforo(m);
   const [invitar, setInvitar] = useState(false);
   const [ocupado, setOcupado] = useState("");
+  const ultimo = useUltimoPartido(m);
   if (!m || !m.sala) return null;
   const sala = m.sala;
 
@@ -127,6 +129,7 @@ export function VistaInicio({ s }) {
         </button>
       </div>
       ${sala.abierta ? html`<${FranjaSala} m=${m} abrirInvitar=${() => setInvitar(true)}/>` : null}
+      ${ultimo ? html`<${TarjetaResultado} m=${m} r=${ultimo} compacto/>` : null}
     </${Tarjeta}>
     <div class="rej2" style="align-items:start">
       <${Tarjeta} interior="padding:20px 24px;display:flex;flex-direction:column;gap:10px">
