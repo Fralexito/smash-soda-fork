@@ -7,13 +7,127 @@
 // =============================================================================
 import { html, useState, useEffect, useRef } from "../lib.js";
 import { t } from "../i18n.js";
-import { accion, avisar, elegirPestana, confirmar } from "../tienda.js";
+import { accion, avisar, elegirPestana, confirmar, irA, leer as leerTienda } from "../tienda.js";
 import { Tarjeta, Titulo, Boton, BotonIr, cx } from "../ui.js";
-import { useSemaforo } from "./semaforo.js";
+import { useSemaforo, causaPausa } from "./semaforo.js";
 
 const espera = (ms) => new Promise((r) => setTimeout(r, ms));
 /** Nombre corto de una ruta para la pantalla; la ruta entera queda en «detalles». */
 const corto = (ruta) => { const p = String(ruta || "").replace(/[\\/]+$/, "").split(/[\\/]/); return p[p.length - 1] || ruta; };
+
+// ---- ARREGLAR TODO (plan UX, fase 1) -------------------------------------------------------
+// Vive fuera de la pantalla: si PES está abierto, ESPERA a que lo cierres y sigue solo (aunque cambies de sección).
+// Nunca escribe en el juego con PES abierto: cada paso que toca el juego vuelve a mirar si PES se abrió.
+let tarea = { haciendo: false, esperandoPes: false, informe: [], busca: null };
+const oyentesTarea = new Set();
+const ponerTarea = (p) => { tarea = { ...tarea, ...p }; oyentesTarea.forEach((f) => f(tarea)); };
+function useTarea() {
+  const [x, setX] = useState(tarea);
+  useEffect(() => { oyentesTarea.add(setX); return () => oyentesTarea.delete(setX); }, []);
+  return x;
+}
+let cancelado = false;
+/** Deja de esperar a que se cierre PES (botón CANCELAR). */
+export function cancelarArreglar() { cancelado = true; }
+const leerTodo = async () => [await accion("sync.modulos", {}, { silencioso: true }), await accion("traspasos.estado", {}, { silencioso: true })];
+
+async function buscarJuegoGlobal() {
+  await accion("sync.detectarJuego", { accion: "iniciar" }, { silencioso: true });
+  for (let i = 0; i < 60; i++) {
+    const r = await accion("sync.detectarJuego", { accion: "estado" }, { silencioso: true });
+    if (!r) return { error: true };
+    if (r.conocido) return { ok: true, ruta: r.ruta };
+    if (r.terminada) { ponerTarea({ busca: r.candidatos || [] }); return { candidatos: r.candidatos || [] }; }
+    await espera(500);
+  }
+  return { error: true };
+}
+
+/** Espera a que PES se cierre (mira cada 3 s). true = cerrado; false = cancelado. */
+async function esperarPesCerrado(nota) {
+  nota(false, t("PES está abierto y con el juego abierto no toco nada. Ciérralo cuando quieras: te aviso y sigo solo.", "PES is open and I touch nothing while it is. Close it whenever you like: I'll let you know and carry on by myself."));
+  ponerTarea({ esperandoPes: true });
+  cancelado = false;
+  try {
+    for (;;) {
+      await espera(3000);
+      if (cancelado) { nota(false, t("Dejé de esperar. Pulsa ARREGLAR TODO cuando cierres PES.", "Stopped waiting. Press FIX EVERYTHING once PES is closed.")); return false; }
+      const r = await accion("sync.modulos", {}, { silencioso: true });
+      if (r && !r.pesAbierto) { nota(true, t("Cerraste PES: sigo con lo que faltaba.", "PES is closed: carrying on with what was left.")); return true; }
+    }
+  } finally { ponerTarea({ esperandoPes: false }); }
+}
+
+/** En orden: carpeta del juego → archivos de Phoenix → que el juego lea los fichajes → recarga automática → cuenta → traspasos. */
+export async function arreglarTodo() {
+  if (tarea.haciendo) return;
+  const log = [];
+  const nota = (ok, texto) => { log.push({ ok, texto }); ponerTarea({ informe: [...log] }); };
+  ponerTarea({ haciendo: true, informe: [] });
+  let esperoPes = false;
+  try {
+    let [a, b] = await leerTodo();
+    if (!a || !b) { nota(false, t("No pude leer el estado de Link. Inténtalo otra vez.", "I couldn't read Link's state. Try again.")); return; }
+    // 1. carpeta del juego
+    if (!a.juego) {
+      const r = await buscarJuegoGlobal();
+      if (r.ok) nota(true, t(`Encontré tu juego: ${corto(r.ruta)}.`, `Found your game: ${corto(r.ruta)}.`));
+      else if (r.candidatos && r.candidatos.length > 1) { nota(false, t("Encontré varios juegos: elige el tuyo en la lista de abajo y vuelve a pulsar ARREGLAR TODO.", "I found several games: pick yours in the list below and press FIX EVERYTHING again.")); return; }
+      else if (r.candidatos && r.candidatos.length === 1) { nota(false, t("Encontré un juego pero todavía no tiene Sider. Ábrelo una vez con su lanzador y vuelve a pulsar.", "I found a game but it has no Sider yet. Open it once with its launcher and press again.")); return; }
+      else { nota(false, t("No encontré PES 2021 en este PC. Si está en una carpeta rara, ábrelo una vez y vuelve a pulsar.", "I didn't find PES 2021 on this PC. If it's in an odd folder, open it once and press again.")); return; }
+      [a, b] = await leerTodo();
+    } else nota(true, t("La carpeta del juego ya estaba bien.", "The game folder was already fine."));
+    // 2. piezas de Phoenix (solo con PES cerrado: si está abierto, se espera)
+    let pend = (a.modulos || []).filter((x) => x.gestionable && x.estado !== "instalado");
+    if (pend.length && a.pesAbierto) {
+      if (!(await esperarPesCerrado(nota))) return;
+      esperoPes = true;
+      [a, b] = await leerTodo();
+      pend = (a?.modulos || []).filter((x) => x.gestionable && x.estado !== "instalado");
+    }
+    if (pend.length) {
+      let bien = true;
+      for (const x of pend) {
+        const r = await accion("sync.modulo", { archivo: x.archivo, accion: "instalar" });   // el motor vuelve a negarse si PES se abrió
+        if (!r) { bien = false; break; }
+      }
+      if (!bien) { nota(false, t("No pude instalar un archivo. Tu juego no se rompió: hay copia de lo que se tocó.", "I couldn't install a file. Your game isn't broken: what was touched is backed up.")); return; }
+      nota(true, t("Instalé los archivos de Phoenix en el juego (con copia antes).", "Installed Phoenix's files in the game (backed up first)."));
+      [a, b] = await leerTodo();
+    } else nota(true, t("Los archivos de Phoenix ya estaban al día.", "Phoenix's files were already up to date."));
+    // 2b. que el juego lea los fichajes ya puestos (línea de Phoenix-DB en sider.ini)
+    let cr = await accion("sync.raizPhoenixDB", {}, { silencioso: true });
+    if (cr && cr.faltan && cr.faltan.length && cr.pesAbierto) {
+      if (!(await esperarPesCerrado(nota))) return;
+      esperoPes = true;
+      cr = await accion("sync.raizPhoenixDB", {}, { silencioso: true });
+    }
+    if (cr && cr.faltan && cr.faltan.length) {
+      if (await accion("sync.raizPhoenixDB", { accion: "arreglar" })) nota(true, t(`Dejé al juego leyendo los fichajes (${cr.faltan.join(", ")}).`, `The game now reads the transfers (${cr.faltan.join(", ")}).`));
+      else { nota(false, t("No pude dejar al juego leyendo los fichajes. No se rompió nada.", "I couldn't make the game read the transfers. Nothing was broken.")); return; }
+    }
+    // 3. recarga automática
+    if ((b?.modoRecarga || "AUTO-SIEMPRE") === "ACTIVAR") {
+      if (await accion("sync.modoRecarga", { modo: "AUTO-SIEMPRE" })) nota(true, t("Dejé la recarga automática.", "Set the automatic reload."));
+      else nota(false, t("No pude cambiar la recarga automática.", "I couldn't change the automatic reload."));
+    } else nota(true, t("La recarga ya era automática.", "The reload was already automatic."));
+    // 4. cuenta: solo la persona puede
+    if ((leerTienda().motor?.web?.estado || "sin_vincular") !== "conectado") { nota(false, t("Falta conectar tu cuenta de la liga. Escribe el código de la web en «Tu cuenta de la liga»: es lo único que haces tú.", "Your league account isn't connected. Type the web code in «Your league account»: it's the only thing you do yourself.")); return; }
+    // 5. conexión de traspasos
+    if (b?.ajustes && (b.ajustes.publicar || b.ajustes.recibir) && (b.ajustes.transporte || "web") === "web" && b.web?.estado !== "ok") {
+      await accion("traspasos.accion", { accion: "reintentar" }, { silencioso: true });
+      await espera(2500);
+      [a, b] = await leerTodo();
+      if (b?.web?.estado === "ok") nota(true, t("La conexión de los traspasos funciona.", "The live transfers connection works."));
+      else nota(false, t("Los traspasos todavía no conectan. Se reintenta sola; mira «Traspasos» para ver el motivo.", "Live transfers aren't connected yet. It retries by itself; see «Transfers» for the reason."));
+    }
+    if (!(b?.ajustes && (b.ajustes.publicar || b.ajustes.recibir))) nota(true, t("Los traspasos en vivo siguen apagados. Si los quieres, enciéndelos en «Traspasos».", "Live transfers are still off. If you want them, turn them on in «Transfers»."));
+  } finally {
+    ponerTarea({ haciendo: false });
+    // Si siguió solo tras cerrar PES, avisa aunque estés en otra pantalla
+    if (esperoPes) avisar(log.every((x) => x.ok || /PES está abierto/.test(x.texto)) ? t("Mi juego quedó listo para los fichajes.", "My game is ready for transfers.") : t("ARREGLAR TODO terminó: mira lo que falta.", "FIX EVERYTHING finished: see what's left."), "ok", 9000, { texto: t("VER", "SEE"), al: () => irA("sync", "mipc") });
+  }
+}
 
 /** Esta pantalla es el punto «Mi juego» del Semáforo Phoenix: arriba, cómo está todo lo demás y un botón al semáforo entero. */
 function EnElSemaforo({ m }) {
@@ -33,10 +147,8 @@ export function Preparar({ s }) {
   const [mods, setMods] = useState(null);      // sync.modulos
   const [tr, setTr] = useState(null);          // traspasos.estado
   const [raiz, setRaiz] = useState(null);      // sync.raizPhoenixDB: modos cuyo sider.ini no lee Phoenix-DB
-  const [busca, setBusca] = useState(null);    // candidatos del juego si hay varios
-  const [haciendo, setHaciendo] = useState(false);
+  const { haciendo, esperandoPes, informe, busca } = useTarea();   // ARREGLAR TODO y los candidatos del juego (fuera de la pantalla)
   const [codigoCta, setCodigoCta] = useState("");   // los 6 dígitos para unir la cuenta
-  const [informe, setInforme] = useState([]);  // lo que hizo «ARREGLAR TODO»: [{ok, texto}]
   const vivo = useRef(true);
   useEffect(() => () => { vivo.current = false; }, []);
 
@@ -63,20 +175,10 @@ export function Preparar({ s }) {
   const pesAbierto = !!mods?.pesAbierto;
 
   // ---- Acciones sueltas (las usan los botones de cada fila y «ARREGLAR TODO») ----
-  const buscarJuego = async () => {
-    await accion("sync.detectarJuego", { accion: "iniciar" }, { silencioso: true });
-    for (let i = 0; i < 60 && vivo.current; i++) {
-      const r = await accion("sync.detectarJuego", { accion: "estado" }, { silencioso: true });
-      if (!r) return { error: true };
-      if (r.conocido) { await leer(); return { ok: true, ruta: r.ruta }; }
-      if (r.terminada) { setBusca(r.candidatos || []); return { candidatos: r.candidatos || [] }; }
-      await espera(500);
-    }
-    return { error: true };
-  };
+  const buscarJuego = async () => { const r = await buscarJuegoGlobal(); await leer(); return r; };
   const elegirCarpeta = async (ruta) => {
     const r = await accion("sync.carpetaJuego", { ruta });
-    if (r) { setBusca(null); await leer(); avisar(t("Listo: ya sé dónde está tu juego.", "Done: I know where your game is."), "ok", 4000); }
+    if (r) { ponerTarea({ busca: null }); await leer(); avisar(t("Listo: ya sé dónde está tu juego.", "Done: I know where your game is."), "ok", 4000); }
   };
   const instalar = async () => {
     for (const x of faltan) {
@@ -108,7 +210,7 @@ export function Preparar({ s }) {
     titulo: t("Tu cuenta de la liga", "Your league account"),
     frase: cuenta === "conectado" ? t(`Esta PC está unida a tu cuenta${m.web?.usuario ? ": " + m.web.usuario : ""}.`, `This PC is linked to your account${m.web?.usuario ? ": " + m.web.usuario : ""}.`)
       : cuenta === "vinculando" ? t("Uniendo esta PC a tu cuenta… espera un momento.", "Linking this PC to your account… wait a moment.")
-      : cuenta === "pausado" ? t("La unión está en pausa.", "The link is paused.")
+      : cuenta === "pausado" ? causaPausa(m.web || {})
       : cuenta === "sin_conexion" ? t("No hay conexión con la web ahora. Se reintenta sola.", "No connection to the web right now. It retries by itself.")
       : t("Une esta PC a tu cuenta con un código de la web. Es lo único que haces tú.", "Link this PC to your account with a code from the web. It's the only thing you do yourself."),
     extra: cuenta === "sin_vincular" ? html`<div style="display:flex;flex-direction:column;gap:6px;margin-top:6px">
@@ -116,7 +218,7 @@ export function Preparar({ s }) {
       <div style="display:flex;gap:8px;align-items:center;max-width:360px"><input class="campo mono" inputmode="numeric" maxLength="6" placeholder="123456" value=${codigoCta} style="font-size:18px;letter-spacing:.25em;text-align:center;height:40px"
         onInput=${(e) => setCodigoCta(e.currentTarget.value.replace(/[^\d]/g, "").slice(0, 6))} onKeyDown=${(e) => e.key === "Enter" && unirCuenta()}/>
         <${Boton} tipo="lleno mini" deshabilitado=${codigoCta.length !== 6} al=${unirCuenta}>${t("UNIR", "LINK")}</${Boton}></div></div>` : null,
-    boton: cuenta === "conectado" ? [t("SEPARAR", "UNLINK"), soltarCuenta] : cuenta === "sin_conexion" ? [t("REINTENTAR", "RETRY"), () => accion("web.reintentar", {}, { ok: t("Reintentando…", "Retrying…") })] : null,
+    boton: cuenta === "conectado" ? [t("SEPARAR", "UNLINK"), soltarCuenta] : cuenta === "sin_conexion" || cuenta === "pausado" ? [t("REINTENTAR", "RETRY"), () => accion("web.reintentar", {}, { ok: t("Reintentando…", "Retrying…") })] : null,
   });
   filas.push({
     id: "juego", ok: !mods ? "espera" : !!mods.juego,
@@ -163,64 +265,7 @@ export function Preparar({ s }) {
   const malas = filas.filter((f) => f.ok === false && !f.opcional);
   const cargando = !mods || !tr;
 
-  // ---- ARREGLAR TODO: en orden, parando cuando haga falta la persona ----
-  const arreglarTodo = async () => {
-    if (haciendo) return;
-    setHaciendo(true);
-    const log = [];
-    const nota = (ok, texto) => { log.push({ ok, texto }); if (vivo.current) setInforme([...log]); };
-    try {
-      let [a, b] = await leer();
-      if (!a || !b) { nota(false, t("No pude leer el estado de Link. Inténtalo otra vez.", "I couldn't read Link's state. Try again.")); return; }
-      // 1. carpeta del juego
-      if (!a.juego) {
-        const r = await buscarJuego();
-        if (r.ok) nota(true, t(`Encontré tu juego: ${corto(r.ruta)}.`, `Found your game: ${corto(r.ruta)}.`));
-        else if (r.candidatos && r.candidatos.length > 1) { nota(false, t("Encontré varios juegos: elige el tuyo en la lista de abajo y vuelve a pulsar ARREGLAR TODO.", "I found several games: pick yours in the list below and press FIX EVERYTHING again.")); return; }
-        else if (r.candidatos && r.candidatos.length === 1) { nota(false, t("Encontré un juego pero todavía no tiene Sider. Ábrelo una vez con su lanzador y vuelve a pulsar.", "I found a game but it has no Sider yet. Open it once with its launcher and press again.")); return; }
-        else { nota(false, t("No encontré PES 2021 en este PC. Si está en una carpeta rara, ábrelo una vez y vuelve a pulsar.", "I didn't find PES 2021 on this PC. If it's in an odd folder, open it once and press again.")); return; }
-        [a, b] = await leer();
-      } else nota(true, t("La carpeta del juego ya estaba bien.", "The game folder was already fine."));
-      // 2. piezas de Phoenix (solo con PES cerrado)
-      const pend = (a.modulos || []).filter((x) => x.gestionable && x.estado !== "instalado");
-      if (pend.length) {
-        if (a.pesAbierto) { nota(false, t("Cierra PES 2021 (y Sider) y vuelve a pulsar ARREGLAR TODO: con el juego abierto no toco nada.", "Close PES 2021 (and Sider) and press FIX EVERYTHING again: I touch nothing while the game is open.")); return; }
-        let bien = true;
-        for (const x of pend) {
-          const r = await accion("sync.modulo", { archivo: x.archivo, accion: "instalar" });
-          if (!r) { bien = false; break; }
-        }
-        if (!bien) { nota(false, t("No pude instalar un archivo. Tu juego no se rompió: hay copia de lo que se tocó.", "I couldn't install a file. Your game isn't broken: what was touched is backed up.")); return; }
-        nota(true, t("Instalé los archivos de Phoenix en el juego (con copia antes).", "Installed Phoenix's files in the game (backed up first)."));
-        [a, b] = await leer();
-      } else nota(true, t("Los archivos de Phoenix ya estaban al día.", "Phoenix's files were already up to date."));
-      // 2b. que el juego lea los fichajes ya puestos (línea de Phoenix-DB en sider.ini)
-      const cr = await accion("sync.raizPhoenixDB", {}, { silencioso: true });
-      if (cr && cr.faltan && cr.faltan.length) {
-        if (cr.pesAbierto) { nota(false, t("Cierra PES 2021 y vuelve a pulsar: falta que el juego lea los fichajes y con el juego abierto no toco nada.", "Close PES 2021 and press again: the game doesn't read the transfers yet and I touch nothing while it's open.")); return; }
-        if (await arreglarRaiz()) nota(true, t(`Dejé al juego leyendo los fichajes (${cr.faltan.join(", ")}).`, `The game now reads the transfers (${cr.faltan.join(", ")}).`));
-        else { nota(false, t("No pude dejar al juego leyendo los fichajes. No se rompió nada.", "I couldn't make the game read the transfers. Nothing was broken.")); return; }
-      }
-      // 3. recarga automática
-      if ((b.modoRecarga || "AUTO-SIEMPRE") === "ACTIVAR") {
-        if (await ponerRecarga()) nota(true, t("Dejé la recarga automática.", "Set the automatic reload."));
-        else nota(false, t("No pude cambiar la recarga automática.", "I couldn't change the automatic reload."));
-      } else nota(true, t("La recarga ya era automática.", "The reload was already automatic."));
-      // 4. cuenta: solo la persona puede
-      if ((s.motor?.web?.estado || "sin_vincular") !== "conectado") { nota(false, t("Falta unir tu cuenta de la liga. Escribe el código de la web en «Tu cuenta de la liga»: es lo único que haces tú.", "Your league account isn't linked. Type the web code in «Your league account»: it's the only thing you do yourself.")); return; }
-      // 5. conexión de traspasos
-      if (b.ajustes && (b.ajustes.publicar || b.ajustes.recibir) && (b.ajustes.transporte || "web") === "web" && b.web?.estado !== "ok") {
-        await accion("traspasos.accion", { accion: "reintentar" }, { silencioso: true });
-        await espera(2500);
-        [a, b] = await leer();
-        if (b?.web?.estado === "ok") nota(true, t("La conexión de los traspasos funciona.", "The live transfers connection works."));
-        else nota(false, t("Los traspasos todavía no conectan. Se reintenta sola; mira «Traspasos» para ver el motivo.", "Live transfers aren't connected yet. It retries by itself; see «Transfers» for the reason."));
-      }
-      if (!(b?.ajustes && (b.ajustes.publicar || b.ajustes.recibir))) nota(true, t("Los traspasos en vivo siguen apagados. Si los quieres, enciéndelos en «Traspasos».", "Live transfers are still off. If you want them, turn them on in «Transfers»."));
-    } finally {
-      if (vivo.current) setHaciendo(false);
-    }
-  };
+  const pulsarArreglar = async () => { await arreglarTodo(); leer(); };
 
   const simbolo = (ok) => ok === true ? "✓" : ok === "espera" ? "…" : ok === "apagado" ? "–" : "✗";
   const todoBien = !cargando && malas.length === 0;
@@ -239,8 +284,11 @@ export function Preparar({ s }) {
       <div style="display:flex;align-items:center;gap:12px"><span class=${cx("punto", cargando ? "" : todoBien ? "ok" : "warn")} style="width:16px;height:16px;flex:none"></span>
         <span class="disp" style="font-size:26px;font-weight:700;color:${cargando ? "inherit" : todoBien ? "var(--ok, #4ade80)" : "var(--warn, #ffb347)"}">${cargando ? t("Revisando…", "Checking…") : todoBien ? t("Listo para los fichajes", "Ready for transfers") : t(`Para los fichajes falta: ${malas.length} ${malas.length === 1 ? "cosa" : "cosas"}`, `Missing for transfers: ${malas.length}`)}</span></div>
       <div class="ayuda" style="font-size:14px">${todoBien ? t("Tu PC está lista para jugar con fichajes.", "Your PC is ready to play with transfers.") : t("Pulsa el botón y Phoenix arregla lo que pueda. Antes cierra PES.", "Press the button and Phoenix fixes what it can. Close PES first.")}</div>
-      <${Boton} tipo=${todoBien ? "suave" : "lleno"} deshabilitado=${haciendo || cargando} al=${arreglarTodo}>
-        ${haciendo ? t("ARREGLANDO…", "FIXING…") : todoBien ? t("REVISAR OTRA VEZ", "CHECK AGAIN") : t("ARREGLAR TODO", "FIX EVERYTHING")}</${Boton}>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <${Boton} tipo=${todoBien ? "suave" : "lleno"} deshabilitado=${haciendo || cargando} al=${pulsarArreglar}>
+          ${esperandoPes ? t("ESPERANDO A QUE CIERRES PES…", "WAITING FOR YOU TO CLOSE PES…") : haciendo ? t("ARREGLANDO…", "FIXING…") : todoBien ? t("REVISAR OTRA VEZ", "CHECK AGAIN") : t("ARREGLAR TODO", "FIX EVERYTHING")}</${Boton}>
+        ${esperandoPes ? html`<${Boton} tipo="suave" al=${cancelarArreglar}>${t("CANCELAR", "CANCEL")}</${Boton}>` : null}
+      </div>
       ${informe.length ? html`<div class="caja" style="display:flex;flex-direction:column;gap:6px;font-size:14px">
         ${informe.map((i, k) => html`<div key=${k} style="display:flex;gap:8px"><span class=${cx("punto", i.ok ? "ok" : "warn")} style="flex:none;margin-top:7px"></span><span>${i.texto}</span></div>`)}
       </div>` : null}

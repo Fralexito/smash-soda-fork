@@ -23,6 +23,7 @@ import { vigilarCambios } from "./vigia.js";
 import { GRUPOS, grupoDe } from "./grupos.js";
 import { BandaCedido, DialogoCeder, SECCIONES_CEDIDO, PESTANAS_CEDIDO, estaCedida, vigilarCedido } from "./vistas/cedido.js";
 import { BandaActualizacion } from "./vistas/actualizacion.js";
+import { causaPausa } from "./vistas/semaforo.js";
 
 const SECCIONES = [
   { id: "sala", es: "SALA", en: "ROOM", vista: VistaSala, pestanas: PESTANAS_SALA },
@@ -119,7 +120,7 @@ function GrupoEstado({ m, w, enSync = false }) {
   const ultimo = b?.estado === "conectado" && b?.ultimo ? " · " + b.ultimo : "";
   return html`<div class="grupo-estado" role="status" aria-label=${t("Estado de la conexión", "Connection status")}>
     <${PildoraSala} m=${m}/>
-    ${enSync ? null : html`<button class="pill web" onClick=${() => irA("sync", "mipc")} title=${m?.web?.mensaje || t("Cuenta de la liga", "League account")}>
+    ${enSync ? null : html`<button class="pill web" onClick=${() => irA("sync", "mipc")} title=${m?.web?.estado === "pausado" ? causaPausa(m.web) : m?.web?.mensaje || t("Cuenta de la liga", "League account")}>
       <span class=${cx("punto", w[0], w[0] === "ok" && "vivo")}></span>${t(w[1], w[2])}</button>
     <button class="pill juego" onClick=${() => irA("sync", "avanzado")} title=${t("Conexión de Phoenix con el juego", "Phoenix game connection")}>
       <span class=${cx("punto", j[0], j[0] === "ok" && "vivo")}></span>${t(j[1], j[2])}${ultimo}</button>`}

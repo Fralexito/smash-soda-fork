@@ -269,7 +269,7 @@ namespace phoenix::web {
 		};
 		PhoenixLink& link = PhoenixLink::instancia();
 		e["web"] = {
-			{"estado", textoEstadoLink(link.estado())}, {"usuario", link.usuario()}, {"mensaje", link.mensaje()},
+			{"estado", textoEstadoLink(link.estado())}, {"usuario", link.usuario()}, {"mensaje", link.mensaje()}, {"codigo", link.codigoPausa()},
 			{"publicada", link.salaPublicada()}, {"jugadoresLista", link.jugadoresEnLista()},
 			{"versionLiga", link.versionLiga()}, {"eventosEnCola", link.eventosEnCola()},
 		};

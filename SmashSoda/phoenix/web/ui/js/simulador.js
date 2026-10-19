@@ -247,6 +247,8 @@ export function crearSimulador(enviar) {
     return { parsecId: mp.ver, crudo, salida: aplicarMapeo(mp.perfiles[mp.ver]?.perfil, crudo), ultima: mp.ultima, n: mp.n, edadMs: 20 };
   };
   try { window.simPulsar = (f) => { s.mapeo.manual = { f, hasta: ahora() + 0.6 }; }; } catch { /* sin ventana */ }
+  // Pruebas a mano: window.simPes(false) cierra PES y window.simPes(true) lo abre (ARREGLAR TODO espera a que se cierre)
+  try { window.simPes = (abierto) => { s.pes.abierto = !!abierto; }; } catch { /* sin ventana */ }
 
   const estado = () => {
     const lista = s.mandos.slice(0, s.xbox + s.ds4).map((id, i) => {

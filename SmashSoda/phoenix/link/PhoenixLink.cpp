@@ -270,6 +270,7 @@ namespace phoenix {
 	EstadoLink PhoenixLink::estado() { std::lock_guard<std::mutex> l(_mutex); return _estado; }
 	std::string PhoenixLink::usuario() { std::lock_guard<std::mutex> l(_mutex); return _usuario; }
 	std::string PhoenixLink::mensaje() { std::lock_guard<std::mutex> l(_mutex); return _mensaje; }
+	std::string PhoenixLink::codigoPausa() { std::lock_guard<std::mutex> l(_mutex); return _pausado ? _codigoFallo : std::string(); }
 	bool PhoenixLink::salaPublicada() { std::lock_guard<std::mutex> l(_mutex); return !_salaId.empty(); }
 	int PhoenixLink::jugadoresEnLista() { std::lock_guard<std::mutex> l(_mutex); return _jugadores; }
 
@@ -277,6 +278,8 @@ namespace phoenix {
 	void PhoenixLink::fallo(const std::string& codigo, const std::string& mensaje, int reintentarEn) {
 		// Llamar con _mutex tomado.
 		_mensaje = textoError(codigo, mensaje);
+		_codigoFallo = codigo;   // la interfaz explica la pausa por su código (plan UX: causa + botón)
+		_codigoFallo = codigo;   // la interfaz explica la pausa por su código (plan UX: causa + botón)
 		if (codigo.rfind("TOKEN_", 0) == 0) {
 			borrarToken();
 			_token.clear();

@@ -155,6 +155,7 @@ namespace phoenix {
 		EstadoLink estado();
 		std::string usuario();
 		std::string mensaje();     ///< último aviso legible (error o éxito)
+		std::string codigoPausa(); ///< código estable de la web que dejó la unión en pausa (HOST_NO_AUTORIZADO…); "" si no está en pausa
 		bool salaPublicada();      ///< la web ya conoce la sala abierta
 		int jugadoresEnLista();    ///< jugadores en la lista de roles (incluye host)
 
@@ -293,6 +294,7 @@ namespace phoenix {
 		std::string _token;
 		std::string _usuario;
 		std::string _mensaje;
+		std::string _codigoFallo;   ///< último código de error de la web (solo se enseña con _pausado)
 		std::string _salaId;
 		EstadoLink _estado = EstadoLink::SinVincular;
 		bool _pausado = false;
