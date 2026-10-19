@@ -27,6 +27,7 @@ import { causaPausa } from "./vistas/semaforo.js";
 import { Bienvenida } from "./vistas/bienvenida.js";
 import { VistaInicio, PESTANAS_INICIO } from "./vistas/inicio.js";
 import { vigilarSentado } from "./vistas/sentado.js";
+import { QueHago } from "./vistas/quehago.js";
 
 const SECCIONES = [
   { id: "inicio", es: "INICIO", en: "HOME", vista: VistaInicio, pestanas: PESTANAS_INICIO },   // plan UX: delante de todo, sin quitar nada
@@ -191,7 +192,7 @@ function Contenido({ s }) {
       </div>
       ${meta}
     </div>
-    ${info?.d ? html`<div class="guia" key=${"g" + pestana}><span class="acc"><${Icono} n="rayo" t=${14}/></span>${t(info.d[0], info.d[1])}</div>` : null}
+    <${QueHago} s=${s} sec=${sec.id} pestana=${pestana} d=${info?.d}/>
     <div class="vista" key=${sec.id + "/" + pestana}>
       <${Vista} s=${s} pestana=${pestana}/>
     </div>

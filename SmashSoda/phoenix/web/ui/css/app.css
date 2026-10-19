@@ -829,3 +829,14 @@ html.sin-foco .peldano.sig::after, html.sin-foco .u-punto, html.sin-foco .punto.
 .inicio-boton .ib-texto { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .inicio-boton .ib-t { font: 700 24px/1.1 var(--f-disp); letter-spacing: .06em; }
 .inicio-boton .ib-d { color: var(--mut); font-size: 14px; line-height: 1.4; }
+
+/* ---- «¿Qué hago aquí?» (segunda pasada visual): una frase y, si falta arriba, el botón principal ---- */
+.que-hago { display: flex; align-items: center; gap: 12px; padding: 10px 12px 10px 14px; margin-top: -4px; border-radius: 12px;
+  border: 1px solid var(--tenue); background: linear-gradient(90deg, var(--acc-suave), rgba(255, 255, 255, .015) 70%); animation: subir .28s var(--ease) both; }
+.que-hago.ok { background: linear-gradient(90deg, rgba(61, 220, 151, .12), rgba(255, 255, 255, .015) 70%); }
+.que-hago.warn { border-color: rgba(255, 181, 71, .4); background: linear-gradient(90deg, rgba(255, 181, 71, .13), rgba(255, 255, 255, .015) 70%); }
+.que-hago .qh-icono { flex: none; width: 32px; height: 32px; border-radius: 16px; display: inline-flex; align-items: center; justify-content: center; color: var(--acc); background: rgba(0, 0, 0, .25); }
+.que-hago.ok .qh-icono { color: var(--ok); } .que-hago.warn .qh-icono { color: var(--warn); }
+.que-hago .qh-frase { flex: 1; min-width: 0; font-size: 14px; line-height: 1.4; color: var(--fg); }
+.que-hago .qh-boton { flex: none; }
+@media (prefers-reduced-motion: reduce) { .que-hago { animation: none; } }
