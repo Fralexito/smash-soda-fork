@@ -38,7 +38,7 @@ const PASOS = [
     texto: ["Enciéndelo y Link ordena el settings.dat de PES solo: el puesto 1 es el jugador 1, el 2 el jugador 2… Cierra DS4Windows mientras usas Link.", "Turn it on and Link sorts PES's settings.dat: seat 1 is player 1, seat 2 is player 2… Close DS4Windows while using Link."] },
   { ir: ["mandos", "bloqueo"], foco: porTexto(".pestanas .tab", /^(ÁRBITRO Y BLOQUEO|REFEREE & LOCK)$/), titulo: ["En vivo, árbitro y bloqueo", "Live, referee and lock"],
     texto: ["También en MANDOS: EN VIVO (qué pulsa cada jugador ahora mismo), ÁRBITRO Y BLOQUEO (modo competitivo, pausa y marcador automáticos, congelar mandos o botones) y TU MANDO. Mapeo y teclado están en MÁS.", "Also in PADS: LIVE (what each player is pressing right now), REFEREE & LOCK (competitive mode, auto pause and scoreboard, freezing pads or buttons) and YOUR PAD. Mapping and keyboard are under MORE."] },
-  { ir: ["jugar", "salas"], foco: nav(4), titulo: ["Otras salas", "Other rooms"],
+  { ir: ["jugar", "salas"], foco: nav(4), titulo: ["Jugar", "Play"],
     texto: ["Para jugar en las salas de otros: las salas abiertas (entras con un clic), tus amigos y dónde están, y tu perfil de PES (tu nombre y tus opciones).", "To play in other people's rooms: open rooms (join with one click), your friends and where they are, and your PES profile (your name and options)."] },
   { ir: ["sync", "mipc"], foco: nav(5), titulo: ["Sync", "Sync"],
     texto: ["Tu PC lista para jugar con fichajes, pasar un fichaje a un amigo y las opciones avanzadas.", "Your PC ready to play with transfers, passing a transfer to a friend and the advanced options."] },

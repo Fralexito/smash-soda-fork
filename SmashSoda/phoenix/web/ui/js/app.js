@@ -34,7 +34,7 @@ const SECCIONES = [
   { id: "partido", es: "PARTIDO", en: "MATCH", vista: VistaPartido, pestanas: PESTANAS_PARTIDO },
   { id: "mandos", es: "MANDOS", en: "PADS", vista: VistaMandos, pestanas: PESTANAS_MANDOS, meta: metaMandos },
   { id: "gente", es: "GENTE", en: "PEOPLE", vista: VistaGente, pestanas: PESTANAS_GENTE, meta: metaGente },
-  { id: "jugar", es: "OTRAS SALAS", en: "OTHER ROOMS", vista: VistaJugar, pestanas: PESTANAS_JUGAR, meta: metaJugar },
+  { id: "jugar", es: "JUGAR", en: "PLAY", vista: VistaJugar, pestanas: PESTANAS_JUGAR, meta: metaJugar },
   { id: "sync", es: "SYNC", en: "SYNC", vista: VistaSync, pestanas: PESTANAS_SYNC, meta: metaSync },
   { id: "ajustes", es: "AJUSTES", en: "SETTINGS", vista: VistaAjustes, pestanas: PESTANAS_AJUSTES },
 ];

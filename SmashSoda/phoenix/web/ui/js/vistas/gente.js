@@ -246,8 +246,14 @@ export function SalasAbiertas({ m }) {
   if (a.lista.length === 0) return html`<${Vacio} titulo=${t("No hay salas abiertas ahora", "No open rooms right now")} texto=${t("Cuando alguien abra una sala pública o de amigos, saldrá aquí.", "When someone opens a public or friends room, it will show up here.")}/>`;
   const unirme = (x) => accion("ui.abrir", { url: x.enlace });
   const SALUD = { en_partida: [t("EN PARTIDA", "IN A MATCH"), ""], inestable: [t("INESTABLE", "UNSTABLE"), "warn"] };
+  const mejor = mejorSala(m);
   return html`<div class="col">
-    <div class="rej3">${a.lista.map((x) => {
+    ${mejor ? html`<div class="caja" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;border-color:var(--linea)">
+      <div style="flex:1;min-width:220px"><b>${t("La mejor para ti ahora:", "Best for you now:")} ${mejor.hostNombre}</b>
+        <div class="ayuda">${[mejor.invitado ? t("te invitó", "invited you") : "", mejor.hostAmigo ? t("es tu amigo", "is your friend") : "", mejor.pingMs >= 0 ? mejor.pingMs + " ms" : "", t(`${mejor.plazasLibres} libres`, `${mejor.plazasLibres} free`)].filter(Boolean).join(" · ")}</div></div>
+      <${Boton} tipo="lleno" al=${() => unirmeASala(mejor)}><${Icono} n="enviar" t=${15}/>${t("ENTRAR A LA MEJOR", "JOIN THE BEST")}</${Boton}>
+    </div>` : null}
+    <div class="rej3">${ordenarSalas(a.lista).map((x) => {
       const sal = SALUD[x.salud];
       const llena = x.plazasTotal > 0 && x.plazasLibres <= 0;
       const motivo = x.soyHost ? t("Es tu propia sala.", "It's your own room.") : !x.enlace ? t("No tienes acceso para entrar a esta sala.", "You can't join this room.") : llena ? t("La sala está llena.", "The room is full.") : "";

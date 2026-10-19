@@ -1,5 +1,5 @@
 // =============================================================================
-//  Menú de Phoenix Link (0.3.11): SALA · PARTIDO · MANDOS · OTRAS SALAS · SYNC · AJUSTES.
+//  Menú de Phoenix Link (0.3.11): INICIO · SALA · PARTIDO · MANDOS · JUGAR · SYNC · AJUSTES (plan UX 0.3.30: «Otras salas» pasa a «Jugar»).
 //  PARTIDO: marcador, campo e historial. MANDOS: puestos, mandos en vivo, árbitro y bloqueo, tu mando
 //  (Fralex, 0.3.11: «esto podria en mandos, pero mejor organizado»).
 //  Nombres de cosas, no de momentos (Fralex: «no me gusta que diga antes y después»),
@@ -47,7 +47,7 @@ export const GRUPOS = [
       { p: ["mandos", "turnos"], es: "TURNOS", en: "HOTSEAT", mas: true },
       { p: ["sala", "puesto"], es: "DÓNDE JUEGO YO", en: "WHERE I PLAY", mas: true },
     ] },
-  { id: "otras", es: "OTRAS SALAS", en: "OTHER ROOMS", icono: "jugar",
+  { id: "otras", es: "JUGAR", en: "PLAY", icono: "jugar",
     d: ["Para jugar en salas de otros: salas abiertas, tus amigos y tu perfil de PES.", "To play in other people's rooms: open rooms, your friends and your PES profile."],
     pestanas: [
       { p: ["jugar", "salas"], es: "SALAS ABIERTAS", en: "OPEN ROOMS" },
