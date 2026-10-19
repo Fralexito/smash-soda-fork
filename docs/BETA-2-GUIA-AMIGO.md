@@ -1,5 +1,7 @@
 # Phoenix Link · beta 2 — Guía para instalar y probar (una página)
 
+> Actualizada al menú del plan UX (Link 0.3.34): INICIO · SALA · PARTIDO · MANDOS · JUGAR · SYNC · AJUSTES. Mapa completo en `docs/GUIA-MENU-NUEVO.md`.
+
 Para quien va a **hostear** con su propia PC (PES 2021 + parche + Parsec). Si solo entras a la sala de otro por Parsec, no necesitas nada de esto.
 
 ## Antes de empezar
@@ -48,7 +50,7 @@ Sin Link (solo los módulos): doble clic en `PhoenixJuego-instalar.bat`, elige l
 
 **Antes de abrir sala (5 min)**
 - [ ] Link abre y dice **BETA 2** abajo a la izquierda.
-- [ ] Sala › Conexión › Diagnóstico del PC: todo verde (WebView2, ViGEmBus, Parsec).
+- [ ] INICIO (o Sala › Conexión) › Semáforo Phoenix: «Todo listo para jugar». Lo que falte sale con su botón para arreglarlo.
 - [ ] SYNC › «Qué funciona en tu juego»: módulos al día, sin ámbar ni rojo.
 - [ ] Abre PES: en `SiderAddons\sider.log` aparece `[phoenix.lua]` sin «is NOT activated».
 
@@ -68,6 +70,6 @@ Sin Link (solo los módulos): doble clic en `PhoenixJuego-instalar.bat`, elige l
 **Si algo falla, anota**
 1. Qué hacías y qué pasó (una frase) y la hora.
 2. Una foto de la pantalla de Link.
-3. El informe: **Sala › Conexión › Diagnóstico del PC › COPIAR INFORME**, y pégalo en el chat. Trae versiones, parche, módulos y el final de `sider.log` con una sección «Qué pasa y qué hacer». Tapa tu nombre de usuario de Windows y no lleva contraseñas ni claves.
+3. El informe: **Sala › Conexión › Detalles técnicos del PC › COPIAR INFORME**, y pégalo en el chat. Trae versiones, parche, módulos y el final de `sider.log` con una sección «Qué pasa y qué hacer». Tapa tu nombre de usuario de Windows y no lleva contraseñas ni claves.
 
 **Reglas de oro:** no abras PES mientras instalas módulos; no enciendas «Traspasos en vivo» salvo que Fralex te lo pida; si dudas, no cambies nada y manda el informe.

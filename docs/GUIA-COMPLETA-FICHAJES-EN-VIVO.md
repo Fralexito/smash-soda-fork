@@ -1,5 +1,7 @@
 # Guía completa de Phoenix Link: instalar y pasar un fichaje de un PES a otro (versión 0.3.12)
 
+> Actualizada al menú del plan UX (Link 0.3.34): INICIO · SALA · PARTIDO · MANDOS · JUGAR · SYNC · AJUSTES. Mapa completo en `docs/GUIA-MENU-NUEVO.md`.
+
 Probado de verdad el 13 de octubre de 2026: un anfitrión hizo fichajes en Editar de PES 2021, los guardó, Link los publicó y el PES de su amigo los recibió. Esta guía junta todo el recorrido, paso a paso, y los errores que pueden salir con la forma de evitarlos.
 
 ## 1. Qué vas a conseguir
@@ -35,12 +37,12 @@ No hace falta instalar nada a mano: el instalador pone lo que falte (Visual C++,
 5. Si ya tenías Phoenix Link, el instalador lo **actualiza** y no toca tus datos ni tu configuración.
 
 ## 4. Primer arranque: dejar todo listo (los dos)
-Sync tiene **3 pestañas**, siempre en este orden: **MI PC** (¿está listo mi PC?), **TRASPASOS** (pasar un fichaje a un amigo) y **AVANZADO** (opciones técnicas, solo si algo falla).
+Sync tiene **3 pestañas**, siempre en este orden: **MI JUEGO** (¿está listo mi juego para los fichajes?), **TRASPASOS** (pasar un fichaje a un amigo) y **AVANZADO** (opciones técnicas, solo si algo falla).
 
 Hazlo con **PES 2021 cerrado**.
-1. Abre Phoenix Link y entra en **SYNC › MI PC**.
+1. Abre Phoenix Link y entra en **SYNC › MI JUEGO**.
 2. Arriba verás un mensaje: **«Todo listo»** (verde) o **«Falta algo: N cosas»** (ámbar). Debajo, una lista con ✓ (bien) y ✗ (falta algo). Cada ✗ trae una frase corta y un botón.
-3. Si **Tu cuenta de la liga** está en ✗: en la web de la liga entra a *Mi perfil › vincular PC*, copia los 6 dígitos, escríbelos en esa fila y pulsa **UNIR**. Es lo único que haces tú.
+3. Si **Tu cuenta de la liga** está en ✗: en la web de la liga entra a *Mi perfil › vincular PC*, copia los 6 dígitos, escríbelos en esa fila y pulsa **CONECTAR**. Es lo único que haces tú.
 4. Pulsa **ARREGLAR TODO**. Hace en orden, solo lo que es seguro:
    - busca tu juego (solo lee nombres de carpetas; si hay varios, te pregunta cuál);
    - instala los archivos de Phoenix en el juego (con copia previa de lo que cambia);
@@ -51,7 +53,7 @@ Hazlo con **PES 2021 cerrado**.
 ## 5. Tu código (para enviar tus fichajes)
 Desde la 0.3.12 **no hay que elegir papel**: en **SYNC › TRASPASOS** enviar y recibir van juntos y se encienden solos.
 1. En el bloque **ENVIAR MIS FICHAJES** sale **tu código en grande** (8 letras y números). Pulsa **COPIAR CÓDIGO** y mándaselo a tu amigo. **CAMBIAR CÓDIGO** pone uno nuevo (el viejo deja de servir para unirse; quien ya lo recibe sigue).
-2. Si no sale el código, la pantalla dice por qué: cuenta sin unir (botón **UNIR MI CUENTA**), cuenta no aprobada como anfitrión (puedes recibir igual; para enviar, pídeselo al staff) o la web sin conexión (**VOLVER A COMPROBAR**).
+2. Si no sale el código, la pantalla dice por qué: cuenta sin conectar (botón **CONECTAR MI CUENTA**), cuenta no aprobada como anfitrión (puedes recibir igual; para enviar, pídeselo al staff) o la web sin conexión (**VOLVER A COMPROBAR**).
 3. Debajo hay **«¿Algo no funciona?»** (se abre sola si hay un ✗) y **«Más opciones»** (modo prueba, carpeta compartida, apagar).
 
 ## 6. Recibir los fichajes de un amigo
@@ -98,7 +100,7 @@ Reglas del traspaso (para entender qué detecta Link):
 | Link se cierra solo | Fallo interno (hubo varios antes de la 0.2.78) | Manda el archivo `%APPDATA%\Trybuchet\Smash Soda\phoenix-fallos.log`; Link anota ahí la causa y las funciones implicadas |
 | El overlay no aparece | La sala está cerrada, o PES va en pantalla completa «de verdad» | Abre la sala, pon PES en ventana o sin bordes. Panel de amigos: **Ctrl+Alt+A** |
 
-### En Sync › MI PC
+### En Sync › MI JUEGO
 | Qué ves | Por qué pasa | Qué hacer |
 |---|---|---|
 | ✗ carpeta del juego | Link no encontró PES o hay varios | Elige la carpeta en la lista (por ejemplo la de tu parche) |
@@ -111,7 +113,7 @@ Reglas del traspaso (para entender qué detecta Link):
 | Qué ves | Por qué pasa | Qué hacer |
 |---|---|---|
 | ✗ «sin permiso» / «aprobada como anfitrión» | Tu cuenta no está aprobada como host | Pídele al staff que apruebe tu cuenta como host en la web |
-| «La web no reconoce este Link» | Cuenta no vinculada o token vencido | **Sync › Mi PC › Tu cuenta de la liga**: vuelve a unirla con un código nuevo (o mira el detalle en Avanzado › Cuenta web detallada) |
+| «La web no reconoce este Link» | Cuenta no vinculada o token vencido | **Sync › Mi juego › Tu cuenta de la liga**: vuelve a conectarla con un código nuevo (o mira el detalle en Avanzado › Cuenta web detallada) |
 | «Sin conexión con la web [motivo]» | Internet, cortafuegos, antivirus o la web caída. El motivo técnico va entre corchetes | Link reintenta solo (10, 20, 40, 80 y 120 s). Si persiste, manda una captura del Paso 2 de Traspasos y de Avanzado › Detalles técnicos |
 | «La web aún no tiene los traspasos en vivo» | La función de la web no estaba disponible | Link prueba de nuevo cada 5 minutos; botón **VOLVER A COMPROBAR** |
 | La liga está en pausa | El staff apagó los resultados/traspasos | Espera a que la reactiven |
@@ -151,7 +153,7 @@ Reglas del traspaso (para entender qué detecta Link):
 - ARREGLAR TODO con varios candidatos de juego.
 
 ## 11. Si algo falla, manda esto
-1. Una captura de **SYNC › MI PC** y de **SYNC › TRASPASOS** (los 3 pasos y «¿Algo no funciona?» abierto). Si hay un error de la web, también **Avanzado › Detalles técnicos**.
+1. Una captura de **SYNC › MI JUEGO** y de **SYNC › TRASPASOS** (los 3 pasos y «¿Algo no funciona?» abierto). Si hay un error de la web, también **Avanzado › Detalles técnicos**.
 2. El archivo `%TEMP%\PhoenixLink-instalador.log` (si falló al instalar).
 3. El archivo `%APPDATA%\Trybuchet\Smash Soda\phoenix-fallos.log` (si Link se cerró).
 4. El archivo `%APPDATA%\Trybuchet\Smash Soda\phoenix-traspasos\estado-actual.json` (estado de los traspasos; no lleva contraseñas).
