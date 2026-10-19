@@ -11,7 +11,7 @@ import { BotonCeder } from "./cedido.js";
 import { Tarjeta, Titulo, Boton, AjusteSw, Campo, Avatar, Chip, Icono, Vacio, colorPing, cx, dos } from "../ui.js";
 
 export const PESTANAS_GENTE = [
-  { id: "sala", es: "EN SALA", en: "IN ROOM", d: ["Elige a alguien de la lista para ver su ficha, su carta de la liga y sus permisos.", "Pick someone to see their card and permissions."] },
+  { id: "sala", es: "GENTE", en: "PEOPLE", d: ["Elige a alguien de la lista para ver su ficha, su carta de la liga y sus permisos.", "Pick someone to see their card and permissions."] },
   { id: "moderacion", es: "MODERACIÓN", en: "MODERATION", d: ["Baneados, moderadores, VIP y quién pasó por tu sala.", "Bans, mods, VIPs and visit history."] },
   { id: "permisos", es: "PERMISOS", en: "PERMISSIONS", d: ["Qué puede hacer cada rol (invitado, VIP, moderador) desde el chat.", "What each role (guest, VIP, moderator) can do from chat."] },
 ];

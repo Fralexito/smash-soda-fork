@@ -11,7 +11,7 @@ import { Tarjeta, Titulo, Boton, Interruptor, Campo, Avatar, Chip, Icono, Vacio,
 import { CampoEnVivo } from "./campo.js";
 
 export const PESTANAS_PARTIDO = [
-  { id: "vivo", es: "EN VIVO", en: "LIVE", d: ["Arma los dos lados, lleva el marcador y el reloj. Al terminar se guarda y se avisa en el chat y la web.", "Set up sides, keep score and time."] },
+  { id: "vivo", es: "MARCADOR", en: "SCORE", d: ["Arma los dos lados, lleva el marcador y el reloj. Al terminar se guarda y se avisa en el chat y la web.", "Set up sides, keep score and time."] },
   { id: "campo", es: "CAMPO", en: "PITCH", d: ["Las 22 fichitas y el balón del partido en vivo, como el radar del modo entrenador (solo lee el juego).", "The 22 players and the ball live, like the coach-mode radar (read-only)."] },
   { id: "historial", es: "HISTORIAL", en: "HISTORY", d: ["Partidos jugados en esta PC y la tabla de la sala (3 puntos por victoria).", "Matches played on this PC and the room table."] },
 ];
@@ -464,7 +464,7 @@ function Historial() {
   const [lista, setLista] = useState(null);
   useEffect(() => { accion("partido.historial", { max: 200 }, { silencioso: true }).then((r) => setLista(r?.partidos || [])); }, []);
   if (!lista) return html`<${Vacio} titulo=${t("Cargando…", "Loading…")} texto=""/>`;
-  if (lista.length === 0) return html`<${Vacio} titulo=${t("Aún no hay partidos", "No matches yet")} texto=${t("Cuando termines un partido desde «En vivo» quedará aquí con su marcador y duración.", "Finished matches show up here.")}/>`;
+  if (lista.length === 0) return html`<${Vacio} titulo=${t("Aún no hay partidos", "No matches yet")} texto=${t("Cuando termines un partido desde «Marcador» quedará aquí con su marcador y duración.", "Finished matches show up here.")}/>`;
   const tab = tabla(lista);
   return html`<div class="fila partible">
     <${Tarjeta} estilo="flex:1.2;min-width:0" interior="padding:22px 24px">

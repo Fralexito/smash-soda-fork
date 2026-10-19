@@ -21,7 +21,7 @@ export const PESTANAS_MANDOS = [
   { id: "teclado", mas: true, es: "TECLADO", en: "KEYBOARD", d: ["Quién puede jugar con teclado y qué tecla es cada botón del mando.", "Who can play with keyboard and which key is each pad button."] },
   { id: "turnos", mas: true, es: "TURNOS", en: "HOTSEAT", d: ["Rotación automática: cada uno juega un rato y cede el mando.", "Automatic rotation of the pads."] },
   { id: "bloqueo", es: "ÁRBITRO Y BLOQUEO", en: "REFEREE & LOCK", d: ["El árbitro del partido (modo competitivo, marcador y pausa automáticos) y el bloqueo de mandos o de botones.", "The match referee (competitive mode, auto scoreboard and pause) and locking pads or buttons."] },
-  { id: "vivo", es: "MANDOS EN VIVO", en: "LIVE PADS", d: ["Lo que pulsa cada jugador ahora mismo. Toca un mando para mapearlo.", "What each player is pressing right now. Tap a pad to map it."] },
+  { id: "vivo", es: "EN VIVO", en: "LIVE", d: ["Lo que pulsa cada jugador ahora mismo. Toca un mando para mapearlo.", "What each player is pressing right now. Tap a pad to map it."] },
 ];
 
 export function metaMandos(s) {
@@ -42,7 +42,7 @@ export function VistaMandos({ s, pestana }) {
     case "turnos": return html`<${Turnos} m=${m}/>`;
     case "marionetas": return html`<${MarionetasNuevo} m=${m}/>`;
     case "bloqueo": return html`<${BloqueoNuevo} m=${m}/>`;
-    case "vivo": return html`<${Tarjeta} interior="padding:22px 24px"><${Titulo} texto=${t("MANDOS EN VIVO", "LIVE PADS")}/><${MandosEnVivo} m=${m}/></${Tarjeta}>`;
+    case "vivo": return html`<${Tarjeta} interior="padding:22px 24px"><${Titulo} texto=${t("EN VIVO · LO QUE PULSA CADA MANDO", "LIVE · WHAT EACH PAD PRESSES")}/><${MandosEnVivo} m=${m}/></${Tarjeta}>`;
     default: return html`<div class="col"><${AjustesSentado} compacto/><${PuestosNuevo} m=${m}/></div>`;
   }
 }
