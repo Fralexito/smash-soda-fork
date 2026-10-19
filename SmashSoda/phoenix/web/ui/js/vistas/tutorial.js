@@ -15,6 +15,8 @@ const EVENTO = "phoenix:tutorial";
 
 /** Abre el tutorial desde cualquier sitio (botón de Ajustes, paleta Ctrl+K…). */
 export function abrirTutorial() { window.dispatchEvent(new CustomEvent(EVENTO)); }
+/** Lo da por visto (el asistente de bienvenida ya lo ofreció). */
+export function marcarTutorialVisto() { try { localStorage.setItem(CLAVE, "1"); } catch { /* nada */ } }
 
 const porTexto = (selector, re) => () => [...document.querySelectorAll(selector)].find((e) => re.test(e.textContent.trim()) && e.getClientRects().length);
 const nav = (n) => () => document.querySelectorAll(".menu .nv")[n];
@@ -56,7 +58,8 @@ export function Tutorial({ s }) {
     window.addEventListener(EVENTO, abrir);
     let visto = true;
     try { visto = localStorage.getItem(CLAVE) === "1"; } catch { /* sin almacenamiento: no insistir */ }
-    const id = !visto ? setTimeout(() => { if (!document.querySelector(".tour-caja")) setPaso(0); }, 1500) : 0;
+    // Si está el asistente de bienvenida, no se tapa: él ofrece el recorrido al final
+    const id = !visto ? setTimeout(() => { if (!document.querySelector(".tour-caja, .bienvenida")) setPaso(0); }, 1500) : 0;
     return () => { window.removeEventListener(EVENTO, abrir); clearTimeout(id); };
   }, []);
 

@@ -10,6 +10,7 @@ import { TarjetaCalidad } from "./sala.js";
 import { AtajosTeclado } from "./nativas.js";
 import { abrirTutorial } from "./tutorial.js";
 import { instalarVigem } from "./arreglos.js";
+import { abrirBienvenida } from "./bienvenida.js";
 
 export const PESTANAS_AJUSTES = [
   { id: "general", es: "GENERAL", en: "GENERAL", d: ["Tema, bot del chat y seguridad de la sala.", "Theme, chat bot and room security."] },
@@ -346,6 +347,7 @@ function Interfaz({ m, info }) {
       <div class="ayuda">${t("Atajos: Ctrl+K busca cualquier acción · Ctrl+Espacio abre el chat · Alt+1…6 cambia de sección · Esc cierra.", "Shortcuts: Ctrl+K search · Ctrl+Space chat · Alt+1…6 sections · Esc close.")}</div>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
         <${Boton} tipo="lleno" al=${abrirTutorial}>${t("VER EL TUTORIAL", "SHOW THE TUTORIAL")}</${Boton}>
+        <${Boton} al=${abrirBienvenida}>${t("VER LA BIENVENIDA", "SHOW THE WELCOME")}</${Boton}>
         <${Boton} al=${() => accion("ui.recargar")}>${t("RECARGAR INTERFAZ", "RELOAD INTERFACE")}</${Boton}>
       </div>
     </${Tarjeta}>

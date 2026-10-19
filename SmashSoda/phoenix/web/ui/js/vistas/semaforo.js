@@ -32,6 +32,8 @@ async function refrescar(forzar = false) {
 }
 /** Vuelve a revisar todo ahora (botón «Revisar» y «Ya lo hice»). */
 export const revisarSemaforo = () => refrescar(true);
+/** Refresco sin forzar el diagnóstico (lo usa ARREGLAR TODO tras cada paso). */
+export const refrescarSemaforo = () => refrescar(false);
 
 function useDatos() {
   const [d, setD] = useState(datos);
@@ -72,7 +74,7 @@ export function avisosTransmision(m) {
 }
 
 // ---- Las comprobaciones ---------------------------------------------------------------------
-/** [{ id, nivel: "ok"|"aviso"|"falta"|"espera", titulo, frase, arreglo: [texto, fn] | null }] */
+/** [{ id, nivel: "ok"|"aviso"|"falta"|"espera", titulo, frase, arreglo: [texto, fn, llevaAOtraPantalla?] | null }] */
 export function comprobaciones(m, d = datos) {
   const sala = m.sala || {};
   const diag = (id) => (d.diag || []).find((c) => c.id === id);
@@ -88,7 +90,7 @@ export function comprobaciones(m, d = datos) {
   const dv = diag("vigem");
   const nMandos = (m.mandos?.lista || []).length;
   if (dv && !dv.datos?.instalado) lista.push({ id: "mandos", nivel: "falta", titulo: t("Mandos virtuales", "Virtual pads"), frase: t("Falta ViGEmBus, el controlador que crea los mandos de tus amigos.", "ViGEmBus is missing, the driver that creates your friends' pads."), arreglo: [t("INSTALAR VIGEMBUS", "INSTALL VIGEMBUS"), instalarVigem] });
-  else if (nMandos === 0) lista.push({ id: "mandos", nivel: dv ? "falta" : "espera", titulo: t("Mandos virtuales", "Virtual pads"), frase: dv ? t("ViGEmBus está, pero no hay mandos: cierra y abre Link.", "ViGEmBus is there but there are no pads: close and reopen Link.") : t("Revisando…", "Checking…"), arreglo: dv ? [t("VER PUESTOS", "SEE SEATS"), () => irA("mandos", "puestos")] : null });
+  else if (nMandos === 0) lista.push({ id: "mandos", nivel: dv ? "falta" : "espera", titulo: t("Mandos virtuales", "Virtual pads"), frase: dv ? t("ViGEmBus está, pero no hay mandos: cierra y abre Link.", "ViGEmBus is there but there are no pads: close and reopen Link.") : t("Revisando…", "Checking…"), arreglo: dv ? [t("VER PUESTOS", "SEE SEATS"), () => irA("mandos", "puestos"), true] : null });
   else lista.push({ id: "mandos", nivel: "ok", titulo: t("Mandos virtuales", "Virtual pads"), frase: t(`${nMandos} mandos listos.`, `${nMandos} pads ready.`) });
 
   // 3. Cuenta de la liga (ámbar: con amigos se juega igual)
@@ -97,14 +99,14 @@ export function comprobaciones(m, d = datos) {
   else if (w.estado === "vinculando") lista.push({ id: "cuenta", nivel: "espera", titulo: t("Tu cuenta de la liga", "Your league account"), frase: t("Conectando…", "Connecting…") });
   else if (w.estado === "pausado") lista.push({ id: "cuenta", nivel: "aviso", titulo: t("Tu cuenta de la liga", "Your league account"), frase: causaPausa(w), arreglo: arregloPausa(w, m) });
   else if (w.estado === "sin_conexion") lista.push({ id: "cuenta", nivel: "aviso", titulo: t("Tu cuenta de la liga", "Your league account"), frase: t("No hay conexión con la web ahora. Se reintenta sola; con amigos se juega igual.", "No connection to the website right now. It retries by itself; you can still play with friends."), arreglo: [t("REINTENTAR", "RETRY"), () => accion("web.reintentar", {}, { ok: t("Reintentando…", "Retrying…") })] });
-  else lista.push({ id: "cuenta", nivel: "aviso", titulo: t("Tu cuenta de la liga", "Your league account"), frase: t("Sin conectar: con amigos juegas igual, pero no sales en el radar ni recibes fichajes.", "Not connected: you can play with friends, but you won't show on the radar or get transfers."), arreglo: [t("CONECTAR MI CUENTA", "CONNECT MY ACCOUNT"), () => irA("sync", "mipc")] });
+  else lista.push({ id: "cuenta", nivel: "aviso", titulo: t("Tu cuenta de la liga", "Your league account"), frase: t("Sin conectar: con amigos juegas igual, pero no sales en el radar ni recibes fichajes.", "Not connected: you can play with friends, but you won't show on the radar or get transfers."), arreglo: [t("CONECTAR MI CUENTA", "CONNECT MY ACCOUNT"), () => irA("sync", "mipc"), true] });
 
   // 4. Mi juego: PES y los archivos de Phoenix (ámbar: hacen falta para los fichajes, no para jugar)
   const mods = d.mods;
   const faltan = (mods?.modulos || []).filter((x) => x.gestionable && x.estado !== "instalado");
   if (!mods) lista.push({ id: "juego", nivel: "espera", titulo: t("Mi juego", "My game"), frase: t("Revisando…", "Checking…") });
-  else if (!mods.juego) lista.push({ id: "juego", nivel: "aviso", titulo: t("Mi juego", "My game"), frase: t("Link aún no sabe dónde está tu PES (hace falta para los fichajes).", "Link doesn't know where your PES is yet (needed for transfers)."), arreglo: [t("BUSCAR MI JUEGO", "FIND MY GAME"), () => irA("sync", "mipc")] });
-  else if (faltan.length) lista.push({ id: "juego", nivel: "aviso", titulo: t("Mi juego", "My game"), frase: mods.pesAbierto ? t("Faltan archivos de Phoenix en el juego. Se ponen con PES cerrado: Link espera solo.", "Phoenix files are missing in the game. They go in with PES closed: Link waits by itself.") : t("Faltan archivos de Phoenix en el juego (para los fichajes).", "Phoenix files are missing in the game (for transfers)."), arreglo: [t("ARREGLAR", "FIX"), () => irA("sync", "mipc")] });
+  else if (!mods.juego) lista.push({ id: "juego", nivel: "aviso", titulo: t("Mi juego", "My game"), frase: t("Link aún no sabe dónde está tu PES (hace falta para los fichajes).", "Link doesn't know where your PES is yet (needed for transfers)."), arreglo: [t("BUSCAR MI JUEGO", "FIND MY GAME"), () => irA("sync", "mipc"), true] });
+  else if (faltan.length) lista.push({ id: "juego", nivel: "aviso", titulo: t("Mi juego", "My game"), frase: mods.pesAbierto ? t("Faltan archivos de Phoenix en el juego. Se ponen con PES cerrado: Link espera solo.", "Phoenix files are missing in the game. They go in with PES closed: Link waits by itself.") : t("Faltan archivos de Phoenix en el juego (para los fichajes).", "Phoenix files are missing in the game (for transfers)."), arreglo: [t("ARREGLAR", "FIX"), () => irA("sync", "mipc"), true] });
   else lista.push({ id: "juego", nivel: "ok", titulo: t("Mi juego", "My game"), frase: t("PES encontrado y archivos de Phoenix al día.", "PES found and Phoenix files up to date.") });
 
   // 5. Transmisión (ámbar): los avisos de ANTES DEL PARTIDO que no cerraste con ✕
@@ -154,11 +156,11 @@ export function useSemaforo(m) {
 const SIMBOLO = { ok: "✓", aviso: "!", falta: "×", espera: "…" };
 const CLASE = { ok: "ok", aviso: "aviso", falta: "error", espera: "" };
 
-function Fila({ x }) {
+function Fila({ x, alIr }) {
   return html`<div class="chequeo" key=${x.id}>
     <span class=${cx("icono", CLASE[x.nivel])}>${SIMBOLO[x.nivel]}</span>
     <div style="min-width:0;flex:1"><div style="font-weight:600">${x.titulo}</div><div class="ayuda" style="word-break:break-word">${x.frase}</div></div>
-    ${x.arreglo ? html`<${Boton} tipo=${x.nivel === "falta" ? "mini lleno" : "mini suave"} al=${x.arreglo[1]}>${x.arreglo[0]}</${Boton}>` : null}
+    ${x.arreglo ? html`<${Boton} tipo=${x.nivel === "falta" ? "mini lleno" : "mini suave"} al=${async () => { const r = x.arreglo[1](); if (x.arreglo[2] && alIr) alIr(); return r; }}>${x.arreglo[0]}</${Boton}>` : null}
   </div>`;
 }
 
@@ -173,9 +175,9 @@ export function CabeceraSemaforo({ resumen, derecha = null, grande = false }) {
 
 /**
  * El Semáforo Phoenix. compacto: la cabecera y solo lo que falla (para portadas); sin compacto: todo (Sala › Conexión).
- * titulo=false para meterlo dentro de otra tarjeta.
+ * enTarjeta=false para meterlo dentro de otra tarjeta. alIr: se llama cuando un botón lleva a otra pantalla (el asistente se cierra).
  */
-export function SemaforoPhoenix({ m, compacto = false, enTarjeta = true }) {
+export function SemaforoPhoenix({ m, compacto = false, enTarjeta = true, alIr = null }) {
   const { lista, resumen } = useSemaforo(m);
   const [abierto, setAbierto] = useState(false);
   const visibles = compacto && !abierto ? lista.filter((x) => x.nivel === "falta" || x.nivel === "aviso") : lista;
@@ -183,7 +185,7 @@ export function SemaforoPhoenix({ m, compacto = false, enTarjeta = true }) {
     <${CabeceraSemaforo} resumen=${resumen} grande=${!compacto} derecha=${html`<div style="display:flex;gap:8px">
       ${compacto ? html`<${Boton} tipo="mini suave" al=${() => setAbierto(!abierto)}>${abierto ? t("SOLO LO QUE FALTA", "ONLY ISSUES") : t("VER DETALLES", "SEE DETAILS")}</${Boton}>` : null}
       <${Boton} tipo="mini suave" al=${revisarSemaforo}>${t("REVISAR", "CHECK")}</${Boton}></div>`}/>
-    ${visibles.length ? html`<div style="margin-top:6px">${visibles.map((x) => html`<${Fila} x=${x} key=${x.id}/>`)}</div>` : null}`;
+    ${visibles.length ? html`<div style="margin-top:6px">${visibles.map((x) => html`<${Fila} x=${x} alIr=${alIr} key=${x.id}/>`)}</div>` : null}`;
   if (!enTarjeta) return html`<div>${cuerpo}</div>`;
   return html`<${Tarjeta} interior="padding:20px 24px">
     <${Titulo} texto=${t("SEMÁFORO PHOENIX", "PHOENIX CHECK")}/>

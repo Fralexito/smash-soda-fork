@@ -24,6 +24,7 @@ import { GRUPOS, grupoDe } from "./grupos.js";
 import { BandaCedido, DialogoCeder, SECCIONES_CEDIDO, PESTANAS_CEDIDO, estaCedida, vigilarCedido } from "./vistas/cedido.js";
 import { BandaActualizacion } from "./vistas/actualizacion.js";
 import { causaPausa } from "./vistas/semaforo.js";
+import { Bienvenida } from "./vistas/bienvenida.js";
 
 const SECCIONES = [
   { id: "sala", es: "SALA", en: "ROOM", vista: VistaSala, pestanas: PESTANAS_SALA },
@@ -268,6 +269,7 @@ function App() {
     <${Dialogo} d=${s.dialogo}/>
     <${DialogoCeder} s=${s}/>
     ${s.paleta && !cedida ? html`<${Paleta} s=${s}/>` : null}
+    <${Bienvenida} s=${s}/>
     <${Tutorial} s=${s}/>
     <div class=${cx("carga", s.conectado && "fuera")} aria-hidden=${s.conectado}>
       <${Logo} t=${64}/><div class="nombre">PHOENIX LINK</div><div class="giro"></div>

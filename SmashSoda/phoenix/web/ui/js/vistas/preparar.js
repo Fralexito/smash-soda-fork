@@ -9,7 +9,7 @@ import { html, useState, useEffect, useRef } from "../lib.js";
 import { t } from "../i18n.js";
 import { accion, avisar, elegirPestana, confirmar, irA, leer as leerTienda } from "../tienda.js";
 import { Tarjeta, Titulo, Boton, BotonIr, cx } from "../ui.js";
-import { useSemaforo, causaPausa } from "./semaforo.js";
+import { useSemaforo, causaPausa, refrescarSemaforo } from "./semaforo.js";
 
 const espera = (ms) => new Promise((r) => setTimeout(r, ms));
 /** Nombre corto de una ruta para la pantalla; la ruta entera queda en «detalles». */
@@ -21,6 +21,8 @@ const corto = (ruta) => { const p = String(ruta || "").replace(/[\\/]+$/, "").sp
 let tarea = { haciendo: false, esperandoPes: false, informe: [], busca: null };
 const oyentesTarea = new Set();
 const ponerTarea = (p) => { tarea = { ...tarea, ...p }; oyentesTarea.forEach((f) => f(tarea)); };
+/** Estado de ARREGLAR TODO para cualquier pantalla (Mi PC y el asistente de bienvenida). */
+export function useTareaArreglar() { return useTarea(); }
 function useTarea() {
   const [x, setX] = useState(tarea);
   useEffect(() => { oyentesTarea.add(setX); return () => oyentesTarea.delete(setX); }, []);
@@ -62,7 +64,7 @@ async function esperarPesCerrado(nota) {
 export async function arreglarTodo() {
   if (tarea.haciendo) return;
   const log = [];
-  const nota = (ok, texto) => { log.push({ ok, texto }); ponerTarea({ informe: [...log] }); };
+  const nota = (ok, texto) => { log.push({ ok, texto }); ponerTarea({ informe: [...log] }); refrescarSemaforo(); };
   ponerTarea({ haciendo: true, informe: [] });
   let esperoPes = false;
   try {
