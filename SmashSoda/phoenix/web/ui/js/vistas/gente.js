@@ -238,8 +238,8 @@ export const unirmeASala = (x) => accion("ui.abrir", { url: x.enlace }, { ok: t(
 export function SalasAbiertas({ m }) {
   const web = m.web || {};
   if (web.estado === "sin_vincular") {
-    return html`<${Vacio} titulo=${t("Vincula la app con la web", "Link the app to the website")} texto=${t("Con tu cuenta de la liga verás las salas abiertas y podrás entrar con un clic.", "With your league account you will see open rooms and join with one click.")}>
-      <${Boton} tipo="lleno" al=${() => irA("sync", "mipc")}><${Icono} n="web" t=${16}/>${t("VINCULAR", "LINK")}</${Boton}></${Vacio}>`;
+    return html`<${Vacio} titulo=${t("Conecta tu cuenta de la liga", "Connect your league account")} texto=${t("Con tu cuenta de la liga verás las salas abiertas y podrás entrar con un clic.", "With your league account you will see open rooms and join with one click.")}>
+      <${Boton} tipo="lleno" al=${() => irA("sync", "mipc")}><${Icono} n="web" t=${16}/>${t("CONECTAR MI CUENTA", "CONNECT MY ACCOUNT")}</${Boton}></${Vacio}>`;
   }
   const a = m.salasAbiertas || { cargadas: false, lista: [] };
   if (!a.cargadas) return html`<${Vacio} titulo=${t("Buscando salas…", "Looking for rooms…")} texto=${t("Se actualizan solas mientras esta ventana está a la vista.", "They refresh automatically while this window is visible.")}/>`;
@@ -278,8 +278,8 @@ export function SalasAbiertas({ m }) {
 export function Amigos({ m }) {
   const web = m.web || {};
   if (web.estado === "sin_vincular") {
-    return html`<${Vacio} titulo=${t("Vincula la app con la web", "Link the app to the website")} texto=${t("Con tu cuenta de la liga verás a tus amigos conectados y podrás invitarlos a tu sala con un clic.", "See your friends online and invite them in one click.")}>
-      <${Boton} tipo="lleno" al=${() => irA("sync", "mipc")}><${Icono} n="web" t=${16}/>${t("VINCULAR", "LINK")}</${Boton}></${Vacio}>`;
+    return html`<${Vacio} titulo=${t("Conecta tu cuenta de la liga", "Connect your league account")} texto=${t("Con tu cuenta de la liga verás a tus amigos conectados y podrás invitarlos a tu sala con un clic.", "See your friends online and invite them in one click.")}>
+      <${Boton} tipo="lleno" al=${() => irA("sync", "mipc")}><${Icono} n="web" t=${16}/>${t("CONECTAR MI CUENTA", "CONNECT MY ACCOUNT")}</${Boton}></${Vacio}>`;
   }
   const a = m.amigos || { cargados: false, lista: [] };
   if (!a.cargados) return html`<${Vacio} titulo=${t("Cargando amigos…", "Loading friends…")} texto=${t("Se actualizan solos cada pocos segundos.", "They refresh automatically.")}/>`;

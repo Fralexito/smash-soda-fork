@@ -57,7 +57,7 @@ export const GRUPOS = [
   { id: "sync", es: "SYNC", en: "SYNC", icono: "sync",
     d: ["Conectar tu cuenta de la liga y el juego con la web: tu PC, traspasos y opciones avanzadas.", "Connect your league account and the game with the website: your PC, transfers and advanced options."],
     pestanas: [
-      { p: ["sync", "mipc"], es: "MI PC", en: "MY PC" },
+      { p: ["sync", "mipc"], es: "MI JUEGO", en: "MY GAME" },
       { p: ["sync", "traspasos"], es: "TRASPASOS", en: "TRANSFERS" },
       { p: ["sync", "avanzado"], es: "AVANZADO", en: "ADVANCED" },
     ] },

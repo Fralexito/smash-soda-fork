@@ -14,7 +14,7 @@ import { Tarjeta, Titulo, AjusteSw, Chip, Boton, cx } from "../ui.js";
 const CONEXION = {
   ok: ["ok", "Conectado a la web.", "Connected to the web."],
   web_sin_endpoints: ["warn", "La web todavía no tiene esta función. Se vuelve a probar sola.", "The web doesn't have this feature yet. It retries by itself."],
-  sin_cuenta: ["bad", "Esta PC no está unida a tu cuenta de la liga.", "This PC isn't linked to your league account."],
+  sin_cuenta: ["bad", "Esta PC no tiene tu cuenta de la liga conectada.", "This PC isn't linked to your league account."],
   sin_permiso: ["bad", "La web no te deja ser anfitrión. Pídele al staff que apruebe tu cuenta.", "The web doesn't let you host. Ask the staff to approve your account."],
   pendiente_aprobacion: ["warn", "Tu anfitrión todavía no te ha aceptado.", "Your host hasn't accepted you yet."],
   limite: ["warn", "Hay demasiadas peticiones. Espero un momento.", "Too many requests. Waiting a moment."],
@@ -101,8 +101,8 @@ export function Traspasos() {
   const sinRaiz = sitiosSider.filter((x) => !x.raiz).map((x) => x.nombre);
   const arch = a.archivo || {};
   const F = (ok, titulo, detalle, pista, boton) => ({ ok, titulo, detalle, pista, boton });
-  const aMiPc = { texto: t("IR A MI PC", "GO TO MY PC"), al: irMiPc };
-  const filaCuenta = F(!!w.vinculada, t("Cuenta de la liga unida", "League account linked"), "", t("Une esta PC a tu cuenta en «Mi PC».", "Link this PC to your account in «My PC»."), aMiPc);
+  const aMiPc = { texto: t("IR A MI JUEGO", "GO TO MY GAME"), al: irMiPc };
+  const filaCuenta = F(!!w.vinculada, t("Cuenta de la liga conectada", "League account linked"), "", t("Conecta tu cuenta en «Mi juego».", "Link this PC to your account in «My game»."), aMiPc);
   const filasEnviar = [
     F(!!arch.existe, t("Archivo de guardado encontrado", "Save file found"), arch.existe ? `${arch.ruta} · ${t("cambió el", "changed on")} ${arch.fecha}` : "", t("No encuentro tu archivo EDIT00000000: indícalo en «Más opciones» de ENVIAR.", "I can't find your EDIT00000000 file: set it under «More options» in SEND.")),
     F(!!a.hayReferencia, t("Punto de partida anotado", "Starting point noted"), a.hayReferencia ? t("Solo se enviará lo que cambies desde ahora.", "Only what you change from now on will be sent.") : "", t("Se anota sola en unos segundos. Si no, guarda una vez en PES.", "It's noted by itself in a few seconds. If not, save once in PES.")),
@@ -110,11 +110,11 @@ export function Traspasos() {
       esWeb ? (w.vinculada ? t(CONEXION[w.estado]?.[1] || "Comprobando…", CONEXION[w.estado]?.[2] || "Checking…") : t("Primero une la cuenta.", "Link the account first.")) : t("Elige la carpeta en «Más opciones».", "Choose the folder under «More options».")),
   ];
   const filasRecibir = [
-    F(!!diag.ok, t("Juego encontrado", "Game found"), diag.ok ? diag.juego : "", t("Pulsa ARREGLAR TODO en «Mi PC»: busca el juego solo.", "Press FIX EVERYTHING in «My PC»: it finds the game by itself."), aMiPc),
+    F(!!diag.ok, t("Juego encontrado", "Game found"), diag.ok ? diag.juego : "", t("Pulsa ARREGLAR TODO en «Mi juego»: busca el juego solo.", "Press FIX EVERYTHING in «My game»: it finds the game by itself."), aMiPc),
     F(!!diag.ok && sitiosSider.length > 0 && sinRaiz.length === 0, t("El juego lee los traspasos", "The game reads the transfers"), diag.ok && sinRaiz.length === 0 && sitiosSider.length ? t(`Listo en ${sitiosSider.length} ${sitiosSider.length === 1 ? "sitio" : "sitios"}.`, `Ready in ${sitiosSider.length} ${sitiosSider.length === 1 ? "place" : "places"}.`) : "",
-      !diag.ok ? t("Primero hace falta saber dónde está el juego.", "The game folder is needed first.") : !sitiosSider.length ? t("No veo la configuración de Sider en el juego.", "I can't see Sider's setup in the game.") : t(`Falta en: ${sinRaiz.join(", ")}. Con PES cerrado, pulsa ARREGLAR TODO en «Mi PC».`, `Missing in: ${sinRaiz.join(", ")}. With PES closed, press FIX EVERYTHING in «My PC».`), aMiPc),
+      !diag.ok ? t("Primero hace falta saber dónde está el juego.", "The game folder is needed first.") : !sitiosSider.length ? t("No veo la configuración de Sider en el juego.", "I can't see Sider's setup in the game.") : t(`Falta en: ${sinRaiz.join(", ")}. Con PES cerrado, pulsa ARREGLAR TODO en «Mi juego».`, `Missing in: ${sinRaiz.join(", ")}. With PES closed, press FIX EVERYTHING in «My game».`), aMiPc),
     F(!!diag.lua && diag.lua.estado === "instalado", t("Archivo de Phoenix instalado en el juego", "Phoenix file installed in the game"), diag.lua && diag.lua.version ? `v${diag.lua.version}` : "",
-      diag.lua && diag.lua.estado === "desactualizado" ? t("Hay una versión nueva. Con PES cerrado, pulsa ARREGLAR TODO en «Mi PC».", "A newer version exists. With PES closed, press FIX EVERYTHING in «My PC».") : t("Con PES cerrado, pulsa ARREGLAR TODO en «Mi PC».", "With PES closed, press FIX EVERYTHING in «My PC»."), aMiPc),
+      diag.lua && diag.lua.estado === "desactualizado" ? t("Hay una versión nueva. Con PES cerrado, pulsa ARREGLAR TODO en «Mi juego».", "A newer version exists. With PES closed, press FIX EVERYTHING in «My game».") : t("Con PES cerrado, pulsa ARREGLAR TODO en «Mi juego».", "With PES closed, press FIX EVERYTHING in «My game»."), aMiPc),
   ];
   const chequeo = !encendido ? [] : [
     { ...filaCuenta, grupo: "" },
@@ -124,8 +124,8 @@ export function Traspasos() {
   const faltan = chequeo.filter((f) => !f.ok).length;
 
   const conexionMsg = () => !w.vinculada ? html`<div class="caja" style="display:flex;flex-direction:column;gap:8px">
-      <div style="font-size:14px"><span class="punto bad"></span> ${t("Esta PC todavía no está unida a tu cuenta de la liga.", "This PC isn't linked to your league account yet.")}</div>
-      <div><${Boton} tipo="lleno mini" al=${irMiPc}>${t("UNIR MI CUENTA", "LINK MY ACCOUNT")}</${Boton}></div></div>`
+      <div style="font-size:14px"><span class="punto bad"></span> ${t("Esta PC todavía no tiene tu cuenta de la liga conectada.", "This PC isn't linked to your league account yet.")}</div>
+      <div><${Boton} tipo="lleno mini" al=${irMiPc}>${t("CONECTAR MI CUENTA", "LINK MY ACCOUNT")}</${Boton}></div></div>`
     : (w.estado !== "ok" && !noAprobado) || d.webDisponible === false ? html`<div class="caja" style="display:flex;flex-direction:column;gap:8px">
       <div style="font-size:14px"><span class=${cx("punto", cp)}></span> ${t(ct, cen)}${w.esperaSeg > 0 && w.estado !== "ok" ? t(` Reintento en ${w.esperaSeg} s.`, ` Retry in ${w.esperaSeg} s.`) : ""}</div>
       ${w.texto ? html`<div class="ayuda mono" style="font-size:12px;word-break:break-word">${w.texto}</div>` : null}
@@ -153,7 +153,7 @@ export function Traspasos() {
       <${AjusteSw} titulo=${t("Recibir los cambios oficiales de Phoenix", "Receive official Phoenix changes")}
         desc=${aj.oficial !== false ? t("Encendido: los fichajes que el staff hace en la web llegan solos a tu PES (no hace falta código).", "On: the transfers the staff makes on the web reach your PES by themselves (no code needed).") : t("Apagado: no recibes los cambios oficiales y se quitan de tu juego.", "Off: you don't receive official changes and they're removed from your game.")}
         valor=${aj.oficial !== false} al=${(v) => poner({ oficial: v })}/>
-      ${aj.oficial !== false && !w.vinculada ? html`<div class="ayuda" style="font-size:13px">${t("Para recibirlos, une esta PC a tu cuenta en «Mi PC».", "To receive them, link this PC to your account in «My PC».")}</div>` : null}
+      ${aj.oficial !== false && !w.vinculada ? html`<div class="ayuda" style="font-size:13px">${t("Para recibirlos, conecta tu cuenta en «Mi juego».", "To receive them, link this PC to your account in «My game».")}</div>` : null}
       ${oficiales.length ? html`<div class="col" style="gap:4px">${oficiales.map((l) => html`<div style="font-size:13px"><span class=${cx("punto", l.estado === "aplicado" ? "ok" : l.estado === "saltado" || l.estado === "error" ? "bad" : "warn")}></span> ${(l.cambios || []).map((c) => `${nombre(c)} → ${c.hastaNombre || "#" + c.hasta}`).join(", ")} <span class="ayuda">· ${l.estado}${l.motivo ? " · " + l.motivo : ""}</span></div>`)}</div>`
         : aj.oficial !== false ? html`<div class="ayuda" style="font-size:13px">${t("Todavía no llegó ningún cambio oficial.", "No official change has arrived yet.")}</div>` : null}
     </${Tarjeta}>`;

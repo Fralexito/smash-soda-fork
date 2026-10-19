@@ -172,7 +172,7 @@ function Clasificatoria({ clas, poner }) {
     <${Interruptor} valor=${!!clas.activa} al=${fijar} etiqueta="clasificatoria"/>
     <div style="flex:1;min-width:220px"><b>${t("Sala clasificatoria", "Ranked room")}</b>
       <div class="ayuda">${!clas.pcVinculada
-        ? t("Vincula esta PC con la web de Phoenix para usarla.", "Link this PC to the Phoenix website to use it.")
+        ? t("Conecta tu cuenta de la liga para usarla.", "Link this PC to the Phoenix website to use it.")
         : t("Solo juega quien tiene su Parsec vinculado a su cuenta de la web; los demás miran. Así cada partido cuenta para el ranking.", "Only people with their Parsec linked to the website can play.")}</div>
       ${clas.activa && clas.sinCuenta?.length ? html`<div class="ayuda" style="color:var(--bad)">${t("Sin cuenta (no pueden jugar): ", "No account: ")}${nombres(clas.sinCuenta)}</div>` : null}
       ${clas.activa && clas.sinComprobar?.length ? html`<div class="ayuda">${t("Comprobando: ", "Checking: ")}${nombres(clas.sinComprobar)}</div>` : null}

@@ -80,10 +80,10 @@ function PildoraSala({ m }) {
 
 const ESTADO_WEB = {
   conectado: ["ok", "WEB CONECTADA", "WEB CONNECTED"],
-  vinculando: ["warn", "VINCULANDO", "LINKING"],
+  vinculando: ["warn", "CONECTANDO", "CONNECTING"],
   sin_conexion: ["bad", "WEB SIN CONEXIÓN", "WEB OFFLINE"],
   pausado: ["warn", "WEB EN PAUSA", "WEB PAUSED"],
-  sin_vincular: ["", "SIN VINCULAR", "NOT LINKED"],
+  sin_vincular: ["", "CONECTAR MI CUENTA", "CONNECT MY ACCOUNT"],
 };
 
 function Barra({ s }) {

@@ -75,7 +75,7 @@ export function PanelChat({ s }) {
   const bloqueado = vista === "general" && (meta.pausado || !vinculada);
   let aviso = null;
   if (vista === "general") {
-    if (!vinculada) aviso = t("Vincula esta PC con la web para usar el chat general.", "Link this PC to the web to use the general chat.");
+    if (!vinculada) aviso = t("Conecta tu cuenta de la liga para usar el chat general.", "Link this PC to the web to use the general chat.");
     else if (meta.pausado) aviso = t("El chat general está en pausa por el staff.", "The general chat is paused by staff.");
     else if (meta.error) aviso = meta.error;
   }

@@ -296,7 +296,7 @@ export function CuentaWeb({ m }) {
     if (await accion("web.vincular", { codigo: c })) setCodigo("");
   };
   const desvincular = async () => {
-    if (await confirmar({ titulo: t("¿Desvincular esta PC?", "Unlink this PC?"), texto: t("La sala dejará de aparecer en la web hasta que vuelvas a vincular con un código nuevo.", "The room won't show on the website until you link again."), si: t("Desvincular", "Unlink"), peligro: true })) {
+    if (await confirmar({ titulo: t("¿Desconectar tu cuenta de esta PC?", "Disconnect your account from this PC?"), texto: t("La sala dejará de aparecer en la web hasta que vuelvas a conectarla con un código nuevo.", "The room won't show on the website until you link again."), si: t("Desconectar", "Disconnect"), peligro: true })) {
       await accion("web.desvincular");
     }
   };
@@ -304,7 +304,7 @@ export function CuentaWeb({ m }) {
   return html`<div class="rej2">
     <${Tarjeta} vivo=${w.estado === "conectado"} interior="padding:24px 26px;display:flex;flex-direction:column;gap:14px">
       <div class="lab acc">${t("WEB DE LA LIGA", "LEAGUE WEBSITE")}</div>
-      <div class="grande degradado" style="font-size:34px">${vinculada ? (w.usuario || t("Vinculada", "Linked")) : t("Sin vincular", "Not linked")}</div>
+      <div class="grande degradado" style="font-size:34px">${vinculada ? (w.usuario || t("Conectada", "Connected")) : t("Sin conectar", "Not connected")}</div>
       <div class="ayuda" style="font-size:14px">${w.mensaje || ""}</div>
       ${vinculada ? html`<div class="rej3" style="gap:10px">
         <div class="caja"><div class="lab">${t("ESTADO", "STATUS")}</div><div style="margin-top:8px;font-weight:600">${(w.estado || "").replace("_", " ").toUpperCase()}</div></div>
@@ -313,11 +313,11 @@ export function CuentaWeb({ m }) {
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
         <${Boton} al=${() => accion("web.reintentar", {}, { ok: t("Reintentando…", "Retrying…") })}>${t("REINTENTAR AHORA", "RETRY NOW")}</${Boton}>
-        <${Boton} tipo="peligro" al=${desvincular}>${t("DESVINCULAR", "UNLINK")}</${Boton}>
+        <${Boton} tipo="peligro" al=${desvincular}>${t("DESCONECTAR", "DISCONNECT")}</${Boton}>
       </div>` : null}
     </${Tarjeta}>
     <${Tarjeta} interior="padding:24px 26px;display:flex;flex-direction:column;gap:12px">
-      <div class="lab acc">${vinculada ? t("VINCULAR DE NUEVO", "LINK AGAIN") : t("CÓMO VINCULAR", "HOW TO LINK")}</div>
+      <div class="lab acc">${vinculada ? t("CONECTAR DE NUEVO", "CONNECT AGAIN") : t("CÓMO CONECTAR MI CUENTA", "HOW TO CONNECT MY ACCOUNT")}</div>
       <ol class="ayuda" style="font-size:14px;line-height:1.7;margin:0;padding-left:20px">
         <li>${t("Entra a la web de la liga con tu cuenta.", "Sign in on the league website.")}</li>
         <li>${t("Ve a Mi perfil › vincular PC (o a Mis salas) y genera el código.", "Go to My profile › link PC (or My rooms) and generate the code.")}</li>
@@ -326,7 +326,7 @@ export function CuentaWeb({ m }) {
       <div style="display:flex;gap:10px">
         <input class="campo mono" inputmode="numeric" maxLength="7" placeholder="123456" value=${codigo} style="font-size:22px;letter-spacing:.3em;text-align:center;height:52px"
           onInput=${(e) => setCodigo(e.currentTarget.value.replace(/[^\d]/g, "").slice(0, 6))} onKeyDown=${(e) => e.key === "Enter" && vincular()}/>
-        <${Boton} tipo="lleno enorme" deshabilitado=${codigo.length !== 6} al=${vincular}>${t("VINCULAR", "LINK")}</${Boton}>
+        <${Boton} tipo="lleno enorme" deshabilitado=${codigo.length !== 6} al=${vincular}>${t("CONECTAR", "CONNECT")}</${Boton}>
       </div>
       <div class="ayuda">${t("Nunca compartas el código: es como una contraseña de un solo uso.", "Never share the code: it's a one-time password.")}</div>
       ${w.versionLiga ? html`<div class="mono mut" style="font-size:12px">${t("Versión de la liga", "League version")}: ${w.versionLiga}</div>` : null}
@@ -363,7 +363,7 @@ const diag = () => ({
   video: [t("Video", "Video"), (d) => `${d.gpus} GPU · ${d.pantallas} ${t("pantallas", "screens")}${d.wgc ? " · WGC" : ""}`],
   audio: [t("Audio", "Audio"), (d) => `${d.salidas} ${t("salidas", "outputs")} · ${d.entradas} ${t("entradas", "inputs")}`],
   config: [t("Carpeta de configuración", "Config folder"), (d) => d.ruta || ""],
-  web: [t("Web de la liga", "League website"), (d) => d.usuario ? `${d.usuario} · ${d.mensaje || ""}` : (d.mensaje || t("Sin vincular", "Not linked"))],
+  web: [t("Web de la liga", "League website"), (d) => d.usuario ? `${d.usuario} · ${d.mensaje || ""}` : (d.mensaje || t("Sin conectar", "Not connected"))],
   overlay: [t("Overlay", "Overlay"), (d) => !d.activo ? t("Apagado (Ajustes › Overlay)", "Off (Settings › Overlay)")
     : d.websocket ? t(`Funcionando · puerto ${d.puerto}`, `Running · port ${d.puerto}`)
     : d.salaAbierta ? t("Arrancando… si no aparece, reabre la sala.", "Starting… if it doesn't show, reopen the room.")

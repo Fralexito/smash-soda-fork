@@ -105,9 +105,9 @@ export function GuiaInicio({ m, ocultar, abrir }) {
     <div class="guia-extra">
       <span class=${cx("punto", vinculada ? "ok" : "")}></span>
       <div style="min-width:0;flex:1"><b>${t("Opcional · Cuenta de la liga", "Optional · League account")}</b>
-        <span class="mut"> — ${vinculada ? t("Vinculada: apareces en el radar y ves a tus amigos.", "Linked: you show on the radar and see your friends.")
-          : t("Vincúlala para aparecer en el radar de la web y ver a tus amigos.", "Link it to show on the website radar and see your friends.")}</span></div>
-      <${Boton} tipo="mini suave" al=${() => irA("sync", "mipc")}>${vinculada ? t("VER", "VIEW") : t("VINCULAR", "LINK")}</${Boton}>
+        <span class="mut"> — ${vinculada ? t("Conectada: apareces en el radar y ves a tus amigos.", "Linked: you show on the radar and see your friends.")
+          : t("Conéctala para aparecer en el radar de la web y ver a tus amigos.", "Link it to show on the website radar and see your friends.")}</span></div>
+      <${Boton} tipo="mini suave" al=${() => irA("sync", "mipc")}>${vinculada ? t("VER", "VIEW") : t("CONECTAR MI CUENTA", "CONNECT MY ACCOUNT")}</${Boton}>
     </div>
     <${Glosario}/>
   </${Tarjeta}>`;

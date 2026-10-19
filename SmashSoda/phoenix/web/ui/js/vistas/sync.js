@@ -45,7 +45,7 @@ function Seccion({ id, titulo, resumen = null, punto = null, acciones = null, ab
 }
 
 export const PESTANAS_SYNC = [
-  { id: "mipc", es: "MI PC", en: "MY PC", d: ["¿Está listo mi PC? Cuenta, juego y archivos de Phoenix en una lista, con un botón que lo arregla.", "Is my PC ready? Account, game and Phoenix files in one list, with a button that fixes it."] },
+  { id: "mipc", es: "MI JUEGO", en: "MY GAME", d: ["¿Está listo mi juego para los fichajes? Cuenta, juego y archivos de Phoenix en una lista, con un botón que lo arregla.", "Is my game ready for transfers? Account, game and Phoenix files in one list, with a button that fixes it."] },
   { id: "traspasos", es: "TRASPASOS", en: "TRANSFERS", d: ["Pasar un fichaje a un amigo: lo que haces en Editar aparece en el PES de tu amigo.", "Pass a transfer to a friend: what you do in Edit shows up in your friend's PES."] },
   { id: "avanzado", es: "AVANZADO", en: "ADVANCED", d: ["Opciones avanzadas: solo para cuando algo no va bien o quieres ajustar algo.", "Advanced options: only for when something goes wrong or you want to tweak something."] },
 ];
@@ -59,7 +59,7 @@ export function metaSync(s) {
   const ok = cuenta === "conectado" && !mal && b?.estado !== "noinstalado";
   const punto = ok ? "ok" : mal ? "bad" : "warn";
   return html`<div class="grupo-estado">
-    <button class="pill" title=${ok ? t("Tu cuenta está unida y el juego recibe los avisos.", "Your account is linked and the game gets the notices.") : t("Falta algo o hay un aviso. Mira «Mi PC».", "Something is missing or there is a notice. See «My PC».")} onClick=${() => elegirPestana("mipc")}>
+    <button class="pill" title=${ok ? t("Tu cuenta está conectada y el juego recibe los avisos.", "Your account is linked and the game gets the notices.") : t("Falta algo o hay un aviso. Mira «Mi juego».", "Something is missing or there is a notice. See «My game».")} onClick=${() => elegirPestana("mipc")}>
       <span class=${cx("punto", punto, ok && "vivo")}></span>${ok ? t("TODO BIEN", "ALL GOOD") : t("ATENCIÓN", "ATTENTION")}</button>
   </div>`;
 }
@@ -69,7 +69,7 @@ function ESTADOS(b) {
   const tabla = {
     apagado: [t("Apagado", "Off"), "", t("Apagaste los avisos de la web dentro del juego.", "You turned off web notices inside the game.")],
     cerrado: [t("Juego cerrado", "Game closed"), "", t("Abre PES 2021 y Phoenix Link lo detecta solo.", "Open PES 2021 and Phoenix Link finds it by itself.")],
-    noinstalado: [t("Falta el archivo de Phoenix en el juego", "Phoenix file missing in the game"), "warn", t("El juego está abierto, pero no tiene el archivo de Phoenix. No se escribe nada. Míralo en «Mi PC».", "The game is open but has no Phoenix file. Nothing is written. See «My PC».")],
+    noinstalado: [t("Falta el archivo de Phoenix en el juego", "Phoenix file missing in the game"), "warn", t("El juego está abierto, pero no tiene el archivo de Phoenix. No se escribe nada. Míralo en «Mi juego».", "The game is open but has no Phoenix file. Nothing is written. See «My game».")],
     conectado: [b?.ultimo ? t(`Conectado · último aviso ${b.ultimo}`, `Connected · last notice ${b.ultimo}`) : t("Conectado", "Connected"), "ok vivo", t("Los avisos de la web llegan al juego en pocos segundos.", "Web notices reach the game within seconds.")],
     sinconexion: [t("Sin conexión", "No connection"), "bad", t("No se pudo hablar con la web. Se reintenta solo, con calma.", "Couldn't reach the web. Retrying by itself.") + (b?.motivo ? ` · ${t("Motivo", "Reason")}: ${b.motivo}` : "")],
   };
@@ -132,7 +132,7 @@ function Avanzado({ m }) {
     <${Seccion} id="puente" titulo=${t("CONEXIÓN CON EL JUEGO", "GAME CONNECTION")} punto=${punto} resumen=${texto}>
       <${Para}>${t("Para qué sirve: que los avisos de la web salgan dentro del juego (panel de Sider, barra espaciadora).", "What it's for: so web notices show inside the game (Sider panel, space bar).")}</${Para}>
       <div class="ayuda" style="font-size:14px">${ayuda}</div>
-      ${b.estado === "noinstalado" ? html`<div><${BotonIr} tipo="mini lleno" ir=${["sync", "mipc"]}>${t("ARREGLARLO EN MI PC", "FIX IT IN MY PC")}</${BotonIr}></div>` : null}
+      ${b.estado === "noinstalado" ? html`<div><${BotonIr} tipo="mini lleno" ir=${["sync", "mipc"]}>${t("ARREGLARLO EN MI JUEGO", "FIX IT IN MY GAME")}</${BotonIr}></div>` : null}
       ${b.estado === "sinconexion" ? html`<div><${Boton} tipo="mini suave" al=${() => accion("web.reintentar", {}, { ok: t("Reintentando…", "Retrying…") })}>${t("REINTENTAR AHORA", "RETRY NOW")}</${Boton}></div>` : null}
       <div>
         <div class="lab" style="margin-bottom:6px">${t("JUEGO DETECTADO", "DETECTED GAME")}</div>
@@ -164,7 +164,7 @@ function Avanzado({ m }) {
           </div>`)}
     </${Seccion}>
     <${Seccion} id="cuentaweb" titulo=${t("CUENTA WEB DETALLADA", "WEB ACCOUNT IN DETAIL")} resumen=${m.web?.usuario || t("Sin unir", "Not linked")}>
-      <${Para}>${t("Para qué sirve: ver el estado de la unión con tu cuenta, reintentar o separar esta PC. Unir la cuenta se hace en «Mi PC». «Soltar rival» está ahora en Jugar › Salas abiertas.", "What it's for: see the account link status, retry or unlink this PC. Linking is done in «My PC». «Release rival» is now in Play › Open rooms.")}</${Para}>
+      <${Para}>${t("Para qué sirve: ver el estado de la conexión con tu cuenta, reintentar o desconectar esta PC. Conectar la cuenta se hace en «Mi juego». «Soltar rival» está ahora en Jugar › Salas abiertas.", "What it's for: see the account link status, retry or unlink this PC. Linking is done in «My game». «Release rival» is now in Play › Open rooms.")}</${Para}>
       <${CuentaWeb} m=${m}/>
     </${Seccion}>
     <${Seccion} id="tecnicos" titulo=${t("DETALLES TÉCNICOS", "TECHNICAL DETAILS")} resumen=${m.app?.version ? "Phoenix Link " + m.app.version : ""}>
@@ -319,8 +319,8 @@ function Modulos({ d, setD, cargar }) {
     resumen=${!d ? t("Revisando…", "Checking…") : !d.juego ? t("No sé dónde está tu juego", "I don't know where your game is") : hayPend ? t("Hay archivos por instalar o actualizar", "Some files need installing or updating") : t("Instalados y al día", "Installed and up to date")}
     acciones=${html`<${Boton} tipo="suave mini" al=${cargar}>${t("REVISAR", "CHECK")}</${Boton}>`}>
     <div class="ayuda" style="font-size:14px">
-      ${t("Para qué sirve: instalar, actualizar, apagar o quitar uno por uno los archivos de Phoenix. Lo normal es hacerlo todo con ARREGLAR TODO en «Mi PC». Antes de cada cambio se guarda una copia.",
-          "What it's for: install, update, turn off or remove Phoenix's files one by one. Normally you do it all with FIX EVERYTHING in «My PC». A backup is saved before every change.")}
+      ${t("Para qué sirve: instalar, actualizar, apagar o quitar uno por uno los archivos de Phoenix. Lo normal es hacerlo todo con ARREGLAR TODO en «Mi juego». Antes de cada cambio se guarda una copia.",
+          "What it's for: install, update, turn off or remove Phoenix's files one by one. Normally you do it all with FIX EVERYTHING in «My game». A backup is saved before every change.")}
     </div>
     ${d?.pesAbierto ? html`<div class="caja" style="font-size:14px"><span class="punto warn"></span> ${t("Cierra PES 2021 para instalar o apagar: el juego lee estas piezas al arrancar.", "Close PES 2021 to install or turn off: the game reads these pieces at startup.")}</div>` : null}
     ${d?.parche && (d.parche.modosRaiz?.length || d.parche.modosPropios?.length) ? html`<div class="ayuda" style="font-size:13px">

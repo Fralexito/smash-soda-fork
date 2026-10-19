@@ -202,7 +202,7 @@ export function Preparar({ s }) {
     if (await accion("web.vincular", { codigo: c })) setCodigoCta("");
   };
   const soltarCuenta = async () => {
-    if (await confirmar({ titulo: t("¿Separar esta PC de tu cuenta?", "Unlink this PC from your account?"), texto: t("Tu sala dejará de salir en la web hasta que la unas otra vez con un código nuevo.", "Your room won't show on the web until you link it again with a new code."), si: t("Separar", "Unlink"), peligro: true })) await accion("web.desvincular");
+    if (await confirmar({ titulo: t("¿Desconectar tu cuenta de esta PC?", "Unlink this PC from your account?"), texto: t("Tu sala dejará de salir en la web hasta que la conectes otra vez con un código nuevo.", "Your room won't show on the web until you link it again with a new code."), si: t("Desconectar", "Disconnect"), peligro: true })) await accion("web.desvincular");
   };
 
   // ---- Las filas: ok = true | false | "espera" ----
@@ -210,17 +210,17 @@ export function Preparar({ s }) {
   filas.push({
     id: "cuenta", ok: cuenta === "conectado" ? true : cuenta === "vinculando" || cuenta === "pausado" ? "espera" : false,
     titulo: t("Tu cuenta de la liga", "Your league account"),
-    frase: cuenta === "conectado" ? t(`Esta PC está unida a tu cuenta${m.web?.usuario ? ": " + m.web.usuario : ""}.`, `This PC is linked to your account${m.web?.usuario ? ": " + m.web.usuario : ""}.`)
-      : cuenta === "vinculando" ? t("Uniendo esta PC a tu cuenta… espera un momento.", "Linking this PC to your account… wait a moment.")
+    frase: cuenta === "conectado" ? t(`Tu cuenta está conectada${m.web?.usuario ? ": " + m.web.usuario : ""}.`, `This PC is linked to your account${m.web?.usuario ? ": " + m.web.usuario : ""}.`)
+      : cuenta === "vinculando" ? t("Conectando tu cuenta… espera un momento.", "Linking this PC to your account… wait a moment.")
       : cuenta === "pausado" ? causaPausa(m.web || {})
       : cuenta === "sin_conexion" ? t("No hay conexión con la web ahora. Se reintenta sola.", "No connection to the web right now. It retries by itself.")
-      : t("Une esta PC a tu cuenta con un código de la web. Es lo único que haces tú.", "Link this PC to your account with a code from the web. It's the only thing you do yourself."),
+      : t("Conecta tu cuenta de la liga con un código de la web. Es lo único que haces tú.", "Link this PC to your account with a code from the web. It's the only thing you do yourself."),
     extra: cuenta === "sin_vincular" ? html`<div style="display:flex;flex-direction:column;gap:6px;margin-top:6px">
       <div class="ayuda" style="font-size:13px">${t("En la web: Mi perfil › vincular PC. Copia los 6 dígitos y escríbelos aquí.", "On the web: My profile › link PC. Copy the 6 digits and type them here.")}</div>
       <div style="display:flex;gap:8px;align-items:center;max-width:360px"><input class="campo mono" inputmode="numeric" maxLength="6" placeholder="123456" value=${codigoCta} style="font-size:18px;letter-spacing:.25em;text-align:center;height:40px"
         onInput=${(e) => setCodigoCta(e.currentTarget.value.replace(/[^\d]/g, "").slice(0, 6))} onKeyDown=${(e) => e.key === "Enter" && unirCuenta()}/>
-        <${Boton} tipo="lleno mini" deshabilitado=${codigoCta.length !== 6} al=${unirCuenta}>${t("UNIR", "LINK")}</${Boton}></div></div>` : null,
-    boton: cuenta === "conectado" ? [t("SEPARAR", "UNLINK"), soltarCuenta] : cuenta === "sin_conexion" || cuenta === "pausado" ? [t("REINTENTAR", "RETRY"), () => accion("web.reintentar", {}, { ok: t("Reintentando…", "Retrying…") })] : null,
+        <${Boton} tipo="lleno mini" deshabilitado=${codigoCta.length !== 6} al=${unirCuenta}>${t("CONECTAR", "CONNECT")}</${Boton}></div></div>` : null,
+    boton: cuenta === "conectado" ? [t("DESCONECTAR", "DISCONNECT"), soltarCuenta] : cuenta === "sin_conexion" || cuenta === "pausado" ? [t("REINTENTAR", "RETRY"), () => accion("web.reintentar", {}, { ok: t("Reintentando…", "Retrying…") })] : null,
   });
   filas.push({
     id: "juego", ok: !mods ? "espera" : !!mods.juego,

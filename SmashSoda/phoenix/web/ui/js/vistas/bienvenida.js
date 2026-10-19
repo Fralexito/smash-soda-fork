@@ -124,7 +124,7 @@ function PasoPc({ m, siguiente, cerrar }) {
     <div class="botones" style="margin-top:0">
       ${esperandoPes ? html`<${Boton} tipo="suave" al=${cancelarArreglar}>${t("CANCELAR", "CANCEL")}</${Boton}>` : null}
       <${Boton} tipo=${resumen.color === "ok" ? "suave" : "lleno"} deshabilitado=${haciendo} al=${arreglarTodo}>
-        ${esperandoPes ? t("ESPERANDO A QUE CIERRES PES…", "WAITING FOR PES TO CLOSE…") : haciendo ? t("PREPARANDO…", "PREPARING…") : t("PREPARAR MI PC", "PREPARE MY PC")}</${Boton}>
+        ${esperandoPes ? t("ESPERANDO A QUE CIERRES PES…", "WAITING FOR PES TO CLOSE…") : haciendo ? t("PREPARANDO…", "PREPARING…") : t("PREPARAR MI JUEGO", "PREPARE MY GAME")}</${Boton}>
       <${Boton} tipo=${resumen.color === "ok" ? "lleno" : "suave"} al=${siguiente}>${resumen.faltan.length ? t("SEGUIR IGUAL", "CONTINUE ANYWAY") : t("SIGUIENTE", "NEXT")}</${Boton}>
     </div>`;
 }
