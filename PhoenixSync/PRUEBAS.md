@@ -1089,3 +1089,21 @@ carnet del blob no cambia con la velocidad (cola idéntica entre ranuras 4 y 5).
 - Hashes: antes `ea0e42f012da235ed74bcf30cd97189e22982e3a129565b6c1b3d62b09605461` (el de Yamal→Arsenal) → después `92d8fdcf294bf7df37d05b5259ecd827bfd87f616f3ba4b8d51acfc73ffe1382`, ambos 11 014 090 bytes.
 - Entrega: respaldo del archivo anterior como `EDIT00000000.respaldo-antes-yamal-barca-havertz-arsenal-20261011` (hash verificado idéntico), archivo nuevo llevado comprimido, descomprimido y verificado en el PC antes de reemplazar, y hash final confirmado en su lugar. Quedaron dos `.zip` sueltos en la carpeta (de este cambio y del anterior) sin poder borrarse todavía — no afectan nada.
 - Pendiente para FRALEX: **Editar → Cargar** en el juego para ver el cambio (solo amistosos).
+
+### 2026-10-18 · phoenix.lua v0.18c (página en «Sider Mod Menu», F1) — simulada e INSTALADA, falta verla en el juego
+- **Pedido de FRALEX:** que los módulos se vean mejor en Sider Mod Menu v1.2 y que aguanten sus versiones futuras.
+- **Qué hace:** con el menú instalado, Phoenix tiene su página. Muestra:
+  - estado: botón nativo, datos en vivo y última recarga;
+  - selector del modo de recarga (igual que la tecla T, solo esta sesión);
+  - avisos de Link y de Sync;
+  - botón «Mirar la opción en vivo».
+
+  Sin menú, todo igual que la v0.18b.
+- **A prueba de versiones futuras:**
+  - adaptador UIX: cada pieza solo si existe; si no, se muestra como texto;
+  - registro original para no repetir la página;
+  - bandera de errores: a los 3, pasa a solo texto.
+- **Simulación:** `simular_v018c.py` 7/7. Casos: menú v1.2, selector, versión con solo texto, versión sin piezas, sin registro original, 3 errores y sin menú. También `simular_v018b.py` 10/10 y v017m/a/d/e OK.
+- **Con el `modmenu.lua` real** (v1.2, sin DLL, modo texto): se registran «Phoenix · Fichajes en vivo» y «About», sin página clásica repetida, y el overlay de Espacio sigue igual.
+- **Instalada** con PES cerrado en `SiderAddons\modules\phoenix.lua` (sha 58552157…). Respaldo `phoenix.lua.v018b`. La carpeta del modo «ConmeGOL Patch 26» ya no existe: con el Patch 27 basta la raíz.
+- **Falta en el juego:** instalar Sider Mod Menu (primer módulo), pulsar F1, ver la página y cambiar el modo. Con Espacio, ver que el overlay sigue igual.
