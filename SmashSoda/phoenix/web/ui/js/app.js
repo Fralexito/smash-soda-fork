@@ -25,8 +25,10 @@ import { BandaCedido, DialogoCeder, SECCIONES_CEDIDO, PESTANAS_CEDIDO, estaCedid
 import { BandaActualizacion } from "./vistas/actualizacion.js";
 import { causaPausa } from "./vistas/semaforo.js";
 import { Bienvenida } from "./vistas/bienvenida.js";
+import { VistaInicio, PESTANAS_INICIO } from "./vistas/inicio.js";
 
 const SECCIONES = [
+  { id: "inicio", es: "INICIO", en: "HOME", vista: VistaInicio, pestanas: PESTANAS_INICIO },   // plan UX: delante de todo, sin quitar nada
   { id: "sala", es: "SALA", en: "ROOM", vista: VistaSala, pestanas: PESTANAS_SALA },
   { id: "partido", es: "PARTIDO", en: "MATCH", vista: VistaPartido, pestanas: PESTANAS_PARTIDO },
   { id: "mandos", es: "MANDOS", en: "PADS", vista: VistaMandos, pestanas: PESTANAS_MANDOS, meta: metaMandos },
@@ -246,7 +248,7 @@ function App() {
         else if (st.dialogo) cerrarDialogo(false);
         else if (st.paleta) cambiar({ paleta: false });
         else if (st.chatAbierto) alternarChat(false);
-      } else if (e.altKey && !e.ctrlKey && /^[1-6]$/.test(e.key)) {   // Ctrl+Alt+número es «tomar mando» (MandoHost)
+      } else if (e.altKey && !e.ctrlKey && /^[1-7]$/.test(e.key)) {   // Ctrl+Alt+número es «tomar mando» (MandoHost)
         e.preventDefault();
         const st = leer();
         const g = gruposVisibles(st)[Number(e.key) - 1];

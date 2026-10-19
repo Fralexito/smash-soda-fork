@@ -134,11 +134,11 @@ function PasoListo({ m, cerrar }) {
   const listo = !resumen.faltan.length;
   return html`
     <${Cabeza} lab=${t("PASO 3 DE 3", "STEP 3 OF 3")} titulo=${listo ? t("Listo. Ya puedes jugar.", "Done. You can play now.") : t("Casi listo", "Almost ready")}
-      texto=${listo ? t("Desde ahora, jugar es un toque: en Sala pulsa ABRIR SALA y manda el enlace. Si alguna vez algo falla, el Semáforo Phoenix te dice qué es y lo arregla.", "From now on, playing is one tap: in Room press OPEN ROOM and send the link. If something ever fails, the Phoenix check tells you what and fixes it.")
+      texto=${listo ? t("Desde ahora, jugar es un toque: en INICIO pulsa JUGAR CON UN AMIGO y manda el enlace. Si alguna vez algo falla, el Semáforo Phoenix te dice qué es y lo arregla.", "From now on, playing is one tap: in HOME press PLAY WITH A FRIEND and send the link. If something ever fails, the Phoenix check tells you what and fixes it.")
         : t("Aún falta algo para poder jugar. El Semáforo Phoenix (Sala › Conexión) te dice qué y tiene el botón para arreglarlo.", "Something is still missing to play. The Phoenix check (Room › Connection) tells you what and has the fix button.")}/>
     <div class="caja" style="padding:14px 16px"><${SemaforoPhoenix} m=${m} compacto enTarjeta=${false} alIr=${cerrar}/></div>
     <div class="botones" style="margin-top:0">
       <${Boton} tipo="suave" al=${() => { cerrar(); abrirTutorial(); }}>${t("VER DÓNDE ESTÁ CADA COSA (1 MIN)", "SHOW ME AROUND (1 MIN)")}</${Boton}>
-      <${Boton} tipo="lleno enorme" al=${() => { cerrar(); marcarTutorialVisto(); irA("sala", "resumen"); }}>${t("EMPEZAR A JUGAR", "START PLAYING")}</${Boton}>
+      <${Boton} tipo="lleno enorme" al=${() => { cerrar(); marcarTutorialVisto(); irA("inicio", "inicio"); }}>${t("EMPEZAR A JUGAR", "START PLAYING")}</${Boton}>
     </div>`;
 }

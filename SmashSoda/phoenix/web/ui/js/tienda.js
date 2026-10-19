@@ -19,8 +19,8 @@ let estado = {
   chatPestana: "general",  // general | sala | registro
   leidoGlobal: null,       // id del último mensaje general ya visto (null = aún sin historial)
   chatAbierto: false,
-  seccion: "sala",
-  pestanas: { sala: "resumen", jugar: "salas", partido: "vivo", mandos: "puestos", gente: "sala", sync: "mipc", ajustes: "general" },
+  seccion: "inicio",   // plan UX: se abre en INICIO (con la PC cedida, app.js cae en la primera sección permitida)
+  pestanas: { inicio: "inicio", sala: "resumen", jugar: "salas", partido: "vivo", mandos: "puestos", gente: "sala", sync: "mipc", ajustes: "general" },
   avisos: [],              // toasts
   dialogo: null,           // { titulo, texto, botones:[{texto, tipo, valor}], resolver }
   paleta: false,

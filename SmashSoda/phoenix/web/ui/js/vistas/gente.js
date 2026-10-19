@@ -221,6 +221,20 @@ const ESTADO_AMIGO = {
 
 // ---- Salas abiertas: las mismas que ve el usuario en la web (GET /v1/salas). Solo para ver y entrar. ----
 const PUNTO_SEMAFORO = { verde: "ok", amarillo: "warn", rojo: "bad" };
+
+/** Orden como en la web (plan UX): donde te invitaron, luego amigos, luego las que se pueden entrar, por ping. */
+export function ordenarSalas(lista) {
+  const puede = (x) => !x.soyHost && !!x.enlace && !(x.plazasTotal > 0 && x.plazasLibres <= 0);
+  const ping = (x) => (x.pingMs >= 0 ? x.pingMs : 9999);
+  return [...lista].sort((a, b) => (puede(b) - puede(a)) || (!!b.invitado - !!a.invitado) || (!!b.hostAmigo - !!a.hostAmigo) || (ping(a) - ping(b)));
+}
+/** La mejor sala para entrar ahora (o null): primera de ordenarSalas en la que se puede entrar y no está inestable. */
+export function mejorSala(m) {
+  const l = ordenarSalas(m.salasAbiertas?.lista || []).filter((x) => !x.soyHost && x.enlace && x.plazasLibres > 0);
+  return l.find((x) => x.salud !== "inestable") || l[0] || null;
+}
+/** Entrar a una sala: abre su enlace de Parsec. */
+export const unirmeASala = (x) => accion("ui.abrir", { url: x.enlace }, { ok: t(`Abriendo la sala de ${x.hostNombre}…`, `Opening ${x.hostNombre}'s room…`) });
 export function SalasAbiertas({ m }) {
   const web = m.web || {};
   if (web.estado === "sin_vincular") {

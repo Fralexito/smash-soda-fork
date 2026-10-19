@@ -645,7 +645,8 @@ namespace phoenix::web {
 		}
 		e["turnos"] = estadoTurnos();
 		if ((in.seccion == "sala" && in.pestana == "transmision") || (in.seccion == "ajustes" && in.pestana == "audio")) e["audio"] = estadoAudio(h);
-		if (in.seccion == "gente" || in.seccion == "partido" || in.seccion == "jugar") {
+		// Amigos de la web: siempre (lista corta). Los usan INICIO (invitar), JUGAR y el sentado automático «solo mis amigos» (plan UX).
+		{
 			json amigos = json::array();
 			for (const AmigoWeb& a : link.amigos()) {
 				amigos.push_back({ {"usuarioId", a.usuarioId}, {"nombre", a.nombre}, {"avatar", a.avatarUrl},
@@ -653,8 +654,8 @@ namespace phoenix::web {
 			}
 			e["amigos"] = { {"cargados", link.amigosCargados()}, {"lista", amigos} };
 		}
-		// Salas abiertas que puedo ver: pestaña de la sección Jugar y botón del resumen de Sala
-		if (in.seccion == "sala" || in.seccion == "jugar") {
+		// Salas abiertas que puedo ver: sección Jugar, INICIO (buscar rival) y botón del resumen de Sala
+		if (in.seccion == "sala" || in.seccion == "jugar" || in.seccion == "inicio") {
 			json salas = json::array();
 			for (const SalaAbierta& s : link.salasAbiertas()) {
 				salas.push_back({ {"salaId", s.salaId}, {"hostNombre", s.hostNombre}, {"hostAvatar", s.hostAvatar}, {"hostAmigo", s.hostAmigo}, {"soyHost", s.soyHost}, {"invitado", s.invitado},

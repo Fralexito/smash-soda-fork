@@ -813,3 +813,19 @@ html.sin-foco .peldano.sig::after, html.sin-foco .u-punto, html.sin-foco .punto.
 .franja-juego .fj-texto { flex: 1; min-width: 0; font-size: 13.5px; color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .franja-juego.abierta { border-color: var(--linea-fuerte); }
 .franja-juego .fj-editor { padding: 4px 16px 16px; border-top: 1px solid var(--tenue); }
+
+/* ---- INICIO (plan UX, fase 2): dos botones grandes con el flujo completo detrás ---- */
+.inicio-botones { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 860px) { .inicio-botones { grid-template-columns: minmax(0, 1fr); } }
+.inicio-boton { display: flex; align-items: center; gap: 18px; min-height: 112px; padding: 20px 24px; border-radius: 16px; text-align: left; cursor: pointer;
+  color: var(--fg); font: inherit; border: 1px solid var(--linea); background: linear-gradient(135deg, var(--acc2-suave), rgba(255, 255, 255, .02));
+  transition: transform .15s var(--ease), border-color .15s var(--ease), box-shadow .2s var(--ease); }
+.inicio-boton.principal { border-color: var(--linea-fuerte); background: linear-gradient(135deg, var(--acc-suave), var(--acc2-suave)); box-shadow: 0 0 34px var(--brillo1); }
+.inicio-boton:active { transform: scale(.985); }
+.inicio-boton:disabled { cursor: progress; opacity: .75; }
+.inicio-boton.ocupado .ib-icono { animation: latido 1.2s ease-in-out infinite; }
+@media (hover: hover) { .inicio-boton:not(:disabled):hover { transform: translateY(-2px); border-color: var(--acc); box-shadow: 0 0 40px var(--brillo2); } }
+.inicio-boton .ib-icono { flex: none; width: 64px; height: 64px; border-radius: 32px; display: inline-flex; align-items: center; justify-content: center; color: var(--acc); background: rgba(0, 0, 0, .28); border: 1px solid var(--linea); }
+.inicio-boton .ib-texto { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.inicio-boton .ib-t { font: 700 24px/1.1 var(--f-disp); letter-spacing: .06em; }
+.inicio-boton .ib-d { color: var(--mut); font-size: 14px; line-height: 1.4; }

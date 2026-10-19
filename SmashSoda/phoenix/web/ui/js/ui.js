@@ -27,6 +27,7 @@ export const cx = (...c) => c.filter(Boolean).join(" ");
 // ---- Iconos (trazos del diseño) ---------------------------------------------------
 const TRAZOS = {
   sala: html`<circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8" stroke-dasharray="3 3"/>`,
+  inicio: html`<path d="M3 11.5L12 4l9 7.5M5.5 9.5V20h13V9.5M10 20v-5h4v5"/>`,
   jugar: html`<path d="M8 5v14l11-7z"/>`,
   partido: html`<path d="M6 21V4h11l-2 4 2 4H6"/>`,
   mandos: html`<rect x="2.5" y="7" width="19" height="10" rx="5"/><path d="M8 10v4M6 12h4M16 11h.01M18 13h.01"/>`,

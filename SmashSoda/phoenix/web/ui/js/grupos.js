@@ -12,6 +12,11 @@
 // p: [sección, pestaña]; es/en: nombre de la pestaña en el menú.
 // mas: true = detrás del botón MÁS. Lo que se usa al jugar va siempre a la vista (plan UX 0.3.22: Conexión y Juegos).
 export const GRUPOS = [
+  { id: "inicio", es: "INICIO", en: "HOME", icono: "inicio",
+    d: ["Jugar en dos clics: con un amigo o contra quien esté libre.", "Play in two clicks: with a friend or against whoever is free."],
+    pestanas: [
+      { p: ["inicio", "inicio"], es: "INICIO", en: "HOME" },
+    ] },
   { id: "sala", es: "SALA", en: "ROOM", icono: "sala",
     d: ["Tu sala: abrirla, el enlace, la transmisión, la gente y las opciones.", "Your room: open it, the link, the stream, the people and the options."],
     pestanas: [

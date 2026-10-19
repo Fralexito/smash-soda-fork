@@ -315,7 +315,7 @@ export function crearSimulador(enviar) {
       e.audio.parlantes.nivel = s.audio.parlantes.activo ? 0.35 + Math.random() * 0.4 : 0;
       e.audio.mic.nivel = s.audio.mic.activo ? Math.random() * 0.3 : 0;
     }
-    if (s.seccion === "gente" || s.seccion === "partido" || s.seccion === "jugar") {
+    if (s.web.estado !== "sin_vincular") {   // como EstadoWeb.cpp (plan UX): los amigos van siempre
       e.amigos = { cargados: true, lista: [
         { usuarioId: "6f1c2a10-0000-4000-8000-000000000001", nombre: "Mirko", avatar: null, estado: "en_sala", salaId: null, desde: new Date(Date.now() - 600000).toISOString() },
         { usuarioId: "6f1c2a10-0000-4000-8000-000000000002", nombre: "Lucho", avatar: null, estado: "disponible", salaId: null, desde: new Date(Date.now() - 3600000).toISOString() },
@@ -323,7 +323,7 @@ export function crearSimulador(enviar) {
         { usuarioId: "6f1c2a10-0000-4000-8000-000000000004", nombre: "Zurdo", avatar: null, estado: "en_partida", salaId: null, desde: new Date(Date.now() - 900000).toISOString() },
       ] };
     }
-    if (s.seccion === "sala" || s.seccion === "jugar") {
+    if (s.seccion === "sala" || s.seccion === "jugar" || s.seccion === "inicio") {
       // Salas abiertas (simuladas; nombres inventados)
       e.salasAbiertas = { cargadas: true, lista: [
         { salaId: "s1", hostNombre: "Mirko", hostAvatar: "", hostAmigo: true, soyHost: false, invitado: true, juego: "eFootball PES 2021", parche: "Conmegol", region: "Lima", modo: "amistoso", visibilidad: "amigos", estado: "abierta", salud: "viva", plazasTotal: 4, plazasLibres: 2, semaforo: "verde", pingMs: 38, enlace: "https://parsec.gg/g/ejemplo" },
