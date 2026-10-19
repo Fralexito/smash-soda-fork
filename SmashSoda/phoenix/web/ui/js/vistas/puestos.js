@@ -218,7 +218,7 @@ export function PuestosNuevo({ m }) {
   const esclavo = !!m.mandos.esclavo;
 
   if (total === 0) {
-    return html`<${Vacio} titulo=${t("No hay mandos virtuales", "No virtual pads")} texto=${t("Falta ViGEmBus, el controlador que crea los mandos de tus amigos. Sin él nadie puede jugar.", "ViGEmBus is missing, the driver that creates your friends' pads. Nobody can play without it.")}>
+    return html`<${Vacio} icono="mandos" titulo=${t("No hay mandos virtuales", "No virtual pads")} texto=${t("Falta ViGEmBus, el controlador que crea los mandos de tus amigos. Sin él nadie puede jugar.", "ViGEmBus is missing, the driver that creates your friends' pads. Nobody can play without it.")}>
       <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
         <${Boton} tipo="lleno" al=${instalarVigem}>${t("INSTALAR VIGEMBUS", "INSTALL VIGEMBUS")}</${Boton}>
         <${BotonIr} tipo="suave" ir=${["sala", "red"]}>${t("VER CONEXIÓN", "SEE CONNECTION")}</${BotonIr}>

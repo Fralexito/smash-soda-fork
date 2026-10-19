@@ -128,8 +128,9 @@ export function Esqueleto({ texto = "", tarjetas = 2 }) {
   </div>`;
 }
 
-export function Vacio({ titulo, texto, children }) {
-  return html`<div class="vacio"><div class="grande">${titulo}</div><div>${texto}</div>${children ? html`<div style="margin-top:16px">${children}</div>` : null}</div>`;
+/** Estado vacío: icono, una frase y (si hay) el botón que lo resuelve. */
+export function Vacio({ titulo, texto, children, icono = "" }) {
+  return html`<div class="vacio">${icono ? html`<div class="vacio-icono" aria-hidden="true"><${Icono} n=${icono} t=${30} w=${1.5}/></div>` : null}<div class="grande">${titulo}</div><div>${texto}</div>${children ? html`<div style="margin-top:16px">${children}</div>` : null}</div>`;
 }
 
 // ---- Controles ------------------------------------------------------------------

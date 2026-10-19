@@ -284,7 +284,7 @@ export function Preparar({ s }) {
     <${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:14px">
       <${Titulo} texto=${t("¿ESTÁ LISTO MI JUEGO PARA LOS FICHAJES?", "IS MY GAME READY FOR TRANSFERS?")}/>
       <div style="display:flex;align-items:center;gap:12px"><span class=${cx("punto", cargando ? "" : todoBien ? "ok" : "warn")} style="width:16px;height:16px;flex:none"></span>
-        <span class="disp" style="font-size:26px;font-weight:700;color:${cargando ? "inherit" : todoBien ? "var(--ok, #4ade80)" : "var(--warn, #ffb347)"}">${cargando ? t("Revisando…", "Checking…") : todoBien ? t("Listo para los fichajes", "Ready for transfers") : t(`Para los fichajes falta: ${malas.length} ${malas.length === 1 ? "cosa" : "cosas"}`, `Missing for transfers: ${malas.length}`)}</span></div>
+        <span class="disp" style="font-size:26px;font-weight:700;color:${cargando ? "inherit" : todoBien ? "var(--ok)" : "var(--warn)"}">${cargando ? t("Revisando…", "Checking…") : todoBien ? t("Listo para los fichajes", "Ready for transfers") : t(`Para los fichajes falta: ${malas.length} ${malas.length === 1 ? "cosa" : "cosas"}`, `Missing for transfers: ${malas.length}`)}</span></div>
       ${cargando ? null : html`<${BarraProgreso} hechos=${filas.filter((f) => f.ok === true || f.opcional).length} total=${filas.length} tono=${todoBien ? "ok" : "warn"}
         texto=${t(`${filas.filter((f) => f.ok === true || f.opcional).length} de ${filas.length}`, `${filas.filter((f) => f.ok === true || f.opcional).length} of ${filas.length}`)}/>`}
       <div class="ayuda" style="font-size:14px">${todoBien ? t("Tu PC está lista para jugar con fichajes.", "Your PC is ready to play with transfers.") : t("Pulsa el botón y Phoenix arregla lo que pueda. Antes cierra PES.", "Press the button and Phoenix fixes what it can. Close PES first.")}</div>
@@ -299,7 +299,7 @@ export function Preparar({ s }) {
     </${Tarjeta}>
     <${Tarjeta} interior="padding:8px 20px;display:flex;flex-direction:column">
       ${filas.map((f) => html`<div key=${f.id} style="display:flex;gap:10px 14px;align-items:flex-start;flex-wrap:wrap;padding:14px 0;border-bottom:1px solid var(--linea, rgba(255,255,255,.08))">
-        <span class=${cx("disp", f.ok === true ? "acc" : "")} style=${"flex:none;width:30px;font-size:22px;font-weight:700;text-align:center;" + (f.ok === false && !f.opcional ? "color:var(--bad, #ff6b6b)" : "")}>${simbolo(f.ok)}</span>
+        <span class=${cx("disp", f.ok === true ? "acc" : "")} style=${"flex:none;width:30px;font-size:22px;font-weight:700;text-align:center;" + (f.ok === false && !f.opcional ? "color:var(--bad)" : "")}>${simbolo(f.ok)}</span>
         <div style="flex:1 1 140px;min-width:0;display:flex;flex-direction:column;gap:3px">
           <b style="font-size:15px">${f.titulo}</b>
           <span class="ayuda" style="font-size:14px">${f.frase}</span>

@@ -62,7 +62,7 @@ function ArmarAuto({ m, aMano }) {
       <${Boton} tipo="mini suave" al=${aMano}>${t("ARMAR A MANO", "SET UP MANUALLY")}</${Boton}>
     </div>
     ${pv ? html`<div class="fila partible">${col("a", "var(--acc)", pv.a)}${col("b", "var(--eq-b)", pv.b)}</div>`
-      : html`<${Vacio} titulo=${t("Nadie tiene mando todavía", "Nobody has a pad yet")} texto=${t("Cuando cada uno tenga su mando (o tú toques el tuyo), aparece aquí en su equipo.", "Once everyone has a pad (or you touch yours), they show up here.")}/>`}
+      : html`<${Vacio} icono="mandos" titulo=${t("Nadie tiene mando todavía", "Nobody has a pad yet")} texto=${t("Cuando cada uno tenga su mando (o tú toques el tuyo), aparece aquí en su equipo.", "Once everyone has a pad (or you touch yours), they show up here.")}><${Boton} tipo="lleno" al=${() => irA("mandos", "puestos")}>${t("IR A PUESTOS", "GO TO SEATS")}</${Boton}></${Vacio}>`}
     ${pv && (pv.mirando || []).length ? html`<${Tarjeta} interior="padding:18px 24px;display:flex;flex-direction:column;gap:10px">
       <div class="lab mut">${t("MIRANDO (mando en el centro del juego)", "WATCHING (pad in the middle)")}</div>
       ${pv.mirando.map(fila)}
@@ -116,8 +116,8 @@ function ArmarManual({ m, volver }) {
     ...(cpu ? { cpu: "b" } : {}),
   });
   if (!m.sala.abierta) {
-    return html`<${Vacio} titulo=${t("Abre la sala para armar un partido", "Open the room to set up a match")}
-      texto=${t("El marcador, el reloj y el historial funcionan con la gente que está en la sala.", "Score, clock and history work with people in the room.")}/>`;
+    return html`<${Vacio} icono="sala" titulo=${t("Abre la sala para armar un partido", "Open the room to set up a match")}
+      texto=${t("El marcador, el reloj y el historial funcionan con la gente que está en la sala.", "Score, clock and history work with people in the room.")}><${Boton} tipo="lleno" al=${() => irA("inicio", "inicio")}>${t("JUGAR CON UN AMIGO", "PLAY WITH A FRIEND")}</${Boton}></${Vacio}>`;
   }
   return html`<div class="col">
     ${volver ? html`<div class="caja" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
@@ -464,7 +464,7 @@ function Historial() {
   const [lista, setLista] = useState(null);
   useEffect(() => { accion("partido.historial", { max: 200 }, { silencioso: true }).then((r) => setLista(r?.partidos || [])); }, []);
   if (!lista) return html`<${Esqueleto} texto=${t("Cargando…", "Loading…")}/>`;
-  if (lista.length === 0) return html`<${Vacio} titulo=${t("Aún no hay partidos", "No matches yet")} texto=${t("Cuando termines un partido desde «Marcador» quedará aquí con su marcador y duración.", "Finished matches show up here.")}/>`;
+  if (lista.length === 0) return html`<${Vacio} icono="trofeo" titulo=${t("Aún no hay partidos", "No matches yet")} texto=${t("Cuando termines un partido desde «Marcador» quedará aquí con su marcador y duración.", "Finished matches show up here.")}/>`;
   const tab = tabla(lista);
   return html`<div class="fila partible">
     <${Tarjeta} estilo="flex:1.2;min-width:0" interior="padding:22px 24px">

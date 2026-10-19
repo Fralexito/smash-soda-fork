@@ -90,7 +90,7 @@ function SoloPes({ m }) {
       : p.modo === "publicar"
         ? t("Tu sala solo aparece en la web mientras PES 2021 está abierto.", "Your room only shows on the web while PES 2021 is open.")
         : t("Además, Link no te deja abrir la sala si PES 2021 está cerrado.", "Also, Link won't let you open the room while PES 2021 is closed.")}</div>
-    ${oculta ? html`<div class="ayuda" style="font-size:14px;color:var(--warn, #ffb347)">${t("PES 2021 está cerrado: tu sala no se publica.", "PES 2021 is closed: your room is not published.")}</div>` : null}
+    ${oculta ? html`<div class="ayuda" style="font-size:14px;color:var(--warn)">${t("PES 2021 está cerrado: tu sala no se publica.", "PES 2021 is closed: your room is not published.")}</div>` : null}
   </${Seccion}>`;
 }
 
@@ -372,7 +372,7 @@ function Entrega({ m }) {
     resumen=${texto + (en.fecha ? " · " + en.fecha : "")}>
     <${Para}>${t("Para qué sirve: ver el último cambio que Phoenix Sync puso en tu juego y deshacerlo si hace falta.", "What it's for: see the last change Phoenix Sync put in your game and undo it if needed.")}</${Para}>
     ${en.resumen ? html`<div class="caja" style="font-size:14px;word-break:break-word">${en.resumen}</div>` : null}
-    ${en.motivo ? html`<div class="ayuda" style="font-size:14px;color:var(--bad, #ff6b6b);word-break:break-word">${en.motivo}</div>` : null}
+    ${en.motivo ? html`<div class="ayuda" style="font-size:14px;color:var(--bad);word-break:break-word">${en.motivo}</div>` : null}
     ${ayuda ? html`<div class="ayuda" style="font-size:14px">${ayuda}</div>` : null}
     <div>
       <${Boton} tipo="suave" deshabilitado=${!en.puedeDeshacer}

@@ -614,7 +614,7 @@ function ConexionSala({ m }) {
 function RedSala({ m }) {
   const red = m.red || [];
   if (!m.sala.abierta && red.length === 0) {
-    return html`<${Vacio} titulo=${t("Sin datos de red", "No network data")} texto=${t("Abre la sala: aquí verás el ping de cada invitado segundo a segundo.", "Open the room to see each guest's ping live.")}/>`;
+    return html`<${Vacio} icono="red" titulo=${t("Sin datos de red", "No network data")} texto=${t("Abre la sala: aquí verás el ping de cada invitado segundo a segundo.", "Open the room to see each guest's ping live.")}><${Boton} tipo="lleno" al=${() => irA("inicio", "inicio")}>${t("JUGAR CON UN AMIGO", "PLAY WITH A FRIEND")}</${Boton}></${Vacio}>`;
   }
   return html`<div class="col">
     <div class="caja" style="display:flex;gap:18px;flex-wrap:wrap;align-items:center">
@@ -625,7 +625,7 @@ function RedSala({ m }) {
       <span class="mut" style="font-size:12px;margin-left:auto">${t("Medias de los últimos 30 s · gráfica de 2 min", "30 s averages · 2 min chart")}</span>
     </div>
     ${red.length > 0 ? html`<${LeyendaRetraso}/>` : null}
-    ${red.length === 0 ? html`<${Vacio} titulo=${t("Nadie en la sala", "Nobody here")} texto=${t("Cuando entren invitados aparecerán aquí.", "Guests will show up here.")}/>` : null}
+    ${red.length === 0 ? html`<${Vacio} icono="red" titulo=${t("Nadie en la sala", "Nobody here")} texto=${t("Cuando entren invitados aparecerán aquí.", "Guests will show up here.")}/>` : null}
     <div class="rej2">${red.map((r) => html`<${Tarjeta} key=${r.parsecId} suave interior="padding:18px 20px">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
         <div style="min-width:0"><div style="font-weight:600;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.nombre || "#" + r.parsecId}</div>

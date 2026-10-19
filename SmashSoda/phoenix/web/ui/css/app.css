@@ -883,3 +883,8 @@ html.sin-foco .destello { animation: none; }
 .barra-prog.bad > i { background: linear-gradient(90deg, var(--bad), #c2284a); }
 .barra-prog-texto { font-size: 12px; flex: none; }
 @media (prefers-reduced-motion: reduce) { .barra-prog > i { transition: none; } }
+
+/* ---- Estados vacíos con icono (segunda pasada visual) ---- */
+.vacio-icono { width: 64px; height: 64px; margin: 0 auto 14px; border-radius: 32px; display: flex; align-items: center; justify-content: center;
+  color: var(--acc); border: 1px solid var(--linea); background: radial-gradient(circle at 50% 35%, var(--acc-suave), rgba(0, 0, 0, .2)); box-shadow: 0 0 30px var(--brillo1); animation: subir .35s var(--ease) both; }
+@media (prefers-reduced-motion: reduce) { .vacio-icono { animation: none; } }

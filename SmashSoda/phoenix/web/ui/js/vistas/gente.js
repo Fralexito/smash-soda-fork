@@ -69,8 +69,8 @@ function EnSala({ m }) {
   const actual = gente.find((g) => g.parsecId === elegido) || lista[0] || null;
 
   if (!m.sala?.abierta && gente.length === 0) {
-    return html`<${Vacio} titulo=${t("La sala está cerrada", "The room is closed")} texto=${t("Cuando abras la sala, aquí verás a cada invitado con su ping, su carta de la liga y sus permisos.", "Open the room to see every guest here.")}>
-      <${Boton} tipo="lleno" al=${() => irA("sala", "resumen")}>${t("IR A SALA", "GO TO ROOM")}</${Boton}></${Vacio}>`;
+    return html`<${Vacio} icono="gente" titulo=${t("La sala está cerrada", "The room is closed")} texto=${t("Cuando abras la sala, aquí verás a cada invitado con su ping, su carta de la liga y sus permisos.", "Open the room to see every guest here.")}>
+      <${Boton} tipo="lleno" al=${() => irA("inicio", "inicio")}>${t("JUGAR CON UN AMIGO", "PLAY WITH A FRIEND")}</${Boton}></${Vacio}>`;
   }
   return html`<div class="fila partible" style="min-height:100%">
     <div class="col" style="width:min(470px,42%);flex:none;gap:12px">
@@ -238,12 +238,12 @@ export const unirmeASala = (x) => accion("ui.abrir", { url: x.enlace }, { ok: t(
 export function SalasAbiertas({ m }) {
   const web = m.web || {};
   if (web.estado === "sin_vincular") {
-    return html`<${Vacio} titulo=${t("Conecta tu cuenta de la liga", "Connect your league account")} texto=${t("Con tu cuenta de la liga verás las salas abiertas y podrás entrar con un clic.", "With your league account you will see open rooms and join with one click.")}>
+    return html`<${Vacio} icono="web" titulo=${t("Conecta tu cuenta de la liga", "Connect your league account")} texto=${t("Con tu cuenta de la liga verás las salas abiertas y podrás entrar con un clic.", "With your league account you will see open rooms and join with one click.")}>
       <${Boton} tipo="lleno" al=${() => irA("sync", "mipc")}><${Icono} n="web" t=${16}/>${t("CONECTAR MI CUENTA", "CONNECT MY ACCOUNT")}</${Boton}></${Vacio}>`;
   }
   const a = m.salasAbiertas || { cargadas: false, lista: [] };
   if (!a.cargadas) return html`<${Esqueleto} texto=${t("Buscando salas…", "Looking for rooms…")}/>`;
-  if (a.lista.length === 0) return html`<${Vacio} titulo=${t("No hay salas abiertas ahora", "No open rooms right now")} texto=${t("Cuando alguien abra una sala pública o de amigos, saldrá aquí.", "When someone opens a public or friends room, it will show up here.")}/>`;
+  if (a.lista.length === 0) return html`<${Vacio} icono="jugar" titulo=${t("No hay salas abiertas ahora", "No open rooms right now")} texto=${t("Cuando alguien abra una sala pública o de amigos, saldrá aquí.", "When someone opens a public or friends room, it will show up here.")}><${Boton} tipo="lleno" al=${() => irA("inicio", "inicio")}><${Icono} n="trofeo" t=${16}/>${t("BUSCAR RIVAL", "FIND A RIVAL")}</${Boton}></${Vacio}>`;
   const unirme = (x) => accion("ui.abrir", { url: x.enlace });
   const SALUD = { en_partida: [t("EN PARTIDA", "IN A MATCH"), ""], inestable: [t("INESTABLE", "UNSTABLE"), "warn"] };
   const mejor = mejorSala(m);
@@ -278,7 +278,7 @@ export function SalasAbiertas({ m }) {
 export function Amigos({ m }) {
   const web = m.web || {};
   if (web.estado === "sin_vincular") {
-    return html`<${Vacio} titulo=${t("Conecta tu cuenta de la liga", "Connect your league account")} texto=${t("Con tu cuenta de la liga verás a tus amigos conectados y podrás invitarlos a tu sala con un clic.", "See your friends online and invite them in one click.")}>
+    return html`<${Vacio} icono="web" titulo=${t("Conecta tu cuenta de la liga", "Connect your league account")} texto=${t("Con tu cuenta de la liga verás a tus amigos conectados y podrás invitarlos a tu sala con un clic.", "See your friends online and invite them in one click.")}>
       <${Boton} tipo="lleno" al=${() => irA("sync", "mipc")}><${Icono} n="web" t=${16}/>${t("CONECTAR MI CUENTA", "CONNECT MY ACCOUNT")}</${Boton}></${Vacio}>`;
   }
   const a = m.amigos || { cargados: false, lista: [] };
@@ -292,7 +292,7 @@ export function Amigos({ m }) {
       ${["disponible", "en_partida", "en_sala"].map((k) => html`<span class="semaforo" key=${k}><span class=${cx("punto", ESTADO_AMIGO[k][0])}></span>${cuenta(k)} ${t(ESTADO_AMIGO[k][1], ESTADO_AMIGO[k][2])}</span>`)}
     </div>
     ${!m.sala?.abierta ? html`<div class="caja" style="border-color:var(--warn)">${t("Abre tu sala para poder invitar.", "Open your room to invite.")}</div>` : null}
-    ${orden.length === 0 ? html`<${Vacio} titulo=${t("Sin amigos todavía", "No friends yet")} texto=${t("Agrégalos desde tu perfil en la web de la liga.", "Add them from your profile on the website.")}/>` : null}
+    ${orden.length === 0 ? html`<${Vacio} icono="gente" titulo=${t("Sin amigos todavía", "No friends yet")} texto=${t("Agrégalos desde tu perfil en la web de la liga.", "Add them from your profile on the website.")}/>` : null}
     <div class="rej3">${orden.map((x) => {
       const e = ESTADO_AMIGO[x.estado] || ["", String(x.estado || "").toUpperCase(), String(x.estado || "").toUpperCase()];
       return html`<${Tarjeta} key=${x.usuarioId} suave interior="padding:18px 20px;display:flex;flex-direction:column;gap:12px">

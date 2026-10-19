@@ -251,7 +251,7 @@ export function MapeoNuevo({ m }) {
   return html`<div class="fila partible" style="align-items:flex-start">
     <div class="col" style="flex:0 1 320px;min-width:min(260px,100%)"><${Personas} lista=${lista} elegido=${elegido} elegir=${setElegido}/></div>
     <div class="col" style="flex:1 1 0;min-width:min(340px,100%)">
-      ${!persona ? html`<${Vacio} titulo=${t("Elige a una persona", "Pick a person")} texto=${t("Cuando haya invitados, aparecen a la izquierda.", "Guests show up on the left.")}/>` : html`
+      ${!persona ? html`<${Vacio} icono="mandos" titulo=${t("Elige a una persona", "Pick a person")} texto=${t("Cuando haya invitados, aparecen a la izquierda.", "Guests show up on the left.")}/>` : html`
         <${EnVivo} persona=${persona} vista=${vista} alRestablecer=${restablecer}/>
         <${Asistente} persona=${persona} vista=${vista} perfil=${persona.perfil}/>
         <${Sticks} persona=${persona} perfil=${persona.perfil} vista=${vista}/>

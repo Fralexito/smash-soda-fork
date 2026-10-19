@@ -264,7 +264,7 @@ export function Traspasos() {
       <details class="sec-detalle" open=${faltan > 0}><summary style="font-weight:600">${t("¿Algo no funciona?", "Something not working?")} <${Chip} tipo=${faltan === 0 ? "acc" : "vip"}>${faltan === 0 ? t("TODO BIEN", "ALL GOOD") : t(`FALTA ${faltan}`, `${faltan} MISSING`)}</${Chip}></summary>
         <div class="ayuda" style="font-size:13px;margin:6px 0">${t("Se revisa sola cada pocos segundos. Si algo sale ✗, la frase de abajo dice qué hacer.", "It's checked by itself every few seconds. If something shows ✗, the line under it says what to do.")}</div>
         ${chequeo.map((f, i) => html`<div key=${i} style="display:flex;flex-direction:column;gap:2px;padding:6px 0;border-top:1px solid var(--line, rgba(255,255,255,.08))">
-          <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap"><span class="mono" style=${"flex:none;width:18px;font-weight:700;color:" + (f.ok ? "var(--ok, #4ade80)" : "var(--bad, #ff6b6b)")}>${f.ok ? "✓" : "✗"}</span>
+          <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap"><span class="mono" style=${"flex:none;width:18px;font-weight:700;color:" + (f.ok ? "var(--ok)" : "var(--bad)")}>${f.ok ? "✓" : "✗"}</span>
             ${f.grupo ? html`<span class="mono mut" style="font-size:11px;flex:none">${f.grupo}</span>` : null}<span style="font-size:14px;flex:1 1 200px">${f.titulo}</span>
             ${!f.ok && f.boton ? html`<${Boton} tipo="suave mini" al=${f.boton.al}>${f.boton.texto}</${Boton}>` : null}</div>
           ${f.ok && f.detalle ? html`<div class="ayuda mono" style="font-size:12px;margin-left:28px;word-break:break-all">${f.detalle}</div>` : null}
@@ -289,7 +289,7 @@ export function Traspasos() {
 /** Cabecera de un paso: círculo con el número (✓ si está hecho), título y «AHORA» si es el que toca. */
 function Cabecera({ n, titulo, hecho, activo }) {
   return html`<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-    <span class="mono" style=${"flex:none;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;border:1.5px solid " + (hecho ? "var(--ok, #4ade80)" : activo ? "var(--acc)" : "var(--line, rgba(255,255,255,.2))") + ";color:" + (hecho ? "var(--ok, #4ade80)" : activo ? "var(--acc)" : "inherit")}>${hecho ? "✓" : n}</span>
+    <span class="mono" style=${"flex:none;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;border:1.5px solid " + (hecho ? "var(--ok)" : activo ? "var(--acc)" : "var(--line, rgba(255,255,255,.2))") + ";color:" + (hecho ? "var(--ok)" : activo ? "var(--acc)" : "inherit")}>${hecho ? "✓" : n}</span>
     <b style="font-size:17px;flex:1 1 200px">${titulo}</b>
     ${activo ? html`<${Chip} tipo="acc">${t("AHORA", "NOW")}</${Chip}>` : null}
   </div>`;

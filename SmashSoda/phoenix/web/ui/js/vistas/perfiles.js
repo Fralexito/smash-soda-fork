@@ -239,7 +239,7 @@ export function PerfilesPes() {
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <${Boton} tipo="lleno" deshabilitado=${d.pesAbierto || sinGuardado || ocupado || !elegidos.length || elegidos.length > caben} al=${preparar}>${t("PREPARAR LA SALA", "PREPARE THE ROOM")}</${Boton}>
         ${d.pesAbierto ? html`<span class="ayuda" style="font-size:13px">${t("Cierra PES para preparar la sala.", "Close PES to prepare the room.")}</span>` : null}
-        ${elegidos.length > caben ? html`<span class="ayuda" style="font-size:13px;color:var(--bad, #ff6b6b)">${t(`Solo caben ${caben} (hay ${protegidos} huecos protegidos).`, `Only ${caben} fit (${protegidos} slots are protected).`)}</span>` : null}
+        ${elegidos.length > caben ? html`<span class="ayuda" style="font-size:13px;color:var(--bad)">${t(`Solo caben ${caben} (hay ${protegidos} huecos protegidos).`, `Only ${caben} fit (${protegidos} slots are protected).`)}</span>` : null}
       </div>
       ${d.informe && d.informe.puestos?.length ? html`<div class="ayuda" style="font-size:13px">${t(`Hecho: ${d.informe.puestos.length} amigos en PES, ${d.informe.escritos} huecos escritos.`, `Done: ${d.informe.puestos.length} friends in PES, ${d.informe.escritos} slots written.`)}${d.informe.copia ? html` <span class="mono" style="font-size:11px;overflow-wrap:anywhere">${t("Copia: ", "Backup: ")}${d.informe.copia}</span>` : ""}</div>` : null}
     </${Tarjeta}>
