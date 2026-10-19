@@ -111,7 +111,7 @@ export function TarjetaCaptura({ m, info }) {
   const op = (lista) => (lista?.length ? lista : [t("(sin datos)", "(no data)")]).map((x, i) => ({ valor: i, texto: x }));
   return html`
     <${Tarjeta} secundaria interior="padding:22px 24px">
-      <${Titulo} texto=${t("CAPTURA", "CAPTURE")} derecha=${html`<${Boton} tipo="mini suave" al=${refrescar}>${t("ACTUALIZAR", "REFRESH")}</${Boton}>`}/>
+      <${Titulo} texto=${t("AJUSTE FINO · CAPTURA", "FINE TUNING · CAPTURE")} derecha=${html`<${Boton} tipo="mini suave" al=${refrescar}>${t("ACTUALIZAR", "REFRESH")}</${Boton}>`}/>
       <${Ajuste} bloque titulo=${t("Tarjeta de video", "Graphics card")}>
         <${Selector} valor=${v.gpu} opciones=${op(info.gpus)} al=${(x) => vid("gpu", Number(x))}/></${Ajuste}>
       <${Ajuste} bloque titulo=${t("Pantalla que se transmite", "Screen to stream")}>

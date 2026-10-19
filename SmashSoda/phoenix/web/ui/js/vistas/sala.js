@@ -431,11 +431,13 @@ export function TarjetaCalidad({ m }) {
         <div class="disp" style="font-size:22px;font-weight:700;margin-top:8px">${p.mbps} <span class="mut" style="font-size:12px">${auto ? t("MBPS / PERSONA", "MBPS / PERSON") : "MBPS"}</span></div>
         <div class="ayuda" style="margin-top:4px">${t(...p.d)}</div>
       </button>`)}</div>
+    <${AjusteSw} titulo=${t("Automático", "Automatic")} desc=${t("Sube y baja la calidad solo según cuántas personas hay conectadas. Lo normal es dejarlo encendido.", "Raises and lowers quality by itself with the people connected. Normally leave it on.")}
+      valor=${auto} al=${(v) => accion("sala.anchoAuto", { auto: v })}/>
+    <details class="sec-detalle ajuste-fino" style="margin-top:8px">
+    <summary>${t("AJUSTE FINO · FPS, Mbps por persona, tu subida y ancho a mano", "FINE TUNING · FPS, Mbps per person, your upload and manual bandwidth")}</summary>
     <${Ajuste} titulo=${t("Fotogramas por segundo", "Frames per second")} desc=${t("Los de la transmisión, no los de tu pantalla (tu monitor sigue igual). Los botones de arriba no los cambian.", "The stream's, not your screen's (your monitor stays the same). The buttons above don't change them.")}>
       <${Stepper} valor=${fps} min=${10} max=${250} paso=${1} al=${(v) => aplicar(v, mbps)}/></${Ajuste}>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin:-4px 0 6px">${[30, 60, 120, 144].map((f) => html`<button key=${f} class=${cx("chip-perfil", fps === f && "on")} onClick=${() => aplicar(f, mbps)}>${f} FPS</button>`)}</div>
-    <${AjusteSw} titulo=${t("Ancho de banda automático", "Automatic bandwidth")} desc=${t("Sube y baja solo según cuántas personas hay conectadas. Apágalo para poner el valor tú.", "Raises and lowers itself with the people connected. Turn off to set it yourself.")}
-      valor=${auto} al=${(v) => accion("sala.anchoAuto", { auto: v })}/>
     ${auto ? html`<${Ajuste} titulo=${t("Mbps por persona", "Mbps per person")} desc=${t("Ahora mismo: ", "Right now: ") + mbps + " Mbps"}>
       <${Stepper} valor=${porPersona} min=${1} max=${50} al=${(v) => accion("sala.anchoAuto", { porPersona: v })}/></${Ajuste}>` : null}
     <${Ajuste} titulo=${t("Mi subida de internet (Mbps)", "My upload speed (Mbps)")} desc=${subida > 0
@@ -446,6 +448,7 @@ export function TarjetaCalidad({ m }) {
     <${Ajuste} titulo=${t("Ancho de banda (Mbps)", "Bandwidth (Mbps)")} desc=${auto ? t("Lo pone el automático. Apágalo para escribirlo tú.", "Set by auto mode. Turn it off to type it yourself.") : t("Escribe el valor que quieras (1–1000) o usa − / +. Más alto = mejor imagen, pero exige más a tu internet.", "Type any value (1–1000) or use − / +.")}>
       <${Stepper} valor=${mbps} min=${1} max=${1000} ancho=${4} al=${(v) => aplicar(fps, v)}/></${Ajuste}>
     </div>
+    </details>
   </${Tarjeta}>`;
 }
 
