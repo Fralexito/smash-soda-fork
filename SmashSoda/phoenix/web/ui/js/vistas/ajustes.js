@@ -11,10 +11,11 @@ import { AtajosTeclado } from "./nativas.js";
 import { abrirTutorial } from "./tutorial.js";
 import { instalarVigem } from "./arreglos.js";
 import { abrirBienvenida } from "./bienvenida.js";
+import { AjustesSentado } from "./sentado.js";
 
 export const PESTANAS_AJUSTES = [
-  { id: "general", es: "GENERAL", en: "GENERAL", d: ["Tema, bot del chat y seguridad de la sala.", "Theme, chat bot and room security."] },
-  { id: "sonidos", mas: true, es: "SONIDOS CHAT", en: "CHAT SOUNDS", d: ["Los sonidos del comando !sfx y cuánto esperar entre uno y otro.", "Sounds for !sfx and their cooldown."] },
+  { id: "general", es: "GENERAL", en: "GENERAL", d: ["Lo fundamental (idioma, sentado automático), tema, bot del chat y seguridad de la sala.", "The basics (language, auto-seat), theme, chat bot and room security."] },
+  { id: "sonidos", es: "SONIDOS CHAT", en: "CHAT SOUNDS", d: ["Los sonidos del comando !sfx y cuánto esperar entre uno y otro.", "Sounds for !sfx and their cooldown."] },
   { id: "overlay", es: "OVERLAY", en: "OVERLAY", d: ["Chat, mandos e invitados encima del juego.", "Chat, pads and guests over the game."] },
   { id: "interfaz", es: "INTERFAZ", en: "INTERFACE", d: ["Idioma, atajos de teclado y recarga de la interfaz.", "Language, shortcuts and reload."] },
   { id: "avanzado", mas: true, es: "AVANZADO", en: "ADVANCED", d: ["WebSocket, registros y modo desarrollador.", "WebSocket, logs and developer mode."] },
@@ -28,7 +29,7 @@ export function VistaAjustes({ s, pestana }) {
     case "sonidos": return html`<${Sonidos} m=${m}/>`;
     case "interfaz": return html`<${Interfaz} m=${m} info=${s.info}/>`;
     case "avanzado": return html`<${Avanzado} m=${m}/>`;
-    default: return html`<${General} m=${m}/>`;
+    default: return html`<${General} m=${m} info=${s.info}/>`;
   }
 }
 
@@ -45,11 +46,22 @@ function TemaCarta({ id, actual, colores, nombre, sub, fondo }) {
   </button>`;
 }
 
-function General({ m }) {
+/** Arriba de Ajustes (plan UX): lo que más se cambia. Idioma y sentado automático; el tema va justo debajo. */
+function LoFundamental({ m, info }) {
+  const idiomas = info?.idiomas?.length ? info.idiomas : [{ codigo: "es", nombre: "Español" }, { codigo: "en", nombre: "English" }];
+  return html`<${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:6px">
+    <${Titulo} texto=${t("LO FUNDAMENTAL", "THE BASICS")}/>
+    <${Ajuste} titulo=${t("Idioma", "Language")}><div style="width:180px"><${Selector} valor=${m.app?.idioma || "es"} opciones=${idiomas.map((x) => ({ valor: x.codigo, texto: x.nombre }))} al=${(x) => accion("ui.idioma", { idioma: x })}/></div></${Ajuste}>
+    <${AjustesSentado}/>
+  </${Tarjeta}>`;
+}
+
+function General({ m, info }) {
   const g = m.ajustes.general;
   const tema = m.app?.tema || "galaxy";
   return html`<div class="fila partible" style="min-height:100%">
     <div class="col" style="flex:1">
+      <${LoFundamental} m=${m} info=${info}/>
       <${Tarjeta} interior="padding:22px 24px">
         <${Titulo} texto=${t("TEMA", "THEME")}/>
         <div class="ayuda" style="margin-top:6px">${t("Cambia el esquema de colores de toda la app.", "Changes the whole app's colors.")}</div>

@@ -18,11 +18,13 @@ export const GRUPOS = [
       { p: ["inicio", "inicio"], es: "INICIO", en: "HOME" },
     ] },
   { id: "sala", es: "SALA", en: "ROOM", icono: "sala",
-    d: ["Tu sala: abrirla, el enlace, la transmisión, la gente y las opciones.", "Your room: open it, the link, the stream, the people and the options."],
+    d: ["Tu sala: abrirla, el enlace, la transmisión, la gente (con moderación y permisos) y las opciones.", "Your room: open it, the link, the stream, the people (with moderation and permissions) and the options."],
     pestanas: [
       { p: ["sala", "resumen"], es: "RESUMEN", en: "OVERVIEW" },
       { p: ["sala", "transmision"], es: "TRANSMISIÓN", en: "STREAM" },
       { p: ["gente", "sala"], es: "GENTE", en: "PEOPLE" },
+      { p: ["gente", "moderacion"], es: "MODERACIÓN", en: "MODERATION", mas: true },   // plan UX: junto a la gente
+      { p: ["gente", "permisos"], es: "PERMISOS", en: "PERMISSIONS", mas: true },
       { p: ["sala", "opciones"], es: "OPCIONES", en: "OPTIONS" },
       { p: ["sala", "red"], es: "CONEXIÓN", en: "CONNECTION" },   // plan UX: lo que se usa al jugar no va tras «MÁS»
       { p: ["sala", "juegos"], es: "JUEGOS", en: "GAMES" },
@@ -62,14 +64,12 @@ export const GRUPOS = [
       { p: ["sync", "avanzado"], es: "AVANZADO", en: "ADVANCED" },
     ] },
   { id: "ajustes", es: "AJUSTES", en: "SETTINGS", icono: "ajustes",
-    d: ["Todo lo demás: general, overlay, moderación y sonidos del chat.", "Everything else: general, overlay, moderation and chat sounds."],
+    d: ["Todo lo demás: lo fundamental (idioma, tema, sentado automático), overlay, sonidos del chat e interfaz.", "Everything else: the basics (language, theme, auto-seat), overlay, chat sounds and interface."],
     pestanas: [
       { p: ["ajustes", "general"], es: "GENERAL", en: "GENERAL" },
       { p: ["ajustes", "overlay"], es: "OVERLAY", en: "OVERLAY" },
-      { p: ["gente", "moderacion"], es: "MODERACIÓN", en: "MODERATION" },
       { p: ["ajustes", "sonidos"], es: "SONIDOS CHAT", en: "CHAT SOUNDS" },
-      { p: ["ajustes", "interfaz"], es: "INTERFAZ", en: "INTERFACE", mas: true },
-      { p: ["gente", "permisos"], es: "PERMISOS", en: "PERMISSIONS", mas: true },
+      { p: ["ajustes", "interfaz"], es: "INTERFAZ", en: "INTERFACE" },
       { p: ["ajustes", "avanzado"], es: "AVANZADO", en: "ADVANCED", mas: true },
     ] },
 ];

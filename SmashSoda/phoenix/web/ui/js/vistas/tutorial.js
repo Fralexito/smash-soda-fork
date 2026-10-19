@@ -23,7 +23,7 @@ const nav = (n) => () => document.querySelectorAll(".menu .nv")[n];
 
 const PASOS = [
   { titulo: ["Bienvenido a Phoenix Link", "Welcome to Phoenix Link"],
-    texto: ["En un minuto te enseño dónde está cada cosa. Puedes omitirlo y volver a verlo cuando quieras desde Ajustes › Más › Interfaz.", "In one minute I'll show you where everything is. Skip it and replay it any time from Settings › More › Interface."] },
+    texto: ["En un minuto te enseño dónde está cada cosa. Puedes omitirlo y volver a verlo cuando quieras desde Ajustes › Interfaz.", "In one minute I'll show you where everything is. Skip it and replay it any time from Settings › Interface."] },
   { ir: ["inicio", "inicio"], foco: nav(0), titulo: ["Inicio", "Home"],
     texto: ["Lo primero que ves: JUGAR CON UN AMIGO (abre tu sala, copia el enlace e invita) o BUSCAR RIVAL (tu sala pública en el radar). Arriba, el Semáforo Phoenix te dice si falta algo.", "The first thing you see: PLAY WITH A FRIEND (opens your room, copies the link and invites) or FIND A RIVAL (your public room on the radar). On top, the Phoenix check tells you if anything is missing."] },
   { ir: ["sala", "resumen"], foco: nav(1), titulo: ["Sala", "Room"],
@@ -43,7 +43,7 @@ const PASOS = [
   { ir: ["sync", "mipc"], foco: nav(5), titulo: ["Sync", "Sync"],
     texto: ["Tu PC lista para jugar con fichajes, pasar un fichaje a un amigo y las opciones avanzadas.", "Your PC ready to play with transfers, passing a transfer to a friend and the advanced options."] },
   { ir: ["ajustes", "general"], foco: nav(6), titulo: ["Ajustes", "Settings"],
-    texto: ["Todo lo demás: general, overlay, moderación y sonidos del chat. En Ajustes › Más › Interfaz puedes volver a ver este tutorial.", "Everything else: general, overlay, moderation and chat sounds. Replay this tutorial from Settings › More › Interface."] },
+    texto: ["Todo lo demás: idioma, tema, sentado automático, overlay y sonidos del chat. En Ajustes › Interfaz puedes volver a ver este tutorial.", "Everything else: language, theme, auto-seat, overlay and chat sounds. Replay this tutorial from Settings › Interface."] },
   { foco: () => document.querySelector(".pill.atajo"), titulo: ["Buscar con Ctrl+K", "Search with Ctrl+K"],
     texto: ["¿No sabes dónde está algo? Pulsa Ctrl+K y escribe: te lleva directo a cualquier ajuste o acción.", "Can't find something? Press Ctrl+K and type: it takes you straight to any setting or action."] },
   { titulo: ["¡Listo!", "All set!"],
