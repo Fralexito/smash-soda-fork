@@ -22,8 +22,8 @@ export const PESTANAS_SALA = [
   { id: "transmision", es: "TRANSMISIÓN", en: "STREAM", d: ["Todo lo de la imagen y el sonido que reciben tus amigos, en un solo sitio: calidad, FPS, pantalla y audio.", "Everything about the picture and sound your friends get, in one place: quality, FPS, screen and audio."] },
   { id: "puesto", es: "DÓNDE JUEGO YO", en: "WHERE I PLAY", d: ["Dónde te sientas tú cuando pulsas JUGAR: un puesto fijo o el primero de un equipo.", "Where you sit when you press PLAY: a fixed seat or the first one of a team."] },
   { id: "opciones", es: "OPCIONES DE SALA", en: "ROOM OPTIONS", d: ["Nombre, plazas, quién puede entrar y la calidad de la imagen. Se guarda al instante.", "Name, slots, who can join and image quality."] },
-  { id: "juegos", mas: true, es: "JUEGOS", en: "GAMES", d: ["Qué se juega (se muestra en la web de la liga) y el juego que abre el modo quiosco.", "What is being played and the kiosk game."] },
-  { id: "red", mas: true, es: "CONEXIÓN", en: "CONNECTION", d: ["¿Tu PC está lista para hostear? Y el ping de cada invitado: verde va bien, ámbar aguanta, rojo es lag.", "Is your PC ready to host? And each guest's ping: green is fine, amber holds, red is lag."] },
+  { id: "juegos", es: "JUEGOS", en: "GAMES", d: ["Qué se juega (se muestra en la web de la liga) y el juego que abre el modo quiosco.", "What is being played and the kiosk game."] },
+  { id: "red", es: "CONEXIÓN", en: "CONNECTION", d: ["¿Tu PC está lista para hostear? Y el ping de cada invitado: verde va bien, ámbar aguanta, rojo es lag.", "Is your PC ready to host? And each guest's ping: green is fine, amber holds, red is lag."] },
   { id: "actividad", mas: true, es: "ACTIVIDAD", en: "ACTIVITY", d: ["Todo lo que pasó en la sala, del más nuevo al más viejo.", "Everything that happened in the room."] },
 ];
 
@@ -575,7 +575,7 @@ function PerfilesSala() {
 }
 
 // ---- Juegos --------------------------------------------------------------------------
-/** Juego, parche y región (se ven en la web de la liga). Lo usan la franja de Sala › Resumen y Sala › Más › Juegos. */
+/** Juego, parche y región (se ven en la web de la liga). Lo usan la franja de Sala › Resumen y Sala › Juegos. */
 function EditorLoQueSeJuega({ ph }) {
   const phx = (d) => accion("sala.phoenix", d);
   return html`

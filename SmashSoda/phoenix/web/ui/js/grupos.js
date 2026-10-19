@@ -10,7 +10,7 @@
 // =============================================================================
 
 // p: [sección, pestaña]; es/en: nombre de la pestaña en el menú.
-// mas: true = detrás del botón MÁS (máximo 4 pestañas a la vista).
+// mas: true = detrás del botón MÁS. Lo que se usa al jugar va siempre a la vista (plan UX 0.3.22: Conexión y Juegos).
 export const GRUPOS = [
   { id: "sala", es: "SALA", en: "ROOM", icono: "sala",
     d: ["Tu sala: abrirla, el enlace, la transmisión, la gente y las opciones.", "Your room: open it, the link, the stream, the people and the options."],
@@ -19,8 +19,8 @@ export const GRUPOS = [
       { p: ["sala", "transmision"], es: "TRANSMISIÓN", en: "STREAM" },
       { p: ["gente", "sala"], es: "GENTE", en: "PEOPLE" },
       { p: ["sala", "opciones"], es: "OPCIONES", en: "OPTIONS" },
-      { p: ["sala", "red"], es: "CONEXIÓN", en: "CONNECTION", mas: true },
-      { p: ["sala", "juegos"], es: "JUEGOS", en: "GAMES", mas: true },
+      { p: ["sala", "red"], es: "CONEXIÓN", en: "CONNECTION" },   // plan UX: lo que se usa al jugar no va tras «MÁS»
+      { p: ["sala", "juegos"], es: "JUEGOS", en: "GAMES" },
       { p: ["sala", "actividad"], es: "ACTIVIDAD", en: "ACTIVITY", mas: true },
     ] },
   { id: "partido", es: "PARTIDO", en: "MATCH", icono: "partido",
