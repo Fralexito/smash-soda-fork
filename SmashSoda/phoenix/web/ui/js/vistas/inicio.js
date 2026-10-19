@@ -13,7 +13,7 @@
 import { html, useState } from "../lib.js";
 import { t } from "../i18n.js";
 import { accion, avisar, irA, leer } from "../tienda.js";
-import { Tarjeta, Titulo, Boton, Avatar, Chip, Icono, PanelLateral, cx } from "../ui.js";
+import { Tarjeta, Titulo, Boton, Avatar, Chip, Icono, PanelLateral, Cifra, BarraProgreso, cx } from "../ui.js";
 import { useSemaforo, CabeceraSemaforo, comprobaciones, revisarSemaforo } from "./semaforo.js";
 import { mejorSala, unirmeASala } from "./gente.js";
 import { useUltimoPartido, TarjetaResultado } from "./partido.js";
@@ -64,7 +64,8 @@ async function abrirCon(visibilidad) {
 
 export function VistaInicio({ s }) {
   const m = s.motor;
-  const { resumen } = useSemaforo(m);
+  const { lista: semLista, resumen } = useSemaforo(m);
+  const semOk = semLista.filter((x) => x.nivel === "ok").length;
   const [invitar, setInvitar] = useState(false);
   const [ocupado, setOcupado] = useState("");
   const ultimo = useUltimoPartido(m);
@@ -113,6 +114,7 @@ export function VistaInicio({ s }) {
         </div>
         <div class="caja" style="flex:0 1 380px;min-width:260px;padding:12px 16px">
           <${CabeceraSemaforo} resumen=${resumen} derecha=${html`<${Boton} tipo="mini suave" al=${() => irA("sala", "red")}>${t("VER DETALLES", "SEE DETAILS")}</${Boton}>`}/>
+          <${BarraProgreso} hechos=${semOk} total=${semLista.length} tono=${resumen.color} texto=${t(`${semOk} de ${semLista.length}`, `${semOk} of ${semLista.length}`)}/>
           ${resumen.faltan[0] || resumen.avisos[0] ? html`<div class="ayuda" style="margin-top:6px">${(resumen.faltan[0] || resumen.avisos[0]).titulo}: ${(resumen.faltan[0] || resumen.avisos[0]).frase}</div>` : null}
         </div>
       </div>
@@ -133,7 +135,7 @@ export function VistaInicio({ s }) {
     </${Tarjeta}>
     <div class="rej2" style="align-items:start">
       <${Tarjeta} interior="padding:20px 24px;display:flex;flex-direction:column;gap:10px">
-        <${Titulo} texto=${t("AMIGOS CONECTADOS", "FRIENDS ONLINE")} derecha=${html`<span class="mono mut">${conectados.length}</span>`}/>
+        <${Titulo} texto=${t("AMIGOS CONECTADOS", "FRIENDS ONLINE")} derecha=${html`<span class="disp acc" style="font-size:22px;font-weight:700"><${Cifra} valor=${conectados.length}/></span>`}/>
         ${m.web?.estado !== "conectado" ? html`<div class="ayuda">${t("Conecta tu cuenta de la liga para ver a tus amigos e invitarlos con un toque.", "Connect your league account to see your friends and invite them in one tap.")}</div>
             <div><${Boton} tipo="mini lleno" al=${() => irA("sync", "mipc")}>${t("CONECTAR MI CUENTA", "CONNECT MY ACCOUNT")}</${Boton}></div>`
           : conectados.length === 0 ? html`<div class="ayuda">${t("Ninguno conectado ahora. Puedes invitarlos igual: la invitación dura 2 horas.", "None online now. You can still invite them: the invite lasts 2 hours.")}</div>
@@ -141,7 +143,7 @@ export function VistaInicio({ s }) {
           : conectados.slice(0, 6).map((x) => html`<${FilaAmigo} key=${x.usuarioId} x=${x} m=${m} alInvitar=${conAmigoYa(x, m, conAmigo)}/>`)}
       </${Tarjeta}>
       <${Tarjeta} interior="padding:20px 24px;display:flex;flex-direction:column;gap:10px">
-        <${Titulo} texto=${t("SALAS ABIERTAS AHORA", "OPEN ROOMS NOW")} derecha=${html`<span class="mono mut">${salas.length}</span>`}/>
+        <${Titulo} texto=${t("SALAS ABIERTAS AHORA", "OPEN ROOMS NOW")} derecha=${html`<span class="disp acc" style="font-size:22px;font-weight:700"><${Cifra} valor=${salas.length}/></span>`}/>
         ${mejor ? html`<div class="caja" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
             <div style="flex:1;min-width:180px"><b>${mejor.hostNombre}</b> ${mejor.hostAmigo ? html`<${Chip} tipo="ok">${t("AMIGO", "FRIEND")}</${Chip}>` : null}
               <div class="mono mut" style="font-size:12px">${[mejor.region, mejor.pingMs >= 0 ? mejor.pingMs + " ms" : "", t(`${mejor.plazasLibres} libres`, `${mejor.plazasLibres} free`)].filter(Boolean).join(" · ")}</div></div>

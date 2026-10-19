@@ -228,6 +228,15 @@ export function Cifra({ valor, decimales = 0 }) {
   return html`${mostrado.toFixed(decimales)}`;
 }
 
+/** Barra de progreso que se llena con transición (p. ej. «4 de 5 listos»). tono: ok | warn | bad | "" (acento). */
+export function BarraProgreso({ hechos, total, tono = "", texto = "" }) {
+  const pct = total > 0 ? Math.round((Math.min(hechos, total) / total) * 100) : 0;
+  return html`<div class="barra-prog-caja">
+    <div class=${cx("barra-prog", tono)} role="progressbar" aria-valuemin="0" aria-valuemax=${total} aria-valuenow=${hechos}><i style=${`width:${pct}%`}></i></div>
+    ${texto ? html`<span class="mono mut barra-prog-texto">${texto}</span>` : null}
+  </div>`;
+}
+
 export function Segmentos({ opciones, valor, al }) {
   return html`<div class="seg">${opciones.map((o) => html`
     <button class=${o.valor === valor ? "on" : ""} onClick=${() => o.valor !== valor && al(o.valor)}>${o.texto}</button>`)}</div>`;

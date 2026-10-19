@@ -14,7 +14,7 @@ const ICONO = { inicio: "inicio", sala: "sala", gente: "gente", partido: "partid
 
 // Frase de acción por pantalla (si no hay un caso según el estado). Responde a «¿qué hago aquí?», no a «¿qué hay aquí?».
 const FRASES = {
-  "inicio/inicio": ["Elige: JUGAR CON UN AMIGO o BUSCAR RIVAL. Si falta algo, el semáforo de la derecha te lo dice.", "Pick: PLAY WITH A FRIEND or FIND A RIVAL. If anything is missing, the check on the right tells you."],
+  "inicio/inicio": ["Elige: JUGAR CON UN AMIGO o BUSCAR RIVAL. Si falta algo, el semáforo te lo dice con su botón.", "Pick: PLAY WITH A FRIEND or FIND A RIVAL. If anything is missing, the check tells you with its button."],
   "gente/moderacion": ["Quita un ban, un moderador o un VIP con su botón. Nada cambia hasta que lo pulses.", "Remove a ban, a moderator or a VIP with its button. Nothing changes until you press it."],
   "gente/permisos": ["Enciende o apaga lo que cada rol puede hacer desde el chat. Se guarda solo.", "Turn on or off what each role can do from chat. Saved automatically."],
   "sala/juegos": ["Elige qué se juega: sale en la web para que te encuentren. La biblioteca solo hace falta para el modo quiosco.", "Pick what is played: it shows on the website so people find you. The library is only for kiosk mode."],

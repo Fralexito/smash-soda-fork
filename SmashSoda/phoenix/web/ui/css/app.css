@@ -873,3 +873,13 @@ html.sin-foco .esq-linea { animation-play-state: paused; }
   .btn.lleno::after { display: none; } .punto, .ping i { transition: none; }
 }
 html.sin-foco .destello { animation: none; }
+
+/* ---- Barras de progreso (segunda pasada visual) ---- */
+.barra-prog-caja { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+.barra-prog { flex: 1; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, .08); overflow: hidden; }
+.barra-prog > i { display: block; height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--acc), var(--acc2)); transition: width .7s var(--ease); }
+.barra-prog.ok > i { background: linear-gradient(90deg, var(--ok), #2fbf86); }
+.barra-prog.warn > i { background: linear-gradient(90deg, var(--warn), #ff9447); }
+.barra-prog.bad > i { background: linear-gradient(90deg, var(--bad), #c2284a); }
+.barra-prog-texto { font-size: 12px; flex: none; }
+@media (prefers-reduced-motion: reduce) { .barra-prog > i { transition: none; } }

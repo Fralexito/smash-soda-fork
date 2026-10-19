@@ -12,7 +12,7 @@
 import { html, useState, useEffect } from "../lib.js";
 import { t } from "../i18n.js";
 import { accion, confirmar, irA } from "../tienda.js";
-import { Tarjeta, Titulo, Boton, cx, useDestello } from "../ui.js";
+import { Tarjeta, Titulo, Boton, BarraProgreso, cx, useDestello } from "../ui.js";
 import { instalarVigem } from "./arreglos.js";
 
 // ---- Datos que no vienen en el estado: se comparten entre todos los semáforos a la vista ----
@@ -186,6 +186,8 @@ export function SemaforoPhoenix({ m, compacto = false, enTarjeta = true, alIr = 
     <${CabeceraSemaforo} resumen=${resumen} grande=${!compacto} derecha=${html`<div style="display:flex;gap:8px">
       ${compacto ? html`<${Boton} tipo="mini suave" al=${() => setAbierto(!abierto)}>${abierto ? t("SOLO LO QUE FALTA", "ONLY ISSUES") : t("VER DETALLES", "SEE DETAILS")}</${Boton}>` : null}
       <${Boton} tipo="mini suave" al=${revisarSemaforo}>${t("REVISAR", "CHECK")}</${Boton}></div>`}/>
+    <${BarraProgreso} hechos=${lista.filter((x) => x.nivel === "ok").length} total=${lista.length} tono=${resumen.color}
+      texto=${t(`${lista.filter((x) => x.nivel === "ok").length} de ${lista.length} listos`, `${lista.filter((x) => x.nivel === "ok").length} of ${lista.length} ready`)}/>
     ${visibles.length ? html`<div style="margin-top:6px">${visibles.map((x) => html`<${Fila} x=${x} alIr=${alIr} key=${x.id}/>`)}</div>` : null}`;
   if (!enTarjeta) return html`<div>${cuerpo}</div>`;
   return html`<${Tarjeta} interior="padding:20px 24px">

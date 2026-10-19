@@ -12,7 +12,7 @@ import { TecladoNuevo } from "./teclado.js";
 import { MapeoNuevo } from "./mapeo.js";
 import { MandosEnVivo } from "./mandovivo.js";
 import { AjustesSentado } from "./sentado.js";
-import { Tarjeta, Titulo, Boton, Interruptor, Ajuste, AjusteSw, Stepper, Icono, Vacio, Avatar, Chip, colorPing, cx, dos, Esqueleto } from "../ui.js";
+import { Tarjeta, Titulo, Boton, Interruptor, Ajuste, AjusteSw, Stepper, Icono, Vacio, Avatar, Chip, colorPing, cx, dos, Esqueleto, Cifra } from "../ui.js";
 
 export const PESTANAS_MANDOS = [
   { id: "puestos", es: "PUESTOS", en: "SEATS", d: ["Arrastra a cada persona a un puesto, o toca «Asignar». Lo que dejes en «Mirando» solo ve la partida.", "Drag each person to a seat, or tap Assign. Anyone in Watching only watches."] },
@@ -28,7 +28,7 @@ export function metaMandos(s) {
   const lista = s.motor?.mandos?.lista || [];
   const usados = lista.filter((p) => p.ocupado).length;
   return html`<div style="display:flex;align-items:baseline;gap:10px">
-    <span class="disp acc" style="font-size:34px;font-weight:700;line-height:1">${usados}</span>
+    <span class="disp acc" style="font-size:34px;font-weight:700;line-height:1"><${Cifra} valor=${usados}/></span>
     <span class="mono mut" style="font-size:14px">${t("DE", "OF")} ${lista.length} ${t("MANDOS EN USO", "PADS IN USE")}</span>
   </div>`;
 }

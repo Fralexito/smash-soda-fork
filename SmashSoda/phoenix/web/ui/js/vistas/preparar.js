@@ -8,7 +8,7 @@
 import { html, useState, useEffect, useRef } from "../lib.js";
 import { t } from "../i18n.js";
 import { accion, avisar, elegirPestana, confirmar, irA, leer as leerTienda } from "../tienda.js";
-import { Tarjeta, Titulo, Boton, BotonIr, cx } from "../ui.js";
+import { Tarjeta, Titulo, Boton, BotonIr, BarraProgreso, cx } from "../ui.js";
 import { useSemaforo, causaPausa, refrescarSemaforo } from "./semaforo.js";
 
 const espera = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -285,6 +285,8 @@ export function Preparar({ s }) {
       <${Titulo} texto=${t("¿ESTÁ LISTO MI JUEGO PARA LOS FICHAJES?", "IS MY GAME READY FOR TRANSFERS?")}/>
       <div style="display:flex;align-items:center;gap:12px"><span class=${cx("punto", cargando ? "" : todoBien ? "ok" : "warn")} style="width:16px;height:16px;flex:none"></span>
         <span class="disp" style="font-size:26px;font-weight:700;color:${cargando ? "inherit" : todoBien ? "var(--ok, #4ade80)" : "var(--warn, #ffb347)"}">${cargando ? t("Revisando…", "Checking…") : todoBien ? t("Listo para los fichajes", "Ready for transfers") : t(`Para los fichajes falta: ${malas.length} ${malas.length === 1 ? "cosa" : "cosas"}`, `Missing for transfers: ${malas.length}`)}</span></div>
+      ${cargando ? null : html`<${BarraProgreso} hechos=${filas.filter((f) => f.ok === true || f.opcional).length} total=${filas.length} tono=${todoBien ? "ok" : "warn"}
+        texto=${t(`${filas.filter((f) => f.ok === true || f.opcional).length} de ${filas.length}`, `${filas.filter((f) => f.ok === true || f.opcional).length} of ${filas.length}`)}/>`}
       <div class="ayuda" style="font-size:14px">${todoBien ? t("Tu PC está lista para jugar con fichajes.", "Your PC is ready to play with transfers.") : t("Pulsa el botón y Phoenix arregla lo que pueda. Antes cierra PES.", "Press the button and Phoenix fixes what it can. Close PES first.")}</div>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
         <${Boton} tipo=${todoBien ? "suave" : "lleno"} deshabilitado=${haciendo || cargando} al=${pulsarArreglar}>
