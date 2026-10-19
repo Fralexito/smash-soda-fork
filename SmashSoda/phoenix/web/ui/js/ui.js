@@ -104,6 +104,16 @@ export function Titulo({ texto, derecha = null, acc = true }) {
       <span class="chev" aria-hidden="true">▸</span><span class=${cx("lab", acc && "acc")}>${texto}</span></button>${derecha}</div>`;
 }
 
+/** Carga con forma (segunda pasada visual): bloques que brillan donde va a salir el contenido, en vez de «Cargando…». */
+export function Esqueleto({ texto = "", tarjetas = 2 }) {
+  return html`<div class="esqueleto" role="status" aria-live="polite" aria-label=${texto}>
+    ${Array.from({ length: tarjetas }, (_, i) => html`<div class="esq-tarjeta" key=${i}>
+      <i class="esq-linea" style="width:28%"></i><i class="esq-linea grande" style="width:62%"></i>
+      <i class="esq-linea" style="width:90%"></i><i class="esq-linea" style="width:74%"></i></div>`)}
+    ${texto ? html`<div class="esq-texto mono">${texto}</div>` : null}
+  </div>`;
+}
+
 export function Vacio({ titulo, texto, children }) {
   return html`<div class="vacio"><div class="grande">${titulo}</div><div>${texto}</div>${children ? html`<div style="margin-top:16px">${children}</div>` : null}</div>`;
 }

@@ -9,7 +9,7 @@ import { t } from "../i18n.js";
 import { SalasAbiertas, Amigos } from "./gente.js";
 import { PerfilesPes } from "./perfiles.js";
 import { accion } from "../tienda.js";
-import { Vacio, Boton } from "../ui.js";
+import { Vacio, Boton, Esqueleto } from "../ui.js";
 
 export const PESTANAS_JUGAR = [
   { id: "salas", es: "SALAS ABIERTAS", en: "OPEN ROOMS", d: ["Las mismas salas que ves en la web de la liga. Entra con un clic.", "The same rooms you see on the league website. Join with one click."] },
@@ -25,7 +25,7 @@ export function metaJugar(s) {
 
 export function VistaJugar({ s, pestana }) {
   const m = s.motor;
-  if (!m) return html`<${Vacio} titulo=${t("Conectando…", "Connecting…")} texto=""/>`;
+  if (!m) return html`<${Esqueleto} texto=${t("Conectando…", "Connecting…")}/>`;
   if (pestana === "amigos") return html`<${Amigos} m=${m}/>`;
   if (pestana === "perfiles") return html`<${PerfilesPes}/>`;
   return html`<div class="col"><${TuSalaEnRadar} m=${m}/><${SalasAbiertas} m=${m}/></div>`;

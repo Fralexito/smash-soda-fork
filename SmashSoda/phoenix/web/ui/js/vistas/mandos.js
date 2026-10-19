@@ -12,7 +12,7 @@ import { TecladoNuevo } from "./teclado.js";
 import { MapeoNuevo } from "./mapeo.js";
 import { MandosEnVivo } from "./mandovivo.js";
 import { AjustesSentado } from "./sentado.js";
-import { Tarjeta, Titulo, Boton, Interruptor, Ajuste, AjusteSw, Stepper, Icono, Vacio, Avatar, Chip, colorPing, cx, dos } from "../ui.js";
+import { Tarjeta, Titulo, Boton, Interruptor, Ajuste, AjusteSw, Stepper, Icono, Vacio, Avatar, Chip, colorPing, cx, dos, Esqueleto } from "../ui.js";
 
 export const PESTANAS_MANDOS = [
   { id: "puestos", es: "PUESTOS", en: "SEATS", d: ["Arrastra a cada persona a un puesto, o toca «Asignar». Lo que dejes en «Mirando» solo ve la partida.", "Drag each person to a seat, or tap Assign. Anyone in Watching only watches."] },
@@ -35,7 +35,7 @@ export function metaMandos(s) {
 
 export function VistaMandos({ s, pestana }) {
   const m = s.motor;
-  if (!m || !m.mandos) return html`<${Vacio} titulo=${t("Conectando…", "Connecting…")} texto=""/>`;
+  if (!m || !m.mandos) return html`<${Esqueleto} texto=${t("Conectando…", "Connecting…")}/>`;
   switch (pestana) {
     case "mapeo": return html`<${MapeoNuevo} m=${m}/>`;
     case "teclado": return html`<${TecladoNuevo} m=${m}/>`;

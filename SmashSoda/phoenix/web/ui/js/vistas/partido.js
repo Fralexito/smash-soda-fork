@@ -7,7 +7,7 @@
 import { html, useState, useEffect, useRef } from "../lib.js";
 import { t, duracion, fecha } from "../i18n.js";
 import { accion, confirmar, avisar, irA } from "../tienda.js";
-import { Tarjeta, Titulo, Boton, Interruptor, Campo, Avatar, Chip, Icono, Vacio, colorPing, cx, dos } from "../ui.js";
+import { Tarjeta, Titulo, Boton, Interruptor, Campo, Avatar, Chip, Icono, Vacio, colorPing, cx, dos, Esqueleto } from "../ui.js";
 import { CampoEnVivo } from "./campo.js";
 
 export const PESTANAS_PARTIDO = [
@@ -18,7 +18,7 @@ export const PESTANAS_PARTIDO = [
 
 export function VistaPartido({ s, pestana }) {
   const m = s.motor;
-  if (!m || !m.sala) return html`<${Vacio} titulo=${t("Conectando…", "Connecting…")} texto=""/>`;
+  if (!m || !m.sala) return html`<${Esqueleto} texto=${t("Conectando…", "Connecting…")}/>`;
   if (pestana === "historial") return html`<${Historial}/>`;
   if (pestana === "campo") return html`<${CampoEnVivo} m=${m}/>`;
   const fase = m.partido?.fase || "libre";
@@ -463,7 +463,7 @@ function tabla(partidos) {
 function Historial() {
   const [lista, setLista] = useState(null);
   useEffect(() => { accion("partido.historial", { max: 200 }, { silencioso: true }).then((r) => setLista(r?.partidos || [])); }, []);
-  if (!lista) return html`<${Vacio} titulo=${t("Cargando…", "Loading…")} texto=""/>`;
+  if (!lista) return html`<${Esqueleto} texto=${t("Cargando…", "Loading…")}/>`;
   if (lista.length === 0) return html`<${Vacio} titulo=${t("Aún no hay partidos", "No matches yet")} texto=${t("Cuando termines un partido desde «Marcador» quedará aquí con su marcador y duración.", "Finished matches show up here.")}/>`;
   const tab = tabla(lista);
   return html`<div class="fila partible">

@@ -8,7 +8,7 @@ import { t, fecha } from "../i18n.js";
 import { accion, confirmar, irA } from "../tienda.js";
 import { Permisos } from "./ajustes.js";
 import { BotonCeder } from "./cedido.js";
-import { Tarjeta, Titulo, Boton, AjusteSw, Campo, Avatar, Chip, Icono, Vacio, colorPing, cx, dos } from "../ui.js";
+import { Tarjeta, Titulo, Boton, AjusteSw, Campo, Avatar, Chip, Icono, Vacio, colorPing, cx, dos, Esqueleto } from "../ui.js";
 
 export const PESTANAS_GENTE = [
   { id: "sala", es: "GENTE", en: "PEOPLE", d: ["Elige a alguien de la lista para ver su ficha, su carta de la liga y sus permisos.", "Pick someone to see their card and permissions."] },
@@ -23,7 +23,7 @@ export function metaGente(s) {
 
 export function VistaGente({ s, pestana }) {
   const m = s.motor;
-  if (!m) return html`<${Vacio} titulo=${t("Conectando…", "Connecting…")} texto=""/>`;
+  if (!m) return html`<${Esqueleto} texto=${t("Conectando…", "Connecting…")}/>`;
   if (pestana === "moderacion") return html`<${Moderacion}/>`;
   if (pestana === "permisos") return html`<${Permisos} m=${m}/>`;
   return html`<${EnSala} m=${m}/>`;
@@ -169,7 +169,7 @@ function Moderacion() {
   const [l, setL] = useState(null);
   const cargar = async () => { const r = await accion("moderacion.listas", {}, { silencioso: true }); if (r) setL(r); };
   useEffect(() => { cargar(); const i = setInterval(cargar, 5000); return () => clearInterval(i); }, []);
-  if (!l) return html`<${Vacio} titulo=${t("Cargando listas…", "Loading lists…")} texto=""/>`;
+  if (!l) return html`<${Esqueleto} texto=${t("Cargando listas…", "Loading lists…")}/>`;
   const quitar = async (nombreAccion, x, pregunta) => {
     if (pregunta && !(await confirmar({ titulo: pregunta, texto: `${x.nombre} · #${x.parsecId}`, si: t("Sí", "Yes") }))) return;
     if (await accion(nombreAccion, { parsecId: x.parsecId })) cargar();
@@ -242,7 +242,7 @@ export function SalasAbiertas({ m }) {
       <${Boton} tipo="lleno" al=${() => irA("sync", "mipc")}><${Icono} n="web" t=${16}/>${t("CONECTAR MI CUENTA", "CONNECT MY ACCOUNT")}</${Boton}></${Vacio}>`;
   }
   const a = m.salasAbiertas || { cargadas: false, lista: [] };
-  if (!a.cargadas) return html`<${Vacio} titulo=${t("Buscando salas…", "Looking for rooms…")} texto=${t("Se actualizan solas mientras esta ventana está a la vista.", "They refresh automatically while this window is visible.")}/>`;
+  if (!a.cargadas) return html`<${Esqueleto} texto=${t("Buscando salas…", "Looking for rooms…")}/>`;
   if (a.lista.length === 0) return html`<${Vacio} titulo=${t("No hay salas abiertas ahora", "No open rooms right now")} texto=${t("Cuando alguien abra una sala pública o de amigos, saldrá aquí.", "When someone opens a public or friends room, it will show up here.")}/>`;
   const unirme = (x) => accion("ui.abrir", { url: x.enlace });
   const SALUD = { en_partida: [t("EN PARTIDA", "IN A MATCH"), ""], inestable: [t("INESTABLE", "UNSTABLE"), "warn"] };
@@ -282,7 +282,7 @@ export function Amigos({ m }) {
       <${Boton} tipo="lleno" al=${() => irA("sync", "mipc")}><${Icono} n="web" t=${16}/>${t("CONECTAR MI CUENTA", "CONNECT MY ACCOUNT")}</${Boton}></${Vacio}>`;
   }
   const a = m.amigos || { cargados: false, lista: [] };
-  if (!a.cargados) return html`<${Vacio} titulo=${t("Cargando amigos…", "Loading friends…")} texto=${t("Se actualizan solos cada pocos segundos.", "They refresh automatically.")}/>`;
+  if (!a.cargados) return html`<${Esqueleto} texto=${t("Cargando amigos…", "Loading friends…")}/>`;
   const peso = { en_partida: 0, en_sala: 1, disponible: 2, ausente: 3, desconectado: 4 };
   const orden = [...a.lista].sort((x, y) => (peso[x.estado] ?? 5) - (peso[y.estado] ?? 5) || x.nombre.localeCompare(y.nombre));
   const invitar = (x) => accion("amigos.invitar", { usuarioId: x.usuarioId }, { ok: t(`Invitación enviada a ${x.nombre}.`, `Invite sent to ${x.nombre}.`) });

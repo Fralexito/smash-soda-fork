@@ -840,3 +840,13 @@ html.sin-foco .peldano.sig::after, html.sin-foco .u-punto, html.sin-foco .punto.
 .que-hago .qh-frase { flex: 1; min-width: 0; font-size: 14px; line-height: 1.4; color: var(--fg); }
 .que-hago .qh-boton { flex: none; }
 @media (prefers-reduced-motion: reduce) { .que-hago { animation: none; } }
+
+/* ---- Esqueletos de carga (segunda pasada visual) ---- */
+.esqueleto { display: flex; flex-direction: column; gap: 14px; }
+.esq-tarjeta { display: flex; flex-direction: column; gap: 12px; padding: 22px 24px; border-radius: 16px; border: 1px solid var(--tenue); background: rgba(255, 255, 255, .02); }
+.esq-linea { display: block; height: 12px; border-radius: 6px; background: linear-gradient(90deg, rgba(255, 255, 255, .05) 0%, var(--acc-suave) 45%, rgba(255, 255, 255, .05) 90%); background-size: 220% 100%; animation: esq-brillo 1.4s linear infinite; }
+.esq-linea.grande { height: 26px; border-radius: 8px; }
+.esq-texto { color: var(--mut); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; }
+@keyframes esq-brillo { from { background-position: 120% 0; } to { background-position: -120% 0; } }
+html.sin-foco .esq-linea { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) { .esq-linea { animation: none; } }

@@ -13,7 +13,7 @@ import { PreferenciaPuesto } from "./jugar.js";
 import { BloqueRetraso, LeyendaRetraso, retrasoDe } from "./retraso.js";
 import {
   Cifra, Tarjeta, Titulo, Boton, Interruptor, Ajuste, AjusteSw, Stepper, Segmentos, Selector, Campo,
-  Minigrafica, Chip, Icono, Vacio, BotonIr, colorPing, claseSemaforo, cx, dos,
+  Minigrafica, Chip, Icono, Vacio, BotonIr, colorPing, claseSemaforo, cx, dos, Esqueleto,
 } from "../ui.js";
 import { instalarVigem } from "./arreglos.js";
 import { SemaforoPhoenix, avisosTransmision, leerCerrados, guardarCerrados } from "./semaforo.js";
@@ -52,7 +52,7 @@ export function presetActual(m) {
 
 export function VistaSala({ s, pestana }) {
   const m = s.motor;
-  if (!m || !m.sala) return html`<${Vacio} titulo=${t("Conectando con el motor…", "Connecting to the engine…")} texto=""/>`;
+  if (!m || !m.sala) return html`<${Esqueleto} texto=${t("Conectando con el motor…", "Connecting to the engine…")}/>`;
   switch (pestana) {
     case "transmision": return html`<${TransmisionSala} m=${m} info=${s.info}/>`;
     case "puesto": return html`<${PreferenciaPuesto} m=${m}/>`;

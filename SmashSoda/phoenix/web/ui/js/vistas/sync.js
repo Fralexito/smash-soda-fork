@@ -11,7 +11,7 @@ import { accion, avisar, elegirPestana, confirmar } from "../tienda.js";
 import { CuentaWeb } from "./ajustes.js";
 import { Traspasos } from "./traspasos.js";
 import { Preparar } from "./preparar.js";
-import { Tarjeta, Titulo, AjusteSw, Segmentos, Vacio, Chip, Icono, Boton, BotonIr, cx } from "../ui.js";
+import { Tarjeta, Titulo, AjusteSw, Segmentos, Vacio, Chip, Icono, Boton, BotonIr, cx, Esqueleto } from "../ui.js";
 
 // Un solo bloque abierto a la vez en AVANZADO (se recuerda cuál en este PC; null = nunca se eligió)
 const CLAVE_ABIERTO = "phoenix.sync.avanzado.abierto";
@@ -384,7 +384,7 @@ function Entrega({ m }) {
 
 export function VistaSync({ s, pestana }) {
   const m = s.motor;
-  if (!m) return html`<${Vacio} titulo=${t("Conectando…", "Connecting…")} texto=""/>`;
+  if (!m) return html`<${Esqueleto} texto=${t("Conectando…", "Connecting…")}/>`;
   if (pestana === "traspasos") return html`<${Traspasos}/>`;
   if (pestana === "avanzado") return html`<${Avanzado} m=${m}/>`;
   return html`<${Preparar} s=${s}/>`;

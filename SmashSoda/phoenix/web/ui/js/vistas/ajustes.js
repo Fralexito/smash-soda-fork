@@ -5,7 +5,7 @@
 import { html, useState, useEffect } from "../lib.js";
 import { t } from "../i18n.js";
 import { accion, confirmar, actualizarInfo, avisar, irA } from "../tienda.js";
-import { Tarjeta, Titulo, Boton, Interruptor, Ajuste, AjusteSw, Stepper, Selector, Segmentos, Campo, Icono, IconoRed, COLOR_RED, Vacio, Chip, cx } from "../ui.js";
+import { Tarjeta, Titulo, Boton, Interruptor, Ajuste, AjusteSw, Stepper, Selector, Segmentos, Campo, Icono, IconoRed, COLOR_RED, Vacio, Chip, cx, Esqueleto } from "../ui.js";
 import { TarjetaCalidad } from "./sala.js";
 import { AtajosTeclado } from "./nativas.js";
 import { abrirTutorial } from "./tutorial.js";
@@ -23,7 +23,7 @@ export const PESTANAS_AJUSTES = [
 
 export function VistaAjustes({ s, pestana }) {
   const m = s.motor;
-  if (!m || !m.ajustes) return html`<${Vacio} titulo=${t("Conectando…", "Connecting…")} texto=""/>`;
+  if (!m || !m.ajustes) return html`<${Esqueleto} texto=${t("Conectando…", "Connecting…")}/>`;
   switch (pestana) {
     case "overlay": return html`<${Overlay} m=${m} info=${s.info}/>`;
     case "sonidos": return html`<${Sonidos} m=${m}/>`;
@@ -161,7 +161,7 @@ function Canal({ c, canal, titulo, desc }) {
 
 export function Audio({ m }) {
   const a = m.audio;
-  if (!a) return html`<${Vacio} titulo=${t("Cargando audio…", "Loading audio…")} texto=""/>`;
+  if (!a) return html`<${Esqueleto} texto=${t("Cargando audio…", "Loading audio…")}/>`;
   return html`<div class="col">
     <${Canal} c=${a.parlantes} canal="parlantes" titulo=${t("SONIDO DEL JUEGO", "GAME SOUND")} desc=${t("Lo que escuchan los invitados (los parlantes de esta PC).", "What guests hear (this PC's speakers).")}/>
     <${Canal} c=${a.mic} canal="mic" titulo=${t("MICRÓFONO", "MICROPHONE")} desc=${t("Tu voz para los invitados. Apágalo si no lo usas.", "Your voice for guests. Turn it off if unused.")}/>
