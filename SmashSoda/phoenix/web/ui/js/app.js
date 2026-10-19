@@ -7,7 +7,7 @@ import { t, fijarIdioma } from "./i18n.js";
 import {
   useTienda, conectarTienda, irA, cambiar, avisar, quitarAviso, cerrarDialogo, accion, leer, elegirPestanaChat, noLeidosGlobal,
 } from "./tienda.js";
-import { Icono, Logo, cx } from "./ui.js";
+import { Icono, Logo, cx, useDestello } from "./ui.js";
 import { VistaSala, PESTANAS_SALA } from "./vistas/sala.js";
 import { VistaPartido, PESTANAS_PARTIDO } from "./vistas/partido.js";
 import { VistaMandos, PESTANAS_MANDOS, metaMandos } from "./vistas/mandos.js";
@@ -122,12 +122,16 @@ const ESTADO_JUEGO = {
 function GrupoEstado({ m, w, enSync = false }) {
   const b = m?.buzon;
   const j = ESTADO_JUEGO[b?.estado] || ESTADO_JUEGO.cerrado;
+  // Cada pastilla destella una vez cuando cambia su estado (sala abierta, web conectada, juego conectado…)
+  const dSala = useDestello(m?.sala?.abierta ? "abierta" : m?.sala?.lista ? "cerrada" : "preparando");
+  const dWeb = useDestello(w[1]);
+  const dJuego = useDestello(j[1]);
   const ultimo = b?.estado === "conectado" && b?.ultimo ? " · " + b.ultimo : "";
   return html`<div class="grupo-estado" role="status" aria-label=${t("Estado de la conexión", "Connection status")}>
-    <${PildoraSala} m=${m}/>
-    ${enSync ? null : html`<button class="pill web" onClick=${() => irA("sync", "mipc")} title=${m?.web?.estado === "pausado" ? causaPausa(m.web) : m?.web?.mensaje || t("Cuenta de la liga", "League account")}>
+    <span class=${dSala ? "destello" : ""} style="display:inline-flex;border-radius:999px"><${PildoraSala} m=${m}/></span>
+    ${enSync ? null : html`<button class=${cx("pill web", dWeb && "destello")} onClick=${() => irA("sync", "mipc")} title=${m?.web?.estado === "pausado" ? causaPausa(m.web) : m?.web?.mensaje || t("Cuenta de la liga", "League account")}>
       <span class=${cx("punto", w[0], w[0] === "ok" && "vivo")}></span>${t(w[1], w[2])}</button>
-    <button class="pill juego" onClick=${() => irA("sync", "avanzado")} title=${t("Conexión de Phoenix con el juego", "Phoenix game connection")}>
+    <button class=${cx("pill juego", dJuego && "destello")} onClick=${() => irA("sync", "avanzado")} title=${t("Conexión de Phoenix con el juego", "Phoenix game connection")}>
       <span class=${cx("punto", j[0], j[0] === "ok" && "vivo")}></span>${t(j[1], j[2])}${ultimo}</button>`}
   </div>`;
 }
