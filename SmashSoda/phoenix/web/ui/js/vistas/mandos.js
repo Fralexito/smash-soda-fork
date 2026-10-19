@@ -11,6 +11,7 @@ import { MarionetasNuevo } from "./marionetas.js";
 import { TecladoNuevo } from "./teclado.js";
 import { MapeoNuevo } from "./mapeo.js";
 import { MandosEnVivo } from "./mandovivo.js";
+import { AjustesSentado } from "./sentado.js";
 import { Tarjeta, Titulo, Boton, Interruptor, Ajuste, AjusteSw, Stepper, Icono, Vacio, Avatar, Chip, colorPing, cx, dos } from "../ui.js";
 
 export const PESTANAS_MANDOS = [
@@ -42,7 +43,7 @@ export function VistaMandos({ s, pestana }) {
     case "marionetas": return html`<${MarionetasNuevo} m=${m}/>`;
     case "bloqueo": return html`<${BloqueoNuevo} m=${m}/>`;
     case "vivo": return html`<${Tarjeta} interior="padding:22px 24px"><${Titulo} texto=${t("MANDOS EN VIVO", "LIVE PADS")}/><${MandosEnVivo} m=${m}/></${Tarjeta}>`;
-    default: return html`<${PuestosNuevo} m=${m}/>`;
+    default: return html`<div class="col"><${AjustesSentado} compacto/><${PuestosNuevo} m=${m}/></div>`;
   }
 }
 
@@ -66,7 +67,7 @@ export function Pendientes({ m }) {
       <${Avatar} nombre=${x.nombre} id=${x.parsecId} t=${36}/>
       ${x.mando < 0
         ? html`<div style="flex:1;min-width:200px"><b>${x.nombre}</b> ${t("quiere jugar", "wants to play")}
-            <div class="ayuda">${t("Pulsó su mando estando en «Mirando». Si aceptas, toma el primer puesto libre.", "Pressed their pad while watching. If you accept, they take the first free seat.")}</div></div>`
+            <div class="ayuda">${t("Pulsó su mando estando en «Mirando». Si aceptas, toma el primer puesto libre. (Con el sentado automático se sienta solo; con «solo mis amigos», solo tus amigos.)", "Pressed their pad while watching. If you accept, they take the first free seat. (With auto-seat they sit by themselves; with «only my friends», only your friends do.)")}</div></div>`
         : html`<div style="flex:1;min-width:200px"><b>${x.nombre}</b> ${x.mando === 0 ? t("quiere cambiar de equipo", "wants to switch teams") : html`${t("pide el mando", "asks for pad")} <b class="acc">${dos(x.mando)}</b>`}
             <div class="ayuda">${t("Lo pidió con !cambio o !equipo en el chat.", "Requested with !cambio or !equipo.")}</div></div>`}
       <${Boton} tipo="ok mini" al=${() => accion("solicitud.aceptar", { parsecId: x.parsecId })}>${t("ACEPTAR", "ACCEPT")}</${Boton}>

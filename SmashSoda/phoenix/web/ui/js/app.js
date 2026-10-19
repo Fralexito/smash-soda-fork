@@ -26,6 +26,7 @@ import { BandaActualizacion } from "./vistas/actualizacion.js";
 import { causaPausa } from "./vistas/semaforo.js";
 import { Bienvenida } from "./vistas/bienvenida.js";
 import { VistaInicio, PESTANAS_INICIO } from "./vistas/inicio.js";
+import { vigilarSentado } from "./vistas/sentado.js";
 
 const SECCIONES = [
   { id: "inicio", es: "INICIO", en: "HOME", vista: VistaInicio, pestanas: PESTANAS_INICIO },   // plan UX: delante de todo, sin quitar nada
@@ -233,6 +234,7 @@ function App() {
   useEffect(() => { document.documentElement.dataset.tema = tema; }, [tema]);
   fijarIdioma(m?.app?.idioma || "es");
   const cedida = !!m?.cedido?.activo;
+  useEffect(() => { vigilarSentado(m); }, [m]);   // sentado automático (plan UX)
   useEffect(() => {
     vigilarCedido(m);
     if (cedida) cambiar({ paleta: false, ceder: null });
