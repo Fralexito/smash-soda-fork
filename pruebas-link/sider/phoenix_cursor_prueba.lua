@@ -4,7 +4,7 @@
 --  NO es un módulo de Phoenix Link (por eso vive en pruebas-link\sider\ y no en SmashSoda\phoenix\sider\).
 --
 --  Qué busca: dónde guarda el juego qué mando (jugador 1-8 de PES) controla a qué futbolista,
---  y dónde apunta quién marcó cada gol. Método en docs/INVESTIGACION-CURSOR-MANDO.md.
+--  y dónde apunta quién marcó cada gol. Método en docs/MANDOS.md («INVESTIGACION-CURSOR-MANDO»).
 --
 --  Cómo: se toma un futbolista conocido (por defecto Lamine Yamal, ID 162114, del Barça) y se busca
 --  su ID en la memoria (1) en el menú y (2) ya en el partido. Lo que solo aparece en el partido es el

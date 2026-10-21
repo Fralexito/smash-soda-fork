@@ -22,7 +22,7 @@
 
 namespace phoenix::equipos {
 
-	constexpr int kPuestos = 16;      ///< tope de puestos (ViGEmBus medido: 16 seguros; ver docs/MAS-DE-8-MANDOS.md)
+	constexpr int kPuestos = 16;      ///< tope de puestos (ViGEmBus medido: 16 seguros; ver docs/MANDOS.md («MAS-DE-8-MANDOS»))
 	constexpr int kPuestosPes = 8;    ///< casillas de settings.dat; el mapa siempre tiene al menos estas letras
 	using Mapa = std::string;
 

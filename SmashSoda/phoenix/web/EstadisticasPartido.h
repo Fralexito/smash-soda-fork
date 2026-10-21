@@ -10,7 +10,7 @@
 //  Mientras el partido está en juego mira, por persona (parsecId): su mando,
 //  pulsaciones e inactividad (lo que recibe su mando virtual), ping, caídas y
 //  tiempo fuera de la sala. Al finalizar, AccionesPartidoWeb añade la ficha a
-//  cada jugador de «partida_fin» (docs/SISTEMA-JUGADORES.md).
+//  cada jugador de «partida_fin» (docs/PEDIDOS-A-LA-WEB.md («SISTEMA-JUGADORES»)).
 //  Solo lee: no toca mandos, sala ni juego.
 // =============================================================================
 

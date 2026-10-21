@@ -95,7 +95,7 @@ namespace phoenix::web {
 			return { {"nombre", l.nombre}, {"goles", l.goles}, {"local", local}, {"jugadores", jugadores} };
 		}
 
-		/// `datos` de «partida_fin» v2 (docs/RANKING-1V1.md): todo lo que la web necesita para el ranking.
+		/// `datos` de «partida_fin» v2 (docs/PEDIDOS-A-LA-WEB.md («RANKING-1V1»)): todo lo que la web necesita para el ranking.
 		/// `invertido` = mandos cruzados al terminar (Partido::finalizar lo pone a false).
 		json datosResultado(Interno& in, const RegistroPartido& r, bool invertido, bool cancelado) {
 			const juego::EstadoPartidoJuego j = PhoenixLink::instancia().estadoJuego();

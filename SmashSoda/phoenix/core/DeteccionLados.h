@@ -2,7 +2,7 @@
 
 // =============================================================================
 //  Phoenix Link · Detección del lado de cada mando (lógica pura, sin Windows; se prueba en
-//  pruebas-link/lados_test.cpp). Ver docs/DETECCION-LADOS.md.
+//  pruebas-link/lados_test.cpp). Ver docs/MANDOS.md («DETECCION-LADOS»).
 // -----------------------------------------------------------------------------
 //  Idea: el futbolista que maneja un mando corre hacia donde apunta su stick izquierdo (con un
 //  pequeño retraso). Se cruza el stick de cada mando con la velocidad de cada fichita del Campo 2D

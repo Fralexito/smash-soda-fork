@@ -1,5 +1,5 @@
 #pragma once
-// Traspasos EN VIVO entre PCs con Phoenix (docs/TRASPASOS-EN-VIVO.md).
+// Traspasos EN VIVO entre PCs con Phoenix (docs/FICHAJES-Y-SYNC.md («TRASPASOS-EN-VIVO»)).
 //   FASE 1 captura (Captura.h): el anfitrion hace un traspaso en Editar, PES guarda el option file, Link lo compara con la foto anterior.
 //   FASE 2 transporte: la lista viaja como un LOTE (JSON corto, idempotente) por un Transporte (hoy una carpeta; la web despues).
 //   FASE 3 aplicacion: el Link del amigo convierte los lotes en cambios de Fichajes (Phoenix-DB sobre SU base), avisa a phoenix.lua
@@ -38,7 +38,7 @@ struct Lote {
 	std::string anfitrionNombre;   ///< nombre visible del anfitrion (solo lo manda la web)
 	std::string parche, baseHuella;   ///< parche y huella (12 hex) de la base del anfitrion; vacio = no se sabe
 	long long seq = 0;       ///< orden de llegada al transporte (lo asigna el transporte; 0 = aun no publicado)
-	bool oficial = false;    ///< lote del canal OFICIAL de Phoenix (la web, docs/CONTRATO-WEB-PES.md): lo reciben todos sin codigo
+	bool oficial = false;    ///< lote del canal OFICIAL de Phoenix (la web, docs/PEDIDOS-A-LA-WEB.md («CONTRATO-WEB-PES»)): lo reciben todos sin codigo
 	std::string cambioId;    ///< uuid del cambio oficial de la web (para informar el resultado); vacio si no es oficial
 	std::vector<CambioLote> cambios;
 };
@@ -94,7 +94,7 @@ private:
 /// Peticion HTTP autenticada a la web (la inyecta quien crea el transporte; en Link real es PhoenixLink::peticionTraspasos).
 /// `estado`: codigo HTTP; 0 = sin red/timeout; -1 = esta PC no esta vinculada a una cuenta de la web. Devuelve false si no hubo respuesta.
 using PeticionWeb = std::function<bool(const std::string& metodo, const std::string& ruta, const std::string& cuerpo, int& estado, std::string& respuesta)>;
-/// Transporte por la web (Supabase, funcion «traspasos»: base .../functions/v1/traspasos/v1). Contrato: C:\dev\pes-liga-automatica\docs\TRASPASOS-EN-VIVO.md
+/// Transporte por la web (Supabase, funcion «traspasos»: base .../functions/v1/traspasos/v1). Contrato: C:\dev\pes-liga-automatica\docs/FICHAJES-Y-SYNC.md («TRASPASOS-EN-VIVO»)
 /// (rutas /traspasos, /traspasos/codigo, /seguir, /dejar, /siguiendo). Respeta 404 (la web aun no lo tiene: espera 5 min), 401, 403, 429
 /// (reintentar_en), 503 LIGA_PAUSADA y red caida (backoff 10 s → 2 min). El `seq` es GLOBAL de la web: un solo buzon («web»).
 class TransporteWeb : public Transporte {
@@ -175,7 +175,7 @@ struct Registro {
 	long long orden = 0;     ///< (indice del buzon << 40) + seq: asi lotes de buzones distintos no se mezclan por su seq
 	std::vector<Detalle> detalle;
 };
-// ─── Registro de este PC en la web (docs/CONTRATO-WEB-PES.md §4) ─────────────────────────────────
+// ─── Registro de este PC en la web (docs/PEDIDOS-A-LA-WEB.md («CONTRATO-WEB-PES») §4) ─────────────────────────────────
 /// Qué pasó en ESTE PC con un cambio oficial (un lote oficial = un cambio).
 struct ResultadoOficial {
 	std::string cambioId;    ///< uuid del cambio en la web

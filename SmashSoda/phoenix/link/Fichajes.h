@@ -1,5 +1,5 @@
 #pragma once
-// Fichajes de Phoenix como CAMBIOS (docs/FICHAJES-COMO-CAMBIOS.md).
+// Fichajes de Phoenix como CAMBIOS (docs/FICHAJES-Y-SYNC.md («FICHAJES-COMO-CAMBIOS»)).
 // Link NO copia bases de nadie: detecta SOLO, por evidencia, la base REAL que ve el juego en cada sitio (raíz del juego y cada
 // modo de un cambiador de parches), le aplica una lista corta de cambios «jugador → equipo» y deja el resultado en
 // <SiderAddons>\livecpk\Phoenix-DB\common\etc\pesdb\PlayerAssignment.bin. Solo cambia PlayerAssignment.bin; Player.bin queda

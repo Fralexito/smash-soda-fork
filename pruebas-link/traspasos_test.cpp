@@ -224,7 +224,7 @@ static void pruebaLote(const fs::path& tmp) {
 	CHECK(vacio.traer(0, v, ileg, e) && v.empty(), "carpeta que aun no existe = nada nuevo");
 }
 
-// Hub falso que cumple el contrato REAL de la web (funcion «traspasos»: C:\dev\pes-liga-automatica\docs\TRASPASOS-EN-VIVO.md): lotes con seq GLOBAL,
+// Hub falso que cumple el contrato REAL de la web (funcion «traspasos»: C:\dev\pes-liga-automatica\docs/FICHAJES-Y-SYNC.md («TRASPASOS-EN-VIVO»)): lotes con seq GLOBAL,
 // un codigo por anfitrion aprobado, seguir con codigo (prueba:true para seguirse a uno mismo), idempotencia por (anfitrion, id) y fallos inyectables.
 struct HubFalso {
 	struct Lote1 { long long seq; std::string anfitrion; json lote; };
@@ -1168,7 +1168,7 @@ static void pruebaAjustes() {
 	CHECK(pr.prueba && pr.publicar && pr.recibir, "el modo prueba se guarda y se lee aparte");
 }
 
-// Canal OFICIAL de Phoenix (migración 125, docs/CONTRATO-WEB-PES.md): llega solo a todo PC vinculado, sin código, se aplica por NOMBRES
+// Canal OFICIAL de Phoenix (migración 125, docs/PEDIDOS-A-LA-WEB.md («CONTRATO-WEB-PES»)): llega solo a todo PC vinculado, sin código, se aplica por NOMBRES
 // en la base de cada PC (sirve en cualquier parche), y cada PC informa su resultado (POST /pc/informe). No necesita el option file real.
 static void pruebaOficial(const fs::path& tmp) {
 	std::cout << "[canal oficial de Phoenix: sin código, por nombres, interruptor, registro del PC]\n";

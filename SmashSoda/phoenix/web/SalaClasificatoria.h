@@ -14,7 +14,7 @@
 //   · no se puede preparar un partido con alguien sin cuenta;
 //   · un partido ya empezado no se toca: solo se avisa de que no puntuará.
 //  Quien aún no se sabe (la web todavía no respondió) puede jugar.
-//  Se guarda en phoenix-clasificatoria.json. Ver docs/SISTEMA-JUGADORES.md §3.
+//  Se guarda en phoenix-clasificatoria.json. Ver docs/PEDIDOS-A-LA-WEB.md («SISTEMA-JUGADORES») §3.
 // =============================================================================
 
 namespace phoenix::web {

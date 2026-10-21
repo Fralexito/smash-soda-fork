@@ -5,7 +5,7 @@
 //  pruebas-link/campo_test.cpp).
 // -----------------------------------------------------------------------------
 //  Las posiciones de los jugadores de PES 2021 se leen del proceso del juego (SOLO lectura) y se
-//  validan aquí. Todo lo que sigue sale de ingeniería inversa propia (ver docs/CAMPO-2D-INVESTIGACION.md)
+//  validan aquí. Todo lo que sigue sale de ingeniería inversa propia (ver docs/CAMPO-2D-Y-ARBITRO.md («CAMPO-2D-INVESTIGACION»))
 //  y vale para UN ejecutable concreto: si algo no cuadra, el lector se apaga solo y el juego sigue normal.
 //
 //  «Actor» = objeto de 640 bytes del juego que representa algo sobre el campo:

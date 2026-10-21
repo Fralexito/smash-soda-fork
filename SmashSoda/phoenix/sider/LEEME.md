@@ -1,9 +1,9 @@
 # Phoenix Referee (antes «Phoenix Estadio») — módulo de Sider + árbitro de Phoenix Link
 
 Une el partido de PES 2021 con Phoenix Link (Parsec: PES corre solo en la PC del anfitrión).
-Documento completo (qué se hizo, cómo, por qué, cómo conviven con `phoenix.lua` en el mismo paquete de Luas y cómo replicarlo): `docs/PHOENIX-ESTADIO-ARBITRO.md`.
+Documento completo (qué se hizo, cómo, por qué, cómo conviven con `phoenix.lua` en el mismo paquete de Luas y cómo replicarlo): `docs/CAMPO-2D-Y-ARBITRO.md («PHOENIX-ESTADIO-ARBITRO»)`.
 
-> Esta carpeta también lleva **`phoenix.lua` v0.18b** (el de Phoenix Sync), para instalarlo en la PC de un amigo desde «Módulos del juego» o con `PhoenixJuego-instalar.bat`. Guía: `docs/PREPARAR-JUEGO-AMIGO.md`. Es copia exacta del de Sync (sha256 `9ed74f45…`, con LF): no editarlo aquí.
+> Esta carpeta también lleva **`phoenix.lua` v0.18b** (el de Phoenix Sync), para instalarlo en la PC de un amigo desde «Módulos del juego» o con `PhoenixJuego-instalar.bat`. Guía: `docs/FICHAJES-Y-SYNC.md («PREPARAR-JUEGO-AMIGO»)`. Es copia exacta del de Sync (sha256 `9ed74f45…`, con LF): no editarlo aquí.
 
 ## Qué se vive
 - **En el juego** (overlay de Sider: Espacio, y con 1 / º hasta «PHOENIX REFEREE»): marcador con los nombres reales de los equipos, minuto y tiempo, goles con su minuto, quién juega en cada lado con su mando y su ping (bien / justo / ALTO), el estado del árbitro y las últimas líneas del chat de la sala.

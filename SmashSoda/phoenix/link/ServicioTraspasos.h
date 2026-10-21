@@ -1,6 +1,6 @@
 #pragma once
 // Traspasos en vivo · el servicio de Link: un hilo propio (no toca el bucle de la web) que cada pocos segundos pasa el Motor
-// (anfitrion: mira el option file; amigo: trae lotes y los aplica). Todo APAGADO por defecto. docs/TRASPASOS-EN-VIVO.md
+// (anfitrion: mira el option file; amigo: trae lotes y los aplica). Todo APAGADO por defecto. docs/FICHAJES-Y-SYNC.md («TRASPASOS-EN-VIVO»)
 #include <nlohmann/json.hpp>
 #include <string>
 

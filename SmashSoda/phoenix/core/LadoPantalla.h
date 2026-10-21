@@ -9,7 +9,7 @@
 //  proveedor, o no esté confirmado, todo queda «desconocido» y Link se comporta como siempre.
 //  El Estabilizador evita parpadeos: un lado solo cuenta si se lee igual kEstableSeg seguidos, y si las
 //  lecturas dejan de llegar (PES cerrado, otra pantalla) todo vuelve a «desconocido».
-//  Ver docs/DETECCION-LADOS.md §7. Pruebas: pruebas-link/ladopantalla_test.cpp.
+//  Ver docs/MANDOS.md («DETECCION-LADOS») §7. Pruebas: pruebas-link/ladopantalla_test.cpp.
 // =============================================================================
 
 #include <cstdint>

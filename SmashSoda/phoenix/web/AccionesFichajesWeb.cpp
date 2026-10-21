@@ -7,7 +7,7 @@
 // =============================================================================
 //  Acciones de la interfaz web: «Fichajes de Phoenix» (SYNC › Puente).
 //  Link genera Phoenix-DB\…\PlayerAssignment.bin a partir de la base REAL de tu juego + la lista de cambios
-//  (fichajes.json). No copia bases de nadie. Solo con PES cerrado. Detalle: docs/FICHAJES-COMO-CAMBIOS.md.
+//  (fichajes.json). No copia bases de nadie. Solo con PES cerrado. Detalle: docs/FICHAJES-Y-SYNC.md («FICHAJES-COMO-CAMBIOS»).
 // =============================================================================
 
 namespace phoenix::web {

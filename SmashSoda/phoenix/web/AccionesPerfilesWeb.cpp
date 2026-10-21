@@ -24,7 +24,7 @@
 //    perfiles.traer     → PES → Link (copia de seguridad de todos los Usuarios; solo lee PES)
 //    perfiles.preparar  → Link → PES (con PES cerrado; copia con sello del guardado antes de escribir)
 //    perfiles.seleccion / proteger / borrar / renombrar / ruta
-//  Detalle y reglas: docs/PERFILES-DE-AMIGOS.md. Todo con PES CERRADO para escribir.
+//  Detalle y reglas: docs/MANDOS.md («PERFILES-DE-AMIGOS»). Todo con PES CERRADO para escribir.
 // =============================================================================
 
 namespace phoenix::web {

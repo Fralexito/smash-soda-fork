@@ -10,7 +10,7 @@
 //    · un color demasiado oscuro (negro, azul marino) se cambia por el secundario o, si tampoco sirve, por un gris azulado;
 //    · si los dos equipos quedan casi iguales, el segundo usa su color secundario y, si sigue parecido, el violeta.
 //  El equipo A (el de la izquierda en el primer saque) se da por el LOCAL del juego; si no fuera así los colores van
-//  cruzados (es un aviso conocido: el juego no dice de qué lado sale cada uno; ver docs/CAMPO-2D.md).
+//  cruzados (es un aviso conocido: el juego no dice de qué lado sale cada uno; ver docs/CAMPO-2D-Y-ARBITRO.md («CAMPO-2D»)).
 // =============================================================================
 
 #include <string>

@@ -8,7 +8,7 @@
 // =============================================================================
 //  OPCIONES DE UN USUARIO DE PES · leer y poner las opciones personales dentro del registro de 2.432 B
 // -----------------------------------------------------------------------------
-//  Es el «Editar Datos personales» de PES 2021 (mapa decodificado el 12 oct 2026, docs/PERFILES-DE-AMIGOS.md §11).
+//  Es el «Editar Datos personales» de PES 2021 (mapa decodificado el 12 oct 2026, docs/MANDOS.md («PERFILES-DE-AMIGOS») §11).
 //  Trabaja con BYTES, no con textos: los nombres de las opciones cambian de un PES o parche a otro, por eso las
 //  etiquetas viven en la interfaz (por parche) y aquí solo hay números. Solo se tocan los bytes conocidos; todo lo demás
 //  del registro (los campos sin identificar) se conserva tal cual. Lógica pura: sin Windows.

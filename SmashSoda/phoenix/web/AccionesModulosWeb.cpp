@@ -23,7 +23,7 @@
 //  Acciones de la interfaz web: «Módulos del juego» (SYNC › Puente).
 //  Instala, actualiza o apaga los módulos Lua de Sider que lleva Phoenix Link
 //  (phoenix/sider/*.lua). Solo con PES cerrado; sider.ini siempre con copia previa.
-//  Detalle: phoenix/link/ModulosJuego.h y docs/PHOENIX-ESTADIO-ARBITRO.md.
+//  Detalle: phoenix/link/ModulosJuego.h y docs/CAMPO-2D-Y-ARBITRO.md («PHOENIX-ESTADIO-ARBITRO»).
 // =============================================================================
 
 namespace phoenix::web {

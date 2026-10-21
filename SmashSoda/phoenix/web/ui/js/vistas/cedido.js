@@ -2,7 +2,7 @@
 //  Modo cedido: el anfitrión cede su PC a un invitado (teclado y ratón solo en
 //  Link y PES). Botón en la ficha de la persona (jugador o espectador), diálogo
 //  para ceder y banda con ABRIR PES y DEVOLVER LA PC. Sin PIN: devolver la PC
-//  siempre le quita el control al invitado. Guía: docs/MODO-CEDIDO.md.
+//  siempre le quita el control al invitado. Guía: docs/MANDOS.md («MODO-CEDIDO»).
 //  El motor bloquea por su cuenta lo que aquí se oculta (error PC_CEDIDA).
 // =============================================================================
 import { html, useState } from "../lib.js";

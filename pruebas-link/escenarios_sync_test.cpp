@@ -1,7 +1,7 @@
 // Pruebas de ESCENARIOS del instalador de módulos (Sync › Módulos del juego) en carpetas temporales con juegos FALSOS
 // (estructura de ConmeGOL: SiderAddons, ConmeGol Extras\<modo>\SiderAddons, olmosjr23\Database...). No toca ningún juego real.
 // Compila en Windows (MSVC): ver pruebas-link/correr_escenarios.bat.  Uso: escenarios_sync_test <carpeta temporal vacía> <carpeta sider del paquete>
-// Cada escenario se describe en docs/SYNC-ESCENARIOS.md.
+// Cada escenario se describe en docs/FICHAJES-Y-SYNC.md («SYNC-ESCENARIOS»).
 #include "phoenix/link/ModulosJuego.h"
 #include "phoenix/link/Entrega.h"
 

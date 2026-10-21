@@ -12,7 +12,7 @@
 //  Cruza el stick de cada mando (puestos y mando físico del anfitrión) con el Campo 2D (solo lectura de PES) en
 //  los primeros minutos del partido. Si TODOS los detectados están al revés en Link, corrige los lados sin mover
 //  mandos (la vía de CORREGIR LADOS) y avisa una vez en el chat. Ante la duda no toca nada.
-//  Lógica en core/DeteccionLados (probada en pruebas-link/lados_test.cpp). Ver docs/DETECCION-LADOS.md.
+//  Lógica en core/DeteccionLados (probada en pruebas-link/lados_test.cpp). Ver docs/MANDOS.md («DETECCION-LADOS»).
 // =============================================================================
 
 namespace phoenix::web {

@@ -18,7 +18,7 @@
 //  confirmación), con Ctrl+Alt+F12 en el teclado físico, o solo: si el invitado
 //  sale, la sala se cierra, la interfaz deja de verse o el guardián falla.
 //  El anfitrión sigue usando su teclado y ratón físicos todo el tiempo.
-//  Guía: docs/MODO-CEDIDO.md · lógica pura: phoenix/core/ModoCedido.
+//  Guía: docs/MANDOS.md («MODO-CEDIDO») · lógica pura: phoenix/core/ModoCedido.
 // =============================================================================
 
 namespace phoenix::web {

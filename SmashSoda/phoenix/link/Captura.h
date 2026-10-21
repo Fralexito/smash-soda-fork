@@ -1,5 +1,5 @@
 #pragma once
-// Traspasos en vivo · FASE 1 · CAPTURA (solo lectura). Docs: docs/TRASPASOS-EN-VIVO.md
+// Traspasos en vivo · FASE 1 · CAPTURA (solo lectura). Docs: docs/FICHAJES-Y-SYNC.md («TRASPASOS-EN-VIVO»)
 // Lee el option file de PES 2021 (EDIT00000000, la base "Editar"), saca quien esta en la plantilla de cada equipo y compara
 // dos fotos: un jugador que SALE de un equipo y ENTRA en otro = traspaso. Todo lo demas (altas, bajas, convocatorias,
 // dorsales, tacticas, Liga Master) se cuenta pero se IGNORA.

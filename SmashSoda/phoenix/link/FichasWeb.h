@@ -1,5 +1,5 @@
 #pragma once
-// Cambios «stats» e «info» de la web (docs/CONTRATO-WEB-PES.md §2 y §3c) → lista de link/Fichas, y resultados para el informe del PC (§4).
+// Cambios «stats» e «info» de la web (docs/PEDIDOS-A-LA-WEB.md («CONTRATO-WEB-PES») §2 y §3c) → lista de link/Fichas, y resultados para el informe del PC (§4).
 // Lógica pura (sin red ni disco): la usa ServicioFichas y se prueba en pruebas-link/fichas_test.cpp.
 #include <map>
 #include <nlohmann/json.hpp>

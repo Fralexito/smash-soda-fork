@@ -7,7 +7,7 @@
 // =============================================================================
 //  USUARIOS EN VIVO · leer y escribir los «Datos personales» (Usuario 1…32) en la memoria de PES 2021 con el juego abierto
 // -----------------------------------------------------------------------------
-//  Hallado y comprobado el 12 oct 2026 en la PC de Fralex (PES 2021 ConmeGOL; ver docs/PERFILES-DE-AMIGOS.md §9):
+//  Hallado y comprobado el 12 oct 2026 en la PC de Fralex (PES 2021 ConmeGOL; ver docs/MANDOS.md («PERFILES-DE-AMIGOS») §9):
 //   · TABLA de 32 registros de 2.432 B (la misma forma que en SYSTEM00000000, core/PerfilesPes.h): vive en el heap, al principio
 //     de una región de memoria RW (+0x10). Es la ÚNICA copia de la configuración: lo que se escribe ahí PES lo usa al instante
 //     (probado con el nombre; las opciones: pendiente de probar).

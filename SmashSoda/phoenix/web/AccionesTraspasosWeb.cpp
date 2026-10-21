@@ -6,7 +6,7 @@
 // =============================================================================
 //  Acciones de la interfaz web: «Traspasos en vivo» (SYNC › Traspasos).
 //  El anfitrion hace un traspaso en Editar de PES; al guardar, Link lo detecta y lo publica como un lote; el Link del amigo lo
-//  aplica sobre SU base y avisa a phoenix.lua. Todo apagado por defecto. Detalle: docs/TRASPASOS-EN-VIVO.md.
+//  aplica sobre SU base y avisa a phoenix.lua. Todo apagado por defecto. Detalle: docs/FICHAJES-Y-SYNC.md («TRASPASOS-EN-VIVO»).
 // =============================================================================
 
 namespace phoenix::web {

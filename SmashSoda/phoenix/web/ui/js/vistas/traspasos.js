@@ -4,7 +4,7 @@
 //    RECIBIR FICHAJES DE UN AMIGO: pega su código; estado y fichajes recibidos.
 //    «¿Algo no funciona?» y «Ajustes de traspasos» (0.3.45: ahí van todos los interruptores — oficiales, aprobar al enviar/recibir,
 //    mantener mis fichajes, modo prueba —, la carpeta compartida y apagar; arriba solo quedan el código y recibir).
-//  La lógica (traspasos.estado / config / accion) no cambia: solo cómo se presenta. Guía: docs/TRASPASOS-EN-VIVO.md
+//  La lógica (traspasos.estado / config / accion) no cambia: solo cómo se presenta. Guía: docs/FICHAJES-Y-SYNC.md («TRASPASOS-EN-VIVO»)
 // =============================================================================
 import { html, useState, useEffect } from "../lib.js";
 import { t } from "../i18n.js";
@@ -147,7 +147,7 @@ export function Traspasos() {
   const infoPes = d.pesAbierto ? t("PES está abierto. Cierra y abre PES para ver el cambio, o espera la recarga automática.", "PES is open. Close and reopen PES to see the change, or wait for the automatic reload.") : t("PES está cerrado: se pone al momento y lo ves al abrir PES.", "PES is closed: it's applied right away and you'll see it when you open PES.");
   const tarjeta = "padding:20px 22px;display:flex;flex-direction:column;gap:12px";
 
-  // ── Cambios OFICIALES de Phoenix (la web, docs/CONTRATO-WEB-PES.md): llegan solos a todos, sin código; aparte de amigos ──
+  // ── Cambios OFICIALES de Phoenix (la web, docs/PEDIDOS-A-LA-WEB.md («CONTRATO-WEB-PES»)): llegan solos a todos, sin código; aparte de amigos ──
   const oficiales = lista.filter((l) => l.oficial).slice(0, 5);
   const tarjetaOficial = html`<${Tarjeta} interior=${tarjeta}>
       <${Titulo} texto=${t("CAMBIOS OFICIALES DE PHOENIX", "OFFICIAL PHOENIX CHANGES")} derecha=${html`<${Chip} tipo=${aj.oficial !== false ? "acc" : ""}>${aj.oficial !== false ? t("ENCENDIDO", "ON") : t("APAGADO", "OFF")}</${Chip}>`}/>

@@ -251,7 +251,7 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E remove_directory $<TARGET_FILE_DIR:${PROJECT_NAME}>/sider
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         "${CMAKE_SOURCE_DIR}/SmashSoda/phoenix/sider" $<TARGET_FILE_DIR:${PROJECT_NAME}>/sider
-    # Phoenix: lista de fichajes que lleva Link (fichajes como CAMBIOS sobre la base de tu juego; docs/FICHAJES-COMO-CAMBIOS.md).
+    # Phoenix: lista de fichajes que lleva Link (fichajes como CAMBIOS sobre la base de tu juego; docs/FICHAJES-Y-SYNC.md («FICHAJES-COMO-CAMBIOS»)).
     COMMAND ${CMAKE_COMMAND} -E remove_directory $<TARGET_FILE_DIR:${PROJECT_NAME}>/fichajes
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         "${CMAKE_SOURCE_DIR}/SmashSoda/phoenix/fichajes" $<TARGET_FILE_DIR:${PROJECT_NAME}>/fichajes

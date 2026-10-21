@@ -1,4 +1,4 @@
-// Prueba manual con el juego: ¿en qué equipo juega cada mando? (docs/DETECCION-LADOS.md)
+// Prueba manual con el juego: ¿en qué equipo juega cada mando? (docs/MANDOS.md («DETECCION-LADOS»))
 // Enciende el lector del Campo 2D (solo lectura de PES2021.exe, el mismo que usa Link) y lee los mandos XInput 0-3
 // de este PC (los físicos y los virtuales de Link aparecen igual). Cada 2 s escribe el veredicto por mando y, si ve
 // un gol, qué equipo marcó. Además graba todo en lados_AAAAMMDD_HHMMSS.csv para afinar después sin repetir el partido.

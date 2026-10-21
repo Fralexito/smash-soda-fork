@@ -3,7 +3,7 @@
 //  Link guarda los de TODOS tus amigos y pone en PES solo los de hoy. Dos pasos, con PES cerrado:
 //    1) TRAER: copia los Usuarios de PES a Link (solo lee PES; así nada se pierde).
 //    2) PREPARAR LA SALA: eliges quiénes juegan hoy (hasta lo que quepa) y Link los pone en los huecos de PES.
-//  Guía: docs/PERFILES-DE-AMIGOS.md
+//  Guía: docs/MANDOS.md («PERFILES-DE-AMIGOS»)
 // =============================================================================
 import { html, useState, useEffect } from "../lib.js";
 import { t } from "../i18n.js";
