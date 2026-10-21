@@ -66,7 +66,7 @@ namespace mercado::sync {
 		Resultado<int64_t> publicar(const std::string& grupoId, const grupo::Operacion& op);
 		Resultado<bool> confirmar(const std::string& grupoId, const std::string& opId, const std::string& estado, const std::string& motivo);
 
-		// Option file oficial (contrato: prompts/PROMPT-WEB-oficial-y-control-total.md)
+		// Option file oficial (contrato: prompts/PEDIDOS-A-LINK-Y-WEB.md («PROMPT-WEB-oficial-y-control-total»))
 		/// GET /v1/sync/oficial → la última foto oficial (SIN_OFICIAL si el admin aún no publicó ninguna).
 		Resultado<Oficial> oficial(const std::string& grupoId);
 		/// POST /v1/sync/oficial/subida → URL firmada para subir UN archivo (solo admin).

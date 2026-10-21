@@ -8,7 +8,7 @@
 // =============================================================================
 //  Phoenix Sync · Editar las STATS de un jugador en Player.bin (Phoenix-DB)
 // -----------------------------------------------------------------------------
-//  Formato (base-conocimiento/16-PLAYER-BIN-FICHA-COMPLETA.md, calibrado con las
+//  Formato (base-conocimiento/DATOS-EN-VIVO-Y-RECARGA.md («16-PLAYER-BIN-FICHA-COMPLETA»), calibrado con las
 //  pantallas del juego): cabecera WESYS 16 B + zlib → registros de 312 B; el
 //  ID del jugador es el u32 de +8. Cada campo son N bits del registro leído
 //  como número little-endian. Stats: 6 bits, valor en pantalla = guardado + 40.

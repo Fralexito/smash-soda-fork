@@ -1,5 +1,13 @@
 # Base de conocimiento · PES 2021 y sus parches
 
+> **Reorganizado el 21-oct-2026** (Fralex: «cada documento por tema y que tenga absolutamente completo»). Los documentos 01–32 se juntaron **completos** en 3 por tema. Los originales siguen intactos en `_archivo/`. Lo nuevo se **añade** al documento de su tema.
+> - **`MOTOR-Y-PARCHES-PES2021.md`:** 01, 02, 03, 04, 06, 07, 12, 19 (más equipos), 21, 22 (ficha ConmeGOL 26), 23 (motor y ligas), 27 (instalador de Sider), 32.
+> - **`DATOS-EN-VIVO-Y-RECARGA.md`:** 05, 10, 16 (Player.bin), 17 (opción en vivo), 19 (paso a paso), 22 (zona segura), 30, 31.
+> - **`LIGA-MASTER.md`:** 08, 09, 11, 13–18, 19 (verificación), 20 (bitácora y traspaso v2), 21 (dos carreras), 23–26, 28, 29. La estructura técnica sigue en `../liga-master/ESTRUCTURA-ML.md`.
+> - **Fuera de esta carpeta:** `../MANUAL-SYNC.md` (informe completo, Sync compartido, «Activar», control total, manual y prompt del parche), `../sider/SIDER.md` y `../prompts/PEDIDOS-A-LINK-Y-WEB.md`.
+>
+> La tabla de abajo es la de antes: cada nombre viejo es ahora una «Parte» del documento de su tema.
+
 **Qué es:** todo lo que Phoenix Sync sabe de los archivos de PES 2021, ordenado como una base de datos.
 Se **alimenta en cada auditoría** y nunca se borra lo aprendido: si algo cambia en una versión nueva del parche, se anota la fecha y el motivo.
 
@@ -26,8 +34,8 @@ Se **alimenta en cada auditoría** y nunca se borra lo aprendido: si algo cambia
 | `parches/sudamerican-2026.md` | Lo poco que ya se sabe del Sudamerican Project 2026 (pendiente de auditar). |
 | `datos/motor.json` | La misma información del motor, en formato de datos, para que el software la lea. |
 | `datos/conmegol-26.json` | Equipos, IDs y competiciones del ConmeGOL 26 sacados del guardado (627 equipos, 39 competiciones). |
-| `../sider/RIESGOS-SIDER.md` | **Puente en vivo con Sider**: qué permite el Lua de Sider (archivos, memoria, overlay), cómo es el puente web → app → archivo → juego, los 12 riesgos con su medida y las fases de prueba. |
-| `../sider/AUDITORIA-SIDER.md` | **Auditoría de los 49 módulos Sider activos**: qué toca cada uno, choques encontrados (cámaras que se pisan, escrituras a ciegas), módulos que no hacen nada y plan de limpieza. Detalle en `../sider/auditoria/`. |
+| `../sider/SIDER.md («RIESGOS-SIDER»)` | **Puente en vivo con Sider**: qué permite el Lua de Sider (archivos, memoria, overlay), cómo es el puente web → app → archivo → juego, los 12 riesgos con su medida y las fases de prueba. |
+| `../sider/SIDER.md («AUDITORIA-SIDER»)` | **Auditoría de los 49 módulos Sider activos**: qué toca cada uno, choques encontrados (cámaras que se pisan, escrituras a ciegas), módulos que no hacen nada y plan de limpieza. Detalle en `../sider/auditoria/`. |
 | `../PRUEBAS.md` | Diario de prueba y error: qué se probó en el juego, qué falló y cómo se corrigió. |
 | `../liga-master/ESTRUCTURA-ML.md` | El cuaderno técnico original (más detalle, menos orden). |
 

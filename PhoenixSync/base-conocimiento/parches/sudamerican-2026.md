@@ -25,7 +25,7 @@ Pendiente: catálogo propio, guardados de Liga Máster (ninguno auditado aún), 
   `PredsKanas2021_NatAnthems.cpk` (himnos). Hay un `DpFileList Generator` dentro de la carpeta del juego.
 - Dos Sider propios, cada uno con sus `SP LAUNCHER <letra de disco>.bat`: **«Sudamerican Project Sider»** (56 módulos, 107 `cpk.root`) y
   **«… WC26»** (Mundial, 66 líneas de módulo, 98 `cpk.root`).
-- Mismos problemas que ya vimos en ConmeGOL (ver `../sider/AUDITORIA-SIDER.md`): `camera.lua` + `DynamicWideCam.lua` juntos (pisan la misma
+- Mismos problemas que ya vimos en ConmeGOL (ver `../sider/SIDER.md («AUDITORIA-SIDER»)`): `camera.lua` + `DynamicWideCam.lua` juntos (pisan la misma
   instrucción), `GFX_lod.lua`, `scoreboard-hexx`. Además: **módulos cargados dos veces** (`MenuServer` en el normal; `env`, `etrace`,
   `camera` y `netblock` en el WC26), módulos de prueba activos (`jittest`, `zlibtest`, `etrace`) y **`netblock.lua`** (bloquea la red del
   juego: incompatible con cualquier online tipo PESBUL).

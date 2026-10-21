@@ -27,7 +27,7 @@ local m = { version = "0.18c" }
 -- v0.18 (2026-10-10, pedido de FRALEX): la v0.17e (botón nativo con A+B+C, teclas de prueba apagadas)
 -- + TRES MODOS DE RECARGA elegibles desde Phoenix Link (content\phoenix\modo.txt) o con la tecla T:
 -- ACTIVAR (por defecto, igual que la v0.17e) · AUTO-FICHAJES · AUTO-SIEMPRE. Ver el bloque «v0.18»
--- más abajo y la guía base-conocimiento/31-MODOS-DE-RECARGA.md.
+-- más abajo y la guía base-conocimiento/DATOS-EN-VIVO-Y-RECARGA.md («31-MODOS-DE-RECARGA»).
 
 -- v0.17e: las teclas de prueba de las v0.4–v0.16 (B, K, L, P, U) quedan DESACTIVADAS.
 -- Motivo (2026-10-10 00:45): con el overlay abierto se pulsó K sin querer. No llegó a llamar nada, pero K

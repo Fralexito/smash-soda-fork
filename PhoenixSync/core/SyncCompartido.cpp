@@ -289,7 +289,7 @@ namespace mercado::sync {
 		}
 	}
 
-	// Aviso «hay fichajes nuevos» para phoenix.lua v0.18 (contrato en base-conocimiento/31):
+	// Aviso «hay fichajes nuevos» para phoenix.lua v0.18 (contrato en base-conocimiento/DATOS-EN-VIVO-Y-RECARGA.md, parte «31 · modos de recarga»):
 	// recargar.txt en cada buzón <SiderAddons>\content\phoenix que ya exista. En modo ACTIVAR
 	// el juego lo ignora; en AUTO-FICHAJES recarga solo al volver al menú y entrar a un modo.
 	void Motor::avisarRecarga() {

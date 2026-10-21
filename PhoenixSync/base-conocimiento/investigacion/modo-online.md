@@ -145,7 +145,7 @@ Lo que se ve en foros y Discord **[probable; hay pocas fuentes formales]**:
 
 ## 5. Sider 7.x: lo que sirve para conectar el juego con la web
 
-Fuentes: tu propia auditoría del repo (`PhoenixSync/sider/RIESGOS-SIDER.md` y `PhoenixSync/sider/auditoria/*.md`) y la página de Sider 7 (https://www.pesmodding.com/2020/09/sider-for-pes-2021-season-update.html).
+Fuentes: tu propia auditoría del repo (`PhoenixSync/sider/SIDER.md («RIESGOS-SIDER»)` y `PhoenixSync/sider/auditoria/*.md`) y la página de Sider 7 (https://www.pesmodding.com/2020/09/sider-for-pes-2021-season-update.html).
 
 **Qué tiene el Lua de Sider** (LuaJIT 5.1)
 - **`io`:** leer y escribir archivos.
