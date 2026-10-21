@@ -4,11 +4,13 @@ Dos trabajos independientes dentro del mismo Phoenix Link:
 
 | Trabajo | Rama | Carpeta | Regla |
 |---|---|---|---|
-| Rediseño de Phoenix Link (interfaz, nombre, logo) | `rediseño-phoenix-portal` | `SmashSoda/` | No tocar `PhoenixMercado/` |
-| Phoenix Mercado (módulo aparte) | `mercado-fase0` | `PhoenixMercado/` | No añadir a la build de `SmashSoda/`; avisar antes de tocar `SmashSoda/` |
+| Phoenix Link (interfaz, sala, mandos) | `plan-ux` (antes `rediseño-phoenix-portal`) | `SmashSoda/` | No tocar `PhoenixSync/` |
+| Phoenix Sync (antes «Mercado») | `mercado-fase0` | `PhoenixSync/` | No añadir a la build de `SmashSoda/`; avisar antes de tocar `SmashSoda/` |
+
+> Actualizado el 21-oct-2026: el frente LINK va en `plan-ux` y Mercado ahora se llama Sync (carpeta `PhoenixSync/`). Las entradas antiguas de abajo conservan los nombres de su fecha.
 
 ## Carpeta compartida en el PC de Fralex (importante)
-`C:\dev\smash-soda-fork` tiene UNA sola rama activa y hoy es `mercado-fase0`. Phoenix Link NO compila ahí: `COMPILAR_PHOENIX.bat` crea una copia de trabajo aparte (`git worktree`) en `C:\dev\smash-soda-fork\_phoenix-link` con su propia build. Regla: nadie hace `git checkout` de otra rama en la carpeta principal por el otro chat, y nadie toca `_phoenix-link`. El Mercado se compila con su `build-mercado\`.
+`C:\dev\smash-soda-fork` tiene UNA sola rama activa y hoy es `mercado-fase0` (Sync). Phoenix Link NO compila ahí: se trabaja en la copia aparte (`git worktree`) `C:\dev\smash-soda-fork\_phoenix-link` y se compila con `cmake --build C:\dev\smash-soda-fork\_phoenix-link\build --config Release --parallel`. **Nunca usar `COMPILAR_PHOENIX.bat`**: hace `git checkout --detach --force` y borra lo no commiteado. Regla: nadie hace `git checkout` de otra rama en la carpeta principal por el otro chat, y nadie toca `_phoenix-link` desde el frente Sync. Sync se compila con su `build-sync\`.
 
 ## Contratos compartidos (si cambian, avisar al otro chat)
 - Token: `%APPDATA%\Trybuchet\Smash Soda\phoenix-token.dat`, cifrado DPAPI (`CryptProtectData`), sin entropía adicional. Mercado lo lee en solo lectura. Sin cambios de ubicación, nombre ni cifrado.
