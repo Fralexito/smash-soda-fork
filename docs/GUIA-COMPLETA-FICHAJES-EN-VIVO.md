@@ -54,7 +54,8 @@ Hazlo con **PES 2021 cerrado**.
 Desde la 0.3.12 **no hay que elegir papel**: en **SYNC › TRASPASOS** enviar y recibir van juntos y se encienden solos.
 1. En el bloque **ENVIAR MIS FICHAJES** sale **tu código en grande** (8 letras y números). Pulsa **COPIAR CÓDIGO** y mándaselo a tu amigo. **CAMBIAR CÓDIGO** pone uno nuevo (el viejo deja de servir para unirse; quien ya lo recibe sigue).
 2. Si no sale el código, la pantalla dice por qué: cuenta sin conectar (botón **CONECTAR MI CUENTA**), cuenta no aprobada como anfitrión (puedes recibir igual; para enviar, pídeselo al staff) o la web sin conexión (**VOLVER A COMPROBAR**).
-3. Debajo hay **«¿Algo no funciona?»** (se abre sola si hay un ✗) y **«Más opciones»** (modo prueba, carpeta compartida, apagar).
+3. Debajo hay **«¿Algo no funciona?»** (se abre sola si hay un ✗) y **«Ajustes de traspasos»**.
+4. **Desde la 0.3.45 la pantalla es más corta.** Arriba solo quedan tu código (ENVIAR) y el campo para pegar el de tu amigo (RECIBIR). Todos los interruptores están juntos en **«Ajustes de traspasos»**, abajo del todo: recibir los cambios oficiales de Phoenix, aprobar cada fichaje antes de enviarlo, mantener mis fichajes en mi juego, aprobar cada fichaje antes de ponerlo en mi juego, modo prueba, carpeta compartida y APAGAR TRASPASOS. Lo normal es no tocarlos. Si Link no encuentra tu archivo de guardado, la ruta se pone en **«Mi archivo de guardado»**, dentro de ENVIAR.
 
 ## 6. Recibir los fichajes de un amigo
 1. En el bloque **RECIBIR FICHAJES DE UN AMIGO**, pega el código de tu amigo y pulsa **RECIBIR**. Verás su nombre con **RECIBIENDO** y el botón **DEJAR DE RECIBIR**.

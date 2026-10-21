@@ -2,7 +2,8 @@
 //  SYNC › TRASPASOS. «Pasar fichajes entre amigos», sin elegir papel: enviar y recibir van juntos.
 //    ENVIAR MIS FICHAJES: tu código (copiar / cambiar) y lo detectado al guardar en Editar.
 //    RECIBIR FICHAJES DE UN AMIGO: pega su código; estado y fichajes recibidos.
-//    «¿Algo no funciona?» y «Más opciones» (modo prueba, carpeta compartida, apagar).
+//    «¿Algo no funciona?» y «Ajustes de traspasos» (0.3.45: ahí van todos los interruptores — oficiales, aprobar al enviar/recibir,
+//    mantener mis fichajes, modo prueba —, la carpeta compartida y apagar; arriba solo quedan el código y recibir).
 //  La lógica (traspasos.estado / config / accion) no cambia: solo cómo se presenta. Guía: docs/TRASPASOS-EN-VIVO.md
 // =============================================================================
 import { html, useState, useEffect } from "../lib.js";
@@ -42,7 +43,7 @@ function estadoAnfitrion(a, w, pend) {
     case "descartado": return ["", t("Descartaste ese fichaje: no se envió.", "You discarded that transfer: it wasn't sent.")];
     case "esperando_que_termine_de_guardar": return ["warn", t("PES está guardando. Espero a que termine.", "PES is saving. Waiting for it to finish.")];
     case "referencia_borrada": return ["warn", t("Empiezo de cero: la próxima vez que PES guarde, solo anoto cómo está todo.", "Starting over: the next time PES saves, I only note how everything is.")];
-    case "sin_option_file": return ["bad", t("No encuentro tu archivo de guardado. Indícalo en «Más opciones».", "I can't find your save file. Set it under «More options».")];
+    case "sin_option_file": return ["bad", t("No encuentro tu archivo de guardado. Indícalo en «Mi archivo de guardado» (ENVIAR).", "I can't find your save file. Set it under «My save file» (SEND).")];
     case "apagado": return ["", t("Apagado.", "Off.")];
     case "pendiente_masivo": return ["warn", t("Son demasiados cambios de golpe. Si cargaste otro archivo de guardado, descártalos.", "That's too many changes at once. If you loaded another save file, discard them.")];
     case "pendiente_de_confirmar": return ["warn", t("Fichaje detectado: pulsa PUBLICAR.", "Transfer detected: press PUBLISH.")];
@@ -104,10 +105,10 @@ export function Traspasos() {
   const aMiPc = { texto: t("IR A MI JUEGO", "GO TO MY GAME"), al: irMiPc };
   const filaCuenta = F(!!w.vinculada, t("Cuenta de la liga conectada", "League account linked"), "", t("Conecta tu cuenta en «Mi juego».", "Link this PC to your account in «My game»."), aMiPc);
   const filasEnviar = [
-    F(!!arch.existe, t("Archivo de guardado encontrado", "Save file found"), arch.existe ? `${arch.ruta} · ${t("cambió el", "changed on")} ${arch.fecha}` : "", t("No encuentro tu archivo EDIT00000000: indícalo en «Más opciones» de ENVIAR.", "I can't find your EDIT00000000 file: set it under «More options» in SEND.")),
+    F(!!arch.existe, t("Archivo de guardado encontrado", "Save file found"), arch.existe ? `${arch.ruta} · ${t("cambió el", "changed on")} ${arch.fecha}` : "", t("No encuentro tu archivo EDIT00000000: indícalo en «Mi archivo de guardado» de ENVIAR.", "I can't find your EDIT00000000 file: set it under «My save file» in SEND.")),
     F(!!a.hayReferencia, t("Punto de partida anotado", "Starting point noted"), a.hayReferencia ? t("Solo se enviará lo que cambies desde ahora.", "Only what you change from now on will be sent.") : "", t("Se anota sola en unos segundos. Si no, guarda una vez en PES.", "It's noted by itself in a few seconds. If not, save once in PES.")),
     F(esWeb ? (w.estado === "ok" && d.webDisponible === true) : !!aj.carpeta, esWeb ? t("Conexión con la web", "Connection to the web") : t("Carpeta compartida elegida", "Shared folder chosen"), "",
-      esWeb ? (w.vinculada ? t(CONEXION[w.estado]?.[1] || "Comprobando…", CONEXION[w.estado]?.[2] || "Checking…") : t("Primero une la cuenta.", "Link the account first.")) : t("Elige la carpeta en «Más opciones».", "Choose the folder under «More options».")),
+      esWeb ? (w.vinculada ? t(CONEXION[w.estado]?.[1] || "Comprobando…", CONEXION[w.estado]?.[2] || "Checking…") : t("Primero une la cuenta.", "Link the account first.")) : t("Elige la carpeta en «Ajustes de traspasos».", "Choose the folder under «Transfer settings».")),
   ];
   const filasRecibir = [
     F(!!diag.ok, t("Juego encontrado", "Game found"), diag.ok ? diag.juego : "", t("Pulsa ARREGLAR TODO en «Mi juego»: busca el juego solo.", "Press FIX EVERYTHING in «My game»: it finds the game by itself."), aMiPc),
@@ -172,8 +173,8 @@ export function Traspasos() {
       <div style="font-size:14px">${t("Para mandar tus fichajes, dale tu código a tu amigo. Para recibir los suyos, pega su código. Puedes hacer las dos cosas a la vez.", "To send your transfers, give your friend your code. To receive theirs, paste their code. You can do both at once.")}</div>
       ${esWeb ? conexionMsg() : html`<div class="ayuda" style="font-size:13px">${t("Usas una carpeta compartida en vez de la web: no hace falta código.", "You use a shared folder instead of the web: no code needed.")}</div>`}
       ${d.mensaje ? html`<div class="caja" style="font-size:13px">${d.mensaje}</div>` : null}
+      <div class="ayuda" style="font-size:13px"><span class=${cx("punto", aj.oficial !== false ? "ok" : "")}></span> ${aj.oficial !== false ? t("Los cambios oficiales de Phoenix llegan solos, sin código.", "Official Phoenix changes arrive by themselves, no code.") : t("Cambios oficiales de Phoenix apagados (en «Ajustes de traspasos»).", "Official Phoenix changes off (in «Transfer settings»).")}</div>
     </${Tarjeta}>
-    ${tarjetaOficial}
 
     <div class="rej2" style="align-items:start">
       <${Tarjeta} interior=${tarjeta}>
@@ -188,12 +189,6 @@ export function Traspasos() {
           <div class="ayuda" style="font-size:13px">${(w.meSiguen || []).length ? t("Lo reciben: ", "Receiving: ") + w.meSiguen.join(", ") : t("Todavía nadie recibe tus fichajes.", "Nobody receives your transfers yet.")}</div>`
           : html`<div class="ayuda" style="font-size:14px">${noAprobado ? t("Tu cuenta todavía no puede enviar fichajes (no está aprobada como anfitrión). Recibir sí puedes. Si quieres enviar, pídeselo al staff.", "Your account can't send transfers yet (not approved as host). You can still receive. To send, ask the staff.") : t("Pidiendo tu código a la web…", "Getting your code from the web…")}</div>`) : null}
         ${!noAprobado ? html`
-          <${AjusteSw} titulo=${t("Aprobar cada fichaje antes de enviarlo", "Approve each transfer before sending it")}
-            desc=${aj.confirmarAntes ? t("Encendido: ves el fichaje y tú pulsas PUBLICAR.", "On: you see the transfer and press PUBLISH.") : t("Apagado: se envía solo al guardar en Editar.", "Off: it's sent by itself when you save in Edit.")}
-            valor=${!!aj.confirmarAntes} al=${(v) => poner({ confirmarAntes: v })}/>
-          <${AjusteSw} titulo=${t("Mantener mis fichajes en mi juego", "Keep my transfers in my game")}
-            desc=${aj.aplicarPropios !== false ? t("Encendido: lo que fichas se queda en tu PES aunque lo cierres y lo abras (sin pulsar Activar).", "On: what you sign stays in your PES even after closing and reopening it (no Activate).") : t("Apagado: tus fichajes solo se envían; en tu PES no se guardan aparte.", "Off: your transfers are only sent; they aren't kept separately in your PES.")}
-            valor=${aj.aplicarPropios !== false} al=${(v) => poner({ aplicarPropios: v })}/>
           <div style="display:flex;align-items:flex-start;gap:10px"><span class=${cx("punto", pA)} style="margin-top:6px"></span><span style="font-size:15px">${fraseA}</span></div>
           ${pend.length ? html`<div class="caja" style="display:flex;flex-direction:column;gap:6px">
             ${pend.slice(0, 12).map((c) => html`<div class="mono" style="font-size:13px" key=${c.jugador_id + "-" + c.hasta_id}>· ${c.jugador || ("#" + c.jugador_id)}: ${c.desde || c.desde_id} → ${c.hasta || c.hasta_id}</div>`)}
@@ -205,7 +200,7 @@ export function Traspasos() {
             </div></div>` : null}
           ${a.publicados ? html`<div class="ayuda" style="font-size:13px">${t(`Enviados en esta sesión: ${a.publicados}`, `Sent this session: ${a.publicados}`)}</div>` : null}
           <div class="ayuda" style="font-size:13px">${t("Se envía cuando guardas y sales de Editar en PES.", "It's sent when you save and leave Edit in PES.")}</div>
-          <details class="sec-detalle"><summary>${t("Más opciones", "More options")}</summary>
+          <details class="sec-detalle"><summary>${t("Mi archivo de guardado", "My save file")}</summary>
             <div class="ayuda" style="font-size:13px;margin-top:6px">${t("Si Link no encuentra tu archivo de guardado, pega su ruta (el archivo EDIT00000000 o su carpeta «save»):", "If Link can't find your save file, paste its path (the EDIT00000000 file or its «save» folder):")}</div>
             <div style="display:flex;gap:8px;align-items:center"><div style="flex:1;min-width:0"><input type="text" class="campo mono" maxLength=${500} value=${opt} placeholder="C:\\Users\\…\\Documents\\KONAMI\\…\\save" onInput=${(e) => setOpt(e.currentTarget.value)}/></div>
               <${Boton} tipo="suave mini" deshabilitado=${!opt.trim()} al=${async () => { await poner({ optionFile: opt.trim() }, t("Archivo de guardado anotado.", "Save file noted.")); setOpt(""); }}>${t("GUARDAR", "SAVE")}</${Boton}></div>
@@ -218,9 +213,6 @@ export function Traspasos() {
 
       <${Tarjeta} interior=${tarjeta}>
         <${Titulo} texto=${t("RECIBIR FICHAJES DE UN AMIGO", "RECEIVE A FRIEND'S TRANSFERS")}/>
-        <${AjusteSw} titulo=${t("Aprobar cada fichaje antes de ponerlo en mi juego", "Approve each transfer before it goes into my game")}
-          desc=${aj.aprobarRecibidos ? t("Encendido: lo que llega espera a que pulses ACEPTAR o RECHAZAR.", "On: what arrives waits until you press ACCEPT or REJECT.") : t("Apagado: lo que llega se pone solo en tu juego.", "Off: what arrives goes into your game by itself.")}
-          valor=${!!aj.aprobarRecibidos} al=${(v) => poner({ aprobarRecibidos: v })}/>
         ${porAprobar.length ? html`<div class="caja" style="border-color:var(--warn);display:flex;flex-direction:column;gap:8px">
           <b class="warn">${porAprobar.length === 1 ? t("1 envío esperando tu aprobación", "1 batch awaiting your approval") : t(`${porAprobar.length} envíos esperando tu aprobación`, `${porAprobar.length} batches awaiting your approval`)}</b>
           ${porAprobar.slice(0, 5).map((l) => html`<div key=${l.id} style="display:flex;flex-direction:column;gap:2px">
@@ -241,7 +233,7 @@ export function Traspasos() {
         ${amigoEstado ? html`
           <div style="display:flex;align-items:flex-start;gap:10px"><span class=${cx("punto", amigoEstado[0])} style="margin-top:6px"></span><span style="font-size:15px">${amigoEstado[1]}</span></div>
           ${amigoEstado[2] ? html`<div class="ayuda" style="font-size:14px">${amigoEstado[2]}</div>` : null}
-          ${m.ultimoAplicado ? html`<div class="ayuda" style="font-size:14px">${infoPes} ${t(MODO_TXT[modo]?.[0] || "", MODO_TXT[modo]?.[1] || "")}</div>` : null}` : null}
+          ${m.ultimoAplicado && !amigoEstado[2] ? html`<div class="ayuda" style="font-size:14px">${infoPes} ${t(MODO_TXT[modo]?.[0] || "", MODO_TXT[modo]?.[1] || "")}</div>` : null}` : null}
         <details class="sec-detalle"><summary>${t("Fichajes recibidos", "Received transfers")}</summary>
           ${lista.length ? lista.slice(0, 8).map((l) => {
             const [tp, es, en] = ESTADO_LOTE[l.estado] || ["", l.estado, l.estado];
@@ -271,7 +263,22 @@ export function Traspasos() {
           ${!f.ok && f.pista ? html`<div class="ayuda" style="font-size:13px;margin-left:28px">${f.pista}</div>` : null}
         </div>`)}
       </details>
-      <details class="sec-detalle" style="margin-top:8px"><summary style="font-weight:600">${t("Más opciones", "More options")}</summary>
+      <details class="sec-detalle" style="margin-top:8px"><summary style="font-weight:600">${t("Ajustes de traspasos", "Transfer settings")}</summary>
+        <div class="ayuda" style="font-size:13px;margin:6px 0">${t("Lo normal es dejarlos como vienen. Solo cámbialos si sabes lo que buscas.", "Usually leave them as they are. Only change them if you know what you want.")}</div>
+        <${AjusteSw} titulo=${t("Recibir los cambios oficiales de Phoenix", "Receive official Phoenix changes")}
+          desc=${aj.oficial !== false ? t("Encendido: los fichajes que el staff hace en la web llegan solos a tu PES (no hace falta código).", "On: the transfers the staff makes on the web reach your PES by themselves (no code needed).") : t("Apagado: no recibes los cambios oficiales y se quitan de tu juego.", "Off: you don't receive official changes and they're removed from your game.")}
+          valor=${aj.oficial !== false} al=${(v) => poner({ oficial: v })}/>
+        ${oficiales.length ? html`<div class="col" style="gap:4px;margin:4px 0 8px">${oficiales.map((l) => html`<div style="font-size:13px"><span class=${cx("punto", l.estado === "aplicado" ? "ok" : l.estado === "saltado" || l.estado === "error" ? "bad" : "warn")}></span> ${(l.cambios || []).map((c) => `${nombre(c)} → ${c.hastaNombre || "#" + c.hasta}`).join(", ")} <span class="ayuda">· ${l.estado}${l.motivo ? " · " + l.motivo : ""}</span></div>`)}</div>` : null}
+        ${!noAprobado ? html`
+          <${AjusteSw} titulo=${t("Aprobar cada fichaje antes de enviarlo", "Approve each transfer before sending it")}
+            desc=${aj.confirmarAntes ? t("Encendido: ves el fichaje y tú pulsas PUBLICAR.", "On: you see the transfer and press PUBLISH.") : t("Apagado: se envía solo al guardar en Editar.", "Off: it's sent by itself when you save in Edit.")}
+            valor=${!!aj.confirmarAntes} al=${(v) => poner({ confirmarAntes: v })}/>
+          <${AjusteSw} titulo=${t("Mantener mis fichajes en mi juego", "Keep my transfers in my game")}
+            desc=${aj.aplicarPropios !== false ? t("Encendido: lo que fichas se queda en tu PES aunque lo cierres y lo abras (sin pulsar Activar).", "On: what you sign stays in your PES even after closing and reopening it (no Activate).") : t("Apagado: tus fichajes solo se envían; en tu PES no se guardan aparte.", "Off: your transfers are only sent; they aren't kept separately in your PES.")}
+            valor=${aj.aplicarPropios !== false} al=${(v) => poner({ aplicarPropios: v })}/>` : null}
+        <${AjusteSw} titulo=${t("Aprobar cada fichaje antes de ponerlo en mi juego", "Approve each transfer before it goes into my game")}
+          desc=${aj.aprobarRecibidos ? t("Encendido: lo que llega espera a que pulses ACEPTAR o RECHAZAR.", "On: what arrives waits until you press ACCEPT or REJECT.") : t("Apagado: lo que llega se pone solo en tu juego.", "Off: what arrives goes into your game by itself.")}
+          valor=${!!aj.aprobarRecibidos} al=${(v) => poner({ aprobarRecibidos: v })}/>
         <${AjusteSw} titulo=${t("Modo prueba", "Test mode")} desc=${t("Te recibes a ti mismo con tu propia cuenta. Solo para comprobar que todo funciona.", "You receive yourself with your own account. Only to check everything works.")}
           valor=${prueba} al=${(v) => poner({ prueba: v, publicar: true, recibir: true })}/>
         <div class="ayuda" style="font-size:13px;margin-top:6px">${t("Por defecto viajan por la web de Phoenix. Si lo prefieres, puedes usar una carpeta compartida (Google Drive u OneDrive) que vean los dos.", "By default they travel through the Phoenix web. If you prefer, you can use a shared folder (Google Drive or OneDrive) both of you can see.")}</div>
