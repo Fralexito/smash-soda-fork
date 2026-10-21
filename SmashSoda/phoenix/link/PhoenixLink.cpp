@@ -84,9 +84,17 @@ namespace phoenix {
 		}
 
 		// --- Huella SHA-256 del exe en ejecución (cabecera X-Phoenix-Build) ---
+		// 2026-10-20: antes era «static std::string cache» rellenado SIN candado. Varios hilos (presencia, chat, buzón, sala) la piden a la
+		// vez al arrancar y cada uno AÑADÍA sus 64 caracteres al mismo texto → huella de 128+ caracteres guardada para toda la sesión →
+		// la web rechazaba TODO con CAMPO_INVALIDO «x-phoenix-build» (desde el 19-oct ~17:00 Lima: no se podía vincular la cuenta).
+		// Ahora se calcula una sola vez (estático local de C++11: seguro entre hilos) y, si no sale bien, se envía vacía (la web lo acepta).
+		std::string calcularHuellaExe();
 		std::string huellaExe() {
-			static std::string cache;
-			if (!cache.empty()) return cache;
+			static const std::string cache = calcularHuellaExe();
+			return cache;
+		}
+		std::string calcularHuellaExe() {
+			std::string cache;
 			try {
 				char ruta[MAX_PATH] = {};
 				GetModuleFileNameA(nullptr, ruta, MAX_PATH);
@@ -106,8 +114,8 @@ namespace phoenix {
 				static const char* hex = "0123456789abcdef";
 				for (unsigned char b : resumen) { cache += hex[b >> 4]; cache += hex[b & 15]; }
 			}
-			catch (...) {}
-			return cache;
+			catch (...) { cache.clear(); }
+			return cache.size() == 64 ? cache : std::string();   // la web solo acepta 64 hex o nada
 		}
 
 		std::string nombrePc() {

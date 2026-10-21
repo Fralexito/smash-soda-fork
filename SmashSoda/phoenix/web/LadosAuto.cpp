@@ -48,7 +48,7 @@ namespace phoenix::web {
 				uint32_t idHost = 0;
 				if (in.ctx.hosting != nullptr) { Guest& g = in.ctx.hosting->getHost(); if (g.isValid()) idHost = g.userID; }
 				if (asiento == kAsientoAnfitrion) return idHost;
-				const std::vector<AsientoVista> v = in.ctx.sala->asientos(8);
+				const std::vector<AsientoVista> v = in.ctx.sala->asientos(equipos::kPuestos);
 				const size_t k = static_cast<size_t>(asiento - 1);
 				if (k < v.size() && v[k].ocupado && v[k].parsecId != 0) return v[k].parsecId;
 				if (asiento - 1 == MandoHost::activo() - 1) return idHost;   // el anfitrión sentado con su mando de Link
@@ -129,7 +129,7 @@ namespace phoenix::web {
 			fichas.reserve(fc.j.size());
 			for (const phoenix::campo::Pieza& p : fc.j) fichas.push_back({ p.x, p.z, p.eq });
 			std::vector<lados::Stick> sticks;
-			for (const AsientoVista& a : in.ctx.sala->asientos(8))
+			for (const AsientoVista& a : in.ctx.sala->asientos(equipos::kPuestos))
 				if (a.conectado) sticks.push_back({ a.numero, a.ejeLX / 32767.0f, a.ejeLY / 32767.0f });
 			int16_t lx = 0, ly = 0;
 			if (in.ctx.sala->hayMandoPropio() && in.ctx.sala->ejesMandoPropio(lx, ly)) sticks.push_back({ kAsientoAnfitrion, lx / 32767.0f, ly / 32767.0f });
@@ -149,7 +149,7 @@ namespace phoenix::web {
 			for (const phoenix::campo::Pieza& p : fc.j) fichas.push_back({ p.x, p.z, p.eq });
 			if (!fc.equiposListos) return;   // sin saque de centro visto, las fichitas no tienen equipo
 			std::vector<lados::Stick> sticks;
-			for (const AsientoVista& a : in.ctx.sala->asientos(8))
+			for (const AsientoVista& a : in.ctx.sala->asientos(equipos::kPuestos))
 				if (a.conectado) sticks.push_back({ a.numero, a.ejeLX / 32767.0f, a.ejeLY / 32767.0f });
 			int16_t lx = 0, ly = 0;
 			if (in.ctx.sala->hayMandoPropio() && in.ctx.sala->ejesMandoPropio(lx, ly)) sticks.push_back({ kAsientoAnfitrion, lx / 32767.0f, ly / 32767.0f });

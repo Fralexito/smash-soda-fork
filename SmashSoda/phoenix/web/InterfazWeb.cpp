@@ -309,7 +309,7 @@ namespace phoenix::web {
 				if (in.vivoRapido && in.seccion == "mandos" && in.ctx.sala != nullptr && ahora - in.ultimoVivo >= 0.033) {
 					in.ultimoVivo = ahora;
 					json v = json::array();
-					for (const AsientoVista& a : in.ctx.sala->asientos(8)) {
+					for (const AsientoVista& a : in.ctx.sala->asientos(equipos::kPuestos)) {
 						if (!a.conectado) continue;
 						v.push_back({ a.numero, a.botones, a.gatilloI, a.gatilloD, a.ejeLX, a.ejeLY, a.ejeRX, a.ejeRY });
 					}

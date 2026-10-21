@@ -34,7 +34,7 @@ namespace phoenix {
 		/// Puesto libre según «Mi puesto al jugar»: el preferido; si está ocupado, otro libre de su equipo; si no, cualquiera.
 		int puestoLibre(ProveedorSala* sala) {
 			const PhoenixPrefs& pr = PhoenixPrefs::get();
-			const std::vector<AsientoVista> as = sala->asientos(8);
+			const std::vector<AsientoVista> as = sala->asientos(equipos::kPuestos);
 			const int total = (std::min)(pr.mandosActivos, static_cast<int>(as.size()));
 			// Un puesto con equipo (A o B) y libre; los «fuera» no se usan. Los equipos son los del mapa por puesto, no «los primeros N».
 			const auto libre = [&](int n) { return n >= 1 && n <= total && pr.equipoDe(n - 1) != '-' && !as[n - 1].ocupado && n != mhActivo; };
@@ -64,7 +64,7 @@ namespace phoenix {
 	}
 
 	void MandoHost::tomar(ProveedorSala* sala, int n) {
-		if (sala == nullptr || n < 0 || n > 8) return;
+		if (sala == nullptr || n < 0 || n > equipos::kPuestos) return;
 		try {
 			if (n == 0 || n == mhActivo) { soltar(sala); return; }
 			soltar(sala);
@@ -115,7 +115,7 @@ namespace phoenix {
 			if (mhActivo == 0) return;
 			if (t - mhUltimoReenganche > 1000) {
 				mhUltimoReenganche = t;
-				const std::vector<AsientoVista> as = sala->asientos(8);
+				const std::vector<AsientoVista> as = sala->asientos(equipos::kPuestos);
 				if (static_cast<size_t>(mhActivo - 1) < as.size() && !as[static_cast<size_t>(mhActivo - 1)].conectado) aplicar(sala);
 			}
 

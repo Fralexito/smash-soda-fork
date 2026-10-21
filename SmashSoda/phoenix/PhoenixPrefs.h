@@ -32,12 +32,15 @@ namespace phoenix {
 		std::string juego = "eFootball PES 2021";
 		std::string parche = "Conmegol";
 		std::string region = "Lima";
-		int mandosActivos = 2;    ///< tramo de puestos visibles (último puesto con equipo, 2–8); lo calcula sincronizarEquipos()
+		int mandosActivos = 2;    ///< tramo de puestos visibles (último puesto con equipo, 2–puestosMax); lo calcula sincronizarEquipos()
+		/// «Puestos máximos»: cuántos mandos virtuales puede tener la sala (8 de serie; 9–16 EXPERIMENTAL:
+		/// los puestos 9+ van a phoenix_mandos_extra.dat y necesitan el módulo de Sider de mandos extra).
+		int puestosMax = 8;
 		bool avisosEnJuego = true; ///< escribir los avisos de la web en el juego (buzon de Sider)
 		std::string modoPes = "off";  ///< prueba «Solo PES 2021»: off | publicar (la sala solo se publica con PES abierto) | estricto (ademas no deja abrir la sala sin PES)
 		std::string carpetaJuego;  ///< ultima carpeta de PES2021.exe detectada (UTF-8), para el repartidor de datos
 		int equipoLocal = 1;      ///< cuántos puestos son del Equipo A (informativo y para versiones viejas; manda equipoPuesto)
-		/// Equipo de cada puesto (mando virtual de Link, 1–8): una letra por puesto, 'A' (Equipo A), 'B' (Equipo B) o '-' (fuera).
+		/// Equipo de cada puesto (mando virtual de Link, 1–16): una letra por puesto, 'A' (Equipo A), 'B' (Equipo B) o '-' (fuera).
 		/// "BA------" = el puesto 01 es del Equipo B y el 02 del A. Migra desde mandosActivos/equipoLocal. Ver core/EquiposPuestos.h.
 		std::string equipoPuesto = "AB------";
 		bool anchoAuto = true;    ///< ancho de banda automático: sube y baja solo según los invitados conectados

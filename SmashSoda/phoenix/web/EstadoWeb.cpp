@@ -153,7 +153,7 @@ namespace phoenix::web {
 
 		std::map<uint32_t, std::pair<std::string, int>> pingsPresentes(ProveedorSala& sala) {
 			std::map<uint32_t, std::pair<std::string, int>> r;
-			for (const AsientoVista& a : sala.asientos(8)) {
+			for (const AsientoVista& a : sala.asientos(equipos::kPuestos)) {
 				if (a.ocupado && a.parsecId != 0) r[a.parsecId] = { a.jugador, a.pingMs };
 			}
 			for (const EspectadorVista& e : sala.espectadores()) {
@@ -335,7 +335,7 @@ namespace phoenix::web {
 		e["sala"] = s;
 
 		// ---- Mandos ----------------------------------------------------------
-		const std::vector<AsientoVista> asientos = sala.asientos(8);
+		const std::vector<AsientoVista> asientos = sala.asientos(equipos::kPuestos);
 		std::map<uint32_t, int> mandoDe;
 		json lista = json::array();
 		{
@@ -366,6 +366,7 @@ namespace phoenix::web {
 					{"n", n}, {"conectado", a.conectado}, {"ocupado", a.ocupado}, {"bloqueado", a.bloqueado},
 					{"jugador", a.jugador}, {"parsecId", a.parsecId}, {"ping", a.pingMs}, {"equipo", equipo},
 					{"tipo", i < tipos.size() ? tipos[i] : std::string("xbox")},
+					{"extra", n > equipos::kPuestosPes},   // puesto 9+: necesita el módulo de mandos extra
 				});
 				// Mando en vivo (solo mirando Mandos › Puestos: si no, el estado cambiaría con cada botón)
 				if (in.seccion == "mandos" && (in.pestana == "puestos" || in.pestana.empty()) && a.conectado) {
@@ -381,22 +382,22 @@ namespace phoenix::web {
 					static ULONGLONG ultimoEnchufe = 0;
 					const ULONGLONG ahora = GetTickCount64();
 					bool falta = false;
-					for (size_t i = 0; i < gc.gamepads.size() && i < 8; i++) if (gc.gamepads[i] && !gc.gamepads[i]->isConnected()) falta = true;
+					for (size_t i = 0; i < gc.gamepads.size() && i < static_cast<size_t>(equipos::kPuestos); i++) if (gc.gamepads[i] && !gc.gamepads[i]->isConnected()) falta = true;
 					if (falta && ahora - ultimoEnchufe > 10000) {
 						ultimoEnchufe = ahora;
-						for (size_t i = 0; i < gc.gamepads.size() && i < 8; i++) if (gc.gamepads[i] && !gc.gamepads[i]->isConnected()) gc.gamepads[i]->connect();
+						for (size_t i = 0; i < gc.gamepads.size() && i < static_cast<size_t>(equipos::kPuestos); i++) if (gc.gamepads[i] && !gc.gamepads[i]->isConnected()) gc.gamepads[i]->connect();
 					}
 				}
 				std::vector<unsigned long> series;
-				for (size_t i = 0; i < gc.gamepads.size() && i < 8; i++) series.push_back(gc.gamepads[i] ? gc.gamepads[i]->serieBus() : 0);
+				for (size_t i = 0; i < gc.gamepads.size() && i < static_cast<size_t>(equipos::kPuestos); i++) series.push_back(gc.gamepads[i] ? gc.gamepads[i]->serieBus() : 0);
 				phoenix::ordenpes::publicarSeries(series);
 			}
 			json ordenPes;
 			{
 				const phoenix::ordenpes::Estado op = phoenix::ordenpes::estado();
 				json casillas = json::array();
-				for (const auto& c : op.casillas) casillas.push_back({ {"n", c.n}, {"puesto", c.puesto}, {"ok", c.ok} });
-				ordenPes = { {"activo", op.activo}, {"estado", op.estado}, {"casillas", casillas}, {"ultimo", op.ultimo}, {"copia", op.copia}, {"error", op.error}, {"ds4windows", op.ds4windows} };
+				for (const auto& c : op.casillas) casillas.push_back({ {"n", c.n}, {"puesto", c.puesto}, {"ok", c.ok}, {"extra", c.extra} });
+				ordenPes = { {"activo", op.activo}, {"estado", op.estado}, {"casillas", casillas}, {"ultimo", op.ultimo}, {"copia", op.copia}, {"copiaExtra", op.copiaExtra}, {"error", op.error}, {"ds4windows", op.ds4windows} };
 			}
 			json fijados = json::object();   // candado de puesto: id de Parsec → puesto
 			for (const auto& par : pr.puestosFijados) fijados[std::to_string(par.first)] = par.second;
@@ -410,6 +411,8 @@ namespace phoenix::web {
 				{"miPuesto", { {"modo", pr.miPuestoModo}, {"numero", pr.miPuestoNumero}, {"alAbrir", pr.sentarmeAlAbrir}, {"pulsando", pr.entrarPulsando}, {"cuenta", pr.anfitrionCuenta}, {"mandoRecordado", !pr.miMando.empty()} }},
 				{"bloqueoGlobal", gc.lock}, {"bloqueoBotones", bloqueoBotonesPropio(in)}, {"esclavo", gc.isSlave},
 				{"xbox", Config::cfg.input.xboxPuppetCount}, {"ds4", Config::cfg.input.ds4PuppetCount},
+				// «Puestos máximos»: 8 de serie; del 9 en adelante EXPERIMENTAL (módulo de Sider de mandos extra)
+				{"puestosMax", pr.puestosMax}, {"puestosTope", equipos::kPuestos}, {"puestosPes", equipos::kPuestosPes},
 				{"reiniciando", in.reiniciandoMandos},
 				// Lo del anfitrión, sin lo que añade el modo competitivo mientras dura el partido
 				{"botonesBloq", in.arbitro.competitivoActivo ? json{

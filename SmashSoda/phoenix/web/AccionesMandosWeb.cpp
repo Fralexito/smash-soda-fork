@@ -27,7 +27,7 @@ namespace phoenix::web {
 
 	namespace detalle_mandos {
 		int indiceMando(Interno& in, const json& d, const char* clave = "indice") {
-			const int total = static_cast<int>(salaObligatoria(in).asientos(8).size());
+			const int total = static_cast<int>(salaObligatoria(in).asientos(equipos::kPuestos).size());
 			if (total == 0) throw ErrorAccion("SIN_MANDOS", "No hay mandos virtuales: revisa ViGEmBus en Diagnóstico.");
 			return entero(d, clave, 0, total - 1);
 		}
@@ -91,7 +91,7 @@ namespace phoenix::web {
 			if (e != "a" && e != "b" && e != "fuera") throw ErrorAccion("DATOS_INVALIDOS", "El equipo es a, b o fuera.");
 			PhoenixPrefs& pr = PhoenixPrefs::get();
 			equipos::Mapa mapa = pr.equipoPuesto;
-			const int maxPuestos = static_cast<int>(salaObligatoria(in).asientos(8).size());
+			const int maxPuestos = static_cast<int>(salaObligatoria(in).asientos(equipos::kPuestos).size());
 			if (!equipos::poner(mapa, i, e == "a" ? 'A' : (e == "b" ? 'B' : '-'), maxPuestos)) {
 				throw ErrorAccion("FUERA_DE_RANGO", "Cada equipo necesita al menos un puesto.");
 			}
@@ -106,17 +106,17 @@ namespace phoenix::web {
 			const int b = indiceMando(in, d, "b");
 			PhoenixPrefs& pr = PhoenixPrefs::get();
 			equipos::Mapa mapa = pr.equipoPuesto;
-			const int maxPuestos = static_cast<int>(salaObligatoria(in).asientos(8).size());
+			const int maxPuestos = static_cast<int>(salaObligatoria(in).asientos(equipos::kPuestos).size());
 			if (!equipos::intercambiarEquipos(mapa, a, b, maxPuestos)) throw ErrorAccion("NADA_QUE_MOVER", "Solo se cruzan dos puestos de equipos distintos.");
 			pr.equipoPuesto = mapa;
 			pr.sincronizarEquipos();
 			pr.guardar();
 			return json::object();
 		});
-		// Candado de puesto: fija el puesto de un jugador (1–8) o lo suelta (0). Al volver, cae en ese puesto o en el siguiente libre.
+		// Candado de puesto: fija el puesto de un jugador (1–16) o lo suelta (0). Al volver, cae en ese puesto o en el siguiente libre.
 		p.registrar("mandos.fijarPuesto", [](const json& d, uint64_t) -> std::optional<json> {
 			const uint32_t id = idParsec(d);
-			const int puesto = entero(d, "puesto", 0, 8);
+			const int puesto = entero(d, "puesto", 0, equipos::kPuestos);
 			PhoenixPrefs& pr = PhoenixPrefs::get();
 			if (puesto == 0) pr.puestosFijados.erase(id);
 			else pr.puestosFijados[id] = puesto;
@@ -125,7 +125,7 @@ namespace phoenix::web {
 		});
 		p.registrar("mandos.tomar", [&in](const json& d, uint64_t) -> std::optional<json> {
 			ProveedorSala& sala = salaObligatoria(in);
-			const int n = entero(d, "numero", 0, 8);
+			const int n = entero(d, "numero", 0, equipos::kPuestos);
 			// Sin sala abierta también se puede tomar un puesto (jugar solo, probar, mapear): ya no se exige SALA ABIERTA.
 			MandoHost::tomar(&sala, n);
 			return json{ {"activo", MandoHost::activo()} };
@@ -362,7 +362,7 @@ namespace phoenix::web {
 				// a | b = «1.º de A / 1.º de B»; «local» y «visitante» son los nombres viejos (versiones anteriores a 0.2.31)
 				pr.miPuestoModo = (modo == "a" || modo == "local") ? "a" : ((modo == "b" || modo == "visitante") ? "b" : "fijo");
 			}
-			if (d.contains("numero")) pr.miPuestoNumero = entero(d, "numero", 1, 8);
+			if (d.contains("numero")) pr.miPuestoNumero = entero(d, "numero", 1, equipos::kPuestos);
 			if (d.contains("alAbrir")) pr.sentarmeAlAbrir = booleano(d, "alAbrir");
 			if (d.contains("pulsando")) pr.entrarPulsando = booleano(d, "pulsando");
 			if (d.contains("cuenta")) pr.anfitrionCuenta = booleano(d, "cuenta");
@@ -383,10 +383,13 @@ namespace phoenix::web {
 
 		p.registrar("mandos.cantidad", [&in](const json& d, uint64_t) -> std::optional<json> {
 			GamepadClient& gc = clienteMandos(in);
-			// PES admite como máximo 8 mandos en total (mismo tope que el panel original)
-			int xbox = entero(d, "xbox", 0, 8);
-			int ds4 = entero(d, "ds4", 0, 8);
-			if (xbox + ds4 > 8) throw ErrorAccion("FUERA_DE_RANGO", "Máximo 8 mandos en total.");
+			// settings.dat de PES tiene 8 casillas; la sala llega hasta 16 (EXPERIMENTAL): los puestos 9+ van a
+			// phoenix_mandos_extra.dat (ver core/MandosExtra.h). Pasar de «Puestos máximos» lo sube solo.
+			const int tope = equipos::kPuestos;
+			int xbox = entero(d, "xbox", 0, tope);
+			int ds4 = entero(d, "ds4", 0, tope);
+			if (xbox + ds4 > tope) throw ErrorAccion("FUERA_DE_RANGO", "Máximo " + std::to_string(tope) + " mandos en total.");
+			if (xbox + ds4 > PhoenixPrefs::get().puestosMax) { PhoenixPrefs::get().puestosMax = xbox + ds4; PhoenixPrefs::get().guardar(); }
 			if (xbox + ds4 < 1) throw ErrorAccion("FUERA_DE_RANGO", "Deja al menos un mando.");
 			Config::cfg.input.xboxPuppetCount = static_cast<unsigned int>(xbox);
 			Config::cfg.input.ds4PuppetCount = static_cast<unsigned int>(ds4);
@@ -399,6 +402,28 @@ namespace phoenix::web {
 				pr.sincronizarEquipos();
 				pr.guardar();
 			}
+			return json::object();
+		});
+
+		// «Puestos máximos» (8 de serie; 9–16 EXPERIMENTAL, necesitan el módulo de Sider de mandos extra).
+		// Si ya hay más mandos virtuales que el nuevo tope, sobran los últimos (primero los de PlayStation).
+		p.registrar("mandos.puestosMax", [&in](const json& d, uint64_t) -> std::optional<json> {
+			const int n = entero(d, "n", equipos::kPuestosPes, equipos::kPuestos);
+			PhoenixPrefs& pr = PhoenixPrefs::get();
+			pr.puestosMax = n;
+			int xbox = static_cast<int>(Config::cfg.input.xboxPuppetCount), ds4 = static_cast<int>(Config::cfg.input.ds4PuppetCount);
+			if (xbox + ds4 > n) {
+				GamepadClient& gc = clienteMandos(in);
+				ds4 = (std::min)(ds4, (std::max)(0, n - xbox));
+				xbox = (std::min)(xbox, n - ds4);
+				Config::cfg.input.xboxPuppetCount = static_cast<unsigned int>(xbox);
+				Config::cfg.input.ds4PuppetCount = static_cast<unsigned int>(ds4);
+				gc.resize(static_cast<size_t>(xbox), static_cast<size_t>(ds4));
+				Config::cfg.Save();
+			}
+			pr.equipoPuesto = equipos::recortar(pr.equipoPuesto, (std::max)(2, xbox + ds4));
+			pr.sincronizarEquipos();
+			pr.guardar();
 			return json::object();
 		});
 

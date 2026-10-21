@@ -40,7 +40,8 @@ int main() {
 	CHEQUEA(normalizar("AAAA----") == "AB------");           // sin Equipo B → 1v1
 	CHEQUEA(normalizar("") == "AB------");
 	CHEQUEA(normalizar("A?B") == "A-B-----");                // letras raras = fuera, y se completa a 8
-	CHEQUEA(normalizar("ABABABABAB") == "ABABABAB");         // se corta a 8
+	CHEQUEA(normalizar("ABABABABAB") == "ABABABABAB");       // puestos 9+ (hasta 16) se guardan
+	CHEQUEA(normalizar("AB--------------XX") == "AB------");  // más allá del 16 se corta; los «-» del final, también
 
 	// ---- El caso clave: puesto 01 en el Equipo B y el 02 en el A, sin renumerar nada ----
 	Mapa k = "AB------";
@@ -109,6 +110,23 @@ int main() {
 
 	// ---- Ida y vuelta por texto (lo que se guarda en phoenix-ui.json) ----
 	for (const Mapa& x : { Mapa("BA------"), Mapa("AABB----"), Mapa("BA-B----"), Mapa("ABABABAB") }) CHEQUEA(normalizar(x) == x);
+
+	// ---- Más de 8 puestos («Puestos máximos», EXPERIMENTAL) ----
+	Mapa g = "AABB----";
+	CHEQUEA(poner(g, 8, 'A', 8) == false && g == "AABB----");            // con 8 mandos el 9 no existe
+	CHEQUEA(poner(g, 8, 'A', 16) && g == "AABB----A");                  // con 16 sí: el mapa crece hasta el 9
+	CHEQUEA(de(g, 8) == 'A' && cuenta(g, 'A') == 3 && tramo(g) == 9 && activos(g) == 9);
+	CHEQUEA(poner(g, 15, 'B', 16) && g == "AABB----A------B" && tramo(g) == 16);
+	CHEQUEA(poner(g, 16, 'B', 16) == false);                             // el 17 no existe nunca
+	CHEQUEA(poner(g, 15, '-', 16) && g == "AABB----A");                 // al quitarlo vuelve a encoger
+	CHEQUEA(intercambiarEquipos(g, 8, 2, 16) && g == "AAAB----B");
+	CHEQUEA(ajustarCuentas(g, 8, 8, 16) && cuenta(g, 'A') == 8 && cuenta(g, 'B') == 8 && tramo(g) == 16);
+	CHEQUEA(ajustarCuentas(g, 9, 8, 16) == false);                       // 17 puestos no caben
+	CHEQUEA(recortar(g, 8).size() == 8 && tramo(recortar(g, 8)) <= 8);   // bajar a 8 mandos: los 9+ quedan fuera
+	CHEQUEA(desdeFormacion(6, 6) == "AAAAAABBBBBB");
+	CHEQUEA(migrar(12, 6) == "AAAAAABB");                              // lo viejo nunca pasó de 8
+	CHEQUEA(cuenta("AABB----A", '-') == 4);
+	CHEQUEA(normalizar("AAAAAABBBBBB") == "AAAAAABBBBBB");
 
 	if (fallos == 0) std::printf("equipos_test: todo bien\n");
 	return fallos == 0 ? 0 : 1;

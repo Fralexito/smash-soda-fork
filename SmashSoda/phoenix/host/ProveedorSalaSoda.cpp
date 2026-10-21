@@ -6,6 +6,7 @@
 #include "../../core/Cache.h"
 #include "../../widgets/HostSettingsWidget.h"
 #include "../PhoenixRoles.h"
+#include "../core/EquiposPuestos.h"
 #include "../PhoenixPrefs.h"
 #include "../../core/MasterOfPuppets.h"
 
@@ -38,7 +39,7 @@ namespace phoenix {
 	bool ProveedorSalaSoda::abrir(std::string& error) {
 	if (!_ajustes.phoenixAbrirSala(error)) return false;
 	// Phoenix: enchufa los 8 mandos al abrir para fijar su orden en Windows
-	try { for (int i = 0; i < 8; i++) if (AGamepad* p = padEn(_hosting, i)) p->connect(); }
+	try { for (int i = 0; i < equipos::kPuestos; i++) if (AGamepad* p = padEn(_hosting, i)) p->connect(); }
 	catch (...) {}
 	return true;
 }
@@ -48,7 +49,7 @@ namespace phoenix {
 	// Phoenix: desenchufa los mandos al cerrar (limpieza). Con el orden de PES (experimental) se quedan
 	// enchufados: si no, Windows baraja otra vez los GUID y PES deja de coincidir con los puestos.
 	if (PhoenixPrefs::get().ordenPes) return;
-	try { for (int i = 0; i < 8; i++) if (AGamepad* p = padEn(_hosting, i)) p->disconnect(); }
+	try { for (int i = 0; i < equipos::kPuestos; i++) if (AGamepad* p = padEn(_hosting, i)) p->disconnect(); }
 	catch (...) {}
 }
 

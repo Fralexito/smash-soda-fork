@@ -1,4 +1,5 @@
 #include "OrdenPes.h"
+#include "MandosExtra.h"
 
 #define DIRECTINPUT_VERSION 0x0800
 #include <Windows.h>
@@ -42,6 +43,7 @@ namespace phoenix::ordenpes {
 		bool pedirYa = false;
 		std::vector<unsigned long> series;   // por puesto
 		Estado est;
+		bool extraCopiado = false;           // phoenix_mandos_extra.dat ya pasó por la copia de esta sesión
 
 		std::wstring rutaSettings() {
 			PWSTR docs = nullptr;
@@ -140,12 +142,23 @@ namespace phoenix::ordenpes {
 			return DIENUM_CONTINUE;
 		}
 
+		/// Escribe phoenix_mandos_extra.dat (copia la primera vez de la sesión). Deja el estado en «ordenado» o «error».
+		bool escribirExtra(Estado& e, const std::wstring& ruta, const std::vector<unsigned char>& datos) {
+			std::string copia, error;
+			if (!mandosextra::escribir(ruta, datos, !extraCopiado, copia, error)) { e.estado = "error"; e.error = error; return false; }
+			extraCopiado = true;
+			if (!copia.empty()) e.copiaExtra = copia;
+			e.estado = "ordenado"; e.ultimo = hora();
+			for (auto& c : e.casillas) c.ok = true;
+			return true;
+		}
+
 		void revisar(IDirectInput8W* di, bool& estableAntes, std::vector<std::vector<unsigned char>>& deseadoAntes) {
 			std::vector<unsigned long> s;
 			{ std::lock_guard<std::mutex> l(mtx); s = series; }
 			Estado e; e.activo = true;
 			e.ds4windows = procesoAbierto(L"DS4Windows.exe");
-			{ std::lock_guard<std::mutex> l(mtx); e.ultimo = est.ultimo; e.copia = est.copia; }
+			{ std::lock_guard<std::mutex> l(mtx); e.ultimo = est.ultimo; e.copia = est.copia; e.copiaExtra = est.copiaExtra; }
 
 			const std::wstring ruta = rutaSettings();
 			std::vector<unsigned char> arch;
@@ -157,13 +170,15 @@ namespace phoenix::ordenpes {
 			Enum en{ di, {} };
 			di->EnumDevices(DI8DEVCLASS_GAMECTRL, cadaMando, &en, DIEDFL_ATTACHEDONLY);
 			std::vector<std::vector<unsigned char>> deseado(8), deLink;
+			// Puestos 9+ (EXPERIMENTAL): van a phoenix_mandos_extra.dat
+			std::vector<std::vector<unsigned char>> extra(s.size() > 8 ? s.size() - 8 : 0);
 			for (const auto& kv : en.porSerie) deLink.push_back(kv.second);
 			bool faltan = false;
-			for (size_t i = 0; i < 8; i++) {
-				if (i >= s.size() || s[i] == 0) continue;            // puesto desenchufado: casilla vacía
+			for (size_t i = 0; i < s.size(); i++) {
+				if (s[i] == 0) continue;                              // puesto desenchufado: casilla vacía
 				auto it = en.porSerie.find(s[i]);
 				if (it == en.porSerie.end()) { faltan = true; continue; }
-				deseado[i] = it->second;
+				(i < 8 ? deseado[i] : extra[i - 8]) = it->second;
 			}
 			for (int n = 1; n <= 8; n++) {
 				Casilla c; c.n = n; c.puesto = deseado[n - 1].empty() ? 0 : n;
@@ -175,13 +190,35 @@ namespace phoenix::ordenpes {
 			bool todoOk = true;
 			for (const auto& c : e.casillas) todoOk = todoOk && c.ok;
 
+			// phoenix_mandos_extra.dat: casilla i = puesto 9+i, con el mapa de botones de la casilla 1 de settings.dat
+			// (el que quedará después de ordenar). Sin puestos 9+ y sin archivo, no hay nada que escribir.
+			const std::wstring rutaExtra = mandosextra::ruta();
+			std::vector<unsigned char> archExtra;
+			const bool hayExtra = !rutaExtra.empty() && leer(rutaExtra, archExtra);
+			const std::vector<unsigned char> base = todoOk ? arch : reordenar(arch, deseado, deLink);
+			const std::vector<unsigned char> nuevoExtra = mandosextra::construir(extra,
+				mandosextra::mapaDeCasilla1(base, std::vector<unsigned char>(kMapaXbox, kMapaXbox + kMapa)));
+			for (size_t i = 0; i < extra.size(); i++) {
+				Casilla c; c.n = static_cast<int>(9 + i); c.extra = true;
+				c.puesto = extra[i].empty() ? 0 : c.n;
+				c.ok = hayExtra && mandosextra::cantidad(archExtra) == extra.size() && mandosextra::guidDe(archExtra, i) == extra[i];
+				e.casillas.push_back(c);
+			}
+			const bool extraOk = extra.empty() ? (!hayExtra || mandosextra::cantidad(archExtra) == 0) : (hayExtra && archExtra == nuevoExtra);
+
 			// Estable = el mismo reparto dos vueltas seguidas (Windows aún registra los mandos recién enchufados).
-			const bool estable = !faltan && deseado == deseadoAntes;
-			deseadoAntes = deseado;
+			std::vector<std::vector<unsigned char>> todos = deseado;
+			todos.insert(todos.end(), extra.begin(), extra.end());
+			const bool estable = !faltan && todos == deseadoAntes;
+			deseadoAntes = todos;
 			if (faltan) e.estado = "esperando";
-			else if (todoOk) e.estado = "al_dia";
+			else if (todoOk && extraOk) e.estado = "al_dia";
 			else if (pesAbierto()) e.estado = "pes_abierto";
 			else if (!estable) e.estado = "esperando";
+			else if (todoOk) {
+				// settings.dat ya está bien: solo falta phoenix_mandos_extra.dat
+				escribirExtra(e, rutaExtra, nuevoExtra);
+			}
 			else {
 				// Copia de seguridad (una por sesión) y escritura atómica.
 				if (e.copia.empty()) {
@@ -200,7 +237,7 @@ namespace phoenix::ordenpes {
 					{ std::ofstream out(tmp, std::ios::binary | std::ios::trunc); out.write(reinterpret_cast<const char*>(nuevo.data()), nuevo.size()); ok = out.good(); }
 					ok = ok && MoveFileExW(tmp.c_str(), ruta.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH);
 					if (!ok) { DeleteFileW(tmp.c_str()); e.estado = "error"; e.error = "No se pudo escribir settings.dat."; }
-					else {
+					else if (extraOk || escribirExtra(e, rutaExtra, nuevoExtra)) {
 						e.estado = "ordenado"; e.ultimo = hora();
 						for (auto& c : e.casillas) c.ok = true;
 					}
@@ -226,6 +263,7 @@ namespace phoenix::ordenpes {
 				if (!activo.load()) {
 					std::lock_guard<std::mutex> l(mtx);
 					est = Estado();
+					extraCopiado = false;
 					estableAntes = false;
 					deseadoAntes.clear();
 					continue;

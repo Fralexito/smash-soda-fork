@@ -72,7 +72,7 @@ namespace phoenix::web {
 		/// Mandos (índices desde 0) que ocupa hoy cada jugador del lado.
 		std::vector<int> mandosDe(ProveedorSala& sala, const LadoPartido& l) {
 			std::vector<int> r;
-			const std::vector<AsientoVista> asientos = sala.asientos(8);
+			const std::vector<AsientoVista> asientos = sala.asientos(equipos::kPuestos);
 			for (const JugadorPartido& j : l.jugadores) {
 				for (size_t i = 0; i < asientos.size(); i++) {
 					if (asientos[i].ocupado && asientos[i].parsecId == j.parsecId) { r.push_back(static_cast<int>(i)); break; }

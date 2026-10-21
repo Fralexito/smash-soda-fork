@@ -65,7 +65,7 @@ namespace phoenix::web {
 
 		/// Start una vez en un mando virtual libre (o el del anfitrión). Nunca en el que el host maneja con Ctrl+Alt (lo pisaría).
 		bool pulsarStart(Interno& in, ProveedorSala& sala, Hosting& h, double ahora) {
-			const std::vector<AsientoVista> asientos = sala.asientos(8);
+			const std::vector<AsientoVista> asientos = sala.asientos(equipos::kPuestos);
 			const int tomado = MandoHost::activo() - 1;
 			uint32_t idHost = 0;
 			try { idHost = h.getHost().userID; } catch (...) {}
@@ -199,7 +199,7 @@ namespace phoenix::web {
 			if (hayLados) t += "goles=" + std::to_string(ll.goles) + "-" + std::to_string(lv.goles) + "\n";
 			// Jugadores por mando. Con partido: el lado del partido (ya corregido por CORREGIR LADOS o por los lados
 			// automáticos, que miran en el juego). Sin partido, o si no está en él: los puestos del Equipo A van arriba (como el local del juego).
-			const std::vector<AsientoVista> asientos = sala.asientos(8);
+			const std::vector<AsientoVista> asientos = sala.asientos(equipos::kPuestos);
 			const int activos = (std::min)(static_cast<int>(asientos.size()), pr.mandosActivos);
 			for (int i = 0; i < activos; i++) {
 				const AsientoVista& s = asientos[static_cast<size_t>(i)];
@@ -263,7 +263,7 @@ namespace phoenix::web {
 		Hosting& h = *in.ctx.hosting;
 		const PhoenixPrefs& pr = PhoenixPrefs::get();
 		const double ahora = ahoraSeg();
-		const std::vector<AsientoVista> asientos = sala.asientos(8);
+		const std::vector<AsientoVista> asientos = sala.asientos(equipos::kPuestos);
 		const int activos = (std::min)(static_cast<int>(asientos.size()), pr.mandosActivos);
 		int humanos = 0, segunJuego = 0;   // para saber si TODOS salen de la pantalla de mandos del juego
 		// Equipo de un puesto: el lado que tiene ese mando en la pantalla de mandos de PES (LADOS AUTO, si se lee),
@@ -362,7 +362,7 @@ namespace phoenix::web {
 
 			// 0) Puestos: quien está sentado (por el host, turnos o torneo) queda autorizado para volver a su mando
 			PhoenixRoles::instancia().soloAutorizados(pr.soloAutorizados);
-			for (const AsientoVista& s : sala.asientos(8)) if (s.ocupado) PhoenixRoles::instancia().autorizar(s.parsecId);
+			for (const AsientoVista& s : sala.asientos(equipos::kPuestos)) if (s.ocupado) PhoenixRoles::instancia().autorizar(s.parsecId);
 
 			// 1) Modo competitivo
 			GamepadClient& gc = h.getGamepadClient();

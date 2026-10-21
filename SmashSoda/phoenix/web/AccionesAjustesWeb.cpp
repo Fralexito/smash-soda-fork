@@ -477,7 +477,7 @@ namespace phoenix::web {
 			const bool vigem = clavePresente(HKEY_LOCAL_MACHINE, L"SYSTEM\\CurrentControlSet\\Services\\ViGEmBus");
 			int mandos = 0, conectados = 0;
 			if (in.ctx.sala != nullptr) {
-				for (const AsientoVista& a : in.ctx.sala->asientos(8)) { mandos++; if (a.conectado) conectados++; }
+				for (const AsientoVista& a : in.ctx.sala->asientos(equipos::kPuestos)) { mandos++; if (a.conectado) conectados++; }
 			}
 			lista.push_back(chequeo("vigem", vigem && mandos > 0 ? "ok" : (vigem ? "aviso" : "error"),
 				{ {"instalado", vigem}, {"mandos", mandos}, {"conectados", conectados} }));

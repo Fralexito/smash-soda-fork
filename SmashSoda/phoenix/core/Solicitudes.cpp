@@ -1,4 +1,5 @@
 #include "Solicitudes.h"
+#include "EquiposPuestos.h"
 
 #include <algorithm>
 #include <cctype>
@@ -42,8 +43,8 @@ namespace phoenix {
 		if (esCambio) {
 			const size_t p = m.find_first_of("0123456789");
 			if (p != std::string::npos) destino = std::atoi(m.c_str() + p);
-			if (destino < 1 || destino > 8) {
-				respuesta = nombre + ": escribe !cambio y el número de mando (1 a 8).";
+			if (destino < 1 || destino > equipos::kPuestos) {
+				respuesta = nombre + ": escribe !cambio y el número de mando (1 a " + std::to_string(equipos::kPuestos) + ").";
 				return true;
 			}
 		}

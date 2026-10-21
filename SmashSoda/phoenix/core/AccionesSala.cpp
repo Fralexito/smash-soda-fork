@@ -12,7 +12,7 @@ namespace phoenix {
 	namespace AccionesSala {
 
 		bool asignarConectando(ProveedorSala& sala, int indice, uint32_t parsecId) {
-			const std::vector<AsientoVista> asientos = sala.asientos(8);
+			const std::vector<AsientoVista> asientos = sala.asientos(equipos::kPuestos);
 			if (indice < 0 || indice >= static_cast<int>(asientos.size()) || parsecId == 0) return false;
 			if (!asientos[indice].conectado) sala.conectarMando(indice);
 			return sala.asignarMando(indice, parsecId);
@@ -35,7 +35,7 @@ namespace phoenix {
 				return false;
 			}
 
-			const std::vector<AsientoVista> asientos = sala.asientos(8);
+			const std::vector<AsientoVista> asientos = sala.asientos(equipos::kPuestos);
 			const PhoenixPrefs& pr = PhoenixPrefs::get();
 			int destino = sol.mandoDestino - 1;
 			if (sol.mandoDestino == 0) {
@@ -70,7 +70,7 @@ namespace phoenix {
 			switch (decision) {
 			case DecisionEspera::Jugador: {
 				PhoenixRoles::instancia().admitir(parsecId, true);
-				const std::vector<AsientoVista> asientos = sala.asientos(8);
+				const std::vector<AsientoVista> asientos = sala.asientos(equipos::kPuestos);
 				const PhoenixPrefs& pr = PhoenixPrefs::get();
 				const int n = (std::min)(pr.mandosActivos, static_cast<int>(asientos.size()));
 				const auto sirve = [&](int i) { return i >= 0 && i < n && !asientos[i].ocupado && pr.equipoDe(i) != '-'; };   // un puesto fuera de los equipos no se da
@@ -102,7 +102,7 @@ namespace phoenix {
 		}
 
 		bool intercambiar(ProveedorSala& sala, int a, int b) {
-			const std::vector<AsientoVista> asientos = sala.asientos(8);
+			const std::vector<AsientoVista> asientos = sala.asientos(equipos::kPuestos);
 			const int n = static_cast<int>(asientos.size());
 			if (a < 0 || b < 0 || a >= n || b >= n || a == b) return false;
 			const uint32_t idA = asientos[a].ocupado ? asientos[a].parsecId : 0;

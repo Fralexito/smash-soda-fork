@@ -62,7 +62,8 @@ namespace phoenix {
 			juego = j.value("juego", juego).substr(0, 60);
 			parche = j.value("parche", parche).substr(0, 60);
 			region = j.value("region", region).substr(0, 40);
-			mandosActivos = (std::max)(2, (std::min)(8, j.value("mandosActivos", mandosActivos)));
+			puestosMax = (std::max)(equipos::kPuestosPes, (std::min)(equipos::kPuestos, j.value("puestosMax", puestosMax)));
+			mandosActivos = (std::max)(2, (std::min)(equipos::kPuestos, j.value("mandosActivos", mandosActivos)));
 			equipoLocal = (std::max)(1, (std::min)(mandosActivos - 1, j.value("equipoLocal", equipoLocal)));
 			// Equipo de cada puesto; un archivo anterior (sin equipoPuesto) migra: los primeros equipoLocal = A, el resto hasta mandosActivos = B
 			equipoPuesto = j.contains("equipoPuesto") && j["equipoPuesto"].is_string()
@@ -75,7 +76,7 @@ namespace phoenix {
 					try {
 						const unsigned long id = std::stoul(par.key());
 						const int puesto = par.value().is_number_integer() ? par.value().get<int>() : 0;
-						if (id != 0 && puesto >= 1 && puesto <= 8) puestosFijados[static_cast<uint32_t>(id)] = puesto;
+						if (id != 0 && puesto >= 1 && puesto <= equipos::kPuestos) puestosFijados[static_cast<uint32_t>(id)] = puesto;
 					}
 					catch (...) {}
 				}
@@ -96,7 +97,7 @@ namespace phoenix {
 			if (miPuestoModo == "local") miPuestoModo = "a";   // archivos viejos: Local → Equipo A, Visitante → Equipo B
 			else if (miPuestoModo == "visitante") miPuestoModo = "b";
 			else if (miPuestoModo != "a" && miPuestoModo != "b") miPuestoModo = "fijo";
-			miPuestoNumero = (std::max)(1, (std::min)(8, j.value("miPuestoNumero", miPuestoNumero)));
+			miPuestoNumero = (std::max)(1, (std::min)(equipos::kPuestos, j.value("miPuestoNumero", miPuestoNumero)));
 			sentarmeAlAbrir = j.value("sentarmeAlAbrir", sentarmeAlAbrir);
 			entrarPulsando = j.value("entrarPulsando", entrarPulsando);
 			anfitrionCuenta = j.value("anfitrionCuenta", anfitrionCuenta);
@@ -157,6 +158,7 @@ namespace phoenix {
 				{"entrarPulsando", entrarPulsando},
 				{"anfitrionCuenta", anfitrionCuenta},
 				{"ordenPes", ordenPes},
+				{"puestosMax", puestosMax},
 				{"campoWeb", campoWeb},
 				{"ladosAuto", ladosAuto},
 				{"mirandoAuto", mirandoAuto},

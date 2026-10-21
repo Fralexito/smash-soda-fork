@@ -259,6 +259,7 @@ export function crearSimulador(enviar) {
         jugador: hostAqui ? "Fralex" : id ? nombreDe(id) : "", parsecId: hostAqui ? 99 : id, ping: id ? pingDe(id) : -1,
         equipo: s.mapa[i] === "A" ? "a" : s.mapa[i] === "B" ? "b" : "fuera",
         tipo: i < s.xbox ? "xbox" : "ds4",
+        extra: n > 8,   // puesto 9+: EXPERIMENTAL (módulo de mandos extra)
         // Mando en vivo (solo en Mandos › Puestos, como el motor): cada mando «pulsa» algo distinto con el tiempo
         ...(s.seccion === "mandos" && (s.pestana === "puestos" || s.pestana === "vivo" || !s.pestana) && (id || hostAqui) ? { entrada: (() => {
           const k = Math.floor(ahora() * 2 + i * 3), bits = [0x1000, 0x2000, 0x4000, 0x8000, 0x1, 0x8, 0x100, 0x10, 0];
@@ -292,7 +293,7 @@ export function crearSimulador(enviar) {
         segundos: s.abierta ? Math.round(ahora() - s.abiertaEn) : -1, opciones: s.opciones, phoenix: s.phoenix, calidad: s.calidad,
         sesion: { pico: 5, entradas: 7, partidos: s.historial.length },
       },
-      mandos: { lista, miMando: s.marionetas.maestro >= 0 ? s.marionetas.maestros[s.marionetas.maestro]?.nombre || "" : "", ordenPes: s.ordenPes || { activo: false, estado: "apagado", casillas: [] }, miPuesto: s.miPuesto || (s.miPuesto = { modo: "fijo", numero: 1, alAbrir: true, pulsando: true, cuenta: true, mandoRecordado: false }), formacion: { a: eqCuenta("A"), b: eqCuenta("B"), mapa: s.mapa }, fijados: s.fijados, host: s.host, bloqueoGlobal: s.bloqueoGlobal, bloqueoBotones: s.bloqueoBotones, botonesBloq: s.botonesBloq, esclavo: false, xbox: s.xbox, ds4: s.ds4, reiniciando: false },
+      mandos: { lista, miMando: s.marionetas.maestro >= 0 ? s.marionetas.maestros[s.marionetas.maestro]?.nombre || "" : "", ordenPes: s.ordenPes || { activo: false, estado: "apagado", casillas: [] }, miPuesto: s.miPuesto || (s.miPuesto = { modo: "fijo", numero: 1, alAbrir: true, pulsando: true, cuenta: true, mandoRecordado: false }), formacion: { a: eqCuenta("A"), b: eqCuenta("B"), mapa: s.mapa }, fijados: s.fijados, host: s.host, bloqueoGlobal: s.bloqueoGlobal, bloqueoBotones: s.bloqueoBotones, botonesBloq: s.botonesBloq, esclavo: false, xbox: s.xbox, ds4: s.ds4, puestosMax: s.puestosMax || 8, puestosTope: 16, puestosPes: 8, reiniciando: false },
       mapeo: { perfiles: s.mapeo.perfiles, vista: vistaMapeo() },
       solicitudes: s.solicitudes, espera: s.espera,
       invitados: s.abierta ? s.invitados.map((g) => ({ parsecId: g.parsecId, nombre: g.nombre, ping: pingDe(g.parsecId), mando: s.mandos.indexOf(g.parsecId) + 1, mod: g.mod, vip: g.vip, teclado: g.teclado, raton: g.raton, rolWeb: g.rolWeb, cop: false, falso: false })) : [],
@@ -457,7 +458,7 @@ export function crearSimulador(enviar) {
     "mandos.asignar": (d) => { const i = s.mandos.indexOf(d.parsecId); if (i >= 0) s.mandos[i] = 0; s.mandos[d.indice] = d.parsecId; act(`[PhoenixBot] Mando ${d.indice + 1} asignado a ${nombreDe(d.parsecId)}`); },
     "mandos.intercambiar": (d) => { const x = s.mandos[d.a]; s.mandos[d.a] = s.mandos[d.b]; s.mandos[d.b] = x; },
     // Formación por cuentas (local = puestos del Equipo A, visitante = del B): si el mapa ya las tiene se respeta; si no, A primero y luego B
-    "mandos.formacion": (d) => { if (eqCuenta("A") !== d.local || eqCuenta("B") !== d.visitante) s.mapa = ("A".repeat(d.local) + "B".repeat(d.visitante)).padEnd(8, "-").slice(0, 8); },
+    "mandos.formacion": (d) => { if (eqCuenta("A") !== d.local || eqCuenta("B") !== d.visitante) s.mapa = ("A".repeat(d.local) + "B".repeat(d.visitante)).padEnd(8, "-").slice(0, 16); },
     "mandos.equipoIntercambiar": (d) => {
       const x = s.mapa[d.a], y = s.mapa[d.b];
       if (x === "-" || y === "-" || x === y || d.a === d.b) error("NADA_QUE_MOVER", "Solo se cruzan dos puestos de equipos distintos.");
@@ -468,12 +469,14 @@ export function crearSimulador(enviar) {
     "mandos.equipo": (d) => {
       const i = d.indice, nuevo = d.equipo === "a" ? "A" : d.equipo === "b" ? "B" : d.equipo === "fuera" ? "-" : "";
       if (!nuevo) error("DATOS_INVALIDOS", "El equipo es a, b o fuera.");
-      const antes = s.mapa[i];
+      const antes = s.mapa[i] || "-";
       if (antes !== nuevo && antes !== "-" && eqCuenta(antes) <= 1) error("FUERA_DE_RANGO", "Cada equipo necesita al menos un puesto.");
-      s.mapa = s.mapa.slice(0, i) + nuevo + s.mapa.slice(i + 1);
+      const m = s.mapa.padEnd(i + 1, "-");   // puestos 9+ (Puestos máximos) alargan el mapa
+      s.mapa = m.slice(0, i) + nuevo + m.slice(i + 1);
     },
     "mandos.ordenPes": (d) => { s.ordenPes = { activo: !!d.si, estado: d.si ? "ordenado" : "apagado", ultimo: d.si ? "00:15" : "", copia: d.si ? "settings.dat.phoenix-20261011-001500" : "", error: "",
-      casillas: d.si ? Array.from({ length: 8 }, (_, i) => ({ n: i + 1, puesto: i + 1, ok: true })) : [] }; },
+      casillas: d.si ? Array.from({ length: Math.max(8, s.xbox + s.ds4) }, (_, i) => ({ n: i + 1, puesto: i < s.xbox + s.ds4 ? i + 1 : 0, ok: true, extra: i >= 8 })) : [],
+      copiaExtra: d.si && s.xbox + s.ds4 > 8 ? "phoenix_mandos_extra.dat.phoenix-20261019-213000" : "" }; },
     "mandos.ordenarPes": () => { if (s.ordenPes?.activo) s.ordenPes.estado = "al_dia"; },
     "mandos.vivo": () => ({}),
     "campo.vivo": (d) => { s.campoVivo = !!d.si; s.campoDesde = ahora(); },
@@ -508,7 +511,8 @@ export function crearSimulador(enviar) {
       return { identidad };
     },
     "mapeo.restablecer": (d) => { delete s.mapeo.perfiles[d.parsecId]; },
-    "mandos.cantidad": (d) => { if (d.xbox + d.ds4 > 8) error("FUERA_DE_RANGO", "Máximo 8 mandos en total."); s.xbox = d.xbox; s.ds4 = d.ds4; },
+    "mandos.cantidad": (d) => { if (d.xbox + d.ds4 > 16) error("FUERA_DE_RANGO", "Máximo 16 mandos en total."); if (d.xbox + d.ds4 > (s.puestosMax || 8)) s.puestosMax = d.xbox + d.ds4; s.xbox = d.xbox; s.ds4 = d.ds4; while (s.mandos.length < d.xbox + d.ds4) s.mandos.push(0); },
+    "mandos.puestosMax": (d) => { if (!(d.n >= 8 && d.n <= 16)) error("FUERA_DE_RANGO", "Entre 8 y 16."); s.puestosMax = d.n; if (s.xbox + s.ds4 > d.n) { s.ds4 = Math.min(s.ds4, Math.max(0, d.n - s.xbox)); s.xbox = Math.min(s.xbox, d.n - s.ds4); } },
     "solicitud.aceptar": (d) => { s.solicitudes = s.solicitudes.filter((x) => x.parsecId !== d.parsecId); },
     "solicitud.rechazar": (d) => { s.solicitudes = s.solicitudes.filter((x) => x.parsecId !== d.parsecId); },
     "espera.decidir": (d) => { const x = s.espera.find((e) => e.parsecId === d.parsecId); s.espera = s.espera.filter((e) => e.parsecId !== d.parsecId); if (x && d.como !== "expulsar") s.invitados.push({ parsecId: x.parsecId, nombre: x.nombre, base: x.ping, mod: false, vip: false, teclado: false, raton: false, rolWeb: "no_listado" }); },

@@ -76,7 +76,7 @@ namespace phoenix::web {
 
 	void aplicarFormacion(Interno& in, int local, int visitante) {
 		int maximo = 8;
-		if (in.ctx.sala != nullptr) maximo = (std::max)(2, (std::min)(8, static_cast<int>(in.ctx.sala->asientos(8).size())));
+		if (in.ctx.sala != nullptr) maximo = (std::max)(2, (std::min)(equipos::kPuestos, static_cast<int>(in.ctx.sala->asientos(equipos::kPuestos).size())));
 		if (local < 1 || visitante < 1 || local + visitante > maximo) {
 			throw ErrorAccion("FUERA_DE_RANGO", "Cada equipo necesita al menos un mando y en total máximo " + std::to_string(maximo) + ".");
 		}

@@ -8,6 +8,7 @@
 #include "SalaClasificatoria.h"
 #include "../../Hosting.h"
 #include "../core/ProveedorSala.h"
+#include "../core/EquiposPuestos.h"
 
 namespace phoenix::web {
 
@@ -82,7 +83,7 @@ namespace phoenix::web {
 
 			uint32_t idHost = 0;
 			try { if (in.ctx.hosting != nullptr) idHost = in.ctx.hosting->getHost().userID; } catch (...) {}
-			const std::vector<AsientoVista> asientos = in.ctx.sala->asientos(8);
+			const std::vector<AsientoVista> asientos = in.ctx.sala->asientos(equipos::kPuestos);
 
 			for (auto& par : e.fichas) {
 				const uint32_t id = par.first;

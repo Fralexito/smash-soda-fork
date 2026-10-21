@@ -11,12 +11,13 @@
 // =============================================================================
 import { html, useState } from "../lib.js";
 import { t } from "../i18n.js";
-import { accion, confirmar, avisar, irA } from "../tienda.js";
+import { accion, confirmar, avisar } from "../tienda.js";
 import { Boton, BotonIr, Icono, Vacio, Avatar, Chip, Stepper, Interruptor, colorPing, cx, dos, useDestello } from "../ui.js";
 import { instalarVigem } from "./arreglos.js";
 import { Pendientes, ElegirJugador } from "./mandos.js";
 import { BotonJugar } from "./jugar.js";
 import { IndicadorRetraso, retrasoDe } from "./retraso.js";
+import { MandosEnVivo } from "./mandovivo.js";
 
 function Agarre() {
   return html`<svg width="12" height="20" viewBox="0 0 14 22" fill="currentColor" style="opacity:.55;flex:none" aria-hidden="true">
@@ -90,6 +91,9 @@ function Fila({ p, m, color, arr, setArr, alAsignar }) {
       style=${`display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:12px 14px;border-radius:10px;border:${p.ocupado ? "1px solid" : "1.5px dashed"} ${borde};background:${fondo};box-shadow:${sombra};opacity:${opacidad};cursor:${p.ocupado ? "grab" : "default"};transition:border-color .15s,background .15s,box-shadow .15s,opacity .15s`}>
     ${p.ocupado ? html`<span style="color:var(--mut)"><${Agarre}/></span>` : html`<span style="width:12px;flex:none"></span>`}
     <div class="disp" style=${`font-weight:700;font-size:40px;line-height:1;width:56px;flex:none;color:${p.ocupado ? color : "rgba(255,255,255,.22)"}`}>${dos(p.n)}</div>
+    ${p.extra ? html`<div style="flex-basis:100%;order:99;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--warn)">
+      <${Chip} tipo="vip">${t("EXPERIMENTAL", "EXPERIMENTAL")}</${Chip}>
+      <span>${t("Necesita el módulo de mandos extra: settings.dat de PES solo tiene 8 casillas.", "Needs the extra pads module: PES's settings.dat only has 8 slots.")}</span></div>` : null}
     ${p.ocupado
       ? html`<${Avatar} nombre=${p.jugador} id=${p.parsecId} url=${perfil?.avatar_url} t=${44}/>
         <div style="flex:1 1 110px;min-width:110px">
@@ -213,6 +217,9 @@ export function PuestosNuevo({ m }) {
   const [arr, setArr] = useState(null);
   const [sobreMirando, setSobreMirando] = useState(false);
   const [ayudaAB, setAyudaAB] = useState(false);
+  // Mandos en vivo dentro de Puestos (como en 0.3.8): abierto salvo que el anfitrión lo pliegue
+  const [verVivo, setVerVivoEstado] = useState(() => { try { return localStorage.getItem("phoenix.verVivo") !== "0"; } catch { return true; } });
+  const setVerVivo = (v) => { setVerVivoEstado(v); try { localStorage.setItem("phoenix.verVivo", v ? "1" : "0"); } catch { /* sin almacenamiento */ } };
   const lista = m.mandos.lista || [];
   const total = lista.length;
   const esclavo = !!m.mandos.esclavo;
@@ -277,9 +284,9 @@ export function PuestosNuevo({ m }) {
           titulo=${t("Encendido: pulsar el mando solo da puesto a quien tú ya sentaste. Los demás aparecen como «quiere jugar» y decides tú.", "On: pressing a pad only seats people you already seated. Others show up as «wants to play» and you decide.")}
           al=${() => accion("mandos.soloAutorizados", { si: !m.arbitro?.soloAutorizados })}>
           ${m.arbitro?.soloAutorizados ? t("PUESTOS: SOLO AUTORIZADOS", "SEATS: AUTHORIZED ONLY") : t("PUESTOS: LIBRES", "SEATS: OPEN")}</${Boton}>
-        <${Boton} tipo="mini suave" al=${() => irA("mandos", "vivo")}
-          titulo=${t("Muestra qué botón pulsa cada uno, sus sticks y gatillos, en vivo. Pídeles que prueben su mando antes del partido.", "Shows each player's buttons, sticks and triggers live. Ask them to test their pad before the match.")}>>
-          ${t("MANDOS EN VIVO ›", "LIVE PADS ›")}</${Boton}>
+        <${Boton} tipo=${cx("mini", verVivo ? "acc" : "suave")} al=${() => setVerVivo(!verVivo)}
+          titulo=${t("Muestra qué botón pulsa cada uno, sus sticks y gatillos, en vivo. Pídeles que prueben su mando antes del partido.", "Shows each player's buttons, sticks and triggers live. Ask them to test their pad before the match.")}>
+          ${verVivo ? t("▾ PLEGAR MANDOS EN VIVO", "▾ COLLAPSE LIVE PADS") : t("▸ MANDOS EN VIVO", "▸ LIVE PADS")}</${Boton}>
         <${Boton} tipo="mini suave" deshabilitado=${esclavo || m.mandos.reiniciando} al=${() => herramienta("ordenar")}>${t("ORDENAR", "SORT")}</${Boton}>
         <${Boton} tipo="mini suave" deshabilitado=${esclavo || m.mandos.reiniciando}
           al=${() => herramienta("reiniciar", [t("¿Reiniciar los mandos?", "Reset pads?"), t("Se desconectan y vuelven a conectar todos los mandos virtuales. Úsalo si el juego dejó de detectarlos.", "All virtual pads are re-plugged. Use it if the game stopped detecting them.")])}>
@@ -334,6 +341,13 @@ export function PuestosNuevo({ m }) {
         </div>
       </div>
     </div>
+    ${verVivo ? html`<div class="caja" style="padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+        <span class="disp" style="font-weight:700;font-size:14px;letter-spacing:.16em">${t("MANDOS EN VIVO", "LIVE PADS")}</span>
+        <span class="ayuda" style="font-size:13px">${t("Lo que el juego recibe ahora mismo, en tiempo real.", "What the game receives right now, in real time.")}</span>
+      </div>
+      <${MandosEnVivo} m=${m}/>
+    </div>` : null}
     <${OrdenPes} m=${m}/>
     ${eligiendo != null ? html`<${ElegirJugador} m=${m} indice=${eligiendo} alCerrar=${() => setEligiendo(null)}/>` : null}
   </div>`;
@@ -389,24 +403,42 @@ function OrdenPes({ m }) {
     ${o.activo && (o.casillas || []).length ? html`<div style="display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:6px">
       ${o.casillas.map((c) => html`<div key=${c.n} class="caja" title=${c.ok ? t("Coincide", "Matches") : t("Pendiente", "Pending")}
           style=${`padding:8px 4px;text-align:center;border-color:${c.ok ? "var(--ok)" : "var(--warn)"}`}>
-        <div class="mono mut" style="font-size:11px">PES ${c.n}</div>
+        <div class="mono mut" style="font-size:11px">${c.extra ? "EXTRA" : "PES"} ${c.n}</div>
         <div class="disp" style="font-weight:700;font-size:16px">${c.puesto ? "P" + c.puesto : "—"}</div>
         <div style="font-size:12px">${c.ok ? "✓" : "…"}</div>
       </div>`)}
     </div>` : null}
     ${o.activo && o.copia ? html`<div class="ayuda mono" style="font-size:12px">${t("Copia de seguridad:", "Backup:")} ${o.copia}</div>` : null}
+    ${o.activo && o.copiaExtra ? html`<div class="ayuda mono" style="font-size:12px">${t("Copia de mandos extra:", "Extra pads backup:")} ${o.copiaExtra}</div>` : null}
+    <${PuestosMax} m=${m}/>
+  </div>`;
+}
+
+/** «Puestos máximos»: 8 de serie (las casillas de settings.dat); del 9 en adelante EXPERIMENTAL. */
+function PuestosMax({ m }) {
+  const max = m.mandos.puestosMax ?? 8, tope = m.mandos.puestosTope ?? 16, pes = m.mandos.puestosPes ?? 8;
+  return html`<div style="display:flex;flex-direction:column;gap:8px;border-top:1px solid rgba(255,255,255,.1);padding-top:12px">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <span class="disp" style="font-weight:700;font-size:13px;letter-spacing:.16em">${t("PUESTOS MÁXIMOS", "MAX SEATS")}</span>
+      ${max > pes ? html`<${Chip} tipo="vip">${t("EXPERIMENTAL", "EXPERIMENTAL")}</${Chip}>` : null}
+      <span style="flex:1"></span>
+      <${Stepper} valor=${max} min=${pes} max=${tope} deshabilitado=${!!m.mandos.esclavo} al=${(v) => accion("mandos.puestosMax", { n: v })}/>
+    </div>
+    <div class="ayuda" style="font-size:13px">${t(
+      `Cuántos mandos virtuales puede tener la sala (también sube solo si pones más mandos Xbox en Tu mando › Mandos virtuales). ${pes} es lo normal. Hasta ${tope} es experimental: los puestos ${pes + 1}+ no caben en settings.dat; con «Orden de mandos en PES» encendido, Link los escribe (con PES cerrado y copia) en phoenix_mandos_extra.dat y PES solo los usa con el módulo de mandos extra de Sider. Después sube los mandos Xbox en Mandos › Mandos virtuales.`,
+      `How many virtual pads the room can have. ${pes} is normal. Up to ${tope} is experimental: seats ${pes + 1}+ don't fit in settings.dat; with «Pad order in PES» on, Link writes them (PES closed, with backup) to phoenix_mandos_extra.dat and PES only uses them with Sider's extra pads module. Then raise the Xbox pads in Pads › Virtual pads.`)}</div>
   </div>`;
 }
 
 /** Cuántos mandos virtuales de cada tipo emula tu PC (a mano). Los primeros puestos son Xbox y los últimos PlayStation. */
 function TipoMando({ m, esclavo }) {
-  const xbox = m.mandos.xbox ?? 0, ds4 = m.mandos.ds4 ?? 0;
+  const xbox = m.mandos.xbox ?? 0, ds4 = m.mandos.ds4 ?? 0, tope = m.mandos.puestosTope ?? 16;
   const cantidad = (x, d) => accion("mandos.cantidad", { xbox: x, ds4: d });
   return html`<div style=${`display:flex;align-items:center;gap:10px;margin-right:8px;${esclavo ? "opacity:.4;pointer-events:none" : ""}`}
-    title=${t("Cuántos mandos de cada tipo emula tu PC (máximo 8 en total). Cámbialo antes de abrir la sala.", "How many pads of each type your PC emulates (max 8 in total). Change it before opening the room.")}>
+    title=${t(`Cuántos mandos de cada tipo emula tu PC (máximo ${tope} en total). Cámbialo antes de abrir la sala.`, `How many pads of each type your PC emulates (max ${tope} in total). Change it before opening the room.`)}>
     <span class="chip mod" style="height:22px">XBOX</span>
-    <${Stepper} valor=${xbox} min=${0} max=${8 - ds4} al=${(v) => cantidad(v, ds4)}/>
+    <${Stepper} valor=${xbox} min=${0} max=${tope - ds4} al=${(v) => cantidad(v, ds4)}/>
     <span class="chip acc2" style="height:22px">PLAYSTATION</span>
-    <${Stepper} valor=${ds4} min=${0} max=${8 - xbox} al=${(v) => cantidad(xbox, v)}/>
+    <${Stepper} valor=${ds4} min=${0} max=${tope - xbox} al=${(v) => cantidad(xbox, v)}/>
   </div>`;
 }

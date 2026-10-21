@@ -1,4 +1,5 @@
 #include "SalaClasificatoria.h"
+#include "../core/EquiposPuestos.h"
 
 #include <filesystem>
 #include <fstream>
@@ -116,7 +117,7 @@ namespace phoenix::web {
 				}
 			}
 
-			const std::vector<AsientoVista> asientos = sala.asientos(8);
+			const std::vector<AsientoVista> asientos = sala.asientos(equipos::kPuestos);
 			for (size_t i = 0; i < asientos.size(); i++) {
 				const AsientoVista& s = asientos[i];
 				if (!s.ocupado || s.parsecId == 0 || s.parsecId == idHost) continue;

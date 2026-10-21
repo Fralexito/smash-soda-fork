@@ -277,7 +277,7 @@ namespace phoenix {
 		PhoenixPrefs& pr = PhoenixPrefs::get();
 		bool cambio = false;
 
-		std::vector<AsientoVista> asientos = sala.asientos(8);
+		std::vector<AsientoVista> asientos = sala.asientos(equipos::kPuestos);
 		if (asientos.empty()) {
 			ImGui::TextColored(tema->textMuted, "%s", T("sala.sin_mando"));
 			return;

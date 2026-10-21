@@ -14,15 +14,17 @@ import { PreferenciaPuesto } from "./jugar.js";
 const TIPOS = { xbox: "XBOX", dualshock: "DUALSHOCK", ds4: "DS4", xinput: "XINPUT" };
 
 function MandosVirtuales({ m }) {
-  const xbox = m.mandos.xbox ?? 0, ds4 = m.mandos.ds4 ?? 0;
+  const xbox = m.mandos.xbox ?? 0, ds4 = m.mandos.ds4 ?? 0, tope = m.mandos.puestosTope ?? 16;
   const cantidad = (x, d) => accion("mandos.cantidad", { xbox: x, ds4: d });
   return html`<${Tarjeta} secundaria interior="padding:22px 24px">
-    <${Titulo} texto=${t("MANDOS VIRTUALES", "VIRTUAL PADS")} derecha=${html`<span class="mono mut">${xbox + ds4} / 8</span>`}/>
-    <div class="ayuda" style="margin-bottom:6px">${t("Son los mandos que ve PES. Máximo 8 en total; con 4 por equipo alcanza para un 4 vs 4.", "Pads PES sees. Max 8 in total.")}</div>
+    <${Titulo} texto=${t("MANDOS VIRTUALES", "VIRTUAL PADS")} derecha=${html`<span class="mono mut">${xbox + ds4} / ${tope}</span>`}/>
+    <div class="ayuda" style="margin-bottom:6px">${xbox + ds4 > 8
+      ? html`${t(`Son los mandos que ve PES (hasta ${tope}). `, `Pads PES sees (up to ${tope}). `)}<b class="warn">${t("Del 9 en adelante es EXPERIMENTAL: PES solo los usa con el módulo de mandos extra de Sider y con «Orden de mandos en PES» encendido.", "From 9 on it's EXPERIMENTAL: PES only uses them with Sider's extra pads module and «Pad order in PES» on.")}</b>`
+      : t(`Son los mandos que ve PES. 8 es lo normal (con 4 por equipo alcanza para un 4 vs 4); puedes subir hasta ${tope}: del 9 en adelante es experimental.`, `Pads PES sees. 8 is normal; you can go up to ${tope}: from 9 on it's experimental.`)}</div>
     <${Ajuste} titulo="Xbox (XInput)" desc=${t("Los más compatibles con PES.", "Most compatible with PES.")}>
-      <${Stepper} valor=${xbox} min=${0} max=${8 - ds4} deshabilitado=${m.mandos.esclavo} al=${(v) => cantidad(v, ds4)}/></${Ajuste}>
+      <${Stepper} valor=${xbox} min=${0} max=${tope - ds4} deshabilitado=${m.mandos.esclavo} al=${(v) => cantidad(v, ds4)}/></${Ajuste}>
     <${Ajuste} titulo="DualShock 4" desc=${t("Para juegos que solo aceptan PlayStation.", "For games that only accept PlayStation pads.")}>
-      <${Stepper} valor=${ds4} min=${0} max=${8 - xbox} deshabilitado=${m.mandos.esclavo} al=${(v) => cantidad(xbox, v)}/></${Ajuste}>
+      <${Stepper} valor=${ds4} min=${0} max=${tope - xbox} deshabilitado=${m.mandos.esclavo} al=${(v) => cantidad(xbox, v)}/></${Ajuste}>
   </${Tarjeta}>`;
 }
 
