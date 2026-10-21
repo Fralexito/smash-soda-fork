@@ -17,7 +17,7 @@ namespace phoenix {
 	/// Versión propia de Phoenix (independiente de la versión del autor).
 	/// REGLA (Fralex, 2026-10-11): subirla en CADA cambio de Link (0.2.0 → 0.2.1 → …), para saber
 	/// a simple vista si el .exe abierto ya trae el cambio. La UI muestra además la hora de compilación.
-	inline constexpr const char* kVersion = "0.3.45";
+	inline constexpr const char* kVersion = "0.3.46";
 
 	/// Caducidad de la beta privada (AAAA-MM-DD; "" = no caduca). Pasada esa fecha Link no abre y pide la versión nueva
 	/// (ver PhoenixBeta.h). El PC del desarrollador queda exento con un archivo marca (ver esDueno en PhoenixBeta.h).

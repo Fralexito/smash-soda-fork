@@ -147,7 +147,10 @@ namespace phoenix::web {
 			return barra == std::wstring::npos ? std::wstring(L".") : r.substr(0, barra);
 		}
 
-		std::wstring carpetaDatosWebView() {
+		// 2026-10-21 (0.3.46): «reserva» = carpeta aparte. Si se abre Link justo después de cerrar otro, el motor web anterior
+		// puede seguir ocupando la carpeta normal y WebView2 se queda esperando más de un minuto sin arrancar (medido: 60–100 s,
+		// también con la 0.3.40). Con otra carpeta arranca al momento; se pierde solo el localStorage de la página (cosas menores).
+		std::wstring carpetaDatosWebView(bool reserva = false) {
 			PWSTR local = nullptr;
 			std::wstring r;
 			if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_LocalAppData, 0, nullptr, &local)) && local != nullptr) {
@@ -155,17 +158,17 @@ namespace phoenix::web {
 			}
 			if (local != nullptr) CoTaskMemFree(local);
 			if (r.empty()) r = carpetaExe() + L"\\datos-webview2";
-			return r;
+			return reserva ? r + L"-reserva" : r;
 		}
 
-		void crearVista(Interno& in) {
+		void crearVista(Interno& in, bool reserva = false) {
 			in.anfitrion = std::make_unique<AnfitrionWeb>();
 			in.anfitrion->alMensaje([&in](const std::string& texto) {
 				if (in.puente) in.puente->recibir(texto);
 			});
 			if (in.puente) in.puente->reiniciar();
 			in.creadaEn = ahoraSeg();
-			in.anfitrion->iniciar(in.ctx.ventana, carpetaExe() + L"\\ui", carpetaDatosWebView(), Config::cfg.general.devMode);
+			in.anfitrion->iniciar(in.ctx.ventana, carpetaExe() + L"\\ui", carpetaDatosWebView(reserva), Config::cfg.general.devMode);
 		}
 
 		void destruirVista(Interno& in) {
@@ -267,6 +270,14 @@ namespace phoenix::web {
 			AnfitrionWeb& a = *in.anfitrion;
 			EstadoAnfitrion est = a.estado();
 
+			// Motor web atascado sin arrancar (sigue en «Creando» a los 10 s): otro Link recién cerrado aún ocupa su carpeta.
+			// Se reintenta enseguida con la carpeta de reserva en vez de esperar al vigilante de 30 s.
+			if (est == EstadoAnfitrion::Creando && a.segundosDesdeInicio() > 10.0 && gReintentosAuto < 2) {
+				gReintentosAuto++;
+				destruirVista(in);
+				crearVista(in, true);
+				return;
+			}
 			// Vigilante: si en 30 s no cargó, se da por fallida (la app sigue con ImGui).
 			if ((est == EstadoAnfitrion::Creando || est == EstadoAnfitrion::Cargando || est == EstadoAnfitrion::Listo) && a.segundosDesdeInicio() > 30.0
 				&& !(in.puente && in.puente->listo())) {

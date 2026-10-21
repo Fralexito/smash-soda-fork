@@ -66,3 +66,20 @@ Lo normal es no tocar los ajustes.
 - Que Fralex vincule la cuenta con el exe 0.3.45 (punto 2).
 - Seguir con el «modo sencillo» (Jugar, Ser anfitrión, Mi cuenta): la pestaña AVANZADO de Sync y el resto de menús.
 - Los capítulos del libro personal de mandos 9+ (`cap_60_j/k/l`, `cap_62`, `00_BITACORA_VIVA`) no se copiaron al repo público. Falta que Fralex diga si quiere publicarlos.
+
+## 6. Link se quedaba en la pantalla de carga (arreglo 0.3.46)
+
+**Qué pasaba (21-oct, 15:39).** Fralex abrió Link 0.3.45 y no pasaba de la pantalla de carga. La duda era si algo se había corrompido.
+
+**Qué se comprobó, paso a paso.**
+1. Los archivos de la interfaz junto al exe (`x64\Release\ui\`) son idénticos al código (`diff -rq`): nada corrupto.
+2. Se abrió Link con `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=93xx` para mirar la página por DevTools (protocolo CDP, `http://127.0.0.1:93xx/json/list`).
+3. Arranque limpio: la página carga en 4–8 s con 4 o con 16 mandos virtuales (se descartaron los 16 mandos como causa, cambiando `xboxPuppetCount` en `config.json` con copia y volviéndolo a 16).
+4. **Abrir Link justo después de cerrar otro**: WebView2 no llega a lanzar su proceso durante 60–100 s o más (ni con la 0.3.40, así que no lo causó ningún cambio reciente). El motor web del Link anterior aún ocupa su carpeta (`%LOCALAPPDATA%\PhoenixLink\WebView2`), y a veces quedan procesos `msedgewebview2.exe` muertos pero listados (los retiene otro programa, p. ej. Process Lasso).
+5. Intento fallido: matar los restos con `taskkill /F` o `Stop-Process`. Quedan como procesos ya terminados que no se pueden cerrar y la espera sigue.
+
+**Arreglo** (`SmashSoda/phoenix/web/InterfazWeb.cpp`): si el motor web sigue en «Creando» a los 10 s, Link lo cierra y reintenta con una carpeta de reserva (`WebView2-reserva`), hasta dos veces. Luego sigue valiendo el vigilante de 30 s. Solo se pierde el localStorage de la página, que guarda cosas menores como si «Mandos en vivo» está plegado.
+
+**Resultado medido.** Antes, al reabrir enseguida: 60–100 s o nunca. Con 0.3.46: carga en 19 s, y en arranque normal en 4–11 s.
+
+**A tener en cuenta.** Si alguna vez vuelve a quedarse cargando, espera un minuto con Link cerrado y ábrelo otra vez. Para depurar la página real usa el truco del punto 2.
