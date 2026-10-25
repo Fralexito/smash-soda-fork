@@ -21,7 +21,7 @@
 --  Desinstalar = quitar la línea (o poner ; delante). En sider.log debe salir «[sonda] v1.0 listo».
 -- =============================================================================
 
-local m = { version = "1.0" }
+local m = { version = "1.0.1" }
 
 local CADA_SEG   = 1.0
 local MAX_EVENTOS = 40
@@ -70,7 +70,6 @@ local function json(v, prof)
         if tx ~= "function" then claves[#claves + 1] = tostring(k) end
         if #claves >= 80 then break end
     end
-    table.sort(claves)
     local partes = {}
     for _, k in ipairs(claves) do
         local x = v[k]
@@ -111,14 +110,15 @@ local function prepararLector()
     if RPM then return true end
     if not ffi then return false end
     -- nombres propios (phxs1_*) para no chocar con otros módulos (ffi.cdef no deja redeclarar).
-    -- Tras Shift+R el módulo nuevo vive en el MISMO Lua: la marca global evita declararlos dos veces.
-    if not rawget(_G, "__phxs1_cdef") then
+    -- Tras Shift+R el módulo nuevo vive en el MISMO Lua: la marca en la tabla ffi (compartida) evita
+    -- declararlos dos veces. (La v1.0 usaba rawget, que el Lua de Sider NO trae: probado el 25-oct.)
+    if not ffi.__phxs1_cdef then
         ffi.cdef[[
             int   phxs1_RPM(void* p, const void* desde, void* hacia, size_t n, size_t* leidos) __asm__("ReadProcessMemory");
             void* phxs1_GCP(void) __asm__("GetCurrentProcess");
             void* phxs1_GMH(const char* nombre) __asm__("GetModuleHandleA");
         ]]
-        rawset(_G, "__phxs1_cdef", true)
+        ffi.__phxs1_cdef = true
     end
     RPM, PROC = ffi.C.phxs1_RPM, ffi.C.phxs1_GCP()
     BASE = tonumber(ffi.cast("uint64_t", ffi.C.phxs1_GMH(nil)))
