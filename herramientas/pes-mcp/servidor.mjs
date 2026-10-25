@@ -183,7 +183,7 @@ const TOOLS = [
       if (!/^[\s0-9a-fA-FxX+\-\[\]exEX]+$/.test(direccion)) throw new Error('Dirección con caracteres no válidos.');
       const r = await ayudante('leer', ['-Expr', direccion, '-N', String(Math.round(bytes))]);
       if (!r.ok) return texto(r);
-      return texto(`dir ${r.dir} (exe+${r.rva}) · ${r.n} bytes · ${formato}\n` + (formato === 'hex' ? interpretar(r.hex, 'hex') : JSON.stringify(interpretar(r.hex, formato))));
+      return texto(`dir ${r.dir} (${r.rva.startsWith('0x') ? 'exe+' + r.rva : r.rva}) · ${r.n} bytes · ${formato}\n` + (formato === 'hex' ? interpretar(r.hex, 'hex') : JSON.stringify(interpretar(r.hex, formato))));
     },
   },
   {

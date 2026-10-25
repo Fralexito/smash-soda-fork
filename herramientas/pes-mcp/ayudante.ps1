@@ -30,6 +30,7 @@ public static class PhxPes {
   [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
   [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int c);
   [DllImport("user32.dll")] public static extern bool PrintWindow(IntPtr h, IntPtr dc, uint f);
+  [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr h);
   [StructLayout(LayoutKind.Sequential)] public struct KI { public ushort wVk, wScan; public uint dwFlags, time; public IntPtr extra; }
   [StructLayout(LayoutKind.Sequential)] public struct INP { public uint type; public KI ki; public uint pad1, pad2; }
   [DllImport("user32.dll")] static extern uint SendInput(uint n, INP[] i, int size);
@@ -117,17 +118,24 @@ switch ($Accion) {
         $dir = [PhxPes]::Resolver($Expr)
         $b = [PhxPes]::Leer($dir, $N)
         if ($null -eq $b) { Json @{ ok = $false; dir = ('0x{0:X}' -f $dir); motivo = 'zona ilegible (no existe o está protegida)' }; break }
-        Json @{ ok = $true; dir = ('0x{0:X}' -f $dir); rva = ('0x{0:X}' -f ($dir - [PhxPes]::Base())); n = $N; hex = ([BitConverter]::ToString($b).Replace('-', '')) }
+        Json @{ ok = $true; dir = ('0x{0:X}' -f $dir); rva = $(if ($dir -ge [PhxPes]::Base() -and $dir -lt [PhxPes]::Base() + 0x10000000) { '0x{0:X}' -f ($dir - [PhxPes]::Base()) } else { 'fuera del exe' }); n = $N; hex = ([BitConverter]::ToString($b).Replace('-', '')) }
     }
     'captura' {
         if (-not $pes -or $pes.MainWindowHandle -eq [IntPtr]::Zero) { throw 'PES2021 no tiene ventana.' }
         $h = $pes.MainWindowHandle
+        if ([PhxPes]::IsIconic($h)) { throw 'La ventana de PES está minimizada: no se puede fotografiar sin restaurarla (eso lo decide la persona).' }
         $r = New-Object PhxPes+R; [void][PhxPes]::GetWindowRect($h, [ref]$r)
         $w = $r.Rr - $r.L; $al = $r.B - $r.T
-        if ($w -le 0 -or $al -le 0) { throw 'La ventana de PES está minimizada.' }
+        if ($w -lt 320 -or $al -lt 200) { throw "La ventana de PES mide ${w}x${al}: está minimizada o escondida." }
         $bmp = New-Object System.Drawing.Bitmap $w, $al
         $g = [System.Drawing.Graphics]::FromImage($bmp); $dc = $g.GetHdc()
-        [void][PhxPes]::PrintWindow($h, $dc, 2); $g.ReleaseHdc($dc); $g.Dispose()
+        [void][PhxPes]::PrintWindow($h, $dc, 2); $g.ReleaseHdc($dc)
+        # Con DirectX, PrintWindow a veces devuelve la imagen en negro: entonces se copia ese rectángulo de la pantalla.
+        $negro = $true
+        foreach ($f in 0.25, 0.5, 0.75) { $px = $bmp.GetPixel([int]($w * $f), [int]($al * $f)); if ($px.R + $px.G + $px.B -gt 30) { $negro = $false } }
+        $metodo = 'PrintWindow'
+        if ($negro) { $g.CopyFromScreen($r.L, $r.T, 0, 0, $bmp.Size); $metodo = 'pantalla' }
+        $g.Dispose()
         if ($Ancho -gt 0 -and $w -gt $Ancho) {
             $alto2 = [int]($al * $Ancho / $w)
             $chica = New-Object System.Drawing.Bitmap $Ancho, $alto2
@@ -136,7 +144,7 @@ switch ($Accion) {
             $g2.DrawImage($bmp, 0, 0, $Ancho, $alto2); $g2.Dispose(); $bmp.Dispose(); $bmp = $chica
         }
         $bmp.Save($Salida, [System.Drawing.Imaging.ImageFormat]::Png)
-        Json @{ ok = $true; ancho = $bmp.Width; alto = $bmp.Height; archivo = $Salida }
+        Json @{ ok = $true; ancho = $bmp.Width; alto = $bmp.Height; archivo = $Salida; metodo = $metodo }
         $bmp.Dispose()
     }
     'tecla' {
