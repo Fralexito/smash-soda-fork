@@ -34,9 +34,7 @@ Es un paquete **suelto y opcional**: funciona en un PES 2021 limpio con Sider 7.
 ## Instalar (una vez, con PES cerrado)
 1. Copiar la carpeta `pes-mcp` a `D:\Frank\IA\CLAUDE\pes-mcp`.
 2. Copiar `sider\phoenix_sonda.lua` a `D:\Frank\Games_\Conmegol Patch\SiderAddons\modules\` (y a la carpeta del modo de ConmeGOL que copia el switcher, igual que `phoenix_referee.lua`).
-3. En `sider.ini`, guardar una copia y añadir debajo de `lua.module = "phoenix_mandos_fase1.lua"`:
-   `lua.module = "phoenix_sonda.lua"`
-   (Según la regla de Link, `sider.ini` solo lo toca el instalador. Hasta que Link lo incluya en «Módulos del juego», este paso lo haces tú a mano o con permiso.)
+3. En `sider.ini` debe quedar `lua.module = "phoenix_sonda.lua"` **antes** de `lua.module = "phoenix_mandos_fase1.lua"`, porque el de mandos 9–16 tiene que ser siempre el último. Desde Link 0.3.51 lo pone el instalador («Módulos del juego»), con PES cerrado. A mano solo si no tienes Link: guarda antes una copia de `sider.ini`.
 4. Registrar el MCP en Claude Code (PowerShell):
    `claude mcp add phoenix-pes -s user -- node D:\Frank\IA\CLAUDE\pes-mcp\servidor.mjs`
 5. Comprobar sin Claude: `node D:\Frank\IA\CLAUDE\pes-mcp\servidor.mjs --prueba` (lista las herramientas y el estado).
