@@ -171,7 +171,7 @@ const TOOLS = [
       const png = join(dir, 'pes.png');
       try {
         const r = await ayudante('captura', ['-Salida', png, '-Ancho', String(Math.round(ancho))]);
-        return { content: [{ type: 'image', data: readFileSync(png).toString('base64'), mimeType: 'image/png' }, { type: 'text', text: `${r.ancho}x${r.alto}` }] };
+        return { content: [{ type: 'image', data: readFileSync(png).toString('base64'), mimeType: 'image/png' }, { type: 'text', text: `${r.ancho}x${r.alto} · ${r.metodo}${r.aviso ? ' · ' + r.aviso : ''}` }] };
       } finally { rmSync(dir, { recursive: true, force: true }); }
     },
   },
