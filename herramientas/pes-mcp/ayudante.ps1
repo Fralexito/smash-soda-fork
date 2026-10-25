@@ -141,12 +141,15 @@ switch ($Accion) {
         if ($w -lt 320 -or $al -lt 200) { throw "La ventana de PES mide ${w}x${al}: está minimizada o escondida." }
         $bmp = New-Object System.Drawing.Bitmap $w, $al
         $g = [System.Drawing.Graphics]::FromImage($bmp); $dc = $g.GetHdc()
-        [void][PhxPes]::PrintWindow($h, $dc, 2); $g.ReleaseHdc($dc)
-        # Con DirectX, PrintWindow a veces devuelve la imagen en negro: entonces se copia ese rectángulo de la pantalla.
-        $negro = $true
-        foreach ($f in 0.25, 0.5, 0.75) { $px = $bmp.GetPixel([int]($w * $f), [int]($al * $f)); if ($px.R + $px.G + $px.B -gt 30) { $negro = $false } }
-        $metodo = 'PrintWindow'
-        if ($negro) { $g.CopyFromScreen($r.L, $r.T, 0, 0, $bmp.Size); $metodo = 'pantalla' }
+        # Con DirectX, PrintWindow devuelve una imagen VIEJA o negra (probado el 25-oct: la selección del menú se movía
+        # y la foto no). Si PES está al frente se copia ese rectángulo de la pantalla, que sí es lo que se ve ahora.
+        $aviso = $null
+        if ([PhxPes]::GetForegroundWindow() -eq $h) {
+            $g.ReleaseHdc($dc); $g.CopyFromScreen($r.L, $r.T, 0, 0, $bmp.Size); $metodo = 'pantalla'
+        } else {
+            [void][PhxPes]::PrintWindow($h, $dc, 2); $g.ReleaseHdc($dc); $metodo = 'PrintWindow'
+            $aviso = 'PES no está al frente: la imagen puede ser vieja. Con las acciones encendidas, una tecla inofensiva lo trae al frente.'
+        }
         $g.Dispose()
         if ($Ancho -gt 0 -and $w -gt $Ancho) {
             $alto2 = [int]($al * $Ancho / $w)
@@ -156,7 +159,7 @@ switch ($Accion) {
             $g2.DrawImage($bmp, 0, 0, $Ancho, $alto2); $g2.Dispose(); $bmp.Dispose(); $bmp = $chica
         }
         $bmp.Save($Salida, [System.Drawing.Imaging.ImageFormat]::Png)
-        Json @{ ok = $true; ancho = $bmp.Width; alto = $bmp.Height; archivo = $Salida; metodo = $metodo }
+        Json @{ ok = $true; ancho = $bmp.Width; alto = $bmp.Height; archivo = $Salida; metodo = $metodo; aviso = $aviso }
         $bmp.Dispose()
     }
     'tecla' {
