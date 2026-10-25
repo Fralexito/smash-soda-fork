@@ -1267,7 +1267,7 @@ Para volver a lo de siempre: Puestos máximos = 8 (Link quita los mandos que sob
 **Paso a paso para replicarlo (en el PC de Fralex):**
 1. Cerrar PES. 2. Descomprimir el zip (o copiar `paquetes/phoenix_mandos_9a16/` de este repo y traer los `.raw` de la PC). 3. Ejecutar `INSTALAR.ps1 -Sider "D:\Frank\Games_\Conmegol Patch\SiderAddons"`. 4. En `sider.ini`: `luajit.ext.enabled=1`, `overlay.enabled=1`, `cpk.root=".\livecpk\PhoenixMandos"` como primera carpeta y `lua.module="phoenix_mandos_fase1.lua"` como último módulo. 5. Abrir PES; comprobar que `SiderAddons\content\phoenix\mandos\fase1.txt` empieza con `# fase1 v0.9.58`.
 
-**Integrar en Link (pendiente, solo cuando el coordinador avise):** copiar `modules\phoenix_mandos_fase1.lua`, `content\phoenix\lados_replica\` y `livecpk\PhoenixMandos\` y poner lo de `sider.ini` de arriba. Link solo toca `sider.ini` con su instalador y con PES cerrado.
+**Integrar en Link — HECHO en Link 0.3.48 (25-oct-2026, ver abajo).** Plan original: copiar `modules\phoenix_mandos_fase1.lua`, `content\phoenix\lados_replica\` y `livecpk\PhoenixMandos\` y poner lo de `sider.ini` de arriba. Link solo toca `sider.ini` con su instalador y con PES cerrado.
 
 **Errores e intentos fallidos (resumen; la historia con direcciones está en `docs/libro-pes/cap_60_k_estrategia_mas_mandos.md` y `cap_60_n_diseno_16_asientos.md`):**
 - 20–21-oct: el jugador del 9+ existía pero no respondía; inyectar «usuario 7» y copiar ajustes de cursor no lo movió (deshecho; el frente se cerró a v0.9.14).
@@ -1280,3 +1280,28 @@ Para volver a lo de siempre: Puestos máximos = 8 (Link quita los mandos que sob
 **Lo que falta:** la **pantalla de Local/Visitante nativa de 16 filas** dentro de PES (hoy es una réplica encima de la de PES). Es lo siguiente (mañana 26-oct); diseño en `cap_60_n_diseno_16_asientos.md`. Candado: lo lleva la Cuenta 1 con acceso a la PC (ver `TRASPASO.md` de la web).
 
 **Cómo comprobar y revertir:** comprobar con la línea de `fase1.txt` y jugando un partido con el mando 16 (pausa › Local/Visitante › ○; barra al cargar un tiro). Revertir: devolver `sider.ini.antes-phoenix-mandos-FECHA` como `sider.ini` o quitar las dos líneas del módulo y de `cpk.root`.
+
+### 13.1 · Integrado en Phoenix Link 0.3.48 (opcional, 25-oct-2026)
+
+**Qué se logró.** El módulo de mandos 9–16 v0.9.58 se instala desde Link como un módulo más, sin dejar de existir el paquete suelto (`paquetes/phoenix_mandos_9a16/`).
+
+**Dónde se ve.** SYNC › AVANZADO › ARCHIVOS DE PHOENIX EN EL JUEGO › REVISAR → `phoenix_mandos_fase1.lua` (marcado EXPERIMENTAL), con INSTALAR / APAGAR / DESINSTALAR como los demás. Siempre con PES cerrado.
+
+**Qué hace INSTALAR (en la raíz del juego y en cada modo del cambiador), en este orden y sin tocar nada si algo falla antes de escribir:**
+1. Copia `livecpk\PhoenixMandos\common\script\flow\Match\MatchPrePause.json` y `content\phoenix\lados_replica\*` (solo archivos nuevos o distintos; no borra nada).
+2. Copia `modules\phoenix_mandos_fase1.lua` (si había otra versión, la guarda como `.lua.antes-v…`) y comprueba el sha256.
+3. En `sider.ini`, con copia `sider.ini.phoenix-AAAAMMDD-HHMMSS`: `luajit.ext.enabled = 1`, `overlay.enabled = 1`, `cpk.root = ".\livecpk\PhoenixMandos"` justo antes de la primera raíz activa, y `lua.module = "phoenix_mandos_fase1.lua"` como el último módulo.
+4. Si después se instala otro módulo de Phoenix (referee, phoenix.lua…), la línea de mandos se vuelve a mover al final: la regla «el último» se mantiene sola.
+
+**DESINSTALAR** quita su `lua.module` y la raíz PhoenixMandos (con copia de `sider.ini`) y renombra el `.lua` a `.desinstalado-<fecha>`. No toca `luajit.ext.enabled` ni `overlay.enabled` (otros mods pueden usarlos).
+
+**Estado.** Sale «instalado» solo si en todos los destinos están el `.lua` idéntico, su línea activa y la raíz PhoenixMandos; si falta la raíz, «a medias».
+
+**Código.** `SmashSoda/phoenix/link/ModulosJuego.cpp` (`prepararIniMandos`, `moverModuloAlFinal`, `quitarRaizMandos`, `tieneRaizMandos`, `copiarCarpetaMandos`). El paquete vive en `SmashSoda/phoenix/sider/phoenix_mandos_fase1.lua` y `SmashSoda/phoenix/sider/phoenix_mandos/` (CMake lo copia a `x64\Release\sider\`).
+
+**A tener en cuenta.** Los `.raw` de la réplica (≈9 MB) **no van a git** (`.gitignore`); en otro PC hay que traerlos del zip `D:\Frank\Games_\PRUEBA_CANCHA\paquetes\phoenix_mandos_9a16_v0.9.58.zip` a `SmashSoda/phoenix/sider/phoenix_mandos/content/phoenix/lados_replica/` antes de compilar. Sin ellos se instala igual el resto. La pantalla nativa de 16 filas de Local/Visitante (experimento del hilo 4) no está incluida.
+
+**Cómo se probó.** `pruebas-link\correr_modulos.bat`: caso nuevo «mandos 9-16 en sider.ini» (luajit/overlay a 1, raíz la primera, módulo el último, segunda vez sin cambios, desinstalar quita la raíz) + las pruebas de siempre: TODO OK. Link 0.3.48 compilado con cmake sin errores y abre en 6 s. **Falta:** instalarlo desde Link en el PES de Fralex y jugar con el mando 16.
+
+**Cómo revertir.** DESINSTALAR en Link, o devolver la copia `sider.ini.phoenix-<fecha>` como `sider.ini`.
+

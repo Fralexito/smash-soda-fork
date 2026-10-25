@@ -106,6 +106,15 @@ std::string activarRaizPhoenixDBSiempre(const std::string& ini, const std::funct
 /// sider.ini.phoenix-<sello> y vuelta atrás si algo falla). El que llama comprueba que PES está cerrado.
 Resultado asegurarRaizPhoenixDB(const std::vector<fs::path>& carpetasSider);
 
+/// Mandos 9–16 (phoenix_mandos_fase1.lua): luajit.ext.enabled = 1, overlay.enabled = 1, cpk.root PhoenixMandos la primera
+/// y su lua.module el último. `cambio` = false si ya estaba todo.
+std::string prepararIniMandos(const std::string& ini, bool& cambio);
+/// Pone la línea lua.module activa de `archivo` detrás de todas las demás (si no lo estaba ya).
+std::string moverModuloAlFinal(const std::string& ini, const std::string& archivo, bool& cambio);
+/// Quita la cpk.root de PhoenixMandos (activa o comentada) / ¿está activa?
+std::string quitarRaizMandos(const std::string& ini, bool& cambio);
+bool tieneRaizMandos(const std::string& ini);
+
 /// Versión declarada en el .lua (`version = "x"`) o "".
 std::string versionDe(const std::string& lua);
 

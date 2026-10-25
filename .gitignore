@@ -401,3 +401,6 @@ colorpicker.html
 
 # Nombre secreto del archivo marca de la beta (solo en el PC del dueno)
 SmashSoda/phoenix/PhoenixBetaSello.h
+
+# Réplica de Local/Visitante del módulo de mandos 9–16 (≈9 MB, se genera con modulo_sider\herramientas\generar_replica_lados.ps1)
+SmashSoda/phoenix/sider/phoenix_mandos/content/phoenix/lados_replica/*.raw

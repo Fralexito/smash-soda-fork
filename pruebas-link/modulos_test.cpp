@@ -22,6 +22,28 @@ static void escribir(const fs::path& p, const std::string& t) { std::ofstream f(
 static int contar(const std::string& s, const std::string& sub) { int n = 0; for (size_t i = s.find(sub); i != std::string::npos; i = s.find(sub, i + 1)) n++; return n; }
 
 int main(int argc, char** argv) {
+	// ── 0) Mandos 9–16 (0.3.47): luajit/overlay a 1, cpk.root PhoenixMandos la primera, su módulo el último ──
+	{
+		const std::string ini = "[sider]\nluajit.ext.enabled = 0\n;overlay.enabled = 1\ncpk.root = \".\\livecpk\\Faces\"\ncpk.root = \".\\olmosjr23\\Database\"\n"
+			"lua.module = \"a.lua\"\nlua.module = \"phoenix_mandos_fase1.lua\"\nlua.module = \"phoenix.lua\"\n";
+		bool c = false;
+		const std::string m = prepararIniMandos(ini, c);
+		OK(c);
+		OK(contar(m, "luajit.ext.enabled = 1") == 1 && contar(m, "luajit.ext.enabled = 0") == 0);
+		OK(contar(m, "overlay.enabled = 1") == 2);   // la comentada se queda y se añade la activa
+		OK(m.find("cpk.root = \".\\livecpk\\PhoenixMandos\"\ncpk.root = \".\\livecpk\\Faces\"") != std::string::npos);
+		OK(m.find("lua.module = \"phoenix.lua\"\nlua.module = \"phoenix_mandos_fase1.lua\"") != std::string::npos);
+		OK(tieneRaizMandos(m));
+		bool c2 = false;
+		const std::string m2 = prepararIniMandos(m, c2);   // segunda vez: nada cambia
+		OK(!c2 && m2 == m);
+		bool c3 = false;
+		const std::string q = quitarRaizMandos(m, c3);
+		OK(c3 && !tieneRaizMandos(q) && contar(q, "PhoenixMandos") == 0);
+		bool c4 = false;   // ya es el último: no se mueve
+		OK(moverModuloAlFinal(m, "phoenix_mandos_fase1.lua", c4) == m && !c4);
+		std::cout << "mandos 9-16 en sider.ini: ok\n";
+	}
 	// ── 1) Lógica pura ──
 	{
 		const std::string ini = "\xEF\xBB\xBF[sider]\r\nlua.module = \"a.lua\"\r\n;lua.module = \"viejo.lua\"\r\nlua.module = \"phoenix.lua\"\r\n\r\noverlay.enabled = 1\r\n";

@@ -1176,3 +1176,21 @@ de los fichajes. Las rutas de Phoenix Sync para grupos y foto oficial quedan **d
 Cuando termines cada punto, deja en `docs/` de la web qué ruta/campo quedó y su forma exacta, para que el chat LINK lo conecte.
 
 ---
+
+## Parte 14 · Torneos premium/oficiales y goles de los duelos: conectados en Link 0.3.47 (25-oct-2026)
+
+**Pedido.** Fralex: «Corrige todo» y «actualízalo hasta lo último». La web ya tenía en línea (TRASPASO del 25-oct, migraciones 145 y 148) `GET /torneos/v1/torneos/partidos`, `POST /torneos/v1/torneos/resultado` y `POST /goles/v1/goles/duelo`. Contratos: `docs/web-pes-link/CONTRATO-TORNEOS-LINK.md` y `CONTRATO-GOLES-LINK.md` del repo de la web.
+
+**Revisión del resto de la web (19-oct → beta 1.31.1).** Ninguna ruta que Link ya usaba cambió de formato, de errores ni de versión mínima. Lo nuevo para Link eran solo esas tres rutas. Además: la liga de ida y vuelta (migración 142) puede dar más de 60 partidos, así que el tope de Link sube a 200.
+
+**Qué hace Link ahora.**
+1. **Torneos.** En PARTIDO, la tarjeta «TORNEO» lista los cruces por jugar de los torneos premium u oficiales (primero «Tus partidos»). Al elegir uno, se suelta el partido de liga (es uno u otro). Al final del partido, con el juego en «final» y completo, Link manda `goles_a`/`goles_b` del lado «a» y «b» **del cruce**: mira los Parsec que cada jugador declaró en la web y, si el Equipo A de Link coincide con el lado «b», los da la vuelta. También manda penales (`pk_a`/`pk_b`) y los nombres de los equipos del juego. Contra la máquina no se manda.
+2. **Duelos.** En PARTIDO › «DUELO DE LA WEB» el anfitrión escribe el número del duelo (sale en la página del duelo) y pulsa LIGAR SALA. Link vuelve a abrir la sala en la web con `reto_id` (la web lo exige: si la sala no se abrió con ese duelo en las últimas 12 h, responde `DUELO_NO_ES_DE_ESTA_SALA`). Si la web contesta `RETO_NO_VALIDO`, Link suelta el duelo y avisa. Al final manda los goles con goleador y minuto; el lado A es el retador según los roles del reto que manda la web; los autogoles van como `en_contra`. Los goles sin nombre (Sider 7.3.3) no se mandan.
+3. **Colas en disco.** Como la liga: `%APPDATA%\Trybuchet\Smash Soda\phoenix-torneos-colas.json`. Reintenta solo con errores de red, 5xx (incluidas las pausas `TORNEOS_PAUSADOS` / `GOLES_PAUSADOS`) y 429 (espera `reintentar_en`); lo demás se descarta y se avisa en la tarjeta.
+
+**Código.** `link/PhoenixLink.cpp` (`pasoTorneos`, `torneoResultado`, `dueloGoles`, `fijarDuelo`; `reto_id` en `pasoAbrir` y en la firma de la sala; lados del reto en `aplicarRoles`), `web/Arbitro.cpp` (envío al final: `torneoLadosCambiados`, `golesDuelo`), `web/AccionesPartidoWeb.cpp` (`partido.torneo`, `partido.torneos`, `partido.duelo`), `web/EstadoWeb.cpp` y `ui/js/vistas/partido.js` (`TorneoYDuelo`). El simulador también lo trae.
+
+**Cómo se probó.** Las tres rutas responden `401 TOKEN_FALTANTE` sin token (están desplegadas). La tarjeta funciona en el simulador: elegir el cruce y ligar el duelo #123. Compilado con cmake sin errores; Link 0.3.47 abre en 7 s. **Falta la prueba de punta a punta con la cuenta vinculada:** crear un torneo de eliminación premium en la web, empezarlo, elegirlo en Link, jugarlo y ver «Link: 2 – 1 · por confirmar» en `/torneo/?id=N`.
+
+**A tener en cuenta.** Sin una ruta de la web que liste «mis duelos», el número se escribe a mano. Si la web la añade, la tarjeta puede ofrecer una lista como en torneos.
+

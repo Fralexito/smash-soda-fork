@@ -25,6 +25,7 @@ namespace {
 	const std::map<std::string, std::string> kDescripciones = {
 		{ "phoenix_referee.lua", "Phoenix Referee: marcador, goles con minuto y goleador, pantalla del juego para la web, HUD del partido y árbitro (solo lectura)." },
 		{ "phoenix_estadio.lua", "Versión anterior de Phoenix Referee: al instalar Phoenix Referee se apaga sola." },
+		{ "phoenix_mandos_fase1.lua", "Mandos 9–16 dentro de PES (EXPERIMENTAL, v0.9.58): hasta 16 mandos a la vez, con jugador, flecha, menús, Datos personales y barra de potencia. Instala también livecpk\PhoenixMandos (la primera raíz), la réplica de Local/Visitante y luajit/overlay en sider.ini; queda siempre el último módulo." },
 		{ "phoenix.lua", "Phoenix Sync: avisos de la web en el overlay, botón nativo «Datos Actual. en vivo» y modos de recarga de fichajes. Instala también la raíz Phoenix-DB y la carpeta de avisos." },
 	};
 
@@ -167,6 +168,135 @@ namespace {
 		std::string m = minus(ruta);
 		std::replace(m.begin(), m.end(), '/', '\\');
 		return m.size() >= 10 && m.compare(m.size() - 10, 10, "phoenix-db") == 0;
+	}
+
+	// ─── Mandos 9–16 (phoenix_mandos_fase1.lua, 0.3.47) ─────────────────────────────────────────────
+	//  Pide en sider.ini: luajit.ext.enabled = 1, overlay.enabled = 1, cpk.root = ".\livecpk\PhoenixMandos" como PRIMERA raíz
+	//  y su lua.module como el ÚLTIMO (docs/MANDOS.md, Parte 13). Trae además dos carpetas que se copian tal cual.
+	const char* kMandos = "phoenix_mandos_fase1.lua";
+	const char* kRaizMandos = ".\\livecpk\\PhoenixMandos";
+	bool esRaizMandos(const std::string& ruta) {
+		std::string m = minus(ruta);
+		std::replace(m.begin(), m.end(), '/', '\\');
+		return m.size() >= 13 && m.compare(m.size() - 13, 13, "phoenixmandos") == 0;
+	}
+	/// clave = valor (activa): pone «valor»; si solo está comentada o no está, añade la línea al principio.
+	bool fijarClave(std::vector<std::string>& v, const std::string& clave, const std::string& valor) {
+		auto esClave = [&](const std::string& l, bool& comentada) {
+			size_t i = 0;
+			if (l.compare(0, 3, "\xEF\xBB\xBF") == 0) i = 3;
+			while (i < l.size() && (l[i] == ' ' || l[i] == '\t')) i++;
+			comentada = false;
+			while (i < l.size() && (l[i] == ';' || l[i] == '#')) { comentada = true; i++; while (i < l.size() && (l[i] == ' ' || l[i] == '\t')) i++; }
+			if (l.compare(i, clave.size(), clave) != 0) return false;
+			size_t k = i + clave.size();
+			while (k < l.size() && (l[k] == ' ' || l[k] == '\t')) k++;
+			return k < l.size() && l[k] == '=';
+		};
+		const std::string nueva = clave + " = " + valor;
+		bool hay = false, cambio = false;
+		for (std::string& l : v) {
+			bool c = false;
+			if (!esClave(l, c) || c) continue;
+			hay = true;
+			const size_t eq = l.find('=');
+			std::string val = l.substr(eq + 1);
+			val.erase(0, val.find_first_not_of(" \t"));
+			val.erase(val.find_last_not_of(" \t") + 1);
+			if (val != valor) { l = nueva; cambio = true; }
+		}
+		if (!hay) { v.insert(v.begin(), nueva); cambio = true; }
+		return cambio;
+	}
+}
+
+std::string moverModuloAlFinal(const std::string& ini, const std::string& archivo, bool& cambio) {
+	cambio = false;
+	Lineas r = partir(ini);
+	const std::string buscado = minus(archivo);
+	int suya = -1, ultima = -1;
+	for (size_t i = 0; i < r.v.size(); i++) {
+		std::string a; bool c = false;
+		if (!lineaModulo(r.v[i], a, c) || c) continue;
+		if (minus(a) == buscado) { if (suya < 0) suya = static_cast<int>(i); }
+		else ultima = static_cast<int>(i);
+	}
+	if (suya < 0 || ultima < suya) return ini;   // no está activa o ya es la última
+	const std::string linea = r.v[static_cast<size_t>(suya)];
+	r.v.erase(r.v.begin() + suya);
+	r.v.insert(r.v.begin() + ultima, linea);   // «ultima» bajó una posición al borrar: queda justo después
+	cambio = true;
+	return unir(r);
+}
+
+std::string prepararIniMandos(const std::string& ini, bool& cambio) {
+	cambio = false;
+	Lineas r = partir(ini);
+	cambio |= fijarClave(r.v, "luajit.ext.enabled", "1");
+	cambio |= fijarClave(r.v, "overlay.enabled", "1");
+	// cpk.root de PhoenixMandos: la primera activa
+	int primera = -1, mia = -1;
+	std::vector<int> comentadas;
+	for (size_t i = 0; i < r.v.size(); i++) {
+		std::string ruta; bool c = false;
+		if (!lineaRaiz(r.v[i], ruta, c)) continue;
+		if (esRaizMandos(ruta)) { if (c) comentadas.push_back(static_cast<int>(i)); else if (mia < 0) mia = static_cast<int>(i); continue; }
+		if (!c && primera < 0) primera = static_cast<int>(i);
+	}
+	if (mia < 0 || (primera >= 0 && mia > primera)) {
+		std::vector<int> fuera = comentadas;
+		if (mia >= 0) fuera.push_back(mia);
+		std::sort(fuera.rbegin(), fuera.rend());
+		for (int k : fuera) { r.v.erase(r.v.begin() + k); if (primera > k) primera--; }
+		const std::string linea = std::string("cpk.root = \"") + kRaizMandos + "\"";
+		if (primera >= 0) r.v.insert(r.v.begin() + primera, linea);
+		else r.v.push_back(linea);
+		cambio = true;
+	}
+	// Su lua.module, el último
+	bool movido = false;
+	const std::string texto = unir(r);
+	const std::string conFinal = moverModuloAlFinal(texto, kMandos, movido);
+	if (movido) cambio = true;
+	return movido ? conFinal : texto;
+}
+
+std::string quitarRaizMandos(const std::string& ini, bool& cambio) {
+	cambio = false;
+	Lineas r = partir(ini);
+	for (size_t i = r.v.size(); i-- > 0;) {
+		std::string ruta; bool c = false;
+		if (lineaRaiz(r.v[i], ruta, c) && esRaizMandos(ruta)) { r.v.erase(r.v.begin() + static_cast<long long>(i)); cambio = true; }
+	}
+	return cambio ? unir(r) : ini;
+}
+
+bool tieneRaizMandos(const std::string& ini) {
+	for (const std::string& l : partir(ini).v) { std::string ruta; bool c = false; if (lineaRaiz(l, ruta, c) && !c && esRaizMandos(ruta)) return true; }
+	return false;
+}
+
+namespace {
+	/// Copia <paquete>\phoenix_mandos\<sub> dentro de SiderAddons (solo archivos nuevos o distintos; sin borrar nada).
+	bool copiarCarpetaMandos(const fs::path& paquete, const fs::path& sider, std::string& error) {
+		const fs::path base = paquete / "phoenix_mandos";
+		std::error_code ec;
+		if (!fs::is_directory(base, ec)) return true;   // sin extras en el paquete: solo el módulo
+		for (fs::recursive_directory_iterator it(base, ec), fin; !ec && it != fin; it.increment(ec)) {
+			std::error_code e2;
+			if (!it->is_regular_file(e2)) continue;
+			const fs::path rel = fs::relative(it->path(), base, e2);
+			if (e2 || rel.empty() || *rel.begin() == "..") continue;
+			const fs::path dst = sider / rel;
+			fs::create_directories(dst.parent_path(), e2);
+			std::error_code e3;
+			if (fs::exists(dst, e3) && fs::file_size(dst, e3) == fs::file_size(it->path(), e3)) {
+				std::string a, b;
+				if (leer(dst, a, 16ull * 1024 * 1024) && leer(it->path(), b, 16ull * 1024 * 1024) && a == b) continue;
+			}
+			if (!fs::copy_file(it->path(), dst, fs::copy_options::overwrite_existing, e2)) { error = "No se pudo copiar " + phoenix::entrega::aU8(rel); return false; }
+		}
+		return true;
 	}
 
 	bool nombreSeguro(const std::string& a) {
@@ -504,6 +634,9 @@ std::vector<Modulo> estado(const fs::path& paquete, const fs::path& juego) {
 		// Sin su raíz Phoenix-DB no está completo, salvo en un sider.ini sin base reconocida (ahí no debe ponerse)
 		if (a == "phoenix.lua" && m.gestionable && m.estado == "instalado")
 			for (const auto& d : ds) if (!inis.count(d.second) || (hayBaseParche(inis[d.second], tieneBaseEn(d.second)) && !tieneRaizPhoenixDB(inis[d.second]))) { m.estado = "a_medias"; break; }
+		// Mandos 9–16: sin su raíz PhoenixMandos no está completo
+		if (a == kMandos && m.gestionable && m.estado == "instalado")
+			for (const auto& d : ds) if (!inis.count(d.second) || !tieneRaizMandos(inis[d.second])) { m.estado = "a_medias"; break; }
 		if (!log.empty()) {
 			if (log.find("Module (" + a + ") is NOT activated") != std::string::npos) m.carga = "error";
 			else if (log.find("[" + a + "]") != std::string::npos) m.carga = "cargado";
@@ -575,6 +708,16 @@ Resultado instalar(const fs::path& paquete, const fs::path& juego, const std::st
 			const std::string sinViejo = quitarLineasModulo(nuevo, rz->second, cambioViejo);
 			if (cambioViejo) { nuevo = sinViejo; cambio = true; }
 		}
+		if (archivo == kMandos) {
+			bool cm = false;
+			const std::string m2 = prepararIniMandos(nuevo, cm);
+			if (cm) { nuevo = m2; cambio = true; }
+		}
+		else {   // otro módulo: el de mandos 9–16 debe seguir siendo el último
+			bool cm = false;
+			const std::string m2 = moverModuloAlFinal(nuevo, kMandos, cm);
+			if (cm) { nuevo = m2; cambio = true; }
+		}
 		if (archivo == "phoenix.lua") {
 			bool cambioRaiz = false;
 			const auto tieneBase = tieneBaseEn(d.second);
@@ -598,6 +741,14 @@ Resultado instalar(const fs::path& paquete, const fs::path& juego, const std::st
 			if (std::find(conBase.begin(), conBase.end(), d.second) == conBase.end()) continue;   // sin base: no se crea Phoenix-DB
 			fs::create_directories(d.second / "livecpk" / "Phoenix-DB" / "common" / "etc" / "pesdb", ec);
 			if (ec) { r.mensaje = "No se pudo crear livecpk\\Phoenix-DB en " + d.first + "."; return r; }
+		}
+	}
+
+	// 1c) Mandos 9–16: livecpk\PhoenixMandos y la réplica de Local/Visitante (content\phoenix\lados_replica)
+	if (archivo == kMandos) {
+		for (const auto& d : ds) {
+			std::string error;
+			if (!copiarCarpetaMandos(paquete, d.second, error)) { r.mensaje = error + " en " + d.first + ": no se tocó sider.ini."; return r; }
 		}
 	}
 
@@ -689,6 +840,7 @@ Resultado desinstalar(const fs::path& paquete, const fs::path& juego, const std:
 		bool c1 = false, c2 = false;
 		std::string nuevo = quitarLineasModulo(ini, archivo, c1);
 		if (archivo == "phoenix.lua") nuevo = quitarRaizPhoenixDB(nuevo, c2);
+		if (archivo == kMandos) nuevo = quitarRaizMandos(nuevo, c2);   // luajit/overlay se dejan como estén (otros mods pueden usarlos)
 		if (c1 || c2) inisNuevos.push_back({ d.second, nuevo });
 	}
 	// 2) sider.ini (con copia y vuelta atrás si falla a medias)
