@@ -219,3 +219,201 @@ Necesita un 9.º mando físico (por ejemplo, el mando propio del anfitrión, que
   - **Si VICTOR se mueve** con el mando del puesto 8 y hay un camino claro y sin riesgo para dar a cada mando 9+ su número: se termina ese paso y se cierra.
   - **Si no se mueve, o el camino exige otra investigación larga:** el frente se **cierra en la v0.9.14** (punto seguro: pantalla de lados de 16, jugador y flecha para los 9+, sin que se muevan). No se abren nuevas líneas de ingeniería inversa sin preguntar a Fralex.
 - **Para retomarlo algún día:** leer este capítulo desde «20-oct ~21:45» y el §21-oct; herramientas en `modulo_sider/herramientas/`; respaldo `RESPALDO_v0.9.14_punto_seguro_20261020.lua`.
+
+### 23-oct-2026 ~04:18 — Resultado de la prueba «usuario 7» y CIERRE del frente en v0.9.14
+**SÍ/NO primero: NO se movió. El frente queda cerrado en la v0.9.14, como se acordó el 21-oct.**
+
+**Cómo se hizo (para repetirlo):**
+1. PES con la v0.9.14 instalada (`sider.ini` línea 194: `lua.module = "phoenix_mandos_fase1.lua"`). Fralex en el puesto 8 de Link (mando lógico 7) y el puesto 13 conectado (ranura 12).
+2. Amistoso en marcha. Lectura con `modulo_sider/herramientas/prueba_usuario7.ps1` (sin parámetros):
+   - `lado  = 01 00 00 00 00 00 00 02 01 00 00 00 02 …` → ranura 0 Local, ranura 7 (Fralex) Visitante, ranura 8 Local, ranura 12 (fila 13) Visitante.
+   - `mando = 00 … 07 08 09 0a 0b 0c 0d 0e 0f 20 …`
+   - `local = 00 ff ff ff ff ff ff 07 ff …` → solo las ranuras de los mandos 1 y 8 tenían número de usuario.
+3. `prueba_usuario7.ps1 -Escribir` con el balón en juego → `local[12] = 07`. Releído 3 s después: **se mantuvo** (el 20-oct PES lo borraba al cambiar lados; esta vez no).
+4. Fralex movió la palanca del mando del puesto 8: **se movió su jugador, VICTOR (fila 13) no**.
+5. `prueba_usuario7.ps1 -Deshacer` → `local[12] = ff` otra vez.
+
+**Qué significa:**
+- Cambiar la lista `ajustes+0x180` con el partido en marcha **no** basta para que un mando 9+ mueva a su jugador. O PES no mueve según ese número, o solo lo lee al crear las ranuras (antes del saque, en `FUN_141FB9040`) y después no vuelve a mirarlo.
+- La segunda opción **no se probó**: habría que poner el número desde el gancho del productor, antes del saque. Eso es una versión nueva del módulo y más pruebas en vivo, o sea, otra línea de investigación. Por la fecha límite **no se abre sin preguntar a Fralex**.
+
+**Error nuevo visto en la prueba (no es del módulo de mandos 9+):** con el mando del puesto 8, **L2 pausa el partido como si fuera START**. Es el mapa de botones de esa casilla (`settings.dat`, casilla 8, o la configuración de botones de Link para ese puesto). Se arregla asignando de nuevo los botones de ese mando en la herramienta de ajustes de PES (`Settings.exe`) o en Link. Pendiente de revisar.
+
+**Estado final (punto seguro v0.9.14, respaldo `modulo_sider/RESPALDO_v0.9.14_punto_seguro_20261020.lua`):**
+- Funciona: pantalla de lados con 16 mandos; los mandos 9–16 reciben ranura, jugador y flecha de color; su entrada llega al registro del partido.
+- No funciona: el jugador de un mando 9+ no se mueve.
+- Techos conocidos: 8 contra 8 = 16 humanos (tope de ViGEm, 16 mandos virtuales); 11 contra 11 = 22 y necesitaría otra forma de crear mandos virtuales.
+
+**Para retomarlo algún día (orden):** (1) poner el número de usuario local de cada mando 9+ desde el gancho de `FUN_141FB9040`, antes del saque, y repetir esta prueba; (2) si sigue sin moverse, buscar dónde el partido filtra por usuario `< 8` (las funciones de `match::pad::ThinkUnit*`, en especial `ThinkUnitPadId`) con Ghidra.
+
+### 23-oct-2026 ~04:35 — v0.9.15: número de usuario ANTES del saque — tampoco mueve
+**SÍ/NO primero: NO. Con el número puesto antes del saque el jugador del mando 9+ sigue sin moverse. Se vuelve a la v0.9.14.**
+
+**Qué se cambió (v0.9.15, guardada como `modulo_sider/phoenix_mandos_fase1.v0915_sin_efecto.lua`):**
+- Datos del gancho `+0x38`: número de usuario local de los mandos 8–15 (= su propio número si tiene lado; si no, `FF`), puesto por `actualizarDatos()`.
+- Gancho del productor `FUN_141FB9040`: además de lados y mandos, copia esos 8 bytes a `ajustes+0x180+8` justo al entrar (instrucciones `4d8b5a38` = `mov r11,[r10+0x38]` y `4c8998 <disp32>` = `mov [rax+disp32],r11`). Tamaño del código del gancho: 127 de 128 bytes.
+- Gancho de «crear pantalla de lados»: además limpia `ajustes+0x180+8` a `FF` (los menús no ven números de usuario de los extra).
+- Probado fuera del juego con `herramientas/probar_ganchos.ps1` (se añadieron 5 comprobaciones; resultado 27/27). Para ejecutarlo hace falta **PowerShell 7** (`pwsh`; con PowerShell 5 falla la conversión a `UIntPtr`) y el paquete `wasmoon` de Node para `sacar_codigos_ganchos.js` (se usó con `NODE_PATH` apuntando a una carpeta que ya lo tenía).
+
+**Error de proceso que hay que evitar:** la primera respuesta «no se mueve» de Fralex fue con la **v0.9.14** todavía cargada: el módulo nuevo estaba solo en `modulo_sider` y PES no se había reiniciado. Siempre confirmar en `content/phoenix/mandos/fase1.txt` la cabecera `# fase1 v0.9.xx` de la sesión antes de dar por buena una prueba.
+
+**Prueba válida (registro, sesión de las 04:3x):** pantalla confirmada con la fila 13 en Visitante → `ajustes.lado[12] = 02`, `ajustes.mando[12] = 0c`, **`ajustes.local[12] = 0c` antes del saque**; el productor pasó por el gancho. El del puesto 13 movió la palanca: **VICTOR no se movió**.
+
+**Conclusión:** la lista `ajustes+0x180` (número de usuario local) **no es** el filtro que impide moverse a los mandos 9+, ni escrita en partido ni antes del saque. El filtro está en otra parte de la lógica del partido.
+
+**Único camino que queda (no empezado; necesita permiso de Fralex):** investigar con Ghidra dónde el partido elige qué mando mueve a qué jugador (`match::pad::ThinkUnit*`, en especial `ThinkUnitPadId`, y el registro `match::registry::PadInput`), buscando una comparación `< 8` o una tabla de 8. Es ingeniería inversa larga, sin garantía.
+
+### 23-oct-2026 ~04:50–05:00 — Lectura en vivo de ranuras y prueba de «modo de control» (NO mueve)
+**SÍ/NO primero: NO. Copiar los ajustes de cursor del mando 1 al mando 13 no hizo que VICTOR se moviera.**
+
+**Herramientas (scratchpad de la sesión; copiar a `modulo_sider/herramientas` si se retoma):** `ranuras.ps1` (lee las 16 primeras ranuras de `[[0x1436F3DC8]+0x180]`; ojo: hay que abrir el proceso con `0x410` y usar **PowerShell 7**; con el partido en pausa o en menús el puntero de la tabla vale 0), `perfiles.ps1` (lee `[[0x143705E10]+0x50]+0x48+i·0x980`, ajustes de cursor por mando) y `copiar_ajustes.ps1` (copia 0x18 bytes del mando 1 al 13 guardando el original; `-Deshacer`).
+
+**Ranuras leídas en partido (v0.9.14, Fralex en Local con el mando 1, fila 13 en Visitante):**
+| Campo | Ranura 0 (se mueve) | Ranura 12 (VICTOR, no se mueve) | Ranura 15 (puesto 16) |
+|---|---|---|---|
+| `+0x00` lado | 00 | 02 | 00 |
+| `+0x10` / `+0x18` mando | 0 / 0 | 0x0C / 0x0C | 0x0F / 0x0F |
+| `+0x20` jugador | 0x0A | 0x14 | 0x05 |
+| `+0x28` | 0x09 | **0xFF** | 0x07 |
+| `+0x2C` | 0x06 | 0x15 | 0x06 |
+| `+0x34` | **01** | **02** | 02 |
+| `+0x68…` | 01 01 04 02 00 00 00 00 00 01 00 | 01 01 04 01 00 00 01 00 01 01 02 | 00 01 04 03 00 00 01 00 01 01 00 |
+
+**Productor `FUN_141FB9040` (Ghidra, `informes/datos/rea/mandos_98.txt`):** activa la bandera y la configuración del bloque de entrada **solo si el índice < 8** (`FUN_140a647e0` / `FUN_140a647f0`); el modo de control de la ranura sale de `FUN_1414c2250(ajustes de cursor del mando)` (0/1/2/3). La bandera solo la lee `FUN_140a64810`, que el módulo ya parchea, así que no es el freno.
+
+**Prueba:** se copiaron los primeros 0x18 bytes de ajustes de cursor del mando 1 al 13 (dejando `+0x14` = nº de perfil del 13; el primer intento lo pisó y se corrigió). Fralex abrió y cerró la pantalla de lados (el productor volvió a pasar, registro t = 593 s). **VICTOR no se movió.** Cambio deshecho. No se pudo releer `+0x34` después porque la tabla de ranuras ya valía 0 (menú/pausa).
+
+**Descartado hasta hoy:** usuario local `ajustes+0x180` (en partido y antes del saque), banderas de bloque `+0xBBE0`, ajustes de cursor del perfil. **Sin mirar:** `+0x28 = FF` en la ranura 12 (en las demás es un jugador) y quién lee el bloque de entrada de cada ranura en el partido (lo ideal: punto de vigilancia de lectura sobre el bloque 12 con Frida/depurador vía REA).
+
+### 23-oct-2026 ~05:05–05:15 — Rastreo en vivo con REA (Frida): el partido solo lee UN bloque de entrada [HALLAZGO CLAVE]
+**SÍ/NO primero: SÍ, ya sé dónde se pierde. El partido nunca lee el bloque de entrada del mando 13: solo lee uno (el del mando 1). La entrada llega, pero nadie la usa.**
+
+**Cómo se hizo (repetible):**
+1. REA conectado (si al abrir la sesión sale «connection timed out», reiniciar la sesión de Claude: REA 6.7.0 arranca en ~12 s y el límite es 30 s con muchos servidores a la vez).
+2. `start_frida_session` modo `attach` al PID de `PES2021.exe` (dispositivo `local`). Solo lectura.
+3. Script 1: `Interceptor.attach` en los 25 lectores del registro de entradas (los llamadores de `FUN_140a64790`, lista en `informes/datos/rea/mandos_95.txt`: `0x140a5d2e0`, `0x140a5f4f0`, `0x140a5cff0`, …). En cada llamada se lee `args[0].readPointer()` (= puntero al bloque de 0x7D4 bytes) y la dirección de retorno; cada 10–15 s se manda un resumen.
+4. Fralex y el puesto 13 movieron la palanca a la vez durante ~30 s en un amistoso (fila 13 en un equipo).
+
+**Resultado:**
+- En el menú y en el partido, **el único bloque real leído es `0x7463bbb4`** (unas 20.000–40.000 lecturas cada 15 s, desde 26–79 sitios distintos). El resto de valores de `args[0]` son basura de lectores con otra firma.
+- **Ningún otro bloque se lee nunca**, aunque el mando 13 se estaba moviendo (y su entrada sí está en su bloque, confirmado el 20-oct).
+- Los lectores principales (`0x1408bb76f`, `0x1408ac9be`, `0x1408ac808`, `0x1408bb4a8`) reciben el bloque desde un **contexto**: `mov rcx,[ctx+0x8]` (`ctx` = 2.º argumento de su función). Hay 4 copias del acceso (direcciones de pila `…fbd0` de 4 hilos), todas apuntando al mismo bloque.
+
+**Conclusión:** el freno no está en las ranuras ni en los ajustes, sino **en cuántos «contextos de mando» crea el partido**: solo crea el de los mandos de verdad (aquí, solo el del mando 1), y la lógica del jugador solo mira esos contextos. Los mandos 9+ tienen ranura, jugador y entrada, pero **no tienen contexto**, así que nadie lee su bloque.
+
+**Siguiente paso para retomarlo:** buscar quién crea esos contextos (el objeto cuyo `+0x8` guarda el acceso al bloque, 2.º argumento de las funciones de `0x1408bb71a` y `0x1408ac96e`) y por qué solo para unos mandos (probablemente un recorrido de 8, o la lista de mandos activos de `HidMan`/`settings.dat`). Con eso se podría crear el contexto de cada mando 9+ desde el módulo. Herramienta: Frida vía REA (`Interceptor` sobre esas dos funciones, registrando `args[1]` y quién la llama).
+
+### 23-oct-2026 ~05:20–05:47 — v0.9.16: ¡LOS MANDOS 9+ YA MUEVEN A SU JUGADOR! [CONFIRMADO EN VIVO]
+**SÍ/NO primero: SÍ. Con la v0.9.16 el jugador del mando 13 se mueve (Fralex: «ya funcionó»). Queda abierto: algunos mandos se van solos a un lado, y falta el menú de configuración por mando.**
+
+**La causa real (para no volver a buscarla):** `match::Command`, función **`FUN_1408A9180`**, recorre las 24 ranuras cada fotograma. Para cada una lee `mando = ranura+0x10` y:
+- en `0x1408A94AC` hace `cmp dl,8` / `jnc` → **solo con mando < 8** arma la orden humana (bloque `mando*0x7D4`, configuración `FUN_140A647C0`, `CommandPlayer`+0x18);
+- en `0x1408A99D0` hace `cmp dil,8` / `jnc` → **con mando ≥ 8 la ranura pasa a la CPU** (`CommandPlayer`+0x10 y `FUN_141FFB9D0`).
+Los 24 objetos `match::CommandPlayer` (0x1840 bytes) existen siempre (fábrica `FUN_1408A9CD0`, lista global `0x1436F40B0`, y `match::Command+0x8620`); no hacía falta crearlos.
+
+**Cómo se llegó (orden real, con los errores):**
+1. Hipótesis «número de usuario local» (`ajustes+0x180`): falsa, probada en partido (21/23-oct) y antes del saque (v0.9.15).
+2. Lectura en vivo de ranuras: diferencias en `+0x28` y `+0x34`; copiar los ajustes de cursor del mando 1 al 13: falso.
+3. **REA (Frida), el paso que lo resolvió:** enganchar los 25 lectores del registro de entradas y ver qué bloques se leen → solo el del mando 1. Es decir, la entrada del 13 llegaba pero nadie la leía.
+4. Ghidra: los lectores reciben el bloque desde un contexto con `+0x20` = ranura (`FUN_1408B97D0`); subiendo por tablas virtuales y constructores (`FUN_1408AD0B0` → `FUN_1408ACC00` → `FUN_1408B3D90` → `match::CommandPlayer` `FUN_1408B3BC0` → `FUN_1408A9CD0`) se llegó a `match::Command`. Buscar las instrucciones `CMP …,0x8` dentro de `FUN_1408A9180` (script nuevo **`scripts/ghidra/BuscarConstante.java`**, que encuentra constantes al final de la instrucción, cosa que `BuscarDesplazamiento` no hace) dio los dos topes.
+
+**Parches de la v0.9.16 (en `PARCHES` del módulo; se comprueban los bytes originales del exe antes de escribir):**
+| Dirección | Original | Nuevo | Por qué |
+|---|---|---|---|
+| `0x1408A94AC` | `80 fa 08` | `80 fa 10` | entrada humana hasta el mando 16 |
+| `0x1408A99D0` | `40 80 ff 08` | `40 80 ff 10` | el mando ≥ 8 ya no pasa a la CPU |
+| `0x140A647C0` (32 bytes, 18 + relleno `CC` hasta `0x140A647E0`) | `8bc2 488d04c0 488d80f45d0000 488d0441 c3` | `8bc2 83f808 7202 31c0 488d04c0 488d80f45d0000 488d0441 c3` | con N ≥ 8 leía configuración fuera de las 8; ahora usa la del mando 1 (como el parche de `FUN_140A64810`) |
+- Probado fuera del juego: el código nuevo de `FUN_140A647C0` se ejecutó con datos falsos (0–7 igual que el original, 8+ = configuración del mando 1); `probar_ganchos.ps1`: todo bien salvo las 2 comprobaciones de la v0.9.15 (usuario local), que la v0.9.16 no incluye a propósito.
+- La v0.9.16 parte de la v0.9.14 (no incluye lo de la v0.9.15, que no servía). Respaldo de la v0.9.14: `SiderAddons/modules/phoenix_mandos_fase1.v0914.lua`.
+
+**Pendiente:** (1) algunos mandos se ponen solos en un lado; (2) menú de configuración por mando (el de «Datos personales»/cursor de PES) para los 9–16.
+
+### 23-oct-2026 ~05:50–07:25 — Menús de antes del partido con mandos 9+ (v0.9.17 → v0.9.24)
+**SÍ/NO primero: SÍ funcionan la estrategia y el mando del lado en «elegir equipo» (✕/○). NO funciona todavía subir/bajar en la lista de ligas/equipos con un mando 9+. La causa está localizada (gestor de foco de menús de 8) y el plan para resolverlo está abajo.**
+
+**Lo que quedó hecho y probado en vivo:**
+- v0.9.17: registro de qué mando mueve cada fila (`fila del mando N → lado L por su palanca (X… Y… cruceta …)`).
+- v0.9.18/v0.9.21: lecturas vacías de mandos virtuales (`X 0000 Y 0000`) ya no cuentan; umbral de palanca 0x1000/0xF000; en el MENÚ cada pantalla de lados nueva empieza con los extra al centro (en la pausa del partido conservan su lado). Causa de «los mandos se ponen solos».
+- v0.9.19: los lados de los extra se escriben en S al cerrar la pantalla de lados (antes solo en el saque) → **los mandos 9+ manejan la estrategia** (confirmado por Fralex).
+- v0.9.20: 8 parches `cmp …,8 → 16` en los menús que buscan «el mando de cada lado» en la lista de lados (`0x140C9EFE7` TeamSelectMatchBase, `0x140ACB4A6` ExhibitionTeamDataLoad, `0x140A9E4F2`/`0x140A9E622` ExhibitionUserDataDoalog, `0x140AAC202/302/402/502` ExhibitionUserDataErrorDialog). El mando 16 recibe la pantalla de equipos del Visitante (✕ y ○ funcionan).
+- Minicancha (resto de la prueba de cancha pequeña): césped original del Camp Nou devuelto y porterías de colisión movidas retiradas (copias en `copias/camp_nou_original/pitch_st002_instalado_antes_de_restaurar_20261023.fpk` y `copias/restos_cancha_pequena_retirados_20261023/`).
+
+**Errores (para no repetirlos):**
+- Una prueba con Frida escribió `+0x114 = 15` en un widget y la sesión se cerró antes de restaurarlo → PES se cerró al cambiar de pantalla. Regla: en pruebas en vivo, solo lectura; si se escribe, restaurar ANTES de cerrar la sesión de Frida.
+- v0.9.22 agrandó el gestor de cursores de menú (`menusystem::PointingCursor`, singleton `[0x1436F9BC8]`, 8 entradas de 0x58; ctor `FUN_140E67580`, alta de 8 punteros gráficos «cmnPointer» en `FUN_140E67CB0`) a 16 → **PES no arrancó** (dos intentos). Desactivado en v0.9.23; copia `modulo_sider/phoenix_mandos_fase1.v0922_no_arranca.lua`.
+- v0.9.24: en vez de agrandar, 13 funciones del PointingCursor usan `mando AND 7` (no se escribe fuera de la tabla). Arranca bien, pero **no era el freno** de subir/bajar.
+
+**Causa real de que el mando 9+ no suba/baje en la lista (hallado con REA/Frida, solo lectura):**
+- El manejador de arriba/abajo de la lista de equipos es `FUN_140C95E10` (lee los códigos 0x25/0x26 del mando de la lista). Solo actúa si la lista **tiene el foco**: `FUN_140E719B0(gestorFoco, lista)` busca la lista entre **8 huecos de foco, uno por mando** (`gestor+0xC8 + i·0x10`). Con el mando 15 la lista nunca entra en esos 8 huecos → la función sale antes de leer el mando (se ve en vivo: con el mando 1 pide el mando en `0x140C95E72`; con el 16 nunca).
+- El gestor de foco (`FUN_140E71810` devuelve el objeto) tiene por mando: una pila de foco (`+0x08 + i·0x18`, vectores) y el foco actual (`+0xC8 + i·0x10`, `+0xD0 + i·0x10`), todo para `i < 8` (`FUN_140E71AE0` `cmp ebx,8` en `0x140E71B09`, `FUN_140E71BE0`, `FUN_140E718A0`).
+
+**Plan para retomarlo (sin agrandar objetos, que ya falló):**
+- Opción A (recomendada): el mando 9+ «toma prestado» en los menús un número de mando libre 0–7 (los menús solo necesitan un mando por lado): al cerrar la pantalla de lados, si un lado solo tiene extra, se escribe su lado en un hueco nativo libre de S y se enlaza en HidMan esa plaza lógica libre a su mando físico (el módulo ya sabe enlazar plazas: fila+8 / plaza+0xC). Al empezar el partido se deshace y el gancho del productor vuelve a poner el mando 9+. Así todos los menús (foco, cursores, equipos, datos personales) lo tratan como un mando nativo.
+- Opción B: `mando AND 7` también en el gestor de foco (como en v0.9.24 con los cursores). Más parches y conflicto si el mando (n−8) está en el mismo menú.
+
+### 23-oct-2026 ~07:25–07:50 — «Número prestado» en los menús: ¡el mando 9+ ya maneja los menús! (v0.9.25 → v0.9.28) [CONFIRMADO EN VIVO]
+**SÍ/NO primero: SÍ. Con la v0.9.28 el mando 16 sube/baja y elige equipo (Fralex: «ya quedó»). Respaldo: `modulo_sider/RESPALDO_v0.9.28_menus_funcionan_20261023.lua`.**
+
+**Idea:** los menús de PES (foco, cursores, listas) solo existen para los mandos 0–7, y agrandarlos rompe el arranque (v0.9.22). Pero los menús de antes del partido solo necesitan **un mando por equipo**. Así que, al cerrar la pantalla de lados (fuera del partido), si un lado solo tiene mandos 9+, el primero de ellos **toma prestado un número 0–7 sin lado** (se busca de 7 hacia abajo) hasta el saque.
+
+**Cómo se hace (v0.9.28, funciones `prestarNumeros` / `devolverPrestados`):**
+1. En la lista de objetos de mando de HidMan (`[0x1437F0A58]+0x48`, un puntero por mando; es lo que devuelve `FUN_141B52460` = vtable+0x18 «dame el mando N»), se **intercambian** los punteros `k` y `extra`. Así «el mando k» de los menús es el mando físico del extra.
+2. En S (lista de lados `+0x2D`): lado del número prestado = lado del extra; lado del extra = 0.
+3. En el saque, el gancho del productor escribe los lados 0–7 desde los datos (`d[8..15]` = S actual con el prestado en 0; `d[1] = 1`) y los 8–15 desde el plan → el extra entra al partido con su número 9+. En cuanto el módulo ve el partido en curso, deshace el intercambio. También se deshace al abrir una pantalla de lados nueva del menú.
+
+**Errores en el camino (no repetir):**
+- v0.9.25: usé `next()`; **Sider no tiene `next`** (`attempt to call global 'next'`) → el módulo fallaba cada cuadro y solo salía la pantalla de 8 de PES. Usar `for _ in pairs(t) do … end`. La vista previa con wasmoon (Lua 5.4) NO detecta esto: revisar siempre `sider.log` tras instalar.
+- v0.9.26: «préstamo NO hecho (número libre nil)»: buscaba plazas sin mando enlazado, pero **Link deja enlazados los 8 mandos virtuales** aunque nadie los use. Hay que buscar números **sin lado**, no sin mando.
+- v0.9.27: cambiar los enlaces fila↔plaza (`+0x08`/`+0x0C` de `HidMan+0xD0`) NO basta: el objeto del mando k seguía leyendo su mando de antes. Lo que cuenta es la lista de objetos `+0x48`.
+- v0.9.27 también quitó lo de «los extra al centro en cada pantalla nueva» (v0.9.21): Fralex quiere que conserven su lado, como los mandos 1–8.
+
+**Pendiente:** barra de potencia (pase/tiro) bajo el jugador de un mando 9+ en el partido; cambiar nombre / «Datos personales» por mando; capitán (△ y tecla C del anfitrión).
+
+### 23-oct-2026 ~07:55 — v0.9.29: cada mando 9+ elige su «Datos personales» con L2/R2 [CONFIRMADO por Fralex]
+- En la pantalla de lados (réplica Phoenix), un mando 9+ cambia de perfil con **LB/RB o los gatillos** (mando virtual tipo Xbox por DirectInput: botones 4/5 en `DIJOYSTATE+0x30`, gatillos en el eje Z `+0x08`). Solo al pulsar (flanco) y solo tras haberlo visto en el centro. La fila muestra el nombre del perfil.
+- El perfil elegido (`PERFIL_DE[mando]`, por defecto el de su número) va a los datos del gancho `+0x38`; el gancho del productor lo copia en el saque a `S+0x180+8` («usuario local» = nº de perfil); el gancho de «crear pantalla de lados» lo vuelve a poner en `FF`. Mismo código de ensamblador que la v0.9.15 (que entonces no movía al jugador porque el freno real era otro).
+- Nombres: se ponen en el menú principal de PES › Datos personales (32 perfiles).
+- Respaldo: `modulo_sider/RESPALDO_v0.9.29_perfiles_20261023.lua`.
+
+**Pendiente para la próxima sesión (en orden):**
+1. Barra de potencia de pase/tiro bajo el jugador de un mando 9+ (la barra se calcula para las 24 ranuras en `FUN_1408AAA30`; el freno está en el dibujo, `match2D::Screen::ModelGauge`, o en la tabla 2D `+0x1B8`).
+2. Capitán por equipo (△ el primero que lo pulse; tecla C del anfitrión), reutilizando el «número prestado».
+3. Paquete independiente (sin Link) con README + paquete para que el hilo de Link lo instale desde «Módulos del juego».
+
+### 23-oct-2026 ~16:30–17:00 — Capitán por equipo y paquete independiente (v0.9.30 → v0.9.31) [CAPITÁN CONFIRMADO con F5/F6]
+- **Capitán:** `PHX.CAPITAN[1|2]` = mando que maneja los menús de ese equipo. Lo elige el anfitrión con **F5** (Local) / **F6** (Visitante) en el teclado (va pasando por los del lado), o un jugador con **L3** (botón 8 de `DIJOYSTATE+0x30`; el primero que lo pulsa; L3 otra vez lo deja). △ no se usa porque en esa pantalla de PES es «Modo Entrenador»; R3 (v0.9.30) se cambió a L3 a pedido de Fralex. Al cerrar la pantalla de lados, los demás mandos 1–8 de ese lado se **ocultan** en S (`PHX.OCULTOS`) hasta el saque (el gancho del productor los repone con `d[8+i]`); si el capitán es 9+, toma número prestado. La fila del capitán muestra «CAP».
+- **Límite de Lua (otra vez):** al añadir tablas se pasó de 200 variables locales; se agruparon en `local PHX = { OCULTOS, CAPITAN, PERFIL_DE, PRESTADOS }`.
+- **Paquete independiente** (regla de Fralex: cada mod instalable sin Phoenix Link): `PRUEBA_CANCHA\paquetes\phoenix_mandos_9a16\` + zip. Contiene el módulo, `content\phoenix\lados_replica\` (5 archivos, piezas de la pantalla), `livecpk\PhoenixMandos\…\MatchPrePause.json`, `LEEME.md` (qué hace, requisitos, instalar, desinstalar, límites) e `INSTALAR.ps1` (copia y ajusta `sider.ini` con copia de seguridad; **no se pudo ejecutar en esta sesión por permisos, revisado a mano**). Pasado al coordinador para que el hilo de Link lo integre en «Módulos del juego».
+- Respaldo: `modulo_sider/RESPALDO_v0.9.31_capitan_20261023.lua`.
+- **Pendiente:** barra de potencia de pase/tiro para los mandos 9+ (necesita partido en vivo).
+
+### 23-oct-2026 ~22:15 — v0.9.38: ○ de los mandos 9+ en la pantalla de lados [CONFIRMADO en Ghidra; falta en vivo]
+**SÍ/NO primero: hecho en código, sin probar en PES. ○ de un mando 9–16 en «Local/Visitante» (pausa y menú) llama al mismo «atrás» que usa PES con los mandos 1–8. Sin teclado.**
+
+**Causa (Ghidra solo lectura, `informes/datos/rea/atras_01 … atras_11`; lanzadores `ss1.bat … ss6.bat` en el scratchpad):**
+- Cada ventana de menú lee **su mando dueño** (`+0x88 → +0x114`) en `FUN_140E3C810`; con el código 1 (○) pone el sonido 2 (`SoundManager [0x1436F9A88] + 0x9E + 2 = 1`) y llama a `vtable+0x190`.
+- En `menu::SideSelect` (vtable `0x142673558`, objeto de 0x118) solo las **8 filas** `SideSelectEach` (`+0x90…+0xC8`, vtable `0x142715608`, dueño = mando 0–7) tienen ese método: **`FUN_140C68350`** (está en `0x142715798` = vtable de fila + 0x190). Este comprueba `FUN_140ABFA40(padre)` y manda al padre (`fila+0x38`) el `sys::TaskMessage` **`0x1081002`** con `FUN_1414A0610` (con cerrojo del gestor de tareas). El padre lo atiende en **`FUN_140AC0700`** (vtable +0x110): en el menú, si cambiaste lados el primer ○ los deshace; si no (o en la pausa) `FUN_140ABFD80` + `FUN_140E42E60(…,"return")`.
+- Las filas son 8 fijas dentro del objeto: **no hay un tope que subir** (opción «parchear el 8» descartada). El mando 9+ no tiene fila → nadie oye su ○. (`0x1081001` = confirmar, `FUN_140C683B0`, sí compara el mando con el de la fila; `0x1081003` = `FUN_140C68470`, Datos personales.)
+
+**Arreglo (v0.9.38, `V9.atrasExtras` en `display_frame`, solo con `activo` y mandos extra):** flanco del botón 2 (`V9.boton(idx, 2)`, solo si antes se le vio suelto) de un mando 9+ con la pantalla de PES abierta (contadores `datos+0x24 ≠ +0x28`) → sonido 2 y `FUN_140C68350(fila)` por FFI sobre una fila del objeto guardado en `datos+0x30` (prefiere una fila con mando conectado, `fila+0x90 = 1`). Comprobaciones antes de llamar: vtables del objeto (`+0` y `+0x70 = 0x1426737B0`), fila con vtable de fila y `fila+0x38 = objeto`, `[0x142715798] = 0x140C68350`, y los 93 bytes de `FUN_140C68350` iguales a los de `copias/exe_pes2021/PES2021.exe` (verificado: coinciden con el exe real y el recortado). Como mucho un «atrás» cada 15 cuadros; si el mando 9+ es el mismo dispositivo que un 1–8, no se llama (PES ya lo oye). Si algo falla solo se anota en `fase1.txt`. Respaldo: `modulo_sider/phoenix_mandos_fase1.v0937.lua`.
+
+**Verificado fuera del juego:** `sacar_codigos_ganchos.js` sin ERROR y `probar_ganchos.ps1` → TODO BIEN (los ganchos no cambian).
+**Riesgos:** (1) se ejecuta lógica de menú desde `display_frame`; si no fuera el hilo del menú podría chocar con el cuadro de PES (la migración del foco v0.9.36 ya hace cosas parecidas desde ahí sin problemas). (2) No se copia el texto «return» a la cadena `+0x3B0` de la fila (lo hace `FUN_140E3C810` antes de `+0x190`); el padre usa su propio «return», así que debería ser solo cosmético. (3) Botón 2 = ○ supone el orden de botones de los mandos virtuales de Link (el mismo que usaba la v0.9.34).
+**Prueba en vivo:** pausa › Local/Visitante con un mando 9+ → ○ → debe volver a la pausa y el registro decir `mando N pulsa ○ → «atrás» en la pantalla de lados de PES`. Repetir en el menú (con y sin cambiar lados: con cambios, el primer ○ los deshace, igual que con 1–8).
+
+### v0.9.39 → v0.9.58 (23 al 25-oct): los mandos 9–16 «indistinguibles» de los 1–8
+
+**Resultado (confirmado por Fralex 25-oct ~00:08):** con un mando 9–16 funcionan pausa › Local/Visitante (○ vuelve), Estrategia en la pausa, L2/R2 para elegir usuario (sin repetidos), □ para «Editar Datos personales» de SU usuario (también en la pausa), nombres iguales en la pantalla simulada y en la real, el usuario elegido llega al partido y, sobre el jugador, el «Tipo de cursor» (Datos personales / Nombre de jugador / Mando n.º / No) y la barra de potencia, también en los mandos 13–16. Paquete independiente: `paquetes\phoenix_mandos_9a16_v0.9.58.zip`.
+
+**Errores y lo que se aprendió, en orden:**
+1. **○ no volvía (v0.9.39→0.9.40).** El registro no tenía ni un «○»: el mando 16 manda ○ como **botón 1** de DirectInput (distribución tipo Xbox: ✕0 ○1 □2 △3 L1 4 R1 5 … L3 8; gatillos por **eje Z**). Medido con `scratchpad\botones16.ps1` mientras Fralex pulsaba. L2/R2 se leen ahora por botón 6/7 o por eje Z (> 0xD000 / < 0x3000); y se copiaban solo 0x24 bytes del estado DI (los botones están en +0x30): se leía fuera.
+2. **Estrategia en la pausa (v0.9.41).** En la 1.ª pausa no dejaba, en la 2.ª sí: el lado elegido en pausa solo llegaba a S al reanudar (gancho del productor). Arreglo: al cerrar Local/Visitante en pausa se escriben los 9+ en S en el momento (sin préstamo). El préstamo de la pausa se devuelve también al ver ranuras jugando («reanudar»).
+3. **«Usuario N» en todos (v0.9.42→0.9.43).** La lista de «Datos personales» (32 × 0x980, nombre en +0x14 del registro) sigue existiendo, pero su bloque está partido en regiones de 0x4000 (la 1.ª protección 0x04, otras 0x40) y la búsqueda exigía 0x14000 en la primera. Ahora basta 0x1000 + cabecera 0x4FFE0 + validación de los 32.
+4. **Campos de la fila SideSelectEach cruzados (v0.9.47, v0.9.54).** `fila+0x98` = **perfil** (lo escribe FUN_140C68410/68440 con L2/R2, y lo lee □); el **mando** de la fila es su dueño `[fila+0x88]+0x114` (FUN_140E3D4D0). `+0x9C` NO es el mando: al volver de editar valía 10 y la Phoenix descartaba la fila («se pega el mando 1»). Encontrado con diferencias de memoria (foto de 2,2 GB, CAMILO 10 → BETO 11 → 10 → 11: quedan 3 direcciones, una en la fila).
+5. **Repetidos (v0.9.48):** L2/R2 salta los perfiles que ya usa otro mando (nativos por su fila, extras por lo elegido), como PES.
+6. **Pantalla «abierta» tras editar (v0.9.53/55).** PES crea la pantalla nueva ANTES de destruir la vieja (FUN_140ABF000 = destructor de menu::SideSelect): aperturas = cierres aunque esté abierta. El gancho de destruir guarda el objeto destruido en datos+**0x248** y «abierta» = contadores distintos o (creado ≠ destruido). ERROR propio: en la v0.9.53 lo guardaba en datos+0x38, que son los **perfiles 8–15** del productor (los pisaba). Otros dos errores propios: pasar de 200 locales (Sider salta el módulo: «main function has more than 200 local variables») y un corte de código mal hecho (`'<eof>' expected near 'end'`). Siempre mirar `sider.log` tras instalar.
+7. **□ de un mando 9+ (v0.9.52/55/56).** PES ni recibe su □. Ghidra: □ de la fila = FUN_140C68470 → `DAT_1434AC580 = perfil`, `FUN_1414BF2D0(FUN_1414BEA50(), mando)` (apila el cursor del editor para ese mando), TaskMessage **0x1081003** al padre (FUN_1414A0610) y sonido FUN_140E41880(fila, 0x3D). El módulo lo replica con el perfil y el número del 9+ (comprobando antes 36 bytes de FUN_140C68470). El cierre que provoca NO es «confirmar»: si se tomaba como tal, el préstamo cambiaba el mando del editor y el ○ dejaba de llegar.
+8. **Usuario en el partido (v0.9.57).** `S+0x45` no es solo «mando»: es el **usuario** de la ranura (al cambiar el usuario del teclado pasó a 0x08/0x0D). Con `i` el extra salía con el usuario de su número; ahora va el elegido (sigue moviéndose: confirmado).
+9. **HUD sobre el jugador para 13–16 (v0.9.58).** match2D::Screen::ModelCursorName (vftable 0x142BDE5A8) y ModelGauge (0x142BDEF90) tienen tablas de **12** modelos (FUN_1420D5BF0: ranura ≥ 12 → −1). Mandos 9–12 ya salían. Parche «tabla espejo» (informe completo: `informes\datos\rea\hud16_informe.md`): reservas 0x118→0x198 y 0x168→0x1E8, tabla CN de 16 en +0x118, MG T1 crece en su sitio y T2 pasa a +0x168, ids nuevos 0xD0–0xDB (FUN_141F9E610 aprende su tipo), 7 ganchos a cuevas propias y topes 0xC→0x10. Cueva F: los usuarios sin nombre reciben la textura «Usuario N». Se aplica solo en `m.init` (sin partido) y comprobando todos los bytes originales.
+
+**Pendiente:** pantalla Local/Visitante nativa de 16 filas (menu::SideSelect de 0x118 con 8 filas fijas) — Fralex: «mañana».

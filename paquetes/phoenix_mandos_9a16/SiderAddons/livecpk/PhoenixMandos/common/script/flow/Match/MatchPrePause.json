@@ -1,0 +1,33 @@
+{
+	"events":{
+		"0_pause":{
+			"to":"Match/MatchPause",
+			"go":"forward",
+			"clear":"all",
+			"fadeStart":"",
+			"fadeEnd":"do",
+			"bgType":"none"
+		},
+		"1_side_setting":{
+			"to":"Match/MatchPostPause",
+			"go":"forward",
+			"clear":"all",
+			"fadeStart":"",
+			"fadeEnd":"do",
+			"bgType":"none"
+		},
+		"2_plan":{
+			"to":"Match/MatchPausePlan",
+			"go":"forward",
+			"clear":"all",
+			"fadeStart":"",
+			"fadeEnd":"do",
+			"bgType":"none"
+		}
+	},
+	"data":{
+		"type":"process",
+		"bgId":"",
+		"dialog":""
+	}
+}

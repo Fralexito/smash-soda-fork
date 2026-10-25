@@ -273,3 +273,34 @@ Formato de entrada: `### AAAA-MM-DD HH:MM — tema` · qué se hizo · resultado
 - Cómo revertir: `git revert` de esos commits. Las memorias no tienen copia previa: cada cambio está descrito en `cap_15_diario_21_oct.md` §15.3.
 - Detalle: `cap_15_diario_21_oct.md`. Certeza: confirmado (acciones realizadas y comprobadas).
 - 21-oct ~20:35: mandos 9–16 con fecha límite: la prueba «usuario 7» decide; si no sale clara y sin riesgo, el frente se cierra en v0.9.14 (detalle en cap_60_k).
+
+### 2026-10-21 16:00 (Lima) — Nueva regla de documentación (Frank)
+- Frank: «solo sea cuando se algo relevante pero que a la vez tenga el paso a paso de todo… es mejor hacer pocos archivos pero super largos y completos que contengan todito».
+- Desde ahora: un documento por TEMA que crece. Cada logro relevante añade una sección con qué se logró, el paso a paso, los errores e intentos fallidos, las cosas a tener en cuenta y cómo comprobar o revertir. Nada de documentos cortos ni uno por día. En el libro esto ya funciona así: cada tema tiene su capítulo y la bitácora viva es un solo archivo.
+- Escrito en: memoria `documentar-logros-github-drive`, `D:\Frank\IA\CLAUDE\CLAUDE.md`, `INDICE_MAESTRO.md` §3 y `pes-liga-automatica/CLAUDE.md`. Certeza: confirmado.
+
+### 2026-10-21 17:45 (Lima) — Reorganización de TODOS los documentos: uno por tema (Frank: «agrupa, unifica y reordena… no borres»)
+- **SÍ, hecho y subido.** GitHub tenía 153 documentos sueltos y quedaron 19 por tema. Cada documento nuevo junta los viejos **completos** (copia íntegra, cada parte dice su origen), y los originales siguen intactos en `_archivo/` de su tema (git mv, no se borró nada).
+  - Link: 50 → 6 (`ac2f680`).
+  - Sync: 61 → 6 (`5bd051a`).
+  - Web: 42 → 7 (`71c777b`).
+- Citas del código cambiadas a `docs/TEMA.md («NOMBRE-VIEJO»)`, solo en comentarios. Tests de la web 648/648 y build 61 páginas.
+- Mapas de dónde quedó cada uno: web `docs/INDICE.md`, Link `docs/RETOMAR-LINK.md`, Sync `base-conocimiento/00-INDICE.md`, y todo junto en `D:\Frank\IA\CLAUDE\INDICE_MAESTRO.md` §5.
+- Drive: los 43 documentos sueltos de «Phoenix Link — Guías y logros» y los 97 de «Phoenix Mercado» se movieron a «Archivo — documentos cortos hasta el 21-oct-2026». No se borró nada. `RESPALDAR_A_DRIVE.ps1` ahora mueve a «_retirados» las copias que ya no están en la fuente: fueron 154, entre ellas los duplicados `cap_60_k (1)` y `00_BITACORA_VIVA (21-oct)`.
+- Herramientas que se usaron (para repetirlo): `fusionar.js` (une con índice y origen de cada parte, baja un nivel los encabezados y respeta los bloques de código) y `reenlazar.js` (cambia las citas). Están, con los planes exactos (`plan-*.json`), en `LIBRO_PERSONAL\herramientas-reorganizacion-21-oct\`. Uso: `node fusionar.js <repo> <plan.json>`, luego `git mv` de cada original a `_archivo/` y por último `node reenlazar.js <repo> <plan.json> <prefijo> [excluir…]`.
+- Errores del camino:
+  - `docs/legal/` está excluido de git a propósito (privado), así que no se tocó.
+  - `ESTRUCTURA-ML.md` se dejó en su sitio porque el código cita sus §.
+  - `generar_pdf.sh` de Sync se actualizó para leer los documentos nuevos.
+- Cómo revertir: `git revert` de los tres commits. En Drive, mover de vuelta desde «Archivo» y «_retirados». Certeza: confirmado.
+- 23-oct ~04:18: prueba «usuario 7» hecha en vivo: local[12]=07 se mantuvo pero VICTOR NO se movió → frente de mandos 9–16 CERRADO en v0.9.14 (cambio deshecho). Visto: L2 del puesto 8 pausa como START (mapa de botones, aparte). Detalle y pasos para retomarlo en cap_60_k (23-oct).
+- 23-oct ~04:35: v0.9.15 (usuario local de los extra puesto ANTES del saque por el gancho del productor) probada en vivo: VICTOR NO se movió. Vuelta a v0.9.14 (instalada y en modulo_sider). Lista ajustes+0x180 descartada como filtro. Ojo: la 1.ª prueba se hizo sin reiniciar PES (seguía la 0.9.14). Detalle en cap_60_k.
+- 23-oct ~05:00: en vivo (solo lectura) ranura 0 vs 12: difieren +0x28 (09 vs FF) y +0x34 (01 vs 02). Copiar ajustes de cursor del mando 1 al 13 NO lo movió (deshecho). Tabla en cap_60_k.
+- 23-oct ~05:15: REA/Frida en vivo: el partido solo lee el bloque de entrada del mando 1 (0x7463bbb4); el del 13 nunca. Causa: los mandos 9+ no tienen «contexto de mando» (objeto con +0x8 = acceso al bloque). Siguiente: hallar quién crea esos contextos. Detalle en cap_60_k.
+- 23-oct ~05:47: ¡v0.9.16 FUNCIONA! El jugador del mando 13 se mueve. Causa: FUN_1408A9180 (match::Command) solo daba entrada humana a mando < 8 (0x1408A94AC, 0x1408A99D0) → parches a 16 + FUN_140A647C0 con tope. Hallado con REA/Frida + Ghidra. Respaldo modulo_sider/RESPALDO_v0.9.16_funciona_20261023.lua. Pendiente: mandos que se van solos a un lado y menú de configuración por mando.
+- 23-oct ~07:25: menús con mandos 9+: estrategia OK (v0.9.19), mando del lado en elegir equipo OK (v0.9.20), lados solos arreglado (v0.9.21). Subir/bajar en la lista: NO — causa = gestor de FOCO de menús con 8 huecos por mando (FUN_140E719B0). v0.9.22 (agrandar cursores) impidió arrancar → desactivado. Plan: el extra toma prestado un número 0–7 libre en los menús. Detalle en cap_60_k.
+- 23-oct ~07:50: ¡v0.9.28 FUNCIONA en menús! El mando 9+ toma prestado un número 0–7 sin lado entre la pantalla de lados y el saque (intercambio de punteros en HidMan+0x48). Errores: next() no existe en Sider; Link enlaza los 8 virtuales; cambiar fila↔plaza no basta. Pendiente: barra de potencia, nombres/Datos personales, capitán. Detalle en cap_60_k.
+- 23-oct ~07:55: v0.9.29: los mandos 9+ eligen «Datos personales» con L2/R2 (confirmado). Fralex se fue a dormir; pendiente: barra de potencia, capitán, paquetes. Detalle en cap_60_k.
+- 23-oct ~17:00: capitán por equipo (F5/F6 anfitrión confirmado; L3 jugadores) v0.9.31 + paquete independiente paquetes\phoenix_mandos_9a16 (LEEME + INSTALAR.ps1 + zip). Pendiente: barra de potencia. Detalle en cap_60_k.
+- 23-oct ~18:30: inventario de los «8 asientos» de los menús (WindowManager de foco 0x148 no agrandable en sitio; PointingCursor sí; topes en ventanas 0x140E39DE4/0x140E3DCBE; SideSelect 0x118). Hipótesis del fallo de v0.9.22: carrera al parchear en m.init. Detalle en cap_60_m.
+- 25-oct ~00:10: mandos 9–16 indistinguibles de 1–8 (○, Estrategia en pausa, L2/R2 sin repetidos, □ editar, usuario en el partido, Tipo de cursor y barra también en 13–16 con HUD de 16) — v0.9.58, confirmado por Fralex. Paquete phoenix_mandos_9a16_v0.9.58.zip. Pendiente: pantalla de lados nativa de 16. Detalle en cap_60_k.

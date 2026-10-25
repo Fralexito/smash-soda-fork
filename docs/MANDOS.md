@@ -1250,3 +1250,33 @@ Para volver a lo de siempre: Puestos máximos = 8 (Link quita los mandos que sob
 > Si tras compilar no ves «Puestos máximos»: la carpeta `x64\Release\ui` quedó vieja (la copia falla con Link abierto). Cierra Link y vuelve a compilar con `cmake --build`.
 
 ---
+
+---
+
+## Parte 13 · Mandos 9–16 DENTRO de PES: el módulo de Sider v0.9.58 (25-oct-2026, confirmado por Fralex)
+
+**Qué se logró.** El frente que la Parte 12 dejaba abierto («falta el módulo de Sider que haga que PES use los mandos 9+») quedó **resuelto**: hasta **16 mandos a la vez** en un mismo PC (8 contra 8), con los mandos 9–16 **indistinguibles de los 1–8**. Fralex lo probó y lo confirmó en vivo el 25-oct.
+- Los mandos 9–16 tienen jugador, flecha de color y lo **mueven** (v0.9.16, 23-oct).
+- Menús con foco para 16: elegir equipo, estrategia y pausa (Local/Visitante y Estrategia) — el mando 9+ toma «prestado» un número libre del 0 al 7 entre la pantalla de lados y el saque (v0.9.28).
+- **L2/R2** eligen el usuario de «Datos personales» (salta los usados), **□** edita «Datos personales» de su usuario, **○** vuelve atrás (v0.9.29–v0.9.56; el ○ del mando 16 llega a PES como botón 1, no 2: v0.9.40).
+- **Capitán** por equipo: L3 los jugadores, F5/F6 el anfitrión (v0.9.31).
+- El mando 9+ juega con el **usuario que eligió** (v0.9.57).
+- **Tipo de cursor** (Datos personales / Nombre de jugador / Mando n.º / No) y **barra de potencia** también en los mandos 13–16, ampliando de 12 a 16 el dibujo de PES; un usuario sin nombre sale como «Usuario N» (v0.9.58). Antes de cambiar nada, el módulo comprueba byte a byte que el `PES2021.exe` sea el esperado; si no coincide, no toca nada.
+- **Paquete instalable sin Phoenix Link** (regla: todo mod de PES también va como paquete suelto): `paquetes/phoenix_mandos_9a16/` en este repo (LEEME, `INSTALAR.ps1`, módulo, flujo de pausa). El zip completo está en la PC: `D:\Frank\Games_\PRUEBA_CANCHA\paquetes\phoenix_mandos_9a16_v0.9.58.zip`. **Lo que NO está en git:** `content\phoenix\lados_replica\*.raw` (≈9 MB, dibujos generados a partir de pantallas de PES; se regeneran con `modulo_sider\herramientas\generar_replica_lados.ps1`). El resto de versiones antiguas (zip por versión) y los respaldos `RESPALDO_v0.9.*.lua` están solo en la PC.
+
+**Paso a paso para replicarlo (en el PC de Fralex):**
+1. Cerrar PES. 2. Descomprimir el zip (o copiar `paquetes/phoenix_mandos_9a16/` de este repo y traer los `.raw` de la PC). 3. Ejecutar `INSTALAR.ps1 -Sider "D:\Frank\Games_\Conmegol Patch\SiderAddons"`. 4. En `sider.ini`: `luajit.ext.enabled=1`, `overlay.enabled=1`, `cpk.root=".\livecpk\PhoenixMandos"` como primera carpeta y `lua.module="phoenix_mandos_fase1.lua"` como último módulo. 5. Abrir PES; comprobar que `SiderAddons\content\phoenix\mandos\fase1.txt` empieza con `# fase1 v0.9.58`.
+
+**Integrar en Link (pendiente, solo cuando el coordinador avise):** copiar `modules\phoenix_mandos_fase1.lua`, `content\phoenix\lados_replica\` y `livecpk\PhoenixMandos\` y poner lo de `sider.ini` de arriba. Link solo toca `sider.ini` con su instalador y con PES cerrado.
+
+**Errores e intentos fallidos (resumen; la historia con direcciones está en `docs/libro-pes/cap_60_k_estrategia_mas_mandos.md` y `cap_60_n_diseno_16_asientos.md`):**
+- 20–21-oct: el jugador del 9+ existía pero no respondía; inyectar «usuario 7» y copiar ajustes de cursor no lo movió (deshecho; el frente se cerró a v0.9.14).
+- 23-oct: causa hallada con Frida y Ghidra: `match::Command` (`FUN_1408A9180`) solo daba entrada humana a mandos < 8 → parches a 16 (v0.9.16, funciona).
+- Ampliar de golpe los 8 asientos del foco de los menús (v0.9.22) impidió arrancar PES → descartado; se sustituyó por el «número prestado» (v0.9.28).
+- 24-oct: el ○ del mando 16 no se veía en la pausa porque llega como botón 1 y se esperaba el 2 (v0.9.40).
+
+**Cosas a tener en cuenta:** el módulo debe ser el **último** de `sider.ini`; una persona no debe ocupar dos puestos a la vez (mando 1 de PES y un puesto 9+ de Link); los botones 9+ se leen con la distribución tipo Xbox de DirectInput; los cambios son solo en memoria (se pierden al cerrar PES; no se tocan archivos del juego ni guardados). Si PES se cierra al empezar o terminar un partido tras la v0.9.58, desactivar el HUD de 16 (aviso de Fralex al hilo de mandos).
+
+**Lo que falta:** la **pantalla de Local/Visitante nativa de 16 filas** dentro de PES (hoy es una réplica encima de la de PES). Es lo siguiente (mañana 26-oct); diseño en `cap_60_n_diseno_16_asientos.md`. Candado: lo lleva la Cuenta 1 con acceso a la PC (ver `TRASPASO.md` de la web).
+
+**Cómo comprobar y revertir:** comprobar con la línea de `fase1.txt` y jugando un partido con el mando 16 (pausa › Local/Visitante › ○; barra al cargar un tiro). Revertir: devolver `sider.ini.antes-phoenix-mandos-FECHA` como `sider.ini` o quitar las dos líneas del módulo y de `cpk.root`.
