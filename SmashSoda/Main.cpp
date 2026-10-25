@@ -588,6 +588,12 @@ int CALLBACK WinMain(_In_ HINSTANCE hInstance, _In_ HINSTANCE hPrevInstance, _In
             phoenix::Shell::tickLogica();
             webUi.renderCarga();
         }
+        else if (webUi.pantallaFallo())
+        {
+            // La interfaz nueva no pudo abrirse: pantalla de Phoenix con REINTENTAR (0.3.49), nunca el diseño viejo
+            phoenix::Shell::tickLogica();
+            webUi.renderFallo();
+        }
         else if (phoenix::PhoenixPrefs::get().interfazPhoenix)
         {
             backgroundWidget.render();

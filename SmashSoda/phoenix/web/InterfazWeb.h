@@ -53,6 +53,10 @@ namespace phoenix::web {
 		bool cargando() const;
 		/// Pantalla de carga (fondo oscuro con el nombre del programa).
 		void renderCarga();
+		/// 0.3.49: la interfaz nueva no pudo abrirse y el host no pidió el «modo técnico»: en vez del diseño viejo se ve
+		/// la pantalla de Phoenix (mismo fondo que la de carga) con qué pasó, REINTENTAR y un enlace pequeño al modo técnico.
+		bool pantallaFallo() const;
+		void renderFallo();
 		/// Logo para la pantalla de carga (ID3D11ShaderResourceView*; nullptr = solo texto).
 		void fijarLogoCarga(void* textura);
 

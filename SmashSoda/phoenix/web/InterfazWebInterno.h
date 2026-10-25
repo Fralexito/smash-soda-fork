@@ -47,6 +47,9 @@ namespace phoenix::web {
 		bool panelClasico = false;      ///< la web pidió mostrar un panel ImGui
 		bool avisoCerrado = false;      ///< el host ocultó el aviso de «no disponible»
 		int reintentos = 0;
+		bool modoTecnico = false;       ///< el host pidió ver los paneles viejos (ImGui) tras un fallo de la interfaz nueva
+		double falloDesde = 0.0;        ///< cuándo empezó la pantalla de fallo (para reintentar solo)
+		int reintentosFallo = 0;        ///< reintentos automáticos desde la pantalla de fallo
 		double creadaEn = 0.0;
 
 		// Lo que la interfaz está mirando (para mandar solo lo necesario)

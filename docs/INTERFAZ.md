@@ -764,3 +764,23 @@ Para quitar solo uno: `git revert <commit>` dentro de `plan-ux` y compilar. Para
   0.3.20 no lo lee, así que no estorba.
 
 ---
+
+## Parte final · Nunca más el diseño viejo: pantalla de Phoenix cuando la interfaz no abre (Link 0.3.49, 25-oct-2026)
+
+**Pedido de Fralex.** «No me gusta que cuando hay error de diseño, se muestre el diseño anterior, todo feo» y «¿no hay manera de rediseñar todo, incluso el diseño de fondo?».
+
+**Por qué pasaba.** Link tiene dos capas. Abajo, la ventana original de Smash Soda dibujada con ImGui (maneja Parsec, mandos y sala). Encima, el diseño de Phoenix, que es una página web en WebView2 (motor de Edge). Si la página no carga en 30 s (tras dos reintentos), se cae o falta WebView2, `InterfazWeb::tick` la quita y Main.cpp dibujaba la capa de abajo: el shell ImGui con los paneles viejos. Se descartó reescribir Link en otro lenguaje: ya es C++ y el problema era solo qué dibuja el respaldo.
+
+**Qué cambió.**
+1. `InterfazWeb::pantallaFallo()` (true si la interfaz nueva está activada, no carga y el host no pidió el modo técnico) y `renderFallo()`: dibuja el mismo fondo animado de la pantalla de carga (`renderCarga`: logo, niebla, brasas) y encima una tarjeta abajo con el motivo, REINTENTAR, «Instalar componente de Microsoft» si falta WebView2, y un enlace pequeño «Modo técnico (diseño antiguo)».
+2. Reintenta solo: a los 20 s y luego cada 60 s, hasta 3 veces, con la carpeta de datos de reserva (`WebView2-reserva`, ver la parte de 0.3.46).
+3. `Main.cpp`: nueva rama antes del shell ImGui (`else if (webUi.pantallaFallo())`). El diseño viejo solo aparece si el host pulsa «Modo técnico»; desde ahí, REINTENTAR vuelve a la pantalla de Phoenix. Cuando la web carga, el modo técnico se olvida.
+4. Textos nuevos en `I18n.cpp`: `web.fallo_titulo`, `web.fallo_texto`, `web.fallo_auto`, `web.modo_tecnico` (es/en).
+
+**Cómo se probó.** Se abrió Link con `WEBVIEW2_BROWSER_EXECUTABLE_FOLDER=C:
+o-existe-prueba` (rompe el motor web solo para ese proceso) y se capturó la ventana con PrintWindow: sale el fondo de Phoenix con la tarjeta, sin paneles viejos. Abierto normal, carga la interfaz nueva como siempre (INICIO, versión 0.3.49). Compilado con cmake sin errores.
+
+**Error en la prueba (no del programa).** La primera captura salía recortada (la tarjeta cortada abajo): PowerShell no era «DPI aware» y capturaba 1534×822 de una ventana de 1918×1028 al 125 %. Con `SetProcessDPIAware()` la captura sale entera.
+
+**A tener en cuenta.** Si alguien desactiva «Usar la interfaz nueva» en Ajustes, sigue viendo el diseño clásico a propósito (eso no cambia).
+

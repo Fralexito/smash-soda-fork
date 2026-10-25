@@ -297,6 +297,7 @@ namespace phoenix::web {
 			gEstadoAnterior = est;
 
 			const bool lista = est == EstadoAnfitrion::Listo && in.puente && in.puente->listo();
+			if (lista) { in.modoTecnico = false; in.falloDesde = 0.0; in.reintentosFallo = 0; }
 			const bool mostrar = lista && permitida && !in.panelClasico && PhoenixPrefs::get().interfazWeb;
 			a.mostrar(mostrar);
 
@@ -586,6 +587,89 @@ namespace phoenix::web {
 		catch (...) {}
 	}
 
+	bool InterfazWeb::pantallaFallo() const {
+		const Interno& in = interno();
+		if (!in.iniciada || in.panelClasico || in.modoTecnico || !PhoenixPrefs::get().interfazWeb) return false;
+		if (cubreVentana() || cargando()) return false;
+		return in.anfitrion == nullptr || in.anfitrion->estado() == EstadoAnfitrion::Fallo || in.anfitrion->estado() == EstadoAnfitrion::Apagado
+			|| (in.anfitrion->estado() == EstadoAnfitrion::Listo && !in.anfitrion->visible());
+	}
+
+	void InterfazWeb::renderFallo() {
+		Interno& in = interno();
+		if (ImGui::GetCurrentContext() == nullptr) return;
+		renderCarga();   // el mismo fondo de Phoenix (logo, niebla, brasas): nunca el diseño viejo
+		try {
+			const double ahora = ahoraSeg();
+			if (in.falloDesde <= 0.0) in.falloDesde = ahora;
+			// Reintento solo: a los 20 s y luego cada 60 s, hasta 3 veces (si la PC estaba ocupada, suele arrancar al segundo intento)
+			const double espera = in.reintentosFallo == 0 ? 20.0 : 60.0;
+			if (in.reintentosFallo < 3 && ahora - in.falloDesde >= espera) {
+				in.reintentosFallo++;
+				in.falloDesde = 0.0;
+				destruirVista(in);
+				crearVista(in, true);
+				return;
+			}
+			const float s = (std::max)(1.0f, ThemeController::getInstance().getUiScale());
+			const ImGuiViewport* vp = ImGui::GetMainViewport();
+			const std::string motivo = motivoNoDisponible();
+			const bool faltaRuntime = motivo.find("WebView2") != std::string::npos;
+			const float ancho = (std::min)(vp->WorkSize.x - 40.0f * s, 460.0f * s);
+			ImGui::SetNextWindowPos(ImVec2(vp->WorkPos.x + vp->WorkSize.x * 0.5f, vp->WorkPos.y + vp->WorkSize.y - 24.0f * s), ImGuiCond_Always, ImVec2(0.5f, 1.0f));   // pegada abajo: entera aunque la ventana sea baja
+			ImGui::SetNextWindowSize(ImVec2(ancho, 0), ImGuiCond_Always);
+			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(20 * s, 16 * s));
+			ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 14.0f * s);
+			ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 10.0f * s);
+			ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.0f);
+			ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.03f, 0.03f, 0.09f, 0.88f));
+			ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.35f, 0.70f, 1.0f, 0.35f));
+			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.85f, 0.92f, 1.0f, 1.0f));
+			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.20f, 0.55f, 0.95f, 0.90f));
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.30f, 0.65f, 1.0f, 1.0f));
+			ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.15f, 0.45f, 0.85f, 1.0f));
+			ImGui::Begin("##phx_web_fallo", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove
+				| ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize);
+			ImGui::PushFont(AppFonts::label);
+			ImGui::TextWrapped("%s", T("web.fallo_titulo"));
+			ImGui::PopFont();
+			ImGui::PushFont(AppFonts::input);
+			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.62f, 0.72f, 0.85f, 1.0f));
+			ImGui::TextWrapped("%s", motivo.empty() ? T("web.fallo_texto") : motivo.c_str());
+			if (in.reintentosFallo < 3) {
+				const int quedan = static_cast<int>((in.reintentosFallo == 0 ? 20.0 : 60.0) - (ahora - in.falloDesde));
+				ImGui::TextWrapped(T("web.fallo_auto"), (std::max)(1, quedan));
+			}
+			ImGui::PopStyleColor();
+			ImGui::Dummy(ImVec2(0, 6 * s));
+			if (ImGui::Button(T("web.reintentar_nueva"), ImVec2(150 * s, 36 * s))) {
+				in.reintentos++;
+				in.falloDesde = 0.0;
+				destruirVista(in);
+				crearVista(in, true);
+			}
+			if (faltaRuntime) {
+				ImGui::SameLine();
+				if (ImGui::Button(T("web.instalar_webview2"), ImVec2(0, 36 * s))) {
+					try { abrirEnlace("https://developer.microsoft.com/microsoft-edge/webview2/"); }
+					catch (...) {}
+				}
+			}
+			// «Modo técnico»: los paneles viejos, solo para emergencias (texto pequeño, sin botón lleno)
+			ImGui::Dummy(ImVec2(0, 2 * s));
+			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(1, 1, 1, 0.06f));
+			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.45f, 0.52f, 0.62f, 1.0f));
+			if (ImGui::SmallButton(T("web.modo_tecnico"))) in.modoTecnico = true;
+			ImGui::PopStyleColor(3);
+			ImGui::PopFont();
+			ImGui::End();
+			ImGui::PopStyleColor(6);
+			ImGui::PopStyleVar(4);
+		}
+		catch (...) {}
+	}
+
 	bool InterfazWeb::disponible() const {
 		const Interno& in = interno();
 		return in.anfitrion != nullptr && in.anfitrion->estado() == EstadoAnfitrion::Listo;
@@ -691,8 +775,10 @@ namespace phoenix::web {
 			ImGui::Dummy(ImVec2(0, 4 * s));
 			if (ImGui::Button(T("web.reintentar_nueva"))) {
 				in.reintentos++;
+				in.modoTecnico = false;
+				in.falloDesde = 0.0;
 				destruirVista(in);
-				crearVista(in);
+				crearVista(in, true);
 			}
 			if (faltaRuntime) {
 				ImGui::SameLine();
