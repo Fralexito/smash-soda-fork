@@ -137,6 +137,25 @@ namespace phoenix {
 		int pendientes = 0;         ///< resultados esperando a la web (guardados en disco)
 	};
 
+	/// Partido de torneo por jugar (GET /v1/torneos/partidos de la función «torneos», migración 145, 25-oct-2026).
+	struct LadoTorneo { std::string nombre; std::vector<std::string> parsec; bool mio = false; };
+	struct PartidoTorneo {
+		long long torneoId = 0;
+		std::string torneo, formato, permiso, clave, ronda, grupo, estado;
+		bool eliminatoria = false;
+		LadoTorneo a, b;
+	};
+	struct InfoTorneos {
+		bool cargado = false;
+		std::string error;
+		std::vector<PartidoTorneo> partidos;
+		std::string ultimoEnvio;
+		int pendientes = 0;
+	};
+	/// Duelo de la web jugado en esta sala (salas.reto_id): con él la sala se abre ligada al duelo y, al final, los goles
+	/// suben a «Goleadores de los duelos» (POST /v1/goles/duelo, migración 148).
+	struct InfoDuelo { long long retoId = 0; std::string ultimoEnvio; int pendientes = 0; };
+
 	class PhoenixLink {
 	public:
 		static PhoenixLink& instancia();
@@ -241,6 +260,19 @@ namespace phoenix {
 		/// hasta que la web lo acepte. Queda «propuesto»: lo valida el staff o el árbitro designado, nunca el host.
 		void ligaResultado(const std::string& cuerpoJson);
 
+		// --- Torneos premium/oficiales (función «torneos») y goles de duelos (función «goles»), 0.3.47 ---------------
+		InfoTorneos torneos();
+		void torneosPedirPartidos();
+		/// JSON con torneo_id, clave, goles_a, goles_b, completo, juego{…}. Cola en disco como la liga; nunca confirma el host.
+		void torneoResultado(const std::string& cuerpoJson);
+		InfoDuelo duelo();
+		/// 0 = sin duelo. Cambiarlo vuelve a abrir la sala en la web con ese reto_id.
+		void fijarDuelo(long long retoId);
+		/// Lado del duelo («A» = retador, «B» = rival) de un Parsec según los roles de la web; "" si no se sabe.
+		std::string ladoDuelo(const std::string& parsecId);
+		/// JSON con reto_id, completo y goles[] (contrato de goles). Cola en disco; reenviar reemplaza.
+		void dueloGoles(const std::string& cuerpoJson);
+
 		// --- Auto-actualización (función «mercado», migración 128) -------------------
 		/// Al abrir y cada hora se pregunta a la web si hay versión nueva publicada.
 		InfoActualizacion actualizacion();
@@ -258,6 +290,9 @@ namespace phoenix {
 		bool pasoLiga(const std::string& token, const std::string& salaId);
 		void guardarLiga();   ///< con _mutex tomado
 		void cargarLiga();
+		bool pasoTorneos(const std::string& token);
+		void guardarColas();   ///< torneos y goles; con _mutex tomado
+		void cargarColas();
 		PhoenixLink() = default;
 		void bucle();
 		void pasoEmparejar(const std::string& codigo);
@@ -414,6 +449,16 @@ namespace phoenix {
 		long long _campoVentanaMs = 0; int _campoVentanaN = 0;
 		std::vector<std::string> _ligaResultados;   ///< cola persistente (phoenix-liga-resultados.json)
 		long long _ligaResProximoMs = 0;
+		// Torneos y goles de duelos (protegido por _mutex)
+		InfoTorneos _torneos;
+		bool _torneosPedido = false;
+		long long _torneosProximoMs = 0;
+		std::vector<std::string> _torneoResultados;   ///< cola persistente (phoenix-torneos-colas.json)
+		long long _torneoResProximoMs = 0;
+		InfoDuelo _duelo;
+		std::vector<std::string> _dueloGoles;         ///< cola persistente (misma archivo)
+		long long _dueloGolesProximoMs = 0;
+		std::map<std::string, std::string> _ladoReto; ///< parsec → «A»/«B» (roles del reto que manda la web)
 		// Auto-actualización (protegido por _mutex salvo _actTrabajando)
 		InfoActualizacion _act;
 		long long _actProximoMs = 0;

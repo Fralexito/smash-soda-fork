@@ -116,7 +116,12 @@ namespace phoenix::web {
 			// Liga automática: partido oficial elegido (0 = amistoso) y marcador en vivo enviado a la web
 			long long partidoOficial = 0;
 			std::string oficialTexto;              ///< «Fecha 10 · Degox vs Victor» (para la interfaz)
-			std::string vivoFirma;                 ///< último marcador mandado (goles|fase)
+			// Torneo premium/oficial elegido (función «torneos», 0.3.47): torneoId 0 = ninguno. Parsec de cada lado para
+			// saber si el Equipo A de Link es el lado «a» o el «b» del cruce.
+			long long torneoId = 0;
+			std::string torneoClave, torneoTexto;
+			std::vector<std::string> torneoParsecA, torneoParsecB;
+			std::string vivoFirma;                ///< último marcador mandado (goles|fase)
 			int vivoMinuto = -100;                 ///< minuto del último envío
 			bool vivoMandado = false;              ///< hay un «en vivo» en la web que habrá que borrar
 		} arbitro;

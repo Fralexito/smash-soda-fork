@@ -316,6 +316,7 @@ namespace phoenix::web {
 			for (const PartidoOficial& po : PhoenixLink::instancia().liga().partidos) {
 				if (po.id != id) continue;
 				in.arbitro.partidoOficial = id;
+				in.arbitro.torneoId = 0; in.arbitro.torneoClave.clear(); in.arbitro.torneoTexto.clear();
 				in.arbitro.oficialTexto = "Fecha " + std::to_string(po.fecha) + " · " + po.local + " vs " + po.visitante;
 				// Phoenix Doctor (informativo): ficha del juego del anfitrión para adjuntar al resultado
 				const std::string carpeta = PhoenixPrefs::get().carpetaJuego;
@@ -326,6 +327,34 @@ namespace phoenix::web {
 		});
 		p.registrar("partido.oficiales", [](const json&, uint64_t) -> std::optional<json> {
 			PhoenixLink::instancia().ligaPedirPartidos();
+			return json::object();
+		});
+
+		// Torneos premium/oficiales (0.3.47): elegir el cruce que se juega. Excluye al partido de liga (uno u otro).
+		p.registrar("partido.torneo", [&in](const json& d, uint64_t) -> std::optional<json> {
+			const long long id = d.contains("torneo_id") && d["torneo_id"].is_number_integer() ? d["torneo_id"].get<long long>() : 0;
+			const std::string clave = d.contains("clave") && d["clave"].is_string() ? d["clave"].get<std::string>() : std::string();
+			Interno::Arbitro& a = in.arbitro;
+			if (id <= 0 || clave.empty()) { a.torneoId = 0; a.torneoClave.clear(); a.torneoTexto.clear(); a.torneoParsecA.clear(); a.torneoParsecB.clear(); return json::object(); }
+			for (const PartidoTorneo& pt : PhoenixLink::instancia().torneos().partidos) {
+				if (pt.torneoId != id || pt.clave != clave) continue;
+				a.torneoId = id; a.torneoClave = clave;
+				a.torneoTexto = pt.torneo + (pt.ronda.empty() ? std::string() : " · " + pt.ronda) + " · " + pt.a.nombre + " vs " + pt.b.nombre;
+				a.torneoParsecA = pt.a.parsec; a.torneoParsecB = pt.b.parsec;
+				a.partidoOficial = 0; a.oficialTexto.clear();   // no puede ser a la vez de liga
+				return json{ {"texto", a.torneoTexto} };
+			}
+			throw ErrorAccion("NO_EXISTE", "Ese partido de torneo ya no está en la lista: actualízala.");
+		});
+		p.registrar("partido.torneos", [](const json&, uint64_t) -> std::optional<json> {
+			PhoenixLink::instancia().torneosPedirPartidos();
+			return json::object();
+		});
+		// Duelo de la web (número que sale en la página del duelo): liga la sala a ese reto para que sus goles suban
+		p.registrar("partido.duelo", [](const json& d, uint64_t) -> std::optional<json> {
+			const long long id = d.contains("id") && d["id"].is_number_integer() ? d["id"].get<long long>() : 0;
+			if (id < 0 || id > 2147483647LL) throw ErrorAccion("CAMPO_INVALIDO", "Número de duelo no válido.");
+			PhoenixLink::instancia().fijarDuelo(id);
 			return json::object();
 		});
 

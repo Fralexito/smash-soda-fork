@@ -645,6 +645,17 @@ namespace phoenix::web {
 			e["liga"] = { {"cargado", lg.cargado}, {"error", lg.error}, {"partidos", ofi}, {"ultimoEnvio", lg.ultimoEnvio},
 				{"pendientes", lg.pendientes}, {"elegido", in.arbitro.partidoOficial}, {"elegidoTexto", in.arbitro.oficialTexto},
 				{"enVivo", in.arbitro.vivoMandado} };
+			// Torneos premium/oficiales y duelo de la web (0.3.47)
+			const InfoTorneos tn = link.torneos();
+			json tps = json::array();
+			for (const PartidoTorneo& pt : tn.partidos) {
+				tps.push_back({ {"torneoId", pt.torneoId}, {"torneo", pt.torneo}, {"clave", pt.clave}, {"ronda", pt.ronda}, {"grupo", pt.grupo},
+					{"estado", pt.estado}, {"permiso", pt.permiso}, {"a", pt.a.nombre}, {"b", pt.b.nombre}, {"mio", pt.a.mio || pt.b.mio} });
+			}
+			e["torneos"] = { {"cargado", tn.cargado}, {"error", tn.error}, {"partidos", tps}, {"ultimoEnvio", tn.ultimoEnvio},
+				{"pendientes", tn.pendientes}, {"elegido", in.arbitro.torneoId}, {"elegidaClave", in.arbitro.torneoClave}, {"elegidoTexto", in.arbitro.torneoTexto} };
+			const InfoDuelo du = link.duelo();
+			e["duelo"] = { {"id", du.retoId}, {"ultimoEnvio", du.ultimoEnvio}, {"pendientes", du.pendientes} };
 		}
 		e["turnos"] = estadoTurnos();
 		if ((in.seccion == "sala" && in.pestana == "transmision") || (in.seccion == "ajustes" && in.pestana == "audio")) e["audio"] = estadoAudio(h);

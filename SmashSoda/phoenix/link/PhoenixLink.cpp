@@ -33,6 +33,8 @@ namespace phoenix {
 
 	namespace {
 		const char* kBase = "https://fiibiyijojkxqlsrhcil.supabase.co/functions/v1/phoenix";
+		const char* kBaseTorneos = "https://fiibiyijojkxqlsrhcil.supabase.co/functions/v1/torneos";   // torneos premium/oficiales (migración 145)
+		const char* kBaseGoles = "https://fiibiyijojkxqlsrhcil.supabase.co/functions/v1/goles";       // goles de los duelos (migración 148)
 		const char* kBaseLiga = "https://fiibiyijojkxqlsrhcil.supabase.co/functions/v1/liga";   // liga automática (resultado + en vivo)
 		const char* kBaseTraspasos = "https://fiibiyijojkxqlsrhcil.supabase.co/functions/v1/traspasos/v1";   // traspasos en vivo (funcion aparte, no toca «liga»)
 		const char* kVersionApp = "7.0.4";
@@ -206,6 +208,7 @@ namespace phoenix {
 		}
 		cargarEventos();
 		cargarLiga();
+		cargarColas();
 		{   // ¿Qué pasó con la última actualización? (lo deja PhoenixActualizador.exe)
 			actualizacion::Resultado r;
 			if (actualizacion::tomarResultado(r)) {
@@ -406,7 +409,7 @@ namespace phoenix {
 				else if (!token.empty() && !pausado && ahoraMs() >= esperaHasta) {
 					const std::string firma = foto.visibilidad + "|" + (foto.aceptaEspectadores ? "1" : "0")
 						+ "|" + std::to_string(foto.limiteEspectadores) + "|" + std::to_string(foto.plazasTotal)
-						+ "|" + foto.juego + "|" + foto.parche + "|" + foto.region;
+						+ "|" + foto.juego + "|" + foto.parche + "|" + foto.region + "|r" + std::to_string(duelo().retoId);
 					if (foto.abierta && (salaId.empty() || firma != firmaPublicada)) pasoAbrir(foto);
 					else if (foto.abierta && ahoraMs() >= proximoLatido) pasoLatido(foto);
 					else if (foto.abierta) {
@@ -489,6 +492,9 @@ namespace phoenix {
 		if (foto.enlace.rfind("https://", 0) == 0) cuerpo["enlace"] = foto.enlace;
 		if (!foto.parche.empty()) cuerpo["parche"] = foto.parche;
 		if (!foto.region.empty()) cuerpo["region"] = foto.region;
+		long long reto = 0;
+		{ std::lock_guard<std::mutex> lock(_mutex); reto = _duelo.retoId; }
+		if (reto > 0) cuerpo["reto_id"] = reto;   // sala del duelo: la web lo exige para aceptar sus goles (148)
 
 		const http::Respuesta r = http::peticion("POST", std::string(kBase) + "/v1/sala/abrir", cuerpo.dump(),
 			{ "Authorization: Bearer " + token, std::string("X-Phoenix-Version: ") + kVersionApp, "X-Phoenix-Build: " + huellaExe() });
@@ -501,7 +507,7 @@ namespace phoenix {
 			_proximoLatidoMs = ahoraMs() + (std::max)(10, _latidoSeg) * 1000LL; // primer latido ≥ 10 s
 			_firmaPrefs = foto.visibilidad + "|" + (foto.aceptaEspectadores ? "1" : "0")
 				+ "|" + std::to_string(foto.limiteEspectadores) + "|" + std::to_string(foto.plazasTotal)
-				+ "|" + foto.juego + "|" + foto.parche + "|" + foto.region;
+				+ "|" + foto.juego + "|" + foto.parche + "|" + foto.region + "|r" + std::to_string(reto);
 			_estado = EstadoLink::Conectado;
 			_espera = 0;
 			_mensaje = foto.visibilidad == "publica" ? "Sala publicada en el radar de retos."
@@ -510,6 +516,11 @@ namespace phoenix {
 			return;
 		}
 		if (r.estado == 0) { fallo("RED", "", 0); return; }
+		if (reto > 0 && !j.is_discarded() && j.value("codigo", "") == "RETO_NO_VALIDO") {
+			// El duelo ya no está ACEPTADO/EN_JUEGO o no es tuyo: se suelta y la sala se abre sin él en la próxima vuelta (_mutex ya tomado).
+			if (_duelo.retoId == reto) { _duelo.retoId = 0; _duelo.ultimoEnvio = "La web no aceptó el duelo #" + std::to_string(reto) + ": no está aceptado o no es tuyo."; }
+			return;
+		}
 		fallo(j.is_discarded() ? "ERROR_INTERNO" : j.value("codigo", "ERROR_INTERNO"),
 			j.is_discarded() ? "" : j.value("mensaje", ""), j.is_discarded() ? 0 : j.value("reintentar_en", 0));
 	}
@@ -661,6 +672,12 @@ namespace phoenix {
 			if (id != 0) espectadores.insert(id);
 		}
 		_jugadores = total;
+		_ladoReto.clear();
+		if (roles.contains("jugadores")) for (const json& p : roles["jugadores"]) {
+			const uint32_t id = idDe(p);
+			const std::string lado = p.is_object() && p.contains("lado") && p["lado"].is_string() ? p["lado"].get<std::string>() : std::string();
+			if (id != 0 && (lado == "A" || lado == "B")) _ladoReto[std::to_string(id)] = lado;
+		}
 
 		// La puerta de mandos se activa en retos, o cuando ya hay rival con Parsec vinculado.
 		bool hayRival = false;
@@ -939,6 +956,7 @@ namespace phoenix {
 		if (pasoPedidos(token, salaId)) return true;
 		if (pasoChat(token)) return true;
 		if (pasoLiga(token, salaId)) return true;   // resultado oficial y marcador en vivo (función «liga»)
+		if (pasoTorneos(token)) return true;        // torneos premium/oficiales y goles de duelos (0.3.47)
 		if (pasoEventos(token, salaId)) return true;
 		if (pasoPerfiles(token, foto)) return true;
 		if (pasoPresencia(token, salaId)) return true;
@@ -1233,7 +1251,7 @@ namespace phoenix {
 		if (r.estado == 200 && !j.is_discarded() && j.value("ok", false) && j.contains("partidos") && j["partidos"].is_array()) {
 			_liga.partidos.clear();
 			for (const json& p : j["partidos"]) {
-				if (!p.is_object() || _liga.partidos.size() >= 60) continue;
+				if (!p.is_object() || _liga.partidos.size() >= 200) continue;
 				PartidoOficial x;
 				x.id = p.value("id", 0LL);
 				x.fecha = p.value("fecha", 0);
@@ -1251,6 +1269,203 @@ namespace phoenix {
 			_liga.error = (!j.is_discarded() && j.contains("mensaje") && j["mensaje"].is_string()) ? j["mensaje"].get<std::string>()
 				: (r.estado == 0 ? std::string("Sin conexión con la web.") : "La web respondió " + std::to_string(r.estado) + ".");
 		}
+		return true;
+	}
+
+	// ─── Torneos premium/oficiales (función «torneos») y goles de los duelos (función «goles»), 0.3.47 ─────────
+	//  Contratos de la web: docs/web-pes-link/CONTRATO-TORNEOS-LINK.md y CONTRATO-GOLES-LINK.md. Igual que la liga:
+	//  lo que hay que mandar va a una cola en disco (phoenix-torneos-colas.json) y se reintenta solo si la web lo permite.
+	InfoTorneos PhoenixLink::torneos() {
+		std::lock_guard<std::mutex> l(_mutex);
+		InfoTorneos i = _torneos;
+		i.pendientes = static_cast<int>(_torneoResultados.size());
+		return i;
+	}
+	void PhoenixLink::torneosPedirPartidos() { std::lock_guard<std::mutex> l(_mutex); _torneosPedido = true; }
+	void PhoenixLink::torneoResultado(const std::string& cuerpoJson) {
+		std::lock_guard<std::mutex> l(_mutex);
+		if (_torneoResultados.size() >= 20) return;
+		_torneoResultados.push_back(cuerpoJson);
+		_torneoResProximoMs = 0;
+		_torneos.ultimoEnvio = "Resultado del torneo listo para enviar a la web…";
+		guardarColas();
+	}
+	InfoDuelo PhoenixLink::duelo() {
+		std::lock_guard<std::mutex> l(_mutex);
+		InfoDuelo d = _duelo;
+		d.pendientes = static_cast<int>(_dueloGoles.size());
+		return d;
+	}
+	void PhoenixLink::fijarDuelo(long long retoId) {
+		std::lock_guard<std::mutex> l(_mutex);
+		_duelo.retoId = retoId > 0 ? retoId : 0;
+		_duelo.ultimoEnvio = retoId > 0 ? "Sala ligada al duelo #" + std::to_string(retoId) + ": al final, los goles suben a la web." : std::string();
+	}
+	std::string PhoenixLink::ladoDuelo(const std::string& parsecId) {
+		std::lock_guard<std::mutex> l(_mutex);
+		const auto it = _ladoReto.find(parsecId);
+		return it == _ladoReto.end() ? std::string() : it->second;
+	}
+	void PhoenixLink::dueloGoles(const std::string& cuerpoJson) {
+		std::lock_guard<std::mutex> l(_mutex);
+		const json nuevo = json::parse(cuerpoJson, nullptr, false);
+		if (nuevo.is_discarded()) return;
+		// Reenviar el mismo duelo reemplaza: en la cola queda solo el último de cada reto_id
+		const long long reto = nuevo.value("reto_id", 0LL);
+		_dueloGoles.erase(std::remove_if(_dueloGoles.begin(), _dueloGoles.end(), [reto](const std::string& x) {
+			const json j = json::parse(x, nullptr, false); return !j.is_discarded() && j.value("reto_id", 0LL) == reto; }), _dueloGoles.end());
+		if (_dueloGoles.size() >= 20) return;
+		_dueloGoles.push_back(cuerpoJson);
+		_dueloGolesProximoMs = 0;
+		_duelo.ultimoEnvio = "Goles del duelo listos para enviar a la web…";
+		guardarColas();
+	}
+	void PhoenixLink::guardarColas() {
+		try {
+			json t = json::array(), g = json::array();
+			for (const std::string& r : _torneoResultados) { const json x = json::parse(r, nullptr, false); if (!x.is_discarded()) t.push_back(x); }
+			for (const std::string& r : _dueloGoles) { const json x = json::parse(r, nullptr, false); if (!x.is_discarded()) g.push_back(x); }
+			std::ofstream f(carpeta() + "phoenix-torneos-colas.json", std::ios::binary | std::ios::trunc);
+			f << json{ {"torneos", t}, {"goles", g} }.dump(-1, ' ', false, json::error_handler_t::replace);
+		}
+		catch (...) {}
+	}
+	void PhoenixLink::cargarColas() {
+		try {
+			std::ifstream f(carpeta() + "phoenix-torneos-colas.json", std::ios::binary);
+			if (!f) return;
+			std::string texto((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
+			const json j = json::parse(texto, nullptr, false);
+			if (j.is_discarded() || !j.is_object()) return;
+			std::lock_guard<std::mutex> l(_mutex);
+			if (j.contains("torneos") && j["torneos"].is_array())
+				for (const json& r : j["torneos"]) if (r.is_object() && r.contains("torneo_id") && _torneoResultados.size() < 20) _torneoResultados.push_back(r.dump());
+			if (j.contains("goles") && j["goles"].is_array())
+				for (const json& r : j["goles"]) if (r.is_object() && r.contains("reto_id") && _dueloGoles.size() < 20) _dueloGoles.push_back(r.dump());
+		}
+		catch (...) {}
+	}
+
+	namespace {
+		/// Qué hacer con un error de «torneos»/«goles»: true = descartar (no se reintenta nunca).
+		bool errorDefinitivo(int estado, const json& j) {
+			if (estado == 0 || estado >= 500 || estado == 429) return false;   // sin red, pausa del staff (503), límite o error interno
+			if (!j.is_discarded() && j.contains("reintentable") && j["reintentable"].is_boolean()) return !j["reintentable"].get<bool>();
+			return true;
+		}
+		std::string mensajeDe(int estado, const json& j) {
+			if (!j.is_discarded() && j.contains("mensaje") && j["mensaje"].is_string()) return j["mensaje"].get<std::string>();
+			return estado == 0 ? std::string("Sin conexión con la web.") : "La web respondió " + std::to_string(estado) + ".";
+		}
+		long long esperaDe(const json& j, long long porDefecto) {
+			if (!j.is_discarded() && j.contains("reintentar_en") && j["reintentar_en"].is_number())
+				return (std::max)(5LL, j["reintentar_en"].get<long long>()) * 1000;
+			return porDefecto;
+		}
+	}
+
+	bool PhoenixLink::pasoTorneos(const std::string& token) {
+		const long long ahora = ahoraMs();
+		// 1) Resultado de torneo pendiente
+		std::string res;
+		{ std::lock_guard<std::mutex> l(_mutex); if (!_torneoResultados.empty() && ahora >= _torneoResProximoMs) res = _torneoResultados.front(); }
+		if (!res.empty()) {
+			json cuerpo = json::parse(res, nullptr, false);
+			if (cuerpo.is_discarded()) { std::lock_guard<std::mutex> l(_mutex); _torneoResultados.erase(_torneoResultados.begin()); guardarColas(); return true; }
+			cuerpo["version_link"] = kVersion;
+			const http::Respuesta r = http::peticion("POST", std::string(kBaseTorneos) + "/v1/torneos/resultado",
+				cuerpo.dump(-1, ' ', false, json::error_handler_t::replace), cabecerasCon(token), 8000);
+			const json j = json::parse(r.cuerpo, nullptr, false);
+			std::lock_guard<std::mutex> l(_mutex);
+			if (r.estado == 200 && !j.is_discarded() && j.value("ok", false)) {
+				const std::string est = j.value("estado", std::string());
+				_torneos.ultimoEnvio = est == "disputa" ? "Resultado del torneo enviado: no coincide con otro ya enviado (queda en disputa)."
+					: j.value("repetido", false) ? "Ese resultado del torneo ya estaba en la web." : "Resultado del torneo enviado. Lo confirma el organizador o el staff.";
+				_torneoResultados.erase(_torneoResultados.begin());
+				_torneosPedido = true;
+			}
+			else if (errorDefinitivo(r.estado, j)) {
+				const std::string cod = j.is_discarded() ? std::string() : j.value("codigo", std::string());
+				_torneos.ultimoEnvio = cod == "TORNEO_SIN_PERMISO" ? "Ese torneo ya no es premium ni oficial: anota el resultado a mano en la web."
+					: "La web no aceptó el resultado del torneo: " + mensajeDe(r.estado, j);
+				_torneoResultados.erase(_torneoResultados.begin());
+				_torneosPedido = true;
+			}
+			else {
+				_torneos.ultimoEnvio = "No se pudo enviar el resultado del torneo (" + mensajeDe(r.estado, j) + "). Se reintenta solo.";
+				_torneoResProximoMs = ahora + esperaDe(j, 30000);
+			}
+			guardarColas();
+			return true;
+		}
+		// 2) Goles de un duelo
+		std::string gol;
+		{ std::lock_guard<std::mutex> l(_mutex); if (!_dueloGoles.empty() && ahora >= _dueloGolesProximoMs) gol = _dueloGoles.front(); }
+		if (!gol.empty()) {
+			json cuerpo = json::parse(gol, nullptr, false);
+			if (cuerpo.is_discarded()) { std::lock_guard<std::mutex> l(_mutex); _dueloGoles.erase(_dueloGoles.begin()); guardarColas(); return true; }
+			cuerpo["version_link"] = kVersion;
+			const http::Respuesta r = http::peticion("POST", std::string(kBaseGoles) + "/v1/goles/duelo",
+				cuerpo.dump(-1, ' ', false, json::error_handler_t::replace), cabecerasCon(token), 8000);
+			const json j = json::parse(r.cuerpo, nullptr, false);
+			std::lock_guard<std::mutex> l(_mutex);
+			if (r.estado == 200 && !j.is_discarded() && j.value("ok", false)) {
+				_duelo.ultimoEnvio = j.value("cuadra", false) ? "Goles del duelo en la web: ya cuentan para los goleadores."
+					: "Goles del duelo en la web: contarán cuando los dos confirmen el marcador.";
+				_dueloGoles.erase(_dueloGoles.begin());
+			}
+			else if (errorDefinitivo(r.estado, j)) {
+				_duelo.ultimoEnvio = "La web no aceptó los goles del duelo: " + mensajeDe(r.estado, j);
+				_dueloGoles.erase(_dueloGoles.begin());
+			}
+			else {
+				_duelo.ultimoEnvio = "No se pudieron enviar los goles (" + mensajeDe(r.estado, j) + "). Se reintenta solo.";
+				_dueloGolesProximoMs = ahora + esperaDe(j, 30000);
+			}
+			guardarColas();
+			return true;
+		}
+		// 3) Lista de partidos de torneo: al pedirla la interfaz, o cada 2 min con la sala abierta y Link a la vista
+		bool pedir = false;
+		{
+			std::lock_guard<std::mutex> l(_mutex);
+			pedir = _torneosPedido || (_foto.abierta && _ventanaVisible && ahora >= _torneosProximoMs);
+			if (pedir) { _torneosPedido = false; _torneosProximoMs = ahora + 120000; }
+		}
+		if (!pedir) return false;
+		const http::Respuesta r = http::peticion("GET", std::string(kBaseTorneos) + "/v1/torneos/partidos", "", cabecerasCon(token), 8000);
+		const json j = json::parse(r.cuerpo, nullptr, false);
+		std::lock_guard<std::mutex> l(_mutex);
+		if (r.estado == 200 && !j.is_discarded() && j.value("ok", false) && j.contains("partidos") && j["partidos"].is_array()) {
+			_torneos.partidos.clear();
+			auto texto = [](const json& p, const char* k) { return p.contains(k) && p[k].is_string() ? p[k].get<std::string>() : std::string(); };
+			auto lado = [&texto](const json& p, const char* k) {
+				LadoTorneo x;
+				if (!p.contains(k) || !p[k].is_object()) return x;
+				const json& o = p[k];
+				x.nombre = texto(o, "nombre");
+				x.mio = o.value("mio", false);
+				if (o.contains("parsec") && o["parsec"].is_array())
+					for (const json& id : o["parsec"]) {
+						if (id.is_string()) x.parsec.push_back(id.get<std::string>());
+						else if (id.is_number_integer()) x.parsec.push_back(std::to_string(id.get<long long>()));
+					}
+				return x;
+			};
+			for (const json& p : j["partidos"]) {
+				if (!p.is_object() || _torneos.partidos.size() >= 200) continue;
+				PartidoTorneo x;
+				x.torneoId = p.value("torneo_id", 0LL);
+				x.torneo = texto(p, "torneo"); x.formato = texto(p, "formato"); x.permiso = texto(p, "permiso");
+				x.clave = texto(p, "clave"); x.ronda = texto(p, "ronda"); x.grupo = texto(p, "grupo"); x.estado = texto(p, "estado");
+				x.eliminatoria = p.value("eliminatoria", false);
+				x.a = lado(p, "a"); x.b = lado(p, "b");
+				if (x.torneoId > 0 && !x.clave.empty()) _torneos.partidos.push_back(std::move(x));
+			}
+			_torneos.cargado = true;
+			_torneos.error.clear();
+		}
+		else _torneos.error = mensajeDe(r.estado, j);
 		return true;
 	}
 

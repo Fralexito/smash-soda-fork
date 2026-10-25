@@ -286,6 +286,7 @@ function Marcador({ m }) {
       </div>
     </div>
     <${PartidoOficial} m=${m}/>
+    <${TorneoYDuelo} m=${m}/>
     ${red.length ? html`<div class="rej4">${red.map((r) => html`<div class="caja" key=${r.parsecId}>
       <div style="display:flex;justify-content:space-between"><b style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.nombre}</b>
         <span class="mono" style=${`color:${colorPing(r.ultimo)}`}>${r.ultimo >= 0 ? r.ultimo + " ms" : "—"}</span></div>
@@ -318,6 +319,52 @@ function PartidoOficial({ m }) {
         : t("Elige la fecha si es un partido de liga. El marcador se ve en vivo en la web (los amistosos solo si la sala no es privada).", "Pick the fixture if it's a league match. The score shows live on the web (friendlies only if the room isn't private).")}
       ${lg.ultimoEnvio ? html`<div style="margin-top:4px"><b>${lg.ultimoEnvio}</b>${lg.pendientes ? ` (${lg.pendientes} ${t("por enviar", "queued")})` : ""}</div>` : null}
       ${lg.error ? html`<div style="margin-top:4px;color:var(--warn)">${lg.error}</div>` : null}
+    </div>
+  </div>`;
+}
+
+// Torneo premium/oficial (función «torneos») y duelo de la web (función «goles»), 0.3.47. El resultado del torneo sube
+// solo al final y lo confirma el organizador o el staff; los goles del duelo van a «Goleadores de los duelos».
+function TorneoYDuelo({ m }) {
+  const tn = m.torneos || { partidos: [] };
+  const du = m.duelo || { id: 0 };
+  const [num, setNum] = useState("");
+  useEffect(() => { accion("partido.torneos", {}, { silencioso: true }); }, []);
+  const lista = tn.partidos || [];
+  const mios = lista.filter((x) => x.mio), resto = lista.filter((x) => !x.mio);
+  const valor = tn.elegido ? `${tn.elegido}|${tn.elegidaClave}` : "0";
+  const op = (x) => html`<option value=${`${x.torneoId}|${x.clave}`}>${`${x.torneo}${x.ronda ? " · " + x.ronda : ""} · ${x.a} vs ${x.b}${x.estado === "disputa" ? " (en disputa)" : x.estado === "propuesto" ? " (ya enviado)" : ""}`}</option>`;
+  const elegir = (v) => { const [id, ...c] = v.split("|"); accion("partido.torneo", { torneo_id: Number(id), clave: c.join("|") }); };
+  const ligar = () => { const n = Number(String(num).replace(/[^0-9]/g, "")); if (n > 0) { accion("partido.duelo", { id: n }, { ok: t("Sala ligada al duelo.", "Room linked to the duel.") }); setNum(""); } };
+  return html`<div class="caja" style="display:flex;flex-direction:column;gap:10px">
+    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+      <b class="disp" style="font-size:13px;letter-spacing:.14em">${t("TORNEO", "TOURNAMENT")}</b>
+      <select class="campo" style="flex:1;min-width:240px" value=${valor} onChange=${(e) => elegir(e.target.value)}>
+        <option value="0">${t("Ninguno", "None")}</option>
+        ${mios.length ? html`<optgroup label=${t("Tus partidos", "Your matches")}>${mios.map(op)}</optgroup>` : null}
+        ${resto.length ? html`<optgroup label=${t("Otros torneos", "Other tournaments")}>${resto.map(op)}</optgroup>` : null}
+      </select>
+      <${Boton} tipo="mini suave" al=${() => accion("partido.torneos", {}, { ok: t("Lista actualizada.", "List updated.") })}>${t("ACTUALIZAR", "REFRESH")}</${Boton}>
+    </div>
+    <div class="ayuda" style="font-size:13px">
+      ${tn.elegido ? t("Al terminar, el resultado sube solo a la web. Lo confirma el organizador (torneo premium) o el staff (oficial).", "At full time the result goes to the web. The organizer (premium) or staff (official) confirms it.")
+        : lista.length ? t("Elige el cruce si este partido es de un torneo premium u oficial.", "Pick the match if it's from a premium or official tournament.")
+        : t("No hay partidos de torneos premium u oficiales por jugar.", "No premium or official tournament matches to play.")}
+      ${tn.ultimoEnvio ? html`<div style="margin-top:4px"><b>${tn.ultimoEnvio}</b>${tn.pendientes ? ` (${tn.pendientes} ${t("por enviar", "queued")})` : ""}</div>` : null}
+      ${tn.error ? html`<div style="margin-top:4px;color:var(--warn)">${tn.error}</div>` : null}
+    </div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;border-top:1px solid rgba(255,255,255,.08);padding-top:10px">
+      <b class="disp" style="font-size:13px;letter-spacing:.14em">${t("DUELO DE LA WEB", "WEB DUEL")}</b>
+      ${du.id ? html`<${Chip} tipo="acc">#${du.id}</${Chip}>
+          <${Boton} tipo="mini suave" al=${() => accion("partido.duelo", { id: 0 })}>${t("QUITAR", "REMOVE")}</${Boton}>`
+        : html`<input class="campo mono" style="width:120px" inputmode="numeric" maxLength=${10} placeholder=${t("N.º del duelo", "Duel no.")} value=${num}
+            onInput=${(e) => setNum(e.currentTarget.value)} onKeyDown=${(e) => { if (e.key === "Enter") ligar(); }}/>
+          <${Boton} tipo="mini" deshabilitado=${!String(num).trim()} al=${ligar}>${t("LIGAR SALA", "LINK ROOM")}</${Boton}>`}
+      <div class="ayuda" style="flex-basis:100%;font-size:13px">
+        ${du.id ? t("Al terminar, los goles (con su goleador) suben a «Goleadores de los duelos» de la web. Cuentan cuando los dos confirmen el marcador.", "At full time the goals (with scorer) go to the web's duel scorers. They count once both confirm the score.")
+          : t("Si juegas un duelo de la web, escribe su número (sale en la página del duelo). La sala se liga a ese duelo y sus goles suben solos.", "If you play a web duel, type its number (shown on the duel page). The room is linked and its goals go up by themselves.")}
+        ${du.ultimoEnvio ? html`<div style="margin-top:4px"><b>${du.ultimoEnvio}</b>${du.pendientes ? ` (${du.pendientes} ${t("por enviar", "queued")})` : ""}</div>` : null}
+      </div>
     </div>
   </div>`;
 }

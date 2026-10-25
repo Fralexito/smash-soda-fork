@@ -135,6 +135,12 @@ export function crearSimulador(enviar) {
       { id: 60, fecha: 10, edicion: "Galaxy League · 1° Edición 2026", estado: "pendiente", local: "Fralex", visitante: "Jeremi", clubLocal: "FC Barcelona", clubVisita: "Chelsea", mio: true },
       { id: 56, fecha: 10, edicion: "Galaxy League · 1° Edición 2026", estado: "pendiente", local: "Jack", visitante: "Hugo", clubLocal: "Manchester United", clubVisita: "Arsenal", mio: false },
     ] },
+    // Torneos premium/oficiales (GET /v1/torneos/partidos) y duelo de la web (0.3.47)
+    torneos: { cargado: true, error: "", ultimoEnvio: "", pendientes: 0, elegido: 0, elegidaClave: "", elegidoTexto: "", partidos: [
+      { torneoId: 12, torneo: "Copa Relámpago", clave: "r1-2", ronda: "Cuartos", grupo: "", estado: "pendiente", permiso: "premium", a: "Fralex", b: "Kaiser", mio: true },
+      { torneoId: 15, torneo: "Torneo oficial de octubre", clave: "g1-3", ronda: "Fecha 2", grupo: "A", estado: "propuesto", permiso: "oficial", a: "Mirko", b: "Lucho", mio: false },
+    ] },
+    duelo: { id: 0, ultimoEnvio: "", pendientes: 0 },
   };
   // Prueba con un estado.json falso: ?estado=estado-prueba.json (junto a index.html). Sin archivo = «sin datos del juego».
   try {
@@ -304,6 +310,8 @@ export function crearSimulador(enviar) {
         previa: p.fase === "libre" ? { fuente: "juego", a: [{ parsecId: 1001, nombre: "Fralex" }], b: [{ parsecId: 1002, nombre: "Kaiser" }], mirando: s.arbitro.mirandoAuto ? [{ parsecId: 1003, nombre: "Lucho" }] : [] } : null },
       juego: s.juego,
       liga: { ...s.liga, enVivo: s.liga.elegido > 0 && p.fase === "en_juego" },
+      torneos: s.torneos,
+      duelo: s.duelo,
       arbitro: {
         ...s.arbitro,
         activo: s.arbitro.competitivo && s.abierta && (s.juego.datos ? s.juego.fase === "en_juego" : p.fase === "en_juego"),
@@ -722,8 +730,18 @@ export function crearSimulador(enviar) {
       const p = s.liga.partidos.find((x) => x.id === d.id);
       s.liga.elegido = p ? p.id : 0;
       s.liga.elegidoTexto = p ? `Fecha ${p.fecha} · ${p.local} vs ${p.visitante}` : "";
+      if (p) { s.torneos.elegido = 0; s.torneos.elegidaClave = ""; s.torneos.elegidoTexto = ""; }
       return { texto: s.liga.elegidoTexto };
     },
+    "partido.torneos": () => { s.torneos.cargado = true; },
+    "partido.torneo": (d) => {
+      const p = s.torneos.partidos.find((x) => x.torneoId === d.torneo_id && x.clave === d.clave);
+      s.torneos.elegido = p ? p.torneoId : 0; s.torneos.elegidaClave = p ? p.clave : "";
+      s.torneos.elegidoTexto = p ? `${p.torneo} · ${p.ronda} · ${p.a} vs ${p.b}` : "";
+      if (p) { s.liga.elegido = 0; s.liga.elegidoTexto = ""; }
+      return { texto: s.torneos.elegidoTexto };
+    },
+    "partido.duelo": (d) => { s.duelo.id = d.id > 0 ? d.id : 0; s.duelo.ultimoEnvio = d.id > 0 ? `Sala ligada al duelo #${d.id}: al final, los goles suben a la web.` : ""; return {}; },
     "partido.clasificatoria": (d) => {
       if (typeof d.si === "boolean") s.clasificatoria = d.si;
       const g = s.invitados.filter((x) => !x.falso);

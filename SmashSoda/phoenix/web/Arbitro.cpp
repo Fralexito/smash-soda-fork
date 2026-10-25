@@ -159,6 +159,40 @@ namespace phoenix::web {
 			return n;
 		}
 
+		/// ¿El Equipo A de Link es el lado «b» del cruce del torneo? Se mira con los Parsec que declaró cada jugador en la web.
+		bool torneoLadosCambiados(Interno& in, const Interno::Arbitro& a) {
+			auto en = [](const std::vector<std::string>& v, uint32_t id) { return id != 0 && std::find(v.begin(), v.end(), std::to_string(id)) != v.end(); };
+			int igual = 0, cruzado = 0;
+			for (const JugadorPartido& jp : in.partido.ladoA().jugadores) { if (en(a.torneoParsecA, jp.parsecId)) igual++; if (en(a.torneoParsecB, jp.parsecId)) cruzado++; }
+			for (const JugadorPartido& jp : in.partido.ladoB().jugadores) { if (en(a.torneoParsecB, jp.parsecId)) igual++; if (en(a.torneoParsecA, jp.parsecId)) cruzado++; }
+			return cruzado > igual;
+		}
+
+		/// Goles para «Goleadores de los duelos»: lado A = retador (roles del reto que manda la web). Los goles sin
+		/// nombre del goleador (Sider 7.3.3) no se mandan: la web los cuadra con el marcador y no sumarían a nadie.
+		json golesDuelo(Interno& in, const juego::EstadoPartidoJuego& j) {
+			int igual = 0, cruzado = 0;
+			for (const JugadorPartido& jp : in.partido.ladoA().jugadores) { const std::string l = PhoenixLink::instancia().ladoDuelo(std::to_string(jp.parsecId)); if (l == "A") igual++; else if (l == "B") cruzado++; }
+			for (const JugadorPartido& jp : in.partido.ladoB().jugadores) { const std::string l = PhoenixLink::instancia().ladoDuelo(std::to_string(jp.parsecId)); if (l == "B") igual++; else if (l == "A") cruzado++; }
+			const bool cambia = cruzado > igual;
+			const bool inv = in.partido.mandosInvertidos();
+			json gs = json::array();
+			for (const juego::GolJuego& g : j.goles) {
+				if (gs.size() >= 40) break;
+				std::string n;
+				for (char c : g.jugador) if (c != '<' && c != '>') n += c;
+				while (!n.empty() && n.back() == ' ') n.pop_back();
+				while (!n.empty() && n.front() == ' ') n.erase(n.begin());
+				if (n.empty()) continue;
+				if (n.size() > 60) n.resize(60);
+				const bool deLinkA = g.local != inv;   // a quién se le anota (igual que golesParaWeb)
+				json x = { {"lado", (deLinkA != cambia) ? "A" : "B"}, {"goleador", n}, {"minuto", (std::max)(0, (std::min)(130, g.minuto))} };
+				if (g.propia) x["tipo"] = "en_contra";
+				gs.push_back(std::move(x));
+			}
+			return gs;
+		}
+
 		/// «12' Local (MESSI), 34' Visita» (máx. 12 goles; el resto se resume).
 		std::string lineaGoles(Interno& in, const juego::EstadoPartidoJuego& j) {
 			std::string r;
@@ -483,6 +517,32 @@ namespace phoenix::web {
 						mensajeDelBot(in, "Resultado enviado a la web (" + a.oficialTexto + "). Lo valida el staff.");
 						a.partidoOficial = 0;
 						a.oficialTexto.clear();
+					}
+					// Torneo premium/oficial (función «torneos»): goles_a es del lado «a» del cruce, no del local del juego
+					if (a.torneoId > 0 && !contraIa) {
+						const bool inv = in.partido.mandosInvertidos();   // Equipo A de Link = mandos del local, salvo «Cambiar lados»
+						const int gA = inv ? j.golesVisita : j.golesLocal, gB = inv ? j.golesLocal : j.golesVisita;
+						const int pA = inv ? j.pkVisita : j.pkLocal, pB = inv ? j.pkLocal : j.pkVisita;
+						const std::string nA = inv ? j.nombreVisita : j.nombreLocal, nB = inv ? j.nombreLocal : j.nombreVisita;
+						const bool cambia = torneoLadosCambiados(in, a);
+						json juego = { {"nombre_a", cambia ? nB : nA}, {"nombre_b", cambia ? nA : nB} };
+						if (pA >= 0 && pB >= 0 && (pA > 0 || pB > 0)) { juego["pk_a"] = cambia ? pB : pA; juego["pk_b"] = cambia ? pA : pB; }
+						PhoenixLink::instancia().torneoResultado(json{
+							{"torneo_id", a.torneoId}, {"clave", a.torneoClave}, {"completo", true},
+							{"goles_a", (std::max)(0, cambia ? gB : gA)}, {"goles_b", (std::max)(0, cambia ? gA : gB)},
+							{"juego", juego}, {"sala_id", PhoenixLink::instancia().salaId().empty() ? json() : json(PhoenixLink::instancia().salaId())},
+						}.dump(-1, ' ', false, json::error_handler_t::replace));
+						mensajeDelBot(in, "Resultado enviado a la web (" + a.torneoTexto + "). Lo confirma el organizador o el staff.");
+						a.torneoId = 0; a.torneoClave.clear(); a.torneoTexto.clear(); a.torneoParsecA.clear(); a.torneoParsecB.clear();
+					}
+					// Duelo de la web (sala abierta con reto_id): los goles van a «Goleadores de los duelos»
+					const long long reto = PhoenixLink::instancia().duelo().retoId;
+					if (reto > 0 && !contraIa) {
+						const json gs = golesDuelo(in, j);
+						if (!gs.empty()) {
+							PhoenixLink::instancia().dueloGoles(json{ {"reto_id", reto}, {"completo", true}, {"goles", gs} }.dump(-1, ' ', false, json::error_handler_t::replace));
+							mensajeDelBot(in, "Goles del duelo enviados a la web (" + std::to_string(gs.size()) + ").");
+						}
 					}
 					finalizarPartido(in, true, goles.empty() ? std::string() : " Goles: " + goles + ".");
 					vivo = false;
