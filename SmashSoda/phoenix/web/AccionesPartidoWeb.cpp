@@ -317,6 +317,7 @@ namespace phoenix::web {
 				if (po.id != id) continue;
 				in.arbitro.partidoOficial = id;
 				in.arbitro.torneoId = 0; in.arbitro.torneoClave.clear(); in.arbitro.torneoTexto.clear();
+				PhoenixLink::instancia().overlayTorneo(std::string());
 				in.arbitro.oficialTexto = "Fecha " + std::to_string(po.fecha) + " · " + po.local + " vs " + po.visitante;
 				// Phoenix Doctor (informativo): ficha del juego del anfitrión para adjuntar al resultado
 				const std::string carpeta = PhoenixPrefs::get().carpetaJuego;
@@ -335,13 +336,19 @@ namespace phoenix::web {
 			const long long id = d.contains("torneo_id") && d["torneo_id"].is_number_integer() ? d["torneo_id"].get<long long>() : 0;
 			const std::string clave = d.contains("clave") && d["clave"].is_string() ? d["clave"].get<std::string>() : std::string();
 			Interno::Arbitro& a = in.arbitro;
-			if (id <= 0 || clave.empty()) { a.torneoId = 0; a.torneoClave.clear(); a.torneoTexto.clear(); a.torneoParsecA.clear(); a.torneoParsecB.clear(); return json::object(); }
+			if (id <= 0 || clave.empty()) {
+				a.torneoId = 0; a.torneoClave.clear(); a.torneoTexto.clear(); a.torneoParsecA.clear(); a.torneoParsecB.clear();
+				PhoenixLink::instancia().overlayTorneo(std::string());
+				return json::object();
+			}
 			for (const PartidoTorneo& pt : PhoenixLink::instancia().torneos().partidos) {
 				if (pt.torneoId != id || pt.clave != clave) continue;
 				a.torneoId = id; a.torneoClave = clave;
 				a.torneoTexto = pt.torneo + (pt.ronda.empty() ? std::string() : " · " + pt.ronda) + " · " + pt.a.nombre + " vs " + pt.b.nombre;
 				a.torneoParsecA = pt.a.parsec; a.torneoParsecB = pt.b.parsec;
 				a.partidoOficial = 0; a.oficialTexto.clear();   // no puede ser a la vez de liga
+				PhoenixLink::instancia().overlayTorneo(json{ {"torneo", pt.torneo}, {"ronda", pt.ronda}, {"a", pt.a.nombre}, {"b", pt.b.nombre} }
+					.dump(-1, ' ', false, json::error_handler_t::replace));
 				return json{ {"texto", a.torneoTexto} };
 			}
 			throw ErrorAccion("NO_EXISTE", "Ese partido de torneo ya no está en la lista: actualízala.");

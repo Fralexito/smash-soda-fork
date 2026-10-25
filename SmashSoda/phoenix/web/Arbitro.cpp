@@ -534,6 +534,7 @@ namespace phoenix::web {
 						}.dump(-1, ' ', false, json::error_handler_t::replace));
 						mensajeDelBot(in, "Resultado enviado a la web (" + a.torneoTexto + "). Lo confirma el organizador o el staff.");
 						a.torneoId = 0; a.torneoClave.clear(); a.torneoTexto.clear(); a.torneoParsecA.clear(); a.torneoParsecB.clear();
+						PhoenixLink::instancia().overlayTorneo(std::string());   // el partido terminó: el overlay quita el torneo
 					}
 					// Duelo de la web (sala abierta con reto_id): los goles van a «Goleadores de los duelos»
 					const long long reto = PhoenixLink::instancia().duelo().retoId;

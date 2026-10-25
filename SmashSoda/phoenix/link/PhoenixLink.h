@@ -232,6 +232,8 @@ namespace phoenix {
 		void invitarDesdeOverlay(const std::string& usuarioId);
 		/// Marcador para el overlay (json ya armado por el árbitro; "" = sin partido). Se envía cuando cambia.
 		void overlayPartido(const std::string& jsonTexto);
+		/// Partido de torneo de la sala para el overlay (phoenix:torneo, {torneo, ronda, a, b}); "" = null (sin torneo o terminó).
+		void overlayTorneo(const std::string& jsonTexto);
 		void enviarChatGlobal(uint64_t ticket, const std::string& texto);
 		/// PES2021.exe esta abierto (se mira cada ~5 s en el hilo de Link).
 		bool pesAbierto() const { return _pesAbierto.load(); }
@@ -375,6 +377,8 @@ namespace phoenix {
 		bool panelOverlayAbierto() const;
 		std::string _overlayPartidoTexto, _overlayPartidoEnviado;
 		long long _overlayPartidoEnviadoMs = 0;
+		std::string _overlayTorneoTexto, _overlayTorneoEnviado = "-";   ///< "-" = aún no mandado (el primer null también sale)
+		long long _overlayTorneoEnviadoMs = 0;
 		std::map<uint64_t, std::string> _overlayInvitaciones;   ///< ticket → amigo invitado desde el overlay
 		uint64_t _overlayTicketN = 0;
 		std::string _overlayFirmaAmigos;

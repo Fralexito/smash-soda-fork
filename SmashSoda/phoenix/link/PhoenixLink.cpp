@@ -764,6 +764,10 @@ namespace phoenix {
 		std::lock_guard<std::mutex> l(_mutex);
 		_overlayPartidoTexto = jsonTexto;
 	}
+	void PhoenixLink::overlayTorneo(const std::string& jsonTexto) {
+		std::lock_guard<std::mutex> l(_mutex);
+		_overlayTorneoTexto = jsonTexto;
+	}
 
 	// Lo que se manda al overlay (PhoenixGlass) por el WebSocket local: noticias de ultima hora y mensajes nuevos del chat general.
 	std::vector<std::string> PhoenixLink::mensajesOverlay() {
@@ -779,6 +783,16 @@ namespace phoenix {
 				const json datos = _overlayPartidoTexto.empty() ? json{ {"fase", "libre"} } : json::parse(_overlayPartidoTexto, nullptr, false);
 				if (!datos.is_discarded()) {
 					json j; j["event"] = "phoenix:partido"; j["data"] = datos;
+					salida.push_back(j.dump(-1, ' ', false, json::error_handler_t::replace));
+				}
+			}
+			// Torneo del partido (phoenix-overlay PR #1): {torneo, ronda, a, b} o null; al cambiar y cada 5 s si hay torneo
+			if (_overlayTorneoTexto != _overlayTorneoEnviado || (!_overlayTorneoTexto.empty() && ahora - _overlayTorneoEnviadoMs > 5000)) {
+				_overlayTorneoEnviado = _overlayTorneoTexto;
+				_overlayTorneoEnviadoMs = ahora;
+				const json datos = _overlayTorneoTexto.empty() ? json(nullptr) : json::parse(_overlayTorneoTexto, nullptr, false);
+				if (!datos.is_discarded()) {
+					json j; j["event"] = "phoenix:torneo"; j["data"] = datos;
 					salida.push_back(j.dump(-1, ' ', false, json::error_handler_t::replace));
 				}
 			}
