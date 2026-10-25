@@ -31,6 +31,18 @@ public static class PhxPes {
   [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int c);
   [DllImport("user32.dll")] public static extern bool PrintWindow(IntPtr h, IntPtr dc, uint f);
   [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr h);
+  [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+  [DllImport("user32.dll")] static extern void keybd_event(byte vk, byte scan, uint flags, IntPtr extra);
+  // Windows no deja que un proceso de fondo se ponga al frente; un Alt «suelto» levanta ese bloqueo.
+  public static bool Traer(IntPtr h) {
+    if (IsIconic(h)) ShowWindow(h, 9);
+    for (int k = 0; k < 3; k++) {
+      if (GetForegroundWindow() == h) return true;
+      keybd_event(0x12, 0x38, 0, IntPtr.Zero); keybd_event(0x12, 0x38, 2, IntPtr.Zero);
+      SetForegroundWindow(h); System.Threading.Thread.Sleep(500);
+    }
+    return GetForegroundWindow() == h;
+  }
   [StructLayout(LayoutKind.Sequential)] public struct KI { public ushort wVk, wScan; public uint dwFlags, time; public IntPtr extra; }
   [StructLayout(LayoutKind.Sequential)] public struct INP { public uint type; public KI ki; public uint pad1, pad2; }
   [DllImport("user32.dll")] static extern uint SendInput(uint n, INP[] i, int size);
@@ -160,8 +172,12 @@ switch ($Accion) {
         }
         $partes = $Teclas.Split('+') | ForEach-Object { $_.Trim() }
         foreach ($p in $partes) { if (-not $mapa.ContainsKey($p)) { throw "Tecla no permitida: $p" } }
-        [void][PhxPes]::ShowWindow($pes.MainWindowHandle, 9); [void][PhxPes]::SetForegroundWindow($pes.MainWindowHandle); Start-Sleep -Milliseconds 400
+        # Las teclas solo se mandan si PES está AL FRENTE: si no, irían a otra ventana.
+        $estabaMin = [PhxPes]::IsIconic($pes.MainWindowHandle)
+        if (-not [PhxPes]::Traer($pes.MainWindowHandle)) { throw 'PES no se pudo poner al frente: no se pulsó nada (para no escribir en otra ventana).' }
+        Start-Sleep -Milliseconds $(if ($estabaMin) { 2500 } else { 600 })
         for ($k = 0; $k -lt [math]::Min([math]::Max($Veces, 1), 20); $k++) {
+            if ([PhxPes]::GetForegroundWindow() -ne $pes.MainWindowHandle) { throw "PES dejó de estar al frente tras $k pulsación(es): se paró." }
             foreach ($p in $partes) { [PhxPes]::Tecla([uint16]$mapa[$p][0], [bool]$mapa[$p][1], $false); Start-Sleep -Milliseconds 40 }
             Start-Sleep -Milliseconds 60
             [array]::Reverse($partes)
