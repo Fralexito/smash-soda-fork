@@ -242,6 +242,9 @@ namespace phoenix {
 		juego::EstadoPartidoJuego estadoJuego();
 		/// Pantalla del juego (pantalla.json de phoenix_referee v1.2+: menú, eligiendo equipos, saliendo al campo…). Solo para la web.
 		juego::PantallaJuego pantallaJuego();
+		/// Ficha del partido según phoenix_sonda.lua (content\\phoenix\\sonda.json, 0.3.51): estadio, clima, hora, estación, duración,
+		/// dificultad, prórroga, penales, cambios y zona del juego. Objeto JSON; vacío (null) si no hay sonda o el dato tiene > 15 s.
+		std::string fichaJuego();
 		/// Texto de sala.txt para el HUD del juego (lineas clave=valor). El hilo de Link lo escribe atómico
 		/// en content\phoenix\ cuando cambia (y cada 4 s con la hora, para que el juego sepa que Link sigue vivo).
 		void salaJuego(const std::string& texto);
@@ -428,6 +431,8 @@ namespace phoenix {
 		long long _estadoLeidoMs = 0;
 		long long _estadoValidoMs = 0;
 		juego::PantallaJuego _pantallaJuego;      ///< con _mutex
+		std::string _fichaJuego;                  ///< con _mutex (JSON de la sonda, ya resumido)
+		long long _fichaLeidaMs = 0;
 		long long _pantallaValidaMs = 0;
 		// sala.txt (HUD del juego): _salaJuegoTexto con _mutex; el resto solo el hilo de Link
 		std::string _salaJuegoTexto, _salaJuegoEscrito;

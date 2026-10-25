@@ -1194,3 +1194,22 @@ Cuando termines cada punto, deja en `docs/` de la web qué ruta/campo quedó y s
 
 **A tener en cuenta.** Sin una ruta de la web que liste «mis duelos», el número se escribe a mano. Si la web la añade, la tarjeta puede ofrecer una lista como en torneos.
 
+## Parte 15 · Pedido a la web (Cuenta 2): mostrar la ficha del partido y los datos del grupo A (Link 0.3.51, 25-oct-2026)
+
+**Origen.** Propuesta del hilo del MCP de PES (`pes-mcp/PROPUESTA-DATOS-WEB.md`, grupo A: datos que ya existen y solo hay que leer y mandar). Los grupos B (minuto a minuto desde `escenas.log`) y C (estadísticas e ingeniería inversa) van después.
+
+**Qué manda Link desde la 0.3.51.**
+1. Módulo opcional nuevo en SYNC › AVANZADO › Archivos de Phoenix: `phoenix_sonda.lua` (solo lectura). Escribe `SiderAddons\content\phoenix\sonda.json` cada segundo. Link lo instala como los demás (copia, línea `lua.module` con copia de `sider.ini`). La línea queda **antes** de la de mandos 9–16, porque esa tiene que ser la última (el LEEME del MCP decía «debajo de mandos»: con Link manda la regla de mandos).
+2. `partida_fin` (`eventos_sala.datos`) trae dos campos nuevos:
+   - `ficha`: `{estadio, estadio_nombre?, clima, hora, estacion, duracion, dificultad, prorroga, penales, cambios, zona}`. Solo si la sonda está instalada y su archivo tiene menos de 15 s. Son los valores tal cual los da Sider (`ctx.stadium` es un número de estadio; `weather`, `timeofday` y `season` son códigos de Sider). Es lo primero que se quita si `datos` pasa de 4 KB.
+   - `juego.anadido`: minutos añadidos del último periodo.
+   - Ya iban antes: `juego.penales_a` / `penales_b` y quién jugó en cada lado (`a` / `b` con sus jugadores).
+3. `POST /liga/v1/liga/vivo` trae además `anadido`, `pk_local` / `pk_visita` (solo si hubo tanda) y `ficha`. **Hoy la función `liga` los ignora** (arma la fila de `liga_vivo` con campos fijos), así que no rompe nada.
+
+**Qué tiene que hacer la web (Cuenta 2).**
+- Ficha del partido (historial o página del duelo y de la liga): «estadio · clima · noche», leyendo `datos.ficha` de `partida_fin`. Hace falta una tabla de códigos de Sider a nombres (estadio, clima, hora, estación). Si no hay ficha, no mostrar nada.
+- Anti-trampas en la liga: comparar `ficha.duracion`, `ficha.dificultad`, `ficha.prorroga`, `ficha.penales` y `ficha.cambios` con las reglas de la edición, y marcar el partido para que lo revise el staff si no coinciden. Nunca rechazarlo solo.
+- En vivo: guardar `anadido` y `pk_local` / `pk_visita` en `liga_vivo` (columnas nuevas) y mostrar «45+3'» y el marcador de penales en la tarjeta en vivo.
+
+**Cómo se probó.** Compilado con cmake sin errores. Sin probar con la sonda funcionando: hace falta instalarla en PES y jugar un partido. Si la sonda no está, Link no manda `ficha` y todo sigue igual.
+

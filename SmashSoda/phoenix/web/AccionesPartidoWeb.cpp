@@ -146,9 +146,16 @@ namespace phoenix::web {
 					goles.push_back(std::move(x));
 				}
 				info["goles"] = goles;
+				if (j.anadido > 0) info["anadido"] = j.anadido;   // minutos añadidos del último periodo (grupo A, 25-oct-2026)
 				d["juego"] = info;
 			}
+			// Ficha del partido de phoenix_sonda.lua (estadio, clima, duración, reglas…), si está instalada
+			{
+				const json ficha = json::parse(PhoenixLink::instancia().fichaJuego(), nullptr, false);
+				if (!ficha.is_discarded() && ficha.is_object()) d["ficha"] = ficha;
+			}
 			// El contrato limita `datos` a 4 KB: si no cabe, fuera la lista de goles (se queda el marcador)
+			if (d.dump(-1, ' ', false, json::error_handler_t::replace).size() > 3800) d.erase("ficha");
 			if (d.dump(-1, ' ', false, json::error_handler_t::replace).size() > 3800 && d.contains("juego")) d["juego"].erase("goles");
 			// Y si aún no cabe, fuera las fichas de los jugadores (el resultado siempre llega)
 			if (d.dump(-1, ' ', false, json::error_handler_t::replace).size() > 3800)

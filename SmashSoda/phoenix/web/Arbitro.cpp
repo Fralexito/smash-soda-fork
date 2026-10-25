@@ -578,6 +578,10 @@ namespace phoenix::web {
 						{"minuto", (std::max)(0, (std::min)(200, j.minuto))}, {"periodo", j.periodo}, {"fase", fase}, {"goles", gs} };
 					if (!pantalla.empty()) c["pantalla"] = pantalla;
 					if (a.partidoOficial > 0) c["partido_id"] = a.partidoOficial;
+					// Grupo A (25-oct-2026): «45+3'», tanda de penales y ficha de la sonda. La web los mostrará cuando los lea.
+					if (j.anadido > 0) c["anadido"] = j.anadido;
+					if (j.pkLocal >= 0 && j.pkVisita >= 0 && (j.pkLocal > 0 || j.pkVisita > 0)) { c["pk_local"] = inv ? j.pkVisita : j.pkLocal; c["pk_visita"] = inv ? j.pkLocal : j.pkVisita; }
+					{ const json ficha = json::parse(PhoenixLink::instancia().fichaJuego(), nullptr, false); if (!ficha.is_discarded() && ficha.is_object()) c["ficha"] = ficha; }
 					PhoenixLink::instancia().ligaVivo(c.dump());
 					vivoEnviadoSeg = ahora;
 					a.vivoFirma = firma;

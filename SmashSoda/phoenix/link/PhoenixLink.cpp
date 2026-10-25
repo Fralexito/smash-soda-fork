@@ -47,6 +47,43 @@ namespace phoenix {
 
 		std::string carpeta() { return PathHelper::GetConfigPath(); }
 
+		/// sonda.json (phoenix_sonda.lua v1.0) → {estadio, estadio_nombre, clima, hora, estacion, duracion, dificultad, prorroga,
+		/// penales, cambios, zona}. Solo campos conocidos y pequeños (cabe en «partida_fin», máx. 4 KB). "" si no hay archivo,
+		/// tiene más de 15 s (la sonda escribe cada segundo) o está a medio escribir.
+		std::string leerFichaSonda(const std::filesystem::path& ruta) {
+			try {
+				std::error_code ec;
+				const auto n = std::filesystem::file_size(ruta, ec);
+				if (ec || n == 0 || n > 256 * 1024) return std::string();
+				const auto t = std::filesystem::last_write_time(ruta, ec);
+				if (ec) return std::string();
+				const auto edad = std::chrono::duration_cast<std::chrono::seconds>(std::filesystem::file_time_type::clock::now() - t).count();
+				if (edad > 15) return std::string();
+				std::ifstream f(ruta, std::ios::binary);
+				if (!f) return std::string();
+				const std::string texto((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
+				const json j = json::parse(texto, nullptr, false);
+				if (j.is_discarded() || !j.is_object()) return std::string();
+				json r = json::object();
+				if (j.contains("ctx") && j["ctx"].is_object()) {
+					const json& c = j["ctx"];
+					auto copia = [&](const char* de, const char* a) {
+						if (!c.contains(de)) return;
+						const json& v = c[de];
+						if (v.is_number() || v.is_boolean()) r[a] = v;
+						else if (v.is_string() && v.get<std::string>().size() <= 60) r[a] = v;
+					};
+					copia("stadium", "estadio"); copia("stadium_name", "estadio_nombre"); copia("weather", "clima"); copia("timeofday", "hora");
+					copia("season", "estacion"); copia("match_time", "duracion"); copia("difficulty", "dificultad");
+					copia("extra_time", "prorroga"); copia("penalties", "penales"); copia("substitutions", "cambios");
+				}
+				if (j.contains("zona") && j["zona"].is_object() && j["zona"].contains("nombre") && j["zona"]["nombre"].is_string())
+					r["zona"] = j["zona"]["nombre"];
+				return r.empty() ? std::string() : r.dump(-1, ' ', false, json::error_handler_t::replace);
+			}
+			catch (...) { return std::string(); }
+		}
+
 		// --- Token cifrado con DPAPI (solo este usuario de Windows lo descifra) ---
 		bool guardarToken(const std::string& token) {
 			DATA_BLOB entrada{ static_cast<DWORD>(token.size()), (BYTE*)token.data() }, salida{};
@@ -388,6 +425,11 @@ namespace phoenix {
 					std::lock_guard<std::mutex> lock(_mutex);
 					if (pj.valida) { _pantallaJuego = pj; _pantallaValidaMs = ahoraMs(); }
 					else if (ahoraMs() - _pantallaValidaMs >= 3000) _pantallaJuego = pj;
+				}
+				// Ficha del partido de phoenix_sonda.lua (sonda.json, ~1/s): solo lectura y solo lo que la web necesita (grupo A)
+				if (!_estadoCarpeta.empty()) {
+					const std::string ficha = leerFichaSonda(std::filesystem::path(_estadoCarpeta) / "sonda.json");
+					if (!ficha.empty()) { std::lock_guard<std::mutex> lock(_mutex); _fichaJuego = ficha; _fichaLeidaMs = ahoraMs(); }
 				}
 				// Link → juego: sala.txt para el HUD de phoenix_estadio.lua (solo con PES abierto y el puente instalado)
 				if (!_estadoCarpeta.empty() && ahoraMs() >= _salaJuegoProximoMs) {
@@ -1486,6 +1528,11 @@ namespace phoenix {
 	void PhoenixLink::salaJuego(const std::string& texto) {
 		std::lock_guard<std::mutex> l(_mutex);
 		_salaJuegoTexto = texto;
+	}
+
+	std::string PhoenixLink::fichaJuego() {
+		std::lock_guard<std::mutex> l(_mutex);
+		return ahoraMs() - _fichaLeidaMs <= 15000 ? _fichaJuego : std::string();
 	}
 
 	juego::PantallaJuego PhoenixLink::pantallaJuego() {
