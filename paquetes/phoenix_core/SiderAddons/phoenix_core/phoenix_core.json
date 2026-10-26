@@ -1,6 +1,7 @@
 {
   "funciones": {
     "diagnostico": true,
+    "sonda_partido": true,
     "gol_nativo_free": false
   }
 }

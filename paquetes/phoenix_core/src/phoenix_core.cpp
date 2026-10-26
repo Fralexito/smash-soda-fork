@@ -24,9 +24,10 @@
 #include <string.h>
 #include <string>
 #include <vector>
+#include <intrin.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.1.0"
+#define PHX_CORE_VERSION "0.2.0"
 
 namespace {
 
@@ -214,9 +215,169 @@ bool diagQuitar(Feature&) { return true; }
 bool golInstalar(Feature& f) { f.estado = "pendiente: sin firma todavía (fase 1)"; return false; }
 bool golQuitar(Feature&) { return true; }
 
+// ---------------------------------------------------------------- desvíos propios (sin MinHook)
+// Solo para funciones cuyo prólogo conocemos (leído con REA/Ghidra): se copian `n` bytes de instrucciones enteras,
+// sin RIP-relativos ni saltos, a un trampolín que salta de vuelta a dir+n. En dir se escribe
+// «jmp [rip+0]; dq gancho» (14 bytes) + NOP hasta n. El trampolín nunca se libera (un hilo podría estar dentro).
+bool crearDesvio(Feature& f, uint8_t* dir, size_t n, void* gancho, void** original) {
+    if (n < 14 || n > 32) return false;
+    auto t = static_cast<uint8_t*>(VirtualAlloc(nullptr, 64, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE));
+    if (!t) return false;
+    memcpy(t, dir, n);
+    const uint8_t jmp[6] = { 0xFF, 0x25, 0, 0, 0, 0 };
+    uint64_t vuelta = reinterpret_cast<uint64_t>(dir + n);
+    memcpy(t + n, jmp, 6); memcpy(t + n + 6, &vuelta, 8);
+    FlushInstructionCache(GetCurrentProcess(), t, 64);
+    *original = t;
+    Parche p; p.dir = dir; p.original.assign(dir, dir + n);
+    p.nuevo.assign(jmp, jmp + 6);
+    uint64_t g = reinterpret_cast<uint64_t>(gancho);
+    p.nuevo.insert(p.nuevo.end(), reinterpret_cast<uint8_t*>(&g), reinterpret_cast<uint8_t*>(&g) + 8);
+    p.nuevo.resize(n, 0x90);
+    if (!aplicarParche(p, f.id)) return false;
+    f.parches.push_back(p);
+    return true;
+}
+
+// Lectura protegida (la memoria del juego puede no estar donde creemos).
+bool leerSeguro(const void* dir, void* out, size_t n) {
+    __try { memcpy(out, dir, n); return true; }
+    __except (EXCEPTION_EXECUTE_HANDLER) { return false; }
+}
+uint64_t leerU32(const uint8_t* base, size_t off) { uint32_t v = 0xFFFFFFFF; leerSeguro(base + off, &v, 4); return v; }
+uint64_t leerU8(const uint8_t* base, size_t off) { uint8_t v = 0xFF; leerSeguro(base + off, &v, 1); return v; }
+
+// --- función 3: sonda del partido (solo mira). Anota cada cambio de estado de los actores (SetState) y cada vez
+// que corre el procesador nativo del gol, con quién lo llamó. Sirve para saber qué decide «gol» en un amistoso y
+// qué cambia en el Entrenamiento libre (zona 52). Escribe en sonda_partido.txt.
+enum { EV_ESTADO = 1, EV_GOL = 2, EV_PARADO = 3 };
+struct Ev { volatile LONG listo; uint32_t tipo, hilo; uint64_t t, ret, a, b, c, d, x[4]; };
+const LONG kEvs = 8192;
+Ev g_ev[kEvs];
+volatile LONG g_escr = 0;
+LONG g_leido = 0, g_perdidos = 0;
+size_t g_bytesSonda = 0;
+const size_t kTopeSonda = 20u << 20;     // 20 MB y deja de escribir
+
+Ev& nuevoEv(uint32_t tipo, void* ret) {
+    LONG i = InterlockedIncrement(&g_escr) - 1;
+    Ev& e = g_ev[i & (kEvs - 1)];
+    e.listo = 0;
+    e.tipo = tipo; e.hilo = GetCurrentThreadId(); e.t = GetTickCount64() - g_tInicio;
+    e.ret = reinterpret_cast<uint64_t>(ret);
+    e.a = e.b = e.c = e.d = 0; e.x[0] = e.x[1] = e.x[2] = e.x[3] = 0;
+    e.listo = -1 - i;   // aún escribiéndose
+    return e;
+}
+void cerrarEv(Ev& e) { MemoryBarrier(); e.listo = -e.listo; }   // -1-i → i+1 = listo
+
+using FnSetState = uint64_t (*)(uint8_t* actor, uint32_t estado, uint32_t modo);
+FnSetState g_setStateOrig = nullptr;
+uint64_t ganchoSetState(uint8_t* actor, uint32_t estado, uint32_t modo) {
+    Ev& e = nuevoEv(EV_ESTADO, _ReturnAddress());
+    e.a = reinterpret_cast<uint64_t>(actor); e.b = estado & 0xFF; e.c = modo & 0xFF;
+    e.d = leerU8(actor, 0xAC8);           // estado anterior
+    cerrarEv(e);
+    return g_setStateOrig(actor, estado, modo);
+}
+
+using FnGol = uint64_t (*)(uint8_t* a, uint8_t* b, uint8_t* job, uint64_t p4);
+FnGol g_golOrig = nullptr;
+uint64_t ganchoGol(uint8_t* a, uint8_t* b, uint8_t* job, uint64_t p4) {
+    uint64_t r = g_golOrig(a, b, job, p4);
+    Ev& e = nuevoEv(EV_GOL, _ReturnAddress());
+    e.a = reinterpret_cast<uint64_t>(a); e.b = reinterpret_cast<uint64_t>(b);
+    e.c = reinterpret_cast<uint64_t>(job); e.d = p4;
+    e.x[0] = leerU32(a, 0x294); e.x[1] = leerU32(a, 0x298);       // goles por equipo (según el Mapa Fox)
+    e.x[2] = leerU32(job, 0x874); e.x[3] = leerU8(job, 0x8F2);    // escena y fase del trabajo
+    cerrarEv(e);
+    return r;
+}
+
+struct Gancho { const char* nombre; const char* firma; uint32_t rvaEsperada; size_t n; void* gancho; void** original; };
+Gancho g_ganchos[] = {
+    // Mapa Fox PARTE1: SetState(actor, estado, modo) · prólogo 15 bytes sin RIP-relativos (leído 26-oct)
+    { "SetState", "48 89 6C 24 10 48 89 74 24 18 48 89 7C 24 20 41 56 48 83 EC 20 8D", 0x6EEBB0, 15,
+      (void*)ganchoSetState, (void**)&g_setStateOrig },
+    // procesador nativo del gol (patrón «gol marcado» de Sider) · prólogo 14 bytes exactos
+    { "ProcesarGol", "48 8B C4 48 89 50 10 55 56 57 41 54 41 55 41 56 41 57 48 8D A8 D8", 0x478190, 14,
+      (void*)ganchoGol, (void**)&g_golOrig },
+};
+
+bool g_exeConocido = true;   // las RVA fijas (vigilarParado) solo valen si todas las firmas caen donde en Conmegol
+
+bool sondaInstalar(Feature& f) {
+    g_exeConocido = true;
+    uint8_t* dirs[_countof(g_ganchos)];
+    for (size_t i = 0; i < _countof(g_ganchos); ++i) {      // primero se buscan todas: o todas o ninguna
+        auto& g = g_ganchos[i];
+        dirs[i] = firmaUnica(".text", g.firma, f.id);
+        if (!dirs[i]) { f.estado = std::string("sin firma: ") + g.nombre; return false; }
+        uint32_t rva = static_cast<uint32_t>(dirs[i] - g_exe.base);
+        logf("[%s] %s en exe+0x%X%s", f.id, g.nombre, rva, rva == g.rvaEsperada ? "" : " (exe distinto del de Conmegol)");
+        if (rva != g.rvaEsperada) g_exeConocido = false;
+    }
+    for (size_t i = 0; i < _countof(g_ganchos); ++i) {
+        if (!crearDesvio(f, dirs[i], g_ganchos[i].n, g_ganchos[i].gancho, g_ganchos[i].original)) {
+            f.estado = std::string("no se pudo desviar ") + g_ganchos[i].nombre; return false;
+        }
+    }
+    f.estado = "ok: anotando en sonda_partido.txt";
+    return true;
+}
+bool sondaQuitar(Feature&) { return true; }   // los parches los quita el marco
+
+// Indicador general «partido detenido» ([[0x1436F3DC8]+0x270]+0x1775), solo en el exe de Conmegol (RVA conocida).
+uint64_t g_paradoPrevio = 0x100;
+void vigilarParado() {
+    if (!g_exeConocido) return;
+    uint8_t* mgr = nullptr; uint8_t* raiz = nullptr;
+    if (!leerSeguro(g_exe.base + 0x36F3DC8, &raiz, 8) || !raiz) return;
+    if (!leerSeguro(raiz + 0x270, &mgr, 8) || !mgr) return;
+    uint64_t v = leerU8(mgr, 0x1775);
+    if (v == g_paradoPrevio) return;
+    g_paradoPrevio = v;
+    Ev& e = nuevoEv(EV_PARADO, nullptr);
+    e.a = reinterpret_cast<uint64_t>(mgr); e.b = v;
+    cerrarEv(e);
+}
+
+void volcarSonda() {
+    if (g_bytesSonda >= kTopeSonda) return;
+    std::string s;
+    char l[320];
+    for (int k = 0; k < 512 && g_leido < g_escr; ++k) {
+        if (g_escr - g_leido > kEvs) { g_perdidos += g_escr - g_leido - kEvs; g_leido = g_escr - kEvs; }
+        Ev& e = g_ev[g_leido & (kEvs - 1)];
+        if (e.listo != g_leido + 1) break;           // aún escribiéndose
+        Ev c = e;                                    // copia antes de que se recicle
+        if (c.listo != g_leido + 1) break;
+        ++g_leido;
+        long long ret = c.ret ? (long long)(c.ret - reinterpret_cast<uint64_t>(g_exe.base)) : 0;
+        if (c.tipo == EV_ESTADO)
+            sprintf_s(l, "%8llu h%-5u ESTADO actor=%llX 0x%02llX->0x%02llX modo=0x%02llX desde exe+0x%llX\r\n",
+                      c.t, c.hilo, c.a, c.d, c.b, c.c, ret);
+        else if (c.tipo == EV_GOL)
+            sprintf_s(l, "%8llu h%-5u GOL a=%llX b=%llX job=%llX p4=%llX goles=%llu-%llu escena=0x%llX fase=%llu desde exe+0x%llX\r\n",
+                      c.t, c.hilo, c.a, c.b, c.c, c.d, c.x[0], c.x[1], c.x[2], c.x[3], ret);
+        else
+            sprintf_s(l, "%8llu h%-5u PARADO mgr=%llX +0x1775=%llu\r\n", c.t, c.hilo, c.a, c.b);
+        s += l;
+    }
+    if (g_perdidos) { sprintf_s(l, "         (perdidos %ld eventos: demasiados de golpe)\r\n", g_perdidos); s += l; g_perdidos = 0; }
+    if (s.empty()) return;
+    FILE* f = nullptr;
+    if (fopen_s(&f, (g_carpeta + "sonda_partido.txt").c_str(), "ab") != 0 || !f) return;
+    fwrite(s.data(), 1, s.size(), f);
+    fclose(f);
+    g_bytesSonda += s.size();
+    if (g_bytesSonda >= kTopeSonda) logf("[sonda_partido] llegó a 20 MB: deja de escribir");
+}
+
 std::vector<Feature> g_funciones = {
-    { "diagnostico",     "Diagnóstico de firmas (solo lectura)",       diagInstalar, diagQuitar },
-    { "gol_nativo_free", "Gol nativo en Entrenamiento libre (street)", golInstalar,  golQuitar  },
+    { "diagnostico",     "Diagnóstico de firmas (solo lectura)",       diagInstalar,  diagQuitar  },
+    { "gol_nativo_free", "Gol nativo en Entrenamiento libre (street)", golInstalar,   golQuitar   },
+    { "sonda_partido",   "Sonda: estados y gol nativo (solo mira)",    sondaInstalar, sondaQuitar },
 };
 
 Feature* buscarFuncion(const char* id) {
@@ -232,6 +393,7 @@ bool encender(Feature& f) {
     if (r == 1) { f.activa = true; logf("[%s] activa · %s", f.id, f.estado.c_str()); return true; }
     if (r < 0) { ++f.fallos; f.estado = "excepción al instalar"; }
     for (auto& p : f.parches) quitarParche(p);
+    f.parches.clear();
     logf("[%s] no activada · %s", f.id, f.estado.c_str());
     return false;
 }
@@ -241,6 +403,7 @@ bool apagar(Feature& f) {
     int r = llamarSeguro(f.quitar, f);
     bool ok = r == 1;
     for (auto& p : f.parches) ok = quitarParche(p) && ok;
+    if (ok) f.parches.clear();
     f.activa = !ok;
     f.estado = ok ? "apagada" : "no se pudo apagar del todo";
     logf("[%s] %s", f.id, f.estado.c_str());
@@ -339,8 +502,12 @@ PHX_API int phx_core_iniciar(const char* carpeta) {
 }
 
 PHX_API void phx_core_tick(void) {
-    if (g_flagBorrada || g_codigoInicio <= 0) return;
-    if (GetTickCount64() - g_tInicio < 60000) return;
+    if (g_codigoInicio <= 0) return;
+    if (Feature* s = buscarFuncion("sonda_partido"); s && s->activa) {
+        vigilarParado();
+        volcarSonda();
+    }
+    if (g_flagBorrada || GetTickCount64() - g_tInicio < 60000) return;
     g_flagBorrada = true;
     DeleteFileA((g_carpeta + "arrancando.flag").c_str());
     logf("60 s estables: arrancando.flag borrada%s", g_modoSeguro ? " (el próximo arranque será normal)" : "");
