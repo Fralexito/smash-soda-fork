@@ -27,7 +27,7 @@
 #include <intrin.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.3.1"
+#define PHX_CORE_VERSION "0.3.2"
 
 namespace {
 
@@ -360,14 +360,16 @@ uint64_t ganchoEvento(uint8_t* job, uint32_t tipo) {
     // gol_nativo_free: el entrenamiento pisa la parada con 0x0E. Si la parada es gol, no lo dejamos.
     if (tipo == 0x0A && reinterpret_cast<uint8_t*>(ret) == g_exe.base + kRetGol) {
         g_ultimoGolJob = job; g_ultimoGolT = GetTickCount64();
+    } else if (tipo != 0x0A && tipo != 0x0E && job == g_ultimoGolJob) {
+        g_ultimoGolJob = nullptr;    // el gol ya terminó (p. ej. 0xA->0x9): un 0x0E posterior no es de ese gol
     }
     int accion = 0;   // 0 = normal, 1 = no pisar (ya es gol), 2 = montar el gol nosotros
     if (g_golFree && g_exeConocido && tipo == 0x0E &&
         reinterpret_cast<uint8_t*>(ret) == g_exe.base + kRetEntreno) {
-        bool golReciente = job == g_ultimoGolJob && GetTickCount64() - g_ultimoGolT < 5000;
+        bool golReciente = job == g_ultimoGolJob && GetTickCount64() - g_ultimoGolT < 1000;
         bool esGol = k == 3 || (k == 5 && flag != 0) || golReciente;
         if (previo == 0x0A) accion = 1;          // el montador ya puso GOL y su cola: se queda (449B00 añade 0x36)
-        else if (esGol)     accion = 2;          // el montador no llegó a correr: lo llamamos nosotros
+        else if (esGol)   { accion = 2; g_ultimoGolJob = nullptr; }   // el montador no corrió: lo llamamos (una vez)
         e.x[3] = accion;
     }
     cerrarEv(e);
