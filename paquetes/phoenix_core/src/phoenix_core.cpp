@@ -24,11 +24,12 @@
 #include <string.h>
 #include <string>
 #include <vector>
+#include <algorithm>
 #include <intrin.h>
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.6"
+#define PHX_CORE_VERSION "0.4.7"
 
 namespace {
 
@@ -562,11 +563,13 @@ void volcarSonda() {
     if (g_bytesSonda >= kTopeSonda) logf("[sonda_partido] llegó a 20 MB: deja de escribir");
 }
 
-// --- función 4: vigilante de bucles (solo mira). Hilo propio que cada 250 ms detiene un instante cada hilo de PES,
-// lee su RIP y lo suelta. Si un hilo pasa ≥6 de 8 muestras en la misma zona del exe (±0x200) y gasta CPU sin parar,
-// anota en phoenix_core.log «[VIGILANTE] bucle» con RIP, RSP y las direcciones del exe que hay en su pila.
-// Sirve para encontrar cuelgues (100 % CPU sin cerrarse) sin volcados de memoria.
-struct MuestraHilo { DWORD tid; uint64_t rip[8]; int n; ULONGLONG cpu0; uint64_t avisado; };
+// --- función 4: vigilante de cuelgues (solo mira). Hilo propio que cada 250 ms mira la CPU de cada hilo de PES.
+// Si el proceso gasta mucha CPU (≥2 núcleos durante 2 s) y la sonda no ha anotado nada en 3 s, entra en «modo
+// perfil»: durante 2 s detiene un instante cada hilo ocupado, lee su RIP (y su pila) y lo suelta; al final anota en
+// phoenix_core.log el top de zonas de código (RIP & ~0x3FF, con módulo si no es el exe) y una pila de ejemplo.
+// Además deja un latido cada 10 s. Sirve para encontrar cuelgues de varios hilos sin volcados de memoria.
+struct HiloCpu { DWORD tid; ULONGLONG cpu; ULONGLONG delta; };
+struct Zona { uint64_t clave; int n; uint64_t pila[8]; };
 volatile LONG g_vigilar = 0;
 HANDLE g_hiloVigilante = nullptr;
 
@@ -576,12 +579,27 @@ ULONGLONG cpuHilo(HANDLE h) {
     return ((ULONGLONG)k.dwHighDateTime << 32 | k.dwLowDateTime) + ((ULONGLONG)u.dwHighDateTime << 32 | u.dwLowDateTime);
 }
 
+void nombreZona(uint64_t dir, char* out, size_t n) {
+    const uint64_t ini = reinterpret_cast<uint64_t>(g_exe.base);
+    if (dir >= ini && dir < ini + g_exe.tamImagen) { sprintf_s(out, n, "exe+0x%llX", dir - ini); return; }
+    HMODULE m = nullptr; char ruta[MAX_PATH] = "?";
+    if (GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                           reinterpret_cast<LPCSTR>(dir), &m) && m) {
+        GetModuleFileNameA(m, ruta, MAX_PATH);
+        const char* barra = strrchr(ruta, '\\');
+        sprintf_s(out, n, "%s+0x%llX", barra ? barra + 1 : ruta, dir - reinterpret_cast<uint64_t>(m));
+    } else sprintf_s(out, n, "0x%llX", dir);
+}
+
 DWORD WINAPI vigilante(LPVOID) {
-    std::vector<MuestraHilo> hilos;
     const DWORD yo = GetCurrentThreadId(), pid = GetCurrentProcessId();
-    const uint64_t ini = reinterpret_cast<uint64_t>(g_exe.base), fin = ini + g_exe.tamImagen;
+    std::vector<HiloCpu> hilos;
+    ULONGLONG tLatido = GetTickCount64(), tVentana = GetTickCount64(), tUltimoPerfil = 0;
+    LONG escrVentana = g_escr;
+    int perfiles = 0;
     while (g_vigilar) {
         Sleep(250);
+        // 1) CPU por hilo (sin detener a nadie)
         std::vector<DWORD> tids;
         HANDLE snap = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
         if (snap == INVALID_HANDLE_VALUE) continue;
@@ -589,41 +607,69 @@ DWORD WINAPI vigilante(LPVOID) {
         for (BOOL ok = Thread32First(snap, &te); ok; ok = Thread32Next(snap, &te))
             if (te.th32OwnerProcessID == pid && te.th32ThreadID != yo) tids.push_back(te.th32ThreadID);
         CloseHandle(snap);
+        ULONGLONG ahora = GetTickCount64();
+        if (ahora - tVentana < 2000) continue;
+        ULONGLONG total = 0;
+        std::vector<HiloCpu> nuevos;
         for (DWORD tid : tids) {
-            HANDLE h = OpenThread(THREAD_SUSPEND_RESUME | THREAD_GET_CONTEXT | THREAD_QUERY_INFORMATION, FALSE, tid);
+            HANDLE h = OpenThread(THREAD_QUERY_INFORMATION, FALSE, tid);
             if (!h) continue;
-            CONTEXT ctx = {}; ctx.ContextFlags = CONTEXT_CONTROL | CONTEXT_INTEGER;
-            uint64_t pila[64] = {};
-            bool leido = false;
-            if (SuspendThread(h) != (DWORD)-1) {      // entre Suspend y Resume: nada que reserve memoria
-                leido = GetThreadContext(h, &ctx) != 0;
-                if (leido) {   // ReadProcessMemory no lanza excepciones (un SEH aquí podría esperar un lock del hilo detenido)
-                    SIZE_T nl = 0;
-                    ReadProcessMemory(GetCurrentProcess(), reinterpret_cast<void*>(ctx.Rsp), pila, sizeof pila, &nl);
+            ULONGLONG c = cpuHilo(h); CloseHandle(h);
+            ULONGLONG d = 0;
+            for (auto& x : hilos) if (x.tid == tid) { d = c > x.cpu ? c - x.cpu : 0; break; }
+            nuevos.push_back({ tid, c, d }); total += d;
+        }
+        hilos.swap(nuevos);
+        bool sondaQuieta = g_escr == escrVentana;
+        escrVentana = g_escr; tVentana = ahora;
+        if (ahora - tLatido >= 10000) {
+            tLatido = ahora;
+            logf("[VIGILANTE] vivo · CPU del proceso %.1f s en 2 s · %zu hilos · sonda %s", total / 1e7, hilos.size(),
+                 sondaQuieta ? "quieta" : "anotando");
+        }
+        // 2) ¿cuelgue? mucha CPU y la sonda quieta (el partido no avanza)
+        if (!sondaQuieta || total < 40000000 || perfiles >= 10 || ahora - tUltimoPerfil < 30000) continue;
+        tUltimoPerfil = ahora; ++perfiles;
+        std::vector<Zona> zonas;
+        for (int muestra = 0; muestra < 8 && g_vigilar; ++muestra) {
+            for (auto& hc : hilos) {
+                if (hc.delta < 3000000) continue;            // ≥0,3 s de CPU en la ventana
+                HANDLE h = OpenThread(THREAD_SUSPEND_RESUME | THREAD_GET_CONTEXT, FALSE, hc.tid);
+                if (!h) continue;
+                CONTEXT ctx = {}; ctx.ContextFlags = CONTEXT_CONTROL;
+                uint64_t pila[64] = {};
+                bool leido = false;
+                if (SuspendThread(h) != (DWORD)-1) {         // entre Suspend y Resume: nada que reserve memoria
+                    leido = GetThreadContext(h, &ctx) != 0;
+                    if (leido) { SIZE_T nl = 0; ReadProcessMemory(GetCurrentProcess(), reinterpret_cast<void*>(ctx.Rsp), pila, sizeof pila, &nl); }
+                    ResumeThread(h);
                 }
-                ResumeThread(h);
+                CloseHandle(h);
+                if (!leido) continue;
+                uint64_t clave = ctx.Rip & ~0x3FFull;
+                Zona* z = nullptr;
+                for (auto& x : zonas) if (x.clave == clave) { z = &x; break; }
+                if (!z) {
+                    zonas.push_back({ clave, 0, {} }); z = &zonas.back();
+                    z->pila[0] = ctx.Rip;
+                    const uint64_t ini = reinterpret_cast<uint64_t>(g_exe.base), fin = ini + g_exe.tamImagen;
+                    int k = 1;
+                    for (uint64_t v : pila) if (v >= ini && v < fin && k < 8) z->pila[k++] = v;
+                }
+                z->n++;
             }
-            ULONGLONG cpu = cpuHilo(h);
-            CloseHandle(h);
-            if (!leido) continue;
-            MuestraHilo* m = nullptr;
-            for (auto& x : hilos) if (x.tid == tid) { m = &x; break; }
-            if (!m) { hilos.push_back({ tid, {}, 0, cpu, 0 }); m = &hilos.back(); }
-            m->rip[m->n % 8] = ctx.Rip; m->n++;
-            if (m->n % 8 != 0) continue;
-            // ventana completa (2 s): ¿misma zona y CPU casi al 100 %?
-            ULONGLONG gastado = cpu - m->cpu0;  m->cpu0 = cpu;      // en unidades de 100 ns
-            uint64_t ref = m->rip[7];
-            int iguales = 0;
-            for (uint64_t r : m->rip) if (r + 0x200 >= ref && r <= ref + 0x200) ++iguales;
-            if (iguales < 6 || gastado < 14000000 || ref < ini || ref >= fin) continue;   // ≥1,4 s de CPU en 2 s
-            if ((m->avisado & ~0xFFFull) == (ref & ~0xFFFull)) continue;                   // ya avisado esta zona
-            m->avisado = ref;
-            char ret[400] = {}; size_t o = 0;
-            for (uint64_t v : pila)
-                if (v >= ini && v < fin && o + 20 < sizeof ret) o += sprintf_s(ret + o, sizeof ret - o, " 0x%llX", v - ini);
-            logf("[VIGILANTE] bucle hilo %lu en exe+0x%llX (RSP %llX, CPU %.1f s de 2 s, %d/8 muestras); exe en la pila:%s",
-                 tid, ref - ini, ctx.Rsp, gastado / 1e7, iguales, ret);
+            Sleep(250);
+        }
+        std::sort(zonas.begin(), zonas.end(), [](const Zona& x, const Zona& y) { return x.n > y.n; });
+        logf("[VIGILANTE] posible cuelgue: CPU %.1f s en 2 s, sonda quieta. Top zonas (muestras):", total / 1e7);
+        for (size_t i = 0; i < zonas.size() && i < 12; ++i) {
+            char nom[160], pil[600] = {}; size_t o = 0;
+            nombreZona(zonas[i].pila[0], nom, sizeof nom);
+            for (int k = 1; k < 8 && zonas[i].pila[k]; ++k) {
+                char r[40]; nombreZona(zonas[i].pila[k], r, sizeof r);
+                o += sprintf_s(pil + o, sizeof pil - o, " %s", r);
+            }
+            logf("[VIGILANTE]   %2d× %s · pila:%s", zonas[i].n, nom, pil);
         }
     }
     return 0;
