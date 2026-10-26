@@ -1,4 +1,4 @@
-# Phoenix Core · v0.3.0 (sonda + gol nativo en entrenamiento)
+# Phoenix Core · v0.4.0 (sonda + gol nativo en entrenamiento)
 
 DLL propia que se carga dentro de PES 2021 desde Sider. En esta fase **no cambia nada del juego**: solo arranca, se identifica y deja registro. Es la base donde irán las funciones on/off (la primera: el gol del modo street en Entrenamiento libre).
 
@@ -41,7 +41,7 @@ copy build\Release\phoenix_core.dll SiderAddons\phoenix_core\
 | id | Qué hace | Por defecto |
 |---|---|---|
 | `diagnostico` | Busca `FREE_TRAINING_BREAK` en el exe, solo lectura | encendida |
-| `gol_nativo_free` | En Entrenamiento libre, cuando la parada es gol (k = [[0x1436F3DC8]+0x270]+0x1574 == 3), impide que FUN_140449B00 pise el evento 0xA (gol) con 0x0E (reinicio). Necesita `sonda_partido` | encendida para la prueba |
+| `gol_nativo_free` | En el Entrenamiento libre, el gestor de parada FUN_1404A56C0 convierte el gol (k=3) en k=7 (saque de puerta). Dos `mov edx,7` (firma `BA 07 00 00 00 49 8B CE E8 ?? ?? ?? ?? BA 07 00 00 00 48 8B CB E8`) saltan a una cueva que conserva k cuando es 3. El resto de paradas no cambia | encendida para la prueba |
 | `sonda_partido` | Solo mira: desvía SetState (0x1406EEBB0) y el procesador del gol (0x140478190) y PonerEvento (0x140451FD0, tipo de evento job+0x874) y anota en `sonda_partido.txt` cada cambio de estado, cada gol procesado (goles, escena job+0x874, fase) y el indicador «partido detenido», con quién llamó | encendida |
 
 Los desvíos son propios (sin MinHook): copian el prólogo conocido (15 y 14 bytes, sin instrucciones relativas a RIP, leídos con Ghidra el 26-oct) a un trampolín y escriben un `jmp` absoluto de 14 bytes. Antes de escribir se comprueba la firma (única en `.text`) y los bytes originales; al cerrar PES se restauran.

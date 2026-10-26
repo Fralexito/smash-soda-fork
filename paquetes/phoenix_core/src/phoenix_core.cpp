@@ -27,7 +27,7 @@
 #include <intrin.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.3.2"
+#define PHX_CORE_VERSION "0.4.0"
 
 namespace {
 
@@ -236,17 +236,71 @@ bool diagInstalar(Feature& f) {
 }
 bool diagQuitar(Feature&) { return true; }
 
-// --- función 2: gol nativo en el Entrenamiento libre. Fase 1: aún sin firma (la está buscando REA).
-// (la lógica vive en ganchoEvento; aquí solo se enciende la bandera. Necesita la sonda enganchada.)
-bool g_golFree = false;
-bool sondaActiva();
-bool golInstalar(Feature& f) {
-    if (!sondaActiva()) { f.estado = "necesita sonda_partido activa (es quien engancha PonerEvento)"; return false; }
-    g_golFree = true;
-    f.estado = "ok: en Entrenamiento libre, si la parada es gol (k==3) se mantiene/pone el evento 0xA en vez de 0x0E";
+// --- función 2: gol nativo en el Entrenamiento libre (street).
+// El detector SÍ ve el gol (k=3), pero el gestor de parada del entrenamiento FUN_1404A56C0 lo degrada: escribe k=7
+// en el registro de parada (job+0x49C0 y su copia) con dos «mov edx,7 ; call FUN_141B8B250». Con k=7 y sub=3 el
+// selector monta un saque de puerta (tipo 5). Aquí cada «mov edx,7» (5 bytes) salta a una cueva propia:
+//     cmp edi,3 ; jne +7 ; mov edx,edi ; jmp vuelta ; mov edx,7 ; jmp vuelta
+// (edi = k original, leído en 0x1404A590A y no volátil entre las dos llamadas). Solo el gol conserva k=3; el resto
+// de paradas siguen igual que siempre. Firma de los dos sitios (13 bytes entre ellos):
+const char* kFirmaDegradar = "BA 07 00 00 00 49 8B CE E8 ?? ?? ?? ?? BA 07 00 00 00 48 8B CB E8";
+
+// Memoria ejecutable a menos de 2 GB de `cerca` (para un jmp rel32 de 5 bytes). Nunca se libera.
+uint8_t* reservarCerca(uint8_t* cerca, size_t tam) {
+    SYSTEM_INFO si; GetSystemInfo(&si);
+    const uintptr_t paso = si.dwAllocationGranularity;
+    uintptr_t base = (reinterpret_cast<uintptr_t>(cerca) & ~(paso - 1));
+    for (uintptr_t d = paso; d < 0x70000000; d += paso) {
+        for (int lado = 0; lado < 2; ++lado) {
+            uintptr_t dir = lado ? base + d + g_exe.tamImagen : base - d;
+            if (!lado && dir > base) continue;
+            void* p = VirtualAlloc(reinterpret_cast<void*>(dir), tam, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+            if (p) return static_cast<uint8_t*>(p);
+        }
+    }
+    return nullptr;
+}
+
+bool escribirRel32(uint8_t* dst, uint8_t op, uint8_t* desde, uint8_t* hacia) {
+    long long rel = (long long)(hacia - (desde + 5));
+    if (rel > INT32_MAX || rel < INT32_MIN) return false;
+    int32_t r = static_cast<int32_t>(rel);
+    dst[0] = op; memcpy(dst + 1, &r, 4);
     return true;
 }
-bool golQuitar(Feature&) { g_golFree = false; return true; }
+
+bool golInstalar(Feature& f) {
+    uint8_t* sitio = firmaUnica("codigo", kFirmaDegradar, f.id);
+    if (!sitio) { f.estado = "sin firma: degradación del gol en el entrenamiento"; return false; }
+    uint8_t* sitios[2] = { sitio, sitio + 13 };
+    uint8_t* cueva = reservarCerca(sitio, 64);
+    if (!cueva) { f.estado = "no hay memoria cerca del exe para la cueva"; return false; }
+    for (int i = 0; i < 2; ++i) {
+        uint8_t* c = cueva + i * 32;
+        uint8_t* vuelta = sitios[i] + 5;
+        const uint8_t cab[] = { 0x83, 0xFF, 0x03,  0x75, 0x07,  0x89, 0xFA };   // cmp edi,3 ; jne +7 ; mov edx,edi
+        memcpy(c, cab, sizeof cab);
+        if (!escribirRel32(c + 7, 0xE9, c + 7, vuelta)) { f.estado = "cueva fuera de alcance"; return false; }
+        const uint8_t siete[] = { 0xBA, 0x07, 0x00, 0x00, 0x00 };                // mov edx,7 (lo de siempre)
+        memcpy(c + 12, siete, 5);
+        if (!escribirRel32(c + 17, 0xE9, c + 17, vuelta)) { f.estado = "cueva fuera de alcance"; return false; }
+    }
+    FlushInstructionCache(GetCurrentProcess(), cueva, 64);
+    for (int i = 0; i < 2; ++i) {
+        Parche p; p.dir = sitios[i];
+        p.original.assign({ 0xBA, 0x07, 0x00, 0x00, 0x00 });
+        p.nuevo.resize(5);
+        if (!escribirRel32(p.nuevo.data(), 0xE9, sitios[i], cueva + i * 32)) { f.estado = "cueva fuera de alcance"; return false; }
+        if (!aplicarParche(p, f.id)) { f.estado = "bytes inesperados en el sitio"; return false; }
+        f.parches.push_back(p);
+    }
+    char b[160];
+    sprintf_s(b, "ok: el entrenamiento ya no degrada el gol (sitios exe+0x%llX y +0x%llX)",
+              (unsigned long long)(sitios[0] - g_exe.base), (unsigned long long)(sitios[1] - g_exe.base));
+    f.estado = b;
+    return true;
+}
+bool golQuitar(Feature&) { return true; }   // los parches los quita el marco (la cueva se queda, sin uso)
 
 // ---------------------------------------------------------------- desvíos propios (sin MinHook)
 // Solo para funciones cuyo prólogo conocemos (leído con REA/Ghidra): se copian `n` bytes de instrucciones enteras,
@@ -342,11 +396,6 @@ uint8_t* objPartido() {
     return obj;
 }
 
-const uint32_t kRetEntreno = 0x449BA9;   // retorno de la llamada PonerEvento(job, 0x0E) en FUN_140449B00
-const uint32_t kRetGol     = 0x44F8E3;   // retorno de PonerEvento(job, 0x0A) en FUN_14044F8A0 (montador del gol)
-const uint32_t kMontarGol  = 0x44F8A0;   // FUN_14044F8A0(job): pone 0xA y encola toda la secuencia (festejo, saque)
-uint8_t*  g_ultimoGolJob = nullptr;      // último gol que montó el juego (por si k ya se borró al llegar el 0x0E)
-ULONGLONG g_ultimoGolT = 0;
 uint64_t ganchoEvento(uint8_t* job, uint32_t tipo) {
     void* ret = _ReturnAddress();
     uint8_t* obj = objPartido();
@@ -357,28 +406,7 @@ uint64_t ganchoEvento(uint8_t* job, uint32_t tipo) {
     Ev& e = nuevoEv(EV_EVENTO, ret);
     e.a = reinterpret_cast<uint64_t>(job); e.b = tipo; e.d = previo; e.c = leerU8(job, 0x8F2);
     e.x[0] = k; e.x[1] = sub; e.x[2] = flag;
-    // gol_nativo_free: el entrenamiento pisa la parada con 0x0E. Si la parada es gol, no lo dejamos.
-    if (tipo == 0x0A && reinterpret_cast<uint8_t*>(ret) == g_exe.base + kRetGol) {
-        g_ultimoGolJob = job; g_ultimoGolT = GetTickCount64();
-    } else if (tipo != 0x0A && tipo != 0x0E && job == g_ultimoGolJob) {
-        g_ultimoGolJob = nullptr;    // el gol ya terminó (p. ej. 0xA->0x9): un 0x0E posterior no es de ese gol
-    }
-    int accion = 0;   // 0 = normal, 1 = no pisar (ya es gol), 2 = montar el gol nosotros
-    if (g_golFree && g_exeConocido && tipo == 0x0E &&
-        reinterpret_cast<uint8_t*>(ret) == g_exe.base + kRetEntreno) {
-        bool golReciente = job == g_ultimoGolJob && GetTickCount64() - g_ultimoGolT < 1000;
-        bool esGol = k == 3 || (k == 5 && flag != 0) || golReciente;
-        if (previo == 0x0A) accion = 1;          // el montador ya puso GOL y su cola: se queda (449B00 añade 0x36)
-        else if (esGol)   { accion = 2; g_ultimoGolJob = nullptr; }   // el montador no corrió: lo llamamos (una vez)
-        e.x[3] = accion;
-    }
     cerrarEv(e);
-    if (accion == 1) return 0;
-    if (accion == 2) {
-        // FUN_14044F8A0 llama a PonerEvento(job, 0xA) (vuelve a pasar por aquí, sin tocar) y monta la secuencia
-        reinterpret_cast<void (*)(uint8_t*)>(g_exe.base + kMontarGol)(job);
-        return 0;
-    }
     return g_eventoOrig(job, tipo);
 }
 
@@ -450,8 +478,7 @@ void volcarSonda() {
         else if (c.tipo == EV_EVENTO)
             sprintf_s(l, "%8llu h%-5u EVENTO job=%llX tipo 0x%llX->0x%llX fase=%llu k=%lld sub=%lld flag=%lld%s desde exe+0x%llX\r\n",
                       c.t, c.hilo, c.a, c.d, c.b, c.c, (long long)(int32_t)c.x[0], (long long)(int32_t)c.x[1],
-                      (long long)(int8_t)c.x[2],
-                      c.x[3] == 1 ? " [GOLFREE: se mantiene 0xA]" : c.x[3] == 2 ? " [GOLFREE: monta el gol (FUN_14044F8A0)]" : "", ret);
+                      (long long)(int8_t)c.x[2], "", ret);
         else
             sprintf_s(l, "%8llu h%-5u PARADO mgr=%llX +0x1775=%llu\r\n", c.t, c.hilo, c.a, c.b);
         s += l;
