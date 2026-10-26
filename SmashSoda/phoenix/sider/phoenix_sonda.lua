@@ -21,7 +21,7 @@
 --  Desinstalar = quitar la línea (o poner ; delante). En sider.log debe salir «[sonda] v1.0 listo».
 -- =============================================================================
 
-local m = { version = "1.0.1" }
+local m = { version = "1.0.2" }
 
 local CADA_SEG   = 1.0
 local MAX_EVENTOS = 40
@@ -36,8 +36,29 @@ local eventos = {}
 local ctxVisto = nil
 
 -- ─── JSON mínimo (sin librerías) ─────────────────────────────────────────────
+-- ¿Es UTF-8 válido? (otros módulos guardan textos en latin-1 en ctx: se cambian sus bytes raros por «?»)
+local function esUtf8(s)
+    local i, n = 1, #s
+    while i <= n do
+        local b = s:byte(i)
+        local extra
+        if b < 0x80 then extra = 0
+        elseif b >= 0xC2 and b <= 0xDF then extra = 1
+        elseif b >= 0xE0 and b <= 0xEF then extra = 2
+        elseif b >= 0xF0 and b <= 0xF4 then extra = 3
+        else return false end
+        for k = 1, extra do
+            local c = s:byte(i + k)
+            if not c or c < 0x80 or c > 0xBF then return false end
+        end
+        i = i + extra + 1
+    end
+    return true
+end
+
 local function jsonTexto(s)
     s = tostring(s or "")
+    if not esUtf8(s) then s = s:gsub("[\128-\255]", "?") end
     s = s:gsub('[%c"\\]', function(c)
         if c == '"' then return '\\"' end
         if c == "\\" then return "\\\\" end
@@ -162,13 +183,45 @@ local function mirarZona()
 end
 
 -- ─── escritura ───────────────────────────────────────────────────────────────
+-- Solo los campos de ctx que da Sider (otros módulos cuelgan ahí tablas enormes, p. ej. CGP_data);
+-- de lo demás se guarda solo el nombre, para saber qué módulos comparten ctx.
+local CAMPOS_CTX = { "home_team", "away_team", "tournament_id", "match_id", "match_leg", "match_info", "stadium",
+    "stadium_choice", "timeofday", "season", "weather", "weather_effects", "match_time", "difficulty", "extra_time",
+    "penalties", "substitutions", "substitutions_in_extra_time" }
+local function ctxCorto(c)
+    local r, otros = {}, {}
+    if type(c) ~= "table" then return r end
+    for _, k in ipairs(CAMPOS_CTX) do
+        local v = c[k]
+        if type(v) == "number" or type(v) == "string" or type(v) == "boolean" then r[k] = v end
+    end
+    local ss = c.scoreboard_server
+    if type(ss) == "table" and type(ss.active_scoreboard) == "string" then r.marcador_activo = ss.active_scoreboard end
+    for k, _ in pairs(c) do
+        if r[k] == nil and k ~= "register" and k ~= "kits" then otros[#otros + 1] = tostring(k) end
+        if #otros >= 40 then break end
+    end
+    r.otros = otros
+    return r
+end
+
+-- match.stats().ptr es un puntero «light userdata»: con ffi se saca su número para leerlo desde fuera (MCP).
+local function hexPtr(u)
+    if not ffi or u == nil then return nil end
+    local n = tonumber(ffi.cast("uint64_t", ffi.cast("void*", u)))
+    if not n then return nil end
+    return string.format("0x%X", n)
+end
+
 local function escribir(ctx)
     seq = seq + 1
     local st = match and match.stats and match.stats() or nil
+    local stp = st and plano(st) or nil
+    if stp and st.ptr ~= nil then stp.ptr_hex = hexPtr(st.ptr) end
     local datos = {
         v = 1, sonda = m.version, t = os.time(), reloj = os.clock(), seq = seq,
-        ctx = plano(ctx or ctxVisto),
-        stats = st and plano(st) or nil,
+        ctx = ctxCorto(ctx or ctxVisto),
+        stats = stp,
         en_partido = st ~= nil,
         zona = mirarZona(),
         eventos = eventos,
