@@ -27,7 +27,7 @@
 #include <intrin.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.0"
+#define PHX_CORE_VERSION "0.4.1"
 
 namespace {
 
@@ -269,7 +269,29 @@ bool escribirRel32(uint8_t* dst, uint8_t op, uint8_t* desde, uint8_t* hacia) {
     return true;
 }
 
+// Tras el gol, FUN_140504D20 recorre 22 «ranuras por jugador» del objeto param_1 (gestos/reacción en la parada) y
+// llama vtable[+0x10] de cada una. En el Entrenamiento libre ese objeto no está construido (vtable nula en
+// param_1+0xC8) y PES cae en exe+0x5B1FD9. Con el gol nativo encendido, si la ranura 0 no tiene vtable se salta.
+// Prólogo 14 bytes sin RIP-relativos (mov [rsp+10],rdx; mov [rsp+8],rcx; push rbx/rbp/rsi/rdi).
+const char* kFirmaRanuras = "48 89 54 24 10 48 89 4C 24 08 53 55 56 57 41 54 41 55 41 56 41 57 48 81 EC A8 00 00 00 48 8B 05";
+bool leerSeguro(const void* dir, void* out, size_t n);
+using FnRanuras = uint64_t (*)(uint8_t*, uint64_t, uint64_t, uint64_t);
+FnRanuras g_ranurasOrig = nullptr;
+volatile LONG g_ranurasSaltadas = 0;
+uint64_t ganchoRanuras(uint8_t* obj, uint64_t a2, uint64_t a3, uint64_t a4) {
+    uint64_t vt = 0;
+    if (!obj || !leerSeguro(obj + 0xC8, &vt, 8) || vt == 0) {
+        InterlockedIncrement(&g_ranurasSaltadas);
+        return 0;
+    }
+    return g_ranurasOrig(obj, a2, a3, a4);
+}
+bool crearDesvio(Feature& f, uint8_t* dir, size_t n, void* gancho, void** original);
+
+
 bool golInstalar(Feature& f) {
+    uint8_t* ranuras = firmaUnica("codigo", kFirmaRanuras, f.id);
+    if (!ranuras) { f.estado = "sin firma: ranuras por jugador (FUN_140504D20)"; return false; }
     uint8_t* sitio = firmaUnica("codigo", kFirmaDegradar, f.id);
     if (!sitio) { f.estado = "sin firma: degradación del gol en el entrenamiento"; return false; }
     uint8_t* sitios[2] = { sitio, sitio + 13 };
@@ -293,6 +315,9 @@ bool golInstalar(Feature& f) {
         if (!escribirRel32(p.nuevo.data(), 0xE9, sitios[i], cueva + i * 32)) { f.estado = "cueva fuera de alcance"; return false; }
         if (!aplicarParche(p, f.id)) { f.estado = "bytes inesperados en el sitio"; return false; }
         f.parches.push_back(p);
+    }
+    if (!crearDesvio(f, ranuras, 14, (void*)ganchoRanuras, (void**)&g_ranurasOrig)) {
+        f.estado = "no se pudo desviar FUN_140504D20"; return false;
     }
     char b[160];
     sprintf_s(b, "ok: el entrenamiento ya no degrada el gol (sitios exe+0x%llX y +0x%llX)",
@@ -482,6 +507,11 @@ void volcarSonda() {
         else
             sprintf_s(l, "%8llu h%-5u PARADO mgr=%llX +0x1775=%llu\r\n", c.t, c.hilo, c.a, c.b);
         s += l;
+    }
+    static LONG saltadasVistas = 0;
+    if (g_ranurasSaltadas != saltadasVistas) {
+        saltadasVistas = g_ranurasSaltadas;
+        sprintf_s(l, "         [GOLFREE] ranuras por jugador sin construir: saltadas %ld veces\r\n", saltadasVistas); s += l;
     }
     if (g_perdidos) { sprintf_s(l, "         (perdidos %ld eventos: demasiados de golpe)\r\n", g_perdidos); s += l; g_perdidos = 0; }
     if (s.empty()) return;
