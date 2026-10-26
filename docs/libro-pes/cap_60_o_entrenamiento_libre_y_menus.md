@@ -145,3 +145,14 @@ Al marcar gol, la jugada se reinicia desde el centro. **No hay marcador ni conta
 ### 8.9 Ropa arreglada (26-oct, ~04:09) ✅
 
 Con la raíz `.\livecpk\Phoenix-Entrenamiento-Ropa` (los 10 archivos originales de `training_suit` sacados de dt32_g4.cpk), puesta con PONER antes de `Managers` y tras QUITAR B1, **cada club sale con su uniforme** en el Entrenamiento libre. Queda confirmada la causa de §8.8: el training_suit reemplazado por Managers de Conmegol. Es una opción que se activa y desactiva: QUITAR lo deshace. Efecto secundario conocido: el DT pierde el traje de Managers en ese modo. Candidata a entrar en el instalador de Link como opción del modo street.
+
+### 8.10 ¡Humano contra humano! (26-oct, ~04:42) ✅
+
+Dos mandos conectados a la PC: mando 1 a la izquierda y mando 2 a la derecha en la pantalla de lados. Configuración: Entrenamiento libre, usuario 3, COM 4. **El mando 2 controla a todos los jugadores del equipo rival** (cambia de jugador como en un partido). Así queda un 3 contra 3 entre dos personas en PES 2021 limpio, por la puerta oficial. Para el juego, un mando de Parsec es un mando local más, así que debería funcionar igual en línea (sin probar).
+
+**Qué falta para el modo street:**
+1. Marcador y tiempo propios (Link + overlay PhoenixGlass), porque este modo no los lleva.
+2. Cancha pequeña: investigar si se puede achicar o usar las líneas y conos del entrenamiento.
+3. Gameplay de regates (cap_90, en orden).
+4. Opción «Modo street» en Link: raíz Ropa, acceso directo y marcador.
+5. Por probar: más humanos por lado, 1 contra 1, 2 contra 2, pausa y salida, fuera de juego y saques.
