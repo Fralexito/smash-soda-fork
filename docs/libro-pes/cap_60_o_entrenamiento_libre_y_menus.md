@@ -88,3 +88,10 @@ El texto de ayuda del juego dice: «Elige el número de jugadores que participar
 | Penalti | 1 | 1 | 1 contra 1 |
 | Córner por la derecha | 4 | 1 | Probable también córner por la izquierda |
 Pendiente: confirmar el mínimo de COM en Entrenamiento libre, la lista completa de tipos, y entrar a la cancha.
+
+### 8.2 Primer intento de entrar a la cancha (26-oct ~01:24): carga atascada
+- Configuración: Entrenamiento libre, 3 jugadores usuario vs 1 COM, Faltas Sí → OK. Mínimos confirmados en Entrenamiento libre: usuario 3, COM 1.
+- Resultado: pantalla fija (fondo de River Plate). PES VIVO (sin WerFault; CPU sostenida, ~3–4 núcleos; memoria plana ~1970–2020 MB) pero sin avanzar durante más de 9 min.
+- Pista: el log de Sider, justo después de `set_teams` (108 vs 109), da `lua ERROR from module_stadium_name: StadiumServer.lua:705: attempt to index a nil value` (línea: `team_assignment_map[ctx.home_team][random_num_team]`). La sonda marca `stadium_choice = 65535` (sin estadio). El camino B1 se salta la elección de estadio («Estadio» salía apagado en el pre-partido), así que el módulo de estadios de Conmegol falla. Causa más probable, no demostrada.
+- La sonda ve el entrenamiento por este desvío en la zona MYCLUB (id 30), porque entra por el evento `06_myclub`.
+- Siguiente prueba: (a) entrenamiento con el módulo `StadiumServer` apagado (necesita botón en Link, porque sider.ini solo lo edita el instalador), o (b) fijar un estadio antes de `TrainingMatchInit` (por ejemplo pasando por la elección de estadio). Recordatorio: la meta final es que funcione en PES limpio, sin los módulos de Conmegol.
