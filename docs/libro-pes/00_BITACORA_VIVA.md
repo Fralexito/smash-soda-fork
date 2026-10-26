@@ -316,3 +316,4 @@ Formato de entrada: `### AAAA-MM-DD HH:MM — tema` · qué se hizo · resultado
 - 26-oct ~04:42 · PES · ✅ Humano contra humano en el Entrenamiento libre: el mando 2 en el lado derecho controla al equipo rival. Base del modo street lista. cap_60_o §8.10.
 - 26-oct ~04:50 · PES · Diseño del marcador (pelota en memoria → Link/overlay) y cancha pequeña (parchear_campo.exe, sin probar en zona 52). cap_60_o §8.11.
 - 26-oct ~04:47 · PES · En el Entrenamiento libre solo el lado que defiende tiene portero (incluido en la cifra). cap_60_o §8.12.
+- 26-oct ~04:50 · PES · CORRECCIÓN: tras un gol en el Entrenamiento libre hay saque de puerta del rival (no reinicio desde el centro). cap_60_o §8.7.

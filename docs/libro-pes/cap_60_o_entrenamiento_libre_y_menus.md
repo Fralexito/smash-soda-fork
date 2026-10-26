@@ -133,7 +133,7 @@ Configuración: Entrenamiento libre, Jugadores usuario 3, Jugadores COM 4 (porte
 
 ### 8.7 Goles sin marcador (26-oct, ~03:52)
 
-Al marcar gol, la jugada se reinicia desde el centro. **No hay marcador ni contador.** Idea: un marcador propio en Link (leer el gol en memoria, como en los partidos) mostrado en el overlay PhoenixGlass, con tiempo y reglas tipo «primero a N goles», como opción que se activa y desactiva. Siguiente: comprobar si dos humanos pueden jugar en lados opuestos, que es clave para Parsec.
+~~Al marcar gol, la jugada se reinicia desde el centro.~~ **[Corrección 26-oct 04:50, Fralex: tras el gol hay SAQUE DE PUERTA del rival, como si el balón hubiera salido por la línea de fondo; el juego no reconoce el gol.]** **No hay marcador ni contador.** Idea: un marcador propio en Link (leer el gol en memoria, como en los partidos) mostrado en el overlay PhoenixGlass, con tiempo y reglas tipo «primero a N goles», como opción que se activa y desactiva. Siguiente: comprobar si dos humanos pueden jugar en lados opuestos, que es clave para Parsec.
 
 ### 8.8 Ropa: corrección del diagnóstico (26-oct, ~04:00)
 
@@ -159,7 +159,7 @@ Dos mandos conectados a la PC: mando 1 a la izquierda y mando 2 a la derecha en 
 
 ### 8.11 Marcador y cancha pequeña: lectura estática (26-oct, ~04:50)
 
-- **Marcador:** en la zona 52 la sonda marca `en_partido: false`, `match.stats()` de Sider devuelve nil y no hay reloj ni lista de goles. `goal_scored` solo existe en Sider 7.3.4 o posterior, y la PC tiene la 7.3.3. **Diseño:** detectar el gol por la posición de la pelota, en solo lectura (objeto de 640 B; x en +208, z en +216; ver `Pelota.cs` y CAMPO-2D-INVESTIGACION §8). Cuenta como gol cuando cruza la línea de fondo entre los palos, y se confirma con el reinicio desde el centro. Lo implementaría Link (hilo 1) y lo mostraría el overlay. Alternativa: Sider 7.3.4 o posterior.
+- **Marcador:** en la zona 52 la sonda marca `en_partido: false`, `match.stats()` de Sider devuelve nil y no hay reloj ni lista de goles. `goal_scored` solo existe en Sider 7.3.4 o posterior, y la PC tiene la 7.3.3. **Diseño:** detectar el gol por la posición de la pelota, en solo lectura (objeto de 640 B; x en +208, z en +216; ver `Pelota.cs` y CAMPO-2D-INVESTIGACION §8). Cuenta como gol cuando cruza la línea de fondo entre los palos, y se confirma con el saque de puerta que viene después (§8.7 corregido). Lo implementaría Link (hilo 1) y lo mostraría el overlay. Alternativa: Sider 7.3.4 o posterior.
 - **Cancha pequeña:** `loaderSwf_trainingPlayArea` es de la ficha de MiClub, no un área de juego. Los training_prop y d2_training_guide son del tutorial de retos. El entrenamiento libre usa el campo normal. Candidato: `parchear_campo.exe 15 10` (30×20, informe 11), sin probar en la zona 52 (faltan saques, porterías y córners).
 
 ### 8.12 Porteros: solo el equipo que defiende tiene arquero (26-oct, ~04:47)
