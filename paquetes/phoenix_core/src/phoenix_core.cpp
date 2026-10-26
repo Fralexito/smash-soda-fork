@@ -27,7 +27,7 @@
 #include <intrin.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.3.0"
+#define PHX_CORE_VERSION "0.3.1"
 
 namespace {
 
@@ -343,6 +343,10 @@ uint8_t* objPartido() {
 }
 
 const uint32_t kRetEntreno = 0x449BA9;   // retorno de la llamada PonerEvento(job, 0x0E) en FUN_140449B00
+const uint32_t kRetGol     = 0x44F8E3;   // retorno de PonerEvento(job, 0x0A) en FUN_14044F8A0 (montador del gol)
+const uint32_t kMontarGol  = 0x44F8A0;   // FUN_14044F8A0(job): pone 0xA y encola toda la secuencia (festejo, saque)
+uint8_t*  g_ultimoGolJob = nullptr;      // último gol que montó el juego (por si k ya se borró al llegar el 0x0E)
+ULONGLONG g_ultimoGolT = 0;
 uint64_t ganchoEvento(uint8_t* job, uint32_t tipo) {
     void* ret = _ReturnAddress();
     uint8_t* obj = objPartido();
@@ -354,17 +358,26 @@ uint64_t ganchoEvento(uint8_t* job, uint32_t tipo) {
     e.a = reinterpret_cast<uint64_t>(job); e.b = tipo; e.d = previo; e.c = leerU8(job, 0x8F2);
     e.x[0] = k; e.x[1] = sub; e.x[2] = flag;
     // gol_nativo_free: el entrenamiento pisa la parada con 0x0E. Si la parada es gol, no lo dejamos.
-    uint32_t tipoFinal = tipo;
-    bool saltar = false;
+    if (tipo == 0x0A && reinterpret_cast<uint8_t*>(ret) == g_exe.base + kRetGol) {
+        g_ultimoGolJob = job; g_ultimoGolT = GetTickCount64();
+    }
+    int accion = 0;   // 0 = normal, 1 = no pisar (ya es gol), 2 = montar el gol nosotros
     if (g_golFree && g_exeConocido && tipo == 0x0E &&
         reinterpret_cast<uint8_t*>(ret) == g_exe.base + kRetEntreno) {
-        bool esGol = k == 3 || (k == 5 && flag != 0);
-        if (previo == 0x0A) { saltar = true; e.x[3] = 1; }          // el detector ya puso GOL: se queda
-        else if (esGol)     { tipoFinal = 0x0A; e.x[3] = 2; }       // se pone GOL en lugar del reinicio
+        bool golReciente = job == g_ultimoGolJob && GetTickCount64() - g_ultimoGolT < 5000;
+        bool esGol = k == 3 || (k == 5 && flag != 0) || golReciente;
+        if (previo == 0x0A) accion = 1;          // el montador ya puso GOL y su cola: se queda (449B00 añade 0x36)
+        else if (esGol)     accion = 2;          // el montador no llegó a correr: lo llamamos nosotros
+        e.x[3] = accion;
     }
     cerrarEv(e);
-    if (saltar) return 0;
-    return g_eventoOrig(job, tipoFinal);
+    if (accion == 1) return 0;
+    if (accion == 2) {
+        // FUN_14044F8A0 llama a PonerEvento(job, 0xA) (vuelve a pasar por aquí, sin tocar) y monta la secuencia
+        reinterpret_cast<void (*)(uint8_t*)>(g_exe.base + kMontarGol)(job);
+        return 0;
+    }
+    return g_eventoOrig(job, tipo);
 }
 
 struct Gancho { const char* nombre; const char* firma; uint32_t rvaEsperada; size_t n; void* gancho; void** original; };
@@ -436,7 +449,7 @@ void volcarSonda() {
             sprintf_s(l, "%8llu h%-5u EVENTO job=%llX tipo 0x%llX->0x%llX fase=%llu k=%lld sub=%lld flag=%lld%s desde exe+0x%llX\r\n",
                       c.t, c.hilo, c.a, c.d, c.b, c.c, (long long)(int32_t)c.x[0], (long long)(int32_t)c.x[1],
                       (long long)(int8_t)c.x[2],
-                      c.x[3] == 1 ? " [GOLFREE: se mantiene 0xA]" : c.x[3] == 2 ? " [GOLFREE: 0x0E->0xA]" : "", ret);
+                      c.x[3] == 1 ? " [GOLFREE: se mantiene 0xA]" : c.x[3] == 2 ? " [GOLFREE: monta el gol (FUN_14044F8A0)]" : "", ret);
         else
             sprintf_s(l, "%8llu h%-5u PARADO mgr=%llX +0x1775=%llu\r\n", c.t, c.hilo, c.a, c.b);
         s += l;
