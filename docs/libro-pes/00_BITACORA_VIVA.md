@@ -320,3 +320,4 @@ Formato de entrada: `### AAAA-MM-DD HH:MM — tema` · qué se hizo · resultado
 - 26-oct ~05:08 · PES · Marcador nativo: en zona 52 el estado 0x4C (GOL) nunca se activa (0x4A → 0x01). Se busca el interruptor por modo. cap_60_o §8.13.
 - 26-oct ~06:04 · PES · DECISIÓN de Fralex: el modo street se construye sobre el Entrenamiento libre (no sobre el amistoso). Primero el interruptor del gol nativo; marcador propio como respaldo.
 - 26-oct ~06:12 · PES · ✅ Cancha 30×20 (lógica) funciona en el Entrenamiento libre: banda a 10 m, suplentes en fila, PT a ~15 m. cap_60_o §8.14.
+- 26-oct ~06:45 · PES · ✅ Camp Nou 30×20 dibujado + porterías a 15 m en el entrenamiento (navegado con el MCP). cap_60_o §8.15.
