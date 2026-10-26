@@ -78,3 +78,13 @@
 | S. pta./córner/banda | Ambos equipos |
 
 **Importancia:** el juego tiene de serie la opción de **elegir cuántos jugadores hay** por equipo (usuario y COM). Es la vía nativa para el modo street (N contra N) sin parchear las 27 000 comparaciones con 11/22. Pendiente: mínimos y máximos de cada valor, lista de tipos de entrenamiento, ver la cancha con por ejemplo 4 contra 4, y si las faltas, saques y portería funcionan.
+
+### 8.1 Mínimos de jugadores según el tipo (pruebas de Fralex, 26-oct ~01:20)
+El texto de ayuda del juego dice: «Elige el número de jugadores que participarán en el entrenamiento… El número mínimo necesario varía según el tipo de entrenamiento.» Al cambiar de tipo, el juego sube solo los valores que quedan por debajo del mínimo.
+| Tipo de entrenamiento | Mínimo jugadores usuario | Mínimo jugadores COM | Notas |
+|---|---|---|---|
+| Entrenamiento libre | 3 (no dejó bajar de 3) | ¿? (con 4 vs 4 y luego Tiro libre, COM subió a 5) | Antes estaba en 11 usuario / 1 COM |
+| Tiro libre | ¿? | 5 (sube solo) | Visto 4 usuario / 5 COM |
+| Penalti | 1 | 1 | 1 contra 1 |
+| Córner por la derecha | 4 | 1 | Probable también córner por la izquierda |
+Pendiente: confirmar el mínimo de COM en Entrenamiento libre, la lista completa de tipos, y entrar a la cancha.
