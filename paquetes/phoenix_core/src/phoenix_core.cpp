@@ -27,7 +27,7 @@
 #include <intrin.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.2.2"
+#define PHX_CORE_VERSION "0.3.0"
 
 namespace {
 
@@ -237,8 +237,16 @@ bool diagInstalar(Feature& f) {
 bool diagQuitar(Feature&) { return true; }
 
 // --- función 2: gol nativo en el Entrenamiento libre. Fase 1: aún sin firma (la está buscando REA).
-bool golInstalar(Feature& f) { f.estado = "pendiente: sin firma todavía (fase 1)"; return false; }
-bool golQuitar(Feature&) { return true; }
+// (la lógica vive en ganchoEvento; aquí solo se enciende la bandera. Necesita la sonda enganchada.)
+bool g_golFree = false;
+bool sondaActiva();
+bool golInstalar(Feature& f) {
+    if (!sondaActiva()) { f.estado = "necesita sonda_partido activa (es quien engancha PonerEvento)"; return false; }
+    g_golFree = true;
+    f.estado = "ok: en Entrenamiento libre, si la parada es gol (k==3) se mantiene/pone el evento 0xA en vez de 0x0E";
+    return true;
+}
+bool golQuitar(Feature&) { g_golFree = false; return true; }
 
 // ---------------------------------------------------------------- desvíos propios (sin MinHook)
 // Solo para funciones cuyo prólogo conocemos (leído con REA/Ghidra): se copian `n` bytes de instrucciones enteras,
@@ -323,12 +331,40 @@ uint64_t ganchoGol(uint8_t* a, uint8_t* b, uint8_t* job, uint64_t p4) {
 // FUN_140449B00 con 0x0E (TrainingWork activo); queremos ver qué tipo pone un gol de amistoso.
 using FnEvento = uint64_t (*)(uint8_t* job, uint32_t tipo);
 FnEvento g_eventoOrig = nullptr;
+// Objeto del partido [[0x1436F3DC8]+0x270] (solo exe de Conmegol). +0x1775 parado, +0x1574 «k» = razón de pelota
+// muerta que usa el selector FUN_1404526A0 (k==3 → gol), +0x1554 subtipo, +0x15A5 bandera del caso k==5.
+bool g_exeConocido = true;   // las RVA fijas solo valen si todas las firmas caen donde en Conmegol
+uint8_t* objPartido() {
+    if (!g_exeConocido) return nullptr;
+    uint8_t* raiz = nullptr; uint8_t* obj = nullptr;
+    if (!leerSeguro(g_exe.base + 0x36F3DC8, &raiz, 8) || !raiz) return nullptr;
+    if (!leerSeguro(raiz + 0x270, &obj, 8)) return nullptr;
+    return obj;
+}
+
+const uint32_t kRetEntreno = 0x449BA9;   // retorno de la llamada PonerEvento(job, 0x0E) en FUN_140449B00
 uint64_t ganchoEvento(uint8_t* job, uint32_t tipo) {
-    Ev& e = nuevoEv(EV_EVENTO, _ReturnAddress());
-    e.a = reinterpret_cast<uint64_t>(job); e.b = tipo; e.d = leerU32(job, 0x874);   // tipo anterior
-    e.c = leerU8(job, 0x8F2);
+    void* ret = _ReturnAddress();
+    uint8_t* obj = objPartido();
+    uint64_t k = obj ? leerU32(obj, 0x1574) : 0xFFFFFFFF;
+    uint64_t sub = obj ? leerU32(obj, 0x1554) : 0xFFFFFFFF;
+    uint64_t flag = obj ? leerU8(obj, 0x15A5) : 0xFF;
+    uint64_t previo = leerU32(job, 0x874);
+    Ev& e = nuevoEv(EV_EVENTO, ret);
+    e.a = reinterpret_cast<uint64_t>(job); e.b = tipo; e.d = previo; e.c = leerU8(job, 0x8F2);
+    e.x[0] = k; e.x[1] = sub; e.x[2] = flag;
+    // gol_nativo_free: el entrenamiento pisa la parada con 0x0E. Si la parada es gol, no lo dejamos.
+    uint32_t tipoFinal = tipo;
+    bool saltar = false;
+    if (g_golFree && g_exeConocido && tipo == 0x0E &&
+        reinterpret_cast<uint8_t*>(ret) == g_exe.base + kRetEntreno) {
+        bool esGol = k == 3 || (k == 5 && flag != 0);
+        if (previo == 0x0A) { saltar = true; e.x[3] = 1; }          // el detector ya puso GOL: se queda
+        else if (esGol)     { tipoFinal = 0x0A; e.x[3] = 2; }       // se pone GOL en lugar del reinicio
+    }
     cerrarEv(e);
-    return g_eventoOrig(job, tipo);
+    if (saltar) return 0;
+    return g_eventoOrig(job, tipoFinal);
 }
 
 struct Gancho { const char* nombre; const char* firma; uint32_t rvaEsperada; size_t n; void* gancho; void** original; };
@@ -343,8 +379,6 @@ Gancho g_ganchos[] = {
     { "PonerEvento", "48 89 5C 24 08 57 48 83 EC 20 48 8B D9 89 91 74 08 00 00 48 8D B9", 0x451FD0, 19,
       (void*)ganchoEvento, (void**)&g_eventoOrig },
 };
-
-bool g_exeConocido = true;   // las RVA fijas (vigilarParado) solo valen si todas las firmas caen donde en Conmegol
 
 bool sondaInstalar(Feature& f) {
     g_exeConocido = true;
@@ -370,10 +404,8 @@ bool sondaQuitar(Feature&) { return true; }   // los parches los quita el marco
 // Indicador general «partido detenido» ([[0x1436F3DC8]+0x270]+0x1775), solo en el exe de Conmegol (RVA conocida).
 uint64_t g_paradoPrevio = 0x100;
 void vigilarParado() {
-    if (!g_exeConocido) return;
-    uint8_t* mgr = nullptr; uint8_t* raiz = nullptr;
-    if (!leerSeguro(g_exe.base + 0x36F3DC8, &raiz, 8) || !raiz) return;
-    if (!leerSeguro(raiz + 0x270, &mgr, 8) || !mgr) return;
+    uint8_t* mgr = objPartido();
+    if (!mgr) return;
     uint64_t v = leerU8(mgr, 0x1775);
     if (v == g_paradoPrevio) return;
     g_paradoPrevio = v;
@@ -398,11 +430,13 @@ void volcarSonda() {
             sprintf_s(l, "%8llu h%-5u ESTADO actor=%llX 0x%02llX->0x%02llX modo=0x%02llX desde exe+0x%llX\r\n",
                       c.t, c.hilo, c.a, c.d, c.b, c.c, ret);
         else if (c.tipo == EV_GOL)
-            sprintf_s(l, "%8llu h%-5u GOL a=%llX b=%llX job=%llX p4=%llX goles=%llu-%llu escena=0x%llX fase=%llu desde exe+0x%llX\r\n",
+            sprintf_s(l, "%8llu h%-5u GOL a=%llX b=%llX job=%llX p4=%llX a+294/298=%llu/%llu escena=0x%llX fase=%llu desde exe+0x%llX\r\n",
                       c.t, c.hilo, c.a, c.b, c.c, c.d, c.x[0], c.x[1], c.x[2], c.x[3], ret);
         else if (c.tipo == EV_EVENTO)
-            sprintf_s(l, "%8llu h%-5u EVENTO job=%llX tipo 0x%llX->0x%llX fase=%llu desde exe+0x%llX\r\n",
-                      c.t, c.hilo, c.a, c.d, c.b, c.c, ret);
+            sprintf_s(l, "%8llu h%-5u EVENTO job=%llX tipo 0x%llX->0x%llX fase=%llu k=%lld sub=%lld flag=%lld%s desde exe+0x%llX\r\n",
+                      c.t, c.hilo, c.a, c.d, c.b, c.c, (long long)(int32_t)c.x[0], (long long)(int32_t)c.x[1],
+                      (long long)(int8_t)c.x[2],
+                      c.x[3] == 1 ? " [GOLFREE: se mantiene 0xA]" : c.x[3] == 2 ? " [GOLFREE: 0x0E->0xA]" : "", ret);
         else
             sprintf_s(l, "%8llu h%-5u PARADO mgr=%llX +0x1775=%llu\r\n", c.t, c.hilo, c.a, c.b);
         s += l;
@@ -417,11 +451,15 @@ void volcarSonda() {
     if (g_bytesSonda >= kTopeSonda) logf("[sonda_partido] llegó a 20 MB: deja de escribir");
 }
 
-std::vector<Feature> g_funciones = {
+std::vector<Feature> g_funciones = {   // orden = orden de arranque (gol_nativo_free necesita la sonda)
     { "diagnostico",     "Diagnóstico de firmas (solo lectura)",       diagInstalar,  diagQuitar  },
-    { "gol_nativo_free", "Gol nativo en Entrenamiento libre (street)", golInstalar,   golQuitar   },
     { "sonda_partido",   "Sonda: estados y gol nativo (solo mira)",    sondaInstalar, sondaQuitar },
+    { "gol_nativo_free", "Gol nativo en Entrenamiento libre (street)", golInstalar,   golQuitar   },
 };
+bool sondaActiva() {
+    for (auto& f : g_funciones) if (strcmp(f.id, "sonda_partido") == 0) return f.activa;
+    return false;
+}
 
 Feature* buscarFuncion(const char* id) {
     for (auto& f : g_funciones) if (strcmp(f.id, id) == 0) return &f;
