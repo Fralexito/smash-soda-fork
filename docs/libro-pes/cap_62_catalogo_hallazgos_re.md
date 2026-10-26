@@ -117,3 +117,49 @@ Añadir filas con fecha cuando aparezca algo nuevo (aunque no sea del tema del d
 | Estado DirectInput por mando | Plaza lógica `+0xC` → fila de dispositivo → objeto → `[obj+0x20]` (GUID) `+0x238` = DIJOYSTATE (X/Y 0–0xFFFF, centro 0x7FFF; cruceta +0x20; botones +0x30, 0x80). 3 copias cada 0x50. | C (en vivo, mando ViGEm de prueba) |
 | Vtable mando lógico HidMan | `0x142AC7660` (8 entradas); `+0x38` `FUN_141B5A160` reenvía a `[[this+0x80]]+0x38`. | C |
 | Sider: opacidad de imágenes | `overlay.image-alpha-max` en sider.ini limita la opacidad (0.8 en ConmeGOL → se transparenta lo de debajo). | C (en vivo) |
+
+#### 25-oct-2026 — Menos jugadores / modo street: lectura estática (hilo «modo street»)
+| Qué | Dónde / formato | Confianza |
+|---|---|---|
+| `[gestor+0x270]+0x1775` (byte) | `FUN_140447290` (secuencia de fin de partido/estado, ~0x8F2 = subestado 1..5) sale de inmediato si es ≠ 0. Bandera que corta la secuencia de cierre; posible interruptor útil. | H (lectura estática) |
+| Subobjeto de «fase» en `S+0x1554` | `FUN_141B8B250` solo guarda un código 0..8 (0,1,6,7,8 vistos en MatchControl/FUN_1404a56c0/FUN_1404a6d20). El código en `+0x1574` es una fase del partido, **no** el motivo de abandono; el «2 = abandono» de ObserverForfeitedGame sigue sin confirmar. | H |
+| Modos con menos jugadores ya existentes | Clases `match::registry::TrainingWork(Ref)`, `match::player::ActionFreeTrainingBreak`, `ActionTrainingMoveRoute`, `menu::MatchTeamSelectTraining`, `MatchPauseTrainingMenu`: el motor ya corre partidos con pocos actores en Entrenamiento libre. **Pista fuerte para «quitar jugadores»**: ver qué crea los actores en ese modo (TrainingWork) y reutilizarlo. | H (por nombre; sin abrir) |
+| Menús de formación | Cuadros Flash `p_grand` con 11 casillas; `matchPlan::TacticsFormation`, `EasyMemberSelect`, `match::ai::TeamMemberChange`, `match::pad::ThinkUnitQucikMemberChange` (cambio rápido de jugador con el mando). Relevante para N jugadores y para el cambio de jugador. | H |
+| Barrido «< 7» | Ninguna comparación `< 7` en las funciones del bloque 0x1404xxxx–0x1408xxxx parece contar jugadores en campo; las candidatas son de IA/posición. La regla de «menos de 7» sigue sin localizar. | negativo parcial |
+
+#### 25-oct-2026 — La «puerta» del Entrenamiento libre (flujo de menús en JSON)
+| Qué | Dónde / formato | Confianza |
+|---|---|---|
+| **Flujo de menús = JSON editables** | `dt16_all.cpk` → `common/script/flow/**.json` (2158 archivos, SIN comprimir; se extraen leyendo `posicion`/`tamano_real` del catálogo `informes/datos/catalogo/cpk/dt16_all.cpk.tsv`). Cada pantalla es un JSON con `events{nombre:{to, go, clear, fade…}}` y `data{type: menu/process, bgId}`. **Todo el árbol de menús de PES se puede re-cablear con archivos** (Sider livecpk) sin tocar el exe. Abre la puerta a menús propios, atajos, saltarse pantallas, modos ocultos. | C (leído) |
+| **Entrenamiento libre existe y está cableado** | `TopMenu/TopMenuNew.json` tiene el evento `05_freeTraining` → `Match/TrainingUgcCheckJoinMode` → `Match/MatchTrainingTeamSel` (bg EXHIBITION; return → TopMenu) → `TrainingPrePlayerSelect` → `MatchTrainingMatchMenu` → `MatchTrainingSetting` → `TrainingMatchInit` → `Match/MatchSetup`. Solo falta el **botón** en la pantalla principal (el exe tiene las cadenas `freeTraining`, `freeTrainingMenu`). | C (flujo) / H (que funcione) |
+| Puerta A (fácil, reversible) | Copiar `TopMenuNew.json` a la carpeta de contenido de Sider y cambiar `04_tutorial.to` de `Tutorial/TutorialUgcCheckJoinMode` a `Match/TrainingUgcCheckJoinMode`: el botón Tutorial abriría el entrenamiento. Riesgo: que el código del botón prepare estado de «tutorial» y el entrenamiento no arranque. | H, sin probar |
+| Puerta B (difícil) | Hacer visible el botón oculto `freeTraining` en `common/menu/general/topModeSelectDMM*.bin` (Flash) o en la lista de botones del exe (`menu::TopModeSelect`, vftable 0x14266DDD8). | H |
+| Datos de entrenamiento | Menús `common/menu/general/trainingSelect.bin`, `trainingSkillSettings(Team).bin`, `playerTrainingSetting.bin`, `common/menu/mode/trainingMainMenu.bin`, `trainingResults.bin`, `trainingFloatingScore_1..3.bin`; objetos `Asset/model/training_prop/` (conos, maniquíes, barreras x3–x5, paneles de portería). Estadísticas `PLAY_DATA_TRAINING_FREE`, `_FREE_12`, `_FREE_22` (¿entrenamiento con 12 y con 22 jugadores? → el motor admite cantidades distintas). | C (existen) / H (significado) |
+| Ideas que abre | Modo street dentro del entrenamiento; minijuegos de habilidad con conos/maniquíes; retos de tiros libres/penales/córners (`PLAY_DATA_TRAINING_FREE_KICK/PK/CONER_KICK/GK`); menú Phoenix propio en la pantalla principal; acceso directo a un partido (`Match/MatchDirectSetup`). | idea |
+
+#### 25-oct-2026 (noche) — Prueba en vivo de la puerta del Entrenamiento libre
+| Qué | Dónde / formato | Confianza |
+|---|---|---|
+| Desvío por livecpk FUNCIONA | `SiderAddons\livecpk\Phoenix-Entrenamiento\common\script\flow\TopMenu\TopMenuNew.json` (copia de `livecpk\Menu`) con `04_tutorial` y `06_myclub` → `Match/TrainingUgcCheckJoinMode`. En Conmegol el botón «ENTRENAMIENTO» usa el evento **06_myclub** (el parche remapea eventos del TopMenu: 07→comentario, 08→sonido…). El JSON no se recarga en caliente: hay que reiniciar PES. | C (en vivo) |
+| Pantallas del Entrenamiento libre | «Empezar» → «Local/Visitante» (elegir 2 equipos a la vez) → «Estrategia» de ambos equipos (11 por lado) con reloj ~114→0 → menú previo (Estadio, Empezar partido, Estrategia, Opciones generales, Cámara, Lista de usuarios). «Empezar partido/Estadio/Opciones generales» salen ATENUADOS: falta algo que el menú original prepara (parece pre-partido de sala). | C (en vivo) |
+| Teclado | PES solo acepta teclado por scancode; Espacio abre el overlay de Sider. | C |
+| Pendiente | Leer `MatchTrainingSetting`, `MatchTrainingMatchMenu`, `TrainingMatchInit` (en `livecpk\Menu\common\script\flow\Match\`) para saltar el lobby; probar Start con mando real. Informe largo: `PRUEBA_CANCHA\informes\ENTRENAMIENTO_LIBRE_PRUEBA.md`; capturas `informes\datos\entrenamiento\` 22–37. | — |
+| Idea | «Entrenamiento libre» propio con 2 equipos editables a la vez. | idea |
+
+#### 25-oct-2026 — Búsqueda web: parches de gameplay «street» para PES 2021
+| Qué | Dónde / formato | Confianza |
+|---|---|---|
+| No existe un mod «street» ni futsal/5v5 conocido | Búsquedas en pesmodding.com / evo-web: solo mods de gameplay 11v11 con regate mejorado (HOS 2023 de Hosamalfars, EVO Soccer V7 / Overhaul de elijio876, Mystery/Scream/Modern Soccer de Alex, Real PES, Direct and Fast). Nadie ha hecho cancha pequeña ni menos jugadores → lo nuestro sería inédito. | C (búsqueda web) |
+| Dónde vive el gameplay | Casi todos cambian `dt18_all.cpk` (o el exe entero); «Direct and Fast» va por módulos Lua de Sider. → los parámetros de regate son DATOS en `dt18_all.cpk`, se pueden estudiar y cargar como opción on/off por livecpk (sin exe modificado, válido en PES limpio). | H |
+
+#### 25-oct-2026 (noche, 2) — Lectura estática del flujo del entrenamiento
+| Qué | Dónde / formato | Confianza |
+|---|---|---|
+| Cadena completa | `MatchTrainingTeamSel → TrainingPrePlayerSelect → MatchTrainingMatchMenu → (00_kickoff) MatchMenuEnd → MatchTrainingSetting (menú de ajustes) → TrainingMatchInit → Match/MatchSetup`. Frente a la exhibición se salta `ExhibiFlowInit` / `ExhibiChangeCompeDesignKind` (modo y estadio); el TopMenu de Conmegol no pasa por `TopMenuModeInit`. | C (flujo) |
+| «Empezar partido» atenuado: candidatos | (a) en la prueba se eligió el MISMO equipo en ambos lados; (b) faltan los pasos de init de la exhibición. Bandera exacta no hallada en Ghidra. | H |
+| `TrainingDirectInit` | Registrado en el exe junto a `MatchDirectInit`, pero sin JSON: entrada directa posible creando el JSON. | H |
+| `freeTrainingMenu` | Evento de la pausa en el modo 11 (= entrenamiento libre). | C |
+| Menús .bin | `trainingMainMenu.bin` = retos del Tutorial (Básico…Experto); `trainingSelect.bin` / `playerTrainingSetting.bin` = entrenamiento de jugadores de ML/BAL. No hay menú «Libre/Tiro libre/Penal» antes de elegir equipos. | C |
+| Mini-campo | `loaderSwf_trainingPlayArea` (área de juego delimitada del entrenamiento) + modelos de conos, maniquíes, paneles y líneas de 6–42 m en el exe → base para modo de retos o mini-cancha. | H |
+| Aviso | En el TopMenu de Conmegol `12_freelobby` y `18_info` → `Match/MatchDirectReplay` (cuidado con las repeticiones reales). | C |
+| Pruebas preparadas (desactivadas) | P0: repetir con 2 equipos distintos. P1: `SiderAddons\livecpk\Phoenix-Entrenamiento-B1` (TrainingPrePlayerSelect → MatchTrainingSetting). P2: `-B2` (→ TrainingMatchInit directo). P3: crear `TrainingDirectInit.json`. Activar = línea `cpk.root` en sider.ini con respaldo. Informe: `PRUEBA_CANCHA\informes\ENTRENAMIENTO_LIBRE_PRUEBA.md` («AMPLIACIÓN»). | — |
