@@ -27,7 +27,7 @@
 #include <intrin.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.2.0"
+#define PHX_CORE_VERSION "0.2.1"
 
 namespace {
 
@@ -250,7 +250,7 @@ uint64_t leerU8(const uint8_t* base, size_t off) { uint8_t v = 0xFF; leerSeguro(
 // --- función 3: sonda del partido (solo mira). Anota cada cambio de estado de los actores (SetState) y cada vez
 // que corre el procesador nativo del gol, con quién lo llamó. Sirve para saber qué decide «gol» en un amistoso y
 // qué cambia en el Entrenamiento libre (zona 52). Escribe en sonda_partido.txt.
-enum { EV_ESTADO = 1, EV_GOL = 2, EV_PARADO = 3 };
+enum { EV_ESTADO = 1, EV_GOL = 2, EV_PARADO = 3, EV_EVENTO = 4 };
 struct Ev { volatile LONG listo; uint32_t tipo, hilo; uint64_t t, ret, a, b, c, d, x[4]; };
 const LONG kEvs = 8192;
 Ev g_ev[kEvs];
@@ -294,6 +294,18 @@ uint64_t ganchoGol(uint8_t* a, uint8_t* b, uint8_t* job, uint64_t p4) {
     return r;
 }
 
+// FUN_140451FD0(job, tipo): pone job+0x874 = tipo de evento y vacía la cola. En el entrenamiento la llama
+// FUN_140449B00 con 0x0E (TrainingWork activo); queremos ver qué tipo pone un gol de amistoso.
+using FnEvento = uint64_t (*)(uint8_t* job, uint32_t tipo);
+FnEvento g_eventoOrig = nullptr;
+uint64_t ganchoEvento(uint8_t* job, uint32_t tipo) {
+    Ev& e = nuevoEv(EV_EVENTO, _ReturnAddress());
+    e.a = reinterpret_cast<uint64_t>(job); e.b = tipo; e.d = leerU32(job, 0x874);   // tipo anterior
+    e.c = leerU8(job, 0x8F2);
+    cerrarEv(e);
+    return g_eventoOrig(job, tipo);
+}
+
 struct Gancho { const char* nombre; const char* firma; uint32_t rvaEsperada; size_t n; void* gancho; void** original; };
 Gancho g_ganchos[] = {
     // Mapa Fox PARTE1: SetState(actor, estado, modo) · prólogo 15 bytes sin RIP-relativos (leído 26-oct)
@@ -302,6 +314,9 @@ Gancho g_ganchos[] = {
     // procesador nativo del gol (patrón «gol marcado» de Sider) · prólogo 14 bytes exactos
     { "ProcesarGol", "48 8B C4 48 89 50 10 55 56 57 41 54 41 55 41 56 41 57 48 8D A8 D8", 0x478190, 14,
       (void*)ganchoGol, (void**)&g_golOrig },
+    // pone el tipo de evento del trabajo (job+0x874) · prólogo 19 bytes sin RIP-relativos
+    { "PonerEvento", "48 89 5C 24 08 57 48 83 EC 20 48 8B D9 89 91 74 08 00 00 48 8D B9", 0x451FD0, 19,
+      (void*)ganchoEvento, (void**)&g_eventoOrig },
 };
 
 bool g_exeConocido = true;   // las RVA fijas (vigilarParado) solo valen si todas las firmas caen donde en Conmegol
@@ -360,6 +375,9 @@ void volcarSonda() {
         else if (c.tipo == EV_GOL)
             sprintf_s(l, "%8llu h%-5u GOL a=%llX b=%llX job=%llX p4=%llX goles=%llu-%llu escena=0x%llX fase=%llu desde exe+0x%llX\r\n",
                       c.t, c.hilo, c.a, c.b, c.c, c.d, c.x[0], c.x[1], c.x[2], c.x[3], ret);
+        else if (c.tipo == EV_EVENTO)
+            sprintf_s(l, "%8llu h%-5u EVENTO job=%llX tipo 0x%llX->0x%llX fase=%llu desde exe+0x%llX\r\n",
+                      c.t, c.hilo, c.a, c.d, c.b, c.c, ret);
         else
             sprintf_s(l, "%8llu h%-5u PARADO mgr=%llX +0x1775=%llu\r\n", c.t, c.hilo, c.a, c.b);
         s += l;
