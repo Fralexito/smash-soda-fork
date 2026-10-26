@@ -1,4 +1,4 @@
-# MCP de PES 2021 · «phoenix-pes» (v0.1.0, 25-oct-2026)
+# MCP de PES 2021 · «phoenix-pes» (v0.1.0, 25-oct-2026) · historia y errores: GUIA-MCP-PES.md
 
 Deja que Claude mire PES 2021 **en vivo** desde tu PC (menú en el que estás, marcador, minuto, goleadores, equipos, estadio, ajustes, eventos de Sider, memoria del juego, foto de la ventana) y, si lo enciendes, que pulse teclas en el juego. Sirve para investigar y probar mucho más rápido, sin capturas manuales.
 
@@ -38,7 +38,7 @@ Es un paquete **suelto y opcional**: funciona en un PES 2021 limpio con Sider 7.
 4. Registrar el MCP en Claude Code (PowerShell):
    `claude mcp add phoenix-pes -s user -- node D:\Frank\IA\CLAUDE\pes-mcp\servidor.mjs`
 5. Comprobar sin Claude: `node D:\Frank\IA\CLAUDE\pes-mcp\servidor.mjs --prueba` (lista las herramientas y el estado).
-6. Abrir PES con el selector. En `sider.log` debe salir `[sonda] v1.0 listo … (con zona)`.
+6. Abrir PES con el selector. En `sider.log` debe salir `[sonda] v1.0.1 listo … (con zona)`.
 
 **Desinstalar:** quitar la línea de `sider.ini` y ejecutar `claude mcp remove phoenix-pes -s user`.
 
