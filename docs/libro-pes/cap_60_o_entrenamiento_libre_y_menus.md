@@ -161,3 +161,10 @@ Dos mandos conectados a la PC: mando 1 a la izquierda y mando 2 a la derecha en 
 
 - **Marcador:** en la zona 52 la sonda marca `en_partido: false`, `match.stats()` de Sider devuelve nil y no hay reloj ni lista de goles. `goal_scored` solo existe en Sider 7.3.4 o posterior, y la PC tiene la 7.3.3. **Diseño:** detectar el gol por la posición de la pelota, en solo lectura (objeto de 640 B; x en +208, z en +216; ver `Pelota.cs` y CAMPO-2D-INVESTIGACION §8). Cuenta como gol cuando cruza la línea de fondo entre los palos, y se confirma con el reinicio desde el centro. Lo implementaría Link (hilo 1) y lo mostraría el overlay. Alternativa: Sider 7.3.4 o posterior.
 - **Cancha pequeña:** `loaderSwf_trainingPlayArea` es de la ficha de MiClub, no un área de juego. Los training_prop y d2_training_guide son del tutorial de retos. El entrenamiento libre usa el campo normal. Candidato: `parchear_campo.exe 15 10` (30×20, informe 11), sin probar en la zona 52 (faltan saques, porterías y córners).
+
+### 8.12 Porteros: solo el equipo que defiende tiene arquero (26-oct, ~04:47)
+
+En el «Menú de entrenamiento» (opciones: Atacante/Defensor, Tipo, Cursor de PT fijo, Jugadores usuario, Jugadores COM, Nivel de partido, Faltas, S. pta./córner/banda = «Ambos equipos», y en pausa: Menú de pausa, Repetición, Menú principal):
+- **Solo el equipo que DEFIENDE tiene portero.** Con usuario 4 en «Defensa» y COM 4: el usuario tiene 1 PT + 3 de campo, y la COM tiene 4 de campo sin arquero. En «Ataque» es al revés (por eso en el 3 contra 1 del principio, el único COM era el portero).
+- La cifra de jugadores INCLUYE al portero del lado que defiende.
+- Pendiente: saber si un gol en la portería vacía (la del atacante) también reinicia o cuenta. Opciones para el street: sin porteros, un portero fijo, o investigar cómo poner arquero en los dos lados (memoria o Ghidra: lógica atacante/defensor del TrainingWork).
