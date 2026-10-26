@@ -44,7 +44,7 @@
 --  v0.9.38 · 23-oct-2026 ○ de los mandos 9–16 en la pantalla de lados de PES (pausa y menú): PES solo oye el ○ en sus 8
 --        FILAS (SideSelectEach, una por mando 0–7). Al ver ○ de un mando 9+ se llama al método «atrás» de una fila
 --        (FUN_140C68350, el mismo que llama PES) sobre el objeto SideSelect guardado. Sin teclado. Ver V9.atrasExtras.
-local m = { version = "0.9.58" }
+local m = { version = "0.9.60" }
 
 local G_HIDMAN, G_GESTOR, G_DI8 = 0x1437F0A58, 0x1436F3DC8, 0x1437F0AF8
 local CAPS = 0x14351A840
@@ -155,10 +155,10 @@ local COLORES_NUEVOS = {            -- mandos 8, 9, 10… (se repiten si hay má
     { 255,  40,  40 },  -- 8  rojo
     {  40,  90, 255 },  -- 9  azul
     { 255, 255, 255 },  -- 10 blanco
-    { 150,  90,  40 },  -- 11 marrón
-    {   0, 120,  60 },  -- 12 verde oscuro
-    { 140,   0,  50 },  -- 13 granate
-    {  20,  40, 110 },  -- 14 azul marino
+    { 100,  50,  10 },  -- 11 chocolate   (26-oct, Fralex: colores lo más distintos posible; se mantienen
+    { 100,   0, 170 },  -- 12 morado oscuro  rojo, azul, blanco y negro. Antes: marrón (≈ naranja), verde
+    {   0, 128, 128 },  -- 13 turquesa oscuro  oscuro (≈ verde), granate (≈ rojo) y azul marino (≈ azul).
+    { 128, 128,   0 },  -- 14 oliva           Mismos colores en piezas.raw: herramientas\generar_replica_lados.ps1)
     {  32,  32,  32 },  -- 15 negro
 }
 -- Métodos esperados en la vftable de HidMan (comprobación de seguridad)
@@ -262,7 +262,10 @@ local function mandosDirectInput()
             -- v0.8.7 BLINDAJE: «vivo» = el objeto del dispositivo tiene su interfaz DirectInput (+0x20 ≠ 0). Las entradas
             -- viejas de mandos que ya no existen la tienen a 0: PES lee basura de ellas (en vivo, 20-oct: el 90760ff5
             -- dado de alta como mando 12 «pulsaba» START sin parar → pausa / pantalla de lados / trabado)
-            local vivo = (disp and disp ~= 0 and (ptr(disp + 0x20) or 0) ~= 0) or false
+            -- v0.9.59 (26-oct, Fralex: «solo hay 15 mandos»): la interfaz DirectInput de la envoltura está en +0x10; +0x20 es
+            -- el enlace «siguiente» de la lista (rea/mandos22_informe.md), así que el ÚLTIMO dispositivo salía «sin mando
+            -- real» aunque existiera (hoy el puesto 16 de Link). PES quita del mapa los mandos desenchufados.
+            local vivo = (disp and disp ~= 0 and (ptr(disp + 0x10) or 0) ~= 0) or false
             if g then res[#res + 1] = { guid = g, tipo = tipo, vivo = vivo } end
             pila[#pila + 1] = ptr(n); pila[#pila + 1] = ptr(n + 0x10)
         end
@@ -1638,6 +1641,30 @@ function V9.atrasExtras()
     ffi.cast("phxf1_m_v", V9.ATRAS_FILA)(ffi.cast("void*", fila))
     anotar(string.format("mando %d pulsa ○ → «atrás» en la pantalla de lados de PES (fila %X del objeto %X)", quien + 1, fila, obj))
 end
+-- v0.9.60 (26-oct, Fralex: los mandos 9+ solo tenían ○ en la pantalla de lados: ○ con cambios los DESHACE, así que el
+-- mando 1 volvía al centro). ✕ de un mando 9+ = ✕ de la fila: FUN_140C683B0 (vtable de fila +0x188) manda al padre el
+-- mensaje 0x1081001 (confirmar), como el ✕ de los mandos 1–8. Mismas comprobaciones que el ○.
+V9.equisPrevio, V9.ultimoEquis = {}, -100
+function V9.confirmarExtras()
+    local abierta = PHX.pantallaPESAbierta()
+    local quien
+    for _, e in ipairs(extras) do
+        local p = V9.boton(e.idx, 0)                     -- ✕ = botón 0 (distribución tipo Xbox: A), como ○ = 1
+        if p and V9.equisPrevio[e.idx] == false and not quien then quien = e.idx end
+        if p == nil then V9.equisPrevio[e.idx] = nil else V9.equisPrevio[e.idx] = p end
+    end
+    if not quien or not abierta then return end
+    if V9.cuadroAtras - V9.ultimoEquis < 15 then return end
+    local dev = V9.dispositivo(quien)
+    for k = 0, NUEVO - 1 do if dev and V9.dispositivo(k) == dev then return end end   -- mismo mando físico que un 1–8: ya lo oye PES
+    if ptr(V9.SS_VT_FILA + 0x188) ~= 0x140C683B0 or bin2hex(leer(0x140C683B0, 18) or "") ~= "40534883ec4048c7442420feffffff488bd9" then
+        anotar("✕ de mandos 9+: FUN_140C683B0 distinta al exe → desactivado"); return end
+    local fila, obj = V9.filaParaAtras()
+    if not fila then anotar(string.format("✕ del mando %d: no se confirma (%s)", quien + 1, tostring(obj))); return end
+    V9.ultimoEquis = V9.cuadroAtras
+    ffi.cast("phxf1_m_v", 0x140C683B0)(ffi.cast("void*", fila))
+    anotar(string.format("mando %d pulsa ✕ → «confirmar» en la pantalla de lados de PES (fila %X)", quien + 1, fila))
+end
 function V9.moverExtras()
     V9.capitanPorBoton()                                   -- v0.9.30
     V9.botonesAPes()                                       -- v0.9.33
@@ -2271,6 +2298,7 @@ function m.display_frame(ctx)
     vigilarPantallaPES()
     -- v0.9: mientras se ve la Phoenix (en el menú), espejo de la de PES + mandos extra
     if mostrado and not enPartidoAhora and #filas > 0 then V9.reflejarNativos(); V9.moverExtras() end
+    if activo and #extras > 0 then V9.confirmarExtras() end   -- v0.9.60: ✕ de los mandos 9+ confirma
     if activo and #extras > 0 then V9.atrasExtras() end   -- v0.9.38: ○ de los mandos 9+ en la pantalla de lados de PES
     if activo and #extras > 0 then V9.cuadradoExtras() end   -- v0.9.51: □ de los mandos 9+ edita SU perfil (v0.9.56: también en la pausa)
     -- v0.9.34: en la PAUSA del partido (sin la pantalla Phoenix) los menús de PES solo escuchan a los mandos 1–8: ✕/○ de

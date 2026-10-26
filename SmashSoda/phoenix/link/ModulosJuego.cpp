@@ -25,7 +25,7 @@ namespace {
 	const std::map<std::string, std::string> kDescripciones = {
 		{ "phoenix_referee.lua", "Phoenix Referee: marcador, goles con minuto y goleador, pantalla del juego para la web, HUD del partido y árbitro (solo lectura)." },
 		{ "phoenix_estadio.lua", "Versión anterior de Phoenix Referee: al instalar Phoenix Referee se apaga sola." },
-		{ "phoenix_mandos_fase1.lua", "Mandos 9–16 dentro de PES (EXPERIMENTAL, v0.9.58): hasta 16 mandos a la vez, con jugador, flecha, menús, Datos personales y barra de potencia. Instala también livecpk\PhoenixMandos (la primera raíz), la réplica de Local/Visitante y luajit/overlay en sider.ini; queda siempre el último módulo." },
+		{ "phoenix_mandos_fase1.lua", "Mandos 9–16 dentro de PES (EXPERIMENTAL, v0.9.60): hasta 16 mandos a la vez, con jugador, flecha, menús, Datos personales y barra de potencia. Instala también livecpk\PhoenixMandos (la primera raíz), la réplica de Local/Visitante y luajit/overlay en sider.ini; queda siempre el último módulo." },
 		{ "phoenix_sonda.lua", "Phoenix Sonda (opcional, solo lectura): escribe content\\phoenix\\sonda.json cada segundo con lo que Sider sabe del juego (estadio, clima, reglas, zona). Link manda esa ficha del partido a la web y la usa el MCP de PES para investigar." },
 		{ "phoenix.lua", "Phoenix Sync: avisos de la web en el overlay, botón nativo «Datos Actual. en vivo» y modos de recarga de fichajes. Instala también la raíz Phoenix-DB y la carpeta de avisos." },
 	};
