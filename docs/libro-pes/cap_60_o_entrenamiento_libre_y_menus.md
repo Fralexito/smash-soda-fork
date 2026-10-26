@@ -134,3 +134,10 @@ Configuración: Entrenamiento libre, Jugadores usuario 3, Jugadores COM 4 (porte
 ### 8.7 Goles sin marcador (26-oct, ~03:52)
 
 Al marcar gol, la jugada se reinicia desde el centro. **No hay marcador ni contador.** Idea: un marcador propio en Link (leer el gol en memoria, como en los partidos) mostrado en el overlay PhoenixGlass, con tiempo y reglas tipo «primero a N goles», como opción que se activa y desactiva. Siguiente: comprobar si dos humanos pueden jugar en lados opuestos, que es clave para Parsec.
+
+### 8.8 Ropa: corrección del diagnóstico (26-oct, ~04:00)
+
+- **Corrige §8.5.** «using dummy for …realUni.bin» es lo normal en kserv (`m.make_key`, kserv.lua ~1016/1022). El juego exige los `.bin`, kserv le da un `dummy.bin` y la ropa real va por las texturas `.ftex` de `content\kit-server`. kserv trata el torneo 65535 como exhibición (kserv.lua:694) y aplica los kits sin error (`init_*_team_kits`, líneas 888–945).
+- **Causa probable (sin probar):** en el entrenamiento PES viste el **training suit** (`model/character/parts/training_suit/training_suit.fmdl`). Conmegol lo reemplaza en `livecpk\Managers\Asset\…\training_suit\` con archivos que no son los originales de `dt32_g4.cpk`; por ejemplo fmdl 477906 frente a 477779 bytes y bsm 21474 frente a 60816.
+- **Arreglo opcional preparado y no instalado:** `PRUEBA_CANCHA\informes\datos\kserv_fix\Phoenix-Entrenamiento-Ropa-ORIGINAL` con los 10 archivos originales extraídos de dt32_g4.cpk. Se usa como raíz livecpk `Phoenix-Entrenamiento-Ropa` puesta con PONER, que tiene que quedar antes de `Managers`. Efecto secundario: el DT pierde el traje de Managers en ese modo.
+- Otras causas si no es eso: el cuerpo PRDX (raíz 15) incompatible con el training suit, o la sombra del estadio.

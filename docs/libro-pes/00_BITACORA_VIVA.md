@@ -311,3 +311,4 @@ Formato de entrada: `### AAAA-MM-DD HH:MM — tema` · qué se hizo · resultado
 - 26-oct ~03:45 · PES · Entrenamiento 3 contra 1 en cancha (zona 52). Uniformes de relleno porque kserv no encuentra el kit sin torneo (65535). cap_60_o §8.5.
 - 26-oct ~03:51 · PES · 3 contra 3 real (usuario 3, COM 4 con portero): la COM defiende y roba. cap_60_o §8.6.
 - 26-oct ~03:52 · PES · En el Entrenamiento libre el gol reinicia desde el centro y no hay marcador. Idea: marcador en Link + overlay. cap_60_o §8.7.
+- 26-oct ~04:00 · PES · Ropa del entrenamiento: kserv va bien; la causa probable es el training_suit reemplazado por Managers de Conmegol. Arreglo opcional con los originales de dt32_g4 en kserv_fix (sin probar). cap_60_o §8.8.
