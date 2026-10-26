@@ -116,6 +116,24 @@ function ModoRecarga({ m, mods }) {
 const Para = ({ children }) => html`<div class="ayuda" style="font-size:14px">${children}</div>`;
 const Grupo = ({ texto }) => html`<div class="lab" style="margin:10px 4px 0">${texto}</div>`;
 
+// Raíz de PRUEBA en sider.ini (0.3.53): para las pruebas de los hilos que investigan PES. Lo pulsa la persona, con PES cerrado.
+// PONER = la carpeta pasa a ser la PRIMERA cpk.root (con copia de sider.ini); QUITAR = se borra esa línea. Mandos 9–16 sigue el último.
+function RaizPrueba() {
+  const [ruta, setRuta] = useState(".\\livecpk\\Phoenix-Entrenamiento");
+  const [msg, setMsg] = useState("");
+  const hacer = async (que) => { const r = await accion("sync.raizPrueba", { ruta: ruta.trim(), accion: que }); if (r) setMsg(r.mensaje || ""); };
+  return html`<${Tarjeta} interior="padding:14px 18px;display:flex;flex-direction:column;gap:8px">
+    <b class="disp" style="font-size:13px;letter-spacing:.14em">${t("RAÍZ DE PRUEBA (SIDER)", "TEST ROOT (SIDER)")}</b>
+    <div class="ayuda" style="font-size:13px">${t("Solo para pruebas que te pida Claude. Con PES cerrado: PONER deja esa carpeta la primera en sider.ini (con copia); QUITAR la borra. No toca nada más.", "Only for tests Claude asks for. With PES closed: PUT makes that folder the first in sider.ini (with a backup); REMOVE deletes it. Touches nothing else.")}</div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <input class="campo mono" style="flex:1;min-width:220px" maxLength=${200} value=${ruta} onInput=${(e) => setRuta(e.currentTarget.value)}/>
+      <${Boton} tipo="mini" deshabilitado=${!ruta.trim()} al=${() => hacer("poner")}>${t("PONER", "PUT")}</${Boton}>
+      <${Boton} tipo="mini suave" deshabilitado=${!ruta.trim()} al=${() => hacer("quitar")}>${t("QUITAR", "REMOVE")}</${Boton}>
+    </div>
+    ${msg ? html`<div class="ayuda" style="font-size:13px"><b>${msg}</b></div>` : null}
+  </${Tarjeta}>`;
+}
+
 function Avanzado({ m }) {
   const [mods, setMods] = useState(null);
   const cargarMods = async () => { const r = await accion("sync.modulos", {}, { silencioso: true }); if (r) setMods(r); };
@@ -151,6 +169,7 @@ function Avanzado({ m }) {
     <${ModoRecarga} m=${m} mods=${mods}/>
     <${Entrega} m=${m}/>
     <${Fichajes} d=${fich} setD=${setFich} cargar=${cargarFich}/>
+    <${RaizPrueba}/>
     <${Grupo} texto=${t("CUENTA Y AYUDA", "ACCOUNT AND HELP")}/>
     <${Seccion} id="avisos" titulo=${t("ÚLTIMOS AVISOS", "LATEST NOTICES")}
       resumen=${(b.avisos || []).length === 0 ? t("Aún no hay avisos", "No notices yet") : t(`${(b.avisos || []).length} de 5`, `${(b.avisos || []).length} of 5`)}>
