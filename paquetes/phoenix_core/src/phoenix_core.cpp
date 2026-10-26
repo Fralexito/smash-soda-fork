@@ -12,8 +12,12 @@
 //     autoapagado a los 3 fallos.
 // Nada de esto toca el exe en disco. Sin la DLL (o con PHOENIX_CORE_OFF) PES queda 100 % original.
 
+#ifndef PHOENIX_CORE_EXPORTS
 #define PHOENIX_CORE_EXPORTS
+#endif
+#ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
+#endif
 #include <windows.h>
 #include <stdio.h>
 #include <stdarg.h>
