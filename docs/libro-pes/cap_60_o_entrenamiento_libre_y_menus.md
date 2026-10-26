@@ -141,3 +141,7 @@ Al marcar gol, la jugada se reinicia desde el centro. **No hay marcador ni conta
 - **Causa probable (sin probar):** en el entrenamiento PES viste el **training suit** (`model/character/parts/training_suit/training_suit.fmdl`). Conmegol lo reemplaza en `livecpk\Managers\Asset\…\training_suit\` con archivos que no son los originales de `dt32_g4.cpk`; por ejemplo fmdl 477906 frente a 477779 bytes y bsm 21474 frente a 60816.
 - **Arreglo opcional preparado y no instalado:** `PRUEBA_CANCHA\informes\datos\kserv_fix\Phoenix-Entrenamiento-Ropa-ORIGINAL` con los 10 archivos originales extraídos de dt32_g4.cpk. Se usa como raíz livecpk `Phoenix-Entrenamiento-Ropa` puesta con PONER, que tiene que quedar antes de `Managers`. Efecto secundario: el DT pierde el traje de Managers en ese modo.
 - Otras causas si no es eso: el cuerpo PRDX (raíz 15) incompatible con el training suit, o la sombra del estadio.
+
+### 8.9 Ropa arreglada (26-oct, ~04:09) ✅
+
+Con la raíz `.\livecpk\Phoenix-Entrenamiento-Ropa` (los 10 archivos originales de `training_suit` sacados de dt32_g4.cpk), puesta con PONER antes de `Managers` y tras QUITAR B1, **cada club sale con su uniforme** en el Entrenamiento libre. Queda confirmada la causa de §8.8: el training_suit reemplazado por Managers de Conmegol. Es una opción que se activa y desactiva: QUITAR lo deshace. Efecto secundario conocido: el DT pierde el traje de Managers en ese modo. Candidata a entrar en el instalador de Link como opción del modo street.
