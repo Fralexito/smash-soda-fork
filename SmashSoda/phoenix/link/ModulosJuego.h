@@ -115,6 +115,15 @@ std::string moverModuloAlFinal(const std::string& ini, const std::string& archiv
 std::string quitarRaizMandos(const std::string& ini, bool& cambio);
 bool tieneRaizMandos(const std::string& ini);
 
+/// Raíz de PRUEBA (0.3.53, para los hilos que investigan PES): pone `cpk.root = "<ruta>"` como PRIMERA raíz activa en el sider.ini
+/// de cada carpeta SiderAddons donde exista esa carpeta (con copia sider.ini.phoenix-<sello> y vuelta atrás si algo falla) y deja el
+/// módulo de mandos 9–16 el último. `ruta` debe ser «.\\livecpk\\<carpeta>» (sin «..»). quitarRaizPrueba quita sus líneas (activas o comentadas).
+Resultado ponerRaizPrueba(const fs::path& juego, const std::string& ruta);
+Resultado quitarRaizPrueba(const fs::path& juego, const std::string& ruta);
+/// Lógica pura: sider.ini con esa raíz la primera (`cambio` = false si ya lo estaba) / sin ella.
+std::string activarRaizPrimera(const std::string& ini, const std::string& ruta, bool& cambio);
+std::string quitarRaiz(const std::string& ini, const std::string& ruta, bool& cambio);
+
 /// Versión declarada en el .lua (`version = "x"`) o "".
 std::string versionDe(const std::string& lua);
 

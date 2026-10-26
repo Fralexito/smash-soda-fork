@@ -861,4 +861,85 @@ Resultado desinstalar(const fs::path& paquete, const fs::path& juego, const std:
 	return r;
 }
 
+// ─── Raíz de prueba (0.3.53) ──────────────────────────────────────────────────────────────────────
+namespace {
+	std::string normRaiz(std::string r) { r = minus(r); std::replace(r.begin(), r.end(), '/', '\\'); while (!r.empty() && r.back() == '\\') r.pop_back(); return r; }
+	/// «.\\livecpk\\Nombre» (o subcarpetas), sin «..», sin comillas ni caracteres raros.
+	bool raizSegura(const std::string& r) {
+		if (r.size() < 11 || r.size() > 200 || normRaiz(r).rfind(".\\livecpk\\", 0) != 0 || r.find("..", 2) != std::string::npos) return false;
+		for (unsigned char c : r) if (c < 0x20 || c == '"' || c == ':' || c == '*' || c == '?' || c == '<' || c == '>' || c == '|') return false;
+		return true;
+	}
+}
+
+std::string activarRaizPrimera(const std::string& ini, const std::string& ruta, bool& cambio) {
+	cambio = false;
+	Lineas r = partir(ini);
+	const std::string buscada = normRaiz(ruta);
+	int primera = -1, mia = -1;
+	std::vector<int> fuera;
+	for (size_t i = 0; i < r.v.size(); i++) {
+		std::string rr; bool c = false;
+		if (!lineaRaiz(r.v[i], rr, c)) continue;
+		if (normRaiz(rr) == buscada) { if (c || mia >= 0) fuera.push_back(static_cast<int>(i)); else mia = static_cast<int>(i); continue; }
+		if (!c && primera < 0) primera = static_cast<int>(i);
+	}
+	if (mia >= 0 && (primera < 0 || mia < primera) && fuera.empty()) return ini;
+	if (mia >= 0) fuera.push_back(mia);
+	std::sort(fuera.rbegin(), fuera.rend());
+	for (int k : fuera) { r.v.erase(r.v.begin() + k); if (primera > k) primera--; }
+	const std::string linea = "cpk.root = \"" + ruta + "\"";
+	if (primera >= 0) r.v.insert(r.v.begin() + primera, linea); else r.v.push_back(linea);
+	cambio = true;
+	return unir(r);
+}
+
+std::string quitarRaiz(const std::string& ini, const std::string& ruta, bool& cambio) {
+	cambio = false;
+	Lineas r = partir(ini);
+	const std::string buscada = normRaiz(ruta);
+	for (size_t i = r.v.size(); i-- > 0;) {
+		std::string rr; bool c = false;
+		if (lineaRaiz(r.v[i], rr, c) && normRaiz(rr) == buscada) { r.v.erase(r.v.begin() + static_cast<long long>(i)); cambio = true; }
+	}
+	return cambio ? unir(r) : ini;
+}
+
+namespace {
+	Resultado raizPrueba(const fs::path& juego, const std::string& ruta, bool poner) {
+		Resultado r;
+		if (!raizSegura(ruta)) { r.mensaje = "Ruta no válida: tiene que ser .\\livecpk\\<carpeta>."; return r; }
+		const auto ds = destinos(juego);
+		if (ds.empty()) { r.mensaje = "No encuentro SiderAddons\\sider.ini en la carpeta del juego."; return r; }
+		std::vector<std::pair<fs::path, std::string>> cambios;
+		std::string donde;
+		for (const auto& d : ds) {
+			std::error_code ec;
+			if (poner && !fs::is_directory(d.second / phoenix::entrega::deU8(ruta), ec)) continue;   // solo donde exista la carpeta
+			std::string ini;
+			if (!leer(d.second / "sider.ini", ini, kMaxIni)) { r.mensaje = "No se pudo leer sider.ini en " + d.first + ": no se tocó nada."; return r; }
+			bool c1 = false, c2 = false;
+			std::string nuevo = poner ? activarRaizPrimera(ini, ruta, c1) : quitarRaiz(ini, ruta, c1);
+			const std::string conMandos = moverModuloAlFinal(nuevo, kMandos, c2);   // el de mandos 9–16, siempre el último
+			if (c2) nuevo = conMandos;
+			if (c1 || c2) { cambios.push_back({ d.second, nuevo }); donde += (donde.empty() ? "" : ", ") + d.first; }
+		}
+		if (poner && cambios.empty()) {
+			bool alguna = false;
+			for (const auto& d : ds) { std::error_code ec; if (fs::is_directory(d.second / phoenix::entrega::deU8(ruta), ec)) alguna = true; }
+			r.ok = alguna;
+			r.mensaje = alguna ? "Esa raíz ya era la primera." : "No existe la carpeta " + ruta + " en ninguna SiderAddons del juego: no se tocó nada.";
+			return r;
+		}
+		if (cambios.empty()) { r.ok = true; r.mensaje = "Esa raíz no estaba en sider.ini."; return r; }
+		if (!escribirInis(cambios, r)) return r;
+		r.ok = true;
+		r.mensaje = std::string(poner ? "Raíz de prueba puesta la primera en: " : "Raíz de prueba quitada de: ") + donde + ". Se guardó copia de sider.ini.";
+		return r;
+	}
+}
+
+Resultado ponerRaizPrueba(const fs::path& juego, const std::string& ruta) { return raizPrueba(juego, ruta, true); }
+Resultado quitarRaizPrueba(const fs::path& juego, const std::string& ruta) { return raizPrueba(juego, ruta, false); }
+
 } // namespace phoenix::modulos

@@ -306,6 +306,20 @@ namespace phoenix::web {
 			return listaModulos();
 		});
 
+		// Raíz de PRUEBA para los hilos que investigan PES (0.3.53): {ruta: ".\\livecpk\\X", accion: "poner"|"quitar"}. Solo con PES y Sider cerrados.
+		p.registrar("sync.raizPrueba", [](const json& d, uint64_t) -> std::optional<json> {
+			const std::string ruta = texto(d, "ruta", 200);
+			const std::string que = texto(d, "accion", 16);
+			if (que != "poner" && que != "quitar") throw ErrorAccion("DATOS_INVALIDOS", "Acción desconocida.");
+			bool abierto = false;
+			const std::filesystem::path juego = carpetaJuego(abierto);
+			if (abierto || !phoenix::modulos::procesosAbiertos().empty()) throw ErrorAccion("PES_ABIERTO", "Cierra PES 2021 y Sider antes de tocar sider.ini.");
+			if (juego.empty()) throw ErrorAccion("SIN_JUEGO", "Abre PES 2021 una vez para que Phoenix Link conozca su carpeta.");
+			const phoenix::modulos::Resultado r = que == "poner" ? phoenix::modulos::ponerRaizPrueba(juego, ruta) : phoenix::modulos::quitarRaizPrueba(juego, ruta);
+			if (!r.ok) throw ErrorAccion("NO_SE_PUDO", r.mensaje);
+			return json{ {"mensaje", r.mensaje}, {"respaldos", r.respaldos} };
+		});
+
 		p.registrar("sync.modulo", [](const json& d, uint64_t) -> std::optional<json> {
 			const std::string archivo = texto(d, "archivo", 64);
 			const std::string que = texto(d, "accion", 16);

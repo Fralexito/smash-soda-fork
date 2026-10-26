@@ -44,6 +44,20 @@ int main(int argc, char** argv) {
 		OK(moverModuloAlFinal(m, "phoenix_mandos_fase1.lua", c4) == m && !c4);
 		std::cout << "mandos 9-16 en sider.ini: ok\n";
 	}
+	// ── 0b) Raíz de prueba (0.3.53): la primera activa, sin duplicar, y se quita ──
+	{
+		const std::string ini = "[sider]\n;cpk.root = \".\\livecpk\\Prueba\"\ncpk.root = \".\\livecpk\\Faces\"\ncpk.root = \".\\livecpk\\Prueba\"\nlua.module = \"a.lua\"\n";
+		bool c = false;
+		const std::string m = activarRaizPrimera(ini, ".\\livecpk\\Prueba", c);
+		OK(c && contar(m, "Prueba") == 1);
+		OK(m.find("cpk.root = \".\\livecpk\\Prueba\"\ncpk.root = \".\\livecpk\\Faces\"") != std::string::npos);
+		bool c2 = false;
+		OK(activarRaizPrimera(m, ".\\livecpk\\Prueba", c2) == m && !c2);
+		bool c3 = false;
+		const std::string q = quitarRaiz(m, ".\\livecpk\\Prueba", c3);
+		OK(c3 && contar(q, "Prueba") == 0 && contar(q, "Faces") == 1);
+		std::cout << "raiz de prueba: ok\n";
+	}
 	// ── 1) Lógica pura ──
 	{
 		const std::string ini = "\xEF\xBB\xBF[sider]\r\nlua.module = \"a.lua\"\r\n;lua.module = \"viejo.lua\"\r\nlua.module = \"phoenix.lua\"\r\n\r\noverlay.enabled = 1\r\n";
