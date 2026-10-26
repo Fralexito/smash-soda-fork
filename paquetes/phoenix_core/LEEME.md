@@ -1,4 +1,4 @@
-# Phoenix Core · v0.4.0 (sonda + gol nativo en entrenamiento)
+# Phoenix Core · v0.4.5 (sonda + gol nativo en entrenamiento + vigilante)
 
 DLL propia que se carga dentro de PES 2021 desde Sider. En esta fase **no cambia nada del juego**: solo arranca, se identifica y deja registro. Es la base donde irán las funciones on/off (la primera: el gol del modo street en Entrenamiento libre).
 
@@ -45,3 +45,4 @@ copy build\Release\phoenix_core.dll SiderAddons\phoenix_core\
 | `sonda_partido` | Solo mira: desvía SetState (0x1406EEBB0) y el procesador del gol (0x140478190) y PonerEvento (0x140451FD0, tipo de evento job+0x874) y anota en `sonda_partido.txt` cada cambio de estado, cada gol procesado (goles, escena job+0x874, fase) y el indicador «partido detenido», con quién llamó | encendida |
 
 Los desvíos son propios (sin MinHook): copian el prólogo conocido (15 y 14 bytes, sin instrucciones relativas a RIP, leídos con Ghidra el 26-oct) a un trampolín y escriben un `jmp` absoluto de 14 bytes. Antes de escribir se comprueba la firma (única en `.text`) y los bytes originales; al cerrar PES se restauran.
+| `vigilante_bucles` | Hilo propio que muestrea el RIP de cada hilo de PES cada 250 ms; si uno se queda en bucle (misma zona, CPU al 100 %) lo anota en `phoenix_core.log` con la pila. Para encontrar cuelgues sin volcados | encendida para la prueba |

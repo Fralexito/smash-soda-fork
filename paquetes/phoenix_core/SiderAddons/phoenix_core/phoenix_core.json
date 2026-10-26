@@ -2,6 +2,7 @@
   "funciones": {
     "diagnostico": true,
     "sonda_partido": true,
-    "gol_nativo_free": true
+    "gol_nativo_free": true,
+    "vigilante_bucles": true
   }
 }

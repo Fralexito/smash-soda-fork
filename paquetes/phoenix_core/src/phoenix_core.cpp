@@ -25,9 +25,10 @@
 #include <string>
 #include <vector>
 #include <intrin.h>
+#include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.4"
+#define PHX_CORE_VERSION "0.4.5"
 
 namespace {
 
@@ -561,10 +562,88 @@ void volcarSonda() {
     if (g_bytesSonda >= kTopeSonda) logf("[sonda_partido] llegó a 20 MB: deja de escribir");
 }
 
+// --- función 4: vigilante de bucles (solo mira). Hilo propio que cada 250 ms detiene un instante cada hilo de PES,
+// lee su RIP y lo suelta. Si un hilo pasa ≥6 de 8 muestras en la misma zona del exe (±0x200) y gasta CPU sin parar,
+// anota en phoenix_core.log «[VIGILANTE] bucle» con RIP, RSP y las direcciones del exe que hay en su pila.
+// Sirve para encontrar cuelgues (100 % CPU sin cerrarse) sin volcados de memoria.
+struct MuestraHilo { DWORD tid; uint64_t rip[8]; int n; ULONGLONG cpu0; uint64_t avisado; };
+volatile LONG g_vigilar = 0;
+HANDLE g_hiloVigilante = nullptr;
+
+ULONGLONG cpuHilo(HANDLE h) {
+    FILETIME c, e, k, u;
+    if (!GetThreadTimes(h, &c, &e, &k, &u)) return 0;
+    return ((ULONGLONG)k.dwHighDateTime << 32 | k.dwLowDateTime) + ((ULONGLONG)u.dwHighDateTime << 32 | u.dwLowDateTime);
+}
+
+DWORD WINAPI vigilante(LPVOID) {
+    std::vector<MuestraHilo> hilos;
+    const DWORD yo = GetCurrentThreadId(), pid = GetCurrentProcessId();
+    const uint64_t ini = reinterpret_cast<uint64_t>(g_exe.base), fin = ini + g_exe.tamImagen;
+    while (g_vigilar) {
+        Sleep(250);
+        std::vector<DWORD> tids;
+        HANDLE snap = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
+        if (snap == INVALID_HANDLE_VALUE) continue;
+        THREADENTRY32 te; te.dwSize = sizeof te;
+        for (BOOL ok = Thread32First(snap, &te); ok; ok = Thread32Next(snap, &te))
+            if (te.th32OwnerProcessID == pid && te.th32ThreadID != yo) tids.push_back(te.th32ThreadID);
+        CloseHandle(snap);
+        for (DWORD tid : tids) {
+            HANDLE h = OpenThread(THREAD_SUSPEND_RESUME | THREAD_GET_CONTEXT | THREAD_QUERY_INFORMATION, FALSE, tid);
+            if (!h) continue;
+            CONTEXT ctx = {}; ctx.ContextFlags = CONTEXT_CONTROL | CONTEXT_INTEGER;
+            uint64_t pila[64] = {};
+            bool leido = false;
+            if (SuspendThread(h) != (DWORD)-1) {      // entre Suspend y Resume: nada que reserve memoria
+                leido = GetThreadContext(h, &ctx) != 0;
+                if (leido) leerSeguro(reinterpret_cast<void*>(ctx.Rsp), pila, sizeof pila);
+                ResumeThread(h);
+            }
+            ULONGLONG cpu = cpuHilo(h);
+            CloseHandle(h);
+            if (!leido) continue;
+            MuestraHilo* m = nullptr;
+            for (auto& x : hilos) if (x.tid == tid) { m = &x; break; }
+            if (!m) { hilos.push_back({ tid, {}, 0, cpu, 0 }); m = &hilos.back(); }
+            m->rip[m->n % 8] = ctx.Rip; m->n++;
+            if (m->n % 8 != 0) continue;
+            // ventana completa (2 s): ¿misma zona y CPU casi al 100 %?
+            ULONGLONG gastado = cpu - m->cpu0;  m->cpu0 = cpu;      // en unidades de 100 ns
+            uint64_t ref = m->rip[7];
+            int iguales = 0;
+            for (uint64_t r : m->rip) if (r + 0x200 >= ref && r <= ref + 0x200) ++iguales;
+            if (iguales < 6 || gastado < 14000000 || ref < ini || ref >= fin) continue;   // ≥1,4 s de CPU en 2 s
+            if ((m->avisado & ~0xFFFull) == (ref & ~0xFFFull)) continue;                   // ya avisado esta zona
+            m->avisado = ref;
+            char ret[400] = {}; size_t o = 0;
+            for (uint64_t v : pila)
+                if (v >= ini && v < fin && o + 20 < sizeof ret) o += sprintf_s(ret + o, sizeof ret - o, " 0x%llX", v - ini);
+            logf("[VIGILANTE] bucle hilo %lu en exe+0x%llX (RSP %llX, CPU %.1f s de 2 s, %d/8 muestras); exe en la pila:%s",
+                 tid, ref - ini, ctx.Rsp, gastado / 1e7, iguales, ret);
+        }
+    }
+    return 0;
+}
+
+bool vigilanteInstalar(Feature& f) {
+    g_vigilar = 1;
+    g_hiloVigilante = CreateThread(nullptr, 0, vigilante, nullptr, 0, nullptr);
+    if (!g_hiloVigilante) { g_vigilar = 0; f.estado = "no se pudo crear el hilo"; return false; }
+    f.estado = "ok: vigilando cuelgues (resultado en phoenix_core.log)";
+    return true;
+}
+bool vigilanteQuitar(Feature&) {
+    g_vigilar = 0;
+    if (g_hiloVigilante) { WaitForSingleObject(g_hiloVigilante, 2000); CloseHandle(g_hiloVigilante); g_hiloVigilante = nullptr; }
+    return true;
+}
+
 std::vector<Feature> g_funciones = {   // orden = orden de arranque (gol_nativo_free necesita la sonda)
     { "diagnostico",     "Diagnóstico de firmas (solo lectura)",       diagInstalar,  diagQuitar  },
     { "sonda_partido",   "Sonda: estados y gol nativo (solo mira)",    sondaInstalar, sondaQuitar },
     { "gol_nativo_free", "Gol nativo en Entrenamiento libre (street)", golInstalar,   golQuitar   },
+    { "vigilante_bucles", "Vigilante de cuelgues (solo mira)",         vigilanteInstalar, vigilanteQuitar },
 };
 bool sondaActiva() {
     for (auto& f : g_funciones) if (strcmp(f.id, "sonda_partido") == 0) return f.activa;
