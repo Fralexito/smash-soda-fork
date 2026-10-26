@@ -1305,3 +1305,20 @@ Para volver a lo de siempre: Puestos máximos = 8 (Link quita los mandos que sob
 
 **Cómo revertir.** DESINSTALAR en Link, o devolver la copia `sider.ini.phoenix-<fecha>` como `sider.ini`.
 
+### 10.x · Nombre propio para cada mando: `!nombre` en el chat y nombre automático (Link 0.3.52, 25-oct-2026)
+
+**Pedido de Fralex.** «Quiero crear un teclado individual para cada jugador para que puedan escribir su nombre sin que yo (el mando 1) lo tenga que hacer cada vez». Espec: `teclado/ESPEC-USUARIO-AUTO.md` (carpeta del proyecto).
+
+**Qué hace.** Todo va tras un interruptor nuevo, apagado de serie: GENTE/JUGAR › Perfil PES › «Nombres por chat y por web». Apagado, Link se comporta como antes.
+1. **`!nombre JUAN` en el chat de Parsec**, cada invitado con su teclado (`chatbot/commands/guest/CommandNombre.h`). Se usa solo `!nombre`, porque `!name` ya renombra la sala. Acepta de 1 a 15 letras, quita los caracteres de control y `<>` y exige UTF-8 válido. Si tiene perfil, cambia solo el nombre (+0x04, 48 B) de su registro. Si no tiene, crea uno copiando el Usuario de su mando (si está sentado y PES está abierto) o, si no, el registro de otro perfil. Si el nombre está repetido, le añade « 2», « 3»… Permite un cambio cada 10 s por persona. Responde «Listo, en PES te verás como JUAN (al elegir lados)».
+2. **Nombre automático.** Si alguien se sienta sin perfil, «Usuario automático» le crea uno con lo que tiene su Usuario y su nombre: el de su cuenta de la web si tiene Parsec vinculado, y si no el de Parsec, recortado a 15 letras. Queda marcado `autoNombre` en `perfiles-amigos.json`.
+3. El tick de siempre (`tickPerfilesAuto`) lo pone en PES al elegir lados y lo devuelve al levantarse. No cambió.
+
+**No incluido (a propósito).** Mandos 9–16: no se sabe con seguridad dónde queda el Usuario de los mandos 9+. Hace falta una prueba en vivo con el módulo 9–16 (pista en cap_62: «Perfil i ↔ mando i» y `menu::SideSelect` +0x9C). Hasta confirmarlo, Link no escribe nada en los puestos 9+.
+
+**Código.** `web/AccionesPerfilesWeb.cpp` (`nombrePorChat`, `limpiarNombre`, `ponerNombreRegistro`, `nombreLibre`, `nombreWeb`, acción `perfiles.nombresChat` y la creación automática en el paso 2 del tick), `web/NombresChat.h`, `core/PerfilesAmigos.*` (`autoNombre`), `chatbot/ChatBot.*` (registro y ayuda) y `ui/js/vistas/perfiles.js` (interruptor).
+
+**Cómo se probó.** Compilado con cmake sin errores. Falta la prueba mínima con un amigo: encender el interruptor, que escriba `!nombre PRUEBA`, que en la pantalla de lados su mando diga PRUEBA, y que al levantarse vuelva el nombre de antes.
+
+**A tener en cuenta.** El chat llega en otro hilo. Si Link está ocupado con la base de perfiles más de medio segundo, responde «Link está ocupado» en vez de esperar.
+

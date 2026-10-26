@@ -61,6 +61,7 @@
 #include "Commands/Guest/CommandFortune.h"
 #include "Commands/Guest/CommandHelp.h"
 #include "Commands/Guest/CommandKeyboard.h"
+#include "Commands/Guest/CommandNombre.h"
 #include "Commands/Guest/CommandMirror.h"
 #include "Commands/Guest/CommandPads.h"
 #include "Commands/Guest/CommandPing.h"

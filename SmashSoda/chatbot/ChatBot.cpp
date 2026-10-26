@@ -66,6 +66,10 @@ ACommand* ChatBot::identifyUserDataMessage(const char* msg, Guest& sender, bool 
 		return new CommandHotseat(msg, sender, _hotseat);
 	}
 
+	if (isCommand(msg, CommandNombre::prefixes())) {
+		return new CommandNombre(msg, sender);
+	}
+
 	if (isCommand(msg, CommandKeyboard::prefixes())) {
 		return new CommandKeyboard(msg, sender, GamepadClient::instance);
 	}
@@ -234,6 +238,7 @@ void ChatBot::addHelp() {
 	addCmdHelp("!ff", "Drop your pad.", Tier::GUEST);
 	addCmdHelp("!cookie", "Get a fortune.", Tier::GUEST);
 	addCmdHelp("!kb", "Map custom keyboard controls.", Tier::GUEST);
+	addCmdHelp("!nombre", "Tu nombre en PES (Phoenix): !nombre JUAN", Tier::GUEST);
 	addCmdHelp("!mirror", "Toggle mirroring of L-Stick into DPad.", Tier::GUEST);
 	addCmdHelp("!pads", "List who are holding gamepads.", Tier::GUEST);
 	addCmdHelp("!spectate", "Add yourself to spectator list.", Tier::GUEST);

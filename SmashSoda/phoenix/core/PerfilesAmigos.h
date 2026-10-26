@@ -30,6 +30,7 @@ namespace phoenix::perfilespes {
 		std::string actualizado;        // sello «20261012-141500»
 		bool sinNombre = false;
 		uint32_t parsecId = 0;          // persona a la que pertenece (0 = ninguna): al sentarse se le pone este perfil solo
+		bool autoNombre = false;        // 0.3.52: lo creó Link solo (nombre de la web o de Parsec); !nombre lo cambia sin preguntar
 	};
 
 	struct Asignacion {

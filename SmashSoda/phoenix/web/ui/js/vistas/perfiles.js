@@ -131,6 +131,13 @@ export function PerfilesPes() {
         <${Boton} tipo=${d.auto ? "suave" : "lleno"} deshabilitado=${ocupado} al=${async () => { const r = await accion("perfiles.auto", { si: !d.auto }); if (r) setD(r); }}>${d.auto ? t("APAGAR AUTOMÁTICO", "TURN OFF") : t("ACTIVAR AUTOMÁTICO", "TURN ON")}</${Boton}>
         ${d.autoLog ? html`<span class="ayuda" style="font-size:13px">${d.autoLog}</span>` : null}
       </div>
+      <div class="caja" style="display:flex;flex-direction:column;gap:6px;padding:10px 12px">
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <b style="font-size:14px;flex:1;min-width:200px">${t("Nombres por chat y por web", "Names by chat and web")}</b>
+          <${Boton} tipo=${d.nombresChat ? "suave mini" : "lleno mini"} deshabilitado=${ocupado} al=${async () => { const r = await accion("perfiles.nombresChat", { si: !d.nombresChat }); if (r) setD(r); }}>${d.nombresChat ? t("APAGAR", "TURN OFF") : t("ENCENDER", "TURN ON")}</${Boton}>
+        </div>
+        <div class="ayuda" style="font-size:13px">${t("Cada invitado escribe en el chat de Parsec «!nombre JUAN» con su propio teclado y Link se lo pone en PES al elegir lados (tú no escribes nada). Quien no tenga perfil recibe solo el nombre de su cuenta de la web o, si no, el de Parsec. Por ahora mandos 1 a 8.", "Each guest types «!nombre JOHN» in Parsec chat with their own keyboard and Link puts it in PES on the side-selection screen. Anyone without a profile gets their web account name, or else their Parsec name. Pads 1 to 8 for now.")}</div>
+      </div>
       <div class="mono mut" style="font-size:12px">${t("QUIÉN ESTÁ SENTADO", "WHO IS SEATED")}</div>
       ${(d.sentados || []).length ? html`<div style="display:flex;flex-direction:column;gap:6px">${d.sentados.map((s) => html`<div key=${s.puesto} class="caja" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:6px 10px">
         <span class="mono mut" style="font-size:12px">${t("P", "S")}${s.puesto}</span>

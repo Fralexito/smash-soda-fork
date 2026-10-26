@@ -16,6 +16,8 @@
 #include "../core/PerfilesAmigos.h"
 #include "../core/PerfilesPes.h"
 #include "../core/UsuariosEnVivo.h"
+#include "NombresChat.h"
+#include "../link/PhoenixLink.h"
 
 // =============================================================================
 //  Acciones de la interfaz web: «Perfiles de amigos» (GENTE › PERFILES PES).
@@ -105,14 +107,14 @@ namespace phoenix::web {
 		std::string carpetaBasePerfiles() { return rutaConfig("phoenix-perfiles-amigos"); }
 		std::string archivoAjustesPerfiles() { return carpetaBasePerfiles() + "\\ajustes.json"; }
 
-		struct AjustesPerfiles { std::string ruta; bool autoRecoger = true; bool autoUsuarios = true; };
+		struct AjustesPerfiles { std::string ruta; bool autoRecoger = true; bool autoUsuarios = true; bool nombresChat = false; };
 
 		AjustesPerfiles leerAjustesPerfiles() {
 			AjustesPerfiles a;
 			try {
 				std::ifstream in(fs::u8path(archivoAjustesPerfiles()));
 				const auto j = json::parse(in, nullptr, false);
-				if (j.is_object()) { a.ruta = j.value("ruta", std::string()); a.autoRecoger = j.value("autoRecoger", true); a.autoUsuarios = j.value("autoUsuarios", true); }
+				if (j.is_object()) { a.ruta = j.value("ruta", std::string()); a.autoRecoger = j.value("autoRecoger", true); a.autoUsuarios = j.value("autoUsuarios", true); a.nombresChat = j.value("nombresChat", false); }
 			}
 			catch (...) {}
 			return a;
@@ -122,7 +124,7 @@ namespace phoenix::web {
 			std::error_code ec;
 			fs::create_directories(fs::u8path(carpetaBasePerfiles()), ec);
 			std::ofstream o(fs::u8path(archivoAjustesPerfiles()), std::ios::trunc);
-			o << json{ {"ruta", a.ruta}, {"autoRecoger", a.autoRecoger}, {"autoUsuarios", a.autoUsuarios} }.dump(1);
+			o << json{ {"ruta", a.ruta}, {"autoRecoger", a.autoRecoger}, {"autoUsuarios", a.autoUsuarios}, {"nombresChat", a.nombresChat} }.dump(1);
 		}
 
 		// El guardado que se usa: el elegido a mano si existe y es válido; si no, el más reciente.
@@ -150,6 +152,64 @@ namespace phoenix::web {
 			nombre.assign(reinterpret_cast<const char*>(&reg[4]), n);
 			if (!pp::utf8Valido(nombre)) { nombre.clear(); return false; }
 			return !nombre.empty();
+		}
+
+		// ---- NOMBRES POR CHAT Y POR WEB (0.3.52) ----
+		std::map<uint32_t, double> ultimoNombreChat;   // antispam: 1 cambio cada 10 s por persona
+
+		/// Nombre válido para PES: sin controles, UTF-8, 1–15 letras visibles y como mucho kMaxNombre bytes. "" + motivo si no sirve.
+		std::string limpiarNombre(const std::string& t, std::string& motivo) {
+			std::string n;
+			for (unsigned char c : t) if (c >= 0x20 && c != 0x7F && c != '<' && c != '>') n += static_cast<char>(c);
+			while (!n.empty() && n.back() == ' ') n.pop_back();
+			while (!n.empty() && n.front() == ' ') n.erase(n.begin());
+			if (n.empty()) { motivo = "Escribe un nombre: !nombre JUAN"; return std::string(); }
+			if (!pp::utf8Valido(n)) { motivo = "Ese nombre tiene letras que PES no entiende."; return std::string(); }
+			size_t letras = 0;
+			for (unsigned char c : n) if ((c & 0xC0) != 0x80) letras++;
+			if (letras > 15 || n.size() > pp::kMaxNombre) { motivo = "Máximo 15 letras."; return std::string(); }
+			return n;
+		}
+		/// Cambia SOLO el nombre (+0x04) de un registro en hex. No toca nada más (ver el arreglo de 0.2.61 con +0x32/+0x33).
+		bool ponerNombreRegistro(std::string& hex, const std::string& nombre) {
+			std::vector<uint8_t> b;
+			if (!pp::deHex(hex, b) || b.size() != static_cast<size_t>(pp::kTamUsuario) || nombre.size() >= pp::kTamNombre) return false;
+			std::fill(b.begin() + 4, b.begin() + 4 + pp::kTamNombre, uint8_t(0));
+			std::copy(nombre.begin(), nombre.end(), b.begin() + 4);
+			hex = pp::aHex(b);
+			return true;
+		}
+		/// Nombre libre en la base: el pedido, o con « 2», « 3»… si otro perfil ya lo usa. "" si no hay forma.
+		std::string nombreLibre(const pp::Base& base, std::string nombre, const std::string& idPropio) {
+			auto usado = [&](const std::string& n) { const pp::PerfilAmigo* o = base.porNombre(n); return o && o->id != idPropio; };
+			if (!usado(nombre)) return nombre;
+			for (int k = 2; k <= 9; k++) {
+				std::string base2 = nombre;
+				while (base2.size() + 2 > pp::kMaxNombre) base2.pop_back();
+				const std::string c = base2 + " " + std::to_string(k);
+				if (!usado(c)) return c;
+			}
+			return std::string();
+		}
+		std::string idNuevoPerfil(const pp::Base& base) {
+			int mx = 0;
+			for (auto& x : base.datos.perfiles) if (x.id.size() > 1 && x.id[0] == 'p') mx = (std::max)(mx, atoi(x.id.c_str() + 1));
+			return "p" + std::to_string(mx + 1);
+		}
+		/// Nombre de su cuenta de la web (si tiene Parsec vinculado y la carta ya llegó); "" si no se sabe.
+		std::string nombreWeb(uint32_t parsecId) {
+			try {
+				if (PhoenixLink::instancia().cuentaWeb(parsecId) != 1) return std::string();
+				const auto cartas = PhoenixLink::instancia().perfiles();
+				const auto it = cartas.find(parsecId);
+				if (it == cartas.end() || it->second.empty()) return std::string();
+				const json c = json::parse(it->second, nullptr, false);
+				if (c.is_discarded() || !c.is_object()) return std::string();
+				for (const char* k : { "nombre_display", "nombre", "username" })
+					if (c.contains(k) && c[k].is_string() && !c[k].get<std::string>().empty()) return c[k].get<std::string>();
+			}
+			catch (...) {}
+			return std::string();
 		}
 
 		bool pesFueAbiertoPerfiles = false;     // para «recoger solo al cerrar PES»
@@ -209,6 +269,7 @@ namespace phoenix::web {
 			r["vivo"] = json::array();
 			for (auto& a : aplicadosVivo) r["vivo"].push_back({ {"puesto", a.puesto}, {"usuario", a.usuario + 1}, {"perfil", a.perfilId} });
 			r["auto"] = aj.autoUsuarios;
+			r["nombresChat"] = aj.nombresChat;
 			r["autoLog"] = logAuto;
 			r["sentados"] = json::array();
 			for (auto& s : sentadosAuto) r["sentados"].push_back({ {"puesto", s.puesto}, {"parsecId", s.parsecId}, {"nombre", s.nombre}, {"simulado", s.simulado}, {"perfil", base.porParsec(s.parsecId) ? base.porParsec(s.parsecId)->id : std::string()} });
@@ -430,6 +491,15 @@ namespace phoenix::web {
 			return estadoPerfiles();
 		});
 
+		p.registrar("perfiles.nombresChat", [](const json& d, uint64_t) -> std::optional<json> {
+			std::lock_guard<std::mutex> g(mtxPerfiles);
+			AjustesPerfiles a = leerAjustesPerfiles();
+			a.nombresChat = booleano(d, "si");
+			guardarAjustesPerfiles(a);
+			logAuto = a.nombresChat ? "Nombres por chat y por web: encendido (!nombre en el chat de Parsec)." : "Nombres por chat y por web: apagado.";
+			return estadoPerfiles();
+		});
+
 		// Sentados de PRUEBA (sin gente de verdad): {puesto, parsecId}; parsecId 0 quita ese puesto; sin puesto quita todos.
 		p.registrar("perfiles.simular", [](const json& d, uint64_t) -> std::optional<json> {
 			std::lock_guard<std::mutex> g(mtxPerfiles);
@@ -564,7 +634,8 @@ namespace phoenix::web {
 			}
 			sentadosAuto = sent;
 
-			const bool activo = leerAjustesPerfiles().autoUsuarios;
+			const AjustesPerfiles ajAuto = leerAjustesPerfiles();
+			const bool activo = ajAuto.autoUsuarios;
 			const bool pes = pesAbiertoPerfiles();
 			if (!pes) {
 				// PES se cerró: los originales ya están en Link como perfiles; no hay nada vivo que devolver
@@ -615,6 +686,28 @@ namespace phoenix::web {
 				if (s.puesto < 1 || s.puesto > pp::vivo::kMandos) continue;
 				const pp::PerfilAmigo* perfil = base.porParsec(s.parsecId);
 				const int usuario = mandos[s.puesto - 1];
+				// Nombres por chat y por web (0.3.52): sin perfil, se le crea uno con lo que hay en su Usuario y SU nombre
+				// (el de su cuenta de la web; si no, el de Parsec). Queda marcado «auto»: !nombre lo puede cambiar.
+				if (!perfil && usuario >= 0 && ajAuto.nombresChat && !s.simulado) {
+					std::vector<uint8_t> plantilla;
+					std::string base0 = nombreWeb(s.parsecId);
+					if (base0.empty()) base0 = s.nombre;
+					std::string cort;   // a 15 letras como mucho
+					size_t letras = 0;
+					for (unsigned char c : base0) { if ((c & 0xC0) != 0x80 && ++letras > 15) break; cort += static_cast<char>(c); }
+					std::string motivo;
+					std::string nom = limpiarNombre(cort, motivo);
+					if (!nom.empty() && conexionAuto->leerUsuario(usuario, plantilla, err)) {
+						nom = nombreLibre(base, nom, std::string());
+						pp::PerfilAmigo n; n.id = idNuevoPerfil(base); n.registro = pp::aHex(plantilla); n.parsecId = s.parsecId; n.autoNombre = true; n.actualizado = selloPerfiles();
+						if (!nom.empty() && ponerNombreRegistro(n.registro, nom)) {
+							n.nombre = nom;
+							base.datos.perfiles.push_back(n);
+							if (base.guardar(selloPerfiles(), err)) logAuto = "Creé el perfil «" + nom + "» para el puesto " + std::to_string(s.puesto) + " (nombre automático).";
+							perfil = base.porParsec(s.parsecId);
+						}
+					}
+				}
 				if (!perfil || usuario < 0) continue;
 				std::vector<uint8_t> nuevo, actual;
 				if (!pp::deHex(perfil->registro, nuevo) || nuevo.size() != static_cast<size_t>(pp::kTamUsuario)) continue;
@@ -668,5 +761,60 @@ namespace phoenix::web {
 		catch (...) {
 			logAuto = "Automático: error inesperado (no se tocó nada más).";
 		}
+	}
+
+	// ---- !nombre <texto> del chat de Parsec (0.3.52) ----
+	std::string nombrePorChat(uint32_t parsecId, const std::string& texto) {
+		try {
+			if (parsecId == 0) return "No sé quién eres en Parsec.";
+			// El chat llega en otro hilo: no se espera más de ~0,5 s a que el vigilante suelte la base
+			std::unique_lock<std::mutex> g(mtxPerfiles, std::defer_lock);
+			for (int i = 0; i < 25 && !g.try_lock(); i++) Sleep(20);
+			if (!g.owns_lock()) return "Link está ocupado. Vuelve a escribirlo en un momento.";
+			if (!leerAjustesPerfiles().nombresChat) return "El anfitrión no tiene activados los nombres por chat.";
+			const double ahora = static_cast<double>(GetTickCount64()) / 1000.0;
+			auto& ult = ultimoNombreChat[parsecId];
+			if (ult > 0 && ahora - ult < 10.0) return "Espera unos segundos antes de cambiar otra vez tu nombre.";
+			std::string motivo;
+			const std::string pedido = limpiarNombre(texto.size() > 120 ? texto.substr(0, 120) : texto, motivo);
+			if (pedido.empty()) return motivo;
+			pp::Base base(carpetaBasePerfiles());
+			std::string err;
+			if (!base.cargar(err)) return "No pude guardar tu nombre (la base de perfiles del anfitrión está dañada).";
+			const pp::PerfilAmigo* suyo = base.porParsec(parsecId);
+			const std::string nombre = nombreLibre(base, pedido, suyo ? suyo->id : std::string());
+			if (nombre.empty()) return "Ese nombre ya lo usa otra persona. Prueba con otro.";
+			if (suyo) {
+				const std::string idSuyo = suyo->id;
+				for (auto& pf : base.datos.perfiles) if (pf.id == idSuyo) {
+					std::string nuevo = pf.registro;
+					if (!ponerNombreRegistro(nuevo, nombre)) return "No pude poner ese nombre.";
+					pf.anterior = pf.registro; pf.registro = nuevo; pf.nombre = nombre; pf.sinNombre = false; pf.autoNombre = false; pf.actualizado = selloPerfiles();
+					break;
+				}
+			}
+			else {
+				// Sin perfil: se copia el Usuario que PES tiene ahora en su mando (si está sentado y PES abierto) o, si no, el de otro perfil
+				std::vector<uint8_t> plantilla;
+				for (const SentadoAuto& sa : sentadosAuto) {
+					if (sa.parsecId != parsecId || sa.puesto < 1 || sa.puesto > pp::vivo::kMandos || !conexionAuto || !conexionAuto->abierta()) continue;
+					int mandos[pp::vivo::kMandos];
+					if (conexionAuto->leerMandos(mandos, err) && mandos[sa.puesto - 1] >= 0) conexionAuto->leerUsuario(mandos[sa.puesto - 1], plantilla, err);
+				}
+				std::string hex = plantilla.size() == static_cast<size_t>(pp::kTamUsuario) ? pp::aHex(plantilla) : std::string();
+				if (hex.empty()) for (auto& x : base.datos.perfiles) if (!x.registro.empty()) { hex = x.registro; break; }
+				if (hex.empty()) return "Siéntate en un mando con PES abierto y vuelve a escribirlo.";
+				pp::PerfilAmigo n; n.id = idNuevoPerfil(base); n.registro = hex; n.parsecId = parsecId; n.actualizado = selloPerfiles();
+				if (!ponerNombreRegistro(n.registro, nombre)) return "No pude poner ese nombre.";
+				n.nombre = nombre;
+				base.datos.perfiles.push_back(n);
+			}
+			if (!base.guardar(selloPerfiles(), err)) return "No pude guardar tu nombre: " + err;
+			ult = ahora;
+			logAuto = "Nombre por chat: el ID " + std::to_string(parsecId) + " ahora se llama «" + nombre + "».";
+			const bool sentado = std::any_of(sentadosAuto.begin(), sentadosAuto.end(), [&](const SentadoAuto& x) { return x.parsecId == parsecId; });
+			return "Listo, en PES te verás como " + nombre + (sentado ? " (al elegir lados)." : " cuando te sientes en un mando.");
+		}
+		catch (...) { return "No pude cambiar tu nombre."; }
 	}
 }

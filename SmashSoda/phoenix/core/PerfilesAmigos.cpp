@@ -106,7 +106,7 @@ namespace phoenix::perfilespes {
 		j["version"] = 1;
 		j["perfiles"] = nlohmann::json::array();
 		for (auto& p : datos.perfiles)
-			j["perfiles"].push_back({ {"id", p.id}, {"nombre", p.nombre}, {"registro", p.registro}, {"anterior", p.anterior}, {"actualizado", p.actualizado}, {"sinNombre", p.sinNombre}, {"parsecId", p.parsecId} });
+			j["perfiles"].push_back({ {"id", p.id}, {"nombre", p.nombre}, {"registro", p.registro}, {"anterior", p.anterior}, {"actualizado", p.actualizado}, {"sinNombre", p.sinNombre}, {"parsecId", p.parsecId}, {"autoNombre", p.autoNombre} });
 		j["protegidos"] = datos.protegidos;
 		j["seleccion"] = datos.seleccion;
 		j["ultima"] = nlohmann::json::array();
@@ -129,6 +129,7 @@ namespace phoenix::perfilespes {
 				p.actualizado = x.value("actualizado", std::string());
 				p.sinNombre = x.value("sinNombre", false);
 				p.parsecId = x.value("parsecId", uint32_t(0));
+				p.autoNombre = x.value("autoNombre", false);
 				std::vector<uint8_t> b;
 				if (p.id.empty() || !ids.insert(p.id).second || !deHex(p.registro, b) || b.size() != kTamUsuario) { error = "un perfil de perfiles-amigos.json está dañado (" + p.id + ")"; return false; }
 				d.perfiles.push_back(std::move(p));
