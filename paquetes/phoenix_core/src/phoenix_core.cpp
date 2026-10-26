@@ -28,7 +28,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.5"
+#define PHX_CORE_VERSION "0.4.6"
 
 namespace {
 
@@ -597,7 +597,10 @@ DWORD WINAPI vigilante(LPVOID) {
             bool leido = false;
             if (SuspendThread(h) != (DWORD)-1) {      // entre Suspend y Resume: nada que reserve memoria
                 leido = GetThreadContext(h, &ctx) != 0;
-                if (leido) leerSeguro(reinterpret_cast<void*>(ctx.Rsp), pila, sizeof pila);
+                if (leido) {   // ReadProcessMemory no lanza excepciones (un SEH aquí podría esperar un lock del hilo detenido)
+                    SIZE_T nl = 0;
+                    ReadProcessMemory(GetCurrentProcess(), reinterpret_cast<void*>(ctx.Rsp), pila, sizeof pila, &nl);
+                }
                 ResumeThread(h);
             }
             ULONGLONG cpu = cpuHilo(h);
