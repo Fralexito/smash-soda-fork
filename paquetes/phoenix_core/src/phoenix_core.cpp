@@ -27,7 +27,7 @@
 #include <intrin.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.1"
+#define PHX_CORE_VERSION "0.4.2"
 
 namespace {
 
@@ -286,12 +286,26 @@ uint64_t ganchoRanuras(uint8_t* obj, uint64_t a2, uint64_t a3, uint64_t a4) {
     }
     return g_ranurasOrig(obj, a2, a3, a4);
 }
+// Más arriba en la cadena: FUN_1405069A0 (void, por fotograma) usa el mismo objeto con más funciones (FUN_140505480,
+// FUN_140506660…). Si el objeto no está construido (sin vtable en +0xC8) se salta entera. Prólogo 15 B sin RIP-relativos.
+const char* kFirmaRanurasFrame = "48 89 5C 24 18 55 56 57 48 81 EC 50 01 00 00 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 84 24 30";
+FnRanuras g_ranurasFrameOrig = nullptr;
+uint64_t ganchoRanurasFrame(uint8_t* obj, uint64_t a2, uint64_t a3, uint64_t a4) {
+    uint64_t vt = 0;
+    if (!obj || !leerSeguro(obj + 0xC8, &vt, 8) || vt == 0) {
+        InterlockedIncrement(&g_ranurasSaltadas);
+        return 0;
+    }
+    return g_ranurasFrameOrig(obj, a2, a3, a4);
+}
 bool crearDesvio(Feature& f, uint8_t* dir, size_t n, void* gancho, void** original);
 
 
 bool golInstalar(Feature& f) {
     uint8_t* ranuras = firmaUnica("codigo", kFirmaRanuras, f.id);
     if (!ranuras) { f.estado = "sin firma: ranuras por jugador (FUN_140504D20)"; return false; }
+    uint8_t* ranurasFrame = firmaUnica("codigo", kFirmaRanurasFrame, f.id);
+    if (!ranurasFrame) { f.estado = "sin firma: rutina por fotograma de las ranuras (FUN_1405069A0)"; return false; }
     uint8_t* sitio = firmaUnica("codigo", kFirmaDegradar, f.id);
     if (!sitio) { f.estado = "sin firma: degradación del gol en el entrenamiento"; return false; }
     uint8_t* sitios[2] = { sitio, sitio + 13 };
@@ -318,6 +332,9 @@ bool golInstalar(Feature& f) {
     }
     if (!crearDesvio(f, ranuras, 14, (void*)ganchoRanuras, (void**)&g_ranurasOrig)) {
         f.estado = "no se pudo desviar FUN_140504D20"; return false;
+    }
+    if (!crearDesvio(f, ranurasFrame, 15, (void*)ganchoRanurasFrame, (void**)&g_ranurasFrameOrig)) {
+        f.estado = "no se pudo desviar FUN_1405069A0"; return false;
     }
     char b[160];
     sprintf_s(b, "ok: el entrenamiento ya no degrada el gol (sitios exe+0x%llX y +0x%llX)",
