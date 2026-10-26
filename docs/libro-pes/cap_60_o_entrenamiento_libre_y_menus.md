@@ -119,3 +119,10 @@ Con la carpeta `Phoenix-Entrenamiento-C` (04 → «Versión», 05 → «Crédito
 ### 8.4 ¡Carga! (26-oct, ~03:43)
 
 Con el juego **limpio** (sin ninguna raíz de prueba), Fralex entró por Día de Partido → Entrenamiento → Entrenamiento libre, configuró el Menú de entrenamiento y pulsó OK: **la cancha cargó** (estadio vacío). Queda confirmada la hipótesis de §8.2: el cuelgue venía de entrar con el evento 06 (zona MYCLUB). Por la puerta oficial (evento 05, FREE_TRAINING), el entrenamiento con pocos jugadores funciona en PES limpio, sin ningún parche. Pendiente: contar los jugadores en cancha y comprobar goles, pausa y faltas.
+
+### 8.5 En cancha: 3 contra 1 y jugadores «sin camiseta» (26-oct, ~03:45)
+
+- El MCP leyó la zona **FREE_TRAINING (52)** con `set_teams` 108 (Barcelona) contra 102 (Chelsea), `tournament_id` 65535 (ninguno) y estadio sin elegir (65535). Carga de todos modos.
+- En cancha hay **3 jugadores del usuario y 1 de la COM (portero)**, tal como se eligió. El resto de la plantilla calienta fuera de la línea y no juega.
+- **Jugadores oscuros, sin camiseta:** en `sider.log`, `kserv.lua` dice «using dummy for …\uniform\team\108\108_DEF_1st_realUni.bin», y lo mismo para el 102. Sin torneo, el servidor de uniformes de Conmegol no encuentra el uniforme real y pone el de relleno. Hay además un error que no bloquea: `TournamentCornerFlags.lua:98` (CornerFlag es nil sin torneo).
+- **Idea para el catálogo:** un parche opcional de `kserv.lua` que busque el uniforme real aunque no haya torneo, o que el entrenamiento pase un torneo. Es secundario para el modo street.
