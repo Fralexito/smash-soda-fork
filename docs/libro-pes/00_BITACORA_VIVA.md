@@ -314,3 +314,4 @@ Formato de entrada: `### AAAA-MM-DD HH:MM — tema` · qué se hizo · resultado
 - 26-oct ~04:00 · PES · Ropa del entrenamiento: kserv va bien; la causa probable es el training_suit reemplazado por Managers de Conmegol. Arreglo opcional con los originales de dt32_g4 en kserv_fix (sin probar). cap_60_o §8.8.
 - 26-oct ~04:09 · PES · ✅ Ropa del entrenamiento arreglada con la raíz Phoenix-Entrenamiento-Ropa (training_suit original). cap_60_o §8.9.
 - 26-oct ~04:42 · PES · ✅ Humano contra humano en el Entrenamiento libre: el mando 2 en el lado derecho controla al equipo rival. Base del modo street lista. cap_60_o §8.10.
+- 26-oct ~04:50 · PES · Diseño del marcador (pelota en memoria → Link/overlay) y cancha pequeña (parchear_campo.exe, sin probar en zona 52). cap_60_o §8.11.

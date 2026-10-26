@@ -156,3 +156,8 @@ Dos mandos conectados a la PC: mando 1 a la izquierda y mando 2 a la derecha en 
 3. Gameplay de regates (cap_90, en orden).
 4. Opción «Modo street» en Link: raíz Ropa, acceso directo y marcador.
 5. Por probar: más humanos por lado, 1 contra 1, 2 contra 2, pausa y salida, fuera de juego y saques.
+
+### 8.11 Marcador y cancha pequeña: lectura estática (26-oct, ~04:50)
+
+- **Marcador:** en la zona 52 la sonda marca `en_partido: false`, `match.stats()` de Sider devuelve nil y no hay reloj ni lista de goles. `goal_scored` solo existe en Sider 7.3.4 o posterior, y la PC tiene la 7.3.3. **Diseño:** detectar el gol por la posición de la pelota, en solo lectura (objeto de 640 B; x en +208, z en +216; ver `Pelota.cs` y CAMPO-2D-INVESTIGACION §8). Cuenta como gol cuando cruza la línea de fondo entre los palos, y se confirma con el reinicio desde el centro. Lo implementaría Link (hilo 1) y lo mostraría el overlay. Alternativa: Sider 7.3.4 o posterior.
+- **Cancha pequeña:** `loaderSwf_trainingPlayArea` es de la ficha de MiClub, no un área de juego. Los training_prop y d2_training_guide son del tutorial de retos. El entrenamiento libre usa el campo normal. Candidato: `parchear_campo.exe 15 10` (30×20, informe 11), sin probar en la zona 52 (faltan saques, porterías y córners).
