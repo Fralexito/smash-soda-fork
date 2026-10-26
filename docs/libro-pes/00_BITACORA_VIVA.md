@@ -310,3 +310,4 @@ Formato de entrada: `### AAAA-MM-DD HH:MM — tema` · qué se hizo · resultado
 - 26-oct ~03:43 · PES · ¡El Entrenamiento libre CARGA por la puerta oficial con el juego limpio! El cuelgue era la puerta 06/MYCLUB. cap_60_o §8.4.
 - 26-oct ~03:45 · PES · Entrenamiento 3 contra 1 en cancha (zona 52). Uniformes de relleno porque kserv no encuentra el kit sin torneo (65535). cap_60_o §8.5.
 - 26-oct ~03:51 · PES · 3 contra 3 real (usuario 3, COM 4 con portero): la COM defiende y roba. cap_60_o §8.6.
+- 26-oct ~03:52 · PES · En el Entrenamiento libre el gol reinicia desde el centro y no hay marcador. Idea: marcador en Link + overlay. cap_60_o §8.7.

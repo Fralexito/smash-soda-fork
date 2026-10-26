@@ -130,3 +130,7 @@ Con el juego **limpio** (sin ninguna raíz de prueba), Fralex entró por Día de
 ### 8.6 ¡3 contra 3 con defensa de la COM! (26-oct, ~03:51)
 
 Configuración: Entrenamiento libre, Jugadores usuario 3, Jugadores COM 4 (portero + 3). **Los rivales de la COM defienden y le quitan el balón al usuario.** Es el primer partido de pocos jugadores que funciona en PES 2021 limpio, sin parches y por la puerta oficial. Pendiente: si los goles cuentan (marcador o reinicio), pausa, si dos humanos pueden jugar en equipos opuestos, y la cancha pequeña.
+
+### 8.7 Goles sin marcador (26-oct, ~03:52)
+
+Al marcar gol, la jugada se reinicia desde el centro. **No hay marcador ni contador.** Idea: un marcador propio en Link (leer el gol en memoria, como en los partidos) mostrado en el overlay PhoenixGlass, con tiempo y reglas tipo «primero a N goles», como opción que se activa y desactiva. Siguiente: comprobar si dos humanos pueden jugar en lados opuestos, que es clave para Parsec.
