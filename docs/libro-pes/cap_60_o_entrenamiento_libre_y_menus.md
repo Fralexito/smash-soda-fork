@@ -58,3 +58,23 @@
 - La «minicancha» que Fralex vio dibujada viene, casi seguro, del prototipo de cancha 30×20 del Camp Nou (`escalar_capa_campo.js`, `RESTAURAR_CAMP_NOU.ps1`). Es independiente de los mandos.
 - Si el entrenamiento arranca, el siguiente paso es contar los actores creados (objetos de jugador de 640 B, `pelota.exe … jugador`) y compararlos con una exhibición, para ver dónde se decide N.
 - Ideas que abre: modo street dentro del entrenamiento; retos de habilidad con conos y maniquíes; retos de tiros libres, penales y córners; un menú Phoenix propio en la pantalla principal; acceso directo a partido (`Match/MatchDirectSetup`).
+
+## 8. ¡LOGRO! 26-oct ~01:17 — Se abre el «Menú de entrenamiento» escondido (prueba P1)
+**Cómo se llegó (paso a paso, lo hizo Fralex a mano):**
+1. Link 0.3.54 → SYNC > AVANZADO → «RAÍZ DE PRUEBA (SIDER)»: texto `.\livecpk\Phoenix-Entrenamiento`, PONER (Link pone la carpeta la primera en sider.ini y guarda copia). La regla del proyecto prohíbe a Claude editar sider.ini directamente: siempre por este botón.
+2. **P0 (FALLÓ):** ENTRENAMIENTO → Empezar → FC Barcelona vs Real Madrid (equipos distintos) → menú previo: «Empezar partido», «Estadio» y «Opciones generales» siguen en GRIS; reloj en cuenta atrás (109 s); □ «Lista de usuarios» dice «No hay datos». Conclusión: ese menú (`MatchTrainingMatchMenu`) es el pre-partido de una SALA ONLINE; con la sala vacía, lo del anfitrión sale apagado. El equipo repetido NO era la causa.
+3. **P1 (FUNCIONÓ):** cerrar PES (y sider.exe), en Link cambiar el texto a `.\livecpk\Phoenix-Entrenamiento-B1` y PONER (sin QUITAR la anterior), abrir PES con el selector → ENTRENAMIENTO → Empezar → equipos → aparece **«Menú de entrenamiento — Elige el tipo de entrenamiento»** (`Match/MatchTrainingSetting`).
+
+**Opciones del menú (captura de Fralex):**
+| Opción | Valor visto |
+|---|---|
+| Atacante/Defensor | Ataque |
+| Tipo de entrenamiento | Entrenamiento libre (◀ ▶: hay más tipos) |
+| Cursor de PT fijo | No |
+| **Jugadores usuario** | **11** |
+| **Jugadores COM** | **1** |
+| Nivel de partido | Juvenil |
+| Faltas | No |
+| S. pta./córner/banda | Ambos equipos |
+
+**Importancia:** el juego tiene de serie la opción de **elegir cuántos jugadores hay** por equipo (usuario y COM). Es la vía nativa para el modo street (N contra N) sin parchear las 27 000 comparaciones con 11/22. Pendiente: mínimos y máximos de cada valor, lista de tipos de entrenamiento, ver la cancha con por ejemplo 4 contra 4, y si las faltas, saques y portería funcionan.
