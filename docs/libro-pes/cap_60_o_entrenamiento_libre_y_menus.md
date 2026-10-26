@@ -126,3 +126,7 @@ Con el juego **limpio** (sin ninguna raíz de prueba), Fralex entró por Día de
 - En cancha hay **3 jugadores del usuario y 1 de la COM (portero)**, tal como se eligió. El resto de la plantilla calienta fuera de la línea y no juega.
 - **Jugadores oscuros, sin camiseta:** en `sider.log`, `kserv.lua` dice «using dummy for …\uniform\team\108\108_DEF_1st_realUni.bin», y lo mismo para el 102. Sin torneo, el servidor de uniformes de Conmegol no encuentra el uniforme real y pone el de relleno. Hay además un error que no bloquea: `TournamentCornerFlags.lua:98` (CornerFlag es nil sin torneo).
 - **Idea para el catálogo:** un parche opcional de `kserv.lua` que busque el uniforme real aunque no haya torneo, o que el entrenamiento pase un torneo. Es secundario para el modo street.
+
+### 8.6 ¡3 contra 3 con defensa de la COM! (26-oct, ~03:51)
+
+Configuración: Entrenamiento libre, Jugadores usuario 3, Jugadores COM 4 (portero + 3). **Los rivales de la COM defienden y le quitan el balón al usuario.** Es el primer partido de pocos jugadores que funciona en PES 2021 limpio, sin parches y por la puerta oficial. Pendiente: si los goles cuentan (marcador o reinicio), pausa, si dos humanos pueden jugar en equipos opuestos, y la cancha pequeña.
