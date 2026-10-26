@@ -115,3 +115,7 @@ Con la carpeta `Phoenix-Entrenamiento-C` (04 → «Versión», 05 → «Crédito
 | Día de Partido → Entrenamiento → Entrenamiento de habilidades | (presumible 04_tutorial → «Versión», sin comprobar) | 04 |
 
 **Conclusión:** el Entrenamiento libre SÍ tiene botón en PES 2021: está dentro de Día de Partido → Entrenamiento (Fralex no lo conocía). Ese botón dispara el evento correcto (05), así que el modo ya no será MYCLUB. La hipótesis MYCLUB de §8.2 queda pendiente de confirmar con la prueba siguiente: QUITAR C, PONER B1 (salta la sala tipo online), entrar por Día de Partido → Entrenamiento → Entrenamiento libre y pulsar OK.
+
+### 8.4 ¡Carga! (26-oct, ~03:43)
+
+Con el juego **limpio** (sin ninguna raíz de prueba), Fralex entró por Día de Partido → Entrenamiento → Entrenamiento libre, configuró el Menú de entrenamiento y pulsó OK: **la cancha cargó** (estadio vacío). Queda confirmada la hipótesis de §8.2: el cuelgue venía de entrar con el evento 06 (zona MYCLUB). Por la puerta oficial (evento 05, FREE_TRAINING), el entrenamiento con pocos jugadores funciona en PES limpio, sin ningún parche. Pendiente: contar los jugadores en cancha y comprobar goles, pausa y faltas.
