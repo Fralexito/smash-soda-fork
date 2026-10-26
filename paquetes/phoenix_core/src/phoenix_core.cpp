@@ -27,7 +27,7 @@
 #include <intrin.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.2"
+#define PHX_CORE_VERSION "0.4.3"
 
 namespace {
 
@@ -286,26 +286,21 @@ uint64_t ganchoRanuras(uint8_t* obj, uint64_t a2, uint64_t a3, uint64_t a4) {
     }
     return g_ranurasOrig(obj, a2, a3, a4);
 }
-// Más arriba en la cadena: FUN_1405069A0 (void, por fotograma) usa el mismo objeto con más funciones (FUN_140505480,
-// FUN_140506660…). Si el objeto no está construido (sin vtable en +0xC8) se salta entera. Prólogo 15 B sin RIP-relativos.
-const char* kFirmaRanurasFrame = "48 89 5C 24 18 55 56 57 48 81 EC 50 01 00 00 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 84 24 30";
-FnRanuras g_ranurasFrameOrig = nullptr;
-uint64_t ganchoRanurasFrame(uint8_t* obj, uint64_t a2, uint64_t a3, uint64_t a4) {
-    uint64_t vt = 0;
-    if (!obj || !leerSeguro(obj + 0xC8, &vt, 8) || vt == 0) {
-        InterlockedIncrement(&g_ranurasSaltadas);
-        return 0;
-    }
-    return g_ranurasFrameOrig(obj, a2, a3, a4);
-}
+// Bug real del crash (exe+0x5B1FD9, FUN_1405B1740): FUN_140A62690(lado, p) devuelve 0xFF cuando no hay jugador
+// (entrenamiento con pocos jugadores) y el código lo usa como índice de ranura sin comprobarlo → ranura fuera del
+// arreglo, vtable nula. Parche en el sitio (12 B tras el call: «movsxd rcx,eax ; mov [r14+rcx*4+34h],9») → cueva:
+//     cmp eax,0FFh ; jne +5 ; jmp salida(sitio+0xBE, el mismo camino que «no hace falta») ;
+//     movsxd rcx,eax ; mov dword [r14+rcx*4+34h],9 ; jmp sitio+12
+const char* kFirmaIndice = "E8 ?? ?? ?? ?? 48 63 C8 41 C7 44 8E 34 09 00 00 00 48 8D 41 05";
 bool crearDesvio(Feature& f, uint8_t* dir, size_t n, void* gancho, void** original);
 
 
 bool golInstalar(Feature& f) {
     uint8_t* ranuras = firmaUnica("codigo", kFirmaRanuras, f.id);
     if (!ranuras) { f.estado = "sin firma: ranuras por jugador (FUN_140504D20)"; return false; }
-    uint8_t* ranurasFrame = firmaUnica("codigo", kFirmaRanurasFrame, f.id);
-    if (!ranurasFrame) { f.estado = "sin firma: rutina por fotograma de las ranuras (FUN_1405069A0)"; return false; }
+    uint8_t* indice = firmaUnica("codigo", kFirmaIndice, f.id);
+    if (!indice) { f.estado = "sin firma: índice de jugador 0xFF (FUN_1405B1740)"; return false; }
+    indice += 5;
     uint8_t* sitio = firmaUnica("codigo", kFirmaDegradar, f.id);
     if (!sitio) { f.estado = "sin firma: degradación del gol en el entrenamiento"; return false; }
     uint8_t* sitios[2] = { sitio, sitio + 13 };
@@ -333,8 +328,23 @@ bool golInstalar(Feature& f) {
     if (!crearDesvio(f, ranuras, 14, (void*)ganchoRanuras, (void**)&g_ranurasOrig)) {
         f.estado = "no se pudo desviar FUN_140504D20"; return false;
     }
-    if (!crearDesvio(f, ranurasFrame, 15, (void*)ganchoRanurasFrame, (void**)&g_ranurasFrameOrig)) {
-        f.estado = "no se pudo desviar FUN_1405069A0"; return false;
+    {   // cueva del índice 0xFF
+        uint8_t* c = reservarCerca(indice, 64);
+        if (!c) { f.estado = "no hay memoria cerca del exe (índice)"; return false; }
+        const uint8_t cmpff[] = { 0x3D, 0xFF, 0x00, 0x00, 0x00,  0x75, 0x05 };
+        memcpy(c, cmpff, sizeof cmpff);
+        bool ok = escribirRel32(c + 7, 0xE9, c + 7, indice + 0xBE);
+        memcpy(c + 12, indice, 12);                                   // las 2 instrucciones originales tal cual
+        ok = ok && escribirRel32(c + 24, 0xE9, c + 24, indice + 12);
+        if (!ok) { f.estado = "cueva fuera de alcance (índice)"; return false; }
+        FlushInstructionCache(GetCurrentProcess(), c, 64);
+        Parche p; p.dir = indice;
+        const uint8_t orig[] = { 0x48, 0x63, 0xC8, 0x41, 0xC7, 0x44, 0x8E, 0x34, 0x09, 0x00, 0x00, 0x00 };
+        p.original.assign(orig, orig + 12);
+        p.nuevo.resize(12, 0x90);
+        if (!escribirRel32(p.nuevo.data(), 0xE9, indice, c)) { f.estado = "cueva fuera de alcance (índice)"; return false; }
+        if (!aplicarParche(p, f.id)) { f.estado = "bytes inesperados (índice)"; return false; }
+        f.parches.push_back(p);
     }
     char b[160];
     sprintf_s(b, "ok: el entrenamiento ya no degrada el gol (sitios exe+0x%llX y +0x%llX)",
