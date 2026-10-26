@@ -58,3 +58,11 @@ Herramientas MCP:
 - Las teclas quedaron **encendidas** el 25-oct «para un día de prueba». Para apagarlas: `"acciones": false`.
 - Siguiente (fase 2): con la sonda viva, comprobar si `stats.ptr` lleva al objeto `partido` (estado en `+0xAC8`). Fase 3: estadísticas en `record::Observer` y alineaciones.
 - Código y commits: PR #1 de `smash-soda-fork`, rama `claude/project-thread-80uzld`.
+
+## 7. Primer partido con la sonda 1.0.1 (26-oct, muestra del hilo de Link)
+- Funciona: `en_partido: true`, zona `EXHIBITION (8)`, reloj, marcador y eventos `set_teams`, `set_stadium_choice` (65533 = estadio del local), `set_conditions` ×2 y `goal_scored`.
+- `goal_scored` trae `player_name_on_shirt`, `player_id`, `home_or_away` y además **`player_offset`** (6216 = 0x1848 en la muestra): probablemente el desplazamiento del jugador dentro de la estructura del equipo. Es una pista para las alineaciones (fase 3).
+- `set_conditions` llega **dos veces** seguidas: la primera con verano, día y despejado; la segunda con invierno, noche y lluvia. La segunda son las condiciones finales (otro módulo o el propio juego las cambia).
+- Problemas que arregla la **1.0.2**:
+  1. `ctx` lo comparten todos los módulos: CGP_data, nesalib, scoreboard_server… El archivo pesaba unos 20 KB y traía textos en latin-1 que rompían el UTF-8. Ahora solo se guardan los campos de Sider, más `marcador_activo` y la lista de nombres de los otros módulos (`otros`).
+  2. `stats.ptr` salía como texto («userdata: 0x…»). Ahora va también `ptr_hex` (número con ffi), para leerlo desde el MCP y comprobar si es el objeto `partido` (fase 2).
