@@ -27,7 +27,7 @@
 #include <intrin.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.3"
+#define PHX_CORE_VERSION "0.4.4"
 
 namespace {
 
@@ -292,8 +292,32 @@ uint64_t ganchoRanuras(uint8_t* obj, uint64_t a2, uint64_t a3, uint64_t a4) {
 //     cmp eax,0FFh ; jne +5 ; jmp salida(sitio+0xBE, el mismo camino que «no hace falta») ;
 //     movsxd rcx,eax ; mov dword [r14+rcx*4+34h],9 ; jmp sitio+12
 const char* kFirmaIndice = "E8 ?? ?? ?? ?? 48 63 C8 41 C7 44 8E 34 09 00 00 00 48 8D 41 05";
+// Segundo uso igual (rama del tipo 0xB, 0x1405B21DB): 11 B «mov rdx,[rsp+180h] ; movsxd rcx,eax»; salida = epílogo.
+const char* kFirmaIndice2 = "E8 ?? ?? ?? ?? 48 8B 94 24 80 01 00 00 48 63 C8 83 7C 8A 34 09 0F";
 bool crearDesvio(Feature& f, uint8_t* dir, size_t n, void* gancho, void** original);
 
+
+// Cueva genérica «si eax==0xFF (sin jugador) salir»: en `sitio` hay `n` bytes de instrucciones enteras sin
+// RIP-relativos justo después del call a FUN_140A62690; se sustituyen por jmp a:
+//     cmp eax,0FFh ; jne +5 ; jmp sitio+salida ; <n bytes originales> ; jmp sitio+n
+bool cuevaIndiceFF(Feature& f, uint8_t* sitio, size_t n, size_t salida) {
+    uint8_t* c = reservarCerca(sitio, 64);
+    if (!c) { f.estado = "no hay memoria cerca del exe (índice)"; return false; }
+    const uint8_t cmpff[] = { 0x3D, 0xFF, 0x00, 0x00, 0x00,  0x75, 0x05 };
+    memcpy(c, cmpff, sizeof cmpff);
+    bool ok = escribirRel32(c + 7, 0xE9, c + 7, sitio + salida);
+    memcpy(c + 12, sitio, n);
+    ok = ok && escribirRel32(c + 12 + n, 0xE9, c + 12 + n, sitio + n);
+    if (!ok) { f.estado = "cueva fuera de alcance (índice)"; return false; }
+    FlushInstructionCache(GetCurrentProcess(), c, 64);
+    Parche p; p.dir = sitio;
+    p.original.assign(sitio, sitio + n);
+    p.nuevo.resize(n, 0x90);
+    if (!escribirRel32(p.nuevo.data(), 0xE9, sitio, c)) { f.estado = "cueva fuera de alcance (índice)"; return false; }
+    if (!aplicarParche(p, f.id)) { f.estado = "bytes inesperados (índice)"; return false; }
+    f.parches.push_back(p);
+    return true;
+}
 
 bool golInstalar(Feature& f) {
     uint8_t* ranuras = firmaUnica("codigo", kFirmaRanuras, f.id);
@@ -301,6 +325,9 @@ bool golInstalar(Feature& f) {
     uint8_t* indice = firmaUnica("codigo", kFirmaIndice, f.id);
     if (!indice) { f.estado = "sin firma: índice de jugador 0xFF (FUN_1405B1740)"; return false; }
     indice += 5;
+    uint8_t* indice2 = firmaUnica("codigo", kFirmaIndice2, f.id);
+    if (!indice2) { f.estado = "sin firma: índice 0xFF, segundo uso"; return false; }
+    indice2 += 5;
     uint8_t* sitio = firmaUnica("codigo", kFirmaDegradar, f.id);
     if (!sitio) { f.estado = "sin firma: degradación del gol en el entrenamiento"; return false; }
     uint8_t* sitios[2] = { sitio, sitio + 13 };
@@ -328,24 +355,8 @@ bool golInstalar(Feature& f) {
     if (!crearDesvio(f, ranuras, 14, (void*)ganchoRanuras, (void**)&g_ranurasOrig)) {
         f.estado = "no se pudo desviar FUN_140504D20"; return false;
     }
-    {   // cueva del índice 0xFF
-        uint8_t* c = reservarCerca(indice, 64);
-        if (!c) { f.estado = "no hay memoria cerca del exe (índice)"; return false; }
-        const uint8_t cmpff[] = { 0x3D, 0xFF, 0x00, 0x00, 0x00,  0x75, 0x05 };
-        memcpy(c, cmpff, sizeof cmpff);
-        bool ok = escribirRel32(c + 7, 0xE9, c + 7, indice + 0xBE);
-        memcpy(c + 12, indice, 12);                                   // las 2 instrucciones originales tal cual
-        ok = ok && escribirRel32(c + 24, 0xE9, c + 24, indice + 12);
-        if (!ok) { f.estado = "cueva fuera de alcance (índice)"; return false; }
-        FlushInstructionCache(GetCurrentProcess(), c, 64);
-        Parche p; p.dir = indice;
-        const uint8_t orig[] = { 0x48, 0x63, 0xC8, 0x41, 0xC7, 0x44, 0x8E, 0x34, 0x09, 0x00, 0x00, 0x00 };
-        p.original.assign(orig, orig + 12);
-        p.nuevo.resize(12, 0x90);
-        if (!escribirRel32(p.nuevo.data(), 0xE9, indice, c)) { f.estado = "cueva fuera de alcance (índice)"; return false; }
-        if (!aplicarParche(p, f.id)) { f.estado = "bytes inesperados (índice)"; return false; }
-        f.parches.push_back(p);
-    }
+    if (!cuevaIndiceFF(f, indice, 12, 0xBE)) return false;
+    if (!cuevaIndiceFF(f, indice2, 11, 0xBE)) return false;
     char b[160];
     sprintf_s(b, "ok: el entrenamiento ya no degrada el gol (sitios exe+0x%llX y +0x%llX)",
               (unsigned long long)(sitios[0] - g_exe.base), (unsigned long long)(sitios[1] - g_exe.base));
