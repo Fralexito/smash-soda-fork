@@ -27,7 +27,7 @@
 #include <intrin.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.2.1"
+#define PHX_CORE_VERSION "0.2.2"
 
 namespace {
 
@@ -139,15 +139,37 @@ int buscar(const Patron& p, uint8_t* ini, size_t tam, uint8_t*& primera, int top
     return n;
 }
 
-// Busca el patrón en una sección. Solo vale si aparece EXACTAMENTE una vez (si no, la función queda apagada).
+// Busca el patrón. `sec` = nombre de sección, o "codigo" = todas las secciones ejecutables (en el exe de PES el
+// código vive en «.trace», no en «.text»). Solo vale si aparece EXACTAMENTE una vez (si no, la función queda apagada).
 uint8_t* firmaUnica(const char* sec, const char* patron, const char* quien) {
     Patron p;
     if (!parsearPatron(patron, p)) { logf("[%s] patrón mal escrito", quien); return nullptr; }
-    uint8_t* ini; size_t tam;
-    if (!seccion(sec, ini, tam)) { logf("[%s] no hay sección %s", quien, sec); return nullptr; }
-    uint8_t* r; int n = buscar(p, ini, tam, r);
+    auto dos = reinterpret_cast<IMAGE_DOS_HEADER*>(g_exe.base);
+    auto nt  = reinterpret_cast<IMAGE_NT_HEADERS64*>(g_exe.base + dos->e_lfanew);
+    auto s   = IMAGE_FIRST_SECTION(nt);
+    const bool codigo = strcmp(sec, "codigo") == 0;
+    int n = 0; uint8_t* r = nullptr;
+    for (unsigned i = 0; i < nt->FileHeader.NumberOfSections && n < 2; ++i, ++s) {
+        bool vale = codigo ? (s->Characteristics & IMAGE_SCN_MEM_EXECUTE) != 0
+                           : strncmp(reinterpret_cast<const char*>(s->Name), sec, 8) == 0;
+        if (!vale) continue;
+        uint8_t* primera; int m = buscar(p, g_exe.base + s->VirtualAddress, s->Misc.VirtualSize, primera);
+        if (m && !r) r = primera;
+        n += m;
+    }
     if (n != 1) { logf("[%s] firma %s (%d coincidencias en %s)", quien, n ? "repetida" : "no encontrada", n, sec); return nullptr; }
     return r;
+}
+
+// Lista las secciones de la imagen en el registro (nombre, RVA, tamaño, permisos).
+void listarSecciones() {
+    auto dos = reinterpret_cast<IMAGE_DOS_HEADER*>(g_exe.base);
+    auto nt  = reinterpret_cast<IMAGE_NT_HEADERS64*>(g_exe.base + dos->e_lfanew);
+    auto s   = IMAGE_FIRST_SECTION(nt);
+    for (unsigned i = 0; i < nt->FileHeader.NumberOfSections; ++i, ++s) {
+        char nom[9] = {}; memcpy(nom, s->Name, 8);
+        logf("sección %-8s rva 0x%08X tam 0x%08X flags 0x%08X", nom, s->VirtualAddress, s->Misc.VirtualSize, s->Characteristics);
+    }
 }
 
 // ---------------------------------------------------------------- parches con verificación y deshacer
@@ -203,9 +225,12 @@ int llamarSeguro(bool (*fn)(Feature&), Feature& f) {
 // --- función 1: diagnóstico (solo lectura). Comprueba que el buscador de firmas funciona en este exe.
 bool diagInstalar(Feature& f) {
     // cadena del enum de acciones del partido (pista 6 del cap. 60-o): debe existir una vez en .rdata
-    uint8_t* r = firmaUnica(".rdata", "46 52 45 45 5F 54 52 41 49 4E 49 4E 47 5F 42 52 45 41 4B 00", f.id); // "FREE_TRAINING_BREAK\0"
-    if (!r) { f.estado = "firma no encontrada"; return false; }
-    char b[96]; sprintf_s(b, "ok: FREE_TRAINING_BREAK en exe+0x%llX", (unsigned long long)(r - g_exe.base));
+    // (aparece 2 veces en el exe de Conmegol: vale con encontrarla; lo que importa es que el buscador funciona)
+    Patron p; uint8_t* ini; size_t tam; uint8_t* r = nullptr;
+    parsearPatron("46 52 45 45 5F 54 52 41 49 4E 49 4E 47 5F 42 52 45 41 4B 00", p);   // "FREE_TRAINING_BREAK\0"
+    int n = seccion(".rdata", ini, tam) ? buscar(p, ini, tam, r, 16) : 0;
+    if (!n) { f.estado = "firma no encontrada"; return false; }
+    char b[96]; sprintf_s(b, "ok: FREE_TRAINING_BREAK x%d, primera en exe+0x%llX", n, (unsigned long long)(r - g_exe.base));
     f.estado = b;
     return true;
 }
@@ -326,7 +351,7 @@ bool sondaInstalar(Feature& f) {
     uint8_t* dirs[_countof(g_ganchos)];
     for (size_t i = 0; i < _countof(g_ganchos); ++i) {      // primero se buscan todas: o todas o ninguna
         auto& g = g_ganchos[i];
-        dirs[i] = firmaUnica(".text", g.firma, f.id);
+        dirs[i] = firmaUnica("codigo", g.firma, f.id);
         if (!dirs[i]) { f.estado = std::string("sin firma: ") + g.nombre; return false; }
         uint32_t rva = static_cast<uint32_t>(dirs[i] - g_exe.base);
         logf("[%s] %s en exe+0x%X%s", f.id, g.nombre, rva, rva == g.rvaEsperada ? "" : " (exe distinto del de Conmegol)");
@@ -507,6 +532,7 @@ PHX_API int phx_core_iniciar(const char* carpeta) {
     escribirArchivo(flag, "Phoenix Core arrancando\r\n");
     g_tInicio = GetTickCount64();
 
+    listarSecciones();
     leerConfig();
     for (auto& f : g_funciones) {
         if (f.deseada) encender(f);
