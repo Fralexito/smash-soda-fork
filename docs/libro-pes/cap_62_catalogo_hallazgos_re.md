@@ -163,3 +163,37 @@ Añadir filas con fecha cuando aparezca algo nuevo (aunque no sea del tema del d
 | Mini-campo | `loaderSwf_trainingPlayArea` (área de juego delimitada del entrenamiento) + modelos de conos, maniquíes, paneles y líneas de 6–42 m en el exe → base para modo de retos o mini-cancha. | H |
 | Aviso | En el TopMenu de Conmegol `12_freelobby` y `18_info` → `Match/MatchDirectReplay` (cuidado con las repeticiones reales). | C |
 | Pruebas preparadas (desactivadas) | P0: repetir con 2 equipos distintos. P1: `SiderAddons\livecpk\Phoenix-Entrenamiento-B1` (TrainingPrePlayerSelect → MatchTrainingSetting). P2: `-B2` (→ TrainingMatchInit directo). P3: crear `TrainingDirectInit.json`. Activar = línea `cpk.root` en sider.ini con respaldo. Informe: `PRUEBA_CANCHA\informes\ENTRENAMIENTO_LIBRE_PRUEBA.md` («AMPLIACIÓN»). | — |
+
+#### 26-oct-2026 — Online de PES 2021 (lectura del código de Nikow5/Pes2021PrivateServer, MIT, feb-2026; hilo «Planear Phoenix Core al límite»)
+| Qué | Dónde / formato | Confianza |
+|---|---|---|
+| Transporte TCP «NclMio» | Puerto 10000 (ConnectGate). Cabecera big-endian `[cmd 2][largo 2][secuencia 4]` + datos; todo el paquete con XOR cíclico de clave `5B 9F 2E 64`. Algunas respuestas van con zlib (0x2EE4). | P (código de terceros, parte heurística) |
+| Comandos | `0x2EE0` CmdLobbyInit (ticket de Steam, 124 B) · `0x2E04` CmdMatchmaking/Auth (respuesta de 96 B) · `0x2EE4` CmdGetSvrList (128 B, entradas de 32 B que empiezan con la vftable `0x14285B5B0`) · `0x2EF4` CmdGetEulaAreaList. El cliente parece deducir el comando por `largo XOR 0x2E64`. | P |
+| Direcciones del exe 1.07.02 | `0x1411AEEC0` validador de paquetes (origen del error C_IDGG_0002) · `0x140FE0C50` estado 5 · `0x140FE1FE0` estado 6 · `0x140FF3EC0` estado 10 de la conexión online. Trazador Frida `trace.js`. | P (comprobar en nuestro exe) |
+| STUN | RFC 5389 estándar (cookie `0x2112A442`), puertos 5730–5739 / 3478. Partido P2P por UDP 5739/5740. | P |
+| Estado del proyecto | Solo login, lista de servidores, EULA y matchmaking inicial; sin lobby ni partido. PESBUL (Docker `noobsaibot301/pes2021-emulator`) va más lejos (amistoso 1v1), pero su código no apareció público. `NoobSaibot888/pes_server` (sin licencia, 2025) no conectaba. | C (repos leídos) |
+| PESBUL verificado (metadatos públicos de Docker Hub, 26-oct 19:10 UTC; sin descargar capas) | Imagen `noobsaibot301/pes2021-emulator`, pública, 38.018 descargas, creada 23-jun-2026, **última versión hoy 26-oct 17:46** (`0.13.10-phase13-r7.3.743.84-CLUBS-UNIQUE-MENU-EVENTS`), ~84 MB comprimida. Python 3.12, `/app/entrypoint.sh`, panel en :5000 (`/health`). Sin licencia ni enlace a código fuente en la imagen. | C |
+| PESBUL: qué tiene | Variables y etiquetas muestran: **co-op** (grupos, salas, cuenta atrás vs COM), **Team Play** 11v11 («avanzado por RE»), **Clubs** (menús, bandeja, calendario de liga, perfiles), **relé de partido propio** (`PES_GAMERELAY_*`, plano de datos en 5100 TCP/UDP, intercambio de claves «KX» con códec nativo) → el partido NO va solo P2P: puede pasar por su relé. Sirve **Live Update** (datos en vivo de 2021-08-26, hash sha256). Puertos: 10000/10001 TCP, 3478–3479, 5730/5739/5740 UDP, 55000–55100 UDP, 53 UDP (DNS propio), 80/443. | C (metadatos) / P (significado) |
+| Dato curioso | Según su etiqueta, el cliente de PES añade 1002 bytes en cero al final de cada archivo de Live Update que descarga (constante del cliente, papel desconocido). | P |
+
+#### 26-oct-2026 (b) — Online: formato NclMio ampliado (hilo «Crear servidor Phoenix Online»; lectura de Nikow5, MIT)
+| Qué | Dónde / formato | Confianza |
+|---|---|---|
+| Respuesta de la secuencia | La respuesta debe repetir la `secuencia` (4 B) del paquete contestado; 0x2E04 y 0x2EF4 además copian los primeros 8 B del token de la petición. | P |
+| Tamaño = identidad | Un 0x2E04 de 64 B se lee como 0x2E24 y da `C_IDGG_0002`: el largo exacto es obligatorio (96 B). | P (de comentarios del autor) |
+| Entrada de servidor 32 B | vtable `B0 5B 85 42 01 00 00 00` · id (BE) · tipo (BE) · IP · puerto **little-endian** · relleno; 4 entradas, zlib. | P |
+| Debilidad a resolver con REA | Nikow5 deduce el comando por tamaño de paquete y no hace framing TCP; confirmar en el exe de dónde sale el cmd. | C |
+| Guía completa | `/mnt/project-files/pes-online/PHOENIX_ONLINE_REA_GUIA.md` (plan R0–R8). | — |
+| Online: máquina de estados del login (exe 1.07.02, según documentos de PESBUL) | switch `0x140fde489`; estado 5 AuthSteam `FUN_140fde810` · 6 `FUN_140fdebe0` · 7 CmdLoginAccount `FUN_140fdf300` · 8 CmdSendPsid `FUN_140fdf860` · 9 CmdGetPlayerData `FUN_140fdee40`; `FUN_140fe12e0` versión/URLs/hora · `FUN_140fe1fe0` lista de servidores · `FUN_140fe3f50` LoginMenu · `FUN_140fe4470` SetCurrentPlayer. Mensajes MessagePack con `msgid`/`rqid`/`result` (`NOERR`). 339 comandos `CMD_*`. Amistoso = P2P con NAT de Konami (`NtlManager`, `P2pFullMesh`) + respaldo TURN (`P2pFullMeshWithTurn`); Team Play = relé (`CsClientSession`, `ClltcpController`). Detalle: cap_72. | P (verificar en nuestro exe) |
+
+#### 26-oct-2026 (c) — Phoenix Core: gol, eventos y portabilidad Conmegol → PES 2021 limpio (hilo «modo street»)
+| Qué | Dónde / formato | Confianza |
+|---|---|---|
+| Código del exe | En el exe de Conmegol el código está en la sección **«.trace»** (no «.text»); hay además .xtext/.xcode/.text1/.sxdata. Core busca firmas en TODAS las secciones ejecutables. **Comprobar en PES limpio** el nombre de sección. | C (Conmegol) |
+| SetState(actor,estado,modo) | firma `48 89 6C 24 10 48 89 74 24 18 48 89 7C 24 20 41 56 48 83 EC 20 8D`, RVA 0x6EEBB0 en Conmegol; prólogo 15 B sin RIP-relativos | C |
+| ProcesarGol | firma `48 8B C4 48 89 50 10 55 56 57 41 54 41 55 41 56 41 57 48 8D A8 D8`, RVA 0x478190; prólogo 14 B | C |
+| PonerEvento(job,tipo) → job+0x874 | firma `48 89 5C 24 08 57 48 83 EC 20 48 8B D9 89 91 74 08 00 00 48 8D B9`, RVA 0x451FD0; prólogo 19 B | C |
+| Tipos de evento | amistoso: gol = 0xA (montador FUN_14044F8A0, ret 0x44F8E3) → ProcesarGol; otros 2,4,5,6,7,9. Entrenamiento: gol = **5 (saque de puerta, k==7 sub==3, ret 0x44F444)**, banda = 6 (sub==2, ret 0x44F7A4), reinicio 0xE (0x4535F1 / 0x449BA9) | C (sonda en vivo) |
+| Selector de parada | FUN_1404526A0: k=[obj+0x1574], sub=[obj+0x1554], obj=[[0x1436F3DC8]+0x270]; k==3 → gol | C (estático) |
+| **Portabilidad (pendiente)** | Core 0.3.x usa aún RVAs fijas de Conmegol para: global 0x36F3DC8, retornos 0x449BA9/0x44F8E3, FUN_14044F8A0. Antes de usarlo en PES limpio hay que sacarlas por firma (instrucción RIP-relativa que lee el global, firma del montador). Las firmas de los 3 ganchos sí son AOB. Sospecha: si el exe limpio es otra versión (Conmegol = PATCH10100), las RVAs cambian; las firmas probablemente sirven. | P |
+| Archivos | La prueba de Core no depende de cpk/livecpk de Conmegol; sí usa Sider (cualquier Sider con luajit.ext.enabled=1). Las pruebas de cancha (pitch_st002 del Camp Nou, goal_post, .geom en livecpk) SÍ eran de Conmegol: en PES limpio las rutas de estadios/AddOn serán distintas. | C |
