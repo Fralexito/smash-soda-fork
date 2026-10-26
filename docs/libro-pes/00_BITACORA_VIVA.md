@@ -318,3 +318,4 @@ Formato de entrada: `### AAAA-MM-DD HH:MM — tema` · qué se hizo · resultado
 - 26-oct ~04:47 · PES · En el Entrenamiento libre solo el lado que defiende tiene portero (incluido en la cifra). cap_60_o §8.12.
 - 26-oct ~04:50 · PES · CORRECCIÓN: tras un gol en el Entrenamiento libre hay saque de puerta del rival (no reinicio desde el centro). cap_60_o §8.7.
 - 26-oct ~05:08 · PES · Marcador nativo: en zona 52 el estado 0x4C (GOL) nunca se activa (0x4A → 0x01). Se busca el interruptor por modo. cap_60_o §8.13.
+- 26-oct ~06:04 · PES · DECISIÓN de Fralex: el modo street se construye sobre el Entrenamiento libre (no sobre el amistoso). Primero el interruptor del gol nativo; marcador propio como respaldo.
