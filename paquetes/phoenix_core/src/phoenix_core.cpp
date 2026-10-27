@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.38"
+#define PHX_CORE_VERSION "0.4.39"
 
 namespace {
 
@@ -782,6 +782,8 @@ bool canchaQuitar(Feature&) {
 // Cuando se mueve a más de ~3 m/s anota en phoenix_core.log «[BALL] dir pos v» y los dwords que cambian entre muestras
 // («[BALL] +0xNN a->b»): así se identifican posición y velocidad. Solo con TrainingWork activo. Json: "pelota_sonda": true.
 volatile LONG g_pelotaOn = 0; HANDLE g_hiloPelota = nullptr;
+volatile LONG g_vigiaPelotaArmada = 0;
+uint8_t* volatile g_pelotaSeguida = nullptr;   // objeto de la pelota localizado por hiloPelota (para la vigía de escritura)
 static bool pareceBola(uint8_t* o) {
     uint32_t a = 0, b = 0, c = 0; float x = 0, y = 0, z = 0;
     if (!leerSeguro(o + 248, &a, 4) || !leerSeguro(o + 312, &b, 4) || !leerSeguro(o + 492, &c, 4)) return false;
@@ -827,12 +829,12 @@ DWORD WINAPI hiloPelota(LPVOID) {
             for (size_t i = 0; i < cand.size(); ++i) {                       // la que se mueve de verdad es la pelota
                 if (!pareceBola(cand[i])) continue;
                 float x = 0, z = 0; leerSeguro(cand[i] + 208, &x, 4); leerSeguro(cand[i] + 216, &z, 4);
-                if (px[i] < 1e8f && (fabsf(x - px[i]) + fabsf(z - pz[i])) > 0.3f) { seguida = cand[i]; logf("[BALL] pelota localizada en %p (x=%.2f z=%.2f)", (void*)seguida, x, z); tengoPrevio = false; break; }
+                if (px[i] < 1e8f && (fabsf(x - px[i]) + fabsf(z - pz[i])) > 0.3f) { seguida = cand[i]; g_pelotaSeguida = seguida; g_vigiaPelotaArmada = 0; logf("[BALL] pelota localizada en %p (x=%.2f z=%.2f)", (void*)seguida, x, z); tengoPrevio = false; break; }
                 px[i] = x; pz[i] = z;
             }
             continue;
         }
-        if (!pareceBola(seguida)) { logf("[BALL] se perdió la pelota (%p)", (void*)seguida); seguida = nullptr; cand.clear(); continue; }
+        if (!pareceBola(seguida)) { logf("[BALL] se perdió la pelota (%p)", (void*)seguida); seguida = nullptr; g_pelotaSeguida = nullptr; cand.clear(); continue; }
         if (GetTickCount64() - tBandera > 1000) {   // «paredes_on.txt» en la carpeta de Core enciende el rebote en vivo (opcional: «x z» dentro)
             tBandera = GetTickCount64(); std::string t; paredes = leerArchivo(g_carpeta + "paredes_on.txt", t);
             if (paredes) { double a = 0, b = 0; if (sscanf_s(t.c_str(), "%lf %lf", &a, &b) == 2 && a > 5 && b > 3) { LX = a; LZ = b; } }
@@ -1428,19 +1430,21 @@ bool parchearRanuraShoot(Feature& f) {
 // los registros de depuración DR0/DR1 (escritura, 4 bytes) sobre cmd+0x10 (carga) y cmd+0x1768 (tipo de orden) del CommandPlayer
 // y un manejador de excepciones vectorizado que anota la instrucción que escribe (rip, retorno, valor). No toca código. Json: "vigia_escritura": 1.
 volatile LONG g_vigiaPedida = 0, g_vigiaArmada = 0, g_vigiaLog = 0;
-uint64_t g_vigiaDir[2] = { 0, 0 };
+uint64_t g_vigiaDir[4] = { 0, 0, 0, 0 };
+static const char* kVigiaNombre[4] = { "cmd+0x10", "cmd+0x1768", "pelota+0x70", "pelota+0x78" };
+volatile LONG g_vigiaPelotaPedida = 0;
 PVOID g_vigiaVeh = nullptr;
 LONG CALLBACK vehVigia(PEXCEPTION_POINTERS ep) {
     if (ep->ExceptionRecord->ExceptionCode != EXCEPTION_SINGLE_STEP) return EXCEPTION_CONTINUE_SEARCH;
     CONTEXT* c = ep->ContextRecord;
-    if (!(c->Dr6 & 3)) return EXCEPTION_CONTINUE_SEARCH;
-    int i = (c->Dr6 & 1) ? 0 : 1;
+    if (!(c->Dr6 & 0xF)) return EXCEPTION_CONTINUE_SEARCH;
+    int i = (c->Dr6 & 1) ? 0 : (c->Dr6 & 2) ? 1 : (c->Dr6 & 4) ? 2 : 3;
     LONG n = InterlockedIncrement(&g_vigiaLog);
     if (n <= 300) {
         uint32_t v = 0; uint64_t ret = 0, b = reinterpret_cast<uint64_t>(g_exe.base);
         leerSeguro(reinterpret_cast<void*>(g_vigiaDir[i]), &v, 4); leerSeguro(reinterpret_cast<void*>(c->Rsp), &ret, 8);
-        logf("[VIGIA] escribe %s = 0x%X · tras exe+0x%llX · ret exe+0x%llX · rax=%llX rcx=%llX rdx=%llX · hilo %lu", i == 0 ? "+0x10" : "+0x1768", v,
-             (unsigned long long)(c->Rip - b), (unsigned long long)(ret - b), (unsigned long long)c->Rax, (unsigned long long)c->Rcx, (unsigned long long)c->Rdx, GetCurrentThreadId());
+        logf("[VIGIA] escribe %s = 0x%X · tras exe+0x%llX · ret exe+0x%llX · rax=%llX rcx=%llX rdx=%llX rsi=%llX rdi=%llX r8=%llX · hilo %lu", kVigiaNombre[i], v,
+             (unsigned long long)(c->Rip - b), (unsigned long long)(ret - b), (unsigned long long)c->Rax, (unsigned long long)c->Rcx, (unsigned long long)c->Rdx, (unsigned long long)c->Rsi, (unsigned long long)c->Rdi, (unsigned long long)c->R8, GetCurrentThreadId());
     }
     c->Dr6 = 0;
     return EXCEPTION_CONTINUE_EXECUTION;
@@ -1458,8 +1462,10 @@ DWORD WINAPI hiloArmarVigia(LPVOID) {
             if (SuspendThread(h) != (DWORD)-1) {
                 CONTEXT c; memset(&c, 0, sizeof c); c.ContextFlags = CONTEXT_DEBUG_REGISTERS;
                 if (GetThreadContext(h, &c)) {
-                    c.Dr0 = g_vigiaDir[0]; c.Dr1 = g_vigiaDir[1];
-                    c.Dr7 = (c.Dr7 & ~((0xFFull) | (0xFFull << 16))) | 0x1ull | 0x4ull | (0x1ull << 16) | (0x3ull << 18) | (0x1ull << 20) | (0x3ull << 22);
+                    c.Dr0 = g_vigiaDir[0]; c.Dr1 = g_vigiaDir[1]; c.Dr2 = g_vigiaDir[2]; c.Dr3 = g_vigiaDir[3];
+                    uint64_t d7 = c.Dr7 & ~((0xFFull) | (0xFFFFull << 16));
+                    for (int k = 0; k < 4; ++k) if (g_vigiaDir[k]) d7 |= (1ull << (k * 2)) | (0xDull << (16 + k * 4));   // L(k), RW=01 (escritura), LEN=11 (4 B)
+                    c.Dr7 = d7;
                     c.Dr6 = 0;
                     if (SetThreadContext(h, &c)) ++n;
                 }
@@ -1469,7 +1475,7 @@ DWORD WINAPI hiloArmarVigia(LPVOID) {
         }
         CloseHandle(sn);
     }
-    logf("[VIGIA] armada sobre cmd+0x10 (%p) y cmd+0x1768 (%p) en %d hilos", (void*)g_vigiaDir[0], (void*)g_vigiaDir[1], n);
+    logf("[VIGIA] armada (%p %p %p %p) en %d hilos", (void*)g_vigiaDir[0], (void*)g_vigiaDir[1], (void*)g_vigiaDir[2], (void*)g_vigiaDir[3], n);
     return 0;
 }
 const char* kFirmaMedidor = "48 89 5C 24 08 48 89 74 24 10 57 48 83 EC 20 48 8B 05 ?? ?? ?? ?? 49 8B F9 49 8B D8 48 8B 88 00 04 00 00";
@@ -1533,6 +1539,10 @@ volatile LONG g_jugSondaOn = 0; HANDLE g_hiloJug = nullptr;
 DWORD WINAPI hiloJug(LPVOID) {
     while (g_jugSondaOn) {
         Sleep(3000);
+        if (g_vigiaPelotaPedida && g_pelotaSeguida && InterlockedCompareExchange(&g_vigiaPelotaArmada, 1, 0) == 0) {
+            g_vigiaDir[2] = reinterpret_cast<uint64_t>(g_pelotaSeguida) + 0x70; g_vigiaDir[3] = reinterpret_cast<uint64_t>(g_pelotaSeguida) + 0x78;
+            CreateThread(nullptr, 0, hiloArmarVigia, nullptr, 0, nullptr);
+        }
         if (!trainingWorkEstable()) continue;
         uint8_t* raiz = nullptr; if (!leerSeguro(g_globalPartido, &raiz, 8) || !raiz) continue;
         char l1[600], l2[600]; int n1 = 0, n2 = 0, fuera = 0;
@@ -1647,6 +1657,7 @@ void leerConfig() {
     if (valorDe("celebracion_modo", v)) g_celebModo = (v == "\"timer\"") ? 1 : (v == "\"salto\"") ? 2 : 0;
     if (valorDe("siempre_disparo_modo", v)) g_disparoModo = atoi(v.c_str());
     if (valorDe("vigia_escritura", v)) g_vigiaPedida = atoi(v.c_str());
+    if (valorDe("vigia_pelota", v)) g_vigiaPelotaPedida = atoi(v.c_str());
     if (valorDe("medidor_real", v)) g_medidorReal = atoi(v.c_str());
     if (valorDe("siempre_disparo_carga", v)) g_disparoCarga = atoi(v.c_str());
     if (valorDe("celebracion_timer_final", v)) g_timerFinal = (uint32_t)atol(v.c_str());
