@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.9"
+#define PHX_CORE_VERSION "0.4.10"
 
 namespace {
 
@@ -456,7 +456,9 @@ uint64_t ganchoSetState(uint8_t* actor, uint32_t estado, uint32_t modo) {
 
 using FnGol = uint64_t (*)(uint8_t* a, uint8_t* b, uint8_t* job, uint64_t p4);
 FnGol g_golOrig = nullptr;
+volatile ULONGLONG g_tUltimoGol = 0;   // para el vigilante: solo perfila después de un gol
 uint64_t ganchoGol(uint8_t* a, uint8_t* b, uint8_t* job, uint64_t p4) {
+    g_tUltimoGol = GetTickCount64();
     uint64_t r = g_golOrig(a, b, job, p4);
     Ev& e = nuevoEv(EV_GOL, _ReturnAddress());
     e.a = reinterpret_cast<uint64_t>(a); e.b = reinterpret_cast<uint64_t>(b);
@@ -661,7 +663,13 @@ DWORD WINAPI vigilante(LPVOID) {
         }
         // 2) ¿cuelgue? sonda quieta ≥8 s (4 ventanas) y CPU alta. La CPU sola no sirve: este PES usa ~5 núcleos
         //    jugando normal (17 falsas alarmas en un amistoso, 26-oct).
-        if (ventanasQuietas < 4 || total < 40000000 || perfiles >= 10 || ahora - tUltimoPerfil < 30000) continue;
+        //    Solo en los 3 min tras un gol (el congelón del entreno es en la celebración): así el cupo no se gasta en
+        //    menús/carga. Sin umbral de CPU: congelado consume lo mismo que jugando (~9 s en 2 s). Cupo 10 por gol.
+        static ULONGLONG golContado = 0;
+        ULONGLONG tGol = g_tUltimoGol;
+        if (tGol != golContado) { golContado = tGol; perfiles = 0; }
+        if (!tGol || ahora - tGol > 180000) continue;
+        if (ventanasQuietas < 4 || perfiles >= 10 || ahora - tUltimoPerfil < 20000) continue;
         tUltimoPerfil = ahora; ++perfiles;
         std::vector<Zona> zonas;
         for (int muestra = 0; muestra < 8 && g_vigilar; ++muestra) {
@@ -694,7 +702,7 @@ DWORD WINAPI vigilante(LPVOID) {
             Sleep(250);
         }
         std::sort(zonas.begin(), zonas.end(), [](const Zona& x, const Zona& y) { return x.n > y.n; });
-        logf("[VIGILANTE] posible cuelgue: CPU %.1f s en 2 s, sonda quieta. Top zonas (muestras):", total / 1e7);
+        logf("[VIGILANTE] posible cuelgue: CPU %.1f s en 2 s, sonda quieta %d s, %.0f s tras el gol. Top zonas (muestras):", total / 1e7, ventanasQuietas * 2, (ahora - tGol) / 1000.0);
         for (size_t i = 0; i < zonas.size() && i < 12; ++i) {
             char nom[160], pil[600] = {}; size_t o = 0;
             nombreZona(zonas[i].pila[0], nom, sizeof nom);
