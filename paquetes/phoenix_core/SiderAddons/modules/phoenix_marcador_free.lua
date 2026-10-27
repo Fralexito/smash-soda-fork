@@ -15,7 +15,7 @@
 --
 -- Deshacer: DESINSTALAR.ps1 quita la línea de sider.ini; o poner "marcador_free": false.
 
-local m = { version = "0.3" }
+local m = { version = "0.4" }
 
 local PAUSA_GOL = 12.0      -- segundos que se detiene el reloj tras un gol (celebración)
 local MIRAR_SEG = 1.0       -- cada cuánto se relee zona/pantalla
@@ -43,6 +43,12 @@ end
 local function mirarConfig()
     local t = leer(rutaCfg)
     encendido = (t ~= nil) and (t:find('"marcador_free"%s*:%s*true') ~= nil)
+end
+
+local canchaOn, rutaCancha = false, nil
+local function mirarCancha()
+    local t = leer(rutaCfg)
+    canchaOn = (t ~= nil) and (t:find('"cancha_chica_free"%s*:%s*true') ~= nil)
 end
 
 -- v0.2: en el Entrenamiento libre pantalla.json se queda en «cargando» (solo pasa a «en_juego» con match.stats
@@ -92,7 +98,7 @@ end
 
 function m.display_frame(ctx)
     local ahora = os.clock()
-    if ahora - tConfig >= CONFIG_SEG then tConfig = ahora; mirarConfig() end
+    if ahora - tConfig >= CONFIG_SEG then tConfig = ahora; mirarConfig(); mirarCancha() end
     if not encendido then tAnterior = nil; return end
     if ahora - tMirar >= MIRAR_SEG then tMirar = ahora; mirarZonaYPantalla(); mirarActividad(ahora) end
     if not enZona then tAnterior = nil; return end
@@ -118,9 +124,24 @@ end
 -- v0.3: registro con hora de cada petición de archivo (livecpk_get_filepath) mientras la zona es FREE_TRAINING.
 -- Solo escribe en phoenix_core\peticiones.log (tope ~2 MB); no devuelve ruta, así que no altera ninguna carga.
 local rutaPeticiones, bytesPeticiones = nil, 0
+-- v0.4: con "cancha_chica_free": true en phoenix_core.json sirve las 5 colisiones de portería (.geom) ya desplazadas hacia el centro
+-- (content/phoenix/cancha/...), porque StadiumServer solo intercepta hit/stadium y no hit/goal ni FoxAnim.
+local GEOM_CANCHA = {
+    ["common/render/model/bg/hit/goal/goal_l.geom"] = true, ["common/render/model/bg/hit/goal/goal_r.geom"] = true,
+    ["common/anime/foxanim/goal_hit.geom"] = true, ["common/anime/foxanim/goal_l.geom"] = true, ["common/anime/foxanim/goal_r.geom"] = true,
+}
 function m.get_filepath(ctx, filename, key)
-    if not encendido or not enZona or not rutaPeticiones or bytesPeticiones > 2000000 then return nil end
-    local linea = string.format("%s %.3f %s\n", os.date("%H:%M:%S"), os.clock(), tostring(filename))
+    if not encendido or not enZona then return nil end
+    if canchaOn and rutaCancha then
+        local fl = string.gsub(string.lower(tostring(filename)), "\\", "/")
+        if GEOM_CANCHA[fl] then
+            local f = rutaCancha .. fl
+            local h = io.open(f, "rb")
+            if h then h:close(); log("[cancha_chica_free] sirvo " .. fl); return f end
+        end
+    end
+    if not rutaPeticiones or bytesPeticiones > 2000000 then return nil end
+    local linea = string.format("%s %.3f %s" .. "\n", os.date("%H:%M:%S"), os.clock(), tostring(filename))
     local f = io.open(rutaPeticiones, "ab")
     if f then f:write(linea); f:close(); bytesPeticiones = bytesPeticiones + #linea end
     return nil
@@ -154,6 +175,7 @@ function m.init(ctx)
     ctx.register("context_reset", m.context_reset)
     ctx.register("overlay_on", m.overlay_on)
     rutaPeticiones = base .. "phoenix_core\\peticiones.log"
+    rutaCancha = base .. "content/phoenix/cancha/"
     ctx.register("livecpk_get_filepath", m.get_filepath)
     log("[marcador_free] v" .. m.version .. " listo (apagado salvo \"marcador_free\": true en phoenix_core.json)")
 end

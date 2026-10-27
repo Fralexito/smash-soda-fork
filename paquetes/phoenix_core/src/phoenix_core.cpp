@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.22"
+#define PHX_CORE_VERSION "0.4.23"
 
 namespace {
 
@@ -708,10 +708,10 @@ static int parchearBloquesCampo() {
 }
 // Cajas de portería y del campo (.data, copiadas de .rdata al arrancar; el motor de colisiones y las decisiones de tiro/despeje las
 // leen cada cuadro): 6 vectores de 16 B en exe+0x37CF4C0 (RVA del exe 1.1.0.0 de PES 2021; se comprueba el contenido antes de escribir).
-static const float kCajasOrig[24] = { 52.44f,0,-4.3547f,0,  55.5047f,2.903f,4.3544f,0,  -52.44f,2.903f,4.3544f,0,  52.56f,50,35.5f,0,  -55.5047f,0,-4.3547f,0,  -52.56f,0,-35.5f,0 };
+static const float kCajasOrig[24] = { 52.44f,0,-4.35472f,0,  55.5047f,2.903f,4.354449f,0,  -52.44f,2.903f,4.354449f,0,  52.56f,50,35.5f,0,  -55.5047f,0,-4.35472f,0,  -52.56f,0,-35.5f,0 };
 static void cajasNuevas(float* f) {
     float largo = (float)g_canchaLargo, ancho = (float)g_canchaAncho, lin = largo - 0.12f, fon = lin + 3.0647f;
-    const float n[24] = { lin,0,-4.3547f,0,  fon,2.903f,4.3544f,0,  -lin,2.903f,4.3544f,0,  largo,50,ancho + 1.44f,0,  -fon,0,-4.3547f,0,  -largo,0,-(ancho + 1.44f),0 };
+    const float n[24] = { lin,0,-4.35472f,0,  fon,2.903f,4.354449f,0,  -lin,2.903f,4.354449f,0,  largo,50,ancho + 1.44f,0,  -fon,0,-4.35472f,0,  -largo,0,-(ancho + 1.44f),0 };
     memcpy(f, n, sizeof n);
 }
 static bool casiIgual(const float* a, const float* b) { for (int i = 0; i < 24; ++i) if (fabsf(a[i] - b[i]) > 1e-3f) return false; return true; }
@@ -729,7 +729,7 @@ static float* cajasPuntero() {
         uint8_t* ini = g_exe.base + sec[i].VirtualAddress; size_t tam = sec[i].Misc.VirtualSize;
         __try {
             for (size_t o = 0; o + sizeof kCajasOrig <= tam; o += 16)
-                if (memcmp(ini + o, kCajasOrig, sizeof kCajasOrig) == 0) { g_cajasPtr = reinterpret_cast<float*>(ini + o); break; }
+                if (casiIgual(reinterpret_cast<float*>(ini + o), kCajasOrig)) { g_cajasPtr = reinterpret_cast<float*>(ini + o); break; }
         } __except (EXCEPTION_EXECUTE_HANDLER) {}
         if (g_cajasPtr) { logf("[cancha_chica_free] cajas localizadas por contenido en exe+0x%llX", (unsigned long long)(reinterpret_cast<uint8_t*>(g_cajasPtr) - g_exe.base)); break; }
     }
