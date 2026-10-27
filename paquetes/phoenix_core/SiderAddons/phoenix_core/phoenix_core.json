@@ -10,10 +10,13 @@
     "vigilante_bucles": true,
     "celebracion_corta_free": false,
     "sin_1D_free": false,
-    "rescate_render_free": false
+    "rescate_render_free": false,
+    "cancha_chica_free": false
   },
   "gol_directo_celebracion": true,
   "celebracion_modo": "timer",
   "celebracion_segundos": 8,
-  "celebracion_timer_final": 4000
+  "celebracion_timer_final": 4000,
+  "cancha_semilargo": 15,
+  "cancha_semiancho": 10
 }

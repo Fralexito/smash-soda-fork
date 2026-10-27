@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.19"
+#define PHX_CORE_VERSION "0.4.20"
 
 namespace {
 
@@ -663,6 +663,75 @@ DWORD WINAPI hiloRecorte(LPVOID) {
     return 0;
 }
 
+// --- función: cancha_chica_free. El «fuera», la línea de gol lógica y la posición del portero salen de un bloque de 36 B
+// (9 floats: [0]=semilargo 52.56, [1]=semiancho 34.06, [2]=media portería 3.66, [3]=travesaño 2.44, [4]=47.06, [5]=9.16,
+// [6]=36.14, [7]=20.12, [8]=41.56) que el juego reserva en el montón en CADA partido (dirección distinta). Un hilo lo
+// busca (solo con TrainingWork activo) durante los 90 s siguientes a que el entrenamiento aparezca y reescribe [0],[1] y las
+// áreas [4]..[8] escaladas. Json: «cancha_semilargo» (15), «cancha_semiancho» (10). No cambia nada dibujado (líneas, red).
+// Validado el 27-oct con 30×20 (semilargo 15 / semiancho 10): gol, celebración y saque de centro normales.
+static const uint8_t kBloqueCampo[36] = { 0x70,0x3D,0x52,0x42, 0x70,0x3D,0x08,0x42, 0x71,0x3D,0x6A,0x40, 0xF6,0x28,0x1C,0x40,
+    0x70,0x3D,0x3C,0x42, 0x5C,0x8F,0x12,0x41, 0x5C,0x8F,0x10,0x42, 0xC2,0xF5,0xA0,0x41, 0x70,0x3D,0x26,0x42 };
+double g_canchaLargo = 15.0, g_canchaAncho = 10.0;
+volatile LONG g_canchaOn = 0, g_canchaParches = 0;
+HANDLE g_hiloCancha = nullptr;
+
+static void bloqueNuevo(uint8_t* d) {
+    memcpy(d, kBloqueCampo, 36);
+    float kx = (float)g_canchaLargo / 52.56f, kz = (float)g_canchaAncho / 34.06f;
+    float f[9] = { (float)g_canchaLargo, (float)g_canchaAncho, 3.66f, 2.44f, 47.06f * kx, fmaxf(4.0f, 9.16f * kz),
+                   36.14f * kx, fmaxf(4.5f, 20.12f * kz), 41.56f * kx };
+    for (int i = 0; i < 9; ++i) { if (i == 2 || i == 3) continue; memcpy(d + i * 4, &f[i], 4); }
+}
+// TrainingWork «estable»: raíz → +0x3F8 (objeto de referencia) → +0x10 (datos) → byte 0 ≠ 0. (raíz+0x400 solo vale dentro de accesos puntuales.)
+static bool trainingWorkEstable() {
+    uint8_t* raiz = nullptr; uint8_t* obj = nullptr; uint8_t* dat = nullptr; uint8_t b = 0;
+    return g_globalPartido && leerSeguro(g_globalPartido, &raiz, 8) && raiz && leerSeguro(raiz + 0x3F8, &obj, 8) && obj &&
+           leerSeguro(obj + 0x10, &dat, 8) && dat && leerSeguro(dat, &b, 1) && b != 0;
+}
+static int parchearBloquesCampo() {
+    uint8_t nuevo[36]; bloqueNuevo(nuevo);
+    int n = 0; MEMORY_BASIC_INFORMATION mbi; uint8_t* a = reinterpret_cast<uint8_t*>(0x10000);
+    while (a < reinterpret_cast<uint8_t*>(0x7FFE0000ull) && VirtualQuery(a, &mbi, sizeof mbi)) {
+        uint8_t* ini = static_cast<uint8_t*>(mbi.BaseAddress); size_t tam = mbi.RegionSize;
+        if (mbi.State == MEM_COMMIT && mbi.Type == MEM_PRIVATE && (mbi.Protect == PAGE_READWRITE) && tam >= 36 && tam <= (512u << 20)) {
+            __try {
+                for (size_t o = 0; o + 36 <= tam; o += 4) {
+                    if (*reinterpret_cast<uint32_t*>(ini + o) == 0x42523D70u && memcmp(ini + o, kBloqueCampo, 36) == 0) {
+                        memcpy(ini + o, nuevo, 36); ++n;
+                    }
+                }
+            } __except (EXCEPTION_EXECUTE_HANDLER) {}
+        }
+        a = ini + tam;
+    }
+    return n;
+}
+DWORD WINAPI hiloCancha(LPVOID) {
+    bool estaba = false; ULONGLONG t0 = 0; int vuelta = 0;
+    while (g_canchaOn) {
+        Sleep(1000);
+        bool hay = trainingWorkEstable();
+        if (hay && !estaba) t0 = GetTickCount64();
+        estaba = hay;
+        if (!hay || GetTickCount64() - t0 > 75000 || (++vuelta % 3) != 0) continue;     // solo los 75 s siguientes a que aparezca el entrenamiento, un barrido cada 3 s
+        int n = parchearBloquesCampo();
+        if (n) { InterlockedAdd(&g_canchaParches, n); logf("[cancha_chica_free] %d bloque(s) de dimensiones parcheados (%.2f x %.2f)", n, g_canchaLargo, g_canchaAncho); }
+    }
+    return 0;
+}
+bool canchaInstalar(Feature& f) {
+    if (!g_globalPartido && !resolverGlobalPartido(f.id)) { f.estado = "sin firma del global del partido"; return false; }
+    g_canchaOn = 1; g_hiloCancha = CreateThread(nullptr, 0, hiloCancha, nullptr, 0, nullptr);
+    if (!g_hiloCancha) { g_canchaOn = 0; f.estado = "no se pudo crear el hilo"; return false; }
+    char b[160]; sprintf_s(b, "ok: cancha lógica %.1f x %.1f m (semilargo x semiancho) en el entrenamiento", g_canchaLargo * 2, g_canchaAncho * 2);
+    f.estado = b; return true;
+}
+bool canchaQuitar(Feature&) {
+    g_canchaOn = 0;
+    if (g_hiloCancha) { WaitForSingleObject(g_hiloCancha, 3000); CloseHandle(g_hiloCancha); g_hiloCancha = nullptr; }
+    return true;
+}
+
 bool directoInstalar(Feature& f) {
     if (!g_globalPartido && !resolverGlobalPartido(f.id)) { f.estado = "sin firma del global del partido"; return false; }
     if (!asegurarMontador(f)) { f.estado = "sin gancho del montador del gol (FUN_14044F8A0)"; return false; }
@@ -1066,6 +1135,7 @@ std::vector<Feature> g_funciones = {   // orden = orden de arranque (gol_nativo_
     { "gol_nativo_free", "Gol nativo en Entrenamiento libre (street)", golInstalar,   golQuitar   },
     { "saque_centro_free", "Tras el gol, saque de centro (entrenamiento)", saqueInstalar, saqueQuitar },
     { "celebracion_corta_free", "Gol sin celebración ni repetición (entrenamiento)", cortaInstalar, cortaQuitar },
+    { "cancha_chica_free", "Cancha lógica pequeña (semilargo/semiancho del json) en el entrenamiento", canchaInstalar, canchaQuitar },
     { "gol_directo_free", "Gol sin celebración, cámara ni repetición: solo reinicio (entrenamiento)", directoInstalar, directoQuitar },
     { "sin_1D_free", "Gol sin el paso 0x1D de la cola (entrenamiento; evita el congelón)", sin1DInstalar, sin1DQuitar },
     { "rescate_render_free", "Rescate del bloqueo juego↔render (experimental)", rescateInstalar, rescateQuitar },
@@ -1140,6 +1210,10 @@ void leerConfig() {
     std::string v;
     if (valorDe("gol_directo_celebracion", v) && v == "false") g_directoCelebracion = false;
     if (valorDe("celebracion_segundos", v)) g_celebSeg = atof(v.c_str());
+    if (valorDe("cancha_semilargo", v)) g_canchaLargo = atof(v.c_str());
+    if (valorDe("cancha_semiancho", v)) g_canchaAncho = atof(v.c_str());
+    if (g_canchaLargo < 8.0 || g_canchaLargo > 80.0) g_canchaLargo = 15.0;
+    if (g_canchaAncho < 6.0 || g_canchaAncho > 50.0) g_canchaAncho = 10.0;
     if (valorDe("celebracion_modo", v)) g_celebModo = (v == "\"timer\"") ? 1 : (v == "\"salto\"") ? 2 : 0;
     if (valorDe("celebracion_timer_final", v)) g_timerFinal = (uint32_t)atol(v.c_str());
     if (g_celebSeg <= 0.0) g_directoCelebracion = false;
