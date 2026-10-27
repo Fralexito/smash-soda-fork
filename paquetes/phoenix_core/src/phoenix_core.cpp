@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.29"
+#define PHX_CORE_VERSION "0.4.32"
 
 namespace {
 
@@ -1310,16 +1310,35 @@ uint32_t ganchoPredTiro(uint64_t a1, int a2, float a3, float a4, uint64_t a5, in
 // y +0x68 (FUN_1408AEF70) —datos de .rdata, no código— por funciones que devuelven 0 (sin despeje) si hay TrainingWork visto.
 using FnClear60 = uint64_t (*)(int64_t);
 using FnClear68 = uint64_t (*)(uint64_t, int64_t);
-FnClear60 g_clear60Orig = nullptr; FnClear68 g_clear68Orig = nullptr;
+FnClear60 g_clear60Orig = nullptr; FnClear68 g_clear68Orig = nullptr; FnClear68 g_clear70Orig = nullptr;
+volatile ULONGLONG g_clearUltimo = 0;   // último instante en que Clear devolvió 0x55 (mantener «dueño» de la acción al soltar)
 volatile LONG g_clearAnulados = 0;
+int g_disparoModo = 2;   // json «siempre_disparo_modo»: 0 = solo el predicado de Shoot, 1 = Clear devuelve 0 (congela), 2 = Clear devuelve la acción de tiro 0x55
 bool trainingReciente() { return g_disparoOn && GetTickCount64() - g_tTrainingVisto < 3000; }
 uint64_t ganchoClear60(int64_t p1) {
-    if (trainingReciente()) { LONG n = InterlockedIncrement(&g_clearAnulados); if (n <= 10) logf("[siempre_disparo_free] despeje (+0x60) anulado"); return 0; }
+    if (trainingReciente()) {
+        LONG n = InterlockedIncrement(&g_clearAnulados); if (n <= 10) logf("[siempre_disparo_free] despeje (+0x60) -> %s", g_disparoModo >= 2 ? "tiro 0x55" : "nada");
+        if (g_disparoModo >= 2) { *(float*)(p1 + 0x20) = 0.1f; g_clearUltimo = GetTickCount64(); return 0x55; }
+        return 0;
+    }
     return g_clear60Orig(p1);
 }
 uint64_t ganchoClear68(uint64_t p1, int64_t p2) {
-    if (trainingReciente()) { LONG n = InterlockedIncrement(&g_clearAnulados); if (n <= 10) logf("[siempre_disparo_free] despeje (+0x68) anulado"); return 0; }
-    return g_clear68Orig(p1, p2);
+    uint64_t r = g_clear68Orig(p1, p2);
+    if (r != 0 && trainingReciente()) {
+        LONG n = InterlockedIncrement(&g_clearAnulados); if (n <= 10) logf("[siempre_disparo_free] despeje (+0x68) -> %s", g_disparoModo >= 2 ? "tiro 0x55" : "nada");
+        g_clearUltimo = GetTickCount64();
+        return g_disparoModo >= 2 ? 0x55 : 0;
+    }
+    return r;
+}
+uint64_t ganchoClear70(uint64_t p1, int64_t p2) {
+    uint64_t r = g_clear70Orig(p1, p2);
+    if (g_disparoModo >= 4 && r == 0 && trainingReciente() && GetTickCount64() - g_clearUltimo < 250) {
+        static LONG n = 0; if (InterlockedIncrement(&n) <= 10) logf("[siempre_disparo_free] soltar: Clear(+0x70) mantiene 0x55");
+        return 0x55;
+    }
+    return r;
 }
 bool parchearRanuraClear(Feature& f, size_t off, void* gancho, void** orig, uint64_t esperado) {
     uint8_t* dir = g_exe.base + 0x260FEE8 + off; uint64_t act = 0;
@@ -1330,14 +1349,48 @@ bool parchearRanuraClear(Feature& f, size_t off, void* gancho, void** orig, uint
     if (!aplicarParche(p, f.id)) return false;
     f.parches.push_back(p); return true;
 }
+// 0.4.31: registro de las ranuras +0x60/+0x68/+0x70/+0x78 de ThinkUnitShoot (vftable exe+0x260FB58) durante el entrenamiento:
+// qué ranura se llama (pulsar / mantener / soltar), con el estado interno (+0x1C), el tiempo de carga (+0x20) y lo que devuelve.
+using FnRanura = uint64_t (*)(uint64_t, uint64_t);
+FnRanura g_shootOrig[4] = {};
+volatile LONG g_shootLog = 0;
+static uint64_t shootRanura(int i, uint64_t p1, uint64_t p2) {
+    uint64_t r = g_shootOrig[i](p1, p2);
+    if (trainingReciente() && g_shootLog < 120) {
+        uint32_t est = 0xFFFFFFFF; float t = 0; leerSeguro(reinterpret_cast<void*>(p1 + 0x1C), &est, 4); leerSeguro(reinterpret_cast<void*>(p1 + 0x20), &t, 4);
+        InterlockedIncrement(&g_shootLog);
+        logf("[SHOOT] ranura +0x%X estado=%u carga=%.3f -> 0x%llX", 0x60 + i * 8, est, t, (unsigned long long)r);
+    }
+    return r;
+}
+uint64_t shoot60(uint64_t a, uint64_t b) { return shootRanura(0, a, b); }
+uint64_t shoot68(uint64_t a, uint64_t b) { return shootRanura(1, a, b); }
+uint64_t shoot70(uint64_t a, uint64_t b) { return shootRanura(2, a, b); }
+uint64_t shoot78(uint64_t a, uint64_t b) { return shootRanura(3, a, b); }
+bool parchearRanuraShoot(Feature& f) {
+    static const uint64_t esp[4] = { 0x8AEED0, 0x8B9AF0, 0xC0B9A0, 0x421F40 };
+    void* gan[4] = { (void*)shoot60, (void*)shoot68, (void*)shoot70, (void*)shoot78 };
+    for (int i = 0; i < 4; ++i) {
+        uint8_t* dir = g_exe.base + 0x260FB58 + 0x60 + i * 8; uint64_t act = 0;
+        if (!leerSeguro(dir, &act, 8) || act != reinterpret_cast<uint64_t>(g_exe.base) + esp[i]) { logf("[%s] ranura Shoot+0x%X inesperada", f.id, 0x60 + i * 8); return false; }
+        g_shootOrig[i] = reinterpret_cast<FnRanura>(act);
+        Parche p; p.dir = dir; p.original.assign(dir, dir + 8);
+        uint64_t g = reinterpret_cast<uint64_t>(gan[i]); p.nuevo.assign(reinterpret_cast<uint8_t*>(&g), reinterpret_cast<uint8_t*>(&g) + 8);
+        if (!aplicarParche(p, f.id)) return false;
+        f.parches.push_back(p);
+    }
+    return true;
+}
 bool disparoInstalar(Feature& f) {
     if (!g_globalPartido && !resolverGlobalPartido(f.id)) { f.estado = "sin firma del global del partido"; return false; }
     uint8_t* m = firmaUnica("codigo", kFirmaPredTiro, f.id);
     if (!m) { f.estado = "sin firma: predicado de tiro FUN_1406b45d0"; return false; }
     if (!crearDesvio(f, m, 20, (void*)ganchoPredTiro, (void**)&g_predTiroOrig)) { f.estado = "no se pudo desviar el predicado de tiro"; return false; }
-    bool clearOk = parchearRanuraClear(f, 0x60, (void*)ganchoClear60, (void**)&g_clear60Orig, 0x8AEEE0) &&
+    bool clearOk = g_disparoModo == 0 ? true : parchearRanuraClear(f, 0x60, (void*)ganchoClear60, (void**)&g_clear60Orig, 0x8AEEE0) &&
                    parchearRanuraClear(f, 0x68, (void*)ganchoClear68, (void**)&g_clear68Orig, 0x8AEF70);
-    logf("[%s] ranuras de ThinkUnitClear: %s", f.id, clearOk ? "parcheadas" : "NO parcheadas");
+    if (g_disparoModo >= 4 && clearOk) { bool ok70 = parchearRanuraClear(f, 0x70, (void*)ganchoClear70, (void**)&g_clear70Orig, 0x421F40); logf("[%s] Clear+0x70 al soltar: %s", f.id, ok70 ? "parcheada" : "NO parcheada"); }
+    logf("[%s] modo %d · ranuras de ThinkUnitClear: %s", f.id, g_disparoModo, g_disparoModo == 0 ? "sin tocar" : clearOk ? "parcheadas" : "NO parcheadas");
+    logf("[%s] ranuras de ThinkUnitShoot (registro): %s", f.id, parchearRanuraShoot(f) ? "parcheadas" : "NO parcheadas");
     g_disparoOn = 1;
     g_hiloDisparo = CreateThread(nullptr, 0, hiloDisparo, nullptr, 0, nullptr);
     char b[140]; sprintf_s(b, "ok: en el entrenamiento cuadrado dispara siempre (predicado en exe+0x%llX)", (unsigned long long)(m - g_exe.base));
@@ -1435,6 +1488,7 @@ void leerConfig() {
     if (g_canchaLargo < 8.0 || g_canchaLargo > 80.0) g_canchaLargo = 15.0;
     if (g_canchaAncho < 6.0 || g_canchaAncho > 50.0) g_canchaAncho = 10.0;
     if (valorDe("celebracion_modo", v)) g_celebModo = (v == "\"timer\"") ? 1 : (v == "\"salto\"") ? 2 : 0;
+    if (valorDe("siempre_disparo_modo", v)) g_disparoModo = atoi(v.c_str());
     if (valorDe("celebracion_timer_final", v)) g_timerFinal = (uint32_t)atol(v.c_str());
     if (g_celebSeg <= 0.0) g_directoCelebracion = false;
 }

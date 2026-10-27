@@ -15,7 +15,7 @@
 --
 -- Deshacer: DESINSTALAR.ps1 quita la línea de sider.ini; o poner "marcador_free": false.
 
-local m = { version = "0.4" }
+local m = { version = "0.5" }
 
 local PAUSA_GOL = 12.0      -- segundos que se detiene el reloj tras un gol (celebración)
 local MIRAR_SEG = 1.0       -- cada cuánto se relee zona/pantalla
@@ -45,9 +45,11 @@ local function mirarConfig()
     encendido = (t ~= nil) and (t:find('"marcador_free"%s*:%s*true') ~= nil)
 end
 
-local canchaOn, rutaCancha, paredesOn = false, nil, false
+local canchaOn, rutaCancha, paredesOn, seasonForzada = false, nil, false, nil
 local function mirarCancha()
     local t = leer(rutaCfg)
+    local sf = t and t:match('"season_forzada"%s*:%s*(%d)')
+    seasonForzada = sf and tonumber(sf) or nil
     canchaOn = (t ~= nil) and (t:find('"cancha_chica_free"%s*:%s*true') ~= nil)
     paredesOn = canchaOn and (t:find('"cancha_paredes"%s*:%s*true') ~= nil)
 end
@@ -154,6 +156,19 @@ function m.get_filepath(ctx, filename, key)
     return nil
 end
 
+-- v0.5: con "season_forzada": 0|1 en phoenix_core.json, el Entrenamiento libre usa siempre esa temporada (0 verano, 1 invierno).
+-- El vacío blanco y el césped oscuro de la cancha chica salían con season 0 (el gestor de clima la elige según el mes real).
+function m.set_conditions(ctx, options)
+    mirarConfig(); mirarCancha()
+    if seasonForzada == nil or not encendido or not options then return nil end
+    local s = leer(rutaSonda)
+    if not (s and s:find('"nombre"%s*:%s*"FREE_TRAINING"')) then return nil end
+    if tonumber(options.season) == seasonForzada then return nil end
+    log(string.format("[marcador_free] season %s -> %d (entrenamiento)", tostring(options.season), seasonForzada))
+    options.season = seasonForzada
+    return options
+end
+
 function m.set_teams(ctx)
     -- Entrenamiento libre nuevo: empieza de cero (si aún no sabemos la zona, se reinicia igual: no estorba).
     if encendido then reiniciar("set_teams") end
@@ -179,6 +194,7 @@ function m.init(ctx)
     ctx.register("display_frame", m.display_frame)
     ctx.register("goal_scored", m.goal_scored)     -- Sider 7.3.4+ (en 7.3.3 solo deja un WARN)
     ctx.register("set_teams", m.set_teams)
+    ctx.register("set_conditions", m.set_conditions)
     ctx.register("context_reset", m.context_reset)
     ctx.register("overlay_on", m.overlay_on)
     rutaPeticiones = base .. "phoenix_core\\peticiones.log"
