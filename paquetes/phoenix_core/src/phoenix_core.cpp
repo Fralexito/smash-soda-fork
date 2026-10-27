@@ -812,8 +812,9 @@ static void escanearBolas(std::vector<uint8_t*>& out) {
 DWORD WINAPI hiloPelota(LPVOID) {
     std::vector<uint8_t*> cand; std::vector<float> px, pz; bool tw = false; ULONGLONG ultimoEscaneo = 0; uint8_t* seguida = nullptr;
     static uint32_t previo[160]; bool tengoPrevio = false; int lineas = 0; ULONGLONG ventana = 0;
+    ULONGLONG tBandera = 0; bool paredes = false; double LX = 19.5, LZ = 11.5;
     while (g_pelotaOn) {
-        Sleep(50);
+        Sleep(paredes ? 8 : 50);
         bool hay = trainingWorkEstable();
         if (!hay) { tw = false; seguida = nullptr; cand.clear(); continue; }
         if (!tw) { tw = true; ultimoEscaneo = 0; }
@@ -832,7 +833,23 @@ DWORD WINAPI hiloPelota(LPVOID) {
             continue;
         }
         if (!pareceBola(seguida)) { logf("[BALL] se perdió la pelota (%p)", (void*)seguida); seguida = nullptr; cand.clear(); continue; }
+        if (GetTickCount64() - tBandera > 1000) {   // «paredes_on.txt» en la carpeta de Core enciende el rebote en vivo (opcional: «x z» dentro)
+            tBandera = GetTickCount64(); std::string t; paredes = leerArchivo(g_carpeta + "paredes_on.txt", t);
+            if (paredes) { double a = 0, b = 0; if (sscanf_s(t.c_str(), "%lf %lf", &a, &b) == 2 && a > 5 && b > 3) { LX = a; LZ = b; } }
+        }
         uint32_t act[160]; if (!leerSeguro(seguida, act, sizeof act)) continue;
+        if (paredes) {   // paredes_core experimental: si la pelota cruza el rectángulo, se refleja su posición (y la copia previa) dentro
+            float x0, z0; memcpy(&x0, (uint8_t*)act + 0x70, 4); memcpy(&z0, (uint8_t*)act + 0x78, 4);
+            float nx = x0, nz = z0; bool toco = false;
+            if (fabsf(x0) > LX) { nx = (float)((x0 > 0 ? 1 : -1) * (2 * LX - fabsf(x0))); toco = true; }
+            if (fabsf(z0) > LZ) { nz = (float)((z0 > 0 ? 1 : -1) * (2 * LZ - fabsf(z0))); toco = true; }
+            if (toco) {
+                memcpy((uint8_t*)seguida + 0x70, &nx, 4); memcpy((uint8_t*)seguida + 0x78, &nz, 4);
+                memcpy((uint8_t*)seguida + 0xD0, &nx, 4); memcpy((uint8_t*)seguida + 0xD8, &nz, 4);
+                static int reb = 0; if (++reb <= 200) logf("[PAREDES] rebote (%.2f, %.2f) -> (%.2f, %.2f)", x0, z0, nx, nz);
+                memcpy((uint8_t*)act + 0x70, &nx, 4); memcpy((uint8_t*)act + 0x78, &nz, 4); memcpy((uint8_t*)act + 0xD0, &nx, 4); memcpy((uint8_t*)act + 0xD8, &nz, 4);
+            }
+        }
         float x, z, y; memcpy(&x, (uint8_t*)act + 208, 4); memcpy(&y, (uint8_t*)act + 212, 4); memcpy(&z, (uint8_t*)act + 216, 4);
         if (tengoPrevio) {
             float xp, zp, yp; memcpy(&xp, (uint8_t*)previo + 208, 4); memcpy(&zp, (uint8_t*)previo + 216, 4); memcpy(&yp, (uint8_t*)previo + 212, 4);
