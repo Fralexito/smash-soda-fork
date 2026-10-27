@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.23"
+#define PHX_CORE_VERSION "0.4.24"
 
 namespace {
 
@@ -672,6 +672,7 @@ DWORD WINAPI hiloRecorte(LPVOID) {
 static const uint8_t kBloqueCampo[36] = { 0x70,0x3D,0x52,0x42, 0x70,0x3D,0x08,0x42, 0x71,0x3D,0x6A,0x40, 0xF6,0x28,0x1C,0x40,
     0x70,0x3D,0x3C,0x42, 0x5C,0x8F,0x12,0x41, 0x5C,0x8F,0x10,0x42, 0xC2,0xF5,0xA0,0x41, 0x70,0x3D,0x26,0x42 };
 double g_canchaLargo = 15.0, g_canchaAncho = 10.0;
+bool g_cajasFisicaGrandes = false;   // json «cajas_fisica_grandes»: la caja del CAMPO (filtro de física) se deja grande; solo se encogen las de portería
 volatile LONG g_canchaOn = 0, g_canchaParches = 0;
 HANDLE g_hiloCancha = nullptr;
 
@@ -713,6 +714,7 @@ static void cajasNuevas(float* f) {
     float largo = (float)g_canchaLargo, ancho = (float)g_canchaAncho, lin = largo - 0.12f, fon = lin + 3.0647f;
     const float n[24] = { lin,0,-4.35472f,0,  fon,2.903f,4.354449f,0,  -lin,2.903f,4.354449f,0,  largo,50,ancho + 1.44f,0,  -fon,0,-4.35472f,0,  -largo,0,-(ancho + 1.44f),0 };
     memcpy(f, n, sizeof n);
+    if (g_cajasFisicaGrandes) { memcpy(f + 12, kCajasOrig + 12, 4 * sizeof(float)); memcpy(f + 20, kCajasOrig + 20, 4 * sizeof(float)); }   // vec4 3 y 5 = caja del campo
 }
 static bool casiIgual(const float* a, const float* b) { for (int i = 0; i < 24; ++i) if (fabsf(a[i] - b[i]) > 1e-3f) return false; return true; }
 // Localiza las cajas POR CONTENIDO (los 96 B originales exactos) en las secciones escribibles del exe: sirve para cualquier PES 2021 limpio
@@ -1253,6 +1255,7 @@ void leerConfig() {
     std::string v;
     if (valorDe("gol_directo_celebracion", v) && v == "false") g_directoCelebracion = false;
     if (valorDe("celebracion_segundos", v)) g_celebSeg = atof(v.c_str());
+    g_cajasFisicaGrandes = valorDe("cajas_fisica_grandes", v) && v == "true";
     if (valorDe("cancha_semilargo", v)) g_canchaLargo = atof(v.c_str());
     if (valorDe("cancha_semiancho", v)) g_canchaAncho = atof(v.c_str());
     if (g_canchaLargo < 8.0 || g_canchaLargo > 80.0) g_canchaLargo = 15.0;
