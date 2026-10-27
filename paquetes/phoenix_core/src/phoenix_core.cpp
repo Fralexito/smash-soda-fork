@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.12b"
+#define PHX_CORE_VERSION "0.4.12c"
 
 namespace {
 
@@ -458,8 +458,10 @@ uint64_t ganchoSetState(uint8_t* actor, uint32_t estado, uint32_t modo) {
 using FnGol = uint64_t (*)(uint8_t* a, uint8_t* b, uint8_t* job, uint64_t p4);
 FnGol g_golOrig = nullptr;
 volatile ULONGLONG g_tUltimoGol = 0;   // para el vigilante: solo perfila después de un gol
+uint8_t* volatile g_jobConocido = nullptr;   // último «job» visto (GOL/EVENTO): lo lee sonda_pasos v2 desde su hilo
 uint64_t ganchoGol(uint8_t* a, uint8_t* b, uint8_t* job, uint64_t p4) {
     g_tUltimoGol = GetTickCount64();
+    g_jobConocido = job;
     uint64_t r = g_golOrig(a, b, job, p4);
     Ev& e = nuevoEv(EV_GOL, _ReturnAddress());
     e.a = reinterpret_cast<uint64_t>(a); e.b = reinterpret_cast<uint64_t>(b);
@@ -503,6 +505,7 @@ uint64_t ganchoEvento(uint8_t* job, uint32_t tipo) {
     uint64_t sub = obj ? leerU32(obj, 0x1554) : 0xFFFFFFFF;
     uint64_t flag = obj ? leerU8(obj, 0x15A5) : 0xFF;
     uint64_t previo = leerU32(job, 0x874);
+    g_jobConocido = job;
     Ev& e = nuevoEv(EV_EVENTO, ret);
     e.a = reinterpret_cast<uint64_t>(job); e.b = tipo; e.d = previo; e.c = leerU8(job, 0x8F2);
     e.x[0] = k; e.x[1] = sub; e.x[2] = flag;
@@ -685,18 +688,56 @@ bool sondaQuitar(Feature&) { return true; }   // los parches los quita el marco
 // --- sonda_pasos (0.4.12b: función propia, apagable por separado de sonda_partido): cola de pasos del gol (COLA, vía el
 // montador FUN_14044F8A0) y ejecutor de pasos (PASO, FUN_14047C2D0). En 0.4.12 iban dentro de la sonda y el juego se cayó en
 // el menú a los 4 s (en la VM de .impdata); así se pueden probar de uno en uno. Necesita sonda_partido para escribir.
+// 0.4.12c — sonda_pasos v2 POR SONDEO, sin tocar código del exe: tanto en 0.4.12 como en 0.4.12b el juego se cayó (en la VM
+// de .impdata) con el hook de FUN_14047C2D0 instalado; el montador ya funcionaba en 0.4.11 pero tampoco se toca aquí.
+// Un hilo propio mira cada 50 ms el último «job» conocido ([job+0x874] escena, [job+0x8F0] índice de cola, [job+0x8F1] nº de
+// pasos, [job+0x8F2] fase, [job+0x878+idx*4] paso activo) y escribe en phoenix_core.log cada CAMBIO («[PASO] …», con los
+// segundos desde el último gol) y, cuando la cola de la escena 0xA se estabiliza, la cola entera («[COLA] …»). Como es
+// otro hilo, sigue escribiendo aunque el hilo de juego se bloquee (deadlock): así sabremos qué paso estaba activo.
+volatile LONG g_sondeoPasos = 0;
+HANDLE g_hiloPasos = nullptr;
+DWORD WINAPI sondeoPasos(LPVOID) {
+    uint8_t* jobPrev = nullptr; uint32_t escPrev = 0xFFFFFFFF, idxPrev = 0xFF, nPrev = 0xFF, idPrev = 0xFFFFFFFF, faPrev = 0xFF;
+    int estable = 0; uint32_t nCola = 0xFF; bool colaVolcada = false;
+    while (g_sondeoPasos) {
+        Sleep(50);
+        uint8_t* job = g_jobConocido;
+        if (!job) continue;
+        uint8_t idx = 0xFF, n = 0xFF, fase = 0xFF; uint32_t esc = 0xFFFFFFFF, id = 0xFFFFFFFF;
+        if (!leerSeguro(job + 0x874, &esc, 4) || !leerSeguro(job + 0x8F0, &idx, 1) || !leerSeguro(job + 0x8F1, &n, 1) ||
+            !leerSeguro(job + 0x8F2, &fase, 1)) continue;
+        if (idx < 0x20) leerSeguro(job + 0x878 + idx * 4, &id, 4);
+        if (job != jobPrev || esc != escPrev || idx != idxPrev || n != nPrev || id != idPrev || fase != faPrev) {
+            ULONGLONG tg = g_tUltimoGol;
+            double desdeGol = tg ? (double)((long long)(GetTickCount64() - tg)) / 1000.0 : -1.0;
+            logf("[PASO] job=%llX escena=0x%X cola=%u paso=0x%02X n=%u fase=%u (%+.2f s desde el gol)",
+                 (unsigned long long)reinterpret_cast<uintptr_t>(job), esc, idx, id, n, fase, desdeGol);
+            if (esc != escPrev || job != jobPrev || n != nPrev) { estable = 0; colaVolcada = false; }
+            jobPrev = job; escPrev = esc; idxPrev = idx; nPrev = n; idPrev = id; faPrev = fase;
+        } else if (esc == 0x0A && !colaVolcada && ++estable >= 4) {      // 200 ms sin cambios en n: la cola ya está montada
+            uint32_t q[32] = {};
+            if (leerSeguro(job + 0x878, q, sizeof q)) {
+                char b[260] = {}; size_t o = 0;
+                for (int k = 0; k < 32 && q[k] != 0x48 && o + 4 < sizeof b; ++k) o += sprintf_s(b + o, sizeof b - o, "%02X ", q[k]);
+                logf("[COLA] escena 0xA, n=%u: %s", n, b);
+            }
+            colaVolcada = true;
+        }
+    }
+    return 0;
+}
 bool pasosInstalar(Feature& f) {
-    if (!asegurarMontador(f)) { f.estado = "sin gancho del montador del gol (FUN_14044F8A0)"; return false; }
-    g_sondaOn = true;
-    uint8_t* paso = firmaUnica("codigo", kFirmaPaso, f.id);
-    if (!paso) { f.estado = "ok parcial: solo COLA (sin firma del ejecutor de pasos FUN_14047C2D0)"; return true; }
-    if (!crearDesvio(f, paso, 17, (void*)ganchoPaso, (void**)&g_pasoOrig)) { f.estado = "ok parcial: solo COLA (no se pudo desviar el ejecutor de pasos)"; return true; }
-    char s[130];
-    sprintf_s(s, "ok: COLA y PASO (montador FUN_14044F8A0; ejecutor de pasos exe+0x%llX)", (unsigned long long)(paso - g_exe.base));
-    f.estado = s;
+    g_sondeoPasos = 1;
+    g_hiloPasos = CreateThread(nullptr, 0, sondeoPasos, nullptr, 0, nullptr);
+    if (!g_hiloPasos) { g_sondeoPasos = 0; f.estado = "no se pudo crear el hilo"; return false; }
+    f.estado = "ok: sondeo de la cola de pasos del gol cada 50 ms (resultado en phoenix_core.log; sin parches de código)";
     return true;
 }
-bool pasosQuitar(Feature&) { g_sondaOn = false; return true; }
+bool pasosQuitar(Feature&) {
+    g_sondeoPasos = 0;
+    if (g_hiloPasos) { WaitForSingleObject(g_hiloPasos, 1000); CloseHandle(g_hiloPasos); g_hiloPasos = nullptr; }
+    return true;
+}
 
 // Indicador general «partido detenido» ([[0x1436F3DC8]+0x270]+0x1775), solo en el exe de Conmegol (RVA conocida).
 uint64_t g_paradoPrevio = 0x100;
