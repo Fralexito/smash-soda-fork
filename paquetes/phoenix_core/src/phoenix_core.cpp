@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.41"
+#define PHX_CORE_VERSION "0.4.42"
 
 namespace {
 
@@ -1607,7 +1607,7 @@ uint64_t ganchoBolaPaso(float dt, uint64_t rdx, uint64_t r8, float* S, void* cfg
     if (g_redOn && GetTickCount64() - g_tTrainRed < 3000) {
         float x = S[0], z = S[2];
         float largo = (float)g_canchaLargo;
-        if (fabsf(x) > largo && fabsf(z) < 4.2f) {
+        if (fabsf(x) > largo && fabsf(z) < 4.2f && S[1] < 2.55f) {   // dentro de la red: por debajo del travesaño (2,44 + radio)
             float f = g_redFactor;
             if (fabsf(x) > largo + 3.0f) f = 0.0f;           // fondo de la red: se queda quieta
             S[3] *= f; S[4] *= f; S[5] *= f;
