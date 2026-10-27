@@ -1435,7 +1435,7 @@ void ganchoMedidor(uint64_t a1, uint64_t a2, uint8_t* entrada, uint8_t* cmd) {
     leerSeguro(cmd + 0x1768, &tipo, 4); leerSeguro(cmd + 0x10, &carga, 4); leerSeguro(entrada + 4, &desp, 4);
     static int ultTipo = -2; static float ultDesp = -1; static LONG n = 0;
     if ((tipo != ultTipo || fabsf(desp - ultDesp) > 0.05f) && InterlockedIncrement(&n) <= 120) {
-        logf("[MEDIDOR] tipo=%d carga(+0x10)=%.3f medidor antes=%.3f despues=%.3f", tipo, carga, antes, desp);
+        logf("[MEDIDOR] cmd=%p entrada=%p tipo=%d carga(+0x10)=%.3f medidor antes=%.3f despues=%.3f", (void*)cmd, (void*)entrada, tipo, carga, antes, desp);
         ultTipo = tipo; ultDesp = desp;
     }
     if (g_medidorReal && tipo == 4 && desp >= 0.999f && carga >= 0.0f && carga <= 1.0f) { memcpy(entrada + 4, &carga, 4); }
