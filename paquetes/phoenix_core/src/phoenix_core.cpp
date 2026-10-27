@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.42"
+#define PHX_CORE_VERSION "0.4.43"
 
 namespace {
 
@@ -1627,6 +1627,69 @@ bool redInstalar(Feature& f) {
 }
 bool redQuitar(Feature&) { g_redOn = 0; return true; }
 
+// --- funciones jugadores_chica_free y suplentes_ocultos_free (0.4.43, de la RE del frente C, 27-oct).
+// La posición de reinicio de cada jugador sale de una tabla de Vec3 en metros absolutos de la cancha grande: team + 0x4B4C + (idx%11)*12, con
+// team = *(raíz + (side+0xA1)*0x28) y side = (idx>10 && idx<22). La lee FUN_1409F5530(out, uint* pIdx, ctx, teamAI) (RVA 0x9F5530, 14 B de prólogo limpios).
+// Gancho: con TrainingWork, escala x,z de la entrada por kx = dims[0]/52.56 y kz = dims[1]/34.06 (dims = *(float**)(raíz+0x2AA8), ya reducidas por
+// cancha_chica_free), llama al original y restaura la entrada. Además FUN_140A597D0(out, idx) (RVA 0xA597D0) da la fila de banda de los que no participan
+// del ejercicio (suplentes): tras el original los manda a (0, 0, 100), el «aparcamiento» que usa el propio juego.
+volatile ULONGLONG g_tTrainGlob = 0; volatile LONG g_trainGlobOn = 0; HANDLE g_hiloTrainGlob = nullptr;
+DWORD WINAPI hiloTrainGlob(LPVOID) { while (g_trainGlobOn) { if (trainingWorkEstable() || hayTrainingWork()) g_tTrainGlob = GetTickCount64(); Sleep(100); } return 0; }
+static void asegurarHiloTrain() { if (!g_trainGlobOn) { g_trainGlobOn = 1; g_hiloTrainGlob = CreateThread(nullptr, 0, hiloTrainGlob, nullptr, 0, nullptr); } }
+const char* kFirmaReinicio = "48 8B C4 53 41 57 48 83 EC 78 48 89 70 E8";
+using FnReinicio = float* (*)(float*, uint32_t*, void*, void*);
+FnReinicio g_reinicioOrig = nullptr; volatile LONG g_jugChOn = 0, g_jugChEscalados = 0;
+float* ganchoReinicio(float* out, uint32_t* pIdx, void* ctx, void* team) {
+    float sx = 0, sz = 0; float* e = nullptr; bool esc = false;
+    if (g_jugChOn && GetTickCount64() - g_tTrainGlob < 3000) {
+        uint8_t* raiz = nullptr; uint32_t i = 0; uint8_t* t = nullptr; float* dims = nullptr;
+        if (leerSeguro(g_globalPartido, &raiz, 8) && raiz && leerSeguro(pIdx, &i, 4)) {
+            int slot = (i < 22) ? (int)(i % 11) : 0, side = (i > 10 && i < 22) ? 1 : 0;
+            if (leerSeguro(raiz + (size_t)(side + 0xA1) * 0x28, &t, 8) && t && leerSeguro(raiz + 0x2AA8, &dims, 8) && dims) {
+                float d[2] = { 0, 0 }, tmp[3];
+                if (leerSeguro(dims, d, 8) && d[0] > 5.0f && d[0] < 60.0f && d[1] > 3.0f && d[1] < 40.0f) {
+                    e = reinterpret_cast<float*>(t + 0x4B4C + slot * 12);
+                    if (leerSeguro(e, tmp, 12) && fabsf(tmp[2]) < 60.0f) { sx = tmp[0]; sz = tmp[2]; e[0] = sx * (d[0] / 52.56f); e[2] = sz * (d[1] / 34.06f); esc = true; }
+                }
+            }
+        }
+    }
+    float* r = g_reinicioOrig(out, pIdx, ctx, team);
+    if (esc) { e[0] = sx; e[2] = sz; LONG n = InterlockedIncrement(&g_jugChEscalados); if (n <= 30) logf("[JUGCH] reinicio idx=%u (%.1f,%.1f) -> salida (%.1f,%.1f)", *pIdx, sx, sz, out[0], out[2]); }
+    return r;
+}
+bool jugChInstalar(Feature& f) {
+    if (!g_globalPartido && !resolverGlobalPartido(f.id)) { f.estado = "sin firma del global del partido"; return false; }
+    uint8_t* m = firmaUnica("codigo", kFirmaReinicio, f.id);
+    if (!m) { f.estado = "sin firma: posición de reinicio FUN_1409F5530"; return false; }
+    if (!crearDesvio(f, m, 14, (void*)ganchoReinicio, (void**)&g_reinicioOrig)) { f.estado = "no se pudo desviar la posición de reinicio"; return false; }
+    asegurarHiloTrain(); g_jugChOn = 1;
+    char b[150]; sprintf_s(b, "ok: escala a la cancha chica las posiciones de reinicio de los jugadores (exe+0x%llX)", (unsigned long long)(m - g_exe.base));
+    f.estado = b; return true;
+}
+bool jugChQuitar(Feature&) { g_jugChOn = 0; return true; }
+
+const char* kFirmaFilaBanda = "48 8B C4 55 41 56 41 57 48 8D 68 A1 48 81 EC 90 00 00 00 48 C7 45 F7 FE FF FF FF 48 89 58 08 48 89 70 10 48 89 78 18 44";
+using FnFilaBanda = uint64_t (*)(float*, int);
+FnFilaBanda g_filaBandaOrig = nullptr; volatile LONG g_supOcultosOn = 0, g_supOcultados = 0;
+uint64_t ganchoFilaBanda(float* out, int idx) {
+    uint64_t r = g_filaBandaOrig(out, idx);
+    if (g_supOcultosOn && (r & 0xFF) && GetTickCount64() - g_tTrainGlob < 3000) {
+        out[0] = 0.0f; out[2] = 100.0f;
+        LONG n = InterlockedIncrement(&g_supOcultados); if (n <= 10) logf("[SUPL] suplente idx=%d aparcado en (0, 0, 100)", idx);
+    }
+    return r;
+}
+bool supOcultosInstalar(Feature& f) {
+    uint8_t* m = firmaUnica("codigo", kFirmaFilaBanda, f.id);
+    if (!m) { f.estado = "sin firma: fila de banda FUN_140A597D0"; return false; }
+    if (!crearDesvio(f, m, 19, (void*)ganchoFilaBanda, (void**)&g_filaBandaOrig)) { f.estado = "no se pudo desviar la fila de banda"; return false; }
+    asegurarHiloTrain(); g_supOcultosOn = 1;
+    char b[150]; sprintf_s(b, "ok: los suplentes de la banda se aparcan en (0,0,100) (exe+0x%llX)", (unsigned long long)(m - g_exe.base));
+    f.estado = b; return true;
+}
+bool supOcultosQuitar(Feature&) { g_supOcultosOn = 0; return true; }
+
 std::vector<Feature> g_funciones = {   // orden = orden de arranque (gol_nativo_free necesita la sonda)
     { "diagnostico",     "Diagnóstico de firmas (solo lectura)",       diagInstalar,  diagQuitar  },
     { "sonda_partido",   "Sonda: estados y gol nativo (solo mira)",    sondaInstalar, sondaQuitar },
@@ -1638,6 +1701,8 @@ std::vector<Feature> g_funciones = {   // orden = orden de arranque (gol_nativo_
     { "siempre_disparo_free", "Cuadrado dispara siempre en el entrenamiento (sin despeje en campo propio)", disparoInstalar, disparoQuitar },
     { "jugadores_sonda", "Sonda de solo lectura de las posiciones de los 22 jugadores en el entrenamiento", jugSondaInstalar, jugSondaQuitar },
     { "red_frena_free", "La red de los arcos frena la pelota en el entrenamiento (gancho al paso de la pelota)", redInstalar, redQuitar },
+    { "jugadores_chica_free", "Escala a la cancha chica las posiciones de reinicio de los jugadores (entrenamiento)", jugChInstalar, jugChQuitar },
+    { "suplentes_ocultos_free", "Aparca a los suplentes de la banda lejos (entrenamiento)", supOcultosInstalar, supOcultosQuitar },
     { "pelota_sonda", "Sonda de solo lectura de la pelota (posición/velocidad) en el entrenamiento", pelotaInstalar, pelotaQuitar },
     { "gol_directo_free", "Gol sin celebración, cámara ni repetición: solo reinicio (entrenamiento)", directoInstalar, directoQuitar },
     { "sin_1D_free", "Gol sin el paso 0x1D de la cola (entrenamiento; evita el congelón)", sin1DInstalar, sin1DQuitar },
