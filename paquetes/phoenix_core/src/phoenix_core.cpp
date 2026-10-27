@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.17"
+#define PHX_CORE_VERSION "0.4.18"
 
 namespace {
 
@@ -642,8 +642,9 @@ DWORD WINAPI hiloRecorte(LPVOID) {
         if (esc == 0xA && id == 0x04) {
             if (!t0) t0 = GetTickCount64();
             if (!hecho && fase >= 1 && fase < 3 && (double)(GetTickCount64() - t0) / 1000.0 >= g_celebSeg) {
-                job[0x8F2] = 3; hecho = true;
-                logf("[gol_directo_free] celebración recortada a %.1f s (fase %u -> 3)", g_celebSeg, (unsigned)fase);
+                // 0.4.18: se salta el paso entero (cola al siguiente, fase 0)
+                job[0x8F0] = (uint8_t)(idx + 1); job[0x8F2] = 0; hecho = true;
+                logf("[gol_directo_free] celebracion saltada a %.1f s (paso %u -> %u, fase %u -> 0)", g_celebSeg, (unsigned)idx, (unsigned)idx + 1, (unsigned)fase);
             }
         } else { t0 = 0; hecho = false; }
     }
@@ -802,6 +803,19 @@ DWORD WINAPI sondeoPasos(LPVOID) {
         uint8_t* job = g_jobConocido;
         if (!job) continue;
         uint8_t idx = 0xFF, n = 0xFF, fase = 0xFF; uint32_t esc = 0xFFFFFFFF, id = 0xFFFFFFFF;
+        {   // [SUB]: cambios de sub (+0x1554) y k (+0x1574) del objeto partido
+            static uint32_t subPrev = 0xFFFFFFFE, kPrev = 0xFFFFFFFE;
+            uint8_t* ob = objPartido();
+            uint32_t sub = ob ? leerU32(ob, 0x1554) : 0xFFFFFFFF, kk = ob ? leerU32(ob, 0x1574) : 0xFFFFFFFF;
+            if (sub != subPrev || kk != kPrev) { logf("[SUB] sub=%u k=%u", sub, kk); subPrev = sub; kPrev = kk; }
+        }
+        {   // [JOB]: diferencias en la escena 0xA, cada 250 ms, hasta 40 s tras el gol
+            static uint32_t previoJob[(0x1A0 + 0xB0 + 0x110) / 4]; static bool tengo = false; static int vuelta = 0;
+            uint32_t e0 = 0;
+            ULONGLONG tg0 = g_tUltimoGol; double dg = tg0 ? (double)((long long)(GetTickCount64() - tg0)) / 1000.0 : -1.0;
+            if (leerSeguro(job + 0x874, &e0, 4) && e0 == 0xA && dg < 40.0) { if (++vuelta >= 5) { vuelta = 0; sondearJob(job, previoJob, tengo, dg); } }
+            else tengo = false;
+        }
         if (!leerSeguro(job + 0x874, &esc, 4) || !leerSeguro(job + 0x8F0, &idx, 1) || !leerSeguro(job + 0x8F1, &n, 1) ||
             !leerSeguro(job + 0x8F2, &fase, 1)) continue;
         if (idx < 0x20) leerSeguro(job + 0x878 + idx * 4, &id, 4);
