@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.53"
+#define PHX_CORE_VERSION "0.4.54"
 
 namespace {
 
@@ -1824,6 +1824,47 @@ bool arqSalidaInstalar(Feature& f) {
 }
 bool arqSalidaQuitar(Feature&) { g_arqSalidaOn = 0; return true; }
 
+// --- reinicio_seguro (0.4.54): red de seguridad contra el cierre «PES2021.exe+0x476E1C, c0000005» (4 cierres el 27-oct cuando el rival marcó). FUN_140476C50 (posición de reinicio del balón) hace
+// `mov edx,[rbx+8]; call FUN_140A7CBA0; movzx ecx, byte [rax]; dec ecx; cmp ecx,6; ja default`: la búsqueda devuelve NULL si la clave del escenario ([rbx+8] = job+0x1F0) no es de categoría 3 (p. ej. 0) y la lectura cae.
+// Cueva: sustituye `0F B6 08 FF C9` (5 B, en 0x476E1C) por un salto; si rax es NULL anota «[REINICIO] tipo=… nulo, sustituido» y pone ecx = -1 (el `ja` cae en la rama por defecto), si no ejecuta lo original.
+static void __stdcall ayudanteReinicioNulo(uint8_t* rbx) {
+    uint32_t t = 0xFFFFFFFF; leerSeguro(rbx + 8, &t, 4);
+    static LONG n = 0; LONG k = InterlockedIncrement(&n); if (k <= 20) logf("[REINICIO] tipo=0x%X nulo, sustituido por la rama por defecto (#%ld)", t, (long)k);
+}
+bool reinicioSeguroInstalar(Feature& f) {
+    uint8_t* sig = firmaUnica("codigo", "8B 53 08 E8 ?? ?? ?? ?? 0F B6 08 FF C9 83 F9 06 0F 87 AD 01 00 00", f.id);
+    if (!sig) { f.estado = "sin firma: FUN_140476C50+0x1CC"; return false; }
+    uint8_t* sitio = sig + 8; const uint8_t esp[5] = { 0x0F, 0xB6, 0x08, 0xFF, 0xC9 };
+    uint8_t v[5]; if (!leerSeguro(sitio, v, 5) || memcmp(v, esp, 5) != 0) { f.estado = "bytes inesperados en FUN_140476C50"; return false; }
+    uint8_t* c = reservarCerca(sitio, 160);
+    if (!c) { f.estado = "no hay memoria cerca del exe (reinicio_seguro)"; return false; }
+    size_t o = 0; auto b = [&](std::initializer_list<uint8_t> l) { for (uint8_t x : l) c[o++] = x; };
+    b({ 0x48, 0x85, 0xC0 });                         // test rax,rax
+    size_t jz = o; b({ 0x74, 0x00 });                // jz nulo (rel8 se rellena)
+    b({ 0x0F, 0xB6, 0x08, 0xFF, 0xC9 });             // movzx ecx,byte[rax] ; dec ecx
+    size_t jb1 = o; b({ 0xE9, 0, 0, 0, 0 });         // jmp back
+    size_t nulo = o; c[jz + 1] = (uint8_t)(nulo - (jz + 2));
+    b({ 0x50, 0x51, 0x52, 0x41, 0x50, 0x41, 0x51, 0x41, 0x52, 0x41, 0x53 });   // push rax,rcx,rdx,r8,r9,r10,r11
+    b({ 0x55, 0x48, 0x89, 0xE5, 0x48, 0x83, 0xE4, 0xF0, 0x48, 0x83, 0xEC, 0x20 }); // push rbp; mov rbp,rsp; and rsp,-16; sub rsp,20h
+    b({ 0x48, 0x89, 0xD9 });                         // mov rcx,rbx
+    b({ 0x48, 0xB8 }); { uint64_t h = reinterpret_cast<uint64_t>(&ayudanteReinicioNulo); memcpy(c + o, &h, 8); o += 8; }   // mov rax,helper
+    b({ 0xFF, 0xD0 });                               // call rax
+    b({ 0x48, 0x89, 0xEC, 0x5D });                   // mov rsp,rbp ; pop rbp
+    b({ 0x41, 0x5B, 0x41, 0x5A, 0x41, 0x59, 0x41, 0x58, 0x5A, 0x59, 0x58 });   // pop r11,r10,r9,r8,rdx,rcx,rax
+    b({ 0xB9, 0xFF, 0xFF, 0xFF, 0xFF });             // mov ecx,-1
+    size_t jb2 = o; b({ 0xE9, 0, 0, 0, 0 });         // jmp back
+    uint8_t* vuelta = sitio + 5;
+    if (!escribirRel32(c + jb1, 0xE9, c + jb1, vuelta) || !escribirRel32(c + jb2, 0xE9, c + jb2, vuelta)) { f.estado = "cueva fuera de alcance (reinicio_seguro)"; return false; }
+    FlushInstructionCache(GetCurrentProcess(), c, 160);
+    Parche p; p.dir = sitio; p.original.assign(sitio, sitio + 5); p.nuevo.resize(5);
+    if (!escribirRel32(p.nuevo.data(), 0xE9, sitio, c)) { f.estado = "cueva fuera de alcance (reinicio_seguro salto)"; return false; }
+    if (!aplicarParche(p, f.id)) { f.estado = "no se pudo escribir el salto (reinicio_seguro)"; return false; }
+    f.parches.push_back(p);
+    char sbuf[140]; sprintf_s(sbuf, "ok: red de seguridad de la posición de reinicio (exe+0x%llX): clave nula -> rama por defecto, sin cierre", (unsigned long long)(sitio - g_exe.base));
+    f.estado = sbuf; return true;
+}
+bool reinicioSeguroQuitar(Feature&) { return true; }   // los parches los quita el marco
+
 const char* kFirmaReinicio = "48 8B C4 53 41 57 48 83 EC 78 48 89 70 E8";
 using FnReinicio = float* (*)(float*, uint32_t*, void*, void*);
 FnReinicio g_reinicioOrig = nullptr; volatile LONG g_jugChOn = 0, g_jugChEscalados = 0;
@@ -1907,6 +1948,7 @@ std::vector<Feature> g_funciones = {   // orden = orden de arranque (gol_nativo_
     { "arquero_saque_corto", "El portero IA no saca largo en el entrenamiento (anula GKPassLong y GKClear de la IA)", gkCortoInstalar, gkCortoQuitar },
     { "arquero_propio_cursor", "Con Cursor de PT fijo = Sí el portero propio no bloquea el cursor del usuario (variante del arquero propio)", arqCursorInstalar, arqCursorQuitar },
     { "arquero_salida_corta", "El portero sale poco de su arco en el entrenamiento (recorta la posición de salida a R m de la línea)", arqSalidaInstalar, arqSalidaQuitar },
+    { "reinicio_seguro", "Red de seguridad: si la posición de reinicio del balón recibe una clave nula, usa la rama por defecto en vez de cerrar el juego", reinicioSeguroInstalar, reinicioSeguroQuitar },
     { "jugadores_chica_free", "Escala a la cancha chica las posiciones de reinicio de los jugadores (entrenamiento)", jugChInstalar, jugChQuitar },
     { "suplentes_ocultos_free", "Aparca a los suplentes de la banda lejos (entrenamiento)", supOcultosInstalar, supOcultosQuitar },
     { "pelota_sonda", "Sonda de solo lectura de la pelota (posición/velocidad) en el entrenamiento", pelotaInstalar, pelotaQuitar },
