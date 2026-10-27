@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.15"
+#define PHX_CORE_VERSION "0.4.16"
 
 namespace {
 
@@ -540,6 +540,7 @@ bool g_sin1DActiva = false;      // sin_1D_free encendida
 volatile LONG g_sin1DCont = 0;
 bool g_directoActiva = false;    // gol_directo_free encendida
 bool g_directoCelebracion = true; // opción json «gol_directo_celebracion» (por defecto true)
+double g_celebSeg = 8.0;          // opción json «celebracion_segundos» (0 = sin celebración; por defecto 8)
 volatile LONG g_directoCont = 0;
 bool g_sondaOn = false;          // la sonda vuelca la cola de pasos tras montar el gol
 
@@ -625,14 +626,43 @@ bool sin1DInstalar(Feature& f) {
 }
 bool sin1DQuitar(Feature&) { g_sin1DActiva = false; return true; }
 
+// Recorte de la celebración (paso 0x04 de la cola de gol): cuando lleva g_celebSeg s activo, se pone la fase del paso
+// [job+0x8F2] a 3 (la que el juego usa al terminar el paso: ahí avanza solo al siguiente). Solo datos, desde un hilo propio.
+volatile LONG g_recorteOn = 0;
+HANDLE g_hiloRecorte = nullptr;
+DWORD WINAPI hiloRecorte(LPVOID) {
+    ULONGLONG t0 = 0; bool hecho = false;
+    while (g_recorteOn) {
+        Sleep(50);
+        uint8_t* job = g_jobConocido;
+        if (!job || g_celebSeg <= 0.0 || !g_directoCelebracion) continue;
+        uint32_t esc = 0, id = 0; uint8_t idx = 0xFF, fase = 0xFF;
+        if (!leerSeguro(job + 0x874, &esc, 4) || !leerSeguro(job + 0x8F0, &idx, 1) || !leerSeguro(job + 0x8F2, &fase, 1)) continue;
+        if (idx < 0x20) leerSeguro(job + 0x878 + idx * 4, &id, 4);
+        if (esc == 0xA && id == 0x04) {
+            if (!t0) t0 = GetTickCount64();
+            if (!hecho && fase >= 1 && fase < 3 && (double)(GetTickCount64() - t0) / 1000.0 >= g_celebSeg) {
+                job[0x8F2] = 3; hecho = true;
+                logf("[gol_directo_free] celebración recortada a %.1f s (fase %u -> 3)", g_celebSeg, (unsigned)fase);
+            }
+        } else { t0 = 0; hecho = false; }
+    }
+    return 0;
+}
+
 bool directoInstalar(Feature& f) {
     if (!g_globalPartido && !resolverGlobalPartido(f.id)) { f.estado = "sin firma del global del partido"; return false; }
     if (!asegurarMontador(f)) { f.estado = "sin gancho del montador del gol (FUN_14044F8A0)"; return false; }
     g_directoActiva = true;
+    if (!g_hiloRecorte) { g_recorteOn = 1; g_hiloRecorte = CreateThread(nullptr, 0, hiloRecorte, nullptr, 0, nullptr); }
     f.estado = g_directoCelebracion ? "ok: cola del gol en el entrenamiento = 03 04 16 12 13 14 15 0E 34 19 1A (celebración corta, sin repetición)" : "ok: cola del gol en el entrenamiento = 03 16 12 13 14 15 0E 34 19 1A (sin celebración ni repetición)";
     return true;
 }
-bool directoQuitar(Feature&) { g_directoActiva = false; return true; }
+bool directoQuitar(Feature&) {
+    g_directoActiva = false; g_recorteOn = 0;
+    if (g_hiloRecorte) { WaitForSingleObject(g_hiloRecorte, 1000); CloseHandle(g_hiloRecorte); g_hiloRecorte = nullptr; }
+    return true;
+}
 
 // --- sonda de pasos: FUN_14047C2D0(job, saltable, ...) es el ejecutor de la cola job+0x878[]. Se anota cada CAMBIO de
 // (índice de cola [job+0x8F0], id de paso) para saber qué paso está activo cuando el juego se congela. Prólogo 17 B
@@ -1047,14 +1077,24 @@ void leerConfig() {
         size_t j = txt.find_first_not_of(" \t\r\n", i + 1);
         if (j != std::string::npos) f.deseada = txt.compare(j, 4, "true") == 0;
     }
-    // opción de gol_directo_free: celebración corta (paso 0x04) en la cola. Solo cuenta si pone expresamente false.
-    g_directoCelebracion = true;
-    size_t k = txt.find("\"gol_directo_celebracion\"");
-    if (k != std::string::npos) {
+    // opciones de gol_directo_free: «gol_directo_celebracion» (false = sin paso 0x04) y «celebracion_segundos» (0 = sin
+    // celebración; N = se recorta a N s; por defecto 8). Lector simple: busca la clave y lee lo que sigue a los dos puntos.
+    g_directoCelebracion = true; g_celebSeg = 8.0;
+    auto valorDe = [&](const char* clave, std::string& v) {
+        size_t k = txt.find(std::string("\"") + clave + "\"");
+        if (k == std::string::npos) return false;
         k = txt.find(':', k);
-        size_t j = (k == std::string::npos) ? k : txt.find_first_not_of(" \t\r\n", k + 1);
-        if (j != std::string::npos) g_directoCelebracion = txt.compare(j, 5, "false") != 0;
-    }
+        if (k == std::string::npos) return false;
+        size_t j = txt.find_first_not_of(" \t\r\n", k + 1);
+        if (j == std::string::npos) return false;
+        size_t e = txt.find_first_of(",} \t\r\n", j);
+        v = txt.substr(j, e == std::string::npos ? std::string::npos : e - j);
+        return true;
+    };
+    std::string v;
+    if (valorDe("gol_directo_celebracion", v) && v == "false") g_directoCelebracion = false;
+    if (valorDe("celebracion_segundos", v)) g_celebSeg = atof(v.c_str());
+    if (g_celebSeg <= 0.0) g_directoCelebracion = false;
 }
 
 std::string escaparJson(const std::string& s) {
