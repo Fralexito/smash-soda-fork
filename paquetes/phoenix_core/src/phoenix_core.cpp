@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.24"
+#define PHX_CORE_VERSION "0.4.25"
 
 namespace {
 
@@ -777,6 +777,92 @@ bool canchaQuitar(Feature&) {
     return true;
 }
 
+// --- función: pelota_sonda (SOLO LECTURA). Localiza el objeto de la pelota por firma (como pelota.exe: objeto de 640 B,
+// +248=0, +312 en {0,1}, +492 en {0x10001,0x80001}, posición float x/y/z en +208/+212/+216 con y≈0,11) y lo sigue cada 50 ms.
+// Cuando se mueve a más de ~3 m/s anota en phoenix_core.log «[BALL] dir pos v» y los dwords que cambian entre muestras
+// («[BALL] +0xNN a->b»): así se identifican posición y velocidad. Solo con TrainingWork activo. Json: "pelota_sonda": true.
+volatile LONG g_pelotaOn = 0; HANDLE g_hiloPelota = nullptr;
+static bool pareceBola(uint8_t* o) {
+    uint32_t a = 0, b = 0, c = 0; float x = 0, y = 0, z = 0;
+    if (!leerSeguro(o + 248, &a, 4) || !leerSeguro(o + 312, &b, 4) || !leerSeguro(o + 492, &c, 4)) return false;
+    if (a != 0 || b > 1 || (c != 0x10001 && c != 0x80001)) return false;
+    if (!leerSeguro(o + 208, &x, 4) || !leerSeguro(o + 212, &y, 4) || !leerSeguro(o + 216, &z, 4)) return false;
+    return x == x && z == z && fabsf(x) < 200 && fabsf(z) < 200 && y > 0.05f && y < 0.4f;
+}
+static void escanearBolas(std::vector<uint8_t*>& out) {
+    MEMORY_BASIC_INFORMATION mbi; uint8_t* a = reinterpret_cast<uint8_t*>(0x10000);
+    while (a < reinterpret_cast<uint8_t*>(0x7FFE0000ull) && VirtualQuery(a, &mbi, sizeof mbi)) {
+        uint8_t* ini = static_cast<uint8_t*>(mbi.BaseAddress); size_t tam = mbi.RegionSize;
+        if (mbi.State == MEM_COMMIT && mbi.Type == MEM_PRIVATE && mbi.Protect == PAGE_READWRITE && tam >= 640 && tam <= (512u << 20)) {
+            __try {
+                for (size_t o = 0; o + 640 <= tam; o += 16) {
+                    uint8_t* q = ini + o;
+                    if (*reinterpret_cast<uint32_t*>(q + 248) != 0 || *reinterpret_cast<uint32_t*>(q + 312) > 1) continue;
+                    uint32_t c = *reinterpret_cast<uint32_t*>(q + 492);
+                    if (c != 0x10001 && c != 0x80001) continue;
+                    float x = *reinterpret_cast<float*>(q + 208), y = *reinterpret_cast<float*>(q + 212), z = *reinterpret_cast<float*>(q + 216);
+                    if (x == x && z == z && fabsf(x) < 200 && fabsf(z) < 200 && y > 0.05f && y < 0.4f) out.push_back(q);
+                    if (out.size() > 400) return;
+                }
+            } __except (EXCEPTION_EXECUTE_HANDLER) {}
+        }
+        a = ini + tam;
+    }
+}
+DWORD WINAPI hiloPelota(LPVOID) {
+    std::vector<uint8_t*> cand; std::vector<float> px, pz; bool tw = false; ULONGLONG ultimoEscaneo = 0; uint8_t* seguida = nullptr;
+    static uint32_t previo[160]; bool tengoPrevio = false; int lineas = 0; ULONGLONG ventana = 0;
+    while (g_pelotaOn) {
+        Sleep(50);
+        bool hay = trainingWorkEstable();
+        if (!hay) { tw = false; seguida = nullptr; cand.clear(); continue; }
+        if (!tw) { tw = true; ultimoEscaneo = 0; }
+        ULONGLONG ahora = GetTickCount64();
+        if (!seguida && (cand.empty() || ahora - ultimoEscaneo > 15000)) {   // (re)escaneo
+            cand.clear(); escanearBolas(cand); ultimoEscaneo = GetTickCount64(); px.assign(cand.size(), 1e9f); pz.assign(cand.size(), 1e9f);
+            logf("[BALL] escaneo: %u candidatos", (unsigned)cand.size());
+        }
+        if (!seguida) {
+            for (size_t i = 0; i < cand.size(); ++i) {                       // la que se mueve de verdad es la pelota
+                if (!pareceBola(cand[i])) continue;
+                float x = 0, z = 0; leerSeguro(cand[i] + 208, &x, 4); leerSeguro(cand[i] + 216, &z, 4);
+                if (px[i] < 1e8f && (fabsf(x - px[i]) + fabsf(z - pz[i])) > 0.3f) { seguida = cand[i]; logf("[BALL] pelota localizada en %p (x=%.2f z=%.2f)", (void*)seguida, x, z); tengoPrevio = false; break; }
+                px[i] = x; pz[i] = z;
+            }
+            continue;
+        }
+        if (!pareceBola(seguida)) { logf("[BALL] se perdió la pelota (%p)", (void*)seguida); seguida = nullptr; cand.clear(); continue; }
+        uint32_t act[160]; if (!leerSeguro(seguida, act, sizeof act)) continue;
+        float x, z, y; memcpy(&x, (uint8_t*)act + 208, 4); memcpy(&y, (uint8_t*)act + 212, 4); memcpy(&z, (uint8_t*)act + 216, 4);
+        if (tengoPrevio) {
+            float xp, zp; memcpy(&xp, (uint8_t*)previo + 208, 4); memcpy(&zp, (uint8_t*)previo + 216, 4);
+            float v = sqrtf((x - xp) * (x - xp) + (z - zp) * (z - zp)) / 0.05f;
+            if (ahora - ventana > 1000) { ventana = ahora; lineas = 0; }
+            if (v > 3.0f && lineas < 12) {
+                ++lineas;
+                logf("[BALL] pos=(%.2f, %.2f, %.2f) v=%.1f m/s (campo %.1f x %.1f)", x, y, z, v, g_canchaLargo, g_canchaAncho);
+                for (int k = 0; k < 160; ++k) if (act[k] != previo[k] && k * 4 != 208 && k * 4 != 212 && k * 4 != 216) {
+                    float fa, fb; memcpy(&fa, &previo[k], 4); memcpy(&fb, &act[k], 4);
+                    if (fabsf(fa) < 1000 && fabsf(fb) < 1000 && lineas < 3) logf("[BALL]   +0x%X %.4f -> %.4f", k * 4, fa, fb);
+                }
+            }
+        }
+        memcpy(previo, act, sizeof act); tengoPrevio = true;
+    }
+    return 0;
+}
+bool pelotaInstalar(Feature& f) {
+    if (!g_globalPartido && !resolverGlobalPartido(f.id)) { f.estado = "sin firma del global del partido"; return false; }
+    g_pelotaOn = 1; g_hiloPelota = CreateThread(nullptr, 0, hiloPelota, nullptr, 0, nullptr);
+    if (!g_hiloPelota) { g_pelotaOn = 0; f.estado = "no se pudo crear el hilo"; return false; }
+    f.estado = "ok: sonda de la pelota (solo lectura): localiza el objeto de 640 B y anota posición/velocidad en el log"; return true;
+}
+bool pelotaQuitar(Feature&) {
+    g_pelotaOn = 0;
+    if (g_hiloPelota) { WaitForSingleObject(g_hiloPelota, 3000); CloseHandle(g_hiloPelota); g_hiloPelota = nullptr; }
+    return true;
+}
+
 bool directoInstalar(Feature& f) {
     if (!g_globalPartido && !resolverGlobalPartido(f.id)) { f.estado = "sin firma del global del partido"; return false; }
     if (!asegurarMontador(f)) { f.estado = "sin gancho del montador del gol (FUN_14044F8A0)"; return false; }
@@ -1181,6 +1267,7 @@ std::vector<Feature> g_funciones = {   // orden = orden de arranque (gol_nativo_
     { "saque_centro_free", "Tras el gol, saque de centro (entrenamiento)", saqueInstalar, saqueQuitar },
     { "celebracion_corta_free", "Gol sin celebración ni repetición (entrenamiento)", cortaInstalar, cortaQuitar },
     { "cancha_chica_free", "Cancha lógica pequeña (semilargo/semiancho del json) en el entrenamiento", canchaInstalar, canchaQuitar },
+    { "pelota_sonda", "Sonda de solo lectura de la pelota (posición/velocidad) en el entrenamiento", pelotaInstalar, pelotaQuitar },
     { "gol_directo_free", "Gol sin celebración, cámara ni repetición: solo reinicio (entrenamiento)", directoInstalar, directoQuitar },
     { "sin_1D_free", "Gol sin el paso 0x1D de la cola (entrenamiento; evita el congelón)", sin1DInstalar, sin1DQuitar },
     { "rescate_render_free", "Rescate del bloqueo juego↔render (experimental)", rescateInstalar, rescateQuitar },
