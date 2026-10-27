@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.7"
+#define PHX_CORE_VERSION "0.4.8"
 
 namespace {
 
@@ -367,6 +367,27 @@ bool golInstalar(Feature& f) {
 }
 bool golQuitar(Feature&) { return true; }   // los parches los quita el marco (la cueva se queda, sin uso)
 
+// --- función 3: tras el gol en el Entrenamiento libre, saque de CENTRO (no de puerta).
+// El reinicio lo decide el registro de parada: sub=1 = saque de centro (amistoso), sub=3 = saque de puerta.
+// En FUN_1404A56C0 (0x1404A5B78) una rama que solo corre con k==3 (edi==3, gol) recoloca el registro en sub=3 con
+// la posición del arquero: «cmp dword [r14+4],1 ; jne ; cmp edi,3 ; jne +64h ; … FUN_14102CAD0(rec,3)».
+// Parche de 1 byte: ese último jne (75) pasa a jmp (EB), la rama queda muerta y el registro conserva sub=1.
+const char* kFirmaSaqueCentro = "41 83 7E 04 01 75 69 83 FF 03 75 64 4C 8B 05 ?? ?? ?? ?? 4D 8D 4E 08 8B D7 48 8D 4D E7";
+bool saqueInstalar(Feature& f) {
+    uint8_t* sitio = firmaUnica("codigo", kFirmaSaqueCentro, f.id);
+    if (!sitio) { f.estado = "sin firma: rama del saque de puerta tras el gol (FUN_1404A56C0)"; return false; }
+    Parche p; p.dir = sitio + 10;
+    p.original.assign({ 0x75 });
+    p.nuevo.assign({ 0xEB });
+    if (!aplicarParche(p, f.id)) { f.estado = "bytes inesperados (saque de centro)"; return false; }
+    f.parches.push_back(p);
+    char b[120];
+    sprintf_s(b, "ok: tras el gol, saque de centro (exe+0x%llX 75->EB)", (unsigned long long)(p.dir - g_exe.base));
+    f.estado = b;
+    return true;
+}
+bool saqueQuitar(Feature&) { return true; }
+
 // ---------------------------------------------------------------- desvíos propios (sin MinHook)
 // Solo para funciones cuyo prólogo conocemos (leído con REA/Ghidra): se copian `n` bytes de instrucciones enteras,
 // sin RIP-relativos ni saltos, a un trampolín que salta de vuelta a dir+n. En dir se escribe
@@ -596,7 +617,7 @@ DWORD WINAPI vigilante(LPVOID) {
     std::vector<HiloCpu> hilos;
     ULONGLONG tLatido = GetTickCount64(), tVentana = GetTickCount64(), tUltimoPerfil = 0;
     LONG escrVentana = g_escr;
-    int perfiles = 0;
+    int perfiles = 0, ventanasQuietas = 0;
     while (g_vigilar) {
         Sleep(250);
         // 1) CPU por hilo (sin detener a nadie)
@@ -622,13 +643,15 @@ DWORD WINAPI vigilante(LPVOID) {
         hilos.swap(nuevos);
         bool sondaQuieta = g_escr == escrVentana;
         escrVentana = g_escr; tVentana = ahora;
+        ventanasQuietas = sondaQuieta ? ventanasQuietas + 1 : 0;
         if (ahora - tLatido >= 10000) {
             tLatido = ahora;
             logf("[VIGILANTE] vivo · CPU del proceso %.1f s en 2 s · %zu hilos · sonda %s", total / 1e7, hilos.size(),
                  sondaQuieta ? "quieta" : "anotando");
         }
-        // 2) ¿cuelgue? mucha CPU y la sonda quieta (el partido no avanza)
-        if (!sondaQuieta || total < 40000000 || perfiles >= 10 || ahora - tUltimoPerfil < 30000) continue;
+        // 2) ¿cuelgue? sonda quieta ≥8 s (4 ventanas) y CPU alta. La CPU sola no sirve: este PES usa ~5 núcleos
+        //    jugando normal (17 falsas alarmas en un amistoso, 26-oct).
+        if (ventanasQuietas < 4 || total < 40000000 || perfiles >= 10 || ahora - tUltimoPerfil < 30000) continue;
         tUltimoPerfil = ahora; ++perfiles;
         std::vector<Zona> zonas;
         for (int muestra = 0; muestra < 8 && g_vigilar; ++muestra) {
@@ -692,6 +715,7 @@ std::vector<Feature> g_funciones = {   // orden = orden de arranque (gol_nativo_
     { "diagnostico",     "Diagnóstico de firmas (solo lectura)",       diagInstalar,  diagQuitar  },
     { "sonda_partido",   "Sonda: estados y gol nativo (solo mira)",    sondaInstalar, sondaQuitar },
     { "gol_nativo_free", "Gol nativo en Entrenamiento libre (street)", golInstalar,   golQuitar   },
+    { "saque_centro_free", "Tras el gol, saque de centro (entrenamiento)", saqueInstalar, saqueQuitar },
     { "vigilante_bucles", "Vigilante de cuelgues (solo mira)",         vigilanteInstalar, vigilanteQuitar },
 };
 bool sondaActiva() {

@@ -37,12 +37,17 @@ El exe en disco **no se toca**. Sin el DLL, PES es 100 % original.
 - Ojo para el futuro: **cualquier modo con menos de 11 por lado** (street 3v3, 5v5) puede pisar este mismo fallo; el arreglo sirve para todos.
 - Hay además un desvío de seguridad en `FUN_140504D20` (firma `48 89 54 24 10 48 89 4C 24 08 53 55 56 57 41 54 41 55 41 56 41 57 48 81 EC A8 00 00 00 48 8B 05`) que no llegó a hacer falta; es inofensivo.
 
-## 5. El congelón al final de la celebración — NO era del juego
-- Síntoma: unos 7 s tras el gol, cuando se juntan los 3 jugadores, PES se queda congelado (sin crash).
-- Causa: un **error de Lua del parche Conmegol**, no del exe ni de Core. `SiderAddons/modules/TournamentCornerFlags.lua` usa la global `CornerFlag`, que solo se rellena para torneos conocidos. En el entrenamiento (torneo 29) queda `nil`, y `log("-- " .. CornerFlag)` falla dentro del callback de trofeo/entrada → el motor se queda esperando.
-- Arreglo (solo Conmegol, copia en `.antes-fix`): línea 92 `if key and CornerFlag then`, línea 98 `log("-- " .. tostring(CornerFlag))`.
-- **En PES limpio este archivo no existe → no hace falta.** En el parche propio: **todo módulo Lua que use datos del torneo debe aguantar `nil`** (el entrenamiento no tiene torneo).
-- Cómo se encontró: comparar `sider.log` de un gol en amistoso (no se congela, sale «Commentary file detected») contra uno en entrenamiento (salía `lua ERROR … CornerFlag` y nunca llegaba el comentario).
+## 5. El congelón al final de la celebración — causa SIN confirmar
+- Síntoma (2 veces, Core 0.4.4 y 0.4.7): unos 7 s tras el gol, en la celebración, PES se queda congelado (sin crash). Los hilos del motor esperan una cola de carga (FUN_1403E0760) que nadie llena.
+- Sospechoso: un **error de Lua del parche Conmegol**. `SiderAddons/modules/TournamentCornerFlags.lua` usa la global `CornerFlag`, que solo se rellena para torneos conocidos; en el entrenamiento (torneo 29) queda `nil` y `log("-- " .. CornerFlag)` falla en el callback de trofeo/entrada. En el amistoso ese camino no se activa y no hay error.
+- **CORRECCIÓN 27-oct 01:40:** en la prueba que salió bien, el arreglo de ese Lua **no estaba puesto** (el archivo volvió a su versión original, sospecha: el selector restaura módulos al arrancar) y aun así NO se congeló. Así que el congelón puede ser intermitente y el Lua no está probado como causa. Sigue en observación con el vigilante (señal: sonda quieta ≥8 s).
+- Arreglo preventivo (solo Conmegol, copia `.antes-fix`): línea 92 `if key and CornerFlag then`, línea 98 `log("-- " .. tostring(CornerFlag))`. En PES limpio ese archivo no existe.
+- Regla para el parche propio: **todo módulo Lua que use datos del torneo debe aguantar `nil`** (el entrenamiento no tiene torneo).
+
+## 5b. Tras el gol saca el arquero (saque de puerta) — `saque_centro_free`
+- Amistoso: `EVENTO 0x1->0xA k=3 sub=1` (sub=1 = saque de centro). Entreno: `k=3 sub=3` (saque de puerta).
+- Quien pone sub=3: una rama de FUN_1404A56C0 (0x1404A5B78) que solo corre con k==3 y recoloca el registro con la posición del arquero (FUN_14050D250(&pos,3,…), FUN_14102CAD0(rec,3)).
+- Parche de 1 byte: firma `41 83 7E 04 01 75 69 83 FF 03 75 64 4C 8B 05 ?? ?? ?? ?? 4D 8D 4E 08 8B D7 48 8D 4D E7`, en firma+10 `75`→`EB` (la rama queda muerta, sub=1 como en el amistoso). Core 0.4.8, sin probar aún.
 
 ## 6. Direcciones fijas que quedan (para portar a PES limpio)
 | Qué | Conmegol | Qué hacer en PES limpio |

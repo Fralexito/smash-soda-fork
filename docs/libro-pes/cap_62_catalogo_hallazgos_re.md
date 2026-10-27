@@ -205,7 +205,9 @@ Añadir filas con fecha cuando aparezca algo nuevo (aunque no sea del tema del d
 | Índice 0xFF sin comprobar | FUN_140A62690(lado,p) → 0xFF si no hay jugador; FUN_1405B1740 lo usa como ranura (2 sitios, firmas en cap_73 §4). Afecta a todo modo con <11 por lado | C |
 | Monitor de cola de carga | FUN_1403E0760: `while(!listo[+0x9C] && cola[[p+0x88]+0x28]==0) esperar`; hilo de render FUN_14170FA10; spin-yield FUN_1403DB2C0/DB590; zlib inflate_fast FUN_1403B6AA0 | C (estático) |
 | Demo de entrada al marcar | En entreno, al marcar se pide `…\demo\fixdemo\ent\table_ent.bin` + Entrance.lua ×4 (ruta trofeo/entrada); en amistoso no. Tablas fixdemo se inicializan en FUN_141EBCB10/141EC68A0/141ECA210/141F29420 (DAT_1437F4E60) | C |
-| Error Lua de Conmegol | TournamentCornerFlags.lua l.98: `CornerFlag` nil para torneo 29 (entreno) → congela el motor. Regla para el parche propio: módulos Lua deben tolerar torneo nil | C |
+| Error Lua de Conmegol | TournamentCornerFlags.lua l.98: `CornerFlag` nil para torneo 29 (entreno); SOSPECHOSO del congelón, no probado (sin arreglo tampoco se congeló una vez). Regla para el parche propio: módulos Lua deben tolerar torneo nil | C |
 | Señal de cuelgue | CPU alta NO distingue cuelgue (~5 núcleos normal, 125–130 hilos). Señal buena: sonda sin escribir ≥8 s y sin «Commentary file detected» | C |
 | sider.ini Conmegol | `Stadium_CornerFlag.lua` (l.164) y `CornerFlag.lua` (l.188) no existen (inocuo) | C |
 | Entreno: estadio | stadium=2, stadium_choice=65533 (sin elección) | P |
+| Reinicio tras gol | registro de parada sub: 1 = saque de centro (amistoso), 3 = saque de puerta (entreno). Rama k==3 de FUN_1404A56C0 en 0x1404A5B78 lo fuerza a 3; jne en firma+10 → jmp lo evita | C (sonda) |
+| Selector PES2021 Start.exe | sospecha: restaura módulos Lua del Conmegol al arrancar (un arreglo en TournamentCornerFlags.lua desapareció) | P |
