@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.36"
+#define PHX_CORE_VERSION "0.4.38"
 
 namespace {
 
@@ -1424,6 +1424,54 @@ bool parchearRanuraShoot(Feature& f) {
 // 0.4.36: gancho de diagnóstico en FUN_1408AB000 (cálculo del medidor de potencia por jugador; 15 B limpios de prólogo).
 // Anota el tipo de orden (cmd+0x1768), la carga (cmd+0x10) y el valor del medidor (entrada+4) antes y después; con el json
 // «medidor_real»: 1 y el tipo 4 en el entrenamiento, el medidor deja de forzarse a 1.0 y muestra la carga real.
+// --- 0.4.37 vigía de escritura (depurador DENTRO del Core). x64dbg adjunto congela PES y no se pudo manejar su ventana; aquí se usan
+// los registros de depuración DR0/DR1 (escritura, 4 bytes) sobre cmd+0x10 (carga) y cmd+0x1768 (tipo de orden) del CommandPlayer
+// y un manejador de excepciones vectorizado que anota la instrucción que escribe (rip, retorno, valor). No toca código. Json: "vigia_escritura": 1.
+volatile LONG g_vigiaPedida = 0, g_vigiaArmada = 0, g_vigiaLog = 0;
+uint64_t g_vigiaDir[2] = { 0, 0 };
+PVOID g_vigiaVeh = nullptr;
+LONG CALLBACK vehVigia(PEXCEPTION_POINTERS ep) {
+    if (ep->ExceptionRecord->ExceptionCode != EXCEPTION_SINGLE_STEP) return EXCEPTION_CONTINUE_SEARCH;
+    CONTEXT* c = ep->ContextRecord;
+    if (!(c->Dr6 & 3)) return EXCEPTION_CONTINUE_SEARCH;
+    int i = (c->Dr6 & 1) ? 0 : 1;
+    LONG n = InterlockedIncrement(&g_vigiaLog);
+    if (n <= 300) {
+        uint32_t v = 0; uint64_t ret = 0, b = reinterpret_cast<uint64_t>(g_exe.base);
+        leerSeguro(reinterpret_cast<void*>(g_vigiaDir[i]), &v, 4); leerSeguro(reinterpret_cast<void*>(c->Rsp), &ret, 8);
+        logf("[VIGIA] escribe %s = 0x%X · tras exe+0x%llX · ret exe+0x%llX · rax=%llX rcx=%llX rdx=%llX · hilo %lu", i == 0 ? "+0x10" : "+0x1768", v,
+             (unsigned long long)(c->Rip - b), (unsigned long long)(ret - b), (unsigned long long)c->Rax, (unsigned long long)c->Rcx, (unsigned long long)c->Rdx, GetCurrentThreadId());
+    }
+    c->Dr6 = 0;
+    return EXCEPTION_CONTINUE_EXECUTION;
+}
+DWORD WINAPI hiloArmarVigia(LPVOID) {
+    if (!g_vigiaVeh) g_vigiaVeh = AddVectoredExceptionHandler(1, vehVigia);
+    DWORD pid = GetCurrentProcessId(), yo = GetCurrentThreadId(); int n = 0;
+    HANDLE sn = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
+    if (sn != INVALID_HANDLE_VALUE) {
+        THREADENTRY32 te; te.dwSize = sizeof te;
+        for (BOOL ok = Thread32First(sn, &te); ok; ok = Thread32Next(sn, &te)) {
+            if (te.th32OwnerProcessID != pid || te.th32ThreadID == yo) continue;
+            HANDLE h = OpenThread(THREAD_SUSPEND_RESUME | THREAD_GET_CONTEXT | THREAD_SET_CONTEXT, FALSE, te.th32ThreadID);
+            if (!h) continue;
+            if (SuspendThread(h) != (DWORD)-1) {
+                CONTEXT c; memset(&c, 0, sizeof c); c.ContextFlags = CONTEXT_DEBUG_REGISTERS;
+                if (GetThreadContext(h, &c)) {
+                    c.Dr0 = g_vigiaDir[0]; c.Dr1 = g_vigiaDir[1];
+                    c.Dr7 = (c.Dr7 & ~((0xFFull) | (0xFFull << 16))) | 0x1ull | 0x4ull | (0x1ull << 16) | (0x3ull << 18) | (0x1ull << 20) | (0x3ull << 22);
+                    c.Dr6 = 0;
+                    if (SetThreadContext(h, &c)) ++n;
+                }
+                ResumeThread(h);
+            }
+            CloseHandle(h);
+        }
+        CloseHandle(sn);
+    }
+    logf("[VIGIA] armada sobre cmd+0x10 (%p) y cmd+0x1768 (%p) en %d hilos", (void*)g_vigiaDir[0], (void*)g_vigiaDir[1], n);
+    return 0;
+}
 const char* kFirmaMedidor = "48 89 5C 24 08 48 89 74 24 10 57 48 83 EC 20 48 8B 05 ?? ?? ?? ?? 49 8B F9 49 8B D8 48 8B 88 00 04 00 00";
 using FnMedidor = void (*)(uint64_t, uint64_t, uint8_t*, uint8_t*);
 FnMedidor g_medidorOrig = nullptr; int g_medidorReal = 0;
@@ -1437,6 +1485,10 @@ void ganchoMedidor(uint64_t a1, uint64_t a2, uint8_t* entrada, uint8_t* cmd) {
     if ((tipo != ultTipo || fabsf(desp - ultDesp) > 0.05f) && InterlockedIncrement(&n) <= 120) {
         logf("[MEDIDOR] cmd=%p entrada=%p tipo=%d carga(+0x10)=%.3f medidor antes=%.3f despues=%.3f", (void*)cmd, (void*)entrada, tipo, carga, antes, desp);
         ultTipo = tipo; ultDesp = desp;
+    }
+    if (g_vigiaPedida && tipo == 4 && InterlockedCompareExchange(&g_vigiaArmada, 1, 0) == 0) {
+        g_vigiaDir[0] = reinterpret_cast<uint64_t>(cmd) + 0x10; g_vigiaDir[1] = reinterpret_cast<uint64_t>(cmd) + 0x1768;
+        CreateThread(nullptr, 0, hiloArmarVigia, nullptr, 0, nullptr);
     }
     if (g_medidorReal && tipo == 4 && desp >= 0.999f && carga >= 0.0f && carga <= 1.0f) { memcpy(entrada + 4, &carga, 4); }
 }
@@ -1474,6 +1526,34 @@ bool disparoInstalar(Feature& f) {
 }
 bool disparoQuitar(Feature&) { g_disparoOn = 0; return true; }
 
+// --- función: jugadores_sonda (0.4.38, SOLO LECTURA). El registro de movimiento de cada jugador i (0..21; accesor FUN_140A48A10) es
+// *(raíz + (i+0xBF)*0x28); su posición lógica (x, y, z) está en +0x55C/+0x560/+0x564 (la usa FUN_1406B45D0). Cada 3 s (con TrainingWork)
+// anota las 22 posiciones y cuántos están fuera del rectángulo de la cancha chica (±semilargo+0.5, ±semiancho+0.5). Json: "jugadores_sonda": true.
+volatile LONG g_jugSondaOn = 0; HANDLE g_hiloJug = nullptr;
+DWORD WINAPI hiloJug(LPVOID) {
+    while (g_jugSondaOn) {
+        Sleep(3000);
+        if (!trainingWorkEstable()) continue;
+        uint8_t* raiz = nullptr; if (!leerSeguro(g_globalPartido, &raiz, 8) || !raiz) continue;
+        char l1[600], l2[600]; int n1 = 0, n2 = 0, fuera = 0;
+        for (int i = 0; i < 22; ++i) {
+            uint8_t* rec = nullptr; float p[3] = { 0, 0, 0 };
+            if (!leerSeguro(raiz + (size_t)(i + 0xBF) * 0x28, &rec, 8) || !rec || !leerSeguro(rec + 0x55C, p, 12)) continue;
+            bool fu = fabsf(p[0]) > g_canchaLargo + 0.5f || fabsf(p[2]) > g_canchaAncho + 0.5f; if (fu) ++fuera;
+            char* b = i < 11 ? l1 : l2; int& n = i < 11 ? n1 : n2;
+            n += sprintf_s(b + n, 600 - n, " %d(%.1f,%.1f)%s", i, p[0], p[2], fu ? "*" : "");
+        }
+        logf("[JUG] fuera=%d  L:%s", fuera, l1); logf("[JUG]           V:%s", l2);
+    }
+    return 0;
+}
+bool jugSondaInstalar(Feature& f) {
+    if (!g_globalPartido && !resolverGlobalPartido(f.id)) { f.estado = "sin firma del global del partido"; return false; }
+    g_jugSondaOn = 1; g_hiloJug = CreateThread(nullptr, 0, hiloJug, nullptr, 0, nullptr);
+    if (!g_hiloJug) { g_jugSondaOn = 0; f.estado = "no se pudo crear el hilo"; return false; }
+    f.estado = "ok: anota las posiciones de los 22 jugadores cada 3 s (solo lectura)"; return true;
+}
+bool jugSondaQuitar(Feature&) { g_jugSondaOn = 0; if (g_hiloJug) { WaitForSingleObject(g_hiloJug, 4000); CloseHandle(g_hiloJug); g_hiloJug = nullptr; } return true; }
 std::vector<Feature> g_funciones = {   // orden = orden de arranque (gol_nativo_free necesita la sonda)
     { "diagnostico",     "Diagnóstico de firmas (solo lectura)",       diagInstalar,  diagQuitar  },
     { "sonda_partido",   "Sonda: estados y gol nativo (solo mira)",    sondaInstalar, sondaQuitar },
@@ -1483,6 +1563,7 @@ std::vector<Feature> g_funciones = {   // orden = orden de arranque (gol_nativo_
     { "celebracion_corta_free", "Gol sin celebración ni repetición (entrenamiento)", cortaInstalar, cortaQuitar },
     { "cancha_chica_free", "Cancha lógica pequeña (semilargo/semiancho del json) en el entrenamiento", canchaInstalar, canchaQuitar },
     { "siempre_disparo_free", "Cuadrado dispara siempre en el entrenamiento (sin despeje en campo propio)", disparoInstalar, disparoQuitar },
+    { "jugadores_sonda", "Sonda de solo lectura de las posiciones de los 22 jugadores en el entrenamiento", jugSondaInstalar, jugSondaQuitar },
     { "pelota_sonda", "Sonda de solo lectura de la pelota (posición/velocidad) en el entrenamiento", pelotaInstalar, pelotaQuitar },
     { "gol_directo_free", "Gol sin celebración, cámara ni repetición: solo reinicio (entrenamiento)", directoInstalar, directoQuitar },
     { "sin_1D_free", "Gol sin el paso 0x1D de la cola (entrenamiento; evita el congelón)", sin1DInstalar, sin1DQuitar },
@@ -1565,6 +1646,7 @@ void leerConfig() {
     if (g_canchaAncho < 6.0 || g_canchaAncho > 50.0) g_canchaAncho = 10.0;
     if (valorDe("celebracion_modo", v)) g_celebModo = (v == "\"timer\"") ? 1 : (v == "\"salto\"") ? 2 : 0;
     if (valorDe("siempre_disparo_modo", v)) g_disparoModo = atoi(v.c_str());
+    if (valorDe("vigia_escritura", v)) g_vigiaPedida = atoi(v.c_str());
     if (valorDe("medidor_real", v)) g_medidorReal = atoi(v.c_str());
     if (valorDe("siempre_disparo_carga", v)) g_disparoCarga = atoi(v.c_str());
     if (valorDe("celebracion_timer_final", v)) g_timerFinal = (uint32_t)atol(v.c_str());

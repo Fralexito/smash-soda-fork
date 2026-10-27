@@ -15,7 +15,7 @@
 --
 -- Deshacer: DESINSTALAR.ps1 quita la línea de sider.ini; o poner "marcador_free": false.
 
-local m = { version = "0.5" }
+local m = { version = "0.6" }
 
 local PAUSA_GOL = 12.0      -- segundos que se detiene el reloj tras un gol (celebración)
 local MIRAR_SEG = 1.0       -- cada cuánto se relee zona/pantalla
@@ -45,11 +45,12 @@ local function mirarConfig()
     encendido = (t ~= nil) and (t:find('"marcador_free"%s*:%s*true') ~= nil)
 end
 
-local canchaOn, rutaCancha, paredesOn, seasonForzada = false, nil, false, nil
+local canchaOn, rutaCancha, paredesOn, seasonForzada, suplentesCero = false, nil, false, nil, false
 local function mirarCancha()
     local t = leer(rutaCfg)
     local sf = t and t:match('"season_forzada"%s*:%s*(%d)')
     seasonForzada = sf and tonumber(sf) or nil
+    suplentesCero = (t ~= nil) and (t:find('"suplentes_cero"%s*:%s*1') ~= nil)
     canchaOn = (t ~= nil) and (t:find('"cancha_chica_free"%s*:%s*true') ~= nil)
     paredesOn = canchaOn and (t:find('"cancha_paredes"%s*:%s*true') ~= nil)
 end
@@ -169,6 +170,17 @@ function m.set_conditions(ctx, options)
     return options
 end
 
+-- v0.6: con "suplentes_cero": 1 el Entrenamiento libre se juega sin banquillo (substitutions = 0): prueba para que no salgan los suplentes en fila en la banda.
+function m.set_match_settings(ctx, options)
+    mirarConfig(); mirarCancha()
+    if not suplentesCero or not encendido or not options then return nil end
+    local s = leer(rutaSonda)
+    if not (s and s:find('"nombre"%s*:%s*"FREE_TRAINING"')) then return nil end
+    log(string.format("[marcador_free] suplentes %s -> 0 (entrenamiento)", tostring(options.substitutions)))
+    options.substitutions = 0
+    return options
+end
+
 function m.set_teams(ctx)
     -- Entrenamiento libre nuevo: empieza de cero (si aún no sabemos la zona, se reinicia igual: no estorba).
     if encendido then reiniciar("set_teams") end
@@ -195,6 +207,7 @@ function m.init(ctx)
     ctx.register("goal_scored", m.goal_scored)     -- Sider 7.3.4+ (en 7.3.3 solo deja un WARN)
     ctx.register("set_teams", m.set_teams)
     ctx.register("set_conditions", m.set_conditions)
+    ctx.register("set_match_settings", m.set_match_settings)
     ctx.register("context_reset", m.context_reset)
     ctx.register("overlay_on", m.overlay_on)
     rutaPeticiones = base .. "phoenix_core\\peticiones.log"
