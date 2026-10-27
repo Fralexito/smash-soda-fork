@@ -184,3 +184,41 @@ IA del portero: no se encontró código específico en el entrenamiento; el slot
 1. Probar en vivo P-A (8.1) y el parche de datos de Defensa; vigilar que el ejercicio no cuente al portero como atacante.
 2. Auditar los ~20 llamadores restantes de `FUN_14213E2F0` (más efectos del flag Sí).
 3. Etiquetas exactas 0/1 de «S. pta./córner/banda» y «Cursor de PT fijo» (ids de texto `0x20079`, `0x160015`).
+
+---
+
+# 12. GK propio presente pero "pasivo" en Ataque (seguimiento tras probar P-A en vivo)
+
+Resultado honesto: **la causa del portero pasivo NO se pudo fijar en estático**. Lo que sí quedó establecido y descartado:
+
+## 12.1 Qué diferencia Ataque/Defensa en el código (TW+0x14), CONFIRMADO lectura
+TW+0x14 (getter `FUN_141030AB0` = `mov eax,[rcx+0x14]`) sólo lo leen funciones del gestor de entrenamiento (rango 0x1404A5xxx-0x1404A9xxx) y `FUN_1420C8140`:
+- `FUN_140A59CA0`: tabla de prioridad (ya cubierto, §1).
+- `FUN_1404A5580` (RVA 0x4A5580, "¿hay que reiniciar el ejercicio?"): `restart_team = S+0x1558`; compara con `(TW+0x14 != 0)` -> el equipo "atacante" del ejercicio es el lado 0 en Ataque y el lado 1 en Defensa (los tipos de ejercicio 1..6 se comparan con `S+0x1554`).
+- `FUN_1404A7BA0` y `FUN_1404A67B0` (RVA 0x4A7BA0 / 0x4A67B0): recortan una posición (balón/punto de reinicio, `float* pos`) a UNA mitad del campo: Ataque -> `x >= 0` (se invierte el signo al final), Defensa -> `x <= 0`; más recorte en z con `dims[1]`. NO tocan a los jugadores ni al portero. (Los llaman `FUN_1404A7830/786C/788C/792B`.)
+- `FUN_1420C8140`: signo (+1/-1) según modo; cámara/HUD (PROBABLE, no leída entera).
+- `FUN_1404A8620/8930/90D0/93A0`: copian la formación de un equipo a un buffer del TW (`FUN_140A40CA0`, `FUN_140A411C0`); no hay rama por modo para el portero.
+No se encontró ningún sitio donde el modo active/desactive el "think" del portero, un flag de equipo (`team+0x254` sólo es el signo de ataque) ni un `ActionKeeper*`. NO existe, en lo leído, una "IA solo ataque" para el equipo del usuario.
+
+## 12.2 Qué más hace «Cursor de PT fijo» (TW+0x18), CONFIRMADO lectura
+- Escribe: `M+0x3F328` (menú) -> `FUN_141FCDA30`/`FUN_141FBA600` -> `FUN_141F9F8D0` (`mov [rcx+0x18],dl`). Lee: (a) tabla en `FUN_140A59CA0`; (b) `FUN_141FB9040` (mando principal -> slot GK, B1), `FUN_14043EC70` (por fotograma, B2), `FUN_14087AC70` (estado de cursor, B3); (c) `FUN_141FCDA30` (sincroniza TW con el menú); (d) estadísticas `FUN_1404CBDA0` (+0x3527C++).
+- La asignación del slot GK (B1) busca el primer slot con `team+0x4C00+4k == 0`. `team+0x4C00` = categoría de puesto por slot (misma estructura de formación que `TW+0x44`, offset `+0x3FB8`; GK = categoría 0). CONFIRMADO por `FUN_14062D350` (cuenta jugadores con categoría != 0).
+- Los ~20 llamadores restantes de `FUN_14213E2F0` (0x140BDCD52, 0x140BEBE43, 0x140CECEDB, 0x140CF600D, 0x140D6EF21, 0x140D8D3E3, 0x141002812, 0x141069DE4, 0x1410BDC4C, 0x1411209F2, 0x141379498…0x1416A9FA0) se leyeron: el argumento es `*(ctx+0x40)` con `ctx = FUN_140FF0A20()` (contexto del partido), es decir pantallas/HUD/menú (pausa, marcador, cámara del modo entrenamiento). No hay ninguno en IA de jugador/equipo. PROBABLE: sólo presentación. => **«Cursor fijo = Sí» no activa ningún think/IA de portero ni modo manual en el código leído: sólo (a) tabla y (b) asignar el mando al GK.** Por tanto B1+B2+B3 con flag Sí dejan al GK en el mismo estado que flag No (COM), salvo HUD.
+
+## 12.3 Qué activa el cerebro del portero (lo leído), y por qué no basta con la participación
+- El jugador sólo actúa si `FUN_1409250A0` (Player::Update, RVA 0x9250A0) llega a la rama `+0x7C9 != 0`. `+0x7C9` lo fija `FUN_140926B00` según la escena `S+0x11B0`: en juego (escena 1) `FUN_140927360` hace `+0x7C9 = (+0x7CD != 0)` y `+0x7CD = 1` cuando `S+0x11C3 == 1`; escena 0x11 (entreno) -> `FUN_1409266E0`: el participante queda como está (no se toca `+0x7C9`), el no participante va a la banda. Dentro de `FUN_1409250A0` hay tres cortes: `TW+0x2C != 0` (`FUN_140E23890`, setter `FUN_140A59F80`; congela a TODOS: espera de reinicio de ejercicio), flags `S+0x1748+idx` y `S+0x175E+idx` ambos 0 sin `param_1[0xFC]` (jugador "fuera del partido") y `S+0x137C`. Ninguno distingue GK ni modo. => si el GK fuera pasivo por esto, lo sería también en Defensa.
+- La conducta del portero sale de acciones `match::player::ActionKeeper*` y de think-units de mando `match::pad::ThinkUnitKeeper*` (AutoMove, Block, TrapMove, PickupBall…, ctor `FUN_1408AD0B0`). Las think-units se crean por mando (pad), no por equipo; en lo leído no hay condición de entrenamiento/modo.
+- **Cambio de cursor a un portero** = `ThinkUnitCursorChangeKeeper` (vtable 0x14260EC80): su método de entrada `FUN_1408B7D70` devuelve la acción 0x4F sólo si el botón #10 del mando (`FUN_140A5F4F0(pad,10)`) está pulsado. O sea: en PES el cursor NO rota hasta el portero con el botón normal de cambio; hace falta ese botón especial (cambio a portero). Es PROBABLE que "el usuario no puede cambiar el cursor a él" sea el comportamiento normal salvo que se use ese botón; no se leyó el manejador de la acción 0x4F (puede exigir balón en el área propia).
+
+## 12.4 Hipótesis para "no ataja / se aparta" (sin confirmar)
+H1 (la más plausible): no hay disparos reales contra la portería del usuario en Ataque (el rival sólo defiende: tabla T_ATAQUE_PORTEROS pone defensores rivales + su GK), así que el GK propio nunca entra en las acciones de parada, y "se aparta del balón" es la conducta normal de un GK con balón propio lejos del área. H2: el GK propio queda fuera de la zona de juego por el recorte a una mitad (§12.1; sólo afecta a puntos de reinicio, no a jugadores) o por las posiciones de reinicio del ejercicio (`FUN_140A43190` del TW, no leída). H3: la IA de equipo (`FUN_14062D350`, formación con pocos jugadores) lo trata como jugador de campo suelto (cuenta de jugadores de campo activos con `categoría != 0` vs `FUN_14063FA70`). No se encontró base para H2/H3 en estático.
+
+## 12.5 Parche mínimo propuesto (SOLO si H1 no explica lo visto)
+No hay parche "de un byte" que active un cerebro de portero: no existe tal flag. Opciones reales, de menor a mayor riesgo:
+1. **Diagnóstico de lectura (sin escribir)**, con GK propio presente en Ataque y luego en Defensa, comparar: `S=[root+0x270]`: `S+0x1748+0`, `S+0x175E+0`, `S+0x11B0`, `S+0x11C3`, `S+0x1554`, `S+0x1558`; `player(idx0)=FUN_140A489F0(root,0)`: `+0x7C9`, `+0x7CB`, `+0x7CD`, `+0x18`; `TW+0x14/+0x18/+0x2C/+0x3C/+0x40`; `team0+0x4C00..+0x4C28`. Si `+0x7C9` del GK es 1 y aun así no actúa, la causa es de IA de equipo/pad, no de participación.
+2. Probar B1+B2+B3 (§8.2) con «Cursor fijo = Sí» ("arquero_propio_free_cursor"): si el GK queda COM y reacciona, la causa estaba en una lectura de TW+0x18 que no pude ver; si queda igual que con flag No, queda descartado.
+3. Probar el botón de cambio a portero (#10 del mando, mismo botón que usa PES para "Change to keeper") con el balón en el área propia.
+4. Alternativa de datos: evitar el problema usando Defensa (donde el GK propio funciona, confirmado por el usuario) y que el usuario "ataque" cambiando el campo de juego: no es un parche, es un modo de uso.
+
+## 12.6 Pendiente
+`FUN_140A43190`/posiciones del ejercicio del TW para participantes; manejador de la acción 0x4F (cambio a portero); `FUN_140928310` (decisión de acción del jugador no controlado) y `FUN_14092C9F0` (15 KB, usa `FUN_140A59AF0` = prioridad sin excepción de pateadores); si `team+0xA2A0/+0xB748` (rol por slot) se rellena distinto con TW activo en Ataque.
