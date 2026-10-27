@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.26"
+#define PHX_CORE_VERSION "0.4.27"
 
 namespace {
 
@@ -1276,6 +1276,37 @@ bool vigilanteQuitar(Feature&) {
     return true;
 }
 
+// --- función: siempre_disparo_free (0.4.27). En el Entrenamiento libre, cuadrado (ThinkUnitShoot) se convierte en despeje
+// (ThinkUnitClear, acción 0x58) cuando FUN_1406b45d0 (predicado «tiro permitido», 1596 B, 7 args) devuelve 0: pasa con el
+// jugador junto a su propia área / lejos del arco. Gancho: si hay TrainingWork (visto en los últimos 3 s) devuelve 1 sin evaluar,
+// así cuadrado dispara siempre. Fuera del entrenamiento (amistoso, liga) llama a la original. Prólogo de 20 B limpios.
+const char* kFirmaPredTiro = "48 8B C4 55 57 41 55 41 56 48 8D 68 A8 48 81 EC 38 01 00 00 8B BD 88 00 00 00 4C 8B F1 0F 29 70 C8";
+using FnPredTiro = uint32_t (*)(uint64_t, int, float, float, uint64_t, int, char);
+FnPredTiro g_predTiroOrig = nullptr;
+volatile ULONGLONG g_tTrainingVisto = 0;
+volatile LONG g_disparoOn = 0;
+volatile LONG g_disparoForzados = 0;
+HANDLE g_hiloDisparo = nullptr;
+DWORD WINAPI hiloDisparo(LPVOID) {
+    while (g_disparoOn) { if (hayTrainingWork()) g_tTrainingVisto = GetTickCount64(); Sleep(100); }
+    return 0;
+}
+uint32_t ganchoPredTiro(uint64_t a1, int a2, float a3, float a4, uint64_t a5, int a6, char a7) {
+    if (g_disparoOn && GetTickCount64() - g_tTrainingVisto < 3000) { InterlockedIncrement(&g_disparoForzados); return 1; }
+    return g_predTiroOrig(a1, a2, a3, a4, a5, a6, a7);
+}
+bool disparoInstalar(Feature& f) {
+    if (!g_globalPartido && !resolverGlobalPartido(f.id)) { f.estado = "sin firma del global del partido"; return false; }
+    uint8_t* m = firmaUnica("codigo", kFirmaPredTiro, f.id);
+    if (!m) { f.estado = "sin firma: predicado de tiro FUN_1406b45d0"; return false; }
+    if (!crearDesvio(f, m, 20, (void*)ganchoPredTiro, (void**)&g_predTiroOrig)) { f.estado = "no se pudo desviar el predicado de tiro"; return false; }
+    g_disparoOn = 1;
+    g_hiloDisparo = CreateThread(nullptr, 0, hiloDisparo, nullptr, 0, nullptr);
+    char b[140]; sprintf_s(b, "ok: en el entrenamiento cuadrado dispara siempre (predicado en exe+0x%llX)", (unsigned long long)(m - g_exe.base));
+    f.estado = b; return true;
+}
+bool disparoQuitar(Feature&) { g_disparoOn = 0; return true; }
+
 std::vector<Feature> g_funciones = {   // orden = orden de arranque (gol_nativo_free necesita la sonda)
     { "diagnostico",     "Diagnóstico de firmas (solo lectura)",       diagInstalar,  diagQuitar  },
     { "sonda_partido",   "Sonda: estados y gol nativo (solo mira)",    sondaInstalar, sondaQuitar },
@@ -1284,6 +1315,7 @@ std::vector<Feature> g_funciones = {   // orden = orden de arranque (gol_nativo_
     { "saque_centro_free", "Tras el gol, saque de centro (entrenamiento)", saqueInstalar, saqueQuitar },
     { "celebracion_corta_free", "Gol sin celebración ni repetición (entrenamiento)", cortaInstalar, cortaQuitar },
     { "cancha_chica_free", "Cancha lógica pequeña (semilargo/semiancho del json) en el entrenamiento", canchaInstalar, canchaQuitar },
+    { "siempre_disparo_free", "Cuadrado dispara siempre en el entrenamiento (sin despeje en campo propio)", disparoInstalar, disparoQuitar },
     { "pelota_sonda", "Sonda de solo lectura de la pelota (posición/velocidad) en el entrenamiento", pelotaInstalar, pelotaQuitar },
     { "gol_directo_free", "Gol sin celebración, cámara ni repetición: solo reinicio (entrenamiento)", directoInstalar, directoQuitar },
     { "sin_1D_free", "Gol sin el paso 0x1D de la cola (entrenamiento; evita el congelón)", sin1DInstalar, sin1DQuitar },
