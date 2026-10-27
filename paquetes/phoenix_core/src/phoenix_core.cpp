@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.43"
+#define PHX_CORE_VERSION "0.4.44"
 
 namespace {
 
@@ -1639,6 +1639,7 @@ static void asegurarHiloTrain() { if (!g_trainGlobOn) { g_trainGlobOn = 1; g_hil
 const char* kFirmaReinicio = "48 8B C4 53 41 57 48 83 EC 78 48 89 70 E8";
 using FnReinicio = float* (*)(float*, uint32_t*, void*, void*);
 FnReinicio g_reinicioOrig = nullptr; volatile LONG g_jugChOn = 0, g_jugChEscalados = 0;
+int g_jugChModo = 1;   // json «jugadores_chica_modo»: 1 = solo recortar (lo que cae fuera de ±(dim-0.5) se escala hacia dentro; lo demás no se toca), 0 = escalar todo (0.4.43)
 float* ganchoReinicio(float* out, uint32_t* pIdx, void* ctx, void* team) {
     float sx = 0, sz = 0; float* e = nullptr; bool esc = false;
     if (g_jugChOn && GetTickCount64() - g_tTrainGlob < 3000) {
@@ -1649,13 +1650,22 @@ float* ganchoReinicio(float* out, uint32_t* pIdx, void* ctx, void* team) {
                 float d[2] = { 0, 0 }, tmp[3];
                 if (leerSeguro(dims, d, 8) && d[0] > 5.0f && d[0] < 60.0f && d[1] > 3.0f && d[1] < 40.0f) {
                     e = reinterpret_cast<float*>(t + 0x4B4C + slot * 12);
-                    if (leerSeguro(e, tmp, 12) && fabsf(tmp[2]) < 60.0f) { sx = tmp[0]; sz = tmp[2]; e[0] = sx * (d[0] / 52.56f); e[2] = sz * (d[1] / 34.06f); esc = true; }
+                    if (leerSeguro(e, tmp, 12) && fabsf(tmp[2]) < 60.0f) {
+                        if (g_jugChModo == 0) { sx = tmp[0]; sz = tmp[2]; e[0] = sx * (d[0] / 52.56f); e[2] = sz * (d[1] / 34.06f); esc = true; }
+                        else {   // solo recortar: dentro de ±(dim-0.5) no se toca; fuera, se escala hacia dentro conservando la dirección
+                            float Lx = d[0] - 0.5f, Wz = d[1] - 0.5f, ax = fabsf(tmp[0]), az = fabsf(tmp[2]);
+                            if (ax > Lx || az > Wz) {
+                                float k = 1.0f; if (ax > Lx) k = fminf(k, Lx / ax); if (az > Wz) k = fminf(k, Wz / az);
+                                sx = tmp[0]; sz = tmp[2]; e[0] = sx * k; e[2] = sz * k; esc = true;
+                            }
+                        }
+                    }
                 }
             }
         }
     }
     float* r = g_reinicioOrig(out, pIdx, ctx, team);
-    if (esc) { e[0] = sx; e[2] = sz; LONG n = InterlockedIncrement(&g_jugChEscalados); if (n <= 30) logf("[JUGCH] reinicio idx=%u (%.1f,%.1f) -> salida (%.1f,%.1f)", *pIdx, sx, sz, out[0], out[2]); }
+    if (esc) { e[0] = sx; e[2] = sz; LONG n = InterlockedIncrement(&g_jugChEscalados); if (n <= 30) logf("[JUGCH] %s idx=%u tabla antes (%.1f,%.1f) · salida (%.1f,%.1f)", g_jugChModo ? "recorte" : "escala", *pIdx, sx, sz, out[0], out[2]); }
     return r;
 }
 bool jugChInstalar(Feature& f) {
@@ -1785,6 +1795,7 @@ void leerConfig() {
     if (g_canchaAncho < 6.0 || g_canchaAncho > 50.0) g_canchaAncho = 10.0;
     if (valorDe("celebracion_modo", v)) g_celebModo = (v == "\"timer\"") ? 1 : (v == "\"salto\"") ? 2 : 0;
     if (valorDe("siempre_disparo_modo", v)) g_disparoModo = atoi(v.c_str());
+    if (valorDe("jugadores_chica_modo", v)) g_jugChModo = atoi(v.c_str());
     if (valorDe("red_factor", v)) { g_redFactor = (float)atof(v.c_str()); if (g_redFactor < 0.0f || g_redFactor > 1.0f) g_redFactor = 0.85f; }
     if (valorDe("vigia_escritura", v)) g_vigiaPedida = atoi(v.c_str());
     if (valorDe("vigia_pelota", v)) g_vigiaPelotaPedida = atoi(v.c_str());
