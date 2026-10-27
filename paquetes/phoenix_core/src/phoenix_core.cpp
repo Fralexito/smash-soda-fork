@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.8"
+#define PHX_CORE_VERSION "0.4.9"
 
 namespace {
 
@@ -471,13 +471,24 @@ uint64_t ganchoGol(uint8_t* a, uint8_t* b, uint8_t* job, uint64_t p4) {
 // FUN_140449B00 con 0x0E (TrainingWork activo); queremos ver qué tipo pone un gol de amistoso.
 using FnEvento = uint64_t (*)(uint8_t* job, uint32_t tipo);
 FnEvento g_eventoOrig = nullptr;
-// Objeto del partido [[0x1436F3DC8]+0x270] (solo exe de Conmegol). +0x1775 parado, +0x1574 «k» = razón de pelota
-// muerta que usa el selector FUN_1404526A0 (k==3 → gol), +0x1554 subtipo, +0x15A5 bandera del caso k==5.
-bool g_exeConocido = true;   // las RVA fijas solo valen si todas las firmas caen donde en Conmegol
+// Objeto del partido [[global]+0x270] (global = 0x1436F3DC8 en Conmegol). +0x1775 parado, +0x1574 «k» = razón de
+// pelota muerta que usa el selector FUN_1404526A0 (k==3 → gol), +0x1554 subtipo, +0x15A5 bandera del caso k==5.
+// El global se saca por firma de una lectura RIP-relativa (0x14041B277: «mov rcx,[rip+rel32] ; mov rax,[rcx+270h]»),
+// así sirve también en un exe distinto del de Conmegol.
+const char* kFirmaGlobalPartido = "43 08 3A 00 00 00 48 8B 0D ?? ?? ?? ?? 48 8B 81 70 02 00 00 8B 90 58";
+uint8_t* g_globalPartido = nullptr;
+bool resolverGlobalPartido(const char* quien) {
+    uint8_t* f = firmaUnica("codigo", kFirmaGlobalPartido, quien);
+    if (!f) return false;
+    int32_t rel; memcpy(&rel, f + 9, 4);
+    g_globalPartido = f + 13 + rel;   // fin de la instrucción (f+6, 7 bytes) + rel32
+    logf("[%s] global del partido en exe+0x%llX", quien, (unsigned long long)(g_globalPartido - g_exe.base));
+    return true;
+}
 uint8_t* objPartido() {
-    if (!g_exeConocido) return nullptr;
+    if (!g_globalPartido) return nullptr;
     uint8_t* raiz = nullptr; uint8_t* obj = nullptr;
-    if (!leerSeguro(g_exe.base + 0x36F3DC8, &raiz, 8) || !raiz) return nullptr;
+    if (!leerSeguro(g_globalPartido, &raiz, 8) || !raiz) return nullptr;
     if (!leerSeguro(raiz + 0x270, &obj, 8)) return nullptr;
     return obj;
 }
@@ -510,7 +521,7 @@ Gancho g_ganchos[] = {
 };
 
 bool sondaInstalar(Feature& f) {
-    g_exeConocido = true;
+    if (!resolverGlobalPartido(f.id)) logf("[%s] sin firma del global del partido: k/sub/parado no se anotan", f.id);
     uint8_t* dirs[_countof(g_ganchos)];
     for (size_t i = 0; i < _countof(g_ganchos); ++i) {      // primero se buscan todas: o todas o ninguna
         auto& g = g_ganchos[i];
@@ -518,7 +529,6 @@ bool sondaInstalar(Feature& f) {
         if (!dirs[i]) { f.estado = std::string("sin firma: ") + g.nombre; return false; }
         uint32_t rva = static_cast<uint32_t>(dirs[i] - g_exe.base);
         logf("[%s] %s en exe+0x%X%s", f.id, g.nombre, rva, rva == g.rvaEsperada ? "" : " (exe distinto del de Conmegol)");
-        if (rva != g.rvaEsperada) g_exeConocido = false;
     }
     for (size_t i = 0; i < _countof(g_ganchos); ++i) {
         if (!crearDesvio(f, dirs[i], g_ganchos[i].n, g_ganchos[i].gancho, g_ganchos[i].original)) {
