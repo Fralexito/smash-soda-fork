@@ -135,8 +135,9 @@ function m.get_filepath(ctx, filename, key)
     if not encendido or not enZona then return nil end
     if canchaOn and rutaCancha then
         local fl = string.gsub(string.lower(tostring(filename)), "\\", "/")
-        if paredesOn and fl == "common/render/model/bg/hit/bill/st002/hit_billboard.geom" then
-            local fp = base .. "content/phoenix/cancha_paredes/" .. fl
+        local fl2 = string.gsub(fl, "//+", "/")
+        if paredesOn and (fl2 == "common/render/model/bg/hit/bill/hit_billboard.geom" or fl2 == "common/render/model/bg/hit/bill/st002/hit_billboard.geom") then
+            local fp = base .. "content/phoenix/cancha_paredes/common/render/model/bg/hit/bill/st002/hit_billboard.geom"
             local hp = io.open(fp, "rb")
             if hp then hp:close(); log("[cancha_paredes] sirvo " .. fl); return fp end
         end
