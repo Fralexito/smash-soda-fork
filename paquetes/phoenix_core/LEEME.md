@@ -11,6 +11,7 @@ Plan completo: `para-proyecto/pes/cap_70_phoenix_core_arquitectura_y_plan.md`.
 | `src/phoenix_core.cpp`, `src/phoenix_api.h` | Código de la DLL y su API en C |
 | `CMakeLists.txt` | Compilar con MSVC (x64, /MT) |
 | `SiderAddons/modules/phoenix_core_loader.lua` | Módulo de Sider que carga la DLL (LoadLibraryA por ffi) y llama a `phx_core_tick` cada fotograma |
+| `SiderAddons/modules/phoenix_marcador_free.lua` | Marcador y reloj del Entrenamiento libre (modo street): goles por `goal_scored`, cronómetro propio; lo muestra en el overlay de Sider (Espacio) y escribe `content\phoenix\marcador_free.json` (para un widget de Phoenix Overlay). Apagado salvo `"marcador_free": true` en `phoenix_core.json`; `INSTALAR.ps1` añade su línea a `sider.ini` y `DESINSTALAR.ps1` la quita |
 | `SiderAddons/phoenix_core/phoenix_core.json` | Funciones encendidas/apagadas |
 | `INSTALAR.ps1` / `DESINSTALAR.ps1` | Poner y quitar sin Phoenix Link |
 

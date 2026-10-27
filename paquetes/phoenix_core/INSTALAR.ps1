@@ -26,13 +26,13 @@ Copy-Item $ini $copia
 $lineas = [Collections.Generic.List[string]]([IO.File]::ReadAllText($ini, $enc) -split "`r?`n")
 $i = $lineas.FindIndex([Predicate[string]]{ param($l) $l -match '^\s*;?\s*luajit\.ext\.enabled\s*=' })
 if ($i -ge 0) { $lineas[$i] = 'luajit.ext.enabled = 1' } else { $lineas.Add('luajit.ext.enabled = 1') }
-[void]$lineas.RemoveAll([Predicate[string]]{ param($l) $l -match 'phoenix_core_loader\.lua' })
-$mod = 'lua.module = "phoenix_core_loader.lua"'
+[void]$lineas.RemoveAll([Predicate[string]]{ param($l) $l -match 'phoenix_core_loader\.lua|phoenix_marcador_free\.lua' })
+$mods = @('lua.module = "phoenix_core_loader.lua"', 'lua.module = "phoenix_marcador_free.lua"')   # marcador del Entrenamiento libre (apagado salvo "marcador_free": true en phoenix_core.json)
 $mandos = $lineas.FindIndex([Predicate[string]]{ param($l) $l -match '^\s*lua\.module\s*=.*phoenix_mandos' })
-if ($mandos -ge 0) { $lineas.Insert($mandos, $mod) }
+if ($mandos -ge 0) { $lineas.InsertRange($mandos, [string[]]$mods) }
 else {
     $ultima = -1; for ($k = 0; $k -lt $lineas.Count; $k++) { if ($lineas[$k] -match '^\s*lua\.module\s*=') { $ultima = $k } }
-    if ($ultima -ge 0) { $lineas.Insert($ultima + 1, $mod) } else { $lineas.Add($mod) }
+    if ($ultima -ge 0) { $lineas.InsertRange($ultima + 1, [string[]]$mods) } else { $lineas.AddRange([string[]]$mods) }
 }
 [IO.File]::WriteAllText($ini, ($lineas -join "`r`n"), $enc)
 Write-Host "sider.ini ajustado (copia en $copia)."

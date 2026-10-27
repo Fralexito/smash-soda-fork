@@ -10,7 +10,9 @@ $enc = [Text.Encoding]::GetEncoding(28591)
 $copia = "$ini.antes-quitar-phoenix-core-" + (Get-Date -Format 'yyyyMMdd-HHmmss')
 Copy-Item $ini $copia
 $lineas = [Collections.Generic.List[string]]([IO.File]::ReadAllText($ini, $enc) -split "`r?`n")
-$n = $lineas.RemoveAll([Predicate[string]]{ param($l) $l -match 'phoenix_core_loader\.lua' })
+$n = $lineas.RemoveAll([Predicate[string]]{ param($l) $l -match 'phoenix_core_loader\.lua|phoenix_marcador_free\.lua' })
 [IO.File]::WriteAllText($ini, ($lineas -join "`r`n"), $enc)
 Remove-Item -Force -ErrorAction SilentlyContinue (Join-Path $Sider 'modules\phoenix_core_loader.lua')
+Remove-Item -Force -ErrorAction SilentlyContinue (Join-Path $Sider 'modules\phoenix_marcador_free.lua')
+Remove-Item -Force -ErrorAction SilentlyContinue (Join-Path $Sider 'content\phoenix\marcador_free.json')
 Write-Host "Quitadas $n línea(s) de sider.ini (copia en $copia). Phoenix Core desinstalado."
