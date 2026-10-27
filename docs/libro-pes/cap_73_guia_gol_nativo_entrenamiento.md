@@ -154,3 +154,27 @@ El gestor de clima del Conmegol (Real-Life-Feel-Weather-Manager) elige la tempor
 
 ## 18. Quién participa en el entrenamiento y por qué el portero solo entra con 11 (frente F, 27-oct)
 `FUN_140A59CA0` (RVA 0xA59CA0, entrada `FUN_140A59EC0`) decide la participación: cada jugador tiene un rango (GK primero) y una prioridad leída de una de 3 tablas de 22 enteros en .rdata (T_ATAQUE 0x142644F10, T_DEFENSA 0x142644F80, T_ATAQUE_PORTEROS 0x142644FF0, ambos GK = 1); participa si prioridad ≤ N del lado (TW+0x3C / TW+0x40). La tabla se elige con TW+0x14 (modo) y TW+0x18 («Cursor de PT fijo»). En Ataque el GK propio vale 11: solo entra con N=11; con «Cursor de PT fijo = Sí» usa T_ATAQUE_PORTEROS. Core 0.4.49 `arquero_propio_free`: parche A (0x140A59DD5, `48 0F 45 CA` → NOP×4, por firma `80 7F 18 01 48 8D 15 ?? ?? ?? ?? 48 8D 0D ?? ?? ?? ?? 48 0F 45 CA`, offset 18): Ataque usa siempre T_ATAQUE_PORTEROS; parche B (dato 0x142644FAC, 11 → 1): GK rival dentro en Defensa. Solo con TrainingWork y restaurados al salir. Menú «S. pta./córner/banda» (M+0x3F31C → TW+0xC): solo 2 valores, ninguno quita los saques; el parche del Juez (`sin_saques_free`) sigue siendo necesario.
+
+## 19. Modo street completo: resumen por logro, interruptores y cómo replicarlo (27-oct-2026)
+Informes técnicos de cada frente (RVA, firmas AOB, confianza): `docs/libro-pes/frentes_re/frente_{B,C,D,E,F,G,I}_*.md` (copia en `para-proyecto/pes/frentes_re/`). Mapa de clases: `cap_74_mapa_clases_pes.md`. Todas las funciones del Core son interruptores del json (`phoenix_core.json`) y solo actúan con TrainingWork; los parches de código se localizan por firma AOB única y se restauran al salir.
+
+| logro | interruptor | cómo funciona (resumen) | frente / sección |
+|---|---|---|---|
+| Gol nativo, celebración corta, saque de centro, sin repetición | `gol_nativo_free`, `saque_centro_free`, `gol_directo_free` | cola de pasos del gol reescrita (03 04 16 12 13 14 15 0E 34 19 1A) | §9–9b |
+| Cancha lógica 30×20 | `cancha_chica_free` (`cancha_semilargo`, `cancha_semiancho`) | bloque de 9 floats de dimensiones y cajas de portería | §10 |
+| Arcos y red visibles en ±15, césped | AddOn de Stadium Server | fmdl movidos/escalados; pitch variante AB | §11–12 |
+| Temporada fija (vacío azul, césped claro) | `season_forzada` (Lua `set_conditions`) | season 1 en el entrenamiento | §15 |
+| Cuadrado = tiro con potencia por carga en cualquier mitad | `siempre_disparo_free` + `siempre_disparo_modo` 8 | 2 parches de 1 byte (Shoot siempre aplicable, Clear nunca) en las unidades del mando | §14, frente D |
+| Muros que rebotan (lados, fondos, postes, travesaño) | `muros_core` (`muro_rebote`, `muro_friccion`, `muro_x`, `muro_z`), `cancha_paredes: false` | gancho al paso analítico de la pelota FUN_140876360; la pelota no colisiona con .geom | §16, frente B |
+| Red frena la pelota | `red_frena_free` (`red_factor`) | factor por paso en la red y rebote leve al fondo | frente B |
+| Malla de la red se deforma | `malla_red_free` | GoalNet_Hit/GoalNet_SetState desde el gancho de la pelota | frente E |
+| Sin saques (juego continuo) | `sin_saques_free` | 2 parches de 1 byte en el Juez (cc=2 puerta/córner, cc=3 banda) | §16, frente G |
+| Suplentes ocultos | `suplentes_ocultos_free` | fila de banda FUN_140A597D0 → (0,0,100) | frente C |
+| Jugadores dentro de la cancha | `jugadores_chica_free` + `jugadores_chica_modo` 1 | recorta las posiciones de reinicio (FUN_1409F5530) que caen fuera de ±(dim−0,5) | frente C |
+| Portero propio con cualquier N | `arquero_propio_free` | cmovne de selección de tabla anulado + dato GK rival en Defensa | §18, frente F |
+| IA sin despejes de emergencia | `sin_despeje_emergencia` | 1 byte en ThinkUnitClear de la IA (FUN_142109EB0) | frente I |
+| Sondas de investigación | `jugadores_sonda`, `pelota_sonda`, `vigia_*` (apagar siempre: el vigía congeló el juego) | solo lectura / DR0-3 | cap_62 |
+
+**Instalación (con backups):** `bash instalar_dll_solo.sh clave=valor …` (herramientas/ del repo): copia la DLL anterior, instala la nueva, añade claves al json, borra `arrancando.flag`. PES debe estar cerrado; el selector se abre aparte (`PES2021 Start.exe`); Frank pulsa Iniciar.
+**Versiones:** 0.4.26 pelota_sonda; 0.4.31 SHOOT/CARGA; 0.4.36 MEDIDOR; 0.4.40 modo 8 (cuadrado); 0.4.41 red; 0.4.43 jugadores/suplentes; 0.4.45 muros_core; 0.4.46 malla; 0.4.47 sin_saques; 0.4.48 boca/postes; 0.4.49 arquero; 0.4.50 sin despeje IA.
+**Lecciones:** ver cap_02 (herramienta mejor primero; x64dbg adjunto congela PES; la vigía de escritura congeló el juego en los goles).
