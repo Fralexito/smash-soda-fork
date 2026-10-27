@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.52"
+#define PHX_CORE_VERSION "0.4.53"
 
 namespace {
 
@@ -1793,6 +1793,37 @@ bool arqCursorInstalar(Feature& f) {
 }
 bool arqCursorQuitar(Feature&) { g_arqCursorOn = 0; ponerParcheN(g_pnC1, false); ponerParcheN(g_pnC2, false); ponerParcheN(g_pnC3, false); return true; }
 
+// --- arquero_salida_corta (0.4.53, RE del frente H3, 27-oct): la posición del portero la da ActionKeeperBasePosition ranura 4 = FUN_1409DC040 (RVA 0x9DC040): ulonglong* f(longlong this, ulonglong* out (vec3), longlong, undefined8),
+// con umbrales de salida de cancha grande (17–35 m). Gancho (15 B de prólogo limpios, firma de 32 B): tras el original se recorta la salida a un máximo de R metros delante de la línea de gol (|x| en [L−R, L−0,5], R = json
+// «arquero_salida_max», 3,5) y |z| <= 5. Solo con TrainingWork.
+const char* kFirmaPorteroPos = "48 8B C4 48 89 58 08 4C 89 48 20 48 89 50 10 55 56 57 41 54 41 55 41 56 41 57 48 8D 6C 24 B0 48";
+using FnPorteroPos = uint64_t* (*)(int64_t, uint64_t*, int64_t, uint64_t);
+FnPorteroPos g_porteroPosOrig = nullptr; volatile LONG g_arqSalidaOn = 0, g_arqSalidaRecortes = 0; float g_arqSalidaMax = 3.5f;
+uint64_t* ganchoPorteroPos(int64_t p1, uint64_t* out, int64_t p3, uint64_t p4) {
+    uint64_t* r = g_porteroPosOrig(p1, out, p3, p4);
+    if (g_arqSalidaOn && out && GetTickCount64() - g_tTrainGlob < 3000) {
+        float v[3]; if (leerSeguro(out, v, 12) && fabsf(v[0]) < 60.0f && fabsf(v[2]) < 60.0f && fabsf(v[0]) > 1.0f) {
+            float L = (float)g_canchaLargo, ax = fabsf(v[0]), sg = v[0] >= 0 ? 1.0f : -1.0f, nx = ax, nz = v[2];
+            if (nx < L - g_arqSalidaMax) nx = L - g_arqSalidaMax;
+            if (nx > L - 0.5f) nx = L - 0.5f;
+            if (nz > 5.0f) nz = 5.0f; else if (nz < -5.0f) nz = -5.0f;
+            if (nx != ax || nz != v[2]) {
+                float* o = reinterpret_cast<float*>(out); o[0] = sg * nx; o[2] = nz;
+                LONG n = InterlockedIncrement(&g_arqSalidaRecortes); if (n <= 10 || n % 500 == 0) logf("[PORTERO] salida recortada #%ld (%.1f,%.1f) -> (%.1f,%.1f)", (long)n, v[0], v[2], o[0], o[2]);
+            }
+        }
+    }
+    return r;
+}
+bool arqSalidaInstalar(Feature& f) {
+    uint8_t* m = firmaUnica("codigo", kFirmaPorteroPos, f.id);
+    if (!m) { f.estado = "sin firma: posición del portero FUN_1409DC040"; return false; }
+    if (!crearDesvio(f, m, 15, (void*)ganchoPorteroPos, (void**)&g_porteroPosOrig)) { f.estado = "no se pudo desviar la posición del portero"; return false; }
+    asegurarHiloTrain(); g_arqSalidaOn = 1;
+    char b[150]; sprintf_s(b, "ok: el portero sale como máximo %.1f m de la línea de gol (exe+0x%llX)", g_arqSalidaMax, (unsigned long long)(m - g_exe.base)); f.estado = b; return true;
+}
+bool arqSalidaQuitar(Feature&) { g_arqSalidaOn = 0; return true; }
+
 const char* kFirmaReinicio = "48 8B C4 53 41 57 48 83 EC 78 48 89 70 E8";
 using FnReinicio = float* (*)(float*, uint32_t*, void*, void*);
 FnReinicio g_reinicioOrig = nullptr; volatile LONG g_jugChOn = 0, g_jugChEscalados = 0;
@@ -1875,6 +1906,7 @@ std::vector<Feature> g_funciones = {   // orden = orden de arranque (gol_nativo_
     { "sin_despeje_emergencia", "La IA no hace despejes automáticos de emergencia en el entrenamiento (puede pasar, regatear y tirar)", iaClearInstalar, iaClearQuitar },
     { "arquero_saque_corto", "El portero IA no saca largo en el entrenamiento (anula GKPassLong y GKClear de la IA)", gkCortoInstalar, gkCortoQuitar },
     { "arquero_propio_cursor", "Con Cursor de PT fijo = Sí el portero propio no bloquea el cursor del usuario (variante del arquero propio)", arqCursorInstalar, arqCursorQuitar },
+    { "arquero_salida_corta", "El portero sale poco de su arco en el entrenamiento (recorta la posición de salida a R m de la línea)", arqSalidaInstalar, arqSalidaQuitar },
     { "jugadores_chica_free", "Escala a la cancha chica las posiciones de reinicio de los jugadores (entrenamiento)", jugChInstalar, jugChQuitar },
     { "suplentes_ocultos_free", "Aparca a los suplentes de la banda lejos (entrenamiento)", supOcultosInstalar, supOcultosQuitar },
     { "pelota_sonda", "Sonda de solo lectura de la pelota (posición/velocidad) en el entrenamiento", pelotaInstalar, pelotaQuitar },
@@ -1964,6 +1996,7 @@ void leerConfig() {
     if (valorDe("muro_friccion", v)) { g_muroFric = (float)atof(v.c_str()); if (g_muroFric < 0.0f || g_muroFric > 1.0f) g_muroFric = 0.92f; }
     if (valorDe("muro_x", v)) g_muroX = atof(v.c_str());
     if (valorDe("muro_z", v)) g_muroZ = atof(v.c_str());
+    if (valorDe("arquero_salida_max", v)) { g_arqSalidaMax = (float)atof(v.c_str()); if (g_arqSalidaMax < 1.0f || g_arqSalidaMax > 12.0f) g_arqSalidaMax = 3.5f; }
     if (valorDe("red_factor", v)) { g_redFactor = (float)atof(v.c_str()); if (g_redFactor < 0.0f || g_redFactor > 1.0f) g_redFactor = 0.85f; }
     if (valorDe("vigia_escritura", v)) g_vigiaPedida = atoi(v.c_str());
     if (valorDe("vigia_pelota", v)) g_vigiaPelotaPedida = atoi(v.c_str());
