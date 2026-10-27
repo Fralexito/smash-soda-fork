@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.34"
+#define PHX_CORE_VERSION "0.4.35"
 
 namespace {
 
@@ -1323,7 +1323,16 @@ static void sincronizarCarga(uint64_t clear, const char* donde) {
     static LONG n = 0; if (InterlockedIncrement(&n) <= 60) logf("[CARGA] %s Clear=%.3f Shoot=%.3f", donde, cc, cs);
     if (g_disparoCarga && cs >= 0.0f && cs < 5.0f) memcpy(c + 0x20, &cs, 4);
 }
+// modo 7 (0.4.35). Causa de la barra llena (RE del 27-oct): la unidad Clear tiene +0x14 = 4; FUN_1408AC9D0 (acumula la carga +0x20,
+// tope 1.0) sale de inmediato si +0x14 == 4 y FUN_1408AB000 pone el medidor a 1.0 cuando el tipo de orden (CommandPlayer+0x1768) es 4.
+// Aquí Clear se vuelve tipo 1 y acumula la carga como Shoot (FUN_1408AC9D0 con la acción 0x55).
+using FnAcum = void (*)(uint64_t, int64_t, uint32_t);
 uint64_t ganchoClear60(int64_t p1) {
+    if (g_disparoModo >= 7 && trainingReciente()) {
+        *(int*)(p1 + 0x14) = 1; *(float*)(p1 + 0x20) = 0.0f; g_clearUltimo = GetTickCount64();
+        static LONG n = 0; if (InterlockedIncrement(&n) <= 10) logf("[siempre_disparo_free] modo 7: Clear tipo 1, carga a 0, 0x55");
+        return 0x55;
+    }
     if (trainingReciente()) {
         LONG n = InterlockedIncrement(&g_clearAnulados); if (n <= 10) logf("[siempre_disparo_free] despeje (+0x60) -> %s", (g_disparoModo >= 2 && g_disparoModo < 5) ? "tiro 0x55" : "nada (modo>=5)");
         if (g_disparoModo >= 5) { *(float*)(p1 + 0x20) = 0.1f; g_clearUltimo = GetTickCount64(); return 0; }
@@ -1334,6 +1343,13 @@ uint64_t ganchoClear60(int64_t p1) {
 }
 uint64_t ganchoClear68(uint64_t p1, int64_t p2) {
     uint64_t r = g_clear68Orig(p1, p2);
+    if (g_disparoModo >= 7 && r != 0 && trainingReciente()) {
+        reinterpret_cast<FnAcum>(g_exe.base + 0x8AC9D0)(p1, p2, 0x55);
+        g_clearUltimo = GetTickCount64();
+        float c = 0; leerSeguro(reinterpret_cast<void*>(p1 + 0x20), &c, 4);
+        static LONG n = 0; if (InterlockedIncrement(&n) <= 40) logf("[CARGA] modo 7 mantener carga=%.3f", c);
+        return 0x55;
+    }
     if (r != 0 && trainingReciente()) {
         LONG n = InterlockedIncrement(&g_clearAnulados); if (n <= 10) logf("[siempre_disparo_free] despeje (+0x68) -> %s", (g_disparoModo >= 2 && g_disparoModo < 5) ? "tiro 0x55" : "nada (modo>=5)");
         g_clearUltimo = GetTickCount64();
@@ -1346,7 +1362,8 @@ uint64_t ganchoClear70(uint64_t p1, int64_t p2) {
     uint64_t r = g_clear70Orig(p1, p2);
     if (g_disparoModo >= 4 && r == 0 && trainingReciente() && GetTickCount64() - g_clearUltimo < 250) {
         static LONG n = 0; if (InterlockedIncrement(&n) <= 10) logf("[siempre_disparo_free] soltar: Clear(+0x70) mantiene 0x55");
-        sincronizarCarga(p1, "soltar");
+        if (g_disparoModo >= 7) { float c = 0; leerSeguro(reinterpret_cast<void*>(p1 + 0x20), &c, 4); logf("[CARGA] modo 7 soltar carga=%.3f", c); }
+        else sincronizarCarga(p1, "soltar");
         return 0x55;
     }
     return r;
