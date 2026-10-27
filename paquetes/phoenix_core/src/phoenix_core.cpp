@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.12"
+#define PHX_CORE_VERSION "0.4.12b"
 
 namespace {
 
@@ -610,10 +610,14 @@ uint64_t ganchoPaso(uint8_t* job, uint64_t saltable, uint64_t p3) {
 // fuerza +0xC4=1 (sale del bucle) y lo anota en el log.
 const char* kFirmaEsperaRender = "48 8D 4C 24 38 E8 ?? ?? ?? ?? 8B 83 C4 00 00 00 85 C0 74";
 volatile LONG g_rescates = 0;
+volatile LONG g_fotogramas = 0;     // +1 en cada phx_core_tick (display_frame de Sider): se para si el hilo de juego se bloquea
 void ayudanteRescate(uint8_t* obj) {
-    static ULONGLONG tPrim = 0, tUlt = 0;
+    // 0.4.12b: FUN_141717150 se llama en CADA fotograma (menús, carga y juego), así que «espera larga» no basta: el
+    // bloqueo real es «≥3 s sin que avance el contador de fotogramas y seguimos dentro de esta espera».
+    static ULONGLONG tPrim = 0, tUlt = 0; static LONG fotoPrev = -1;
     ULONGLONG ahora = GetTickCount64();
-    if (ahora - tUlt > 500) tPrim = ahora;          // espera nueva
+    LONG fr = g_fotogramas;
+    if (fr != fotoPrev || ahora - tUlt > 500) { fotoPrev = fr; tPrim = ahora; }   // hay fotogramas o espera nueva
     tUlt = ahora;
     if (ahora - tPrim < 3000) return;
     tPrim = ahora;                                  // se rearma: como mucho 1 rescate cada 3 s
@@ -673,17 +677,26 @@ bool sondaInstalar(Feature& f) {
             f.estado = std::string("no se pudo desviar ") + g_ganchos[i].nombre; return false;
         }
     }
-    // Complementos de la sonda (si fallan, la sonda sigue con lo básico): cola de pasos del gol y ejecutor de pasos.
-    g_sondaOn = asegurarMontador(f);
-    uint8_t* paso = firmaUnica("codigo", kFirmaPaso, f.id);
-    if (!paso) logf("[%s] sin firma: ejecutor de pasos (FUN_14047C2D0): no se anotan los pasos", f.id);
-    else if (!crearDesvio(f, paso, 17, (void*)ganchoPaso, (void**)&g_pasoOrig))
-        logf("[%s] no se pudo desviar el ejecutor de pasos", f.id);
-    else logf("[%s] ejecutor de pasos en exe+0x%llX", f.id, (unsigned long long)(paso - g_exe.base));
     f.estado = "ok: anotando en sonda_partido.txt";
     return true;
 }
-bool sondaQuitar(Feature&) { g_sondaOn = false; return true; }   // los parches los quita el marco
+bool sondaQuitar(Feature&) { return true; }   // los parches los quita el marco
+
+// --- sonda_pasos (0.4.12b: función propia, apagable por separado de sonda_partido): cola de pasos del gol (COLA, vía el
+// montador FUN_14044F8A0) y ejecutor de pasos (PASO, FUN_14047C2D0). En 0.4.12 iban dentro de la sonda y el juego se cayó en
+// el menú a los 4 s (en la VM de .impdata); así se pueden probar de uno en uno. Necesita sonda_partido para escribir.
+bool pasosInstalar(Feature& f) {
+    if (!asegurarMontador(f)) { f.estado = "sin gancho del montador del gol (FUN_14044F8A0)"; return false; }
+    g_sondaOn = true;
+    uint8_t* paso = firmaUnica("codigo", kFirmaPaso, f.id);
+    if (!paso) { f.estado = "ok parcial: solo COLA (sin firma del ejecutor de pasos FUN_14047C2D0)"; return true; }
+    if (!crearDesvio(f, paso, 17, (void*)ganchoPaso, (void**)&g_pasoOrig)) { f.estado = "ok parcial: solo COLA (no se pudo desviar el ejecutor de pasos)"; return true; }
+    char s[130];
+    sprintf_s(s, "ok: COLA y PASO (montador FUN_14044F8A0; ejecutor de pasos exe+0x%llX)", (unsigned long long)(paso - g_exe.base));
+    f.estado = s;
+    return true;
+}
+bool pasosQuitar(Feature&) { g_sondaOn = false; return true; }
 
 // Indicador general «partido detenido» ([[0x1436F3DC8]+0x270]+0x1775), solo en el exe de Conmegol (RVA conocida).
 uint64_t g_paradoPrevio = 0x100;
@@ -884,6 +897,7 @@ bool vigilanteQuitar(Feature&) {
 std::vector<Feature> g_funciones = {   // orden = orden de arranque (gol_nativo_free necesita la sonda)
     { "diagnostico",     "Diagnóstico de firmas (solo lectura)",       diagInstalar,  diagQuitar  },
     { "sonda_partido",   "Sonda: estados y gol nativo (solo mira)",    sondaInstalar, sondaQuitar },
+    { "sonda_pasos",     "Sonda: cola y pasos del gol (solo mira)",    pasosInstalar, pasosQuitar },
     { "gol_nativo_free", "Gol nativo en Entrenamiento libre (street)", golInstalar,   golQuitar   },
     { "saque_centro_free", "Tras el gol, saque de centro (entrenamiento)", saqueInstalar, saqueQuitar },
     { "celebracion_corta_free", "Gol sin celebración ni repetición (entrenamiento)", cortaInstalar, cortaQuitar },
@@ -1019,6 +1033,7 @@ PHX_API int phx_core_iniciar(const char* carpeta) {
 
 PHX_API void phx_core_tick(void) {
     if (g_codigoInicio <= 0) return;
+    InterlockedIncrement(&g_fotogramas);
     if (Feature* s = buscarFuncion("sonda_partido"); s && s->activa) {
         vigilarParado();
         volcarSonda();
