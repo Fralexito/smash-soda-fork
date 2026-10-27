@@ -40,6 +40,7 @@ El exe en disco **no se toca**. Sin el DLL, PES es 100 % original.
 ## 5. El congelón al final de la celebración — causa SIN confirmar
 - Síntoma (2 veces, Core 0.4.4 y 0.4.7): unos 7 s tras el gol, en la celebración, PES se queda congelado (sin crash). Los hilos del motor esperan una cola de carga (FUN_1403E0760) que nadie llena.
 - Sospechoso: un **error de Lua del parche Conmegol**. `SiderAddons/modules/TournamentCornerFlags.lua` usa la global `CornerFlag`, que solo se rellena para torneos conocidos; en el entrenamiento (torneo 29) queda `nil` y `log("-- " .. CornerFlag)` falla en el callback de trofeo/entrada. En el amistoso ese camino no se activa y no hay error.
+- **27-oct 01:55: DESCARTADO como causa.** El selector restaura el archivo original en cada arranque, y con el original el gol no se congeló. El congelón sigue sin causa conocida (quizá intermitente).
 - **CORRECCIÓN 27-oct 01:40:** en la prueba que salió bien, el arreglo de ese Lua **no estaba puesto** (el archivo volvió a su versión original, sospecha: el selector restaura módulos al arrancar) y aun así NO se congeló. Así que el congelón puede ser intermitente y el Lua no está probado como causa. Sigue en observación con el vigilante (señal: sonda quieta ≥8 s).
 - Arreglo preventivo (solo Conmegol, copia `.antes-fix`): línea 92 `if key and CornerFlag then`, línea 98 `log("-- " .. tostring(CornerFlag))`. En PES limpio ese archivo no existe.
 - Regla para el parche propio: **todo módulo Lua que use datos del torneo debe aguantar `nil`** (el entrenamiento no tiene torneo).
