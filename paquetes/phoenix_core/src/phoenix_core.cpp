@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.25"
+#define PHX_CORE_VERSION "0.4.26"
 
 namespace {
 
@@ -818,7 +818,7 @@ DWORD WINAPI hiloPelota(LPVOID) {
         if (!hay) { tw = false; seguida = nullptr; cand.clear(); continue; }
         if (!tw) { tw = true; ultimoEscaneo = 0; }
         ULONGLONG ahora = GetTickCount64();
-        if (!seguida && (cand.empty() || ahora - ultimoEscaneo > 15000)) {   // (re)escaneo
+        if (!seguida && ahora - ultimoEscaneo > 4000) {   // (re)escaneo cada 4 s hasta encontrarla
             cand.clear(); escanearBolas(cand); ultimoEscaneo = GetTickCount64(); px.assign(cand.size(), 1e9f); pz.assign(cand.size(), 1e9f);
             logf("[BALL] escaneo: %u candidatos", (unsigned)cand.size());
         }
@@ -835,15 +835,15 @@ DWORD WINAPI hiloPelota(LPVOID) {
         uint32_t act[160]; if (!leerSeguro(seguida, act, sizeof act)) continue;
         float x, z, y; memcpy(&x, (uint8_t*)act + 208, 4); memcpy(&y, (uint8_t*)act + 212, 4); memcpy(&z, (uint8_t*)act + 216, 4);
         if (tengoPrevio) {
-            float xp, zp; memcpy(&xp, (uint8_t*)previo + 208, 4); memcpy(&zp, (uint8_t*)previo + 216, 4);
-            float v = sqrtf((x - xp) * (x - xp) + (z - zp) * (z - zp)) / 0.05f;
+            float xp, zp, yp; memcpy(&xp, (uint8_t*)previo + 208, 4); memcpy(&zp, (uint8_t*)previo + 216, 4); memcpy(&yp, (uint8_t*)previo + 212, 4);
+            float d = fabsf(x - xp) + fabsf(z - zp) + fabsf(y - yp);
             if (ahora - ventana > 1000) { ventana = ahora; lineas = 0; }
-            if (v > 3.0f && lineas < 12) {
+            if (d > 0.0005f && lineas < 40) {    // cada cambio de posición, con hora en ms
                 ++lineas;
-                logf("[BALL] pos=(%.2f, %.2f, %.2f) v=%.1f m/s (campo %.1f x %.1f)", x, y, z, v, g_canchaLargo, g_canchaAncho);
-                for (int k = 0; k < 160; ++k) if (act[k] != previo[k] && k * 4 != 208 && k * 4 != 212 && k * 4 != 216) {
+                logf("[BALL] t=%llu pos=(%.3f, %.3f, %.3f) d=(%.3f, %.3f, %.3f)", (unsigned long long)ahora, x, y, z, x - xp, y - yp, z - zp);
+                if (lineas <= 4) for (int k = 0; k < 160; ++k) if (act[k] != previo[k] && k * 4 != 208 && k * 4 != 212 && k * 4 != 216 && k * 4 != 0x70 && k * 4 != 0x74 && k * 4 != 0x78) {
                     float fa, fb; memcpy(&fa, &previo[k], 4); memcpy(&fb, &act[k], 4);
-                    if (fabsf(fa) < 1000 && fabsf(fb) < 1000 && lineas < 3) logf("[BALL]   +0x%X %.4f -> %.4f", k * 4, fa, fb);
+                    if (fabsf(fa) < 1000 && fabsf(fb) < 1000) logf("[BALL]   +0x%X %.5f -> %.5f", k * 4, fa, fb);
                 }
             }
         }
