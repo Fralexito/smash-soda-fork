@@ -15,14 +15,14 @@
 --
 -- Deshacer: DESINSTALAR.ps1 quita la línea de sider.ini; o poner "marcador_free": false.
 
-local m = { version = "0.1" }
+local m = { version = "0.2" }
 
 local PAUSA_GOL = 12.0      -- segundos que se detiene el reloj tras un gol (celebración)
 local MIRAR_SEG = 1.0       -- cada cuánto se relee zona/pantalla
 local CONFIG_SEG = 5.0      -- cada cuánto se relee phoenix_core.json
 local ESCRIBIR_SEG = 1.0    -- cada cuánto se reescribe marcador_free.json
 
-local base, rutaCfg, rutaSonda, rutaPantalla, rutaSalida
+local base, rutaCfg, rutaSonda, rutaPantalla, rutaSalida, rutaSonda2
 local encendido = false
 local enZona = false
 local pantalla = ""
@@ -43,6 +43,23 @@ end
 local function mirarConfig()
     local t = leer(rutaCfg)
     encendido = (t ~= nil) and (t:find('"marcador_free"%s*:%s*true') ~= nil)
+end
+
+-- v0.2: en el Entrenamiento libre pantalla.json se queda en «cargando» (solo pasa a «en_juego» con match.stats
+-- de un partido real). Señal propia de «el juego está jugando»: Core anota los cambios de estado de los actores
+-- en phoenix_core\sonda_partido.txt; si el archivo ha crecido en los últimos 3 s hay actividad (en menú/pausa/carga
+-- no crece).
+local ACTIVIDAD_SEG = 3.0
+local tamSonda = -1
+local tCrecio = -100
+
+local function mirarActividad(ahora)
+    local f = io.open(rutaSonda2, "rb")
+    if not f then return end
+    local n = f:seek("end")
+    f:close()
+    if n and n > tamSonda and tamSonda >= 0 then tCrecio = ahora end
+    if n then tamSonda = n end
 end
 
 local function mirarZonaYPantalla()
@@ -77,11 +94,12 @@ function m.display_frame(ctx)
     local ahora = os.clock()
     if ahora - tConfig >= CONFIG_SEG then tConfig = ahora; mirarConfig() end
     if not encendido then tAnterior = nil; return end
-    if ahora - tMirar >= MIRAR_SEG then tMirar = ahora; mirarZonaYPantalla() end
+    if ahora - tMirar >= MIRAR_SEG then tMirar = ahora; mirarZonaYPantalla(); mirarActividad(ahora) end
     if not enZona then tAnterior = nil; return end
     if tAnterior then
         local dt = ahora - tAnterior
-        if dt > 0 and dt < 1.0 and pantalla == "en_juego" and ahora >= pausaHasta then
+        local jugando = (pantalla == "en_juego") or (ahora - tCrecio <= ACTIVIDAD_SEG)
+        if dt > 0 and dt < 1.0 and jugando and ahora >= pausaHasta then
             segundos = segundos + dt
         end
     end
@@ -118,6 +136,7 @@ function m.init(ctx)
     rutaSonda = base .. "content\\phoenix\\sonda.json"
     rutaPantalla = base .. "content\\phoenix\\pantalla.json"
     rutaSalida = base .. "content\\phoenix\\marcador_free.json"
+    rutaSonda2 = base .. "phoenix_core\\sonda_partido.txt"
     ctx.register("display_frame", m.display_frame)
     ctx.register("goal_scored", m.goal_scored)     -- Sider 7.3.4+ (en 7.3.3 solo deja un WARN)
     ctx.register("set_teams", m.set_teams)
