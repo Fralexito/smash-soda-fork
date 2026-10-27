@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.44"
+#define PHX_CORE_VERSION "0.4.45"
 
 namespace {
 
@@ -1596,34 +1596,59 @@ bool jugSondaQuitar(Feature&) { g_jugSondaOn = 0; if (g_hiloJug) { WaitForSingle
 const char* kFirmaBolaPaso = "48 8B C4 F3 0F 11 40 08 55 53 56 48 8D 68 88 48 81 EC 60 01 00 00";
 using FnBolaPaso = uint64_t (*)(float, uint64_t, uint64_t, float*, void*, uint64_t);
 FnBolaPaso g_bolaPasoOrig = nullptr;
-float g_redFactor = 0.85f; volatile ULONGLONG g_tTrainRed = 0; volatile LONG g_redOn = 0; volatile LONG g_redFrenos = 0;
+float g_redFactor = 0.93f; volatile ULONGLONG g_tTrainRed = 0; volatile LONG g_redOn = 0; volatile LONG g_redFrenos = 0;
 HANDLE g_hiloRed = nullptr;
 DWORD WINAPI hiloRed(LPVOID) {
     while (g_redOn) { if (trainingWorkEstable() || hayTrainingWork()) g_tTrainRed = GetTickCount64(); Sleep(100); }
     return 0;
 }
+volatile LONG g_murosOn = 0, g_murosRebotes = 0;
+float g_muroRebote = 0.6f, g_muroFric = 0.92f; double g_muroX = 0, g_muroZ = 0;   // 0 = semilargo/semiancho + 0.2
 uint64_t ganchoBolaPaso(float dt, uint64_t rdx, uint64_t r8, float* S, void* cfg, uint64_t flag) {
     uint64_t r = g_bolaPasoOrig(dt, rdx, r8, S, cfg, flag);
-    if (g_redOn && GetTickCount64() - g_tTrainRed < 3000) {
-        float x = S[0], z = S[2];
-        float largo = (float)g_canchaLargo;
-        if (fabsf(x) > largo && fabsf(z) < 4.2f && S[1] < 2.55f) {   // dentro de la red: por debajo del travesaño (2,44 + radio)
+    if ((g_redOn || g_murosOn) && GetTickCount64() - g_tTrainRed < 3000) {
+        float x = S[0], y = S[1], z = S[2];
+        float largo = (float)g_canchaLargo, ancho = (float)g_canchaAncho;
+        bool bocaGol = fabsf(z) < 4.2f && y < 2.55f;
+        if (g_redOn && fabsf(x) > largo && bocaGol) {       // red: freno suave y, al fondo, un pequeño rebote hacia atrás
             float f = g_redFactor;
-            if (fabsf(x) > largo + 3.0f) f = 0.0f;           // fondo de la red: se queda quieta
             S[3] *= f; S[4] *= f; S[5] *= f;
+            if (fabsf(x) > largo + 3.0f && S[3] * x > 0) S[3] = -0.2f * S[3];
             LONG n = InterlockedIncrement(&g_redFrenos); if (n <= 5 || n % 2000 == 0) logf("[RED] freno #%ld x=%.2f z=%.2f f=%.2f", (long)n, x, z, f);
+        }
+        if (g_murosOn) {                                       // muros lógicos del Core (el estado S es el del modelo: persiste)
+            const float rb = 0.109f;
+            float Lx = (float)(g_muroX > 0 ? g_muroX : g_canchaLargo + 0.2), Wz = (float)(g_muroZ > 0 ? g_muroZ : g_canchaAncho + 0.2);
+            float lim = bocaGol ? largo + 3.4f : Lx;           // en la boca del arco la pared está al fondo de la red
+            bool toco = false;
+            if (x > lim - rb && S[3] > 0) { S[0] = lim - rb; S[3] = -g_muroRebote * S[3]; S[5] *= g_muroFric; toco = true; }
+            else if (x < -lim + rb && S[3] < 0) { S[0] = -lim + rb; S[3] = -g_muroRebote * S[3]; S[5] *= g_muroFric; toco = true; }
+            if (z > Wz - rb && S[5] > 0) { S[2] = Wz - rb; S[5] = -g_muroRebote * S[5]; S[3] *= g_muroFric; toco = true; }
+            else if (z < -Wz + rb && S[5] < 0) { S[2] = -Wz + rb; S[5] = -g_muroRebote * S[5]; S[3] *= g_muroFric; toco = true; }
+            if (toco) { LONG n = InterlockedIncrement(&g_murosRebotes); if (n <= 10 || n % 500 == 0) logf("[MURO] rebote #%ld pos=(%.2f,%.2f,%.2f)", (long)n, S[0], S[1], S[2]); }
         }
     }
     return r;
 }
-bool redInstalar(Feature& f) {
+static bool asegurarGanchoBola(Feature& f) {
+    if (g_bolaPasoOrig) { if (!g_hiloRed) { g_hiloRed = CreateThread(nullptr, 0, hiloRed, nullptr, 0, nullptr); } return true; }
     if (!g_globalPartido && !resolverGlobalPartido(f.id)) { f.estado = "sin firma del global del partido"; return false; }
     uint8_t* m = firmaUnica("codigo", kFirmaBolaPaso, f.id);
     if (!m) { f.estado = "sin firma: paso de la pelota FUN_140876360"; return false; }
     if (!crearDesvio(f, m, 15, (void*)ganchoBolaPaso, (void**)&g_bolaPasoOrig)) { f.estado = "no se pudo desviar el paso de la pelota"; return false; }
-    g_redOn = 1; g_hiloRed = CreateThread(nullptr, 0, hiloRed, nullptr, 0, nullptr);
-    char b[150]; sprintf_s(b, "ok: la red frena la pelota en el entrenamiento (paso de la pelota en exe+0x%llX, factor %.2f)", (unsigned long long)(m - g_exe.base), g_redFactor);
-    f.estado = b; return true;
+    g_hiloRed = CreateThread(nullptr, 0, hiloRed, nullptr, 0, nullptr);
+    logf("[%s] paso de la pelota enganchado en exe+0x%llX", f.id, (unsigned long long)(m - g_exe.base)); return true;
+}
+bool murosInstalar(Feature& f) {
+    g_redOn = 1;   // el hilo de TrainingWork (g_tTrainRed) lo comparten red y muros
+    if (!asegurarGanchoBola(f)) return false;
+    g_murosOn = 1; char b[160]; sprintf_s(b, "ok: muros lógicos en el paso de la pelota (rebote %.2f, fricción %.2f)", g_muroRebote, g_muroFric); f.estado = b; return true;
+}
+bool murosQuitar(Feature&) { g_murosOn = 0; return true; }
+bool redInstalar(Feature& f) {
+    g_redOn = 1;
+    if (!asegurarGanchoBola(f)) { g_redOn = 0; return false; }
+    char b[150]; sprintf_s(b, "ok: la red frena la pelota en el entrenamiento (factor %.2f)", g_redFactor); f.estado = b; return true;
 }
 bool redQuitar(Feature&) { g_redOn = 0; return true; }
 
@@ -1710,6 +1735,7 @@ std::vector<Feature> g_funciones = {   // orden = orden de arranque (gol_nativo_
     { "cancha_chica_free", "Cancha lógica pequeña (semilargo/semiancho del json) en el entrenamiento", canchaInstalar, canchaQuitar },
     { "siempre_disparo_free", "Cuadrado dispara siempre en el entrenamiento (sin despeje en campo propio)", disparoInstalar, disparoQuitar },
     { "jugadores_sonda", "Sonda de solo lectura de las posiciones de los 22 jugadores en el entrenamiento", jugSondaInstalar, jugSondaQuitar },
+    { "muros_core", "Muros lógicos del Core en el paso de la pelota (rebote contra la línea de la cancha chica)", murosInstalar, murosQuitar },
     { "red_frena_free", "La red de los arcos frena la pelota en el entrenamiento (gancho al paso de la pelota)", redInstalar, redQuitar },
     { "jugadores_chica_free", "Escala a la cancha chica las posiciones de reinicio de los jugadores (entrenamiento)", jugChInstalar, jugChQuitar },
     { "suplentes_ocultos_free", "Aparca a los suplentes de la banda lejos (entrenamiento)", supOcultosInstalar, supOcultosQuitar },
@@ -1796,6 +1822,10 @@ void leerConfig() {
     if (valorDe("celebracion_modo", v)) g_celebModo = (v == "\"timer\"") ? 1 : (v == "\"salto\"") ? 2 : 0;
     if (valorDe("siempre_disparo_modo", v)) g_disparoModo = atoi(v.c_str());
     if (valorDe("jugadores_chica_modo", v)) g_jugChModo = atoi(v.c_str());
+    if (valorDe("muro_rebote", v)) { g_muroRebote = (float)atof(v.c_str()); if (g_muroRebote < 0.0f || g_muroRebote > 1.0f) g_muroRebote = 0.6f; }
+    if (valorDe("muro_friccion", v)) { g_muroFric = (float)atof(v.c_str()); if (g_muroFric < 0.0f || g_muroFric > 1.0f) g_muroFric = 0.92f; }
+    if (valorDe("muro_x", v)) g_muroX = atof(v.c_str());
+    if (valorDe("muro_z", v)) g_muroZ = atof(v.c_str());
     if (valorDe("red_factor", v)) { g_redFactor = (float)atof(v.c_str()); if (g_redFactor < 0.0f || g_redFactor > 1.0f) g_redFactor = 0.85f; }
     if (valorDe("vigia_escritura", v)) g_vigiaPedida = atoi(v.c_str());
     if (valorDe("vigia_pelota", v)) g_vigiaPelotaPedida = atoi(v.c_str());
