@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.46"
+#define PHX_CORE_VERSION "0.4.47"
 
 namespace {
 
@@ -1684,8 +1684,28 @@ bool redQuitar(Feature&) { g_redOn = 0; return true; }
 // cancha_chica_free), llama al original y restaura la entrada. Además FUN_140A597D0(out, idx) (RVA 0xA597D0) da la fila de banda de los que no participan
 // del ejercicio (suplentes): tras el original los manda a (0, 0, 100), el «aparcamiento» que usa el propio juego.
 volatile ULONGLONG g_tTrainGlob = 0; volatile LONG g_trainGlobOn = 0; HANDLE g_hiloTrainGlob = nullptr;
-DWORD WINAPI hiloTrainGlob(LPVOID) { while (g_trainGlobOn) { if (trainingWorkEstable() || hayTrainingWork()) g_tTrainGlob = GetTickCount64(); Sleep(100); } return 0; }
+volatile LONG g_sinSaquesOn = 0; ParcheDisp g_pdS1, g_pdS2;
+DWORD WINAPI hiloTrainGlob(LPVOID) {
+    while (g_trainGlobOn) {
+        if (trainingWorkEstable() || hayTrainingWork()) g_tTrainGlob = GetTickCount64();
+        if (g_sinSaquesOn) { bool dentro = GetTickCount64() - g_tTrainGlob < 3000; ponerParche(g_pdS1, dentro); ponerParche(g_pdS2, dentro); }
+        Sleep(100);
+    }
+    return 0;
+}
 static void asegurarHiloTrain() { if (!g_trainGlobOn) { g_trainGlobOn = 1; g_hiloTrainGlob = CreateThread(nullptr, 0, hiloTrainGlob, nullptr, 0, nullptr); } }
+// --- sin_saques_free (0.4.47, RE del frente G, 27-oct): regla street = juego continuo, solo el gol reinicia. El Juez (match::ai::Judge, FUN_14050E4A0) pone job+0xCC:
+// 1 gol, 2 fondo fuera del arco (puerta/córner), 3 banda. Dos parches de 1 byte (solo con TrainingWork; se restauran al salir) lo anulan: P1 0x50E65F «02»->«00», P2 0x50E68D «03»->«00».
+// El gol (cc=1) y su detector independiente FUN_140A18510 no se tocan.
+bool sinSaquesInstalar(Feature& f) {
+    bool a = localizarParche("C7 87 CC 00 00 00 01 00 00 00 EB 38 C7 87 CC 00 00 00 02 00 00 00 EB 2C 48 8B CB E8 ?? ?? ?? ?? F3 0F 10 40 08", 18, 0x02, 0x00, g_pdS1, f.id);
+    bool b = localizarParche("41 0F 2F 47 04 76 0A C7 87 CC 00 00 00 03 00 00 00 4C 8B 64 24 40 48 8B 5C 24 48", 13, 0x03, 0x00, g_pdS2, f.id);
+    if (!a || !b) { f.estado = "sin firma/byte inesperado en el Juez (FUN_14050E4A0)"; return false; }
+    asegurarHiloTrain(); g_sinSaquesOn = 1;
+    f.estado = "ok: en el entrenamiento no hay saques (puerta/córner/banda anulados en el Juez); solo el gol reinicia"; return true;
+}
+bool sinSaquesQuitar(Feature&) { g_sinSaquesOn = 0; ponerParche(g_pdS1, false); ponerParche(g_pdS2, false); return true; }
+
 const char* kFirmaReinicio = "48 8B C4 53 41 57 48 83 EC 78 48 89 70 E8";
 using FnReinicio = float* (*)(float*, uint32_t*, void*, void*);
 FnReinicio g_reinicioOrig = nullptr; volatile LONG g_jugChOn = 0, g_jugChEscalados = 0;
@@ -1763,6 +1783,7 @@ std::vector<Feature> g_funciones = {   // orden = orden de arranque (gol_nativo_
     { "malla_red_free", "La pelota en la red deforma la tela del arco (golpes GoalNet_Hit al paso de la pelota)", mallaInstalar, mallaQuitar },
     { "muros_core", "Muros lógicos del Core en el paso de la pelota (rebote contra la línea de la cancha chica)", murosInstalar, murosQuitar },
     { "red_frena_free", "La red de los arcos frena la pelota en el entrenamiento (gancho al paso de la pelota)", redInstalar, redQuitar },
+    { "sin_saques_free", "Sin saques de banda/esquina/puerta en el entrenamiento: solo el gol reinicia (parches de 1 byte en el Juez)", sinSaquesInstalar, sinSaquesQuitar },
     { "jugadores_chica_free", "Escala a la cancha chica las posiciones de reinicio de los jugadores (entrenamiento)", jugChInstalar, jugChQuitar },
     { "suplentes_ocultos_free", "Aparca a los suplentes de la banda lejos (entrenamiento)", supOcultosInstalar, supOcultosQuitar },
     { "pelota_sonda", "Sonda de solo lectura de la pelota (posición/velocidad) en el entrenamiento", pelotaInstalar, pelotaQuitar },
