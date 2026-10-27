@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.13"
+#define PHX_CORE_VERSION "0.4.15"
 
 namespace {
 
@@ -538,6 +538,9 @@ volatile LONG g_celebracionesCortas = 0;
 bool g_cortaActiva = false;      // celebracion_corta_free encendida
 bool g_sin1DActiva = false;      // sin_1D_free encendida
 volatile LONG g_sin1DCont = 0;
+bool g_directoActiva = false;    // gol_directo_free encendida
+bool g_directoCelebracion = true; // opción json «gol_directo_celebracion» (por defecto true)
+volatile LONG g_directoCont = 0;
 bool g_sondaOn = false;          // la sonda vuelca la cola de pasos tras montar el gol
 
 // ¿Hay TrainingWork? Mismo criterio que FUN_14044D110: [root+0x400] != 0 y su primer byte != 0.
@@ -551,7 +554,7 @@ bool hayTrainingWork(uint8_t** raizOut = nullptr) {
 
 uint64_t ganchoMontador(uint64_t a1, uint64_t a2, uint64_t a3, uint64_t a4) {
     uint8_t* raiz = nullptr; uint8_t* sel = nullptr; uint8_t v = 0;
-    bool training = (g_cortaActiva || g_sin1DActiva) && hayTrainingWork(&raiz);
+    bool training = (g_cortaActiva || g_sin1DActiva || g_directoActiva) && hayTrainingWork(&raiz);
     bool cambiar = g_cortaActiva && training && leerSeguro(raiz + 0x2C0, &sel, 8) && sel &&
                    leerSeguro(sel + 0x84, &v, 1);
     if (cambiar) { sel[0x84] = 1; InterlockedIncrement(&g_celebracionesCortas); }
@@ -564,11 +567,28 @@ uint64_t ganchoMontador(uint64_t a1, uint64_t a2, uint64_t a3, uint64_t a4) {
     uint64_t r = g_montadorOrig(a1, a2, a3, a4);
     if (cambiar) sel[0x84] = v;
     if (sin1d) part[0x177F] = v1d;
+    // gol_directo_free: tras montar el gol, la cola de pasos se reescribe sin celebración, cámara ni repetición: solo el paso
+    // 0x03 (procesa el gol) y la cola de reinicio nativa del propio gol (16 12 13 14 15 0E 34 19 1A). Solo datos de job+0x878/0x8F1.
+    bool directo = false;
+    if (g_directoActiva && training) {
+        uint8_t* job = reinterpret_cast<uint8_t*>(a1);
+        // con celebración (opción «gol_directo_celebracion», por defecto sí) se mantiene el paso 0x04 (celebración corta)
+        static const uint32_t kDirecta[] = { 0x03, 0x16, 0x12, 0x13, 0x14, 0x15, 0x0E, 0x34, 0x19, 0x1A };
+        static const uint32_t kDirectaCel[] = { 0x03, 0x04, 0x16, 0x12, 0x13, 0x14, 0x15, 0x0E, 0x34, 0x19, 0x1A };
+        const uint32_t* q = g_directoCelebracion ? kDirectaCel : kDirecta;
+        const size_t nq = g_directoCelebracion ? sizeof kDirectaCel / sizeof kDirectaCel[0] : sizeof kDirecta / sizeof kDirecta[0];
+        uint32_t evento = 0;
+        if (leerSeguro(job + 0x874, &evento, 4) && evento == 0xA) {
+            for (size_t i = 0; i < nq; ++i) memcpy(job + 0x878 + i * 4, &q[i], 4);
+            job[0x8F1] = (uint8_t)nq;
+            directo = true; InterlockedIncrement(&g_directoCont);
+        }
+    }
     if (g_sondaOn) {                      // volcado de la cola de pasos que acaba de montar el juego
         uint8_t* job = reinterpret_cast<uint8_t*>(a1);
         Ev& e = nuevoEv(EV_COLA, _ReturnAddress());
         e.a = a1; e.b = leerU8(job, 0x8F0); e.c = leerU8(job, 0x8F1); e.d = leerU32(job, 0x874);
-        e.x[0] = (cambiar ? 1 : 0) | (sin1d ? 2 : 0);
+        e.x[0] = (cambiar ? 1 : 0) | (sin1d ? 2 : 0) | (directo ? 4 : 0);
         leerSeguro(job + 0x878, e.q, sizeof e.q);
         cerrarEv(e);
     }
@@ -604,6 +624,15 @@ bool sin1DInstalar(Feature& f) {
     return true;
 }
 bool sin1DQuitar(Feature&) { g_sin1DActiva = false; return true; }
+
+bool directoInstalar(Feature& f) {
+    if (!g_globalPartido && !resolverGlobalPartido(f.id)) { f.estado = "sin firma del global del partido"; return false; }
+    if (!asegurarMontador(f)) { f.estado = "sin gancho del montador del gol (FUN_14044F8A0)"; return false; }
+    g_directoActiva = true;
+    f.estado = g_directoCelebracion ? "ok: cola del gol en el entrenamiento = 03 04 16 12 13 14 15 0E 34 19 1A (celebración corta, sin repetición)" : "ok: cola del gol en el entrenamiento = 03 16 12 13 14 15 0E 34 19 1A (sin celebración ni repetición)";
+    return true;
+}
+bool directoQuitar(Feature&) { g_directoActiva = false; return true; }
 
 // --- sonda de pasos: FUN_14047C2D0(job, saltable, ...) es el ejecutor de la cola job+0x878[]. Se anota cada CAMBIO de
 // (índice de cola [job+0x8F0], id de paso) para saber qué paso está activo cuando el juego se congela. Prólogo 17 B
@@ -961,6 +990,7 @@ std::vector<Feature> g_funciones = {   // orden = orden de arranque (gol_nativo_
     { "gol_nativo_free", "Gol nativo en Entrenamiento libre (street)", golInstalar,   golQuitar   },
     { "saque_centro_free", "Tras el gol, saque de centro (entrenamiento)", saqueInstalar, saqueQuitar },
     { "celebracion_corta_free", "Gol sin celebración ni repetición (entrenamiento)", cortaInstalar, cortaQuitar },
+    { "gol_directo_free", "Gol sin celebración, cámara ni repetición: solo reinicio (entrenamiento)", directoInstalar, directoQuitar },
     { "sin_1D_free", "Gol sin el paso 0x1D de la cola (entrenamiento; evita el congelón)", sin1DInstalar, sin1DQuitar },
     { "rescate_render_free", "Rescate del bloqueo juego↔render (experimental)", rescateInstalar, rescateQuitar },
     { "vigilante_bucles", "Vigilante de cuelgues (solo mira)",         vigilanteInstalar, vigilanteQuitar },
@@ -1016,6 +1046,14 @@ void leerConfig() {
         if (i == std::string::npos) continue;
         size_t j = txt.find_first_not_of(" \t\r\n", i + 1);
         if (j != std::string::npos) f.deseada = txt.compare(j, 4, "true") == 0;
+    }
+    // opción de gol_directo_free: celebración corta (paso 0x04) en la cola. Solo cuenta si pone expresamente false.
+    g_directoCelebracion = true;
+    size_t k = txt.find("\"gol_directo_celebracion\"");
+    if (k != std::string::npos) {
+        k = txt.find(':', k);
+        size_t j = (k == std::string::npos) ? k : txt.find_first_not_of(" \t\r\n", k + 1);
+        if (j != std::string::npos) g_directoCelebracion = txt.compare(j, 5, "false") != 0;
     }
 }
 

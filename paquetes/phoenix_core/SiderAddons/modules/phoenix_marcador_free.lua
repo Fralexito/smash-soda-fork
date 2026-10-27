@@ -15,7 +15,7 @@
 --
 -- Deshacer: DESINSTALAR.ps1 quita la línea de sider.ini; o poner "marcador_free": false.
 
-local m = { version = "0.2" }
+local m = { version = "0.3" }
 
 local PAUSA_GOL = 12.0      -- segundos que se detiene el reloj tras un gol (celebración)
 local MIRAR_SEG = 1.0       -- cada cuánto se relee zona/pantalla
@@ -115,6 +115,17 @@ function m.goal_scored(ctx, info)
     log(string.format("[marcador_free] gol %s → %d-%d", visita and "visita" or "local", golesL, golesV))
 end
 
+-- v0.3: registro con hora de cada petición de archivo (livecpk_get_filepath) mientras la zona es FREE_TRAINING.
+-- Solo escribe en phoenix_core\peticiones.log (tope ~2 MB); no devuelve ruta, así que no altera ninguna carga.
+local rutaPeticiones, bytesPeticiones = nil, 0
+function m.get_filepath(ctx, filename, key)
+    if not encendido or not enZona or not rutaPeticiones or bytesPeticiones > 2000000 then return nil end
+    local linea = string.format("%s %.3f %s\n", os.date("%H:%M:%S"), os.clock(), tostring(filename))
+    local f = io.open(rutaPeticiones, "ab")
+    if f then f:write(linea); f:close(); bytesPeticiones = bytesPeticiones + #linea end
+    return nil
+end
+
 function m.set_teams(ctx)
     -- Entrenamiento libre nuevo: empieza de cero (si aún no sabemos la zona, se reinicia igual: no estorba).
     if encendido then reiniciar("set_teams") end
@@ -142,6 +153,8 @@ function m.init(ctx)
     ctx.register("set_teams", m.set_teams)
     ctx.register("context_reset", m.context_reset)
     ctx.register("overlay_on", m.overlay_on)
+    rutaPeticiones = base .. "phoenix_core\\peticiones.log"
+    ctx.register("livecpk_get_filepath", m.get_filepath)
     log("[marcador_free] v" .. m.version .. " listo (apagado salvo \"marcador_free\": true en phoenix_core.json)")
 end
 
