@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.45"
+#define PHX_CORE_VERSION "0.4.46"
 
 namespace {
 
@@ -1602,6 +1602,14 @@ DWORD WINAPI hiloRed(LPVOID) {
     while (g_redOn) { if (trainingWorkEstable() || hayTrainingWork()) g_tTrainRed = GetTickCount64(); Sleep(100); }
     return 0;
 }
+// --- malla_red_free (0.4.46, RE del frente E): la red es una simulación de tela (cobra::rd::SceneGoalnetNode); la deforman golpes de esfera que el juego encola
+// con FUN_141EAE180 GoalNet_Hit(int lado, int tipo, float* pos3 (alineado a 16), float radio, char flag) y activa con FUN_141EAE330 GoalNet_SetState(int lado, int estado: 1 activa, 2 duerme).
+// El motor no los dispara en ±15 (su sonda de «pelota dentro de la red» usa las dimensiones originales). Desde el gancho de la pelota: con la pelota dentro de la red
+// street, cada ~14 ms se llama SetState(lado,1) y Hit(lado, tipo 1/2, posición de mundo de la pelota, radio 0,10868593, flag 1). lado = (x >= 0).
+using FnGoalNetHit = void (*)(int, int, float*, float, char);
+using FnGoalNetEstado = void (*)(int, int);
+FnGoalNetHit g_goalNetHit = nullptr; FnGoalNetEstado g_goalNetEstado = nullptr;
+volatile LONG g_mallaOn = 0, g_mallaGolpes = 0; volatile ULONGLONG g_mallaUlt = 0;
 volatile LONG g_murosOn = 0, g_murosRebotes = 0;
 float g_muroRebote = 0.6f, g_muroFric = 0.92f; double g_muroX = 0, g_muroZ = 0;   // 0 = semilargo/semiancho + 0.2
 uint64_t ganchoBolaPaso(float dt, uint64_t rdx, uint64_t r8, float* S, void* cfg, uint64_t flag) {
@@ -1615,6 +1623,15 @@ uint64_t ganchoBolaPaso(float dt, uint64_t rdx, uint64_t r8, float* S, void* cfg
             S[3] *= f; S[4] *= f; S[5] *= f;
             if (fabsf(x) > largo + 3.0f && S[3] * x > 0) S[3] = -0.2f * S[3];
             LONG n = InterlockedIncrement(&g_redFrenos); if (n <= 5 || n % 2000 == 0) logf("[RED] freno #%ld x=%.2f z=%.2f f=%.2f", (long)n, x, z, f);
+        }
+        if (g_mallaOn && g_goalNetHit && g_goalNetEstado && fabsf(x) > largo && bocaGol) {   // malla: golpe de tela cada ~14 ms
+            ULONGLONG ahora = GetTickCount64();
+            if (ahora - g_mallaUlt >= 14) {
+                g_mallaUlt = ahora; int lado = x >= 0 ? 1 : 0; float v = sqrtf(S[3] * S[3] + S[5] * S[5]);
+                alignas(16) float pos[4] = { x, y, z, 0.0f };
+                g_goalNetEstado(lado, 1); g_goalNetHit(lado, v > 8.0f ? 2 : 1, pos, 0.10868593f, 1);
+                LONG n = InterlockedIncrement(&g_mallaGolpes); if (n <= 5 || n % 300 == 0) logf("[MALLA] golpe #%ld lado=%d pos=(%.2f,%.2f,%.2f) v=%.1f", (long)n, lado, x, y, z, v);
+            }
         }
         if (g_murosOn) {                                       // muros lógicos del Core (el estado S es el del modelo: persiste)
             const float rb = 0.109f;
@@ -1639,6 +1656,14 @@ static bool asegurarGanchoBola(Feature& f) {
     g_hiloRed = CreateThread(nullptr, 0, hiloRed, nullptr, 0, nullptr);
     logf("[%s] paso de la pelota enganchado en exe+0x%llX", f.id, (unsigned long long)(m - g_exe.base)); return true;
 }
+bool mallaInstalar(Feature& f) {
+    g_redOn = 1;
+    if (!g_goalNetHit) { uint8_t* m = firmaUnica("codigo", "40 57 48 83 EC 50 48 C7 44 24 30 FE FF FF FF 48 89 5C 24 60 48 89 6C 24 68 48 89 74 24 70 0F 29 74 24 40 0F 28 F3 49 8B F0 8B EA 48 63 D9", f.id); if (!m) { f.estado = "sin firma: GoalNet_Hit FUN_141EAE180"; return false; } g_goalNetHit = reinterpret_cast<FnGoalNetHit>(m); }
+    if (!g_goalNetEstado) { uint8_t* m = firmaUnica("codigo", "40 57 48 83 EC 30 48 C7 44 24 20 FE FF FF FF 48 89 5C 24 40 48 89 74 24 48 8B FA 48 63 D9 48 8D 34 5B 48 C1 E6 04", f.id); if (!m) { f.estado = "sin firma: GoalNet_SetState FUN_141EAE330"; return false; } g_goalNetEstado = reinterpret_cast<FnGoalNetEstado>(m); }
+    if (!asegurarGanchoBola(f)) return false;
+    g_mallaOn = 1; f.estado = "ok: la pelota en la red golpea la tela del arco (GoalNet_Hit desde el paso de la pelota)"; return true;
+}
+bool mallaQuitar(Feature&) { g_mallaOn = 0; return true; }
 bool murosInstalar(Feature& f) {
     g_redOn = 1;   // el hilo de TrainingWork (g_tTrainRed) lo comparten red y muros
     if (!asegurarGanchoBola(f)) return false;
@@ -1735,6 +1760,7 @@ std::vector<Feature> g_funciones = {   // orden = orden de arranque (gol_nativo_
     { "cancha_chica_free", "Cancha lógica pequeña (semilargo/semiancho del json) en el entrenamiento", canchaInstalar, canchaQuitar },
     { "siempre_disparo_free", "Cuadrado dispara siempre en el entrenamiento (sin despeje en campo propio)", disparoInstalar, disparoQuitar },
     { "jugadores_sonda", "Sonda de solo lectura de las posiciones de los 22 jugadores en el entrenamiento", jugSondaInstalar, jugSondaQuitar },
+    { "malla_red_free", "La pelota en la red deforma la tela del arco (golpes GoalNet_Hit al paso de la pelota)", mallaInstalar, mallaQuitar },
     { "muros_core", "Muros lógicos del Core en el paso de la pelota (rebote contra la línea de la cancha chica)", murosInstalar, murosQuitar },
     { "red_frena_free", "La red de los arcos frena la pelota en el entrenamiento (gancho al paso de la pelota)", redInstalar, redQuitar },
     { "jugadores_chica_free", "Escala a la cancha chica las posiciones de reinicio de los jugadores (entrenamiento)", jugChInstalar, jugChQuitar },
