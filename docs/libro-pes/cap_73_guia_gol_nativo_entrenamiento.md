@@ -107,3 +107,32 @@ El exe en disco **no se toca**. Sin el DLL, PES es 100 % original.
 
 ## 13. Paredes de la cancha pequeña (prototipo, apagado por defecto)
 `common\render\model\bg\hit\bill\st002\hit_billboard.geom` (dt15_x64.cpk) es la colisión de las vallas publicitarias (x≈±57,7, z≈±26…38; vec4 con x en offset≡0 mod 16 y z en ≡8 mod 16). Escalada x·15/52,56, z·10/34,06 queda a ±16,5 × ±11,2 (junto a la cancha 30×20). `phoenix_marcador_free` v0.4 la sirve desde `content\phoenix\cancha_paredes\…` solo con `"cancha_chica_free": true` Y `"cancha_paredes": true` (por defecto no está: sin cambio). StadiumServer solo intercepta `hit\stadium` (colisión de gradas, `hit_stand.geom`) por estadio; `hit\bill` y `hit\goal` no. Prueba pendiente: ¿la pelota rebota en las nuevas vallas?
+
+## 14. Cuadrado = disparo en campo propio (siempre_disparo_free) — bitácora-guía (27-oct-2026)
+
+**Qué se consiguió.** En el Entrenamiento libre (zona 52) el botón cuadrado dispara desde cualquier parte del campo, también dentro del área propia, donde el juego despeja. Opción de Phoenix Core `siempre_disparo_free` (json), solo con TrainingWork, apagable; el modo de la prueba se elige con `siempre_disparo_modo`. Estado final al cierre del día: patea (modo 4–7), pero con un toque la potencia sale al máximo y la barra se llena (ver §14.4); en curso.
+
+**14.1 Cómo decide el juego «tirar o despejar» (hallazgos).**
+- Cada mando tiene un `match::CommandPlayer` (ctor FUN_1408B3BC0, unidades en +0x30, fábrica FUN_1408AD0B0). Las unidades `ThinkUnitShoot` (vtable exe+0x260FB58) y `ThinkUnitClear` (exe+0x260FEE8) comparten el botón 0xF.
+- Despachador común FUN_1408AC500 (ranura +0x40). Si el byte +0x18 de la unidad es 0 devuelve 0 (unidad apagada). Estado +0x1C: 1 pulsar, 2 mantener, 3 soltar; llama a las ranuras +0x60/+0x68/+0x70/+0x78. Shoot devuelve la acción 0x55 a los 0,148 s y al soltar; Clear devuelve 0x58 al pulsar.
+- El predicado «tiro permitido» FUN_1406B45D0 (exe+0x6B45D0, único llamador FUN_1408AC500) da falso en campo/área propia: entonces Shoot devuelve 0 y gana Clear (despeje).
+
+**14.2 Paso a paso de lo que funcionó (modo 4).**
+1. Gancho de 20 B limpios en FUN_1406B45D0 (firma `48 8B C4 55 57 41 55 41 56 48 8D 68 A8 48 81 EC 38 01 00 00 8B BD 88 00 00 00 4C 8B F1 0F 29 70 C8`): con TrainingWork visto en los últimos 3 s devuelve 1.
+2. Cambiar, en la vtable de Clear (datos de .rdata, no código), las ranuras +0x60 (FUN_1408AEEE0), +0x68 (FUN_1408AEF70) y +0x70 (FUN_140421F40) por funciones que devuelven 0x55 (acción de tiro) mientras el botón está pulsado y en el instante de soltar. Verificar antes que cada ranura apunta a la función esperada.
+
+**14.3 Intentos fallidos (para no repetirlos).**
+- Solo forzar el predicado: carga el tiro pero se cancela justo antes del contacto (finta).
+- Anular Clear (devolver 0): la barra queda cargada y no patea; con X sale el regate cuadrado+X.
+- Clear devuelve 0x55 al pulsar y mantener pero no al soltar: finta. Hay que mantener 0x55 también al soltar (ranura +0x70).
+- Modos 5 y 6 (Clear solo al soltar; forzar +0x18=1 en Shoot): la barra sigue llena.
+- x64dbg adjunto a PES: congela el juego y, al cerrar el depurador, PES muere; sin control de su ventana no sirve.
+
+**14.4 Barra y potencia (causa, en curso).** La barra se dibuja en FUN_1408AAA30 con CommandPlayer+0x10 (carga). FUN_1408AB000 pone el medidor a 1,0 cuando el tipo de orden (cmd+0x1768) es 4; ese tipo pasa de 0x4E a 4 al pulsar cuadrado con Clear aunque Clear+0x14 valga 1 (log `[MEDIDOR]`); cmd+0x10 queda en 0 y FUN_1408AC9D0 (acumula la carga +0x20, tope 1,0) sale si +0x14 == 4. Pendiente: la instrucción que escribe cmd+0x1768 (vigía de escritura del Core 0.4.37, `vigia_escritura`) y la que fija la potencia real.
+
+**14.5 Herramientas nuevas del Core para investigar sin depurador externo.** `[MEDIDOR]` (gancho FUN_1408AB000), `[SHOOT]`/`[CARGA]` (ranuras de las unidades), `[VIGIA]` (registros DR0–DR3 de escritura + manejador de excepciones, sin tocar código), `[JUG]` (posiciones de los 22 jugadores: registro = *(raíz+(i+0xBF)*0x28), posición en +0x55C/+0x564).
+
+**14.6 Cosas a tener en cuenta.** Reiniciar PES para cada versión (la DLL no se recarga); borrar `arrancando.flag` si el cierre fue <60 s; no cerrar PES mientras Frank juega; instalador: `/c/Temp/instalar_043x.sh`.
+
+## 15. Temporada fija en el entrenamiento (season_forzada) — bitácora-guía
+El gestor de clima del Conmegol (Real-Life-Feel-Weather-Manager) elige la temporada por el mes real, así que cambia entre arranques. Con season 0 (verano) la cancha chica muestra vacío blanco y césped oscuro; con season 1 (invierno) vacío azul y césped claro. `phoenix_marcador_free.lua` v0.5+ registra `set_conditions` y, con `"season_forzada": 1` en phoenix_core.json y la zona FREE_TRAINING, pone `options.season = 1` (log «season 0 -> 1 (entrenamiento)»). El Lua v0.6 añade `"suplentes_cero": 1` (`set_match_settings`, substitutions = 0) como prueba para el banquillo.
