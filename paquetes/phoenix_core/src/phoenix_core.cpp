@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.21"
+#define PHX_CORE_VERSION "0.4.22"
 
 namespace {
 
@@ -715,10 +715,30 @@ static void cajasNuevas(float* f) {
     memcpy(f, n, sizeof n);
 }
 static bool casiIgual(const float* a, const float* b) { for (int i = 0; i < 24; ++i) if (fabsf(a[i] - b[i]) > 1e-3f) return false; return true; }
+// Localiza las cajas POR CONTENIDO (los 96 B originales exactos) en las secciones escribibles del exe: sirve para cualquier PES 2021 limpio
+// (no depende de la RVA). Se guarda el puntero (o nulo si no se halla; se reintenta cada ~10 s).
+static float* g_cajasPtr = nullptr; static ULONGLONG g_cajasIntento = 0;
+static float* cajasPuntero() {
+    if (g_cajasPtr) return g_cajasPtr;
+    if (GetTickCount64() - g_cajasIntento < 10000) return nullptr;
+    g_cajasIntento = GetTickCount64();
+    auto dos = reinterpret_cast<IMAGE_DOS_HEADER*>(g_exe.base); auto nt = reinterpret_cast<IMAGE_NT_HEADERS*>(g_exe.base + dos->e_lfanew);
+    auto sec = IMAGE_FIRST_SECTION(nt);
+    for (unsigned i = 0; i < nt->FileHeader.NumberOfSections; ++i) {
+        if (!(sec[i].Characteristics & IMAGE_SCN_MEM_WRITE)) continue;
+        uint8_t* ini = g_exe.base + sec[i].VirtualAddress; size_t tam = sec[i].Misc.VirtualSize;
+        __try {
+            for (size_t o = 0; o + sizeof kCajasOrig <= tam; o += 16)
+                if (memcmp(ini + o, kCajasOrig, sizeof kCajasOrig) == 0) { g_cajasPtr = reinterpret_cast<float*>(ini + o); break; }
+        } __except (EXCEPTION_EXECUTE_HANDLER) {}
+        if (g_cajasPtr) { logf("[cancha_chica_free] cajas localizadas por contenido en exe+0x%llX", (unsigned long long)(reinterpret_cast<uint8_t*>(g_cajasPtr) - g_exe.base)); break; }
+    }
+    return g_cajasPtr;
+}
 // escribe las cajas nuevas si ahora mismo están las originales; con enMarcha==false las devuelve a las originales
 static void ajustarCajas(bool enMarcha) {
-    float* c = reinterpret_cast<float*>(g_exe.base + 0x37CF4C0); float act[24], nue[24];
-    if (!leerSeguro(c, act, sizeof act)) return;
+    float* c = cajasPuntero(); float act[24], nue[24];
+    if (!c || !leerSeguro(c, act, sizeof act)) return;
     cajasNuevas(nue);
     DWORD old = 0;
     if (enMarcha && casiIgual(act, kCajasOrig)) {
