@@ -78,3 +78,10 @@ El exe en disco **no se toca**. Sin el DLL, PES es 100 % original.
 - Junto con `gol_nativo_free` (k=3) y `saque_centro_free` (sub=1) da: gol → celebración → saque de centro.
 - ⚠ No enganchar FUN_14047C2D0: la protección del exe (.impdata) tumba el juego.
 - Si tras muchos crashes todo falla, reiniciar la PC antes de culpar al código.
+
+### 9b. Duración de la celebración y recorte (27-oct, Core 0.4.16–0.4.19)
+- El paso 0x04 dura lo que la animación de celebración elegida (medido: 16 s, 31 s, 15 s, 12 s). Su contador es `job+0x27D0` (dword, ≈54/s desde el gol); el paso sale cuando el contador alcanza la duración de la animación Y ésta termina.
+- **No saltar el índice de la cola** (`[job+0x8F0]`+1, fase 0): deja la demo/cámara sin liberar y el 2.º gol cae en el deadlock render (0.4.18). Poner solo la fase 3 (0.4.16) no acorta (~13 s más de espera).
+- Opción estable (`celebracion_modo:"timer"`): a los N s (por defecto 8) escribir `job+0x27D0 = 4000` (valor mayor que cualquier animación). Resultado en prueba (3 goles): el paso termina ~4–7 s después de escribir (celebración total 12–15 s en vez de 16–31 s), sin deadlock. Json: `celebracion_modo` ("completa" | "timer" | "salto"), `celebracion_segundos`, `celebracion_timer_final`.
+- Otros campos medidos: `+0x27C0/0x27C8/0x27CC/0x27D4` contadores de fotogramas; `+0x27D8` fase de escena; `+0x27DC` flags; `+0x900` nº de reinicios.
+- ⚠ Modo seguro del Core: si PES se cierra en <60 s tras abrir, `arrancando.flag` se queda y el siguiente arranque va con TODAS las funciones apagadas (se ve como «saca el arquero otra vez»). Borrar el flag (o esperar un arranque normal) antes de probar.
