@@ -45,10 +45,11 @@ local function mirarConfig()
     encendido = (t ~= nil) and (t:find('"marcador_free"%s*:%s*true') ~= nil)
 end
 
-local canchaOn, rutaCancha = false, nil
+local canchaOn, rutaCancha, paredesOn = false, nil, false
 local function mirarCancha()
     local t = leer(rutaCfg)
     canchaOn = (t ~= nil) and (t:find('"cancha_chica_free"%s*:%s*true') ~= nil)
+    paredesOn = canchaOn and (t:find('"cancha_paredes"%s*:%s*true') ~= nil)
 end
 
 -- v0.2: en el Entrenamiento libre pantalla.json se queda en «cargando» (solo pasa a «en_juego» con match.stats
@@ -134,6 +135,11 @@ function m.get_filepath(ctx, filename, key)
     if not encendido or not enZona then return nil end
     if canchaOn and rutaCancha then
         local fl = string.gsub(string.lower(tostring(filename)), "\\", "/")
+        if paredesOn and fl == "common/render/model/bg/hit/bill/st002/hit_billboard.geom" then
+            local fp = base .. "content/phoenix/cancha_paredes/" .. fl
+            local hp = io.open(fp, "rb")
+            if hp then hp:close(); log("[cancha_paredes] sirvo " .. fl); return fp end
+        end
         if GEOM_CANCHA[fl] then
             local f = rutaCancha .. fl
             local h = io.open(f, "rb")
