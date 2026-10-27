@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.10"
+#define PHX_CORE_VERSION "0.4.11"
 
 namespace {
 
@@ -522,6 +522,39 @@ Gancho g_ganchos[] = {
       (void*)ganchoEvento, (void**)&g_eventoOrig },
 };
 
+// --- función: celebración corta en el Entrenamiento libre (plan B del congelón; APAGADA por defecto).
+// FUN_14044F8A0 (montador del gol) elige la secuencia tras PonerEvento(job,0xA): LARGA (celebración + repetición:
+// 0x03,0x11,0x08,0x23,…) o CORTA (0x43,0x07,0x44) según FUN_140A3F580([root+0x2C0]) = byte [[root+0x2C0]+0x84] != 0.
+// El congelón del entreno cae siempre en la LARGA. Gancho: si hay TrainingWork ([root+0x400] y su primer byte != 0,
+// mismo criterio que FUN_14044D110), pone ese byte a 1 solo durante la llamada y lo restaura. El amistoso no cambia.
+const char* kFirmaMontadorGol = "48 89 5C 24 08 48 89 74 24 10 57 48 83 EC 20 48 8B 05 ?? ?? ?? ?? 48 8B D9 48 8B B8 70 02 00 00 48 8B B0 C0 02 00 00 48";
+using FnMontador = uint64_t (*)(uint64_t, uint64_t, uint64_t, uint64_t);
+FnMontador g_montadorOrig = nullptr;
+volatile LONG g_celebracionesCortas = 0;
+uint64_t ganchoMontador(uint64_t a1, uint64_t a2, uint64_t a3, uint64_t a4) {
+    uint8_t* raiz = nullptr; uint8_t* tw = nullptr; uint8_t* sel = nullptr; uint8_t twb = 0, v = 0;
+    bool entreno = g_globalPartido && leerSeguro(g_globalPartido, &raiz, 8) && raiz &&
+                   leerSeguro(raiz + 0x400, &tw, 8) && tw && leerSeguro(tw, &twb, 1) && twb != 0;
+    bool cambiar = entreno && leerSeguro(raiz + 0x2C0, &sel, 8) && sel && leerSeguro(sel + 0x84, &v, 1);
+    if (cambiar) { sel[0x84] = 1; InterlockedIncrement(&g_celebracionesCortas); }
+    uint64_t r = g_montadorOrig(a1, a2, a3, a4);
+    if (cambiar) sel[0x84] = v;
+    return r;
+}
+bool cortaInstalar(Feature& f) {
+    if (!g_globalPartido && !resolverGlobalPartido(f.id)) { f.estado = "sin firma del global del partido"; return false; }
+    uint8_t* m = firmaUnica("codigo", kFirmaMontadorGol, f.id);
+    if (!m) { f.estado = "sin firma: montador del gol (FUN_14044F8A0)"; return false; }
+    if (!crearDesvio(f, m, 15, (void*)ganchoMontador, (void**)&g_montadorOrig)) {
+        f.estado = "no se pudo desviar el montador del gol"; return false;
+    }
+    char b[120];
+    sprintf_s(b, "ok: en el entrenamiento el gol usa la secuencia corta (montador exe+0x%llX)", (unsigned long long)(m - g_exe.base));
+    f.estado = b;
+    return true;
+}
+bool cortaQuitar(Feature&) { return true; }
+
 bool sondaInstalar(Feature& f) {
     if (!resolverGlobalPartido(f.id)) logf("[%s] sin firma del global del partido: k/sub/parado no se anotan", f.id);
     uint8_t* dirs[_countof(g_ganchos)];
@@ -734,6 +767,7 @@ std::vector<Feature> g_funciones = {   // orden = orden de arranque (gol_nativo_
     { "sonda_partido",   "Sonda: estados y gol nativo (solo mira)",    sondaInstalar, sondaQuitar },
     { "gol_nativo_free", "Gol nativo en Entrenamiento libre (street)", golInstalar,   golQuitar   },
     { "saque_centro_free", "Tras el gol, saque de centro (entrenamiento)", saqueInstalar, saqueQuitar },
+    { "celebracion_corta_free", "Gol sin celebración ni repetición (entrenamiento)", cortaInstalar, cortaQuitar },
     { "vigilante_bucles", "Vigilante de cuelgues (solo mira)",         vigilanteInstalar, vigilanteQuitar },
 };
 bool sondaActiva() {
