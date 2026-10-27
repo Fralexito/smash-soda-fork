@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.27"
+#define PHX_CORE_VERSION "0.4.29"
 
 namespace {
 
@@ -1285,21 +1285,59 @@ using FnPredTiro = uint32_t (*)(uint64_t, int, float, float, uint64_t, int, char
 FnPredTiro g_predTiroOrig = nullptr;
 volatile ULONGLONG g_tTrainingVisto = 0;
 volatile LONG g_disparoOn = 0;
-volatile LONG g_disparoForzados = 0;
+volatile LONG g_disparoForzados = 0, g_disparoLlamadas = 0;
+static uint32_t g_dispArg[16][3]; volatile LONG g_dispN = 0;
 HANDLE g_hiloDisparo = nullptr;
 DWORD WINAPI hiloDisparo(LPVOID) {
-    while (g_disparoOn) { if (hayTrainingWork()) g_tTrainingVisto = GetTickCount64(); Sleep(100); }
+    bool visto = false; ULONGLONG tLog = 0; LONG ult = 0;
+    while (g_disparoOn) {
+        bool tw = trainingWorkEstable() || hayTrainingWork();
+        if (tw) g_tTrainingVisto = GetTickCount64();
+        if (tw != visto) { visto = tw; logf("[siempre_disparo_free] TrainingWork %s", tw ? "visto" : "no visto"); }
+        if (GetTickCount64() - tLog > 5000) { tLog = GetTickCount64(); LONG n = g_disparoLlamadas, f = g_disparoForzados;
+            if (n != ult) { logf("[siempre_disparo_free] predicado llamado %ld veces, forzado a 1 en %ld", (long)n, (long)f); ult = n; } }
+        Sleep(100);
+    }
     return 0;
 }
 uint32_t ganchoPredTiro(uint64_t a1, int a2, float a3, float a4, uint64_t a5, int a6, char a7) {
+    LONG nn = InterlockedIncrement(&g_disparoLlamadas);
+    if (nn <= 12) logf("[siempre_disparo_free] predicado: jugador=%d modo=%d lado=%d training=%d", a2, a6, (int)a7, (int)(GetTickCount64() - g_tTrainingVisto < 3000));
     if (g_disparoOn && GetTickCount64() - g_tTrainingVisto < 3000) { InterlockedIncrement(&g_disparoForzados); return 1; }
     return g_predTiroOrig(a1, a2, a3, a4, a5, a6, a7);
+}
+// 0.4.29: ThinkUnitClear (vftable exe+0x260FEE8) comparte el botón 0xF con ThinkUnitShoot. Se cambian sus ranuras +0x60 (FUN_1408AEEE0)
+// y +0x68 (FUN_1408AEF70) —datos de .rdata, no código— por funciones que devuelven 0 (sin despeje) si hay TrainingWork visto.
+using FnClear60 = uint64_t (*)(int64_t);
+using FnClear68 = uint64_t (*)(uint64_t, int64_t);
+FnClear60 g_clear60Orig = nullptr; FnClear68 g_clear68Orig = nullptr;
+volatile LONG g_clearAnulados = 0;
+bool trainingReciente() { return g_disparoOn && GetTickCount64() - g_tTrainingVisto < 3000; }
+uint64_t ganchoClear60(int64_t p1) {
+    if (trainingReciente()) { LONG n = InterlockedIncrement(&g_clearAnulados); if (n <= 10) logf("[siempre_disparo_free] despeje (+0x60) anulado"); return 0; }
+    return g_clear60Orig(p1);
+}
+uint64_t ganchoClear68(uint64_t p1, int64_t p2) {
+    if (trainingReciente()) { LONG n = InterlockedIncrement(&g_clearAnulados); if (n <= 10) logf("[siempre_disparo_free] despeje (+0x68) anulado"); return 0; }
+    return g_clear68Orig(p1, p2);
+}
+bool parchearRanuraClear(Feature& f, size_t off, void* gancho, void** orig, uint64_t esperado) {
+    uint8_t* dir = g_exe.base + 0x260FEE8 + off; uint64_t act = 0;
+    if (!leerSeguro(dir, &act, 8) || act != reinterpret_cast<uint64_t>(g_exe.base) + esperado) { logf("[%s] ranura Clear+0x%llX inesperada", f.id, (unsigned long long)off); return false; }
+    *orig = reinterpret_cast<void*>(act);
+    Parche p; p.dir = dir; p.original.assign(dir, dir + 8);
+    uint64_t g = reinterpret_cast<uint64_t>(gancho); p.nuevo.assign(reinterpret_cast<uint8_t*>(&g), reinterpret_cast<uint8_t*>(&g) + 8);
+    if (!aplicarParche(p, f.id)) return false;
+    f.parches.push_back(p); return true;
 }
 bool disparoInstalar(Feature& f) {
     if (!g_globalPartido && !resolverGlobalPartido(f.id)) { f.estado = "sin firma del global del partido"; return false; }
     uint8_t* m = firmaUnica("codigo", kFirmaPredTiro, f.id);
     if (!m) { f.estado = "sin firma: predicado de tiro FUN_1406b45d0"; return false; }
     if (!crearDesvio(f, m, 20, (void*)ganchoPredTiro, (void**)&g_predTiroOrig)) { f.estado = "no se pudo desviar el predicado de tiro"; return false; }
+    bool clearOk = parchearRanuraClear(f, 0x60, (void*)ganchoClear60, (void**)&g_clear60Orig, 0x8AEEE0) &&
+                   parchearRanuraClear(f, 0x68, (void*)ganchoClear68, (void**)&g_clear68Orig, 0x8AEF70);
+    logf("[%s] ranuras de ThinkUnitClear: %s", f.id, clearOk ? "parcheadas" : "NO parcheadas");
     g_disparoOn = 1;
     g_hiloDisparo = CreateThread(nullptr, 0, hiloDisparo, nullptr, 0, nullptr);
     char b[140]; sprintf_s(b, "ok: en el entrenamiento cuadrado dispara siempre (predicado en exe+0x%llX)", (unsigned long long)(m - g_exe.base));
