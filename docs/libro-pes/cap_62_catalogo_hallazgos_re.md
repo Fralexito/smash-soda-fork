@@ -197,3 +197,15 @@ Añadir filas con fecha cuando aparezca algo nuevo (aunque no sea del tema del d
 | Selector de parada | FUN_1404526A0: k=[obj+0x1574], sub=[obj+0x1554], obj=[[0x1436F3DC8]+0x270]; k==3 → gol | C (estático) |
 | **Portabilidad (pendiente)** | Core 0.3.x usa aún RVAs fijas de Conmegol para: global 0x36F3DC8, retornos 0x449BA9/0x44F8E3, FUN_14044F8A0. Antes de usarlo en PES limpio hay que sacarlas por firma (instrucción RIP-relativa que lee el global, firma del montador). Las firmas de los 3 ganchos sí son AOB. Sospecha: si el exe limpio es otra versión (Conmegol = PATCH10100), las RVAs cambian; las firmas probablemente sirven. | P |
 | Archivos | La prueba de Core no depende de cpk/livecpk de Conmegol; sí usa Sider (cualquier Sider con luajit.ext.enabled=1). Las pruebas de cancha (pitch_st002 del Camp Nou, goal_post, .geom en livecpk) SÍ eran de Conmegol: en PES limpio las rutas de estadios/AddOn serán distintas. | C |
+
+#### 27-oct-2026 — Gol nativo completo en el Entrenamiento libre (hilo «modo street»)
+| Qué | Dónde / formato | Confianza |
+|---|---|---|
+| Culpable del «saque de puerta» | FUN_1404A56C0 (gestor de paradas del entrenamiento, TrainingWork `[[0x1436F3DC8]+0x400]`) fuerza k=7 con 2× `mov edx,7; call FUN_141B8B250`. Firma `BA 07 00 00 00 49 8B CE E8 ?? ?? ?? ?? BA 07 00 00 00 48 8B CB E8` | C |
+| Índice 0xFF sin comprobar | FUN_140A62690(lado,p) → 0xFF si no hay jugador; FUN_1405B1740 lo usa como ranura (2 sitios, firmas en cap_73 §4). Afecta a todo modo con <11 por lado | C |
+| Monitor de cola de carga | FUN_1403E0760: `while(!listo[+0x9C] && cola[[p+0x88]+0x28]==0) esperar`; hilo de render FUN_14170FA10; spin-yield FUN_1403DB2C0/DB590; zlib inflate_fast FUN_1403B6AA0 | C (estático) |
+| Demo de entrada al marcar | En entreno, al marcar se pide `…\demo\fixdemo\ent\table_ent.bin` + Entrance.lua ×4 (ruta trofeo/entrada); en amistoso no. Tablas fixdemo se inicializan en FUN_141EBCB10/141EC68A0/141ECA210/141F29420 (DAT_1437F4E60) | C |
+| Error Lua de Conmegol | TournamentCornerFlags.lua l.98: `CornerFlag` nil para torneo 29 (entreno) → congela el motor. Regla para el parche propio: módulos Lua deben tolerar torneo nil | C |
+| Señal de cuelgue | CPU alta NO distingue cuelgue (~5 núcleos normal, 125–130 hilos). Señal buena: sonda sin escribir ≥8 s y sin «Commentary file detected» | C |
+| sider.ini Conmegol | `Stadium_CornerFlag.lua` (l.164) y `CornerFlag.lua` (l.188) no existen (inocuo) | C |
+| Entreno: estadio | stadium=2, stadium_choice=65533 (sin elección) | P |
