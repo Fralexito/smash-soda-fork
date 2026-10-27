@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.12c"
+#define PHX_CORE_VERSION "0.4.13"
 
 namespace {
 
@@ -536,6 +536,8 @@ using FnMontador = uint64_t (*)(uint64_t, uint64_t, uint64_t, uint64_t);
 FnMontador g_montadorOrig = nullptr;
 volatile LONG g_celebracionesCortas = 0;
 bool g_cortaActiva = false;      // celebracion_corta_free encendida
+bool g_sin1DActiva = false;      // sin_1D_free encendida
+volatile LONG g_sin1DCont = 0;
 bool g_sondaOn = false;          // la sonda vuelca la cola de pasos tras montar el gol
 
 // ¿Hay TrainingWork? Mismo criterio que FUN_14044D110: [root+0x400] != 0 y su primer byte != 0.
@@ -549,16 +551,24 @@ bool hayTrainingWork(uint8_t** raizOut = nullptr) {
 
 uint64_t ganchoMontador(uint64_t a1, uint64_t a2, uint64_t a3, uint64_t a4) {
     uint8_t* raiz = nullptr; uint8_t* sel = nullptr; uint8_t v = 0;
-    bool cambiar = g_cortaActiva && hayTrainingWork(&raiz) && leerSeguro(raiz + 0x2C0, &sel, 8) && sel &&
+    bool training = (g_cortaActiva || g_sin1DActiva) && hayTrainingWork(&raiz);
+    bool cambiar = g_cortaActiva && training && leerSeguro(raiz + 0x2C0, &sel, 8) && sel &&
                    leerSeguro(sel + 0x84, &v, 1);
     if (cambiar) { sel[0x84] = 1; InterlockedIncrement(&g_celebracionesCortas); }
+    // sin_1D_free: el montador solo encola el paso 0x1D (repetición/cámara, causa del congelón) si FUN_140A3C020(partido)
+    // = byte [partido+0x177F] es 0. Se pone a 1 solo durante la llamada y se restaura.
+    uint8_t* part = nullptr; uint8_t v1d = 0;
+    bool sin1d = g_sin1DActiva && training && leerSeguro(raiz + 0x270, &part, 8) && part &&
+                 leerSeguro(part + 0x177F, &v1d, 1);
+    if (sin1d) { part[0x177F] = 1; InterlockedIncrement(&g_sin1DCont); }
     uint64_t r = g_montadorOrig(a1, a2, a3, a4);
     if (cambiar) sel[0x84] = v;
+    if (sin1d) part[0x177F] = v1d;
     if (g_sondaOn) {                      // volcado de la cola de pasos que acaba de montar el juego
         uint8_t* job = reinterpret_cast<uint8_t*>(a1);
         Ev& e = nuevoEv(EV_COLA, _ReturnAddress());
         e.a = a1; e.b = leerU8(job, 0x8F0); e.c = leerU8(job, 0x8F1); e.d = leerU32(job, 0x874);
-        e.x[0] = cambiar ? 1 : 0;
+        e.x[0] = (cambiar ? 1 : 0) | (sin1d ? 2 : 0);
         leerSeguro(job + 0x878, e.q, sizeof e.q);
         cerrarEv(e);
     }
@@ -585,6 +595,15 @@ bool cortaInstalar(Feature& f) {
     return true;
 }
 bool cortaQuitar(Feature&) { g_cortaActiva = false; return true; }
+
+bool sin1DInstalar(Feature& f) {
+    if (!g_globalPartido && !resolverGlobalPartido(f.id)) { f.estado = "sin firma del global del partido"; return false; }
+    if (!asegurarMontador(f)) { f.estado = "sin gancho del montador del gol (FUN_14044F8A0)"; return false; }
+    g_sin1DActiva = true;
+    f.estado = "ok: en el entrenamiento el gol no encola el paso 0x1D (montador FUN_14044F8A0, solo datos)";
+    return true;
+}
+bool sin1DQuitar(Feature&) { g_sin1DActiva = false; return true; }
 
 // --- sonda de pasos: FUN_14047C2D0(job, saltable, ...) es el ejecutor de la cola job+0x878[]. Se anota cada CAMBIO de
 // (índice de cola [job+0x8F0], id de paso) para saber qué paso está activo cuando el juego se congela. Prólogo 17 B
@@ -942,6 +961,7 @@ std::vector<Feature> g_funciones = {   // orden = orden de arranque (gol_nativo_
     { "gol_nativo_free", "Gol nativo en Entrenamiento libre (street)", golInstalar,   golQuitar   },
     { "saque_centro_free", "Tras el gol, saque de centro (entrenamiento)", saqueInstalar, saqueQuitar },
     { "celebracion_corta_free", "Gol sin celebración ni repetición (entrenamiento)", cortaInstalar, cortaQuitar },
+    { "sin_1D_free", "Gol sin el paso 0x1D de la cola (entrenamiento; evita el congelón)", sin1DInstalar, sin1DQuitar },
     { "rescate_render_free", "Rescate del bloqueo juego↔render (experimental)", rescateInstalar, rescateQuitar },
     { "vigilante_bucles", "Vigilante de cuelgues (solo mira)",         vigilanteInstalar, vigilanteQuitar },
 };
