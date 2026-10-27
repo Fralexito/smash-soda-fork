@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.40"
+#define PHX_CORE_VERSION "0.4.41"
 
 namespace {
 
@@ -1587,6 +1587,46 @@ bool jugSondaInstalar(Feature& f) {
     f.estado = "ok: anota las posiciones de los 22 jugadores cada 3 s (solo lectura)"; return true;
 }
 bool jugSondaQuitar(Feature&) { g_jugSondaOn = 0; if (g_hiloJug) { WaitForSingleObject(g_hiloJug, 4000); CloseHandle(g_hiloJug); g_hiloJug = nullptr; } return true; }
+// --- función: red_frena_free (0.4.41, de la RE del frente B, 27-oct). La pelota del partido NO es un cuerpo rígido: la mueve un modelo analítico propio
+// FUN_140876360 (RVA 0x876360; gravedad 9,80665, arrastre, Magnus, rebote y rodadura) sobre un estado S de 272 B: S[0..2] = posición (x largo, y, z ancho),
+// S[3..5] = velocidad lineal, S[6..8] = giro. Se llama en cada paso, también en la predicción de 250 pasos por fotograma. No hay colisión con .geom: por eso
+// la pelota atraviesa la red. Gancho (15 B de prólogo, firma AOB de 22 B única): llama al original y, si el estado cae dentro de la red (|x| > semilargo y
+// |z| < media portería + margen) con TrainingWork visto, multiplica S[3..5] por un factor por paso (json «red_factor», 0.85) y frena en seco al fondo de la red.
+// Firma: (float dt /*xmm0*/, u64 rdx, u64 r8, float* S /*r9*/, void* cfg /*[rsp+0x28]*/, u64 flag /*[rsp+0x30]*/).
+const char* kFirmaBolaPaso = "48 8B C4 F3 0F 11 40 08 55 53 56 48 8D 68 88 48 81 EC 60 01 00 00";
+using FnBolaPaso = uint64_t (*)(float, uint64_t, uint64_t, float*, void*, uint64_t);
+FnBolaPaso g_bolaPasoOrig = nullptr;
+float g_redFactor = 0.85f; volatile ULONGLONG g_tTrainRed = 0; volatile LONG g_redOn = 0; volatile LONG g_redFrenos = 0;
+HANDLE g_hiloRed = nullptr;
+DWORD WINAPI hiloRed(LPVOID) {
+    while (g_redOn) { if (trainingWorkEstable() || hayTrainingWork()) g_tTrainRed = GetTickCount64(); Sleep(100); }
+    return 0;
+}
+uint64_t ganchoBolaPaso(float dt, uint64_t rdx, uint64_t r8, float* S, void* cfg, uint64_t flag) {
+    uint64_t r = g_bolaPasoOrig(dt, rdx, r8, S, cfg, flag);
+    if (g_redOn && GetTickCount64() - g_tTrainRed < 3000) {
+        float x = S[0], z = S[2];
+        float largo = (float)g_canchaLargo;
+        if (fabsf(x) > largo && fabsf(z) < 4.2f) {
+            float f = g_redFactor;
+            if (fabsf(x) > largo + 3.0f) f = 0.0f;           // fondo de la red: se queda quieta
+            S[3] *= f; S[4] *= f; S[5] *= f;
+            LONG n = InterlockedIncrement(&g_redFrenos); if (n <= 5 || n % 2000 == 0) logf("[RED] freno #%ld x=%.2f z=%.2f f=%.2f", (long)n, x, z, f);
+        }
+    }
+    return r;
+}
+bool redInstalar(Feature& f) {
+    if (!g_globalPartido && !resolverGlobalPartido(f.id)) { f.estado = "sin firma del global del partido"; return false; }
+    uint8_t* m = firmaUnica("codigo", kFirmaBolaPaso, f.id);
+    if (!m) { f.estado = "sin firma: paso de la pelota FUN_140876360"; return false; }
+    if (!crearDesvio(f, m, 15, (void*)ganchoBolaPaso, (void**)&g_bolaPasoOrig)) { f.estado = "no se pudo desviar el paso de la pelota"; return false; }
+    g_redOn = 1; g_hiloRed = CreateThread(nullptr, 0, hiloRed, nullptr, 0, nullptr);
+    char b[150]; sprintf_s(b, "ok: la red frena la pelota en el entrenamiento (paso de la pelota en exe+0x%llX, factor %.2f)", (unsigned long long)(m - g_exe.base), g_redFactor);
+    f.estado = b; return true;
+}
+bool redQuitar(Feature&) { g_redOn = 0; return true; }
+
 std::vector<Feature> g_funciones = {   // orden = orden de arranque (gol_nativo_free necesita la sonda)
     { "diagnostico",     "Diagnóstico de firmas (solo lectura)",       diagInstalar,  diagQuitar  },
     { "sonda_partido",   "Sonda: estados y gol nativo (solo mira)",    sondaInstalar, sondaQuitar },
@@ -1597,6 +1637,7 @@ std::vector<Feature> g_funciones = {   // orden = orden de arranque (gol_nativo_
     { "cancha_chica_free", "Cancha lógica pequeña (semilargo/semiancho del json) en el entrenamiento", canchaInstalar, canchaQuitar },
     { "siempre_disparo_free", "Cuadrado dispara siempre en el entrenamiento (sin despeje en campo propio)", disparoInstalar, disparoQuitar },
     { "jugadores_sonda", "Sonda de solo lectura de las posiciones de los 22 jugadores en el entrenamiento", jugSondaInstalar, jugSondaQuitar },
+    { "red_frena_free", "La red de los arcos frena la pelota en el entrenamiento (gancho al paso de la pelota)", redInstalar, redQuitar },
     { "pelota_sonda", "Sonda de solo lectura de la pelota (posición/velocidad) en el entrenamiento", pelotaInstalar, pelotaQuitar },
     { "gol_directo_free", "Gol sin celebración, cámara ni repetición: solo reinicio (entrenamiento)", directoInstalar, directoQuitar },
     { "sin_1D_free", "Gol sin el paso 0x1D de la cola (entrenamiento; evita el congelón)", sin1DInstalar, sin1DQuitar },
@@ -1679,6 +1720,7 @@ void leerConfig() {
     if (g_canchaAncho < 6.0 || g_canchaAncho > 50.0) g_canchaAncho = 10.0;
     if (valorDe("celebracion_modo", v)) g_celebModo = (v == "\"timer\"") ? 1 : (v == "\"salto\"") ? 2 : 0;
     if (valorDe("siempre_disparo_modo", v)) g_disparoModo = atoi(v.c_str());
+    if (valorDe("red_factor", v)) { g_redFactor = (float)atof(v.c_str()); if (g_redFactor < 0.0f || g_redFactor > 1.0f) g_redFactor = 0.85f; }
     if (valorDe("vigia_escritura", v)) g_vigiaPedida = atoi(v.c_str());
     if (valorDe("vigia_pelota", v)) g_vigiaPelotaPedida = atoi(v.c_str());
     if (valorDe("medidor_real", v)) g_medidorReal = atoi(v.c_str());
