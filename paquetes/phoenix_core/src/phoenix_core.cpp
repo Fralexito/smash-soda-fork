@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.49"
+#define PHX_CORE_VERSION "0.4.50"
 
 namespace {
 
@@ -1704,11 +1704,12 @@ bool redQuitar(Feature&) { g_redOn = 0; return true; }
 volatile ULONGLONG g_tTrainGlob = 0; volatile LONG g_trainGlobOn = 0; HANDLE g_hiloTrainGlob = nullptr;
 struct ParcheN { uint8_t* dir = nullptr; uint8_t ori[8] = {}, nue[8] = {}; size_t n = 0; bool puesto = false; };
 static void ponerParcheN(ParcheN& pn, bool si) { if (!pn.dir || pn.puesto == si) return; if (escribirCodigo(pn.dir, si ? pn.nue : pn.ori, pn.n)) pn.puesto = si; }
-volatile LONG g_sinSaquesOn = 0, g_arqueroOn = 0; ParcheDisp g_pdS1, g_pdS2; ParcheN g_pnA, g_pnB;
+volatile LONG g_sinSaquesOn = 0, g_arqueroOn = 0, g_iaClearOn = 0; ParcheDisp g_pdS1, g_pdS2, g_pdIA; ParcheN g_pnA, g_pnB;
 DWORD WINAPI hiloTrainGlob(LPVOID) {
     while (g_trainGlobOn) {
         if (trainingWorkEstable() || hayTrainingWork()) g_tTrainGlob = GetTickCount64();
         if (g_sinSaquesOn) { bool dentro = GetTickCount64() - g_tTrainGlob < 3000; ponerParche(g_pdS1, dentro); ponerParche(g_pdS2, dentro); }
+        if (g_iaClearOn) { bool dentro = GetTickCount64() - g_tTrainGlob < 3000; ponerParche(g_pdIA, dentro); }
         if (g_arqueroOn) { bool dentro = GetTickCount64() - g_tTrainGlob < 3000; ponerParcheN(g_pnA, dentro); ponerParcheN(g_pnB, dentro); }
         Sleep(100);
     }
@@ -1743,6 +1744,17 @@ bool arqueroInstalar(Feature& f) {
     f.estado = "ok: el portero participa siempre en el entrenamiento (parches en FUN_140A59CA0)"; return true;
 }
 bool arqueroQuitar(Feature&) { g_arqueroOn = 0; ponerParcheN(g_pnA, false); ponerParcheN(g_pnB, false); return true; }
+
+// --- sin_despeje_emergencia (0.4.50, RE del frente I, 27-oct): la IA NO usa las pad::ThinkUnit* (solo el mando); va por BallPlayer con match::ai::bp::ThinkUnit*. El despeje automático es
+// match::ai::bp::ThinkUnitClear (vtable 0x142beef70), exec FUN_142109EB0 (RVA 0x2109EB0, 59 B): si *(ctx[5]+0x31C1) != 0 (flag de presión + cercanía a la portería, FUN_142119390) escribe la intención tipo 5
+// (Clear); si no, no escribe nada (el «no aplicable» normal). Parche de 1 byte, RVA 0x2109EC7, «74»->«EB» (je -> jmp al ret): la IA nunca despeja; sigue pudiendo pasar, regatear, tirar (tipo 3) y fintar.
+// No se toca ThinkUnitGKClear (el portero). Solo con TrainingWork; se restaura al salir.
+bool iaClearInstalar(Feature& f) {
+    if (!localizarParche("40 53 48 83 EC 20 49 8B 40 28 4D 8B C8 48 8B DA 80 B8 C1 31 00 00 00 74 1C", 23, 0x74, 0xEB, g_pdIA, f.id)) { f.estado = "sin firma/byte inesperado en ThinkUnitClear de la IA (FUN_142109EB0)"; return false; }
+    asegurarHiloTrain(); g_iaClearOn = 1;
+    f.estado = "ok: la IA no hace despejes automáticos en el entrenamiento (parche de 1 byte en ThinkUnitClear de la IA)"; return true;
+}
+bool iaClearQuitar(Feature&) { g_iaClearOn = 0; ponerParche(g_pdIA, false); return true; }
 
 const char* kFirmaReinicio = "48 8B C4 53 41 57 48 83 EC 78 48 89 70 E8";
 using FnReinicio = float* (*)(float*, uint32_t*, void*, void*);
@@ -1823,6 +1835,7 @@ std::vector<Feature> g_funciones = {   // orden = orden de arranque (gol_nativo_
     { "red_frena_free", "La red de los arcos frena la pelota en el entrenamiento (gancho al paso de la pelota)", redInstalar, redQuitar },
     { "sin_saques_free", "Sin saques de banda/esquina/puerta en el entrenamiento: solo el gol reinicia (parches de 1 byte en el Juez)", sinSaquesInstalar, sinSaquesQuitar },
     { "arquero_propio_free", "El portero participa siempre en el entrenamiento, con cualquier número de jugadores y sin fijar el cursor", arqueroInstalar, arqueroQuitar },
+    { "sin_despeje_emergencia", "La IA no hace despejes automáticos de emergencia en el entrenamiento (puede pasar, regatear y tirar)", iaClearInstalar, iaClearQuitar },
     { "jugadores_chica_free", "Escala a la cancha chica las posiciones de reinicio de los jugadores (entrenamiento)", jugChInstalar, jugChQuitar },
     { "suplentes_ocultos_free", "Aparca a los suplentes de la banda lejos (entrenamiento)", supOcultosInstalar, supOcultosQuitar },
     { "pelota_sonda", "Sonda de solo lectura de la pelota (posición/velocidad) en el entrenamiento", pelotaInstalar, pelotaQuitar },
