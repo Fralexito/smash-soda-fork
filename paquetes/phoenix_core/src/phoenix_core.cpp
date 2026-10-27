@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.39"
+#define PHX_CORE_VERSION "0.4.40"
 
 namespace {
 
@@ -1286,6 +1286,24 @@ bool vigilanteQuitar(Feature&) {
 const char* kFirmaPredTiro = "48 8B C4 55 57 41 55 41 56 48 8D 68 A8 48 81 EC 38 01 00 00 8B BD 88 00 00 00 4C 8B F1 0F 29 70 C8";
 using FnPredTiro = uint32_t (*)(uint64_t, int, float, float, uint64_t, int, char);
 FnPredTiro g_predTiroOrig = nullptr;
+int g_disparoModo = 2;   // json «siempre_disparo_modo»: 0 = solo el predicado de Shoot, 1 = Clear devuelve 0 (congela), 2 = Clear devuelve la acción de tiro 0x55
+// --- modo 8 (0.4.40), de la RE del frente D (27-oct): ordA = cmd+0x1768 es el id de la ThinkUnit ganadora (3 Shoot, 4 Clear). FUN_1408B08A0 empuja
+// Clear antes que Shoot, y cada unidad se habilita con su ranura +0x88: Shoot (FUN_1408B9C80) devuelve «no» en la mitad propia con mode+0x116C==1;
+// Clear (FUN_1408BB0D0) solo se habilita en mitad propia. FUN_1408B1490 pone la potencia a 1.0 si el id de unidad es 4. Dos parches de 1 byte:
+//  A) 0x1408B9CE8 «75 22» -> «EB 22» (Shoot siempre aplicable)  B) 0x1408BB150 «76 34» -> «EB 34» (Clear nunca aplicable).
+// Se ponen solo mientras hay TrainingWork (hilo de la vigía de entrenamiento) y se restauran al salir. Entonces gana Shoot (ordA=3, barra y potencia por carga).
+struct ParcheDisp { uint8_t* dir = nullptr; uint8_t ori = 0, nue = 0; bool puesto = false; };
+ParcheDisp g_pdA, g_pdB;
+static bool localizarParche(const char* firma, size_t desp, uint8_t ori, uint8_t nue, ParcheDisp& pd, const char* id) {
+    uint8_t* m = firmaUnica("codigo", firma, id); if (!m) return false;
+    pd.dir = m + desp; pd.ori = ori; pd.nue = nue;
+    uint8_t v = 0; if (!leerSeguro(pd.dir, &v, 1) || v != ori) { logf("[%s] byte inesperado en exe+0x%llX (0x%02X, esperaba 0x%02X)", id, (unsigned long long)(pd.dir - g_exe.base), v, ori); pd.dir = nullptr; return false; }
+    return true;
+}
+static void ponerParche(ParcheDisp& pd, bool si) {
+    if (!pd.dir || pd.puesto == si) return;
+    uint8_t v = si ? pd.nue : pd.ori; if (escribirCodigo(pd.dir, &v, 1)) pd.puesto = si;
+}
 volatile ULONGLONG g_tTrainingVisto = 0;
 volatile LONG g_disparoOn = 0;
 volatile LONG g_disparoForzados = 0, g_disparoLlamadas = 0;
@@ -1296,6 +1314,7 @@ DWORD WINAPI hiloDisparo(LPVOID) {
     while (g_disparoOn) {
         bool tw = trainingWorkEstable() || hayTrainingWork();
         if (tw) g_tTrainingVisto = GetTickCount64();
+        if (g_disparoModo >= 8) { bool dentro = GetTickCount64() - g_tTrainingVisto < 3000; ponerParche(g_pdA, dentro); ponerParche(g_pdB, dentro); }
         if (tw != visto) { visto = tw; logf("[siempre_disparo_free] TrainingWork %s", tw ? "visto" : "no visto"); }
         if (GetTickCount64() - tLog > 5000) { tLog = GetTickCount64(); LONG n = g_disparoLlamadas, f = g_disparoForzados;
             if (n != ult) { logf("[siempre_disparo_free] predicado llamado %ld veces, forzado a 1 en %ld", (long)n, (long)f); ult = n; } }
@@ -1316,7 +1335,6 @@ using FnClear68 = uint64_t (*)(uint64_t, int64_t);
 FnClear60 g_clear60Orig = nullptr; FnClear68 g_clear68Orig = nullptr; FnClear68 g_clear70Orig = nullptr;
 volatile ULONGLONG g_clearUltimo = 0;   // último instante en que Clear devolvió 0x55 (mantener «dueño» de la acción al soltar)
 volatile LONG g_clearAnulados = 0;
-int g_disparoModo = 2;   // json «siempre_disparo_modo»: 0 = solo el predicado de Shoot, 1 = Clear devuelve 0 (congela), 2 = Clear devuelve la acción de tiro 0x55
 bool trainingReciente() { return g_disparoOn && GetTickCount64() - g_tTrainingVisto < 3000; }
 int g_disparoCarga = 1;   // json «siempre_disparo_carga»: 1 = la carga (+0x20) de Clear sigue a la de Shoot (potencia calculable)
 static void sincronizarCarga(uint64_t clear, const char* donde) {
@@ -1509,9 +1527,14 @@ bool disparoInstalar(Feature& f) {
     uint8_t* m = firmaUnica("codigo", kFirmaPredTiro, f.id);
     if (!m) { f.estado = "sin firma: predicado de tiro FUN_1406b45d0"; return false; }
     if (!crearDesvio(f, m, 20, (void*)ganchoPredTiro, (void**)&g_predTiroOrig)) { f.estado = "no se pudo desviar el predicado de tiro"; return false; }
-    bool clearOk = g_disparoModo == 0 ? true : parchearRanuraClear(f, 0x60, (void*)ganchoClear60, (void**)&g_clear60Orig, 0x8AEEE0) &&
+    bool clearOk = (g_disparoModo == 0 || g_disparoModo >= 8) ? true : parchearRanuraClear(f, 0x60, (void*)ganchoClear60, (void**)&g_clear60Orig, 0x8AEEE0) &&
                    parchearRanuraClear(f, 0x68, (void*)ganchoClear68, (void**)&g_clear68Orig, 0x8AEF70);
-    if (g_disparoModo >= 6) {
+    if (g_disparoModo >= 8) {
+        bool a = localizarParche("41 83 BE 6C 11 00 00 01 75 22 0F BE 80 54 02 00 00", 8, 0x75, 0xEB, g_pdA, f.id);
+        bool b = localizarParche("76 34 8B 87 6C 11 00 00 83 F8 01 74 19 83 F8 03 75 24", 0, 0x76, 0xEB, g_pdB, f.id);
+        logf("[%s] modo 8: parche A (Shoot siempre aplicable) %s · parche B (Clear nunca aplicable) %s · se aplican solo con TrainingWork", f.id, a ? "localizado" : "NO", b ? "localizado" : "NO");
+    }
+    if (g_disparoModo >= 6 && g_disparoModo < 8) {
         uint8_t* dir = g_exe.base + 0x260FB58 + 0x40; uint64_t act = 0;
         if (leerSeguro(dir, &act, 8) && act == reinterpret_cast<uint64_t>(g_exe.base) + 0x8AC500) {
             g_despShootOrig = reinterpret_cast<FnDesp>(act);
@@ -1521,7 +1544,7 @@ bool disparoInstalar(Feature& f) {
             logf("[%s] Shoot+0x40 (despachador) forzado a activo: %s", f.id, ok ? "parcheada" : "NO parcheada");
         } else logf("[%s] ranura Shoot+0x40 inesperada", f.id);
     }
-    if (g_disparoModo >= 4 && clearOk) { bool ok70 = parchearRanuraClear(f, 0x70, (void*)ganchoClear70, (void**)&g_clear70Orig, 0x421F40); logf("[%s] Clear+0x70 al soltar: %s", f.id, ok70 ? "parcheada" : "NO parcheada"); }
+    if (g_disparoModo >= 4 && g_disparoModo < 8 && clearOk) { bool ok70 = parchearRanuraClear(f, 0x70, (void*)ganchoClear70, (void**)&g_clear70Orig, 0x421F40); logf("[%s] Clear+0x70 al soltar: %s", f.id, ok70 ? "parcheada" : "NO parcheada"); }
     logf("[%s] modo %d · ranuras de ThinkUnitClear: %s", f.id, g_disparoModo, g_disparoModo == 0 ? "sin tocar" : clearOk ? "parcheadas" : "NO parcheadas");
     if (g_disparoModo >= 7) medidorInstalar(f);
     logf("[%s] ranuras de ThinkUnitShoot (registro): %s", f.id, parchearRanuraShoot(f) ? "parcheadas" : "NO parcheadas");
@@ -1530,7 +1553,7 @@ bool disparoInstalar(Feature& f) {
     char b[140]; sprintf_s(b, "ok: en el entrenamiento cuadrado dispara siempre (predicado en exe+0x%llX)", (unsigned long long)(m - g_exe.base));
     f.estado = b; return true;
 }
-bool disparoQuitar(Feature&) { g_disparoOn = 0; return true; }
+bool disparoQuitar(Feature&) { g_disparoOn = 0; ponerParche(g_pdA, false); ponerParche(g_pdB, false); return true; }
 
 // --- función: jugadores_sonda (0.4.38, SOLO LECTURA). El registro de movimiento de cada jugador i (0..21; accesor FUN_140A48A10) es
 // *(raíz + (i+0xBF)*0x28); su posición lógica (x, y, z) está en +0x55C/+0x560/+0x564 (la usa FUN_1406B45D0). Cada 3 s (con TrainingWork)
