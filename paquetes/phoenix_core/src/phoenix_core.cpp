@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.51"
+#define PHX_CORE_VERSION "0.4.52"
 
 namespace {
 
@@ -1704,12 +1704,13 @@ bool redQuitar(Feature&) { g_redOn = 0; return true; }
 volatile ULONGLONG g_tTrainGlob = 0; volatile LONG g_trainGlobOn = 0; HANDLE g_hiloTrainGlob = nullptr;
 struct ParcheN { uint8_t* dir = nullptr; uint8_t ori[8] = {}, nue[8] = {}; size_t n = 0; bool puesto = false; };
 static void ponerParcheN(ParcheN& pn, bool si) { if (!pn.dir || pn.puesto == si) return; if (escribirCodigo(pn.dir, si ? pn.nue : pn.ori, pn.n)) pn.puesto = si; }
-volatile LONG g_sinSaquesOn = 0, g_arqueroOn = 0, g_iaClearOn = 0, g_gkCortoOn = 0; ParcheDisp g_pdS1, g_pdS2, g_pdIA, g_pdGK1, g_pdGK2; ParcheN g_pnA, g_pnB;
+volatile LONG g_sinSaquesOn = 0, g_arqueroOn = 0, g_iaClearOn = 0, g_gkCortoOn = 0, g_arqCursorOn = 0; ParcheDisp g_pdS1, g_pdS2, g_pdIA, g_pdGK1, g_pdGK2; ParcheN g_pnA, g_pnB, g_pnC1, g_pnC2, g_pnC3;
 DWORD WINAPI hiloTrainGlob(LPVOID) {
     while (g_trainGlobOn) {
         if (trainingWorkEstable() || hayTrainingWork()) g_tTrainGlob = GetTickCount64();
         if (g_sinSaquesOn) { bool dentro = GetTickCount64() - g_tTrainGlob < 3000; ponerParche(g_pdS1, dentro); ponerParche(g_pdS2, dentro); }
         if (g_gkCortoOn) { bool dentro = GetTickCount64() - g_tTrainGlob < 3000; ponerParche(g_pdGK1, dentro); ponerParche(g_pdGK2, dentro); }
+        if (g_arqCursorOn) { bool dentro = GetTickCount64() - g_tTrainGlob < 3000; ponerParcheN(g_pnC1, dentro); ponerParcheN(g_pnC2, dentro); ponerParcheN(g_pnC3, dentro); }
         if (g_iaClearOn) { bool dentro = GetTickCount64() - g_tTrainGlob < 3000; ponerParche(g_pdIA, dentro); }
         if (g_arqueroOn) { bool dentro = GetTickCount64() - g_tTrainGlob < 3000; ponerParcheN(g_pnA, dentro); ponerParcheN(g_pnB, dentro); }
         Sleep(100);
@@ -1771,6 +1772,26 @@ bool gkCortoInstalar(Feature& f) {
     f.estado = "ok: el portero IA no saca largo en el entrenamiento (GKPassLong/GKClear anulados; quedan pase corto y regate)"; return true;
 }
 bool gkCortoQuitar(Feature&) { g_gkCortoOn = 0; ponerParche(g_pdGK1, false); ponerParche(g_pdGK2, false); return true; }
+
+// --- arquero_propio_cursor (0.4.52, variante del frente F): con «Cursor de PT fijo = Sí» en el menú, el flag TW+0x18 da el portero en la tabla (a) pero también asigna el mando al GK (b). Esta variante deja (a) y anula (b):
+// B1 FUN_141FB9040 (0x141FB9713, JNZ -> JMP: no asigna el mando principal al GK), B2 FUN_14043EC70 (0x14043EE2C, JZ -> JMP: no reasigna cada fotograma), B3 FUN_14087AC70 (0x14087ADB7, JNZ -> JMP: no fuerza +0x10=1).
+// Resultado esperado: el GK propio queda como cualquier compañero de la IA y el cursor cambia normal. Solo con TrainingWork; se restauran al salir.
+static bool localizarParcheN(ParcheN& pn, const char* firma, size_t desp, std::initializer_list<uint8_t> ori, std::initializer_list<uint8_t> nue, const char* id) {
+    uint8_t* m = firmaUnica("codigo", firma, id); if (!m) return false;
+    pn.dir = m + desp; pn.n = ori.size(); size_t i = 0; for (uint8_t b : ori) pn.ori[i++] = b; i = 0; for (uint8_t b : nue) pn.nue[i++] = b;
+    uint8_t v[8] = {}; if (!leerSeguro(pn.dir, v, pn.n) || memcmp(v, pn.ori, pn.n) != 0) { pn.dir = nullptr; return false; }
+    return true;
+}
+bool arqCursorInstalar(Feature& f) {
+    bool a = localizarParcheN(g_pnC1, "41 83 7D 00 01 0F 85 ?? ?? ?? ?? 45 38 65 20 0F 84", 5, { 0x0F, 0x85 }, { 0x90, 0xE9 }, f.id);
+    bool b = localizarParcheN(g_pnC2, "48 8B CB E8 ?? ?? ?? ?? 84 C0 0F 84 C5 00 00 00 E8 ?? ?? ?? ?? 33 C9", 10, { 0x0F, 0x84 }, { 0x90, 0xE9 }, f.id);
+    bool c = localizarParcheN(g_pnC3, "48 8B CE E8 ?? ?? ?? ?? 3C 01 75 09 C7 43 10 01 00 00 00", 10, { 0x75 }, { 0xEB }, f.id);
+    logf("[%s] B1 %s · B2 %s · B3 %s", f.id, a ? "localizado" : "NO", b ? "localizado" : "NO", c ? "localizado" : "NO");
+    if (!a && !b && !c) { f.estado = "sin firma de los bloqueos de cursor"; return false; }
+    asegurarHiloTrain(); g_arqCursorOn = 1;
+    f.estado = "ok: con «Cursor de PT fijo = Sí» el portero propio no bloquea el cursor (B1+B2+B3)"; return true;
+}
+bool arqCursorQuitar(Feature&) { g_arqCursorOn = 0; ponerParcheN(g_pnC1, false); ponerParcheN(g_pnC2, false); ponerParcheN(g_pnC3, false); return true; }
 
 const char* kFirmaReinicio = "48 8B C4 53 41 57 48 83 EC 78 48 89 70 E8";
 using FnReinicio = float* (*)(float*, uint32_t*, void*, void*);
@@ -1853,6 +1874,7 @@ std::vector<Feature> g_funciones = {   // orden = orden de arranque (gol_nativo_
     { "arquero_propio_free", "El portero participa siempre en el entrenamiento, con cualquier número de jugadores y sin fijar el cursor", arqueroInstalar, arqueroQuitar },
     { "sin_despeje_emergencia", "La IA no hace despejes automáticos de emergencia en el entrenamiento (puede pasar, regatear y tirar)", iaClearInstalar, iaClearQuitar },
     { "arquero_saque_corto", "El portero IA no saca largo en el entrenamiento (anula GKPassLong y GKClear de la IA)", gkCortoInstalar, gkCortoQuitar },
+    { "arquero_propio_cursor", "Con Cursor de PT fijo = Sí el portero propio no bloquea el cursor del usuario (variante del arquero propio)", arqCursorInstalar, arqCursorQuitar },
     { "jugadores_chica_free", "Escala a la cancha chica las posiciones de reinicio de los jugadores (entrenamiento)", jugChInstalar, jugChQuitar },
     { "suplentes_ocultos_free", "Aparca a los suplentes de la banda lejos (entrenamiento)", supOcultosInstalar, supOcultosQuitar },
     { "pelota_sonda", "Sonda de solo lectura de la pelota (posición/velocidad) en el entrenamiento", pelotaInstalar, pelotaQuitar },
