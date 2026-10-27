@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.48"
+#define PHX_CORE_VERSION "0.4.49"
 
 namespace {
 
@@ -1702,11 +1702,14 @@ bool redQuitar(Feature&) { g_redOn = 0; return true; }
 // cancha_chica_free), llama al original y restaura la entrada. Además FUN_140A597D0(out, idx) (RVA 0xA597D0) da la fila de banda de los que no participan
 // del ejercicio (suplentes): tras el original los manda a (0, 0, 100), el «aparcamiento» que usa el propio juego.
 volatile ULONGLONG g_tTrainGlob = 0; volatile LONG g_trainGlobOn = 0; HANDLE g_hiloTrainGlob = nullptr;
-volatile LONG g_sinSaquesOn = 0; ParcheDisp g_pdS1, g_pdS2;
+struct ParcheN { uint8_t* dir = nullptr; uint8_t ori[8] = {}, nue[8] = {}; size_t n = 0; bool puesto = false; };
+static void ponerParcheN(ParcheN& pn, bool si) { if (!pn.dir || pn.puesto == si) return; if (escribirCodigo(pn.dir, si ? pn.nue : pn.ori, pn.n)) pn.puesto = si; }
+volatile LONG g_sinSaquesOn = 0, g_arqueroOn = 0; ParcheDisp g_pdS1, g_pdS2; ParcheN g_pnA, g_pnB;
 DWORD WINAPI hiloTrainGlob(LPVOID) {
     while (g_trainGlobOn) {
         if (trainingWorkEstable() || hayTrainingWork()) g_tTrainGlob = GetTickCount64();
         if (g_sinSaquesOn) { bool dentro = GetTickCount64() - g_tTrainGlob < 3000; ponerParche(g_pdS1, dentro); ponerParche(g_pdS2, dentro); }
+        if (g_arqueroOn) { bool dentro = GetTickCount64() - g_tTrainGlob < 3000; ponerParcheN(g_pnA, dentro); ponerParcheN(g_pnB, dentro); }
         Sleep(100);
     }
     return 0;
@@ -1723,6 +1726,23 @@ bool sinSaquesInstalar(Feature& f) {
     f.estado = "ok: en el entrenamiento no hay saques (puerta/córner/banda anulados en el Juez); solo el gol reinicia"; return true;
 }
 bool sinSaquesQuitar(Feature&) { g_sinSaquesOn = 0; ponerParche(g_pdS1, false); ponerParche(g_pdS2, false); return true; }
+
+// --- arquero_propio_free (0.4.49, RE del frente F, 27-oct): quién participa lo decide FUN_140A59CA0 (RVA 0xA59CA0): cada jugador tiene una prioridad en una de 3 tablas de 22 enteros
+// en .rdata (T_ATAQUE 0x142644F10, T_DEFENSA 0x142644F80, T_ATAQUE_PORTEROS 0x142644FF0) y participa si prioridad <= N del lado (Jugadores usuario / COM). El GK vale 11 en T_ATAQUE (por eso solo
+// entra con 11 jugadores) y 1 en T_ATAQUE_PORTEROS (que se elige con «Cursor de PT fijo = Sí»). P-A: el cmovne de la selección (0x140A59DD5, 4 B) se anula: Ataque usa siempre T_ATAQUE_PORTEROS (GK de ambos
+// lados dentro con cualquier N ≥ 1, sin fijar el cursor). P-B: en Defensa el GK rival (dato 0x142644FAC = 11) pasa a 1. Solo con TrainingWork; se restauran al salir.
+bool arqueroInstalar(Feature& f) {
+    uint8_t* m = firmaUnica("codigo", "80 7F 18 01 48 8D 15 ?? ?? ?? ?? 48 8D 0D ?? ?? ?? ?? 48 0F 45 CA", f.id);
+    bool a = false, b = false;
+    if (m) { uint8_t v[4]; if (leerSeguro(m + 18, v, 4) && v[0] == 0x48 && v[1] == 0x0F && v[2] == 0x45 && v[3] == 0xCA) { g_pnA.dir = m + 18; g_pnA.n = 4; memcpy(g_pnA.ori, v, 4); memset(g_pnA.nue, 0x90, 4); a = true; } }
+    uint8_t* d = g_exe.base + 0x2644FAC; uint32_t dv = 0;
+    if (leerSeguro(d, &dv, 4) && dv == 0x0B) { g_pnB.dir = d; g_pnB.n = 4; memcpy(g_pnB.ori, &dv, 4); uint32_t nv = 1; memcpy(g_pnB.nue, &nv, 4); b = true; }
+    logf("[%s] parche A (Ataque siempre con porteros) %s · parche B (GK rival en Defensa) %s", f.id, a ? "localizado" : "NO", b ? "localizado" : "NO (valor inesperado)");
+    if (!a) { f.estado = "sin firma: selección de tabla de participantes FUN_140A59CA0"; return false; }
+    asegurarHiloTrain(); g_arqueroOn = 1;
+    f.estado = "ok: el portero participa siempre en el entrenamiento (parches en FUN_140A59CA0)"; return true;
+}
+bool arqueroQuitar(Feature&) { g_arqueroOn = 0; ponerParcheN(g_pnA, false); ponerParcheN(g_pnB, false); return true; }
 
 const char* kFirmaReinicio = "48 8B C4 53 41 57 48 83 EC 78 48 89 70 E8";
 using FnReinicio = float* (*)(float*, uint32_t*, void*, void*);
@@ -1802,6 +1822,7 @@ std::vector<Feature> g_funciones = {   // orden = orden de arranque (gol_nativo_
     { "muros_core", "Muros lógicos del Core en el paso de la pelota (rebote contra la línea de la cancha chica)", murosInstalar, murosQuitar },
     { "red_frena_free", "La red de los arcos frena la pelota en el entrenamiento (gancho al paso de la pelota)", redInstalar, redQuitar },
     { "sin_saques_free", "Sin saques de banda/esquina/puerta en el entrenamiento: solo el gol reinicia (parches de 1 byte en el Juez)", sinSaquesInstalar, sinSaquesQuitar },
+    { "arquero_propio_free", "El portero participa siempre en el entrenamiento, con cualquier número de jugadores y sin fijar el cursor", arqueroInstalar, arqueroQuitar },
     { "jugadores_chica_free", "Escala a la cancha chica las posiciones de reinicio de los jugadores (entrenamiento)", jugChInstalar, jugChQuitar },
     { "suplentes_ocultos_free", "Aparca a los suplentes de la banda lejos (entrenamiento)", supOcultosInstalar, supOcultosQuitar },
     { "pelota_sonda", "Sonda de solo lectura de la pelota (posición/velocidad) en el entrenamiento", pelotaInstalar, pelotaQuitar },
