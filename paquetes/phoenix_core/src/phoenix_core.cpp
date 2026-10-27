@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.20"
+#define PHX_CORE_VERSION "0.4.21"
 
 namespace {
 
@@ -706,11 +706,33 @@ static int parchearBloquesCampo() {
     }
     return n;
 }
+// Cajas de portería y del campo (.data, copiadas de .rdata al arrancar; el motor de colisiones y las decisiones de tiro/despeje las
+// leen cada cuadro): 6 vectores de 16 B en exe+0x37CF4C0 (RVA del exe 1.1.0.0 de PES 2021; se comprueba el contenido antes de escribir).
+static const float kCajasOrig[24] = { 52.44f,0,-4.3547f,0,  55.5047f,2.903f,4.3544f,0,  -52.44f,2.903f,4.3544f,0,  52.56f,50,35.5f,0,  -55.5047f,0,-4.3547f,0,  -52.56f,0,-35.5f,0 };
+static void cajasNuevas(float* f) {
+    float largo = (float)g_canchaLargo, ancho = (float)g_canchaAncho, lin = largo - 0.12f, fon = lin + 3.0647f;
+    const float n[24] = { lin,0,-4.3547f,0,  fon,2.903f,4.3544f,0,  -lin,2.903f,4.3544f,0,  largo,50,ancho + 1.44f,0,  -fon,0,-4.3547f,0,  -largo,0,-(ancho + 1.44f),0 };
+    memcpy(f, n, sizeof n);
+}
+static bool casiIgual(const float* a, const float* b) { for (int i = 0; i < 24; ++i) if (fabsf(a[i] - b[i]) > 1e-3f) return false; return true; }
+// escribe las cajas nuevas si ahora mismo están las originales; con enMarcha==false las devuelve a las originales
+static void ajustarCajas(bool enMarcha) {
+    float* c = reinterpret_cast<float*>(g_exe.base + 0x37CF4C0); float act[24], nue[24];
+    if (!leerSeguro(c, act, sizeof act)) return;
+    cajasNuevas(nue);
+    DWORD old = 0;
+    if (enMarcha && casiIgual(act, kCajasOrig)) {
+        if (VirtualProtect(c, sizeof nue, PAGE_READWRITE, &old)) { memcpy(c, nue, sizeof nue); VirtualProtect(c, sizeof nue, old, &old); logf("[cancha_chica_free] cajas de porteria/campo movidas a +-%.2f", g_canchaLargo); }
+    } else if (!enMarcha && casiIgual(act, nue)) {
+        if (VirtualProtect(c, sizeof nue, PAGE_READWRITE, &old)) { memcpy(c, kCajasOrig, sizeof nue); VirtualProtect(c, sizeof nue, old, &old); logf("[cancha_chica_free] cajas restauradas"); }
+    }
+}
 DWORD WINAPI hiloCancha(LPVOID) {
     bool estaba = false; ULONGLONG t0 = 0; int vuelta = 0;
     while (g_canchaOn) {
         Sleep(1000);
         bool hay = trainingWorkEstable();
+        ajustarCajas(hay);
         if (hay && !estaba) t0 = GetTickCount64();
         estaba = hay;
         if (!hay || GetTickCount64() - t0 > 75000 || (++vuelta % 3) != 0) continue;     // solo los 75 s siguientes a que aparezca el entrenamiento, un barrido cada 3 s
@@ -729,6 +751,7 @@ bool canchaInstalar(Feature& f) {
 bool canchaQuitar(Feature&) {
     g_canchaOn = 0;
     if (g_hiloCancha) { WaitForSingleObject(g_hiloCancha, 3000); CloseHandle(g_hiloCancha); g_hiloCancha = nullptr; }
+    ajustarCajas(false);
     return true;
 }
 
