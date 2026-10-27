@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.50"
+#define PHX_CORE_VERSION "0.4.51"
 
 namespace {
 
@@ -1704,11 +1704,12 @@ bool redQuitar(Feature&) { g_redOn = 0; return true; }
 volatile ULONGLONG g_tTrainGlob = 0; volatile LONG g_trainGlobOn = 0; HANDLE g_hiloTrainGlob = nullptr;
 struct ParcheN { uint8_t* dir = nullptr; uint8_t ori[8] = {}, nue[8] = {}; size_t n = 0; bool puesto = false; };
 static void ponerParcheN(ParcheN& pn, bool si) { if (!pn.dir || pn.puesto == si) return; if (escribirCodigo(pn.dir, si ? pn.nue : pn.ori, pn.n)) pn.puesto = si; }
-volatile LONG g_sinSaquesOn = 0, g_arqueroOn = 0, g_iaClearOn = 0; ParcheDisp g_pdS1, g_pdS2, g_pdIA; ParcheN g_pnA, g_pnB;
+volatile LONG g_sinSaquesOn = 0, g_arqueroOn = 0, g_iaClearOn = 0, g_gkCortoOn = 0; ParcheDisp g_pdS1, g_pdS2, g_pdIA, g_pdGK1, g_pdGK2; ParcheN g_pnA, g_pnB;
 DWORD WINAPI hiloTrainGlob(LPVOID) {
     while (g_trainGlobOn) {
         if (trainingWorkEstable() || hayTrainingWork()) g_tTrainGlob = GetTickCount64();
         if (g_sinSaquesOn) { bool dentro = GetTickCount64() - g_tTrainGlob < 3000; ponerParche(g_pdS1, dentro); ponerParche(g_pdS2, dentro); }
+        if (g_gkCortoOn) { bool dentro = GetTickCount64() - g_tTrainGlob < 3000; ponerParche(g_pdGK1, dentro); ponerParche(g_pdGK2, dentro); }
         if (g_iaClearOn) { bool dentro = GetTickCount64() - g_tTrainGlob < 3000; ponerParche(g_pdIA, dentro); }
         if (g_arqueroOn) { bool dentro = GetTickCount64() - g_tTrainGlob < 3000; ponerParcheN(g_pnA, dentro); ponerParcheN(g_pnB, dentro); }
         Sleep(100);
@@ -1755,6 +1756,21 @@ bool iaClearInstalar(Feature& f) {
     f.estado = "ok: la IA no hace despejes automáticos en el entrenamiento (parche de 1 byte en ThinkUnitClear de la IA)"; return true;
 }
 bool iaClearQuitar(Feature&) { g_iaClearOn = 0; ponerParche(g_pdIA, false); return true; }
+
+// --- arquero_saque_corto (0.4.51, RE del frente H4, 27-oct): el portero IA (match::ai::bp::BallPlayer) elige entre unidades id 18 GKClear, 19 GKDribble, 20 GKPassShort, 21 GKPassLong. El pase corto
+// (FUN_142132660 selección de receptor) exige umbrales de libertad/presión/distancia de cancha grande y en 30x20 casi nunca se cumple; a los 3 s o con presión entra GKPassLong (patada larga que cruza la cancha y
+// marca). Parches (primer byte «48»->«C3», la función vuelve sin escribir intención): GKPassLong FUN_142133120 (RVA 0x2133120) y GKClear FUN_142132B40 (RVA 0x2132B40). Quedan GKPassShort y GKDribble.
+// Solo con TrainingWork; se restauran al salir. RIESGO: si no hay receptor el portero podría retener la pelota más de lo normal (sin congelar el juego); el complemento B (hook al selector de receptor) queda pendiente.
+bool gkCortoInstalar(Feature& f) {
+    bool a = localizarParche("48 89 5C 24 18 48 89 6C 24 20 56 57 41 54 41 56 41 57 48 83 EC 50 49 8B 00 33", 0, 0x48, 0xC3, g_pdGK1, f.id);
+    bool b = localizarParche("48 89 5C 24 08 55 56 57 41 54 41 55 41 56 41 57 48 83 EC 60 49 8B", 0, 0x48, 0xC3, g_pdGK2, f.id);
+    logf("[%s] GKPassLong %s · GKClear %s", f.id, a ? "localizado" : "NO", b ? "localizado" : "NO");
+    if (!a && !b) { f.estado = "sin firma de GKPassLong/GKClear de la IA"; return false; }
+    if (!a) g_pdGK1.dir = nullptr; if (!b) g_pdGK2.dir = nullptr;
+    asegurarHiloTrain(); g_gkCortoOn = 1;
+    f.estado = "ok: el portero IA no saca largo en el entrenamiento (GKPassLong/GKClear anulados; quedan pase corto y regate)"; return true;
+}
+bool gkCortoQuitar(Feature&) { g_gkCortoOn = 0; ponerParche(g_pdGK1, false); ponerParche(g_pdGK2, false); return true; }
 
 const char* kFirmaReinicio = "48 8B C4 53 41 57 48 83 EC 78 48 89 70 E8";
 using FnReinicio = float* (*)(float*, uint32_t*, void*, void*);
@@ -1836,6 +1852,7 @@ std::vector<Feature> g_funciones = {   // orden = orden de arranque (gol_nativo_
     { "sin_saques_free", "Sin saques de banda/esquina/puerta en el entrenamiento: solo el gol reinicia (parches de 1 byte en el Juez)", sinSaquesInstalar, sinSaquesQuitar },
     { "arquero_propio_free", "El portero participa siempre en el entrenamiento, con cualquier número de jugadores y sin fijar el cursor", arqueroInstalar, arqueroQuitar },
     { "sin_despeje_emergencia", "La IA no hace despejes automáticos de emergencia en el entrenamiento (puede pasar, regatear y tirar)", iaClearInstalar, iaClearQuitar },
+    { "arquero_saque_corto", "El portero IA no saca largo en el entrenamiento (anula GKPassLong y GKClear de la IA)", gkCortoInstalar, gkCortoQuitar },
     { "jugadores_chica_free", "Escala a la cancha chica las posiciones de reinicio de los jugadores (entrenamiento)", jugChInstalar, jugChQuitar },
     { "suplentes_ocultos_free", "Aparca a los suplentes de la banda lejos (entrenamiento)", supOcultosInstalar, supOcultosQuitar },
     { "pelota_sonda", "Sonda de solo lectura de la pelota (posición/velocidad) en el entrenamiento", pelotaInstalar, pelotaQuitar },
