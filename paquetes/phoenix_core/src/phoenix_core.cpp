@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.11"
+#define PHX_CORE_VERSION "0.4.12"
 
 namespace {
 
@@ -423,8 +423,8 @@ uint64_t leerU8(const uint8_t* base, size_t off) { uint8_t v = 0xFF; leerSeguro(
 // --- función 3: sonda del partido (solo mira). Anota cada cambio de estado de los actores (SetState) y cada vez
 // que corre el procesador nativo del gol, con quién lo llamó. Sirve para saber qué decide «gol» en un amistoso y
 // qué cambia en el Entrenamiento libre (zona 52). Escribe en sonda_partido.txt.
-enum { EV_ESTADO = 1, EV_GOL = 2, EV_PARADO = 3, EV_EVENTO = 4 };
-struct Ev { volatile LONG listo; uint32_t tipo, hilo; uint64_t t, ret, a, b, c, d, x[4]; };
+enum { EV_ESTADO = 1, EV_GOL = 2, EV_PARADO = 3, EV_EVENTO = 4, EV_COLA = 5, EV_PASO = 6 };
+struct Ev { volatile LONG listo; uint32_t tipo, hilo; uint64_t t, ret, a, b, c, d, x[4]; uint32_t q[32]; };   // q: cola de pasos (solo EV_COLA)
 const LONG kEvs = 8192;
 Ev g_ev[kEvs];
 volatile LONG g_escr = 0;
@@ -439,6 +439,7 @@ Ev& nuevoEv(uint32_t tipo, void* ret) {
     e.tipo = tipo; e.hilo = GetCurrentThreadId(); e.t = GetTickCount64() - g_tInicio;
     e.ret = reinterpret_cast<uint64_t>(ret);
     e.a = e.b = e.c = e.d = 0; e.x[0] = e.x[1] = e.x[2] = e.x[3] = 0;
+    if (tipo == EV_COLA) memset(e.q, 0, sizeof e.q);
     e.listo = -1 - i;   // aún escribiéndose
     return e;
 }
@@ -531,29 +532,131 @@ const char* kFirmaMontadorGol = "48 89 5C 24 08 48 89 74 24 10 57 48 83 EC 20 48
 using FnMontador = uint64_t (*)(uint64_t, uint64_t, uint64_t, uint64_t);
 FnMontador g_montadorOrig = nullptr;
 volatile LONG g_celebracionesCortas = 0;
+bool g_cortaActiva = false;      // celebracion_corta_free encendida
+bool g_sondaOn = false;          // la sonda vuelca la cola de pasos tras montar el gol
+
+// ¿Hay TrainingWork? Mismo criterio que FUN_14044D110: [root+0x400] != 0 y su primer byte != 0.
+bool hayTrainingWork(uint8_t** raizOut = nullptr) {
+    uint8_t* raiz = nullptr; uint8_t* tw = nullptr; uint8_t twb = 0;
+    bool si = g_globalPartido && leerSeguro(g_globalPartido, &raiz, 8) && raiz &&
+              leerSeguro(raiz + 0x400, &tw, 8) && tw && leerSeguro(tw, &twb, 1) && twb != 0;
+    if (raizOut) *raizOut = raiz;
+    return si;
+}
+
 uint64_t ganchoMontador(uint64_t a1, uint64_t a2, uint64_t a3, uint64_t a4) {
-    uint8_t* raiz = nullptr; uint8_t* tw = nullptr; uint8_t* sel = nullptr; uint8_t twb = 0, v = 0;
-    bool entreno = g_globalPartido && leerSeguro(g_globalPartido, &raiz, 8) && raiz &&
-                   leerSeguro(raiz + 0x400, &tw, 8) && tw && leerSeguro(tw, &twb, 1) && twb != 0;
-    bool cambiar = entreno && leerSeguro(raiz + 0x2C0, &sel, 8) && sel && leerSeguro(sel + 0x84, &v, 1);
+    uint8_t* raiz = nullptr; uint8_t* sel = nullptr; uint8_t v = 0;
+    bool cambiar = g_cortaActiva && hayTrainingWork(&raiz) && leerSeguro(raiz + 0x2C0, &sel, 8) && sel &&
+                   leerSeguro(sel + 0x84, &v, 1);
     if (cambiar) { sel[0x84] = 1; InterlockedIncrement(&g_celebracionesCortas); }
     uint64_t r = g_montadorOrig(a1, a2, a3, a4);
     if (cambiar) sel[0x84] = v;
+    if (g_sondaOn) {                      // volcado de la cola de pasos que acaba de montar el juego
+        uint8_t* job = reinterpret_cast<uint8_t*>(a1);
+        Ev& e = nuevoEv(EV_COLA, _ReturnAddress());
+        e.a = a1; e.b = leerU8(job, 0x8F0); e.c = leerU8(job, 0x8F1); e.d = leerU32(job, 0x874);
+        e.x[0] = cambiar ? 1 : 0;
+        leerSeguro(job + 0x878, e.q, sizeof e.q);
+        cerrarEv(e);
+    }
     return r;
 }
-bool cortaInstalar(Feature& f) {
-    if (!g_globalPartido && !resolverGlobalPartido(f.id)) { f.estado = "sin firma del global del partido"; return false; }
+
+// El montador lo usan la sonda (volcado de la cola) y celebracion_corta_free: se engancha UNA vez, la primera que lo pida.
+bool asegurarMontador(Feature& f) {
+    if (g_montadorOrig) return true;
     uint8_t* m = firmaUnica("codigo", kFirmaMontadorGol, f.id);
-    if (!m) { f.estado = "sin firma: montador del gol (FUN_14044F8A0)"; return false; }
+    if (!m) { logf("[%s] sin firma: montador del gol (FUN_14044F8A0)", f.id); return false; }
     if (!crearDesvio(f, m, 15, (void*)ganchoMontador, (void**)&g_montadorOrig)) {
-        f.estado = "no se pudo desviar el montador del gol"; return false;
+        logf("[%s] no se pudo desviar el montador del gol", f.id); return false;
     }
-    char b[120];
-    sprintf_s(b, "ok: en el entrenamiento el gol usa la secuencia corta (montador exe+0x%llX)", (unsigned long long)(m - g_exe.base));
-    f.estado = b;
+    logf("[%s] montador del gol enganchado en exe+0x%llX", f.id, (unsigned long long)(m - g_exe.base));
     return true;
 }
-bool cortaQuitar(Feature&) { return true; }
+
+bool cortaInstalar(Feature& f) {
+    if (!g_globalPartido && !resolverGlobalPartido(f.id)) { f.estado = "sin firma del global del partido"; return false; }
+    if (!asegurarMontador(f)) { f.estado = "sin gancho del montador del gol (FUN_14044F8A0)"; return false; }
+    g_cortaActiva = true;
+    f.estado = "ok: en el entrenamiento el gol usa la secuencia corta (montador FUN_14044F8A0)";
+    return true;
+}
+bool cortaQuitar(Feature&) { g_cortaActiva = false; return true; }
+
+// --- sonda de pasos: FUN_14047C2D0(job, saltable, ...) es el ejecutor de la cola job+0x878[]. Se anota cada CAMBIO de
+// (índice de cola [job+0x8F0], id de paso) para saber qué paso está activo cuando el juego se congela. Prólogo 17 B
+// sin RIP-relativos (mov [rsp+8],rbx; push rdi; sub rsp,20h; movzx eax,[rcx+8F0h]); la siguiente es `lea r11,[rip+…]`.
+const char* kFirmaPaso = "48 89 5C 24 08 57 48 83 EC 20 0F B6 81 F0 08 00 00 4C 8D 1D ?? ?? ?? ?? 0F B6 FA 48 8B D9 44 8B 94 81 78 08 00 00";
+using FnPaso = uint64_t (*)(uint8_t* job, uint64_t saltable, uint64_t p3);
+FnPaso g_pasoOrig = nullptr;
+uint8_t* g_pasoJob = nullptr; uint32_t g_pasoIdx = 0xFFFF, g_pasoId = 0xFFFF;
+uint64_t ganchoPaso(uint8_t* job, uint64_t saltable, uint64_t p3) {
+    uint8_t idx = 0xFF; uint32_t id = 0xFFFFFFFF;
+    if (leerSeguro(job + 0x8F0, &idx, 1) && idx < 0x20) leerSeguro(job + 0x878 + idx * 4, &id, 4);
+    if (job != g_pasoJob || idx != g_pasoIdx || id != g_pasoId) {
+        g_pasoJob = job; g_pasoIdx = idx; g_pasoId = id;
+        Ev& e = nuevoEv(EV_PASO, _ReturnAddress());
+        e.a = reinterpret_cast<uint64_t>(job); e.b = idx; e.c = id; e.d = leerU32(job, 0x874);
+        e.x[0] = leerU8(job, 0x8F2); e.x[1] = leerU8(job, 0x8F1); e.x[2] = saltable & 0xFF; e.x[3] = p3 & 0xFF;
+        cerrarEv(e);
+    }
+    return g_pasoOrig(job, saltable, p3);
+}
+
+// --- función: rescate del bloqueo juego↔render (EXPERIMENTAL, APAGADA por defecto). En el Entrenamiento libre, al empezar la
+// repetición del gol, el hilo de juego se queda en FUN_141717150 esperando [DAT_143747E98+0xC4]!=0 (que pone el hilo de
+// render) mientras el render espera trabajo: deadlock. FUN_141717150 repite `CALL FUN_1403DC7D0` (esperar) hasta que +0xC4
+// cambia. Se desvía ese CALL a una cueva que llama a un ayudante en C: si la misma espera dura ≥3 s y hay TrainingWork,
+// fuerza +0xC4=1 (sale del bucle) y lo anota en el log.
+const char* kFirmaEsperaRender = "48 8D 4C 24 38 E8 ?? ?? ?? ?? 8B 83 C4 00 00 00 85 C0 74";
+volatile LONG g_rescates = 0;
+void ayudanteRescate(uint8_t* obj) {
+    static ULONGLONG tPrim = 0, tUlt = 0;
+    ULONGLONG ahora = GetTickCount64();
+    if (ahora - tUlt > 500) tPrim = ahora;          // espera nueva
+    tUlt = ahora;
+    if (ahora - tPrim < 3000) return;
+    tPrim = ahora;                                  // se rearma: como mucho 1 rescate cada 3 s
+    LONG v = 0;
+    if (!obj || !hayTrainingWork() || !leerSeguro(obj + 0xC4, &v, 4) || v != 0) return;
+    InterlockedExchange(reinterpret_cast<volatile LONG*>(obj + 0xC4), 1);
+    LONG n = InterlockedIncrement(&g_rescates);
+    logf("[rescate_render_free] rescate nº %ld: [render+0xC4] forzado a 1 tras 3 s de espera (obj %llX)", n,
+         (unsigned long long)reinterpret_cast<uintptr_t>(obj));
+}
+bool rescateInstalar(Feature& f) {
+    if (!g_globalPartido && !resolverGlobalPartido(f.id)) { f.estado = "sin firma del global del partido"; return false; }
+    uint8_t* sig = firmaUnica("codigo", kFirmaEsperaRender, f.id);
+    if (!sig) { f.estado = "sin firma: espera del render (FUN_141717150)"; return false; }
+    uint8_t* sitio = sig + 5;                       // el E8 rel32 hacia FUN_1403DC7D0
+    int32_t rel = 0; memcpy(&rel, sitio + 1, 4);
+    uint8_t* original = sitio + 5 + rel;
+    uint8_t* c = reservarCerca(sitio, 128);
+    if (!c) { f.estado = "no hay memoria cerca del exe (rescate)"; return false; }
+    size_t o = 0;
+    auto b = [&](std::initializer_list<uint8_t> l) { for (uint8_t x : l) c[o++] = x; };
+    b({ 0x50, 0x51, 0x52, 0x41, 0x50, 0x41, 0x51, 0x41, 0x52, 0x41, 0x53 });   // push rax,rcx,rdx,r8,r9,r10,r11
+    b({ 0x48, 0x83, 0xEC, 0x20 });                                               // sub rsp,20h
+    b({ 0x48, 0x89, 0xD9 });                                                     // mov rcx,rbx (obj de render)
+    b({ 0x48, 0xB8 }); { uint64_t h = reinterpret_cast<uint64_t>(&ayudanteRescate); memcpy(c + o, &h, 8); o += 8; }   // mov rax,helper
+    b({ 0xFF, 0xD0 });                                                           // call rax
+    b({ 0x48, 0x83, 0xC4, 0x20 });                                               // add rsp,20h
+    b({ 0x41, 0x5B, 0x41, 0x5A, 0x41, 0x59, 0x41, 0x58, 0x5A, 0x59, 0x58 });   // pop r11,r10,r9,r8,rdx,rcx,rax
+    b({ 0xFF, 0x25, 0x00, 0x00, 0x00, 0x00 });                                  // jmp [rip+0] → FUN_1403DC7D0 (cola del call)
+    { uint64_t t = reinterpret_cast<uint64_t>(original); memcpy(c + o, &t, 8); o += 8; }
+    FlushInstructionCache(GetCurrentProcess(), c, 128);
+    Parche p; p.dir = sitio;
+    p.original.assign(sitio, sitio + 5);
+    p.nuevo.resize(5);
+    if (!escribirRel32(p.nuevo.data(), 0xE8, sitio, c)) { f.estado = "cueva fuera de alcance (rescate)"; return false; }
+    if (!aplicarParche(p, f.id)) { f.estado = "bytes inesperados (rescate)"; return false; }
+    f.parches.push_back(p);
+    char s[140];
+    sprintf_s(s, "ok: rescate del render tras 3 s de espera en exe+0x%llX (solo con TrainingWork)", (unsigned long long)(sitio - g_exe.base));
+    f.estado = s;
+    return true;
+}
+bool rescateQuitar(Feature&) { return true; }
 
 bool sondaInstalar(Feature& f) {
     if (!resolverGlobalPartido(f.id)) logf("[%s] sin firma del global del partido: k/sub/parado no se anotan", f.id);
@@ -570,10 +673,17 @@ bool sondaInstalar(Feature& f) {
             f.estado = std::string("no se pudo desviar ") + g_ganchos[i].nombre; return false;
         }
     }
+    // Complementos de la sonda (si fallan, la sonda sigue con lo básico): cola de pasos del gol y ejecutor de pasos.
+    g_sondaOn = asegurarMontador(f);
+    uint8_t* paso = firmaUnica("codigo", kFirmaPaso, f.id);
+    if (!paso) logf("[%s] sin firma: ejecutor de pasos (FUN_14047C2D0): no se anotan los pasos", f.id);
+    else if (!crearDesvio(f, paso, 17, (void*)ganchoPaso, (void**)&g_pasoOrig))
+        logf("[%s] no se pudo desviar el ejecutor de pasos", f.id);
+    else logf("[%s] ejecutor de pasos en exe+0x%llX", f.id, (unsigned long long)(paso - g_exe.base));
     f.estado = "ok: anotando en sonda_partido.txt";
     return true;
 }
-bool sondaQuitar(Feature&) { return true; }   // los parches los quita el marco
+bool sondaQuitar(Feature&) { g_sondaOn = false; return true; }   // los parches los quita el marco
 
 // Indicador general «partido detenido» ([[0x1436F3DC8]+0x270]+0x1775), solo en el exe de Conmegol (RVA conocida).
 uint64_t g_paradoPrevio = 0x100;
@@ -610,6 +720,15 @@ void volcarSonda() {
             sprintf_s(l, "%8llu h%-5u EVENTO job=%llX tipo 0x%llX->0x%llX fase=%llu k=%lld sub=%lld flag=%lld%s desde exe+0x%llX\r\n",
                       c.t, c.hilo, c.a, c.d, c.b, c.c, (long long)(int32_t)c.x[0], (long long)(int32_t)c.x[1],
                       (long long)(int8_t)c.x[2], "", ret);
+        else if (c.tipo == EV_PASO)
+            sprintf_s(l, "%8llu h%-5u PASO job=%llX cola=%llu paso=0x%02llX escena=0x%llX fase=%llu n=%llu saltable=%llu p3=%llu desde exe+0x%llX\r\n",
+                      c.t, c.hilo, c.a, c.b, c.c, c.d, c.x[0], c.x[1], c.x[2], c.x[3], ret);
+        else if (c.tipo == EV_COLA) {
+            char pasos[400] = {}; size_t o = 0;
+            for (int k = 0; k < 32 && c.q[k] != 0x48 && o + 8 < sizeof pasos; ++k) o += sprintf_s(pasos + o, sizeof pasos - o, "%02X ", c.q[k]);
+            sprintf_s(l, "%8llu h%-5u COLA job=%llX escena=0x%llX [+8F0]=%llu [+8F1]=%llu corta=%llu pasos: %s\r\n",
+                      c.t, c.hilo, c.a, c.d, c.b, c.c, c.x[0], pasos);
+        }
         else
             sprintf_s(l, "%8llu h%-5u PARADO mgr=%llX +0x1775=%llu\r\n", c.t, c.hilo, c.a, c.b);
         s += l;
@@ -768,6 +887,7 @@ std::vector<Feature> g_funciones = {   // orden = orden de arranque (gol_nativo_
     { "gol_nativo_free", "Gol nativo en Entrenamiento libre (street)", golInstalar,   golQuitar   },
     { "saque_centro_free", "Tras el gol, saque de centro (entrenamiento)", saqueInstalar, saqueQuitar },
     { "celebracion_corta_free", "Gol sin celebración ni repetición (entrenamiento)", cortaInstalar, cortaQuitar },
+    { "rescate_render_free", "Rescate del bloqueo juego↔render (experimental)", rescateInstalar, rescateQuitar },
     { "vigilante_bucles", "Vigilante de cuelgues (solo mira)",         vigilanteInstalar, vigilanteQuitar },
 };
 bool sondaActiva() {
