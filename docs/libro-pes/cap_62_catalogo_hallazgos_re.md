@@ -211,3 +211,6 @@ Añadir filas con fecha cuando aparezca algo nuevo (aunque no sea del tema del d
 | Entreno: estadio | stadium=2, stadium_choice=65533 (sin elección) | P |
 | Reinicio tras gol | registro de parada sub: 1 = saque de centro (amistoso), 3 = saque de puerta (entreno). Rama k==3 de FUN_1404A56C0 en 0x1404A5B78 lo fuerza a 3; jne en firma+10 → jmp lo evita | C (sonda) |
 | Selector PES2021 Start.exe | CONFIRMADO (27-oct): restaura módulos Lua del Conmegol al arrancar (un arreglo en TournamentCornerFlags.lua desapareció) | P |
+| Secuencia del gol | FUN_14044F8A0 tras 0xA: LARGA (0x03,0x11,0x08,0x23,0x16,0x12,0x13,[0x17],0x14,0x15,0x0E,0x34,0x19,0x1A: celebración+repetición) o CORTA (0x43,0x07,0x44) si byte `[[root+0x2C0]+0x84]` != 0 (FUN_140A3F580). Salto en 0x14044F941 `74 47` | C (estático) |
+| Deadlock en la repetición (entreno) | juego FUN_141717150: `while([[0x143747E98]+0xC4]==0) esperar`; render FUN_14170FA10: `while([obj+0xC0]==0 && ![obj+0xD0]) esperar`. Esperas FUN_1403F7BC0/1403F0330/1403E0760, spin 1403DB2C0. Bucle principal FUN_1404002D0 | C (perfiles vivos) |
+| TrainingWork activo | `[root+0x400] != 0 && *(byte*)[root+0x400] != 0` (criterio de FUN_14044D110) | C |
