@@ -68,3 +68,13 @@ El exe en disco **no se toca**. Sin el DLL, PES es 100 % original.
 - Global por firma (portabilidad total).
 - Colisión con la red, porteros en los dos lados.
 - Idea de Frank (27-oct): paredes invisibles: apagar «fuera» (banda sub=2 y fondo) y rebote de la pelota en los bordes desde Core (leer posición/velocidad de la pelota cada fotograma e invertir la componente que cruza, con pérdida de fuerza). Visual opcional con estadio propio. Ruta alternativa A: colisión real con la geometría (.geom) de un estadio AddOn — validar con una pared de prueba. Ruta B (lógica en Core) primero; falta mapear posición y velocidad de la pelota.
+
+
+## 9. SOLUCIÓN FINAL del congelón (27-oct, Core 0.4.15) — lo que hay que replicar
+- El congelón NO era un Lua, ni un archivo de estadio, ni un paso concreto: tras el gol, el entreno monta una cola de pasos con **celebración (0x04) + repetición (0x1D, 11, 08, 23) + demo de fin de tiempo (0x07 + 10 26 45)**. El entreno no graba repetición y no tiene reloj de partido, así que la repetición y el «tiempo cumplido» se quedan esperando para siempre (deadlock juego↔render).
+- Arreglo (`gol_directo_free`, solo datos, solo con TrainingWork): en el gancho del montador FUN_14044F8A0 (firma en cap_62/LEEME del paquete), DESPUÉS del original, reescribir la cola `job+0x878[]` y su nº `[job+0x8F1]` a:
+  - con celebración (`gol_directo_celebracion`, por defecto): `03 04 16 12 13 14 15 0E 34 19 1A`
+  - sin celebración: `03 16 12 13 14 15 0E 34 19 1A`
+- Junto con `gol_nativo_free` (k=3) y `saque_centro_free` (sub=1) da: gol → celebración → saque de centro.
+- ⚠ No enganchar FUN_14047C2D0: la protección del exe (.impdata) tumba el juego.
+- Si tras muchos crashes todo falla, reiniciar la PC antes de culpar al código.
