@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.18"
+#define PHX_CORE_VERSION "0.4.19"
 
 namespace {
 
@@ -540,6 +540,8 @@ bool g_sin1DActiva = false;      // sin_1D_free encendida
 volatile LONG g_sin1DCont = 0;
 bool g_directoActiva = false;    // gol_directo_free encendida
 bool g_directoCelebracion = true; // opción json «gol_directo_celebracion» (por defecto true)
+int g_celebModo = 0;               // «celebracion_modo»: 0 completa (por defecto), 1 timer (+0x27D0 al final a los N s), 2 salto de indice (inestable)
+uint32_t g_timerFinal = 1180;      // «celebracion_timer_final»: valor de job+0x27D0 que se escribe en modo timer
 double g_celebSeg = 8.0;          // opción json «celebracion_segundos» (0 = sin celebración; por defecto 8)
 volatile LONG g_directoCont = 0;
 bool g_sondaOn = false;          // la sonda vuelca la cola de pasos tras montar el gol
@@ -631,22 +633,32 @@ bool sin1DQuitar(Feature&) { g_sin1DActiva = false; return true; }
 volatile LONG g_recorteOn = 0;
 HANDLE g_hiloRecorte = nullptr;
 DWORD WINAPI hiloRecorte(LPVOID) {
-    ULONGLONG t0 = 0; bool hecho = false;
+    ULONGLONG t0 = 0; bool hecho = false, enCel = false; uint32_t ultimoTimer = 0; double ultimoT = 0;
     while (g_recorteOn) {
         Sleep(50);
         uint8_t* job = g_jobConocido;
-        if (!job || g_celebSeg <= 0.0 || !g_directoCelebracion) continue;
-        uint32_t esc = 0, id = 0; uint8_t idx = 0xFF, fase = 0xFF;
+        if (!job || !g_directoCelebracion) continue;
+        uint32_t esc = 0, id = 0, timer = 0; uint8_t idx = 0xFF, fase = 0xFF;
         if (!leerSeguro(job + 0x874, &esc, 4) || !leerSeguro(job + 0x8F0, &idx, 1) || !leerSeguro(job + 0x8F2, &fase, 1)) continue;
         if (idx < 0x20) leerSeguro(job + 0x878 + idx * 4, &id, 4);
+        leerSeguro(job + 0x27D0, &timer, 4);
         if (esc == 0xA && id == 0x04) {
             if (!t0) t0 = GetTickCount64();
-            if (!hecho && fase >= 1 && fase < 3 && (double)(GetTickCount64() - t0) / 1000.0 >= g_celebSeg) {
-                // 0.4.18: se salta el paso entero (cola al siguiente, fase 0)
-                job[0x8F0] = (uint8_t)(idx + 1); job[0x8F2] = 0; hecho = true;
-                logf("[gol_directo_free] celebracion saltada a %.1f s (paso %u -> %u, fase %u -> 0)", g_celebSeg, (unsigned)idx, (unsigned)idx + 1, (unsigned)fase);
+            enCel = true; ultimoTimer = timer; ultimoT = (double)(GetTickCount64() - t0) / 1000.0;
+            if (!hecho && g_celebModo != 0 && g_celebSeg > 0.0 && fase >= 1 && fase < 3 && ultimoT >= g_celebSeg) {
+                hecho = true;
+                if (g_celebModo == 1) {   // «timer»: se pone el contador de la celebración (job+0x27D0, ~56/s) a su valor final
+                    memcpy(job + 0x27D0, &g_timerFinal, 4);
+                    logf("[gol_directo_free] celebracion_modo=timer: +0x27D0 %u -> %u a %.1f s", timer, g_timerFinal, ultimoT);
+                } else {                  // «salto»: indice al siguiente paso (inestable: provoca deadlock en el 2.º gol)
+                    job[0x8F0] = (uint8_t)(idx + 1); job[0x8F2] = 0;
+                    logf("[gol_directo_free] celebracion_modo=salto a %.1f s (paso %u -> %u)", ultimoT, (unsigned)idx, (unsigned)idx + 1);
+                }
             }
-        } else { t0 = 0; hecho = false; }
+        } else {
+            if (enCel) logf("[gol_directo_free] paso 0x04 terminado: ultimo +0x27D0=%u a %.2f s de celebracion (modo %d)", ultimoTimer, ultimoT, g_celebModo);
+            enCel = false; t0 = 0; hecho = false;
+        }
     }
     return 0;
 }
@@ -1128,6 +1140,8 @@ void leerConfig() {
     std::string v;
     if (valorDe("gol_directo_celebracion", v) && v == "false") g_directoCelebracion = false;
     if (valorDe("celebracion_segundos", v)) g_celebSeg = atof(v.c_str());
+    if (valorDe("celebracion_modo", v)) g_celebModo = (v == "\"timer\"") ? 1 : (v == "\"salto\"") ? 2 : 0;
+    if (valorDe("celebracion_timer_final", v)) g_timerFinal = (uint32_t)atol(v.c_str());
     if (g_celebSeg <= 0.0) g_directoCelebracion = false;
 }
 
