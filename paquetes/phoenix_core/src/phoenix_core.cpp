@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.35"
+#define PHX_CORE_VERSION "0.4.36"
 
 namespace {
 
@@ -1421,6 +1421,31 @@ bool parchearRanuraShoot(Feature& f) {
     }
     return true;
 }
+// 0.4.36: gancho de diagnóstico en FUN_1408AB000 (cálculo del medidor de potencia por jugador; 15 B limpios de prólogo).
+// Anota el tipo de orden (cmd+0x1768), la carga (cmd+0x10) y el valor del medidor (entrada+4) antes y después; con el json
+// «medidor_real»: 1 y el tipo 4 en el entrenamiento, el medidor deja de forzarse a 1.0 y muestra la carga real.
+const char* kFirmaMedidor = "48 89 5C 24 08 48 89 74 24 10 57 48 83 EC 20 48 8B 05 ?? ?? ?? ?? 49 8B F9 49 8B D8 48 8B 88 00 04 00 00";
+using FnMedidor = void (*)(uint64_t, uint64_t, uint8_t*, uint8_t*);
+FnMedidor g_medidorOrig = nullptr; int g_medidorReal = 0;
+void ganchoMedidor(uint64_t a1, uint64_t a2, uint8_t* entrada, uint8_t* cmd) {
+    float antes = 0; leerSeguro(entrada + 4, &antes, 4);
+    g_medidorOrig(a1, a2, entrada, cmd);
+    if (!trainingReciente()) return;
+    int tipo = -1; float carga = 0, desp = 0;
+    leerSeguro(cmd + 0x1768, &tipo, 4); leerSeguro(cmd + 0x10, &carga, 4); leerSeguro(entrada + 4, &desp, 4);
+    static int ultTipo = -2; static float ultDesp = -1; static LONG n = 0;
+    if ((tipo != ultTipo || fabsf(desp - ultDesp) > 0.05f) && InterlockedIncrement(&n) <= 120) {
+        logf("[MEDIDOR] tipo=%d carga(+0x10)=%.3f medidor antes=%.3f despues=%.3f", tipo, carga, antes, desp);
+        ultTipo = tipo; ultDesp = desp;
+    }
+    if (g_medidorReal && tipo == 4 && desp >= 0.999f && carga >= 0.0f && carga <= 1.0f) { memcpy(entrada + 4, &carga, 4); }
+}
+bool medidorInstalar(Feature& f) {
+    uint8_t* m = firmaUnica("codigo", kFirmaMedidor, f.id);
+    if (!m) { logf("[%s] sin firma del medidor FUN_1408AB000", f.id); return false; }
+    if (!crearDesvio(f, m, 15, (void*)ganchoMedidor, (void**)&g_medidorOrig)) { logf("[%s] no se pudo desviar el medidor", f.id); return false; }
+    logf("[%s] medidor FUN_1408AB000 enganchado en exe+0x%llX", f.id, (unsigned long long)(m - g_exe.base)); return true;
+}
 bool disparoInstalar(Feature& f) {
     if (!g_globalPartido && !resolverGlobalPartido(f.id)) { f.estado = "sin firma del global del partido"; return false; }
     uint8_t* m = firmaUnica("codigo", kFirmaPredTiro, f.id);
@@ -1440,6 +1465,7 @@ bool disparoInstalar(Feature& f) {
     }
     if (g_disparoModo >= 4 && clearOk) { bool ok70 = parchearRanuraClear(f, 0x70, (void*)ganchoClear70, (void**)&g_clear70Orig, 0x421F40); logf("[%s] Clear+0x70 al soltar: %s", f.id, ok70 ? "parcheada" : "NO parcheada"); }
     logf("[%s] modo %d · ranuras de ThinkUnitClear: %s", f.id, g_disparoModo, g_disparoModo == 0 ? "sin tocar" : clearOk ? "parcheadas" : "NO parcheadas");
+    if (g_disparoModo >= 7) medidorInstalar(f);
     logf("[%s] ranuras de ThinkUnitShoot (registro): %s", f.id, parchearRanuraShoot(f) ? "parcheadas" : "NO parcheadas");
     g_disparoOn = 1;
     g_hiloDisparo = CreateThread(nullptr, 0, hiloDisparo, nullptr, 0, nullptr);
@@ -1539,6 +1565,7 @@ void leerConfig() {
     if (g_canchaAncho < 6.0 || g_canchaAncho > 50.0) g_canchaAncho = 10.0;
     if (valorDe("celebracion_modo", v)) g_celebModo = (v == "\"timer\"") ? 1 : (v == "\"salto\"") ? 2 : 0;
     if (valorDe("siempre_disparo_modo", v)) g_disparoModo = atoi(v.c_str());
+    if (valorDe("medidor_real", v)) g_medidorReal = atoi(v.c_str());
     if (valorDe("siempre_disparo_carga", v)) g_disparoCarga = atoi(v.c_str());
     if (valorDe("celebracion_timer_final", v)) g_timerFinal = (uint32_t)atol(v.c_str());
     if (g_celebSeg <= 0.0) g_directoCelebracion = false;
