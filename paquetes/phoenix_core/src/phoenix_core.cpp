@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.47"
+#define PHX_CORE_VERSION "0.4.48"
 
 namespace {
 
@@ -1617,7 +1617,7 @@ uint64_t ganchoBolaPaso(float dt, uint64_t rdx, uint64_t r8, float* S, void* cfg
     if ((g_redOn || g_murosOn) && GetTickCount64() - g_tTrainRed < 3000) {
         float x = S[0], y = S[1], z = S[2];
         float largo = (float)g_canchaLargo, ancho = (float)g_canchaAncho;
-        bool bocaGol = fabsf(z) < 4.2f && y < 2.55f;
+        bool bocaGol = fabsf(z) < 3.66f + 0.109f && y < 2.44f + 0.109f;   // boca real: media portería 3,66 y travesaño 2,44 (+ radio de la pelota)
         if (g_redOn && fabsf(x) > largo && bocaGol) {       // red: freno suave y, al fondo, un pequeño rebote hacia atrás
             float f = g_redFactor;
             S[3] *= f; S[4] *= f; S[5] *= f;
@@ -1642,6 +1642,24 @@ uint64_t ganchoBolaPaso(float dt, uint64_t rdx, uint64_t r8, float* S, void* cfg
             else if (x < -lim + rb && S[3] < 0) { S[0] = -lim + rb; S[3] = -g_muroRebote * S[3]; S[5] *= g_muroFric; toco = true; }
             if (z > Wz - rb && S[5] > 0) { S[2] = Wz - rb; S[5] = -g_muroRebote * S[5]; S[3] *= g_muroFric; toco = true; }
             else if (z < -Wz + rb && S[5] < 0) { S[2] = -Wz + rb; S[5] = -g_muroRebote * S[5]; S[3] *= g_muroFric; toco = true; }
+            // postes (cilindros verticales en (±largo, ±3,66), radio 0,06) y travesaño (cilindro horizontal en y=2,44): rebote contra la normal
+            {
+                const float rp = 0.06f + rb; const float px = (x >= 0 ? largo : -largo);
+                for (int sg = -1; sg <= 1; sg += 2) {
+                    float dx = x - px, dz = z - sg * 3.66f, d2 = dx * dx + dz * dz;
+                    if (y < 2.44f && d2 < rp * rp && d2 > 1e-6f) {               // poste
+                        float d = sqrtf(d2), nx = dx / d, nz = dz / d, vn = S[3] * nx + S[5] * nz;
+                        if (vn < 0) { S[3] -= (1 + 0.5f) * vn * nx; S[5] -= (1 + 0.5f) * vn * nz; S[0] = px + nx * rp; S[2] = sg * 3.66f + nz * rp; toco = true; }
+                    }
+                }
+                if (fabsf(z) < 3.66f) {                                         // travesaño
+                    float dx = x - px, dy = y - 2.44f, d2 = dx * dx + dy * dy;
+                    if (d2 < rp * rp && d2 > 1e-6f) {
+                        float d = sqrtf(d2), nx = dx / d, ny = dy / d, vn = S[3] * nx + S[4] * ny;
+                        if (vn < 0) { S[3] -= (1 + 0.5f) * vn * nx; S[4] -= (1 + 0.5f) * vn * ny; S[0] = px + nx * rp; S[1] = 2.44f + ny * rp; toco = true; }
+                    }
+                }
+            }
             if (toco) { LONG n = InterlockedIncrement(&g_murosRebotes); if (n <= 10 || n % 500 == 0) logf("[MURO] rebote #%ld pos=(%.2f,%.2f,%.2f)", (long)n, S[0], S[1], S[2]); }
         }
     }
