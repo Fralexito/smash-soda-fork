@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.16"
+#define PHX_CORE_VERSION "0.4.17"
 
 namespace {
 
@@ -774,6 +774,26 @@ bool sondaQuitar(Feature&) { return true; }   // los parches los quita el marco
 // otro hilo, sigue escribiendo aunque el hilo de juego se bloquee (deadlock): así sabremos qué paso estaba activo.
 volatile LONG g_sondeoPasos = 0;
 HANDLE g_hiloPasos = nullptr;
+// 0.4.17 [JOB]: durante la escena 0xA (primeros 40 s) compara cada 250 ms tres zonas del job y anota los dwords que cambian
+// (offset: antes -> ahora). Sirve para encontrar el temporizador que hace esperar al paso 0x04 en la fase 3.
+static const uint32_t kZonasJob[][2] = { {0x860, 0xA00}, {0x2780, 0x2830}, {0x57F0, 0x5900} };
+static void sondearJob(uint8_t* job, uint32_t* previo, bool& tengo, double desdeGol) {
+    static uint32_t cur[(0x1A0 + 0xB0 + 0x110) / 4];
+    size_t o = 0;
+    for (auto& z : kZonasJob) { if (!leerSeguro(job + z[0], cur + o, z[1] - z[0])) return; o += (z[1] - z[0]) / 4; }
+    if (tengo) {
+        int n = 0; size_t i = 0;
+        for (auto& z : kZonasJob) {
+            for (uint32_t off = z[0]; off < z[1]; off += 4, ++i) {
+                if (cur[i] != previo[i] && n < 24) {
+                    logf("[JOB] +0x%X: %08X -> %08X (%+.2f s)", off, previo[i], cur[i], desdeGol); ++n;
+                }
+            }
+        }
+    }
+    memcpy(previo, cur, o * 4); tengo = true;
+}
+
 DWORD WINAPI sondeoPasos(LPVOID) {
     uint8_t* jobPrev = nullptr; uint32_t escPrev = 0xFFFFFFFF, idxPrev = 0xFF, nPrev = 0xFF, idPrev = 0xFFFFFFFF, faPrev = 0xFF;
     int estable = 0; uint32_t nCola = 0xFF; bool colaVolcada = false;
