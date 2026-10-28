@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.80"
+#define PHX_CORE_VERSION "0.4.81"
 
 namespace {
 
@@ -2201,6 +2201,15 @@ volatile LONG g_saquePedido = 0, g_saqueEquipo = 1, g_saqueResetReloj = 0, g_saq
 // --- street_pantalla_descanso (0.4.66, frente J5, A-min; RE estático, sin probar en vivo): a 45:00 se pone fase=2 y base 0 y se encola [0x22, 0x48...] (paso 0x22 = FUN_140449390: SOLO manda el mensaje 0x105001C que abre el menú REAL
 // de descanso MatchStatsHalf/MatchHalfTime, sin la demo que cuelga); el relleno 0x48 aparca la cola. «Menú cerrado» = el job vuelve a ticar tras una pausa >1,5 s (el flujo suspende las tareas del partido mientras el menú está abierto;
 // hipótesis) o a los 120 s como último recurso; entonces se limpia la cola y se pide el saque central nativo (que hace la fase 2->3). NO tocar «cambios» (plan) en esta prueba: puede colgar con el banquillo vacío.
+// 0.4.81 (J5 §señal): ProcessMatchPostHalfTime::update (FUN_1412F7500, vf+0xC0; void(this)) corre por tick mientras ese proceso está activo, o sea cuando el menú de descanso se cerró y el flujo pasa a MatchPostHalfTime («proceed»).
+// Gancho (crearDesvio 14 B): si lo armamos nosotros al encolar [0x22] y la instancia es PostHalfTime (vtable exe+0x28CCCB8), se marca g_menuCerrado. El Core lanza entonces el saque central. Sin gancho queda el límite de 120 s.
+volatile LONG g_menuArmado = 0, g_menuCerrado = 0; void (*g_postHalfOrig)(void*) = nullptr;
+void ganchoPostHalf(void* self) {
+    if (g_menuArmado && !g_menuCerrado) {
+        uint64_t vt = 0; if (leerSeguro(self, &vt, 8) && vt == (uint64_t)(g_exe.base + 0x28CCCB8)) { uint8_t f89 = 0, f8a = 0; leerSeguro((uint8_t*)self + 0x89, &f89, 1); leerSeguro((uint8_t*)self + 0x8A, &f8a, 1); logf("[DESCANSO] ProcessMatchPostHalfTime activo (+0x89=%u +0x8A=%u): el menú se cerró", f89, f8a); g_menuCerrado = 1; g_menuArmado = 0; }
+    }
+    g_postHalfOrig(self);
+}
 volatile LONG g_descansoPedido = 0, g_descansoFase = 0; volatile ULONGLONG g_descansoT = 0, g_ultTickJob = 0; int g_descansoOn = 0;
 using FnE770 = void (*)(uint8_t*, int, int, int, float*, uint64_t, uint64_t, uint64_t);
 using FnBaseReloj = void (*)(void*, float);
@@ -2226,13 +2235,14 @@ static void __stdcall ayudanteSaque(uint8_t* job) {
         memcpy(job + 0x878, full, sizeof(full)); job[0x8F0] = 0; job[0x8F1] = 2;
         uint32_t sub2 = 2; memcpy(job + 0x2794, &sub2, 4);
         logf("[DESCANSO] cola [0x22,0x48..] escrita (sin tocar fase ni reloj): se abre el menú de descanso");
+        g_menuCerrado = 0; g_menuArmado = g_postHalfOrig ? 1 : 0;
         g_descansoPedido = 0; g_descansoFase = 1; g_descansoT = ahora; return;
     }
     if (g_descansoFase == 1) {
         static ULONGLONG tLogD = 0; if (ahora - tLogD > 3000) { tLogD = ahora; uint32_t q0 = 0, s94 = 0, f = 0; uint8_t cur = 0; leerSeguro(job + 0x878, &q0, 4); leerSeguro(job + 0x2794, &s94, 4); leerSeguro(job + 0x2790, &f, 4); leerSeguro(job + 0x8F0, &cur, 1); logf("[DESCANSO] esperando: cola0=0x%X cursor=%u fase=%u sub=%u gap=%llu ms", q0, (unsigned)cur, f, s94, (unsigned long long)gap); }
-        if (gap > 1500 || ahora - g_descansoT > 120000) {
+        if (g_menuCerrado || gap > 1500 || ahora - g_descansoT > 120000) {
             uint32_t ceros[30] = {}; memcpy(job + 0x878, ceros, sizeof(ceros)); job[0x8F0] = 0; job[0x8F1] = 0; uint32_t sub1 = 1; memcpy(job + 0x2794, &sub1, 4);
-            logf("[DESCANSO] menú cerrado (%s): cola limpia, saque central del 2.º tiempo", gap > 1500 ? "el job volvió a ticar tras la pausa" : "tiempo límite de 120 s");
+            logf("[DESCANSO] menú cerrado (%s): cola limpia, saque central del 2.º tiempo", g_menuCerrado ? "señal de ProcessMatchPostHalfTime" : gap > 1500 ? "el job volvió a ticar tras la pausa" : "tiempo límite de 120 s"); g_menuArmado = 0;
             g_descansoFase = 0; g_descansoT = 0; g_saqueEquipo = g_sacaInicial ? 0 : 1; g_saqueResetReloj = 0; g_saqueT = 0; g_saquePedido = 1;
         }
         return;
@@ -2369,7 +2379,10 @@ bool ramaNormalInstalar(Feature& f) {
     f.estado = "ok: el portero usa siempre la rama normal de posición (como el COM); solo en el entrenamiento"; return true;
 }
 bool ramaNormalQuitar(Feature&) { g_krOn = 0; ponerParche(g_pdKR, false); return true; }
-bool descansoInstalar(Feature& f) { g_descansoOn = 1; f.estado = "ok: a 45:00 se abre la pantalla REAL de medio tiempo (fase 2 + paso 0x22) y al cerrarla saque central del 2.º tiempo (requiere street_saque_nativo; NO tocar cambios)"; return true; }
+bool descansoInstalar(Feature& f) {
+    if (!g_postHalfOrig) { uint8_t* m = firmaUnica("codigo", "48 8B C4 55 48 8B EC 48 81 EC 80 00 00 00 48 C7 45 A8 FE FF FF FF 48 89 58 10 48 89 78 18 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 45 F0 48 8B D9 80 B9 89 00 00 00 00 0F 84", f.id);
+        if (m && crearDesvio(f, m, 14, (void*)ganchoPostHalf, (void**)&g_postHalfOrig)) logf("[%s] señal de menú cerrado enganchada (exe+0x%llX)", f.id, (unsigned long long)(m - g_exe.base)); else logf("[%s] sin señal de menú cerrado: límite de 120 s", f.id); }
+    g_descansoOn = 1; f.estado = "ok: a 45:00 se abre la pantalla REAL de medio tiempo (fase 2 + paso 0x22) y al cerrarla saque central del 2.º tiempo (requiere street_saque_nativo; NO tocar cambios)"; return true; }
 bool descansoQuitar(Feature&) { g_descansoOn = 0; return true; }
 
 volatile LONG g_dosTiemposOn = 0; HANDLE g_hiloDosTiempos = nullptr;
