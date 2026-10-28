@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.73"
+#define PHX_CORE_VERSION "0.4.74"
 
 namespace {
 
@@ -2091,13 +2091,13 @@ volatile LONG g_saquePedido = 0, g_saqueEquipo = 1, g_saqueResetReloj = 0, g_saq
 volatile LONG g_descansoPedido = 0, g_descansoFase = 0; volatile ULONGLONG g_descansoT = 0, g_ultTickJob = 0; int g_descansoOn = 0;
 using FnE770 = void (*)(uint8_t*, int, int, int, float*, uint64_t, uint64_t, uint64_t);
 using FnBaseReloj = void (*)(void*, float);
-FnE770 g_e770 = nullptr; FnBaseReloj g_baseReloj = nullptr;
+FnE770 g_e770 = nullptr; FnBaseReloj g_baseReloj = nullptr; void (*g_arma4537)(uint8_t*) = nullptr;
 static void __stdcall ayudanteSaque(uint8_t* job) {
     ULONGLONG ahora = GetTickCount64(); ULONGLONG gap = g_ultTickJob ? ahora - g_ultTickJob : 0; g_ultTickJob = ahora;
     if (g_descansoPedido && !g_descansoFase) {
         uint32_t rec = 1, c878 = 1, k2794 = 0; uint8_t c8f0 = 1; uint64_t j3b8 = 0;
         bool ok = leerSeguro(job + 0x49C0, &rec, 4) && leerSeguro(job + 0x878, &c878, 4) && leerSeguro(job + 0x8F0, &c8f0, 1) && leerSeguro(job + 0x2794, &k2794, 4) && leerSeguro(job + 0x908 + 0x3B8, &j3b8, 8);
-        bool ocioso = ok && rec == 0 && j3b8 != 0;   // 0.4.69: en el entrenamiento el estado normal de juego es cola [03..] con cursor 1 y sub=2 (medido en el log): solo se exige que no haya parada en curso
+        bool ocioso = leerSeguro(job + 0x49C0, &rec, 4) && rec == 0;   // 0.4.74: [juez+0x3B8] es 0 en el entrenamiento (E770 no hace nada con eso): solo se exige que no haya parada en curso
         if (!ocioso) { if (!g_descansoT) g_descansoT = ahora; if (ahora - g_descansoT > 40000) { logf("[DESCANSO] el job no quedó ocioso en 40 s (rec=%u c878=%u c8f0=%u 2794=%u): pantalla cancelada, saque directo", rec, c878, c8f0, k2794); g_descansoPedido = 0; g_descansoT = 0; g_saquePedido = 1; } return; }
         uint32_t fase2 = 2; memcpy(job + 0x2790, &fase2, 4);
         if (g_baseReloj) g_baseReloj(job + 0x2790, 0.0f);
@@ -2121,7 +2121,7 @@ static void __stdcall ayudanteSaque(uint8_t* job) {
     if (g_saquePedido && !g_saqueFase) {
         uint32_t rec = 1, c878 = 1, k2794 = 0; uint8_t c8f0 = 1; uint64_t j3b8 = 0;
         bool ok = leerSeguro(job + 0x49C0, &rec, 4) && leerSeguro(job + 0x878, &c878, 4) && leerSeguro(job + 0x8F0, &c8f0, 1) && leerSeguro(job + 0x2794, &k2794, 4) && leerSeguro(job + 0x908 + 0x3B8, &j3b8, 8);
-        bool ocioso = ok && rec == 0 && j3b8 != 0;   // 0.4.69: en el entrenamiento el estado normal de juego es cola [03..] con cursor 1 y sub=2 (medido en el log): solo se exige que no haya parada en curso
+        bool ocioso = leerSeguro(job + 0x49C0, &rec, 4) && rec == 0;   // 0.4.74: [juez+0x3B8] es 0 en el entrenamiento (E770 no hace nada con eso): solo se exige que no haya parada en curso
         if (!ocioso) {
             if (!g_saqueT) g_saqueT = ahora;
             if (ahora - g_saqueT > 40000) { logf("[SAQUE] el job no quedó ocioso en 40 s (rec=%u c878=%u c8f0=%u 2794=%u): pedido cancelado", rec, c878, c8f0, k2794); g_saquePedido = 0; g_saqueT = 0; }
@@ -2129,8 +2129,18 @@ static void __stdcall ayudanteSaque(uint8_t* job) {
         }
         if (g_saqueResetReloj && g_baseReloj) { g_baseReloj(job + 0x2790, 0.0f); float z = 0.0f; memcpy(job + 0x279C, &z, 4); logf("[SAQUE] reloj reiniciado a 0:00"); }
         alignas(16) float centro[4] = { 0, 0, 0, 0 };
-        g_e770(job + 0x908, (int)g_saqueEquipo, 1, 4, centro, 0, 0, 0);
-        logf("[SAQUE] saque central pedido: saca el equipo %d (E770 k=4)", (int)g_saqueEquipo);
+        (void)centro;
+        {   // 0.4.74 (M2, J4 §11): E770 sale sin hacer nada si [juez+0x3B8]==0 (así es en el entrenamiento): se escribe el registro de parada directamente y se arma el reinicio con FUN_1404537B0
+            uint8_t* rec = job + 0x49C0; uint32_t eq = (uint32_t)g_saqueEquipo;
+            memset(rec + 8, 0, 0x18); uint32_t uno = 1, siete = 7, cero = 0, ff = 0xFF; uint32_t previo = 0;
+            memcpy(rec, &uno, 4); memcpy(rec + 4, &eq, 4); memcpy(rec + 0x20, &siete, 4); rec[0x24] = 0;
+            leerSeguro(job + 0x908 + 0xA0, &previo, 4); memcpy(rec + 0x28, &previo, 4); memcpy(job + 0x908 + 0xA0, &ff, 4);
+            memcpy(rec + 0x34, &cero, 4); memcpy(rec + 0x3C, &cero, 4); memcpy(rec + 0x40, &cero, 4);
+            uint8_t* raiz = nullptr; uint8_t* S = nullptr;
+            if (leerSeguro(g_globalPartido, &raiz, 8) && raiz && leerSeguro(raiz + 0x270, &S, 8) && S) { memcpy(S + 0x1554, &uno, 4); memcpy(S + 0x1558, &eq, 4); memcpy(S + 0x1574, &siete, 4); }
+            if (g_arma4537) g_arma4537(job);
+        }
+        logf("[SAQUE] saque central pedido (registro de parada escrito, FUN_1404537B0): saca el equipo %d", (int)g_saqueEquipo);
         g_saquePedido = 0; g_saqueResetReloj = 0; g_saqueFase = 1; g_saqueT = ahora; return;
     }
     if (g_saqueFase == 1) {   // vigilar la cola montada; reescribir si empieza por 0F
@@ -2151,6 +2161,9 @@ bool saqueNativoInstalar(Feature& f) {
     uint8_t* sitio = firmaUnica("codigo", "40 55 41 56 41 57 48 83 EC 40 48 8D 6C 24 20 48 89 5D 40 48 89 75 48 48 89 7D 50 4C 89 65 58 0F 29 75 10 48 8B 05 ?? ?? ?? ?? 48 33 C5", f.id);
     if (!e || !sitio) { f.estado = "sin firma de FUN_14050E770 / FUN_14044CE80"; return false; }
     g_e770 = reinterpret_cast<FnE770>(e); g_baseReloj = reinterpret_cast<FnBaseReloj>(r);
+    uint8_t* a4537 = firmaUnica("codigo", "48 89 5C 24 08 57 48 83 EC 30 80 B9 11 4A 00 00 00 48 8B F9 75 39 8B 81 C0 49 00 00", f.id);
+    if (!a4537) { f.estado = "sin firma de FUN_1404537B0 (armar el reinicio)"; return false; }
+    g_arma4537 = reinterpret_cast<void (*)(uint8_t*)>(a4537);
     const uint8_t esp[10] = { 0x40, 0x55, 0x41, 0x56, 0x41, 0x57, 0x48, 0x83, 0xEC, 0x40 };
     uint8_t v[10]; if (!leerSeguro(sitio, v, 10) || memcmp(v, esp, 10) != 0) { f.estado = "bytes inesperados en FUN_14044CE80"; return false; }
     uint8_t* c = reservarCerca(sitio, 192);
