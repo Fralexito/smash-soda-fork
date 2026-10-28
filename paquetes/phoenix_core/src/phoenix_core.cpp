@@ -1966,7 +1966,7 @@ bool celChicaQuitar(Feature&) {
 // --- reloj_street_free (0.4.57, RE del frente J §2.5): el reloj del partido es una estructura en S+0x1168 (S = [raíz+0x270]): +0 fase, +4 sub-fase (1 en juego), +0xC float «transcurrido» (S+0x1174; 60 unidades = 1 s,
 // escritura plana sin protección) y una base protegida por hash (NO se toca). El HUD (match2D::Screen::Time) muestra base + float. En el entrenamiento la función del reloj (FUN_14044CE80) sale si TrainingWork está activo, así que
 // el reloj queda en 0:00. El Core, desde un hilo, suma 60·dt a S+0x1174 mientras la sub-fase es 1 (en juego) y reinicia a 0 al llegar a «street_minutos» (json, por defecto 5): nunca se alcanzan los 45:00 del fin de tiempo.
-volatile LONG g_relojOn = 0; HANDLE g_hiloReloj = nullptr; double g_streetMinutos = 5.0;
+volatile LONG g_relojOn = 0; HANDLE g_hiloReloj = nullptr; double g_streetMinutos = 5.0; ParcheDisp g_pdR1, g_pdR1b; bool g_relojNativo = false;
 DWORD WINAPI hiloReloj(LPVOID) {
     LARGE_INTEGER fq, t0; QueryPerformanceFrequency(&fq); QueryPerformanceCounter(&t0); LONG vueltas = 0;
     while (g_relojOn) {
@@ -1980,19 +1980,26 @@ DWORD WINAPI hiloReloj(LPVOID) {
         uint32_t fase = 0; static ULONGLONG tLog = 0;
         if (!leerSeguro(S + 0x116C, &sub, 4) || !leerSeguro(S + 0x1168, &fase, 4) || !leerSeguro(S + 0x1174, &f, 4) || !(f >= 0.0f) || f > 1.0e6f) continue;
         if (GetTickCount64() - tLog > 5000) { tLog = GetTickCount64(); uint32_t reg = 0; leerSeguro(S + 0x11B0, &reg, 4); logf("[RELOJ] fase=%u sub=%u transcurrido=%.0f (=%.1f s) S+0x11B0=0x%08X", fase, sub, f, f / 60.0f, reg); }
-        f += (float)(60.0 * dt);
+        if (!g_relojNativo) f += (float)(60.0 * dt);   // con R1 el juego ya lo avanza; el Core solo lo reinicia al llegar a street_minutos
         if (f >= (float)(g_streetMinutos * 60.0 * 60.0)) { f = 0.0f; logf("[RELOJ] fin de los %.1f min: el reloj vuelve a 0 (vuelta %ld)", g_streetMinutos, (long)++vueltas); }
-        memcpy(S + 0x1174, &f, 4);
+        if (!g_relojNativo || f == 0.0f) memcpy(S + 0x1174, &f, 4);
     }
     return 0;
 }
 bool relojInstalar(Feature& f) {
     if (!g_globalPartido && !resolverGlobalPartido(f.id)) { f.estado = "sin firma del global del partido"; return false; }
+    // 0.4.59: el Core escribía +60·dt pero el juego lo pisa a 0 cada fotograma en juego (log: transcurrido=0). Ruta del RE: R1 (RVA 0x44CEE2, 74->EB) saltea el chequeo de TrainingWork en FUN_14044CE80
+    // y R1b (0x44CF02) el del objeto [raíz+0x3B0]; así corre el reloj nativo. Se aplican siempre (fuera del entrenamiento esos chequeos ya no se cumplen).
+    bool r1 = localizarParche("80 B9 DB 27 00 00 00 48 8B F9 8B 91 94 27 00 00 41 0F 95 C0 48 81 C1 C0 27 00 00 E8 ?? ?? ?? ?? 48 8B 05 ?? ?? ?? ?? 48 8B 88 00 04 00 00 48 85 C9 74 14", 49, 0x74, 0xEB, g_pdR1, f.id);
+    bool r1b = localizarParche("48 8B 88 B0 03 00 00 48 85 C9 74 0D E8 ?? ?? ?? ?? 84 C0 0F 85 D0 01 00 00 E8 ?? ?? ?? ?? 84 C0 0F 85 C3 01 00 00", 10, 0x74, 0xEB, g_pdR1b, f.id);
+    logf("[%s] parche R1 (TrainingWork) %s · R1b (objeto 0x3B0) %s", f.id, r1 ? "localizado" : "NO", r1b ? "localizado" : "NO");
+    if (r1) ponerParche(g_pdR1, true); if (r1b) ponerParche(g_pdR1b, true);
+    g_relojNativo = r1 && g_pdR1.puesto;
     g_relojOn = 1; g_hiloReloj = CreateThread(nullptr, 0, hiloReloj, nullptr, 0, nullptr);
     if (!g_hiloReloj) { g_relojOn = 0; f.estado = "no se pudo crear el hilo del reloj"; return false; }
     char b[140]; sprintf_s(b, "ok: el reloj nativo corre en el entrenamiento y reinicia a los %.1f min (escribe S+0x1174)", g_streetMinutos); f.estado = b; return true;
 }
-bool relojQuitar(Feature&) { g_relojOn = 0; if (g_hiloReloj) { WaitForSingleObject(g_hiloReloj, 2000); CloseHandle(g_hiloReloj); g_hiloReloj = nullptr; } return true; }
+bool relojQuitar(Feature&) { g_relojOn = 0; ponerParche(g_pdR1, false); ponerParche(g_pdR1b, false); g_relojNativo = false; if (g_hiloReloj) { WaitForSingleObject(g_hiloReloj, 2000); CloseHandle(g_hiloReloj); g_hiloReloj = nullptr; } return true; }
 
 const char* kFirmaReinicio = "48 8B C4 53 41 57 48 83 EC 78 48 89 70 E8";
 using FnReinicio = float* (*)(float*, uint32_t*, void*, void*);
