@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.65"
+#define PHX_CORE_VERSION "0.4.66"
 
 namespace {
 
@@ -1560,10 +1560,19 @@ bool disparoQuitar(Feature&) { g_disparoOn = 0; ponerParche(g_pdA, false); poner
 // --- función: jugadores_sonda (0.4.38, SOLO LECTURA). El registro de movimiento de cada jugador i (0..21; accesor FUN_140A48A10) es
 // *(raíz + (i+0xBF)*0x28); su posición lógica (x, y, z) está en +0x55C/+0x560/+0x564 (la usa FUN_1406B45D0). Cada 3 s (con TrainingWork)
 // anota las 22 posiciones y cuántos están fuera del rectángulo de la cancha chica (±semilargo+0.5, ±semiancho+0.5). Json: "jugadores_sonda": true.
-volatile LONG g_jugSondaOn = 0; HANDLE g_hiloJug = nullptr;
+volatile LONG g_jugSondaOn = 0; HANDLE g_hiloJug = nullptr; volatile LONG g_ultCursor = -1;
 DWORD WINAPI hiloJug(LPVOID) {
+    int tickJ = 0; ULONGLONG tPt = 0;
     while (g_jugSondaOn) {
-        Sleep(3000);
+        Sleep(250);
+        if (trainingWorkEstable() && GetTickCount64() - tPt > 1000) {     // 0.4.66: cada 1 s, si el portero propio (slot 0) está a menos de 10 m de su línea, anota dónde está y a quién controla el mando
+            uint8_t* raiz0 = nullptr; uint8_t* rec0 = nullptr; float p0[3] = { 0, 0, 0 };
+            if (leerSeguro(g_globalPartido, &raiz0, 8) && raiz0 && leerSeguro(raiz0 + (size_t)0xBF * 0x28, &rec0, 8) && rec0 && leerSeguro(rec0 + 0x55C, p0, 12) && fabsf(p0[0]) < g_canchaLargo - 5.0f) {
+                tPt = GetTickCount64(); static LONG nPt = 0; LONG k = InterlockedIncrement(&nPt);
+                if (k <= 400) logf("[PT_PROPIO] portero en (%.1f,%.1f) lejos de su línea; cursor=%ld", p0[0], p0[2], (long)g_ultCursor);
+            }
+        }
+        if ((++tickJ % 12) != 0) continue;
         if (g_vigiaPelotaPedida && g_pelotaSeguida && InterlockedCompareExchange(&g_vigiaPelotaArmada, 1, 0) == 0) {
             g_vigiaDir[2] = reinterpret_cast<uint64_t>(g_pelotaSeguida) + 0x70; g_vigiaDir[3] = reinterpret_cast<uint64_t>(g_pelotaSeguida) + 0x78;
             CreateThread(nullptr, 0, hiloArmarVigia, nullptr, 0, nullptr);
@@ -2060,19 +2069,46 @@ bool sinFinTiempoQuitar(Feature&) { g_sinFinOn = 0; ponerParche(g_pdT1, false); 
 // Para el FINAL, además se reinicia el reloj: FUN_140A3CBC0(job+0x2790, 0.0f) recifra la base y el float de tiempo muerto (job+0x279C) se pone a 0.
 int g_sacaInicial = 0;   // json street_saca_inicial: equipo que sacó al inicio (0 local, 1 visita); el medio tiempo lo saca el otro
 volatile LONG g_saquePedido = 0, g_saqueEquipo = 1, g_saqueResetReloj = 0, g_saqueFase = 0; volatile ULONGLONG g_saqueT = 0;
+// --- street_pantalla_descanso (0.4.66, frente J5, A-min; RE estático, sin probar en vivo): a 45:00 se pone fase=2 y base 0 y se encola [0x22, 0x48...] (paso 0x22 = FUN_140449390: SOLO manda el mensaje 0x105001C que abre el menú REAL
+// de descanso MatchStatsHalf/MatchHalfTime, sin la demo que cuelga); el relleno 0x48 aparca la cola. «Menú cerrado» = el job vuelve a ticar tras una pausa >1,5 s (el flujo suspende las tareas del partido mientras el menú está abierto;
+// hipótesis) o a los 120 s como último recurso; entonces se limpia la cola y se pide el saque central nativo (que hace la fase 2->3). NO tocar «cambios» (plan) en esta prueba: puede colgar con el banquillo vacío.
+volatile LONG g_descansoPedido = 0, g_descansoFase = 0; volatile ULONGLONG g_descansoT = 0, g_ultTickJob = 0; int g_descansoOn = 0;
 using FnE770 = void (*)(uint8_t*, int, int, int, float*, uint64_t, uint64_t, uint64_t);
 using FnBaseReloj = void (*)(void*, float);
 FnE770 g_e770 = nullptr; FnBaseReloj g_baseReloj = nullptr;
 static void __stdcall ayudanteSaque(uint8_t* job) {
+    ULONGLONG ahora = GetTickCount64(); ULONGLONG gap = g_ultTickJob ? ahora - g_ultTickJob : 0; g_ultTickJob = ahora;
+    if (g_descansoPedido && !g_descansoFase) {
+        uint32_t rec = 1, c878 = 1, k2794 = 0; uint8_t c8f0 = 1; uint64_t j3b8 = 0;
+        bool ok = leerSeguro(job + 0x49C0, &rec, 4) && leerSeguro(job + 0x878, &c878, 4) && leerSeguro(job + 0x8F0, &c8f0, 1) && leerSeguro(job + 0x2794, &k2794, 4) && leerSeguro(job + 0x908 + 0x3B8, &j3b8, 8);
+        bool ocioso = ok && rec == 0 && c878 == 0 && c8f0 == 0 && k2794 == 1 && j3b8 != 0;
+        if (!ocioso) { if (!g_descansoT) g_descansoT = ahora; if (ahora - g_descansoT > 40000) { logf("[DESCANSO] el job no quedó ocioso en 40 s (rec=%u c878=%u c8f0=%u 2794=%u): pantalla cancelada, saque directo", rec, c878, c8f0, k2794); g_descansoPedido = 0; g_descansoT = 0; g_saquePedido = 1; } return; }
+        uint32_t fase2 = 2; memcpy(job + 0x2790, &fase2, 4);
+        if (g_baseReloj) g_baseReloj(job + 0x2790, 0.0f);
+        float z = 0.0f; memcpy(job + 0x279C, &z, 4);
+        uint32_t full[30]; for (int i = 0; i < 30; i++) full[i] = i == 0 ? 0x22 : 0x48;
+        memcpy(job + 0x878, full, sizeof(full)); job[0x8F0] = 0; job[0x8F1] = 2;
+        uint32_t sub2 = 2; memcpy(job + 0x2794, &sub2, 4);
+        logf("[DESCANSO] fase=2, reloj 0 y cola [0x22,0x48..] escritas: se abre el menú de descanso");
+        g_descansoPedido = 0; g_descansoFase = 1; g_descansoT = ahora; return;
+    }
+    if (g_descansoFase == 1) {
+        static ULONGLONG tLogD = 0; if (ahora - tLogD > 3000) { tLogD = ahora; uint32_t q0 = 0, s94 = 0, f = 0; uint8_t cur = 0; leerSeguro(job + 0x878, &q0, 4); leerSeguro(job + 0x2794, &s94, 4); leerSeguro(job + 0x2790, &f, 4); leerSeguro(job + 0x8F0, &cur, 1); logf("[DESCANSO] esperando: cola0=0x%X cursor=%u fase=%u sub=%u gap=%llu ms", q0, (unsigned)cur, f, s94, (unsigned long long)gap); }
+        if (gap > 1500 || ahora - g_descansoT > 120000) {
+            uint32_t ceros[30] = {}; memcpy(job + 0x878, ceros, sizeof(ceros)); job[0x8F0] = 0; job[0x8F1] = 0; uint32_t sub1 = 1; memcpy(job + 0x2794, &sub1, 4);
+            logf("[DESCANSO] menú cerrado (%s): cola limpia, saque central del 2.º tiempo", gap > 1500 ? "el job volvió a ticar tras la pausa" : "tiempo límite de 120 s");
+            g_descansoFase = 0; g_descansoT = 0; g_saqueEquipo = g_sacaInicial ? 0 : 1; g_saqueResetReloj = 0; g_saqueT = 0; g_saquePedido = 1;
+        }
+        return;
+    }
     if (!g_saquePedido && !g_saqueFase) return;
-    ULONGLONG ahora = GetTickCount64();
     if (g_saquePedido && !g_saqueFase) {
         uint32_t rec = 1, c878 = 1, k2794 = 0; uint8_t c8f0 = 1; uint64_t j3b8 = 0;
         bool ok = leerSeguro(job + 0x49C0, &rec, 4) && leerSeguro(job + 0x878, &c878, 4) && leerSeguro(job + 0x8F0, &c8f0, 1) && leerSeguro(job + 0x2794, &k2794, 4) && leerSeguro(job + 0x908 + 0x3B8, &j3b8, 8);
         bool ocioso = ok && rec == 0 && c878 == 0 && c8f0 == 0 && k2794 == 1 && j3b8 != 0;
         if (!ocioso) {
             if (!g_saqueT) g_saqueT = ahora;
-            if (ahora - g_saqueT > 4000) { logf("[SAQUE] el job no quedó ocioso en 4 s (rec=%u c878=%u c8f0=%u 2794=%u): pedido cancelado", rec, c878, c8f0, k2794); g_saquePedido = 0; g_saqueT = 0; }
+            if (ahora - g_saqueT > 40000) { logf("[SAQUE] el job no quedó ocioso en 40 s (rec=%u c878=%u c8f0=%u 2794=%u): pedido cancelado", rec, c878, c8f0, k2794); g_saquePedido = 0; g_saqueT = 0; }
             return;
         }
         if (g_saqueResetReloj && g_baseReloj) { g_baseReloj(job + 0x2790, 0.0f); float z = 0.0f; memcpy(job + 0x279C, &z, 4); logf("[SAQUE] reloj reiniciado a 0:00"); }
@@ -2123,6 +2159,8 @@ bool saqueNativoInstalar(Feature& f) {
     char sbuf[160]; sprintf_s(sbuf, "ok: saque central nativo sin gol disponible (E770 exe+0x%llX, cueva en el reloj exe+0x%llX)%s", (unsigned long long)(e - g_exe.base), (unsigned long long)(sitio - g_exe.base), r ? "" : " · sin reinicio de reloj"); f.estado = sbuf; return true;
 }
 bool saqueNativoQuitar(Feature&) { g_saquePedido = 0; return true; }
+bool descansoInstalar(Feature& f) { g_descansoOn = 1; f.estado = "ok: a 45:00 se abre la pantalla REAL de medio tiempo (fase 2 + paso 0x22) y al cerrarla saque central del 2.º tiempo (requiere street_saque_nativo; NO tocar cambios)"; return true; }
+bool descansoQuitar(Feature&) { g_descansoOn = 0; return true; }
 
 volatile LONG g_dosTiemposOn = 0; HANDLE g_hiloDosTiempos = nullptr;
 static bool leerRelojPantalla(double* tOut) {
@@ -2155,7 +2193,7 @@ DWORD WINAPI hiloDosTiempos(LPVOID) {
         if (estado == 0 && t >= 162000.0 && (prev < 0 || prev < 162000.0 + 3600.0)) {
             estado = 1; logf("[TIEMPOS] MEDIO TIEMPO a t=%.0f: aviso y %s", t, g_e770 ? "saque central nativo del rival" : "pelota al centro 6 s");
             escribirEstadoStreet("medio_tiempo", t);
-            if (g_e770) { g_saqueEquipo = g_sacaInicial ? 0 : 1; g_saqueResetReloj = 0; g_saqueT = 0; g_saquePedido = 1; } else g_bolaCentroHasta = GetTickCount64() + 6000;
+            if (g_e770 && g_descansoOn) { g_descansoT = 0; g_descansoPedido = 1; } else if (g_e770) { g_saqueEquipo = g_sacaInicial ? 0 : 1; g_saqueResetReloj = 0; g_saqueT = 0; g_saquePedido = 1; } else g_bolaCentroHasta = GetTickCount64() + 6000;
         }
         if (estado == 1 && t >= 324000.0 && (prev < 0 || prev < 324000.0 + 3600.0)) {
             estado = 2; logf("[TIEMPOS] FINAL a t=%.0f: aviso, pausa de 8 s y revancha con saque central y reloj a 0", t);
@@ -2188,7 +2226,7 @@ static void __stdcall ayudanteCursor(uint8_t* reg, uint32_t idx, uint8_t* ret, u
     static LONG nTodos = 0, nPt = 0; LONG t = InterlockedIncrement(&nTodos);
     bool pt = (idx == 0 || idx == 11);
     if (viejo == idx) return;
-    long off = (long)(ret - g_exe.base);
+    long off = (long)(ret - g_exe.base); g_ultCursor = (LONG)idx;
     // 0.4.64: el cambio AUTOMÁTICO de cursor (llamadores exe+0x4403D2 = cambio por balón y exe+0x1FB98D2 = cursor inicial del reinicio) nunca debe caer en el portero propio (slot 0):
     // el log mostró «cursor -> portero idx=0 (antes 7/8/10)» desde 0x4403D2 y el portero del jugador quedó jugando de campo. Se cambia por el campista 9 (o se deja el cursor donde estaba si era un campista).
     if (g_cursorSinPtOn && idx == 0 && idxPila && (off == 0x4403D2 || off == 0x1FB98D2) && GetTickCount64() - g_tTrainGlob < 3000) {
@@ -2315,6 +2353,7 @@ std::vector<Feature> g_funciones = {   // orden = orden de arranque (gol_nativo_
     { "celebracion_chica", "La ancla de la celebración del gol se recorta a la cancha chica en el entrenamiento", celChicaInstalar, celChicaQuitar },
     { "ajustes_partido_free", "El menú «Opciones gener.» del entrenamiento libre se puede editar (duración del partido, etc.); el reloj usa esa duración", ajustesPartidoInstalar, ajustesPartidoQuitar },
     { "street_saque_nativo", "Saque central nativo sin gol para el medio tiempo y la revancha (cueva en el reloj + FUN_14050E770)", saqueNativoInstalar, saqueNativoQuitar },
+    { "street_pantalla_descanso", "A 45:00 abre la pantalla real de medio tiempo del flujo (paso 0x22) y al cerrarla hace el saque central del 2.o tiempo (experimental)", descansoInstalar, descansoQuitar },
     { "street_dos_tiempos", "Medio tiempo a 45:00 y final a 90:00 propios del entrenamiento (lee el reloj de pantalla; v1: pausa + aviso)", dosTiemposInstalar, dosTiemposQuitar },
     { "sin_fin_tiempo_free", "El Juez no pita el fin de tiempo (medio tiempo/final) en el entrenamiento libre", sinFinTiempoInstalar, sinFinTiempoQuitar },
     { "reloj_street_free", "El reloj nativo corre en el entrenamiento y se reinicia a los street_minutos", relojInstalar, relojQuitar },
