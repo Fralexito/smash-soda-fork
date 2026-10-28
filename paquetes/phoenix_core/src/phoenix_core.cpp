@@ -133,10 +133,17 @@ int buscar(const Patron& p, uint8_t* ini, size_t tam, uint8_t*& primera, int top
     int n = 0; primera = nullptr;
     const size_t L = p.b.size();
     if (tam < L) return 0;
-    for (size_t i = 0; i + L <= tam; ++i) {
-        size_t k = 0;
-        while (k < L && (!p.m[k] || ini[i + k] == p.b[k])) ++k;
-        if (k == L) { if (!n) primera = ini + i; if (++n >= tope) break; }
+    // 0.4.87: búsqueda rápida: memchr (SIMD) por el primer byte NO comodín y verificación solo en los candidatos (antes cada firma tardaba 2-5 s)
+    size_t f = 0; while (f < L && !p.m[f]) ++f;
+    if (f == L) return 0;
+    const uint8_t primero = p.b[f]; const size_t lim = tam - L + 1;
+    for (size_t i = 0; i < lim; ) {
+        const uint8_t* q = static_cast<const uint8_t*>(memchr(ini + i + f, primero, lim - i));
+        if (!q) break;
+        size_t pos = static_cast<size_t>(q - (ini + f));
+        size_t k = 0; while (k < L && (!p.m[k] || ini[pos + k] == p.b[k])) ++k;
+        if (k == L) { if (!n) primera = ini + pos; if (++n >= tope) break; }
+        i = pos + 1;
     }
     return n;
 }
@@ -2860,7 +2867,12 @@ PHX_API int phx_core_iniciar(const char* carpeta) {
 
     listarSecciones();
     leerConfig();
+    // 0.4.87: primero lo que el menú previo y el HUD necesitan (ajustes_partido_free, marcador, reloj), luego el resto
+    static const char* prioridad[] = { "ajustes_partido_free", "marcador_nativo_free", "reloj_street_free", "orden_jugador_segura", "reinicio_seguro", "cancha_chica_free" };
+    for (const char* pn : prioridad) for (auto& f : g_funciones) if (strcmp(f.id, pn) == 0 && f.deseada) { encender(f); f.estado = f.estado; }
     for (auto& f : g_funciones) {
+        bool yaHecha = false; for (const char* pn : prioridad) if (strcmp(f.id, pn) == 0) yaHecha = true;
+        if (yaHecha && f.deseada) continue;
         if (f.deseada) encender(f);
         else f.estado = g_modoSeguro ? "apagada: modo seguro" : "apagada";
     }
