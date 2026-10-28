@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.64"
+#define PHX_CORE_VERSION "0.4.65"
 
 namespace {
 
@@ -2054,6 +2054,76 @@ bool sinFinTiempoQuitar(Feature&) { g_sinFinOn = 0; ponerParche(g_pdT1, false); 
 // S = [[exe+0x36F3DC8]+0x270]; reloj espejo de 0x30 B en S+0x1168: +0 fase, +4 sub, +0xC float tiempo muerto, +0x10 hash FNV-1a 64, +0x18 contador, +0x1C índice, +0x20..+0x2F cuatro slots de la base. Decodificación (FUN_140A3C070):
 // u = dword[+0x20+(dword[+0x1C]&3)*4], c = dword[+0x18]*3; b[k] = (u8)((u8)(u>>8k) + (u8)((c+4k)>>8k)) ^ (u8)(cc*0x3F); hash FNV-1a 64 sobre b[0..3] debe igualar qword[+0x10]; t = float(b) + float[+0xC].
 // Bandera de seguridad: si la lectura es absurda (hash malo, t<0, t>400000, salto hacia atrás) NO actúa y solo anota. Acciones v1: pausa (pelota quieta en el centro unos segundos) y aviso en street_estado.json (lo lee el Lua); jugadores/cambio de campo: pendiente.
+// --- saque central nativo SIN gol (0.4.65, frente J4 §10; RE estático, sin probar en vivo): el estado de parada es rec = job+0x49C0 (+0 sub: 1 centro; +4 equipo que SACA; +0x20 k: 3 gol, 4 fuera genérico),
+// que rellena FUN_14050E770(judge=job+0x908, equipo, tipo, k, pos, p6, p7, p8). Con k=4 y sub=1 no hay gol ni celebración. Cueva en la entrada de FUN_14044CE80 (corre en el hilo del juego cada tick, RCX=job):
+// si hay un pedido del Core y el job está ocioso, llama a E770(job+0x908, equipo, 1, 4, &centro,0,0,0); la cola nativa que se monta (0F 45 16 12 ..., con fundidos que esperan render) se reescribe a la probada 03 16 12 13 14 15 0E 34 19 1A.
+// Para el FINAL, además se reinicia el reloj: FUN_140A3CBC0(job+0x2790, 0.0f) recifra la base y el float de tiempo muerto (job+0x279C) se pone a 0.
+int g_sacaInicial = 0;   // json street_saca_inicial: equipo que sacó al inicio (0 local, 1 visita); el medio tiempo lo saca el otro
+volatile LONG g_saquePedido = 0, g_saqueEquipo = 1, g_saqueResetReloj = 0, g_saqueFase = 0; volatile ULONGLONG g_saqueT = 0;
+using FnE770 = void (*)(uint8_t*, int, int, int, float*, uint64_t, uint64_t, uint64_t);
+using FnBaseReloj = void (*)(void*, float);
+FnE770 g_e770 = nullptr; FnBaseReloj g_baseReloj = nullptr;
+static void __stdcall ayudanteSaque(uint8_t* job) {
+    if (!g_saquePedido && !g_saqueFase) return;
+    ULONGLONG ahora = GetTickCount64();
+    if (g_saquePedido && !g_saqueFase) {
+        uint32_t rec = 1, c878 = 1, k2794 = 0; uint8_t c8f0 = 1; uint64_t j3b8 = 0;
+        bool ok = leerSeguro(job + 0x49C0, &rec, 4) && leerSeguro(job + 0x878, &c878, 4) && leerSeguro(job + 0x8F0, &c8f0, 1) && leerSeguro(job + 0x2794, &k2794, 4) && leerSeguro(job + 0x908 + 0x3B8, &j3b8, 8);
+        bool ocioso = ok && rec == 0 && c878 == 0 && c8f0 == 0 && k2794 == 1 && j3b8 != 0;
+        if (!ocioso) {
+            if (!g_saqueT) g_saqueT = ahora;
+            if (ahora - g_saqueT > 4000) { logf("[SAQUE] el job no quedó ocioso en 4 s (rec=%u c878=%u c8f0=%u 2794=%u): pedido cancelado", rec, c878, c8f0, k2794); g_saquePedido = 0; g_saqueT = 0; }
+            return;
+        }
+        if (g_saqueResetReloj && g_baseReloj) { g_baseReloj(job + 0x2790, 0.0f); float z = 0.0f; memcpy(job + 0x279C, &z, 4); logf("[SAQUE] reloj reiniciado a 0:00"); }
+        alignas(16) float centro[4] = { 0, 0, 0, 0 };
+        g_e770(job + 0x908, (int)g_saqueEquipo, 1, 4, centro, 0, 0, 0);
+        logf("[SAQUE] saque central pedido: saca el equipo %d (E770 k=4)", (int)g_saqueEquipo);
+        g_saquePedido = 0; g_saqueResetReloj = 0; g_saqueFase = 1; g_saqueT = ahora; return;
+    }
+    if (g_saqueFase == 1) {   // vigilar la cola montada; reescribir si empieza por 0F
+        uint32_t q0 = 0; leerSeguro(job + 0x878, &q0, 4);
+        if (q0 == 0x0F) {
+            static const uint32_t cola[10] = { 0x03, 0x16, 0x12, 0x13, 0x14, 0x15, 0x0E, 0x34, 0x19, 0x1A };
+            uint32_t full[30]; for (int i = 0; i < 30; i++) full[i] = i < 10 ? cola[i] : 0x48;
+            memcpy(job + 0x878, full, sizeof(full)); job[0x8F1] = 10;
+            logf("[SAQUE] cola nativa 0F... sustituida por 03 16 12 13 14 15 0E 34 19 1A"); g_saqueFase = 0; g_saqueT = 0; return;
+        }
+        if (q0 != 0 && ahora - g_saqueT > 200) { logf("[SAQUE] cola montada empieza por 0x%X (no 0F): se deja como está", q0); g_saqueFase = 0; g_saqueT = 0; return; }
+        if (ahora - g_saqueT > 3000) { logf("[SAQUE] no se montó ninguna cola en 3 s"); g_saqueFase = 0; g_saqueT = 0; }
+    }
+}
+bool saqueNativoInstalar(Feature& f) {
+    uint8_t* e = firmaUnica("codigo", "48 8B C4 55 53 41 54 41 56 41 57 48 8D 68 C1 48 81 EC F0 00 00 00 48 83 B9 B8 03 00 00 00 45 8B F1 45 8B F8 44 8B E2 48 8B D9", f.id);
+    uint8_t* r = firmaUnica("codigo", "F3 0F 11 4C 24 10 53 48 83 EC 10 8B 54 24 28 4C 8D 51 10 44 8B 0C 25 08 00 FE 7F", f.id);
+    uint8_t* sitio = firmaUnica("codigo", "40 55 41 56 41 57 48 83 EC 40 48 8D 6C 24 20 48 89 5D 40 48 89 75 48 48 89 7D 50 4C 89 65 58 0F 29 75 10 48 8B 05 ?? ?? ?? ?? 48 33 C5", f.id);
+    if (!e || !sitio) { f.estado = "sin firma de FUN_14050E770 / FUN_14044CE80"; return false; }
+    g_e770 = reinterpret_cast<FnE770>(e); g_baseReloj = reinterpret_cast<FnBaseReloj>(r);
+    const uint8_t esp[10] = { 0x40, 0x55, 0x41, 0x56, 0x41, 0x57, 0x48, 0x83, 0xEC, 0x40 };
+    uint8_t v[10]; if (!leerSeguro(sitio, v, 10) || memcmp(v, esp, 10) != 0) { f.estado = "bytes inesperados en FUN_14044CE80"; return false; }
+    uint8_t* c = reservarCerca(sitio, 192);
+    if (!c) { f.estado = "no hay memoria cerca del exe (saque)"; return false; }
+    size_t o = 0; auto b = [&](std::initializer_list<uint8_t> l) { for (uint8_t x : l) c[o++] = x; };
+    b({ 0x50, 0x51, 0x52, 0x41, 0x50, 0x41, 0x51, 0x41, 0x52, 0x41, 0x53 });
+    b({ 0x55, 0x48, 0x89, 0xE5, 0x48, 0x83, 0xE4, 0xF0, 0x48, 0x83, 0xEC, 0x60 });
+    b({ 0x0F, 0x11, 0x44, 0x24, 0x20, 0x0F, 0x11, 0x4C, 0x24, 0x30, 0x0F, 0x11, 0x54, 0x24, 0x40, 0x0F, 0x11, 0x5C, 0x24, 0x50 });
+    b({ 0x48, 0xB8 }); { uint64_t h = reinterpret_cast<uint64_t>(&ayudanteSaque); memcpy(c + o, &h, 8); o += 8; }
+    b({ 0xFF, 0xD0 });
+    b({ 0x0F, 0x10, 0x44, 0x24, 0x20, 0x0F, 0x10, 0x4C, 0x24, 0x30, 0x0F, 0x10, 0x54, 0x24, 0x40, 0x0F, 0x10, 0x5C, 0x24, 0x50 });
+    b({ 0x48, 0x89, 0xEC, 0x5D });
+    b({ 0x41, 0x5B, 0x41, 0x5A, 0x41, 0x59, 0x41, 0x58, 0x5A, 0x59, 0x58 });
+    b({ 0x40, 0x55, 0x41, 0x56, 0x41, 0x57, 0x48, 0x83, 0xEC, 0x40 });
+    size_t jb = o; b({ 0xE9, 0, 0, 0, 0 });
+    if (!escribirRel32(c + jb, 0xE9, c + jb, sitio + 10)) { f.estado = "cueva fuera de alcance (saque)"; return false; }
+    FlushInstructionCache(GetCurrentProcess(), c, 192);
+    Parche p; p.dir = sitio; p.original.assign(sitio, sitio + 10); p.nuevo.assign(10, 0x90);
+    if (!escribirRel32(p.nuevo.data(), 0xE9, sitio, c)) { f.estado = "cueva fuera de alcance (saque salto)"; return false; }
+    if (!aplicarParche(p, f.id)) { f.estado = "no se pudo escribir el salto (saque)"; return false; }
+    f.parches.push_back(p);
+    char sbuf[160]; sprintf_s(sbuf, "ok: saque central nativo sin gol disponible (E770 exe+0x%llX, cueva en el reloj exe+0x%llX)%s", (unsigned long long)(e - g_exe.base), (unsigned long long)(sitio - g_exe.base), r ? "" : " · sin reinicio de reloj"); f.estado = sbuf; return true;
+}
+bool saqueNativoQuitar(Feature&) { g_saquePedido = 0; return true; }
+
 volatile LONG g_dosTiemposOn = 0; HANDLE g_hiloDosTiempos = nullptr;
 static bool leerRelojPantalla(double* tOut) {
     uint8_t* raiz = nullptr; uint8_t* S = nullptr;
@@ -2075,7 +2145,7 @@ static void escribirEstadoStreet(const char* evento, double t) {
     FILE* f = nullptr; if (fopen_s(&f, (g_carpeta + "street_estado.json").c_str(), "wb") == 0 && f) { fputs(b, f); fclose(f); }
 }
 DWORD WINAPI hiloDosTiempos(LPVOID) {
-    double prev = -1; int estado = 0; ULONGLONG tLog = 0; LONG malas = 0;
+    double prev = -1; int estado = 0; ULONGLONG tLog = 0; LONG malas = 0; ULONGLONG tFinal = 0;
     while (g_dosTiemposOn) {
         Sleep(50);
         if (!trainingWorkEstable()) { continue; }
@@ -2083,12 +2153,17 @@ DWORD WINAPI hiloDosTiempos(LPVOID) {
         if (GetTickCount64() - tLog > 5000) { tLog = GetTickCount64(); logf("[TIEMPOS] t=%.0f (pantalla %d:%02d) estado=%d", t, (int)(t / 3600.0) + ((int)t % 3600 ? 1 : 0), (int)(t / 60.0) % 60, estado); }
         if (prev >= 0 && t < prev - 200.0) { logf("[TIEMPOS] el reloj saltó hacia atrás (%.0f -> %.0f): reinicio la máquina de estados, no actúo", prev, t); estado = 0; prev = t; continue; }
         if (estado == 0 && t >= 162000.0 && (prev < 0 || prev < 162000.0 + 3600.0)) {
-            estado = 1; logf("[TIEMPOS] MEDIO TIEMPO a t=%.0f: pelota al centro 6 s y aviso", t);
-            g_bolaCentroHasta = GetTickCount64() + 6000; escribirEstadoStreet("medio_tiempo", t);
+            estado = 1; logf("[TIEMPOS] MEDIO TIEMPO a t=%.0f: aviso y %s", t, g_e770 ? "saque central nativo del rival" : "pelota al centro 6 s");
+            escribirEstadoStreet("medio_tiempo", t);
+            if (g_e770) { g_saqueEquipo = g_sacaInicial ? 0 : 1; g_saqueResetReloj = 0; g_saqueT = 0; g_saquePedido = 1; } else g_bolaCentroHasta = GetTickCount64() + 6000;
         }
         if (estado == 1 && t >= 324000.0 && (prev < 0 || prev < 324000.0 + 3600.0)) {
-            estado = 2; logf("[TIEMPOS] FINAL a t=%.0f: pelota al centro 10 s y aviso", t);
-            g_bolaCentroHasta = GetTickCount64() + 10000; escribirEstadoStreet("final", t);
+            estado = 2; logf("[TIEMPOS] FINAL a t=%.0f: aviso, pausa de 8 s y revancha con saque central y reloj a 0", t);
+            g_bolaCentroHasta = GetTickCount64() + 8000; escribirEstadoStreet("final", t); tFinal = GetTickCount64() + 8000;
+        }
+        if (estado == 2 && tFinal && GetTickCount64() >= tFinal) {
+            tFinal = 0;
+            if (g_e770) { g_saqueEquipo = g_sacaInicial ? 1 : 0; g_saqueResetReloj = 1; g_saqueT = 0; g_saquePedido = 1; estado = 0; prev = -1; logf("[TIEMPOS] revancha pedida (reloj a 0:00); el marcador NO se reinicia todavía"); }
         }
         prev = t;
     }
@@ -2239,6 +2314,7 @@ std::vector<Feature> g_funciones = {   // orden = orden de arranque (gol_nativo_
     { "marcador_nativo_free", "El marcador y el reloj nativos del partido se muestran en el entrenamiento (parche de 1 byte en el HUD)", marcadorNativoInstalar, marcadorNativoQuitar },
     { "celebracion_chica", "La ancla de la celebración del gol se recorta a la cancha chica en el entrenamiento", celChicaInstalar, celChicaQuitar },
     { "ajustes_partido_free", "El menú «Opciones gener.» del entrenamiento libre se puede editar (duración del partido, etc.); el reloj usa esa duración", ajustesPartidoInstalar, ajustesPartidoQuitar },
+    { "street_saque_nativo", "Saque central nativo sin gol para el medio tiempo y la revancha (cueva en el reloj + FUN_14050E770)", saqueNativoInstalar, saqueNativoQuitar },
     { "street_dos_tiempos", "Medio tiempo a 45:00 y final a 90:00 propios del entrenamiento (lee el reloj de pantalla; v1: pausa + aviso)", dosTiemposInstalar, dosTiemposQuitar },
     { "sin_fin_tiempo_free", "El Juez no pita el fin de tiempo (medio tiempo/final) en el entrenamiento libre", sinFinTiempoInstalar, sinFinTiempoQuitar },
     { "reloj_street_free", "El reloj nativo corre en el entrenamiento y se reinicia a los street_minutos", relojInstalar, relojQuitar },
