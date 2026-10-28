@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.89"
+#define PHX_CORE_VERSION "0.4.90"
 
 namespace {
 
