@@ -1646,6 +1646,12 @@ uint64_t ganchoBolaPaso(float dt, uint64_t rdx, uint64_t r8, float* S, void* cfg
     float v0x = S[3], v0y = S[4], v0z = S[5];
     uint64_t r = g_bolaPasoOrig(dt, rdx, r8, S, cfg, flag);
     bool fueTiro = false;
+    if (GetTickCount64() - g_tTrainRed < 3000) {   // 0.4.93 [ARQUERO]: golpes de balón dentro de los 3 m de la línea de gol (portero): anota velocidad, dirección y posición para ver si «despeja» (GKClear/GKPassLong ya están anulados por arquero_saque_corto)
+        float sp0 = sqrtf(v0x * v0x + v0y * v0y + v0z * v0z), sp1 = sqrtf(S[3] * S[3] + S[4] * S[4] + S[5] * S[5]);
+        if (sp1 - sp0 > 5.0f && sp1 >= 7.0f && fabsf(S[0]) >= (float)g_canchaLargo - 3.0f && fabsf(S[0]) < (float)g_canchaLargo) {
+            static LONG nA = 0; LONG n = InterlockedIncrement(&nA); if (n <= 80) logf("[ARQUERO] golpe junto a la línea de gol #%ld v %.1f->%.1f vel (%.1f,%.1f,%.1f) pos (%.1f,%.1f,%.1f) hacia %s", (long)n, sp0, sp1, S[3], S[4], S[5], S[0], S[1], S[2], (S[3] * S[0] < 0) ? "el centro" : "su línea de gol");
+        }
+    }
     if (g_paseOn && GetTickCount64() - g_tTrainRed < 3000 && !g_bolaCentroHasta) {   // 0.4.93 «pase_rapido_preciso»: pase = salto de velocidad en un paso a 7..16 m/s; se escala lo horizontal y se gira hacia el compañero mejor alineado dentro de un cono
         float sp0 = sqrtf(v0x * v0x + v0y * v0y + v0z * v0z), sp1 = sqrtf(S[3] * S[3] + S[4] * S[4] + S[5] * S[5]);
         bool centro = fabsf(S[0]) < 1.2f && fabsf(S[2]) < 1.2f;
