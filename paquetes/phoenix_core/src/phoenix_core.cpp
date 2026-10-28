@@ -2139,9 +2139,43 @@ DWORD WINAPI hiloStatsSonda(LPVOID) {
     }
     return 0;
 }
+// 0.4.92: la ruta del frente Q no valió (los manejadores empotrados no llevan el bloque). Escáner INTERNO y de solo lectura: con TrainingWork estable 40 s busca en la memoria privada RW del propio proceso el bloque de habilidades por su firma
+// (18 bytes 40..99, 1 byte 0..3, 7 bytes 40..99 seguidos; k19..44 del frente Q) y vuelca al log hasta 60 aciertos con dirección y 0x60 bytes. Una sola pasada por sesión de entrenamiento; ningún escritor ni depurador.
+DWORD WINAPI hiloStatsEscaner(LPVOID) {
+    ULONGLONG tEstable = 0; bool hecho = false;
+    while (g_statsSondaOn) {
+        Sleep(1000);
+        if (!trainingWorkEstable()) { tEstable = 0; hecho = false; continue; }
+        if (!tEstable) tEstable = GetTickCount64();
+        if (hecho || GetTickCount64() - tEstable < 40000) continue;
+        hecho = true; ULONGLONG t0 = GetTickCount64(); int hits = 0; uint64_t bytes = 0;
+        SYSTEM_INFO si; GetSystemInfo(&si); uint8_t* p = (uint8_t*)si.lpMinimumApplicationAddress; uint8_t* fin = (uint8_t*)si.lpMaximumApplicationAddress;
+        std::vector<uint8_t> buf(1 << 20);
+        while (p < fin && g_statsSondaOn) {
+            MEMORY_BASIC_INFORMATION mbi; if (!VirtualQuery(p, &mbi, sizeof(mbi))) break;
+            uint8_t* base = (uint8_t*)mbi.BaseAddress; size_t sz = mbi.RegionSize; p = base + sz;
+            if (mbi.State != MEM_COMMIT || mbi.Type != MEM_PRIVATE || mbi.Protect != PAGE_READWRITE) continue;
+            for (size_t off = 0; off < sz && g_statsSondaOn; off += buf.size() - 64) {
+                size_t n = (sz - off < buf.size()) ? sz - off : buf.size(); if (n < 64) break;
+                if (!leerSeguro(base + off, buf.data(), n)) continue; bytes += n;
+                for (size_t i = 0; i + 26 <= n; i++) {
+                    const uint8_t* b = buf.data() + i; if (b[0] < 40 || b[0] > 99 || b[18] > 3) continue;
+                    bool ok = true; for (int k = 0; k < 18 && ok; k++) ok = b[k] >= 40 && b[k] <= 99; for (int k = 19; k < 26 && ok; k++) ok = b[k] >= 40 && b[k] <= 99;
+                    if (!ok) continue;
+                    int dist = 0; bool vis[256] = {}; for (int k = 0; k < 26; k++) if (!vis[b[k]]) { vis[b[k]] = true; dist++; }
+                    if (dist < 6) continue;
+                    if (++hits <= 60) { char hx[200]; int m = 0; for (int k = 0; k < 0x30 && i + k < n; k++) m += sprintf_s(hx + m, sizeof(hx) - m, "%02X ", b[k]); logf("[STATS_SCAN] hit #%d @%p (+0x%zX de la región): %s", hits, base + off + i, (size_t)(off + i), hx); }
+                }
+                if (off + n >= sz) break;
+            }
+        }
+        logf("[STATS_SCAN] fin: %d aciertos, %.0f MB leídos en %llu ms", hits, bytes / 1048576.0, (unsigned long long)(GetTickCount64() - t0));
+    }
+    return 0;
+}
 bool statsSondaInstalar(Feature& f) {
     if (!g_globalPartido && !resolverGlobalPartido(f.id)) { f.estado = "sin firma del global del partido"; return false; }
-    g_statsSondaOn = 1; g_hiloStatsSonda = CreateThread(nullptr, 0, hiloStatsSonda, nullptr, 0, nullptr);
+    g_statsSondaOn = 1; g_hiloStatsSonda = CreateThread(nullptr, 0, hiloStatsEscaner, nullptr, 0, nullptr);
     if (!g_hiloStatsSonda) { g_statsSondaOn = 0; f.estado = "no se pudo crear el hilo"; return false; }
     f.estado = "ok: solo lectura, anota las stats de los 22 jugadores (6 rondas por partido)"; return true;
 }
@@ -2482,6 +2516,7 @@ static void vigilarCondiciones() {
     static ULONGLONG t = 0; static uint32_t ult[4] = { 9, 9, 9, 9 }; ULONGLONG ah = GetTickCount64(); if (ah - t < 1000) return; t = ah;
     uint8_t *a = nullptr, *c = nullptr; if (!leerSeguro(g_exe.base + 0x3705E10, &a, 8) || !a || !leerSeguro(a + 0x50, &c, 8) || !c) return;
     uint32_t v[4]; if (!leerSeguro(c + 0x35960, v, 16)) return;
+    { static ULONGLONG t30 = 0; if (GetTickCount64() - t30 > 30000 && GetTickCount64() - g_tTrainGlob < 3000) { t30 = GetTickCount64(); logf("[CONDICIONES] (cada 30 s) stadium=%u timeofday=%u weather=%u season=%u", v[0], v[1], v[2], v[3]); } }   // 0.4.91: traza periódica para atribuir el fondo blanco
     if (memcmp(v, ult, 16) != 0) { logf("[CONDICIONES] stadium=%u timeofday=%u weather=%u season=%u (forzada=%d)", v[0], v[1], v[2], v[3], g_seasonCore); memcpy(ult, v, 16); }
     if (g_seasonCore >= 0 && g_seasonCore <= 3 && v[3] <= 3 && v[3] != (uint32_t)g_seasonCore && GetTickCount64() - g_tTrainGlob < 3000) {
         uint32_t nv = (uint32_t)g_seasonCore; memcpy(c + 0x35960 + 12, &nv, 4); logf("[CONDICIONES] season %u -> %u reescrita (tras el flujo del descanso)", v[3], nv);
