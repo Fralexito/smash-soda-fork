@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.63"
+#define PHX_CORE_VERSION "0.4.64"
 
 namespace {
 
@@ -2107,12 +2107,21 @@ bool relojQuitar(Feature&) { g_relojOn = 0; ponerParche(g_pdR1, false); ponerPar
 
 // --- cursor_pt_log (0.4.61, frente L): SOLO LECTURA. FUN_140A571B0 (RVA 0xA571B0) = setControlado(reg, idx): `if (reg[+0x20] != idx) { reg[+0x28]=reg[+0x20]; reg[+0x20]=idx; reg[+0x38]=0; }`. Cueva que roba los 5 B
 // `8B 41 20 3B C2` (mov eax,[rcx+0x20]; cmp eax,edx) y anota (idx nuevo, idx viejo, dirección de retorno del llamador) cuando el cursor pasa al portero (idx 0 u 11) y las primeras 40 llamadas, para saber QUIÉN pone el cursor en el portero propio.
-static void __stdcall ayudanteCursor(uint8_t* reg, uint32_t idx, uint8_t* ret) {
+volatile LONG g_cursorSinPtOn = 0, g_cursorCambiados = 0;
+static void __stdcall ayudanteCursor(uint8_t* reg, uint32_t idx, uint8_t* ret, uint32_t* idxPila) {
     uint32_t viejo = 0xFFFFFFFF; leerSeguro(reg + 0x20, &viejo, 4);
     static LONG nTodos = 0, nPt = 0; LONG t = InterlockedIncrement(&nTodos);
     bool pt = (idx == 0 || idx == 11);
     if (viejo == idx) return;
     long off = (long)(ret - g_exe.base);
+    // 0.4.64: el cambio AUTOMÁTICO de cursor (llamadores exe+0x4403D2 = cambio por balón y exe+0x1FB98D2 = cursor inicial del reinicio) nunca debe caer en el portero propio (slot 0):
+    // el log mostró «cursor -> portero idx=0 (antes 7/8/10)» desde 0x4403D2 y el portero del jugador quedó jugando de campo. Se cambia por el campista 9 (o se deja el cursor donde estaba si era un campista).
+    if (g_cursorSinPtOn && idx == 0 && idxPila && (off == 0x4403D2 || off == 0x1FB98D2) && GetTickCount64() - g_tTrainGlob < 3000) {
+        uint32_t nuevo = (viejo >= 1 && viejo <= 10) ? viejo : 9u;
+        *idxPila = nuevo; LONG n = InterlockedIncrement(&g_cursorCambiados);
+        if (n <= 40) logf("[CURSOR_PT] cursor al portero desde exe+0x%lX EVITADO: se queda en idx=%u (antes %u) #%ld", off, nuevo, viejo, (long)n);
+        return;
+    }
     if (pt) { LONG k = InterlockedIncrement(&nPt); if (k <= 300) logf("[CURSOR_PT] cursor -> portero idx=%u (antes %u) llamador=exe+0x%lX train=%d", idx, viejo, off, (int)(GetTickCount64() - g_tTrainGlob < 3000)); }
     else if (t <= 40) logf("[CURSOR_PT] cursor -> idx=%u (antes %u) llamador=exe+0x%lX", idx, viejo, off);
 }
@@ -2124,6 +2133,7 @@ bool cursorPtLogInstalar(Feature& f) {
     size_t o = 0; auto b = [&](std::initializer_list<uint8_t> l) { for (uint8_t x : l) c[o++] = x; };
     b({ 0x50, 0x51, 0x52, 0x41, 0x50, 0x41, 0x51, 0x41, 0x52, 0x41, 0x53 });   // push rax,rcx,rdx,r8,r9,r10,r11 (7 = 56 B)
     b({ 0x4C, 0x8B, 0x44, 0x24, 0x38 });             // mov r8,[rsp+56] = dirección de retorno del llamador
+    b({ 0x4C, 0x8D, 0x4C, 0x24, 0x20 });             // lea r9,[rsp+32] = dónde quedó guardado rdx (idx): el ayudante puede cambiarlo
     b({ 0x55, 0x48, 0x89, 0xE5, 0x48, 0x83, 0xE4, 0xF0, 0x48, 0x83, 0xEC, 0x20 });
     b({ 0x48, 0xB8 }); { uint64_t h = reinterpret_cast<uint64_t>(&ayudanteCursor); memcpy(c + o, &h, 8); o += 8; }   // mov rax,helper (rcx=reg, edx=idx, r8=ret ya puestos)
     b({ 0xFF, 0xD0 });
@@ -2136,8 +2146,8 @@ bool cursorPtLogInstalar(Feature& f) {
     Parche p; p.dir = sitio; p.original.assign(sitio, sitio + 5); p.nuevo.resize(5);
     if (!escribirRel32(p.nuevo.data(), 0xE9, sitio, c)) { f.estado = "cueva fuera de alcance (cursor_pt_log salto)"; return false; }
     if (!aplicarParche(p, f.id)) { f.estado = "no se pudo escribir el salto (cursor_pt_log)"; return false; }
-    f.parches.push_back(p);
-    char sbuf[140]; sprintf_s(sbuf, "ok: anota quién pone el cursor en el portero (exe+0x%llX, solo lectura)", (unsigned long long)(sitio - g_exe.base)); f.estado = sbuf; return true;
+    f.parches.push_back(p); g_cursorSinPtOn = 1; asegurarHiloTrain();
+    char sbuf[140]; sprintf_s(sbuf, "ok: el cursor automático no cae en el portero propio y anota quién lo mueve (exe+0x%llX)", (unsigned long long)(sitio - g_exe.base)); f.estado = sbuf; return true;
 }
 bool cursorPtLogQuitar(Feature&) { return true; }
 
