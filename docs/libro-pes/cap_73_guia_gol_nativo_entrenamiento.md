@@ -232,3 +232,9 @@ Flags del estado estable: `muros_core` (`muro_x` 15,0, `muro_z` 10,0), `cancha_p
 2. Mi bloqueo del cursor de 0.4.64 (`cursor_bloqueo_pt`, ahora apagado por defecto) impedía seleccionar al portero: el gancho `FUN_140A571B0` con llamador `exe+0x4403D2` sirve tanto al cambio automático como al manual.
 **Cómo se encontró:** `cursor_pt_log` (cueva solo lectura en `FUN_140A571B0`) mostró que el cursor sí iba al portero desde `0x4403D2` y `0x1FB98D2`, pero evitarlo no arregló nada; el análisis estático del frente L (§9) halló la rama por equipo y el log `[PORTERO_RAMA]` la confirmó.
 **Errores:** la prueba con R1 apagado quedó confundida por el bloqueo del cursor (Fralex: «no me deja ni seleccionar»); lección: aislar UNA variable por prueba. También `arquero_salida_max` volvió a 3.5.
+
+## 26. Regla de Fralex: la configuración del portero queda CONGELADA (28-oct-2026)
+«Que no vuelva a descuadrarse la configuración del arquero.» Referencia = Core 0.4.68 (`street_estable_0468`, §25): arquero_rama_normal=true, cursor_bloqueo_pt=false, arquero_salida_max=3.5, arquero_propio_cursor=true (+ «Cursor de PT fijo = Sí» en el menú), arquero_salida_corta, arquero_saque_corto, sin_despeje_emergencia.
+- Cada versión nueva: no tocar ninguna bandera ni parche del portero propio salvo pedido expreso; comparar el json del portero con street_estable_0468 antes de instalar y avisar si algo difiere; una sola variable por prueba.
+- Frente M (portero que despeja tras el pase atrás, AMBOS bandos cuando lo maneja la IA): cambiar SOLO la decisión de despeje (pase corto a un compañero); no la posición ni el cursor. Si Fralex controla al portero, decide él.
+- Frente N (formación inicial): excluir los slots de portero (0 y 11/21).
