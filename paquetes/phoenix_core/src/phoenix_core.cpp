@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.88"
+#define PHX_CORE_VERSION "0.4.89"
 
 namespace {
 
@@ -2242,7 +2242,7 @@ volatile LONG g_saquePedido = 0, g_saqueEquipo = 1, g_saqueResetReloj = 0, g_saq
 // hipótesis) o a los 120 s como último recurso; entonces se limpia la cola y se pide el saque central nativo (que hace la fase 2->3). NO tocar «cambios» (plan) en esta prueba: puede colgar con el banquillo vacío.
 // 0.4.81 (J5 §señal): ProcessMatchPostHalfTime::update (FUN_1412F7500, vf+0xC0; void(this)) corre por tick mientras ese proceso está activo, o sea cuando el menú de descanso se cerró y el flujo pasa a MatchPostHalfTime («proceed»).
 // Gancho (crearDesvio 14 B): si lo armamos nosotros al encolar [0x22] y la instancia es PostHalfTime (vtable exe+0x28CCCB8), se marca g_menuCerrado. El Core lanza entonces el saque central. Sin gancho queda el límite de 120 s.
-bool g_descansoFase3 = true;   // 0.4.87: por defecto true (el 2.º tiempo arrancaba en 0:01); json «descanso_fase3»: true = el 2.º tiempo se escribe en fase 3 con base 0 (HUD 45:00-90:00 sin +N); false (por defecto) = se restaura la fase anterior (0.4.82)
+bool g_descansoFase3 = false;   // 0.4.89: por defecto false otra vez (con true en 0.4.87: cierre al volver al menú y marcador dudoso); json «descanso_fase3»: true = el 2.º tiempo se escribe en fase 3 con base 0 (HUD 45:00-90:00 sin +N); false (por defecto) = se restaura la fase anterior (0.4.82)
 volatile LONG g_menuArmado = 0, g_menuCerrado = 0; volatile uint32_t g_faseAntesDescanso = 1; void (*g_postHalfOrig)(void*) = nullptr;
 // 0.4.86 (J5): MatchPreHalfTime::update (FUN_1413090F0) espera el byte [obj+0x290] (obj = *(u64*)([exe+0x3705E10]+0x58)); lo pone a 1 el mensaje 0x105001B del paso de cola 0x25, que nuestra cola [0x22,0x48] no ejecuta: por eso el flujo quedaba en PreHalfTime.
 // Con el menú armado se pone ese byte a 1 (el update lo baja a 0 y emite «proceed» hacia MatchHalfTime = menú nativo). Y en ProcessMatchPostHalfTime::update se ponen +0x89=1, +0x8A=0 para que emita «proceed» hacia MatchIdle.
@@ -2478,11 +2478,19 @@ static void vigilarCondiciones() {
     }
 }
 DWORD WINAPI hiloDosTiempos(LPVOID) {
-    double prev = -1; int estado = 0; ULONGLONG tLog = 0; LONG malas = 0; ULONGLONG tFinal = 0; bool pendMedio = false;
+    double prev = -1; int estado = 0; ULONGLONG tLog = 0; LONG malas = 0; ULONGLONG tFinal = 0; bool pendMedio = false, enTW = false;
     while (g_dosTiemposOn) {
         Sleep(50);
         vigilarCondiciones();
-        if (!trainingWorkEstable()) { continue; }
+        if (!trainingWorkEstable()) {
+            if (enTW) {   // 0.4.89: al salir del entrenamiento con la fase 3 escrita a mano, se devuelve a 1 antes de que el juego destruya la escena (candidata del cierre exe+0xB7AAA al volver al menú)
+                enTW = false;
+                if (g_descansoFase3) { uint8_t* rz = nullptr; uint8_t* Sx = nullptr; uint32_t f = 0;
+                    if (leerSeguro(g_globalPartido, &rz, 8) && rz && leerSeguro(rz + 0x270, &Sx, 8) && Sx && leerSeguro(Sx + 0x1168, &f, 4) && f == 3) { uint32_t f1 = 1; memcpy(Sx + 0x1168, &f1, 4); logf("[TIEMPOS] salida del entrenamiento: fase 3 -> 1"); } }
+            }
+            continue;
+        }
+        enTW = true;
         uint32_t faseP = 0; { uint8_t* rz = nullptr; uint8_t* Sx = nullptr; if (leerSeguro(g_globalPartido, &rz, 8) && rz && leerSeguro(rz + 0x270, &Sx, 8) && Sx) leerSeguro(Sx + 0x1168, &faseP, 4); }
         double t = 0; if (!leerRelojPantalla(&t)) { if (++malas == 1 || malas % 400 == 0) logf("[TIEMPOS] lectura del reloj no válida (#%ld): no actúo", (long)malas); continue; }
         if (GetTickCount64() - tLog > 5000) { tLog = GetTickCount64(); logf("[TIEMPOS] t=%.0f (pantalla %d:%02d) estado=%d", t, (int)(t / 3600.0) + ((int)t % 3600 ? 1 : 0), (int)(t / 60.0) % 60, estado); }
