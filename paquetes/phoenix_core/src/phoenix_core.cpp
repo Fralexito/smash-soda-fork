@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.59"
+#define PHX_CORE_VERSION "0.4.60"
 
 namespace {
 
@@ -1966,7 +1966,13 @@ bool celChicaQuitar(Feature&) {
 // --- reloj_street_free (0.4.57, RE del frente J §2.5): el reloj del partido es una estructura en S+0x1168 (S = [raíz+0x270]): +0 fase, +4 sub-fase (1 en juego), +0xC float «transcurrido» (S+0x1174; 60 unidades = 1 s,
 // escritura plana sin protección) y una base protegida por hash (NO se toca). El HUD (match2D::Screen::Time) muestra base + float. En el entrenamiento la función del reloj (FUN_14044CE80) sale si TrainingWork está activo, así que
 // el reloj queda en 0:00. El Core, desde un hilo, suma 60·dt a S+0x1174 mientras la sub-fase es 1 (en juego) y reinicia a 0 al llegar a «street_minutos» (json, por defecto 5): nunca se alcanzan los 45:00 del fin de tiempo.
-volatile LONG g_relojOn = 0; HANDLE g_hiloReloj = nullptr; double g_streetMinutos = 5.0; ParcheDisp g_pdR1, g_pdR1b; bool g_relojNativo = false;
+volatile LONG g_relojOn = 0; HANDLE g_hiloReloj = nullptr; double g_streetMinutos = 5.0; ParcheDisp g_pdR1, g_pdR1b; bool g_relojNativo = false; volatile LONG g_usaDuracion = 0; uint8_t* g_cfgDuracionGlob = nullptr;
+// Duración elegida en «Opciones gener.» (frente J2): byte de minutos en S_cfg+0x1C, S_cfg = *(*(exe+0x3705E10)+0x50)+0x35960 (valores 5-15, 20, 25, 30). Devuelve 0 si no se puede leer.
+static int duracionElegida() {
+    uint8_t *a = nullptr, *b = nullptr; uint8_t m = 0;
+    if (!g_cfgDuracionGlob || !leerSeguro(g_cfgDuracionGlob, &a, 8) || !a || !leerSeguro(a + 0x50, &b, 8) || !b || !leerSeguro(b + 0x35960 + 0x1C, &m, 1)) return 0;
+    return (m >= 5 && m <= 30) ? (int)m : 0;
+}
 DWORD WINAPI hiloReloj(LPVOID) {
     LARGE_INTEGER fq, t0; QueryPerformanceFrequency(&fq); QueryPerformanceCounter(&t0); LONG vueltas = 0;
     while (g_relojOn) {
@@ -1981,7 +1987,8 @@ DWORD WINAPI hiloReloj(LPVOID) {
         if (!leerSeguro(S + 0x116C, &sub, 4) || !leerSeguro(S + 0x1168, &fase, 4) || !leerSeguro(S + 0x1174, &f, 4) || !(f >= 0.0f) || f > 1.0e6f) continue;
         if (GetTickCount64() - tLog > 5000) { tLog = GetTickCount64(); uint32_t reg = 0; leerSeguro(S + 0x11B0, &reg, 4); logf("[RELOJ] fase=%u sub=%u transcurrido=%.0f (=%.1f s) S+0x11B0=0x%08X", fase, sub, f, f / 60.0f, reg); }
         if (!g_relojNativo) f += (float)(60.0 * dt);   // con R1 el juego ya lo avanza; el Core solo lo reinicia al llegar a street_minutos
-        if (f >= (float)(g_streetMinutos * 60.0 * 60.0)) { f = 0.0f; logf("[RELOJ] fin de los %.1f min: el reloj vuelve a 0 (vuelta %ld)", g_streetMinutos, (long)++vueltas); }
+        double lim = g_streetMinutos; int dm = g_usaDuracion ? duracionElegida() : 0; if (dm) lim = dm;
+        if (f >= (float)(lim * 60.0 * 60.0)) { f = 0.0f; logf("[RELOJ] fin de los %.1f min (%s): el reloj vuelve a 0 (vuelta %ld)", lim, dm ? "duración del menú" : "street_minutos", (long)++vueltas); }
         if (!g_relojNativo || f == 0.0f) memcpy(S + 0x1174, &f, 4);
     }
     return 0;
@@ -1999,6 +2006,17 @@ bool relojInstalar(Feature& f) {
     if (!g_hiloReloj) { g_relojOn = 0; f.estado = "no se pudo crear el hilo del reloj"; return false; }
     char b[140]; sprintf_s(b, "ok: el reloj nativo corre en el entrenamiento y reinicia a los %.1f min (escribe S+0x1174)", g_streetMinutos); f.estado = b; return true;
 }
+// --- ajustes_partido_free (0.4.60, frente J2): el menú «Opciones gener.» (menu::MatchGeneralSettings) sale gris en el modo 52 porque FUN_140AA90A0 compara modo==0x34 y pone [rsp+0x24]=0 (RVA 0xAA9261, `40 88 7C 24 24`),
+// lo que acaba en MatchMenu+0x188=1. NOP de esos 5 bytes: filas 0..7 (nivel, duración, prórroga, pen., sustituciones, forma, lesiones) editables y guardadas. Reversible.
+ParcheN g_pnAJ;
+bool ajustesPartidoInstalar(Feature& f) {
+    if (!localizarParcheN(g_pnAJ, "83 FD 34 75 09 40 88 7C 24 24 33 C9 EB ?? E8 ?? ?? ?? ?? 84 C0 75 ?? 40 88 BB 87 01 00 00", 5, { 0x40, 0x88, 0x7C, 0x24, 0x24 }, { 0x0F, 0x1F, 0x44, 0x00, 0x00 }, f.id)) { f.estado = "sin firma/byte inesperado en FUN_140AA90A0 (grises del menú de ajustes)"; return false; }
+    ponerParcheN(g_pnAJ, true);
+    g_cfgDuracionGlob = g_exe.base + 0x3705E10; g_usaDuracion = 1;   // RVA fija del exe v1.1.0.0 (frente J2)
+    f.estado = g_pnAJ.puesto ? "ok: el menú «Opciones gener.» del entrenamiento ya no sale gris (parche de 5 bytes en FUN_140AA90A0)" : "no se pudo escribir el parche del menú";
+    return g_pnAJ.puesto;
+}
+bool ajustesPartidoQuitar(Feature&) { g_usaDuracion = 0; ponerParcheN(g_pnAJ, false); return true; }
 bool relojQuitar(Feature&) { g_relojOn = 0; ponerParche(g_pdR1, false); ponerParche(g_pdR1b, false); g_relojNativo = false; if (g_hiloReloj) { WaitForSingleObject(g_hiloReloj, 2000); CloseHandle(g_hiloReloj); g_hiloReloj = nullptr; } return true; }
 
 const char* kFirmaReinicio = "48 8B C4 53 41 57 48 83 EC 78 48 89 70 E8";
@@ -2087,6 +2105,7 @@ std::vector<Feature> g_funciones = {   // orden = orden de arranque (gol_nativo_
     { "reinicio_seguro", "Red de seguridad: si la posición de reinicio del balón recibe una clave nula, usa la rama por defecto en vez de cerrar el juego", reinicioSeguroInstalar, reinicioSeguroQuitar },
     { "marcador_nativo_free", "El marcador y el reloj nativos del partido se muestran en el entrenamiento (parche de 1 byte en el HUD)", marcadorNativoInstalar, marcadorNativoQuitar },
     { "celebracion_chica", "La ancla de la celebración del gol se recorta a la cancha chica en el entrenamiento", celChicaInstalar, celChicaQuitar },
+    { "ajustes_partido_free", "El menú «Opciones gener.» del entrenamiento libre se puede editar (duración del partido, etc.); el reloj usa esa duración", ajustesPartidoInstalar, ajustesPartidoQuitar },
     { "reloj_street_free", "El reloj nativo corre en el entrenamiento y se reinicia a los street_minutos", relojInstalar, relojQuitar },
     { "jugadores_chica_free", "Escala a la cancha chica las posiciones de reinicio de los jugadores (entrenamiento)", jugChInstalar, jugChQuitar },
     { "suplentes_ocultos_free", "Aparca a los suplentes de la banda lejos (entrenamiento)", supOcultosInstalar, supOcultosQuitar },
