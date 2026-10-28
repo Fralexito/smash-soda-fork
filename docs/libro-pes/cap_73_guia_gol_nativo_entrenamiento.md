@@ -214,3 +214,13 @@ Flags del estado estable: `muros_core` (`muro_x` 15,0, `muro_z` 10,0), `cancha_p
 
 **Errores/lecciones:** (a) la lectura viva falló: en la escena del gol [raíz+0x270]=0, no hay estado legible; (b) un parche que arregla «a veces» no es la causa: medir con el log (S+0x11B0) antes de repetir; (c) el RE estático por subagente + AOB únicas resolvió lo que 2 iteraciones a ciegas no.
 **A tener en cuenta:** la velocidad del reloj la fija el juego según la duración (no medida); el HUD ahora se ve también en celebración; sin pantalla de fin de tiempo. Informes: frente_J2_barra_ajustes.md, frente_J3_hud_desaparece.md.
+
+## 24. Decisión de diseño: formatos de partido del modo street (28-oct-2026, Fralex) — PENDIENTE DE IMPLEMENTAR
+**Pedido de Fralex:** cuatro formatos seleccionables, con el reloj SIEMPRE al ritmo nativo (45:00 de pantalla = la duración del menú; no se fuerza M=45):
+1. `dos_tiempos`: medio tiempo a 45:00 (pausa corta, saque central del rival), final a 90:00 con resultado.
+2. `un_tiempo`: final a 45:00.
+3. `goles`: gana el primero en llegar a `street_goles` (por defecto 5); el reloj solo se muestra.
+4. `gol_oro`: un tiempo; si hay empate a 45:00, el siguiente gol gana.
+**Selector:** json `street_formato` = `"dos_tiempos"|"un_tiempo"|"goles"|"gol_oro"` + `street_goles`; más adelante un botón en Link o en el menú del juego.
+**Orden de implementación:** maquinaria común (FINAL: congelar/mostrar resultado y luego revancha 0-0 con saque central; MEDIO TIEMPO propio sin la demo nativa que congelaba) → un_tiempo → gol_oro → goles → dos_tiempos.
+**Estado base mientras tanto (Core 0.4.61):** `sin_fin_tiempo_free` (T1) deja pasar los 45:00 sin pitar; no hay fin de partido. Lo medido sobre el reloj de pantalla está en frentes_re/frente_J4_reloj_pantalla_real.md (base protegida + float; con M=5 la pantalla va 9× más rápido que el tiempo real, y eso es el ritmo nativo esperado).
