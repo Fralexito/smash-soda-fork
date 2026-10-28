@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.61"
+#define PHX_CORE_VERSION "0.4.62"
 
 namespace {
 
@@ -1979,13 +1979,14 @@ bool celChicaQuitar(Feature&) {
 // el reloj queda en 0:00. El Core, desde un hilo, suma 60·dt a S+0x1174 mientras la sub-fase es 1 (en juego) y reinicia a 0 al llegar a «street_minutos» (json, por defecto 5): nunca se alcanzan los 45:00 del fin de tiempo.
 volatile LONG g_relojOn = 0; HANDLE g_hiloReloj = nullptr; double g_streetMinutos = 5.0; ParcheDisp g_pdR1, g_pdR1b; bool g_relojNativo = false; volatile LONG g_usaDuracion = 0; uint8_t* g_cfgDuracionGlob = nullptr;
 // Duración elegida en «Opciones gener.» (frente J2): byte de minutos en S_cfg+0x1C, S_cfg = *(*(exe+0x3705E10)+0x50)+0x35960 (valores 5-15, 20, 25, 30). Devuelve 0 si no se puede leer.
+static bool g_relojMFijado = false;
 static int duracionElegida() {
     uint8_t *a = nullptr, *b = nullptr; uint8_t m = 0;
     if (!g_cfgDuracionGlob || !leerSeguro(g_cfgDuracionGlob, &a, 8) || !a || !leerSeguro(a + 0x50, &b, 8) || !b || !leerSeguro(b + 0x35960 + 0x1C, &m, 1)) return 0;
     return (m >= 5 && m <= 30) ? (int)m : 0;
 }
 DWORD WINAPI hiloReloj(LPVOID) {
-    LARGE_INTEGER fq, t0; QueryPerformanceFrequency(&fq); QueryPerformanceCounter(&t0); LONG vueltas = 0;
+    LARGE_INTEGER fq, t0; QueryPerformanceFrequency(&fq); QueryPerformanceCounter(&t0); LONG vueltas = 0; ULONGLONG tM = 0;
     while (g_relojOn) {
         Sleep(16);
         LARGE_INTEGER t1; QueryPerformanceCounter(&t1); double dt = (double)(t1.QuadPart - t0.QuadPart) / (double)fq.QuadPart; t0 = t1;
@@ -1998,9 +1999,20 @@ DWORD WINAPI hiloReloj(LPVOID) {
         if (!leerSeguro(S + 0x116C, &sub, 4) || !leerSeguro(S + 0x1168, &fase, 4) || !leerSeguro(S + 0x1174, &f, 4) || !(f >= 0.0f) || f > 1.0e6f) continue;
         if (GetTickCount64() - tLog > 5000) { tLog = GetTickCount64(); uint32_t reg = 0; leerSeguro(S + 0x11B0, &reg, 4); logf("[RELOJ] fase=%u sub=%u transcurrido=%.0f (=%.1f s) S+0x11B0=0x%08X", fase, sub, f, f / 60.0f, reg); }
         if (!g_relojNativo) f += (float)(60.0 * dt);   // con R1 el juego ya lo avanza; el Core solo lo reinicia al llegar a street_minutos
-        double lim = g_streetMinutos; int dm = g_usaDuracion ? duracionElegida() : 0; if (dm) lim = dm;
-        if (f >= (float)(lim * 60.0 * 60.0)) { f = 0.0f; logf("[RELOJ] fin de los %.1f min (%s): el reloj vuelve a 0 (vuelta %ld)", lim, dm ? "duración del menú" : "street_minutos", (long)++vueltas); }
-        if (!g_relojNativo || f == 0.0f) memcpy(S + 0x1174, &f, 4);
+        // 0.4.62 (frente J4): el juego suma al reloj de pantalla inc = 90/((M/(x5C·(60/G)))/x60) por tick con M = float [[raíz+0x2C0]+0x58] (la duración del menú, 5-30): 45:00 de pantalla = M minutos de juego vivo.
+        // Con «ajustes_partido_free» se fuerza M = 45 (solo si coincide con el byte de duración del menú) y la pantalla corre 1:1 (tiempo real). S+0x1174 solo cuenta el tiempo muerto.
+        if (g_usaDuracion && (GetTickCount64() - tM) > 100) {
+            tM = GetTickCount64(); uint8_t* x = nullptr; float m = 0, c5 = 0, c6 = 0; int dm = duracionElegida();
+            if (dm && leerSeguro(raiz + 0x2C0, &x, 8) && x && leerSeguro(x + 0x58, &m, 4) && leerSeguro(x + 0x5C, &c5, 4) && leerSeguro(x + 0x60, &c6, 4)) {
+                static ULONGLONG tl = 0; if (GetTickCount64() - tl > 5000) { tl = GetTickCount64(); logf("[RELOJ] M=%.2f x5C=%.3f x60=%.3f duracion_menu=%d", m, c5, c6, dm); }
+                if (fabsf(m - (float)dm) < 0.01f || (fabsf(m - 45.0f) < 0.01f && g_relojMFijado)) {
+                    if (fabsf(m - 45.0f) > 0.01f) { float v45 = 45.0f; memcpy(x + 0x58, &v45, 4); g_relojMFijado = true; logf("[RELOJ] duración %d min -> M=45 (pantalla en tiempo real)", dm); }
+                }
+            }
+        }
+        double lim = g_streetMinutos;
+        if (!g_usaDuracion && f >= (float)(lim * 60.0 * 60.0)) { f = 0.0f; memcpy(S + 0x1174, &f, 4); logf("[RELOJ] fin de los %.1f min (street_minutos): el reloj vuelve a 0 (vuelta %ld)", lim, (long)++vueltas); }
+        if (!g_relojNativo) memcpy(S + 0x1174, &f, 4);
     }
     return 0;
 }
@@ -2023,7 +2035,7 @@ ParcheN g_pnAJ;
 bool ajustesPartidoInstalar(Feature& f) {
     if (!localizarParcheN(g_pnAJ, "83 FD 34 75 09 40 88 7C 24 24 33 C9 EB ?? E8 ?? ?? ?? ?? 84 C0 75 ?? 40 88 BB 87 01 00 00", 5, { 0x40, 0x88, 0x7C, 0x24, 0x24 }, { 0x0F, 0x1F, 0x44, 0x00, 0x00 }, f.id)) { f.estado = "sin firma/byte inesperado en FUN_140AA90A0 (grises del menú de ajustes)"; return false; }
     ponerParcheN(g_pnAJ, true);
-    g_cfgDuracionGlob = g_exe.base + 0x3705E10; g_usaDuracion = 0;   /* 0.4.61: S+0x1174 no es el reloj de pantalla (48:12 con 85 s): no se reinicia por duración */   // RVA fija del exe v1.1.0.0 (frente J2)
+    g_cfgDuracionGlob = g_exe.base + 0x3705E10; g_usaDuracion = 1;   /* 0.4.62: la duración del menú fija M=45 y la pantalla corre en tiempo real (frente J4) */   // RVA fija del exe v1.1.0.0 (frente J2)
     f.estado = g_pnAJ.puesto ? "ok: el menú «Opciones gener.» del entrenamiento ya no sale gris (parche de 5 bytes en FUN_140AA90A0)" : "no se pudo escribir el parche del menú";
     return g_pnAJ.puesto;
 }
