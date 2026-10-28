@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.69"
+#define PHX_CORE_VERSION "0.4.70"
 
 namespace {
 
@@ -2168,6 +2168,49 @@ bool saqueNativoInstalar(Feature& f) {
     char sbuf[160]; sprintf_s(sbuf, "ok: saque central nativo sin gol disponible (E770 exe+0x%llX, cueva en el reloj exe+0x%llX)%s", (unsigned long long)(e - g_exe.base), (unsigned long long)(sitio - g_exe.base), r ? "" : " · sin reinicio de reloj"); f.estado = sbuf; return true;
 }
 bool saqueNativoQuitar(Feature&) { g_saquePedido = 0; return true; }
+// --- arquero_pase_corto (0.4.70, frente M): el selector de receptor del pase corto del portero de la IA (FUN_142132660, RVA 0x2132660; uint32 f(void** ctx, void*): ctx[0] = int* con el índice GLOBAL 0..21 del portero,
+// ctx[5] = mundo IA; devuelve el índice GLOBAL del compañero, >=0x16 = ninguno) devuelve el PRIMER compañero que cumple los filtros (5-40 m), no el más cercano: en la mini cancha el pase «corto» podía ir al otro extremo con potencia
+// alta (parecía un despeje). Gancho: tras la original, SOLO con TrainingWork y mientras lo maneja la IA, devuelve el compañero de campo disponible (estado 0xB en ctx[5]+0xB6C+0x3C+4*j) más cercano a >= 3 m y, si hay, a <= gk_pase_corto_m (10).
+// No toca posición, cursor, salida corta, saque corto ni despeje de emergencia.
+const char* kFirmaReceptor = "48 8B C4 48 89 58 10 55 56 57 41 54 41 55 41 56 41 57 48 81 EC D0 02 00 00 0F 29 78 A8 33 F6";
+using FnRecv = uint32_t (*)(void**, void*);
+FnRecv g_recvOrig = nullptr; volatile LONG g_pcOn = 0, g_pcCambios = 0; float g_pcMin = 3.0f, g_pcMax = 10.0f;
+static bool posJugPC(uint8_t* raiz, int i, float& x, float& z) {
+    uint8_t* rec = nullptr; float p[3];
+    if (!leerSeguro(raiz + (size_t)(i + 0xBF) * 0x28, &rec, 8) || !rec) return false;
+    if (!leerSeguro(rec + 0x55C, p, 12)) return false;
+    x = p[0]; z = p[2]; return true;
+}
+uint32_t ganchoReceptor(void** ctx, void* rdx) {
+    uint32_t r = g_recvOrig(ctx, rdx);
+    if (!g_pcOn || GetTickCount64() - g_tTrainGlob > 3000) return r;
+    uint8_t* raiz = nullptr; int* pg = nullptr; uint8_t* mundo = nullptr; int g = 0;
+    if (!leerSeguro(g_globalPartido, &raiz, 8) || !raiz || !leerSeguro(ctx, &pg, 8) || !pg || !leerSeguro(ctx + 5, &mundo, 8) || !mundo || !leerSeguro(pg, &g, 4) || g < 0 || g > 21) return r;
+    int base = (g > 10) ? 11 : 0; float gx, gz; if (!posJugPC(raiz, g, gx, gz)) return r;
+    int best = -1, bestAny = -1; float dBest = 1e9f, dAny = 1e9f;
+    for (int j = 1; j <= 10; j++) {
+        int i = base + j; if (i == g) continue;
+        int est = 0; if (!leerSeguro(mundo + 0xB6C + 0x3C + 4 * j, &est, 4) || est != 0xB) continue;
+        float x, z; if (!posJugPC(raiz, i, x, z) || fabsf(x) > 20.0f) continue;
+        float d = sqrtf((x - gx) * (x - gx) + (z - gz) * (z - gz));
+        if (d < g_pcMin) continue;
+        if (d < dAny) { dAny = d; bestAny = i; }
+        if (d <= g_pcMax && d < dBest) { dBest = d; best = i; }
+    }
+    int nuevo = best >= 0 ? best : bestAny; if (nuevo < 0) return r;
+    if ((uint32_t)nuevo != r) { LONG n = InterlockedIncrement(&g_pcCambios); if (n <= 40) logf("[PASE_CORTO] portero %d: receptor original %u -> %d (el más cercano disponible) #%ld", g, r, nuevo, (long)n); }
+    return (uint32_t)nuevo;
+}
+bool paseCortoInstalar(Feature& f) {
+    uint8_t* m = firmaUnica("codigo", kFirmaReceptor, f.id);
+    if (!m) { f.estado = "sin firma: selector de receptor del pase corto del portero (FUN_142132660)"; return false; }
+    if (!crearDesvio(f, m, 14, (void*)ganchoReceptor, (void**)&g_recvOrig)) { f.estado = "no se pudo desviar el selector de receptor"; return false; }
+    asegurarHiloTrain(); g_pcOn = 1;
+    char sb[170]; sprintf_s(sb, "ok: el pase corto del portero (IA) va al compañero más cercano disponible (%.0f-%.0f m) (exe+0x%llX)", g_pcMin, g_pcMax, (unsigned long long)(m - g_exe.base)); f.estado = sb; return true;
+}
+bool paseCortoQuitar(Feature&) { g_pcOn = 0; return true; }
+
+
 // --- arquero_rama_normal (0.4.67, frente L §9): FUN_1409DC040 va a la rama alternativa del portero (FUN_1409DF7D0, ~3 KB, portero activo) si team+0x255 != 0. Con el jz de RVA 0x9DC8CF pasado a jmp
 // (`80 B8 55 02 00 00 00 74 13 ...` byte +7: 74 -> EB) el portero usa siempre la rama normal FUN_1409DE8C0, como el portero COM. Solo con TrainingWork; restaurado al salir.
 bool ramaNormalInstalar(Feature& f) {
@@ -2372,6 +2415,7 @@ std::vector<Feature> g_funciones = {   // orden = orden de arranque (gol_nativo_
     { "street_saque_nativo", "Saque central nativo sin gol para el medio tiempo y la revancha (cueva en el reloj + FUN_14050E770)", saqueNativoInstalar, saqueNativoQuitar },
     { "street_pantalla_descanso", "A 45:00 abre la pantalla real de medio tiempo del flujo (paso 0x22) y al cerrarla hace el saque central del 2.o tiempo (experimental)", descansoInstalar, descansoQuitar },
     { "arquero_rama_normal", "El portero usa siempre la rama normal de posición base (team+0x255 forzado a la normal) en el entrenamiento", ramaNormalInstalar, ramaNormalQuitar },
+    { "arquero_pase_corto", "El pase corto del portero de la IA va al compañero disponible más cercano (no al primero que cumple los filtros)", paseCortoInstalar, paseCortoQuitar },
     { "street_dos_tiempos", "Medio tiempo a 45:00 y final a 90:00 propios del entrenamiento (lee el reloj de pantalla; v1: pausa + aviso)", dosTiemposInstalar, dosTiemposQuitar },
     { "sin_fin_tiempo_free", "El Juez no pita el fin de tiempo (medio tiempo/final) en el entrenamiento libre", sinFinTiempoInstalar, sinFinTiempoQuitar },
     { "reloj_street_free", "El reloj nativo corre en el entrenamiento y se reinicia a los street_minutos", relojInstalar, relojQuitar },
@@ -2465,6 +2509,7 @@ void leerConfig() {
     if (valorDe("muro_x", v)) g_muroX = atof(v.c_str());
     if (valorDe("muro_z", v)) g_muroZ = atof(v.c_str());
     if (valorDe("arquero_salida_max", v)) { g_arqSalidaMax = (float)atof(v.c_str()); if (g_arqSalidaMax < 1.0f || g_arqSalidaMax > 12.0f) g_arqSalidaMax = 3.5f; }
+    if (valorDe("gk_pase_corto_m", v)) { g_pcMax = (float)atof(v.c_str()); if (g_pcMax < 4.0f || g_pcMax > 40.0f) g_pcMax = 10.0f; }
     if (valorDe("cursor_bloqueo_pt", v)) g_cursorBloqueoCfg = (v == "true");
     if (valorDe("street_minutos", v)) { g_streetMinutos = atof(v.c_str()); if (g_streetMinutos < 0.5 || g_streetMinutos > 44.0) g_streetMinutos = 5.0; }
     if (valorDe("red_factor", v)) { g_redFactor = (float)atof(v.c_str()); if (g_redFactor < 0.0f || g_redFactor > 1.0f) g_redFactor = 0.85f; }
