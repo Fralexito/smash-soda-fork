@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.77"
+#define PHX_CORE_VERSION "0.4.78"
 
 namespace {
 
@@ -2220,13 +2220,11 @@ static void __stdcall ayudanteSaque(uint8_t* job) {
         bool ok = leerSeguro(job + 0x49C0, &rec, 4) && leerSeguro(job + 0x878, &c878, 4) && leerSeguro(job + 0x8F0, &c8f0, 1) && leerSeguro(job + 0x2794, &k2794, 4) && leerSeguro(job + 0x908 + 0x3B8, &j3b8, 8);
         bool ocioso = leerSeguro(job + 0x49C0, &rec, 4) && rec == 0;   // 0.4.74: [juez+0x3B8] es 0 en el entrenamiento (E770 no hace nada con eso): solo se exige que no haya parada en curso
         if (!ocioso) { if (!g_descansoT) g_descansoT = ahora; if (ahora - g_descansoT > 40000) { logf("[DESCANSO] el job no quedó ocioso en 40 s (rec=%u c878=%u c8f0=%u 2794=%u): pantalla cancelada, saque directo", rec, c878, c8f0, k2794); g_descansoPedido = 0; g_descansoT = 0; g_saquePedido = 1; } return; }
-        uint32_t fase2 = 2; memcpy(job + 0x2790, &fase2, 4);
-        if (g_baseReloj) g_baseReloj(job + 0x2790, 0.0f);
-        float z = 0.0f; memcpy(job + 0x279C, &z, 4);
+        // 0.4.78: NO se toca la fase ni el reloj (con fase=2 el saque hacía el 2->3 nativo: cambio de lado + IA/formación con el lado viejo, y el cierre del 2.º tiempo en 0x4B712B). El reloj sigue desde 45:00 y T1 evita el fin de tiempo.
         uint32_t full[30]; for (int i = 0; i < 30; i++) full[i] = i == 0 ? 0x22 : 0x48;
         memcpy(job + 0x878, full, sizeof(full)); job[0x8F0] = 0; job[0x8F1] = 2;
         uint32_t sub2 = 2; memcpy(job + 0x2794, &sub2, 4);
-        logf("[DESCANSO] fase=2, reloj 0 y cola [0x22,0x48..] escritas: se abre el menú de descanso");
+        logf("[DESCANSO] cola [0x22,0x48..] escrita (sin tocar fase ni reloj): se abre el menú de descanso");
         g_descansoPedido = 0; g_descansoFase = 1; g_descansoT = ahora; return;
     }
     if (g_descansoFase == 1) {
