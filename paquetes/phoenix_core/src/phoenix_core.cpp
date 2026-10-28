@@ -2210,7 +2210,7 @@ volatile LONG g_saquePedido = 0, g_saqueEquipo = 1, g_saqueResetReloj = 0, g_saq
 // hipótesis) o a los 120 s como último recurso; entonces se limpia la cola y se pide el saque central nativo (que hace la fase 2->3). NO tocar «cambios» (plan) en esta prueba: puede colgar con el banquillo vacío.
 // 0.4.81 (J5 §señal): ProcessMatchPostHalfTime::update (FUN_1412F7500, vf+0xC0; void(this)) corre por tick mientras ese proceso está activo, o sea cuando el menú de descanso se cerró y el flujo pasa a MatchPostHalfTime («proceed»).
 // Gancho (crearDesvio 14 B): si lo armamos nosotros al encolar [0x22] y la instancia es PostHalfTime (vtable exe+0x28CCCB8), se marca g_menuCerrado. El Core lanza entonces el saque central. Sin gancho queda el límite de 120 s.
-bool g_descansoFase3 = false;   // json «descanso_fase3»: true = el 2.º tiempo se escribe en fase 3 con base 0 (HUD 45:00-90:00 sin +N); false (por defecto) = se restaura la fase anterior (0.4.82)
+bool g_descansoFase3 = true;   // 0.4.87: por defecto true (el 2.º tiempo arrancaba en 0:01); json «descanso_fase3»: true = el 2.º tiempo se escribe en fase 3 con base 0 (HUD 45:00-90:00 sin +N); false (por defecto) = se restaura la fase anterior (0.4.82)
 volatile LONG g_menuArmado = 0, g_menuCerrado = 0; volatile uint32_t g_faseAntesDescanso = 1; void (*g_postHalfOrig)(void*) = nullptr;
 // 0.4.86 (J5): MatchPreHalfTime::update (FUN_1413090F0) espera el byte [obj+0x290] (obj = *(u64*)([exe+0x3705E10]+0x58)); lo pone a 1 el mensaje 0x105001B del paso de cola 0x25, que nuestra cola [0x22,0x48] no ejecuta: por eso el flujo quedaba en PreHalfTime.
 // Con el menú armado se pone ese byte a 1 (el update lo baja a 0 y emite «proceed» hacia MatchHalfTime = menú nativo). Y en ProcessMatchPostHalfTime::update se ponen +0x89=1, +0x8A=0 para que emita «proceed» hacia MatchIdle.
@@ -2454,6 +2454,7 @@ DWORD WINAPI hiloDosTiempos(LPVOID) {
         uint32_t faseP = 0; { uint8_t* rz = nullptr; uint8_t* Sx = nullptr; if (leerSeguro(g_globalPartido, &rz, 8) && rz && leerSeguro(rz + 0x270, &Sx, 8) && Sx) leerSeguro(Sx + 0x1168, &faseP, 4); }
         double t = 0; if (!leerRelojPantalla(&t)) { if (++malas == 1 || malas % 400 == 0) logf("[TIEMPOS] lectura del reloj no válida (#%ld): no actúo", (long)malas); continue; }
         if (GetTickCount64() - tLog > 5000) { tLog = GetTickCount64(); logf("[TIEMPOS] t=%.0f (pantalla %d:%02d) estado=%d", t, (int)(t / 3600.0) + ((int)t % 3600 ? 1 : 0), (int)(t / 60.0) % 60, estado); }
+        if (prev >= 0 && t < prev - 200.0 && estado == 1 && g_descansoFase3) { logf("[TIEMPOS] reloj a 0 por el descanso (%.0f -> %.0f): sigo en 2.º tiempo (final a 90:00)", prev, t); prev = t; continue; }   // 0.4.87: el descanso reinicia la base; no es un reinicio de partido
         if (prev >= 0 && t < prev - 200.0) { logf("[TIEMPOS] el reloj saltó hacia atrás (%.0f -> %.0f): reinicio la máquina de estados, no actúo", prev, t); estado = 0; prev = t; continue; }
         if (estado == 0 && t >= 162000.0 && (prev < 0 || prev < 162000.0 + 3600.0)) {
             estado = 1; logf("[TIEMPOS] MEDIO TIEMPO a t=%.0f: aviso y %s", t, g_e770 ? "saque central nativo del rival" : "pelota al centro 6 s");
