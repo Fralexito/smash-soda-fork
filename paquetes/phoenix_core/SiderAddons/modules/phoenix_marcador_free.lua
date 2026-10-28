@@ -219,6 +219,7 @@ local PANEL = {
     { id = "clima_forzado", txt = "Clima despejado", tipo = "clima", modo = "sig.partida" },
     { id = "street_dos_tiempos", txt = "Dos tiempos", tipo = "bool", modo = "sig.partida" },
     { id = "street_pantalla_descanso", txt = "Pantalla de descanso", tipo = "bool", modo = "sig.partida" },
+    { id = "reloj_visual_2t", txt = "Reloj 2.º tiempo 45→90 (visual)", tipo = "bool", modo = "vivo" },
     { id = "final_nativo", txt = "Final nativo (experimental)", tipo = "bool", modo = "vivo" },
     { id = "descanso_fase3", txt = "Reloj 2.º tiempo en fase 3", tipo = "bool", modo = "sig.partida" },
     { id = "descanso_base45", txt = "Reloj 2.º tiempo base 45", tipo = "bool", modo = "sig.partida" },

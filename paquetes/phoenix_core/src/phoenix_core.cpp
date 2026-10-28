@@ -987,6 +987,34 @@ bool rescateInstalar(Feature& f) {
 }
 bool rescateQuitar(Feature&) { return true; }
 
+// --- reloj_visual_2t (0.4.94, frente Z): suma minutos SOLO a lo que dibuja el HUD (FUN_1420EFEC0: min = floor(t/3600) + base_periodo). Cueva en el call FUN_1420BD500 (RVA 0x20EFFD8, E8 rel32 → 5 B):
+//   mov eax,[rip+DATO]; add [rbp-0x29],eax; call FUN_1420BD500; jmp vuelta. DATO = 45 en el 2.º tiempo (lo pone hiloDosTiempos con g_segundaParte) y 0 fuera: no toca S, el job ni el gestor, ni los segundos ni el «+N».
+uint32_t* g_relojVisualDato = nullptr; volatile LONG g_relojVisualOn = 0;
+bool relojVisualInstalar(Feature& f) {
+    if (!g_relojVisualDato) {
+        uint8_t* sig = firmaUnica("codigo", "4C 89 7D DB 44 89 7D E3 E8 ?? ?? ?? ?? 44 38 3D ?? ?? ?? ?? 41 0F 45 C7 83 F8 06 77 0F 44 38 BE", f.id);
+        if (!sig) { f.estado = "sin firma: texto del reloj del HUD (FUN_1420EFEC0)"; return false; }
+        uint8_t* sitio = sig + 8; int32_t rel = 0; memcpy(&rel, sitio + 1, 4);
+        uint8_t* original = sitio + 5 + rel, *vuelta = sitio + 5;
+        uint8_t* c = reservarCerca(sitio, 64);
+        if (!c) { f.estado = "no hay memoria cerca del exe (reloj visual)"; return false; }
+        memset(c, 0xCC, 64); size_t o = 0;
+        c[o++] = 0x8B; c[o++] = 0x05; int32_t d = 14; memcpy(c + o, &d, 4); o += 4;   // mov eax,[rip+14] → DATO en c+20
+        c[o++] = 0x01; c[o++] = 0x45; c[o++] = 0xD7;                                  // add [rbp-0x29],eax
+        if (!escribirRel32(c + o, 0xE8, c + o, original)) { f.estado = "cueva fuera de alcance (reloj visual, call)"; return false; } o += 5;
+        if (!escribirRel32(c + o, 0xE9, c + o, vuelta)) { f.estado = "cueva fuera de alcance (reloj visual, jmp)"; return false; } o += 5;
+        uint32_t cero = 0; memcpy(c + 20, &cero, 4);
+        FlushInstructionCache(GetCurrentProcess(), c, 64);
+        Parche p; p.dir = sitio; p.original.assign(sitio, sitio + 5); p.nuevo.resize(5);
+        if (!escribirRel32(p.nuevo.data(), 0xE9, sitio, c)) { f.estado = "cueva fuera de alcance (reloj visual)"; return false; }
+        if (!aplicarParche(p, f.id)) { f.estado = "bytes inesperados (reloj visual)"; return false; }
+        f.parches.push_back(p); g_relojVisualDato = reinterpret_cast<uint32_t*>(c + 20);
+        logf("[%s] cueva del reloj visual en exe+0x%llX (dato en %p)", f.id, (unsigned long long)(sitio - g_exe.base), (void*)g_relojVisualDato);
+    }
+    g_relojVisualOn = 1; f.estado = "ok: en el 2.º tiempo el HUD suma 45 min a lo que dibuja (45:00→90:00); el +N y el juego no se tocan"; return true;
+}
+bool relojVisualQuitar(Feature&) { g_relojVisualOn = 0; if (g_relojVisualDato) *g_relojVisualDato = 0; return true; }
+
 bool sondaInstalar(Feature& f) {
     if (!resolverGlobalPartido(f.id)) logf("[%s] sin firma del global del partido: k/sub/parado no se anotan", f.id);
     uint8_t* dirs[_countof(g_ganchos)];
@@ -2613,6 +2641,7 @@ DWORD WINAPI hiloDosTiempos(LPVOID) {
     while (g_dosTiemposOn) {
         Sleep(50);
         vigilarCondiciones();
+        if (g_relojVisualDato) { uint32_t nv = (g_relojVisualOn && g_segundaParte && GetTickCount64() - g_tTrainGlob < 3000) ? 45u : 0u; if (*g_relojVisualDato != nv) { *g_relojVisualDato = nv; logf("[RELOJ_VISUAL] suma de minutos del HUD = %u", nv); } }   // 0.4.94: 45 solo en el 2.º tiempo (g_segundaParte), 0 fuera
         if (!trainingWorkEstable()) {
             if (enTW) {   // 0.4.89: al salir del entrenamiento con la fase 3 escrita a mano, se devuelve a 1 antes de que el juego destruya la escena (candidata del cierre exe+0xB7AAA al volver al menú)
                 enTW = false;
@@ -2861,6 +2890,7 @@ std::vector<Feature> g_funciones = {   // orden = orden de arranque (gol_nativo_
     { "ia_sonda", "Solo lectura: anota los datos de IA de campo (cobertura, defensa, marca, base, apoyo) para escalarlos a la minicancha", iaSondaInstalar, iaSondaQuitar },
     { "tiro_fuerte", "Los disparos fuertes salen más potentes y menos altos (tiro_potencia_k, tiro_altura_k); pases y toques suaves casi no cambian", tiroInstalar, tiroQuitar },
     { "pase_rapido_preciso", "Los pases salen más rápidos y se giran hacia el compañero mejor alineado (pase_vel_k, pase_cono_grados, pase_correccion)", paseInstalar, paseQuitar },
+    { "reloj_visual_2t", "El HUD muestra 45:00→90:00 en el 2.º tiempo (suma 45 min solo a lo dibujado; no toca el juego)", relojVisualInstalar, relojVisualQuitar },
     { "stats_sonda", "Solo lectura: anota en el log las stats de los 22 jugadores (calibrar el mapa de habilidades; apagado por defecto)", statsSondaInstalar, statsSondaQuitar },
     { "ia_cancha_chica", "La IA de campo usa distancias de cobertura, defensa, marca, apoyo y pase escaladas a la minicancha (con restauracion al salir; sin porteros)", iaChicaInstalar, iaChicaQuitar },
     { "street_dos_tiempos", "Medio tiempo a 45:00 y final a 90:00 propios del entrenamiento (lee el reloj de pantalla; v1: pausa + aviso)", dosTiemposInstalar, dosTiemposQuitar },
