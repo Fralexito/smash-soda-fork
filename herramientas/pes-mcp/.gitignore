@@ -1,3 +1,5 @@
 ayudante.dll
+ayudante-*.dll
 ayudante.firma
-prueba.png
+prueba*.png
+escrituras.jsonl
