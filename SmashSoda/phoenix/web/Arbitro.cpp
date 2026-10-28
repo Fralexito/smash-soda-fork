@@ -8,6 +8,7 @@
 #include "../PhoenixPrefs.h"
 #include "../PhoenixRoles.h"
 #include "../core/ProveedorSala.h"
+#include "../core/AccionesSala.h"
 #include "../core/MandoHost.h"
 #include "../link/PhoenixLink.h"
 
@@ -35,6 +36,7 @@ namespace phoenix::web {
 	namespace detalle_arbitro {
 		constexpr unsigned int kBotonesCompetitivo = 0x0010 | 0x0020 | 0x0400;   // Start | Back | Guía
 		constexpr uint16_t kBotonStart = 0x0010;
+		constexpr uint16_t kComboRelevo = 0x0040 | 0x0080 | 0x0020;               // L3 + R3 + Back (Select): relevo rápido sin salir de PES
 		constexpr int kPingAlto = 150;      // ms
 		constexpr size_t kSegundosPing = 5;  // muestras seguidas (1 por segundo)
 		constexpr double kLatidoVivoSeg = 120.0;   // el marcador en vivo se reenvía al menos cada 2 min (la web oculta los de >10 min sin noticias)
@@ -42,6 +44,8 @@ namespace phoenix::web {
 		double autoArmarEsperaHasta = 0.0;         // armar lados solo al pitazo: no reintentar antes de esto
 		double pesCerradoDesde = -1.0;             // desde cuándo PES está cerrado con un partido de Link abierto (ahoraSeg)
 		double anfitrionPulsoSeg = -1e9;           // última vez que el anfitrión tocó su mando físico (ahoraSeg)
+		bool comboRelevoPrevio = false;            // flanco de subida del combo L3+R3+Select del anfitrión
+		double comboRelevoUltimoSeg = -1e9;        // antirrebote del combo L3+R3+Select
 
 		/// Copia la máscara del anfitrión (Config) y le suma lo del modo competitivo si está activo.
 		void aplicarBloqueo(Interno& in, Hosting& h) {
@@ -320,7 +324,7 @@ namespace phoenix::web {
 		auto poner = [&](char eq, const JugadorPartido& j, bool alPrincipio) {
 			if (eq == '-') { if (mirando && !ya(j.parsecId)) mirando->push_back(j); return; }
 			LadoPartido& l = eq == 'A' ? la : lb;
-			if (ya(j.parsecId) || l.jugadores.size() >= 4) return;
+			if (ya(j.parsecId) || l.jugadores.size() >= 8) return;
 			if (alPrincipio) l.jugadores.insert(l.jugadores.begin(), j); else l.jugadores.push_back(j);
 		};
 		for (int i = 0; i < activos; i++) {
@@ -367,6 +371,56 @@ namespace phoenix::web {
 			if (a.pulsando >= 0 && ahora >= a.soltarEn) {
 				sala.inyectar(a.pulsando, 0, 0, 0);
 				a.pulsando = -1;
+			}
+			// Combo del mando 1 del anfitrión (L3 + R3 + Select/Back): reasigna un puesto caído en pleno partido sin salir de PES
+			if (sala.abierta() && sala.hayMandoPropio()) {
+				const uint16_t bot = sala.botonesMandoPropio();
+				const bool pulsado = (bot & kComboRelevo) == kComboRelevo;
+				if (pulsado && !comboRelevoPrevio && ahora - comboRelevoUltimoSeg >= 1.0) {
+					comboRelevoUltimoSeg = ahora;
+					const FasePartido fpCombo = in.partido.fase();
+					if (fpCombo == FasePartido::EnJuego || fpCombo == FasePartido::Pausado) {
+						const PhoenixPrefs& prC = PhoenixPrefs::get();
+						const std::vector<AsientoVista> asientos = sala.asientos(equipos::kPuestos);
+						const std::vector<EspectadorVista> esp = sala.espectadores();
+						const int tomado = MandoHost::activo() - 1;
+						std::set<uint32_t> sentados;
+						for (const AsientoVista& s : asientos) if (s.ocupado && s.parsecId != 0) sentados.insert(s.parsecId);
+						auto faltaEn = [&](const LadoPartido& l) {
+							for (const JugadorPartido& jp : l.jugadores) if (jp.parsecId != 0 && !sentados.count(jp.parsecId)) return true;
+							return false;
+						};
+						const bool faltaA = faltaEn(in.partido.ladoA()), faltaB = faltaEn(in.partido.ladoB());
+						int puestoElegido = -1;
+						for (int pasada = 0; pasada < 2 && puestoElegido < 0; pasada++) {
+							for (size_t i = 0; i < asientos.size(); i++) {
+								if (!asientos[i].conectado || asientos[i].ocupado || static_cast<int>(i) == tomado) continue;
+								const char eq = prC.equipoDe(static_cast<int>(i));
+								if (eq != 'A' && eq != 'B') continue;
+								if (pasada == 0 && !((eq == 'A' && faltaA) || (eq == 'B' && faltaB))) continue;
+								puestoElegido = static_cast<int>(i);
+								break;
+							}
+						}
+						if (puestoElegido >= 0 && !esp.empty()) {
+							const char eqPuesto = prC.equipoDe(puestoElegido);
+							const LadoPartido& ladoP = eqPuesto == 'A' ? in.partido.ladoA() : in.partido.ladoB();
+							EspectadorVista elegido = esp.front();
+							for (const EspectadorVista& e : esp) {
+								const bool eraDelLado = std::any_of(ladoP.jugadores.begin(), ladoP.jugadores.end(), [&](const JugadorPartido& jp) { return jp.parsecId == e.parsecId; });
+								if (eraDelLado) { elegido = e; break; }
+							}
+							if (AccionesSala::asignarConectando(sala, puestoElegido, elegido.parsecId)) {
+								const std::string num = (puestoElegido + 1 < 10 ? "0" : "") + std::to_string(puestoElegido + 1);
+								mensajeDelBot(in, "Relevo en caliente (Mando 1): " + elegido.nombre + " entra al puesto #" + num + " (Equipo " + std::string(1, eqPuesto) + ").");
+							}
+						}
+					}
+				}
+				comboRelevoPrevio = pulsado;
+			}
+			else {
+				comboRelevoPrevio = false;
 			}
 			if (ahora - a.ultimoTick < 0.5) return;
 			a.ultimoTick = ahora;

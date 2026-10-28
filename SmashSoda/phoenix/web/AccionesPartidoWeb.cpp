@@ -45,8 +45,8 @@ namespace phoenix::web {
 					? texto(d, claveNombre, 40) : std::string("Máquina (CPU)");
 				return l;
 			}
-			if (!d.contains(clave) || !d[clave].is_array() || d[clave].empty() || d[clave].size() > 4) {
-				throw ErrorAccion("DATOS_INVALIDOS", "Cada lado necesita entre 1 y 4 jugadores.");
+			if (!d.contains(clave) || !d[clave].is_array() || d[clave].empty() || d[clave].size() > 8) {
+				throw ErrorAccion("DATOS_INVALIDOS", "Cada lado necesita entre 1 y 8 jugadores.");
 			}
 			LadoPartido l;
 			for (const json& x : d[clave]) {

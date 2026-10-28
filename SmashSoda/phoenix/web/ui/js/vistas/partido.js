@@ -99,15 +99,15 @@ function ArmarManual({ m, volver }) {
   const lado = (id) => (a.includes(id) ? "a" : bb.includes(id) ? "b" : null);
   const mover = (id, destino) => {
     const na = a.filter((x) => x !== id), nb = bb.filter((x) => x !== id);
-    if (destino === "a" && na.length < 4) na.push(id);
-    if (destino === "b" && nb.length < 4 && !cpu) nb.push(id);
+    if (destino === "a" && na.length < 8) na.push(id);
+    if (destino === "b" && nb.length < 8 && !cpu) nb.push(id);
     fijar({ a: na, b: nb });
   };
   const desdeMandos = () => {
     const lista = m.mandos?.lista || [];
     fijar({
-      a: lista.filter((p) => p.ocupado && p.equipo === "a" && p.parsecId).map((p) => p.parsecId).slice(0, 4),
-      b: lista.filter((p) => p.ocupado && p.equipo === "b" && p.parsecId).map((p) => p.parsecId).slice(0, 4),
+      a: lista.filter((p) => p.ocupado && p.equipo === "a" && p.parsecId).map((p) => p.parsecId).slice(0, 8),
+      b: lista.filter((p) => p.ocupado && p.equipo === "b" && p.parsecId).map((p) => p.parsecId).slice(0, 8),
     });
   };
   const preparar = () => accion("partido.preparar", {
@@ -182,7 +182,7 @@ function Clasificatoria({ clas, poner }) {
 
 function Columna({ id, ids, nombre, clave, color, gente, m, fijar, mover, cpu }) {
   return html`<${Tarjeta} estilo="flex:1;min-width:0" interior="padding:22px 24px;display:flex;flex-direction:column;gap:12px">
-    <div class="lab" style=${`color:${color}`}>${id === "a" ? t("EQUIPO A", "TEAM A") : t("EQUIPO B", "TEAM B")}</div>
+    <div class="lab" style=${`color:${color}`}>${id === "a" ? t("EQUIPO A", "TEAM A") : t("EQUIPO B", "TEAM B")}${!cpu && ids.length ? ` · ${ids.length}/8` : ""}</div>
     <${Campo} valor=${nombre} max=${40} placeholder=${cpu ? t("Máquina (CPU)", "CPU") : t("Nombre del equipo (opcional)", "Team name (optional)")} al=${(v) => fijar({ [clave]: v })}/>
     ${id === "b" ? html`<${Boton} tipo=${cx("mini", cpu ? "lleno" : "suave")} al=${() => fijar({ cpu: !cpu, b: [] })}
       titulo=${t("Juegas contra la CPU del juego. Se guarda en el historial y se ve en la web, pero no cuenta para el ranking ni como resultado oficial.", "You play against the game's CPU. Saved and shown on the web, but not ranked nor official.")}>
@@ -190,7 +190,7 @@ function Columna({ id, ids, nombre, clave, color, gente, m, fijar, mover, cpu })
     ${cpu ? html`<div class="persona on" style="cursor:default"><span style="font-size:22px">🤖</span><div class="nom" style="flex:1">${t("La máquina (CPU del juego)", "The game's CPU")}</div></div>
       <div class="ayuda">${t("No cuenta para el ranking ni como partido oficial. El marcador y el historial funcionan igual.", "Not ranked nor official. Score and history work the same.")}</div>` : null}
     <div style=${`display:${cpu ? "none" : "flex"};flex-direction:column;gap:8px;min-height:120px`}>
-      ${ids.length === 0 ? html`<div class="ayuda">${t("Toca a alguien de la lista para sumarlo (máx. 4).", "Tap someone to add them (max 4).")}</div>` : null}
+      ${ids.length === 0 ? html`<div class="ayuda">${t("Toca a alguien de la lista para sumarlo (máx. 8).", "Tap someone to add them (max 8).")}</div>` : null}
       ${ids.map((pid) => { const g = gente.find((x) => x.parsecId === pid); return html`<button class="persona on" key=${pid} onClick=${() => mover(pid, null)}>
         <${Avatar} nombre=${g?.nombre} id=${pid} url=${m.perfiles?.[pid]?.avatar_url} t=${34}/><div class="nom" style="flex:1;text-align:left">${g?.nombre}</div><span class="mut">×</span></button>`; })}
     </div>
