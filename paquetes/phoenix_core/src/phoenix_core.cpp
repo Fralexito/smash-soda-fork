@@ -2477,6 +2477,23 @@ static void vigilarCondiciones() {
         uint32_t nv = (uint32_t)g_seasonCore; memcpy(c + 0x35960 + 12, &nv, 4); logf("[CONDICIONES] season %u -> %u reescrita (tras el flujo del descanso)", v[3], nv);
     }
 }
+// 0.4.90 (frente R): marcador NATIVO = suma de los contadores 0..7 de cada equipo; M=*(raíz+0x150), equipo i en M+0x750D0+i*0x59650, contador c en +0x59530+c*0x20 con el mismo esquema protegido del reloj
+// (hash FNV-1a 64 en +0, contador +8, índice +0xC, 4 slots cifrados en +0x10). Solo lectura: se usa para anotar [MARCADOR] cuando cambia (atribuir «reinicios»). Si el hash no cuadra, devuelve -1.
+static int leerGolesNativos(int equipo) {
+    uint8_t* raiz = nullptr; uint8_t* M = nullptr;
+    if (!leerSeguro(g_globalPartido, &raiz, 8) || !raiz || !leerSeguro(raiz + 0x150, &M, 8) || !M) return -1;
+    int suma = 0;
+    for (int c = 0; c < 8; c++) {
+        uint8_t r[0x20]; if (!leerSeguro(M + 0x750D0 + (size_t)equipo * 0x59650 + 0x59530 + (size_t)c * 0x20, r, 0x20)) return -1;
+        uint64_t hash; uint32_t cnt, idx, slot[4]; memcpy(&hash, r, 8); memcpy(&cnt, r + 8, 4); memcpy(&idx, r + 0xC, 4); memcpy(slot, r + 0x10, 16);
+        uint32_t u = slot[idx & 3], cc3 = cnt * 3; uint8_t b[4];
+        for (int k = 0; k < 4; k++) { uint8_t cc = (uint8_t)((cc3 + 4 * k) >> (8 * k)); b[k] = (uint8_t)((uint8_t)(u >> (8 * k)) + cc) ^ (uint8_t)(cc * 0x3F); }
+        uint64_t h = 0xcbf29ce484222325ULL; for (int k = 0; k < 4; k++) { h ^= b[k]; h *= 0x100000001b3ULL; }
+        if (h != hash) return -1;
+        uint32_t v; memcpy(&v, b, 4); if (v > 1000) return -1; suma += (int)v;
+    }
+    return suma;
+}
 DWORD WINAPI hiloDosTiempos(LPVOID) {
     double prev = -1; int estado = 0; ULONGLONG tLog = 0; LONG malas = 0; ULONGLONG tFinal = 0; bool pendMedio = false, enTW = false;
     while (g_dosTiemposOn) {
@@ -2491,6 +2508,7 @@ DWORD WINAPI hiloDosTiempos(LPVOID) {
             continue;
         }
         enTW = true;
+        { static int gL = -2, gV = -2; static ULONGLONG tM = 0; ULONGLONG am = GetTickCount64(); if (am - tM > 250) { tM = am; int a = leerGolesNativos(0), b = leerGolesNativos(1); if (a != gL || b != gV) { logf("[MARCADOR] goles nativos local=%d visita=%d (-1 = lectura no válida)", a, b); gL = a; gV = b; } } }
         uint32_t faseP = 0; { uint8_t* rz = nullptr; uint8_t* Sx = nullptr; if (leerSeguro(g_globalPartido, &rz, 8) && rz && leerSeguro(rz + 0x270, &Sx, 8) && Sx) leerSeguro(Sx + 0x1168, &faseP, 4); }
         double t = 0; if (!leerRelojPantalla(&t)) { if (++malas == 1 || malas % 400 == 0) logf("[TIEMPOS] lectura del reloj no válida (#%ld): no actúo", (long)malas); continue; }
         if (GetTickCount64() - tLog > 5000) { tLog = GetTickCount64(); logf("[TIEMPOS] t=%.0f (pantalla %d:%02d) estado=%d", t, (int)(t / 3600.0) + ((int)t % 3600 ? 1 : 0), (int)(t / 60.0) % 60, estado); }
