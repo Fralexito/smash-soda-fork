@@ -2245,13 +2245,13 @@ static void __stdcall ayudanteSaque(uint8_t* job) {
     }
     if (g_descansoFase == 1) {
         static ULONGLONG tLogD = 0; if (ahora - tLogD > 3000) { tLogD = ahora; uint32_t q0 = 0, s94 = 0, f = 0; uint8_t cur = 0; leerSeguro(job + 0x878, &q0, 4); leerSeguro(job + 0x2794, &s94, 4); leerSeguro(job + 0x2790, &f, 4); leerSeguro(job + 0x8F0, &cur, 1); logf("[DESCANSO] esperando: cola0=0x%X cursor=%u fase=%u sub=%u gap=%llu ms", q0, (unsigned)cur, f, s94, (unsigned long long)gap); }
-        if (g_menuCerrado || gap > 1500 || ahora - g_descansoT > 120000) {
+        if (g_menuCerrado || gap > 1500 || ahora - g_descansoT > 60000) {
             if (g_descansoFase3) {   // 0.4.83: 2.º tiempo exacto en 45:00 y sin «+N»: fase 3 escrita DIRECTA (sin pasar por 453530/14102CAD0 = sin el 2->3 nativo) y base del reloj a 0 (la pantalla suma 45:00 en fase 3)
                 uint32_t f3 = 3; memcpy(job + 0x2790, &f3, 4); if (g_baseReloj) g_baseReloj(job + 0x2790, 0.0f); float z0 = 0.0f; memcpy(job + 0x279C, &z0, 4);
                 g_relojPausa = 0; logf("[DESCANSO] 2.º tiempo: fase 3 directa y reloj a 0 (pantalla 45:00)");
             } else { uint32_t fa = g_faseAntesDescanso; memcpy(job + 0x2790, &fa, 4); g_relojPausa = 0; }   // 0.4.82: se restaura la fase
             uint32_t ceros[30] = {}; memcpy(job + 0x878, ceros, sizeof(ceros)); job[0x8F0] = 0; job[0x8F1] = 0; uint32_t sub1 = 1; memcpy(job + 0x2794, &sub1, 4);
-            logf("[DESCANSO] menú cerrado (%s): cola limpia, saque central del 2.º tiempo", g_menuCerrado ? "señal de ProcessMatchPostHalfTime" : gap > 1500 ? "el job volvió a ticar tras la pausa" : "tiempo límite de 120 s"); g_menuArmado = 0;
+            logf("[DESCANSO] menú cerrado (%s): cola limpia, saque central del 2.º tiempo", g_menuCerrado ? "señal de ProcessMatchPostHalfTime" : gap > 1500 ? "el job volvió a ticar tras la pausa" : "tiempo límite de 60 s"); g_menuArmado = 0;
             g_descansoFase = 0; g_descansoT = 0; g_saqueEquipo = g_sacaInicial ? 0 : 1; g_saqueResetReloj = 0; g_saqueT = 0; g_saquePedido = 1;
         }
         return;
