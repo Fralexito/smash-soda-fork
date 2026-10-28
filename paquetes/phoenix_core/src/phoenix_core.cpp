@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.81"
+#define PHX_CORE_VERSION "0.4.82"
 
 namespace {
 
@@ -2203,7 +2203,7 @@ volatile LONG g_saquePedido = 0, g_saqueEquipo = 1, g_saqueResetReloj = 0, g_saq
 // hipótesis) o a los 120 s como último recurso; entonces se limpia la cola y se pide el saque central nativo (que hace la fase 2->3). NO tocar «cambios» (plan) en esta prueba: puede colgar con el banquillo vacío.
 // 0.4.81 (J5 §señal): ProcessMatchPostHalfTime::update (FUN_1412F7500, vf+0xC0; void(this)) corre por tick mientras ese proceso está activo, o sea cuando el menú de descanso se cerró y el flujo pasa a MatchPostHalfTime («proceed»).
 // Gancho (crearDesvio 14 B): si lo armamos nosotros al encolar [0x22] y la instancia es PostHalfTime (vtable exe+0x28CCCB8), se marca g_menuCerrado. El Core lanza entonces el saque central. Sin gancho queda el límite de 120 s.
-volatile LONG g_menuArmado = 0, g_menuCerrado = 0; void (*g_postHalfOrig)(void*) = nullptr;
+volatile LONG g_menuArmado = 0, g_menuCerrado = 0; volatile uint32_t g_faseAntesDescanso = 1; void (*g_postHalfOrig)(void*) = nullptr;
 void ganchoPostHalf(void* self) {
     if (g_menuArmado && !g_menuCerrado) {
         uint64_t vt = 0; if (leerSeguro(self, &vt, 8) && vt == (uint64_t)(g_exe.base + 0x28CCCB8)) { uint8_t f89 = 0, f8a = 0; leerSeguro((uint8_t*)self + 0x89, &f89, 1); leerSeguro((uint8_t*)self + 0x8A, &f8a, 1); logf("[DESCANSO] ProcessMatchPostHalfTime activo (+0x89=%u +0x8A=%u): el menú se cerró", f89, f8a); g_menuCerrado = 1; g_menuArmado = 0; }
@@ -2230,7 +2230,9 @@ static void __stdcall ayudanteSaque(uint8_t* job) {
         bool ok = leerSeguro(job + 0x49C0, &rec, 4) && leerSeguro(job + 0x878, &c878, 4) && leerSeguro(job + 0x8F0, &c8f0, 1) && leerSeguro(job + 0x2794, &k2794, 4) && leerSeguro(job + 0x908 + 0x3B8, &j3b8, 8);
         bool ocioso = leerSeguro(job + 0x49C0, &rec, 4) && rec == 0;   // 0.4.74: [juez+0x3B8] es 0 en el entrenamiento (E770 no hace nada con eso): solo se exige que no haya parada en curso
         if (!ocioso) { if (!g_descansoT) g_descansoT = ahora; if (ahora - g_descansoT > 40000) { logf("[DESCANSO] el job no quedó ocioso en 40 s (rec=%u c878=%u c8f0=%u 2794=%u): pantalla cancelada, saque directo", rec, c878, c8f0, k2794); g_descansoPedido = 0; g_descansoT = 0; g_saquePedido = 1; } return; }
-        // 0.4.78: NO se toca la fase ni el reloj (con fase=2 el saque hacía el 2->3 nativo: cambio de lado + IA/formación con el lado viejo, y el cierre del 2.º tiempo en 0x4B712B). El reloj sigue desde 45:00 y T1 evita el fin de tiempo.
+        // 0.4.82: el menú de descanso SOLO sale con fase=2 (con fase=1, 0.4.78-0.4.81, la cola [0x22] se consumía y no salía el menú: Fralex se quedó atascado). Se pone fase=2 mientras dura el menú y se VUELVE a la fase anterior al cerrarlo,
+        // antes del saque: así FUN_140453530 no hace el 2->3 nativo (cambio de lado + IA/formación con el lado viejo). El reloj no se toca: sigue desde 45:00 y T1 evita el fin de tiempo.
+        { uint32_t f0 = 1; leerSeguro(job + 0x2790, &f0, 4); g_faseAntesDescanso = f0; uint32_t fase2 = 2; memcpy(job + 0x2790, &fase2, 4); }
         uint32_t full[30]; for (int i = 0; i < 30; i++) full[i] = i == 0 ? 0x22 : 0x48;
         memcpy(job + 0x878, full, sizeof(full)); job[0x8F0] = 0; job[0x8F1] = 2;
         uint32_t sub2 = 2; memcpy(job + 0x2794, &sub2, 4);
@@ -2241,6 +2243,7 @@ static void __stdcall ayudanteSaque(uint8_t* job) {
     if (g_descansoFase == 1) {
         static ULONGLONG tLogD = 0; if (ahora - tLogD > 3000) { tLogD = ahora; uint32_t q0 = 0, s94 = 0, f = 0; uint8_t cur = 0; leerSeguro(job + 0x878, &q0, 4); leerSeguro(job + 0x2794, &s94, 4); leerSeguro(job + 0x2790, &f, 4); leerSeguro(job + 0x8F0, &cur, 1); logf("[DESCANSO] esperando: cola0=0x%X cursor=%u fase=%u sub=%u gap=%llu ms", q0, (unsigned)cur, f, s94, (unsigned long long)gap); }
         if (g_menuCerrado || gap > 1500 || ahora - g_descansoT > 120000) {
+            { uint32_t fa = g_faseAntesDescanso; memcpy(job + 0x2790, &fa, 4); }   // 0.4.82: se restaura la fase (sin 2->3 nativo)
             uint32_t ceros[30] = {}; memcpy(job + 0x878, ceros, sizeof(ceros)); job[0x8F0] = 0; job[0x8F1] = 0; uint32_t sub1 = 1; memcpy(job + 0x2794, &sub1, 4);
             logf("[DESCANSO] menú cerrado (%s): cola limpia, saque central del 2.º tiempo", g_menuCerrado ? "señal de ProcessMatchPostHalfTime" : gap > 1500 ? "el job volvió a ticar tras la pausa" : "tiempo límite de 120 s"); g_menuArmado = 0;
             g_descansoFase = 0; g_descansoT = 0; g_saqueEquipo = g_sacaInicial ? 0 : 1; g_saqueResetReloj = 0; g_saqueT = 0; g_saquePedido = 1;
