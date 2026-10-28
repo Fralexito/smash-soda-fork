@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.78"
+#define PHX_CORE_VERSION "0.4.79"
 
 namespace {
 
@@ -2473,6 +2473,30 @@ bool cursorPtLogInstalar(Feature& f) {
 }
 bool cursorPtLogQuitar(Feature&) { return true; }
 
+// --- orden_jugador_segura (0.4.79, frente J4 §13): el cierre «PES2021.exe+0x4B712B c0000005» del 28-oct (2.º tiempo, ~6 s tras un gol) es `cmp byte [rax+1],1` con RAX=NULL dentro de FUN_1404B6ED0 (case 2 de la orden de un jugador): FUN_140A7CBA0(gestor,
+// handle) devuelve NULL si el handle del jugador objetivo ya no resuelve (órdenes viejas tras un cambio de plantilla/lado, formación propia, escena de gol con rec.sub=0). Cueva anti-null como reinicio_seguro: si rax es NULL o [rax+1]!=1 se salta a la rama común.
+bool ordenSeguraInstalar(Feature& f) {
+    uint8_t* sig = firmaUnica("codigo", "41 8B 56 08 48 8B C8 E8 ?? ?? ?? ?? 80 78 01 01 0F 85 AE 01 00 00", f.id);
+    if (!sig) { f.estado = "sin firma: orden de jugador FUN_1404B6ED0 (0x4B712B)"; return false; }
+    uint8_t* sitio = sig + 12; const uint8_t esp[10] = { 0x80, 0x78, 0x01, 0x01, 0x0F, 0x85, 0xAE, 0x01, 0x00, 0x00 };
+    uint8_t v[10]; if (!leerSeguro(sitio, v, 10) || memcmp(v, esp, 10) != 0) { f.estado = "bytes inesperados en FUN_1404B6ED0"; return false; }
+    uint8_t* c = reservarCerca(sitio, 64); if (!c) { f.estado = "no hay memoria cerca del exe (orden_jugador_segura)"; return false; }
+    uint8_t* skip = sitio + 10 + 0x1AE; uint8_t* ret = sitio + 10; size_t o = 0; auto b = [&](std::initializer_list<uint8_t> l) { for (uint8_t x : l) c[o++] = x; };
+    auto rel = [&](uint8_t* destino) { int64_t d = destino - (c + o + 4); return (int32_t)d; };
+    b({ 0x48, 0x85, 0xC0 });                                   // test rax,rax
+    b({ 0x0F, 0x84 }); { int32_t r = rel(skip); memcpy(c + o, &r, 4); o += 4; }   // jz skip
+    b({ 0x80, 0x78, 0x01, 0x01 });                             // cmp byte [rax+1],1
+    b({ 0x0F, 0x85 }); { int32_t r = rel(skip); memcpy(c + o, &r, 4); o += 4; }   // jne skip
+    b({ 0xE9 }); { int32_t r = rel(ret); memcpy(c + o, &r, 4); o += 4; }          // jmp ret
+    FlushInstructionCache(GetCurrentProcess(), c, 64);
+    Parche p; p.dir = sitio; p.original.assign(sitio, sitio + 10); p.nuevo.assign(10, 0x90);
+    if (!escribirRel32(p.nuevo.data(), 0xE9, sitio, c)) { f.estado = "cueva fuera de alcance (orden_jugador_segura)"; return false; }
+    if (!aplicarParche(p, f.id)) { f.estado = "no se pudo escribir el salto (orden_jugador_segura)"; return false; }
+    f.parches.push_back(p);
+    char sb[140]; sprintf_s(sb, "ok: red de seguridad de la orden de jugador (exe+0x%llX): handle nulo -> rama común, sin cierre", (unsigned long long)(sitio - g_exe.base)); f.estado = sb; return true;
+}
+bool ordenSeguraQuitar(Feature&) { return true; }
+
 const char* kFirmaReinicio = "48 8B C4 53 41 57 48 83 EC 78 48 89 70 E8";
 using FnReinicio = float* (*)(float*, uint32_t*, void*, void*);
 FnReinicio g_reinicioOrig = nullptr; volatile LONG g_jugChOn = 0, g_jugChEscalados = 0;
@@ -2589,6 +2613,7 @@ std::vector<Feature> g_funciones = {   // orden = orden de arranque (gol_nativo_
     { "arquero_propio_cursor", "Con Cursor de PT fijo = Sí el portero propio no bloquea el cursor del usuario (variante del arquero propio)", arqCursorInstalar, arqCursorQuitar },
     { "arquero_salida_corta", "El portero sale poco de su arco en el entrenamiento (recorta la posición de salida a R m de la línea)", arqSalidaInstalar, arqSalidaQuitar },
     { "cursor_pt_log", "Solo lectura: anota quién pone el cursor del mando en el portero (llamador de setControlado)", cursorPtLogInstalar, cursorPtLogQuitar },
+    { "orden_jugador_segura", "Red de seguridad: si la orden de un jugador (case 2) tiene un handle nulo, usa la rama común en vez de cerrar el juego (0x4B712B)", ordenSeguraInstalar, ordenSeguraQuitar },
     { "reinicio_seguro", "Red de seguridad: si la posición de reinicio del balón recibe una clave nula, usa la rama por defecto en vez de cerrar el juego", reinicioSeguroInstalar, reinicioSeguroQuitar },
     { "marcador_nativo_free", "El marcador y el reloj nativos del partido se muestran en el entrenamiento (parche de 1 byte en el HUD)", marcadorNativoInstalar, marcadorNativoQuitar },
     { "celebracion_chica", "La ancla de la celebración del gol se recorta a la cancha chica en el entrenamiento", celChicaInstalar, celChicaQuitar },
