@@ -2391,8 +2391,8 @@ static void __stdcall ayudanteSaque(uint8_t* job) {
         static ULONGLONG tLogD = 0; if (ahora - tLogD > 3000) { tLogD = ahora; uint32_t q0 = 0, s94 = 0, f = 0; uint8_t cur = 0; leerSeguro(job + 0x878, &q0, 4); leerSeguro(job + 0x2794, &s94, 4); leerSeguro(job + 0x2790, &f, 4); leerSeguro(job + 0x8F0, &cur, 1); logf("[DESCANSO] esperando: cola0=0x%X cursor=%u fase=%u sub=%u gap=%llu ms", q0, (unsigned)cur, f, s94, (unsigned long long)gap); }
         if (g_menuCerrado || gap > 1500 || ahora - g_descansoT > 180000) {
             if (g_descansoFase3) {   // 0.4.83: 2.º tiempo exacto en 45:00 y sin «+N»: fase 3 escrita DIRECTA (sin pasar por 453530/14102CAD0 = sin el 2->3 nativo) y base del reloj a 0 (la pantalla suma 45:00 en fase 3)
-                uint32_t f3 = 3; memcpy(job + 0x2790, &f3, 4); if (g_baseReloj) g_baseReloj(job + 0x2790, 162000.0f); float z0 = 0.0f; memcpy(job + 0x279C, &z0, 4);   // 0.4.93: con base 0 la pantalla mostró 0:00-based (captura 15:21: 40:19 en el 2.º tiempo): la pantalla NO suma 45:00 en fase 3, así que la base va a 45:00
-                g_relojPausa = 0; logf("[DESCANSO] 2.º tiempo: fase 3 directa y base del reloj 45:00");
+                uint32_t f3 = 3; memcpy(job + 0x2790, &f3, 4); if (g_baseReloj) g_baseReloj(job + 0x2790, 0.0f); float z0 = 0.0f; memcpy(job + 0x279C, &z0, 4);   // 0.4.93: variante SEGURA: base 0 (la pantalla cuenta 0→45 en el 2.º tiempo; con base 45:00 en fase 1 el HUD se quedaba en «45:00 +N»); el final llega a t≥162000+añadido
+                g_relojPausa = 0; logf("[DESCANSO] 2.º tiempo: fase 3 directa y reloj a 0 (la pantalla cuenta 0→45; el final a 45 min de reloj + añadido)");
             } else if (g_descansoFinal) {   // 0.4.91: final tipo amistoso: tras estadísticas → X (menú) la revancha arranca desde 0:00 en fase 1
                 uint32_t fa = g_faseAntesDescanso; memcpy(job + 0x2790, &fa, 4); if (g_baseReloj) g_baseReloj(job + 0x2790, 0.0f); float z0 = 0.0f; memcpy(job + 0x279C, &z0, 4); g_relojPausa = 0;
                 logf("[DESCANSO] final: revancha desde 0:00 (fase %u); el marcador nativo NO se reinicia todavía", fa);
@@ -2625,7 +2625,7 @@ DWORD WINAPI hiloDosTiempos(LPVOID) {
             escribirEstadoStreet("medio_tiempo", t);
             pendMedio = true;   // 0.4.80: se pide cuando hayan pasado >10 s del último gol (la escena de gol + órdenes viejas provocó el cierre 0x4B712B)
         }
-        if (estado == 1 && (t >= 324000.0 + g_anadidoSeg) && !(faseP == 2)) {
+        if (estado == 1 && (t >= ((g_descansoFase3 && !g_descansoBase45) ? 162000.0 : 324000.0) + g_anadidoSeg) && !(faseP == 2)) {
             estado = 2; logf("[TIEMPOS] FINAL a t=%.0f: aviso, pausa de 8 s y revancha con saque central y reloj a 0", t);
             g_bolaCentroHasta = GetTickCount64() + 8000; escribirEstadoStreet("final", t); tFinal = GetTickCount64() + 8000; g_relojPausa = 1;
             if (g_e770 && g_descansoOn) { tFinal = 0; pendFinal = true; }   // 0.4.91: el final usa el panel de estadísticas del descanso y la revancha sale al cerrar el menú
