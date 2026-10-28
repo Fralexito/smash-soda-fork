@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.82"
+#define PHX_CORE_VERSION "0.4.83"
 
 namespace {
 
@@ -1725,7 +1725,7 @@ bool redQuitar(Feature&) { g_redOn = 0; return true; }
 volatile ULONGLONG g_tTrainGlob = 0; volatile LONG g_trainGlobOn = 0; HANDLE g_hiloTrainGlob = nullptr;
 struct ParcheN { uint8_t* dir = nullptr; uint8_t ori[8] = {}, nue[8] = {}; size_t n = 0; bool puesto = false; };
 static void ponerParcheN(ParcheN& pn, bool si) { if (!pn.dir || pn.puesto == si) return; if (escribirCodigo(pn.dir, si ? pn.nue : pn.ori, pn.n)) pn.puesto = si; }
-volatile LONG g_sinSaquesOn = 0, g_arqueroOn = 0, g_iaClearOn = 0, g_gkCortoOn = 0, g_arqCursorOn = 0; ParcheDisp g_pdS1, g_pdS2, g_pdIA, g_pdGK1, g_pdGK2, g_pdMN, g_pdMN2; ParcheN g_pnA, g_pnB, g_pnC1, g_pnC2, g_pnC3, g_pnMA1, g_pnMA2; volatile LONG g_hudFuerzaOn = 0; ParcheDisp g_pdT1; volatile LONG g_sinFinOn = 0; ParcheDisp g_pdR1, g_pdR1b; volatile LONG g_hudP1On = 0, g_relojR1On = 0; ParcheDisp g_pdKR; volatile LONG g_krOn = 0;   // 0.4.77: los parches de HUD (P1/P2) y del reloj (R1/R1b) solo con TrainingWork
+volatile LONG g_sinSaquesOn = 0, g_arqueroOn = 0, g_iaClearOn = 0, g_gkCortoOn = 0, g_arqCursorOn = 0; ParcheDisp g_pdS1, g_pdS2, g_pdIA, g_pdGK1, g_pdGK2, g_pdMN, g_pdMN2; ParcheN g_pnA, g_pnB, g_pnC1, g_pnC2, g_pnC3, g_pnMA1, g_pnMA2; volatile LONG g_hudFuerzaOn = 0; ParcheDisp g_pdT1; volatile LONG g_sinFinOn = 0; ParcheDisp g_pdR1, g_pdR1b; volatile LONG g_hudP1On = 0, g_relojR1On = 0, g_relojPausa = 0; ParcheDisp g_pdKR; volatile LONG g_krOn = 0;   // 0.4.77: los parches de HUD (P1/P2) y del reloj (R1/R1b) solo con TrainingWork
 DWORD WINAPI hiloTrainGlob(LPVOID) {
     while (g_trainGlobOn) {
         if (trainingWorkEstable() || hayTrainingWork()) g_tTrainGlob = GetTickCount64();
@@ -1734,7 +1734,7 @@ DWORD WINAPI hiloTrainGlob(LPVOID) {
         if (g_arqCursorOn) { bool dentro = GetTickCount64() - g_tTrainGlob < 3000; ponerParcheN(g_pnC1, dentro); ponerParcheN(g_pnC2, dentro); ponerParcheN(g_pnC3, dentro); }
         if (g_krOn) { bool dentro = GetTickCount64() - g_tTrainGlob < 3000; ponerParche(g_pdKR, dentro); }
         if (g_hudP1On) { bool dentro = GetTickCount64() - g_tTrainGlob < 3000; ponerParche(g_pdMN, dentro); ponerParche(g_pdMN2, dentro); }
-        if (g_relojR1On) { bool dentro = GetTickCount64() - g_tTrainGlob < 3000; ponerParche(g_pdR1, dentro); ponerParche(g_pdR1b, dentro); }
+        if (g_relojR1On) { bool dentro = GetTickCount64() - g_tTrainGlob < 3000 && !g_relojPausa; ponerParche(g_pdR1, dentro); ponerParche(g_pdR1b, dentro); }
         if (g_sinFinOn) { bool dentro = GetTickCount64() - g_tTrainGlob < 3000; ponerParche(g_pdT1, dentro); }
         if (g_hudFuerzaOn) { bool dentro = GetTickCount64() - g_tTrainGlob < 3000; ponerParcheN(g_pnMA1, dentro); ponerParcheN(g_pnMA2, dentro); }
         if (g_iaClearOn) { bool dentro = GetTickCount64() - g_tTrainGlob < 3000; ponerParche(g_pdIA, dentro); }
@@ -2203,6 +2203,7 @@ volatile LONG g_saquePedido = 0, g_saqueEquipo = 1, g_saqueResetReloj = 0, g_saq
 // hipótesis) o a los 120 s como último recurso; entonces se limpia la cola y se pide el saque central nativo (que hace la fase 2->3). NO tocar «cambios» (plan) en esta prueba: puede colgar con el banquillo vacío.
 // 0.4.81 (J5 §señal): ProcessMatchPostHalfTime::update (FUN_1412F7500, vf+0xC0; void(this)) corre por tick mientras ese proceso está activo, o sea cuando el menú de descanso se cerró y el flujo pasa a MatchPostHalfTime («proceed»).
 // Gancho (crearDesvio 14 B): si lo armamos nosotros al encolar [0x22] y la instancia es PostHalfTime (vtable exe+0x28CCCB8), se marca g_menuCerrado. El Core lanza entonces el saque central. Sin gancho queda el límite de 120 s.
+bool g_descansoFase3 = false;   // json «descanso_fase3»: true = el 2.º tiempo se escribe en fase 3 con base 0 (HUD 45:00-90:00 sin +N); false (por defecto) = se restaura la fase anterior (0.4.82)
 volatile LONG g_menuArmado = 0, g_menuCerrado = 0; volatile uint32_t g_faseAntesDescanso = 1; void (*g_postHalfOrig)(void*) = nullptr;
 void ganchoPostHalf(void* self) {
     if (g_menuArmado && !g_menuCerrado) {
@@ -2237,13 +2238,16 @@ static void __stdcall ayudanteSaque(uint8_t* job) {
         memcpy(job + 0x878, full, sizeof(full)); job[0x8F0] = 0; job[0x8F1] = 2;
         uint32_t sub2 = 2; memcpy(job + 0x2794, &sub2, 4);
         logf("[DESCANSO] cola [0x22,0x48..] escrita (sin tocar fase ni reloj): se abre el menú de descanso");
-        g_menuCerrado = 0; g_menuArmado = g_postHalfOrig ? 1 : 0;
+        g_menuCerrado = 0; g_menuArmado = g_postHalfOrig ? 1 : 0; g_relojPausa = 1;
         g_descansoPedido = 0; g_descansoFase = 1; g_descansoT = ahora; return;
     }
     if (g_descansoFase == 1) {
         static ULONGLONG tLogD = 0; if (ahora - tLogD > 3000) { tLogD = ahora; uint32_t q0 = 0, s94 = 0, f = 0; uint8_t cur = 0; leerSeguro(job + 0x878, &q0, 4); leerSeguro(job + 0x2794, &s94, 4); leerSeguro(job + 0x2790, &f, 4); leerSeguro(job + 0x8F0, &cur, 1); logf("[DESCANSO] esperando: cola0=0x%X cursor=%u fase=%u sub=%u gap=%llu ms", q0, (unsigned)cur, f, s94, (unsigned long long)gap); }
         if (g_menuCerrado || gap > 1500 || ahora - g_descansoT > 120000) {
-            { uint32_t fa = g_faseAntesDescanso; memcpy(job + 0x2790, &fa, 4); }   // 0.4.82: se restaura la fase (sin 2->3 nativo)
+            if (g_descansoFase3) {   // 0.4.83: 2.º tiempo exacto en 45:00 y sin «+N»: fase 3 escrita DIRECTA (sin pasar por 453530/14102CAD0 = sin el 2->3 nativo) y base del reloj a 0 (la pantalla suma 45:00 en fase 3)
+                uint32_t f3 = 3; memcpy(job + 0x2790, &f3, 4); if (g_baseReloj) g_baseReloj(job + 0x2790, 0.0f); float z0 = 0.0f; memcpy(job + 0x279C, &z0, 4);
+                g_relojPausa = 0; logf("[DESCANSO] 2.º tiempo: fase 3 directa y reloj a 0 (pantalla 45:00)");
+            } else { uint32_t fa = g_faseAntesDescanso; memcpy(job + 0x2790, &fa, 4); g_relojPausa = 0; }   // 0.4.82: se restaura la fase
             uint32_t ceros[30] = {}; memcpy(job + 0x878, ceros, sizeof(ceros)); job[0x8F0] = 0; job[0x8F1] = 0; uint32_t sub1 = 1; memcpy(job + 0x2794, &sub1, 4);
             logf("[DESCANSO] menú cerrado (%s): cola limpia, saque central del 2.º tiempo", g_menuCerrado ? "señal de ProcessMatchPostHalfTime" : gap > 1500 ? "el job volvió a ticar tras la pausa" : "tiempo límite de 120 s"); g_menuArmado = 0;
             g_descansoFase = 0; g_descansoT = 0; g_saqueEquipo = g_sacaInicial ? 0 : 1; g_saqueResetReloj = 0; g_saqueT = 0; g_saquePedido = 1;
@@ -2260,7 +2264,7 @@ static void __stdcall ayudanteSaque(uint8_t* job) {
             if (ahora - g_saqueT > 40000) { logf("[SAQUE] el job no quedó ocioso en 40 s (rec=%u c878=%u c8f0=%u 2794=%u): pedido cancelado", rec, c878, c8f0, k2794); g_saquePedido = 0; g_saqueT = 0; }
             return;
         }
-        if (g_saqueResetReloj && g_baseReloj) { g_baseReloj(job + 0x2790, 0.0f); float z = 0.0f; memcpy(job + 0x279C, &z, 4); logf("[SAQUE] reloj reiniciado a 0:00"); }
+        if (g_saqueResetReloj && g_baseReloj) { g_baseReloj(job + 0x2790, 0.0f); float z = 0.0f; memcpy(job + 0x279C, &z, 4); uint32_t f1 = 1; memcpy(job + 0x2790, &f1, 4); g_relojPausa = 0; logf("[SAQUE] reloj reiniciado a 0:00 (fase 1)"); }
         alignas(16) float centro[4] = { 0, 0, 0, 0 };
         (void)centro;
         bool hecho = false;
@@ -2413,6 +2417,7 @@ DWORD WINAPI hiloDosTiempos(LPVOID) {
     while (g_dosTiemposOn) {
         Sleep(50);
         if (!trainingWorkEstable()) { continue; }
+        uint32_t faseP = 0; { uint8_t* rz = nullptr; uint8_t* Sx = nullptr; if (leerSeguro(g_globalPartido, &rz, 8) && rz && leerSeguro(rz + 0x270, &Sx, 8) && Sx) leerSeguro(Sx + 0x1168, &faseP, 4); }
         double t = 0; if (!leerRelojPantalla(&t)) { if (++malas == 1 || malas % 400 == 0) logf("[TIEMPOS] lectura del reloj no válida (#%ld): no actúo", (long)malas); continue; }
         if (GetTickCount64() - tLog > 5000) { tLog = GetTickCount64(); logf("[TIEMPOS] t=%.0f (pantalla %d:%02d) estado=%d", t, (int)(t / 3600.0) + ((int)t % 3600 ? 1 : 0), (int)(t / 60.0) % 60, estado); }
         if (prev >= 0 && t < prev - 200.0) { logf("[TIEMPOS] el reloj saltó hacia atrás (%.0f -> %.0f): reinicio la máquina de estados, no actúo", prev, t); estado = 0; prev = t; continue; }
@@ -2421,9 +2426,9 @@ DWORD WINAPI hiloDosTiempos(LPVOID) {
             escribirEstadoStreet("medio_tiempo", t);
             pendMedio = true;   // 0.4.80: se pide cuando hayan pasado >10 s del último gol (la escena de gol + órdenes viejas provocó el cierre 0x4B712B)
         }
-        if (estado == 1 && t >= 324000.0 && (prev < 0 || prev < 324000.0 + 3600.0)) {
+        if (estado == 1 && ((g_descansoFase3 && faseP == 3 && t >= 162000.0) || t >= 324000.0) && !(faseP == 2)) {
             estado = 2; logf("[TIEMPOS] FINAL a t=%.0f: aviso, pausa de 8 s y revancha con saque central y reloj a 0", t);
-            g_bolaCentroHasta = GetTickCount64() + 8000; escribirEstadoStreet("final", t); tFinal = GetTickCount64() + 8000;
+            g_bolaCentroHasta = GetTickCount64() + 8000; escribirEstadoStreet("final", t); tFinal = GetTickCount64() + 8000; g_relojPausa = 1;
         }
         if (pendMedio && GetTickCount64() - g_tUltGol > 10000) {
             pendMedio = false;
@@ -2750,6 +2755,7 @@ void leerConfig() {
     if (valorDe("ia_escala", v)) g_iaE = (float)atof(v.c_str());
     if (valorDe("ia_escala_apoyo", v)) g_iaEApoyo = (float)atof(v.c_str());
     if (valorDe("ia_piso_m", v)) g_iaPiso = (float)atof(v.c_str());
+    if (valorDe("descanso_fase3", v)) g_descansoFase3 = (v == "true");
     if (valorDe("cursor_bloqueo_pt", v)) g_cursorBloqueoCfg = (v == "true");
     if (valorDe("street_minutos", v)) { g_streetMinutos = atof(v.c_str()); if (g_streetMinutos < 0.5 || g_streetMinutos > 44.0) g_streetMinutos = 5.0; }
     if (valorDe("red_factor", v)) { g_redFactor = (float)atof(v.c_str()); if (g_redFactor < 0.0f || g_redFactor > 1.0f) g_redFactor = 0.85f; }
