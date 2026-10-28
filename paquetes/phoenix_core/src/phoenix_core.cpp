@@ -1325,7 +1325,8 @@ DWORD WINAPI hiloDisparo(LPVOID) {
 uint32_t ganchoPredTiro(uint64_t a1, int a2, float a3, float a4, uint64_t a5, int a6, char a7) {
     LONG nn = InterlockedIncrement(&g_disparoLlamadas);
     if (nn <= 12) logf("[siempre_disparo_free] predicado: jugador=%d modo=%d lado=%d training=%d", a2, a6, (int)a7, (int)(GetTickCount64() - g_tTrainingVisto < 3000));
-    if (g_disparoOn && GetTickCount64() - g_tTrainingVisto < 3000) { InterlockedIncrement(&g_disparoForzados); return 1; }
+    // 0.4.60 (frente L): el portero (slots 0 y 11) conserva su lógica de portero: el tiro de campo forzado NO se le aplica (si el cursor cae en él tras un reinicio no actúa como jugador de campo).
+    if (g_disparoOn && a2 != 0 && a2 != 11 && GetTickCount64() - g_tTrainingVisto < 3000) { InterlockedIncrement(&g_disparoForzados); return 1; }
     return g_predTiroOrig(a1, a2, a3, a4, a5, a6, a7);
 }
 // 0.4.29: ThinkUnitClear (vftable exe+0x260FEE8) comparte el botón 0xF con ThinkUnitShoot. Se cambian sus ranuras +0x60 (FUN_1408AEEE0)
@@ -1704,13 +1705,14 @@ bool redQuitar(Feature&) { g_redOn = 0; return true; }
 volatile ULONGLONG g_tTrainGlob = 0; volatile LONG g_trainGlobOn = 0; HANDLE g_hiloTrainGlob = nullptr;
 struct ParcheN { uint8_t* dir = nullptr; uint8_t ori[8] = {}, nue[8] = {}; size_t n = 0; bool puesto = false; };
 static void ponerParcheN(ParcheN& pn, bool si) { if (!pn.dir || pn.puesto == si) return; if (escribirCodigo(pn.dir, si ? pn.nue : pn.ori, pn.n)) pn.puesto = si; }
-volatile LONG g_sinSaquesOn = 0, g_arqueroOn = 0, g_iaClearOn = 0, g_gkCortoOn = 0, g_arqCursorOn = 0; ParcheDisp g_pdS1, g_pdS2, g_pdIA, g_pdGK1, g_pdGK2, g_pdMN, g_pdMN2; ParcheN g_pnA, g_pnB, g_pnC1, g_pnC2, g_pnC3;
+volatile LONG g_sinSaquesOn = 0, g_arqueroOn = 0, g_iaClearOn = 0, g_gkCortoOn = 0, g_arqCursorOn = 0; ParcheDisp g_pdS1, g_pdS2, g_pdIA, g_pdGK1, g_pdGK2, g_pdMN, g_pdMN2; ParcheN g_pnA, g_pnB, g_pnC1, g_pnC2, g_pnC3, g_pnMA1, g_pnMA2; volatile LONG g_hudFuerzaOn = 0;
 DWORD WINAPI hiloTrainGlob(LPVOID) {
     while (g_trainGlobOn) {
         if (trainingWorkEstable() || hayTrainingWork()) g_tTrainGlob = GetTickCount64();
         if (g_sinSaquesOn) { bool dentro = GetTickCount64() - g_tTrainGlob < 3000; ponerParche(g_pdS1, dentro); ponerParche(g_pdS2, dentro); }
         if (g_gkCortoOn) { bool dentro = GetTickCount64() - g_tTrainGlob < 3000; ponerParche(g_pdGK1, dentro); ponerParche(g_pdGK2, dentro); }
         if (g_arqCursorOn) { bool dentro = GetTickCount64() - g_tTrainGlob < 3000; ponerParcheN(g_pnC1, dentro); ponerParcheN(g_pnC2, dentro); ponerParcheN(g_pnC3, dentro); }
+        if (g_hudFuerzaOn) { bool dentro = GetTickCount64() - g_tTrainGlob < 3000; ponerParcheN(g_pnMA1, dentro); ponerParcheN(g_pnMA2, dentro); }
         if (g_iaClearOn) { bool dentro = GetTickCount64() - g_tTrainGlob < 3000; ponerParche(g_pdIA, dentro); }
         if (g_arqueroOn) { bool dentro = GetTickCount64() - g_tTrainGlob < 3000; ponerParcheN(g_pnA, dentro); ponerParcheN(g_pnB, dentro); }
         Sleep(100);
@@ -1874,10 +1876,17 @@ bool marcadorNativoInstalar(Feature& f) {
     bool p2 = localizarParche("44 38 37 75 0F 45 38 B5 B2 11 00 00 45 0F B6 D1 45 0F 44 D6 0F B6 B4 24 B0 00 00 00", 3, 0x75, 0xEB, g_pdMN2, f.id);
     logf("[%s] pestillo del HUD (S+0x11B2) %s", f.id, p2 ? "localizado" : "NO localizado");
     ponerParche(g_pdMN, true); if (p2) ponerParche(g_pdMN2, true);
+    // 0.4.60 (J3, parche A): el pestillo no bastaba (el HUD volvió a perderse con S+0x11B2==1). En FUN_1420C9080 se fuerza M+0x9C=1 ignorando todas las condiciones que lo apagan (repetición, [raíz+0x388], S+0x177F…):
+    // +7 `74 0E`→`EB 0E`; +23 `80 3F 00 75 09`→`C6 07 01 EB 09`. Solo con TrainingWork (hiloTrainGlob), restaurado al salir.
+    const char* firmaA = "E8 ?? ?? ?? ?? 84 C0 74 0E 66 C7 07 00 01 C7 47 20 00 00 00 00 EB 29 80 3F 00 75 09 C7 47 20 00 00 00 00 EB 1B E8";
+    bool a1 = localizarParcheN(g_pnMA1, firmaA, 7, { 0x74, 0x0E }, { 0xEB, 0x0E }, f.id);
+    bool a2 = localizarParcheN(g_pnMA2, firmaA, 23, { 0x80, 0x3F, 0x00, 0x75, 0x09 }, { 0xC6, 0x07, 0x01, 0xEB, 0x09 }, f.id);
+    logf("[%s] HUD forzado (parche A) %s", f.id, (a1 && a2) ? "localizado" : "NO localizado");
+    if (a1 && a2) { asegurarHiloTrain(); g_hudFuerzaOn = 1; } else { g_pnMA1.dir = nullptr; g_pnMA2.dir = nullptr; }
     f.estado = g_pdMN.puesto ? "ok: el HUD de marcador y reloj nativo ya no se apaga en el entrenamiento (parche de 1 byte en FUN_1420C9080)" : "no se pudo escribir el parche del HUD";
     return g_pdMN.puesto;
 }
-bool marcadorNativoQuitar(Feature&) { ponerParche(g_pdMN, false); ponerParche(g_pdMN2, false); return true; }
+bool marcadorNativoQuitar(Feature&) { g_hudFuerzaOn = 0; ponerParcheN(g_pnMA1, false); ponerParcheN(g_pnMA2, false); ponerParche(g_pdMN, false); ponerParche(g_pdMN2, false); return true; }
 
 // --- celebracion_chica (0.4.56, RE del frente K, 27-oct): la ancla de la demo de gol/celebración (FUN_140476C50, guardada en [raíz+0x1A8]+0x98) se pasa a FUN_14047C500 (RVA 0x47C500;
 // void(int* this, u64 jugador, uint* st, int tipo, int flag), st[0]=id, st[1]=x, st[2]=y, st[3]=z), que arranca la demo; los tipos 4 y 7 de ancla usan metros absolutos del estadio real. Pre-gancho: con TrainingWork, st[1] y st[3] se recortan
