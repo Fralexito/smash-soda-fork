@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.76"
+#define PHX_CORE_VERSION "0.4.77"
 
 namespace {
 
@@ -1724,7 +1724,7 @@ bool redQuitar(Feature&) { g_redOn = 0; return true; }
 volatile ULONGLONG g_tTrainGlob = 0; volatile LONG g_trainGlobOn = 0; HANDLE g_hiloTrainGlob = nullptr;
 struct ParcheN { uint8_t* dir = nullptr; uint8_t ori[8] = {}, nue[8] = {}; size_t n = 0; bool puesto = false; };
 static void ponerParcheN(ParcheN& pn, bool si) { if (!pn.dir || pn.puesto == si) return; if (escribirCodigo(pn.dir, si ? pn.nue : pn.ori, pn.n)) pn.puesto = si; }
-volatile LONG g_sinSaquesOn = 0, g_arqueroOn = 0, g_iaClearOn = 0, g_gkCortoOn = 0, g_arqCursorOn = 0; ParcheDisp g_pdS1, g_pdS2, g_pdIA, g_pdGK1, g_pdGK2, g_pdMN, g_pdMN2; ParcheN g_pnA, g_pnB, g_pnC1, g_pnC2, g_pnC3, g_pnMA1, g_pnMA2; volatile LONG g_hudFuerzaOn = 0; ParcheDisp g_pdT1; volatile LONG g_sinFinOn = 0; ParcheDisp g_pdKR; volatile LONG g_krOn = 0;
+volatile LONG g_sinSaquesOn = 0, g_arqueroOn = 0, g_iaClearOn = 0, g_gkCortoOn = 0, g_arqCursorOn = 0; ParcheDisp g_pdS1, g_pdS2, g_pdIA, g_pdGK1, g_pdGK2, g_pdMN, g_pdMN2; ParcheN g_pnA, g_pnB, g_pnC1, g_pnC2, g_pnC3, g_pnMA1, g_pnMA2; volatile LONG g_hudFuerzaOn = 0; ParcheDisp g_pdT1; volatile LONG g_sinFinOn = 0; ParcheDisp g_pdR1, g_pdR1b; volatile LONG g_hudP1On = 0, g_relojR1On = 0; ParcheDisp g_pdKR; volatile LONG g_krOn = 0;   // 0.4.77: los parches de HUD (P1/P2) y del reloj (R1/R1b) solo con TrainingWork
 DWORD WINAPI hiloTrainGlob(LPVOID) {
     while (g_trainGlobOn) {
         if (trainingWorkEstable() || hayTrainingWork()) g_tTrainGlob = GetTickCount64();
@@ -1732,6 +1732,8 @@ DWORD WINAPI hiloTrainGlob(LPVOID) {
         if (g_gkCortoOn) { bool dentro = GetTickCount64() - g_tTrainGlob < 3000; ponerParche(g_pdGK1, dentro); ponerParche(g_pdGK2, dentro); }
         if (g_arqCursorOn) { bool dentro = GetTickCount64() - g_tTrainGlob < 3000; ponerParcheN(g_pnC1, dentro); ponerParcheN(g_pnC2, dentro); ponerParcheN(g_pnC3, dentro); }
         if (g_krOn) { bool dentro = GetTickCount64() - g_tTrainGlob < 3000; ponerParche(g_pdKR, dentro); }
+        if (g_hudP1On) { bool dentro = GetTickCount64() - g_tTrainGlob < 3000; ponerParche(g_pdMN, dentro); ponerParche(g_pdMN2, dentro); }
+        if (g_relojR1On) { bool dentro = GetTickCount64() - g_tTrainGlob < 3000; ponerParche(g_pdR1, dentro); ponerParche(g_pdR1b, dentro); }
         if (g_sinFinOn) { bool dentro = GetTickCount64() - g_tTrainGlob < 3000; ponerParche(g_pdT1, dentro); }
         if (g_hudFuerzaOn) { bool dentro = GetTickCount64() - g_tTrainGlob < 3000; ponerParcheN(g_pnMA1, dentro); ponerParcheN(g_pnMA2, dentro); }
         if (g_iaClearOn) { bool dentro = GetTickCount64() - g_tTrainGlob < 3000; ponerParche(g_pdIA, dentro); }
@@ -1904,7 +1906,8 @@ bool marcadorNativoInstalar(Feature& f) {
     // 0.4.58 (J3): pestillo de FUN_1420C9080 (RVA 0x20C90F4, 75->EB): si el HUD se apagó y S+0x11B2==0, no volvía a encenderse; el saque de TrainingWork no pone ese byte.
     bool p2 = localizarParche("44 38 37 75 0F 45 38 B5 B2 11 00 00 45 0F B6 D1 45 0F 44 D6 0F B6 B4 24 B0 00 00 00", 3, 0x75, 0xEB, g_pdMN2, f.id);
     logf("[%s] pestillo del HUD (S+0x11B2) %s", f.id, p2 ? "localizado" : "NO localizado");
-    ponerParche(g_pdMN, true); if (p2) ponerParche(g_pdMN2, true);
+    if (!p2) g_pdMN2.dir = nullptr;
+    asegurarHiloTrain(); g_hudP1On = 1;   // 0.4.77: se aplican solo con TrainingWork (hiloTrainGlob)
     // 0.4.60 (J3, parche A): el pestillo no bastaba (el HUD volvió a perderse con S+0x11B2==1). En FUN_1420C9080 se fuerza M+0x9C=1 ignorando todas las condiciones que lo apagan (repetición, [raíz+0x388], S+0x177F…):
     // +7 `74 0E`→`EB 0E`; +23 `80 3F 00 75 09`→`C6 07 01 EB 09`. Solo con TrainingWork (hiloTrainGlob), restaurado al salir.
     const char* firmaA = "E8 ?? ?? ?? ?? 84 C0 74 0E 66 C7 07 00 01 C7 47 20 00 00 00 00 EB 29 80 3F 00 75 09 C7 47 20 00 00 00 00 EB 1B E8";
@@ -1912,10 +1915,10 @@ bool marcadorNativoInstalar(Feature& f) {
     bool a2 = localizarParcheN(g_pnMA2, firmaA, 23, { 0x80, 0x3F, 0x00, 0x75, 0x09 }, { 0xC6, 0x07, 0x01, 0xEB, 0x09 }, f.id);
     logf("[%s] HUD forzado (parche A) %s", f.id, (a1 && a2) ? "localizado" : "NO localizado");
     if (a1 && a2) { asegurarHiloTrain(); g_hudFuerzaOn = 1; } else { g_pnMA1.dir = nullptr; g_pnMA2.dir = nullptr; }
-    f.estado = g_pdMN.puesto ? "ok: el HUD de marcador y reloj nativo ya no se apaga en el entrenamiento (parche de 1 byte en FUN_1420C9080)" : "no se pudo escribir el parche del HUD";
-    return g_pdMN.puesto;
+    f.estado = "ok: el HUD de marcador y reloj nativo ya no se apaga en el entrenamiento (parches en FUN_1420C9080 solo con TrainingWork)";
+    return true;
 }
-bool marcadorNativoQuitar(Feature&) { g_hudFuerzaOn = 0; ponerParcheN(g_pnMA1, false); ponerParcheN(g_pnMA2, false); ponerParche(g_pdMN, false); ponerParche(g_pdMN2, false); return true; }
+bool marcadorNativoQuitar(Feature&) { g_hudFuerzaOn = 0; g_hudP1On = 0; ponerParcheN(g_pnMA1, false); ponerParcheN(g_pnMA2, false); ponerParche(g_pdMN, false); ponerParche(g_pdMN2, false); return true; }
 
 // --- celebracion_chica (0.4.56, RE del frente K, 27-oct): la ancla de la demo de gol/celebración (FUN_140476C50, guardada en [raíz+0x1A8]+0x98) se pasa a FUN_14047C500 (RVA 0x47C500;
 // void(int* this, u64 jugador, uint* st, int tipo, int flag), st[0]=id, st[1]=x, st[2]=y, st[3]=z), que arranca la demo; los tipos 4 y 7 de ancla usan metros absolutos del estadio real. Pre-gancho: con TrainingWork, st[1] y st[3] se recortan
@@ -2112,7 +2115,7 @@ bool celChicaQuitar(Feature&) {
 // --- reloj_street_free (0.4.57, RE del frente J §2.5): el reloj del partido es una estructura en S+0x1168 (S = [raíz+0x270]): +0 fase, +4 sub-fase (1 en juego), +0xC float «transcurrido» (S+0x1174; 60 unidades = 1 s,
 // escritura plana sin protección) y una base protegida por hash (NO se toca). El HUD (match2D::Screen::Time) muestra base + float. En el entrenamiento la función del reloj (FUN_14044CE80) sale si TrainingWork está activo, así que
 // el reloj queda en 0:00. El Core, desde un hilo, suma 60·dt a S+0x1174 mientras la sub-fase es 1 (en juego) y reinicia a 0 al llegar a «street_minutos» (json, por defecto 5): nunca se alcanzan los 45:00 del fin de tiempo.
-volatile LONG g_relojOn = 0; HANDLE g_hiloReloj = nullptr; double g_streetMinutos = 5.0; ParcheDisp g_pdR1, g_pdR1b; bool g_relojNativo = false; volatile LONG g_usaDuracion = 0; uint8_t* g_cfgDuracionGlob = nullptr;
+volatile LONG g_relojOn = 0; HANDLE g_hiloReloj = nullptr; double g_streetMinutos = 5.0; bool g_relojNativo = false; volatile LONG g_usaDuracion = 0; uint8_t* g_cfgDuracionGlob = nullptr;
 // Duración elegida en «Opciones gener.» (frente J2): byte de minutos en S_cfg+0x1C, S_cfg = *(*(exe+0x3705E10)+0x50)+0x35960 (valores 5-15, 20, 25, 30). Devuelve 0 si no se puede leer.
 static bool g_relojMFijado = false;
 static int duracionElegida() {
@@ -2158,8 +2161,9 @@ bool relojInstalar(Feature& f) {
     bool r1 = localizarParche("80 B9 DB 27 00 00 00 48 8B F9 8B 91 94 27 00 00 41 0F 95 C0 48 81 C1 C0 27 00 00 E8 ?? ?? ?? ?? 48 8B 05 ?? ?? ?? ?? 48 8B 88 00 04 00 00 48 85 C9 74 14", 49, 0x74, 0xEB, g_pdR1, f.id);
     bool r1b = localizarParche("48 8B 88 B0 03 00 00 48 85 C9 74 0D E8 ?? ?? ?? ?? 84 C0 0F 85 D0 01 00 00 E8 ?? ?? ?? ?? 84 C0 0F 85 C3 01 00 00", 10, 0x74, 0xEB, g_pdR1b, f.id);
     logf("[%s] parche R1 (TrainingWork) %s · R1b (objeto 0x3B0) %s", f.id, r1 ? "localizado" : "NO", r1b ? "localizado" : "NO");
-    if (r1) ponerParche(g_pdR1, true); if (r1b) ponerParche(g_pdR1b, true);
-    g_relojNativo = r1 && g_pdR1.puesto;
+    if (!r1b) g_pdR1b.dir = nullptr;
+    if (r1) { asegurarHiloTrain(); g_relojR1On = 1; }   // 0.4.77: R1/R1b solo con TrainingWork (hiloTrainGlob)
+    g_relojNativo = r1;
     g_relojOn = 1; g_hiloReloj = CreateThread(nullptr, 0, hiloReloj, nullptr, 0, nullptr);
     if (!g_hiloReloj) { g_relojOn = 0; f.estado = "no se pudo crear el hilo del reloj"; return false; }
     char b[140]; sprintf_s(b, "ok: el reloj nativo corre en el entrenamiento y reinicia a los %.1f min (escribe S+0x1174)", g_streetMinutos); f.estado = b; return true;
@@ -2423,7 +2427,7 @@ bool dosTiemposInstalar(Feature& f) {
 }
 bool dosTiemposQuitar(Feature&) { g_dosTiemposOn = 0; if (g_hiloDosTiempos) { WaitForSingleObject(g_hiloDosTiempos, 2000); CloseHandle(g_hiloDosTiempos); g_hiloDosTiempos = nullptr; } return true; }
 
-bool relojQuitar(Feature&) { g_relojOn = 0; ponerParche(g_pdR1, false); ponerParche(g_pdR1b, false); g_relojNativo = false; if (g_hiloReloj) { WaitForSingleObject(g_hiloReloj, 2000); CloseHandle(g_hiloReloj); g_hiloReloj = nullptr; } return true; }
+bool relojQuitar(Feature&) { g_relojOn = 0; g_relojR1On = 0; ponerParche(g_pdR1, false); ponerParche(g_pdR1b, false); g_relojNativo = false; if (g_hiloReloj) { WaitForSingleObject(g_hiloReloj, 2000); CloseHandle(g_hiloReloj); g_hiloReloj = nullptr; } return true; }
 
 // --- cursor_pt_log (0.4.61, frente L): SOLO LECTURA. FUN_140A571B0 (RVA 0xA571B0) = setControlado(reg, idx): `if (reg[+0x20] != idx) { reg[+0x28]=reg[+0x20]; reg[+0x20]=idx; reg[+0x38]=0; }`. Cueva que roba los 5 B
 // `8B 41 20 3B C2` (mov eax,[rcx+0x20]; cmp eax,edx) y anota (idx nuevo, idx viejo, dirección de retorno del llamador) cuando el cursor pasa al portero (idx 0 u 11) y las primeras 40 llamadas, para saber QUIÉN pone el cursor en el portero propio.
