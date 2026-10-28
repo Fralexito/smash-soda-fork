@@ -2261,6 +2261,7 @@ void ganchoPostHalf(void* self) {
     g_postHalfOrig(self);
 }
 volatile LONG g_descansoPedido = 0, g_descansoFase = 0; volatile ULONGLONG g_descansoT = 0, g_ultTickJob = 0; int g_descansoOn = 0;
+bool g_descansoBase45 = false;   // json «descanso_base45» (0.4.90): true = el 2.º tiempo conserva la fase 1 y la base del reloj se escribe a 45:00 (la fase 3 a mano provoca el cierre exe+0xB7AAA al salir; frente S)
 using FnE770 = void (*)(uint8_t*, int, int, int, float*, uint64_t, uint64_t, uint64_t);
 using FnBaseReloj = void (*)(void*, float);
 FnE770 g_e770 = nullptr; FnBaseReloj g_baseReloj = nullptr; void (*g_arma4537)(uint8_t*) = nullptr;
@@ -2298,7 +2299,10 @@ static void __stdcall ayudanteSaque(uint8_t* job) {
             if (g_descansoFase3) {   // 0.4.83: 2.º tiempo exacto en 45:00 y sin «+N»: fase 3 escrita DIRECTA (sin pasar por 453530/14102CAD0 = sin el 2->3 nativo) y base del reloj a 0 (la pantalla suma 45:00 en fase 3)
                 uint32_t f3 = 3; memcpy(job + 0x2790, &f3, 4); if (g_baseReloj) g_baseReloj(job + 0x2790, 0.0f); float z0 = 0.0f; memcpy(job + 0x279C, &z0, 4);
                 g_relojPausa = 0; logf("[DESCANSO] 2.º tiempo: fase 3 directa y reloj a 0 (pantalla 45:00)");
-            } else { uint32_t fa = g_faseAntesDescanso; memcpy(job + 0x2790, &fa, 4); g_relojPausa = 0; }   // 0.4.82: se restaura la fase
+            } else {
+                uint32_t fa = g_faseAntesDescanso; memcpy(job + 0x2790, &fa, 4); g_relojPausa = 0;   // 0.4.82: se restaura la fase
+                if (g_descansoBase45 && g_baseReloj) { g_baseReloj(job + 0x2790, 162000.0f); float z0 = 0.0f; memcpy(job + 0x279C, &z0, 4); logf("[DESCANSO] 2.º tiempo en fase %u con base del reloj 45:00 (sin tocar la fase)", fa); }   // 0.4.90: alternativa segura a la fase 3
+            }
             uint32_t ceros[30] = {}; memcpy(job + 0x878, ceros, sizeof(ceros)); job[0x8F0] = 0; job[0x8F1] = 0; uint32_t sub1 = 1; memcpy(job + 0x2794, &sub1, 4);
             logf("[DESCANSO] menú cerrado (%s): cola limpia, saque central del 2.º tiempo", g_menuCerrado ? "señal de ProcessMatchPostHalfTime" : gap > 1500 ? "el job volvió a ticar tras la pausa" : "tiempo límite de 180 s"); g_menuArmado = 0;
             g_descansoFase = 0; g_descansoT = 0; g_saqueEquipo = g_sacaInicial ? 0 : 1; g_saqueResetReloj = 0; g_saqueT = 0; g_saquePedido = 1;
@@ -2512,7 +2516,7 @@ DWORD WINAPI hiloDosTiempos(LPVOID) {
         uint32_t faseP = 0; { uint8_t* rz = nullptr; uint8_t* Sx = nullptr; if (leerSeguro(g_globalPartido, &rz, 8) && rz && leerSeguro(rz + 0x270, &Sx, 8) && Sx) leerSeguro(Sx + 0x1168, &faseP, 4); }
         double t = 0; if (!leerRelojPantalla(&t)) { if (++malas == 1 || malas % 400 == 0) logf("[TIEMPOS] lectura del reloj no válida (#%ld): no actúo", (long)malas); continue; }
         if (GetTickCount64() - tLog > 5000) { tLog = GetTickCount64(); logf("[TIEMPOS] t=%.0f (pantalla %d:%02d) estado=%d", t, (int)(t / 3600.0) + ((int)t % 3600 ? 1 : 0), (int)(t / 60.0) % 60, estado); }
-        if (prev >= 0 && t < prev - 200.0 && estado == 1 && g_descansoFase3) { logf("[TIEMPOS] reloj a 0 por el descanso (%.0f -> %.0f): sigo en 2.º tiempo (final a 90:00)", prev, t); prev = t; continue; }   // 0.4.87: el descanso reinicia la base; no es un reinicio de partido
+        if (prev >= 0 && t < prev - 200.0 && estado == 1 && (g_descansoFase3 || g_descansoBase45)) { logf("[TIEMPOS] reloj a 0 por el descanso (%.0f -> %.0f): sigo en 2.º tiempo (final a 90:00)", prev, t); prev = t; continue; }   // 0.4.87: el descanso reinicia la base; no es un reinicio de partido
         if (prev >= 0 && t < prev - 200.0) { logf("[TIEMPOS] el reloj saltó hacia atrás (%.0f -> %.0f): reinicio la máquina de estados, no actúo", prev, t); estado = 0; prev = t; continue; }
         if (estado == 0 && t >= 162000.0 && (prev < 0 || prev < 162000.0 + 3600.0)) {
             estado = 1; logf("[TIEMPOS] MEDIO TIEMPO a t=%.0f: aviso y %s", t, g_e770 ? "saque central nativo del rival" : "pelota al centro 6 s");
@@ -2850,6 +2854,7 @@ void leerConfig() {
     if (valorDe("ia_escala_apoyo", v)) g_iaEApoyo = (float)atof(v.c_str());
     if (valorDe("ia_piso_m", v)) g_iaPiso = (float)atof(v.c_str());
     if (valorDe("descanso_fase3", v)) g_descansoFase3 = (v == "true");
+    if (valorDe("descanso_base45", v)) g_descansoBase45 = (v == "true");
     if (valorDe("season_forzada", v)) g_seasonCore = atoi(v.c_str());
     if (valorDe("cursor_bloqueo_pt", v)) g_cursorBloqueoCfg = (v == "true");
     if (valorDe("street_minutos", v)) { g_streetMinutos = atof(v.c_str()); if (g_streetMinutos < 0.5 || g_streetMinutos > 44.0) g_streetMinutos = 5.0; }
