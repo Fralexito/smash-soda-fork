@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.74"
+#define PHX_CORE_VERSION "0.4.75"
 
 namespace {
 
@@ -2092,6 +2092,15 @@ volatile LONG g_descansoPedido = 0, g_descansoFase = 0; volatile ULONGLONG g_des
 using FnE770 = void (*)(uint8_t*, int, int, int, float*, uint64_t, uint64_t, uint64_t);
 using FnBaseReloj = void (*)(void*, float);
 FnE770 g_e770 = nullptr; FnBaseReloj g_baseReloj = nullptr; void (*g_arma4537)(uint8_t*) = nullptr;
+// 0.4.75 (opción a de J4 §12, «árbitro invisible»): el Juez nativo SÍ corre en el entrenamiento (paso 0x3A), pero [juez+0x3B8] apunta a un tmp de la pila del paso y el valor puede ser 0 o basura cuando nuestra cueva lo mira.
+// Se reproduce la preparación desde la cueva (hilo del juego): FUN_14050A8A0(tmp, *p, p[1]) con p = *(u64**)(job+0x17860) y FUN_14050B2B0(job+0x908, job+0x49C0, tmp) con un tmp PERSISTENTE; entonces E770 funciona sin cambios.
+void (*g_a8a0)(uint64_t*, uint64_t, uint64_t) = nullptr; void (*g_b2b0)(uint8_t*, uint8_t*, uint64_t*) = nullptr; alignas(16) uint64_t g_tmpJuez[3] = { 0, 0, 0 };
+static bool prepararJuez(uint8_t* job) {
+    if (!g_a8a0 || !g_b2b0) return false;
+    uint64_t* p = nullptr; if (!leerSeguro(job + 0x17860, &p, 8) || !p) return false;
+    uint64_t a = 0, b2 = 0; if (!leerSeguro(p, &a, 8) || !a || !leerSeguro(p + 1, &b2, 8)) return false;
+    g_a8a0(g_tmpJuez, a, b2); g_b2b0(job + 0x908, job + 0x49C0, g_tmpJuez); return true;
+}
 static void __stdcall ayudanteSaque(uint8_t* job) {
     ULONGLONG ahora = GetTickCount64(); ULONGLONG gap = g_ultTickJob ? ahora - g_ultTickJob : 0; g_ultTickJob = ahora;
     if (g_descansoPedido && !g_descansoFase) {
@@ -2130,7 +2139,13 @@ static void __stdcall ayudanteSaque(uint8_t* job) {
         if (g_saqueResetReloj && g_baseReloj) { g_baseReloj(job + 0x2790, 0.0f); float z = 0.0f; memcpy(job + 0x279C, &z, 4); logf("[SAQUE] reloj reiniciado a 0:00"); }
         alignas(16) float centro[4] = { 0, 0, 0, 0 };
         (void)centro;
-        {   // 0.4.74 (M2, J4 §11): E770 sale sin hacer nada si [juez+0x3B8]==0 (así es en el entrenamiento): se escribe el registro de parada directamente y se arma el reinicio con FUN_1404537B0
+        bool hecho = false;
+        if (prepararJuez(job)) {   // 0.4.75: con el juez enlazado E770 funciona sin cambios (k=7: lo que el gestor de entreno fuerza)
+            g_e770(job + 0x908, (int)g_saqueEquipo, 1, 7, nullptr, 0, 0, 0);
+            uint32_t r2 = 0; leerSeguro(job + 0x49C0, &r2, 4); hecho = (r2 == 1);
+            logf("[SAQUE] juez enlazado (A8A0+B2B0) y E770 llamado: rec.sub=%u %s", r2, hecho ? "(ok)" : "(sin efecto: M2)");
+        } else { uint32_t v5818 = 0, c0 = 0; leerSeguro(job + 0x5818, &v5818, 4); leerSeguro(job + 0xCC0, &c0, 4); logf("[SAQUE] no se pudo enlazar el juez (job+0x17860 nulo?) 5818=%u CC0=%u: M2", v5818, c0); }
+        if (!hecho) {   // 0.4.74 (M2, J4 §11): E770 sale sin hacer nada si [juez+0x3B8]==0: se escribe el registro de parada directamente y se arma el reinicio con FUN_1404537B0
             uint8_t* rec = job + 0x49C0; uint32_t eq = (uint32_t)g_saqueEquipo;
             memset(rec + 8, 0, 0x18); uint32_t uno = 1, siete = 7, cero = 0, ff = 0xFF; uint32_t previo = 0;
             memcpy(rec, &uno, 4); memcpy(rec + 4, &eq, 4); memcpy(rec + 0x20, &siete, 4); rec[0x24] = 0;
@@ -2140,7 +2155,7 @@ static void __stdcall ayudanteSaque(uint8_t* job) {
             if (leerSeguro(g_globalPartido, &raiz, 8) && raiz && leerSeguro(raiz + 0x270, &S, 8) && S) { memcpy(S + 0x1554, &uno, 4); memcpy(S + 0x1558, &eq, 4); memcpy(S + 0x1574, &siete, 4); }
             if (g_arma4537) g_arma4537(job);
         }
-        logf("[SAQUE] saque central pedido (registro de parada escrito, FUN_1404537B0): saca el equipo %d", (int)g_saqueEquipo);
+        logf("[SAQUE] saque central pedido: saca el equipo %d", (int)g_saqueEquipo);
         g_saquePedido = 0; g_saqueResetReloj = 0; g_saqueFase = 1; g_saqueT = ahora; return;
     }
     if (g_saqueFase == 1) {   // vigilar la cola montada; reescribir si empieza por 0F
@@ -2164,6 +2179,10 @@ bool saqueNativoInstalar(Feature& f) {
     uint8_t* a4537 = firmaUnica("codigo", "48 89 5C 24 08 57 48 83 EC 30 80 B9 11 4A 00 00 00 48 8B F9 75 39 8B 81 C0 49 00 00", f.id);
     if (!a4537) { f.estado = "sin firma de FUN_1404537B0 (armar el reinicio)"; return false; }
     g_arma4537 = reinterpret_cast<void (*)(uint8_t*)>(a4537);
+    uint8_t* a8 = firmaUnica("codigo", "48 89 11 48 8B C1 4C 89 41 08 C7 41 10 FF 00 00 00 C3", f.id);
+    uint8_t* b2 = firmaUnica("codigo", "4C 89 81 B8 03 00 00 48 89 91 C0 03 00 00 48 8D 4A 6C E9", f.id);
+    if (a8 && b2) { g_a8a0 = reinterpret_cast<void (*)(uint64_t*, uint64_t, uint64_t)>(a8); g_b2b0 = reinterpret_cast<void (*)(uint8_t*, uint8_t*, uint64_t*)>(b2); }
+    else logf("[%s] sin firma de FUN_14050A8A0/FUN_14050B2B0: solo M2", f.id);
     const uint8_t esp[10] = { 0x40, 0x55, 0x41, 0x56, 0x41, 0x57, 0x48, 0x83, 0xEC, 0x40 };
     uint8_t v[10]; if (!leerSeguro(sitio, v, 10) || memcmp(v, esp, 10) != 0) { f.estado = "bytes inesperados en FUN_14044CE80"; return false; }
     uint8_t* c = reservarCerca(sitio, 192);
