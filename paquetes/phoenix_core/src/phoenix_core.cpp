@@ -2853,8 +2853,7 @@ PHX_API int phx_core_iniciar(const char* carpeta) {
         logf("arrancando.flag ya existía: el arranque anterior no terminó limpio en menos de 60 s (crash o cierre forzado) → MODO SEGURO");
     }
     // 0.4.87: aviso visible del modo seguro (el módulo Lua lo muestra en el overlay) y limpieza cuando el arranque es normal
-    if (g_modoSeguro) escribirArchivo(g_carpeta + "MODO_SEGURO.txt", "Phoenix Core en MODO SEGURO: el arranque anterior se cortó (crash o cierre forzado antes de 60 s). Ninguna funcion del street esta activa. Cierra PES y vuelve a abrirlo (el proximo arranque sera normal).
-");
+    if (g_modoSeguro) escribirArchivo(g_carpeta + "MODO_SEGURO.txt", "Phoenix Core en MODO SEGURO: el arranque anterior se cortó (crash o cierre forzado antes de 60 s). Ninguna funcion del street esta activa. Cierra PES y vuelve a abrirlo (el proximo arranque sera normal).\r\n");
     else DeleteFileA((g_carpeta + "MODO_SEGURO.txt").c_str());
     escribirArchivo(flag, "Phoenix Core arrancando\r\n");
     g_tInicio = GetTickCount64();
