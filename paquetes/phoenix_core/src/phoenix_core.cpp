@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.85"
+#define PHX_CORE_VERSION "0.4.86"
 
 namespace {
 
@@ -2205,9 +2205,19 @@ volatile LONG g_saquePedido = 0, g_saqueEquipo = 1, g_saqueResetReloj = 0, g_saq
 // Gancho (crearDesvio 14 B): si lo armamos nosotros al encolar [0x22] y la instancia es PostHalfTime (vtable exe+0x28CCCB8), se marca g_menuCerrado. El Core lanza entonces el saque central. Sin gancho queda el límite de 120 s.
 bool g_descansoFase3 = false;   // json «descanso_fase3»: true = el 2.º tiempo se escribe en fase 3 con base 0 (HUD 45:00-90:00 sin +N); false (por defecto) = se restaura la fase anterior (0.4.82)
 volatile LONG g_menuArmado = 0, g_menuCerrado = 0; volatile uint32_t g_faseAntesDescanso = 1; void (*g_postHalfOrig)(void*) = nullptr;
+// 0.4.86 (J5): MatchPreHalfTime::update (FUN_1413090F0) espera el byte [obj+0x290] (obj = *(u64*)([exe+0x3705E10]+0x58)); lo pone a 1 el mensaje 0x105001B del paso de cola 0x25, que nuestra cola [0x22,0x48] no ejecuta: por eso el flujo quedaba en PreHalfTime.
+// Con el menú armado se pone ese byte a 1 (el update lo baja a 0 y emite «proceed» hacia MatchHalfTime = menú nativo). Y en ProcessMatchPostHalfTime::update se ponen +0x89=1, +0x8A=0 para que emita «proceed» hacia MatchIdle.
+void (*g_preHalfOrig)(void*) = nullptr;
+void ganchoPreHalf(void* self) {
+    if (g_menuArmado && !g_menuCerrado) {
+        uint8_t *a = nullptr, *obj = nullptr;
+        if (leerSeguro(g_exe.base + 0x3705E10, &a, 8) && a && leerSeguro(a + 0x58, &obj, 8) && obj) { uint8_t v = 0; leerSeguro(obj + 0x290, &v, 1); if (v == 0) { uint8_t uno = 1; memcpy(obj + 0x290, &uno, 1); static LONG n = 0; if (InterlockedIncrement(&n) <= 5) logf("[DESCANSO] MatchPreHalfTime: señal [obj+0x290]=1 escrita (el flujo pasa al menú de descanso)"); } }
+    }
+    g_preHalfOrig(self);
+}
 void ganchoPostHalf(void* self) {
     if (g_menuArmado && !g_menuCerrado) {
-        uint64_t vt = 0; if (leerSeguro(self, &vt, 8) && vt == (uint64_t)(g_exe.base + 0x28CCCB8)) { uint8_t f89 = 0, f8a = 0; leerSeguro((uint8_t*)self + 0x89, &f89, 1); leerSeguro((uint8_t*)self + 0x8A, &f8a, 1); logf("[DESCANSO] ProcessMatchPostHalfTime activo (+0x89=%u +0x8A=%u): el menú se cerró", f89, f8a); g_menuCerrado = 1; g_menuArmado = 0; }
+        uint64_t vt = 0; if (leerSeguro(self, &vt, 8) && vt == (uint64_t)(g_exe.base + 0x28CCCB8)) { uint8_t f89 = 0, f8a = 0; leerSeguro((uint8_t*)self + 0x89, &f89, 1); leerSeguro((uint8_t*)self + 0x8A, &f8a, 1); logf("[DESCANSO] ProcessMatchPostHalfTime activo (+0x89=%u +0x8A=%u): el menú se cerró", f89, f8a); g_menuCerrado = 1; g_menuArmado = 0; { uint8_t uno = 1, cero = 0; memcpy((uint8_t*)self + 0x89, &uno, 1); memcpy((uint8_t*)self + 0x8A, &cero, 1); } }
     }
     g_postHalfOrig(self);
 }
@@ -2245,13 +2255,13 @@ static void __stdcall ayudanteSaque(uint8_t* job) {
     }
     if (g_descansoFase == 1) {
         static ULONGLONG tLogD = 0; if (ahora - tLogD > 3000) { tLogD = ahora; uint32_t q0 = 0, s94 = 0, f = 0; uint8_t cur = 0; leerSeguro(job + 0x878, &q0, 4); leerSeguro(job + 0x2794, &s94, 4); leerSeguro(job + 0x2790, &f, 4); leerSeguro(job + 0x8F0, &cur, 1); logf("[DESCANSO] esperando: cola0=0x%X cursor=%u fase=%u sub=%u gap=%llu ms", q0, (unsigned)cur, f, s94, (unsigned long long)gap); }
-        if (g_menuCerrado || gap > 1500 || ahora - g_descansoT > 60000) {
+        if (g_menuCerrado || gap > 1500 || ahora - g_descansoT > 180000) {
             if (g_descansoFase3) {   // 0.4.83: 2.º tiempo exacto en 45:00 y sin «+N»: fase 3 escrita DIRECTA (sin pasar por 453530/14102CAD0 = sin el 2->3 nativo) y base del reloj a 0 (la pantalla suma 45:00 en fase 3)
                 uint32_t f3 = 3; memcpy(job + 0x2790, &f3, 4); if (g_baseReloj) g_baseReloj(job + 0x2790, 0.0f); float z0 = 0.0f; memcpy(job + 0x279C, &z0, 4);
                 g_relojPausa = 0; logf("[DESCANSO] 2.º tiempo: fase 3 directa y reloj a 0 (pantalla 45:00)");
             } else { uint32_t fa = g_faseAntesDescanso; memcpy(job + 0x2790, &fa, 4); g_relojPausa = 0; }   // 0.4.82: se restaura la fase
             uint32_t ceros[30] = {}; memcpy(job + 0x878, ceros, sizeof(ceros)); job[0x8F0] = 0; job[0x8F1] = 0; uint32_t sub1 = 1; memcpy(job + 0x2794, &sub1, 4);
-            logf("[DESCANSO] menú cerrado (%s): cola limpia, saque central del 2.º tiempo", g_menuCerrado ? "señal de ProcessMatchPostHalfTime" : gap > 1500 ? "el job volvió a ticar tras la pausa" : "tiempo límite de 60 s"); g_menuArmado = 0;
+            logf("[DESCANSO] menú cerrado (%s): cola limpia, saque central del 2.º tiempo", g_menuCerrado ? "señal de ProcessMatchPostHalfTime" : gap > 1500 ? "el job volvió a ticar tras la pausa" : "tiempo límite de 180 s"); g_menuArmado = 0;
             g_descansoFase = 0; g_descansoT = 0; g_saqueEquipo = g_sacaInicial ? 0 : 1; g_saqueResetReloj = 0; g_saqueT = 0; g_saquePedido = 1;
         }
         return;
@@ -2391,6 +2401,8 @@ bool ramaNormalQuitar(Feature&) { g_krOn = 0; ponerParche(g_pdKR, false); return
 bool descansoInstalar(Feature& f) {
     if (!g_postHalfOrig) { uint8_t* m = firmaUnica("codigo", "48 8B C4 55 48 8B EC 48 81 EC 80 00 00 00 48 C7 45 A8 FE FF FF FF 48 89 58 10 48 89 78 18 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 45 F0 48 8B D9 80 B9 89 00 00 00 00 0F 84", f.id);
         if (m && crearDesvio(f, m, 14, (void*)ganchoPostHalf, (void**)&g_postHalfOrig)) logf("[%s] señal de menú cerrado enganchada (exe+0x%llX)", f.id, (unsigned long long)(m - g_exe.base)); else logf("[%s] sin señal de menú cerrado: límite de 120 s", f.id); }
+    if (!g_preHalfOrig) { uint8_t* m = firmaUnica("codigo", "40 57 48 83 EC 60 48 C7 44 24 28 FE FF FF FF 48 89 5C 24 78 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 44 24 50 48 8B F9 E8 ?? ?? ?? ?? 48 8B 58 58 48 8B CB E8 ?? ?? ?? ?? 84 C0 74", f.id);
+        if (m && crearDesvio(f, m, 15, (void*)ganchoPreHalf, (void**)&g_preHalfOrig)) logf("[%s] MatchPreHalfTime enganchado (exe+0x%llX)", f.id, (unsigned long long)(m - g_exe.base)); else logf("[%s] sin gancho de MatchPreHalfTime", f.id); }
     g_descansoOn = 1; f.estado = "ok: a 45:00 se abre la pantalla REAL de medio tiempo (fase 2 + paso 0x22) y al cerrarla saque central del 2.º tiempo (requiere street_saque_nativo; NO tocar cambios)"; return true; }
 bool descansoQuitar(Feature&) { g_descansoOn = 0; return true; }
 
