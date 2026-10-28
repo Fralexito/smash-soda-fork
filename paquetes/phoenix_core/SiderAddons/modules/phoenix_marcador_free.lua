@@ -46,10 +46,13 @@ local function mirarConfig()
 end
 
 local canchaOn, rutaCancha, paredesOn, seasonForzada, suplentesCero = false, nil, false, nil, false
+local climaForzado = nil   -- v0.8: json "clima_forzado": 0 = sin lluvia (la lluvia pone el cielo/fondo blanco en la cancha chica)
 local function mirarCancha()
     local t = leer(rutaCfg)
     local sf = t and t:match('"season_forzada"%s*:%s*(%d)')
     seasonForzada = sf and tonumber(sf) or nil
+    local cf = t and t:match('"clima_forzado"%s*:%s*(%d)')
+    climaForzado = cf and tonumber(cf) or nil
     suplentesCero = (t ~= nil) and (t:find('"suplentes_cero"%s*:%s*1') ~= nil)
     canchaOn = (t ~= nil) and (t:find('"cancha_chica_free"%s*:%s*true') ~= nil)
     paredesOn = canchaOn and (t:find('"cancha_paredes"%s*:%s*true') ~= nil)
@@ -161,12 +164,19 @@ end
 -- El vacío blanco y el césped oscuro de la cancha chica salían con season 0 (el gestor de clima la elige según el mes real).
 function m.set_conditions(ctx, options)
     mirarConfig(); mirarCancha()
-    if seasonForzada == nil or not encendido or not options then return nil end
+    if (seasonForzada == nil and climaForzado == nil) or not encendido or not options then return nil end
     local s = leer(rutaSonda)
     if not (s and s:find('"nombre"%s*:%s*"FREE_TRAINING"')) then return nil end
-    if tonumber(options.season) == seasonForzada then return nil end
-    log(string.format("[marcador_free] season %s -> %d (entrenamiento)", tostring(options.season), seasonForzada))
-    options.season = seasonForzada
+    local cambio = false
+    if seasonForzada ~= nil and tonumber(options.season) ~= seasonForzada then
+        log(string.format("[marcador_free] season %s -> %d (entrenamiento)", tostring(options.season), seasonForzada))
+        options.season = seasonForzada; cambio = true
+    end
+    if climaForzado ~= nil and (tonumber(options.weather) ~= climaForzado or (options.weather_effects ~= nil and tonumber(options.weather_effects) ~= 0)) then
+        log(string.format("[marcador_free] clima %s (efectos %s) -> %d sin efectos (entrenamiento)", tostring(options.weather), tostring(options.weather_effects), climaForzado))
+        options.weather = climaForzado; if options.weather_effects ~= nil then options.weather_effects = 0 end; cambio = true
+    end
+    if not cambio then return nil end
     return options
 end
 
@@ -190,10 +200,86 @@ function m.context_reset(ctx)
     if encendido then reiniciar("context_reset") end
 end
 
+-- v0.8 «panel Phoenix Street»: F9 abre/cierra · F10 siguiente · F11 ON/OFF · ← → ajusta el valor. Escribe órdenes en phoenix_core\ordenes.txt (el Core las lee cada segundo y guarda el json).
+-- Las claves congeladas del portero NO están en la lista. «vivo» = se aplica al instante; «sig.partida» = se guarda y se usa en la próxima partida/arranque.
+local PANEL = {
+    { id = "tiro_fuerte", txt = "Tiro fuerte", tipo = "bool", modo = "vivo" },
+    { id = "tiro_potencia_k", txt = "  Tiro: potencia", tipo = "num", paso = 0.05, lo = 0.8, hi = 1.8, def = 1.25, modo = "vivo" },
+    { id = "tiro_altura_k", txt = "  Tiro: altura", tipo = "num", paso = 0.05, lo = 0.3, hi = 1.2, def = 0.7, modo = "vivo" },
+    { id = "pase_rapido_preciso", txt = "Pase rápido y preciso", tipo = "bool", modo = "vivo" },
+    { id = "pase_vel_k", txt = "  Pase: velocidad", tipo = "num", paso = 0.05, lo = 0.9, hi = 1.6, def = 1.2, modo = "vivo" },
+    { id = "pase_correccion", txt = "  Pase: corrección", tipo = "num", paso = 0.1, lo = 0.0, hi = 1.0, def = 0.6, modo = "vivo" },
+    { id = "muros_core", txt = "Paredes (rebote)", tipo = "bool", modo = "vivo" },
+    { id = "muro_rebote", txt = "  Rebote", tipo = "num", paso = 0.05, lo = 0.4, hi = 0.9, def = 0.75, modo = "vivo" },
+    { id = "muro_friccion", txt = "  Fricción", tipo = "num", paso = 0.01, lo = 0.9, hi = 1.0, def = 0.97, modo = "vivo" },
+    { id = "red_resorte", txt = "Red del arco", tipo = "bool", modo = "vivo" },
+    { id = "ia_cancha_chica", txt = "IA de cancha chica", tipo = "bool", modo = "vivo" },
+    { id = "jugadores_formacion", txt = "Formación de saque", tipo = "bool", modo = "vivo" },
+    { id = "arquero_pase_corto", txt = "Portero: pase corto", tipo = "bool", modo = "vivo" },
+    { id = "clima_forzado", txt = "Clima despejado", tipo = "clima", modo = "sig.partida" },
+    { id = "street_dos_tiempos", txt = "Dos tiempos", tipo = "bool", modo = "sig.partida" },
+    { id = "street_pantalla_descanso", txt = "Pantalla de descanso", tipo = "bool", modo = "sig.partida" },
+    { id = "descanso_fase3", txt = "Reloj 2.º tiempo en fase 3", tipo = "bool", modo = "sig.partida" },
+    { id = "descanso_base45", txt = "Reloj 2.º tiempo base 45", tipo = "bool", modo = "sig.partida" },
+}
+local panelAbierto, panelSel, panelCache, panelCambio, tPanelLeer = false, 1, {}, {}, -100
+local function panelValor(it)
+    local t = leer(rutaCfg) or ""
+    if it.tipo == "bool" then return t:find('"' .. it.id .. '"%s*:%s*true') ~= nil end
+    if it.tipo == "clima" then return t:match('"clima_forzado"%s*:%s*(%d)') ~= nil end
+    local v = t:match('"' .. it.id .. '"%s*:%s*([%d%.]+)')
+    return tonumber(v) or it.def
+end
+local function panelEnviar(linea)
+    local f = io.open(base .. "phoenix_core\\ordenes.txt", "ab")
+    if f then f:write(linea .. "\r\n"); f:close() end
+end
+local function panelLeer()
+    local ahora = os.clock()
+    if ahora - tPanelLeer < 1.0 then return end
+    tPanelLeer = ahora
+    for _, it in ipairs(PANEL) do
+        if not panelCambio[it.id] or ahora - panelCambio[it.id] > 4.0 then panelCache[it.id] = panelValor(it) end
+    end
+end
+local function panelTexto()
+    panelLeer()
+    local s = { "PHOENIX STREET   F9 cerrar · F10 siguiente · F11 on/off · Izq/Der valor" }
+    for i, it in ipairs(PANEL) do
+        local v = panelCache[it.id]; local est
+        if it.tipo == "num" then est = string.format("%.2f", tonumber(v) or it.def) else est = v and "ON" or "OFF" end
+        s[#s + 1] = string.format("%s %s: %s%s", i == panelSel and ">" or " ", it.txt, est, it.modo == "sig.partida" and "  (sig. partida)" or "")
+    end
+    return table.concat(s, "\n")
+end
+function m.key_down(ctx, vkey)
+    if vkey == 0x78 then panelAbierto = not panelAbierto; return end              -- F9
+    if not panelAbierto then return end
+    local it = PANEL[panelSel]
+    if vkey == 0x79 then panelSel = panelSel % #PANEL + 1                          -- F10
+    elseif vkey == 0x7A and it and it.tipo ~= "num" then                            -- F11
+        panelLeer(); local nuevo = not panelCache[it.id]
+        panelCache[it.id] = nuevo; panelCambio[it.id] = os.clock()
+        if it.tipo == "clima" then panelEnviar("clima_forzado=" .. (nuevo and "0" or "-1")) else panelEnviar(it.id .. "=" .. (nuevo and "1" or "0")) end
+    elseif (vkey == 0x25 or vkey == 0x27) and it and it.tipo == "num" then         -- ← →
+        panelLeer(); local v = (tonumber(panelCache[it.id]) or it.def) + (vkey == 0x27 and it.paso or -it.paso)
+        if v < it.lo then v = it.lo elseif v > it.hi then v = it.hi end
+        v = math.floor(v * 100 + 0.5) / 100
+        panelCache[it.id] = v; panelCambio[it.id] = os.clock(); panelEnviar(string.format("%s=%.2f", it.id, v))
+    end
+end
+
 function m.overlay_on(ctx)
+    if panelAbierto then return panelTexto() end
     if not encendido then return "MARCADOR STREET · apagado (phoenix_core.json → marcador_free)" end
     if not enZona then return "MARCADOR STREET · solo en Entrenamiento libre" end
-    return texto()
+    -- v0.7: aviso de medio tiempo / final que escribe el Core (street_dos_tiempos) en phoenix_core\street_estado.json
+    local aviso = ""
+    local e = leer(base .. "phoenix_core\\street_estado.json")
+    if e then
+        if e:find('"final"') then aviso = "*** FINAL *** " elseif e:find('"medio_tiempo"') then aviso = "** MEDIO TIEMPO ** " end
+    end
+    return aviso .. texto()
 end
 
 function m.init(ctx)
@@ -210,6 +296,7 @@ function m.init(ctx)
     ctx.register("set_match_settings", m.set_match_settings)
     ctx.register("context_reset", m.context_reset)
     ctx.register("overlay_on", m.overlay_on)
+    ctx.register("key_down", m.key_down)
     rutaPeticiones = base .. "phoenix_core\\peticiones.log"
     rutaCancha = base .. "content/phoenix/cancha/"
     ctx.register("livecpk_get_filepath", m.get_filepath)
