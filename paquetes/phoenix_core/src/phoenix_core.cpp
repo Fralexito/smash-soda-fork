@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.66"
+#define PHX_CORE_VERSION "0.4.67"
 
 namespace {
 
@@ -1717,13 +1717,14 @@ bool redQuitar(Feature&) { g_redOn = 0; return true; }
 volatile ULONGLONG g_tTrainGlob = 0; volatile LONG g_trainGlobOn = 0; HANDLE g_hiloTrainGlob = nullptr;
 struct ParcheN { uint8_t* dir = nullptr; uint8_t ori[8] = {}, nue[8] = {}; size_t n = 0; bool puesto = false; };
 static void ponerParcheN(ParcheN& pn, bool si) { if (!pn.dir || pn.puesto == si) return; if (escribirCodigo(pn.dir, si ? pn.nue : pn.ori, pn.n)) pn.puesto = si; }
-volatile LONG g_sinSaquesOn = 0, g_arqueroOn = 0, g_iaClearOn = 0, g_gkCortoOn = 0, g_arqCursorOn = 0; ParcheDisp g_pdS1, g_pdS2, g_pdIA, g_pdGK1, g_pdGK2, g_pdMN, g_pdMN2; ParcheN g_pnA, g_pnB, g_pnC1, g_pnC2, g_pnC3, g_pnMA1, g_pnMA2; volatile LONG g_hudFuerzaOn = 0; ParcheDisp g_pdT1; volatile LONG g_sinFinOn = 0;
+volatile LONG g_sinSaquesOn = 0, g_arqueroOn = 0, g_iaClearOn = 0, g_gkCortoOn = 0, g_arqCursorOn = 0; ParcheDisp g_pdS1, g_pdS2, g_pdIA, g_pdGK1, g_pdGK2, g_pdMN, g_pdMN2; ParcheN g_pnA, g_pnB, g_pnC1, g_pnC2, g_pnC3, g_pnMA1, g_pnMA2; volatile LONG g_hudFuerzaOn = 0; ParcheDisp g_pdT1; volatile LONG g_sinFinOn = 0; ParcheDisp g_pdKR; volatile LONG g_krOn = 0;
 DWORD WINAPI hiloTrainGlob(LPVOID) {
     while (g_trainGlobOn) {
         if (trainingWorkEstable() || hayTrainingWork()) g_tTrainGlob = GetTickCount64();
         if (g_sinSaquesOn) { bool dentro = GetTickCount64() - g_tTrainGlob < 3000; ponerParche(g_pdS1, dentro); ponerParche(g_pdS2, dentro); }
         if (g_gkCortoOn) { bool dentro = GetTickCount64() - g_tTrainGlob < 3000; ponerParche(g_pdGK1, dentro); ponerParche(g_pdGK2, dentro); }
         if (g_arqCursorOn) { bool dentro = GetTickCount64() - g_tTrainGlob < 3000; ponerParcheN(g_pnC1, dentro); ponerParcheN(g_pnC2, dentro); ponerParcheN(g_pnC3, dentro); }
+        if (g_krOn) { bool dentro = GetTickCount64() - g_tTrainGlob < 3000; ponerParche(g_pdKR, dentro); }
         if (g_sinFinOn) { bool dentro = GetTickCount64() - g_tTrainGlob < 3000; ponerParche(g_pdT1, dentro); }
         if (g_hudFuerzaOn) { bool dentro = GetTickCount64() - g_tTrainGlob < 3000; ponerParcheN(g_pnMA1, dentro); ponerParcheN(g_pnMA2, dentro); }
         if (g_iaClearOn) { bool dentro = GetTickCount64() - g_tTrainGlob < 3000; ponerParche(g_pdIA, dentro); }
@@ -1816,6 +1817,14 @@ using FnPorteroPos = uint64_t* (*)(int64_t, uint64_t*, int64_t, uint64_t);
 FnPorteroPos g_porteroPosOrig = nullptr; volatile LONG g_arqSalidaOn = 0, g_arqSalidaRecortes = 0; float g_arqSalidaMax = 3.5f;
 uint64_t* ganchoPorteroPos(int64_t p1, uint64_t* out, int64_t p3, uint64_t p4) {
     uint64_t* r = g_porteroPosOrig(p1, out, p3, p4);
+    {   // 0.4.67 (frente L §9): FUN_1409DC040 elige la rama del portero por team+0x255 (0 = normal FUN_1409DE8C0, !=0 = alternativa FUN_1409DF7D0). Se mide en cada bando (log cada 5 s).
+        static ULONGLONG tM = 0; ULONGLONG ah = GetTickCount64();
+        if (ah - tM > 5000) {
+            tM = ah; uint8_t* raiz = nullptr; uint8_t v[2] = { 0xEE, 0xEE };
+            if (leerSeguro(g_globalPartido, &raiz, 8) && raiz) for (int sd = 0; sd < 2; sd++) { uint8_t* team = nullptr; if (leerSeguro(raiz + (size_t)(sd + 0xA1) * 0x28, &team, 8) && team) leerSeguro(team + 0x255, &v[sd], 1); }
+            static LONG nm = 0; if (InterlockedIncrement(&nm) <= 120) logf("[PORTERO_RAMA] team+0x255: lado0=%u lado1=%u (0 = rama normal)", v[0], v[1]);
+        }
+    }
     if (g_arqSalidaOn && out && GetTickCount64() - g_tTrainGlob < 3000) {
         float v[3]; if (leerSeguro(out, v, 12) && fabsf(v[0]) < 60.0f && fabsf(v[2]) < 60.0f && fabsf(v[0]) > 1.0f) {
             float L = (float)g_canchaLargo, ax = fabsf(v[0]), sg = v[0] >= 0 ? 1.0f : -1.0f, nx = ax, nz = v[2];
@@ -2159,6 +2168,14 @@ bool saqueNativoInstalar(Feature& f) {
     char sbuf[160]; sprintf_s(sbuf, "ok: saque central nativo sin gol disponible (E770 exe+0x%llX, cueva en el reloj exe+0x%llX)%s", (unsigned long long)(e - g_exe.base), (unsigned long long)(sitio - g_exe.base), r ? "" : " · sin reinicio de reloj"); f.estado = sbuf; return true;
 }
 bool saqueNativoQuitar(Feature&) { g_saquePedido = 0; return true; }
+// --- arquero_rama_normal (0.4.67, frente L §9): FUN_1409DC040 va a la rama alternativa del portero (FUN_1409DF7D0, ~3 KB, portero activo) si team+0x255 != 0. Con el jz de RVA 0x9DC8CF pasado a jmp
+// (`80 B8 55 02 00 00 00 74 13 ...` byte +7: 74 -> EB) el portero usa siempre la rama normal FUN_1409DE8C0, como el portero COM. Solo con TrainingWork; restaurado al salir.
+bool ramaNormalInstalar(Feature& f) {
+    if (!localizarParche("80 B8 55 02 00 00 00 74 13 48 8D 85 A0 00 00 00 48 89 44 24 20 E8 ?? ?? ?? ?? EB 05 E8", 7, 0x74, 0xEB, g_pdKR, f.id)) { f.estado = "sin firma/byte inesperado en la rama del portero (FUN_1409DC040)"; return false; }
+    asegurarHiloTrain(); g_krOn = 1;
+    f.estado = "ok: el portero usa siempre la rama normal de posición (como el COM); solo en el entrenamiento"; return true;
+}
+bool ramaNormalQuitar(Feature&) { g_krOn = 0; ponerParche(g_pdKR, false); return true; }
 bool descansoInstalar(Feature& f) { g_descansoOn = 1; f.estado = "ok: a 45:00 se abre la pantalla REAL de medio tiempo (fase 2 + paso 0x22) y al cerrarla saque central del 2.º tiempo (requiere street_saque_nativo; NO tocar cambios)"; return true; }
 bool descansoQuitar(Feature&) { g_descansoOn = 0; return true; }
 
@@ -2354,6 +2371,7 @@ std::vector<Feature> g_funciones = {   // orden = orden de arranque (gol_nativo_
     { "ajustes_partido_free", "El menú «Opciones gener.» del entrenamiento libre se puede editar (duración del partido, etc.); el reloj usa esa duración", ajustesPartidoInstalar, ajustesPartidoQuitar },
     { "street_saque_nativo", "Saque central nativo sin gol para el medio tiempo y la revancha (cueva en el reloj + FUN_14050E770)", saqueNativoInstalar, saqueNativoQuitar },
     { "street_pantalla_descanso", "A 45:00 abre la pantalla real de medio tiempo del flujo (paso 0x22) y al cerrarla hace el saque central del 2.o tiempo (experimental)", descansoInstalar, descansoQuitar },
+    { "arquero_rama_normal", "El portero usa siempre la rama normal de posición base (team+0x255 forzado a la normal) en el entrenamiento", ramaNormalInstalar, ramaNormalQuitar },
     { "street_dos_tiempos", "Medio tiempo a 45:00 y final a 90:00 propios del entrenamiento (lee el reloj de pantalla; v1: pausa + aviso)", dosTiemposInstalar, dosTiemposQuitar },
     { "sin_fin_tiempo_free", "El Juez no pita el fin de tiempo (medio tiempo/final) en el entrenamiento libre", sinFinTiempoInstalar, sinFinTiempoQuitar },
     { "reloj_street_free", "El reloj nativo corre en el entrenamiento y se reinicia a los street_minutos", relojInstalar, relojQuitar },
