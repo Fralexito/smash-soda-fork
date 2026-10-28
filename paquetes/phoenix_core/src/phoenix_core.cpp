@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.90"
+#define PHX_CORE_VERSION "0.4.91"
 
 namespace {
 
@@ -2261,6 +2261,7 @@ void ganchoPostHalf(void* self) {
     g_postHalfOrig(self);
 }
 volatile LONG g_descansoPedido = 0, g_descansoFase = 0; volatile ULONGLONG g_descansoT = 0, g_ultTickJob = 0; int g_descansoOn = 0;
+double g_anadidoSeg = 2 * 3600.0;   // json «anadido_min» (0.4.91): minutos de añadido en cada parte (3600 unidades del reloj = 1 min de pantalla); 0 = sin añadido
 bool g_descansoBase45 = false;   // json «descanso_base45» (0.4.90): true = el 2.º tiempo conserva la fase 1 y la base del reloj se escribe a 45:00 (la fase 3 a mano provoca el cierre exe+0xB7AAA al salir; frente S)
 using FnE770 = void (*)(uint8_t*, int, int, int, float*, uint64_t, uint64_t, uint64_t);
 using FnBaseReloj = void (*)(void*, float);
@@ -2518,12 +2519,12 @@ DWORD WINAPI hiloDosTiempos(LPVOID) {
         if (GetTickCount64() - tLog > 5000) { tLog = GetTickCount64(); logf("[TIEMPOS] t=%.0f (pantalla %d:%02d) estado=%d", t, (int)(t / 3600.0) + ((int)t % 3600 ? 1 : 0), (int)(t / 60.0) % 60, estado); }
         if (prev >= 0 && t < prev - 200.0 && estado == 1 && (g_descansoFase3 || g_descansoBase45)) { logf("[TIEMPOS] reloj a 0 por el descanso (%.0f -> %.0f): sigo en 2.º tiempo (final a 90:00)", prev, t); prev = t; continue; }   // 0.4.87: el descanso reinicia la base; no es un reinicio de partido
         if (prev >= 0 && t < prev - 200.0) { logf("[TIEMPOS] el reloj saltó hacia atrás (%.0f -> %.0f): reinicio la máquina de estados, no actúo", prev, t); estado = 0; prev = t; continue; }
-        if (estado == 0 && t >= 162000.0 && (prev < 0 || prev < 162000.0 + 3600.0)) {
+        if (estado == 0 && t >= 162000.0 + g_anadidoSeg && (prev < 0 || prev < 162000.0 + g_anadidoSeg + 3600.0)) {   // 0.4.91: el descanso llega al acabar el añadido (json «anadido_min», por defecto 2)
             estado = 1; logf("[TIEMPOS] MEDIO TIEMPO a t=%.0f: aviso y %s", t, g_e770 ? "saque central nativo del rival" : "pelota al centro 6 s");
             escribirEstadoStreet("medio_tiempo", t);
             pendMedio = true;   // 0.4.80: se pide cuando hayan pasado >10 s del último gol (la escena de gol + órdenes viejas provocó el cierre 0x4B712B)
         }
-        if (estado == 1 && ((g_descansoFase3 && faseP == 3 && t >= 162000.0) || t >= 324000.0) && !(faseP == 2)) {
+        if (estado == 1 && ((g_descansoFase3 && faseP == 3 && t >= 162000.0) || t >= 324000.0 + g_anadidoSeg) && !(faseP == 2)) {
             estado = 2; logf("[TIEMPOS] FINAL a t=%.0f: aviso, pausa de 8 s y revancha con saque central y reloj a 0", t);
             g_bolaCentroHasta = GetTickCount64() + 8000; escribirEstadoStreet("final", t); tFinal = GetTickCount64() + 8000; g_relojPausa = 1;
         }
@@ -2855,6 +2856,8 @@ void leerConfig() {
     if (valorDe("ia_piso_m", v)) g_iaPiso = (float)atof(v.c_str());
     if (valorDe("descanso_fase3", v)) g_descansoFase3 = (v == "true");
     if (valorDe("descanso_base45", v)) g_descansoBase45 = (v == "true");
+    if (valorDe("anadido_min", v)) { double m = atof(v.c_str()); if (m >= 0.0 && m <= 10.0) g_anadidoSeg = m * 3600.0; }
+    if (valorDe("rebote_k", v)) { g_muroRebote = (float)atof(v.c_str()); if (g_muroRebote < 0.3f || g_muroRebote > 0.95f) g_muroRebote = 0.75f; }   // 0.4.91: alias de muro_rebote
     if (valorDe("season_forzada", v)) g_seasonCore = atoi(v.c_str());
     if (valorDe("cursor_bloqueo_pt", v)) g_cursorBloqueoCfg = (v == "true");
     if (valorDe("street_minutos", v)) { g_streetMinutos = atof(v.c_str()); if (g_streetMinutos < 0.5 || g_streetMinutos > 44.0) g_streetMinutos = 5.0; }
