@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.60"
+#define PHX_CORE_VERSION "0.4.61"
 
 namespace {
 
@@ -1324,6 +1324,7 @@ DWORD WINAPI hiloDisparo(LPVOID) {
 }
 uint32_t ganchoPredTiro(uint64_t a1, int a2, float a3, float a4, uint64_t a5, int a6, char a7) {
     LONG nn = InterlockedIncrement(&g_disparoLlamadas);
+    if ((a2 == 0 || a2 == 11) && nn > 12) { static LONG nGk = 0; LONG k = InterlockedIncrement(&nGk); if (k <= 200) logf("[CURSOR_PT] predicado de tiro para el portero: jugador=%d (cursor/pad en el portero)", a2); }
     if (nn <= 12) logf("[siempre_disparo_free] predicado: jugador=%d modo=%d lado=%d training=%d", a2, a6, (int)a7, (int)(GetTickCount64() - g_tTrainingVisto < 3000));
     // 0.4.60 (frente L): el portero (slots 0 y 11) conserva su lógica de portero: el tiro de campo forzado NO se le aplica (si el cursor cae en él tras un reinicio no actúa como jugador de campo).
     if (g_disparoOn && a2 != 0 && a2 != 11 && GetTickCount64() - g_tTrainingVisto < 3000) { InterlockedIncrement(&g_disparoForzados); return 1; }
