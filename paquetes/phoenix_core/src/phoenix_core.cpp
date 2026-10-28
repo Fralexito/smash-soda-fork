@@ -3008,6 +3008,44 @@ std::string estadoJson() {
 
 void guardarEstado() { escribirArchivo(g_carpeta + "phoenix_core_estado.json", estadoJson()); }
 
+// 0.4.93 «panel Phoenix Street»: el módulo Lua escribe órdenes «id=1|0» (o «clave=valor») en phoenix_core\ordenes.txt; el Core las lee cada segundo (desde phx_core_tick), las aplica EN VIVO si la función lo permite
+// o solo las guarda («al reiniciar»), y siempre las persiste en phoenix_core.json. Las claves congeladas del portero NO se pueden cambiar desde aquí.
+static bool claveEn(const char* id, const char* const* lista) { for (; *lista; ++lista) if (strcmp(id, *lista) == 0) return true; return false; }
+static void persistirClaveJson(const std::string& id, const std::string& valor) {
+    std::string ruta = g_carpeta + "phoenix_core.json", t; if (!leerArchivo(ruta, t)) return;
+    std::string k = "\"" + id + "\""; size_t p = t.find(k);
+    if (p == std::string::npos) { size_t a = t.find('{'); if (a == std::string::npos) return; t.insert(a + 1, "\r\n    " + k + ": " + valor + ","); }
+    else { size_t c = t.find(':', p + k.size()); if (c == std::string::npos) return; size_t e = c + 1; while (e < t.size() && (t[e] == ' ' || t[e] == '\t')) e++; size_t f = e; while (f < t.size() && t[f] != ',' && t[f] != '\r' && t[f] != '\n' && t[f] != '}') f++; t.replace(e, f - e, valor); }
+    escribirArchivo(ruta, t);
+}
+static void procesarOrdenes() {
+    static ULONGLONG tOrd = 0; ULONGLONG ahora = GetTickCount64(); if (ahora - tOrd < 1000) return; tOrd = ahora;
+    std::string ruta = g_carpeta + "ordenes.txt", txt; if (!existe(ruta) || !leerArchivo(ruta, txt)) return;
+    DeleteFileA(ruta.c_str());
+    static const char* const prohibidas[] = { "arquero_rama_normal", "arquero_propio_cursor", "arquero_salida_corta", "arquero_saque_corto", "sin_despeje_emergencia", "cursor_bloqueo_pt", "arquero_salida_max", "cursor_pt_log", nullptr };
+    static const char* const alReiniciar[] = { "street_dos_tiempos", "street_pantalla_descanso", "street_saque_nativo", "ajustes_partido_free", "marcador_nativo_free", "reloj_street_free", "orden_jugador_segura", "reinicio_seguro", "cancha_chica_free", "descanso_fase3", "descanso_base45", "clima_forzado", "season_forzada", "anadido_min", nullptr };
+    size_t i = 0;
+    while (i < txt.size()) {
+        size_t e = txt.find_first_of("\r\n", i); std::string l = txt.substr(i, e == std::string::npos ? std::string::npos : e - i); i = (e == std::string::npos) ? txt.size() : e + 1;
+        size_t q = l.find('='); if (q == std::string::npos || q == 0) continue;
+        std::string id = l.substr(0, q), v = l.substr(q + 1); while (!v.empty() && (v.back() == ' ' || v.back() == '\t')) v.pop_back();
+        if (claveEn(id.c_str(), prohibidas)) { logf("[PANEL] %s: clave congelada del portero, orden ignorada", id.c_str()); continue; }
+        bool esBool = (v == "1" || v == "0" || v == "true" || v == "false"); bool on = (v == "1" || v == "true");
+        {   // parámetros numéricos EN VIVO (se releen al instante: son las variables que usan los ganchos) y se guardan en el json
+            struct Num { const char* id; float* var; float lo, hi; }; static const Num nums[] = { { "tiro_potencia_k", &g_tiroPot, 0.5f, 2.0f }, { "tiro_altura_k", &g_tiroAlt, 0.2f, 1.5f }, { "pase_vel_k", &g_paseVel, 0.8f, 2.0f }, { "pase_correccion", &g_paseCorr, 0.0f, 1.0f }, { "pase_cono_grados", &g_paseCono, 5.0f, 60.0f }, { "muro_rebote", &g_muroRebote, 0.3f, 0.95f }, { "muro_friccion", &g_muroFric, 0.0f, 1.0f } };
+            bool hecho = false; for (const Num& n : nums) if (id == n.id) { float x = (float)atof(v.c_str()); if (x >= n.lo && x <= n.hi) { *n.var = x; persistirClaveJson(id, v); logf("[PANEL] %s = %.3f (en vivo)", n.id, x); } else logf("[PANEL] %s=%s fuera de rango [%.2f, %.2f]: ignorado", n.id, v.c_str(), n.lo, n.hi); hecho = true; break; }
+            if (hecho) continue;
+        }
+        Feature* f = buscarFuncion(id.c_str());
+        if (f && esBool) {
+            persistirClaveJson(id, on ? "true" : "false");
+            if (claveEn(id.c_str(), alReiniciar)) { f->deseada = on; logf("[PANEL] %s=%s guardado (se aplica al reiniciar PES)", id.c_str(), on ? "ON" : "OFF"); }
+            else { EnterCriticalSection(&g_cs); f->deseada = on; bool ok = on ? encender(*f) : apagar(*f); guardarEstado(); LeaveCriticalSection(&g_cs); logf("[PANEL] %s=%s en vivo: %s", id.c_str(), on ? "ON" : "OFF", ok ? "hecho" : "no se pudo"); }
+        } else if (!f && claveEn(id.c_str(), alReiniciar)) { persistirClaveJson(id, esBool ? (on ? "true" : "false") : v); logf("[PANEL] %s=%s guardado (partido nuevo / reinicio)", id.c_str(), v.c_str()); }
+        else logf("[PANEL] orden desconocida o no permitida: %s", l.c_str());
+    }
+}
+
 } // namespace
 
 // ================================================================ API exportada
@@ -3065,6 +3103,7 @@ PHX_API int phx_core_iniciar(const char* carpeta) {
 PHX_API void phx_core_tick(void) {
     if (g_codigoInicio <= 0) return;
     InterlockedIncrement(&g_fotogramas);
+    if (!g_modoSeguro) procesarOrdenes();
     if (Feature* s = buscarFuncion("sonda_partido"); s && s->activa) {
         vigilarParado();
         volcarSonda();
