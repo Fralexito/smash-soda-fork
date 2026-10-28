@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.55"
+#define PHX_CORE_VERSION "0.4.56"
 
 namespace {
 
@@ -1876,6 +1876,39 @@ bool marcadorNativoInstalar(Feature& f) {
 }
 bool marcadorNativoQuitar(Feature&) { ponerParche(g_pdMN, false); return true; }
 
+// --- celebracion_chica (0.4.56, RE del frente K, 27-oct): la ancla de la demo de gol/celebración (FUN_140476C50, guardada en [raíz+0x1A8]+0x98) se pasa a FUN_14047C500 (RVA 0x47C500;
+// void(int* this, u64 jugador, uint* st, int tipo, int flag), st[0]=id, st[1]=x, st[2]=y, st[3]=z), que arranca la demo; los tipos 4 y 7 de ancla usan metros absolutos del estadio real. Pre-gancho: con TrainingWork, st[1] y st[3] se recortan
+// a ±(dims-0,5) (dims = *(float**)(raíz+0x2AA8)). La carrera del goleador (GoalEvent::Actualizar) usa el borde del «área de demo» del estadio (demoarea_stNNN.json, 8 Vec3 en el registro FUN_141E5D4C0); un parche de datos de esos puntos queda
+// pendiente si hace falta. NO se toca el id de escena (clave nula en FUN_140476C50).
+const char* kFirmaAncla = "40 56 57 41 56 48 83 EC 40 48 C7 44 24 20 FE FF FF FF 48 89 5C 24 60 48 89 6C 24 68 4D 8B F0 48";
+using FnAncla = void (*)(int*, uint64_t, uint32_t*, int, int);
+FnAncla g_anclaOrig = nullptr; volatile LONG g_celChicaOn = 0, g_celChicaRecortes = 0;
+void ganchoAncla(int* self, uint64_t jug, uint32_t* st, int tipo, int flag) {
+    if (g_celChicaOn && st && GetTickCount64() - g_tTrainGlob < 3000) {
+        uint8_t* raiz = nullptr; float* dims = nullptr; float d[2] = { 0, 0 }, v[4];
+        if (leerSeguro(g_globalPartido, &raiz, 8) && raiz && leerSeguro(raiz + 0x2AA8, &dims, 8) && dims && leerSeguro(dims, d, 8) &&
+            d[0] > 5.0f && d[0] < 60.0f && d[1] > 3.0f && d[1] < 40.0f && leerSeguro(st, v, 16)) {
+            float lx = d[0] - 0.5f, lz = d[1] - 0.5f, nx = v[1], nz = v[3];
+            if (nx > lx) nx = lx; else if (nx < -lx) nx = -lx;
+            if (nz > lz) nz = lz; else if (nz < -lz) nz = -lz;
+            if (nx != v[1] || nz != v[3]) {
+                reinterpret_cast<float*>(st)[1] = nx; reinterpret_cast<float*>(st)[3] = nz;
+                LONG n = InterlockedIncrement(&g_celChicaRecortes); if (n <= 10) logf("[CELEBRACION] ancla recortada (%.1f,%.1f) -> (%.1f,%.1f) id=0x%X", v[1], v[3], nx, nz, st[0]);
+            }
+        }
+    }
+    g_anclaOrig(self, jug, st, tipo, flag);
+}
+bool celChicaInstalar(Feature& f) {
+    if (!g_globalPartido && !resolverGlobalPartido(f.id)) { f.estado = "sin firma del global del partido"; return false; }
+    uint8_t* m = firmaUnica("codigo", kFirmaAncla, f.id);
+    if (!m) { f.estado = "sin firma: arranque de demo FUN_14047C500"; return false; }
+    if (!crearDesvio(f, m, 18, (void*)ganchoAncla, (void**)&g_anclaOrig)) { f.estado = "no se pudo desviar el arranque de demo"; return false; }
+    asegurarHiloTrain(); g_celChicaOn = 1;
+    char b[150]; sprintf_s(b, "ok: la ancla de la celebración se recorta a la cancha chica (exe+0x%llX)", (unsigned long long)(m - g_exe.base)); f.estado = b; return true;
+}
+bool celChicaQuitar(Feature&) { g_celChicaOn = 0; return true; }
+
 const char* kFirmaReinicio = "48 8B C4 53 41 57 48 83 EC 78 48 89 70 E8";
 using FnReinicio = float* (*)(float*, uint32_t*, void*, void*);
 FnReinicio g_reinicioOrig = nullptr; volatile LONG g_jugChOn = 0, g_jugChEscalados = 0;
@@ -1961,6 +1994,7 @@ std::vector<Feature> g_funciones = {   // orden = orden de arranque (gol_nativo_
     { "arquero_salida_corta", "El portero sale poco de su arco en el entrenamiento (recorta la posición de salida a R m de la línea)", arqSalidaInstalar, arqSalidaQuitar },
     { "reinicio_seguro", "Red de seguridad: si la posición de reinicio del balón recibe una clave nula, usa la rama por defecto en vez de cerrar el juego", reinicioSeguroInstalar, reinicioSeguroQuitar },
     { "marcador_nativo_free", "El marcador y el reloj nativos del partido se muestran en el entrenamiento (parche de 1 byte en el HUD)", marcadorNativoInstalar, marcadorNativoQuitar },
+    { "celebracion_chica", "La ancla de la celebración del gol se recorta a la cancha chica en el entrenamiento", celChicaInstalar, celChicaQuitar },
     { "jugadores_chica_free", "Escala a la cancha chica las posiciones de reinicio de los jugadores (entrenamiento)", jugChInstalar, jugChQuitar },
     { "suplentes_ocultos_free", "Aparca a los suplentes de la banda lejos (entrenamiento)", supOcultosInstalar, supOcultosQuitar },
     { "pelota_sonda", "Sonda de solo lectura de la pelota (posición/velocidad) en el entrenamiento", pelotaInstalar, pelotaQuitar },
