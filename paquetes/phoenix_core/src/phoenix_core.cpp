@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.83"
+#define PHX_CORE_VERSION "0.4.84"
 
 namespace {
 
@@ -2412,10 +2412,23 @@ static void escribirEstadoStreet(const char* evento, double t) {
     char b[200]; sprintf_s(b, "{\"evento\":\"%s\",\"t\":%.0f,\"hora\":%llu}\n", evento, t, (unsigned long long)GetTickCount64());
     FILE* f = nullptr; if (fopen_s(&f, (g_carpeta + "street_estado.json").c_str(), "wb") == 0 && f) { fputs(b, f); fclose(f); }
 }
+// 0.4.84 (frente J5, blanco tras el descanso): sider.dll lee stadium/timeofday/weather/season de 4 dwords seguidos del struct de ajustes del partido (0xA0 B; FUN_1414C07B0 lo copia y ahí cuelga set_conditions).
+// El origen es el mismo S_cfg de la duración: *(*(exe+0x3705E10)+0x50)+0x35960. Se anota [CONDICIONES] cada vez que cambia y, con «season_forzada» (json), si la temporada deja de ser la forzada (p. ej. tras el flujo del descanso) se REESCRIBE (solo con TrainingWork y valor 0..3).
+int g_seasonCore = -1;
+static void vigilarCondiciones() {
+    static ULONGLONG t = 0; static uint32_t ult[4] = { 9, 9, 9, 9 }; ULONGLONG ah = GetTickCount64(); if (ah - t < 1000) return; t = ah;
+    uint8_t *a = nullptr, *c = nullptr; if (!leerSeguro(g_exe.base + 0x3705E10, &a, 8) || !a || !leerSeguro(a + 0x50, &c, 8) || !c) return;
+    uint32_t v[4]; if (!leerSeguro(c + 0x35960, v, 16)) return;
+    if (memcmp(v, ult, 16) != 0) { logf("[CONDICIONES] stadium=%u timeofday=%u weather=%u season=%u (forzada=%d)", v[0], v[1], v[2], v[3], g_seasonCore); memcpy(ult, v, 16); }
+    if (g_seasonCore >= 0 && g_seasonCore <= 3 && v[3] <= 3 && v[3] != (uint32_t)g_seasonCore && GetTickCount64() - g_tTrainGlob < 3000) {
+        uint32_t nv = (uint32_t)g_seasonCore; memcpy(c + 0x35960 + 12, &nv, 4); logf("[CONDICIONES] season %u -> %u reescrita (tras el flujo del descanso)", v[3], nv);
+    }
+}
 DWORD WINAPI hiloDosTiempos(LPVOID) {
     double prev = -1; int estado = 0; ULONGLONG tLog = 0; LONG malas = 0; ULONGLONG tFinal = 0; bool pendMedio = false;
     while (g_dosTiemposOn) {
         Sleep(50);
+        vigilarCondiciones();
         if (!trainingWorkEstable()) { continue; }
         uint32_t faseP = 0; { uint8_t* rz = nullptr; uint8_t* Sx = nullptr; if (leerSeguro(g_globalPartido, &rz, 8) && rz && leerSeguro(rz + 0x270, &Sx, 8) && Sx) leerSeguro(Sx + 0x1168, &faseP, 4); }
         double t = 0; if (!leerRelojPantalla(&t)) { if (++malas == 1 || malas % 400 == 0) logf("[TIEMPOS] lectura del reloj no válida (#%ld): no actúo", (long)malas); continue; }
@@ -2756,6 +2769,7 @@ void leerConfig() {
     if (valorDe("ia_escala_apoyo", v)) g_iaEApoyo = (float)atof(v.c_str());
     if (valorDe("ia_piso_m", v)) g_iaPiso = (float)atof(v.c_str());
     if (valorDe("descanso_fase3", v)) g_descansoFase3 = (v == "true");
+    if (valorDe("season_forzada", v)) g_seasonCore = atoi(v.c_str());
     if (valorDe("cursor_bloqueo_pt", v)) g_cursorBloqueoCfg = (v == "true");
     if (valorDe("street_minutos", v)) { g_streetMinutos = atof(v.c_str()); if (g_streetMinutos < 0.5 || g_streetMinutos > 44.0) g_streetMinutos = 5.0; }
     if (valorDe("red_factor", v)) { g_redFactor = (float)atof(v.c_str()); if (g_redFactor < 0.0f || g_redFactor > 1.0f) g_redFactor = 0.85f; }
