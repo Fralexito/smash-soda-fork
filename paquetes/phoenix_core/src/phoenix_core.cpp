@@ -1706,13 +1706,14 @@ bool redQuitar(Feature&) { g_redOn = 0; return true; }
 volatile ULONGLONG g_tTrainGlob = 0; volatile LONG g_trainGlobOn = 0; HANDLE g_hiloTrainGlob = nullptr;
 struct ParcheN { uint8_t* dir = nullptr; uint8_t ori[8] = {}, nue[8] = {}; size_t n = 0; bool puesto = false; };
 static void ponerParcheN(ParcheN& pn, bool si) { if (!pn.dir || pn.puesto == si) return; if (escribirCodigo(pn.dir, si ? pn.nue : pn.ori, pn.n)) pn.puesto = si; }
-volatile LONG g_sinSaquesOn = 0, g_arqueroOn = 0, g_iaClearOn = 0, g_gkCortoOn = 0, g_arqCursorOn = 0; ParcheDisp g_pdS1, g_pdS2, g_pdIA, g_pdGK1, g_pdGK2, g_pdMN, g_pdMN2; ParcheN g_pnA, g_pnB, g_pnC1, g_pnC2, g_pnC3, g_pnMA1, g_pnMA2; volatile LONG g_hudFuerzaOn = 0;
+volatile LONG g_sinSaquesOn = 0, g_arqueroOn = 0, g_iaClearOn = 0, g_gkCortoOn = 0, g_arqCursorOn = 0; ParcheDisp g_pdS1, g_pdS2, g_pdIA, g_pdGK1, g_pdGK2, g_pdMN, g_pdMN2; ParcheN g_pnA, g_pnB, g_pnC1, g_pnC2, g_pnC3, g_pnMA1, g_pnMA2; volatile LONG g_hudFuerzaOn = 0; ParcheDisp g_pdT1; volatile LONG g_sinFinOn = 0;
 DWORD WINAPI hiloTrainGlob(LPVOID) {
     while (g_trainGlobOn) {
         if (trainingWorkEstable() || hayTrainingWork()) g_tTrainGlob = GetTickCount64();
         if (g_sinSaquesOn) { bool dentro = GetTickCount64() - g_tTrainGlob < 3000; ponerParche(g_pdS1, dentro); ponerParche(g_pdS2, dentro); }
         if (g_gkCortoOn) { bool dentro = GetTickCount64() - g_tTrainGlob < 3000; ponerParche(g_pdGK1, dentro); ponerParche(g_pdGK2, dentro); }
         if (g_arqCursorOn) { bool dentro = GetTickCount64() - g_tTrainGlob < 3000; ponerParcheN(g_pnC1, dentro); ponerParcheN(g_pnC2, dentro); ponerParcheN(g_pnC3, dentro); }
+        if (g_sinFinOn) { bool dentro = GetTickCount64() - g_tTrainGlob < 3000; ponerParche(g_pdT1, dentro); }
         if (g_hudFuerzaOn) { bool dentro = GetTickCount64() - g_tTrainGlob < 3000; ponerParcheN(g_pnMA1, dentro); ponerParcheN(g_pnMA2, dentro); }
         if (g_iaClearOn) { bool dentro = GetTickCount64() - g_tTrainGlob < 3000; ponerParche(g_pdIA, dentro); }
         if (g_arqueroOn) { bool dentro = GetTickCount64() - g_tTrainGlob < 3000; ponerParcheN(g_pnA, dentro); ponerParcheN(g_pnB, dentro); }
@@ -2022,11 +2023,19 @@ ParcheN g_pnAJ;
 bool ajustesPartidoInstalar(Feature& f) {
     if (!localizarParcheN(g_pnAJ, "83 FD 34 75 09 40 88 7C 24 24 33 C9 EB ?? E8 ?? ?? ?? ?? 84 C0 75 ?? 40 88 BB 87 01 00 00", 5, { 0x40, 0x88, 0x7C, 0x24, 0x24 }, { 0x0F, 0x1F, 0x44, 0x00, 0x00 }, f.id)) { f.estado = "sin firma/byte inesperado en FUN_140AA90A0 (grises del menú de ajustes)"; return false; }
     ponerParcheN(g_pnAJ, true);
-    g_cfgDuracionGlob = g_exe.base + 0x3705E10; g_usaDuracion = 1;   // RVA fija del exe v1.1.0.0 (frente J2)
+    g_cfgDuracionGlob = g_exe.base + 0x3705E10; g_usaDuracion = 0;   /* 0.4.61: S+0x1174 no es el reloj de pantalla (48:12 con 85 s): no se reinicia por duración */   // RVA fija del exe v1.1.0.0 (frente J2)
     f.estado = g_pnAJ.puesto ? "ok: el menú «Opciones gener.» del entrenamiento ya no sale gris (parche de 5 bytes en FUN_140AA90A0)" : "no se pudo escribir el parche del menú";
     return g_pnAJ.puesto;
 }
 bool ajustesPartidoQuitar(Feature&) { g_usaDuracion = 0; ponerParcheN(g_pnAJ, false); return true; }
+// --- sin_fin_tiempo_free (0.4.61, frente J §T1): con el reloj nativo corriendo, al llegar a 45:00 el Juez (FUN_14050B9B0) pita el medio tiempo y el entrenamiento «no sabe qué hacer» (captura de Fralex, 48:12 +2).
+// `44 0F B6 C3 0F 28 CE E8 ?? ?? ?? ?? 84 C0 0F 84 60 08 00 00 83 BE 20 29 00 00 04` byte +12 (RVA 0x50BA3F): `84`→`32` (test al,al → xor al,al): la decisión por tiempo siempre es «no». Solo con TrainingWork; el reloj sigue sumando.
+bool sinFinTiempoInstalar(Feature& f) {
+    if (!localizarParche("44 0F B6 C3 0F 28 CE E8 ?? ?? ?? ?? 84 C0 0F 84 60 08 00 00 83 BE 20 29 00 00 04", 12, 0x84, 0x32, g_pdT1, f.id)) { f.estado = "sin firma/byte inesperado en el Juez (FUN_14050B9B0)"; return false; }
+    asegurarHiloTrain(); g_sinFinOn = 1;
+    f.estado = "ok: el entrenamiento no tiene fin de tiempo (parche de 1 byte en el Juez, solo con TrainingWork)"; return true;
+}
+bool sinFinTiempoQuitar(Feature&) { g_sinFinOn = 0; ponerParche(g_pdT1, false); return true; }
 bool relojQuitar(Feature&) { g_relojOn = 0; ponerParche(g_pdR1, false); ponerParche(g_pdR1b, false); g_relojNativo = false; if (g_hiloReloj) { WaitForSingleObject(g_hiloReloj, 2000); CloseHandle(g_hiloReloj); g_hiloReloj = nullptr; } return true; }
 
 // --- cursor_pt_log (0.4.61, frente L): SOLO LECTURA. FUN_140A571B0 (RVA 0xA571B0) = setControlado(reg, idx): `if (reg[+0x20] != idx) { reg[+0x28]=reg[+0x20]; reg[+0x20]=idx; reg[+0x38]=0; }`. Cueva que roba los 5 B
@@ -2153,6 +2162,7 @@ std::vector<Feature> g_funciones = {   // orden = orden de arranque (gol_nativo_
     { "marcador_nativo_free", "El marcador y el reloj nativos del partido se muestran en el entrenamiento (parche de 1 byte en el HUD)", marcadorNativoInstalar, marcadorNativoQuitar },
     { "celebracion_chica", "La ancla de la celebración del gol se recorta a la cancha chica en el entrenamiento", celChicaInstalar, celChicaQuitar },
     { "ajustes_partido_free", "El menú «Opciones gener.» del entrenamiento libre se puede editar (duración del partido, etc.); el reloj usa esa duración", ajustesPartidoInstalar, ajustesPartidoQuitar },
+    { "sin_fin_tiempo_free", "El Juez no pita el fin de tiempo (medio tiempo/final) en el entrenamiento libre", sinFinTiempoInstalar, sinFinTiempoQuitar },
     { "reloj_street_free", "El reloj nativo corre en el entrenamiento y se reinicia a los street_minutos", relojInstalar, relojQuitar },
     { "jugadores_chica_free", "Escala a la cancha chica las posiciones de reinicio de los jugadores (entrenamiento)", jugChInstalar, jugChQuitar },
     { "suplentes_ocultos_free", "Aparca a los suplentes de la banda lejos (entrenamiento)", supOcultosInstalar, supOcultosQuitar },
