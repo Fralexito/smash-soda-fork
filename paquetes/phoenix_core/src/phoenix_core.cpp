@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.70"
+#define PHX_CORE_VERSION "0.4.71"
 
 namespace {
 
@@ -2328,6 +2328,31 @@ const char* kFirmaReinicio = "48 8B C4 53 41 57 48 83 EC 78 48 89 70 E8";
 using FnReinicio = float* (*)(float*, uint32_t*, void*, void*);
 FnReinicio g_reinicioOrig = nullptr; volatile LONG g_jugChOn = 0, g_jugChEscalados = 0;
 int g_jugChModo = 1;   // json «jugadores_chica_modo»: 1 = solo recortar (lo que cae fuera de ±(dim-0.5) se escala hacia dentro; lo demás no se toca), 0 = escalar todo (0.4.43)
+// --- jugadores_formacion (0.4.71, frente N): la tabla de reinicio (team+0x4B4C+slot*12, leída por FUN_1409F5530) trae un reparto fijo de ejercicio (defensas sobre su raya, jugadores pegados a las bandas), no una formación.
+// Tras la original, solo en TrainingWork, fase 2/3 y parada de centro (S+0x1554==1), se sustituye la salida de los jugadores de campo (NO el portero slot 0, NO los dos pateadores S+0x173C/+0x1740) por una formación a escala EXACTA de la mini cancha
+// (dims 15x10): slots 1/7 defensa izq (f=.50), 2/8 defensa der, 3/9 delantero izq (f=.17), 4/10 delantero der; el lado propio = signo de x de los slots 1..4 de la tabla.
+bool g_formOn = false; float g_formDef = 0.50f, g_formDel = 0.17f; volatile LONG g_formAplic = 0;
+static bool formacionSaque(uint8_t* raiz, uint32_t i, const float d[2], float* out) {
+    if (i >= 22) return false;
+    int slot = (int)(i % 11), side = (i > 10);
+    if (slot == 0) return false;
+    uint8_t* S = nullptr; uint32_t fase = 0, sub = 0, k1 = 99, k2 = 99;
+    if (!leerSeguro(raiz + 0x270, &S, 8) || !S) return false;
+    leerSeguro(S + 0x116C, &fase, 4); leerSeguro(S + 0x1554, &sub, 4);
+    if ((fase != 2 && fase != 3) || sub != 1) return false;
+    leerSeguro(S + 0x173C, &k1, 4); leerSeguro(S + 0x1740, &k2, 4);
+    if (i == k1 || i == k2) return false;
+    uint8_t* team = nullptr; if (!leerSeguro(raiz + (size_t)(side + 0xA1) * 0x28, &team, 8) || !team) return false;
+    float sum = 0, t[3];
+    for (int s = 1; s <= 4; s++) if (leerSeguro(team + 0x4B4C + s * 12, t, 12)) sum += t[0];
+    float sg = sum >= 0 ? 1.f : -1.f;
+    const float A = d[0] - 0.5f, B = d[1] - 0.5f;
+    float f, zf; int r = (slot <= 4) ? slot - 1 : (slot >= 7 ? slot - 7 : -1);
+    switch (r) { case 0: f = g_formDef; zf = -.40f; break; case 1: f = g_formDef; zf = +.40f; break;
+                 case 2: f = g_formDel; zf = -.35f; break; case 3: f = g_formDel; zf = +.35f; break;
+                 default: f = .33f; zf = ((slot % 3) - 1) * .40f; }
+    out[0] = sg * A * f; out[2] = zf * B; return true;
+}
 float* ganchoReinicio(float* out, uint32_t* pIdx, void* ctx, void* team) {
     float sx = 0, sz = 0; float* e = nullptr; bool esc = false;
     if (g_jugChOn && GetTickCount64() - g_tTrainGlob < 3000) {
@@ -2353,6 +2378,13 @@ float* ganchoReinicio(float* out, uint32_t* pIdx, void* ctx, void* team) {
         }
     }
     float* r = g_reinicioOrig(out, pIdx, ctx, team);
+    if (g_formOn && g_jugChOn && GetTickCount64() - g_tTrainGlob < 3000) {
+        uint8_t* raiz = nullptr; uint32_t i = 0; float* dims = nullptr; float d[2] = { 0, 0 };
+        if (leerSeguro(g_globalPartido, &raiz, 8) && raiz && leerSeguro(pIdx, &i, 4) && leerSeguro(raiz + 0x2AA8, &dims, 8) && dims && leerSeguro(dims, d, 8) && d[0] > 5.0f && d[0] < 60.0f && d[1] > 3.0f && d[1] < 40.0f) {
+            float antes[3] = { out[0], out[1], out[2] };
+            if (formacionSaque(raiz, i, d, out)) { LONG n = InterlockedIncrement(&g_formAplic); if (n <= 40) logf("[FORMACION] idx=%u (%.1f,%.1f) -> (%.1f,%.1f)", i, antes[0], antes[2], out[0], out[2]); }
+        }
+    }
     if (esc) { e[0] = sx; e[2] = sz; LONG n = InterlockedIncrement(&g_jugChEscalados); if (n <= 30) logf("[JUGCH] %s idx=%u tabla antes (%.1f,%.1f) · salida (%.1f,%.1f)", g_jugChModo ? "recorte" : "escala", *pIdx, sx, sz, out[0], out[2]); }
     return r;
 }
@@ -2510,6 +2542,9 @@ void leerConfig() {
     if (valorDe("muro_z", v)) g_muroZ = atof(v.c_str());
     if (valorDe("arquero_salida_max", v)) { g_arqSalidaMax = (float)atof(v.c_str()); if (g_arqSalidaMax < 1.0f || g_arqSalidaMax > 12.0f) g_arqSalidaMax = 3.5f; }
     if (valorDe("gk_pase_corto_m", v)) { g_pcMax = (float)atof(v.c_str()); if (g_pcMax < 4.0f || g_pcMax > 40.0f) g_pcMax = 10.0f; }
+    if (valorDe("jugadores_formacion", v)) g_formOn = (v == "true");
+    if (valorDe("formacion_f_def", v)) g_formDef = (float)atof(v.c_str());
+    if (valorDe("formacion_f_del", v)) g_formDel = (float)atof(v.c_str());
     if (valorDe("cursor_bloqueo_pt", v)) g_cursorBloqueoCfg = (v == "true");
     if (valorDe("street_minutos", v)) { g_streetMinutos = atof(v.c_str()); if (g_streetMinutos < 0.5 || g_streetMinutos > 44.0) g_streetMinutos = 5.0; }
     if (valorDe("red_factor", v)) { g_redFactor = (float)atof(v.c_str()); if (g_redFactor < 0.0f || g_redFactor > 1.0f) g_redFactor = 0.85f; }
