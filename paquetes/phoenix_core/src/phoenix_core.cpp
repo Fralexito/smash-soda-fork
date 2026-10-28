@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.57"
+#define PHX_CORE_VERSION "0.4.58"
 
 namespace {
 
@@ -1899,15 +1899,66 @@ void ganchoAncla(int* self, uint64_t jug, uint32_t* st, int tipo, int flag) {
     }
     g_anclaOrig(self, jug, st, tipo, flag);
 }
+// 0.4.58 (frente K2): parche de datos de los 8 puntos del «área de demo» del estadio (registro de FUN_141E5D4C0, global leída del RIP-rel de esa función; R = [[[global]]+id*8]+8, 8 Vec3 en R+0x38, ancla tipo 4 en R+0x130/0x138).
+// Con TrainingWork se escriben x,z = ±(dims-0,5) (y intacta), así el goleador y el resto (arquero rival incluido) no corren hasta el borde del estadio real; al salir del entrenamiento o quitar la opción se restauran los originales.
+const char* kFirmaRegDemo = "48 8B 0D ?? ?? ?? ?? 48 85 C9 75 03 33 C0 C3 E9 ?? ?? ?? ?? CC CC CC CC CC CC CC CC CC CC CC CC";
+uint8_t* g_regDemoGlobal = nullptr; volatile LONG g_demoAreaOn = 0; HANDLE g_hiloDemoArea = nullptr;
+uint8_t* g_regDemoR = nullptr; uint8_t g_regDemoCopia[96 + 12]; bool g_regDemoParcheado = false;
+static void regDemoRestaurar() {
+    if (g_regDemoParcheado && g_regDemoR) {
+        memcpy(g_regDemoR + 0x38, g_regDemoCopia, 96); memcpy(g_regDemoR + 0x130, g_regDemoCopia + 96, 12);
+        logf("[CELEBRACION] puntos demoarea restaurados");
+    }
+    g_regDemoParcheado = false; g_regDemoR = nullptr;
+}
+DWORD WINAPI hiloDemoArea(LPVOID) {
+    while (g_demoAreaOn) {
+        Sleep(250);
+        if (!trainingWorkEstable()) { regDemoRestaurar(); continue; }
+        uint8_t* raiz = nullptr; uint8_t* sel = nullptr; float* dims = nullptr; float d[2] = { 0, 0 }; int32_t id = -1;
+        if (!leerSeguro(g_globalPartido, &raiz, 8) || !raiz || !leerSeguro(raiz + 0x2C0, &sel, 8) || !sel || !leerSeguro(sel + 0x20, &id, 4) || id < 0 || id >= 512) continue;
+        if (!leerSeguro(raiz + 0x2AA8, &dims, 8) || !dims || !leerSeguro(dims, d, 8) || !(d[0] > 5.0f && d[0] < 60.0f && d[1] > 3.0f && d[1] < 40.0f)) continue;
+        uint8_t *P = nullptr, *A = nullptr, *E = nullptr, *R = nullptr;
+        if (!leerSeguro(g_regDemoGlobal, &P, 8) || !P || !leerSeguro(P, &A, 8) || !A || !leerSeguro(A + (size_t)id * 8, &E, 8) || !E || !leerSeguro(E + 8, &R, 8) || !R) continue;
+        uint8_t tmp[96 + 12];
+        if (!leerSeguro(R + 0x38, tmp, 96) || !leerSeguro(R + 0x130, tmp + 96, 12)) continue;
+        if (R != g_regDemoR) { regDemoRestaurar(); g_regDemoR = R; memcpy(g_regDemoCopia, tmp, 108); }
+        const float dx = d[0] - 0.5f, dz = d[1] - 0.5f;
+        static const int sx[8] = { -1, -1, -1, -1, 1, 1, 1, 1 }, sz[8] = { -1, -1, 1, 1, 1, 1, -1, -1 };
+        float nuevos[24]; memcpy(nuevos, tmp, 96);
+        for (int k = 0; k < 8; k++) { nuevos[k * 3 + 0] = sx[k] * dx; nuevos[k * 3 + 2] = sz[k] * dz; }
+        float anc[3]; memcpy(anc, tmp + 96, 12);
+        if (anc[0] > dx) anc[0] = dx; else if (anc[0] < -dx) anc[0] = -dx;
+        if (anc[2] > dz) anc[2] = dz; else if (anc[2] < -dz) anc[2] = -dz;
+        if (memcmp(nuevos, tmp, 96) != 0 || memcmp(anc, tmp + 96, 12) != 0) {
+            memcpy(R + 0x38, nuevos, 96); memcpy(R + 0x130, anc, 12);
+            if (!g_regDemoParcheado) logf("[CELEBRACION] puntos demoarea recortados a ±(%.1f, %.1f) (estadio id=%d, registro %p)", dx, dz, (int)id, (void*)R);
+            g_regDemoParcheado = true;
+        }
+    }
+    regDemoRestaurar();
+    return 0;
+}
 bool celChicaInstalar(Feature& f) {
     if (!g_globalPartido && !resolverGlobalPartido(f.id)) { f.estado = "sin firma del global del partido"; return false; }
     uint8_t* m = firmaUnica("codigo", kFirmaAncla, f.id);
     if (!m) { f.estado = "sin firma: arranque de demo FUN_14047C500"; return false; }
     if (!crearDesvio(f, m, 18, (void*)ganchoAncla, (void**)&g_anclaOrig)) { f.estado = "no se pudo desviar el arranque de demo"; return false; }
     asegurarHiloTrain(); g_celChicaOn = 1;
-    char b[150]; sprintf_s(b, "ok: la ancla de la celebración se recorta a la cancha chica (exe+0x%llX)", (unsigned long long)(m - g_exe.base)); f.estado = b; return true;
+    const char* extra = "";
+    uint8_t* r = firmaUnica("codigo", kFirmaRegDemo, f.id);
+    if (r) {
+        int32_t rel = 0; memcpy(&rel, r + 3, 4); g_regDemoGlobal = r + 7 + rel;
+        g_demoAreaOn = 1; g_hiloDemoArea = CreateThread(nullptr, 0, hiloDemoArea, nullptr, 0, nullptr);
+        if (!g_hiloDemoArea) { g_demoAreaOn = 0; extra = " (sin hilo de demoarea)"; } else extra = " + puntos demoarea";
+    } else extra = " (sin firma del registro demoarea)";
+    char b[190]; sprintf_s(b, "ok: la ancla de la celebración se recorta a la cancha chica (exe+0x%llX)%s", (unsigned long long)(m - g_exe.base), extra); f.estado = b; return true;
 }
-bool celChicaQuitar(Feature&) { g_celChicaOn = 0; return true; }
+bool celChicaQuitar(Feature&) {
+    g_celChicaOn = 0; g_demoAreaOn = 0;
+    if (g_hiloDemoArea) { WaitForSingleObject(g_hiloDemoArea, 2000); CloseHandle(g_hiloDemoArea); g_hiloDemoArea = nullptr; }
+    return true;
+}
 
 // --- reloj_street_free (0.4.57, RE del frente J §2.5): el reloj del partido es una estructura en S+0x1168 (S = [raíz+0x270]): +0 fase, +4 sub-fase (1 en juego), +0xC float «transcurrido» (S+0x1174; 60 unidades = 1 s,
 // escritura plana sin protección) y una base protegida por hash (NO se toca). El HUD (match2D::Screen::Time) muestra base + float. En el entrenamiento la función del reloj (FUN_14044CE80) sale si TrainingWork está activo, así que
