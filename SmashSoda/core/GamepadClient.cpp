@@ -394,6 +394,9 @@ int GamepadClient::onQuit(Guest& guest) {
 	reduce([&](AGamepad* gamepad) {
 		if (gamepad->owner.guest.userID == guest.userID) {
 			gamepad->clearOwner();
+			// Phoenix 0.3.55: el mando sigue enchufado (PES no se para) pero QUIETO: si se fue con el stick o un botón
+			// apretado, ese jugador se quedaba corriendo o disparando solo.
+			gamepad->clearState();
 			result++;
 		}
 	});
@@ -620,6 +623,20 @@ bool GamepadClient::sendMessage(Guest guest, ParsecMessage message)
 	return success;
 }
 
+// Phoenix 0.3.55: el bloqueo de botones también vale para quien tiene mapeo por persona (antes el mapeo se lo saltaba).
+// Se aplica sobre el estado ya mapeado; repetirlo en el camino sin mapeo no cambia nada (ya está a cero).
+static void phoenixBloquear(bool bloqueado, XINPUT_STATE& x) {
+	if (!bloqueado) return;
+	const auto& l = g_hosting._lockedGamepad;
+	x.Gamepad.wButtons &= ~l.wButtons;
+	if (l.bLeftTrigger) x.Gamepad.bLeftTrigger = 0;
+	if (l.bRightTrigger) x.Gamepad.bRightTrigger = 0;
+	if (l.sThumbLX) x.Gamepad.sThumbLX = 0;
+	if (l.sThumbLY) x.Gamepad.sThumbLY = 0;
+	if (l.sThumbRX) x.Gamepad.sThumbRX = 0;
+	if (l.sThumbRY) x.Gamepad.sThumbRY = 0;
+}
+
 bool GamepadClient::sendButtonMessageForPad(AGamepad* gamepad, ParsecGamepadButtonMessage& button) {
 
 	GuestPreferences guestPrefs = GuestPreferences();
@@ -669,6 +686,7 @@ bool GamepadClient::sendGamepadStateMessage(ParsecGamepadStateMessage& gamepadSt
 				}
 				xstate = toXInput(gamepadState, pad->getState(), prefs, guest.userID);
 				}
+				phoenixBloquear(pad->isLockedButtons() || lockButtons, xstate);
 				phoenixAnotar(guest.userID, crudo, xstate);
 				pad->setStateSafe(xstate);
 				return true;
@@ -691,6 +709,7 @@ bool GamepadClient::sendGamepadAxisMessage(ParsecGamepadAxisMessage& gamepadAxis
 				pad->phoenixCrudo = crudo;
 				XINPUT_STATE xstate;
 				if (phoenixMapear(pad, guest.userID, crudo, xstate)) {
+					phoenixBloquear(pad->isLockedButtons() || lockButtons, xstate);
 					phoenixAnotar(guest.userID, crudo, xstate);
 					pad->setStateSafe(xstate);
 					return true;
@@ -710,6 +729,7 @@ bool GamepadClient::sendGamepadAxisMessage(ParsecGamepadAxisMessage& gamepadAxis
 					else if (g_hosting._lockedGamepad.bRightTrigger && gamepadAxis.axis == GAMEPAD_AXIS_TRIGGERR)
 						xstate.Gamepad.bRightTrigger = 0;
 				}
+				phoenixBloquear(pad->isLockedButtons() || lockButtons, xstate);
 				phoenixAnotar(guest.userID, crudo, xstate);
 				pad->setStateSafe(xstate);
 				return true;
@@ -740,6 +760,7 @@ bool GamepadClient::sendGamepadButtonMessage(ParsecGamepadButtonMessage& gamepad
 						xstate.Gamepad.wButtons &= ~g_hosting._lockedGamepad.wButtons;
 				}
 				}
+				phoenixBloquear(pad->isLockedButtons() || lockButtons, xstate);
 				phoenixAnotar(guest.userID, crudo, xstate);
 				pad->setStateSafe(xstate);
 				return true;

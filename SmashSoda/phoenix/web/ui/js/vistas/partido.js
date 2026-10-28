@@ -385,7 +385,7 @@ function LineaJuego({ j, a, p }) {
     <div style="display:flex;gap:14px;flex-wrap:wrap;justify-content:center">
       <span>${t("Juego:", "Game:")} ${hay ? html`<b style=${j.fase === "en_juego" ? "color:var(--ok)" : ""}>${t(f[0], f[1])}</b>${conMinuto ? ` · ${j.minuto}'` : ""}` : t("sin datos del juego", "no game data")}</span>
       ${equipos ? html`<span>${equipos}</span>` : null}
-      ${a?.activo ? html`<span>${t("Start/Back/Guía bloqueados a los invitados", "Start/Back/Guide locked for guests")}</span>` : null}
+      ${a?.activo ? html`<span>${t("Modo competitivo: botones bloqueados a los invitados", "Competitive mode: buttons locked for guests")}</span>` : null}
     </div>
     ${goles.length ? html`<div>${t("Goles:", "Goals:")} ${goles.join(" · ")}</div>` : null}
   </div>`;

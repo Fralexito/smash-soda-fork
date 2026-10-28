@@ -47,14 +47,18 @@ namespace phoenix::web {
 		void aplicarBloqueo(Interno& in, Hosting& h) {
 			const auto& c = Config::cfg.input;
 			LockedGamepadState& l = h._lockedGamepad;
+			// 0.3.55 (Frank: «yo pueda seleccionar qué botones quiero bloquear»): manda SU selección. Antes, en modo competitivo,
+			// se le sumaban siempre Start/Back/Guía y, al apagar su interruptor, quedaban solo esos 3. Ahora Start/Back/Guía
+			// solo se ponen de serie si él no ha marcado nada; si marcó algo y apaga su bloqueo, no queda nada bloqueado.
+			const bool marcoAlgo = c.lockedGamepadButtons != 0 || c.lockedGamepadLeftTrigger || c.lockedGamepadRightTrigger
+				|| c.lockedGamepadLX || c.lockedGamepadLY || c.lockedGamepadRX || c.lockedGamepadRY;
 			if (in.arbitro.competitivoActivo && !in.arbitro.lockPrevio) {
-				// El anfitrión no bloqueaba nada: solo Start/Back/Guía (sus gatillos y sticks quedan libres)
-				l.wButtons = kBotonesCompetitivo;
+				l.wButtons = marcoAlgo ? 0u : kBotonesCompetitivo;
 				l.bLeftTrigger = false; l.bRightTrigger = false;
 				l.sThumbLX = false; l.sThumbLY = false; l.sThumbRX = false; l.sThumbRY = false;
 				return;
 			}
-			l.wButtons = c.lockedGamepadButtons | (in.arbitro.competitivoActivo ? kBotonesCompetitivo : 0u);
+			l.wButtons = c.lockedGamepadButtons;
 			l.bLeftTrigger = c.lockedGamepadLeftTrigger;
 			l.bRightTrigger = c.lockedGamepadRightTrigger;
 			l.sThumbLX = c.lockedGamepadLX;
@@ -254,7 +258,7 @@ namespace phoenix::web {
 			}
 			catch (...) {}
 			std::string arb;
-			if (in.arbitro.competitivoActivo) arb = "Start/Back/Guía bloqueados a los invitados";
+			if (in.arbitro.competitivoActivo) arb = in.arbitro.lockPrevio ? "botones elegidos por el anfitrión bloqueados" : "Start/Back/Guía bloqueados a los invitados";
 			if (pr.pausaAuto) arb += std::string(arb.empty() ? "" : " · ") + "pausa automática";
 			if (!arb.empty()) t += "arbitro=" + arb + "\n";
 			const std::vector<std::string>& chat = h.getMessageLog();
