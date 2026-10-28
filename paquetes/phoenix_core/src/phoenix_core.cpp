@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.72"
+#define PHX_CORE_VERSION "0.4.73"
 
 namespace {
 
@@ -1607,7 +1607,7 @@ bool jugSondaQuitar(Feature&) { g_jugSondaOn = 0; if (g_hiloJug) { WaitForSingle
 const char* kFirmaBolaPaso = "48 8B C4 F3 0F 11 40 08 55 53 56 48 8D 68 88 48 81 EC 60 01 00 00";
 using FnBolaPaso = uint64_t (*)(float, uint64_t, uint64_t, float*, void*, uint64_t);
 FnBolaPaso g_bolaPasoOrig = nullptr;
-bool g_redResorte = false; float g_redK = 70.0f, g_redC = 7.0f, g_redHolgura = 1.0f;   // 0.4.72 «red_resorte»: la red como resorte-amortiguador (json red_resorte/red_k/red_c/red_holgura)
+bool g_redResorte = false; float g_redK = 70.0f, g_redC = 8.0f, g_redHolgura = 0.4f;   // 0.4.72 «red_resorte»: la red como resorte-amortiguador (json red_resorte/red_k/red_c/red_holgura)
 float g_redFactor = 0.93f; volatile ULONGLONG g_tTrainRed = 0; volatile LONG g_redOn = 0; volatile LONG g_redFrenos = 0;
 HANDLE g_hiloRed = nullptr;
 DWORD WINAPI hiloRed(LPVOID) {
@@ -1656,7 +1656,7 @@ uint64_t ganchoBolaPaso(float dt, uint64_t rdx, uint64_t r8, float* S, void* cfg
         if (g_murosOn) {                                       // muros lógicos del Core (el estado S es el del modelo: persiste)
             const float rb = 0.109f;
             float Lx = (float)(g_muroX > 0 ? g_muroX : g_canchaLargo + 0.2), Wz = (float)(g_muroZ > 0 ? g_muroZ : g_canchaAncho + 0.2);
-            float lim = bocaGol ? largo + 3.4f : Lx;           // en la boca del arco la pared está al fondo de la red
+            float lim = bocaGol ? largo + 3.05f : Lx;   // 0.4.73: fondo real de la red dibujada = línea de gol + 3,0 m (goal_l_hit.geom: 55,445-55,505 sobre 52,5); antes 3,4 = «malla invisible» 0,4 m más allá           // en la boca del arco la pared está al fondo de la red
             bool toco = false;
             if (x > lim - rb && S[3] > 0) { S[0] = lim - rb; S[3] = -g_muroRebote * S[3]; S[5] *= g_muroFric; toco = true; }
             else if (x < -lim + rb && S[3] < 0) { S[0] = -lim + rb; S[3] = -g_muroRebote * S[3]; S[5] *= g_muroFric; toco = true; }
