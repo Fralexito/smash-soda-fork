@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.79"
+#define PHX_CORE_VERSION "0.4.80"
 
 namespace {
 
@@ -902,10 +902,11 @@ bool directoQuitar(Feature&) {
 const char* kFirmaPaso = "48 89 5C 24 08 57 48 83 EC 20 0F B6 81 F0 08 00 00 4C 8D 1D ?? ?? ?? ?? 0F B6 FA 48 8B D9 44 8B 94 81 78 08 00 00";
 using FnPaso = uint64_t (*)(uint8_t* job, uint64_t saltable, uint64_t p3);
 FnPaso g_pasoOrig = nullptr;
-uint8_t* g_pasoJob = nullptr; uint32_t g_pasoIdx = 0xFFFF, g_pasoId = 0xFFFF;
+uint8_t* g_pasoJob = nullptr; uint32_t g_pasoIdx = 0xFFFF, g_pasoId = 0xFFFF; volatile ULONGLONG g_tUltGol = 0;   // 0.4.80: instante del último paso 0x04 (celebración de gol)
 uint64_t ganchoPaso(uint8_t* job, uint64_t saltable, uint64_t p3) {
     uint8_t idx = 0xFF; uint32_t id = 0xFFFFFFFF;
     if (leerSeguro(job + 0x8F0, &idx, 1) && idx < 0x20) leerSeguro(job + 0x878 + idx * 4, &id, 4);
+    if (id == 0x04 && g_pasoId != 0x04) g_tUltGol = GetTickCount64();
     if (job != g_pasoJob || idx != g_pasoIdx || id != g_pasoId) {
         g_pasoJob = job; g_pasoIdx = idx; g_pasoId = id;
         Ev& e = nuevoEv(EV_PASO, _ReturnAddress());
@@ -2392,7 +2393,7 @@ static void escribirEstadoStreet(const char* evento, double t) {
     FILE* f = nullptr; if (fopen_s(&f, (g_carpeta + "street_estado.json").c_str(), "wb") == 0 && f) { fputs(b, f); fclose(f); }
 }
 DWORD WINAPI hiloDosTiempos(LPVOID) {
-    double prev = -1; int estado = 0; ULONGLONG tLog = 0; LONG malas = 0; ULONGLONG tFinal = 0;
+    double prev = -1; int estado = 0; ULONGLONG tLog = 0; LONG malas = 0; ULONGLONG tFinal = 0; bool pendMedio = false;
     while (g_dosTiemposOn) {
         Sleep(50);
         if (!trainingWorkEstable()) { continue; }
@@ -2402,13 +2403,18 @@ DWORD WINAPI hiloDosTiempos(LPVOID) {
         if (estado == 0 && t >= 162000.0 && (prev < 0 || prev < 162000.0 + 3600.0)) {
             estado = 1; logf("[TIEMPOS] MEDIO TIEMPO a t=%.0f: aviso y %s", t, g_e770 ? "saque central nativo del rival" : "pelota al centro 6 s");
             escribirEstadoStreet("medio_tiempo", t);
-            if (g_e770 && g_descansoOn) { g_descansoT = 0; g_descansoPedido = 1; } else if (g_e770) { g_saqueEquipo = g_sacaInicial ? 0 : 1; g_saqueResetReloj = 0; g_saqueT = 0; g_saquePedido = 1; } else g_bolaCentroHasta = GetTickCount64() + 6000;
+            pendMedio = true;   // 0.4.80: se pide cuando hayan pasado >10 s del último gol (la escena de gol + órdenes viejas provocó el cierre 0x4B712B)
         }
         if (estado == 1 && t >= 324000.0 && (prev < 0 || prev < 324000.0 + 3600.0)) {
             estado = 2; logf("[TIEMPOS] FINAL a t=%.0f: aviso, pausa de 8 s y revancha con saque central y reloj a 0", t);
             g_bolaCentroHasta = GetTickCount64() + 8000; escribirEstadoStreet("final", t); tFinal = GetTickCount64() + 8000;
         }
-        if (estado == 2 && tFinal && GetTickCount64() >= tFinal) {
+        if (pendMedio && GetTickCount64() - g_tUltGol > 10000) {
+            pendMedio = false;
+            if (g_e770 && g_descansoOn) { g_descansoT = 0; g_descansoPedido = 1; } else if (g_e770) { g_saqueEquipo = g_sacaInicial ? 0 : 1; g_saqueResetReloj = 0; g_saqueT = 0; g_saquePedido = 1; } else g_bolaCentroHasta = GetTickCount64() + 6000;
+            logf("[TIEMPOS] medio tiempo pedido (último gol hace %.0f s)", (GetTickCount64() - g_tUltGol) / 1000.0);
+        }
+        if (estado == 2 && tFinal && GetTickCount64() >= tFinal && GetTickCount64() - g_tUltGol > 10000) {
             tFinal = 0;
             if (g_e770) { g_saqueEquipo = g_sacaInicial ? 1 : 0; g_saqueResetReloj = 1; g_saqueT = 0; g_saquePedido = 1; estado = 0; prev = -1; logf("[TIEMPOS] revancha pedida (reloj a 0:00); el marcador NO se reinicia todavía"); }
         }
