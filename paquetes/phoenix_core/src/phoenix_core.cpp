@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.71"
+#define PHX_CORE_VERSION "0.4.72"
 
 namespace {
 
@@ -1607,6 +1607,7 @@ bool jugSondaQuitar(Feature&) { g_jugSondaOn = 0; if (g_hiloJug) { WaitForSingle
 const char* kFirmaBolaPaso = "48 8B C4 F3 0F 11 40 08 55 53 56 48 8D 68 88 48 81 EC 60 01 00 00";
 using FnBolaPaso = uint64_t (*)(float, uint64_t, uint64_t, float*, void*, uint64_t);
 FnBolaPaso g_bolaPasoOrig = nullptr;
+bool g_redResorte = false; float g_redK = 70.0f, g_redC = 7.0f, g_redHolgura = 1.0f;   // 0.4.72 «red_resorte»: la red como resorte-amortiguador (json red_resorte/red_k/red_c/red_holgura)
 float g_redFactor = 0.93f; volatile ULONGLONG g_tTrainRed = 0; volatile LONG g_redOn = 0; volatile LONG g_redFrenos = 0;
 HANDLE g_hiloRed = nullptr;
 DWORD WINAPI hiloRed(LPVOID) {
@@ -1631,6 +1632,12 @@ uint64_t ganchoBolaPaso(float dt, uint64_t rdx, uint64_t r8, float* S, void* cfg
         float x = S[0], y = S[1], z = S[2];
         float largo = (float)g_canchaLargo, ancho = (float)g_canchaAncho;
         bool bocaGol = fabsf(z) < 3.66f + 0.109f && y < 2.44f + 0.109f;   // boca real: media portería 3,66 y travesaño 2,44 (+ radio de la pelota)
+        if (g_redOn && g_redResorte && fabsf(x) > largo && bocaGol) {   // 0.4.72: la red cede como una malla: holgura sin fuerza, luego resorte + amortiguación; rebota un poco y la pelota cae dentro
+            float sgx = x >= 0 ? 1.0f : -1.0f, pen = fabsf(x) - largo, vout = S[3] * sgx;
+            if (pen > g_redHolgura) { float a = -g_redK * (pen - g_redHolgura) - g_redC * vout; S[3] += a * sgx * dt; }
+            float arr = 1.0f - 1.2f * dt; if (arr < 0.5f) arr = 0.5f; S[3] *= (pen > g_redHolgura ? 1.0f : (1.0f - 0.8f * dt)); S[4] *= (y > 0.2f ? 1.0f : 1.0f); S[5] *= arr;   // arrastre lateral de la tela
+            LONG n = InterlockedIncrement(&g_redFrenos); if (n <= 5 || n % 2000 == 0) logf("[RED] resorte #%ld x=%.2f pen=%.2f vout=%.1f", (long)n, x, pen, vout);
+        } else
         if (g_redOn && fabsf(x) > largo && bocaGol) {       // red: freno suave y, al fondo, un pequeño rebote hacia atrás
             float f = g_redFactor;
             S[3] *= f; S[4] *= f; S[5] *= f;
@@ -2545,6 +2552,10 @@ void leerConfig() {
     if (valorDe("jugadores_formacion", v)) g_formOn = (v == "true");
     if (valorDe("formacion_f_def", v)) g_formDef = (float)atof(v.c_str());
     if (valorDe("formacion_f_del", v)) g_formDel = (float)atof(v.c_str());
+    if (valorDe("red_resorte", v)) g_redResorte = (v == "true");
+    if (valorDe("red_k", v)) g_redK = (float)atof(v.c_str());
+    if (valorDe("red_c", v)) g_redC = (float)atof(v.c_str());
+    if (valorDe("red_holgura", v)) g_redHolgura = (float)atof(v.c_str());
     if (valorDe("cursor_bloqueo_pt", v)) g_cursorBloqueoCfg = (v == "true");
     if (valorDe("street_minutos", v)) { g_streetMinutos = atof(v.c_str()); if (g_streetMinutos < 0.5 || g_streetMinutos > 44.0) g_streetMinutos = 5.0; }
     if (valorDe("red_factor", v)) { g_redFactor = (float)atof(v.c_str()); if (g_redFactor < 0.0f || g_redFactor > 1.0f) g_redFactor = 0.85f; }
