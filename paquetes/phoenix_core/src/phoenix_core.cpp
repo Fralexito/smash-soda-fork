@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.56"
+#define PHX_CORE_VERSION "0.4.57"
 
 namespace {
 
@@ -1909,6 +1909,35 @@ bool celChicaInstalar(Feature& f) {
 }
 bool celChicaQuitar(Feature&) { g_celChicaOn = 0; return true; }
 
+// --- reloj_street_free (0.4.57, RE del frente J §2.5): el reloj del partido es una estructura en S+0x1168 (S = [raíz+0x270]): +0 fase, +4 sub-fase (1 en juego), +0xC float «transcurrido» (S+0x1174; 60 unidades = 1 s,
+// escritura plana sin protección) y una base protegida por hash (NO se toca). El HUD (match2D::Screen::Time) muestra base + float. En el entrenamiento la función del reloj (FUN_14044CE80) sale si TrainingWork está activo, así que
+// el reloj queda en 0:00. El Core, desde un hilo, suma 60·dt a S+0x1174 mientras la sub-fase es 1 (en juego) y reinicia a 0 al llegar a «street_minutos» (json, por defecto 5): nunca se alcanzan los 45:00 del fin de tiempo.
+volatile LONG g_relojOn = 0; HANDLE g_hiloReloj = nullptr; double g_streetMinutos = 5.0;
+DWORD WINAPI hiloReloj(LPVOID) {
+    LARGE_INTEGER fq, t0; QueryPerformanceFrequency(&fq); QueryPerformanceCounter(&t0); LONG vueltas = 0;
+    while (g_relojOn) {
+        Sleep(16);
+        LARGE_INTEGER t1; QueryPerformanceCounter(&t1); double dt = (double)(t1.QuadPart - t0.QuadPart) / (double)fq.QuadPart; t0 = t1;
+        if (dt <= 0 || dt > 0.5) continue;
+        if (!trainingWorkEstable()) continue;
+        uint8_t* raiz = nullptr; uint8_t* S = nullptr;
+        if (!leerSeguro(g_globalPartido, &raiz, 8) || !raiz || !leerSeguro(raiz + 0x270, &S, 8) || !S) continue;
+        uint32_t sub = 0; float f = 0;
+        if (!leerSeguro(S + 0x116C, &sub, 4) || sub != 1 || !leerSeguro(S + 0x1174, &f, 4) || !(f >= 0.0f) || f > 1.0e6f) continue;
+        f += (float)(60.0 * dt);
+        if (f >= (float)(g_streetMinutos * 60.0 * 60.0)) { f = 0.0f; logf("[RELOJ] fin de los %.1f min: el reloj vuelve a 0 (vuelta %ld)", g_streetMinutos, (long)++vueltas); }
+        memcpy(S + 0x1174, &f, 4);
+    }
+    return 0;
+}
+bool relojInstalar(Feature& f) {
+    if (!g_globalPartido && !resolverGlobalPartido(f.id)) { f.estado = "sin firma del global del partido"; return false; }
+    g_relojOn = 1; g_hiloReloj = CreateThread(nullptr, 0, hiloReloj, nullptr, 0, nullptr);
+    if (!g_hiloReloj) { g_relojOn = 0; f.estado = "no se pudo crear el hilo del reloj"; return false; }
+    char b[140]; sprintf_s(b, "ok: el reloj nativo corre en el entrenamiento y reinicia a los %.1f min (escribe S+0x1174)", g_streetMinutos); f.estado = b; return true;
+}
+bool relojQuitar(Feature&) { g_relojOn = 0; if (g_hiloReloj) { WaitForSingleObject(g_hiloReloj, 2000); CloseHandle(g_hiloReloj); g_hiloReloj = nullptr; } return true; }
+
 const char* kFirmaReinicio = "48 8B C4 53 41 57 48 83 EC 78 48 89 70 E8";
 using FnReinicio = float* (*)(float*, uint32_t*, void*, void*);
 FnReinicio g_reinicioOrig = nullptr; volatile LONG g_jugChOn = 0, g_jugChEscalados = 0;
@@ -1995,6 +2024,7 @@ std::vector<Feature> g_funciones = {   // orden = orden de arranque (gol_nativo_
     { "reinicio_seguro", "Red de seguridad: si la posición de reinicio del balón recibe una clave nula, usa la rama por defecto en vez de cerrar el juego", reinicioSeguroInstalar, reinicioSeguroQuitar },
     { "marcador_nativo_free", "El marcador y el reloj nativos del partido se muestran en el entrenamiento (parche de 1 byte en el HUD)", marcadorNativoInstalar, marcadorNativoQuitar },
     { "celebracion_chica", "La ancla de la celebración del gol se recorta a la cancha chica en el entrenamiento", celChicaInstalar, celChicaQuitar },
+    { "reloj_street_free", "El reloj nativo corre en el entrenamiento y se reinicia a los street_minutos", relojInstalar, relojQuitar },
     { "jugadores_chica_free", "Escala a la cancha chica las posiciones de reinicio de los jugadores (entrenamiento)", jugChInstalar, jugChQuitar },
     { "suplentes_ocultos_free", "Aparca a los suplentes de la banda lejos (entrenamiento)", supOcultosInstalar, supOcultosQuitar },
     { "pelota_sonda", "Sonda de solo lectura de la pelota (posición/velocidad) en el entrenamiento", pelotaInstalar, pelotaQuitar },
@@ -2085,6 +2115,7 @@ void leerConfig() {
     if (valorDe("muro_x", v)) g_muroX = atof(v.c_str());
     if (valorDe("muro_z", v)) g_muroZ = atof(v.c_str());
     if (valorDe("arquero_salida_max", v)) { g_arqSalidaMax = (float)atof(v.c_str()); if (g_arqSalidaMax < 1.0f || g_arqSalidaMax > 12.0f) g_arqSalidaMax = 3.5f; }
+    if (valorDe("street_minutos", v)) { g_streetMinutos = atof(v.c_str()); if (g_streetMinutos < 0.5 || g_streetMinutos > 44.0) g_streetMinutos = 5.0; }
     if (valorDe("red_factor", v)) { g_redFactor = (float)atof(v.c_str()); if (g_redFactor < 0.0f || g_redFactor > 1.0f) g_redFactor = 0.85f; }
     if (valorDe("vigia_escritura", v)) g_vigiaPedida = atoi(v.c_str());
     if (valorDe("vigia_pelota", v)) g_vigiaPelotaPedida = atoi(v.c_str());
