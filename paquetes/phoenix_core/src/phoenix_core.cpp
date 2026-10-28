@@ -2354,6 +2354,7 @@ void ganchoPostHalf(void* self) {
 volatile LONG g_descansoPedido = 0, g_descansoFase = 0; volatile ULONGLONG g_descansoT = 0, g_ultTickJob = 0; int g_descansoOn = 0;
 int g_velocidadPartido = -1;   // json «velocidad_partido» (0.4.92): -1 = no tocar
 double g_anadidoSeg = 2 * 3600.0;   // json «anadido_min» (0.4.91): minutos de añadido en cada parte (3600 unidades del reloj = 1 min de pantalla); 0 = sin añadido
+volatile bool g_segundaParte = false;   // true desde que se cierra el menú del descanso hasta el final (0.4.93)
 volatile bool g_descansoFinal = false;   // 0.4.91: el descanso en curso es el FINAL (panel de estadísticas y revancha)
 bool g_descansoBase45 = false;   // json «descanso_base45» (0.4.90): true = el 2.º tiempo conserva la fase 1 y la base del reloj se escribe a 45:00 (la fase 3 a mano provoca el cierre exe+0xB7AAA al salir; frente S)
 using FnE770 = void (*)(uint8_t*, int, int, int, float*, uint64_t, uint64_t, uint64_t);
@@ -2403,7 +2404,7 @@ static void __stdcall ayudanteSaque(uint8_t* job) {
             uint32_t ceros[30] = {}; memcpy(job + 0x878, ceros, sizeof(ceros)); job[0x8F0] = 0; job[0x8F1] = 0; uint32_t sub1 = 1; memcpy(job + 0x2794, &sub1, 4);
             logf("[DESCANSO] menú cerrado (%s): cola limpia, saque central del 2.º tiempo", g_menuCerrado ? "señal de ProcessMatchPostHalfTime" : gap > 1500 ? "el job volvió a ticar tras la pausa" : "tiempo límite de 180 s"); g_menuArmado = 0;
             g_descansoFase = 0; g_descansoT = 0; g_saqueEquipo = g_sacaInicial ? 0 : 1; g_saqueResetReloj = 0; g_saqueT = 0; g_saquePedido = 1;
-            if (g_descansoFinal) { g_saqueEquipo = g_sacaInicial ? 1 : 0; g_descansoFinal = false; }
+            if (g_descansoFinal) { g_saqueEquipo = g_sacaInicial ? 1 : 0; g_descansoFinal = false; g_segundaParte = false; } else g_segundaParte = true;   // 0.4.93: la máquina de tiempos sabe en qué parte está aunque el reloj se reinicie
         }
         return;
     }
@@ -2620,12 +2621,12 @@ DWORD WINAPI hiloDosTiempos(LPVOID) {
         if (GetTickCount64() - tLog > 5000) { tLog = GetTickCount64(); logf("[TIEMPOS] t=%.0f (pantalla %d:%02d) estado=%d", t, (int)(t / 3600.0) + ((int)t % 3600 ? 1 : 0), (int)(t / 60.0) % 60, estado); }
         if (prev >= 0 && t < prev - 200.0 && estado == 1 && (g_descansoFase3 || g_descansoBase45)) { logf("[TIEMPOS] reloj a 0 por el descanso (%.0f -> %.0f): sigo en 2.º tiempo (final a 90:00)", prev, t); prev = t; continue; }   // 0.4.87: el descanso reinicia la base; no es un reinicio de partido
         if (prev >= 0 && t < prev - 200.0) { logf("[TIEMPOS] el reloj saltó hacia atrás (%.0f -> %.0f): reinicio la máquina de estados, no actúo", prev, t); estado = 0; prev = t; continue; }
-        if (estado == 0 && t >= 162000.0 + g_anadidoSeg && (prev < 0 || prev < 162000.0 + g_anadidoSeg + 3600.0)) {   // 0.4.91: el descanso llega al acabar el añadido (json «anadido_min», por defecto 2)
+        if (estado == 0 && !g_segundaParte && t >= 162000.0 + g_anadidoSeg && (prev < 0 || prev < 162000.0 + g_anadidoSeg + 3600.0)) {   // 0.4.91: el descanso llega al acabar el añadido (json «anadido_min», por defecto 2)
             estado = 1; logf("[TIEMPOS] MEDIO TIEMPO a t=%.0f: aviso y %s", t, g_e770 ? "saque central nativo del rival" : "pelota al centro 6 s");
             escribirEstadoStreet("medio_tiempo", t);
             pendMedio = true;   // 0.4.80: se pide cuando hayan pasado >10 s del último gol (la escena de gol + órdenes viejas provocó el cierre 0x4B712B)
         }
-        if (estado == 1 && (t >= ((g_descansoFase3 && !g_descansoBase45) ? 162000.0 : 324000.0) + g_anadidoSeg) && !(faseP == 2)) {
+        if (estado < 2 && g_segundaParte && (t >= ((g_descansoFase3 && !g_descansoBase45) ? 162000.0 : 324000.0) + g_anadidoSeg) && !(faseP == 2)) {
             estado = 2; logf("[TIEMPOS] FINAL a t=%.0f: aviso, pausa de 8 s y revancha con saque central y reloj a 0", t);
             g_bolaCentroHasta = GetTickCount64() + 8000; escribirEstadoStreet("final", t); tFinal = GetTickCount64() + 8000; g_relojPausa = 1;
             if (g_e770 && g_descansoOn) { tFinal = 0; pendFinal = true; }   // 0.4.91: el final usa el panel de estadísticas del descanso y la revancha sale al cerrar el menú
