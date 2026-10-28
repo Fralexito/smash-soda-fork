@@ -66,3 +66,36 @@ Herramientas MCP:
 - Problemas que arregla la **1.0.2**:
   1. `ctx` lo comparten todos los módulos: CGP_data, nesalib, scoreboard_server… El archivo pesaba unos 20 KB y traía textos en latin-1 que rompían el UTF-8. Ahora solo se guardan los campos de Sider, más `marcador_activo` y la lista de nombres de los otros módulos (`otros`).
   2. `stats.ptr` salía como texto («userdata: 0x…»). Ahora va también `ptr_hex` (número con ffi), para leerlo desde el MCP y comprobar si es el objeto `partido` (fase 2).
+
+## 8. Versión 0.2.0 (28-oct): el MCP «que cubra todo lo posible»
+Pedido de Frank: «SIEMPRE USA EL MCP para complementar todo lo que hacemos… es posible hacer un MCP mucho más completo que cubra absolutamente todo lo posible».
+
+**Qué se añadió (de 9 a 18 herramientas):**
+| Herramienta | De dónde saca el dato |
+|---|---|
+| `pes_partido` | sonda (marcador, reloj, goleadores), `marcador_free.json`, y las líneas `[BALL]`, `[JUG]`, `[TIEMPOS]`, `[RELOJ]`, `[VIGILANTE]` de `phoenix_core.log` |
+| `pes_eventos` | eventos de la sonda, etiquetas de Core (`MARCADOR`, `CELEBRACION`, `SAQUE`, `DESCANSO`, `SHOOT`, `MURO`, `RED`, errores; con `detalle` también `PASO`, `PORTERO`…), `street_estado.json` y los «flows» de `peticiones.log` (= pantalla que abre el juego) |
+| `pes_salud` | proceso (Responding, `IsHungAppWindow`, CPU en 1 s), edad de sonda y Core, `[VIGILANTE]`, Visor de eventos de Windows (ids 1000/1001/1002) y `.dmp` |
+| `pes_memoria_firma` | busca la firma en las secciones de código leyendo la cabecera PE en memoria (trozos de 4 MB; si una página no se deja leer, en bloques de 64 KB) |
+| `pes_modulos` | `Process.Modules` |
+| `pes_memoria_escribir` / `pes_memoria_deshacer` | `WriteProcessMemory` + `VirtualProtectEx` + `FlushInstructionCache`; solo si los bytes actuales = `esperado`; registro `escrituras.jsonl` |
+| `pes_navegar` | teclas paso a paso + zona (sonda o memoria) + flow actual; rutas en `rutas.json` |
+| `pes_core` | `phoenix_core_estado.json`, carpetas `street_*`, respaldos en `_mcp_respaldos`, `PHOENIX_CORE_OFF` |
+También: `pes_log` lee 7 registros, `pes_captura` saca series y `pes_memoria_leer` acepta `modulo.dll+0x…`.
+
+**Candados nuevos:** escribir memoria tiene su propio interruptor (`escribir_memoria`, apagado; lo enciende Frank a mano). Las acciones de Core exigen PES cerrado y guardan copia antes. Nada actúa con una sala de Link abierta.
+
+**Prueba (28-oct, PC de Frank, solo lectura, con PES abierto en Entrenamiento libre por el hilo de street):**
+- `--prueba`: 18 herramientas y el ayudante recompilado sin errores. `pes_estado` y `pes_partido` correctos (3-3, equipos 108/109).
+- `salud`: minimizada, no colgada, 136 hilos, CPU 4,9 s por segundo.
+- `fallos`: 6 cierres de PES (0xc0000005) el 28-oct. El de las 14:38 fue en `phoenix_core.dll+0x1cfc4`; los otros en `PES2021.exe` (+0x1b5d052 dos veces, +0xb7aaa, +0x4b712b) y en `sider.dll` 7.3.4. Se avisó al hilo de Core.
+- `modulos`: 128 módulos; `phoenix_core.dll` cargada.
+- `leer [exe+0x3704E38]+0xF0` = 0x34 (52 = FREE_TRAINING). Correcto.
+- `firma "48 8B 05 C1 A9 26 02 C3"`: 1 coincidencia en exe+0x149A470, con destino exe+0x3704E38 (el gestor de modos). 3,1 s para recorrer el código. Con la firma genérica `48 8B 05 ?? ?? ?? ?? C3` hay muchas coincidencias: hace falta una firma más larga o subir `max`.
+- No se probaron (a propósito, porque otro hilo usaba PES): teclas, navegar, escribir memoria, ni la foto (PES estaba minimizado).
+
+**Foto con PES minimizado:** imposible con cualquier herramienta, porque Windows no dibuja una ventana minimizada y el juego deja de pintar. Con PES al fondo sí se puede de dos formas: (1) una función de Phoenix Core que copie la imagen en el gancho DX11 `Present`, propuesta al hilo de Core; (2) la captura moderna de Windows (Windows Graphics Capture), que es el plan B del MCP.
+
+**Errores de esta ronda:**
+1. La copia de `servidor.mjs` en la PC tenía un arreglo local (los `eventos` de la sonda a veces llegan como objeto, no como lista). Se integró en la 0.2 con `comoLista`.
+2. La firma genérica con `max` 5 no llega a exe+0x149A470 (hay muchas antes). Lección: usar los bytes exactos o una firma con más contexto.
