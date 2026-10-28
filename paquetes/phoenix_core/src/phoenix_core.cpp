@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.75"
+#define PHX_CORE_VERSION "0.4.76"
 
 namespace {
 
@@ -1995,6 +1995,47 @@ bool celChicaInstalar(Feature& f) {
     } else extra = " (sin firma del registro demoarea)";
     char b[190]; sprintf_s(b, "ok: la ancla de la celebración se recorta a la cancha chica (exe+0x%llX)%s", (unsigned long long)(m - g_exe.base), extra); f.estado = b; return true;
 }
+// --- ia_sonda (0.4.76, frente P paso 0, SOLO LECTURA): los datos de IA de campo (constant::DefenceCover id 187, Defence 186, DefenceMark 188, BasePosition 183, Matchup 50, Throughpass 61, Support 197, SpaceRun 195, DiagonalRun 189, PullAway 193)
+// viven en el mismo registro que los puntos demoarea: R = [[[P]]+id*8]+8, P = global de FUN_141E5D4C0. Se anotan los floats por offset para conocer los valores típicos de cancha grande antes de escalar nada. NO se escribe nada.
+volatile LONG g_iaSondaOn = 0; HANDLE g_hiloIaSonda = nullptr;
+DWORD WINAPI hiloIaSonda(LPVOID) {
+    struct G { int id; const char* nombre; std::initializer_list<uint32_t> offs; };
+    static const G grupos[] = {
+        { 187, "DefenceCover", { 0x38, 0x3C, 0x4C, 0x50, 0x58, 0x68, 0x70, 0x74, 0x80, 0x88 } },
+        { 186, "Defence", { 0x30, 0x34, 0x38, 0x3C, 0x40, 0x44, 0x48, 0x4C, 0x50, 0x54 } },
+        { 188, "DefenceMark", { 0xBC, 0xCC, 0xD0, 0x30, 0x34, 0x38, 0x3C, 0x40, 0x44, 0x48 } },
+        { 183, "BasePosition", { 0xC0, 0x184, 0x21C, 0x278, 0x290, 0x1B4, 0x214, 0x24C } },
+        { 50, "Matchup", { 0x30, 0x34, 0x38, 0x3C, 0x40, 0x44 } },
+        { 61, "Throughpass", { 0x118, 0x120, 0x188, 0x18C, 0x190, 0x194 } },
+        { 197, "Support", { 0x30, 0x34, 0x38, 0x3C, 0x40, 0x44, 0x48, 0x4C } },
+        { 195, "SpaceRun", { 0x30, 0x34, 0x38, 0x3C, 0x40, 0x44, 0x48, 0x4C } },
+        { 189, "DiagonalRun", { 0x30, 0x34, 0x38, 0x3C, 0x40, 0x44 } },
+        { 193, "PullAway", { 0x30, 0x34, 0x38, 0x3C, 0x40, 0x44 } },
+    };
+    int veces = 0; ULONGLONG ultimo = 0;
+    while (g_iaSondaOn) {
+        Sleep(500);
+        if (veces >= 2 || !trainingWorkEstable() || (ultimo && GetTickCount64() - ultimo < 60000) || !g_regDemoGlobal) continue;
+        uint8_t* P = nullptr; uint8_t* A = nullptr; if (!leerSeguro(g_regDemoGlobal, &P, 8) || !P || !leerSeguro(P, &A, 8) || !A) continue;
+        for (const G& g : grupos) {
+            uint8_t* E = nullptr; uint8_t* R = nullptr;
+            if (!leerSeguro(A + (size_t)g.id * 8, &E, 8) || !E || !leerSeguro(E + 8, &R, 8) || !R) { logf("[IA_DATOS] %s (id %d): sin registro", g.nombre, g.id); continue; }
+            char buf[400]; int n = sprintf_s(buf, "[IA_DATOS] %s (id %d, R=%p):", g.nombre, g.id, (void*)R);
+            for (uint32_t o : g.offs) { float v = 0; if (leerSeguro(R + o, &v, 4)) n += sprintf_s(buf + n, sizeof(buf) - n, " +%X=%.3f", o, v); }
+            logf("%s", buf);
+        }
+        ultimo = GetTickCount64(); veces++;
+    }
+    return 0;
+}
+bool iaSondaInstalar(Feature& f) {
+    if (!g_regDemoGlobal) { uint8_t* r = firmaUnica("codigo", kFirmaRegDemo, f.id); if (!r) { f.estado = "sin firma del registro de constantes (FUN_141E5D4C0)"; return false; } int32_t rel = 0; memcpy(&rel, r + 3, 4); g_regDemoGlobal = r + 7 + rel; }
+    g_iaSondaOn = 1; g_hiloIaSonda = CreateThread(nullptr, 0, hiloIaSonda, nullptr, 0, nullptr);
+    if (!g_hiloIaSonda) { g_iaSondaOn = 0; f.estado = "no se pudo crear el hilo de la sonda de IA"; return false; }
+    f.estado = "ok: anota en el log los datos de IA de campo (DefenceCover, Defence, DefenceMark, BasePosition…) para escalarlos; solo lectura"; return true;
+}
+bool iaSondaQuitar(Feature&) { g_iaSondaOn = 0; if (g_hiloIaSonda) { WaitForSingleObject(g_hiloIaSonda, 2000); CloseHandle(g_hiloIaSonda); g_hiloIaSonda = nullptr; } return true; }
+
 bool celChicaQuitar(Feature&) {
     g_celChicaOn = 0; g_demoAreaOn = 0;
     if (g_hiloDemoArea) { WaitForSingleObject(g_hiloDemoArea, 2000); CloseHandle(g_hiloDemoArea); g_hiloDemoArea = nullptr; }
@@ -2487,6 +2528,7 @@ std::vector<Feature> g_funciones = {   // orden = orden de arranque (gol_nativo_
     { "street_pantalla_descanso", "A 45:00 abre la pantalla real de medio tiempo del flujo (paso 0x22) y al cerrarla hace el saque central del 2.o tiempo (experimental)", descansoInstalar, descansoQuitar },
     { "arquero_rama_normal", "El portero usa siempre la rama normal de posición base (team+0x255 forzado a la normal) en el entrenamiento", ramaNormalInstalar, ramaNormalQuitar },
     { "arquero_pase_corto", "El pase corto del portero de la IA va al compañero disponible más cercano (no al primero que cumple los filtros)", paseCortoInstalar, paseCortoQuitar },
+    { "ia_sonda", "Solo lectura: anota los datos de IA de campo (cobertura, defensa, marca, base, apoyo) para escalarlos a la minicancha", iaSondaInstalar, iaSondaQuitar },
     { "street_dos_tiempos", "Medio tiempo a 45:00 y final a 90:00 propios del entrenamiento (lee el reloj de pantalla; v1: pausa + aviso)", dosTiemposInstalar, dosTiemposQuitar },
     { "sin_fin_tiempo_free", "El Juez no pita el fin de tiempo (medio tiempo/final) en el entrenamiento libre", sinFinTiempoInstalar, sinFinTiempoQuitar },
     { "reloj_street_free", "El reloj nativo corre en el entrenamiento y se reinicia a los street_minutos", relojInstalar, relojQuitar },
