@@ -2029,6 +2029,42 @@ bool ajustesPartidoInstalar(Feature& f) {
 bool ajustesPartidoQuitar(Feature&) { g_usaDuracion = 0; ponerParcheN(g_pnAJ, false); return true; }
 bool relojQuitar(Feature&) { g_relojOn = 0; ponerParche(g_pdR1, false); ponerParche(g_pdR1b, false); g_relojNativo = false; if (g_hiloReloj) { WaitForSingleObject(g_hiloReloj, 2000); CloseHandle(g_hiloReloj); g_hiloReloj = nullptr; } return true; }
 
+// --- cursor_pt_log (0.4.61, frente L): SOLO LECTURA. FUN_140A571B0 (RVA 0xA571B0) = setControlado(reg, idx): `if (reg[+0x20] != idx) { reg[+0x28]=reg[+0x20]; reg[+0x20]=idx; reg[+0x38]=0; }`. Cueva que roba los 5 B
+// `8B 41 20 3B C2` (mov eax,[rcx+0x20]; cmp eax,edx) y anota (idx nuevo, idx viejo, dirección de retorno del llamador) cuando el cursor pasa al portero (idx 0 u 11) y las primeras 40 llamadas, para saber QUIÉN pone el cursor en el portero propio.
+static void __stdcall ayudanteCursor(uint8_t* reg, uint32_t idx, uint8_t* ret) {
+    uint32_t viejo = 0xFFFFFFFF; leerSeguro(reg + 0x20, &viejo, 4);
+    static LONG nTodos = 0, nPt = 0; LONG t = InterlockedIncrement(&nTodos);
+    bool pt = (idx == 0 || idx == 11);
+    if (viejo == idx) return;
+    long off = (long)(ret - g_exe.base);
+    if (pt) { LONG k = InterlockedIncrement(&nPt); if (k <= 300) logf("[CURSOR_PT] cursor -> portero idx=%u (antes %u) llamador=exe+0x%lX train=%d", idx, viejo, off, (int)(GetTickCount64() - g_tTrainGlob < 3000)); }
+    else if (t <= 40) logf("[CURSOR_PT] cursor -> idx=%u (antes %u) llamador=exe+0x%lX", idx, viejo, off);
+}
+bool cursorPtLogInstalar(Feature& f) {
+    uint8_t* sitio = firmaUnica("codigo", "8B 41 20 3B C2 74 0D 89 41 28 89 51 20 C7 41 38 00 00 00 00 C3", f.id);
+    if (!sitio) { f.estado = "sin firma: FUN_140A571B0 (setControlado)"; return false; }
+    uint8_t* c = reservarCerca(sitio, 160);
+    if (!c) { f.estado = "no hay memoria cerca del exe (cursor_pt_log)"; return false; }
+    size_t o = 0; auto b = [&](std::initializer_list<uint8_t> l) { for (uint8_t x : l) c[o++] = x; };
+    b({ 0x50, 0x51, 0x52, 0x41, 0x50, 0x41, 0x51, 0x41, 0x52, 0x41, 0x53 });   // push rax,rcx,rdx,r8,r9,r10,r11 (7 = 56 B)
+    b({ 0x4C, 0x8B, 0x44, 0x24, 0x38 });             // mov r8,[rsp+56] = dirección de retorno del llamador
+    b({ 0x55, 0x48, 0x89, 0xE5, 0x48, 0x83, 0xE4, 0xF0, 0x48, 0x83, 0xEC, 0x20 });
+    b({ 0x48, 0xB8 }); { uint64_t h = reinterpret_cast<uint64_t>(&ayudanteCursor); memcpy(c + o, &h, 8); o += 8; }   // mov rax,helper (rcx=reg, edx=idx, r8=ret ya puestos)
+    b({ 0xFF, 0xD0 });
+    b({ 0x48, 0x89, 0xEC, 0x5D });
+    b({ 0x41, 0x5B, 0x41, 0x5A, 0x41, 0x59, 0x41, 0x58, 0x5A, 0x59, 0x58 });
+    b({ 0x8B, 0x41, 0x20, 0x3B, 0xC2 });             // instrucciones robadas
+    size_t jb = o; b({ 0xE9, 0, 0, 0, 0 });
+    if (!escribirRel32(c + jb, 0xE9, c + jb, sitio + 5)) { f.estado = "cueva fuera de alcance (cursor_pt_log)"; return false; }
+    FlushInstructionCache(GetCurrentProcess(), c, 160);
+    Parche p; p.dir = sitio; p.original.assign(sitio, sitio + 5); p.nuevo.resize(5);
+    if (!escribirRel32(p.nuevo.data(), 0xE9, sitio, c)) { f.estado = "cueva fuera de alcance (cursor_pt_log salto)"; return false; }
+    if (!aplicarParche(p, f.id)) { f.estado = "no se pudo escribir el salto (cursor_pt_log)"; return false; }
+    f.parches.push_back(p);
+    char sbuf[140]; sprintf_s(sbuf, "ok: anota quién pone el cursor en el portero (exe+0x%llX, solo lectura)", (unsigned long long)(sitio - g_exe.base)); f.estado = sbuf; return true;
+}
+bool cursorPtLogQuitar(Feature&) { return true; }
+
 const char* kFirmaReinicio = "48 8B C4 53 41 57 48 83 EC 78 48 89 70 E8";
 using FnReinicio = float* (*)(float*, uint32_t*, void*, void*);
 FnReinicio g_reinicioOrig = nullptr; volatile LONG g_jugChOn = 0, g_jugChEscalados = 0;
@@ -2112,6 +2148,7 @@ std::vector<Feature> g_funciones = {   // orden = orden de arranque (gol_nativo_
     { "arquero_saque_corto", "El portero IA no saca largo en el entrenamiento (anula GKPassLong y GKClear de la IA)", gkCortoInstalar, gkCortoQuitar },
     { "arquero_propio_cursor", "Con Cursor de PT fijo = Sí el portero propio no bloquea el cursor del usuario (variante del arquero propio)", arqCursorInstalar, arqCursorQuitar },
     { "arquero_salida_corta", "El portero sale poco de su arco en el entrenamiento (recorta la posición de salida a R m de la línea)", arqSalidaInstalar, arqSalidaQuitar },
+    { "cursor_pt_log", "Solo lectura: anota quién pone el cursor del mando en el portero (llamador de setControlado)", cursorPtLogInstalar, cursorPtLogQuitar },
     { "reinicio_seguro", "Red de seguridad: si la posición de reinicio del balón recibe una clave nula, usa la rama por defecto en vez de cerrar el juego", reinicioSeguroInstalar, reinicioSeguroQuitar },
     { "marcador_nativo_free", "El marcador y el reloj nativos del partido se muestran en el entrenamiento (parche de 1 byte en el HUD)", marcadorNativoInstalar, marcadorNativoQuitar },
     { "celebracion_chica", "La ancla de la celebración del gol se recorta a la cancha chica en el entrenamiento", celChicaInstalar, celChicaQuitar },
