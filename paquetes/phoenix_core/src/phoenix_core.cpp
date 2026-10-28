@@ -2035,7 +2035,7 @@ ParcheN g_pnAJ;
 bool ajustesPartidoInstalar(Feature& f) {
     if (!localizarParcheN(g_pnAJ, "83 FD 34 75 09 40 88 7C 24 24 33 C9 EB ?? E8 ?? ?? ?? ?? 84 C0 75 ?? 40 88 BB 87 01 00 00", 5, { 0x40, 0x88, 0x7C, 0x24, 0x24 }, { 0x0F, 0x1F, 0x44, 0x00, 0x00 }, f.id)) { f.estado = "sin firma/byte inesperado en FUN_140AA90A0 (grises del menú de ajustes)"; return false; }
     ponerParcheN(g_pnAJ, true);
-    g_cfgDuracionGlob = g_exe.base + 0x3705E10; g_usaDuracion = 1;   /* 0.4.62: la duración del menú fija M=45 y la pantalla corre en tiempo real (frente J4) */   // RVA fija del exe v1.1.0.0 (frente J2)
+    g_cfgDuracionGlob = g_exe.base + 0x3705E10; g_usaDuracion = 0;   /* 0.4.62: Fralex quiere el ritmo NATIVO (45:00 = duración del menú): no se fuerza M=45 */   // RVA fija del exe v1.1.0.0 (frente J2)
     f.estado = g_pnAJ.puesto ? "ok: el menú «Opciones gener.» del entrenamiento ya no sale gris (parche de 5 bytes en FUN_140AA90A0)" : "no se pudo escribir el parche del menú";
     return g_pnAJ.puesto;
 }
