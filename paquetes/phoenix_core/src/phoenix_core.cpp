@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.62"
+#define PHX_CORE_VERSION "0.4.63"
 
 namespace {
 
@@ -1614,8 +1614,10 @@ FnGoalNetHit g_goalNetHit = nullptr; FnGoalNetEstado g_goalNetEstado = nullptr;
 volatile LONG g_mallaOn = 0, g_mallaGolpes = 0; volatile ULONGLONG g_mallaUlt = 0;
 volatile LONG g_murosOn = 0, g_murosRebotes = 0;
 float g_muroRebote = 0.6f, g_muroFric = 0.92f; double g_muroX = 0, g_muroZ = 0;   // 0 = semilargo/semiancho + 0.2
+volatile ULONGLONG g_bolaCentroHasta = 0;   // 0.4.63: mientras dure, la pelota se mantiene en el centro (pausa del medio tiempo / final)
 uint64_t ganchoBolaPaso(float dt, uint64_t rdx, uint64_t r8, float* S, void* cfg, uint64_t flag) {
     uint64_t r = g_bolaPasoOrig(dt, rdx, r8, S, cfg, flag);
+    if (g_bolaCentroHasta && GetTickCount64() < g_bolaCentroHasta) { S[0] = 0; S[1] = 0.11f; S[2] = 0; S[3] = S[4] = S[5] = 0; }
     if ((g_redOn || g_murosOn) && GetTickCount64() - g_tTrainRed < 3000) {
         float x = S[0], y = S[1], z = S[2];
         float largo = (float)g_canchaLargo, ancho = (float)g_canchaAncho;
@@ -2048,6 +2050,59 @@ bool sinFinTiempoInstalar(Feature& f) {
     f.estado = "ok: el entrenamiento no tiene fin de tiempo (parche de 1 byte en el Juez, solo con TrainingWork)"; return true;
 }
 bool sinFinTiempoQuitar(Feature&) { g_sinFinOn = 0; ponerParche(g_pdT1, false); return true; }
+// --- street_dos_tiempos (0.4.63, frente J4 §9): lee el reloj de pantalla t (unidades; 162000 = 45:00) y hace el MEDIO TIEMPO propio a 45:00 y el FINAL a 90:00 (con T1 el Juez no pita). Lectura verificada por RE estático (sin medir en vivo):
+// S = [[exe+0x36F3DC8]+0x270]; reloj espejo de 0x30 B en S+0x1168: +0 fase, +4 sub, +0xC float tiempo muerto, +0x10 hash FNV-1a 64, +0x18 contador, +0x1C índice, +0x20..+0x2F cuatro slots de la base. Decodificación (FUN_140A3C070):
+// u = dword[+0x20+(dword[+0x1C]&3)*4], c = dword[+0x18]*3; b[k] = (u8)((u8)(u>>8k) + (u8)((c+4k)>>8k)) ^ (u8)(cc*0x3F); hash FNV-1a 64 sobre b[0..3] debe igualar qword[+0x10]; t = float(b) + float[+0xC].
+// Bandera de seguridad: si la lectura es absurda (hash malo, t<0, t>400000, salto hacia atrás) NO actúa y solo anota. Acciones v1: pausa (pelota quieta en el centro unos segundos) y aviso en street_estado.json (lo lee el Lua); jugadores/cambio de campo: pendiente.
+volatile LONG g_dosTiemposOn = 0; HANDLE g_hiloDosTiempos = nullptr;
+static bool leerRelojPantalla(double* tOut) {
+    uint8_t* raiz = nullptr; uint8_t* S = nullptr;
+    if (!leerSeguro(g_globalPartido, &raiz, 8) || !raiz || !leerSeguro(raiz + 0x270, &S, 8) || !S) return false;
+    uint8_t r[0x30]; if (!leerSeguro(S + 0x1168, r, 0x30)) return false;
+    uint32_t idx, cnt, slot[4]; float muerto; uint64_t hash;
+    memcpy(&cnt, r + 0x18, 4); memcpy(&idx, r + 0x1C, 4); memcpy(slot, r + 0x20, 16); memcpy(&muerto, r + 0xC, 4); memcpy(&hash, r + 0x10, 8);
+    uint32_t u = slot[idx & 3], c = cnt * 3; uint8_t b[4];
+    for (int k = 0; k < 4; k++) { uint8_t cc = (uint8_t)((c + 4 * k) >> (8 * k)); b[k] = (uint8_t)((uint8_t)(u >> (8 * k)) + cc) ^ (uint8_t)(cc * 0x3F); }
+    uint64_t h = 0xcbf29ce484222325ULL; for (int k = 0; k < 4; k++) { h ^= b[k]; h *= 0x100000001b3ULL; }
+    if (h != hash) return false;
+    float base; memcpy(&base, b, 4);
+    double t = (double)base + (double)muerto;
+    if (!(t >= 0.0 && t < 400000.0)) return false;
+    *tOut = t; return true;
+}
+static void escribirEstadoStreet(const char* evento, double t) {
+    char b[200]; sprintf_s(b, "{\"evento\":\"%s\",\"t\":%.0f,\"hora\":%llu}\n", evento, t, (unsigned long long)GetTickCount64());
+    FILE* f = nullptr; if (fopen_s(&f, (g_carpeta + "street_estado.json").c_str(), "wb") == 0 && f) { fputs(b, f); fclose(f); }
+}
+DWORD WINAPI hiloDosTiempos(LPVOID) {
+    double prev = -1; int estado = 0; ULONGLONG tLog = 0; LONG malas = 0;
+    while (g_dosTiemposOn) {
+        Sleep(50);
+        if (!trainingWorkEstable()) { continue; }
+        double t = 0; if (!leerRelojPantalla(&t)) { if (++malas == 1 || malas % 400 == 0) logf("[TIEMPOS] lectura del reloj no válida (#%ld): no actúo", (long)malas); continue; }
+        if (GetTickCount64() - tLog > 5000) { tLog = GetTickCount64(); logf("[TIEMPOS] t=%.0f (pantalla %d:%02d) estado=%d", t, (int)(t / 3600.0) + ((int)t % 3600 ? 1 : 0), (int)(t / 60.0) % 60, estado); }
+        if (prev >= 0 && t < prev - 200.0) { logf("[TIEMPOS] el reloj saltó hacia atrás (%.0f -> %.0f): reinicio la máquina de estados, no actúo", prev, t); estado = 0; prev = t; continue; }
+        if (estado == 0 && t >= 162000.0 && (prev < 0 || prev < 162000.0 + 3600.0)) {
+            estado = 1; logf("[TIEMPOS] MEDIO TIEMPO a t=%.0f: pelota al centro 6 s y aviso", t);
+            g_bolaCentroHasta = GetTickCount64() + 6000; escribirEstadoStreet("medio_tiempo", t);
+        }
+        if (estado == 1 && t >= 324000.0 && (prev < 0 || prev < 324000.0 + 3600.0)) {
+            estado = 2; logf("[TIEMPOS] FINAL a t=%.0f: pelota al centro 10 s y aviso", t);
+            g_bolaCentroHasta = GetTickCount64() + 10000; escribirEstadoStreet("final", t);
+        }
+        prev = t;
+    }
+    return 0;
+}
+bool dosTiemposInstalar(Feature& f) {
+    if (!g_globalPartido && !resolverGlobalPartido(f.id)) { f.estado = "sin firma del global del partido"; return false; }
+    remove((g_carpeta + "street_estado.json").c_str());
+    g_dosTiemposOn = 1; g_hiloDosTiempos = CreateThread(nullptr, 0, hiloDosTiempos, nullptr, 0, nullptr);
+    if (!g_hiloDosTiempos) { g_dosTiemposOn = 0; f.estado = "no se pudo crear el hilo de los tiempos"; return false; }
+    f.estado = "ok: medio tiempo a 45:00 y final a 90:00 propios (lee el reloj de pantalla; con T1; v1: pausa + aviso)"; return true;
+}
+bool dosTiemposQuitar(Feature&) { g_dosTiemposOn = 0; if (g_hiloDosTiempos) { WaitForSingleObject(g_hiloDosTiempos, 2000); CloseHandle(g_hiloDosTiempos); g_hiloDosTiempos = nullptr; } return true; }
+
 bool relojQuitar(Feature&) { g_relojOn = 0; ponerParche(g_pdR1, false); ponerParche(g_pdR1b, false); g_relojNativo = false; if (g_hiloReloj) { WaitForSingleObject(g_hiloReloj, 2000); CloseHandle(g_hiloReloj); g_hiloReloj = nullptr; } return true; }
 
 // --- cursor_pt_log (0.4.61, frente L): SOLO LECTURA. FUN_140A571B0 (RVA 0xA571B0) = setControlado(reg, idx): `if (reg[+0x20] != idx) { reg[+0x28]=reg[+0x20]; reg[+0x20]=idx; reg[+0x38]=0; }`. Cueva que roba los 5 B
@@ -2174,6 +2229,7 @@ std::vector<Feature> g_funciones = {   // orden = orden de arranque (gol_nativo_
     { "marcador_nativo_free", "El marcador y el reloj nativos del partido se muestran en el entrenamiento (parche de 1 byte en el HUD)", marcadorNativoInstalar, marcadorNativoQuitar },
     { "celebracion_chica", "La ancla de la celebración del gol se recorta a la cancha chica en el entrenamiento", celChicaInstalar, celChicaQuitar },
     { "ajustes_partido_free", "El menú «Opciones gener.» del entrenamiento libre se puede editar (duración del partido, etc.); el reloj usa esa duración", ajustesPartidoInstalar, ajustesPartidoQuitar },
+    { "street_dos_tiempos", "Medio tiempo a 45:00 y final a 90:00 propios del entrenamiento (lee el reloj de pantalla; v1: pausa + aviso)", dosTiemposInstalar, dosTiemposQuitar },
     { "sin_fin_tiempo_free", "El Juez no pita el fin de tiempo (medio tiempo/final) en el entrenamiento libre", sinFinTiempoInstalar, sinFinTiempoQuitar },
     { "reloj_street_free", "El reloj nativo corre en el entrenamiento y se reinicia a los street_minutos", relojInstalar, relojQuitar },
     { "jugadores_chica_free", "Escala a la cancha chica las posiciones de reinicio de los jugadores (entrenamiento)", jugChInstalar, jugChQuitar },
