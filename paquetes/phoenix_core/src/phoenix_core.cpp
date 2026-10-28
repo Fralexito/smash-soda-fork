@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.91"
+#define PHX_CORE_VERSION "0.4.92"
 
 namespace {
 
@@ -1633,8 +1633,21 @@ volatile LONG g_mallaOn = 0, g_mallaGolpes = 0; volatile ULONGLONG g_mallaUlt = 
 volatile LONG g_murosOn = 0, g_murosRebotes = 0;
 float g_muroRebote = 0.6f, g_muroFric = 0.92f; double g_muroX = 0, g_muroZ = 0;   // 0 = semilargo/semiancho + 0.2
 volatile ULONGLONG g_bolaCentroHasta = 0;   // 0.4.63: mientras dure, la pelota se mantiene en el centro (pausa del medio tiempo / final)
+// 0.4.92 «tiro_fuerte»: un disparo fuerte = salto brusco de la velocidad de la pelota en un solo paso (>8 m/s y >16 m/s al final). Se escala en el estado S (el mismo que usan los muros): horizontales × tiro_potencia_k y vertical × tiro_altura_k,
+// graduados por la velocidad (a 16 m/s casi nada, a 34 m/s todo el efecto) para no tocar pases ni toques suaves; no actúa a menos de 3 m de la línea de gol (saques del portero). Log [TIRO] de los primeros 60.
+volatile LONG g_tiroOn = 0, g_tiroN = 0; float g_tiroPot = 1.25f, g_tiroAlt = 0.7f;
 uint64_t ganchoBolaPaso(float dt, uint64_t rdx, uint64_t r8, float* S, void* cfg, uint64_t flag) {
+    float v0x = S[3], v0y = S[4], v0z = S[5];
     uint64_t r = g_bolaPasoOrig(dt, rdx, r8, S, cfg, flag);
+    if (g_tiroOn && GetTickCount64() - g_tTrainRed < 3000 && !g_bolaCentroHasta) {
+        float sp0 = sqrtf(v0x * v0x + v0y * v0y + v0z * v0z), sp1 = sqrtf(S[3] * S[3] + S[4] * S[4] + S[5] * S[5]);
+        if (sp1 - sp0 > 8.0f && sp1 > 16.0f && fabsf(S[0]) < (float)g_canchaLargo - 3.0f) {
+            float p = (sp1 - 16.0f) / 18.0f; if (p > 1.0f) p = 1.0f;
+            float kP = 1.0f + (g_tiroPot - 1.0f) * p, kA = 1.0f + (g_tiroAlt - 1.0f) * p;
+            float a3 = S[3], a4 = S[4], a5 = S[5]; S[3] *= kP; S[5] *= kP; S[4] *= kA;
+            LONG n = InterlockedIncrement(&g_tiroN); if (n <= 60) logf("[TIRO] #%ld v %.1f->%.1f p=%.2f kP=%.2f kA=%.2f vel antes (%.1f,%.1f,%.1f) después (%.1f,%.1f,%.1f) pos (%.1f,%.1f,%.1f)", (long)n, sp0, sp1, p, kP, kA, a3, a4, a5, S[3], S[4], S[5], S[0], S[1], S[2]);
+        }
+    }
     if (g_bolaCentroHasta && GetTickCount64() < g_bolaCentroHasta) { S[0] = 0; S[1] = 0.11f; S[2] = 0; S[3] = S[4] = S[5] = 0; }
     if ((g_redOn || g_murosOn) && GetTickCount64() - g_tTrainRed < 3000) {
         float x = S[0], y = S[1], z = S[2];
@@ -1716,6 +1729,11 @@ bool murosInstalar(Feature& f) {
     g_murosOn = 1; char b[160]; sprintf_s(b, "ok: muros lógicos en el paso de la pelota (rebote %.2f, fricción %.2f)", g_muroRebote, g_muroFric); f.estado = b; return true;
 }
 bool murosQuitar(Feature&) { g_murosOn = 0; return true; }
+bool tiroInstalar(Feature& f) {
+    if (!asegurarGanchoBola(f)) return false;
+    g_tiroOn = 1; char b[170]; sprintf_s(b, "ok: tiros fuertes ×%.2f de velocidad y ×%.2f de elevación (graduado por velocidad; paso de la pelota FUN_140876360)", g_tiroPot, g_tiroAlt); f.estado = b; return true;
+}
+bool tiroQuitar(Feature&) { g_tiroOn = 0; return true; }
 bool redInstalar(Feature& f) {
     g_redOn = 1;
     if (!asegurarGanchoBola(f)) { g_redOn = 0; return false; }
@@ -2295,6 +2313,7 @@ void ganchoPostHalf(void* self) {
     g_postHalfOrig(self);
 }
 volatile LONG g_descansoPedido = 0, g_descansoFase = 0; volatile ULONGLONG g_descansoT = 0, g_ultTickJob = 0; int g_descansoOn = 0;
+int g_velocidadPartido = -1;   // json «velocidad_partido» (0.4.92): -1 = no tocar
 double g_anadidoSeg = 2 * 3600.0;   // json «anadido_min» (0.4.91): minutos de añadido en cada parte (3600 unidades del reloj = 1 min de pantalla); 0 = sin añadido
 volatile bool g_descansoFinal = false;   // 0.4.91: el descanso en curso es el FINAL (panel de estadísticas y revancha)
 bool g_descansoBase45 = false;   // json «descanso_base45» (0.4.90): true = el 2.º tiempo conserva la fase 1 y la base del reloj se escribe a 45:00 (la fase 3 a mano provoca el cierre exe+0xB7AAA al salir; frente S)
@@ -2516,6 +2535,9 @@ static void vigilarCondiciones() {
     static ULONGLONG t = 0; static uint32_t ult[4] = { 9, 9, 9, 9 }; ULONGLONG ah = GetTickCount64(); if (ah - t < 1000) return; t = ah;
     uint8_t *a = nullptr, *c = nullptr; if (!leerSeguro(g_exe.base + 0x3705E10, &a, 8) || !a || !leerSeguro(a + 0x50, &c, 8) || !c) return;
     uint32_t v[4]; if (!leerSeguro(c + 0x35960, v, 16)) return;
+    if (g_velocidadPartido >= 0 && GetTickCount64() - g_tTrainGlob < 3000) {   // 0.4.92: «velocidad_partido» (0..4; 2 = normal): byte del ajuste de menú en S_cfg_base+0x13021 (frente V, PROBABLE)
+        uint8_t cur = 0xFF; if (leerSeguro(c + 0x13021, &cur, 1) && cur <= 4 && cur != (uint8_t)g_velocidadPartido) { uint8_t nv = (uint8_t)g_velocidadPartido; memcpy(c + 0x13021, &nv, 1); logf("[VELOCIDAD] ajuste de velocidad del partido %u -> %u", (unsigned)cur, (unsigned)nv); }
+    }
     { static ULONGLONG t30 = 0; if (GetTickCount64() - t30 > 30000 && GetTickCount64() - g_tTrainGlob < 3000) { t30 = GetTickCount64(); logf("[CONDICIONES] (cada 30 s) stadium=%u timeofday=%u weather=%u season=%u", v[0], v[1], v[2], v[3]); } }   // 0.4.91: traza periódica para atribuir el fondo blanco
     if (memcmp(v, ult, 16) != 0) { logf("[CONDICIONES] stadium=%u timeofday=%u weather=%u season=%u (forzada=%d)", v[0], v[1], v[2], v[3], g_seasonCore); memcpy(ult, v, 16); }
     if (g_seasonCore >= 0 && g_seasonCore <= 3 && v[3] <= 3 && v[3] != (uint32_t)g_seasonCore && GetTickCount64() - g_tTrainGlob < 3000) {
@@ -2564,7 +2586,7 @@ DWORD WINAPI hiloDosTiempos(LPVOID) {
             escribirEstadoStreet("medio_tiempo", t);
             pendMedio = true;   // 0.4.80: se pide cuando hayan pasado >10 s del último gol (la escena de gol + órdenes viejas provocó el cierre 0x4B712B)
         }
-        if (estado == 1 && ((g_descansoFase3 && faseP == 3 && t >= 162000.0) || t >= 324000.0 + g_anadidoSeg) && !(faseP == 2)) {
+        if (estado == 1 && ((g_descansoFase3 && faseP == 3 && t >= 162000.0 + g_anadidoSeg) || t >= 324000.0 + g_anadidoSeg) && !(faseP == 2)) {
             estado = 2; logf("[TIEMPOS] FINAL a t=%.0f: aviso, pausa de 8 s y revancha con saque central y reloj a 0", t);
             g_bolaCentroHasta = GetTickCount64() + 8000; escribirEstadoStreet("final", t); tFinal = GetTickCount64() + 8000; g_relojPausa = 1;
             if (g_e770 && g_descansoOn) { tFinal = 0; pendFinal = true; }   // 0.4.91: el final usa el panel de estadísticas del descanso y la revancha sale al cerrar el menú
@@ -2790,6 +2812,7 @@ std::vector<Feature> g_funciones = {   // orden = orden de arranque (gol_nativo_
     { "arquero_rama_normal", "El portero usa siempre la rama normal de posición base (team+0x255 forzado a la normal) en el entrenamiento", ramaNormalInstalar, ramaNormalQuitar },
     { "arquero_pase_corto", "El pase corto del portero de la IA va al compañero disponible más cercano (no al primero que cumple los filtros)", paseCortoInstalar, paseCortoQuitar },
     { "ia_sonda", "Solo lectura: anota los datos de IA de campo (cobertura, defensa, marca, base, apoyo) para escalarlos a la minicancha", iaSondaInstalar, iaSondaQuitar },
+    { "tiro_fuerte", "Los disparos fuertes salen más potentes y menos altos (tiro_potencia_k, tiro_altura_k); pases y toques suaves casi no cambian", tiroInstalar, tiroQuitar },
     { "stats_sonda", "Solo lectura: anota en el log las stats de los 22 jugadores (calibrar el mapa de habilidades; apagado por defecto)", statsSondaInstalar, statsSondaQuitar },
     { "ia_cancha_chica", "La IA de campo usa distancias de cobertura, defensa, marca, apoyo y pase escaladas a la minicancha (con restauracion al salir; sin porteros)", iaChicaInstalar, iaChicaQuitar },
     { "street_dos_tiempos", "Medio tiempo a 45:00 y final a 90:00 propios del entrenamiento (lee el reloj de pantalla; v1: pausa + aviso)", dosTiemposInstalar, dosTiemposQuitar },
@@ -2898,6 +2921,9 @@ void leerConfig() {
     if (valorDe("ia_piso_m", v)) g_iaPiso = (float)atof(v.c_str());
     if (valorDe("descanso_fase3", v)) g_descansoFase3 = (v == "true");
     if (valorDe("descanso_base45", v)) g_descansoBase45 = (v == "true");
+    if (valorDe("tiro_potencia_k", v)) { g_tiroPot = (float)atof(v.c_str()); if (g_tiroPot < 0.5f || g_tiroPot > 2.0f) g_tiroPot = 1.25f; }
+    if (valorDe("tiro_altura_k", v)) { g_tiroAlt = (float)atof(v.c_str()); if (g_tiroAlt < 0.2f || g_tiroAlt > 1.5f) g_tiroAlt = 0.7f; }
+    if (valorDe("velocidad_partido", v)) { int q = atoi(v.c_str()); g_velocidadPartido = (q >= 0 && q <= 4) ? q : -1; }
     if (valorDe("anadido_min", v)) { double m = atof(v.c_str()); if (m >= 0.0 && m <= 10.0) g_anadidoSeg = m * 3600.0; }
     if (valorDe("rebote_k", v)) { g_muroRebote = (float)atof(v.c_str()); if (g_muroRebote < 0.3f || g_muroRebote > 0.95f) g_muroRebote = 0.75f; }   // 0.4.91: alias de muro_rebote
     if (valorDe("season_forzada", v)) g_seasonCore = atoi(v.c_str());
