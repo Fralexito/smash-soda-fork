@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.58"
+#define PHX_CORE_VERSION "0.4.59"
 
 namespace {
 
@@ -1704,7 +1704,7 @@ bool redQuitar(Feature&) { g_redOn = 0; return true; }
 volatile ULONGLONG g_tTrainGlob = 0; volatile LONG g_trainGlobOn = 0; HANDLE g_hiloTrainGlob = nullptr;
 struct ParcheN { uint8_t* dir = nullptr; uint8_t ori[8] = {}, nue[8] = {}; size_t n = 0; bool puesto = false; };
 static void ponerParcheN(ParcheN& pn, bool si) { if (!pn.dir || pn.puesto == si) return; if (escribirCodigo(pn.dir, si ? pn.nue : pn.ori, pn.n)) pn.puesto = si; }
-volatile LONG g_sinSaquesOn = 0, g_arqueroOn = 0, g_iaClearOn = 0, g_gkCortoOn = 0, g_arqCursorOn = 0; ParcheDisp g_pdS1, g_pdS2, g_pdIA, g_pdGK1, g_pdGK2, g_pdMN; ParcheN g_pnA, g_pnB, g_pnC1, g_pnC2, g_pnC3;
+volatile LONG g_sinSaquesOn = 0, g_arqueroOn = 0, g_iaClearOn = 0, g_gkCortoOn = 0, g_arqCursorOn = 0; ParcheDisp g_pdS1, g_pdS2, g_pdIA, g_pdGK1, g_pdGK2, g_pdMN, g_pdMN2; ParcheN g_pnA, g_pnB, g_pnC1, g_pnC2, g_pnC3;
 DWORD WINAPI hiloTrainGlob(LPVOID) {
     while (g_trainGlobOn) {
         if (trainingWorkEstable() || hayTrainingWork()) g_tTrainGlob = GetTickCount64();
@@ -1870,11 +1870,14 @@ bool reinicioSeguroQuitar(Feature&) { return true; }   // los parches los quita 
 // (el modo 52 deja de apagar el HUD; el modo 51 sigue siendo clase 0x0C). Se aplica al instalar (el HUD se crea al cargar el partido) y se restaura al salir. Los goles los lee el HUD de los stats de cada equipo (ya cuentan).
 bool marcadorNativoInstalar(Feature& f) {
     if (!localizarParche("83 F8 0B 74 12 E8 ?? ?? ?? ?? 48 8B C8 E8 ?? ?? ?? ?? 83 F8 0C 75 03 C6 07 00", 2, 0x0B, 0xFF, g_pdMN, f.id)) { f.estado = "sin firma/byte inesperado en FUN_1420C9080 (HUD de marcador)"; return false; }
-    ponerParche(g_pdMN, true);
+    // 0.4.58 (J3): pestillo de FUN_1420C9080 (RVA 0x20C90F4, 75->EB): si el HUD se apagó y S+0x11B2==0, no volvía a encenderse; el saque de TrainingWork no pone ese byte.
+    bool p2 = localizarParche("44 38 37 75 0F 45 38 B5 B2 11 00 00 45 0F B6 D1 45 0F 44 D6 0F B6 B4 24 B0 00 00 00", 3, 0x75, 0xEB, g_pdMN2, f.id);
+    logf("[%s] pestillo del HUD (S+0x11B2) %s", f.id, p2 ? "localizado" : "NO localizado");
+    ponerParche(g_pdMN, true); if (p2) ponerParche(g_pdMN2, true);
     f.estado = g_pdMN.puesto ? "ok: el HUD de marcador y reloj nativo ya no se apaga en el entrenamiento (parche de 1 byte en FUN_1420C9080)" : "no se pudo escribir el parche del HUD";
     return g_pdMN.puesto;
 }
-bool marcadorNativoQuitar(Feature&) { ponerParche(g_pdMN, false); return true; }
+bool marcadorNativoQuitar(Feature&) { ponerParche(g_pdMN, false); ponerParche(g_pdMN2, false); return true; }
 
 // --- celebracion_chica (0.4.56, RE del frente K, 27-oct): la ancla de la demo de gol/celebración (FUN_140476C50, guardada en [raíz+0x1A8]+0x98) se pasa a FUN_14047C500 (RVA 0x47C500;
 // void(int* this, u64 jugador, uint* st, int tipo, int flag), st[0]=id, st[1]=x, st[2]=y, st[3]=z), que arranca la demo; los tipos 4 y 7 de ancla usan metros absolutos del estadio real. Pre-gancho: con TrainingWork, st[1] y st[3] se recortan
@@ -1976,7 +1979,7 @@ DWORD WINAPI hiloReloj(LPVOID) {
         uint32_t sub = 0; float f = 0;
         uint32_t fase = 0; static ULONGLONG tLog = 0;
         if (!leerSeguro(S + 0x116C, &sub, 4) || !leerSeguro(S + 0x1168, &fase, 4) || !leerSeguro(S + 0x1174, &f, 4) || !(f >= 0.0f) || f > 1.0e6f) continue;
-        if (GetTickCount64() - tLog > 5000) { tLog = GetTickCount64(); logf("[RELOJ] fase=%u sub=%u transcurrido=%.0f (=%.1f s)", fase, sub, f, f / 60.0f); }
+        if (GetTickCount64() - tLog > 5000) { tLog = GetTickCount64(); uint32_t reg = 0; leerSeguro(S + 0x11B0, &reg, 4); logf("[RELOJ] fase=%u sub=%u transcurrido=%.0f (=%.1f s) S+0x11B0=0x%08X", fase, sub, f, f / 60.0f, reg); }
         f += (float)(60.0 * dt);
         if (f >= (float)(g_streetMinutos * 60.0 * 60.0)) { f = 0.0f; logf("[RELOJ] fin de los %.1f min: el reloj vuelve a 0 (vuelta %ld)", g_streetMinutos, (long)++vueltas); }
         memcpy(S + 0x1174, &f, 4);
