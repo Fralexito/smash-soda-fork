@@ -424,6 +424,10 @@ bool leerSeguro(const void* dir, void* out, size_t n) {
     __try { memcpy(out, dir, n); return true; }
     __except (EXCEPTION_EXECUTE_HANDLER) { return false; }
 }
+bool escribirSeguro(void* dir, const void* in, size_t n) {   // 0.4.92: la restauración al salir escribía en un registro de IA ya liberado (cierre phoenix_core.dll+0x1CFC4, 14:38 del 28-oct)
+    __try { memcpy(dir, in, n); return true; }
+    __except (EXCEPTION_EXECUTE_HANDLER) { return false; }
+}
 uint64_t leerU32(const uint8_t* base, size_t off) { uint32_t v = 0xFFFFFFFF; leerSeguro(base + off, &v, 4); return v; }
 uint64_t leerU8(const uint8_t* base, size_t off) { uint8_t v = 0xFF; leerSeguro(base + off, &v, 1); return v; }
 
@@ -2075,7 +2079,7 @@ static std::vector<CampoIA> campos(std::initializer_list<uint16_t> d, std::initi
 }
 volatile LONG g_iaChicaOn = 0; HANDLE g_hiloIaChica = nullptr; float g_iaE = 0.5f, g_iaEApoyo = 0.4f, g_iaPiso = 1.5f;
 static void restaurarGrupoIA(GrupoIA& g) {
-    if (g.parcheado && g.R) { for (size_t i = 0; i < g.c.size(); i++) memcpy(g.R + g.c[i].off, &g.orig[i], 4); logf("[IA_DATOS] %s (id %d): restaurado", g.nom, g.id); }
+    if (g.parcheado && g.R) { bool ok = true; for (size_t i = 0; i < g.c.size() && ok; i++) ok = escribirSeguro(g.R + g.c[i].off, &g.orig[i], 4); logf("[IA_DATOS] %s (id %d): %s", g.nom, g.id, ok ? "restaurado" : "registro ya liberado: no se restaura"); }
     g.parcheado = false; g.R = nullptr;
 }
 DWORD WINAPI hiloIaChica(LPVOID) {
