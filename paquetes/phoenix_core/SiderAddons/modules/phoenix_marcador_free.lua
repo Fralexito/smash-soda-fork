@@ -15,7 +15,7 @@
 --
 -- Deshacer: DESINSTALAR.ps1 quita la línea de sider.ini; o poner "marcador_free": false.
 
-local m = { version = "0.6" }
+local m = { version = "0.8" }
 
 local PAUSA_GOL = 12.0      -- segundos que se detiene el reloj tras un gol (celebración)
 local MIRAR_SEG = 1.0       -- cada cuánto se relee zona/pantalla
@@ -222,7 +222,7 @@ local PANEL = {
     { id = "descanso_fase3", txt = "Reloj 2.º tiempo en fase 3", tipo = "bool", modo = "sig.partida" },
     { id = "descanso_base45", txt = "Reloj 2.º tiempo base 45", tipo = "bool", modo = "sig.partida" },
 }
-local panelAbierto, panelSel, panelCache, panelCambio, tPanelLeer = false, 1, {}, {}, -100
+local panelAbierto, panelSel, panelCache, panelCambio, tPanelLeer = true, 1, {}, {}, -100   -- v0.8: el panel es lo primero que se ve en esta página del overlay de Sider (F9 alterna con el marcador)
 local function panelValor(it)
     local t = leer(rutaCfg) or ""
     if it.tipo == "bool" then return t:find('"' .. it.id .. '"%s*:%s*true') ~= nil end
@@ -244,7 +244,7 @@ local function panelLeer()
 end
 local function panelTexto()
     panelLeer()
-    local s = { "PHOENIX STREET   F9 cerrar · F10 siguiente · F11 on/off · Izq/Der valor" }
+    local s = { "PHOENIX STREET   F9 marcador/panel · F10 siguiente · F11 on/off · Izq/Der valor" }
     for i, it in ipairs(PANEL) do
         local v = panelCache[it.id]; local est
         if it.tipo == "num" then est = string.format("%.2f", tonumber(v) or it.def) else est = v and "ON" or "OFF" end

@@ -2626,7 +2626,7 @@ DWORD WINAPI hiloDosTiempos(LPVOID) {
             escribirEstadoStreet("medio_tiempo", t);
             pendMedio = true;   // 0.4.80: se pide cuando hayan pasado >10 s del último gol (la escena de gol + órdenes viejas provocó el cierre 0x4B712B)
         }
-        if (estado < 2 && g_segundaParte && (t >= ((g_descansoFase3 && !g_descansoBase45) ? 162000.0 : 324000.0) + g_anadidoSeg) && !(faseP == 2)) {
+        if (estado < 2 && g_segundaParte && (t >= (g_descansoBase45 ? 324000.0 : 162000.0) + g_anadidoSeg) && !(faseP == 2)) {
             estado = 2; logf("[TIEMPOS] FINAL a t=%.0f: aviso, pausa de 8 s y revancha con saque central y reloj a 0", t);
             g_bolaCentroHasta = GetTickCount64() + 8000; escribirEstadoStreet("final", t); tFinal = GetTickCount64() + 8000; g_relojPausa = 1;
             if (g_e770 && g_descansoOn) { tFinal = 0; pendFinal = true; }   // 0.4.91: el final usa el panel de estadísticas del descanso y la revancha sale al cerrar el menú
