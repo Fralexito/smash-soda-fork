@@ -224,3 +224,11 @@ Flags del estado estable: `muros_core` (`muro_x` 15,0, `muro_z` 10,0), `cancha_p
 **Selector:** json `street_formato` = `"dos_tiempos"|"un_tiempo"|"goles"|"gol_oro"` + `street_goles`; más adelante un botón en Link o en el menú del juego.
 **Orden de implementación:** maquinaria común (FINAL: congelar/mostrar resultado y luego revancha 0-0 con saque central; MEDIO TIEMPO propio sin la demo nativa que congelaba) → un_tiempo → gol_oro → goles → dos_tiempos.
 **Estado base mientras tanto (Core 0.4.61):** `sin_fin_tiempo_free` (T1) deja pasar los 45:00 sin pitar; no hay fin de partido. Lo medido sobre el reloj de pantalla está en frentes_re/frente_J4_reloj_pantalla_real.md (base protegida + float; con M=5 la pantalla va 9× más rápido que el tiempo real, y eso es el ritmo nativo esperado).
+
+## 25. El portero propio vuelve a ser portero: rama team+0x255 y bloqueo de cursor (28-oct-2026, Core 0.4.68) — LOGRADO
+**Resultado (Fralex, 0.4.68):** «bien»: el portero se queda en su área y se puede seleccionar y controlar. Respaldo: `SiderAddons\phoenix_core\street_estable_0468`.
+**Causa (dos cosas):**
+1. `FUN_1409DC040` (posición base del portero) elige rama por `team+0x255`: 0 = rama normal `FUN_1409DE8C0`, ≠0 = rama alternativa `FUN_1409DF7D0` (~3 KB, portero «activo»). Log `[PORTERO_RAMA]`: bando del usuario = 1, rival (COM) = 0 → el rival se quedaba en su área y el nuestro salía. Arreglo `arquero_rama_normal` (RVA 0x9DC8CF, `74 13`→`EB 13`, firma `80 B8 55 02 00 00 00 74 13 48 8D 85 A0 00 00 00 48 89 44 24 20 E8 ?? ?? ?? ?? EB 05 E8`, byte +7), solo con TrainingWork.
+2. Mi bloqueo del cursor de 0.4.64 (`cursor_bloqueo_pt`, ahora apagado por defecto) impedía seleccionar al portero: el gancho `FUN_140A571B0` con llamador `exe+0x4403D2` sirve tanto al cambio automático como al manual.
+**Cómo se encontró:** `cursor_pt_log` (cueva solo lectura en `FUN_140A571B0`) mostró que el cursor sí iba al portero desde `0x4403D2` y `0x1FB98D2`, pero evitarlo no arregló nada; el análisis estático del frente L (§9) halló la rama por equipo y el log `[PORTERO_RAMA]` la confirmó.
+**Errores:** la prueba con R1 apagado quedó confundida por el bloqueo del cursor (Fralex: «no me deja ni seleccionar»); lección: aislar UNA variable por prueba. También `arquero_salida_max` volvió a 3.5.
