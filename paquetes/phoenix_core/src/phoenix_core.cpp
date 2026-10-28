@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.68"
+#define PHX_CORE_VERSION "0.4.69"
 
 namespace {
 
@@ -2090,7 +2090,7 @@ static void __stdcall ayudanteSaque(uint8_t* job) {
     if (g_descansoPedido && !g_descansoFase) {
         uint32_t rec = 1, c878 = 1, k2794 = 0; uint8_t c8f0 = 1; uint64_t j3b8 = 0;
         bool ok = leerSeguro(job + 0x49C0, &rec, 4) && leerSeguro(job + 0x878, &c878, 4) && leerSeguro(job + 0x8F0, &c8f0, 1) && leerSeguro(job + 0x2794, &k2794, 4) && leerSeguro(job + 0x908 + 0x3B8, &j3b8, 8);
-        bool ocioso = ok && rec == 0 && c878 == 0 && c8f0 == 0 && k2794 == 1 && j3b8 != 0;
+        bool ocioso = ok && rec == 0 && j3b8 != 0;   // 0.4.69: en el entrenamiento el estado normal de juego es cola [03..] con cursor 1 y sub=2 (medido en el log): solo se exige que no haya parada en curso
         if (!ocioso) { if (!g_descansoT) g_descansoT = ahora; if (ahora - g_descansoT > 40000) { logf("[DESCANSO] el job no quedó ocioso en 40 s (rec=%u c878=%u c8f0=%u 2794=%u): pantalla cancelada, saque directo", rec, c878, c8f0, k2794); g_descansoPedido = 0; g_descansoT = 0; g_saquePedido = 1; } return; }
         uint32_t fase2 = 2; memcpy(job + 0x2790, &fase2, 4);
         if (g_baseReloj) g_baseReloj(job + 0x2790, 0.0f);
@@ -2114,7 +2114,7 @@ static void __stdcall ayudanteSaque(uint8_t* job) {
     if (g_saquePedido && !g_saqueFase) {
         uint32_t rec = 1, c878 = 1, k2794 = 0; uint8_t c8f0 = 1; uint64_t j3b8 = 0;
         bool ok = leerSeguro(job + 0x49C0, &rec, 4) && leerSeguro(job + 0x878, &c878, 4) && leerSeguro(job + 0x8F0, &c8f0, 1) && leerSeguro(job + 0x2794, &k2794, 4) && leerSeguro(job + 0x908 + 0x3B8, &j3b8, 8);
-        bool ocioso = ok && rec == 0 && c878 == 0 && c8f0 == 0 && k2794 == 1 && j3b8 != 0;
+        bool ocioso = ok && rec == 0 && j3b8 != 0;   // 0.4.69: en el entrenamiento el estado normal de juego es cola [03..] con cursor 1 y sub=2 (medido en el log): solo se exige que no haya parada en curso
         if (!ocioso) {
             if (!g_saqueT) g_saqueT = ahora;
             if (ahora - g_saqueT > 40000) { logf("[SAQUE] el job no quedó ocioso en 40 s (rec=%u c878=%u c8f0=%u 2794=%u): pedido cancelado", rec, c878, c8f0, k2794); g_saquePedido = 0; g_saqueT = 0; }
