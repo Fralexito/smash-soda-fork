@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.67"
+#define PHX_CORE_VERSION "0.4.68"
 
 namespace {
 
@@ -2237,7 +2237,7 @@ bool relojQuitar(Feature&) { g_relojOn = 0; ponerParche(g_pdR1, false); ponerPar
 
 // --- cursor_pt_log (0.4.61, frente L): SOLO LECTURA. FUN_140A571B0 (RVA 0xA571B0) = setControlado(reg, idx): `if (reg[+0x20] != idx) { reg[+0x28]=reg[+0x20]; reg[+0x20]=idx; reg[+0x38]=0; }`. Cueva que roba los 5 B
 // `8B 41 20 3B C2` (mov eax,[rcx+0x20]; cmp eax,edx) y anota (idx nuevo, idx viejo, dirección de retorno del llamador) cuando el cursor pasa al portero (idx 0 u 11) y las primeras 40 llamadas, para saber QUIÉN pone el cursor en el portero propio.
-volatile LONG g_cursorSinPtOn = 0, g_cursorCambiados = 0;
+volatile LONG g_cursorSinPtOn = 0, g_cursorCambiados = 0; bool g_cursorBloqueoCfg = false;   // json «cursor_bloqueo_pt»: false (por defecto) = solo log; true = bloquea el cambio automático hacia el portero (0.4.64; impide seleccionarlo)
 static void __stdcall ayudanteCursor(uint8_t* reg, uint32_t idx, uint8_t* ret, uint32_t* idxPila) {
     uint32_t viejo = 0xFFFFFFFF; leerSeguro(reg + 0x20, &viejo, 4);
     static LONG nTodos = 0, nPt = 0; LONG t = InterlockedIncrement(&nTodos);
@@ -2276,7 +2276,7 @@ bool cursorPtLogInstalar(Feature& f) {
     Parche p; p.dir = sitio; p.original.assign(sitio, sitio + 5); p.nuevo.resize(5);
     if (!escribirRel32(p.nuevo.data(), 0xE9, sitio, c)) { f.estado = "cueva fuera de alcance (cursor_pt_log salto)"; return false; }
     if (!aplicarParche(p, f.id)) { f.estado = "no se pudo escribir el salto (cursor_pt_log)"; return false; }
-    f.parches.push_back(p); g_cursorSinPtOn = 1; asegurarHiloTrain();
+    f.parches.push_back(p); g_cursorSinPtOn = g_cursorBloqueoCfg ? 1 : 0; asegurarHiloTrain();
     char sbuf[140]; sprintf_s(sbuf, "ok: el cursor automático no cae en el portero propio y anota quién lo mueve (exe+0x%llX)", (unsigned long long)(sitio - g_exe.base)); f.estado = sbuf; return true;
 }
 bool cursorPtLogQuitar(Feature&) { return true; }
@@ -2465,6 +2465,7 @@ void leerConfig() {
     if (valorDe("muro_x", v)) g_muroX = atof(v.c_str());
     if (valorDe("muro_z", v)) g_muroZ = atof(v.c_str());
     if (valorDe("arquero_salida_max", v)) { g_arqSalidaMax = (float)atof(v.c_str()); if (g_arqSalidaMax < 1.0f || g_arqSalidaMax > 12.0f) g_arqSalidaMax = 3.5f; }
+    if (valorDe("cursor_bloqueo_pt", v)) g_cursorBloqueoCfg = (v == "true");
     if (valorDe("street_minutos", v)) { g_streetMinutos = atof(v.c_str()); if (g_streetMinutos < 0.5 || g_streetMinutos > 44.0) g_streetMinutos = 5.0; }
     if (valorDe("red_factor", v)) { g_redFactor = (float)atof(v.c_str()); if (g_redFactor < 0.0f || g_redFactor > 1.0f) g_redFactor = 0.85f; }
     if (valorDe("vigia_escritura", v)) g_vigiaPedida = atoi(v.c_str());
