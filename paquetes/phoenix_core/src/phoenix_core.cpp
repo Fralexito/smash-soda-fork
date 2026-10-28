@@ -1640,10 +1640,40 @@ volatile ULONGLONG g_bolaCentroHasta = 0;   // 0.4.63: mientras dure, la pelota 
 // 0.4.92 «tiro_fuerte»: un disparo fuerte = salto brusco de la velocidad de la pelota en un solo paso (>8 m/s y >16 m/s al final). Se escala en el estado S (el mismo que usan los muros): horizontales × tiro_potencia_k y vertical × tiro_altura_k,
 // graduados por la velocidad (a 16 m/s casi nada, a 34 m/s todo el efecto) para no tocar pases ni toques suaves; no actúa a menos de 3 m de la línea de gol (saques del portero). Log [TIRO] de los primeros 60.
 volatile LONG g_tiroOn = 0, g_tiroN = 0; float g_tiroPot = 1.25f, g_tiroAlt = 0.7f;
+volatile LONG g_paseOn = 0, g_paseN = 0; float g_paseVel = 1.2f, g_paseCono = 25.0f, g_paseCorr = 0.6f;   // json pase_rapido_preciso / pase_vel_k / pase_cono_grados / pase_correccion
+static bool posJugPC(uint8_t* raiz, int i, float& x, float& z);
 uint64_t ganchoBolaPaso(float dt, uint64_t rdx, uint64_t r8, float* S, void* cfg, uint64_t flag) {
     float v0x = S[3], v0y = S[4], v0z = S[5];
     uint64_t r = g_bolaPasoOrig(dt, rdx, r8, S, cfg, flag);
-    if (g_tiroOn && GetTickCount64() - g_tTrainRed < 3000 && !g_bolaCentroHasta) {
+    bool fueTiro = false;
+    if (g_paseOn && GetTickCount64() - g_tTrainRed < 3000 && !g_bolaCentroHasta) {   // 0.4.93 «pase_rapido_preciso»: pase = salto de velocidad en un paso a 7..16 m/s; se escala lo horizontal y se gira hacia el compañero mejor alineado dentro de un cono
+        float sp0 = sqrtf(v0x * v0x + v0y * v0y + v0z * v0z), sp1 = sqrtf(S[3] * S[3] + S[4] * S[4] + S[5] * S[5]);
+        bool centro = fabsf(S[0]) < 1.2f && fabsf(S[2]) < 1.2f;
+        if (sp1 - sp0 > 5.0f && sp1 >= 7.0f && sp1 <= 16.0f && fabsf(S[0]) < (float)g_canchaLargo - 3.0f && !centro) {
+            float a3 = S[3], a5 = S[5], hs0 = sqrtf(a3 * a3 + a5 * a5); int pasador = -1, receptor = -1; float errGrados = 0.0f;
+            uint8_t* raiz = nullptr;
+            if (hs0 > 0.5f && leerSeguro(g_globalPartido, &raiz, 8) && raiz) {
+                float mejorD = 2.5f; for (int i = 0; i < 22; i++) { float px, pz; if (!posJugPC(raiz, i, px, pz)) continue; float d = hypotf(px - S[0], pz - S[2]); if (d < mejorD) { mejorD = d; pasador = i; } }
+                if (pasador >= 0) {
+                    float cono = g_paseCono * 3.14159265f / 180.0f, mejorA = cono; float ux = a3 / hs0, uz = a5 / hs0, bx = 0, bz = 0;
+                    for (int j = (pasador / 11) * 11; j < (pasador / 11) * 11 + 11; j++) {
+                        if (j == pasador || j % 11 == 0) continue; float px, pz; if (!posJugPC(raiz, j, px, pz)) continue;
+                        float dx = px - S[0], dz = pz - S[2], d = hypotf(dx, dz); if (d < 3.0f) continue;
+                        float c = (dx * ux + dz * uz) / d; if (c > 1.0f) c = 1.0f; if (c < -1.0f) c = -1.0f; float ang = acosf(c);
+                        if (ang < mejorA) { mejorA = ang; receptor = j; bx = dx / d; bz = dz / d; }
+                    }
+                    if (receptor >= 0) {   // gira la dirección horizontal hacia el receptor una fracción del error y conserva la magnitud
+                        float cross = ux * bz - uz * bx, giro = mejorA * g_paseCorr * (cross >= 0 ? 1.0f : -1.0f), cs = cosf(giro), sn = sinf(giro);
+                        float nx = ux * cs - uz * sn, nz = ux * sn + uz * cs; S[3] = nx * hs0; S[5] = nz * hs0; errGrados = mejorA * 180.0f / 3.14159265f;
+                    }
+                }
+            }
+            S[3] *= g_paseVel; S[5] *= g_paseVel;
+            LONG n = InterlockedIncrement(&g_paseN); if (n <= 60) logf("[PASE] #%ld v %.1f->%.1f horiz %.1f->%.1f antes (%.1f,%.1f) después (%.1f,%.1f) pasador=%d receptor=%d error=%.1f° pos (%.1f,%.1f)", (long)n, sp0, sp1, hs0, hs0 * g_paseVel, a3, a5, S[3], S[5], pasador, receptor, errGrados, S[0], S[2]);
+            fueTiro = true;
+        }
+    }
+    if (!fueTiro && g_tiroOn && GetTickCount64() - g_tTrainRed < 3000 && !g_bolaCentroHasta) {
         float sp0 = sqrtf(v0x * v0x + v0y * v0y + v0z * v0z), sp1 = sqrtf(S[3] * S[3] + S[4] * S[4] + S[5] * S[5]);
         if (sp1 - sp0 > 8.0f && sp1 > 16.0f && fabsf(S[0]) < (float)g_canchaLargo - 3.0f) {
             float p = (sp1 - 16.0f) / 18.0f; if (p > 1.0f) p = 1.0f;
@@ -1738,6 +1768,11 @@ bool tiroInstalar(Feature& f) {
     g_tiroOn = 1; char b[170]; sprintf_s(b, "ok: tiros fuertes ×%.2f de velocidad y ×%.2f de elevación (graduado por velocidad; paso de la pelota FUN_140876360)", g_tiroPot, g_tiroAlt); f.estado = b; return true;
 }
 bool tiroQuitar(Feature&) { g_tiroOn = 0; return true; }
+bool paseInstalar(Feature& f) {
+    if (!asegurarGanchoBola(f)) return false;
+    g_paseOn = 1; char b[190]; sprintf_s(b, "ok: pases ×%.2f de velocidad y giro hacia el compañero más alineado (cono ±%.0f°, corrección %.0f%%)", g_paseVel, g_paseCono, g_paseCorr * 100.0f); f.estado = b; return true;
+}
+bool paseQuitar(Feature&) { g_paseOn = 0; return true; }
 bool redInstalar(Feature& f) {
     g_redOn = 1;
     if (!asegurarGanchoBola(f)) { g_redOn = 0; return false; }
@@ -2817,6 +2852,7 @@ std::vector<Feature> g_funciones = {   // orden = orden de arranque (gol_nativo_
     { "arquero_pase_corto", "El pase corto del portero de la IA va al compañero disponible más cercano (no al primero que cumple los filtros)", paseCortoInstalar, paseCortoQuitar },
     { "ia_sonda", "Solo lectura: anota los datos de IA de campo (cobertura, defensa, marca, base, apoyo) para escalarlos a la minicancha", iaSondaInstalar, iaSondaQuitar },
     { "tiro_fuerte", "Los disparos fuertes salen más potentes y menos altos (tiro_potencia_k, tiro_altura_k); pases y toques suaves casi no cambian", tiroInstalar, tiroQuitar },
+    { "pase_rapido_preciso", "Los pases salen más rápidos y se giran hacia el compañero mejor alineado (pase_vel_k, pase_cono_grados, pase_correccion)", paseInstalar, paseQuitar },
     { "stats_sonda", "Solo lectura: anota en el log las stats de los 22 jugadores (calibrar el mapa de habilidades; apagado por defecto)", statsSondaInstalar, statsSondaQuitar },
     { "ia_cancha_chica", "La IA de campo usa distancias de cobertura, defensa, marca, apoyo y pase escaladas a la minicancha (con restauracion al salir; sin porteros)", iaChicaInstalar, iaChicaQuitar },
     { "street_dos_tiempos", "Medio tiempo a 45:00 y final a 90:00 propios del entrenamiento (lee el reloj de pantalla; v1: pausa + aviso)", dosTiemposInstalar, dosTiemposQuitar },
@@ -2927,6 +2963,9 @@ void leerConfig() {
     if (valorDe("descanso_base45", v)) g_descansoBase45 = (v == "true");
     if (valorDe("tiro_potencia_k", v)) { g_tiroPot = (float)atof(v.c_str()); if (g_tiroPot < 0.5f || g_tiroPot > 2.0f) g_tiroPot = 1.25f; }
     if (valorDe("tiro_altura_k", v)) { g_tiroAlt = (float)atof(v.c_str()); if (g_tiroAlt < 0.2f || g_tiroAlt > 1.5f) g_tiroAlt = 0.7f; }
+    if (valorDe("pase_vel_k", v)) { g_paseVel = (float)atof(v.c_str()); if (g_paseVel < 0.8f || g_paseVel > 2.0f) g_paseVel = 1.2f; }
+    if (valorDe("pase_cono_grados", v)) { g_paseCono = (float)atof(v.c_str()); if (g_paseCono < 5.0f || g_paseCono > 60.0f) g_paseCono = 25.0f; }
+    if (valorDe("pase_correccion", v)) { g_paseCorr = (float)atof(v.c_str()); if (g_paseCorr < 0.0f || g_paseCorr > 1.0f) g_paseCorr = 0.6f; }
     if (valorDe("velocidad_partido", v)) { int q = atoi(v.c_str()); g_velocidadPartido = (q >= 0 && q <= 4) ? q : -1; }
     if (valorDe("anadido_min", v)) { double m = atof(v.c_str()); if (m >= 0.0 && m <= 10.0) g_anadidoSeg = m * 3600.0; }
     if (valorDe("rebote_k", v)) { g_muroRebote = (float)atof(v.c_str()); if (g_muroRebote < 0.3f || g_muroRebote > 0.95f) g_muroRebote = 0.75f; }   // 0.4.91: alias de muro_rebote
