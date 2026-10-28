@@ -1923,7 +1923,9 @@ DWORD WINAPI hiloReloj(LPVOID) {
         uint8_t* raiz = nullptr; uint8_t* S = nullptr;
         if (!leerSeguro(g_globalPartido, &raiz, 8) || !raiz || !leerSeguro(raiz + 0x270, &S, 8) || !S) continue;
         uint32_t sub = 0; float f = 0;
-        if (!leerSeguro(S + 0x116C, &sub, 4) || sub != 1 || !leerSeguro(S + 0x1174, &f, 4) || !(f >= 0.0f) || f > 1.0e6f) continue;
+        uint32_t fase = 0; static ULONGLONG tLog = 0;
+        if (!leerSeguro(S + 0x116C, &sub, 4) || !leerSeguro(S + 0x1168, &fase, 4) || !leerSeguro(S + 0x1174, &f, 4) || !(f >= 0.0f) || f > 1.0e6f) continue;
+        if (GetTickCount64() - tLog > 5000) { tLog = GetTickCount64(); logf("[RELOJ] fase=%u sub=%u transcurrido=%.0f (=%.1f s)", fase, sub, f, f / 60.0f); }
         f += (float)(60.0 * dt);
         if (f >= (float)(g_streetMinutos * 60.0 * 60.0)) { f = 0.0f; logf("[RELOJ] fin de los %.1f min: el reloj vuelve a 0 (vuelta %ld)", g_streetMinutos, (long)++vueltas); }
         memcpy(S + 0x1174, &f, 4);
