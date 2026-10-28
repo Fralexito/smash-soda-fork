@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.86"
+#define PHX_CORE_VERSION "0.4.87"
 
 namespace {
 
@@ -2850,8 +2850,12 @@ PHX_API int phx_core_iniciar(const char* carpeta) {
     std::string flag = g_carpeta + "arrancando.flag";
     if (existe(flag)) {
         g_modoSeguro = true;
-        logf("arrancando.flag ya existía: el arranque anterior no llegó a 60 s estables → MODO SEGURO");
+        logf("arrancando.flag ya existía: el arranque anterior no terminó limpio en menos de 60 s (crash o cierre forzado) → MODO SEGURO");
     }
+    // 0.4.87: aviso visible del modo seguro (el módulo Lua lo muestra en el overlay) y limpieza cuando el arranque es normal
+    if (g_modoSeguro) escribirArchivo(g_carpeta + "MODO_SEGURO.txt", "Phoenix Core en MODO SEGURO: el arranque anterior se cortó (crash o cierre forzado antes de 60 s). Ninguna funcion del street esta activa. Cierra PES y vuelve a abrirlo (el proximo arranque sera normal).
+");
+    else DeleteFileA((g_carpeta + "MODO_SEGURO.txt").c_str());
     escribirArchivo(flag, "Phoenix Core arrancando\r\n");
     g_tInicio = GetTickCount64();
 
@@ -2906,6 +2910,8 @@ PHX_API int phx_core_estado(char* buf, int n) {
 BOOL APIENTRY DllMain(HMODULE, DWORD motivo, LPVOID) {
     // Nada pesado aquí (bloqueo del cargador de Windows): todo empieza en phx_core_iniciar.
     if (motivo == DLL_PROCESS_DETACH && g_codigoInicio > 0) {
+        // 0.4.87: si PES se cierra de forma LIMPIA (el proceso llega aquí; un crash o un cierre forzado no pasa por DllMain), no es un crash: se borra la bandera y el próximo arranque NO entra en modo seguro
+        DeleteFileA((g_carpeta + "arrancando.flag").c_str());
         for (auto& f : g_funciones) for (auto& p : f.parches) quitarParche(p);
     }
     return TRUE;
