@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.93"
+#define PHX_CORE_VERSION "0.4.94"
 
 namespace {
 
@@ -2360,6 +2360,7 @@ void ganchoPostHalf(void* self) {
 volatile LONG g_descansoPedido = 0, g_descansoFase = 0; volatile ULONGLONG g_descansoT = 0, g_ultTickJob = 0; int g_descansoOn = 0;
 int g_velocidadPartido = -1;   // json «velocidad_partido» (0.4.92): -1 = no tocar
 double g_anadidoSeg = 2 * 3600.0;   // json «anadido_min» (0.4.91): minutos de añadido en cada parte (3600 unidades del reloj = 1 min de pantalla); 0 = sin añadido
+bool g_finalNativo = false;   // json «final_nativo» (0.4.94, EXPERIMENTAL): el final usa la pantalla nativa «Final del partido» (paso de cola 0x21) en vez del panel del descanso
 volatile bool g_segundaParte = false;   // true desde que se cierra el menú del descanso hasta el final (0.4.93)
 volatile bool g_descansoFinal = false;   // 0.4.91: el descanso en curso es el FINAL (panel de estadísticas y revancha)
 bool g_descansoBase45 = false;   // json «descanso_base45» (0.4.90): true = el 2.º tiempo conserva la fase 1 y la base del reloj se escribe a 45:00 (la fase 3 a mano provoca el cierre exe+0xB7AAA al salir; frente S)
@@ -2387,7 +2388,7 @@ static void __stdcall ayudanteSaque(uint8_t* job) {
         { uint32_t f0 = 1; leerSeguro(job + 0x2790, &f0, 4); g_faseAntesDescanso = f0; uint32_t fase2 = 2; memcpy(job + 0x2790, &fase2, 4);
             // 0.4.84: IDÉNTICO a 0.4.76 (la última que abrió el menú): base del reloj a 0 y float a 0 al abrir. Las versiones 0.4.78-0.4.83 sin este reinicio NO abrieron el menú (0.4.80: fase 1; 0.4.83: fase 2 sin reinicio; 0.4.76: fase 2 + reinicio = menú).
             if (g_baseReloj) g_baseReloj(job + 0x2790, 0.0f); float z0 = 0.0f; memcpy(job + 0x279C, &z0, 4); }
-        uint32_t full[30]; for (int i = 0; i < 30; i++) full[i] = i == 0 ? 0x22 : 0x48;
+        uint32_t full[30]; for (int i = 0; i < 30; i++) full[i] = i == 0 ? ((g_descansoFinal && g_finalNativo) ? 0x21 : 0x22) : 0x48;   // 0.4.94 (frente Y): el paso 0x21 (FUN_14044B860) manda 0x1050016 = «Final del partido» (MatchStatsResult → MatchPreResult → MatchResult); gemelo del 0x22 del descanso
         memcpy(job + 0x878, full, sizeof(full)); job[0x8F0] = 0; job[0x8F1] = 2;
         uint32_t sub2 = 2; memcpy(job + 0x2794, &sub2, 4);
         logf("[DESCANSO] fase=2, reloj a 0 y cola [0x22,0x48..] escritos: se abre el menú de descanso (como 0.4.76)");
@@ -2974,6 +2975,7 @@ void leerConfig() {
     if (valorDe("pase_cono_grados", v)) { g_paseCono = (float)atof(v.c_str()); if (g_paseCono < 5.0f || g_paseCono > 60.0f) g_paseCono = 25.0f; }
     if (valorDe("pase_correccion", v)) { g_paseCorr = (float)atof(v.c_str()); if (g_paseCorr < 0.0f || g_paseCorr > 1.0f) g_paseCorr = 0.6f; }
     if (valorDe("velocidad_partido", v)) { int q = atoi(v.c_str()); g_velocidadPartido = (q >= 0 && q <= 4) ? q : -1; }
+    if (valorDe("final_nativo", v)) g_finalNativo = (v == "true");
     if (valorDe("anadido_min", v)) { double m = atof(v.c_str()); if (m >= 0.0 && m <= 10.0) g_anadidoSeg = m * 3600.0; }
     if (valorDe("rebote_k", v)) { g_muroRebote = (float)atof(v.c_str()); if (g_muroRebote < 0.3f || g_muroRebote > 0.95f) g_muroRebote = 0.75f; }   // 0.4.91: alias de muro_rebote
     if (valorDe("season_forzada", v)) g_seasonCore = atoi(v.c_str());
@@ -3030,7 +3032,7 @@ static void procesarOrdenes() {
     std::string ruta = g_carpeta + "ordenes.txt", txt; if (!existe(ruta) || !leerArchivo(ruta, txt)) return;
     DeleteFileA(ruta.c_str());
     static const char* const prohibidas[] = { "arquero_rama_normal", "arquero_propio_cursor", "arquero_salida_corta", "arquero_saque_corto", "sin_despeje_emergencia", "cursor_bloqueo_pt", "arquero_salida_max", "cursor_pt_log", nullptr };
-    static const char* const alReiniciar[] = { "street_dos_tiempos", "street_pantalla_descanso", "street_saque_nativo", "ajustes_partido_free", "marcador_nativo_free", "reloj_street_free", "orden_jugador_segura", "reinicio_seguro", "cancha_chica_free", "descanso_fase3", "descanso_base45", "clima_forzado", "season_forzada", "anadido_min", nullptr };
+    static const char* const alReiniciar[] = { "street_dos_tiempos", "street_pantalla_descanso", "street_saque_nativo", "ajustes_partido_free", "marcador_nativo_free", "reloj_street_free", "orden_jugador_segura", "reinicio_seguro", "cancha_chica_free", "descanso_fase3", "descanso_base45", "final_nativo", "clima_forzado", "season_forzada", "anadido_min", nullptr };
     size_t i = 0;
     while (i < txt.size()) {
         size_t e = txt.find_first_of("\r\n", i); std::string l = txt.substr(i, e == std::string::npos ? std::string::npos : e - i); i = (e == std::string::npos) ? txt.size() : e + 1;
@@ -3048,7 +3050,7 @@ static void procesarOrdenes() {
             persistirClaveJson(id, on ? "true" : "false");
             if (claveEn(id.c_str(), alReiniciar)) { f->deseada = on; logf("[PANEL] %s=%s guardado (se aplica al reiniciar PES)", id.c_str(), on ? "ON" : "OFF"); }
             else { EnterCriticalSection(&g_cs); f->deseada = on; bool ok = on ? encender(*f) : apagar(*f); guardarEstado(); LeaveCriticalSection(&g_cs); logf("[PANEL] %s=%s en vivo: %s", id.c_str(), on ? "ON" : "OFF", ok ? "hecho" : "no se pudo"); }
-        } else if (!f && claveEn(id.c_str(), alReiniciar)) { persistirClaveJson(id, esBool ? (on ? "true" : "false") : v); logf("[PANEL] %s=%s guardado (partido nuevo / reinicio)", id.c_str(), v.c_str()); }
+        } else if (!f && claveEn(id.c_str(), alReiniciar)) { if (id == "final_nativo" && esBool) g_finalNativo = on; persistirClaveJson(id, esBool ? (on ? "true" : "false") : v); logf("[PANEL] %s=%s guardado (partido nuevo / reinicio)", id.c_str(), v.c_str()); }
         else logf("[PANEL] orden desconocida o no permitida: %s", l.c_str());
     }
 }
