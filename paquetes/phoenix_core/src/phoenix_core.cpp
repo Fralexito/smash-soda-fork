@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.54"
+#define PHX_CORE_VERSION "0.4.55"
 
 namespace {
 
@@ -1704,7 +1704,7 @@ bool redQuitar(Feature&) { g_redOn = 0; return true; }
 volatile ULONGLONG g_tTrainGlob = 0; volatile LONG g_trainGlobOn = 0; HANDLE g_hiloTrainGlob = nullptr;
 struct ParcheN { uint8_t* dir = nullptr; uint8_t ori[8] = {}, nue[8] = {}; size_t n = 0; bool puesto = false; };
 static void ponerParcheN(ParcheN& pn, bool si) { if (!pn.dir || pn.puesto == si) return; if (escribirCodigo(pn.dir, si ? pn.nue : pn.ori, pn.n)) pn.puesto = si; }
-volatile LONG g_sinSaquesOn = 0, g_arqueroOn = 0, g_iaClearOn = 0, g_gkCortoOn = 0, g_arqCursorOn = 0; ParcheDisp g_pdS1, g_pdS2, g_pdIA, g_pdGK1, g_pdGK2; ParcheN g_pnA, g_pnB, g_pnC1, g_pnC2, g_pnC3;
+volatile LONG g_sinSaquesOn = 0, g_arqueroOn = 0, g_iaClearOn = 0, g_gkCortoOn = 0, g_arqCursorOn = 0; ParcheDisp g_pdS1, g_pdS2, g_pdIA, g_pdGK1, g_pdGK2, g_pdMN; ParcheN g_pnA, g_pnB, g_pnC1, g_pnC2, g_pnC3;
 DWORD WINAPI hiloTrainGlob(LPVOID) {
     while (g_trainGlobOn) {
         if (trainingWorkEstable() || hayTrainingWork()) g_tTrainGlob = GetTickCount64();
@@ -1865,6 +1865,17 @@ bool reinicioSeguroInstalar(Feature& f) {
 }
 bool reinicioSeguroQuitar(Feature&) { return true; }   // los parches los quita el marco
 
+// --- marcador_nativo_free (0.4.55, RE del frente J, 27-oct): el marcador y el reloj son la pantalla 2D match2D::Screen::Time (id 7 del gestor de pantallas), construida en FUN_1420CCCD0 y que solo existe
+// si el byte gestor+0x18B4 != 0 (FUN_1420CD220 caso 7). Al final de FUN_1420C9080: `clase = FUN_14149F4F0(modo); si clase == 0x0B o 0x0C -> byte = 0`. FREE_TRAINING (modo 52) es clase 0x0B. Parche de 1 byte, RVA 0x20C93D7: «0B» -> «FF»
+// (el modo 52 deja de apagar el HUD; el modo 51 sigue siendo clase 0x0C). Se aplica al instalar (el HUD se crea al cargar el partido) y se restaura al salir. Los goles los lee el HUD de los stats de cada equipo (ya cuentan).
+bool marcadorNativoInstalar(Feature& f) {
+    if (!localizarParche("83 F8 0B 74 12 E8 ?? ?? ?? ?? 48 8B C8 E8 ?? ?? ?? ?? 83 F8 0C 75 03 C6 07 00", 2, 0x0B, 0xFF, g_pdMN, f.id)) { f.estado = "sin firma/byte inesperado en FUN_1420C9080 (HUD de marcador)"; return false; }
+    ponerParche(g_pdMN, true);
+    f.estado = g_pdMN.puesto ? "ok: el HUD de marcador y reloj nativo ya no se apaga en el entrenamiento (parche de 1 byte en FUN_1420C9080)" : "no se pudo escribir el parche del HUD";
+    return g_pdMN.puesto;
+}
+bool marcadorNativoQuitar(Feature&) { ponerParche(g_pdMN, false); return true; }
+
 const char* kFirmaReinicio = "48 8B C4 53 41 57 48 83 EC 78 48 89 70 E8";
 using FnReinicio = float* (*)(float*, uint32_t*, void*, void*);
 FnReinicio g_reinicioOrig = nullptr; volatile LONG g_jugChOn = 0, g_jugChEscalados = 0;
@@ -1949,6 +1960,7 @@ std::vector<Feature> g_funciones = {   // orden = orden de arranque (gol_nativo_
     { "arquero_propio_cursor", "Con Cursor de PT fijo = Sí el portero propio no bloquea el cursor del usuario (variante del arquero propio)", arqCursorInstalar, arqCursorQuitar },
     { "arquero_salida_corta", "El portero sale poco de su arco en el entrenamiento (recorta la posición de salida a R m de la línea)", arqSalidaInstalar, arqSalidaQuitar },
     { "reinicio_seguro", "Red de seguridad: si la posición de reinicio del balón recibe una clave nula, usa la rama por defecto en vez de cerrar el juego", reinicioSeguroInstalar, reinicioSeguroQuitar },
+    { "marcador_nativo_free", "El marcador y el reloj nativos del partido se muestran en el entrenamiento (parche de 1 byte en el HUD)", marcadorNativoInstalar, marcadorNativoQuitar },
     { "jugadores_chica_free", "Escala a la cancha chica las posiciones de reinicio de los jugadores (entrenamiento)", jugChInstalar, jugChQuitar },
     { "suplentes_ocultos_free", "Aparca a los suplentes de la banda lejos (entrenamiento)", supOcultosInstalar, supOcultosQuitar },
     { "pelota_sonda", "Sonda de solo lectura de la pelota (posición/velocidad) en el entrenamiento", pelotaInstalar, pelotaQuitar },
