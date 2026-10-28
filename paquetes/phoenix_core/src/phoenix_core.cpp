@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.92"
+#define PHX_CORE_VERSION "0.4.93"
 
 namespace {
 
@@ -2540,7 +2540,7 @@ static void vigilarCondiciones() {
     uint8_t *a = nullptr, *c = nullptr; if (!leerSeguro(g_exe.base + 0x3705E10, &a, 8) || !a || !leerSeguro(a + 0x50, &c, 8) || !c) return;
     uint32_t v[4]; if (!leerSeguro(c + 0x35960, v, 16)) return;
     if (g_velocidadPartido >= 0 && GetTickCount64() - g_tTrainGlob < 3000) {   // 0.4.92: «velocidad_partido» (0..4; 2 = normal): byte del ajuste de menú en S_cfg_base+0x13021 (frente V, PROBABLE)
-        uint8_t cur = 0xFF; if (leerSeguro(c + 0x13021, &cur, 1) && cur <= 4 && cur != (uint8_t)g_velocidadPartido) { uint8_t nv = (uint8_t)g_velocidadPartido; memcpy(c + 0x13021, &nv, 1); logf("[VELOCIDAD] ajuste de velocidad del partido %u -> %u", (unsigned)cur, (unsigned)nv); }
+        uint8_t cur = 0xFF; if (leerSeguro(c + 0x13021, &cur, 1) && cur <= 4 && cur < (uint8_t)g_velocidadPartido) {   // 0.4.93: solo SUBE el ajuste (en la 0.4.92 bajó 4 -> 3: el valor de partida era 4) uint8_t nv = (uint8_t)g_velocidadPartido; memcpy(c + 0x13021, &nv, 1); logf("[VELOCIDAD] ajuste de velocidad del partido %u -> %u", (unsigned)cur, (unsigned)nv); }
     }
     { static ULONGLONG t30 = 0; if (GetTickCount64() - t30 > 30000 && GetTickCount64() - g_tTrainGlob < 3000) { t30 = GetTickCount64(); logf("[CONDICIONES] (cada 30 s) stadium=%u timeofday=%u weather=%u season=%u", v[0], v[1], v[2], v[3]); } }   // 0.4.91: traza periódica para atribuir el fondo blanco
     if (memcmp(v, ult, 16) != 0) { logf("[CONDICIONES] stadium=%u timeofday=%u weather=%u season=%u (forzada=%d)", v[0], v[1], v[2], v[3], g_seasonCore); memcpy(ult, v, 16); }
