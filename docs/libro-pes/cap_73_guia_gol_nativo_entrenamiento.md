@@ -202,3 +202,15 @@ Flags del estado estable: `muros_core` (`muro_x` 15,0, `muro_z` 10,0), `cancha_p
 - El HUD se perdía tras los goles; el RE estático (subagente) encontró el pestillo; con el parche (2) el log pasó a mostrar S+0x11B0=0x01010016 en juego.
 
 **A tener en cuenta:** la duración sale fija (5 min) hasta habilitar «Duración del partido» del menú «Opciones gener.» (frente J2, pendiente); no hay pantalla de fin de tiempo (el reloj se reinicia); los parches de reloj/HUD se aplican siempre, pero fuera del entrenamiento esos chequeos no se cumplen. Informes: frentes_re/frente_J_marcador_reloj_nativo.md y frente_J3_hud_desaparece.md.
+
+## 23. HUD forzado, reloj con duración del menú y menú «Opciones gener.» editable (28-oct-2026, Core 0.4.60) — LOGRADO
+
+**Resultado (Fralex, 0.4.60):** «ya funciona todo bien el marcador y el contador por ahora». Respaldo: `SiderAddons\phoenix_core\street_estable_0460` (DLL + json + Lua).
+
+**Paso a paso (todo json on/off, AOB, reversible):**
+1. **HUD forzado** (`marcador_nativo_free`, parche A en FUN_1420C9080, solo con TrainingWork, restaurado al salir): firma `E8 ?? ?? ?? ?? 84 C0 74 0E 66 C7 07 00 01 C7 47 20 00 00 00 00 EB 29 80 3F 00 75 09 C7 47 20 00 00 00 00 EB 1B E8`; +7 `74 0E`→`EB 0E`; +23 `80 3F 00 75 09`→`C6 07 01 EB 09` (fuerza M+0x9C=1). El pestillo de 0.4.59 (RVA 0x20C90F4) arregló solo el primer caso: el log mostró S+0x11B2=1 en el segundo apagado.
+2. **Menú editable** (`ajustes_partido_free`): FUN_140AA90A0 compara modo==0x34 y apaga la lista entera de «Opciones gener.»; NOP de 5 bytes en RVA 0xAA9261 (`40 88 7C 24 24`→`0F 1F 44 00 00`), firma `83 FD 34 75 09 40 88 7C 24 24 33 C9 EB ?? E8 ?? ?? ?? ?? 84 C0 75 ?? 40 88 BB 87 01 00 00` offset 5.
+3. **Duración** = byte de minutos en `*(*(exe+0x3705E10)+0x50)+0x35960+0x1C` (5-15, 20, 25, 30); el reloj reinicia al llegar a esos minutos en pantalla.
+
+**Errores/lecciones:** (a) la lectura viva falló: en la escena del gol [raíz+0x270]=0, no hay estado legible; (b) un parche que arregla «a veces» no es la causa: medir con el log (S+0x11B0) antes de repetir; (c) el RE estático por subagente + AOB únicas resolvió lo que 2 iteraciones a ciegas no.
+**A tener en cuenta:** la velocidad del reloj la fija el juego según la duración (no medida); el HUD ahora se ve también en celebración; sin pantalla de fin de tiempo. Informes: frente_J2_barra_ajustes.md, frente_J3_hud_desaparece.md.
