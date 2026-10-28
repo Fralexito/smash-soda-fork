@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.84"
+#define PHX_CORE_VERSION "0.4.85"
 
 namespace {
 
@@ -2233,12 +2233,14 @@ static void __stdcall ayudanteSaque(uint8_t* job) {
         if (!ocioso) { if (!g_descansoT) g_descansoT = ahora; if (ahora - g_descansoT > 40000) { logf("[DESCANSO] el job no quedó ocioso en 40 s (rec=%u c878=%u c8f0=%u 2794=%u): pantalla cancelada, saque directo", rec, c878, c8f0, k2794); g_descansoPedido = 0; g_descansoT = 0; g_saquePedido = 1; } return; }
         // 0.4.82: el menú de descanso SOLO sale con fase=2 (con fase=1, 0.4.78-0.4.81, la cola [0x22] se consumía y no salía el menú: Fralex se quedó atascado). Se pone fase=2 mientras dura el menú y se VUELVE a la fase anterior al cerrarlo,
         // antes del saque: así FUN_140453530 no hace el 2->3 nativo (cambio de lado + IA/formación con el lado viejo). El reloj no se toca: sigue desde 45:00 y T1 evita el fin de tiempo.
-        { uint32_t f0 = 1; leerSeguro(job + 0x2790, &f0, 4); g_faseAntesDescanso = f0; uint32_t fase2 = 2; memcpy(job + 0x2790, &fase2, 4); }
+        { uint32_t f0 = 1; leerSeguro(job + 0x2790, &f0, 4); g_faseAntesDescanso = f0; uint32_t fase2 = 2; memcpy(job + 0x2790, &fase2, 4);
+            // 0.4.84: IDÉNTICO a 0.4.76 (la última que abrió el menú): base del reloj a 0 y float a 0 al abrir. Las versiones 0.4.78-0.4.83 sin este reinicio NO abrieron el menú (0.4.80: fase 1; 0.4.83: fase 2 sin reinicio; 0.4.76: fase 2 + reinicio = menú).
+            if (g_baseReloj) g_baseReloj(job + 0x2790, 0.0f); float z0 = 0.0f; memcpy(job + 0x279C, &z0, 4); }
         uint32_t full[30]; for (int i = 0; i < 30; i++) full[i] = i == 0 ? 0x22 : 0x48;
         memcpy(job + 0x878, full, sizeof(full)); job[0x8F0] = 0; job[0x8F1] = 2;
         uint32_t sub2 = 2; memcpy(job + 0x2794, &sub2, 4);
-        logf("[DESCANSO] cola [0x22,0x48..] escrita (sin tocar fase ni reloj): se abre el menú de descanso");
-        g_menuCerrado = 0; g_menuArmado = g_postHalfOrig ? 1 : 0; g_relojPausa = 1;
+        logf("[DESCANSO] fase=2, reloj a 0 y cola [0x22,0x48..] escritos: se abre el menú de descanso (como 0.4.76)");
+        g_menuCerrado = 0; g_menuArmado = g_postHalfOrig ? 1 : 0;
         g_descansoPedido = 0; g_descansoFase = 1; g_descansoT = ahora; return;
     }
     if (g_descansoFase == 1) {
