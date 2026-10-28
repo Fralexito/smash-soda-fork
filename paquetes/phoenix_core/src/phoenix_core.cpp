@@ -2036,6 +2036,73 @@ bool iaSondaInstalar(Feature& f) {
 }
 bool iaSondaQuitar(Feature&) { g_iaSondaOn = 0; if (g_hiloIaSonda) { WaitForSingleObject(g_hiloIaSonda, 2000); CloseHandle(g_hiloIaSonda); g_hiloIaSonda = nullptr; } return true; }
 
+// --- ia_cancha_chica (0.4.76, frente P): los datos de IA de campo (constant::DefenceCover 187, Defence 186, BasePosition 183 [solo campo], DefenceMark 188, Matchup 50, Support 197, SpaceRun 195, DiagonalRun 189, PullAway 193, Throughpass 61, Passget 53)
+// viven en el registro de constantes (R = [[[P]]+id*8]+8, P = global de FUN_141E5D4C0, como los puntos demoarea). Con TrainingWork se escalan las distancias a la minicancha con k = (dims/dims_grande)^e (e = ia_escala 0,5; 0,4 en apoyo/desmarque/pase) y un piso
+// ia_piso_m (1,5 m): nuevo = max(orig*k, min(orig, piso)); siempre desde una copia de los originales (idempotente); se restaura al salir del entrenamiento / quitar la opción. NO se tocan ángulos, *Rate, ints, bytes ni los campos del PORTERO (gkl*, gks*, kickoffDfLineX, margin_restartX).
+struct CampoIA { uint16_t off; char eje; };
+struct GrupoIA { int id; const char* nom; bool apoyo; std::vector<CampoIA> c; uint8_t* R = nullptr; std::vector<float> orig, pat; bool parcheado = false; };
+static std::vector<CampoIA> campos(std::initializer_list<uint16_t> d, std::initializer_list<uint16_t> x = {}, std::initializer_list<uint16_t> z = {}) {
+    std::vector<CampoIA> v; for (uint16_t o : d) v.push_back({ o, 'd' }); for (uint16_t o : x) v.push_back({ o, 'x' }); for (uint16_t o : z) v.push_back({ o, 'z' }); return v;
+}
+volatile LONG g_iaChicaOn = 0; HANDLE g_hiloIaChica = nullptr; float g_iaE = 0.5f, g_iaEApoyo = 0.4f, g_iaPiso = 1.5f;
+static void restaurarGrupoIA(GrupoIA& g) {
+    if (g.parcheado && g.R) { for (size_t i = 0; i < g.c.size(); i++) memcpy(g.R + g.c[i].off, &g.orig[i], 4); logf("[IA_DATOS] %s (id %d): restaurado", g.nom, g.id); }
+    g.parcheado = false; g.R = nullptr;
+}
+DWORD WINAPI hiloIaChica(LPVOID) {
+    std::vector<GrupoIA> gr;
+    gr.push_back({ 187, "DefenceCover", false, campos({ 0x68, 0x38, 0x3C, 0x88, 0x58, 0x4C, 0x50, 0x10, 0x18 }, { 0x74, 0x70, 0x80 }) });
+    gr.push_back({ 186, "Defence", false, campos({ 0x18, 0x1C, 0x20, 0x0C, 0x88, 0x78, 0x3C, 0x4C, 0x6C, 0x70, 0x28, 0x2C }, { 0x64, 0x68, 0x74, 0x40, 0x44, 0x80 }, { 0x84, 0x48 }) });
+    gr.push_back({ 183, "BasePosition", false, campos({ 0x21C, 0x220, 0x224, 0x228, 0x278, 0x27C, 0x280, 0x284, 0x28C, 0x22C, 0x230, 0x290, 0x298, 0x29C, 0xB8, 0xBC, 0xC0, 0x4C, 0x184, 0x188, 0x18C, 0x190, 0x31C, 0x320, 0x2EC, 0x2F0, 0x160, 0x164, 0x168, 0x10C, 0x110, 0x114, 0x118, 0x120, 0x128, 0x12C, 0x130, 0x2A4 }, { 0x2B0, 0x2B4, 0x210, 0x248, 0xC4 }, { 0x244, 0xC8 }) });
+    gr.push_back({ 188, "DefenceMark", false, campos({ 0x8C, 0x98, 0xA4, 0x90, 0x9C, 0xA8, 0x94, 0xA0, 0xAC, 0xB0, 0xB4, 0xBC, 0xC0, 0xB8, 0xD0, 0xCC, 0x38, 0x3C, 0x40, 0x44, 0x48, 0x4C, 0x5C, 0xD8, 0x10C, 0x110, 0x114, 0x118, 0x14, 0x18, 0x1C }, { 0xF4, 0xF8, 0x124, 0x128 }, { 0xFC, 0x100, 0x12C, 0x130, 0x88, 0x134 }) });
+    gr.push_back({ 50, "Matchup", false, campos({ 0x30, 0x2C, 0x34, 0x0C }) });
+    gr.push_back({ 197, "Support", true, campos({ 0x20, 0x24, 0x28, 0x44, 0x50, 0x68, 0x58, 0x5C, 0x60, 0x64, 0xCC, 0xD0, 0xD4, 0xD8, 0xDC, 0xE0, 0xE4, 0x78 }) });
+    gr.push_back({ 195, "SpaceRun", true, campos({ 0x3C, 0x40, 0x44, 0x48, 0x4C, 0x50, 0x34, 0x38, 0x64, 0x68, 0x74, 0x78, 0x7C, 0x80, 0x9C, 0xA8 }, { 0x8C, 0x90, 0x94, 0x98, 0xA0, 0xA4 }, { 0xBC, 0xC0, 0xC4, 0xC8, 0xCC, 0xD0 }) });
+    gr.push_back({ 189, "DiagonalRun", true, campos({ 0x1C, 0x20, 0x10, 0x14, 0x18 }, { 0x24, 0x28, 0x2C, 0x30 }) });
+    gr.push_back({ 193, "PullAway", true, campos({ 0x10, 0x14, 0x18, 0x1C, 0x20, 0x24, 0x28, 0x2C }) });
+    gr.push_back({ 61, "Throughpass", true, campos({ 0x118, 0x120, 0x188, 0x190, 0x18C, 0x194, 0x19C, 0x1A0, 0x70, 0x74, 0x154, 0x158, 0x17C, 0x184 }) });
+    gr.push_back({ 53, "Passget", true, campos({ 0x64 }) });
+    for (auto& g : gr) { g.orig.assign(g.c.size(), 0.0f); g.pat.assign(g.c.size(), 0.0f); }
+    while (g_iaChicaOn) {
+        Sleep(150);
+        if (!trainingWorkEstable() || !g_regDemoGlobal) { for (auto& g : gr) restaurarGrupoIA(g); continue; }
+        uint8_t* raiz = nullptr; float* dims = nullptr; float d[2] = { 0, 0 };
+        if (!leerSeguro(g_globalPartido, &raiz, 8) || !raiz || !leerSeguro(raiz + 0x2AA8, &dims, 8) || !dims || !leerSeguro(dims, d, 8) || !(d[0] > 5.0f && d[0] < 60.0f && d[1] > 3.0f && d[1] < 40.0f)) continue;
+        for (auto& g : gr) {
+            uint8_t *P = nullptr, *A = nullptr, *E = nullptr, *R = nullptr;
+            if (!leerSeguro(g_regDemoGlobal, &P, 8) || !P || !leerSeguro(P, &A, 8) || !A || !leerSeguro(A + (size_t)g.id * 8, &E, 8) || !E || !leerSeguro(E + 8, &R, 8) || !R) continue;
+            std::vector<float> cur(g.c.size()); bool valido = true;
+            for (size_t i = 0; i < g.c.size(); i++) { if (!leerSeguro(R + g.c[i].off, &cur[i], 4) || !(fabsf(cur[i]) < 1000.0f) || cur[i] != cur[i]) { valido = false; break; } }
+            if (!valido) continue;
+            if (R != g.R) { restaurarGrupoIA(g); g.R = R; g.orig = cur; }
+            else if (g.parcheado && memcmp(cur.data(), g.pat.data(), cur.size() * 4) != 0) g.orig = cur;   // el juego recargó: nueva original
+            else if (!g.parcheado) g.orig = cur;
+            float e = g.apoyo ? g_iaEApoyo : g_iaE, kx = powf(d[0] / 52.56f, e), kz = powf(d[1] / 34.06f, e), kd = sqrtf(kx * kz);
+            std::vector<float> nuevo(g.c.size()); bool cambia = false;
+            for (size_t i = 0; i < g.c.size(); i++) {
+                float k = g.c[i].eje == 'x' ? kx : g.c[i].eje == 'z' ? kz : kd, o = g.orig[i];
+                float n = fmaxf(o * k, fminf(o, g_iaPiso)); nuevo[i] = (o < 0.0f) ? o * k : n; if (nuevo[i] != cur[i]) cambia = true;
+            }
+            if (cambia) { for (size_t i = 0; i < g.c.size(); i++) memcpy(R + g.c[i].off, &nuevo[i], 4); g.pat = nuevo; }
+            if (!g.parcheado) {
+                g.parcheado = true; char buf[300]; int n = sprintf_s(buf, "[IA_DATOS] %s (id %d) escalado (kd=%.2f kx=%.2f kz=%.2f):", g.nom, g.id, kd, kx, kz);
+                for (size_t i = 0; i < g.c.size() && i < 4; i++) n += sprintf_s(buf + n, sizeof(buf) - n, " +%X %.2f->%.2f", g.c[i].off, g.orig[i], nuevo[i]);
+                logf("%s", buf);
+            }
+        }
+    }
+    for (auto& g : gr) restaurarGrupoIA(g);
+    return 0;
+}
+bool iaChicaInstalar(Feature& f) {
+    if (!g_regDemoGlobal) { uint8_t* r = firmaUnica("codigo", kFirmaRegDemo, f.id); if (!r) { f.estado = "sin firma del registro de constantes (FUN_141E5D4C0)"; return false; } int32_t rel = 0; memcpy(&rel, r + 3, 4); g_regDemoGlobal = r + 7 + rel; }
+    if (!g_globalPartido && !resolverGlobalPartido(f.id)) { f.estado = "sin firma del global del partido"; return false; }
+    g_iaChicaOn = 1; g_hiloIaChica = CreateThread(nullptr, 0, hiloIaChica, nullptr, 0, nullptr);
+    if (!g_hiloIaChica) { g_iaChicaOn = 0; f.estado = "no se pudo crear el hilo de la IA chica"; return false; }
+    char sb[170]; sprintf_s(sb, "ok: la IA de campo piensa en la minicancha (escala^%.2f, apoyo^%.2f, piso %.1f m); porteros intactos; se restaura al salir", g_iaE, g_iaEApoyo, g_iaPiso); f.estado = sb; return true;
+}
+bool iaChicaQuitar(Feature&) { g_iaChicaOn = 0; if (g_hiloIaChica) { WaitForSingleObject(g_hiloIaChica, 2000); CloseHandle(g_hiloIaChica); g_hiloIaChica = nullptr; } return true; }
+
 bool celChicaQuitar(Feature&) {
     g_celChicaOn = 0; g_demoAreaOn = 0;
     if (g_hiloDemoArea) { WaitForSingleObject(g_hiloDemoArea, 2000); CloseHandle(g_hiloDemoArea); g_hiloDemoArea = nullptr; }
@@ -2529,6 +2596,7 @@ std::vector<Feature> g_funciones = {   // orden = orden de arranque (gol_nativo_
     { "arquero_rama_normal", "El portero usa siempre la rama normal de posición base (team+0x255 forzado a la normal) en el entrenamiento", ramaNormalInstalar, ramaNormalQuitar },
     { "arquero_pase_corto", "El pase corto del portero de la IA va al compañero disponible más cercano (no al primero que cumple los filtros)", paseCortoInstalar, paseCortoQuitar },
     { "ia_sonda", "Solo lectura: anota los datos de IA de campo (cobertura, defensa, marca, base, apoyo) para escalarlos a la minicancha", iaSondaInstalar, iaSondaQuitar },
+    { "ia_cancha_chica", "La IA de campo usa distancias de cobertura, defensa, marca, apoyo y pase escaladas a la minicancha (con restauracion al salir; sin porteros)", iaChicaInstalar, iaChicaQuitar },
     { "street_dos_tiempos", "Medio tiempo a 45:00 y final a 90:00 propios del entrenamiento (lee el reloj de pantalla; v1: pausa + aviso)", dosTiemposInstalar, dosTiemposQuitar },
     { "sin_fin_tiempo_free", "El Juez no pita el fin de tiempo (medio tiempo/final) en el entrenamiento libre", sinFinTiempoInstalar, sinFinTiempoQuitar },
     { "reloj_street_free", "El reloj nativo corre en el entrenamiento y se reinicia a los street_minutos", relojInstalar, relojQuitar },
@@ -2630,6 +2698,9 @@ void leerConfig() {
     if (valorDe("red_k", v)) g_redK = (float)atof(v.c_str());
     if (valorDe("red_c", v)) g_redC = (float)atof(v.c_str());
     if (valorDe("red_holgura", v)) g_redHolgura = (float)atof(v.c_str());
+    if (valorDe("ia_escala", v)) g_iaE = (float)atof(v.c_str());
+    if (valorDe("ia_escala_apoyo", v)) g_iaEApoyo = (float)atof(v.c_str());
+    if (valorDe("ia_piso_m", v)) g_iaPiso = (float)atof(v.c_str());
     if (valorDe("cursor_bloqueo_pt", v)) g_cursorBloqueoCfg = (v == "true");
     if (valorDe("street_minutos", v)) { g_streetMinutos = atof(v.c_str()); if (g_streetMinutos < 0.5 || g_streetMinutos > 44.0) g_streetMinutos = 5.0; }
     if (valorDe("red_factor", v)) { g_redFactor = (float)atof(v.c_str()); if (g_redFactor < 0.0f || g_redFactor > 1.0f) g_redFactor = 0.85f; }
