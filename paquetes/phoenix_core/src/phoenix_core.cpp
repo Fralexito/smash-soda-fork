@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.87"
+#define PHX_CORE_VERSION "0.4.88"
 
 namespace {
 
@@ -2114,6 +2114,38 @@ bool iaChicaInstalar(Feature& f) {
 }
 bool iaChicaQuitar(Feature&) { g_iaChicaOn = 0; if (g_hiloIaChica) { WaitForSingleObject(g_hiloIaChica, 2000); CloseHandle(g_hiloIaChica); g_hiloIaChica = nullptr; } return true; }
 
+// --- stats_sonda (0.4.88, frente Q): SOLO LECTURA. Bloque de stats vivo del jugador i (0..21) = *(raiz+(i+0xF3)*0x28)+0x70 (bytes 40..99; k19..44 habilidades, +0x40 u64 de trucos, +0x48 u32 estilo).
+// Con TrainingWork anota, cada 10 s (max 6 rondas por sesion), los 22 jugadores para calibrar el mapa k->nombre antes de escribir nada (street_stats).
+volatile LONG g_statsSondaOn = 0; HANDLE g_hiloStatsSonda = nullptr;
+DWORD WINAPI hiloStatsSonda(LPVOID) {
+    int rondas = 0; ULONGLONG t0 = 0;
+    while (g_statsSondaOn) {
+        Sleep(500);
+        if (rondas >= 6 || !trainingWorkEstable()) continue;
+        ULONGLONG ah = GetTickCount64(); if (ah - t0 < 10000) continue;
+        uint8_t* raiz = nullptr; if (!leerSeguro(g_globalPartido, &raiz, 8) || !raiz) continue;
+        int ok = 0; char buf[400];
+        for (int i = 0; i < 22; i++) {
+            uint8_t* pj = nullptr; uint8_t* B = nullptr; uint8_t k[0x50];
+            if (!leerSeguro(raiz + (size_t)(i + 0xF3) * 0x28, &pj, 8) || !pj) continue;
+            B = pj + 0x70; if (!leerSeguro(B, k, 0x50)) continue;
+            uint64_t sk = 0; uint32_t est = 0; memcpy(&sk, k + 0x40, 8); memcpy(&est, k + 0x48, 4);
+            int n = sprintf_s(buf, "[STATS_SONDA] r%d j%02d B=%p k19-44:", rondas, i, (void*)B);
+            for (int q = 19; q <= 44 && n < (int)sizeof(buf) - 8; q++) n += sprintf_s(buf + n, sizeof(buf) - n, " %u", (unsigned)k[q]);
+            sprintf_s(buf + n, sizeof(buf) - n, " | trucos=%llX estilo=%X", (unsigned long long)sk, est);
+            logf("%s", buf); ok++;
+        }
+        if (ok) { rondas++; t0 = ah; } else t0 = ah - 5000;
+    }
+    return 0;
+}
+bool statsSondaInstalar(Feature& f) {
+    if (!g_globalPartido && !resolverGlobalPartido(f.id)) { f.estado = "sin firma del global del partido"; return false; }
+    g_statsSondaOn = 1; g_hiloStatsSonda = CreateThread(nullptr, 0, hiloStatsSonda, nullptr, 0, nullptr);
+    if (!g_hiloStatsSonda) { g_statsSondaOn = 0; f.estado = "no se pudo crear el hilo"; return false; }
+    f.estado = "ok: solo lectura, anota las stats de los 22 jugadores (6 rondas por partido)"; return true;
+}
+bool statsSondaQuitar(Feature&) { g_statsSondaOn = 0; if (g_hiloStatsSonda) { WaitForSingleObject(g_hiloStatsSonda, 2000); CloseHandle(g_hiloStatsSonda); g_hiloStatsSonda = nullptr; } return true; }
 bool celChicaQuitar(Feature&) {
     g_celChicaOn = 0; g_demoAreaOn = 0;
     if (g_hiloDemoArea) { WaitForSingleObject(g_hiloDemoArea, 2000); CloseHandle(g_hiloDemoArea); g_hiloDemoArea = nullptr; }
@@ -2685,6 +2717,7 @@ std::vector<Feature> g_funciones = {   // orden = orden de arranque (gol_nativo_
     { "arquero_rama_normal", "El portero usa siempre la rama normal de posición base (team+0x255 forzado a la normal) en el entrenamiento", ramaNormalInstalar, ramaNormalQuitar },
     { "arquero_pase_corto", "El pase corto del portero de la IA va al compañero disponible más cercano (no al primero que cumple los filtros)", paseCortoInstalar, paseCortoQuitar },
     { "ia_sonda", "Solo lectura: anota los datos de IA de campo (cobertura, defensa, marca, base, apoyo) para escalarlos a la minicancha", iaSondaInstalar, iaSondaQuitar },
+    { "stats_sonda", "Solo lectura: anota en el log las stats de los 22 jugadores (calibrar el mapa de habilidades; apagado por defecto)", statsSondaInstalar, statsSondaQuitar },
     { "ia_cancha_chica", "La IA de campo usa distancias de cobertura, defensa, marca, apoyo y pase escaladas a la minicancha (con restauracion al salir; sin porteros)", iaChicaInstalar, iaChicaQuitar },
     { "street_dos_tiempos", "Medio tiempo a 45:00 y final a 90:00 propios del entrenamiento (lee el reloj de pantalla; v1: pausa + aviso)", dosTiemposInstalar, dosTiemposQuitar },
     { "sin_fin_tiempo_free", "El Juez no pita el fin de tiempo (medio tiempo/final) en el entrenamiento libre", sinFinTiempoInstalar, sinFinTiempoQuitar },
