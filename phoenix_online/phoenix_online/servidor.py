@@ -61,6 +61,8 @@ async def atender(srv, codec, svrtype, carpeta, reader, writer):
                 cap.anotar("rx", secuencia, msg)
                 await srv.recibir(sesion, secuencia, msg)
             await writer.drain()
+            if sesion.cerrar_tras_responder:
+                break
     except (ConnectionError, asyncio.IncompleteReadError):
         pass
     except Exception:

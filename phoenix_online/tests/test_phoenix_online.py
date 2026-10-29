@@ -112,6 +112,12 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         await self.srv.recibir(s, 1, {"msgid": "CMD_JOIN_OFFLINE_MODE", "rqid": 5})
         self.assertEqual(env[-1][1], {"msgid": "CMD_JOIN_OFFLINE_MODE", "rqid": 5, "result": "NOERR"})
 
+    async def test_disconnect_mov(self):
+        s, env = cliente(self.srv)
+        await self.srv.recibir(s, 3, {"msgid": "CMD_DISCONNECT", "rqid": 4, "logoutstat": "MOV"})
+        self.assertEqual(env[-1][1]["result"], "NOERR")
+        self.assertTrue(s.cerrar_tras_responder)
+
     async def test_vinculo_exigido(self):
         self.srv.datos.vinculos = {"aa": {}}
         s, env = cliente(self.srv)

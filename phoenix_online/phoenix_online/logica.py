@@ -53,6 +53,7 @@ class Sesion:
         self.versiones = {}
         self.entry = False
         self.lang = None
+        self.cerrar_tras_responder = False
 
     def enviar(self, mensaje):
         self._enviar_trama(self.secuencia, mensaje)
@@ -195,6 +196,13 @@ class Servidor:
 
     async def c_cmd_get_server_env(self, s, m):
         return {"proto_opt": 1 if self.cfg.get("turn") else 0}
+
+    async def c_cmd_disconnect(self, s, m):
+        # Tras CMD_GET_SVRLIST el cliente manda CMD_DISCONNECT {logoutstat: "MOV"} y salta al
+        # servidor MENU de la lista (P: informe público de PESBUL; confirmar en la captura)
+        log.info("CMD_DISCONNECT logoutstat=%s (%s)", m.get("logoutstat"), s.svrtype)
+        s.cerrar_tras_responder = True
+        return {}
 
     # ---------- Inicio de sesión (§11.4) ----------
     async def c_cmd_login(self, s, m):

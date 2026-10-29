@@ -9,7 +9,7 @@ Servidor para que PES 2021 (Steam 1.07.02) juegue online con cuentas Phoenix. Es
 - Lobby y salas del amistoso 1v1: crear, unirse con el orden de empujes que evita UQOW_0006, «Empezar» (SETENV a GAME), resultado de los dos lados y salida.
 - TURN con credenciales REST de coturn. El secreto se lee de la variable `PHOENIX_TURN_SECRETO` y nunca va en archivos.
 - Registro JSONL de cada sesión en `capturas/`.
-- 14 pruebas: `python -m unittest -v tests.test_phoenix_online`.
+- 15 pruebas: `python -m unittest -v tests.test_phoenix_online`.
 
 ## Qué falta (marcado «P» en el código)
 1. ✓ Clave real extraída (28-oct, SHA-256 coincide) en `D:\Frank\IA\CLAUDE\pes-online\nclmio_key.bin`; Blowfish con palabras little-endian (`blowfish_le: true`), XOR desde el byte 0 y MD5 sobre cabecera 8 B + cifrado: los tres CONFIRMADOS y ya así en el código.
