@@ -10,6 +10,7 @@ import { accion, confirmar, avisar, irA } from "../tienda.js";
 import { Tarjeta, Titulo, Boton, Interruptor, Campo, Avatar, Chip, Icono, Vacio, colorPing, cx, dos, Esqueleto } from "../ui.js";
 import { CampoEnVivo } from "./campo.js";
 import { ejecutarRotacionRey, obtenerConfigRey } from "./reydelapista.js";
+import { FichaPartidoModal } from "./reportepartido.js";
 
 export const PESTANAS_PARTIDO = [
   { id: "vivo", es: "MARCADOR Y CAMPO", en: "SCORE & PITCH", d: ["Arma los dos lados, lleva el marcador y el reloj y mira el campo 2D en vivo, todo en una sola vista. Al terminar se guarda y se avisa en el chat y la web.", "Set up sides, keep score and time and watch the live 2D pitch, all in one view."] },
@@ -463,35 +464,43 @@ async function revancha(m, r, cruzar) {
 /** La tarjeta del último resultado con REVANCHA y CAMBIAR LADOS. compacto = una línea (INICIO). */
 export function TarjetaResultado({ m, r, compacto = false }) {
   if (!r) return null;
+  const [verFicha, setVerFicha] = useState(false);
   const gana = r.ganador === "empate" ? t("Empate", "Draw") : t(`Ganó ${r.ganador === "a" ? r.a.nombre : r.b.nombre}`, `${r.ganador === "a" ? r.a.nombre : r.b.nombre} won`);
   const puedeJugar = !!m.sala?.abierta;
   const botones = html`<div style="display:flex;gap:8px;flex-wrap:wrap">
     <${Boton} tipo=${compacto ? "mini lleno" : "lleno"} deshabilitado=${!puedeJugar} titulo=${puedeJugar ? "" : t("Abre la sala para jugar la revancha", "Open the room to play the rematch")} al=${() => revancha(m, r, false)}><${Icono} n="rayo" t=${15}/>${t("REVANCHA", "REMATCH")}</${Boton}>
     <${Boton} tipo=${compacto ? "mini suave" : "suave"} deshabilitado=${!puedeJugar} al=${() => revancha(m, r, true)}><${Icono} n="intercambio" t=${15}/>${t("CAMBIAR LADOS", "SWITCH SIDES")}</${Boton}>
+    <${Boton} tipo=${compacto ? "mini suave" : "suave"} al=${() => setVerFicha(true)}>🌟 ${t("ACTA OFICIAL", "MATCH REPORT")}</${Boton}>
     ${compacto ? null : html`<${Boton} tipo="suave" al=${() => irA("partido", "historial")}>${t("HISTORIAL", "HISTORY")}</${Boton}>`}
   </div>`;
   if (compacto) {
-    return html`<div class="caja" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-      <span class="lab acc" style="flex:none">${r.reciente ? t("TU ÚLTIMO PARTIDO", "YOUR LAST MATCH") : t("ÚLTIMO PARTIDO", "LAST MATCH")}</span>
-      <b style="flex:1;min-width:200px">${r.a.nombre} <span class="disp acc">${r.a.goles} : ${r.b.goles}</span> ${r.b.nombre} <span class="mut" style="font-weight:400">· ${gana}</span></b>
-      ${botones}
-    </div>`;
+    return html`
+      <div class="caja" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <span class="lab acc" style="flex:none">${r.reciente ? t("TU ÚLTIMO PARTIDO", "YOUR LAST MATCH") : t("ÚLTIMO PARTIDO", "LAST MATCH")}</span>
+        <b style="flex:1;min-width:200px">${r.a.nombre} <span class="disp acc">${r.a.goles} : ${r.b.goles}</span> ${r.b.nombre} <span class="mut" style="font-weight:400">· ${gana}</span></b>
+        ${botones}
+      </div>
+      ${verFicha ? html`<${FichaPartidoModal} r=${r} alCerrar=${() => setVerFicha(false)}/>` : null}
+    `;
   }
-  return html`<${Tarjeta} vivo=${r.reciente} interior="padding:24px 28px;display:flex;flex-direction:column;gap:16px">
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
-      <span class="lab acc">${t("RESULTADO FINAL", "FULL TIME")}</span>
-      <span class="mono mut" style="font-size:12px">${fecha(r.inicioMs)} · ${duracion(r.duracionSeg)}</span>
-    </div>
-    <div class="marcador">
-      <div class="equipo a"><div class="lab" style="color:var(--acc)">${t("EQUIPO A", "TEAM A")}</div><div class="nom">${r.a.nombre}</div></div>
-      <div class="goles"><div class="num a">${r.a.goles}</div><span class="sep">:</span><div class="num b">${r.b.goles}</div></div>
-      <div class="equipo b"><div class="lab" style="color:var(--eq-b)">${t("EQUIPO B", "TEAM B")}</div><div class="nom">${r.b.nombre}</div></div>
-    </div>
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
-      <b class="disp" style="font-size:20px">${gana}</b>
-      ${botones}
-    </div>
-  </${Tarjeta}>`;
+  return html`
+    <${Tarjeta} vivo=${r.reciente} interior="padding:24px 28px;display:flex;flex-direction:column;gap:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+        <span class="lab acc">${t("RESULTADO FINAL", "FULL TIME")}</span>
+        <span class="mono mut" style="font-size:12px">${fecha(r.inicioMs)} · ${duracion(r.duracionSeg)}</span>
+      </div>
+      <div class="marcador">
+        <div class="equipo a"><div class="lab" style="color:var(--acc)">${t("EQUIPO A", "TEAM A")}</div><div class="nom">${r.a.nombre}</div></div>
+        <div class="goles"><div class="num a">${r.a.goles}</div><span class="sep">:</span><div class="num b">${r.b.goles}</div></div>
+        <div class="equipo b"><div class="lab" style="color:var(--eq-b)">${t("EQUIPO B", "TEAM B")}</div><div class="nom">${r.b.nombre}</div></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+        <b class="disp" style="font-size:20px">${gana}</b>
+        ${botones}
+      </div>
+    </${Tarjeta}>
+    ${verFicha ? html`<${FichaPartidoModal} r=${r} alCerrar=${() => setVerFicha(false)}/>` : null}
+  `;
 }
 
 // ---- Historial y tabla ------------------------------------------------------------------------
@@ -515,6 +524,7 @@ function tabla(partidos) {
 
 function Historial() {
   const [lista, setLista] = useState(null);
+  const [fichaModal, setFichaModal] = useState(null);
   useEffect(() => { accion("partido.historial", { max: 200 }, { silencioso: true }).then((r) => setLista(r?.partidos || [])); }, []);
   if (!lista) return html`<${Esqueleto} texto=${t("Cargando…", "Loading…")}/>`;
   if (lista.length === 0) return html`<${Vacio} icono="trofeo" titulo=${t("Aún no hay partidos", "No matches yet")} texto=${t("Cuando termines un partido desde «Marcador» quedará aquí con su marcador y duración.", "Finished matches show up here.")}/>`;
@@ -522,10 +532,13 @@ function Historial() {
   return html`<div class="fila partible">
     <${Tarjeta} estilo="flex:1.2;min-width:0" interior="padding:22px 24px">
       <${Titulo} texto=${t("ÚLTIMOS PARTIDOS", "LATEST MATCHES")} derecha=${html`<span class="mono mut">${lista.length}</span>`}/>
-      <div style="display:flex;flex-direction:column;gap:8px">${lista.slice(0, 80).map((r) => html`<div class="caja" key=${r.id + "-" + r.inicioMs} style="display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center">
+      <div style="display:flex;flex-direction:column;gap:8px">${lista.slice(0, 80).map((r) => html`<div class="caja" key=${r.id + "-" + r.inicioMs} style="display:grid;grid-template-columns:1fr auto 1fr auto;gap:12px;align-items:center">
         <div style=${`font-weight:${r.ganador === "a" ? 700 : 500};white-space:nowrap;overflow:hidden;text-overflow:ellipsis`}>${r.a.nombre}</div>
         <div class="disp" style="font-size:22px;font-weight:700;text-align:center">${r.a.goles} <span class="mut">:</span> ${r.b.goles}</div>
         <div style=${`text-align:right;font-weight:${r.ganador === "b" ? 700 : 500};white-space:nowrap;overflow:hidden;text-overflow:ellipsis`}>${r.b.nombre}</div>
+        <div style="display:flex;justify-content:flex-end">
+          <${Boton} tipo="mini suave" al=${() => setFichaModal(r)}>🌟 ${t("ACTA / MVP", "REPORT / MVP")}</${Boton}>
+        </div>
         <div class="mono mut" style="grid-column:1/-1;font-size:12px;display:flex;justify-content:space-between"><span>${fecha(r.inicioMs)}</span><span>${duracion(r.duracionSeg)}</span></div>
       </div>`)}</div>
     </${Tarjeta}>
@@ -538,5 +551,6 @@ function Historial() {
           <td class="mono">${x.gf - x.gc > 0 ? "+" : ""}${x.gf - x.gc}</td><td class="mono acc" style="font-weight:700">${x.pts}</td></tr>`)}</tbody></table>
       <div class="ayuda" style="margin-top:12px">${t("3 puntos por victoria y 1 por empate. Cuenta los partidos guardados en esta PC.", "3 pts per win, 1 per draw. Counts matches saved on this PC.")}</div>
     </${Tarjeta}>
+    ${fichaModal ? html`<${FichaPartidoModal} r=${fichaModal} alCerrar=${() => setFichaModal(null)}/>` : null}
   </div>`;
 }

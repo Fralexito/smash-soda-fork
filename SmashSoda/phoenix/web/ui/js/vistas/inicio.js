@@ -62,6 +62,49 @@ async function abrirCon(visibilidad) {
   return esperarA((x) => !!(x.sala?.abierta && x.sala?.enlace), 25000);
 }
 
+// Monitor y Lanzador de PES 2021 y Sider
+function MonitorJuegoLanzador({ m }) {
+  const b = m?.buzon;
+  const pesCorriendo = b?.estado === "conectado";
+  const [lanzando, setLanzando] = useState(false);
+
+  const abrirJuego = async () => {
+    if (lanzando) return;
+    setLanzando(true);
+    try {
+      await accion("juego.abrir", {}, { ok: t("Iniciando PES 2021 y Sider…", "Starting PES 2021 & Sider…") });
+    } catch {
+      irA("sync", "mipc");
+    } finally {
+      setTimeout(() => setLanzando(false), 2500);
+    }
+  };
+
+  return html`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px;background:rgba(0,0,0,0.35);border:1px solid ${pesCorriendo ? 'rgba(0,255,136,0.25)' : 'rgba(255,255,255,0.08)'};border-radius:12px;margin-bottom:14px;flex-wrap:wrap;gap:12px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class=${cx("punto", pesCorriendo ? "ok vivo" : "mut")}></span>
+        <div>
+          <div class="disp" style="font-weight:700;font-size:13px;color:#fff">${pesCorriendo ? t("PES 2021 & SIDER: EN EJECUCIÓN", "PES 2021 & SIDER: RUNNING") : t("PES 2021 & SIDER: CERRADO", "PES 2021 & SIDER: CLOSED")}</div>
+          <div class="mono mut" style="font-size:11px">${pesCorriendo ? t("Módulos Sider enlazados · Telemetría en vivo", "Sider modules linked · Live telemetry") : t("Arranca el juego para habilitar la transmisión y telemetría", "Launch the game to enable streaming and telemetry")}</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        ${!pesCorriendo ? html`
+          <${Boton} tipo="lleno" al=${abrirJuego} deshabilitado=${lanzando}>
+            ${lanzando ? t("INICIANDO…", "STARTING…") : html`▶ ${t("ARRANCAR JUEGO (SIDER + PES)", "LAUNCH GAME (SIDER + PES)")}`}
+          </${Boton}>
+        ` : html`
+          <span class="chip ok" style="font-size:11px;font-weight:700">● ${t("JUEGO LISTO", "GAME READY")}</span>
+        `}
+        <${Boton} tipo="mini suave" al=${() => irA("sync", "mipc")} title=${t("Ver rutas y configuración de PES 2021", "Check PES 2021 paths and config")}>
+          ⚙ ${t("CONFIGURACIÓN", "SETTINGS")}
+        </${Boton}>
+      </div>
+    </div>
+  `;
+}
+
 export function VistaInicio({ s }) {
   const m = s.motor;
   const { lista: semLista, resumen } = useSemaforo(m);
@@ -131,6 +174,7 @@ export function VistaInicio({ s }) {
   const vis = sala.phoenix?.visibilidad === "publica" ? t("PÚBLICA", "PUBLIC") : sala.phoenix?.visibilidad === "privada" ? t("PRIVADA", "PRIVATE") : t("AMIGOS", "FRIENDS");
 
   return html`<div class="col inicio">
+    <${MonitorJuegoLanzador} m=${m}/>
     ${enPartido ? html`
       <${Tarjeta} clase="heroe" vivo=${partido.fase === "en_juego"} interior="padding:24px 28px;display:flex;flex-direction:column;gap:16px">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
