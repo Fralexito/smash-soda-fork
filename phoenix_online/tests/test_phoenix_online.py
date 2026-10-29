@@ -136,6 +136,15 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         await r(s, 4, {"msgid": "CMD_SEND_PSID", "rqid": 4})
         self.assertEqual(env[-1][1]["result"], "NOERR")
 
+    async def test_auth_steam_http_y_perfil_creado(self):
+        r = self.srv.respuesta_http({"msgid": "CMD_AUTH_STEAM", "rqid": "4", "ticket": "ab" * 300})
+        self.assertEqual((r["msgid"], r["rqid"], r["result"]), ("CMD_AUTH_STEAM", 4, "NOERR"))
+        self.assertIsNone(self.srv.respuesta_http({}))
+        # Tras CREATE_PLAYER, GET_PLAYER_DATA debe decir has_data (si no, el cliente vuelve a crear)
+        s, env = await self.entrar("0110000100000077")
+        await self.srv.recibir(s, 9, {"msgid": "CMD_GET_PLAYER_DATA", "rqid": 9})
+        self.assertTrue(env[-1][1]["has_data"])
+
     async def test_login_account_rechaza_sin_vinculo(self):
         srv = Servidor(CFG, Datos(vinculos={}))
         s, env = cliente(srv)

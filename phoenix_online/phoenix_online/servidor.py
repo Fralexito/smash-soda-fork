@@ -76,7 +76,7 @@ async def atender(srv, codec, svrtype, carpeta, reader, writer):
 
 
 async def http(srv, reader, writer):
-    """HTTP mínimo: imágenes de anuncios y la lista TURN (petición tipo formulario)."""
+    """HTTP mínimo: imágenes de anuncios y comandos HTTP (TURN, AUTH_STEAM...)."""
     try:
         cab = await reader.readuntil(b"\r\n\r\n")
         linea, *resto = cab.decode("latin-1").split("\r\n")
@@ -84,7 +84,14 @@ async def http(srv, reader, writer):
         cabeceras = {k.lower(): v.strip() for k, _, v in (h.partition(":") for h in resto if h)}
         cuerpo = await reader.readexactly(int(cabeceras.get("content-length", 0) or 0))
         ruta_sin_query, _, query = ruta.partition("?")
-        form = {k: v[0] for k, v in urllib.parse.parse_qs(query + "&" + cuerpo.decode("latin-1")).items()}
+        if "json" in cabeceras.get("content-type", ""):
+            try:
+                form = {str(k): v for k, v in json.loads(cuerpo or b"{}").items()}
+            except (ValueError, AttributeError):
+                form = {}
+        else:
+            form = {k: v[0] for k, v in
+                    urllib.parse.parse_qs(query + "&" + cuerpo.decode("latin-1")).items()}
         log.info("HTTP %s %s %s", metodo, ruta_sin_query, sorted(form))
         # Espía: todo pedido HTTP queda completo en capturas/http.jsonl (formato aún desconocido)
         carpeta = srv.cfg.get("capturas", "capturas")
@@ -92,8 +99,10 @@ async def http(srv, reader, writer):
         with open(os.path.join(carpeta, "http.jsonl"), "a", encoding="utf-8") as f:
             f.write(json.dumps({"t": time.time(), "linea": linea, "cabeceras": cabeceras,
                                 "cuerpo": cuerpo.decode("latin-1")}, ensure_ascii=False) + "\n")
-        if form.get("msgid") == "CMD_GET_TURN_SERVER_LIST" and srv.cfg.get("turn"):
-            datos, tipo = msgpack_min.packb(srv.respuesta_turn(form)), "application/x-msgpack"
+        respuesta = srv.respuesta_http(form)
+        if respuesta is not None:
+            # P: formato de respuesta HTTP = MessagePack (como TURN); confirmar en la captura
+            datos, tipo = msgpack_min.packb(respuesta), "application/x-msgpack"
         else:
             archivo = srv.cfg.get("archivos_http", {}).get(ruta_sin_query)
             if archivo and os.path.isfile(archivo):

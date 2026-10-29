@@ -459,6 +459,28 @@ class Servidor:
                                           hashlib.sha1).digest()).decode()
         return usuario, clave
 
+    def respuesta_http(self, formulario):
+        """Comandos que el cliente manda por WinHTTP (base CommandObjectHttp, REA 29-oct).
+
+        Los nombres exactos de los campos aún no se conocen (P): se registran y se
+        buscan por varios nombres. Devuelve None si no es un comando.
+        """
+        msgid = formulario.get("msgid")
+        if not msgid:
+            return None
+        if msgid == "CMD_GET_TURN_SERVER_LIST" and self.cfg.get("turn"):
+            return self.respuesta_turn(formulario)
+        base = {"msgid": msgid, "rqid": int(formulario.get("rqid", 0) or 0), "result": NOERR}
+        if msgid == "CMD_AUTH_STEAM":
+            # Ticket = GetAuthSessionTicket en hex + SteamID64 en claro. Verificar la firma
+            # del ticket queda pendiente; hoy la identidad la garantiza el vínculo de Link.
+            resumen = {k: (f"<{len(v)} car.>" if len(str(v)) > 40 else v)
+                       for k, v in formulario.items()}
+            log.info("HTTP CMD_AUTH_STEAM %s", resumen)
+            return base
+        log.warning("comando HTTP sin manejador: %s campos=%s", msgid, sorted(formulario))
+        return base
+
     def respuesta_turn(self, formulario):
         t = self.cfg["turn"]
         pid = formulario.get("pid", "0")
