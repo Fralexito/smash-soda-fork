@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.99"
+#define PHX_CORE_VERSION "0.4.100"
 
 namespace {
 
@@ -2288,7 +2288,14 @@ static std::vector<CampoIA> campos(std::initializer_list<uint16_t> d, std::initi
 }
 volatile LONG g_iaChicaOn = 0; HANDLE g_hiloIaChica = nullptr; float g_iaE = 0.5f, g_iaEApoyo = 0.4f, g_iaPiso = 1.5f;
 static void restaurarGrupoIA(GrupoIA& g) {
-    if (g.parcheado && g.R) { bool ok = true; for (size_t i = 0; i < g.c.size() && ok; i++) ok = escribirSeguro(g.R + g.c[i].off, &g.orig[i], 4); logf("[IA_DATOS] %s (id %d): %s", g.nom, g.id, ok ? "restaurado" : "registro ya liberado: no se restaura"); }
+    // 0.4.100: SOLO se restaura si el registro sigue siendo EL NUESTRO (los campos valen exactamente lo que escribimos). Al salir del partido el juego libera/reutiliza estos bloques del montón:
+    // escribir en un bloque liberado pero aún mapeado no da excepción (escribirSeguro no lo detecta) y corrompía el montón → cierres al volver al menú (+0x3FD68B, +0x3FE920, +0x902B2).
+    if (g.parcheado && g.R) {
+        bool nuestro = g.pat.size() == g.c.size();
+        for (size_t i = 0; i < g.c.size() && nuestro; i++) { float v = 0; nuestro = leerSeguro(g.R + g.c[i].off, &v, 4) && memcmp(&v, &g.pat[i], 4) == 0; }
+        if (!nuestro) logf("[IA_DATOS] %s (id %d): el registro ya no es el escalado (liberado o recargado): NO se escribe", g.nom, g.id);
+        else { bool ok = true; for (size_t i = 0; i < g.c.size() && ok; i++) ok = escribirSeguro(g.R + g.c[i].off, &g.orig[i], 4); logf("[IA_DATOS] %s (id %d): %s", g.nom, g.id, ok ? "restaurado" : "no se pudo restaurar"); }
+    }
     g.parcheado = false; g.R = nullptr;
 }
 DWORD WINAPI hiloIaChica(LPVOID) {
@@ -2783,7 +2790,9 @@ DWORD WINAPI hiloDosTiempos(LPVOID) {
         vigilarCondiciones();
         if (g_relojVisualDato) { uint32_t nv = (g_relojVisualOn && g_segundaParte && GetTickCount64() - g_tTrainGlob < 3000) ? 45u : 0u; if (*g_relojVisualDato != nv) { *g_relojVisualDato = nv; logf("[RELOJ_VISUAL] suma de minutos del HUD = %u", nv); } }   // 0.4.94: 45 solo en el 2.º tiempo (g_segundaParte), 0 fuera
         if (!trainingWorkEstable()) {
-            if (enTW) {   // 0.4.89: al salir del entrenamiento con la fase 3 escrita a mano, se devuelve a 1 antes de que el juego destruya la escena (candidata del cierre exe+0xB7AAA al volver al menú)
+            if (enTW) {   // 0.4.100: al salir del partido se olvidan los punteros guardados (EQ de goles, EQ del HUD): el juego los libera
+                for (int i = 0; i < 2; i++) g_eqGol[i] = nullptr; for (int i = 0; i < 8; i++) g_leeStatVistos[i] = nullptr;
+                // 0.4.89: al salir del entrenamiento con la fase 3 escrita a mano, se devuelve a 1 antes de que el juego destruya la escena (candidata del cierre exe+0xB7AAA al volver al menú)
                 enTW = false;
                 if (g_descansoFase3) { uint8_t* rz = nullptr; uint8_t* Sx = nullptr; uint32_t f = 0;
                     if (leerSeguro(g_globalPartido, &rz, 8) && rz && leerSeguro(rz + 0x270, &Sx, 8) && Sx && leerSeguro(Sx + 0x1168, &f, 4) && f == 3) { uint32_t f1 = 1; memcpy(Sx + 0x1168, &f1, 4); logf("[TIEMPOS] salida del entrenamiento: fase 3 -> 1"); } }
