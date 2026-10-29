@@ -167,13 +167,22 @@ class Servidor:
     async def c_cmd_get_svrtime(self, s, m):
         return {"date": int(time.time())}  # C: entero; P: segundos Unix (el exe suma 9 h JST)
 
+    @staticmethod
+    def _texto(v):
+        # C (REA 29-oct, fns 141bd88e0/141bcdc60): el cliente lee estos campos como CADENA;
+        # un entero o bool rompe la elección de país (error 4 tras confirmar)
+        if isinstance(v, bool):
+            return "1" if v else "0"
+        return "" if v is None else str(v)
+
     async def c_cmd_get_eula_nation_list(self, s, m):
-        naciones = self.cfg["naciones"]
+        naciones = [{k: self._texto(v) for k, v in n.items()} for n in self.cfg["naciones"]]
         return {"nation_list": [Empaquetado(n) for n in naciones],
                 "nation_list_num": len(naciones)}
 
     async def c_cmd_get_eula_nation_code(self, s, m):
-        return {"nation_code": self.cfg["nacion"], "area_code": self.cfg.get("area", 0)}
+        return {"nation_code": self._texto(self.cfg["nacion"]),
+                "area_code": self._texto(self.cfg.get("area", ""))}
 
     async def c_cmd_get_svrlist(self, s, m):
         ip = self.cfg["ip_publica"]

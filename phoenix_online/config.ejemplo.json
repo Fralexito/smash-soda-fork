@@ -28,9 +28,9 @@
     "eula_myclub_version": "0", "livedata_version": "0", "eula_privacy_policy_version": "0",
     "eula_privacy_notice_version": "0", "eula_privacy_policy_california_version": "0"
   },
-  "naciones": [{"nation_code": 0, "privacy_kind": 0, "has_area": false, "name": "Peru"}],
-  "nacion": 0,
-  "area": 0,
+  "naciones": [{"nation_code": "PE", "privacy_kind": "0", "has_area": "0", "name": "Peru"}],
+  "nacion": "PE",
+  "area": "",
   "anuncios": [],
   "lobbies": [
     {"lobby_id": 1, "name": "Phoenix 1v1", "player_num": 0, "player_num_max": 200,

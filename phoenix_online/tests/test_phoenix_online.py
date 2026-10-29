@@ -165,6 +165,16 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(m["server_num"], 2)
         self.assertEqual([x.valor["svrtype"] for x in m["svrlist"]], ["ACCOUNT", "MENU"])
 
+    async def test_nacion_siempre_cadena(self):
+        self.srv.cfg = dict(CFG, naciones=[{"nation_code": 0, "has_area": False, "name": "Peru"}],
+                            nacion=0)
+        s, env = cliente(self.srv)
+        await self.srv.recibir(s, 1, {"msgid": "CMD_GET_EULA_NATION_LIST", "rqid": 1})
+        self.assertEqual(env[-1][1]["nation_list"][0].valor,
+                         {"nation_code": "0", "has_area": "0", "name": "Peru"})
+        await self.srv.recibir(s, 2, {"msgid": "CMD_GET_EULA_NATION_CODE", "rqid": 2})
+        self.assertEqual((env[-1][1]["nation_code"], env[-1][1]["area_code"]), ("0", ""))
+
     async def test_confirmacion_offline(self):
         s, env = cliente(self.srv)
         await self.srv.recibir(s, 1, {"msgid": "CMD_JOIN_OFFLINE_MODE", "rqid": 5})
