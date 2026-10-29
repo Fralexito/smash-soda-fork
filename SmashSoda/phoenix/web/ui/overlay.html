@@ -138,9 +138,43 @@
       pointer-events: none;
       transform: translateX(-50%) translateY(20px);
     }
+
+    /* Banner Caño / Huacha Callejera */
+    .banner-canno {
+      position: absolute;
+      top: 90px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: linear-gradient(90deg, #ff7300, #ff0055);
+      border: 2px solid #ffd700;
+      border-radius: 12px;
+      padding: 10px 24px;
+      box-shadow: 0 0 30px rgba(255, 115, 0, 0.8);
+      font-size: 18px;
+      font-weight: 900;
+      letter-spacing: 0.1em;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      z-index: 200;
+      animation: rebotar 0.5s ease-in-out infinite alternate;
+      transition: opacity 0.4s ease;
+    }
+
+    @keyframes rebotar {
+      from { transform: translateX(-50%) scale(1); }
+      to { transform: translateX(-50%) scale(1.08); }
+    }
   </style>
 </head>
 <body>
+
+  <!-- Banner Caño / Huacha -->
+  <div class="banner-canno oculto" id="cannoBox">
+    <span>🥜 ¡QUÉ CAÑO!</span>
+    <span style="color:#ffd700;font-size:14px">¡HUMILLACIÓN TOTAL!</span>
+  </div>
 
   <!-- Marcador HUD -->
   <div class="overlay-hud" id="hud">
@@ -173,9 +207,23 @@
   </div>
 
   <script>
+    let ultimoHuacha = 0;
     // Actualización reactiva leyendo estado compartido
     function actualizarOverlay() {
       try {
+        const rawStreet = localStorage.getItem("phoenix.street_cfg");
+        if (rawStreet) {
+          const s = JSON.parse(rawStreet);
+          if (s.totalHuachasPartido > ultimoHuacha) {
+            ultimoHuacha = s.totalHuachasPartido;
+            const cBox = document.getElementById("cannoBox");
+            if (cBox) {
+              cBox.classList.remove("oculto");
+              setTimeout(() => cBox.classList.add("oculto"), 3500);
+            }
+          }
+        }
+
         const rawPred = localStorage.getItem("phoenix.prediccion");
         if (rawPred) {
           const p = JSON.parse(rawPred);
@@ -208,3 +256,4 @@
   </script>
 </body>
 </html>
+

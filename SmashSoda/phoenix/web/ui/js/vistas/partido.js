@@ -12,6 +12,9 @@ import { CampoEnVivo } from "./campo.js";
 import { ejecutarRotacionRey, obtenerConfigRey } from "./reydelapista.js";
 import { FichaPartidoModal } from "./reportepartido.js";
 import { WidgetPredicciones, resolverPrediccion } from "./predicciones.js";
+import { sonarGol, sonarSilbato, narrar } from "./locutor.js";
+import { obtenerConfigStreet } from "./street.js";
+import { sumarProgresoRPG } from "./rpgsala.js";
 
 export const PESTANAS_PARTIDO = [
   { id: "vivo", es: "MARCADOR Y CAMPO", en: "SCORE & PITCH", d: ["Arma los dos lados, lleva el marcador y el reloj y mira el campo 2D en vivo, todo en una sola vista. Al terminar se guarda y se avisa en el chat y la web.", "Set up sides, keep score and time and watch the live 2D pitch, all in one view."] },
@@ -235,7 +238,20 @@ function Marcador({ m }) {
   const [fiesta, setFiesta] = useState(0);
   const enJuego = p.fase === "en_juego" || p.fase === "pausado";
   const gol = (lado, delta) => {
-    if (delta > 0) setFiesta((x) => x + 1);
+    if (delta > 0) {
+      setFiesta((x) => x + 1);
+      sonarGol();
+      try {
+        const stCfg = obtenerConfigStreet();
+        if (stCfg.activo && stCfg.reglaGoles > 0) {
+          const golesTot = (lado === "a" ? p.a.goles : p.b.goles) + delta;
+          if (golesTot >= stCfg.reglaGoles) {
+            narrar("¡Gol decisivo callejero! ¡Terminó el partido!");
+            sonarSilbato({ largo: true });
+          }
+        }
+      } catch (e) {}
+    }
     return accion("partido.gol", { lado, delta });
   };
   const finalizar = async () => {
@@ -244,6 +260,8 @@ function Marcador({ m }) {
     const r = await accion("partido.finalizar", { anunciar: true });
     if (r?.registro) {
       const g = r.registro.ganador;
+      sonarSilbato({ largo: true });
+      narrar(g === "empate" ? "¡Final del partido! ¡Empate vibrante!" : `¡Victoria de ${g === "a" ? p.a.nombre : p.b.nombre}!`);
       setFiesta((x) => x + 1);
       avisar(g === "empate" ? t("¡Empate!", "Draw!") : t(`¡Ganó ${g === "a" ? p.a.nombre : p.b.nombre}!`, `${g === "a" ? p.a.nombre : p.b.nombre} wins!`), "ok", 6000);
       if (!r.guardado) avisar(t("No se pudo guardar en el historial.", "Could not save to history."), "warn");
@@ -256,6 +274,12 @@ function Marcador({ m }) {
       } catch (e) {
         console.error("[predicciones] Error al resolver:", e);
       }
+      try {
+        const idsA = p.a.jugadores || [];
+        const idsB = p.b.jugadores || [];
+        for (const j of idsA) sumarProgresoRPG({ nombre: j.nombre, victoria: g === "a", goles: p.a.goles, arcoCero: p.b.goles === 0 });
+        for (const j of idsB) sumarProgresoRPG({ nombre: j.nombre, victoria: g === "b", goles: p.b.goles, arcoCero: p.a.goles === 0 });
+      } catch (e) {}
     }
   };
   const cancelar = async () => {

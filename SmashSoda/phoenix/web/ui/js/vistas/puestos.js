@@ -23,6 +23,12 @@ import { BarraReyDeLaPista } from "./reydelapista.js";
 import { ModalAtajosModerador } from "./atajos.js";
 import { BadgeConexion, AlertaLaggerSala } from "./radarconexion.js";
 import { ModalBracket } from "./bracket.js";
+import { PanelLocutorModal } from "./locutor.js";
+import { ModalVAR, lanzarRevisionVAR } from "./var.js";
+import { ModalRuletaPenitencias } from "./penitencias.js";
+import { BadgeNivelRPG } from "./rpgsala.js";
+import { ModalDraftPanYQueso } from "./draft.js";
+import { BarraModoStreet } from "./street.js";
 
 // ---- Mini-mando en vivo integrado en cada fila (Minimalismo Táctico 0.3.57) ----
 const BITS_MINI = [
@@ -165,6 +171,7 @@ function Fila({ p, m, color, arr, setArr, alAsignar, mirando, vivo }) {
         <div style="flex:1 1 110px;min-width:110px">
           <div style="font:600 16px/1.2 var(--f-body);color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.jugador}
             ${esHost ? html` <${Chip} tipo="acc">${t("TÚ", "YOU")}</${Chip}>` : null}
+            <${BadgeNivelRPG} nombre=${p.jugador}/>
             <span class=${cx("chip", p.tipo === "ds4" ? "acc2" : "mod")} style="height:20px;margin-left:6px;font-size:11px" title=${p.tipo === "ds4" ? t("Este puesto es un mando de PlayStation (DualShock 4)", "This seat is a PlayStation pad (DualShock 4)") : t("Este puesto es un mando de Xbox", "This seat is an Xbox pad")}>${p.tipo === "ds4" ? "PLAYSTATION" : "XBOX"}</span></div>
           <div class="mono mut" style="font-size:12px">
             ${esHost ? (m.mandos.miMando ? t("con tu mando · ", "with your pad · ") + m.mandos.miMando : t("con el teclado", "with the keyboard"))
@@ -371,6 +378,10 @@ export function PuestosNuevo({ m }) {
   const [ayudaAB, setAyudaAB] = useState(false);
   const [verAtajos, setVerAtajos] = useState(false);
   const [verBracket, setVerBracket] = useState(false);
+  const [verLocutor, setVerLocutor] = useState(false);
+  const [verVAR, setVerVAR] = useState(false);
+  const [verRuleta, setVerRuleta] = useState(false);
+  const [verDraft, setVerDraft] = useState(false);
   const [prefSentado, setPrefSentado] = useState(() => leerSentado());
   // Mandos en vivo: cada fila ocupada ya muestra su pastilla en vivo (~30 Hz); la rejilla grande 2D se abre si el anfitrión la despliega
   const [verVivo, setVerVivoEstado] = useState(() => { try { return localStorage.getItem("phoenix.verVivo2D") === "1"; } catch { return false; } });
@@ -647,6 +658,18 @@ export function PuestosNuevo({ m }) {
         <${Boton} tipo="mini suave" al=${() => setVerBracket(true)}
           titulo=${t("Copa Relámpago de la sala (Bracket eliminatorio con carga de mandos en 1 clic)", "Room Blitz Cup (Elimination bracket with 1-click pad loading)")}>
           🏆 ${t("COPA", "CUP")}</${Boton}>
+        <${Boton} tipo="mini suave" al=${() => setVerLocutor(true)}
+          titulo=${t("Locutor con voz IA en vivo y efectos de sonido de estadio", "AI live voice announcer & stadium SFX")}>
+          🎙️ ${t("LOCUTOR", "ANNOUNCER")}</${Boton}>
+        <${Boton} tipo="mini suave" al=${() => { lanzarRevisionVAR({ m }); setVerVAR(true); }}
+          titulo=${t("Lanzar revisión de VAR dramática con votación de 15 segundos", "Launch dramatic VAR review with 15s voting")}>
+          🚨 ${t("VAR", "VAR")}</${Boton}>
+        <${Boton} tipo="mini suave" al=${() => setVerDraft(true)}
+          titulo=${t("Modo Pan y Queso: Capitanes eligen por turnos y van a los mandos", "Street draft: Captains pick teams and sit them automatically")}>
+          🤝 ${t("DRAFT", "DRAFT")}</${Boton}>
+        <${Boton} tipo="mini suave" al=${() => setVerRuleta(true)}
+          titulo=${t("Ruleta animada de castigos para el perdedor de la partida", "Animated punishment wheel for the match loser")}>
+          🎡 ${t("CASTIGO", "PUNISHMENT")}</${Boton}>
         <${TodosAMirar} m=${m} esclavo=${esclavo}/>
       </div>
     </div>
@@ -654,6 +677,8 @@ export function PuestosNuevo({ m }) {
     <${BarraPartidoEnSala} m=${m}/>
 
     <${BarraReyDeLaPista} m=${m} esclavo=${esclavo}/>
+
+    <${BarraModoStreet} m=${m} esclavo=${esclavo}/>
 
     <${AlertaLaggerSala} m=${m}/>
 
@@ -727,6 +752,10 @@ export function PuestosNuevo({ m }) {
     ${eligiendo != null ? html`<${ElegirJugador} m=${m} indice=${eligiendo} alCerrar=${() => setEligiendo(null)}/>` : null}
     ${verAtajos ? html`<${ModalAtajosModerador} alCerrar=${() => setVerAtajos(false)}/>` : null}
     ${verBracket ? html`<${ModalBracket} m=${m} alCerrar=${() => setVerBracket(false)}/>` : null}
+    ${verLocutor ? html`<${PanelLocutorModal} alCerrar=${() => setVerLocutor(false)}/>` : null}
+    ${verVAR ? html`<${ModalVAR} m=${m} alCerrar=${() => setVerVAR(false)}/>` : null}
+    ${verRuleta ? html`<${ModalRuletaPenitencias} perdedor=${m?.sala?.ultimoPerdedor || "Perdedor"} m=${m} alCerrar=${() => setVerRuleta(false)}/>` : null}
+    ${verDraft ? html`<${ModalDraftPanYQueso} m=${m} alCerrar=${() => setVerDraft(false)}/>` : null}
   </div>`;
 }
 
