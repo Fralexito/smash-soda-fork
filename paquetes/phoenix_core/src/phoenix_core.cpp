@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.97"
+#define PHX_CORE_VERSION "0.4.98"
 
 namespace {
 
@@ -1816,7 +1816,7 @@ bool murosQuitar(Feature&) { g_murosOn = 0; return true; }
 // --- goles_sonda (0.4.95, frente R/revancha 0-0): SOLO LOG. Gancho en FUN_1408C9E90+9 (RVA 0x8C9E99; tras «cmp edx,3E; ja»): rcx = EQ_i (bloque del equipo), edx = 0, r8d = categoría c, r9d = delta.
 // Anota los punteros reales para saber dónde están los contadores: EQ_i = rcx, M = rcx-0x750D0 (equipo 0) o rcx-0x750D0-0x59650 (equipo 1); CAT_c = rcx+0x59530+c*0x20. No escribe nada.
 typedef uint64_t(__fastcall* GolCatFn)(void*, uint32_t, uint32_t, uint32_t);
-GolCatFn g_golCatOrig = nullptr; volatile LONG g_golCatN = 0; uint8_t* volatile g_eqGol[2] = { nullptr, nullptr }; bool g_golesReinicio = false;   // json «goles_reinicio»
+GolCatFn g_golCatOrig = nullptr; volatile LONG g_golCatN = 0; uint8_t* volatile g_eqGol[2] = { nullptr, nullptr }; bool g_golesReinicio = false; void* volatile g_leeStatVistos[8] = {};   // 0.4.98: EQ que lee el HUD/lógica (suma de equipo): también se reinician   // json «goles_reinicio»
 // 0.4.96: pone a 0 los contadores de goles (CAT_0..8 de cada EQ capturado) con el esquema protegido del juego. Se llama desde el hilo del partido (ayudanteSaque), sin carrera con el comprobador.
 // Seguridad: solo escribe si el hash actual del contador valida (memoria correcta); si no, no toca nada.
 static bool catValido(const uint8_t* c, uint32_t* cnt, uint32_t* idx) {
@@ -1841,11 +1841,14 @@ static int sumaEqGol(const uint8_t* eq) {   // 0.4.97: suma de CAT_0..7 de un EQ
 }
 static int golesReiniciar() {
     int hechos = 0;
-    for (int t = 0; t < 2; t++) {
-        uint8_t* eq = g_eqGol[t]; if (!eq) continue;
+    uint8_t* lista[10]; int nl = 0;
+    for (int t = 0; t < 2; t++) if (g_eqGol[t]) lista[nl++] = g_eqGol[t];
+    for (int i = 0; i < 8; i++) { uint8_t* e = (uint8_t*)g_leeStatVistos[i]; if (!e) continue; bool ya = false; for (int j = 0; j < nl; j++) if (lista[j] == e) ya = true; if (!ya && nl < 10) lista[nl++] = e; }
+    for (int t = 0; t < nl; t++) {
+        uint8_t* eq = lista[t];
         uint32_t cnt[9], idx[9]; bool ok = true;
         for (int c = 0; c < 9 && ok; c++) ok = catValido(eq + 0x59530 + (size_t)c * 0x20, &cnt[c], &idx[c]);
-        if (!ok) { logf("[GOLES] reinicio: EQ%d=%p no valida (hash): no se toca", t, (void*)eq); continue; }
+        if (!ok) { logf("[GOLES] reinicio: EQ#%d=%p no valida (hash): no se toca", t, (void*)eq); continue; }
         for (int c = 0; c < 9; c++) {
             uint8_t* cat = eq + 0x59530 + (size_t)c * 0x20; uint32_t cc3 = cnt[c] * 3, nu = 0;
             for (int k = 0; k < 4; k++) { uint8_t cc = (uint8_t)((cc3 + 4 * k) >> (8 * k)); nu |= (uint32_t)(uint8_t)(cc * 0x3E) << (8 * k); }
@@ -1853,7 +1856,7 @@ static int golesReiniciar() {
             if (escribirSeguro(cat + 0x10 + (idx[c] & 3) * 4, &nu, 4) && escribirSeguro(cat, &h0, 8)) hechos++;
         }
     }
-    logf("[GOLES] reinicio: %d contadores a 0 (EQ0=%p EQ1=%p)", hechos, (void*)g_eqGol[0], (void*)g_eqGol[1]);
+    logf("[GOLES] reinicio: %d contadores a 0 en %d bloques EQ (gancho goles: %p %p)", hechos, nl, (void*)g_eqGol[0], (void*)g_eqGol[1]);
     return hechos;
 }
 uint64_t __fastcall ganchoGolCat(void* rcx, uint32_t edx, uint32_t r8d, uint32_t r9d) {
@@ -1864,7 +1867,7 @@ uint64_t __fastcall ganchoGolCat(void* rcx, uint32_t edx, uint32_t r8d, uint32_t
 }
 // 0.4.97: gancho de LOG en FUN_1408C8FC0 (lector de estadísticas; el HUD llama FUN_1408C9DF0(EQ,5) = FUN_1408C8FC0(EQ,0,5)). Anota los EQ que de verdad lee el HUD y si son los mismos que captura el gancho de goles.
 typedef uint64_t(__fastcall* LeeStatFn)(void*, uint32_t, uint32_t);
-LeeStatFn g_leeStatOrig = nullptr; volatile LONG g_leeStatN = 0; void* volatile g_leeStatVistos[8] = {};
+LeeStatFn g_leeStatOrig = nullptr; volatile LONG g_leeStatN = 0;
 uint64_t __fastcall ganchoLeeStat(void* rcx, uint32_t edx, uint32_t r8d) {
     uint64_t r = g_leeStatOrig(rcx, edx, r8d);
     if (edx == 0 && r8d == 5) {
