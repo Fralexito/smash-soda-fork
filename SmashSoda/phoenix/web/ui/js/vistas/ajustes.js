@@ -254,7 +254,6 @@ function InterfazYOverlay({ m, info }) {
     </div>
   </div>`;
 }
-}
 
 // ---- Sonidos (!sfx) ---------------------------------------------------------------------------
 function Sonidos({ m }) {
