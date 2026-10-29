@@ -204,9 +204,27 @@ class Servidor:
         s.cerrar_tras_responder = True
         return {}
 
-    # ---------- Inicio de sesión (§11.4) ----------
-    async def c_cmd_login(self, s, m):
-        steam_hex = str(m.get("username", "")).lower()
+    # ---------- Inicio de sesión (§11.4 + REA 29-oct, guía §14) ----------
+    # Orden real del cliente (OnlineLoginTaskConnectAccount): CMD_AUTH_STEAM ->
+    # CMD_GET_CHALLENGECODE -> CMD_LOGIN_ACCOUNT -> CMD_SEND_PSID -> CMD_GET_PLAYER_DATA.
+    # Los campos de la petición de AUTH_STEAM aún no se conocen (P): se registran todos.
+    CAMPOS_STEAM = ("np_account_id", "username", "steam_id", "steamid", "account_id")
+
+    @classmethod
+    def _steam_de(cls, m):
+        """SteamID del mensaje en hex de 16 cifras, o None si no viene."""
+        for k in cls.CAMPOS_STEAM:
+            v = m.get(k)
+            if isinstance(v, int) and v > 0:
+                return format(v, "016x")
+            if isinstance(v, bytes) and len(v) == 8:
+                return v.hex()
+            if isinstance(v, str) and v:
+                return v.lower()
+        return None
+
+    def _entrar(self, s, m):
+        steam_hex = self._steam_de(m) or s.steam_hex or ""
         if not self.datos.autorizado(steam_hex):
             log.info("login rechazado (sin cuenta Phoenix vinculada): %s", steam_hex)
             return {"result": "ERR_LOGIN_FAILED"}  # C: texto de error del exe
@@ -214,6 +232,24 @@ class Servidor:
         s.versiones = {k: m.get(k) for k in ("patch_version", "dlc_version",
                                               "livedata_version", "extradata_version")}
         return {}
+
+    async def c_cmd_auth_steam(self, s, m):
+        # El ticket es un EncryptedAppTicket (P): solo lo abre la clave de Konami, así que no
+        # sirve para verificar. La identidad real la garantiza el vínculo de Phoenix Link.
+        log.info("CMD_AUTH_STEAM campos=%s", sorted(m))
+        s.steam_hex = self._steam_de(m) or s.steam_hex
+        return {}
+
+    async def c_cmd_get_challengecode(self, s, m):
+        return {"challenge_code": base64.b16encode(hashlib.sha256(
+            f"{id(s)}{time.time()}".encode()).digest()[:8]).decode()}
+
+    async def c_cmd_login_account(self, s, m):
+        log.info("CMD_LOGIN_ACCOUNT campos=%s", sorted(m))
+        return self._entrar(s, m)
+
+    async def c_cmd_login(self, s, m):
+        return self._entrar(s, m)
 
     async def c_cmd_get_player_data(self, s, m):
         j = self.datos.jugador(s.steam_hex or "")

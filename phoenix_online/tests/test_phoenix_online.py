@@ -123,6 +123,25 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.assertEqual((seq, m["rqid"], m["result"], m["url_num"]), (42, 9, "NOERR", 3))
         self.assertTrue(all(isinstance(x, Empaquetado) for x in m["ulist"]))
 
+    async def test_login_real_steam_challenge_account(self):
+        s, env = cliente(self.srv)
+        r = self.srv.recibir
+        await r(s, 1, {"msgid": "CMD_AUTH_STEAM", "rqid": 1, "ticket": b"x" * 16})
+        self.assertEqual(env[-1][1]["result"], "NOERR")
+        await r(s, 2, {"msgid": "CMD_GET_CHALLENGECODE", "rqid": 2})
+        self.assertTrue(env[-1][1]["challenge_code"])
+        await r(s, 3, {"msgid": "CMD_LOGIN_ACCOUNT", "rqid": 3, "np_account_id": 0x0110000100000000})
+        self.assertEqual(env[-1][1]["result"], "NOERR")
+        self.assertEqual(s.steam_hex, "0110000100000000")
+        await r(s, 4, {"msgid": "CMD_SEND_PSID", "rqid": 4})
+        self.assertEqual(env[-1][1]["result"], "NOERR")
+
+    async def test_login_account_rechaza_sin_vinculo(self):
+        srv = Servidor(CFG, Datos(vinculos={}))
+        s, env = cliente(srv)
+        await srv.recibir(s, 1, {"msgid": "CMD_LOGIN_ACCOUNT", "rqid": 1, "np_account_id": 5})
+        self.assertEqual(env[-1][1]["result"], "ERR_LOGIN_FAILED")
+
     async def test_confirmacion_offline(self):
         s, env = cliente(self.srv)
         await self.srv.recibir(s, 1, {"msgid": "CMD_JOIN_OFFLINE_MODE", "rqid": 5})
