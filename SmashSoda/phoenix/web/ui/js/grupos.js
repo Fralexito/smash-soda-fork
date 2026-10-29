@@ -20,21 +20,14 @@ export const GRUPOS = [
   { id: "sala", es: "SALA", en: "ROOM", icono: "sala",
     d: ["Tu sala: abrirla, el enlace, la transmisión, la gente (con moderación y permisos) y las opciones.", "Your room: open it, the link, the stream, the people (with moderation and permissions) and the options."],
     pestanas: [
-      { p: ["sala", "resumen"], es: "RESUMEN", en: "OVERVIEW" },
-      { p: ["sala", "transmision"], es: "TRANSMISIÓN", en: "STREAM" },
-      { p: ["gente", "sala"], es: "GENTE", en: "PEOPLE" },
-      { p: ["gente", "moderacion"], es: "MODERACIÓN", en: "MODERATION", mas: true },   // plan UX: junto a la gente
-      { p: ["gente", "permisos"], es: "PERMISOS", en: "PERMISSIONS", mas: true },
-      { p: ["sala", "opciones"], es: "OPCIONES", en: "OPTIONS" },
-      { p: ["sala", "red"], es: "CONEXIÓN", en: "CONNECTION" },   // plan UX: lo que se usa al jugar no va tras «MÁS»
-      { p: ["sala", "juegos"], es: "JUEGOS", en: "GAMES" },
-      { p: ["sala", "actividad"], es: "ACTIVIDAD", en: "ACTIVITY", mas: true },
+      { p: ["sala", "resumen"], es: "PANEL DE SALA", en: "ROOM DASHBOARD" },
+      { p: ["sala", "gente"], es: "INVITADOS Y ROLES", en: "GUESTS & ROLES" },
+      { p: ["sala", "transmision"], es: "RED Y TRANSMISIÓN", en: "STREAM & NETWORK" },
     ] },
   { id: "partido", es: "PARTIDO", en: "MATCH", icono: "partido",
     d: ["El partido: marcador, equipos y lados, campo en vivo e historial.", "The match: score, teams and sides, live pitch and history."],
     pestanas: [
-      { p: ["partido", "vivo"], es: "MARCADOR", en: "SCORE" },
-      { p: ["partido", "vivo"], es: "CAMPO 2D", en: "2D PITCH" },
+      { p: ["partido", "vivo"], es: "MARCADOR Y CAMPO", en: "SCORE & PITCH" },
       { p: ["partido", "historial"], es: "HISTORIAL", en: "HISTORY" },
     ] },
   { id: "mandos", es: "MANDOS", en: "PADS", icono: "mandos",
@@ -66,11 +59,8 @@ export const GRUPOS = [
   { id: "ajustes", es: "AJUSTES", en: "SETTINGS", icono: "ajustes",
     d: ["Todo lo demás: lo fundamental (idioma, tema, sentado automático), overlay, sonidos del chat e interfaz.", "Everything else: the basics (language, theme, auto-seat), overlay, chat sounds and interface."],
     pestanas: [
-      { p: ["ajustes", "general"], es: "GENERAL", en: "GENERAL" },
-      { p: ["ajustes", "overlay"], es: "OVERLAY", en: "OVERLAY" },
-      { p: ["ajustes", "sonidos"], es: "SONIDOS CHAT", en: "CHAT SOUNDS" },
-      { p: ["ajustes", "interfaz"], es: "INTERFAZ", en: "INTERFACE" },
-      { p: ["ajustes", "avanzado"], es: "AVANZADO", en: "ADVANCED", mas: true },
+      { p: ["ajustes", "general"], es: "GENERAL Y SISTEMA", en: "GENERAL & SYSTEM" },
+      { p: ["ajustes", "overlay"], es: "INTERFAZ Y OVERLAY", en: "INTERFACE & OVERLAY" },
     ] },
 ];
 
