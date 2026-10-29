@@ -99,3 +99,11 @@ También: `pes_log` lee 7 registros, `pes_captura` saca series y `pes_memoria_le
 **Errores de esta ronda:**
 1. La copia de `servidor.mjs` en la PC tenía un arreglo local (los `eventos` de la sonda a veces llegan como objeto, no como lista). Se integró en la 0.2 con `comoLista`.
 2. La firma genérica con `max` 5 no llega a exe+0x149A470 (hay muchas antes). Lección: usar los bytes exactos o una firma con más contexto.
+
+## 9. Foto con PES al fondo: Windows Graphics Capture (29-oct)
+- `captura_wgc.cs` es un módulo aparte que usa la API de captura de Windows 10 1903+ (viene con Windows y no se descarga nada). `ayudante.ps1` lo compila la primera vez que lo necesita (`captura_wgc-<firma>.dll`) y lo usa **solo cuando PES no está al frente**. Si falla, vuelve a PrintWindow y lo avisa. Con PES minimizado no hay imagen.
+- Errores en orden (PC de Frank, Windows 11 26100):
+  1. `Add-Type -ReferencedAssemblies WinMetadata\*.winmd` → `FileLoadException 0x80131047` con `Windows.AI.winmd`. Add-Type intenta cargar los .winmd como ensamblados. **Arreglo:** compilar con `csc.exe` de .NET Framework, que sí acepta .winmd, y solo con `Windows.Foundation`, `Windows.Graphics` y `Windows.Storage`.
+  2. `AsTask()` y `IBuffer.ToArray()` (de System.Runtime.WindowsRuntime) piden el ensamblado «Windows» 255.255.255.255, el Windows.winmd de todo en uno, que Windows 11 ya no trae. **Arreglo:** esperar la operación mirando `Status` y `GetResults()`, y leer los bytes con la interfaz COM `IBufferByteAccess`.
+  3. Tercera prueba: compila (código 0) y `GraphicsCaptureSession.IsSupported()` = True.
+- Falta: la foto real con PES detrás de otra ventana (se hará cuando PES esté libre). En Windows 10 sale un borde amarillo alrededor de PES mientras dura la foto; en Windows 11 también puede salir.

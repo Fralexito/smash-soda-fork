@@ -402,7 +402,7 @@ const TOOLS = [
   },
   {
     name: 'pes_captura',
-    description: 'Foto SOLO de la ventana de PES (no del resto de la pantalla). Con «veces» saca una serie (para ver una animación o un cambio). Devuelve las imágenes.',
+    description: 'Foto SOLO de la ventana de PES (no del resto de la pantalla). Con PES al frente copia la pantalla; con PES detrás de otras ventanas usa la captura de Windows (Windows Graphics Capture, sin traerlo al frente); minimizado no hay foto (el juego no dibuja). Con «veces» saca una serie (para ver una animación o un cambio). Devuelve las imágenes.',
     inputSchema: { type: 'object', properties: { ancho: { type: 'number', description: 'ancho máximo en píxeles (por defecto 1280)' }, veces: { type: 'number', description: '1–6 fotos seguidas (por defecto 1)' }, intervalo_ms: { type: 'number', description: 'pausa entre fotos (por defecto 500)' } } },
     async run({ ancho = 1280, veces = 1, intervalo_ms = 500 } = {}) {
       const dir = mkdtempSync(join(tmpdir(), 'pesmcp-'));

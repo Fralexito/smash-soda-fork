@@ -13,6 +13,7 @@
 #    escribir -Expr "<expr>" -Hex "90 90" -Esperado "74 05"
 #                                    -> escribe SOLO si lo que hay ahora es -Esperado (lo decide servidor.mjs)
 #    captura -Salida <png> [-Ancho 1280] [-Veces 1] [-Intervalo 500]  -> foto(s) SOLO de la ventana de PES
+#             al frente: copia de la pantalla · al fondo: Windows Graphics Capture (captura_wgc.cs) · si no, PrintWindow
 #    tecla  -Teclas "Enter" | "Shift+R" [-Veces N]  -> pulsa teclas en la ventana de PES (SendInput)
 #  Todas las lecturas abren el proceso solo con permiso de LEER (PROCESS_VM_READ | QUERY_INFORMATION).
 #  Solo «escribir» lo abre con permiso de escribir, y servidor.mjs solo la llama si config.json lo permite.
@@ -208,6 +209,31 @@ Add-Type -Path $dll
 Add-Type -AssemblyName System.Drawing
 
 function Json($o) { $o | ConvertTo-Json -Depth 6 -Compress }
+# Windows Graphics Capture (captura_wgc.cs): se compila la primera vez que hace falta, aparte del ayudante,
+# para que si este Windows no la soporta el resto siga funcionando.
+function Cargar-Wgc {
+    if ('PhxWgc' -as [type]) { return }
+    $cs = Join-Path $PSScriptRoot 'captura_wgc.cs'
+    if (-not (Test-Path $cs)) { throw 'falta captura_wgc.cs' }
+    $src = Get-Content $cs -Raw
+    $hw = [BitConverter]::ToString([Security.Cryptography.SHA256]::Create().ComputeHash([Text.Encoding]::UTF8.GetBytes($src))).Replace('-', '').Substring(0, 12)
+    $dllW = Join-Path $PSScriptRoot "captura_wgc-$hw.dll"
+    if (-not (Test-Path $dllW)) {
+        # Add-Type no acepta los .winmd como referencia (intenta cargarlos y falla: probado el 29-oct en Windows 11).
+        # El compilador csc.exe de .NET Framework sí, así que se compila con él y solo con los .winmd necesarios.
+        $fw = [Runtime.InteropServices.RuntimeEnvironment]::GetRuntimeDirectory()
+        $wm = "$env:SystemRoot\System32\WinMetadata"
+        $refs = @(@('Windows.Foundation.winmd', 'Windows.Graphics.winmd', 'Windows.Storage.winmd') | ForEach-Object { Join-Path $wm $_ } | Where-Object { Test-Path $_ })
+        if ($refs.Count -lt 3) { $refs = @(Get-ChildItem "$wm\*.winmd" | ForEach-Object FullName) }  # Windows antiguo: un solo Windows.winmd
+        $refs += @('System.Runtime.WindowsRuntime.dll', 'System.Runtime.dll', 'System.Runtime.InteropServices.WindowsRuntime.dll', 'System.Threading.Tasks.dll', 'System.Drawing.dll') | ForEach-Object { Join-Path $fw $_ } | Where-Object { Test-Path $_ }
+        $salidaCsc = & (Join-Path $fw 'csc.exe') /nologo /target:library /optimize "/out:$dllW" ($refs | ForEach-Object { "/r:$_" }) $cs 2>&1
+        if ($LASTEXITCODE -ne 0 -or -not (Test-Path $dllW)) {
+            $t = (($salidaCsc | Out-String) -replace '\s+', ' ').Trim(); if ($t.Length -gt 600) { $t = $t.Substring(0, 600) }
+            throw "no compiló la captura de Windows: $t"
+        }
+    }
+    Add-Type -Path $dllW
+}
 function Hex2Bytes([string]$h) {
     $h = $h -replace '\s', ''
     if ($h.Length % 2 -ne 0 -or $h -notmatch '^[0-9a-fA-F]*$') { throw "hex no válido: $h" }
@@ -325,10 +351,16 @@ switch ($Accion) {
             if ([PhxPes]::GetForegroundWindow() -eq $h) {
                 $g.ReleaseHdc($dc); $g.CopyFromScreen($r.L, $r.T, 0, 0, $bmp.Size); $metodo = 'pantalla'
             } else {
-                [void][PhxPes]::PrintWindow($h, $dc, 2); $g.ReleaseHdc($dc); $metodo = 'PrintWindow'
-                $aviso = 'PES no está al frente: la imagen puede ser vieja. Con las acciones encendidas, una tecla inofensiva lo trae al frente.'
+                # Al fondo: primero Windows Graphics Capture (lo último que el juego dibujó); si falla, PrintWindow.
+                $g.ReleaseHdc($dc); $wgc = $null; $errWgc = $null
+                try { Cargar-Wgc; $wgc = [PhxWgc]::Capturar($h, 2500) } catch { $errWgc = $_.Exception.InnerException; if (-not $errWgc) { $errWgc = $_.Exception }; $errWgc = $errWgc.Message }
+                if ($wgc) { $viejo = $bmp; $bmp = $wgc; $w = $bmp.Width; $al = $bmp.Height; $metodo = 'wgc' }
+                else {
+                    $dc = $g.GetHdc(); [void][PhxPes]::PrintWindow($h, $dc, 2); $g.ReleaseHdc($dc); $metodo = 'PrintWindow'
+                    $aviso = "PES no está al frente y la captura de Windows falló ($errWgc): la imagen puede ser vieja."
+                }
             }
-            $g.Dispose()
+            $g.Dispose(); if ($viejo) { $viejo.Dispose(); $viejo = $null }
             if ($Ancho -gt 0 -and $w -gt $Ancho) {
                 $alto2 = [int]($al * $Ancho / $w)
                 $chica = New-Object System.Drawing.Bitmap $Ancho, $alto2
