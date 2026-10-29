@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.96"
+#define PHX_CORE_VERSION "0.4.97"
 
 namespace {
 
@@ -1827,6 +1827,18 @@ static bool catValido(const uint8_t* c, uint32_t* cnt, uint32_t* idx) {
     uint64_t h = 0xcbf29ce484222325ULL; for (int k = 0; k < 4; k++) { h ^= b[k]; h *= 0x100000001b3ULL; }
     return h == hash;
 }
+static int sumaEqGol(const uint8_t* eq) {   // 0.4.97: suma de CAT_0..7 de un EQ capturado (-1 si el hash no valida); sirve para ver si el marcador nativo sigue en 0 tras el reinicio
+    if (!eq) return -2; int suma = 0;
+    for (int c = 0; c < 8; c++) {
+        uint8_t r[0x20]; if (!leerSeguro(eq + 0x59530 + (size_t)c * 0x20, r, 0x20)) return -1;
+        uint64_t hash; uint32_t cnt, idx, slot[4]; memcpy(&hash, r, 8); memcpy(&cnt, r + 8, 4); memcpy(&idx, r + 0xC, 4); memcpy(slot, r + 0x10, 16);
+        uint32_t u = slot[idx & 3], cc3 = cnt * 3; uint8_t b[4];
+        for (int k = 0; k < 4; k++) { uint8_t cc = (uint8_t)((cc3 + 4 * k) >> (8 * k)); b[k] = (uint8_t)((uint8_t)(u >> (8 * k)) + cc) ^ (uint8_t)(cc * 0x3F); }
+        uint64_t h = 0xcbf29ce484222325ULL; for (int k = 0; k < 4; k++) { h ^= b[k]; h *= 0x100000001b3ULL; }
+        if (h != hash) return -1; uint32_t v; memcpy(&v, b, 4); suma += (int)v;
+    }
+    return suma;
+}
 static int golesReiniciar() {
     int hechos = 0;
     for (int t = 0; t < 2; t++) {
@@ -1850,11 +1862,26 @@ uint64_t __fastcall ganchoGolCat(void* rcx, uint32_t edx, uint32_t r8d, uint32_t
     if (n > 0 && n <= 400) { uint64_t e = (uint64_t)rcx; logf("[GOLES_SONDA] #%ld rcx=%p edx=%u cat=%u delta=%u M(eq0)=%p M(eq1)=%p CAT=%p", (long)n, rcx, edx, r8d, r9d, (void*)(e - 0x750D0), (void*)(e - 0x750D0 - 0x59650), (void*)(e + 0x59530 + (uint64_t)r8d * 0x20)); }
     return g_golCatOrig(rcx, edx, r8d, r9d);
 }
+// 0.4.97: gancho de LOG en FUN_1408C8FC0 (lector de estadísticas; el HUD llama FUN_1408C9DF0(EQ,5) = FUN_1408C8FC0(EQ,0,5)). Anota los EQ que de verdad lee el HUD y si son los mismos que captura el gancho de goles.
+typedef uint64_t(__fastcall* LeeStatFn)(void*, uint32_t, uint32_t);
+LeeStatFn g_leeStatOrig = nullptr; volatile LONG g_leeStatN = 0; void* volatile g_leeStatVistos[8] = {};
+uint64_t __fastcall ganchoLeeStat(void* rcx, uint32_t edx, uint32_t r8d) {
+    uint64_t r = g_leeStatOrig(rcx, edx, r8d);
+    if (edx == 0 && r8d == 5) {
+        bool nuevo = true; for (int i = 0; i < 8; i++) if (g_leeStatVistos[i] == rcx) { nuevo = false; break; }
+        if (nuevo) { for (int i = 0; i < 8; i++) if (!g_leeStatVistos[i]) { g_leeStatVistos[i] = rcx; break; }
+            logf("[LEE_STAT] el HUD/lógica lee goles de EQ=%p (suma=%u) · EQ del gancho de goles: EQ0=%p EQ1=%p · %s", rcx, (unsigned)r, (void*)g_eqGol[0], (void*)g_eqGol[1],
+                 (rcx == (void*)g_eqGol[0] || rcx == (void*)g_eqGol[1]) ? "COINCIDE" : "DISTINTO"); }
+    }
+    return r;
+}
 bool golesSondaInstalar(Feature& f) {
     if (g_golCatOrig) { f.estado = "ok: gancho de goles ya puesto (solo log)"; return true; }
     uint8_t* m = firmaUnica("codigo", "83 FA 3E 0F 87 ?? ?? ?? ?? 55 48 8B EC 48 83 EC 50 45 8B D9 4C 8B C9 41 83 F8 08 0F 87", f.id);
     if (!m) { f.estado = "sin firma: FUN_1408C9E90"; return false; }
     if (!crearDesvio(f, m + 9, 18, (void*)ganchoGolCat, (void**)&g_golCatOrig)) { f.estado = "no se pudo desviar FUN_1408C9E90+9"; return false; }
+    { uint8_t* m2 = firmaUnica("codigo", "48 89 74 24 10 57 48 83 EC 20 8B FA 48 8B F1 83 FA 3E 0F 87 ?? ?? ?? ?? 48 89 5C 24 30 41 83 F8 05 0F 87", f.id);
+      if (m2 && !g_leeStatOrig) crearDesvio(f, m2, 15, (void*)ganchoLeeStat, (void**)&g_leeStatOrig); else if (!m2) logf("[goles_sonda] sin firma de FUN_1408C8FC0 (lector de stats)"); }
     char b[160]; sprintf_s(b, "ok: gancho de log en FUN_1408C9E90+9 (exe+0x%llX); anota rcx/cat/delta en cada gol", (unsigned long long)(m + 9 - g_exe.base)); f.estado = b; return true;
 }
 bool golesSondaQuitar(Feature&) { return true; }   // los parches los restaura el cierre general (f.parches)
@@ -2718,6 +2745,7 @@ DWORD WINAPI hiloDosTiempos(LPVOID) {
         }
         enTW = true;
         { static int gL = -2, gV = -2; static ULONGLONG tM = 0; ULONGLONG am = GetTickCount64(); if (am - tM > 250) { tM = am; int a = leerGolesNativos(0), b = leerGolesNativos(1); if (a != gL || b != gV) { logf("[MARCADOR] goles nativos local=%d visita=%d (-1 = lectura no válida)", a, b); gL = a; gV = b; } } }
+        { static int e0 = -9, e1 = -9; static ULONGLONG tE = 0; ULONGLONG ae = GetTickCount64(); if (ae - tE > 500 && (g_eqGol[0] || g_eqGol[1])) { tE = ae; int a = sumaEqGol(g_eqGol[0]), b = sumaEqGol(g_eqGol[1]); if (a != e0 || b != e1) { logf("[GOLES] contadores EQ0=%d EQ1=%d (EQ0=%p EQ1=%p; -1 = hash no valida, -2 = sin puntero)", a, b, (void*)g_eqGol[0], (void*)g_eqGol[1]); e0 = a; e1 = b; } } }
         uint32_t faseP = 0; { uint8_t* rz = nullptr; uint8_t* Sx = nullptr; if (leerSeguro(g_globalPartido, &rz, 8) && rz && leerSeguro(rz + 0x270, &Sx, 8) && Sx) leerSeguro(Sx + 0x1168, &faseP, 4); }
         double t = 0; if (!leerRelojPantalla(&t)) { if (++malas == 1 || malas % 400 == 0) logf("[TIEMPOS] lectura del reloj no válida (#%ld): no actúo", (long)malas); continue; }
         if (GetTickCount64() - tLog > 5000) { tLog = GetTickCount64(); logf("[TIEMPOS] t=%.0f (pantalla %d:%02d) estado=%d", t, (int)(t / 3600.0) + ((int)t % 3600 ? 1 : 0), (int)(t / 60.0) % 60, estado); }
