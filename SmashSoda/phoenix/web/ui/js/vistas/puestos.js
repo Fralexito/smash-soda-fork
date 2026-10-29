@@ -153,16 +153,15 @@ function Fila({ p, m, color, arr, setArr, alAsignar, mirando, vivo }) {
       onDragOver=${(e) => { if (recibe) { e.preventDefault(); setSobre(true); } }}
       onDragLeave=${() => setSobre(false)}
       onDrop=${soltar}
-      style=${`display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:12px 14px;border-radius:10px;border:${p.ocupado ? "1px solid" : "1.5px dashed"} ${borde};background:${fondo};box-shadow:${sombra};opacity:${opacidad};cursor:${p.ocupado ? "grab" : "default"};transition:border-color .15s,background .15s,box-shadow .15s,opacity .15s`}>
+      style=${`display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:12px 14px;min-height:76px;box-sizing:border-box;border-radius:10px;border:${p.ocupado ? "1px solid" : "1.5px dashed"} ${borde};background:${fondo};box-shadow:${sombra};opacity:${opacidad};cursor:${p.ocupado ? "grab" : "default"};transition:border-color .15s,background .15s,box-shadow .15s,opacity .15s`}>
     ${p.ocupado ? html`<span style="color:var(--mut)"><${Agarre}/></span>` : html`<span style="width:12px;flex:none"></span>`}
-    <div class="disp" style=${`font-weight:700;font-size:40px;line-height:1;width:56px;flex:none;color:${p.ocupado ? color : caido ? "var(--warn)" : "rgba(255,255,255,.22)"}`}>${dos(p.n)}</div>
+    <div style="width:56px;flex:none;display:flex;flex-direction:column;align-items:center;gap:3px"><div class="disp" style=${`font-weight:700;font-size:40px;line-height:1;color:${p.ocupado ? color : caido ? "var(--warn)" : "rgba(255,255,255,.22)"}`}>${dos(p.n)}</div>${p.extra ? html`<span class="mono" style="font-size:9px;line-height:1;letter-spacing:.12em;color:var(--warn);opacity:.9" title=${t("Puesto 9–16: necesita el módulo de mandos extra de Sider", "Seat 9–16: needs Sider's extra pads module")}>EXTRA</span>` : null}</div>
     ${p.ocupado
       ? html`<${Avatar} nombre=${p.jugador} id=${p.parsecId} url=${perfil?.avatar_url} t=${42} brillo=${pulsando}/>
         <div style="flex:1 1 110px;min-width:110px">
           <div style="font:600 16px/1.2 var(--f-body);color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.jugador}
             ${esHost ? html` <${Chip} tipo="acc">${t("TÚ", "YOU")}</${Chip}>` : null}
-            <span class=${cx("chip", p.tipo === "ds4" ? "acc2" : "mod")} style="height:20px;margin-left:6px;font-size:11px" title=${p.tipo === "ds4" ? t("Este puesto es un mando de PlayStation (DualShock 4)", "This seat is a PlayStation pad (DualShock 4)") : t("Este puesto es un mando de Xbox", "This seat is an Xbox pad")}>${p.tipo === "ds4" ? "PLAYSTATION" : "XBOX"}</span>
-            ${p.extra ? html`<span class="chip vip" style="height:20px;margin-left:6px;font-size:10px" title=${t("Puesto 9–16: necesita el módulo de mandos extra de Sider", "Seat 9–16: needs Sider's extra pads module")}>EXTRA</span>` : null}</div>
+            <span class=${cx("chip", p.tipo === "ds4" ? "acc2" : "mod")} style="height:20px;margin-left:6px;font-size:11px" title=${p.tipo === "ds4" ? t("Este puesto es un mando de PlayStation (DualShock 4)", "This seat is a PlayStation pad (DualShock 4)") : t("Este puesto es un mando de Xbox", "This seat is an Xbox pad")}>${p.tipo === "ds4" ? "PLAYSTATION" : "XBOX"}</span></div>
           <div class="mono mut" style="font-size:12px">
             ${esHost ? (m.mandos.miMando ? t("con tu mando · ", "with your pad · ") + m.mandos.miMando : t("con el teclado", "with the keyboard"))
               : html`${p.conectado ? t("conectado", "connected") : t("desconectado", "unplugged")}${p.bloqueado ? t(" · bloqueado", " · locked") : ""}`}
@@ -171,8 +170,7 @@ function Fila({ p, m, color, arr, setArr, alAsignar, mirando, vivo }) {
         <${MiniMandoFila} p=${p} e=${entradaViva} esHost=${esHost}/>`
       : html`<div style="flex:1 1 110px;min-width:110px">
           <div style=${`font:600 17px/1.2 var(--f-body);color:${caido ? "var(--warn)" : "var(--mut)"}`}>${caido ? t(`Puesto libre · Se cayó ${caido.nombre}`, `Free seat · ${caido.nombre} dropped`) : t("Puesto libre", "Free seat")}
-            ${p.tipo ? html`<span class=${cx("chip", p.tipo === "ds4" ? "acc2" : "mod")} style="height:18px;margin-left:6px;font-size:10px;opacity:.8">${p.tipo === "ds4" ? "PLAYSTATION" : "XBOX"}</span>` : null}
-            ${p.extra ? html`<span class="chip vip" style="height:18px;margin-left:6px;font-size:10px;opacity:.85" title=${t("Puesto 9–16: necesita el módulo de mandos extra de Sider", "Seat 9–16: needs Sider's extra pads module")}>EXTRA</span>` : null}</div>
+            ${p.tipo ? html`<span class=${cx("chip", p.tipo === "ds4" ? "acc2" : "mod")} style="height:18px;margin-left:6px;font-size:10px;opacity:.8">${p.tipo === "ds4" ? "PLAYSTATION" : "XBOX"}</span>` : null}</div>
           <div style="font:400 13px/1.3 var(--f-body);color:var(--mut)">${arrastrando && recibe ? t("Suelta aquí", "Drop here") : caido ? t("Pásale este mando a quien reconectó o a un suplente sin salir del partido", "Give this pad to whoever reconnected or a sub without leaving the match") : t("Arrastra a alguien aquí", "Drag someone here")}</div>
         </div>`}
     ${caido && candidatosRelevo.length ? html`<div style="flex-basis:100%;order:98;display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px;border-radius:8px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35)">
