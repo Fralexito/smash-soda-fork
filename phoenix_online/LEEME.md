@@ -13,7 +13,7 @@ Servidor para que PES 2021 (Steam 1.07.02) juegue online con cuentas Phoenix. Es
 - 16 pruebas: `python -m unittest -v tests.test_phoenix_online`.
 
 ## Qué falta (marcado «P» en el código)
-1. ✓ Clave real extraída (28-oct, SHA-256 coincide) en `D:\Frank\IA\CLAUDE\pes-online\nclmio_key.bin`; Blowfish con palabras little-endian (`blowfish_le: true`), XOR desde el byte 0 y MD5 sobre cabecera 8 B + cifrado: los tres CONFIRMADOS y ya así en el código.
+1. ✓ Clave real extraída (28-oct, SHA-256 coincide) en `D:\Frank\IA\CLAUDE\pes-online\nclmio_key.bin`; Blowfish con palabras big-endian (`blowfish_le: false`, confirmado 29-oct con la primera trama real: CMD_GET_SVRLIST), XOR desde el byte 0 y MD5 sobre cabecera 8 B + cifrado: los tres CONFIRMADOS y ya así en el código.
 2. Los valores de `versiones` y la lista completa de tipos de URL.
 3. Las claves internas de `pname`, el formato de `date`, los códigos de error propios y los campos de `CMD_WATCH_ENTRY_GAME`.
 4. El primer paso de autenticación Steam (ticket y challenge) antes de `CMD_LOGIN`.

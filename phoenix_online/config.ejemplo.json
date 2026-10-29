@@ -1,6 +1,6 @@
 {
   "clave_nclmio": "D:/Frank/IA/CLAUDE/pes-online/nclmio_key.bin",
-  "blowfish_le": true,
+  "blowfish_le": false,
   "ip_publica": "192.168.1.50",
   "puerto_gate": 10000,
   "puerto_menu": 10001,
