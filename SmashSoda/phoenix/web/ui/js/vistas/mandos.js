@@ -43,7 +43,7 @@ export function VistaMandos({ s, pestana }) {
     case "marionetas": return html`<${MarionetasNuevo} m=${m}/>`;
     case "bloqueo": return html`<${BloqueoNuevo} m=${m}/>`;
     case "vivo": return html`<${Tarjeta} interior="padding:22px 24px"><${Titulo} texto=${t("EN VIVO · LO QUE PULSA CADA MANDO", "LIVE · WHAT EACH PAD PRESSES")}/><${MandosEnVivo} m=${m}/></${Tarjeta}>`;
-    default: return html`<div class="col"><${AjustesSentado} compacto/><${PuestosNuevo} m=${m}/></div>`;
+    default: return html`<${PuestosNuevo} m=${m}/>`;
   }
 }
 

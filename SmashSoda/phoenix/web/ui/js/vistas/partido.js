@@ -8,7 +8,34 @@ import { html, useState, useEffect, useRef } from "../lib.js";
 import { t, duracion, fecha } from "../i18n.js";
 import { accion, confirmar, avisar, irA } from "../tienda.js";
 import { Tarjeta, Titulo, Boton, Interruptor, Campo, Avatar, Chip, Icono, Vacio, colorPing, cx, dos, Esqueleto } from "../ui.js";
-import { CampoEnVivo } from "./campo.js";
+import { CampoEnVivo, CampoSvg } from "./campo.js";
+
+function CampoTacticoIntegrado({ m }) {
+  const c = m.campo || { estado: "apagado", motivo: "" };
+  const activo = c.estado === "activo";
+  const [est, setEst] = useState(null);
+  useEffect(() => {
+    accion("campo.vivo", { si: true }, { silencioso: true });
+    return () => { accion("campo.vivo", { si: false }, { silencioso: true }); };
+  }, []);
+  return html`<div class="caja" style="padding:16px 18px;display:flex;flex-direction:column;gap:10px">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:8px">
+        <b class="disp" style="font-size:13px;letter-spacing:.14em;color:var(--acc)">⚽ ${t("CANCHA 2D EN VIVO", "LIVE 2D PITCH")}</b>
+        <span class="chip ${activo ? "ok" : ""}" style="height:20px;font-size:10px">${activo ? t("22 FICHAS · 20 HZ", "22 PIECES · 20 HZ") : c.estado === "buscando" ? t("BUSCANDO…", "SEARCHING…") : t("ESPERANDO EN PES", "WAITING IN PES")}</span>
+      </div>
+      <button class="enlace-mas" style="font-size:12px" onClick=${() => irA("partido", "campo")}>${t("Ampliar radar ›", "Expand radar ›")}</button>
+    </div>
+    <div style="max-width:560px;width:100%;margin:0 auto">
+      <${CampoSvg} alEst=${setEst}/>
+    </div>
+    ${est?.pos ? html`<div class="mono mut" style="display:flex;justify-content:space-between;font-size:12px">
+      <span>${t("Posesión A:", "Possession A:")} <b class="acc">${est.pos[0]}%</b></span>
+      ${est.tir ? html`<span>${t("Tiros:", "Shots:")} <b>${est.tir[0]} - ${est.tir[1]}</b></span>` : null}
+      <span>${t("Posesión B:", "Possession B:")} <b style="color:var(--eq-b)">${est.pos[1]}%</b></span>
+    </div>` : null}
+  </div>`;
+}
 
 export const PESTANAS_PARTIDO = [
   { id: "vivo", es: "MARCADOR", en: "SCORE", d: ["Arma los dos lados, lleva el marcador y el reloj. Al terminar se guarda y se avisa en el chat y la web.", "Set up sides, keep score and time."] },
@@ -252,8 +279,8 @@ function Marcador({ m }) {
   const ids = [...p.a.jugadores, ...p.b.jugadores].map((j) => j.parsecId);
   const red = (m.red || []).filter((r) => ids.includes(r.parsecId));
   return html`<div class="col">
-    <${Tarjeta} vivo=${p.fase === "en_juego"} interior="padding:30px 34px;position:relative;overflow:hidden">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+    <${Tarjeta} clase="heroe" vivo=${p.fase === "en_juego"} interior="padding:26px 32px;position:relative;overflow:hidden">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
         <span class=${cx("chip", p.fase === "en_juego" ? "acc" : p.fase === "pausado" ? "vip" : "")}>
           ${p.fase === "en_juego" ? html`<span class="punto ok vivo"></span> ${t("EN JUEGO", "LIVE")}` : p.fase === "pausado" ? t("PAUSADO", "PAUSED") : t("LISTO PARA EMPEZAR", "READY")}</span>
         <span class="reloj">${duracion(p.segundos)}</span>
@@ -279,14 +306,19 @@ function Marcador({ m }) {
       </span>
       ${p.origenLados === "juego" ? html`<span class="ayuda">${t("Lados comprobados en el juego.", "Sides checked in game.")}</span>`
         : m.arbitro && m.arbitro.ladosEstado === "midiendo" ? html`<span class="ayuda">${t("Mirando en el juego en qué lado juega cada mando…", "Checking each pad's side in game…")}</span>`
-        : p.origenLados === "mandos" ? html`<span class="ayuda">${t("Lados armados solos según los mandos. Si en el juego es al revés: CORREGIR LADOS (no mueve mandos).", "Sides set from pads. If reversed in game: FIX SIDES.")}</span>` : null}
+        : p.origenLados === "mandos" ? html`<span class="ayuda">${t("Lados armados solos según los mandos.", "Sides set from pads.")}</span><span class="help-dot" title=${t("Si en el juego es al revés, pulsa CORREGIR LADOS (no mueve mandos).", "If reversed in game, press FIX SIDES (does not move pads).")}>?</span>` : null}
       <div style="margin-left:auto;display:flex;gap:10px">
         ${enJuego ? html`<${Boton} tipo="ok" al=${finalizar}><${Icono} n="trofeo" t=${16}/>${t("TERMINAR", "FINISH")}</${Boton}>` : null}
         <${Boton} tipo="peligro" al=${cancelar}>${t("CANCELAR", "CANCEL")}</${Boton}>
       </div>
     </div>
-    <${PartidoOficial} m=${m}/>
-    <${TorneoYDuelo} m=${m}/>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:16px;align-items:start">
+      <${CampoTacticoIntegrado} m=${m}/>
+      <div class="col" style="gap:12px">
+        <${PartidoOficial} m=${m}/>
+        <${TorneoYDuelo} m=${m}/>
+      </div>
+    </div>
     ${red.length ? html`<div class="rej4">${red.map((r) => html`<div class="caja" key=${r.parsecId}>
       <div style="display:flex;justify-content:space-between"><b style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.nombre}</b>
         <span class="mono" style=${`color:${colorPing(r.ultimo)}`}>${r.ultimo >= 0 ? r.ultimo + " ms" : "—"}</span></div>

@@ -11,13 +11,63 @@
 // =============================================================================
 import { html, useState, useEffect } from "../lib.js";
 import { t } from "../i18n.js";
-import { accion, confirmar, avisar } from "../tienda.js";
+import { accion, confirmar, avisar, oirVivo, irA } from "../tienda.js";
 import { Boton, BotonIr, Icono, Vacio, Avatar, Chip, Stepper, Interruptor, colorPing, cx, dos, useDestello } from "../ui.js";
 import { instalarVigem } from "./arreglos.js";
 import { Pendientes, ElegirJugador } from "./mandos.js";
 import { BotonJugar } from "./jugar.js";
 import { IndicadorRetraso, retrasoDe } from "./retraso.js";
 import { MandosEnVivo } from "./mandovivo.js";
+import { leerSentado, ponerSentado } from "./sentado.js";
+
+// ---- Mini-mando en vivo integrado en cada fila (Minimalismo Táctico 0.3.57) ----
+const BITS_MINI = [
+  [0x1000, "A", "✕"], [0x2000, "B", "◯"], [0x4000, "X", "□"], [0x8000, "Y", "△"],
+  [0x100, "LB", "L1"], [0x200, "RB", "R1"], [0x10, "START", "OPTIONS"], [0x20, "BACK", "SHARE"],
+  [0x40, "L3", "L3"], [0x80, "R3", "R3"], [0x1, "↑", "↑"], [0x2, "↓", "↓"], [0x4, "←", "←"], [0x8, "→", "→"],
+];
+function flechaStick(x, y) {
+  const nx = (x || 0) / 32767, ny = (y || 0) / 32767;
+  if (Math.hypot(nx, ny) < 0.28) return "";
+  const ang = Math.atan2(ny, nx) * (180 / Math.PI);
+  if (ang >= -22.5 && ang < 22.5) return "→";
+  if (ang >= 22.5 && ang < 67.5) return "↗";
+  if (ang >= 67.5 && ang < 112.5) return "↑";
+  if (ang >= 112.5 && ang < 157.5) return "↖";
+  if (ang >= 157.5 || ang < -157.5) return "←";
+  if (ang >= -157.5 && ang < -112.5) return "↙";
+  if (ang >= -112.5 && ang < -67.5) return "↓";
+  return "↘";
+}
+function resumenEntrada(e, esPs) {
+  if (!e) return { activo: false, sticks: [], botones: [] };
+  const b = e.b || 0;
+  const sticks = [];
+  const fl = flechaStick(e.lx, e.ly), fr = flechaStick(e.rx, e.ry);
+  if (fl) sticks.push("LX " + fl);
+  if (fr) sticks.push("RX " + fr);
+  if ((e.lt || 0) > 45) sticks.push(esPs ? "L2" : "LT");
+  if ((e.rt || 0) > 45) sticks.push(esPs ? "R2" : "RT");
+  const botones = [];
+  for (const [bit, xb, ps] of BITS_MINI) {
+    if (b & bit) botones.push(esPs ? ps : xb);
+  }
+  return { activo: sticks.length > 0 || botones.length > 0, sticks, botones: botones.slice(0, 3) };
+}
+function MiniMandoFila({ p, e, esHost }) {
+  const esPs = p.tipo === "ds4";
+  const r = resumenEntrada(e, esPs);
+  const ir = (ev) => {
+    ev.stopPropagation();
+    irA("mandos", esHost ? "marionetas" : "mapeo");
+  };
+  return html`<button type="button" class=${cx("mini-pad", p.equipo === "b" && "b", !r.activo && "reposo")}
+    title=${t("En vivo: pulsa para abrir el mapeo de este mando", "Live: click to open mapping for this pad")}
+    onClick=${ir}>
+    <span>🎮 ${r.activo ? (r.sticks.join(" ") || t("Activo", "Active")) : t("En reposo", "Idle")}</span>
+    ${r.botones.map((k) => html`<span key=${k} class="k">${k}</span>`)}
+  </button>`;
+}
 
 function Agarre() {
   return html`<svg width="12" height="20" viewBox="0 0 14 22" fill="currentColor" style="opacity:.55;flex:none" aria-hidden="true">
@@ -26,8 +76,10 @@ function Agarre() {
 }
 
 // ---- Un puesto (fila) -------------------------------------------------------------------
-function Fila({ p, m, color, arr, setArr, alAsignar, mirando }) {
+function Fila({ p, m, color, arr, setArr, alAsignar, mirando, vivo }) {
   const [sobre, setSobre] = useState(false);
+  const entradaViva = vivo?.[p.n] || p.entrada;
+  const pulsando = !!(entradaViva && ((entradaViva.b || 0) !== 0 || (entradaViva.lt || 0) > 45 || (entradaViva.rt || 0) > 45 || Math.hypot(entradaViva.lx || 0, entradaViva.ly || 0) > 9000 || Math.hypot(entradaViva.rx || 0, entradaViva.ry || 0) > 9000));
   const esHost = m.mandos.host === p.n || (p.ocupado && p.parsecId && p.parsecId === m.sala?.hostId);
   const arrastrando = arr != null;
   const recibe = arrastrando && ((arr.tipo === "puesto" && arr.valor !== p.n - 1) || (arr.tipo === "persona" && !p.ocupado));
@@ -105,9 +157,9 @@ function Fila({ p, m, color, arr, setArr, alAsignar, mirando }) {
     ${p.ocupado ? html`<span style="color:var(--mut)"><${Agarre}/></span>` : html`<span style="width:12px;flex:none"></span>`}
     <div class="disp" style=${`font-weight:700;font-size:40px;line-height:1;width:56px;flex:none;color:${p.ocupado ? color : caido ? "var(--warn)" : "rgba(255,255,255,.22)"}`}>${dos(p.n)}</div>
     ${p.ocupado
-      ? html`<${Avatar} nombre=${p.jugador} id=${p.parsecId} url=${perfil?.avatar_url} t=${44}/>
+      ? html`<${Avatar} nombre=${p.jugador} id=${p.parsecId} url=${perfil?.avatar_url} t=${42} brillo=${pulsando}/>
         <div style="flex:1 1 110px;min-width:110px">
-          <div style="font:600 17px/1.2 var(--f-body);color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.jugador}
+          <div style="font:600 16px/1.2 var(--f-body);color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.jugador}
             ${esHost ? html` <${Chip} tipo="acc">${t("TÚ", "YOU")}</${Chip}>` : null}
             <span class=${cx("chip", p.tipo === "ds4" ? "acc2" : "mod")} style="height:20px;margin-left:6px;font-size:11px" title=${p.tipo === "ds4" ? t("Este puesto es un mando de PlayStation (DualShock 4)", "This seat is a PlayStation pad (DualShock 4)") : t("Este puesto es un mando de Xbox", "This seat is an Xbox pad")}>${p.tipo === "ds4" ? "PLAYSTATION" : "XBOX"}</span>
             ${p.extra ? html`<span class="chip vip" style="height:20px;margin-left:6px;font-size:10px" title=${t("Puesto 9–16: necesita el módulo de mandos extra de Sider", "Seat 9–16: needs Sider's extra pads module")}>EXTRA</span>` : null}</div>
@@ -115,7 +167,8 @@ function Fila({ p, m, color, arr, setArr, alAsignar, mirando }) {
             ${esHost ? (m.mandos.miMando ? t("con tu mando · ", "with your pad · ") + m.mandos.miMando : t("con el teclado", "with the keyboard"))
               : html`${p.conectado ? t("conectado", "connected") : t("desconectado", "unplugged")}${p.bloqueado ? t(" · bloqueado", " · locked") : ""}`}
             ${p.ping >= 0 ? html` · <span style=${`color:${colorPing(p.ping)}`}>${p.ping} ms</span>` : null}${!esHost ? html`<${IndicadorRetraso} r=${retrasoDe(m, p.parsecId)}/>` : null}</div>
-        </div>`
+        </div>
+        <${MiniMandoFila} p=${p} e=${entradaViva} esHost=${esHost}/>`
       : html`<div style="flex:1 1 110px;min-width:110px">
           <div style=${`font:600 17px/1.2 var(--f-body);color:${caido ? "var(--warn)" : "var(--mut)"}`}>${caido ? t(`Puesto libre · Se cayó ${caido.nombre}`, `Free seat · ${caido.nombre} dropped`) : t("Puesto libre", "Free seat")}
             ${p.tipo ? html`<span class=${cx("chip", p.tipo === "ds4" ? "acc2" : "mod")} style="height:18px;margin-left:6px;font-size:10px;opacity:.8">${p.tipo === "ds4" ? "PLAYSTATION" : "XBOX"}</span>` : null}
@@ -154,7 +207,7 @@ function Fila({ p, m, color, arr, setArr, alAsignar, mirando }) {
 }
 
 // ---- Un equipo (Local o Visita) -----------------------------------------------------------
-function Equipo({ equipo, nombre, desc, color, filas, m, arr, setArr, alAsignar, mirando, puedeMas, puedeMenos, mas, menos, esclavo }) {
+function Equipo({ equipo, nombre, desc, tip, color, filas, m, arr, setArr, alAsignar, mirando, vivo, puedeMas, puedeMenos, mas, menos, esclavo }) {
   const n = filas.length;
   const [sobre, setSobre] = useState(false);
   // Soltar en el hueco de un equipo (no sobre una fila) un puesto arrastrado del otro equipo: el puesto pasa a este equipo
@@ -169,21 +222,21 @@ function Equipo({ equipo, nombre, desc, color, filas, m, arr, setArr, alAsignar,
     if (a && a.tipo === "puesto" && recibe) accion("mandos.equipo", { indice: a.valor, equipo });
   };
   return html`<div class="cut" style=${`background:linear-gradient(135deg,${color},rgba(255,255,255,.04) 70%)`}>
-    <div class="in" style=${`padding:20px;display:flex;flex-direction:column;gap:12px;height:100%;box-sizing:border-box;outline:${recibe ? `2px dashed ${sobre ? "var(--acc)" : color}` : "2px solid transparent"};outline-offset:-6px;transition:outline-color .15s`}
+    <div class="in" style=${`padding:18px 20px;display:flex;flex-direction:column;gap:10px;height:100%;box-sizing:border-box;outline:${recibe ? `2px dashed ${sobre ? "var(--acc)" : color}` : "2px solid transparent"};outline-offset:-6px;transition:outline-color .15s`}
       onDragOver=${(e) => { if (recibe) { e.preventDefault(); setSobre(true); } }}
       onDragLeave=${() => setSobre(false)}
       onDrop=${soltar}>
       ${recibe ? html`<div style=${`text-align:center;font:700 14px/1.3 var(--f-body);color:${sobre ? "var(--acc)" : color};padding:10px;border:1.5px dashed ${color};border-radius:10px`}>
         ${t(`Suelta aquí: el puesto ${dos(origenAsiento.n)} pasa a ${nombre}`, `Drop here: seat ${dos(origenAsiento.n)} moves to ${nombre}`)}</div>` : null}
       <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
-        <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
-          <span class="disp" style=${`font-weight:700;font-size:22px;letter-spacing:.08em;color:${color}`}>${nombre}</span>
-          <span class="ayuda">${desc}</span>
+        <div style="display:flex;align-items:baseline;gap:8px;min-width:0;flex-wrap:wrap">
+          <span class="disp" style=${`font-weight:700;font-size:21px;letter-spacing:.08em;color:${color}`}>${nombre}</span>
+          <span class="ayuda" style="font-size:12.5px">${desc}${tip ? html`<span class="help-dot" title=${tip}>?</span>` : null}</span>
         </div>
-        <span class="mono" style=${`font-size:12px;color:${color};background:rgba(255,255,255,.07);padding:6px 10px;border-radius:999px;white-space:nowrap`}>${n} ${n === 1 ? t("PUESTO", "SEAT") : t("PUESTOS", "SEATS")}</span>
+        <span class="mono" style=${`font-size:12px;color:${color};background:rgba(255,255,255,.07);padding:5px 10px;border-radius:999px;white-space:nowrap`}>${n} ${n === 1 ? t("PUESTO", "SEAT") : t("PUESTOS", "SEATS")}</span>
       </div>
-      ${filas.map((p) => html`<${Fila} key=${p.n} p=${p} m=${m} color=${color} arr=${arr} setArr=${setArr} alAsignar=${alAsignar} mirando=${mirando}/>`)}
-      <div style="margin-top:auto;display:flex;gap:10px;padding-top:6px">
+      ${filas.map((p) => html`<${Fila} key=${p.n} p=${p} m=${m} color=${color} arr=${arr} setArr=${setArr} alAsignar=${alAsignar} mirando=${mirando} vivo=${vivo}/>`)}
+      <div style="margin-top:auto;display:flex;gap:10px;padding-top:4px">
         <${Boton} estilo=${`flex:1;border-color:${color};color:${color}`} deshabilitado=${!puedeMas || esclavo} al=${mas}>${t("+ AÑADIR PUESTO", "+ ADD SEAT")}</${Boton}>
         <${Boton} tipo="suave" deshabilitado=${!puedeMenos || esclavo} al=${menos}>${t("− QUITAR UNO", "− REMOVE ONE")}</${Boton}>
       </div>
@@ -313,9 +366,30 @@ export function PuestosNuevo({ m }) {
   const [arr, setArr] = useState(null);
   const [sobreMirando, setSobreMirando] = useState(false);
   const [ayudaAB, setAyudaAB] = useState(false);
-  // Mandos en vivo dentro de Puestos (como en 0.3.8): abierto salvo que el anfitrión lo pliegue
-  const [verVivo, setVerVivoEstado] = useState(() => { try { return localStorage.getItem("phoenix.verVivo") !== "0"; } catch { return true; } });
-  const setVerVivo = (v) => { setVerVivoEstado(v); try { localStorage.setItem("phoenix.verVivo", v ? "1" : "0"); } catch { /* sin almacenamiento */ } };
+  const [prefSentado, setPrefSentado] = useState(() => leerSentado());
+  // Mandos en vivo: cada fila ocupada ya muestra su pastilla en vivo (~30 Hz); la rejilla grande 2D se abre si el anfitrión la despliega
+  const [verVivo, setVerVivoEstado] = useState(() => { try { return localStorage.getItem("phoenix.verVivo2D") === "1"; } catch { return false; } });
+  const setVerVivo = (v) => { setVerVivoEstado(v); try { localStorage.setItem("phoenix.verVivo2D", v ? "1" : "0"); } catch { /* sin almacenamiento */ } };
+  const [vivo, setVivo] = useState({});
+  useEffect(() => {
+    accion("mandos.vivo", { si: true }, { silencioso: true });
+    const quitar = oirVivo((d) => {
+      const n = {};
+      for (const [num, b, lt, rt, lx, ly, rx, ry] of d || []) n[num] = { b, lt, rt, lx, ly, rx, ry };
+      setVivo(n);
+    });
+    return () => { quitar(); accion("mandos.vivo", { si: false }, { silencioso: true }); };
+  }, []);
+  const rotarSentado = () => {
+    const p = leerSentado();
+    const sig = !p.auto ? { auto: true, soloAmigos: false } : !p.soloAmigos ? { auto: true, soloAmigos: true } : { auto: false, soloAmigos: false };
+    ponerSentado(sig);
+    setPrefSentado(leerSentado());
+  };
+  const aplicarFormacion = async (k) => {
+    if (k === 8 && (m.mandos.puestosMax ?? 8) < 16) await accion("mandos.puestosMax", { n: 16 }, { silencioso: true });
+    return accion("mandos.formacion", { local: k, visitante: k });
+  };
   const lista = m.mandos.lista || [];
   const total = lista.length;
   const esclavo = !!m.mandos.esclavo;
@@ -373,16 +447,27 @@ export function PuestosNuevo({ m }) {
     ${esclavo ? html`<div class="caja" style="border-color:var(--warn)"><b class="warn">${t("Turnos o torneo controlan los mandos.", "Hotseat or tournament controls the pads.")}</b>
       <span class="ayuda"> ${t("Las herramientas generales están en pausa mientras tanto.", "General tools are paused meanwhile.")}</span></div>` : null}
 
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
-      <div class="ayuda" style="font-size:14px">${t("Arrastra a cada persona al puesto que quieras. Quien esté en «Mirando» solo ve la partida.", "Drag each person to the seat you want. Anyone in «Watching» only watches.")}</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+        <span class="disp" style="font-weight:700;font-size:12px;letter-spacing:.14em;color:var(--mut);margin-right:4px">${t("FORMACIÓN:", "FORMATION:")}</span>
+        ${[1, 2, 3, 4, 8].map((k) => {
+          const es = equipoA.length === k && equipoB.length === k;
+          return html`<${Boton} key=${k} tipo=${cx("mini", es ? "acc" : "suave")} deshabilitado=${esclavo}
+            titulo=${t(`Poner ${k} puestos en Equipo A y ${k} en Equipo B`, `Set ${k} seats on Team A and ${k} on Team B`)}
+            al=${() => aplicarFormacion(k)}>${k}V${k}</${Boton}>`;
+        })}
+      </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <${Boton} tipo=${cx("mini", prefSentado.auto ? "acc" : "suave")} al=${rotarSentado}
+          titulo=${t("Clic para alternar quién se sienta solo al pulsar un botón de su mando estando en Mirando (Todos / Solo amigos / Apagado)", "Click to cycle who takes a free seat automatically when pressing their pad while Watching (Everyone / Friends only / Off)")}>
+          ⚡ ${prefSentado.auto ? (prefSentado.soloAmigos ? t("SENTADO AUTO: AMIGOS", "AUTO-SEAT: FRIENDS") : t("SENTADO AUTO: TODOS", "AUTO-SEAT: ALL")) : t("SENTADO AUTO: NO", "AUTO-SEAT: OFF")}</${Boton}>
         <${Boton} tipo=${cx("mini", m.arbitro?.soloAutorizados ? "acc" : "suave")}
           titulo=${t("Encendido: pulsar el mando solo da puesto a quien tú ya sentaste. Los demás aparecen como «quiere jugar» y decides tú.", "On: pressing a pad only seats people you already seated. Others show up as «wants to play» and you decide.")}
           al=${() => accion("mandos.soloAutorizados", { si: !m.arbitro?.soloAutorizados })}>
           ${m.arbitro?.soloAutorizados ? t("PUESTOS: SOLO AUTORIZADOS", "SEATS: AUTHORIZED ONLY") : t("PUESTOS: LIBRES", "SEATS: OPEN")}</${Boton}>
         <${Boton} tipo=${cx("mini", verVivo ? "acc" : "suave")} al=${() => setVerVivo(!verVivo)}
-          titulo=${t("Muestra qué botón pulsa cada uno, sus sticks y gatillos, en vivo. Pídeles que prueben su mando antes del partido.", "Shows each player's buttons, sticks and triggers live. Ask them to test their pad before the match.")}>
-          ${verVivo ? t("▾ PLEGAR MANDOS EN VIVO", "▾ COLLAPSE LIVE PADS") : t("▸ MANDOS EN VIVO", "▸ LIVE PADS")}</${Boton}>
+          titulo=${t("Abre o cierra el panel grande con el dibujo 2D completo de cada mando en vivo.", "Opens or closes the full 2D live pad drawings panel.")}>
+          ${verVivo ? t("▾ PLEGAR MANDOS 2D", "▾ HIDE 2D PADS") : t("▸ MANDOS 2D", "▸ 2D PADS")}</${Boton}>
         <${Boton} tipo="mini suave" deshabilitado=${esclavo || m.mandos.reiniciando} al=${() => herramienta("ordenar")}>${t("ORDENAR", "SORT")}</${Boton}>
         <${Boton} tipo="mini suave" deshabilitado=${esclavo || m.mandos.reiniciando}
           al=${() => herramienta("reiniciar", [t("¿Reiniciar los mandos?", "Reset pads?"), t("Se desconectan y vuelven a conectar todos los mandos virtuales. Úsalo si el juego dejó de detectarlos.", "All virtual pads are re-plugged. Use it if the game stopped detecting them.")])}>
@@ -407,19 +492,23 @@ export function PuestosNuevo({ m }) {
           "Equipo A y Equipo B son los equipos de Link: no tienen por qué coincidir con local y visita del juego (A = el que estaba a la izquierda en el saque, según el Campo 2D). El número del puesto es el mando de Link y no cambia: con «Orden de mandos en PES» el puesto N es el jugador N. Para pasar un puesto de equipo arrastra su fila al hueco del otro equipo (o usa el botoncito ⇄ de la fila): el puesto se va con su mando y su número. Si la sueltas sobre una fila del otro equipo, los dos puestos se cruzan. La chincheta fija el puesto de un jugador: al volver cae ahí (o en el siguiente libre). Por ejemplo, tú en el 01 siendo del Equipo B.",
           "Team A and Team B are Link's teams: they don't have to match the game's home and away (A = the one on the left at kick-off, per the 2D Pitch). The seat number is Link's pad and never changes: with «Pad order in PES», seat N is player N. To move a seat to the other team drag its row onto the other team's empty area (or use the small ⇄ button on the row): the seat goes with its pad and number. Dropped on a row of the other team, the two seats swap. The pin fixes a player's seat: when they return they land there (or on the next free one). For example, you on 01 as Team B.")}</div>` : null}
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:16px;align-items:stretch">
-          <${Equipo} equipo="a" nombre=${t("EQUIPO A", "TEAM A")} desc=${t("Un equipo de Link: el que estaba a la izquierda en el saque", "A Link team: the one on the left at kick-off")} color="var(--acc)" filas=${equipoA}
-            m=${m} arr=${arr} setArr=${setArr} alAsignar=${setEligiendo} mirando=${mirando} esclavo=${esclavo}
+          <${Equipo} equipo="a" nombre=${t("EQUIPO A", "TEAM A")} desc=${t("Izquierda en el saque", "Left side at kick-off")}
+            tip=${t("Equipo A es el que empieza a la izquierda en el saque según el Campo 2D. El número del puesto es el mando de Link.", "Team A starts on the left at kick-off per the 2D Pitch. The seat number is Link's pad.")}
+            color="var(--acc)" filas=${equipoA}
+            m=${m} arr=${arr} setArr=${setArr} alAsignar=${setEligiendo} mirando=${mirando} vivo=${vivo} esclavo=${esclavo}
             puedeMas=${sinUsar.length > 0} puedeMenos=${equipoA.length > 1}
             mas=${() => masDe("a")} menos=${() => menosDe(equipoA)}/>
-          <${Equipo} equipo="b" nombre=${t("EQUIPO B", "TEAM B")} desc=${t("El equipo rival", "The rival team")} color="var(--eq-b)" filas=${equipoB}
-            m=${m} arr=${arr} setArr=${setArr} alAsignar=${setEligiendo} mirando=${mirando} esclavo=${esclavo}
+          <${Equipo} equipo="b" nombre=${t("EQUIPO B", "TEAM B")} desc=${t("Derecha en el saque", "Right side at kick-off")}
+            tip=${t("Equipo B es el equipo rival (derecha en el saque inicial). Puedes arrastrar cualquier puesto de un equipo al otro.", "Team B is the rival team (right side at kick-off). You can drag any seat between teams.")}
+            color="var(--eq-b)" filas=${equipoB}
+            m=${m} arr=${arr} setArr=${setArr} alAsignar=${setEligiendo} mirando=${mirando} vivo=${vivo} esclavo=${esclavo}
             puedeMas=${sinUsar.length > 0} puedeMenos=${equipoB.length > 1}
             mas=${() => masDe("b")} menos=${() => menosDe(equipoB)}/>
         </div>
         ${sinEquipo.length ? html`<div class="caja" style="display:flex;flex-direction:column;gap:10px">
           <div class="lab">${t("MANDOS SIN EQUIPO", "PADS WITHOUT TEAM")}</div>
           <div class="ayuda">${t("Estos puestos quedaron fuera del Equipo A y del B. Pásalos a un equipo (botones A / B) o quítales el mando.", "These seats are outside both teams. Move them to a team (A / B buttons) or remove their pad.")}</div>
-          ${sinEquipo.map((p) => html`<${Fila} key=${p.n} p=${p} m=${m} color="var(--mut)" arr=${arr} setArr=${setArr} alAsignar=${setEligiendo} mirando=${mirando}/>`)}
+          ${sinEquipo.map((p) => html`<${Fila} key=${p.n} p=${p} m=${m} color="var(--mut)" arr=${arr} setArr=${setArr} alAsignar=${setEligiendo} mirando=${mirando} vivo=${vivo}/>`)}
         </div>` : null}
       </div>
 
@@ -482,36 +571,45 @@ const ESTADO_ORDEN = {
 };
 function OrdenPes({ m }) {
   const o = m.mandos.ordenPes || { activo: false, estado: "apagado", casillas: [] };
+  const [abierto, setAbierto] = useState(false);
   const [punto, texto] = ESTADO_ORDEN[o.estado] || ["", ""];
   const [es, en] = (o.estado === "error" ? (o.error || "Error") + "|" + (o.error || "Error") : texto).split("|");
-  return html`<div class="caja" style="padding:16px 18px;display:flex;flex-direction:column;gap:12px">
-    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-      <span class="disp" style="font-weight:700;font-size:14px;letter-spacing:.16em">${t("ORDEN DE MANDOS EN PES", "PAD ORDER IN PES")}</span>
-      <${Chip} tipo="vip">${t("EXPERIMENTAL", "EXPERIMENTAL")}</${Chip}>
+  const max = m.mandos.puestosMax ?? 8, tope = m.mandos.puestosTope ?? 16;
+  const hayAviso = o.estado === "pes_abierto" || o.estado === "sin_settings" || o.estado === "error" || !!o.ds4windows;
+  const mostrarDetalle = abierto || hayAviso;
+  return html`<div class="caja" style="padding:10px 16px;display:flex;flex-direction:column;gap:10px">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <span class=${cx("punto", o.activo ? (punto || "ok") : "")}></span>
+      <span class="disp" style="font-weight:700;font-size:13px;letter-spacing:.14em">${t("ORDEN EN PES", "PAD ORDER IN PES")}</span>
+      <span class="chip ${o.activo ? "ok" : ""}" style="height:20px;font-size:10.5px">${o.activo ? t("✓ PUESTO N = JUGADOR N", "✓ SEAT N = PLAYER N") : t("APAGADO", "OFF")}</span>
+      <span class="mono mut" style="font-size:12px">${t("Máx:", "Max:")} <b>${max}/${tope}</b> ${t("puestos", "seats")}</span>
+      <span class="help-dot" title=${t("Link escribe settings.dat de PES 2021 (con PES cerrado y copia de seguridad) para que el puesto 1 sea el jugador 1, el 2 el jugador 2…", "Link writes PES 2021 settings.dat (with PES closed and backup) so seat 1 is player 1, seat 2 is player 2…")}>?</span>
       <span style="flex:1"></span>
       ${o.activo ? html`<${Boton} tipo="mini suave" al=${() => accion("mandos.ordenarPes", {})}>${t("REVISAR AHORA", "CHECK NOW")}</${Boton}>` : null}
+      <${Boton} tipo="mini suave" al=${() => setAbierto(!abierto)}>${abierto ? t("▴ OCULTAR AJUSTES", "▴ HIDE SETTINGS") : t(`⚙ CONFIGURAR (8–${tope}) ▾`, `⚙ CONFIGURE (8–${tope}) ▾`)}</${Boton}>
       <${Interruptor} valor=${o.activo} al=${(v) => accion("mandos.ordenPes", { si: v })} etiqueta=${t("Orden de mandos en PES", "Pad order in PES")}/>
     </div>
-    <div class="ayuda" style="font-size:13px">${t(
-      "Link escribe el settings.dat de PES para que el puesto 1 sea el jugador 1, el 2 el jugador 2… Lo hace solo con PES cerrado y guarda una copia antes. Mientras esté encendido, los mandos de Link no se desconectan al cerrar la sala (así Windows no los vuelve a barajar). Tu mando físico no va en Settings: úsalo con Marionetas.",
-      "Link writes PES's settings.dat so seat 1 is player 1, seat 2 is player 2… Only with PES closed, with a backup first. While on, Link's pads stay plugged when the room closes (so Windows doesn't reshuffle them). Your physical pad doesn't go in Settings: use it with Puppets.")}</div>
-    ${o.activo && es ? html`<div style="display:flex;align-items:center;gap:10px;font-size:14px">
-      <span class=${cx("punto", punto)}></span><span>${t(es, en)}</span>
-      ${o.ultimo ? html`<span class="mono mut" style="font-size:12px">· ${t("último orden", "last sort")} ${o.ultimo}</span>` : null}
-    </div>` : null}
-    ${o.activo && o.ds4windows ? html`<div class="caja" style="border-color:var(--warn);font-size:14px"><b class="warn">${t("DS4Windows está abierto.", "DS4Windows is open.")}</b> ${t("Mete su propio mando virtual y desordena los de Link. Ciérralo (y quítalo del inicio de Windows): tu DS4 entra por Mandos › Tu mando.", "It adds its own virtual pad and shuffles Link's. Close it (and remove it from Windows startup): your DS4 goes through Pads › Your pad.")}
-      <div style="margin-top:8px"><${BotonIr} ir=${["mandos", "marionetas"]}>${t("IR A TU MANDO", "GO TO YOUR PAD")}</${BotonIr}></div></div>` : null}
-    ${o.activo && (o.casillas || []).length ? html`<div style="display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:6px">
-      ${o.casillas.map((c) => html`<div key=${c.n} class="caja" title=${c.ok ? t("Coincide", "Matches") : t("Pendiente", "Pending")}
-          style=${`padding:8px 4px;text-align:center;border-color:${c.ok ? "var(--ok)" : "var(--warn)"}`}>
-        <div class="mono mut" style="font-size:11px">${c.extra ? "EXTRA" : "PES"} ${c.n}</div>
-        <div class="disp" style="font-weight:700;font-size:16px">${c.puesto ? "P" + c.puesto : "—"}</div>
-        <div style="font-size:12px">${c.ok ? "✓" : "…"}</div>
-      </div>`)}
-    </div>` : null}
-    ${o.activo && o.copia ? html`<div class="ayuda mono" style="font-size:12px">${t("Copia de seguridad:", "Backup:")} ${o.copia}</div>` : null}
-    ${o.activo && o.copiaExtra ? html`<div class="ayuda mono" style="font-size:12px">${t("Copia de mandos extra:", "Extra pads backup:")} ${o.copiaExtra}</div>` : null}
-    <${PuestosMax} m=${m}/>
+    ${mostrarDetalle ? html`
+      ${o.activo && es ? html`<div style="display:flex;align-items:center;gap:10px;font-size:13px">
+        <span class=${cx("punto", punto)}></span><span>${t(es, en)}</span>
+        ${o.ultimo ? html`<span class="mono mut" style="font-size:12px">· ${t("último orden", "last sort")} ${o.ultimo}</span>` : null}
+      </div>` : null}
+      ${o.activo && o.ds4windows ? html`<div class="caja" style="border-color:var(--warn);font-size:13px"><b class="warn">${t("DS4Windows está abierto.", "DS4Windows is open.")}</b> ${t("Mete su propio mando virtual y desordena los de Link. Ciérralo: tu DS4 entra por Mandos › Tu mando.", "It adds its own virtual pad and shuffles Link's. Close it: your DS4 goes through Pads › Your pad.")}
+        <div style="margin-top:8px"><${BotonIr} ir=${["mandos", "marionetas"]}>${t("IR A TU MANDO", "GO TO YOUR PAD")}</${BotonIr}></div></div>` : null}
+      ${abierto ? html`
+        ${o.activo && (o.casillas || []).length ? html`<div style="display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:6px">
+          ${o.casillas.map((c) => html`<div key=${c.n} class="caja" title=${c.ok ? t("Coincide", "Matches") : t("Pendiente", "Pending")}
+              style=${`padding:6px 4px;text-align:center;border-color:${c.ok ? "var(--ok)" : "var(--warn)"}`}>
+            <div class="mono mut" style="font-size:11px">${c.extra ? "EXTRA" : "PES"} ${c.n}</div>
+            <div class="disp" style="font-weight:700;font-size:15px">${c.puesto ? "P" + c.puesto : "—"}</div>
+            <div style="font-size:11px">${c.ok ? "✓" : "…"}</div>
+          </div>`)}
+        </div>` : null}
+        ${o.activo && o.copia ? html`<div class="ayuda mono" style="font-size:12px">${t("Copia de seguridad:", "Backup:")} ${o.copia}</div>` : null}
+        ${o.activo && o.copiaExtra ? html`<div class="ayuda mono" style="font-size:12px">${t("Copia de mandos extra:", "Extra pads backup:")} ${o.copiaExtra}</div>` : null}
+        <${PuestosMax} m=${m}/>
+      ` : null}
+    ` : null}
   </div>`;
 }
 

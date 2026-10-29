@@ -67,24 +67,24 @@ function pantallaActual(s) {
   return { sec, pestana: pestanas.some((p) => p.id === pedida) ? pedida : pestanas[0].id };
 }
 
-// ---- Barra superior --------------------------------------------------------------
+// ---- Barra superior (Cápsula Unificada de Estado 0.3.57) --------------------------
 function PildoraSala({ m }) {
   const sala = m && m.sala;
-  if (!sala) return html`<span class="pill"><span class="punto"></span>${t("SIN MOTOR", "NO ENGINE")}</span>`;
+  if (!sala) return html`<span class="capsula-seg"><span class="punto"></span>${t("SIN MOTOR", "NO ENGINE")}</span>`;
   if (sala.abierta) {
-    return html`<button class="pill" onClick=${() => irA("sala", "resumen")}><span class="punto ok vivo"></span>
-      ${t("EN VIVO", "LIVE")} · ${sala.invitados} ${t("EN SALA", "IN ROOM")}</button>`;
+    return html`<button class="capsula-seg" onClick=${() => irA("sala", "resumen")} title=${t("Ir al resumen de la sala", "Go to room overview")}><span class="punto ok vivo"></span>
+      ${t("SALA", "ROOM")} (${sala.invitados}/${sala.plazas})</button>`;
   }
-  if (!sala.lista) return html`<span class="pill"><span class="punto warn"></span>${t("PREPARANDO", "STARTING")}</span>`;
-  return html`<button class="pill" onClick=${() => irA("sala", "resumen")}><span class="punto"></span>${t("SALA CERRADA", "ROOM CLOSED")}</button>`;
+  if (!sala.lista) return html`<span class="capsula-seg"><span class="punto warn"></span>${t("PREPARANDO", "STARTING")}</span>`;
+  return html`<button class="capsula-seg" onClick=${() => irA("sala", "resumen")} title=${t("Ir al resumen de la sala", "Go to room overview")}><span class="punto"></span>${t("SALA CERRADA", "ROOM CLOSED")}</button>`;
 }
 
 const ESTADO_WEB = {
-  conectado: ["ok", "WEB CONECTADA", "WEB CONNECTED"],
+  conectado: ["ok", "WEB", "WEB"],
   vinculando: ["warn", "CONECTANDO", "CONNECTING"],
-  sin_conexion: ["bad", "WEB SIN CONEXIÓN", "WEB OFFLINE"],
-  pausado: ["warn", "WEB EN PAUSA", "WEB PAUSED"],
-  sin_vincular: ["", "CONECTAR MI CUENTA", "CONNECT MY ACCOUNT"],
+  sin_conexion: ["bad", "SIN WEB", "OFFLINE"],
+  pausado: ["warn", "WEB PAUSA", "WEB PAUSED"],
+  sin_vincular: ["", "VINCULAR WEB", "LINK WEB"],
 };
 
 function Barra({ s }) {
@@ -113,26 +113,29 @@ function Barra({ s }) {
   </header>`;
 }
 
-// Grupo «conectado»: sala, web de la liga y juego (puente de Phoenix Sync), con su punto vivo.
+// Grupo «conectado»: sala, web de la liga y juego en una sola cápsula de estado unificada (0.3.57).
 const ESTADO_JUEGO = {
-  conectado: ["ok", "JUEGO CONECTADO", "GAME CONNECTED"], cerrado: ["", "JUEGO CERRADO", "GAME CLOSED"],
-  noinstalado: ["warn", "SIN MÓDULO SIDER", "NO SIDER MODULE"], sinconexion: ["bad", "JUEGO SIN WEB", "GAME OFFLINE"], apagado: ["", "AVISOS APAGADOS", "NOTICES OFF"],
+  conectado: ["ok", "PES 2021", "PES 2021"], cerrado: ["", "JUEGO CERRADO", "GAME CLOSED"],
+  noinstalado: ["warn", "SIN SIDER", "NO SIDER"], sinconexion: ["bad", "JUEGO SIN WEB", "GAME OFFLINE"], apagado: ["", "AVISOS OFF", "NOTICES OFF"],
 };
 // En Sync, la web y el juego ya salen en sus propias pastillas: aquí solo queda la sala (sin repetir).
 function GrupoEstado({ m, w, enSync = false }) {
   const b = m?.buzon;
   const j = ESTADO_JUEGO[b?.estado] || ESTADO_JUEGO.cerrado;
-  // Cada pastilla destella una vez cuando cambia su estado (sala abierta, web conectada, juego conectado…)
+  // Cada segmento destella una vez cuando cambia su estado (sala abierta, web conectada, juego conectado…)
   const dSala = useDestello(m?.sala?.abierta ? "abierta" : m?.sala?.lista ? "cerrada" : "preparando");
   const dWeb = useDestello(w[1]);
   const dJuego = useDestello(j[1]);
   const ultimo = b?.estado === "conectado" && b?.ultimo ? " · " + b.ultimo : "";
-  return html`<div class="grupo-estado" role="status" aria-label=${t("Estado de la conexión", "Connection status")}>
+  return html`<div class="capsula-estado" role="status" aria-label=${t("Estado de la conexión", "Connection status")}>
     <span class=${dSala ? "destello" : ""} style="display:inline-flex;border-radius:999px"><${PildoraSala} m=${m}/></span>
-    ${enSync ? null : html`<button class=${cx("pill web", dWeb && "destello")} onClick=${() => irA("sync", "mipc")} title=${m?.web?.estado === "pausado" ? causaPausa(m.web) : m?.web?.mensaje || t("Cuenta de la liga", "League account")}>
-      <span class=${cx("punto", w[0], w[0] === "ok" && "vivo")}></span>${t(w[1], w[2])}</button>
-    <button class=${cx("pill juego", dJuego && "destello")} onClick=${() => irA("sync", "avanzado")} title=${t("Conexión de Phoenix con el juego", "Phoenix game connection")}>
-      <span class=${cx("punto", j[0], j[0] === "ok" && "vivo")}></span>${t(j[1], j[2])}${ultimo}</button>`}
+    ${enSync ? null : html`
+      <span class="capsula-div web" aria-hidden="true"></span>
+      <button class=${cx("capsula-seg web", dWeb && "destello")} onClick=${() => irA("sync", "mipc")} title=${m?.web?.estado === "pausado" ? causaPausa(m.web) : m?.web?.mensaje || t("Cuenta de la liga", "League account")}>
+        <span class=${cx("punto", w[0], w[0] === "ok" && "vivo")}></span>${t(w[1], w[2])}</button>
+      <span class="capsula-div juego" aria-hidden="true"></span>
+      <button class=${cx("capsula-seg juego", dJuego && "destello")} onClick=${() => irA("sync", "avanzado")} title=${t("Conexión de Phoenix con el juego", "Phoenix game connection")}>
+        <span class=${cx("punto", j[0], j[0] === "ok" && "vivo")}></span>${t(j[1], j[2])}${ultimo}</button>`}
   </div>`;
 }
 

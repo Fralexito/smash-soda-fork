@@ -195,18 +195,36 @@ button.pill:active { transform: scale(.96); }
 @media (max-width: 1100px) { .rej4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } .rej3 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 760px) { .rej2, .rej3, .rej4 { grid-template-columns: minmax(0, 1fr); } .fila.partible { flex-direction: column; } }
 
-/* ---------- Tarjeta con esquinas cortadas y borde degradado ---------- */
+/* ---------- Tarjeta con jerarquía visual (Minimalismo Táctico 0.3.57) ----------
+   Tarjetas estándar: glassmorphism redondeado y limpio (16 px, borde sutil).
+   Tarjetas protagonistas (.heroe, .vivo): borde luminoso acentuado. */
 .cut {
   position: relative; padding: 1px; display: flex; flex-direction: column;
-  background: linear-gradient(135deg, var(--acc), rgba(255, 255, 255, .05) 45%, var(--acc2));
-  clip-path: polygon(0 0, calc(100% - var(--corte)) 0, 100% var(--corte), 100% 100%, var(--corte) 100%, 0 calc(100% - var(--corte)));
+  border-radius: 16px; clip-path: none;
+  background: rgba(255, 255, 255, .09);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .28);
 }
 .cut > .in {
-  flex: 1 1 auto; min-height: 0; padding: 20px 22px; background: var(--panel);
-  clip-path: polygon(0 0, calc(100% - var(--corte)) 0, 100% var(--corte), 100% 100%, var(--corte) 100%, 0 calc(100% - var(--corte)));
+  flex: 1 1 auto; min-height: 0; padding: 20px 22px;
+  border-radius: 15px; clip-path: none;
+  background: rgba(11, 16, 42, .82);
+  backdrop-filter: blur(12px);
 }
-.cut.suave { background: linear-gradient(135deg, var(--linea), rgba(255, 255, 255, .04) 50%, var(--acc2-suave)); }
-.cut.vivo { background: linear-gradient(135deg, var(--acc), var(--acc2) 60%, var(--acc)); background-size: 220% 220%; animation: brillo 6s linear infinite; }
+.cut.suave { background: rgba(255, 255, 255, .07); }
+.cut.heroe {
+  border-radius: 20px;
+  background: linear-gradient(135deg, var(--acc), rgba(255, 255, 255, .12) 45%, var(--acc2));
+  box-shadow: 0 14px 40px rgba(0, 229, 255, .08);
+}
+.cut.heroe > .in {
+  border-radius: 19px;
+  background: linear-gradient(160deg, rgba(14, 22, 58, .92), rgba(9, 13, 36, .95));
+}
+.cut.vivo {
+  background: linear-gradient(135deg, var(--acc), var(--acc2) 60%, var(--acc));
+  background-size: 220% 220%; animation: brillo 6s linear infinite;
+  box-shadow: 0 14px 40px rgba(0, 229, 255, .10);
+}
 @keyframes brillo { to { background-position: 220% 0; } }
 .caja { border-radius: var(--radio); border: 1px solid var(--tenue); background: rgba(255, 255, 255, .025); padding: 14px; }
 .lab { font: 600 12px/1 var(--f-disp); letter-spacing: .2em; color: var(--mut); text-transform: uppercase; }
@@ -888,3 +906,45 @@ html.sin-foco .destello { animation: none; }
 .vacio-icono { width: 64px; height: 64px; margin: 0 auto 14px; border-radius: 32px; display: flex; align-items: center; justify-content: center;
   color: var(--acc); border: 1px solid var(--linea); background: radial-gradient(circle at 50% 35%, var(--acc-suave), rgba(0, 0, 0, .2)); box-shadow: 0 0 30px var(--brillo1); animation: subir .35s var(--ease) both; }
 @media (prefers-reduced-motion: reduce) { .vacio-icono { animation: none; } }
+
+/* ---- Minimalismo Táctico (0.3.57): Cápsula de estado, globos ? y mini-mando en vivo ---- */
+.capsula-estado {
+  display: inline-flex; align-items: center; height: 34px; padding: 0 6px; border-radius: 999px;
+  border: 1px solid rgba(0, 229, 255, .32); background: rgba(7, 12, 32, .85);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .25);
+}
+:root[data-tema="sudario"] .capsula-estado { border-color: var(--linea); }
+.capsula-seg {
+  display: inline-flex; align-items: center; gap: 7px; height: 26px; padding: 0 10px; border-radius: 999px;
+  border: 0; background: transparent; color: var(--fg); font: 600 11.5px/1 var(--f-mono); letter-spacing: .06em;
+  cursor: pointer; white-space: nowrap; transition: background .15s var(--ease), color .15s var(--ease);
+}
+.capsula-seg:hover { background: rgba(255, 255, 255, .07); color: #fff; }
+.capsula-div { width: 1px; height: 14px; background: rgba(255, 255, 255, .14); flex: none; margin: 0 2px; }
+@media (max-width: 860px) { .capsula-seg.web, .capsula-div.web { display: none; } }
+@media (max-width: 720px) { .capsula-seg.juego, .capsula-div.juego { display: none; } }
+
+.help-dot {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 17px; height: 17px; border-radius: 50%;
+  background: rgba(255, 255, 255, .09); border: 1px solid rgba(255, 255, 255, .2);
+  color: var(--mut); font: 700 10.5px/1 var(--f-mono); cursor: help; margin-left: 6px; vertical-align: middle;
+  transition: border-color .15s, color .15s, background .15s;
+}
+.help-dot:hover { border-color: var(--acc); color: var(--acc); background: var(--acc-suave); }
+
+.mini-pad {
+  display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 8px;
+  background: rgba(0, 229, 255, .10); border: 1px solid rgba(0, 229, 255, .32);
+  font: 600 11px/1 var(--f-mono); color: var(--acc); white-space: nowrap; cursor: pointer;
+  transition: transform .12s, background .15s, border-color .15s;
+}
+.mini-pad.b { background: rgba(176, 123, 255, .12); border-color: rgba(176, 123, 255, .36); color: #d8b9ff; }
+.mini-pad.reposo { background: rgba(255, 255, 255, .04); border-color: rgba(255, 255, 255, .12); color: var(--mut); font-weight: 500; }
+.mini-pad:hover { border-color: var(--acc); color: #fff; }
+.mini-pad .k {
+  display: inline-flex; align-items: center; justify-content: center; min-width: 16px; height: 16px; padding: 0 4px;
+  border-radius: 4px; background: var(--acc); color: #021018; font: 700 10px/1 var(--f-mono);
+}
+.mini-pad.b .k { background: var(--eq-b); color: #120624; }
+

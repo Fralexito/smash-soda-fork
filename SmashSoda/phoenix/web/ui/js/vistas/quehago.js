@@ -86,10 +86,10 @@ function queHago(m, sec, pes, d) {
   }
 }
 
-/** La franja de arriba de cada pantalla. */
+/** La franja de arriba de cada pantalla (0.3.57 Minimalismo Táctico: solo se muestra ante avisos reales o acciones necesarias). */
 export function QueHago({ s, sec, pestana, d }) {
   const x = queHago(s.motor, sec, pestana, d);
-  if (!x.frase && !x.boton) return null;
+  if (!x.boton && x.tono !== "warn" && x.tono !== "bad") return null;
   return html`<div class=${cx("que-hago", x.tono)} key=${"q" + sec + pestana}>
     <span class="qh-icono" aria-hidden="true"><${Icono} n=${ICONO[sec] || "rayo"} t=${18}/></span>
     <span class="qh-frase">${x.frase}</span>
