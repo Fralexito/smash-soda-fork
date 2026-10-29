@@ -31,6 +31,7 @@
   "naciones": [{"nation_code": "PE", "privacy_kind": "0", "has_area": "0", "name": "Peru"}],
   "nacion": "PE",
   "area": "",
+  "areas_por_defecto": [{"nation_code": "PE", "area_code": "PE-LIM", "privacy_kind": "0", "name": "Lima"}],
   "anuncios": [],
   "lobbies": [
     {"lobby_id": 1, "name": "Phoenix 1v1", "player_num": 0, "player_num_max": 200,

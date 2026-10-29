@@ -180,6 +180,14 @@ class Servidor:
         return {"nation_list": [Empaquetado(n) for n in naciones],
                 "nation_list_num": len(naciones)}
 
+    async def c_cmd_get_eula_area_list(self, s, m):
+        # P (REA 29-oct §16): al confirmar el país el cliente indexa el vector de ZONAS; vacío ->
+        # error 4. Claves del lector aún sin leer: se usan las de la lista de naciones (cadenas).
+        nacion = self._texto(m.get("nation_code", self.cfg.get("nacion", "")))
+        zonas = self.cfg.get("areas", {}).get(nacion) or self.cfg.get("areas_por_defecto", [])
+        zonas = [{k: self._texto(v) for k, v in z.items()} for z in zonas]
+        return {"area_list": [Empaquetado(z) for z in zonas], "area_list_num": len(zonas)}
+
     async def c_cmd_get_eula_nation_code(self, s, m):
         return {"nation_code": self._texto(self.cfg["nacion"]),
                 "area_code": self._texto(self.cfg.get("area", ""))}
