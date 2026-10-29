@@ -1,0 +1,194 @@
+# Capítulo 60-o — Modo street con menos jugadores: la puerta del Entrenamiento libre y los menús en JSON (23–26 oct 2026)
+
+> Pregunta de Fralex (23-oct): «si ya logré agregar jugadores y mandos que no existen, ¿será posible lo contrario, quitar jugadores para mi modo street?». Este capítulo recoge todo lo hecho hasta el 26-oct: qué se consiguió, cómo replicarlo, los intentos fallidos y lo que queda. Base anterior: M09 (`PRUEBA_CANCHA\informes\manual\M09_MENOS_JUGADORES_4V4_Y_ROJA.md`), memorias `pes-cancha-modo-street-prototipo-a`, `pes-minimo-7-jugadores-termina-partido` y `pes-objetivo-cantidad-jugadores-elegible`.
+
+## 1. Resumen
+- **Respuesta a Fralex:** SÍ es posible, pero cuesta más que lo de los mandos. Los mandos tenían un tope único (8→16). El número de jugadores (11/22) está repartido en unas 27 000 comparaciones, y no hay un contador entero por equipo: se refutó con 5 partidos de rojas el 15-oct.
+- **Cuatro piezas para el objetivo:** (1) quitar jugadores al empezar; (2) apagar la regla de «menos de 7, se acaba el partido»; (3) formaciones, IA y portería dibujada para pocos jugadores; (4) un menú para elegir N dentro de Phoenix Link.
+- **Hallazgo principal (25-oct):** el flujo de menús de PES son **2158 archivos JSON** dentro de `Data\dt16_all.cpk` (`common/script/flow/**`). En `TopMenu/TopMenuNew.json` **sigue cableado el Entrenamiento libre** (evento `05_freeTraining`); Konami solo quitó el botón. Como el motor ya corre partidos de entrenamiento, es la vía elegida por Fralex para «menos jugadores».
+- **Prueba en vivo (25-oct ~22:10):** con un override por livecpk, el botón «ENTRENAMIENTO» de Conmegol abre las pantallas escondidas (Local/Visitante, Estrategia de los dos equipos y menú previo). **«Empezar partido» sale atenuado**, así que el partido aún no arranca.
+- **Gameplay street:** no existe ningún mod street, futsal o 5v5 para PES 2021; solo mods de regate 11v11. Queda registrado para el futuro (cap. 90), en orden y sin prisa.
+
+## 2. La regla «menos de 7» y la ruta del abandono (lectura estática, 25-oct)
+- Barrido de todas las funciones del volcado (`PRUEBA_CANCHA\informes\datos\rea\todo\todo_*.txt`, cabeceras `==== 0xDIRECCIÓN  FUN_x`) buscando `< 7` / `<= 6` junto a `_DAT_1436f3dc8+0x270` y bucles de 11/22: 160 candidatas pequeñas. En el bloque 0x1404–0x1408 ninguna cuenta jugadores en campo (IA, menús de 6 casillas, opciones). **Sin localizar.**
+- `FUN_141B8B250` (setter de `S+0x1554`, código en `+0x1574`) recibe 0, 1, 6, 7 y 8 desde MatchControl y desde `FUN_1404A56C0`/`FUN_1404A6D20`: es una **fase del partido**, no el motivo de abandono. El «2 = abandono» de `ObserverForfeitedGame` sigue sin confirmar.
+- `FUN_140447290` (secuencia de fin de partido, subestado en `+0x8F2` 1..5) termina enseguida si el byte `[gestor+0x270]+0x1775` ≠ 0. Es un posible interruptor.
+- Script usado (reutilizable): `ext.py` extrae funciones por dirección de los `todo_*.txt`, y `grepfun.py` lista las funciones que contienen un patrón (por ejemplo una vftable `UNK_142bbb768`).
+
+## 3. Los menús de PES son JSON (cómo extraerlos)
+1. El catálogo `PRUEBA_CANCHA\informes\datos\catalogo\cpk\dt16_all.cpk.tsv` da `ruta, tamano_en_cpk, tamano_real, posicion`. Las entradas de `common/script/flow/` NO están comprimidas (los dos tamaños son iguales).
+2. Para cada fila: `dd if=dt16_all.cpk of=<ruta> bs=1 skip=<posicion> count=<tamano_real>`. Salen 2158 JSON; hay copia comprimida en `PRUEBA_CANCHA\informes\datos\flujo_menus_dt16.tgz`.
+3. Formato de cada pantalla: `events{ nombre:{ to:"Carpeta/Pantalla", go:forward|backward, clear, fadeStart, fadeEnd, bgType } }` + `data{ type: menu|process, bgId, dialog, mark }` (+ `string`, `binFile`).
+4. **Consecuencia:** todo el árbol de menús se puede re-cablear con archivos (Sider livecpk) sin tocar el exe: botones propios («Modo Street»), atajos, saltarse pantallas, abrir modos ocultos. Conmegol ya trae su propio `livecpk\Menu` que remapea eventos del TopMenu (07→comentario, 08→sonido…).
+
+## 4. Cadena del Entrenamiento libre
+`TopMenuNew.05_freeTraining → Match/TrainingUgcCheckJoinMode → Match/MatchTrainingTeamSel (bg EXHIBITION) → TrainingPrePlayerSelect → MatchTrainingMatchMenu → (00_kickoff) MatchMenuSub/MatchMenuEnd → Match/MatchTrainingSetting (menú de ajustes) → TrainingMatchInit → Match/MatchSetup`.
+- El Tutorial entra de la misma forma (`Tutorial/TutorialUgcCheckJoinMode`).
+- Frente a la exhibición, el entrenamiento **no pasa** por `ExhibiFlowInit` ni por `ExhibiChangeCompeDesignKind` (modo y estadio). El TopMenu de Conmegol salta además `TopMenuModeInit`.
+- En el exe: `freeTraining`, `freeTrainingMenu` (evento de pausa en el modo 11 = entrenamiento libre), `Match/TrainingDirectInit` (registrado junto a `MatchDirectInit`, **sin JSON**), `CreateTrainingSetupTeamSelect`, `PLAY_DATA_TRAINING_FREE / _FREE_12 / _FREE_22 / _FREE_KICK / _PK / _CONER_KICK / _GK`. Clases: `match::registry::TrainingWork(Ref)`, `match::player::ActionFreeTrainingBreak`, `ActionTrainingMoveRoute`, `menu::MatchTeamSelectTraining`, `MatchPauseTrainingMenu`.
+- Recursos: `Asset/model/training_prop/` (conos, maniquíes, barreras x3–x5, paneles de portería, líneas de 6–42 m) y `loaderSwf_trainingPlayArea` (área de juego delimitada → posible mini-campo).
+- `.bin` de interfaz: `trainingMainMenu.bin` = retos del Tutorial (Básico…Experto); `trainingSelect.bin` / `playerTrainingSetting.bin` = entrenamiento de jugadores de ML/BAL. No hay menú «Libre / Tiro libre / Penal» antes de elegir equipos.
+
+## 5. Prueba en vivo del 25-oct (paso a paso para replicarla)
+1. Respaldar `sider.ini` (se hizo `sider.ini.entrenamiento-20261025`).
+2. Crear `SiderAddons\livecpk\Phoenix-Entrenamiento\common\script\flow\TopMenu\TopMenuNew.json` como **copia del de `livecpk\Menu` de Conmegol** (no del original) y cambiar `04_tutorial.to` **y `06_myclub.to`** a `Match/TrainingUgcCheckJoinMode`.
+3. Añadir `cpk.root` de esa carpeta **al principio** de la lista de `sider.ini`.
+4. Abrir PES **con el selector**. El JSON NO se recarga en caliente: cada cambio exige reiniciar PES (1–2 min por arranque).
+5. Pantalla principal → «ENTRENAMIENTO» → «Empezar» → Local/Visitante (los dos equipos a la vez) → «Estrategia» de ambos equipos (4-2-1-3, 11 por lado, reloj ~114→0 que no avanza) → menú previo (Estadio, Empezar partido, Estrategia, Opciones generales, Cámara, Lista de usuarios).
+6. Al terminar: cerrar PES, restaurar `sider.ini` desde el respaldo (verificado con `cmp`) y dejar la carpeta desactivada.
+
+**Errores e intentos fallidos:**
+- Con solo `04_tutorial` cambiado, el botón seguía yendo al Tutorial: en Conmegol ese botón dispara **`06_myclub`**.
+- «Empezar partido», «Estadio» y «Opciones generales» salen **atenuados**; Enter no hizo nada en 45 s y unas 30 teclas en «Estrategia» tampoco avanzaron. No se probó con mando real.
+- PES solo acepta teclado por **scancode**; Espacio abre el overlay de Sider.
+- `sider.exe` se quedó colgado en el segundo cierre y se terminó con `taskkill` de su propio PID.
+- En la prueba se eligió **el mismo equipo** en ambos lados (Academia Puerto Cabello); puede ser la causa del botón apagado.
+- Capturas: `PRUEBA_CANCHA\informes\datos\entrenamiento\` (22–37 = flujo nuevo). Informe largo en la PC: `PRUEBA_CANCHA\informes\ENTRENAMIENTO_LIBRE_PRUEBA.md` (con «AMPLIACIÓN»).
+
+## 6. Pruebas preparadas (desactivadas; hacerlas con el MCP phoenix-pes cuando el juego esté libre)
+- **P0:** repetir con DOS equipos distintos, sin cambiar archivos.
+- **P1:** `SiderAddons\livecpk\Phoenix-Entrenamiento-B1` — `TrainingPrePlayerSelect.proceed → Match/MatchTrainingSetting`.
+- **P2:** `…-B2` — directo a `Match/TrainingMatchInit`.
+- **P3:** crear `Match/TrainingDirectInit.json` (entrada directa).
+- Activar B1 o B2 = añadir su `cpk.root` antes del de `Phoenix-Entrenamiento`, con respaldo de `sider.ini` antes. Coordinar primero con los demás hilos: Link y mandos también usan PES y `sider.ini`.
+- **Aviso:** en el TopMenu de Conmegol, `12_freelobby` y `18_info` van a `Match/MatchDirectReplay` (repeticiones reales de Fralex: no tocar).
+
+## 7. Cosas a tener en cuenta
+- Regla del 25-oct: Conmegol es solo banco de pruebas. Toda función debe ser **opción encender/apagar** que funcione en PES 2021 limpio; los overrides livecpk cumplen eso.
+- La «minicancha» que Fralex vio dibujada viene, casi seguro, del prototipo de cancha 30×20 del Camp Nou (`escalar_capa_campo.js`, `RESTAURAR_CAMP_NOU.ps1`). Es independiente de los mandos.
+- Si el entrenamiento arranca, el siguiente paso es contar los actores creados (objetos de jugador de 640 B, `pelota.exe … jugador`) y compararlos con una exhibición, para ver dónde se decide N.
+- Ideas que abre: modo street dentro del entrenamiento; retos de habilidad con conos y maniquíes; retos de tiros libres, penales y córners; un menú Phoenix propio en la pantalla principal; acceso directo a partido (`Match/MatchDirectSetup`).
+
+## 8. ¡LOGRO! 26-oct ~01:17 — Se abre el «Menú de entrenamiento» escondido (prueba P1)
+**Cómo se llegó (paso a paso, lo hizo Fralex a mano):**
+1. Link 0.3.54 → SYNC > AVANZADO → «RAÍZ DE PRUEBA (SIDER)»: texto `.\livecpk\Phoenix-Entrenamiento`, PONER (Link pone la carpeta la primera en sider.ini y guarda copia). La regla del proyecto prohíbe a Claude editar sider.ini directamente: siempre por este botón.
+2. **P0 (FALLÓ):** ENTRENAMIENTO → Empezar → FC Barcelona vs Real Madrid (equipos distintos) → menú previo: «Empezar partido», «Estadio» y «Opciones generales» siguen en GRIS; reloj en cuenta atrás (109 s); □ «Lista de usuarios» dice «No hay datos». Conclusión: ese menú (`MatchTrainingMatchMenu`) es el pre-partido de una SALA ONLINE; con la sala vacía, lo del anfitrión sale apagado. El equipo repetido NO era la causa.
+3. **P1 (FUNCIONÓ):** cerrar PES (y sider.exe), en Link cambiar el texto a `.\livecpk\Phoenix-Entrenamiento-B1` y PONER (sin QUITAR la anterior), abrir PES con el selector → ENTRENAMIENTO → Empezar → equipos → aparece **«Menú de entrenamiento — Elige el tipo de entrenamiento»** (`Match/MatchTrainingSetting`).
+
+**Opciones del menú (captura de Fralex):**
+| Opción | Valor visto |
+|---|---|
+| Atacante/Defensor | Ataque |
+| Tipo de entrenamiento | Entrenamiento libre (◀ ▶: hay más tipos) |
+| Cursor de PT fijo | No |
+| **Jugadores usuario** | **11** |
+| **Jugadores COM** | **1** |
+| Nivel de partido | Juvenil |
+| Faltas | No |
+| S. pta./córner/banda | Ambos equipos |
+
+**Importancia:** el juego tiene de serie la opción de **elegir cuántos jugadores hay** por equipo (usuario y COM). Es la vía nativa para el modo street (N contra N) sin parchear las 27 000 comparaciones con 11/22. Pendiente: mínimos y máximos de cada valor, lista de tipos de entrenamiento, ver la cancha con por ejemplo 4 contra 4, y si las faltas, saques y portería funcionan.
+
+### 8.1 Mínimos de jugadores según el tipo (pruebas de Fralex, 26-oct ~01:20)
+El texto de ayuda del juego dice: «Elige el número de jugadores que participarán en el entrenamiento… El número mínimo necesario varía según el tipo de entrenamiento.» Al cambiar de tipo, el juego sube solo los valores que quedan por debajo del mínimo.
+| Tipo de entrenamiento | Mínimo jugadores usuario | Mínimo jugadores COM | Notas |
+|---|---|---|---|
+| Entrenamiento libre | 3 (no dejó bajar de 3) | ¿? (con 4 vs 4 y luego Tiro libre, COM subió a 5) | Antes estaba en 11 usuario / 1 COM |
+| Tiro libre | ¿? | 5 (sube solo) | Visto 4 usuario / 5 COM |
+| Penalti | 1 | 1 | 1 contra 1 |
+| Córner por la derecha | 4 | 1 | Probable también córner por la izquierda |
+Pendiente: confirmar el mínimo de COM en Entrenamiento libre, la lista completa de tipos, y entrar a la cancha.
+
+### 8.2 Primer intento de entrar a la cancha (26-oct ~01:24): carga atascada
+- Configuración: Entrenamiento libre, 3 jugadores usuario vs 1 COM, Faltas Sí → OK. Mínimos confirmados en Entrenamiento libre: usuario 3, COM 1.
+- Resultado: pantalla fija (fondo de River Plate). PES VIVO (sin WerFault; CPU sostenida, ~3–4 núcleos; memoria plana ~1970–2020 MB) pero sin avanzar durante más de 9 min.
+- Pista: el log de Sider, justo después de `set_teams` (108 vs 109), da `lua ERROR from module_stadium_name: StadiumServer.lua:705: attempt to index a nil value` (línea: `team_assignment_map[ctx.home_team][random_num_team]`). La sonda marca `stadium_choice = 65535` (sin estadio). El camino B1 se salta la elección de estadio («Estadio» salía apagado en el pre-partido), así que el módulo de estadios de Conmegol falla. Causa más probable, no demostrada.
+- La sonda ve el entrenamiento por este desvío en la zona MYCLUB (id 30), porque entra por el evento `06_myclub`.
+- Siguiente prueba: (a) entrenamiento con el módulo `StadiumServer` apagado (necesita botón en Link, porque sider.ini solo lo edita el instalador), o (b) fijar un estadio antes de `TrainingMatchInit` (por ejemplo pasando por la elección de estadio). Recordatorio: la meta final es que funcione en PES limpio, sin los módulos de Conmegol.
+- 26-oct ~01:34: **Penalti 1 vs 1 también se queda atascado** en la misma pantalla. Conclusión: el problema es la CARGA del partido por el camino B1 (falta algo que prepara el camino original: estadio, init de modo/sala), no el tipo de entrenamiento ni el número de jugadores. Fin de las pruebas del día; Fralex pulsa QUITAR (B1 y Phoenix-Entrenamiento) en Link.
+- Próximos pasos (estáticos primero): leer `StadiumServer.lua` de Conmegol y qué hace con `stadium_choice = 65535`; comparar qué ejecuta `MatchTrainingMatchMenu` (00_kickoff → `MatchMenuEnd`) antes de `MatchTrainingSetting` (en el camino original el menú de entrenamiento se abre DESPUÉS del pre-partido, así que el estadio y la sala ya están listos); probar en PES limpio o con el módulo de estadios apagado (botón en Link); alternativa: hacer que el pre-partido de la sala habilite «Empezar partido» (ser anfitrión).
+- Corrección (26-oct ~01:36): el error de `StadiumServer.lua:705` también sale en exhibiciones normales que SÍ cargan → NO es la causa. Hipótesis nueva y más fuerte: el botón ENTRENAMIENTO de Conmegol dispara `06_myclub` y el juego fija el MODO según el evento del botón (la sonda ve zona MYCLUB, id 30). Nuestro override solo cambia el destino (`to`), no el modo; `MatchSetup` de entrenamiento espera el modo de entrenamiento libre (modo 11, evento `05_freeTraining`) y se queda esperando. Siguiente paso: averiguar qué botón (menús .bin del TopMenu / `menu::TopModeSelect`) dispara `05_freeTraining`, o hacer que un botón lo dispare.
+- Lectura estática (26-oct ~01:45): el modo («zona») lo fija el código del menú principal según el evento del botón, no el JSON. ENTRENAMIENTO de Conmegol → `06_myclub` → zona MYCLUB (30) en vez de FREE_TRAINING (52). Ninguno de los 7 botones conocidos del menú de Conmegol dispara `05_freeTraining`; el mapeo botón→evento está en código o en `topModeSelectDMM.bin` (AFP). **Prueba C1 preparada (desactivada):** `SiderAddons\livecpk\Phoenix-Entrenamiento-C` = como A pero con `04_tutorial` → pantalla «Versión» y `05_freeTraining` → «Créditos» (marcadores inofensivos). Con PONER, pulsar cada botón del menú principal: si alguno abre Versión o Créditos, ese botón dispara 04 o 05. Alternativas si ninguno: editar la interfaz o el exe para que un botón dispare 05 (pesado); escribir el modo desde Lua (escritura de memoria, descartada por regla); ver si el hub del Tutorial lleva al mismo menú con modo propio.
+- Lectura estática 2 (26-oct ~01:50): tabla de eventos del TopMenu en el exe, punteros a cadenas en VA `0x1434B6800`: 0 exhibition, 1 randomselection, 2 offline_coop, 3 versus, 4 tutorial, **5 freeTraining**, **6 myclub**, 7 rankmatch, 8 online_coop … 25 Exit; detrás `topMenuIcon_0…6` (los 7 botones). Dos enums distintos: zona/modo (61 nombres; FREE_TRAINING=52, MYCLUB=30, STEPUP_TUTORIAL=51; lo que lee la sonda) y tipo de partido (… SUDAMERICANA, FREE_TRAINING, STEPUP_TUTORIAL, VERSUS …). La hipótesis «zona MYCLUB ⇒ cuelgue» queda MÁS DÉBIL: el nodo de entrenamiento podría fijar bien el tipo de partido y el cuelgue venir de otro estado de MyClub (datos/sala). Función que arma los iconos: `todo_0133.txt` líneas ~7770–9200; lector del modo `0x14149F4F0` (997 llamadores). Siguiente: prueba C1; con PES libre, leer en vivo la tabla de 7 iconos y su índice de evento; leer la zona dentro del hub del Tutorial por el camino normal.
+
+### 8.3 Prueba C1 (26-oct, ~03:39): ¡la puerta real existe!
+
+Con la carpeta `Phoenix-Entrenamiento-C` (04 → «Versión», 05 → «Créditos») Fralex pulsó cada botón del menú principal de Conmegol:
+
+| Botón (Conmegol) | Qué abre | Evento |
+|---|---|---|
+| Música y Sonido | menú en línea (Partida rápida, Divisiones, Cooperativo, Matchday, Torneo) | no es 04/05 |
+| Estadísticas | menú de información (Info en línea, Galería de repeticiones, Aviso legal) | no es 04/05 |
+| Ajustes | Editar / Opciones | no es 04/05 |
+| ENTRENAMIENTO (portada) | Menú de MyClub | 06_myclub (ya sabido) |
+| **Día de Partido → Entrenamiento → Entrenamiento libre** | **«Créditos»** | **05_freeTraining** ✅ |
+| Día de Partido → Entrenamiento → Entrenamiento de habilidades | (presumible 04_tutorial → «Versión», sin comprobar) | 04 |
+
+**Conclusión:** el Entrenamiento libre SÍ tiene botón en PES 2021: está dentro de Día de Partido → Entrenamiento (Fralex no lo conocía). Ese botón dispara el evento correcto (05), así que el modo ya no será MYCLUB. La hipótesis MYCLUB de §8.2 queda pendiente de confirmar con la prueba siguiente: QUITAR C, PONER B1 (salta la sala tipo online), entrar por Día de Partido → Entrenamiento → Entrenamiento libre y pulsar OK.
+
+### 8.4 ¡Carga! (26-oct, ~03:43)
+
+Con el juego **limpio** (sin ninguna raíz de prueba), Fralex entró por Día de Partido → Entrenamiento → Entrenamiento libre, configuró el Menú de entrenamiento y pulsó OK: **la cancha cargó** (estadio vacío). Queda confirmada la hipótesis de §8.2: el cuelgue venía de entrar con el evento 06 (zona MYCLUB). Por la puerta oficial (evento 05, FREE_TRAINING), el entrenamiento con pocos jugadores funciona en PES limpio, sin ningún parche. Pendiente: contar los jugadores en cancha y comprobar goles, pausa y faltas.
+
+### 8.5 En cancha: 3 contra 1 y jugadores «sin camiseta» (26-oct, ~03:45)
+
+- El MCP leyó la zona **FREE_TRAINING (52)** con `set_teams` 108 (Barcelona) contra 102 (Chelsea), `tournament_id` 65535 (ninguno) y estadio sin elegir (65535). Carga de todos modos.
+- En cancha hay **3 jugadores del usuario y 1 de la COM (portero)**, tal como se eligió. El resto de la plantilla calienta fuera de la línea y no juega.
+- **Jugadores oscuros, sin camiseta:** en `sider.log`, `kserv.lua` dice «using dummy for …\uniform\team\108\108_DEF_1st_realUni.bin», y lo mismo para el 102. Sin torneo, el servidor de uniformes de Conmegol no encuentra el uniforme real y pone el de relleno. Hay además un error que no bloquea: `TournamentCornerFlags.lua:98` (CornerFlag es nil sin torneo).
+- **Idea para el catálogo:** un parche opcional de `kserv.lua` que busque el uniforme real aunque no haya torneo, o que el entrenamiento pase un torneo. Es secundario para el modo street.
+
+### 8.6 ¡3 contra 3 con defensa de la COM! (26-oct, ~03:51)
+
+Configuración: Entrenamiento libre, Jugadores usuario 3, Jugadores COM 4 (portero + 3). **Los rivales de la COM defienden y le quitan el balón al usuario.** Es el primer partido de pocos jugadores que funciona en PES 2021 limpio, sin parches y por la puerta oficial. Pendiente: si los goles cuentan (marcador o reinicio), pausa, si dos humanos pueden jugar en equipos opuestos, y la cancha pequeña.
+
+### 8.7 Goles sin marcador (26-oct, ~03:52)
+
+~~Al marcar gol, la jugada se reinicia desde el centro.~~ **[Corrección 26-oct 04:50, Fralex: tras el gol hay SAQUE DE PUERTA del rival, como si el balón hubiera salido por la línea de fondo; el juego no reconoce el gol.]** **No hay marcador ni contador.** Idea: un marcador propio en Link (leer el gol en memoria, como en los partidos) mostrado en el overlay PhoenixGlass, con tiempo y reglas tipo «primero a N goles», como opción que se activa y desactiva. Siguiente: comprobar si dos humanos pueden jugar en lados opuestos, que es clave para Parsec.
+
+### 8.8 Ropa: corrección del diagnóstico (26-oct, ~04:00)
+
+- **Corrige §8.5.** «using dummy for …realUni.bin» es lo normal en kserv (`m.make_key`, kserv.lua ~1016/1022). El juego exige los `.bin`, kserv le da un `dummy.bin` y la ropa real va por las texturas `.ftex` de `content\kit-server`. kserv trata el torneo 65535 como exhibición (kserv.lua:694) y aplica los kits sin error (`init_*_team_kits`, líneas 888–945).
+- **Causa probable (sin probar):** en el entrenamiento PES viste el **training suit** (`model/character/parts/training_suit/training_suit.fmdl`). Conmegol lo reemplaza en `livecpk\Managers\Asset\…\training_suit\` con archivos que no son los originales de `dt32_g4.cpk`; por ejemplo fmdl 477906 frente a 477779 bytes y bsm 21474 frente a 60816.
+- **Arreglo opcional preparado y no instalado:** `PRUEBA_CANCHA\informes\datos\kserv_fix\Phoenix-Entrenamiento-Ropa-ORIGINAL` con los 10 archivos originales extraídos de dt32_g4.cpk. Se usa como raíz livecpk `Phoenix-Entrenamiento-Ropa` puesta con PONER, que tiene que quedar antes de `Managers`. Efecto secundario: el DT pierde el traje de Managers en ese modo.
+- Otras causas si no es eso: el cuerpo PRDX (raíz 15) incompatible con el training suit, o la sombra del estadio.
+
+### 8.9 Ropa arreglada (26-oct, ~04:09) ✅
+
+Con la raíz `.\livecpk\Phoenix-Entrenamiento-Ropa` (los 10 archivos originales de `training_suit` sacados de dt32_g4.cpk), puesta con PONER antes de `Managers` y tras QUITAR B1, **cada club sale con su uniforme** en el Entrenamiento libre. Queda confirmada la causa de §8.8: el training_suit reemplazado por Managers de Conmegol. Es una opción que se activa y desactiva: QUITAR lo deshace. Efecto secundario conocido: el DT pierde el traje de Managers en ese modo. Candidata a entrar en el instalador de Link como opción del modo street.
+
+### 8.10 ¡Humano contra humano! (26-oct, ~04:42) ✅
+
+Dos mandos conectados a la PC: mando 1 a la izquierda y mando 2 a la derecha en la pantalla de lados. Configuración: Entrenamiento libre, usuario 3, COM 4. **El mando 2 controla a todos los jugadores del equipo rival** (cambia de jugador como en un partido). Así queda un 3 contra 3 entre dos personas en PES 2021 limpio, por la puerta oficial. Para el juego, un mando de Parsec es un mando local más, así que debería funcionar igual en línea (sin probar).
+
+**Qué falta para el modo street:**
+1. Marcador y tiempo propios (Link + overlay PhoenixGlass), porque este modo no los lleva.
+2. Cancha pequeña: investigar si se puede achicar o usar las líneas y conos del entrenamiento.
+3. Gameplay de regates (cap_90, en orden).
+4. Opción «Modo street» en Link: raíz Ropa, acceso directo y marcador.
+5. Por probar: más humanos por lado, 1 contra 1, 2 contra 2, pausa y salida, fuera de juego y saques.
+
+### 8.11 Marcador y cancha pequeña: lectura estática (26-oct, ~04:50)
+
+- **Marcador:** en la zona 52 la sonda marca `en_partido: false`, `match.stats()` de Sider devuelve nil y no hay reloj ni lista de goles. `goal_scored` solo existe en Sider 7.3.4 o posterior, y la PC tiene la 7.3.3. **Diseño:** detectar el gol por la posición de la pelota, en solo lectura (objeto de 640 B; x en +208, z en +216; ver `Pelota.cs` y CAMPO-2D-INVESTIGACION §8). Cuenta como gol cuando cruza la línea de fondo entre los palos, y se confirma con el saque de puerta que viene después (§8.7 corregido). Lo implementaría Link (hilo 1) y lo mostraría el overlay. Alternativa: Sider 7.3.4 o posterior.
+- **Cancha pequeña:** `loaderSwf_trainingPlayArea` es de la ficha de MiClub, no un área de juego. Los training_prop y d2_training_guide son del tutorial de retos. El entrenamiento libre usa el campo normal. Candidato: `parchear_campo.exe 15 10` (30×20, informe 11), sin probar en la zona 52 (faltan saques, porterías y córners).
+
+### 8.12 Porteros: solo el equipo que defiende tiene arquero (26-oct, ~04:47)
+
+En el «Menú de entrenamiento» (opciones: Atacante/Defensor, Tipo, Cursor de PT fijo, Jugadores usuario, Jugadores COM, Nivel de partido, Faltas, S. pta./córner/banda = «Ambos equipos», y en pausa: Menú de pausa, Repetición, Menú principal):
+- **Solo el equipo que DEFIENDE tiene portero.** Con usuario 4 en «Defensa» y COM 4: el usuario tiene 1 PT + 3 de campo, y la COM tiene 4 de campo sin arquero. En «Ataque» es al revés (por eso en el 3 contra 1 del principio, el único COM era el portero).
+- La cifra de jugadores INCLUYE al portero del lado que defiende.
+- Pendiente: saber si un gol en la portería vacía (la del atacante) también reinicia o cuenta. Opciones para el street: sin porteros, un portero fijo, o investigar cómo poner arquero en los dos lados (memoria o Ghidra: lógica atacante/defensor del TrainingWork).
+
+### 8.13 Marcador nativo: pistas de RE (26-oct, ~04:55–05:08)
+
+- **Pista 1.** El marcador del partido está repartido en archivos AFP por licencia: `common/menu/licence/game2dPes.bin`, `game2dUcl.bin`, `game2dAcl.bin`… (más sus `…Enter`, `…Pk`, `…CompeWinner` y `…Layout`), el genérico `common/menu/general/game2d.bin` (217 KB) y `game2dTutorial.bin` / `game2dTutorialRight.bin`. La tabla de nombres empieza en el exe en 0x142BD39A8. Conmegol reemplaza `game2dPes*.bin` en `livecpk\Scoreboard`. Hipótesis: el entrenamiento, que llega sin competición (65535), no carga ningún HUD con marcador.
+- **Pista 2.** El partido es una máquina de estados: `[partido+0xAC8]` guarda el id y `+0xAC9` el modo, y escribe `SetState = FUN_1406EEBB0`, al que llaman `FUN_1406EEA90`, `FUN_1407E1C60`, `FUN_1407F0A20`, `FUN_1407EBFE0` y `FUN_1406F9B70`. En un partido normal (14-oct): cuando la pelota cruza la línea de fondo pasa a 0x4A; si entró, va a **0x4C (GOL)**, y si salió fuera, a 0x4F (saque).
+- **Pista 3 (en vivo, zona 52, `marcador_street\estado_zona52_b.txt`).** Un gol en el entrenamiento hace **0x3A → 0x4A → 0x01 (preparar saque) → 0x03**. **El estado 0x4C no se activa nunca.** Por eso no hay marcador, repetición ni festejo. Hay una decisión «0x4A → 0x4C» que depende del modo: ese es el interruptor que buscamos. El objeto de estado del partido tiene la vtable 0x1425E3508 y empieza en 0x3E. Al marcar, PES recrea objetos (memoria de 2,2 a 5,3 GB): el lector tiene que volver a escanear.
+- **Pista 4 (en vivo, gol y fuera señalados por Fralex).** El objeto de estado del partido (el que empieza en 0x3E) sigue pautas distintas antes de 0x4A. Con **gol**: `0x3A` → 0x4A (0,5 s) → 0x01, y vuelve a 0x3E (2 muestras). Con **fuera**: el jugador pasa por 0x48 y el partido por 0x40 → 0x4A → 0x01. No aparece nunca 0x4C ni 0x4F. Así que el juego distingue el gol (0x3A antes de 0x4A), pero se salta el paso 0x4C/0x4F. Sirve al plan B: un marcador propio que cuente goles por el estado 0x3A, sin geometría de la pelota (falta confirmarlo con una prueba etiquetada).
+- **Pista 4 CORREGIDA (05:37, prueba etiquetada gol1/fuera1, `estado_zona52_d.txt`).** El tiro fuera dio **la misma pauta** que el gol: 0x47 → 0x3A → 0x4A → 0x01 → 0x3E. Por tanto **0x3A es «pelota muerta» genérico y NO distingue gol de fuera**; el 0x40 es solo el arranque de una jugada nueva. Queda anulada la idea de contar goles por 0x3A. Para el plan B hay que usar la posición de la pelota en el momento del 0x4A (dentro de los palos); para el plan A, encontrar la decisión nativa que lleva a 0x4C.
+- **Pista 5 (cadenas del exe, offsets 0x259C8xx y 0x25D2xxx).** Modos de juego del partido: `MODE_NORMAL`, `MODE_KICK_OFF`, `MODE_THROW_IN`, `MODE_GOAL_KICK`, `MODE_CORNER_KICK`, `MODE_FREE_KICK`, `MODE_PENALTY_KICK` y **`MODE_ENDLESS`** (candidato a ser el del Entrenamiento libre), más las fases `MATCH_PHASE_*`. Hay una razón de pelota fuera (`OutOfPlayReason`, `GetOutOfPlayReason`: LINEOUT, LINEOUT_CK, LINEOUT_GK, LINEOUT_THROW, GOAL, OUT_OF_PLAY) y un evento de gol propio (`GoalEvent`, `STEP_GOALEVENT_INIT/MAIN/END/STEP`, `eventType_goal`). Hipótesis: en MODE_ENDLESS la razón no se marca como GOAL y por eso no se lanza el GoalEvent (0x4C, marcador). Siguiente: los consumidores de `GetOutOfPlayReason` y de `STEP_GOALEVENT_INIT`.
+- **Pista 6 (probablemente la buena).** En el exe hay un enum de escenas o demos del partido. Seguidas, están `DEMO_GOALEVENT`, `DEMO_GOALEVENT_RUNNING_ACTION`, `DEMO_GOALEVENT_FINISH_ACTION` y **`FREE_TRAINING_BREAK`** (cadena en 0x2650BF0); también `ANIME_FREE_TRAINING_BREAK` y la acción `AVActionFreeTrainingBreak`. Tras un gol, el juego elige entre la escena de gol (GOALEVENT: festejo, marcador, repetición) y FREE_TRAINING_BREAK (corta la jugada y la reanuda), según el tipo de partido. El interruptor es ese selector. Siguiente: encontrar quién usa el id de FREE_TRAINING_BREAK y los ids numéricos de las dos escenas.
+- **Pista 7 (refina la 6).** `DEMO_GOALEVENT` (id 137) y `FREE_TRAINING_BREAK` (id 140) son **ids de acción de jugador**: la tabla de 148 acciones está en 0x1434A4CB8 (WALK… KICKOFF 122, DEMO_GOALEVENT 137, FREE_TRAINING_BREAK 140…). FREE_TRAINING_BREAK tiene clase propia, `match::player::ActionFreeTrainingBreak` (vftable 0x142632768). El partido guarda un registro `match::registry::TrainingWork`, referenciado desde el trabajo grande `FUN_140441490` en `+0x17D50`: es el candidato a «bandera de entrenamiento». Siguiente: las xrefs de las lecturas de `+0x17D50`.
+
+### 8.14 Cancha pequeña 30×20 en el entrenamiento (26-oct, ~06:07–06:12) ✅
+
+`parchear_campo.exe 15 10` (solo memoria) parcheó 2 bloques de dimensiones (proceso 0x76E454 y 0x47FB038): la mitad del largo y la mitad del ancho pasan de 52,56/34,06 a 15/10. El resto del bloque no cambia. Se deshace con `parchear_campo.exe restaurar` o cerrando PES, y hay que reaplicarlo si el juego recrea la estructura. Captura de Fralex (Barcelona contra Real Madrid, Camp Nou, humano contra humano FRALEX/AXEL): **saque de banda casi en el centro** (la banda lógica está a 10 m), los suplentes **en fila sobre la banda nueva** y el portero rival a unos 15 m. La lógica del campo pequeño funciona en la zona 52. El dibujo sigue siendo grande; para el Camp Nou ya existe `escalar_capa_campo.js` (prototipo de octubre). **Confirmado (06:14):** el balón que cruza la línea cerca del portero, a unos 15 m, acaba en saque del arquero: la portería lógica se movió con el parche. La captura era un saque de banda de AXEL (Faltas: No, no puede ser tiro libre). Pendiente: dibujo a escala (escalar_capa_campo.js) y porterías visibles a ±15 m.
+- **Pista 8 (TrainingWork).** El registro está en `registro+0x103CC` y existe siempre. byte0 indica «activo» (lo lee `FUN_141F9C3B0`) y byte1 es la «petición de reinicio» (setter `FUN_140A59F70`). Si los dos están activos, el trabajo por fotograma `FUN_140449B00` pone byte1=0, llama a `FUN_140451FD0(partido, 0x0E)` (`+0x874`=0x0E, cola de eventos a 0x48) y encola el evento 0x36. byte1=1 lo ponen `FUN_141FBA600` y `FUN_141FCDA30`, que montan el entrenamiento según el menú (`switch` del tipo 0..6). TrainingWork guarda el tipo y los parámetros del menú, pero **el desvío gol → saque de puerta no está aquí**. Idea: Link podría escribir esos ajustes para montar el modo street automáticamente.
+
+### 8.15 Cancha 30×20 dibujada y porterías a 15 m (Camp Nou, 26-oct ~06:45)
+
+- **Archivos** (con respaldo y sin probar antes): el césped y las líneas `content\stadium-server\España\Spotify Camp Nou\Asset\model\bg\st002\pitch\#Win\pitch_st002.fpk` pasan a la versión 30×20 de octubre (`escalar_capa_campo.js`, ×0,2857/×0,2941). La portería `…\Spotify Camp Nou\AddOn\Goal Post Colour\Global\Asset\model\bg\common\goal\#Win\goal_post.fpk` pasa a `goal_post_x15.fpk` (410 vértices trasladados de −52,5 a −15). Los dos afectan **solo al Camp Nou**: cada estadio tiene su add-on, y hay 276 goal_post.fpk. No sirven como raíz livecpk porque `StadiumServer.lua get_filepath` (~1053) manda sobre `cpk.root`. Respaldos: `pitch_st002.fpk.respaldo-<fecha>` y `street_visual\porteria_modelo\goal_post_ORIGINAL_conmegol.fpk`.
+- **Navegación con el MCP phoenix-pes** (teclas y capturas): Día de Partido → Entrenamiento → Entrenamiento libre, Barcelona contra Real Madrid, 4/4 y OK, con `parchear_campo 15 10` (bloques 0x48DDDF0 y 0x3697C444).
+- **Resultado:** líneas, círculo y áreas a 30×20, que coinciden con la cancha lógica; **las porterías se dibujan a unos 15 m en los dos lados** (el modelo espejo funciona). Capturas: `street_visual\camp_nou_30x20_porterias_x15.png` y `…_en_juego.png`. Pendiente: la red frena la pelota, el poste rebota, los saques. **Obligatorio al terminar:** restaurar los dos .fpk con PES cerrado.
+- **Prueba de Fralex (06:47):** los saques salen justo en la línea pintada ✅ y los palos se ven a 15 m ✅. La **red no se movió** (otro archivo) y **la pelota la atraviesa**: falta la colisión, que son los volúmenes de portería de `.data 0x1437CF4C0` (octubre). Siguiente: preparar la red dibujada a x15 y un parche de memoria de esos volúmenes a ±15. Tiro al poste pendiente.
+- **Red (06:56–07:04):** se probó (a) el parche en memoria de los volúmenes de portería `.data 0x1437CF4C0` (96 B, de ±52,44/±55,50/±35,5 a ±14,94/±18,00/±11,5), aplicado con el partido ya cargado, y (b) 5 `.geom` desplazados 37,5 m (`common/anime/FoxAnim/goal_hit|goal_l|goal_r.geom`, `common/render/model/bg/hit/goal/goal_l|r.geom`) dentro de la raíz Ropa. **En los dos casos la pelota sigue atravesando la red.** Hipótesis: las constantes están en el código del exe o en copias por partido hechas al cargar (y entonces el parche a `.data` tendría que aplicarse ANTES de cargar el partido). No bloquea el modo: el gol se detecta a 15 m.

@@ -1,0 +1,24 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="18.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="C:\dev\phoenix-core-wt\paquetes\phoenix_core\src\phoenix_core.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="C:\dev\phoenix-core-wt\paquetes\phoenix_core\src\phoenix_api.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="C:\dev\phoenix-core-wt\paquetes\phoenix_core\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{983DE6CA-8EC1-39B9-A6FB-CF63F9FD5FF9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{A22A1DDC-E287-37FC-8478-F7D340197BB0}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

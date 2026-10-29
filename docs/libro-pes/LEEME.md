@@ -10,6 +10,7 @@ El original vive en `D:\Frank\Games_\PRUEBA_CANCHA\informes\LIBRO_PERSONAL\`, qu
 | `cap_60_k_estrategia_mas_mandos.md` | Estrategia 8v8 y hasta 11v11. |
 | `cap_60_l_team_play_22_humanos.md` | ¿Sirve el Team Play online para 22 humanos en local? |
 | `cap_60_n_diseno_16_asientos.md` | Diseño de los 16 asientos de los menús (pantalla Local/Visitante nativa de 16, pendiente). |
+| `cap_60_o_entrenamiento_libre_y_menus.md` | Modo street con menos jugadores: menús de PES en JSON, puerta del Entrenamiento libre (prueba en vivo 25-oct), regla de 7 y pruebas pendientes. |
 | `cap_90_pendientes_decisiones_y_hoja_de_ruta.md` | Pendientes, decisiones y hoja de ruta del proyecto. |
 | `cap_62_catalogo_hallazgos_re.md` | Catálogo de hallazgos de ingeniería inversa (settings.dat, mandos, menús, partido). Míralo antes de buscar algo en el exe. |
 
