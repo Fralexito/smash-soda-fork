@@ -232,6 +232,8 @@ class Servidor:
                 return format(v, "016x")
             if isinstance(v, bytes) and len(v) == 8:
                 return v.hex()
+            if isinstance(v, str) and v.isdigit() and int(v) > 0:
+                return format(int(v), "016x")  # P: np_account_id en decimal como texto
             if isinstance(v, str) and v:
                 return v.lower()
         return None
@@ -265,20 +267,28 @@ class Servidor:
         return self._entrar(s, m)
 
     async def c_cmd_get_player_data(self, s, m):
+        # C (REA 29-oct, lector 141d3f450): has_data, is_valid_cache e is_deleted son CADENA;
+        # account_id es NÚMERO; pid entero. P: el texto exacto de has_data ("1"/"0").
         j = self.datos.jugador(s.steam_hex or "")
         if not j:
-            return {"has_data": False}
+            return {"has_data": "0"}
         self._registrar(s, j)
-        return {"has_data": True, "pid": j["pid"],
-                "pname": Empaquetado(self._identidad(s, j["pname"])),  # C: claves del exe
-                "psn_user_id": Empaquetado({"account_id": s.steam_hex, "online_id": j["pname"],
-                                            "is_valid_cache": True})}
+        return {"has_data": "1", "pid": j["pid"],
+                "pname": Empaquetado(self._identidad(s, j["pname"])),
+                "account_id": self._numero_cuenta(s)}
 
     @staticmethod
-    def _identidad(s, nombre):
+    def _numero_cuenta(s):
+        try:
+            return int(s.steam_hex or "0", 16)
+        except ValueError:
+            return 0
+
+    @classmethod
+    def _identidad(cls, s, nombre):
         # nunca SteamID en campos de Xbox/PSN: xuid_one y psn_user_id vacíos
-        return {"name": nombre, "xuid_one": "", "psn_user_id": "", "account_id": s.steam_hex or "",
-                "online_id": nombre, "is_valid_cache": True, "is_deleted": False}
+        return {"name": nombre, "xuid_one": "", "psn_user_id": "", "account_id": cls._numero_cuenta(s),
+                "online_id": nombre, "is_valid_cache": "1", "is_deleted": "0"}
 
     async def c_cmd_create_player(self, s, m):
         nombre = m.get("pname") or m.get("name") or f"Phoenix_{(s.steam_hex or '')[-4:]}"
