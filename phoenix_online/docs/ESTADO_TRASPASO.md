@@ -27,3 +27,7 @@
 - Sala limpia: este trabajo **no** lee archivos de PESBUL; solo la especificación cap_72 §11, el exe y Nikow5 (MIT).
 - Al terminar una prueba, restaurar hosts con `RESTAURAR_HOSTS.ps1` (como administrador). **A las 19:50 del 29-oct seguían puestas las 5 líneas**: confirmar con Frank.
 - Configuración que funciona: `blowfish_le: false`. GET_SVRLIST devuelve ACCOUNT y MENU. Los campos de nación y de perfil van como cadena.
+
+## Para la próxima prueba (nota del 29-oct, 20:10 UTC)
+- El servidor de la PC está **apagado** porque la PC se reinició. Para arrancarlo: en `D:\Frank\IA\CLAUDE\pes-online\phoenix_online`, ejecutar `python -m phoenix_online.servidor config.json`. Ya tiene instalado adcc2d1, con su config.json y vinculos.json locales.
+- Revisar el hosts: si siguen las 5 líneas PHOENIX_PRUEBA, quitarlas con `RESTAURAR_HOSTS.ps1` (como administrador) en cuanto acabe la prueba.
