@@ -11,6 +11,7 @@ import { Tarjeta, Titulo, Boton, Interruptor, Campo, Avatar, Chip, Icono, Vacio,
 import { CampoEnVivo } from "./campo.js";
 import { ejecutarRotacionRey, obtenerConfigRey } from "./reydelapista.js";
 import { FichaPartidoModal } from "./reportepartido.js";
+import { WidgetPredicciones, resolverPrediccion } from "./predicciones.js";
 
 export const PESTANAS_PARTIDO = [
   { id: "vivo", es: "MARCADOR Y CAMPO", en: "SCORE & PITCH", d: ["Arma los dos lados, lleva el marcador y el reloj y mira el campo 2D en vivo, todo en una sola vista. Al terminar se guarda y se avisa en el chat y la web.", "Set up sides, keep score and time and watch the live 2D pitch, all in one view."] },
@@ -29,7 +30,13 @@ export function VistaPartido({ s, pestana }) {
 /** Sin partido en marcha: si acaba de terminar uno, primero su resultado con REVANCHA; debajo, armar el siguiente. */
 function ResultadoYArmar({ m }) {
   const r = useUltimoPartido(m);
-  return html`<div class="col">${r?.reciente ? html`<${TarjetaResultado} m=${m} r=${r}/>` : null}<${Armar} m=${m}/><${CampoEnVivo} m=${m}/></div>`;
+  const esHost = m.sala?.hostId === m.sala?.miId || m.sala?.esHost;
+  return html`<div class="col">
+    ${r?.reciente ? html`<${TarjetaResultado} m=${m} r=${r}/>` : null}
+    <${WidgetPredicciones} m=${m} esHost=${esHost}/>
+    <${Armar} m=${m}/>
+    <${CampoEnVivo} m=${m}/>
+  </div>`;
 }
 
 // ---- Armar el partido ---------------------------------------------------------------------
@@ -243,6 +250,11 @@ function Marcador({ m }) {
       const cfgRey = obtenerConfigRey();
       if (cfgRey.activo) {
         await ejecutarRotacionRey({ ganador: g, m });
+      }
+      try {
+        await resolverPrediccion({ resultado: g === "empate" ? "x" : g, m });
+      } catch (e) {
+        console.error("[predicciones] Error al resolver:", e);
       }
     }
   };

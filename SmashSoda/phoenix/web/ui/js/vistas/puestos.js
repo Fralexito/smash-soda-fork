@@ -21,6 +21,8 @@ import { MandosEnVivo } from "./mandovivo.js";
 import { leerSentado, ponerSentado } from "./sentado.js";
 import { BarraReyDeLaPista } from "./reydelapista.js";
 import { ModalAtajosModerador } from "./atajos.js";
+import { BadgeConexion, AlertaLaggerSala } from "./radarconexion.js";
+import { ModalBracket } from "./bracket.js";
 
 // ---- Mini-mando en vivo integrado en cada fila (Minimalismo Táctico 0.3.57) ----
 const BITS_MINI = [
@@ -167,7 +169,8 @@ function Fila({ p, m, color, arr, setArr, alAsignar, mirando, vivo }) {
           <div class="mono mut" style="font-size:12px">
             ${esHost ? (m.mandos.miMando ? t("con tu mando · ", "with your pad · ") + m.mandos.miMando : t("con el teclado", "with the keyboard"))
               : html`${p.conectado ? t("conectado", "connected") : t("desconectado", "unplugged")}${p.bloqueado ? t(" · bloqueado", " · locked") : ""}`}
-            ${p.ping >= 0 ? html` · <span style=${`color:${colorPing(p.ping)}`}>${p.ping} ms</span>` : null}${!esHost ? html`<${IndicadorRetraso} r=${retrasoDe(m, p.parsecId)}/>` : null}</div>
+            ${p.ping >= 0 ? html` · <span style=${`color:${colorPing(p.ping)}`}>${p.ping} ms</span>` : null}${!esHost ? html`<${IndicadorRetraso} r=${retrasoDe(m, p.parsecId)}/>` : null}
+            <${BadgeConexion} parsecId=${p.parsecId} m=${m}/></div>
         </div>`
       : html`<div style="flex:1 1 110px;min-width:110px">
           <div style=${`font:600 17px/1.2 var(--f-body);color:${caido ? "var(--warn)" : "var(--mut)"}`}>${caido ? t(`Puesto libre · Se cayó ${caido.nombre}`, `Free seat · ${caido.nombre} dropped`) : t("Puesto libre", "Free seat")}
@@ -367,6 +370,7 @@ export function PuestosNuevo({ m }) {
   const [sobreMirando, setSobreMirando] = useState(false);
   const [ayudaAB, setAyudaAB] = useState(false);
   const [verAtajos, setVerAtajos] = useState(false);
+  const [verBracket, setVerBracket] = useState(false);
   const [prefSentado, setPrefSentado] = useState(() => leerSentado());
   // Mandos en vivo: cada fila ocupada ya muestra su pastilla en vivo (~30 Hz); la rejilla grande 2D se abre si el anfitrión la despliega
   const [verVivo, setVerVivoEstado] = useState(() => { try { return localStorage.getItem("phoenix.verVivo2D") === "1"; } catch { return false; } });
@@ -640,6 +644,9 @@ export function PuestosNuevo({ m }) {
         <${Boton} tipo="mini suave" al=${() => setVerAtajos(true)}
           titulo=${t("Ver y consultar todos los atajos de teclado globales de moderador (Ctrl+Shift+K)", "View all moderator global hotkeys (Ctrl+Shift+K)")}>
           ⌨ ${t("ATAJOS", "HOTKEYS")}</${Boton}>
+        <${Boton} tipo="mini suave" al=${() => setVerBracket(true)}
+          titulo=${t("Copa Relámpago de la sala (Bracket eliminatorio con carga de mandos en 1 clic)", "Room Blitz Cup (Elimination bracket with 1-click pad loading)")}>
+          🏆 ${t("COPA", "CUP")}</${Boton}>
         <${TodosAMirar} m=${m} esclavo=${esclavo}/>
       </div>
     </div>
@@ -647,6 +654,8 @@ export function PuestosNuevo({ m }) {
     <${BarraPartidoEnSala} m=${m}/>
 
     <${BarraReyDeLaPista} m=${m} esclavo=${esclavo}/>
+
+    <${AlertaLaggerSala} m=${m}/>
 
     <div style="display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:20px;flex:1;align-items:stretch">
       <div style="display:flex;flex-direction:column;gap:14px;min-width:0">
@@ -717,6 +726,7 @@ export function PuestosNuevo({ m }) {
     <${OrdenPes} m=${m}/>
     ${eligiendo != null ? html`<${ElegirJugador} m=${m} indice=${eligiendo} alCerrar=${() => setEligiendo(null)}/>` : null}
     ${verAtajos ? html`<${ModalAtajosModerador} alCerrar=${() => setVerAtajos(false)}/>` : null}
+    ${verBracket ? html`<${ModalBracket} m=${m} alCerrar=${() => setVerBracket(false)}/>` : null}
   </div>`;
 }
 

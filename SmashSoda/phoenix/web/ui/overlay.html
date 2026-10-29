@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Phoenix Link · Overlay OBS Esports</title>
+  <style>
+    @font-face {
+      font-family: 'ChakraPetch';
+      src: url('fonts/ChakraPetch-Bold.ttf') format('truetype');
+      font-weight: 700;
+    }
+    @font-face {
+      font-family: 'IBMPlexSans';
+      src: url('fonts/IBMPlexSans-Variable.ttf') format('truetype');
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      background: transparent !important;
+      overflow: hidden;
+      font-family: 'IBMPlexSans', -apple-system, sans-serif;
+      color: #fff;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    /* Contenedor del marcador flotante superior */
+    .overlay-hud {
+      position: absolute;
+      top: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      z-index: 100;
+    }
+
+    .marcador-barra {
+      display: flex;
+      align-items: center;
+      background: rgba(10, 12, 18, 0.88);
+      border: 1.5px solid rgba(0, 240, 255, 0.35);
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 240, 255, 0.2);
+      backdrop-filter: blur(8px);
+      overflow: hidden;
+      min-width: 440px;
+      height: 48px;
+    }
+
+    .equipo-lado {
+      flex: 1;
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      font-weight: 700;
+      font-size: 16px;
+      letter-spacing: 0.05em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .lado-a {
+      justify-content: flex-end;
+      color: #00f0ff;
+      border-right: 2px solid rgba(0, 240, 255, 0.4);
+    }
+
+    .lado-b {
+      justify-content: flex-start;
+      color: #d880ff;
+      border-left: 2px solid rgba(179, 0, 255, 0.4);
+    }
+
+    .marcador-centro {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 14px;
+      background: rgba(0, 0, 0, 0.5);
+      height: 100%;
+    }
+
+    .goles {
+      font-family: 'ChakraPetch', sans-serif;
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: #ffffff;
+      min-width: 60px;
+      text-align: center;
+    }
+
+    .reloj {
+      font-family: 'ChakraPetch', sans-serif;
+      font-size: 14px;
+      color: #ffd700;
+      background: rgba(255, 215, 0, 0.15);
+      border: 1px solid rgba(255, 215, 0, 0.3);
+      padding: 2px 8px;
+      border-radius: 6px;
+      letter-spacing: 0.05em;
+    }
+
+    /* Banner inferior de predicciones */
+    .prediccion-lower-third {
+      position: absolute;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 500px;
+      background: rgba(10, 12, 18, 0.9);
+      border: 1px solid rgba(0, 240, 255, 0.3);
+      border-radius: 12px;
+      padding: 10px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(10px);
+      transition: opacity 0.4s ease, transform 0.4s ease;
+    }
+
+    .pred-barra {
+      height: 8px;
+      width: 100%;
+      background: rgba(0, 0, 0, 0.4);
+      border-radius: 4px;
+      overflow: hidden;
+      display: flex;
+    }
+
+    .oculto {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateX(-50%) translateY(20px);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Marcador HUD -->
+  <div class="overlay-hud" id="hud">
+    <div class="marcador-barra">
+      <div class="equipo-lado lado-a" id="nombreA">Equipo Local</div>
+      <div class="marcador-centro">
+        <div class="goles" id="marcadorGoles">0 - 0</div>
+        <div class="reloj" id="tiempo">00:00</div>
+      </div>
+      <div class="equipo-lado lado-b" id="nombreB">Equipo Visita</div>
+    </div>
+  </div>
+
+  <!-- Lower Third de Predicciones Esports -->
+  <div class="prediccion-lower-third oculto" id="predBox">
+    <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:700">
+      <span style="color:#00f0ff">🎯 PREDICCIÓN EN VIVO</span>
+      <span style="color:#888" id="totalVotos">0 votos</span>
+    </div>
+    <div class="pred-barra">
+      <div id="barraA" style="width:33%;background:#00f0ff;transition:width .4s ease"></div>
+      <div id="barraX" style="width:34%;background:#888;transition:width .4s ease"></div>
+      <div id="barraB" style="width:33%;background:#b300ff;transition:width .4s ease"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:11px;color:#ccc">
+      <span id="porcA">33%</span>
+      <span id="porcX">Empate 34%</span>
+      <span id="porcB">33%</span>
+    </div>
+  </div>
+
+  <script>
+    // Actualización reactiva leyendo estado compartido
+    function actualizarOverlay() {
+      try {
+        const rawPred = localStorage.getItem("phoenix.prediccion");
+        if (rawPred) {
+          const p = JSON.parse(rawPred);
+          const box = document.getElementById("predBox");
+          if (p.activa && !p.resuelta) {
+            box.classList.remove("oculto");
+            const tot = p.opciones.reduce((a, b) => a + b.votos, 0);
+            const pA = tot > 0 ? Math.round((p.opciones[0].votos / tot) * 100) : 33;
+            const pX = tot > 0 ? Math.round((p.opciones[1].votos / tot) * 100) : 34;
+            const pB = tot > 0 ? 100 - pA - pX : 33;
+
+            document.getElementById("barraA").style.width = pA + "%";
+            document.getElementById("barraX").style.width = pX + "%";
+            document.getElementById("barraB").style.width = pB + "%";
+
+            document.getElementById("porcA").innerText = p.opciones[0].texto + " " + pA + "%";
+            document.getElementById("porcX").innerText = "X " + pX + "%";
+            document.getElementById("porcB").innerText = pB + "% " + p.opciones[2].texto;
+            document.getElementById("totalVotos").innerText = tot + " votos";
+          } else {
+            box.classList.add("oculto");
+          }
+        }
+      } catch (e) {}
+    }
+
+    window.addEventListener("storage", actualizarOverlay);
+    setInterval(actualizarOverlay, 1000);
+    actualizarOverlay();
+  </script>
+</body>
+</html>
