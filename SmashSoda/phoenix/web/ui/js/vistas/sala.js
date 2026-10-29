@@ -95,7 +95,7 @@ function Heroe({ m, conGuia, verGuia }) {
   // salas de otros en las que se puede entrar ahora (la lista llega con la sección Sala visible)
   const hayAbiertas = ((m.salasAbiertas && m.salasAbiertas.lista) || []).filter((x) => !x.soyHost && x.enlace && x.plazasLibres > 0).length;
   if (!sala.abierta) {
-    return html`<${Tarjeta} clase="heroe" estilo="flex:1;min-height:236px" interior="padding:26px 30px;display:flex;flex-direction:column;gap:18px">
+    return html`<${Tarjeta} clase="heroe" estilo="flex:none" interior="padding:24px 28px;display:flex;flex-direction:column;gap:18px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:24px;flex-wrap:wrap">
         <div style="display:flex;flex-direction:column;min-width:0;flex:1 1 320px">
           <div class="lab">${t("SALA CERRADA", "ROOM CLOSED")}</div>
@@ -136,54 +136,23 @@ function Heroe({ m, conGuia, verGuia }) {
     </${Tarjeta}>`;
   }
   const copiar = () => accion("sala.copiarEnlace", {}, { ok: t("Enlace copiado. Pégalo en Discord o WhatsApp.", "Link copied.") });
-  const c = sala.calidad || {};
-  const autoCal = c.auto ?? true;
-  const mbps = (autoCal ? c.porPersona : c.mbps) ?? 15;
-  const fps = c.fps ?? m.ajustes?.video?.fps ?? 60;
-  return html`<${Tarjeta} vivo clase="heroe" estilo="min-height:236px" interior="padding:26px 30px;display:flex;flex-direction:column;gap:20px">
-    <div style="display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap">
-      <div style="display:flex;flex-direction:column;min-width:0;flex:1 1 320px">
-        <div class="lab acc">${t("SALA EN VIVO", "LIVE ROOM")}</div>
-        <div class="grande degradado" style="margin-top:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${titulo}</div>
-        ${detalle ? html`<div class="mono mut" style="margin-top:6px;font-size:13px;letter-spacing:.08em">${detalle}</div>` : null}
-        <div class="ayuda" style="margin-top:8px;font-size:14px">${t("Comparte el enlace con tus amigos.", "Share the link with your friends.")}
-          <span class="help-dot" title=${t("Los invitados entran con el enlace. Tú decides quién juega y quién mira desde Mandos › Puestos.", "Guests join with the link. You decide who plays and who watches from Pads › Seats.")}>?</span>
-        </div>
-        <${PingSala} m=${m}/>
-        <div style="margin-top:auto;padding-top:16px;display:flex;gap:10px;align-items:center">
-          <div class="campo mono" style="flex:1;display:flex;align-items:center;height:44px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;user-select:text">${sala.enlace || t("Generando enlace…", "Generating link…")}</div>
-          <${Boton} tipo="lleno" estilo="height:44px" deshabilitado=${!sala.enlace} al=${copiar}>${t("COPIAR ENLACE", "COPY LINK")}</${Boton}>
-        </div>
-      </div>
-      <div class="derecha" style="width:190px;display:flex;flex-direction:column;justify-content:space-between;gap:16px">
-        <div style="text-align:right"><div class="lab">${t("TIEMPO EN VIVO", "LIVE TIME")}</div>
-          <div class="reloj" style="margin-top:8px;font-size:34px">${duracion(sala.segundos)}</div></div>
-        ${sala.opciones?.pendiente ? html`<${Boton} tipo="warn" al=${() => accion("sala.aplicar", {}, { ok: t("Cambios aplicados.", "Changes applied.") })}>${t("APLICAR CAMBIOS", "APPLY CHANGES")}</${Boton}>` : null}
-        ${m?.cedido?.activo ? null : html`<${Boton} tipo="peligro lleno enorme" al=${() => cerrarSala(m)}>${t("DETENER SALA", "STOP ROOM")}</${Boton}>`}
+  return html`<${Tarjeta} vivo clase="heroe" estilo="flex:none" interior="padding:22px 26px;display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap">
+    <div style="display:flex;flex-direction:column;min-width:0;flex:1">
+      <div class="lab acc">${t("SALA EN VIVO", "LIVE ROOM")}</div>
+      <div class="grande degradado" style="margin-top:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${titulo}</div>
+      ${detalle ? html`<div class="mono mut" style="margin-top:6px;font-size:13px;letter-spacing:.08em">${detalle}</div>` : null}
+      <div class="ayuda" style="margin-top:8px;font-size:14px">${t("Los invitados entran con el enlace. Tú decides quién juega y quién mira.", "Guests join with the link. You decide who plays and who watches.")}</div>
+      <${PingSala} m=${m}/>
+      <div style="margin-top:auto;padding-top:14px;display:flex;gap:10px;align-items:center">
+        <div class="campo mono" style="flex:1;display:flex;align-items:center;height:42px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;user-select:text">${sala.enlace || t("Generando enlace…", "Generating link…")}</div>
+        <${Boton} tipo="lleno" estilo="height:42px" deshabilitado=${!sala.enlace} al=${copiar}>${t("COPIAR", "COPY")}</${Boton}>
       </div>
     </div>
-    <div style="padding-top:16px;border-top:1px solid rgba(255,255,255,.1);display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px">
-      <${CajaRapida} lab=${t("VISIBILIDAD", "VISIBILITY")} sub=${t("quién ve tu sala", "who sees your room")} ir=${["sala", "opciones"]}
-        valor=${html`<div class="disp" style="font-size:18px;font-weight:700;color:var(--acc);margin-top:2px">${textoVisibilidad(sala.phoenix?.visibilidad).toUpperCase()}</div>`}>
-        <div class="ayuda">${t("Quién ve tu sala en el radar de la web.", "Who sees your room on the website radar.")}</div>
-        <${Segmentos} valor=${sala.phoenix?.visibilidad} al=${(v) => accion("sala.phoenix", { visibilidad: v })} opciones=${[
-          { valor: "publica", texto: t("PÚBLICA", "PUBLIC") }, { valor: "amigos", texto: t("AMIGOS", "FRIENDS") }, { valor: "privada", texto: t("PRIVADA", "PRIVATE") }]}/>
-      </${CajaRapida}>
-      <${CajaRapida} lab=${t("PLAZAS EN SALA", "ROOM SLOTS")} sub=${t("invitados a la vez", "guests at once")} ir=${["sala", "opciones"]}
-        valor=${html`<div class="disp" style="font-size:18px;font-weight:700;margin-top:2px">${sala.invitados} / ${sala.plazas} <span class="mut" style="font-size:12px">${t("INVITADOS", "GUESTS")}</span></div>`}>
-        <div class="ayuda">${t("Cuántos invitados pueden estar a la vez en tu sala.", "How many guests can be in your room at once.")}</div>
-        <${Stepper} valor=${sala.opciones?.plazas ?? sala.plazas ?? 0} min=${0} max=${20} al=${(v) => accion("sala.opciones", { plazas: v })}/>
-      </${CajaRapida}>
-      <${CajaRapida} ancho lab=${t("JUEGO Y PARCHE", "GAME & PATCH")} sub=${sala.phoenix?.parche || t("elegir parche", "pick patch")} ir=${["sala", "juegos"]}
-        valor=${html`<div class="disp" style="font-size:16px;font-weight:700;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${sala.phoenix?.juego || "eFootball PES 2021"}</div>`}>
-        <${EditorLoQueSeJuega} ph=${sala.phoenix || {}}/>
-      </${CajaRapida}>
-      <${CajaRapida} ancho lab=${t("CALIDAD STREAM", "STREAM QUALITY")} sub=${autoCal ? t("automática", "automatic") : t("manual", "manual")} ir=${["sala", "transmision"]}
-        valor=${html`<div class="disp" style="font-size:18px;font-weight:700;color:var(--ok);margin-top:2px">${fps} FPS · ${mbps} MBPS</div>`}>
-        <${AjusteSw} titulo=${t("Calidad automática", "Auto quality")} desc=${t("Link reparte tu subida entre los invitados.", "Link splits your upload among guests.")} valor=${autoCal} al=${(v) => accion("sala.anchoAuto", { auto: v })}/>
-        <div style="display:flex;gap:6px;flex-wrap:wrap">${PRESETS_CALIDAD.map((p) => html`<button key=${p.id} class=${cx("chip-perfil", presetActual(m)?.id === p.id && "on")}
-            onClick=${() => aplicarPresetCalidad(m, p.mbps)} title=${t(p.d[0], p.d[1])}>${t(p.es, p.en)} · ${p.mbps}</button>`)}</div>
-      </${CajaRapida}>
+    <div class="derecha" style="width:190px;display:flex;flex-direction:column;justify-content:space-between;gap:16px">
+      <div style="text-align:right"><div class="lab">${t("TIEMPO EN VIVO", "LIVE TIME")}</div>
+        <div class="reloj" style="margin-top:8px;font-size:34px">${duracion(sala.segundos)}</div></div>
+      ${sala.opciones?.pendiente ? html`<${Boton} tipo="warn" al=${() => accion("sala.aplicar", {}, { ok: t("Cambios aplicados.", "Changes applied.") })}>${t("APLICAR CAMBIOS", "APPLY CHANGES")}</${Boton}>` : null}
+      ${m?.cedido?.activo ? null : html`<${Boton} tipo="peligro lleno enorme" al=${() => cerrarSala(m)}>${t("DETENER SALA", "STOP ROOM")}</${Boton}>`}
     </div>
   </${Tarjeta}>`;
 }
@@ -361,7 +330,7 @@ function ResumenSala({ s, m }) {
     ${verGuia ? html`<${GuiaInicio} m=${m} ocultar=${ocultarGuia} abrir=${abrirSala}/>` : null}
     ${m.sala.abierta ? html`<${Entrenador} m=${m}/>` : null}
     <${AntesDelPartido} m=${m}/>
-    ${m.sala.abierta ? null : html`<${FranjaJuego} m=${m}/>`}
+    <${FranjaJuego} m=${m}/>
     <div class="fila resumen" style="flex:1 0 auto">
     <div class="col" style="flex:1 1 0">
       <${Heroe} m=${m} conGuia=${verGuia} verGuia=${mostrarGuia}/>

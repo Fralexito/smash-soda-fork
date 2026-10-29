@@ -195,36 +195,18 @@ button.pill:active { transform: scale(.96); }
 @media (max-width: 1100px) { .rej4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } .rej3 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 760px) { .rej2, .rej3, .rej4 { grid-template-columns: minmax(0, 1fr); } .fila.partible { flex-direction: column; } }
 
-/* ---------- Tarjeta con jerarquía visual (Minimalismo Táctico 0.3.57) ----------
-   Tarjetas estándar: glassmorphism redondeado y limpio (16 px, borde sutil).
-   Tarjetas protagonistas (.heroe, .vivo): borde luminoso acentuado. */
+/* ---------- Tarjeta con esquinas cortadas y borde degradado (paleta viva original) ---------- */
 .cut {
   position: relative; padding: 1px; display: flex; flex-direction: column;
-  border-radius: 16px; clip-path: none;
-  background: rgba(255, 255, 255, .09);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, .28);
+  background: linear-gradient(135deg, var(--acc), rgba(255, 255, 255, .05) 45%, var(--acc2));
+  clip-path: polygon(0 0, calc(100% - var(--corte)) 0, 100% var(--corte), 100% 100%, var(--corte) 100%, 0 calc(100% - var(--corte)));
 }
 .cut > .in {
-  flex: 1 1 auto; min-height: 0; padding: 20px 22px;
-  border-radius: 15px; clip-path: none;
-  background: rgba(11, 16, 42, .82);
-  backdrop-filter: blur(12px);
+  flex: 1 1 auto; min-height: 0; padding: 20px 22px; background: var(--panel);
+  clip-path: polygon(0 0, calc(100% - var(--corte)) 0, 100% var(--corte), 100% 100%, var(--corte) 100%, 0 calc(100% - var(--corte)));
 }
-.cut.suave { background: rgba(255, 255, 255, .07); }
-.cut.heroe {
-  border-radius: 20px;
-  background: linear-gradient(135deg, var(--acc), rgba(255, 255, 255, .12) 45%, var(--acc2));
-  box-shadow: 0 14px 40px rgba(0, 229, 255, .08);
-}
-.cut.heroe > .in {
-  border-radius: 19px;
-  background: linear-gradient(160deg, rgba(14, 22, 58, .92), rgba(9, 13, 36, .95));
-}
-.cut.vivo {
-  background: linear-gradient(135deg, var(--acc), var(--acc2) 60%, var(--acc));
-  background-size: 220% 220%; animation: brillo 6s linear infinite;
-  box-shadow: 0 14px 40px rgba(0, 229, 255, .10);
-}
+.cut.suave { background: linear-gradient(135deg, var(--linea), rgba(255, 255, 255, .04) 50%, var(--acc2-suave)); }
+.cut.vivo { background: linear-gradient(135deg, var(--acc), var(--acc2) 60%, var(--acc)); background-size: 220% 220%; animation: brillo 6s linear infinite; }
 @keyframes brillo { to { background-position: 220% 0; } }
 .caja { border-radius: var(--radio); border: 1px solid var(--tenue); background: rgba(255, 255, 255, .025); padding: 14px; }
 .lab { font: 600 12px/1 var(--f-disp); letter-spacing: .2em; color: var(--mut); text-transform: uppercase; }
@@ -455,7 +437,6 @@ button.persona:disabled { opacity: .45; cursor: not-allowed; }
 .vista > .fila, .vista > .col { min-height: 100%; }
 
 .app.chat-abierto ~ .avisos { right: 400px; }
-.heroe > .in { flex-wrap: wrap; }
 @media (max-width: 1180px) {
   .fila.resumen { flex-direction: column; }
   .fila.resumen > .col { flex: none !important; }

@@ -387,8 +387,24 @@ export function PuestosNuevo({ m }) {
     setPrefSentado(leerSentado());
   };
   const aplicarFormacion = async (k) => {
-    if (k === 8 && (m.mandos.puestosMax ?? 8) < 16) await accion("mandos.puestosMax", { n: 16 }, { silencioso: true });
-    return accion("mandos.formacion", { local: k, visitante: k });
+    const necesarios = k * 2;
+    if ((m.mandos.puestosMax ?? 8) < necesarios) {
+      await accion("mandos.puestosMax", { n: Math.max(8, necesarios) }, { silencioso: true });
+    }
+    const xbox = m.mandos.xbox ?? 0, ds4 = m.mandos.ds4 ?? 0;
+    if (xbox + ds4 < necesarios) {
+      await accion("mandos.cantidad", { xbox: necesarios - ds4, ds4 }, { silencioso: true });
+    }
+    if (k <= 7) {
+      return accion("mandos.formacion", { local: k, visitante: k });
+    }
+    // Para 8v8 (16 puestos): primero ponemos 7v7 de base y luego asignamos el 8.º de A y el 8.º de B con mandos.equipo,
+    // así funciona tanto en binarios con tope 7 como en el nuevo con tope 15 sin dar error «visitante debe estar entre 1 y 7».
+    await accion("mandos.formacion", { local: 7, visitante: 7 }, { silencioso: true });
+    await accion("mandos.equipo", { indice: 7, equipo: "a" }, { silencioso: true });
+    await accion("mandos.equipo", { indice: 15, equipo: "b" }, { silencioso: true });
+    for (let i = 0; i < 8; i++) await accion("mandos.equipo", { indice: i, equipo: "a" }, { silencioso: true });
+    for (let i = 8; i < 16; i++) await accion("mandos.equipo", { indice: i, equipo: "b" }, { silencioso: true });
   };
   const lista = m.mandos.lista || [];
   const total = lista.length;

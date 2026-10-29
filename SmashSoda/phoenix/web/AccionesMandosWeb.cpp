@@ -81,7 +81,7 @@ namespace phoenix::web {
 			return json::object();
 		});
 		p.registrar("mandos.formacion", [&in](const json& d, uint64_t) -> std::optional<json> {
-			aplicarFormacion(in, entero(d, "local", 1, 7), entero(d, "visitante", 1, 7));
+			aplicarFormacion(in, entero(d, "local", 1, equipos::kPuestos - 1), entero(d, "visitante", 1, equipos::kPuestos - 1));
 			return json::object();
 		});
 		// Equipo de UN puesto (el número de mando no cambia): equipo = "a" | "b" | "fuera". Cada equipo conserva al menos un puesto.

@@ -128,7 +128,7 @@ namespace phoenix::web {
 		}
 		if (!phoenix.empty()) aplicarPhoenix(phoenix);
 		if (v.contains("local") && v.contains("visitante")) {
-			try { aplicarFormacion(in, entero(v, "local", 1, 7), entero(v, "visitante", 1, 7)); }
+			try { aplicarFormacion(in, entero(v, "local", 1, equipos::kPuestos - 1), entero(v, "visitante", 1, equipos::kPuestos - 1)); }
 			catch (const ErrorAccion&) {} // formación imposible con los mandos de hoy: se ignora
 		}
 		if (v.contains("fps") && v.contains("mbps") && in.ctx.sala != nullptr) {
