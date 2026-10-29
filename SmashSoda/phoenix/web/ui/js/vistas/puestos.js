@@ -508,29 +508,6 @@ export function PuestosNuevo({ m }) {
     avisar(t("Lados invertidos: Equipo A ⇄ Equipo B.", "Sides swapped: Team A ⇄ Team B."), "ok");
   };
 
-  const sortearEquipos = async () => {
-    const enJuego = lista.filter((p) => p.equipo === "a" || p.equipo === "b");
-    if (enJuego.length < 2) {
-      return avisar(t("Se necesitan al menos 2 puestos en juego para sortear.", "At least 2 active seats needed to shuffle."), "warn");
-    }
-
-    const copia = [...enJuego];
-    for (let i = copia.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [copia[i], copia[j]] = [copia[j], copia[i]];
-    }
-
-    const mitad = Math.floor(copia.length / 2);
-    for (let i = 0; i < copia.length; i++) {
-      const p = copia[i];
-      const nuevo = i < mitad ? "a" : "b";
-      if (p.equipo !== nuevo) {
-        await accion("mandos.equipo", { indice: p.n - 1, equipo: nuevo }, { silencioso: true });
-      }
-    }
-    avisar(t("¡Equipos sorteados al azar!", "Teams shuffled randomly!"), "ok");
-  };
-
   const meterSiguienteEnCola = async () => {
     if (!mirando.length) {
       return avisar(t("No hay nadie esperando en cola.", "Nobody waiting in queue."), "warn");
@@ -602,9 +579,6 @@ export function PuestosNuevo({ m }) {
         <${Boton} tipo="mini suave" deshabilitado=${esclavo} al=${invertirEquipos}
           titulo=${t("Invierte los lados: todo el Equipo A pasa a B y todo el Equipo B pasa a A (ideal para el partido de vuelta)", "Swaps sides: all Team A goes to B and all Team B goes to A (ideal for 2nd leg match)")}>
           ⚡ ${t("INVERTIR (A ⇄ B)", "SWAP (A ⇄ B)")}</${Boton}>
-        <${Boton} tipo="mini suave" deshabilitado=${esclavo} al=${sortearEquipos}
-          titulo=${t("Reparte y baraja al azar los puestos en juego entre el Equipo A y el Equipo B", "Randomly shuffles active seats between Team A and Team B")}>
-          ⚡ ${t("SORTEAR", "SHUFFLE")}</${Boton}>
         <${Boton} tipo="mini suave" deshabilitado=${esclavo || mirando.length === 0} al=${sentarEspectadores}
           titulo=${t("Sienta a todos los espectadores de la sala en los puestos libres disponibles", "Seats all room spectators into available free seats")}>
           ⚡ ${t("SENTAR ESPECTADORES", "SEAT SPECTATORS")}</${Boton}>
