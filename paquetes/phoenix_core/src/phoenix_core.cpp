@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.98"
+#define PHX_CORE_VERSION "0.4.99"
 
 namespace {
 
@@ -1878,6 +1878,7 @@ uint64_t __fastcall ganchoLeeStat(void* rcx, uint32_t edx, uint32_t r8d) {
     }
     return r;
 }
+static bool asegurarGanchoGk(Feature& f);
 bool golesSondaInstalar(Feature& f) {
     if (g_golCatOrig) { f.estado = "ok: gancho de goles ya puesto (solo log)"; return true; }
     uint8_t* m = firmaUnica("codigo", "83 FA 3E 0F 87 ?? ?? ?? ?? 55 48 8B EC 48 83 EC 50 45 8B D9 4C 8B C9 41 83 F8 08 0F 87", f.id);
@@ -1885,9 +1886,52 @@ bool golesSondaInstalar(Feature& f) {
     if (!crearDesvio(f, m + 9, 18, (void*)ganchoGolCat, (void**)&g_golCatOrig)) { f.estado = "no se pudo desviar FUN_1408C9E90+9"; return false; }
     { uint8_t* m2 = firmaUnica("codigo", "48 89 74 24 10 57 48 83 EC 20 8B FA 48 8B F1 83 FA 3E 0F 87 ?? ?? ?? ?? 48 89 5C 24 30 41 83 F8 05 0F 87", f.id);
       if (m2 && !g_leeStatOrig) crearDesvio(f, m2, 15, (void*)ganchoLeeStat, (void**)&g_leeStatOrig); else if (!m2) logf("[goles_sonda] sin firma de FUN_1408C8FC0 (lector de stats)"); }
+    asegurarGanchoGk(f);   // 0.4.99: [GK_MODO] siempre activo (solo lectura si arquero_controla está apagado)
     char b[160]; sprintf_s(b, "ok: gancho de log en FUN_1408C9E90+9 (exe+0x%llX); anota rcx/cat/delta en cada gol", (unsigned long long)(m + 9 - g_exe.base)); f.estado = b; return true;
 }
 bool golesSondaQuitar(Feature&) { return true; }   // los parches los restaura el cierre general (f.parches)
+// --- arquero_controla (0.4.99, frente W §9): FUN_142133950 (unidad del portero IA que despacha por «modo»: m=this+0x40, sobrescrito por equipo+0x6D4 si ≠0; m=5 → patada larga out[0]=1; m=6 → despejar out[0]=5).
+// Siempre registra [GK_MODO] (límite 500 ms). Con arquero_controla=true, si el modo efectivo es 5 o 6 y NO (balón < gk_despeje_dist_m del arco propio Y rival < gk_despeje_presion_m del balón), fuerza el modo 2 (pase a jugador) durante la llamada y restaura los dos campos.
+typedef void(__fastcall* GkUnidadFn)(void*, uint32_t*, void**);
+typedef uint64_t(__fastcall* GkEquipoFn)(uint64_t, uint32_t);
+GkUnidadFn g_gkUnidadOrig = nullptr; volatile LONG g_arqControlaOn = 0, g_gkModoLog = 0; float g_gkDespejeDist = 4.5f, g_gkDespejePresion = 2.5f; ULONGLONG g_gkModoUlt = 0;
+void __fastcall ganchoGkUnidad(void* thisp, uint32_t* out, void** ctx) {
+    if (GetTickCount64() - g_tTrainRed >= 3000 || !ctx) { g_gkUnidadOrig(thisp, out, ctx); return; }
+    int idx = -1; void* p0 = nullptr; void* bs = nullptr; uint8_t* raiz = nullptr;
+    if (!leerSeguro(&ctx[0], &p0, 8) || !p0 || !leerSeguro(p0, &idx, 4) || idx < 0 || idx > 21 || !leerSeguro(&ctx[4], &bs, 8) || !bs || !leerSeguro(g_globalPartido, &raiz, 8) || !raiz) { g_gkUnidadOrig(thisp, out, ctx); return; }
+    bool lado = idx > 10;
+    uint64_t game = 0; leerSeguro(g_exe.base + 0x36F3DC8, &game, 8);
+    uint8_t* team = game ? reinterpret_cast<uint8_t*>(reinterpret_cast<GkEquipoFn>(g_exe.base + 0xA48A30)(game, lado ? 1u : 0u)) : nullptr;
+    int mThis = 0, mTeam = 0; leerSeguro(reinterpret_cast<uint8_t*>(thisp) + 0x40, &mThis, 4); if (team) leerSeguro(team + 0x6D4, &mTeam, 4);
+    int mEff = mTeam ? mTeam : mThis;
+    float bx = 0, bz = 0, gx = 0, gz = 0; leerSeguro(reinterpret_cast<uint8_t*>(bs) + 0x40, &bx, 4); leerSeguro(reinterpret_cast<uint8_t*>(bs) + 0x48, &bz, 4);
+    float dBalon = 99.0f, dRival = 99.0f;
+    if (posJugPC(raiz, idx, gx, gz)) { float sg = gx >= 0 ? 1.0f : -1.0f; dBalon = hypotf(bx - sg * (float)g_canchaLargo, bz); }
+    for (int i = lado ? 0 : 11; i < (lado ? 11 : 22); i++) { float px, pz; if (!posJugPC(raiz, i, px, pz)) continue; float d = hypotf(px - bx, pz - bz); if (d < dRival) dRival = d; }
+    bool forzar = g_arqControlaOn && (mEff == 5 || mEff == 6) && team && !(dBalon < g_gkDespejeDist && dRival < g_gkDespejePresion);
+    if (forzar) {
+        int dos = 2, cero = 0; escribirSeguro(reinterpret_cast<uint8_t*>(thisp) + 0x40, &dos, 4); escribirSeguro(team + 0x6D4, &cero, 4);
+        g_gkUnidadOrig(thisp, out, ctx);
+        escribirSeguro(reinterpret_cast<uint8_t*>(thisp) + 0x40, &mThis, 4); escribirSeguro(team + 0x6D4, &mTeam, 4);
+    } else g_gkUnidadOrig(thisp, out, ctx);
+    ULONGLONG ahora = GetTickCount64();
+    if (ahora - g_gkModoUlt >= 500 && g_gkModoLog < 3000) { g_gkModoUlt = ahora; InterlockedIncrement(&g_gkModoLog);
+        uint32_t o0 = 0xFFFFFFFFu; leerSeguro(out, &o0, 4);
+        logf("[GK_MODO] portero=%d this+0x40=%d equipo+0x6D4=%d efectivo=%d forzado=%d out[0]=%d dBalonArco=%.1f dRivalBalon=%.1f", idx, mThis, mTeam, mEff, forzar ? 1 : 0, (int)o0, dBalon, dRival); }
+}
+static bool asegurarGanchoGk(Feature& f) {
+    if (g_gkUnidadOrig) return true;
+    uint8_t* m = firmaUnica("codigo", "48 89 5C 24 10 48 89 74 24 18 57 41 54 41 55 41 56 41 57 48 83 EC 50 49 8B 00", f.id);
+    if (!m) { logf("[%s] sin firma de FUN_142133950 (unidad del portero)", f.id); return false; }
+    if (!crearDesvio(f, m, 15, (void*)ganchoGkUnidad, (void**)&g_gkUnidadOrig)) { logf("[%s] no se pudo desviar FUN_142133950", f.id); return false; }
+    logf("[%s] unidad del portero FUN_142133950 enganchada en exe+0x%llX ([GK_MODO])", f.id, (unsigned long long)(m - g_exe.base)); return true;
+}
+bool arqControlaInstalar(Feature& f) {
+    if (!g_globalPartido && !resolverGlobalPartido(f.id)) { f.estado = "sin firma del global del partido"; return false; }
+    if (!asegurarGanchoGk(f)) { f.estado = "sin firma/desvío de FUN_142133950"; return false; }
+    g_arqControlaOn = 1; char b[200]; sprintf_s(b, "ok: modo 5/6 de la unidad del portero se fuerza a pase salvo balón < %.1f m del arco y rival < %.1f m", g_gkDespejeDist, g_gkDespejePresion); f.estado = b; return true;
+}
+bool arqControlaQuitar(Feature&) { g_arqControlaOn = 0; return true; }
 bool arcoChicoInstalar(Feature& f) {   // 0.4.95: arco más chico con postes y larguero lógicos; el juego sigue viendo el gol solo por la boca chica
     if (!murosInstalar(f)) return false;
     g_arcoChicoOn = 1; char b[160]; sprintf_s(b, "ok: arco lógico %.2f x %.2f m (postes y larguero invisibles; requiere los muros del Core)", g_arcoAncho, g_arcoAlto); f.estado = b; return true;
@@ -2969,6 +3013,7 @@ std::vector<Feature> g_funciones = {   // orden = orden de arranque (gol_nativo_
     { "muros_core", "Muros lógicos del Core en el paso de la pelota (rebote contra la línea de la cancha chica)", murosInstalar, murosQuitar },
     { "arco_chico_free", "Arco más chico (3v3): postes y larguero lógicos del Core; ancho y alto en el json (arco_chico_ancho/alto)", arcoChicoInstalar, arcoChicoQuitar },
     { "goles_sonda", "Solo log: punteros reales de los contadores de goles (gancho en FUN_1408C9E90+9) para la revancha 0-0", golesSondaInstalar, golesSondaQuitar },
+    { "arquero_controla", "Arquero controla: la unidad del portero IA (modo 5/6) pasa en vez de patear/despejar, salvo balón muy cerca del arco y rival encima (APAGADA por defecto; aparte de la config congelada del portero)", arqControlaInstalar, arqControlaQuitar },
     { "red_frena_free", "La red de los arcos frena la pelota en el entrenamiento (gancho al paso de la pelota)", redInstalar, redQuitar },
     { "sin_saques_free", "Sin saques de banda/esquina/puerta en el entrenamiento: solo el gol reinicia (parches de 1 byte en el Juez)", sinSaquesInstalar, sinSaquesQuitar },
     { "arquero_propio_free", "El portero participa siempre en el entrenamiento, con cualquier número de jugadores y sin fijar el cursor", arqueroInstalar, arqueroQuitar },
@@ -3082,6 +3127,8 @@ void leerConfig() {
     if (valorDe("jugadores_chica_modo", v)) g_jugChModo = atoi(v.c_str());
     if (valorDe("muro_rebote", v)) { g_muroRebote = (float)atof(v.c_str()); if (g_muroRebote < 0.0f || g_muroRebote > 1.0f) g_muroRebote = 0.6f; }
     if (valorDe("muro_friccion", v)) { g_muroFric = (float)atof(v.c_str()); if (g_muroFric < 0.0f || g_muroFric > 1.0f) g_muroFric = 0.92f; }
+    if (valorDe("gk_despeje_dist_m", v)) { g_gkDespejeDist = (float)atof(v.c_str()); if (g_gkDespejeDist < 1.0f || g_gkDespejeDist > 15.0f) g_gkDespejeDist = 4.5f; }
+    if (valorDe("gk_despeje_presion_m", v)) { g_gkDespejePresion = (float)atof(v.c_str()); if (g_gkDespejePresion < 0.5f || g_gkDespejePresion > 15.0f) g_gkDespejePresion = 2.5f; }
     if (valorDe("goles_reinicio", v)) g_golesReinicio = (v == "true");
     if (valorDe("arco_chico_ancho", v)) { g_arcoAncho = (float)atof(v.c_str()); if (g_arcoAncho < 1.5f || g_arcoAncho > 7.32f) g_arcoAncho = 4.0f; }
     if (valorDe("arco_chico_alto", v)) { g_arcoAlto = (float)atof(v.c_str()); if (g_arcoAlto < 1.0f || g_arcoAlto > 2.44f) g_arcoAlto = 2.0f; }
@@ -3176,7 +3223,7 @@ static void procesarOrdenes() {
         if (claveEn(id.c_str(), prohibidas)) { logf("[PANEL] %s: clave congelada del portero, orden ignorada", id.c_str()); continue; }
         bool esBool = (v == "1" || v == "0" || v == "true" || v == "false"); bool on = (v == "1" || v == "true");
         {   // parámetros numéricos EN VIVO (se releen al instante: son las variables que usan los ganchos) y se guardan en el json
-            struct Num { const char* id; float* var; float lo, hi; }; static const Num nums[] = { { "tiro_potencia_k", &g_tiroPot, 0.5f, 2.0f }, { "tiro_altura_k", &g_tiroAlt, 0.2f, 1.5f }, { "pase_vel_k", &g_paseVel, 0.8f, 2.0f }, { "pase_correccion", &g_paseCorr, 0.0f, 1.0f }, { "pase_cono_grados", &g_paseCono, 5.0f, 60.0f }, { "muro_rebote", &g_muroRebote, 0.3f, 0.95f }, { "muro_fondo_rebote", &g_muroFondoRebote, 0.0f, 0.95f }, { "muro_lat_friccion", &g_muroLatFric, 0.0f, 1.0f }, { "arco_chico_ancho", &g_arcoAncho, 1.5f, 7.32f }, { "arco_chico_alto", &g_arcoAlto, 1.0f, 2.44f }, { "muro_lat_empuje", &g_muroLatEmpuje, 0.0f, 0.3f }, { "muro_friccion", &g_muroFric, 0.0f, 1.0f } };
+            struct Num { const char* id; float* var; float lo, hi; }; static const Num nums[] = { { "tiro_potencia_k", &g_tiroPot, 0.5f, 2.0f }, { "tiro_altura_k", &g_tiroAlt, 0.2f, 1.5f }, { "pase_vel_k", &g_paseVel, 0.8f, 2.0f }, { "pase_correccion", &g_paseCorr, 0.0f, 1.0f }, { "pase_cono_grados", &g_paseCono, 5.0f, 60.0f }, { "muro_rebote", &g_muroRebote, 0.3f, 0.95f }, { "muro_fondo_rebote", &g_muroFondoRebote, 0.0f, 0.95f }, { "muro_lat_friccion", &g_muroLatFric, 0.0f, 1.0f }, { "arco_chico_ancho", &g_arcoAncho, 1.5f, 7.32f }, { "gk_despeje_dist_m", &g_gkDespejeDist, 1.0f, 15.0f }, { "gk_despeje_presion_m", &g_gkDespejePresion, 0.5f, 15.0f }, { "arco_chico_alto", &g_arcoAlto, 1.0f, 2.44f }, { "muro_lat_empuje", &g_muroLatEmpuje, 0.0f, 0.3f }, { "muro_friccion", &g_muroFric, 0.0f, 1.0f } };
             bool hecho = false; for (const Num& n : nums) if (id == n.id) { float x = (float)atof(v.c_str()); if (x >= n.lo && x <= n.hi) { *n.var = x; persistirClaveJson(id, v); logf("[PANEL] %s = %.3f (en vivo)", n.id, x); } else logf("[PANEL] %s=%s fuera de rango [%.2f, %.2f]: ignorado", n.id, v.c_str(), n.lo, n.hi); hecho = true; break; }
             if (hecho) continue;
         }

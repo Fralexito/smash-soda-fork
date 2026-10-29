@@ -216,6 +216,7 @@ local PANEL = {
     { id = "ia_cancha_chica", txt = "IA de cancha chica", tipo = "bool", modo = "vivo" },
     { id = "jugadores_formacion", txt = "Formación de saque", tipo = "bool", modo = "vivo" },
     { id = "arquero_pase_corto", txt = "Portero: pase corto", tipo = "bool", modo = "vivo" },
+    { id = "arquero_controla", txt = "Arquero controla (no despeja)", tipo = "bool", modo = "vivo" },
     { id = "clima_forzado", txt = "Clima despejado", tipo = "clima", modo = "sig.partida" },
     { id = "street_dos_tiempos", txt = "Dos tiempos", tipo = "bool", modo = "sig.partida" },
     { id = "street_pantalla_descanso", txt = "Pantalla de descanso", tipo = "bool", modo = "sig.partida" },
