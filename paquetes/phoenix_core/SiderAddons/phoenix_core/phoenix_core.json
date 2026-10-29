@@ -13,6 +13,8 @@
     "rescate_render_free": false,
     "cancha_chica_free": false
   },
+  "online_phoenix": false,
+  "online_phoenix_ip": "127.0.0.1",
   "gol_directo_celebracion": true,
   "celebracion_modo": "timer",
   "celebracion_segundos": 8,

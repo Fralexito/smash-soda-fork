@@ -28,6 +28,7 @@
 #include <intrin.h>
 #include <tlhelp32.h>
 #include "phoenix_api.h"
+#include "redireccion_online.h"
 
 #define PHX_CORE_VERSION "0.4.96"
 
@@ -3136,7 +3137,7 @@ static void procesarOrdenes() {
     std::string ruta = g_carpeta + "ordenes.txt", txt; if (!existe(ruta) || !leerArchivo(ruta, txt)) return;
     DeleteFileA(ruta.c_str());
     static const char* const prohibidas[] = { "arquero_rama_normal", "arquero_propio_cursor", "arquero_salida_corta", "arquero_saque_corto", "sin_despeje_emergencia", "cursor_bloqueo_pt", "arquero_salida_max", "cursor_pt_log", nullptr };
-    static const char* const alReiniciar[] = { "street_dos_tiempos", "street_pantalla_descanso", "street_saque_nativo", "ajustes_partido_free", "marcador_nativo_free", "reloj_street_free", "orden_jugador_segura", "reinicio_seguro", "cancha_chica_free", "descanso_fase3", "descanso_base45", "final_nativo", "clima_forzado", "season_forzada", "anadido_min", nullptr };
+    static const char* const alReiniciar[] = { "online_phoenix", "street_dos_tiempos", "street_pantalla_descanso", "street_saque_nativo", "ajustes_partido_free", "marcador_nativo_free", "reloj_street_free", "orden_jugador_segura", "reinicio_seguro", "cancha_chica_free", "descanso_fase3", "descanso_base45", "final_nativo", "clima_forzado", "season_forzada", "anadido_min", nullptr };
     size_t i = 0;
     while (i < txt.size()) {
         size_t e = txt.find_first_of("\r\n", i); std::string l = txt.substr(i, e == std::string::npos ? std::string::npos : e - i); i = (e == std::string::npos) ? txt.size() : e + 1;
@@ -3197,6 +3198,7 @@ PHX_API int phx_core_iniciar(const char* carpeta) {
 
     listarSecciones();
     leerConfig();
+    phx_online::iniciar(g_carpeta, g_modoSeguro, [](const char* l) { logf("%s", l); });   // opción «online_phoenix» (apagada por defecto)
     // 0.4.87: primero lo que el menú previo y el HUD necesitan (ajustes_partido_free, marcador, reloj), luego el resto
     static const char* prioridad[] = { "ajustes_partido_free", "marcador_nativo_free", "reloj_street_free", "orden_jugador_segura", "reinicio_seguro", "cancha_chica_free" };
     for (const char* pn : prioridad) for (auto& f : g_funciones) if (strcmp(f.id, pn) == 0 && f.deseada) { encender(f); f.estado = f.estado; }
@@ -3255,6 +3257,7 @@ BOOL APIENTRY DllMain(HMODULE, DWORD motivo, LPVOID) {
         // 0.4.87: si PES se cierra de forma LIMPIA (el proceso llega aquí; un crash o un cierre forzado no pasa por DllMain), no es un crash: se borra la bandera y el próximo arranque NO entra en modo seguro
         DeleteFileA((g_carpeta + "arrancando.flag").c_str());
         for (auto& f : g_funciones) for (auto& p : f.parches) quitarParche(p);
+        phx_online::detener();
     }
     return TRUE;
 }

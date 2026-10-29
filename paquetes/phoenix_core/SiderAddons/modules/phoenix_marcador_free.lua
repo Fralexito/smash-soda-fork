@@ -223,6 +223,7 @@ local PANEL = {
     { id = "final_nativo", txt = "Final nativo (experimental)", tipo = "bool", modo = "vivo" },
     { id = "descanso_fase3", txt = "Reloj 2.º tiempo en fase 3", tipo = "bool", modo = "sig.partida" },
     { id = "descanso_base45", txt = "Reloj 2.º tiempo base 45", tipo = "bool", modo = "sig.partida" },
+    { id = "online_phoenix", txt = "Online Phoenix (servidor propio)", tipo = "bool", modo = "sig.partida" },
 }
 local panelAbierto, panelSel, panelCache, panelCambio, tPanelLeer = true, 1, {}, {}, -100   -- v0.8: el panel es lo primero que se ve en esta página del overlay de Sider (F9 alterna con el marcador)
 local function panelValor(it)

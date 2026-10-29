@@ -8,6 +8,6 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # /MT: sin depender de las DLL de Visual C++ instaladas en la PC del jugador
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-add_library(phoenix_core SHARED src/phoenix_core.cpp src/phoenix_api.h)
+add_library(phoenix_core SHARED src/phoenix_core.cpp src/redireccion_online.cpp src/redireccion_online.h src/phoenix_api.h)
 target_compile_definitions(phoenix_core PRIVATE PHOENIX_CORE_EXPORTS WIN32_LEAN_AND_MEAN NOMINMAX _CRT_SECURE_NO_WARNINGS)
 target_compile_options(phoenix_core PRIVATE /W3 /EHa /utf-8)
