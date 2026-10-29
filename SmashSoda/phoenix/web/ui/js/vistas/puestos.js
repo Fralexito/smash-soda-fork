@@ -441,6 +441,61 @@ export function PuestosNuevo({ m }) {
     return accion("mandos.herramienta", { nombre });
   };
 
+  const sentarEspectadores = async () => {
+    const libresEquipos = lista.filter((p) => (p.equipo === "a" || p.equipo === "b") && !p.ocupado);
+    const libresFuera = lista.filter((p) => p.equipo !== "a" && p.equipo !== "b" && !p.ocupado);
+    const libres = [...libresEquipos, ...libresFuera];
+
+    if (!mirando.length) {
+      return avisar(t("No hay nadie en Mirando.", "Nobody is watching."), "warn");
+    }
+    if (!libres.length) {
+      return avisar(t("No hay puestos libres disponibles.", "No free seats available."), "warn");
+    }
+
+    const aSentar = Math.min(mirando.length, libres.length);
+    for (let i = 0; i < aSentar; i++) {
+      const g = mirando[i];
+      const p = libres[i];
+      if (g.host) {
+        await accion("mandos.tomar", { numero: p.n }, { silencioso: true });
+      } else {
+        await accion("mandos.asignar", { indice: p.n - 1, parsecId: g.parsecId }, { silencioso: true });
+      }
+    }
+    avisar(t(`Se sentaron ${aSentar} espectadores en puestos libres.`, `Seated ${aSentar} spectators into free seats.`), "ok");
+  };
+
+  const variarEquipos = async () => {
+    const asignados = lista.filter((p) => p.equipo === "a" || p.equipo === "b");
+    const objetivos = asignados.length > 0
+      ? asignados
+      : lista.slice(0, Math.min(lista.length, (m.mandos?.puestosMax ?? 8)));
+
+    if (objetivos.length === 0) return;
+
+    const yaParesEnA = objetivos.every((p) => {
+      const esPar = p.n % 2 === 0;
+      return esPar ? p.equipo === "a" : p.equipo === "b";
+    });
+
+    const destinoPar = yaParesEnA ? "b" : "a";
+    const destinoImpar = yaParesEnA ? "a" : "b";
+
+    for (const p of objetivos) {
+      const esPar = p.n % 2 === 0;
+      const nuevo = esPar ? destinoPar : destinoImpar;
+      if (p.equipo !== nuevo) {
+        await accion("mandos.equipo", { indice: p.n - 1, equipo: nuevo }, { silencioso: true });
+      }
+    }
+
+    const mensaje = yaParesEnA
+      ? t("Variado: impares a Equipo A y pares a Equipo B.", "Varied: odds to Team A and evens to Team B.")
+      : t("Variado: pares a Equipo A e impares a Equipo B.", "Varied: evens to Team A and odds to Team B.");
+    avisar(mensaje, "ok");
+  };
+
   const sueltaEnMirando = (e) => {
     e.preventDefault();
     setSobreMirando(false);
@@ -485,6 +540,12 @@ export function PuestosNuevo({ m }) {
         <${Boton} tipo="mini suave" deshabilitado=${esclavo || m.mandos.reiniciando}
           al=${() => herramienta("reiniciar", [t("¿Reiniciar los mandos?", "Reset pads?"), t("Se desconectan y vuelven a conectar todos los mandos virtuales. Úsalo si el juego dejó de detectarlos.", "All virtual pads are re-plugged. Use it if the game stopped detecting them.")])}>
           ${m.mandos.reiniciando ? t("REINICIANDO…", "RESETTING…") : t("REINICIAR", "RESET")}</${Boton}>
+        <${Boton} tipo="mini suave" deshabilitado=${esclavo} al=${variarEquipos}
+          titulo=${t("Pone en el Equipo A los mandos pares y en el Equipo B los mandos impares (o los alterna si ya están variados)", "Puts even pads on Team A and odd pads on Team B (or alternates them if already varied)")}>
+          ⚡ ${t("VARIAR", "VARY")}</${Boton}>
+        <${Boton} tipo="mini suave" deshabilitado=${esclavo || mirando.length === 0} al=${sentarEspectadores}
+          titulo=${t("Sienta a todos los espectadores de la sala en los puestos libres disponibles", "Seats all room spectators into available free seats")}>
+          ⚡ ${t("SENTAR ESPECTADORES", "SEAT SPECTATORS")}</${Boton}>
         <${TodosAMirar} m=${m} esclavo=${esclavo}/>
       </div>
     </div>
@@ -530,6 +591,9 @@ export function PuestosNuevo({ m }) {
           <span class="disp" style="font-weight:700;font-size:15px;letter-spacing:.2em">${t("MIRANDO", "WATCHING")} <span class="mut" style="letter-spacing:.1em;font-size:12px">· ${t("ESPECTADORES", "SPECTATORS")}</span></span>
           <span style="flex:1;height:1px;background:linear-gradient(90deg,rgba(255,255,255,.3),transparent)"></span>
           <span class="mono mut" style="font-size:12px">${mirando.length} ${mirando.length === 1 ? t("PERSONA", "PERSON") : t("PERSONAS", "PEOPLE")}</span>
+          ${mirando.length > 0 ? html`<${Boton} tipo="mini suave" deshabilitado=${esclavo} al=${sentarEspectadores}
+            titulo=${t("Sienta a todos los espectadores en los puestos libres", "Seats all spectators into free seats")}>
+            ⚡ ${t("SENTAR A TODOS", "SEAT ALL")}</${Boton}>` : null}
         </div>
         <div
           onDragOver=${(e) => { if (recibeMirando) { e.preventDefault(); setSobreMirando(true); } }}
