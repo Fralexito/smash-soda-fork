@@ -244,7 +244,7 @@ function Equipo({ equipo, nombre, desc, tip, color, filas, m, arr, setArr, alAsi
 // ---- Persona que mira ---------------------------------------------------------------------
 // Una sola línea por persona (caben muchas): agarre, avatar pequeño, nombre con su dato al lado
 // (ping, «web» o tu mando) y un selector corto de puesto.
-function Espectador({ g, m, arr, setArr }) {
+function Espectador({ g, m, arr, setArr, turno }) {
   const libres = (m.mandos?.lista || []).filter((p) => !p.ocupado);
   const soloWeb = g.rolWeb === "espectador";
   const perfil = m.perfiles?.[g.parsecId];
@@ -266,6 +266,7 @@ function Espectador({ g, m, arr, setArr }) {
       onDragEnd=${() => setArr(null)}
       style=${`display:flex;align-items:center;gap:8px;min-height:40px;padding:4px 8px;border-radius:8px;border:1px solid ${g.host ? "var(--linea)" : "rgba(255,255,255,.08)"};background:${g.host ? "var(--acc-suave)" : "rgba(255,255,255,.03)"};cursor:${soloWeb ? "default" : "grab"};opacity:${soloWeb ? ".7" : "1"}`}>
     ${soloWeb ? html`<span style="width:12px;flex:none"></span>` : html`<span style="color:var(--mut);flex:none"><${Agarre}/></span>`}
+    ${turno != null ? html`<span class="mono" style="font-size:11px;font-weight:700;color:var(--acc);min-width:20px;text-align:center" title=${t(`Turno #${turno} en la cola de espera`, `Queue #${turno} in line`)}>#${turno}</span>` : null}
     <${Avatar} nombre=${g.nombre} id=${g.parsecId} url=${perfil?.avatar_url} t=${26}/>
     <div style="flex:1;min-width:0;display:flex;align-items:baseline;gap:6px;white-space:nowrap;overflow:hidden">
       <span style="font:600 14px/1.2 var(--f-body);color:#fff;overflow:hidden;text-overflow:ellipsis">${g.nombre}</span>
@@ -496,6 +497,61 @@ export function PuestosNuevo({ m }) {
     avisar(mensaje, "ok");
   };
 
+  const invertirEquipos = async () => {
+    const enJuego = lista.filter((p) => p.equipo === "a" || p.equipo === "b");
+    if (enJuego.length === 0) return;
+
+    for (const p of enJuego) {
+      const nuevo = p.equipo === "a" ? "b" : "a";
+      await accion("mandos.equipo", { indice: p.n - 1, equipo: nuevo }, { silencioso: true });
+    }
+    avisar(t("Lados invertidos: Equipo A ⇄ Equipo B.", "Sides swapped: Team A ⇄ Team B."), "ok");
+  };
+
+  const sortearEquipos = async () => {
+    const enJuego = lista.filter((p) => p.equipo === "a" || p.equipo === "b");
+    if (enJuego.length < 2) {
+      return avisar(t("Se necesitan al menos 2 puestos en juego para sortear.", "At least 2 active seats needed to shuffle."), "warn");
+    }
+
+    const copia = [...enJuego];
+    for (let i = copia.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [copia[i], copia[j]] = [copia[j], copia[i]];
+    }
+
+    const mitad = Math.floor(copia.length / 2);
+    for (let i = 0; i < copia.length; i++) {
+      const p = copia[i];
+      const nuevo = i < mitad ? "a" : "b";
+      if (p.equipo !== nuevo) {
+        await accion("mandos.equipo", { indice: p.n - 1, equipo: nuevo }, { silencioso: true });
+      }
+    }
+    avisar(t("¡Equipos sorteados al azar!", "Teams shuffled randomly!"), "ok");
+  };
+
+  const meterSiguienteEnCola = async () => {
+    if (!mirando.length) {
+      return avisar(t("No hay nadie esperando en cola.", "Nobody waiting in queue."), "warn");
+    }
+    const libresEquipos = lista.filter((p) => (p.equipo === "a" || p.equipo === "b") && !p.ocupado);
+    const libresFuera = lista.filter((p) => p.equipo !== "a" && p.equipo !== "b" && !p.ocupado);
+    const primerLibre = libresEquipos[0] || libresFuera[0];
+
+    if (!primerLibre) {
+      return avisar(t("No hay ningún puesto libre para meter al siguiente.", "No free seat to seat the next player."), "warn");
+    }
+
+    const primero = mirando[0];
+    if (primero.host) {
+      await accion("mandos.tomar", { numero: primerLibre.n }, { silencioso: true });
+    } else {
+      await accion("mandos.asignar", { indice: primerLibre.n - 1, parsecId: primero.parsecId }, { silencioso: true });
+    }
+    avisar(t(`${primero.nombre} entró al puesto ${dos(primerLibre.n)}.`, `${primero.nombre} took seat ${dos(primerLibre.n)}.`), "ok");
+  };
+
   const sueltaEnMirando = (e) => {
     e.preventDefault();
     setSobreMirando(false);
@@ -543,6 +599,12 @@ export function PuestosNuevo({ m }) {
         <${Boton} tipo="mini suave" deshabilitado=${esclavo} al=${variarEquipos}
           titulo=${t("Pone en el Equipo A los mandos pares y en el Equipo B los mandos impares (o los alterna si ya están variados)", "Puts even pads on Team A and odd pads on Team B (or alternates them if already varied)")}>
           ⚡ ${t("VARIAR", "VARY")}</${Boton}>
+        <${Boton} tipo="mini suave" deshabilitado=${esclavo} al=${invertirEquipos}
+          titulo=${t("Invierte los lados: todo el Equipo A pasa a B y todo el Equipo B pasa a A (ideal para el partido de vuelta)", "Swaps sides: all Team A goes to B and all Team B goes to A (ideal for 2nd leg match)")}>
+          ⚡ ${t("INVERTIR (A ⇄ B)", "SWAP (A ⇄ B)")}</${Boton}>
+        <${Boton} tipo="mini suave" deshabilitado=${esclavo} al=${sortearEquipos}
+          titulo=${t("Reparte y baraja al azar los puestos en juego entre el Equipo A y el Equipo B", "Randomly shuffles active seats between Team A and Team B")}>
+          ⚡ ${t("SORTEAR", "SHUFFLE")}</${Boton}>
         <${Boton} tipo="mini suave" deshabilitado=${esclavo || mirando.length === 0} al=${sentarEspectadores}
           titulo=${t("Sienta a todos los espectadores de la sala en los puestos libres disponibles", "Seats all room spectators into available free seats")}>
           ⚡ ${t("SENTAR ESPECTADORES", "SEAT SPECTATORS")}</${Boton}>
@@ -587,11 +649,14 @@ export function PuestosNuevo({ m }) {
       </div>
 
       <div style="display:flex;flex-direction:column;gap:14px;min-width:0">
-        <div style="display:flex;align-items:center;gap:12px">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
           <span class="disp" style="font-weight:700;font-size:15px;letter-spacing:.2em">${t("MIRANDO", "WATCHING")} <span class="mut" style="letter-spacing:.1em;font-size:12px">· ${t("ESPECTADORES", "SPECTATORS")}</span></span>
           <span style="flex:1;height:1px;background:linear-gradient(90deg,rgba(255,255,255,.3),transparent)"></span>
           <span class="mono mut" style="font-size:12px">${mirando.length} ${mirando.length === 1 ? t("PERSONA", "PERSON") : t("PERSONAS", "PEOPLE")}</span>
-          ${mirando.length > 0 ? html`<${Boton} tipo="mini suave" deshabilitado=${esclavo} al=${sentarEspectadores}
+          ${mirando.length > 0 ? html`<${Boton} tipo="mini suave" deshabilitado=${esclavo} al=${meterSiguienteEnCola}
+            titulo=${t("Sienta al primero de la cola en el primer puesto libre", "Seats the first person in queue into the first free seat")}>
+            ⚡ ${t("METER SIGUIENTE", "SEAT NEXT")}</${Boton}>` : null}
+          ${mirando.length > 1 ? html`<${Boton} tipo="mini suave" deshabilitado=${esclavo} al=${sentarEspectadores}
             titulo=${t("Sienta a todos los espectadores en los puestos libres", "Seats all spectators into free seats")}>
             ⚡ ${t("SENTAR A TODOS", "SEAT ALL")}</${Boton}>` : null}
         </div>
@@ -601,7 +666,7 @@ export function PuestosNuevo({ m }) {
           onDrop=${sueltaEnMirando}
           style=${`flex:1;border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:6px;background:${sobreMirando ? "var(--acc-suave)" : "rgba(0,0,0,.3)"};border:1px solid ${sobreMirando ? "var(--acc)" : "rgba(255,255,255,.12)"};transition:background .15s,border-color .15s`}>
           <div class="ayuda">${t("Están en la sala pero no tienen mando. Arrástralos a un puesto para que jueguen.", "They are in the room without a pad. Drag them to a seat to let them play.")}</div>
-          ${mirando.map((g) => html`<${Espectador} key=${g.parsecId} g=${g} m=${m} arr=${arr} setArr=${setArr}/>`)}
+          ${mirando.map((g, i) => html`<${Espectador} key=${g.parsecId} g=${g} m=${m} arr=${arr} setArr=${setArr} turno=${i + 1}/>`)}
           ${mirando.length === 0 ? html`<div class="ayuda" style="padding:6px 2px">${t("Nadie está mirando ahora.", "Nobody is watching right now.")}</div>` : null}
           <div style=${`margin-top:auto;border:1.5px dashed ${recibeMirando ? "var(--acc)" : "rgba(255,255,255,.22)"};border-radius:10px;padding:18px 12px;text-align:center;font-size:13px;line-height:1.4;color:${recibeMirando ? "var(--acc)" : "var(--mut)"}`}>
             ${recibeMirando ? t("Suelta aquí: solo va a mirar", "Drop here: they will only watch") : t("Suelta aquí a quien solo va a mirar", "Drop here anyone who only watches")}</div>
