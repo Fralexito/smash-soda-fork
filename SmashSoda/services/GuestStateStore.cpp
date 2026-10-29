@@ -36,8 +36,8 @@ void GuestStateStore::load() {
             GuestPermissionState state;
             state.userID = entry.value("userID", 0u);
             state.gamepad = entry.value("gamepad", true);
-            state.keyboard = entry.value("keyboard", true);
-            state.mouse = entry.value("mouse", true);
+            state.keyboard = entry.value("keyboard", false);   // Phoenix 0.3.57: sin dato, sin teclado
+            state.mouse = entry.value("mouse", false);
 
             if (state.userID != 0) {
                 _guestInputPermissions.push_back(state);

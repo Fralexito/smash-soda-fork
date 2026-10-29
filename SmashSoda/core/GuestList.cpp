@@ -20,6 +20,11 @@ void GuestList::setGuests(ParsecGuest* guests, int guestCount)
 			guest.allowMouseInput = it->second.mouse;
 		}
 		else {
+			// Phoenix 0.3.57 (seguridad): un invitado nuevo entra SOLO con mando. Su teclado y ratón no llegan al PC del
+			// anfitrión (SendInput) salvo que el anfitrión se lo permita en Gente o en el modo cedido. El teclado sigue
+			// sirviendo como mando (!kb), porque ese camino no pasa por este permiso.
+			guest.allowKeyboardInput = false;
+			guest.allowMouseInput = false;
 			ParsecPermissions perms{};
 			perms.gamepad = guest.allowGamepadInput;
 			perms.keyboard = guest.allowKeyboardInput;
