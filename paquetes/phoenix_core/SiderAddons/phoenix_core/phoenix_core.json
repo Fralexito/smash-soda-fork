@@ -1,5 +1,13 @@
 {
   "funciones": {
+    "reloj_visual_2t": true,
+    "final_nativo": false,
+    "goles_sonda": true,
+    "goles_reinicio": true,
+    "arquero_controla": false,
+    "arco_chico_free": false,
+    "gk_despeje_dist_m": 4.5,
+    "gk_despeje_presion_m": 2.5,
     "diagnostico": true,
     "sonda_partido": true,
     "sonda_pasos": true,
