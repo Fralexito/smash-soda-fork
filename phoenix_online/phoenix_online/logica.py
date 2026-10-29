@@ -177,9 +177,13 @@ class Servidor:
 
     async def c_cmd_get_svrlist(self, s, m):
         ip = self.cfg["ip_publica"]
+        # C (REA 29-oct): ConnectAccount cuenta los servidores «ACCOUNT» de esta lista y, si no
+        # hay ninguno, da error fatal sin abrir red. ACCOUNT y MENU pueden ser el mismo puerto.
+        menu = self.cfg["puerto_menu"]
         lista = [
-            {"svrtype": "MENU", "svraddr": ip, "svrport": self.cfg["puerto_menu"],
-             "svrgid": 1, "player_num": len(self.por_pid), "max_player_num": 1000},
+            {"svrtype": t, "svraddr": ip, "svrport": self.cfg.get(f"puerto_{t.lower()}", menu),
+             "svrgid": 1, "player_num": len(self.por_pid), "max_player_num": 1000}
+            for t in ("ACCOUNT", "MENU")
         ]
         return {"server_num": len(lista), "svrlist": [Empaquetado(x) for x in lista]}  # P: bin
 

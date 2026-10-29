@@ -158,6 +158,13 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         await srv.recibir(s, 1, {"msgid": "CMD_LOGIN_ACCOUNT", "rqid": 1, "np_account_id": 5})
         self.assertEqual(env[-1][1]["result"], "ERR_LOGIN_FAILED")
 
+    async def test_svrlist_trae_account_y_menu(self):
+        s, env = cliente(self.srv)
+        await self.srv.recibir(s, 1, {"msgid": "CMD_GET_SVRLIST", "rqid": 10, "svrtype": "GATE"})
+        m = env[-1][1]
+        self.assertEqual(m["server_num"], 2)
+        self.assertEqual([x.valor["svrtype"] for x in m["svrlist"]], ["ACCOUNT", "MENU"])
+
     async def test_confirmacion_offline(self):
         s, env = cliente(self.srv)
         await self.srv.recibir(s, 1, {"msgid": "CMD_JOIN_OFFLINE_MODE", "rqid": 5})
