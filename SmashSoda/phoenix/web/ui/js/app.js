@@ -72,11 +72,11 @@ function PildoraSala({ m }) {
   const sala = m && m.sala;
   if (!sala) return html`<span class="capsula-seg"><span class="punto"></span>${t("SIN MOTOR", "NO ENGINE")}</span>`;
   if (sala.abierta) {
-    return html`<button class="capsula-seg" onClick=${() => irA("sala", "resumen")} title=${t("Ir al resumen de la sala", "Go to room overview")}><span class="punto ok vivo"></span>
+    return html`<button class="capsula-seg" onClick=${() => irA("sala", "panel")} title=${t("Ir al panel de la sala", "Go to room dashboard")}><span class="punto ok vivo"></span>
       ${t("SALA", "ROOM")} (${sala.invitados}/${sala.plazas})</button>`;
   }
   if (!sala.lista) return html`<span class="capsula-seg"><span class="punto warn"></span>${t("PREPARANDO", "STARTING")}</span>`;
-  return html`<button class="capsula-seg" onClick=${() => irA("sala", "resumen")} title=${t("Ir al resumen de la sala", "Go to room overview")}><span class="punto"></span>${t("SALA CERRADA", "ROOM CLOSED")}</button>`;
+  return html`<button class="capsula-seg" onClick=${() => irA("sala", "panel")} title=${t("Ir al panel de la sala", "Go to room dashboard")}><span class="punto"></span>${t("SALA CERRADA", "ROOM CLOSED")}</button>`;
 }
 
 const ESTADO_WEB = {

@@ -13,19 +13,15 @@ import { PreferenciaPuesto } from "./jugar.js";
 import { BloqueRetraso, LeyendaRetraso, retrasoDe } from "./retraso.js";
 import {
   Cifra, Tarjeta, Titulo, Boton, Interruptor, Ajuste, AjusteSw, Stepper, Segmentos, Selector, Campo,
-  Minigrafica, Chip, Icono, Vacio, BotonIr, colorPing, claseSemaforo, cx, dos, Esqueleto,
+  Minigrafica, Chip, Icono, Vacio, BotonIr, colorPing, claseSemaforo, cx, dos, Esqueleto, Avatar,
 } from "../ui.js";
 import { instalarVigem } from "./arreglos.js";
 import { SemaforoPhoenix, avisosTransmision, leerCerrados, guardarCerrados } from "./semaforo.js";
 
 export const PESTANAS_SALA = [
-  { id: "resumen", es: "RESUMEN", en: "OVERVIEW", d: ["Tu sala de un vistazo: enlace, tiempo en vivo, quién juega y cómo va la conexión.", "Your room at a glance."] },
-  { id: "transmision", es: "TRANSMISIÓN", en: "STREAM", d: ["Todo lo de la imagen y el sonido que reciben tus amigos, en un solo sitio: calidad, FPS, pantalla y audio.", "Everything about the picture and sound your friends get, in one place: quality, FPS, screen and audio."] },
-  { id: "puesto", es: "DÓNDE JUEGO YO", en: "WHERE I PLAY", d: ["Dónde te sientas tú cuando pulsas JUGAR: un puesto fijo o el primero de un equipo.", "Where you sit when you press PLAY: a fixed seat or the first one of a team."] },
-  { id: "opciones", es: "OPCIONES", en: "OPTIONS", d: ["Nombre, plazas y quién puede entrar. Con la sala cerrada se guarda al instante; con la sala abierta, pulsa APLICAR para que lo vean tus invitados.", "Name, slots, who can join and image quality."] },
-  { id: "juegos", es: "JUEGOS", en: "GAMES", d: ["Qué se juega (se muestra en la web de la liga) y el juego que abre el modo quiosco.", "What is being played and the kiosk game."] },
-  { id: "red", es: "CONEXIÓN", en: "CONNECTION", d: ["¿Tu PC está lista para hostear? Y el ping de cada invitado: verde va bien, ámbar aguanta, rojo es lag.", "Is your PC ready to host? And each guest's ping: green is fine, amber holds, red is lag."] },
-  { id: "actividad", mas: true, es: "ACTIVIDAD", en: "ACTIVITY", d: ["Todo lo que pasó en la sala, del más nuevo al más viejo.", "Everything that happened in the room."] },
+  { id: "panel", es: "PANEL DE SALA", en: "ROOM DASHBOARD", d: ["Tu sala de un vistazo: enlace, tiempo en vivo, quién juega y cómo va la conexión.", "Your room at a glance."] },
+  { id: "gente", es: "INVITADOS Y ROLES", en: "GUESTS & ROLES", d: ["Jugadores con mando vs espectadores mirando, silenciar chat, expulsar y actividad reciente.", "Players with pads vs spectators, mute, kick and recent activity."] },
+  { id: "transmision", es: "RED Y TRANSMISIÓN", en: "STREAM & NETWORK", d: ["Todo lo de la imagen y el sonido que reciben tus amigos, calidad, FPS, pantalla, audio y semáforo.", "Everything about picture, sound, FPS, screen and network check."] },
 ];
 
 // Parches conocidos. Para agregar uno nuevo basta con añadir su nombre aquí.
@@ -54,12 +50,15 @@ export function VistaSala({ s, pestana }) {
   const m = s.motor;
   if (!m || !m.sala) return html`<${Esqueleto} texto=${t("Conectando con el motor…", "Connecting to the engine…")}/>`;
   switch (pestana) {
-    case "transmision": return html`<${TransmisionSala} m=${m} info=${s.info}/>`;
+    case "gente": return html`<${InvitadosYRoles} m=${m} s=${s}/>`;
+    case "transmision":
+    case "red": return html`<${RedYTransmision} m=${m} info=${s.info}/>`;
     case "puesto": return html`<${PreferenciaPuesto} m=${m}/>`;
     case "opciones": return html`<${OpcionesSala} m=${m}/>`;
     case "juegos": return html`<${JuegosSala} m=${m}/>`;
-    case "red": return html`<${ConexionSala} m=${m}/>`;
     case "actividad": return html`<${ActividadSala} s=${s}/>`;
+    case "panel":
+    case "resumen":
     default: return html`<${ResumenSala} s=${s} m=${m}/>`;
   }
 }
@@ -343,6 +342,199 @@ function ResumenSala({ s, m }) {
       <${ActividadResumen} s=${s}/>
     </div>
     </div>
+  </div>`;
+}
+
+// ---- Invitados y Roles (Núcleo 2 unificado) -------------------------------------------
+function InvitadosYRoles({ m, s }) {
+  const [filtro, setFiltro] = useState("");
+  const [silenciado, setSilenciado] = useState(false);
+  const gente = (m.invitados || []).filter((g) => !g.falso);
+  const mandos = m.mandos?.lista || [];
+  const libres = mandos.filter((p) => !p.ocupado);
+
+  const f = filtro.trim().toLowerCase();
+  const filtrados = gente.filter((g) => !f || g.nombre.toLowerCase().includes(f) || String(g.parsecId).includes(f));
+  const jugando = gente.filter((g) => !!g.mando);
+  const mirando = gente.filter((g) => !g.mando);
+
+  const alternarSilencio = () => {
+    const nuevo = !silenciado;
+    setSilenciado(nuevo);
+    accion("chat.enviar", { texto: nuevo ? "🔇 El anfitrión ha silenciado el chat temporalmente." : "🔊 El anfitrión ha activado el chat." });
+    avisar(nuevo ? t("Chat silenciado.", "Chat muted.") : t("Chat reactivado.", "Chat unmuted."));
+  };
+
+  const expulsarTodos = async () => {
+    if (gente.length === 0) return;
+    const ok = await confirmar({
+      titulo: t("¿Expulsar a todos los invitados?", "Kick all guests?"),
+      texto: t("Se desconectará a todos los invitados que están en la sala.", "All guests in the room will be disconnected."),
+      si: t("Expulsar a todos", "Kick all"),
+      peligro: true,
+    });
+    if (ok) {
+      for (const g of gente) {
+        await accion("gente.expulsar", { parsecId: g.parsecId, nombre: g.nombre });
+      }
+      avisar(t("Todos los invitados fueron expulsados.", "All guests were kicked."));
+    }
+  };
+
+  const expulsarUno = async (g) => {
+    const ok = await confirmar({
+      titulo: t(`¿Expulsar a ${g.nombre}?`, `Kick ${g.nombre}?`),
+      texto: t("Sale de la sala, pero puede volver a entrar con el enlace.", "They leave but can rejoin with the link."),
+      si: t("Expulsar", "Kick"),
+      peligro: true,
+    });
+    if (ok) await accion("gente.expulsar", { parsecId: g.parsecId, nombre: g.nombre }, { ok: t("Expulsado.", "Kicked.") });
+  };
+
+  const ph = m.sala?.phoenix || {};
+  const phx = (d) => accion("sala.phoenix", d);
+
+  return html`<div class="col" style="gap:16px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <span class="disp" style="font-weight:700;font-size:15px;letter-spacing:.16em">
+          ${t("INVITADOS EN SALA", "GUESTS IN ROOM")} (${gente.length + (m.sala?.hostId ? 1 : 0)} ${t("CONECTADOS", "CONNECTED")})
+        </span>
+        <span class="chip ok">${jugando.length + (m.mandos?.host ? 1 : 0)} ${t("JUGANDO", "PLAYING")}</span>
+        <span class="chip acc2">${mirando.length} ${t("MIRANDO", "WATCHING")}</span>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <${Boton} tipo="suave mini" al=${alternarSilencio}>
+          ${silenciado ? "🔇 " + t("CHAT SILENCIADO", "CHAT MUTED") : "🔊 " + t("SILENCIAR CHAT", "MUTE CHAT")}
+        </${Boton}>
+        <${Boton} tipo="peligro mini" deshabilitado=${gente.length === 0} al=${expulsarTodos}>
+          ${t("EXPULSAR A TODOS", "KICK ALL")}
+        </${Boton}>
+      </div>
+    </div>
+
+    <div class="rej2" style="grid-template-columns:1.35fr 1fr;align-items:start">
+      <${Tarjeta} interior="padding:20px;display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+          <div class="lab acc">${t("JUGADORES Y ESPECTADORES", "PLAYERS & SPECTATORS")}</div>
+          <input class="campo" style="max-width:240px;height:34px;font-size:13px" placeholder=${t("Buscar por nombre o ID…", "Search name or ID…")}
+            value=${filtro} onInput=${(e) => setFiltro(e.currentTarget.value)}/>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div class="caja" style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:rgba(0,229,255,.05);border-color:rgba(0,229,255,.3)">
+            <${Avatar} nombre=${m.sala?.hostNombre || "Host"} id=${m.sala?.hostId || 1} brillo t=${38}/>
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:600;font-size:15px;color:#fff;display:flex;align-items:center;gap:8px">
+                ${m.sala?.hostNombre || t("Anfitrión", "Host")}
+                <span class="chip acc" style="height:18px;font-size:10px">${t("ANFITRIÓN · TÚ", "HOST · YOU")}</span>
+              </div>
+              <div class="mono mut" style="font-size:12px">
+                ${m.mandos?.host ? `${t("Mando", "Pad")} ${dos(m.mandos.host)} · ` : ""}${t("Host local", "Local host")}
+              </div>
+            </div>
+            <span class="chip ok" style="height:24px">${m.mandos?.host ? `${t("JUGANDO #", "PLAYING #")}${dos(m.mandos.host)}` : t("MIRANDO", "WATCHING")}</span>
+          </div>
+
+          ${filtrados.length === 0 ? html`
+            <div class="ayuda" style="padding:16px 8px;text-align:center">
+              ${gente.length ? t("Nadie coincide con el filtro.", "Nobody matches the search.") : t("Esperando a que entren amigos con el enlace de la sala.", "Waiting for friends to join with room link.")}
+            </div>` : null}
+
+          ${filtrados.map((g) => {
+            const perfil = m.perfiles?.[g.parsecId];
+            return html`<div key=${g.parsecId} class="caja" style="display:flex;align-items:center;gap:12px;padding:12px 14px">
+              <${Avatar} nombre=${perfil?.nombre || g.nombre} url=${perfil?.avatar_url} id=${g.parsecId} t=${38}/>
+              <div style="flex:1;min-width:0">
+                <div style="font-weight:600;font-size:15px;color:#fff;display:flex;align-items:center;gap:8px">
+                  <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${g.nombre}</span>
+                  <span class="mono" style=${`font-size:12px;font-weight:600;color:${colorPing(g.ping)}`}>
+                    ${g.ping >= 0 ? `· ${g.ping} ms` : ""}
+                  </span>
+                  ${g.mod ? html`<${Chip} tipo="mod">MOD</${Chip}>` : null}
+                  ${g.vip ? html`<${Chip} tipo="vip">VIP</${Chip}>` : null}
+                </div>
+                <div class="mono mut" style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+                  #${g.parsecId}${g.mando ? ` · ${t("Mando", "Pad")} ${dos(g.mando)}` : ` · ${t("Sin mando · Espectador", "No pad · Spectator")}`}
+                </div>
+              </div>
+
+              ${g.mando ? html`
+                <span class="chip ok" style="height:24px">${t("JUGANDO #", "PLAYING #")}${dos(g.mando)}</span>
+                <${Boton} tipo="mini suave" al=${() => accion("mandos.liberar", { indice: g.mando - 1 })} title=${t("Quitar mando", "Remove pad")}>
+                  ${t("QUITAR", "REMOVE")}
+                </${Boton}>` : html`
+                <span class="chip acc2" style="height:24px">${t("MIRANDO", "WATCHING")}</span>
+                <select class="campo" style="width:auto;height:28px;padding:0 8px;font-size:12px" disabled=${libres.length === 0}
+                  onChange=${(e) => { const v = Number(e.currentTarget.value); e.currentTarget.value = ""; if (v) accion("mandos.asignar", { indice: v - 1, parsecId: g.parsecId }); }}>
+                  <option value="">${libres.length ? t("DAR MANDO…", "GIVE PAD…") : t("LLENO", "FULL")}</option>
+                  ${libres.map((p) => html`<option value=${p.n}>${dos(p.n)} · ${p.equipo === "a" ? "EQ A" : p.equipo === "b" ? "EQ B" : "EXT"}</option>`)}
+                </select>`}
+
+              <button class="icono-btn" style="color:var(--mut);font-size:13px" title=${t("Ver ficha detallada", "View details")} onClick=${() => abrirFicha(g.parsecId)}>
+                ℹ
+              </button>
+              <button class="icono-btn" style="color:var(--warn);font-size:13px" title=${t("Expulsar", "Kick")} onClick=${() => expulsarUno(g)}>
+                ✕
+              </button>
+            </div>`;
+          })}
+        </div>
+      </${Tarjeta}>
+
+      <div class="col" style="gap:16px">
+        <${Tarjeta} interior="padding:20px;display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div class="lab acc">${t("ACTIVIDAD EN VIVO DE LA SALA", "LIVE ROOM ACTIVITY")}</div>
+            <button class="mono mut" style="background:none;border:0;cursor:pointer;font-size:12px" onClick=${() => irA("sala", "actividad")}>
+              ${t("VER TODO", "SEE ALL")} ›
+            </button>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px;font-size:13px">
+            ${s.actividad.slice(-8).reverse().map((e) => html`
+              <div key=${e.id} style="display:flex;gap:10px;align-items:flex-start">
+                <span class="punto" style=${`margin-top:5px;background:${colorLinea(e.texto)}`}></span>
+                <div style="flex:1;min-width:0;line-height:1.3">
+                  <div style="word-break:break-word">${e.texto}</div>
+                  ${e.en ? html`<div class="mono mut" style="font-size:11px;margin-top:2px">${haceCuanto(e.en)}</div>` : null}
+                </div>
+              </div>`)}
+            ${s.actividad.length === 0 ? html`<div class="ayuda">${t("Sin actividad registrada aún.", "No activity recorded yet.")}</div>` : null}
+          </div>
+        </${Tarjeta}>
+
+        <${Tarjeta} secundaria interior="padding:20px;display:flex;flex-direction:column;gap:12px">
+          <div class="lab acc">${t("SEGURIDAD Y CONTROL DE ACCESO", "SECURITY & ACCESS CONTROL")}</div>
+          <${Ajuste} titulo=${t("Visibilidad", "Visibility")} desc=${t("Quién puede encontrar la sala.", "Who can find the room.")}>
+            <${Segmentos} valor=${ph.visibilidad || "publica"} al=${(v) => phx({ visibilidad: v })} opciones=${[
+              { valor: "publica", texto: t("PÚBLICA", "PUBLIC") },
+              { valor: "amigos", texto: t("AMIGOS", "FRIENDS") },
+              { valor: "privada", texto: t("PRIVADA", "PRIVATE") },
+            ]}/>
+          </${Ajuste}>
+          <${AjusteSw} titulo=${t("Aceptar espectadores", "Allow spectators")} desc=${t("Pueden entrar a ver sin mando.", "Guests can watch without a pad.")}
+            valor=${ph.espectadores ?? true} al=${(v) => phx({ espectadores: v })}/>
+          <${AjusteSw} titulo=${t("Entrada directa por Parsec", "Direct Parsec entry")} desc=${t("Entrada sin estar registrado en la web.", "Join without web registration.")}
+            valor=${ph.entradaParsec ?? true} al=${(v) => phx({ entradaParsec: v })}/>
+        </${Tarjeta}>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ---- Red y Transmisión (Núcleo 3 unificado) -------------------------------------------
+function RedYTransmision({ m, info }) {
+  return html`<div class="col" style="gap:16px">
+    <${AntesDelPartido} m=${m}/>
+    <div class="rej2" style="align-items:start">
+      <${TarjetaCalidad} m=${m}/>
+      <div class="col" style="gap:16px">
+        <${Audio} m=${m}/>
+        <${TarjetaCaptura} m=${m} info=${info}/>
+      </div>
+    </div>
+    <${ConexionSala} m=${m}/>
+    <${UltimaPartida}/>
   </div>`;
 }
 
