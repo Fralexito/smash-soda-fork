@@ -19,6 +19,7 @@ import { BotonJugar } from "./jugar.js";
 import { IndicadorRetraso, retrasoDe } from "./retraso.js";
 import { MandosEnVivo } from "./mandovivo.js";
 import { leerSentado, ponerSentado } from "./sentado.js";
+import { BarraReyDeLaPista } from "./reydelapista.js";
 
 // ---- Mini-mando en vivo integrado en cada fila (Minimalismo Táctico 0.3.57) ----
 const BITS_MINI = [
@@ -639,6 +640,8 @@ export function PuestosNuevo({ m }) {
     </div>
 
     <${BarraPartidoEnSala} m=${m}/>
+
+    <${BarraReyDeLaPista} m=${m} esclavo=${esclavo}/>
 
     <div style="display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:20px;flex:1;align-items:stretch">
       <div style="display:flex;flex-direction:column;gap:14px;min-width:0">

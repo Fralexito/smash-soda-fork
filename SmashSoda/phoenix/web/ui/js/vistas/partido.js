@@ -9,6 +9,7 @@ import { t, duracion, fecha } from "../i18n.js";
 import { accion, confirmar, avisar, irA } from "../tienda.js";
 import { Tarjeta, Titulo, Boton, Interruptor, Campo, Avatar, Chip, Icono, Vacio, colorPing, cx, dos, Esqueleto } from "../ui.js";
 import { CampoEnVivo } from "./campo.js";
+import { ejecutarRotacionRey, obtenerConfigRey } from "./reydelapista.js";
 
 export const PESTANAS_PARTIDO = [
   { id: "vivo", es: "MARCADOR Y CAMPO", en: "SCORE & PITCH", d: ["Arma los dos lados, lleva el marcador y el reloj y mira el campo 2D en vivo, todo en una sola vista. Al terminar se guarda y se avisa en el chat y la web.", "Set up sides, keep score and time and watch the live 2D pitch, all in one view."] },
@@ -238,6 +239,10 @@ function Marcador({ m }) {
       setFiesta((x) => x + 1);
       avisar(g === "empate" ? t("¡Empate!", "Draw!") : t(`¡Ganó ${g === "a" ? p.a.nombre : p.b.nombre}!`, `${g === "a" ? p.a.nombre : p.b.nombre} wins!`), "ok", 6000);
       if (!r.guardado) avisar(t("No se pudo guardar en el historial.", "Could not save to history."), "warn");
+      const cfgRey = obtenerConfigRey();
+      if (cfgRey.activo) {
+        await ejecutarRotacionRey({ ganador: g, m });
+      }
     }
   };
   const cancelar = async () => {

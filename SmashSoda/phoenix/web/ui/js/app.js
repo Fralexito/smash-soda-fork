@@ -87,8 +87,31 @@ const ESTADO_WEB = {
   sin_vincular: ["", "VINCULAR WEB", "LINK WEB"],
 };
 
+export function useEscudoStreamer() {
+  const [activo, setActivo] = useState(() => {
+    try { return localStorage.getItem("phoenix.escudo_streamer") === "1"; } catch { return false; }
+  });
+  useEffect(() => {
+    document.body.classList.toggle("modo-streamer", activo);
+    try { localStorage.setItem("phoenix.escudo_streamer", activo ? "1" : "0"); } catch {}
+  }, [activo]);
+  useEffect(() => {
+    const alTecla = (e) => {
+      if (e.ctrlKey && e.shiftKey && (e.key === "S" || e.key === "s")) {
+        e.preventDefault();
+        setActivo((a) => !a);
+        avisar(!activo ? "🛡 Escudo Streamer ACTIVADO (datos sensibles censurados)" : "🛡 Escudo Streamer desactivado", "info");
+      }
+    };
+    window.addEventListener("keydown", alTecla);
+    return () => window.removeEventListener("keydown", alTecla);
+  }, [activo]);
+  return [activo, () => setActivo((a) => !a)];
+}
+
 function Barra({ s }) {
   const m = s.motor;
+  const [escudo, alternarEscudo] = useEscudoStreamer();
   const tema = m?.app?.tema === "sudario" ? "sudario" : "galaxy";
   const w = ESTADO_WEB[m?.web?.estado] || ESTADO_WEB.sin_vincular;
   const cambiarTema = () => accion("ui.tema", { tema: tema === "galaxy" ? "sudario" : "galaxy" });
@@ -103,6 +126,9 @@ function Barra({ s }) {
     <div class="ultima-hueco"><${UltimaHora} s=${s}/></div>
     <div class="lado">
       <${GrupoEstado} m=${m} w=${w} enSync=${s.seccion === "sync" || estaCedida(s)}/>
+      <button class=${cx("pill", escudo && "acc")} onClick=${alternarEscudo} title=${t("Escudo Streamer: oculta IPs y enlaces en directos (Ctrl+Shift+S)", "Streamer Shield: hides IPs and links in streams (Ctrl+Shift+S)")}>
+        <${Icono} n="candado" t=${14}/><span>${escudo ? t("STREAMER ON", "STREAMER ON") : t("STREAMER", "STREAMER")}</span>
+      </button>
       <button class=${cx("pill", s.chatAbierto && "acc")} onClick=${() => alternarChat()} title="Chat (Ctrl+Espacio)">
         <${Icono} n="chat" t=${15}/>CHAT${totalNoLeidos(s) > 0 ? html`<span class="chip bad" style="height:20px">${totalNoLeidos(s) > 99 ? "99+" : totalNoLeidos(s)}</span>` : null}
       </button>

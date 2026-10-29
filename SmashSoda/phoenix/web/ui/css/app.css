@@ -929,3 +929,22 @@ html.sin-foco .destello { animation: none; }
 }
 .mini-pad.b .k { background: var(--eq-b); color: #120624; }
 
+/* ---------- Modo Streamer (Privacidad / Anti-Doxxing en transmisiones) ---------- */
+body.modo-streamer .ip,
+body.modo-streamer .id-privado,
+body.modo-streamer [data-privado],
+body.modo-streamer .enlace-caja input,
+body.modo-streamer .enlace-sala {
+  filter: blur(8px);
+  user-select: none;
+  transition: filter .15s ease;
+}
+body.modo-streamer .ip:hover,
+body.modo-streamer .id-privado:hover,
+body.modo-streamer [data-privado]:hover,
+body.modo-streamer .enlace-caja input:hover,
+body.modo-streamer .enlace-sala:hover {
+  filter: blur(0px);
+}
+
+
