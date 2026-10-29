@@ -75,6 +75,23 @@ local function mirarActividad(ahora)
     if n then tamSonda = n end
 end
 
+-- v0.9 (0.4.99): el marcador y el reloj del módulo se sincronizan con match.stats() del juego una vez por segundo.
+-- Antes solo contaban goal_scored y se reiniciaban en set_teams/context_reset: la revancha propia (sin set_teams) los dejaba con los goles y los segundos del partido anterior.
+local function sincronizarConJuego()
+    local ok, st = pcall(function() return match.stats() end)
+    if not ok or not st then return end
+    local hl, al = tonumber(st.home_score), tonumber(st.away_score)
+    if hl and al and (hl ~= golesL or al ~= golesV) then
+        log(string.format("[marcador_free] marcador sincronizado con el juego %d-%d -> %d-%d", golesL, golesV, hl, al))
+        golesL, golesV = hl, al
+    end
+    local mi, se = tonumber(st.clock_minutes), tonumber(st.clock_seconds)
+    if mi and se then
+        local t = mi * 60 + se
+        if t + 30 < segundos then log(string.format("[marcador_free] reloj sincronizado con el juego %d s -> %d s", math.floor(segundos), t)); segundos = t end
+    end
+end
+
 local function mirarZonaYPantalla()
     local s = leer(rutaSonda)
     enZona = (s ~= nil) and (s:find('"nombre"%s*:%s*"FREE_TRAINING"') ~= nil)
@@ -107,7 +124,7 @@ function m.display_frame(ctx)
     local ahora = os.clock()
     if ahora - tConfig >= CONFIG_SEG then tConfig = ahora; mirarConfig(); mirarCancha() end
     if not encendido then tAnterior = nil; return end
-    if ahora - tMirar >= MIRAR_SEG then tMirar = ahora; mirarZonaYPantalla(); mirarActividad(ahora) end
+    if ahora - tMirar >= MIRAR_SEG then tMirar = ahora; mirarZonaYPantalla(); if enZona then sincronizarConJuego() end; mirarActividad(ahora) end
     if not enZona then tAnterior = nil; return end
     if tAnterior then
         local dt = ahora - tAnterior
