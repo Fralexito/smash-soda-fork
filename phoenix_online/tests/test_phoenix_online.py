@@ -6,6 +6,7 @@ from phoenix_online import msgpack_min
 from phoenix_online.datos import Datos
 from phoenix_online.logica import Servidor, Sesion
 from phoenix_online.msgpack_min import Empaquetado
+from phoenix_online.stun import respuesta_binding
 from phoenix_online.nclmio import Codec, ErrorTrama, LectorTramas, xor
 
 CLAVE_FALSA = bytes(range(56))  # la real vive solo en la PC de Frank
@@ -59,6 +60,21 @@ class TestTrama(unittest.TestCase):
     def test_cabe_en_0x410(self):
         t = self.codec.codificar(1, {"msgid": "A", "d": "abc" * 2000})
         self.assertLessEqual(len(t) - 24, 0x410)
+
+
+class TestStun(unittest.TestCase):
+    def test_binding(self):
+        import struct
+        txid = bytes(range(12))
+        pet = struct.pack(">HHI", 1, 0, 0x2112A442) + txid
+        r = respuesta_binding(pet, "1.2.3.4", 5739)
+        self.assertEqual(r[:2], b"\x01\x01")
+        self.assertEqual(r[8:20], txid)
+        x = r[20 + 12:]  # XOR-MAPPED-ADDRESS
+        puerto = struct.unpack(">H", x[6:8])[0] ^ 0x2112
+        ip = bytes(a ^ b for a, b in zip(x[8:12], bytes.fromhex("2112A442")))
+        self.assertEqual((puerto, ip), (5739, bytes([1, 2, 3, 4])))
+        self.assertIsNone(respuesta_binding(b"basura", "1.2.3.4", 1))
 
 
 CFG = {

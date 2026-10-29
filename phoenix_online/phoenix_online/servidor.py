@@ -16,6 +16,7 @@ from . import msgpack_min
 from .datos import Datos
 from .logica import Servidor, Sesion
 from .nclmio import Codec, LectorTramas
+from .stun import ProtocoloStun
 
 log = logging.getLogger("phoenix_online")
 
@@ -134,6 +135,9 @@ async def principal(ruta_config):
     # HTTP en uno o varios puertos (5000 propio; 80 para el respaldo http:// de GateInfo.php)
     for puerto in cfg.get("puertos_http", [cfg.get("puerto_http", 5000)]):
         servidores.append(await asyncio.start_server(lambda r, w: http(srv, r, w), "0.0.0.0", puerto))
+    bucle = asyncio.get_running_loop()
+    for puerto in cfg.get("puertos_stun", [5730, 3478]):
+        await bucle.create_datagram_endpoint(ProtocoloStun, local_addr=("0.0.0.0", puerto))
     log.info("Phoenix Online escuchando en %s", [s.sockets[0].getsockname() for s in servidores])
     await asyncio.gather(*(s.serve_forever() for s in servidores))
 
