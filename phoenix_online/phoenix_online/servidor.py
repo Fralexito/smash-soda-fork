@@ -83,6 +83,12 @@ async def http(srv, reader, writer):
         ruta_sin_query, _, query = ruta.partition("?")
         form = {k: v[0] for k, v in urllib.parse.parse_qs(query + "&" + cuerpo.decode("latin-1")).items()}
         log.info("HTTP %s %s %s", metodo, ruta_sin_query, sorted(form))
+        # Espía: todo pedido HTTP queda completo en capturas/http.jsonl (formato aún desconocido)
+        carpeta = srv.cfg.get("capturas", "capturas")
+        os.makedirs(carpeta, exist_ok=True)
+        with open(os.path.join(carpeta, "http.jsonl"), "a", encoding="utf-8") as f:
+            f.write(json.dumps({"t": time.time(), "linea": linea, "cabeceras": cabeceras,
+                                "cuerpo": cuerpo.decode("latin-1")}, ensure_ascii=False) + "\n")
         if form.get("msgid") == "CMD_GET_TURN_SERVER_LIST" and srv.cfg.get("turn"):
             datos, tipo = msgpack_min.packb(srv.respuesta_turn(form)), "application/x-msgpack"
         else:
@@ -122,8 +128,10 @@ async def principal(ruta_config):
                                    "0.0.0.0", cfg.get("puerto_gate", 10000)),
         await asyncio.start_server(lambda r, w: atender(srv, codec, "MENU", carpeta, r, w),
                                    "0.0.0.0", cfg["puerto_menu"]),
-        await asyncio.start_server(lambda r, w: http(srv, r, w), "0.0.0.0", cfg.get("puerto_http", 5000)),
     ]
+    # HTTP en uno o varios puertos (5000 propio; 80 para el respaldo http:// de GateInfo.php)
+    for puerto in cfg.get("puertos_http", [cfg.get("puerto_http", 5000)]):
+        servidores.append(await asyncio.start_server(lambda r, w: http(srv, r, w), "0.0.0.0", puerto))
     log.info("Phoenix Online escuchando en %s", [s.sockets[0].getsockname() for s in servidores])
     await asyncio.gather(*(s.serve_forever() for s in servidores))
 

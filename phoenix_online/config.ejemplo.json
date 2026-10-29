@@ -5,6 +5,7 @@
   "puerto_gate": 10000,
   "puerto_menu": 10001,
   "puerto_http": 5000,
+  "puertos_http": [5000, 80],
   "base_datos": "phoenix_online.db",
   "capturas": "capturas",
   "vinculos": "vinculos.json",
