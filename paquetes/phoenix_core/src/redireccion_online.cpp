@@ -24,12 +24,19 @@ using PfnGetAddrInfoW = int (*)(const wchar_t*, const wchar_t*, const void*, voi
 using PfnGetHostByName = void* (*)(const char*);
 using PfnWinHttpConnect = void* (*)(void*, const wchar_t*, WORD, DWORD);
 using PfnGetProcAddress = FARPROC (WINAPI*)(HMODULE, LPCSTR);
+using PfnConnect = int (*)(UINT_PTR, const void*, int);
+using PfnSendTo = int (*)(UINT_PTR, const char*, int, int, const void*, int);
+using PfnWSASendTo = int (*)(UINT_PTR, void*, DWORD, DWORD*, DWORD, const void*, int, void*, void*);
 
 PfnGetAddrInfo    g_origGai = nullptr;
 PfnGetAddrInfoW   g_origGaiW = nullptr;
 PfnGetHostByName  g_origGhbn = nullptr;
 PfnWinHttpConnect g_origWhc = nullptr;
 PfnGetProcAddress g_origGpa = nullptr;
+PfnConnect        g_origConnect = nullptr;
+PfnSendTo         g_origSendTo = nullptr;
+PfnWSASendTo      g_origWsaSendTo = nullptr;
+uint32_t          g_ipNet = 0;   // nuestra IP en orden de red
 HMODULE           g_ws2 = nullptr;
 
 struct Casilla { uint64_t* dir; uint64_t original; };
@@ -93,6 +100,39 @@ void* hookWinHttpConnect(void* sesion, const wchar_t* servidor, WORD puerto, DWO
     }
     if (InterlockedIncrement(&g_otros) <= 40) anota("online_phoenix: WinHttpConnect(\"%ls\") no es de Konami: sin cambios", servidor ? servidor : L"(nulo)");
     return g_origWhc(sesion, servidor, puerto, reservado);
+}
+
+// IP fijas de Konami que lleva el exe en su tabla de servidores (4 IP de AWS Tokio). No pasan por ningún nombre: se reescribe el destino.
+bool ipKonamiFija(uint32_t netip) {
+    static const uint8_t fijas[][4] = { {52,199,19,186}, {18,176,195,37}, {54,178,167,19}, {18,182,217,155}, {18,165,61,88}, {40,86,103,106} };
+    for (auto& f : fijas) if (memcmp(&netip, f, 4) == 0) return true;
+    return false;
+}
+// sockaddr_in = { WORD familia; WORD puerto; DWORD ip; ...}; si el destino es una IP fija de Konami se entrega una copia con la nuestra.
+bool reescribir(const void* sa, int n, uint8_t* copia /*16*/) {
+    if (!sa || n < 16) return false;
+    const uint8_t* b = static_cast<const uint8_t*>(sa);
+    uint16_t fam; memcpy(&fam, b, 2);
+    uint32_t ip; memcpy(&ip, b + 4, 4);
+    if (fam != 2 || !ipKonamiFija(ip)) return false;
+    memcpy(copia, b, 16); memcpy(copia + 4, &g_ipNet, 4);
+    anota("online_phoenix: destino fijo %u.%u.%u.%u:%u -> %s", b[4], b[5], b[6], b[7], (unsigned)((b[2] << 8) | b[3]), g_ip);
+    return true;
+}
+int hookConnect(UINT_PTR s, const void* sa, int n) {
+    uint8_t c[16];
+    if (reescribir(sa, n, c)) return g_origConnect(s, c, 16);
+    return g_origConnect(s, sa, n);
+}
+int hookSendTo(UINT_PTR s, const char* buf, int len, int fl, const void* sa, int n) {
+    uint8_t c[16];
+    if (reescribir(sa, n, c)) return g_origSendTo(s, buf, len, fl, c, 16);
+    return g_origSendTo(s, buf, len, fl, sa, n);
+}
+int hookWSASendTo(UINT_PTR s, void* bufs, DWORD nb, DWORD* enviados, DWORD fl, const void* sa, int n, void* ov, void* cb) {
+    uint8_t c[16];
+    if (reescribir(sa, n, c)) return g_origWsaSendTo(s, bufs, nb, enviados, fl, c, 16, ov, cb);
+    return g_origWsaSendTo(s, bufs, nb, enviados, fl, sa, n, ov, cb);
 }
 // El getaddrinfo de WspiapiLoad se pide con GetProcAddress la primera vez que se usa: se entrega el nuestro.
 FARPROC WINAPI hookGetProcAddress(HMODULE m, LPCSTR nombre) {
@@ -223,6 +263,7 @@ void iniciar(const std::string& carpeta, bool modoSeguro, LogFn log) {
     if (!ipValida(ip)) { anota("online_phoenix: ip \"%s\" no válida: no se instala", ip.c_str()); return; }
     strncpy_s(g_ip, ip.c_str(), _TRUNCATE);
     for (size_t i = 0; i < sizeof g_ipW / sizeof g_ipW[0]; ++i) g_ipW[i] = static_cast<wchar_t>(static_cast<unsigned char>(g_ip[i]));
+    { unsigned a1, a2, a3, a4; sscanf_s(g_ip, "%u.%u.%u.%u", &a1, &a2, &a3, &a4); uint8_t nb[4] = { (uint8_t)a1, (uint8_t)a2, (uint8_t)a3, (uint8_t)a4 }; memcpy(&g_ipNet, nb, 4); }
     anota("online_phoenix: encendido, ip %s; se buscan las casillas del exe", g_ip);
 
     g_ws2 = LoadLibraryA("ws2_32.dll");
@@ -233,6 +274,9 @@ void iniciar(const std::string& carpeta, bool modoSeguro, LogFn log) {
     g_origGai = reinterpret_cast<PfnGetAddrInfo>(GetProcAddress(g_ws2, "getaddrinfo"));
     g_origGaiW = reinterpret_cast<PfnGetAddrInfoW>(GetProcAddress(g_ws2, "GetAddrInfoW"));
     g_origGhbn = reinterpret_cast<PfnGetHostByName>(GetProcAddress(g_ws2, "gethostbyname"));
+    g_origConnect = reinterpret_cast<PfnConnect>(GetProcAddress(g_ws2, "connect"));
+    g_origSendTo = reinterpret_cast<PfnSendTo>(GetProcAddress(g_ws2, "sendto"));
+    g_origWsaSendTo = reinterpret_cast<PfnWSASendTo>(GetProcAddress(g_ws2, "WSASendTo"));
     if (wh) g_origWhc = reinterpret_cast<PfnWinHttpConnect>(GetProcAddress(wh, "WinHttpConnect"));
 
     std::vector<Objetivo> objs;
@@ -243,6 +287,9 @@ void iniciar(const std::string& carpeta, bool modoSeguro, LogFn log) {
     agrega(reinterpret_cast<void*>(g_origGai), reinterpret_cast<void*>(&hookGetAddrInfo), "getaddrinfo");
     agrega(reinterpret_cast<void*>(g_origGaiW), reinterpret_cast<void*>(&hookGetAddrInfoW), "GetAddrInfoW");
     agrega(reinterpret_cast<void*>(g_origGhbn), reinterpret_cast<void*>(&hookGetHostByName), "gethostbyname");
+    agrega(reinterpret_cast<void*>(g_origConnect), reinterpret_cast<void*>(&hookConnect), "connect");
+    agrega(reinterpret_cast<void*>(g_origSendTo), reinterpret_cast<void*>(&hookSendTo), "sendto");
+    agrega(reinterpret_cast<void*>(g_origWsaSendTo), reinterpret_cast<void*>(&hookWSASendTo), "WSASendTo");
     agrega(reinterpret_cast<void*>(g_origWhc), reinterpret_cast<void*>(&hookWinHttpConnect), "WinHttpConnect");
     agrega(reinterpret_cast<void*>(g_origGpa), reinterpret_cast<void*>(&hookGetProcAddress), "GetProcAddress");
 
