@@ -508,6 +508,55 @@ export function PuestosNuevo({ m }) {
     avisar(t("Lados invertidos: Equipo A ⇄ Equipo B.", "Sides swapped: Team A ⇄ Team B."), "ok");
   };
 
+  /**
+   * Hook preparado para empujar los mandos al lado correspondiente dentro de PES (Local / Visita).
+   * Envía la asignación calculada para que cuando el motor o Sider tengan listo el inyector de inputs,
+   * cada mando se mueva solo a la izquierda o derecha en la pantalla de selección de lados.
+   */
+  const aplicarLadosEnPes = async (asignaciones) => {
+    // Si el motor implementa la acción en C++/ViGEm, la llamamos de forma segura:
+    try {
+      await accion("mandos.sincronizarLadosPes", { asignaciones }, { silencioso: true });
+    } catch (_) {}
+  };
+
+  const sortearEquipos = async () => {
+    const enJuego = lista.filter((p) => p.equipo === "a" || p.equipo === "b");
+    if (enJuego.length < 2) {
+      return avisar(t("Se necesitan al menos 2 puestos en juego para sortear.", "At least 2 active seats needed to shuffle."), "warn");
+    }
+
+    // Algoritmo de barajado aleatorio (Fisher-Yates)
+    const copia = [...enJuego];
+    for (let i = copia.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [copia[i], copia[j]] = [copia[j], copia[i]];
+    }
+
+    const mitad = Math.floor(copia.length / 2);
+    const asignaciones = [];
+
+    for (let i = 0; i < copia.length; i++) {
+      const p = copia[i];
+      const nuevo = i < mitad ? "a" : "b";
+      asignaciones.push({
+        puesto: p.n,
+        indice: p.n - 1,
+        equipo: nuevo,
+        ladoPes: nuevo === "a" ? "local" : "visita",
+        parsecId: p.parsecId,
+      });
+      if (p.equipo !== nuevo) {
+        await accion("mandos.equipo", { indice: p.n - 1, equipo: nuevo }, { silencioso: true });
+      }
+    }
+
+    // Disparamos el hook para sincronizar lados en PES
+    await aplicarLadosEnPes(asignaciones);
+
+    avisar(t("¡Equipos sorteados al azar!", "Teams shuffled randomly!"), "ok");
+  };
+
   const meterSiguienteEnCola = async () => {
     if (!mirando.length) {
       return avisar(t("No hay nadie esperando en cola.", "Nobody waiting in queue."), "warn");
@@ -579,6 +628,9 @@ export function PuestosNuevo({ m }) {
         <${Boton} tipo="mini suave" deshabilitado=${esclavo} al=${invertirEquipos}
           titulo=${t("Invierte los lados: todo el Equipo A pasa a B y todo el Equipo B pasa a A (ideal para el partido de vuelta)", "Swaps sides: all Team A goes to B and all Team B goes to A (ideal for 2nd leg match)")}>
           ⚡ ${t("INVERTIR (A ⇄ B)", "SWAP (A ⇄ B)")}</${Boton}>
+        <${Boton} tipo="mini suave" deshabilitado=${esclavo} al=${sortearEquipos}
+          titulo=${t("Reparte y baraja al azar los puestos entre Equipo A y Equipo B (preparado para empujar lados en PES)", "Randomly shuffles active seats between Team A and Team B (ready for PES side sync)")}>
+          ⚡ ${t("SORTEAR", "SHUFFLE")}</${Boton}>
         <${Boton} tipo="mini suave" deshabilitado=${esclavo || mirando.length === 0} al=${sentarEspectadores}
           titulo=${t("Sienta a todos los espectadores de la sala en los puestos libres disponibles", "Seats all room spectators into available free seats")}>
           ⚡ ${t("SENTAR ESPECTADORES", "SEAT SPECTATORS")}</${Boton}>
