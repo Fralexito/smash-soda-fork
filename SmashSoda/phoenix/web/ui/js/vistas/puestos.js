@@ -166,8 +166,7 @@ function Fila({ p, m, color, arr, setArr, alAsignar, mirando, vivo }) {
             ${esHost ? (m.mandos.miMando ? t("con tu mando · ", "with your pad · ") + m.mandos.miMando : t("con el teclado", "with the keyboard"))
               : html`${p.conectado ? t("conectado", "connected") : t("desconectado", "unplugged")}${p.bloqueado ? t(" · bloqueado", " · locked") : ""}`}
             ${p.ping >= 0 ? html` · <span style=${`color:${colorPing(p.ping)}`}>${p.ping} ms</span>` : null}${!esHost ? html`<${IndicadorRetraso} r=${retrasoDe(m, p.parsecId)}/>` : null}</div>
-        </div>
-        <${MiniMandoFila} p=${p} e=${entradaViva} esHost=${esHost}/>`
+        </div>`
       : html`<div style="flex:1 1 110px;min-width:110px">
           <div style=${`font:600 17px/1.2 var(--f-body);color:${caido ? "var(--warn)" : "var(--mut)"}`}>${caido ? t(`Puesto libre · Se cayó ${caido.nombre}`, `Free seat · ${caido.nombre} dropped`) : t("Puesto libre", "Free seat")}
             ${p.tipo ? html`<span class=${cx("chip", p.tipo === "ds4" ? "acc2" : "mod")} style="height:18px;margin-left:6px;font-size:10px;opacity:.8">${p.tipo === "ds4" ? "PLAYSTATION" : "XBOX"}</span>` : null}</div>
