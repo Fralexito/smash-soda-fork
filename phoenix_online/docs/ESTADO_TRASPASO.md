@@ -31,3 +31,4 @@
 ## Para la próxima prueba (nota del 29-oct, 20:10 UTC)
 - El servidor de la PC está **apagado** porque la PC se reinició. Para arrancarlo: en `D:\Frank\IA\CLAUDE\pes-online\phoenix_online`, ejecutar `python -m phoenix_online.servidor config.json`. Ya tiene instalado adcc2d1, con su config.json y vinculos.json locales.
 - Revisar el hosts: si siguen las 5 líneas PHOENIX_PRUEBA, quitarlas con `RESTAURAR_HOSTS.ps1` (como administrador) en cuanto acabe la prueba.
+- Pista del error del país: leído por memoria, el vector de naciones del login manager estaba **vacío** en el momento de confirmar. Sospecha: la lista que se dibuja no es la misma que usa fn 140fe2fb0, o se vacía al cerrar la conexión (DISCONNECT MOV) antes de que se elija el país.
