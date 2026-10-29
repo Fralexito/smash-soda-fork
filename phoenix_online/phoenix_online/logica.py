@@ -459,6 +459,13 @@ class Servidor:
                                           hashlib.sha1).digest()).decode()
         return usuario, clave
 
+    async def c_cmd_check_local_gamerelay_player(self, s, m):
+        # C (REA 29-oct, fn 141b9cdc0): claves leídas por el cliente. Sin relé propio por ahora:
+        # 0 relés por modo -> el partido va P2P (directo o por TURN).
+        return {"is_local_gamerelay_player": False, "gamerelay_register_url_data": "[]",
+                "build_gamerelay_num_for_1vs1": 0, "build_gamerelay_num_for_3vs3": 0,
+                "build_gamerelay_num_for_11vs11": 0}
+
     def respuesta_http(self, formulario):
         """Comandos que el cliente manda por WinHTTP (base CommandObjectHttp, REA 29-oct).
 

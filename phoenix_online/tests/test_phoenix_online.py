@@ -145,6 +145,13 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         await self.srv.recibir(s, 9, {"msgid": "CMD_GET_PLAYER_DATA", "rqid": 9})
         self.assertTrue(env[-1][1]["has_data"])
 
+    async def test_check_local_gamerelay(self):
+        s, env = cliente(self.srv)
+        await self.srv.recibir(s, 1, {"msgid": "CMD_CHECK_LOCAL_GAMERELAY_PLAYER", "rqid": 2})
+        m = env[-1][1]
+        self.assertEqual((m["result"], m["is_local_gamerelay_player"]), ("NOERR", False))
+        self.assertEqual(m["build_gamerelay_num_for_1vs1"], 0)
+
     async def test_login_account_rechaza_sin_vinculo(self):
         srv = Servidor(CFG, Datos(vinculos={}))
         s, env = cliente(srv)
