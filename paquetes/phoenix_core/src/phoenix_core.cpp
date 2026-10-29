@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.95"
+#define PHX_CORE_VERSION "0.4.96"
 
 namespace {
 
@@ -1816,10 +1816,38 @@ bool murosQuitar(Feature&) { g_murosOn = 0; return true; }
 // --- goles_sonda (0.4.95, frente R/revancha 0-0): SOLO LOG. Gancho en FUN_1408C9E90+9 (RVA 0x8C9E99; tras «cmp edx,3E; ja»): rcx = EQ_i (bloque del equipo), edx = 0, r8d = categoría c, r9d = delta.
 // Anota los punteros reales para saber dónde están los contadores: EQ_i = rcx, M = rcx-0x750D0 (equipo 0) o rcx-0x750D0-0x59650 (equipo 1); CAT_c = rcx+0x59530+c*0x20. No escribe nada.
 typedef uint64_t(__fastcall* GolCatFn)(void*, uint32_t, uint32_t, uint32_t);
-GolCatFn g_golCatOrig = nullptr; volatile LONG g_golCatN = 0;
+GolCatFn g_golCatOrig = nullptr; volatile LONG g_golCatN = 0; uint8_t* volatile g_eqGol[2] = { nullptr, nullptr }; bool g_golesReinicio = false;   // json «goles_reinicio»
+// 0.4.96: pone a 0 los contadores de goles (CAT_0..8 de cada EQ capturado) con el esquema protegido del juego. Se llama desde el hilo del partido (ayudanteSaque), sin carrera con el comprobador.
+// Seguridad: solo escribe si el hash actual del contador valida (memoria correcta); si no, no toca nada.
+static bool catValido(const uint8_t* c, uint32_t* cnt, uint32_t* idx) {
+    uint8_t r[0x20]; if (!leerSeguro(c, r, 0x20)) return false;
+    uint64_t hash; uint32_t slot[4]; memcpy(&hash, r, 8); memcpy(cnt, r + 8, 4); memcpy(idx, r + 0xC, 4); memcpy(slot, r + 0x10, 16);
+    uint32_t u = slot[*idx & 3], cc3 = *cnt * 3; uint8_t b[4];
+    for (int k = 0; k < 4; k++) { uint8_t cc = (uint8_t)((cc3 + 4 * k) >> (8 * k)); b[k] = (uint8_t)((uint8_t)(u >> (8 * k)) + cc) ^ (uint8_t)(cc * 0x3F); }
+    uint64_t h = 0xcbf29ce484222325ULL; for (int k = 0; k < 4; k++) { h ^= b[k]; h *= 0x100000001b3ULL; }
+    return h == hash;
+}
+static int golesReiniciar() {
+    int hechos = 0;
+    for (int t = 0; t < 2; t++) {
+        uint8_t* eq = g_eqGol[t]; if (!eq) continue;
+        uint32_t cnt[9], idx[9]; bool ok = true;
+        for (int c = 0; c < 9 && ok; c++) ok = catValido(eq + 0x59530 + (size_t)c * 0x20, &cnt[c], &idx[c]);
+        if (!ok) { logf("[GOLES] reinicio: EQ%d=%p no valida (hash): no se toca", t, (void*)eq); continue; }
+        for (int c = 0; c < 9; c++) {
+            uint8_t* cat = eq + 0x59530 + (size_t)c * 0x20; uint32_t cc3 = cnt[c] * 3, nu = 0;
+            for (int k = 0; k < 4; k++) { uint8_t cc = (uint8_t)((cc3 + 4 * k) >> (8 * k)); nu |= (uint32_t)(uint8_t)(cc * 0x3E) << (8 * k); }
+            uint64_t h0 = 0x4D25767F9DCE13F5ULL;
+            if (escribirSeguro(cat + 0x10 + (idx[c] & 3) * 4, &nu, 4) && escribirSeguro(cat, &h0, 8)) hechos++;
+        }
+    }
+    logf("[GOLES] reinicio: %d contadores a 0 (EQ0=%p EQ1=%p)", hechos, (void*)g_eqGol[0], (void*)g_eqGol[1]);
+    return hechos;
+}
 uint64_t __fastcall ganchoGolCat(void* rcx, uint32_t edx, uint32_t r8d, uint32_t r9d) {
-    LONG n = InterlockedIncrement(&g_golCatN);
-    if (n <= 400) { uint64_t e = (uint64_t)rcx; logf("[GOLES_SONDA] #%ld rcx=%p edx=%u cat=%u delta=%u M(eq0)=%p M(eq1)=%p CAT=%p", (long)n, rcx, edx, r8d, r9d, (void*)(e - 0x750D0), (void*)(e - 0x750D0 - 0x59650), (void*)(e + 0x59530 + (uint64_t)r8d * 0x20)); }
+    if (edx == 0 && r8d < 8) { uint8_t* e = (uint8_t*)rcx; if (e != g_eqGol[0] && e != g_eqGol[1]) { if (!g_eqGol[0]) g_eqGol[0] = e; else if (!g_eqGol[1]) g_eqGol[1] = e; else g_eqGol[1] = e; } }   // 0.4.96: punteros de los bloques de equipo (EQ_i = M+0x750D0+i*0x59650), para reiniciar el marcador en la revancha
+    LONG n = edx == 0 ? InterlockedIncrement(&g_golCatN) : 0;
+    if (n > 0 && n <= 400) { uint64_t e = (uint64_t)rcx; logf("[GOLES_SONDA] #%ld rcx=%p edx=%u cat=%u delta=%u M(eq0)=%p M(eq1)=%p CAT=%p", (long)n, rcx, edx, r8d, r9d, (void*)(e - 0x750D0), (void*)(e - 0x750D0 - 0x59650), (void*)(e + 0x59530 + (uint64_t)r8d * 0x20)); }
     return g_golCatOrig(rcx, edx, r8d, r9d);
 }
 bool golesSondaInstalar(Feature& f) {
@@ -2469,7 +2497,7 @@ static void __stdcall ayudanteSaque(uint8_t* job) {
                 g_relojPausa = 0; logf("[DESCANSO] 2.º tiempo: fase 3 directa y reloj a 0 (la pantalla cuenta 0→45; el final a 45 min de reloj + añadido)");
             } else if (g_descansoFinal) {   // 0.4.91: final tipo amistoso: tras estadísticas → X (menú) la revancha arranca desde 0:00 en fase 1
                 uint32_t fa = g_faseAntesDescanso; memcpy(job + 0x2790, &fa, 4); if (g_baseReloj) g_baseReloj(job + 0x2790, 0.0f); float z0 = 0.0f; memcpy(job + 0x279C, &z0, 4); g_relojPausa = 0;
-                InterlockedExchange(&g_rearmaCancha, 1); logf("[DESCANSO] final: revancha desde 0:00 (fase %u); el marcador nativo NO se reinicia todavía", fa);
+                InterlockedExchange(&g_rearmaCancha, 1); if (g_golesReinicio) golesReiniciar(); logf("[DESCANSO] final: revancha desde 0:00 (fase %u); el marcador nativo NO se reinicia todavía", fa);
             } else {
                 uint32_t fa = g_faseAntesDescanso; memcpy(job + 0x2790, &fa, 4); g_relojPausa = 0;   // 0.4.82: se restaura la fase
                 if (g_descansoBase45 && g_baseReloj) { g_baseReloj(job + 0x2790, 162000.0f); float z0 = 0.0f; memcpy(job + 0x279C, &z0, 4); logf("[DESCANSO] 2.º tiempo en fase %u con base del reloj 45:00 (sin tocar la fase)", fa); }   // 0.4.90: alternativa segura a la fase 3
@@ -3023,6 +3051,7 @@ void leerConfig() {
     if (valorDe("jugadores_chica_modo", v)) g_jugChModo = atoi(v.c_str());
     if (valorDe("muro_rebote", v)) { g_muroRebote = (float)atof(v.c_str()); if (g_muroRebote < 0.0f || g_muroRebote > 1.0f) g_muroRebote = 0.6f; }
     if (valorDe("muro_friccion", v)) { g_muroFric = (float)atof(v.c_str()); if (g_muroFric < 0.0f || g_muroFric > 1.0f) g_muroFric = 0.92f; }
+    if (valorDe("goles_reinicio", v)) g_golesReinicio = (v == "true");
     if (valorDe("arco_chico_ancho", v)) { g_arcoAncho = (float)atof(v.c_str()); if (g_arcoAncho < 1.5f || g_arcoAncho > 7.32f) g_arcoAncho = 4.0f; }
     if (valorDe("arco_chico_alto", v)) { g_arcoAlto = (float)atof(v.c_str()); if (g_arcoAlto < 1.0f || g_arcoAlto > 2.44f) g_arcoAlto = 2.0f; }
     if (valorDe("muro_x", v)) g_muroX = atof(v.c_str());
