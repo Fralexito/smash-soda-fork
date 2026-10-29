@@ -146,6 +146,10 @@ function Arbitro({ m }) {
                    : t("Si un jugador del partido se cae o pasa de 150 ms de ping 5 s: aviso en el chat y pausa del marcador. Sin datos del juego no se pulsa nada.",
                        "If a match player drops or stays above 150 ms for 5 s: chat notice and scoreboard pause. Without game data nothing is pressed.")}
       valor=${!!a.pausaAuto} al=${() => accion("mandos.pausaAuto", { si: !a.pausaAuto })}/>
+    <${AjusteSw} titulo=${t("Combo para dar un puesto libre (LB + RB + Back)", "Combo to give a free seat (LB + RB + Back)")}
+      desc=${t("Mantén LB + RB + Back 1,5 s en TU mando, sin salir de PES: el primero que espera para jugar se sienta en el puesto libre (por ejemplo, el de quien se fue a mitad de partido).",
+               "Hold LB + RB + Back for 1.5 s on YOUR pad, without leaving PES: the first person waiting to play takes the free seat (e.g. the one of someone who left mid-match).")}
+      valor=${a.comboReasignar !== false} al=${() => accion("mandos.comboReasignar", { si: a.comboReasignar === false })}/>
     ${a.ultimaPausa ? html`<div class="ayuda" style="margin-top:8px">${t("Última pausa automática:", "Last auto pause:")} ${a.ultimaPausa}${a.conStart ? t(" (Start pulsado)", " (Start pressed)") : ""}</div>` : null}
   </${Tarjeta}>`;
 }

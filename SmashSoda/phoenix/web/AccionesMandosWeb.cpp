@@ -188,6 +188,12 @@ namespace phoenix::web {
 			pr.guardar();
 			return json::object();   // el árbitro lo aplica o lo quita en su siguiente vuelta (≤ 0,5 s)
 		});
+		p.registrar("mandos.comboReasignar", [](const json& d, uint64_t) -> std::optional<json> {
+			PhoenixPrefs& pr = PhoenixPrefs::get();
+			pr.comboReasignar = booleano(d, "si");
+			pr.guardar();
+			return json::object();
+		});
 		p.registrar("mandos.pausaAuto", [&in](const json& d, uint64_t) -> std::optional<json> {
 			PhoenixPrefs& pr = PhoenixPrefs::get();
 			pr.pausaAuto = booleano(d, "si");

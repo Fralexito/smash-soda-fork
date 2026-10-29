@@ -631,7 +631,7 @@ namespace phoenix::web {
 				{"nombreLocal", ej.nombreLocal}, {"nombreVisita", ej.nombreVisita}, {"relojCorre", ej.relojCorre}, {"goles", golesJ} }
 				: json{ {"datos", false} };
 			const PhoenixPrefs& prA = PhoenixPrefs::get();
-			e["arbitro"] = { {"competitivo", prA.competitivo}, {"pausaAuto", prA.pausaAuto}, {"marcadorAuto", prA.marcadorAuto},
+			e["arbitro"] = { {"competitivo", prA.competitivo}, {"pausaAuto", prA.pausaAuto}, {"comboReasignar", prA.comboReasignar}, {"marcadorAuto", prA.marcadorAuto},
 				{"soloAutorizados", prA.soloAutorizados}, {"modoRecarga", prA.modoRecarga}, {"ladosAuto", prA.ladosAuto}, {"ladosEstado", ladosEstado()}, {"mirandoAuto", prA.mirandoAuto}, {"pantallaLados", ladoPantallaVivo()},
 				{"activo", in.arbitro.competitivoActivo}, {"origen", in.arbitro.origen},
 				{"ultimaPausa", in.arbitro.ultimaPausa}, {"conStart", in.arbitro.ultimaConStart} };

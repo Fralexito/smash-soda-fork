@@ -47,6 +47,7 @@ namespace phoenix {
 		int anchoPorPersona = 10;  ///< Mbps por persona cuando el ancho automático está activo (1–50)
 		int subidaMbps = 0;       ///< subida de internet del anfitrión en Mbps (0 = no la sabe); el automático no pasa del 80 %
 		bool competitivo = true;  ///< árbitro: con el partido en juego, Start/Back/Guía bloqueados a los invitados
+		bool comboReasignar = true;   ///< 0.3.56: LB+RB+Back 1,5 s en TU mando → el puesto libre al primero que «quiere jugar»
 		bool pausaAuto = false;   ///< árbitro: pausa si un jugador del partido se cae o pasa de 150 ms de ping 5 s (apagado hasta probarlo)
 		bool marcadorAuto = true; ///< árbitro: con datos del juego, el marcador arranca, relata los goles y termina solo
 		bool ordenPes = false;        ///< EXPERIMENTAL: Link ordena settings.dat de PES (casilla N = puesto N) y no desenchufa sus mandos al cerrar la sala

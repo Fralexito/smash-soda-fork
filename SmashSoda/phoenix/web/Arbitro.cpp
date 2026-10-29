@@ -452,6 +452,23 @@ namespace phoenix::web {
 			// El anfitrión usa su mando físico (TU MANDO)? Se anota cuándo, para saber si juega aunque no esté en un puesto
 			if (sala.hayMandoPropio() && sala.botonesMandoPropio() != 0) anfitrionPulsoSeg = ahora;
 
+			// 0a) Combo del anfitrión (0.3.56, Frank): LB + RB + Back mantenidos 1,5 s en SU mando físico, sin salir de PES →
+			//     el primero que «quiere jugar» se sienta en el primer puesto libre (p. ej. el de quien se fue a mitad de partido).
+			{
+				static double comboDesde = -1.0, comboHecho = -1e9;
+				constexpr uint16_t kCombo = 0x0100 | 0x0200 | 0x0020;   // LB | RB | Back
+				const bool pulsado = pr.comboReasignar && sala.abierta() && sala.hayMandoPropio() && (sala.botonesMandoPropio() & kCombo) == kCombo;
+				if (!pulsado) comboDesde = -1.0;
+				else if (comboDesde < 0.0) comboDesde = ahora;
+				else if (ahora - comboDesde >= 1.5 && ahora - comboHecho >= 3.0) {
+					comboHecho = ahora;
+					comboDesde = -1.0;
+					const std::vector<uint32_t> esperan = PhoenixRoles::instancia().quierenJugar();
+					if (esperan.empty()) mensajeDelBot(in, "Nadie está esperando para jugar: el puesto queda libre.");
+					else if (AccionesSala::aceptarSolicitud(sala, esperan.front())) mensajeDelBot(in, "El anfitrión dio el puesto libre al siguiente en espera.");
+				}
+			}
+
 			// 0) Puestos: quien está sentado (por el host, turnos o torneo) queda autorizado para volver a su mando
 			PhoenixRoles::instancia().soloAutorizados(pr.soloAutorizados);
 			for (const AsientoVista& s : sala.asientos(equipos::kPuestos)) if (s.ocupado) PhoenixRoles::instancia().autorizar(s.parsecId);

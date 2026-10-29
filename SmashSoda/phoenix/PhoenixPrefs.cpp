@@ -86,6 +86,7 @@ namespace phoenix {
 			subidaMbps = (std::max)(0, (std::min)(10000, j.value("subidaMbps", subidaMbps)));
 			competitivo = j.value("competitivo", competitivo);
 			pausaAuto = j.value("pausaAuto", pausaAuto);
+			comboReasignar = j.value("comboReasignar", comboReasignar);
 			marcadorAuto = j.value("marcadorAuto", marcadorAuto);
 			soloAutorizados = j.value("soloAutorizados", soloAutorizados);
 			avisoEntrada = j.value("avisoEntrada", avisoEntrada);
@@ -145,6 +146,7 @@ namespace phoenix {
 				{"subidaMbps", subidaMbps},
 				{"competitivo", competitivo},
 				{"pausaAuto", pausaAuto},
+				{"comboReasignar", comboReasignar},
 				{"marcadorAuto", marcadorAuto},
 				{"soloAutorizados", soloAutorizados},
 				{"avisoEntrada", avisoEntrada},
