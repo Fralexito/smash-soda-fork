@@ -10,6 +10,7 @@ import { t } from "../i18n.js";
 import { accion, avisar } from "../tienda.js";
 import { Boton } from "../ui.js";
 import { sonarSilbato, narrar } from "./locutor.js";
+import { notificarPenitenciaDiscord } from "../servicios/discord.js";
 
 const CLAVE_PENITENCIAS = "phoenix.penitencias_lista";
 
@@ -154,6 +155,9 @@ export function ModalRuletaPenitencias({ perdedor = "El perdedor", m, alCerrar }
             texto: `🎡 ¡LA RUEDA DEL CASTIGO! El perdedor (${perdedor}) debe cumplir: ${elegido}`,
           }, { silencioso: true });
         }
+        try {
+          notificarPenitenciaDiscord({ perdedor, penitencia: elegido });
+        } catch (e) {}
       }
     };
     requestAnimationFrame(animar);
@@ -211,3 +215,4 @@ export function ModalRuletaPenitencias({ perdedor = "El perdedor", m, alCerrar }
       </div>
     </div>`;
 }
+

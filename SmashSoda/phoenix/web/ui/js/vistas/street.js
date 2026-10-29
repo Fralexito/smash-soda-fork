@@ -62,6 +62,43 @@ export function guardarConfigStreet(cfg) {
   } catch (e) {}
 }
 
+/** Sincroniza las físicas en caliente con el archivo phoenix_core.json de Sider */
+export async function sincronizarFisicasSider(cfg, { avisarExito = true } = {}) {
+  const c = cfg || obtenerConfigStreet();
+  const p = PRESETS_STREET[c.preset] || PRESETS_STREET.jaula;
+  const payload = {
+    preset: c.preset,
+    muro_rebote: p.rebote,
+    muro_friccion: p.friccion,
+    pase_vel_k: p.velPase,
+    cancha_semilargo: 15,
+    cancha_semiancho: 10,
+    muros_core: true,
+    cancha_paredes: false
+  };
+
+  try {
+    const res = await fetch("http://127.0.0.1:38888/sync-street", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    if (res.ok) {
+      if (avisarExito) {
+        avisar(t("⚡ ¡Físicas sincronizadas en vivo con PES 2021!", "⚡ Physics synced live with PES 2021!"), "ok");
+        sonarReboteMuro();
+      }
+      return { ok: true };
+    }
+  } catch (e) {
+    // Si no está corriendo el demonio local
+  }
+  if (avisarExito) {
+    avisar(t("ℹ️ Físicas guardadas en Link. Para sync en vivo ejecuta: tools/INICIAR_SYNC_SIDER.bat", "Saved in Link. For live sync run: tools/INICIAR_SYNC_SIDER.bat"), "info", 5000);
+  }
+  return { ok: false, motivo: "Demonio de sync apagado" };
+}
+
 /** Dispara la celebración de un caño o huacha */
 export async function registrarCannoHuacha({ jugador = "El atacante", m } = {}) {
   sonarReboteMuro();
@@ -158,13 +195,21 @@ export function BarraModoStreet({ m, esclavo }) {
 
 export function ModalStreetTuning({ m, alCerrar }) {
   const [cfg, setCfg] = useState(obtenerConfigStreet);
+  const [sincronizando, setSincronizando] = useState(false);
 
-  const elegirPreset = (k) => {
+  const elegirPreset = async (k) => {
     const nuevo = { ...cfg, preset: k };
     setCfg(nuevo);
     guardarConfigStreet(nuevo);
     narrar(`Físicas actualizadas a: ${PRESETS_STREET[k].nombre}`);
     avisar(t(`Preset cargado: ${PRESETS_STREET[k].nombre}`, `Preset loaded: ${PRESETS_STREET[k].nombre}`), "ok");
+    await sincronizarFisicasSider(nuevo, { avisarExito: false });
+  };
+
+  const forzarSync = async () => {
+    setSincronizando(true);
+    await sincronizarFisicasSider(cfg, { avisarExito: true });
+    setSincronizando(false);
   };
 
   return html`
@@ -203,6 +248,17 @@ export function ModalStreetTuning({ m, alCerrar }) {
             })}
           </div>
 
+          <div style="background:rgba(0,0,0,0.3);border:1px dashed rgba(255,115,0,0.4);border-radius:8px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:4px">
+            <div style="font-size:12px">
+              <b style="color:#ffaa33">⚡ Sider Hot-Sync:</b>
+              <div class="mut" style="font-size:11px">Aplica cambios en <code>phoenix_core.json</code> sin reiniciar PES.</div>
+            </div>
+            <button class="btn mini" style="background:#ff7300;color:#000;font-weight:700;white-space:nowrap"
+              disabled=${sincronizando} onClick=${forzarSync}>
+              ${sincronizando ? "..." : t("⚡ SINCRONIZAR YA", "⚡ SYNC NOW")}
+            </button>
+          </div>
+
           <div class="botones" style="margin-top:8px;display:flex;justify-content:flex-end">
             <button class="btn acc" onClick=${alCerrar}>${t("Listo", "Done")}</button>
           </div>
@@ -211,3 +267,4 @@ export function ModalStreetTuning({ m, alCerrar }) {
       </div>
     </div>`;
 }
+

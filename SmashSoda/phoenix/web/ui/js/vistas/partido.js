@@ -15,6 +15,7 @@ import { WidgetPredicciones, resolverPrediccion } from "./predicciones.js";
 import { sonarGol, sonarSilbato, narrar } from "./locutor.js";
 import { obtenerConfigStreet } from "./street.js";
 import { sumarProgresoRPG } from "./rpgsala.js";
+import { notificarFinalPartidoDiscord } from "../servicios/discord.js";
 
 export const PESTANAS_PARTIDO = [
   { id: "vivo", es: "MARCADOR Y CAMPO", en: "SCORE & PITCH", d: ["Arma los dos lados, lleva el marcador y el reloj y mira el campo 2D en vivo, todo en una sola vista. Al terminar se guarda y se avisa en el chat y la web.", "Set up sides, keep score and time and watch the live 2D pitch, all in one view."] },
@@ -279,6 +280,17 @@ function Marcador({ m }) {
         const idsB = p.b.jugadores || [];
         for (const j of idsA) sumarProgresoRPG({ nombre: j.nombre, victoria: g === "a", goles: p.a.goles, arcoCero: p.b.goles === 0 });
         for (const j of idsB) sumarProgresoRPG({ nombre: j.nombre, victoria: g === "b", goles: p.b.goles, arcoCero: p.a.goles === 0 });
+      } catch (e) {}
+      try {
+        const stCfg = obtenerConfigStreet();
+        notificarFinalPartidoDiscord({
+          equipoA: p.a.nombre,
+          equipoB: p.b.nombre,
+          golesA: p.a.goles,
+          golesB: p.b.goles,
+          ganador: g,
+          esStreet: !!stCfg.activo
+        });
       } catch (e) {}
     }
   };

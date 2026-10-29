@@ -12,6 +12,7 @@ import { abrirTutorial } from "./tutorial.js";
 import { instalarVigem } from "./arreglos.js";
 import { abrirBienvenida } from "./bienvenida.js";
 import { AjustesSentado } from "./sentado.js";
+import { obtenerWebhookDiscord, guardarWebhookDiscord, enviarEmbedDiscord } from "../servicios/discord.js";
 
 export const PESTANAS_AJUSTES = [
   { id: "general", es: "GENERAL Y SISTEMA", en: "GENERAL & SYSTEM", d: ["Lo fundamental (idioma, sentado automático), tema visual, bot de chat y sonidos.", "The basics, theme, chat bot and sounds."] },
@@ -59,6 +60,18 @@ function LoFundamental({ m, info }) {
 function GeneralYSistema({ m, info }) {
   const g = m.ajustes.general;
   const tema = m.app?.tema || "galaxy";
+  const [webhook, setWebhook] = useState(obtenerWebhookDiscord);
+
+  const probarWebhook = async () => {
+    const r = await enviarEmbedDiscord({
+      titulo: "🔔 ¡PRUEBA DE CONEXIÓN PHOENIX LINK!",
+      descripcion: "El sistema de alertas automáticas (Goles, VAR, Ruleta, Street) está conectado correctamente a este canal.",
+      color: 0x00ff88,
+      campos: [{ name: "Estado", value: "🟢 Operativo al 100%", inline: true }]
+    });
+    if (r.ok) avisar(t("🔔 ¡Mensaje de prueba enviado a Discord!", "Test message sent to Discord!"), "ok");
+    else avisar(t("❌ Error enviando a Discord. Revisa la URL.", "Error sending to Discord. Check URL."), "err");
+  };
   return html`<div class="fila partible" style="min-height:100%;gap:16px">
     <div class="col" style="flex:1;gap:16px">
       <${LoFundamental} m=${m} info=${info}/>
@@ -88,6 +101,14 @@ function GeneralYSistema({ m, info }) {
               title=${(g.discord || "").startsWith("https://") ? t("Abrir tu servidor de Discord", "Open your Discord server") : t("Pega arriba el enlace de tu servidor (https://…)", "Paste your server link above (https://…)")}
               aria-label="Discord" onClick=${() => accion("ui.abrir", { url: g.discord })}>
               <${IconoRed} red="discord" t=${26}/><span>Discord</span></button>
+          </div></${Ajuste}>
+        <${Ajuste} bloque titulo=${t("Webhook de Discord (Alertas Esports en Vivo)", "Discord Webhook (Live Esports Alerts)")} desc=${t("Envía goles, resultados, veredictos de VAR y ruleta de castigos automáticamente.", "Posts goals, results, VAR verdicts and punishments directly to your Discord.")}>
+          <${Campo} valor=${webhook} max=${255} mono marcador="https://discord.com/api/webhooks/..." al=${(v) => { setWebhook(v); guardarWebhookDiscord(v); }}/>
+          <div style="margin-top:6px;display:flex;gap:8px">
+            <button class="btn mini suave" disabled=${!webhook.startsWith("https://discord.com/api/webhooks/")}
+              onClick=${probarWebhook}>
+              🔔 ${t("Probar Webhook", "Test Webhook")}
+            </button>
           </div></${Ajuste}>
       </${Tarjeta}>
     </div>

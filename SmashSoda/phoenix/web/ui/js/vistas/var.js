@@ -10,6 +10,7 @@ import { t } from "../i18n.js";
 import { accion, avisar } from "../tienda.js";
 import { Boton } from "../ui.js";
 import { sonarSirenaVAR, narrar } from "./locutor.js";
+import { notificarVARDiscord } from "../servicios/discord.js";
 
 const CLAVE_VAR = "phoenix.var_estado";
 
@@ -176,3 +177,4 @@ export function ModalVAR({ m, alCerrar }) {
       </div>
     </div>`;
 }
+

@@ -1,134 +1,143 @@
-# Guía Maestra e Informe Paso a Paso: Suite Esports, Modo Street y Funciones Virales de Phoenix Link (v0.3.58)
+# GUÍA E INFORME TÉCNICO PASO A PASO · SUITE ESPORTS, MODO STREET Y AUTOMATIZACIÓN EN VIVO (PHOENIX LINK v0.3.58)
 
 > **Autor:** Antigravity (Gemini) · Google DeepMind  
+> **Destinatarios:** Frank (`Fralexito`), desarrolladores, inteligencias artificiales futuras y comunidad de PES 2021 / Phoenix Link.  
 > **Fecha:** 29 de Octubre de 2026  
-> **Proyecto:** Phoenix Link & Phoenix Evolution  
-> **Destinatario:** Frank / Fralex (`Fralexito`)  
-> **Rama Git:** `smash-soda-fork@plan-ux` y `phoenixevolution@borrador`  
-> **Objetivo:** Documento pedagógico, técnico y exhaustivo para que cualquier Inteligencia Artificial (Claude, GPT, Gemini) o desarrollador humano pueda comprender el diseño, replicar la implementación y mantener o ampliar estas funciones sin pérdida de contexto.
+> **Ramas de Trabajo:** `plan-ux` (`SmashSoda/phoenix`) y `borrador` (`C:\dev\pes-liga-automatica`).  
+> **Objetivo:** Guía exhaustiva, reproducible y de nivel profesional para comprender, auditar, replicar y extender la suite completa de Esports, Moderación Avanzada, Modo Street Callejero, Locución Sintetizada, Sincronización en Caliente de Físicas Sider y Webhooks de Discord en Phoenix Link.
 
 ---
 
-## 1. Contexto y Filosofía del Ecosistema
+## 1. Resumen Ejecutivo de la Arquitectura
 
-Phoenix Link es la aplicación compañera y gestora de partidas multijugador para PES 2021 en Windows. Conecta la experiencia de sala de Parsec con la simulación en tiempo real de PES mediante Sider y ViGEmBus.
+Phoenix Link es el orquestador competitivo para PES 2021 sobre Parsec. Su interfaz web moderna está desarrollada sobre componentes reactivos ultraligeros (`htm` + `preact`) servidos sin empaquetadores lentos. 
 
-Este conjunto de funciones lleva a Phoenix Link a su máxima expresión como **Suite Integral de Esports, Entretenimiento Comunitario y Modo Street (Fútbol Callejero)**:
-1. **Interactividad para espectadores:** Predicciones estilo Twitch/Kick con puntos simbólicos de sala.
-2. **Protección y telemetría de red:** Radar de latencia y alerta proactiva de laggers para evitar cortes en el partido.
-3. **Automatización competitiva:** Copas relámpago con bracket de 4 jugadores y rotación de mandos en 1 clic; modo Rey de la Pista autónomo.
-4. **Moderación y producción:** Matriz global de atajos de teclado `Ctrl + Shift`, Escudo anti-doxxing y Overlay transparente dedicado para OBS y TikTok Studio.
-5. **Funciones Virales de Comunidad:**
-   - 🎙️ Locutor / Comentarista de voz IA (Web Speech API nativo sin coste).
-   - ⚖️ El VAR de la Sala con votación relámpago de 15 segundos y sirena.
-   - 🎡 La Rueda de Penitencias con animación física Canvas para el perdedor.
-   - 🎖️ Sistema RPG de Rangos, Niveles (XP) y Títulos Legendarios.
-   - 🤝 Modo «Pan y Queso» / Draft Callejero por turnos con asignación automática a mandos.
-6. **Suite Modo Street (Losa y Cancha Chica):**
-   - 🎛️ Panel de Físicas Callejeras para `phoenix_core.json` (Presets: *La Jaula de Hierro*, *Futsal Técnico de Losa*, *Frenesí Arcade*).
-   - ⚡ Regla Callejera: *«A 2 Goles se Queda»* / *«Gol de Oro»* con pitazo final y rotación instantánea.
-   - 🥜 Botón y Contador *«¡QUÉ CAÑO! / ¡HUACHA!»* con banner animado gigante en overlay y chat.
+Para lograr dinamismo total y máxima diversión comunitaria sin requerir recompilar el binario C++ (`PhoenixLink.exe`), la arquitectura implementa:
+1. **Locución y Audio Sintetizado en Vivo:** Mediante `window.speechSynthesis` (voz nativa Windows en español) y `AudioContext` (Web Audio API) para generar silbatos, ovaciones con ruido blanco filtrado, rebotes metálicos y sirenas.
+2. **Juicio Popular y VAR en Vivo:** Modal interactivo con cuenta regresiva de 15 segundos y cálculo dinámico de porcentajes de voto para jugadas polémicas.
+3. **Ruleta de Penitencias:** Animación con física de desaceleración cúbica en HTML5 Canvas con castigos divertidos para los perdedores.
+4. **RPG de Sala y Niveles:** Cálculo de XP, insignias dinámicas (*El Muro*, *El Matador*, *Rey del Caño*) y rangos de sala mostrados en cada mando.
+5. **Draft Callejero «Pan y Queso»:** Selección por turnos entre dos capitanes con asignación instantánea a los asientos de mandos.
+6. **Modo Street Callejero ($15 \times 10$):** Panel de control táctico con presets de físicas para Sider (`phoenix_core.json`), regla de finalización rápida (*A 2 Goles / Gol de Oro*) y botón de humillación *¡QUÉ CAÑO!* con banner animado para streaming.
+7. **Sincronización en Caliente de Físicas Sider:** Micro-demonio Node.js (`tools/sync-sider-street.js`) que escucha peticiones en `http://127.0.0.1:38888/sync-street` y actualiza directamente `D:\Frank\Games_\Conmegol Patch\SiderAddons\phoenix_core\phoenix_core.json` en tiempo real.
+8. **Discord Webhook en Vivo:** Módulo (`discord.js`) configurado desde Ajustes que envía embeds automáticos de partidos finalizados, veredictos de VAR y penitencias al servidor de Discord.
 
 ---
 
-## 2. Arquitectura de Estado y Comunicación
+## 2. Inventario de Componentes y Módulos Desarrollados
 
-Para mantener la aplicación ultrarrápida y evitar tocar innecesariamente el núcleo C++ compilado, se implementó un patrón de **Estado Reactivo Desacoplado**:
-- **C++ (Motor):** Mantiene la verdad sobre los mandos físicos/virtuales (ViGEm), estado de la sala Parsec y la IPC con PES/Sider (`puente.js`).
-- **Nivel UI (JavaScript ES Modules):** Los módulos competitivos (`predicciones.js`, `bracket.js`, `reydelapista.js`, `street.js`, `rpgsala.js`, `var.js`, `penitencias.js`, `locutor.js`) almacenan su estado persistente en `localStorage` bajo el espacio de nombres `phoenix.*`.
-- **Sincronización Multiventana / Multiwidget:** Cada mutación de estado emite un evento `CustomEvent` en `window` (ej. `phoenix:prediccion`, `phoenix:street_evento`, `phoenix:var_evento`), permitiendo que cualquier componente (la barra de Puestos, el Marcador de Partido o el Overlay externo) se actualice a 60 FPS de forma instantánea.
-- **Audio y Voz Nativo:** Uso exclusivo de las APIs estándar del navegador de Windows (`window.speechSynthesis` y `AudioContext` de Web Audio API), generando silbatos, rugidos de grada, sirenas y choques de reja sintetizados en tiempo real sin requerir archivos `.wav` o `.mp3` externos pesados.
+### 2.1. Locutor IA y Soundboard Sintetizado (`locutor.js`)
+- **Voz en Vivo:** Función `narrar(texto, { prioridad, velocidad, tono })`. Selecciona la mejor voz en español del sistema operativo y evita solapamientos molestos.
+- **Efectos de Sonido Web Audio API:**
+  - `sonarSilbato({ largo })`: Oscilador senoidal dual (2400 Hz y 2460 Hz) con modulación de vibrato de referí.
+  - `sonarGol()`: Explosión acústica combinando oscilador de 120 Hz descendente con buffer de ruido blanco filtrado a 800 Hz (sensación de estadio lleno).
+  - `sonarReboteMuro()`: Pulso percusivo de 180 Hz a 60 Hz emulando el golpe de pelota contra valla de alambre/hierro de fútbol callejero.
+  - `sonarSirenaVAR()`: Barrido de frecuencia senoidal de 400 Hz a 900 Hz simulando alarma de revisión técnica.
+
+### 2.2. Sala de Revisión VAR (`var.js`)
+- **Activación:** Se lanza con el botón `🚨 VAR` en la barra de moderación de puestos.
+- **Temporizador:** 15 segundos con animación de alerta pulsante.
+- **Opciones de Voto:** `⚽ Penal`, `🏊 Piscinazo / Siga`, `🟥 Roja Directa`.
+- **Integración:** Al concluir el tiempo, relata el veredicto con la voz IA, lo anuncia en el chat de la sala y lo transmite por webhook a Discord.
+
+### 2.3. Ruleta de Penitencias del Perdedor (`penitencias.js`)
+- **Motor Gráfico:** Canvas 2D interactivo con renderizado de 8 gajos multicolor, sombras y puntero superior.
+- **Física:** Desaceleración cúbica $1 - (1 - t)^3$ a lo largo de 4.2 segundos.
+- **Efecto de Audio:** Clics de giro y silbato de parada.
+- **Personalización:** Lista editable persistida en `localStorage` con botón para añadir castigos en caliente.
+
+### 2.4. Progresión RPG de Sala (`rpgsala.js`)
+- **Fórmula de Nivel:** Nivel calculado como $\lfloor \sqrt{\text{XP} / 100} \rfloor + 1$.
+- **Títulos según Nivel:**
+  - Nivel 1–4: *Novato de Sala*
+  - Nivel 5–9: *Titular Frecuente*
+  - Nivel 10–19: *Capitán de Barrio*
+  - Nivel 20–29: *Crack Consagrado*
+  - Nivel 30+: *Leyenda Viviente*
+- **Insignias Automáticas:**
+  - 🧱 *El Muro* (10+ vallas invictas)
+  - ⚽ *El Matador* (25+ goles)
+  - 🥜 *Rey del Caño* (10+ huachas callejeras)
+- **Componente Visual:** `BadgeNivelRPG` insertado en cada fila de jugador ocupada en `puestos.js`.
+
+### 2.5. Draft Callejero «Pan y Queso» (`draft.js`)
+- Selección interactiva por turnos entre dos capitanes a partir de los espectadores presentes en la sala.
+- Asignación en 1 clic: sienta automáticamente a los elegidos en los mandos del Equipo A y Equipo B llamando la acción nativa `mandos.asignar`.
+
+### 2.6. Panel Modo Street y Físicas Callejeras (`street.js`)
+- **Presets de Físicas Sider:**
+  - *🧱 La Jaula de Hierro:* Rebote al 90%, fricción 0.98, velocidad de pase x1.4, disparo bomba activado.
+  - *⚽ Futsal Técnico de Losa:* Rebote al 40%, fricción 0.94, velocidad de pase x1.1, control fino.
+  - *🌪️ Frenesí Arcade:* Rebote al 100%, súper velocidad y rebotes infinitos.
+- **Regla Rápida:** Finalización rápida con selector de *90 Minutos*, *Gol de Oro*, *A 2 Goles* o *A 3 Goles*.
+- **Contador de Humillación:** Botón `🥜 ¡QUÉ CAÑO!` que reproduce el impacto metálico, suma XP de filigrana, anuncia en el chat y detona el banner en OBS.
+
+### 2.7. Sincronizador en Caliente de Físicas (`tools/sync-sider-street.js`)
+- Micro-demonio local en Node.js que expone `http://127.0.0.1:38888/sync-street`.
+- Modifica directamente en caliente el archivo:
+  `D:\Frank\Games_\Conmegol Patch\SiderAddons\phoenix_core\phoenix_core.json`
+- Se ejecuta fácilmente mediante el lanzador `tools/INICIAR_SYNC_SIDER.bat`.
+
+### 2.8. Notificador Discord Webhook (`js/servicios/discord.js`)
+- Configurable desde `Ajustes › General › Webhook de Discord`.
+- Transmite embeds con formato profesional a canales de Discord comunitarios para:
+  - Finales de partido (goles, ganador, MVP y modalidad Street/Oficial).
+  - Resoluciones de VAR con porcentaje exacto de votantes.
+  - Penitencias dictaminadas por la ruleta para el perdedor.
 
 ---
 
-## 3. Desglose Módulo por Módulo (Paso a Paso)
+## 3. Guía de Verificación y Replicación Paso a Paso
 
-### Módulo 1: Sistema de Predicciones y Votaciones en Vivo (`predicciones.js`)
-- **Ruta de código:** `SmashSoda/phoenix/web/ui/js/vistas/predicciones.js`
-- **Mecánica técnica:** Votación a 3 vías (`Equipo A`, `Empate`, `Equipo B`) con cálculo porcentual dinámico y barra animada. Hook automático en `partido.js` (`finalizar()`) para resolver y premiar con +100 puntos de sala a los acertantes anunciándolo en el chat.
-
-### Módulo 2: Radar de Conexión & Alertas de Lagger (`radarconexion.js`)
-- **Ruta de código:** `SmashSoda/phoenix/web/ui/js/vistas/radarconexion.js`
-- **Mecánica técnica:** Evalúa ping y pérdida de paquetes clasificando en Óptimo ($\le 45$ ms), Medio ($46-85$ ms) y Crítico ($>85$ ms / $>3\%$). Renderiza `BadgeConexion` en cada fila de puesto y `AlertaLaggerSala` en cabecera.
-
-### Módulo 3: Bracket / Cuadro de Torneo Relámpago (`bracket.js`)
-- **Ruta de código:** `SmashSoda/phoenix/web/ui/js/vistas/bracket.js`
-- **Mecánica técnica:** Genera cuadro eliminatorio de 4 jugadores (Semis y Gran Final) y ofrece botón `⚡ CARGAR CRUCE EN MANDOS` para sentar a los 2 rivales en el Puesto 1 y Puesto 2 con un solo clic.
-
-### Módulo 4: Overlay Transparente para Streamers (`overlay.html`)
-- **Ruta de código:** `SmashSoda/phoenix/web/ui/overlay.html`
-- **Mecánica técnica:** Fondo 100% transparente para Browser Source en OBS Studio / TikTok Studio. Incluye marcador con tipografía deportiva neón, lower-third de predicciones y banner animado de *«¡QUÉ CAÑO!»*.
-
-### Módulo 5: Locutor / Comentarista IA & Soundboard Sintetizado (`locutor.js`)
-- **Ruta de código:** `SmashSoda/phoenix/web/ui/js/vistas/locutor.js`
-- **Mecánica técnica:** Utiliza `SpeechSynthesisUtterance` en español con tono enérgico para relatar goles y eventos. Incorpora sintetizador Web Audio API para silbatos de árbitro, ovación de gol con ruido blanco filtrado, rebote metálico de reja y sirena de VAR.
-
-### Módulo 6: El VAR de la Sala (`var.js`)
-- **Ruta de código:** `SmashSoda/phoenix/web/ui/js/vistas/var.js`
-- **Mecánica técnica:** Despliega modal de pantalla completa con sirena de emergencia, cuenta regresiva de 15 segundos y votación relámpago (`Penal`, `Piscinazo`, `Roja`) para que la sala dicte sentencia en jugadas polémicas.
-
-### Módulo 7: La Ruleta del Castigo / Penitencias (`penitencias.js`)
-- **Ruta de código:** `SmashSoda/phoenix/web/ui/js/vistas/penitencias.js`
-- **Mecánica técnica:** Ruleta Canvas HTML5 interactiva con física de desaceleración cúbica para sortear castigos cómicos al perdedor (cambiar foto en Discord, cantar el himno, jugar con una mano). Permite añadir penitencias personalizadas y anuncia el castigo en el chat.
-
-### Módulo 8: Sistema RPG de Sala (`rpgsala.js`)
-- **Ruta de código:** `SmashSoda/phoenix/web/ui/js/vistas/rpgsala.js`
-- **Mecánica técnica:** Progresión de XP, niveles (Novato, Titular, Capitán, Crack, Leyenda) e insignias (*El Muro*, *El Matador*, *El Destronador*, *Rey del Caño*). Muestra `BadgeNivelRPG` en cada fila de puesto junto al nombre del jugador.
-
-### Módulo 9: Modo «Pan y Queso» / Draft Callejero (`draft.js`)
-- **Ruta de código:** `SmashSoda/phoenix/web/ui/js/vistas/draft.js`
-- **Mecánica técnica:** Dos capitanes eligen por turnos a los miembros de la sala. Al completar las plantillas, sienta automáticamente a todos los jugadores en los mandos del Equipo A y Equipo B vía `mandos.formacion` y `mandos.asignar`.
-
-### Módulo 10: Suite Modo Street & Físicas Callejeras (`street.js`)
-- **Ruta de código:** `SmashSoda/phoenix/web/ui/js/vistas/street.js`
-- **Mecánica técnica:** Barra de control táctico para la cancha chica de $15 \times 10$:
-  - Presets de físicas para `phoenix_core.json`: *La Jaula de Hierro* (rebote 90%), *Futsal Técnico* (rebote 40%) y *Frenesí Arcade* (rebote 100%).
-  - Regla rápida: *«A 2 Goles se Queda»* / *«Gol de Oro»*, pita el final en cuanto se alcanza el objetivo.
-  - Botón *«¡QUÉ CAÑO! (+1)»*: Efecto de sonido, relato del locutor y banner de humillación en pantalla.
-
----
-
-## 4. Procedimiento de Verificación y Despliegue
+Para comprobar o replicar esta suite en cualquier entorno Windows con Node.js instalado:
 
 ```powershell
-# 1. Comprobación sintáctica obligatoria con Node.js
-node --check 'SmashSoda/phoenix/web/ui/js/vistas/locutor.js'
-node --check 'SmashSoda/phoenix/web/ui/js/vistas/var.js'
-node --check 'SmashSoda/phoenix/web/ui/js/vistas/penitencias.js'
-node --check 'SmashSoda/phoenix/web/ui/js/vistas/rpgsala.js'
-node --check 'SmashSoda/phoenix/web/ui/js/vistas/draft.js'
+# 1. Comprobación sintáctica con Node.js
+node --check 'SmashSoda/phoenix/web/ui/js/servicios/discord.js'
 node --check 'SmashSoda/phoenix/web/ui/js/vistas/street.js'
-node --check 'SmashSoda/phoenix/web/ui/js/vistas/puestos.js'
+node --check 'SmashSoda/phoenix/web/ui/js/vistas/penitencias.js'
+node --check 'SmashSoda/phoenix/web/ui/js/vistas/var.js'
 node --check 'SmashSoda/phoenix/web/ui/js/vistas/partido.js'
-node --check 'SmashSoda/phoenix/web/ui/js/app.js'
+node --check 'SmashSoda/phoenix/web/ui/js/vistas/ajustes.js'
+node --check 'SmashSoda/phoenix/web/ui/js/vistas/locutor.js'
+node --check 'SmashSoda/phoenix/web/ui/js/vistas/puestos.js'
+node --check 'SmashSoda/phoenix/web/ui/js/vistas/draft.js'
+node --check 'SmashSoda/phoenix/web/ui/js/vistas/rpgsala.js'
+node --check 'tools/sync-sider-street.js'
 
-# 2. Despliegue en caliente a la carpeta de Release (sin recompilar C++)
-Copy-Item 'SmashSoda/phoenix/web/ui/js/vistas/locutor.js' 'x64/Release/ui/js/vistas/' -Force
-Copy-Item 'SmashSoda/phoenix/web/ui/js/vistas/var.js' 'x64/Release/ui/js/vistas/' -Force
-Copy-Item 'SmashSoda/phoenix/web/ui/js/vistas/penitencias.js' 'x64/Release/ui/js/vistas/' -Force
-Copy-Item 'SmashSoda/phoenix/web/ui/js/vistas/rpgsala.js' 'x64/Release/ui/js/vistas/' -Force
-Copy-Item 'SmashSoda/phoenix/web/ui/js/vistas/draft.js' 'x64/Release/ui/js/vistas/' -Force
+# 2. Despliegue en caliente a Release (sin recompilar C++)
+New-Item -ItemType Directory -Path 'x64/Release/ui/js/servicios' -Force
+Copy-Item 'SmashSoda/phoenix/web/ui/js/servicios/discord.js' 'x64/Release/ui/js/servicios/' -Force
 Copy-Item 'SmashSoda/phoenix/web/ui/js/vistas/street.js' 'x64/Release/ui/js/vistas/' -Force
-Copy-Item 'SmashSoda/phoenix/web/ui/js/vistas/puestos.js' 'x64/Release/ui/js/vistas/' -Force
+Copy-Item 'SmashSoda/phoenix/web/ui/js/vistas/penitencias.js' 'x64/Release/ui/js/vistas/' -Force
+Copy-Item 'SmashSoda/phoenix/web/ui/js/vistas/var.js' 'x64/Release/ui/js/vistas/' -Force
 Copy-Item 'SmashSoda/phoenix/web/ui/js/vistas/partido.js' 'x64/Release/ui/js/vistas/' -Force
+Copy-Item 'SmashSoda/phoenix/web/ui/js/vistas/ajustes.js' 'x64/Release/ui/js/vistas/' -Force
+Copy-Item 'SmashSoda/phoenix/web/ui/js/vistas/locutor.js' 'x64/Release/ui/js/vistas/' -Force
+Copy-Item 'SmashSoda/phoenix/web/ui/js/vistas/puestos.js' 'x64/Release/ui/js/vistas/' -Force
+Copy-Item 'SmashSoda/phoenix/web/ui/js/vistas/draft.js' 'x64/Release/ui/js/vistas/' -Force
+Copy-Item 'SmashSoda/phoenix/web/ui/js/vistas/rpgsala.js' 'x64/Release/ui/js/vistas/' -Force
 Copy-Item 'SmashSoda/phoenix/web/ui/overlay.html' 'x64/Release/ui/' -Force
 ```
 
 ---
 
-## 5. Registro de Archivos y Trazabilidad
+## 4. Registro y Trazabilidad de Archivos
 
-| Archivo | Tipo | Descripción |
+| Archivo | Estado | Responsabilidad Técnica |
 |---|---|---|
-| `SmashSoda/phoenix/web/ui/js/vistas/locutor.js` | Nuevo | Locutor con voz IA en español y soundboard Web Audio API sintetizado. |
-| `SmashSoda/phoenix/web/ui/js/vistas/var.js` | Nuevo | Sistema de revisión dramática de VAR con votación de 15 segundos. |
-| `SmashSoda/phoenix/web/ui/js/vistas/penitencias.js` | Nuevo | Ruleta de penitencias animada Canvas para el perdedor del partido. |
-| `SmashSoda/phoenix/web/ui/js/vistas/rpgsala.js` | Nuevo | Sistema RPG de niveles, XP, insignias y títulos de sala. |
-| `SmashSoda/phoenix/web/ui/js/vistas/draft.js` | Nuevo | Modo Pan y Queso / Draft callejero de capitanes por turnos. |
-| `SmashSoda/phoenix/web/ui/js/vistas/street.js` | Nuevo | Panel de físicas Modo Street, regla a 2 goles y contador de caños. |
-| `SmashSoda/phoenix/web/ui/overlay.html` | Modificado | HUD superior, lower-third de predicciones y banner de caño/huacha. |
-| `SmashSoda/phoenix/web/ui/js/vistas/puestos.js` | Modificado | Integración de botones Locutor, VAR, Draft, Castigo, badges RPG y Barra Street. |
-| `SmashSoda/phoenix/web/ui/js/vistas/partido.js` | Modificado | Relato y ovación en goles, silbato final, progreso RPG y regla a 2 goles. |
+| `SmashSoda/phoenix/web/ui/js/servicios/discord.js` | **Nuevo** | Integración de Discord Webhooks con payloads embeds para partidos, VAR y penitencias. |
+| `tools/sync-sider-street.js` | **Nuevo** | Micro-demonio HTTP local que modifica `phoenix_core.json` en tiempo real. |
+| `tools/INICIAR_SYNC_SIDER.bat` | **Nuevo** | Lanzador en 1 clic del demonio de sincronización de físicas en Windows. |
+| `SmashSoda/phoenix/web/ui/js/vistas/street.js` | **Actualizado** | Integración de hot-sync con Sider y botón directo de sincronización en vivo. |
+| `SmashSoda/phoenix/web/ui/js/vistas/penitencias.js` | **Actualizado** | Envío automático de castigos de la ruleta hacia Discord. |
+| `SmashSoda/phoenix/web/ui/js/vistas/var.js` | **Actualizado** | Difusión de resoluciones de jugadas polémicas hacia Discord. |
+| `SmashSoda/phoenix/web/ui/js/vistas/partido.js` | **Actualizado** | Notificación de finales de partido y resultados a Discord. |
+| `SmashSoda/phoenix/web/ui/js/vistas/ajustes.js` | **Actualizado** | Campo interactivo para URL de Webhook de Discord y botón de prueba. |
+| `SmashSoda/phoenix/web/ui/js/vistas/locutor.js` | **Activo** | Locución en español y efectos de sonido de estadio y calle. |
+| `SmashSoda/phoenix/web/ui/js/vistas/draft.js` | **Activo** | Draft por turnos con sentado en mandos. |
+| `SmashSoda/phoenix/web/ui/js/vistas/rpgsala.js` | **Activo** | Progresión por niveles, títulos e insignias. |
+| `SmashSoda/phoenix/web/ui/overlay.html` | **Activo** | HUD transparente para OBS con predicciones y banner de caño. |
 
 ---
-*Documento sellado y registrado por **Antigravity (Gemini)** para el ecosistema Phoenix.*
+*Documento sellado y registrado por **Antigravity (Gemini) · Google DeepMind** para el ecosistema Phoenix.*
