@@ -14,22 +14,22 @@ import { abrirBienvenida } from "./bienvenida.js";
 import { AjustesSentado } from "./sentado.js";
 
 export const PESTANAS_AJUSTES = [
-  { id: "general", es: "GENERAL", en: "GENERAL", d: ["Lo fundamental (idioma, sentado automático), tema, bot del chat y seguridad de la sala.", "The basics (language, auto-seat), theme, chat bot and room security."] },
-  { id: "sonidos", es: "SONIDOS CHAT", en: "CHAT SOUNDS", d: ["Los sonidos del comando !sfx y cuánto esperar entre uno y otro.", "Sounds for !sfx and their cooldown."] },
-  { id: "overlay", es: "OVERLAY", en: "OVERLAY", d: ["Chat, mandos e invitados encima del juego.", "Chat, pads and guests over the game."] },
-  { id: "interfaz", es: "INTERFAZ", en: "INTERFACE", d: ["Idioma, atajos de teclado y recarga de la interfaz.", "Language, shortcuts and reload."] },
-  { id: "avanzado", mas: true, es: "AVANZADO", en: "ADVANCED", d: ["WebSocket, registros y modo desarrollador.", "WebSocket, logs and developer mode."] },
+  { id: "general", es: "GENERAL Y SISTEMA", en: "GENERAL & SYSTEM", d: ["Lo fundamental (idioma, sentado automático), tema visual, bot de chat y sonidos.", "The basics, theme, chat bot and sounds."] },
+  { id: "overlay", es: "INTERFAZ Y OVERLAY", en: "INTERFACE & OVERLAY", d: ["Overlay encima del juego, seguridad de entrada, atajos y opciones avanzadas.", "In-game overlay, input security, hotkeys and advanced options."] },
 ];
 
 export function VistaAjustes({ s, pestana }) {
   const m = s.motor;
   if (!m || !m.ajustes) return html`<${Esqueleto} texto=${t("Conectando…", "Connecting…")}/>`;
   switch (pestana) {
-    case "overlay": return html`<${Overlay} m=${m} info=${s.info}/>`;
-    case "sonidos": return html`<${Sonidos} m=${m}/>`;
-    case "interfaz": return html`<${Interfaz} m=${m} info=${s.info}/>`;
-    case "avanzado": return html`<${Avanzado} m=${m}/>`;
-    default: return html`<${General} m=${m} info=${s.info}/>`;
+    case "overlay":
+    case "interfaz":
+    case "avanzado":
+      return html`<${InterfazYOverlay} m=${m} info=${s.info}/>`;
+    case "sonidos":
+    case "general":
+    default:
+      return html`<${GeneralYSistema} m=${m} info=${s.info}/>`;
   }
 }
 
@@ -56,11 +56,11 @@ function LoFundamental({ m, info }) {
   </${Tarjeta}>`;
 }
 
-function General({ m, info }) {
+function GeneralYSistema({ m, info }) {
   const g = m.ajustes.general;
   const tema = m.app?.tema || "galaxy";
-  return html`<div class="fila partible" style="min-height:100%">
-    <div class="col" style="flex:1">
+  return html`<div class="fila partible" style="min-height:100%;gap:16px">
+    <div class="col" style="flex:1;gap:16px">
       <${LoFundamental} m=${m} info=${info}/>
       <${Tarjeta} interior="padding:22px 24px">
         <${Titulo} texto=${t("TEMA", "THEME")}/>
@@ -70,7 +70,7 @@ function General({ m, info }) {
           <${TemaCarta} id="sudario" actual=${tema} colores=${["#f5c451", "#3b82f6"]} nombre="LIGA B" sub=${t("DORADO · AZUL", "GOLD · BLUE")} fondo="linear-gradient(135deg,#0c1634,#10244f)"/>
         </div>
       </${Tarjeta}>
-      <${Tarjeta} estilo="flex:1" interior="padding:22px 24px;display:flex;flex-direction:column;gap:4px">
+      <${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:4px">
         <${Titulo} texto=${t("CHAT Y BOT", "CHAT AND BOT")}/>
         <${Ajuste} bloque titulo=${t("Nombre del bot", "Bot name")} desc=${t("Ponle un nombre divertido si quieres.", "Give it a fun name.")}>
           <${Campo} valor=${g.chatbot} max=${64} al=${(v) => gen("chatbot", v)}/></${Ajuste}>
@@ -91,22 +91,8 @@ function General({ m, info }) {
           </div></${Ajuste}>
       </${Tarjeta}>
     </div>
-    <div class="col" style="flex:1">
-      <${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column">
-        <${Titulo} texto=${t("ENTRADA Y SEGURIDAD", "INPUT AND SECURITY")}/>
-        <${AjusteSw} titulo=${t("Desactivar botón Guía", "Disable Guide button")} desc=${t("Suele abrir overlays y puede dar problemas al hostear.", "It opens overlays and can cause trouble.")} valor=${g.disableGuideButton} al=${(v) => gen("disableGuideButton", v)}/>
-        <${AjusteSw} titulo=${t("Indexar mandos automáticamente", "Auto-index pads")} desc=${t("Puede causar pantallazos azules en algunos equipos.", "May cause blue screens on some PCs.")} valor=${g.autoIndex} al=${(v) => gen("autoIndex", v)}/>
-        <${AjusteSw} titulo=${t("Bloquear también la IP", "Also ban the IP")} desc=${t("Al banear a alguien se bloquea su dirección IP.", "Bans also block the IP address.")} valor=${g.ipBan} al=${(v) => gen("ipBan", v)}/>
-        <${AjusteSw} titulo=${t("Bloquear VPN", "Block VPN")} desc=${t("Actívalo solo si tienes problemas con trolls.", "Only if you have trolls.")} valor=${g.blockVPN} al=${(v) => gen("blockVPN", v)}/>
-      </${Tarjeta}>
-      <${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column">
-        <${Titulo} texto=${t("AVISOS", "NOTIFICATIONS")}/>
-        <${AjusteSw} titulo=${t("Parpadear la ventana", "Flash the window")} desc=${t("La barra de tareas avisa cuando alguien escribe.", "Taskbar flashes on new messages.")} valor=${g.flashWindow} al=${(v) => gen("flashWindow", v)}/>
-        <${AjusteSw} titulo=${t("Sonido de mensaje", "Message sound")} valor=${g.messageNotification} al=${(v) => gen("messageNotification", v)}/>
-        <${AjusteSw} titulo=${t("Leer el chat en voz alta", "Text to speech")} valor=${g.ttsEnabled} al=${(v) => gen("ttsEnabled", v)}/>
-        <${AjusteSw} titulo=${t("Permitir !bonk", "Allow !bonk")} desc=${t("El juego de golpes del chat.", "The chat bonk game.")} valor=${g.bonkEnabled} al=${(v) => gen("bonkEnabled", v)}/>
-        <${AjusteSw} titulo=${t("Al anfitrión no le hacen !bonk", "Host can't be bonked")} valor=${g.hostBonkProof} al=${(v) => gen("hostBonkProof", v)}/>
-      </${Tarjeta}>
+    <div class="col" style="flex:1;gap:16px">
+      <${Sonidos} m=${m}/>
     </div>
   </div>`;
 }
@@ -190,48 +176,84 @@ function BloqueOverlay({ titulo, clave, extra, o, ov }) {
   </div>`;
 }
 
-function Overlay({ m, info }) {
+function InterfazYOverlay({ m, info }) {
+  const g = m.ajustes.general;
   const o = m.ajustes.overlay;
   const ov = (clave, valor) => accion("ajustes.overlay", { clave, valor });
   const activo = m.sala?.opciones?.overlay;
-  return html`<div class="rej2">
-    <${Tarjeta} interior="padding:22px 24px">
-      <${Titulo} texto="OVERLAY" derecha=${html`<${Interruptor} valor=${activo} al=${(x) => accion("sala.opciones", { overlay: x })} etiqueta="Overlay"/>`}/>
-      <div class="ayuda">${t("Muestra chat, mandos e invitados encima del juego, para ti y para quien mira la transmisión.", "Shows chat, pads and guests over the game.")}
-        ${activo ? html` <${Chip} tipo=${o.corriendo ? "mod" : "vip"}>${o.corriendo ? t("FUNCIONANDO", "RUNNING") : t("INICIANDO", "STARTING")}</${Chip}>` : null}</div>
-      <details class="sec-detalle"><summary>${t("¿No ves el overlay encima de PES?", "Can't see the overlay over PES?")}</summary>
-        <div class="ayuda" style="line-height:1.6">
-          <b>1.</b> ${t("La sala tiene que estar abierta y este interruptor encendido: el overlay se enciende solo con la sala.", "The room must be open and this switch on: the overlay starts with the room.")}<br/>
-          <b>2.</b> ${t("El overlay es una ventana transparente encima del juego. Si PES va en pantalla completa «de verdad», Windows no la deja ver. Pon PES en ventana o sin bordes (Settings.exe del parche, o Alt+Enter si tu PES lo permite).", "The overlay is a transparent window over the game. If PES is in true fullscreen, Windows will not show it. Put PES in windowed or borderless mode.")}<br/>
-          <b>3.</b> ${t("«Pantalla» abajo debe ser la misma donde está PES.", "«Screen» below must be the one PES is on.")}<br/>
-          <b>4.</b> ${t("Sin tocar nada: dentro de PES pulsa la barra espaciadora y sale el panel de Sider con los jugadores de cada lado, el ping, los avisos y el chat. Ese siempre se ve, también en pantalla completa.", "No setup needed: in PES press the space bar and the Sider panel shows players per side, ping, notices and chat. It always shows, even in fullscreen.")}<br/>
-          <b>5.</b> ${t("El Diagnóstico del PC te dice cómo está la ventana de PES ahora mismo.", "PC diagnostics tells you how the PES window is right now.")}
+  return html`<div class="fila partible" style="min-height:100%;gap:16px">
+    <div class="col" style="flex:1.2;gap:16px">
+      <${Tarjeta} interior="padding:22px 24px">
+        <${Titulo} texto="OVERLAY" derecha=${html`<${Interruptor} valor=${activo} al=${(x) => accion("sala.opciones", { overlay: x })} etiqueta="Overlay"/>`}/>
+        <div class="ayuda">${t("Muestra chat, mandos e invitados encima del juego, para ti y para quien mira la transmisión.", "Shows chat, pads and guests over the game.")}
+          ${activo ? html` <${Chip} tipo=${o.corriendo ? "mod" : "vip"}>${o.corriendo ? t("FUNCIONANDO", "RUNNING") : t("INICIANDO", "STARTING")}</${Chip}>` : null}</div>
+        <details class="sec-detalle"><summary>${t("¿No ves el overlay encima de PES?", "Can't see the overlay over PES?")}</summary>
+          <div class="ayuda" style="line-height:1.6">
+            <b>1.</b> ${t("La sala tiene que estar abierta y este interruptor encendido: el overlay se enciende solo con la sala.", "The room must be open and this switch on: the overlay starts with the room.")}<br/>
+            <b>2.</b> ${t("El overlay es una ventana transparente encima del juego. Si PES va en pantalla completa «de verdad», Windows no la deja ver. Pon PES en ventana o sin bordes (Settings.exe del parche, o Alt+Enter si tu PES lo permite).", "The overlay is a transparent window over the game. If PES is in true fullscreen, Windows will not show it. Put PES in windowed or borderless mode.")}<br/>
+            <b>3.</b> ${t("«Pantalla» abajo debe ser la misma donde está PES.", "«Screen» below must be the one PES is on.")}<br/>
+            <b>4.</b> ${t("Sin tocar nada: dentro de PES pulsa la barra espaciadora y sale el panel de Sider con los jugadores de cada lado, el ping, los avisos y el chat. Ese siempre se ve, también en pantalla completa.", "No setup needed: in PES press the space bar and the Sider panel shows players per side, ping, notices and chat. It always shows, even in fullscreen.")}<br/>
+            <b>5.</b> ${t("El Diagnóstico del PC te dice cómo está la ventana de PES ahora mismo.", "PC diagnostics tells you how the PES window is right now.")}
+          </div>
+        </details>
+        <${Ajuste} bloque titulo=${t("Pantalla", "Screen")}>
+          <${Selector} valor=${o.monitor} opciones=${((info?.pantallas || []).length ? info.pantallas : ["#1"]).map((x, i) => ({ valor: i, texto: x }))} al=${(x) => ov("monitor", Number(x))}/></${Ajuste}>
+        <${Ajuste} bloque titulo=${t("Tema del overlay", "Overlay theme")} desc=${t("Carpeta overlay/themes.", "overlay/themes folder.")}>
+          <${Selector} valor=${o.tema} opciones=${[{ valor: "", texto: t("(predeterminado)", "(default)") }, ...(info?.temasOverlay || []).map((x) => ({ valor: x, texto: x }))]} al=${(x) => ov("tema", x)}/></${Ajuste}>
+        <${Ajuste} bloque titulo=${t("Configurar el overlay", "Configure the overlay")} desc=${t("Abre su ventana de configuración: cuadros, atajos, temas y plugins.", "Opens its settings window: widgets, hotkeys, themes and plugins.")}>
+          ${m.sala?.abierta && activo
+            ? html`<${Boton} al=${() => accion("ajustes.overlayMenu", {}, { ok: t("Mira tu pantalla del juego: la ventana se abre ahí.", "Look at your game screen: the window opens there.") })}>${t("ABRIR CONFIGURACIÓN DEL OVERLAY", "OPEN OVERLAY SETTINGS")}</${Boton}>`
+            : html`<div class="ayuda">${activo ? t("Primero abre la sala: el overlay solo funciona con la sala abierta.", "Open the room first: the overlay only works while it is open.") : t("Primero enciende el interruptor OVERLAY de arriba.", "Turn the OVERLAY switch above on first.")}</div>`}
+        </${Ajuste}>
+        <${Ajuste} bloque titulo=${t("Atajos de teclado (funcionan dentro del juego)", "Hotkeys (work inside the game)")}>
+          <div class="ayuda" style="line-height:1.7">
+            <b>Ctrl + Alt + F1</b> · ${t("abrir/cerrar la configuración", "open/close settings")}<br/>
+            <b>Ctrl + Alt + M</b> · ${t("mover y cambiar tamaño de los cuadros", "move and resize the boxes")}<br/>
+            <b>Ctrl + Alt + C</b> · ${t("escribir en el chat", "write in chat")}<br/>
+            <b>Ctrl + Alt + ← →</b> · ${t("tamaño", "size")} · <b>Ctrl + Alt + ↑ ↓</b> · ${t("transparencia", "opacity")}
+          </div>
+        </${Ajuste}>
+      </${Tarjeta}>
+
+      <div class="col" style="gap:12px">
+        <${BloqueOverlay} o=${o} ov=${ov} titulo="Chat" clave="chat" extra=${html`<${AjusteSw} titulo=${t("Mostrar historial", "Show history")} valor=${o.chat.historial} al=${(x) => ov("chat.historial", x)}/>`}/>
+        <${BloqueOverlay} o=${o} ov=${ov} titulo=${t("Mandos", "Pads")} clave="mandos"/>
+        <${BloqueOverlay} o=${o} ov=${ov} titulo=${t("Invitados", "Guests")} clave="invitados" extra=${html`<${AjusteSw} titulo=${t("Mostrar latencia", "Show latency")} valor=${o.invitados.latencia} al=${(x) => ov("invitados.latencia", x)}/>`}/>
+      </div>
+    </div>
+
+    <div class="col" style="flex:1;gap:16px">
+      <${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column">
+        <${Titulo} texto=${t("ENTRADA Y SEGURIDAD", "INPUT AND SECURITY")}/>
+        <${AjusteSw} titulo=${t("Desactivar botón Guía", "Disable Guide button")} desc=${t("Suele abrir overlays y puede dar problemas al hostear.", "It opens overlays and can cause trouble.")} valor=${g.disableGuideButton} al=${(v) => gen("disableGuideButton", v)}/>
+        <${AjusteSw} titulo=${t("Indexar mandos automáticamente", "Auto-index pads")} desc=${t("Puede causar pantallazos azules en algunos equipos.", "May cause blue screens on some PCs.")} valor=${g.autoIndex} al=${(v) => gen("autoIndex", v)}/>
+        <${AjusteSw} titulo=${t("Bloquear también la IP", "Also ban the IP")} desc=${t("Al banear a alguien se bloquea su dirección IP.", "Bans also block the IP address.")} valor=${g.ipBan} al=${(v) => gen("ipBan", v)}/>
+        <${AjusteSw} titulo=${t("Bloquear VPN", "Block VPN")} desc=${t("Actívalo solo si tienes problemas con trolls.", "Only if you have trolls.")} valor=${g.blockVPN} al=${(v) => gen("blockVPN", v)}/>
+      </${Tarjeta}>
+
+      <${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column">
+        <${Titulo} texto=${t("AVISOS", "NOTIFICATIONS")}/>
+        <${AjusteSw} titulo=${t("Parpadear la ventana", "Flash the window")} desc=${t("La barra de tareas avisa cuando alguien escribe.", "Taskbar flashes on new messages.")} valor=${g.flashWindow} al=${(v) => gen("flashWindow", v)}/>
+        <${AjusteSw} titulo=${t("Sonido de mensaje", "Message sound")} valor=${g.messageNotification} al=${(v) => gen("messageNotification", v)}/>
+        <${AjusteSw} titulo=${t("Leer el chat en voz alta", "Text to speech")} valor=${g.ttsEnabled} al=${(v) => gen("ttsEnabled", v)}/>
+        <${AjusteSw} titulo=${t("Permitir !bonk", "Allow !bonk")} desc=${t("El juego de golpes del chat.", "The chat bonk game.")} valor=${g.bonkEnabled} al=${(v) => gen("bonkEnabled", v)}/>
+        <${AjusteSw} titulo=${t("Al anfitrión no le hacen !bonk", "Host can't be bonked")} valor=${g.hostBonkProof} al=${(v) => gen("hostBonkProof", v)}/>
+      </${Tarjeta}>
+
+      <${Tarjeta} interior="padding:22px 24px;display:flex;flex-direction:column;gap:12px">
+        <${Titulo} texto=${t("HERRAMIENTAS DE INTERFAZ", "INTERFACE TOOLS")}/>
+        <div class="ayuda">${t("Atajos: Ctrl+K busca · Ctrl+Espacio chat · Alt+1…6 secciones.", "Shortcuts: Ctrl+K search · Ctrl+Space chat · Alt+1…6 sections.")}</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <${Boton} tipo="suave" al=${abrirTutorial}>${t("TUTORIAL", "TUTORIAL")}</${Boton}>
+          <${Boton} tipo="suave" al=${abrirBienvenida}>${t("BIENVENIDA", "WELCOME")}</${Boton}>
+          <${Boton} tipo="suave" al=${() => accion("ui.recargar")}>${t("RECARGAR INTERFAZ", "RELOAD")}</${Boton}>
         </div>
-      </details>
-      <${Ajuste} bloque titulo=${t("Pantalla", "Screen")}>
-        <${Selector} valor=${o.monitor} opciones=${(info.pantallas.length ? info.pantallas : ["#1"]).map((x, i) => ({ valor: i, texto: x }))} al=${(x) => ov("monitor", Number(x))}/></${Ajuste}>
-      <${Ajuste} bloque titulo=${t("Tema del overlay", "Overlay theme")} desc=${t("Carpeta overlay/themes.", "overlay/themes folder.")}>
-        <${Selector} valor=${o.tema} opciones=${[{ valor: "", texto: t("(predeterminado)", "(default)") }, ...info.temasOverlay.map((x) => ({ valor: x, texto: x }))]} al=${(x) => ov("tema", x)}/></${Ajuste}>
-      <${Ajuste} bloque titulo=${t("Configurar el overlay", "Configure the overlay")} desc=${t("Abre su ventana de configuración: cuadros, atajos, temas y plugins.", "Opens its settings window: widgets, hotkeys, themes and plugins.")}>
-        ${m.sala?.abierta && activo
-          ? html`<${Boton} al=${() => accion("ajustes.overlayMenu", {}, { ok: t("Mira tu pantalla del juego: la ventana se abre ahí.", "Look at your game screen: the window opens there.") })}>${t("ABRIR CONFIGURACIÓN DEL OVERLAY", "OPEN OVERLAY SETTINGS")}</${Boton}>`
-          : html`<div class="ayuda">${activo ? t("Primero abre la sala: el overlay solo funciona con la sala abierta.", "Open the room first: the overlay only works while it is open.") : t("Primero enciende el interruptor OVERLAY de arriba.", "Turn the OVERLAY switch above on first.")}</div>`}
-      </${Ajuste}>
-      <${Ajuste} bloque titulo=${t("Atajos de teclado (funcionan dentro del juego)", "Hotkeys (work inside the game)")}>
-        <div class="ayuda" style="line-height:1.7">
-          <b>Ctrl + Alt + F1</b> · ${t("abrir/cerrar la configuración", "open/close settings")}<br/>
-          <b>Ctrl + Alt + M</b> · ${t("mover y cambiar tamaño de los cuadros", "move and resize the boxes")}<br/>
-          <b>Ctrl + Alt + C</b> · ${t("escribir en el chat", "write in chat")}<br/>
-          <b>Ctrl + Alt + ← →</b> · ${t("tamaño", "size")} · <b>Ctrl + Alt + ↑ ↓</b> · ${t("transparencia", "opacity")}
-        </div>
-      </${Ajuste}>
-    </${Tarjeta}>
-    <div class="col" style="gap:12px">
-      <${BloqueOverlay} o=${o} ov=${ov} titulo="Chat" clave="chat" extra=${html`<${AjusteSw} titulo=${t("Mostrar historial", "Show history")} valor=${o.chat.historial} al=${(x) => ov("chat.historial", x)}/>`}/>
-      <${BloqueOverlay} o=${o} ov=${ov} titulo=${t("Mandos", "Pads")} clave="mandos"/>
-      <${BloqueOverlay} o=${o} ov=${ov} titulo=${t("Invitados", "Guests")} clave="invitados" extra=${html`<${AjusteSw} titulo=${t("Mostrar latencia", "Show latency")} valor=${o.invitados.latencia} al=${(x) => ov("invitados.latencia", x)}/>`}/>
+      </${Tarjeta}>
+
+      <${Avanzado} m=${m}/>
     </div>
   </div>`;
+}
 }
 
 // ---- Sonidos (!sfx) ---------------------------------------------------------------------------
