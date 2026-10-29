@@ -212,7 +212,7 @@ export function CampoEnVivo({ m }) {
           <span><span style=${`display:inline-block;width:10px;height:10px;border-radius:50%;background:${COLOR[2]};vertical-align:-1px;margin-right:5px`}></span>${t("Árbitros", "Officials")}</span>
         </span>` : null}
       </div>
-      <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
+      <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:stretch">
         <div style="flex:1 1 420px;max-width:680px;min-width:0"><${CampoSvg} alTanda=${alTanda} alColores=${alColores} alDiag=${alDiag} alEst=${alEst} alMandos=${alMandos}/>
         ${mandos.length ? html`<div class="ayuda" style="margin-top:6px;font-size:12px;display:flex;gap:10px;flex-wrap:wrap">${t("Luz del balón:", "Ball glow:")} ${[...new Set(mandos)].sort().map((a) => html`<span><span style=${`display:inline-block;width:10px;height:10px;border-radius:50%;background:${colorMando(a) || "#fff"};vertical-align:-1px;margin-right:4px`}></span>${a === 9 ? t("Anfitrión", "Host") : t("Mando ", "Pad ") + a}</span>`)}</div>` : null}
         ${activo && c.diag ? html`<div class="ayuda mono" style="margin-top:8px;font-size:12px;display:flex;gap:6px 18px;flex-wrap:wrap" title=${t("Diagnóstico del campo: sirve para comparar antes y después de cualquier cambio", "Pitch diagnostics: compare before/after any change")}>
@@ -221,7 +221,7 @@ export function CampoEnVivo({ m }) {
           <span>${t("retraso del campo hasta aquí", "pitch delay to here")}: <b>${dg.retrasoMs == null ? "—" : dg.retrasoMs + " ms"}</b> · ${dg.eventosPorSeg}/s</span>
           <span>${t("envío a la web", "web upload")}: <b>${c.diag.webEnviosPorSeg}/s</b> (${c.diag.webPostMediaMs} ms ${t("por envío", "each")}${c.diag.webErrores ? ` · ${c.diag.webErrores} ${t("fallos", "errors")}` : ""})${c.diag.mirando ? ` · ${c.diag.mirando} ${t("mirando", "watching")}` : ""}</span>
         </div>` : null}</div>
-        <div style="flex:1 1 220px;min-width:200px;border:1px dashed var(--tenue);border-radius:12px;padding:14px">
+        <div style="flex:1 1 240px;min-width:220px;border:1px solid var(--tenue);background:rgba(255,255,255,.03);border-radius:12px;padding:16px">
           <b>${t("Estadísticas del partido", "Match stats")}</b>
           ${est ? html`<div style="margin-top:8px;display:grid;grid-template-columns:1fr auto auto;gap:4px 12px;font-size:13px;align-items:center">
             <span></span><b style=${`color:${colorEq(0)}`}>A</b><b style=${`color:${colorEq(1)}`}>B</b>

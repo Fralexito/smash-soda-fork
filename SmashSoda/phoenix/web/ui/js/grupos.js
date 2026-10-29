@@ -34,7 +34,7 @@ export const GRUPOS = [
     d: ["El partido: marcador, equipos y lados, campo en vivo e historial.", "The match: score, teams and sides, live pitch and history."],
     pestanas: [
       { p: ["partido", "vivo"], es: "MARCADOR", en: "SCORE" },
-      { p: ["partido", "campo"], es: "CAMPO", en: "PITCH" },
+      { p: ["partido", "vivo"], es: "CAMPO 2D", en: "2D PITCH" },
       { p: ["partido", "historial"], es: "HISTORIAL", en: "HISTORY" },
     ] },
   { id: "mandos", es: "MANDOS", en: "PADS", icono: "mandos",

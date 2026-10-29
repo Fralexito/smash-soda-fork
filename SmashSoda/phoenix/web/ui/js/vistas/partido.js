@@ -8,38 +8,10 @@ import { html, useState, useEffect, useRef } from "../lib.js";
 import { t, duracion, fecha } from "../i18n.js";
 import { accion, confirmar, avisar, irA } from "../tienda.js";
 import { Tarjeta, Titulo, Boton, Interruptor, Campo, Avatar, Chip, Icono, Vacio, colorPing, cx, dos, Esqueleto } from "../ui.js";
-import { CampoEnVivo, CampoSvg } from "./campo.js";
-
-function CampoTacticoIntegrado({ m }) {
-  const c = m.campo || { estado: "apagado", motivo: "" };
-  const activo = c.estado === "activo";
-  const [est, setEst] = useState(null);
-  useEffect(() => {
-    accion("campo.vivo", { si: true }, { silencioso: true });
-    return () => { accion("campo.vivo", { si: false }, { silencioso: true }); };
-  }, []);
-  return html`<div class="caja" style="padding:16px 18px;display:flex;flex-direction:column;gap:10px">
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
-      <div style="display:flex;align-items:center;gap:8px">
-        <b class="disp" style="font-size:13px;letter-spacing:.14em;color:var(--acc)">⚽ ${t("CANCHA 2D EN VIVO", "LIVE 2D PITCH")}</b>
-        <span class="chip ${activo ? "ok" : ""}" style="height:20px;font-size:10px">${activo ? t("22 FICHAS · 20 HZ", "22 PIECES · 20 HZ") : c.estado === "buscando" ? t("BUSCANDO…", "SEARCHING…") : t("ESPERANDO EN PES", "WAITING IN PES")}</span>
-      </div>
-      <button class="enlace-mas" style="font-size:12px" onClick=${() => irA("partido", "campo")}>${t("Ampliar radar ›", "Expand radar ›")}</button>
-    </div>
-    <div style="max-width:560px;width:100%;margin:0 auto">
-      <${CampoSvg} alEst=${setEst}/>
-    </div>
-    ${est?.pos ? html`<div class="mono mut" style="display:flex;justify-content:space-between;font-size:12px">
-      <span>${t("Posesión A:", "Possession A:")} <b class="acc">${est.pos[0]}%</b></span>
-      ${est.tir ? html`<span>${t("Tiros:", "Shots:")} <b>${est.tir[0]} - ${est.tir[1]}</b></span>` : null}
-      <span>${t("Posesión B:", "Possession B:")} <b style="color:var(--eq-b)">${est.pos[1]}%</b></span>
-    </div>` : null}
-  </div>`;
-}
+import { CampoEnVivo } from "./campo.js";
 
 export const PESTANAS_PARTIDO = [
-  { id: "vivo", es: "MARCADOR", en: "SCORE", d: ["Arma los dos lados, lleva el marcador y el reloj. Al terminar se guarda y se avisa en el chat y la web.", "Set up sides, keep score and time."] },
-  { id: "campo", es: "CAMPO", en: "PITCH", d: ["Las 22 fichitas y el balón del partido en vivo, como el radar del modo entrenador (solo lee el juego).", "The 22 players and the ball live, like the coach-mode radar (read-only)."] },
+  { id: "vivo", es: "MARCADOR Y CAMPO", en: "SCORE & PITCH", d: ["Arma los dos lados, lleva el marcador y el reloj y mira el campo 2D en vivo, todo en una sola vista. Al terminar se guarda y se avisa en el chat y la web.", "Set up sides, keep score and time and watch the live 2D pitch, all in one view."] },
   { id: "historial", es: "HISTORIAL", en: "HISTORY", d: ["Partidos jugados en esta PC y la tabla de la sala (3 puntos por victoria).", "Matches played on this PC and the room table."] },
 ];
 
@@ -47,7 +19,6 @@ export function VistaPartido({ s, pestana }) {
   const m = s.motor;
   if (!m || !m.sala) return html`<${Esqueleto} texto=${t("Conectando…", "Connecting…")}/>`;
   if (pestana === "historial") return html`<${Historial}/>`;
-  if (pestana === "campo") return html`<${CampoEnVivo} m=${m}/>`;
   const fase = m.partido?.fase || "libre";
   if (fase === "libre") return html`<${ResultadoYArmar} m=${m}/>`;
   return html`<${Marcador} m=${m}/>`;
@@ -56,7 +27,7 @@ export function VistaPartido({ s, pestana }) {
 /** Sin partido en marcha: si acaba de terminar uno, primero su resultado con REVANCHA; debajo, armar el siguiente. */
 function ResultadoYArmar({ m }) {
   const r = useUltimoPartido(m);
-  return html`<div class="col">${r?.reciente ? html`<${TarjetaResultado} m=${m} r=${r}/>` : null}<${Armar} m=${m}/></div>`;
+  return html`<div class="col">${r?.reciente ? html`<${TarjetaResultado} m=${m} r=${r}/>` : null}<${Armar} m=${m}/><${CampoEnVivo} m=${m}/></div>`;
 }
 
 // ---- Armar el partido ---------------------------------------------------------------------
@@ -312,12 +283,10 @@ function Marcador({ m }) {
         <${Boton} tipo="peligro" al=${cancelar}>${t("CANCELAR", "CANCEL")}</${Boton}>
       </div>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:16px;align-items:start">
-      <${CampoTacticoIntegrado} m=${m}/>
-      <div class="col" style="gap:12px">
-        <${PartidoOficial} m=${m}/>
-        <${TorneoYDuelo} m=${m}/>
-      </div>
+    <${CampoEnVivo} m=${m}/>
+    <div class="rej2" style="align-items:start">
+      <${PartidoOficial} m=${m}/>
+      <${TorneoYDuelo} m=${m}/>
     </div>
     ${red.length ? html`<div class="rej4">${red.map((r) => html`<div class="caja" key=${r.parsecId}>
       <div style="display:flex;justify-content:space-between"><b style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.nombre}</b>
