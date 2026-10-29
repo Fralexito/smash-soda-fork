@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.94"
+#define PHX_CORE_VERSION "0.4.95"
 
 namespace {
 
@@ -686,6 +686,7 @@ double g_canchaLargo = 15.0, g_canchaAncho = 10.0;
 bool g_cajasFisicaGrandes = false;   // json «cajas_fisica_grandes»: la caja del CAMPO (filtro de física) se deja grande; solo se encogen las de portería
 volatile LONG g_canchaOn = 0, g_canchaParches = 0;
 HANDLE g_hiloCancha = nullptr;
+volatile LONG g_rearmaCancha = 0;   // 0.4.95: la revancha (MatchSetupRematch) crea un bloque de dimensiones NUEVO sin parchear; esto vuelve a abrir la ventana de búsqueda de 75 s
 
 static void bloqueNuevo(uint8_t* d) {
     memcpy(d, kBloqueCampo, 36);
@@ -766,6 +767,7 @@ DWORD WINAPI hiloCancha(LPVOID) {
         Sleep(1000);
         bool hay = trainingWorkEstable();
         ajustarCajas(hay);
+        if (InterlockedExchange(&g_rearmaCancha, 0)) { t0 = GetTickCount64(); vuelta = 0; logf("[cancha_chica_free] revancha: vuelvo a buscar el bloque de dimensiones (75 s)"); }
         if (hay && !estaba) t0 = GetTickCount64();
         estaba = hay;
         if (!hay || GetTickCount64() - t0 > 75000 || (++vuelta % 3) != 0) continue;     // solo los 75 s siguientes a que aparezca el entrenamiento, un barrido cada 3 s
@@ -1663,7 +1665,7 @@ using FnGoalNetEstado = void (*)(int, int);
 FnGoalNetHit g_goalNetHit = nullptr; FnGoalNetEstado g_goalNetEstado = nullptr;
 volatile LONG g_mallaOn = 0, g_mallaGolpes = 0; volatile ULONGLONG g_mallaUlt = 0;
 volatile LONG g_murosOn = 0, g_murosRebotes = 0;
-float g_muroRebote = 0.6f, g_muroFric = 0.92f; double g_muroX = 0, g_muroZ = 0;   // 0 = semilargo/semiancho + 0.2
+float g_muroRebote = 0.6f, g_muroFric = 0.92f, g_muroFondoRebote = -1.0f, g_muroLatFric = -1.0f, g_muroLatEmpuje = 0.0f, g_arcoAncho = 4.0f, g_arcoAlto = 2.0f; volatile LONG g_arcoChicoOn = 0; double g_muroX = 0, g_muroZ = 0;   // 0.4.95: g_muroFondoRebote = rebote propio de la pared de fondo (<0 = igual que g_muroRebote); g_muroX/Z: 0 =   // 0 = semilargo/semiancho + 0.2
 volatile ULONGLONG g_bolaCentroHasta = 0;   // 0.4.63: mientras dure, la pelota se mantiene en el centro (pausa del medio tiempo / final)
 // 0.4.92 «tiro_fuerte»: un disparo fuerte = salto brusco de la velocidad de la pelota en un solo paso (>8 m/s y >16 m/s al final). Se escala en el estado S (el mismo que usan los muros): horizontales × tiro_potencia_k y vertical × tiro_altura_k,
 // graduados por la velocidad (a 16 m/s casi nada, a 34 m/s todo el efecto) para no tocar pases ni toques suaves; no actúa a menos de 3 m de la línea de gol (saques del portero). Log [TIRO] de los primeros 60.
@@ -1674,6 +1676,18 @@ uint64_t ganchoBolaPaso(float dt, uint64_t rdx, uint64_t r8, float* S, void* cfg
     float v0x = S[3], v0y = S[4], v0z = S[5];
     uint64_t r = g_bolaPasoOrig(dt, rdx, r8, S, cfg, flag);
     bool fueTiro = false;
+    if (GetTickCount64() - g_tTrainRed < 3000) {   // 0.4.95 [GOLPE]: salto de velocidad = golpe de un jugador (pase/tiro/rebote en jugador). Anota vel. antes/después, posición y el jugador más cercano (0-10 local, 11-21 visita) para saber QUIÉN y hacia dónde
+        float sp0 = sqrtf(v0x * v0x + v0y * v0y + v0z * v0z), sp1 = sqrtf(S[3] * S[3] + S[4] * S[4] + S[5] * S[5]);
+        float dvx = S[3] - v0x, dvz = S[5] - v0z;
+        if (sqrtf(dvx * dvx + dvz * dvz) > 3.0f && sp1 > 3.0f && fabsf(S[2]) < 9.0f) {
+            static LONG nG = 0; LONG n = InterlockedIncrement(&nG);
+            if (n <= 400) {
+                int cerca = -1; float mejorD = 3.0f; uint8_t* raiz = nullptr;
+                if (leerSeguro(g_globalPartido, &raiz, 8) && raiz) for (int i = 0; i < 22; i++) { float px, pz; if (!posJugPC(raiz, i, px, pz)) continue; float d = hypotf(px - S[0], pz - S[2]); if (d < mejorD) { mejorD = d; cerca = i; } }
+                logf("[GOLPE] #%ld v antes (%.1f,%.1f,%.1f) -> después (%.1f,%.1f,%.1f) pos (%.1f,%.1f,%.1f) jugador_cercano=%d (%s) a %.1f m hacia x%s", (long)n, v0x, v0y, v0z, S[3], S[4], S[5], S[0], S[1], S[2], cerca, cerca < 0 ? "ninguno" : (cerca < 11 ? "local" : "visita"), cerca < 0 ? -1.0f : mejorD, S[3] >= 0 ? "+" : "-");
+            }
+        }
+    }
     if (GetTickCount64() - g_tTrainRed < 3000) {   // 0.4.93 [ARQUERO]: golpes de balón dentro de los 3 m de la línea de gol (portero): anota velocidad, dirección y posición para ver si «despeja» (GKClear/GKPassLong ya están anulados por arquero_saque_corto)
         float sp0 = sqrtf(v0x * v0x + v0y * v0y + v0z * v0z), sp1 = sqrtf(S[3] * S[3] + S[4] * S[4] + S[5] * S[5]);
         if (sp1 - sp0 > 5.0f && sp1 >= 7.0f && fabsf(S[0]) >= (float)g_canchaLargo - 3.0f && fabsf(S[0]) < (float)g_canchaLargo) {
@@ -1720,7 +1734,8 @@ uint64_t ganchoBolaPaso(float dt, uint64_t rdx, uint64_t r8, float* S, void* cfg
     if ((g_redOn || g_murosOn) && GetTickCount64() - g_tTrainRed < 3000) {
         float x = S[0], y = S[1], z = S[2];
         float largo = (float)g_canchaLargo, ancho = (float)g_canchaAncho;
-        bool bocaGol = fabsf(z) < 3.66f + 0.109f && y < 2.44f + 0.109f;   // boca real: media portería 3,66 y travesaño 2,44 (+ radio de la pelota)
+        const float hw = g_arcoChicoOn ? g_arcoAncho * 0.5f : 3.66f, hh = g_arcoChicoOn ? g_arcoAlto : 2.44f;   // 0.4.95 arco_chico_free: boca lógica más chica (postes/larguero invisibles del Core)
+        bool bocaGol = fabsf(z) < hw + 0.109f && y < hh + 0.109f;   // boca real: media portería 3,66 y travesaño 2,44 (+ radio de la pelota)
         if (g_redOn && g_redResorte && fabsf(x) > largo && bocaGol) {   // 0.4.72: la red cede como una malla: holgura sin fuerza, luego resorte + amortiguación; rebota un poco y la pelota cae dentro
             float sgx = x >= 0 ? 1.0f : -1.0f, pen = fabsf(x) - largo, vout = S[3] * sgx;
             if (pen > g_redHolgura) { float a = -g_redK * (pen - g_redHolgura) - g_redC * vout; S[3] += a * sgx * dt; }
@@ -1746,30 +1761,31 @@ uint64_t ganchoBolaPaso(float dt, uint64_t rdx, uint64_t r8, float* S, void* cfg
             const float rb = 0.109f;
             float Lx = (float)(g_muroX > 0 ? g_muroX : g_canchaLargo + 0.2), Wz = (float)(g_muroZ > 0 ? g_muroZ : g_canchaAncho + 0.2);
             float lim = bocaGol ? largo + 3.05f : Lx;   // 0.4.73: fondo real de la red dibujada = línea de gol + 3,0 m (goal_l_hit.geom: 55,445-55,505 sobre 52,5); antes 3,4 = «malla invisible» 0,4 m más allá           // en la boca del arco la pared está al fondo de la red
-            bool toco = false;
-            if (x > lim - rb && S[3] > 0) { S[0] = lim - rb; S[3] = -g_muroRebote * S[3]; S[5] *= g_muroFric; toco = true; }
-            else if (x < -lim + rb && S[3] < 0) { S[0] = -lim + rb; S[3] = -g_muroRebote * S[3]; S[5] *= g_muroFric; toco = true; }
-            if (z > Wz - rb && S[5] > 0) { S[2] = Wz - rb; S[5] = -g_muroRebote * S[5]; S[3] *= g_muroFric; toco = true; }
-            else if (z < -Wz + rb && S[5] < 0) { S[2] = -Wz + rb; S[5] = -g_muroRebote * S[5]; S[3] *= g_muroFric; toco = true; }
+            bool toco = false; float mv0[3] = { S[3], S[4], S[5] }; const float rf = g_muroFondoRebote >= 0.0f ? g_muroFondoRebote : g_muroRebote;
+            if (x > lim - rb && S[3] > 0) { S[0] = lim - rb; S[3] = -rf * S[3]; S[5] *= g_muroFric; toco = true; }
+            else if (x < -lim + rb && S[3] < 0) { S[0] = -lim + rb; S[3] = -rf * S[3]; S[5] *= g_muroFric; toco = true; }
+            const float lf = g_muroLatFric >= 0.0f ? g_muroLatFric : g_muroFric;   // 0.4.95: fricción en x de las paredes laterales (1.0 = vx intacta) y empuje hacia dentro
+            if (z > Wz - rb && S[5] > 0) { S[2] = Wz - rb - g_muroLatEmpuje; S[5] = -g_muroRebote * S[5]; S[3] *= lf; toco = true; }
+            else if (z < -Wz + rb && S[5] < 0) { S[2] = -Wz + rb + g_muroLatEmpuje; S[5] = -g_muroRebote * S[5]; S[3] *= lf; toco = true; }
             // postes (cilindros verticales en (±largo, ±3,66), radio 0,06) y travesaño (cilindro horizontal en y=2,44): rebote contra la normal
             {
                 const float rp = 0.06f + rb; const float px = (x >= 0 ? largo : -largo);
                 for (int sg = -1; sg <= 1; sg += 2) {
-                    float dx = x - px, dz = z - sg * 3.66f, d2 = dx * dx + dz * dz;
-                    if (y < 2.44f && d2 < rp * rp && d2 > 1e-6f) {               // poste
+                    float dx = x - px, dz = z - sg * hw, d2 = dx * dx + dz * dz;
+                    if (y < hh && d2 < rp * rp && d2 > 1e-6f) {               // poste
                         float d = sqrtf(d2), nx = dx / d, nz = dz / d, vn = S[3] * nx + S[5] * nz;
-                        if (vn < 0) { S[3] -= (1 + 0.5f) * vn * nx; S[5] -= (1 + 0.5f) * vn * nz; S[0] = px + nx * rp; S[2] = sg * 3.66f + nz * rp; toco = true; }
+                        if (vn < 0) { S[3] -= (1 + 0.5f) * vn * nx; S[5] -= (1 + 0.5f) * vn * nz; S[0] = px + nx * rp; S[2] = sg * hw + nz * rp; toco = true; }
                     }
                 }
-                if (fabsf(z) < 3.66f) {                                         // travesaño
-                    float dx = x - px, dy = y - 2.44f, d2 = dx * dx + dy * dy;
+                if (fabsf(z) < hw) {                                         // travesaño
+                    float dx = x - px, dy = y - hh, d2 = dx * dx + dy * dy;
                     if (d2 < rp * rp && d2 > 1e-6f) {
                         float d = sqrtf(d2), nx = dx / d, ny = dy / d, vn = S[3] * nx + S[4] * ny;
-                        if (vn < 0) { S[3] -= (1 + 0.5f) * vn * nx; S[4] -= (1 + 0.5f) * vn * ny; S[0] = px + nx * rp; S[1] = 2.44f + ny * rp; toco = true; }
+                        if (vn < 0) { S[3] -= (1 + 0.5f) * vn * nx; S[4] -= (1 + 0.5f) * vn * ny; S[0] = px + nx * rp; S[1] = hh + ny * rp; toco = true; }
                     }
                 }
             }
-            if (toco) { LONG n = InterlockedIncrement(&g_murosRebotes); if (n <= 10 || n % 500 == 0) logf("[MURO] rebote #%ld pos=(%.2f,%.2f,%.2f)", (long)n, S[0], S[1], S[2]); }
+            if (toco) { LONG n = InterlockedIncrement(&g_murosRebotes); if (n <= 80 || n % 500 == 0) logf("[MURO] rebote #%ld pos=(%.2f,%.2f,%.2f) v antes (%.1f,%.1f,%.1f) después (%.1f,%.1f,%.1f)", (long)n, S[0], S[1], S[2], mv0[0], mv0[1], mv0[2], S[3], S[4], S[5]); }
         }
     }
     return r;
@@ -1797,6 +1813,28 @@ bool murosInstalar(Feature& f) {
     g_murosOn = 1; char b[160]; sprintf_s(b, "ok: muros lógicos en el paso de la pelota (rebote %.2f, fricción %.2f)", g_muroRebote, g_muroFric); f.estado = b; return true;
 }
 bool murosQuitar(Feature&) { g_murosOn = 0; return true; }
+// --- goles_sonda (0.4.95, frente R/revancha 0-0): SOLO LOG. Gancho en FUN_1408C9E90+9 (RVA 0x8C9E99; tras «cmp edx,3E; ja»): rcx = EQ_i (bloque del equipo), edx = 0, r8d = categoría c, r9d = delta.
+// Anota los punteros reales para saber dónde están los contadores: EQ_i = rcx, M = rcx-0x750D0 (equipo 0) o rcx-0x750D0-0x59650 (equipo 1); CAT_c = rcx+0x59530+c*0x20. No escribe nada.
+typedef uint64_t(__fastcall* GolCatFn)(void*, uint32_t, uint32_t, uint32_t);
+GolCatFn g_golCatOrig = nullptr; volatile LONG g_golCatN = 0;
+uint64_t __fastcall ganchoGolCat(void* rcx, uint32_t edx, uint32_t r8d, uint32_t r9d) {
+    LONG n = InterlockedIncrement(&g_golCatN);
+    if (n <= 400) { uint64_t e = (uint64_t)rcx; logf("[GOLES_SONDA] #%ld rcx=%p edx=%u cat=%u delta=%u M(eq0)=%p M(eq1)=%p CAT=%p", (long)n, rcx, edx, r8d, r9d, (void*)(e - 0x750D0), (void*)(e - 0x750D0 - 0x59650), (void*)(e + 0x59530 + (uint64_t)r8d * 0x20)); }
+    return g_golCatOrig(rcx, edx, r8d, r9d);
+}
+bool golesSondaInstalar(Feature& f) {
+    if (g_golCatOrig) { f.estado = "ok: gancho de goles ya puesto (solo log)"; return true; }
+    uint8_t* m = firmaUnica("codigo", "83 FA 3E 0F 87 ?? ?? ?? ?? 55 48 8B EC 48 83 EC 50 45 8B D9 4C 8B C9 41 83 F8 08 0F 87", f.id);
+    if (!m) { f.estado = "sin firma: FUN_1408C9E90"; return false; }
+    if (!crearDesvio(f, m + 9, 18, (void*)ganchoGolCat, (void**)&g_golCatOrig)) { f.estado = "no se pudo desviar FUN_1408C9E90+9"; return false; }
+    char b[160]; sprintf_s(b, "ok: gancho de log en FUN_1408C9E90+9 (exe+0x%llX); anota rcx/cat/delta en cada gol", (unsigned long long)(m + 9 - g_exe.base)); f.estado = b; return true;
+}
+bool golesSondaQuitar(Feature&) { return true; }   // los parches los restaura el cierre general (f.parches)
+bool arcoChicoInstalar(Feature& f) {   // 0.4.95: arco más chico con postes y larguero lógicos; el juego sigue viendo el gol solo por la boca chica
+    if (!murosInstalar(f)) return false;
+    g_arcoChicoOn = 1; char b[160]; sprintf_s(b, "ok: arco lógico %.2f x %.2f m (postes y larguero invisibles; requiere los muros del Core)", g_arcoAncho, g_arcoAlto); f.estado = b; return true;
+}
+bool arcoChicoQuitar(Feature&) { g_arcoChicoOn = 0; return true; }
 bool tiroInstalar(Feature& f) {
     if (!asegurarGanchoBola(f)) return false;
     g_tiroOn = 1; char b[170]; sprintf_s(b, "ok: tiros fuertes ×%.2f de velocidad y ×%.2f de elevación (graduado por velocidad; paso de la pelota FUN_140876360)", g_tiroPot, g_tiroAlt); f.estado = b; return true;
@@ -2431,7 +2469,7 @@ static void __stdcall ayudanteSaque(uint8_t* job) {
                 g_relojPausa = 0; logf("[DESCANSO] 2.º tiempo: fase 3 directa y reloj a 0 (la pantalla cuenta 0→45; el final a 45 min de reloj + añadido)");
             } else if (g_descansoFinal) {   // 0.4.91: final tipo amistoso: tras estadísticas → X (menú) la revancha arranca desde 0:00 en fase 1
                 uint32_t fa = g_faseAntesDescanso; memcpy(job + 0x2790, &fa, 4); if (g_baseReloj) g_baseReloj(job + 0x2790, 0.0f); float z0 = 0.0f; memcpy(job + 0x279C, &z0, 4); g_relojPausa = 0;
-                logf("[DESCANSO] final: revancha desde 0:00 (fase %u); el marcador nativo NO se reinicia todavía", fa);
+                InterlockedExchange(&g_rearmaCancha, 1); logf("[DESCANSO] final: revancha desde 0:00 (fase %u); el marcador nativo NO se reinicia todavía", fa);
             } else {
                 uint32_t fa = g_faseAntesDescanso; memcpy(job + 0x2790, &fa, 4); g_relojPausa = 0;   // 0.4.82: se restaura la fase
                 if (g_descansoBase45 && g_baseReloj) { g_baseReloj(job + 0x2790, 162000.0f); float z0 = 0.0f; memcpy(job + 0x279C, &z0, 4); logf("[DESCANSO] 2.º tiempo en fase %u con base del reloj 45:00 (sin tocar la fase)", fa); }   // 0.4.90: alternativa segura a la fase 3
@@ -2870,6 +2908,8 @@ std::vector<Feature> g_funciones = {   // orden = orden de arranque (gol_nativo_
     { "jugadores_sonda", "Sonda de solo lectura de las posiciones de los 22 jugadores en el entrenamiento", jugSondaInstalar, jugSondaQuitar },
     { "malla_red_free", "La pelota en la red deforma la tela del arco (golpes GoalNet_Hit al paso de la pelota)", mallaInstalar, mallaQuitar },
     { "muros_core", "Muros lógicos del Core en el paso de la pelota (rebote contra la línea de la cancha chica)", murosInstalar, murosQuitar },
+    { "arco_chico_free", "Arco más chico (3v3): postes y larguero lógicos del Core; ancho y alto en el json (arco_chico_ancho/alto)", arcoChicoInstalar, arcoChicoQuitar },
+    { "goles_sonda", "Solo log: punteros reales de los contadores de goles (gancho en FUN_1408C9E90+9) para la revancha 0-0", golesSondaInstalar, golesSondaQuitar },
     { "red_frena_free", "La red de los arcos frena la pelota en el entrenamiento (gancho al paso de la pelota)", redInstalar, redQuitar },
     { "sin_saques_free", "Sin saques de banda/esquina/puerta en el entrenamiento: solo el gol reinicia (parches de 1 byte en el Juez)", sinSaquesInstalar, sinSaquesQuitar },
     { "arquero_propio_free", "El portero participa siempre en el entrenamiento, con cualquier número de jugadores y sin fijar el cursor", arqueroInstalar, arqueroQuitar },
@@ -2983,6 +3023,8 @@ void leerConfig() {
     if (valorDe("jugadores_chica_modo", v)) g_jugChModo = atoi(v.c_str());
     if (valorDe("muro_rebote", v)) { g_muroRebote = (float)atof(v.c_str()); if (g_muroRebote < 0.0f || g_muroRebote > 1.0f) g_muroRebote = 0.6f; }
     if (valorDe("muro_friccion", v)) { g_muroFric = (float)atof(v.c_str()); if (g_muroFric < 0.0f || g_muroFric > 1.0f) g_muroFric = 0.92f; }
+    if (valorDe("arco_chico_ancho", v)) { g_arcoAncho = (float)atof(v.c_str()); if (g_arcoAncho < 1.5f || g_arcoAncho > 7.32f) g_arcoAncho = 4.0f; }
+    if (valorDe("arco_chico_alto", v)) { g_arcoAlto = (float)atof(v.c_str()); if (g_arcoAlto < 1.0f || g_arcoAlto > 2.44f) g_arcoAlto = 2.0f; }
     if (valorDe("muro_x", v)) g_muroX = atof(v.c_str());
     if (valorDe("muro_z", v)) g_muroZ = atof(v.c_str());
     if (valorDe("arquero_salida_max", v)) { g_arqSalidaMax = (float)atof(v.c_str()); if (g_arqSalidaMax < 1.0f || g_arqSalidaMax > 12.0f) g_arqSalidaMax = 3.5f; }
@@ -3007,6 +3049,9 @@ void leerConfig() {
     if (valorDe("velocidad_partido", v)) { int q = atoi(v.c_str()); g_velocidadPartido = (q >= 0 && q <= 4) ? q : -1; }
     if (valorDe("final_nativo", v)) g_finalNativo = (v == "true");
     if (valorDe("anadido_min", v)) { double m = atof(v.c_str()); if (m >= 0.0 && m <= 10.0) g_anadidoSeg = m * 3600.0; }
+    if (valorDe("muro_fondo_rebote", v)) { g_muroFondoRebote = (float)atof(v.c_str()); if (g_muroFondoRebote < 0.0f || g_muroFondoRebote > 0.95f) g_muroFondoRebote = -1.0f; }
+    if (valorDe("muro_lat_friccion", v)) { g_muroLatFric = (float)atof(v.c_str()); if (g_muroLatFric < 0.0f || g_muroLatFric > 1.0f) g_muroLatFric = -1.0f; }
+    if (valorDe("muro_lat_empuje", v)) { g_muroLatEmpuje = (float)atof(v.c_str()); if (g_muroLatEmpuje < 0.0f || g_muroLatEmpuje > 0.3f) g_muroLatEmpuje = 0.0f; }
     if (valorDe("rebote_k", v)) { g_muroRebote = (float)atof(v.c_str()); if (g_muroRebote < 0.3f || g_muroRebote > 0.95f) g_muroRebote = 0.75f; }   // 0.4.91: alias de muro_rebote
     if (valorDe("season_forzada", v)) g_seasonCore = atoi(v.c_str());
     if (valorDe("cursor_bloqueo_pt", v)) g_cursorBloqueoCfg = (v == "true");
@@ -3071,7 +3116,7 @@ static void procesarOrdenes() {
         if (claveEn(id.c_str(), prohibidas)) { logf("[PANEL] %s: clave congelada del portero, orden ignorada", id.c_str()); continue; }
         bool esBool = (v == "1" || v == "0" || v == "true" || v == "false"); bool on = (v == "1" || v == "true");
         {   // parámetros numéricos EN VIVO (se releen al instante: son las variables que usan los ganchos) y se guardan en el json
-            struct Num { const char* id; float* var; float lo, hi; }; static const Num nums[] = { { "tiro_potencia_k", &g_tiroPot, 0.5f, 2.0f }, { "tiro_altura_k", &g_tiroAlt, 0.2f, 1.5f }, { "pase_vel_k", &g_paseVel, 0.8f, 2.0f }, { "pase_correccion", &g_paseCorr, 0.0f, 1.0f }, { "pase_cono_grados", &g_paseCono, 5.0f, 60.0f }, { "muro_rebote", &g_muroRebote, 0.3f, 0.95f }, { "muro_friccion", &g_muroFric, 0.0f, 1.0f } };
+            struct Num { const char* id; float* var; float lo, hi; }; static const Num nums[] = { { "tiro_potencia_k", &g_tiroPot, 0.5f, 2.0f }, { "tiro_altura_k", &g_tiroAlt, 0.2f, 1.5f }, { "pase_vel_k", &g_paseVel, 0.8f, 2.0f }, { "pase_correccion", &g_paseCorr, 0.0f, 1.0f }, { "pase_cono_grados", &g_paseCono, 5.0f, 60.0f }, { "muro_rebote", &g_muroRebote, 0.3f, 0.95f }, { "muro_fondo_rebote", &g_muroFondoRebote, 0.0f, 0.95f }, { "muro_lat_friccion", &g_muroLatFric, 0.0f, 1.0f }, { "arco_chico_ancho", &g_arcoAncho, 1.5f, 7.32f }, { "arco_chico_alto", &g_arcoAlto, 1.0f, 2.44f }, { "muro_lat_empuje", &g_muroLatEmpuje, 0.0f, 0.3f }, { "muro_friccion", &g_muroFric, 0.0f, 1.0f } };
             bool hecho = false; for (const Num& n : nums) if (id == n.id) { float x = (float)atof(v.c_str()); if (x >= n.lo && x <= n.hi) { *n.var = x; persistirClaveJson(id, v); logf("[PANEL] %s = %.3f (en vivo)", n.id, x); } else logf("[PANEL] %s=%s fuera de rango [%.2f, %.2f]: ignorado", n.id, v.c_str(), n.lo, n.hi); hecho = true; break; }
             if (hecho) continue;
         }
