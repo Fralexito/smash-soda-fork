@@ -179,3 +179,4 @@ export function FichaPartidoModal({ r, alCerrar }) {
     </div>
   `;
 }
+

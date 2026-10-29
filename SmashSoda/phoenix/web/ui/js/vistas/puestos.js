@@ -20,6 +20,7 @@ import { IndicadorRetraso, retrasoDe } from "./retraso.js";
 import { MandosEnVivo } from "./mandovivo.js";
 import { leerSentado, ponerSentado } from "./sentado.js";
 import { BarraReyDeLaPista } from "./reydelapista.js";
+import { ModalAtajosModerador } from "./atajos.js";
 
 // ---- Mini-mando en vivo integrado en cada fila (Minimalismo Táctico 0.3.57) ----
 const BITS_MINI = [
@@ -365,6 +366,7 @@ export function PuestosNuevo({ m }) {
   const [arr, setArr] = useState(null);
   const [sobreMirando, setSobreMirando] = useState(false);
   const [ayudaAB, setAyudaAB] = useState(false);
+  const [verAtajos, setVerAtajos] = useState(false);
   const [prefSentado, setPrefSentado] = useState(() => leerSentado());
   // Mandos en vivo: cada fila ocupada ya muestra su pastilla en vivo (~30 Hz); la rejilla grande 2D se abre si el anfitrión la despliega
   const [verVivo, setVerVivoEstado] = useState(() => { try { return localStorage.getItem("phoenix.verVivo2D") === "1"; } catch { return false; } });
@@ -635,6 +637,9 @@ export function PuestosNuevo({ m }) {
         <${Boton} tipo="mini suave" deshabilitado=${esclavo || mirando.length === 0} al=${sentarEspectadores}
           titulo=${t("Sienta a todos los espectadores de la sala en los puestos libres disponibles", "Seats all room spectators into available free seats")}>
           ⚡ ${t("SENTAR ESPECTADORES", "SEAT SPECTATORS")}</${Boton}>
+        <${Boton} tipo="mini suave" al=${() => setVerAtajos(true)}
+          titulo=${t("Ver y consultar todos los atajos de teclado globales de moderador (Ctrl+Shift+K)", "View all moderator global hotkeys (Ctrl+Shift+K)")}>
+          ⌨ ${t("ATAJOS", "HOTKEYS")}</${Boton}>
         <${TodosAMirar} m=${m} esclavo=${esclavo}/>
       </div>
     </div>
@@ -711,6 +716,7 @@ export function PuestosNuevo({ m }) {
     </div>` : null}
     <${OrdenPes} m=${m}/>
     ${eligiendo != null ? html`<${ElegirJugador} m=${m} indice=${eligiendo} alCerrar=${() => setEligiendo(null)}/>` : null}
+    ${verAtajos ? html`<${ModalAtajosModerador} alCerrar=${() => setVerAtajos(false)}/>` : null}
   </div>`;
 }
 

@@ -28,6 +28,7 @@ import { Bienvenida } from "./vistas/bienvenida.js";
 import { VistaInicio, PESTANAS_INICIO } from "./vistas/inicio.js";
 import { vigilarSentado } from "./vistas/sentado.js";
 import { QueHago } from "./vistas/quehago.js";
+import { useMatrizAtajosModerador, ModalAtajosModerador } from "./vistas/atajos.js";
 
 const SECCIONES = [
   { id: "inicio", es: "INICIO", en: "HOME", vista: VistaInicio, pestanas: PESTANAS_INICIO },   // plan UX: delante de todo, sin quitar nada
@@ -109,7 +110,7 @@ export function useEscudoStreamer() {
   return [activo, () => setActivo((a) => !a)];
 }
 
-function Barra({ s }) {
+function Barra({ s, alAbrirAtajos }) {
   const m = s.motor;
   const [escudo, alternarEscudo] = useEscudoStreamer();
   const tema = m?.app?.tema === "sudario" ? "sudario" : "galaxy";
@@ -128,6 +129,9 @@ function Barra({ s }) {
       <${GrupoEstado} m=${m} w=${w} enSync=${s.seccion === "sync" || estaCedida(s)}/>
       <button class=${cx("pill", escudo && "acc")} onClick=${alternarEscudo} title=${t("Escudo Streamer: oculta IPs y enlaces en directos (Ctrl+Shift+S)", "Streamer Shield: hides IPs and links in streams (Ctrl+Shift+S)")}>
         <${Icono} n="candado" t=${14}/><span>${escudo ? t("STREAMER ON", "STREAMER ON") : t("STREAMER", "STREAMER")}</span>
+      </button>
+      <button class="pill atajo" onClick=${alAbrirAtajos} title=${t("Atajos de moderador (Ctrl+Shift+K)", "Moderator hotkeys (Ctrl+Shift+K)")}>
+        <${Icono} n="teclado" t=${15}/><kbd>Ctrl Shift</kbd>
       </button>
       <button class=${cx("pill", s.chatAbierto && "acc")} onClick=${() => alternarChat()} title="Chat (Ctrl+Espacio)">
         <${Icono} n="chat" t=${15}/>CHAT${totalNoLeidos(s) > 0 ? html`<span class="chip bad" style="height:20px">${totalNoLeidos(s) > 99 ? "99+" : totalNoLeidos(s)}</span>` : null}
@@ -263,6 +267,7 @@ function Dialogo({ d }) {
 // ---- Raíz ------------------------------------------------------------------------
 function App() {
   const s = useTienda();
+  const { modalAtajos, setModalAtajos } = useMatrizAtajosModerador(s);
   const m = s.motor;
   const tema = m?.app?.tema === "sudario" ? "sudario" : "galaxy";
   useEffect(() => { document.documentElement.dataset.tema = tema; }, [tema]);
@@ -298,7 +303,7 @@ function App() {
   return html`
     <div class="fondo"></div>
     <div class=${cx("app", s.chatAbierto && "chat-abierto")}>
-      <${Barra} s=${s}/>
+      <${Barra} s=${s} alAbrirAtajos=${() => setModalAtajos(true)}/>
       <${Menu} s=${s}/>
       <${Contenido} s=${s}/>
       <${PanelChat} s=${s}/>
@@ -309,6 +314,7 @@ function App() {
     ${s.paleta && !cedida ? html`<${Paleta} s=${s}/>` : null}
     <${Bienvenida} s=${s}/>
     <${Tutorial} s=${s}/>
+    ${modalAtajos ? html`<${ModalAtajosModerador} alCerrar=${() => setModalAtajos(false)}/>` : null}
     <div class=${cx("carga", s.conectado && "fuera")} aria-hidden=${s.conectado}>
       <${Logo} t=${64}/><div class="nombre">PHOENIX LINK</div><div class="giro"></div>
     </div>`;
