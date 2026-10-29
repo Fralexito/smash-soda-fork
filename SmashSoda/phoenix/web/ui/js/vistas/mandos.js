@@ -53,26 +53,51 @@ export function Pendientes({ m }) {
   const sol = m.solicitudes || [];
   const esp = m.espera || [];
   if (!sol.length && !esp.length) return null;
-  return html`<div class="col" style="gap:10px">
-    ${esp.map((x) => html`<div class="caja" key=${"e" + x.parsecId} style="border-color:var(--warn);display:flex;align-items:center;gap:14px;flex-wrap:wrap">
-      <${Avatar} nombre=${x.nombre} id=${x.parsecId} t=${36}/>
-      <div style="flex:1;min-width:200px"><b>${x.nombre}</b> <span class="mono mut">#${x.parsecId}</span>
-        <div class="ayuda">${t("Entró por Parsec y no está en la lista de la web. ¿Qué hace?", "Joined via Parsec, not on the web list. What now?")}
-        ${x.ping >= 0 ? html` · <span style=${`color:${colorPing(x.ping)}`}>${x.ping} ms</span>` : null}</div></div>
-      <${Boton} tipo="ok mini" al=${() => accion("espera.decidir", { parsecId: x.parsecId, como: "jugador" })}>${t("JUEGA", "PLAYS")}</${Boton}>
-      <${Boton} tipo="mini" al=${() => accion("espera.decidir", { parsecId: x.parsecId, como: "espectador" })}>${t("MIRA", "WATCHES")}</${Boton}>
-      <${Boton} tipo="peligro mini" al=${() => accion("espera.decidir", { parsecId: x.parsecId, como: "expulsar" })}>${t("EXPULSAR", "KICK")}</${Boton}>
-    </div>`)}
-    ${sol.map((x) => html`<div class="caja" key=${"s" + x.parsecId} style="border-color:var(--acc);display:flex;align-items:center;gap:14px;flex-wrap:wrap">
-      <${Avatar} nombre=${x.nombre} id=${x.parsecId} t=${36}/>
-      ${x.mando < 0
-        ? html`<div style="flex:1;min-width:200px"><b>${x.nombre}</b> ${t("quiere jugar", "wants to play")}
-            <div class="ayuda">${t("Pulsó su mando estando en «Mirando». Si aceptas, toma el primer puesto libre. (Con el sentado automático se sienta solo; con «solo mis amigos», solo tus amigos.)", "Pressed their pad while watching. If you accept, they take the first free seat. (With auto-seat they sit by themselves; with «only my friends», only your friends do.)")}</div></div>`
-        : html`<div style="flex:1;min-width:200px"><b>${x.nombre}</b> ${x.mando === 0 ? t("quiere cambiar de equipo", "wants to switch teams") : html`${t("pide el mando", "asks for pad")} <b class="acc">${dos(x.mando)}</b>`}
-            <div class="ayuda">${t("Lo pidió con !cambio o !equipo en el chat.", "Requested with !cambio or !equipo.")}</div></div>`}
-      <${Boton} tipo="ok mini" al=${() => accion("solicitud.aceptar", { parsecId: x.parsecId })}>${t("ACEPTAR", "ACCEPT")}</${Boton}>
-      <${Boton} tipo="peligro mini" al=${() => accion("solicitud.rechazar", { parsecId: x.parsecId })}>${t("RECHAZAR", "DECLINE")}</${Boton}>
-    </div>`)}
+  const [desplegado, setDesplegado] = useState(false);
+
+  const total = sol.length + esp.length;
+
+  const aceptarTodos = async () => {
+    for (const x of sol) await accion("solicitud.aceptar", { parsecId: x.parsecId }, { silencioso: true });
+    for (const x of esp) await accion("espera.decidir", { parsecId: x.parsecId, como: "jugador" }, { silencioso: true });
+  };
+
+  return html`<div class="col" style="gap:8px">
+    <div class="caja" style="padding:10px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-color:rgba(255,181,71,.5);background:linear-gradient(90deg, rgba(255,181,71,.12), rgba(11,16,42,.6) 70%);border-radius:12px">
+      <div style="display:flex;align-items:center;gap:12px;min-width:0;flex-wrap:wrap">
+        <span class="punto warn vivo"></span>
+        <span class="disp" style="font-weight:700;font-size:12.5px;letter-spacing:.14em;color:var(--warn)">${t("COLA DE ESPERA", "WAITING QUEUE")} · ${total} ${total === 1 ? t("QUIERE JUGAR", "WANTS TO PLAY") : t("QUIEREN JUGAR", "WANT TO PLAY")}:</span>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+          ${esp.map((x) => html`<span key=${"e" + x.parsecId} class="chip bad" style="height:24px;font-size:11px;cursor:pointer" title=${t("Entró por Parsec sin cuenta. Clic para dar puesto", "Joined via Parsec without account")} onClick=${() => accion("espera.decidir", { parsecId: x.parsecId, como: "jugador" })}>${x.nombre} ⚡</span>`)}
+          ${sol.map((x) => html`<span key=${"s" + x.parsecId} class=${cx("chip", x.mando < 0 ? "vip" : "acc")} style="height:24px;font-size:11px;cursor:pointer" title=${x.mando < 0 ? t("Pulsó mando en Mirando: clic para sentar", "Pressed pad: click to seat") : t(`Pide mando ${dos(x.mando)}: clic para aceptar`, `Asks pad ${dos(x.mando)}`)} onClick=${() => accion("solicitud.aceptar", { parsecId: x.parsecId })}>${x.nombre}${x.mando > 0 ? ` (#${dos(x.mando)})` : " ✓"}</span>`)}
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex:none">
+        <${Boton} tipo="mini lleno" estilo="background:var(--warn);color:#080b18;border-color:transparent" al=${aceptarTodos}>⚡ ${t("SENTAR A TODOS", "SEAT ALL")}</${Boton}>
+        <${Boton} tipo="mini suave" al=${() => setDesplegado(!desplegado)}>${desplegado ? t("▴ PLEGAR", "▴ HIDE") : t("▾ GESTIONAR", "▾ MANAGE")}</${Boton}>
+      </div>
+    </div>
+    ${desplegado ? html`<div class="col" style="gap:8px">
+      ${esp.map((x) => html`<div class="caja" key=${"ed" + x.parsecId} style="border-color:var(--warn);display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+        <${Avatar} nombre=${x.nombre} id=${x.parsecId} t=${36}/>
+        <div style="flex:1;min-width:200px"><b>${x.nombre}</b> <span class="mono mut">#${x.parsecId}</span>
+          <div class="ayuda">${t("Entró por Parsec y no está en la lista de la web. ¿Qué hace?", "Joined via Parsec, not on the web list. What now?")}
+          ${x.ping >= 0 ? html` · <span style=${`color:${colorPing(x.ping)}`}>${x.ping} ms</span>` : null}</div></div>
+        <${Boton} tipo="ok mini" al=${() => accion("espera.decidir", { parsecId: x.parsecId, como: "jugador" })}>${t("JUEGA", "PLAYS")}</${Boton}>
+        <${Boton} tipo="mini" al=${() => accion("espera.decidir", { parsecId: x.parsecId, como: "espectador" })}>${t("MIRA", "WATCHES")}</${Boton}>
+        <${Boton} tipo="peligro mini" al=${() => accion("espera.decidir", { parsecId: x.parsecId, como: "expulsar" })}>${t("EXPULSAR", "KICK")}</${Boton}>
+      </div>`)}
+      ${sol.map((x) => html`<div class="caja" key=${"sd" + x.parsecId} style="border-color:var(--acc);display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+        <${Avatar} nombre=${x.nombre} id=${x.parsecId} t=${36}/>
+        ${x.mando < 0
+          ? html`<div style="flex:1;min-width:200px"><b>${x.nombre}</b> ${t("quiere jugar", "wants to play")}
+              <div class="ayuda">${t("Pulsó su mando estando en «Mirando». Si aceptas, toma el primer puesto libre.", "Pressed their pad while watching.")}</div></div>`
+          : html`<div style="flex:1;min-width:200px"><b>${x.nombre}</b> ${x.mando === 0 ? t("quiere cambiar de equipo", "wants to switch teams") : html`${t("pide el mando", "asks for pad")} <b class="acc">${dos(x.mando)}</b>`}
+              <div class="ayuda">${t("Lo pidió con !cambio o !equipo en el chat.", "Requested with !cambio or !equipo.")}</div></div>`}
+        <${Boton} tipo="ok mini" al=${() => accion("solicitud.aceptar", { parsecId: x.parsecId })}>${t("ACEPTAR", "ACCEPT")}</${Boton}>
+        <${Boton} tipo="peligro mini" al=${() => accion("solicitud.rechazar", { parsecId: x.parsecId })}>${t("RECHAZAR", "DECLINE")}</${Boton}>
+      </div>`)}
+    </div>` : null}
   </div>`;
 }
 
