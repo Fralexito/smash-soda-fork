@@ -11,8 +11,8 @@
 //  amigos.invitar, ui.abrir). Si la web cae, JUGAR CON UN AMIGO funciona igual.
 // =============================================================================
 import { html, useState } from "../lib.js";
-import { t } from "../i18n.js";
-import { accion, avisar, irA, leer } from "../tienda.js";
+import { t, duracion } from "../i18n.js";
+import { accion, avisar, confirmar, irA, leer } from "../tienda.js";
 import { Tarjeta, Titulo, Boton, Avatar, Chip, Icono, PanelLateral, Cifra, BarraProgreso, cx } from "../ui.js";
 import { useSemaforo, CabeceraSemaforo, comprobaciones, revisarSemaforo } from "./semaforo.js";
 import { mejorSala, unirmeASala } from "./gente.js";
@@ -68,9 +68,12 @@ export function VistaInicio({ s }) {
   const semOk = semLista.filter((x) => x.nivel === "ok").length;
   const [invitar, setInvitar] = useState(false);
   const [ocupado, setOcupado] = useState("");
+  const [copiado, setCopiado] = useState(false);
   const ultimo = useUltimoPartido(m);
   if (!m || !m.sala) return null;
   const sala = m.sala;
+  const partido = m.partido;
+  const enPartido = !!(partido && partido.fase && partido.fase !== "libre");
 
   const conAmigo = async () => {
     setOcupado("amigo");
@@ -99,40 +102,157 @@ export function VistaInicio({ s }) {
     } finally { setOcupado(""); }
   };
 
+  const copiarEnlace = async () => {
+    if (!sala.enlace) return;
+    await accion("sala.copiarEnlace", {}, { silencioso: true });
+    setCopiado(true);
+    avisar(t("Enlace copiado al portapapeles: pégalo en WhatsApp o Discord.", "Link copied to clipboard: paste it in WhatsApp or Discord."), "ok");
+    setTimeout(() => setCopiado(false), 2500);
+  };
+
+  const cerrarSala = async () => {
+    if (!(await confirmar({
+      titulo: t("¿Cerrar la sala?", "Close room?"),
+      texto: t("Se desconectará a los invitados que estén en la sala.", "Guests in the room will be disconnected."),
+      si: t("Cerrar sala", "Close room"),
+      peligro: true,
+    }))) return;
+    await accion("sala.cerrar", {});
+    avisar(t("Sala cerrada.", "Room closed."));
+  };
+
+  const listaMandos = m.mandos?.lista || [];
+  const ocupados = listaMandos.filter((p) => p.ocupado);
   const amigos = (m.amigos?.lista || []);
   const conectados = amigos.filter((x) => x.estado && x.estado !== "desconectado");
   const salas = (m.salasAbiertas?.lista || []).filter((x) => !x.soyHost && x.enlace && x.plazasLibres > 0);
   const mejor = mejorSala(m);
   const buscando = sala.abierta && sala.phoenix?.visibilidad === "publica";
+  const vis = sala.phoenix?.visibilidad === "publica" ? t("PÚBLICA", "PUBLIC") : sala.phoenix?.visibilidad === "privada" ? t("PRIVADA", "PRIVATE") : t("AMIGOS", "FRIENDS");
 
   return html`<div class="col inicio">
-    <${Tarjeta} clase="heroe" interior="padding:26px 30px;display:flex;flex-direction:column;gap:18px">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap">
-        <div style="min-width:0;flex:1 1 320px">
-          <div class="lab acc">${t("PHOENIX", "PHOENIX")}</div>
-          <div class="grande degradado" style="margin-top:10px;font-size:46px">${sala.abierta ? t("Tu sala está abierta", "Your room is open") : t("¿A qué jugamos hoy?", "What are we playing today?")}</div>
+    ${enPartido ? html`
+      <${Tarjeta} clase="heroe" vivo=${partido.fase === "en_juego"} interior="padding:24px 28px;display:flex;flex-direction:column;gap:16px">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span class=${cx("chip", partido.fase === "en_juego" ? "acc" : "vip")}>
+              ${partido.fase === "en_juego" ? html`<span class="punto ok vivo"></span>` : null}
+              ${partido.fase === "en_juego" ? t("EN JUEGO EN PES", "LIVE IN PES") : partido.fase === "pausado" ? t("PAUSADO", "PAUSED") : t("FINALIZADO", "FINISHED")}
+            </span>
+            <span class="mono" style="font-size:14px;font-weight:700;color:var(--acc)">⏱ ${partido.reloj?.texto || (partido.segundos ? duracion(partido.segundos) : "00:00")}</span>
+          </div>
+          <div style="display:flex;gap:8px">
+            <${Boton} tipo="mini suave" al=${() => irA("partido", "vivo")}><${Icono} n="partido" t=${14}/>${t("VER EN VIVO", "WATCH LIVE")}</${Boton}>
+            <${Boton} tipo="mini suave" al=${() => irA("mandos", "puestos")}><${Icono} n="mandos" t=${14}/>${t("PUESTOS", "SEATS")}</${Boton}>
+          </div>
         </div>
-        <div class="caja" style="flex:0 1 380px;min-width:260px;padding:12px 16px">
-          <${CabeceraSemaforo} resumen=${resumen} derecha=${html`<${Boton} tipo="mini suave" al=${() => irA("sala", "red")}>${t("VER DETALLES", "SEE DETAILS")}</${Boton}>`}/>
-          <${BarraProgreso} hechos=${semOk} total=${semLista.length} tono=${resumen.color} texto=${t(`${semOk} de ${semLista.length}`, `${semOk} of ${semLista.length}`)}/>
-          ${resumen.faltan[0] || resumen.avisos[0] ? html`<div class="ayuda" style="margin-top:6px">${(resumen.faltan[0] || resumen.avisos[0]).titulo}: ${(resumen.faltan[0] || resumen.avisos[0]).frase}</div>` : null}
+
+        <div style="display:flex;align-items:center;justify-content:space-around;padding:16px 20px;background:rgba(0,0,0,.35);border-radius:14px;border:1px solid rgba(255,255,255,.08);flex-wrap:wrap;gap:16px">
+          <div style="text-align:right;flex:1;min-width:140px">
+            <div class="disp" style="font-weight:700;font-size:22px;color:var(--acc)">${(partido.a || partido.ladoA || {}).nombre || t("EQUIPO A", "TEAM A")}</div>
+            <div class="mono mut" style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${((partido.a || partido.ladoA || {}).jugadores || []).map((j) => j.nombre || j.jugador).filter(Boolean).join(", ") || t("Sin asignar", "Unassigned")}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:16px;padding:0 18px">
+            <span class="disp" style="font-size:46px;font-weight:900;line-height:1;color:#fff">${(partido.a || partido.ladoA || {}).goles ?? 0}</span>
+            <span class="disp mut" style="font-size:24px;font-weight:700">:</span>
+            <span class="disp" style="font-size:46px;font-weight:900;line-height:1;color:#fff">${(partido.b || partido.ladoB || {}).goles ?? 0}</span>
+          </div>
+          <div style="text-align:left;flex:1;min-width:140px">
+            <div class="disp" style="font-weight:700;font-size:22px;color:var(--eq-b)">${(partido.b || partido.ladoB || {}).nombre || t("EQUIPO B", "TEAM B")}</div>
+            <div class="mono mut" style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${((partido.b || partido.ladoB || {}).jugadores || []).map((j) => j.nombre || j.jugador).filter(Boolean).join(", ") || t("Sin asignar", "Unassigned")}</div>
+          </div>
         </div>
-      </div>
-      <div class="inicio-botones">
-        <button class=${cx("inicio-boton", "principal", ocupado === "amigo" && "ocupado")} disabled=${!!ocupado} onClick=${conAmigo}>
-          <span class="ib-icono"><${Icono} n="gente" t=${34}/></span>
-          <span class="ib-texto"><span class="ib-t">${t("JUGAR CON UN AMIGO", "PLAY WITH A FRIEND")}</span>
-            <span class="ib-d">${ocupado === "amigo" ? t("Abriendo tu sala…", "Opening your room…") : sala.abierta ? t("Copia el enlace e invita a tus amigos.", "Copy the link and invite your friends.") : t("Abre tu sala, copia el enlace e invita.", "Opens your room, copies the link and invites.")}</span></span>
-        </button>
-        <button class=${cx("inicio-boton", ocupado === "rival" && "ocupado")} disabled=${!!ocupado} onClick=${buscarRival}>
-          <span class="ib-icono"><${Icono} n="trofeo" t=${34}/></span>
-          <span class="ib-texto"><span class="ib-t">${buscando ? t("BUSCANDO RIVAL…", "LOOKING FOR A RIVAL…") : t("BUSCAR RIVAL", "FIND A RIVAL")}</span>
-            <span class="ib-d">${ocupado === "rival" ? t("Abriendo tu sala pública…", "Opening your public room…") : buscando ? t("Tu sala pública está en el radar de la web.", "Your public room is on the website radar.") : t("Abre una sala pública en el radar de la web.", "Opens a public room on the website radar.")}</span></span>
-        </button>
-      </div>
-      ${sala.abierta ? html`<${FranjaSala} m=${m} abrirInvitar=${() => setInvitar(true)}/>` : null}
-      ${ultimo ? html`<${TarjetaResultado} m=${m} r=${ultimo} compacto/>` : null}
-    </${Tarjeta}>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+          <span class="ayuda">${t("Partido en curso en PES. El marcador y las posiciones se actualizan en tiempo real.", "Match in progress in PES. Score and positions update in real time.")}</span>
+          <${Boton} tipo="lleno" al=${() => irA("partido", "vivo")}><${Icono} n="partido" t=${16}/>${t("IR AL CAMPO 2D Y MARCADOR", "GO TO SCORE & 2D PITCH")}</${Boton}>
+        </div>
+      </${Tarjeta}>
+    ` : sala.abierta ? html`
+      <${Tarjeta} clase="heroe" vivo=${true} interior="padding:24px 28px;display:flex;flex-direction:column;gap:16px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap">
+          <div style="min-width:0;flex:1 1 320px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span class="punto ok vivo"></span>
+              <span class="lab acc" style="margin:0">${t("SALA EN VIVO", "LIVE ROOM")} · ${vis}</span>
+            </div>
+            <div class="grande degradado" style="margin-top:8px;font-size:38px">${t("Tu sala está lista para jugar", "Your room is ready to play")}</div>
+          </div>
+          <div class="caja" style="flex:0 1 340px;min-width:240px;padding:10px 14px;display:flex;flex-direction:column;gap:6px">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <span class="mono mut" style="font-size:11px">${t("ESTADO DE SALA", "ROOM STATUS")}</span>
+              <span class="chip ok" style="height:18px;font-size:10px">${t("ABIERTA", "OPEN")}</span>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;font-size:12px">
+              <span class="mut">${t("Invitados:", "Guests:")}</span>
+              <b>${sala.invitados ?? 0} ${t("en sala", "in room")}</b>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;font-size:12px">
+              <span class="mut">${t("Mandos ocupados:", "Occupied pads:")}</span>
+              <b>${ocupados.length} / ${(m.mandos?.puestosMax ?? 8)}</b>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:rgba(0,0,0,.35);border-radius:12px;border:1px solid rgba(255,255,255,.1);flex-wrap:wrap">
+          <span class="mono mut" style="font-size:12px;flex:none">${t("ENLACE DE LA SALA:", "ROOM LINK:")}</span>
+          <div class="campo mono" style="flex:1;min-width:220px;height:38px;display:flex;align-items:center;padding:0 12px;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;user-select:all">
+            ${sala.enlace || t("Generando enlace…", "Generating link…")}
+          </div>
+          <${Boton} tipo="lleno" deshabilitado=${!sala.enlace} al=${copiarEnlace} title=${t("Copia el enlace para compartirlo por Discord o WhatsApp", "Copy link to share on Discord or WhatsApp")}>
+            <${Icono} n="copiar" t=${14}/>${copiado ? t("✓ ¡COPIADO!", "✓ COPIED!") : t("COPIAR ENLACE", "COPY LINK")}
+          </${Boton}>
+          <${Boton} tipo="suave" al=${() => setInvitar(true)}>
+            <${Icono} n="enviar" t=${14}/>${t("INVITAR A…", "INVITE…")}
+          </${Boton}>
+        </div>
+
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <${Boton} tipo="mini suave" al=${() => irA("mandos", "puestos")}>
+              <${Icono} n="mandos" t=${14}/>${t("CONFIGURAR PUESTOS", "MANAGE SEATS")}
+            </${Boton}>
+            <${Boton} tipo="mini suave" al=${() => irA("sala", "resumen")}>
+              <${Icono} n="sala" t=${14}/>${t("PANEL DE SALA", "ROOM DASHBOARD")}
+            </${Boton}>
+            <${Boton} tipo="mini suave" al=${() => irA("sala", "red")}>
+              ${t("RED Y CALIDAD", "NETWORK & QUALITY")}
+            </${Boton}>
+          </div>
+          <${Boton} tipo="mini peligro" al=${cerrarSala}>
+            ${t("CERRAR SALA", "CLOSE ROOM")}
+          </${Boton}>
+        </div>
+      </${Tarjeta}>
+    ` : html`
+      <${Tarjeta} clase="heroe" interior="padding:26px 30px;display:flex;flex-direction:column;gap:18px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap">
+          <div style="min-width:0;flex:1 1 320px">
+            <div class="lab acc">${t("PHOENIX", "PHOENIX")}</div>
+            <div class="grande degradado" style="margin-top:10px;font-size:46px">${t("¿A qué jugamos hoy?", "What are we playing today?")}</div>
+          </div>
+          <div class="caja" style="flex:0 1 380px;min-width:260px;padding:12px 16px">
+            <${CabeceraSemaforo} resumen=${resumen} derecha=${html`<${Boton} tipo="mini suave" al=${() => irA("sala", "red")}>${t("VER DETALLES", "SEE DETAILS")}</${Boton}>`}/>
+            <${BarraProgreso} hechos=${semOk} total=${semLista.length} tono=${resumen.color} texto=${t(`${semOk} de ${semLista.length}`, `${semOk} of ${semLista.length}`)}/>
+            ${resumen.faltan[0] || resumen.avisos[0] ? html`<div class="ayuda" style="margin-top:6px">${(resumen.faltan[0] || resumen.avisos[0]).titulo}: ${(resumen.faltan[0] || resumen.avisos[0]).frase}</div>` : null}
+          </div>
+        </div>
+        <div class="inicio-botones">
+          <button class=${cx("inicio-boton", "principal", ocupado === "amigo" && "ocupado")} disabled=${!!ocupado} onClick=${conAmigo}>
+            <span class="ib-icono"><${Icono} n="gente" t=${34}/></span>
+            <span class="ib-texto"><span class="ib-t">${t("JUGAR CON UN AMIGO", "PLAY WITH A FRIEND")}</span>
+              <span class="ib-d">${ocupado === "amigo" ? t("Abriendo tu sala…", "Opening your room…") : t("Abre tu sala, copia el enlace e invita.", "Opens your room, copies the link and invites.")}</span></span>
+          </button>
+          <button class=${cx("inicio-boton", ocupado === "rival" && "ocupado")} disabled=${!!ocupado} onClick=${buscarRival}>
+            <span class="ib-icono"><${Icono} n="trofeo" t=${34}/></span>
+            <span class="ib-texto"><span class="ib-t">${buscando ? t("BUSCANDO RIVAL…", "LOOKING FOR A RIVAL…") : t("BUSCAR RIVAL", "FIND A RIVAL")}</span>
+              <span class="ib-d">${ocupado === "rival" ? t("Abriendo tu sala pública…", "Opening your public room…") : buscando ? t("Tu sala pública está en el radar de la web.", "Your public room is on the website radar.") : t("Abre una sala pública en el radar de la web.", "Opens a public room on the website radar.")}</span></span>
+          </button>
+        </div>
+      </${Tarjeta}>
+    `}
+
+    ${ultimo && !enPartido ? html`<${TarjetaResultado} m=${m} r=${ultimo} compacto/>` : null}
     <div class="rej2" style="align-items:start">
       <${Tarjeta} interior="padding:20px 24px;display:flex;flex-direction:column;gap:10px">
         <${Titulo} texto=${t("AMIGOS CONECTADOS", "FRIENDS ONLINE")} derecha=${html`<span class="disp acc" style="font-size:22px;font-weight:700"><${Cifra} valor=${conectados.length}/></span>`}/>
