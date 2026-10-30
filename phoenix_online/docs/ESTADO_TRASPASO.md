@@ -24,7 +24,7 @@
 
 ## Reglas
 - La clave NclMio (56 B) vive **solo** en `D:\Frank\IA\CLAUDE\pes-online\nclmio_key.bin`. Nunca va en el chat, los documentos ni los repos.
-- Sala limpia: este trabajo **no** lee archivos de PESBUL; solo la especificación cap_72 §11, el exe y Nikow5 (MIT).
+- Sala limpia RETIRADA por Frank (30-oct): se puede leer PESBUL para entenderlo, pero sin copiar sus archivos ni su código propietario.
 - Al terminar una prueba, restaurar hosts con `RESTAURAR_HOSTS.ps1` (como administrador). **A las 19:50 del 29-oct seguían puestas las 5 líneas**: confirmar con Frank.
 - Configuración que funciona: `blowfish_le: false`. GET_SVRLIST devuelve ACCOUNT y MENU. Los campos de nación y de perfil van como cadena.
 
