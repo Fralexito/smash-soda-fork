@@ -1,0 +1,41 @@
+{
+  "clave_nclmio": "D:/Frank/IA/CLAUDE/pes-online/nclmio_key.bin",
+  "blowfish_le": false,
+  "ip_publica": "192.168.1.50",
+  "puerto_gate": 10000,
+  "puerto_menu": 10001,
+  "puerto_http": 5000,
+  "puertos_http": [5000, 80],
+  "puertos_stun": [5730, 3478],
+  "base_datos": "phoenix_online.db",
+  "capturas": "capturas",
+  "vinculos": "vinculos.json",
+  "abierto_a_todos": false,
+  "exigir_misma_huella": false,
+  "urls": {
+    "TOPINFO": "http://192.168.1.50:5000/topinfo",
+    "BANNER": "http://192.168.1.50:5000/banner",
+    "GET_TURN_SERVER_LIST": "http://192.168.1.50:5000/turn",
+    "GET_GAMERELAY_QUALITYCHECKLIST": "http://192.168.1.50:5000/quality",
+    "GET_GAMERELAY": "http://192.168.1.50:5000/gamerelay",
+    "EULA_PES": "http://192.168.1.50:5000/eula",
+    "AUTH_STEAM": "http://192.168.1.50:5000/auth_steam",
+    "ONLINEID": "http://192.168.1.50:5000/onlineid"
+  },
+  "archivos_http": {},
+  "versiones": {
+    "version": "0", "patch_version": "0", "dlc_version": "0", "eula_version": "0",
+    "eula_myclub_version": "0", "livedata_version": "0", "eula_privacy_policy_version": "0",
+    "eula_privacy_notice_version": "0", "eula_privacy_policy_california_version": "0"
+  },
+  "naciones": [{"nation_code": "PE", "privacy_kind": "0", "has_area": "0", "name": "Peru"}],
+  "nacion": "PE",
+  "area": "",
+  "areas_por_defecto": [{"nation_code": "PE", "area_code": "PE-LIM", "privacy_kind": "0", "name": "Lima"}],
+  "anuncios": [],
+  "lobbies": [
+    {"lobby_id": 1, "name": "Phoenix 1v1", "player_num": 0, "player_num_max": 200,
+     "gamerelay_index": 0, "lobby_type": "FREE"}
+  ],
+  "turn": null
+}
