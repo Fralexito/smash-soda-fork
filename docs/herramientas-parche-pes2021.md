@@ -307,3 +307,51 @@ Organizada por **para qué sirve**. ⭐ = clave para Phoenix o tu parche.
 | **CRI File System Tools v2.40.13** | Herramientas oficiales CPK | welovepes.com |
 | **PES 2021 NX** | PES 2021 versión móvil (Android) | github.com/Ibnuard/pes21_nx |
 | **FC 26 Live Editor (xAranaktu)** | Referencia: lo que un Live Editor completo puede hacer (fichajes, LUA API, presupuestos). Es para EA FC, no PES | github.com/xAranaktu/FC-26-Live-Editor |
+
+---
+
+## 11. Ronda 5 (30-oct-2026, noche)
+**Licencias:** MIT / zlib / GPL = se puede copiar código (GPL obliga a publicar el tuyo también). Sin licencia = solo inspirarse o usarla como apoyo, no copiar código.
+
+### ⭐⭐ Clave para Phoenix
+| Herramienta | Qué hace | Para Phoenix | Licencia | Dónde |
+|---|---|---|---|---|
+| **pesXdecrypter (4chan Cup)** | Descifra y cifra saves y EDIT de PES 2016-2021; trae librería | Base técnica para leer/escribir el EDIT | propia (ver repo) | github.com/the4chancup/pesXdecrypter |
+| **PES 2021 Utilities (srafols)** | Referencia Python para descifrar y leer archivos TED | Copiable | **MIT** | GitHub srafols |
+| **GV PES TED Editor** | Lee, descifra y edita .ted en Python, por línea de comandos | Copiable para leer equipos | basado en MIT | github.com/gabriel-valenga/gv-pes-ted-editor |
+| **Crypter (Tomato4cc)** | Descifrador/cifrador alternativo en Python, por lotes | Idea de proceso por lotes | ver repo | github.com/Tomato4cc/Crypter |
+| **Sider 7 (código fuente)** | El código de Sider | Entender cómo carga phoenix.lua | ver repo | github.com/pes-modding/sider7 |
+| **PES 2011 Online Matchmaker (idea en EvoWeb)** | Plan de app "tipo Parsec Arcade": junta 4 jugadores, elige host, abre Parsec y conecta solo; lee el marcador con memoria u OCR | **Casi Phoenix Link**: mirar ideas | — | evoweb.uk (hilo 106848) |
+| **pes-ml-sim** | Simula la Liga Máster PES 2020/2021 en Python | Idea para simular partidos sin jugar | ver repo | github.com/martha889/pes-ml-sim |
+
+### Editores y utilidades
+| Herramienta | Qué hace | Dónde |
+|---|---|---|
+| **Player Data Editor (Devil Cold52)** | Edita jugadores y equipos del EDIT (habilidades, posiciones, narración) | PES Modding |
+| **PES File Crypter v3 (Devil Cold52)** | Descifrar/cifrar EDIT y ML arrastrando | kazemario / pespatchs |
+| **Slot Creator (Devil Cold52)** | Añade slots para guardar torneos | PES Modding |
+| **sider7-linux** | Sider en Linux (Lutris / Proton) | github.com/FabianZettl/sider7-linux |
+| **hkpl-pes2021-edit-data** | Datos de edición de la liga de Hong Kong en un repo (ejemplo de liga en GitHub) | github.com/wehk-pes/hkpl-pes2021-edit-data |
+| **Extensión Chrome "Manager League Players"** | Busca jugadores libres en ligas manager usando PESDB | Chrome Web Store |
+
+### Módulos Sider base (los "servidores")
+| Módulo | Qué hace | Dónde |
+|---|---|---|
+| **CommonLib.lua** | Librería común; siempre va primero en sider.ini | Steam guía / mods |
+| **Scoreboard Server v1.4 (Zlac)** | Marcadores por competición | mods PES |
+| **Kitserver v1.12 (juce)** | Camisetas por servidor | mods PES |
+| **MenuServer / Menu Server AIO (JEMP)** | Menús por servidor | mods PES |
+| **BallServer / RefKitServer / MiniFaceServer** | Balones, árbitros, minicaras | mods PES |
+| **Derbys.lua / LogoHalftime.lua** | Derbis y logo en el descanso | mods PES |
+| **Tournament StaffServer v3.2 (Guorfan & Hawke)** | Personal de torneo por competición | PES Modding |
+| **UnlockCam.lua (juce & nesa24)** | Cámaras extra con 2+ jugadores del mismo lado | github.com/pes-modding/unlockcam |
+| **UIColors.lua** | Colores del menú | PES Modding |
+
+### Apps de liga y torneo (competencia y apoyo para la web)
+| App | Qué hace | Para Phoenix |
+|---|---|---|
+| **Torneo by Sofascore** | Gestor de torneos gratis | Comparar con CopaFácil |
+| **Competize** | Ligas, copas, grupos, playoffs, estadísticas | Ideas de formatos |
+| **Cupside** | Chat por torneo, reporte de partidos, notificaciones | Idea de reporte de resultados |
+| **Easy Tournament** | Torneos de eSports | Comparar |
+| **ML Manager Pro (Ruls)** | Objetivos de carrera y análisis | Ya listada |
