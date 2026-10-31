@@ -28,7 +28,6 @@ import { ModalVAR, lanzarRevisionVAR } from "./var.js";
 import { ModalRuletaPenitencias } from "./penitencias.js";
 import { BadgeNivelRPG } from "./rpgsala.js";
 import { ModalDraftPanYQueso } from "./draft.js";
-import { BarraModoStreet } from "./street.js";
 
 // ---- Mini-mando en vivo integrado en cada fila (Minimalismo Táctico 0.3.57) ----
 const BITS_MINI = [
@@ -677,8 +676,6 @@ export function PuestosNuevo({ m }) {
     <${BarraPartidoEnSala} m=${m}/>
 
     <${BarraReyDeLaPista} m=${m} esclavo=${esclavo}/>
-
-    <${BarraModoStreet} m=${m} esclavo=${esclavo}/>
 
     <${AlertaLaggerSala} m=${m}/>
 

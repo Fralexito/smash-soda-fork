@@ -13,7 +13,6 @@ import { ejecutarRotacionRey, obtenerConfigRey } from "./reydelapista.js";
 import { FichaPartidoModal } from "./reportepartido.js";
 import { WidgetPredicciones, resolverPrediccion } from "./predicciones.js";
 import { sonarGol, sonarSilbato, narrar } from "./locutor.js";
-import { obtenerConfigStreet } from "./street.js";
 import { sumarProgresoRPG } from "./rpgsala.js";
 import { notificarFinalPartidoDiscord } from "../servicios/discord.js";
 
@@ -242,16 +241,6 @@ function Marcador({ m }) {
     if (delta > 0) {
       setFiesta((x) => x + 1);
       sonarGol();
-      try {
-        const stCfg = obtenerConfigStreet();
-        if (stCfg.activo && stCfg.reglaGoles > 0) {
-          const golesTot = (lado === "a" ? p.a.goles : p.b.goles) + delta;
-          if (golesTot >= stCfg.reglaGoles) {
-            narrar("¡Gol decisivo callejero! ¡Terminó el partido!");
-            sonarSilbato({ largo: true });
-          }
-        }
-      } catch (e) {}
     }
     return accion("partido.gol", { lado, delta });
   };
@@ -282,14 +271,12 @@ function Marcador({ m }) {
         for (const j of idsB) sumarProgresoRPG({ nombre: j.nombre, victoria: g === "b", goles: p.b.goles, arcoCero: p.a.goles === 0 });
       } catch (e) {}
       try {
-        const stCfg = obtenerConfigStreet();
         notificarFinalPartidoDiscord({
           equipoA: p.a.nombre,
           equipoB: p.b.nombre,
           golesA: p.a.goles,
           golesB: p.b.goles,
-          ganador: g,
-          esStreet: !!stCfg.activo
+          ganador: g
         });
       } catch (e) {}
     }
