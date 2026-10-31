@@ -277,3 +277,33 @@ Organizada por **para qué sirve**. ⭐ = clave para Phoenix o tu parche.
 - **Rigged Wiki** (implyingrigged.info): tutoriales de Blender, estadios y herramientas.
 - PES Modding: etiquetas "PES 2021 Tools" y "PES 2021 Sider Modules".
 - Documentación oficial de Sider: mapote.com/doc/sider.
+
+---
+
+## 10. Ronda 4 (30-oct-2026, noche)
+
+### ⭐⭐ Las que más le sirven a Phoenix
+| Herramienta | Qué hace | Por qué importa | Dónde |
+|---|---|---|---|
+| **FL Daily Edit (gvoze32)** | Actualiza el EDIT00000000 (FL26 y PES 2021) con **fichajes reales verificados**, dorsales y capitanes; respaldo y reemplazo seguro; reportes y GitHub Actions. Licencia **MIT**. Archivado el 16-oct-2026 (ya no se actualiza, pero el código queda) | Es casi tu Mercado: escribir fichajes en el EDIT de forma segura. Podemos estudiar cómo lo hace | github.com/gvoze32/fldailyedit |
+| **FL ML Desk (gvoze32)** | App Windows para editar la Liga Máster **en curso**: fichajes con monto, sueldo y contrato | Idea de cómo editar saves de ML | github.com/gvoze32/flmldesk |
+| **CareerLab (nsfxu)** | Edita una carrera de Ser una Leyenda en curso; lee la base con un módulo Sider **solo lectura** (`DBDump.lua`) | El patrón "módulo Sider que solo lee" es justo el seguro para Phoenix | github.com/nsfxu/careerlab |
+| **TEditor Web-Tool** | Edita archivos .TED (equipos) **en el navegador**, sin instalar; arregla el flag de "datos en vivo" con un clic | Otro editor web, y toca el mismo flag de datos en vivo que usamos | teditor.app |
+| **Stat Editor v35 (JamesHoward333)** | Módulo Sider: edita stats dentro del juego; en ML cambia fichajes, préstamos y sueldos | Edición dentro del juego por Lua | pes-files |
+| **Master League FL26 (Vanic17)** | Gestor de ML con scripts para actualizar en **otra PC** y restaurar el EDIT | Mismo problema que resolvemos (varias PCs) | github.com/Vanic17/football-life-master-league |
+
+### Más herramientas
+| Herramienta | Qué hace | Dónde |
+|---|---|---|
+| **blue41 Mod Studio v0.2** | Todo en uno: Ser una Leyenda, cánticos propios, botines y guantes | PeSoccerWorld / PES Modding |
+| **EDIT Version Changer** | Cambia la versión del option file sin exportar/importar equipos | PES Modding |
+| **Kit Manager PES2021 edition** | Editor de configuraciones de camisetas | Rigged Wiki (Tools) |
+| **Stadium Server v1.40 (Zlac)** | Estadios por servidor (módulo) | welovepes.com |
+| **Stadium Checker Scanner (dhpz)** | Revisa estadios instalados | PES Modding |
+| **PES 2021 Stadium Manager** | Gestiona estadios | PES Modding |
+| **Miniface Maker / Creation Tool v1.1 (Nobody)** | Crea minicaras | PES Modding / PeSoccerWorld |
+| **Face Relinker con vista 3D (About PES)** | Cambia ID de caras viendo el 3D | PES Modding |
+| **DpFileList Generator v1.3 (Baris)** | El generador clásico de DpFileList | welovepes.com |
+| **CRI File System Tools v2.40.13** | Herramientas oficiales CPK | welovepes.com |
+| **PES 2021 NX** | PES 2021 versión móvil (Android) | github.com/Ibnuard/pes21_nx |
+| **FC 26 Live Editor (xAranaktu)** | Referencia: lo que un Live Editor completo puede hacer (fichajes, LUA API, presupuestos). Es para EA FC, no PES | github.com/xAranaktu/FC-26-Live-Editor |
