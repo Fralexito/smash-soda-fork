@@ -174,3 +174,106 @@ Regla: probar todo en una COPIA del juego. Nada de esto se instala sin aprobar.
 | **spfl26-pes2021-linux** | Jugar FL26 en Linux / Steam Deck | github.com/agentkyo/spfl26-pes2021-linux |
 | **eFootball Minifaces Downloader** | Descarga minicaras con IDs originales | github.com/mohamedamrnady/eFootball-Minifaces-Downloalder |
 | **ML Manager Pro (Ruls)** | Web gratis de objetivos de carrera y análisis de jugadores | ml-manager-pro.vercel.app |
+
+---
+
+## 9. Ronda 3: la biblioteca grande (30-oct-2026, noche)
+Organizada por **para qué sirve**. ⭐ = clave para Phoenix o tu parche.
+
+### A. Archivos base del juego (abrir, empaquetar, convertir)
+| Herramienta | Qué hace | Dónde |
+|---|---|---|
+| ⭐ **Unlimited Tool Works (4chan Cup)** | Suite "todo en uno" en desarrollo: lee/escribe CPK, FPK, FTEX, DDS, uniparam, modelos y el save (descifra y reescribe byte a byte). GUI + línea de comandos | github.com/the4chancup/unlimited-tool-works |
+| ⭐ **pes-file-tools (4chan Cup)** | Librerías Python para manipular archivos de PES (alternativa DDS→FTEX) | github.com/the4chancup/pes-file-tools |
+| ⭐ **boggylp/pes** | Herramientas en Go: leer/extraer CPK, **descifrar-editar-cifrar EDIT**, sacar plantillas de Player.bin, detectar caras con ID mal, añadir slots de uniformes, descargar adjuntos de EvoWeb | github.com/boggylp/pes |
+| **CpkPatcher (mosamadeeb / MjTs)** | Parchea un CPK cambiando archivos **sin rehacerlo entero** | github.com/MjTs140914/CpkPatcher |
+| **PES CPK Tool v1.0** | Arma y extrae varios CPK arrastrando carpetas | pespatch.eu.org |
+| **CRI Packed File Maker** | El empaquetador oficial de CPK | sitios de mods PES |
+| **GzsTool** | Abre .fpk / .fpkd (paquetes del motor Fox) | GitHub (Atvaark) |
+| **FtexTool / PES 2021 Ftex Converter** | Convierte texturas .ftex ↔ .dds | GitHub / implyingrigged |
+| **Universal DpFileList Generator** | Genera el DpFileList.bin respetando el formato real de Konami | github.com/CPKProtectionToolkit/udg |
+| **PES Protection Toolkit** | Cifra y licencia tu parche (de pago) | cpkprotectiontoolkit.github.io |
+| **pes16decrypter (4chan Cup)** | Descifrador de saves PES 2016-2020 | github.com/the4chancup |
+| **PES CPK Tool Android** | Manejo de CPK desde Android | github.com/yi8438222-rgb/pes2021-CPK- |
+
+### B. Base de datos y option file
+| Herramienta | Qué hace | Dónde |
+|---|---|---|
+| ⭐ **4ccEditor** | Editor de save: estéticas, **portar equipos entre versiones de PES** | github.com/the4chancup/4ccEditor |
+| ⭐ **pes-db-generator** | Scripts para **generar una base de datos** de PES | github.com/the4chancup/pes-db-generator |
+| ⭐ **PESDatabase v0.2.1** | Convierte datos de eFootball a PES; Magic Ability Generator (stats viejos → nuevos) | PES Modding |
+| **PES 2021 Live Editor (Ruls/xAranaktu)** | Editor de memoria en tiempo real | PES Modding / GitHub xAranaktu |
+| **PES-2021-Cheat-Table (xAranaktu)** | Tabla de Cheat Engine de la comunidad | github.com/xAranaktu/PES-2021-Cheat-Table |
+| **Player Real Face Manager (Ruls)** | Gestiona caras reales | PES Modding |
+| **Face ID Relinker (Ruls)** | Cambia el ID de una carpeta de cara (edita el .fpk) | PES Modding |
+| **BAL Face Relink & BAL Editor (AlexDelPiero23)** | Editor de "Ser una Leyenda" | PES Modding / PeSoccerWorld |
+| **UltimateYearChanger 2.1 (loucopouco)** | Jugar en cualquier año (ML, BAL, Liga, Copa) | EvoWeb |
+| **ML Fast Forward v1.2** | Saltar a cualquier fecha en la Liga Máster (módulo) | EvoWeb |
+| **The Gaffer** | App de Liga Máster para FL | EvoWeb |
+| **Online Master League & UCL 36 (web)** | Liga Máster online con amigos, sin instalar | EvoWeb (competidor, ya analizado) |
+
+### C. Modelos 3D, estadios, caras (Blender)
+| Herramienta | Qué hace | Dónde |
+|---|---|---|
+| ⭐ **pes-fmdl-blender** | Importa/exporta modelos .fmdl (PES 2018+) en Blender | github.com/the4chancup/pes-fmdl-blender |
+| **pes-fmdl-blender-5.2** | Versión para Blender 4.2–5.2 | github.com/EssexDotDev/pes-fmdl-blender-5.2 |
+| ⭐ **PES Stadium Exporter (MjTs)** | Hace estadios completos en Blender: luces, público, banderas, pantallas, césped, personal | github.com/MjTs140914/PES_Stadium_Exporter |
+| **Stadium ID Changer (MjTs)** | Cambia el ID de un estadio | github.com/MjTs140914 |
+| **PES Face Hair Modifier (MjTs)** | Modifica caras y pelo | github.com/MjTs140914 |
+| **pes-model-blender** | Modelos PES 2014-2017 | github.com/the4chancup |
+| **Head Rescale Tool (Football4Life)** | Reescala cabezas | EvoWeb |
+| **Tattoo Converter v0.1** | Pasa tatuajes de brazo a torso | EvoWeb |
+| **xNormal** | Mapas de normales para texturas | xnormal.net |
+
+### D. Camisetas, fuentes, dorsales
+| Herramienta | Qué hace | Dónde |
+|---|---|---|
+| ⭐ **PES Kit Creator (PES Master)** | Diseñar camisetas en la web, plantillas de marcas | pesmaster.com |
+| **Plantillas Puma / Adidas 2026 (A.ZK)** | Plantillas para Photoshop o Kit Creator | PES Modding |
+| **KitPos (módulo)** | Mueve libremente nombres y números en la camiseta | PES Modding |
+| **Anthem Jacket Mod** | Chaquetas de himno estilo eFootball | EvoWeb |
+| **Font Server para Sider 7 (Aoba)** | Fuentes por servidor | EvoWeb |
+
+### E. Sonido y narración
+| Herramienta | Qué hace | Dónde |
+|---|---|---|
+| ⭐ **PES Sound Editor v3.1 (Devil Cold52)** | Edita sonidos del juego | EvoWeb |
+| **CRI Atom Craft** | Arma paquetes de audio (lo usan los de callnames) | CRI Middleware |
+| **CallnamesMaker + guía con IA (Dcv)** | Crea callnames de jugadores y equipos con IA | EvoWeb |
+| **English Callname Pack V12 (predator002)** | 1301 callnames en inglés | PES Modding |
+| **Narración EA FC 27 (módulo)** | Narración completa nueva | EvoWeb |
+| **Home Crowd Bronca / Random Whistle** | Silbidos y reacciones del público | PES Modding |
+| **Audacity / GoldWave / Wavosaur** | Editores de audio | gratis |
+
+### F. Jugabilidad y textos
+| Herramienta | Qué hace | Dónde |
+|---|---|---|
+| ⭐ **pes-gameplay-editor (4chan Cup)** | Edita los valores de jugabilidad en dt18 | github.com/the4chancup/pes-gameplay-editor |
+| **TBG Gameplay Parametric Editor** | Edita archivos .o de jugabilidad | PES Modding |
+| **Gameplay Editor (Football4Life)** | Editor de jugabilidad | EvoWeb |
+| ⭐ **STR Editor 2025 (Devil Cold52)** | Cambia **los textos del juego** | PES Modding |
+| **Anthem Animation Style Editor** | Estilo de animación del himno | PES Modding |
+| **Tutorial ChatGPT + exe de jugabilidad** | Analizar el exe con IA | EvoWeb |
+
+### G. Módulos Sider extra
+| Módulo | Qué hace | Dónde |
+|---|---|---|
+| ⭐ **Sider Mod Menu v1.2** | Menú moderno con mouse dentro del juego | PES Modding |
+| ⭐ **Chatty Tactics Server / Chatty Auto Lineup** | Captura el plan de juego, perfiles, alineación automática | EvoWeb / PES Modding |
+| **Nuevo formato Champions (Ruls)** | UCL formato nuevo | PES Modding |
+| **Mundial 48 equipos (papijonnnn)** | Formato Mundial 2026 | EvoWeb |
+| **Custom Celebrations** | Nuevos slots de celebración | PES Modding |
+| **crowd_attendance.lua** | Asistencia de público | PES Modding |
+| **PlayerCam / VerticalCam** | Cámara en tercera persona | EvoWeb |
+| **GOALNETS (FicaBre)** | Redes de arco + tutorial | EvoWeb |
+| **Post-Processing Editor + ReShade (Godmode_ON)** | Gráficos | EvoWeb |
+| **Free Cloth Physics** | Física de ropa | EvoWeb |
+| **MatchUP** | Modo de juego nuevo | EvoWeb |
+| **Scoreboard modding en game2dPes.bin** | Fuentes y tamaño del marcador en el juego | EvoWeb |
+| **UI Modding: UIColors.lua y offsets (SoulBallZ)** | Tutorial para cambiar menús | EvoWeb |
+
+### H. Listas maestras para no perder nada
+- EvoWeb: hilo **"List of important tools & tutorials"** (fijado en el foro PES 2021).
+- **Rigged Wiki** (implyingrigged.info): tutoriales de Blender, estadios y herramientas.
+- PES Modding: etiquetas "PES 2021 Tools" y "PES 2021 Sider Modules".
+- Documentación oficial de Sider: mapote.com/doc/sider.
