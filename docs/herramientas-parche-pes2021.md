@@ -148,3 +148,29 @@ Regla: probar todo en una COPIA del juego. Nada de esto se instala sin aprobar.
 
 ## Correcciones a documentos anteriores
 - VirtuaRED NO está parado: salió **v10.3 el 26-jul-2026** (hilo EvoWeb).
+
+---
+
+## 8. Ronda 2 de búsqueda (30-oct-2026, noche)
+
+### ⭐ Las más importantes de esta ronda
+| Herramienta | Qué hace | Por qué importa | Dónde |
+|---|---|---|---|
+| **FootballLife-new-leagues + FL26 Mod Studio (Matozanato)** | Ligas, clubes y **países nuevos** en la Liga Máster, sin parchear el exe ni rehacer .cpk (todo por módulos de Sider). Sube la tabla de competiciones de 100 a 127 (experimental 192). **Plantillas desde una tabla** (escrita a mano, copiada de una web, o exportada de Football Manager / EA FC). Gestor de Sider con perfiles, puntos de restauración y diagnóstico. Licencia **MIT** (se puede usar su código) | Es justo lo que pediste para tu parche: más ligas y divisiones, y armar plantillas desde una tabla | github.com/Matozanato/FootballLife-new-leagues |
+| **Pes Editor Rebuilt (Agustinioquino)** | Editor del EDIT00000000 en el navegador; instala su propio módulo de Sider (`edit21_db.lua`) y lee la base directo de los .cpk del juego | Idea para Phoenix: editor web + módulo Sider | github.com/Agustinioquino/Pes-Editor-Rebuilt |
+| **sider-lua-localize (boggylp)** | Encuentra módulos Lua que chocan por usar la misma variable global y los arregla | Evita choques entre phoenix.lua y otros módulos | github.com/boggylp/pes (tools/) |
+
+### Más herramientas nuevas
+| Herramienta | Qué hace | Dónde |
+|---|---|---|
+| **Economy Scaler v5** | Cambia los sistemas económicos del juego | pes-files (30-oct-2026) |
+| **ML Budget Manager v1.0 (JamesHoward333)** | Ajusta presupuestos de la Liga Máster con teclas | PES Modding |
+| **CamSwitcher v1.0** | Cambia de cámara en tiempo real (Lua) | pes-files (26-oct-2026) |
+| **Soundtrack Server v11 / Radio Server v1 (MarcoIacovelli02)** | Música del juego por servidor | pes-files / EvoWeb |
+| **Menú de selección estilo PES 2019 (Spursfan07)** | Pantalla de elegir equipo en cuadrícula | PeSoccerWorld |
+| **PES21FX (Pes Editor Rebuilt)** | Mejora césped, luces, piel y cuerpos; menú dentro del juego | PeSoccerWorld (27-oct-2026) |
+| **Boots & Gloves Relinker (RFootball)** | Cambia IDs de botines con un script | PES Modding |
+| **PES2021-scripts (Gustavohps10)** | Módulos Lua de ejemplo: Soundtrack, Ringtone, Playername | github.com/Gustavohps10/PES2021-scripts |
+| **spfl26-pes2021-linux** | Jugar FL26 en Linux / Steam Deck | github.com/agentkyo/spfl26-pes2021-linux |
+| **eFootball Minifaces Downloader** | Descarga minicaras con IDs originales | github.com/mohamedamrnady/eFootball-Minifaces-Downloalder |
+| **ML Manager Pro (Ruls)** | Web gratis de objetivos de carrera y análisis de jugadores | ml-manager-pro.vercel.app |
