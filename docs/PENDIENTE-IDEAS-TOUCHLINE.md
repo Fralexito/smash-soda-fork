@@ -40,3 +40,18 @@
 
 ## La idea guía
 PES hace la Liga Máster para **uno solo** contra la máquina. Phoenix la hace para **toda una liga de amigos**: negocias con personas, la prensa habla de tus amigos, la directiva te compara con otros DTs reales.
+
+---
+
+## PLAN A FUTURO · Fichajes en memoria (agregado 30-oct-2026)
+**Decisión de Fralex:** primero estabilizar la recarga por archivo (R3 / Activar) para que funcione el 100% de las veces. Después, como experimento aparte, intentar los fichajes en memoria. Detalle y motivos en `INFORME-VIABILIDAD-FICHAJES-EN-MEMORIA.md`.
+
+**Orden:**
+1. **Estabilizar R3 (ahora):** escribir cada fichaje en option file y `PlayerAssignment.bin` a la vez; detectar de cuál lee el juego (arreglar el caso "después de Editar"); avisar si falla; confirmar tras recargar; prueba guiada de 10 fichajes con un amigo.
+2. **Experimento en memoria (futuro), por fases:**
+   - **Fase 1 · Solo mirar:** foto de la memoria antes y después de R3 con un fichaje (lectura segura con `ReadProcessMemory`, sin escribir). Contar cuántas tablas cambia el juego.
+   - **Fase 2 · Decidir:** si son pocas y fáciles de ubicar, seguir; si no, abandonar sin haber roto nada.
+   - **Fase 3 · Escribir:** solo en menús, nunca en partido, revisando bytes antes (como `phoenix.lua`), en una copia de prueba.
+   - **Guardado:** seguir escribiendo también el archivo, como hoy. La memoria solo quitaría el paso de presionar R3.
+
+**Avisos:** el jugador vive en varias tablas (la Liga Máster usa ~11); escribir stats en memoria ya falló (el juego usa otras copias); leer memoria a lo bruto cerró el juego (ReShade). Solo la PC del host necesita los cambios (Parsec).
