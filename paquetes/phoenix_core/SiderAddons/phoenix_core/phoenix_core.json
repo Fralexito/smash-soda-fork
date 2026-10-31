@@ -1,0 +1,30 @@
+{
+  "funciones": {
+    "reloj_visual_2t": true,
+    "final_nativo": false,
+    "goles_sonda": true,
+    "goles_reinicio": true,
+    "arquero_controla": false,
+    "arco_chico_free": false,
+    "gk_despeje_dist_m": 4.5,
+    "gk_despeje_presion_m": 2.5,
+    "diagnostico": true,
+    "sonda_partido": true,
+    "sonda_pasos": true,
+    "gol_nativo_free": true,
+    "saque_centro_free": true,
+    "gol_directo_free": true,
+    "marcador_free": true,
+    "vigilante_bucles": true,
+    "celebracion_corta_free": false,
+    "sin_1D_free": false,
+    "rescate_render_free": false,
+    "cancha_chica_free": false
+  },
+  "gol_directo_celebracion": true,
+  "celebracion_modo": "timer",
+  "celebracion_segundos": 8,
+  "celebracion_timer_final": 4000,
+  "cancha_semilargo": 15,
+  "cancha_semiancho": 10
+}

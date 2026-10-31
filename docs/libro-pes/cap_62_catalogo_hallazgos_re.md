@@ -117,3 +117,106 @@ Añadir filas con fecha cuando aparezca algo nuevo (aunque no sea del tema del d
 | Estado DirectInput por mando | Plaza lógica `+0xC` → fila de dispositivo → objeto → `[obj+0x20]` (GUID) `+0x238` = DIJOYSTATE (X/Y 0–0xFFFF, centro 0x7FFF; cruceta +0x20; botones +0x30, 0x80). 3 copias cada 0x50. | C (en vivo, mando ViGEm de prueba) |
 | Vtable mando lógico HidMan | `0x142AC7660` (8 entradas); `+0x38` `FUN_141B5A160` reenvía a `[[this+0x80]]+0x38`. | C |
 | Sider: opacidad de imágenes | `overlay.image-alpha-max` en sider.ini limita la opacidad (0.8 en ConmeGOL → se transparenta lo de debajo). | C (en vivo) |
+
+#### 25-oct-2026 — Menos jugadores / modo street: lectura estática (hilo «modo street»)
+| Qué | Dónde / formato | Confianza |
+|---|---|---|
+| `[gestor+0x270]+0x1775` (byte) | `FUN_140447290` (secuencia de fin de partido/estado, ~0x8F2 = subestado 1..5) sale de inmediato si es ≠ 0. Bandera que corta la secuencia de cierre; posible interruptor útil. | H (lectura estática) |
+| Subobjeto de «fase» en `S+0x1554` | `FUN_141B8B250` solo guarda un código 0..8 (0,1,6,7,8 vistos en MatchControl/FUN_1404a56c0/FUN_1404a6d20). El código en `+0x1574` es una fase del partido, **no** el motivo de abandono; el «2 = abandono» de ObserverForfeitedGame sigue sin confirmar. | H |
+| Modos con menos jugadores ya existentes | Clases `match::registry::TrainingWork(Ref)`, `match::player::ActionFreeTrainingBreak`, `ActionTrainingMoveRoute`, `menu::MatchTeamSelectTraining`, `MatchPauseTrainingMenu`: el motor ya corre partidos con pocos actores en Entrenamiento libre. **Pista fuerte para «quitar jugadores»**: ver qué crea los actores en ese modo (TrainingWork) y reutilizarlo. | H (por nombre; sin abrir) |
+| Menús de formación | Cuadros Flash `p_grand` con 11 casillas; `matchPlan::TacticsFormation`, `EasyMemberSelect`, `match::ai::TeamMemberChange`, `match::pad::ThinkUnitQucikMemberChange` (cambio rápido de jugador con el mando). Relevante para N jugadores y para el cambio de jugador. | H |
+| Barrido «< 7» | Ninguna comparación `< 7` en las funciones del bloque 0x1404xxxx–0x1408xxxx parece contar jugadores en campo; las candidatas son de IA/posición. La regla de «menos de 7» sigue sin localizar. | negativo parcial |
+
+#### 25-oct-2026 — La «puerta» del Entrenamiento libre (flujo de menús en JSON)
+| Qué | Dónde / formato | Confianza |
+|---|---|---|
+| **Flujo de menús = JSON editables** | `dt16_all.cpk` → `common/script/flow/**.json` (2158 archivos, SIN comprimir; se extraen leyendo `posicion`/`tamano_real` del catálogo `informes/datos/catalogo/cpk/dt16_all.cpk.tsv`). Cada pantalla es un JSON con `events{nombre:{to, go, clear, fade…}}` y `data{type: menu/process, bgId}`. **Todo el árbol de menús de PES se puede re-cablear con archivos** (Sider livecpk) sin tocar el exe. Abre la puerta a menús propios, atajos, saltarse pantallas, modos ocultos. | C (leído) |
+| **Entrenamiento libre existe y está cableado** | `TopMenu/TopMenuNew.json` tiene el evento `05_freeTraining` → `Match/TrainingUgcCheckJoinMode` → `Match/MatchTrainingTeamSel` (bg EXHIBITION; return → TopMenu) → `TrainingPrePlayerSelect` → `MatchTrainingMatchMenu` → `MatchTrainingSetting` → `TrainingMatchInit` → `Match/MatchSetup`. Solo falta el **botón** en la pantalla principal (el exe tiene las cadenas `freeTraining`, `freeTrainingMenu`). | C (flujo) / H (que funcione) |
+| Puerta A (fácil, reversible) | Copiar `TopMenuNew.json` a la carpeta de contenido de Sider y cambiar `04_tutorial.to` de `Tutorial/TutorialUgcCheckJoinMode` a `Match/TrainingUgcCheckJoinMode`: el botón Tutorial abriría el entrenamiento. Riesgo: que el código del botón prepare estado de «tutorial» y el entrenamiento no arranque. | H, sin probar |
+| Puerta B (difícil) | Hacer visible el botón oculto `freeTraining` en `common/menu/general/topModeSelectDMM*.bin` (Flash) o en la lista de botones del exe (`menu::TopModeSelect`, vftable 0x14266DDD8). | H |
+| Datos de entrenamiento | Menús `common/menu/general/trainingSelect.bin`, `trainingSkillSettings(Team).bin`, `playerTrainingSetting.bin`, `common/menu/mode/trainingMainMenu.bin`, `trainingResults.bin`, `trainingFloatingScore_1..3.bin`; objetos `Asset/model/training_prop/` (conos, maniquíes, barreras x3–x5, paneles de portería). Estadísticas `PLAY_DATA_TRAINING_FREE`, `_FREE_12`, `_FREE_22` (¿entrenamiento con 12 y con 22 jugadores? → el motor admite cantidades distintas). | C (existen) / H (significado) |
+| Ideas que abre | Modo street dentro del entrenamiento; minijuegos de habilidad con conos/maniquíes; retos de tiros libres/penales/córners (`PLAY_DATA_TRAINING_FREE_KICK/PK/CONER_KICK/GK`); menú Phoenix propio en la pantalla principal; acceso directo a un partido (`Match/MatchDirectSetup`). | idea |
+
+#### 25-oct-2026 (noche) — Prueba en vivo de la puerta del Entrenamiento libre
+| Qué | Dónde / formato | Confianza |
+|---|---|---|
+| Desvío por livecpk FUNCIONA | `SiderAddons\livecpk\Phoenix-Entrenamiento\common\script\flow\TopMenu\TopMenuNew.json` (copia de `livecpk\Menu`) con `04_tutorial` y `06_myclub` → `Match/TrainingUgcCheckJoinMode`. En Conmegol el botón «ENTRENAMIENTO» usa el evento **06_myclub** (el parche remapea eventos del TopMenu: 07→comentario, 08→sonido…). El JSON no se recarga en caliente: hay que reiniciar PES. | C (en vivo) |
+| Pantallas del Entrenamiento libre | «Empezar» → «Local/Visitante» (elegir 2 equipos a la vez) → «Estrategia» de ambos equipos (11 por lado) con reloj ~114→0 → menú previo (Estadio, Empezar partido, Estrategia, Opciones generales, Cámara, Lista de usuarios). «Empezar partido/Estadio/Opciones generales» salen ATENUADOS: falta algo que el menú original prepara (parece pre-partido de sala). | C (en vivo) |
+| Teclado | PES solo acepta teclado por scancode; Espacio abre el overlay de Sider. | C |
+| Pendiente | Leer `MatchTrainingSetting`, `MatchTrainingMatchMenu`, `TrainingMatchInit` (en `livecpk\Menu\common\script\flow\Match\`) para saltar el lobby; probar Start con mando real. Informe largo: `PRUEBA_CANCHA\informes\ENTRENAMIENTO_LIBRE_PRUEBA.md`; capturas `informes\datos\entrenamiento\` 22–37. | — |
+| Idea | «Entrenamiento libre» propio con 2 equipos editables a la vez. | idea |
+
+#### 25-oct-2026 — Búsqueda web: parches de gameplay «street» para PES 2021
+| Qué | Dónde / formato | Confianza |
+|---|---|---|
+| No existe un mod «street» ni futsal/5v5 conocido | Búsquedas en pesmodding.com / evo-web: solo mods de gameplay 11v11 con regate mejorado (HOS 2023 de Hosamalfars, EVO Soccer V7 / Overhaul de elijio876, Mystery/Scream/Modern Soccer de Alex, Real PES, Direct and Fast). Nadie ha hecho cancha pequeña ni menos jugadores → lo nuestro sería inédito. | C (búsqueda web) |
+| Dónde vive el gameplay | Casi todos cambian `dt18_all.cpk` (o el exe entero); «Direct and Fast» va por módulos Lua de Sider. → los parámetros de regate son DATOS en `dt18_all.cpk`, se pueden estudiar y cargar como opción on/off por livecpk (sin exe modificado, válido en PES limpio). | H |
+
+#### 25-oct-2026 (noche, 2) — Lectura estática del flujo del entrenamiento
+| Qué | Dónde / formato | Confianza |
+|---|---|---|
+| Cadena completa | `MatchTrainingTeamSel → TrainingPrePlayerSelect → MatchTrainingMatchMenu → (00_kickoff) MatchMenuEnd → MatchTrainingSetting (menú de ajustes) → TrainingMatchInit → Match/MatchSetup`. Frente a la exhibición se salta `ExhibiFlowInit` / `ExhibiChangeCompeDesignKind` (modo y estadio); el TopMenu de Conmegol no pasa por `TopMenuModeInit`. | C (flujo) |
+| «Empezar partido» atenuado: candidatos | (a) en la prueba se eligió el MISMO equipo en ambos lados; (b) faltan los pasos de init de la exhibición. Bandera exacta no hallada en Ghidra. | H |
+| `TrainingDirectInit` | Registrado en el exe junto a `MatchDirectInit`, pero sin JSON: entrada directa posible creando el JSON. | H |
+| `freeTrainingMenu` | Evento de la pausa en el modo 11 (= entrenamiento libre). | C |
+| Menús .bin | `trainingMainMenu.bin` = retos del Tutorial (Básico…Experto); `trainingSelect.bin` / `playerTrainingSetting.bin` = entrenamiento de jugadores de ML/BAL. No hay menú «Libre/Tiro libre/Penal» antes de elegir equipos. | C |
+| Mini-campo | `loaderSwf_trainingPlayArea` (área de juego delimitada del entrenamiento) + modelos de conos, maniquíes, paneles y líneas de 6–42 m en el exe → base para modo de retos o mini-cancha. | H |
+| Aviso | En el TopMenu de Conmegol `12_freelobby` y `18_info` → `Match/MatchDirectReplay` (cuidado con las repeticiones reales). | C |
+| Pruebas preparadas (desactivadas) | P0: repetir con 2 equipos distintos. P1: `SiderAddons\livecpk\Phoenix-Entrenamiento-B1` (TrainingPrePlayerSelect → MatchTrainingSetting). P2: `-B2` (→ TrainingMatchInit directo). P3: crear `TrainingDirectInit.json`. Activar = línea `cpk.root` en sider.ini con respaldo. Informe: `PRUEBA_CANCHA\informes\ENTRENAMIENTO_LIBRE_PRUEBA.md` («AMPLIACIÓN»). | — |
+
+#### 26-oct-2026 — Online de PES 2021 (lectura del código de Nikow5/Pes2021PrivateServer, MIT, feb-2026; hilo «Planear Phoenix Core al límite»)
+| Qué | Dónde / formato | Confianza |
+|---|---|---|
+| Transporte TCP «NclMio» | Puerto 10000 (ConnectGate). Cabecera big-endian `[cmd 2][largo 2][secuencia 4]` + datos; todo el paquete con XOR cíclico de clave `5B 9F 2E 64`. Algunas respuestas van con zlib (0x2EE4). | P (código de terceros, parte heurística) |
+| Comandos | `0x2EE0` CmdLobbyInit (ticket de Steam, 124 B) · `0x2E04` CmdMatchmaking/Auth (respuesta de 96 B) · `0x2EE4` CmdGetSvrList (128 B, entradas de 32 B que empiezan con la vftable `0x14285B5B0`) · `0x2EF4` CmdGetEulaAreaList. El cliente parece deducir el comando por `largo XOR 0x2E64`. | P |
+| Direcciones del exe 1.07.02 | `0x1411AEEC0` validador de paquetes (origen del error C_IDGG_0002) · `0x140FE0C50` estado 5 · `0x140FE1FE0` estado 6 · `0x140FF3EC0` estado 10 de la conexión online. Trazador Frida `trace.js`. | P (comprobar en nuestro exe) |
+| STUN | RFC 5389 estándar (cookie `0x2112A442`), puertos 5730–5739 / 3478. Partido P2P por UDP 5739/5740. | P |
+| Estado del proyecto | Solo login, lista de servidores, EULA y matchmaking inicial; sin lobby ni partido. PESBUL (Docker `noobsaibot301/pes2021-emulator`) va más lejos (amistoso 1v1), pero su código no apareció público. `NoobSaibot888/pes_server` (sin licencia, 2025) no conectaba. | C (repos leídos) |
+| PESBUL verificado (metadatos públicos de Docker Hub, 26-oct 19:10 UTC; sin descargar capas) | Imagen `noobsaibot301/pes2021-emulator`, pública, 38.018 descargas, creada 23-jun-2026, **última versión hoy 26-oct 17:46** (`0.13.10-phase13-r7.3.743.84-CLUBS-UNIQUE-MENU-EVENTS`), ~84 MB comprimida. Python 3.12, `/app/entrypoint.sh`, panel en :5000 (`/health`). Sin licencia ni enlace a código fuente en la imagen. | C |
+| PESBUL: qué tiene | Variables y etiquetas muestran: **co-op** (grupos, salas, cuenta atrás vs COM), **Team Play** 11v11 («avanzado por RE»), **Clubs** (menús, bandeja, calendario de liga, perfiles), **relé de partido propio** (`PES_GAMERELAY_*`, plano de datos en 5100 TCP/UDP, intercambio de claves «KX» con códec nativo) → el partido NO va solo P2P: puede pasar por su relé. Sirve **Live Update** (datos en vivo de 2021-08-26, hash sha256). Puertos: 10000/10001 TCP, 3478–3479, 5730/5739/5740 UDP, 55000–55100 UDP, 53 UDP (DNS propio), 80/443. | C (metadatos) / P (significado) |
+| Dato curioso | Según su etiqueta, el cliente de PES añade 1002 bytes en cero al final de cada archivo de Live Update que descarga (constante del cliente, papel desconocido). | P |
+
+#### 26-oct-2026 (b) — Online: formato NclMio ampliado (hilo «Crear servidor Phoenix Online»; lectura de Nikow5, MIT)
+| Qué | Dónde / formato | Confianza |
+|---|---|---|
+| Respuesta de la secuencia | La respuesta debe repetir la `secuencia` (4 B) del paquete contestado; 0x2E04 y 0x2EF4 además copian los primeros 8 B del token de la petición. | P |
+| Tamaño = identidad | Un 0x2E04 de 64 B se lee como 0x2E24 y da `C_IDGG_0002`: el largo exacto es obligatorio (96 B). | P (de comentarios del autor) |
+| Entrada de servidor 32 B | vtable `B0 5B 85 42 01 00 00 00` · id (BE) · tipo (BE) · IP · puerto **little-endian** · relleno; 4 entradas, zlib. | P |
+| Debilidad a resolver con REA | Nikow5 deduce el comando por tamaño de paquete y no hace framing TCP; confirmar en el exe de dónde sale el cmd. | C |
+| Guía completa | `/mnt/project-files/pes-online/PHOENIX_ONLINE_REA_GUIA.md` (plan R0–R8). | — |
+| Online: máquina de estados del login (exe 1.07.02, según documentos de PESBUL) | switch `0x140fde489`; estado 5 AuthSteam `FUN_140fde810` · 6 `FUN_140fdebe0` · 7 CmdLoginAccount `FUN_140fdf300` · 8 CmdSendPsid `FUN_140fdf860` · 9 CmdGetPlayerData `FUN_140fdee40`; `FUN_140fe12e0` versión/URLs/hora · `FUN_140fe1fe0` lista de servidores · `FUN_140fe3f50` LoginMenu · `FUN_140fe4470` SetCurrentPlayer. Mensajes MessagePack con `msgid`/`rqid`/`result` (`NOERR`). 339 comandos `CMD_*`. Amistoso = P2P con NAT de Konami (`NtlManager`, `P2pFullMesh`) + respaldo TURN (`P2pFullMeshWithTurn`); Team Play = relé (`CsClientSession`, `ClltcpController`). Detalle: cap_72. | P (verificar en nuestro exe) |
+
+#### 26-oct-2026 (c) — Phoenix Core: gol, eventos y portabilidad Conmegol → PES 2021 limpio (hilo «modo street»)
+| Qué | Dónde / formato | Confianza |
+|---|---|---|
+| Código del exe | En el exe de Conmegol el código está en la sección **«.trace»** (no «.text»); hay además .xtext/.xcode/.text1/.sxdata. Core busca firmas en TODAS las secciones ejecutables. **Comprobar en PES limpio** el nombre de sección. | C (Conmegol) |
+| SetState(actor,estado,modo) | firma `48 89 6C 24 10 48 89 74 24 18 48 89 7C 24 20 41 56 48 83 EC 20 8D`, RVA 0x6EEBB0 en Conmegol; prólogo 15 B sin RIP-relativos | C |
+| ProcesarGol | firma `48 8B C4 48 89 50 10 55 56 57 41 54 41 55 41 56 41 57 48 8D A8 D8`, RVA 0x478190; prólogo 14 B | C |
+| PonerEvento(job,tipo) → job+0x874 | firma `48 89 5C 24 08 57 48 83 EC 20 48 8B D9 89 91 74 08 00 00 48 8D B9`, RVA 0x451FD0; prólogo 19 B | C |
+| Tipos de evento | amistoso: gol = 0xA (montador FUN_14044F8A0, ret 0x44F8E3) → ProcesarGol; otros 2,4,5,6,7,9. Entrenamiento: gol = **5 (saque de puerta, k==7 sub==3, ret 0x44F444)**, banda = 6 (sub==2, ret 0x44F7A4), reinicio 0xE (0x4535F1 / 0x449BA9) | C (sonda en vivo) |
+| Selector de parada | FUN_1404526A0: k=[obj+0x1574], sub=[obj+0x1554], obj=[[0x1436F3DC8]+0x270]; k==3 → gol | C (estático) |
+| **Portabilidad (pendiente)** | Core 0.3.x usa aún RVAs fijas de Conmegol para: global 0x36F3DC8, retornos 0x449BA9/0x44F8E3, FUN_14044F8A0. Antes de usarlo en PES limpio hay que sacarlas por firma (instrucción RIP-relativa que lee el global, firma del montador). Las firmas de los 3 ganchos sí son AOB. Sospecha: si el exe limpio es otra versión (Conmegol = PATCH10100), las RVAs cambian; las firmas probablemente sirven. | P |
+| Archivos | La prueba de Core no depende de cpk/livecpk de Conmegol; sí usa Sider (cualquier Sider con luajit.ext.enabled=1). Las pruebas de cancha (pitch_st002 del Camp Nou, goal_post, .geom en livecpk) SÍ eran de Conmegol: en PES limpio las rutas de estadios/AddOn serán distintas. | C |
+
+#### 27-oct-2026 — Gol nativo completo en el Entrenamiento libre (hilo «modo street»)
+| Qué | Dónde / formato | Confianza |
+|---|---|---|
+| Culpable del «saque de puerta» | FUN_1404A56C0 (gestor de paradas del entrenamiento, TrainingWork `[[0x1436F3DC8]+0x400]`) fuerza k=7 con 2× `mov edx,7; call FUN_141B8B250`. Firma `BA 07 00 00 00 49 8B CE E8 ?? ?? ?? ?? BA 07 00 00 00 48 8B CB E8` | C |
+| Índice 0xFF sin comprobar | FUN_140A62690(lado,p) → 0xFF si no hay jugador; FUN_1405B1740 lo usa como ranura (2 sitios, firmas en cap_73 §4). Afecta a todo modo con <11 por lado | C |
+| Monitor de cola de carga | FUN_1403E0760: `while(!listo[+0x9C] && cola[[p+0x88]+0x28]==0) esperar`; hilo de render FUN_14170FA10; spin-yield FUN_1403DB2C0/DB590; zlib inflate_fast FUN_1403B6AA0 | C (estático) |
+| Demo de entrada al marcar | En entreno, al marcar se pide `…\demo\fixdemo\ent\table_ent.bin` + Entrance.lua ×4 (ruta trofeo/entrada); en amistoso no. Tablas fixdemo se inicializan en FUN_141EBCB10/141EC68A0/141ECA210/141F29420 (DAT_1437F4E60) | C |
+| Error Lua de Conmegol | TournamentCornerFlags.lua l.98: `CornerFlag` nil para torneo 29 (entreno); DESCARTADO como causa del congelón (con el original no se congeló). Regla para el parche propio: módulos Lua deben tolerar torneo nil | C |
+| Señal de cuelgue | CPU alta NO distingue cuelgue (~5 núcleos normal, 125–130 hilos). Señal buena: sonda sin escribir ≥8 s y sin «Commentary file detected» | C |
+| sider.ini Conmegol | `Stadium_CornerFlag.lua` (l.164) y `CornerFlag.lua` (l.188) no existen (inocuo) | C |
+| Entreno: estadio | stadium=2, stadium_choice=65533 (sin elección) | P |
+| Reinicio tras gol | registro de parada sub: 1 = saque de centro (amistoso), 3 = saque de puerta (entreno). Rama k==3 de FUN_1404A56C0 en 0x1404A5B78 lo fuerza a 3; jne en firma+10 → jmp lo evita | C (sonda) |
+| Selector PES2021 Start.exe | CONFIRMADO (27-oct): restaura módulos Lua del Conmegol al arrancar (un arreglo en TournamentCornerFlags.lua desapareció) | P |
+| Secuencia del gol | FUN_14044F8A0 tras 0xA: LARGA (0x03,0x11,0x08,0x23,0x16,0x12,0x13,[0x17],0x14,0x15,0x0E,0x34,0x19,0x1A: celebración+repetición) o CORTA (0x43,0x07,0x44) si byte `[[root+0x2C0]+0x84]` != 0 (FUN_140A3F580). Salto en 0x14044F941 `74 47` | C (estático) |
+| Deadlock en la repetición (entreno) | juego FUN_141717150: `while([[0x143747E98]+0xC4]==0) esperar`; render FUN_14170FA10: `while([obj+0xC0]==0 && ![obj+0xD0]) esperar`. Esperas FUN_1403F7BC0/1403F0330/1403E0760, spin 1403DB2C0. Bucle principal FUN_1404002D0 | C (perfiles vivos) |
+| TrainingWork activo | `[root+0x400] != 0 && *(byte*)[root+0x400] != 0` (criterio de FUN_14044D110) | C |
+| ⚠ Protección anti-manipulación | Sección «.impdata» (rva 0x3D14000, ~0x17C3D94F, ejecutable) = VM de protección del exe. Parchear FUN_14047C2D0 (ejecutor de pasos del gol, hook de 17 B) → crash 0xC0000005 DENTRO de .impdata segundos después (2 veces: +0x118074F5 en menú, +0xD1D4317 al entrar al entreno; llamador .trace +0x44521D). SÍ se pueden parchear sin problema: SetState, ProcesarGol, PonerEvento, montador FUN_14044F8A0, cuevas en FUN_1404A56C0 y FUN_1405B1740. Regla: si un parche nuevo provoca crash en .impdata, esa función está vigilada → usar sondeo desde un hilo propio (leer memoria) en vez de parchear | C |
+| Cola real del gol (entreno) | job+0x878[]: `03 04 45 1D 03 11 08 23 16 12 13 14 15 0E 34 19 1A` (n en [+0x8F1], índice en [+0x8F0]). 0x04 = celebración (~12,7 s). **0x1D = paso donde se congela el entreno** (lo encola el montador si !FUN_140A3C020, también delante de la secuencia corta) | C (sondeo en vivo) |
+| FUN_140A3C020(partido) | = byte [partido+0x177F]; si 0 el montador encola 0x1D. Ponerlo a 1 durante el montador quita 0x1D | C |
+| Cola tras celebración (entreno) | se amplía a `… 10 26 45`; paso 0x07 = siguiente cambio de cámara, también se cuelga | C (sondeo) |
+| Pasos de la cola del gol (inferido) | 03 = procesar gol; 04 = celebración (goal_celebrate_*); 45/43/44 = envoltorio HUD/cámara; 1D = cambio de escena; **07 (+10 26 45) = demo de fin de tiempo** (fixdemo\timeup\tu_half_cmn_01 + dml_ent_entering06); 16 12 13 14 15 0E/0C 34 19 1A = reinicio (igual que tras saque de puerta). Ejecutor: switch en FUN_1404D21F0 | P (por archivos pedidos y orden) |
+| Cola segura en entreno | `03 16 12 13 14 15 0E 34 19 1A` → gol + saque de centro sin congelarse (0.4.14) | C (probado por Frank) |

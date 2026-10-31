@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="18.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="C:\dev\phoenix-core-wt\paquetes\phoenix_core\build0411\CMakeFiles\4673591584aa808f6b76341d2bad0256\generate.stamp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{2A32540D-DEFE-37C3-8B82-E54F5BEDE68F}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

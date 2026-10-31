@@ -66,3 +66,12 @@ La hoja de ruta anterior habla de «4v4» por ser el primer caso de prueba. Fran
 
 ## Ampliaciones
 (Vacío: añadir con fecha, y reflejar en la bitácora.)
+
+## 90.x Pendiente para el futuro (25-oct-2026): gameplay «street» — EN ORDEN, sin prisa
+Decisión de Fralex: **por ahora no se prueba nada.** Primero estudiar y entender todo el juego; tocar el gameplay después, en orden.
+- **Mods de la comunidad para estudiar más adelante** (nadie ha hecho modo street/futsal/5v5 en PES 2021; todos son 11v11 con regate mejorado): HOS 2023 de Hosamalfars (Sider o `dt18_all.cpk`), EVO Soccer V7 / Overhaul de elijio876, Mystery / Scream / Modern Soccer V4 / New Challenge V3 de Alex (varios cambian el exe → NO valen para PES limpio), Real PES V1, Direct and Fast (módulos Lua de Sider). Enlaces en pesmodding.com (ver cap. 62, 25-oct).
+- **Hipótesis a confirmar:** el gameplay (regate, fintas, física) son DATOS en `dt18_all.cpk` → se podría hacer un gameplay «street» propio como opción on/off por livecpk. Paso 1 futuro: catalogar qué archivos de `dt18_all.cpk` cambian esos mods (comparar con el original, sin instalar). Requiere permiso de Fralex para descargar.
+- Orden propuesto: (1) Entrenamiento libre / menos jugadores; (2) catálogo de `dt18_all.cpk` (constantes de gameplay); (3) estudiar los mods; (4) gameplay «street» propio.
+- Más candidatos (25-oct, 2.ª búsqueda): SimSnob 5.2 y Soccer Revolution Revamped 1.1 (más skill moves por bandas, nuevos parámetros de regate); «Street Rush 2026» (pes-files.com, requiere Sider 7.3.3) NO es street pese al nombre. Descargas en sharemods/modsfire sin verificar → pedir permiso antes. Lista con enlaces también al final de `PRUEBA_CANCHA\informes\12_prototipo_cancha_pequena_modo_street.md` («REGISTRO PARA PROBAR EN EL FUTURO»). Estudiar primero `08_gameplay.md` y `11_guia_reutilizable_pes2021.md`.
+
+- 27-oct-2026 · Modo street (pedido de Frank): **paredes invisibles**. Sin «fuera» (apagar banda sub=2 y fondo) y la pelota rebota en los bordes de la cancha desde Phoenix Core (función on/off). Orden: después de marcador y reloj. Detalle: cap_73 §8.

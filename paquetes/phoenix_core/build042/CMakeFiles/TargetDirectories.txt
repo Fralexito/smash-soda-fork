@@ -1,0 +1,3 @@
+C:/dev/phoenix-core-wt/paquetes/phoenix_core/build042/CMakeFiles/phoenix_core.dir
+C:/dev/phoenix-core-wt/paquetes/phoenix_core/build042/CMakeFiles/ALL_BUILD.dir
+C:/dev/phoenix-core-wt/paquetes/phoenix_core/build042/CMakeFiles/ZERO_CHECK.dir

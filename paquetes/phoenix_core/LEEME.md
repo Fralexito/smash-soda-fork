@@ -1,0 +1,51 @@
+# Phoenix Core · v0.4.5 (sonda + gol nativo en entrenamiento + vigilante)
+
+DLL propia que se carga dentro de PES 2021 desde Sider. En esta fase **no cambia nada del juego**: solo arranca, se identifica y deja registro. Es la base donde irán las funciones on/off (la primera: el gol del modo street en Entrenamiento libre).
+
+Plan completo: `para-proyecto/pes/cap_70_phoenix_core_arquitectura_y_plan.md`.
+
+## Qué trae
+
+| Archivo | Para qué |
+|---|---|
+| `src/phoenix_core.cpp`, `src/phoenix_api.h` | Código de la DLL y su API en C |
+| `CMakeLists.txt` | Compilar con MSVC (x64, /MT) |
+| `SiderAddons/modules/phoenix_core_loader.lua` | Módulo de Sider que carga la DLL (LoadLibraryA por ffi) y llama a `phx_core_tick` cada fotograma |
+| `SiderAddons/modules/phoenix_marcador_free.lua` | Marcador y reloj del Entrenamiento libre (modo street): goles por `goal_scored`, cronómetro propio; lo muestra en el overlay de Sider (Espacio) y escribe `content\phoenix\marcador_free.json` (para un widget de Phoenix Overlay). Apagado salvo `"marcador_free": true` en `phoenix_core.json`; `INSTALAR.ps1` añade su línea a `sider.ini` y `DESINSTALAR.ps1` la quita |
+| `SiderAddons/phoenix_core/phoenix_core.json` | Funciones encendidas/apagadas |
+| `INSTALAR.ps1` / `DESINSTALAR.ps1` | Poner y quitar sin Phoenix Link |
+
+## Compilar (Windows, Visual Studio con C++)
+
+```
+cmake -S . -B build -A x64
+cmake --build build --config Release
+copy build\Release\phoenix_core.dll SiderAddons\phoenix_core\
+```
+
+## Seguridad
+
+- **Interruptor general:** si existe `SiderAddons\phoenix_core\PHOENIX_CORE_OFF` (vacío), Core no hace nada.
+- **Modo seguro automático:** al arrancar crea `arrancando.flag` y la borra a los 60 s estables. Si PES se cerró antes, el siguiente arranque va en modo seguro (todas las funciones apagadas).
+- **Firmas verificadas:** cada parche busca su patrón de bytes y comprueba los bytes originales; si el exe es otro, la función queda apagada y lo dice en el registro.
+- **Fallos:** cada función corre protegida; a los 3 fallos se apaga sola.
+- Al cerrar PES se restauran los bytes originales. El exe en disco nunca se toca.
+
+## Comprobar que cargó
+
+- `SiderAddons\phoenix_core\cargador.txt`: lo que vio el módulo de Sider.
+- `SiderAddons\phoenix_core\phoenix_core.log`: versión, identidad del exe y estado de cada función.
+- `SiderAddons\phoenix_core\phoenix_core_estado.json`: lo mismo en JSON (lo leerá Phoenix Link).
+
+## Funciones (fase 0)
+
+| id | Qué hace | Por defecto |
+|---|---|---|
+| `diagnostico` | Busca `FREE_TRAINING_BREAK` en el exe, solo lectura | encendida |
+| `gol_nativo_free` | En el Entrenamiento libre, el gestor de parada FUN_1404A56C0 convierte el gol (k=3) en k=7 (saque de puerta). Dos `mov edx,7` (firma `BA 07 00 00 00 49 8B CE E8 ?? ?? ?? ?? BA 07 00 00 00 48 8B CB E8`) saltan a una cueva que conserva k cuando es 3. El resto de paradas no cambia | encendida para la prueba |
+| `saque_centro_free` | Tras el gol en el Entrenamiento libre, una rama de FUN_1404A56C0 (solo con k==3) recoloca el registro en sub=3 (saque de puerta, arquero). Firma `41 83 7E 04 01 75 69 83 FF 03 75 64 4C 8B 05 ?? ?? ?? ?? 4D 8D 4E 08 8B D7 48 8D 4D E7`, byte firma+10 `75`→`EB`: el registro conserva sub=1 = saque de centro, como en el amistoso | encendida para la prueba |
+| `celebracion_corta_free` | APAGADA por defecto (plan B del congelón). Gancho al montador del gol FUN_14044F8A0 (firma `48 89 5C 24 08 48 89 74 24 10 57 48 83 EC 20 48 8B 05 ?? ?? ?? ?? 48 8B D9 48 8B B8 70 02 00 00 48 8B B0 C0 02 00 00 48`, prólogo 15 B): solo con TrainingWork activo pone `[[root+0x2C0]+0x84]=1` durante la llamada → secuencia corta (0x43,0x07,0x44) sin celebración ni repetición. Amistoso intacto | apagada |
+| `sonda_partido` | Solo mira: desvía SetState (0x1406EEBB0) y el procesador del gol (0x140478190) y PonerEvento (0x140451FD0, tipo de evento job+0x874) y anota en `sonda_partido.txt` cada cambio de estado, cada gol procesado (goles, escena job+0x874, fase) y el indicador «partido detenido», con quién llamó | encendida |
+
+Los desvíos son propios (sin MinHook): copian el prólogo conocido (15 y 14 bytes, sin instrucciones relativas a RIP, leídos con Ghidra el 26-oct) a un trampolín y escriben un `jmp` absoluto de 14 bytes. Antes de escribir se comprueba la firma (única en `.text`) y los bytes originales; al cerrar PES se restauran.
+| `vigilante_bucles` | Hilo propio que muestrea el RIP de cada hilo de PES cada 250 ms; si uno se queda en bucle (misma zona, CPU al 100 %) lo anota en `phoenix_core.log` con la pila. Para encontrar cuelgues sin volcados | encendida para la prueba |
