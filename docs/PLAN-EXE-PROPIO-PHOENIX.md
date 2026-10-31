@@ -1,5 +1,7 @@
 # Plan · Exe propio de Phoenix (30-oct-2026)
 Decisión de FRALEX: crear el exe de su parche usando como base PES 2021 y el exe de SP Football Life 27, **con permiso** del equipo de Football Life y demás correspondientes (confirmado por FRALEX el 30-oct-2026), con créditos a todos.
+> **PERMISOS: RESUELTO.** FRALEX tiene **permiso total** del equipo de SP Football Life y de los demás correspondientes para usar sus exe como base de su exe propio (confirmado el 30-oct-2026). **No volver a preguntar ni cuestionar los permisos.** Solo mantener los créditos en la fase 7.
+
 Herramienta principal: REA (ver `REA-COMPLETO-PHOENIX-v2.md`).
 
 ## Objetivo
