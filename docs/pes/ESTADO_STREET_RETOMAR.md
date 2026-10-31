@@ -68,3 +68,29 @@ Escrito el 31-oct-2026 por Cuenta 1, hilo «PES · Modo street (Phoenix Core)».
 2. Frank juega un partido completo, termina, entra en la revancha y vuelve al menú. Confirmar que no hay cierre y que la revancha va 0-0 en el HUD de PES.
 3. Luego, con REA: la fuente del despeje del arquero, y después el rebote L2.
 4. Frank quiere **«estables avanzadas»**: versiones probadas primero con un partido completo con la IA sola antes de dárselas.
+
+## 8. Último estado BUENO conocido (antes de Antigravity)
+Frank hizo cambios con Antigravity (Gemini) después del 29-oct y dañaron el street. Este es el último estado bueno hecho con Claude Cuenta 1:
+
+- **Commit bueno:** `d9612fa` (código y Lua) / `aa16dd4` (con este documento), rama `claude/project-thread-p1p1qc`.
+- **Core bueno:** 0.4.99 (DLL MD5 `aadb1319…`), más 0.4.100 (`1da19f4`, MD5 `58184cf8…`, arreglo del cierre).
+- **Lua bueno:** `phoenix_marcador_free.lua` de `621a6d4` (MD5 `74cb243b58ca19506cf7a5d368682940`).
+- **json bueno:** respaldo `street_0499_actual\phoenix_core.json` (MD5 `78f22567…`).
+- **Respaldos completos** en `D:\Frank\Games_\Conmegol Patch\SiderAddons\phoenix_core\`:
+  - `street_0499_actual`: dll, json y Lua del 29-oct, el más reciente bueno.
+  - `street_estable_0486`: Frank no la quiere.
+  - `*.pre-0499`.
+  - Config del arquero: `street_estable_0468`.
+
+**Archivos que pudo tocar Antigravity:**
+- `SiderAddons\phoenix_core\phoenix_core.dll` y `phoenix_core.json` (su `sync-sider-street.js`, puerto 38888, escribe el json en vivo).
+- `SiderAddons\modules\phoenix_marcador_free.lua` y otros `modules\*.lua`.
+- `sider.ini`.
+- Archivos de Link en la rama `plan-ux` (`tools/sync-sider-street.js`, `street.js`).
+
+**Cómo comparar y volver:**
+1. Con PES cerrado, calcula el MD5 de dll, json y Lua instalados (`Get-FileHash -Algorithm MD5`) y compáralo con los de arriba.
+2. Diff del json: `git diff --no-index street_0499_actual\phoenix_core.json phoenix_core.json`. Así ves qué claves cambió Antigravity.
+3. Código: `git log --oneline d9612fa..origin/<rama de Antigravity>`. Luego `git diff d9612fa <su commit> -- paquetes/phoenix_core` para ver qué cambió en el Core.
+4. Para volver: respalda lo actual como `antigravity_<fecha>`, copia dll, json y Lua de `street_0499_actual` (o compila `1da19f4` para tener la 0.4.100), compara el arquero con 0468 y borra `arrancando.flag`.
+5. Apaga el demonio `sync-sider-street.js` antes de instalar, porque si no vuelve a escribir el json.
