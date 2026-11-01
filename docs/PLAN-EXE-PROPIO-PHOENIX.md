@@ -30,6 +30,11 @@ Si el nivel 1 muestra protección/compresión, desempaquetar antes de los nivele
 
 Herramienta principal: REA (ver `REA-COMPLETO-PHOENIX-v2.md`).
 
+## Alcance acordado (1-nov-2026)
+- **Fuera del plan:** saltar Denuvo u otras protecciones anticopia. FRALEX lo descartó.
+- **Dentro del plan:** todo lo demás: comparar PES 2021 y FL27 en lo accesible, estudiar el EDIT y la base de datos, módulos Sider/Lua, Phoenix Core en memoria, Phoenix Studio y herramientas propias.
+- Si una parte del exe está protegida, se deja anotada y se sigue con otra.
+
 ## Objetivo
 Un exe "Phoenix" con reglas propias del motor (límites, economía, modos, Liga Máster) pensado para la liga de FRALEX.
 
