@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.111"
+#define PHX_CORE_VERSION "0.4.112"
 
 namespace {
 
@@ -1707,6 +1707,7 @@ FnGoalNetHit g_goalNetHit = nullptr; FnGoalNetEstado g_goalNetEstado = nullptr;
 volatile LONG g_mallaOn = 0, g_mallaGolpes = 0; volatile ULONGLONG g_mallaUlt = 0;
 volatile LONG g_murosOn = 0, g_murosRebotes = 0;
 float g_muroRebote = 0.6f, g_muroFric = 0.92f, g_muroFondoRebote = -1.0f, g_muroLatFric = -1.0f, g_muroLatEmpuje = 0.0f, g_arcoAncho = 4.0f, g_arcoAlto = 2.0f; volatile LONG g_arcoChicoOn = 0; double g_muroX = 0, g_muroZ = 0;   // 0.4.95: g_muroFondoRebote = rebote propio de la pared de fondo (<0 = igual que g_muroRebote); g_muroX/Z: 0 =   // 0 = semilargo/semiancho + 0.2
+volatile ULONGLONG g_cursorEqT[2] = { 0, 0 }; volatile ULONGLONG g_empujeHasta = 0; volatile float g_empujeVx = 0.0f;   // 0.4.112: ultimo cursor visto por equipo (hay humano?) y empuje del balon en el saque trabado
 float g_1v1SaqueF = 0.0f; bool g_1v1Siempre = false; volatile ULONGLONG g_1v1BolaHasta = 0; volatile float g_1v1BolaX = 0.0f;   // 0.4.103 street_1v1_saque (0 normal, 1 portero saca del centro, 2 balón en el área del portero que recibió el gol, 3 balón al centro sin pateador)
 volatile ULONGLONG g_bolaCentroHasta = 0;   // 0.4.63: mientras dure, la pelota se mantiene en el centro (pausa del medio tiempo / final)
 // 0.4.92 «tiro_fuerte»: un disparo fuerte = salto brusco de la velocidad de la pelota en un solo paso (>8 m/s y >16 m/s al final). Se escala en el estado S (el mismo que usan los muros): horizontales × tiro_potencia_k y vertical × tiro_altura_k,
@@ -1774,6 +1775,7 @@ uint64_t ganchoBolaPaso(float dt, uint64_t rdx, uint64_t r8, float* S, void* cfg
     }
     if (g_bolaCentroHasta && GetTickCount64() < g_bolaCentroHasta) { S[0] = 0; S[1] = 0.11f; S[2] = 0; S[3] = S[4] = S[5] = 0; }
     else if (g_1v1BolaHasta && GetTickCount64() < g_1v1BolaHasta) { S[0] = g_1v1BolaX; S[1] = 0.11f; S[2] = 0; S[3] = S[4] = S[5] = 0; }   // 0.4.103 modo 2 del 1v1: balón en el área del portero
+    else if (g_empujeHasta && GetTickCount64() < g_empujeHasta) { S[3] = g_empujeVx; }   // 0.4.112: saque trabado de la IA: el balon sale rodando del centro
     if ((g_redOn || g_murosOn) && GetTickCount64() - g_tTrainRed < 3000) {
         float x = S[0], y = S[1], z = S[2];
         float largo = (float)g_canchaLargo, ancho = (float)g_canchaAncho;
@@ -2034,26 +2036,43 @@ bool uno1Quitar(Feature&) { g_1v1SaqueF = 0.0f; return true; }
 // En cada una +0x3C = cantidad de jugadores (3 con 3 contra 3) y +0x40 = 1. El lado del usuario puede ser la instancia 0 o la 1: el hilo lee quién es el equipo de
 // usuario (SIDE 0 = local, 1 = visita, ver g_jugLado) y escribe «local» en SU instancia y «rival» en la otra. 0 = no tocar. Log [JUGADORES] antes→después.
 float g_jugLocalF = 0.0f, g_jugRivalF = 0.0f, g_jugLadoF = 0.0f; volatile LONG g_jugCantOn = 0; HANDLE g_hiloJugCant = nullptr;
+static void persistirClaveJson(const std::string& id, const std::string& valor);
 DWORD WINAPI hiloJugCant(LPVOID) {
-    // 0.4.105: las dos instancias de 0x103C8 B son COPIAS del mismo registro (leído en vivo: al cambiar Atacante/Defensor cambian igual en las dos). Cada copia tiene
-    // dos celdas: +0x3C = grupo atacante y +0x40 = grupo defensor. «lado» dice en cuál está MI equipo (0 = +0x3C, 1 = +0x40); se escriben las dos copias.
-    bool estaba = false; LONG nLog = 0;
+    // 0.4.112: sincronizacion en los dos sentidos, gana el ultimo cambio. Las dos instancias de 0x103C8 B son COPIAS del mismo registro y cada copia tiene dos celdas: +0x3C = grupo atacante y
+    // +0x40 = grupo defensor; street_jugadores_lado dice en cual esta MI equipo (0 = +0x3C, 1 = +0x40). Cada celda tiene su variable del panel (local/rival).
+    //  - si el MENU del juego cambia una celda (valor distinto de lo escrito por el Core y de lo visto antes), el panel pasa a mostrar ese valor (y se guarda en el json);
+    //  - si el PANEL cambia su variable, el Core escribe ese valor en las dos copias;
+    //  - con la variable en 0 (lo que diga el menu) el panel refleja el valor actual de la celda.
+    bool estaba = false; LONG nLog = 0; int escrito[2] = { -1, -1 }, visto[2] = { -1, -1 };
     while (g_jugCantOn) {
         Sleep(50);
-        int cant[2] = { (int)(g_jugLocalF + 0.5f), (int)(g_jugRivalF + 0.5f) };
-        if (!g_streetActivo || (cant[0] <= 0 && cant[1] <= 0) || !trainingWorkCrudo()) { estaba = false; continue; }
+        if (!g_streetActivo || !trainingWorkCrudo()) { estaba = false; escrito[0] = escrito[1] = visto[0] = visto[1] = -1; continue; }
         int lado = (int)(g_jugLadoF + 0.5f) == 1 ? 1 : 0;
-        int want[2]; want[lado] = cant[0]; want[1 - lado] = cant[1];   // want[0] -> celda +0x3C, want[1] -> celda +0x40
+        float* var[2]; var[lado] = &g_jugLocalF; var[1 - lado] = &g_jugRivalF;
+        const char* clave[2]; clave[lado] = "street_jugadores_local"; clave[1 - lado] = "street_jugadores_rival";
         uint8_t* raiz = nullptr; uint8_t* obj = nullptr; uint8_t* dat = nullptr;
         if (!leerSeguro(g_globalPartido, &raiz, 8) || !raiz || !leerSeguro(raiz + 0x3F8, &obj, 8) || !obj || !leerSeguro(obj + 0x10, &dat, 8) || !dat) continue;
-        for (int c = 0; c < 2; ++c) {
-            for (int fl = 0; fl < 2; ++fl) {
-                int w = want[fl]; if (w < 1) continue; if (w > 11) w = 11;
-                uint8_t* celda = dat + 4 + (size_t)c * 0x103C8 + 0x3C + fl * 4;
-                int ant = -1; if (!leerSeguro(celda, &ant, 4) || ant < 0 || ant > 11) continue;
-                if (ant == w) continue;
-                if (escribirSeguro(celda, &w, 4)) { if (++nLog <= 300) logf("[JUGADORES] copia %d, celda +0x%X (%s): %d -> %d (dat=%p%s)", c, 0x3C + fl * 4, fl == lado ? "mi equipo" : "rival", ant, w, (void*)dat, estaba ? "" : ", al entrar"); }
+        for (int fl = 0; fl < 2; ++fl) {
+            int cur = -1; if (!leerSeguro(dat + 4 + 0x3C + fl * 4, &cur, 4) || cur < 0 || cur > 11) continue;
+            int w = (int)(*var[fl] + 0.5f);
+            if (estaba && cur != visto[fl] && cur != escrito[fl]) {   // el menu cambio la celda: el menu manda
+                *var[fl] = (float)cur; persistirClaveJson(clave[fl], std::to_string(cur)); escrito[fl] = cur; visto[fl] = cur;
+                if (++nLog <= 300) logf("[JUGADORES] el menu cambio %s a %d -> el panel lo refleja", fl == lado ? "mi equipo" : "rival", cur);
+                continue;
             }
+            visto[fl] = cur;
+            if (w < 1) {   // lo que diga el menu: el panel muestra el valor real
+                if (cur >= 1) { *var[fl] = (float)cur; persistirClaveJson(clave[fl], std::to_string(cur)); escrito[fl] = cur; }
+                continue;
+            }
+            if (w > 11) w = 11;
+            if (cur == w) { escrito[fl] = w; continue; }
+            for (int c = 0; c < 2; ++c) {
+                uint8_t* celda = dat + 4 + (size_t)c * 0x103C8 + 0x3C + fl * 4;
+                int ant = -1; if (!leerSeguro(celda, &ant, 4) || ant < 0 || ant > 11 || ant == w) continue;
+                if (escribirSeguro(celda, &w, 4) && ++nLog <= 300) logf("[JUGADORES] copia %d, celda +0x%X (%s): %d -> %d (dat=%p%s)", c, 0x3C + fl * 4, fl == lado ? "mi equipo" : "rival", ant, w, (void*)dat, estaba ? "" : ", al entrar");
+            }
+            escrito[fl] = w; visto[fl] = w;
         }
         estaba = true;
     }
@@ -2181,6 +2200,43 @@ bool arcoRealInstalar(Feature& f) {
     char b[240]; sprintf_s(b, "ok: volumen de red enganchado en exe+0x%llX (arco_medida 0-3; se aplica al empezar el partido); anclas %s; golpes %s; sonda %s", (unsigned long long)(m - g_exe.base), g_setPostOrig ? "ok" : "sin gancho", g_hitOrig ? "ok" : "sin gancho", g_sondaOrig ? "ok" : "sin gancho"); f.estado = b; return true;
 }
 bool arcoRealQuitar(Feature&) { g_arcoMedidaF = 0.0f; return true; }
+// --- street_saque_trabado (0.4.112): a veces el rival (IA) se queda en el circulo central con el balon sin sacar. Un hilo mira el balon (objeto de pelota_sonda): quieto (<0,15 m/s) en el centro durante
+// street_saque_espera_s (5 s por defecto) en el Entrenamiento. Anota SIEMPRE el estado ([SAQUE_TRABADO]: equipo que saca, pateador S+0x173C, fase S+0x1168/0x116C, hay humano en ese equipo?)
+// y, si el saque es de un equipo SIN humano (sin cursor suyo en los ultimos 20 s) y street_saque_empuje = 1, empuja el balon 2 m/s hacia la porteria rival durante 0,18 s para que el juego de el saque por hecho.
+float g_saqueEsperaF = 5.0f, g_saqueEmpujeF = 1.0f; volatile LONG g_saqueTrabOn = 0; HANDLE g_hiloSaqueTrab = nullptr;
+DWORD WINAPI hiloSaqueTrabado(LPVOID) {
+    ULONGLONG quietoDesde = 0, ultEmpuje = 0; bool anotado = false; LONG nLog = 0;
+    while (g_saqueTrabOn) {
+        Sleep(200);
+        if (!g_streetActivo || !trainingWorkEstable()) { quietoDesde = 0; anotado = false; continue; }
+        uint8_t* b = g_pelotaSeguida; float bp[3], bv[3];
+        if (!b || !leerSeguro(b + 0x64, bp, 12) || !leerSeguro(b + 0x70, bv, 12)) { quietoDesde = 0; anotado = false; continue; }
+        float sp = sqrtf(bv[0] * bv[0] + bv[1] * bv[1] + bv[2] * bv[2]);
+        if (!(fabsf(bp[0]) < 0.8f && fabsf(bp[2]) < 0.8f && bp[1] < 0.5f && sp < 0.15f)) { quietoDesde = 0; anotado = false; continue; }
+        ULONGLONG ahora = GetTickCount64();
+        if (!quietoDesde) { quietoDesde = ahora; continue; }
+        if (ahora - quietoDesde < (ULONGLONG)(g_saqueEsperaF * 1000.0f)) continue;
+        uint8_t* raiz = nullptr; uint8_t* S = nullptr;
+        if (!leerSeguro(g_globalPartido, &raiz, 8) || !raiz || !leerSeguro(raiz + 0x270, &S, 8) || !S) continue;
+        uint32_t eq = 0, ph = 0, st = 0, pat = 0xFFFFFFFF; leerSeguro(S + 0x1558, &eq, 4); if (eq > 1) eq = 0;
+        leerSeguro(S + 0x1168, &ph, 4); leerSeguro(S + 0x116C, &st, 4); leerSeguro(S + 0x173C + eq * 4, &pat, 4);
+        bool humano = ahora - g_cursorEqT[eq] < 20000;
+        if (!anotado && ++nLog <= 60) { anotado = true; logf("[SAQUE_TRABADO] balon quieto %.1f s en el centro; saca el equipo %u (humano=%d), pateador=%u, fase S+0x1168=%u S+0x116C=%u", (ahora - quietoDesde) / 1000.0, eq, humano ? 1 : 0, pat, ph, st); }
+        if (humano || g_saqueEmpujeF < 0.5f || ahora - ultEmpuje < 4000) continue;
+        ultEmpuje = ahora;
+        float gx = 0, gz = 0; float dirx = (posJugPC(raiz, eq ? 11 : 0, gx, gz) && gx > 0) ? -1.0f : 1.0f;
+        g_empujeVx = dirx * 2.0f; g_empujeHasta = ahora + 180;
+        logf("[SAQUE_TRABADO] saque sin humano parado: empujo el balon 2 m/s hacia %s", dirx > 0 ? "+x" : "-x");
+    }
+    return 0;
+}
+bool saqueTrabInstalar(Feature& f) {
+    if (!g_globalPartido && !resolverGlobalPartido(f.id)) { f.estado = "sin firma del global del partido"; return false; }
+    g_saqueTrabOn = 1; g_hiloSaqueTrab = CreateThread(nullptr, 0, hiloSaqueTrabado, nullptr, 0, nullptr);
+    if (!g_hiloSaqueTrab) { g_saqueTrabOn = 0; f.estado = "no se pudo crear el hilo"; return false; }
+    f.estado = "ok: vigila el saque de centro (street_saque_espera_s, street_saque_empuje)"; return true;
+}
+bool saqueTrabQuitar(Feature&) { g_saqueTrabOn = 0; if (g_hiloSaqueTrab) { WaitForSingleObject(g_hiloSaqueTrab, 3000); CloseHandle(g_hiloSaqueTrab); g_hiloSaqueTrab = nullptr; } return true; }
 bool jugCantQuitar(Feature&) { g_jugCantOn = 0; if (g_hiloJugCant) { WaitForSingleObject(g_hiloJugCant, 4000); CloseHandle(g_hiloJugCant); g_hiloJugCant = nullptr; } g_jugLocalF = g_jugRivalF = 0.0f; return true; }
 bool arcoChicoInstalar(Feature& f) {   // 0.4.95: arco más chico con postes y larguero lógicos; el juego sigue viendo el gol solo por la boca chica
     if (!murosInstalar(f)) return false;
@@ -3185,6 +3241,7 @@ static bool equipoSoloPortero(int equipo) {
 }
 static void __stdcall ayudanteCursor(uint8_t* reg, uint32_t idx, uint8_t* ret, uint32_t* idxPila) {
     uint32_t viejo = 0xFFFFFFFF; leerSeguro(reg + 0x20, &viejo, 4);
+    if (idx < 22) g_cursorEqT[idx > 10 ? 1 : 0] = GetTickCount64();   // 0.4.112: ese equipo tiene un humano con cursor
     static LONG nTodos = 0, nPt = 0; LONG t = InterlockedIncrement(&nTodos);
     bool pt = (idx == 0 || idx == 11);
     if (viejo == idx) return;
@@ -3370,6 +3427,7 @@ std::vector<Feature> g_funciones = {   // orden = orden de arranque (gol_nativo_
     { "goles_sonda", "Solo log: punteros reales de los contadores de goles (gancho en FUN_1408C9E90+9) para la revancha 0-0", golesSondaInstalar, golesSondaQuitar },
     { "street_jugadores", "Entrenamiento: cantidad de jugadores por equipo sin el mínimo de 3 del menú (EXPERIMENTAL; street_jugadores_local / _rival 0-11, _lado 0/1)", jugCantInstalar, jugCantQuitar },
     { "arco_chico_real", "Arco chico REAL (EXPERIMENTAL): boca lógica y volumen de la red nativa nacen con la medida arco_medida (0 original, 1 = 4x2, 2 = 3x2, 3 = 5x2,2) al empezar el partido", arcoRealInstalar, arcoRealQuitar },
+    { "street_saque_trabado", "Saque de centro trabado: anota el estado y empuja el balon si la IA no saca (street_saque_espera_s, street_saque_empuje)", saqueTrabInstalar, saqueTrabQuitar },
     { "street_1v1_portero", "1 contra 1: el saque lo hace el portero (gancho del setter de pateadores FUN_140A3CAE0; modo en street_1v1_saque 0-3)", uno1Instalar, uno1Quitar },
     { "arquero_controla", "Arquero controla: la unidad del portero IA (modo 5/6) pasa en vez de patear/despejar, salvo balón muy cerca del arco y rival encima (APAGADA por defecto; aparte de la config congelada del portero)", arqControlaInstalar, arqControlaQuitar },
     { "red_frena_free", "La red de los arcos frena la pelota en el entrenamiento (gancho al paso de la pelota)", redInstalar, redQuitar },
@@ -3496,6 +3554,8 @@ void leerConfig() {
     if (valorDe("arquero_dist_seleccion", v)) { g_arqDistSelF = (float)atof(v.c_str()); if (g_arqDistSelF < 2.0f || g_arqDistSelF > 25.0f) g_arqDistSelF = 7.0f; }
     if (valorDe("arquero_dist_rival", v)) { g_arqRivalDistF = (float)atof(v.c_str()); if (g_arqRivalDistF < 0.0f || g_arqRivalDistF > 15.0f) g_arqRivalDistF = 4.0f; }
     if (valorDe("red_rebote_factor", v)) { g_reboteFactorF = (float)atof(v.c_str()); if (g_reboteFactorF < 0.0f || g_reboteFactorF > 1.0f) g_reboteFactorF = 0.6f; }
+    if (valorDe("street_saque_espera_s", v)) { g_saqueEsperaF = (float)atof(v.c_str()); if (g_saqueEsperaF < 2.0f || g_saqueEsperaF > 20.0f) g_saqueEsperaF = 5.0f; }
+    if (valorDe("street_saque_empuje", v)) g_saqueEmpujeF = (v == "false" || v == "0") ? 0.0f : 1.0f;
     if (valorDe("red_tope_rebote", v)) g_redTopeF = (v == "false" || v == "0") ? 0.0f : 1.0f;
     if (valorDe("red_anclas", v)) g_anclasF = (v == "false" || v == "0") ? 0.0f : 1.0f;
     if (valorDe("street_l1_sin_portero", v)) g_l1SinPorteroF = (v == "false" || v == "0") ? 0.0f : 1.0f;
@@ -3600,7 +3660,7 @@ static void procesarOrdenes() {
             continue;
         }
         {   // parámetros numéricos EN VIVO (se releen al instante: son las variables que usan los ganchos) y se guardan en el json
-            struct Num { const char* id; float* var; float lo, hi; }; static const Num nums[] = { { "tiro_potencia_k", &g_tiroPot, 0.5f, 2.0f }, { "tiro_altura_k", &g_tiroAlt, 0.2f, 1.5f }, { "pase_vel_k", &g_paseVel, 0.8f, 2.0f }, { "pase_correccion", &g_paseCorr, 0.0f, 1.0f }, { "pase_cono_grados", &g_paseCono, 5.0f, 60.0f }, { "muro_rebote", &g_muroRebote, 0.3f, 0.95f }, { "muro_fondo_rebote", &g_muroFondoRebote, 0.0f, 0.95f }, { "muro_lat_friccion", &g_muroLatFric, 0.0f, 1.0f }, { "arco_chico_ancho", &g_arcoAncho, 1.5f, 7.32f }, { "street_1v1_saque", &g_1v1SaqueF, 0.0f, 3.0f }, { "street_jugadores_local", &g_jugLocalF, 0.0f, 11.0f }, { "street_jugadores_rival", &g_jugRivalF, 0.0f, 11.0f }, { "street_jugadores_lado", &g_jugLadoF, 0.0f, 1.0f }, { "arco_medida", &g_arcoMedidaF, 0.0f, 3.0f }, { "street_l1_sin_portero", &g_l1SinPorteroF, 0.0f, 1.0f }, { "arquero_dist_seleccion", &g_arqDistSelF, 2.0f, 25.0f }, { "arquero_dist_rival", &g_arqRivalDistF, 0.0f, 15.0f }, { "red_tope_rebote", &g_redTopeF, 0.0f, 1.0f }, { "red_rebote_factor", &g_reboteFactorF, 0.0f, 1.0f }, { "red_anclas", &g_anclasF, 0.0f, 1.0f }, { "gk_despeje_dist_m", &g_gkDespejeDist, 1.0f, 15.0f }, { "gk_despeje_presion_m", &g_gkDespejePresion, 0.5f, 15.0f }, { "arco_chico_alto", &g_arcoAlto, 1.0f, 2.44f }, { "muro_lat_empuje", &g_muroLatEmpuje, 0.0f, 0.3f }, { "muro_friccion", &g_muroFric, 0.0f, 1.0f } };
+            struct Num { const char* id; float* var; float lo, hi; }; static const Num nums[] = { { "tiro_potencia_k", &g_tiroPot, 0.5f, 2.0f }, { "tiro_altura_k", &g_tiroAlt, 0.2f, 1.5f }, { "pase_vel_k", &g_paseVel, 0.8f, 2.0f }, { "pase_correccion", &g_paseCorr, 0.0f, 1.0f }, { "pase_cono_grados", &g_paseCono, 5.0f, 60.0f }, { "muro_rebote", &g_muroRebote, 0.3f, 0.95f }, { "muro_fondo_rebote", &g_muroFondoRebote, 0.0f, 0.95f }, { "muro_lat_friccion", &g_muroLatFric, 0.0f, 1.0f }, { "arco_chico_ancho", &g_arcoAncho, 1.5f, 7.32f }, { "street_1v1_saque", &g_1v1SaqueF, 0.0f, 3.0f }, { "street_jugadores_local", &g_jugLocalF, 0.0f, 11.0f }, { "street_jugadores_rival", &g_jugRivalF, 0.0f, 11.0f }, { "street_jugadores_lado", &g_jugLadoF, 0.0f, 1.0f }, { "arco_medida", &g_arcoMedidaF, 0.0f, 3.0f }, { "street_l1_sin_portero", &g_l1SinPorteroF, 0.0f, 1.0f }, { "arquero_dist_seleccion", &g_arqDistSelF, 2.0f, 25.0f }, { "arquero_dist_rival", &g_arqRivalDistF, 0.0f, 15.0f }, { "red_tope_rebote", &g_redTopeF, 0.0f, 1.0f }, { "red_rebote_factor", &g_reboteFactorF, 0.0f, 1.0f }, { "street_saque_espera_s", &g_saqueEsperaF, 2.0f, 20.0f }, { "street_saque_empuje", &g_saqueEmpujeF, 0.0f, 1.0f }, { "red_anclas", &g_anclasF, 0.0f, 1.0f }, { "gk_despeje_dist_m", &g_gkDespejeDist, 1.0f, 15.0f }, { "gk_despeje_presion_m", &g_gkDespejePresion, 0.5f, 15.0f }, { "arco_chico_alto", &g_arcoAlto, 1.0f, 2.44f }, { "muro_lat_empuje", &g_muroLatEmpuje, 0.0f, 0.3f }, { "muro_friccion", &g_muroFric, 0.0f, 1.0f } };
             bool hecho = false; for (const Num& n : nums) if (id == n.id) { float x = (float)atof(v.c_str()); if (x >= n.lo && x <= n.hi) { *n.var = x; persistirClaveJson(id, v); logf("[PANEL] %s = %.3f (en vivo)", n.id, x); } else logf("[PANEL] %s=%s fuera de rango [%.2f, %.2f]: ignorado", n.id, v.c_str(), n.lo, n.hi); hecho = true; break; }
             if (hecho) continue;
         }

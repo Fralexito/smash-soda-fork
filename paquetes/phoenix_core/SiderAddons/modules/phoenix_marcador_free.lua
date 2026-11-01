@@ -285,33 +285,35 @@ local PANEL = {
     { id = "arquero_dist_seleccion", txt = "  Distancia para poder elegir al arquero (m)", tipo = "num", paso = 1, lo = 2, hi = 25, def = 7, modo = "vivo" },
     { id = "arquero_dist_rival", txt = "  Sin rival a menos de (m) del balón para elegir al arquero (0 = no mirar)", tipo = "num", paso = 1, lo = 0, hi = 15, def = 4, modo = "vivo" },
     { id = "red_rebote_factor", txt = "Rebote contra fondo/poste/travesaño: salida máx. = entrada × (0 o 1 = sin tope)", tipo = "num", paso = 0.05, lo = 0, hi = 1, def = 0.6, modo = "vivo" },
+    { id = "street_saque_empuje", txt = "Saque de centro trabado de la IA: 1 = empujar el balón · 0 = solo anotar", tipo = "num", paso = 1, lo = 0, hi = 1, def = 1, modo = "vivo" },
+    { id = "street_saque_espera_s", txt = "  Segundos quieto antes de empujarlo", tipo = "num", paso = 1, lo = 2, hi = 20, def = 5, modo = "vivo" },
     { id = "red_tope_rebote", txt = "Tope de rebote en la red (no sale más rápido de lo que entró): 1 sí · 0 no", tipo = "num", paso = 1, lo = 0, hi = 1, def = 1, modo = "vivo" },
     { id = "red_anclas", txt = "Anclas de la tela a la medida del arco: 1 sí · 0 no", tipo = "num", paso = 1, lo = 0, hi = 1, def = 1, modo = "vivo" },
-    { id = "street_jugadores_local", txt = "Jugadores mi equipo (0 = no tocar; EXPERIMENTAL)", tipo = "num", paso = 1, lo = 0, hi = 11, def = 0, modo = "vivo" },
-    { id = "street_jugadores_rival", txt = "Jugadores rival (0 = no tocar; EXPERIMENTAL)", tipo = "num", paso = 1, lo = 0, hi = 11, def = 0, modo = "vivo" },
+    { id = "street_jugadores_local", txt = "Jugadores mi equipo (sigue al menú del juego; el último cambio gana)", tipo = "num", paso = 1, lo = 0, hi = 11, def = 0, modo = "vivo" },
+    { id = "street_jugadores_rival", txt = "Jugadores rival (sigue al menú del juego; el último cambio gana)", tipo = "num", paso = 1, lo = 0, hi = 11, def = 0, modo = "vivo" },
     { id = "street_jugadores_lado", txt = "Mi equipo es la instancia 0 o 1 (si baja el rival y no el mío, cambia a 1)", tipo = "num", paso = 1, lo = 0, hi = 1, def = 0, modo = "vivo" },
-    { id = "tiro_fuerte", txt = "Tiro fuerte", tipo = "bool", modo = "vivo" },
+    { id = "tiro_fuerte", txt = "Tiro fuerte", tipo = "bool", def = true, modo = "vivo" },
     { id = "tiro_potencia_k", txt = "  Tiro: potencia", tipo = "num", paso = 0.05, lo = 0.8, hi = 1.8, def = 1.25, modo = "vivo" },
     { id = "tiro_altura_k", txt = "  Tiro: altura", tipo = "num", paso = 0.05, lo = 0.3, hi = 1.2, def = 0.7, modo = "vivo" },
-    { id = "pase_rapido_preciso", txt = "Pase rápido y preciso", tipo = "bool", modo = "vivo" },
+    { id = "pase_rapido_preciso", txt = "Pase rápido y preciso", tipo = "bool", def = true, modo = "vivo" },
     { id = "pase_vel_k", txt = "  Pase: velocidad", tipo = "num", paso = 0.05, lo = 0.9, hi = 1.6, def = 1.2, modo = "vivo" },
     { id = "pase_correccion", txt = "  Pase: corrección", tipo = "num", paso = 0.1, lo = 0.0, hi = 1.0, def = 0.6, modo = "vivo" },
-    { id = "muros_core", txt = "Paredes (rebote)", tipo = "bool", modo = "vivo" },
+    { id = "muros_core", txt = "Paredes (rebote)", tipo = "bool", def = true, modo = "vivo" },
     { id = "muro_rebote", txt = "  Rebote", tipo = "num", paso = 0.05, lo = 0.4, hi = 0.9, def = 0.75, modo = "vivo" },
     { id = "muro_friccion", txt = "  Fricción", tipo = "num", paso = 0.01, lo = 0.9, hi = 1.0, def = 0.97, modo = "vivo" },
-    { id = "red_frena_free", txt = "Freno de red del Core (apagado = red nativa; sin muro de fondo en el arco)", tipo = "bool", modo = "vivo" },
-    { id = "red_resorte", txt = "Red del arco", tipo = "bool", modo = "vivo" },
-    { id = "ia_cancha_chica", txt = "IA de cancha chica", tipo = "bool", modo = "vivo" },
-    { id = "jugadores_formacion", txt = "Formación de saque", tipo = "bool", modo = "vivo" },
-    { id = "arquero_pase_corto", txt = "Portero: pase corto", tipo = "bool", modo = "vivo" },
-    { id = "arquero_controla", txt = "Arquero controla (no despeja)", tipo = "bool", modo = "vivo" },
-    { id = "clima_forzado", txt = "Clima despejado", tipo = "clima", modo = "sig.partida" },
-    { id = "street_dos_tiempos", txt = "Dos tiempos", tipo = "bool", modo = "sig.partida" },
-    { id = "street_pantalla_descanso", txt = "Pantalla de descanso", tipo = "bool", modo = "sig.partida" },
-    { id = "reloj_visual_2t", txt = "Reloj 2.º tiempo 45→90 (visual)", tipo = "bool", modo = "vivo" },
-    { id = "final_nativo", txt = "Final nativo (experimental)", tipo = "bool", modo = "vivo" },
-    { id = "descanso_fase3", txt = "Reloj 2.º tiempo en fase 3", tipo = "bool", modo = "sig.partida" },
-    { id = "descanso_base45", txt = "Reloj 2.º tiempo base 45", tipo = "bool", modo = "sig.partida" },
+    { id = "red_frena_free", txt = "Freno de red del Core (apagado = red nativa; sin muro de fondo en el arco)", tipo = "bool", def = false, modo = "vivo" },
+    { id = "red_resorte", txt = "Red del arco", tipo = "bool", def = true, modo = "vivo" },
+    { id = "ia_cancha_chica", txt = "IA de cancha chica", tipo = "bool", def = true, modo = "vivo" },
+    { id = "jugadores_formacion", txt = "Formación de saque", tipo = "bool", def = true, modo = "vivo" },
+    { id = "arquero_pase_corto", txt = "Portero: pase corto", tipo = "bool", def = true, modo = "vivo" },
+    { id = "arquero_controla", txt = "Arquero controla (no despeja)", tipo = "bool", def = false, modo = "vivo" },
+    { id = "clima_forzado", txt = "Clima despejado", tipo = "clima", def = true, modo = "sig.partida" },
+    { id = "street_dos_tiempos", txt = "Dos tiempos", tipo = "bool", def = true, modo = "sig.partida" },
+    { id = "street_pantalla_descanso", txt = "Pantalla de descanso", tipo = "bool", def = true, modo = "sig.partida" },
+    { id = "reloj_visual_2t", txt = "Reloj 2.º tiempo 45→90 (visual)", tipo = "bool", def = true, modo = "vivo" },
+    { id = "final_nativo", txt = "Final nativo (experimental)", tipo = "bool", def = false, modo = "vivo" },
+    { id = "descanso_fase3", txt = "Reloj 2.º tiempo en fase 3", tipo = "bool", def = false, modo = "sig.partida" },
+    { id = "descanso_base45", txt = "Reloj 2.º tiempo base 45", tipo = "bool", def = false, modo = "sig.partida" },
 }
 local panelAbierto, panelSel, panelCache, panelCambio, tPanelLeer = true, 1, {}, {}, -100   -- v0.8: el panel es lo primero que se ve en esta página del overlay de Sider (F9 alterna con el marcador)
 local function panelValor(it)
@@ -338,7 +340,7 @@ local function panelLeer()
 end
 local function panelTexto()
     panelLeer()
-    local s = { "PHOENIX STREET   F9 marcador/panel · 8 ↑ · 9 ↓ · 0 cambiar · RePag baja / AvPag sube (o Izq/Der) · F10/F11 también valen" }
+    local s = { "PHOENIX STREET   F9 marcador/panel · 8 ↑ · 9 ↓ · 0 cambiar · 7 valor normal · RePag baja / AvPag sube (o Izq/Der) · F10/F11 también valen" }
     for i, it in ipairs(PANEL) do
         local v = panelCache[it.id]; local est
         if it.tipo == "num" then est = string.format("%.2f", tonumber(v) or it.def) else est = v and "ON" or "OFF" end
@@ -350,6 +352,18 @@ end
 -- Valen la fila superior (0x38/0x39/0x30) y el teclado numérico (0x68/0x69/0x60), y SOLO si el overlay de Sider está mostrando esta página (overlay_on se llamó hace <0,6 s).
 -- Choques revisados: attack_mentality.lua usa 8/9 pero NO está en sider.ini; trophy.lua usa el 0 de la fila superior para recargar su map.txt (inofensivo; el teclado numérico no choca).
 local tOverlayVisto = -100
+-- 0.4.112: tecla 7 (fila superior 0x37 o teclado numérico 0x67) = vuelve la línea elegida a su valor «normal» (el campo def de la línea). Sin choques en sider.ini ni en los otros módulos.
+local function panelRestablecer(it)
+    if not it or it.def == nil then return end
+    panelLeer()
+    if it.tipo == "num" then
+        panelCache[it.id] = it.def; panelCambio[it.id] = os.clock(); panelEnviar(string.format("%s=%.2f", it.id, it.def))
+    elseif it.tipo == "clima" then
+        panelCache[it.id] = it.def; panelCambio[it.id] = os.clock(); panelEnviar("clima_forzado=" .. (it.def and "0" or "-1"))
+    else
+        panelCache[it.id] = it.def; panelCambio[it.id] = os.clock(); panelEnviar(it.id .. "=" .. (it.def and "1" or "0"))
+    end
+end
 local function panelCambiarValor(it)
     if not it then return end
     panelLeer()
@@ -368,10 +382,11 @@ function m.key_down(ctx, vkey)
     if vkey == 0x78 then panelAbierto = not panelAbierto; return end              -- F9
     if not panelAbierto then return end
     local it = PANEL[panelSel]
-    if (vkey == 0x38 or vkey == 0x68 or vkey == 0x39 or vkey == 0x69 or vkey == 0x30 or vkey == 0x60) then
+    if (vkey == 0x38 or vkey == 0x68 or vkey == 0x39 or vkey == 0x69 or vkey == 0x30 or vkey == 0x60 or vkey == 0x37 or vkey == 0x67) then
         if os.clock() - tOverlayVisto > 0.6 then return end                         -- solo con el overlay abierto en esta página
         if vkey == 0x38 or vkey == 0x68 then panelSel = (panelSel - 2) % #PANEL + 1       -- 8: anterior
         elseif vkey == 0x39 or vkey == 0x69 then panelSel = panelSel % #PANEL + 1         -- 9: siguiente
+        elseif vkey == 0x37 or vkey == 0x67 then panelRestablecer(it)                     -- 7: valor normal
         else panelCambiarValor(it) end                                                    -- 0: cambiar
         return
     end
