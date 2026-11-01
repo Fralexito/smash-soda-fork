@@ -42,7 +42,7 @@ end
 
 local function mirarConfig()
     local t = leer(rutaCfg)
-    encendido = (t ~= nil) and (t:find('"marcador_free"%s*:%s*true') ~= nil)
+    encendido = (t ~= nil) and (t:find('"marcador_free"%s*:%s*true') ~= nil) and not t:find('"street_activo"%s*:%s*false')   -- 0.4.102: con el Street apagado no hay marcador
 end
 
 local canchaOn, rutaCancha, paredesOn, seasonForzada, suplentesCero = false, nil, false, nil, false
@@ -220,6 +220,7 @@ end
 -- v0.8 «panel Phoenix Street»: F9 abre/cierra · F10 siguiente · F11 ON/OFF · ← → ajusta el valor. Escribe órdenes en phoenix_core\ordenes.txt (el Core las lee cada segundo y guarda el json).
 -- Las claves congeladas del portero NO están en la lista. «vivo» = se aplica al instante; «sig.partida» = se guarda y se usa en la próxima partida/arranque.
 local PANEL = {
+    { id = "street_activo", txt = "MODO STREET (todo el Street en el Entrenamiento)", tipo = "bool", def = true, modo = "fuera" },   -- 0.4.102
     { id = "tiro_fuerte", txt = "Tiro fuerte", tipo = "bool", modo = "vivo" },
     { id = "tiro_potencia_k", txt = "  Tiro: potencia", tipo = "num", paso = 0.05, lo = 0.8, hi = 1.8, def = 1.25, modo = "vivo" },
     { id = "tiro_altura_k", txt = "  Tiro: altura", tipo = "num", paso = 0.05, lo = 0.3, hi = 1.2, def = 0.7, modo = "vivo" },
@@ -245,7 +246,10 @@ local PANEL = {
 local panelAbierto, panelSel, panelCache, panelCambio, tPanelLeer = true, 1, {}, {}, -100   -- v0.8: el panel es lo primero que se ve en esta página del overlay de Sider (F9 alterna con el marcador)
 local function panelValor(it)
     local t = leer(rutaCfg) or ""
-    if it.tipo == "bool" then return t:find('"' .. it.id .. '"%s*:%s*true') ~= nil end
+    if it.tipo == "bool" then
+        if it.def ~= nil and not t:find('"' .. it.id .. '"') then return it.def end   -- 0.4.102: clave ausente = valor por defecto
+        return t:find('"' .. it.id .. '"%s*:%s*true') ~= nil
+    end
     if it.tipo == "clima" then return t:match('"clima_forzado"%s*:%s*(%d)') ~= nil end
     local v = t:match('"' .. it.id .. '"%s*:%s*([%d%.]+)')
     return tonumber(v) or it.def
@@ -268,7 +272,7 @@ local function panelTexto()
     for i, it in ipairs(PANEL) do
         local v = panelCache[it.id]; local est
         if it.tipo == "num" then est = string.format("%.2f", tonumber(v) or it.def) else est = v and "ON" or "OFF" end
-        s[#s + 1] = string.format("%s %s: %s%s", i == panelSel and ">" or " ", it.txt, est, it.modo == "sig.partida" and "  (sig. partida)" or "")
+        s[#s + 1] = string.format("%s %s: %s%s", i == panelSel and ">" or " ", it.txt, est, it.modo == "sig.partida" and "  (sig. partida)" or it.modo == "fuera" and "  (se aplica al salir del Entrenamiento)" or "")
     end
     return table.concat(s, "\n")
 end

@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.101"
+#define PHX_CORE_VERSION "0.4.102"
 
 namespace {
 
@@ -287,6 +287,8 @@ bool leerSeguro(const void* dir, void* out, size_t n);
 using FnRanuras = uint64_t (*)(uint8_t*, uint64_t, uint64_t, uint64_t);
 FnRanuras g_ranurasOrig = nullptr;
 volatile LONG g_ranurasSaltadas = 0;
+volatile LONG g_streetActivo = 1, g_streetPedido = 1;   // 0.4.102 «street_activo»: ver hayTrainingWork
+volatile uint8_t* g_golStreetBandera = nullptr;   // 0.4.102: byte que leen las cuevas del gol nativo (1 = Street encendido); lo sincroniza streetVigilar
 uint64_t ganchoRanuras(uint8_t* obj, uint64_t a2, uint64_t a3, uint64_t a4) {
     uint64_t vt = 0;
     if (!obj || !leerSeguro(obj + 0xC8, &vt, 8) || vt == 0) {
@@ -340,19 +342,23 @@ bool golInstalar(Feature& f) {
     uint8_t* sitio = firmaUnica("codigo", kFirmaDegradar, f.id);
     if (!sitio) { f.estado = "sin firma: degradación del gol en el entrenamiento"; return false; }
     uint8_t* sitios[2] = { sitio, sitio + 13 };
-    uint8_t* cueva = reservarCerca(sitio, 64);
+    uint8_t* cueva = reservarCerca(sitio, 80);
     if (!cueva) { f.estado = "no hay memoria cerca del exe para la cueva"; return false; }
-    for (int i = 0; i < 2; ++i) {
+    uint8_t* bandera = cueva + 72; *bandera = g_streetActivo ? 1 : 0; g_golStreetBandera = bandera;
+    for (int i = 0; i < 2; ++i) {   // 0.4.102: con el Street apagado (bandera 0) la cueva hace lo de siempre (mov edx,7)
         uint8_t* c = cueva + i * 32;
         uint8_t* vuelta = sitios[i] + 5;
-        const uint8_t cab[] = { 0x83, 0xFF, 0x03,  0x75, 0x07,  0x89, 0xFA };   // cmp edi,3 ; jne +7 ; mov edx,edi
-        memcpy(c, cab, sizeof cab);
-        if (!escribirRel32(c + 7, 0xE9, c + 7, vuelta)) { f.estado = "cueva fuera de alcance"; return false; }
-        const uint8_t siete[] = { 0xBA, 0x07, 0x00, 0x00, 0x00 };                // mov edx,7 (lo de siempre)
-        memcpy(c + 12, siete, 5);
-        if (!escribirRel32(c + 17, 0xE9, c + 17, vuelta)) { f.estado = "cueva fuera de alcance"; return false; }
+        int32_t dB = static_cast<int32_t>(bandera - (c + 7));
+        const uint8_t cmpB[] = { 0x80, 0x3D, 0, 0, 0, 0, 0x00 };                  // cmp byte [rip+bandera],0
+        memcpy(c, cmpB, sizeof cmpB); memcpy(c + 2, &dB, 4);
+        const uint8_t cab[] = { 0x74, 0x0C,  0x83, 0xFF, 0x03,  0x75, 0x07,  0x89, 0xFA };   // je siete ; cmp edi,3 ; jne siete ; mov edx,edi
+        memcpy(c + 7, cab, sizeof cab);
+        if (!escribirRel32(c + 16, 0xE9, c + 16, vuelta)) { f.estado = "cueva fuera de alcance"; return false; }
+        const uint8_t siete[] = { 0xBA, 0x07, 0x00, 0x00, 0x00 };                // c+21: mov edx,7 (lo de siempre)
+        memcpy(c + 21, siete, 5);
+        if (!escribirRel32(c + 26, 0xE9, c + 26, vuelta)) { f.estado = "cueva fuera de alcance"; return false; }
     }
-    FlushInstructionCache(GetCurrentProcess(), cueva, 64);
+    FlushInstructionCache(GetCurrentProcess(), cueva, 80);
     for (int i = 0; i < 2; ++i) {
         Parche p; p.dir = sitios[i];
         p.original.assign({ 0xBA, 0x07, 0x00, 0x00, 0x00 });
@@ -557,13 +563,18 @@ double g_celebSeg = 8.0;          // opción json «celebracion_segundos» (0 = 
 volatile LONG g_directoCont = 0;
 bool g_sondaOn = false;          // la sonda vuelca la cola de pasos tras montar el gol
 
+// 0.4.102 «street_activo» (json y panel F9 de Sider): interruptor general del modo Street. Con 0, hayTrainingWork() y
+// trainingWorkEstable() responden «no» y todas las funciones del Street dejan el Entrenamiento como el original.
+// El cambio pedido (g_streetPedido) solo pasa a g_streetActivo fuera del Entrenamiento (streetVigilar), para no cortar un Street a medias.
+// (las variables g_streetActivo / g_streetPedido están declaradas junto a g_golStreetBandera)
+
 // ¿Hay TrainingWork? Mismo criterio que FUN_14044D110: [root+0x400] != 0 y su primer byte != 0.
 bool hayTrainingWork(uint8_t** raizOut = nullptr) {
     uint8_t* raiz = nullptr; uint8_t* tw = nullptr; uint8_t twb = 0;
     bool si = g_globalPartido && leerSeguro(g_globalPartido, &raiz, 8) && raiz &&
               leerSeguro(raiz + 0x400, &tw, 8) && tw && leerSeguro(tw, &twb, 1) && twb != 0;
     if (raizOut) *raizOut = raiz;
-    return si;
+    return si && g_streetActivo;
 }
 
 uint64_t ganchoMontador(uint64_t a1, uint64_t a2, uint64_t a3, uint64_t a4) {
@@ -696,21 +707,24 @@ static void bloqueNuevo(uint8_t* d) {
     for (int i = 0; i < 9; ++i) { if (i == 2 || i == 3) continue; memcpy(d + i * 4, &f[i], 4); }
 }
 // TrainingWork «estable»: raíz → +0x3F8 (objeto de referencia) → +0x10 (datos) → byte 0 ≠ 0. (raíz+0x400 solo vale dentro de accesos puntuales.)
-static bool trainingWorkEstable() {
+// Sin el interruptor «street_activo»: lo usa streetVigilar para saber si ya se puede aplicar el cambio pedido.
+static bool trainingWorkCrudo() {
     uint8_t* raiz = nullptr; uint8_t* obj = nullptr; uint8_t* dat = nullptr; uint8_t b = 0;
     return g_globalPartido && leerSeguro(g_globalPartido, &raiz, 8) && raiz && leerSeguro(raiz + 0x3F8, &obj, 8) && obj &&
            leerSeguro(obj + 0x10, &dat, 8) && dat && leerSeguro(dat, &b, 1) && b != 0;
 }
-static int parchearBloquesCampo() {
-    uint8_t nuevo[36]; bloqueNuevo(nuevo);
+static bool trainingWorkEstable() { return g_streetActivo && trainingWorkCrudo(); }
+// cambia cada bloque de dimensiones igual a «de» por «a» (36 B; mismo barrido de memoria privada que antes de la 0.4.102)
+static int reemplazarBloquesCampo(const uint8_t* de, const uint8_t* a36) {
+    uint32_t cab; memcpy(&cab, de, 4);
     int n = 0; MEMORY_BASIC_INFORMATION mbi; uint8_t* a = reinterpret_cast<uint8_t*>(0x10000);
     while (a < reinterpret_cast<uint8_t*>(0x7FFE0000ull) && VirtualQuery(a, &mbi, sizeof mbi)) {
         uint8_t* ini = static_cast<uint8_t*>(mbi.BaseAddress); size_t tam = mbi.RegionSize;
         if (mbi.State == MEM_COMMIT && mbi.Type == MEM_PRIVATE && (mbi.Protect == PAGE_READWRITE) && tam >= 36 && tam <= (512u << 20)) {
             __try {
                 for (size_t o = 0; o + 36 <= tam; o += 4) {
-                    if (*reinterpret_cast<uint32_t*>(ini + o) == 0x42523D70u && memcmp(ini + o, kBloqueCampo, 36) == 0) {
-                        memcpy(ini + o, nuevo, 36); ++n;
+                    if (*reinterpret_cast<uint32_t*>(ini + o) == cab && memcmp(ini + o, de, 36) == 0) {
+                        memcpy(ini + o, a36, 36); ++n;
                     }
                 }
             } __except (EXCEPTION_EXECUTE_HANDLER) {}
@@ -719,6 +733,9 @@ static int parchearBloquesCampo() {
     }
     return n;
 }
+static int parchearBloquesCampo() { uint8_t nuevo[36]; bloqueNuevo(nuevo); return reemplazarBloquesCampo(kBloqueCampo, nuevo); }
+// 0.4.102: al salir del Entrenamiento (o con el Street apagado) los bloques que quedaron con la minicancha vuelven a 52.56 x 34.06
+static int restaurarBloquesCampo() { uint8_t nuevo[36]; bloqueNuevo(nuevo); return reemplazarBloquesCampo(nuevo, kBloqueCampo); }
 // Cajas de portería y del campo (.data, copiadas de .rdata al arrancar; el motor de colisiones y las decisiones de tiro/despeje las
 // leen cada cuadro): 6 vectores de 16 B en exe+0x37CF4C0 (RVA del exe 1.1.0.0 de PES 2021; se comprueba el contenido antes de escribir).
 static const float kCajasOrig[24] = { 52.44f,0,-4.35472f,0,  55.5047f,2.903f,4.354449f,0,  -52.44f,2.903f,4.354449f,0,  52.56f,50,35.5f,0,  -55.5047f,0,-4.35472f,0,  -52.56f,0,-35.5f,0 };
@@ -762,11 +779,16 @@ static void ajustarCajas(bool enMarcha) {
     }
 }
 DWORD WINAPI hiloCancha(LPVOID) {
-    bool estaba = false; ULONGLONG t0 = 0; int vuelta = 0;
+    bool estaba = false, pendRestaurar = false; ULONGLONG t0 = 0; int vuelta = 0, segFuera = 0;
     while (g_canchaOn) {
         Sleep(1000);
         bool hay = trainingWorkEstable();
         ajustarCajas(hay);
+        if (hay) { pendRestaurar = true; segFuera = 0; }
+        else if (pendRestaurar && ++segFuera >= 3) {   // 0.4.102: 3 s seguidos fuera del Street → devolver las medidas del campo
+            pendRestaurar = false; int r = restaurarBloquesCampo();
+            logf("[cancha_chica_free] fuera del Street: %d bloque(s) de dimensiones devueltos a 52.56 x 34.06", r);
+        }
         if (InterlockedExchange(&g_rearmaCancha, 0)) { t0 = GetTickCount64(); vuelta = 0; logf("[cancha_chica_free] revancha: vuelvo a buscar el bloque de dimensiones (75 s)"); }
         if (hay && !estaba) t0 = GetTickCount64();
         estaba = hay;
@@ -3196,6 +3218,7 @@ void leerConfig() {
     if (valorDe("pase_correccion", v)) { g_paseCorr = (float)atof(v.c_str()); if (g_paseCorr < 0.0f || g_paseCorr > 1.0f) g_paseCorr = 0.6f; }
     if (valorDe("velocidad_partido", v)) { int q = atoi(v.c_str()); g_velocidadPartido = (q >= 0 && q <= 4) ? q : -1; }
     if (valorDe("final_nativo", v)) g_finalNativo = (v == "true");
+    if (valorDe("street_activo", v)) { LONG s = (v == "false") ? 0 : 1; g_streetActivo = g_streetPedido = s; logf("[STREET] al arrancar: modo Street %s", s ? "ENCENDIDO" : "APAGADO"); }
     if (valorDe("anadido_min", v)) { double m = atof(v.c_str()); if (m >= 0.0 && m <= 10.0) g_anadidoSeg = m * 3600.0; }
     if (valorDe("muro_fondo_rebote", v)) { g_muroFondoRebote = (float)atof(v.c_str()); if (g_muroFondoRebote < 0.0f || g_muroFondoRebote > 0.95f) g_muroFondoRebote = -1.0f; }
     if (valorDe("muro_lat_friccion", v)) { g_muroLatFric = (float)atof(v.c_str()); if (g_muroLatFric < 0.0f || g_muroLatFric > 1.0f) g_muroLatFric = -1.0f; }
@@ -3263,6 +3286,11 @@ static void procesarOrdenes() {
         std::string id = l.substr(0, q), v = l.substr(q + 1); while (!v.empty() && (v.back() == ' ' || v.back() == '\t')) v.pop_back();
         if (claveEn(id.c_str(), prohibidas)) { logf("[PANEL] %s: clave congelada del portero, orden ignorada", id.c_str()); continue; }
         bool esBool = (v == "1" || v == "0" || v == "true" || v == "false"); bool on = (v == "1" || v == "true");
+        if (id == "street_activo" && esBool) {   // 0.4.102: interruptor general; streetVigilar lo aplica cuando no hay Entrenamiento en curso
+            InterlockedExchange(&g_streetPedido, on ? 1 : 0); persistirClaveJson(id, on ? "true" : "false");
+            logf("[STREET] pedido: modo Street %s%s", on ? "ENCENDIDO" : "APAGADO", (g_streetPedido != g_streetActivo && trainingWorkCrudo()) ? " (se aplica al salir del Entrenamiento)" : "");
+            continue;
+        }
         {   // parámetros numéricos EN VIVO (se releen al instante: son las variables que usan los ganchos) y se guardan en el json
             struct Num { const char* id; float* var; float lo, hi; }; static const Num nums[] = { { "tiro_potencia_k", &g_tiroPot, 0.5f, 2.0f }, { "tiro_altura_k", &g_tiroAlt, 0.2f, 1.5f }, { "pase_vel_k", &g_paseVel, 0.8f, 2.0f }, { "pase_correccion", &g_paseCorr, 0.0f, 1.0f }, { "pase_cono_grados", &g_paseCono, 5.0f, 60.0f }, { "muro_rebote", &g_muroRebote, 0.3f, 0.95f }, { "muro_fondo_rebote", &g_muroFondoRebote, 0.0f, 0.95f }, { "muro_lat_friccion", &g_muroLatFric, 0.0f, 1.0f }, { "arco_chico_ancho", &g_arcoAncho, 1.5f, 7.32f }, { "gk_despeje_dist_m", &g_gkDespejeDist, 1.0f, 15.0f }, { "gk_despeje_presion_m", &g_gkDespejePresion, 0.5f, 15.0f }, { "arco_chico_alto", &g_arcoAlto, 1.0f, 2.44f }, { "muro_lat_empuje", &g_muroLatEmpuje, 0.0f, 0.3f }, { "muro_friccion", &g_muroFric, 0.0f, 1.0f } };
             bool hecho = false; for (const Num& n : nums) if (id == n.id) { float x = (float)atof(v.c_str()); if (x >= n.lo && x <= n.hi) { *n.var = x; persistirClaveJson(id, v); logf("[PANEL] %s = %.3f (en vivo)", n.id, x); } else logf("[PANEL] %s=%s fuera de rango [%.2f, %.2f]: ignorado", n.id, v.c_str(), n.lo, n.hi); hecho = true; break; }
@@ -3278,6 +3306,15 @@ static void procesarOrdenes() {
     }
 }
 
+// 0.4.102: aplica el interruptor «street_activo» pedido desde el panel solo cuando no hay Entrenamiento en curso (cada 1 s)
+static void streetVigilar() {
+    static ULONGLONG t = 0, tAviso = 0; ULONGLONG ahora = GetTickCount64(); if (ahora - t < 1000) return; t = ahora;
+    if (g_golStreetBandera) { uint8_t b = g_streetActivo ? 1 : 0; if (*g_golStreetBandera != b) *g_golStreetBandera = b; }   // gol nativo solo con el Street encendido
+    LONG pedido = g_streetPedido; if (pedido == g_streetActivo) return;
+    if (trainingWorkCrudo()) { if (ahora - tAviso > 30000) { tAviso = ahora; logf("[STREET] cambio a %s pendiente: se aplica al salir del Entrenamiento", pedido ? "ENCENDIDO" : "APAGADO"); } return; }
+    InterlockedExchange(&g_streetActivo, pedido);
+    logf("[STREET] modo Street %s", pedido ? "ENCENDIDO: el próximo Entrenamiento será Street" : "APAGADO: el Entrenamiento queda como el original");
+}
 } // namespace
 
 // ================================================================ API exportada
@@ -3335,7 +3372,7 @@ PHX_API int phx_core_iniciar(const char* carpeta) {
 PHX_API void phx_core_tick(void) {
     if (g_codigoInicio <= 0) return;
     InterlockedIncrement(&g_fotogramas);
-    if (!g_modoSeguro) procesarOrdenes();
+    if (!g_modoSeguro) { procesarOrdenes(); streetVigilar(); }
     if (Feature* s = buscarFuncion("sonda_partido"); s && s->activa) {
         vigilarParado();
         volcarSonda();
