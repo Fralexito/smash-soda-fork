@@ -174,3 +174,13 @@ Frank quiere jugar normal sin que se ponga el Street.
   1. Un Street normal (nada cambia).
   2. Apagar el Street en F9 desde el menú → el Entrenamiento es normal.
   3. Un Street y luego un amistoso sin cerrar el PES → cancha normal (`[cancha_chica_free] fuera del Street: N bloque(s)...` en el log).
+
+### 9.9 La cancha dibujada sigue al interruptor (1-nov)
+Frank apagó el Street y el Entrenamiento seguía con la cancha chica dibujada, aunque el Core sí estaba apagado (`[STREET] modo Street APAGADO`, `training=0`).
+- **Causa:** el césped 30x20 y los arcos a ±15 (cap_73 §11–12, `instalar_cancha_visual.py`) estaban en el AddOn de StadiumServer `España\Spotify Camp Nou\AddOn\Goal Post Colour\Global`. Por eso salían siempre en el Camp Nou: con el Street apagado y también en partidos normales en ese estadio.
+- **Arreglo:**
+  - Los 16 archivos se movieron a `SiderAddons\content\phoenix\cancha_visual\`.
+  - `phoenix_marcador_free.lua` sirve los 11 de dibujo (arcos, red y `pitch_st002.fpk`) solo en FREE_TRAINING con `marcador_free`, `cancha_chica_free` y `street_activo` distinto de false. Se apunta en `sider.log` como `[cancha_visual] sirvo …`.
+  - La carpeta original quedó fuera de StadiumServer, en `phoenix_core\camp_nou_global_retirado\`, con copia en `phoenix_core\respaldo_camp_nou_global\`.
+  - Para volver atrás: devolver esa carpeta como `...\Goal Post Colour\Global`.
+- **Pendiente de probar:** si el PES vuelve a pedir esos archivos en cada entrada al Entrenamiento (cambio en vivo) o los guarda hasta cerrar el juego (entonces hará falta reiniciar tras cambiar el interruptor).

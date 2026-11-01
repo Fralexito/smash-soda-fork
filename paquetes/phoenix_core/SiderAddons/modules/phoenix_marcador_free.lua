@@ -154,6 +154,15 @@ local GEOM_CANCHA = {
     ["common/render/model/bg/hit/goal/goal_l.geom"] = true, ["common/render/model/bg/hit/goal/goal_r.geom"] = true,
     ["common/anime/foxanim/goal_hit.geom"] = true, ["common/anime/foxanim/goal_l.geom"] = true, ["common/anime/foxanim/goal_r.geom"] = true,
 }
+-- 1-nov (Core 0.4.102): la cancha DIBUJADA del street (césped 30x20 y arcos a ±15) estaba en el AddOn «Goal Post Colour\Global»
+-- del Camp Nou de StadiumServer, así que salía siempre, con el Street apagado y en cualquier partido en el Camp Nou. Ahora vive
+-- en content\phoenix\cancha_visual\ y la sirve este módulo SOLO en el Entrenamiento con el Street encendido (street_activo).
+local CANCHA_VISUAL = {}
+for _, r in ipairs({ "goal_post.fpk", "goal_post.fpkd", "goalnet_l.fpk", "goalnet_l.fpkd", "goalnet_r.fpk", "goalnet_r.fpkd",
+                     "goalnet_hangpole_l.fpk", "goalnet_hangpole_l.fpkd", "goalnet_hangpole_r.fpk", "goalnet_hangpole_r.fpkd" }) do
+    CANCHA_VISUAL["asset/model/bg/common/goal/#win/" .. r] = true
+end
+CANCHA_VISUAL["asset/model/bg/st002/pitch/#win/pitch_st002.fpk"] = true
 function m.get_filepath(ctx, filename, key)
     if not encendido or not enZona then return nil end
     if canchaOn and rutaCancha then
@@ -163,6 +172,12 @@ function m.get_filepath(ctx, filename, key)
             local fp = base .. "content/phoenix/cancha_paredes/common/render/model/bg/hit/bill/st002/hit_billboard.geom"
             local hp = io.open(fp, "rb")
             if hp then hp:close(); log("[cancha_paredes] sirvo " .. fl); return fp end
+        end
+        local flv = string.gsub(fl2, "^/+", "")
+        if CANCHA_VISUAL[flv] then
+            local f = base .. "content/phoenix/cancha_visual/" .. flv
+            local h = io.open(f, "rb")
+            if h then h:close(); log("[cancha_visual] sirvo " .. flv); return f end
         end
         if GEOM_CANCHA[fl] then
             local f = rutaCancha .. fl
