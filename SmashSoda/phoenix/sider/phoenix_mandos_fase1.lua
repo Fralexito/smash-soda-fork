@@ -56,7 +56,7 @@
 --        libre también en la pausa, como los demás (V9.candadoMando1 queda en el archivo pero no se llama).
 --  v0.9.65 · 1-nov-2026 MANDO 1 ADMINISTRADOR, más: con la fila de otro elegida, L2/R2 le cambian el usuario (no el suyo) y
 --        □ abre «Editar Datos personales» del usuario de esa fila (DAT_1434AC580 sobrescrito unos cuadros).
-local m = { version = "0.9.65" }
+local m = { version = "0.9.66" }
 
 local G_HIDMAN, G_GESTOR, G_DI8 = 0x1437F0A58, 0x1436F3DC8, 0x1437F0AF8
 local CAPS = 0x14351A840
@@ -1771,6 +1771,50 @@ end
 -- por lado y la página); las 9+ (solo en el menú, en la réplica) como si las moviera su mando. La fila propia del mando 1
 -- no se mueve mientras maneja otra: si PES la movió con esa misma palanca, se devuelve a su lado en el mismo cuadro.
 V9.adm = { sel = nil, propio = nil, prevX = 0, prevY = 0, prevR3 = false, sinLectura = false }
+-- v0.9.66 (1-nov, claude/mandos-fix): tras usar el mando 1 administrador en la PAUSA (mover filas de otros mandos) Frank se quedó sin control: el registro
+-- (sesión 15:28) terminó con filas del 6-7 en «Local sin local» (ajustes.lado 00, ajustes.local ff) y el partido no reanudó. Esto añade:
+--  (a) DIAGNÓSTICO: al cerrar la pantalla de lados anota lado/local/mando de las 16 filas y los focos (cursores) 1 s después (cuando PES ya actualizó los ajustes);
+--  (b) SALVAGUARDA: las filas 1–8 cuyo lado movió el administrador y que quedan en Local/Visitante SIN local (ff) con un usuario puesto (mando ≠ 0x20) vuelven a su
+--      lado anterior (el que tenían antes de que el administrador las tocara). Para desactivarla: V9.SALVAGUARDA_ADMIN = false, o crear el archivo
+--      content\phoenix\mandos\sin_salvaguarda.txt (se mira cada vez, no hace falta reiniciar).
+V9.admTocadas, V9.SALVAGUARDA_ADMIN, V9.cierreDiag = {}, true, nil
+function V9.salvaguardaActiva()
+    if not V9.SALVAGUARDA_ADMIN then return false end
+    local f = carpeta and io.open(carpeta .. "sin_salvaguarda.txt", "rb")
+    if f then f:close(); return false end
+    return true
+end
+function V9.diagCierre()
+    local s = direccionAjustes(); if not s then return end
+    local lad, loc, man = leer(s + AJ_LADO, 16), leer(s + AJ_LOCAL, 16), leer(s + AJ_MANDO, 16)
+    if not lad or not loc or not man then return end
+    local t = {}
+    for i = 1, 16 do t[i] = string.format("%d:%02x/%02x/%02x", i, lad:byte(i), loc:byte(i), man:byte(i)) end
+    anotar("DIAG cierre de lados (fila:lado/local/mando): " .. table.concat(t, " "))
+    anotar("DIAG cierre de lados · focos (cursores): " .. tostring(PHX.wmHuella))
+end
+function V9.alCerrarLados() V9.cierreDiag = os.clock() end
+function V9.cierreTick()
+    local t0 = V9.cierreDiag
+    if not t0 or os.clock() - t0 < 1.0 then return end
+    V9.cierreDiag = nil
+    V9.diagCierre()
+    local tocadas = V9.admTocadas; V9.admTocadas = {}
+    if not next(tocadas) or not V9.salvaguardaActiva() then return end
+    local s = direccionAjustes(); if not s then return end
+    for k, prev in pairs(tocadas) do
+        local lad, loc, man = leer(s + AJ_LADO + k, 1), leer(s + AJ_LOCAL + k, 1), leer(s + AJ_MANDO + k, 1)
+        if lad and loc and man then
+            local l, lo, mn = lad:byte(1), loc:byte(1), man:byte(1)
+            if (l == 0 or l == 2) and lo == 0xFF and mn ~= 0x20 and l ~= prev then
+                memory.write(s + AJ_LADO + k, string.char(prev))
+                anotar(string.format("SALVAGUARDA: la fila del mando %d quedó en lado %d sin local → vuelve a su lado anterior %d", k + 1, l, prev))
+            else
+                anotar(string.format("SALVAGUARDA: la fila del mando %d queda como está (lado %d, local %02x, mando %02x)", k + 1, l, lo, mn))
+            end
+        end
+    end
+end
 V9.PONER_LADO, V9.PONER_LADO_ORIG = 0x140C67970, "48895c2420574883ec20418bf8488bd9e8ab571d003b8394"
 function V9.ponerLadoNativo(fila, lado, obj)
     if V9.ponerLadoOk == nil then
@@ -1938,6 +1982,7 @@ function V9.administrar(enMenu)
                 if t then
                     local l = math.max(0, math.min(2, t.lado + dx))
                     if l ~= t.lado then
+                        if V9.admTocadas[A.sel] == nil then V9.admTocadas[A.sel] = t.lado end   -- v0.9.66: su lado antes de que el administrador la toque
                         local ok = V9.ponerLadoNativo(t.fila, l)
                         anotar(string.format("mando 1 administrador: fila del mando %d → lado %d%s", A.sel + 1, l, ok and "" or " (PES no lo dejó: lado lleno o página distinta)"))
                     end
@@ -2134,6 +2179,7 @@ local function vigilarPantallaPES()
         prevCierra = c
         auto = mostrado and { fase = "cerrar", cuadros = 0 } or nil
         anotar("PES cerró su pantalla de lados" .. (mostrado and " → cierro la Phoenix" or ""))
+        V9.alCerrarLados()   -- v0.9.66: diagnóstico + salvaguarda 1 s después
         -- v0.9.19 (23-oct, Fralex: «no le deja hacer su estrategia… lo detecta como la máquina hasta llegar al partido»):
         -- los menús de antes del saque (estrategia) miran la lista de lados de S, y hasta ahora los extra solo se
         -- escribían en el gancho del productor (al saque). Se escriben ya al cerrar la pantalla de lados (fuera del
@@ -2530,6 +2576,7 @@ function m.display_frame(ctx)
     vigilarPantallaPES()
     -- v0.9: mientras se ve la Phoenix (en el menú), espejo de la de PES + mandos extra
     V9.adminEditar()   -- v0.9.65
+    V9.cierreTick()    -- v0.9.66
     if PHX.pantallaPESAbierta() then V9.sinRepetidos() end   -- v0.9.63 (el candado del mando 1 de la v0.9.62 se quitó en la v0.9.64)
     if PHX.pantallaPESAbierta() then V9.administrar(mostrado and not enPartidoAhora) end   -- v0.9.61: mando 1 administrador (antes del espejo)
     if mostrado and not enPartidoAhora and #filas > 0 then V9.reflejarNativos(); V9.moverExtras() end
