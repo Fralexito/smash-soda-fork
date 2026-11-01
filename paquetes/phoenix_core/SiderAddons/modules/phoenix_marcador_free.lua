@@ -294,6 +294,7 @@ local PANEL = {
     { id = "muros_core", txt = "Paredes (rebote)", tipo = "bool", modo = "vivo" },
     { id = "muro_rebote", txt = "  Rebote", tipo = "num", paso = 0.05, lo = 0.4, hi = 0.9, def = 0.75, modo = "vivo" },
     { id = "muro_friccion", txt = "  Fricción", tipo = "num", paso = 0.01, lo = 0.9, hi = 1.0, def = 0.97, modo = "vivo" },
+    { id = "red_frena_free", txt = "Freno de red del Core (apagado = red nativa; sin muro de fondo en el arco)", tipo = "bool", modo = "vivo" },
     { id = "red_resorte", txt = "Red del arco", tipo = "bool", modo = "vivo" },
     { id = "ia_cancha_chica", txt = "IA de cancha chica", tipo = "bool", modo = "vivo" },
     { id = "jugadores_formacion", txt = "Formación de saque", tipo = "bool", modo = "vivo" },

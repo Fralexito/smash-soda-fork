@@ -1690,6 +1690,7 @@ using FnBolaPaso = uint64_t (*)(float, uint64_t, uint64_t, float*, void*, uint64
 FnBolaPaso g_bolaPasoOrig = nullptr;
 bool g_redResorte = false; float g_redK = 70.0f, g_redC = 8.0f, g_redHolgura = 0.4f;   // 0.4.72 «red_resorte»: la red como resorte-amortiguador (json red_resorte/red_k/red_c/red_holgura)
 float g_redFactor = 0.93f; volatile ULONGLONG g_tTrainRed = 0; volatile LONG g_redOn = 0; volatile LONG g_redFrenos = 0;
+volatile LONG g_redFrenoOn = 0;   // 0.4.107: SOLO red_frena_free (freno/resorte de la red y muro del fondo dentro de la boca). g_redOn es el interruptor del hilo de TrainingWork que comparten red y muros
 HANDLE g_hiloRed = nullptr;
 DWORD WINAPI hiloRed(LPVOID) {
     while (g_redOn) { if (trainingWorkEstable() || hayTrainingWork()) g_tTrainRed = GetTickCount64(); Sleep(100); }
@@ -1778,13 +1779,13 @@ uint64_t ganchoBolaPaso(float dt, uint64_t rdx, uint64_t r8, float* S, void* cfg
         float mw = 7.32f, mh = 2.44f; medidaWH(mw, mh); bool conMedida = (int)(g_arcoMedidaF + 0.5f) > 0;
         const float hw = conMedida ? mw * 0.5f : g_arcoChicoOn ? g_arcoAncho * 0.5f : 3.66f, hh = conMedida ? mh : g_arcoChicoOn ? g_arcoAlto : 2.44f;   // 0.4.95 arco_chico_free: boca lógica más chica (postes/larguero invisibles del Core)
         bool bocaGol = fabsf(z) < hw + 0.109f && y < hh + 0.109f;   // boca real: media portería 3,66 y travesaño 2,44 (+ radio de la pelota)
-        if (g_redOn && g_redResorte && fabsf(x) > largo && bocaGol) {   // 0.4.72: la red cede como una malla: holgura sin fuerza, luego resorte + amortiguación; rebota un poco y la pelota cae dentro
+        if (g_redFrenoOn && g_redResorte && fabsf(x) > largo && bocaGol) {   // 0.4.72: la red cede como una malla: holgura sin fuerza, luego resorte + amortiguación; rebota un poco y la pelota cae dentro
             float sgx = x >= 0 ? 1.0f : -1.0f, pen = fabsf(x) - largo, vout = S[3] * sgx;
             if (pen > g_redHolgura) { float a = -g_redK * (pen - g_redHolgura) - g_redC * vout; S[3] += a * sgx * dt; }
             float arr = 1.0f - 1.2f * dt; if (arr < 0.5f) arr = 0.5f; S[3] *= (pen > g_redHolgura ? 1.0f : (1.0f - 0.8f * dt)); S[4] *= (y > 0.2f ? 1.0f : 1.0f); S[5] *= arr;   // arrastre lateral de la tela
             LONG n = InterlockedIncrement(&g_redFrenos); if (n <= 5 || n % 2000 == 0) logf("[RED] resorte #%ld x=%.2f pen=%.2f vout=%.1f", (long)n, x, pen, vout);
         } else
-        if (g_redOn && fabsf(x) > largo && bocaGol) {       // red: freno suave y, al fondo, un pequeño rebote hacia atrás
+        if (g_redFrenoOn && fabsf(x) > largo && bocaGol) {       // red: freno suave y, al fondo, un pequeño rebote hacia atrás
             float f = g_redFactor;
             S[3] *= f; S[4] *= f; S[5] *= f;
             if (fabsf(x) > largo + 3.0f && S[3] * x > 0) S[3] = -0.2f * S[3];
@@ -1802,7 +1803,7 @@ uint64_t ganchoBolaPaso(float dt, uint64_t rdx, uint64_t r8, float* S, void* cfg
         if (g_murosOn) {                                       // muros lógicos del Core (el estado S es el del modelo: persiste)
             const float rb = 0.109f;
             float Lx = (float)(g_muroX > 0 ? g_muroX : g_canchaLargo + 0.2), Wz = (float)(g_muroZ > 0 ? g_muroZ : g_canchaAncho + 0.2);
-            float lim = bocaGol ? largo + 3.05f : Lx;   // 0.4.73: fondo real de la red dibujada = línea de gol + 3,0 m (goal_l_hit.geom: 55,445-55,505 sobre 52,5); antes 3,4 = «malla invisible» 0,4 m más allá           // en la boca del arco la pared está al fondo de la red
+            float lim = bocaGol ? (g_redFrenoOn ? largo + 3.05f : 1000.0f) : Lx;   // 0.4.107: con red_frena_free apagado no hay muro de fondo dentro de la boca (prueba de la red nativa)   // 0.4.73: fondo real de la red dibujada = línea de gol + 3,0 m (goal_l_hit.geom: 55,445-55,505 sobre 52,5); antes 3,4 = «malla invisible» 0,4 m más allá           // en la boca del arco la pared está al fondo de la red
             bool toco = false; float mv0[3] = { S[3], S[4], S[5] }; const float rf = g_muroFondoRebote >= 0.0f ? g_muroFondoRebote : g_muroRebote;
             if (x > lim - rb && S[3] > 0) { S[0] = lim - rb; S[3] = -rf * S[3]; S[5] *= g_muroFric; toco = true; }
             else if (x < -lim + rb && S[3] < 0) { S[0] = -lim + rb; S[3] = -rf * S[3]; S[5] *= g_muroFric; toco = true; }
@@ -2111,11 +2112,11 @@ bool paseInstalar(Feature& f) {
 }
 bool paseQuitar(Feature&) { g_paseOn = 0; return true; }
 bool redInstalar(Feature& f) {
-    g_redOn = 1;
-    if (!asegurarGanchoBola(f)) { g_redOn = 0; return false; }
+    g_redOn = 1; g_redFrenoOn = 1;
+    if (!asegurarGanchoBola(f)) { g_redOn = 0; g_redFrenoOn = 0; return false; }
     char b[150]; sprintf_s(b, "ok: la red frena la pelota en el entrenamiento (factor %.2f)", g_redFactor); f.estado = b; return true;
 }
-bool redQuitar(Feature&) { g_redOn = 0; return true; }
+bool redQuitar(Feature&) { g_redFrenoOn = 0; if (!g_murosOn) g_redOn = 0; return true; }
 
 // --- funciones jugadores_chica_free y suplentes_ocultos_free (0.4.43, de la RE del frente C, 27-oct).
 // La posición de reinicio de cada jugador sale de una tabla de Vec3 en metros absolutos de la cancha grande: team + 0x4B4C + (idx%11)*12, con
