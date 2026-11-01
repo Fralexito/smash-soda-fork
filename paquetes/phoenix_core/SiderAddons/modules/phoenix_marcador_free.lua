@@ -331,7 +331,7 @@ local function panelLeer()
 end
 local function panelTexto()
     panelLeer()
-    local s = { "PHOENIX STREET   F9 marcador/panel · F10 siguiente · F11 on/off · RePag baja / AvPag sube (o Izq/Der)" }
+    local s = { "PHOENIX STREET   F9 marcador/panel · 8 ↑ · 9 ↓ · 0 cambiar · RePag baja / AvPag sube (o Izq/Der) · F10/F11 también valen" }
     for i, it in ipairs(PANEL) do
         local v = panelCache[it.id]; local est
         if it.tipo == "num" then est = string.format("%.2f", tonumber(v) or it.def) else est = v and "ON" or "OFF" end
@@ -339,10 +339,35 @@ local function panelTexto()
     end
     return table.concat(s, "\n")
 end
+-- 1-nov (0.4.105): teclas numéricas. 8 = opción anterior · 9 = siguiente · 0 = cambiar valor (bool: enciende/apaga; num: sube un paso y vuelve al mínimo al pasar el máximo).
+-- Valen la fila superior (0x38/0x39/0x30) y el teclado numérico (0x68/0x69/0x60), y SOLO si el overlay de Sider está mostrando esta página (overlay_on se llamó hace <0,6 s).
+-- Choques revisados: attack_mentality.lua usa 8/9 pero NO está en sider.ini; trophy.lua usa el 0 de la fila superior para recargar su map.txt (inofensivo; el teclado numérico no choca).
+local tOverlayVisto = -100
+local function panelCambiarValor(it)
+    if not it then return end
+    panelLeer()
+    if it.tipo == "num" then
+        local v = (tonumber(panelCache[it.id]) or it.def) + it.paso
+        if v > it.hi then v = it.lo end
+        v = math.floor(v * 100 + 0.5) / 100
+        panelCache[it.id] = v; panelCambio[it.id] = os.clock(); panelEnviar(string.format("%s=%.2f", it.id, v))
+    else
+        local nuevo = not panelCache[it.id]
+        panelCache[it.id] = nuevo; panelCambio[it.id] = os.clock()
+        if it.tipo == "clima" then panelEnviar("clima_forzado=" .. (nuevo and "0" or "-1")) else panelEnviar(it.id .. "=" .. (nuevo and "1" or "0")) end
+    end
+end
 function m.key_down(ctx, vkey)
     if vkey == 0x78 then panelAbierto = not panelAbierto; return end              -- F9
     if not panelAbierto then return end
     local it = PANEL[panelSel]
+    if (vkey == 0x38 or vkey == 0x68 or vkey == 0x39 or vkey == 0x69 or vkey == 0x30 or vkey == 0x60) then
+        if os.clock() - tOverlayVisto > 0.6 then return end                         -- solo con el overlay abierto en esta página
+        if vkey == 0x38 or vkey == 0x68 then panelSel = (panelSel - 2) % #PANEL + 1       -- 8: anterior
+        elseif vkey == 0x39 or vkey == 0x69 then panelSel = panelSel % #PANEL + 1         -- 9: siguiente
+        else panelCambiarValor(it) end                                                    -- 0: cambiar
+        return
+    end
     if vkey == 0x79 then panelSel = panelSel % #PANEL + 1                          -- F10
     elseif vkey == 0x7A and it and it.tipo ~= "num" then                            -- F11
         panelLeer(); local nuevo = not panelCache[it.id]
@@ -362,6 +387,7 @@ function m.key_down(ctx, vkey)
 end
 
 function m.overlay_on(ctx)
+    tOverlayVisto = os.clock()
     if panelAbierto then return panelTexto() end
     if not encendido then return "MARCADOR STREET · apagado (phoenix_core.json → marcador_free)" end
     if not enZona then return "MARCADOR STREET · solo en Entrenamiento libre" end
