@@ -52,7 +52,9 @@
 --        métodos de PES +0x1B8/+0x1C0); el □ de los 9+ ya no usa la fila del mando 1 si hay otra; □ de los 1–8 en la pausa APAGADO.
 --  v0.9.63 · 1-nov-2026 SIN USUARIOS REPETIDOS: si L2/R2 de PES da a un mando 1–8 el usuario de un mando 9–16, se sigue
 --        hasta uno libre con el mismo método de PES (PES solo conoce los usuarios de los mandos 1–8).
-local m = { version = "0.9.63" }
+--  v0.9.64 · 1-nov-2026 FUERA el candado del mando 1 (Fralex): con la v0.9.63 ya no hay usuarios repetidos; el mando 1 elige
+--        libre también en la pausa, como los demás (V9.candadoMando1 queda en el archivo pero no se llama).
+local m = { version = "0.9.64" }
 
 local G_HIDMAN, G_GESTOR, G_DI8 = 0x1437F0A58, 0x1436F3DC8, 0x1437F0AF8
 local CAPS = 0x14351A840
@@ -2476,7 +2478,7 @@ function m.display_frame(ctx)
     if pedirCierre then pedirCierre = false; if mostrado then auto = { fase = "cerrar", cuadros = 0 } end end
     vigilarPantallaPES()
     -- v0.9: mientras se ve la Phoenix (en el menú), espejo de la de PES + mandos extra
-    if PHX.pantallaPESAbierta() then V9.candadoMando1(not mostrado and enPartidoPegado()); V9.sinRepetidos() end   -- v0.9.62/63: antes que nada
+    if PHX.pantallaPESAbierta() then V9.sinRepetidos() end   -- v0.9.63 (el candado del mando 1 de la v0.9.62 se quitó en la v0.9.64)
     if PHX.pantallaPESAbierta() then V9.administrar(mostrado and not enPartidoAhora) end   -- v0.9.61: mando 1 administrador (antes del espejo)
     if mostrado and not enPartidoAhora and #filas > 0 then V9.reflejarNativos(); V9.moverExtras() end
     if activo and #extras > 0 then V9.confirmarExtras() end   -- v0.9.60: ✕ de los mandos 9+ confirma
