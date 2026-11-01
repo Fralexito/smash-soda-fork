@@ -152,3 +152,25 @@ Frank hizo cambios con Antigravity (Gemini) después del 29-oct y dañaron el st
 - Errores conocidos de Sider, que no son la causa de nada de lo anterior:
   - `StadiumServer.lua:705` (el equipo 108 sin entrada `random_num_team`);
   - `TournamentCornerFlags.lua:98`.
+
+### 9.7 Resultados de la prueba 1 contra 1 / 2 contra 2 (31-oct, noche, REA/Frida en vivo)
+Método: Frida intercepta `FUN_140A59CA0(tw, idx, límite, S)` y cambia el argumento «límite». No se escribió memoria.
+- **El portero cuenta dentro de N.** Límite 2 = portero y un jugador; límite 1 = solo el portero.
+- **2 contra 2 (límite 2): funciona.** Frank lo confirmó viendo el partido. Sin Frida, el juego vuelve solo al 3 contra 1 del menú.
+- **1 contra 1 (límite 1): funciona a medias.** En juego solo participan i0 e i11, los dos porteros. Pero en el saque de centro el juego mete a la fuerza al jugador de campo i10 como pateador (560 llamadas). El cursor queda en él y, como no participa, lo mandan a la fila de banda. Frank lo vio así: «quiere controlar el balón y salir de la cancha a la vez». Al rato el cursor pasó solo al portero.
+- **Falta para el 1 contra 1:** que saque el portero (pateadores en `S+0x173C/+0x1740`) y que el cursor vaya al portero. Es una ampliación de `arquero_propio_cursor`.
+- **Siguiente paso:** pasar el límite al Core como `street_jugadores_local` y `street_jugadores_rival` (0 = lo del menú). Con esto el 2 contra 2 queda fijo; el 1 contra 1 sigue experimental hasta resolver el pateador.
+
+### 9.8 Core 0.4.102: interruptor del Street desde Sider (rama `cuenta2/street-0.4.102`, commit b5c050f)
+Frank quiere jugar normal sin que se ponga el Street.
+- **Cómo se ve:** overlay de Sider → página del marcador (`phoenix_marcador_free.lua`), panel F9 → primera línea **«MODO STREET»**. Se cambia con F11 y se guarda en el json como `"street_activo"`; si falta la clave, está encendido.
+- **Cómo funciona:**
+  - `hayTrainingWork()` y `trainingWorkEstable()` responden «no» cuando el interruptor está apagado. Todo el Street se apoya en ellas (y en `g_tTrainGlob` / `g_tTrainRed`, que salen de ellas), así que el Entrenamiento queda como el original.
+  - El cambio solo se aplica fuera del Entrenamiento (`streetVigilar`, cada 1 s), para no cortar un Street a medias.
+- **Arreglo de la minicancha:** antes, el bloque de medidas del campo (52.56 x 34.06) se reescribía en memoria y nunca se devolvía. Ahora `hiloCancha` lo restaura tras 3 s seguidos fuera del Street (`restaurarBloquesCampo`).
+- **Gol nativo atado al interruptor:** el parche de `gol_nativo_free` era fijo. Su cueva lee ahora un byte bandera (cueva+72): con el Street apagado hace lo de siempre (`mov edx,7`).
+- **Instalado en la PC** con respaldo en `phoenix_core/street_0101_antes_0102/`. El Lua anterior está en `street_0499_antes_0101/phoenix_marcador_free.lua.antes_0102`.
+- **Pendiente de probar en el juego:**
+  1. Un Street normal (nada cambia).
+  2. Apagar el Street en F9 desde el menú → el Entrenamiento es normal.
+  3. Un Street y luego un amistoso sin cerrar el PES → cancha normal (`[cancha_chica_free] fuera del Street: N bloque(s)...` en el log).
