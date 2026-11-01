@@ -281,7 +281,10 @@ local PANEL = {
     { id = "street_activo", txt = "MODO STREET (todo el Street en el Entrenamiento)", tipo = "bool", def = true, modo = "fuera" },   -- 0.4.102
     { id = "street_1v1_saque", txt = "1v1 saque: 0 normal · 1 portero centro · 2 portero su área · 3 libre", tipo = "num", paso = 1, lo = 0, hi = 3, def = 0, modo = "vivo" },
     { id = "arco_medida", txt = "Medida del arco: 0 original · 1 = 4x2 · 2 = 3x2 · 3 = 5x2,2 (al reentrar al entrenamiento)", tipo = "num", paso = 1, lo = 0, hi = 3, def = 0, modo = "sig.partida" },
-    { id = "street_l1_sin_portero", txt = "L1 no elige al arquero: 1 = sí · 0 = no (L1+R3 sí lo elige)", tipo = "num", paso = 1, lo = 0, hi = 1, def = 1, modo = "vivo" },
+    { id = "street_l1_sin_portero", txt = "L1 no elige al arquero salvo balón cerca o hacia él (1 sí · 0 no; L1+R3 lo fuerza)", tipo = "num", paso = 1, lo = 0, hi = 1, def = 1, modo = "vivo" },
+    { id = "arquero_dist_seleccion", txt = "  Distancia para poder elegir al arquero (m)", tipo = "num", paso = 1, lo = 2, hi = 25, def = 7, modo = "vivo" },
+    { id = "red_tope_rebote", txt = "Tope de rebote en la red (no sale más rápido de lo que entró): 1 sí · 0 no", tipo = "num", paso = 1, lo = 0, hi = 1, def = 1, modo = "vivo" },
+    { id = "red_anclas", txt = "Anclas de la tela a la medida del arco: 1 sí · 0 no", tipo = "num", paso = 1, lo = 0, hi = 1, def = 1, modo = "vivo" },
     { id = "street_jugadores_local", txt = "Jugadores mi equipo (0 = no tocar; EXPERIMENTAL)", tipo = "num", paso = 1, lo = 0, hi = 11, def = 0, modo = "vivo" },
     { id = "street_jugadores_rival", txt = "Jugadores rival (0 = no tocar; EXPERIMENTAL)", tipo = "num", paso = 1, lo = 0, hi = 11, def = 0, modo = "vivo" },
     { id = "street_jugadores_lado", txt = "Mi equipo es la instancia 0 o 1 (si baja el rival y no el mío, cambia a 1)", tipo = "num", paso = 1, lo = 0, hi = 1, def = 0, modo = "vivo" },

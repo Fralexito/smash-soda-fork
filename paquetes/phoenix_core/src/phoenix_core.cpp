@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.107"
+#define PHX_CORE_VERSION "0.4.108"
 
 namespace {
 
@@ -1690,7 +1690,7 @@ using FnBolaPaso = uint64_t (*)(float, uint64_t, uint64_t, float*, void*, uint64
 FnBolaPaso g_bolaPasoOrig = nullptr;
 bool g_redResorte = false; float g_redK = 70.0f, g_redC = 8.0f, g_redHolgura = 0.4f;   // 0.4.72 «red_resorte»: la red como resorte-amortiguador (json red_resorte/red_k/red_c/red_holgura)
 float g_redFactor = 0.93f; volatile ULONGLONG g_tTrainRed = 0; volatile LONG g_redOn = 0; volatile LONG g_redFrenos = 0;
-volatile LONG g_redFrenoOn = 0;   // 0.4.107: SOLO red_frena_free (freno/resorte de la red y muro del fondo dentro de la boca). g_redOn es el interruptor del hilo de TrainingWork que comparten red y muros
+volatile LONG g_redFrenoOn = 0; float g_redTopeF = 1.0f; volatile LONG g_topeN = 0;   // 0.4.107: SOLO red_frena_free (freno/resorte de la red y muro del fondo dentro de la boca). g_redOn es el interruptor del hilo de TrainingWork que comparten red y muros
 HANDLE g_hiloRed = nullptr;
 DWORD WINAPI hiloRed(LPVOID) {
     while (g_redOn) { if (trainingWorkEstable() || hayTrainingWork()) g_tTrainRed = GetTickCount64(); Sleep(100); }
@@ -1829,6 +1829,17 @@ uint64_t ganchoBolaPaso(float dt, uint64_t rdx, uint64_t r8, float* S, void* cfg
                 }
             }
             if (toco) { LONG n = InterlockedIncrement(&g_murosRebotes); if (n <= 80 || n % 500 == 0) logf("[MURO] rebote #%ld pos=(%.2f,%.2f,%.2f) v antes (%.1f,%.1f,%.1f) después (%.1f,%.1f,%.1f)", (long)n, S[0], S[1], S[2], mv0[0], mv0[1], mv0[2], S[3], S[4], S[5]); }
+        }
+    }
+    // 0.4.108 red_tope_rebote (por defecto 1): dentro de la red (detrás de la línea de gol, en la boca) la pelota no puede salir más rápida de lo que entró en este paso (rebotes «cohete»)
+    if (g_redTopeF > 0.5f && g_streetActivo && GetTickCount64() - g_tTrainRed < 3000) {
+        float mw = 7.32f, mh = 2.44f; medidaWH(mw, mh);
+        if (fabsf(S[0]) > (float)g_canchaLargo + 0.05f && fabsf(S[2]) < mw * 0.5f + 0.6f && S[1] < mh + 0.6f) {
+            float sp0 = sqrtf(v0x * v0x + v0y * v0y + v0z * v0z), sp1 = sqrtf(S[3] * S[3] + S[4] * S[4] + S[5] * S[5]);
+            if (sp1 > sp0 * 1.02f + 0.3f && sp1 > 1e-3f) {
+                float k = sp0 / sp1; S[3] *= k; S[4] *= k; S[5] *= k;
+                LONG n = InterlockedIncrement(&g_topeN); if (n <= 40) logf("[TOPE_RED] velocidad %.1f -> %.1f (entrada) pos=(%.2f,%.2f,%.2f)", sp1, sp0, S[0], S[1], S[2]);
+            }
         }
     }
     return r;
@@ -2072,6 +2083,10 @@ void* __fastcall ganchoArcoVol(uint32_t a, float* p) {
                 bloqueNuevo(nuevo); float c23[2] = { ((float*)nuevo)[2], ((float*)nuevo)[3] };
                 if (m > 0 && escribirSeguro(p + 2, c23, 8)) logf("[ARCO_REAL] bloque ya parcheado: boca puesta en %.2f x %.2f", c23[0] * 2, c23[1]);
             }
+            if (m > 0 && fabsf(cur[9] - 2.5f) < 0.001f) {   // p[9] = 2,5 = alto del volumen de la red (travesaño 2,44 + 0,06): sigue el alto de la medida
+                float mw = 7.32f, mh = 2.44f; medidaWH(mw, mh); float nv9 = mh + 0.06f;
+                if (escribirSeguro(p + 9, &nv9, 4)) logf("[ARCO_REAL] p[9] (alto del volumen) 2.500 -> %.3f", nv9);
+            }
             // 0.4.105 (medido en vivo con la boca 4x2): p[0xC]=51.172, p[0xD]=54.320, p[0xE]=54.434 son X ABSOLUTAS de la red nativa (planos del volumen y umbrales de estado de la pelota
             // en FUN_140425E20 / FUN_1404AA610) del campo de 52,56 de semilargo. cancha_chica_free solo parchea [0..8], así que el volumen nacía a ~54 m y la sonda daba siempre «fuera».
             // Se desplazan la misma distancia que la línea de gol (52,56 - semilargo). Solo si siguen en su valor original (> 40).
@@ -2086,13 +2101,35 @@ void* __fastcall ganchoArcoVol(uint32_t a, float* p) {
     }
     return g_arcoVolOrig(a, p);
 }
+// 0.4.108 red_anclas (por defecto 1): GoalNet_SetPost (FUN_141EAE2B0, ecx = lado, edx = tipo 0/1 postes y 2 travesaño, r8 = float* pos) recibe cada fotograma las posiciones de los postes y el travesaño del registro
+// GoalPostInfo; la tela de la red nativa cuelga de ellas. Si siguen en el campo grande (|x| > 40) se llevan a la línea de gol chica y, con arco_medida > 0, se les aplica la misma transformación de z (ancho)
+// y de y (alto) que a los modelos de red (herr/escalar_arco.py). Se anotan las primeras llamadas ([ANCLA]) para medir qué llega de verdad.
+typedef void(__fastcall* SetPostFn)(int, int, float*);
+SetPostFn g_setPostOrig = nullptr; float g_anclasF = 1.0f; volatile LONG g_anclaLogs = 0;
+static float anclaZ(float z, float hw) { float a = fabsf(z), sg = z >= 0 ? 1.0f : -1.0f; return a <= 3.55f ? z * hw / 3.66f : sg * (hw + (a - 3.66f)); }
+static float anclaY(float y, float h) { return y <= 2.30f ? y * h / 2.44f : y - (2.44f - h); }
+void __fastcall ganchoSetPost(int lado, int tipo, float* pos) {
+    alignas(16) float p[4] = { 0, 0, 0, 0 };
+    if (pos && g_anclasF > 0.5f && g_streetActivo && g_canchaOn && GetTickCount64() - g_tTrainRed < 3000 && leerSeguro(pos, p, 12)) {
+        float ent[3] = { p[0], p[1], p[2] };
+        float dxs = 52.56f - (float)g_canchaLargo; bool cambio = false;
+        if (dxs > 0.5f && fabsf(p[0]) > 40.0f) { p[0] += p[0] < 0 ? dxs : -dxs; cambio = true; }
+        if ((int)(g_arcoMedidaF + 0.5f) > 0) { float mw = 7.32f, mh = 2.44f; medidaWH(mw, mh); p[2] = anclaZ(p[2], mw * 0.5f); p[1] = anclaY(p[1], mh); cambio = true; }
+        LONG n = InterlockedIncrement(&g_anclaLogs); if (n <= 24) logf("[ANCLA] SetPost lado=%d tipo=%d entra (%.3f, %.3f, %.3f) -> sale (%.3f, %.3f, %.3f)%s", lado, tipo, ent[0], ent[1], ent[2], p[0], p[1], p[2], cambio ? "" : " (sin cambio)");
+        g_setPostOrig(lado, tipo, p);
+        return;
+    }
+    g_setPostOrig(lado, tipo, pos);
+}
 bool arcoRealInstalar(Feature& f) {
     if (g_arcoVolOrig) { f.estado = "ok: gancho del volumen de red ya puesto"; return true; }
     if (!g_globalPartido && !resolverGlobalPartido(f.id)) { f.estado = "sin firma del global del partido"; return false; }
     uint8_t* m = firmaUnica("codigo", "40 55 56 57 48 83 EC 40 48 C7 44 24 30 FE FF FF FF 48 89 5C 24 60 48 8B F2 8B E9 C7 44 24 70 18 00 00 00 45 33 C0", f.id);
     if (!m) { f.estado = "sin firma: FUN_1404AA610 (volumen de la red)"; return false; }
     if (!crearDesvio(f, m, 17, (void*)ganchoArcoVol, (void**)&g_arcoVolOrig)) { f.estado = "no se pudo desviar FUN_1404AA610"; return false; }
-    char b[200]; sprintf_s(b, "ok: volumen de red enganchado en exe+0x%llX (arco_medida 0-3; se aplica al empezar el partido)", (unsigned long long)(m - g_exe.base)); f.estado = b; return true;
+    uint8_t* sp = firmaUnica("codigo", "40 56 57 41 56 48 83 EC 30 48 C7 44 24 20 FE FF FF FF 48 89 5C 24 50 48 89 6C 24 58 49 8B E8 44 8B F2 48 63 F1", f.id);
+    if (sp && !g_setPostOrig && !crearDesvio(f, sp, 18, (void*)ganchoSetPost, (void**)&g_setPostOrig)) logf("[ARCO_REAL] no se pudo desviar GoalNet_SetPost (anclas)");
+    char b[200]; sprintf_s(b, "ok: volumen de red enganchado en exe+0x%llX (arco_medida 0-3; se aplica al empezar el partido); anclas %s", (unsigned long long)(m - g_exe.base), g_setPostOrig ? "ok" : "sin gancho"); f.estado = b; return true;
 }
 bool arcoRealQuitar(Feature&) { g_arcoMedidaF = 0.0f; return true; }
 bool jugCantQuitar(Feature&) { g_jugCantOn = 0; if (g_hiloJugCant) { WaitForSingleObject(g_hiloJugCant, 4000); CloseHandle(g_hiloJugCant); g_hiloJugCant = nullptr; } g_jugLocalF = g_jugRivalF = 0.0f; return true; }
@@ -3071,6 +3108,19 @@ static int r3DirectInput() {
     }
     return leidos > 0 ? 0 : -1;
 }
+// 0.4.108 arquero_dist_seleccion (m, json/panel, por defecto 7): el portero solo puede elegirse con el cambio normal si el balón está a menos de esa distancia de él o viene hacia él
+// (velocidad hacia el portero > 3 m/s a menos de 30 m). Sin pelota localizada o sin posición del portero no se bloquea (deja pasar).
+float g_arqDistSelF = 7.0f;
+static bool arqueroElegible(int idxGk) {
+    uint8_t* raiz = nullptr; float gx = 0, gz = 0;
+    if (!leerSeguro(g_globalPartido, &raiz, 8) || !raiz || !posJugPC(raiz, idxGk, gx, gz)) return true;
+    uint8_t* b = g_pelotaSeguida; if (!b) return true;
+    float bp[3], bv[3]; if (!leerSeguro(b + 0x64, bp, 12) || !leerSeguro(b + 0x70, bv, 12)) return true;
+    float dx = bp[0] - gx, dz = bp[2] - gz, d = sqrtf(dx * dx + dz * dz);
+    if (d <= g_arqDistSelF) return true;
+    if (d < 30.0f) { float vp = -(bv[0] * dx + bv[2] * dz) / d; if (vp > 3.0f) return true; }
+    return false;
+}
 static bool equipoSoloPortero(int equipo) {
     uint8_t* raiz = nullptr; int cuenta[2];
     if (!leerSeguro(g_globalPartido, &raiz, 8) || !raiz) return false;
@@ -3086,11 +3136,11 @@ static void __stdcall ayudanteCursor(uint8_t* reg, uint32_t idx, uint8_t* ret, u
     // 0.4.64: el cambio AUTOMÁTICO de cursor (llamadores exe+0x4403D2 = cambio por balón y exe+0x1FB98D2 = cursor inicial del reinicio) nunca debe caer en el portero propio (slot 0):
     // el log mostró «cursor -> portero idx=0 (antes 7/8/10)» desde 0x4403D2 y el portero del jugador quedó jugando de campo. Se cambia por el campista 9 (o se deja el cursor donde estaba si era un campista).
     if (g_l1SinPorteroF > 0.5f && g_streetActivo && (idx == 0 || idx == 11) && idxPila && off == 0x4403D2 && GetTickCount64() - g_tTrainGlob < 3000
-        && !equipoSoloPortero(idx == 0 ? 0 : 1) && r3DirectInput() == 0 && !r3Pulsado()) {
+        && !equipoSoloPortero(idx == 0 ? 0 : 1) && !arqueroElegible((int)idx) && r3DirectInput() == 0 && !r3Pulsado()) {
         uint32_t tb = idx == 0 ? 0u : 11u;
         uint32_t nuevo = (viejo >= tb + 1 && viejo <= tb + 10) ? tb + 1 + (viejo - tb) % 10 : tb + 9;
         *idxPila = nuevo; static LONG nL1 = 0; LONG n = InterlockedIncrement(&nL1);
-        if (n <= 60) logf("[L1_SIN_PT] el cambio de jugador iba al portero idx=%u (antes %u) → se pone el jugador de campo %u (L1+R3 sí elige al portero) #%ld", idx, viejo, nuevo, (long)n);
+        if (n <= 60) logf("[L1_SIN_PT] el cambio de jugador iba al portero idx=%u (antes %u) → se pone el jugador de campo %u (el balón no está cerca ni viene hacia él; L1+R3 sí lo elige) #%ld", idx, viejo, nuevo, (long)n);
         return;
     }
     if (g_cursorSinPtOn && idx == 0 && idxPila && (off == 0x4403D2 || off == 0x1FB98D2) && GetTickCount64() - g_tTrainGlob < 3000) {
@@ -3387,6 +3437,9 @@ void leerConfig() {
     if (valorDe("street_1v1_siempre", v)) g_1v1Siempre = (v == "true" || v == "1");
     if (valorDe("street_jugadores_local", v)) { g_jugLocalF = (float)atof(v.c_str()); if (g_jugLocalF < 0.0f || g_jugLocalF > 11.0f) g_jugLocalF = 0.0f; }
     if (valorDe("street_jugadores_rival", v)) { g_jugRivalF = (float)atof(v.c_str()); if (g_jugRivalF < 0.0f || g_jugRivalF > 11.0f) g_jugRivalF = 0.0f; }
+    if (valorDe("arquero_dist_seleccion", v)) { g_arqDistSelF = (float)atof(v.c_str()); if (g_arqDistSelF < 2.0f || g_arqDistSelF > 25.0f) g_arqDistSelF = 7.0f; }
+    if (valorDe("red_tope_rebote", v)) g_redTopeF = (v == "false" || v == "0") ? 0.0f : 1.0f;
+    if (valorDe("red_anclas", v)) g_anclasF = (v == "false" || v == "0") ? 0.0f : 1.0f;
     if (valorDe("street_l1_sin_portero", v)) g_l1SinPorteroF = (v == "false" || v == "0") ? 0.0f : 1.0f;
     if (valorDe("arco_medida", v)) { g_arcoMedidaF = (float)atof(v.c_str()); if (g_arcoMedidaF < 0.0f || g_arcoMedidaF > 3.0f) g_arcoMedidaF = 0.0f; }
     if (valorDe("street_jugadores_lado", v)) { g_jugLadoF = (float)atof(v.c_str()); if (g_jugLadoF < 0.0f || g_jugLadoF > 1.0f) g_jugLadoF = 0.0f; }
@@ -3489,7 +3542,7 @@ static void procesarOrdenes() {
             continue;
         }
         {   // parámetros numéricos EN VIVO (se releen al instante: son las variables que usan los ganchos) y se guardan en el json
-            struct Num { const char* id; float* var; float lo, hi; }; static const Num nums[] = { { "tiro_potencia_k", &g_tiroPot, 0.5f, 2.0f }, { "tiro_altura_k", &g_tiroAlt, 0.2f, 1.5f }, { "pase_vel_k", &g_paseVel, 0.8f, 2.0f }, { "pase_correccion", &g_paseCorr, 0.0f, 1.0f }, { "pase_cono_grados", &g_paseCono, 5.0f, 60.0f }, { "muro_rebote", &g_muroRebote, 0.3f, 0.95f }, { "muro_fondo_rebote", &g_muroFondoRebote, 0.0f, 0.95f }, { "muro_lat_friccion", &g_muroLatFric, 0.0f, 1.0f }, { "arco_chico_ancho", &g_arcoAncho, 1.5f, 7.32f }, { "street_1v1_saque", &g_1v1SaqueF, 0.0f, 3.0f }, { "street_jugadores_local", &g_jugLocalF, 0.0f, 11.0f }, { "street_jugadores_rival", &g_jugRivalF, 0.0f, 11.0f }, { "street_jugadores_lado", &g_jugLadoF, 0.0f, 1.0f }, { "arco_medida", &g_arcoMedidaF, 0.0f, 3.0f }, { "street_l1_sin_portero", &g_l1SinPorteroF, 0.0f, 1.0f }, { "gk_despeje_dist_m", &g_gkDespejeDist, 1.0f, 15.0f }, { "gk_despeje_presion_m", &g_gkDespejePresion, 0.5f, 15.0f }, { "arco_chico_alto", &g_arcoAlto, 1.0f, 2.44f }, { "muro_lat_empuje", &g_muroLatEmpuje, 0.0f, 0.3f }, { "muro_friccion", &g_muroFric, 0.0f, 1.0f } };
+            struct Num { const char* id; float* var; float lo, hi; }; static const Num nums[] = { { "tiro_potencia_k", &g_tiroPot, 0.5f, 2.0f }, { "tiro_altura_k", &g_tiroAlt, 0.2f, 1.5f }, { "pase_vel_k", &g_paseVel, 0.8f, 2.0f }, { "pase_correccion", &g_paseCorr, 0.0f, 1.0f }, { "pase_cono_grados", &g_paseCono, 5.0f, 60.0f }, { "muro_rebote", &g_muroRebote, 0.3f, 0.95f }, { "muro_fondo_rebote", &g_muroFondoRebote, 0.0f, 0.95f }, { "muro_lat_friccion", &g_muroLatFric, 0.0f, 1.0f }, { "arco_chico_ancho", &g_arcoAncho, 1.5f, 7.32f }, { "street_1v1_saque", &g_1v1SaqueF, 0.0f, 3.0f }, { "street_jugadores_local", &g_jugLocalF, 0.0f, 11.0f }, { "street_jugadores_rival", &g_jugRivalF, 0.0f, 11.0f }, { "street_jugadores_lado", &g_jugLadoF, 0.0f, 1.0f }, { "arco_medida", &g_arcoMedidaF, 0.0f, 3.0f }, { "street_l1_sin_portero", &g_l1SinPorteroF, 0.0f, 1.0f }, { "arquero_dist_seleccion", &g_arqDistSelF, 2.0f, 25.0f }, { "red_tope_rebote", &g_redTopeF, 0.0f, 1.0f }, { "red_anclas", &g_anclasF, 0.0f, 1.0f }, { "gk_despeje_dist_m", &g_gkDespejeDist, 1.0f, 15.0f }, { "gk_despeje_presion_m", &g_gkDespejePresion, 0.5f, 15.0f }, { "arco_chico_alto", &g_arcoAlto, 1.0f, 2.44f }, { "muro_lat_empuje", &g_muroLatEmpuje, 0.0f, 0.3f }, { "muro_friccion", &g_muroFric, 0.0f, 1.0f } };
             bool hecho = false; for (const Num& n : nums) if (id == n.id) { float x = (float)atof(v.c_str()); if (x >= n.lo && x <= n.hi) { *n.var = x; persistirClaveJson(id, v); logf("[PANEL] %s = %.3f (en vivo)", n.id, x); } else logf("[PANEL] %s=%s fuera de rango [%.2f, %.2f]: ignorado", n.id, v.c_str(), n.lo, n.hi); hecho = true; break; }
             if (hecho) continue;
         }
