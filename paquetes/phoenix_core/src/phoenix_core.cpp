@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.104"
+#define PHX_CORE_VERSION "0.4.105"
 
 namespace {
 
@@ -708,12 +708,20 @@ volatile LONG g_canchaOn = 0, g_canchaParches = 0;
 HANDLE g_hiloCancha = nullptr;
 volatile LONG g_rearmaCancha = 0;   // 0.4.95: la revancha (MatchSetupRematch) crea un bloque de dimensiones NUEVO sin parchear; esto vuelve a abrir la ventana de búsqueda de 75 s
 
+// 0.4.105 arco_medida (0 = original, 1 = 4x2, 2 = 3x2, 3 = 5x2,2): boca lógica (ancho, alto) en metros. Con medida > 0 el bloque de dimensiones lleva [2] = ancho/2 y [3] = alto.
+float g_arcoMedidaF = 0.0f;
+static void medidaWH(float& w, float& h) {
+    static const float T[4][2] = { { 7.32f, 2.44f }, { 4.0f, 2.0f }, { 3.0f, 2.0f }, { 5.0f, 2.2f } };
+    int m = (int)(g_arcoMedidaF + 0.5f); if (m < 0 || m > 3) m = 0;
+    w = T[m][0]; h = T[m][1];
+}
 static void bloqueNuevo(uint8_t* d) {
     memcpy(d, kBloqueCampo, 36);
     float kx = (float)g_canchaLargo / 52.56f, kz = (float)g_canchaAncho / 34.06f;
-    float f[9] = { (float)g_canchaLargo, (float)g_canchaAncho, 3.66f, 2.44f, 47.06f * kx, fmaxf(4.0f, 9.16f * kz),
+    float aw = 7.32f, ah = 2.44f; medidaWH(aw, ah); bool conMedida = (int)(g_arcoMedidaF + 0.5f) > 0;
+    float f[9] = { (float)g_canchaLargo, (float)g_canchaAncho, aw * 0.5f, ah, 47.06f * kx, fmaxf(4.0f, 9.16f * kz),
                    36.14f * kx, fmaxf(4.5f, 20.12f * kz), 41.56f * kx };
-    for (int i = 0; i < 9; ++i) { if (i == 2 || i == 3) continue; memcpy(d + i * 4, &f[i], 4); }
+    for (int i = 0; i < 9; ++i) { if ((i == 2 || i == 3) && !conMedida) continue; memcpy(d + i * 4, &f[i], 4); }
 }
 // TrainingWork «estable»: raíz → +0x3F8 (objeto de referencia) → +0x10 (datos) → byte 0 ≠ 0. (raíz+0x400 solo vale dentro de accesos puntuales.)
 // Sin el interruptor «street_activo»: lo usa streetVigilar para saber si ya se puede aplicar el cambio pedido.
@@ -1767,7 +1775,8 @@ uint64_t ganchoBolaPaso(float dt, uint64_t rdx, uint64_t r8, float* S, void* cfg
     if ((g_redOn || g_murosOn) && GetTickCount64() - g_tTrainRed < 3000) {
         float x = S[0], y = S[1], z = S[2];
         float largo = (float)g_canchaLargo, ancho = (float)g_canchaAncho;
-        const float hw = g_arcoChicoOn ? g_arcoAncho * 0.5f : 3.66f, hh = g_arcoChicoOn ? g_arcoAlto : 2.44f;   // 0.4.95 arco_chico_free: boca lógica más chica (postes/larguero invisibles del Core)
+        float mw = 7.32f, mh = 2.44f; medidaWH(mw, mh); bool conMedida = (int)(g_arcoMedidaF + 0.5f) > 0;
+        const float hw = conMedida ? mw * 0.5f : g_arcoChicoOn ? g_arcoAncho * 0.5f : 3.66f, hh = conMedida ? mh : g_arcoChicoOn ? g_arcoAlto : 2.44f;   // 0.4.95 arco_chico_free: boca lógica más chica (postes/larguero invisibles del Core)
         bool bocaGol = fabsf(z) < hw + 0.109f && y < hh + 0.109f;   // boca real: media portería 3,66 y travesaño 2,44 (+ radio de la pelota)
         if (g_redOn && g_redResorte && fabsf(x) > largo && bocaGol) {   // 0.4.72: la red cede como una malla: holgura sin fuerza, luego resorte + amortiguación; rebota un poco y la pelota cae dentro
             float sgx = x >= 0 ? 1.0f : -1.0f, pen = fabsf(x) - largo, vout = S[3] * sgx;
@@ -2037,6 +2046,42 @@ bool jugCantInstalar(Feature& f) {
     if (!g_hiloJugCant) { g_jugCantOn = 0; f.estado = "no se pudo crear el hilo"; return false; }
     f.estado = "ok: street_jugadores_local / street_jugadores_rival (0 = no tocar, 1-11) y street_jugadores_lado (0 = mi equipo es la instancia 0, 1 = la 1), solo con street_activo"; return true;
 }
+// --- arco_chico_real (0.4.105, EXPERIMENTAL, apagado): FUN_1404AA610(u32, float* dims) construye el volumen de la red nativa UNA vez por partido (init de BallControl) con
+// p[2]+0,046875, p[9], p[0]-0,1, p[0xd], p[0xe]. Antes de que corra, si el bloque vivo de dimensiones sigue con las medidas originales se le escribe el bloque nuevo completo
+// (cancha + boca arco_medida); así el volumen y la lógica de gol nacen con la boca chica. Anota p[0..0x12] ([ARCO_REAL]) para saber qué son p[9], p[0xd], p[0xe].
+typedef void* (__fastcall* ArcoVolFn)(uint32_t, float*);
+ArcoVolFn g_arcoVolOrig = nullptr; volatile LONG g_arcoRealLogs = 0;
+void* __fastcall ganchoArcoVol(uint32_t a, float* p) {
+    int m = (int)(g_arcoMedidaF + 0.5f);
+    if (m > 0 && g_streetActivo && g_canchaOn && p) {
+        float cur[19];
+        if (leerSeguro(p, cur, sizeof cur)) {
+            LONG n = InterlockedIncrement(&g_arcoRealLogs);
+            if (n <= 12) {
+                char b[400]; int k = 0; for (int i = 0; i < 19; ++i) k += sprintf_s(b + k, sizeof b - k, " %.3f", cur[i]);
+                logf("[ARCO_REAL] init del volumen de red: bloque=%p medida=%d p[0..0x12]=%s", (void*)p, m, b);
+            }
+            uint8_t nuevo[36];
+            if (memcmp(cur, kBloqueCampo, 36) == 0 && (trainingWorkEstable() || hayTrainingWork())) {
+                bloqueNuevo(nuevo);
+                if (escribirSeguro(p, nuevo, 36)) logf("[ARCO_REAL] bloque original sustituido por el de cancha %.1f x %.1f con boca %.2f x %.2f", g_canchaLargo * 2, g_canchaAncho * 2, ((float*)nuevo)[2] * 2, ((float*)nuevo)[3]);
+            } else if (fabsf(cur[0] - (float)g_canchaLargo) < 0.01f) {
+                bloqueNuevo(nuevo); float c23[2] = { ((float*)nuevo)[2], ((float*)nuevo)[3] };
+                if (escribirSeguro(p + 2, c23, 8)) logf("[ARCO_REAL] bloque ya parcheado: boca puesta en %.2f x %.2f", c23[0] * 2, c23[1]);
+            }
+        }
+    }
+    return g_arcoVolOrig(a, p);
+}
+bool arcoRealInstalar(Feature& f) {
+    if (g_arcoVolOrig) { f.estado = "ok: gancho del volumen de red ya puesto"; return true; }
+    if (!g_globalPartido && !resolverGlobalPartido(f.id)) { f.estado = "sin firma del global del partido"; return false; }
+    uint8_t* m = firmaUnica("codigo", "40 55 56 57 48 83 EC 40 48 C7 44 24 30 FE FF FF FF 48 89 5C 24 60 48 8B F2 8B E9 C7 44 24 70 18 00 00 00 45 33 C0", f.id);
+    if (!m) { f.estado = "sin firma: FUN_1404AA610 (volumen de la red)"; return false; }
+    if (!crearDesvio(f, m, 17, (void*)ganchoArcoVol, (void**)&g_arcoVolOrig)) { f.estado = "no se pudo desviar FUN_1404AA610"; return false; }
+    char b[200]; sprintf_s(b, "ok: volumen de red enganchado en exe+0x%llX (arco_medida 0-3; se aplica al empezar el partido)", (unsigned long long)(m - g_exe.base)); f.estado = b; return true;
+}
+bool arcoRealQuitar(Feature&) { g_arcoMedidaF = 0.0f; return true; }
 bool jugCantQuitar(Feature&) { g_jugCantOn = 0; if (g_hiloJugCant) { WaitForSingleObject(g_hiloJugCant, 4000); CloseHandle(g_hiloJugCant); g_hiloJugCant = nullptr; } g_jugLocalF = g_jugRivalF = 0.0f; return true; }
 bool arcoChicoInstalar(Feature& f) {   // 0.4.95: arco más chico con postes y larguero lógicos; el juego sigue viendo el gol solo por la boca chica
     if (!murosInstalar(f)) return false;
@@ -3160,6 +3205,7 @@ std::vector<Feature> g_funciones = {   // orden = orden de arranque (gol_nativo_
     { "arco_chico_free", "Arco más chico (3v3): postes y larguero lógicos del Core; ancho y alto en el json (arco_chico_ancho/alto)", arcoChicoInstalar, arcoChicoQuitar },
     { "goles_sonda", "Solo log: punteros reales de los contadores de goles (gancho en FUN_1408C9E90+9) para la revancha 0-0", golesSondaInstalar, golesSondaQuitar },
     { "street_jugadores", "Entrenamiento: cantidad de jugadores por equipo sin el mínimo de 3 del menú (EXPERIMENTAL; street_jugadores_local / _rival 0-11, _lado 0/1)", jugCantInstalar, jugCantQuitar },
+    { "arco_chico_real", "Arco chico REAL (EXPERIMENTAL): boca lógica y volumen de la red nativa nacen con la medida arco_medida (0 original, 1 = 4x2, 2 = 3x2, 3 = 5x2,2) al empezar el partido", arcoRealInstalar, arcoRealQuitar },
     { "street_1v1_portero", "1 contra 1: el saque lo hace el portero (gancho del setter de pateadores FUN_140A3CAE0; modo en street_1v1_saque 0-3)", uno1Instalar, uno1Quitar },
     { "arquero_controla", "Arquero controla: la unidad del portero IA (modo 5/6) pasa en vez de patear/despejar, salvo balón muy cerca del arco y rival encima (APAGADA por defecto; aparte de la config congelada del portero)", arqControlaInstalar, arqControlaQuitar },
     { "red_frena_free", "La red de los arcos frena la pelota en el entrenamiento (gancho al paso de la pelota)", redInstalar, redQuitar },
@@ -3283,6 +3329,7 @@ void leerConfig() {
     if (valorDe("street_1v1_siempre", v)) g_1v1Siempre = (v == "true" || v == "1");
     if (valorDe("street_jugadores_local", v)) { g_jugLocalF = (float)atof(v.c_str()); if (g_jugLocalF < 0.0f || g_jugLocalF > 11.0f) g_jugLocalF = 0.0f; }
     if (valorDe("street_jugadores_rival", v)) { g_jugRivalF = (float)atof(v.c_str()); if (g_jugRivalF < 0.0f || g_jugRivalF > 11.0f) g_jugRivalF = 0.0f; }
+    if (valorDe("arco_medida", v)) { g_arcoMedidaF = (float)atof(v.c_str()); if (g_arcoMedidaF < 0.0f || g_arcoMedidaF > 3.0f) g_arcoMedidaF = 0.0f; }
     if (valorDe("street_jugadores_lado", v)) { g_jugLadoF = (float)atof(v.c_str()); if (g_jugLadoF < 0.0f || g_jugLadoF > 1.0f) g_jugLadoF = 0.0f; }
     if (valorDe("arco_chico_ancho", v)) { g_arcoAncho = (float)atof(v.c_str()); if (g_arcoAncho < 1.5f || g_arcoAncho > 7.32f) g_arcoAncho = 4.0f; }
     if (valorDe("arco_chico_alto", v)) { g_arcoAlto = (float)atof(v.c_str()); if (g_arcoAlto < 1.0f || g_arcoAlto > 2.44f) g_arcoAlto = 2.0f; }
@@ -3383,7 +3430,7 @@ static void procesarOrdenes() {
             continue;
         }
         {   // parámetros numéricos EN VIVO (se releen al instante: son las variables que usan los ganchos) y se guardan en el json
-            struct Num { const char* id; float* var; float lo, hi; }; static const Num nums[] = { { "tiro_potencia_k", &g_tiroPot, 0.5f, 2.0f }, { "tiro_altura_k", &g_tiroAlt, 0.2f, 1.5f }, { "pase_vel_k", &g_paseVel, 0.8f, 2.0f }, { "pase_correccion", &g_paseCorr, 0.0f, 1.0f }, { "pase_cono_grados", &g_paseCono, 5.0f, 60.0f }, { "muro_rebote", &g_muroRebote, 0.3f, 0.95f }, { "muro_fondo_rebote", &g_muroFondoRebote, 0.0f, 0.95f }, { "muro_lat_friccion", &g_muroLatFric, 0.0f, 1.0f }, { "arco_chico_ancho", &g_arcoAncho, 1.5f, 7.32f }, { "street_1v1_saque", &g_1v1SaqueF, 0.0f, 3.0f }, { "street_jugadores_local", &g_jugLocalF, 0.0f, 11.0f }, { "street_jugadores_rival", &g_jugRivalF, 0.0f, 11.0f }, { "street_jugadores_lado", &g_jugLadoF, 0.0f, 1.0f }, { "gk_despeje_dist_m", &g_gkDespejeDist, 1.0f, 15.0f }, { "gk_despeje_presion_m", &g_gkDespejePresion, 0.5f, 15.0f }, { "arco_chico_alto", &g_arcoAlto, 1.0f, 2.44f }, { "muro_lat_empuje", &g_muroLatEmpuje, 0.0f, 0.3f }, { "muro_friccion", &g_muroFric, 0.0f, 1.0f } };
+            struct Num { const char* id; float* var; float lo, hi; }; static const Num nums[] = { { "tiro_potencia_k", &g_tiroPot, 0.5f, 2.0f }, { "tiro_altura_k", &g_tiroAlt, 0.2f, 1.5f }, { "pase_vel_k", &g_paseVel, 0.8f, 2.0f }, { "pase_correccion", &g_paseCorr, 0.0f, 1.0f }, { "pase_cono_grados", &g_paseCono, 5.0f, 60.0f }, { "muro_rebote", &g_muroRebote, 0.3f, 0.95f }, { "muro_fondo_rebote", &g_muroFondoRebote, 0.0f, 0.95f }, { "muro_lat_friccion", &g_muroLatFric, 0.0f, 1.0f }, { "arco_chico_ancho", &g_arcoAncho, 1.5f, 7.32f }, { "street_1v1_saque", &g_1v1SaqueF, 0.0f, 3.0f }, { "street_jugadores_local", &g_jugLocalF, 0.0f, 11.0f }, { "street_jugadores_rival", &g_jugRivalF, 0.0f, 11.0f }, { "street_jugadores_lado", &g_jugLadoF, 0.0f, 1.0f }, { "arco_medida", &g_arcoMedidaF, 0.0f, 3.0f }, { "gk_despeje_dist_m", &g_gkDespejeDist, 1.0f, 15.0f }, { "gk_despeje_presion_m", &g_gkDespejePresion, 0.5f, 15.0f }, { "arco_chico_alto", &g_arcoAlto, 1.0f, 2.44f }, { "muro_lat_empuje", &g_muroLatEmpuje, 0.0f, 0.3f }, { "muro_friccion", &g_muroFric, 0.0f, 1.0f } };
             bool hecho = false; for (const Num& n : nums) if (id == n.id) { float x = (float)atof(v.c_str()); if (x >= n.lo && x <= n.hi) { *n.var = x; persistirClaveJson(id, v); logf("[PANEL] %s = %.3f (en vivo)", n.id, x); } else logf("[PANEL] %s=%s fuera de rango [%.2f, %.2f]: ignorado", n.id, v.c_str(), n.lo, n.hi); hecho = true; break; }
             if (hecho) continue;
         }

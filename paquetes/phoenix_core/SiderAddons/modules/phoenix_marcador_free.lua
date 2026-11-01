@@ -46,6 +46,8 @@ local function mirarConfig()
 end
 
 local canchaOn, rutaCancha, paredesOn, seasonForzada, suplentesCero = false, nil, false, nil, false
+local arcoMedida = 0
+local CARPETA_ARCO = { [1] = "arco_4x2/", [2] = "arco_3x2/", [3] = "arco_5x22/" }
 local climaForzado = nil   -- v0.8: json "clima_forzado": 0 = sin lluvia (la lluvia pone el cielo/fondo blanco en la cancha chica)
 local function mirarCancha()
     local t = leer(rutaCfg)
@@ -55,6 +57,8 @@ local function mirarCancha()
     climaForzado = cf and tonumber(cf) or nil
     suplentesCero = (t ~= nil) and (t:find('"suplentes_cero"%s*:%s*1') ~= nil)
     canchaOn = (t ~= nil) and (t:find('"cancha_chica_free"%s*:%s*true') ~= nil)
+    local am = t and t:match('"arco_medida"%s*:%s*([%d%.]+)')   -- 0.4.105: 0 original, 1 = 4x2, 2 = 3x2, 3 = 5x2,2
+    arcoMedida = am and math.floor(tonumber(am) + 0.5) or 0
     paredesOn = canchaOn and (t:find('"cancha_paredes"%s*:%s*true') ~= nil)
 end
 
@@ -207,6 +211,12 @@ function m.get_filepath(ctx, filename, key)
             if hp then hp:close(); log("[cancha_paredes] sirvo " .. fl); return fp end
         end
         local flv = string.gsub(fl2, "^/+", "")
+        local carp = CARPETA_ARCO[arcoMedida]
+        if carp and (CANCHA_VISUAL[flv] or GEOM_CANCHA[fl]) and flv ~= "asset/model/bg/st002/pitch/#win/pitch_st002.fpk" then
+            local fa = base .. "content/phoenix/cancha_visual/" .. carp .. flv
+            local ha = io.open(fa, "rb")
+            if ha then ha:close(); log("[cancha_visual] sirvo (" .. carp .. ") " .. flv); return fa end
+        end
         if CANCHA_VISUAL[flv] then
             local f = base .. "content/phoenix/cancha_visual/" .. flv
             local h = io.open(f, "rb")
@@ -270,6 +280,7 @@ end
 local PANEL = {
     { id = "street_activo", txt = "MODO STREET (todo el Street en el Entrenamiento)", tipo = "bool", def = true, modo = "fuera" },   -- 0.4.102
     { id = "street_1v1_saque", txt = "1v1 saque: 0 normal · 1 portero centro · 2 portero su área · 3 libre", tipo = "num", paso = 1, lo = 0, hi = 3, def = 0, modo = "vivo" },
+    { id = "arco_medida", txt = "Medida del arco: 0 original · 1 = 4x2 · 2 = 3x2 · 3 = 5x2,2 (al reentrar al entrenamiento)", tipo = "num", paso = 1, lo = 0, hi = 3, def = 0, modo = "sig.partida" },
     { id = "street_jugadores_local", txt = "Jugadores mi equipo (0 = no tocar; EXPERIMENTAL)", tipo = "num", paso = 1, lo = 0, hi = 11, def = 0, modo = "vivo" },
     { id = "street_jugadores_rival", txt = "Jugadores rival (0 = no tocar; EXPERIMENTAL)", tipo = "num", paso = 1, lo = 0, hi = 11, def = 0, modo = "vivo" },
     { id = "street_jugadores_lado", txt = "Mi equipo es la instancia 0 o 1 (si baja el rival y no el mío, cambia a 1)", tipo = "num", paso = 1, lo = 0, hi = 1, def = 0, modo = "vivo" },
