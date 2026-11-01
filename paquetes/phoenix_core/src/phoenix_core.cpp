@@ -3132,16 +3132,23 @@ static int r3DirectInput() {
 }
 // 0.4.108 arquero_dist_seleccion (m, json/panel, por defecto 7): el portero solo puede elegirse con el cambio normal si el balón está a menos de esa distancia de él o viene hacia él
 // (velocidad hacia el portero > 3 m/s a menos de 30 m). Sin pelota localizada o sin posición del portero no se bloquea (deja pasar).
-float g_arqDistSelF = 7.0f;
+float g_arqDistSelF = 7.0f, g_arqRivalDistF = 5.0f;
 static bool arqueroElegible(int idxGk) {
     uint8_t* raiz = nullptr; float gx = 0, gz = 0;
     if (!leerSeguro(g_globalPartido, &raiz, 8) || !raiz || !posJugPC(raiz, idxGk, gx, gz)) return true;
     uint8_t* b = g_pelotaSeguida; if (!b) return true;
     float bp[3], bv[3]; if (!leerSeguro(b + 0x64, bp, 12) || !leerSeguro(b + 0x70, bv, 12)) return true;
     float dx = bp[0] - gx, dz = bp[2] - gz, d = sqrtf(dx * dx + dz * dz);
-    if (d <= g_arqDistSelF) return true;
-    if (d < 30.0f) { float vp = -(bv[0] * dx + bv[2] * dz) / d; if (vp > 3.0f) return true; }
-    return false;
+    bool candidato = d <= g_arqDistSelF;
+    if (!candidato && d < 30.0f) { float vp = -(bv[0] * dx + bv[2] * dz) / d; candidato = vp > 3.0f; }
+    if (!candidato) return false;
+    // 0.4.109 arquero_rival_dist (m, por defecto 5): con un rival a menos de esa distancia del balón NO se elige al portero (se queda el jugador de campo)
+    for (int i = (idxGk == 0 ? 11 : 0), fin = i + 11; i < fin; ++i) {
+        if (i == 0 || i == 11) continue;   // los porteros no cuentan como rival cercano
+        float rx = 0, rz = 0; if (!posJugPC(raiz, i, rx, rz)) continue;
+        float ex = rx - bp[0], ez = rz - bp[2]; if (ex * ex + ez * ez < g_arqRivalDistF * g_arqRivalDistF) return false;
+    }
+    return true;
 }
 static bool equipoSoloPortero(int equipo) {
     uint8_t* raiz = nullptr; int cuenta[2];
@@ -3460,6 +3467,7 @@ void leerConfig() {
     if (valorDe("street_jugadores_local", v)) { g_jugLocalF = (float)atof(v.c_str()); if (g_jugLocalF < 0.0f || g_jugLocalF > 11.0f) g_jugLocalF = 0.0f; }
     if (valorDe("street_jugadores_rival", v)) { g_jugRivalF = (float)atof(v.c_str()); if (g_jugRivalF < 0.0f || g_jugRivalF > 11.0f) g_jugRivalF = 0.0f; }
     if (valorDe("arquero_dist_seleccion", v)) { g_arqDistSelF = (float)atof(v.c_str()); if (g_arqDistSelF < 2.0f || g_arqDistSelF > 25.0f) g_arqDistSelF = 7.0f; }
+    if (valorDe("arquero_rival_dist", v)) { g_arqRivalDistF = (float)atof(v.c_str()); if (g_arqRivalDistF < 1.0f || g_arqRivalDistF > 15.0f) g_arqRivalDistF = 5.0f; }
     if (valorDe("red_tope_rebote", v)) g_redTopeF = (v == "false" || v == "0") ? 0.0f : 1.0f;
     if (valorDe("red_anclas", v)) g_anclasF = (v == "false" || v == "0") ? 0.0f : 1.0f;
     if (valorDe("street_l1_sin_portero", v)) g_l1SinPorteroF = (v == "false" || v == "0") ? 0.0f : 1.0f;
@@ -3564,7 +3572,7 @@ static void procesarOrdenes() {
             continue;
         }
         {   // parámetros numéricos EN VIVO (se releen al instante: son las variables que usan los ganchos) y se guardan en el json
-            struct Num { const char* id; float* var; float lo, hi; }; static const Num nums[] = { { "tiro_potencia_k", &g_tiroPot, 0.5f, 2.0f }, { "tiro_altura_k", &g_tiroAlt, 0.2f, 1.5f }, { "pase_vel_k", &g_paseVel, 0.8f, 2.0f }, { "pase_correccion", &g_paseCorr, 0.0f, 1.0f }, { "pase_cono_grados", &g_paseCono, 5.0f, 60.0f }, { "muro_rebote", &g_muroRebote, 0.3f, 0.95f }, { "muro_fondo_rebote", &g_muroFondoRebote, 0.0f, 0.95f }, { "muro_lat_friccion", &g_muroLatFric, 0.0f, 1.0f }, { "arco_chico_ancho", &g_arcoAncho, 1.5f, 7.32f }, { "street_1v1_saque", &g_1v1SaqueF, 0.0f, 3.0f }, { "street_jugadores_local", &g_jugLocalF, 0.0f, 11.0f }, { "street_jugadores_rival", &g_jugRivalF, 0.0f, 11.0f }, { "street_jugadores_lado", &g_jugLadoF, 0.0f, 1.0f }, { "arco_medida", &g_arcoMedidaF, 0.0f, 3.0f }, { "street_l1_sin_portero", &g_l1SinPorteroF, 0.0f, 1.0f }, { "arquero_dist_seleccion", &g_arqDistSelF, 2.0f, 25.0f }, { "red_tope_rebote", &g_redTopeF, 0.0f, 1.0f }, { "red_anclas", &g_anclasF, 0.0f, 1.0f }, { "gk_despeje_dist_m", &g_gkDespejeDist, 1.0f, 15.0f }, { "gk_despeje_presion_m", &g_gkDespejePresion, 0.5f, 15.0f }, { "arco_chico_alto", &g_arcoAlto, 1.0f, 2.44f }, { "muro_lat_empuje", &g_muroLatEmpuje, 0.0f, 0.3f }, { "muro_friccion", &g_muroFric, 0.0f, 1.0f } };
+            struct Num { const char* id; float* var; float lo, hi; }; static const Num nums[] = { { "tiro_potencia_k", &g_tiroPot, 0.5f, 2.0f }, { "tiro_altura_k", &g_tiroAlt, 0.2f, 1.5f }, { "pase_vel_k", &g_paseVel, 0.8f, 2.0f }, { "pase_correccion", &g_paseCorr, 0.0f, 1.0f }, { "pase_cono_grados", &g_paseCono, 5.0f, 60.0f }, { "muro_rebote", &g_muroRebote, 0.3f, 0.95f }, { "muro_fondo_rebote", &g_muroFondoRebote, 0.0f, 0.95f }, { "muro_lat_friccion", &g_muroLatFric, 0.0f, 1.0f }, { "arco_chico_ancho", &g_arcoAncho, 1.5f, 7.32f }, { "street_1v1_saque", &g_1v1SaqueF, 0.0f, 3.0f }, { "street_jugadores_local", &g_jugLocalF, 0.0f, 11.0f }, { "street_jugadores_rival", &g_jugRivalF, 0.0f, 11.0f }, { "street_jugadores_lado", &g_jugLadoF, 0.0f, 1.0f }, { "arco_medida", &g_arcoMedidaF, 0.0f, 3.0f }, { "street_l1_sin_portero", &g_l1SinPorteroF, 0.0f, 1.0f }, { "arquero_dist_seleccion", &g_arqDistSelF, 2.0f, 25.0f }, { "arquero_rival_dist", &g_arqRivalDistF, 1.0f, 15.0f }, { "red_tope_rebote", &g_redTopeF, 0.0f, 1.0f }, { "red_anclas", &g_anclasF, 0.0f, 1.0f }, { "gk_despeje_dist_m", &g_gkDespejeDist, 1.0f, 15.0f }, { "gk_despeje_presion_m", &g_gkDespejePresion, 0.5f, 15.0f }, { "arco_chico_alto", &g_arcoAlto, 1.0f, 2.44f }, { "muro_lat_empuje", &g_muroLatEmpuje, 0.0f, 0.3f }, { "muro_friccion", &g_muroFric, 0.0f, 1.0f } };
             bool hecho = false; for (const Num& n : nums) if (id == n.id) { float x = (float)atof(v.c_str()); if (x >= n.lo && x <= n.hi) { *n.var = x; persistirClaveJson(id, v); logf("[PANEL] %s = %.3f (en vivo)", n.id, x); } else logf("[PANEL] %s=%s fuera de rango [%.2f, %.2f]: ignorado", n.id, v.c_str(), n.lo, n.hi); hecho = true; break; }
             if (hecho) continue;
         }

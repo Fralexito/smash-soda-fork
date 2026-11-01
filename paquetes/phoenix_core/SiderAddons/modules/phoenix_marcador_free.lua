@@ -283,6 +283,7 @@ local PANEL = {
     { id = "arco_medida", txt = "Medida del arco: 0 original · 1 = 4x2 · 2 = 3x2 · 3 = 5x2,2 (al reentrar al entrenamiento)", tipo = "num", paso = 1, lo = 0, hi = 3, def = 0, modo = "sig.partida" },
     { id = "street_l1_sin_portero", txt = "L1 no elige al arquero salvo balón cerca o hacia él (1 sí · 0 no; L1+R3 lo fuerza)", tipo = "num", paso = 1, lo = 0, hi = 1, def = 1, modo = "vivo" },
     { id = "arquero_dist_seleccion", txt = "  Distancia para poder elegir al arquero (m)", tipo = "num", paso = 1, lo = 2, hi = 25, def = 7, modo = "vivo" },
+    { id = "arquero_rival_dist", txt = "  Sin rival a menos de (m) del balón para elegir al arquero", tipo = "num", paso = 1, lo = 1, hi = 15, def = 5, modo = "vivo" },
     { id = "red_tope_rebote", txt = "Tope de rebote en la red (no sale más rápido de lo que entró): 1 sí · 0 no", tipo = "num", paso = 1, lo = 0, hi = 1, def = 1, modo = "vivo" },
     { id = "red_anclas", txt = "Anclas de la tela a la medida del arco: 1 sí · 0 no", tipo = "num", paso = 1, lo = 0, hi = 1, def = 1, modo = "vivo" },
     { id = "street_jugadores_local", txt = "Jugadores mi equipo (0 = no tocar; EXPERIMENTAL)", tipo = "num", paso = 1, lo = 0, hi = 11, def = 0, modo = "vivo" },
