@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.100"
+#define PHX_CORE_VERSION "0.4.101"
 
 namespace {
 
@@ -2096,6 +2096,37 @@ bool arqSalidaInstalar(Feature& f) {
 }
 bool arqSalidaQuitar(Feature&) { g_arqSalidaOn = 0; return true; }
 
+// --- jugadores_dentro_free (0.4.101, 31-oct, REA/Frida en vivo): el destino de cada jugador de CAMPO lo da ActionBasePosition = FUN_140956C30 (RVA 0x956C30;
+// frente C §7), que escribe un vec3 en param_2 y lo devuelve. Medido con Frida en el entrenamiento: la mitad de las salidas caían fuera de la minicancha
+// (p. ej. (5.26,-18.17)) y los jugadores se iban detrás de la portería o por la banda. Gancho (18 B de prólogo limpios): tras el original, solo con
+// TrainingWork, se recorta la salida a |x| <= L-0,5 y |z| <= W-0,5. Los porteros usan ActionKeeperBasePosition (arquero_salida_corta) y no pasan por aquí.
+// Se reenvían 6 argumentos por si la función usa alguno en la pila (leer las ranuras de pila del llamador es inocuo).
+const char* kFirmaBasePos = "40 55 53 56 57 41 54 41 55 41 56 41 57 48 8D 6C 24 E1 48 81 EC C8 00 00 00 48 C7 45 D7 FE FF FF";
+using FnBasePos = uint64_t* (*)(int64_t, uint64_t*, int64_t, int64_t, int64_t, int64_t);
+FnBasePos g_basePosOrig = nullptr; volatile LONG g_jugDentroOn = 0, g_jugDentroRecortes = 0;
+uint64_t* ganchoBasePos(int64_t p1, uint64_t* out, int64_t p3, int64_t p4, int64_t p5, int64_t p6) {
+    uint64_t* r = g_basePosOrig(p1, out, p3, p4, p5, p6);
+    if (g_jugDentroOn && out && GetTickCount64() - g_tTrainGlob < 3000) {
+        float v[3]; if (leerSeguro(out, v, 12) && fabsf(v[0]) < 60.0f && fabsf(v[2]) < 60.0f) {
+            float Lx = (float)g_canchaLargo - 0.5f, Wz = (float)g_canchaAncho - 0.5f;
+            float nx = fminf(fmaxf(v[0], -Lx), Lx), nz = fminf(fmaxf(v[2], -Wz), Wz);
+            if (nx != v[0] || nz != v[2]) {
+                float* o = reinterpret_cast<float*>(out); o[0] = nx; o[2] = nz;
+                LONG n = InterlockedIncrement(&g_jugDentroRecortes); if (n <= 10 || n % 500 == 0) logf("[JUG_DENTRO] destino recortado #%ld (%.1f,%.1f) -> (%.1f,%.1f)", (long)n, v[0], v[2], nx, nz);
+            }
+        }
+    }
+    return r;
+}
+bool jugDentroInstalar(Feature& f) {
+    uint8_t* m = firmaUnica("codigo", kFirmaBasePos, f.id);
+    if (!m) { f.estado = "sin firma: ActionBasePosition FUN_140956C30"; return false; }
+    if (!crearDesvio(f, m, 18, (void*)ganchoBasePos, (void**)&g_basePosOrig)) { f.estado = "no se pudo desviar ActionBasePosition"; return false; }
+    asegurarHiloTrain(); g_jugDentroOn = 1;
+    char b[150]; sprintf_s(b, "ok: los jugadores de campo no buscan posiciones fuera de la minicancha (exe+0x%llX)", (unsigned long long)(m - g_exe.base)); f.estado = b; return true;
+}
+bool jugDentroQuitar(Feature&) { g_jugDentroOn = 0; return true; }
+
 // --- reinicio_seguro (0.4.54): red de seguridad contra el cierre «PES2021.exe+0x476E1C, c0000005» (4 cierres el 27-oct cuando el rival marcó). FUN_140476C50 (posición de reinicio del balón) hace
 // `mov edx,[rbx+8]; call FUN_140A7CBA0; movzx ecx, byte [rax]; dec ecx; cmp ecx,6; ja default`: la búsqueda devuelve NULL si la clave del escenario ([rbx+8] = job+0x1F0) no es de categoría 3 (p. ej. 0) y la lectura cae.
 // Cueva: sustituye `0F B6 08 FF C9` (5 B, en 0x476E1C) por un salto; si rax es NULL anota «[REINICIO] tipo=… nulo, sustituido» y pone ecx = -1 (el `ja` cae en la rama por defecto), si no ejecuta lo original.
@@ -3050,6 +3081,7 @@ std::vector<Feature> g_funciones = {   // orden = orden de arranque (gol_nativo_
     { "sin_fin_tiempo_free", "El Juez no pita el fin de tiempo (medio tiempo/final) en el entrenamiento libre", sinFinTiempoInstalar, sinFinTiempoQuitar },
     { "reloj_street_free", "El reloj nativo corre en el entrenamiento y se reinicia a los street_minutos", relojInstalar, relojQuitar },
     { "jugadores_chica_free", "Escala a la cancha chica las posiciones de reinicio de los jugadores (entrenamiento)", jugChInstalar, jugChQuitar },
+    { "jugadores_dentro_free", "Los jugadores de campo no buscan posiciones fuera de la minicancha (recorta ActionBasePosition; entrenamiento)", jugDentroInstalar, jugDentroQuitar },
     { "suplentes_ocultos_free", "Aparca a los suplentes de la banda lejos (entrenamiento)", supOcultosInstalar, supOcultosQuitar },
     { "pelota_sonda", "Sonda de solo lectura de la pelota (posición/velocidad) en el entrenamiento", pelotaInstalar, pelotaQuitar },
     { "gol_directo_free", "Gol sin celebración, cámara ni repetición: solo reinicio (entrenamiento)", directoInstalar, directoQuitar },
