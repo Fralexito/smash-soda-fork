@@ -3053,6 +3053,24 @@ static bool r3Pulsado() {
     for (DWORD i = 0; i < 4; ++i) { XSt st; if (fn(i, &st) == 0 && (st.g.b & 0x0080)) return true; }
     return false;
 }
+// R3 por DirectInput (solo lectura), de CUALQUIER mando 1-16: tabla de PES [0x1437F0A58]+0xD0 (entradas de 0x20 B: +0xC = fila, +8 = puesto, +0 = objeto del mando), estado
+// DirectInput en [objeto+0x20]+0x238 (0x50 B, botones desde +0x30; R3 = botón 9, mando tipo Xbox: la misma lectura que el módulo de mandos). Devuelve 1 si algún mando tiene R3,
+// 0 si se leyó al menos uno y ninguno lo tiene, -1 si no se pudo leer ninguno (en ese caso NO se bloquea al portero).
+static int r3DirectInput() {
+    uint8_t* hid = nullptr; if (!leerSeguro(g_exe.base + 0x37F0A58, &hid, 8) || !hid) return -1;
+    uint8_t* tab = nullptr; if (!leerSeguro(hid + 0xD0, &tab, 8) || !tab) return -1;
+    int leidos = 0;
+    for (int i = 0; i < 16; ++i) {
+        int32_t r = -1, puesto = -1;
+        if (!leerSeguro(tab + (size_t)i * 0x20 + 0xC, &r, 4) || r < 0 || r >= 64) continue;
+        if (!leerSeguro(tab + (size_t)r * 0x20 + 8, &puesto, 4) || puesto != i) continue;
+        uint8_t* dev = nullptr; if (!leerSeguro(tab + (size_t)r * 0x20, &dev, 8) || reinterpret_cast<uintptr_t>(dev) < 0x10000) continue;
+        uint8_t* w = nullptr; if (!leerSeguro(dev + 0x20, &w, 8) || reinterpret_cast<uintptr_t>(w) < 0x10000) continue;
+        uint8_t est[0x50]; if (!leerSeguro(w + 0x238, est, sizeof est)) continue;
+        ++leidos; if (est[0x30 + 9] >= 0x80) return 1;
+    }
+    return leidos > 0 ? 0 : -1;
+}
 static bool equipoSoloPortero(int equipo) {
     uint8_t* raiz = nullptr; int cuenta[2];
     if (!leerSeguro(g_globalPartido, &raiz, 8) || !raiz) return false;
@@ -3068,7 +3086,7 @@ static void __stdcall ayudanteCursor(uint8_t* reg, uint32_t idx, uint8_t* ret, u
     // 0.4.64: el cambio AUTOMÁTICO de cursor (llamadores exe+0x4403D2 = cambio por balón y exe+0x1FB98D2 = cursor inicial del reinicio) nunca debe caer en el portero propio (slot 0):
     // el log mostró «cursor -> portero idx=0 (antes 7/8/10)» desde 0x4403D2 y el portero del jugador quedó jugando de campo. Se cambia por el campista 9 (o se deja el cursor donde estaba si era un campista).
     if (g_l1SinPorteroF > 0.5f && g_streetActivo && (idx == 0 || idx == 11) && idxPila && off == 0x4403D2 && GetTickCount64() - g_tTrainGlob < 3000
-        && !equipoSoloPortero(idx == 0 ? 0 : 1) && !r3Pulsado()) {
+        && !equipoSoloPortero(idx == 0 ? 0 : 1) && r3DirectInput() == 0 && !r3Pulsado()) {
         uint32_t tb = idx == 0 ? 0u : 11u;
         uint32_t nuevo = (viejo >= tb + 1 && viejo <= tb + 10) ? tb + 1 + (viejo - tb) % 10 : tb + 9;
         *idxPila = nuevo; static LONG nL1 = 0; LONG n = InterlockedIncrement(&nL1);
