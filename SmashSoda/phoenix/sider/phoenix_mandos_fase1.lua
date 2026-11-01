@@ -48,7 +48,9 @@
 --        elige la fila de otro mando, izquierda/derecha la mueve (filas 1–8 con el método de PES FUN_140C67970; 9+ en la
 --        réplica), R3 vuelve a la suya; su propia fila no se mueve mientras tanto. Además, en la PAUSA, □ de un mando 1–8
 --        abre «Editar Datos personales» de su usuario (PES lo bloquea ahí). Ver V9.administrar y V9.cuadradoNativosPausa.
-local m = { version = "0.9.61" }
+--  v0.9.62 · 1-nov-2026 CANDADO DEL MANDO 1 en la pausa (si su usuario de «Datos personales» cambia, se deshace con los
+--        métodos de PES +0x1B8/+0x1C0); el □ de los 9+ ya no usa la fila del mando 1 si hay otra; □ de los 1–8 en la pausa APAGADO.
+local m = { version = "0.9.62" }
 
 local G_HIDMAN, G_GESTOR, G_DI8 = 0x1437F0A58, 0x1436F3DC8, 0x1437F0AF8
 local CAPS = 0x14351A840
@@ -1559,7 +1561,7 @@ V9.CUAD_ORIG = "40574883ec4048c7442420feffffff48895c2450488bf9e8a44c1d003b879400
 V9.cuadradoPrevio = {}
 -- v0.9.61 (1-nov, Fralex: «en medio partido ese apartado se bloquea»): en la PAUSA, □ de un mando 1–8 abre «Editar Datos
 -- personales» de SU usuario con el mismo camino que los 9+ (en el menú lo hace PES solo; aquí no se toca). EXPERIMENTAL.
-V9.cuadradoNatPrevio = {}
+V9.cuadradoNatPrevio, V9.CUADRADO_PAUSA_1A8 = {}, false   -- v0.9.62: false = apagado
 function V9.cuadradoNativosPausa()
     local nat = ladosNativos(); if not nat then V9.cuadradoNatPrevio = {}; return end
     for k = 0, NUEVO - 1 do
@@ -1580,7 +1582,7 @@ function V9.cuadradoExtras()
     end
 end
 function V9.editarPerfilDe(idx, perfilNativo)   -- v0.9.61: perfilNativo = el de la fila de PES (mandos 1–8 en la pausa)
-    local fila, porque = V9.filaParaAtras()
+    local fila, porque = V9.filaParaAtras(true)
     if not fila then anotar("□ del mando " .. (idx + 1) .. ": " .. tostring(porque)); return end
     if ptr(V9.SS_VT_FILA + 0x198) ~= V9.CUAD_FILA then anotar("□: vtable de fila distinta → no se hace nada"); return end
     if V9.cuadCodigoOk == nil then
@@ -1612,7 +1614,7 @@ function V9.dispositivo(i)                                  -- objeto DirectInpu
     local dev = ptr(tab + r * 0x20); if not dev or dev < 0x10000 then return nil end
     return dev
 end
-function V9.filaParaAtras()
+function V9.filaParaAtras(evitarMando1)
     local d = datos(); if not d then return nil, "sin datos" end
     local obj = tonumber(ffi.cast("uint64_t*", d + 0x30)[0])
     if obj < 0x10000 or ptr(obj) ~= V9.SS_VT or ptr(obj + 0x70) ~= V9.SS_VT2 then return nil, "el objeto guardado no es un menu::SideSelect vivo" end
@@ -1623,14 +1625,17 @@ function V9.filaParaAtras()
         if not V9.atrasCodigoOk then anotar("○ de mandos 9+: FUN_140C68350 no coincide con el exe → desactivado") end
     end
     if not V9.atrasCodigoOk then return nil, "código distinto al del exe" end
-    local elegida
+    local elegida, otra
     for k = 0, 7 do
         local fila = ptr(obj + V9.SS_FILAS + 8 * k)
         if fila and fila >= 0x10000 and ptr(fila) == V9.SS_VT_FILA and ptr(fila + 0x38) == obj then
             local w = ptr(fila + 0x88)
             if w and w >= 0x10000 and (not elegida or (u8(fila + 0x90) == 1 and u8(elegida + 0x90) ~= 1)) then elegida = fila end
+            -- v0.9.62: para el □ de un 9+, otra fila que no sea la del mando 1 (con ella pudo tocar al anfitrión, 1-nov)
+            if w and w >= 0x10000 and u32(w + 0x114) ~= 0 and (not otra or (u8(fila + 0x90) == 1 and u8(otra + 0x90) ~= 1)) then otra = fila end
         end
     end
+    if evitarMando1 and otra then elegida = otra end
     if not elegida then return nil, "ninguna fila válida" end
     return elegida, obj
 end
@@ -1801,6 +1806,30 @@ function V9.admElegir(nuevo, nat, motivo)
     else A.propio = nil end
     anotar(string.format("mando 1 administrador: %s (%s)", nuevo and ("maneja la fila del mando " .. (nuevo + 1)) or "vuelve a su fila", motivo))
     refrescar()
+end
+-- v0.9.62 (1-nov, Fralex: «mi mando se cambió al usuario 2 dentro del juego»): CANDADO DEL MANDO 1 EN LA PAUSA. Registro
+-- del 1-nov 00:20: en la pantalla de lados de la pausa la fila del mando 1 pasó del usuario 1 al 9 (L2/R2 de PES, que salta
+-- los usados) y al cerrar PES reacomodó los puestos: el anfitrión quedó en el puesto rojo. En la PAUSA, si el usuario de la
+-- fila del mando 1 cambia, se deshace con los mismos métodos de PES (vtable de fila +0x1B8 / +0x1C0 = FUN_140C68410 /
+-- FUN_140C68440: anterior/siguiente; recalculan +0x98 con el selector de PES). En el menú no se toca: ahí se elige libre.
+V9.candado = { perfil = nil }
+V9.USU_A, V9.USU_B = 0x140C68410, 0x140C68440
+function V9.candadoMando1(enPausa)
+    local C, nat = V9.candado, ladosNativos()
+    if not nat or not nat[0] then C.perfil = nil; return end
+    local f0, p = nat[0].fila, nat[0].perfil
+    if not enPausa or C.perfil == nil then C.perfil = p; return end
+    if p == C.perfil then return end
+    if ptr(V9.SS_VT_FILA + 0x1B8) ~= V9.USU_A or ptr(V9.SS_VT_FILA + 0x1C0) ~= V9.USU_B or ptr(f0) ~= V9.SS_VT_FILA then
+        anotar("candado del mando 1: métodos de PES distintos → no se deshace"); C.perfil = p; return
+    end
+    local A, B = ffi.cast("void(*)(uint64_t)", V9.USU_A), ffi.cast("void(*)(uint64_t)", V9.USU_B)
+    local function u() return u32(f0 + V9.FILA_PERFIL) end
+    A(f0)                                                  -- uno de los dos deshace el paso; si no, se prueba el otro
+    if u() ~= C.perfil then B(f0); B(f0) end
+    local ok = (u() == C.perfil)
+    anotar(string.format("candado del mando 1 (pausa): su usuario pasó de %d a %d → %s", C.perfil + 1, p + 1, ok and "devuelto" or ("no se pudo (queda " .. tostring((u() or -1) + 1) .. ")")))
+    if not ok then C.perfil = u() end
 end
 function V9.administrar(enMenu)
     local A, nat = V9.adm, ladosNativos()
@@ -2418,12 +2447,13 @@ function m.display_frame(ctx)
     if pedirCierre then pedirCierre = false; if mostrado then auto = { fase = "cerrar", cuadros = 0 } end end
     vigilarPantallaPES()
     -- v0.9: mientras se ve la Phoenix (en el menú), espejo de la de PES + mandos extra
+    if PHX.pantallaPESAbierta() then V9.candadoMando1(not mostrado and enPartidoPegado()) end   -- v0.9.62: antes que nada
     if PHX.pantallaPESAbierta() then V9.administrar(mostrado and not enPartidoAhora) end   -- v0.9.61: mando 1 administrador (antes del espejo)
     if mostrado and not enPartidoAhora and #filas > 0 then V9.reflejarNativos(); V9.moverExtras() end
     if activo and #extras > 0 then V9.confirmarExtras() end   -- v0.9.60: ✕ de los mandos 9+ confirma
     if activo and #extras > 0 then V9.atrasExtras() end   -- v0.9.38: ○ de los mandos 9+ en la pantalla de lados de PES
     if activo and #extras > 0 then V9.cuadradoExtras() end
-    if not mostrado and enPartidoPegado() and PHX.pantallaPESAbierta() then V9.cuadradoNativosPausa() end   -- v0.9.61: □ de los mandos 1–8 en la pausa   -- v0.9.51: □ de los mandos 9+ edita SU perfil (v0.9.56: también en la pausa)
+    if V9.CUADRADO_PAUSA_1A8 and not mostrado and enPartidoPegado() and PHX.pantallaPESAbierta() then V9.cuadradoNativosPausa() end   -- v0.9.62: APAGADO hasta investigarlo   -- v0.9.61: □ de los mandos 1–8 en la pausa   -- v0.9.51: □ de los mandos 9+ edita SU perfil (v0.9.56: también en la pausa)
     -- v0.9.34: en la PAUSA del partido (sin la pantalla Phoenix) los menús de PES solo escuchan a los mandos 1–8: ✕/○ de
     -- un mando 9+ se pasan como teclas. Solo con el partido visto y SIN ranuras jugando (pausa), nunca jugando.
     if activo and #extras > 0 and not mostrado and enPartidoPegado() then
