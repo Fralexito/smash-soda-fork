@@ -369,11 +369,11 @@ function m.init(ctx)
     rutaPantalla = base .. "content\\phoenix\\pantalla.json"
     rutaSalida = base .. "content\\phoenix\\marcador_free.json"
     rutaSonda2 = base .. "phoenix_core\\sonda_partido.txt"
-    local ss = base .. "content\stadium-server\España\Spotify Camp Nou\Asset\model\bg\st002\pitch\#Win\pitch_st002.fpk"
+    local ss = base .. "content/stadium-server/España/Spotify Camp Nou/Asset/model/bg/st002/pitch/#Win/pitch_st002.fpk"
     if leer(ss .. ".respaldo-20261026-013452") then
         rutaPitchSS = ss
         rutaPitchOrig = ss .. ".respaldo-20261026-013452"
-        rutaPitchChica = base .. "content\phoenix\cancha_visual\Asset\model\bg\st002\pitch\#Win\pitch_st002.fpk"
+        rutaPitchChica = base .. "content/phoenix/cancha_visual/Asset/model/bg/st002/pitch/#Win/pitch_st002.fpk"
         if copiarArchivo(rutaPitchOrig, rutaPitchSS) then log("[cancha_visual] césped original asegurado al arrancar") end
     end
     ctx.register("display_frame", m.display_frame)
