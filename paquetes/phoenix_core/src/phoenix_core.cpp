@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.108"
+#define PHX_CORE_VERSION "0.4.109"
 
 namespace {
 
@@ -2108,7 +2108,20 @@ typedef void(__fastcall* SetPostFn)(int, int, float*);
 SetPostFn g_setPostOrig = nullptr; float g_anclasF = 1.0f; volatile LONG g_anclaLogs = 0;
 static float anclaZ(float z, float hw) { float a = fabsf(z), sg = z >= 0 ? 1.0f : -1.0f; return a <= 3.55f ? z * hw / 3.66f : sg * (hw + (a - 3.66f)); }
 static float anclaY(float y, float h) { return y <= 2.30f ? y * h / 2.44f : y - (2.44f - h); }
+// 0.4.109 (medido con los logs de Frank en el entrenamiento): FUN_1404219D0 llama a SetPost 4 veces por fotograma con FUN_140A5BC60(registro [raíz+0x158], i, out): out = (x, y, z, w) del registro (4 vectores de 16 B desde
+// registro+0x40). En el Entrenamiento TODAS llegaron (0, 0, 0): el registro GoalPostInfo no trae las posiciones de los postes, así que las anclas de la tela estaban en el origen. Ahora se anota CADA vez que llega un valor
+// distinto por (lado, tipo), en cualquier modo (también en un amistoso normal, para saber qué valores y qué marco usa el juego original), y también las llamadas a GoalNet_Hit ([HIT_RED]).
+static float g_ultAncla[2][2][4]; static LONG g_anclaDif = 0;
+static void anotarAncla(int lado, int tipo, const float* p) {
+    if (lado < 0 || lado > 1 || tipo < 0 || tipo > 1) return;
+    float* u = g_ultAncla[lado][tipo];
+    if (memcmp(u, p, 12) == 0 && g_anclaDif > 0) return;
+    LONG n = InterlockedIncrement(&g_anclaDif); if (n > 120) return;
+    memcpy(u, p, 12);
+    logf("[ANCLA_VALOR] #%ld lado=%d tipo=%d registro entrega (%.3f, %.3f, %.3f) · entrenamiento=%d medida=%d", (long)n, lado, tipo, p[0], p[1], p[2], (int)(GetTickCount64() - g_tTrainRed < 3000), (int)(g_arcoMedidaF + 0.5f));
+}
 void __fastcall ganchoSetPost(int lado, int tipo, float* pos) {
+    { float q[3]; if (pos && leerSeguro(pos, q, 12)) anotarAncla(lado, tipo, q); }
     alignas(16) float p[4] = { 0, 0, 0, 0 };
     if (pos && g_anclasF > 0.5f && g_streetActivo && g_canchaOn && GetTickCount64() - g_tTrainRed < 3000 && leerSeguro(pos, p, 12)) {
         float ent[3] = { p[0], p[1], p[2] };
@@ -2121,6 +2134,13 @@ void __fastcall ganchoSetPost(int lado, int tipo, float* pos) {
     }
     g_setPostOrig(lado, tipo, pos);
 }
+typedef void(__fastcall* HitFn)(int, int, float*, float, char);
+HitFn g_hitOrig = nullptr; volatile LONG g_hitN = 0;
+void __fastcall ganchoHitRed(int lado, int tipo, float* pos, float radio, char flag) {
+    LONG n = InterlockedIncrement(&g_hitN);
+    if (n <= 40 || n % 500 == 0) { float q[3] = { 0, 0, 0 }; if (pos) leerSeguro(pos, q, 12); logf("[HIT_RED] #%ld GoalNet_Hit lado=%d tipo=%d pos=(%.2f, %.2f, %.2f) radio=%.3f flag=%d entrenamiento=%d", (long)n, lado, tipo, q[0], q[1], q[2], radio, (int)flag, (int)(GetTickCount64() - g_tTrainRed < 3000)); }
+    g_hitOrig(lado, tipo, pos, radio, flag);
+}
 bool arcoRealInstalar(Feature& f) {
     if (g_arcoVolOrig) { f.estado = "ok: gancho del volumen de red ya puesto"; return true; }
     if (!g_globalPartido && !resolverGlobalPartido(f.id)) { f.estado = "sin firma del global del partido"; return false; }
@@ -2129,7 +2149,9 @@ bool arcoRealInstalar(Feature& f) {
     if (!crearDesvio(f, m, 17, (void*)ganchoArcoVol, (void**)&g_arcoVolOrig)) { f.estado = "no se pudo desviar FUN_1404AA610"; return false; }
     uint8_t* sp = firmaUnica("codigo", "40 56 57 41 56 48 83 EC 30 48 C7 44 24 20 FE FF FF FF 48 89 5C 24 50 48 89 6C 24 58 49 8B E8 44 8B F2 48 63 F1", f.id);
     if (sp && !g_setPostOrig && !crearDesvio(f, sp, 18, (void*)ganchoSetPost, (void**)&g_setPostOrig)) logf("[ARCO_REAL] no se pudo desviar GoalNet_SetPost (anclas)");
-    char b[200]; sprintf_s(b, "ok: volumen de red enganchado en exe+0x%llX (arco_medida 0-3; se aplica al empezar el partido); anclas %s", (unsigned long long)(m - g_exe.base), g_setPostOrig ? "ok" : "sin gancho"); f.estado = b; return true;
+    uint8_t* sh = firmaUnica("codigo", "40 57 48 83 EC 50 48 C7 44 24 30 FE FF FF FF 48 89 5C 24 60 48 89 6C 24 68 48 89 74 24 70 0F 29", f.id);
+    if (sh && !g_hitOrig && !crearDesvio(f, sh, 15, (void*)ganchoHitRed, (void**)&g_hitOrig)) logf("[ARCO_REAL] no se pudo desviar GoalNet_Hit (log)");
+    char b[200]; sprintf_s(b, "ok: volumen de red enganchado en exe+0x%llX (arco_medida 0-3; se aplica al empezar el partido); anclas %s; golpes %s", (unsigned long long)(m - g_exe.base), g_setPostOrig ? "ok" : "sin gancho", g_hitOrig ? "ok" : "sin gancho"); f.estado = b; return true;
 }
 bool arcoRealQuitar(Feature&) { g_arcoMedidaF = 0.0f; return true; }
 bool jugCantQuitar(Feature&) { g_jugCantOn = 0; if (g_hiloJugCant) { WaitForSingleObject(g_hiloJugCant, 4000); CloseHandle(g_hiloJugCant); g_hiloJugCant = nullptr; } g_jugLocalF = g_jugRivalF = 0.0f; return true; }
