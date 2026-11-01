@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.103"
+#define PHX_CORE_VERSION "0.4.104"
 
 namespace {
 
@@ -50,15 +50,24 @@ struct Exe {
 } g_exe;
 
 // ---------------------------------------------------------------- registro
+// 0.4.104: [SUB], [BALL] y [JUG] salen como mucho 1 vez por segundo cada una (antes llenaban el log: 113 MB) y el log se rota a .1 al pasar de 20 MB.
 void logf(const char* fmt, ...) {
     if (g_carpeta.empty()) return;
+    char msg[1500]; va_list a; va_start(a, fmt); vsnprintf(msg, sizeof msg, fmt, a); va_end(a);
+    static ULONGLONG tUlt[3] = { 0, 0, 0 };
+    int tag = !strncmp(msg, "[SUB]", 5) ? 0 : !strncmp(msg, "[BALL]", 6) ? 1 : !strncmp(msg, "[JUG]", 5) ? 2 : -1;
+    if (tag == 1 && (strstr(msg, "localizada") || strstr(msg, "perdi") || strstr(msg, "escaneo"))) tag = -1;
+    if (tag >= 0) { ULONGLONG n = GetTickCount64(); if (n - tUlt[tag] < 1000) return; tUlt[tag] = n; }
     std::string ruta = g_carpeta + "phoenix_core.log";
+    WIN32_FILE_ATTRIBUTE_DATA fa;
+    if (GetFileAttributesExA(ruta.c_str(), GetFileExInfoStandard, &fa) && fa.nFileSizeHigh == 0 && fa.nFileSizeLow > 20u * 1024 * 1024)
+        MoveFileExA(ruta.c_str(), (ruta + ".1").c_str(), MOVEFILE_REPLACE_EXISTING);
     FILE* f = nullptr;
     if (fopen_s(&f, ruta.c_str(), "ab") != 0 || !f) return;
     SYSTEMTIME t; GetLocalTime(&t);
     fprintf(f, "%04d-%02d-%02d %02d:%02d:%02d.%03d  ", t.wYear, t.wMonth, t.wDay, t.wHour, t.wMinute, t.wSecond,
             t.wMilliseconds);
-    va_list a; va_start(a, fmt); vfprintf(f, fmt, a); va_end(a);
+    fputs(msg, f);
     fputs("\r\n", f);
     fclose(f);
 }
@@ -1970,7 +1979,8 @@ void __fastcall ganchoSetPateador(uint8_t* S, int equipo, int jugador) {
     if (modo > 0 && g_streetActivo && (equipo == 0 || equipo == 1) && GetTickCount64() - g_tTrainRed < 3000) {
         uint8_t* raiz = nullptr; int cuenta[2];
         if (leerSeguro(g_globalPartido, &raiz, 8) && raiz) {
-            bool uno = unoContraUno(raiz, cuenta);
+            unoContraUno(raiz, cuenta);
+            bool uno = cuenta[equipo] == 1;   // 0.4.104: cada equipo por separado (2v1, 1v3…): solo el que tiene 1 jugador saca con su portero
             if (uno || g_1v1Siempre) {
                 int gk = equipo ? 11 : 0; j = (modo == 3) ? 0xFF : gk;
                 if (modo == 2) {
@@ -1979,7 +1989,7 @@ void __fastcall ganchoSetPateador(uint8_t* S, int equipo, int jugador) {
                     g_1v1BolaX = sg * ((float)g_canchaLargo - 3.0f); g_1v1BolaHasta = GetTickCount64() + 2500;
                 }
                 LONG n = InterlockedIncrement(&g_1v1Logs); if (n <= 60) logf("[1V1] pateador equipo %d: jugador %d -> %d (modo %d; en campo L=%d V=%d)", equipo, jugador, j, modo, cuenta[0], cuenta[1]);
-            } else { LONG n = InterlockedIncrement(&g_1v1Logs); if (n <= 60) logf("[1V1] no es 1 contra 1 (en campo L=%d V=%d): pateador %d sin cambios", cuenta[0], cuenta[1], jugador); }
+            } else { LONG n = InterlockedIncrement(&g_1v1Logs); if (n <= 60) logf("[1V1] equipo %d no tiene 1 solo jugador (en campo L=%d V=%d): pateador %d sin cambios", equipo, cuenta[0], cuenta[1], jugador); }
         }
     }
     if (j < 0x19 || j == 0xFF) { int64_t ix = equipo; *reinterpret_cast<int*>(S + 0x173C + ix * 4) = j; }
@@ -1993,6 +2003,41 @@ bool uno1Instalar(Feature& f) {
     char b[200]; sprintf_s(b, "ok: setter de pateadores enganchado en exe+0x%llX (street_1v1_saque 0-3; ahora %d)", (unsigned long long)(m - g_exe.base), (int)(g_1v1SaqueF + 0.5f)); f.estado = b; return true;
 }
 bool uno1Quitar(Feature&) { g_1v1SaqueF = 0.0f; return true; }
+// --- street_jugadores (0.4.104, EXPERIMENTAL): cantidad de jugadores de cada equipo del Entrenamiento sin pasar por el mínimo de 3 del menú.
+// RE en vivo (1-nov): TrainingWork estable = raíz → +0x3F8 → +0x10 = «dat» (cabecera de 4 B = 1) y dos instancias de 0x103C8 B desde dat+4: la 0 y la 1.
+// En cada una +0x3C = cantidad de jugadores (3 con 3 contra 3) y +0x40 = 1. El lado del usuario puede ser la instancia 0 o la 1: el hilo lee quién es el equipo de
+// usuario (SIDE 0 = local, 1 = visita, ver g_jugLado) y escribe «local» en SU instancia y «rival» en la otra. 0 = no tocar. Log [JUGADORES] antes→después.
+float g_jugLocalF = 0.0f, g_jugRivalF = 0.0f, g_jugLadoF = 0.0f; volatile LONG g_jugCantOn = 0; HANDLE g_hiloJugCant = nullptr;
+DWORD WINAPI hiloJugCant(LPVOID) {
+    bool estaba = false; LONG nLog = 0;
+    while (g_jugCantOn) {
+        Sleep(50);
+        int cant[2] = { (int)(g_jugLocalF + 0.5f), (int)(g_jugRivalF + 0.5f) };
+        if (!g_streetActivo || (cant[0] <= 0 && cant[1] <= 0) || !trainingWorkCrudo()) { estaba = false; continue; }
+        int lado = (int)(g_jugLadoF + 0.5f) == 1 ? 1 : 0;   // instancia que usa mi equipo
+        int want[2]; want[lado] = cant[0]; want[1 - lado] = cant[1];
+        uint8_t* raiz = nullptr; uint8_t* obj = nullptr; uint8_t* dat = nullptr;
+        if (!leerSeguro(g_globalPartido, &raiz, 8) || !raiz || !leerSeguro(raiz + 0x3F8, &obj, 8) || !obj || !leerSeguro(obj + 0x10, &dat, 8) || !dat) continue;
+        for (int e = 0; e < 2; ++e) {
+            if (want[e] < 1) continue;
+            if (want[e] > 11) want[e] = 11;
+            uint8_t* celda = dat + 4 + (size_t)e * 0x103C8 + 0x3C;
+            int ant = -1; if (!leerSeguro(celda, &ant, 4) || ant < 0 || ant > 11) continue;
+            if (ant == want[e]) continue;
+            int nv = want[e];
+            if (escribirSeguro(celda, &nv, 4)) { if (++nLog <= 200) logf("[JUGADORES] instancia %d (%s): %d -> %d (dat=%p%s)", e, e == lado ? "mi equipo" : "rival", ant, nv, (void*)dat, estaba ? "" : ", al entrar"); }
+        }
+        estaba = true;
+    }
+    return 0;
+}
+bool jugCantInstalar(Feature& f) {
+    if (!g_globalPartido && !resolverGlobalPartido(f.id)) { f.estado = "sin firma del global del partido"; return false; }
+    g_jugCantOn = 1; g_hiloJugCant = CreateThread(nullptr, 0, hiloJugCant, nullptr, 0, nullptr);
+    if (!g_hiloJugCant) { g_jugCantOn = 0; f.estado = "no se pudo crear el hilo"; return false; }
+    f.estado = "ok: street_jugadores_local / street_jugadores_rival (0 = no tocar, 1-11) y street_jugadores_lado (0 = mi equipo es la instancia 0, 1 = la 1), solo con street_activo"; return true;
+}
+bool jugCantQuitar(Feature&) { g_jugCantOn = 0; if (g_hiloJugCant) { WaitForSingleObject(g_hiloJugCant, 4000); CloseHandle(g_hiloJugCant); g_hiloJugCant = nullptr; } g_jugLocalF = g_jugRivalF = 0.0f; return true; }
 bool arcoChicoInstalar(Feature& f) {   // 0.4.95: arco más chico con postes y larguero lógicos; el juego sigue viendo el gol solo por la boca chica
     if (!murosInstalar(f)) return false;
     g_arcoChicoOn = 1; char b[160]; sprintf_s(b, "ok: arco lógico %.2f x %.2f m (postes y larguero invisibles; requiere los muros del Core)", g_arcoAncho, g_arcoAlto); f.estado = b; return true;
@@ -3114,6 +3159,7 @@ std::vector<Feature> g_funciones = {   // orden = orden de arranque (gol_nativo_
     { "muros_core", "Muros lógicos del Core en el paso de la pelota (rebote contra la línea de la cancha chica)", murosInstalar, murosQuitar },
     { "arco_chico_free", "Arco más chico (3v3): postes y larguero lógicos del Core; ancho y alto en el json (arco_chico_ancho/alto)", arcoChicoInstalar, arcoChicoQuitar },
     { "goles_sonda", "Solo log: punteros reales de los contadores de goles (gancho en FUN_1408C9E90+9) para la revancha 0-0", golesSondaInstalar, golesSondaQuitar },
+    { "street_jugadores", "Entrenamiento: cantidad de jugadores por equipo sin el mínimo de 3 del menú (EXPERIMENTAL; street_jugadores_local / _rival 0-11, _lado 0/1)", jugCantInstalar, jugCantQuitar },
     { "street_1v1_portero", "1 contra 1: el saque lo hace el portero (gancho del setter de pateadores FUN_140A3CAE0; modo en street_1v1_saque 0-3)", uno1Instalar, uno1Quitar },
     { "arquero_controla", "Arquero controla: la unidad del portero IA (modo 5/6) pasa en vez de patear/despejar, salvo balón muy cerca del arco y rival encima (APAGADA por defecto; aparte de la config congelada del portero)", arqControlaInstalar, arqControlaQuitar },
     { "red_frena_free", "La red de los arcos frena la pelota en el entrenamiento (gancho al paso de la pelota)", redInstalar, redQuitar },
@@ -3235,6 +3281,9 @@ void leerConfig() {
     if (valorDe("goles_reinicio", v)) g_golesReinicio = (v == "true");
     if (valorDe("street_1v1_saque", v)) { g_1v1SaqueF = (float)atof(v.c_str()); if (g_1v1SaqueF < 0.0f || g_1v1SaqueF > 3.0f) g_1v1SaqueF = 0.0f; }
     if (valorDe("street_1v1_siempre", v)) g_1v1Siempre = (v == "true" || v == "1");
+    if (valorDe("street_jugadores_local", v)) { g_jugLocalF = (float)atof(v.c_str()); if (g_jugLocalF < 0.0f || g_jugLocalF > 11.0f) g_jugLocalF = 0.0f; }
+    if (valorDe("street_jugadores_rival", v)) { g_jugRivalF = (float)atof(v.c_str()); if (g_jugRivalF < 0.0f || g_jugRivalF > 11.0f) g_jugRivalF = 0.0f; }
+    if (valorDe("street_jugadores_lado", v)) { g_jugLadoF = (float)atof(v.c_str()); if (g_jugLadoF < 0.0f || g_jugLadoF > 1.0f) g_jugLadoF = 0.0f; }
     if (valorDe("arco_chico_ancho", v)) { g_arcoAncho = (float)atof(v.c_str()); if (g_arcoAncho < 1.5f || g_arcoAncho > 7.32f) g_arcoAncho = 4.0f; }
     if (valorDe("arco_chico_alto", v)) { g_arcoAlto = (float)atof(v.c_str()); if (g_arcoAlto < 1.0f || g_arcoAlto > 2.44f) g_arcoAlto = 2.0f; }
     if (valorDe("muro_x", v)) g_muroX = atof(v.c_str());
@@ -3334,7 +3383,7 @@ static void procesarOrdenes() {
             continue;
         }
         {   // parámetros numéricos EN VIVO (se releen al instante: son las variables que usan los ganchos) y se guardan en el json
-            struct Num { const char* id; float* var; float lo, hi; }; static const Num nums[] = { { "tiro_potencia_k", &g_tiroPot, 0.5f, 2.0f }, { "tiro_altura_k", &g_tiroAlt, 0.2f, 1.5f }, { "pase_vel_k", &g_paseVel, 0.8f, 2.0f }, { "pase_correccion", &g_paseCorr, 0.0f, 1.0f }, { "pase_cono_grados", &g_paseCono, 5.0f, 60.0f }, { "muro_rebote", &g_muroRebote, 0.3f, 0.95f }, { "muro_fondo_rebote", &g_muroFondoRebote, 0.0f, 0.95f }, { "muro_lat_friccion", &g_muroLatFric, 0.0f, 1.0f }, { "arco_chico_ancho", &g_arcoAncho, 1.5f, 7.32f }, { "street_1v1_saque", &g_1v1SaqueF, 0.0f, 3.0f }, { "gk_despeje_dist_m", &g_gkDespejeDist, 1.0f, 15.0f }, { "gk_despeje_presion_m", &g_gkDespejePresion, 0.5f, 15.0f }, { "arco_chico_alto", &g_arcoAlto, 1.0f, 2.44f }, { "muro_lat_empuje", &g_muroLatEmpuje, 0.0f, 0.3f }, { "muro_friccion", &g_muroFric, 0.0f, 1.0f } };
+            struct Num { const char* id; float* var; float lo, hi; }; static const Num nums[] = { { "tiro_potencia_k", &g_tiroPot, 0.5f, 2.0f }, { "tiro_altura_k", &g_tiroAlt, 0.2f, 1.5f }, { "pase_vel_k", &g_paseVel, 0.8f, 2.0f }, { "pase_correccion", &g_paseCorr, 0.0f, 1.0f }, { "pase_cono_grados", &g_paseCono, 5.0f, 60.0f }, { "muro_rebote", &g_muroRebote, 0.3f, 0.95f }, { "muro_fondo_rebote", &g_muroFondoRebote, 0.0f, 0.95f }, { "muro_lat_friccion", &g_muroLatFric, 0.0f, 1.0f }, { "arco_chico_ancho", &g_arcoAncho, 1.5f, 7.32f }, { "street_1v1_saque", &g_1v1SaqueF, 0.0f, 3.0f }, { "street_jugadores_local", &g_jugLocalF, 0.0f, 11.0f }, { "street_jugadores_rival", &g_jugRivalF, 0.0f, 11.0f }, { "street_jugadores_lado", &g_jugLadoF, 0.0f, 1.0f }, { "gk_despeje_dist_m", &g_gkDespejeDist, 1.0f, 15.0f }, { "gk_despeje_presion_m", &g_gkDespejePresion, 0.5f, 15.0f }, { "arco_chico_alto", &g_arcoAlto, 1.0f, 2.44f }, { "muro_lat_empuje", &g_muroLatEmpuje, 0.0f, 0.3f }, { "muro_friccion", &g_muroFric, 0.0f, 1.0f } };
             bool hecho = false; for (const Num& n : nums) if (id == n.id) { float x = (float)atof(v.c_str()); if (x >= n.lo && x <= n.hi) { *n.var = x; persistirClaveJson(id, v); logf("[PANEL] %s = %.3f (en vivo)", n.id, x); } else logf("[PANEL] %s=%s fuera de rango [%.2f, %.2f]: ignorado", n.id, v.c_str(), n.lo, n.hi); hecho = true; break; }
             if (hecho) continue;
         }
