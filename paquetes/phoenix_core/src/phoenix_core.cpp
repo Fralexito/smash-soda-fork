@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.106"
+#define PHX_CORE_VERSION "0.4.107"
 
 namespace {
 
@@ -3039,6 +3039,25 @@ bool relojQuitar(Feature&) { g_relojOn = 0; g_relojR1On = 0; ponerParche(g_pdR1,
 // --- cursor_pt_log (0.4.61, frente L): SOLO LECTURA. FUN_140A571B0 (RVA 0xA571B0) = setControlado(reg, idx): `if (reg[+0x20] != idx) { reg[+0x28]=reg[+0x20]; reg[+0x20]=idx; reg[+0x38]=0; }`. Cueva que roba los 5 B
 // `8B 41 20 3B C2` (mov eax,[rcx+0x20]; cmp eax,edx) y anota (idx nuevo, idx viejo, dirección de retorno del llamador) cuando el cursor pasa al portero (idx 0 u 11) y las primeras 40 llamadas, para saber QUIÉN pone el cursor en el portero propio.
 volatile LONG g_cursorSinPtOn = 0, g_cursorCambiados = 0; bool g_cursorBloqueoCfg = false;   // json «cursor_bloqueo_pt»: false (por defecto) = solo log; true = bloquea el cambio automático hacia el portero (0.4.64; impide seleccionarlo)
+// 0.4.107 street_l1_sin_portero (json 0/1, por defecto 1; panel «L1 no elige al arquero»): en el Street el cambio normal de jugador (llamador exe+0x4403D2) no puede caer en
+// el portero (idx 0 u 11): se sustituye por el siguiente jugador de campo de ese equipo (cíclico respecto al cursor anterior). Pasan: L1+R3 (R3 pulsado en algún mando XInput al
+// cambiar), y el equipo que solo tiene a su portero en el campo (1v1). Opción aparte de cursor_bloqueo_pt: no toca la config 0468.
+float g_l1SinPorteroF = 1.0f;
+static bool r3Pulsado() {
+    struct XPad { WORD b; BYTE lt, rt; SHORT lx, ly, rx, ry; }; struct XSt { DWORD pk; XPad g; };
+    typedef DWORD(WINAPI* XFn)(DWORD, XSt*);
+    static XFn fn = nullptr; static bool probado = false;
+    if (!probado) { probado = true; HMODULE h = LoadLibraryA("xinput1_4.dll"); if (!h) h = LoadLibraryA("xinput9_1_0.dll"); if (h) fn = (XFn)GetProcAddress(h, "XInputGetState"); }
+    if (!fn) return false;
+    for (DWORD i = 0; i < 4; ++i) { XSt st; if (fn(i, &st) == 0 && (st.g.b & 0x0080)) return true; }
+    return false;
+}
+static bool equipoSoloPortero(int equipo) {
+    uint8_t* raiz = nullptr; int cuenta[2];
+    if (!leerSeguro(g_globalPartido, &raiz, 8) || !raiz) return false;
+    unoContraUno(raiz, cuenta);
+    return cuenta[equipo] == 1;
+}
 static void __stdcall ayudanteCursor(uint8_t* reg, uint32_t idx, uint8_t* ret, uint32_t* idxPila) {
     uint32_t viejo = 0xFFFFFFFF; leerSeguro(reg + 0x20, &viejo, 4);
     static LONG nTodos = 0, nPt = 0; LONG t = InterlockedIncrement(&nTodos);
@@ -3047,6 +3066,14 @@ static void __stdcall ayudanteCursor(uint8_t* reg, uint32_t idx, uint8_t* ret, u
     long off = (long)(ret - g_exe.base); g_ultCursor = (LONG)idx;
     // 0.4.64: el cambio AUTOMÁTICO de cursor (llamadores exe+0x4403D2 = cambio por balón y exe+0x1FB98D2 = cursor inicial del reinicio) nunca debe caer en el portero propio (slot 0):
     // el log mostró «cursor -> portero idx=0 (antes 7/8/10)» desde 0x4403D2 y el portero del jugador quedó jugando de campo. Se cambia por el campista 9 (o se deja el cursor donde estaba si era un campista).
+    if (g_l1SinPorteroF > 0.5f && g_streetActivo && (idx == 0 || idx == 11) && idxPila && off == 0x4403D2 && GetTickCount64() - g_tTrainGlob < 3000
+        && !equipoSoloPortero(idx == 0 ? 0 : 1) && !r3Pulsado()) {
+        uint32_t tb = idx == 0 ? 0u : 11u;
+        uint32_t nuevo = (viejo >= tb + 1 && viejo <= tb + 10) ? tb + 1 + (viejo - tb) % 10 : tb + 9;
+        *idxPila = nuevo; static LONG nL1 = 0; LONG n = InterlockedIncrement(&nL1);
+        if (n <= 60) logf("[L1_SIN_PT] el cambio de jugador iba al portero idx=%u (antes %u) → se pone el jugador de campo %u (L1+R3 sí elige al portero) #%ld", idx, viejo, nuevo, (long)n);
+        return;
+    }
     if (g_cursorSinPtOn && idx == 0 && idxPila && (off == 0x4403D2 || off == 0x1FB98D2) && GetTickCount64() - g_tTrainGlob < 3000) {
         uint32_t nuevo = (viejo >= 1 && viejo <= 10) ? viejo : 9u;
         *idxPila = nuevo; LONG n = InterlockedIncrement(&g_cursorCambiados);
@@ -3341,6 +3368,7 @@ void leerConfig() {
     if (valorDe("street_1v1_siempre", v)) g_1v1Siempre = (v == "true" || v == "1");
     if (valorDe("street_jugadores_local", v)) { g_jugLocalF = (float)atof(v.c_str()); if (g_jugLocalF < 0.0f || g_jugLocalF > 11.0f) g_jugLocalF = 0.0f; }
     if (valorDe("street_jugadores_rival", v)) { g_jugRivalF = (float)atof(v.c_str()); if (g_jugRivalF < 0.0f || g_jugRivalF > 11.0f) g_jugRivalF = 0.0f; }
+    if (valorDe("street_l1_sin_portero", v)) g_l1SinPorteroF = (v == "false" || v == "0") ? 0.0f : 1.0f;
     if (valorDe("arco_medida", v)) { g_arcoMedidaF = (float)atof(v.c_str()); if (g_arcoMedidaF < 0.0f || g_arcoMedidaF > 3.0f) g_arcoMedidaF = 0.0f; }
     if (valorDe("street_jugadores_lado", v)) { g_jugLadoF = (float)atof(v.c_str()); if (g_jugLadoF < 0.0f || g_jugLadoF > 1.0f) g_jugLadoF = 0.0f; }
     if (valorDe("arco_chico_ancho", v)) { g_arcoAncho = (float)atof(v.c_str()); if (g_arcoAncho < 1.5f || g_arcoAncho > 7.32f) g_arcoAncho = 4.0f; }
@@ -3442,7 +3470,7 @@ static void procesarOrdenes() {
             continue;
         }
         {   // parámetros numéricos EN VIVO (se releen al instante: son las variables que usan los ganchos) y se guardan en el json
-            struct Num { const char* id; float* var; float lo, hi; }; static const Num nums[] = { { "tiro_potencia_k", &g_tiroPot, 0.5f, 2.0f }, { "tiro_altura_k", &g_tiroAlt, 0.2f, 1.5f }, { "pase_vel_k", &g_paseVel, 0.8f, 2.0f }, { "pase_correccion", &g_paseCorr, 0.0f, 1.0f }, { "pase_cono_grados", &g_paseCono, 5.0f, 60.0f }, { "muro_rebote", &g_muroRebote, 0.3f, 0.95f }, { "muro_fondo_rebote", &g_muroFondoRebote, 0.0f, 0.95f }, { "muro_lat_friccion", &g_muroLatFric, 0.0f, 1.0f }, { "arco_chico_ancho", &g_arcoAncho, 1.5f, 7.32f }, { "street_1v1_saque", &g_1v1SaqueF, 0.0f, 3.0f }, { "street_jugadores_local", &g_jugLocalF, 0.0f, 11.0f }, { "street_jugadores_rival", &g_jugRivalF, 0.0f, 11.0f }, { "street_jugadores_lado", &g_jugLadoF, 0.0f, 1.0f }, { "arco_medida", &g_arcoMedidaF, 0.0f, 3.0f }, { "gk_despeje_dist_m", &g_gkDespejeDist, 1.0f, 15.0f }, { "gk_despeje_presion_m", &g_gkDespejePresion, 0.5f, 15.0f }, { "arco_chico_alto", &g_arcoAlto, 1.0f, 2.44f }, { "muro_lat_empuje", &g_muroLatEmpuje, 0.0f, 0.3f }, { "muro_friccion", &g_muroFric, 0.0f, 1.0f } };
+            struct Num { const char* id; float* var; float lo, hi; }; static const Num nums[] = { { "tiro_potencia_k", &g_tiroPot, 0.5f, 2.0f }, { "tiro_altura_k", &g_tiroAlt, 0.2f, 1.5f }, { "pase_vel_k", &g_paseVel, 0.8f, 2.0f }, { "pase_correccion", &g_paseCorr, 0.0f, 1.0f }, { "pase_cono_grados", &g_paseCono, 5.0f, 60.0f }, { "muro_rebote", &g_muroRebote, 0.3f, 0.95f }, { "muro_fondo_rebote", &g_muroFondoRebote, 0.0f, 0.95f }, { "muro_lat_friccion", &g_muroLatFric, 0.0f, 1.0f }, { "arco_chico_ancho", &g_arcoAncho, 1.5f, 7.32f }, { "street_1v1_saque", &g_1v1SaqueF, 0.0f, 3.0f }, { "street_jugadores_local", &g_jugLocalF, 0.0f, 11.0f }, { "street_jugadores_rival", &g_jugRivalF, 0.0f, 11.0f }, { "street_jugadores_lado", &g_jugLadoF, 0.0f, 1.0f }, { "arco_medida", &g_arcoMedidaF, 0.0f, 3.0f }, { "street_l1_sin_portero", &g_l1SinPorteroF, 0.0f, 1.0f }, { "gk_despeje_dist_m", &g_gkDespejeDist, 1.0f, 15.0f }, { "gk_despeje_presion_m", &g_gkDespejePresion, 0.5f, 15.0f }, { "arco_chico_alto", &g_arcoAlto, 1.0f, 2.44f }, { "muro_lat_empuje", &g_muroLatEmpuje, 0.0f, 0.3f }, { "muro_friccion", &g_muroFric, 0.0f, 1.0f } };
             bool hecho = false; for (const Num& n : nums) if (id == n.id) { float x = (float)atof(v.c_str()); if (x >= n.lo && x <= n.hi) { *n.var = x; persistirClaveJson(id, v); logf("[PANEL] %s = %.3f (en vivo)", n.id, x); } else logf("[PANEL] %s=%s fuera de rango [%.2f, %.2f]: ignorado", n.id, v.c_str(), n.lo, n.hi); hecho = true; break; }
             if (hecho) continue;
         }
