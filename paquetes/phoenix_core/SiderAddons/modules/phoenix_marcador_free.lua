@@ -268,7 +268,7 @@ local function panelLeer()
 end
 local function panelTexto()
     panelLeer()
-    local s = { "PHOENIX STREET   F9 marcador/panel · F10 siguiente · F11 on/off · Izq/Der valor" }
+    local s = { "PHOENIX STREET   F9 marcador/panel · F10 siguiente · F11 on/off · RePag baja / AvPag sube (o Izq/Der)" }
     for i, it in ipairs(PANEL) do
         local v = panelCache[it.id]; local est
         if it.tipo == "num" then est = string.format("%.2f", tonumber(v) or it.def) else est = v and "ON" or "OFF" end
@@ -285,8 +285,13 @@ function m.key_down(ctx, vkey)
         panelLeer(); local nuevo = not panelCache[it.id]
         panelCache[it.id] = nuevo; panelCambio[it.id] = os.clock()
         if it.tipo == "clima" then panelEnviar("clima_forzado=" .. (nuevo and "0" or "-1")) else panelEnviar(it.id .. "=" .. (nuevo and "1" or "0")) end
-    elseif (vkey == 0x25 or vkey == 0x27) and it and it.tipo == "num" then         -- ← →
-        panelLeer(); local v = (tonumber(panelCache[it.id]) or it.def) + (vkey == 0x27 and it.paso or -it.paso)
+    elseif (vkey == 0x21 or vkey == 0x22) and it and it.tipo ~= "num" then         -- 1-nov: RePag = OFF · AvPag = ON
+        local nuevo = (vkey == 0x22)
+        panelCache[it.id] = nuevo; panelCambio[it.id] = os.clock()
+        if it.tipo == "clima" then panelEnviar("clima_forzado=" .. (nuevo and "0" or "-1")) else panelEnviar(it.id .. "=" .. (nuevo and "1" or "0")) end
+    elseif (vkey == 0x25 or vkey == 0x27 or vkey == 0x21 or vkey == 0x22) and it and it.tipo == "num" then   -- ← → · 1-nov: RePag resta · AvPag suma
+        local sube = (vkey == 0x27 or vkey == 0x22)
+        panelLeer(); local v = (tonumber(panelCache[it.id]) or it.def) + (sube and it.paso or -it.paso)
         if v < it.lo then v = it.lo elseif v > it.hi then v = it.hi end
         v = math.floor(v * 100 + 0.5) / 100
         panelCache[it.id] = v; panelCambio[it.id] = os.clock(); panelEnviar(string.format("%s=%.2f", it.id, v))
