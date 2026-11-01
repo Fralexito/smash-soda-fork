@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.109"
+#define PHX_CORE_VERSION "0.4.110"
 
 namespace {
 
@@ -2075,6 +2075,7 @@ void* __fastcall ganchoArcoVol(uint32_t a, float* p) {
                 char b[400]; int k = 0; for (int i = 0; i < 19; ++i) k += sprintf_s(b + k, sizeof b - k, " %.3f", cur[i]);
                 logf("[ARCO_REAL] init del volumen de red: bloque=%p medida=%d p[0..0x12]=%s", (void*)p, m, b);
             }
+            { uint64_t gn[2] = { 0, 0 }; leerSeguro(g_exe.base + 0x37F4940, gn, 16); if (n <= 12) logf("[ARCO_REAL] objetos GoalNet de render (exe+0x37F4940): lado0=%p lado1=%p", (void*)gn[0], (void*)gn[1]); }
             uint8_t nuevo[36];
             if (memcmp(cur, kBloqueCampo, 36) == 0 && (trainingWorkEstable() || hayTrainingWork())) {
                 bloqueNuevo(nuevo);
@@ -2134,6 +2135,20 @@ void __fastcall ganchoSetPost(int lado, int tipo, float* pos) {
     }
     g_setPostOrig(lado, tipo, pos);
 }
+// 0.4.110 [SONDA_RED]: FUN_140456290(netObj, pos9, tipo) decide si la pelota está «dentro» del volumen de la red nativa (netObj+0x10 = 1 y entonces el driver llama a GoalNet_Hit). Anota, para posiciones junto a la línea de gol / dentro de la boca,
+// el resultado y los punteros de volumen por lado (netObj+0 y +8): si son nulos, en este modo no existe red nativa; si la sonda da 0 con la pelota dentro, el volumen no coincide.
+typedef uint64_t(__fastcall* SondaFn)(uint8_t*, float*, uint32_t);
+SondaFn g_sondaOrig = nullptr; volatile LONG g_sondaN = 0, g_sondaDentro = 0;
+uint64_t __fastcall ganchoSondaRed(uint8_t* net, float* pos, uint32_t tipo) {
+    uint64_t r = g_sondaOrig(net, pos, tipo);
+    float q[3];
+    if (pos && leerSeguro(pos, q, 12) && fabsf(q[0]) > (float)g_canchaLargo - 0.3f && fabsf(q[2]) < 4.5f && q[1] < 3.0f) {
+        bool dentro = (uint8_t)r != 0;
+        LONG n = InterlockedIncrement(&g_sondaN); LONG d = dentro ? InterlockedIncrement(&g_sondaDentro) : 0;
+        if (n <= 40 || (dentro && d <= 40)) { uint64_t vol[2] = { 0, 0 }; if (net) leerSeguro(net, vol, 16); logf("[SONDA_RED] #%ld pos=(%.2f, %.2f, %.2f) tipo=%u dentro=%d volumen lado0=%p lado1=%p entrenamiento=%d", (long)n, q[0], q[1], q[2], tipo, dentro ? 1 : 0, (void*)vol[0], (void*)vol[1], (int)(GetTickCount64() - g_tTrainRed < 3000)); }
+    }
+    return r;
+}
 typedef void(__fastcall* HitFn)(int, int, float*, float, char);
 HitFn g_hitOrig = nullptr; volatile LONG g_hitN = 0;
 void __fastcall ganchoHitRed(int lado, int tipo, float* pos, float radio, char flag) {
@@ -2149,9 +2164,11 @@ bool arcoRealInstalar(Feature& f) {
     if (!crearDesvio(f, m, 17, (void*)ganchoArcoVol, (void**)&g_arcoVolOrig)) { f.estado = "no se pudo desviar FUN_1404AA610"; return false; }
     uint8_t* sp = firmaUnica("codigo", "40 56 57 41 56 48 83 EC 30 48 C7 44 24 20 FE FF FF FF 48 89 5C 24 50 48 89 6C 24 58 49 8B E8 44 8B F2 48 63 F1", f.id);
     if (sp && !g_setPostOrig && !crearDesvio(f, sp, 18, (void*)ganchoSetPost, (void**)&g_setPostOrig)) logf("[ARCO_REAL] no se pudo desviar GoalNet_SetPost (anclas)");
-    uint8_t* sh = firmaUnica("codigo", "40 57 48 83 EC 50 48 C7 44 24 30 FE FF FF FF 48 89 5C 24 60 48 89 6C 24 68 48 89 74 24 70 0F 29", f.id);
+    uint8_t* sh = firmaUnica("codigo", "40 57 48 83 EC 50 48 C7 44 24 30 FE FF FF FF 48 89 5C 24 60 48 89 6C 24 68 48 89 74 24 70 0F 29 74 24 40 0F 28 F3 49 8B F0 8B EA 48 63 D9", f.id);
     if (sh && !g_hitOrig && !crearDesvio(f, sh, 15, (void*)ganchoHitRed, (void**)&g_hitOrig)) logf("[ARCO_REAL] no se pudo desviar GoalNet_Hit (log)");
-    char b[200]; sprintf_s(b, "ok: volumen de red enganchado en exe+0x%llX (arco_medida 0-3; se aplica al empezar el partido); anclas %s; golpes %s", (unsigned long long)(m - g_exe.base), g_setPostOrig ? "ok" : "sin gancho", g_hitOrig ? "ok" : "sin gancho"); f.estado = b; return true;
+    uint8_t* ss = firmaUnica("codigo", "48 89 5C 24 08 48 89 74 24 10 57 48 83 EC 20 48 8B D9 41 8B F0 48", f.id);
+    if (ss && !g_sondaOrig && !crearDesvio(f, ss, 15, (void*)ganchoSondaRed, (void**)&g_sondaOrig)) logf("[ARCO_REAL] no se pudo desviar la sonda de la red (log)");
+    char b[240]; sprintf_s(b, "ok: volumen de red enganchado en exe+0x%llX (arco_medida 0-3; se aplica al empezar el partido); anclas %s; golpes %s; sonda %s", (unsigned long long)(m - g_exe.base), g_setPostOrig ? "ok" : "sin gancho", g_hitOrig ? "ok" : "sin gancho", g_sondaOrig ? "ok" : "sin gancho"); f.estado = b; return true;
 }
 bool arcoRealQuitar(Feature&) { g_arcoMedidaF = 0.0f; return true; }
 bool jugCantQuitar(Feature&) { g_jugCantOn = 0; if (g_hiloJugCant) { WaitForSingleObject(g_hiloJugCant, 4000); CloseHandle(g_hiloJugCant); g_hiloJugCant = nullptr; } g_jugLocalF = g_jugRivalF = 0.0f; return true; }
