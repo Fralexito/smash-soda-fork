@@ -1322,3 +1322,44 @@ Para volver a lo de siempre: Puestos máximos = 8 (Link quita los mandos que sob
 
 **A tener en cuenta.** El chat llega en otro hilo. Si Link está ocupado con la base de perfiles más de medio segundo, responde «Link está ocupado» en vez de esperar.
 
+
+### 13.2 · Mando 1 administrador, usuarios sin repetir y nombre en la pausa (módulo v0.9.61–v0.9.65, 1-nov-2026, Cuenta 2)
+
+**Hecho por la Cuenta 2** (Claude dentro de la extensión, en la PC de Fralex), rama `cuenta2/mandos-admin`. El módulo instalado en la PC es la v0.9.65. Respaldo de la v0.9.60 y de la v0.9.64 en `SiderAddons\phoenix_core\respaldo_mandos_0960\`.
+
+**Qué pidió Fralex.**
+1. Que el mando 1 (el puesto 1 de Link, o quien esté en él si se cede la PC) pueda bajar por las filas de los demás en la pantalla de lados, en el menú y en la pausa. Al llegar a una fila, que la maneje como si fuera ese mando, sin sacar a nadie. R3 vuelve a la suya.
+2. Que cada mando del 1 al 16 tenga su usuario y lo cambie sin perjudicar a otros.
+3. Cambiar el nombre en medio del partido.
+
+**Cómo funciona (todo hallado con REA sobre `PES2021.exe`).** Como el exe entero no carga en Ghidra en 330 s, se extrajeron trozos a un PE mínimo. Los scripts quedaron en el scratchpad de la sesión: `extraer.py` y `minipe.py`.
+
+| Pieza | Dirección | Qué hace |
+|---|---|---|
+| Fila `SideSelectEach`, vtable `0x142715608` | +0x148 = `FUN_140C67970(fila, 0, lado)` | **Pone el lado** (0 Local · 1 centro · 2 Visitante) respetando el máximo por lado; solo si `[fila+0x88]+0xA0 == fila+0x94` (la página de filas). |
+| | +0x1B8 = `FUN_140C68410` / +0x1C0 = `FUN_140C68440` | **Usuario anterior / siguiente** de la fila. Llaman a `FUN_140C67160` / `FUN_140C671F0` sobre la tabla `DAT_1436F5820` (u32[8], el usuario de cada mando 0–7) y escriben `fila+0x98`. |
+| | +0x188 ✕ · +0x190 ○ · +0x198 □ · +0x140/+0x158 sin uso aquí | ya documentados en la Parte 13 |
+| `FUN_140E3D130` | `mov rax,[rcx+0x88]; mov eax,[rax+0xA0]` | página actual de la pantalla |
+| `DAT_1434AC580` | u32 | usuario que abrirá «Editar Datos personales» (lo pone el □ de la fila) |
+
+**Versiones.**
+- **v0.9.61 · mando 1 administrador:** palanca izquierda abajo o arriba elige la fila de otro mando, izquierda o derecha la mueve, R3 vuelve a la suya.
+  - Las filas 1–8 se mueven con +0x148; las 9+ en la réplica (solo en el menú).
+  - La fila propia vuelve a su lado en el mismo cuadro si PES la movió.
+  - Se lee el mando 1 por DirectInput (`V9.mando1`, tipo Xbox: R3 = botón 9). Con un mando físico que no va por DirectInput no hay modo administrador y se anota en el registro.
+  - **Fralex lo probó: funciona.**
+- **v0.9.62 · candado del usuario del mando 1 en la pausa:** se quitó en la v0.9.64.
+  - El □ de los 9+ ya no usa la fila del mando 1 como remitente si hay otra (`V9.filaParaAtras(true)`).
+  - El □ de los 1–8 en la pausa (v0.9.61, «nombre en medio partido») quedó **apagado** con `V9.CUADRADO_PAUSA_1A8 = false`. Se sospecha que, al prestar la fila del anfitrión, le cambió ajustes: a Fralex y a su amigo se les quitó el nombre encima del jugador.
+- **v0.9.63 · sin usuarios repetidos:** PES (L2/R2) solo salta los usuarios de los mandos 1–8. Si una fila 1–8 cae en el usuario de un 9+, se sigue en la misma dirección con +0x1B8/+0x1C0 hasta uno libre (`V9.sinRepetidos`, menú y pausa).
+  - Causa probable de lo del 1-nov 00:20: el mando 1 de Fralex saltó al usuario 9 en la pausa y PES lo reacomodó al puesto rojo.
+- **v0.9.64:** fuera el candado del mando 1 (lo pidió Fralex).
+- **v0.9.65:** con la fila de otro elegida, L2/R2 del mando 1 le cambian **el usuario a esa fila** (la propia lo conserva con `V9.usuarioA`). □ abre «Editar Datos personales» del usuario de esa fila: se sobrescribe `DAT_1434AC580` durante 30 cuadros (`V9.adminEditar`) y se marca `V9.editandoPerfil`. En la pausa, PES bloquea el □.
+
+**Pendiente de probar (Fralex).**
+1. v0.9.65: L2/R2 y □ sobre la fila de otro. Mirar que el editor muestre el nombre del otro mando.
+2. v0.9.63: cambiar usuario con un 9+ conectado.
+3. Por qué se pierde el nombre encima de los jugadores tras el □ de un 9+ en la pausa: comparar con REA el registro del usuario (mapa en la Parte 10 §11) antes y después.
+4. Si se quiere recuperar el «nombre en medio partido»: reactivar `V9.CUADRADO_PAUSA_1A8` solo después de (3).
+
+**Registro.** Cada acción deja una línea en `SiderAddons\content\phoenix\mandos\fase1.txt`: «mando 1 administrador: …», «mando N: el usuario X ya lo usa el mando Y → pasa al Z».
