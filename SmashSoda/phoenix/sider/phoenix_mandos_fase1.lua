@@ -54,7 +54,9 @@
 --        hasta uno libre con el mismo método de PES (PES solo conoce los usuarios de los mandos 1–8).
 --  v0.9.64 · 1-nov-2026 FUERA el candado del mando 1 (Fralex): con la v0.9.63 ya no hay usuarios repetidos; el mando 1 elige
 --        libre también en la pausa, como los demás (V9.candadoMando1 queda en el archivo pero no se llama).
-local m = { version = "0.9.64" }
+--  v0.9.65 · 1-nov-2026 MANDO 1 ADMINISTRADOR, más: con la fila de otro elegida, L2/R2 le cambian el usuario (no el suyo) y
+--        □ abre «Editar Datos personales» del usuario de esa fila (DAT_1434AC580 sobrescrito unos cuadros).
+local m = { version = "0.9.65" }
 
 local G_HIDMAN, G_GESTOR, G_DI8 = 0x1437F0A58, 0x1436F3DC8, 0x1437F0AF8
 local CAPS = 0x14351A840
@@ -1797,17 +1799,30 @@ function V9.mando1()
         if pov >= 4500 and pov <= 13500 then dx = 1 elseif pov >= 22500 and pov <= 31500 then dx = -1 end
         if pov <= 4500 or pov >= 31500 then dy = -1 elseif pov >= 13500 and pov <= 22500 then dy = 1 end
     end
-    return dx, dy, b[0x30 + 9] >= 0x80
+    -- v0.9.65: L2/R2 (botones 6/7 o eje Z, como en direccionExtra) y □ (botón 2, tipo Xbox X)
+    local z = tonumber(p[2])
+    local bl, br = b[0x30 + 6] >= 0x80, b[0x30 + 7] >= 0x80
+    if not bl and not br and z then bl, br = z > 0xD000, z < 0x3000 end
+    return dx, dy, b[0x30 + 9] >= 0x80, bl and -1 or (br and 1 or 0), b[0x30 + 2] >= 0x80
+end
+-- v0.9.65: deja la fila en el usuario «meta» con los métodos de PES anterior/siguiente (recorren los usuarios libres)
+function V9.usuarioA(fila, meta)
+    if ptr(V9.SS_VT_FILA + 0x1B8) ~= V9.USU_A or ptr(V9.SS_VT_FILA + 0x1C0) ~= V9.USU_B or ptr(fila) ~= V9.SS_VT_FILA then return false end
+    for _, dir in ipairs({ V9.USU_A, V9.USU_B }) do
+        local fn = ffi.cast("void(*)(uint64_t)", dir)
+        for _ = 1, 33 do if u32(fila + V9.FILA_PERFIL) == meta then return true end; fn(fila) end
+    end
+    return u32(fila + V9.FILA_PERFIL) == meta
 end
 function V9.admElegir(nuevo, nat, motivo)
     local A = V9.adm
     if nuevo == A.sel then return end
-    if nuevo and not A.sel then A.propio = nat and nat[0] and nat[0].lado end   -- su lado, para que no se mueva
+    if nuevo and not A.sel then A.propio = nat and nat[0] and nat[0].lado; A.perfilPropio = nat and nat[0] and nat[0].perfil end   -- su lado y su usuario, para que no se muevan
     A.sel = nuevo; PHX.admSel = nuevo   -- PHX: lo lee dibujarFila (V9 se declara después)
     if nuevo then
         for k, f in ipairs(filas) do if f.idx == nuevo then sel = k end end
         if #filas > P.VISIBLES then desplaz = math.max(0, math.min(#filas - P.VISIBLES, sel - P.VISIBLES)) end
-    else A.propio = nil end
+    else A.propio, A.perfilPropio = nil, nil end
     anotar(string.format("mando 1 administrador: %s (%s)", nuevo and ("maneja la fila del mando " .. (nuevo + 1)) or "vuelve a su fila", motivo))
     refrescar()
 end
@@ -1869,7 +1884,7 @@ function V9.administrar(enMenu)
         A.prevX, A.prevY, A.prevR3 = 0, 0, false
         return
     end
-    local dx, dy, r3 = V9.mando1()
+    local dx, dy, r3, pd, sq = V9.mando1()
     if dx == nil then
         if not A.sinLectura then A.sinLectura = true; anotar("mando 1 administrador: no se puede leer el mando 1 por DirectInput (¿mando físico sin Link?) → sin modo administrador") end
         return
@@ -1889,6 +1904,34 @@ function V9.administrar(enMenu)
     if A.sel then
         -- su propia fila se queda donde estaba (PES la mueve con la misma palanca)
         if A.propio and nat[0].lado ~= A.propio then V9.ponerLadoNativo(nat[0].fila, A.propio) end
+        -- v0.9.65: tampoco cambia su usuario (PES le aplica el L2/R2 del mando 1): se devuelve y el cambio va a la fila elegida
+        if A.perfilPropio and nat[0].perfil ~= A.perfilPropio then V9.usuarioA(nat[0].fila, A.perfilPropio) end
+        if pd ~= 0 and (A.prevPd or 0) == 0 then
+            if A.sel < NUEVO and nat[A.sel] then
+                local t = nat[A.sel]
+                ffi.cast("void(*)(uint64_t)", pd < 0 and V9.USU_A or V9.USU_B)(t.fila)   -- V9.sinRepetidos salta los de los 9+
+                anotar(string.format("mando 1 administrador: usuario del mando %d %d → %s", A.sel + 1, (t.perfil or 0) + 1, tostring((u32(t.fila + V9.FILA_PERFIL) or -1) + 1)))
+            elseif A.sel >= NUEVO then
+                local usado = {}
+                for k = 0, NUEVO - 1 do if nat[k] and nat[k].perfil then usado[nat[k].perfil] = true end end
+                for _, g in ipairs(filas) do if g.idx >= NUEVO and g.idx ~= A.sel then usado[PHX.PERFIL_DE[g.idx] or g.idx] = true end end
+                local nuevo = PHX.PERFIL_DE[A.sel] or A.sel
+                for _ = 1, 32 do nuevo = (nuevo + pd) % 32; if not usado[nuevo] then break end end
+                PHX.PERFIL_DE[A.sel] = nuevo
+                for _, g in ipairs(filas) do if g.idx == A.sel then g.nombre = nombrePerfil(nuevo) or ("Usuario " .. (nuevo + 1)) end end
+                anotar(string.format("mando 1 administrador: usuario del mando %d → %d", A.sel + 1, nuevo + 1))
+                actualizarDatos(); refrescar()
+            end
+        end
+        -- v0.9.65: □ del mando 1 = «Editar Datos personales» del usuario de la fila elegida. PES abre el editor con el
+        -- usuario que deja en DAT_1434AC580 (lo pone su □ de la fila del mando 1): se sobrescribe unos cuadros con el elegido.
+        if sq and not A.prevSq then
+            local perfil = (A.sel < NUEVO) and (nat[A.sel] and nat[A.sel].perfil) or (PHX.PERFIL_DE[A.sel] or A.sel)
+            if perfil then
+                A.editar = { perfil = perfil, cuadros = 30 }; V9.editandoPerfil = ahora()   -- el cierre que viene NO es confirmar (como en editarPerfilDe)
+                anotar(string.format("mando 1 administrador: □ → «Editar Datos personales» del mando %d (usuario %d)", A.sel + 1, perfil + 1))
+            end
+        end
         if dx ~= 0 and A.prevX == 0 then
             if A.sel < NUEVO then
                 local t = nat[A.sel]
@@ -1912,7 +1955,15 @@ function V9.administrar(enMenu)
             end
         end
     end
-    A.prevX, A.prevY, A.prevR3 = dx, dy, r3
+    A.prevX, A.prevY, A.prevR3, A.prevPd, A.prevSq = dx, dy, r3, pd, sq
+end
+-- v0.9.65: cada cuadro (aunque la pantalla de lados ya se haya cerrado para abrir el editor)
+function V9.adminEditar()
+    local E = V9.adm and V9.adm.editar
+    if not E then return end
+    memory.write(V9.CUAD_PERFIL, u32le(E.perfil))
+    E.cuadros = E.cuadros - 1
+    if E.cuadros <= 0 then V9.adm.editar = nil end
 end
 local function cambiarLado(d)
     local f = filas[sel]; if not f then return end
@@ -2478,6 +2529,7 @@ function m.display_frame(ctx)
     if pedirCierre then pedirCierre = false; if mostrado then auto = { fase = "cerrar", cuadros = 0 } end end
     vigilarPantallaPES()
     -- v0.9: mientras se ve la Phoenix (en el menú), espejo de la de PES + mandos extra
+    V9.adminEditar()   -- v0.9.65
     if PHX.pantallaPESAbierta() then V9.sinRepetidos() end   -- v0.9.63 (el candado del mando 1 de la v0.9.62 se quitó en la v0.9.64)
     if PHX.pantallaPESAbierta() then V9.administrar(mostrado and not enPartidoAhora) end   -- v0.9.61: mando 1 administrador (antes del espejo)
     if mostrado and not enPartidoAhora and #filas > 0 then V9.reflejarNativos(); V9.moverExtras() end
