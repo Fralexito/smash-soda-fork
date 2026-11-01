@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.105"
+#define PHX_CORE_VERSION "0.4.106"
 
 namespace {
 
@@ -2055,7 +2055,7 @@ typedef void* (__fastcall* ArcoVolFn)(uint32_t, float*);
 ArcoVolFn g_arcoVolOrig = nullptr; volatile LONG g_arcoRealLogs = 0;
 void* __fastcall ganchoArcoVol(uint32_t a, float* p) {
     int m = (int)(g_arcoMedidaF + 0.5f);
-    if (m > 0 && g_streetActivo && g_canchaOn && p) {
+    if (g_streetActivo && g_canchaOn && p) {
         float cur[19];
         if (leerSeguro(p, cur, sizeof cur)) {
             LONG n = InterlockedIncrement(&g_arcoRealLogs);
@@ -2069,7 +2069,17 @@ void* __fastcall ganchoArcoVol(uint32_t a, float* p) {
                 if (escribirSeguro(p, nuevo, 36)) logf("[ARCO_REAL] bloque original sustituido por el de cancha %.1f x %.1f con boca %.2f x %.2f", g_canchaLargo * 2, g_canchaAncho * 2, ((float*)nuevo)[2] * 2, ((float*)nuevo)[3]);
             } else if (fabsf(cur[0] - (float)g_canchaLargo) < 0.01f) {
                 bloqueNuevo(nuevo); float c23[2] = { ((float*)nuevo)[2], ((float*)nuevo)[3] };
-                if (escribirSeguro(p + 2, c23, 8)) logf("[ARCO_REAL] bloque ya parcheado: boca puesta en %.2f x %.2f", c23[0] * 2, c23[1]);
+                if (m > 0 && escribirSeguro(p + 2, c23, 8)) logf("[ARCO_REAL] bloque ya parcheado: boca puesta en %.2f x %.2f", c23[0] * 2, c23[1]);
+            }
+            // 0.4.105 (medido en vivo con la boca 4x2): p[0xC]=51.172, p[0xD]=54.320, p[0xE]=54.434 son X ABSOLUTAS de la red nativa (planos del volumen y umbrales de estado de la pelota
+            // en FUN_140425E20 / FUN_1404AA610) del campo de 52,56 de semilargo. cancha_chica_free solo parchea [0..8], así que el volumen nacía a ~54 m y la sonda daba siempre «fuera».
+            // Se desplazan la misma distancia que la línea de gol (52,56 - semilargo). Solo si siguen en su valor original (> 40).
+            {
+                float c[3]; const float dxs = 52.56f - (float)g_canchaLargo;
+                if (dxs > 0.5f && leerSeguro(p + 0xC, c, 12) && c[0] > 40.0f && c[1] > 40.0f && c[2] > 40.0f) {
+                    float nv[3] = { c[0] - dxs, c[1] - dxs, c[2] - dxs };
+                    if (escribirSeguro(p + 0xC, nv, 12)) logf("[ARCO_REAL] planos de la red nativa movidos %.2f m: p[0xC..0xE] %.3f %.3f %.3f -> %.3f %.3f %.3f", dxs, c[0], c[1], c[2], nv[0], nv[1], nv[2]);
+                }
             }
         }
     }
