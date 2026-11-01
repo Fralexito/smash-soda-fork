@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.110"
+#define PHX_CORE_VERSION "0.4.111"
 
 namespace {
 
@@ -1690,7 +1690,8 @@ using FnBolaPaso = uint64_t (*)(float, uint64_t, uint64_t, float*, void*, uint64
 FnBolaPaso g_bolaPasoOrig = nullptr;
 bool g_redResorte = false; float g_redK = 70.0f, g_redC = 8.0f, g_redHolgura = 0.4f;   // 0.4.72 «red_resorte»: la red como resorte-amortiguador (json red_resorte/red_k/red_c/red_holgura)
 float g_redFactor = 0.93f; volatile ULONGLONG g_tTrainRed = 0; volatile LONG g_redOn = 0; volatile LONG g_redFrenos = 0;
-volatile LONG g_redFrenoOn = 0; float g_redTopeF = 1.0f; volatile LONG g_topeN = 0;   // 0.4.107: SOLO red_frena_free (freno/resorte de la red y muro del fondo dentro de la boca). g_redOn es el interruptor del hilo de TrainingWork que comparten red y muros
+volatile LONG g_redFrenoOn = 0; float g_redTopeF = 1.0f; volatile LONG g_topeN = 0;
+float g_reboteFactorF = 0.6f; volatile LONG g_reboteFactorN = 0;   // 0.4.111 red_rebote_factor (0..1; 0 o 1 = sin tope): tras un rebote del Core contra el fondo de la cancha/línea de gol, postes o travesaño la velocidad de salida no pasa de entrada × factor   // 0.4.107: SOLO red_frena_free (freno/resorte de la red y muro del fondo dentro de la boca). g_redOn es el interruptor del hilo de TrainingWork que comparten red y muros
 HANDLE g_hiloRed = nullptr;
 DWORD WINAPI hiloRed(LPVOID) {
     while (g_redOn) { if (trainingWorkEstable() || hayTrainingWork()) g_tTrainRed = GetTickCount64(); Sleep(100); }
@@ -1827,6 +1828,10 @@ uint64_t ganchoBolaPaso(float dt, uint64_t rdx, uint64_t r8, float* S, void* cfg
                         if (vn < 0) { S[3] -= (1 + 0.5f) * vn * nx; S[4] -= (1 + 0.5f) * vn * ny; S[0] = px + nx * rp; S[1] = hh + ny * rp; toco = true; }
                     }
                 }
+            }
+            if (toco && g_reboteFactorF > 0.01f && g_reboteFactorF < 0.999f && fabsf(S[0]) > largo - 0.4f) {   // 0.4.111: el «cohete» salía de un tiro fuerte contra el fondo/travesaño (27 m/s -> 23 m/s hacia atrás)
+                float s0 = sqrtf(mv0[0] * mv0[0] + mv0[1] * mv0[1] + mv0[2] * mv0[2]), s1 = sqrtf(S[3] * S[3] + S[4] * S[4] + S[5] * S[5]), lim = s0 * g_reboteFactorF;
+                if (s1 > lim && s1 > 1e-3f) { float k = lim / s1; S[3] *= k; S[4] *= k; S[5] *= k; LONG nf = InterlockedIncrement(&g_reboteFactorN); if (nf <= 60) logf("[REBOTE_TOPE] salida %.1f -> %.1f m/s (entrada %.1f × %.2f) pos=(%.2f,%.2f,%.2f)", s1, lim, s0, g_reboteFactorF, S[0], S[1], S[2]); }
             }
             if (toco) { LONG n = InterlockedIncrement(&g_murosRebotes); if (n <= 80 || n % 500 == 0) logf("[MURO] rebote #%ld pos=(%.2f,%.2f,%.2f) v antes (%.1f,%.1f,%.1f) después (%.1f,%.1f,%.1f)", (long)n, S[0], S[1], S[2], mv0[0], mv0[1], mv0[2], S[3], S[4], S[5]); }
         }
@@ -2153,7 +2158,12 @@ typedef void(__fastcall* HitFn)(int, int, float*, float, char);
 HitFn g_hitOrig = nullptr; volatile LONG g_hitN = 0;
 void __fastcall ganchoHitRed(int lado, int tipo, float* pos, float radio, char flag) {
     LONG n = InterlockedIncrement(&g_hitN);
-    if (n <= 40 || n % 500 == 0) { float q[3] = { 0, 0, 0 }; if (pos) leerSeguro(pos, q, 12); logf("[HIT_RED] #%ld GoalNet_Hit lado=%d tipo=%d pos=(%.2f, %.2f, %.2f) radio=%.3f flag=%d entrenamiento=%d", (long)n, lado, tipo, q[0], q[1], q[2], radio, (int)flag, (int)(GetTickCount64() - g_tTrainRed < 3000)); }
+    if (n <= 40 || n % 500 == 0) {
+        float q[3] = { 0, 0, 0 }; if (pos) leerSeguro(pos, q, 12);
+        uint8_t* gn = nullptr; uint8_t* nodo = nullptr; int st = -1;   // estado de la máquina del nodo de la tela (SceneGoalnetNodeImpl+0x80; 7 = operativa): si no es 7 los golpes se descartan
+        if (lado >= 0 && lado <= 1 && leerSeguro(g_exe.base + 0x37F4940 + lado * 8, &gn, 8) && gn && leerSeguro(gn + 8, &nodo, 8) && nodo) leerSeguro(nodo + 0x80, &st, 4);
+        logf("[HIT_RED] #%ld GoalNet_Hit lado=%d tipo=%d pos=(%.2f, %.2f, %.2f) radio=%.3f flag=%d entrenamiento=%d goalnet=%p nodo=%p estado=%d", (long)n, lado, tipo, q[0], q[1], q[2], radio, (int)flag, (int)(GetTickCount64() - g_tTrainRed < 3000), (void*)gn, (void*)nodo, st);
+    }
     g_hitOrig(lado, tipo, pos, radio, flag);
 }
 bool arcoRealInstalar(Feature& f) {
@@ -3485,6 +3495,7 @@ void leerConfig() {
     if (valorDe("street_jugadores_rival", v)) { g_jugRivalF = (float)atof(v.c_str()); if (g_jugRivalF < 0.0f || g_jugRivalF > 11.0f) g_jugRivalF = 0.0f; }
     if (valorDe("arquero_dist_seleccion", v)) { g_arqDistSelF = (float)atof(v.c_str()); if (g_arqDistSelF < 2.0f || g_arqDistSelF > 25.0f) g_arqDistSelF = 7.0f; }
     if (valorDe("arquero_dist_rival", v)) { g_arqRivalDistF = (float)atof(v.c_str()); if (g_arqRivalDistF < 0.0f || g_arqRivalDistF > 15.0f) g_arqRivalDistF = 4.0f; }
+    if (valorDe("red_rebote_factor", v)) { g_reboteFactorF = (float)atof(v.c_str()); if (g_reboteFactorF < 0.0f || g_reboteFactorF > 1.0f) g_reboteFactorF = 0.6f; }
     if (valorDe("red_tope_rebote", v)) g_redTopeF = (v == "false" || v == "0") ? 0.0f : 1.0f;
     if (valorDe("red_anclas", v)) g_anclasF = (v == "false" || v == "0") ? 0.0f : 1.0f;
     if (valorDe("street_l1_sin_portero", v)) g_l1SinPorteroF = (v == "false" || v == "0") ? 0.0f : 1.0f;
@@ -3589,7 +3600,7 @@ static void procesarOrdenes() {
             continue;
         }
         {   // parámetros numéricos EN VIVO (se releen al instante: son las variables que usan los ganchos) y se guardan en el json
-            struct Num { const char* id; float* var; float lo, hi; }; static const Num nums[] = { { "tiro_potencia_k", &g_tiroPot, 0.5f, 2.0f }, { "tiro_altura_k", &g_tiroAlt, 0.2f, 1.5f }, { "pase_vel_k", &g_paseVel, 0.8f, 2.0f }, { "pase_correccion", &g_paseCorr, 0.0f, 1.0f }, { "pase_cono_grados", &g_paseCono, 5.0f, 60.0f }, { "muro_rebote", &g_muroRebote, 0.3f, 0.95f }, { "muro_fondo_rebote", &g_muroFondoRebote, 0.0f, 0.95f }, { "muro_lat_friccion", &g_muroLatFric, 0.0f, 1.0f }, { "arco_chico_ancho", &g_arcoAncho, 1.5f, 7.32f }, { "street_1v1_saque", &g_1v1SaqueF, 0.0f, 3.0f }, { "street_jugadores_local", &g_jugLocalF, 0.0f, 11.0f }, { "street_jugadores_rival", &g_jugRivalF, 0.0f, 11.0f }, { "street_jugadores_lado", &g_jugLadoF, 0.0f, 1.0f }, { "arco_medida", &g_arcoMedidaF, 0.0f, 3.0f }, { "street_l1_sin_portero", &g_l1SinPorteroF, 0.0f, 1.0f }, { "arquero_dist_seleccion", &g_arqDistSelF, 2.0f, 25.0f }, { "arquero_dist_rival", &g_arqRivalDistF, 0.0f, 15.0f }, { "red_tope_rebote", &g_redTopeF, 0.0f, 1.0f }, { "red_anclas", &g_anclasF, 0.0f, 1.0f }, { "gk_despeje_dist_m", &g_gkDespejeDist, 1.0f, 15.0f }, { "gk_despeje_presion_m", &g_gkDespejePresion, 0.5f, 15.0f }, { "arco_chico_alto", &g_arcoAlto, 1.0f, 2.44f }, { "muro_lat_empuje", &g_muroLatEmpuje, 0.0f, 0.3f }, { "muro_friccion", &g_muroFric, 0.0f, 1.0f } };
+            struct Num { const char* id; float* var; float lo, hi; }; static const Num nums[] = { { "tiro_potencia_k", &g_tiroPot, 0.5f, 2.0f }, { "tiro_altura_k", &g_tiroAlt, 0.2f, 1.5f }, { "pase_vel_k", &g_paseVel, 0.8f, 2.0f }, { "pase_correccion", &g_paseCorr, 0.0f, 1.0f }, { "pase_cono_grados", &g_paseCono, 5.0f, 60.0f }, { "muro_rebote", &g_muroRebote, 0.3f, 0.95f }, { "muro_fondo_rebote", &g_muroFondoRebote, 0.0f, 0.95f }, { "muro_lat_friccion", &g_muroLatFric, 0.0f, 1.0f }, { "arco_chico_ancho", &g_arcoAncho, 1.5f, 7.32f }, { "street_1v1_saque", &g_1v1SaqueF, 0.0f, 3.0f }, { "street_jugadores_local", &g_jugLocalF, 0.0f, 11.0f }, { "street_jugadores_rival", &g_jugRivalF, 0.0f, 11.0f }, { "street_jugadores_lado", &g_jugLadoF, 0.0f, 1.0f }, { "arco_medida", &g_arcoMedidaF, 0.0f, 3.0f }, { "street_l1_sin_portero", &g_l1SinPorteroF, 0.0f, 1.0f }, { "arquero_dist_seleccion", &g_arqDistSelF, 2.0f, 25.0f }, { "arquero_dist_rival", &g_arqRivalDistF, 0.0f, 15.0f }, { "red_tope_rebote", &g_redTopeF, 0.0f, 1.0f }, { "red_rebote_factor", &g_reboteFactorF, 0.0f, 1.0f }, { "red_anclas", &g_anclasF, 0.0f, 1.0f }, { "gk_despeje_dist_m", &g_gkDespejeDist, 1.0f, 15.0f }, { "gk_despeje_presion_m", &g_gkDespejePresion, 0.5f, 15.0f }, { "arco_chico_alto", &g_arcoAlto, 1.0f, 2.44f }, { "muro_lat_empuje", &g_muroLatEmpuje, 0.0f, 0.3f }, { "muro_friccion", &g_muroFric, 0.0f, 1.0f } };
             bool hecho = false; for (const Num& n : nums) if (id == n.id) { float x = (float)atof(v.c_str()); if (x >= n.lo && x <= n.hi) { *n.var = x; persistirClaveJson(id, v); logf("[PANEL] %s = %.3f (en vivo)", n.id, x); } else logf("[PANEL] %s=%s fuera de rango [%.2f, %.2f]: ignorado", n.id, v.c_str(), n.lo, n.hi); hecho = true; break; }
             if (hecho) continue;
         }

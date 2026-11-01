@@ -284,6 +284,7 @@ local PANEL = {
     { id = "street_l1_sin_portero", txt = "L1 no elige al arquero salvo balón cerca o hacia él (1 sí · 0 no; L1+R3 lo fuerza)", tipo = "num", paso = 1, lo = 0, hi = 1, def = 1, modo = "vivo" },
     { id = "arquero_dist_seleccion", txt = "  Distancia para poder elegir al arquero (m)", tipo = "num", paso = 1, lo = 2, hi = 25, def = 7, modo = "vivo" },
     { id = "arquero_dist_rival", txt = "  Sin rival a menos de (m) del balón para elegir al arquero (0 = no mirar)", tipo = "num", paso = 1, lo = 0, hi = 15, def = 4, modo = "vivo" },
+    { id = "red_rebote_factor", txt = "Rebote contra fondo/poste/travesaño: salida máx. = entrada × (0 o 1 = sin tope)", tipo = "num", paso = 0.05, lo = 0, hi = 1, def = 0.6, modo = "vivo" },
     { id = "red_tope_rebote", txt = "Tope de rebote en la red (no sale más rápido de lo que entró): 1 sí · 0 no", tipo = "num", paso = 1, lo = 0, hi = 1, def = 1, modo = "vivo" },
     { id = "red_anclas", txt = "Anclas de la tela a la medida del arco: 1 sí · 0 no", tipo = "num", paso = 1, lo = 0, hi = 1, def = 1, modo = "vivo" },
     { id = "street_jugadores_local", txt = "Jugadores mi equipo (0 = no tocar; EXPERIMENTAL)", tipo = "num", paso = 1, lo = 0, hi = 11, def = 0, modo = "vivo" },
