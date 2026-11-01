@@ -78,8 +78,9 @@ end
 -- v0.9 (0.4.99): el marcador y el reloj del módulo se sincronizan con match.stats() del juego una vez por segundo.
 -- Antes solo contaban goal_scored y se reiniciaban en set_teams/context_reset: la revancha propia (sin set_teams) los dejaba con los goles y los segundos del partido anterior.
 local function sincronizarConJuego()
-    local ok, st = pcall(function() return match.stats() end)
-    if not ok or not st then return end
+    -- 0.4.104: el Lua de Sider no trae pcall (daba «attempt to call global pcall» en cada fotograma y dejaba muerta la sincronización)
+    local st = match and match.stats and match.stats()
+    if not st then return end
     local hl, al = tonumber(st.home_score), tonumber(st.away_score)
     if hl and al and (hl ~= golesL or al ~= golesV) then
         log(string.format("[marcador_free] marcador sincronizado con el juego %d-%d -> %d-%d", golesL, golesV, hl, al))
