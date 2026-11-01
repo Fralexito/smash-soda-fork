@@ -2185,7 +2185,49 @@ void __fastcall ganchoHitRed(int lado, int tipo, float* pos, float radio, char f
     }
     g_hitOrig(lado, tipo, pos, radio, flag);
 }
+// --- [NODO_RED] (0.4.112, SOLO LECTURA): el nodo de render de la tela de la red (cobra::rd::SceneGoalnetNodeImpl, vtable exe+0x2AA2880) acepta golpes solo si su estado interno (+0x80) vale 7
+// (1 carga datos Fox, 2 espera, 3 resuelve las 3 entidades por hash, 4 crea la tela, 5-6 modelo/buffer, 7 operativo) y tiene el manejador de la tela en +0x190. El puntero GoalNet que usa el Core
+// (exe+0x37F4940) NO es el nodo, asi que se BUSCA el nodo por su vtable en la memoria privada de lectura/escritura: cuando aparecen los objetos GoalNet (partido cargado) y 15 s, 60 s y 180 s despues,
+// anota hasta 6 nodos con su estado, manejador y modo. Sirve para comparar un amistoso normal con el Entrenamiento.
+volatile LONG g_nodoRedOn = 0; HANDLE g_hiloNodoRed = nullptr;
+static void barrerNodosRed(const char* motivo) {
+    uint64_t vt = reinterpret_cast<uint64_t>(g_exe.base) + 0x2AA2880ull; int hallados = 0;
+    MEMORY_BASIC_INFORMATION mbi; uint8_t* a = reinterpret_cast<uint8_t*>(0x10000);
+    while (a < reinterpret_cast<uint8_t*>(0x7FFE0000ull) && VirtualQuery(a, &mbi, sizeof mbi) && hallados < 6 && g_nodoRedOn) {
+        uint8_t* ini = static_cast<uint8_t*>(mbi.BaseAddress); size_t tam = mbi.RegionSize;
+        if (mbi.State == MEM_COMMIT && mbi.Type == MEM_PRIVATE && mbi.Protect == PAGE_READWRITE && tam >= 0x200 && tam <= (512u << 20)) {
+            __try {
+                for (size_t o = 0; o + 0x200 <= tam && hallados < 6; o += 8) {
+                    if (*reinterpret_cast<uint64_t*>(ini + o) == vt) {
+                        uint32_t st = *reinterpret_cast<uint32_t*>(ini + o + 0x80); uint64_t h = *reinterpret_cast<uint64_t*>(ini + o + 0x190);
+                        logf("[NODO_RED] (%s) nodo=%p estado(+0x80)=%u manejador(+0x190)=%p entrenamiento=%d", motivo, (void*)(ini + o), st, (void*)h, (int)(GetTickCount64() - g_tTrainRed < 3000));
+                        ++hallados;
+                    }
+                }
+            } __except (EXCEPTION_EXECUTE_HANDLER) {}
+        }
+        a = ini + tam;
+    }
+    if (!hallados) logf("[NODO_RED] (%s) no hay nodos con esa vtable en la memoria privada", motivo);
+}
+DWORD WINAPI hiloNodoRed(LPVOID) {
+    bool habia = false; ULONGLONG t0 = 0; int fase = 0;
+    while (g_nodoRedOn) {
+        Sleep(500);
+        uint64_t gn[2] = { 0, 0 }; leerSeguro(g_exe.base + 0x37F4940, gn, 16);
+        bool hay = gn[0] != 0 && gn[1] != 0;
+        if (hay && !habia) { t0 = GetTickCount64(); fase = 0; }
+        habia = hay;
+        if (!hay) continue;
+        ULONGLONG dt = GetTickCount64() - t0;
+        if (fase == 0 && dt > 15000) { fase = 1; barrerNodosRed("15 s"); }
+        else if (fase == 1 && dt > 60000) { fase = 2; barrerNodosRed("60 s"); }
+        else if (fase == 2 && dt > 180000) { fase = 3; barrerNodosRed("180 s"); }
+    }
+    return 0;
+}
 bool arcoRealInstalar(Feature& f) {
+    if (!g_nodoRedOn) { g_nodoRedOn = 1; g_hiloNodoRed = CreateThread(nullptr, 0, hiloNodoRed, nullptr, 0, nullptr); }
     if (g_arcoVolOrig) { f.estado = "ok: gancho del volumen de red ya puesto"; return true; }
     if (!g_globalPartido && !resolverGlobalPartido(f.id)) { f.estado = "sin firma del global del partido"; return false; }
     uint8_t* m = firmaUnica("codigo", "40 55 56 57 48 83 EC 40 48 C7 44 24 30 FE FF FF FF 48 89 5C 24 60 48 8B F2 8B E9 C7 44 24 70 18 00 00 00 45 33 C0", f.id);
@@ -2199,7 +2241,7 @@ bool arcoRealInstalar(Feature& f) {
     if (ss && !g_sondaOrig && !crearDesvio(f, ss, 15, (void*)ganchoSondaRed, (void**)&g_sondaOrig)) logf("[ARCO_REAL] no se pudo desviar la sonda de la red (log)");
     char b[240]; sprintf_s(b, "ok: volumen de red enganchado en exe+0x%llX (arco_medida 0-3; se aplica al empezar el partido); anclas %s; golpes %s; sonda %s", (unsigned long long)(m - g_exe.base), g_setPostOrig ? "ok" : "sin gancho", g_hitOrig ? "ok" : "sin gancho", g_sondaOrig ? "ok" : "sin gancho"); f.estado = b; return true;
 }
-bool arcoRealQuitar(Feature&) { g_arcoMedidaF = 0.0f; return true; }
+bool arcoRealQuitar(Feature&) { g_arcoMedidaF = 0.0f; g_nodoRedOn = 0; if (g_hiloNodoRed) { WaitForSingleObject(g_hiloNodoRed, 3000); CloseHandle(g_hiloNodoRed); g_hiloNodoRed = nullptr; } return true; }
 // --- street_saque_trabado (0.4.112): a veces el rival (IA) se queda en el circulo central con el balon sin sacar. Un hilo mira el balon (objeto de pelota_sonda): quieto (<0,15 m/s) en el centro durante
 // street_saque_espera_s (5 s por defecto) en el Entrenamiento. Anota SIEMPRE el estado ([SAQUE_TRABADO]: equipo que saca, pateador S+0x173C, fase S+0x1168/0x116C, hay humano en ese equipo?)
 // y, si el saque es de un equipo SIN humano (sin cursor suyo en los ultimos 20 s) y street_saque_empuje = 1, empuja el balon 2 m/s hacia la porteria rival durante 0,18 s para que el juego de el saque por hecho.
