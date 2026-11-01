@@ -92,9 +92,37 @@ local function sincronizarConJuego()
     end
 end
 
+-- 0.4.104: césped de la minicancha. StadiumServer.lua (cargado antes) contesta él mismo la petición de pitch_st002.fpk con su copia original, así que el servicio
+-- por livecpk de este módulo nunca llegaba a tocarlo (en el log solo salían los arcos). Solución: con Street + cancha chica en FREE_TRAINING se copia el césped chico sobre
+-- el archivo que sirve StadiumServer y al salir de la zona / apagar el Street / arrancar PES se restaura el original (respaldo-20261026 = original del juego).
+local rutaPitchSS, rutaPitchOrig, rutaPitchChica
+local cespedChica = false
+local function copiarArchivo(origen, destino)
+    local t = leer(origen)
+    if not t or #t < 1000 then return false end
+    local f = io.open(destino, "wb")
+    if not f then return false end
+    local ok = f:write(t)
+    f:close()
+    return ok ~= nil
+end
+local function ajustarCesped()
+    if not rutaPitchSS then return end
+    local quiere = encendido and enZona and canchaOn
+    if quiere == cespedChica then return end
+    local ok = copiarArchivo(quiere and rutaPitchChica or rutaPitchOrig, rutaPitchSS)
+    if ok then
+        cespedChica = quiere
+        log("[cancha_visual] césped " .. (quiere and "CHICO puesto" or "ORIGINAL restaurado") .. " en StadiumServer (pitch_st002.fpk)")
+    else
+        log("[cancha_visual] no pude cambiar el césped (" .. (quiere and "chico" or "original") .. "); se reintenta")
+    end
+end
+
 local function mirarZonaYPantalla()
     local s = leer(rutaSonda)
     enZona = (s ~= nil) and (s:find('"nombre"%s*:%s*"FREE_TRAINING"') ~= nil)
+    ajustarCesped()
     local p = leer(rutaPantalla)
     pantalla = p and (p:match('"pantalla"%s*:%s*"([%w_]+)"') or "") or ""
 end
@@ -341,6 +369,13 @@ function m.init(ctx)
     rutaPantalla = base .. "content\\phoenix\\pantalla.json"
     rutaSalida = base .. "content\\phoenix\\marcador_free.json"
     rutaSonda2 = base .. "phoenix_core\\sonda_partido.txt"
+    local ss = base .. "content\stadium-server\España\Spotify Camp Nou\Asset\model\bg\st002\pitch\#Win\pitch_st002.fpk"
+    if leer(ss .. ".respaldo-20261026-013452") then
+        rutaPitchSS = ss
+        rutaPitchOrig = ss .. ".respaldo-20261026-013452"
+        rutaPitchChica = base .. "content\phoenix\cancha_visual\Asset\model\bg\st002\pitch\#Win\pitch_st002.fpk"
+        if copiarArchivo(rutaPitchOrig, rutaPitchSS) then log("[cancha_visual] césped original asegurado al arrancar") end
+    end
     ctx.register("display_frame", m.display_frame)
     ctx.register("goal_scored", m.goal_scored)     -- Sider 7.3.4+ (en 7.3.3 solo deja un WARN)
     ctx.register("set_teams", m.set_teams)
