@@ -2018,23 +2018,25 @@ bool uno1Quitar(Feature&) { g_1v1SaqueF = 0.0f; return true; }
 // usuario (SIDE 0 = local, 1 = visita, ver g_jugLado) y escribe «local» en SU instancia y «rival» en la otra. 0 = no tocar. Log [JUGADORES] antes→después.
 float g_jugLocalF = 0.0f, g_jugRivalF = 0.0f, g_jugLadoF = 0.0f; volatile LONG g_jugCantOn = 0; HANDLE g_hiloJugCant = nullptr;
 DWORD WINAPI hiloJugCant(LPVOID) {
+    // 0.4.105: las dos instancias de 0x103C8 B son COPIAS del mismo registro (leído en vivo: al cambiar Atacante/Defensor cambian igual en las dos). Cada copia tiene
+    // dos celdas: +0x3C = grupo atacante y +0x40 = grupo defensor. «lado» dice en cuál está MI equipo (0 = +0x3C, 1 = +0x40); se escriben las dos copias.
     bool estaba = false; LONG nLog = 0;
     while (g_jugCantOn) {
         Sleep(50);
         int cant[2] = { (int)(g_jugLocalF + 0.5f), (int)(g_jugRivalF + 0.5f) };
         if (!g_streetActivo || (cant[0] <= 0 && cant[1] <= 0) || !trainingWorkCrudo()) { estaba = false; continue; }
-        int lado = (int)(g_jugLadoF + 0.5f) == 1 ? 1 : 0;   // instancia que usa mi equipo
-        int want[2]; want[lado] = cant[0]; want[1 - lado] = cant[1];
+        int lado = (int)(g_jugLadoF + 0.5f) == 1 ? 1 : 0;
+        int want[2]; want[lado] = cant[0]; want[1 - lado] = cant[1];   // want[0] -> celda +0x3C, want[1] -> celda +0x40
         uint8_t* raiz = nullptr; uint8_t* obj = nullptr; uint8_t* dat = nullptr;
         if (!leerSeguro(g_globalPartido, &raiz, 8) || !raiz || !leerSeguro(raiz + 0x3F8, &obj, 8) || !obj || !leerSeguro(obj + 0x10, &dat, 8) || !dat) continue;
-        for (int e = 0; e < 2; ++e) {
-            if (want[e] < 1) continue;
-            if (want[e] > 11) want[e] = 11;
-            uint8_t* celda = dat + 4 + (size_t)e * 0x103C8 + 0x3C;
-            int ant = -1; if (!leerSeguro(celda, &ant, 4) || ant < 0 || ant > 11) continue;
-            if (ant == want[e]) continue;
-            int nv = want[e];
-            if (escribirSeguro(celda, &nv, 4)) { if (++nLog <= 200) logf("[JUGADORES] instancia %d (%s): %d -> %d (dat=%p%s)", e, e == lado ? "mi equipo" : "rival", ant, nv, (void*)dat, estaba ? "" : ", al entrar"); }
+        for (int c = 0; c < 2; ++c) {
+            for (int fl = 0; fl < 2; ++fl) {
+                int w = want[fl]; if (w < 1) continue; if (w > 11) w = 11;
+                uint8_t* celda = dat + 4 + (size_t)c * 0x103C8 + 0x3C + fl * 4;
+                int ant = -1; if (!leerSeguro(celda, &ant, 4) || ant < 0 || ant > 11) continue;
+                if (ant == w) continue;
+                if (escribirSeguro(celda, &w, 4)) { if (++nLog <= 300) logf("[JUGADORES] copia %d, celda +0x%X (%s): %d -> %d (dat=%p%s)", c, 0x3C + fl * 4, fl == lado ? "mi equipo" : "rival", ant, w, (void*)dat, estaba ? "" : ", al entrar"); }
+            }
         }
         estaba = true;
     }
