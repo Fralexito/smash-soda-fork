@@ -1,5 +1,7 @@
 {
   "funciones": {
+    "street_1v1_portero": true,
+    "street_1v1_saque": 0,
     "reloj_visual_2t": true,
     "final_nativo": false,
     "goles_sonda": true,

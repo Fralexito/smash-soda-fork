@@ -164,7 +164,11 @@ for _, r in ipairs({ "goal_post.fpk", "goal_post.fpkd", "goalnet_l.fpk", "goalne
 end
 CANCHA_VISUAL["asset/model/bg/st002/pitch/#win/pitch_st002.fpk"] = true
 function m.get_filepath(ctx, filename, key)
-    if not encendido or not enZona then return nil end
+    if not encendido or not enZona then
+        local fz = string.gsub(string.gsub(string.lower(tostring(filename)), "\\", "/"), "//+", "/")
+        if encendido and CANCHA_VISUAL[(string.gsub(fz, "^/+", ""))] then log("[cancha_visual] pedido " .. fz .. " pero NO se sirve: zona no es FREE_TRAINING todavía") end
+        return nil
+    end
     if canchaOn and rutaCancha then
         local fl = string.gsub(string.lower(tostring(filename)), "\\", "/")
         local fl2 = string.gsub(fl, "//+", "/")
@@ -236,6 +240,7 @@ end
 -- Las claves congeladas del portero NO están en la lista. «vivo» = se aplica al instante; «sig.partida» = se guarda y se usa en la próxima partida/arranque.
 local PANEL = {
     { id = "street_activo", txt = "MODO STREET (todo el Street en el Entrenamiento)", tipo = "bool", def = true, modo = "fuera" },   -- 0.4.102
+    { id = "street_1v1_saque", txt = "1v1 saque: 0 normal · 1 portero centro · 2 portero su área · 3 libre", tipo = "num", paso = 1, lo = 0, hi = 3, def = 0, modo = "vivo" },
     { id = "tiro_fuerte", txt = "Tiro fuerte", tipo = "bool", modo = "vivo" },
     { id = "tiro_potencia_k", txt = "  Tiro: potencia", tipo = "num", paso = 0.05, lo = 0.8, hi = 1.8, def = 1.25, modo = "vivo" },
     { id = "tiro_altura_k", txt = "  Tiro: altura", tipo = "num", paso = 0.05, lo = 0.3, hi = 1.2, def = 0.7, modo = "vivo" },
