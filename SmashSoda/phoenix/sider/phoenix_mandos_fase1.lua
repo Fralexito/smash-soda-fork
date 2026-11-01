@@ -50,7 +50,9 @@
 --        abre «Editar Datos personales» de su usuario (PES lo bloquea ahí). Ver V9.administrar y V9.cuadradoNativosPausa.
 --  v0.9.62 · 1-nov-2026 CANDADO DEL MANDO 1 en la pausa (si su usuario de «Datos personales» cambia, se deshace con los
 --        métodos de PES +0x1B8/+0x1C0); el □ de los 9+ ya no usa la fila del mando 1 si hay otra; □ de los 1–8 en la pausa APAGADO.
-local m = { version = "0.9.62" }
+--  v0.9.63 · 1-nov-2026 SIN USUARIOS REPETIDOS: si L2/R2 de PES da a un mando 1–8 el usuario de un mando 9–16, se sigue
+--        hasta uno libre con el mismo método de PES (PES solo conoce los usuarios de los mandos 1–8).
+local m = { version = "0.9.63" }
 
 local G_HIDMAN, G_GESTOR, G_DI8 = 0x1437F0A58, 0x1436F3DC8, 0x1437F0AF8
 local CAPS = 0x14351A840
@@ -1831,6 +1833,33 @@ function V9.candadoMando1(enPausa)
     anotar(string.format("candado del mando 1 (pausa): su usuario pasó de %d a %d → %s", C.perfil + 1, p + 1, ok and "devuelto" or ("no se pudo (queda " .. tostring((u() or -1) + 1) .. ")")))
     if not ok then C.perfil = u() end
 end
+-- v0.9.63 (1-nov) SIN USUARIOS REPETIDOS ENTRE LOS 16 MANDOS. REA: L2/R2 de una fila de PES (FUN_140C67160 anterior /
+-- FUN_140C671F0 siguiente) saltan solo los usuarios de los mandos 1–8 (tabla de 8 en DAT_1436F5820): no saben de los 9–16,
+-- así que podían dar a un mando 1–8 el usuario de un amigo del 9–16 (1-nov: el mando 1 saltó al usuario 9). Ahora, si una
+-- fila 1–8 cae en un usuario que usa un mando 9+, se sigue en la misma dirección con el mismo método de PES hasta uno libre.
+-- (Los 9+ ya saltan los de los 1–8 desde la v0.9.48.) Menú y pausa; cada uno sigue eligiendo el suyo.
+V9.perfilPrevNat = {}
+function V9.sinRepetidos()
+    local nat = ladosNativos(); if not nat then V9.perfilPrevNat = {}; return end
+    if ptr(V9.SS_VT_FILA + 0x1B8) ~= V9.USU_A or ptr(V9.SS_VT_FILA + 0x1C0) ~= V9.USU_B then return end
+    local usados = {}
+    if activo then for _, e in ipairs(extras) do usados[PHX.PERFIL_DE[e.idx] or e.idx] = e.idx end end
+    for k = 0, NUEVO - 1 do
+        local n = nat[k]
+        if n and n.perfil and n.fila then
+            local prev = V9.perfilPrevNat[k]
+            if prev and n.perfil ~= prev and usados[n.perfil] then
+                local adelante = ((n.perfil - prev) % 32) < 16
+                local fn = ffi.cast("void(*)(uint64_t)", adelante and V9.USU_B or V9.USU_A)
+                local q = n.perfil
+                for _ = 1, 32 do fn(n.fila); q = u32(n.fila + V9.FILA_PERFIL); if not q or not usados[q] then break end end
+                anotar(string.format("mando %d: el usuario %d ya lo usa el mando %d → pasa al %s", k + 1, n.perfil + 1, usados[n.perfil] + 1, tostring((q or -1) + 1)))
+                n.perfil = q
+            end
+            V9.perfilPrevNat[k] = n.perfil
+        end
+    end
+end
 function V9.administrar(enMenu)
     local A, nat = V9.adm, ladosNativos()
     if not nat or not nat[0] then
@@ -2447,7 +2476,7 @@ function m.display_frame(ctx)
     if pedirCierre then pedirCierre = false; if mostrado then auto = { fase = "cerrar", cuadros = 0 } end end
     vigilarPantallaPES()
     -- v0.9: mientras se ve la Phoenix (en el menú), espejo de la de PES + mandos extra
-    if PHX.pantallaPESAbierta() then V9.candadoMando1(not mostrado and enPartidoPegado()) end   -- v0.9.62: antes que nada
+    if PHX.pantallaPESAbierta() then V9.candadoMando1(not mostrado and enPartidoPegado()); V9.sinRepetidos() end   -- v0.9.62/63: antes que nada
     if PHX.pantallaPESAbierta() then V9.administrar(mostrado and not enPartidoAhora) end   -- v0.9.61: mando 1 administrador (antes del espejo)
     if mostrado and not enPartidoAhora and #filas > 0 then V9.reflejarNativos(); V9.moverExtras() end
     if activo and #extras > 0 then V9.confirmarExtras() end   -- v0.9.60: ✕ de los mandos 9+ confirma
