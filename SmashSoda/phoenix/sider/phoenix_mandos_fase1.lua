@@ -44,7 +44,11 @@
 --  v0.9.38 · 23-oct-2026 ○ de los mandos 9–16 en la pantalla de lados de PES (pausa y menú): PES solo oye el ○ en sus 8
 --        FILAS (SideSelectEach, una por mando 0–7). Al ver ○ de un mando 9+ se llama al método «atrás» de una fila
 --        (FUN_140C68350, el mismo que llama PES) sobre el objeto SideSelect guardado. Sin teclado. Ver V9.atrasExtras.
-local m = { version = "0.9.60" }
+--  v0.9.61 · 1-nov-2026 MANDO 1 ADMINISTRADOR en la pantalla de lados (menú y pausa): palanca izquierda arriba/abajo
+--        elige la fila de otro mando, izquierda/derecha la mueve (filas 1–8 con el método de PES FUN_140C67970; 9+ en la
+--        réplica), R3 vuelve a la suya; su propia fila no se mueve mientras tanto. Además, en la PAUSA, □ de un mando 1–8
+--        abre «Editar Datos personales» de su usuario (PES lo bloquea ahí). Ver V9.administrar y V9.cuadradoNativosPausa.
+local m = { version = "0.9.61" }
 
 local G_HIDMAN, G_GESTOR, G_DI8 = 0x1437F0A58, 0x1436F3DC8, 0x1437F0AF8
 local CAPS = 0x14351A840
@@ -1118,6 +1122,7 @@ local function dibujarFila(v, f, elegida)
     local cx = med.cx[col + 1]
     pieza("m" .. (f.idx % 16), cx - 47, y + med.mando_y)
     local nombre = f.nombre
+    if PHX.admSel == f.idx then nombre = "> " .. nombre .. " <" end   -- v0.9.61: la fila que maneja el mando 1
     if f.lado ~= 1 and PHX.CAPITAN[CODIGO_LADO[f.lado]] == f.idx then nombre = nombre .. " CAP" end   -- v0.9.30
     while #nombre > 1 and medir(nombre) > 280 do nombre = nombre:sub(1, -2) end
     texto(nombre, cx - floor(medir(nombre) / 2), y + 8 - med.tope_mayuscula, med.color_nombre, 255)
@@ -1552,6 +1557,20 @@ V9.circuloPrevio, V9.cuadroAtras, V9.ultimoAtras = {}, 0, -100
 V9.CUAD_FILA, V9.CUAD_PERFIL, V9.CUAD_MSG_VT = 0x140C68470, 0x1434AC580, 0x1425B76A0
 V9.CUAD_ORIG = "40574883ec4048c7442420feffffff48895c2450488bf9e8a44c1d003b8794000000755e"   -- primeros 36 bytes (PES2021.exe)
 V9.cuadradoPrevio = {}
+-- v0.9.61 (1-nov, Fralex: «en medio partido ese apartado se bloquea»): en la PAUSA, □ de un mando 1–8 abre «Editar Datos
+-- personales» de SU usuario con el mismo camino que los 9+ (en el menú lo hace PES solo; aquí no se toca). EXPERIMENTAL.
+V9.cuadradoNatPrevio = {}
+function V9.cuadradoNativosPausa()
+    local nat = ladosNativos(); if not nat then V9.cuadradoNatPrevio = {}; return end
+    for k = 0, NUEVO - 1 do
+        local p = nat[k] and V9.boton(k, 2) or nil
+        if p and V9.cuadradoNatPrevio[k] == false then
+            anotar(string.format("□ del mando %d en la pausa → «Editar Datos personales» (usuario %s)", k + 1, tostring((nat[k].perfil or k) + 1)))
+            V9.editarPerfilDe(k, nat[k].perfil)
+        end
+        if p ~= nil then V9.cuadradoNatPrevio[k] = p end
+    end
+end
 function V9.cuadradoExtras()
     local abierta = PHX.pantallaPESAbierta()   -- BLINDAJE: solo con la pantalla de lados de PES abierta
     for _, e in ipairs(extras) do
@@ -1560,7 +1579,7 @@ function V9.cuadradoExtras()
         if p ~= nil then V9.cuadradoPrevio[e.idx] = p end
     end
 end
-function V9.editarPerfilDe(idx)
+function V9.editarPerfilDe(idx, perfilNativo)   -- v0.9.61: perfilNativo = el de la fila de PES (mandos 1–8 en la pausa)
     local fila, porque = V9.filaParaAtras()
     if not fila then anotar("□ del mando " .. (idx + 1) .. ": " .. tostring(porque)); return end
     if ptr(V9.SS_VT_FILA + 0x198) ~= V9.CUAD_FILA then anotar("□: vtable de fila distinta → no se hace nada"); return end
@@ -1572,7 +1591,7 @@ function V9.editarPerfilDe(idx)
     if not V9.cuadCodigoOk then return end
     local w = ptr(fila + 0x88)
     if not w or w < 0x10000 or u32(w + 0xA0) ~= u32(fila + 0x94) then anotar("□ del mando " .. (idx + 1) .. ": la pantalla no está en la página de filas"); return end
-    local perfil = PHX.PERFIL_DE[idx] or idx
+    local perfil = perfilNativo or PHX.PERFIL_DE[idx] or idx
     memory.write(V9.CUAD_PERFIL, u32le(perfil))
     local gestor = ffi.cast("uint64_t(*)(void)", 0x1414BEA50)()
     ffi.cast("void(*)(uint64_t, uint32_t)", 0x1414BF2D0)(gestor, idx)
@@ -1732,6 +1751,108 @@ function V9.moverExtras()
             V9.dirPrevia[f.idx] = { dx, dy }
         end
     end
+end
+-- v0.9.61 (1-nov, Fralex) «MANDO 1 ADMINISTRADOR» en la pantalla de lados (menú y pausa): el mando 1 de PES (el
+-- puesto 1 de Link: si se cede la PC, quien esté en el puesto 1) baja/sube con la palanca izquierda por las filas de
+-- los demás y mueve la elegida con izquierda/derecha sin sacar a nadie (su dueño la sigue pudiendo mover). R3 vuelve a
+-- su propia fila. Solo con la pantalla de lados abierta: fuera de ella (y jugando) R3 y la palanca son los de siempre.
+-- Las filas 1–8 se mueven con el método de PES «poner lado» (vtable de fila +0x148 = FUN_140C67970: respeta el máximo
+-- por lado y la página); las 9+ (solo en el menú, en la réplica) como si las moviera su mando. La fila propia del mando 1
+-- no se mueve mientras maneja otra: si PES la movió con esa misma palanca, se devuelve a su lado en el mismo cuadro.
+V9.adm = { sel = nil, propio = nil, prevX = 0, prevY = 0, prevR3 = false, sinLectura = false }
+V9.PONER_LADO, V9.PONER_LADO_ORIG = 0x140C67970, "48895c2420574883ec20418bf8488bd9e8ab571d003b8394"
+function V9.ponerLadoNativo(fila, lado, obj)
+    if V9.ponerLadoOk == nil then
+        local b = leer(V9.PONER_LADO, #V9.PONER_LADO_ORIG / 2)
+        V9.ponerLadoOk = (b ~= nil and bin2hex(b) == V9.PONER_LADO_ORIG and ptr(V9.SS_VT_FILA + 0x148) == V9.PONER_LADO)
+        if not V9.ponerLadoOk then anotar("mando 1 administrador: FUN_140C67970 no coincide con el exe → desactivado") end
+    end
+    if not V9.ponerLadoOk or not fila or lado < 0 or lado > 2 then return false end
+    if ptr(fila) ~= V9.SS_VT_FILA or (obj and ptr(fila + 0x38) ~= obj) then return false end
+    local w = ptr(fila + 0x88)
+    if not w or w < 0x10000 or u32(w + 0xA0) ~= u32(fila + 0x94) then return false end   -- la misma condición que pone PES
+    ffi.cast("void(*)(uint64_t, uint64_t, int32_t)", V9.PONER_LADO)(fila, 0, lado)
+    return u8(fila + V9.FILA_LADO) == lado
+end
+-- palanca izquierda / cruceta y R3 del mando 1 (DirectInput, distribución tipo Xbox: L3 = botón 8, R3 = botón 9)
+function V9.mando1()
+    local dev = V9.dispositivo(0); if not dev then return nil end
+    local w = ptr(dev + 0x20); if not w or w < 0x10000 then return nil end
+    local s = copiar(w + V9.DI_ESTADO, 0x50); if not s then return nil end
+    local p, b = ffi.cast("uint32_t*", s), ffi.cast("uint8_t*", s)
+    local x, y, pov = tonumber(p[0]), tonumber(p[1]), tonumber(p[8])
+    if x == 0 and y == 0 then return nil end                 -- mando virtual sin datos (como en direccionExtra)
+    local dx = (x < 0x1000) and -1 or ((x > 0xF000) and 1 or 0)
+    local dy = (y < 0x1000) and -1 or ((y > 0xF000) and 1 or 0)
+    if pov <= 36000 then
+        if pov >= 4500 and pov <= 13500 then dx = 1 elseif pov >= 22500 and pov <= 31500 then dx = -1 end
+        if pov <= 4500 or pov >= 31500 then dy = -1 elseif pov >= 13500 and pov <= 22500 then dy = 1 end
+    end
+    return dx, dy, b[0x30 + 9] >= 0x80
+end
+function V9.admElegir(nuevo, nat, motivo)
+    local A = V9.adm
+    if nuevo == A.sel then return end
+    if nuevo and not A.sel then A.propio = nat and nat[0] and nat[0].lado end   -- su lado, para que no se mueva
+    A.sel = nuevo; PHX.admSel = nuevo   -- PHX: lo lee dibujarFila (V9 se declara después)
+    if nuevo then
+        for k, f in ipairs(filas) do if f.idx == nuevo then sel = k end end
+        if #filas > P.VISIBLES then desplaz = math.max(0, math.min(#filas - P.VISIBLES, sel - P.VISIBLES)) end
+    else A.propio = nil end
+    anotar(string.format("mando 1 administrador: %s (%s)", nuevo and ("maneja la fila del mando " .. (nuevo + 1)) or "vuelve a su fila", motivo))
+    refrescar()
+end
+function V9.administrar(enMenu)
+    local A, nat = V9.adm, ladosNativos()
+    if not nat or not nat[0] then
+        if A.sel then A.sel, A.propio, PHX.admSel = nil, nil, nil; refrescar(); anotar("mando 1 administrador: pantalla de lados cerrada → vuelve a su fila") end
+        A.prevX, A.prevY, A.prevR3 = 0, 0, false
+        return
+    end
+    local dx, dy, r3 = V9.mando1()
+    if dx == nil then
+        if not A.sinLectura then A.sinLectura = true; anotar("mando 1 administrador: no se puede leer el mando 1 por DirectInput (¿mando físico sin Link?) → sin modo administrador") end
+        return
+    end
+    -- filas que puede manejar: en el menú todas las de la réplica (1–16); en la pausa, las de PES (1–8)
+    local lista = {}
+    if enMenu and #filas > 0 then for _, f in ipairs(filas) do lista[#lista + 1] = f.idx end
+    else for k = 0, NUEVO - 1 do if nat[k] then lista[#lista + 1] = k end end end
+    local actual, pos = A.sel or 0, 1
+    for i, idx in ipairs(lista) do if idx == actual then pos = i end end
+    if dy ~= 0 and A.prevY == 0 and dx == 0 then           -- arriba/abajo «puro» (en diagonal cuenta como lado)
+        local np = math.max(1, math.min(#lista, pos + dy))
+        local idx = lista[np]
+        if idx and idx ~= actual then V9.admElegir(idx ~= 0 and idx or nil, nat, dy > 0 and "palanca abajo" or "palanca arriba") end
+    end
+    if r3 and not A.prevR3 and A.sel then V9.admElegir(nil, nat, "R3") end
+    if A.sel then
+        -- su propia fila se queda donde estaba (PES la mueve con la misma palanca)
+        if A.propio and nat[0].lado ~= A.propio then V9.ponerLadoNativo(nat[0].fila, A.propio) end
+        if dx ~= 0 and A.prevX == 0 then
+            if A.sel < NUEVO then
+                local t = nat[A.sel]
+                if t then
+                    local l = math.max(0, math.min(2, t.lado + dx))
+                    if l ~= t.lado then
+                        local ok = V9.ponerLadoNativo(t.fila, l)
+                        anotar(string.format("mando 1 administrador: fila del mando %d → lado %d%s", A.sel + 1, l, ok and "" or " (PES no lo dejó: lado lleno o página distinta)"))
+                    end
+                else V9.admElegir(nil, nat, "esa fila ya no está") end
+            else
+                for _, f in ipairs(filas) do
+                    if f.idx == A.sel then
+                        local l = math.max(0, math.min(2, f.lado + dx))
+                        if l ~= f.lado then
+                            f.lado = l; plan[f.idx] = l; actualizarDatos(); refrescar()
+                            anotar(string.format("mando 1 administrador: fila del mando %d → lado %d", f.idx + 1, l))
+                        end
+                    end
+                end
+            end
+        end
+    end
+    A.prevX, A.prevY, A.prevR3 = dx, dy, r3
 end
 local function cambiarLado(d)
     local f = filas[sel]; if not f then return end
@@ -2297,10 +2418,12 @@ function m.display_frame(ctx)
     if pedirCierre then pedirCierre = false; if mostrado then auto = { fase = "cerrar", cuadros = 0 } end end
     vigilarPantallaPES()
     -- v0.9: mientras se ve la Phoenix (en el menú), espejo de la de PES + mandos extra
+    if PHX.pantallaPESAbierta() then V9.administrar(mostrado and not enPartidoAhora) end   -- v0.9.61: mando 1 administrador (antes del espejo)
     if mostrado and not enPartidoAhora and #filas > 0 then V9.reflejarNativos(); V9.moverExtras() end
     if activo and #extras > 0 then V9.confirmarExtras() end   -- v0.9.60: ✕ de los mandos 9+ confirma
     if activo and #extras > 0 then V9.atrasExtras() end   -- v0.9.38: ○ de los mandos 9+ en la pantalla de lados de PES
-    if activo and #extras > 0 then V9.cuadradoExtras() end   -- v0.9.51: □ de los mandos 9+ edita SU perfil (v0.9.56: también en la pausa)
+    if activo and #extras > 0 then V9.cuadradoExtras() end
+    if not mostrado and enPartidoPegado() and PHX.pantallaPESAbierta() then V9.cuadradoNativosPausa() end   -- v0.9.61: □ de los mandos 1–8 en la pausa   -- v0.9.51: □ de los mandos 9+ edita SU perfil (v0.9.56: también en la pausa)
     -- v0.9.34: en la PAUSA del partido (sin la pantalla Phoenix) los menús de PES solo escuchan a los mandos 1–8: ✕/○ de
     -- un mando 9+ se pasan como teclas. Solo con el partido visto y SIN ranuras jugando (pausa), nunca jugando.
     if activo and #extras > 0 and not mostrado and enPartidoPegado() then
