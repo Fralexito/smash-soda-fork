@@ -175,8 +175,22 @@ class Servidor:
             return "1" if v else "0"
         return "" if v is None else str(v)
 
+    PRIVACIDADES = ("PRIVACY_POLICY", "PRIVACY_NOTICE", "PRIVACY_POLICY_CALIFORNIA",
+                    "PRIVACY_POLICY_JAPAN")
+
+    @classmethod
+    def _nacion(cls, n):
+        # C (30-oct): has_area es el literal "YES"/"NO" y privacy_kind uno de los enums de
+        # arriba. Con "1"/"0" el cliente toma la ruta de zonas, la halla vacía y da error 4.
+        n = {k: cls._texto(v) for k, v in n.items()}
+        n["has_area"] = "YES" if n.get("has_area", "NO").upper() in ("YES", "1", "TRUE") else "NO"
+        if n.get("privacy_kind") not in cls.PRIVACIDADES:
+            n["privacy_kind"] = "PRIVACY_POLICY"
+        return n
+
     async def c_cmd_get_eula_nation_list(self, s, m):
-        naciones = [{k: self._texto(v) for k, v in n.items()} for n in self.cfg["naciones"]]
+        # Nunca vacía: el cliente aborta con una lista de 0 elementos
+        naciones = [self._nacion(n) for n in self.cfg["naciones"]]
         return {"nation_list": [Empaquetado(n) for n in naciones],
                 "nation_list_num": len(naciones)}
 
@@ -189,6 +203,8 @@ class Servidor:
         return {"area_list": [Empaquetado(z) for z in zonas], "area_list_num": len(zonas)}
 
     async def c_cmd_get_eula_nation_code(self, s, m):
+        # nation_code = país YA guardado: si coincide con la lista, el cliente salta la pantalla;
+        # "" obliga a elegir
         return {"nation_code": self._texto(self.cfg["nacion"]),
                 "area_code": self._texto(self.cfg.get("area", ""))}
 

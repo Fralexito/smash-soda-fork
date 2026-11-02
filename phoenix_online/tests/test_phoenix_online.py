@@ -172,7 +172,8 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         s, env = cliente(self.srv)
         await self.srv.recibir(s, 1, {"msgid": "CMD_GET_EULA_NATION_LIST", "rqid": 1})
         self.assertEqual(env[-1][1]["nation_list"][0].valor,
-                         {"nation_code": "0", "has_area": "0", "name": "Peru"})
+                         {"nation_code": "0", "has_area": "NO", "name": "Peru",
+                          "privacy_kind": "PRIVACY_POLICY"})
         await self.srv.recibir(s, 2, {"msgid": "CMD_GET_EULA_NATION_CODE", "rqid": 2})
         self.assertEqual((env[-1][1]["nation_code"], env[-1][1]["area_code"]), ("0", ""))
 
