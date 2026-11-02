@@ -96,4 +96,7 @@ namespace phoenix {
 	/// Peor pérdida de paquetes entre los invitados, en décimas de por ciento (50 = 5 %). La escribe Hosting cada 2 s.
 	inline std::atomic<int> g_perdidaPorMil{ 0 };
 
+	/// 0.3.60: chat de los invitados silenciado (solo en memoria; se apaga al reiniciar Link). El chat del anfitrión y los comandos siguen.
+	inline std::atomic<bool> g_chatSilenciado{ false };
+
 }

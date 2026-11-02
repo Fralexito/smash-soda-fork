@@ -52,5 +52,5 @@ Frank quiere, más adelante, **cambiar todo el diseño de Link a algo mucho más
 3. Un solo diseño de prueba (maqueta) antes de tocar el código; mantener la identidad Phoenix (#05060F, cian #00E5FF, púrpura #7B2CBF).
 
 ## Pendiente de C++ (no se puede sin compilar con cmake)
-- Acción `sala.silenciarChat` (atajo Ctrl+Shift+M, quitado de la interfaz en 0.3.59 hasta que exista).
+- (Hecho en 0.3.60) `sala.silenciarChat` y atajo Ctrl+Shift+M: ya existen; falta probarlos en una sala real.
 - Acción `mandos.sincronizarLadosPes` (sortear/invertir equipos que se vean en Local/Visita de PES): hoy el hook no manda nada.

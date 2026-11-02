@@ -16,6 +16,7 @@ export const LISTA_ATAJOS_MODERADOR = [
   { teclas: "Ctrl + Shift + I", accion: "Invertir Lados (A ⇄ B)", desc: "Intercambia los lados de ambos equipos (para el partido de vuelta).", icono: "intercambio" },
   { teclas: "Ctrl + Shift + R", accion: "Rotar Rey de la Pista", desc: "Fuerza la rotación del rey y sienta a los siguientes retadores.", icono: "trofeo" },
   { teclas: "Ctrl + Shift + S", accion: "Escudo Streamer (Anti-Doxxing)", desc: "Censura o revela IPs, correos y enlaces en vivo.", icono: "candado" },
+  { teclas: "Ctrl + Shift + M", accion: "Silenciar Chat de Invitados", desc: "Silencia o reactiva el chat de los invitados (el tuyo y los comandos siguen).", icono: "usuario" },
   { teclas: "Ctrl + Shift + K", accion: "Chuleta de Atajos", desc: "Abre esta ventana de referencia rápida.", icono: "buscar" },
 ];
 
@@ -72,6 +73,20 @@ export function useMatrizAtajosModerador(s) {
         } else {
           avisar(t("👑 El Modo Rey de la Pista está apagado. Actívalo en Puestos.", "👑 King of the Hill is off. Turn it on in Seats."), "warn");
         }
+      }
+
+      // 5b. Ctrl + Shift + M -> Silenciar / reactivar el chat de invitados (sala.silenciarChat)
+      else if (tecla === "M") {
+        e.preventDefault();
+        const silenciar = !m?.sala?.chatSilenciado;
+        const r = await accion("sala.silenciarChat", { silenciado: silenciar });
+        if (r === null) return;
+        avisar(
+          silenciar
+            ? t("🔇 Chat de invitados SILENCIADO (Ctrl+Shift+M)", "🔇 Guest chat MUTED (Ctrl+Shift+M)")
+            : t("🔊 Chat de invitados ACTIVO (Ctrl+Shift+M)", "🔊 Guest chat ON (Ctrl+Shift+M)"),
+          silenciar ? "warn" : "ok"
+        );
       }
 
       // 6. Ctrl + Shift + K -> Chuleta de Atajos

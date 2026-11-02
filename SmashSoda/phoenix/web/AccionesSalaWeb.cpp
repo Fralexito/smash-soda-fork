@@ -261,6 +261,12 @@ namespace phoenix::web {
 			return json::object();
 		});
 
+		// 0.3.60: silenciar el chat de los invitados (el del anfitrión y los comandos siguen). Solo en memoria.
+		p.registrar("sala.silenciarChat", [](const json& d, uint64_t) -> std::optional<json> {
+			g_chatSilenciado.store(booleano(d, "silenciado"));
+			return json::object();
+		});
+
 		// Registro de partidas (phoenix/host/RegistroSesion): resumen de la última y abrir la carpeta
 		p.registrar("sesiones.ultima", [](const json&, uint64_t) -> std::optional<json> {
 			std::wstring mejor;
