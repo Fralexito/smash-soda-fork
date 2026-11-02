@@ -184,6 +184,15 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         m = env[-1][1]
         self.assertEqual((m["area_list_num"], m["area_list"][0].valor), (1, {"area_code": "7", "name": "Lima"}))
 
+    async def test_avisos_nunca_vacios(self):
+        s, env = cliente(self.srv)
+        await self.srv.recibir(s, 1, {"msgid": "CMD_GET_GLOBALINFOTITLELIST", "rqid": 1})
+        m = env[-1][1]
+        self.assertEqual(m["annnounce_info_list_num"], 1)
+        self.assertEqual(m["announce_info_list"][0].valor["announce_type"], "NO_BANNER_INFO")
+        await self.srv.recibir(s, 2, {"msgid": "CMD_GET_INFOBODY", "rqid": 2, "announce_id": 1})
+        self.assertIn("body", env[-1][1]["announce_info"].valor)
+
     async def test_confirmacion_offline(self):
         s, env = cliente(self.srv)
         await self.srv.recibir(s, 1, {"msgid": "CMD_JOIN_OFFLINE_MODE", "rqid": 5})

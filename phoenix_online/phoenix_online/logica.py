@@ -220,16 +220,37 @@ class Servidor:
         ]
         return {"server_num": len(lista), "svrlist": [Empaquetado(x) for x in lista]}  # P: bin
 
+    AVISO_POR_DEFECTO = {"title": "Phoenix Online", "body": "Bienvenido al servidor Phoenix."}
+
+    def _avisos(self):
+        # Sin avisos el cliente muestra «Lista de imágenes: no hay datos»: siempre al menos uno
+        return self.cfg.get("anuncios") or [self.AVISO_POR_DEFECTO]
+
+    @staticmethod
+    def _aviso_basico(a, n):
+        # C (30-oct): announce_type es un enum de texto; sin imagen = NO_BANNER_INFO.
+        # date entero de 32 bits; evoked_text vacío.
+        return {"announce_type": "NO_BANNER_INFO", "title": str(a.get("title", "")),
+                "announce_id": int(a.get("announce_id", n)), "priority": int(a.get("priority", 0)),
+                "popup_type": "ONCE", "weekly_info_type": "MYCLUB_AGENT", "event_id": 0,
+                "date": int(a.get("date", 0)), "evoked_text": ""}
+
     async def c_cmd_get_globalinfotitlelist(self, s, m):
-        avisos = self.cfg.get("anuncios", [])
-        return {"announce_info_list": [Empaquetado(a) for a in avisos],
+        avisos = [Empaquetado(self._aviso_basico(a, i)) for i, a in enumerate(self._avisos(), 1)]
+        return {"announce_info_list": avisos,
                 "annnounce_info_list_num": len(avisos)}  # tres «n», así lo lee el cliente
 
     async def c_cmd_get_privateinfotitlelist(self, s, m):
         return {"announce_info_list": [], "annnounce_info_list_num": 0}
 
     async def c_cmd_get_infobody(self, s, m):
-        return {}  # P: campos del cuerpo de anuncio
+        avisos = self._avisos()
+        n = int(m.get("announce_id", 1) or 1)
+        a = avisos[n - 1] if 0 < n <= len(avisos) else avisos[0]
+        return {"announce_info": Empaquetado({
+            "announce_basic_info": Empaquetado(self._aviso_basico(a, n)),
+            "body": str(a.get("body", "")), "link_url": "", "direct_move": "",
+            "use_template": "", "template_id": 0})}
 
     async def c_cmd_get_server_env(self, s, m):
         return {"proto_opt": 1 if self.cfg.get("turn") else 0}
