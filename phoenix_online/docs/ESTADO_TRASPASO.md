@@ -33,3 +33,7 @@
 - Revisar el hosts: si siguen las 5 líneas PHOENIX_PRUEBA, quitarlas con `RESTAURAR_HOSTS.ps1` (como administrador) en cuanto acabe la prueba.
 - Pista del error del país: leído por memoria, el vector de naciones del login manager estaba **vacío** en el momento de confirmar. Sospecha: la lista que se dibuja no es la misma que usa fn 140fe2fb0, o se vacía al cerrar la conexión (DISCONNECT MOV) antes de que se elija el país.
 - **Prueba del 29-oct a las 20:19** (con has_area "1" y la zona Lima): el error sigue igual y no llega CMD_GET_EULA_AREA_LIST. La pantalla de zonas (MenuSelectEulaArea, fn 140fe23a0 → 140fe2bc0 pide las zonas) nunca se abre, porque el error 4 salta antes, en 140fe2920. **Siguiente paso:** con REA, averiguar la condición que elige 140fe3f50 o 140fe2920 (estado del manager en +0x94 == 2) y qué dato del servidor la pone.
+
+## 02-nov (con permiso de Frank para estudiar PESBUL)
+- Arreglado el error del país: `has_area` debe ser "YES"/"NO" y `privacy_kind` "PRIVACY_POLICY" (commit a30538a). Ahora sale «Lista de imágenes: no hay datos», porque la lista de avisos estaba vacía. Desde c91ff89 se manda siempre 1 aviso (NO_BANNER_INFO) y se responde CMD_GET_INFOBODY. **Falta probarlo.**
+- El .BAT de PESBUL redirige 7 dominios. Faltan en nuestro hosts y en el Core los de NTL: `ntl.service.konami.net`, `ntleu.service.konami.net`, `ntljp.service.konami.net`. Añadirlos a ACTIVAR_PRUEBA_ONLINE.ps1 y a redireccion_online (ya cubre *.konami.net).
