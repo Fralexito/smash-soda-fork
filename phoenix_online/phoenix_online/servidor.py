@@ -110,7 +110,10 @@ async def http(srv, reader, writer):
             writer.write(f"HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\n"
                          f"Content-Length: {len(datos)}\r\nConnection: close\r\n\r\n".encode() + datos)
             return
-        respuesta = srv.respuesta_http(form)
+        if ruta_sin_query.lstrip("/").startswith("livedata/"):
+            respuesta = srv.respuesta_livedata(ruta_sin_query.rstrip("/").rsplit("/", 1)[-1], form)
+        else:
+            respuesta = srv.respuesta_http(form)
         if respuesta is not None:
             # P: formato de respuesta HTTP = MessagePack (como TURN); confirmar en la captura
             datos, tipo = msgpack_min.packb(respuesta), "application/x-msgpack"

@@ -173,7 +173,15 @@ class Servidor:
                 "ulist": [Empaquetado({"type": t, "url": u}) for t, u in urls.items()]}
 
     URLS_EULA = (("EULA_PES", "/eula/pes"), ("EULA_MYCLUB", "/eula/myclub"),
-                 ("EULA_PRIVACY_POLICY", "/eula/privacy-policy"))
+                 ("EULA_PRIVACY_POLICY", "/eula/privacy-policy"),
+                 # C (PESBUL R7.3.172): tras crear el usuario el cliente busca la clave exacta
+                 # «FLOW» (y las LiveDataSet*); si falta: «Error al descargar los nuevos archivos»
+                 ("FLOW", "/livedata/LiveDataSetFlow"),
+                 ("LiveDataSetFlow", "/livedata/LiveDataSetFlow"),
+                 ("LiveDataSetFlowOnMode", "/livedata/LiveDataSetFlowOnMode"),
+                 ("LiveDataSetFlowOffMode", "/livedata/LiveDataSetFlowOffMode"),
+                 ("LiveDataSetFlowExhibition", "/livedata/LiveDataSetFlowExhibition"),
+                 ("LiveDataSetEditData", "/livedata/LiveDataSetEditData"))
     VERSIONES_EULA = ("eula_version", "eula_myclub_version", "eula_privacy_policy_version")
     VERSIONES_EULA_CERO = ("eula_privacy_notice_version", "eula_privacy_policy_california_version",
                            "eula_privacy_policy_japan_version")
@@ -582,6 +590,30 @@ class Servidor:
         return {"is_local_gamerelay_player": False, "gamerelay_register_url_data": "[]",
                 "build_gamerelay_num_for_1vs1": 0, "build_gamerelay_num_for_3vs3": 0,
                 "build_gamerelay_num_for_11vs11": 0}
+
+    def respuesta_livedata(self, flujo, formulario):
+        """Datos en vivo por HTTP: «no hay actualización» con las versiones del juego (P, PESBUL)."""
+        log.info("HTTP livedata %s campos=%s", flujo, sorted(formulario))
+        return {"msgid": formulario.get("msgid") or flujo, "rqid": int(formulario.get("rqid", 0) or 0),
+                "result": NOERR, "flow": flujo, "urltype": flujo, "status": "online",
+                "no_update": True, "update_required": False, "maintenance": False,
+                "live_update_status": "ok", "game_version": "1.07.02", "exe_version": "1.07.02",
+                "data_pack_version": "DP07", "data_pack_number": "7.00"}
+
+    # ---------- tienda y logros (cuenta nueva: todo vacío) ----------
+    # C (PESBUL R7.3.124): las *_list son ARRAYS msgpack nativos; como bin el cliente lee un
+    # número de elementos basura y revienta
+    async def c_cmd_get_store_product_list(self, s, m):
+        return {"product_list": [], "product_list_num": 0}
+
+    async def c_cmd_get_gp_achievement(self, s, m):
+        return {"all_gp": 0, "all_achievement_bit_array": [], "pes_point": 0}
+
+    async def c_cmd_get_store_transaction_state(self, s, m):
+        return {"state": 0, "product_id": "", "use_num": 0, "possession_num": 0,
+                "live_transaction_id": "", "transaction_id": "",
+                "used_present_product_id_list": [], "used_present_product_id_list_num": 0,
+                "steam_order_id": ""}
 
     def respuesta_http(self, formulario):
         """Comandos que el cliente manda por WinHTTP (base CommandObjectHttp, REA 29-oct).
