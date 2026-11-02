@@ -143,7 +143,12 @@ class Servidor:
             return
         manejador = getattr(self, "c_" + msgid.lower(), None)
         if manejador is not None:
-            extra = await manejador(sesion, msg)
+            try:
+                extra = await manejador(sesion, msg)
+            except Exception:
+                # un fallo nuestro no debe cerrar la conexión: el cliente lo vive como desconexión
+                log.exception("fallo en %s", msgid)
+                extra = {"result": "ERR_SERVERNOTREADY"}
             if extra is None:
                 return  # el manejador ya respondió o no responde
         elif msgid in CONFIRMACIONES:

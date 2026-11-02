@@ -192,6 +192,12 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(Servidor._steam_de({"np_account_id": "0", "username": "3a660"}),
                          "000000000003a660")
 
+    async def test_crear_jugador_dos_veces(self):
+        d = self.srv.datos
+        a = d.crear_jugador("000000000003a660", "FRALEX")
+        b = d.crear_jugador("000000000003a660", "FRALEX")
+        self.assertEqual(a["pid"], b["pid"])
+
     async def test_nacion_siempre_cadena(self):
         self.srv.cfg = dict(CFG, naciones=[{"nation_code": 0, "has_area": False, "name": "Peru"}],
                             nacion=0)

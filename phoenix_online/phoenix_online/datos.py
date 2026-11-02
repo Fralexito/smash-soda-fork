@@ -41,6 +41,11 @@ class Datos:
         v = (self.vinculos or {}).get(steam_hex.lower())
         if v and v.get("pname"):
             pname = v["pname"]  # el nombre manda la web Phoenix
+        ya = self.jugador(steam_hex)
+        if ya:
+            # C (02-nov): el cliente puede volver a pedir crear (p. ej. tras un cierre antes de
+            # guardar); se reutiliza el perfil en vez de romper por la clave única
+            return ya
         cur = self.db.execute("insert into jugadores(steam_hex, pname, creado) values (?,?,?)",
                               (steam_hex.lower(), pname, time.time()))
         self.db.commit()
