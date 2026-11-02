@@ -75,6 +75,11 @@ async def atender(srv, codec, svrtype, carpeta, reader, writer):
         log.info("[%s] desconecta %s", svrtype, direccion)
 
 
+EULA_HTML = ("<!doctype html><html lang=\"es\"><head><meta charset=\"utf-8\"><title>Phoenix Online</title>"
+             "</head><body><h1>Phoenix Online</h1><p>Servidor comunitario de PES 2021, sin relación con "
+             "KONAMI. Documento: %s</p></body></html>")
+
+
 async def http(srv, reader, writer):
     """HTTP mínimo: imágenes de anuncios y comandos HTTP (TURN, AUTH_STEAM...)."""
     try:
@@ -99,6 +104,12 @@ async def http(srv, reader, writer):
         with open(os.path.join(carpeta, "http.jsonl"), "a", encoding="utf-8") as f:
             f.write(json.dumps({"t": time.time(), "linea": linea, "cabeceras": cabeceras,
                                 "cuerpo": cuerpo.decode("latin-1")}, ensure_ascii=False) + "\n")
+        if metodo == "GET" and ruta_sin_query.startswith("/eula"):
+            # Textos legales que el cliente muestra tras elegir país (EULA_PES/MYCLUB/PRIVACY_POLICY)
+            datos = (EULA_HTML % ruta_sin_query).encode("utf-8")
+            writer.write(f"HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\n"
+                         f"Content-Length: {len(datos)}\r\nConnection: close\r\n\r\n".encode() + datos)
+            return
         respuesta = srv.respuesta_http(form)
         if respuesta is not None:
             # P: formato de respuesta HTTP = MessagePack (como TURN); confirmar en la captura

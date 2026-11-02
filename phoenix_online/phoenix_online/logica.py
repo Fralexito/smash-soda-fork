@@ -157,10 +157,18 @@ class Servidor:
 
     # ---------- ConnectGate (§11.3) ----------
     async def c_cmd_get_urllist(self, s, m):
-        urls = self.cfg["urls"]  # {type: url}; debe incluir TOPINFO, BANNER, GET_TURN_SERVER_LIST...
+        urls = dict(self.cfg["urls"])  # {type: url}; debe incluir TOPINFO, BANNER, GET_TURN_SERVER_LIST...
+        # C (PESBUL, 02-nov): justo tras confirmar el país el cliente busca EULA_PES, EULA_MYCLUB y
+        # EULA_PRIVACY_POLICY en esta lista; si falta una da «Se ha producido un error» sin red.
+        base = self.cfg.get("http_base") or next(
+            (u.rsplit("/", 1)[0] for u in urls.values() if u.startswith("http")), "http://127.0.0.1:5000")
+        for t, ruta in self.URLS_EULA:
+            urls.setdefault(t, base + ruta)
         return {"url_num": len(urls),
                 "ulist": [Empaquetado({"type": t, "url": u}) for t, u in urls.items()]}
 
+    URLS_EULA = (("EULA_PES", "/eula/pes"), ("EULA_MYCLUB", "/eula/myclub"),
+                 ("EULA_PRIVACY_POLICY", "/eula/privacy-policy"))
     VERSIONES_EULA = ("eula_version", "eula_myclub_version", "eula_privacy_policy_version")
     VERSIONES_EULA_CERO = ("eula_privacy_notice_version", "eula_privacy_policy_california_version",
                            "eula_privacy_policy_japan_version")

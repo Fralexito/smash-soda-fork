@@ -120,7 +120,7 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         s, env = cliente(self.srv)
         await self.srv.recibir(s, 42, {"msgid": "CMD_GET_URLLIST", "rqid": 9})
         seq, m = env[-1]
-        self.assertEqual((seq, m["rqid"], m["result"], m["url_num"]), (42, 9, "NOERR", 3))
+        self.assertEqual((seq, m["rqid"], m["result"], m["url_num"]), (42, 9, "NOERR", 6))
         self.assertTrue(all(isinstance(x, Empaquetado) for x in m["ulist"]))
 
     async def test_login_real_steam_challenge_account(self):
@@ -176,6 +176,14 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
                          ("0", "0", "0"))
         self.assertEqual(m["eula_privacy_policy_japan_version"], "0")
         self.assertTrue(all(isinstance(v, str) for k, v in m.items() if k.endswith("version")))
+
+    async def test_urllist_trae_las_tres_eula(self):
+        s, env = cliente(self.srv)
+        await self.srv.recibir(s, 1, {"msgid": "CMD_GET_URLLIST", "rqid": 1})
+        tipos = [x.valor["type"] for x in env[-1][1]["ulist"]]
+        for t in ("EULA_PES", "EULA_MYCLUB", "EULA_PRIVACY_POLICY"):
+            self.assertIn(t, tipos)
+        self.assertEqual(env[-1][1]["url_num"], len(tipos))
 
     async def test_nacion_siempre_cadena(self):
         self.srv.cfg = dict(CFG, naciones=[{"nation_code": 0, "has_area": False, "name": "Peru"}],
