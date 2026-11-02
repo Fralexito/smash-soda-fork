@@ -41,4 +41,5 @@ class ProtocoloStun(asyncio.DatagramProtocol):
         if r is None:
             log.info("STUN: paquete no reconocido de %s (%d B) %s", addr, len(data), data[:16].hex())
             return
+        log.info("STUN binding de %s:%s (%d B)", addr[0], addr[1], len(data))
         self.t.sendto(r, addr)
