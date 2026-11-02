@@ -144,7 +144,10 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         # Tras CREATE_PLAYER, GET_PLAYER_DATA debe decir has_data (si no, el cliente vuelve a crear)
         s, env = await self.entrar("0110000100000077")
         await self.srv.recibir(s, 9, {"msgid": "CMD_GET_PLAYER_DATA", "rqid": 9})
-        self.assertEqual(env[-1][1]["has_data"], "1")
+        self.assertEqual(env[-1][1]["has_data"], "true")
+        pn = env[-1][1]["pname"].valor
+        self.assertIsInstance(pn["psn_user_id"], Empaquetado)
+        self.assertEqual(pn["psn_user_id"].valor["is_valid_cache"], "1")
 
     async def test_check_local_gamerelay(self):
         s, env = cliente(self.srv)

@@ -346,7 +346,8 @@ class Servidor:
         if not j:
             return {"has_data": "0"}
         self._registrar(s, j)
-        return {"has_data": "1", "pid": j["pid"],
+        # C (PESBUL, lector probado): has_data "true"; cualquier otro valor = crear perfil
+        return {"has_data": "true", "pid": j["pid"],
                 "pname": Empaquetado(self._identidad(s, j["pname"])),
                 "account_id": self._numero_cuenta(s)}
 
@@ -359,9 +360,14 @@ class Servidor:
 
     @classmethod
     def _identidad(cls, s, nombre):
-        # nunca SteamID en campos de Xbox/PSN: xuid_one y psn_user_id vacíos
-        return {"name": nombre, "xuid_one": "", "psn_user_id": "", "account_id": cls._numero_cuenta(s),
-                "online_id": nombre, "is_valid_cache": "1", "is_deleted": "0"}
+        # C (crash 02-nov en 141d3fe49 + PESBUL): psn_user_id NO es texto sino otro MessagePack
+        # empaquetado (bin) con account_id/online_id/is_valid_cache; con "" el lector revienta.
+        # xuid_one "0" (nunca el SteamID en el campo de Xbox).
+        cuenta = cls._numero_cuenta(s)
+        return {"name": nombre, "xuid_one": "0",
+                "psn_user_id": Empaquetado({"account_id": cuenta, "online_id": nombre,
+                                            "is_valid_cache": "1"}),
+                "is_deleted": "0"}
 
     async def c_cmd_create_player(self, s, m):
         nombre = m.get("pname") or m.get("name") or f"Phoenix_{(s.steam_hex or '')[-4:]}"
