@@ -375,6 +375,11 @@ class Servidor:
         s.steam_hex = steam_hex
         s.versiones = {k: m.get(k) for k in ("patch_version", "dlc_version",
                                               "livedata_version", "extradata_version")}
+        # La conexión MENU (matchmaking) no pide GET_PLAYER_DATA: sin esto la tarjeta salía
+        # «Phoenix» en vez del nombre del jugador (captura 02-nov)
+        j = self.datos.jugador(steam_hex)
+        if j is not None:
+            self._registrar(s, j)
         return {}
 
     async def c_cmd_auth_steam(self, s, m):

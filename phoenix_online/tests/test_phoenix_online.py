@@ -304,6 +304,16 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         r = self.srv.respuesta_http({"msgid": "CMD_GET_AVATAR_HTTP", "rqid": "3", "pid": "7"})
         self.assertEqual((r["avatar_data_size"], r["avatar_md5"]), (49152, hashlib.md5(img).hexdigest()))
 
+    async def test_tarjeta_con_nombre_en_conexion_menu(self):
+        await self.entrar("A1")
+        self.srv.datos.crear_jugador(Servidor._steam_de({"username": "A1"}) or "a1", "FRALEX")
+        s, env = cliente(self.srv)
+        await self.srv.recibir(s, 1, {"msgid": "CMD_LOGIN", "rqid": 1, "username": "A1"})
+        await self.srv.recibir(s, 2, {"msgid": "CMD_START_MATCHING", "rqid": 2})
+        tarjeta = msgpack_min.unpackb(msgpack_min.packb(env[-1][1]["member"][0].valor))
+        nombre = msgpack_min.unpackb(tarjeta["pname"])["name"]
+        self.assertEqual(nombre, "FRALEX")
+
     async def test_partida_rapida_cancelar(self):
         a, ea = await self.entrar("A1")
         await self.srv.recibir(a, 21, {"msgid": "CMD_START_MATCHING", "rqid": 2})
