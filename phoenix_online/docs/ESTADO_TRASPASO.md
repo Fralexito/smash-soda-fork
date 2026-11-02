@@ -37,3 +37,22 @@
 ## 02-nov (con permiso de Frank para estudiar PESBUL)
 - Arreglado el error del país: `has_area` debe ser "YES"/"NO" y `privacy_kind` "PRIVACY_POLICY" (commit a30538a). Ahora sale «Lista de imágenes: no hay datos», porque la lista de avisos estaba vacía. Desde c91ff89 se manda siempre 1 aviso (NO_BANNER_INFO) y se responde CMD_GET_INFOBODY. **Falta probarlo.**
 - El .BAT de PESBUL redirige 7 dominios. Faltan en nuestro hosts y en el Core los de NTL: `ntl.service.konami.net`, `ntleu.service.konami.net`, `ntljp.service.konami.net`. Añadirlos a ACTIVAR_PRUEBA_ONLINE.ps1 y a redireccion_online (ya cubre *.konami.net).
+
+## 02-nov noche — HITO: matchmaking de Partida rápida (un jugador) completo
+Recorrido que ya funciona en la PC de Frank, sin Sider, con hosts temporal: país → Términos → AUTH_STEAM → login → crear usuario (FRALEX) → actualización en vivo («no hay actualizaciones») → menú online → equipos → «Opciones de Matchmaking» → «Buscando rival» con la tarjeta FRALEX en Local → Cancelar vuelve al menú. Después, PES recuerda país, Términos y usuario.
+
+Claves aprendidas (detalle en el código, comentarios C/P):
+- URLLIST debe traer EULA_PES/MYCLUB/PRIVACY_POLICY, FLOW + LiveDataSet*, DMM_TOP, WEEKLY_INFO_BANNER, BANNER, RANK, DIVISION_RANK y AVATAR. Si falta una clave, la URL es NULL y el juego falla en silencio o se cae.
+- GET_PLAYER_DATA: has_data "YES" + pid + pname (bin). psn_user_id va como bin, nunca "".
+- Matchmaking: START_MATCHING solo lleva msgid/rqid/result. El estado viaja por un EMPUJE CMD_WATCH_MATCHING (rqid 0, result NOERR): SEARCHING (con tu tarjeta), FINISH (pareja, con side HOME/AWAY) y CANCEL. Luego, cuando los dos mandan SET_GAMERELAY_CHECK_RES, se empuja CMD_WATCH_GAMERELAY_CHECK_RES con error_code NOERR. La pareja de dos todavía NO está probada.
+- La conexión MENU no pide GET_PLAYER_DATA: el perfil se carga en el LOGIN (4a48e48).
+- Avatar: base64 de una imagen 128x128x3 (49152 B), con md5 de los bytes decodificados. Si no hay avatar, va vacío.
+- Al cancelar, PES manda LEAVE_ROOM con error_code EYRH791. Es normal.
+- Frida: hacer detach de un script cierra PES (c0000409 en frida-agent.dll). No usar Frida con detach durante una prueba. Stalker también tumba PES.
+- No reiniciar el servidor durante una prueba (da C_MHJX_0002).
+
+Pendiente:
+1. Prueba con 2 PCs (Partida rápida y amistoso). Hace falta que el servidor sea alcanzable (VPS o la PC de Frank abierta).
+2. NAT: con el servidor en 127.0.0.1, PES publica 127.0.0.1:puerto_local como host/reflexive y no manda UDP a nuestro STUN (3478/5730). Con el servidor remoto hay que comprobar qué publica. PESBUL documenta listeners en 3478/5730/5739/5740.
+3. Después: TURN, saltar el onboarding, el «pase» de identidad (Link + Core + Supabase ≥162), redirección del Core sin hosts, VPS y envío segmentado.
+4. Hosts: siguen activas 5+3 líneas. Restaurar con RESTAURAR_HOSTS.ps1 cuando Frank termine.
