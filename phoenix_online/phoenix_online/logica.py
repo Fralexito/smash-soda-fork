@@ -345,16 +345,30 @@ class Servidor:
         return self._entrar(s, m)
 
     async def c_cmd_get_player_data(self, s, m):
-        # C (REA 29-oct, lector 141d3f450): has_data, is_valid_cache e is_deleted son CADENA;
-        # account_id es NÚMERO; pid entero. P: el texto exacto de has_data ("1"/"0").
+        # C (REA 29-oct, lector 141d3f450): has_data, is_valid_cache e is_deleted son CADENA.
+        # C (02-nov): con solo has_data/pid/pname el cliente repite CREATE_PLAYER en bucle;
+        # PESBUL lo corta con un sobre amplio (perfil actual + lista de 1) y el mismo número de
+        # plataforma como pid/account_id en todas partes.
         j = self.datos.jugador(s.steam_hex or "")
         if not j:
             return {"has_data": "0"}
         self._registrar(s, j)
-        # C (PESBUL, lector probado): has_data "true"; cualquier otro valor = crear perfil
-        return {"has_data": "true", "pid": j["pid"],
-                "pname": Empaquetado(self._identidad(s, j["pname"])),
-                "account_id": self._numero_cuenta(s)}
+        return self._perfil(s, j["pname"])
+
+    def _perfil(self, s, nombre):
+        n = self._numero_cuenta(s) or s.pid
+        texto = str(n)
+        base = {"pid": n, "player_id": n, "user_id": n, "account_id": n, "current_player_id": n,
+                "name": nombre, "player_name": nombre, "online_id": nombre,
+                "lang": getattr(s, "lang", None) or "SP", "nation_code": self.cfg.get("nacion") or "PE",
+                "has_data": "true", "created": 1, "exists": 1, "has_player_data": 1,
+                "is_create_player": 0, "create_required": 0,
+                "is_deleted": "0", "is_valid_cache": "1",
+                "online": 1, "selected": 1, "current": 1, "is_current": 1,
+                "steam_id": texto, "platform_id": texto}
+        return {**base, "pname": Empaquetado(self._identidad(s, nombre)),
+                "player_num": 1, "player_list": [dict(base, pname=nombre)],
+                "current_player": dict(base, pname=nombre)}
 
     @staticmethod
     def _numero_cuenta(s):
@@ -367,12 +381,13 @@ class Servidor:
     def _identidad(cls, s, nombre):
         # C (crash 02-nov en 141d3fe49 + PESBUL): psn_user_id NO es texto sino otro MessagePack
         # empaquetado (bin) con account_id/online_id/is_valid_cache; con "" el lector revienta.
-        # xuid_one "0" (nunca el SteamID en el campo de Xbox).
         cuenta = cls._numero_cuenta(s)
-        return {"name": nombre, "xuid_one": "0",
+        texto = str(cuenta)
+        # P (PESBUL 02-nov): xuid_one y steam_id llevan el número de plataforma en texto
+        return {"name": nombre, "xuid_one": texto or "0",
                 "psn_user_id": Empaquetado({"account_id": cuenta, "online_id": nombre,
-                                            "is_valid_cache": "1"}),
-                "is_deleted": "0"}
+                                            "is_valid_cache": "1", "steam_id": texto}),
+                "is_deleted": "0", "steam_id": texto}
 
     async def c_cmd_create_player(self, s, m):
         nombre = m.get("pname") or m.get("name") or f"Phoenix_{(s.steam_hex or '')[-4:]}"
@@ -380,7 +395,9 @@ class Servidor:
             nombre = f"Phoenix_{(s.steam_hex or '')[-4:]}"
         j = self.datos.crear_jugador(s.steam_hex or "", nombre)
         self._registrar(s, j)
-        return {"pid": j["pid"]}
+        # P (PESBUL): la respuesta de crear lleva los mismos números/nombre que GET_PLAYER_DATA
+        p = self._perfil(s, j["pname"])
+        return {k: v for k, v in p.items() if k not in ("player_list", "current_player", "player_num")}
 
     def _registrar(self, s, j):
         s.pid, s.pname = j["pid"], j["pname"]
