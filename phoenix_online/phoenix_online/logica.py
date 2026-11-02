@@ -303,8 +303,12 @@ class Servidor:
                 return v.hex()
             if isinstance(v, str) and v.isdigit() and int(v) > 0:
                 return format(int(v), "016x")  # P: np_account_id en decimal como texto
-            if isinstance(v, str) and v:
-                return v.lower()
+            if isinstance(v, str) and v.strip("0 "):
+                v = v.strip().lower()
+                # C (02-nov): CMD_LOGIN trae username = hex SIN ceros a la izquierda ('3a660')
+                if all(c in "0123456789abcdef" for c in v) and len(v) <= 16:
+                    return v.zfill(16)
+                return v
         return None
 
     def _entrar(self, s, m):
