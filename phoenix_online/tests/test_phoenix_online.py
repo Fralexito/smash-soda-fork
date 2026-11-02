@@ -295,6 +295,15 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         for e in (ea, eb):
             self.assertEqual(e[-1][1]["error_code"], "NOERR")
 
+    def test_avatar_http_vacio_y_guardado(self):
+        r = self.srv.respuesta_http({"msgid": "CMD_GET_AVATAR_HTTP", "rqid": "3", "pid": "7"})
+        self.assertEqual((r["result"], r["avatar_data"], r["avatar_data_size"]), ("NOERR", "", 0))
+        import base64, hashlib
+        img = bytes(49152)
+        self.srv.avatares["7"] = base64.b64encode(img).decode()
+        r = self.srv.respuesta_http({"msgid": "CMD_GET_AVATAR_HTTP", "rqid": "3", "pid": "7"})
+        self.assertEqual((r["avatar_data_size"], r["avatar_md5"]), (49152, hashlib.md5(img).hexdigest()))
+
     async def test_partida_rapida_cancelar(self):
         a, ea = await self.entrar("A1")
         await self.srv.recibir(a, 21, {"msgid": "CMD_START_MATCHING", "rqid": 2})

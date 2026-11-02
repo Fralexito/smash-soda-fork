@@ -124,6 +124,7 @@ class Servidor:
         self.salas = {}
         self.turn_pendiente = {}  # pid destino -> (address, size)
         self.dormir = asyncio.sleep
+        self.avatares = {}    # pid (texto) -> base64 del avatar
         self.colas = {}       # matching_type -> [Sesion] buscando rival
         self.parejas = {}     # Sesion -> Pareja de partida rápida
 
@@ -769,6 +770,8 @@ class Servidor:
         if msgid == "CMD_GET_TURN_SERVER_LIST" and self.cfg.get("turn"):
             return self.respuesta_turn(formulario)
         base = {"msgid": msgid, "rqid": int(formulario.get("rqid", 0) or 0), "result": NOERR}
+        if msgid in ("CMD_GET_AVATAR_HTTP", "CMD_GET_AVATAR"):
+            return {**base, **self._avatar(formulario.get("pid"))}
         if msgid == "CMD_AUTH_STEAM":
             # Ticket = GetAuthSessionTicket en hex + SteamID64 en claro. Verificar la firma
             # del ticket queda pendiente; hoy la identidad la garantiza el vínculo de Link.
@@ -778,6 +781,27 @@ class Servidor:
             return base
         log.warning("comando HTTP sin manejador: %s campos=%s", msgid, sorted(formulario))
         return base
+
+    def _avatar(self, pid):
+        """C (PESBUL avatar_service): avatar_data = base64 de una imagen 128x128x3 (49152 B),
+        avatar_data_size = bytes decodificados y avatar_md5 = md5 de esos bytes. Sin avatar:
+        NOERR con datos vacíos (no se inventa imagen)."""
+        texto = self.avatares.get(str(pid or ""), "")
+        crudo = base64.b64decode(texto) if texto else b""
+        return {"avatar_data": texto, "avatar_data_size": len(crudo),
+                "avatar_md5": hashlib.md5(crudo).hexdigest() if crudo else ""}
+
+    async def c_cmd_get_avatar_http(self, s, m):
+        return self._avatar(m.get("pid"))
+
+    c_cmd_get_avatar = c_cmd_get_avatar_http
+
+    async def c_cmd_set_avatar(self, s, m):
+        # el cliente sube el base64 tal cual; se guarda en memoria (P: persistir en la web)
+        datos = m.get("avatar_data")
+        if isinstance(datos, (bytes, str)) and datos:
+            self.avatares[str(self._pid_visible(s))] = datos.decode() if isinstance(datos, bytes) else datos
+        return {}
 
     def respuesta_turn(self, formulario):
         t = self.cfg["turn"]
