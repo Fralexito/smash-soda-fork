@@ -5,8 +5,14 @@
   "puerto_gate": 10000,
   "puerto_menu": 10001,
   "puerto_http": 5000,
-  "puertos_http": [5000, 80],
-  "puertos_stun": [5730, 3478],
+  "puertos_http": [
+    5000,
+    80
+  ],
+  "puertos_stun": [
+    5730,
+    3478
+  ],
   "base_datos": "phoenix_online.db",
   "capturas": "capturas",
   "vinculos": "vinculos.json",
@@ -24,18 +30,45 @@
   },
   "archivos_http": {},
   "versiones": {
-    "version": "0", "patch_version": "0", "dlc_version": "0", "eula_version": "0",
-    "eula_myclub_version": "0", "livedata_version": "0", "eula_privacy_policy_version": "0",
-    "eula_privacy_notice_version": "0", "eula_privacy_policy_california_version": "0"
+    "version": "1.07.02",
+    "patch_version": "1.07.02",
+    "dlc_version": "7.00",
+    "livedata_version": "0",
+    "eula_version": "1",
+    "eula_myclub_version": "1",
+    "eula_privacy_policy_version": "1",
+    "eula_privacy_notice_version": "0",
+    "eula_privacy_policy_california_version": "0",
+    "eula_privacy_policy_japan_version": "0"
   },
-  "naciones": [{"nation_code": "PE", "privacy_kind": "PRIVACY_POLICY", "has_area": "NO", "name": "Peru"}],
+  "naciones": [
+    {
+      "nation_code": "PE",
+      "privacy_kind": "PRIVACY_POLICY",
+      "has_area": "NO",
+      "name": "Peru"
+    }
+  ],
   "nacion": "PE",
   "area": "",
-  "areas_por_defecto": [{"nation_code": "PE", "area_code": "PE-LIM", "privacy_kind": "0", "name": "Lima"}],
+  "areas_por_defecto": [
+    {
+      "nation_code": "PE",
+      "area_code": "PE-LIM",
+      "privacy_kind": "0",
+      "name": "Lima"
+    }
+  ],
   "anuncios": [],
   "lobbies": [
-    {"lobby_id": 1, "name": "Phoenix 1v1", "player_num": 0, "player_num_max": 200,
-     "gamerelay_index": 0, "lobby_type": "FREE"}
+    {
+      "lobby_id": 1,
+      "name": "Phoenix 1v1",
+      "player_num": 0,
+      "player_num_max": 200,
+      "gamerelay_index": 0,
+      "lobby_type": "FREE"
+    }
   ],
   "turn": null
 }

@@ -166,6 +166,17 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(m["server_num"], 2)
         self.assertEqual([x.valor["svrtype"] for x in m["svrlist"]], ["ACCOUNT", "MENU"])
 
+    async def test_svrversion_como_cliente_y_eula_no_cero(self):
+        s, env = cliente(self.srv)
+        await self.srv.recibir(s, 1, {"msgid": "CMD_GET_SVRVERSION", "rqid": 3,
+                                      "patch_version": "1.07.02", "dlc_version": "7.00"})
+        m = env[-1][1]
+        self.assertEqual((m["version"], m["patch_version"], m["dlc_version"]), ("1", "1.07.02", "7.00"))
+        self.assertEqual((m["eula_version"], m["eula_myclub_version"], m["eula_privacy_policy_version"]),
+                         ("1", "1", "1"))
+        self.assertEqual(m["eula_privacy_policy_japan_version"], "0")
+        self.assertTrue(all(isinstance(v, str) for k, v in m.items() if k.endswith("version")))
+
     async def test_nacion_siempre_cadena(self):
         self.srv.cfg = dict(CFG, naciones=[{"nation_code": 0, "has_area": False, "name": "Peru"}],
                             nacion=0)

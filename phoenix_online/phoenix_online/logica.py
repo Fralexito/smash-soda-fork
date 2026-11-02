@@ -161,8 +161,24 @@ class Servidor:
         return {"url_num": len(urls),
                 "ulist": [Empaquetado({"type": t, "url": u}) for t, u in urls.items()]}
 
+    VERSIONES_EULA = ("eula_version", "eula_myclub_version", "eula_privacy_policy_version")
+    VERSIONES_EULA_CERO = ("eula_privacy_notice_version", "eula_privacy_policy_california_version",
+                           "eula_privacy_policy_japan_version")
+
     async def c_cmd_get_svrversion(self, s, m):
-        return dict(self.cfg["versiones"])
+        # P (02-nov, como PESBUL): versión del juego 1.07.02; patch/dlc/livedata se devuelven
+        # tal como los manda el cliente; EULA nunca "0" (el cliente guarda la aceptada y una
+        # menor lo tumba) y siempre los 10 campos, también el de Japón.
+        v = {k: self._texto(x) for k, x in self.cfg.get("versiones", {}).items()}
+        r = {"version": v.get("version") if v.get("version") not in (None, "", "0") else "1.07.02"}
+        for k, defecto in (("patch_version", "1.07.02"), ("dlc_version", "7.00"),
+                           ("livedata_version", "0")):
+            r[k] = self._texto(m.get(k)) or (v.get(k) if v.get(k) not in (None, "", "0") else defecto)
+        for k in self.VERSIONES_EULA:
+            r[k] = v.get(k) if v.get(k) not in (None, "", "0") else "1"
+        for k in self.VERSIONES_EULA_CERO:
+            r[k] = v.get(k) or "0"
+        return r
 
     async def c_cmd_get_svrtime(self, s, m):
         return {"date": int(time.time())}  # C: entero; P: segundos Unix (el exe suma 9 h JST)
