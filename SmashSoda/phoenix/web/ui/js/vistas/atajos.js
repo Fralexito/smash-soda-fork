@@ -11,12 +11,12 @@ import { Boton, Icono, Tarjeta } from "../ui.js";
 import { obtenerConfigRey, ejecutarRotacionRey } from "./reydelapista.js";
 
 export const LISTA_ATAJOS_MODERADOR = [
-  { teclas: "Ctrl + Shift + M", accion: "Silenciar / Activar Chat", desc: "Silencia o reactiva el chat de invitados en toda la sala.", icono: "chat" },
   { teclas: "Ctrl + Shift + F", accion: "Congelar Mandos (Árbitro)", desc: "Bloquea o desbloquea al instante los mandos de los invitados.", icono: "candado" },
   { teclas: "Ctrl + Shift + E", accion: "Todos a Espectador", desc: "Mueve a todos los jugadores a la lista de Mirando.", icono: "usuario" },
   { teclas: "Ctrl + Shift + I", accion: "Invertir Lados (A ⇄ B)", desc: "Intercambia los lados de ambos equipos (para el partido de vuelta).", icono: "intercambio" },
   { teclas: "Ctrl + Shift + R", accion: "Rotar Rey de la Pista", desc: "Fuerza la rotación del rey y sienta a los siguientes retadores.", icono: "trofeo" },
   { teclas: "Ctrl + Shift + S", accion: "Escudo Streamer (Anti-Doxxing)", desc: "Censura o revela IPs, correos y enlaces en vivo.", icono: "candado" },
+  { teclas: "Ctrl + Shift + M", accion: "Silenciar Chat de Invitados", desc: "Silencia o reactiva el chat de los invitados (el tuyo y los comandos siguen).", icono: "usuario" },
   { teclas: "Ctrl + Shift + K", accion: "Chuleta de Atajos", desc: "Abre esta ventana de referencia rápida.", icono: "buscar" },
 ];
 
@@ -31,24 +31,12 @@ export function useMatrizAtajosModerador(s) {
       if (!e.ctrlKey || !e.shiftKey) return;
       const tecla = e.key.toUpperCase();
 
-      // 1. Ctrl + Shift + M -> Silenciar / Activar Chat
-      if (tecla === "M") {
+      // 2. Ctrl + Shift + F -> Congelar / Descongelar Mandos (acción real del motor: mandos.herramienta/bloquearTodo, alterna)
+      if (tecla === "F") {
         e.preventDefault();
-        const silenciado = !m?.sala?.chatSilenciado;
-        await accion("sala.silenciarChat", { silenciado }, { silencioso: true });
-        avisar(
-          silenciado
-            ? t("🔇 Chat de la sala SILENCIADO (Ctrl+Shift+M)", "🔇 Room chat MUTED (Ctrl+Shift+M)")
-            : t("🔊 Chat de la sala ACTIVADO (Ctrl+Shift+M)", "🔊 Room chat UNMUTED (Ctrl+Shift+M)"),
-          "info"
-        );
-      }
-
-      // 2. Ctrl + Shift + F -> Congelar / Descongelar Mandos (Árbitro)
-      else if (tecla === "F") {
-        e.preventDefault();
-        const bloqueado = !m?.arbitro?.bloqueoActivo;
-        await accion("mandos.bloqueo", { activo: bloqueado }, { silencioso: true });
+        const bloqueado = !m?.mandos?.bloqueoGlobal;
+        const r = await accion("mandos.herramienta", { nombre: "bloquearTodo" });
+        if (r === null) return;
         avisar(
           bloqueado
             ? t("🛑 Mandos de invitados CONGELADOS (Ctrl+Shift+F)", "🛑 Guest controllers FROZEN (Ctrl+Shift+F)")
@@ -60,7 +48,8 @@ export function useMatrizAtajosModerador(s) {
       // 3. Ctrl + Shift + E -> Mandar a todos a espectador
       else if (tecla === "E") {
         e.preventDefault();
-        await accion("mandos.todosAMirar", {}, { silencioso: true });
+        const ocupados = (m?.mandos?.lista || []).filter((p) => p.ocupado);
+        for (const p of ocupados) await accion("mandos.liberar", { indice: p.n - 1 }, { silencioso: true });
         avisar(t("👥 Todos los jugadores movidos a espectadores (Ctrl+Shift+E)", "👥 All players moved to spectators (Ctrl+Shift+E)"), "info");
       }
 
@@ -69,8 +58,8 @@ export function useMatrizAtajosModerador(s) {
         e.preventDefault();
         const lista = m?.mandos?.lista || [];
         for (const p of lista) {
-          if (p.equipo === "a") await accion("mandos.equipo", { indice: p.indice, equipo: "b" }, { silencioso: true });
-          else if (p.equipo === "b") await accion("mandos.equipo", { indice: p.indice, equipo: "a" }, { silencioso: true });
+          if (p.equipo === "a") await accion("mandos.equipo", { indice: p.n - 1, equipo: "b" }, { silencioso: true });
+          else if (p.equipo === "b") await accion("mandos.equipo", { indice: p.n - 1, equipo: "a" }, { silencioso: true });
         }
         avisar(t("⚡ Lados intercambiados: Equipo A ⇄ Equipo B (Ctrl+Shift+I)", "⚡ Swapped sides: Team A ⇄ Team B (Ctrl+Shift+I)"), "ok");
       }
@@ -84,6 +73,20 @@ export function useMatrizAtajosModerador(s) {
         } else {
           avisar(t("👑 El Modo Rey de la Pista está apagado. Actívalo en Puestos.", "👑 King of the Hill is off. Turn it on in Seats."), "warn");
         }
+      }
+
+      // 5b. Ctrl + Shift + M -> Silenciar / reactivar el chat de invitados (sala.silenciarChat)
+      else if (tecla === "M") {
+        e.preventDefault();
+        const silenciar = !m?.sala?.chatSilenciado;
+        const r = await accion("sala.silenciarChat", { silenciado: silenciar });
+        if (r === null) return;
+        avisar(
+          silenciar
+            ? t("🔇 Chat de invitados SILENCIADO (Ctrl+Shift+M)", "🔇 Guest chat MUTED (Ctrl+Shift+M)")
+            : t("🔊 Chat de invitados ACTIVO (Ctrl+Shift+M)", "🔊 Guest chat ON (Ctrl+Shift+M)"),
+          silenciar ? "warn" : "ok"
+        );
       }
 
       // 6. Ctrl + Shift + K -> Chuleta de Atajos

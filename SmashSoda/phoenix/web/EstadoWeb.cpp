@@ -332,6 +332,7 @@ namespace phoenix::web {
 			{"subida", PhoenixPrefs::get().subidaMbps}, {"perdida", g_perdidaPorMil.load()}, {"energia", planEnergia()},
 			{"parsecApp", appParsecAbierta()} };
 		s["sesion"] = { {"pico", in.picoInvitados}, {"entradas", in.entradasSesion}, {"partidos", in.partidosSesion} };
+		s["chatSilenciado"] = g_chatSilenciado.load();
 		e["sala"] = s;
 
 		// ---- Mandos ----------------------------------------------------------

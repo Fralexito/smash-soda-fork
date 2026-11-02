@@ -821,7 +821,7 @@ void Hosting::handleMessage(const char* message, Guest& guest, bool isHost, bool
 	command->run();
 
 	// Non-blocked default message
-	if (!isFilteredCommand(command)) {
+	if (!isFilteredCommand(command) && (isHost || !phoenix::g_chatSilenciado.load())) {
 		Tier tier = _tierList.getTier(guest.userID);
 
 		CommandDefaultMessage defaultMessage(message, guest, _chatBot->getLastUserId(), tier, isHost);
