@@ -29,7 +29,7 @@
 #include <tlhelp32.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.112"
+#define PHX_CORE_VERSION "0.4.113"
 
 namespace {
 
@@ -709,7 +709,7 @@ HANDLE g_hiloCancha = nullptr;
 volatile LONG g_rearmaCancha = 0;   // 0.4.95: la revancha (MatchSetupRematch) crea un bloque de dimensiones NUEVO sin parchear; esto vuelve a abrir la ventana de búsqueda de 75 s
 
 // 0.4.105 arco_medida (0 = original, 1 = 4x2, 2 = 3x2, 3 = 5x2,2): boca lógica (ancho, alto) en metros. Con medida > 0 el bloque de dimensiones lleva [2] = ancho/2 y [3] = alto.
-float g_arcoMedidaF = 0.0f;
+float g_arcoMedidaF = 0.0f, g_arcosVisualesF = 1.0f;   // 0.4.113 arcos_visuales (1 = el Lua sirve los modelos/colisiones de arco y red del Street; 0 = los originales del juego: prueba para ver si la tela nativa nace)
 static void medidaWH(float& w, float& h) {
     static const float T[4][2] = { { 7.32f, 2.44f }, { 4.0f, 2.0f }, { 3.0f, 2.0f }, { 5.0f, 2.2f } };
     int m = (int)(g_arcoMedidaF + 0.5f); if (m < 0 || m > 3) m = 0;
@@ -3598,6 +3598,7 @@ void leerConfig() {
     if (valorDe("red_rebote_factor", v)) { g_reboteFactorF = (float)atof(v.c_str()); if (g_reboteFactorF < 0.0f || g_reboteFactorF > 1.0f) g_reboteFactorF = 0.6f; }
     if (valorDe("street_saque_espera_s", v)) { g_saqueEsperaF = (float)atof(v.c_str()); if (g_saqueEsperaF < 2.0f || g_saqueEsperaF > 20.0f) g_saqueEsperaF = 5.0f; }
     if (valorDe("street_saque_empuje", v)) g_saqueEmpujeF = (v == "false" || v == "0") ? 0.0f : 1.0f;
+    if (valorDe("arcos_visuales", v)) g_arcosVisualesF = (v == "false" || v == "0") ? 0.0f : 1.0f;
     if (valorDe("red_tope_rebote", v)) g_redTopeF = (v == "false" || v == "0") ? 0.0f : 1.0f;
     if (valorDe("red_anclas", v)) g_anclasF = (v == "false" || v == "0") ? 0.0f : 1.0f;
     if (valorDe("street_l1_sin_portero", v)) g_l1SinPorteroF = (v == "false" || v == "0") ? 0.0f : 1.0f;
@@ -3702,7 +3703,7 @@ static void procesarOrdenes() {
             continue;
         }
         {   // parámetros numéricos EN VIVO (se releen al instante: son las variables que usan los ganchos) y se guardan en el json
-            struct Num { const char* id; float* var; float lo, hi; }; static const Num nums[] = { { "tiro_potencia_k", &g_tiroPot, 0.5f, 2.0f }, { "tiro_altura_k", &g_tiroAlt, 0.2f, 1.5f }, { "pase_vel_k", &g_paseVel, 0.8f, 2.0f }, { "pase_correccion", &g_paseCorr, 0.0f, 1.0f }, { "pase_cono_grados", &g_paseCono, 5.0f, 60.0f }, { "muro_rebote", &g_muroRebote, 0.3f, 0.95f }, { "muro_fondo_rebote", &g_muroFondoRebote, 0.0f, 0.95f }, { "muro_lat_friccion", &g_muroLatFric, 0.0f, 1.0f }, { "arco_chico_ancho", &g_arcoAncho, 1.5f, 7.32f }, { "street_1v1_saque", &g_1v1SaqueF, 0.0f, 3.0f }, { "street_jugadores_local", &g_jugLocalF, 0.0f, 11.0f }, { "street_jugadores_rival", &g_jugRivalF, 0.0f, 11.0f }, { "street_jugadores_lado", &g_jugLadoF, 0.0f, 1.0f }, { "arco_medida", &g_arcoMedidaF, 0.0f, 3.0f }, { "street_l1_sin_portero", &g_l1SinPorteroF, 0.0f, 1.0f }, { "arquero_dist_seleccion", &g_arqDistSelF, 2.0f, 25.0f }, { "arquero_dist_rival", &g_arqRivalDistF, 0.0f, 15.0f }, { "red_tope_rebote", &g_redTopeF, 0.0f, 1.0f }, { "red_rebote_factor", &g_reboteFactorF, 0.0f, 1.0f }, { "street_saque_espera_s", &g_saqueEsperaF, 2.0f, 20.0f }, { "street_saque_empuje", &g_saqueEmpujeF, 0.0f, 1.0f }, { "red_anclas", &g_anclasF, 0.0f, 1.0f }, { "gk_despeje_dist_m", &g_gkDespejeDist, 1.0f, 15.0f }, { "gk_despeje_presion_m", &g_gkDespejePresion, 0.5f, 15.0f }, { "arco_chico_alto", &g_arcoAlto, 1.0f, 2.44f }, { "muro_lat_empuje", &g_muroLatEmpuje, 0.0f, 0.3f }, { "muro_friccion", &g_muroFric, 0.0f, 1.0f } };
+            struct Num { const char* id; float* var; float lo, hi; }; static const Num nums[] = { { "tiro_potencia_k", &g_tiroPot, 0.5f, 2.0f }, { "tiro_altura_k", &g_tiroAlt, 0.2f, 1.5f }, { "pase_vel_k", &g_paseVel, 0.8f, 2.0f }, { "pase_correccion", &g_paseCorr, 0.0f, 1.0f }, { "pase_cono_grados", &g_paseCono, 5.0f, 60.0f }, { "muro_rebote", &g_muroRebote, 0.3f, 0.95f }, { "muro_fondo_rebote", &g_muroFondoRebote, 0.0f, 0.95f }, { "muro_lat_friccion", &g_muroLatFric, 0.0f, 1.0f }, { "arco_chico_ancho", &g_arcoAncho, 1.5f, 7.32f }, { "street_1v1_saque", &g_1v1SaqueF, 0.0f, 3.0f }, { "street_jugadores_local", &g_jugLocalF, 0.0f, 11.0f }, { "street_jugadores_rival", &g_jugRivalF, 0.0f, 11.0f }, { "street_jugadores_lado", &g_jugLadoF, 0.0f, 1.0f }, { "arco_medida", &g_arcoMedidaF, 0.0f, 3.0f }, { "street_l1_sin_portero", &g_l1SinPorteroF, 0.0f, 1.0f }, { "arquero_dist_seleccion", &g_arqDistSelF, 2.0f, 25.0f }, { "arquero_dist_rival", &g_arqRivalDistF, 0.0f, 15.0f }, { "red_tope_rebote", &g_redTopeF, 0.0f, 1.0f }, { "red_rebote_factor", &g_reboteFactorF, 0.0f, 1.0f }, { "arcos_visuales", &g_arcosVisualesF, 0.0f, 1.0f }, { "street_saque_espera_s", &g_saqueEsperaF, 2.0f, 20.0f }, { "street_saque_empuje", &g_saqueEmpujeF, 0.0f, 1.0f }, { "red_anclas", &g_anclasF, 0.0f, 1.0f }, { "gk_despeje_dist_m", &g_gkDespejeDist, 1.0f, 15.0f }, { "gk_despeje_presion_m", &g_gkDespejePresion, 0.5f, 15.0f }, { "arco_chico_alto", &g_arcoAlto, 1.0f, 2.44f }, { "muro_lat_empuje", &g_muroLatEmpuje, 0.0f, 0.3f }, { "muro_friccion", &g_muroFric, 0.0f, 1.0f } };
             bool hecho = false; for (const Num& n : nums) if (id == n.id) { float x = (float)atof(v.c_str()); if (x >= n.lo && x <= n.hi) { *n.var = x; persistirClaveJson(id, v); logf("[PANEL] %s = %.3f (en vivo)", n.id, x); } else logf("[PANEL] %s=%s fuera de rango [%.2f, %.2f]: ignorado", n.id, v.c_str(), n.lo, n.hi); hecho = true; break; }
             if (hecho) continue;
         }

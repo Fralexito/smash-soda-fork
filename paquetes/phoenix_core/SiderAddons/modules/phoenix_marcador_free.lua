@@ -47,6 +47,7 @@ end
 
 local canchaOn, rutaCancha, paredesOn, seasonForzada, suplentesCero = false, nil, false, nil, false
 local arcoMedida = 0
+local arcosVisuales = 1   -- 0.4.113: 0 = no se sirven los modelos de arco/red ni los .geom del Street (queda el arco original del juego)
 local CARPETA_ARCO = { [1] = "arco_4x2/", [2] = "arco_3x2/", [3] = "arco_5x22/" }
 local climaForzado = nil   -- v0.8: json "clima_forzado": 0 = sin lluvia (la lluvia pone el cielo/fondo blanco en la cancha chica)
 local function mirarCancha()
@@ -59,6 +60,8 @@ local function mirarCancha()
     canchaOn = (t ~= nil) and (t:find('"cancha_chica_free"%s*:%s*true') ~= nil)
     local am = t and t:match('"arco_medida"%s*:%s*([%d%.]+)')   -- 0.4.105: 0 original, 1 = 4x2, 2 = 3x2, 3 = 5x2,2
     arcoMedida = am and math.floor(tonumber(am) + 0.5) or 0
+    local av = t and t:match('"arcos_visuales"%s*:%s*([%d%.]+)')
+    arcosVisuales = av and math.floor(tonumber(av) + 0.5) or 1
     paredesOn = canchaOn and (t:find('"cancha_paredes"%s*:%s*true') ~= nil)
 end
 
@@ -211,6 +214,8 @@ function m.get_filepath(ctx, filename, key)
             if hp then hp:close(); log("[cancha_paredes] sirvo " .. fl); return fp end
         end
         local flv = string.gsub(fl2, "^/+", "")
+        local esArco = (CANCHA_VISUAL[flv] and flv ~= "asset/model/bg/st002/pitch/#win/pitch_st002.fpk") or GEOM_CANCHA[fl]
+        if arcosVisuales == 0 and esArco then return nil end   -- 0.4.113: arcos y redes originales
         local carp = CARPETA_ARCO[arcoMedida]
         if carp and (CANCHA_VISUAL[flv] or GEOM_CANCHA[fl]) and flv ~= "asset/model/bg/st002/pitch/#win/pitch_st002.fpk" then
             local fa = base .. "content/phoenix/cancha_visual/" .. carp .. flv
@@ -287,6 +292,7 @@ local PANEL = {
     { id = "red_rebote_factor", txt = "Rebote contra fondo/poste/travesaño: salida máx. = entrada × (0 o 1 = sin tope)", tipo = "num", paso = 0.05, lo = 0, hi = 1, def = 0.6, modo = "vivo" },
     { id = "street_saque_empuje", txt = "Saque de centro trabado de la IA: 1 = empujar el balón · 0 = solo anotar", tipo = "num", paso = 1, lo = 0, hi = 1, def = 1, modo = "vivo" },
     { id = "street_saque_espera_s", txt = "  Segundos quieto antes de empujarlo", tipo = "num", paso = 1, lo = 2, hi = 20, def = 5, modo = "vivo" },
+    { id = "arcos_visuales", txt = "Arcos y redes del Street (modelos y colisión): 1 sí · 0 = los originales del juego (prueba de la tela)", tipo = "num", paso = 1, lo = 0, hi = 1, def = 1, modo = "sig.partida" },
     { id = "red_tope_rebote", txt = "Tope de rebote en la red (no sale más rápido de lo que entró): 1 sí · 0 no", tipo = "num", paso = 1, lo = 0, hi = 1, def = 1, modo = "vivo" },
     { id = "red_anclas", txt = "Anclas de la tela a la medida del arco: 1 sí · 0 no", tipo = "num", paso = 1, lo = 0, hi = 1, def = 1, modo = "vivo" },
     { id = "street_jugadores_local", txt = "Jugadores mi equipo (sigue al menú del juego; el último cambio gana)", tipo = "num", paso = 1, lo = 0, hi = 11, def = 0, modo = "vivo" },
