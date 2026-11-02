@@ -527,16 +527,11 @@ export function PuestosNuevo({ m }) {
   };
 
   /**
-   * Hook preparado para empujar los mandos al lado correspondiente dentro de PES (Local / Visita).
-   * Envía la asignación calculada para que cuando el motor o Sider tengan listo el inyector de inputs,
-   * cada mando se mueva solo a la izquierda o derecha en la pantalla de selección de lados.
+   * Hook para empujar los lados a Local / Visita dentro de PES. El motor aún NO tiene esa acción
+   * (no existe «mandos.sincronizarLadosPes» en C++), así que por ahora no manda nada: los equipos
+   * se cambian en Link y los lados en PES se eligen a mano. Pendiente de C++ (ver PLAN-UX-ESTADO).
    */
-  const aplicarLadosEnPes = async (asignaciones) => {
-    // Si el motor implementa la acción en C++/ViGEm, la llamamos de forma segura:
-    try {
-      await accion("mandos.sincronizarLadosPes", { asignaciones }, { silencioso: true });
-    } catch (_) {}
-  };
+  const aplicarLadosEnPes = async (_asignaciones) => {};
 
   const sortearEquipos = async () => {
     const enJuego = lista.filter((p) => p.equipo === "a" || p.equipo === "b");
