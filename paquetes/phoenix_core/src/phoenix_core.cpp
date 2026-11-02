@@ -2211,18 +2211,21 @@ static void barrerNodosRed(const char* motivo) {
     if (!hallados) logf("[NODO_RED] (%s) no hay nodos con esa vtable en la memoria privada", motivo);
 }
 DWORD WINAPI hiloNodoRed(LPVOID) {
-    bool habia = false; ULONGLONG t0 = 0; int fase = 0;
+    // 0.4.113: el barrido ya no depende de que los punteros GoalNet pasen de nulo a no nulo (en el log de la noche del 1-nov los objetos persistieron entre partidos y el Entrenamiento con Street apagado no
+    // genero ningun barrido). Ahora se barre 15 s despues de la primera vez que se ve un GoalNet y luego cada 45 s mientras exista (maximo 40 barridos por sesion), anotando zona/Street.
+    bool habia = false; ULONGLONG t0 = 0, ult = 0; int hechos = 0;
     while (g_nodoRedOn) {
         Sleep(500);
         uint64_t gn[2] = { 0, 0 }; leerSeguro(g_exe.base + 0x37F4940, gn, 16);
         bool hay = gn[0] != 0 && gn[1] != 0;
-        if (hay && !habia) { t0 = GetTickCount64(); fase = 0; }
+        if (hay && !habia) { t0 = GetTickCount64(); ult = 0; }
         habia = hay;
-        if (!hay) continue;
-        ULONGLONG dt = GetTickCount64() - t0;
-        if (fase == 0 && dt > 15000) { fase = 1; barrerNodosRed("15 s"); }
-        else if (fase == 1 && dt > 60000) { fase = 2; barrerNodosRed("60 s"); }
-        else if (fase == 2 && dt > 180000) { fase = 3; barrerNodosRed("180 s"); }
+        if (!hay || hechos >= 40) continue;
+        ULONGLONG ahora = GetTickCount64();
+        if (ahora - t0 < 15000) continue;
+        if (ult && ahora - ult < 45000) continue;
+        ult = ahora; ++hechos;
+        char mot[48]; sprintf_s(mot, "barrido %d, street=%d", hechos, (int)g_streetActivo); barrerNodosRed(mot);
     }
     return 0;
 }
