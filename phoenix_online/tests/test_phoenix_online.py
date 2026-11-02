@@ -173,7 +173,7 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         m = env[-1][1]
         self.assertEqual((m["version"], m["patch_version"], m["dlc_version"]), ("1", "1.07.02", "7.00"))
         self.assertEqual((m["eula_version"], m["eula_myclub_version"], m["eula_privacy_policy_version"]),
-                         ("1", "1", "1"))
+                         ("0", "0", "0"))
         self.assertEqual(m["eula_privacy_policy_japan_version"], "0")
         self.assertTrue(all(isinstance(v, str) for k, v in m.items() if k.endswith("version")))
 

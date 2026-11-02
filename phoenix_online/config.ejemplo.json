@@ -34,9 +34,9 @@
     "patch_version": "1.07.02",
     "dlc_version": "7.00",
     "livedata_version": "0",
-    "eula_version": "1",
-    "eula_myclub_version": "1",
-    "eula_privacy_policy_version": "1",
+    "eula_version": "0",
+    "eula_myclub_version": "0",
+    "eula_privacy_policy_version": "0",
     "eula_privacy_notice_version": "0",
     "eula_privacy_policy_california_version": "0",
     "eula_privacy_policy_japan_version": "0"
