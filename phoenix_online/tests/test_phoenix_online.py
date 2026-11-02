@@ -108,7 +108,7 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         r = self.srv.recibir
         await r(s, 1, {"msgid": "CMD_LOGIN", "rqid": 1, "username": steam})
         await r(s, 2, {"msgid": "CMD_GET_PLAYER_DATA", "rqid": 2})
-        self.assertEqual(env[-1][1]["has_data"], "0")
+        self.assertEqual(env[-1][1]["has_data"], "NO")
         await r(s, 3, {"msgid": "CMD_CREATE_PLAYER", "rqid": 3})
         for w in ("CMD_REQWATCHL_ROOMLIST", "CMD_REQWATCHL_ROOMPLAYERLIST_NTL",
                   "CMD_WATCH_ROOMSTATE", "CMD_WATCH_ENTRY_GAME", "CMD_WATCH_DECIDE_GAMEENV_FREE",
@@ -144,7 +144,7 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         # Tras CREATE_PLAYER, GET_PLAYER_DATA debe decir has_data (si no, el cliente vuelve a crear)
         s, env = await self.entrar("0110000100000077")
         await self.srv.recibir(s, 9, {"msgid": "CMD_GET_PLAYER_DATA", "rqid": 9})
-        self.assertEqual(env[-1][1]["has_data"], "true")
+        self.assertEqual(env[-1][1]["has_data"], "YES")
         pn = env[-1][1]["pname"].valor
         self.assertIsInstance(pn["psn_user_id"], Empaquetado)
         self.assertEqual(pn["psn_user_id"].valor["is_valid_cache"], "1")

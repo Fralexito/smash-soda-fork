@@ -345,30 +345,18 @@ class Servidor:
         return self._entrar(s, m)
 
     async def c_cmd_get_player_data(self, s, m):
-        # C (REA 29-oct, lector 141d3f450): has_data, is_valid_cache e is_deleted son CADENA.
-        # C (02-nov): con solo has_data/pid/pname el cliente repite CREATE_PLAYER en bucle;
-        # PESBUL lo corta con un sobre amplio (perfil actual + lista de 1) y el mismo número de
-        # plataforma como pid/account_id en todas partes.
+        # C (PESBUL R7.3.121, Frida): el cliente instala el perfil solo si has_data == "YES"
+        # (FUN_141211da0); luego lee pid y pname (bin con name). Un sobre «rico» con listas y
+        # alias hace que se desconecte; cualquier otro has_data = crear perfil (bucle).
         j = self.datos.jugador(s.steam_hex or "")
         if not j:
-            return {"has_data": "0"}
+            return {"has_data": "NO"}
         self._registrar(s, j)
-        return self._perfil(s, j["pname"])
+        return {"has_data": "YES", "pid": self._pid_visible(s),
+                "pname": Empaquetado(self._identidad(s, j["pname"]))}
 
-    def _perfil(self, s, nombre):
-        n = self._numero_cuenta(s) or s.pid
-        texto = str(n)
-        base = {"pid": n, "player_id": n, "user_id": n, "account_id": n, "current_player_id": n,
-                "name": nombre, "player_name": nombre, "online_id": nombre,
-                "lang": getattr(s, "lang", None) or "SP", "nation_code": self.cfg.get("nacion") or "PE",
-                "has_data": "true", "created": 1, "exists": 1, "has_player_data": 1,
-                "is_create_player": 0, "create_required": 0,
-                "is_deleted": "0", "is_valid_cache": "1",
-                "online": 1, "selected": 1, "current": 1, "is_current": 1,
-                "steam_id": texto, "platform_id": texto}
-        return {**base, "pname": Empaquetado(self._identidad(s, nombre)),
-                "player_num": 1, "player_list": [dict(base, pname=nombre)],
-                "current_player": dict(base, pname=nombre)}
+    def _pid_visible(self, s):
+        return self._numero_cuenta(s) or s.pid
 
     @staticmethod
     def _numero_cuenta(s):
@@ -395,9 +383,14 @@ class Servidor:
             nombre = f"Phoenix_{(s.steam_hex or '')[-4:]}"
         j = self.datos.crear_jugador(s.steam_hex or "", nombre)
         self._registrar(s, j)
-        # P (PESBUL): la respuesta de crear lleva los mismos números/nombre que GET_PLAYER_DATA
-        p = self._perfil(s, j["pname"])
-        return {k: v for k, v in p.items() if k not in ("player_list", "current_player", "player_num")}
+        return {"pid": self._pid_visible(s), "name": j["pname"]}
+
+    async def c_cmd_set_currentplayer(self, s, m):
+        # C (PESBUL R7.3.122): el msgid real va SIN guion entre CURRENT y PLAYER; sin respuesta
+        # el cliente espera ~53 s y se desconecta
+        return {}
+
+    c_cmd_set_current_player = c_cmd_set_currentplayer
 
     def _registrar(self, s, j):
         s.pid, s.pname = j["pid"], j["pname"]
