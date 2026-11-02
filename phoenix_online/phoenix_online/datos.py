@@ -38,13 +38,18 @@ class Datos:
         return {"pid": f[0], "pname": f[1]} if f else None
 
     def crear_jugador(self, steam_hex, pname):
-        v = (self.vinculos or {}).get(steam_hex.lower())
-        if v and v.get("pname"):
-            pname = v["pname"]  # el nombre manda la web Phoenix
+        # C (02-nov): el nombre que devuelve GET_PLAYER_DATA debe ser el MISMO que el cliente
+        # mandó en CREATE_PLAYER (con el de la web el cliente repite CREATE_PLAYER en bucle).
+        # El nombre de la web Phoenix queda en vinculos.json para la web, no para el juego.
         ya = self.jugador(steam_hex)
         if ya:
-            # C (02-nov): el cliente puede volver a pedir crear (p. ej. tras un cierre antes de
-            # guardar); se reutiliza el perfil en vez de romper por la clave única
+            # el cliente puede volver a pedir crear (p. ej. tras un cierre antes de guardar):
+            # se reutiliza el perfil y se toma el nombre que acaba de escribir
+            if pname and pname != ya["pname"]:
+                self.db.execute("update jugadores set pname=? where steam_hex=?",
+                                (pname, steam_hex.lower()))
+                self.db.commit()
+                ya["pname"] = pname
             return ya
         cur = self.db.execute("insert into jugadores(steam_hex, pname, creado) values (?,?,?)",
                               (steam_hex.lower(), pname, time.time()))
