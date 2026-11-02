@@ -290,7 +290,34 @@ class Servidor:
             "use_template": "", "template_id": 0})}
 
     async def c_cmd_get_server_env(self, s, m):
-        return {"proto_opt": 1 if self.cfg.get("turn") else 0}
+        # C (PESBUL R7.3.169/631): nombres probados en Ghidra; valores de cuenta nueva.
+        # max_division es el TOKEN "D12" (el entero o "10" da VNBP_0002); is_revision_check 0.
+        return {"proto_opt": 1 if self.cfg.get("turn") else 0, "max_division": "D12",
+                "teamlobby_game_rating_border_normal": 0, "teamlobby_game_rating_border_hard": 0,
+                "is_revision_check": 0, "quality_check_wait_sec": 0, "trigger_keep_alive": 30,
+                "matchrejectpid_max": 0, "match_client_timeout_load_timeout": 60,
+                "match_client_timeout_long_outofplay": 60, "match_client_timeout_init_not_end": 60,
+                "match_client_timeout_cmd_lack": 60, "is_check_myclub_level": 0,
+                "log_update_level": 0, "lobby_ping_good": 50, "lobby_ping_normal": 150,
+                "quick_ping_good": 50, "quick_ping_normal": 150, "konamiid_api_retry_sec": 5}
+
+    # C (PESBUL R7.3.169): el menú online pide este lote al entrar; con NOERR vacío falla
+    async def c_cmd_get_match_analyze_env(self, s, m):
+        return {"posession": 0, "passtype": 0, "deffence": 0, "match_up": 0,
+                "favorite_play": 0, "favorite_play_rate": 0}
+
+    async def c_cmd_get_manner_warn(self, s, m):
+        return {"warn_kind": 0}
+
+    async def c_cmd_get_game_team_list(self, s, m):
+        return {"team_list": [], "team_list_num": 0}
+
+    async def c_cmd_get_dmm_playerinfo(self, s, m):
+        return {"is_present_inbox": 0}
+
+    async def c_cmd_send_log(self, s, m):
+        log.info("SEND_LOG del cliente: %s", str(m.get("title", ""))[:80])
+        return {}
 
     async def c_cmd_disconnect(self, s, m):
         # Tras CMD_GET_SVRLIST el cliente manda CMD_DISCONNECT {logoutstat: "MOV"} y salta al
