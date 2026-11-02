@@ -181,7 +181,12 @@ class Servidor:
                  ("LiveDataSetFlowOnMode", "/livedata/LiveDataSetFlowOnMode"),
                  ("LiveDataSetFlowOffMode", "/livedata/LiveDataSetFlowOffMode"),
                  ("LiveDataSetFlowExhibition", "/livedata/LiveDataSetFlowExhibition"),
-                 ("LiveDataSetEditData", "/livedata/LiveDataSetEditData"))
+                 ("LiveDataSetEditData", "/livedata/LiveDataSetEditData"),
+                 # C (PESBUL R7.3.634 + crash 02-nov en 140c5ec4b): imágenes del menú online; si
+                 # falta la clave la URL es NULL y TopMode revienta (c0000005, FUN_140c5f7b0)
+                 ("DMM_TOP", "/asset/dmm-top"), ("WEEKLY_INFO_BANNER", "/asset/weekly-info-banner"),
+                 ("BANNER", "/asset/banner"), ("RANK", "/rank"), ("DIVISION_RANK", "/division_rank"),
+                 ("AVATAR", "/avatar/AVATAR"))
     VERSIONES_EULA = ("eula_version", "eula_myclub_version", "eula_privacy_policy_version")
     VERSIONES_EULA_CERO = ("eula_privacy_notice_version", "eula_privacy_policy_california_version",
                            "eula_privacy_policy_japan_version")

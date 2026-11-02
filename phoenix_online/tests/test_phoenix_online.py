@@ -120,7 +120,7 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         s, env = cliente(self.srv)
         await self.srv.recibir(s, 42, {"msgid": "CMD_GET_URLLIST", "rqid": 9})
         seq, m = env[-1]
-        self.assertEqual((seq, m["rqid"], m["result"], m["url_num"]), (42, 9, "NOERR", 12))
+        self.assertEqual((seq, m["rqid"], m["result"], m["url_num"]), (42, 9, "NOERR", 17))
         self.assertTrue(all(isinstance(x, Empaquetado) for x in m["ulist"]))
 
     async def test_login_real_steam_challenge_account(self):
@@ -184,7 +184,7 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         s, env = cliente(self.srv)
         await self.srv.recibir(s, 1, {"msgid": "CMD_GET_URLLIST", "rqid": 1})
         tipos = [x.valor["type"] for x in env[-1][1]["ulist"]]
-        for t in ("EULA_PES", "EULA_MYCLUB", "EULA_PRIVACY_POLICY", "FLOW"):
+        for t in ("EULA_PES", "EULA_MYCLUB", "EULA_PRIVACY_POLICY", "FLOW", "DMM_TOP", "WEEKLY_INFO_BANNER"):
             self.assertIn(t, tipos)
         self.assertEqual(env[-1][1]["url_num"], len(tipos))
 
