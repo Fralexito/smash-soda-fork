@@ -273,6 +273,35 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         await self.srv.cerrar(a)
         self.assertEqual(self.srv.salas, {})
 
+    async def test_partida_rapida_empareja_dos(self):
+        a, ea = await self.entrar("A1")
+        b, eb = await self.entrar("B2")
+        r = self.srv.recibir
+        await r(a, 20, {"msgid": "CMD_GET_QUICKMATCHOPTION", "rqid": 1})
+        self.assertEqual(ea[-1][1]["ping_level"], "PING_LEVEL_3")
+        await r(a, 21, {"msgid": "CMD_START_MATCHING", "rqid": 2, "matching_type": "OC_QUICK"})
+        self.assertEqual(sorted(ea[-2][1]), ["msgid", "result", "rqid"])  # START solo acusa recibo
+        self.assertEqual(ea[-1][1]["matching_state"], "SEARCHING")
+        await r(b, 30, {"msgid": "CMD_START_MATCHING", "rqid": 3, "matching_type": "OC_QUICK"})
+        for e in (ea, eb):
+            m = e[-1][1]
+            self.assertEqual((m["msgid"], m["rqid"], m["matching_state"], m["player_num"]),
+                             ("CMD_WATCH_MATCHING", 0, "FINISH", 2))
+            lados = [msgpack_min.unpackb(msgpack_min.packb(x.valor))["side"] for x in m["member"]]
+            self.assertEqual(lados, ["HOME", "AWAY"])
+        await r(a, 22, {"msgid": "CMD_SET_GAMERELAY_CHECK_RES", "rqid": 4})
+        self.assertNotEqual(ea[-1][1]["msgid"], "CMD_WATCH_GAMERELAY_CHECK_RES")
+        await r(b, 31, {"msgid": "CMD_SET_GAMERELAY_CHECK_RES", "rqid": 5})
+        for e in (ea, eb):
+            self.assertEqual(e[-1][1]["error_code"], "NOERR")
+
+    async def test_partida_rapida_cancelar(self):
+        a, ea = await self.entrar("A1")
+        await self.srv.recibir(a, 21, {"msgid": "CMD_START_MATCHING", "rqid": 2})
+        await self.srv.recibir(a, 22, {"msgid": "CMD_CANCEL_MATCHING", "rqid": 3})
+        self.assertEqual(ea[-1][1]["matching_state"], "CANCEL")
+        self.assertEqual(self.srv.colas["OC_QUICK"], [])
+
     async def test_reconexion_no_la_borra_la_sesion_vieja(self):
         a, _ = await self.entrar("A1")
         await self.srv.recibir(a, 5, {"msgid": "CMD_CREATEJOIN_ROOM", "rqid": 6})

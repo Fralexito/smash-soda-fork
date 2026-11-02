@@ -32,6 +32,11 @@ VIGILANCIAS = {
     "CMD_WATCH_NOTICE", "CMD_WATCH_TURN_ADDRESS_DATA",
 }
 
+# P (PESBUL matchmaking_policy): opciones guardadas de «Opciones de Matchmaking»
+OPCIONES_RAPIDA = {"is_pass_level": "NO", "pass_level": 1, "rating_level": "RATING_LEVEL_1",
+                   "ping_level": "PING_LEVEL_3", "team_class": "TEAM_NONE", "is_league": "NO",
+                   "is_team_power_lv": "NO", "is_good_reputation": "YES"}
+
 PAUSA_EMPUJE = 0.25  # cientos de ms entre empujes encadenados (§11.5.6)
 
 
@@ -54,6 +59,7 @@ class Sesion:
         self.entry = False
         self.lang = None
         self.cerrar_tras_responder = False
+        self.opciones_rapida = dict(OPCIONES_RAPIDA)
 
     def enviar(self, mensaje):
         self._enviar_trama(self.secuencia, mensaje)
@@ -118,6 +124,8 @@ class Servidor:
         self.salas = {}
         self.turn_pendiente = {}  # pid destino -> (address, size)
         self.dormir = asyncio.sleep
+        self.colas = {}       # matching_type -> [Sesion] buscando rival
+        self.parejas = {}     # Sesion -> Pareja de partida rápida
 
     # ---------- ciclo de vida ----------
     def abrir(self, sesion):
@@ -128,6 +136,8 @@ class Servidor:
         if sesion.pid is not None and self.por_pid.get(sesion.pid) is sesion:
             del self.por_pid[sesion.pid]
         await self._salir_de_sala(sesion)
+        self._salir_de_cola(sesion)
+        self.parejas.pop(sesion, None)
 
     # ---------- despacho ----------
     async def recibir(self, sesion, secuencia, msg):
@@ -458,6 +468,106 @@ class Servidor:
             crudo = repr(hashes).encode()
             s.huella = (len(hashes) if hasattr(hashes, "__len__") else 0,
                         hashlib.sha256(crudo).hexdigest())
+        return {}
+
+    # ---------- Partida rápida: matchmaking (PESBUL r7.3.641-649, solo hechos de protocolo) ----------
+    async def c_cmd_get_quickmatchoption(self, s, m):
+        return dict(s.opciones_rapida)
+
+    async def c_cmd_set_quickmatchoption(self, s, m):
+        for k in OPCIONES_RAPIDA:
+            if k in m:
+                s.opciones_rapida[k] = m[k]
+        return {}
+
+    async def c_cmd_get_maintenance_info(self, s, m):
+        return {}
+
+    def _salir_de_cola(self, s):
+        for cola in self.colas.values():
+            if s in cola:
+                cola.remove(s)
+
+    def _miembro(self, s, orden, dueno, lado=None):
+        """Una ficha del roster de CMD_WATCH_MATCHING (bin con MessagePack dentro)."""
+        ident = self._identidad(s, s.pname or "Phoenix")
+        f = {"matching_order": orden, "is_owner": "YES" if dueno else "NO",
+             "pid": self._pid_visible(s) or 0, "pname": Empaquetado(ident),
+             "ntl_nat_type": int(s.ntl.get("ntl_nat_type") or 0),
+             "has_guestplayer": "NO", "guest_info": Empaquetado([]),
+             "rating": 0, "manner": "", "team_power_lv": "", "division": "",
+             "retry_num": 0, "base_team_id": 0, "team_name": "",
+             "hometown_info": Empaquetado([]), "game_result_wdl": [],
+             "is_pes_league_mode": "NO", "skill_rank": "", "is_entry_weekly_myclub": "NO",
+             "weekly_point": 0, "join_compe_rating": 0}
+        if lado is not None:
+            f["side"] = lado  # C (r7.3.650): sin side, el 2.º jugador no ve su tarjeta
+        for k in ("host_addr", "reflexive_addr", "relayed_addr"):
+            v = s.ntl.get(k)
+            if isinstance(v, dict):
+                v = Empaquetado(v)
+            if v:
+                f[k] = v
+        return Empaquetado(f)
+
+    @staticmethod
+    def _vigilar_emparejamiento(s, estado, miembros):
+        # C (r7.3.641/644): el estado llega por un EMPUJE con rqid 0 y result NOERR obligatorio;
+        # START_MATCHING solo lleva msgid/rqid/result
+        s.enviar({"msgid": "CMD_WATCH_MATCHING", "rqid": 0, "result": NOERR,
+                  "matching_state": estado, "player_num": len(miembros), "member": miembros})
+
+    async def c_cmd_start_matching(self, s, m):
+        tipo = str(m.get("matching_type") or "OC_QUICK")
+        self._salir_de_cola(s)
+        self.parejas.pop(s, None)
+        s.enviar({"msgid": m["msgid"], "rqid": m.get("rqid", 0), "result": NOERR})
+        cola = self.colas.setdefault(tipo, [])
+        rival = next((x for x in cola if x is not s and x in self.sesiones), None)
+        if rival is None:
+            cola.append(s)
+            await self.dormir(PAUSA_EMPUJE)
+            if s in cola:  # tarjeta propia en el panel LOCAL mientras busca (r7.3.647)
+                self._vigilar_emparejamiento(s, "SEARCHING", [self._miembro(s, 0, False)])
+            return None
+        cola.remove(rival)
+        # el que esperaba es anfitrión/LOCAL; el que completa la pareja, VISITANTE (r7.3.644/650)
+        miembros = [self._miembro(rival, 0, True, "HOME"), self._miembro(s, 1, False, "AWAY")]
+        pareja = {"miembros": (rival, s), "check": set()}
+        self.parejas[rival] = self.parejas[s] = pareja
+        await self.dormir(PAUSA_EMPUJE)
+        for x in (rival, s):
+            self._vigilar_emparejamiento(x, "FINISH", miembros)
+        log.info("pareja de %s: %s vs %s", tipo, rival.pid, s.pid)
+        return None
+
+    async def c_cmd_cancel_matching(self, s, m):
+        self._salir_de_cola(s)
+        self.parejas.pop(s, None)
+        s.enviar({"msgid": m["msgid"], "rqid": m.get("rqid", 0), "result": NOERR})
+        # C (r7.3.648): la pantalla de búsqueda solo se cierra con el empuje CANCEL
+        self._vigilar_emparejamiento(s, "CANCEL", [])
+        return None
+
+    async def c_cmd_set_gamerelay_check_res(self, s, m):
+        s.enviar({"msgid": m["msgid"], "rqid": m.get("rqid", 0), "result": NOERR})
+        pareja = self.parejas.get(s)
+        if pareja is None:
+            return None
+        pareja["check"].add(s)
+        # P (política PESBUL): se libera cuando los dos informaron; el cliente espera 30 s máx.
+        if len(pareja["check"]) == 2:
+            for x in pareja["miembros"]:
+                x.enviar({"msgid": "CMD_WATCH_GAMERELAY_CHECK_RES", "rqid": 0,
+                          "result": NOERR, "error_code": NOERR})
+        return None
+
+    async def c_cmd_send_matching_result(self, s, m):
+        if m.get("error_code") not in (None, NOERR):
+            log.warning("matching_result con error %s pid=%s", m.get("error_code"), s.pid)
+        return {}
+
+    async def c_cmd_set_gamemember(self, s, m):
         return {}
 
     # ---------- Lobby (§11.5 pasos 1-2) ----------
