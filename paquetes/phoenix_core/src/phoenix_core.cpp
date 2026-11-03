@@ -27,9 +27,12 @@
 #include <algorithm>
 #include <intrin.h>
 #include <tlhelp32.h>
+#include <d3d11.h>       // 0.5.0 nitidez (CAS sobre Present): solo cabeceras; las DLL se cargan en ejecución
+#include <dxgi.h>
+#include <d3dcompiler.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.4.113"
+#define PHX_CORE_VERSION "0.5.0"
 
 namespace {
 
@@ -3456,6 +3459,8 @@ bool supOcultosInstalar(Feature& f) {
 }
 bool supOcultosQuitar(Feature&) { g_supOcultosOn = 0; return true; }
 
+#include "nitidez.h"   // 0.5.0: nit::nitInstalar / nit::nitQuitar (filtro de nitidez CAS en Present)
+
 std::vector<Feature> g_funciones = {   // orden = orden de arranque (gol_nativo_free necesita la sonda)
     { "diagnostico",     "Diagnóstico de firmas (solo lectura)",       diagInstalar,  diagQuitar  },
     { "sonda_partido",   "Sonda: estados y gol nativo (solo mira)",    sondaInstalar, sondaQuitar },
@@ -3509,6 +3514,7 @@ std::vector<Feature> g_funciones = {   // orden = orden de arranque (gol_nativo_
     { "sin_1D_free", "Gol sin el paso 0x1D de la cola (entrenamiento; evita el congelón)", sin1DInstalar, sin1DQuitar },
     { "rescate_render_free", "Rescate del bloqueo juego↔render (experimental)", rescateInstalar, rescateQuitar },
     { "vigilante_bucles", "Vigilante de cuelgues (solo mira)",         vigilanteInstalar, vigilanteQuitar },
+    { "nitidez_activa", "Filtro de nitidez adaptativa (CAS) sobre la imagen final; Ctrl+F10 enciende/apaga, Ctrl+F11/F12 fuerza (0.5.0)", nit::nitInstalar, nit::nitQuitar },
 };
 bool sondaActiva() {
     for (auto& f : g_funciones) if (strcmp(f.id, "sonda_partido") == 0) return f.activa;
@@ -3633,6 +3639,7 @@ void leerConfig() {
     if (valorDe("velocidad_partido", v)) { int q = atoi(v.c_str()); g_velocidadPartido = (q >= 0 && q <= 4) ? q : -1; }
     if (valorDe("final_nativo", v)) g_finalNativo = (v == "true");
     if (valorDe("street_activo", v)) { LONG s = (v == "false") ? 0 : 1; g_streetActivo = g_streetPedido = s; logf("[STREET] al arrancar: modo Street %s", s ? "ENCENDIDO" : "APAGADO"); }
+    if (valorDe("nitidez_fuerza", v)) { float q = (float)atof(v.c_str()); nit::g_fuerza = (q >= 0.0f && q <= 1.0f) ? q : 0.5f; }   // 0.5.0: fuerza del filtro de nitidez (0..1, por defecto 0.5)
     if (valorDe("anadido_min", v)) { double m = atof(v.c_str()); if (m >= 0.0 && m <= 10.0) g_anadidoSeg = m * 3600.0; }
     if (valorDe("muro_fondo_rebote", v)) { g_muroFondoRebote = (float)atof(v.c_str()); if (g_muroFondoRebote < 0.0f || g_muroFondoRebote > 0.95f) g_muroFondoRebote = -1.0f; }
     if (valorDe("muro_lat_friccion", v)) { g_muroLatFric = (float)atof(v.c_str()); if (g_muroLatFric < 0.0f || g_muroLatFric > 1.0f) g_muroLatFric = -1.0f; }

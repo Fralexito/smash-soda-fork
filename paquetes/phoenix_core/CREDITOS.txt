@@ -1,0 +1,13 @@
+CREDITOS
+
+== Phoenix Core ==
+
+Nitidez (nitidez_activa, desde la version 0.5.0)
+  Algoritmo: AMD FidelityFX CAS (Contrast Adaptive Sharpening), (c) Advanced Micro Devices, Inc., licencia MIT.
+  El pixel shader de src/nitidez.h esta reescrito por Phoenix desde la formula publica de CAS (pasada unica, sin escalado).
+  No se incluye ni se descarga codigo ni binarios de AMD. Referencia: https://gpuopen.com/fidelityfx-cas/
+  Licencia MIT de FidelityFX CAS: se permite usar, copiar, modificar y distribuir el software con el aviso de copyright
+  y de permiso en todas las copias o partes sustanciales; el software se ofrece "tal cual", sin garantia.
+
+Enganche de Present
+  Por vtable de IDXGISwapChain (indice 8), encadenado detras del gancho de Sider (sider.dll), sin librerias externas.
