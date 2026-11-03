@@ -11,7 +11,7 @@ const MAX_ACTIVIDAD = 400;
 let estado = {
   conectado: false,        // llegó la bienvenida
   motor: null,             // último «estado» del motor
-  info: { idiomas: [], resoluciones: [], pantallas: [], gpus: [], wgc: false, temasOverlay: [] },
+  info: { idiomas: [], resoluciones: [], pantallas: [], gpus: [], wgc: false, ventanas: [], temasOverlay: [] },
   chat: [],                // { id, texto, en }
   actividad: [],           // { id, texto, en }
   noLeidos: 0,             // sin leer del chat de SALA
@@ -201,7 +201,7 @@ export function conectarTienda() {
       conectado: true,
       info: {
         idiomas: b.idiomas || [], resoluciones: b.resoluciones || [], pantallas: b.pantallas || [],
-        gpus: b.gpus || [], wgc: !!b.wgc, temasOverlay: b.temasOverlay || [],
+        gpus: b.gpus || [], wgc: !!b.wgc, ventanas: b.ventanas || [], temasOverlay: b.temasOverlay || [],
       },
       chat: (b.chat || []).map((texto) => ({ id: idLinea++, texto, en: 0 })),
       actividad: (b.actividad || []).map((texto) => ({ id: idLinea++, texto, en: 0 })),

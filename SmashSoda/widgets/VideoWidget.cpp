@@ -92,6 +92,27 @@ bool VideoWidget::render(bool& showWindow)
     }
 
     // =========================================================
+    // 0.3.61: Solo una ventana (nada más del escritorio sale al invitado)
+    // =========================================================
+    if (DX11::isWGCSupported()) {
+        std::vector<std::pair<std::string, std::string>> winOptions;
+        winOptions.push_back({ "", "Pantalla entera (normal)" });
+        std::string winCurrent = _dx11.getCaptureWindowTitle();
+        bool winFound = winCurrent.empty();
+        for (const auto& t : WGCapture::listWindowTitles()) {
+            winOptions.push_back({ t, t });
+            if (t == winCurrent) winFound = true;
+        }
+        if (!winFound) winOptions.push_back({ winCurrent, winCurrent + " (cerrada)" });
+
+        if (elSelect("Transmitir solo esta ventana", winOptions, winCurrent, "Solo se envía la ventana elegida; el resto del escritorio no se ve. Si se cierra, no se muestra nada más.")) {
+            _dx11.setCaptureWindowTitle(winCurrent);
+            Config::cfg.video.captureWindowTitle = winCurrent;
+            Config::cfg.Save();
+        }
+    }
+
+    // =========================================================
     // Resolution
     // =========================================================
     static unsigned int currentResolutionIndex = Config::cfg.video.resolutionIndex;

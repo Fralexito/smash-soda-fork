@@ -2,6 +2,8 @@
 #pragma warning(disable: 4265 4946 4100)
 
 #include "WGCapture.h"
+#include <dwmapi.h>
+#pragma comment(lib, "dwmapi.lib")
 
 #include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.Foundation.Metadata.h>
@@ -58,6 +60,28 @@ static GraphicsCaptureItem CreateItemForMonitor(HMONITOR hmon)
 		guid_of<GraphicsCaptureItem>(),
 		put_abi(item)));
 	return item;
+}
+
+static GraphicsCaptureItem CreateItemForWindow(HWND hwnd)
+{
+	auto factory = get_activation_factory<GraphicsCaptureItem>();
+	auto interop = factory.as<IGraphicsCaptureItemInterop>();
+
+	GraphicsCaptureItem item{ nullptr };
+	check_hresult(interop->CreateForWindow(
+		hwnd,
+		guid_of<GraphicsCaptureItem>(),
+		put_abi(item)));
+	return item;
+}
+
+static std::string WideToUtf8(const wchar_t* w)
+{
+	int n = WideCharToMultiByte(CP_UTF8, 0, w, -1, nullptr, 0, nullptr, nullptr);
+	if (n <= 1) return std::string();
+	std::string out((size_t)n - 1, '\0');
+	WideCharToMultiByte(CP_UTF8, 0, w, -1, &out[0], n, nullptr, nullptr);
+	return out;
 }
 
 struct WGCapture::Impl
@@ -158,6 +182,43 @@ WGCapture::~WGCapture()
 	delete _impl;
 }
 
+namespace
+{
+	struct EnumCtx { std::vector<std::pair<HWND, std::string>>* out; };
+
+	BOOL CALLBACK enumWindowsProc(HWND hwnd, LPARAM lp)
+	{
+		if (!IsWindowVisible(hwnd) || GetWindow(hwnd, GW_OWNER) != nullptr) return TRUE;
+		if (GetWindowLongW(hwnd, GWL_EXSTYLE) & WS_EX_TOOLWINDOW) return TRUE;
+		int cloaked = 0;
+		if (SUCCEEDED(DwmGetWindowAttribute(hwnd, DWMWA_CLOAKED, &cloaked, sizeof(cloaked))) && cloaked) return TRUE;
+		wchar_t buf[512] = {};
+		if (GetWindowTextW(hwnd, buf, 512) <= 0) return TRUE;
+		reinterpret_cast<EnumCtx*>(lp)->out->push_back({ hwnd, WideToUtf8(buf) });
+		return TRUE;
+	}
+}
+
+std::vector<std::string> WGCapture::listWindowTitles()
+{
+	std::vector<std::pair<HWND, std::string>> all;
+	EnumCtx ctx{ &all };
+	EnumWindows(enumWindowsProc, reinterpret_cast<LPARAM>(&ctx));
+	std::vector<std::string> titles;
+	for (auto& w : all) titles.push_back(w.second);
+	return titles;
+}
+
+HWND WGCapture::findWindowByTitle(const std::string& title)
+{
+	if (title.empty()) return nullptr;
+	std::vector<std::pair<HWND, std::string>> all;
+	EnumCtx ctx{ &all };
+	EnumWindows(enumWindowsProc, reinterpret_cast<LPARAM>(&ctx));
+	for (auto& w : all) if (w.second == title) return w.first;
+	return nullptr;
+}
+
 bool WGCapture::isSupported()
 {
 	try
@@ -170,7 +231,7 @@ bool WGCapture::isSupported()
 	}
 }
 
-bool WGCapture::start(ID3D11Device* device, ID3D11DeviceContext* context, HMONITOR monitor)
+bool WGCapture::start(ID3D11Device* device, ID3D11DeviceContext* context, HMONITOR monitor, HWND window)
 {
 	stop();
 
@@ -183,7 +244,7 @@ bool WGCapture::start(ID3D11Device* device, ID3D11DeviceContext* context, HMONIT
 		_impl->winrtDevice = CreateWinRTDevice(device);
 		if (!_impl->winrtDevice) { _impl->release(); return false; }
 
-		_impl->item = CreateItemForMonitor(monitor);
+		_impl->item = window ? CreateItemForWindow(window) : CreateItemForMonitor(monitor);
 		if (!_impl->item) { _impl->release(); return false; }
 
 		auto size = _impl->item.Size();

@@ -274,6 +274,7 @@ bool DX11::init()
 	_currentScreen = Config::cfg.video.monitor;
 	_currentGPU = Config::cfg.video.adapter;
 	_captureMethod = (CaptureMethod)Config::cfg.video.captureMethod;
+	_captureWindowTitle = Config::cfg.video.captureWindowTitle;
 	_lanczosEnabled = Config::cfg.video.lanczos;
 	enumGPUS();
 
@@ -309,8 +310,25 @@ bool DX11::init()
 }
 
 
+void DX11::setCaptureWindowTitle(const std::string& title)
+{
+	if (_captureWindowTitle == title) return;
+	_captureWindowTitle = title;
+	_wgCapture.stop();
+}
+
+const std::string& DX11::getCaptureWindowTitle() const
+{
+	return _captureWindowTitle;
+}
+
 bool DX11::captureScreen(ParsecDSO* ps)
 {
+	// 0.3.61: modo "solo ventana elegida". Si falla (ventana cerrada, WGC no disponible) NO se cae a duplicar el
+	// escritorio: simplemente no se envía cuadro nuevo.
+	if (!_captureWindowTitle.empty())
+		return WGCapture::isSupported() && captureScreenWGC(ps);
+
 	bool useWGC = (_captureMethod == CaptureMethod::GraphicsCapture) ||
 	              (_captureMethod == CaptureMethod::Auto && WGCapture::isSupported());
 
@@ -330,9 +348,19 @@ bool DX11::captureScreenWGC(ParsecDSO* ps)
 {
 	if (!_wgCapture.isActive())
 	{
-		HMONITOR hmon = getMonitorHandle();
-		if (!hmon) return false;
-		if (!_wgCapture.start(_device, _context, hmon))
+		HWND hwndCap = nullptr;
+		HMONITOR hmon = nullptr;
+		if (!_captureWindowTitle.empty())
+		{
+			hwndCap = WGCapture::findWindowByTitle(_captureWindowTitle);
+			if (!hwndCap) return false;
+		}
+		else
+		{
+			hmon = getMonitorHandle();
+			if (!hmon) return false;
+		}
+		if (!_wgCapture.start(_device, _context, hmon, hwndCap))
 			return false;
 	}
 

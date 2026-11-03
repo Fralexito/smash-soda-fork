@@ -67,6 +67,9 @@ public:
 	void setCaptureMethod(CaptureMethod method);
 	CaptureMethod getCaptureMethod() const;
 	static bool isWGCSupported();
+	/// 0.3.61: "" = pantalla entera; si no, solo esa ventana (por título). Nunca se cae al escritorio.
+	void setCaptureWindowTitle(const std::string& title);
+	const std::string& getCaptureWindowTitle() const;
 
 private:
 	void fetchScreenList();
@@ -126,6 +129,7 @@ private:
 	// Windows Graphics Capture
 	CaptureMethod _captureMethod = CaptureMethod::Auto;
 	WGCapture _wgCapture;
+	std::string _captureWindowTitle;
 };
 
 

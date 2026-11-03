@@ -1,6 +1,8 @@
 #pragma once
 
 #include <d3d11.h>
+#include <string>
+#include <vector>
 
 class WGCapture
 {
@@ -10,7 +12,12 @@ public:
 
 	static bool isSupported();
 
-	bool start(ID3D11Device* device, ID3D11DeviceContext* context, HMONITOR monitor);
+	/// 0.3.61: si `window` no es nulo se captura solo esa ventana (WGC); si es nulo, el monitor entero.
+	bool start(ID3D11Device* device, ID3D11DeviceContext* context, HMONITOR monitor, HWND window = nullptr);
+	/// 0.3.61: títulos (UTF-8) de las ventanas abiertas que se pueden capturar.
+	static std::vector<std::string> listWindowTitles();
+	/// 0.3.61: busca una ventana visible cuyo título sea exactamente `title` (UTF-8). nullptr si no existe.
+	static HWND findWindowByTitle(const std::string& title);
 	void stop();
 	bool isActive() const;
 
