@@ -114,6 +114,7 @@ void Config::Load() {
 			cfg.video.lanczos = setValue(cfg.video.lanczos, j["Video"]["lanczos"].get<bool>());
 			cfg.video.framePacing = setValue(cfg.video.framePacing, j["Video"].value("framePacing", true));
 			cfg.video.captureMethod = setValue(cfg.video.captureMethod, j["Video"]["captureMethod"].get<unsigned int>());
+			cfg.video.captureWindowTitle = setValue(cfg.video.captureWindowTitle, j["Video"].value("captureWindowTitle", std::string("")));
 			cfg.video.fps = setValue(cfg.video.fps, j["Video"]["fps"].get<unsigned int>());
 			cfg.video.bandwidth = setValue(cfg.video.bandwidth, j["Video"]["bandwidth"].get<unsigned int>());
 
@@ -371,6 +372,7 @@ void Config::Save() {
 		{"lanczos", cfg.video.lanczos},
 		{"framePacing", cfg.video.framePacing},
 		{"captureMethod", cfg.video.captureMethod},
+		{"captureWindowTitle", cfg.video.captureWindowTitle},
 		{"fps", cfg.video.fps},
 		{"bandwidth", cfg.video.bandwidth}
 	};

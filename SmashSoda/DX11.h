@@ -79,6 +79,9 @@ private:
 	bool ensureLastSubmittedTexture(UINT width, UINT height, DXGI_FORMAT format);
 
 	HMONITOR getMonitorHandle();
+	/// 0.3.61: "" = pantalla entera; si no, solo esa ventana (por título). Nunca se cae al escritorio.
+	void setCaptureWindowTitle(const std::string& title);
+	const std::string& getCaptureWindowTitle() const;
 	bool captureScreenWGC(ParsecDSO* ps);
 	bool captureScreenDupl(ParsecDSO* ps);
 
@@ -126,6 +129,7 @@ private:
 	// Windows Graphics Capture
 	CaptureMethod _captureMethod = CaptureMethod::Auto;
 	WGCapture _wgCapture;
+	std::string _captureWindowTitle;
 };
 
 

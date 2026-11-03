@@ -63,6 +63,7 @@ public:
 		bool lanczos = true;
 		bool framePacing = true;
 		unsigned int captureMethod = 0;
+		std::string captureWindowTitle = ""; // 0.3.61: "" = pantalla entera; si no, solo esa ventana
 		unsigned int fps = 60;
 		unsigned int bandwidth = 20;
 	};
