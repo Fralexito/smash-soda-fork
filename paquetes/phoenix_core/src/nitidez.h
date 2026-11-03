@@ -27,11 +27,17 @@ typedef HRESULT(WINAPI* CrearDispFn)(IDXGIAdapter*, D3D_DRIVER_TYPE, HMODULE, UI
 
 volatile LONG g_on = 0;          // 1 = filtrando
 float g_fuerza = 0.5f;           // 0..1
+float g_pielNit = 0.3f;          // json nitidez_piel (0..1): multiplica la nitidez en tono de piel
+float g_pielSuav = 0.35f;        // json suavizado_piel (0..1): mezcla del suavizado bilateral solo en piel
+bool  g_anisoCfg = true;         // json aniso_activo (por defecto true)
+int   g_anisoNivel = 16;         // json aniso_nivel (1..16)
 PresentFn g_sig = nullptr;       // lo que había en la vtable antes de nosotros (el gancho de Sider o el Present real)
 void** g_vt = nullptr;           // vtable compartida de IDXGISwapChain
 bool g_enganchado = false;
 volatile LONG g_apagadoSolo = 0; // 1 = se desactivó por un fallo (ver log)
 int g_dibujados = 0;
+volatile LONG g_anisoOn = 0, g_sVistos = 0, g_sCambiados = 0;   // 0.5.3 aniso (ver más abajo)
+void** g_ctxVt = nullptr;
 
 ID3D11Device* g_dev = nullptr;
 ID3D11VertexShader* g_vs = nullptr;
@@ -56,7 +62,7 @@ void liberarTodo() {
 
 // CAS (FidelityFX, MIT) · pasada única sin escalado. Fuerza 0..1 en el buffer constante.
 const char* kHlsl = R"(
-cbuffer C : register(b0) { float4 p; };   // p.x = fuerza 0..1
+cbuffer C : register(b0) { float4 p; };   // x = fuerza 0..1, y = nitidez_piel, z = suavizado_piel, w = modo (0 = 0.5.3; 1 = como la 0.5.1, sin proteccion de piel)
 Texture2D<float4> T : register(t0);
 struct V { float4 pos : SV_Position; };
 V VS(uint id : SV_VertexID) {
@@ -64,6 +70,22 @@ V VS(uint id : SV_VertexID) {
     o.pos = float4(uv * float2(2, -2) + float2(-1, 1), 0, 1); return o;
 }
 float3 L(int2 q, int2 d, int2 mx) { return T.Load(int3(clamp(q + d, int2(0, 0), mx), 0)).rgb; }
+float Y(float3 c) { return dot(c, float3(0.2126, 0.7152, 0.0722)); }
+// Peso de piel (0..1): tono 5-50 grados y saturacion 0.15-0.65, con bordes suaves
+float pesoPiel(float3 c) {
+    float mx = max(c.r, max(c.g, c.b)), mn = min(c.r, min(c.g, c.b)), dl = mx - mn;
+    float s = mx > 1e-4 ? dl / mx : 0.0;
+    float h = 0.0;
+    if (dl > 1e-5) {
+        if (mx == c.r) h = fmod((c.g - c.b) / dl + 6.0, 6.0);
+        else if (mx == c.g) h = (c.b - c.r) / dl + 2.0;
+        else h = (c.r - c.g) / dl + 4.0;
+    }
+    h *= 60.0;
+    float wh = smoothstep(-3.0, 5.0, h) * (1.0 - smoothstep(50.0, 58.0, h));
+    float ws = smoothstep(0.10, 0.15, s) * (1.0 - smoothstep(0.65, 0.72, s));
+    return wh * ws;
+}
 float4 PS(V i) : SV_Target {
     uint w, h; T.GetDimensions(w, h);
     int2 mx = int2(w - 1, h - 1); int2 q = int2(i.pos.xy);
@@ -77,9 +99,25 @@ float4 PS(V i) : SV_Target {
     float3 mx2 = max(mx3, max(max(a, c), max(g, ii))); mx3 += mx2;
     float3 amp = saturate(min(mn, 2.0 - mx3) / max(mx3, 1e-5));
     float3 wgt = -sqrt(amp) / (8.0 - 3.0 * saturate(p.x));
+    float wp = (p.w < 0.5) ? pesoPiel(e) : 0.0;          // proteccion de piel solo en el modo 0
+    wgt *= lerp(1.0, saturate(p.y), wp);                  // nitidez_piel multiplica la nitidez en la piel
     float3 rcpW = 1.0 / (1.0 + 4.0 * wgt);
     float3 win = (b + d) + (f + hh);
-    return float4(saturate((win * wgt + e) * rcpW), e4.a);
+    float3 outc = saturate((win * wgt + e) * rcpW);
+    if (wp > 0.0 && p.z > 0.0) {                          // suavizado bilateral 5x5 SOLO en piel; tolerancia de bordes por luminancia
+        float ye = Y(e); float3 acc = e; float aw = 1.0;
+        [unroll] for (int dy = -2; dy <= 2; ++dy) {
+            [unroll] for (int dx = -2; dx <= 2; ++dx) {
+                if (dx == 0 && dy == 0) continue;
+                float3 n = L(q, int2(dx, dy), mx);
+                float dY = Y(n) - ye;
+                float wt = exp(-(dx * dx + dy * dy) / 4.5) * exp(-(dY * dY) / 0.005);
+                acc += n * wt; aw += wt;
+            }
+        }
+        outc = lerp(outc, acc / aw, saturate(p.z) * wp);
+    }
+    return float4(outc, e4.a);
 }
 )";
 
@@ -163,22 +201,62 @@ bool guardarBmp(const std::string& ruta, const std::vector<uint8_t>& px, UINT w,
     CloseHandle(f); return true;
 }
 
-// Segunda mitad: lee el frame ya filtrado, guarda las dos capturas y anota la diferencia en el log.
-void terminarCaptura(ID3D11DeviceContext* ctx, ID3D11Texture2D* bb, const D3D11_TEXTURE2D_DESC& d, const std::vector<uint8_t>& raw) {
+// Una pasada de dibujo con el modo dado (0 = 0.5.3, 1 = como la 0.5.1): escribe el buffer constante y dibuja.
+void pasada(ID3D11DeviceContext* ctx, float modo) {
+    D3D11_MAPPED_SUBRESOURCE mp;
+    if (SUCCEEDED(ctx->Map(g_cb, 0, D3D11_MAP_WRITE_DISCARD, 0, &mp))) { float* v = (float*)mp.pData; v[0] = g_fuerza; v[1] = g_pielNit; v[2] = g_pielSuav; v[3] = modo; ctx->Unmap(g_cb, 0); }
+    ctx->Draw(3, 0);
+}
+
+static bool esPielCpu(const uint8_t* px, bool rgba) {
+    float r = (rgba ? px[0] : px[2]) / 255.0f, g = px[1] / 255.0f, b = (rgba ? px[2] : px[0]) / 255.0f;
+    float mx = (std::max)(r, (std::max)(g, b)), mn = (std::min)(r, (std::min)(g, b)), dl = mx - mn;
+    if (mx < 1e-4f || dl < 1e-5f) return false;
+    float s = dl / mx, h;
+    if (mx == r) h = fmodf((g - b) / dl + 6.0f, 6.0f); else if (mx == g) h = (b - r) / dl + 2.0f; else h = (r - g) / dl + 4.0f;
+    h *= 60.0f; float Y = 0.2126f * r + 0.7152f * g + 0.0722f * b;
+    return h >= 5.0f && h <= 50.0f && s >= 0.15f && s <= 0.65f && Y > 0.05f && Y < 0.9f;
+}
+static void lumas(const std::vector<uint8_t>& v, bool rgba, std::vector<float>& out) {
+    size_t n = v.size() / 4; out.resize(n);
+    for (size_t i = 0; i < n; ++i) { float r = rgba ? v[i * 4] : v[i * 4 + 2], g = v[i * 4 + 1], b = rgba ? v[i * 4 + 2] : v[i * 4]; out[i] = 0.2126f * r + 0.7152f * g + 0.0722f * b; }
+}
+// «Grano» = varianza de la alta frecuencia (luminancia menos su media 3x3) en los pixeles de piel de la mascara.
+static double granoPiel(const std::vector<float>& Lm, const std::vector<char>& mask, UINT w, UINT h) {
+    double sq = 0; size_t n = 0;
+    for (UINT y = 1; y + 1 < h; ++y) for (UINT x = 1; x + 1 < w; ++x) {
+        size_t i = (size_t)y * w + x; if (!mask[i]) continue;
+        float m = 0; for (int dy = -1; dy <= 1; ++dy) for (int dx = -1; dx <= 1; ++dx) m += Lm[i + (size_t)dy * w + dx];
+        double hf = Lm[i] - m / 9.0f; sq += hf * hf; ++n;
+    }
+    return n ? sq / n : 0.0;
+}
+
+// Con el estado ya preparado y el frame original en g_copia: dibuja y mide TRES versiones del MISMO frame:
+// sin filtro, la 0.5.1 tal cual (modo 1) y la 0.5.3 (modo 0). Guarda 3 BMP y anota diferencias y «grano» de piel en el log.
+// Deja en el backbuffer la 0.5.3 (la version que se muestra).
+void capturaTres(ID3D11DeviceContext* ctx, ID3D11Texture2D* bb, const D3D11_TEXTURE2D_DESC& d, const std::vector<uint8_t>& raw) {
     DeleteFileA((std::string(kCapDir) + "captura.flag").c_str());
-    if (d.Format != DXGI_FORMAT_R8G8B8A8_UNORM && d.Format != DXGI_FORMAT_B8G8R8A8_UNORM) { logf("[nitidez] captura: formato %d no soportado para BMP", (int)d.Format); return; }
-    std::vector<uint8_t> fil;
-    if (raw.empty() || !leerPixeles(ctx, bb, d, fil)) { logf("[nitidez] captura: no se pudo leer el frame"); return; }
+    bool rgba = d.Format == DXGI_FORMAT_R8G8B8A8_UNORM;
+    if (!rgba && d.Format != DXGI_FORMAT_B8G8R8A8_UNORM) { logf("[nitidez] captura: formato %d no soportado para BMP", (int)d.Format); pasada(ctx, 0.0f); return; }
+    std::vector<uint8_t> v51, v52;
+    pasada(ctx, 1.0f); bool ok1 = leerPixeles(ctx, bb, d, v51);
+    pasada(ctx, 0.0f); bool ok2 = leerPixeles(ctx, bb, d, v52);
+    if (raw.empty() || !ok1 || !ok2) { logf("[nitidez] captura: no se pudo leer algun frame"); return; }
     CreateDirectoryA((std::string(kCapDir) + "capturas").c_str(), nullptr);
     SYSTEMTIME st; GetLocalTime(&st); char tag[64]; snprintf(tag, sizeof tag, "%02d%02d%02d_f%02d", st.wHour, st.wMinute, st.wSecond, (int)(g_fuerza * 100));
     std::string base = std::string(kCapDir) + "capturas\\" + tag;
-    bool a = guardarBmp(base + "_sin_filtro.bmp", raw, d.Width, d.Height, d.Format), b = guardarBmp(base + "_con_filtro.bmp", fil, d.Width, d.Height, d.Format);
-    double suma = 0, suma2 = 0; unsigned long cambiados = 0; int maxd = 0; size_t np = (size_t)d.Width * d.Height;
-    for (size_t i = 0; i < np; ++i) {
-        int dr = abs((int)raw[i * 4] - (int)fil[i * 4]), dg = abs((int)raw[i * 4 + 1] - (int)fil[i * 4 + 1]), db = abs((int)raw[i * 4 + 2] - (int)fil[i * 4 + 2]);
-        int m = (std::max)(dr, (std::max)(dg, db)); suma += (dr + dg + db) / 3.0; suma2 += m; if (m > 2) ++cambiados; if (m > maxd) maxd = m;
-    }
-    logf("[nitidez] CAPTURA %s: %ux%u fuerza %.2f · diferencia media %.3f /255 · pixeles con cambio >2: %.2f%% · cambio maximo %d · guardado sin_filtro=%d con_filtro=%d", tag, d.Width, d.Height, g_fuerza, suma / np, 100.0 * cambiados / np, maxd, (int)a, (int)b);
+    bool a = guardarBmp(base + "_1_sin_filtro.bmp", raw, d.Width, d.Height, d.Format);
+    bool b = guardarBmp(base + "_2_v051.bmp", v51, d.Width, d.Height, d.Format);
+    bool c = guardarBmp(base + "_3_v053.bmp", v52, d.Width, d.Height, d.Format);
+    size_t np = (size_t)d.Width * d.Height;
+    double d51 = 0, d52 = 0; for (size_t i = 0; i < np; ++i) for (int k = 0; k < 3; ++k) { d51 += abs((int)raw[i * 4 + k] - (int)v51[i * 4 + k]); d52 += abs((int)raw[i * 4 + k] - (int)v52[i * 4 + k]); }
+    std::vector<char> mask(np, 0); size_t nPiel = 0;
+    for (size_t i = 0; i < np; ++i) if (esPielCpu(&raw[i * 4], rgba)) { mask[i] = 1; ++nPiel; }
+    std::vector<float> l0, l1, l2; lumas(raw, rgba, l0); lumas(v51, rgba, l1); lumas(v52, rgba, l2);
+    double g0 = granoPiel(l0, mask, d.Width, d.Height), g1 = granoPiel(l1, mask, d.Width, d.Height), g2 = granoPiel(l2, mask, d.Width, d.Height);
+    logf("[nitidez] CAPTURA %s %ux%u fuerza %.2f piel %.2f suav %.2f · diferencia media vs sin filtro: v051 %.3f /255, v053 %.3f /255", tag, d.Width, d.Height, g_fuerza, g_pielNit, g_pielSuav, d51 / (np * 3.0), d52 / (np * 3.0));
+    logf("[nitidez] CAPTURA GRANO de piel (varianza de alta frecuencia, 0-255 al cuadrado): sin filtro %.3f · v051 %.3f · v053 %.3f · pixeles de piel %zu (%.1f%% del frame) · BMP %d%d%d", g0, g1, g2, nPiel, 100.0 * nPiel / np, (int)a, (int)b, (int)c);
 }
 
 // Una pasada del filtro sobre el backbuffer de `sc`. Sin objetos C++ con destructor (se llama dentro de __try).
@@ -223,8 +301,6 @@ bool aplicar(IDXGISwapChain* sc) {
     // ---- dibujar
     ctx->CopyResource(g_copia, bb);
     std::vector<uint8_t> raw; bool cap = pidioCaptura(); if (cap && !leerPixeles(ctx, g_copia, d, raw)) raw.clear();
-    D3D11_MAPPED_SUBRESOURCE mp;
-    if (SUCCEEDED(ctx->Map(g_cb, 0, D3D11_MAP_WRITE_DISCARD, 0, &mp))) { float* v = (float*)mp.pData; v[0] = g_fuerza; v[1] = v[2] = v[3] = 0; ctx->Unmap(g_cb, 0); }
     D3D11_VIEWPORT vp = { 0, 0, (FLOAT)d.Width, (FLOAT)d.Height, 0.0f, 1.0f };
     FLOAT bf[4] = { 0, 0, 0, 0 };
     ctx->IASetInputLayout(nullptr); ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -233,8 +309,7 @@ bool aplicar(IDXGISwapChain* sc) {
     ctx->PSSetShaderResources(0, 1, &g_srv); ctx->PSSetConstantBuffers(0, 1, &g_cb);
     ctx->OMSetRenderTargets(1, &rtv, nullptr); ctx->OMSetBlendState(g_bs, bf, 0xFFFFFFFF); ctx->OMSetDepthStencilState(g_dss, 0);
     ctx->RSSetState(g_rs); ctx->RSSetViewports(1, &vp);
-    ctx->Draw(3, 0);
-    if (cap) terminarCaptura(ctx, bb, d, raw);
+    if (cap) capturaTres(ctx, bb, d, raw); else pasada(ctx, 0.0f);
 
     // ---- restaurar estado
     ID3D11ShaderResourceView* nul = nullptr; ctx->PSSetShaderResources(0, 1, &nul);
@@ -261,18 +336,108 @@ bool primerPlano() {
 }
 
 void teclas() {
-    static bool a10 = false, a11 = false, a12 = false;
+    static bool a9 = false, a10 = false, a11 = false, a12 = false;
     if (!primerPlano()) return;
     bool ctrl = (GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0;
     bool k10 = ctrl && (GetAsyncKeyState(VK_F10) & 0x8000), k11 = ctrl && (GetAsyncKeyState(VK_F11) & 0x8000), k12 = ctrl && (GetAsyncKeyState(VK_F12) & 0x8000);
+    bool k9 = ctrl && (GetAsyncKeyState(VK_F9) & 0x8000);
+    if (k9 && !a9) { LONG n = g_anisoOn ? 0 : 1; if (g_ctxVt) { InterlockedExchange(&g_anisoOn, n); logf("[aniso] Ctrl+F9: %s (samplers cambiados %ld; los que ya estan puestos se actualizan cuando PES los vuelve a asignar)", n ? "ON" : "OFF", g_sCambiados); } }
+    a9 = k9;
     if (k10 && !a10) { LONG n = g_on ? 0 : 1; if (n && g_apagadoSolo) logf("[nitidez] estaba apagada sola; se reintenta"); InterlockedExchange(&g_apagadoSolo, 0); InterlockedExchange(&g_on, n); logf("[nitidez] Ctrl+F10: %s (fuerza %.2f)", n ? "ENCENDIDA" : "APAGADA", g_fuerza); }
     if (k11 && !a11) { g_fuerza = (std::max)(0.0f, g_fuerza - 0.1f); logf("[nitidez] fuerza %.2f", g_fuerza); }
     if (k12 && !a12) { g_fuerza = (std::min)(1.0f, g_fuerza + 0.1f); logf("[nitidez] fuerza %.2f", g_fuerza); }
     a10 = k10; a11 = k11; a12 = k12;
 }
 
+// ================= 0.5.3 · filtro anisotropico forzado =================
+// PES crea y asigna sus samplers desde el arranque (antes de que el Core exista), asi que no basta enganchar CreateSamplerState:
+// se engancha PSSetSamplers del contexto inmediato REAL (vtable[10], tomada del contexto de la swapchain en el primer Present)
+// y cada sampler MIN_MAG_MIP_LINEAR se sustituye por una version ANISOTROPIC (cache por puntero). No se tocan los de
+// comparacion (sombras) ni los POINT / mixtos. Ademas se vuelven a asignar los samplers que ya estaban puestos.
+typedef void(STDMETHODCALLTYPE* PSSetSamplersFn)(ID3D11DeviceContext*, UINT, UINT, ID3D11SamplerState* const*);
+PSSetSamplersFn g_psSetOrig = nullptr; ID3D11Device* g_devAniso = nullptr;
+struct EntradaS { ID3D11SamplerState* orig; ID3D11SamplerState* nuevo; };
+EntradaS g_cacheS[256];
+int g_histoFiltros[8][2]; int g_nHisto = 0;
+
+ID3D11SamplerState* aSampler(ID3D11SamplerState* s) {
+    if (!s || !g_devAniso) return s;
+    size_t h = ((uintptr_t)s >> 4) & 255;
+    for (int i = 0; i < 256; ++i) {
+        EntradaS& e = g_cacheS[(h + i) & 255];
+        if (e.orig == s) return e.nuevo;
+        if (!e.orig) {
+            D3D11_SAMPLER_DESC d; s->GetDesc(&d);
+            InterlockedIncrement(&g_sVistos);
+            ID3D11SamplerState* n = s;
+            bool hallado = false; for (int k = 0; k < g_nHisto; ++k) if (g_histoFiltros[k][0] == (int)d.Filter) { ++g_histoFiltros[k][1]; hallado = true; }
+            if (!hallado && g_nHisto < 8) { g_histoFiltros[g_nHisto][0] = (int)d.Filter; g_histoFiltros[g_nHisto][1] = 1; ++g_nHisto; }
+            if (d.Filter == D3D11_FILTER_MIN_MAG_MIP_LINEAR) {
+                d.Filter = D3D11_FILTER_ANISOTROPIC; d.MaxAnisotropy = (UINT)g_anisoNivel;
+                ID3D11SamplerState* t = nullptr;
+                if (SUCCEEDED(g_devAniso->CreateSamplerState(&d, &t)) && t) { n = t; InterlockedIncrement(&g_sCambiados); }
+            }
+            s->AddRef();   // se conserva el original vivo: asi su direccion no se reutiliza mientras este en la cache
+            e.orig = s; e.nuevo = n; return n;
+        }
+    }
+    return s;   // tabla llena: se deja pasar
+}
+ID3D11SamplerState* aSamplerSeguro(ID3D11SamplerState* s) {
+    __try { return aSampler(s); }
+    __except (EXCEPTION_EXECUTE_HANDLER) { InterlockedExchange(&g_anisoOn, 0); return s; }
+}
+void STDMETHODCALLTYPE ganchoPSSetSamplers(ID3D11DeviceContext* c, UINT start, UINT num, ID3D11SamplerState* const* pp) {
+    if (g_anisoOn && pp && num && num <= 16) {
+        ID3D11SamplerState* tmp[16];
+        for (UINT i = 0; i < num; ++i) tmp[i] = aSamplerSeguro(pp[i]);
+        g_psSetOrig(c, start, num, tmp);
+    } else g_psSetOrig(c, start, num, pp);
+}
+void anisoIniciar(IDXGISwapChain* sc) {
+    static int intentos = 0;
+    if (g_ctxVt || !g_anisoCfg || intentos >= 3) return;
+    ++intentos;
+    ID3D11Device* dev = nullptr;
+    if (FAILED(sc->GetDevice(__uuidof(ID3D11Device), (void**)&dev)) || !dev) { logf("[aniso] intento %d: sin dispositivo", intentos); return; }
+    ID3D11DeviceContext* ctx = nullptr; dev->GetImmediateContext(&ctx);
+    if (!ctx) { logf("[aniso] intento %d: sin contexto inmediato", intentos); dev->Release(); return; }
+    void** vt = *(void***)ctx; DWORD old;
+    if (!VirtualProtect(&vt[10], sizeof(void*), PAGE_EXECUTE_READWRITE, &old)) { logf("[aniso] VirtualProtect fallo (err %lu)", GetLastError()); ctx->Release(); dev->Release(); return; }
+    void* actual = vt[10];
+    g_devAniso = dev; dev->AddRef();
+    if (actual != (void*)ganchoPSSetSamplers) { g_psSetOrig = (PSSetSamplersFn)actual; vt[10] = (void*)ganchoPSSetSamplers; }
+    VirtualProtect(&vt[10], sizeof(void*), old, &old);
+    g_ctxVt = vt; InterlockedExchange(&g_anisoOn, 1);
+    logf("[aniso] PSSetSamplers enganchado en vtable del contexto %p (original %p); nivel %d", (void*)vt, (void*)g_psSetOrig, g_anisoNivel);
+    // volver a asignar los samplers ya puestos (por si PES no los repite)
+    ID3D11SamplerState* cur[16] = {}; ctx->PSGetSamplers(0, 16, cur);
+    bool alguno = false; for (int i = 0; i < 16; ++i) if (cur[i]) alguno = true;
+    if (alguno) ctx->PSSetSamplers(0, 16, cur);   // pasa por nuestro gancho
+    for (int i = 0; i < 16; ++i) liberar(cur[i]);
+    ctx->Release(); dev->Release();
+}
+
+// tiempo de frame: media de 300 frames, anotada con el estado de aniso/nitidez para poder comparar
+LARGE_INTEGER g_qpf = {}, g_ultPres = {}; double g_sumDt = 0; int g_nDt = 0;
+void medirFrame() {
+    LARGE_INTEGER n; QueryPerformanceCounter(&n);
+    if (!g_qpf.QuadPart) QueryPerformanceFrequency(&g_qpf);
+    if (g_ultPres.QuadPart) {
+        double dt = (double)(n.QuadPart - g_ultPres.QuadPart) * 1000.0 / (double)g_qpf.QuadPart;
+        if (dt > 0.0 && dt < 500.0) { g_sumDt += dt; ++g_nDt; }
+        if (g_nDt >= 300) {
+            logf("[nitidez] frame medio %.2f ms (%.1f fps) en %d frames · aniso %s (samplers vistos %ld, cambiados %ld) · nitidez %s fuerza %.2f", g_sumDt / g_nDt, 1000.0 / (g_sumDt / g_nDt), g_nDt, g_anisoOn ? "ON" : "OFF", g_sVistos, g_sCambiados, g_on ? "ON" : "OFF", g_fuerza);
+            g_sumDt = 0; g_nDt = 0;
+        }
+    }
+    g_ultPres = n;
+}
+
 HRESULT STDMETHODCALLTYPE ganchoPresent(IDXGISwapChain* sc, UINT sync, UINT flags) {
     if (!(flags & DXGI_PRESENT_TEST)) {
+        medirFrame();
+        anisoIniciar(sc);
         teclas();
         if (g_on) {
             int r = aplicarSeguro(sc);

@@ -32,7 +32,7 @@
 #include <d3dcompiler.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.5.2"
+#define PHX_CORE_VERSION "0.5.3"
 
 namespace {
 
@@ -3639,6 +3639,10 @@ void leerConfig() {
     if (valorDe("velocidad_partido", v)) { int q = atoi(v.c_str()); g_velocidadPartido = (q >= 0 && q <= 4) ? q : -1; }
     if (valorDe("final_nativo", v)) g_finalNativo = (v == "true");
     if (valorDe("street_activo", v)) { LONG s = (v == "false") ? 0 : 1; g_streetActivo = g_streetPedido = s; logf("[STREET] al arrancar: modo Street %s", s ? "ENCENDIDO" : "APAGADO"); }
+    if (valorDe("nitidez_piel", v)) { float q = (float)atof(v.c_str()); nit::g_pielNit = (q >= 0.0f && q <= 1.0f) ? q : 0.3f; }   // 0.5.3: multiplica la nitidez en la piel (0..1, por defecto 0.3)
+    if (valorDe("suavizado_piel", v)) { float q = (float)atof(v.c_str()); nit::g_pielSuav = (q >= 0.0f && q <= 1.0f) ? q : 0.35f; }   // 0.5.3: suavizado bilateral solo en piel (0..1, por defecto 0.35)
+    if (valorDe("aniso_activo", v)) nit::g_anisoCfg = (v != "false");   // 0.5.3: anisotropico forzado (por defecto true)
+    if (valorDe("aniso_nivel", v)) { int q = atoi(v.c_str()); nit::g_anisoNivel = (q >= 1 && q <= 16) ? q : 16; }   // 0.5.3: nivel 1..16 (por defecto 16)
     if (valorDe("nitidez_fuerza", v)) { float q = (float)atof(v.c_str()); nit::g_fuerza = (q >= 0.0f && q <= 1.0f) ? q : 0.5f; }   // 0.5.0: fuerza del filtro de nitidez (0..1, por defecto 0.5)
     if (valorDe("anadido_min", v)) { double m = atof(v.c_str()); if (m >= 0.0 && m <= 10.0) g_anadidoSeg = m * 3600.0; }
     if (valorDe("muro_fondo_rebote", v)) { g_muroFondoRebote = (float)atof(v.c_str()); if (g_muroFondoRebote < 0.0f || g_muroFondoRebote > 0.95f) g_muroFondoRebote = -1.0f; }
