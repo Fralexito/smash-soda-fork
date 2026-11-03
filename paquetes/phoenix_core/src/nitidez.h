@@ -161,7 +161,7 @@ bool iniciarRecursos(ID3D11Device* dev) {
 }
 
 // ---- captura objetiva (0.5.2): si existe pes-graficos\nitidez\captura.flag, guarda el MISMO frame sin filtro y con filtro (BMP) y mide la diferencia.
-const char* kCapDir = "D:\Frank\IA\CLAUDE\pes-graficos\nitidez\\";
+const char* kCapDir = "D:/Frank/IA/CLAUDE/pes-graficos/nitidez/";
 UINT g_stgW = 0, g_stgH = 0; DXGI_FORMAT g_stgF = DXGI_FORMAT_UNKNOWN;
 
 bool pidioCaptura() { std::string f = std::string(kCapDir) + "captura.flag"; return GetFileAttributesA(f.c_str()) != INVALID_FILE_ATTRIBUTES; }
@@ -427,7 +427,7 @@ void medirFrame() {
         double dt = (double)(n.QuadPart - g_ultPres.QuadPart) * 1000.0 / (double)g_qpf.QuadPart;
         if (dt > 0.0 && dt < 500.0) { g_sumDt += dt; ++g_nDt; }
         if (g_nDt >= 300) {
-            logf("[nitidez] frame medio %.2f ms (%.1f fps) en %d frames · aniso %s (samplers vistos %ld, cambiados %ld) · nitidez %s fuerza %.2f", g_sumDt / g_nDt, 1000.0 / (g_sumDt / g_nDt), g_nDt, g_anisoOn ? "ON" : "OFF", g_sVistos, g_sCambiados, g_on ? "ON" : "OFF", g_fuerza);
+            logf("[nitidez] frame medio %.2f ms (%.1f fps) en %d frames · aniso %s (samplers vistos %ld, cambiados %ld, filtros vistos %d) · nitidez %s fuerza %.2f", g_sumDt / g_nDt, 1000.0 / (g_sumDt / g_nDt), g_nDt, g_anisoOn ? "ON" : "OFF", g_sVistos, g_sCambiados, g_nHisto >= 1 ? g_histoFiltros[0][0] : -1, g_on ? "ON" : "OFF", g_fuerza);
             g_sumDt = 0; g_nDt = 0;
         }
     }
