@@ -42,6 +42,7 @@ ID3D11BlendState* g_bs = nullptr;
 ID3D11DepthStencilState* g_dss = nullptr;
 ID3D11Texture2D* g_copia = nullptr;
 ID3D11ShaderResourceView* g_srv = nullptr;
+ID3D11Texture2D* g_stg = nullptr;   // 0.5.2: textura de lectura para la captura de prueba
 UINT g_w = 0, g_h = 0;
 DXGI_FORMAT g_fmt = DXGI_FORMAT_UNKNOWN;
 
@@ -49,7 +50,7 @@ template <class T> void liberar(T*& p) { if (p) { p->Release(); p = nullptr; } }
 
 void liberarTodo() {
     liberar(g_srv); liberar(g_copia); liberar(g_dss); liberar(g_bs); liberar(g_rs);
-    liberar(g_cb); liberar(g_ps); liberar(g_vs); liberar(g_dev);
+    liberar(g_cb); liberar(g_ps); liberar(g_vs); liberar(g_dev); liberar(g_stg);
     g_w = g_h = 0; g_fmt = DXGI_FORMAT_UNKNOWN;
 }
 
@@ -121,6 +122,65 @@ bool iniciarRecursos(ID3D11Device* dev) {
     return true;
 }
 
+// ---- captura objetiva (0.5.2): si existe pes-graficos\nitidez\captura.flag, guarda el MISMO frame sin filtro y con filtro (BMP) y mide la diferencia.
+const char* kCapDir = "D:\Frank\IA\CLAUDE\pes-graficos\nitidez\\";
+UINT g_stgW = 0, g_stgH = 0; DXGI_FORMAT g_stgF = DXGI_FORMAT_UNKNOWN;
+
+bool pidioCaptura() { std::string f = std::string(kCapDir) + "captura.flag"; return GetFileAttributesA(f.c_str()) != INVALID_FILE_ATTRIBUTES; }
+
+// Copia `src` (misma resolución/formato que `d`) a memoria. out = filas de w*4 bytes (formato del backbuffer).
+bool leerPixeles(ID3D11DeviceContext* ctx, ID3D11Texture2D* src, const D3D11_TEXTURE2D_DESC& d, std::vector<uint8_t>& out) {
+    if (!g_stg || g_stgW != d.Width || g_stgH != d.Height || g_stgF != d.Format) {
+        liberar(g_stg);
+        D3D11_TEXTURE2D_DESC sd = d; sd.BindFlags = 0; sd.MiscFlags = 0; sd.Usage = D3D11_USAGE_STAGING; sd.CPUAccessFlags = D3D11_CPU_ACCESS_READ; sd.MipLevels = 1; sd.ArraySize = 1;
+        if (FAILED(g_dev->CreateTexture2D(&sd, nullptr, &g_stg))) return false;
+        g_stgW = d.Width; g_stgH = d.Height; g_stgF = d.Format;
+    }
+    ctx->CopyResource(g_stg, src);
+    D3D11_MAPPED_SUBRESOURCE m;
+    if (FAILED(ctx->Map(g_stg, 0, D3D11_MAP_READ, 0, &m))) return false;
+    out.resize((size_t)d.Width * d.Height * 4);
+    for (UINT y = 0; y < d.Height; ++y) memcpy(&out[(size_t)y * d.Width * 4], (uint8_t*)m.pData + (size_t)y * m.RowPitch, (size_t)d.Width * 4);
+    ctx->Unmap(g_stg, 0);
+    return true;
+}
+
+bool guardarBmp(const std::string& ruta, const std::vector<uint8_t>& px, UINT w, UINT h, DXGI_FORMAT fmt) {
+    bool rgba = fmt == DXGI_FORMAT_R8G8B8A8_UNORM;
+    std::vector<uint8_t> fila((size_t)w * 3 + 3);
+    UINT rowB = (w * 3 + 3) & ~3u; UINT tam = 54 + rowB * h;
+    uint8_t cab[54] = { 'B', 'M' }; *(uint32_t*)(cab + 2) = tam; *(uint32_t*)(cab + 10) = 54; *(uint32_t*)(cab + 14) = 40;
+    *(int32_t*)(cab + 18) = (int32_t)w; *(int32_t*)(cab + 22) = (int32_t)h; *(uint16_t*)(cab + 26) = 1; *(uint16_t*)(cab + 28) = 24; *(uint32_t*)(cab + 34) = rowB * h;
+    HANDLE f = CreateFileA(ruta.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (f == INVALID_HANDLE_VALUE) return false;
+    DWORD n; WriteFile(f, cab, 54, &n, nullptr);
+    std::vector<uint8_t> buf(rowB, 0);
+    for (int y = (int)h - 1; y >= 0; --y) {
+        const uint8_t* p = &px[(size_t)y * w * 4];
+        for (UINT x = 0; x < w; ++x) { buf[x * 3 + 0] = rgba ? p[x * 4 + 2] : p[x * 4 + 0]; buf[x * 3 + 1] = p[x * 4 + 1]; buf[x * 3 + 2] = rgba ? p[x * 4 + 0] : p[x * 4 + 2]; }
+        WriteFile(f, buf.data(), rowB, &n, nullptr);
+    }
+    CloseHandle(f); return true;
+}
+
+// Segunda mitad: lee el frame ya filtrado, guarda las dos capturas y anota la diferencia en el log.
+void terminarCaptura(ID3D11DeviceContext* ctx, ID3D11Texture2D* bb, const D3D11_TEXTURE2D_DESC& d, const std::vector<uint8_t>& raw) {
+    DeleteFileA((std::string(kCapDir) + "captura.flag").c_str());
+    if (d.Format != DXGI_FORMAT_R8G8B8A8_UNORM && d.Format != DXGI_FORMAT_B8G8R8A8_UNORM) { logf("[nitidez] captura: formato %d no soportado para BMP", (int)d.Format); return; }
+    std::vector<uint8_t> fil;
+    if (raw.empty() || !leerPixeles(ctx, bb, d, fil)) { logf("[nitidez] captura: no se pudo leer el frame"); return; }
+    CreateDirectoryA((std::string(kCapDir) + "capturas").c_str(), nullptr);
+    SYSTEMTIME st; GetLocalTime(&st); char tag[64]; snprintf(tag, sizeof tag, "%02d%02d%02d_f%02d", st.wHour, st.wMinute, st.wSecond, (int)(g_fuerza * 100));
+    std::string base = std::string(kCapDir) + "capturas\\" + tag;
+    bool a = guardarBmp(base + "_sin_filtro.bmp", raw, d.Width, d.Height, d.Format), b = guardarBmp(base + "_con_filtro.bmp", fil, d.Width, d.Height, d.Format);
+    double suma = 0, suma2 = 0; unsigned long cambiados = 0; int maxd = 0; size_t np = (size_t)d.Width * d.Height;
+    for (size_t i = 0; i < np; ++i) {
+        int dr = abs((int)raw[i * 4] - (int)fil[i * 4]), dg = abs((int)raw[i * 4 + 1] - (int)fil[i * 4 + 1]), db = abs((int)raw[i * 4 + 2] - (int)fil[i * 4 + 2]);
+        int m = (std::max)(dr, (std::max)(dg, db)); suma += (dr + dg + db) / 3.0; suma2 += m; if (m > 2) ++cambiados; if (m > maxd) maxd = m;
+    }
+    logf("[nitidez] CAPTURA %s: %ux%u fuerza %.2f · diferencia media %.3f /255 · pixeles con cambio >2: %.2f%% · cambio maximo %d · guardado sin_filtro=%d con_filtro=%d", tag, d.Width, d.Height, g_fuerza, suma / np, 100.0 * cambiados / np, maxd, (int)a, (int)b);
+}
+
 // Una pasada del filtro sobre el backbuffer de `sc`. Sin objetos C++ con destructor (se llama dentro de __try).
 bool aplicar(IDXGISwapChain* sc) {
     ID3D11Device* dev = nullptr;
@@ -162,6 +222,7 @@ bool aplicar(IDXGISwapChain* sc) {
 
     // ---- dibujar
     ctx->CopyResource(g_copia, bb);
+    std::vector<uint8_t> raw; bool cap = pidioCaptura(); if (cap && !leerPixeles(ctx, g_copia, d, raw)) raw.clear();
     D3D11_MAPPED_SUBRESOURCE mp;
     if (SUCCEEDED(ctx->Map(g_cb, 0, D3D11_MAP_WRITE_DISCARD, 0, &mp))) { float* v = (float*)mp.pData; v[0] = g_fuerza; v[1] = v[2] = v[3] = 0; ctx->Unmap(g_cb, 0); }
     D3D11_VIEWPORT vp = { 0, 0, (FLOAT)d.Width, (FLOAT)d.Height, 0.0f, 1.0f };
@@ -173,6 +234,7 @@ bool aplicar(IDXGISwapChain* sc) {
     ctx->OMSetRenderTargets(1, &rtv, nullptr); ctx->OMSetBlendState(g_bs, bf, 0xFFFFFFFF); ctx->OMSetDepthStencilState(g_dss, 0);
     ctx->RSSetState(g_rs); ctx->RSSetViewports(1, &vp);
     ctx->Draw(3, 0);
+    if (cap) terminarCaptura(ctx, bb, d, raw);
 
     // ---- restaurar estado
     ID3D11ShaderResourceView* nul = nullptr; ctx->PSSetShaderResources(0, 1, &nul);

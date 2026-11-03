@@ -32,7 +32,7 @@
 #include <d3dcompiler.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.5.1"
+#define PHX_CORE_VERSION "0.5.2"
 
 namespace {
 
