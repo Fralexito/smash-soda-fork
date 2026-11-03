@@ -221,43 +221,77 @@ HRESULT STDMETHODCALLTYPE ganchoPresent(IDXGISwapChain* sc, UINT sync, UINT flag
 }
 
 // Obtiene la vtable de IDXGISwapChain creando un dispositivo y una swapchain mínimos (se destruyen enseguida).
-void** vtableSwapChain() {
+// `diag` recibe el motivo si falla (con HRESULT / GetLastError).
+void** vtableSwapChain(char* diag, size_t nd) {
+    diag[0] = 0;
     HMODULE d3d = GetModuleHandleA("d3d11.dll"); if (!d3d) d3d = LoadLibraryA("d3d11.dll");
-    CrearDispFn crear = d3d ? (CrearDispFn)GetProcAddress(d3d, "D3D11CreateDeviceAndSwapChain") : nullptr;
-    if (!crear) return nullptr;
+    if (!d3d) { snprintf(diag, nd, "no hay d3d11.dll (err %lu)", GetLastError()); return nullptr; }
+    CrearDispFn crear = (CrearDispFn)GetProcAddress(d3d, "D3D11CreateDeviceAndSwapChain");
+    if (!crear) { snprintf(diag, nd, "no existe D3D11CreateDeviceAndSwapChain"); return nullptr; }
     WNDCLASSA wc = {}; wc.lpfnWndProc = DefWindowProcA; wc.hInstance = GetModuleHandleA(nullptr); wc.lpszClassName = "PhoenixNitidezDummy";
-    RegisterClassA(&wc);
-    HWND w = CreateWindowA(wc.lpszClassName, "n", WS_OVERLAPPED, 0, 0, 64, 64, nullptr, nullptr, wc.hInstance, nullptr);
-    if (!w) return nullptr;
+    RegisterClassA(&wc);   // si ya existe de un intento anterior, no pasa nada
+    HWND w = CreateWindowA(wc.lpszClassName, "n", WS_OVERLAPPEDWINDOW, 0, 0, 64, 64, nullptr, nullptr, wc.hInstance, nullptr);
+    if (!w) { snprintf(diag, nd, "CreateWindow falló (err %lu)", GetLastError()); return nullptr; }
     DXGI_SWAP_CHAIN_DESC sd = {}; sd.BufferCount = 1; sd.BufferDesc.Width = 64; sd.BufferDesc.Height = 64; sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
     sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT; sd.OutputWindow = w; sd.SampleDesc.Count = 1; sd.Windowed = TRUE; sd.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
-    IDXGISwapChain* sc = nullptr; ID3D11Device* dv = nullptr; ID3D11DeviceContext* cx = nullptr; D3D_FEATURE_LEVEL fl;
     void** vt = nullptr;
-    if (SUCCEEDED(crear(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, 0, nullptr, 0, D3D11_SDK_VERSION, &sd, &sc, &dv, &fl, &cx)) && sc) vt = *(void***)sc;
-    liberar(sc); liberar(cx); liberar(dv);
+    const D3D_DRIVER_TYPE tipos[2] = { D3D_DRIVER_TYPE_HARDWARE, D3D_DRIVER_TYPE_WARP };
+    for (int i = 0; i < 2 && !vt; ++i) {
+        IDXGISwapChain* sc = nullptr; ID3D11Device* dv = nullptr; ID3D11DeviceContext* cx = nullptr; D3D_FEATURE_LEVEL fl;
+        HRESULT hr = crear(nullptr, tipos[i], nullptr, 0, nullptr, 0, D3D11_SDK_VERSION, &sd, &sc, &dv, &fl, &cx);
+        if (SUCCEEDED(hr) && sc) vt = *(void***)sc;
+        else { size_t l = strlen(diag); snprintf(diag + l, nd - l, "%s hr=0x%08X; ", i ? "WARP" : "HARDWARE", (unsigned)hr); }
+        liberar(sc); liberar(cx); liberar(dv);
+    }
     DestroyWindow(w); UnregisterClassA(wc.lpszClassName, wc.hInstance);
     return vt;
 }
 
-bool nitInstalar(Feature& f) {
-    if (!g_enganchado) {
-        void** vt = vtableSwapChain();
-        if (!vt) { f.estado = "no se pudo obtener la vtable de IDXGISwapChain"; return false; }
-        DWORD old;
-        if (!VirtualProtect(&vt[8], sizeof(void*), PAGE_EXECUTE_READWRITE, &old)) { f.estado = "VirtualProtect falló"; return false; }
-        void* actual = vt[8];
-        if (actual == (void*)ganchoPresent) { f.estado = "ya enganchado"; }
-        else { g_sig = (PresentFn)actual; vt[8] = (void*)ganchoPresent; }
-        VirtualProtect(&vt[8], sizeof(void*), old, &old);
-        g_vt = vt; g_enganchado = true;
-        logf("[nitidez] Present enganchado en vtable %p: siguiente (Sider o el real) = %p", (void*)vt, (void*)g_sig);
+void** vtableSegura(char* diag, size_t nd) {
+    __try { return vtableSwapChain(diag, nd); }
+    __except (EXCEPTION_EXECUTE_HANDLER) { snprintf(diag, nd, "excepción 0x%08lX al crear la swapchain de prueba", (unsigned long)GetExceptionCode()); return nullptr; }
+}
+
+volatile LONG g_quiere = 0, g_hiloVivo = 0;
+
+// Engancha Present en un hilo aparte con reintentos (cada 1 s, hasta 2 min): así se espera a que el juego ya tenga su
+// ventana/DX11 y no se hace nada pesado dentro del arranque del Core.
+DWORD WINAPI hiloEnganche(LPVOID) {
+    for (int i = 0; i < 120 && g_quiere && !g_enganchado; ++i) {
+        char diag[240];
+        void** vt = vtableSegura(diag, sizeof diag);
+        if (vt) {
+            DWORD old;
+            if (!VirtualProtect(&vt[8], sizeof(void*), PAGE_EXECUTE_READWRITE, &old)) { logf("[nitidez] VirtualProtect falló (err %lu)", GetLastError()); break; }
+            void* actual = vt[8];
+            if (actual != (void*)ganchoPresent) { g_sig = (PresentFn)actual; vt[8] = (void*)ganchoPresent; }
+            VirtualProtect(&vt[8], sizeof(void*), old, &old);
+            g_vt = vt; g_enganchado = true;
+            logf("[nitidez] Present enganchado (intento %d) en vtable %p: siguiente (Sider o el real) = %p", i + 1, (void*)vt, (void*)g_sig);
+            InterlockedExchange(&g_on, 1);
+            break;
+        }
+        if (i < 3 || i % 20 == 0) logf("[nitidez] intento %d sin vtable: %s", i + 1, diag);
+        Sleep(1000);
     }
-    g_apagadoSolo = 0; InterlockedExchange(&g_on, 1);
-    f.estado = "activa (Ctrl+F10 enciende/apaga, Ctrl+F11/F12 fuerza)";
+    if (!g_enganchado) logf("[nitidez] NO se pudo enganchar Present tras los reintentos; el filtro queda apagado");
+    InterlockedExchange(&g_hiloVivo, 0);
+    return 0;
+}
+
+bool nitInstalar(Feature& f) {
+    g_apagadoSolo = 0; InterlockedExchange(&g_quiere, 1);
+    if (g_enganchado) { InterlockedExchange(&g_on, 1); f.estado = "activa (ya enganchada)"; return true; }
+    if (InterlockedCompareExchange(&g_hiloVivo, 1, 0) == 0) {
+        HANDLE h = CreateThread(nullptr, 0, hiloEnganche, nullptr, 0, nullptr);
+        if (!h) { InterlockedExchange(&g_hiloVivo, 0); f.estado = "no se pudo crear el hilo de enganche"; return false; }
+        CloseHandle(h);
+    }
+    f.estado = "enganchando Present (reintentos en un hilo; ver [nitidez] en el log); Ctrl+F10 enciende/apaga, Ctrl+F11/F12 fuerza";
     return true;
 }
 
 // Apagar solo detiene el filtro; el gancho se queda como paso transparente (si Sider se encadenó detrás de nosotros no se puede quitar sin romperlo).
-bool nitQuitar(Feature&) { InterlockedExchange(&g_on, 0); return true; }
+bool nitQuitar(Feature&) { InterlockedExchange(&g_quiere, 0); InterlockedExchange(&g_on, 0); return true; }
 
 }  // namespace nit
