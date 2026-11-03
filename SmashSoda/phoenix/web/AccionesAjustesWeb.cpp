@@ -287,6 +287,13 @@ namespace phoenix::web {
 				if (metodo == 2 && !DX11::isWGCSupported()) throw ErrorAccion("NO_SOPORTADO", "Graphics Capture necesita Windows 10 2004 o superior.");
 				dx.setCaptureMethod(static_cast<DX11::CaptureMethod>(metodo));
 			}
+			else if (clave == "ventana") {
+				// 0.3.62: "" = pantalla entera; si no, solo la ventana con ese título (nunca cae al escritorio)
+				const std::string t = texto(d, "valor", 400);
+				dx.setCaptureWindowTitle(t);
+				Config::cfg.video.captureWindowTitle = t;
+				Config::cfg.Save();
+			}
 			else if (clave == "resolucion") {
 				const int i = entero(d, "valor", 0, static_cast<int>(Config::cfg.resolutions.size()) - 1);
 				Config::cfg.video.resolutionIndex = static_cast<unsigned int>(i);
@@ -306,7 +313,7 @@ namespace phoenix::web {
 			Hosting& h = hostingObligatorio(in);
 			in.listaPantallas = h.getDX11().listScreens();
 			in.listaGpus = h.getDX11().listGPUs();
-			return json{ {"pantallas", in.listaPantallas}, {"gpus", in.listaGpus}, {"wgc", DX11::isWGCSupported()} };
+			return json{ {"pantallas", in.listaPantallas}, {"gpus", in.listaGpus}, {"wgc", DX11::isWGCSupported()}, {"ventanas", WGCapture::listWindowTitles()} };
 		});
 
 		// ---- Audio (AudioSettingsWidget) ------------------------------------------

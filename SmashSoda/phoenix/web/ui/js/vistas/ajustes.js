@@ -125,7 +125,7 @@ export function TarjetaCaptura({ m, info }) {
   const vid = (clave, valor) => accion("ajustes.video", { clave, valor });
   const refrescar = async () => {
     const r = await accion("ajustes.videoListas", {}, { ok: t("Listas actualizadas.", "Lists refreshed.") });
-    if (r) actualizarInfo({ pantallas: r.pantallas || [], gpus: r.gpus || [], wgc: !!r.wgc });
+    if (r) actualizarInfo({ pantallas: r.pantallas || [], gpus: r.gpus || [], wgc: !!r.wgc, ventanas: r.ventanas || [] });
   };
   const op = (lista) => (lista?.length ? lista : [t("(sin datos)", "(no data)")]).map((x, i) => ({ valor: i, texto: x }));
   return html`
@@ -139,6 +139,11 @@ export function TarjetaCaptura({ m, info }) {
         <${Selector} valor=${v.captura} al=${(x) => vid("captura", Number(x))} opciones=${[
           { valor: 0, texto: t("Automático", "Automatic") }, { valor: 1, texto: "Desktop Duplication" },
           ...(info.wgc ? [{ valor: 2, texto: "Windows Graphics Capture" }] : [])]}/></${Ajuste}>
+      ${info.wgc && html`<${Ajuste} bloque titulo=${t("Transmitir solo una ventana", "Stream only one window")} desc=${t("Solo se ve la ventana elegida; el resto del escritorio no sale. Pulsa ACTUALIZAR para ver las ventanas abiertas.", "Only the chosen window is shown; the rest of the desktop is hidden. Press REFRESH to list open windows.")}>
+        <${Selector} valor=${v.ventana || ""} al=${(x) => vid("ventana", x)} opciones=${[
+          { valor: "", texto: t("Pantalla entera (normal)", "Whole screen (normal)") },
+          ...((v.ventana && !(info.ventanas || []).includes(v.ventana)) ? [{ valor: v.ventana, texto: v.ventana + t(" (cerrada)", " (closed)") }] : []),
+          ...(info.ventanas || []).map((x) => ({ valor: x, texto: x }))]}/></${Ajuste}>`}
       <${Ajuste} bloque titulo=${t("Resolución de salida", "Output resolution")}>
         <${Selector} valor=${v.resolucion} opciones=${op(info.resoluciones)} al=${(x) => vid("resolucion", Number(x))}/></${Ajuste}>
       <${AjusteSw} titulo=${t("Escalado Lanczos", "Lanczos scaling")} desc=${t("Imagen más nítida al reducir resolución (usa más GPU).", "Sharper downscaling (more GPU).")} valor=${v.lanczos} al=${(x) => vid("lanczos", x)}/>

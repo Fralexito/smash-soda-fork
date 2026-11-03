@@ -240,7 +240,7 @@ namespace phoenix::web {
 				}},
 				{"video", {
 					{"monitor", c.video.monitor}, {"gpu", c.video.adapter}, {"captura", c.video.captureMethod},
-					{"resolucion", c.video.resolutionIndex}, {"lanczos", c.video.lanczos}, {"ritmo", c.video.framePacing},
+					{"ventana", c.video.captureWindowTitle}, {"resolucion", c.video.resolutionIndex}, {"lanczos", c.video.lanczos}, {"ritmo", c.video.framePacing},
 					{"fps", c.video.fps}, {"mbps", c.video.bandwidth},
 				}},
 				{"overlay", {
@@ -729,6 +729,7 @@ namespace phoenix::web {
 		b["pantallas"] = in.listaPantallas;
 		b["gpus"] = in.listaGpus;
 		b["wgc"] = DX11::isWGCSupported();
+		b["ventanas"] = WGCapture::listWindowTitles();
 		b["temasOverlay"] = Config::cfg.overlayThemes;
 		b["estado"] = construirEstado(in);
 		return b;
