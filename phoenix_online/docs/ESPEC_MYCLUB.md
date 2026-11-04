@@ -92,3 +92,12 @@ Marcas: C = leído en el código; P = deducción.
 - Claves de home_town.
 - Confirmar en vivo si los anidados van como bin o como mapa.
 - Club inicial: elegir los gameplayer_id de la base de datos del juego.
+
+## 13. Estado del progreso guiado por el servidor (C) y pruebas 04-nov 23:30
+- CMD_SEND_MYCLUB_PROGRESS_STATUS (cadena 1428a61e8, petición 141dad7b0, lector 141dade70).
+  - La petición lleva pid y `status` (texto); la respuesta lleva `next_status` (texto).
+  - El cliente no compara esos textos y en .rdata no hay ninguna tabla de etiquetas. Son etiquetas propias del servidor.
+- CMD_GET_MYCLUB_IS_FIRST_MEMBERLIST y CMD_GET_MYCLUB_IS_FIRST_AGENT_MULTIPLE: la petición lleva pid y la respuesta `is_first` (YES/NO). Lectores 141dafeb0 y 141daee90.
+  - P: los tres comandos se piden ya dentro del menú principal de myClub.
+- En vivo: con progress_status «NotImplement» y con «NONE» pasa lo mismo que con el vacío. Llega LEAVE_ONLINE_MODE justo después de SQUADLIST y no aparece ningún comando de creación.
+- Siguiente hipótesis (P): el cliente sale porque cree que no hay club. Se prueba fingiendo un club ya creado con `"myclub": {"club_de_prueba": {...}}` en config.json.

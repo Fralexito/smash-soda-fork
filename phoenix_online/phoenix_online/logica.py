@@ -880,7 +880,9 @@ class Servidor:
 
     async def c_cmd_get_myclub_user_info(self, s, m):
         cfg = self._cfg_myclub()
-        club = self.datos.club(s.steam_hex or "")
+        # P: «club_de_prueba» en config = fingir un club ya creado para ver si el cliente pasa
+        # al menú principal de myClub (y pide IS_FIRST_* / SEND_MYCLUB_PROGRESS_STATUS)
+        club = self.datos.club(s.steam_hex or "") or (self.cfg.get("myclub") or {}).get("club_de_prueba")
         c = club or {}
         texto = lambda k: c.get(k) if isinstance(c.get(k), str) else ""
         entero = lambda k: c.get(k) if isinstance(c.get(k), int) else 0
@@ -901,6 +903,23 @@ class Servidor:
                 "nation_id": entero("nation_id"), "label": texto("label"), "name": texto("name"),
                 "add_uniform_list": [], "select_add_uniform_id": 0,
                 "is_iconic_moment_view": "NO"}
+
+    async def c_cmd_send_myclub_progress_status(self, s, m):
+        # C (§13): máquina de estados guiada por el SERVIDOR: el cliente manda «status» (texto)
+        # y lee «next_status» (texto). P: sin tabla conocida, se guarda y se devuelve el mismo.
+        estado = m.get("status") if isinstance(m.get("status"), str) else ""
+        club = self.datos.club(s.steam_hex or "")
+        if club is not None:
+            club["progress_status"] = estado
+            self.datos.guardar_club(s.steam_hex or "", club)
+        siguiente = ((self.cfg.get("myclub") or {}).get("siguiente_estado") or {}).get(estado, estado)
+        return {"next_status": siguiente}
+
+    async def c_cmd_get_myclub_is_first_memberlist(self, s, m):
+        return {"is_first": "YES"}  # C (§13): texto YES/NO
+
+    async def c_cmd_get_myclub_is_first_agent_multiple(self, s, m):
+        return {"is_first": "YES"}
 
     async def c_cmd_create_myclub_team(self, s, m):
         # C (§12): la respuesta solo lleva msgid/rqid/result; ERR_ALREADYEXISTS si ya hay club
