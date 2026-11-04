@@ -695,6 +695,9 @@ class Servidor:
     async def _al_vigilar(self, s, msgid):
         if msgid == "CMD_REQWATCHL_ROOMLIST":
             self._empujar_salas(s, "RELOAD", list(self.salas.values()))
+        elif msgid == "CMD_REQWATCHL_ROOMPLAYERLIST_NTL" and s.room_id in self.salas:
+            # L (ESPEC_SALAS §2.5): al abrir el watch dentro de la sala, RELOAD con los jugadores
+            self._empujar_jugadores(s, self.salas[s.room_id], "RELOAD")
         elif msgid == "CMD_WATCH_TURN_ADDRESS_DATA" and s.pid in self.turn_pendiente:
             addr, size = self.turn_pendiente.pop(s.pid)
             s.completar(msgid, address=addr, address_data_size=size)

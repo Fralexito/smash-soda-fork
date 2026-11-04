@@ -344,6 +344,21 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         await self.srv.recibir(a, 43, {"msgid": "CMD_GET_SERVER_ENV", "rqid": 4})
         self.assertIn("MatchCommandDropMode", ea[-1][1]["proto_opt"])
 
+    async def test_salon_propio_lista_de_jugadores(self):
+        s, env = cliente(self.srv)
+        r = self.srv.recibir
+        await r(s, 1, {"msgid": "CMD_LOGIN", "rqid": 1, "username": "A1"})
+        await r(s, 2, {"msgid": "CMD_CREATE_PLAYER", "rqid": 2})
+        await r(s, 3, {"msgid": "CMD_REQWATCHL_ROOMLIST", "rqid": 3})
+        await r(s, 4, {"msgid": "CMD_CREATEJOIN_ROOM", "rqid": 4, "name": "Salón", "vs_com": "PL_VS_PL"})
+        await r(s, 5, {"msgid": "CMD_REQWATCHL_ROOMPLAYERLIST_NTL", "rqid": 5, "room_id": 1})
+        m = env[-1][1]
+        self.assertEqual((m["msgid"], m["rqid"], m["list_type"], m["list_num"]),
+                         ("CMD_REQWATCHL_ROOMPLAYERLIST_NTL", 5, "RELOAD", 1))
+        fila = msgpack_min.unpackb(msgpack_min.packb(m["list_data"][0].valor))
+        self.assertEqual((fila["is_owner"], fila["room_entry_no"], fila["side"]), ("YES", 1, ""))
+        self.assertIsInstance(fila["pname"], bytes)
+
     def test_avatar_http_vacio_y_guardado(self):
         r = self.srv.respuesta_http({"msgid": "CMD_GET_AVATAR_HTTP", "rqid": "3", "pid": "7"})
         self.assertEqual((r["result"], r["avatar_data"], r["avatar_data_size"]), ("NOERR", "", 0))
