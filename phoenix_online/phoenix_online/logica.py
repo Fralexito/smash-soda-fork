@@ -75,46 +75,98 @@ class Sesion:
         return True
 
 
+def _texto_si(v, defecto="NO"):
+    """Indicadores al cable como TEXTO «YES»/«NO» (ESPEC_SALAS §0: bool o int = PES se cierra)."""
+    if isinstance(v, str) and v:
+        return v
+    if v is None:
+        return defecto
+    return "YES" if v else "NO"
+
+
+def _binario(o):
+    """bin con msgpack dentro (también para listas: guest_info = bin([]))."""
+    return msgpack_min.packb(o)
+
+
+GAMEENV_SALA = {"cpuLevel": "HARDEST", "gametime": 10, "injury": "YES", "ball_type": 22,
+                "exGame": "NO", "pkOnOff": "NO", "substitution": 3, "exSubstitution": "YES",
+                "limitTime": "MIDDLE"}  # L (ESPEC_SALAS §1b): valores de una sala nueva
+
+
 class Sala:
     ids = itertools.count(1)
 
-    def __init__(self, dueno, nombre):
+    def __init__(self, dueno, nombre, opciones=None):
         self.room_id = next(Sala.ids)
         self.nombre = nombre
         self.dueno = dueno
         self.miembros = [dueno]
         self.estado = "WAITING"  # WAITING -> SETENV -> GAME
         self.gameenv = {}
-        self.opciones = {}
-        self.passwd = None
-        self.max_players = 2
+        self.opciones = dict(opciones or {})
+        self.passwd = self.opciones.get("password") or self.opciones.get("passwd") or None
+        try:
+            self.max_players = int(self.opciones.get("max_players") or 2)
+        except (TypeError, ValueError):
+            self.max_players = 2
         self.partido = None
 
-    def ficha(self):
-        g = self.gameenv
+    @staticmethod
+    def pname(s):
+        """L §1d: bin(mapa) con name, xuid_one, psn_user_id (bin) e is_deleted, todo en texto."""
+        nombre = s.pname or ""
+        cuenta = Servidor._numero_cuenta(s) or (s.pid or 0)
+        return Empaquetado({"name": nombre, "xuid_one": str(cuenta),
+                            "psn_user_id": Empaquetado({"account_id": int(cuenta), "online_id": nombre,
+                                                        "is_valid_cache": "YES"}),
+                            "is_deleted": "NO"})
+
+    def ficha(self, para=None, slot=0):
+        """L ESPEC_SALAS §1: fila de sala; anidados como bin, enumerados como texto."""
+        o = self.opciones
+        entra = self.miembros.index(para) + 1 if para in self.miembros else 0
+        env = {**GAMEENV_SALA, **{k: v for k, v in self.gameenv.items() if k in GAMEENV_SALA}}
         return {
-            "room_id": self.room_id, "name": self.nombre, "status": self.estado,
-            "game_phase": 0, "gameenv": g.get("gameenv", 0), "is_passwd": bool(self.passwd),
-            "max_players": self.max_players, "owner_pname": self.dueno.pname or "",
-            "room_user_count": len(self.miembros), "vs_com": g.get("vs_com", False),
-            **{k: g[k] for k in ("gametime", "injury", "ball_type", "exGame", "pkOnOff",
-                                  "substitution", "exSubstitution", "limitTime", "cpuLevel")
-               if k in g},
+            "slot": slot, "room_id": self.room_id,
+            "name": self.nombre, "room_name": self.nombre, "roomName": self.nombre,
+            "status": self.estado if isinstance(self.estado, str) else "WAITING",
+            "game_phase": "DATASYNC", "gameenv": Empaquetado(env),
+            "gamer_num": len(self.miembros),
+            "gamer": [Empaquetado({"pid": x.pid or 0, "is_room_owner": _texto_si(x is self.dueno),
+                                   "side": "HOME" if i == 0 else "AWAY", "enter_no": i + 1,
+                                   "game_no": 1}) for i, x in enumerate(self.miembros)],
+            "is_room_owner": _texto_si(para is self.dueno), "enter_no": entra, "game_no": 1,
+            "is_passwd": _texto_si(bool(self.passwd)), "max_players": self.max_players,
+            "is_invite_limit": _texto_si(o.get("is_invite_limit")), "dlcontent": "7.00",
+            "is_original_player": _texto_si(o.get("use_original_player"), "YES"),
+            "vs_com": o.get("vs_com") if isinstance(o.get("vs_com"), str) and o.get("vs_com") else "PL_VS_PL",
+            "owner_pname": self.pname(self.dueno), "owner_lang": "EN",
+            "room_user_count": len(self.miembros),
+            "is_anyplayers": _texto_si(o.get("is_anyplayers")),
+            "is_select_gk": _texto_si(o.get("is_select_gk")),
+            "auto_start_num": int(o.get("auto_start_num") or 0), "room_number": self.room_id,
+            "game_rating_limit": o.get("game_rating_limit") if isinstance(o.get("game_rating_limit"), str)
+            and o.get("game_rating_limit") else "NONE",
         }
 
     def ficha_jugador(self, s, numero):
-        return {
-            "pid": s.pid, "pname": s.pname or "", "room_player_id": s.pid,
-            "room_entry_no": numero, "game_entry_no": numero,
-            "is_owner": s is self.dueno, "side": numero, "lang": s.lang or 0,
-            "is_quality_bad": False, "has_guest": False, "guest_info": b"",
-            "account_id": s.steam_hex or "", "online_id": s.pname or "", "is_valid_cache": True,
-            "xuid_one": "", "psn_user_id": "", "is_deleted": False,  # nunca SteamID en campos de Xbox/PSN
-            "ntl_nat_type": s.ntl.get("ntl_nat_type", 0),
-            "host_addr": s.ntl.get("host_addr", b""),
-            "reflexive_addr": s.ntl.get("reflexive_addr", b""),
-            "relayed_addr": s.ntl.get("relayed_addr", b""),
+        """L ESPEC_SALAS §3: enteros obligatorios pid/room_player_id/room_entry_no/game_entry_no;
+        textos obligatorios lang/is_owner/side/is_quality_bad/has_guest; pname y guest_info bin."""
+        fila = {
+            "pid": s.pid or 0, "room_player_id": s.pid or 0,
+            "room_entry_no": numero + 1, "game_entry_no": numero + 1,
+            "pname": self.pname(s),
+            "lang": s.lang if isinstance(s.lang, str) and s.lang else "US",
+            "is_owner": _texto_si(s is self.dueno), "side": "",
+            "is_quality_bad": "", "has_guest": "", "guest_info": _binario([]),
+            "ntl_nat_type": int(s.ntl.get("ntl_nat_type", 0) or 0),
         }
+        for k in ("host_addr", "reflexive_addr", "relayed_addr"):
+            v = s.ntl.get(k)
+            if isinstance(v, (bytes, bytearray)) and v:
+                fila[k] = bytes(v)  # ya viene como bin(mapa{address_family, sa_data}) del cliente
+        return fila
 
 
 class Servidor:
@@ -647,28 +699,38 @@ class Servidor:
             addr, size = self.turn_pendiente.pop(s.pid)
             s.completar(msgid, address=addr, address_data_size=size)
 
-    def _empujar_salas(self, s, accion, salas):
-        s.completar("CMD_REQWATCHL_ROOMLIST", list_type=accion, list_num=len(salas),
-                    list_key_name="room_id", list_data=[Empaquetado(x.ficha()) for x in salas])
+    def _empujar_salas(self, s, accion=None, salas=None):
+        # L (ESPEC_SALAS §1): siempre RELOAD con TODAS las salas, list_key_name «slot» y la fila
+        # vista por quien recibe (con ADD el cliente queda vacío -> VZLN_0002)
+        salas = list(self.salas.values())
+        s.completar("CMD_REQWATCHL_ROOMLIST", list_type="RELOAD", list_num=len(salas),
+                    list_key_name="slot",
+                    list_data=[Empaquetado(x.ficha(s, i)) for i, x in enumerate(salas)])
 
-    def _empujar_salas_a_todos(self, accion, salas):
+    def _empujar_salas_a_todos(self, accion=None, salas=None):
         for otro in list(self.sesiones):
-            self._empujar_salas(otro, accion, salas)
+            self._empujar_salas(otro)
 
-    def _empujar_jugadores(self, s, sala, accion, miembros):
-        datos = [Empaquetado(sala.ficha_jugador(x, i)) for i, x in enumerate(miembros)]
+    def _empujar_jugadores(self, s, sala, accion="RELOAD", miembros=None):
+        # L (ESPEC_SALAS §3): PESBUL manda RELOAD; al entrar un segundo jugador se mantiene el
+        # orden UPDATE -> ADD que ya se había comprobado (§11.5.6)
+        miembros = sala.miembros if miembros is None else miembros
+        datos = [Empaquetado(sala.ficha_jugador(x, sala.miembros.index(x))) for x in miembros]
         s.completar("CMD_REQWATCHL_ROOMPLAYERLIST_NTL", list_type=accion, list_num=len(datos),
                     list_key_name="pid", list_data=datos)
 
     # ---------- Salas (§11.5 pasos 4-8) ----------
     async def c_cmd_createjoin_room(self, s, m):
         await self._salir_de_sala(s)
-        sala = Sala(s, m.get("name") or f"Sala de {s.pname}")
-        sala.passwd = m.get("passwd") or None
+        nombre = m.get("name") if isinstance(m.get("name"), str) and m.get("name") else f"Sala de {s.pname}"
+        sala = Sala(s, nombre, {k: v for k, v in m.items() if k not in ("msgid", "rqid")})
         self.salas[sala.room_id] = sala
         s.room_id, s.entry = sala.room_id, False
-        self._empujar_salas_a_todos("ADD", [sala])
-        return {"room_id": sala.room_id}
+        # L (ESPEC_SALAS §2): PRIMERO la respuesta, DESPUÉS el RELOAD de salas
+        s.enviar({"msgid": m["msgid"], "rqid": m.get("rqid", 0), "result": NOERR,
+                  "room_id": sala.room_id})
+        self._empujar_salas_a_todos()
+        return None
 
     async def c_cmd_set_gameenv(self, s, m):
         sala = self.salas.get(s.room_id)
@@ -711,10 +773,14 @@ class Servidor:
 
     async def c_cmd_entry_game(self, s, m):
         sala = self.salas.get(s.room_id)
-        s.enviar({"msgid": m["msgid"], "rqid": m.get("rqid", 0), "result": NOERR})
+        entrada = m.get("entry", "TRUE")
+        s.entry = (entrada.upper() in ("TRUE", "YES", "1")) if isinstance(entrada, str) else bool(entrada)
+        # C/L (ESPEC_SALAS §4): entryflag = eco en texto y gameNum
+        s.enviar({"msgid": m["msgid"], "rqid": m.get("rqid", 0), "result": NOERR,
+                  "entryflag": "TRUE" if s.entry else "FALSE",
+                  "gameNum": 1 if sala and sala.partido else 0})
         if not sala:
             return None
-        s.entry = bool(m.get("entry", True))
         if sala.estado == "WAITING" and len(sala.miembros) == sala.max_players \
                 and all(x.entry for x in sala.miembros):
             sala.estado = "SETENV"

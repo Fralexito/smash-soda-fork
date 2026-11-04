@@ -250,9 +250,17 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         a, ea = await self.entrar("A1")
         b, eb = await self.entrar("B2")
         await self.srv.recibir(a, 5, {"msgid": "CMD_CREATEJOIN_ROOM", "rqid": 6, "name": "X"})
-        room = ea[-1][1]["room_id"]
+        # L (ESPEC_SALAS §2): primero la respuesta con room_id, luego el RELOAD de salas
+        self.assertEqual([m["msgid"] for _, m in ea[-2:]], ["CMD_CREATEJOIN_ROOM", "CMD_REQWATCHL_ROOMLIST"])
+        room = ea[-2][1]["room_id"]
         await self.srv.recibir(a, 6, {"msgid": "CMD_SET_GAMEENV", "rqid": 7, "gametime": 10})
-        self.assertTrue(any(m.get("list_type") == "ADD" for _, m in eb))  # B vio la sala nueva
+        vistas = [m for _, m in eb if m.get("msgid") == "CMD_REQWATCHL_ROOMLIST" and m["list_num"]]
+        self.assertTrue(vistas and vistas[-1]["list_type"] == "RELOAD")  # B vio la sala nueva
+        fila = msgpack_min.unpackb(msgpack_min.packb(vistas[-1]["list_data"][0].valor))
+        self.assertEqual((fila["vs_com"], fila["is_passwd"], fila["game_phase"], fila["is_room_owner"]),
+                         ("PL_VS_PL", "NO", "DATASYNC", "NO"))
+        self.assertIsInstance(fila["owner_pname"], bytes)
+        self.assertIsInstance(fila["gameenv"], bytes)
         eb.clear()
         await self.srv.recibir(b, 9, {"msgid": "CMD_JOIN_ROOM", "rqid": 8, "room_id": room})
         listas = [m for _, m in eb if m["msgid"] == "CMD_REQWATCHL_ROOMPLAYERLIST_NTL"]
@@ -260,7 +268,8 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(listas[-1]["list_num"], 2)  # sin esto: UQOW_0006
         self.assertTrue(all(seq == 9 for seq, _ in eb))  # secuencia actual de la sesión
         self.assertEqual(eb[-1][1]["msgid"], "CMD_WATCH_ENTRY_GAME")
-        await self.srv.recibir(a, 7, {"msgid": "CMD_ENTRY_GAME", "rqid": 10, "entry": True})
+        await self.srv.recibir(a, 7, {"msgid": "CMD_ENTRY_GAME", "rqid": 10, "entry": "TRUE"})
+        self.assertEqual(ea[-1][1]["entryflag"], "TRUE")
         self.assertFalse(any(m.get("state") == "SETENV" for _, m in ea))
         await self.srv.recibir(b, 10, {"msgid": "CMD_ENTRY_GAME", "rqid": 11, "entry": True})
         for e in (ea, eb):
