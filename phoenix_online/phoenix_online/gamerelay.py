@@ -357,7 +357,9 @@ class Rele(asyncio.DatagramProtocol):
             secciones.append((n, c.esperado, sorted(c.pendientes.items())))
         cuerpo = armar_transporte(cli.seq, secciones)
         cli.seq += 1
-        self.enviar(cli, armar_marco(0x80, cuerpo))
+        # C (04-nov): tras el KX el cliente descarta marcos con bit 7; flags = sal de 6 bits
+        # (bits 6 y 7 limpios), como hace el propio cliente. Solo la respuesta KX lleva 0x80.
+        self.enviar(cli, armar_marco(os.urandom(1)[0] & 0x3F, cuerpo))
 
     def limpiar(self):
         corte = time.time() - self.VIDA_SONDA
