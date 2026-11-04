@@ -598,15 +598,31 @@ class Servidor:
     async def c_cmd_get_lobbylist(self, s, m):
         tipo = m.get("lobby_type", "FREE")
         lobbies = [l for l in self.cfg["lobbies"] if l["lobby_type"] == tipo]
+        # C (PESBUL 04-nov): el cliente liga la calidad del lobby a gamerelay_index == índice del
+        # nodo del checklist; con 0 no hay nodo. Si la config pone 0, se usa el del relé.
+        nodos = self._nodos_relay()
+        indice = nodos[0]["gamerelay_index"] if nodos else 0
         return {"lobby_list_num": len(lobbies),
-                "lobby_list": [Empaquetado({**l, "player_num": len(self.por_pid)}) for l in lobbies]}
+                "lobby_list": [Empaquetado({**l, "player_num": len(self.por_pid),
+                                            "gamerelay_index": l.get("gamerelay_index") or indice})
+                               for l in lobbies]}
 
     async def c_cmd_get_lobbyinfo(self, s, m):
         return {"has_info": True, "title": "Phoenix Online",
                 "sentence_info": self.cfg.get("lobby_info", ""), "sentence_intro": ""}
 
+    def _url_gamerelay_web(self):
+        # C (PESBUL 04-nov): JOIN_LOBBY lleva http://<IP>:5000/gamerelay; vacío deja al cliente
+        # en XXJA_0005 / «no se reciben datos» en el vestíbulo
+        u = self.cfg["urls"].get("GAMERELAY_WEB")
+        if u:
+            return u
+        base = self.cfg.get("http_base") or f"http://{self.cfg.get('ip_publica', '127.0.0.1')}:" \
+                                            f"{self.cfg.get('puerto_http', 5000)}"
+        return base.rstrip("/") + "/gamerelay"
+
     async def c_cmd_join_lobby(self, s, m):
-        return {"gamerelay_web_url": self.cfg["urls"].get("GAMERELAY_WEB", ""), "bklist": []}
+        return {"gamerelay_web_url": self._url_gamerelay_web(), "bklist": []}
 
     # ---------- Vigilancias ----------
     async def _al_vigilar(self, s, msgid):
@@ -790,8 +806,7 @@ class Servidor:
 
     async def c_cmd_get_gamerelay(self, s, m):
         nodos = self._nodos_relay()
-        base = self.cfg.get("http_base") or self.cfg["urls"].get("GAMERELAY_WEB", "")
-        return {"gamerelay_web_url": base, "gamerelay_num": len(nodos),
+        return {"gamerelay_web_url": self._url_gamerelay_web(), "gamerelay_num": len(nodos),
                 "gamerelay_list": [Empaquetado(n) for n in nodos]}
 
     async def c_cmd_set_gamerelay_quality(self, s, m):
