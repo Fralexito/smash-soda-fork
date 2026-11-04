@@ -236,7 +236,7 @@ class Cliente:
 class Rele(asyncio.DatagramProtocol):
     """Atiende el puerto UDP del nodo (5100 por defecto)."""
 
-    VIDA_SONDA = 30  # s (C: la sonda caduca a los ~27 s)
+    VIDA_SONDA = 10  # s (L: PESBUL borra la sonda tras 10 s sin datos; el cliente vuelve a medir)
 
     def __init__(self, srv, clave_exterior, clave_interior, indice=1):
         self.srv = srv
@@ -266,6 +266,9 @@ class Rele(asyncio.DatagramProtocol):
             log.exception("gamerelay: error con %s (%d B)", addr, len(data))
 
     def _recibir(self, data, addr):
+        self._n = getattr(self, "_n", 0) + 1
+        if self._n % 500 == 0:
+            self.limpiar()
         cli = self.clientes.get(addr)
         marco = None
         if cli:

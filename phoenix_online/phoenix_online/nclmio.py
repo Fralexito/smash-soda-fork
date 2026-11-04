@@ -101,7 +101,14 @@ class Codec:
         cod, orig, flag = struct.unpack(">IIB", interno[:9])
         cuerpo = interno[9:9 + cod]
         datos = zlib.decompress(cuerpo) if flag else cuerpo
-        if len(datos) != orig:
+        if not flag and datos[:1] == b"\x78":
+            # C (04-nov): llegó un «mensaje» que era el entero 120 = 0x78, cabecera zlib con el
+            # indicador de compresión a 0: se intenta descomprimir
+            try:
+                datos = zlib.decompress(datos)
+            except zlib.error:
+                pass
+        if len(datos) != orig and not (not flag and len(datos) > len(cuerpo)):
             raise ErrorTrama(f"tamaño original {orig} != {len(datos)}")
         return msgpack_min.unpackb(datos)
 
@@ -129,14 +136,23 @@ class LectorTramas:
             self._seg = (secuencia, total, flag, bytearray(interno[13:13 + largo]))
         else:
             if self._seg is None:
-                raise ErrorTrama(f"continuación 0x{tipo:04x} sin inicio")
+                # L (PESBUL «orphan»): continuación sin inicio = se ignora sin cortar la conexión
+                import logging
+                logging.getLogger("phoenix.nclmio").warning("continuación 0x%04x sin inicio", tipo)
+                return None
             (largo,) = struct.unpack(">I", interno[:4])
             self._seg[3].extend(interno[4:4 + largo])
         inicio, total, flag, datos = self._seg
         if len(datos) >= total or tipo in TIPOS_FIN:
             self._seg = None
             crudo = bytes(datos[:total])
-            return inicio, msgpack_min.unpackb(zlib.decompress(crudo) if flag else crudo)
+            if flag or crudo[:1] == b"\x78":
+                try:
+                    crudo = zlib.decompress(crudo)
+                except zlib.error:
+                    if flag:
+                        raise
+            return inicio, msgpack_min.unpackb(crudo)
         return None
 
     def alimentar(self, data):

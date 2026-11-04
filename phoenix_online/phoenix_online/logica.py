@@ -377,10 +377,12 @@ class Servidor:
         j = self.datos.jugador(s.steam_hex or "") or {}
         return {"pname": Sala.pname(s) if s.pname else Empaquetado(self._identidad(s, j.get("pname", ""))),
                 "division_info": Empaquetado({
-                    "division": "D12", "demotion_point": 0, "promotion_point": 99999,
+                    # L (reglamento por defecto): D12 no desciende, asciende con 300 pts,
+                    # sin doble ascenso (99999 = desactivado), 10 partidos, rating inicial 1000
+                    "division": "D12", "demotion_point": 0, "promotion_point": 300,
                     "doublerank_promotion_point": 99999, "other_match_num": 1,
                     "match_record": Empaquetado({"win_count": 0, "draw_count": 0, "lose_count": 0,
-                                                 "win_s_max": 0, "rating": 0}),
+                                                 "win_s_max": 0, "rating": 1000}),
                     "match_history_list": []})}
 
     async def c_cmd_join_online_mode(self, s, m):
