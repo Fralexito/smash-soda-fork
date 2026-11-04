@@ -38,7 +38,9 @@ Frank entró a «[1001]Salón FRALEX». Cliente: `CMD_ENTRY_GAME` (entry FALSE, 
 `entryflag` y `gameNum` (0 partidos) y difunde el resumen de la sala (`ROOM_BROADCAST`, un solo usuario vivo, sala 1001, lobby 1, tipo `OC_FREE`).
 Pantalla (foto): Local FRALEX, Visitante vacío, texto «espera a tener suficientes usuarios». Botones: Empezar partido, Cargar datos de usuario,
 Añadir Invitado, opciones de salón y generales, Salir. Al salir: `CMD_LEAVE_ROOM` y el servidor borra la sala y la difunde vacía (`ROOM_DELETE_REBROADCAST`).
-- Falta en nuestro servidor: no creamos salas ni las mantenemos; habría que implementar ids de sala, dueño, lados Local/Visitante, invitado y difusión.
+- CORRECCIÓN (revisado en `logica.py`, 4-nov): nuestro servidor SÍ tiene salas: `c_cmd_createjoin_room`, `c_cmd_join_room`, `c_cmd_entry_game` y `c_cmd_leave_room`.
+  Lo que falta (P) es compararlas con el comportamiento de PESBUL (difusión de sala a los demás, borrado y reenvío al salir, lados Local/Visitante, invitado) y,
+  sobre todo, el gamerelay UDP que se usa al empezar el partido: ver `ESPEC_GAMERELAY.md`.
 
 ## 4. Partida rápida (C)
 Orden: `GET_QUICKMATCHOPTION` (opciones: calidad de ping nivel 3, rating 1, reputación buena) → `START_MATCHING` (tipo `OC_QUICK`) → el servidor registra
