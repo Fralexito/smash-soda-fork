@@ -133,3 +133,9 @@ Es un trabajo grande (el módulo equivalente de PESBUL pesa cientos de KB): conv
 - Configuración: `clave_gamerelay` (ruta al archivo de 272 B, solo en la PC) y `gamerelay` {activo, indice, puerto 5100, ip}.
 - Puntos P que la prueba real debe confirmar: clave tras el KX (M o la constante; el relé acepta las dos), formato de la lista B, y si el eco RTT necesita algo más que responder a cada datagrama. Todo se registra en el log como «gamerelay …».
 - Pendiente: `proto_opt` de `GET_SERVER_ENV` como JSON (falta el nombre exacto de la clave), fase 2 (sala + lista con otros) y fase 3 (reenvío de canales 9..15).
+
+## 10. Confirmado en vivo con el PES base (4-nov-2026, 21:20 UTC; 8 sesiones KX, 6110 datagramas)
+- La comprobación de red se dispara al entrar a **«Divisiones en línea»** (JOIN_ONLINE_MODE `RANKMATCH`), no en el vestíbulo ni en Partida rápida.
+- El checklist debe llevar los nodos como **mapas en línea** (con bin el cliente reporta índice 0 y 0xFFFFFFFF sin mandar UDP).
+- KX y material M: correctos. **Tras el KX la clave exterior es M** (misma capa: RC4 con KSA nuevo por datagrama + retroalimentación, IV 0xEA): descifra el 100 % (C).
+- Marco con bit 6 (0x40): `[flags][ zlib( checksum u16 BE || cuerpo ) ]`, checksum calculado con `flags & ~0x40`; no hay checksum fuera del zlib. El cliente manda así su primer SYN (24 B en el cable). Sin el bit 6, formato normal. El servidor puede emitir siempre sin comprimir.

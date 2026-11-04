@@ -90,19 +90,30 @@ def armar_marco(flags, cuerpo):
 
 
 def leer_marco(plano):
-    """-> (flags, cuerpo) o None si el checksum no cuadra."""
+    """-> (flags, cuerpo) o None si el checksum no cuadra.
+
+    C (04-nov, 6110 datagramas reales): con el bit 6 (0x40) el marco es
+    [flags][ zlib( checksum u16 BE || cuerpo ) ] y el checksum se calcula con flags sin 0x40.
+    Sin el bit 6: [flags][checksum u16 BE][cuerpo]. El cliente manda así su primer SYN."""
     if len(plano) < 3:
         return None
-    flags, (cs,) = plano[0], struct.unpack(">H", plano[1:3])
-    cuerpo = plano[3:]
-    if suma_control(bytes([flags]) + b"\x00\x00" + cuerpo) != cs:
-        return None
-    if flags & 0x40:  # L: cuerpo zlib (el cliente casi no lo usa)
+    flags = plano[0]
+    if flags & 0x40:
         import zlib
+        d = zlib.decompressobj()
         try:
-            cuerpo = zlib.decompress(cuerpo)
+            out = d.decompress(plano[1:], 0x801)
         except zlib.error:
             return None
+        if not d.eof or d.unused_data or d.unconsumed_tail or len(out) < 2 or len(out) >= 0x801:
+            return None
+        cs, cuerpo = struct.unpack(">H", out[:2])[0], out[2:]
+        base = flags & ~0x40
+    else:
+        cs, cuerpo = struct.unpack(">H", plano[1:3])[0], plano[3:]
+        base = flags
+    if suma_control(bytes([base]) + b"\x00\x00" + cuerpo) != cs:
+        return None
     return flags, cuerpo
 
 

@@ -456,6 +456,16 @@ class TestGamerelay(unittest.TestCase):
         self.assertEqual(g.leer_marco(g.descifrar_exterior(self.k_ext, c)), (0x80, b"hola mundo"))
         self.assertIsNone(g.leer_marco(b"\x80\x00\x00x"))
 
+    def test_marco_comprimido_del_cliente(self):
+        import struct, zlib
+        g = self.g
+        cuerpo = g.armar_transporte(0, [(0, 0, [(0, g.carga_de(b"\x80"))]), (1, 0, [])])
+        flags = 0x74
+        cs = g.suma_control(bytes([flags & ~0x40]) + b"\x00\x00" + cuerpo)
+        plano = bytes([flags]) + zlib.compress(struct.pack(">H", cs) + cuerpo)
+        self.assertEqual(g.leer_marco(plano), (flags, cuerpo))
+        self.assertIsNone(g.leer_marco(bytes([flags]) + zlib.compress(b"\x00\x00" + cuerpo)))
+
     def test_transporte_ejemplo_real(self):
         # C (ESPEC §2): 50 52 | ack 0 | 1 elemento | seq 0 | largo-1 = 2 | 02 1f c0
         cuerpo = bytes.fromhex("00000000" "00" "5052" "00000000" "00" "00000000" "0002" "021fc0")
