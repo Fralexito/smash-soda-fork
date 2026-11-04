@@ -9,6 +9,7 @@ import base64
 import hashlib
 import hmac
 import itertools
+import json
 import logging
 import time
 
@@ -320,7 +321,13 @@ class Servidor:
     async def c_cmd_get_server_env(self, s, m):
         # C (PESBUL R7.3.169/631): nombres probados en Ghidra; valores de cuenta nueva.
         # max_division es el TOKEN "D12" (el entero o "10" da VNBP_0002); is_revision_check 0.
-        return {"proto_opt": 1 if self.cfg.get("turn") else 0, "max_division": "D12",
+        # C (PESBUL 04-nov): proto_opt es una CADENA JSON compacta con el perfil de red
+        # (por defecto «MatchCommandDropMode 1»); antes mandábamos el entero 0
+        proto = self.cfg.get("proto_opt",
+                             {"CS": {"MatchCommandBufferingControl": {"MatchCommandDropMode": 1}}})
+        if not isinstance(proto, (str, int)):
+            proto = json.dumps(proto, sort_keys=True, separators=(",", ":"))
+        return {"proto_opt": proto, "max_division": "D12",
                 "teamlobby_game_rating_border_normal": 0, "teamlobby_game_rating_border_hard": 0,
                 "is_revision_check": 0, "quality_check_wait_sec": 0, "trigger_keep_alive": 30,
                 "matchrejectpid_max": 0, "match_client_timeout_load_timeout": 60,
@@ -621,7 +628,15 @@ class Servidor:
                                             f"{self.cfg.get('puerto_http', 5000)}"
         return base.rstrip("/") + "/gamerelay"
 
+    async def c_cmd_get_blocklist(self, s, m):
+        # C (PESBUL R7.3.183): respuesta pelada = XXJA_0005 y el cliente sale del vestíbulo;
+        # lista vacía tampoco sirve. Un bloque «Main» como bin.
+        bloque = int(m.get("lobby_id") or getattr(s, "lobby_id", None) or 1)
+        return {"count": 1, "bklist": [Empaquetado({"name": "Main", "player_num": len(self.por_pid),
+                                                     "max_player_num": 100, "block_id": max(1, bloque)})]}
+
     async def c_cmd_join_lobby(self, s, m):
+        s.lobby_id = m.get("lobby_id") or 1
         return {"gamerelay_web_url": self._url_gamerelay_web(), "bklist": []}
 
     # ---------- Vigilancias ----------

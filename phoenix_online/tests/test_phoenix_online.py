@@ -321,6 +321,20 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         await self.srv.cerrar(a)
         self.assertFalse(self.srv.sondas)
 
+    async def test_vestibulo_blocklist_y_url_relay(self):
+        a, ea = await self.entrar("A1")
+        await self.srv.recibir(a, 40, {"msgid": "CMD_GET_LOBBYLIST", "rqid": 1, "lobby_type": "FREE"})
+        for x in ea[-1][1]["lobby_list"]:
+            self.assertGreater(msgpack_min.unpackb(msgpack_min.packb(x.valor))["gamerelay_index"], 0)
+        await self.srv.recibir(a, 41, {"msgid": "CMD_JOIN_LOBBY", "rqid": 2, "lobby_id": 1})
+        self.assertTrue(ea[-1][1]["gamerelay_web_url"].endswith("/gamerelay"))
+        await self.srv.recibir(a, 42, {"msgid": "CMD_GET_BLOCKLIST", "rqid": 3})
+        r = ea[-1][1]
+        self.assertEqual((r["count"], msgpack_min.unpackb(msgpack_min.packb(r["bklist"][0].valor))["block_id"]),
+                         (1, 1))
+        await self.srv.recibir(a, 43, {"msgid": "CMD_GET_SERVER_ENV", "rqid": 4})
+        self.assertIn("MatchCommandDropMode", ea[-1][1]["proto_opt"])
+
     def test_avatar_http_vacio_y_guardado(self):
         r = self.srv.respuesta_http({"msgid": "CMD_GET_AVATAR_HTTP", "rqid": "3", "pid": "7"})
         self.assertEqual((r["result"], r["avatar_data"], r["avatar_data_size"]), ("NOERR", "", 0))
