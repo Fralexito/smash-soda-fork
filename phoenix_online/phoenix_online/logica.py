@@ -883,6 +883,10 @@ class Servidor:
         # P: «club_de_prueba» en config = fingir un club ya creado para ver si el cliente pasa
         # al menú principal de myClub (y pide IS_FIRST_* / SEND_MYCLUB_PROGRESS_STATUS)
         club = self.datos.club(s.steam_hex or "") or (self.cfg.get("myclub") or {}).get("club_de_prueba")
+        # P: prueba «sin club = error»: config myclub.resultado_sin_club (p. ej. ERR_NOTREGISTERED)
+        error = (self.cfg.get("myclub") or {}).get("resultado_sin_club")
+        if not club and error:
+            return {"result": error}
         c = club or {}
         texto = lambda k: c.get(k) if isinstance(c.get(k), str) else ""
         entero = lambda k: c.get(k) if isinstance(c.get(k), int) else 0
