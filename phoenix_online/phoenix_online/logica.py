@@ -12,6 +12,7 @@ import itertools
 import logging
 import time
 
+from . import msgpack_min
 from .msgpack_min import Empaquetado
 
 log = logging.getLogger("phoenix_online")
@@ -125,6 +126,8 @@ class Servidor:
         self.turn_pendiente = {}  # pid destino -> (address, size)
         self.dormir = asyncio.sleep
         self.avatares = {}    # pid (texto) -> base64 del avatar
+        self.sondas = {}      # (ip, índice de nodo) -> (pid, hasta): sondas UDP autorizadas
+        self.calidades = {}   # pid -> {índice: medida} de SET_GAMERELAY_QUALITY
         self.colas = {}       # matching_type -> [Sesion] buscando rival
         self.parejas = {}     # Sesion -> Pareja de partida rápida
 
@@ -139,6 +142,11 @@ class Servidor:
         await self._salir_de_sala(sesion)
         self._salir_de_cola(sesion)
         self.parejas.pop(sesion, None)
+        # C: la sonda autorizada se revoca al desconectar el TCP de ese pid
+        pid = str(self._pid_visible(sesion))
+        if pid not in {str(self._pid_visible(x)) for x in self.sesiones}:
+            for k in [k for k, v in self.sondas.items() if v[0] == pid]:
+                del self.sondas[k]
 
     # ---------- despacho ----------
     async def recibir(self, sesion, secuencia, msg):
@@ -197,7 +205,11 @@ class Servidor:
                  # falta la clave la URL es NULL y TopMode revienta (c0000005, FUN_140c5f7b0)
                  ("DMM_TOP", "/asset/dmm-top"), ("WEEKLY_INFO_BANNER", "/asset/weekly-info-banner"),
                  ("BANNER", "/asset/banner"), ("RANK", "/rank"), ("DIVISION_RANK", "/division_rank"),
-                 ("AVATAR", "/avatar/AVATAR"))
+                 ("AVATAR", "/avatar/AVATAR"),
+                 # C (PESBUL local 04-nov): clave exacta del chequeo de red; si falta, el
+                 # cliente falla antes de abrir el socket UDP del relé
+                 ("GET_GAMERELAY_QUALITYCHECKLIST", "/gamerelay/qualitychecklist"),
+                 ("GAMERELAY", "/gamerelay"))
     VERSIONES_EULA = ("eula_version", "eula_myclub_version", "eula_privacy_policy_version")
     VERSIONES_EULA_CERO = ("eula_privacy_notice_version", "eula_privacy_policy_california_version",
                            "eula_privacy_policy_japan_version")
@@ -738,6 +750,69 @@ class Servidor:
                                           hashlib.sha1).digest()).decode()
         return usuario, clave
 
+    # ---------- Gamerelay: comprobación de red (ESPEC_GAMERELAY.md §1 y §5) ----------
+    def _nodos_relay(self):
+        """Nodos UDP del relé que se anuncian al cliente (C: índice 1, IP del servidor, 5100, grid 0)."""
+        g = self.cfg.get("gamerelay") or {}
+        if not g.get("activo", True):
+            return []
+        return [{"gamerelay_index": int(g.get("indice", 1)),
+                 "ip_addr": str(g.get("ip") or self.cfg.get("ip_publica", "127.0.0.1")),
+                 "port": int(g.get("puerto", 5100)), "grid": int(g.get("grid", 0))}]
+
+    def lista_calidad(self, pid, ip_cliente=None):
+        """Respuesta de GET_GAMERELAY_QUALITYCHECKLIST (HTTP o TCP).
+
+        Efecto lateral (C): autoriza una sonda UDP desde esa IP contra cada nodo hasta que
+        el pid se desconecte (tope 86 400 s)."""
+        nodos = self._nodos_relay()
+        if ip_cliente:
+            hasta = time.time() + 86400
+            for n in nodos:
+                self.sondas[(ip_cliente, n["gamerelay_index"])] = (str(pid or ""), hasta)
+        medidas = self.calidades.get(str(pid or ""), {})
+        g = self.cfg.get("gamerelay") or {}
+        return {"quality_check_data_list": [Empaquetado(n) for n in nodos],  # P: bin con mapa
+                "quality_check_data_num": len(nodos),
+                "quality_threshold_1": int(g.get("umbral_1", 80)),   # P: política propia (ms)
+                "quality_threshold_2": int(g.get("umbral_2", 150)),
+                # lista vacía = «mídelo tú» (L): así PES vuelve a medir cada vez
+                "quality_list": [Empaquetado(v) for v in medidas.values()] if g.get("recordar") else [],
+                "quality_list_num": len(medidas) if g.get("recordar") else 0}
+
+    def sonda_autorizada(self, ip_cliente, indice):
+        x = self.sondas.get((ip_cliente, indice))
+        return bool(x and x[1] > time.time())
+
+    async def c_cmd_get_gamerelay_qualitychecklist(self, s, m):
+        ip = s.direccion[0] if isinstance(s.direccion, tuple) else None
+        return self.lista_calidad(self._pid_visible(s), ip)
+
+    async def c_cmd_get_gamerelay(self, s, m):
+        nodos = self._nodos_relay()
+        base = self.cfg.get("http_base") or self.cfg["urls"].get("GAMERELAY_WEB", "")
+        return {"gamerelay_web_url": base, "gamerelay_num": len(nodos),
+                "gamerelay_list": [Empaquetado(n) for n in nodos]}
+
+    async def c_cmd_set_gamerelay_quality(self, s, m):
+        # C: cada elemento llega como bin con un mapa {gamerelay_index, quality(ms), last_update};
+        # 0xFFFFFFFF = no se pudo medir. Se guarda por pid e índice; respuesta solo NOERR.
+        pid = str(self._pid_visible(s))
+        for x in m.get("quality_list") or []:
+            if isinstance(x, (bytes, bytearray)):
+                try:
+                    x = msgpack_min.unpackb(bytes(x))
+                except Exception:
+                    continue
+            if isinstance(x, dict) and "gamerelay_index" in x:
+                self.calidades.setdefault(pid, {})[int(x["gamerelay_index"])] = {
+                    "gamerelay_index": int(x["gamerelay_index"]),
+                    "quality": int(x.get("quality", 0xFFFFFFFF)),
+                    "last_update": int(x.get("last_update", 0))}
+                log.info("calidad gamerelay pid=%s nodo=%s %s ms", pid, x["gamerelay_index"],
+                         x.get("quality"))
+        return {}
+
     async def c_cmd_check_local_gamerelay_player(self, s, m):
         # C (REA 29-oct, fn 141b9cdc0): claves leídas por el cliente. Sin relé propio por ahora:
         # 0 relés por modo -> el partido va P2P (directo o por TURN).
@@ -769,7 +844,7 @@ class Servidor:
                 "used_present_product_id_list": [], "used_present_product_id_list_num": 0,
                 "steam_order_id": ""}
 
-    def respuesta_http(self, formulario):
+    def respuesta_http(self, formulario, ip_cliente=None):
         """Comandos que el cliente manda por WinHTTP (base CommandObjectHttp, REA 29-oct).
 
         Los nombres exactos de los campos aún no se conocen (P): se registran y se
@@ -781,6 +856,8 @@ class Servidor:
         if msgid == "CMD_GET_TURN_SERVER_LIST" and self.cfg.get("turn"):
             return self.respuesta_turn(formulario)
         base = {"msgid": msgid, "rqid": int(formulario.get("rqid", 0) or 0), "result": NOERR}
+        if msgid in ("CMD_GET_GAMERELAY_QUALITYCHECKLIST", "GET_GAMERELAY_QUALITYCHECKLIST"):
+            return {**base, **self.lista_calidad(formulario.get("pid"), ip_cliente)}
         if msgid in ("CMD_GET_AVATAR_HTTP", "CMD_GET_AVATAR"):
             return {**base, **self._avatar(formulario.get("pid"))}
         if msgid == "CMD_AUTH_STEAM":

@@ -113,7 +113,8 @@ async def http(srv, reader, writer):
         if ruta_sin_query.lstrip("/").startswith("livedata/"):
             respuesta = srv.respuesta_livedata(ruta_sin_query.rstrip("/").rsplit("/", 1)[-1], form)
         else:
-            respuesta = srv.respuesta_http(form)
+            ip = (writer.get_extra_info("peername") or (None,))[0]
+            respuesta = srv.respuesta_http(form, ip)
         if respuesta is not None:
             # P: formato de respuesta HTTP = MessagePack (como TURN); confirmar en la captura
             datos, tipo = msgpack_min.packb(respuesta), "application/x-msgpack"

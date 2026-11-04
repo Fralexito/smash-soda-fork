@@ -22,7 +22,7 @@
     "TOPINFO": "http://192.168.1.50:5000/topinfo",
     "BANNER": "http://192.168.1.50:5000/banner",
     "GET_TURN_SERVER_LIST": "http://192.168.1.50:5000/turn",
-    "GET_GAMERELAY_QUALITYCHECKLIST": "http://192.168.1.50:5000/quality",
+    "GET_GAMERELAY_QUALITYCHECKLIST": "http://192.168.1.50:5000/gamerelay/qualitychecklist",
     "GET_GAMERELAY": "http://192.168.1.50:5000/gamerelay",
     "EULA_PES": "http://192.168.1.50:5000/eula",
     "AUTH_STEAM": "http://192.168.1.50:5000/auth_steam",

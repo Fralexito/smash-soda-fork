@@ -120,7 +120,7 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         s, env = cliente(self.srv)
         await self.srv.recibir(s, 42, {"msgid": "CMD_GET_URLLIST", "rqid": 9})
         seq, m = env[-1]
-        self.assertEqual((seq, m["rqid"], m["result"], m["url_num"]), (42, 9, "NOERR", 17))
+        self.assertEqual((seq, m["rqid"], m["result"], m["url_num"]), (42, 9, "NOERR", 19))
         self.assertTrue(all(isinstance(x, Empaquetado) for x in m["ulist"]))
 
     async def test_login_real_steam_challenge_account(self):
@@ -298,6 +298,28 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         await r(b, 31, {"msgid": "CMD_SET_GAMERELAY_CHECK_RES", "rqid": 5})
         for e in (ea, eb):
             self.assertEqual(e[-1][1]["error_code"], "NOERR")
+
+    def test_lista_calidad_http_autoriza_sonda(self):
+        r = self.srv.respuesta_http({"msgid": "CMD_GET_GAMERELAY_QUALITYCHECKLIST", "rqid": "5",
+                                     "pid": "7"}, "10.0.0.2")
+        self.assertEqual((r["result"], r["quality_check_data_num"], r["quality_list_num"]), ("NOERR", 1, 0))
+        nodo = msgpack_min.unpackb(msgpack_min.packb(r["quality_check_data_list"][0].valor))
+        self.assertEqual((nodo["gamerelay_index"], nodo["port"], nodo["grid"]), (1, 5100, 0))
+        self.assertTrue(self.srv.sonda_autorizada("10.0.0.2", 1))
+        self.assertFalse(self.srv.sonda_autorizada("10.0.0.3", 1))
+
+    async def test_set_gamerelay_quality_y_revocar(self):
+        a, ea = await self.entrar("A1")
+        await self.srv.recibir(a, 30, {"msgid": "CMD_GET_GAMERELAY_QUALITYCHECKLIST", "rqid": 7})
+        self.assertEqual(ea[-1][1]["quality_check_data_num"], 1)
+        item = msgpack_min.packb({"gamerelay_index": 1, "quality": 18, "last_update": 1})
+        await self.srv.recibir(a, 31, {"msgid": "CMD_SET_GAMERELAY_QUALITY", "rqid": 8,
+                                       "quality_list": [item]})
+        self.assertEqual(ea[-1][1]["result"], "NOERR")
+        self.assertEqual(self.srv.calidades[str(self.srv._pid_visible(a))][1]["quality"], 18)
+        self.assertTrue(self.srv.sondas)
+        await self.srv.cerrar(a)
+        self.assertFalse(self.srv.sondas)
 
     def test_avatar_http_vacio_y_guardado(self):
         r = self.srv.respuesta_http({"msgid": "CMD_GET_AVATAR_HTTP", "rqid": "3", "pid": "7"})
