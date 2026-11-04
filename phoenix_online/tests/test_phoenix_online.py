@@ -391,6 +391,65 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         info = msgpack_min.unpackb(msgpack_min.packb(ea[-1][1]["division_info"].valor))
         self.assertEqual((info["division"], info["other_match_num"]), ("D12", 1))
 
+    async def test_bloque_salir_y_revisar_texto(self):
+        a, ea = await self.entrar("A1")
+        r = self.srv.recibir
+        await r(a, 60, {"msgid": "CMD_JOIN_LOBBY", "rqid": 1, "lobby_id": 1})
+        await r(a, 61, {"msgid": "CMD_JOIN_BLOCK", "rqid": 2, "block_id": 1})
+        self.assertEqual((ea[-1][1]["result"], a.block_id), ("NOERR", 1))
+        await r(a, 62, {"msgid": "CMD_CHECK_STRING", "rqid": 3, "str": "Sala de Frank"})
+        self.assertEqual(ea[-1][1]["result"], "NOERR")
+        await r(a, 63, {"msgid": "CMD_CHECK_STRING", "rqid": 4, "str": "una mierda"})
+        self.assertEqual(ea[-1][1]["result"], "ERR_NGWORD")
+        await r(a, 64, {"msgid": "CMD_CREATEJOIN_ROOM", "rqid": 5, "name": "S"})
+        self.assertEqual(len(self.srv.salas), 1)
+        await r(a, 65, {"msgid": "CMD_LEAVE_LOBBY", "rqid": 6})
+        self.assertEqual((ea[-1][1]["msgid"], ea[-1][1]["result"]), ("CMD_LEAVE_LOBBY", "NOERR"))
+        self.assertEqual((len(self.srv.salas), a.lobby_id, a.block_id), (0, None, None))
+
+    async def test_perfil_guardar_y_leer(self):
+        a, ea = await self.entrar("A1")
+        r = self.srv.recibir
+        perfil = msgpack_min.packb({"favorite_team": "Alianza", "favorite_player": "Cueto",
+                                    "intro": "Hola", "date": 0})
+        await r(a, 70, {"msgid": "CMD_SET_PLAYERPROFILE", "rqid": 1, "profile": perfil})
+        self.assertEqual(ea[-1][1]["error_intro"], "")
+        await r(a, 71, {"msgid": "CMD_GET_PLAYERINFO", "rqid": 2, "pid": self.srv._pid_visible(a)})
+        m = ea[-1][1]
+        self.assertEqual((m["favoriteTeam"], m["favoritePlayer"], m["intro"]),
+                         ("Alianza", "Cueto", "Hola"))
+        est = msgpack_min.unpackb(msgpack_min.packb(m["rankmatch_stats"].valor))
+        self.assertEqual((est["division"], est["rating"]), ("D12", 1000))
+        pn = msgpack_min.unpackb(msgpack_min.packb(m["pname"].valor))
+        self.assertIsInstance(pn["psn_user_id"], bytes)
+        self.assertEqual(msgpack_min.unpackb(msgpack_min.packb(m["manner"].valor))["manner"], "AA")
+
+    async def test_registros_y_ranking(self):
+        a, ea = await self.entrar("A1")
+        b, eb = await self.entrar("B2")
+        r = self.srv.recibir
+        await r(a, 80, {"msgid": "CMD_GET_DIVISION_POINT_INFO", "rqid": 1, "pid": 1})
+        lista = ea[-1][1]["division_list"]
+        self.assertEqual(len(lista), 12)
+        self.assertEqual(msgpack_min.unpackb(msgpack_min.packb(lista[0].valor))["division_type"], "D12")
+        await r(a, 81, {"msgid": "CMD_GET_GAMERESULTS", "rqid": 2})
+        self.assertEqual(ea[-1][1]["no_match"], "YES")
+        await r(a, 82, {"msgid": "CMD_GET_OFTEN_USED_TEAM_LIST", "rqid": 3})
+        self.assertEqual(ea[-1][1]["used_team_id_list_num"], 0)
+        await r(a, 83, {"msgid": "CMD_GET_DIVISION_RANKING", "rqid": 4, "division_type": "D12"})
+        m = ea[-1][1]
+        self.assertEqual((m["total_rank_num"], m["rank_list"][1]["rank"]), (2, 2))
+        self.assertIsInstance(m["rank_list"][0]["user"], dict)
+        await r(a, 84, {"msgid": "CMD_GET_DIVISION_RANKING", "rqid": 5, "division_type": "D1"})
+        self.assertEqual(ea[-1][1]["total_rank_num"], 0)
+
+    async def test_avisos_y_chat_quedan_abiertos(self):
+        a, ea = await self.entrar("A1")
+        antes = len(ea)
+        for w in ("CMD_WATCH_SYSTEM_NOTICE", "CMD_WATCH_SYNC_NOTICE", "CMD_WATCH_TEXTCHAT"):
+            await self.srv.recibir(a, 90, {"msgid": w, "rqid": 7})
+        self.assertEqual(len(ea), antes)
+
     def test_avatar_http_vacio_y_guardado(self):
         r = self.srv.respuesta_http({"msgid": "CMD_GET_AVATAR_HTTP", "rqid": "3", "pid": "7"})
         self.assertEqual((r["result"], r["avatar_data"], r["avatar_data_size"]), ("NOERR", "", 0))

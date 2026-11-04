@@ -63,3 +63,10 @@ Pendiente:
 - Hecho y probado en vivo con el PES base: vestíbulo (BLOCKLIST con un bloque, JOIN_LOBBY con gamerelay_web_url, gamerelay_index del nodo), salas con fichas en formato correcto (anidados en bin, enumerados en texto; antes PES se cerraba en msvcrt), Divisiones (GET_DIVISION_INFO cuenta nueva; proto_opt JSON con perfil RANKMATCH), tramas troceadas 0x0070-0x0072, y el relé UDP completo para la sonda (KX, clave M, marcos zlib, sal de 6 bits, listas A/B, eco por elemento) → **18 ms**.
 - Pendiente: la sonda se repite cada ~9 s en Divisiones (sin daño); promotion_point 99999 se ve raro; respuestas de myClub; **fase 2/3 del relé (dos jugadores y reenvío del partido)**; VPS; web.
 - Estado de la PC: hosts apunta a 192.168.100.236 (copias hosts.antes_pesbul_local*); servidor propio encendido; copia local de PESBUL apagada.
+
+## 04-nov noche (2): lo que va con un solo PES
+- Inventario completo de PESBUL frente a lo nuestro: docs/INVENTARIO_PESBUL.md (194 órdenes en PESBUL, 78 nuestras antes de esta ronda).
+- Nuevos manejadores (logica.py): vestíbulo (JOIN_BLOCK, LEAVE_BLOCK, LEAVE_LOBBY, CHECK_STRING), perfil (SET_PLAYERPROFILE, GET_PLAYERINFO), registros (GET_DIVISION_POINT_INFO, GET_GAMERESULTS, GET_OFTEN_USED_TEAM_LIST, GET_RANKING y variantes). Avisos y chat quedan como vigilancias abiertas.
+- datos.py: tabla nueva `perfiles` (equipo favorito, jugador favorito, presentación) y `todos()` para el ranking.
+- Tipos que importan: en GET_PLAYERINFO, favoriteTeam/favoritePlayer/intro van arriba; rankmatch_stats y manner van como bin; division es texto «D12». En el ranking, los elementos son mapas, no bin. En DIVISION_POINT_INFO siempre van 12 filas.
+- Pruebas: 48 OK. Pendiente verlo en PES: Editar perfil, Registros de Divisiones, entrar y salir del vestíbulo.

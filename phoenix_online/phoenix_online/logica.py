@@ -25,6 +25,9 @@ CONFIRMACIONES = {
     "CMD_SEND_PSID", "CMD_SET_CURRENT_PLAYER", "CMD_LOGIN_MENU", "CMD_SET_LANGUAGE",
     "CMD_JOIN_OFFLINE_MODE",
     "CMD_LEAVE_OFFLINE_MODE", "CMD_SEND_HEARTBEAT", "CMD_SET_ROOM_OPTION",
+    # L (PESBUL): estos también se contestan solo con NOERR
+    "CMD_CHECK_CHEAT", "CMD_GET_DMM_NOTIFICATION", "CMD_GET_URGENT_ANNOUNCEMENT",
+    "CMD_FINISH_SEASON",
 }
 
 # Vigilancias que el cliente deja abiertas y el servidor completa más tarde
@@ -32,7 +35,18 @@ VIGILANCIAS = {
     "CMD_REQWATCHL_ROOMLIST", "CMD_REQWATCHL_ROOMPLAYERLIST_NTL", "CMD_WATCH_ROOMSTATE",
     "CMD_WATCH_ENTRY_GAME", "CMD_WATCH_DECIDE_GAMEENV", "CMD_WATCH_DECIDE_GAMEENV_FREE",
     "CMD_WATCH_NOTICE", "CMD_WATCH_TURN_ADDRESS_DATA",
+    # L (PESBUL): avisos y chat quedan abiertos; se completan solo cuando hay algo que decir
+    "CMD_WATCH_SYNC_NOTICE", "CMD_WATCH_SYSTEM_NOTICE", "CMD_WATCH_TEXTCHAT",
 }
+
+# L: palabras que CHECK_STRING rechaza con ERR_NGWORD (único error que el cliente acepta ahí).
+# Lista corta a propósito: un filtro grande rechaza nombres inocentes.
+PALABRAS_PROHIBIDAS = ("FUCK", "SHIT", "NIGGER", "CUNT", "HITLER", "NAZI",
+                       "MIERDA", "PUTA", "MARICON", "CONCHETUMARE")
+
+DIVISION_INICIAL = "D12"
+RATING_INICIAL = 1000
+MODALES_DEFECTO = "AA"  # L: fichas de modales AA/A/B/C/D; vacío se pinta «-»
 
 # P (PESBUL matchmaking_policy): opciones guardadas de «Opciones de Matchmaking»
 OPCIONES_RAPIDA = {"is_pass_level": "NO", "pass_level": 1, "rating_level": "RATING_LEVEL_1",
@@ -63,6 +77,8 @@ class Sesion:
         self.cerrar_tras_responder = False
         self.opciones_rapida = dict(OPCIONES_RAPIDA)
         self.modo_online = None
+        self.lobby_id = None
+        self.block_id = None
 
     def enviar(self, mensaje):
         self._enviar_trama(self.secuencia, mensaje)
@@ -718,6 +734,133 @@ class Servidor:
     async def c_cmd_join_lobby(self, s, m):
         s.lobby_id = m.get("lobby_id") or 1
         return {"gamerelay_web_url": self._url_gamerelay_web(), "bklist": []}
+
+    async def c_cmd_join_block(self, s, m):
+        # L (PESBUL): tras GET_BLOCKLIST el cliente entra al bloque; sin respuesta = C_RL_JS_0002
+        try:
+            s.block_id = int(m.get("block_id") or 0)
+        except (TypeError, ValueError):
+            s.block_id = 0
+        return {}
+
+    async def c_cmd_leave_block(self, s, m):
+        # L: salir del bloque también saca de la sala
+        await self._salir_de_sala(s)
+        s.block_id = None
+        return {}
+
+    async def c_cmd_leave_lobby(self, s, m):
+        await self._salir_de_sala(s)
+        s.block_id = s.lobby_id = None
+        return {}
+
+    async def c_cmd_check_string(self, s, m):
+        # L (PESBUL R7.3.341): campo «str»; sin respuesta el cliente espera para siempre
+        texto = m.get("str") if isinstance(m.get("str"), str) else ""
+        mal = any(p in texto.upper() for p in PALABRAS_PROHIBIDAS)
+        return {"result": "ERR_NGWORD"} if mal else {}
+
+    # ---------- Perfil y registros ----------
+    async def c_cmd_set_playerprofile(self, s, m):
+        # L (PESBUL R7.3.130.3): «profile» = bin(msgpack) con favorite_team/favorite_player/intro
+        perfil = m.get("profile")
+        if isinstance(perfil, (bytes, bytearray)):
+            try:
+                perfil = msgpack_min.unpackb(perfil)
+            except Exception:
+                perfil = {}
+        perfil = perfil if isinstance(perfil, dict) else {}
+        def campo(k, n):
+            v = perfil.get(k)
+            return v[:n] if isinstance(v, str) else ""
+        self.datos.guardar_perfil(s.steam_hex or "", campo("favorite_team", 100),
+                                  campo("favorite_player", 100), campo("intro", 512))
+        return {"error_favorite_team": "", "error_favorite_player": "", "error_intro": ""}
+
+    def _sesion_de_pid(self, pid):
+        for x in self.sesiones:
+            if pid and str(self._pid_visible(x)) == str(pid):
+                return x
+        return None
+
+    async def c_cmd_get_playerinfo(self, s, m):
+        # L (PESBUL R7.3.141/636): pid + pname(bin) + favoriteTeam/favoritePlayer/intro ARRIBA
+        # (si faltan, «Editar perfil» muestra NotImplement); rankmatch_stats y manner van como
+        # bin; division es TEXTO, el resto números
+        destino = self._sesion_de_pid(m.get("pid")) or s
+        j = self.datos.jugador(destino.steam_hex or "") or {}
+        nombre = j.get("pname") or destino.pname or ""
+        perfil = self.datos.perfil(destino.steam_hex or "")
+        cero = {"match_num": 0, "win_num": 0, "lose_num": 0, "draw_num": 0, "goal": 0,
+                "lost_goal": 0, "rating": RATING_INICIAL, "division": 0, "acclaim_level": 1}
+        pname = {**self._identidad(destino, nombre), "account_id": self._numero_cuenta(destino),
+                 "online_id": nombre, "is_valid_cache": "1", "disconnect_rate": 0,
+                 "favoriteTeam": perfil["favorite_team"],
+                 "favoritePlayer": perfil["favorite_player"], "intro": perfil["intro"],
+                 "regist_team_info": {"team_id": 0, "team_name": "", "team_type": 0},
+                 "myclub_stats": {**cero, "gp": 0, "coins": 0},
+                 "matchday_stats_single": dict(cero), "matchday_stats_coop": dict(cero),
+                 "coop_profile_data": {"level": 1, "exp": 0, "rating": RATING_INICIAL,
+                                       "match_num": 0, "win_num": 0, "lose_num": 0,
+                                       "draw_num": 0},
+                 "match_data_size": 0, "match_data": b""}
+        estadisticas = {"division": DIVISION_INICIAL, "rating": RATING_INICIAL,
+                        "max_weekly_point": 0, "current_weekly_point": 0, "match_num": 0,
+                        "win_num": 0, "lose_num": 0, "draw_num": 0, "contWin_num": 0,
+                        "contWinMax_num": 0, "goal": 0, "lostGoal": 0}
+        return {"pid": self._pid_visible(destino), "pname": Empaquetado(pname),
+                "favoriteTeam": perfil["favorite_team"],
+                "favoritePlayer": perfil["favorite_player"], "intro": perfil["intro"],
+                "rankmatch_stats": Empaquetado(estadisticas),
+                "manner": Empaquetado({"manner": MODALES_DEFECTO}),
+                "rankmatch_teamLog": []}
+
+    async def c_cmd_get_often_used_team_list(self, s, m):
+        # L (PESBUL, parser 0x1D46940): ids de equipo SIMPLES (el cliente hace id << 14)
+        return {"last_used_team_id": 0, "used_team_id_list": [], "used_team_id_list_num": 0}
+
+    async def c_cmd_get_division_point_info(self, s, m):
+        # L (PESBUL r7.3.630): la tabla es POSICIONAL: siempre 12 filas, D12 -> D1, como bin
+        return {"server_num": 1, "division_list": [
+            Empaquetado({"division_type": f"D{d}", "point": 0, "rank": 0})
+            for d in range(12, 0, -1)]}
+
+    async def c_cmd_get_gameresults(self, s, m):
+        # L (PESBUL r7.3.629): sin historial = no_match «YES»; un elemento mal formado cierra PES
+        return {"rlist_num": 0, "rlist": [], "no_match": "YES"}
+
+    async def c_cmd_get_ranking(self, s, m):
+        # L (PESBUL r728): elementos como MAPAS (no bin); ordenados por rating y luego puntos
+        division = m.get("division_type") or m.get("division")
+        filas = [] if division not in (None, "", DIVISION_INICIAL) else self.datos.todos()
+        try:
+            inicio = max(0, int(m.get("start_index") or 0))
+            cuantos = min(100, max(0, int(m.get("view_num") or 50)))
+        except (TypeError, ValueError):
+            inicio, cuantos = 0, 50
+        lista = []
+        for i, f in enumerate(filas[inicio:inicio + cuantos]):
+            perfil = self.datos.perfil(f["steam_hex"])
+            try:
+                cuenta_pid = int(f["steam_hex"], 16)
+            except ValueError:
+                cuenta_pid = f["pid"]
+            lista.append({"rank": inicio + i + 1, "point": 0, "user": {
+                "pid": cuenta_pid,
+                "pname": {"name": f["pname"], "xuid_one": "NotImplement",
+                          "psn_user_id": {"account_id": 0, "online_id": f["pname"],
+                                          "is_valid_cache": "NO"},
+                          "is_deleted": "NO"},
+                "division": DIVISION_INICIAL, "manner": MODALES_DEFECTO,
+                "favoriteTeam": perfil["favorite_team"],
+                "favoritePlayer": perfil["favorite_player"], "intro": perfil["intro"],
+                "match_record": {"win_count": 0, "draw_count": 0, "lose_count": 0,
+                                 "win_s_max": 0, "rating": RATING_INICIAL}}})
+        return {"date": int(time.time()), "total_rank_num": len(filas), "rank_list": lista}
+
+    c_cmd_get_ranking_byid = c_cmd_get_ranking
+    c_cmd_get_division_ranking = c_cmd_get_ranking
+    c_cmd_get_division_ranking_byid = c_cmd_get_ranking
 
     # ---------- Vigilancias ----------
     async def _al_vigilar(self, s, msgid):

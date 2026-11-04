@@ -11,6 +11,12 @@ create table if not exists jugadores (
   pname text not null,
   creado real not null
 );
+create table if not exists perfiles (
+  steam_hex text primary key,
+  favorite_team text not null default '',
+  favorite_player text not null default '',
+  intro text not null default ''
+);
 create table if not exists resultados (
   id integer primary key autoincrement,
   room_id integer not null,
@@ -55,6 +61,25 @@ class Datos:
                               (steam_hex.lower(), pname, time.time()))
         self.db.commit()
         return {"pid": cur.lastrowid, "pname": pname}
+
+    def todos(self):
+        """Todos los jugadores registrados, del más antiguo al más nuevo."""
+        return [{"pid": f[0], "pname": f[1], "steam_hex": f[2]} for f in
+                self.db.execute("select pid, pname, steam_hex from jugadores order by pid")]
+
+    def perfil(self, steam_hex):
+        """Equipo favorito, jugador favorito y presentación («Editar perfil» del juego)."""
+        f = self.db.execute("select favorite_team, favorite_player, intro from perfiles "
+                            "where steam_hex=?", ((steam_hex or "").lower(),)).fetchone()
+        return dict(zip(("favorite_team", "favorite_player", "intro"), f or ("", "", "")))
+
+    def guardar_perfil(self, steam_hex, favorite_team, favorite_player, intro):
+        self.db.execute("insert into perfiles(steam_hex, favorite_team, favorite_player, intro) "
+                        "values (?,?,?,?) on conflict(steam_hex) do update set "
+                        "favorite_team=excluded.favorite_team, "
+                        "favorite_player=excluded.favorite_player, intro=excluded.intro",
+                        ((steam_hex or "").lower(), favorite_team, favorite_player, intro))
+        self.db.commit()
 
     def guardar_resultado(self, room_id, partido, pid, datos):
         self.db.execute("insert into resultados(room_id, partido, pid, datos, hora) values (?,?,?,?,?)",

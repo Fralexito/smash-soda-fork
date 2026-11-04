@@ -8,6 +8,11 @@ Comandos del juego: PESBUL nombra 194; nosotros atendemos 78. Faltan ~115, agrup
 
 Leyenda: ✅ hecho y probado en vivo · 🟡 a medias · ❌ falta.
 
+## Avance 04-nov noche (lo que va con un solo PES)
+- ✅ (en pruebas automáticas, falta verlo en PES) JOIN_BLOCK, LEAVE_BLOCK, LEAVE_LOBBY, CHECK_STRING (ERR_NGWORD), SET_PLAYERPROFILE (se guarda en la tabla perfiles), GET_PLAYERINFO (perfil completo), GET_DIVISION_POINT_INFO (12 filas), GET_GAMERESULTS (vacío con no_match), GET_OFTEN_USED_TEAM_LIST, GET_RANKING / GET_DIVISION_RANKING (+_BYID).
+- ✅ WATCH_SYSTEM_NOTICE, WATCH_SYNC_NOTICE, WATCH_TEXTCHAT quedan abiertos, igual que en PESBUL.
+- ✅ CHECK_CHEAT, GET_DMM_NOTIFICATION, GET_URGENT_ANNOUNCEMENT, FINISH_SEASON: PESBUL también responde solo NOERR, así que ya estamos igual.
+
 ## 1. Entrada (ya cubierta)
 - ✅ País, EULA, AUTH_STEAM, login, crear usuario, live update, menú online.
 - ✅ HTTP (URL list, EULA, qualitychecklist), STUN básico.
