@@ -38,6 +38,47 @@ Pila, de abajo arriba:
    - Siempre van DOS secciones: canal 0 y canal 1 (aunque estén vacías). L
 Ejemplo real (C, canal 5): `50 52 | 00000000 (ack) | 00 (1 elemento) | 00000000 (seq 0) | 0002 (3 bytes) | 02 1f c0` → una carga con un bloque de 2 bytes `1f c0`.
 
+## 2b. Criptografía exacta del gamerelay (L: leído en el servidor de referencia; C solo donde se indica)
+
+Fecha: 4-nov-2026. Todo con palabras y pseudocódigo propios. **Las claves NO están en este documento ni en ningún repo**: están solo en `D:\Frank\IA\CLAUDE\pes-online\gamerelay_claves.bin` (272 bytes: 256 de la clave exterior + 16 de la clave interior, en ese orden).
+
+### A) Capa exterior (todos los datagramas UDP, ambos sentidos)
+- **Algoritmo único para los dos sentidos** (cliente→servidor y servidor→cliente): RC4 con retroalimentación del texto cifrado. No hay byte de dirección, ni sal, ni contador.
+- **El KSA se reinicia en CADA datagrama**: se vuelve a inicializar RC4 con la clave de 256 bytes (usada tal cual como clave del KSA, sin procesar) y el keystream arranca desde cero en cada paquete. (Comprobado en el cliente: la misma entrada de 2 bytes dio la misma salida 20 veces seguidas.) No hay estado entre datagramas.
+- **Se cifra el marco entero**: `[flags][checksum u16 BE][cuerpo]`, todo.
+- Sea `ks[k]` el k-ésimo byte del keystream RC4 estándar de ese datagrama y `iv₀ = 0xEA`:
+  ```
+  cifrar(plano):                    descifrar(cifrado):
+    iv = 0xEA                         iv = 0xEA
+    para k en 0..n-1:                 para k en 0..n-1:
+      c[k] = ks[k] ^ plano[k] ^ iv      plano[k] = ks[k] ^ cifrado[k] ^ iv
+      iv   = c[k]                       iv       = cifrado[k]
+  ```
+  Es decir, a cada byte se le aplica XOR con el keystream y con el **byte cifrado anterior** (el primero usa 0xEA). El keystream no depende de los datos; solo la mezcla con `iv`. Para descifrar se usa el byte cifrado anterior tal como viaja por el cable.
+- Después de descifrar, el marco se valida así: checksum RFC 1071 (palabras de 16 bits big-endian, acarreo plegado, complemento a uno; byte final impar se rellena con 0) calculado sobre el marco con los 2 bytes de checksum puestos a 0 debe igualar el campo. Tamaño mínimo 3 bytes.
+- Bit 6 de flags (0x40) = cuerpo comprimido en zlib (el checksum va dentro del flujo y se calcula con el bit 6 puesto a 0). Bit 7 (0x80) solo se *registra*, no condiciona. Los bits 0–5 no se examinan, pero entran en el checksum. **Recomendación: nuestro servidor emite siempre sin comprimir y acepta comprimido solo si hace falta.**
+- Comprobación de que el esquema funciona: el propio servidor de referencia se prueba cifrando y descifrando de vuelta (ida y vuelta exacta). **No tenemos ningún datagrama real capturado de hoy** (pktmon no ve el tráfico de bucle local y la captura completa estaba apagada), así que la verificación contra tráfico del cliente real queda **P**; lo único cierto es que el cliente real de Frank terminó la sonda UDP con éxito contra ese servidor (canales 5/6 y RTT en `events.log`), lo que implica que esta descripción descifra y cifra de forma que el cliente la acepta (**C indirecto**).
+
+### B) Intercambio de claves (KX)
+- **Solicitud del cliente** (7 bytes en el cable = marco de 7: `flags` + `checksum` + 4 de cuerpo, cifrado con la capa exterior): `flags` con **bit 7 puesto y bit 6 limpio**; el cuerpo de 4 bytes es el *nonce* del cliente **cifrado con RC4 simple** (sin retroalimentación) con la **clave interior de 16 bytes** (KSA nuevo, XOR directo). Para leerlo: descifrar exterior → validar checksum y longitud de cuerpo = 4 → `nonce = u32 big-endian( RC4(clave16, cuerpo) )`.
+- **Respuesta del servidor** (259 bytes = 3 de cabecera + 256 de cuerpo, luego cifrada con la capa exterior):
+  1. Elegir una semilla de 32 bits cualquiera (el cliente acepta cualquiera; es aleatoriedad propia del servidor).
+  2. `x = semilla; x = xorshift32(x); x = x + (x // 0xFFFFFFFF) + nonce_cliente` (todo módulo 2³²; el término de división vale 0 salvo cuando x = 0xFFFFFFFF).
+  3. Repetir 256 veces: `x = xorshift32(x)` y emitir el byte `((x // 0xFF) + x) & 0xFF`. Eso da el **material** M de 256 bytes.
+  4. `xorshift32`: `x ^= x << 13; x ^= x >> 7; x ^= x << 5` (todo módulo 2³²).
+  5. **Cuerpo = RC4(clave interior de 16 bytes, M)**, RC4 simple con KSA nuevo; **no** se usa el bucle de retroalimentación aquí.
+  6. Marco = `[flags de respuesta = 0x80][checksum][cuerpo de 256]`, y se cifra con la capa exterior (A).
+- **¿Cambia la clave después?** Lo que el cliente hace con M tras el KX, es decir, si cifra el tráfico posterior con una clave derivada, **NO está comprobado (P)**. El servidor de referencia lo trata como hipótesis en prueba: tras el KX usa un modo «Secure» que es **la misma capa exterior (RC4 + retroalimentación, IV 0xEA, KSA nuevo por datagrama) pero con M como clave en vez de la constante**, con marco `[sal 6 bits][checksum][cuerpo]` sin comprimir (sal = bits 0–5 de flags; bit 6 = zlib; bit 7 solo registrado). Es decir: **la clave pasa de la constante de 256 bytes a M (256 bytes derivados) tras el KX.** En su captura de la fase de prueba, 72/72 datagramas propios se reprodujeron byte a byte en el modo sin comprimir; lo que **no** pudimos ver nosotros es un datagrama post-KX del cliente real. **Para nuestra implementación: aplicar KX, guardar M por cliente (dirección, puerto), y cifrar/descifrar con M los datagramas siguientes de ese cliente; si el cliente deja de responder, probar a seguir con la constante como plan B (P).**
+- Los datagramas de la sonda del canal 5/6 que vimos funcionando (C) pasaron por este KX seguido del modo Secure, de modo que la hipótesis es compatible con lo observado en vivo, pero sin bytes que lo demuestren.
+
+### C) Dónde están las claves en el `PES2021.exe` base (C:\PES21\eFootball PES 2021, 458 739 200 bytes)
+| Clave | Tamaño | Dónde | Cómo está guardada |
+|---|---|---|---|
+| Interior | 16 B | Archivo `0x2BC9D10` (VA `0x142BCAF10`, sección `.rdata`) | Bloque contiguo, patrón literal de 16 bytes único en el exe. |
+| Exterior | 256 B | Sección `.trace`, VA `0x14119EAC7` a `0x14119ED47` (archivo `0x119E0C7`–`0x119E347`) | **No hay tabla de 256 bytes**: se construye en el stack con 64 instrucciones `mov dword ptr [rbp+0xB0+4k], imm32` (opcode `C7 85 disp32 imm32`, 10 bytes cada una, paso 10), cada imm32 son 4 bytes de la clave en orden. Para extraerla: leer los 4 bytes del inmediato (offset +6 dentro de cada instrucción) de las 64 instrucciones consecutivas. |
+- Comprobado: los 64 trozos de 4 bytes de la clave exterior aparecen en orden exacto en esa secuencia (paso 10), y los 16 bytes de la interior aparecen una sola vez. La clave exterior de 256 bytes extraída coincide con la usada por el servidor de referencia (huella SHA-256 que empieza por `a71862ce…`).
+- Guardadas en `D:\Frank\IA\CLAUDE\pes-online\gamerelay_claves.bin` (fuera de cualquier repo/Drive): bytes 0–255 = exterior, 256–271 = interior.
+
 ## 3. Canales (L, con C donde se vio)
 - **Canal 0 (control, apretón de manos de 3 pasos)**: bits `SYN`=bit 0, `ACK`=bit 3; byte = `bit0<<7 | … | bit5<<2`.
   Cliente manda 0x80 (SYN) → el servidor responde 0x90 (SYN+ACK) → el cliente manda 0x10 (ACK) y entra en «establecido». Sin el 0x90 el cliente reenvía el SYN para siempre. L
