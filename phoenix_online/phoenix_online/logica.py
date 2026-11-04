@@ -357,6 +357,12 @@ class Servidor:
                 return format(v, "016x")
             if isinstance(v, bytes) and len(v) == 8:
                 return v.hex()
+            if k == "username" and isinstance(v, str) and v.strip("0 "):
+                # C (02-nov / 04-nov): username es SIEMPRE hex sin ceros ('3a660'). Con el PES base
+                # el SteamID 0x0410000004100000 llega como '410000004100000', solo dígitos: no es decimal
+                v = v.strip().lower()
+                if all(c in "0123456789abcdef" for c in v) and len(v) <= 16:
+                    return v.zfill(16)
             if isinstance(v, str) and v.isdigit() and int(v) > 0:
                 return format(int(v), "016x")  # P: np_account_id en decimal como texto
             if isinstance(v, str) and v.strip("0 "):

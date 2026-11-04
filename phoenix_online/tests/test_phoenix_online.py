@@ -188,6 +188,10 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
             self.assertIn(t, tipos)
         self.assertEqual(env[-1][1]["url_num"], len(tipos))
 
+    def test_username_solo_digitos_es_hex(self):
+        self.assertEqual(Servidor._steam_de({"username": "410000004100000"}), "0410000004100000")
+        self.assertEqual(Servidor._steam_de({"steamid": "292733975847239680"}), "0410000004100000")
+
     def test_steam_hex_sin_ceros(self):
         self.assertEqual(Servidor._steam_de({"np_account_id": "0", "username": "3a660"}),
                          "000000000003a660")
