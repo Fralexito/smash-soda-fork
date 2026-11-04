@@ -97,6 +97,10 @@ class Codec:
         cod, orig, flag = struct.unpack(">IIB", interno[:9])
         cuerpo = interno[9:9 + cod]
         datos = zlib.decompress(cuerpo) if flag else cuerpo
+        if not flag and len(datos) > orig:
+            # C (04-nov, myClub): trama sin comprimir con tamaño_codificado 1015 y original 1011;
+            # el sobrante es relleno: se usa el tamaño original
+            datos = datos[:orig]
         if len(datos) != orig:
             raise ErrorTrama(f"tamaño original {orig} != {len(datos)}")
         return msgpack_min.unpackb(datos)
