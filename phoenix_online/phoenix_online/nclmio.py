@@ -87,23 +87,31 @@ class Codec:
         interno += b"\0" * (-len(interno) % 8)
         return self._enc(interno)
 
-    def descifrar(self, tipo, secuencia, md5, cifrado):
+    def abrir(self, tipo, secuencia, md5, cifrado):
+        """Comprueba MD5 y descifra: devuelve el bloque interno en claro."""
         cab = struct.pack(">HHI", tipo, len(cifrado), secuencia)
         if hashlib.md5(cab + cifrado).digest() != md5:
             raise ErrorTrama("MD5 incorrecto")
         if len(cifrado) % 8:
             raise ErrorTrama("cifrado no es múltiplo de 8")
-        interno = self._dec(cifrado)
+        return self._dec(cifrado)
+
+    def descifrar(self, tipo, secuencia, md5, cifrado):
+        interno = self.abrir(tipo, secuencia, md5, cifrado)
         cod, orig, flag = struct.unpack(">IIB", interno[:9])
         cuerpo = interno[9:9 + cod]
         datos = zlib.decompress(cuerpo) if flag else cuerpo
-        if not flag and len(datos) > orig:
-            # C (04-nov, myClub): trama sin comprimir con tamaño_codificado 1015 y original 1011;
-            # el sobrante es relleno: se usa el tamaño original
-            datos = datos[:orig]
         if len(datos) != orig:
             raise ErrorTrama(f"tamaño original {orig} != {len(datos)}")
         return msgpack_min.unpackb(datos)
+
+
+# L (PESBUL nclmio, 04-nov): mensajes grandes del cliente llegan en varias tramas.
+# INICIO: [total u32][largo_trozo u32][zlib u8][4 bytes][trozo]; SIGUE: [largo_trozo u32][trozo].
+# Las terminales cierran el mensaje. La respuesta va con el tipo normal 0x0060.
+TIPOS_INICIO = {0x0070, 0x1070}
+TIPOS_SIGUE = {0x0071, 0x0072, 0x1071, 0x1072}
+TIPOS_FIN = {0x0072, 0x1072}
 
 
 class LectorTramas:
@@ -112,6 +120,24 @@ class LectorTramas:
     def __init__(self, codec):
         self.codec = codec
         self._buf = bytearray()
+        self._seg = None  # (secuencia de inicio, total, zlib, bytearray)
+
+    def _segmento(self, tipo, secuencia, interno):
+        """Devuelve el mensaje cuando el troceado se completa; si no, None."""
+        if tipo in TIPOS_INICIO:
+            total, largo, flag = struct.unpack(">IIB", interno[:9])
+            self._seg = (secuencia, total, flag, bytearray(interno[13:13 + largo]))
+        else:
+            if self._seg is None:
+                raise ErrorTrama(f"continuación 0x{tipo:04x} sin inicio")
+            (largo,) = struct.unpack(">I", interno[:4])
+            self._seg[3].extend(interno[4:4 + largo])
+        inicio, total, flag, datos = self._seg
+        if len(datos) >= total or tipo in TIPOS_FIN:
+            self._seg = None
+            crudo = bytes(datos[:total])
+            return inicio, msgpack_min.unpackb(zlib.decompress(crudo) if flag else crudo)
+        return None
 
     def alimentar(self, data):
         self._buf += data
@@ -124,6 +150,12 @@ class LectorTramas:
                 break
             trama = xor(bytes(self._buf[:total]))
             del self._buf[:total]
+            if tipo in TIPOS_INICIO or tipo in TIPOS_SIGUE:
+                listo = self._segmento(tipo, secuencia,
+                                       self.codec.abrir(tipo, secuencia, trama[8:24], trama[24:]))
+                if listo:
+                    salida.append((TIPO_USUAL, listo[0], listo[1]))  # responde con la secuencia del inicio
+                continue
             msg = self.codec.descifrar(tipo, secuencia, trama[8:24], trama[24:])
             salida.append((tipo, secuencia, msg))
         return salida

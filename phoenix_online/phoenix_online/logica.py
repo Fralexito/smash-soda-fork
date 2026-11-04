@@ -371,6 +371,18 @@ class Servidor:
             "body": str(a.get("body", "")), "link_url": "", "direct_move": "",
             "use_template": "", "template_id": 0})}
 
+    async def c_cmd_get_division_info(self, s, m):
+        # L (PESBUL online_division): con NOERR pelado el cliente cae en «fin de temporada» y
+        # repite la sonda; cuenta nueva = D12, partido 1 de la temporada, sin historial
+        j = self.datos.jugador(s.steam_hex or "") or {}
+        return {"pname": Sala.pname(s) if s.pname else Empaquetado(self._identidad(s, j.get("pname", ""))),
+                "division_info": Empaquetado({
+                    "division": "D12", "demotion_point": 0, "promotion_point": 99999,
+                    "doublerank_promotion_point": 99999, "other_match_num": 1,
+                    "match_record": Empaquetado({"win_count": 0, "draw_count": 0, "lose_count": 0,
+                                                 "win_s_max": 0, "rating": 0}),
+                    "match_history_list": []})}
+
     async def c_cmd_join_online_mode(self, s, m):
         s.modo_online = m.get("online_mode") if isinstance(m.get("online_mode"), str) else None
         return {}

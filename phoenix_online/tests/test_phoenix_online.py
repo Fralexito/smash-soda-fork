@@ -32,6 +32,25 @@ class TestTrama(unittest.TestCase):
     def setUp(self):
         self.codec = Codec(CLAVE_FALSA, comprobar_clave=False)
 
+    def test_trama_troceada(self):
+        import hashlib, struct, zlib
+        from phoenix_online import nclmio
+        datos = zlib.compress(msgpack_min.packb({"msgid": "CMD_SET_AVATAR", "rqid": 3, "x": "a" * 3000}))
+        mitad = len(datos) // 2
+
+        def trama(tipo, seq, interno):
+            interno += b"\0" * (-len(interno) % 8)
+            cif = self.codec._enc(interno)
+            cab = struct.pack(">HHI", tipo, len(cif), seq)
+            return nclmio.xor(cab + hashlib.md5(cab + cif).digest() + cif)
+
+        a = trama(0x0070, 7, struct.pack(">IIB", len(datos), mitad, 1) + b"\0\0\0\0" + datos[:mitad])
+        b = trama(0x0072, 8, struct.pack(">I", len(datos) - mitad) + datos[mitad:])
+        lector = LectorTramas(self.codec)
+        self.assertEqual(lector.alimentar(a), [])
+        [(tipo, seq, msg)] = lector.alimentar(b)
+        self.assertEqual((tipo, seq, msg["msgid"], len(msg["x"])), (0x0060, 7, "CMD_SET_AVATAR", 3000))
+
     def test_ida_y_vuelta_partida_y_pegada(self):
         a = self.codec.codificar(5, {"msgid": "A", "rqid": 1})
         b = self.codec.codificar(6, {"msgid": "B", "rqid": 2, "d": "x" * 3000})  # comprime
@@ -365,6 +384,12 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         fila = msgpack_min.unpackb(msgpack_min.packb(m["list_data"][0].valor))
         self.assertEqual((fila["is_owner"], fila["room_entry_no"], fila["side"]), ("YES", 1, ""))
         self.assertIsInstance(fila["pname"], bytes)
+
+    async def test_division_info_cuenta_nueva(self):
+        a, ea = await self.entrar("A1")
+        await self.srv.recibir(a, 50, {"msgid": "CMD_GET_DIVISION_INFO", "rqid": 1})
+        info = msgpack_min.unpackb(msgpack_min.packb(ea[-1][1]["division_info"].valor))
+        self.assertEqual((info["division"], info["other_match_num"]), ("D12", 1))
 
     def test_avatar_http_vacio_y_guardado(self):
         r = self.srv.respuesta_http({"msgid": "CMD_GET_AVATAR_HTTP", "rqid": "3", "pid": "7"})
