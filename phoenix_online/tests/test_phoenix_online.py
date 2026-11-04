@@ -471,6 +471,13 @@ class TestGamerelay(unittest.TestCase):
         cuerpo = bytes.fromhex("00000000" "00" "5052" "00000000" "00" "00000000" "0002" "021fc0")
         seq, secs = self.g.leer_transporte(cuerpo)
         self.assertEqual(secs, [(5, 0, [(0, b"\x02\x1f\xc0")], [])])
+        # C (04-nov): sección del canal 6 con lista A y B (marca 0x63)
+        real = bytes.fromhex("00000079" "00" "0000" "00000001" "1010" "00000002" "5050" "00000001"
+                             "6063" "00000071" "00" "00000071" "0005" "050ca546fd38"
+                             "8000" "0009" "00000070" "050c1caa7bbd")
+        _, secs6 = self.g.leer_transporte(real)
+        self.assertEqual(secs6[-1], (6, 0x71, [(0x71, bytes.fromhex("050ca546fd38"))],
+                                    [(0x70, bytes.fromhex("050c1caa7bbd"))]))
         self.assertEqual(self.g.bloques(secs[0][2][0][1]), [b"\x1f\xc0"])
         self.assertEqual(self.g.armar_transporte(0, [(5, 0, [(0, b"\x02\x1f\xc0")])]), cuerpo)
 

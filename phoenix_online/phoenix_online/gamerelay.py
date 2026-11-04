@@ -159,13 +159,18 @@ def leer_transporte(cuerpo):
                 lista_a.append((s_elem, cuerpo[p + 6:p + 6 + largo]))
                 p += 6 + largo
         if marca & 0x01:
-            # P: la lista B (no fiable) no está descrita; se supone [cuenta-1] + [largo-1 u16][carga]
-            n = cuerpo[p] + 1
-            p += 1
+            # C (04-nov, canal 6): lista B = [u16 BE 0x8000 | (cuenta-1)] y por elemento
+            # [largo-1 u16 BE][seq u32 BE][carga]; la carga son bloques como en la lista A
+            (cab,) = struct.unpack(">H", cuerpo[p:p + 2])
+            n = (cab & 0x7FFF) + 1
+            p += 2
             for _ in range(n):
                 (largo,) = struct.unpack(">H", cuerpo[p:p + 2])
                 largo += 1
-                lista_b.append(cuerpo[p + 2:p + 2 + largo])
+                elem = cuerpo[p + 2:p + 2 + largo]
+                if len(elem) != largo or largo < 4:
+                    raise ValueError("elemento B corto")
+                lista_b.append((struct.unpack(">I", elem[:4])[0], elem[4:]))
                 p += 2 + largo
         secciones.append((canal, ack, lista_a, lista_b))
     if p != len(cuerpo):
@@ -295,7 +300,7 @@ class Rele(asyncio.DatagramProtocol):
                     continue  # repetido o desordenado: el cliente lo reenviará
                 c.esperado += 1
                 self._elemento(cli, canal, carga)
-            for carga in lista_b:
+            for _s_b, carga in lista_b:
                 self._elemento(cli, canal, carga)
         self._responder(cli)  # C: cada datagrama del cliente recibe respuesta (eco RTT)
 
