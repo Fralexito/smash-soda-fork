@@ -863,24 +863,99 @@ class Servidor:
     c_cmd_get_division_ranking_byid = c_cmd_get_ranking
 
     # ---------- myClub (docs/ESPEC_MYCLUB.md, leído del exe) ----------
-    # Paso 1: respuestas VACÍAS pero con cada clave y su tipo, en vez de NOERR pelado.
-    # P: el estado «club sin crear» y los objetos anidados están por confirmar en vivo.
+    # C (§12): todo objeto anidado y todo elemento de lista de objetos = bin(msgpack); las listas
+    # de enteros van en línea. Un mapa en línea donde el lector espera bin = fallo de memoria.
+    # P: progress_status es un enum aún sin recuperar; se prueba desde config.json
+    # («myclub»: {"progreso_sin_club": "...", "progreso_con_club": "..."}) sin tocar código.
     MYCLUB_GP_INICIAL = 0
-    MYCLUB_PROGRESO = ""   # P: enum progress_status sin recuperar todavía
+
+    def _cfg_myclub(self):
+        c = self.cfg.get("myclub") or {}
+        return {"sin": c.get("progreso_sin_club", ""), "con": c.get("progreso_con_club", ""),
+                "gp": int(c.get("gp_inicial", self.MYCLUB_GP_INICIAL))}
 
     async def c_cmd_get_myclub_server_env(self, s, m):
         return {"license_out_player_list": [], "license_out_coach_list": [],
                 "market_scout_list": [], "sell_gp": [], "is_all_club_edition_set": "NO"}
 
     async def c_cmd_get_myclub_user_info(self, s, m):
-        return {"gp": self.MYCLUB_GP_INICIAL, "pes_point": 0,
-                "progress_status": self.MYCLUB_PROGRESO,
-                "team_name": "", "team_name_short": "", "base_team_id": 0,
-                "team_name_commentary_id": 0, "user_team_name": "", "user_team_name_short": "",
-                "user_base_team_id": 0, "user_team_name_commentary_id": 0,
+        cfg = self._cfg_myclub()
+        club = self.datos.club(s.steam_hex or "")
+        c = club or {}
+        texto = lambda k: c.get(k) if isinstance(c.get(k), str) else ""
+        entero = lambda k: c.get(k) if isinstance(c.get(k), int) else 0
+        casa = c.get("home_town") if isinstance(c.get("home_town"), dict) else {}
+        return {"gp": c.get("gp", cfg["gp"]), "pes_point": 0,
+                "progress_status": cfg["con"] if club else cfg["sin"],
+                "team_name": texto("team_name"), "team_name_short": texto("team_name_short"),
+                "base_team_id": entero("base_team_id"),
+                "team_name_commentary_id": entero("team_name_commentary_id"),
+                "user_team_name": texto("team_name"),
+                "user_team_name_short": texto("team_name_short"),
+                "user_base_team_id": entero("base_team_id"),
+                "user_team_name_commentary_id": entero("team_name_commentary_id"),
                 "norma_point_division": 0, "norma_point_sim": 0, "norma_point_vscom": 0,
-                "nation_id": 0, "label": "", "name": "", "add_uniform_list": [],
-                "select_add_uniform_id": 0, "is_iconic_moment_view": "NO"}
+                "home_town": Empaquetado({"nation_id": int(casa.get("nation_id") or 0),
+                                          "label": str(casa.get("label") or ""),
+                                          "name": str(casa.get("name") or "")}),
+                "nation_id": entero("nation_id"), "label": texto("label"), "name": texto("name"),
+                "add_uniform_list": [], "select_add_uniform_id": 0,
+                "is_iconic_moment_view": "NO"}
+
+    async def c_cmd_create_myclub_team(self, s, m):
+        # C (§12): la respuesta solo lleva msgid/rqid/result; ERR_ALREADYEXISTS si ya hay club
+        if self.datos.club(s.steam_hex or ""):
+            return {"result": "ERR_ALREADYEXISTS"}
+        casa = m.get("home_town")
+        if isinstance(casa, (bytes, bytearray)):
+            try:
+                casa = msgpack_min.unpackb(casa)
+            except Exception:
+                casa = {}
+        club = {k: m.get(k) for k in ("team_name", "team_name_short", "base_team_id", "coach_id",
+                                      "rental_gameplayer_id", "team_name_commentary_id",
+                                      "nation_id", "label", "name")
+                if isinstance(m.get(k), (str, int))}
+        club["home_town"] = casa if isinstance(casa, dict) else {}
+        club["gp"] = self._cfg_myclub()["gp"]
+        club["squads"] = []
+        club["staff"] = []
+        self.datos.guardar_club(s.steam_hex or "", club)
+        return {}
+
+    async def c_cmd_create_myclub_squad(self, s, m):
+        club = self.datos.club(s.steam_hex or "")
+        if club is None:
+            return {"result": "ERR_DATABASE"}
+        squad_id = len(club.get("squads", [])) + 1
+        club.setdefault("squads", []).append({"squad_id": squad_id,
+                                              "name": m.get("name") if isinstance(m.get("name"), str) else "",
+                                              "coach_unique_id": m.get("coach_unique_id") or 0})
+        self.datos.guardar_club(s.steam_hex or "", club)
+        return {"squad_id": squad_id}
+
+    async def c_cmd_create_myclub_staff(self, s, m):
+        club = self.datos.club(s.steam_hex or "")
+        if club is None:
+            return {"result": "ERR_DATABASE"}
+        claves = ("gameplayer_unique_id", "gameplayer_base_id", "gameplayer_id",
+                  "gameplayer_level", "registared_position", "position", "stronger_foot",
+                  "overall", "ability", "play_style", "nation_id", "club_team_id")
+        salida = []
+        for el in m.get("player_info_list") or []:
+            if isinstance(el, (bytes, bytearray)):
+                try:
+                    el = msgpack_min.unpackb(el)
+                except Exception:
+                    continue
+            if not isinstance(el, dict):
+                continue
+            base = {k: el.get(k) if isinstance(el.get(k), (int, str)) else 0 for k in claves}
+            nuevo = {"id": len(club.get("staff", [])) + 1, "base_player_info": base, "base_exp": 0}
+            club.setdefault("staff", []).append(nuevo)
+            salida.append(Empaquetado({**nuevo, "base_player_info": Empaquetado(base)}))
+        self.datos.guardar_club(s.steam_hex or "", club)
+        return {"staff_info_list": salida}
 
     async def c_cmd_get_myclub_feature_player_list(self, s, m):
         return {"gameplayer_list": [], "gameplayer_list_num": 0,

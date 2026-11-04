@@ -467,6 +467,30 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
             self.assertIn(clave, ea[-1][1])
         msgpack_min.packb(ea[-1][1])  # todo se puede empaquetar
 
+    async def test_myclub_crear_club(self):
+        self.srv.cfg = {**self.srv.cfg, "myclub": {"progreso_sin_club": "X_SIN", "progreso_con_club": "X_CON"}}
+        a, ea = await self.entrar("A1")
+        r = self.srv.recibir
+        await r(a, 1, {"msgid": "CMD_GET_MYCLUB_USER_INFO", "rqid": 1, "pid": 1})
+        self.assertEqual(ea[-1][1]["progress_status"], "X_SIN")
+        casa = msgpack_min.packb({"nation_id": 5, "label": "L", "name": "Lima"})
+        await r(a, 2, {"msgid": "CMD_CREATE_MYCLUB_TEAM", "rqid": 2, "pid": 1, "team_name": "Phoenix FC",
+                       "team_name_short": "PHX", "base_team_id": 7, "home_town": casa})
+        self.assertEqual(ea[-1][1]["result"], "NOERR")
+        await r(a, 3, {"msgid": "CMD_CREATE_MYCLUB_TEAM", "rqid": 3, "team_name": "Otra"})
+        self.assertEqual(ea[-1][1]["result"], "ERR_ALREADYEXISTS")
+        await r(a, 4, {"msgid": "CMD_GET_MYCLUB_USER_INFO", "rqid": 4, "pid": 1})
+        m = ea[-1][1]
+        self.assertEqual((m["progress_status"], m["team_name"], m["base_team_id"]), ("X_CON", "Phoenix FC", 7))
+        self.assertEqual(msgpack_min.unpackb(msgpack_min.packb(m["home_town"].valor))["name"], "Lima")
+        await r(a, 5, {"msgid": "CMD_CREATE_MYCLUB_SQUAD", "rqid": 5, "name": "A"})
+        self.assertEqual(ea[-1][1]["squad_id"], 1)
+        jug = msgpack_min.packb({"gameplayer_id": 1234, "overall": 70})
+        await r(a, 6, {"msgid": "CMD_CREATE_MYCLUB_STAFF", "rqid": 6, "player_info_list": [jug]})
+        el = msgpack_min.unpackb(msgpack_min.packb(ea[-1][1]["staff_info_list"][0].valor))
+        self.assertIsInstance(el["base_player_info"], bytes)
+        self.assertEqual(el["id"], 1)
+
     def test_avatar_http_vacio_y_guardado(self):
         r = self.srv.respuesta_http({"msgid": "CMD_GET_AVATAR_HTTP", "rqid": "3", "pid": "7"})
         self.assertEqual((r["result"], r["avatar_data"], r["avatar_data_size"]), ("NOERR", "", 0))

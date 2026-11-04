@@ -17,6 +17,10 @@ create table if not exists perfiles (
   favorite_player text not null default '',
   intro text not null default ''
 );
+create table if not exists myclub (
+  steam_hex text primary key,
+  datos text not null
+);
 create table if not exists resultados (
   id integer primary key autoincrement,
   room_id integer not null,
@@ -79,6 +83,18 @@ class Datos:
                         "favorite_team=excluded.favorite_team, "
                         "favorite_player=excluded.favorite_player, intro=excluded.intro",
                         ((steam_hex or "").lower(), favorite_team, favorite_player, intro))
+        self.db.commit()
+
+    def club(self, steam_hex):
+        """Club de myClub guardado (dict) o None si aún no se creó."""
+        f = self.db.execute("select datos from myclub where steam_hex=?",
+                            ((steam_hex or "").lower(),)).fetchone()
+        return json.loads(f[0]) if f else None
+
+    def guardar_club(self, steam_hex, club):
+        self.db.execute("insert into myclub(steam_hex, datos) values (?,?) on conflict(steam_hex) "
+                        "do update set datos=excluded.datos",
+                        ((steam_hex or "").lower(), json.dumps(club)))
         self.db.commit()
 
     def guardar_resultado(self, room_id, partido, pid, datos):

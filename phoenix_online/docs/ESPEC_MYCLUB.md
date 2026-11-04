@@ -57,8 +57,35 @@ Marcas: C = leído en el código; P = deducción.
 10. **REQWATCH_MYCLUB_AUCTION_REFUNDED_GP**: lector 141bb4220.
     - refunded_gp_list [{product_id int, skill{skill_category str, skill_id int}, gp int}], total_gp int.
 
+## 11. Prueba en vivo (04-nov, 23:18, eb50e54)
+- Al entrar a myClub, el orden fue: VSCOM_GAMERESULT → SERVER_ENV → USER_INFO → PROCURABLE → AUCTION_REFUNDED_GP → SET_CLUB_EDITION_INFO → FEATURE_PLAYER_LIST → GAMEPLAYERLIST → COACHLIST → SQUADLIST.
+- Todas se aceptaron, sin cierre y sin error. Un segundo después el cliente manda LEAVE_ONLINE_MODE y vuelve al menú principal.
+- No llegó ningún CREATE_MYCLUB_*. P: con progress_status vacío el cliente no abre la pantalla de crear club.
+
+## 12. Creación del club y regla de anidados (C)
+- **CREATE_MYCLUB_TEAM**: lector 141d8eba0, petición 141d8dd20.
+  - La petición lleva pid, team_name, team_name_short, base_team_id, coach_id, rental_gameplayer_id, is_check_team_name, is_check_team_name_short, is_coach_texture_use, team_name_commentary_id, home_town{nation_id, label, name}, nation_id, label y name.
+  - La respuesta solo lleva msgid, rqid y result. Errores posibles: ERR_ALREADYEXISTS, ERR_DATABASE.
+- **CREATE_MYCLUB_SQUAD**: lector 141bc0500.
+  - La petición lleva pid, coach_unique_id y name.
+  - La respuesta lleva squad_id int.
+- **CREATE_MYCLUB_STAFF**: lector 141c96dd0.
+  - La petición lleva player_info_list [{gameplayer_unique_id, gameplayer_base_id, gameplayer_id, gameplayer_level, registared_position, position, stronger_foot, overall, ability, play_style, nation_id, club_team_id, is_use_cloud_match}].
+  - La respuesta lleva staff_info_list [{id, base_player_info{las mismas 12}, base_exp}].
+  - Errores posibles: ERR_DATABASE, ERR_COMMAND_BLOCKED, ERR_TEAM_MEMBER_LACK, ERR_TEAM_STAFF_FULL, ERR_PLAYER_PROTECTED.
+- **home_town** = {nation_id int, label str, name str}.
+- **Lector anidado** 141c190a0: envuelve un decodificador msgpack genérico (1421a5e30), en el que str y bin comparten el tipo 5.
+  - Los lectores de myClub releen cada clave anidada desde un nodo de tipo 5.
+  - **Regla:** todo objeto anidado y todo elemento de una lista de objetos va como bin(msgpack(mapa)). Las listas de enteros van en línea.
+- **progress_status**:
+  - El valor por defecto del objeto es «NotImplement».
+  - Que el club no exista no es un error: viene dentro de un NOERR.
+  - El consumidor del valor todavía no está ubicado. Clases de interfaz relacionadas: OnlineMyClubTeamSelect, OnlineMyClubTeamNameSetting, OnlineMyClubTeamUniform/Selector, OnlineMyClubLoginBonus, MyClubMainMenu*.
+
 ## Implementado (paso 1, logica.py)
-Respuestas vacías, pero con todas las claves y sus tipos. El objeto player_data de VSCOM va como bin, igual que nuestro pname (P).
+- Respuestas vacías, pero con todas las claves y sus tipos. home_town y player_data van como bin.
+- CREATE_MYCLUB_TEAM, CREATE_MYCLUB_SQUAD y CREATE_MYCLUB_STAFF guardan el club en la tabla `myclub` (JSON por cuenta).
+- progress_status sale de config.json: `"myclub": {"progreso_sin_club": "...", "progreso_con_club": "...", "gp_inicial": 0}`. Así se prueban valores candidatos sin tocar el código.
 
 ## Pendiente
 - Valores del enum progress_status y el flujo para crear el club.
