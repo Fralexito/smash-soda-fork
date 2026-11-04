@@ -312,7 +312,9 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         r = self.srv.respuesta_http({"msgid": "CMD_GET_GAMERELAY_QUALITYCHECKLIST", "rqid": "5",
                                      "pid": "7"}, "10.0.0.2")
         self.assertEqual((r["result"], r["quality_check_data_num"], r["quality_list_num"]), ("NOERR", 1, 0))
-        nodo = msgpack_min.unpackb(msgpack_min.packb(r["quality_check_data_list"][0].valor))
+        nodo = r["quality_check_data_list"][0]
+        self.assertIsInstance(nodo, dict)  # C: como bin el cliente no lo lee
+        self.assertEqual((r["quality_threshold_1"], r["quality_threshold_2"]), (150, 200))
         self.assertEqual((nodo["gamerelay_index"], nodo["port"], nodo["grid"]), (1, 5100, 0))
         self.assertTrue(self.srv.sonda_autorizada("10.0.0.2", 1))
         self.assertFalse(self.srv.sonda_autorizada("10.0.0.3", 1))
@@ -343,6 +345,11 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
                          (1, 1))
         await self.srv.recibir(a, 43, {"msgid": "CMD_GET_SERVER_ENV", "rqid": 4})
         self.assertIn("MatchCommandDropMode", ea[-1][1]["proto_opt"])
+        self.assertNotIn("P2P", ea[-1][1]["proto_opt"])
+        await self.srv.recibir(a, 44, {"msgid": "CMD_JOIN_ONLINE_MODE", "rqid": 5, "online_mode": "RANKMATCH"})
+        await self.srv.recibir(a, 45, {"msgid": "CMD_GET_SERVER_ENV", "rqid": 6})
+        self.assertIn('"P2P_LOW_LEVEL":{"Match":{"ActualMatchHzFatalConditionDeterminationTimeUs":60000000}}',
+                      ea[-1][1]["proto_opt"])
 
     async def test_salon_propio_lista_de_jugadores(self):
         s, env = cliente(self.srv)

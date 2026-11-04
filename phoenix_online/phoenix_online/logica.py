@@ -23,7 +23,7 @@ NOERR = "NOERR"
 # Comandos que solo esperan msgid/rqid/result (cap_72 §11.4)
 CONFIRMACIONES = {
     "CMD_SEND_PSID", "CMD_SET_CURRENT_PLAYER", "CMD_LOGIN_MENU", "CMD_SET_LANGUAGE",
-    "CMD_JOIN_ONLINE_MODE", "CMD_LEAVE_ONLINE_MODE", "CMD_JOIN_OFFLINE_MODE",
+    "CMD_JOIN_OFFLINE_MODE",
     "CMD_LEAVE_OFFLINE_MODE", "CMD_SEND_HEARTBEAT", "CMD_SET_ROOM_OPTION",
 }
 
@@ -62,6 +62,7 @@ class Sesion:
         self.lang = None
         self.cerrar_tras_responder = False
         self.opciones_rapida = dict(OPCIONES_RAPIDA)
+        self.modo_online = None
 
     def enviar(self, mensaje):
         self._enviar_trama(self.secuencia, mensaje)
@@ -370,6 +371,14 @@ class Servidor:
             "body": str(a.get("body", "")), "link_url": "", "direct_move": "",
             "use_template": "", "template_id": 0})}
 
+    async def c_cmd_join_online_mode(self, s, m):
+        s.modo_online = m.get("online_mode") if isinstance(m.get("online_mode"), str) else None
+        return {}
+
+    async def c_cmd_leave_online_mode(self, s, m):
+        s.modo_online = None
+        return {}
+
     async def c_cmd_get_server_env(self, s, m):
         # C (PESBUL R7.3.169/631): nombres probados en Ghidra; valores de cuenta nueva.
         # max_division es el TOKEN "D12" (el entero o "10" da VNBP_0002); is_revision_check 0.
@@ -377,6 +386,11 @@ class Servidor:
         # (por defecto «MatchCommandDropMode 1»); antes mandábamos el entero 0
         proto = self.cfg.get("proto_opt",
                              {"CS": {"MatchCommandBufferingControl": {"MatchCommandDropMode": 1}}})
+        if isinstance(proto, dict) and s.modo_online == "RANKMATCH":
+            # L (PESBUL): solo en Divisiones, margen de 60 s antes de dar el partido por perdido
+            margen = {"Match": {"ActualMatchHzFatalConditionDeterminationTimeUs": 60000000}}
+            proto = {**proto, **{k: margen for k in ("P2P", "P2P_HIGH_LEVEL", "P2P_LOW_LEVEL",
+                                                       "P2P_GIVE_UP_QUICKLY_LEVEL")}}
         if not isinstance(proto, (str, int)):
             proto = json.dumps(proto, sort_keys=True, separators=(",", ":"))
         return {"proto_opt": proto, "max_division": "D12",
@@ -872,12 +886,14 @@ class Servidor:
                 self.sondas[(ip_cliente, n["gamerelay_index"])] = (str(pid or ""), hasta)
         medidas = self.calidades.get(str(pid or ""), {})
         g = self.cfg.get("gamerelay") or {}
-        return {"quality_check_data_list": [Empaquetado(n) for n in nodos],  # P: bin con mapa
+        # C (04-nov, Divisiones): con los nodos como bin el cliente no los lee (reporta índice 0
+        # y 0xFFFFFFFF sin mandar UDP). L (PESBUL): aquí van como MAPAS EN LÍNEA, umbrales 150/200.
+        return {"quality_check_data_list": [dict(n) for n in nodos],
                 "quality_check_data_num": len(nodos),
-                "quality_threshold_1": int(g.get("umbral_1", 80)),   # P: política propia (ms)
-                "quality_threshold_2": int(g.get("umbral_2", 150)),
+                "quality_threshold_1": int(g.get("umbral_1", 150)),
+                "quality_threshold_2": int(g.get("umbral_2", 200)),
                 # lista vacía = «mídelo tú» (L): así PES vuelve a medir cada vez
-                "quality_list": [Empaquetado(v) for v in medidas.values()] if g.get("recordar") else [],
+                "quality_list": [dict(v) for v in medidas.values()] if g.get("recordar") else [],
                 "quality_list_num": len(medidas) if g.get("recordar") else 0}
 
     def sonda_autorizada(self, ip_cliente, indice):
@@ -891,7 +907,7 @@ class Servidor:
     async def c_cmd_get_gamerelay(self, s, m):
         nodos = self._nodos_relay()
         return {"gamerelay_web_url": self._url_gamerelay_web(), "gamerelay_num": len(nodos),
-                "gamerelay_list": [Empaquetado(n) for n in nodos]}
+                "gamerelay_list": [dict(n) for n in nodos]}  # L: mismo formato que el checklist
 
     async def c_cmd_set_gamerelay_quality(self, s, m):
         # C: cada elemento llega como bin con un mapa {gamerelay_index, quality(ms), last_update};

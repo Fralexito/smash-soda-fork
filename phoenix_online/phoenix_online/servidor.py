@@ -119,6 +119,8 @@ async def http(srv, reader, writer):
         if respuesta is not None:
             # P: formato de respuesta HTTP = MessagePack (como TURN); confirmar en la captura
             datos, tipo = msgpack_min.packb(respuesta), "application/x-msgpack"
+            if "QUALITYCHECKLIST" in str(form.get("msgid", "")):
+                tipo = "application/octet-stream"  # L (PESBUL): así responde el checklist
         else:
             archivo = srv.cfg.get("archivos_http", {}).get(ruta_sin_query)
             if archivo and os.path.isfile(archivo):
