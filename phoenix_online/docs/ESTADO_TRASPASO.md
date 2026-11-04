@@ -56,3 +56,10 @@ Pendiente:
 2. NAT: con el servidor en 127.0.0.1, PES publica 127.0.0.1:puerto_local como host/reflexive y no manda UDP a nuestro STUN (3478/5730). Con el servidor remoto hay que comprobar qué publica. PESBUL documenta listeners en 3478/5730/5739/5740.
 3. Después: TURN, saltar el onboarding, el «pase» de identidad (Link + Core + Supabase ≥162), redirección del Core sin hosts, VPS y envío segmentado.
 4. Hosts: siguen activas 5+3 líneas. Restaurar con RESTAURAR_HOSTS.ps1 cuando Frank termine.
+
+
+## 04-nov-2026 — PES base + relé propio (leer primero)
+- Se estudió una copia local de PESBUL (solo lectura, en la PC de Frank, fuera de repos) y se reimplementó con palabras propias.
+- Hecho y probado en vivo con el PES base: vestíbulo (BLOCKLIST con un bloque, JOIN_LOBBY con gamerelay_web_url, gamerelay_index del nodo), salas con fichas en formato correcto (anidados en bin, enumerados en texto; antes PES se cerraba en msvcrt), Divisiones (GET_DIVISION_INFO cuenta nueva; proto_opt JSON con perfil RANKMATCH), tramas troceadas 0x0070-0x0072, y el relé UDP completo para la sonda (KX, clave M, marcos zlib, sal de 6 bits, listas A/B, eco por elemento) → **18 ms**.
+- Pendiente: la sonda se repite cada ~9 s en Divisiones (sin daño); promotion_point 99999 se ve raro; respuestas de myClub; **fase 2/3 del relé (dos jugadores y reenvío del partido)**; VPS; web.
+- Estado de la PC: hosts apunta a 192.168.100.236 (copias hosts.antes_pesbul_local*); servidor propio encendido; copia local de PESBUL apagada.

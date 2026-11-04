@@ -1,6 +1,6 @@
 # Guía: poner Phoenix Online en cualquier PES 2021 (o en el parche propio)
 
-Estado al 02-nov-2026: el recorrido completo de un jugador funciona, de la elección de país hasta «Buscando rival» y Cancelar. La pareja de dos jugadores y el partido todavía NO están probados (ver ESTADO_TRASPASO.md).
+Estado al 04-nov-2026 (PES base `C:\PES21`, sin Sider): login, menú online, «Buscando rival», vestíbulo amistoso, crear salón, Divisiones en línea hasta «Seleccionar equipo», myClub sin cortes y la **comprobación de red con el relé propio (18 ms)** funcionan. La pareja de dos jugadores y el partido todavía NO están probados (ver ESTADO_TRASPASO.md).
 
 ## 1. Qué necesita el PES del jugador
 1. **Versión:** PES 2021 1.07.02, DLC 7.00 (Data Pack 7). El servidor devuelve la misma versión que manda el cliente, así que no hay que tocar nada.
@@ -22,15 +22,21 @@ Hay dos opciones:
    - Si falta una clave de URLLIST, la URL queda en NULL y el juego falla en silencio o se cae. El servidor completa solo las claves obligatorias (`URLS_EULA` en logica.py).
 3. Poner la clave NclMio en la ruta de `clave_nclmio`. **Esa clave nunca va en repos, chat ni documentos.**
 4. Crear `vinculos.json` a partir de `vinculos.ejemplo.json`, o poner `abierto_a_todos: true` solo para pruebas.
-5. Ejecutar `python -m phoenix_online.servidor config.json`.
-6. Puertos:
+5. Relé UDP (comprobación de red): sacar del `PES2021.exe` las dos claves del gamerelay (ver `ESPEC_GAMERELAY.md` §2b-C) a un archivo local de 272 B y poner su ruta en `clave_gamerelay`; `gamerelay` = {activo, indice 1, puerto 5100, ip}. **Las claves nunca van en repos, chat ni documentos.**
+6. Ejecutar `python -m phoenix_online.servidor config.json`.
+7. Puertos:
    - TCP 10000 (gate), 10001 (menú), 5000 y 80 (HTTP);
-   - UDP 3478 y 5730 (STUN).
+   - UDP 3478 y 5730 (STUN); UDP 5100 (relé de juego).
    - PESBUL usa además UDP 5739/5740.
-7. Pruebas: `python -m unittest tests.test_phoenix_online` (deben pasar todas).
+8. Pruebas: `python -m unittest tests.test_phoenix_online` (deben pasar todas; 44 al 04-nov).
 
 ## 4. Primera vez de cada jugador
 País → aceptar los 3 documentos (pulsar Enter en cada uno, aunque no se abran) → nombre de usuario → «no hay actualizaciones» → menú online. Las siguientes veces PES lo recuerda todo.
+
+## 4b. Dónde se ve cada cosa (04-nov)
+- La comprobación de red solo se lanza en **«Divisiones en línea»** (modo RANKMATCH). En el log: `gamerelay KX` → `canal 0 establecido` → `lista de participantes` → `abre canal 6` → `calidad gamerelay … 18 ms`.
+- Vestíbulo de partidos amistosos: lista de salones y «Crear Salón de juego».
+- Formatos exactos: `ESPEC_GAMERELAY.md` (relé UDP, §10 lo confirmado en vivo) y `ESPEC_SALAS.md` (salas y vestíbulo).
 
 ## 5. Reglas de prueba
 - No reiniciar el servidor mientras alguien está dentro (da C_MHJX_0002).
