@@ -1,6 +1,8 @@
 {
   "clave_nclmio": "D:/Frank/IA/CLAUDE/pes-online/nclmio_key.bin",
   "blowfish_le": false,
+  "clave_gamerelay": "D:/Frank/IA/CLAUDE/pes-online/gamerelay_claves.bin",
+  "gamerelay": {"activo": true, "indice": 1, "puerto": 5100, "ip": "192.168.1.50"},
   "ip_publica": "192.168.1.50",
   "puerto_gate": 10000,
   "puerto_menu": 10001,

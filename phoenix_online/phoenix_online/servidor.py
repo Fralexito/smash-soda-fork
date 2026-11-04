@@ -17,6 +17,7 @@ from .datos import Datos
 from .logica import Servidor, Sesion
 from .nclmio import Codec, LectorTramas
 from .stun import ProtocoloStun
+from .gamerelay import Rele
 
 log = logging.getLogger("phoenix_online")
 
@@ -162,6 +163,14 @@ async def principal(ruta_config):
     bucle = asyncio.get_running_loop()
     for puerto in cfg.get("puertos_stun", [5730, 3478]):
         await bucle.create_datagram_endpoint(ProtocoloStun, local_addr=("0.0.0.0", puerto))
+    # Relé UDP (comprobación de red). Claves solo en un archivo local (ESPEC_GAMERELAY §2b-C)
+    g = cfg.get("gamerelay") or {}
+    if cfg.get("clave_gamerelay") and g.get("activo", True):
+        rele = Rele.desde_archivo(srv, cfg["clave_gamerelay"], int(g.get("indice", 1)))
+        await bucle.create_datagram_endpoint(lambda: rele, local_addr=("0.0.0.0", int(g.get("puerto", 5100))))
+        log.info("gamerelay UDP en %s", g.get("puerto", 5100))
+    else:
+        log.warning("sin clave_gamerelay: no hay relé UDP; la comprobación de red fallará")
     log.info("Phoenix Online escuchando en %s", [s.sockets[0].getsockname() for s in servidores])
     await asyncio.gather(*(s.serve_forever() for s in servidores))
 

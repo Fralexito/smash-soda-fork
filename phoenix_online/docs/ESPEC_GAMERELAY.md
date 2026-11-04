@@ -125,3 +125,11 @@ Son los del servidor STUN/descubrimiento, distintos del relé 5100. 3478 = STUN 
 3. Tabla de emparejamiento IP↔pid↔sala escrita al crear/entrar a la sala, y reenvío de los canales de juego entre pares.
 4. `CMD_SET_GAMERELAY_QUALITY` (guardar la calidad por pid/índice) y `proto_opt` en `GET_SERVER_ENV`.
 Es un trabajo grande (el módulo equivalente de PESBUL pesa cientos de KB): conviene hacerlo por fases: 1) HTTP/TCP + sonda (para que PES no falle la comprobación de red), 2) sala + lista de participantes, 3) reenvío de juego.
+
+## 9. Implementación en Phoenix Online (4-nov-2026)
+- Fase 1 hecha (sin probar aún con el PES real):
+  - `logica.py`: `GET_GAMERELAY_QUALITYCHECKLIST` (HTTP y TCP), `CMD_GET_GAMERELAY`, `CMD_SET_GAMERELAY_QUALITY`, autorización de sonda por IP (se revoca al desconectar) y clave de URLLIST `GET_GAMERELAY_QUALITYCHECKLIST`.
+  - `gamerelay.py`: capa exterior, marco con checksum, KX, transporte con ARQ por canal, canal 0 (SYN+ACK, vida), canal 1 (abrir/cerrar), canal 5 (lista servidor + yo si la sonda está autorizada), canal 6 (eco ×cuenta), y respuesta a cada datagrama.
+- Configuración: `clave_gamerelay` (ruta al archivo de 272 B, solo en la PC) y `gamerelay` {activo, indice, puerto 5100, ip}.
+- Puntos P que la prueba real debe confirmar: clave tras el KX (M o la constante; el relé acepta las dos), formato de la lista B, y si el eco RTT necesita algo más que responder a cada datagrama. Todo se registra en el log como «gamerelay …».
+- Pendiente: `proto_opt` de `GET_SERVER_ENV` como JSON (falta el nombre exacto de la clave), fase 2 (sala + lista con otros) y fase 3 (reenvío de canales 9..15).

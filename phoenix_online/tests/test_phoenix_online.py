@@ -376,3 +376,90 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestGamerelay(unittest.TestCase):
+    """Cliente falso contra el relé (claves falsas: las reales viven solo en la PC)."""
+
+    def setUp(self):
+        from phoenix_online import gamerelay as g
+        self.g = g
+        self.k_ext, self.k_int = bytes(range(256)), bytes(range(16, 32))
+
+        class SrvFalso:
+            def __init__(s):
+                s.autorizadas = {("1.2.3.4", 1)}
+
+            def sonda_autorizada(s, ip, indice):
+                return (ip, indice) in s.autorizadas
+
+        self.rele = g.Rele(SrvFalso(), self.k_ext, self.k_int)
+        self.salida = []
+
+        class T:
+            def sendto(s, d, a):
+                self.salida.append((d, a))
+
+        self.rele.connection_made(T())
+        self.addr = ("1.2.3.4", 9000)
+
+    def test_cifrado_ida_vuelta_y_checksum(self):
+        g = self.g
+        m = g.armar_marco(0x80, b"hola mundo")
+        c = g.cifrar_exterior(self.k_ext, m)
+        self.assertNotEqual(c, m)
+        self.assertEqual(g.leer_marco(g.descifrar_exterior(self.k_ext, c)), (0x80, b"hola mundo"))
+        self.assertIsNone(g.leer_marco(b"\x80\x00\x00x"))
+
+    def test_transporte_ejemplo_real(self):
+        # C (ESPEC §2): 50 52 | ack 0 | 1 elemento | seq 0 | largo-1 = 2 | 02 1f c0
+        cuerpo = bytes.fromhex("00000000" "00" "5052" "00000000" "00" "00000000" "0002" "021fc0")
+        seq, secs = self.g.leer_transporte(cuerpo)
+        self.assertEqual(secs, [(5, 0, [(0, b"\x02\x1f\xc0")], [])])
+        self.assertEqual(self.g.bloques(secs[0][2][0][1]), [b"\x1f\xc0"])
+        self.assertEqual(self.g.armar_transporte(0, [(5, 0, [(0, b"\x02\x1f\xc0")])]), cuerpo)
+
+    def _mandar(self, clave, secciones, seq=0):
+        g = self.g
+        self.rele.datagram_received(
+            g.cifrar_exterior(clave, g.armar_marco(0x80, g.armar_transporte(seq, secciones))), self.addr)
+
+    def _leer(self, clave):
+        g = self.g
+        d, _ = self.salida[-1]
+        flags, cuerpo = g.leer_marco(g.descifrar_exterior(clave, d))
+        return dict((c, (ack, a)) for c, ack, a, _b in g.leer_transporte(cuerpo)[1])
+
+    def test_sonda_completa(self):
+        g = self.g
+        # KX
+        nonce = 0x01020304
+        self.rele.datagram_received(
+            g.cifrar_exterior(self.k_ext, g.armar_marco(0x80, g.rc4(self.k_int, nonce.to_bytes(4, "big")))),
+            self.addr)
+        flags, cuerpo = g.leer_marco(g.descifrar_exterior(self.k_ext, self.salida[-1][0]))
+        self.assertEqual((flags, len(cuerpo)), (0x80, 256))
+        m = g.rc4(self.k_int, cuerpo)  # material que el cliente usa luego como clave (P)
+        # canal 0: SYN -> SYN+ACK
+        self._mandar(m, [(0, 0, [(0, g.carga_de(b"\x80"))]), (1, 0, [])])
+        r = self._leer(m)
+        self.assertEqual(r[0], (1, [(0, g.carga_de(b"\x90"))]))
+        # ACK confirma el SYN+ACK -> establecido -> lista de participantes
+        self._mandar(m, [(0, 1, [(1, g.carga_de(b"\x10"))]), (1, 0, [])], seq=1)
+        r = self._leer(m)
+        self.assertEqual(r[0][1], [])
+        self.assertEqual(r[5][1], [(0, g.carga_de(b"\x1f\xc0"))])
+        # canal 1: abrir 6 -> aceptado; canal 6: eco 2 veces
+        self._mandar(m, [(0, 1, []), (1, 0, [(0, g.carga_de(b"\x80\x06"))]), (5, 1, []),
+                         (6, 0, [(0, g.carga_de(b"\x0c\xaa\xbb\xcc\xdd"))])], seq=2)
+        r = self._leer(m)
+        self.assertEqual(r[1][1], [(0, g.carga_de(b"\x90\x06"))])
+        self.assertNotIn(5, {c for c, (ack, a) in r.items() if a})
+        self.assertEqual(g.bloques(r[6][1][0][1]), [b"\x0c\xaa\xbb\xcc\xdd"] * 2)
+
+    def test_sin_autorizacion_no_hay_lista(self):
+        g = self.g
+        self.addr = ("9.9.9.9", 1)
+        self._mandar(self.k_ext, [(0, 0, [(0, g.carga_de(b"\x80"))]), (1, 0, [])])
+        self._mandar(self.k_ext, [(0, 1, [(1, g.carga_de(b"\x10"))]), (1, 0, [])], seq=1)
+        self.assertNotIn(5, self._leer(self.k_ext))
