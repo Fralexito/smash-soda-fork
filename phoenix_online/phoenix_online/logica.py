@@ -862,6 +862,68 @@ class Servidor:
     c_cmd_get_division_ranking = c_cmd_get_ranking
     c_cmd_get_division_ranking_byid = c_cmd_get_ranking
 
+    # ---------- myClub (docs/ESPEC_MYCLUB.md, leído del exe) ----------
+    # Paso 1: respuestas VACÍAS pero con cada clave y su tipo, en vez de NOERR pelado.
+    # P: el estado «club sin crear» y los objetos anidados están por confirmar en vivo.
+    MYCLUB_GP_INICIAL = 0
+    MYCLUB_PROGRESO = ""   # P: enum progress_status sin recuperar todavía
+
+    async def c_cmd_get_myclub_server_env(self, s, m):
+        return {"license_out_player_list": [], "license_out_coach_list": [],
+                "market_scout_list": [], "sell_gp": [], "is_all_club_edition_set": "NO"}
+
+    async def c_cmd_get_myclub_user_info(self, s, m):
+        return {"gp": self.MYCLUB_GP_INICIAL, "pes_point": 0,
+                "progress_status": self.MYCLUB_PROGRESO,
+                "team_name": "", "team_name_short": "", "base_team_id": 0,
+                "team_name_commentary_id": 0, "user_team_name": "", "user_team_name_short": "",
+                "user_base_team_id": 0, "user_team_name_commentary_id": 0,
+                "norma_point_division": 0, "norma_point_sim": 0, "norma_point_vscom": 0,
+                "nation_id": 0, "label": "", "name": "", "add_uniform_list": [],
+                "select_add_uniform_id": 0, "is_iconic_moment_view": "NO"}
+
+    async def c_cmd_get_myclub_feature_player_list(self, s, m):
+        return {"gameplayer_list": [], "gameplayer_list_num": 0,
+                "hold_gameplayer_list": [], "hold_gameplayer_list_num": 0}
+
+    async def c_cmd_get_myclub_gameplayerlist(self, s, m):
+        return {"gameplayer_list": [], "gameplayer_list_num": 0, "gameplayer_list_max": 250,
+                "main_edition_gameplayer_list": [], "main_edition_gameplayer_list_num": 0}
+
+    async def c_cmd_get_myclub_coachlist(self, s, m):
+        return {"coach_list": [], "coach_list_num": 0}
+
+    async def c_cmd_get_myclub_squadlist(self, s, m):
+        return {"squad_list": [], "squad_list_num": 0, "edition_squad_list": [],
+                "edition_squad_list_num": 0, "main_squad_id": 0, "cloud_squad_id": 0}
+
+    async def c_cmd_get_myclub_procurable_gameplayerlist(self, s, m):
+        return {"gameplayer_list": [], "gameplayer_list_num": 0}
+
+    async def c_cmd_set_myclub_club_edition_info(self, s, m):
+        return {}  # C: el lector solo mira msgid/rqid/result
+
+    async def c_cmd_reqwatch_myclub_auction_refunded_gp(self, s, m):
+        return {"refunded_gp_list": [], "total_gp": 0}
+
+    async def c_cmd_set_myclub_vscom_gameresult(self, s, m):
+        j = self.datos.jugador(s.steam_hex or "") or {}
+        nombre = j.get("pname") or s.pname or ""
+        cuenta = self._numero_cuenta(s)
+        return {"gameend_reason": m.get("gameend_reason") if isinstance(m.get("gameend_reason"), str) else "",
+                "player_data": Empaquetado({
+                    "pid": self._pid_visible(s),
+                    "pes_pname": Empaquetado({"name": nombre, "xuid_one": str(cuenta),
+                                              "psn_user_id": Empaquetado({
+                                                  "account_id": cuenta, "online_id": nombre,
+                                                  "is_valid_cache": "1"}),
+                                              "is_deleted": "0"}),
+                    "rating_type": "", "rating": RATING_INICIAL, "oldrating": RATING_INICIAL,
+                    "rating_boost_type": "", "rating_boost_rate": 0, "rating_compe": 0,
+                    "team_id": m.get("team") if isinstance(m.get("team"), int) else 0,
+                    "side": "", "contWin_num": 0, "skill_rank": "",
+                    "is_rankup_skill_rank": "NO", "is_first_skillrank": "NO", "is_first": "NO"})}
+
     # ---------- Vigilancias ----------
     async def _al_vigilar(self, s, msgid):
         if msgid == "CMD_REQWATCHL_ROOMLIST":

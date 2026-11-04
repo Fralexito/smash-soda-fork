@@ -450,6 +450,23 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
             await self.srv.recibir(a, 90, {"msgid": w, "rqid": 7})
         self.assertEqual(len(ea), antes)
 
+    async def test_myclub_vacio_con_tipos(self):
+        a, ea = await self.entrar("A1")
+        casos = {"CMD_GET_MYCLUB_SERVER_ENV": "is_all_club_edition_set",
+                 "CMD_GET_MYCLUB_USER_INFO": "progress_status",
+                 "CMD_GET_MYCLUB_FEATURE_PLAYER_LIST": "hold_gameplayer_list_num",
+                 "CMD_GET_MYCLUB_GAMEPLAYERLIST": "gameplayer_list_max",
+                 "CMD_GET_MYCLUB_COACHLIST": "coach_list_num",
+                 "CMD_GET_MYCLUB_SQUADLIST": "main_squad_id",
+                 "CMD_GET_MYCLUB_PROCURABLE_GAMEPLAYERLIST": "gameplayer_list_num",
+                 "CMD_REQWATCH_MYCLUB_AUCTION_REFUNDED_GP": "total_gp",
+                 "CMD_SET_MYCLUB_VSCOM_GAMERESULT": "player_data"}
+        for i, (cmd, clave) in enumerate(casos.items()):
+            await self.srv.recibir(a, 100 + i, {"msgid": cmd, "rqid": i, "pid": 1})
+            self.assertEqual((ea[-1][1]["msgid"], ea[-1][1]["result"]), (cmd, "NOERR"))
+            self.assertIn(clave, ea[-1][1])
+        msgpack_min.packb(ea[-1][1])  # todo se puede empaquetar
+
     def test_avatar_http_vacio_y_guardado(self):
         r = self.srv.respuesta_http({"msgid": "CMD_GET_AVATAR_HTTP", "rqid": "3", "pid": "7"})
         self.assertEqual((r["result"], r["avatar_data"], r["avatar_data_size"]), ("NOERR", "", 0))
