@@ -517,7 +517,8 @@ class TestGamerelay(unittest.TestCase):
         r = self._leer(m)
         self.assertEqual(r[1][1], [(0, g.carga_de(b"\x90\x06"))])
         self.assertNotIn(5, {c for c, (ack, a) in r.items() if a})
-        self.assertEqual(g.bloques(r[6][1][0][1]), [b"\x0c\xaa\xbb\xcc\xdd"] * 2)
+        self.assertEqual([g.bloques(c) for _, c in r[6][1]], [[b"\x0c\xaa\xbb\xcc\xdd"]] * 2)
+        self.assertEqual([q for q, _ in r[6][1]], [0, 1])  # una copia por elemento
 
     def test_sin_autorizacion_no_hay_lista(self):
         g = self.g

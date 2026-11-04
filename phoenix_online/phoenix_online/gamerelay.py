@@ -339,7 +339,10 @@ class Rele(asyncio.DatagramProtocol):
                     cli.poner(CANAL_FLUJOS, carga_de(bytes([CERRAR_OK, k])))
             elif canal == CANAL_CALIDAD and len(b) == 5:
                 cuenta = (b[0] >> 3) + 1
-                cli.poner(CANAL_CALIDAD, carga_de(*([b] * cuenta)))  # L: idéntico, «cuenta» veces
+                # C (04-nov): una copia por ELEMENTO (cada una con su seq); fundidas en una carga
+                # el cliente mide ~1240 ms en LAN
+                for _ in range(cuenta):
+                    cli.poner(CANAL_CALIDAD, carga_de(b))
             elif canal in CANALES_JUEGO:
                 pass  # fase 3: reenviar a los demás de la sala
 
