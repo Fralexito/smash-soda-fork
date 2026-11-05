@@ -70,3 +70,20 @@ Pendiente:
 - datos.py: tabla nueva `perfiles` (equipo favorito, jugador favorito, presentación) y `todos()` para el ranking.
 - Tipos que importan: en GET_PLAYERINFO, favoriteTeam/favoritePlayer/intro van arriba; rankmatch_stats y manner van como bin; division es texto «D12». En el ranking, los elementos son mapas, no bin. En DIVISION_POINT_INFO siempre van 12 filas.
 - Pruebas: 48 OK. Pendiente verlo en PES: Editar perfil, Registros de Divisiones, entrar y salir del vestíbulo.
+
+## 05-nov madrugada — myClub navegable, camino al partido vs COM (leer primero)
+- Funciona en el PES base (C:\PES21) contra nuestro servidor:
+  - Sede de club, plantilla de 18 sin «!», DT con nombre, Miembros, Contrato, Cazatalentos, subastas, Estadíst.
+  - «Partido igualado» llega hasta pedir el rival.
+- Commits:
+  - 203c107: parámetros y rival.
+  - b75a83e: MATCH_LEVEL_REGULAR.
+  - c9d66a0: tipos del rival corregidos tras el crash, ver ESPEC_MYCLUB §20.
+  - Último: club propio por cuenta, GP por partido e historial vs COM, ver §21.
+- Siguiente:
+  1. Confirmar que el partido arranca con c9d66a0+.
+  2. Capturar SET_MYCLUB_VSCOM_GAMERESULT y ajustar _desenlace_vscom.
+  3. Capturar los comandos de Contrato y Cazatalentos y cobrar con _sumar_gp.
+  4. Agentes.
+  5. La identidad propia, para que cada persona tenga su club. Hoy CPY comparte SteamID.
+- El config real de la PC tiene myclub.rival con 18 ids del Real Madrid. No subirlo nunca.

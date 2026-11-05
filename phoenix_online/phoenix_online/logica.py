@@ -909,7 +909,7 @@ class Servidor:
         """Jugadores, entrenadores y plantillas del club: lo guardado o, si no hay, el de config
         (myclub.jugadores / myclub.entrenadores). C (§14): con 0 jugadores el cliente sale."""
         cfg = self.cfg.get("myclub") or {}
-        club = self.datos.club(s.steam_hex or "") or {}
+        club = self._club_inicial(s) or {}
         jugadores = club.get("jugadores") or cfg.get("jugadores") or []
         dts = club.get("entrenadores") or cfg.get("entrenadores") or []
         return [j for j in jugadores if isinstance(j, dict)], [d for d in dts if isinstance(d, dict)]
@@ -963,7 +963,7 @@ class Servidor:
         cfg = self._cfg_myclub()
         # P: «club_de_prueba» en config = fingir un club ya creado para ver si el cliente pasa
         # al menú principal de myClub (y pide IS_FIRST_* / SEND_MYCLUB_PROGRESS_STATUS)
-        club = self.datos.club(s.steam_hex or "") or (self.cfg.get("myclub") or {}).get("club_de_prueba")
+        club = self._club_inicial(s)
         # P: prueba «sin club = error»: config myclub.resultado_sin_club (p. ej. ERR_NOTREGISTERED)
         error = (self.cfg.get("myclub") or {}).get("resultado_sin_club")
         if not club and error:
@@ -1012,7 +1012,10 @@ class Servidor:
         _, dts = self._plantel_myclub(s)
         jugadores, _ = self._plantel_myclub(s)
         sin_archivo = lambda: Empaquetado({"filename": "", "hash_str": ""})
-        return {"com_countWin_num": 0, "com_match_num": 0, "oppo_level": 0,
+        club = self._club_inicial(s) or {}
+        com = club.get("vscom") or {}
+        return {"com_countWin_num": int(com.get("racha") or 0),
+                "com_match_num": int(com.get("partidos") or 0), "oppo_level": 0,
                 "weekly_group_rank": 0, "weekly_group_rank_total_num": 0, "rank": 0,
                 "rank_total_num": 0, "rank_coach": 0, "rank_coach_total_num": 0,
                 "present_num": 0, "scount_num": 0, "staff_num": 0,
@@ -1045,13 +1048,47 @@ class Servidor:
             return base64.b64decode(v["b64"])
         return v
 
-    def _club_o_prueba(self, s):
-        """Club guardado; si no hay, se crea uno a partir de club_de_prueba para poder guardar."""
+    def _plantel_inicial(self):
+        """Copia propia de los jugadores y DT de config (myclub.jugadores / entrenadores), con
+        gameplayer_unique_id / coach_unique_id fijos para que cada club los guarde a su nombre."""
+        cfg = self.cfg.get("myclub") or {}
+        jug = [dict(j, gameplayer_unique_id=j.get("gameplayer_unique_id") or i + 1)
+               for i, j in enumerate(x for x in cfg.get("jugadores") or [] if isinstance(x, dict))]
+        dts = [dict(d, coach_unique_id=d.get("coach_unique_id") or i + 1)
+               for i, d in enumerate(x for x in cfg.get("entrenadores") or [] if isinstance(x, dict))]
+        return jug, dts
+
+    def _club_inicial(self, s):
+        """Club guardado de ESTA persona. Si no tiene y config trae myclub.club_de_prueba, se le
+        crea uno propio (copia de la plantilla) y se guarda: así cada cuenta tiene sus GP,
+        su orden de plantilla y sus partidos. Sin plantilla en config = None."""
         club = self.datos.club(s.steam_hex or "")
-        if club is None:
-            base = (self.cfg.get("myclub") or {}).get("club_de_prueba")
-            club = dict(base) if isinstance(base, dict) else {}
+        if club is not None:
+            return club
+        base = (self.cfg.get("myclub") or {}).get("club_de_prueba")
+        if not isinstance(base, dict) or not s.steam_hex:
+            return None
+        club = dict(base)
+        club.setdefault("gp", self._cfg_myclub()["gp"])
+        club["jugadores"], club["entrenadores"] = self._plantel_inicial()
+        self.datos.guardar_club(s.steam_hex, club)
+        log.info("myClub: club propio creado para %s (%s)", s.steam_hex, club.get("team_name"))
         return club
+
+    def _club_o_prueba(self, s):
+        return self._club_inicial(s) or {}
+
+    def _sumar_gp(self, s, cantidad):
+        """Suma (o resta) GP al club guardado. Devuelve el saldo nuevo, o None si no alcanza."""
+        club = self._club_inicial(s)
+        if club is None:
+            return None
+        saldo = int(club.get("gp") or 0) + int(cantidad)
+        if saldo < 0:
+            return None
+        club["gp"] = saldo
+        self.datos.guardar_club(s.steam_hex or "", club)
+        return saldo
 
     async def c_cmd_get_myclub_squad_gameplan(self, s, m):
         # C (§15.4/§17): el plan (XI inscrito + banquillo) lo guarda el servidor tal cual lo mandó
@@ -1230,6 +1267,9 @@ class Servidor:
                 if isinstance(m.get(k), (str, int))}
         club["home_town"] = casa if isinstance(casa, dict) else {}
         club["gp"] = self._cfg_myclub()["gp"]
+        # C (§14): con 0 jugadores el cliente sale de myClub; mientras no haya agentes/fichajes,
+        # el club nuevo arranca con la plantilla de config
+        club["jugadores"], club["entrenadores"] = self._plantel_inicial()
         club["squads"] = []
         club["staff"] = []
         self.datos.guardar_club(s.steam_hex or "", club)
@@ -1327,7 +1367,49 @@ class Servidor:
     async def c_cmd_reqwatch_myclub_auction_refunded_gp(self, s, m):
         return {"refunded_gp_list": [], "total_gp": 0}
 
+    @staticmethod
+    def _desenlace_vscom(m):
+        """P: forma del resultado aún sin captura. Se aceptan un texto WINNER_* o el par de
+        goles (score/opponent_score o home_score/away_score con side). Devuelve WIN/DRAW/LOSE/""."""
+        for v in m.values():
+            if isinstance(v, str) and v.startswith("WINNER_"):
+                lado = v[len("WINNER_"):]
+                if lado in ("DRAW", "NONE"):
+                    return "DRAW"
+                propio = m.get("side") if isinstance(m.get("side"), str) else "HOME"
+                return "WIN" if lado == propio else "LOSE"
+        pares = (("score", "opponent_score"), ("home_score", "away_score"))
+        for a, b in pares:
+            if isinstance(m.get(a), int) and isinstance(m.get(b), int):
+                x, y = m[a], m[b]
+                if a == "home_score" and m.get("side") == "AWAY":
+                    x, y = y, x
+                return "WIN" if x > y else "DRAW" if x == y else "LOSE"
+        return ""
+
+    def _guardar_partido_vscom(self, s, m):
+        """Guarda el partido vs COM en el club de la persona y le da los GP de config
+        (myclub.gp_por_partido = {"WIN": n, "DRAW": n, "LOSE": n, "": n})."""
+        club = self._club_inicial(s)
+        if club is None:
+            return
+        desenlace = self._desenlace_vscom(m)
+        tabla = (self.cfg.get("myclub") or {}).get("gp_por_partido") or {}
+        premio = int(tabla.get(desenlace, 0) or 0)
+        com = club.setdefault("vscom", {"partidos": 0, "racha": 0, "historial": []})
+        com["partidos"] = int(com.get("partidos") or 0) + 1
+        com["racha"] = int(com.get("racha") or 0) + 1 if desenlace == "WIN" else 0
+        simple = {k: v for k, v in m.items() if isinstance(v, (int, str)) and k not in ("msgid", "rqid")}
+        com.setdefault("historial", []).append({"hora": int(time.time()), "desenlace": desenlace,
+                                                "gp": premio, "datos": simple})
+        com["historial"] = com["historial"][-50:]
+        club["gp"] = int(club.get("gp") or 0) + premio
+        self.datos.guardar_club(s.steam_hex or "", club)
+        log.info("myClub vs COM %s: %s, +%d GP (saldo %d)", s.steam_hex, desenlace or "?",
+                 premio, club["gp"])
+
     async def c_cmd_set_myclub_vscom_gameresult(self, s, m):
+        self._guardar_partido_vscom(s, m)
         j = self.datos.jugador(s.steam_hex or "") or {}
         nombre = j.get("pname") or s.pname or ""
         cuenta = self._numero_cuenta(s)

@@ -267,6 +267,94 @@
       },
       "nation_id": 0,
       "gp": 10000
+    },
+    "gp_por_partido": {
+      "WIN": 300,
+      "DRAW": 150,
+      "LOSE": 50,
+      "": 50
+    },
+    "rival": {
+      "jugadores": [
+        {
+          "gameplayer_id": 0,
+          "uniform_number": 1
+        },
+        {
+          "gameplayer_id": 0,
+          "uniform_number": 2
+        },
+        {
+          "gameplayer_id": 0,
+          "uniform_number": 3
+        },
+        {
+          "gameplayer_id": 0,
+          "uniform_number": 4
+        },
+        {
+          "gameplayer_id": 0,
+          "uniform_number": 5
+        },
+        {
+          "gameplayer_id": 0,
+          "uniform_number": 6
+        },
+        {
+          "gameplayer_id": 0,
+          "uniform_number": 7
+        },
+        {
+          "gameplayer_id": 0,
+          "uniform_number": 8
+        },
+        {
+          "gameplayer_id": 0,
+          "uniform_number": 9
+        },
+        {
+          "gameplayer_id": 0,
+          "uniform_number": 10
+        },
+        {
+          "gameplayer_id": 0,
+          "uniform_number": 11
+        },
+        {
+          "gameplayer_id": 0,
+          "uniform_number": 12
+        },
+        {
+          "gameplayer_id": 0,
+          "uniform_number": 13
+        },
+        {
+          "gameplayer_id": 0,
+          "uniform_number": 14
+        },
+        {
+          "gameplayer_id": 0,
+          "uniform_number": 15
+        },
+        {
+          "gameplayer_id": 0,
+          "uniform_number": 16
+        },
+        {
+          "gameplayer_id": 0,
+          "uniform_number": 17
+        },
+        {
+          "gameplayer_id": 0,
+          "uniform_number": 18
+        }
+      ],
+      "coach_id": 24,
+      "team_name": "Real Madrid",
+      "team_name_short": "RMA",
+      "base_team_id": 109,
+      "cpu_level": "MATCH_LEVEL_REGULAR",
+      "side": "AWAY"
     }
   }
 }

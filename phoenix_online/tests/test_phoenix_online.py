@@ -573,8 +573,8 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(msgpack_min.unpackb(el["gameplayer_id_info"])["gameplayer_id"], 102)
 
     async def test_myclub_rival_com_tipos(self):
-        self.srv.cfg.setdefault("myclub", {})["rival"] = {
-            "jugadores": [{"gameplayer_id": 500 + i} for i in range(18)], "coach_id": 24}
+        self.srv.cfg = {**self.srv.cfg, "myclub": {"rival": {
+            "jugadores": [{"gameplayer_id": 500 + i} for i in range(18)], "coach_id": 24}}}
         a, ea = await self.entrar("A1")
         await self.srv.recibir(a, 1, {"msgid": "CMD_GET_MYCLUB_VSCOM_OPPONENT", "rqid": 1})
         r = ea[-1][1]
@@ -584,6 +584,35 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         el = msgpack_min.unpackb(msgpack_min.packb(r["concept_data"][3].valor))
         self.assertEqual(el["gameplayer_id"], 503)
         self.assertEqual(r["gameplan_data_size"], len(r["gameplan_data"]))
+
+    async def test_myclub_club_propio_por_cuenta_y_gp(self):
+        jug = [{"gameplayer_id": 100 + i} for i in range(18)]
+        self.srv.cfg = {**self.srv.cfg, "myclub": {
+            "jugadores": jug, "entrenadores": [{"coach_id": 8}],
+            "club_de_prueba": {"team_name": "Phoenix FC", "gp": 1000},
+            "gp_por_partido": {"WIN": 300, "DRAW": 100, "LOSE": 50}}}
+        a, ea = await self.entrar("A1")
+        b, eb = await self.entrar("B2")
+        await self.srv.recibir(a, 1, {"msgid": "CMD_GET_MYCLUB_USER_INFO", "rqid": 1})
+        await self.srv.recibir(b, 1, {"msgid": "CMD_GET_MYCLUB_USER_INFO", "rqid": 1})
+        self.assertEqual((ea[-1][1]["gp"], eb[-1][1]["gp"]), (1000, 1000))
+        await self.srv.recibir(a, 2, {"msgid": "CMD_SET_MYCLUB_VSCOM_GAMERESULT", "rqid": 2,
+                                      "winner": "WINNER_HOME", "side": "HOME"})
+        self.assertEqual(ea[-1][1]["result"], "NOERR")
+        await self.srv.recibir(a, 3, {"msgid": "CMD_GET_MYCLUB_USER_INFO", "rqid": 3})
+        await self.srv.recibir(b, 3, {"msgid": "CMD_GET_MYCLUB_USER_INFO", "rqid": 3})
+        self.assertEqual((ea[-1][1]["gp"], eb[-1][1]["gp"]), (1300, 1000))
+        await self.srv.recibir(a, 4, {"msgid": "CMD_GET_MYCLUB_MAINMENU_INFO", "rqid": 4})
+        self.assertEqual((ea[-1][1]["com_match_num"], ea[-1][1]["com_countWin_num"]), (1, 1))
+        self.assertEqual(self.srv._sumar_gp(b, -2000), None)
+        self.assertEqual(self.srv._sumar_gp(b, -200), 800)
+
+    def test_myclub_desenlace_vscom(self):
+        d = self.srv._desenlace_vscom
+        self.assertEqual(d({"winner": "WINNER_AWAY", "side": "HOME"}), "LOSE")
+        self.assertEqual(d({"winner": "WINNER_DRAW"}), "DRAW")
+        self.assertEqual(d({"home_score": 1, "away_score": 2, "side": "AWAY"}), "WIN")
+        self.assertEqual(d({}), "")
 
     def test_avatar_http_vacio_y_guardado(self):
         r = self.srv.respuesta_http({"msgid": "CMD_GET_AVATAR_HTTP", "rqid": "3", "pid": "7"})

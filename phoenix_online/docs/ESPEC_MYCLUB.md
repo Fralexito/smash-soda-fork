@@ -247,3 +247,40 @@ La petición de estos tres solo trae pid. Todo objeto anidado va como bin.
   - La petición lleva is_coach_mode e is_team_power_lv.
   - La respuesta lleva side, cpu_level, team_name, team_name_short, base_team_id, team_data{plantilla como SQUADLIST}, pes_pname{…}, pid, coach_adaptability_rate, concept_data{concept{14}} y team_name_commentary_id.
   - Se arma desde config myclub.rival. P: los anidados van como bin.
+
+## 20. Rival COM: tipos exactos (C, 05-nov, crash 20:57)
+- Con b75a83e, PES se cerraba unos 4,5 s después de VSCOM_OPPONENT con c0000005.
+  - El fallo estaba dentro del decodificador msgpack genérico (1421a5e9a).
+  - RSI contenía el texto «ansition», de «transition_counter»: el lector había recibido un tipo distinto del que esperaba.
+- Orden y tipos reales al final del lector 141da7b80:
+  - pes_pname{name, xuid_one, psn_user_id{account_id, online_id, is_valid_cache}, is_deleted}
+  - pid int
+  - gameplan_data_size int y gameplan_data, también en el nivel superior, además de dentro de team_data
+  - coach_adaptability_rate = **lista de int**: [100]
+  - concept_data = **lista**, un bin por jugador del rival: {gameplayer_id int, concept bin{14 claves int}}
+  - team_name_commentary_id int
+- Enums:
+  - cpu_level = MATCH_LEVEL_{BEGINNER, AMATEUR, REGULAR, PROFESSIONAL, TOPPLAYER, SUPERSTAR} (tabla 142645fd0). Por defecto: MATCH_LEVEL_REGULAR.
+  - side = HOME o AWAY.
+- Corregido en c9d66a0.
+- Config de prueba en la PC: myclub.rival = 18 ids del Real Madrid (team 109 de PlayerAssignment, por puesto), coach_id 24 (G. IACHINI).
+
+## 21. Club propio por cuenta y GP (05-nov)
+- Si una cuenta no tiene club y config trae myclub.club_de_prueba, el servidor le crea **su propia copia** y la guarda en la tabla myclub. La copia lleva club, jugadores y DT de config, y gp de club_de_prueba (o gp_inicial).
+  - Desde ahí, cada cuenta tiene sus propios GP, orden de plantilla, gameplan y partidos.
+- CREATE_MYCLUB_TEAM, el flujo real de crear club, también copia el plantel de config. Así el club nuevo no queda con 0 jugadores, que haría salir al cliente.
+- SET_MYCLUB_VSCOM_GAMERESULT:
+  - Guarda el partido en club.vscom (partidos, racha de victorias e historial de los últimos 50).
+  - Suma GP según config myclub.gp_por_partido {WIN, DRAW, LOSE, ""}.
+  - MAINMENU_INFO muestra com_match_num y com_countWin_num.
+- P: todavía no se sabe en qué campo viene el resultado.
+  - _desenlace_vscom acepta un texto WINNER_* con side, o pares de goles (score/opponent_score, home_score/away_score).
+  - Hay que confirmarlo con la captura real y ajustarlo.
+- _sumar_gp(s, n) suma o resta GP y se niega si el saldo no alcanza. Ya está listo para contratos y cazatalentos cuando se capturen sus comandos.
+- **Límite actual:** todo va por steam_hex. Con CPY, todas las copias comparten el mismo SteamID, así que dos personas con CPY verían el mismo club. El club será de verdad de cada persona cuando llegue la identidad propia: el pase web de Link, validado en Supabase.
+
+## Cómo replicarlo desde cero
+1. config.json: bloque myclub con jugadores (18 o más ids de PlayerAssignment, contract_term 100), entrenadores [{coach_id de Coach.bin}], club_de_prueba, rival, y opcionalmente gp_por_partido.
+2. Con PES cerrado: `python -m phoenix_online.servidor config.json`.
+3. Abrir PES (base) → online → myClub.
+4. Si PES se cierra: mirar el último comando del log (las peticiones MYCLUB se registran completas) y el dump en CrashDumps. Luego leer su lector en Ghidra.
