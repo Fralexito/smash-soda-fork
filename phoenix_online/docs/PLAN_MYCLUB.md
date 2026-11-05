@@ -95,3 +95,11 @@ Regla: nada se paga con dinero real, y cada cosa se puede prender o apagar.
 - Los datos de jugadores son de Konami: mostrarlos en una web pública tiene riesgo legal. Revisarlo antes de publicar.
 - No cobrar nada por myClub sin abogado.
 - Lo que sale de la base del juego (catalogo.json, los .bin) y config.json no se suben nunca.
+
+## Jugar online con un amigo (pregunta de Frank, 05-nov 09:35)
+Los dos PC deben tener la MISMA base de jugadores (mismo parche, misma versión): el servidor manda números de jugador.
+Falta, en orden:
+1. Instalador «Phoenix»: parche + conexión de un clic (Link/Core en vez de hosts).
+2. Control de versión: al entrar, el cliente/Link manda la versión del parche y el servidor avisa si no coincide (en vez de dejar que el juego se caiga).
+3. Servidor alcanzable desde internet: puerto abierto en la PC de Frank o VPS.
+4. Cada persona con su propia copia de PES 2021.
