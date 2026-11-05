@@ -1188,7 +1188,13 @@ class Servidor:
         precio = int(oferta.get("gp") or 0)
         if int(club.get("gp") or 0) < precio:
             return {"result": "ERR_INSUFFICIENT_GP"}
-        dts = club.setdefault("entrenadores", [])
+        # C (05-nov): clubes guardados antes de a61d371 no tenían «entrenadores» (salían de
+        # config); sin esto el DT inicial se perdía al fichar el primero
+        if not club.get("entrenadores"):
+            club["entrenadores"] = self._plantel_inicial()[1]
+        if not club.get("jugadores"):
+            club["jugadores"] = self._plantel_inicial()[0]
+        dts = club["entrenadores"]
         uid = max([int(d.get("coach_unique_id") or 0) for d in dts] + [0]) + 1
         nuevo = {**{k: v for k, v in oferta.items() if k not in ("gp", "pes_point")},
                  "coach_unique_id": uid, "contract_term": 10,

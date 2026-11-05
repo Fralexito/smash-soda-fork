@@ -652,6 +652,7 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
             "club_de_prueba": {"team_name": "P", "gp": 6000},
             "mercado_dt": [{"coach_id": 24, "gp": 5000}, 37]}}
         a, ea = await self.entrar("A1")
+        self.srv.datos.guardar_club(a.steam_hex, {"team_name": "P", "gp": 6000})  # club viejo
         r = self.srv.recibir
         await r(a, 1, {"msgid": "CMD_BUY_MYCLUB_MARKET_COACH", "rqid": 1, "coach_id": 24,
                        "use_pes_point": "NO", "is_coach_texture_use": "YES"})
