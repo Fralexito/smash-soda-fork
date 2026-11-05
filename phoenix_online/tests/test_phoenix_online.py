@@ -753,6 +753,7 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         await r(a, 11, {"msgid": "CMD_GET_MYCLUB_AGENT_BOX_INFO", "rqid": 11, "agent_id": 1})
         caja = msgpack_min.unpackb(msgpack_min.packb(ea[-1][1]["agent_info"].valor))
         self.assertEqual(caja["box_size"], 5)
+        self.assertEqual(caja["main_player_rarity_info"], [])
         self.assertIn("agent", msgpack_min.unpackb(caja["agent_info"]))
         await r(a, 2, {"msgid": "CMD_USE_MYCLUB_AGENT", "rqid": 2, "agent_id": 1, "use_pes_point": "NO"})
         res = ea[-1][1]

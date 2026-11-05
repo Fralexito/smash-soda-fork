@@ -1293,7 +1293,9 @@ class Servidor:
         if a is None:
             return {"result": "ERR_NOTFOUND"}
         bolsa = self._bolsa(a, self._club_inicial(s))
-        cuenta = lambda: Empaquetado({"rarity": 0, "count": 0})
+        # C (05-nov, lector 141c2e880): *_player_rarity_info son LISTAS de bin({rarity, count});
+        # un bin suelto se leía como lista → basura → PES se cerraba
+        cuenta = lambda: []
         # C (05-nov, lector 141c2e880): DOS niveles agent_info; el de fuera lleva la caja y el
         # de dentro agent + banner_file_info + skill (con un solo nivel PES se cerraba)
         return {"agent_info": Empaquetado({
@@ -1303,7 +1305,8 @@ class Servidor:
             "sub2_player_rarity_info": cuenta(), "is_use_reset": "NO"})}
 
     async def c_cmd_get_myclub_agent_draw_rate(self, s, m):
-        tasa = lambda: Empaquetado({"rate_table": 0, "rate_player_num": 0})
+        # C (05-nov, lector 141ca9080): rate_table es una LISTA de enteros
+        tasa = lambda: Empaquetado({"rate_table": [], "rate_player_num": 0})
         return {"main": tasa(), "sub1": tasa(), "sub2": tasa()}
 
     async def c_cmd_reset_myclub_agent_box(self, s, m):

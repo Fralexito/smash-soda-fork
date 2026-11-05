@@ -476,7 +476,8 @@ Lectores encontrados en el juego (RE estático, sin abrir PES). Todo lo de dentr
 - **Forma real de cada elemento de `market_agent_list`:** `bin({agent: bin({agent_id, name, name_jp, type, target_level, token_list:[bin({level,count})], token_list_num, bgm_id, uniform, get_player_num, is_draw_checked, is_buy_gp_pes_point, pes_point, gp, agent_end_time, agent_token_end_time}), banner_file_info: bin({filename, hash_str}), skill: bin({skill_category, skill_id, limit_count, use_count})})`.
   - `banner_file_info` y `skill` son hermanos de `agent`, no van dentro de él.
   - Nosotros mandábamos los campos sueltos. Corregido.
-- `AGENT_BOX_INFO` (lector 141c2e880) tiene DOS niveles: `agent_info: bin({agent_info: bin({agent, banner_file_info, skill}), box_size, box_pack_num, reset_remain_count, main/sub1/sub2_player_rarity_info: bin({rarity,count}), is_use_reset})`. Con un solo nivel, PES se cerraba al entrar al agente (vivo 05:45).
+- `AGENT_BOX_INFO` (lector 141c2e880) tiene DOS niveles: `agent_info: bin({agent_info: bin({agent, banner_file_info, skill}), box_size, box_pack_num, reset_remain_count, main/sub1/sub2_player_rarity_info: [bin({rarity:int,count:int})] (LISTA), is_use_reset})`. Con un solo nivel, o con rarity_info como bin suelto, PES se cerraba al entrar al agente (vivo 05:45 y 05:58).
+- AGENT_DRAW_RATE (141ca9080): main/sub1/sub2 = bin({rate_table: [int…], rate_player_num}). Tras AGENT_BOX_INFO la pantalla espera: 1_use_pack → USE_AGENT, 2_emission_ratio → DRAW_RATE, 3_reset → RESET_AGENT_BOX.
 - Falta: los valores válidos de `type`. El valor por defecto del cliente es «NotImplement», y las ramas 0_box y 1_single sugieren BOX o SINGLE.
 
 ## 38. Pruebas en vivo, 05-nov 05:30-05:55
