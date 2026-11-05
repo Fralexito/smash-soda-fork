@@ -1614,6 +1614,44 @@ class Servidor:
             "gameplan_data_size": tam, "gameplan_data": texto, "is_club_edition": "NO",
             "club_edition_type": ""})
 
+    def _nivel_cpu(self, club):
+        """Nivel de la COM para este club. Config myclub.dificultad = {activa, niveles [orden de
+        fácil a difícil], inicial, victorias_para_subir, derrotas_para_bajar}. Apagada o sin
+        niveles = el cpu_level fijo de myclub.rival (como antes)."""
+        cfg = self.cfg.get("myclub") or {}
+        fijo = (cfg.get("rival") or {}).get("cpu_level", "MATCH_LEVEL_REGULAR")
+        d = cfg.get("dificultad") or {}
+        niveles = [n for n in d.get("niveles") or [] if isinstance(n, str)]
+        if not d.get("activa") or not niveles:
+            return fijo
+        com = (club or {}).get("vscom") or {}
+        idx = com.get("nivel_idx")
+        if not isinstance(idx, int):
+            idx = niveles.index(d["inicial"]) if d.get("inicial") in niveles else 0
+        return niveles[max(0, min(idx, len(niveles) - 1))]
+
+    def _ajustar_dificultad(self, com, desenlace):
+        """Tras un partido: sube un nivel con N victorias seguidas, baja con M derrotas seguidas.
+        Guarda nivel_idx, nivel_antes y las rachas en club["vscom"]."""
+        d = (self.cfg.get("myclub") or {}).get("dificultad") or {}
+        niveles = [n for n in d.get("niveles") or [] if isinstance(n, str)]
+        if not d.get("activa") or not niveles:
+            return
+        idx = com.get("nivel_idx")
+        if not isinstance(idx, int):
+            idx = niveles.index(d["inicial"]) if d.get("inicial") in niveles else 0
+        com["nivel_antes"] = niveles[max(0, min(idx, len(niveles) - 1))]
+        com["derrotas_seguidas"] = int(com.get("derrotas_seguidas") or 0) + 1 \
+            if desenlace == "LOSE" else 0
+        subir = int(d.get("victorias_para_subir") or 3)
+        bajar = int(d.get("derrotas_para_bajar") or 0)
+        if desenlace == "WIN" and com.get("racha", 0) and com["racha"] % subir == 0:
+            idx = min(idx + 1, len(niveles) - 1)
+        elif bajar and com["derrotas_seguidas"] >= bajar:
+            idx = max(idx - 1, 0)
+            com["derrotas_seguidas"] = 0
+        com["nivel_idx"] = idx
+
     def _rival_de_turno(self, s):
         """Config myclub.rival; si trae «equipos» [{base_team_id, team_name, team_name_short,
         coach_id, cpu_level}...], el rival rota según los partidos vs COM ya jugados del club."""
@@ -1635,7 +1673,9 @@ class Servidor:
         if not jugadores and r.get("base_team_id"):
             jugadores = self._equipo_catalogo(r["base_team_id"], 18)
         nombre = r.get("team_name") or "Rival"
-        return {"side": r.get("side", "AWAY"), "cpu_level": r.get("cpu_level", "MATCH_LEVEL_REGULAR"),
+        return {"side": r.get("side", "AWAY"),
+                "cpu_level": self._nivel_cpu(self._club_inicial(s)) if not r.get("cpu_level_fijo")
+                else r.get("cpu_level", "MATCH_LEVEL_REGULAR"),
                 "team_name": nombre, "team_name_short": r.get("team_name_short", "RIV"),
                 "base_team_id": int(r.get("base_team_id") or 0),
                 "team_data": self._plantilla_bin(jugadores, int(r.get("coach_id") or 0), nombre,
@@ -1884,12 +1924,12 @@ class Servidor:
         # C (05-nov, lector 141c7a820): premio del último partido. Listas vacías = sin extras.
         club = self._club_inicial(s) or {}
         u = (club.get("vscom") or {}).get("ultimo") or {}
-        nivel = ((self.cfg.get("myclub") or {}).get("rival") or {}).get("cpu_level",
-                                                                         "MATCH_LEVEL_REGULAR")
+        nivel = self._nivel_cpu(club)
+        antes = (club.get("vscom") or {}).get("nivel_antes") or nivel
         return {"gain_gp": int(u.get("gp") or 0), "gp": int(club.get("gp") or 0),
                 "base_gp": int(u.get("gp") or 0), "game_res": u.get("desenlace") or "",
                 "match_num": int((club.get("vscom") or {}).get("partidos") or 0),
-                "new_cpu_level": nivel, "old_cpu_level": nivel,
+                "new_cpu_level": nivel, "old_cpu_level": antes,
                 "is_first_win": "YES" if u.get("primera_victoria") else "NO",
                 "gp_bonus_list": [], "gp_bonus_list_num": 0,
                 "gp_bonus_elected_myplayer_num": 0, "special_match_bonus_list": [],
@@ -1955,6 +1995,7 @@ class Servidor:
         com["partidos"] = int(com.get("partidos") or 0) + 1
         com["racha"] = int(com.get("racha") or 0) + 1 if desenlace == "WIN" else 0
         com["racha_max"] = max(int(com.get("racha_max") or 0), com["racha"])
+        self._ajustar_dificultad(com, desenlace)
         simple = {k: v for k, v in m.items() if isinstance(v, (int, str)) and k not in ("msgid", "rqid")}
         com.setdefault("historial", []).append({"hora": int(time.time()), "desenlace": desenlace,
                                                 "gp": premio, "datos": simple})

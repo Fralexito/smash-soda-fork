@@ -644,6 +644,38 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.srv._sumar_gp(b, -2000), None)
         self.assertEqual(self.srv._sumar_gp(b, -200), 800)
 
+    async def test_myclub_dificultad_sube_y_baja(self):
+        # C (05-nov noche): nivel de la COM según rachas (config myclub.dificultad)
+        niveles = ["N1", "N2", "N3"]
+        self.srv.cfg = {**self.srv.cfg, "myclub": {
+            "jugadores": [{"gameplayer_id": 100 + i} for i in range(18)],
+            "entrenadores": [{"coach_id": 8}], "club_de_prueba": {"team_name": "P", "gp": 0},
+            "rival": {"jugadores": [{"gameplayer_id": 500 + i} for i in range(18)]},
+            "dificultad": {"activa": True, "niveles": niveles, "victorias_para_subir": 2,
+                           "derrotas_para_bajar": 2}}}
+        a, ea = await self.entrar("A1")
+        r = self.srv.recibir
+        await r(a, 1, {"msgid": "CMD_GET_MYCLUB_USER_INFO", "rqid": 1})
+
+        async def partido(ganador, n):
+            await r(a, n, {"msgid": "CMD_SET_MYCLUB_VSCOM_GAMERESULT", "rqid": n,
+                           "winner_side": ganador, "gameend_reason": "NORMAL_END",
+                           "past_game_played_pid": 7, "pes_srv_rtt_nums": 3})
+            await r(a, n + 1, {"msgid": "CMD_GET_MYCLUB_GAME_BONUS", "rqid": n + 1})
+            bono = ea[-1][1]
+            await r(a, n + 2, {"msgid": "CMD_GET_MYCLUB_VSCOM_OPPONENT", "rqid": n + 2})
+            return bono["old_cpu_level"], bono["new_cpu_level"], ea[-1][1]["cpu_level"]
+
+        await r(a, 2, {"msgid": "CMD_GET_MYCLUB_VSCOM_OPPONENT", "rqid": 2})
+        self.assertEqual(ea[-1][1]["cpu_level"], "N1")
+        self.assertEqual(await partido("WINNER_HOME", 10), ("N1", "N1", "N1"))
+        self.assertEqual(await partido("WINNER_HOME", 20), ("N1", "N2", "N2"))  # 2 seguidas
+        self.assertEqual(await partido("WINNER_AWAY", 30), ("N2", "N2", "N2"))
+        self.assertEqual(await partido("WINNER_AWAY", 40), ("N2", "N1", "N1"))  # 2 derrotas
+        self.srv.cfg["myclub"]["dificultad"]["activa"] = False
+        await r(a, 50, {"msgid": "CMD_GET_MYCLUB_VSCOM_OPPONENT", "rqid": 50})
+        self.assertEqual(ea[-1][1]["cpu_level"], "MATCH_LEVEL_REGULAR")  # apagada = fijo
+
     def test_myclub_desenlace_vscom(self):
         d = self.srv._desenlace_vscom
         self.assertEqual(d({"winner": "WINNER_AWAY", "side": "HOME"}), "LOSE")

@@ -474,6 +474,14 @@
       "GIVEUP"
     ],
     "gp_logro_defecto": 300,
-    "gp_logros": {"231": 800, "237": 240}
+    "gp_logros": {"231": 800, "237": 240},
+    "dificultad": {
+      "activa": false,
+      "_nota": "niveles de fácil a difícil; nombres MATCH_LEVEL_* por confirmar con REA (RE_NOCHE_05NOV.md)",
+      "niveles": ["MATCH_LEVEL_REGULAR"],
+      "inicial": "MATCH_LEVEL_REGULAR",
+      "victorias_para_subir": 3,
+      "derrotas_para_bajar": 2
+    }
   }
 }
