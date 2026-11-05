@@ -1231,7 +1231,7 @@ class Servidor:
                 and int(b.get("rating") or 75) >= minimo
                 and (not puestos or b.get("posicion_txt") in puestos)]
 
-    def _ficha_agente(self, a, **extra):
+    def _ficha_agente(self, a):
         """C (05-nov, lector 141c20550): cada elemento es bin({agent: bin({...}),
         banner_file_info: bin, skill: bin}); banner y skill son HERMANOS de «agent». Antes iban
         sueltos y el cliente marcaba la respuesta como error y volvía al menú."""
@@ -1249,8 +1249,7 @@ class Servidor:
             "banner_file_info": Empaquetado({"filename": "", "hash_str": ""}),
             "skill": Empaquetado({"skill_category": a.get("skill_category") or "",
                                   "skill_id": int(a.get("skill_id") or 0),
-                                  "limit_count": 0, "use_count": 0}),
-            **extra})
+                                  "limit_count": 0, "use_count": 0})})
 
     def _fichar(self, club, nuevos):
         """Añade jugadores al club con unique_id nuevo y contrato completo; devuelve las fichas."""
@@ -1295,10 +1294,13 @@ class Servidor:
             return {"result": "ERR_NOTFOUND"}
         bolsa = self._bolsa(a, self._club_inicial(s))
         cuenta = lambda: Empaquetado({"rarity": 0, "count": 0})
-        return {"agent_info": self._ficha_agente(
-            a, box_size=len(bolsa), box_pack_num=len(bolsa), reset_remain_count=0,
-            main_player_rarity_info=cuenta(), sub1_player_rarity_info=cuenta(),
-            sub2_player_rarity_info=cuenta(), is_use_reset="NO")}
+        # C (05-nov, lector 141c2e880): DOS niveles agent_info; el de fuera lleva la caja y el
+        # de dentro agent + banner_file_info + skill (con un solo nivel PES se cerraba)
+        return {"agent_info": Empaquetado({
+            "agent_info": self._ficha_agente(a), "box_size": len(bolsa),
+            "box_pack_num": len(bolsa), "reset_remain_count": 0,
+            "main_player_rarity_info": cuenta(), "sub1_player_rarity_info": cuenta(),
+            "sub2_player_rarity_info": cuenta(), "is_use_reset": "NO"})}
 
     async def c_cmd_get_myclub_agent_draw_rate(self, s, m):
         tasa = lambda: Empaquetado({"rate_table": 0, "rate_player_num": 0})
