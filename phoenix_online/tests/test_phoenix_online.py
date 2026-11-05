@@ -523,6 +523,7 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         f = msgpack_min.unpackb(msgpack_min.packb(m["gameplayer_list"][0].valor))
         self.assertIsInstance(f["concept"], bytes)
         self.assertEqual((f["gameplayer_id"], f["rating"]), (100, 90))
+        self.assertEqual(f["default_rarity"], "PLAYER_RARITY_BLACK")
         await r(a, 2, {"msgid": "CMD_GET_MYCLUB_COACHLIST", "rqid": 2})
         self.assertEqual(ea[-1][1]["coach_list_num"], 1)
         await r(a, 3, {"msgid": "CMD_GET_MYCLUB_SQUADLIST", "rqid": 3})

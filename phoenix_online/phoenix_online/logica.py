@@ -892,6 +892,19 @@ class Servidor:
                    "press_rule", "first_df", "passsupport_dist", "offence_num", "defence_line",
                    "defence_compact", "defence_num")
 
+    @staticmethod
+    def _rareza(j):
+        """C (§18): token CON prefijo; «WHITE» suelto = NotImplement = jugador inelegible («!»).
+        P: cortes de valoración de myClub (negro ≥85, oro 80, plata 75, bronce 70)."""
+        r = j.get("default_rarity")
+        if isinstance(r, str) and r.startswith("PLAYER_RARITY_"):
+            return r
+        v = j.get("rating") if isinstance(j.get("rating"), int) else 75
+        for corte, nombre in ((85, "BLACK"), (80, "GOLD"), (75, "SILVER"), (70, "BRONZE")):
+            if v >= corte:
+                return "PLAYER_RARITY_" + nombre
+        return "PLAYER_RARITY_WHITE"
+
     def _plantel_myclub(self, s):
         """Jugadores, entrenadores y plantillas del club: lo guardado o, si no hay, el de config
         (myclub.jugadores / myclub.entrenadores). C (§14): con 0 jugadores el cliente sale."""
@@ -923,7 +936,7 @@ class Servidor:
             "enhanced_parameters": list(j.get("enhanced_parameters") or []),
             "add_skill_id": e("add_skill_id"), "is_protected": t("is_protected"),
             "redcard_info_list": [], "default_overall": e("default_overall", e("rating", 75)),
-            "default_rarity": t("default_rarity", "WHITE"), "team_id": e("team_id"),
+            "default_rarity": self._rareza(j), "team_id": e("team_id"),
             "nation_id": e("nation_id")})
 
     def _ficha_dt_myclub(self, i, d):
@@ -1234,7 +1247,7 @@ class Servidor:
             "gameplayer_id": j.get("gameplayer_id") or 0,
             "uniform_number": j.get("uniform_number") or i + 1,
             "player_level": j.get("level") or 1, "parameters": list(j.get("parameters") or []),
-            "default_rarity": j.get("default_rarity") or "WHITE"})
+            "default_rarity": self._rareza(j)})
             for i, j in elegidos]
         plantilla = Empaquetado({
             "squad_id": 1, "name": "Plantilla 1", "member_list": miembros,

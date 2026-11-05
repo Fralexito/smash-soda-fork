@@ -219,3 +219,16 @@ La petición de estos tres solo trae pid. Todo objeto anidado va como bin.
   - SQUADLIST manda los 18 en ese orden.
   - GAMEPLAN_DEFECTO (el plan capturado) se usa si no hay ninguno guardado.
   - SET_GP_ACHIEVEMENT responde NOERR.
+
+## 18. Enums con prefijo (C, 05-nov), causa probable del «!»
+- default_rarity ∈ PLAYER_RARITY_{BLACK, GOLD, SILVER, BRONZE, WHITE} (tabla 142ad2c50, fn 14021d4c0). Si mandamos «WHITE» solo, el cliente lo lee como NotImplement.
+  - Ahora se toma de la valoración (P: negro ≥85, oro ≥80, plata ≥75, bronce ≥70).
+- Otros enums:
+  - team_level: TEAM_POWER_LV1..LV4 o NONE.
+  - Nivel de valoración: RATING_LEVEL_NONE/1..4.
+  - Valoración de plantilla: SQUAD_RATING_PLAYER_NORMAL, _SLAYER, _FP, _FP_SLAYER, _ENEMY, _FP_ENEMY.
+  - Tiempo: WEATHER_TYPE_*. Ganador: WINNER_HOME/AWAY/NONE.
+  - Tipos de partido, sin prefijo: PESLEAGUE, MYCLUB_FREE, MULTI, OC_FREE, OC_RANKING, MATCHDAY, MYCLUB_VSCOM_COOP, ONLINE_VSCOM_COOP.
+- La comprobación antes del partido la hace el propio cliente: flujos ProcessCheckMatchSquad*.json en dt16_all.cpk, con los resultados NOERR, NOT_ENOUGH_PLAYER, INCLUDES_RENTAL, RED_CARD y CONTRACT.
+- parameters y enhanced_parameters: listas libres; vacías también valen.
+- El nombre del DT sale de los datos locales por coach_id. Sigue sin resolver.
