@@ -830,6 +830,27 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         await r(a, 9, {"msgid": "CMD_GET_MYCLUB_GAMEPLAYERLIST", "rqid": 9})
         self.assertEqual(ea[-1][1]["gameplayer_list_num"], 18)
 
+    async def test_myclub_entrenador_titular_no_deja_hueco(self):
+        # C (05-nov 09:20): convertir a un inscrito pone al primer libre en su mismo puesto
+        self.srv.cfg = {**self.srv.cfg, "myclub": {
+            "jugadores": [{"gameplayer_id": 100 + i} for i in range(20)],
+            "entrenadores": [{"coach_id": 8}],
+            "club_de_prueba": {"team_name": "P", "gp": 1000}}}
+        a, ea = await self.entrar("A1")
+        r = self.srv.recibir
+        await r(a, 1, {"msgid": "CMD_GET_MYCLUB_USER_INFO", "rqid": 1})
+        miembros = [msgpack_min.packb({"gameplayer_unique_id": u}) for u in range(1, 19)]
+        await r(a, 2, {"msgid": "CMD_SET_MYCLUB_SQUAD_GAMEPLAYER", "rqid": 2, "squad_id": 1,
+                       "member_list": miembros})
+        el = msgpack_min.packb({"gameplayer_unique_id": 5, "gameplayer_id": 104, "overall": 90})
+        await r(a, 3, {"msgid": "CMD_CREATE_MYCLUB_STAFF", "rqid": 3, "player_info_list": [el]})
+        club = self.srv.datos.club(a.steam_hex)
+        orden = club["inscritos"]["1"]
+        self.assertEqual(len(orden), 18)
+        self.assertEqual(orden[4], 19)  # mismo puesto, primer jugador libre
+        self.assertNotIn(5, orden)
+        self.assertNotIn(5, [j.get("gameplayer_unique_id") for j in club["jugadores"]])
+
     async def test_myclub_monedas_gratis(self):
         self.srv.cfg = {**self.srv.cfg, "myclub": {
             "jugadores": [{"gameplayer_id": 1}], "entrenadores": [{"coach_id": 8}],

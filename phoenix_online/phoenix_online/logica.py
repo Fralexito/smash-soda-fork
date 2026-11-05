@@ -1713,9 +1713,12 @@ class Servidor:
             nuevo = {"id": max([e.get("id", 0) for e in club.get("staff", [])] + [0]) + 1,
                      "base_player_info": base, "base_exp": int(base.get("overall") or 0)}
             club.setdefault("staff", []).append(nuevo)
-            # C (07:50): el jugador convertido desaparece de los miembros
+            # C (07:50): el jugador convertido desaparece de los miembros.
+            # C (05-nov 09:20): si estaba inscrito (titular o banquillo), su puesto lo ocupa
+            # el primer jugador libre; antes quedaba un hueco y PES no dejaba jugar (§42).
             uid = base.get("gameplayer_unique_id")
-            if uid and uid not in self._uids_en_uso(club):
+            if uid:
+                self._sacar_de_plantilla(club, uid)
                 club["jugadores"] = [j for j in club.get("jugadores") or []
                                      if j.get("gameplayer_unique_id") != uid]
             salida.append(Empaquetado({**nuevo, "base_player_info": Empaquetado(base)}))
@@ -1728,6 +1731,21 @@ class Servidor:
         lista = [Empaquetado({**e, "base_player_info": Empaquetado(e.get("base_player_info") or {})})
                  for e in club.get("staff") or []]
         return {"staff_list_num": len(lista), "staff_list": lista}
+
+    @staticmethod
+    def _sacar_de_plantilla(club, uid):
+        """Quita uid de cada plantilla inscrita y pone en su mismo puesto al primer jugador
+        libre (no inscrito). Mismo puesto = la tabla de huecos del gameplan sigue valiendo."""
+        for clave, orden in (club.get("inscritos") or {}).items():
+            if uid not in orden:
+                continue
+            libres = [j.get("gameplayer_unique_id") for j in club.get("jugadores") or []
+                      if j.get("gameplayer_unique_id") not in orden
+                      and j.get("gameplayer_unique_id") != uid]
+            if libres:
+                orden[orden.index(uid)] = libres[0]
+            else:
+                orden.remove(uid)
 
     # ---------- menú del jugador: bloquear y liberar (C, 07:50) ----------
     @staticmethod

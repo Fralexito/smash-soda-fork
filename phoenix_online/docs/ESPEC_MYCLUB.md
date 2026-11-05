@@ -602,3 +602,9 @@ Un «producto» es un cazatalentos a subasta (`scout_id` = agent_id, `grade` = e
 - Caja de Representante: X abre «Información de Caja» (155/155) sin caída; fichaje de Fabinho Nv.1 sin coste (token).
 - Avisos de logro muestran el GP real: bit 231 «Vender jugador» = 800, bit 237 = 240, convertir en entrenador = 600 (bit por identificar). Añadidos 231 y 237 a gp_logros.
 - Pendiente: devolver a Messi (admin), logro de convertir (bit), abandono en vs COM.
+
+## 43. Convertir a un titular en entrenador (05-nov 09:20)
+- Visto en vivo: el cliente deja convertir a un inscrito (Messi). El servidor lo dejaba en inscritos["1"] y PES guardaba la plantilla con un hueco (tabla de huecos con 0xFF) → «No tienes jugadores suficientes».
+- Arreglo (`_sacar_de_plantilla`): al convertir, el jugador sale de jugadores y de cada plantilla inscrita; su mismo puesto lo ocupa el primer jugador libre (así la tabla de huecos del gameplan sigue siendo válida). Si no hay libres, se quita el puesto.
+- PES guarda la lista vieja en memoria: tras convertir a un titular hay que salir de myClub y volver a entrar para ver el reemplazo.
+- Prueba: test_myclub_entrenador_titular_no_deja_hueco.
