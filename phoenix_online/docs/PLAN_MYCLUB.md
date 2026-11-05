@@ -10,13 +10,15 @@ Detalles técnicos: `ESPEC_MYCLUB.md`. Cómo se logró: `GUIA_MYCLUB_REVIVIDO.md
    - Falta: las habilidades, para calcular la media, la rareza y el precio reales.
 2. **Fichajes**
    - Hecho en el servidor (05-nov, `ESPEC_MYCLUB.md` §33): Representantes, Cazatalentos y renovar contratos, pagando con GP o con monedas gratis.
-   - Falta: probarlo en vivo, y las subastas.
+   - Hecho en el servidor (05-nov noche, §49): subastas de cazatalentos de la casa.
+   - Falta: probar todo en vivo.
 3. **Progreso de jugadores**
    - Hecho en el servidor: experiencia y nivel tras cada partido.
-   - Falta: confirmar la curva real, el cansancio y renovar o vender contratos.
+   - Hecho en el servidor: contrato real (partidos x 90, §47), gasto por partido y cansancio (§45, apagado).
+   - Falta: confirmar la curva real de experiencia y la escala del cansancio.
 4. **Rival COM variado**
    - Hecho: rotación entre 7 clubes grandes.
-   - Falta: subir la dificultad con las victorias (new_cpu_level).
+   - Hecho en el servidor (§44): la dificultad sube con 3 victorias seguidas y baja con 2 derrotas. Falta probarla en vivo.
    - El escudo «MD» del Madrid es el oficial del juego, que no tiene licencia: no es un fallo.
 5. **Para mucha gente**
    - Identidad propia por persona: el pase web de Link, validado en Supabase. Hoy todas las copias CPY comparten el mismo SteamID.
@@ -46,7 +48,8 @@ Se abre en Miembros con X (A en Xbox) y luego D (Y en Xbox). Opciones:
 - **Convertir en Entrenador de experiencia:** el jugador pasa a dar experiencia a otros.
 - **Liberar:** soltar al jugador, quizá a cambio de GP.
 - **Usar objeto:** Boleto de contrato (x0), un objeto que renueva sin gastar GP.
-Falta: leer y hacer los comandos de bloquear, entrenador de experiencia, liberar y objetos.
+- Probado en vivo (05-nov): bloquear/desbloquear, liberar y convertir en entrenador.
+- Hecho en el servidor (§48), falta probarlo en vivo: usar un entrenador de experiencia, el Boleto de contrato (`admin_myclub.py dar-boletos`) y recuperar el cansancio.
 
 ## Decisiones de Frank
 - **Abandonar un partido vs COM = derrota** (05-nov). Opción `myclub.abandono_es_derrota`.

@@ -102,3 +102,16 @@ Pendiente:
 
 ## 05-nov 08:10 — Prueba en vivo del menú del jugador
 Bloquear/Desbloquear, Liberar, Convertir en Entrenador y caja de Representante (X) probados con Frank: todo OK, sin excepciones. Detalle en ESPEC_MYCLUB §42. gp_logros con 231=800 y 237=240. Pendiente: abandono vs COM (en curso), devolver a Messi (convertido por error), bit del logro de convertir (600), USE_MYCLUB_STAFF, ITEMLIST, subastas.
+
+## 05-nov 10:40 — Noche sola: todo lo que faltaba en el servidor (leer primero)
+- **Probado en vivo antes de dormir:** menú del jugador completo, convertir a un titular sin hueco (§43), vs COM con contratos OK. La pausa de vs COM no tiene «Salir»: así es el juego original, se deja.
+- **Hecho en el servidor, con pruebas (75 OK), sin probar en PES:**
+  - Dificultad de la COM por rachas (§44).
+  - Contrato en la unidad real (partidos x 90) con migración automática y gasto por partido (§45, §47).
+  - Reglas en caliente desde `reglas_myclub.json` (§46).
+  - Entrenador de experiencia, Boleto de contrato y recuperar cansancio (§48).
+  - Subastas de cazatalentos de la casa (§49).
+  - `admin_myclub.py dar-boletos`.
+- **La PC todavía corre el código viejo (4b8a9b4).** Para instalar el nuevo: con PES CERRADO, `git pull` en la carpeta del servidor y reiniciar el servidor. La migración de contratos corre sola la primera vez que PES pide el club. Copiar al config real las claves nuevas de config.ejemplo.json (staff_exp_factor, recuperar_monedas, subastas) si se quieren cambiar.
+- **Prueba en vivo sugerida (en este orden):** 1) Plantilla: los contratos se ven bien (ej. «10»). 2) Un partido vs COM: el contrato baja 1. 3) Entrenamiento: usar un entrenador de experiencia. 4) `dar-boletos` y usar el Boleto. 5) Casa de subastas: ver 6 cazatalentos y pujar.
+- **Sin resolver:** bits de habilidades de Player.bin (media/rareza reales), texto de item_type de los boletos, escala del cansancio, partido entre 2 personas (relé), identidad propia y Supabase (162 sin aplicar, necesita el SÍ de Frank).
