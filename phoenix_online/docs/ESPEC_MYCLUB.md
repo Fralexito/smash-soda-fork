@@ -403,3 +403,9 @@ La petición de estos tres solo trae pid. Todo objeto anidado va como bin.
   - USER_INFO y GP_ACHIEVEMENT muestran el saldo en pes_point.
   - BUY_MYCLUB_MARKET_COACH con use_pes_point YES cobra el «pes_point» del DT. Si no alcanza: ERR_INSUFFICIENT_PES_POINT.
 - Con false (lo predeterminado), todo sigue como antes: monedas en 0 y deshabilitadas.
+
+## 32. Respuestas que no caben en una trama (C, 05-nov 04:00)
+- La prueba completa salió bien: club tomado del catálogo, partido 3-2 contra Madrid Chamartín, WIN +240, y la pantalla de recompensas («Primera victoria del día»).
+- Pero después del OK, GET_MYCLUB_MAIN_SQUAD (18 fichas + DT, unos 1600 B cifrados) fue la primera respuesta mandada **troceada** (0x0070) a un PES real. El cliente se quedó en blanco unos 60 s y mostró C_WNJJ_0002. **El formato troceado hacia el cliente no es el correcto (o le falta algo).**
+- Arreglo provisional: MAIN_SQUAD manda solo la plantilla, sin fichas ni DT (unos 700 B). Para volver a lo completo: myclub.main_squad_completo = true.
+- **Riesgo:** GAMEPLAYERLIST con un club grande, de 30 o más jugadores con datos variados, también puede pasar de 0x410. Pendiente de RE: cómo arma el cliente las respuestas troceadas (NclMio::DivBufForEasyEncryptionVer y el lector de tipos 0x0070-72 del lado del cliente).

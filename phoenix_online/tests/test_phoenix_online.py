@@ -632,7 +632,7 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         f0 = msgpack_min.unpackb(msgpack_min.packb(ea[-1][1]["gameplayer_list"][0].valor))
         self.assertEqual(msgpack_min.unpackb(f0["level_info"])["exp_total"], 60)
         await self.srv.recibir(a, 24, {"msgid": "CMD_GET_MYCLUB_MAIN_SQUAD", "rqid": 24, "target_pid": 1})
-        self.assertEqual(ea[-1][1]["gameplayer_list_num"], 18)
+        self.assertEqual(ea[-1][1]["gameplayer_list_num"], 0)  # cabe en una trama
         await self.srv.recibir(a, 4, {"msgid": "CMD_GET_MYCLUB_MAINMENU_INFO", "rqid": 4})
         self.assertEqual((ea[-1][1]["com_match_num"], ea[-1][1]["com_countWin_num"]), (1, 1))
         await self.srv.recibir(a, 5, {"msgid": "CMD_GET_GP_ACHIEVEMENT", "rqid": 5})

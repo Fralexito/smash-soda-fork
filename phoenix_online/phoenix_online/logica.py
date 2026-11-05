@@ -1518,8 +1518,14 @@ class Servidor:
         jugadores, dts = self._plantel_myclub(s)
         club = self.datos.club(s.steam_hex or "") or {}
         plantilla = self._plantilla_principal(s)
-        fichas = [self._ficha_jugador_myclub(i, j) for i, j in self._elegidos(club, jugadores)]
-        dt = [self._ficha_dt_myclub(i, d) for i, d in enumerate(dts[:1])]
+        # C (05-nov 04:00): con las 18 fichas + DT medía ~1600 B cifrados; el envío troceado
+        # hacia el cliente aún no lo acepta PES (pantalla en blanco → C_WNJJ_0002). Hasta
+        # resolverlo, solo la plantilla (los miembros ya llevan id, dorsal, nivel y rareza);
+        # config myclub.main_squad_completo = true para volver a mandar las fichas.
+        completo = (self.cfg.get("myclub") or {}).get("main_squad_completo")
+        fichas = [self._ficha_jugador_myclub(i, j) for i, j in self._elegidos(club, jugadores)] \
+            if completo else []
+        dt = [self._ficha_dt_myclub(i, d) for i, d in enumerate(dts[:1])] if completo else []
         return {"squad": plantilla or Empaquetado({}), "gameplayer_list": fichas,
                 "gameplayer_list_num": len(fichas), "coach_list": dt, "coach_list_num": len(dt),
                 "team_name": club.get("team_name") or "",
