@@ -99,3 +99,6 @@ Pendiente:
 - **Representantes:** la lista y la caja ya abren (0d4fa63, d7ac264, 6089f7f). Falta el aviso «caducó» (ESPEC §37-38).
 - **Falta:** renovar contrato (no se encuentra la acción en el juego), pausa y abandono en vs COM, subastas, la tabla real de GP por logro.
 - Ideas de Frank en PLAN_MYCLUB: arquitectura con la web, intercambios, torneos con el club de cada uno.
+
+## 05-nov 08:10 — Prueba en vivo del menú del jugador
+Bloquear/Desbloquear, Liberar, Convertir en Entrenador y caja de Representante (X) probados con Frank: todo OK, sin excepciones. Detalle en ESPEC_MYCLUB §42. gp_logros con 231=800 y 237=240. Pendiente: abandono vs COM (en curso), devolver a Messi (convertido por error), bit del logro de convertir (600), USE_MYCLUB_STAFF, ITEMLIST, subastas.
