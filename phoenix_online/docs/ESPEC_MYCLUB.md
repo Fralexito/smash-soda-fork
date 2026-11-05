@@ -413,3 +413,10 @@ La petición de estos tres solo trae pid. Todo objeto anidado va como bin.
   - Ejemplo: un club del catálogo con 27 jugadores pasó el límite apenas se sumaron exp_total y games después del partido.
   - MAX_CIFRADO_CLIENTE ahora es 0x3D8.
 - El envío troceado está en prueba: config «tipos_troceado» (p. ej. ["0x1070","0x1071","0x1072"]) permite probar otros tipos sin tocar el código. **Mientras el troceado no funcione, un club grande no entra.** Es la prioridad número 1.
+- **Formato troceado correcto (C, 05-nov, receptor del cliente FUN_141853120 → decodificador FUN_1418566c0):**
+  - Tipos 0x10/0x60 = mensaje entero; 0x20-22 y 0x70-72 = troceado (Easy, MD5); 0x1060/0x1070-72 = variante Enhanced (SHA-256, cabecera 0x38).
+  - INICIO 0x70: interno = [total u32][largo_trozo u32][**tamaño_original u32**][zlib u8] + trozo.
+  - SIGUE 0x71 / ÚLTIMO 0x72: [largo_trozo u32] + trozo. Al llegar el 0x72, el cliente une todo y descomprime.
+  - Límite del largo cifrado de cada trama: 0x410.
+  - Nuestro error: poníamos [total][largo][zlib][4 ceros]. El cliente leía tamaño_original = 0x01000000 y zlib = 0, y no descomprimía. Corregido, tanto en el envío como en la lectura.
+  - Ojo: el rechazo con 1000 B cifrados tal vez no fue por tamaño (el límite en el código es 0x410), sino por el contenido (exp_total/games). Falta separarlo con una prueba.

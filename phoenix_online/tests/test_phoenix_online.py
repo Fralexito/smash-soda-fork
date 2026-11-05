@@ -35,7 +35,8 @@ class TestTrama(unittest.TestCase):
     def test_trama_troceada(self):
         import hashlib, struct, zlib
         from phoenix_online import nclmio
-        datos = zlib.compress(msgpack_min.packb({"msgid": "CMD_SET_AVATAR", "rqid": 3, "x": "a" * 3000}))
+        crudo = msgpack_min.packb({"msgid": "CMD_SET_AVATAR", "rqid": 3, "x": "a" * 3000})
+        datos = zlib.compress(crudo)
         mitad = len(datos) // 2
 
         def trama(tipo, seq, interno):
@@ -44,7 +45,7 @@ class TestTrama(unittest.TestCase):
             cab = struct.pack(">HHI", tipo, len(cif), seq)
             return nclmio.xor(cab + hashlib.md5(cab + cif).digest() + cif)
 
-        a = trama(0x0070, 7, struct.pack(">IIB", len(datos), mitad, 1) + b"\0\0\0\0" + datos[:mitad])
+        a = trama(0x0070, 7, struct.pack(">IIIB", len(datos), mitad, len(crudo), 1) + datos[:mitad])
         b = trama(0x0072, 8, struct.pack(">I", len(datos) - mitad) + datos[mitad:])
         lector = LectorTramas(self.codec)
         self.assertEqual(lector.alimentar(a), [])

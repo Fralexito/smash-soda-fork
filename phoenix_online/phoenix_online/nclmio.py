@@ -81,7 +81,7 @@ class Codec:
         if len(cifrado) > MAX_CIFRADO_CLIENTE:
             cifrado = self._sellar(datos, comprimir=True)
         if len(cifrado) > MAX_CIFRADO_CLIENTE:
-            return self._troceado(secuencia, zlib.compress(datos))
+            return self._troceado(secuencia, zlib.compress(datos), len(datos))
         return self._trama(tipo, secuencia, cifrado)
 
     def _trama(self, tipo, secuencia, cifrado):
@@ -90,17 +90,18 @@ class Codec:
 
     TROZO = 0x3B0  # P: cabe en MAX_CIFRADO_CLIENTE con la cabecera interna y el relleno
 
-    def _troceado(self, secuencia, comprimido):
+    def _troceado(self, secuencia, comprimido, original):
         """P (05-nov): envío troceado hacia el cliente con el MISMO formato que el cliente usa
         hacia nosotros (L: PESBUL nclmio, C: capturas 04-nov). Sin probar aún en PES; solo se
         usa cuando el mensaje no cabe en una trama (antes se cortaba la conexión).
-        INICIO 0x0070: [total u32][largo u32][zlib u8][4 bytes 0][trozo]
+        C (05-nov, receptor del cliente FUN_1418566c0):
+        INICIO 0x0070: [total u32][largo u32][tamaño_original u32][zlib u8][trozo]
         SIGUE 0x0071 / ÚLTIMO 0x0072: [largo u32][trozo]."""
         trozos = [comprimido[i:i + self.TROZO] for i in range(0, len(comprimido), self.TROZO)]
         salida = b""
         for n, t in enumerate(trozos):
             if n == 0:
-                interno = struct.pack(">IIB", len(comprimido), len(t), 1) + b"\0" * 4 + t
+                interno = struct.pack(">IIIB", len(comprimido), len(t), original, 1) + t
                 tipo = self.tipos_troceado[0]
             else:
                 interno = struct.pack(">I", len(t)) + t
@@ -142,7 +143,8 @@ class Codec:
 
 
 # L (PESBUL nclmio, 04-nov): mensajes grandes del cliente llegan en varias tramas.
-# INICIO: [total u32][largo_trozo u32][zlib u8][4 bytes][trozo]; SIGUE: [largo_trozo u32][trozo].
+# C (05-nov, decodificador del cliente FUN_1418566c0): INICIO: [total u32][largo_trozo u32]
+# [tamaño_original u32][zlib u8][trozo]; SIGUE: [largo_trozo u32][trozo].
 # Las terminales cierran el mensaje. La respuesta va con el tipo normal 0x0060.
 TIPOS_INICIO = {0x0070, 0x1070}
 TIPOS_SIGUE = {0x0071, 0x0072, 0x1071, 0x1072}
@@ -160,7 +162,7 @@ class LectorTramas:
     def _segmento(self, tipo, secuencia, interno):
         """Devuelve el mensaje cuando el troceado se completa; si no, None."""
         if tipo in TIPOS_INICIO:
-            total, largo, flag = struct.unpack(">IIB", interno[:9])
+            total, largo, _original, flag = struct.unpack(">IIIB", interno[:13])
             self._seg = (secuencia, total, flag, bytearray(interno[13:13 + largo]))
         else:
             if self._seg is None:
