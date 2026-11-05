@@ -530,7 +530,8 @@ Lectores encontrados en el juego (RE estático, sin abrir PES). Todo lo de dentr
   - DRAW_RATE sin probar: se abre con X (Perfil), y el MCP bloquea esa tecla.
 
 ## 39. Renovar contratos: tope de duración (05-nov 07:20)
-- Frank pulsó X en Miembros y NO salió renovar/extender. Nuestros jugadores tienen `contract_term` 100.
+- Frank pulsó X en Miembros y NO salió renovar/extender. Nuestros jugadores tenían `contract_term` 100.
+- **Corrección (07:35):** la hipótesis del tope era FALSA para que aparezca la opción. Aparece también con contrato 100; lo que la hizo aparecer fue mandar `contract_gp` y `contract_pes_point` en la ficha (precio 0 antes). El tope sí existe: Messi con 100 pagó 200 GP y siguió en 100.
 - Textos del juego: «renovar por 10 partidos más… con GP o Monedas», y «No se pudieron renovar los contratos de todos… algunos ya tienen la MÁXIMA DURACIÓN POSIBLE». Hay un tope, y 100 casi seguro lo alcanza, así que el menú no ofrece nada.
 - Prueba: `tools/admin_myclub.py config.json poner-contrato <persona> <partidos> <unique_id…>` baja el contrato de jugadores de prueba (30, 5…) sin reiniciar el servidor.
 - El servidor ahora limita la renovación con `myclub.renovacion_maximo` (por defecto 100).
@@ -542,3 +543,4 @@ Lectores encontrados en el juego (RE estático, sin abrir PES). Todo lo de dentr
   - Causa: mandábamos `gameplayer_unique_id` como TEXTO en `contract_term_list`, y el lector (141bf8200) lo lee como ENTERO de 64 bits. Cualquier otro tipo lo deja en 0, y el cliente no encuentra al jugador renovado.
   - Forma correcta: `{result, contract_term_list: [bin({gameplayer_unique_id: int, gameplayer_id: int, contract_term: int})], gp: int, pes_point: int}`.
   - Corregido. Antes de este arreglo el servidor sí cobró (−200 GP) y sumó +10 al contrato; el cliente no llegó a verlo.
+- **Renovar a quien ya está en el tope no cobra** (07:40). Probar el resultado visible con un jugador de contrato 30 (unique_id 1 y 2) y otro de 5 (unique_id 3): deben quedar en 40 y 15.

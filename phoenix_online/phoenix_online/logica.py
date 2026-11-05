@@ -1437,13 +1437,15 @@ class Servidor:
         cfg = self.cfg.get("myclub") or {}
         uids = [int(u) for u in m.get("gameplayer_unique_id_list") or [] if str(u).isdigit()]
         elegidos = [j for j in club.get("jugadores") or [] if j.get("gameplayer_unique_id") in uids]
-        error = self._cobrar(club, int(cfg.get("renovacion_gp") or 0) * len(elegidos),
-                             int(cfg.get("renovacion_monedas") or 0) * len(elegidos),
+        extra = int(cfg.get("renovacion_partidos") or 10)
+        tope = int(cfg.get("renovacion_maximo") or 100)  # P: el juego avisa de «máxima duración»
+        # P: a quien ya está en el tope no se le cobra (vivo 07:30: Messi con 100 pagó 200 GP)
+        a_cobrar = [j for j in elegidos if int(j.get("contract_term") or 0) < tope]
+        error = self._cobrar(club, int(cfg.get("renovacion_gp") or 0) * len(a_cobrar),
+                             int(cfg.get("renovacion_monedas") or 0) * len(a_cobrar),
                              m.get("use_pes_point") == "YES")
         if error:
             return {"result": error}
-        extra = int(cfg.get("renovacion_partidos") or 10)
-        tope = int(cfg.get("renovacion_maximo") or 100)  # P: el juego avisa de «máxima duración»
         for j in elegidos:
             j["contract_term"] = min(int(j.get("contract_term") or 0) + extra, tope)
         self.datos.guardar_club(s.steam_hex or "", club)
