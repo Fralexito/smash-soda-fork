@@ -1245,10 +1245,13 @@ class Servidor:
                 # bin por jugador {gameplayer_id, concept bin}; gameplan también arriba.
                 "pid": 0, "gameplan_data_size": len(GAMEPLAN_DEFECTO),
                 "gameplan_data": GAMEPLAN_DEFECTO, "coach_adaptability_rate": [100],
+                # C (05-nov 02:03): con un concepto por jugador la respuesta medía 1080 B cifrados
+                # y no cabía en una trama (0x410). El lector hace push por elemento: [] = vector
+                # vacío. Config myclub.rival.con_conceptos = true para volver a mandarlos.
                 "concept_data": [Empaquetado({
                     "gameplayer_id": j.get("gameplayer_id") or 0,
                     "concept": Empaquetado({k: 0 for k in self.CONCEPTO_JUGADOR})})
-                    for j in jugadores[:18]],
+                    for j in jugadores[:18]] if r.get("con_conceptos") else [],
                 "team_name_commentary_id": 0}
 
     async def c_cmd_create_myclub_team(self, s, m):

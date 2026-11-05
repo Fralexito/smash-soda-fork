@@ -76,10 +76,33 @@ class Codec:
         if len(cifrado) > MAX_CIFRADO_CLIENTE:
             cifrado = self._sellar(datos, comprimir=True)
         if len(cifrado) > MAX_CIFRADO_CLIENTE:
-            # Falta el envío segmentado (investigar en el exe cuando haga falta)
-            raise ErrorTrama(f"mensaje demasiado grande ({len(cifrado)} B) para una trama")
+            return self._troceado(secuencia, zlib.compress(datos))
+        return self._trama(tipo, secuencia, cifrado)
+
+    def _trama(self, tipo, secuencia, cifrado):
         cab = struct.pack(">HHI", tipo, len(cifrado), secuencia)
         return xor(cab + hashlib.md5(cab + cifrado).digest() + cifrado)
+
+    TROZO = 0x3E0  # P: cabe en 0x410 con la cabecera interna y el relleno
+
+    def _troceado(self, secuencia, comprimido):
+        """P (05-nov): envío troceado hacia el cliente con el MISMO formato que el cliente usa
+        hacia nosotros (L: PESBUL nclmio, C: capturas 04-nov). Sin probar aún en PES; solo se
+        usa cuando el mensaje no cabe en una trama (antes se cortaba la conexión).
+        INICIO 0x0070: [total u32][largo u32][zlib u8][4 bytes 0][trozo]
+        SIGUE 0x0071 / ÚLTIMO 0x0072: [largo u32][trozo]."""
+        trozos = [comprimido[i:i + self.TROZO] for i in range(0, len(comprimido), self.TROZO)]
+        salida = b""
+        for n, t in enumerate(trozos):
+            if n == 0:
+                interno = struct.pack(">IIB", len(comprimido), len(t), 1) + b"\0" * 4 + t
+                tipo = 0x0070
+            else:
+                interno = struct.pack(">I", len(t)) + t
+                tipo = 0x0072 if n == len(trozos) - 1 else 0x0071
+            interno += b"\0" * (-len(interno) % 8)
+            salida += self._trama(tipo, secuencia, self._enc(interno))
+        return salida
 
     def _sellar(self, datos, comprimir):
         cuerpo = zlib.compress(datos) if comprimir else datos

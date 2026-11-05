@@ -62,6 +62,16 @@ class TestTrama(unittest.TestCase):
             recibidos += lector.alimentar(flujo[i:i + 7])
         self.assertEqual([(s, m["msgid"]) for _, s, m in recibidos], [(5, "A"), (6, "B")])
 
+    def test_respuesta_grande_va_troceada(self):
+        import os
+        grande = {"msgid": "G", "x": os.urandom(3000)}
+        trama = self.codec.codificar(9, grande)
+        tipo = __import__("struct").unpack(">H", xor(trama[:2]))[0]
+        self.assertEqual(tipo, 0x0070)
+        recibidos = LectorTramas(self.codec).alimentar(trama)
+        self.assertEqual(recibidos[0][1], 9)
+        self.assertEqual(recibidos[0][2]["x"], grande["x"])
+
     def test_md5_malo(self):
         t = bytearray(xor(self.codec.codificar(1, {"msgid": "A"})))
         t[-1] ^= 1
@@ -580,6 +590,10 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         r = ea[-1][1]
         self.assertEqual(r["coach_adaptability_rate"], [100])
         self.assertEqual(r["cpu_level"], "MATCH_LEVEL_REGULAR")
+        self.assertEqual(r["concept_data"], [])
+        self.srv.cfg["myclub"]["rival"]["con_conceptos"] = True
+        await self.srv.recibir(a, 2, {"msgid": "CMD_GET_MYCLUB_VSCOM_OPPONENT", "rqid": 2})
+        r = ea[-1][1]
         self.assertEqual(len(r["concept_data"]), 18)
         el = msgpack_min.unpackb(msgpack_min.packb(r["concept_data"][3].valor))
         self.assertEqual(el["gameplayer_id"], 503)

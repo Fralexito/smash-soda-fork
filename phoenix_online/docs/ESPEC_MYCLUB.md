@@ -284,3 +284,13 @@ La petición de estos tres solo trae pid. Todo objeto anidado va como bin.
 2. Con PES cerrado: `python -m phoenix_online.servidor config.json`.
 3. Abrir PES (base) → online → myClub.
 4. Si PES se cierra: mirar el último comando del log (las peticiones MYCLUB se registran completas) y el dump en CrashDumps. Luego leer su lector en Ghidra.
+
+## 22. Respuesta del rival demasiado grande (C, 05-nov 02:03)
+- Con c9d66a0, PES ya no se cerraba: pasaba a la pantalla de carga del partido.
+- Pero el servidor lanzaba ErrorTrama: la respuesta medía 1080 B cifrados, más que el máximo de una trama (0x410). El servidor cortaba la conexión y PES mostraba «Conexión al servidor perdida. CODE:VNBP_0002».
+- Arreglo 1: concept_data = [] por defecto (vector vacío), y queda en unos 744 B. Para mandar un concepto por jugador: myclub.rival.con_conceptos = true.
+- Arreglo 2 (P, sin probar en PES): nclmio.codificar ya no lanza el error. Trocea la respuesta con el mismo formato que el cliente usa hacia nosotros:
+  - Primera trama 0x0070: [total][largo][zlib=1][4 bytes 0][trozo].
+  - Tramas siguientes 0x0071, y la última 0x0072: [largo][trozo].
+  - Todas llevan la misma secuencia.
+  - Si un día PES no lo acepta, mirar NclMio::DivBufForEasyEncryptionVer en el exe.
