@@ -499,3 +499,6 @@ Lectores encontrados en el juego (RE estático, sin abrir PES). Todo lo de dentr
   - No tiene que ver con los tiempos: las pruebas con +10 años fallaron.
   - Arreglo: cada `*_player_rarity_info` lleva al menos un elemento `{rarity, count = candidatos}`.
   - Otro aviso del mismo constructor («caja sin fichajes», 0x226028a/b) se evita con `is_use_reset` «NO» y box_size > 0.
+- Después del «caducó» (0f320ec), PES se cerraba 0,4 s después de AGENT_BOX_INFO.
+  - Causa: FUN_140d491c0 carga el banner del agente desde la URL tipo 17, `MYCLUB_AGENT_BANNER`, y GET_URLLIST no la traía. La URL quedaba NULL y daba el mismo crash que DMM_TOP el 02-nov.
+  - Arreglo: se añadió `MYCLUB_AGENT_BANNER` → `/asset/myclub-agent-banner`, que devuelve un 404 limpio.

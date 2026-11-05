@@ -287,6 +287,9 @@ class Servidor:
                  ("DMM_TOP", "/asset/dmm-top"), ("WEEKLY_INFO_BANNER", "/asset/weekly-info-banner"),
                  ("BANNER", "/asset/banner"), ("RANK", "/rank"), ("DIVISION_RANK", "/division_rank"),
                  ("AVATAR", "/avatar/AVATAR"),
+                 # C (05-nov, FUN_140d491c0): la caja del agente descarga su banner desde la
+                 # URL tipo 17; sin la clave la URL es NULL y PES se cierra al abrir la caja
+                 ("MYCLUB_AGENT_BANNER", "/asset/myclub-agent-banner"),
                  # C (PESBUL local 04-nov): clave exacta del chequeo de red; si falta, el
                  # cliente falla antes de abrir el socket UDP del relé
                  ("GET_GAMERELAY_QUALITYCHECKLIST", "/gamerelay/qualitychecklist"),
