@@ -1091,14 +1091,30 @@ class Servidor:
         self.datos.guardar_club(s.steam_hex or "", club)
         return saldo
 
+    def _plan_texto(self, guardado=None):
+        """C (05-nov, depurador): gameplan_data es TEXTO base64 (el lector lo copia como cadena
+        terminada en NUL); los bytes crudos empiezan por 0x00 y quedaban vacíos → sin tabla de
+        huecos → los 11 huecos al miembro 0 (11× Courtois, todos «(PT)»). gameplan_data_size =
+        bytes ANTES de base64 (536). Devuelve (size, texto)."""
+        v = self._de_json(guardado) if guardado else b""
+        if isinstance(v, str) and v:
+            try:
+                crudo = base64.b64decode(v, validate=True)
+            except Exception:
+                crudo = v.encode("latin-1", "replace")
+                v = base64.b64encode(crudo).decode()
+            return len(crudo), v
+        crudo = bytes(v) if isinstance(v, (bytes, bytearray)) and v else GAMEPLAN_DEFECTO
+        return len(crudo), base64.b64encode(crudo).decode()
+
     async def c_cmd_get_myclub_squad_gameplan(self, s, m):
         # C (§15.4/§17): el plan (XI inscrito + banquillo) lo guarda el servidor tal cual lo mandó
         # el cliente con SET_MYCLUB_SQUAD_GAMEPLAN; vacío = «menos de 11 inscritos»
         club = self.datos.club(s.steam_hex or "") or {}
         planes = club.get("gameplans") or {}
         p = planes.get(str(m.get("squad_id") or 1)) or {}
-        datos = self._de_json(p.get("gameplan_data", "")) or GAMEPLAN_DEFECTO
-        return {"gameplan_data_size": len(datos), "gameplan_data": datos}
+        tam, texto = self._plan_texto(p.get("gameplan_data"))
+        return {"gameplan_data_size": tam, "gameplan_data": texto}
 
     async def c_cmd_set_myclub_squad_gameplayer(self, s, m):
         # C (§17): el cliente manda los 18 inscritos (XI + 7) en orden; se guarda ese orden
@@ -1267,7 +1283,8 @@ class Servidor:
 
     RIVAL_UID_BASE = 900001  # C (05-nov): uids 1..18 chocaban con los del club propio
 
-    def _plantilla_bin(self, jugadores, coach_id, nombre, plan):
+    def _plantilla_bin(self, jugadores, coach_id, nombre, plan=None):
+        tam, texto = self._plan_texto(plan)
         # C (05-nov, partido jugado): con uids 1..18 el rival salía 11 veces «T. Courtois»;
         # cada jugador del rival necesita un unique_id propio, distinto de los del club
         miembros = [Empaquetado({
@@ -1279,7 +1296,7 @@ class Servidor:
         return Empaquetado({
             "squad_id": 1, "name": nombre, "member_list": miembros, "member_num": len(miembros),
             "is_entry_compe": "NO", "coach_id_list": [coach_id], "coach_unique_id_list": [1],
-            "gameplan_data_size": len(plan), "gameplan_data": plan, "is_club_edition": "NO",
+            "gameplan_data_size": tam, "gameplan_data": texto, "is_club_edition": "NO",
             "club_edition_type": ""})
 
     async def c_cmd_get_myclub_vscom_opponent(self, s, m):
@@ -1292,7 +1309,7 @@ class Servidor:
                 "team_name": nombre, "team_name_short": r.get("team_name_short", "RIV"),
                 "base_team_id": int(r.get("base_team_id") or 0),
                 "team_data": self._plantilla_bin(jugadores, int(r.get("coach_id") or 0), nombre,
-                                                 GAMEPLAN_DEFECTO),
+                                                 None),
                 "pes_pname": Empaquetado({"name": nombre, "xuid_one": "0",
                                           "psn_user_id": Empaquetado({"account_id": 0,
                                                                       "online_id": nombre,
@@ -1300,8 +1317,8 @@ class Servidor:
                                           "is_deleted": "0"}),
                 # Lector 141da7b80: adaptabilidad = lista de int; concept_data = lista con un
                 # bin por jugador {gameplayer_id, concept bin}; gameplan también arriba.
-                "pid": 0, "gameplan_data_size": len(GAMEPLAN_DEFECTO),
-                "gameplan_data": GAMEPLAN_DEFECTO, "coach_adaptability_rate": [100],
+                "pid": 0, "gameplan_data_size": self._plan_texto()[0],
+                "gameplan_data": self._plan_texto()[1], "coach_adaptability_rate": [100],
                 # C (05-nov 02:03): con un concepto por jugador la respuesta medía 1080 B cifrados
                 # y no cabía en una trama (0x410). El lector hace push por elemento: [] = vector
                 # vacío. Config myclub.rival.con_conceptos = true para volver a mandarlos.
@@ -1411,8 +1428,8 @@ class Servidor:
             "member_num": len(miembros), "is_entry_compe": "NO",
             "coach_id_list": [d.get("coach_id") or 0 for d in dts[:1]],
             "coach_unique_id_list": [d.get("coach_unique_id") or 1 for d in dts[:1]],
-            "gameplan_data_size": len(self._de_json(plan.get("gameplan_data", "")) or GAMEPLAN_DEFECTO),
-            "gameplan_data": self._de_json(plan.get("gameplan_data", "")) or GAMEPLAN_DEFECTO,
+            "gameplan_data_size": self._plan_texto(plan.get("gameplan_data"))[0],
+            "gameplan_data": self._plan_texto(plan.get("gameplan_data"))[1],
             "is_club_edition": "NO",
             "club_edition_type": ""})
         return {"squad_list": [plantilla], "squad_list_num": 1, "edition_squad_list": [],

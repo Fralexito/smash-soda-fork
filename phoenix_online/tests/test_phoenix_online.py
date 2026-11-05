@@ -549,11 +549,15 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         a, ea = await self.entrar("A1")
         r = self.srv.recibir
         await r(a, 1, {"msgid": "CMD_SET_MYCLUB_SQUAD_GAMEPLAN", "rqid": 1, "squad_id": 1,
-                       "gameplan_data": b"\x01\x02plan", "gameplan_data_size": 6})
+                       "gameplan_data": "AQJwbGFu", "gameplan_data_size": 6})
         self.assertEqual(ea[-1][1]["result"], "NOERR")
         await r(a, 2, {"msgid": "CMD_GET_MYCLUB_SQUAD_GAMEPLAN", "rqid": 2, "squad_id": 1})
+        # C (05-nov): texto base64 tal cual lo mandó el cliente; size = bytes sin base64
         self.assertEqual((ea[-1][1]["gameplan_data"], ea[-1][1]["gameplan_data_size"]),
-                         (b"\x01\x02plan", 6))
+                         ("AQJwbGFu", 6))
+        await r(a, 3, {"msgid": "CMD_GET_MYCLUB_SQUAD_GAMEPLAN", "rqid": 3, "squad_id": 9})
+        self.assertIsInstance(ea[-1][1]["gameplan_data"], str)
+        self.assertEqual(ea[-1][1]["gameplan_data_size"], 536)
 
     async def test_myclub_inscritos_orden(self):
         jug = [{"gameplayer_id": 100 + i} for i in range(23)]
@@ -597,7 +601,7 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(r["concept_data"]), 18)
         el = msgpack_min.unpackb(msgpack_min.packb(r["concept_data"][3].valor))
         self.assertEqual(el["gameplayer_id"], 503)
-        self.assertEqual(r["gameplan_data_size"], len(r["gameplan_data"]))
+        self.assertEqual((r["gameplan_data_size"], type(r["gameplan_data"])), (536, str))
 
     async def test_myclub_club_propio_por_cuenta_y_gp(self):
         jug = [{"gameplayer_id": 100 + i} for i in range(18)]

@@ -343,3 +343,12 @@ La petición de estos tres solo trae pid. Todo objeto anidado va como bin.
 - Lección: antes de mandar un objeto suelto, confirmar en el lector si es una lista.
 - Diff del gameplan guardado por el cliente contra GAMEPLAN_DEFECTO: son idénticos. El gameplan no explica los «(PT)».
 - A/B: con «inscritos» guardado y DT 24, el Barcelona sale con sus posiciones; con club nuevo (sin «inscritos», DT 8), todos salen «(PT)». Se sigue investigando.
+
+## 27. CAUSA de los 11 Courtois, los «(PT)» y el partido que acaba solo (C, 05-nov, x64dbg en vivo, solo lectura)
+- El cliente guarda bien los 18 miembros del rival: 18 llamadas a 141da8d25, con unique_id 900001..900018 y gameplayer_id y dorsales distintos.
+- **gameplan_data es TEXTO base64.** El lector lo copia como cadena terminada en NUL, y el cliente lo manda así: 716 caracteres, con gameplan_data_size = 536, el tamaño en bytes antes del base64.
+- Nosotros devolvíamos bytes crudos que empiezan por 0x00, así que como cadena quedaban vacíos. Sin tabla de huecos, los 11 huecos apuntaban al miembro 0: 11× Courtois (PT)(C), y en un club nuevo todos los propios salían «(PT)».
+- gameend_reason INJURY = un equipo con menos de 7 jugadores válidos. Con 11 veces el mismo jugador, el partido acababa solo, con victoria 3-0 para el local.
+- Tabla de enum de gameend_reason: 1402190c0 (NORMAL_END, DISCONN, … INJURY, GIVEUP …).
+- Arreglo: _plan_texto() devuelve siempre (536, texto base64) en SQUADLIST, GET_MYCLUB_SQUAD_GAMEPLAN y el rival (team_data y nivel superior). Un plan guardado por el cliente se devuelve tal cual.
+- La respuesta del rival queda en unos 880 B cifrados: cabe en una sola trama.
