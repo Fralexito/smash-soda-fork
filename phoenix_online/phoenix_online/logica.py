@@ -1204,9 +1204,14 @@ class Servidor:
                                                                       "online_id": nombre,
                                                                       "is_valid_cache": "1"}),
                                           "is_deleted": "0"}),
-                "pid": 0, "coach_adaptability_rate": 100,
-                "concept_data": Empaquetado({"concept": Empaquetado(
-                    {k: 0 for k in self.CONCEPTO_JUGADOR})}),
+                # Lector 141da7b80: adaptabilidad = lista de int; concept_data = lista con un
+                # bin por jugador {gameplayer_id, concept bin}; gameplan también arriba.
+                "pid": 0, "gameplan_data_size": len(GAMEPLAN_DEFECTO),
+                "gameplan_data": GAMEPLAN_DEFECTO, "coach_adaptability_rate": [100],
+                "concept_data": [Empaquetado({
+                    "gameplayer_id": j.get("gameplayer_id") or 0,
+                    "concept": Empaquetado({k: 0 for k in self.CONCEPTO_JUGADOR})})
+                    for j in jugadores[:18]],
                 "team_name_commentary_id": 0}
 
     async def c_cmd_create_myclub_team(self, s, m):

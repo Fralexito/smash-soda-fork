@@ -572,6 +572,19 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         el = msgpack_min.unpackb(msgpack_min.packb(lista[2].valor))
         self.assertEqual(msgpack_min.unpackb(el["gameplayer_id_info"])["gameplayer_id"], 102)
 
+    async def test_myclub_rival_com_tipos(self):
+        self.srv.cfg.setdefault("myclub", {})["rival"] = {
+            "jugadores": [{"gameplayer_id": 500 + i} for i in range(18)], "coach_id": 24}
+        a, ea = await self.entrar("A1")
+        await self.srv.recibir(a, 1, {"msgid": "CMD_GET_MYCLUB_VSCOM_OPPONENT", "rqid": 1})
+        r = ea[-1][1]
+        self.assertEqual(r["coach_adaptability_rate"], [100])
+        self.assertEqual(r["cpu_level"], "MATCH_LEVEL_REGULAR")
+        self.assertEqual(len(r["concept_data"]), 18)
+        el = msgpack_min.unpackb(msgpack_min.packb(r["concept_data"][3].valor))
+        self.assertEqual(el["gameplayer_id"], 503)
+        self.assertEqual(r["gameplan_data_size"], len(r["gameplan_data"]))
+
     def test_avatar_http_vacio_y_guardado(self):
         r = self.srv.respuesta_http({"msgid": "CMD_GET_AVATAR_HTTP", "rqid": "3", "pid": "7"})
         self.assertEqual((r["result"], r["avatar_data"], r["avatar_data_size"]), ("NOERR", "", 0))
