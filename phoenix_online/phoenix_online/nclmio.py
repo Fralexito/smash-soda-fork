@@ -20,7 +20,9 @@ from . import msgpack_min
 XOR_CLAVE = bytes((0x5B, 0x9F, 0x2E, 0x64))
 TIPO_USUAL = 0x0060
 CABECERA = 24
-MAX_CIFRADO_CLIENTE = 0x410  # el cliente descarta tramas más grandes
+# C (05-nov, en vivo): 984 B cifrados (trama 1008) entra; 1000 (trama 1024 = 0x400) el cliente
+# la rechaza (C_JZZX_0002). Límite seguro probado = 0x3D8.
+MAX_CIFRADO_CLIENTE = 0x3D8
 SHA256_CLAVE = "e8b7fa83e4f9b37efaaa3ae9dab744ca903dc08c565304ac6dd658f211f60519"
 
 
@@ -49,11 +51,14 @@ def verificar_clave(clave):
 
 
 class Codec:
-    def __init__(self, clave, blowfish_le=False, comprobar_clave=True):
+    def __init__(self, clave, blowfish_le=False, comprobar_clave=True, tipos_troceado=None):
         if comprobar_clave and not verificar_clave(clave):
             raise ValueError("la clave NclMio no coincide con el SHA-256 esperado")
         self._cifra = _blowfish(clave)
         self.blowfish_le = blowfish_le
+        # P: tipos del envío troceado hacia el cliente (inicio, sigue, último). 0x0070-72 no los
+        # aceptó PES (05-nov); config «tipos_troceado» permite probar otros (p. ej. 0x1070-72)
+        self.tipos_troceado = tuple(tipos_troceado or (0x0070, 0x0071, 0x0072))
 
     def _enc(self, b):
         if self.blowfish_le:
@@ -83,7 +88,7 @@ class Codec:
         cab = struct.pack(">HHI", tipo, len(cifrado), secuencia)
         return xor(cab + hashlib.md5(cab + cifrado).digest() + cifrado)
 
-    TROZO = 0x3E0  # P: cabe en 0x410 con la cabecera interna y el relleno
+    TROZO = 0x3B0  # P: cabe en MAX_CIFRADO_CLIENTE con la cabecera interna y el relleno
 
     def _troceado(self, secuencia, comprimido):
         """P (05-nov): envío troceado hacia el cliente con el MISMO formato que el cliente usa
@@ -96,10 +101,10 @@ class Codec:
         for n, t in enumerate(trozos):
             if n == 0:
                 interno = struct.pack(">IIB", len(comprimido), len(t), 1) + b"\0" * 4 + t
-                tipo = 0x0070
+                tipo = self.tipos_troceado[0]
             else:
                 interno = struct.pack(">I", len(t)) + t
-                tipo = 0x0072 if n == len(trozos) - 1 else 0x0071
+                tipo = self.tipos_troceado[2] if n == len(trozos) - 1 else self.tipos_troceado[1]
             interno += b"\0" * (-len(interno) % 8)
             salida += self._trama(tipo, secuencia, self._enc(interno))
         return salida

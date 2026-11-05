@@ -409,3 +409,7 @@ La petición de estos tres solo trae pid. Todo objeto anidado va como bin.
 - Pero después del OK, GET_MYCLUB_MAIN_SQUAD (18 fichas + DT, unos 1600 B cifrados) fue la primera respuesta mandada **troceada** (0x0070) a un PES real. El cliente se quedó en blanco unos 60 s y mostró C_WNJJ_0002. **El formato troceado hacia el cliente no es el correcto (o le falta algo).**
 - Arreglo provisional: MAIN_SQUAD manda solo la plantilla, sin fichas ni DT (unos 700 B). Para volver a lo completo: myclub.main_squad_completo = true.
 - **Riesgo:** GAMEPLAYERLIST con un club grande, de 30 o más jugadores con datos variados, también puede pasar de 0x410. Pendiente de RE: cómo arma el cliente las respuestas troceadas (NclMio::DivBufForEasyEncryptionVer y el lector de tipos 0x0070-72 del lado del cliente).
+- **Límite real (C, en vivo, 04:08):** una respuesta de 984 B cifrados (trama de 1008) entra; una de 1000 (trama de 1024 = 0x400) el cliente la rechaza, con C_JZZX_0002 en GAMEPLAYERLIST.
+  - Ejemplo: un club del catálogo con 27 jugadores pasó el límite apenas se sumaron exp_total y games después del partido.
+  - MAX_CIFRADO_CLIENTE ahora es 0x3D8.
+- El envío troceado está en prueba: config «tipos_troceado» (p. ej. ["0x1070","0x1071","0x1072"]) permite probar otros tipos sin tocar el código. **Mientras el troceado no funcione, un club grande no entra.** Es la prioridad número 1.

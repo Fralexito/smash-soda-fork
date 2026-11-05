@@ -142,7 +142,8 @@ async def principal(ruta_config):
     with open(ruta_config, encoding="utf-8") as f:
         cfg = json.load(f)
     with open(cfg["clave_nclmio"], "rb") as f:
-        codec = Codec(f.read(), blowfish_le=cfg.get("blowfish_le", False))
+        codec = Codec(f.read(), blowfish_le=cfg.get("blowfish_le", False),
+                      tipos_troceado=[int(str(t), 0) for t in cfg.get("tipos_troceado") or []] or None)
     if cfg.get("turn"):
         # el secreto TURN nunca va en el archivo: variable de entorno
         cfg["turn"]["secreto"] = os.environ["PHOENIX_TURN_SECRETO"]
