@@ -199,3 +199,13 @@ La petición de estos tres solo trae pid. Todo objeto anidado va como bin.
   - El ejemplo de config trae 23 jugadores del Barcelona en el orden de PlayerAssignment (Messi = 7511 en el hueco 8).
 - Nombre del club: va en myclub.club_de_prueba (team_name y team_name_short). Si no, «Nom. del equipo» sale vacío.
 - Costo: la suma de gameplayer_cost de los 18 convocados debe ser ≤ management del DT (70). Por defecto, el costo ahora es 3.
+
+## 17. Alineación inscrita = gameplan (C/P, 05-nov)
+- En vivo: «No puedes elegir la estrategia ya que tu Plantilla tiene menos de 11 jugadores inscritos», aunque member_list trae 23 jugadores.
+  - El «!» rojo = jugador no inscrito.
+  - P: la alineación inscrita (XI + banquillo) está en gameplan_data (SQUAD_GAMEPLAN), que hoy va vacío.
+- Enum del cliente para validar la plantilla: NOERR, NOT_ENOUGH_PLAYER, INCLUDES_RENTAL, RED_CARD, CONTRACT (fn 14113f940, tabla 1437f2560). P: es el result de SET_MYCLUB_MAIN_SQUAD.
+- Implementado:
+  - SET_MYCLUB_SQUAD_GAMEPLAN guarda la petición tal cual, por squad_id; los bytes van en base64 dentro del JSON del club.
+  - GET_SQUAD_GAMEPLAN y SQUADLIST la devuelven.
+  - Toda orden MYCLUB sin manejador se registra completa en el log.

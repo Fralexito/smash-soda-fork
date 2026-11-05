@@ -532,6 +532,16 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(sq["member_num"], 11)
         msgpack_min.packb(m)
 
+    async def test_myclub_gameplan_se_guarda(self):
+        a, ea = await self.entrar("A1")
+        r = self.srv.recibir
+        await r(a, 1, {"msgid": "CMD_SET_MYCLUB_SQUAD_GAMEPLAN", "rqid": 1, "squad_id": 1,
+                       "gameplan_data": b"\x01\x02plan", "gameplan_data_size": 6})
+        self.assertEqual(ea[-1][1]["result"], "NOERR")
+        await r(a, 2, {"msgid": "CMD_GET_MYCLUB_SQUAD_GAMEPLAN", "rqid": 2, "squad_id": 1})
+        self.assertEqual((ea[-1][1]["gameplan_data"], ea[-1][1]["gameplan_data_size"]),
+                         (b"\x01\x02plan", 6))
+
     def test_avatar_http_vacio_y_guardado(self):
         r = self.srv.respuesta_http({"msgid": "CMD_GET_AVATAR_HTTP", "rqid": "3", "pid": "7"})
         self.assertEqual((r["result"], r["avatar_data"], r["avatar_data_size"]), ("NOERR", "", 0))

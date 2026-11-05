@@ -245,6 +245,9 @@ class Servidor:
         else:
             # Desconocido: NOERR mínimo destraba los GET_*; se registra para investigarlo
             log.warning("comando sin manejador: %s campos=%s", msgid, sorted(msg))
+            if "MYCLUB" in msgid:
+                # myClub: la petición completa sirve para deducir formatos (gameplan, plantilla…)
+                log.warning("peticion completa %s: %r", msgid, msg)
             extra = {}
         result = extra.pop("result", NOERR)
         sesion.enviar({"msgid": msgid, "rqid": rqid, "result": result, **extra})
@@ -1010,8 +1013,45 @@ class Servidor:
     async def c_cmd_get_myclub_itemlist(self, s, m):
         return {"item_list": [], "item_list_num": 0}  # C (§15.3)
 
+    @staticmethod
+    def _a_json(v):
+        """bytes -> {"b64": ...} para guardarlo en el JSON del club tal cual llegó."""
+        if isinstance(v, (bytes, bytearray)):
+            return {"b64": base64.b64encode(bytes(v)).decode()}
+        return v
+
+    @staticmethod
+    def _de_json(v):
+        if isinstance(v, dict) and set(v) == {"b64"}:
+            return base64.b64decode(v["b64"])
+        return v
+
+    def _club_o_prueba(self, s):
+        """Club guardado; si no hay, se crea uno a partir de club_de_prueba para poder guardar."""
+        club = self.datos.club(s.steam_hex or "")
+        if club is None:
+            base = (self.cfg.get("myclub") or {}).get("club_de_prueba")
+            club = dict(base) if isinstance(base, dict) else {}
+        return club
+
     async def c_cmd_get_myclub_squad_gameplan(self, s, m):
-        return {"gameplan_data_size": 0, "gameplan_data": ""}  # C (§15.4)
+        # C (§15.4/§17): el plan (XI inscrito + banquillo) lo guarda el servidor tal cual lo mandó
+        # el cliente con SET_MYCLUB_SQUAD_GAMEPLAN; vacío = «menos de 11 inscritos»
+        club = self.datos.club(s.steam_hex or "") or {}
+        planes = club.get("gameplans") or {}
+        p = planes.get(str(m.get("squad_id") or 1)) or {}
+        datos = self._de_json(p.get("gameplan_data", ""))
+        return {"gameplan_data_size": p.get("gameplan_data_size", len(datos) if datos else 0),
+                "gameplan_data": datos}
+
+    async def c_cmd_set_myclub_squad_gameplan(self, s, m):
+        log.warning("peticion completa CMD_SET_MYCLUB_SQUAD_GAMEPLAN: %r", m)
+        club = self._club_o_prueba(s)
+        planes = club.setdefault("gameplans", {})
+        planes[str(m.get("squad_id") or 1)] = {
+            k: self._a_json(v) for k, v in m.items() if k not in ("msgid", "rqid", "client", "svrtype")}
+        self.datos.guardar_club(s.steam_hex or "", club)
+        return {}
 
     async def c_cmd_set_myclub_main_squad(self, s, m):
         return {}  # C (§15.5): solo msgid/rqid/result
@@ -1159,6 +1199,7 @@ class Servidor:
         if not jugadores:
             return {"squad_list": [], "squad_list_num": 0, "edition_squad_list": [],
                     "edition_squad_list_num": 0, "main_squad_id": 0, "cloud_squad_id": 0}
+        plan = ((self.datos.club(s.steam_hex or "") or {}).get("gameplans") or {}).get("1") or {}
         miembros = [Empaquetado({
             "gameplayer_unique_id": j.get("gameplayer_unique_id") or i + 1,
             "gameplayer_id": j.get("gameplayer_id") or 0,
@@ -1171,7 +1212,8 @@ class Servidor:
             "member_num": len(miembros), "is_entry_compe": "NO",
             "coach_id_list": [d.get("coach_id") or 0 for d in dts[:1]],
             "coach_unique_id_list": [d.get("coach_unique_id") or 1 for d in dts[:1]],
-            "gameplan_data_size": 0, "gameplan_data": "", "is_club_edition": "NO",
+            "gameplan_data_size": plan.get("gameplan_data_size", 0),
+            "gameplan_data": self._de_json(plan.get("gameplan_data", "")), "is_club_edition": "NO",
             "club_edition_type": ""})
         return {"squad_list": [plantilla], "squad_list_num": 1, "edition_squad_list": [],
                 "edition_squad_list_num": 0, "main_squad_id": 1, "cloud_squad_id": 0}
