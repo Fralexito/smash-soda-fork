@@ -775,6 +775,21 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         fila = msgpack_min.unpackb(msgpack_min.packb(ea[-1][1]["contract_term_list"][0].valor))
         self.assertEqual(fila["contract_term"], antes + 10)
 
+    async def test_myclub_logros_gp(self):
+        self.srv.cfg = {**self.srv.cfg, "myclub": {
+            "jugadores": [{"gameplayer_id": 1}], "entrenadores": [{"coach_id": 8}],
+            "club_de_prueba": {"team_name": "P", "gp": 1000}, "gp_logros": {"33": 1200}}}
+        a, ea = await self.entrar("A1")
+        r = self.srv.recibir
+        await r(a, 1, {"msgid": "CMD_SET_GP_ACHIEVEMENT", "rqid": 1,
+                       "new_achievement_bit_array": [0b101, 0b10]})
+        self.assertEqual(ea[-1][1]["all_gp"], 1000 + 300 + 300 + 1200)
+        await r(a, 2, {"msgid": "CMD_SET_GP_ACHIEVEMENT", "rqid": 2,
+                       "new_achievement_bit_array": [0b101, 0b10]})
+        self.assertEqual(ea[-1][1]["all_gp"], 2800)  # ya cobrados: no paga dos veces
+        await r(a, 3, {"msgid": "CMD_GET_GP_ACHIEVEMENT", "rqid": 3})
+        self.assertEqual(ea[-1][1]["all_achievement_bit_array"], [5, 2])
+
     async def test_myclub_monedas_gratis(self):
         self.srv.cfg = {**self.srv.cfg, "myclub": {
             "jugadores": [{"gameplayer_id": 1}], "entrenadores": [{"coach_id": 8}],

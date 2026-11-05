@@ -472,6 +472,8 @@
     "abandono_es_derrota": true,
     "motivos_abandono": [
       "GIVEUP"
-    ]
+    ],
+    "gp_logro_defecto": 300,
+    "gp_logros": {}
   }
 }

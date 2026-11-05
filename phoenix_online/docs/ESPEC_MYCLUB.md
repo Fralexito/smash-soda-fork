@@ -455,3 +455,16 @@ Lectores encontrados en el juego (RE estático, sin abrir PES). Todo lo de dentr
 - Falta ver en vivo si el icono aparece en la pausa y, si no aparece, qué lo esconde. Puede ser una regla de Konami.
 - **Decisión de Frank:** abandonar cuenta como derrota. Si `gameend_reason` está en `myclub.motivos_abandono` (por defecto ["GIVEUP"]), el resultado es LOSE, con los GP de derrota. Se apaga con `myclub.abandono_es_derrota = false`.
 - DISCONN no cuenta por defecto, porque puede ser culpa de la red o del servidor.
+
+## 36. Logros de GP durante el partido (C, 05-nov)
+- En vivo, durante el partido salen avisos como «Arrancaste PES 2021 · 240», «Pared · 600» o «Dribble en una baldosa · 1200». Llegan como `CMD_SET_GP_ACHIEVEMENT`. Antes se contestaba NOERR sin sumar nada.
+- Lectores 141bb27a0 y 141bb2e40.
+  - Petición: `new_achievement_bit_array`, una lista de palabras de bits de los logros de la sesión. **No trae importes.**
+  - Respuesta: `all_gp` (el saldo después de sumar) y `all_achievement_bit_array` (todos los logros ya cobrados, para que el cliente no vuelva a avisar).
+- Servidor:
+  - Guarda los bits en `club.logros_bits`.
+  - Cada bit nuevo, con número = palabra×32 + bit, paga `myclub.gp_logros["<n>"]`, o `myclub.gp_logro_defecto` (300) si no está en la tabla.
+  - Nunca paga dos veces el mismo bit.
+  - Queda anotado en `club.logros_cobrados`.
+  - `GET_GP_ACHIEVEMENT` devuelve también los bits.
+- Falta: la tabla real de importes por logro, buscándola en los .cpk. El log guarda las palabras crudas para armarla.

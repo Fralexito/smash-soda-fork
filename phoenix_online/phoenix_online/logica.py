@@ -28,7 +28,7 @@ CONFIRMACIONES = {
     "CMD_LEAVE_OFFLINE_MODE", "CMD_SEND_HEARTBEAT", "CMD_SET_ROOM_OPTION",
     # L (PESBUL): estos también se contestan solo con NOERR
     "CMD_CHECK_CHEAT", "CMD_GET_DMM_NOTIFICATION", "CMD_GET_URGENT_ANNOUNCEMENT",
-    "CMD_FINISH_SEASON", "CMD_SET_GP_ACHIEVEMENT",
+    "CMD_FINISH_SEASON",
 }
 
 # C (§17, capturado 05-nov): gameplan que el propio cliente generó para un 4-2-3-1 con 18
@@ -2138,8 +2138,41 @@ class Servidor:
         # C (05-nov): el cliente la pide antes del partido y pone all_gp en la barra superior;
         # con 0 fijo la barra quedaba en «G 0» tras jugar. Se devuelve el saldo del club.
         club = self._club_inicial(s) or {}
-        return {"all_gp": int(club.get("gp") or 0), "all_achievement_bit_array": [],
+        return {"all_gp": int(club.get("gp") or 0),
+                "all_achievement_bit_array": list(club.get("logros_bits") or []),
                 "pes_point": self._monedas(club)}
+
+    async def c_cmd_set_gp_achievement(self, s, m):
+        # C (05-nov, lectores 141bb27a0/141bb2e40): el cliente manda new_achievement_bit_array
+        # (palabras de bits de los logros de la sesión, SIN importes) y espera all_gp y
+        # all_achievement_bit_array (todos los ya cobrados). P: cada bit NUEVO paga
+        # myclub.gp_logros["<bit>"] o myclub.gp_logro_defecto (300). Bit = palabra*32 + bit.
+        club = self._club_inicial(s)
+        if club is None:
+            return {"all_gp": 0, "all_achievement_bit_array": []}
+        nuevos = [int(x) & 0xFFFFFFFF for x in m.get("new_achievement_bit_array") or []
+                  if isinstance(x, int)]
+        viejos = list(club.get("logros_bits") or [])
+        viejos += [0] * (len(nuevos) - len(viejos))
+        cfg = self.cfg.get("myclub") or {}
+        tabla = cfg.get("gp_logros") or {}
+        por_defecto = int(cfg.get("gp_logro_defecto", 300))
+        ganado, bits = 0, []
+        for i, palabra in enumerate(nuevos):
+            recien = palabra & ~viejos[i]
+            for b in range(32):
+                if recien >> b & 1:
+                    bits.append(i * 32 + b)
+                    ganado += int(tabla.get(str(i * 32 + b), por_defecto))
+            viejos[i] |= palabra
+        log.info("myClub %s logros nuevos %s (+%d GP), crudo %s", s.steam_hex, bits, ganado, nuevos)
+        club["logros_bits"] = viejos
+        if ganado:
+            club["gp"] = int(club.get("gp") or 0) + ganado
+            club.setdefault("logros_cobrados", []).append(
+                {"hora": int(time.time()), "bits": bits, "gp": ganado})
+        self.datos.guardar_club(s.steam_hex or "", club)
+        return {"all_gp": int(club.get("gp") or 0), "all_achievement_bit_array": viejos}
 
     async def c_cmd_get_myclub_commentary_info(self, s, m):
         # C (05-nov, lector 141c4ced0): datos para el comentarista. P: listas vacías válidas.
