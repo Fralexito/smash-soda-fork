@@ -1803,7 +1803,13 @@ class Servidor:
         """C (05-nov, 2 partidos reales): el ganador llega en winner_side ∈ WINNER_HOME/AWAY/NONE
         (NONE = empate); NO llegan goles. Otros campos: gameend_reason (NORMAL_END, INJURY…),
         cpu_level «NORMAL», ex_flag/pk_flag, rtt. P: los pares de goles quedan por si acaso.
-        Devuelve WIN/DRAW/LOSE/""."""
+        Devuelve WIN/DRAW/LOSE/"".
+        Decisión de Frank (05-nov): abandonar cuenta como derrota. Se apaga con
+        myclub.abandono_es_derrota = false; los motivos se cambian con myclub.motivos_abandono."""
+        cfg = self.cfg.get("myclub") or {}
+        if cfg.get("abandono_es_derrota", True) and \
+                m.get("gameend_reason") in (cfg.get("motivos_abandono") or ["GIVEUP"]):
+            return "LOSE"
         orden = [m.get("winner_side")] + list(m.values())
         for v in orden:
             if isinstance(v, str) and v.startswith("WINNER_"):

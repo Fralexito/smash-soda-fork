@@ -468,6 +468,10 @@
     ],
     "renovacion_partidos": 10,
     "renovacion_gp": 200,
-    "renovacion_monedas": 2
+    "renovacion_monedas": 2,
+    "abandono_es_derrota": true,
+    "motivos_abandono": [
+      "GIVEUP"
+    ]
   }
 }

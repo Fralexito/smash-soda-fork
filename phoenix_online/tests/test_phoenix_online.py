@@ -651,6 +651,9 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(d({"winner_side": "WINNER_AWAY"}), "LOSE")
         self.assertEqual(d({"home_score": 1, "away_score": 2, "side": "AWAY"}), "WIN")
         self.assertEqual(d({}), "")
+        self.assertEqual(d({"winner_side": "WINNER_HOME", "gameend_reason": "GIVEUP"}), "LOSE")
+        self.srv.cfg = {**self.srv.cfg, "myclub": {"abandono_es_derrota": False}}
+        self.assertEqual(d({"winner_side": "WINNER_HOME", "gameend_reason": "GIVEUP"}), "WIN")
 
     async def test_myclub_tienda_y_mercado_dt(self):
         self.srv.cfg = {**self.srv.cfg, "myclub": {"mercado_dt": [24, {"coach_id": 37, "gp": 5000}]}}

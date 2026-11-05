@@ -39,6 +39,7 @@ Frank preguntó si todo se puede armar y mantener desde su página. Sí, en 3 pi
 - Va en el paso 5. Antes de eso, cada sección de config.json se pasa tal cual a una tabla.
 
 ## Decisiones de Frank
+- **Abandonar un partido vs COM = derrota** (05-nov). Opción `myclub.abandono_es_derrota`.
 - **Monedas de myClub:** solo como premio gratis, con la opción `myclub.monedas_gratis`. **Nunca se venden** (regla: nada de dinero real).
 - **Dar GP o monedas a una persona:** `tools/admin_myclub.py`. Hoy es por consola; más adelante será un botón en la web.
 - **Modelo:** usar Opus para leer el juego (ingeniería inversa) y avisar cuando se pueda volver a Sonnet.

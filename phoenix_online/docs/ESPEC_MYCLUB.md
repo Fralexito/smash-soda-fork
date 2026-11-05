@@ -449,3 +449,9 @@ Lectores encontrados en el juego (RE estático, sin abrir PES). Todo lo de dentr
   - Coincide con la selección nacional en el 89 % (1173 de 1311). El resto son jugadores con asignación mixta.
 - **La media no está guardada**, porque el juego la calcula con las habilidades. Los bytes +4..+59 tienen altura, peso, pie y habilidades (unos 8 bits por atributo), y aún no están separados uno a uno. El cliente pinta la media desde su propia base por gameplayer_id.
 - `tools/catalogo_pesdb.py --player Player.bin` ya guarda `posicion`, `posicion_txt` y `nacion` en el catálogo.
+
+## 35. Abandonar el partido vs COM (05-nov)
+- C: el flujo del juego trae la salida: `Match/MatchPause.json` (`02_exit`) → `Match/MatchDiscontinue` → `4_toMyClubMain` → `Online/CpuMatch/ProcessMatchEnd`.
+- Falta ver en vivo si el icono aparece en la pausa y, si no aparece, qué lo esconde. Puede ser una regla de Konami.
+- **Decisión de Frank:** abandonar cuenta como derrota. Si `gameend_reason` está en `myclub.motivos_abandono` (por defecto ["GIVEUP"]), el resultado es LOSE, con los GP de derrota. Se apaga con `myclub.abandono_es_derrota = false`.
+- DISCONN no cuenta por defecto, porque puede ser culpa de la red o del servidor.
