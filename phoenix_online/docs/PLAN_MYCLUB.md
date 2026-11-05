@@ -29,6 +29,10 @@ Detalles técnicos: `ESPEC_MYCLUB.md`. Cómo se logró: `GUIA_MYCLUB_REVIVIDO.md
 
 ## Ideas de Frank, apuntadas para después
 - **Leyendas y jugadores propios:** se puede, si están en la base de datos del juego o del parche. El servidor solo reparte los números de jugador. Todos los que jueguen online necesitan la misma base.
+- **Varias cartas del mismo jugador con distinto valor** (pedido de Frank):
+  - (a) Seguro: copias del jugador en la base del parche, con otro número y otras medias.
+  - (b) Por probar en el paso 2: un mismo gameplayer_id con default_rarity, default_overall y enhanced_parameters distintos en la ficha del servidor. Falta confirmar que PES los usa en el partido.
+- **Jugadores propios en la base:** se agregan en la base del parche y el catálogo los toma solos.
 - **Usar otra base de datos o el parche propio:** volver a correr el catálogo con esa base. Si cambian los números de los jugadores, pasar los clubes existentes a la base nueva (dejarlo automático).
 - **Diseño y color de las cartas:**
   - Son imágenes del juego: se cambian con un mod gráfico de Sider (prender/apagar), y solo lo ve quien tenga el parche.
