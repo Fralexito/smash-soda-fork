@@ -544,3 +544,6 @@ Lectores encontrados en el juego (RE estático, sin abrir PES). Todo lo de dentr
   - Forma correcta: `{result, contract_term_list: [bin({gameplayer_unique_id: int, gameplayer_id: int, contract_term: int})], gp: int, pes_point: int}`.
   - Corregido. Antes de este arreglo el servidor sí cobró (−200 GP) y sumó +10 al contrato; el cliente no llegó a verlo.
 - **Renovar a quien ya está en el tope no cobra** (07:40). Probar el resultado visible con un jugador de contrato 30 (unique_id 1 y 2) y otro de 5 (unique_id 3): deben quedar en 40 y 15.
+- **07:35, RENOVAR CONTRATO FUNCIONA en vivo (f4eadf2).** «M. Ter Stegen renovó su contrato.» sin congelarse. Contrato 30 → 40, −200 GP.
+  - Además se cobró un logro: bit 225 («renovar un contrato», +300), así que el saldo quedó en 24 100.
+  - Falta ver a Lenglet (5 → 15) y el contrato nuevo en la lista de miembros.
