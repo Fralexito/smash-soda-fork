@@ -611,7 +611,8 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         await self.srv.recibir(b, 1, {"msgid": "CMD_GET_MYCLUB_USER_INFO", "rqid": 1})
         self.assertEqual((ea[-1][1]["gp"], eb[-1][1]["gp"]), (1000, 1000))
         await self.srv.recibir(a, 2, {"msgid": "CMD_SET_MYCLUB_VSCOM_GAMERESULT", "rqid": 2,
-                                      "winner": "WINNER_HOME", "side": "HOME"})
+                                      "winner_side": "WINNER_HOME",
+                                      "gameend_reason": "NORMAL_END", "cpu_level": "NORMAL"})
         self.assertEqual(ea[-1][1]["result"], "NOERR")
         await self.srv.recibir(a, 3, {"msgid": "CMD_GET_MYCLUB_USER_INFO", "rqid": 3})
         await self.srv.recibir(b, 3, {"msgid": "CMD_GET_MYCLUB_USER_INFO", "rqid": 3})
@@ -624,7 +625,8 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
     def test_myclub_desenlace_vscom(self):
         d = self.srv._desenlace_vscom
         self.assertEqual(d({"winner": "WINNER_AWAY", "side": "HOME"}), "LOSE")
-        self.assertEqual(d({"winner": "WINNER_DRAW"}), "DRAW")
+        self.assertEqual(d({"winner_side": "WINNER_NONE"}), "DRAW")
+        self.assertEqual(d({"winner_side": "WINNER_AWAY"}), "LOSE")
         self.assertEqual(d({"home_score": 1, "away_score": 2, "side": "AWAY"}), "WIN")
         self.assertEqual(d({}), "")
 

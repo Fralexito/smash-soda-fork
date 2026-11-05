@@ -1212,9 +1212,13 @@ class Servidor:
                 "parameters": [], "is_cost_over": "NO"}))
         return {"param_playerlist": salida}
 
+    RIVAL_UID_BASE = 900001  # C (05-nov): uids 1..18 chocaban con los del club propio
+
     def _plantilla_bin(self, jugadores, coach_id, nombre, plan):
+        # C (05-nov, partido jugado): con uids 1..18 el rival salía 11 veces «T. Courtois»;
+        # cada jugador del rival necesita un unique_id propio, distinto de los del club
         miembros = [Empaquetado({
-            "gameplayer_unique_id": j.get("gameplayer_unique_id") or i + 1,
+            "gameplayer_unique_id": j.get("gameplayer_unique_id") or self.RIVAL_UID_BASE + i,
             "gameplayer_id": j.get("gameplayer_id") or 0,
             "uniform_number": j.get("uniform_number") or i + 1,
             "player_level": j.get("level") or 1, "parameters": [],
@@ -1370,16 +1374,23 @@ class Servidor:
     async def c_cmd_reqwatch_myclub_auction_refunded_gp(self, s, m):
         return {"refunded_gp_list": [], "total_gp": 0}
 
-    @staticmethod
-    def _desenlace_vscom(m):
-        """P: forma del resultado aún sin captura. Se aceptan un texto WINNER_* o el par de
-        goles (score/opponent_score o home_score/away_score con side). Devuelve WIN/DRAW/LOSE/""."""
-        for v in m.values():
+    def _lado_propio(self):
+        """El jugador ocupa el lado contrario al del rival COM (config myclub.rival.side)."""
+        r = ((self.cfg.get("myclub") or {}).get("rival") or {}).get("side", "AWAY")
+        return "AWAY" if r == "HOME" else "HOME"
+
+    def _desenlace_vscom(self, m):
+        """C (05-nov, 2 partidos reales): el ganador llega en winner_side ∈ WINNER_HOME/AWAY/NONE
+        (NONE = empate); NO llegan goles. Otros campos: gameend_reason (NORMAL_END, INJURY…),
+        cpu_level «NORMAL», ex_flag/pk_flag, rtt. P: los pares de goles quedan por si acaso.
+        Devuelve WIN/DRAW/LOSE/""."""
+        orden = [m.get("winner_side")] + list(m.values())
+        for v in orden:
             if isinstance(v, str) and v.startswith("WINNER_"):
                 lado = v[len("WINNER_"):]
                 if lado in ("DRAW", "NONE"):
                     return "DRAW"
-                propio = m.get("side") if isinstance(m.get("side"), str) else "HOME"
+                propio = m.get("side") if isinstance(m.get("side"), str) else self._lado_propio()
                 return "WIN" if lado == propio else "LOSE"
         pares = (("score", "opponent_score"), ("home_score", "away_score"))
         for a, b in pares:

@@ -294,3 +294,19 @@ La petición de estos tres solo trae pid. Todo objeto anidado va como bin.
   - Tramas siguientes 0x0071, y la última 0x0072: [largo][trozo].
   - Todas llevan la misma secuencia.
   - Si un día PES no lo acepta, mirar NclMio::DivBufForEasyEncryptionVer en el exe.
+
+## 23. ¡Partido vs COM jugado de punta a punta! (C, 05-nov, a26e7e0)
+- Flujo completo:
+  1. myClub → Partido → vs. COM.
+  2. MAINTENANCE_INFO → PLAYER_PARAMETERLIST → VSCOM_OPPONENT.
+  3. Pantallas de mandos y de alineaciones (Phoenix FC vs Real Madrid), y la carga.
+  4. GET_MYCLUB_COMMENTARY_INFO {match_category VSCOM_MATCH, team_spirit, team_power_level} → GET_GP_ACHIEVEMENT → SEND_MATCH_TEAM_INFO {match_team_info}. Hoy los dos sin manejador reciben NOERR a secas, y alcanza.
+  5. Partido → SET_MYCLUB_VSCOM_GAMERESULT → «Final del partido 3-0» y el aviso de GP.
+- Campos de SET_MYCLUB_VSCOM_GAMERESULT:
+  - winner_side ∈ WINNER_HOME / WINNER_AWAY / WINNER_NONE (empate).
+  - gameend_reason (NORMAL_END, INJURY…), cpu_level «NORMAL», ex_flag, pk_flag, is_coach_mode, error_code, is_interrupt.
+  - pes_srv_rtt_* (nums, mean, variance, min, max), pid y past_game_played_pid.
+  - **No trae goles.**
+- El servidor suma los GP de myclub.gp_por_partido. El cliente mostró «240» por la victoria, así que el ejemplo usa WIN 240.
+- Arreglado después: el rival salía 11 veces «T. Courtois» porque sus gameplayer_unique_id (1..18) chocaban con los del club propio. Ahora el rival usa 900001 en adelante.
+- Pendiente: escudo del rival (sale «MD» genérico con base_team_id 109) y respuestas propias para COMMENTARY_INFO y SEND_MATCH_TEAM_INFO.
