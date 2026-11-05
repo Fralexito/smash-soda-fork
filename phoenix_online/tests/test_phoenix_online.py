@@ -616,8 +616,12 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.assertEqual((ea[-1][1]["gp"], eb[-1][1]["gp"]), (1000, 1000))
         await self.srv.recibir(a, 2, {"msgid": "CMD_SET_MYCLUB_VSCOM_GAMERESULT", "rqid": 2,
                                       "winner_side": "WINNER_HOME",
-                                      "gameend_reason": "NORMAL_END", "cpu_level": "NORMAL"})
+                                      "gameend_reason": "NORMAL_END", "cpu_level": "NORMAL",
+                                      "past_game_played_pid": 7, "pes_srv_rtt_nums": 3})
         self.assertEqual(ea[-1][1]["result"], "NOERR")
+        await self.srv.recibir(a, 21, {"msgid": "CMD_SET_MYCLUB_VSCOM_GAMERESULT", "rqid": 21,
+                                       "winner_side": "WINNER_NONE", "gameend_reason": "NORMAL_END",
+                                       "past_game_played_pid": 0, "pes_srv_rtt_nums": 0})
         await self.srv.recibir(a, 3, {"msgid": "CMD_GET_MYCLUB_USER_INFO", "rqid": 3})
         await self.srv.recibir(b, 3, {"msgid": "CMD_GET_MYCLUB_USER_INFO", "rqid": 3})
         self.assertEqual((ea[-1][1]["gp"], eb[-1][1]["gp"]), (1300, 1000))
@@ -700,7 +704,8 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(ea[-1][1]["team_name"], "B")
         equipo = msgpack_min.unpackb(msgpack_min.packb(ea[-1][1]["team_data"].valor))
         self.assertEqual(equipo["member_num"], 18)
-        await r(a, 3, {"msgid": "CMD_SET_MYCLUB_VSCOM_GAMERESULT", "rqid": 3, "winner_side": "WINNER_NONE"})
+        await r(a, 3, {"msgid": "CMD_SET_MYCLUB_VSCOM_GAMERESULT", "rqid": 3, "winner_side": "WINNER_NONE",
+                       "past_game_played_pid": 7, "pes_srv_rtt_nums": 3})
         await r(a, 4, {"msgid": "CMD_GET_MYCLUB_VSCOM_OPPONENT", "rqid": 4})
         self.assertEqual(ea[-1][1]["team_name"], "A")
 

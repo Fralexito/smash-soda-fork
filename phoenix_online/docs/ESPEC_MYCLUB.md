@@ -366,3 +366,4 @@ La petición de estos tres solo trae pid. Todo objeto anidado va como bin.
   - Sin myclub.jugadores, el club nuevo toma el equipo club_de_prueba.base_team_id del catálogo.
   - myclub.rival.equipos = [{base_team_id, team_name, team_name_short, coach_id, cpu_level}…]: el rival rota con cada partido vs COM. Sin «jugadores», salen los 18 primeros de ese equipo del catálogo.
 - Pendiente: leer Player.bin (media, posición, nación) para la rareza y el precio reales, y usar el catálogo en Cazatalentos y Representantes.
+- C: al ENTRAR a myClub, el cliente manda un SET_MYCLUB_VSCOM_GAMERESULT vacío: NORMAL_END, WINNER_NONE, pes_srv_rtt_nums 0, past_game_played_pid 0. Se responde sin guardar nada ni dar GP. Esto explica los «DRAW» raros de las pruebas. Un resultado real trae rtt_nums > 0 y past_game_played_pid = pid.

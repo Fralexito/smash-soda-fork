@@ -1523,6 +1523,11 @@ class Servidor:
     def _guardar_partido_vscom(self, s, m):
         """Guarda el partido vs COM en el club de la persona y le da los GP de config
         (myclub.gp_por_partido = {"WIN": n, "DRAW": n, "LOSE": n, "": n})."""
+        # C (05-nov): al ENTRAR a myClub el cliente manda un GAMERESULT sin partido
+        # (past_game_played_pid 0, pes_srv_rtt_nums 0, WINNER_NONE): no se guarda ni da GP
+        if not m.get("past_game_played_pid") and not m.get("pes_srv_rtt_nums"):
+            log.info("myClub: GAMERESULT sin partido (al entrar), ignorado")
+            return
         club = self._club_inicial(s)
         if club is None:
             return
