@@ -721,6 +721,24 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         await r(a, 4, {"msgid": "CMD_GET_MYCLUB_VSCOM_OPPONENT", "rqid": 4})
         self.assertEqual(ea[-1][1]["team_name"], "A")
 
+    async def test_myclub_monedas_gratis(self):
+        self.srv.cfg = {**self.srv.cfg, "myclub": {
+            "jugadores": [{"gameplayer_id": 1}], "entrenadores": [{"coach_id": 8}],
+            "club_de_prueba": {"team_name": "P", "gp": 0, "monedas": 400},
+            "mercado_dt": [{"coach_id": 24, "gp": 5000, "pes_point": 300}]}}
+        a, ea = await self.entrar("A1")
+        r = self.srv.recibir
+        await r(a, 1, {"msgid": "CMD_CHECK_MYCLUB_STORE", "rqid": 1})
+        self.assertEqual(ea[-1][1]["is_enable_myclub_coin"], "NO")
+        await r(a, 2, {"msgid": "CMD_GET_MYCLUB_USER_INFO", "rqid": 2})
+        self.assertEqual(ea[-1][1]["pes_point"], 0)
+        self.srv.cfg["myclub"]["monedas_gratis"] = True
+        await r(a, 3, {"msgid": "CMD_CHECK_MYCLUB_STORE", "rqid": 3})
+        self.assertEqual(ea[-1][1]["is_enable_myclub_coin"], "YES")
+        await r(a, 4, {"msgid": "CMD_BUY_MYCLUB_MARKET_COACH", "rqid": 4, "coach_id": 24,
+                       "use_pes_point": "YES"})
+        self.assertEqual((ea[-1][1]["pes_point"], ea[-1][1]["gp"]), (100, 0))
+
     def test_avatar_http_vacio_y_guardado(self):
         r = self.srv.respuesta_http({"msgid": "CMD_GET_AVATAR_HTTP", "rqid": "3", "pid": "7"})
         self.assertEqual((r["result"], r["avatar_data"], r["avatar_data_size"]), ("NOERR", "", 0))

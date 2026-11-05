@@ -406,6 +406,13 @@
       "DRAW": 40,
       "LOSE": 30,
       "": 30
+    },
+    "monedas_gratis": true,
+    "monedas_por_partido": {
+      "WIN": 10,
+      "DRAW": 5,
+      "LOSE": 2,
+      "": 2
     }
   }
 }

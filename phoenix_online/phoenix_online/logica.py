@@ -979,7 +979,7 @@ class Servidor:
         texto = lambda k: c.get(k) if isinstance(c.get(k), str) else ""
         entero = lambda k: c.get(k) if isinstance(c.get(k), int) else 0
         casa = c.get("home_town") if isinstance(c.get("home_town"), dict) else {}
-        return {"gp": c.get("gp", cfg["gp"]), "pes_point": 0,
+        return {"gp": c.get("gp", cfg["gp"]), "pes_point": self._monedas(c),
                 "progress_status": cfg["con"] if club else cfg["sin"],
                 "team_name": texto("team_name"), "team_name_short": texto("team_name_short"),
                 "base_team_id": entero("base_team_id"),
@@ -1234,16 +1234,18 @@ class Servidor:
     async def c_cmd_buy_myclub_market_coach(self, s, m):
         # C (05-nov, lector 141d8ba10). Petición {coach_id, use_pes_point, is_coach_texture_use}.
         # Respuesta: gp y pes_point = saldos NUEVOS, coach = ficha del DT nuevo (bin), is_first.
-        if m.get("use_pes_point") == "YES":
-            return {"result": "ERR_FORBIDDEN"}  # monedas = dinero real: apagado siempre
+        con_monedas = m.get("use_pes_point") == "YES"
+        if con_monedas and not self._monedas_activas():
+            return {"result": "ERR_FORBIDDEN"}
         coach_id = m.get("coach_id") if isinstance(m.get("coach_id"), int) else 0
         oferta = next((c for c in self._mercado_dt() if c.get("coach_id") == coach_id), None)
         club = self._club_inicial(s)
         if oferta is None or club is None or coach_id in (club.get("dt_comprados") or []):
             return {"result": "ERR_NOTFOUND"}
-        precio = int(oferta.get("gp") or 0)
-        if int(club.get("gp") or 0) < precio:
-            return {"result": "ERR_INSUFFICIENT_GP"}
+        moneda = "monedas" if con_monedas else "gp"
+        precio = int(oferta.get("pes_point" if con_monedas else "gp") or 0)
+        if int(club.get(moneda) or 0) < precio:
+            return {"result": "ERR_INSUFFICIENT_PES_POINT" if con_monedas else "ERR_INSUFFICIENT_GP"}
         # C (05-nov): clubes guardados antes de a61d371 no tenían «entrenadores» (salían de
         # config); sin esto el DT inicial se perdía al fichar el primero
         if not club.get("entrenadores"):
@@ -1257,11 +1259,11 @@ class Servidor:
                  "is_coach_texture_use": m.get("is_coach_texture_use") or "NO"}
         primero = not dts
         dts.append(nuevo)
-        club["gp"] = int(club.get("gp") or 0) - precio
+        club[moneda] = int(club.get(moneda) or 0) - precio
         club.setdefault("dt_comprados", []).append(coach_id)
         self.datos.guardar_club(s.steam_hex or "", club)
-        log.info("myClub %s fichó DT %d por %d GP (saldo %d)", s.steam_hex, coach_id, precio, club["gp"])
-        return {"gp": club["gp"], "pes_point": 0, "coach": self._ficha_dt_myclub(len(dts) - 1, nuevo),
+        log.info("myClub %s fichó DT %d por %d %s", s.steam_hex, coach_id, precio, moneda)
+        return {"gp": int(club.get("gp") or 0), "pes_point": self._monedas(club), "coach": self._ficha_dt_myclub(len(dts) - 1, nuevo),
                 "is_first": "YES" if primero else "NO"}
 
     async def c_cmd_get_myclub_coach_contract_norma(self, s, m):
@@ -1270,10 +1272,19 @@ class Servidor:
                 "norma_point_division": 0, "norma_point_sim": 0, "norma_point_vscom": 0,
                 "is_contract_end": "NO"}
 
+    def _monedas_activas(self):
+        """Decisión de Frank (05-nov): Monedas de myClub SOLO como premio gratis (config
+        myclub.monedas_gratis = true). Nunca se venden: la tienda de compra sigue sin manejador."""
+        return bool((self.cfg.get("myclub") or {}).get("monedas_gratis"))
+
+    def _monedas(self, club):
+        return int((club or {}).get("monedas") or 0) if self._monedas_activas() else 0
+
     async def c_cmd_check_myclub_store(self, s, m):
         # C (05-nov, lector 141c46300): sin respuesta propia, «Pagar con GP» decía «función no
-        # disponible». Monedas de myClub = dinero real: siempre NO (regla: nada de dinero real).
-        return {"is_enable_myclub_coin": "NO", "is_enable_subscription": "NO"}
+        # disponible». is_enable_myclub_coin = YES solo con monedas gratis activadas.
+        return {"is_enable_myclub_coin": "YES" if self._monedas_activas() else "NO",
+                "is_enable_subscription": "NO"}
 
     async def c_cmd_get_myclub_refine_search_auction_list(self, s, m):
         return {"auction_info_list": [], "total_auction_info_list_num": 0}  # C (§16.3)
@@ -1596,6 +1607,9 @@ class Servidor:
                                                 "gp": premio, "datos": simple})
         com["historial"] = com["historial"][-50:]
         club["gp"] = int(club.get("gp") or 0) + premio
+        if self._monedas_activas():
+            tabla_m = (self.cfg.get("myclub") or {}).get("monedas_por_partido") or {}
+            club["monedas"] = int(club.get("monedas") or 0) + int(tabla_m.get(desenlace, 0) or 0)
         victorias_antes = sum(1 for h in com["historial"][:-1] if h.get("desenlace") == "WIN")
         com["ultimo"] = {"desenlace": desenlace, "gp": premio,
                          "primera_victoria": desenlace == "WIN" and victorias_antes == 0}
@@ -1881,7 +1895,7 @@ class Servidor:
         # con 0 fijo la barra quedaba en «G 0» tras jugar. Se devuelve el saldo del club.
         club = self._club_inicial(s) or {}
         return {"all_gp": int(club.get("gp") or 0), "all_achievement_bit_array": [],
-                "pes_point": 0}
+                "pes_point": self._monedas(club)}
 
     async def c_cmd_get_myclub_commentary_info(self, s, m):
         # C (05-nov, lector 141c4ced0): datos para el comentarista. P: listas vacías válidas.

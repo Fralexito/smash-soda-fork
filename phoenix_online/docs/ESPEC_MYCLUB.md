@@ -393,3 +393,13 @@ La petición de estos tres solo trae pid. Todo objeto anidado va como bin.
 - Funciona con el servidor encendido: el cambio se ve la próxima vez que PES pida el club.
 - Lo que se gana por partido se ajusta en myclub.gp_por_partido.
 - Monedas: hoy apagadas (en Konami eran dinero real). Opción propuesta a Frank: monedas solo de premio y gratis, que nunca se venden.
+
+## 31. Monedas gratis (decisión de Frank, 05-nov)
+- Con myclub.monedas_gratis = true:
+  - Las Monedas de myClub existen solo como premio: monedas_por_partido o admin_myclub.py dar-monedas/poner-monedas.
+  - **Nunca se venden.** La compra de monedas de la tienda no tiene manejador y no se implementará.
+- Con monedas activas:
+  - CHECK_MYCLUB_STORE responde is_enable_myclub_coin «YES».
+  - USER_INFO y GP_ACHIEVEMENT muestran el saldo en pes_point.
+  - BUY_MYCLUB_MARKET_COACH con use_pes_point YES cobra el «pes_point» del DT. Si no alcanza: ERR_INSUFFICIENT_PES_POINT.
+- Con false (lo predeterminado), todo sigue como antes: monedas en 0 y deshabilitadas.
