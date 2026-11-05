@@ -626,3 +626,11 @@ Un «producto» es un cazatalentos a subasta (`scout_id` = agent_id, `grade` = e
 - Config raíz `reglas_myclub` (ruta de un JSON) y `reglas_cada_s` (def. 30). El servidor relee el archivo cuando cambia y mezcla su contenido sobre `cfg["myclub"]` (lo nuevo manda), sin reiniciar. JSON roto = aviso en el log y se reintenta.
 - Sirve ya para cambiar precios, GP, dificultad, agentes… mientras PES está abierto. Más adelante el espejo de Supabase escribirá este archivo desde el panel web (PLAN_MULTIUSUARIO §3).
 - Prueba: test_reglas_myclub_en_caliente.
+
+## 47. Escala real del contrato (REA 05-nov noche) — CORRIGE §39 y §45
+- C (0x140d36fe0): PES calcula «Contrato restante» = contract_term / 90 (entero) y solo deja jugar con contract_term >= 90. P: la unidad son minutos (un partido = 90).
+- Por eso 100 se veía «1» y 40/30/15 «0» + «!» (inelegibles).
+- Servidor: la base guarda contract_term en la unidad del juego; la config habla en PARTIDOS: `contrato_inicial` (10), `renovacion_partidos` (10), `renovacion_maximo` (50), `contrato_por_partido` (1, ya encendido). `_partidos_a_unidad` multiplica x90.
+- Migración automática (una vez por club, marca `contrato_x90`): los valores viejos (en «partidos», máx. 100) pasan a min(v, renovacion_maximo) x 90. Jugadores sin contract_term = contrato_inicial.
+- `admin_myclub.py poner-contrato <persona> <partidos> <uid…>` ahora recibe partidos.
+- Prueba: test_contrato_escala_y_migracion.

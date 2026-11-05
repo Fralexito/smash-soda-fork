@@ -933,6 +933,32 @@ class Servidor:
         return [j for j in jugadores if isinstance(j, dict)], [d for d in dts if isinstance(d, dict)]
 
     EXP_POR_NIVEL = 100  # P: curva simple hasta conocer la real
+    # C (REA 05-nov noche, 0x140d36fe0): PES muestra contract_term / 90 (entero) como «partidos»
+    # y exige >= 90 para jugar. P: la unidad son minutos (un partido = 90). En la base se guarda
+    # ya en esa unidad; la config habla siempre en PARTIDOS.
+    MIN_POR_PARTIDO = 90
+
+    def _partidos_a_unidad(self, partidos):
+        return int(partidos) * self.MIN_POR_PARTIDO
+
+    def _contrato_inicial(self):
+        return self._partidos_a_unidad((self.cfg.get("myclub") or {}).get("contrato_inicial", 10))
+
+    def _contrato(self, j):
+        v = j.get("contract_term")
+        return v if isinstance(v, int) else self._contrato_inicial()
+
+    def _migrar_contratos(self, club):
+        """Clubes guardados antes del 05-nov guardaban contract_term en «partidos» (100 = tope).
+        Se pasan una vez a la unidad del juego (x90), con el tope de renovación."""
+        if club.get("contrato_x90"):
+            return False
+        tope = int((self.cfg.get("myclub") or {}).get("renovacion_maximo") or 50)
+        for j in club.get("jugadores") or []:
+            if isinstance(j.get("contract_term"), int):
+                j["contract_term"] = self._partidos_a_unidad(min(j["contract_term"], tope))
+        club["contrato_x90"] = True
+        return True
 
     def _ficha_jugador_myclub(self, i, j):
         e = lambda k, d=0: j.get(k) if isinstance(j.get(k), int) else d
@@ -945,7 +971,7 @@ class Servidor:
             "gameplayer_unique_id": e("gameplayer_unique_id", i + 1),
             "gameplayer_id": e("gameplayer_id"), "games": e("games"), "goal": e("goal"),
             "assist": e("assist"), "tiredness": e("tiredness"),
-            "contract_term": e("contract_term", 100), "gameplayer_cost": e("gameplayer_cost", 3),
+            "contract_term": self._contrato(j), "gameplayer_cost": e("gameplayer_cost", 3),
             "rating": e("rating", 75),
             "concept": Empaquetado({k: e(k) for k in self.CONCEPTO_JUGADOR}),
             "is_rental": t("is_rental"), "is_subscription": t("is_subscription"),
@@ -1125,6 +1151,8 @@ class Servidor:
         su orden de plantilla y sus partidos. Sin plantilla en config = None."""
         club = self.datos.club(s.steam_hex or "")
         if club is not None:
+            if self._migrar_contratos(club):
+                self.datos.guardar_club(s.steam_hex or "", club)
             return club
         base = (self.cfg.get("myclub") or {}).get("club_de_prueba")
         if not isinstance(base, dict) or not s.steam_hex:
@@ -1132,6 +1160,7 @@ class Servidor:
         club = dict(base)
         club.setdefault("gp", self._cfg_myclub()["gp"])
         club["jugadores"], club["entrenadores"] = self._plantel_inicial()
+        club["contrato_x90"] = True
         self.datos.guardar_club(s.steam_hex, club)
         log.info("myClub: club propio creado para %s (%s)", s.steam_hex, club.get("team_name"))
         return club
@@ -1283,7 +1312,7 @@ class Servidor:
         siguiente = max([int(j.get("gameplayer_unique_id") or 0) for j in jug] + [0]) + 1
         fichas = []
         for n in nuevos:
-            j = {**n, "gameplayer_unique_id": siguiente, "contract_term": 100}
+            j = {**n, "gameplayer_unique_id": siguiente, "contract_term": self._contrato_inicial()}
             j.pop("puesto", None)
             siguiente += 1
             jug.append(j)
@@ -1453,17 +1482,18 @@ class Servidor:
         cfg = self.cfg.get("myclub") or {}
         uids = [int(u) for u in m.get("gameplayer_unique_id_list") or [] if str(u).isdigit()]
         elegidos = [j for j in club.get("jugadores") or [] if j.get("gameplayer_unique_id") in uids]
-        extra = int(cfg.get("renovacion_partidos") or 10)
-        tope = int(cfg.get("renovacion_maximo") or 100)  # P: el juego avisa de «máxima duración»
+        extra = self._partidos_a_unidad(cfg.get("renovacion_partidos") or 10)
+        # P: el juego avisa de «máxima duración»; config en partidos (def. 50)
+        tope = self._partidos_a_unidad(cfg.get("renovacion_maximo") or 50)
         # P: a quien ya está en el tope no se le cobra (vivo 07:30: Messi con 100 pagó 200 GP)
-        a_cobrar = [j for j in elegidos if int(j.get("contract_term") or 0) < tope]
+        a_cobrar = [j for j in elegidos if self._contrato(j) < tope]
         error = self._cobrar(club, int(cfg.get("renovacion_gp") or 0) * len(a_cobrar),
                              int(cfg.get("renovacion_monedas") or 0) * len(a_cobrar),
                              m.get("use_pes_point") == "YES")
         if error:
             return {"result": error}
         for j in elegidos:
-            j["contract_term"] = min(int(j.get("contract_term") or 0) + extra, tope)
+            j["contract_term"] = min(self._contrato(j) + extra, tope)
         self.datos.guardar_club(s.steam_hex or "", club)
         lista = [Empaquetado({"gameplayer_unique_id": int(j["gameplayer_unique_id"]),
                               "gameplayer_id": int(j.get("gameplayer_id") or 0),
@@ -2029,7 +2059,7 @@ class Servidor:
         cfgm = self.cfg.get("myclub") or {}
         # C (05-nov noche): cada partido gasta contrato (myclub.contrato_por_partido, 0 = apagado;
         # ojo: PES muestra 100 como «1», ver §39.x) y cansa a los inscritos (myclub.cansancio).
-        gasto = int(cfgm.get("contrato_por_partido") or 0)
+        gasto = self._partidos_a_unidad(cfgm.get("contrato_por_partido") or 0)
         cans = cfgm.get("cansancio") or {}
         inscritos = set()
         for _, j in self._elegidos(club, club["jugadores"]):
@@ -2037,7 +2067,7 @@ class Servidor:
             j["exp_total"] = int(j.get("exp_total") or 0) + ganada
             j["games"] = int(j.get("games") or 0) + 1
             if gasto:
-                j["contract_term"] = max(0, int(j.get("contract_term", 100)) - gasto)
+                j["contract_term"] = max(0, self._contrato(j) - gasto)
             if cans.get("activo"):
                 j["tiredness"] = min(int(cans.get("maximo", 100)),
                                      int(j.get("tiredness") or 0) + int(cans.get("sube", 10)))

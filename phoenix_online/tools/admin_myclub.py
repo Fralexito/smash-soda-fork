@@ -56,12 +56,13 @@ def main(argv=None):
         cambiados = []
         for jug in club.get("jugadores") or []:
             if jug.get("gameplayer_unique_id") in uids:
-                jug["contract_term"] = partidos
+                jug["contract_term"] = partidos * 90  # C (05-nov): unidad del juego = partidos x 90
                 cambiados.append(jug["gameplayer_unique_id"])
+        club["contrato_x90"] = True
         club.setdefault("admin", []).append({"hora": int(time.time()), "orden": orden,
                                              "monto": partidos, "jugadores": cambiados})
         datos.guardar_club(j["steam_hex"], club)
-        print(f'{j["pname"]}: contrato {partidos} a los unique_id {cambiados}')
+        print(f'{j["pname"]}: contrato de {partidos} partidos a los unique_id {cambiados}')
         return 0
     campos = {"dar-gp": "gp", "poner-gp": "gp", "dar-monedas": "monedas",
               "poner-monedas": "monedas"}

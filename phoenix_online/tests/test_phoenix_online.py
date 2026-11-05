@@ -693,9 +693,18 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
                            "winner_side": "WINNER_HOME", "gameend_reason": "NORMAL_END",
                            "past_game_played_pid": 7, "pes_srv_rtt_nums": 3})
         j = self.srv.datos.club(a.steam_hex)["jugadores"]
-        self.assertEqual((j[0]["contract_term"], j[0]["tiredness"]), (98, 50))  # tope 50
+        self.assertEqual((j[0]["contract_term"], j[0]["tiredness"]), (720, 50))  # 10 partidos - 2; tope 50
         self.assertNotIn("contract_term", j[19])  # no inscrito: no gasta contrato
         self.assertEqual(j[19]["tiredness"], 0)  # descansa 10 por partido, sin bajar de 0
+
+    def test_contrato_escala_y_migracion(self):
+        # C (REA 05-nov noche): PES muestra contract_term // 90; club viejo guardado en partidos
+        self.srv.cfg = {**self.srv.cfg, "myclub": {"renovacion_maximo": 50}}
+        club = {"jugadores": [{"contract_term": 40}, {"contract_term": 100}, {}]}
+        self.assertTrue(self.srv._migrar_contratos(club))
+        self.assertEqual([j.get("contract_term") for j in club["jugadores"]], [3600, 4500, None])
+        self.assertFalse(self.srv._migrar_contratos(club))  # solo una vez
+        self.assertEqual(self.srv._contrato(club["jugadores"][2]), 900)  # 10 partidos por defecto
 
     def test_reglas_myclub_en_caliente(self):
         self.srv.cfg = {**self.srv.cfg, "myclub": {"venta_gp": 100, "renovacion_gp": 200}}
@@ -839,12 +848,12 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(ficha["contract_gp"], 100)  # precio de renovar sale de la ficha
         club = self.srv.datos.club(a.steam_hex)
         uid = club["jugadores"][0]["gameplayer_unique_id"]
-        antes = int(club["jugadores"][0].get("contract_term") or 0)
+        antes = self.srv._contrato(club["jugadores"][0])  # unidad del juego: partidos x 90
         await r(a, 9, {"msgid": "CMD_EXTEND_MYCLUB_GAMEPLAYER", "rqid": 9,
                        "gameplayer_unique_id_list": [str(uid)], "use_pes_point": "NO"})
         self.assertEqual(ea[-1][1]["gp"], 2200)
         fila = msgpack_min.unpackb(msgpack_min.packb(ea[-1][1]["contract_term_list"][0].valor))
-        self.assertEqual(fila["contract_term"], antes + 10)
+        self.assertEqual(fila["contract_term"], antes + 10 * 90)  # +10 partidos
         self.assertIsInstance(fila["gameplayer_unique_id"], int)  # texto = PES se congelaba
 
     async def test_myclub_logros_gp(self):
