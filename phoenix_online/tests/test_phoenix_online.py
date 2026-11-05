@@ -673,6 +673,37 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
                        "use_pes_point": "YES"})
         self.assertEqual(ea[-1][1]["result"], "ERR_FORBIDDEN")
 
+    async def test_myclub_catalogo_club_y_rival_rotando(self):
+        import os, struct, tempfile, zlib, json as _j, sys as _s
+        _s.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "tools"))
+        import catalogo_pesdb as cp
+        filas = b"".join(struct.pack("<4I", i, 1000 + i, 108 if i < 20 else 109, (3 << 10) | (i % 30 + 1))
+                         for i in range(40))
+        crudo = b"\xff\x10\x81WESYS" + zlib.compress(filas)
+        cat = cp.armar(cp.leer_asignaciones(cp.descomprimir_wesys(crudo)), {"1001": {"rating": 90}})
+        self.assertEqual((len(cat["equipos"]["108"]), len(cat["equipos"]["109"])), (20, 20))
+        ruta = os.path.join(tempfile.mkdtemp(), "catalogo.json")
+        with open(ruta, "w") as f:
+            _j.dump(cat, f)
+        self.srv.cfg = {**self.srv.cfg, "myclub": {
+            "catalogo": ruta, "entrenadores": [{"coach_id": 8}],
+            "club_de_prueba": {"team_name": "P", "base_team_id": 108},
+            "rival": {"coach_id": 24, "equipos": [
+                {"base_team_id": 109, "team_name": "B"}, {"base_team_id": 108, "team_name": "A"}]}}}
+        a, ea = await self.entrar("A1")
+        r = self.srv.recibir
+        await r(a, 1, {"msgid": "CMD_GET_MYCLUB_GAMEPLAYERLIST", "rqid": 1})
+        self.assertEqual(ea[-1][1]["gameplayer_list_num"], 20)
+        f1 = msgpack_min.unpackb(msgpack_min.packb(ea[-1][1]["gameplayer_list"][1].valor))
+        self.assertEqual((f1["gameplayer_id"], f1["default_rarity"]), (1001, "PLAYER_RARITY_BLACK"))
+        await r(a, 2, {"msgid": "CMD_GET_MYCLUB_VSCOM_OPPONENT", "rqid": 2})
+        self.assertEqual(ea[-1][1]["team_name"], "B")
+        equipo = msgpack_min.unpackb(msgpack_min.packb(ea[-1][1]["team_data"].valor))
+        self.assertEqual(equipo["member_num"], 18)
+        await r(a, 3, {"msgid": "CMD_SET_MYCLUB_VSCOM_GAMERESULT", "rqid": 3, "winner_side": "WINNER_NONE"})
+        await r(a, 4, {"msgid": "CMD_GET_MYCLUB_VSCOM_OPPONENT", "rqid": 4})
+        self.assertEqual(ea[-1][1]["team_name"], "A")
+
     def test_avatar_http_vacio_y_guardado(self):
         r = self.srv.respuesta_http({"msgid": "CMD_GET_AVATAR_HTTP", "rqid": "3", "pid": "7"})
         self.assertEqual((r["result"], r["avatar_data"], r["avatar_data_size"]), ("NOERR", "", 0))

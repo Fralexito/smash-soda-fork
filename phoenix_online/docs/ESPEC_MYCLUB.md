@@ -352,3 +352,17 @@ La petición de estos tres solo trae pid. Todo objeto anidado va como bin.
 - Tabla de enum de gameend_reason: 1402190c0 (NORMAL_END, DISCONN, … INJURY, GIVEUP …).
 - Arreglo: _plan_texto() devuelve siempre (536, texto base64) en SQUADLIST, GET_MYCLUB_SQUAD_GAMEPLAN y el rival (team_data y nivel superior). Un plan guardado por el cliente se devuelve tal cual.
 - La respuesta del rival queda en unos 880 B cifrados: cabe en una sola trama.
+
+## 28. Partido vs COM de verdad + catálogo automático (05-nov)
+- **Con 8658db3 el partido se juega de verdad** (lo vieron Frank y la PC):
+  - Alineación del Madrid con 11 jugadores distintos (Courtois, Carvajal, Varane, Casemiro, Marcelo, Modrić, Isco, Benzema, Hazard…). El Barcelona sale con sus posiciones.
+  - Saque inicial «PHX 0–0 RMA 0:00» y los jugadores corriendo.
+- **Catálogo** (tools/catalogo_pesdb.py):
+  - Lee PlayerAssignment.bin de TU juego y saca {equipos: {team_id: [jugadores en orden]}, jugadores: {id: {team_id, …extra}}}.
+  - Con --extra se agregan media y nación, mientras no sepamos leer Player.bin.
+  - El archivo queda solo en la PC: .gitignore incluye catalogo*.json y *.bin.
+- Config:
+  - myclub.catalogo = ruta del catálogo.
+  - Sin myclub.jugadores, el club nuevo toma el equipo club_de_prueba.base_team_id del catálogo.
+  - myclub.rival.equipos = [{base_team_id, team_name, team_name_short, coach_id, cpu_level}…]: el rival rota con cada partido vs COM. Sin «jugadores», salen los 18 primeros de ese equipo del catálogo.
+- Pendiente: leer Player.bin (media, posición, nación) para la rareza y el precio reales, y usar el catálogo en Cazatalentos y Representantes.

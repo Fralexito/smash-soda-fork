@@ -1049,12 +1049,46 @@ class Servidor:
             return base64.b64decode(v["b64"])
         return v
 
+    def _catalogo(self):
+        """Catálogo sacado de la base del juego (tools/catalogo_pesdb.py), ruta en config
+        myclub.catalogo. Se lee una vez. Sin catálogo = {}."""
+        ruta = (self.cfg.get("myclub") or {}).get("catalogo")
+        if not ruta:
+            return {}
+        if getattr(self, "_cat_ruta", None) != ruta:
+            try:
+                with open(ruta, encoding="utf-8") as f:
+                    self._cat = json.load(f)
+            except (OSError, ValueError) as e:
+                log.warning("myClub: no pude leer el catálogo %s: %s", ruta, e)
+                self._cat = {}
+            self._cat_ruta = ruta
+        return self._cat
+
+    def _equipo_catalogo(self, team_id, cuantos=None):
+        """Jugadores de un equipo del catálogo, en el orden del juego (XI + banquillo)."""
+        cat = self._catalogo()
+        filas = (cat.get("equipos") or {}).get(str(team_id)) or []
+        datos = cat.get("jugadores") or {}
+        salida = []
+        for f in filas[:cuantos] if cuantos else filas:
+            extra = datos.get(str(f.get("gameplayer_id"))) or {}
+            salida.append({**extra, "gameplayer_id": f.get("gameplayer_id"),
+                           "uniform_number": f.get("uniform_number") or 0,
+                           "team_id": int(team_id)})
+        return salida
+
     def _plantel_inicial(self):
         """Copia propia de los jugadores y DT de config (myclub.jugadores / entrenadores), con
-        gameplayer_unique_id / coach_unique_id fijos para que cada club los guarde a su nombre."""
+        gameplayer_unique_id / coach_unique_id fijos para que cada club los guarde a su nombre.
+        Sin myclub.jugadores, se toma del catálogo el equipo club_de_prueba.base_team_id."""
         cfg = self.cfg.get("myclub") or {}
+        base = cfg.get("jugadores") or []
+        if not base:
+            equipo = (cfg.get("club_de_prueba") or {}).get("base_team_id")
+            base = self._equipo_catalogo(equipo) if equipo else []
         jug = [dict(j, gameplayer_unique_id=j.get("gameplayer_unique_id") or i + 1)
-               for i, j in enumerate(x for x in cfg.get("jugadores") or [] if isinstance(x, dict))]
+               for i, j in enumerate(x for x in base if isinstance(x, dict))]
         dts = [dict(d, coach_unique_id=d.get("coach_unique_id") or i + 1)
                for i, d in enumerate(x for x in cfg.get("entrenadores") or [] if isinstance(x, dict))]
         return jug, dts
@@ -1299,11 +1333,26 @@ class Servidor:
             "gameplan_data_size": tam, "gameplan_data": texto, "is_club_edition": "NO",
             "club_edition_type": ""})
 
+    def _rival_de_turno(self, s):
+        """Config myclub.rival; si trae «equipos» [{base_team_id, team_name, team_name_short,
+        coach_id, cpu_level}...], el rival rota según los partidos vs COM ya jugados del club."""
+        r = dict((self.cfg.get("myclub") or {}).get("rival") or {})
+        equipos = [e for e in r.pop("equipos", None) or [] if isinstance(e, dict)]
+        if equipos:
+            jugados = int(((self._club_inicial(s) or {}).get("vscom") or {}).get("partidos") or 0)
+            elegido = equipos[jugados % len(equipos)]
+            r = {**r, **elegido}
+            if "jugadores" not in elegido:
+                r.pop("jugadores", None)
+        return r
+
     async def c_cmd_get_myclub_vscom_opponent(self, s, m):
         # C (§19): rival COM. Config myclub.rival = {jugadores [...18 por puesto], coach_id,
         # team_name, team_name_short, base_team_id, cpu_level, side}. P: anidados = bin.
-        r = (self.cfg.get("myclub") or {}).get("rival") or {}
+        r = self._rival_de_turno(s)
         jugadores = [j for j in r.get("jugadores") or [] if isinstance(j, dict)]
+        if not jugadores and r.get("base_team_id"):
+            jugadores = self._equipo_catalogo(r["base_team_id"], 18)
         nombre = r.get("team_name") or "Rival"
         return {"side": r.get("side", "AWAY"), "cpu_level": r.get("cpu_level", "MATCH_LEVEL_REGULAR"),
                 "team_name": nombre, "team_name_short": r.get("team_name_short", "RIV"),
