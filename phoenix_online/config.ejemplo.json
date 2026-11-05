@@ -2,7 +2,12 @@
   "clave_nclmio": "D:/Frank/IA/CLAUDE/pes-online/nclmio_key.bin",
   "blowfish_le": false,
   "clave_gamerelay": "D:/Frank/IA/CLAUDE/pes-online/gamerelay_claves.bin",
-  "gamerelay": {"activo": true, "indice": 1, "puerto": 5100, "ip": "192.168.1.50"},
+  "gamerelay": {
+    "activo": true,
+    "indice": 1,
+    "puerto": 5100,
+    "ip": "192.168.1.50"
+  },
   "ip_publica": "192.168.1.50",
   "puerto_gate": 10000,
   "puerto_menu": 10001,
@@ -72,5 +77,95 @@
       "lobby_type": "FREE"
     }
   ],
-  "turn": null
+  "turn": null,
+  "myclub": {
+    "progreso_sin_club": "",
+    "progreso_con_club": "",
+    "gp_inicial": 0,
+    "jugadores": [
+      {
+        "gameplayer_id": 61672,
+        "rating": 90,
+        "level": 1,
+        "uniform_number": 1,
+        "team_id": 108
+      },
+      {
+        "gameplayer_id": 8639,
+        "rating": 90,
+        "level": 1,
+        "uniform_number": 2,
+        "team_id": 108
+      },
+      {
+        "gameplayer_id": 104418,
+        "rating": 90,
+        "level": 1,
+        "uniform_number": 3,
+        "team_id": 108
+      },
+      {
+        "gameplayer_id": 42892,
+        "rating": 90,
+        "level": 1,
+        "uniform_number": 4,
+        "team_id": 108
+      },
+      {
+        "gameplayer_id": 40425,
+        "rating": 90,
+        "level": 1,
+        "uniform_number": 5,
+        "team_id": 108
+      },
+      {
+        "gameplayer_id": 38568,
+        "rating": 90,
+        "level": 1,
+        "uniform_number": 6,
+        "team_id": 108
+      },
+      {
+        "gameplayer_id": 108662,
+        "rating": 90,
+        "level": 1,
+        "uniform_number": 7,
+        "team_id": 108
+      },
+      {
+        "gameplayer_id": 36625,
+        "rating": 90,
+        "level": 1,
+        "uniform_number": 8,
+        "team_id": 108
+      },
+      {
+        "gameplayer_id": 42316,
+        "rating": 90,
+        "level": 1,
+        "uniform_number": 9,
+        "team_id": 108
+      },
+      {
+        "gameplayer_id": 34881,
+        "rating": 90,
+        "level": 1,
+        "uniform_number": 10,
+        "team_id": 108
+      },
+      {
+        "gameplayer_id": 43202,
+        "rating": 90,
+        "level": 1,
+        "uniform_number": 11,
+        "team_id": 108
+      }
+    ],
+    "entrenadores": [
+      {
+        "coach_id": 121552,
+        "overall": 70
+      }
+    ]
+  }
 }

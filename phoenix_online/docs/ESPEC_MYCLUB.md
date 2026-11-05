@@ -112,3 +112,13 @@ Marcas: C = leído en el código; P = deducción.
 - Después recorre los elementos: +0x36 == 1 (P: «en plantilla»), +0x1c ≥ 90 (P: valoración o nivel), +8 = id que se busca en la estructura del paso 1.
 - **Conclusión:** con 0 jugadores el cliente sale. Hacen falta jugadores, al menos un entrenador y una plantilla que referencie a esos jugadores.
 - Implementado: `"myclub": {"jugadores": [...], "entrenadores": [...]}` en config.json arma GAMEPLAYERLIST, COACHLIST y SQUADLIST. main_squad_id = 1. Todo elemento va como bin. Faltan gameplayer_id y coach_id reales del juego.
+
+## 15. ¡myClub abre! (05-nov, 00:10, commit 57cbc5a)
+- Con 11 jugadores, 1 entrenador y 1 plantilla, el PES base entra a la «Sede de club»: formación 4-2-3-1, calidad 2197, jugadores 11/250, DT 1/50. Sin error y sin cierre.
+- Ids usados (datos del juego, no son secretos):
+  - Jugadores: PlayerAssignment.bin de dt10_x64.cpk, team_id 108 (FC Barcelona), filas 0-10: 61672, 8639, 104418, 42892, 40425, 38568, 108662, 36625, 42316, 34881, 43202.
+  - Entrenador: coach_id 121552, la 1.ª fila de MyclubCoach.bin.
+  - Ejemplo en config.ejemplo.json → "myclub".
+- Comandos que llegan después y aún no tienen manejador (la pantalla abre igual):
+  - Al cargar: GET_MYCLUB_SQUAD_GAMEPLAN, SET_MYCLUB_MAIN_SQUAD, SET_MYCLUB_CLOUD_SQUAD, GET_MYCLUB_ITEMLIST, GET_MYCLUB_PLAYER_NUMBER_FIXATION, GET_MYCLUB_SCOUTLIST, GET_MYCLUB_WEEKLY_RANKING_BASIC_INFO.
+  - Al abrir el menú: GET_MYCLUB_LOGIN_BONUS, GET_MYCLUB_CLOUDMATCH_BONUS, GET_MYCLUB_MAINMENU_INFO.
