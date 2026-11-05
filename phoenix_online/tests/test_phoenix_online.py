@@ -988,6 +988,71 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.assertEqual([j["tiredness"] for j in self.srv.datos.club(a.steam_hex)["jugadores"]],
                          [0, 0])
 
+    async def test_myclub_subastas_de_la_casa(self):
+        self.srv.cfg = {**self.srv.cfg, "myclub": {
+            "jugadores": [{"gameplayer_id": 1}], "entrenadores": [{"coach_id": 8}],
+            "club_de_prueba": {"team_name": "P", "gp": 5000},
+            "cazatalentos": [{"agent_id": 50, "grade": 3, "sell_gp": 500, "equipos": [103]}],
+            "subastas": {"cantidad": 2, "duracion_min": 60, "incremento": 100}}}
+        a, ea = await self.entrar("A1")
+        r = self.srv.recibir
+        await r(a, 1, {"msgid": "CMD_GET_MYCLUB_REFINE_SEARCH_AUCTION_LIST", "rqid": 1,
+                       "start_index": 0})
+        resp = ea[-1][1]
+        self.assertEqual(resp["total_auction_info_list_num"], 2)
+        info = resp["auction_info_list"][0].valor
+        self.assertEqual((info["scout_id"], info["grade"], info["price_now"], info["auction_state"]),
+                         (50, 3, 3000, "AUCTION_USER_STATE_NONE"))
+        pid = info["product_id"]
+        await r(a, 2, {"msgid": "CMD_TENDER_MYCLUB_AUCTION_SCOUT", "rqid": 2, "product_id": pid,
+                       "tender_gp": 2000, "is_finalround": "NO"})
+        self.assertEqual(ea[-1][1]["result"], "ERR_INSUFFICIENT_TENDER_GP")
+        await r(a, 3, {"msgid": "CMD_TENDER_MYCLUB_AUCTION_SCOUT", "rqid": 3, "product_id": pid,
+                       "tender_gp": 3000, "is_finalround": "NO"})
+        resp = ea[-1][1]
+        self.assertEqual((resp["result"], resp["gp"]), ("NOERR", 2000))
+        det = resp["auction_scout_detail"].valor
+        self.assertEqual((det["my_price"], det["auction_state"]), (3000, "AUCTION_USER_STATE_HIGHEST_BIDER"))
+        await r(a, 4, {"msgid": "CMD_ADD_MYCLUB_AUCTION_WATCH_LIST", "rqid": 4, "product_id": pid})
+        await r(a, 5, {"msgid": "CMD_GET_MYCLUB_AUCTION_WATCH_LIST", "rqid": 5})
+        self.assertEqual(ea[-1][1]["total_auction_info_list_num"], 1)
+        # se vence la subasta: el cazatalentos pasa al club y queda en el historial
+        club = self.srv.datos.club(a.steam_hex)
+        club["scouts"] = []
+        for p in club["subastas"]["productos"]:
+            p["fin"] = 0
+        self.srv.datos.guardar_club(a.steam_hex, club)
+        await r(a, 6, {"msgid": "CMD_GET_MYCLUB_AUCTION_REPORT_LIST", "rqid": 6})
+        self.assertEqual(ea[-1][1]["total_auction_report_list_num"], 1)
+        club = self.srv.datos.club(a.steam_hex)
+        self.assertEqual([(c["agent_id"], c["grade"]) for c in club["scouts"]], [(50, 3)])
+        self.assertEqual(club["gp"], 2000)
+        self.assertEqual(len(club["subastas"]["productos"]), 2)  # la casa repone
+        await r(a, 7, {"msgid": "CMD_GET_MYCLUB_AUCTION_PRICE_RANKING", "rqid": 7,
+                       "ranking_kind": "X"})
+        self.assertEqual(ea[-1][1]["auction_price_ranking"][0].valor["price"], 3000)
+        await r(a, 8, {"msgid": "CMD_GET_MYCLUB_AUCTION_SUCCESSFUL_BID_INFO", "rqid": 8,
+                       "product_id": pid})
+        self.assertEqual(ea[-1][1]["best_bid_amount_price"], 3000)
+
+    async def test_myclub_subasta_rival_de_la_casa_devuelve_gp(self):
+        self.srv.cfg = {**self.srv.cfg, "myclub": {
+            "jugadores": [{"gameplayer_id": 1}], "entrenadores": [{"coach_id": 8}],
+            "club_de_prueba": {"team_name": "P", "gp": 5000},
+            "cazatalentos": [{"agent_id": 50, "grade": 1}],
+            "subastas": {"cantidad": 1, "rival_casa": {"activo": True, "probabilidad": 1}}}}
+        a, ea = await self.entrar("A1")
+        r = self.srv.recibir
+        await r(a, 1, {"msgid": "CMD_GET_MYCLUB_REFINE_SEARCH_AUCTION_LIST", "rqid": 1})
+        pid = ea[-1][1]["auction_info_list"][0].valor["product_id"]
+        await r(a, 2, {"msgid": "CMD_TENDER_MYCLUB_AUCTION_SCOUT", "rqid": 2, "product_id": pid,
+                       "tender_gp": 1000})
+        resp = ea[-1][1]
+        self.assertEqual(resp["gp"], 5000)  # la casa pujó más: el GP vuelve
+        self.assertEqual(resp["auction_scout_detail"].valor["price_now"], 1100)
+        await r(a, 3, {"msgid": "CMD_REQWATCH_MYCLUB_AUCTION_REFUNDED_GP", "rqid": 3})
+        self.assertEqual(ea[-1][1]["total_gp"], 1000)
+
     async def test_myclub_monedas_gratis(self):
         self.srv.cfg = {**self.srv.cfg, "myclub": {
             "jugadores": [{"gameplayer_id": 1}], "entrenadores": [{"coach_id": 8}],

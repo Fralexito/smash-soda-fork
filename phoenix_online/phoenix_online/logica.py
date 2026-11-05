@@ -1593,17 +1593,306 @@ class Servidor:
         return {"is_enable_myclub_coin": "YES" if self._monedas_activas() else "NO",
                 "is_enable_subscription": "NO"}
 
+    # ---------- Subastas de la casa (ESPEC §41 y §49) ----------
+    # C (REA): un producto es un cazatalentos (scout_id = agent_id, grade = estrellas). Con una
+    # sola persona no hay vendedores: la «casa» pone a subasta cazatalentos de config.
+    # P: time_limit, auction_end_time y finalround_end_time = segundos Unix absolutos.
+    ESTADO_NADA = "AUCTION_USER_STATE_NONE"
+    ESTADO_PUJA = "AUCTION_USER_STATE_BID_PARTICIPATION"
+    ESTADO_MEJOR = "AUCTION_USER_STATE_HIGHEST_BIDER"
+
+    def _cfg_subastas(self):
+        c = dict((self.cfg.get("myclub") or {}).get("subastas") or {})
+        c.setdefault("activa", True)
+        c.setdefault("cantidad", 6)
+        c.setdefault("duracion_min", 60)
+        c.setdefault("incremento", 100)
+        c.setdefault("precio_por_estrella", 1000)
+        c.setdefault("seguimiento_max", 20)
+        c.setdefault("deseos_max", 10)
+        c.setdefault("rival_casa", {})
+        return c
+
+    def _catalogo_subastas(self):
+        cfgm = self.cfg.get("myclub") or {}
+        lista = self._cfg_subastas().get("productos") or cfgm.get("cazatalentos") or []
+        return [p for p in lista if isinstance(p, dict) and p.get("agent_id")]
+
+    def _subastas(self, club):
+        """Estado de las subastas del club; cierra las vencidas y repone hasta «cantidad»."""
+        st = club.setdefault("subastas", {})
+        for k in ("productos", "seguimiento", "deseos", "reembolsos", "historial"):
+            st.setdefault(k, [])
+        st.setdefault("siguiente_id", 1)
+        cfg = self._cfg_subastas()
+        ahora = int(time.time())
+        abiertas = []
+        for p in st["productos"]:
+            if p["fin"] > ahora:
+                abiertas.append(p)
+                continue
+            if p.get("mejor") == "yo":
+                # P: gana la subasta = el cazatalentos pasa a «Cazatalentos» del club
+                plantilla = next((dict(c) for c in self._catalogo_subastas()
+                                  if int(c["agent_id"]) == p["scout_id"]), {"agent_id": p["scout_id"]})
+                plantilla.pop("precio_inicial", None)
+                plantilla.update({"grade": p["grade"], "count": 1})
+                self._scouts(club).append(plantilla)
+                p["ganada"] = True
+                log.info("myClub subasta %s ganada por %d GP", p["product_id"], p["precio"])
+            st["historial"].append({k: p.get(k) for k in (
+                "product_id", "scout_id", "grade", "skill_category", "skill_id", "precio", "fin",
+                "mi_puja", "ganada")})
+        st["productos"] = abiertas
+        st["historial"] = st["historial"][-100:]
+        catalogo = self._catalogo_subastas()
+        while cfg["activa"] and catalogo and len(st["productos"]) < int(cfg["cantidad"]):
+            c = random.choice(catalogo)
+            grade = int(c.get("grade") or 1)
+            inicial = int(c.get("precio_inicial") or grade * int(cfg["precio_por_estrella"]))
+            st["productos"].append({
+                "product_id": st["siguiente_id"], "scout_id": int(c["agent_id"]), "grade": grade,
+                "skill_category": c.get("skill_category") or "", "skill_id": int(c.get("skill_id") or 0),
+                "precio_inicial": inicial, "precio": inicial, "pujas": 0, "mejor": None,
+                "mi_puja": 0, "inicio": ahora, "fin": ahora + int(cfg["duracion_min"]) * 60})
+            st["siguiente_id"] += 1
+        return st
+
+    def _producto(self, st, pid, con_historial=False):
+        for p in st["productos"] + (st["historial"] if con_historial else []):
+            if p.get("product_id") == pid:
+                return p
+        return None
+
+    def _estado_usuario(self, p):
+        if p.get("mejor") == "yo":
+            return self.ESTADO_MEJOR
+        return self.ESTADO_PUJA if p.get("mi_puja") else self.ESTADO_NADA
+
+    def _info_subasta(self, st, p):
+        yn = lambda v: "YES" if v else "NO"
+        return {"product_id": p["product_id"], "scout_id": p["scout_id"], "grade": p["grade"],
+                "skill": Empaquetado({"skill_category": p.get("skill_category") or "",
+                                      "skill_id": int(p.get("skill_id") or 0)}),
+                "price_now": p["precio"], "bid_num": int(p.get("pujas") or 0),
+                "time_limit": p["fin"], "finalround_end_time": p["fin"],
+                "auction_state": self._estado_usuario(p), "is_bid_user_max": "NO",
+                "update_time": int(time.time()), "is_highest_bider": yn(p.get("mejor") == "yo"),
+                "is_register_watchlist": yn(p["product_id"] in st["seguimiento"]),
+                "is_bid": yn(p.get("mi_puja"))}
+
+    def _detalle_subasta(self, st, p):
+        d = self._info_subasta(st, p)
+        d.update({"price_start": p.get("precio_inicial", p["precio"]),
+                  "auction_start_time": p.get("inicio", 0), "auction_end_time": p["fin"],
+                  "is_highest_bidder": d["is_highest_bider"], "is_reservation": "NO",
+                  "second_price": 0, "third_price": 0, "my_price": int(p.get("mi_puja") or 0),
+                  "reservation_price": 0})
+        for k in ("time_limit", "update_time", "is_register_watchlist"):
+            d.pop(k, None)  # C (RE noche): el detalle no lleva time_limit ni update_time
+        return Empaquetado(d)
+
+    def _lista_subastas(self, st, productos, m):
+        inicio = m.get("start_index") if isinstance(m.get("start_index"), int) else 0
+        lista = [Empaquetado(self._info_subasta(st, p)) for p in productos[inicio:inicio + 50]]
+        return {"auction_info_list": lista, "total_auction_info_list_num": len(productos)}
+
+    def _club_subastas(self, s):
+        club = self._club_inicial(s)
+        if club is None:
+            return None, None
+        return club, self._subastas(club)
+
     async def c_cmd_get_myclub_refine_search_auction_list(self, s, m):
-        return {"auction_info_list": [], "total_auction_info_list_num": 0}  # C (§16.3)
+        club, st = self._club_subastas(s)
+        if club is None or not self._cfg_subastas()["activa"]:
+            return {"auction_info_list": [], "total_auction_info_list_num": 0}  # C (§16.3)
+        self.datos.guardar_club(s.steam_hex or "", club)
+        return self._lista_subastas(st, st["productos"], m)
 
     async def c_cmd_get_myclub_auction_watch_list(self, s, m):
-        return {"auction_info_list": [], "total_auction_info_list_num": 0}  # C (§16.4)
+        club, st = self._club_subastas(s)
+        if club is None:
+            return {"auction_info_list": [], "total_auction_info_list_num": 0}  # C (§16.4)
+        st["seguimiento"] = [i for i in st["seguimiento"] if self._producto(st, i)]
+        self.datos.guardar_club(s.steam_hex or "", club)
+        return self._lista_subastas(st, [self._producto(st, i) for i in st["seguimiento"]], m)
+
+    async def c_cmd_add_myclub_auction_watch_list(self, s, m):
+        club, st = self._club_subastas(s)
+        pid = m.get("product_id")
+        if club is None or self._producto(st, pid) is None:
+            return {"result": "ERR_NOTFOUND"}
+        if pid not in st["seguimiento"]:
+            if len(st["seguimiento"]) >= int(self._cfg_subastas()["seguimiento_max"]):
+                return {"result": "ERR_WATCH_LIST_MAX"}
+            st["seguimiento"].append(pid)
+        self.datos.guardar_club(s.steam_hex or "", club)
+        return {}
+
+    async def c_cmd_delete_myclub_auction_watch_list(self, s, m):
+        club, st = self._club_subastas(s)
+        if club is None:
+            return {"result": "ERR_NOTFOUND"}
+        if m.get("is_all") == "YES":
+            st["seguimiento"] = []
+        else:
+            st["seguimiento"] = [i for i in st["seguimiento"] if i != m.get("product_id")]
+        self.datos.guardar_club(s.steam_hex or "", club)
+        return {}
 
     async def c_cmd_get_myclub_auction_wish_list(self, s, m):
-        return {"wish_info_list": [], "total_wish_info_list_num": 0}  # C (§16.5)
+        club, st = self._club_subastas(s)
+        if club is None:
+            return {"wish_info_list": [], "total_wish_info_list_num": 0}  # C (§16.5)
+        lista = []
+        for w in st["deseos"]:
+            hay = any(p["grade"] == w["grade"] and p.get("skill_id") == w["skill_id"]
+                      for p in st["productos"])
+            lista.append(Empaquetado({
+                "wishlist_id": w["wishlist_id"], "grade": w["grade"],
+                "skill": Empaquetado({"skill_category": w["skill_category"], "skill_id": w["skill_id"]}),
+                "is_exhibited": "YES" if hay else "NO"}))
+        return {"wish_info_list": lista, "total_wish_info_list_num": len(lista)}
+
+    async def c_cmd_add_myclub_auction_wish_list(self, s, m):
+        # P: la petición no se leyó con REA; se aceptan skill (bin) y grade
+        club, st = self._club_subastas(s)
+        if club is None:
+            return {"result": "ERR_NOTFOUND"}
+        sk = m.get("skill")
+        if isinstance(sk, (bytes, bytearray)):
+            sk = msgpack_min.unpackb(sk)
+        sk = sk if isinstance(sk, dict) else {}
+        w = {"grade": int(m.get("grade") or 0), "skill_category": sk.get("skill_category") or "",
+             "skill_id": int(sk.get("skill_id") or 0)}
+        if any((x["grade"], x["skill_id"]) == (w["grade"], w["skill_id"]) for x in st["deseos"]):
+            return {"result": "ERR_WISH_LIST_ALREADY_ADD"}
+        if len(st["deseos"]) >= int(self._cfg_subastas()["deseos_max"]):
+            return {"result": "ERR_WISH_LIST_MAX"}
+        w["wishlist_id"] = max([x["wishlist_id"] for x in st["deseos"]] + [0]) + 1
+        st["deseos"].append(w)
+        self.datos.guardar_club(s.steam_hex or "", club)
+        return {}
+
+    async def c_cmd_delete_myclub_auction_wish_list(self, s, m):
+        club, st = self._club_subastas(s)
+        if club is None:
+            return {"result": "ERR_NOTFOUND"}
+        quitar = set(self._lista_uids(m, "wishlist_id_list"))
+        if isinstance(m.get("wishlist_id"), int):
+            quitar.add(m["wishlist_id"])
+        st["deseos"] = [] if m.get("is_all") == "YES" else [
+            w for w in st["deseos"] if w["wishlist_id"] not in quitar]
+        self.datos.guardar_club(s.steam_hex or "", club)
+        return {}
+
+    async def c_cmd_get_myclub_auction_scout_detail(self, s, m):
+        club, st = self._club_subastas(s)
+        p = self._producto(st, m.get("product_id"), True) if club is not None else None
+        if p is None:
+            return {"result": "ERR_NOTFOUND"}
+        self.datos.guardar_club(s.steam_hex or "", club)
+        return {"auction_scout_detail": self._detalle_subasta(st, p)}
+
+    async def c_cmd_watch_myclub_auction_scout_detail(self, s, m):
+        r = await self.c_cmd_get_myclub_auction_scout_detail(s, m)
+        if "auction_scout_detail" in r:
+            return {"update_auction_scout_detail": r["auction_scout_detail"]}
+        return r
+
+    async def c_cmd_leave_myclub_auction_scout_detail(self, s, m):
+        return {}
+
+    async def c_cmd_tender_myclub_auction_scout(self, s, m):
+        """Pujar {product_id, tender_gp, is_finalround}. P: tender_gp es la puja total. El GP
+        queda apartado; si la casa puja más (rival_casa), se devuelve al momento."""
+        club, st = self._club_subastas(s)
+        p = self._producto(st, m.get("product_id")) if club is not None else None
+        if p is None:
+            return {"result": "ERR_TENDER_TIMEOUT" if club is not None else "ERR_NOTFOUND"}
+        cfg = self._cfg_subastas()
+        puja = int(m.get("tender_gp") or 0)
+        minimo = p["precio"] + (int(cfg["incremento"]) if p.get("pujas") else 0)
+        if p.get("mejor") == "yo" or puja < minimo:
+            return {"result": "ERR_INSUFFICIENT_TENDER_GP"}
+        falta = puja - int(p.get("mi_puja") or 0)
+        if int(club.get("gp") or 0) < falta:
+            return {"result": "ERR_INSUFFICIENT_GP"}
+        club["gp"] = int(club.get("gp") or 0) - falta
+        p.update({"precio": puja, "mi_puja": puja, "mejor": "yo", "pujas": int(p.get("pujas") or 0) + 1})
+        rival = cfg["rival_casa"] if isinstance(cfg["rival_casa"], dict) else {}
+        tope = int(p["precio_inicial"] * float(rival.get("tope_factor") or 2))
+        if (rival.get("activo") and random.random() < float(rival.get("probabilidad") or 0.3)
+                and puja + int(cfg["incremento"]) <= tope):
+            # la casa sube la puja: tu GP vuelve y puedes volver a pujar
+            p.update({"precio": puja + int(cfg["incremento"]), "mejor": "casa",
+                      "pujas": p["pujas"] + 1, "mi_puja": 0})
+            club["gp"] += puja
+            st["reembolsos"].append({"product_id": p["product_id"], "gp": puja})
+        self.datos.guardar_club(s.steam_hex or "", club)
+        return {"auction_scout_detail": self._detalle_subasta(st, p), "gp": int(club["gp"])}
+
+    async def c_cmd_tender_myclub_auction_scout_finalround_reservation(self, s, m):
+        # P: sin ronda final en las subastas de la casa: se trata como una puja normal
+        return await self.c_cmd_tender_myclub_auction_scout(s, m)
+
+    async def c_cmd_tender_myclub_auction_scout_finalround_reservation_cancel(self, s, m):
+        club, st = self._club_subastas(s)
+        p = self._producto(st, m.get("product_id")) if club is not None else None
+        if p is None:
+            return {"result": "ERR_NOTFOUND"}
+        return {"auction_scout_detail": self._detalle_subasta(st, p), "gain_gp": 0}
+
+    async def c_cmd_get_myclub_auction_report_list(self, s, m):
+        club, st = self._club_subastas(s)
+        if club is None:
+            return {"auction_report_list": [], "total_auction_report_list_num": 0}
+        mias = [p for p in st["productos"] if p.get("mi_puja") or p.get("mejor") == "yo"]
+        mias += [p for p in reversed(st["historial"]) if p.get("mi_puja")][:20]
+        lista = [Empaquetado(self._info_subasta(st, {**p, "pujas": p.get("pujas", 1),
+                                                    "mejor": "yo" if p.get("ganada") else p.get("mejor")}))
+                 for p in mias]
+        self.datos.guardar_club(s.steam_hex or "", club)
+        return {"auction_report_list": lista, "total_auction_report_list_num": len(lista)}
+
+    async def c_cmd_get_myclub_auction_successful_bid_info(self, s, m):
+        # C (RE noche): auction_successful_bid_list = lista de ENTEROS. P: precios finales
+        # recientes de cazatalentos con el mismo scout_id/grade del producto pedido
+        club, st = self._club_subastas(s)
+        if club is None:
+            return {"auction_successful_bid_list": [], "auction_successful_bid_list_num": 0,
+                    "best_bid_amount_price": 0, "best_bid_amount_day": 0, "average_bid_price": 0}
+        p = self._producto(st, m.get("product_id"), True) or {}
+        precios = [int(h["precio"]) for h in st["historial"]
+                   if not p or (h.get("scout_id"), h.get("grade")) == (p.get("scout_id"), p.get("grade"))][-10:]
+        return {"auction_successful_bid_list": precios, "auction_successful_bid_list_num": len(precios),
+                "best_bid_amount_price": max(precios, default=0), "best_bid_amount_day": 0,
+                "average_bid_price": sum(precios) // len(precios) if precios else 0}
 
     async def c_cmd_get_myclub_auction_price_ranking(self, s, m):
-        return {"auction_price_ranking": [], "auction_price_ranking_num": 0}  # C (§16.6)
+        # C (RE noche): elemento sin «rank»; el orden de la lista es el ranking. ranking_kind
+        # se ignora (no tiene enum propio).
+        club, st = self._club_subastas(s)
+        if club is None:
+            return {"auction_price_ranking": [], "auction_price_ranking_num": 0}  # C (§16.6)
+        orden = sorted(st["historial"], key=lambda h: -int(h.get("precio") or 0))[:20]
+        lista = [Empaquetado({"product_id": h["product_id"], "scout_id": h["scout_id"],
+                              "grade": h["grade"],
+                              "skill": Empaquetado({"skill_category": h.get("skill_category") or "",
+                                                    "skill_id": int(h.get("skill_id") or 0)}),
+                              "price": int(h["precio"]), "end_time": int(h["fin"])}) for h in orden]
+        return {"auction_price_ranking": lista, "auction_price_ranking_num": len(lista)}
+
+    async def c_cmd_reqwatch_myclub_auction_refunded_gp(self, s, m):
+        club, st = self._club_subastas(s)
+        if club is None or not st["reembolsos"]:
+            return {"refunded_gp_list": [], "total_gp": 0}
+        # P: elemento de refunded_gp_list sin leer con REA; se manda la lista de montos
+        montos = [int(r["gp"]) for r in st["reembolsos"]]
+        st["reembolsos"] = []
+        self.datos.guardar_club(s.steam_hex or "", club)
+        return {"refunded_gp_list": montos, "total_gp": sum(montos)}
 
     async def c_cmd_get_myclub_rental_gameplayerlist(self, s, m):
         # C (§16.7): sin respuesta = C_NDZS_0112 en «Acuerdo de préstamo»
@@ -2082,9 +2371,6 @@ class Servidor:
 
     async def c_cmd_set_myclub_club_edition_info(self, s, m):
         return {}  # C: el lector solo mira msgid/rqid/result
-
-    async def c_cmd_reqwatch_myclub_auction_refunded_gp(self, s, m):
-        return {"refunded_gp_list": [], "total_gp": 0}
 
     def _lado_propio(self):
         """El jugador ocupa el lado contrario al del rival COM (config myclub.rival.side)."""

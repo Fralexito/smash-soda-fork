@@ -491,6 +491,17 @@
     "contrato_por_partido": 1,
     "staff_exp_factor": 1,
     "recuperar_monedas": 0,
+    "subastas": {
+      "activa": true,
+      "_nota": "subastas de la casa: cazatalentos de 'productos' (o de 'cazatalentos' si falta)",
+      "cantidad": 6,
+      "duracion_min": 60,
+      "incremento": 100,
+      "precio_por_estrella": 1000,
+      "seguimiento_max": 20,
+      "deseos_max": 10,
+      "rival_casa": {"activo": false, "probabilidad": 0.3, "tope_factor": 2}
+    },
     "cansancio": {"activo": false, "sube": 10, "baja": 10, "maximo": 100,
                   "_nota": "rango real de tiredness por confirmar con REA"}
   }

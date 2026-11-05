@@ -650,3 +650,15 @@ Formas sacadas con REA (RC, `RE_NOCHE_05NOV.md`). Hecho en el servidor; falta pr
   - Petición {gameplayer_unique_id_list, is_all, use_pes_point}. Respuesta {pes_point}.
   - Pone tiredness = 0 a los elegidos (o a todos con is_all = YES). Coste `myclub.recuperar_monedas` monedas gratis por jugador (def. 0 = gratis; nunca dinero real).
 - Pruebas: test_myclub_usar_entrenador_de_experiencia, test_myclub_boleto_de_contrato, test_myclub_recuperar_cansancio.
+
+## 49. Subastas de la casa (05-nov noche)
+Con una sola persona no hay quien venda, así que la «casa» pone cazatalentos a subasta. Hecho en el servidor; falta probarlo en vivo. Formas: §41 y `RE_NOCHE_05NOV.md` §7.
+- **Config `myclub.subastas`:** activa, cantidad (6 a la vez), duracion_min (60), incremento (100 GP), precio_por_estrella (1000; o `precio_inicial` en cada producto), seguimiento_max (20), deseos_max (10), `productos` (lista de cazatalentos; si falta se usan los de `myclub.cazatalentos`), `rival_casa` {activo (false), probabilidad, tope_factor}. Todo se puede cambiar en caliente (§46).
+- **Estado** en `club["subastas"]`: productos abiertos, seguimiento, deseos, reembolsos e historial (últimos 100). Cada vez que PES pide algo de subastas, el servidor cierra las vencidas y repone hasta `cantidad`.
+- **Pujar** (TENDER_MYCLUB_AUCTION_SCOUT {product_id, tender_gp}): P: tender_gp = puja total. La primera puja puede ser el precio inicial; las siguientes, precio + incremento. El GP queda apartado. Errores: puja baja o ya vas ganando = ERR_INSUFFICIENT_TENDER_GP; sin GP = ERR_INSUFFICIENT_GP; vencida = ERR_TENDER_TIMEOUT. Responde auction_scout_detail y gp.
+- **Rival de la casa** (apagado): con esa probabilidad la casa sube tu puja al momento; tu GP vuelve y queda en REQWATCH_MYCLUB_AUCTION_REFUNDED_GP.
+- **Al vencer:** si ibas ganando, el cazatalentos pasa a tus Cazatalentos (count 1, mismas estrellas). El GP ya se había pagado al pujar.
+- **Comandos hechos:** REFINE_SEARCH_AUCTION_LIST (start_index, de 50 en 50), AUCTION_WATCH_LIST + ADD/DELETE (is_all), AUCTION_WISH_LIST + ADD/DELETE (P: petición sin leer; se aceptan skill y grade, y wishlist_id / wishlist_id_list), AUCTION_SCOUT_DETAIL, WATCH_ (devuelve update_auction_scout_detail) y LEAVE_, TENDER y las dos variantes de ronda final (P: sin ronda final; la reserva cuenta como puja normal, cancelar devuelve gain_gp 0), AUCTION_REPORT_LIST («Mis pujas»), SUCCESSFUL_BID_INFO (precios finales del mismo cazatalentos), PRICE_RANKING (historial ordenado por precio; ranking_kind se ignora) y REQWATCH_REFUNDED_GP.
+- **Supuestos por confirmar en vivo (P):** time_limit / auction_end_time / finalround_end_time = segundos Unix absolutos; is_bid y demás = YES/NO; refunded_gp_list = lista de montos. Si la Casa de subastas falla, apagar con `subastas.activa = false` en las reglas y avisar.
+- Falta: TENDER_USERINFOLIST (forma sin leer) y la ronda final real; el mercado entre personas necesita la identidad propia (PLAN_MULTIUSUARIO).
+- Pruebas: test_myclub_subastas_de_la_casa, test_myclub_subasta_rival_de_la_casa_devuelve_gp.
