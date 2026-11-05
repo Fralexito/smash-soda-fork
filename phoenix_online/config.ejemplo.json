@@ -354,7 +354,58 @@
       "team_name_short": "RMA",
       "base_team_id": 109,
       "cpu_level": "MATCH_LEVEL_REGULAR",
-      "side": "AWAY"
+      "side": "AWAY",
+      "equipos": [
+        {
+          "base_team_id": 109,
+          "team_name": "Madrid Chamartín",
+          "team_name_short": "MCH",
+          "coach_id": 24
+        },
+        {
+          "base_team_id": 103,
+          "team_name": "Liverpool",
+          "team_name_short": "LIV",
+          "coach_id": 24
+        },
+        {
+          "base_team_id": 114,
+          "team_name": "PSG",
+          "team_name_short": "PSG",
+          "coach_id": 24
+        },
+        {
+          "base_team_id": 120,
+          "team_name": "Juventus",
+          "team_name_short": "JUV",
+          "coach_id": 24
+        },
+        {
+          "base_team_id": 127,
+          "team_name": "Bayern",
+          "team_name_short": "BAY",
+          "coach_id": 24
+        },
+        {
+          "base_team_id": 173,
+          "team_name": "Man City",
+          "team_name_short": "MCI",
+          "coach_id": 24
+        },
+        {
+          "base_team_id": 100,
+          "team_name": "Manchester United",
+          "team_name_short": "MUN",
+          "coach_id": 24
+        }
+      ]
+    },
+    "catalogo": "D:/Frank/IA/CLAUDE/pes-online/catalogo.json",
+    "exp_por_partido": {
+      "WIN": 60,
+      "DRAW": 40,
+      "LOSE": 30,
+      "": 30
     }
   }
 }

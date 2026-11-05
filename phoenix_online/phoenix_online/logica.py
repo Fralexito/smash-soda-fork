@@ -915,10 +915,14 @@ class Servidor:
         dts = club.get("entrenadores") or cfg.get("entrenadores") or []
         return [j for j in jugadores if isinstance(j, dict)], [d for d in dts if isinstance(d, dict)]
 
+    EXP_POR_NIVEL = 100  # P: curva simple hasta conocer la real
+
     def _ficha_jugador_myclub(self, i, j):
         e = lambda k, d=0: j.get(k) if isinstance(j.get(k), int) else d
         t = lambda k, d="NO": j.get(k) if isinstance(j.get(k), str) else d
-        nivel = e("level", 1)
+        limite = e("level_limit", 30)
+        exp = e("exp_total")
+        nivel = max(e("level", 1), min(limite, 1 + exp // self.EXP_POR_NIVEL))
         return Empaquetado({
             "gameplayer_unique_id": e("gameplayer_unique_id", i + 1),
             "gameplayer_id": e("gameplayer_id"), "games": e("games"), "goal": e("goal"),
@@ -931,8 +935,10 @@ class Servidor:
             "contract_pes_point": e("contract_pes_point"),
             "uniform_number": e("uniform_number", i + 1),
             "player_level_need_exp": [], "level_info": Empaquetado({
-                "level": nivel, "level_limit": e("level_limit", 30), "exp_total": 0,
-                "exp_current_level": 0, "exp_to_next_level": 100}),
+                "level": nivel, "level_limit": limite, "exp_total": exp,
+                "exp_current_level": exp % self.EXP_POR_NIVEL,
+                "exp_to_next_level": 0 if nivel >= limite else
+                self.EXP_POR_NIVEL - exp % self.EXP_POR_NIVEL}),
             "parameters": list(j.get("parameters") or []),
             "enhanced_parameters": list(j.get("enhanced_parameters") or []),
             "add_skill_id": e("add_skill_id"), "is_protected": t("is_protected"),
@@ -1451,20 +1457,24 @@ class Servidor:
         fichas = [self._ficha_dt_myclub(i, d) for i, d in enumerate(dts)]
         return {"coach_list": fichas, "coach_list_num": len(fichas)}
 
-    async def c_cmd_get_myclub_squadlist(self, s, m):
-        jugadores, dts = self._plantel_myclub(s)
-        if not jugadores:
-            return {"squad_list": [], "squad_list_num": 0, "edition_squad_list": [],
-                    "edition_squad_list_num": 0, "main_squad_id": 0, "cloud_squad_id": 0}
-        club = self.datos.club(s.steam_hex or "") or {}
-        plan = (club.get("gameplans") or {}).get("1") or {}
+    @staticmethod
+    def _elegidos(club, jugadores):
+        """C (§17): los 18 inscritos (XI + 7) en el orden guardado; si no hay, los 18 primeros.
+        Devuelve [(índice, jugador)]."""
         uid = lambda i, j: j.get("gameplayer_unique_id") or i + 1
         por_uid = {uid(i, j): (i, j) for i, j in enumerate(jugadores)}
         orden = [u for u in (club.get("inscritos") or {}).get("1") or [] if u in por_uid]
         if not orden:
             orden = [uid(i, j) for i, j in enumerate(jugadores)]
-        # C (§17): la plantilla son 18 (XI + 7 suplentes); el resto queda solo en «Miembros»
-        elegidos = [por_uid[u] for u in orden[:18]]
+        return [por_uid[u] for u in orden[:18]]
+
+    def _plantilla_principal(self, s):
+        jugadores, dts = self._plantel_myclub(s)
+        if not jugadores:
+            return None
+        club = self.datos.club(s.steam_hex or "") or {}
+        plan = (club.get("gameplans") or {}).get("1") or {}
+        elegidos = self._elegidos(club, jugadores)
         miembros = [Empaquetado({
             "gameplayer_unique_id": j.get("gameplayer_unique_id") or i + 1,
             "gameplayer_id": j.get("gameplayer_id") or 0,
@@ -1481,8 +1491,51 @@ class Servidor:
             "gameplan_data": self._plan_texto(plan.get("gameplan_data"))[1],
             "is_club_edition": "NO",
             "club_edition_type": ""})
+        return plantilla
+
+    async def c_cmd_get_myclub_squadlist(self, s, m):
+        plantilla = self._plantilla_principal(s)
+        if plantilla is None:
+            return {"squad_list": [], "squad_list_num": 0, "edition_squad_list": [],
+                    "edition_squad_list_num": 0, "main_squad_id": 0, "cloud_squad_id": 0}
         return {"squad_list": [plantilla], "squad_list_num": 1, "edition_squad_list": [],
                 "edition_squad_list_num": 0, "main_squad_id": 1, "cloud_squad_id": 0}
+
+    async def c_cmd_get_myclub_main_squad(self, s, m):
+        # C (05-nov, lector 141c06500): plantilla principal de target_pid. P: hoy solo la propia
+        # (ver la de otro jugador necesita la identidad propia y buscar su club por pid).
+        jugadores, dts = self._plantel_myclub(s)
+        club = self.datos.club(s.steam_hex or "") or {}
+        plantilla = self._plantilla_principal(s)
+        fichas = [self._ficha_jugador_myclub(i, j) for i, j in self._elegidos(club, jugadores)]
+        dt = [self._ficha_dt_myclub(i, d) for i, d in enumerate(dts[:1])]
+        return {"squad": plantilla or Empaquetado({}), "gameplayer_list": fichas,
+                "gameplayer_list_num": len(fichas), "coach_list": dt, "coach_list_num": len(dt),
+                "team_name": club.get("team_name") or "",
+                "base_team_id": int(club.get("base_team_id") or 0)}
+
+    async def c_cmd_get_myclub_gameplayer_experience(self, s, m):
+        # C/P (05-nov, lector candidato 141bf0cf0): tras el partido, los jugadores con su
+        # experiencia y nivel ya actualizados (misma ficha que GAMEPLAYERLIST)
+        jugadores, _ = self._plantel_myclub(s)
+        club = self.datos.club(s.steam_hex or "") or {}
+        fichas = [self._ficha_jugador_myclub(i, j) for i, j in self._elegidos(club, jugadores)]
+        return {"gameplayer_list": fichas, "gameplayer_list_num": len(fichas)}
+
+    async def c_cmd_get_myclub_game_bonus(self, s, m):
+        # C (05-nov, lector 141c7a820): premio del último partido. Listas vacías = sin extras.
+        club = self._club_inicial(s) or {}
+        u = (club.get("vscom") or {}).get("ultimo") or {}
+        nivel = ((self.cfg.get("myclub") or {}).get("rival") or {}).get("cpu_level",
+                                                                         "MATCH_LEVEL_REGULAR")
+        return {"gain_gp": int(u.get("gp") or 0), "gp": int(club.get("gp") or 0),
+                "base_gp": int(u.get("gp") or 0), "game_res": u.get("desenlace") or "",
+                "match_num": int((club.get("vscom") or {}).get("partidos") or 0),
+                "new_cpu_level": nivel, "old_cpu_level": nivel,
+                "is_first_win": "YES" if u.get("primera_victoria") else "NO",
+                "gp_bonus_list": [], "gp_bonus_list_num": 0,
+                "gp_bonus_elected_myplayer_num": 0, "special_match_bonus_list": [],
+                "squad_bonus_item_list": []}
 
     async def c_cmd_get_myclub_procurable_gameplayerlist(self, s, m):
         return {"gameplayer_list": [], "gameplayer_list_num": 0}
@@ -1543,6 +1596,18 @@ class Servidor:
                                                 "gp": premio, "datos": simple})
         com["historial"] = com["historial"][-50:]
         club["gp"] = int(club.get("gp") or 0) + premio
+        victorias_antes = sum(1 for h in com["historial"][:-1] if h.get("desenlace") == "WIN")
+        com["ultimo"] = {"desenlace": desenlace, "gp": premio,
+                         "primera_victoria": desenlace == "WIN" and victorias_antes == 0}
+        # Experiencia para los 18 inscritos (P: valores de config myclub.exp_por_partido)
+        if not club.get("jugadores"):
+            club["jugadores"] = self._plantel_inicial()[0]
+        tabla_exp = (self.cfg.get("myclub") or {}).get("exp_por_partido") or {
+            "WIN": 60, "DRAW": 40, "LOSE": 30, "": 30}
+        ganada = int(tabla_exp.get(desenlace, 0) or 0)
+        for _, j in self._elegidos(club, club["jugadores"]):
+            j["exp_total"] = int(j.get("exp_total") or 0) + ganada
+            j["games"] = int(j.get("games") or 0) + 1
         self.datos.guardar_club(s.steam_hex or "", club)
         log.info("myClub vs COM %s: %s, +%d GP (saldo %d)", s.steam_hex, desenlace or "?",
                  premio, club["gp"])

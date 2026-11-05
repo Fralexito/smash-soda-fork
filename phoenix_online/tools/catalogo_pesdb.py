@@ -1,7 +1,7 @@
 """Arma el catálogo de jugadores de myClub desde la base de datos del PROPIO juego.
 
 Uso (en la PC, con los .bin ya sacados del cpk):
-    python -I tools/catalogo_pesdb.py PlayerAssignment.bin [--extra extra.json] -o catalogo.json
+    python -I tools/catalogo_pesdb.py PlayerAssignment.bin [--player Player.bin] [--extra extra.json] -o catalogo.json
 
 - PlayerAssignment.bin (dt10_x64.cpk → common/etc/pesdb/): cabecera con «WESYS» y luego zlib.
   Filas de 16 bytes = 4 × u32 LE: [fila][player_id][team_id][puesto<<10 | dorsal].
@@ -45,12 +45,27 @@ def leer_asignaciones(datos):
     return equipos
 
 
-def armar(asignaciones, extra=None):
+def leer_nombres(datos):
+    """C (05-nov, Player.bin del PES base, ya descomprimido): registros de 312 B desde el
+    offset 8; id = u32 en +0; nombre de camiseta ASCII en +243 (61 B, p. ej. «L. MESSI»).
+    Los bytes +4..+59 son campos en bits sin documentar (la media no está guardada)."""
+    nombres = {}
+    for off in range(8, len(datos) - 311, 312):
+        (pid,) = struct.unpack_from("<I", datos, off)
+        crudo = datos[off + 243:off + 304].split(b"\0", 1)[0]
+        if pid and crudo:
+            nombres[str(pid)] = crudo.decode("latin-1")
+    return nombres
+
+
+def armar(asignaciones, extra=None, nombres=None):
     extra = extra or {}
     jugadores = {}
     for equipo, filas in asignaciones.items():
         for f in filas:
             j = jugadores.setdefault(str(f["gameplayer_id"]), {"team_id": equipo})
+            if nombres and str(f["gameplayer_id"]) in nombres:
+                j["nombre"] = nombres[str(f["gameplayer_id"])]
             j.update(extra.get(str(f["gameplayer_id"]), {}))
     return {"version": 1,
             "equipos": {str(e): f for e, f in sorted(asignaciones.items())},
@@ -60,6 +75,7 @@ def armar(asignaciones, extra=None):
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("assignment")
+    ap.add_argument("--player", help="Player.bin para añadir los nombres")
     ap.add_argument("--extra")
     ap.add_argument("-o", "--salida", default="catalogo.json")
     a = ap.parse_args(argv)
@@ -69,10 +85,14 @@ def main(argv=None):
     if a.extra:
         with open(a.extra, encoding="utf-8") as f:
             extra = json.load(f)
-    cat = armar(asign, extra)
+    nombres = None
+    if a.player:
+        with open(a.player, "rb") as f:
+            nombres = leer_nombres(descomprimir_wesys(f.read()))
+    cat = armar(asign, extra, nombres)
     with open(a.salida, "w", encoding="utf-8") as f:
         json.dump(cat, f, ensure_ascii=False)
-    print(f"{len(cat['equipos'])} equipos, {len(cat['jugadores'])} jugadores → {a.salida}")
+    print(f"{len(cat['equipos'])} equipos, {len(cat['jugadores'])} jugadores -> {a.salida}")
 
 
 if __name__ == "__main__":

@@ -367,3 +367,21 @@ La petición de estos tres solo trae pid. Todo objeto anidado va como bin.
   - myclub.rival.equipos = [{base_team_id, team_name, team_name_short, coach_id, cpu_level}…]: el rival rota con cada partido vs COM. Sin «jugadores», salen los 18 primeros de ese equipo del catálogo.
 - Pendiente: leer Player.bin (media, posición, nación) para la rareza y el precio reales, y usar el catálogo en Cazatalentos y Representantes.
 - C: al ENTRAR a myClub, el cliente manda un SET_MYCLUB_VSCOM_GAMERESULT vacío: NORMAL_END, WINNER_NONE, pes_srv_rtt_nums 0, past_game_played_pid 0. Se responde sin guardar nada ni dar GP. Esto explica los «DRAW» raros de las pruebas. Un resultado real trae rtt_nums > 0 y past_game_played_pid = pid.
+
+## 29. Después del partido, catálogo real y tablas del juego (C, 05-nov)
+- Partido completo: unos 16 min reales, NORMAL_END, WINNER_HOME, pes_srv_rtt_nums 30. El servidor dio WIN +240 GP y PES terminó sin errores.
+- Comandos que llegan después del partido (ya respondidos):
+  - **GET_MYCLUB_GAME_BONUS** (lector 141c7a820):
+    - Campos: gain_gp, gp (saldo), base_gp, game_res (WIN/DRAW/LOSE), match_num, new_cpu_level/old_cpu_level (MATCH_LEVEL_*), is_first_win.
+    - Listas: gp_bonus_list [{bonus_kind, bonus_rate}] + _num, gp_bonus_elected_myplayer_num, special_match_bonus_list [regalo], squad_bonus_item_list [regalo].
+    - scout{…} (premio, sin mandar por ahora).
+    - El servidor guarda club.vscom.ultimo con el resultado.
+  - **GET_MYCLUB_GAMEPLAYER_EXPERIENCE** (candidato 141bf0cf0): gameplayer_list = fichas completas con level_info actualizado.
+  - **GET_MYCLUB_MAIN_SQUAD** {target_pid} (lector 141c06500): squad (como SQUADLIST) + gameplayer_list + coach_list + team_name + base_team_id. Hoy solo devuelve la plantilla propia.
+- **Experiencia (P):** cada partido suma exp_total a los 18 inscritos según myclub.exp_por_partido (WIN 60, DRAW 40, LOSE 30). Nivel = 1 + exp//100, hasta level_limit (30). También suma games. Hay que confirmar contra la curva real.
+- **Catálogo real:** 661 equipos y 17 583 jugadores desde PlayerAssignment (1,66 MB). `--player Player.bin` agrega los nombres.
+- Tablas del juego (PES base, dt10_x64.cpk):
+  - Player.bin: WESYS+zlib, registros de 312 B desde +8; id u32 +0; nombre japonés +60; apellido +121; nombre largo +182; nombre de camiseta +243 (61 B c/u). Los bytes +4..+59 son campos en bits; la media no está guardada.
+  - Team.bin: 662 registros de 1532 B desde +84; nombre en inglés +284. El u32 de +1476 no es un id fiable.
+- team_id de clubes grandes: 100 Man United, 101 Arsenal, 102 Chelsea, 103 Liverpool, 108 Barcelona, 109 Real Madrid sin licencia («Madrid Chamartín»; su escudo «MD» es el oficial del juego, no un fallo), 114 PSG, 119 Inter, 120 Juventus, 121 Milan, 127 Bayern, 172 Atlético, 173 Man City, 327 Napoli. Los team_id menores de ~60 son selecciones.
+- config.ejemplo: rival.equipos rota entre 7 clubes grandes.
