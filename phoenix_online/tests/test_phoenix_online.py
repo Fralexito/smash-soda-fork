@@ -491,6 +491,27 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.assertIsInstance(el["base_player_info"], bytes)
         self.assertEqual(el["id"], 1)
 
+    async def test_myclub_plantel_desde_config(self):
+        jug = [{"gameplayer_id": 100 + i, "rating": 90} for i in range(11)]
+        self.srv.cfg = {**self.srv.cfg, "myclub": {"jugadores": jug,
+                                                    "entrenadores": [{"coach_id": 5}]}}
+        a, ea = await self.entrar("A1")
+        r = self.srv.recibir
+        await r(a, 1, {"msgid": "CMD_GET_MYCLUB_GAMEPLAYERLIST", "rqid": 1})
+        m = ea[-1][1]
+        self.assertEqual(m["gameplayer_list_num"], 11)
+        f = msgpack_min.unpackb(msgpack_min.packb(m["gameplayer_list"][0].valor))
+        self.assertIsInstance(f["concept"], bytes)
+        self.assertEqual((f["gameplayer_id"], f["rating"]), (100, 90))
+        await r(a, 2, {"msgid": "CMD_GET_MYCLUB_COACHLIST", "rqid": 2})
+        self.assertEqual(ea[-1][1]["coach_list_num"], 1)
+        await r(a, 3, {"msgid": "CMD_GET_MYCLUB_SQUADLIST", "rqid": 3})
+        m = ea[-1][1]
+        self.assertEqual((m["squad_list_num"], m["main_squad_id"]), (1, 1))
+        sq = msgpack_min.unpackb(msgpack_min.packb(m["squad_list"][0].valor))
+        self.assertEqual(sq["member_num"], 11)
+        msgpack_min.packb(m)
+
     def test_avatar_http_vacio_y_guardado(self):
         r = self.srv.respuesta_http({"msgid": "CMD_GET_AVATAR_HTTP", "rqid": "3", "pid": "7"})
         self.assertEqual((r["result"], r["avatar_data"], r["avatar_data_size"]), ("NOERR", "", 0))

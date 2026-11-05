@@ -101,3 +101,14 @@ Marcas: C = leído en el código; P = deducción.
   - P: los tres comandos se piden ya dentro del menú principal de myClub.
 - En vivo: con progress_status «NotImplement» y con «NONE» pasa lo mismo que con el vacío. Llega LEAVE_ONLINE_MODE justo después de SQUADLIST y no aparece ningún comando de creación.
 - Siguiente hipótesis (P): el cliente sale porque cree que no hay club. Se prueba fingiendo un club ya creado con `"myclub": {"club_de_prueba": {...}}` en config.json.
+
+## 14. El interruptor de «salir» (C, Ghidra estático, 05-nov)
+- La carga de myClub es una máquina de estados (código en 1413d5000..1413d652e, sin funciones definidas en el proyecto recortado).
+  - El estado vive en [tarea+0x90]. Cada estado crea un comando por nombre y lo sondea con 1413c7ab0 (0 = pendiente, 1 = ok, otro = error).
+  - Orden: UserInfo, Gameplayerlist, Coachlist, Squadlist y después SquadGameplan, SetMyclubMainSquad, CloudSquad, Itemlist, PlayerNumberFixation…
+- **Estado 0x15 = salir** (1413d5101). Se llega ahí si un comando no da 1, y también por dos comprobaciones después de SQUADLIST (estado 0x11, 1413d5fbb..1413d6014):
+  1. Una estructura que llenan COACHLIST/SQUADLIST no debe ser nula (P).
+  2. El número de elementos de un vector de 944 bytes por elemento, que P = la lista de JUGADORES, no debe ser 0.
+- Después recorre los elementos: +0x36 == 1 (P: «en plantilla»), +0x1c ≥ 90 (P: valoración o nivel), +8 = id que se busca en la estructura del paso 1.
+- **Conclusión:** con 0 jugadores el cliente sale. Hacen falta jugadores, al menos un entrenador y una plantilla que referencie a esos jugadores.
+- Implementado: `"myclub": {"jugadores": [...], "entrenadores": [...]}` en config.json arma GAMEPLAYERLIST, COACHLIST y SQUADLIST. main_squad_id = 1. Todo elemento va como bin. Faltan gameplayer_id y coach_id reales del juego.

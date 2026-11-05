@@ -874,6 +874,65 @@ class Servidor:
         return {"sin": c.get("progreso_sin_club", ""), "con": c.get("progreso_con_club", ""),
                 "gp": int(c.get("gp_inicial", self.MYCLUB_GP_INICIAL))}
 
+    CONCEPTO_JUGADOR = ("transition_counter", "transition_possession", "build_up_long",
+                        "build_up_short", "attacking_area_side", "attacking_area_center",
+                        "mobility_fix", "mobility_float", "defence_type_forecheck",
+                        "defence_type_retreat", "press_rule_net_defence", "press_rule_seal_off",
+                        "first_df_aggressive", "first_df_safety")
+    CONCEPTO_DT = ("transition", "build_up", "attacking_area", "mobility", "defence_type",
+                   "press_rule", "first_df", "passsupport_dist", "offence_num", "defence_line",
+                   "defence_compact", "defence_num")
+
+    def _plantel_myclub(self, s):
+        """Jugadores, entrenadores y plantillas del club: lo guardado o, si no hay, el de config
+        (myclub.jugadores / myclub.entrenadores). C (§14): con 0 jugadores el cliente sale."""
+        cfg = self.cfg.get("myclub") or {}
+        club = self.datos.club(s.steam_hex or "") or {}
+        jugadores = club.get("jugadores") or cfg.get("jugadores") or []
+        dts = club.get("entrenadores") or cfg.get("entrenadores") or []
+        return [j for j in jugadores if isinstance(j, dict)], [d for d in dts if isinstance(d, dict)]
+
+    def _ficha_jugador_myclub(self, i, j):
+        e = lambda k, d=0: j.get(k) if isinstance(j.get(k), int) else d
+        t = lambda k, d="NO": j.get(k) if isinstance(j.get(k), str) else d
+        nivel = e("level", 1)
+        return Empaquetado({
+            "gameplayer_unique_id": e("gameplayer_unique_id", i + 1),
+            "gameplayer_id": e("gameplayer_id"), "games": e("games"), "goal": e("goal"),
+            "assist": e("assist"), "tiredness": e("tiredness"),
+            "contract_term": e("contract_term", 10), "gameplayer_cost": e("gameplayer_cost", 5),
+            "rating": e("rating", 75),
+            "concept": Empaquetado({k: e(k) for k in self.CONCEPTO_JUGADOR}),
+            "is_rental": t("is_rental"), "is_subscription": t("is_subscription"),
+            "sell_gp": e("sell_gp"), "contract_gp": e("contract_gp"),
+            "contract_pes_point": e("contract_pes_point"),
+            "uniform_number": e("uniform_number", i + 1),
+            "player_level_need_exp": [], "level_info": Empaquetado({
+                "level": nivel, "level_limit": e("level_limit", 30), "exp_total": 0,
+                "exp_current_level": 0, "exp_to_next_level": 100}),
+            "parameters": list(j.get("parameters") or []),
+            "enhanced_parameters": list(j.get("enhanced_parameters") or []),
+            "add_skill_id": e("add_skill_id"), "is_protected": t("is_protected"),
+            "redcard_info_list": [], "default_overall": e("default_overall", e("rating", 75)),
+            "default_rarity": t("default_rarity", "WHITE"), "team_id": e("team_id"),
+            "nation_id": e("nation_id")})
+
+    def _ficha_dt_myclub(self, i, d):
+        e = lambda k, x=0: d.get(k) if isinstance(d.get(k), int) else x
+        t = lambda k, x="NO": d.get(k) if isinstance(d.get(k), str) else x
+        return Empaquetado({
+            "coach_unique_id": e("coach_unique_id", i + 1), "coach_id": e("coach_id"),
+            "contract_term": e("contract_term", 10),
+            "offensive_main_concept": Empaquetado({k: e(k) for k in self.CONCEPTO_DT}),
+            "defensive_main_concept": Empaquetado({k: e(k) for k in self.CONCEPTO_DT}),
+            "formation_data": t("formation_data", ""), "overall": e("overall", 70),
+            "management": e("management", 70), "adaptability_rate": e("adaptability_rate", 100),
+            "sell_gp": 0, "contract_gp": 0, "contract_pes_point": 0,
+            "current_point_division": 0, "current_point_sim": 0, "current_point_vscom": 0,
+            "is_use_variable_formation": t("is_use_variable_formation"),
+            "is_coach_texture_use": t("is_coach_texture_use"), "team_id": e("team_id"),
+            "nation_id": e("nation_id")})
+
     async def c_cmd_get_myclub_server_env(self, s, m):
         return {"license_out_player_list": [], "license_out_coach_list": [],
                 "market_scout_list": [], "sell_gp": [], "is_all_club_edition_set": "NO"}
@@ -985,15 +1044,38 @@ class Servidor:
                 "hold_gameplayer_list": [], "hold_gameplayer_list_num": 0}
 
     async def c_cmd_get_myclub_gameplayerlist(self, s, m):
-        return {"gameplayer_list": [], "gameplayer_list_num": 0, "gameplayer_list_max": 250,
+        jugadores, _ = self._plantel_myclub(s)
+        fichas = [self._ficha_jugador_myclub(i, j) for i, j in enumerate(jugadores)]
+        return {"gameplayer_list": fichas, "gameplayer_list_num": len(fichas),
+                "gameplayer_list_max": 250,
                 "main_edition_gameplayer_list": [], "main_edition_gameplayer_list_num": 0}
 
     async def c_cmd_get_myclub_coachlist(self, s, m):
-        return {"coach_list": [], "coach_list_num": 0}
+        _, dts = self._plantel_myclub(s)
+        fichas = [self._ficha_dt_myclub(i, d) for i, d in enumerate(dts)]
+        return {"coach_list": fichas, "coach_list_num": len(fichas)}
 
     async def c_cmd_get_myclub_squadlist(self, s, m):
-        return {"squad_list": [], "squad_list_num": 0, "edition_squad_list": [],
-                "edition_squad_list_num": 0, "main_squad_id": 0, "cloud_squad_id": 0}
+        jugadores, dts = self._plantel_myclub(s)
+        if not jugadores:
+            return {"squad_list": [], "squad_list_num": 0, "edition_squad_list": [],
+                    "edition_squad_list_num": 0, "main_squad_id": 0, "cloud_squad_id": 0}
+        miembros = [Empaquetado({
+            "gameplayer_unique_id": j.get("gameplayer_unique_id") or i + 1,
+            "gameplayer_id": j.get("gameplayer_id") or 0,
+            "uniform_number": j.get("uniform_number") or i + 1,
+            "player_level": j.get("level") or 1, "parameters": list(j.get("parameters") or []),
+            "default_rarity": j.get("default_rarity") or "WHITE"})
+            for i, j in enumerate(jugadores)]
+        plantilla = Empaquetado({
+            "squad_id": 1, "name": "Plantilla 1", "member_list": miembros,
+            "member_num": len(miembros), "is_entry_compe": "NO",
+            "coach_id_list": [d.get("coach_id") or 0 for d in dts[:1]],
+            "coach_unique_id_list": [d.get("coach_unique_id") or 1 for d in dts[:1]],
+            "gameplan_data_size": 0, "gameplan_data": "", "is_club_edition": "NO",
+            "club_edition_type": ""})
+        return {"squad_list": [plantilla], "squad_list_num": 1, "edition_squad_list": [],
+                "edition_squad_list_num": 0, "main_squad_id": 1, "cloud_squad_id": 0}
 
     async def c_cmd_get_myclub_procurable_gameplayerlist(self, s, m):
         return {"gameplayer_list": [], "gameplayer_list_num": 0}
