@@ -507,3 +507,5 @@ Lectores encontrados en el juego (RE estático, sin abrir PES). Todo lo de dentr
   - `sub1_player_rarity_info` y `sub2_player_rarity_info` = UN bin cada una. Se guardan en +0x228/+0x22c y en +0x230/+0x234.
   - Con 3 bins el crash era en main; con 3 listas, en sub1.
   - El banner no era la causa de este crash, pero la URL igual hace falta.
+- **06:30, con 9956374:** sin crash, pero vuelve el «caducó». El vector de 8 B en +0x50 no es la rareza: casi seguro es `token_list` ({level, count}), que también usa token_use_dialog (FUN_140d48520).
+  - Prueba: `token_list` = [bin({level:1, count:1})], `token_list_num` 1 e `is_draw_checked` «YES». Los dos se pueden cambiar con token_level, token_count e is_draw_checked en myclub.agentes.

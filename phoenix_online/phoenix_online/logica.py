@@ -1241,9 +1241,14 @@ class Servidor:
         agente = Empaquetado({
             "agent_id": a["agent_id"], "name": a.get("name") or "", "name_jp": a.get("name_jp") or "",
             "type": a.get("type") or "", "target_level": int(a.get("target_level") or 0),
-            "token_list": [], "token_list_num": 0,
+            # C (06:30, FUN_140d46f90): con token_list vacía y un byte del agente en 0 la caja
+            # dice «caducó». P: un token {level, count} y is_draw_checked YES (config agentes)
+            "token_list": [Empaquetado({"level": int(a.get("token_level") or 1),
+                                        "count": int(a.get("token_count") or 1)})],
+            "token_list_num": 1,
             "bgm_id": int(a.get("bgm_id") or 0), "uniform": int(a.get("uniform") or 0),
-            "get_player_num": int(a.get("get_player_num") or 1), "is_draw_checked": "NO",
+            "get_player_num": int(a.get("get_player_num") or 1),
+            "is_draw_checked": a.get("is_draw_checked") or "YES",
             "is_buy_gp_pes_point": "YES", "pes_point": int(a.get("pes_point") or 0),
             "gp": int(a.get("gp") or 0), "agent_end_time": int(time.time()) + 7 * 86400,
             "agent_token_end_time": 0})
