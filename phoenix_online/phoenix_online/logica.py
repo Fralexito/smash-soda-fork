@@ -1295,7 +1295,11 @@ class Servidor:
         bolsa = self._bolsa(a, self._club_inicial(s))
         # C (05-nov, lector 141c2e880): *_player_rarity_info son LISTAS de bin({rarity, count});
         # un bin suelto se leía como lista → basura → PES se cerraba
-        cuenta = lambda: []
+        # C (05-nov, constructor de la caja FUN_140d46f90): si la lista de rareza está VACÍA el
+        # cliente muestra «No puedes usar este Representante porque ya caducó» (msg 0x22602be).
+        # P: un elemento {rarity, count} con los candidatos que quedan
+        rareza = int(a.get("rareza_caja") or 1)
+        cuenta = lambda n=len(bolsa): [Empaquetado({"rarity": rareza, "count": n})]
         # C (05-nov, lector 141c2e880): DOS niveles agent_info; el de fuera lleva la caja y el
         # de dentro agent + banner_file_info + skill (con un solo nivel PES se cerraba)
         return {"agent_info": Empaquetado({

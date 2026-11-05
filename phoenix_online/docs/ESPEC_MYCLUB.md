@@ -494,3 +494,8 @@ Lectores encontrados en el juego (RE estático, sin abrir PES). Todo lo de dentr
   - No se envía ningún comando: lo decide el cliente con los datos del agente.
   - Sospechas: agent_token_end_time = 0, skill.limit_count = 0, o tiempos en otra unidad.
   - Prueba en curso: tiempos a +10 años y limit_count 99.
+- **Causa del «caducó»:** RE del texto: msg 0x22602be en string/all.str. Lo muestra solo el constructor de la caja, FUN_140d46f90.
+  - Sale si el vector de pares {rarity, count} está vacío y además un byte (+0x75) vale 0, o si unos contadores (+0x78/+0x7c) valen 0.
+  - No tiene que ver con los tiempos: las pruebas con +10 años fallaron.
+  - Arreglo: cada `*_player_rarity_info` lleva al menos un elemento `{rarity, count = candidatos}`.
+  - Otro aviso del mismo constructor («caja sin fichajes», 0x226028a/b) se evita con `is_use_reset` «NO» y box_size > 0.
