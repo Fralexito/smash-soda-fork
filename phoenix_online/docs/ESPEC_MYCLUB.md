@@ -613,7 +613,8 @@ Un «producto» es un cazatalentos a subasta (`scout_id` = agent_id, `grade` = e
 - Config `myclub.dificultad` = {activa, niveles [fácil→difícil], inicial, victorias_para_subir (def. 3), derrotas_para_bajar (def. 2; 0 = nunca baja)}. Apagada por defecto.
 - Se guarda por club en vscom.nivel_idx; tras cada partido `_ajustar_dificultad` sube un nivel cada N victorias seguidas y baja con M derrotas seguidas.
 - VSCOM_OPPONENT.cpu_level = nivel del club (salvo rival.cpu_level_fijo = true). GAME_BONUS: old_cpu_level = nivel antes del partido, new_cpu_level = nivel nuevo (el cliente muestra el cambio).
-- Pendiente: la lista real de MATCH_LEVEL_* (REA). Hasta entonces niveles = [MATCH_LEVEL_REGULAR].
+- C (REA 05-nov noche, tabla 0x142645fd0): MATCH_LEVEL_ 0..5 = BEGINNER, AMATEUR, REGULAR, PROFESSIONAL, TOPPLAYER, SUPERSTAR. GAME_BONUS (lector 0x141c7a820): new/old_cpu_level TEXTO (+0x188/+0x1a8), game_res texto, match_num int, is_first_win texto. Activada en config.ejemplo con inicial REGULAR (igual que antes hasta ganar 3 seguidas).
+- Logro «Convertir en Entrenador» = bit 244 (600 GP, P por orden de acciones); «Liberar» = 231 (800).
 - Prueba: test_myclub_dificultad_sube_y_baja.
 
 ## 45. Contrato y cansancio por partido (05-nov noche)
