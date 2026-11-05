@@ -460,7 +460,10 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
                  "CMD_GET_MYCLUB_SQUADLIST": "main_squad_id",
                  "CMD_GET_MYCLUB_PROCURABLE_GAMEPLAYERLIST": "gameplayer_list_num",
                  "CMD_REQWATCH_MYCLUB_AUCTION_REFUNDED_GP": "total_gp",
-                 "CMD_SET_MYCLUB_VSCOM_GAMERESULT": "player_data"}
+                 "CMD_SET_MYCLUB_VSCOM_GAMERESULT": "player_data",
+                 "CMD_GET_MYCLUB_MAINMENU_INFO": "matchday_emblem_info",
+                 "CMD_GET_MYCLUB_LOGIN_BONUS": "is_bonus",
+                 "CMD_GET_MYCLUB_ITEMLIST": "item_list_num"}
         for i, (cmd, clave) in enumerate(casos.items()):
             await self.srv.recibir(a, 100 + i, {"msgid": cmd, "rqid": i, "pid": 1})
             self.assertEqual((ea[-1][1]["msgid"], ea[-1][1]["result"]), (cmd, "NOERR"))

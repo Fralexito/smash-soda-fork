@@ -984,6 +984,32 @@ class Servidor:
     async def c_cmd_get_myclub_is_first_agent_multiple(self, s, m):
         return {"is_first": "YES"}
 
+    async def c_cmd_get_myclub_mainmenu_info(self, s, m):
+        # C (§15.1). P: game_result_wdl / game_result / cpu_level se omiten hasta conocer su forma
+        # (una clave ausente deja el valor por defecto del cliente).
+        _, dts = self._plantel_myclub(s)
+        jugadores, _ = self._plantel_myclub(s)
+        sin_archivo = lambda: Empaquetado({"filename": "", "hash_str": ""})
+        return {"com_countWin_num": 0, "com_match_num": 0, "oppo_level": 0,
+                "weekly_group_rank": 0, "weekly_group_rank_total_num": 0, "rank": 0,
+                "rank_total_num": 0, "rank_coach": 0, "rank_coach_total_num": 0,
+                "present_num": 0, "scount_num": 0, "staff_num": 0,
+                "is_free_enable": "YES", "is_coop_enable": "NO", "is_auction_state_changed": "NO",
+                "achievement_info": Empaquetado({"achievement_not_recieved_num": 0,
+                                                 "achievement_num": 0, "achievement_total_num": 0}),
+                "agent_panel_file_info": sin_archivo(), "liveevent_panel_file_info": sin_archivo(),
+                "matchday_emblem_info": Empaquetado({
+                    "is_use_emblem": "NO", "is_auto_make_compe_name": "NO",
+                    "matchday_group_type": "", "team_list_group_a": [], "team_list_group_b": [],
+                    "compe_db_id": 0})}
+
+    async def c_cmd_get_myclub_login_bonus(self, s, m):
+        return {"login_bonus_list": [], "login_bonus_list_num": 0, "today_bonus_number": 0,
+                "is_bonus": "NO"}  # C (§15.2): «sin bonus»
+
+    async def c_cmd_get_myclub_itemlist(self, s, m):
+        return {"item_list": [], "item_list_num": 0}  # C (§15.3)
+
     async def c_cmd_create_myclub_team(self, s, m):
         # C (§12): la respuesta solo lleva msgid/rqid/result; ERR_ALREADYEXISTS si ya hay club
         if self.datos.club(s.steam_hex or ""):

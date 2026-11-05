@@ -122,3 +122,29 @@ Marcas: C = leído en el código; P = deducción.
 - Comandos que llegan después y aún no tienen manejador (la pantalla abre igual):
   - Al cargar: GET_MYCLUB_SQUAD_GAMEPLAN, SET_MYCLUB_MAIN_SQUAD, SET_MYCLUB_CLOUD_SQUAD, GET_MYCLUB_ITEMLIST, GET_MYCLUB_PLAYER_NUMBER_FIXATION, GET_MYCLUB_SCOUTLIST, GET_MYCLUB_WEEKLY_RANKING_BASIC_INFO.
   - Al abrir el menú: GET_MYCLUB_LOGIN_BONUS, GET_MYCLUB_CLOUDMATCH_BONUS, GET_MYCLUB_MAINMENU_INFO.
+
+### 15.1–15.3 (C, lectores leídos 05-nov)
+La petición de estos tres solo trae pid. Todo objeto anidado va como bin.
+- **GET_MYCLUB_MAINMENU_INFO** (lector 141bfd5f0):
+  - Enteros: com_countWin_num, com_match_num, oppo_level, weekly_group_rank, weekly_group_rank_total_num, rank, rank_total_num, rank_coach, rank_coach_total_num, present_num, scount_num, staff_num.
+  - Textos: cpu_level (P), is_free_enable, is_coop_enable, is_auction_state_changed.
+  - Objetos:
+    - achievement_info{achievement_not_recieved_num, achievement_num, achievement_total_num}.
+    - agent_panel_file_info y liveevent_panel_file_info, cada uno {filename, hash_str}.
+    - matchday_emblem_info{is_use_emblem, is_auto_make_compe_name, matchday_group_type, team_list_group_a [int], team_list_group_b [int], compe_db_id}.
+    - game_result_wdl y game_result: forma todavía dudosa, se omiten.
+- **GET_MYCLUB_LOGIN_BONUS** (lector 141bf4a40):
+  - login_bonus_list = lista de {present_id, name, name_jp, title, body, entity_id, grade, skill{skill_category, skill_id}, type, player_level, contract_term, team_id, present_type, item{item_type, item_variation, item_effect_arg, count, pes_point_price}, receipt_deadline, count}.
+  - login_bonus_list_num, today_bonus_number, is_bonus.
+- **GET_MYCLUB_ITEMLIST** (lector 141bed520): item_list [{item_type, item_variation, item_effect_arg, count, pes_point_price}] e item_list_num.
+- Direcciones de los otros 7 (petición/lector):
+
+  | Comando | Petición | Lector |
+  |---|---|---|
+  | SQUAD_GAMEPLAN | 141ca7890 | 141ca7ef0 |
+  | SET_MAIN_SQUAD | 141bebaf0 | 141bec4a0 |
+  | SET_CLOUD_SQUAD | 141bdfef0 | 141be0740 |
+  | PLAYER_NUMBER_FIXATION | 141c5c110 | 141c5c710 |
+  | SCOUTLIST | 141c3d920 | 141c3df20 |
+  | WEEKLY_RANKING_BASIC_INFO | 141c714e0 | 141c71ae0 |
+  | CLOUDMATCH_BONUS | 141c424b0 | 141c42b10 |
