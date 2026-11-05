@@ -585,3 +585,11 @@ Un «producto» es un cazatalentos a subasta (`scout_id` = agent_id, `grade` = e
   - `ranking_kind` no tiene enum propio: se ignora y se devuelve siempre el mismo ranking.
   - `auction_successful_bid_list` es una lista de ENTEROS (no de bins), más auction_successful_bid_list_num, best_bid_amount_price, best_bid_amount_day y average_bid_price.
 - **AGENT_DRAW_RATE:** `main`, `sub1` y `sub2` = bin({rate_table: [int], rate_player_num: [int]}), dos listas paralelas con una fila por rareza. Antes mandábamos `rate_player_num` como un entero suelto, lo que podía romper la pantalla. Ahora lleva una fila: [10000] y [candidatos]. Por probar con X en la caja.
+
+## 42. Prueba en vivo del menú del jugador (05-nov)
+- Bloquear/Desbloquear (SET_MYCLUB_PROTECTED_ENABLE/DISABLE): OK. Candado en la lista; el cliente deshabilita por sí solo Bloquear, Convertir y Liberar en un jugador protegido.
+- Liberar (SELL_MYCLUB_GAMEPLAYER): OK, +100 GP, 30 -> 29 jugadores.
+- Convertir en Entrenador (CREATE_MYCLUB_STAFF): OK, sale de la plantilla; el cliente lo permite también con titulares (Messi).
+- Caja de Representante: X abre «Información de Caja» (155/155) sin caída; fichaje de Fabinho Nv.1 sin coste (token).
+- Avisos de logro muestran el GP real: bit 231 «Vender jugador» = 800, bit 237 = 240, convertir en entrenador = 600 (bit por identificar). Añadidos 231 y 237 a gp_logros.
+- Pendiente: devolver a Messi (admin), logro de convertir (bit), abandono en vs COM.
