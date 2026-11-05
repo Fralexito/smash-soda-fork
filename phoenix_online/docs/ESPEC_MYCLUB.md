@@ -517,3 +517,9 @@ Lectores encontrados en el juego (RE estático, sin abrir PES). Todo lo de dentr
     - Sale «1/3» en la pantalla de fichaje.
     - Sale «Finaliza en 0 min»: la caja usa otro campo de tiempo.
     - Los iconos de la tarjeta muestran 0 GP y 0 monedas.
+- **06:50, RE de los detalles (PC):**
+  - «1/3» en «Nuevo fichaje con representante» NO es un contador de jugadores: son 3 PÁGINAS (jugadores, objetos extra, bonus), con los botones LT y RT. No es un fallo.
+  - «G 0 / ★ 0» en la tarjeta sería el coste por tirada. Con token e is_draw_checked YES sale gratis para el cliente. El servidor es quien cobra los 10 000 GP.
+  - «Finaliza en 0 min»: prueba barata con `agent_token_end_time` y `market_subscription.end_time` = ahora + 7 días.
+  - Mapa de offsets del objeto resultado de AGENT_BOX_INFO: agent_id +0xb8, target_level +0x100, token_list +0x128, get_player_num +0x144, pes_point +0x188, gp +0x18c, agent_end_time +0x190, agent_token_end_time +0x194, skill_id +0x1f8, limit_count +0x200, use_count +0x204, box_size +0x208, box_pack_num +0x20c, reset_remain_count +0x210, main_rarity +0x218, sub1 +0x228, sub2 +0x230.
+  - Renovar contrato: Miembros → evento «01_extend» (1 jugador) o «05_extend_list» (varios) → CMD_EXTEND_MYCLUB_GAMEPLAYER. Sale del menú de acciones del jugador, que se abre con X, y el MCP bloquea esa tecla.
