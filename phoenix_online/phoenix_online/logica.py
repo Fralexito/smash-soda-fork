@@ -1302,14 +1302,15 @@ class Servidor:
         # cliente muestra «No puedes usar este Representante porque ya caducó» (msg 0x22602be).
         # P: un elemento {rarity, count} con los candidatos que quedan
         rareza = int(a.get("rareza_caja") or 1)
-        cuenta = lambda n=len(bolsa): [Empaquetado({"rarity": rareza, "count": n})]
+        par = lambda n=len(bolsa): Empaquetado({"rarity": rareza, "count": n})
         # C (05-nov, lector 141c2e880): DOS niveles agent_info; el de fuera lleva la caja y el
         # de dentro agent + banner_file_info + skill (con un solo nivel PES se cerraba)
         return {"agent_info": Empaquetado({
             "agent_info": self._ficha_agente(a), "box_size": len(bolsa),
             "box_pack_num": len(bolsa), "reset_remain_count": 0,
-            "main_player_rarity_info": cuenta(), "sub1_player_rarity_info": cuenta(),
-            "sub2_player_rarity_info": cuenta(), "is_use_reset": "NO"})}
+            # C (x64dbg 06:25, 141c3055f): main = LISTA de bin; sub1 y sub2 = UN bin cada una
+            "main_player_rarity_info": [par()], "sub1_player_rarity_info": par(0),
+            "sub2_player_rarity_info": par(0), "is_use_reset": "NO"})}
 
     async def c_cmd_get_myclub_agent_draw_rate(self, s, m):
         # C (05-nov, lector 141ca9080): rate_table es una LISTA de enteros

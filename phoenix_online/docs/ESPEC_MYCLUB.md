@@ -502,3 +502,8 @@ Lectores encontrados en el juego (RE estático, sin abrir PES). Todo lo de dentr
 - Después del «caducó» (0f320ec), PES se cerraba 0,4 s después de AGENT_BOX_INFO.
   - Causa: FUN_140d491c0 carga el banner del agente desde la URL tipo 17, `MYCLUB_AGENT_BANNER`, y GET_URLLIST no la traía. La URL quedaba NULL y daba el mismo crash que DMM_TOP el 02-nov.
   - Arreglo: se añadió `MYCLUB_AGENT_BANNER` → `/asset/myclub-agent-banner`, que devuelve un 404 limpio.
+- **06:25, x64dbg (solo lectura):** el crash era dentro del lector, en `sub1_player_rarity_info` (retorno 141c3055f). Forma real:
+  - `main_player_rarity_info` = LISTA de bin({rarity, count}), con al menos un elemento.
+  - `sub1_player_rarity_info` y `sub2_player_rarity_info` = UN bin cada una. Se guardan en +0x228/+0x22c y en +0x230/+0x234.
+  - Con 3 bins el crash era en main; con 3 listas, en sub1.
+  - El banner no era la causa de este crash, pero la URL igual hace falta.
