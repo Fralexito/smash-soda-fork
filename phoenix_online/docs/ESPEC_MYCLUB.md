@@ -490,3 +490,7 @@ Lectores encontrados en el juego (RE estático, sin abrir PES). Todo lo de dentr
   - Esc = atrás.
 - Ojo: con Esc ×2 desde Miembros se vuelve al menú principal del juego. Teclas de más pueden entrar al vestíbulo online (SEND_IPANDPORT_NTL y GET_LOBBYLIST), que el servidor aún no maneja, y sale «No se ha podido enviar ni recibir datos». No es un fallo del servidor.
 - Renovar contrato: falta ver qué acción la abre (flow MenuEstimateExtendList).
+- 06:05: con 6089f7f PES ya no se cierra en la caja del agente. Al usarlo sale «No puedes usar este Representante porque ya caducó».
+  - No se envía ningún comando: lo decide el cliente con los datos del agente.
+  - Sospechas: agent_token_end_time = 0, skill.limit_count = 0, o tiempos en otra unidad.
+  - Prueba en curso: tiempos a +10 años y limit_count 99.

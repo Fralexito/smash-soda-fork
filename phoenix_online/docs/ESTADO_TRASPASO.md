@@ -87,3 +87,15 @@ Pendiente:
   4. Agentes.
   5. La identidad propia, para que cada persona tenga su club. Hoy CPY comparte SteamID.
 - El config real de la PC tiene myclub.rival con 18 ids del Real Madrid. No subirlo nunca.
+
+### 05-nov 06:10, myClub: fichajes
+- **Funciona en vivo:**
+  - Cazatalentos: fichar (L. Millar), vender (+500 GP) y la barra de GP.
+  - Partido vs COM completo, con experiencia (Nv.2) y MAIN_SQUAD completa.
+- **Hecho en el servidor:**
+  - Logros de GP (SET_GP_ACHIEVEMENT).
+  - Abandonar = derrota.
+  - Posición y nación desde Player.bin.
+- **Representantes:** la lista y la caja ya abren (0d4fa63, d7ac264, 6089f7f). Falta el aviso «caducó» (ESPEC §37-38).
+- **Falta:** renovar contrato (no se encuentra la acción en el juego), pausa y abandono en vs COM, subastas, la tabla real de GP por logro.
+- Ideas de Frank en PLAN_MYCLUB: arquitectura con la web, intercambios, torneos con el club de cada uno.
