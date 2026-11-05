@@ -232,3 +232,7 @@ La petición de estos tres solo trae pid. Todo objeto anidado va como bin.
 - La comprobación antes del partido la hace el propio cliente: flujos ProcessCheckMatchSquad*.json en dt16_all.cpk, con los resultados NOERR, NOT_ENOUGH_PLAYER, INCLUDES_RENTAL, RED_CARD y CONTRACT.
 - parameters y enhanced_parameters: listas libres; vacías también valen.
 - El nombre del DT sale de los datos locales por coach_id. Sigue sin resolver.
+- **El DT queda resuelto:** coach_id = primera columna de Coach.bin (dt10_x64.cpk → common/etc/pesdb/Coach.bin; 221 registros de 300 B; u32[0] = id, nombre ASCII en +54). Ejemplos: 8 ALEXANDRE GAMA, 24 G. IACHINI, 37 R. BOSCAGLIA, 104 RAFAEL BENÍTEZ, 325 O. SOLSKJÆR, 375 F. INZAGHI.
+  - Los ids de MyclubCoach.bin (121xxx) no sirven.
+  - La formación sale de los datos del DT (5-2-1-2 para el 8).
+  - El gameplan guardado sí se aplica.

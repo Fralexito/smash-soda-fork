@@ -247,13 +247,14 @@
     ],
     "entrenadores": [
       {
-        "coach_id": 121538,
+        "coach_id": 8,
         "overall": 70
       }
     ],
     "mercado_dt": [
-      121538,
-      121573
+      24,
+      37,
+      104
     ],
     "club_de_prueba": {
       "team_name": "Phoenix FC",
