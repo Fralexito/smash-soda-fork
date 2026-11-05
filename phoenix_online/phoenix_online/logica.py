@@ -1037,6 +1037,30 @@ class Servidor:
         return {"match_num": 0, "win_num": 0, "lose_num": 0, "draw_num": 0,
                 "match_list": [], "match_list_num": 0}
 
+    async def c_cmd_get_myclub_market_agentlist(self, s, m):
+        # C (§16.1). Sin agentes todavía: lista vacía y suscripción vencida
+        return {"market_agent_list": [], "market_agent_list_num": 0,
+                "market_subscription": Empaquetado({"end_time": 0})}
+
+    async def c_cmd_get_myclub_market_coachlist(self, s, m):
+        # C (§16.2). DT a la venta: config myclub.mercado_dt = [coach_id...] (de MyclubCoach.bin)
+        ids = (self.cfg.get("myclub") or {}).get("mercado_dt") or []
+        ahora = int(time.time())
+        lista = [Empaquetado({
+            "coach_id": int(c), "pes_point": 0, "overall": 70,
+            "offensive_main_concept": Empaquetado({k: 0 for k in self.CONCEPTO_DT}),
+            "defensive_main_concept": Empaquetado({k: 0 for k in self.CONCEPTO_DT}),
+            "formation_data": "", "is_locked": "NO", "management": 70, "adaptability_rate": 100,
+            "is_use_variable_formation": "NO"}) for c in ids if isinstance(c, int)]
+        return {"market_coach_list": lista, "market_coach_list_num": len(lista),
+                "now_time": ahora, "end_time": ahora + 7 * 86400}
+
+    async def c_cmd_get_myclub_refine_search_auction_list(self, s, m):
+        return {"auction_info_list": [], "total_auction_info_list_num": 0}  # C (§16.3)
+
+    async def c_cmd_get_myclub_auction_watch_list(self, s, m):
+        return {"auction_info_list": [], "total_auction_info_list_num": 0}  # C (§16.4)
+
     async def c_cmd_create_myclub_team(self, s, m):
         # C (§12): la respuesta solo lleva msgid/rqid/result; ERR_ALREADYEXISTS si ya hay club
         if self.datos.club(s.steam_hex or ""):

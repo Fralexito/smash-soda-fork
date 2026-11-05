@@ -166,3 +166,22 @@ La petición de estos tres solo trae pid. Todo objeto anidado va como bin.
   - Cabecera FF 10 81 «WESYS» y después zlib.
   - Filas de 16 bytes = 4 × u32 LE: [fila][player_id][team_id][puesto<<10 | número].
 - Entrenadores: MyclubCoach.bin, 21 filas de 192 bytes con [índice 6..27][coach_id].
+
+## 16. Mercado y subastas (C, 05-nov)
+- **GET_MYCLUB_MARKET_AGENTLIST** (lector 141c20550):
+  - market_agent_list = [{agent{agent_id, name, name_jp, target_level, type, token_list [{level, count}], token_list_num, bgm_id, uniform, get_player_num, is_draw_checked, is_buy_gp_pes_point, pes_point, agent_end_time, agent_token_end_time, banner_file_info{filename, hash_str}, skill{…}, limit_count, use_count}}]. P: cómo se agrupan exactamente.
+  - market_agent_list_num; market_subscription{end_time}.
+  - Sin respuesta, la pantalla Representantes vuelve al menú.
+- **GET_MYCLUB_MARKET_COACHLIST** (lector 141d93950):
+  - market_coach_list = [{coach_id, pes_point, overall, offensive_main_concept{12 int}, defensive_main_concept{12 int}, formation_data, is_locked, management, adaptability_rate, is_use_variable_formation}].
+  - market_coach_list_num, now_time, end_time.
+  - Los DT en venta salen de config myclub.mercado_dt (ids de MyclubCoach.bin).
+- **GET_MYCLUB_REFINE_SEARCH_AUCTION_LIST** (lector 141cd53f0):
+  - La petición lleva refine_search_auction{filtros} y start_index.
+  - La respuesta lleva auction_info_list [{product_id, scout_id, grade, skill{…}, price_now, bid_num, time_limit, finalround_end_time, auction_state, is_bid_user_max, update_time, is_highest_bider, is_register_watchlist, is_bid}] y total_auction_info_list_num.
+- **GET_MYCLUB_AUCTION_WATCH_LIST** (lector 141cddb60): la misma respuesta que la anterior.
+- Pantallas ya vistas en vivo:
+  - Entrenamiento: los 11 jugadores en Nv. 1/30.
+  - Fichar jugador: «Asignar cazatalentos».
+  - Casa de subastas y Lista de interés: «No hay datos».
+  - El nombre del DT sale vacío (pendiente).
