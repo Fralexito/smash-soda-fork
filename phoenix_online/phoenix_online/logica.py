@@ -1231,20 +1231,26 @@ class Servidor:
                 and int(b.get("rating") or 75) >= minimo
                 and (not puestos or b.get("posicion_txt") in puestos)]
 
-    def _ficha_agente(self, a):
-        return Empaquetado({
+    def _ficha_agente(self, a, **extra):
+        """C (05-nov, lector 141c20550): cada elemento es bin({agent: bin({...}),
+        banner_file_info: bin, skill: bin}); banner y skill son HERMANOS de «agent». Antes iban
+        sueltos y el cliente marcaba la respuesta como error y volvía al menú."""
+        agente = Empaquetado({
             "agent_id": a["agent_id"], "name": a.get("name") or "", "name_jp": a.get("name_jp") or "",
             "type": a.get("type") or "", "target_level": int(a.get("target_level") or 0),
-            "level": int(a.get("level") or 0), "token_list": [], "token_list_num": 0,
+            "token_list": [], "token_list_num": 0,
             "bgm_id": int(a.get("bgm_id") or 0), "uniform": int(a.get("uniform") or 0),
             "get_player_num": int(a.get("get_player_num") or 1), "is_draw_checked": "NO",
             "is_buy_gp_pes_point": "YES", "pes_point": int(a.get("pes_point") or 0),
             "gp": int(a.get("gp") or 0), "agent_end_time": int(time.time()) + 7 * 86400,
-            "agent_token_end_time": 0,
+            "agent_token_end_time": 0})
+        return Empaquetado({
+            "agent": agente,
             "banner_file_info": Empaquetado({"filename": "", "hash_str": ""}),
             "skill": Empaquetado({"skill_category": a.get("skill_category") or "",
                                   "skill_id": int(a.get("skill_id") or 0),
-                                  "limit_count": 0, "use_count": 0})})
+                                  "limit_count": 0, "use_count": 0}),
+            **extra})
 
     def _fichar(self, club, nuevos):
         """Añade jugadores al club con unique_id nuevo y contrato completo; devuelve las fichas."""
@@ -1289,11 +1295,10 @@ class Servidor:
             return {"result": "ERR_NOTFOUND"}
         bolsa = self._bolsa(a, self._club_inicial(s))
         cuenta = lambda: Empaquetado({"rarity": 0, "count": 0})
-        return {"agent_info": Empaquetado({
-            "agent": self._ficha_agente(a), "box_size": len(bolsa), "box_pack_num": len(bolsa),
-            "reset_remain_count": 0, "main_player_rarity_info": cuenta(),
-            "sub1_player_rarity_info": cuenta(), "sub2_player_rarity_info": cuenta(),
-            "is_use_reset": "NO"})}
+        return {"agent_info": self._ficha_agente(
+            a, box_size=len(bolsa), box_pack_num=len(bolsa), reset_remain_count=0,
+            main_player_rarity_info=cuenta(), sub1_player_rarity_info=cuenta(),
+            sub2_player_rarity_info=cuenta(), is_use_reset="NO")}
 
     async def c_cmd_get_myclub_agent_draw_rate(self, s, m):
         tasa = lambda: Empaquetado({"rate_table": 0, "rate_player_num": 0})

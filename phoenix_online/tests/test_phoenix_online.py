@@ -747,6 +747,9 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         r = self.srv.recibir
         await r(a, 1, {"msgid": "CMD_GET_MYCLUB_MARKET_AGENTLIST", "rqid": 1})
         self.assertEqual(ea[-1][1]["market_agent_list_num"], 1)
+        el = msgpack_min.unpackb(msgpack_min.packb(ea[-1][1]["market_agent_list"][0].valor))
+        self.assertEqual(set(el), {"agent", "banner_file_info", "skill"})
+        self.assertEqual(msgpack_min.unpackb(el["agent"])["agent_id"], 1)
         await r(a, 2, {"msgid": "CMD_USE_MYCLUB_AGENT", "rqid": 2, "agent_id": 1, "use_pes_point": "NO"})
         res = ea[-1][1]
         self.assertEqual((res["gp"], res["gameplayer_list_num"]), (2000, 1))

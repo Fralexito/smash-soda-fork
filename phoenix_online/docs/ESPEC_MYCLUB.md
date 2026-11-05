@@ -468,3 +468,13 @@ Lectores encontrados en el juego (RE estático, sin abrir PES). Todo lo de dentr
   - Queda anotado en `club.logros_cobrados`.
   - `GET_GP_ACHIEVEMENT` devuelve también los bits.
 - Falta: la tabla real de importes por logro, buscándola en los .cpk. El log guarda las palabras crudas para armarla.
+
+## 37. Representantes: por qué volvía al menú (C, 05-nov)
+- «Representantes» → `ProcessPreMarketAgentList` (clase OnlineMyClubAgentListPre, ejecución FUN_1413d8ae0).
+  - Muestra 2 anuncios y envía MARKET_AGENTLIST.
+  - Si el lector 141c20550 marca la respuesta como error, emite «return» → `ProcessGetMainMenuInfoShort`. Ese es el rebote que se veía: LOGIN_BONUS seguido de MAINMENU_INFO.
+- **Forma real de cada elemento de `market_agent_list`:** `bin({agent: bin({agent_id, name, name_jp, type, target_level, token_list:[bin({level,count})], token_list_num, bgm_id, uniform, get_player_num, is_draw_checked, is_buy_gp_pes_point, pes_point, gp, agent_end_time, agent_token_end_time}), banner_file_info: bin({filename, hash_str}), skill: bin({skill_category, skill_id, limit_count, use_count})})`.
+  - `banner_file_info` y `skill` son hermanos de `agent`, no van dentro de él.
+  - Nosotros mandábamos los campos sueltos. Corregido.
+- `AGENT_BOX_INFO.agent_info` usa la misma forma, más box_size, box_pack_num, reset_remain_count, main/sub1/sub2_player_rarity_info y is_use_reset.
+- Falta: los valores válidos de `type`. El valor por defecto del cliente es «NotImplement», y las ramas 0_box y 1_single sugieren BOX o SINGLE.
