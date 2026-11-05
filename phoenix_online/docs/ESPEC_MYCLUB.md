@@ -198,3 +198,4 @@ La petición de estos tres solo trae pid. Todo objeto anidado va como bin.
   - El orden de member_list decide la colocación: índices 0..10 = posiciones de la formación, y de 11 en adelante = banquillo.
   - El ejemplo de config trae 23 jugadores del Barcelona en el orden de PlayerAssignment (Messi = 7511 en el hueco 8).
 - Nombre del club: va en myclub.club_de_prueba (team_name y team_name_short). Si no, «Nom. del equipo» sale vacío.
+- Costo: la suma de gameplayer_cost de los 18 convocados debe ser ≤ management del DT (70). Por defecto, el costo ahora es 3.

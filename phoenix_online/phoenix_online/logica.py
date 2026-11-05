@@ -900,7 +900,7 @@ class Servidor:
             "gameplayer_unique_id": e("gameplayer_unique_id", i + 1),
             "gameplayer_id": e("gameplayer_id"), "games": e("games"), "goal": e("goal"),
             "assist": e("assist"), "tiredness": e("tiredness"),
-            "contract_term": e("contract_term", 10), "gameplayer_cost": e("gameplayer_cost", 5),
+            "contract_term": e("contract_term", 10), "gameplayer_cost": e("gameplayer_cost", 3),
             "rating": e("rating", 75),
             "concept": Empaquetado({k: e(k) for k in self.CONCEPTO_JUGADOR}),
             "is_rental": t("is_rental"), "is_subscription": t("is_subscription"),
