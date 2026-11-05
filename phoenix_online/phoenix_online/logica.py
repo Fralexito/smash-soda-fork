@@ -209,6 +209,19 @@ class Servidor:
         self.colas = {}       # matching_type -> [Sesion] buscando rival
         self.parejas = {}     # Sesion -> Pareja de partida rápida
 
+    def aplicar_reglas_myclub(self, reglas):
+        """Reglas de myClub editables en caliente (archivo reglas_myclub o, más adelante, la
+        tabla myclub_reglas de Supabase). Se mezclan sobre cfg["myclub"]: lo nuevo manda.
+        Devuelve las claves cambiadas."""
+        if not isinstance(reglas, dict):
+            return []
+        actual = self.cfg.setdefault("myclub", {})
+        cambiadas = [k for k, v in reglas.items() if actual.get(k) != v]
+        actual.update(reglas)
+        if cambiadas:
+            log.info("reglas myClub actualizadas en caliente: %s", ", ".join(sorted(cambiadas)))
+        return cambiadas
+
     # ---------- ciclo de vida ----------
     def abrir(self, sesion):
         self.sesiones.add(sesion)

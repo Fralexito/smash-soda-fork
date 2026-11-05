@@ -175,7 +175,28 @@ async def principal(ruta_config):
     else:
         log.warning("sin clave_gamerelay: no hay relé UDP; la comprobación de red fallará")
     log.info("Phoenix Online escuchando en %s", [s.sockets[0].getsockname() for s in servidores])
-    await asyncio.gather(*(s.serve_forever() for s in servidores))
+    tareas = [s.serve_forever() for s in servidores]
+    if cfg.get("reglas_myclub"):
+        tareas.append(vigilar_reglas(srv, cfg["reglas_myclub"], int(cfg.get("reglas_cada_s", 30))))
+    await asyncio.gather(*tareas)
+
+
+async def vigilar_reglas(srv, ruta, cada):
+    """Relee el archivo de reglas de myClub cuando cambia (sin reiniciar el servidor).
+    Más adelante lo escribirá el espejo de Supabase (docs/PLAN_MULTIUSUARIO.md §3)."""
+    visto = None
+    while True:
+        try:
+            marca = os.path.getmtime(ruta)
+            if marca != visto:
+                with open(ruta, encoding="utf-8") as f:
+                    srv.aplicar_reglas_myclub(json.load(f))
+                visto = marca
+        except FileNotFoundError:
+            pass
+        except Exception as e:  # archivo a medio escribir o JSON roto: se reintenta luego
+            log.warning("reglas_myclub sin aplicar: %s", e)
+        await asyncio.sleep(cada)
 
 
 if __name__ == "__main__":

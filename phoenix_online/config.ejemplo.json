@@ -1,4 +1,6 @@
 {
+  "reglas_myclub": "reglas_myclub.json",
+  "reglas_cada_s": 30,
   "clave_nclmio": "D:/Frank/IA/CLAUDE/pes-online/nclmio_key.bin",
   "blowfish_le": false,
   "clave_gamerelay": "D:/Frank/IA/CLAUDE/pes-online/gamerelay_claves.bin",

@@ -697,6 +697,13 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("contract_term", j[19])  # no inscrito: no gasta contrato
         self.assertEqual(j[19]["tiredness"], 0)  # descansa 10 por partido, sin bajar de 0
 
+    def test_reglas_myclub_en_caliente(self):
+        self.srv.cfg = {**self.srv.cfg, "myclub": {"venta_gp": 100, "renovacion_gp": 200}}
+        cambiadas = self.srv.aplicar_reglas_myclub({"venta_gp": 150, "renovacion_gp": 200})
+        self.assertEqual(cambiadas, ["venta_gp"])
+        self.assertEqual(self.srv.cfg["myclub"]["venta_gp"], 150)
+        self.assertEqual(self.srv.aplicar_reglas_myclub("roto"), [])
+
     def test_myclub_desenlace_vscom(self):
         d = self.srv._desenlace_vscom
         self.assertEqual(d({"winner": "WINNER_AWAY", "side": "HOME"}), "LOSE")

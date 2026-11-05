@@ -621,3 +621,8 @@ Un «producto» es un cazatalentos a subasta (`scout_id` = agent_id, `grade` = e
 - `myclub.contrato_por_partido` (0 = apagado): cada partido vs COM resta ese valor al contract_term de los 18 inscritos (nunca baja de 0). Ojo con la escala: PES muestra 100 como «1» y <100 como «0» (inelegible, §39.x); no encender hasta confirmar la escala con REA.
 - `myclub.cansancio` = {activo, sube, baja, maximo}: los inscritos suben `sube` de tiredness (hasta `maximo`); los que no juegan bajan `baja` (hasta 0). Apagado hasta confirmar el rango real.
 - Prueba: test_myclub_contrato_y_cansancio_por_partido.
+
+## 46. Reglas de myClub en caliente (05-nov noche)
+- Config raíz `reglas_myclub` (ruta de un JSON) y `reglas_cada_s` (def. 30). El servidor relee el archivo cuando cambia y mezcla su contenido sobre `cfg["myclub"]` (lo nuevo manda), sin reiniciar. JSON roto = aviso en el log y se reintenta.
+- Sirve ya para cambiar precios, GP, dificultad, agentes… mientras PES está abierto. Más adelante el espejo de Supabase escribirá este archivo desde el panel web (PLAN_MULTIUSUARIO §3).
+- Prueba: test_reglas_myclub_en_caliente.
