@@ -6,6 +6,8 @@ Uso, en la carpeta del servidor:
     python -I tools/admin_myclub.py config.json poner-gp FRALEX 20000  (deja el saldo exacto)
     python -I tools/admin_myclub.py config.json dar-monedas FRALEX 100  (monedas gratis; igual
     con poner-monedas). Las monedas solo se ven en PES con myclub.monedas_gratis = true.
+    python -I tools/admin_myclub.py config.json poner-contrato FRALEX 30 1 2 3   (deja 30 partidos
+    de contrato a los jugadores con esos gameplayer_unique_id; para probar la renovación)
 
 La persona se indica por su nombre en el juego (pname) o por su steam_hex.
 Se puede usar con el servidor encendido: el cambio se ve la próxima vez que PES pida el club
@@ -43,6 +45,23 @@ def main(argv=None):
             print(f'{j["pname"]:<16} {j["steam_hex"]:<18} club={club.get("team_name", "-"):<14} '
                   f'GP={club.get("gp", 0):>8} monedas={club.get("monedas", 0):>6} '
                   f'partidos={com.get("partidos", 0)}')
+        return 0
+    if orden == "poner-contrato" and len(argv) >= 5:
+        j = buscar(datos, argv[2])
+        club = datos.club(j["steam_hex"]) if j else None
+        if club is None:
+            print("No encontré a esa persona o todavía no tiene club.")
+            return 1
+        partidos, uids = int(argv[3]), {int(u) for u in argv[4:]}
+        cambiados = []
+        for jug in club.get("jugadores") or []:
+            if jug.get("gameplayer_unique_id") in uids:
+                jug["contract_term"] = partidos
+                cambiados.append(jug["gameplayer_unique_id"])
+        club.setdefault("admin", []).append({"hora": int(time.time()), "orden": orden,
+                                             "monto": partidos, "jugadores": cambiados})
+        datos.guardar_club(j["steam_hex"], club)
+        print(f'{j["pname"]}: contrato {partidos} a los unique_id {cambiados}')
         return 0
     campos = {"dar-gp": "gp", "poner-gp": "gp", "dar-monedas": "monedas",
               "poner-monedas": "monedas"}

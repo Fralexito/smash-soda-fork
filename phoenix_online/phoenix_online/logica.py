@@ -1440,8 +1440,9 @@ class Servidor:
         if error:
             return {"result": error}
         extra = int(cfg.get("renovacion_partidos") or 10)
+        tope = int(cfg.get("renovacion_maximo") or 100)  # P: el juego avisa de «máxima duración»
         for j in elegidos:
-            j["contract_term"] = int(j.get("contract_term") or 0) + extra
+            j["contract_term"] = min(int(j.get("contract_term") or 0) + extra, tope)
         self.datos.guardar_club(s.steam_hex or "", club)
         lista = [Empaquetado({"gameplayer_unique_id": str(j["gameplayer_unique_id"]),
                               "gameplayer_id": int(j.get("gameplayer_id") or 0),

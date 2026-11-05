@@ -528,3 +528,9 @@ Lectores encontrados en el juego (RE estático, sin abrir PES). Todo lo de dentr
   - La 2.ª caja «Delanteros» (54/54) funciona: el agente 2 cobra 6 000 GP y sale M. Greenwood (Man United). El club queda con 30 jugadores.
   - **Aviso sobre `posiciones`:** el catálogo lo ve como DC (posición registrada en Player.bin), pero el juego lo muestra como EXD. El filtro por posiciones es aproximado y puede sacar un extremo en lugar de un delantero centro. Falta conocer la posición que usa el juego para mostrarla.
   - DRAW_RATE sin probar: se abre con X (Perfil), y el MCP bloquea esa tecla.
+
+## 39. Renovar contratos: tope de duración (05-nov 07:20)
+- Frank pulsó X en Miembros y NO salió renovar/extender. Nuestros jugadores tienen `contract_term` 100.
+- Textos del juego: «renovar por 10 partidos más… con GP o Monedas», y «No se pudieron renovar los contratos de todos… algunos ya tienen la MÁXIMA DURACIÓN POSIBLE». Hay un tope, y 100 casi seguro lo alcanza, así que el menú no ofrece nada.
+- Prueba: `tools/admin_myclub.py config.json poner-contrato <persona> <partidos> <unique_id…>` baja el contrato de jugadores de prueba (30, 5…) sin reiniciar el servidor.
+- El servidor ahora limita la renovación con `myclub.renovacion_maximo` (por defecto 100).
