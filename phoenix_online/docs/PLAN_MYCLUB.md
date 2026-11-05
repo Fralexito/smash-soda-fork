@@ -38,6 +38,16 @@ Frank preguntó si todo se puede armar y mantener desde su página. Sí, en 3 pi
 - El servidor sigue siendo un programa aparte: una web estática no puede hablar con PES.
 - Va en el paso 5. Antes de eso, cada sección de config.json se pasa tal cual a una tabla.
 
+## Menú del jugador de myClub (visto en vivo, 05-nov 07:17)
+Se abre en Miembros con X (A en Xbox) y luego D (Y en Xbox). Opciones:
+- Añadir a plantilla.
+- **Renovación del contrato:** solo aparece si al contrato le quedan pocos partidos. Hecho en el servidor (+10 partidos por GP o monedas).
+- **Bloquear / Desbloquear** (para que no se venda ni se use por error).
+- **Convertir en Entrenador de experiencia:** el jugador pasa a dar experiencia a otros.
+- **Liberar:** soltar al jugador, quizá a cambio de GP.
+- **Usar objeto:** Boleto de contrato (x0), un objeto que renueva sin gastar GP.
+Falta: leer y hacer los comandos de bloquear, entrenador de experiencia, liberar y objetos.
+
 ## Decisiones de Frank
 - **Abandonar un partido vs COM = derrota** (05-nov). Opción `myclub.abandono_es_derrota`.
 - **Monedas de myClub:** solo como premio gratis, con la opción `myclub.monedas_gratis`. **Nunca se venden** (regla: nada de dinero real).
