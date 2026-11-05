@@ -1074,6 +1074,15 @@ class Servidor:
     async def c_cmd_get_matchrejectlist(self, s, m):
         return {"reject_list": [], "reject_list_num": 0}  # C (§16.8)
 
+    async def c_cmd_get_event_category_list(self, s, m):
+        # C (§16.9): sin eventos; el emblema de jornada vacío como en MAINMENU_INFO
+        return {"event_category_list": [], "matchday_emblem_info": Empaquetado({
+            "is_use_emblem": "NO", "is_auto_make_compe_name": "NO", "matchday_group_type": "",
+            "team_list_group_a": [], "team_list_group_b": [], "compe_db_id": 0})}
+
+    async def c_cmd_get_pesleague_compe_result_list(self, s, m):
+        return {"result_list": [], "result_list_num": 0}  # C (§16.10)
+
     async def c_cmd_create_myclub_team(self, s, m):
         # C (§12): la respuesta solo lleva msgid/rqid/result; ERR_ALREADYEXISTS si ya hay club
         if self.datos.club(s.steam_hex or ""):

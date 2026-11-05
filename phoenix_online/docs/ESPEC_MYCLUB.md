@@ -191,3 +191,10 @@ La petición de estos tres solo trae pid. Todo objeto anidado va como bin.
 - **GET_MATCHREJECTLIST** (lector 141c4f160): reject_list [{pid, pname{…}}] y reject_list_num.
 - Pantallas que se resuelven en el propio cliente, sin mensajes: Buscar subasta, Vender cazatalentos, Base de datos, Negociar. Contrato tiene 5 tarjetas: Representantes, Cazatalentos, Directores técnicos, Acuerdo de préstamo y Negociar.
 - Herramientas en la PC: x64dbg ya estaba instalado en herramientas\x64dbg\programa\release\x64\ (snapshot 2026.05.27). También está Cheat Engine 7.7.
+- **GET_EVENT_CATEGORY_LIST** (lector 141ba19f0): event_category_list [{event_category, open_event_num, not_cleared_event_num, recent_event_start_time, banner_file_info{…}}] y matchday_emblem_info{…}.
+- **GET_PESLEAGUE_COMPE_RESULT_LIST** (lector 141c11b00): result_list [{compe_id, compe_name, banner_file_info, start_date, end_date, player_rank, entry_user_num, clan_name, clan_owner_pid, clan_owner_name{pname}, is_participation_get, update_division, before_division, is_confirm, is_get_reward, compe_db_id}] y result_list_num.
+- **Regla de la alineación (C, en vivo):**
+  - Para jugar hacen falta el XI más el banquillo, 18 como mínimo.
+  - El orden de member_list decide la colocación: índices 0..10 = posiciones de la formación, y de 11 en adelante = banquillo.
+  - El ejemplo de config trae 23 jugadores del Barcelona en el orden de PlayerAssignment (Messi = 7511 en el hueco 8).
+- Nombre del club: va en myclub.club_de_prueba (team_name y team_name_short). Si no, «Nom. del equipo» sale vacío.

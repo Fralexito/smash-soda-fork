@@ -87,7 +87,7 @@
         "gameplayer_id": 61672,
         "rating": 90,
         "level": 1,
-        "uniform_number": 1,
+        "uniform_number": 24,
         "team_id": 108
       },
       {
@@ -101,75 +101,171 @@
         "gameplayer_id": 104418,
         "rating": 90,
         "level": 1,
-        "uniform_number": 3,
+        "uniform_number": 14,
         "team_id": 108
       },
       {
         "gameplayer_id": 42892,
         "rating": 90,
         "level": 1,
-        "uniform_number": 4,
+        "uniform_number": 19,
         "team_id": 108
       },
       {
         "gameplayer_id": 40425,
         "rating": 90,
         "level": 1,
-        "uniform_number": 5,
+        "uniform_number": 17,
         "team_id": 108
       },
       {
         "gameplayer_id": 38568,
         "rating": 90,
         "level": 1,
-        "uniform_number": 6,
+        "uniform_number": 4,
         "team_id": 108
       },
       {
         "gameplayer_id": 108662,
         "rating": 90,
         "level": 1,
-        "uniform_number": 7,
+        "uniform_number": 20,
         "team_id": 108
       },
       {
         "gameplayer_id": 36625,
         "rating": 90,
         "level": 1,
-        "uniform_number": 8,
+        "uniform_number": 3,
         "team_id": 108
       },
       {
-        "gameplayer_id": 42316,
+        "gameplayer_id": 7511,
         "rating": 90,
         "level": 1,
         "uniform_number": 9,
         "team_id": 108
       },
       {
+        "gameplayer_id": 42316,
+        "rating": 90,
+        "level": 1,
+        "uniform_number": 16,
+        "team_id": 108
+      },
+      {
         "gameplayer_id": 34881,
         "rating": 90,
         "level": 1,
-        "uniform_number": 10,
+        "uniform_number": 8,
         "team_id": 108
       },
       {
         "gameplayer_id": 43202,
         "rating": 90,
         "level": 1,
-        "uniform_number": 11,
+        "uniform_number": 12,
+        "team_id": 108
+      },
+      {
+        "gameplayer_id": 45330,
+        "rating": 90,
+        "level": 1,
+        "uniform_number": 22,
+        "team_id": 108
+      },
+      {
+        "gameplayer_id": 119150,
+        "rating": 90,
+        "level": 1,
+        "uniform_number": 39,
+        "team_id": 108
+      },
+      {
+        "gameplayer_id": 132544,
+        "rating": 90,
+        "level": 1,
+        "uniform_number": 32,
+        "team_id": 108
+      },
+      {
+        "gameplayer_id": 108696,
+        "rating": 90,
+        "level": 1,
+        "uniform_number": 1,
+        "team_id": 108
+      },
+      {
+        "gameplayer_id": 121314,
+        "rating": 90,
+        "level": 1,
+        "uniform_number": 23,
+        "team_id": 108
+      },
+      {
+        "gameplayer_id": 36714,
+        "rating": 90,
+        "level": 1,
+        "uniform_number": 21,
+        "team_id": 108
+      },
+      {
+        "gameplayer_id": 106614,
+        "rating": 90,
+        "level": 1,
+        "uniform_number": 7,
+        "team_id": 108
+      },
+      {
+        "gameplayer_id": 121985,
+        "rating": 90,
+        "level": 1,
+        "uniform_number": 27,
+        "team_id": 108
+      },
+      {
+        "gameplayer_id": 122908,
+        "rating": 90,
+        "level": 1,
+        "uniform_number": 29,
+        "team_id": 108
+      },
+      {
+        "gameplayer_id": 110626,
+        "rating": 90,
+        "level": 1,
+        "uniform_number": 10,
+        "team_id": 108
+      },
+      {
+        "gameplayer_id": 60622,
+        "rating": 90,
+        "level": 1,
+        "uniform_number": 18,
         "team_id": 108
       }
     ],
     "entrenadores": [
       {
-        "coach_id": 121552,
+        "coach_id": 121538,
         "overall": 70
       }
     ],
     "mercado_dt": [
       121538,
       121573
-    ]
+    ],
+    "club_de_prueba": {
+      "team_name": "Phoenix FC",
+      "team_name_short": "PHX",
+      "base_team_id": 108,
+      "home_town": {
+        "nation_id": 0,
+        "label": "",
+        "name": ""
+      },
+      "nation_id": 0,
+      "gp": 10000
+    }
   }
 }

@@ -478,7 +478,9 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
                  "CMD_GET_MYCLUB_AUCTION_WISH_LIST": "total_wish_info_list_num",
                  "CMD_GET_MYCLUB_AUCTION_PRICE_RANKING": "auction_price_ranking_num",
                  "CMD_GET_MYCLUB_RENTAL_GAMEPLAYERLIST": "rental_gameplayer_list_num",
-                 "CMD_GET_MATCHREJECTLIST": "reject_list_num"}
+                 "CMD_GET_MATCHREJECTLIST": "reject_list_num",
+                 "CMD_GET_EVENT_CATEGORY_LIST": "event_category_list",
+                 "CMD_GET_PESLEAGUE_COMPE_RESULT_LIST": "result_list_num"}
         for i, (cmd, clave) in enumerate(casos.items()):
             await self.srv.recibir(a, 100 + i, {"msgid": cmd, "rqid": i, "pid": 1})
             self.assertEqual((ea[-1][1]["msgid"], ea[-1][1]["result"]), (cmd, "NOERR"))
