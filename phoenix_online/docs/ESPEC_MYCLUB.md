@@ -534,3 +534,7 @@ Lectores encontrados en el juego (RE estático, sin abrir PES). Todo lo de dentr
 - Textos del juego: «renovar por 10 partidos más… con GP o Monedas», y «No se pudieron renovar los contratos de todos… algunos ya tienen la MÁXIMA DURACIÓN POSIBLE». Hay un tope, y 100 casi seguro lo alcanza, así que el menú no ofrece nada.
 - Prueba: `tools/admin_myclub.py config.json poner-contrato <persona> <partidos> <unique_id…>` baja el contrato de jugadores de prueba (30, 5…) sin reiniciar el servidor.
 - El servidor ahora limita la renovación con `myclub.renovacion_maximo` (por defecto 100).
+- **07:25, precio de renovar:** no hay comando de precio. «Comprobar estado» (MenuEstimateExtendGameplayer) lee de la FICHA del jugador, que ya cargó GAMEPLAYERLIST.
+  - `contract_gp` = precio en GP, `contract_pes_point` = precio en monedas y `sell_gp` = lo que se cobra al vender.
+  - Antes iban en 0, y por eso salía «Puntos necesarios 0» con «Pagar con GP» apagado.
+  - Ahora salen de `myclub.renovacion_gp`, `myclub.renovacion_monedas` y `myclub.venta_gp`, a menos que el jugador traiga los suyos.

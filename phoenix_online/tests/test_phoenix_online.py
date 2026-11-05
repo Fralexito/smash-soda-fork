@@ -775,6 +775,8 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(ea[-1][1]["scout_list_num"], 0)
         await r(a, 8, {"msgid": "CMD_GET_MYCLUB_GAMEPLAYERLIST", "rqid": 8})
         self.assertEqual(ea[-1][1]["gameplayer_list_num"], 3)
+        ficha = msgpack_min.unpackb(msgpack_min.packb(ea[-1][1]["gameplayer_list"][0].valor))
+        self.assertEqual(ficha["contract_gp"], 100)  # precio de renovar sale de la ficha
         club = self.srv.datos.club(a.steam_hex)
         uid = club["jugadores"][0]["gameplayer_unique_id"]
         antes = int(club["jugadores"][0].get("contract_term") or 0)

@@ -924,6 +924,7 @@ class Servidor:
     def _ficha_jugador_myclub(self, i, j):
         e = lambda k, d=0: j.get(k) if isinstance(j.get(k), int) else d
         t = lambda k, d="NO": j.get(k) if isinstance(j.get(k), str) else d
+        cfgm = self.cfg.get("myclub") or {}
         limite = e("level_limit", 30)
         exp = e("exp_total")
         nivel = max(e("level", 1), min(limite, 1 + exp // self.EXP_POR_NIVEL))
@@ -935,8 +936,10 @@ class Servidor:
             "rating": e("rating", 75),
             "concept": Empaquetado({k: e(k) for k in self.CONCEPTO_JUGADOR}),
             "is_rental": t("is_rental"), "is_subscription": t("is_subscription"),
-            "sell_gp": e("sell_gp"), "contract_gp": e("contract_gp"),
-            "contract_pes_point": e("contract_pes_point"),
+            # C (07:25, lector 141c66d60): el precio de renovar sale de la ficha, no de un comando
+            "sell_gp": e("sell_gp", int(cfgm.get("venta_gp") or 0)),
+            "contract_gp": e("contract_gp", int(cfgm.get("renovacion_gp") or 0)),
+            "contract_pes_point": e("contract_pes_point", int(cfgm.get("renovacion_monedas") or 0)),
             "uniform_number": e("uniform_number", i + 1),
             "player_level_need_exp": [], "level_info": Empaquetado({
                 "level": nivel, "level_limit": limite, "exp_total": exp,
