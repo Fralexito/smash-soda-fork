@@ -148,3 +148,21 @@ La petición de estos tres solo trae pid. Todo objeto anidado va como bin.
   | SCOUTLIST | 141c3d920 | 141c3df20 |
   | WEEKLY_RANKING_BASIC_INFO | 141c714e0 | 141c71ae0 |
   | CLOUDMATCH_BONUS | 141c424b0 | 141c42b10 |
+
+### 15.4–15.10 (C)
+- **SQUAD_GAMEPLAN**: la petición lleva squad_id; la respuesta gameplan_data_size int y gameplan_data texto.
+- **SET_MYCLUB_MAIN_SQUAD**: la petición lleva matchday_squad_rating_info, squad_id, team_level, team_power y team_spirit; la respuesta solo msgid, rqid y result.
+- **SET_MYCLUB_CLOUD_SQUAD**: la petición lleva cloud_squad_id, is_use_cloud_match, team_level y team_power; la respuesta solo msgid, rqid y result.
+- **PLAYER_NUMBER_FIXATION**: player_number_list [{player_id, number}] y player_number_list_num.
+- **SCOUTLIST**: scout_list [{agent_id, skill{skill_category, skill_id}, grade, count, rate{rate_table [int], rate_player_num [int]}, target_level, sell_gp}] y scout_list_num.
+- **WEEKLY_RANKING_BASIC_INFO**: basic_info{eura_url, is_beginner, is_join, is_rejected, is_season_end, reward (regalo), division, division_change_type, is_no_play_season, is_group_rank_1st}.
+- **CLOUDMATCH_BONUS**:
+  - cloud_bonus (regalo); match_num, win_num, lose_num y draw_num.
+  - match_list = lista de {date, ex_type, pk_flag, no_match, player{pid, pname{…}, side, is_com, cpu_level, is_follow, is_guest, team}, score{score_1st, score_2nd, score_ex1st, score_ex2nd, score_pk}, match_category, gameend_reason}; match_list_num.
+- **«Regalo»** = {present_id, name, name_jp, title, body, entity_id, grade, skill{…}, type, player_level, contract_term, team_id, present_type, item{item_type, item_variation, item_effect_arg, count, pes_point_price}, receipt_deadline, count}.
+
+### Cómo se sacaron los ids del juego (repetible)
+- Jugadores: en Data\dt10_x64.cpk, el archivo common/etc/pesdb/PlayerAssignment.bin.
+  - Cabecera FF 10 81 «WESYS» y después zlib.
+  - Filas de 16 bytes = 4 × u32 LE: [fila][player_id][team_id][puesto<<10 | número].
+- Entrenadores: MyclubCoach.bin, 21 filas de 192 bytes con [índice 6..27][coach_id].

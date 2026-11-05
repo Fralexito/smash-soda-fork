@@ -1010,6 +1010,33 @@ class Servidor:
     async def c_cmd_get_myclub_itemlist(self, s, m):
         return {"item_list": [], "item_list_num": 0}  # C (§15.3)
 
+    async def c_cmd_get_myclub_squad_gameplan(self, s, m):
+        return {"gameplan_data_size": 0, "gameplan_data": ""}  # C (§15.4)
+
+    async def c_cmd_set_myclub_main_squad(self, s, m):
+        return {}  # C (§15.5): solo msgid/rqid/result
+
+    async def c_cmd_set_myclub_cloud_squad(self, s, m):
+        return {}  # C (§15.6)
+
+    async def c_cmd_get_myclub_player_number_fixation(self, s, m):
+        return {"player_number_list": [], "player_number_list_num": 0}  # C (§15.7)
+
+    async def c_cmd_get_myclub_scoutlist(self, s, m):
+        return {"scout_list": [], "scout_list_num": 0}  # C (§15.8)
+
+    async def c_cmd_get_myclub_weekly_ranking_basic_info(self, s, m):
+        # C (§15.9). P: «reward» (regalo) se omite hasta tener uno real
+        return {"basic_info": Empaquetado({
+            "eura_url": "", "is_beginner": "YES", "is_join": "NO", "is_rejected": "NO",
+            "is_season_end": "NO", "division": "", "division_change_type": "",
+            "is_no_play_season": "NO", "is_group_rank_1st": "NO"})}
+
+    async def c_cmd_get_myclub_cloudmatch_bonus(self, s, m):
+        # C (§15.10). P: «cloud_bonus» (regalo) se omite
+        return {"match_num": 0, "win_num": 0, "lose_num": 0, "draw_num": 0,
+                "match_list": [], "match_list_num": 0}
+
     async def c_cmd_create_myclub_team(self, s, m):
         # C (§12): la respuesta solo lleva msgid/rqid/result; ERR_ALREADYEXISTS si ya hay club
         if self.datos.club(s.steam_hex or ""):

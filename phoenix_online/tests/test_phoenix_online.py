@@ -463,7 +463,14 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
                  "CMD_SET_MYCLUB_VSCOM_GAMERESULT": "player_data",
                  "CMD_GET_MYCLUB_MAINMENU_INFO": "matchday_emblem_info",
                  "CMD_GET_MYCLUB_LOGIN_BONUS": "is_bonus",
-                 "CMD_GET_MYCLUB_ITEMLIST": "item_list_num"}
+                 "CMD_GET_MYCLUB_ITEMLIST": "item_list_num",
+                 "CMD_GET_MYCLUB_SQUAD_GAMEPLAN": "gameplan_data",
+                 "CMD_SET_MYCLUB_MAIN_SQUAD": "result",
+                 "CMD_SET_MYCLUB_CLOUD_SQUAD": "result",
+                 "CMD_GET_MYCLUB_PLAYER_NUMBER_FIXATION": "player_number_list_num",
+                 "CMD_GET_MYCLUB_SCOUTLIST": "scout_list_num",
+                 "CMD_GET_MYCLUB_WEEKLY_RANKING_BASIC_INFO": "basic_info",
+                 "CMD_GET_MYCLUB_CLOUDMATCH_BONUS": "match_list_num"}
         for i, (cmd, clave) in enumerate(casos.items()):
             await self.srv.recibir(a, 100 + i, {"msgid": cmd, "rqid": i, "pid": 1})
             self.assertEqual((ea[-1][1]["msgid"], ea[-1][1]["result"]), (cmd, "NOERR"))
