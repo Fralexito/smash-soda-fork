@@ -1707,11 +1707,70 @@ class Servidor:
             if not isinstance(el, dict):
                 continue
             base = {k: el.get(k) if isinstance(el.get(k), (int, str)) else 0 for k in claves}
-            nuevo = {"id": len(club.get("staff", [])) + 1, "base_player_info": base, "base_exp": 0}
+            nuevo = {"id": max([e.get("id", 0) for e in club.get("staff", [])] + [0]) + 1,
+                     "base_player_info": base, "base_exp": int(base.get("overall") or 0)}
             club.setdefault("staff", []).append(nuevo)
+            # C (07:50): el jugador convertido desaparece de los miembros
+            uid = base.get("gameplayer_unique_id")
+            if uid and uid not in self._uids_en_uso(club):
+                club["jugadores"] = [j for j in club.get("jugadores") or []
+                                     if j.get("gameplayer_unique_id") != uid]
             salida.append(Empaquetado({**nuevo, "base_player_info": Empaquetado(base)}))
         self.datos.guardar_club(s.steam_hex or "", club)
         return {"staff_info_list": salida}
+
+    async def c_cmd_get_myclub_staff_list(self, s, m):
+        # C (07:50): staff_list = lista de bin({id, base_player_info, base_exp})
+        club = self._club_inicial(s) or {}
+        lista = [Empaquetado({**e, "base_player_info": Empaquetado(e.get("base_player_info") or {})})
+                 for e in club.get("staff") or []]
+        return {"staff_list_num": len(lista), "staff_list": lista}
+
+    # ---------- menú del jugador: bloquear y liberar (C, 07:50) ----------
+    @staticmethod
+    def _uids_en_uso(club):
+        """Jugadores inscritos en la plantilla (no se pueden liberar ni convertir)."""
+        return {u for u in (club.get("inscritos") or {}).get("1") or []}
+
+    @staticmethod
+    def _lista_uids(m, clave="gameplayer_unique_id_list"):
+        return [int(u) for u in m.get(clave) or [] if isinstance(u, int) or str(u).isdigit()]
+
+    def _proteger(self, s, m, valor):
+        club = self._club_inicial(s)
+        if club is None:
+            return {"result": "ERR_NOTFOUND"}
+        uids = set(self._lista_uids(m))
+        for j in club.get("jugadores") or []:
+            if j.get("gameplayer_unique_id") in uids:
+                j["is_protected"] = valor
+        self.datos.guardar_club(s.steam_hex or "", club)
+        return {}
+
+    async def c_cmd_set_myclub_protected_enable(self, s, m):
+        return self._proteger(s, m, "YES")
+
+    async def c_cmd_set_myclub_protected_disable(self, s, m):
+        return self._proteger(s, m, "NO")
+
+    async def c_cmd_sell_myclub_gameplayer(self, s, m):
+        # C (07:50): liberar. REQ gameplayer_unique_id_list + is_use_cloud_match;
+        # RES gain_gp y gp. Precio = sell_gp de la ficha (config myclub.venta_gp).
+        club = self._club_inicial(s)
+        if club is None:
+            return {"result": "ERR_NOTFOUND"}
+        uids = set(self._lista_uids(m))
+        elegidos = [j for j in club.get("jugadores") or [] if j.get("gameplayer_unique_id") in uids]
+        if not elegidos or any(j.get("is_protected") == "YES" for j in elegidos) \
+                or uids & self._uids_en_uso(club):
+            return {"result": "ERR_FORBIDDEN"}  # bloqueados o inscritos en la plantilla: no
+        base = int((self.cfg.get("myclub") or {}).get("venta_gp") or 0)
+        ganancia = sum(int(j.get("sell_gp", base)) for j in elegidos)
+        club["jugadores"] = [j for j in club["jugadores"] if j not in elegidos]
+        club["gp"] = int(club.get("gp") or 0) + ganancia
+        self.datos.guardar_club(s.steam_hex or "", club)
+        log.info("myClub %s liberó %d jugador(es): +%d GP", s.steam_hex, len(elegidos), ganancia)
+        return {"gain_gp": ganancia, "gp": club["gp"]}
 
     async def c_cmd_get_myclub_feature_player_list(self, s, m):
         return {"gameplayer_list": [], "gameplayer_list_num": 0,

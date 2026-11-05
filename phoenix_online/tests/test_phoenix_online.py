@@ -802,6 +802,34 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         await r(a, 3, {"msgid": "CMD_GET_GP_ACHIEVEMENT", "rqid": 3})
         self.assertEqual(ea[-1][1]["all_achievement_bit_array"], [5, 2])
 
+    async def test_myclub_bloquear_liberar_y_entrenador(self):
+        self.srv.cfg = {**self.srv.cfg, "myclub": {
+            "jugadores": [{"gameplayer_id": 100 + i} for i in range(20)],
+            "entrenadores": [{"coach_id": 8}], "venta_gp": 100,
+            "club_de_prueba": {"team_name": "P", "gp": 1000}}}
+        a, ea = await self.entrar("A1")
+        r = self.srv.recibir
+        await r(a, 1, {"msgid": "CMD_GET_MYCLUB_USER_INFO", "rqid": 1})
+        await r(a, 2, {"msgid": "CMD_SET_MYCLUB_PROTECTED_ENABLE", "rqid": 2,
+                       "gameplayer_unique_id_list": [19, 20]})
+        self.assertEqual(ea[-1][1]["result"], "NOERR")
+        await r(a, 3, {"msgid": "CMD_SELL_MYCLUB_GAMEPLAYER", "rqid": 3,
+                       "gameplayer_unique_id_list": [19], "is_use_cloud_match": "NO"})
+        self.assertEqual(ea[-1][1]["result"], "ERR_FORBIDDEN")  # bloqueado
+        await r(a, 4, {"msgid": "CMD_SET_MYCLUB_PROTECTED_DISABLE", "rqid": 4,
+                       "gameplayer_unique_id_list": [19]})
+        await r(a, 5, {"msgid": "CMD_SELL_MYCLUB_GAMEPLAYER", "rqid": 5,
+                       "gameplayer_unique_id_list": [19], "is_use_cloud_match": "NO"})
+        self.assertEqual((ea[-1][1]["gain_gp"], ea[-1][1]["gp"]), (100, 1100))
+        await r(a, 6, {"msgid": "CMD_GET_MYCLUB_GAMEPLAYERLIST", "rqid": 6})
+        self.assertEqual(ea[-1][1]["gameplayer_list_num"], 19)
+        el = msgpack_min.packb({"gameplayer_unique_id": 18, "gameplayer_id": 117, "overall": 80})
+        await r(a, 7, {"msgid": "CMD_CREATE_MYCLUB_STAFF", "rqid": 7, "player_info_list": [el]})
+        await r(a, 8, {"msgid": "CMD_GET_MYCLUB_STAFF_LIST", "rqid": 8})
+        self.assertEqual(ea[-1][1]["staff_list_num"], 1)
+        await r(a, 9, {"msgid": "CMD_GET_MYCLUB_GAMEPLAYERLIST", "rqid": 9})
+        self.assertEqual(ea[-1][1]["gameplayer_list_num"], 18)
+
     async def test_myclub_monedas_gratis(self):
         self.srv.cfg = {**self.srv.cfg, "myclub": {
             "jugadores": [{"gameplayer_id": 1}], "entrenadores": [{"coach_id": 8}],

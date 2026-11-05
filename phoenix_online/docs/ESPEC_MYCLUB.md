@@ -547,3 +547,21 @@ Lectores encontrados en el juego (RE estático, sin abrir PES). Todo lo de dentr
 - **07:35, RENOVAR CONTRATO FUNCIONA en vivo (f4eadf2).** «M. Ter Stegen renovó su contrato.» sin congelarse. Contrato 30 → 40, −200 GP.
   - Además se cobró un logro: bit 225 («renovar un contrato», +300), así que el saldo quedó en 24 100.
   - Falta ver a Lenglet (5 → 15) y el contrato nuevo en la lista de miembros.
+
+## 40. Menú del jugador: bloquear, liberar y entrenador de experiencia (C, 05-nov 07:50)
+Leído en el juego (sin abrir PES). Los ids van como ENTEROS.
+- **Bloquear / Desbloquear:** `CMD_SET_MYCLUB_PROTECTED_ENABLE` y `..._DISABLE`.
+  - Petición: `gameplayer_unique_id_list` (lista de int). Respuesta: solo NOERR.
+  - Se guarda en la ficha como `is_protected` «YES» o «NO».
+- **Liberar:** `CMD_SELL_MYCLUB_GAMEPLAYER`.
+  - Petición: `gameplayer_unique_id_list` e `is_use_cloud_match`. Respuesta: `gain_gp` y `gp`.
+  - El precio sale de `sell_gp` de la ficha, o de `myclub.venta_gp` si el jugador no lo trae.
+  - El servidor rechaza con ERR_FORBIDDEN a los bloqueados y a los inscritos en la plantilla.
+- **Convertir en Entrenador de experiencia:** `CMD_CREATE_MYCLUB_STAFF`.
+  - Petición: `player_info_list` (bins de 12 campos). Respuesta: `staff_info_list` = lista de bin({id, base_player_info, base_exp}).
+  - El jugador desaparece de los miembros. La lista se pide con `CMD_GET_MYCLUB_STAFF_LIST`, que devuelve `staff_list_num` y `staff_list`.
+- **Pendiente (leído, sin hacer):**
+  - `CMD_USE_MYCLUB_STAFF`, para dar experiencia a un jugador.
+    - Petición: player_info, staff_info_list y use_item_list.
+    - Respuesta: exp_added, exp_info_pre/post, sell_gp, contract_gp, contract_pes_point y traning_result.
+  - `CMD_GET_MYCLUB_ITEMLIST`: lista de bin({item_type, item_variation, item_effect_arg, count, pes_point_price}). Sirve para el «Boleto de contrato».
