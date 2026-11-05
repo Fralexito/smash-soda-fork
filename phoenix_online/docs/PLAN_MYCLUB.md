@@ -58,6 +58,23 @@ Frank preguntó si todo se puede armar y mantener desde su página. Sí, en 3 pi
 - **Probar myClub con el parche de Frank:** después del paso 1, y con su permiso.
 - **Partidos entre dos personas:** emparejar a 2 jugadores y el relé de juego (ver `INVENTARIO_PESBUL.md`). Hacen falta dos PES conectados a la vez.
 
+## «El mejor myClub que existe»: ideas que los fans pidieron y nunca salieron (Frank, 05-nov)
+Regla: nada se paga con dinero real, y cada cosa se puede prender o apagar.
+- **Solo con el servidor (lo más fácil):**
+  - Intercambiar jugadores entre personas, y préstamos.
+  - Mercado de traspasos con precio por oferta y demanda.
+  - Misiones diarias y semanales con premio.
+  - Modo draft: elegir el equipo entre opciones al azar.
+  - Torneos y ligas propias entre amigos.
+  - Cartas que evolucionan con TUS partidos, de forma única.
+  - Leyendas como premio, nunca en venta.
+  - Historial del club: trofeos, goleadores y rivalidades.
+- **Con la web o la app:**
+  - Página de cada club y clasificación.
+  - Avisos al celular.
+  - Manejar el mercado y los intercambios desde el celular.
+- **Con mods (más difícil):** pantallas nuevas dentro de PES y diseño de cartas (Sider).
+
 ## Riesgos y límites
 - Los datos de jugadores son de Konami: mostrarlos en una web pública tiene riesgo legal. Revisarlo antes de publicar.
 - No cobrar nada por myClub sin abogado.
