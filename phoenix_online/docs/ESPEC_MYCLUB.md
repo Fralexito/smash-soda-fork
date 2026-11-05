@@ -615,3 +615,8 @@ Un «producto» es un cazatalentos a subasta (`scout_id` = agent_id, `grade` = e
 - VSCOM_OPPONENT.cpu_level = nivel del club (salvo rival.cpu_level_fijo = true). GAME_BONUS: old_cpu_level = nivel antes del partido, new_cpu_level = nivel nuevo (el cliente muestra el cambio).
 - Pendiente: la lista real de MATCH_LEVEL_* (REA). Hasta entonces niveles = [MATCH_LEVEL_REGULAR].
 - Prueba: test_myclub_dificultad_sube_y_baja.
+
+## 45. Contrato y cansancio por partido (05-nov noche)
+- `myclub.contrato_por_partido` (0 = apagado): cada partido vs COM resta ese valor al contract_term de los 18 inscritos (nunca baja de 0). Ojo con la escala: PES muestra 100 como «1» y <100 como «0» (inelegible, §39.x); no encender hasta confirmar la escala con REA.
+- `myclub.cansancio` = {activo, sube, baja, maximo}: los inscritos suben `sube` de tiredness (hasta `maximo`); los que no juegan bajan `baja` (hasta 0). Apagado hasta confirmar el rango real.
+- Prueba: test_myclub_contrato_y_cansancio_por_partido.

@@ -2013,9 +2013,25 @@ class Servidor:
         tabla_exp = (self.cfg.get("myclub") or {}).get("exp_por_partido") or {
             "WIN": 60, "DRAW": 40, "LOSE": 30, "": 30}
         ganada = int(tabla_exp.get(desenlace, 0) or 0)
+        cfgm = self.cfg.get("myclub") or {}
+        # C (05-nov noche): cada partido gasta contrato (myclub.contrato_por_partido, 0 = apagado;
+        # ojo: PES muestra 100 como «1», ver §39.x) y cansa a los inscritos (myclub.cansancio).
+        gasto = int(cfgm.get("contrato_por_partido") or 0)
+        cans = cfgm.get("cansancio") or {}
+        inscritos = set()
         for _, j in self._elegidos(club, club["jugadores"]):
+            inscritos.add(id(j))
             j["exp_total"] = int(j.get("exp_total") or 0) + ganada
             j["games"] = int(j.get("games") or 0) + 1
+            if gasto:
+                j["contract_term"] = max(0, int(j.get("contract_term", 100)) - gasto)
+            if cans.get("activo"):
+                j["tiredness"] = min(int(cans.get("maximo", 100)),
+                                     int(j.get("tiredness") or 0) + int(cans.get("sube", 10)))
+        if cans.get("activo"):
+            for j in club["jugadores"]:
+                if id(j) not in inscritos:
+                    j["tiredness"] = max(0, int(j.get("tiredness") or 0) - int(cans.get("baja", 10)))
         self.datos.guardar_club(s.steam_hex or "", club)
         log.info("myClub vs COM %s: %s, +%d GP (saldo %d)", s.steam_hex, desenlace or "?",
                  premio, club["gp"])

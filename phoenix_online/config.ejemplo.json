@@ -482,6 +482,9 @@
       "inicial": "MATCH_LEVEL_REGULAR",
       "victorias_para_subir": 3,
       "derrotas_para_bajar": 2
-    }
+    },
+    "contrato_por_partido": 0,
+    "cansancio": {"activo": false, "sube": 10, "baja": 10, "maximo": 100,
+                  "_nota": "rango real de tiredness por confirmar con REA"}
   }
 }

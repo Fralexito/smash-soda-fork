@@ -676,6 +676,27 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         await r(a, 50, {"msgid": "CMD_GET_MYCLUB_VSCOM_OPPONENT", "rqid": 50})
         self.assertEqual(ea[-1][1]["cpu_level"], "MATCH_LEVEL_REGULAR")  # apagada = fijo
 
+    async def test_myclub_contrato_y_cansancio_por_partido(self):
+        self.srv.cfg = {**self.srv.cfg, "myclub": {
+            "jugadores": [{"gameplayer_id": 100 + i} for i in range(20)],
+            "entrenadores": [{"coach_id": 8}], "club_de_prueba": {"team_name": "P", "gp": 0},
+            "contrato_por_partido": 1,
+            "cansancio": {"activo": True, "sube": 30, "baja": 10, "maximo": 50}}}
+        a, ea = await self.entrar("A1")
+        r = self.srv.recibir
+        await r(a, 1, {"msgid": "CMD_GET_MYCLUB_USER_INFO", "rqid": 1})
+        club = self.srv.datos.club(a.steam_hex)
+        club["jugadores"][19]["tiredness"] = 15
+        self.srv.datos.guardar_club(a.steam_hex, club)
+        for n in (2, 3):
+            await r(a, n, {"msgid": "CMD_SET_MYCLUB_VSCOM_GAMERESULT", "rqid": n,
+                           "winner_side": "WINNER_HOME", "gameend_reason": "NORMAL_END",
+                           "past_game_played_pid": 7, "pes_srv_rtt_nums": 3})
+        j = self.srv.datos.club(a.steam_hex)["jugadores"]
+        self.assertEqual((j[0]["contract_term"], j[0]["tiredness"]), (98, 50))  # tope 50
+        self.assertNotIn("contract_term", j[19])  # no inscrito: no gasta contrato
+        self.assertEqual(j[19]["tiredness"], 0)  # descansa 10 por partido, sin bajar de 0
+
     def test_myclub_desenlace_vscom(self):
         d = self.srv._desenlace_vscom
         self.assertEqual(d({"winner": "WINNER_AWAY", "side": "HOME"}), "LOSE")
