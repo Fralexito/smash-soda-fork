@@ -236,3 +236,14 @@ La petición de estos tres solo trae pid. Todo objeto anidado va como bin.
   - Los ids de MyclubCoach.bin (121xxx) no sirven.
   - La formación sale de los datos del DT (5-2-1-2 para el 8).
   - El gameplan guardado sí se aplica.
+
+## 19. Hacia el partido vs COM (05-nov)
+- El «!» rojo = contrato corto. Con contract_term 100 desaparece. Ahora 100 es el valor por defecto.
+- Partido igualado avanza y pide GET_PLAYER_PARAMETERLIST y GET_MYCLUB_VSCOM_OPPONENT. Sin respuesta, PES se cierra a propósito (c0000409, FAST_FAIL 5).
+- **GET_PLAYER_PARAMETERLIST** (lector 141d8a120):
+  - La petición lleva is_equalization y player_list [{gameplayer_unique_id, gameplayer_id}].
+  - La respuesta lleva param_playerlist [{gameplayer_id_info{unique_id, id}, parameters [int], is_cost_over}], un elemento por jugador pedido.
+- **GET_MYCLUB_VSCOM_OPPONENT** (lector 141da7b80):
+  - La petición lleva is_coach_mode e is_team_power_lv.
+  - La respuesta lleva side, cpu_level, team_name, team_name_short, base_team_id, team_data{plantilla como SQUADLIST}, pes_pname{…}, pid, coach_adaptability_rate, concept_data{concept{14}} y team_name_commentary_id.
+  - Se arma desde config myclub.rival. P: los anidados van como bin.

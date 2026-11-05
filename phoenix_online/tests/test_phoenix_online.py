@@ -480,7 +480,8 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
                  "CMD_GET_MYCLUB_RENTAL_GAMEPLAYERLIST": "rental_gameplayer_list_num",
                  "CMD_GET_MATCHREJECTLIST": "reject_list_num",
                  "CMD_GET_EVENT_CATEGORY_LIST": "event_category_list",
-                 "CMD_GET_PESLEAGUE_COMPE_RESULT_LIST": "result_list_num"}
+                 "CMD_GET_PESLEAGUE_COMPE_RESULT_LIST": "result_list_num",
+                 "CMD_GET_MYCLUB_VSCOM_OPPONENT": "team_data"}
         for i, (cmd, clave) in enumerate(casos.items()):
             await self.srv.recibir(a, 100 + i, {"msgid": cmd, "rqid": i, "pid": 1})
             self.assertEqual((ea[-1][1]["msgid"], ea[-1][1]["result"]), (cmd, "NOERR"))
@@ -560,6 +561,16 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         sq = msgpack_min.unpackb(msgpack_min.packb(ea[-1][1]["squad_list"][0].valor))
         primero = msgpack_min.unpackb(sq["member_list"][0])
         self.assertEqual(primero["gameplayer_id"], 101)
+
+    async def test_myclub_parametros_por_jugador(self):
+        a, ea = await self.entrar("A1")
+        pedidos = [msgpack_min.packb({"gameplayer_unique_id": i, "gameplayer_id": 100 + i}) for i in range(3)]
+        await self.srv.recibir(a, 1, {"msgid": "CMD_GET_PLAYER_PARAMETERLIST", "rqid": 1,
+                                      "player_list": pedidos, "is_equalization": "YES"})
+        lista = ea[-1][1]["param_playerlist"]
+        self.assertEqual(len(lista), 3)
+        el = msgpack_min.unpackb(msgpack_min.packb(lista[2].valor))
+        self.assertEqual(msgpack_min.unpackb(el["gameplayer_id_info"])["gameplayer_id"], 102)
 
     def test_avatar_http_vacio_y_guardado(self):
         r = self.srv.respuesta_http({"msgid": "CMD_GET_AVATAR_HTTP", "rqid": "3", "pid": "7"})

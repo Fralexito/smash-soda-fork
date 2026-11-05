@@ -922,7 +922,7 @@ class Servidor:
             "gameplayer_unique_id": e("gameplayer_unique_id", i + 1),
             "gameplayer_id": e("gameplayer_id"), "games": e("games"), "goal": e("goal"),
             "assist": e("assist"), "tiredness": e("tiredness"),
-            "contract_term": e("contract_term", 10), "gameplayer_cost": e("gameplayer_cost", 3),
+            "contract_term": e("contract_term", 100), "gameplayer_cost": e("gameplayer_cost", 3),
             "rating": e("rating", 75),
             "concept": Empaquetado({k: e(k) for k in self.CONCEPTO_JUGADOR}),
             "is_rental": t("is_rental"), "is_subscription": t("is_subscription"),
@@ -1156,6 +1156,58 @@ class Servidor:
 
     async def c_cmd_get_pesleague_compe_result_list(self, s, m):
         return {"result_list": [], "result_list_num": 0}  # C (§16.10)
+
+    async def c_cmd_get_player_parameterlist(self, s, m):
+        # C (§19): un elemento por jugador pedido; sin respuesta PES se cierra (c0000409)
+        salida = []
+        for el in m.get("player_list") or []:
+            if isinstance(el, (bytes, bytearray)):
+                try:
+                    el = msgpack_min.unpackb(el)
+                except Exception:
+                    continue
+            if not isinstance(el, dict):
+                continue
+            salida.append(Empaquetado({
+                "gameplayer_id_info": Empaquetado({
+                    "gameplayer_unique_id": el.get("gameplayer_unique_id") or 0,
+                    "gameplayer_id": el.get("gameplayer_id") or 0}),
+                "parameters": [], "is_cost_over": "NO"}))
+        return {"param_playerlist": salida}
+
+    def _plantilla_bin(self, jugadores, coach_id, nombre, plan):
+        miembros = [Empaquetado({
+            "gameplayer_unique_id": j.get("gameplayer_unique_id") or i + 1,
+            "gameplayer_id": j.get("gameplayer_id") or 0,
+            "uniform_number": j.get("uniform_number") or i + 1,
+            "player_level": j.get("level") or 1, "parameters": [],
+            "default_rarity": self._rareza(j)}) for i, j in enumerate(jugadores[:18])]
+        return Empaquetado({
+            "squad_id": 1, "name": nombre, "member_list": miembros, "member_num": len(miembros),
+            "is_entry_compe": "NO", "coach_id_list": [coach_id], "coach_unique_id_list": [1],
+            "gameplan_data_size": len(plan), "gameplan_data": plan, "is_club_edition": "NO",
+            "club_edition_type": ""})
+
+    async def c_cmd_get_myclub_vscom_opponent(self, s, m):
+        # C (§19): rival COM. Config myclub.rival = {jugadores [...18 por puesto], coach_id,
+        # team_name, team_name_short, base_team_id, cpu_level, side}. P: anidados = bin.
+        r = (self.cfg.get("myclub") or {}).get("rival") or {}
+        jugadores = [j for j in r.get("jugadores") or [] if isinstance(j, dict)]
+        nombre = r.get("team_name") or "Rival"
+        return {"side": r.get("side", "AWAY"), "cpu_level": r.get("cpu_level", ""),
+                "team_name": nombre, "team_name_short": r.get("team_name_short", "RIV"),
+                "base_team_id": int(r.get("base_team_id") or 0),
+                "team_data": self._plantilla_bin(jugadores, int(r.get("coach_id") or 0), nombre,
+                                                 GAMEPLAN_DEFECTO),
+                "pes_pname": Empaquetado({"name": nombre, "xuid_one": "0",
+                                          "psn_user_id": Empaquetado({"account_id": 0,
+                                                                      "online_id": nombre,
+                                                                      "is_valid_cache": "1"}),
+                                          "is_deleted": "0"}),
+                "pid": 0, "coach_adaptability_rate": 100,
+                "concept_data": Empaquetado({"concept": Empaquetado(
+                    {k: 0 for k in self.CONCEPTO_JUGADOR})}),
+                "team_name_commentary_id": 0}
 
     async def c_cmd_create_myclub_team(self, s, m):
         # C (§12): la respuesta solo lleva msgid/rqid/result; ERR_ALREADYEXISTS si ya hay club
