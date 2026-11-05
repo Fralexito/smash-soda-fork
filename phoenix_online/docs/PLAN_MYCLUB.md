@@ -66,7 +66,12 @@ Regla: nada se paga con dinero real, y cada cosa se puede prender o apagar.
   - Mercado de traspasos con precio por oferta y demanda.
   - Misiones diarias y semanales con premio.
   - Modo draft: elegir el equipo entre opciones al azar.
-  - Torneos y ligas propias entre amigos.
+  - Torneos y ligas propias entre amigos. Frank lo pidió el 05-nov: cada persona juega con SU club de myClub.
+    - El torneo se arma en la web: cruces y fechas.
+    - El servidor empareja a los dos del cruce en un partido myClub.
+    - El resultado llega solo y la tabla de la web se actualiza.
+    - Necesita antes el partido de 2 personas.
+  - Vender jugadores a otras personas por GP desde la web o la app (Frank, 05-nov). El servidor pasa la ficha de un club al otro.
   - Cartas que evolucionan con TUS partidos, de forma única.
   - Leyendas como premio, nunca en venta.
   - Historial del club: trofeos, goleadores y rivalidades.
