@@ -489,6 +489,8 @@
     "contrato_inicial": 10,
     "renovacion_maximo": 50,
     "contrato_por_partido": 1,
+    "staff_exp_factor": 1,
+    "recuperar_monedas": 0,
     "cansancio": {"activo": false, "sube": 10, "baja": 10, "maximo": 100,
                   "_nota": "rango real de tiredness por confirmar con REA"}
   }

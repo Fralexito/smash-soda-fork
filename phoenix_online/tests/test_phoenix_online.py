@@ -920,6 +920,74 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn(5, orden)
         self.assertNotIn(5, [j.get("gameplayer_unique_id") for j in club["jugadores"]])
 
+    async def test_myclub_usar_entrenador_de_experiencia(self):
+        self.srv.cfg = {**self.srv.cfg, "myclub": {
+            "jugadores": [{"gameplayer_id": 100 + i} for i in range(20)],
+            "entrenadores": [{"coach_id": 8}],
+            "club_de_prueba": {"team_name": "P", "gp": 1000}}}
+        a, ea = await self.entrar("A1")
+        r = self.srv.recibir
+        await r(a, 1, {"msgid": "CMD_GET_MYCLUB_USER_INFO", "rqid": 1})
+        el = msgpack_min.packb({"gameplayer_unique_id": 20, "gameplayer_id": 119, "overall": 150})
+        await r(a, 2, {"msgid": "CMD_CREATE_MYCLUB_STAFF", "rqid": 2, "player_info_list": [el]})
+        staff_id = self.srv.datos.club(a.steam_hex)["staff"][0]["id"]
+        info = msgpack_min.packb({"gameplayer_unique_id": 3, "gameplayer_id": 102})
+        await r(a, 3, {"msgid": "CMD_USE_MYCLUB_STAFF", "rqid": 3, "player_info": info,
+                       "staff_info_list": [msgpack_min.packb({"id": staff_id})],
+                       "use_item_list": []})
+        resp = ea[-1][1]
+        self.assertEqual((resp["result"], resp["exp_added"]), ("NOERR", 150))
+        post = resp["exp_info_post"].valor
+        self.assertEqual((post["exp_total"], post["level"]), (150, 2))
+        club = self.srv.datos.club(a.steam_hex)
+        self.assertEqual(club["staff"], [])
+        # el mismo entrenador no se puede usar dos veces
+        await r(a, 4, {"msgid": "CMD_USE_MYCLUB_STAFF", "rqid": 4, "player_info": info,
+                       "staff_info_list": [msgpack_min.packb({"id": staff_id})]})
+        self.assertEqual(ea[-1][1]["result"], "ERR_NOTFOUND")
+
+    async def test_myclub_boleto_de_contrato(self):
+        self.srv.cfg = {**self.srv.cfg, "myclub": {
+            "jugadores": [{"gameplayer_id": 1}], "entrenadores": [{"coach_id": 8}],
+            "club_de_prueba": {"team_name": "P", "gp": 0}}}
+        a, ea = await self.entrar("A1")
+        r = self.srv.recibir
+        await r(a, 1, {"msgid": "CMD_GET_MYCLUB_USER_INFO", "rqid": 1})
+        await r(a, 2, {"msgid": "CMD_EXTEND_MYCLUB_ITEM_GAMEPLAYER", "rqid": 2,
+                       "gameplayer_unique_id": 1})
+        self.assertEqual(ea[-1][1]["result"], "ERR_FORBIDDEN")
+        club = self.srv.datos.club(a.steam_hex)
+        club["boletos_contrato"] = 1
+        antes = self.srv._contrato(club["jugadores"][0])
+        self.srv.datos.guardar_club(a.steam_hex, club)
+        await r(a, 3, {"msgid": "CMD_EXTEND_MYCLUB_ITEM_GAMEPLAYER", "rqid": 3,
+                       "gameplayer_unique_id": 1})
+        resp = ea[-1][1]
+        self.assertEqual((resp["result"], resp["extend_ticket"]), ("NOERR", 0))
+        self.assertEqual(self.srv.datos.club(a.steam_hex)["jugadores"][0]["contract_term"],
+                         antes + 900)
+
+    async def test_myclub_recuperar_cansancio(self):
+        self.srv.cfg = {**self.srv.cfg, "myclub": {
+            "jugadores": [{"gameplayer_id": 1}, {"gameplayer_id": 2}],
+            "entrenadores": [{"coach_id": 8}], "club_de_prueba": {"team_name": "P", "gp": 0}}}
+        a, ea = await self.entrar("A1")
+        r = self.srv.recibir
+        await r(a, 1, {"msgid": "CMD_GET_MYCLUB_USER_INFO", "rqid": 1})
+        club = self.srv.datos.club(a.steam_hex)
+        for j in club["jugadores"]:
+            j["tiredness"] = 3
+        self.srv.datos.guardar_club(a.steam_hex, club)
+        await r(a, 2, {"msgid": "CMD_USE_MYCLUB_ITEM_RECOVERY", "rqid": 2,
+                       "gameplayer_unique_id_list": [1], "is_all": "NO", "use_pes_point": "NO"})
+        self.assertEqual(ea[-1][1]["result"], "NOERR")
+        self.assertEqual([j["tiredness"] for j in self.srv.datos.club(a.steam_hex)["jugadores"]],
+                         [0, 3])
+        await r(a, 3, {"msgid": "CMD_USE_MYCLUB_ITEM_RECOVERY", "rqid": 3,
+                       "gameplayer_unique_id_list": [], "is_all": "YES"})
+        self.assertEqual([j["tiredness"] for j in self.srv.datos.club(a.steam_hex)["jugadores"]],
+                         [0, 0])
+
     async def test_myclub_monedas_gratis(self):
         self.srv.cfg = {**self.srv.cfg, "myclub": {
             "jugadores": [{"gameplayer_id": 1}], "entrenadores": [{"coach_id": 8}],

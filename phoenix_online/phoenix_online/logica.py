@@ -1815,6 +1815,105 @@ class Servidor:
                  for e in club.get("staff") or []]
         return {"staff_list_num": len(lista), "staff_list": lista}
 
+    def _info_exp(self, j):
+        """C (REA 05-nov noche, 0x141ca40d0): exp_info_pre/post = UN bin con level, level_limit,
+        exp_total, exp_current_level, exp_to_next_level, parameters, enhanced_parameters,
+        add_skill_id."""
+        e = lambda k, d=0: j.get(k) if isinstance(j.get(k), int) else d
+        limite = e("level_limit", 30)
+        exp = e("exp_total")
+        nivel = max(e("level", 1), min(limite, 1 + exp // self.EXP_POR_NIVEL))
+        return Empaquetado({
+            "level": nivel, "level_limit": limite, "exp_total": exp,
+            "exp_current_level": exp % self.EXP_POR_NIVEL,
+            "exp_to_next_level": 0 if nivel >= limite else self.EXP_POR_NIVEL - exp % self.EXP_POR_NIVEL,
+            "parameters": list(j.get("parameters") or []),
+            "enhanced_parameters": list(j.get("enhanced_parameters") or []),
+            "add_skill_id": e("add_skill_id")})
+
+    async def c_cmd_use_myclub_staff(self, s, m):
+        """C (REA 05-nov noche, petición 0x141ca2480): player_info (bin, 12 claves),
+        staff_info_list [bin {id, base_player_info, base_exp}], use_item_list [bin
+        {item_variation, count}]. Respuesta: gameplayer_unique_id, exp_added, exp_info_pre,
+        exp_info_post, sell_gp, contract_gp, contract_pes_point, traning_result [], _num.
+        P: cada entrenador de experiencia da su base_exp x myclub.staff_exp_factor (def. 1)."""
+        club = self._club_inicial(s)
+        if club is None:
+            return {"result": "ERR_NOTFOUND"}
+        des = lambda v: msgpack_min.unpackb(v) if isinstance(v, (bytes, bytearray)) else v
+        info = des(m.get("player_info")) or {}
+        uid = info.get("gameplayer_unique_id") if isinstance(info, dict) else None
+        j = next((x for x in club.get("jugadores") or [] if x.get("gameplayer_unique_id") == uid), None)
+        ids = set()
+        for el in m.get("staff_info_list") or []:
+            el = des(el)
+            if isinstance(el, dict) and isinstance(el.get("id"), int):
+                ids.add(el["id"])
+        usados = [e for e in club.get("staff") or [] if e.get("id") in ids]
+        if j is None or not usados:
+            return {"result": "ERR_NOTFOUND"}
+        factor = float((self.cfg.get("myclub") or {}).get("staff_exp_factor") or 1)
+        ganada = int(sum(int(e.get("base_exp") or 0) for e in usados) * factor)
+        antes = self._info_exp(j)
+        j["exp_total"] = int(j.get("exp_total") or 0) + ganada
+        club["staff"] = [e for e in club.get("staff") or [] if e.get("id") not in ids]
+        self.datos.guardar_club(s.steam_hex or "", club)
+        cfgm = self.cfg.get("myclub") or {}
+        log.info("myClub %s: %d entrenador(es) dan +%d exp a %s", s.steam_hex, len(usados), ganada, uid)
+        return {"gameplayer_unique_id": int(uid), "exp_added": ganada,
+                "exp_info_pre": antes, "exp_info_post": self._info_exp(j),
+                "sell_gp": int(j.get("sell_gp", cfgm.get("venta_gp") or 0)),
+                "contract_gp": int(j.get("contract_gp", cfgm.get("renovacion_gp") or 0)),
+                "contract_pes_point": int(j.get("contract_pes_point", cfgm.get("renovacion_monedas") or 0)),
+                "traning_result": [], "traning_result_num": 0}
+
+    async def c_cmd_extend_myclub_item_gameplayer(self, s, m):
+        """Boleto de contrato. C (REA 05-nov noche, 0x141c00870 / 0x141c00ed0): petición
+        {gameplayer_unique_id}; respuesta {contract_term: UN bin {gameplayer_unique_id,
+        gameplayer_id, contract_term}, extend_ticket: boletos que quedan}. Boletos en
+        club["boletos_contrato"] (se dan con admin o como premio)."""
+        club = self._club_inicial(s)
+        if club is None:
+            return {"result": "ERR_NOTFOUND"}
+        uid = m.get("gameplayer_unique_id")
+        j = next((x for x in club.get("jugadores") or [] if x.get("gameplayer_unique_id") == uid), None)
+        boletos = int(club.get("boletos_contrato") or 0)
+        if j is None:
+            return {"result": "ERR_NOTFOUND"}
+        if boletos <= 0:
+            return {"result": "ERR_FORBIDDEN"}
+        cfg = self.cfg.get("myclub") or {}
+        tope = self._partidos_a_unidad(cfg.get("renovacion_maximo") or 50)
+        j["contract_term"] = min(self._contrato(j) + self._partidos_a_unidad(
+            cfg.get("renovacion_partidos") or 10), tope)
+        club["boletos_contrato"] = boletos - 1
+        self.datos.guardar_club(s.steam_hex or "", club)
+        return {"contract_term": Empaquetado({"gameplayer_unique_id": int(uid),
+                                              "gameplayer_id": int(j.get("gameplayer_id") or 0),
+                                              "contract_term": j["contract_term"]}),
+                "extend_ticket": club["boletos_contrato"]}
+
+    async def c_cmd_use_myclub_item_recovery(self, s, m):
+        """Recuperar cansancio. C (REA 05-nov noche, 0x141c81660 / 0x141c81e80): petición
+        {gameplayer_unique_id_list, is_all, use_pes_point}; respuesta {pes_point}.
+        P: cuesta myclub.recuperar_monedas monedas gratis por jugador (def. 0 = gratis)."""
+        club = self._club_inicial(s)
+        if club is None:
+            return {"result": "ERR_NOTFOUND"}
+        uids = set(self._lista_uids(m))
+        todos = m.get("is_all") == "YES"
+        elegidos = [j for j in club.get("jugadores") or []
+                    if todos or j.get("gameplayer_unique_id") in uids]
+        coste = int((self.cfg.get("myclub") or {}).get("recuperar_monedas") or 0) * len(elegidos)
+        if coste:
+            error = self._cobrar(club, 0, coste, True)
+            if error:
+                return {"result": error}
+        for j in elegidos:
+            j["tiredness"] = 0
+        self.datos.guardar_club(s.steam_hex or "", club)
+        return {"pes_point": self._monedas(club)}
+
     @staticmethod
     def _sacar_de_plantilla(club, uid):
         """Quita uid de cada plantilla inscrita y pone en su mismo puesto al primer jugador

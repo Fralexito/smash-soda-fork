@@ -634,3 +634,19 @@ Un «producto» es un cazatalentos a subasta (`scout_id` = agent_id, `grade` = e
 - Migración automática (una vez por club, marca `contrato_x90`): los valores viejos (en «partidos», máx. 100) pasan a min(v, renovacion_maximo) x 90. Jugadores sin contract_term = contrato_inicial.
 - `admin_myclub.py poner-contrato <persona> <partidos> <uid…>` ahora recibe partidos.
 - Prueba: test_contrato_escala_y_migracion.
+
+## 48. Entrenador de experiencia, Boleto de contrato y recuperar cansancio (05-nov noche)
+Formas sacadas con REA (RC, `RE_NOCHE_05NOV.md`). Hecho en el servidor; falta probarlo en vivo.
+- **CMD_USE_MYCLUB_STAFF** (petición 0x141ca2480, respuesta 0x141ca40d0):
+  - Petición: `player_info` (bin con las 12 claves de la ficha), `staff_info_list` (lista de bin {id, base_player_info, base_exp}), `use_item_list` (lista de bin {item_variation, count}).
+  - Respuesta: gameplayer_unique_id, exp_added, `exp_info_pre` y `exp_info_post` (UN bin cada uno: level, level_limit, exp_total, exp_current_level, exp_to_next_level, parameters, enhanced_parameters, add_skill_id), sell_gp, contract_gp, contract_pes_point, traning_result [] y traning_result_num 0.
+  - P: cada entrenador da su base_exp (hoy = su media al convertirlo) x `myclub.staff_exp_factor` (def. 1). El entrenador usado se borra de `club["staff"]`. Jugador o entrenador inexistente = ERR_NOTFOUND.
+  - Curva de nivel: la provisional (100 exp por nivel, `EXP_POR_NIVEL`) hasta conocer la real.
+- **CMD_EXTEND_MYCLUB_ITEM_GAMEPLAYER** (Boleto de contrato):
+  - Petición {gameplayer_unique_id}. Respuesta {contract_term: UN bin {gameplayer_unique_id, gameplayer_id, contract_term}, extend_ticket: boletos que quedan}.
+  - Los boletos viven en `club["boletos_contrato"]`; se dan con `admin_myclub.py dar-boletos`. Sin boletos = ERR_FORBIDDEN. Suma `renovacion_partidos` hasta `renovacion_maximo` (en partidos x 90).
+  - Falta: el texto real de item_type/item_variation con que PES cuenta los boletos en el menú (solo se ve en vivo). Si el menú sigue diciendo «x0», hay que mandar el conteo en la lista de objetos.
+- **CMD_USE_MYCLUB_ITEM_RECOVERY** (recuperar cansancio):
+  - Petición {gameplayer_unique_id_list, is_all, use_pes_point}. Respuesta {pes_point}.
+  - Pone tiredness = 0 a los elegidos (o a todos con is_all = YES). Coste `myclub.recuperar_monedas` monedas gratis por jugador (def. 0 = gratis; nunca dinero real).
+- Pruebas: test_myclub_usar_entrenador_de_experiencia, test_myclub_boleto_de_contrato, test_myclub_recuperar_cansancio.

@@ -8,6 +8,8 @@ Uso, en la carpeta del servidor:
     con poner-monedas). Las monedas solo se ven en PES con myclub.monedas_gratis = true.
     python -I tools/admin_myclub.py config.json poner-contrato FRALEX 30 1 2 3   (deja 30 partidos
     de contrato a los jugadores con esos gameplayer_unique_id; para probar la renovación)
+    python -I tools/admin_myclub.py config.json dar-boletos FRALEX 3   (Boletos de contrato;
+    igual con poner-boletos)
 
 La persona se indica por su nombre en el juego (pname) o por su steam_hex.
 Se puede usar con el servidor encendido: el cambio se ve la próxima vez que PES pida el club
@@ -44,6 +46,7 @@ def main(argv=None):
             com = club.get("vscom") or {}
             print(f'{j["pname"]:<16} {j["steam_hex"]:<18} club={club.get("team_name", "-"):<14} '
                   f'GP={club.get("gp", 0):>8} monedas={club.get("monedas", 0):>6} '
+                  f'boletos={club.get("boletos_contrato", 0):>3} '
                   f'partidos={com.get("partidos", 0)}')
         return 0
     if orden == "poner-contrato" and len(argv) >= 5:
@@ -65,7 +68,8 @@ def main(argv=None):
         print(f'{j["pname"]}: contrato de {partidos} partidos a los unique_id {cambiados}')
         return 0
     campos = {"dar-gp": "gp", "poner-gp": "gp", "dar-monedas": "monedas",
-              "poner-monedas": "monedas"}
+              "poner-monedas": "monedas", "dar-boletos": "boletos_contrato",
+              "poner-boletos": "boletos_contrato"}
     if orden in campos and len(argv) == 4:
         campo = campos[orden]
         j = buscar(datos, argv[2])
