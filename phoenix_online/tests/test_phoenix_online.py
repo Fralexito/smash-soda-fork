@@ -530,6 +530,7 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.assertEqual((m["squad_list_num"], m["main_squad_id"]), (1, 1))
         sq = msgpack_min.unpackb(msgpack_min.packb(m["squad_list"][0].valor))
         self.assertEqual(sq["member_num"], 11)
+        self.assertEqual(sq["gameplan_data_size"], 536)
         msgpack_min.packb(m)
 
     async def test_myclub_gameplan_se_guarda(self):
@@ -541,6 +542,23 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         await r(a, 2, {"msgid": "CMD_GET_MYCLUB_SQUAD_GAMEPLAN", "rqid": 2, "squad_id": 1})
         self.assertEqual((ea[-1][1]["gameplan_data"], ea[-1][1]["gameplan_data_size"]),
                          (b"\x01\x02plan", 6))
+
+    async def test_myclub_inscritos_orden(self):
+        jug = [{"gameplayer_id": 100 + i} for i in range(23)]
+        self.srv.cfg = {**self.srv.cfg, "myclub": {"jugadores": jug}}
+        a, ea = await self.entrar("A1")
+        r = self.srv.recibir
+        await r(a, 1, {"msgid": "CMD_GET_MYCLUB_SQUADLIST", "rqid": 1})
+        sq = msgpack_min.unpackb(msgpack_min.packb(ea[-1][1]["squad_list"][0].valor))
+        self.assertEqual(sq["member_num"], 18)
+        lista = [msgpack_min.packb({"gameplayer_unique_id": u}) for u in [2, 1] + list(range(3, 19))]
+        await r(a, 2, {"msgid": "CMD_SET_MYCLUB_SQUAD_GAMEPLAYER", "rqid": 2, "squad_id": 1,
+                       "member_list": lista, "member_list_num": 18})
+        self.assertEqual(ea[-1][1]["result"], "NOERR")
+        await r(a, 3, {"msgid": "CMD_GET_MYCLUB_SQUADLIST", "rqid": 3})
+        sq = msgpack_min.unpackb(msgpack_min.packb(ea[-1][1]["squad_list"][0].valor))
+        primero = msgpack_min.unpackb(sq["member_list"][0])
+        self.assertEqual(primero["gameplayer_id"], 101)
 
     def test_avatar_http_vacio_y_guardado(self):
         r = self.srv.respuesta_http({"msgid": "CMD_GET_AVATAR_HTTP", "rqid": "3", "pid": "7"})

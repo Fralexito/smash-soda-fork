@@ -209,3 +209,13 @@ La petición de estos tres solo trae pid. Todo objeto anidado va como bin.
   - SET_MYCLUB_SQUAD_GAMEPLAN guarda la petición tal cual, por squad_id; los bytes van en base64 dentro del JSON del club.
   - GET_SQUAD_GAMEPLAN y SQUADLIST la devuelven.
   - Toda orden MYCLUB sin manejador se registra completa en el log.
+- Capturado en vivo al cambiar un jugador y salir. El cliente manda, en orden:
+  1. SET_MYCLUB_SQUAD_GAMEPLAYER: squad_id, member_list (18 elementos bin de {gameplayer_unique_id, gameplayer_id, uniform_number, player_level, parameters, default_rarity}), member_list_num 18, is_over_cost, team_power, team_level «TEAM_POWER_LV4», team_spirit y matchday_squad_rating_info.
+  2. SET_GP_ACHIEVEMENT.
+  3. SET_MYCLUB_SQUAD_GAMEPLAN: 536 bytes = 3 bloques de táctica de 0xA0 + tabla de huecos 0..17 + FF.
+  4. MAINMENU_INFO.
+- Implementado:
+  - Se guarda el orden de los 18 inscritos.
+  - SQUADLIST manda los 18 en ese orden.
+  - GAMEPLAN_DEFECTO (el plan capturado) se usa si no hay ninguno guardado.
+  - SET_GP_ACHIEVEMENT responde NOERR.

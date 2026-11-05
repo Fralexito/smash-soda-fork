@@ -27,8 +27,14 @@ CONFIRMACIONES = {
     "CMD_LEAVE_OFFLINE_MODE", "CMD_SEND_HEARTBEAT", "CMD_SET_ROOM_OPTION",
     # L (PESBUL): estos también se contestan solo con NOERR
     "CMD_CHECK_CHEAT", "CMD_GET_DMM_NOTIFICATION", "CMD_GET_URGENT_ANNOUNCEMENT",
-    "CMD_FINISH_SEASON",
+    "CMD_FINISH_SEASON", "CMD_SET_GP_ACHIEVEMENT",
 }
+
+# C (§17, capturado 05-nov): gameplan que el propio cliente generó para un 4-2-3-1 con 18
+# inscritos (3 bloques de táctica de 0xA0 + tabla de huecos 0..17). Se usa como plan inicial
+# para que un club nuevo tenga XI + banquillo inscritos.
+GAMEPLAN_DEFECTO = base64.b64decode(
+    "AAEBAwIEBAcGDAgDNAo/CikMWQwPEkASKB5WHhIrNCA0AAEBAwIEBAcGDAgDNAo/CikMWQwPEkASKB5WHhIrNCA0AAEBAwIEBAcGDAgDNAo/CikMWQwPEkASKB5WHhIrNCA0AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAv//////////////AAAAAAABAQMCBAQHBggMAzQKPwopDFkMDxJAEigeVh4SIDQrNAABAQMCBAQHBggMAzQKPwopDFkMDxJAEigeVh4SIDQrNAABAQMCBAQHBggMAzQKPwopDFkMDxJAEigeVh4SIDQrNAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAAL//////////////wAAAAAAAQEDAgQEBwYIDAM0Cj8KKQxZDA8SQBIoHlYeEiA0KzQAAQEDAgQEBwYIDAM0Cj8KKQxZDA8SQBIoHlYeEiA0KzQAAQEDAgQEBwYIDAM0Cj8KKQxZDA8SQBIoHlYeEiA0KzQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAAC//////////////8AAAAAAAECAwQFBgcICQoLDA0ODxAR/////////////////////////////wkJCQkJCf///wAAAAABAAA=")
 
 # Vigilancias que el cliente deja abiertas y el servidor completa más tarde
 VIGILANCIAS = {
@@ -1040,9 +1046,24 @@ class Servidor:
         club = self.datos.club(s.steam_hex or "") or {}
         planes = club.get("gameplans") or {}
         p = planes.get(str(m.get("squad_id") or 1)) or {}
-        datos = self._de_json(p.get("gameplan_data", ""))
-        return {"gameplan_data_size": p.get("gameplan_data_size", len(datos) if datos else 0),
-                "gameplan_data": datos}
+        datos = self._de_json(p.get("gameplan_data", "")) or GAMEPLAN_DEFECTO
+        return {"gameplan_data_size": len(datos), "gameplan_data": datos}
+
+    async def c_cmd_set_myclub_squad_gameplayer(self, s, m):
+        # C (§17): el cliente manda los 18 inscritos (XI + 7) en orden; se guarda ese orden
+        club = self._club_o_prueba(s)
+        orden = []
+        for el in m.get("member_list") or []:
+            if isinstance(el, (bytes, bytearray)):
+                try:
+                    el = msgpack_min.unpackb(el)
+                except Exception:
+                    continue
+            if isinstance(el, dict) and isinstance(el.get("gameplayer_unique_id"), int):
+                orden.append(el["gameplayer_unique_id"])
+        club.setdefault("inscritos", {})[str(m.get("squad_id") or 1)] = orden
+        self.datos.guardar_club(s.steam_hex or "", club)
+        return {}
 
     async def c_cmd_set_myclub_squad_gameplan(self, s, m):
         log.warning("peticion completa CMD_SET_MYCLUB_SQUAD_GAMEPLAN: %r", m)
@@ -1199,21 +1220,30 @@ class Servidor:
         if not jugadores:
             return {"squad_list": [], "squad_list_num": 0, "edition_squad_list": [],
                     "edition_squad_list_num": 0, "main_squad_id": 0, "cloud_squad_id": 0}
-        plan = ((self.datos.club(s.steam_hex or "") or {}).get("gameplans") or {}).get("1") or {}
+        club = self.datos.club(s.steam_hex or "") or {}
+        plan = (club.get("gameplans") or {}).get("1") or {}
+        uid = lambda i, j: j.get("gameplayer_unique_id") or i + 1
+        por_uid = {uid(i, j): (i, j) for i, j in enumerate(jugadores)}
+        orden = [u for u in (club.get("inscritos") or {}).get("1") or [] if u in por_uid]
+        if not orden:
+            orden = [uid(i, j) for i, j in enumerate(jugadores)]
+        # C (§17): la plantilla son 18 (XI + 7 suplentes); el resto queda solo en «Miembros»
+        elegidos = [por_uid[u] for u in orden[:18]]
         miembros = [Empaquetado({
             "gameplayer_unique_id": j.get("gameplayer_unique_id") or i + 1,
             "gameplayer_id": j.get("gameplayer_id") or 0,
             "uniform_number": j.get("uniform_number") or i + 1,
             "player_level": j.get("level") or 1, "parameters": list(j.get("parameters") or []),
             "default_rarity": j.get("default_rarity") or "WHITE"})
-            for i, j in enumerate(jugadores)]
+            for i, j in elegidos]
         plantilla = Empaquetado({
             "squad_id": 1, "name": "Plantilla 1", "member_list": miembros,
             "member_num": len(miembros), "is_entry_compe": "NO",
             "coach_id_list": [d.get("coach_id") or 0 for d in dts[:1]],
             "coach_unique_id_list": [d.get("coach_unique_id") or 1 for d in dts[:1]],
-            "gameplan_data_size": plan.get("gameplan_data_size", 0),
-            "gameplan_data": self._de_json(plan.get("gameplan_data", "")), "is_club_edition": "NO",
+            "gameplan_data_size": len(self._de_json(plan.get("gameplan_data", "")) or GAMEPLAN_DEFECTO),
+            "gameplan_data": self._de_json(plan.get("gameplan_data", "")) or GAMEPLAN_DEFECTO,
+            "is_club_edition": "NO",
             "club_edition_type": ""})
         return {"squad_list": [plantilla], "squad_list_num": 1, "edition_squad_list": [],
                 "edition_squad_list_num": 0, "main_squad_id": 1, "cloud_squad_id": 0}
