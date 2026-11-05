@@ -385,3 +385,11 @@ La petición de estos tres solo trae pid. Todo objeto anidado va como bin.
   - Team.bin: 662 registros de 1532 B desde +84; nombre en inglés +284. El u32 de +1476 no es un id fiable.
 - team_id de clubes grandes: 100 Man United, 101 Arsenal, 102 Chelsea, 103 Liverpool, 108 Barcelona, 109 Real Madrid sin licencia («Madrid Chamartín»; su escudo «MD» es el oficial del juego, no un fallo), 114 PSG, 119 Inter, 120 Juventus, 121 Milan, 127 Bayern, 172 Atlético, 173 Man City, 327 Napoli. Los team_id menores de ~60 son selecciones.
 - config.ejemplo: rival.equipos rota entre 7 clubes grandes.
+
+## 30. Administrar GP (05-nov)
+- `python -I tools/admin_myclub.py config.json lista`: muestra a las personas con su club, sus GP y sus partidos.
+- `dar-gp <nombre|steam_hex> <monto>` suma (o resta, si es negativo). `poner-gp <nombre> <monto>` deja el saldo exacto. Nunca deja el saldo negativo.
+- Cada cambio queda anotado en club.admin, con la hora, el saldo de antes y el de después.
+- Funciona con el servidor encendido: el cambio se ve la próxima vez que PES pida el club.
+- Lo que se gana por partido se ajusta en myclub.gp_por_partido.
+- Monedas: hoy apagadas (en Konami eran dinero real). Opción propuesta a Frank: monedas solo de premio y gratis, que nunca se venden.
