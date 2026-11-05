@@ -77,6 +77,7 @@ class Sesion:
         self.room_id = None
         self.ntl = {}
         self.huella = None
+        self.ultima_alineacion = None
         self.versiones = {}
         self.entry = False
         self.lang = None
@@ -1413,6 +1414,7 @@ class Servidor:
         com = club.setdefault("vscom", {"partidos": 0, "racha": 0, "historial": []})
         com["partidos"] = int(com.get("partidos") or 0) + 1
         com["racha"] = int(com.get("racha") or 0) + 1 if desenlace == "WIN" else 0
+        com["racha_max"] = max(int(com.get("racha_max") or 0), com["racha"])
         simple = {k: v for k, v in m.items() if isinstance(v, (int, str)) and k not in ("msgid", "rqid")}
         com.setdefault("historial", []).append({"hora": int(time.time()), "desenlace": desenlace,
                                                 "gp": premio, "datos": simple})
@@ -1687,7 +1689,31 @@ class Servidor:
         return {"product_list": [], "product_list_num": 0}
 
     async def c_cmd_get_gp_achievement(self, s, m):
-        return {"all_gp": 0, "all_achievement_bit_array": [], "pes_point": 0}
+        # C (05-nov): el cliente la pide antes del partido y pone all_gp en la barra superior;
+        # con 0 fijo la barra quedaba en «G 0» tras jugar. Se devuelve el saldo del club.
+        club = self._club_inicial(s) or {}
+        return {"all_gp": int(club.get("gp") or 0), "all_achievement_bit_array": [],
+                "pes_point": 0}
+
+    async def c_cmd_get_myclub_commentary_info(self, s, m):
+        # C (05-nov, lector 141c4ced0): datos para el comentarista. P: listas vacías válidas.
+        com = (self._club_inicial(s) or {}).get("vscom") or {}
+        e = lambda k: m.get(k) if isinstance(m.get(k), int) else 0
+        return {"team_spirit_prematch": e("team_spirit"),
+                "team_power_level_prematch": e("team_power_level"),
+                "total_match_num": int(com.get("partidos") or 0),
+                "cont_win_num": int(com.get("racha") or 0),
+                "cont_win_max": int(com.get("racha_max") or com.get("racha") or 0),
+                "coach_match_num": int(com.get("partidos") or 0),
+                "is_coach_norma_clear": "NO", "coach_extended": "NO",
+                "gameplayer_extended_list": [], "division_stats": [],
+                "get_player_result": Empaquetado({"num": 0})}
+
+    async def c_cmd_send_match_team_info(self, s, m):
+        # C (05-nov, lector 141d63cc0): solo msgid/rqid/result. Se guarda la alineación jugada
+        # para unirla al próximo resultado vs COM.
+        s.ultima_alineacion = m.get("match_team_info")
+        return {}
 
     async def c_cmd_get_store_transaction_state(self, s, m):
         return {"state": 0, "product_id": "", "use_num": 0, "possession_num": 0,

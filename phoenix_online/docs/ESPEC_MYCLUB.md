@@ -310,3 +310,11 @@ La petición de estos tres solo trae pid. Todo objeto anidado va como bin.
 - El servidor suma los GP de myclub.gp_por_partido. El cliente mostró «240» por la victoria, así que el ejemplo usa WIN 240.
 - Arreglado después: el rival salía 11 veces «T. Courtois» porque sus gameplayer_unique_id (1..18) chocaban con los del club propio. Ahora el rival usa 900001 en adelante.
 - Pendiente: escudo del rival (sale «MD» genérico con base_team_id 109) y respuestas propias para COMMENTARY_INFO y SEND_MATCH_TEAM_INFO.
+
+## 24. Barra de GP, comentarista y alineación (C, 05-nov)
+- La barra superior mostraba «G 0» después del partido. Venía de GET_GP_ACHIEVEMENT.all_gp, que estaba fijo en 0 y que el cliente pide antes del partido. Ahora all_gp = saldo del club.
+- GET_MYCLUB_COMMENTARY_INFO (lector 141c4ced0) responde:
+  - team_spirit_prematch, team_power_level_prematch, total_match_num, cont_win_num, cont_win_max, coach_match_num.
+  - is_coach_norma_clear «NO», coach_extended «NO».
+  - gameplayer_extended_list [], division_stats [], get_player_result bin{num}.
+- SEND_MATCH_TEAM_INFO (lector 141d63cc0) solo mira el result. La alineación jugada (match_team_info) se guarda en la sesión.
