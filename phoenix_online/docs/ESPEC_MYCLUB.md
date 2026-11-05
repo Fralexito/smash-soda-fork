@@ -523,3 +523,8 @@ Lectores encontrados en el juego (RE estático, sin abrir PES). Todo lo de dentr
   - «Finaliza en 0 min»: prueba barata con `agent_token_end_time` y `market_subscription.end_time` = ahora + 7 días.
   - Mapa de offsets del objeto resultado de AGENT_BOX_INFO: agent_id +0xb8, target_level +0x100, token_list +0x128, get_player_num +0x144, pes_point +0x188, gp +0x18c, agent_end_time +0x190, agent_token_end_time +0x194, skill_id +0x1f8, limit_count +0x200, use_count +0x204, box_size +0x208, box_pack_num +0x20c, reset_remain_count +0x210, main_rarity +0x218, sub1 +0x228, sub2 +0x230.
   - Renovar contrato: Miembros → evento «01_extend» (1 jugador) o «05_extend_list» (varios) → CMD_EXTEND_MYCLUB_GAMEPLAYER. Sale del menú de acciones del jugador, que se abre con X, y el MCP bloquea esa tecla.
+- **07:00, prueba conjunta con 896e60e (depurador, cero excepciones):**
+  - «Finaliza en 0 min» sigue igual. No son `agent_end_time` (probado a +7 días y a +10 años), `agent_token_end_time` ni `market_subscription.end_time`. Queda como detalle cosmético sin localizar.
+  - La 2.ª caja «Delanteros» (54/54) funciona: el agente 2 cobra 6 000 GP y sale M. Greenwood (Man United). El club queda con 30 jugadores.
+  - **Aviso sobre `posiciones`:** el catálogo lo ve como DC (posición registrada en Player.bin), pero el juego lo muestra como EXD. El filtro por posiciones es aproximado y puede sacar un extremo en lugar de un delantero centro. Falta conocer la posición que usa el juego para mostrarla.
+  - DRAW_RATE sin probar: se abre con X (Perfil), y el MCP bloquea esa tecla.
