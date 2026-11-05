@@ -1251,7 +1251,7 @@ class Servidor:
             "is_draw_checked": a.get("is_draw_checked") or "YES",
             "is_buy_gp_pes_point": "YES", "pes_point": int(a.get("pes_point") or 0),
             "gp": int(a.get("gp") or 0), "agent_end_time": int(time.time()) + 7 * 86400,
-            "agent_token_end_time": 0})
+            "agent_token_end_time": int(time.time()) + 7 * 86400})
         return Empaquetado({
             "agent": agente,
             "banner_file_info": Empaquetado({"filename": "", "hash_str": ""}),
@@ -1293,8 +1293,8 @@ class Servidor:
         lista = [self._ficha_agente(a) for a in self._agentes()]
         return {"market_agent_list": lista, "market_agent_list_num": len(lista),
                 "market_subscription": Empaquetado({"target_level": 0, "bgm_id": 0, "uniform": 0,
-                                                    "end_time": 0, "limit_count": 0,
-                                                    "use_count": 0})}
+                                                    "end_time": int(time.time()) + 7 * 86400,
+                                                    "limit_count": 0, "use_count": 0})}
 
     async def c_cmd_get_myclub_agent_box_info(self, s, m):
         a = next((x for x in self._agentes() if x["agent_id"] == m.get("agent_id")), None)
