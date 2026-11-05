@@ -579,3 +579,9 @@ Un «producto» es un cazatalentos a subasta (`scout_id` = agent_id, `grade` = e
   - `GET_MYCLUB_AUCTION_SCOUT_TENDER_USERINFOLIST`, `GET_MYCLUB_AUCTION_REPORT_LIST` («Mis pujas»), `GET_MYCLUB_AUCTION_SUCCESSFUL_BID_INFO`, `GET_MYCLUB_AUCTION_PRICE_RANKING {ranking_kind}` y `REQWATCH_MYCLUB_AUCTION_REFUNDED_GP` (refunded_gp_list y total_gp).
 - **Faltan por RE:** los valores de `auction_state` y de `ranking_kind`, y el elemento de la lista de SUCCESSFUL_BID.
 - **Diseño del servidor:** una tabla de subastas con product_id, vendedor, scout, precio inicial, fin y pujas. Al perder una puja se devuelve el GP. Con una sola persona hacen falta subastas del sistema para que no esté vacío. El mercado entre personas depende de la identidad propia por cuenta.
+- **Aclaraciones de las subastas (RE, 08:10):**
+  - `auction_state` parece ser el estado del USUARIO: AUCTION_USER_STATE_{NONE, BID_PARTICIPATION, HIGHEST_BIDER, FINAL_ROUND, NOT_BE_FINAL_ROUND_BID, REJECTED}. Empezar con «AUCTION_USER_STATE_NONE». Cerca hay otros posibles estados del producto: NORMAL, 1ST_30MIN, 2ND_15MIN, 2ND_30MIN, CANCEL, FINISH, FOUND.
+  - Errores que el cliente conoce: ERR_INSUFFICIENT_TENDER_GP, ERR_BID_USER_MAX, ERR_TENDER_TIMEOUT, ERR_WATCH_LIST_MAX, ERR_WISH_LIST_MAX, ERR_WISH_LIST_ALREADY_ADD, ERR_PLAYER_PROTECTED, ERR_TEAM_STAFF_FULL, ERR_FORBIDDEN.
+  - `ranking_kind` no tiene enum propio: se ignora y se devuelve siempre el mismo ranking.
+  - `auction_successful_bid_list` es una lista de ENTEROS (no de bins), más auction_successful_bid_list_num, best_bid_amount_price, best_bid_amount_day y average_bid_price.
+- **AGENT_DRAW_RATE:** `main`, `sub1` y `sub2` = bin({rate_table: [int], rate_player_num: [int]}), dos listas paralelas con una fila por rareza. Antes mandábamos `rate_player_num` como un entero suelto, lo que podía romper la pantalla. Ahora lleva una fila: [10000] y [candidatos]. Por probar con X en la caja.

@@ -1321,8 +1321,11 @@ class Servidor:
             "sub2_player_rarity_info": par(0), "is_use_reset": "NO"})}
 
     async def c_cmd_get_myclub_agent_draw_rate(self, s, m):
-        # C (05-nov, lector 141ca9080): rate_table es una LISTA de enteros
-        tasa = lambda: Empaquetado({"rate_table": [], "rate_player_num": 0})
+        # C (lector 141ca9080): main/sub1/sub2 = bin({rate_table: [int], rate_player_num: [int]});
+        # listas paralelas, una fila por rareza. P: una sola fila con todos los candidatos
+        a = next((x for x in self._agentes() if x["agent_id"] == m.get("agent_id")), None)
+        n = len(self._bolsa(a, self._club_inicial(s))) if a else 0
+        tasa = lambda: Empaquetado({"rate_table": [10000], "rate_player_num": [n]})
         return {"main": tasa(), "sub1": tasa(), "sub2": tasa()}
 
     async def c_cmd_reset_myclub_agent_box(self, s, m):
