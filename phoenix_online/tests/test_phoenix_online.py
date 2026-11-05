@@ -696,6 +696,10 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         reg = struct.pack("<I", 1001) + bytes(239) + b"L. MESSI".ljust(61, b"\0") + bytes(8)
         nombres = cp.leer_nombres(bytes(8) + reg)
         self.assertEqual(nombres["1001"], "L. MESSI")
+        bits = 1001 | (10 << 370) | (16 << 169)
+        reg2 = bits.to_bytes(64, "little") + reg[64:]
+        ficha = cp.leer_fichas(bytes(8) + reg2)["1001"]
+        self.assertEqual((ficha["posicion_txt"], ficha["nacion"]), ("ED", 16))
         cat = cp.armar(cp.leer_asignaciones(cp.descomprimir_wesys(crudo)), {"1001": {"rating": 90}}, nombres)
         self.assertEqual(cat["jugadores"]["1001"]["nombre"], "L. MESSI")
         self.assertEqual((len(cat["equipos"]["108"]), len(cat["equipos"]["109"])), (20, 20))
@@ -721,6 +725,52 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
                        "past_game_played_pid": 7, "pes_srv_rtt_nums": 3})
         await r(a, 4, {"msgid": "CMD_GET_MYCLUB_VSCOM_OPPONENT", "rqid": 4})
         self.assertEqual(ea[-1][1]["team_name"], "A")
+
+    async def test_myclub_fichar_agente_cazatalentos_y_renovar(self):
+        import os, tempfile, json as _j
+        cat = {"version": 1, "equipos": {"103": [{"gameplayer_id": 2000 + i} for i in range(5)]},
+               "jugadores": {str(2000 + i): {"team_id": 103} for i in range(5)}}
+        ruta = os.path.join(tempfile.mkdtemp(), "catalogo.json")
+        with open(ruta, "w") as f:
+            _j.dump(cat, f)
+        self.srv.cfg = {**self.srv.cfg, "myclub": {
+            "catalogo": ruta, "jugadores": [{"gameplayer_id": 1}], "entrenadores": [{"coach_id": 8}],
+            "club_de_prueba": {"team_name": "P", "gp": 12000},
+            "agentes": [{"agent_id": 1, "name": "Estrellas", "gp": 10000, "get_player_num": 1,
+                         "equipos": [103]}],
+            "cazatalentos": [{"agent_id": 50, "count": 2, "sell_gp": 300, "jugadores": [2001, 2002]}],
+            "renovacion_gp": 100, "renovacion_partidos": 10}}
+        a, ea = await self.entrar("A1")
+        r = self.srv.recibir
+        await r(a, 1, {"msgid": "CMD_GET_MYCLUB_MARKET_AGENTLIST", "rqid": 1})
+        self.assertEqual(ea[-1][1]["market_agent_list_num"], 1)
+        await r(a, 2, {"msgid": "CMD_USE_MYCLUB_AGENT", "rqid": 2, "agent_id": 1, "use_pes_point": "NO"})
+        res = ea[-1][1]
+        self.assertEqual((res["gp"], res["gameplayer_list_num"]), (2000, 1))
+        nuevo = msgpack_min.unpackb(msgpack_min.packb(res["gameplayer_list"][0].valor))
+        self.assertIn(nuevo["gameplayer_id"], range(2000, 2005))
+        await r(a, 3, {"msgid": "CMD_USE_MYCLUB_AGENT", "rqid": 3, "agent_id": 1, "use_pes_point": "NO"})
+        self.assertEqual(ea[-1][1]["result"], "ERR_INSUFFICIENT_GP")
+        await r(a, 4, {"msgid": "CMD_GET_MYCLUB_SCOUTLIST", "rqid": 4})
+        self.assertEqual(ea[-1][1]["scout_list_num"], 1)
+        pedido = [msgpack_min.packb({"agent_id": 50})]
+        await r(a, 5, {"msgid": "CMD_USE_MYCLUB_SCOUT", "rqid": 5, "scout_list": pedido})
+        g = msgpack_min.unpackb(msgpack_min.packb(ea[-1][1]["gameplayer"].valor))
+        self.assertIn(g["gameplayer_id"], (2001, 2002))
+        await r(a, 6, {"msgid": "CMD_SELL_MYCLUB_SCOUT", "rqid": 6, "scout_list": pedido})
+        self.assertEqual((ea[-1][1]["gain_gp"], ea[-1][1]["gp"]), (300, 2300))
+        await r(a, 7, {"msgid": "CMD_GET_MYCLUB_SCOUTLIST", "rqid": 7})
+        self.assertEqual(ea[-1][1]["scout_list_num"], 0)
+        await r(a, 8, {"msgid": "CMD_GET_MYCLUB_GAMEPLAYERLIST", "rqid": 8})
+        self.assertEqual(ea[-1][1]["gameplayer_list_num"], 3)
+        club = self.srv.datos.club(a.steam_hex)
+        uid = club["jugadores"][0]["gameplayer_unique_id"]
+        antes = int(club["jugadores"][0].get("contract_term") or 0)
+        await r(a, 9, {"msgid": "CMD_EXTEND_MYCLUB_GAMEPLAYER", "rqid": 9,
+                       "gameplayer_unique_id_list": [str(uid)], "use_pes_point": "NO"})
+        self.assertEqual(ea[-1][1]["gp"], 2200)
+        fila = msgpack_min.unpackb(msgpack_min.packb(ea[-1][1]["contract_term_list"][0].valor))
+        self.assertEqual(fila["contract_term"], antes + 10)
 
     async def test_myclub_monedas_gratis(self):
         self.srv.cfg = {**self.srv.cfg, "myclub": {

@@ -45,6 +45,25 @@ def leer_asignaciones(datos):
     return equipos
 
 
+POSICIONES = ["PT", "DFC", "LI", "LD", "MCD", "MC", "MDI", "MDD", "MO", "EI", "ED", "SD", "DC"]
+
+
+def leer_fichas(datos):
+    """C (05-nov): los primeros 64 B del registro como entero LE de 512 bits.
+    Posición registrada = bits 370-373 (0 PT … 12 DC, ver POSICIONES; 6, 7 y 11 por orden
+    estándar, sin ejemplo visto). Nación = bits 169-175 (índice de nación del juego, coincide
+    con la selección nacional en el 89 %). La media no está guardada."""
+    fichas = {}
+    for off in range(8, len(datos) - 311, 312):
+        v = int.from_bytes(datos[off:off + 64], "little")
+        pid = v & 0xFFFFFFFF
+        if pid:
+            pos = (v >> 370) & 15
+            fichas[str(pid)] = {"posicion": pos, "posicion_txt": POSICIONES[pos] if pos < 13 else "",
+                                "nacion": (v >> 169) & 127}
+    return fichas
+
+
 def leer_nombres(datos):
     """C (05-nov, Player.bin del PES base, ya descomprimido): registros de 312 B desde el
     offset 8; id = u32 en +0; nombre de camiseta ASCII en +243 (61 B, p. ej. «L. MESSI»).
@@ -58,14 +77,16 @@ def leer_nombres(datos):
     return nombres
 
 
-def armar(asignaciones, extra=None, nombres=None):
+def armar(asignaciones, extra=None, nombres=None, fichas=None):
     extra = extra or {}
+    fichas = fichas or {}
     jugadores = {}
     for equipo, filas in asignaciones.items():
         for f in filas:
             j = jugadores.setdefault(str(f["gameplayer_id"]), {"team_id": equipo})
             if nombres and str(f["gameplayer_id"]) in nombres:
                 j["nombre"] = nombres[str(f["gameplayer_id"])]
+            j.update(fichas.get(str(f["gameplayer_id"]), {}))
             j.update(extra.get(str(f["gameplayer_id"]), {}))
     return {"version": 1,
             "equipos": {str(e): f for e, f in sorted(asignaciones.items())},
@@ -85,11 +106,12 @@ def main(argv=None):
     if a.extra:
         with open(a.extra, encoding="utf-8") as f:
             extra = json.load(f)
-    nombres = None
+    nombres = fichas = None
     if a.player:
         with open(a.player, "rb") as f:
-            nombres = leer_nombres(descomprimir_wesys(f.read()))
-    cat = armar(asign, extra, nombres)
+            crudo = descomprimir_wesys(f.read())
+        nombres, fichas = leer_nombres(crudo), leer_fichas(crudo)
+    cat = armar(asign, extra, nombres, fichas)
     with open(a.salida, "w", encoding="utf-8") as f:
         json.dump(cat, f, ensure_ascii=False)
     print(f"{len(cat['equipos'])} equipos, {len(cat['jugadores'])} jugadores -> {a.salida}")

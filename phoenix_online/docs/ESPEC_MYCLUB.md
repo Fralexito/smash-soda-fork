@@ -421,3 +421,31 @@ La petición de estos tres solo trae pid. Todo objeto anidado va como bin.
   - Nuestro error: poníamos [total][largo][zlib][4 ceros]. El cliente leía tamaño_original = 0x01000000 y zlib = 0, y no descomprimía. Corregido, tanto en el envío como en la lectura.
   - Ojo: el rechazo con 1000 B cifrados tal vez no fue por tamaño (el límite en el código es 0x410), sino por el contenido (exp_total/games). Falta separarlo con una prueba.
 - **CONFIRMADO en vivo (04:25Z, 67e9e25):** un GAMEPLAYERLIST de 992 B cifrados salió troceado con el formato corregido y PES cargó myClub sin errores (27 jugadores con exp_total). Es el primer troceado servidor→cliente que funciona en un PES real. Ya no hay límite de tamaño.
+
+## 33. Fichar jugadores: Representantes, Cazatalentos y renovar contratos (C, 05-nov)
+Lectores encontrados en el juego (RE estático, sin abrir PES). Todo lo de dentro va en bin(msgpack).
+- **Representantes (agentes).** Config `myclub.agentes`: `[{agent_id, name, gp, pes_point, get_player_num, equipos | jugadores, media_min, posiciones}]`.
+  - `GET_MYCLUB_MARKET_AGENTLIST` → `market_agent_list` (fichas de agente) + `market_subscription`.
+  - `GET_MYCLUB_AGENT_BOX_INFO` → `agent_info` (box_size = candidatos que quedan).
+  - `GET_MYCLUB_AGENT_DRAW_RATE` → main/sub1/sub2 (tablas vacías por ahora).
+  - `USE_MYCLUB_AGENT {agent_id, use_pes_point}` → cobra GP (o monedas gratis), elige al azar de la bolsa y devuelve `gameplayer_list`, `agent_bonus_item_list` [], `gp` y `pes_point` nuevos. Errores: ERR_INSUFFICIENT_GP, ERR_INSUFFICIENT_PES_POINT, ERR_FORBIDDEN (monedas apagadas), ERR_NOTFOUND.
+  - La bolsa sale del catálogo y nunca repite a un jugador que el club ya tiene. `posiciones` filtra por la posición registrada (§34), p. ej. ["DC","EI","ED"].
+- **Cazatalentos.** Se guardan por club en `club.scouts`; un club nuevo los toma de `myclub.cazatalentos` `[{agent_id, grade, count, sell_gp, equipos | jugadores}]`.
+  - `GET_MYCLUB_SCOUTLIST` → `scout_list`.
+  - `GET_MYCLUB_PROCURABLE_GAMEPLAYERLIST_SCOUT {scout_list:[bin]}` → hasta 50 candidatos.
+  - `USE_MYCLUB_SCOUT {scout_list:[bin]}` → UNA ficha en `gameplayer`. Resta 1 a `count` o quita el cazatalentos.
+  - `SELL_MYCLUB_SCOUT` → `gain_gp` y `gp`.
+- **Renovar.** `EXTEND_MYCLUB_GAMEPLAYER {gameplayer_unique_id_list, use_pes_point}` suma `renovacion_partidos` (10) por `renovacion_gp` GP (o `renovacion_monedas`) a cada jugador. Devuelve `contract_term_list` (unique_id como texto). `EXTEND_MYCLUB_COACH {coach_unique_id}` hace lo mismo con el DT.
+- Un jugador fichado entra con unique_id nuevo y contrato 100.
+- **Falta probar en vivo** que PES muestre al jugador nuevo y los saldos. Faltan también subastas (AUCTION_SCOUT*), IS_FIRST_AGENT_MULTIPLE real y las tablas de rareza.
+
+## 34. Player.bin: posición y nación (C, 05-nov)
+- Se leen los primeros 64 B de cada registro (312 B desde +8) como un entero little-endian de 512 bits. El id son los bits 0-31.
+- **Posición registrada:** bits 370-373. Valores: 0 PT, 1 DFC, 2 LI, 3 LD, 4 MCD, 5 MC, 6 MDI, 7 MDD, 8 MO, 9 EI, 10 ED, 11 SD, 12 DC.
+  - Verificado con Isco, Hazard, Messi, Salah, Benzema y Lewandowski.
+  - 6, 7 y 11 salen del orden estándar; no se vio un ejemplo.
+  - El `puesto` de PlayerAssignment es el hueco en la plantilla, no esta posición.
+- **Nación:** bits 169-175. Es el índice de nación del juego, p. ej. ESP 108, BRA 18, FRA 80, ARG 16, POR 100.
+  - Coincide con la selección nacional en el 89 % (1173 de 1311). El resto son jugadores con asignación mixta.
+- **La media no está guardada**, porque el juego la calcula con las habilidades. Los bytes +4..+59 tienen altura, peso, pie y habilidades (unos 8 bits por atributo), y aún no están separados uno a uno. El cliente pinta la media desde su propia base por gameplayer_id.
+- `tools/catalogo_pesdb.py --player Player.bin` ya guarda `posicion`, `posicion_txt` y `nacion` en el catálogo.

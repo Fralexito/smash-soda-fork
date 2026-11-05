@@ -413,6 +413,61 @@
       "DRAW": 5,
       "LOSE": 2,
       "": 2
-    }
+    },
+    "agentes": [
+      {
+        "agent_id": 1,
+        "name": "Phoenix Estrellas",
+        "gp": 10000,
+        "pes_point": 100,
+        "get_player_num": 1,
+        "equipos": [
+          103,
+          108,
+          109,
+          114,
+          127,
+          173
+        ]
+      },
+      {
+        "agent_id": 2,
+        "name": "Delanteros",
+        "gp": 6000,
+        "pes_point": 60,
+        "get_player_num": 1,
+        "equipos": [
+          100,
+          101,
+          102,
+          119,
+          120,
+          121,
+          172,
+          327
+        ],
+        "posiciones": [
+          "DC",
+          "SD",
+          "EI",
+          "ED"
+        ]
+      }
+    ],
+    "cazatalentos": [
+      {
+        "agent_id": 50,
+        "grade": 3,
+        "count": 2,
+        "sell_gp": 500,
+        "equipos": [
+          103,
+          114
+        ]
+      }
+    ],
+    "renovacion_partidos": 10,
+    "renovacion_gp": 200,
+    "renovacion_monedas": 2
   }
 }

@@ -6,10 +6,11 @@ Detalles técnicos: `ESPEC_MYCLUB.md`. Cómo se logró: `GUIA_MYCLUB_REVIVIDO.md
 ## Orden acordado con Frank (05-nov)
 1. **Catálogo automático de jugadores**
    - Hecho: 661 equipos y 17 583 jugadores con nombre (`tools/catalogo_pesdb.py`).
-   - Falta: descifrar en Player.bin la posición, la nación y las habilidades, para calcular la media, la rareza y el precio reales.
+   - Hecho: la posición y la nación ya se leen de Player.bin (§34).
+   - Falta: las habilidades, para calcular la media, la rareza y el precio reales.
 2. **Fichajes**
-   - Cazatalentos, Representantes (agentes) y subastas, pagando con GP (o con monedas gratis).
-   - Faltan los lectores de sus comandos de compra.
+   - Hecho en el servidor (05-nov, `ESPEC_MYCLUB.md` §33): Representantes, Cazatalentos y renovar contratos, pagando con GP o con monedas gratis.
+   - Falta: probarlo en vivo, y las subastas.
 3. **Progreso de jugadores**
    - Hecho en el servidor: experiencia y nivel tras cada partido.
    - Falta: confirmar la curva real, el cansancio y renovar o vender contratos.
@@ -21,6 +22,21 @@ Detalles técnicos: `ESPEC_MYCLUB.md`. Cómo se logró: `GUIA_MYCLUB_REVIVIDO.md
    - Identidad propia por persona: el pase web de Link, validado en Supabase. Hoy todas las copias CPY comparten el mismo SteamID.
    - Base de datos en Supabase en lugar de la PC.
    - Panel web para GP, monedas y eventos.
+
+## Arquitectura a largo plazo, manejada desde la web (Frank, 05-nov)
+Frank preguntó si todo se puede armar y mantener desde su página. Sí, en 3 piezas:
+1. **Servidor Phoenix Online.** Habla con PES. Hoy corre en la PC y más adelante en un VPS. No guarda reglas fijas: las lee de Supabase.
+2. **Supabase** (el mismo proyecto de la web):
+   - Datos: clubes, GP, monedas, historial de partidos y eventos.
+   - Reglas: GP por partido, agentes, cazatalentos, precios, rival COM y dificultad.
+3. **La web (panel):**
+   - Inicio de sesión: el pase da la identidad propia en PES.
+   - Botones para dar GP o monedas, armar agentes y eventos, y elegir el rival.
+   - Clasificación y vista de cada club.
+   - Los datos de Konami solo se muestran con permiso, porque mostrarlos tiene riesgo legal.
+- Mantenible porque las reglas se cambian desde la web, sin tocar código ni reiniciar el servidor.
+- El servidor sigue siendo un programa aparte: una web estática no puede hablar con PES.
+- Va en el paso 5. Antes de eso, cada sección de config.json se pasa tal cual a una tabla.
 
 ## Decisiones de Frank
 - **Monedas de myClub:** solo como premio gratis, con la opción `myclub.monedas_gratis`. **Nunca se venden** (regla: nada de dinero real).

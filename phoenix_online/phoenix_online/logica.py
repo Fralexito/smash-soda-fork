@@ -11,6 +11,7 @@ import hmac
 import itertools
 import json
 import logging
+import random
 import time
 
 from . import msgpack_min
@@ -1191,7 +1192,10 @@ class Servidor:
         return {"player_number_list": [], "player_number_list_num": 0}  # C (§15.7)
 
     async def c_cmd_get_myclub_scoutlist(self, s, m):
-        return {"scout_list": [], "scout_list_num": 0}  # C (§15.8)
+        # C (§15.8 + §33): cazatalentos del club
+        club = self._club_inicial(s) or {}
+        lista = [self._ficha_scout(c) for c in self._scouts(club)]
+        return {"scout_list": lista, "scout_list_num": len(lista)}
 
     async def c_cmd_get_myclub_weekly_ranking_basic_info(self, s, m):
         # C (§15.9). P: «reward» (regalo) se omite hasta tener uno real
@@ -1205,10 +1209,237 @@ class Servidor:
         return {"match_num": 0, "win_num": 0, "lose_num": 0, "draw_num": 0,
                 "match_list": [], "match_list_num": 0}
 
+    # ---------- Fichar jugadores: representantes (agentes) y cazatalentos (C, 05-nov §33) ----------
+    def _agentes(self):
+        """Config myclub.agentes = [{agent_id, name, gp, pes_point, get_player_num,
+        equipos: [team_id...] o jugadores: [gameplayer_id...], media_min, posiciones}]."""
+        return [a for a in (self.cfg.get("myclub") or {}).get("agentes") or []
+                if isinstance(a, dict) and isinstance(a.get("agent_id"), int)]
+
+    def _bolsa(self, origen, club):
+        """Candidatos (fichas de catálogo) de un agente/cazatalentos, sin los que el club ya tiene."""
+        tiene = {j.get("gameplayer_id") for j in (club or {}).get("jugadores") or []}
+        if origen.get("jugadores"):
+            bolsa = [{"gameplayer_id": int(g)} for g in origen["jugadores"]]
+            datos = self._catalogo().get("jugadores") or {}
+            bolsa = [{**(datos.get(str(b["gameplayer_id"])) or {}), **b} for b in bolsa]
+        else:
+            bolsa = [j for t in origen.get("equipos") or [] for j in self._equipo_catalogo(t)]
+        minimo = int(origen.get("media_min") or 0)
+        puestos = set(origen.get("posiciones") or [])  # p. ej. ["DC", "EI", "ED"] (catálogo)
+        return [b for b in bolsa if b.get("gameplayer_id") not in tiene
+                and int(b.get("rating") or 75) >= minimo
+                and (not puestos or b.get("posicion_txt") in puestos)]
+
+    def _ficha_agente(self, a):
+        return Empaquetado({
+            "agent_id": a["agent_id"], "name": a.get("name") or "", "name_jp": a.get("name_jp") or "",
+            "type": a.get("type") or "", "target_level": int(a.get("target_level") or 0),
+            "level": int(a.get("level") or 0), "token_list": [], "token_list_num": 0,
+            "bgm_id": int(a.get("bgm_id") or 0), "uniform": int(a.get("uniform") or 0),
+            "get_player_num": int(a.get("get_player_num") or 1), "is_draw_checked": "NO",
+            "is_buy_gp_pes_point": "YES", "pes_point": int(a.get("pes_point") or 0),
+            "gp": int(a.get("gp") or 0), "agent_end_time": int(time.time()) + 7 * 86400,
+            "agent_token_end_time": 0,
+            "banner_file_info": Empaquetado({"filename": "", "hash_str": ""}),
+            "skill": Empaquetado({"skill_category": a.get("skill_category") or "",
+                                  "skill_id": int(a.get("skill_id") or 0),
+                                  "limit_count": 0, "use_count": 0})})
+
+    def _fichar(self, club, nuevos):
+        """Añade jugadores al club con unique_id nuevo y contrato completo; devuelve las fichas."""
+        if not club.get("jugadores"):
+            club["jugadores"] = self._plantel_inicial()[0]
+        jug = club["jugadores"]
+        siguiente = max([int(j.get("gameplayer_unique_id") or 0) for j in jug] + [0]) + 1
+        fichas = []
+        for n in nuevos:
+            j = {**n, "gameplayer_unique_id": siguiente, "contract_term": 100}
+            j.pop("puesto", None)
+            siguiente += 1
+            jug.append(j)
+            fichas.append(self._ficha_jugador_myclub(len(jug) - 1, j))
+        return fichas
+
+    def _cobrar(self, club, gp, monedas, con_monedas):
+        """Cobra en GP o en monedas gratis. Devuelve el código de error o None."""
+        if con_monedas:
+            if not self._monedas_activas():
+                return "ERR_FORBIDDEN"
+            if int(club.get("monedas") or 0) < monedas:
+                return "ERR_INSUFFICIENT_PES_POINT"
+            club["monedas"] = int(club.get("monedas") or 0) - monedas
+        else:
+            if int(club.get("gp") or 0) < gp:
+                return "ERR_INSUFFICIENT_GP"
+            club["gp"] = int(club.get("gp") or 0) - gp
+        return None
+
     async def c_cmd_get_myclub_market_agentlist(self, s, m):
-        # C (§16.1). Sin agentes todavía: lista vacía y suscripción vencida
-        return {"market_agent_list": [], "market_agent_list_num": 0,
-                "market_subscription": Empaquetado({"end_time": 0})}
+        # C (§16.1 + §33, lector 141c20550). Agentes de config myclub.agentes
+        lista = [self._ficha_agente(a) for a in self._agentes()]
+        return {"market_agent_list": lista, "market_agent_list_num": len(lista),
+                "market_subscription": Empaquetado({"target_level": 0, "bgm_id": 0, "uniform": 0,
+                                                    "end_time": 0, "limit_count": 0,
+                                                    "use_count": 0})}
+
+    async def c_cmd_get_myclub_agent_box_info(self, s, m):
+        a = next((x for x in self._agentes() if x["agent_id"] == m.get("agent_id")), None)
+        if a is None:
+            return {"result": "ERR_NOTFOUND"}
+        bolsa = self._bolsa(a, self._club_inicial(s))
+        cuenta = lambda: Empaquetado({"rarity": 0, "count": 0})
+        return {"agent_info": Empaquetado({
+            "agent": self._ficha_agente(a), "box_size": len(bolsa), "box_pack_num": len(bolsa),
+            "reset_remain_count": 0, "main_player_rarity_info": cuenta(),
+            "sub1_player_rarity_info": cuenta(), "sub2_player_rarity_info": cuenta(),
+            "is_use_reset": "NO"})}
+
+    async def c_cmd_get_myclub_agent_draw_rate(self, s, m):
+        tasa = lambda: Empaquetado({"rate_table": 0, "rate_player_num": 0})
+        return {"main": tasa(), "sub1": tasa(), "sub2": tasa()}
+
+    async def c_cmd_reset_myclub_agent_box(self, s, m):
+        return {}
+
+    async def c_cmd_use_myclub_agent(self, s, m):
+        # C (§33, lector de USE_MYCLUB_AGENT): petición {agent_id, use_pes_point, use_token,
+        # use_token_level}; respuesta gameplayer_list (fichas nuevas), agent_bonus_item_list,
+        # pes_point y gp = saldos nuevos
+        a = next((x for x in self._agentes() if x["agent_id"] == m.get("agent_id")), None)
+        club = self._club_inicial(s)
+        if a is None or club is None:
+            return {"result": "ERR_NOTFOUND"}
+        bolsa = self._bolsa(a, club)
+        n = max(1, int(a.get("get_player_num") or 1))
+        if len(bolsa) < n:
+            return {"result": "ERR_NOTFOUND"}
+        error = self._cobrar(club, int(a.get("gp") or 0), int(a.get("pes_point") or 0),
+                             m.get("use_pes_point") == "YES")
+        if error:
+            return {"result": error}
+        fichas = self._fichar(club, random.sample(bolsa, n))
+        self.datos.guardar_club(s.steam_hex or "", club)
+        log.info("myClub %s usó agente %s: %d jugador(es)", s.steam_hex, a["agent_id"], n)
+        return {"gameplayer_list": fichas, "gameplayer_list_num": len(fichas),
+                "agent_bonus_item_list": [], "pes_point": self._monedas(club),
+                "gp": int(club.get("gp") or 0)}
+
+    def _ficha_scout(self, c):
+        return Empaquetado({
+            "agent_id": int(c.get("agent_id") or 0),
+            "skill": Empaquetado({"skill_category": c.get("skill_category") or "",
+                                  "skill_id": int(c.get("skill_id") or 0)}),
+            "grade": int(c.get("grade") or 1), "count": int(c.get("count") or 1),
+            "rate": Empaquetado({"rate_table": 0, "rate_player_num": 0}),
+            "target_level": int(c.get("target_level") or 0), "sell_gp": int(c.get("sell_gp") or 0)})
+
+    def _scouts(self, club):
+        """Cazatalentos del club (club.scouts); si no tiene, los de config myclub.cazatalentos."""
+        if "scouts" not in club:
+            club["scouts"] = [dict(c) for c in (self.cfg.get("myclub") or {}).get("cazatalentos") or []
+                              if isinstance(c, dict)]
+        return club["scouts"]
+
+    @staticmethod
+    def _scout_pedido(m):
+        el = m.get("scout_list")
+        if isinstance(el, list):
+            el = el[0] if el else None
+        if isinstance(el, (bytes, bytearray)):
+            try:
+                el = msgpack_min.unpackb(el)
+            except Exception:
+                el = None
+        return el if isinstance(el, dict) else {}
+
+    def _buscar_scout(self, club, m):
+        pedido = self._scout_pedido(m)
+        for i, c in enumerate(self._scouts(club)):
+            if int(c.get("agent_id") or 0) == pedido.get("agent_id"):
+                return i, c
+        return None, None
+
+    async def c_cmd_get_myclub_procurable_scoutlist_gameplayer(self, s, m):
+        return {"scout_list": [], "scout_list_num": 0}
+
+    async def c_cmd_get_myclub_procurable_gameplayerlist_scout(self, s, m):
+        club = self._club_inicial(s) or {}
+        _, c = self._buscar_scout(club, m)
+        bolsa = self._bolsa(c, club) if c else []
+        lista = [Empaquetado({"gameplayer_id": b["gameplayer_id"], "level_limit": 30,
+                              "team_id": int(b.get("team_id") or 0), "is_draw": "YES"})
+                 for b in bolsa[:50]]
+        return {"gameplayer_list": lista, "gameplayer_list_num": len(lista),
+                "rate": Empaquetado({"rate_table": 0, "rate_player_num": len(lista)})}
+
+    async def c_cmd_use_myclub_scout(self, s, m):
+        # C (§33): usar un cazatalentos = UNA ficha nueva en «gameplayer» (bin)
+        club = self._club_inicial(s)
+        if club is None:
+            return {"result": "ERR_NOTFOUND"}
+        i, c = self._buscar_scout(club, m)
+        bolsa = self._bolsa(c, club) if c else []
+        if not bolsa:
+            return {"result": "ERR_NOTFOUND"}
+        ficha = self._fichar(club, [random.choice(bolsa)])[0]
+        if int(c.get("count") or 1) > 1:
+            c["count"] = int(c["count"]) - 1
+        else:
+            club["scouts"].pop(i)
+        self.datos.guardar_club(s.steam_hex or "", club)
+        return {"gameplayer": ficha}
+
+    async def c_cmd_sell_myclub_scout(self, s, m):
+        club = self._club_inicial(s)
+        i, c = self._buscar_scout(club, m) if club is not None else (None, None)
+        if c is None:
+            return {"result": "ERR_NOTFOUND"}
+        ganancia = int(c.get("sell_gp") or 0)
+        club["scouts"].pop(i)
+        club["gp"] = int(club.get("gp") or 0) + ganancia
+        self.datos.guardar_club(s.steam_hex or "", club)
+        return {"gain_gp": ganancia, "gp": club["gp"]}
+
+    async def c_cmd_extend_myclub_gameplayer(self, s, m):
+        # C (§33): renovar contratos. P: +N partidos (myclub.renovacion_partidos, 10) por
+        # myclub.renovacion_gp GP cada jugador (o renovacion_monedas)
+        club = self._club_inicial(s)
+        if club is None:
+            return {"result": "ERR_NOTFOUND"}
+        cfg = self.cfg.get("myclub") or {}
+        uids = [int(u) for u in m.get("gameplayer_unique_id_list") or [] if str(u).isdigit()]
+        elegidos = [j for j in club.get("jugadores") or [] if j.get("gameplayer_unique_id") in uids]
+        error = self._cobrar(club, int(cfg.get("renovacion_gp") or 0) * len(elegidos),
+                             int(cfg.get("renovacion_monedas") or 0) * len(elegidos),
+                             m.get("use_pes_point") == "YES")
+        if error:
+            return {"result": error}
+        extra = int(cfg.get("renovacion_partidos") or 10)
+        for j in elegidos:
+            j["contract_term"] = int(j.get("contract_term") or 0) + extra
+        self.datos.guardar_club(s.steam_hex or "", club)
+        lista = [Empaquetado({"gameplayer_unique_id": str(j["gameplayer_unique_id"]),
+                              "gameplayer_id": int(j.get("gameplayer_id") or 0),
+                              "contract_term": j["contract_term"]}) for j in elegidos]
+        return {"contract_term_list": lista, "gp": int(club.get("gp") or 0),
+                "pes_point": self._monedas(club)}
+
+    async def c_cmd_extend_myclub_coach(self, s, m):
+        club = self._club_inicial(s)
+        dt = next((d for d in (club or {}).get("entrenadores") or []
+                   if d.get("coach_unique_id") == m.get("coach_unique_id")), None)
+        if dt is None:
+            return {"result": "ERR_NOTFOUND"}
+        cfg = self.cfg.get("myclub") or {}
+        error = self._cobrar(club, int(cfg.get("renovacion_gp") or 0),
+                             int(cfg.get("renovacion_monedas") or 0), m.get("use_pes_point") == "YES")
+        if error:
+            return {"result": error}
+        dt["contract_term"] = int(dt.get("contract_term") or 0) + int(cfg.get("renovacion_partidos") or 10)
+        self.datos.guardar_club(s.steam_hex or "", club)
+        return {"contract_term": dt["contract_term"], "gp": int(club.get("gp") or 0),
+                "pes_point": self._monedas(club)}
 
     async def c_cmd_get_myclub_market_coachlist(self, s, m):
         # C (§16.2). DT a la venta: config myclub.mercado_dt = [coach_id...] (de MyclubCoach.bin)
