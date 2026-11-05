@@ -1388,7 +1388,8 @@ class Servidor:
         else:
             club["scouts"].pop(i)
         self.datos.guardar_club(s.steam_hex or "", club)
-        return {"gameplayer": ficha}
+        # P (vivo 05:10): sin gp la barra superior mostraba «G 0»; se manda el saldo
+        return {"gameplayer": ficha, "gp": int(club.get("gp") or 0), "pes_point": self._monedas(club)}
 
     async def c_cmd_sell_myclub_scout(self, s, m):
         club = self._club_inicial(s)
