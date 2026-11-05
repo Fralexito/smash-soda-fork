@@ -565,3 +565,17 @@ Leído en el juego (sin abrir PES). Los ids van como ENTEROS.
     - Petición: player_info, staff_info_list y use_item_list.
     - Respuesta: exp_added, exp_info_pre/post, sell_gp, contract_gp, contract_pes_point y traning_result.
   - `CMD_GET_MYCLUB_ITEMLIST`: lista de bin({item_type, item_variation, item_effect_arg, count, pes_point_price}). Sirve para el «Boleto de contrato».
+
+## 41. Subastas de cazatalentos, AUCTION_SCOUT* (C, RE estático 05-nov 08:00)
+Un «producto» es un cazatalentos a subasta (`scout_id` = agent_id, `grade` = estrellas 1-5). Todo lo anidado va en bin. Pantallas: MenuScoutMainMenu → «Casa de Subastas», buscar, seguimiento (watchlist), lista de deseos, buscar jugador y ranking de precios.
+- **AUCTION_INFO** (elemento de listas): bin({product_id, scout_id, grade, skill: bin({skill_category, skill_id}), price_now, bid_num, time_limit, finalround_end_time, auction_state (texto), is_bid_user_max, update_time, is_highest_bider [sic], is_register_watchlist, is_bid}).
+- **DETAIL** (auction_scout_detail): AUCTION_INFO más price_start, auction_start_time, auction_end_time, is_highest_bidder [sic «bidder»], is_reservation, second_price, third_price, my_price y reservation_price.
+- **Comandos:**
+  - `GET_MYCLUB_REFINE_SEARCH_AUCTION_LIST`: petición con refine_search_auction (filtros), start_index e is_auction_state_changed. Respuesta: auction_info_list y total_auction_info_list_num.
+  - `GET_MYCLUB_AUCTION_WATCH_LIST`, y `ADD/DELETE_..._WATCH_LIST` con product_id (borrar también lleva is_all).
+  - `GET_MYCLUB_AUCTION_WISH_LIST` (wish_info_list con wishlist_id, skill, grade, is_exhibited) y `ADD/DELETE_..._WISH_LIST`.
+  - `GET_MYCLUB_AUCTION_SCOUT_DETAIL {product_id}` devuelve el detalle. `WATCH_..._SCOUT_DETAIL` sondea con update_auction_scout_detail. `LEAVE_...` no devuelve nada.
+  - `TENDER_MYCLUB_AUCTION_SCOUT {product_id, tender_gp, is_finalround}` (pujar) devuelve el detalle y gp. Hay variantes `..._FINALROUND_RESERVATION` y `..._CANCEL` (esta también devuelve gain_gp).
+  - `GET_MYCLUB_AUCTION_SCOUT_TENDER_USERINFOLIST`, `GET_MYCLUB_AUCTION_REPORT_LIST` («Mis pujas»), `GET_MYCLUB_AUCTION_SUCCESSFUL_BID_INFO`, `GET_MYCLUB_AUCTION_PRICE_RANKING {ranking_kind}` y `REQWATCH_MYCLUB_AUCTION_REFUNDED_GP` (refunded_gp_list y total_gp).
+- **Faltan por RE:** los valores de `auction_state` y de `ranking_kind`, y el elemento de la lista de SUCCESSFUL_BID.
+- **Diseño del servidor:** una tabla de subastas con product_id, vendedor, scout, precio inicial, fin y pujas. Al perder una puja se devuelve el GP. Con una sola persona hacen falta subastas del sistema para que no esté vacío. El mercado entre personas depende de la identidad propia por cuenta.
