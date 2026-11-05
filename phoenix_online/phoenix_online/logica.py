@@ -1194,7 +1194,7 @@ class Servidor:
         r = (self.cfg.get("myclub") or {}).get("rival") or {}
         jugadores = [j for j in r.get("jugadores") or [] if isinstance(j, dict)]
         nombre = r.get("team_name") or "Rival"
-        return {"side": r.get("side", "AWAY"), "cpu_level": r.get("cpu_level", ""),
+        return {"side": r.get("side", "AWAY"), "cpu_level": r.get("cpu_level", "MATCH_LEVEL_REGULAR"),
                 "team_name": nombre, "team_name_short": r.get("team_name_short", "RIV"),
                 "base_team_id": int(r.get("base_team_id") or 0),
                 "team_data": self._plantilla_bin(jugadores, int(r.get("coach_id") or 0), nombre,
