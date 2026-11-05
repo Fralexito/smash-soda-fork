@@ -435,7 +435,7 @@ Lectores encontrados en el juego (RE estático, sin abrir PES). Todo lo de dentr
   - `GET_MYCLUB_PROCURABLE_GAMEPLAYERLIST_SCOUT {scout_list:[bin]}` → hasta 50 candidatos.
   - `USE_MYCLUB_SCOUT {scout_list:[bin]}` → UNA ficha en `gameplayer`. Resta 1 a `count` o quita el cazatalentos.
   - `SELL_MYCLUB_SCOUT` → `gain_gp` y `gp`.
-- **Renovar.** `EXTEND_MYCLUB_GAMEPLAYER {gameplayer_unique_id_list, use_pes_point}` suma `renovacion_partidos` (10) por `renovacion_gp` GP (o `renovacion_monedas`) a cada jugador. Devuelve `contract_term_list` (unique_id como texto). `EXTEND_MYCLUB_COACH {coach_unique_id}` hace lo mismo con el DT.
+- **Renovar.** `EXTEND_MYCLUB_GAMEPLAYER {gameplayer_unique_id_list, use_pes_point}` suma `renovacion_partidos` (10) por `renovacion_gp` GP (o `renovacion_monedas`) a cada jugador. Devuelve `contract_term_list` (unique_id ENTERO, no texto: con texto PES se congela). `EXTEND_MYCLUB_COACH {coach_unique_id}` hace lo mismo con el DT.
 - Un jugador fichado entra con unique_id nuevo y contrato 100.
 - **Falta probar en vivo** que PES muestre al jugador nuevo y los saldos. Faltan también subastas (AUCTION_SCOUT*), IS_FIRST_AGENT_MULTIPLE real y las tablas de rareza.
 
@@ -538,3 +538,7 @@ Lectores encontrados en el juego (RE estático, sin abrir PES). Todo lo de dentr
   - `contract_gp` = precio en GP, `contract_pes_point` = precio en monedas y `sell_gp` = lo que se cobra al vender.
   - Antes iban en 0, y por eso salía «Puntos necesarios 0» con «Pagar con GP» apagado.
   - Ahora salen de `myclub.renovacion_gp`, `myclub.renovacion_monedas` y `myclub.venta_gp`, a menos que el jugador traiga los suyos.
+- **07:35, congelado al renovar:** PES se quedó en bucle al 100 % de CPU esperando el fin de EXTEND_MYCLUB_GAMEPLAYER.
+  - Causa: mandábamos `gameplayer_unique_id` como TEXTO en `contract_term_list`, y el lector (141bf8200) lo lee como ENTERO de 64 bits. Cualquier otro tipo lo deja en 0, y el cliente no encuentra al jugador renovado.
+  - Forma correcta: `{result, contract_term_list: [bin({gameplayer_unique_id: int, gameplayer_id: int, contract_term: int})], gp: int, pes_point: int}`.
+  - Corregido. Antes de este arreglo el servidor sí cobró (−200 GP) y sumó +10 al contrato; el cliente no llegó a verlo.

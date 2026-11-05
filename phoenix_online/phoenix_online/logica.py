@@ -1447,7 +1447,7 @@ class Servidor:
         for j in elegidos:
             j["contract_term"] = min(int(j.get("contract_term") or 0) + extra, tope)
         self.datos.guardar_club(s.steam_hex or "", club)
-        lista = [Empaquetado({"gameplayer_unique_id": str(j["gameplayer_unique_id"]),
+        lista = [Empaquetado({"gameplayer_unique_id": int(j["gameplayer_unique_id"]),
                               "gameplayer_id": int(j.get("gameplayer_id") or 0),
                               "contract_term": j["contract_term"]}) for j in elegidos]
         return {"contract_term_list": lista, "gp": int(club.get("gp") or 0),

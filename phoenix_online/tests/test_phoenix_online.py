@@ -785,6 +785,7 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(ea[-1][1]["gp"], 2200)
         fila = msgpack_min.unpackb(msgpack_min.packb(ea[-1][1]["contract_term_list"][0].valor))
         self.assertEqual(fila["contract_term"], antes + 10)
+        self.assertIsInstance(fila["gameplayer_unique_id"], int)  # texto = PES se congelaba
 
     async def test_myclub_logros_gp(self):
         self.srv.cfg = {**self.srv.cfg, "myclub": {
