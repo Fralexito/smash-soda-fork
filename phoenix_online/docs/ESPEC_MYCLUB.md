@@ -548,6 +548,13 @@ Lectores encontrados en el juego (RE estático, sin abrir PES). Todo lo de dentr
   - Además se cobró un logro: bit 225 («renovar un contrato», +300), así que el saldo quedó en 24 100.
   - Falta ver a Lenglet (5 → 15) y el contrato nuevo en la lista de miembros.
 
+### 39.x Hallazgo: contract_term < 100 deja al jugador inelegible para vs. COM (05-nov 09:05)
+- Síntoma: vs. COM mostraba «No puedes disputar el partido porque no tienes jugadores suficientes… jugadores inelegibles», aunque había 18 inscritos sin huecos (tabla del gameplan 00..11 completa).
+- En Dirección plantilla, Ter Stegen, Lenglet y Piqué (contract_term 40/15/30 en la base, puestos bajos a mano con poner-contrato para probar renovar) mostraban «Contrato restante 0» con «!» rojo. Los jugadores con contract_term 100 (o sin clave: el servidor manda 100 por defecto) muestran «Contrato restante 1».
+- Conclusión: la unidad de contract_term NO es «partidos»; PES parece mostrar/validar algo como contract_term // 100 (o trata <100 como 0). Un «!» = inelegible para vs. COM.
+- Arreglo (05-nov): contract_term de uid 1, 2, 3 puesto a 100 en la base (copia previa: phoenix_online.antes_contratos100.db), sin reiniciar servidor ni PES.
+- Pendiente: confirmar con REA el campo y la escala que lee la pantalla «Contrato restante». No usar valores < 100 en contract_term hasta entonces.
+
 ## 40. Menú del jugador: bloquear, liberar y entrenador de experiencia (C, 05-nov 07:50)
 Leído en el juego (sin abrir PES). Los ids van como ENTEROS.
 - **Bloquear / Desbloquear:** `CMD_SET_MYCLUB_PROTECTED_ENABLE` y `..._DISABLE`.
