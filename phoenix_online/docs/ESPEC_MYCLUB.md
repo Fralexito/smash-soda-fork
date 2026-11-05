@@ -478,3 +478,14 @@ Lectores encontrados en el juego (RE estático, sin abrir PES). Todo lo de dentr
   - Nosotros mandábamos los campos sueltos. Corregido.
 - `AGENT_BOX_INFO` (lector 141c2e880) tiene DOS niveles: `agent_info: bin({agent_info: bin({agent, banner_file_info, skill}), box_size, box_pack_num, reset_remain_count, main/sub1/sub2_player_rarity_info: bin({rarity,count}), is_use_reset})`. Con un solo nivel, PES se cerraba al entrar al agente (vivo 05:45).
 - Falta: los valores válidos de `type`. El valor por defecto del cliente es «NotImplement», y las ramas 0_box y 1_single sugieren BOX o SINGLE.
+
+## 38. Pruebas en vivo, 05-nov 05:30-05:55
+- Vender cazatalentos FUNCIONA en el juego: se marca la casilla con Enter, se confirma con «C», sale «¿Vender por 500 GP?», se elige Sí y aparece «Recibiste 500 GP» (SELL_MYCLUB_SCOUT).
+- La barra de GP después de USE_MYCLUB_SCOUT ya muestra el saldo bien (560d088).
+- Teclas útiles para pruebas con el MCP:
+  - C = acción del contexto: Vender, Clasificar.
+  - V = cambiar entre lista y rejilla.
+  - Z = desmarcar o atrás.
+  - Esc = atrás.
+- Ojo: con Esc ×2 desde Miembros se vuelve al menú principal del juego. Teclas de más pueden entrar al vestíbulo online (SEND_IPANDPORT_NTL y GET_LOBBYLIST), que el servidor aún no maneja, y sale «No se ha podido enviar ni recibir datos». No es un fallo del servidor.
+- Renovar contrato: falta ver qué acción la abre (flow MenuEstimateExtendList).
