@@ -420,3 +420,4 @@ La petición de estos tres solo trae pid. Todo objeto anidado va como bin.
   - Límite del largo cifrado de cada trama: 0x410.
   - Nuestro error: poníamos [total][largo][zlib][4 ceros]. El cliente leía tamaño_original = 0x01000000 y zlib = 0, y no descomprimía. Corregido, tanto en el envío como en la lectura.
   - Ojo: el rechazo con 1000 B cifrados tal vez no fue por tamaño (el límite en el código es 0x410), sino por el contenido (exp_total/games). Falta separarlo con una prueba.
+- **CONFIRMADO en vivo (04:25Z, 67e9e25):** un GAMEPLAYERLIST de 992 B cifrados salió troceado con el formato corregido y PES cargó myClub sin errores (27 jugadores con exp_total). Es el primer troceado servidor→cliente que funciona en un PES real. Ya no hay límite de tamaño.
