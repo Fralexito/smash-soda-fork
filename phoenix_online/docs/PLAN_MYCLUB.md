@@ -103,3 +103,4 @@ Falta, en orden:
 2. Control de versión: al entrar, el cliente/Link manda la versión del parche y el servidor avisa si no coincide (en vez de dejar que el juego se caiga).
 3. Servidor alcanzable desde internet: puerto abierto en la PC de Frank o VPS.
 4. Cada persona con su propia copia de PES 2021.
+- Opciones para que el amigo llegue a la PC de Frank (05-nov 09:38): (1) red virtual Tailscale/Radmin VPN — recomendada para pruebas, sin tocar el router; (2) abrir puertos en el router (puede fallar con IP compartida/CGNAT); (3) VPS para muchos. Con (1), el servidor debe anunciar la IP de la red virtual (gamerelay, STUN, SVRLIST): revisar config antes de la prueba. Descarga del programa solo con permiso de Frank.
