@@ -318,3 +318,12 @@ La petición de estos tres solo trae pid. Todo objeto anidado va como bin.
   - is_coach_norma_clear «NO», coach_extended «NO».
   - gameplayer_extended_list [], division_stats [], get_player_result bin{num}.
 - SEND_MATCH_TEAM_INFO (lector 141d63cc0) solo mira el result. La alineación jugada (match_team_info) se guarda en la sesión.
+
+## 25. Fichar un DT (C, 05-nov)
+- Contrato → Directores técnicos: aparecen los 3 DT de mercado_dt con nombre y formación. La ficha carga y aparece la confirmación «Pagar con GP / Monedas».
+- «Pagar con GP» manda CHECK_MYCLUB_STORE (lector 141c46300). Sin respuesta propia, el cliente decía «Esta función no está disponible».
+  - Ahora responde is_enable_myclub_coin «NO» e is_enable_subscription «NO».
+  - Las Monedas de myClub son dinero real y quedan siempre apagadas.
+- mercado_dt acepta ids sueltos o {coach_id, gp, pes_point}.
+  - P: el campo del precio en GP todavía no está confirmado; «gp» es de prueba.
+- Siguiente: capturar el comando de compra que llega después.

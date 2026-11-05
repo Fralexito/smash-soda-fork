@@ -635,6 +635,17 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(d({"home_score": 1, "away_score": 2, "side": "AWAY"}), "WIN")
         self.assertEqual(d({}), "")
 
+    async def test_myclub_tienda_y_mercado_dt(self):
+        self.srv.cfg = {**self.srv.cfg, "myclub": {"mercado_dt": [24, {"coach_id": 37, "gp": 5000}]}}
+        a, ea = await self.entrar("A1")
+        await self.srv.recibir(a, 1, {"msgid": "CMD_CHECK_MYCLUB_STORE", "rqid": 1})
+        self.assertEqual(ea[-1][1]["is_enable_myclub_coin"], "NO")
+        await self.srv.recibir(a, 2, {"msgid": "CMD_GET_MYCLUB_MARKET_COACHLIST", "rqid": 2})
+        lista = ea[-1][1]["market_coach_list"]
+        self.assertEqual(len(lista), 2)
+        dt = msgpack_min.unpackb(msgpack_min.packb(lista[1].valor))
+        self.assertEqual((dt["coach_id"], dt["gp"]), (37, 5000))
+
     def test_avatar_http_vacio_y_guardado(self):
         r = self.srv.respuesta_http({"msgid": "CMD_GET_AVATAR_HTTP", "rqid": "3", "pid": "7"})
         self.assertEqual((r["result"], r["avatar_data"], r["avatar_data_size"]), ("NOERR", "", 0))

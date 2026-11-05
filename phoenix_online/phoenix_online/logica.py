@@ -1156,16 +1156,25 @@ class Servidor:
 
     async def c_cmd_get_myclub_market_coachlist(self, s, m):
         # C (§16.2). DT a la venta: config myclub.mercado_dt = [coach_id...] (de MyclubCoach.bin)
-        ids = (self.cfg.get("myclub") or {}).get("mercado_dt") or []
+        # P: cada entrada puede ser un id o {coach_id, gp, pes_point}; el campo del precio en
+        # GP aún no está confirmado («gp» de prueba).
+        ids = [c if isinstance(c, dict) else {"coach_id": c}
+               for c in (self.cfg.get("myclub") or {}).get("mercado_dt") or []]
         ahora = int(time.time())
         lista = [Empaquetado({
-            "coach_id": int(c), "pes_point": 0, "overall": 70,
+            "coach_id": int(c.get("coach_id") or 0), "pes_point": int(c.get("pes_point") or 0),
+            "gp": int(c.get("gp") or 0), "overall": 70,
             "offensive_main_concept": Empaquetado({k: 0 for k in self.CONCEPTO_DT}),
             "defensive_main_concept": Empaquetado({k: 0 for k in self.CONCEPTO_DT}),
             "formation_data": "", "is_locked": "NO", "management": 70, "adaptability_rate": 100,
-            "is_use_variable_formation": "NO"}) for c in ids if isinstance(c, int)]
+            "is_use_variable_formation": "NO"}) for c in ids if isinstance(c.get("coach_id"), int)]
         return {"market_coach_list": lista, "market_coach_list_num": len(lista),
                 "now_time": ahora, "end_time": ahora + 7 * 86400}
+
+    async def c_cmd_check_myclub_store(self, s, m):
+        # C (05-nov, lector 141c46300): sin respuesta propia, «Pagar con GP» decía «función no
+        # disponible». Monedas de myClub = dinero real: siempre NO (regla: nada de dinero real).
+        return {"is_enable_myclub_coin": "NO", "is_enable_subscription": "NO"}
 
     async def c_cmd_get_myclub_refine_search_auction_list(self, s, m):
         return {"auction_info_list": [], "total_auction_info_list_num": 0}  # C (§16.3)
