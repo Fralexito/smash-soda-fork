@@ -474,6 +474,6 @@
       "GIVEUP"
     ],
     "gp_logro_defecto": 300,
-    "gp_logros": {}
+    "gp_logros": {"231": 800, "237": 240}
   }
 }
