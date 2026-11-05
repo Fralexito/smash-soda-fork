@@ -1759,7 +1759,9 @@ class Servidor:
                 "coach_match_num": int(com.get("partidos") or 0),
                 "is_coach_norma_clear": "NO", "coach_extended": "NO",
                 "gameplayer_extended_list": [], "division_stats": [],
-                "get_player_result": Empaquetado({"num": 0})}
+                # C (05-nov, crash 21:44 en 141c4e427): get_player_result es LISTA de bin
+                # {gameplayer_id, num}; un mapa suelto hacía caer a PES en la carga
+                "get_player_result": []}
 
     async def c_cmd_send_match_team_info(self, s, m):
         # C (05-nov, lector 141d63cc0): solo msgid/rqid/result. Se guarda la alineación jugada

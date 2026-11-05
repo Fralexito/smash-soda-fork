@@ -335,3 +335,11 @@ La petición de estos tres solo trae pid. Todo objeto anidado va como bin.
   - Errores: ERR_INSUFFICIENT_GP si no alcanza; ERR_FORBIDDEN si se intenta pagar con monedas; ERR_NOTFOUND si el DT no está en venta.
 - Antes de que existiera este manejador, el cliente igual decía «Contrataste…» y abría la renovación con un DT vacío.
 - **GET_MYCLUB_COACH_CONTRACT_NORMA** (lector 141c5b360): current_point_* y norma_point_* (division, sim, vscom) e is_contract_end «NO».
+
+## 26. Crash en la carga del partido: COMMENTARY_INFO (C, 05-nov 21:44 local)
+- Volcado c0000005 en memmove, llamado desde 141c4e427, dentro del lector de GET_MYCLUB_COMMENTARY_INFO.
+- Causa: get_player_result es una **lista** de bin {gameplayer_id, num}, y nosotros mandábamos un solo mapa. Arreglado: [].
+- Otros tipos del mismo lector: gameplayer_extended_list = lista de bin {gameplayer_unique_id, gameplayer_id}; division_stats = lista de bin; division_num = lista de int.
+- Lección: antes de mandar un objeto suelto, confirmar en el lector si es una lista.
+- Diff del gameplan guardado por el cliente contra GAMEPLAN_DEFECTO: son idénticos. El gameplan no explica los «(PT)».
+- A/B: con «inscritos» guardado y DT 24, el Barcelona sale con sus posiciones; con club nuevo (sin «inscritos», DT 8), todos salen «(PT)». Se sigue investigando.
