@@ -646,6 +646,28 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         dt = msgpack_min.unpackb(msgpack_min.packb(lista[1].valor))
         self.assertEqual((dt["coach_id"], dt["gp"]), (37, 5000))
 
+    async def test_myclub_fichar_dt_con_gp(self):
+        self.srv.cfg = {**self.srv.cfg, "myclub": {
+            "jugadores": [{"gameplayer_id": 1}], "entrenadores": [{"coach_id": 8}],
+            "club_de_prueba": {"team_name": "P", "gp": 6000},
+            "mercado_dt": [{"coach_id": 24, "gp": 5000}, 37]}}
+        a, ea = await self.entrar("A1")
+        r = self.srv.recibir
+        await r(a, 1, {"msgid": "CMD_BUY_MYCLUB_MARKET_COACH", "rqid": 1, "coach_id": 24,
+                       "use_pes_point": "NO", "is_coach_texture_use": "YES"})
+        self.assertEqual(ea[-1][1]["gp"], 1000)
+        dt = msgpack_min.unpackb(msgpack_min.packb(ea[-1][1]["coach"].valor))
+        self.assertEqual((dt["coach_id"], dt["coach_unique_id"]), (24, 2))
+        await r(a, 2, {"msgid": "CMD_BUY_MYCLUB_MARKET_COACH", "rqid": 2, "coach_id": 24})
+        self.assertEqual(ea[-1][1]["result"], "ERR_NOTFOUND")
+        await r(a, 3, {"msgid": "CMD_GET_MYCLUB_COACHLIST", "rqid": 3})
+        self.assertEqual(ea[-1][1]["coach_list_num"], 2)
+        await r(a, 4, {"msgid": "CMD_GET_MYCLUB_MARKET_COACHLIST", "rqid": 4})
+        self.assertEqual(ea[-1][1]["market_coach_list_num"], 1)
+        await r(a, 5, {"msgid": "CMD_BUY_MYCLUB_MARKET_COACH", "rqid": 5, "coach_id": 37,
+                       "use_pes_point": "YES"})
+        self.assertEqual(ea[-1][1]["result"], "ERR_FORBIDDEN")
+
     def test_avatar_http_vacio_y_guardado(self):
         r = self.srv.respuesta_http({"msgid": "CMD_GET_AVATAR_HTTP", "rqid": "3", "pid": "7"})
         self.assertEqual((r["result"], r["avatar_data"], r["avatar_data_size"]), ("NOERR", "", 0))

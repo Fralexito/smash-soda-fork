@@ -1158,8 +1158,8 @@ class Servidor:
         # C (§16.2). DT a la venta: config myclub.mercado_dt = [coach_id...] (de MyclubCoach.bin)
         # P: cada entrada puede ser un id o {coach_id, gp, pes_point}; el campo del precio en
         # GP aún no está confirmado («gp» de prueba).
-        ids = [c if isinstance(c, dict) else {"coach_id": c}
-               for c in (self.cfg.get("myclub") or {}).get("mercado_dt") or []]
+        comprados = set((self._club_inicial(s) or {}).get("dt_comprados") or [])
+        ids = [c for c in self._mercado_dt() if c.get("coach_id") not in comprados]
         ahora = int(time.time())
         lista = [Empaquetado({
             "coach_id": int(c.get("coach_id") or 0), "pes_point": int(c.get("pes_point") or 0),
@@ -1170,6 +1170,43 @@ class Servidor:
             "is_use_variable_formation": "NO"}) for c in ids if isinstance(c.get("coach_id"), int)]
         return {"market_coach_list": lista, "market_coach_list_num": len(lista),
                 "now_time": ahora, "end_time": ahora + 7 * 86400}
+
+    def _mercado_dt(self):
+        return [c if isinstance(c, dict) else {"coach_id": c}
+                for c in (self.cfg.get("myclub") or {}).get("mercado_dt") or []]
+
+    async def c_cmd_buy_myclub_market_coach(self, s, m):
+        # C (05-nov, lector 141d8ba10). Petición {coach_id, use_pes_point, is_coach_texture_use}.
+        # Respuesta: gp y pes_point = saldos NUEVOS, coach = ficha del DT nuevo (bin), is_first.
+        if m.get("use_pes_point") == "YES":
+            return {"result": "ERR_FORBIDDEN"}  # monedas = dinero real: apagado siempre
+        coach_id = m.get("coach_id") if isinstance(m.get("coach_id"), int) else 0
+        oferta = next((c for c in self._mercado_dt() if c.get("coach_id") == coach_id), None)
+        club = self._club_inicial(s)
+        if oferta is None or club is None or coach_id in (club.get("dt_comprados") or []):
+            return {"result": "ERR_NOTFOUND"}
+        precio = int(oferta.get("gp") or 0)
+        if int(club.get("gp") or 0) < precio:
+            return {"result": "ERR_INSUFFICIENT_GP"}
+        dts = club.setdefault("entrenadores", [])
+        uid = max([int(d.get("coach_unique_id") or 0) for d in dts] + [0]) + 1
+        nuevo = {**{k: v for k, v in oferta.items() if k not in ("gp", "pes_point")},
+                 "coach_unique_id": uid, "contract_term": 10,
+                 "is_coach_texture_use": m.get("is_coach_texture_use") or "NO"}
+        primero = not dts
+        dts.append(nuevo)
+        club["gp"] = int(club.get("gp") or 0) - precio
+        club.setdefault("dt_comprados", []).append(coach_id)
+        self.datos.guardar_club(s.steam_hex or "", club)
+        log.info("myClub %s fichó DT %d por %d GP (saldo %d)", s.steam_hex, coach_id, precio, club["gp"])
+        return {"gp": club["gp"], "pes_point": 0, "coach": self._ficha_dt_myclub(len(dts) - 1, nuevo),
+                "is_first": "YES" if primero else "NO"}
+
+    async def c_cmd_get_myclub_coach_contract_norma(self, s, m):
+        # C (05-nov, lector 141c5b360): puntos del contrato del DT. P: sin normas = todo 0.
+        return {"current_point_division": 0, "current_point_sim": 0, "current_point_vscom": 0,
+                "norma_point_division": 0, "norma_point_sim": 0, "norma_point_vscom": 0,
+                "is_contract_end": "NO"}
 
     async def c_cmd_check_myclub_store(self, s, m):
         # C (05-nov, lector 141c46300): sin respuesta propia, «Pagar con GP» decía «función no

@@ -327,3 +327,11 @@ La petición de estos tres solo trae pid. Todo objeto anidado va como bin.
 - mercado_dt acepta ids sueltos o {coach_id, gp, pes_point}.
   - P: el campo del precio en GP todavía no está confirmado; «gp» es de prueba.
 - Siguiente: capturar el comando de compra que llega después.
+- **Confirmado:** el precio en GP es el campo «gp» (int) de cada DT de MARKET_COACHLIST. Con gp 5000 y pes_point 300, el cliente muestra «Pagar 5,000 GP» y deja deshabilitado el pago con monedas.
+- **BUY_MYCLUB_MARKET_COACH** (lector 141d8ba10):
+  - Petición: {coach_id, use_pes_point, is_coach_texture_use}.
+  - Respuesta: gp (saldo nuevo), pes_point (saldo nuevo), coach (bin con la ficha completa del DT, como en COACHLIST) e is_first.
+  - El servidor cobra, agrega el DT al club con un coach_unique_id nuevo y lo quita del mercado de ese club (dt_comprados).
+  - Errores: ERR_INSUFFICIENT_GP si no alcanza; ERR_FORBIDDEN si se intenta pagar con monedas; ERR_NOTFOUND si el DT no está en venta.
+- Antes de que existiera este manejador, el cliente igual decía «Contrataste…» y abría la renovación con un DT vacío.
+- **GET_MYCLUB_COACH_CONTRACT_NORMA** (lector 141c5b360): current_point_* y norma_point_* (division, sim, vscom) e is_contract_end «NO».
