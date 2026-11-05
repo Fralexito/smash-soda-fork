@@ -455,6 +455,8 @@ Lectores encontrados en el juego (RE estático, sin abrir PES). Todo lo de dentr
 - Falta ver en vivo si el icono aparece en la pausa y, si no aparece, qué lo esconde. Puede ser una regla de Konami.
 - **Decisión de Frank:** abandonar cuenta como derrota. Si `gameend_reason` está en `myclub.motivos_abandono` (por defecto ["GIVEUP"]), el resultado es LOSE, con los GP de derrota. Se apaga con `myclub.abandono_es_derrota = false`.
 - DISCONN no cuenta por defecto, porque puede ser culpa de la red o del servidor.
+- **Observado en vivo (05-nov, partido vs. COM, pausa con Start ≡):** opciones Ayuda, Estrategia, Repetición (gris), Config. de cámara, Ajustes de sistema (y una cortada a la izquierda). **No hay Salir ni Abandonar.**
+- **Decisión de Frank:** dejarlo así, como el PES 2021 original. No se fuerza la opción de abandono. `abandono_es_derrota` / `motivos_abandono` (GIVEUP) se quedan por si algún día llega ese `gameend_reason`; hoy no se puede probar.
 
 ## 36. Logros de GP durante el partido (C, 05-nov)
 - En vivo, durante el partido salen avisos como «Arrancaste PES 2021 · 240», «Pared · 600» o «Dribble en una baldosa · 1200». Llegan como `CMD_SET_GP_ACHIEVEMENT`. Antes se contestaba NOERR sin sumar nada.
