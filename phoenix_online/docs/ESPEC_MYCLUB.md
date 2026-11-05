@@ -185,3 +185,9 @@ La petición de estos tres solo trae pid. Todo objeto anidado va como bin.
   - Fichar jugador: «Asignar cazatalentos».
   - Casa de subastas y Lista de interés: «No hay datos».
   - El nombre del DT sale vacío (pendiente).
+- **GET_MYCLUB_AUCTION_WISH_LIST** (lector 141c22fa0): wish_info_list [{wishlist_id, skill{…}, grade, is_exhibited}] y total_wish_info_list_num. Con la lista vacía, el cliente muestra «La lista está vacía».
+- **GET_MYCLUB_AUCTION_PRICE_RANKING** (lector 141c6ccc0; la petición lleva ranking_kind): auction_price_ranking [{product_id, rank, scout_id, grade, skill{…}, price, end_time}] y auction_price_ranking_num.
+- **GET_MYCLUB_RENTAL_GAMEPLAYERLIST** (lector 141da24f0): rental_gameplayer_list [{gameplayer{la misma ficha que GAMEPLAYERLIST}, pes_point, open_date, close_date}] y rental_gameplayer_list_num. Sin respuesta da C_NDZS_0112.
+- **GET_MATCHREJECTLIST** (lector 141c4f160): reject_list [{pid, pname{…}}] y reject_list_num.
+- Pantallas que se resuelven en el propio cliente, sin mensajes: Buscar subasta, Vender cazatalentos, Base de datos, Negociar. Contrato tiene 5 tarjetas: Representantes, Cazatalentos, Directores técnicos, Acuerdo de préstamo y Negociar.
+- Herramientas en la PC: x64dbg ya estaba instalado en herramientas\x64dbg\programa\release\x64\ (snapshot 2026.05.27). También está Cheat Engine 7.7.

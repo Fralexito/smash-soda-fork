@@ -1061,6 +1061,19 @@ class Servidor:
     async def c_cmd_get_myclub_auction_watch_list(self, s, m):
         return {"auction_info_list": [], "total_auction_info_list_num": 0}  # C (§16.4)
 
+    async def c_cmd_get_myclub_auction_wish_list(self, s, m):
+        return {"wish_info_list": [], "total_wish_info_list_num": 0}  # C (§16.5)
+
+    async def c_cmd_get_myclub_auction_price_ranking(self, s, m):
+        return {"auction_price_ranking": [], "auction_price_ranking_num": 0}  # C (§16.6)
+
+    async def c_cmd_get_myclub_rental_gameplayerlist(self, s, m):
+        # C (§16.7): sin respuesta = C_NDZS_0112 en «Acuerdo de préstamo»
+        return {"rental_gameplayer_list": [], "rental_gameplayer_list_num": 0}
+
+    async def c_cmd_get_matchrejectlist(self, s, m):
+        return {"reject_list": [], "reject_list_num": 0}  # C (§16.8)
+
     async def c_cmd_create_myclub_team(self, s, m):
         # C (§12): la respuesta solo lleva msgid/rqid/result; ERR_ALREADYEXISTS si ya hay club
         if self.datos.club(s.steam_hex or ""):
