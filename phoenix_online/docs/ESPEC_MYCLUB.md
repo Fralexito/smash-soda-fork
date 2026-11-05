@@ -509,3 +509,11 @@ Lectores encontrados en el juego (RE estático, sin abrir PES). Todo lo de dentr
   - El banner no era la causa de este crash, pero la URL igual hace falta.
 - **06:30, con 9956374:** sin crash, pero vuelve el «caducó». El vector de 8 B en +0x50 no es la rareza: casi seguro es `token_list` ({level, count}), que también usa token_use_dialog (FUN_140d48520).
   - Prueba: `token_list` = [bin({level:1, count:1})], `token_list_num` 1 e `is_draw_checked` «YES». Los dos se pueden cambiar con token_level, token_count e is_draw_checked en myclub.agentes.
+- **06:42 Lima 01:42: REPRESENTANTES FUNCIONA DE PUNTA A PUNTA (40f2bb9).**
+  - Recorrido: caja «Phoenix Estrellas» (154/154) → usar → animación → USE_MYCLUB_AGENT → «Nuevo fichaje con representante»: L. Goretzka (Bayern, MC 85) → la caja queda en 153/153.
+  - GP: −10 000 del agente y +300 de un logro, con la barra correcta. La causa del «caducó» era el token_list vacío.
+  - Logro real visto: bit 237 (palabra 7, bit 13), +300 por gp_logro_defecto.
+  - Detalles menores por arreglar:
+    - Sale «1/3» en la pantalla de fichaje.
+    - Sale «Finaliza en 0 min»: la caja usa otro campo de tiempo.
+    - Los iconos de la tarjeta muestran 0 GP y 0 monedas.
