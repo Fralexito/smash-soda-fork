@@ -1071,7 +1071,11 @@ class Servidor:
                 "com_match_num": int(com.get("partidos") or 0), "oppo_level": 0,
                 "weekly_group_rank": 0, "weekly_group_rank_total_num": 0, "rank": 0,
                 "rank_total_num": 0, "rank_coach": 0, "rank_coach_total_num": 0,
-                "present_num": 0, "scount_num": 0, "staff_num": 0,
+                # P (vivo 06-nov): la tarjeta Entrenamiento decía 0 con 1 entrenador; antes iba fijo en 0.
+                # P: scount_num [sic] = cazatalentos del club.
+                "present_num": 0,
+                "scount_num": sum(int(c.get("count") or 1) for c in club.get("scouts") or []),
+                "staff_num": len(club.get("staff") or []),
                 "is_free_enable": "YES", "is_coop_enable": "NO", "is_auction_state_changed": "NO",
                 "achievement_info": Empaquetado({"achievement_not_recieved_num": 0,
                                                  "achievement_num": 0, "achievement_total_num": 0}),

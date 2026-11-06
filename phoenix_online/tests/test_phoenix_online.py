@@ -931,6 +931,8 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         el = msgpack_min.packb({"gameplayer_unique_id": 20, "gameplayer_id": 119, "overall": 150})
         await r(a, 2, {"msgid": "CMD_CREATE_MYCLUB_STAFF", "rqid": 2, "player_info_list": [el]})
         staff_id = self.srv.datos.club(a.steam_hex)["staff"][0]["id"]
+        await r(a, 9, {"msgid": "CMD_GET_MYCLUB_MAINMENU_INFO", "rqid": 9})
+        self.assertEqual(ea[-1][1]["staff_num"], 1)
         info = msgpack_min.packb({"gameplayer_unique_id": 3, "gameplayer_id": 102})
         await r(a, 3, {"msgid": "CMD_USE_MYCLUB_STAFF", "rqid": 3, "player_info": info,
                        "staff_info_list": [msgpack_min.packb({"id": staff_id})],
