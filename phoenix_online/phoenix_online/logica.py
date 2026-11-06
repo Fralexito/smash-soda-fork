@@ -2160,6 +2160,8 @@ class Servidor:
             return {"result": "ERR_NOTFOUND"}
         des = lambda v: msgpack_min.unpackb(v) if isinstance(v, (bytes, bytearray)) else v
         info = des(m.get("player_info")) or {}
+        log.warning("peticion completa CMD_USE_MYCLUB_STAFF: player_info=%r use_item_list=%r",
+                    info, m.get("use_item_list"))  # para confirmar ability y la curva de exp
         uid = info.get("gameplayer_unique_id") if isinstance(info, dict) else None
         j = next((x for x in club.get("jugadores") or [] if x.get("gameplayer_unique_id") == uid), None)
         ids = set()
