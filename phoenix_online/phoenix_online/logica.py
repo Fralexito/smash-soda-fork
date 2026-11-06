@@ -1085,8 +1085,31 @@ class Servidor:
         return {"login_bonus_list": [], "login_bonus_list_num": 0, "today_bonus_number": 0,
                 "is_bonus": "NO"}  # C (§15.2): «sin bonus»
 
+    # P (05-nov noche): item_type/item_variation son texto libre (no hay enum en el exe, RE
+    # noche §ITEMLIST). Candidatos de la tabla de categorías 0x142ad6780: CONTRACT y RECOVERY.
+    # Se cambian en caliente con myclub.objetos para probar otros valores sin reiniciar.
+    OBJETOS_DEFECTO = [
+        {"clave": "boletos_contrato", "item_type": "CONTRACT", "item_variation": "CONTRACT"},
+        {"clave": "objetos_recuperar", "item_type": "RECOVERY", "item_variation": "RECOVERY"},
+    ]
+
+    def _objetos(self):
+        lista = (self.cfg.get("myclub") or {}).get("objetos")
+        return [o for o in (lista if isinstance(lista, list) else self.OBJETOS_DEFECTO)
+                if isinstance(o, dict) and o.get("clave")]
+
     async def c_cmd_get_myclub_itemlist(self, s, m):
-        return {"item_list": [], "item_list_num": 0}  # C (§15.3)
+        # C (§15.3, lector 0x141bed520): item_list = lista de bin({item_type, item_variation,
+        # item_effect_arg, count, pes_point_price}). Los conteos salen del club.
+        club = self._club_inicial(s) or {}
+        lista = [Empaquetado({"item_type": str(o.get("item_type") or "NotImplement"),
+                              "item_variation": str(o.get("item_variation") or "NotImplement"),
+                              "item_effect_arg": int(o.get("item_effect_arg") or 0),
+                              "count": int(club.get(o["clave"]) or 0),
+                              "pes_point_price": int(o.get("pes_point_price") or 0)})
+                 for o in self._objetos()
+                 if o.get("mostrar_vacio", True) or int(club.get(o["clave"]) or 0) > 0]
+        return {"item_list": lista, "item_list_num": len(lista)}
 
     @staticmethod
     def _a_json(v):
@@ -2193,7 +2216,13 @@ class Servidor:
         todos = m.get("is_all") == "YES"
         elegidos = [j for j in club.get("jugadores") or []
                     if todos or j.get("gameplayer_unique_id") in uids]
-        coste = int((self.cfg.get("myclub") or {}).get("recuperar_monedas") or 0) * len(elegidos)
+        objetos = int(club.get("objetos_recuperar") or 0)
+        coste = 0
+        if m.get("use_pes_point") != "YES" and objetos >= len(elegidos) > 0:
+            # P: «Recuperar resistencia (uno)» = un objeto por jugador
+            club["objetos_recuperar"] = objetos - len(elegidos)
+        else:
+            coste = int((self.cfg.get("myclub") or {}).get("recuperar_monedas") or 0) * len(elegidos)
         if coste:
             error = self._cobrar(club, 0, coste, True)
             if error:

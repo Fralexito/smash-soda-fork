@@ -662,3 +662,14 @@ Con una sola persona no hay quien venda, así que la «casa» pone cazatalentos 
 - **Supuestos por confirmar en vivo (P):** time_limit / auction_end_time / finalround_end_time = segundos Unix absolutos; is_bid y demás = YES/NO; refunded_gp_list = lista de montos. Si la Casa de subastas falla, apagar con `subastas.activa = false` en las reglas y avisar.
 - Falta: TENDER_USERINFOLIST (forma sin leer) y la ronda final real; el mercado entre personas necesita la identidad propia (PLAN_MULTIUSUARIO).
 - Pruebas: test_myclub_subastas_de_la_casa, test_myclub_subasta_rival_de_la_casa_devuelve_gp.
+
+## 50. Prueba en vivo de la noche (06-nov, sin Frank) y lista de objetos
+- **Visto en vivo (RC con capturas, servidor 5bec999):**
+  - Contratos: un jugador sin clave muestra «Contrato restante 10» y uno migrado (4500) muestra «50». Ningún «!» ni 0.
+  - Casa de subastas: «Subastas 1/6» con 6 cazatalentos a 3 000 GP y 1 h. El detalle abre; el juego propone 4 000 como mínimo (suma su propio incremento) y la puja llega como TENDER_MYCLUB_AUCTION_SCOUT sin error. Pantalla: «Oferta más alta», Ofertas 1, cuenta atrás. GP 21 540 → 17 840 (−4 000 y +300 de un logro).
+  - Menú del jugador (Dirección plantilla, botón X): «Usar objeto» muestra «Recuperar resistencia (uno) ×0» y «Boleto de contrato ×0».
+- **Causa del ×0:** GET_MYCLUB_ITEMLIST respondía la lista vacía. Ahora manda un bin por objeto de `myclub.objetos` = [{clave, item_type, item_variation, item_effect_arg, pes_point_price, mostrar_vacio}], con count = club[clave]. P: valores por defecto CONTRACT / RECOVERY (tabla de categorías 0x142ad6780); si el juego sigue con ×0, probar otros textos en caliente (§46) sin reiniciar.
+- Recuperar cansancio gasta primero objetos (`club["objetos_recuperar"]`, uno por jugador) y si no hay, `recuperar_monedas`. Admin: `dar-recuperar`.
+- **Teclado de Frank (settings.dat):** en los menús de myClub, LB = tecla A; RT = W; botón X del pad = tecla C (abre el Menú del jugador en Dirección plantilla). La captura del MCP sale cortada por el DPI: capturar con SetProcessDPIAware + CopyFromScreen 1920x1080.
+- Comandos sin manejador vistos: CMD_GET_MYCLUB_CLOUD_SQUADID {pid} y CMD_GET_ONLINE_AD_FILE (los dos reciben NOERR vacío; sin efecto visible).
+- Prueba: test_myclub_itemlist_cuenta_boletos_y_objetos.

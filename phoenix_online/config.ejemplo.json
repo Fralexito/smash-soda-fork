@@ -491,6 +491,10 @@
     "contrato_por_partido": 1,
     "staff_exp_factor": 1,
     "recuperar_monedas": 0,
+    "objetos": [
+      {"clave": "boletos_contrato", "item_type": "CONTRACT", "item_variation": "CONTRACT"},
+      {"clave": "objetos_recuperar", "item_type": "RECOVERY", "item_variation": "RECOVERY"}
+    ],
     "subastas": {
       "activa": true,
       "_nota": "subastas de la casa: cazatalentos de 'productos' (o de 'cazatalentos' si falta)",

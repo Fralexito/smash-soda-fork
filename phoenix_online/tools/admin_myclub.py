@@ -10,6 +10,8 @@ Uso, en la carpeta del servidor:
     de contrato a los jugadores con esos gameplayer_unique_id; para probar la renovación)
     python -I tools/admin_myclub.py config.json dar-boletos FRALEX 3   (Boletos de contrato;
     igual con poner-boletos)
+    python -I tools/admin_myclub.py config.json dar-recuperar FRALEX 3  (objetos «Recuperar
+    resistencia»; igual con poner-recuperar)
 
 La persona se indica por su nombre en el juego (pname) o por su steam_hex.
 Se puede usar con el servidor encendido: el cambio se ve la próxima vez que PES pida el club
@@ -69,7 +71,8 @@ def main(argv=None):
         return 0
     campos = {"dar-gp": "gp", "poner-gp": "gp", "dar-monedas": "monedas",
               "poner-monedas": "monedas", "dar-boletos": "boletos_contrato",
-              "poner-boletos": "boletos_contrato"}
+              "poner-boletos": "boletos_contrato", "dar-recuperar": "objetos_recuperar",
+              "poner-recuperar": "objetos_recuperar"}
     if orden in campos and len(argv) == 4:
         campo = campos[orden]
         j = buscar(datos, argv[2])

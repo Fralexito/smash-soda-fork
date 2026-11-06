@@ -967,6 +967,32 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.srv.datos.club(a.steam_hex)["jugadores"][0]["contract_term"],
                          antes + 900)
 
+    async def test_myclub_itemlist_cuenta_boletos_y_objetos(self):
+        self.srv.cfg = {**self.srv.cfg, "myclub": {
+            "jugadores": [{"gameplayer_id": 1}], "entrenadores": [{"coach_id": 8}],
+            "club_de_prueba": {"team_name": "P", "gp": 0}}}
+        a, ea = await self.entrar("A1")
+        r = self.srv.recibir
+        await r(a, 1, {"msgid": "CMD_GET_MYCLUB_USER_INFO", "rqid": 1})
+        club = self.srv.datos.club(a.steam_hex)
+        club.update({"boletos_contrato": 3, "objetos_recuperar": 2})
+        for j in club["jugadores"]:
+            j["tiredness"] = 4
+        self.srv.datos.guardar_club(a.steam_hex, club)
+        await r(a, 2, {"msgid": "CMD_GET_MYCLUB_ITEMLIST", "rqid": 2})
+        items = {i.valor["item_type"]: i.valor["count"] for i in ea[-1][1]["item_list"]}
+        self.assertEqual(items, {"CONTRACT": 3, "RECOVERY": 2})
+        # los valores se cambian en caliente desde config
+        self.srv.cfg["myclub"]["objetos"] = [{"clave": "boletos_contrato", "item_type": "X",
+                                              "item_variation": "Y"}]
+        await r(a, 3, {"msgid": "CMD_GET_MYCLUB_ITEMLIST", "rqid": 3})
+        el = ea[-1][1]["item_list"][0].valor
+        self.assertEqual((el["item_type"], el["item_variation"], el["count"]), ("X", "Y", 3))
+        await r(a, 4, {"msgid": "CMD_USE_MYCLUB_ITEM_RECOVERY", "rqid": 4,
+                       "gameplayer_unique_id_list": [1], "is_all": "NO", "use_pes_point": "NO"})
+        club = self.srv.datos.club(a.steam_hex)
+        self.assertEqual((club["objetos_recuperar"], club["jugadores"][0]["tiredness"]), (1, 0))
+
     async def test_myclub_recuperar_cansancio(self):
         self.srv.cfg = {**self.srv.cfg, "myclub": {
             "jugadores": [{"gameplayer_id": 1}, {"gameplayer_id": 2}],
