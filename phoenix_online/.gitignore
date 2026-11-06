@@ -1,0 +1,8 @@
+config.json
+vinculos.json
+catalogo*.json
+*.bin
+*.db
+*.bin
+capturas/
+__pycache__/
