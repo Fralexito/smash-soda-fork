@@ -933,7 +933,8 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         staff_id = self.srv.datos.club(a.steam_hex)["staff"][0]["id"]
         await r(a, 9, {"msgid": "CMD_GET_MYCLUB_MAINMENU_INFO", "rqid": 9})
         self.assertEqual(ea[-1][1]["staff_num"], 1)
-        info = msgpack_min.packb({"gameplayer_unique_id": 3, "gameplayer_id": 102})
+        info = msgpack_min.packb({"gameplayer_unique_id": 3, "gameplayer_id": 102,
+                                  "ability": [95, 94, 95]})
         await r(a, 3, {"msgid": "CMD_USE_MYCLUB_STAFF", "rqid": 3, "player_info": info,
                        "staff_info_list": [msgpack_min.packb({"id": staff_id})],
                        "use_item_list": []})
@@ -941,6 +942,7 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.assertEqual((resp["result"], resp["exp_added"]), ("NOERR", 150))
         post = resp["exp_info_post"].valor
         self.assertEqual((post["exp_total"], post["level"]), (150, 2))
+        self.assertEqual(post["parameters"], [95, 94, 95])
         club = self.srv.datos.club(a.steam_hex)
         self.assertEqual(club["staff"], [])
         # el mismo entrenador no se puede usar dos veces

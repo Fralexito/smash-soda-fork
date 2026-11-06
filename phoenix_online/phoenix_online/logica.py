@@ -2131,7 +2131,7 @@ class Servidor:
                  for e in club.get("staff") or []]
         return {"staff_list_num": len(lista), "staff_list": lista}
 
-    def _info_exp(self, j):
+    def _info_exp(self, j, habilidades=None):
         """C (REA 05-nov noche, 0x141ca40d0): exp_info_pre/post = UN bin con level, level_limit,
         exp_total, exp_current_level, exp_to_next_level, parameters, enhanced_parameters,
         add_skill_id."""
@@ -2143,7 +2143,9 @@ class Servidor:
             "level": nivel, "level_limit": limite, "exp_total": exp,
             "exp_current_level": exp % self.EXP_POR_NIVEL,
             "exp_to_next_level": 0 if nivel >= limite else self.EXP_POR_NIVEL - exp % self.EXP_POR_NIVEL,
-            "parameters": list(j.get("parameters") or []),
+            # C (vivo 06-nov): con parameters vacío, «Resultados del entrenamiento» pintaba la
+            # carta con media 40 y todos los atributos 0. Se manda la ability que trae la petición.
+            "parameters": list(j.get("parameters") or habilidades or []),
             "enhanced_parameters": list(j.get("enhanced_parameters") or []),
             "add_skill_id": e("add_skill_id")})
 
@@ -2170,14 +2172,15 @@ class Servidor:
             return {"result": "ERR_NOTFOUND"}
         factor = float((self.cfg.get("myclub") or {}).get("staff_exp_factor") or 1)
         ganada = int(sum(int(e.get("base_exp") or 0) for e in usados) * factor)
-        antes = self._info_exp(j)
+        habilidades = [int(x) for x in info.get("ability") or [] if isinstance(x, int)]
+        antes = self._info_exp(j, habilidades)
         j["exp_total"] = int(j.get("exp_total") or 0) + ganada
         club["staff"] = [e for e in club.get("staff") or [] if e.get("id") not in ids]
         self.datos.guardar_club(s.steam_hex or "", club)
         cfgm = self.cfg.get("myclub") or {}
         log.info("myClub %s: %d entrenador(es) dan +%d exp a %s", s.steam_hex, len(usados), ganada, uid)
         return {"gameplayer_unique_id": int(uid), "exp_added": ganada,
-                "exp_info_pre": antes, "exp_info_post": self._info_exp(j),
+                "exp_info_pre": antes, "exp_info_post": self._info_exp(j, habilidades),
                 "sell_gp": int(j.get("sell_gp", cfgm.get("venta_gp") or 0)),
                 "contract_gp": int(j.get("contract_gp", cfgm.get("renovacion_gp") or 0)),
                 "contract_pes_point": int(j.get("contract_pes_point", cfgm.get("renovacion_monedas") or 0)),
