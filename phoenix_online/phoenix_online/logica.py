@@ -1244,6 +1244,16 @@ class Servidor:
                     continue
             if isinstance(el, dict) and isinstance(el.get("gameplayer_unique_id"), int):
                 orden.append(el["gameplayer_unique_id"])
+                # P (06-nov): «parameters» del miembro = el formato que el cliente espera en
+                # exp_info_pre/post (con lista vacía la carta del entrenamiento sale PT 40 / 0)
+                par = el.get("parameters")
+                if isinstance(par, list) and par:
+                    club.setdefault("parametros_cliente", {})[str(el["gameplayer_unique_id"])] = \
+                        [int(x) for x in par if isinstance(x, int)]
+        if orden and not club.get("_parametros_vistos"):
+            ej = (club.get("parametros_cliente") or {}).get(str(orden[0]))
+            log.warning("myClub: parameters de ejemplo (uid %s): %r", orden[0], ej)
+            club["_parametros_vistos"] = True
         club.setdefault("inscritos", {})[str(m.get("squad_id") or 1)] = orden
         self.datos.guardar_club(s.steam_hex or "", club)
         return {}
@@ -2144,7 +2154,7 @@ class Servidor:
             "exp_current_level": exp % self.EXP_POR_NIVEL,
             "exp_to_next_level": 0 if nivel >= limite else self.EXP_POR_NIVEL - exp % self.EXP_POR_NIVEL,
             # C (vivo 06-nov): con parameters vacío, «Resultados del entrenamiento» pintaba la
-            # carta con media 40 y todos los atributos 0. Se manda la ability que trae la petición.
+            # carta con media 40 y todos los atributos 0.
             "parameters": list(j.get("parameters") or habilidades or []),
             "enhanced_parameters": list(j.get("enhanced_parameters") or []),
             "add_skill_id": e("add_skill_id")})
@@ -2174,7 +2184,10 @@ class Servidor:
             return {"result": "ERR_NOTFOUND"}
         factor = float((self.cfg.get("myclub") or {}).get("staff_exp_factor") or 1)
         ganada = int(sum(int(e.get("base_exp") or 0) for e in usados) * factor)
-        habilidades = [int(x) for x in info.get("ability") or [] if isinstance(x, int)]
+        # C (vivo 06-nov): player_info.ability son solo 6 enteros (no las habilidades) y con
+        # ellos la carta seguía en PT 40. Se usan los parameters que el cliente mandó al
+        # guardar la plantilla (SET_MYCLUB_SQUAD_GAMEPLAYER).
+        habilidades = (club.get("parametros_cliente") or {}).get(str(uid)) or []
         antes = self._info_exp(j, habilidades)
         j["exp_total"] = int(j.get("exp_total") or 0) + ganada
         club["staff"] = [e for e in club.get("staff") or [] if e.get("id") not in ids]
