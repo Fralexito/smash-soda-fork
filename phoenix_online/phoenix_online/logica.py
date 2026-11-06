@@ -2141,6 +2141,23 @@ class Servidor:
                  for e in club.get("staff") or []]
         return {"staff_list_num": len(lista), "staff_list": lista}
 
+    # P (06-nov): el cliente no manda «parameters» en SET_MYCLUB_SQUAD_GAMEPLAYER (llega None).
+    # Se arman con las habilidades del catálogo (Player.bin) en el orden de la ficha de
+    # detalle del juego. Por confirmar en vivo que este es el orden y la escala (valor real).
+    ORDEN_HABILIDADES = [
+        "act_ofensiva", "control", "drible", "posesion", "pase_ras", "pase_bombeado",
+        "finalizacion", "cabeceo", "balon_parado", "efecto", "act_defensiva", "recuperacion",
+        "agresividad", "act_portero", "atajar", "despejar", "reflejos", "cobertura",
+        "velocidad", "aceleracion", "potencia_tiro", "salto", "contacto", "equilibrio",
+        "resistencia"]
+
+    def _habilidades_catalogo(self, j):
+        datos = (self._catalogo().get("jugadores") or {}).get(str(j.get("gameplayer_id"))) or {}
+        hab = j.get("habilidades") or datos.get("habilidades") or {}
+        if not isinstance(hab, dict) or not hab:
+            return []
+        return [int(hab.get(k) or 40) for k in self.ORDEN_HABILIDADES]
+
     def _info_exp(self, j, habilidades=None):
         """C (REA 05-nov noche, 0x141ca40d0): exp_info_pre/post = UN bin con level, level_limit,
         exp_total, exp_current_level, exp_to_next_level, parameters, enhanced_parameters,
@@ -2187,7 +2204,8 @@ class Servidor:
         # C (vivo 06-nov): player_info.ability son solo 6 enteros (no las habilidades) y con
         # ellos la carta seguía en PT 40. Se usan los parameters que el cliente mandó al
         # guardar la plantilla (SET_MYCLUB_SQUAD_GAMEPLAYER).
-        habilidades = (club.get("parametros_cliente") or {}).get(str(uid)) or []
+        habilidades = ((club.get("parametros_cliente") or {}).get(str(uid))
+                       or self._habilidades_catalogo(j))
         antes = self._info_exp(j, habilidades)
         j["exp_total"] = int(j.get("exp_total") or 0) + ganada
         club["staff"] = [e for e in club.get("staff") or [] if e.get("id") not in ids]
