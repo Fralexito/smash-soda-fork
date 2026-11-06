@@ -57,3 +57,8 @@ v = int.from_bytes(d[off:off + 64], "little")   # off = 8 + 312 * n
 val = lambda bit: ((v >> bit) & 63) + 40
 control_balon = val(217)
 ```
+
+## Uso en el catálogo (06-nov)
+- `tools/catalogo_pesdb.py` ya guarda en cada jugador `habilidades` (las 25 de la tabla) y una media estimada `rating` con `rating_estimado = True`.
+- P: `estimar_media` = promedio de las habilidades clave del grupo de puestos (PT, defensa, medio, ataque) + un ajuste por grupo, calibrado con Messi 94, Piqué 87 y Ter Stegen 89 (los tres salen exactos). No es la fórmula de PES: puede fallar por 1–3 puntos en otros jugadores. Sirve para rareza, precio y filtros de agentes (media_min). Un `--extra` con `rating` la reemplaza.
+- Para que la PC lo use: volver a correr `catalogo_pesdb.py PlayerAssignment.bin --player Player.bin -o catalogo.json` con el Player.bin del PES base.

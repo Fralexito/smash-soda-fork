@@ -47,20 +47,57 @@ def leer_asignaciones(datos):
 
 POSICIONES = ["PT", "DFC", "LI", "LD", "MCD", "MC", "MDI", "MDD", "MO", "EI", "ED", "SD", "DC"]
 
+# C (RC 06-nov, RE_PLAYERBIN_HABILIDADES.md): cada habilidad = 6 bits = valor - 40, comprobado
+# con 5 jugadores del PES base.
+HABILIDADES = {
+    "act_ofensiva": 306, "control": 217, "drible": 288, "posesion": 352, "pase_ras": 199,
+    "pase_bombeado": 338, "finalizacion": 332, "cabeceo": 224, "balon_parado": 186,
+    "efecto": 268, "act_defensiva": 211, "recuperacion": 248, "agresividad": 320,
+    "act_portero": 262, "atajar": 300, "despejar": 205, "reflejos": 256, "cobertura": 236,
+    "velocidad": 242, "aceleracion": 280, "potencia_tiro": 294, "salto": 230,
+    "contacto": 326, "equilibrio": 312, "resistencia": 274,
+}
+
+# P (06-nov): la media real de PES es una suma ponderada por posición que no se guarda y aún
+# no se leyó del exe. Mientras tanto: promedio de las habilidades clave de cada grupo de
+# puestos + un ajuste por grupo, calibrado con Messi (94), Piqué (87) y Ter Stegen (89).
+CLAVE_POR_GRUPO = {
+    "PT": (["act_portero", "act_portero", "atajar", "despejar", "reflejos", "cobertura",
+            "salto"], -5),
+    "DEF": (["act_defensiva", "recuperacion", "agresividad", "cabeceo", "salto", "contacto",
+             "velocidad", "pase_ras"], 2),
+    "MED": (["pase_ras", "pase_bombeado", "control", "posesion", "act_ofensiva",
+             "recuperacion", "resistencia", "drible"], 0),
+    "ATA": (["act_ofensiva", "control", "drible", "posesion", "finalizacion", "pase_ras",
+             "aceleracion", "equilibrio", "efecto"], 0),
+}
+GRUPO_DE_PUESTO = {0: "PT", 1: "DEF", 2: "DEF", 3: "DEF", 4: "MED", 5: "MED", 6: "MED",
+                   7: "MED", 8: "MED", 9: "ATA", 10: "ATA", 11: "ATA", 12: "ATA"}
+
+
+def estimar_media(hab, puesto):
+    claves, ajuste = CLAVE_POR_GRUPO[GRUPO_DE_PUESTO.get(puesto, "MED")]
+    valor = sum(hab[k] for k in claves) / len(claves) + ajuste
+    return max(40, min(99, round(valor)))
+
 
 def leer_fichas(datos):
     """C (05-nov): los primeros 64 B del registro como entero LE de 512 bits.
     Posición registrada = bits 370-373 (0 PT … 12 DC, ver POSICIONES; 6, 7 y 11 por orden
     estándar, sin ejemplo visto). Nación = bits 169-175 (índice de nación del juego, coincide
-    con la selección nacional en el 89 %). La media no está guardada."""
+    con la selección nacional en el 89 %). Habilidades: HABILIDADES (6 bits, valor - 40).
+    La media no está guardada: se estima con estimar_media (P) y queda rating_estimado = True.
+    Un --extra con «rating» la reemplaza."""
     fichas = {}
     for off in range(8, len(datos) - 311, 312):
         v = int.from_bytes(datos[off:off + 64], "little")
         pid = v & 0xFFFFFFFF
         if pid:
             pos = (v >> 370) & 15
+            hab = {k: ((v >> b) & 63) + 40 for k, b in HABILIDADES.items()}
             fichas[str(pid)] = {"posicion": pos, "posicion_txt": POSICIONES[pos] if pos < 13 else "",
-                                "nacion": (v >> 169) & 127}
+                                "nacion": (v >> 169) & 127, "habilidades": hab,
+                                "rating": estimar_media(hab, pos), "rating_estimado": True}
     return fichas
 
 

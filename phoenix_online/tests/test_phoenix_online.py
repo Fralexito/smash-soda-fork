@@ -772,6 +772,12 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         reg2 = bits.to_bytes(64, "little") + reg[64:]
         ficha = cp.leer_fichas(bytes(8) + reg2)["1001"]
         self.assertEqual((ficha["posicion_txt"], ficha["nacion"]), ("ED", 16))
+        # habilidades: 6 bits = valor - 40 (control de balón en el bit 217)
+        bits3 = 1001 | (12 << 370) | ((96 - 40) << 217) | ((95 - 40) << 332)
+        ficha3 = cp.leer_fichas(bytes(8) + bits3.to_bytes(64, "little") + reg[64:])["1001"]
+        self.assertEqual((ficha3["habilidades"]["control"], ficha3["habilidades"]["finalizacion"],
+                          ficha3["habilidades"]["drible"]), (96, 95, 40))
+        self.assertTrue(ficha3["rating_estimado"])
         cat = cp.armar(cp.leer_asignaciones(cp.descomprimir_wesys(crudo)), {"1001": {"rating": 90}}, nombres)
         self.assertEqual(cat["jugadores"]["1001"]["nombre"], "L. MESSI")
         self.assertEqual((len(cat["equipos"]["108"]), len(cat["equipos"]["109"])), (20, 20))
