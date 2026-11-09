@@ -32,7 +32,7 @@
 #include <d3dcompiler.h>
 #include "phoenix_api.h"
 
-#define PHX_CORE_VERSION "0.5.4"
+#define PHX_CORE_VERSION "0.5.47"
 
 namespace {
 
@@ -61,18 +61,21 @@ void logf(const char* fmt, ...) {
     int tag = !strncmp(msg, "[SUB]", 5) ? 0 : !strncmp(msg, "[BALL]", 6) ? 1 : !strncmp(msg, "[JUG]", 5) ? 2 : -1;
     if (tag == 1 && (strstr(msg, "localizada") || strstr(msg, "perdi") || strstr(msg, "escaneo"))) tag = -1;
     if (tag >= 0) { ULONGLONG n = GetTickCount64(); if (n - tUlt[tag] < 1000) return; tUlt[tag] = n; }
+    // 0.5.38: logf SERIALIZADO (SRWLOCK) y abierto con _fsopen(_SH_DENYNO): fopen_s abre con DENYWR y, con varios hilos logueando a la vez, el segundo fallaba (linea perdida) y mi reintento de 0.5.37 ROTABA el archivo en cada colision (rotaba cada ~5 s a ~4 KB). Ahora solo se rota por tamano (6 MB = 6*1024*1024 B) y el fallo de apertura se reintenta sin mover nada.
+    static SRWLOCK lk = SRWLOCK_INIT; AcquireSRWLockExclusive(&lk);
     std::string ruta = g_carpeta + "phoenix_core.log";
     WIN32_FILE_ATTRIBUTE_DATA fa;
-    if (GetFileAttributesExA(ruta.c_str(), GetFileExInfoStandard, &fa) && fa.nFileSizeHigh == 0 && fa.nFileSizeLow > 20u * 1024 * 1024)
+    if (GetFileAttributesExA(ruta.c_str(), GetFileExInfoStandard, &fa) && fa.nFileSizeHigh == 0 && fa.nFileSizeLow > 6u * 1024u * 1024u)
         MoveFileExA(ruta.c_str(), (ruta + ".1").c_str(), MOVEFILE_REPLACE_EXISTING);
-    FILE* f = nullptr;
-    if (fopen_s(&f, ruta.c_str(), "ab") != 0 || !f) return;
+    FILE* f = _fsopen(ruta.c_str(), "ab", _SH_DENYNO); DWORD err = 0;
+    if (!f) { err = GetLastError(); Sleep(2); f = _fsopen(ruta.c_str(), "ab", _SH_DENYNO); }
+    if (!f) { std::string alt = g_carpeta + "phoenix_core_alt.log"; f = _fsopen(alt.c_str(), "ab", _SH_DENYNO); if (!f) { ReleaseSRWLockExclusive(&lk); return; } fprintf(f, "(no se pudo abrir phoenix_core.log, error %lu) ", (unsigned long)err); }
     SYSTEMTIME t; GetLocalTime(&t);
-    fprintf(f, "%04d-%02d-%02d %02d:%02d:%02d.%03d  ", t.wYear, t.wMonth, t.wDay, t.wHour, t.wMinute, t.wSecond,
-            t.wMilliseconds);
+    fprintf(f, "%04d-%02d-%02d %02d:%02d:%02d.%03d  ", t.wYear, t.wMonth, t.wDay, t.wHour, t.wMinute, t.wSecond, t.wMilliseconds);
     fputs(msg, f);
     fputs("\r\n", f);
     fclose(f);
+    ReleaseSRWLockExclusive(&lk);
 }
 
 bool existe(const std::string& ruta) { return GetFileAttributesA(ruta.c_str()) != INVALID_FILE_ATTRIBUTES; }
@@ -442,7 +445,9 @@ bool leerSeguro(const void* dir, void* out, size_t n) {
     __try { memcpy(out, dir, n); return true; }
     __except (EXCEPTION_EXECUTE_HANDLER) { return false; }
 }
-bool escribirSeguro(void* dir, const void* in, size_t n) {   // 0.4.92: la restauración al salir escribía en un registro de IA ya liberado (cierre phoenix_core.dll+0x1CFC4, 14:38 del 28-oct)
+volatile LONG g_cerrando = 0;   // 0.5.28b: PES se esta cerrando (ya no hay ventana): el Core deja de escribir en la memoria del juego (cierre con c0000005 en PES2021.exe+0x3FE2CD: asignador del juego, posible memoria pisada por los hilos del Core mientras el juego libera)
+bool escribirSeguro(void* dir, const void* in, size_t n) {
+    if (g_cerrando) return false;   // 0.4.92: la restauración al salir escribía en un registro de IA ya liberado (cierre phoenix_core.dll+0x1CFC4, 14:38 del 28-oct)
     __try { memcpy(dir, in, n); return true; }
     __except (EXCEPTION_EXECUTE_HANDLER) { return false; }
 }
@@ -459,6 +464,16 @@ Ev g_ev[kEvs];
 volatile LONG g_escr = 0;
 LONG g_leido = 0, g_perdidos = 0;
 size_t g_bytesSonda = 0;
+float g_sondaLogF = 0.0f;   // 0.5.44 json sonda_partido_log (0/1, viva)
+// 0.5.44: rotacion de archivos que crecian sin limite (D: se quedo sin espacio). Se rota a nombre.1 al pasar de `tope`; NUNCA se borra ni se pisa un .1 grande heredado (>tope*1.2): en ese caso solo se avisa una vez.
+void rotarGrande(const char* nombre, size_t tope) {
+    std::string ruta = g_carpeta + nombre; WIN32_FILE_ATTRIBUTE_DATA fa;
+    if (!GetFileAttributesExA(ruta.c_str(), GetFileExInfoStandard, &fa)) return;
+    unsigned long long sz = ((unsigned long long)fa.nFileSizeHigh << 32) | fa.nFileSizeLow; if (sz <= tope) return;
+    std::string v = ruta + ".1"; WIN32_FILE_ATTRIBUTE_DATA fb; unsigned long long sz1 = 0; bool hay1 = GetFileAttributesExA(v.c_str(), GetFileExInfoStandard, &fb); if (hay1) sz1 = ((unsigned long long)fb.nFileSizeHigh << 32) | fb.nFileSizeLow;
+    if (hay1 && sz1 > (unsigned long long)(tope * 1.2)) { static std::string avisados; if (avisados.find(nombre) == std::string::npos) { avisados += nombre; logf("[ROTAR] %s (%llu MB) NO se rota: %s.1 ya existe y es grande (%llu MB, heredado); no se borra nada. Vaciarlo a mano", nombre, sz >> 20, nombre, sz1 >> 20); } return; }
+    if (MoveFileExA(ruta.c_str(), v.c_str(), MOVEFILE_REPLACE_EXISTING)) logf("[ROTAR] %s (%llu MB) -> %s.1", nombre, sz >> 20, nombre);
+}
 const size_t kTopeSonda = 20u << 20;     // 20 MB y deja de escribir
 
 Ev& nuevoEv(uint32_t tipo, void* ret) {
@@ -759,9 +774,12 @@ static int restaurarBloquesCampo() { uint8_t nuevo[36]; bloqueNuevo(nuevo); retu
 // Cajas de portería y del campo (.data, copiadas de .rdata al arrancar; el motor de colisiones y las decisiones de tiro/despeje las
 // leen cada cuadro): 6 vectores de 16 B en exe+0x37CF4C0 (RVA del exe 1.1.0.0 de PES 2021; se comprueba el contenido antes de escribir).
 static const float kCajasOrig[24] = { 52.44f,0,-4.35472f,0,  55.5047f,2.903f,4.354449f,0,  -52.44f,2.903f,4.354449f,0,  52.56f,50,35.5f,0,  -55.5047f,0,-4.35472f,0,  -52.56f,0,-35.5f,0 };
+bool g_golCajaBoca = true;   // 0.5.24 json gol_caja_boca (true): la caja de detección de gol usa la BOCA real del arco (z = ±(hw+0.15), altura hh+0.1) en vez de ±4.35 × 2.903 del arco original; solo con arco_medida > 0
 static void cajasNuevas(float* f) {
     float largo = (float)g_canchaLargo, ancho = (float)g_canchaAncho, lin = largo - 0.12f, fon = lin + 3.0647f;
-    const float n[24] = { lin,0,-4.35472f,0,  fon,2.903f,4.354449f,0,  -lin,2.903f,4.354449f,0,  largo,50,ancho + 1.44f,0,  -fon,0,-4.35472f,0,  -largo,0,-(ancho + 1.44f),0 };
+    float zb = 4.35472f, zb2 = 4.354449f, yh = 2.903f;
+    if (g_golCajaBoca && (int)(g_arcoMedidaF + 0.5f) > 0) { float mw = 7.32f, mh = 2.44f; medidaWH(mw, mh); zb = zb2 = mw * 0.5f + 0.15f; yh = mh + 0.1f; }
+    const float n[24] = { lin,0,-zb,0,  fon,yh,zb2,0,  -lin,yh,zb2,0,  largo,50,ancho + 1.44f,0,  -fon,0,-zb,0,  -largo,0,-(ancho + 1.44f),0 };
     memcpy(f, n, sizeof n);
     if (g_cajasFisicaGrandes) { memcpy(f + 12, kCajasOrig + 12, 4 * sizeof(float)); memcpy(f + 20, kCajasOrig + 20, 4 * sizeof(float)); }   // vec4 3 y 5 = caja del campo
 }
@@ -839,24 +857,29 @@ bool canchaQuitar(Feature&) {
 volatile LONG g_pelotaOn = 0; HANDLE g_hiloPelota = nullptr;
 volatile LONG g_vigiaPelotaArmada = 0;
 uint8_t* volatile g_pelotaSeguida = nullptr;   // objeto de la pelota localizado por hiloPelota (para la vigía de escritura)
+// 0.5.6: tick de la última vez que hiloPelota vio moverse la pelota seguida (>0.05 m) y de la última pérdida/«0 candidatos»; arqueroElegible los usa para no bloquear al portero con una posición vieja.
+volatile ULONGLONG g_tPelotaMovio = 0, g_tPelotaPerdida = 0;
+// 0.5.16: respaldo relajado (g_bolaRelajada): tras 3 escaneos estrictos vacíos se acepta cualquier objeto con +248==0, +312<=1 y y 0.05..0.4 (sin exigir +492) que se mueva de verdad; el límite de región pasa de 512 MB a 3 GB.
+volatile LONG g_bolaRelajada = 0;
 static bool pareceBola(uint8_t* o) {
     uint32_t a = 0, b = 0, c = 0; float x = 0, y = 0, z = 0;
     if (!leerSeguro(o + 248, &a, 4) || !leerSeguro(o + 312, &b, 4) || !leerSeguro(o + 492, &c, 4)) return false;
-    if (a != 0 || b > 1 || (c != 0x10001 && c != 0x80001)) return false;
+    if (a != 0 || b > 1 || (!g_bolaRelajada && c != 0x10001 && c != 0x80001)) return false;
     if (!leerSeguro(o + 208, &x, 4) || !leerSeguro(o + 212, &y, 4) || !leerSeguro(o + 216, &z, 4)) return false;
     return x == x && z == z && fabsf(x) < 200 && fabsf(z) < 200 && y > 0.05f && y < 0.4f;
 }
 static void escanearBolas(std::vector<uint8_t*>& out) {
+    const bool rel = g_bolaRelajada != 0;
     MEMORY_BASIC_INFORMATION mbi; uint8_t* a = reinterpret_cast<uint8_t*>(0x10000);
     while (a < reinterpret_cast<uint8_t*>(0x7FFE0000ull) && VirtualQuery(a, &mbi, sizeof mbi)) {
         uint8_t* ini = static_cast<uint8_t*>(mbi.BaseAddress); size_t tam = mbi.RegionSize;
-        if (mbi.State == MEM_COMMIT && mbi.Type == MEM_PRIVATE && mbi.Protect == PAGE_READWRITE && tam >= 640 && tam <= (512u << 20)) {
+        if (mbi.State == MEM_COMMIT && mbi.Type == MEM_PRIVATE && mbi.Protect == PAGE_READWRITE && tam >= 640 && tam <= (size_t)0xC0000000u) {
             __try {
                 for (size_t o = 0; o + 640 <= tam; o += 16) {
                     uint8_t* q = ini + o;
                     if (*reinterpret_cast<uint32_t*>(q + 248) != 0 || *reinterpret_cast<uint32_t*>(q + 312) > 1) continue;
                     uint32_t c = *reinterpret_cast<uint32_t*>(q + 492);
-                    if (c != 0x10001 && c != 0x80001) continue;
+                    if (!rel && c != 0x10001 && c != 0x80001) continue;
                     float x = *reinterpret_cast<float*>(q + 208), y = *reinterpret_cast<float*>(q + 212), z = *reinterpret_cast<float*>(q + 216);
                     if (x == x && z == z && fabsf(x) < 200 && fabsf(z) < 200 && y > 0.05f && y < 0.4f) out.push_back(q);
                     if (out.size() > 400) return;
@@ -866,30 +889,66 @@ static void escanearBolas(std::vector<uint8_t*>& out) {
         a = ini + tam;
     }
 }
+// 0.5.15 [BALL_DIAG] (SOLO LECTURA, límite 12 volcados): cuando el escaneo estricto da 0 candidatos se anota (a) cuántos objetos cumplen el patrón relajado (+248==0, +312<=1, y 0.05..0.4, sin exigir +492) y el histograma de los valores
+// de +492 de los que tienen y≈0.11 (para ver qué cambió), y (b) el puntero BallInfo del partido (raiz+0x2970, catálogo cap_62) con sus primeros 0x80 bytes como dwords/float, para localizar la posición de la pelota por una vía estable.
+static void diagBola() {
+    static LONG nD = 0; if (InterlockedIncrement(&nD) > 12) return;
+    uint32_t hv[64]; int hc[64]; int hn = 0; int total = 0; int grandes = 0; size_t mayor = 0; float ej[3][4]; uint8_t* ejp[3] = { nullptr, nullptr, nullptr };
+    MEMORY_BASIC_INFORMATION mbi; uint8_t* a = reinterpret_cast<uint8_t*>(0x10000);
+    while (a < reinterpret_cast<uint8_t*>(0x7FFE0000ull) && VirtualQuery(a, &mbi, sizeof mbi)) {
+        uint8_t* ini = static_cast<uint8_t*>(mbi.BaseAddress); size_t tam = mbi.RegionSize;
+        if (mbi.State == MEM_COMMIT && mbi.Type == MEM_PRIVATE && mbi.Protect == PAGE_READWRITE && tam > (512u << 20)) { ++grandes; if (tam > mayor) mayor = tam; }
+        if (mbi.State == MEM_COMMIT && mbi.Type == MEM_PRIVATE && mbi.Protect == PAGE_READWRITE && tam >= 640 && tam <= (512u << 20)) {
+            __try {
+                for (size_t o = 0; o + 640 <= tam; o += 16) {
+                    uint8_t* q = ini + o;
+                    if (*reinterpret_cast<uint32_t*>(q + 248) != 0 || *reinterpret_cast<uint32_t*>(q + 312) > 1) continue;
+                    float x = *reinterpret_cast<float*>(q + 208), y = *reinterpret_cast<float*>(q + 212), z = *reinterpret_cast<float*>(q + 216);
+                    if (!(x == x && z == z && fabsf(x) < 200 && fabsf(z) < 200 && y > 0.09f && y < 0.14f)) continue;
+                    ++total; { uint32_t cv = *reinterpret_cast<uint32_t*>(q + 492); int k = 0; while (k < hn && hv[k] != cv) ++k; if (k == hn && hn < 64) { hv[hn] = cv; hc[hn] = 0; ++hn; } if (k < hn) ++hc[k]; }
+                    if (total <= 3) { ejp[total - 1] = q; ej[total - 1][0] = x; ej[total - 1][1] = y; ej[total - 1][2] = z; }
+                    if (total > 3000) break;
+                }
+            } __except (EXCEPTION_EXECUTE_HANDLER) {}
+        }
+        if (total > 3000) break;
+        a = ini + tam;
+    }
+    char b[400]; int n = 0; for (int r = 0; r < 6 && r < hn; ++r) { int bi2 = r; for (int k = r + 1; k < hn; ++k) if (hc[k] > hc[bi2]) bi2 = k; std::swap(hc[r], hc[bi2]); std::swap(hv[r], hv[bi2]); n += sprintf_s(b + n, sizeof(b) - n, " 0x%X x%d", hv[r], hc[r]); }
+    logf("[BALL_DIAG] #%ld relajado (y 0.09-0.14, +248==0, +312<=1): %d objetos; +492 más frecuentes:%s", (long)nD, total, n ? b : " (ninguno)");
+    logf("[BALL_DIAG]   regiones RW privadas >512 MB (antes NO escaneadas): %d, la mayor %llu MB", grandes, (unsigned long long)(mayor >> 20));
+    for (int i = 0; i < 3 && ejp[i]; ++i) { MEMORY_BASIC_INFORMATION mi; unsigned long long rt = 0; DWORD pr = 0, ty = 0; if (VirtualQuery(ejp[i], &mi, sizeof mi)) { rt = mi.RegionSize; pr = mi.Protect; ty = mi.Type; } logf("[BALL_DIAG]   ej%d %p pos=(%.2f,%.2f,%.2f) +492=0x%X región prot=0x%lX tipo=0x%lX tam=%llu MB", i, (void*)ejp[i], ej[i][0], ej[i][1], ej[i][2], *reinterpret_cast<uint32_t*>(ejp[i] + 492), pr, ty, rt >> 20); }
+    uint8_t* raiz = nullptr; uint8_t* bi = nullptr;
+    if (leerSeguro(g_globalPartido, &raiz, 8) && raiz && leerSeguro(raiz + 0x2970, &bi, 8) && bi) {
+        uint32_t d[32]; if (leerSeguro(bi, d, sizeof d)) { char l[900]; int m = 0; for (int i = 0; i < 32; ++i) { float f; memcpy(&f, &d[i], 4); m += (fabsf(f) < 1000.0f && f == f && d[i] != 0) ? sprintf_s(l + m, sizeof(l) - m, " +%X=%.2f", i * 4, f) : sprintf_s(l + m, sizeof(l) - m, " +%X=0x%X", i * 4, d[i]); }
+            logf("[BALL_DIAG]   raiz+0x2970 -> %p:%s", (void*)bi, l); }
+    } else logf("[BALL_DIAG]   raiz+0x2970 no legible (raiz=%p)", (void*)raiz);
+}
 DWORD WINAPI hiloPelota(LPVOID) {
-    std::vector<uint8_t*> cand; std::vector<float> px, pz; bool tw = false; ULONGLONG ultimoEscaneo = 0; uint8_t* seguida = nullptr;
+    std::vector<uint8_t*> cand; std::vector<float> px, pz; bool tw = false; ULONGLONG ultimoEscaneo = 0; uint8_t* seguida = nullptr; int vacios = 0;
     static uint32_t previo[160]; bool tengoPrevio = false; int lineas = 0; ULONGLONG ventana = 0;
     ULONGLONG tBandera = 0; bool paredes = false; double LX = 19.5, LZ = 11.5;
     while (g_pelotaOn) {
         Sleep(paredes ? 8 : 50);
         bool hay = trainingWorkEstable();
-        if (!hay) { tw = false; seguida = nullptr; cand.clear(); continue; }
+        if (!hay) { tw = false; seguida = nullptr; g_pelotaSeguida = nullptr; cand.clear(); continue; }
         if (!tw) { tw = true; ultimoEscaneo = 0; }
         ULONGLONG ahora = GetTickCount64();
         if (!seguida && ahora - ultimoEscaneo > 4000) {   // (re)escaneo cada 4 s hasta encontrarla
             cand.clear(); escanearBolas(cand); ultimoEscaneo = GetTickCount64(); px.assign(cand.size(), 1e9f); pz.assign(cand.size(), 1e9f);
             logf("[BALL] escaneo: %u candidatos", (unsigned)cand.size());
+            if (cand.empty()) { g_tPelotaPerdida = GetTickCount64(); diagBola(); if (!g_bolaRelajada && ++vacios >= 3) { InterlockedExchange(&g_bolaRelajada, 1); logf("[BALL] 3 escaneos estrictos vacíos: paso al patrón RELAJADO (sin +492; solo objetos que se mueven)"); } }
         }
         if (!seguida) {
             for (size_t i = 0; i < cand.size(); ++i) {                       // la que se mueve de verdad es la pelota
                 if (!pareceBola(cand[i])) continue;
                 float x = 0, z = 0; leerSeguro(cand[i] + 208, &x, 4); leerSeguro(cand[i] + 216, &z, 4);
-                if (px[i] < 1e8f && (fabsf(x - px[i]) + fabsf(z - pz[i])) > 0.3f) { seguida = cand[i]; g_pelotaSeguida = seguida; g_vigiaPelotaArmada = 0; logf("[BALL] pelota localizada en %p (x=%.2f z=%.2f)", (void*)seguida, x, z); tengoPrevio = false; break; }
+                if (px[i] < 1e8f && (fabsf(x - px[i]) + fabsf(z - pz[i])) > 0.3f) { seguida = cand[i]; g_pelotaSeguida = seguida; g_vigiaPelotaArmada = 0; logf("[BALL] pelota localizada en %p (x=%.2f z=%.2f)", (void*)seguida, x, z); tengoPrevio = false; g_tPelotaMovio = GetTickCount64(); break; }
                 px[i] = x; pz[i] = z;
             }
             continue;
         }
-        if (!pareceBola(seguida)) { logf("[BALL] se perdió la pelota (%p)", (void*)seguida); seguida = nullptr; g_pelotaSeguida = nullptr; cand.clear(); continue; }
+        if (!pareceBola(seguida)) { logf("[BALL] se perdió la pelota (%p)", (void*)seguida); if (g_bolaRelajada) { InterlockedExchange(&g_bolaRelajada, 0); vacios = 0; } g_tPelotaPerdida = GetTickCount64(); seguida = nullptr; g_pelotaSeguida = nullptr; cand.clear(); continue; }
         if (GetTickCount64() - tBandera > 1000) {   // «paredes_on.txt» en la carpeta de Core enciende el rebote en vivo (opcional: «x z» dentro)
             tBandera = GetTickCount64(); std::string t; paredes = leerArchivo(g_carpeta + "paredes_on.txt", t);
             if (paredes) { double a = 0, b = 0; if (sscanf_s(t.c_str(), "%lf %lf", &a, &b) == 2 && a > 5 && b > 3) { LX = a; LZ = b; } }
@@ -906,6 +965,11 @@ DWORD WINAPI hiloPelota(LPVOID) {
                 static int reb = 0; if (++reb <= 200) logf("[PAREDES] rebote (%.2f, %.2f) -> (%.2f, %.2f)", x0, z0, nx, nz);
                 memcpy((uint8_t*)act + 0x70, &nx, 4); memcpy((uint8_t*)act + 0x78, &nz, 4); memcpy((uint8_t*)act + 0xD0, &nx, 4); memcpy((uint8_t*)act + 0xD8, &nz, 4);
             }
+        }
+        {   // 0.5.6: movimiento de la posición que lee arqueroElegible (+0x64/+0x6C) y de la copia +208/+216; >0.05 m = «se movió»
+            static float mx = 1e9f, mz = 1e9f, mx2 = 1e9f, mz2 = 1e9f; float px64, pz64, px208, pz208;
+            memcpy(&px64, (uint8_t*)act + 0x64, 4); memcpy(&pz64, (uint8_t*)act + 0x6C, 4); memcpy(&px208, (uint8_t*)act + 208, 4); memcpy(&pz208, (uint8_t*)act + 216, 4);
+            if (!(mx < 1e8f) || fabsf(px64 - mx) + fabsf(pz64 - mz) > 0.05f || fabsf(px208 - mx2) + fabsf(pz208 - mz2) > 0.05f) { g_tPelotaMovio = GetTickCount64(); mx = px64; mz = pz64; mx2 = px208; mz2 = pz208; }
         }
         float x, z, y; memcpy(&x, (uint8_t*)act + 208, 4); memcpy(&y, (uint8_t*)act + 212, 4); memcpy(&z, (uint8_t*)act + 216, 4);
         if (tengoPrevio) {
@@ -1033,7 +1097,7 @@ bool rescateQuitar(Feature&) { return true; }
 
 // --- reloj_visual_2t (0.4.94, frente Z): suma minutos SOLO a lo que dibuja el HUD (FUN_1420EFEC0: min = floor(t/3600) + base_periodo). Cueva en el call FUN_1420BD500 (RVA 0x20EFFD8, E8 rel32 → 5 B):
 //   mov eax,[rip+DATO]; add [rbp-0x29],eax; call FUN_1420BD500; jmp vuelta. DATO = 45 en el 2.º tiempo (lo pone hiloDosTiempos con g_segundaParte) y 0 fuera: no toca S, el job ni el gestor, ni los segundos ni el «+N».
-uint32_t* g_relojVisualDato = nullptr; volatile LONG g_relojVisualOn = 0;
+uint32_t* g_relojVisualDato = nullptr; volatile LONG g_relojVisualOn = 0; bool g_finReloj90 = true;   // 0.5.19d json «final_reloj_90» (true): durante la pantalla del final el reloj visual suma 90 (el panel mostraba «45 min»)
 bool relojVisualInstalar(Feature& f) {
     if (!g_relojVisualDato) {
         uint8_t* sig = firmaUnica("codigo", "4C 89 7D DB 44 89 7D E3 E8 ?? ?? ?? ?? 44 38 3D ?? ?? ?? ?? 41 0F 45 C7 83 F8 06 77 0F 44 38 BE", f.id);
@@ -1221,6 +1285,8 @@ void volcarSonda() {
     }
     if (g_perdidos) { sprintf_s(l, "         (perdidos %ld eventos: demasiados de golpe)\r\n", g_perdidos); s += l; g_perdidos = 0; }
     if (s.empty()) return;
+    if (g_sondaLogF < 0.5f) return;   // 0.5.44 sonda_partido_log (por defecto 0): sonda_partido.txt llego a 110 MB y dejo D: sin espacio; solo para diagnostico
+    rotarGrande("sonda_partido.txt", 5u << 20);
     FILE* f = nullptr;
     if (fopen_s(&f, (g_carpeta + "sonda_partido.txt").c_str(), "ab") != 0 || !f) return;
     fwrite(s.data(), 1, s.size(), f);
@@ -1447,9 +1513,15 @@ uint64_t ganchoClear60(int64_t p1) {
     }
     return g_clear60Orig(p1);
 }
+// 0.5.12 (E5, compatibilidad con otros PES2021.exe): las RVAs fijas de FUNCIONES (0x8AC9D0 acumulador de disparo y 0xA48A30 equipo del portero) solo se LLAMAN si el exe es el conocido (fecha/checksum de la base);
+// con otro exe se anota un aviso una vez y esa rama no se ejecuta (el resto de la función y del Core sigue). Las lecturas de datos con RVA fija son seguras (leerSeguro).
+static bool exeConocidoRva() {
+    static int ok = -1; if (ok < 0) { ok = (g_exe.fecha == 0x5F5ED4BF && g_exe.checksum == 0x1B59007B) ? 1 : 0; if (!ok) logf("[RVA_FIJAS] AVISO: exe distinto al conocido (fecha 0x%08X checksum 0x%08X): se omiten las llamadas a RVAs fijas (disparo 0x8AC9D0, equipo del portero 0xA48A30)", g_exe.fecha, g_exe.checksum); }
+    return ok == 1;
+}
 uint64_t ganchoClear68(uint64_t p1, int64_t p2) {
     uint64_t r = g_clear68Orig(p1, p2);
-    if (g_disparoModo >= 7 && r != 0 && trainingReciente()) {
+    if (g_disparoModo >= 7 && r != 0 && trainingReciente() && exeConocidoRva()) {
         reinterpret_cast<FnAcum>(g_exe.base + 0x8AC9D0)(p1, p2, 0x55);
         g_clearUltimo = GetTickCount64();
         float c = 0; leerSeguro(reinterpret_cast<void*>(p1 + 0x20), &c, 4);
@@ -1645,8 +1717,10 @@ bool disparoQuitar(Feature&) { g_disparoOn = 0; ponerParche(g_pdA, false); poner
 // *(raíz + (i+0xBF)*0x28); su posición lógica (x, y, z) está en +0x55C/+0x560/+0x564 (la usa FUN_1406B45D0). Cada 3 s (con TrainingWork)
 // anota las 22 posiciones y cuántos están fuera del rectángulo de la cancha chica (±semilargo+0.5, ±semiancho+0.5). Json: "jugadores_sonda": true.
 volatile LONG g_jugSondaOn = 0; HANDLE g_hiloJug = nullptr; volatile LONG g_ultCursor = -1;
+bool g_rolIa = false; int g_rolIaVal = 1;   // 0.5.18 json street_rol_ia (false) / street_rol_ia_valor (1)
+static bool posJugPC(uint8_t* raiz, int i, float& x, float& z);
 DWORD WINAPI hiloJug(LPVOID) {
-    int tickJ = 0; ULONGLONG tPt = 0;
+    int tickJ = 0; ULONGLONG tPt = 0, tSa = 0, tRol = 0;
     while (g_jugSondaOn) {
         Sleep(250);
         if (trainingWorkEstable() && GetTickCount64() - tPt > 1000) {     // 0.4.66: cada 1 s, si el portero propio (slot 0) está a menos de 10 m de su línea, anota dónde está y a quién controla el mando
@@ -1654,6 +1728,40 @@ DWORD WINAPI hiloJug(LPVOID) {
             if (leerSeguro(g_globalPartido, &raiz0, 8) && raiz0 && leerSeguro(raiz0 + (size_t)0xBF * 0x28, &rec0, 8) && rec0 && leerSeguro(rec0 + 0x55C, p0, 12) && fabsf(p0[0]) < g_canchaLargo - 5.0f) {
                 tPt = GetTickCount64(); static LONG nPt = 0; LONG k = InterlockedIncrement(&nPt);
                 if (k <= 400) logf("[PT_PROPIO] portero en (%.1f,%.1f) lejos de su línea; cursor=%ld", p0[0], p0[2], (long)g_ultCursor);
+            }
+        }
+        // 0.5.8 [SAQUE_ARCO] (SOLO LECTURA, límite 600): cada 500 ms con Street/TrainingWork activo anota tick, sub/k ([SUB]), pelota, portador (jugador de campo a <1.5 m del balón) y x,z de los jugadores de campo en cancha
+        // (portero slot 0/11 aparte), para medir cuánto esperan y dónde se quedan en el saque de arco.
+        // 0.5.18 [ROL_IA]: modo Atacante/Defensor del Entrenamiento libre = TrainingWork+0x14 (0 = Ataque, 1 = Defensa; PROBABLE, frente F del catálogo). Cada 5 s se anota (límite 60) con TW+0xC y TW+0x3C/+0x40 (N de jugadores por lado).
+        // Con json «street_rol_ia»=true (por defecto FALSE hasta ver el valor real) se escribe TW+0x14 = «street_rol_ia_valor» (por defecto 1 = Defensa, donde Frank vio que el COM ataca y presiona) cuando difiere. Solo con Street/TrainingWork estable.
+        if (g_streetActivo && trainingWorkEstable() && GetTickCount64() - tRol >= 5000) {
+            tRol = GetTickCount64(); uint8_t* rz = nullptr; uint8_t* tw = nullptr;
+            if (leerSeguro(g_globalPartido, &rz, 8) && rz && leerSeguro(rz + 0x400, &tw, 8) && tw) {
+                uint32_t r14 = 0xFFFFFFFF, rC = 0xFFFFFFFF, r3C = 0xFFFFFFFF, r40 = 0xFFFFFFFF; leerSeguro(tw + 0x14, &r14, 4); leerSeguro(tw + 0xC, &rC, 4); leerSeguro(tw + 0x3C, &r3C, 4); leerSeguro(tw + 0x40, &r40, 4);
+                static LONG nRol = 0; if (InterlockedIncrement(&nRol) <= 60) logf("[ROL_IA] TW+0x14=%u (0=Ataque 1=Defensa) TW+0xC=%u N_lado0=%u N_lado1=%u street_rol_ia=%d valor=%d", r14, rC, r3C, r40, (int)g_rolIa, (int)g_rolIaVal);
+                if (g_rolIa && r14 != 0xFFFFFFFF && r14 != (uint32_t)g_rolIaVal) { uint32_t nv = (uint32_t)g_rolIaVal; if (memcpy(tw + 0x14, &nv, 4)) logf("[ROL_IA] TW+0x14 %u -> %u (street_rol_ia)", r14, nv); }
+            }
+        }
+        // 0.5.15: sin pelota localizada y sin sub válido no se gasta línea (en la 0.5.14 se agotaron 581/600 con balon=?)
+        bool saUtil = g_pelotaSeguida != nullptr; if (!saUtil) { uint8_t* obS = objPartido(); uint32_t subS = obS ? leerU32(obS, 0x1554) : 0xFFFFFFFF; saUtil = subS != 0xFFFFFFFF; }
+        if (saUtil && g_streetActivo && trainingWorkEstable() && GetTickCount64() - tSa >= 500) {
+            static LONG nSa = 0;
+            if (nSa < 600) {
+                tSa = GetTickCount64(); uint8_t* raizS = nullptr;
+                if (leerSeguro(g_globalPartido, &raizS, 8) && raizS) {
+                    uint8_t* ob = objPartido(); uint32_t sub = ob ? leerU32(ob, 0x1554) : 0xFFFFFFFF, kk = ob ? leerU32(ob, 0x1574) : 0xFFFFFFFF;
+                    float bp[3] = { 0, 0, 0 }; bool hayB = false; uint8_t* bo = g_pelotaSeguida; if (bo && leerSeguro(bo + 0x64, bp, 12)) hayB = true;
+                    char ln[700]; int n = 0, port = -1; float mejor = 1.5f; float gkx[2] = { 0, 0 }, gkz[2] = { 0, 0 }; bool gkok[2] = { false, false };
+                    for (int i = 0; i < 22; ++i) {
+                        float px = 0, pz = 0; if (!posJugPC(raizS, i, px, pz) || fabsf(px) > 60.0f || fabsf(pz) > 40.0f) continue;
+                        if (i == 0 || i == 11) { int e = i == 0 ? 0 : 1; gkx[e] = px; gkz[e] = pz; gkok[e] = true; continue; }
+                        if (hayB) { float d = hypotf(px - bp[0], pz - bp[2]); if (d < mejor) { mejor = d; port = i; } }
+                        n += sprintf_s(ln + n, sizeof(ln) - n, " %d(%.1f,%.1f)", i, px, pz);
+                    }
+                    LONG k = InterlockedIncrement(&nSa);
+                    logf("[SAQUE_ARCO] t=%llu sub=%u k=%u balon=%s(%.1f,%.1f) portador=%d GK0=%s(%.1f,%.1f) GK11=%s(%.1f,%.1f) campo:%s #%ld", (unsigned long long)tSa, sub, kk, hayB ? "" : "?", bp[0], bp[2], port,
+                        gkok[0] ? "" : "?", gkx[0], gkz[0], gkok[1] ? "" : "?", gkx[1], gkz[1], ln, (long)k);
+                }
             }
         }
         if ((++tickJ % 12) != 0) continue;
@@ -1671,13 +1779,100 @@ DWORD WINAPI hiloJug(LPVOID) {
             char* b = i < 11 ? l1 : l2; int& n = i < 11 ? n1 : n2;
             n += sprintf_s(b + n, 600 - n, " %d(%.1f,%.1f)%s", i, p[0], p[2], fu ? "*" : "");
         }
-        logf("[JUG] fuera=%d  L:%s", fuera, l1); logf("[JUG]           V:%s", l2);
+        logf("[JUG] fuera=%d  L:%s", fuera, l1); logf("[JUGV] (rival, idx 11-21; 0.5.19c: etiqueta propia para que el limitador de [JUG] no la descarte) V:%s", l2);
+    }
+    return 0;
+}
+// 0.5.19 jugadores_dentro_reja (json, por defecto true): hilo de ~8 ms que, con Street/TrainingWork estable, proyecta la posición lógica (+0x55C/+0x564) de los jugadores de CAMPO (no porteros) al rectángulo ±(muro_x-0.4) / ±(muro_z-0.4)
+// cuando se salen. Solo escribe si está fuera; [JUG_DENTRO] (límite 400) cuenta correcciones y máxima distancia fuera. Escribir posiciones a veces se recalcula: el log dirá si se mantiene.
+extern double g_muroX, g_muroZ; extern float g_redFondoM;
+bool g_muroTodoAlto = true; float g_muroMargenBola = 0.05f;   // 0.5.30 json muro_margen_bola (m, 0-1, 0.25): la pared lateral/de fondo de la PELOTA queda esa distancia mas adentro para que ni su borde cruce la linea nativa de fuera
+float g_rejaMargen = 1.4f;   // 0.5.29 json reja_margen (m, 0.2-3, 1.4): limite logico de los jugadores = muro - margen (antes muro - 0.4; el exceso medido era <=1.56 m y llegaban a la reja visual)
+static uint8_t* volatile g_destVistos[16]; static volatile LONG g_destCuenta[16];   // 0.5.38: destinos distintos vistos por la copia A (aprox., sin locks) para el resumen
+volatile LONG g_copiaALlamadas = 0, g_copiaAJug = 0, g_rejaHookN = 0, g_rejaHookLlamadas = 0;   // 0.5.37: contadores de los hooks de copia para el resumen cada 10 s
+static uint8_t* volatile g_srcPorSlot[22];   // 0.5.35: ultimo ORIGEN (rdi) visto por la rutina de copia de estado para cada slot (para el HWBP en el origen real: diag_hwbp_base=src)
+static void recortarEstadoOrigen(uint8_t* src, int idx);
+extern volatile LONG g_saquePedido, g_saqueFase, g_descansoFase;   // 0.5.43 watchdog del saque inicial
+float g_wdSegF = 8.0f;   // 0.5.43 street_watchdog_s (VIVA, 0 = apagado; 8 s): reloj corriendo y TODOS los activos inmoviles este tiempo -> se pide el saque central de nuevo (cada 3 s, hasta 5 veces)
+bool g_hiloOrigen = true;   // 0.5.38 json reja_hilo_origen
+volatile LONG g_maskAp = 0, g_maskReset = 0;   // 0.5.32: slots (bits 0-21) que el Core vio APARCADOS (z>=90) en este Street; persiste entre transiciones/revancha; lo usa tambien el hook de copia para mantenerlos aparcados
+bool g_jugDentroReja = true; volatile LONG g_jugDentroN = 0; bool g_reaparcar = true;   // 0.5.26 json street_reaparcar (true): un suplente aparcado (z>=90) que el saque central devuelve al campo (|z|<30) se vuelve a aparcar
+DWORD WINAPI hiloDentroReja(LPVOID) {
+    LONG corr = 0; float maxFuera = 0; ULONGLONG tRes = 0; LONG reinc = 0;
+    while (g_jugSondaOn) {
+        Sleep(1);   // 0.5.25: 8 -> 1 ms (los jugadores salian hasta 1,56 m entre pasadas)
+        const bool tw = trainingWorkEstable();   // 0.5.32: la memoria de aparcados sobrevive a los cortes de TrainingWork (revancha nativa) hasta 20 s sin él; el re-aparcado no exige TrainingWork, solo Street activo
+        { static ULONGLONG tSinTW = 0; ULONGLONG ah0 = GetTickCount64(); if (tw) tSinTW = 0; else { if (!tSinTW) tSinTW = ah0; if (ah0 - tSinTW > 20000) g_maskAp = 0; } }
+        if (InterlockedExchange(&g_maskReset, 0)) g_maskAp = 0;
+        if (!g_jugDentroReja || !g_streetActivo || !g_globalPartido) { g_maskAp = 0; continue; }
+        uint8_t* raiz = nullptr; if (!leerSeguro(g_globalPartido, &raiz, 8) || !raiz) continue;
+        const float mX = (float)(g_muroX > 0 ? g_muroX : g_canchaLargo + 0.2), mZ = (float)(g_muroZ > 0 ? g_muroZ : g_canchaAncho + 0.2);
+        float Lp = mX - g_rejaMargen, Wp = mZ - g_rejaMargen; const float rejaX = mX - 0.05f, rejaZ = mZ - 0.05f;   // reja visual ~ muro - 0.05 (±14.95/±9.95)
+        for (int i = 0; i < 22; ++i) {
+            uint8_t* rec = nullptr; float p[3];   // 0.5.25: porteros (0 y 11) incluidos
+            const bool portero = (i == 0 || i == 11);
+            if (!leerSeguro(raiz + (size_t)(i + 0xBF) * 0x28, &rec, 8) || !rec || !leerSeguro(rec + 0x55C, p, 12)) continue;
+            if (!(fabsf(p[0]) < 200 && fabsf(p[2]) < 200)) continue;
+            if (fabsf(p[2]) >= 90.0f) { if (!portero) g_maskAp |= (1u << i); continue; }   // 0.5.27: los porteros (0 y 11) NUNCA entran en la memoria de aparcados (0.5.26 teletransportaba al GK propio a (0,100) cuando su slot se vio una vez a z>=90)   // 0.5.26: slot aparcado (z~100)
+            if (g_reaparcar && !portero && ((g_maskAp >> i) & 1) && fabsf(p[2]) < 30.0f) {   // 0.5.26: el saque central lo devolvio al campo -> se vuelve a aparcar (todas las copias de posicion)
+                uint32_t blk[48]; float dX = 0.0f - p[0], dZ = 100.0f - p[2];
+                if (leerSeguro(rec + 0x540, blk, sizeof blk)) {
+                    for (int k = 0; k < 48; ++k) { float v; memcpy(&v, &blk[k], 4); float nv = v; bool ch = false;
+                        if (fabsf(v - p[0]) < 0.12f) { nv = v + dX; ch = true; } else if (fabsf(v - p[2]) < 0.12f) { nv = v + dZ; ch = true; }
+                        if (ch) escribirSeguro(rec + 0x540 + k * 4, &nv, 4); }
+                }
+                float cx = 0.0f, cz = 100.0f; escribirSeguro(rec + 0x55C, &cx, 4); escribirSeguro(rec + 0x564, &cz, 4);
+                static LONG nRA = 0; LONG q = InterlockedIncrement(&nRA); if (q <= 150) logf("[REAPARCAR] slot=%d devuelto al campo en (%.1f,%.1f) -> aparcado de nuevo #%ld", i, p[0], p[2], (long)q);
+                continue;
+            }
+            if (g_hiloOrigen && g_srcPorSlot[i] && fabsf(p[0]) < 30.0f && fabsf(p[2]) < 30.0f && (fabsf(p[0]) > Lp || fabsf(p[2]) > Wp)) recortarEstadoOrigen(g_srcPorSlot[i], i);   // 0.5.38 reja_hilo_origen: ademas del registro, el ORIGEN que vio la copia A para ese slot
+            if (!tw) continue;   // 0.5.32: sin TrainingWork solo se re-aparca, no se recorta
+            float LpI = Lp;
+            if (portero && fabsf(p[2]) < 4.2f) { float prof = (float)g_canchaLargo + g_redFondoM - 0.3f; if (prof > LpI) LpI = prof; }   // 0.5.25: el portero puede estar en su area/boca hasta el fondo de la red; fuera de esa franja se recorta como los demas
+            float nx = p[0] > LpI ? LpI : p[0] < -LpI ? -LpI : p[0], nz = p[2] > Wp ? Wp : p[2] < -Wp ? -Wp : p[2];
+            if (nx == p[0] && nz == p[2]) continue;
+            float fuera = fmaxf(fabsf(p[0]) - LpI, fabsf(p[2]) - Wp);
+            if (fabsf(p[0]) >= 30.0f || fabsf(p[2]) >= 30.0f) continue;   // 0.5.19c: APARCADO/oculto (suplentes en z=40..100): NO se toca; entre 6 y 30 m fuera sí se corrige (empujados, celebración)
+            { static LONG nJF = 0; LONG q = InterlockedIncrement(&nJF); if (q <= 120 || q % 500 == 0) logf("[JUG_FUERA] #%ld slot=%d%s pos=(%.2f,%.2f) pasado_limite=%.2f m, vs_reja_visual=%.2f m (%s) lim=(%.1f,%.1f)", (long)q, i, portero ? " (portero)" : "", p[0], p[2], fuera, fmaxf(fabsf(p[0]) - rejaX, fabsf(p[2]) - rejaZ), (fabsf(p[0]) > rejaX || fabsf(p[2]) > rejaZ) ? "TRASPASADA" : "dentro", LpI, Wp); }
+            if (fuera > maxFuera) maxFuera = fuera;
+            uint32_t A[48]; bool dump = false; static LONG nDump = 0;
+            if (InterlockedIncrement(&nDump) <= 14) dump = leerSeguro(rec + 0x540, A, sizeof A);   // 0.5.19c [JUG_DENTRO_DIAG]: qué campos del registro cambian tras corregir (para hallar la posición REAL que recalcula el motor)
+            {   // 0.5.20: el log [JUG_DENTRO_DIAG] (0.5.19c) mostró que +55C/+564 se RECALCULAN desde otra copia (+568/+570, y +5B4/+5BC/+5C0/+5C8 las siguen): escribir solo +55C no frena al jugador. Ahora se desplazan TODAS las copias de la posición del bloque 0x540..0x600 (floats que valen x o z ±0.12) por el mismo delta
+                uint32_t blk[48]; float dX = nx - p[0], dZ = nz - p[2];
+                if (leerSeguro(rec + 0x540, blk, sizeof blk)) {
+                    for (int k = 0; k < 48; ++k) { float v; memcpy(&v, &blk[k], 4); float nv = v; bool ch = false;
+                        if (dX != 0.0f && fabsf(p[0]) > 8.0f && fabsf(v - p[0]) < 0.12f) { nv = v + dX; ch = true; }
+                        else if (dZ != 0.0f && fabsf(p[2]) > 4.0f && fabsf(v - p[2]) < 0.12f) { nv = v + dZ; ch = true; }
+                        if (ch) escribirSeguro(rec + 0x540 + k * 4, &nv, 4); }
+                }
+                escribirSeguro(rec + 0x55C, &nx, 4); escribirSeguro(rec + 0x564, &nz, 4); ++corr;
+            }
+            if (dump) { Sleep(30); uint32_t B[48]; if (leerSeguro(rec + 0x540, B, sizeof B)) { char l[900]; int m = 0; for (int k = 0; k < 48; ++k) if (A[k] != B[k]) { float fa, fb; memcpy(&fa, &A[k], 4); memcpy(&fb, &B[k], 4); m += sprintf_s(l + m, sizeof(l) - m, " +%X:%.2f->%.2f", 0x540 + k * 4, fa, fb); } logf("[JUG_DENTRO_DIAG] idx=%d escrito (%.2f,%.2f)->(%.2f,%.2f); 30 ms después cambian:%s", i, p[0], p[2], nx, nz, m ? l : " (nada)"); } }
+            float q[3]; if (leerSeguro(rec + 0x55C, q, 12) && fabsf(q[0] - nx) < 0.01f && fabsf(q[2] - nz) < 0.01f) { /* mantenida este fotograma */ } else ++reinc;
+            LONG n = InterlockedIncrement(&g_jugDentroN); if (n <= 30) logf("[JUG_DENTRO] idx=%d (%.2f,%.2f) -> (%.2f,%.2f) fuera=%.2f", i, p[0], p[2], nx, nz, fuera);
+        }
+        {   // 0.5.43 [WATCHDOG]
+            static ULONGLONG tW = 0, tFrozen = 0, tUltW = 0; static float pr[22][2]; static float clkIni = -1; static int nTr = 0; ULONGLONG aw = GetTickCount64();
+            if (tw && g_wdSegF > 0.5f && aw - tW > 250) { tW = aw; uint8_t* Sx = nullptr; float clk = -1; if (leerSeguro(raiz + 0x270, &Sx, 8) && Sx) leerSeguro(Sx + 0x1174, &clk, 4);
+                float mov = 0; int act = 0; for (int i = 0; i < 22; ++i) { uint8_t* r = nullptr; float p3[3]; if (leerSeguro(raiz + (size_t)(i + 0xBF) * 0x28, &r, 8) && r && leerSeguro(r + 0x55C, p3, 12) && fabsf(p3[2]) < 30.0f && fabsf(p3[0]) < 30.0f) { ++act; mov += fabsf(p3[0] - pr[i][0]) + fabsf(p3[2] - pr[i][1]); pr[i][0] = p3[0]; pr[i][1] = p3[2]; } else { pr[i][0] = pr[i][1] = 1000.0f; } }
+                if (act >= 2 && mov < 0.04f) { if (!tFrozen) { tFrozen = aw; clkIni = clk; } }
+                else { tFrozen = 0; if (mov > 0.5f) nTr = 0; }
+                bool relojCorre = clk >= 0 && clkIni >= 0 && clk > clkIni + 120.0f;   // 120 unidades = 2 s de reloj de partido
+                if (tFrozen && aw - tFrozen > (ULONGLONG)(g_wdSegF * 1000.0f) && relojCorre && !g_saqueFase && !g_saquePedido && !g_descansoFase && nTr < 5 && aw - tUltW > 3000) {
+                    tUltW = aw; ++nTr; InterlockedExchange(&g_saquePedido, 1);
+                    logf("[WATCHDOG] reloj corriendo (%.0f->%.0f) y %d jugadores inmoviles %.1f s: saque central forzado (intento %d/5)", clkIni, clk, act, (aw - tFrozen) / 1000.0, nTr); } } }
+        { static ULONGLONG tLat = 0; static LONG nLat = 0; ULONGLONG ahL = GetTickCount64(); if (tw && ahL - tLat > 1000 && nLat < 90) { tLat = ahL; ++nLat; char l[700]; int m = sprintf_s(l, "[LATERAL] z (largo x) de los activos:"); for (int i = 0; i < 22; ++i) { uint8_t* r = nullptr; float p3[3]; if (leerSeguro(raiz + (size_t)(i + 0xBF) * 0x28, &r, 8) && r && leerSeguro(r + 0x55C, p3, 12) && fabsf(p3[2]) < 30.0f && fabsf(p3[0]) < 30.0f) m += sprintf_s(l + m, sizeof(l) - m, " %d:%+.1f(%+.1f)", i, p3[2], p3[0]); } logf("%s", l); } }   // 0.5.43: posiciones laterales de los jugadores activos, 1 vez/s (90 veces)
+        { static ULONGLONG tHk = 0; ULONGLONG ah2 = GetTickCount64(); if (ah2 - tHk > 10000) { tHk = ah2; static LONG nHk = 0; if (InterlockedIncrement(&nHk) <= 300) logf("[REJA_HOOK] resumen 10 s: copia A llamadas=%ld de ellas jugadores=%ld; destino B llamadas=%ld recortes B=%ld", (long)g_copiaALlamadas, (long)g_copiaAJug, (long)g_rejaHookLlamadas, (long)g_rejaHookN);
+            { uint8_t* rz = nullptr; uint8_t* recs[22] = {}; if (leerSeguro(g_globalPartido, &rz, 8) && rz) for (int i = 0; i < 22; ++i) leerSeguro(rz + (size_t)(i + 0xBF) * 0x28, &recs[i], 8);
+              int ord[16]; int nd = 0; for (int k = 0; k < 16 && g_destVistos[k]; ++k) ord[nd++] = k; for (int a1 = 0; a1 < nd; ++a1) for (int b1 = a1 + 1; b1 < nd; ++b1) if (g_destCuenta[ord[b1]] > g_destCuenta[ord[a1]]) { int t1 = ord[a1]; ord[a1] = ord[b1]; ord[b1] = t1; }
+              char l[900]; int m = sprintf_s(l, "[REJA_HOOK] destinos distintos=%d; top:", nd); for (int q = 0; q < nd && q < 5; ++q) { uint8_t* d = g_destVistos[ord[q]]; int cerca = -1; long off = 0; for (int i = 0; i < 22; ++i) if (recs[i] && d >= recs[i] - 0x800 && d <= recs[i] + 0x800) { cerca = i; off = (long)(d - recs[i]); break; } m += sprintf_s(l + m, sizeof(l) - m, " %p x%ld(%s", (void*)d, (long)g_destCuenta[ord[q]], cerca < 0 ? "lejos de jugadores)" : ""); if (cerca >= 0) m += sprintf_s(l + m, sizeof(l) - m, "slot %d%+ld)", cerca, off); } logf("%s", l); } } }
+        ULONGLONG ah = GetTickCount64(); if (ah - tRes > 5000) { tRes = ah; static LONG nR = 0; if (corr && InterlockedIncrement(&nR) <= 370) logf("[JUG_DENTRO] resumen: correcciones=%ld no_mantenidas=%ld maxFuera=%.2f m (Lp=%.1f Wp=%.1f)", (long)corr, (long)reinc, maxFuera, Lp, Wp); }
     }
     return 0;
 }
 bool jugSondaInstalar(Feature& f) {
     if (!g_globalPartido && !resolverGlobalPartido(f.id)) { f.estado = "sin firma del global del partido"; return false; }
-    g_jugSondaOn = 1; g_hiloJug = CreateThread(nullptr, 0, hiloJug, nullptr, 0, nullptr);
+    g_jugSondaOn = 1; g_hiloJug = CreateThread(nullptr, 0, hiloJug, nullptr, 0, nullptr); { HANDLE hd = CreateThread(nullptr, 0, hiloDentroReja, nullptr, 0, nullptr); if (hd) CloseHandle(hd); }
     if (!g_hiloJug) { g_jugSondaOn = 0; f.estado = "no se pudo crear el hilo"; return false; }
     f.estado = "ok: anota las posiciones de los 22 jugadores cada 3 s (solo lectura)"; return true;
 }
@@ -1709,6 +1904,9 @@ using FnGoalNetEstado = void (*)(int, int);
 FnGoalNetHit g_goalNetHit = nullptr; FnGoalNetEstado g_goalNetEstado = nullptr;
 volatile LONG g_mallaOn = 0, g_mallaGolpes = 0; volatile ULONGLONG g_mallaUlt = 0;
 volatile LONG g_murosOn = 0, g_murosRebotes = 0;
+float g_redFondoM = 3.3f;   // 0.5.21 json red_fondo_m (m, 1-6, por defecto 3.3): con red_frena_free apagado el fondo de la boca del arco ya NO es infinito (1000 m): hay un muro de seguridad a largo+red_fondo_m (justo detrás de la red dibujada, 3.0 m), para que un tiro fuerte no atraviese la red nativa (0.5.20: la pelota salió por la boca a x=-19.7…-50)
+float g_muroTecho = 40.0f;   // 0.5.19d json muro_techo (m, por defecto 40; 0 = sin techo): techo del rebote vertical. muro_alto pasa a ser la ALTURA de la reja (lateral y fondo): por encima de ella la pelota pasa por encima
+float g_muroAlto = 6.0f; volatile LONG g_muroAltoN = 0, g_muroFugaN = 0;   // 0.5.19 json muro_alto (m, por defecto 6.0; 0 = sin tope): techo lógico: por encima de esa altura la pelota rebota hacia abajo, así no pasa por encima de los muros/reja
 float g_muroRebote = 0.6f, g_muroFric = 0.92f, g_muroFondoRebote = -1.0f, g_muroLatFric = -1.0f, g_muroLatEmpuje = 0.0f, g_arcoAncho = 4.0f, g_arcoAlto = 2.0f; volatile LONG g_arcoChicoOn = 0; double g_muroX = 0, g_muroZ = 0;   // 0.4.95: g_muroFondoRebote = rebote propio de la pared de fondo (<0 = igual que g_muroRebote); g_muroX/Z: 0 =   // 0 = semilargo/semiancho + 0.2
 volatile ULONGLONG g_cursorEqT[2] = { 0, 0 }; volatile ULONGLONG g_empujeHasta = 0; volatile float g_empujeVx = 0.0f;   // 0.4.112: ultimo cursor visto por equipo (hay humano?) y empuje del balon en el saque trabado
 float g_1v1SaqueF = 0.0f; bool g_1v1Siempre = false; volatile ULONGLONG g_1v1BolaHasta = 0; volatile float g_1v1BolaX = 0.0f;   // 0.4.103 street_1v1_saque (0 normal, 1 portero saca del centro, 2 balón en el área del portero que recibió el gol, 3 balón al centro sin pateador)
@@ -1718,6 +1916,7 @@ volatile ULONGLONG g_bolaCentroHasta = 0;   // 0.4.63: mientras dure, la pelota 
 volatile LONG g_tiroOn = 0, g_tiroN = 0; float g_tiroPot = 1.25f, g_tiroAlt = 0.7f;
 volatile LONG g_paseOn = 0, g_paseN = 0; float g_paseVel = 1.2f, g_paseCono = 25.0f, g_paseCorr = 0.6f;   // json pase_rapido_preciso / pase_vel_k / pase_cono_grados / pase_correccion
 static bool posJugPC(uint8_t* raiz, int i, float& x, float& z);
+bool g_gkSacaManos = true; float g_gkPatadaK = 0.6f;   // 0.5.22 json gk_saca_manos (true) / gk_patada_k (0.3-1.0, 0.6)
 uint64_t ganchoBolaPaso(float dt, uint64_t rdx, uint64_t r8, float* S, void* cfg, uint64_t flag) {
     float v0x = S[3], v0y = S[4], v0z = S[5];
     uint64_t r = g_bolaPasoOrig(dt, rdx, r8, S, cfg, flag);
@@ -1809,13 +2008,18 @@ uint64_t ganchoBolaPaso(float dt, uint64_t rdx, uint64_t r8, float* S, void* cfg
         if (g_murosOn) {                                       // muros lógicos del Core (el estado S es el del modelo: persiste)
             const float rb = 0.109f;
             float Lx = (float)(g_muroX > 0 ? g_muroX : g_canchaLargo + 0.2), Wz = (float)(g_muroZ > 0 ? g_muroZ : g_canchaAncho + 0.2);
-            float lim = bocaGol ? (g_redFrenoOn ? largo + 3.05f : 1000.0f) : Lx;   // 0.4.107: con red_frena_free apagado no hay muro de fondo dentro de la boca (prueba de la red nativa)   // 0.4.73: fondo real de la red dibujada = línea de gol + 3,0 m (goal_l_hit.geom: 55,445-55,505 sobre 52,5); antes 3,4 = «malla invisible» 0,4 m más allá           // en la boca del arco la pared está al fondo de la red
+            float lim = bocaGol ? (g_redFrenoOn ? largo + 3.05f : largo + g_redFondoM) : Lx;   // 0.4.107: con red_frena_free apagado no hay muro de fondo dentro de la boca (prueba de la red nativa)   // 0.4.73: fondo real de la red dibujada = línea de gol + 3,0 m (goal_l_hit.geom: 55,445-55,505 sobre 52,5); antes 3,4 = «malla invisible» 0,4 m más allá           // en la boca del arco la pared está al fondo de la red
+            const bool bajo = g_muroTodoAlto || !(g_muroAlto > 0.5f) || y <= g_muroAlto;   // 0.5.30 muro_todo_alto (true): las paredes de la PELOTA llegan hasta muro_techo en todos los lados (un tiro alto salio por encima de muro_alto=6 y el juego dio saque de banda)   // 0.5.19d: la reja solo rebota hasta muro_alto
             bool toco = false; float mv0[3] = { S[3], S[4], S[5] }; const float rf = g_muroFondoRebote >= 0.0f ? g_muroFondoRebote : g_muroRebote;
-            if (x > lim - rb && S[3] > 0) { S[0] = lim - rb; S[3] = -rf * S[3]; S[5] *= g_muroFric; toco = true; }
-            else if (x < -lim + rb && S[3] < 0) { S[0] = -lim + rb; S[3] = -rf * S[3]; S[5] *= g_muroFric; toco = true; }
+            const float rbw = rb + (bocaGol ? 0.0f : g_muroMargenBola);   // 0.5.30: margen de pared de la pelota (no en la boca del arco: el gol)
+            if (x > lim - rbw && S[3] > 0 && (bocaGol || bajo)) { S[0] = lim - rbw; S[3] = -rf * S[3]; S[5] *= g_muroFric; toco = true; }
+            else if (x < -lim + rbw && S[3] < 0 && (bocaGol || bajo)) { S[0] = -lim + rbw; S[3] = -rf * S[3]; S[5] *= g_muroFric; toco = true; }
             const float lf = g_muroLatFric >= 0.0f ? g_muroLatFric : g_muroFric;   // 0.4.95: fricción en x de las paredes laterales (1.0 = vx intacta) y empuje hacia dentro
-            if (z > Wz - rb && S[5] > 0) { S[2] = Wz - rb - g_muroLatEmpuje; S[5] = -g_muroRebote * S[5]; S[3] *= lf; toco = true; }
-            else if (z < -Wz + rb && S[5] < 0) { S[2] = -Wz + rb + g_muroLatEmpuje; S[5] = -g_muroRebote * S[5]; S[3] *= lf; toco = true; }
+            const float rbz = rb + g_muroMargenBola;
+            if (z > Wz - rbz && S[5] > 0 && bajo) { S[2] = Wz - rbz - g_muroLatEmpuje; S[5] = -g_muroRebote * S[5]; S[3] *= lf; toco = true; }
+            else if (z < -Wz + rbz && S[5] < 0 && bajo) { S[2] = -Wz + rbz + g_muroLatEmpuje; S[5] = -g_muroRebote * S[5]; S[3] *= lf; toco = true; }
+            // 0.5.30: pelota que ya esta FUERA de la pared lateral (paso por encima de muro_alto o entre ticks) y no es boca de gol: se devuelve dentro aunque no vaya hacia fuera
+            if (!bocaGol && fabsf(S[0]) < 50.0f && fabsf(S[2]) > Wz + 0.02f && fabsf(S[2]) < 60.0f) { float sz = S[2] > 0 ? 1.0f : -1.0f; S[2] = sz * (Wz - rbz); if (S[5] * sz > 0) S[5] = -g_muroRebote * S[5]; toco = true; LONG nf2 = InterlockedIncrement(&g_muroFugaN); if (nf2 <= 200) logf("[MURO_ALTO] pelota fuera de la pared lateral devuelta (z->%.2f, y=%.1f)", S[2], S[1]); }
             // postes (cilindros verticales en (±largo, ±3,66), radio 0,06) y travesaño (cilindro horizontal en y=2,44): rebote contra la normal
             {
                 const float rp = 0.06f + rb; const float px = (x >= 0 ? largo : -largo);
@@ -1834,10 +2038,13 @@ uint64_t ganchoBolaPaso(float dt, uint64_t rdx, uint64_t r8, float* S, void* cfg
                     }
                 }
             }
+            if (!bocaGol && bajo && fabsf(S[2]) < 50.0f && fabsf(S[0]) > Lx + 0.3f && fabsf(S[0]) < 50.0f) { float sx = S[0] > 0 ? 1.0f : -1.0f; S[0] = sx * (Lx - rb); if (S[3] * sx > 0) S[3] = -rf * S[3]; toco = true; }   // 0.5.25: la pelota quedaba POSADA fuera de la reja (x=15.8, Lx=15, v~0, fuera de la boca): el rebote solo actuaba si iba hacia fuera
             if (toco && g_reboteFactorF > 0.01f && g_reboteFactorF < 0.999f && fabsf(S[0]) > largo - 0.4f) {   // 0.4.111: el «cohete» salía de un tiro fuerte contra el fondo/travesaño (27 m/s -> 23 m/s hacia atrás)
                 float s0 = sqrtf(mv0[0] * mv0[0] + mv0[1] * mv0[1] + mv0[2] * mv0[2]), s1 = sqrtf(S[3] * S[3] + S[4] * S[4] + S[5] * S[5]), lim = s0 * g_reboteFactorF;
                 if (s1 > lim && s1 > 1e-3f) { float k = lim / s1; S[3] *= k; S[4] *= k; S[5] *= k; LONG nf = InterlockedIncrement(&g_reboteFactorN); if (nf <= 60) logf("[REBOTE_TOPE] salida %.1f -> %.1f m/s (entrada %.1f × %.2f) pos=(%.2f,%.2f,%.2f)", s1, lim, s0, g_reboteFactorF, S[0], S[1], S[2]); }
             }
+            if (g_muroTecho > 0.5f && S[1] > g_muroTecho && S[4] > 0) { S[1] = g_muroTecho; S[4] = -g_muroRebote * S[4]; toco = true; LONG na = InterlockedIncrement(&g_muroAltoN); if (na <= 60) logf("[MURO_ALTO] techo #%ld a y=%.1f: vy -> %.1f pos=(%.1f,%.1f,%.1f)", (long)na, g_muroTecho, S[4], S[0], S[1], S[2]); }
+            if ((fabsf(S[0]) > Lx + 0.5f || fabsf(S[2]) > Wz + 0.5f) && fabsf(S[2]) < 50.0f && fabsf(S[0]) < 50.0f) { if (!(bocaGol && fabsf(S[0]) <= largo + 4.5f)) { LONG nf = InterlockedIncrement(&g_muroFugaN); if (nf <= 200) logf("[MURO_ALTO] FUGA #%ld pelota fuera de los muros pos=(%.1f,%.1f,%.1f) v=(%.1f,%.1f,%.1f) Lx=%.1f Wz=%.1f bocaGol=%d hw=%.2f", (long)nf, S[0], S[1], S[2], S[3], S[4], S[5], Lx, Wz, (int)bocaGol, hw); } }
             if (toco) { LONG n = InterlockedIncrement(&g_murosRebotes); if (n <= 80 || n % 500 == 0) logf("[MURO] rebote #%ld pos=(%.2f,%.2f,%.2f) v antes (%.1f,%.1f,%.1f) después (%.1f,%.1f,%.1f)", (long)n, S[0], S[1], S[2], mv0[0], mv0[1], mv0[2], S[3], S[4], S[5]); }
         }
     }
@@ -1849,6 +2056,34 @@ uint64_t ganchoBolaPaso(float dt, uint64_t rdx, uint64_t r8, float* S, void* cfg
             if (sp1 > sp0 * 1.02f + 0.3f && sp1 > 1e-3f) {
                 float k = sp0 / sp1; S[3] *= k; S[4] *= k; S[5] *= k;
                 LONG n = InterlockedIncrement(&g_topeN); if (n <= 40) logf("[TOPE_RED] velocidad %.1f -> %.1f (entrada) pos=(%.2f,%.2f,%.2f)", sp1, sp0, S[0], S[1], S[2]);
+            }
+        }
+    }
+    // 0.5.22 [GK_SAQUE] / gk_saca_manos / gk_patada_k (Street): detecta la SALIDA del balón de un portero (balón casi quieto a < 1.5 m de su portero y velocidad que salta > 6 m/s) y la anota (límite 300).
+    // gk_saca_manos (true): redirige esa salida a un lanzamiento a ras al compañero de campo más cercano a >= 3 m (si no hay, al más lejano), velocidad 5-14 m/s según la distancia; gk_patada_k (0.3-1.0, por defecto 0.6): si saca_manos está apagado, multiplica la velocidad de una patada larga (> 12 m/s).
+    if (g_streetActivo && GetTickCount64() - g_tTrainRed < 3000 && !g_bolaCentroHasta) {   // siempre anota (solo-log si saca_manos=false y patada_k=1.0)
+        float sp0 = sqrtf(v0x * v0x + v0y * v0y + v0z * v0z), sp1 = sqrtf(S[3] * S[3] + S[4] * S[4] + S[5] * S[5]);
+        if (sp0 < 3.0f && sp1 - sp0 > 6.0f) {
+            uint8_t* raiz = nullptr;
+            if (leerSeguro(g_globalPartido, &raiz, 8) && raiz) {
+                int gk = -1; float gdx = 0, gdz = 0;
+                for (int g = 0; g < 2; ++g) { int idxg = g == 0 ? 0 : 11; float gx, gz; if (posJugPC(raiz, idxg, gx, gz) && fabsf(gz) < 30.0f && hypotf(S[0] - gx, S[2] - gz) < 1.5f) { gk = idxg; gdx = gx; gdz = gz; break; } }
+                if (gk >= 0) {
+                    int ini = gk == 0 ? 1 : 12, fin = ini + 10; int mejor = -1, lejos = -1; float dMejor = 1e9f, dLejos = -1; float mx = 0, mz = 0, lx = 0, lz = 0;
+                    for (int i = ini; i < fin; ++i) { float px, pz; if (!posJugPC(raiz, i, px, pz) || fabsf(pz) >= 30.0f || fabsf(px) >= 30.0f) continue; float d = hypotf(px - S[0], pz - S[2]);
+                        if (d >= 3.0f && d < dMejor) { dMejor = d; mejor = i; mx = px; mz = pz; } if (d > dLejos) { dLejos = d; lejos = i; lx = px; lz = pz; } }
+                    int dest = mejor >= 0 ? mejor : lejos; float tx = mejor >= 0 ? mx : lx, tz = mejor >= 0 ? mz : lz, dd = mejor >= 0 ? dMejor : dLejos;
+                    static LONG nGs = 0; LONG k = InterlockedIncrement(&nGs); bool log = k <= 300;
+                    if (g_gkSacaManos && dest >= 0 && dd > 0.5f) {
+                        float v = dd * 1.1f + 3.0f; if (v < 5.0f) v = 5.0f; if (v > 14.0f) v = 14.0f; float ux = (tx - S[0]) / dd, uz = (tz - S[2]) / dd;
+                        float vy = dd > 12.0f ? 3.0f : 0.0f;
+                        if (log) logf("[GK_SAQUE] #%ld portero=%d balon=(%.1f,%.1f) v antes %.1f -> SACA A MANO a idx=%d (%.1f,%.1f) d=%.1f v=%.1f vy=%.1f (patada original %.1f m/s)", (long)k, gk, S[0], S[2], sp0, dest, tx, tz, dd, v, vy, sp1);
+                        S[3] = ux * v; S[5] = uz * v; S[4] = vy;
+                    } else if (g_gkPatadaK < 0.999f && sp1 > 12.0f) {
+                        if (log) logf("[GK_SAQUE] #%ld portero=%d balon=(%.1f,%.1f) PATADA %.1f m/s -> x%.2f = %.1f (destino por defecto idx=%d d=%.1f)", (long)k, gk, S[0], S[2], sp1, g_gkPatadaK, sp1 * g_gkPatadaK, dest, dd);
+                        S[3] *= g_gkPatadaK; S[4] *= g_gkPatadaK; S[5] *= g_gkPatadaK;
+                    } else if (log) logf("[GK_SAQUE] #%ld portero=%d balon=(%.1f,%.1f) salida %.1f m/s sin cambios (saca_manos=%d patada_k=%.2f dest=%d)", (long)k, gk, S[0], S[2], sp1, (int)g_gkSacaManos, g_gkPatadaK, dest);
+                }
             }
         }
     }
@@ -1907,6 +2142,7 @@ static int golesReiniciar() {
     int hechos = 0;
     uint8_t* lista[10]; int nl = 0;
     for (int t = 0; t < 2; t++) if (g_eqGol[t]) lista[nl++] = g_eqGol[t];
+    { uint8_t* rz = nullptr; uint8_t* Mx = nullptr; if (g_globalPartido && leerSeguro(g_globalPartido, &rz, 8) && rz && leerSeguro(rz + 0x150, &Mx, 8) && Mx) for (int t2 = 0; t2 < 2; t2++) { uint8_t* e2 = Mx + 0x750D0 + (size_t)t2 * 0x59650; bool ya = false; for (int j = 0; j < nl; j++) if (lista[j] == e2) ya = true; if (!ya && nl < 10) lista[nl++] = e2; } }   // 0.5.47: los dos bloques de equipo directos (M+0x750D0 + t*0x59650); cada uno solo se toca si su hash es valida
     for (int i = 0; i < 8; i++) { uint8_t* e = (uint8_t*)g_leeStatVistos[i]; if (!e) continue; bool ya = false; for (int j = 0; j < nl; j++) if (lista[j] == e) ya = true; if (!ya && nl < 10) lista[nl++] = e; }
     for (int t = 0; t < nl; t++) {
         uint8_t* eq = lista[t];
@@ -1965,7 +2201,7 @@ void __fastcall ganchoGkUnidad(void* thisp, uint32_t* out, void** ctx) {
     if (!leerSeguro(&ctx[0], &p0, 8) || !p0 || !leerSeguro(p0, &idx, 4) || idx < 0 || idx > 21 || !leerSeguro(&ctx[4], &bs, 8) || !bs || !leerSeguro(g_globalPartido, &raiz, 8) || !raiz) { g_gkUnidadOrig(thisp, out, ctx); return; }
     bool lado = idx > 10;
     uint64_t game = 0; leerSeguro(g_exe.base + 0x36F3DC8, &game, 8);
-    uint8_t* team = game ? reinterpret_cast<uint8_t*>(reinterpret_cast<GkEquipoFn>(g_exe.base + 0xA48A30)(game, lado ? 1u : 0u)) : nullptr;
+    uint8_t* team = (game && exeConocidoRva()) ? reinterpret_cast<uint8_t*>(reinterpret_cast<GkEquipoFn>(g_exe.base + 0xA48A30)(game, lado ? 1u : 0u)) : nullptr;
     int mThis = 0, mTeam = 0; leerSeguro(reinterpret_cast<uint8_t*>(thisp) + 0x40, &mThis, 4); if (team) leerSeguro(team + 0x6D4, &mTeam, 4);
     int mEff = mTeam ? mTeam : mThis;
     float bx = 0, bz = 0, gx = 0, gz = 0; leerSeguro(reinterpret_cast<uint8_t*>(bs) + 0x40, &bx, 4); leerSeguro(reinterpret_cast<uint8_t*>(bs) + 0x48, &bz, 4);
@@ -2040,6 +2276,53 @@ bool uno1Quitar(Feature&) { g_1v1SaqueF = 0.0f; return true; }
 // usuario (SIDE 0 = local, 1 = visita, ver g_jugLado) y escribe «local» en SU instancia y «rival» en la otra. 0 = no tocar. Log [JUGADORES] antes→después.
 float g_jugLocalF = 0.0f, g_jugRivalF = 0.0f, g_jugLadoF = 0.0f; volatile LONG g_jugCantOn = 0; HANDLE g_hiloJugCant = nullptr;
 static void persistirClaveJson(const std::string& id, const std::string& valor);
+
+// --- 0.5.39 frente T: 3 tamanos de cancha (S 30x20, M 42x25, L 75x48) y 3 de arco (A 3x2, B 5x2.2, C 7.32x2.44), independientes. Claves vivas/F9 (numericas): street_tamanos (1 = el Core elige y aplica), cancha_tamano (0 auto, 1 S, 2 M, 3 L),
+// arco_tamano (0 auto, 1 A, 2 B, 3 C). auto cancha: N = max(jugadores por lado) -> <=3 S, 4-6 M, >=7 L; auto arco: S->A, M->B, L->C. Se aplica al ENTRAR a cada partido (antes de que cancha_chica_free parchee cajas y bloques de
+// dimensiones) y escribe content\phoenix\cancha_tamano.ini (tamano=S|M|L, arco=A|B|C) que lee el Lua de estadio/arcos de Cancha. Tabla (DISENO_TAMANOS_CORE.md): semi-medidas, muro, techo, red_fondo, area/salida del portero, piso y factores de la IA.
+extern bool g_gkLimiteArea; extern float g_gkAreaRadio, g_arqSalidaMax, g_iaPiso, g_iaPresionK, g_iaAtaqueK, g_iaBaseK;
+float g_muroExtraF = 0.05f;   // 0.5.42 cancha_muro_extra (m, 0-0.5, 0.05, VIVA, al entrar al partido): el muro de la PELOTA = linea + esto (antes +0.3: con muro_z 10.3 el centro de la pelota llegaba a 10.19 > linea 10.0, el juego la daba por FUERA y sacaba de banda); con 0.05 el centro queda en W-0.06
+float g_lineaExtraF = 0.0f;   // 0.5.42 cancha_linea_extra (m, 0-2, 0 por defecto, VIVA; al entrar al partido; OJO: mueve tambien cajas de gol y postes logicos): las lineas LOGICAS del juego (bloque de dimensiones/cajas = lo que decide «fuera») quedan esos metros mas afuera que las lineas dibujadas y que el muro de la pelota (linea+0.3): con muro_z 10.3 > linea 10.0 la pelota llegaba a 10.19, el juego la daba por fuera y sacaba de banda
+float g_tamanosF = 1.0f, g_canchaTamF = 0.0f, g_arcoTamF = 0.0f, g_penalesF = 0.0f;
+static int g_tamActual = 0, g_arcoTamActual = 0;
+void resetEstadosPartido();   // 0.5.43 (definida junto al ayudante del saque)
+int g_ultimoN = 3;   // 0.5.40: ultimo N (jugadores por lado) visto; se guarda en json street_ultimo_n para escribir el .ini al arrancar
+void escribirIniTamano(int n) {   // 0.5.40: solo escribe content\phoenix\cancha_tamano.ini (lo mas pronto posible: arranque, cambio de claves, cambio de N en el menu) sin tocar los globales de juego
+    if (g_tamanosF < 0.5f) return;
+    static const char* nom[3] = { "S", "M", "L" }; static const int largo[3] = { 30, 42, 75 }, ancho[3] = { 20, 25, 48 }; static const int arcoAuto[3] = { 1, 2, 3 };
+    int t = (int)(g_canchaTamF + 0.5f); if (t < 0 || t > 3) t = 0; if (t == 0) t = n <= 3 ? 1 : n <= 6 ? 2 : 3;
+    int a = (int)(g_arcoTamF + 0.5f); if (a < 0 || a > 3) a = 0; if (a == 0) a = arcoAuto[t - 1];
+    static const char* an[4] = { "?", "A", "B", "C" }; static const char* am[4] = { "?", "3x2", "5x2.2", "7.32x2.44" };
+    std::string ini = "tamano=" + std::string(nom[t - 1]) + "\r\narco=" + an[a] + "\r\ncancha=" + std::to_string(largo[t - 1]) + "x" + std::to_string(ancho[t - 1]) + "\r\narco_medida=" + am[a] + "\r\n";
+    std::string ruta = g_carpeta + "..\content\phoenix\cancha_tamano.ini"; std::string prev; if (leerArchivo(ruta, prev) && prev == ini) return;
+    FILE* f = nullptr; if (fopen_s(&f, ruta.c_str(), "wb") == 0 && f) { fwrite(ini.data(), 1, ini.size(), f); fclose(f); }
+    logf("[TAMANO] ini escrito pronto: N=%d -> cancha %s arco %s (%s)", n, nom[t - 1], an[a], f ? "ok" : "NO se pudo escribir");
+}
+void aplicarTamanos(int nPorLado) {
+    g_ultimoN = nPorLado; persistirClaveJson("street_ultimo_n", std::to_string(nPorLado));
+    resetEstadosPartido();   // 0.5.43: solo actua si NO hay un flujo simulado de descanso/final/saque en curso
+    if (g_tamanosF < 0.5f) return;
+    struct TamC { double L, W; float techo, redFondo, gkR, salida, iaPiso, iaPres, iaAtaq, iaBase; bool gkArea; int arcoAuto; const char* nom; };
+    static TamC tab[3] = { { 15.0, 10.0, 40.0f, 3.3f, 5.0f, 3.5f, 1.5f, 2.0f, 1.4f, 1.0f, true, 1, "S" },
+                           { 21.0, 12.5, 40.0f, 3.3f, 6.0f, 4.5f, 2.0f, 1.5f, 1.3f, 1.0f, true, 2, "M" },
+                           { 37.5, 24.0, 60.0f, 3.0f, 5.0f, 3.5f, 3.0f, 1.0f, 1.0f, 1.0f, false, 3, "L" } };
+    static bool guardado = false; static float s_iaPres = 2.0f, s_iaAtaq = 1.4f, s_iaBase = 1.0f, s_iaPiso = 1.5f;
+    if (!guardado) { guardado = true; s_iaPres = g_iaPresionK; s_iaAtaq = g_iaAtaqueK; s_iaBase = g_iaBaseK; s_iaPiso = g_iaPiso; }
+    int t = (int)(g_canchaTamF + 0.5f); if (t < 0 || t > 3) t = 0;
+    if (t == 0) t = nPorLado <= 3 ? 1 : nPorLado <= 6 ? 2 : 3;
+    const TamC& c = tab[t - 1];
+    int a = (int)(g_arcoTamF + 0.5f); if (a < 0 || a > 3) a = 0; if (a == 0) a = c.arcoAuto;   // 1 A, 2 B, 3 C
+    g_canchaLargo = c.L + g_lineaExtraF; g_canchaAncho = c.W + g_lineaExtraF; g_muroX = c.L + g_muroExtraF; g_muroZ = c.W + g_muroExtraF;   // el muro de la pelota queda 0.3 m fuera de la linea, como en S (muro_x 15.3 / muro_z 10.3)
+    g_muroTecho = c.techo; g_redFondoM = c.redFondo; g_gkAreaRadio = c.gkR; g_gkLimiteArea = c.gkArea; g_arqSalidaMax = c.salida;
+    g_iaPiso = (t == 1) ? s_iaPiso : c.iaPiso; g_iaPresionK = (t == 1) ? s_iaPres : c.iaPres; g_iaAtaqueK = (t == 1) ? s_iaAtaq : c.iaAtaq; g_iaBaseK = (t == 1) ? s_iaBase : c.iaBase;
+    g_arcoMedidaF = (a == 1) ? 2.0f : (a == 2) ? 3.0f : 0.0f;   // arco_medida: 2 = 3x2 (A), 3 = 5x2.2 (B), 0 = 7.32x2.44 real (C)
+    g_tamActual = t; g_arcoTamActual = a; InterlockedExchange(&g_rearmaCancha, 1);
+    static const char* an[4] = { "?", "A", "B", "C" }; static const char* am[4] = { "?", "3x2", "5x2.2", "7.32x2.44" };
+    std::string ini = "tamano=" + std::string(c.nom) + "\r\narco=" + an[a] + "\r\ncancha=" + std::to_string((int)(c.L * 2)) + "x" + std::to_string((int)(c.W * 2)) + "\r\narco_medida=" + am[a] + "\r\n";
+    std::string ruta = g_carpeta + "..\content\phoenix\cancha_tamano.ini"; FILE* f = nullptr;
+    if (fopen_s(&f, ruta.c_str(), "wb") == 0 && f) { fwrite(ini.data(), 1, ini.size(), f); fclose(f); }
+    logf("[TAMANO] N=%d -> cancha %s (%.1fx%.1f, muro %.1f/%.1f, techo %.0f, red %.1f, GK radio %.0f%s, IA piso %.1f) arco %s (%s) | ini %s", nPorLado, c.nom, c.L * 2, c.W * 2, g_muroX, g_muroZ, c.techo, c.redFondo, c.gkR, c.gkArea ? "" : " (area nativa)", g_iaPiso, an[a], am[a], existe(ruta) ? "escrito" : "NO escrito");
+}
 DWORD WINAPI hiloJugCant(LPVOID) {
     // 0.4.112: sincronizacion en los dos sentidos, gana el ultimo cambio. Las dos instancias de 0x103C8 B son COPIAS del mismo registro y cada copia tiene dos celdas: +0x3C = grupo atacante y
     // +0x40 = grupo defensor; street_jugadores_lado dice en cual esta MI equipo (0 = +0x3C, 1 = +0x40). Cada celda tiene su variable del panel (local/rival).
@@ -2055,11 +2338,16 @@ DWORD WINAPI hiloJugCant(LPVOID) {
         const char* clave[2]; clave[lado] = "street_jugadores_local"; clave[1 - lado] = "street_jugadores_rival";
         uint8_t* raiz = nullptr; uint8_t* obj = nullptr; uint8_t* dat = nullptr;
         if (!leerSeguro(g_globalPartido, &raiz, 8) || !raiz || !leerSeguro(raiz + 0x3F8, &obj, 8) || !obj || !leerSeguro(obj + 0x10, &dat, 8) || !dat) continue;
+        if (!estaba) {   // 0.5.39: al ENTRAR a un partido se elige/aplica el tamano de cancha y de arco segun los jugadores por lado (panel o, si 0, lo del menu)
+            int n0 = 0; for (int f2 = 0; f2 < 2; ++f2) { int c2 = -1; leerSeguro(dat + 4 + 0x3C + f2 * 4, &c2, 4); int w2 = (int)(*var[f2] + 0.5f); int e2 = w2 >= 1 ? w2 : c2; if (e2 > n0) n0 = e2; }
+            aplicarTamanos(n0 < 1 || n0 > 11 ? 3 : n0);
+        }
         for (int fl = 0; fl < 2; ++fl) {
             int cur = -1; if (!leerSeguro(dat + 4 + 0x3C + fl * 4, &cur, 4) || cur < 0 || cur > 11) continue;
             int w = (int)(*var[fl] + 0.5f);
             if (estaba && cur != visto[fl] && cur != escrito[fl]) {   // el menu cambio la celda: el menu manda
-                *var[fl] = (float)cur; persistirClaveJson(clave[fl], std::to_string(cur)); escrito[fl] = cur; visto[fl] = cur;
+                { int nn = 0; for (int f3 = 0; f3 < 2; ++f3) { int c3 = -1; leerSeguro(dat + 4 + 0x3C + f3 * 4, &c3, 4); if (f3 == fl) c3 = cur; if (c3 > nn) nn = c3; } if (nn >= 1 && nn <= 11) { g_ultimoN = nn; persistirClaveJson("street_ultimo_n", std::to_string(nn)); escribirIniTamano(nn); } }   // 0.5.40: el menu cambio N: .ini listo para el SIGUIENTE partido
+                InterlockedExchange(&g_maskReset, 1); *var[fl] = (float)cur; persistirClaveJson(clave[fl], std::to_string(cur)); escrito[fl] = cur; visto[fl] = cur;
                 if (++nLog <= 300) logf("[JUGADORES] el menu cambio %s a %d -> el panel lo refleja", fl == lado ? "mi equipo" : "rival", cur);
                 continue;
             }
@@ -2073,7 +2361,7 @@ DWORD WINAPI hiloJugCant(LPVOID) {
             for (int c = 0; c < 2; ++c) {
                 uint8_t* celda = dat + 4 + (size_t)c * 0x103C8 + 0x3C + fl * 4;
                 int ant = -1; if (!leerSeguro(celda, &ant, 4) || ant < 0 || ant > 11 || ant == w) continue;
-                if (escribirSeguro(celda, &w, 4) && ++nLog <= 300) logf("[JUGADORES] copia %d, celda +0x%X (%s): %d -> %d (dat=%p%s)", c, 0x3C + fl * 4, fl == lado ? "mi equipo" : "rival", ant, w, (void*)dat, estaba ? "" : ", al entrar");
+                if ((escribirSeguro(celda, &w, 4) ? (InterlockedExchange(&g_maskReset, 1), true) : false) && ++nLog <= 300) logf("[JUGADORES] copia %d, celda +0x%X (%s): %d -> %d (dat=%p%s)", c, 0x3C + fl * 4, fl == lado ? "mi equipo" : "rival", ant, w, (void*)dat, estaba ? "" : ", al entrar");
             }
             escrito[fl] = w; visto[fl] = w;
         }
@@ -2081,6 +2369,180 @@ DWORD WINAPI hiloJugCant(LPVOID) {
     }
     return 0;
 }
+
+// --- 0.5.28 diag_hwbp (DIAGNOSTICO, apagado por defecto): breakpoint de hardware de ESCRITURA (4 bytes) en rec+0x568 del slot diag_hwbp_slot (8 por defecto), puesto desde dentro del proceso
+// (DR0/DR7 con SetThreadContext en cada hilo + AddVectoredExceptionHandler). Anota en el log [HWBP] los RVA que escriben esa posicion (max 150 impactos o 25 s) y limpia los DR. Sirve para hallar la
+// funcion que integra el movimiento del jugador. No adjunta ningun depurador externo.
+int g_hwbpSlot = 8, g_hwbpOff = 0x568, g_hwbpBaseSrc = 0;   // 0.5.35 diag_hwbp_base: 0 = registro del jugador, 1 = el ORIGEN (src) que vio la copia A para ese slot
+   // 0.5.34 diag_hwbp_off (offset dentro del registro del jugador que se vigila; 0x568 por defecto; 0x55C = la posicion que lee el Core)
+ static volatile LONG g_hwbpCorriendo = 0;
+struct HwbpHit { uint64_t rip; uint64_t ret[3]; DWORD tid; uint32_t val; };
+static HwbpHit g_hwbpHits[160]; static volatile LONG g_hwbpN = 0; static uint8_t* g_hwbpAddr = nullptr; static volatile LONG g_hwbpOn = 0; static void* g_hwbpVeh = nullptr; static HANDLE g_hwbpTh = nullptr;
+LONG CALLBACK hwbpVeh(PEXCEPTION_POINTERS ep) {
+    if (!g_hwbpOn || ep->ExceptionRecord->ExceptionCode != EXCEPTION_SINGLE_STEP) return EXCEPTION_CONTINUE_SEARCH;
+    CONTEXT* c = ep->ContextRecord; if (!(c->Dr6 & 1)) return EXCEPTION_CONTINUE_SEARCH;
+    LONG n = InterlockedIncrement(&g_hwbpN) - 1;
+    if (n < 150) { HwbpHit& h = g_hwbpHits[n]; h.rip = c->Rip; h.tid = GetCurrentThreadId(); h.val = 0; memcpy(&h.val, g_hwbpAddr, 4);
+        for (int k = 0; k < 3; ++k) { h.ret[k] = 0; uint64_t* sp = (uint64_t*)(c->Rsp + 8 * k); if (!IsBadReadPtr(sp, 8)) h.ret[k] = *sp; } }
+    c->Dr6 = 0; return EXCEPTION_CONTINUE_EXECUTION;
+}
+static void hwbpPonerDR(bool on) {
+    DWORD yo = GetCurrentThreadId(); HANDLE sn = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0); if (sn == INVALID_HANDLE_VALUE) return;
+    THREADENTRY32 te; te.dwSize = sizeof te; int ok = 0, mal = 0;
+    for (BOOL r = Thread32First(sn, &te); r; r = Thread32Next(sn, &te)) {
+        if (te.th32OwnerProcessID != GetCurrentProcessId() || te.th32ThreadID == yo) continue;
+        HANDLE h = OpenThread(THREAD_SUSPEND_RESUME | THREAD_GET_CONTEXT | THREAD_SET_CONTEXT, FALSE, te.th32ThreadID); if (!h) { ++mal; continue; }
+        if (SuspendThread(h) != (DWORD)-1) {
+            CONTEXT c; memset(&c, 0, sizeof c); c.ContextFlags = CONTEXT_DEBUG_REGISTERS;
+            if (GetThreadContext(h, &c)) { c.Dr0 = on ? (DWORD64)g_hwbpAddr : 0; c.Dr6 = 0; c.Dr7 = on ? (1ull | (1ull << 16) | (3ull << 18)) : 0; if (SetThreadContext(h, &c)) ++ok; else ++mal; } else ++mal;
+            ResumeThread(h);
+        } else ++mal;
+        CloseHandle(h);
+    }
+    CloseHandle(sn); logf("[HWBP] DR %s en %d hilos (fallos %d)", on ? "puestos" : "limpiados", ok, mal);
+}
+DWORD WINAPI hiloHwbp(LPVOID) {
+    int slot = g_hwbpSlot; if (slot < 0 || slot > 21) slot = 8;
+    uint8_t* rec = nullptr;
+    while (g_hwbpOn) {   // 0.5.28b: espera SIN limite a que haya partido con el slot listo; los 25 s empiezan al armar los DR   // espera un partido con TrainingWork y un jugador de campo en posicion sana
+        uint8_t* raiz = nullptr; float p[3];
+        if (trainingWorkEstable() && g_globalPartido && leerSeguro(g_globalPartido, &raiz, 8) && raiz && leerSeguro(raiz + (size_t)(slot + 0xBF) * 0x28, &rec, 8) && rec && leerSeguro(rec + 0x55C, p, 12) && fabsf(p[0]) < 30 && fabsf(p[2]) < 30) { if (!g_hwbpBaseSrc) break; if (g_srcPorSlot[slot]) { rec = g_srcPorSlot[slot]; break; } }
+        rec = nullptr; Sleep(500);
+    }
+    if (!rec || !g_hwbpOn) { logf("[HWBP] cancelado antes de armar (slot %d)", slot); InterlockedExchange(&g_hwbpCorriendo, 0); return 0; }
+    g_hwbpAddr = rec + g_hwbpOff; g_hwbpN = 0;
+    logf("[HWBP] vigilando escrituras en slot %d rec=%p +0x%X (%p)", slot, (void*)rec, g_hwbpOff, (void*)g_hwbpAddr);
+    g_hwbpVeh = AddVectoredExceptionHandler(1, hwbpVeh); hwbpPonerDR(true);
+    ULONGLONG t1 = GetTickCount64();
+    while (g_hwbpOn && GetTickCount64() - t1 < 25000 && g_hwbpN < 150) Sleep(50);
+    hwbpPonerDR(false); Sleep(100); if (g_hwbpVeh) { RemoveVectoredExceptionHandler(g_hwbpVeh); g_hwbpVeh = nullptr; }
+    LONG n = g_hwbpN; if (n > 150) n = 150;
+    logf("[HWBP] fin: %ld impactos en %.1f s", (long)n, (GetTickCount64() - t1) / 1000.0);
+    uint64_t base = (uint64_t)g_exe.base; uint64_t vistos[40]; int cnt[40]; int nv = 0;
+    for (int i = 0; i < n; ++i) { int j = 0; for (; j < nv; ++j) if (vistos[j] == g_hwbpHits[i].rip) break; if (j == nv && nv < 40) { vistos[nv] = g_hwbpHits[i].rip; cnt[nv] = 0; ++nv; } if (j < 40) cnt[j]++; }
+    for (int j = 0; j < nv; ++j) { int pi = 0; for (int i = 0; i < n; ++i) if (g_hwbpHits[i].rip == vistos[j]) { pi = i; break; }
+        const HwbpHit& h = g_hwbpHits[pi]; uint8_t cod[48] = {}; leerSeguro((void*)(vistos[j] - 24), cod, 48); char hex[110] = {}; for (int k = 0; k < 48; ++k) sprintf_s(hex + k * 2, 4, "%02X", cod[k]);
+        logf("[HWBP] RVA 0x%llX (rip tras la escritura) x%d tid=%lu valor=%.3f ret=[0x%llX 0x%llX 0x%llX] bytes[-24..+24]=%s", (unsigned long long)(vistos[j] - base), cnt[j], (unsigned long)h.tid, *(float*)&h.val,
+            (unsigned long long)(h.ret[0] - base), (unsigned long long)(h.ret[1] - base), (unsigned long long)(h.ret[2] - base), hex); }
+    logf("[HWBP] terminado; para repetir: ordenes.txt con diag_hwbp=1 (y diag_hwbp_slot=N)"); InterlockedExchange(&g_hwbpOn, 0); InterlockedExchange(&g_hwbpCorriendo, 0);
+    return 0;
+}
+bool hwbpArrancar() {   // 0.5.28b: tambien desde ordenes.txt (diag_hwbp=1)
+    if (InterlockedCompareExchange(&g_hwbpCorriendo, 1, 0) != 0) return true;
+    g_hwbpOn = 1; HANDLE h = CreateThread(nullptr, 0, hiloHwbp, nullptr, 0, nullptr); if (!h) { g_hwbpOn = 0; InterlockedExchange(&g_hwbpCorriendo, 0); return false; } CloseHandle(h); return true;
+}
+bool hwbpInstalar(Feature& f) {
+    if (!g_globalPartido && !resolverGlobalPartido(f.id)) { f.estado = "sin firma del global del partido"; return false; }
+    if (!hwbpArrancar()) { f.estado = "no se pudo crear el hilo"; return false; }
+    f.estado = "ok (DIAGNOSTICO): espera un partido, vigila +0x568 del slot diag_hwbp_slot unos 25 s y escribe [HWBP]"; return true;
+}
+bool hwbpQuitar(Feature&) { g_hwbpOn = 0; return true; }
+
+// --- 0.5.31 reja_hook_copia: el [HWBP] (0.5.28b, slot 12, 150 impactos) mostro que +0x568/+0x570 de un jugador los ESCRIBE una rutina de copia (RVA 0x431E4D, tras
+// «lea rcx,[rdi+568h]; lea rdx,[rbx+568h]; cmp rdx,rcx; je; mov eax,[rcx]; mov [rdx],eax; mov eax,[rcx+4]; mov [rdx+4],eax; mov eax,[rcx+8]; mov [rdx+8],eax») cada tick; por eso mover
+// las copias desde fuera se revertia. Se engancha ESE bloque de 16 bytes (parche a mitad de funcion con una cueva propia que ejecuta los 16 bytes originales, guarda todo el estado volatil,
+// llama a reCopiaPos(rdx) y vuelve): si el destino (rdx = rec+0x568) es el registro de un jugador de campo, se recorta x/z al limite logico (muro - reja_margen) -> el motor ya parte del valor recortado.
+bool g_rejaHookOn = true;
+static uint8_t* g_recCache[22]; static volatile ULONGLONG g_recCacheT = 0;   // 0.5.41: tabla de los 22 registros en cache (se refresca cada 100 ms): el hook se llama ~60000 veces/s y leer 22 punteros con SEH en cada llamada ahogaba el juego (el saque inicial no avanzaba en 0.5.37/0.5.38)
+static int slotDeRecord(uint8_t* rec) {
+    if (!rec) return -1;
+    ULONGLONG ah = GetTickCount64();
+    if (ah - g_recCacheT > 100) { uint8_t* raiz = nullptr; uint8_t* tmp[22] = {}; if (g_globalPartido && leerSeguro(g_globalPartido, &raiz, 8) && raiz) { for (int i = 0; i < 22; ++i) { uint8_t* r = nullptr; if (leerSeguro(raiz + (size_t)(i + 0xBF) * 0x28, &r, 8)) tmp[i] = r; } for (int i = 0; i < 22; ++i) g_recCache[i] = tmp[i]; } g_recCacheT = ah; }
+    for (int i = 0; i < 22; ++i) if (g_recCache[i] == rec) return i;
+    return -1;
+}
+// Recorta x/z (y todas sus copias del bloque +0x540..+0x600, como hacia el hilo de reja) en el estado ORIGEN de la copia.
+static void recortarEstadoOrigen(uint8_t* src, int idx) {
+    float p[3]; if (!leerSeguro(src + 0x55C, p, 12)) return;
+    if (!(fabsf(p[0]) < 30.0f && fabsf(p[2]) < 30.0f)) return;
+    const float mX = (float)(g_muroX > 0 ? g_muroX : g_canchaLargo + 0.2), mZ = (float)(g_muroZ > 0 ? g_muroZ : g_canchaAncho + 0.2);
+    float Lp = mX - g_rejaMargen, Wp = mZ - g_rejaMargen;
+    if (idx == 0 || idx == 11) { if (fabsf(p[2]) < 4.2f) { float prof = (float)g_canchaLargo + g_redFondoM - 0.3f; if (prof > Lp) Lp = prof; } }
+    float nx = p[0] > Lp ? Lp : p[0] < -Lp ? -Lp : p[0], nz = p[2] > Wp ? Wp : p[2] < -Wp ? -Wp : p[2];
+    if (nx == p[0] && nz == p[2]) return;
+    uint32_t blk[48]; float dX = nx - p[0], dZ = nz - p[2];
+    if (leerSeguro(src + 0x540, blk, sizeof blk)) {
+        for (int k = 0; k < 48; ++k) { float v; memcpy(&v, &blk[k], 4); float nv = v; bool ch = false;
+            if (dX != 0.0f && fabsf(v - p[0]) < 0.12f) { nv = v + dX; ch = true; } else if (dZ != 0.0f && fabsf(v - p[2]) < 0.12f) { nv = v + dZ; ch = true; }
+            if (ch) escribirSeguro(src + 0x540 + k * 4, &nv, 4); }
+    }
+    escribirSeguro(src + 0x55C, &nx, 4); escribirSeguro(src + 0x564, &nz, 4);
+    static LONG n = 0; LONG q = InterlockedIncrement(&n); if (q <= 80 || q % 500 == 0) logf("[REJA_HOOK] copia A: ORIGEN slot=%d recortado (%.2f,%.2f) -> (%.2f,%.2f) #%ld", idx, p[0], p[2], nx, nz, (long)q);
+}
+using FnCopiaA = uint64_t (*)(uint8_t*, uint8_t*);
+FnCopiaA g_copiaAOrig = nullptr;
+float g_hookAF = 1.0f;   // 0.5.41 reja_hook_a (1/0, VIVA): 0 = el gancho de la copia A solo llama a la original
+// 0.5.43: CADENA de buffers (HWBP base=src: el origen de la copia A es a su vez destino de otra copia A): tabla pequena puntero -> slot, alimentada por el propio gancho
+static uint8_t* g_chainP[64]; static volatile LONG g_chainS[64]; static volatile LONG g_chainN = 0; static uint8_t* g_chainRecRef = nullptr;
+static int chainBuscar(uint8_t* p) { LONG n = g_chainN; if (n > 64) n = 64; for (LONG i = 0; i < n; ++i) if (g_chainP[i] == p) return (int)g_chainS[i]; return -1; }
+static void chainAnadir(uint8_t* p, int slot) { if (!p || chainBuscar(p) >= 0) return; LONG i = g_chainN; if (i >= 64) i = i % 64; g_chainP[i] = p; g_chainS[i] = slot; if (g_chainN < 64) InterlockedIncrement(&g_chainN); }
+uint64_t ganchoCopiaA(uint8_t* dest, uint8_t* src) {
+    if (g_hookAF < 0.5f) return g_copiaAOrig(dest, src);   // 0.5.36: diagnostico de las primeras llamadas (dest/src, banderas y las 3 coordenadas de origen y destino) + cada 3000
+    InterlockedIncrement(&g_copiaALlamadas);
+    { int k = 0; for (; k < 16; ++k) { if (g_destVistos[k] == dest) { InterlockedIncrement(&g_destCuenta[k]); break; } if (!g_destVistos[k]) { g_destVistos[k] = dest; g_destCuenta[k] = 1; break; } } }
+    { static LONG nD = 0; LONG q = InterlockedIncrement(&nD); if (q <= 25) { float pd[3] = {0,0,0}, ps[3] = {0,0,0}; if (dest) leerSeguro(dest + 0x55C, pd, 12); if (src) leerSeguro(src + 0x55C, ps, 12); int ix = slotDeRecord(dest);
+        logf("[REJA_HOOK] copia A llamada #%ld dest=%p src=%p slot=%d on=%d dentro=%d | dest(+55C,+560,+564)=(%.2f,%.2f,%.2f) src=(%.2f,%.2f,%.2f)", (long)q, (void*)dest, (void*)src, ix, (int)g_rejaHookOn, (int)g_jugDentroReja, pd[0], pd[1], pd[2], ps[0], ps[1], ps[2]); } }
+    // 0.5.35: rutina de copia de estado (RVA 0x431DCA; copia +0x554/+0x558/+0x55C/+0x568... del objeto rdx al registro rcx)
+    if (g_rejaHookOn && g_jugDentroReja && src && dest) {
+        int idx = slotDeRecord(dest); bool enCadena = false;
+        if (idx >= 0) { if (g_recCache[0] != g_chainRecRef) { g_chainRecRef = g_recCache[0]; g_chainN = 0; } }   // otro partido: la cadena se invalida
+        else { idx = chainBuscar(dest); enCadena = idx >= 0; }
+        if (enCadena) { chainAnadir(src, idx); recortarEstadoOrigen(dest, idx); recortarEstadoOrigen(src, idx); if (idx < 22) g_srcPorSlot[idx] = src; }
+        else if (idx >= 0) { chainAnadir(src, idx); InterlockedIncrement(&g_copiaAJug); g_srcPorSlot[idx] = src; static LONG nA = 0; LONG q = InterlockedIncrement(&nA); if (q <= 30) logf("[REJA_HOOK] copia A: slot=%d dest=%p src=%p", idx, (void*)dest, (void*)src); recortarEstadoOrigen(src, idx); }
+    }
+    return g_copiaAOrig(dest, src);
+}
+extern "C" void reCopiaPos(float* p, float* src) {   // 0.5.33: p = destino (rec+0x568), src = ORIGEN de la copia (rdi+0x568): el estado autoritativo del motor; se recorta tambien para que el siguiente tick no parta de fuera
+    LONG nl = InterlockedIncrement(&g_rejaHookLlamadas); if (nl <= 12 || nl % 20000 == 0) logf("[REJA_HOOK] llamada #%ld dest=%p src=%p", (long)nl, (void*)p, (void*)src);
+    if (!g_rejaHookOn || !g_jugDentroReja || !g_globalPartido) return;
+    __try {
+        uint8_t* dest = reinterpret_cast<uint8_t*>(p) - 0x568; int idx = slotDeRecord(dest);
+        if (idx < 0) return;
+        if (g_reaparcar && g_streetActivo && idx != 0 && idx != 11 && ((g_maskAp >> idx) & 1) && fabsf(p[2]) < 90.0f) { static LONG nPH = 0; LONG q = InterlockedIncrement(&nPH); if (q <= 100 || q % 1000 == 0) logf("[REAPARCAR] (hook de copia) slot=%d (%.1f,%.1f) -> (0,100) #%ld", idx, p[0], p[2], (long)q); p[0] = 0.0f; p[2] = 100.0f; return; }   // 0.5.32
+        float x = p[0], z = p[2]; if (!(fabsf(x) < 30.0f && fabsf(z) < 30.0f)) return;   // aparcados/ocultos: no se tocan
+        float sx = x, sz = z; bool conSrc = false; if (src && src != p && !IsBadReadPtr(src, 12)) { sx = src[0]; sz = src[2]; conSrc = fabsf(sx) < 30.0f && fabsf(sz) < 30.0f; }
+        const float mX = (float)(g_muroX > 0 ? g_muroX : g_canchaLargo + 0.2), mZ = (float)(g_muroZ > 0 ? g_muroZ : g_canchaAncho + 0.2);
+        float Lp = mX - g_rejaMargen, Wp = mZ - g_rejaMargen;
+        if (idx == 0 || idx == 11) { if (fabsf(z) < 4.2f) { float prof = (float)g_canchaLargo + g_redFondoM - 0.3f; if (prof > Lp) Lp = prof; } }
+        float nx = x > Lp ? Lp : x < -Lp ? -Lp : x, nz = z > Wp ? Wp : z < -Wp ? -Wp : z;
+        if (conSrc) { float qx = sx > Lp ? Lp : sx < -Lp ? -Lp : sx, qz = sz > Wp ? Wp : sz < -Wp ? -Wp : sz; if (qx != sx || qz != sz) { src[0] = qx; src[2] = qz; static LONG nS = 0; LONG q = InterlockedIncrement(&nS); if (q <= 60 || q % 500 == 0) logf("[REJA_HOOK] ORIGEN recortado #%ld slot=%d (%.2f,%.2f) -> (%.2f,%.2f)", (long)q, idx, sx, sz, qx, qz); } }
+        if (nx != x || nz != z) { p[0] = nx; p[2] = nz; LONG n = InterlockedIncrement(&g_rejaHookN); if (n <= 80 || n % 500 == 0) logf("[REJA_HOOK] #%ld slot=%d (%.2f,%.2f) -> (%.2f,%.2f)", (long)n, idx, x, z, nx, nz); }
+    } __except (EXCEPTION_EXECUTE_HANDLER) {}
+}
+bool rejaHookInstalar(Feature& f) {
+    if (!g_globalPartido && !resolverGlobalPartido(f.id)) { f.estado = "sin firma del global del partido"; return false; }
+    g_rejaHookOn = true;   // 0.5.36: rejaHookQuitar lo ponia a false y al reinstalar quedaba apagado (0 recortes en 0.5.33-0.5.35)
+    // 0.5.31: se localiza por FIRMA (cualquier PES2021.exe): lea rcx,[rdi+568h]; lea rdx,[rbx+568h]; cmp rdx,rcx; je +10h; <16 bytes de copia>. dir = inicio de la copia (+19).
+    uint8_t* m = firmaUnica("codigo", "48 8D 8F 68 05 00 00 48 8D 93 68 05 00 00 48 3B D1 74 10 8B 01 89 02 8B 41 04 89 42 04 8B 41 08 89 42 08", f.id);
+    if (!m) { f.estado = "sin firma: rutina de copia de posicion (+0x568) no encontrada en este ejecutable; el recorte de reja de la copia queda apagado"; logf("[REJA_HOOK] firma no encontrada: autodesactivado"); return false; }
+    uint8_t* dir = m + 19;
+    static const uint8_t esperado[] = { 0x8B,0x01,0x89,0x02,0x8B,0x41,0x04,0x89,0x42,0x04,0x8B,0x41,0x08,0x89,0x42,0x08 };
+    uint8_t leido[16] = {}; if (!leerSeguro(dir, leido, 16) || memcmp(leido, esperado, 16) != 0) { f.estado = "bytes inesperados tras la firma"; return false; }
+    { uint8_t* ma = firmaUnica("codigo", "48 89 5C 24 08 48 89 6C 24 10 48 89 74 24 18 48 89 7C 24 20 41 56 48 83 EC 20 48 8B FA 48 8B D9 E8 ?? ?? ?? ?? 48 8D 87 54 05 00 00 48 8D 8B 54 05 00 00", f.id);   // 0.5.37: ENTRADA REAL de la copia A (RVA 0x431DC5; 0.5.35-0.5.36 enganchaban 10 B mas tarde, tras los mov [rsp+8],rbx / [rsp+10h],rbp, y el gancho podia pisar esos huecos de la pila): 26 B sin RIP-relativos
+      if (ma && crearDesvio(f, ma, 26, (void*)ganchoCopiaA, (void**)&g_copiaAOrig)) logf("[REJA_HOOK] copia A enganchada por firma (exe+0x%llX)", (unsigned long long)(ma - g_exe.base)); else logf("[REJA_HOOK] firma de la copia A no encontrada: solo queda el recorte del destino de la copia B"); }
+    uint8_t* c = static_cast<uint8_t*>(VirtualAlloc(nullptr, 256, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE)); if (!c) { f.estado = "sin memoria para la cueva"; return false; }
+    size_t o = 0; auto E = [&](std::initializer_list<uint8_t> b) { for (uint8_t v : b) c[o++] = v; };
+    for (int k = 0; k < 16; ++k) c[o++] = esperado[k];                                   // las instrucciones originales
+    E({ 0x9C, 0x50, 0x51, 0x52, 0x41,0x50, 0x41,0x51, 0x41,0x52, 0x41,0x53 });          // pushfq; push rax,rcx,rdx,r8,r9,r10,r11
+    E({ 0x48,0x81,0xEC,0x80,0,0,0 });                                                    // sub rsp,0x80
+    E({ 0x0F,0x11,0x04,0x24, 0x0F,0x11,0x4C,0x24,0x10, 0x0F,0x11,0x54,0x24,0x20, 0x0F,0x11,0x5C,0x24,0x30, 0x0F,0x11,0x64,0x24,0x40, 0x0F,0x11,0x6C,0x24,0x50 });   // movups [rsp+..],xmm0-5
+    E({ 0x48,0x87,0xCA });                                                               // xchg rcx,rdx -> rcx = destino (rdx), rdx = origen (rcx)
+    E({ 0x55, 0x48,0x89,0xE5, 0x48,0x83,0xE4,0xF0, 0x48,0x83,0xEC,0x20 });             // push rbp; mov rbp,rsp; and rsp,-16; sub rsp,32
+    E({ 0x48,0xB8 }); { uint64_t fn = reinterpret_cast<uint64_t>(&reCopiaPos); memcpy(c + o, &fn, 8); o += 8; }   // mov rax,reCopiaPos
+    E({ 0xFF,0xD0, 0x48,0x89,0xEC, 0x5D });                                             // call rax; mov rsp,rbp; pop rbp
+    E({ 0x0F,0x10,0x04,0x24, 0x0F,0x10,0x4C,0x24,0x10, 0x0F,0x10,0x54,0x24,0x20, 0x0F,0x10,0x5C,0x24,0x30, 0x0F,0x10,0x64,0x24,0x40, 0x0F,0x10,0x6C,0x24,0x50 });   // movups xmm0-5,[rsp+..]
+    E({ 0x48,0x81,0xC4,0x80,0,0,0 });                                                    // add rsp,0x80
+    E({ 0x41,0x5B, 0x41,0x5A, 0x41,0x59, 0x41,0x58, 0x5A, 0x59, 0x58, 0x9D });         // pop r11,r10,r9,r8,rdx,rcx,rax; popfq
+    E({ 0xFF,0x25,0,0,0,0 }); { uint64_t vuelta = reinterpret_cast<uint64_t>(dir + 16); memcpy(c + o, &vuelta, 8); o += 8; }   // jmp [rip+0] -> dir+16
+    FlushInstructionCache(GetCurrentProcess(), c, 256);
+    Parche p; p.dir = dir; p.original.assign(dir, dir + 16);
+    p.nuevo.assign({ 0xFF,0x25,0,0,0,0 }); { uint64_t g = reinterpret_cast<uint64_t>(c) ; /* la cueva empieza por las instrucciones originales, que luego siguen a la llamada */ p.nuevo.insert(p.nuevo.end(), reinterpret_cast<uint8_t*>(&g), reinterpret_cast<uint8_t*>(&g) + 8); }
+    p.nuevo.resize(16, 0x90);
+    if (!aplicarParche(p, f.id)) { f.estado = "no se pudo parchear la rutina de copia"; return false; }
+    f.parches.push_back(p);
+    char b[160]; sprintf_s(b, "ok: recorte de x/z en la copia de posicion (exe+0x%llX por firma), cueva %p", (unsigned long long)(dir - g_exe.base), (void*)c); f.estado = b; return true;
+}
+bool rejaHookQuitar(Feature&) { return true; }   // 0.5.36: no se apaga en vivo (el marco llama a quitar al salir del Street y dejaba el hook inerte); el parche se retira con deshacer.ps1   // los parches los quita el marco
 bool jugCantInstalar(Feature& f) {
     if (!g_globalPartido && !resolverGlobalPartido(f.id)) { f.estado = "sin firma del global del partido"; return false; }
     g_jugCantOn = 1; g_hiloJugCant = CreateThread(nullptr, 0, hiloJugCant, nullptr, 0, nullptr);
@@ -2417,8 +2879,17 @@ bool arqCursorQuitar(Feature&) { g_arqCursorOn = 0; ponerParcheN(g_pnC1, false);
 const char* kFirmaPorteroPos = "48 8B C4 48 89 58 08 4C 89 48 20 48 89 50 10 55 56 57 41 54 41 55 41 56 41 57 48 8D 6C 24 B0 48";
 using FnPorteroPos = uint64_t* (*)(int64_t, uint64_t*, int64_t, uint64_t);
 FnPorteroPos g_porteroPosOrig = nullptr; volatile LONG g_arqSalidaOn = 0, g_arqSalidaRecortes = 0; float g_arqSalidaMax = 3.5f;
+// 0.5.9 gk_limite_area (json true/false, por defecto true) + gk_area_radio (m, por defecto 5; rango 2-10): en vez del rectángulo, el destino del portero se limita al ÁREA REDONDA de futsal:
+// distancia al segmento entre postes (x = ±semilargo, z de -2 a +2) <= radio; el destino fuera del área se proyecta al borde del círculo. Solo se reescribe el destino (out) que el juego pide al portero.
+bool g_gkLimiteArea = true; float g_gkLateral = 1.0f; /* 0.5.27 json gk_area_lateral (m, 0-6, por defecto 1): el destino del portero no se aleja en z mas de (semiancho de boca + esto): la capsula de radio 5 le dejaba irse a z=5-6.5 (borde del area, junto a la banda) con el arco vacio */ float g_gkAreaRadio = 5.0f; volatile LONG g_gkAreaN = 0;
 uint64_t* ganchoPorteroPos(int64_t p1, uint64_t* out, int64_t p3, uint64_t p4) {
     uint64_t* r = g_porteroPosOrig(p1, out, p3, p4);
+    static LONG s_llamadas = 0, s_dentro = 0; static float s_ult[3] = { 0, 0, 0 }, s_maxD = 0; InterlockedIncrement(&s_llamadas);   // 0.5.14 [GK_AREA_DIAG]
+    {   // 0.5.14: contador de llamadas al gancho y de correcciones (cada 5 s) para saber si el portero pasa por aquí y si el destino llega a caer fuera del área
+        static ULONGLONG tD = 0; ULONGLONG ahD = GetTickCount64();
+        if (ahD - tD > 5000) { tD = ahD; static LONG nD = 0; if (InterlockedIncrement(&nD) <= 200) { float v3[3] = { 0, 0, 0 }; bool okV = out && leerSeguro(out, v3, 12); if (okV) memcpy(s_ult, v3, 12);
+            logf("[GK_AREA_DIAG] llamadas=%ld correcciones=%ld dentro=%ld activo=%d train=%d ult_destino=(%.1f,%.1f) maxDistAlSegmento=%.1f L=%.1f R=%.1f", (long)s_llamadas, (long)g_gkAreaN, (long)s_dentro, (int)g_arqSalidaOn, (int)(GetTickCount64() - g_tTrainGlob < 3000), s_ult[0], s_ult[2], s_maxD, (float)g_canchaLargo, g_gkAreaRadio); s_maxD = 0; } }
+    }
     {   // 0.4.67 (frente L §9): FUN_1409DC040 elige la rama del portero por team+0x255 (0 = normal FUN_1409DE8C0, !=0 = alternativa FUN_1409DF7D0). Se mide en cada bando (log cada 5 s).
         static ULONGLONG tM = 0; ULONGLONG ah = GetTickCount64();
         if (ah - tM > 5000) {
@@ -2430,9 +2901,20 @@ uint64_t* ganchoPorteroPos(int64_t p1, uint64_t* out, int64_t p3, uint64_t p4) {
     if (g_arqSalidaOn && out && GetTickCount64() - g_tTrainGlob < 3000) {
         float v[3]; if (leerSeguro(out, v, 12) && fabsf(v[0]) < 60.0f && fabsf(v[2]) < 60.0f && fabsf(v[0]) > 1.0f) {
             float L = (float)g_canchaLargo, ax = fabsf(v[0]), sg = v[0] >= 0 ? 1.0f : -1.0f, nx = ax, nz = v[2];
+            if (g_gkLimiteArea) {   // 0.5.9: área redonda (distancia al segmento entre postes <= radio)
+                if (nx > L - 0.5f) nx = L - 0.5f;
+                float hwp = 2.0f; if (g_golCajaBoca && (int)(g_arcoMedidaF + 0.5f) > 0) { float mw = 7.32f, mh = 2.44f; medidaWH(mw, mh); hwp = mw * 0.5f; }   /* 0.5.24: postes = boca real */
+                { float zl = hwp + g_gkLateral; if (nz > zl) nz = zl; else if (nz < -zl) nz = -zl; }
+                float R = g_gkAreaRadio, pz = nz > hwp ? hwp : nz < -hwp ? -hwp : nz, dx = nx - L, dz = nz - pz, d = sqrtf(dx * dx + dz * dz);
+                if (d > s_maxD) s_maxD = d; if (d <= R) InterlockedIncrement(&s_dentro);
+                if (d > R && d > 0.001f) { nx = L + dx * (R / d); nz = pz + dz * (R / d); }
+                if (nx > L - 0.5f) nx = L - 0.5f;
+                if (nx != ax || nz != v[2]) { LONG n = InterlockedIncrement(&g_gkAreaN); if (n <= 400) logf("[GK_AREA] destino (%.1f,%.1f) -> (%.1f,%.1f) radio=%.1f #%ld", v[0], v[2], sg * nx, nz, R, (long)n); }
+            } else {
             if (nx < L - g_arqSalidaMax) nx = L - g_arqSalidaMax;
             if (nx > L - 0.5f) nx = L - 0.5f;
             if (nz > 5.0f) nz = 5.0f; else if (nz < -5.0f) nz = -5.0f;
+            }
             if (nx != ax || nz != v[2]) {
                 float* o = reinterpret_cast<float*>(out); o[0] = sg * nx; o[2] = nz;
                 LONG n = InterlockedIncrement(&g_arqSalidaRecortes); if (n <= 10 || n % 500 == 0) logf("[PORTERO] salida recortada #%ld (%.1f,%.1f) -> (%.1f,%.1f)", (long)n, v[0], v[2], o[0], o[2]);
@@ -2462,7 +2944,7 @@ uint64_t* ganchoBasePos(int64_t p1, uint64_t* out, int64_t p3, int64_t p4, int64
     uint64_t* r = g_basePosOrig(p1, out, p3, p4, p5, p6);
     if (g_jugDentroOn && out && GetTickCount64() - g_tTrainGlob < 3000) {
         float v[3]; if (leerSeguro(out, v, 12) && fabsf(v[0]) < 60.0f && fabsf(v[2]) < 60.0f) {
-            float Lx = (float)g_canchaLargo - 0.5f, Wz = (float)g_canchaAncho - 0.5f;
+            float Lx = (float)g_canchaLargo - g_rejaMargen, Wz = (float)g_canchaAncho - g_rejaMargen;   // 0.5.29: mismo margen que el hilo de reja
             float nx = fminf(fmaxf(v[0], -Lx), Lx), nz = fminf(fmaxf(v[2], -Wz), Wz);
             if (nx != v[0] || nz != v[2]) {
                 float* o = reinterpret_cast<float*>(out); o[0] = nx; o[2] = nz;
@@ -2667,11 +3149,20 @@ bool iaSondaQuitar(Feature&) { g_iaSondaOn = 0; if (g_hiloIaSonda) { WaitForSing
 // viven en el registro de constantes (R = [[[P]]+id*8]+8, P = global de FUN_141E5D4C0, como los puntos demoarea). Con TrainingWork se escalan las distancias a la minicancha con k = (dims/dims_grande)^e (e = ia_escala 0,5; 0,4 en apoyo/desmarque/pase) y un piso
 // ia_piso_m (1,5 m): nuevo = max(orig*k, min(orig, piso)); siempre desde una copia de los originales (idempotente); se restaura al salir del entrenamiento / quitar la opción. NO se tocan ángulos, *Rate, ints, bytes ni los campos del PORTERO (gkl*, gks*, kickoffDfLineX, margin_restartX).
 struct CampoIA { uint16_t off; char eje; };
-struct GrupoIA { int id; const char* nom; bool apoyo; std::vector<CampoIA> c; uint8_t* R = nullptr; std::vector<float> orig, pat; bool parcheado = false; };
+struct GrupoIA { int id; const char* nom; bool apoyo; std::vector<CampoIA> c; uint8_t* R = nullptr; std::vector<float> orig, pat; bool parcheado = false; bool cond = false; };
+// 0.5.10 saque_margen_chica (json true/false, por defecto true): escala (como eje x, sin el factor de presión) margin_restartX (BasePosition +0x24C) y kickoffDfLineX (+0x214), que no se escalaban (campos del portero/reinicio);
+// hipótesis: en el saque de arco los jugadores esperan tras una línea de cancha grande, pasada la mediacancha. Mismo mecanismo (copia de originales, restaura al salir). Sin verificar en el juego.
+bool g_saqueMargenChica = true;
+// 0.5.11 ia_encarar_k (json, por defecto 1.3, rango 0.8-2.0; 1.0 = apagado): factor EXTRA solo sobre los radios de «encarar» (Defence +0x20, DefenceMark +0x8C, Matchup +0x2C), encima de ia_presion_k.
+float g_iaEncararK = 1.3f;
 static std::vector<CampoIA> campos(std::initializer_list<uint16_t> d, std::initializer_list<uint16_t> x = {}, std::initializer_list<uint16_t> z = {}) {
     std::vector<CampoIA> v; for (uint16_t o : d) v.push_back({ o, 'd' }); for (uint16_t o : x) v.push_back({ o, 'x' }); for (uint16_t o : z) v.push_back({ o, 'z' }); return v;
 }
 volatile LONG g_iaChicaOn = 0; HANDLE g_hiloIaChica = nullptr; float g_iaE = 0.5f, g_iaEApoyo = 0.4f, g_iaPiso = 1.5f;
+// 0.5.7: factores extra sobre la escala de la minicancha (1.0 = como antes; json ia_presion_k / ia_ataque_k, rango 0.8-2.0). presión: Defence 186, DefenceMark 188, Matchup 50, DefenceCover 187; ataque: Support 197, SpaceRun 195, Throughpass 61.
+bool g_iaContra = false; float g_iaContraK = 1.5f; ULONGLONG g_tContra = 0;   // 0.5.22 json ia_contra (false por defecto) / ia_contra_k (1.0-2.0, 1.5): contraataque: cuando el equipo SIN humano recupera el balón (el jugador más cercano a la pelota pasa del equipo humano al de la IA) se sube ia_contra_k a SpaceRun (195) y Throughpass (61) durante 4 s
+float g_iaBaseK = 1.0f;   // 0.5.18 json «ia_base_k» (0.5-2.0, por defecto 1.0): factor propio de BasePosition (183); ya NO lleva el factor de presión (en la 0.5.8 con ia_presion_k=2.0 su escala subía de 0.54 a 1.08: posible causa de que el rival no pase de mediacancha)
+float g_iaPresionK = 2.0f, g_iaAtaqueK = 1.4f;   // 0.5.8: presión 2.0 por defecto y BasePosition 183 también en el grupo de presión
 static void restaurarGrupoIA(GrupoIA& g) {
     // 0.4.100: SOLO se restaura si el registro sigue siendo EL NUESTRO (los campos valen exactamente lo que escribimos). Al salir del partido el juego libera/reutiliza estos bloques del montón:
     // escribir en un bloque liberado pero aún mapeado no da excepción (escribirSeguro no lo detecta) y corrompía el montón → cierres al volver al menú (+0x3FD68B, +0x3FE920, +0x902B2).
@@ -2689,6 +3180,7 @@ DWORD WINAPI hiloIaChica(LPVOID) {
     gr.push_back({ 186, "Defence", false, campos({ 0x18, 0x1C, 0x20, 0x0C, 0x88, 0x78, 0x3C, 0x4C, 0x6C, 0x70, 0x28, 0x2C }, { 0x64, 0x68, 0x74, 0x40, 0x44, 0x80 }, { 0x84, 0x48 }) });
     gr.push_back({ 183, "BasePosition", false, campos({ 0x21C, 0x220, 0x224, 0x228, 0x278, 0x27C, 0x280, 0x284, 0x28C, 0x22C, 0x230, 0x290, 0x298, 0x29C, 0xB8, 0xBC, 0xC0, 0x4C, 0x184, 0x188, 0x18C, 0x190, 0x31C, 0x320, 0x2EC, 0x2F0, 0x160, 0x164, 0x168, 0x10C, 0x110, 0x114, 0x118, 0x120, 0x128, 0x12C, 0x130, 0x2A4 }, { 0x2B0, 0x2B4, 0x210, 0x248, 0xC4 }, { 0x244, 0xC8 }) });
     gr.push_back({ 188, "DefenceMark", false, campos({ 0x8C, 0x98, 0xA4, 0x90, 0x9C, 0xA8, 0x94, 0xA0, 0xAC, 0xB0, 0xB4, 0xBC, 0xC0, 0xB8, 0xD0, 0xCC, 0x38, 0x3C, 0x40, 0x44, 0x48, 0x4C, 0x5C, 0xD8, 0x10C, 0x110, 0x114, 0x118, 0x14, 0x18, 0x1C }, { 0xF4, 0xF8, 0x124, 0x128 }, { 0xFC, 0x100, 0x12C, 0x130, 0x88, 0x134 }) });
+    gr.push_back({ 183, "BasePosition_saque", false, campos({}, { 0x24C, 0x214 }) }); gr.back().cond = true;
     gr.push_back({ 50, "Matchup", false, campos({ 0x30, 0x2C, 0x34, 0x0C }) });
     gr.push_back({ 197, "Support", true, campos({ 0x20, 0x24, 0x28, 0x44, 0x50, 0x68, 0x58, 0x5C, 0x60, 0x64, 0xCC, 0xD0, 0xD4, 0xD8, 0xDC, 0xE0, 0xE4, 0x78 }) });
     gr.push_back({ 195, "SpaceRun", true, campos({ 0x3C, 0x40, 0x44, 0x48, 0x4C, 0x50, 0x34, 0x38, 0x64, 0x68, 0x74, 0x78, 0x7C, 0x80, 0x9C, 0xA8 }, { 0x8C, 0x90, 0x94, 0x98, 0xA0, 0xA4 }, { 0xBC, 0xC0, 0xC4, 0xC8, 0xCC, 0xD0 }) });
@@ -2700,9 +3192,18 @@ DWORD WINAPI hiloIaChica(LPVOID) {
     while (g_iaChicaOn) {
         Sleep(150);
         if (!trainingWorkEstable() || !g_regDemoGlobal) { for (auto& g : gr) restaurarGrupoIA(g); continue; }
+        if (g_iaContra) {   // 0.5.22 detector de recuperación (cada 150 ms)
+            static int ladoPrev = -1; uint8_t* bo = g_pelotaSeguida; uint8_t* rz = nullptr; float bp[3];
+            if (bo && leerSeguro(bo + 0x64, bp, 12) && leerSeguro(g_globalPartido, &rz, 8) && rz) {
+                int cerca = -1; float dm = 1e9f; for (int i = 0; i < 22; ++i) { float px, pz; if (!posJugPC(rz, i, px, pz) || fabsf(pz) >= 30.0f) continue; float d = hypotf(px - bp[0], pz - bp[2]); if (d < dm) { dm = d; cerca = i; } }
+                if (cerca >= 0 && dm < 2.0f) { int lado = cerca > 10 ? 1 : 0; ULONGLONG ah = GetTickCount64(); bool h0 = ah - g_cursorEqT[0] < 20000, h1 = ah - g_cursorEqT[1] < 20000;
+                    if (lado != ladoPrev) { if (ladoPrev >= 0 && ((ladoPrev == 0 && h0 && !h1 && lado == 1) || (ladoPrev == 1 && h1 && !h0 && lado == 0))) { g_tContra = ah + 4000; static LONG nC = 0; if (InterlockedIncrement(&nC) <= 100) logf("[IA_CONTRA] la IA recupera el balón (idx %d a %.1f m): contraataque x%.2f durante 4 s", cerca, dm, g_iaContraK); } ladoPrev = lado; } }
+            }
+        }
         uint8_t* raiz = nullptr; float* dims = nullptr; float d[2] = { 0, 0 };
         if (!leerSeguro(g_globalPartido, &raiz, 8) || !raiz || !leerSeguro(raiz + 0x2AA8, &dims, 8) || !dims || !leerSeguro(dims, d, 8) || !(d[0] > 5.0f && d[0] < 60.0f && d[1] > 3.0f && d[1] < 40.0f)) continue;
         for (auto& g : gr) {
+            if (g.cond && !g_saqueMargenChica) { restaurarGrupoIA(g); continue; }
             uint8_t *P = nullptr, *A = nullptr, *E = nullptr, *R = nullptr;
             if (!leerSeguro(g_regDemoGlobal, &P, 8) || !P || !leerSeguro(P, &A, 8) || !A || !leerSeguro(A + (size_t)g.id * 8, &E, 8) || !E || !leerSeguro(E + 8, &R, 8) || !R) continue;
             std::vector<float> cur(g.c.size()); bool valido = true;
@@ -2712,9 +3213,11 @@ DWORD WINAPI hiloIaChica(LPVOID) {
             else if (g.parcheado && memcmp(cur.data(), g.pat.data(), cur.size() * 4) != 0) g.orig = cur;   // el juego recargó: nueva original
             else if (!g.parcheado) g.orig = cur;
             float e = g.apoyo ? g_iaEApoyo : g_iaE, kx = powf(d[0] / 52.56f, e), kz = powf(d[1] / 34.06f, e), kd = sqrtf(kx * kz);
+            { float fk = g.cond ? 1.0f : g.id == 183 ? g_iaBaseK : (g.id == 186 || g.id == 188 || g.id == 50 || g.id == 187) ? g_iaPresionK : (g.id == 197 || g.id == 195 || g.id == 61) ? g_iaAtaqueK : 1.0f; if (g_iaContra && (g.id == 195 || g.id == 61) && GetTickCount64() < g_tContra) fk *= g_iaContraK; if (fk != 1.0f) { kx *= fk; kz *= fk; kd *= fk; } }
             std::vector<float> nuevo(g.c.size()); bool cambia = false;
             for (size_t i = 0; i < g.c.size(); i++) {
                 float k = g.c[i].eje == 'x' ? kx : g.c[i].eje == 'z' ? kz : kd, o = g.orig[i];
+                if (g_iaEncararK != 1.0f && ((g.id == 186 && g.c[i].off == 0x20) || (g.id == 188 && g.c[i].off == 0x8C) || (g.id == 50 && g.c[i].off == 0x2C))) k *= g_iaEncararK;   // 0.5.11: radios de «encarar»
                 float n = fmaxf(o * k, fminf(o, g_iaPiso)); nuevo[i] = (o < 0.0f) ? o * k : n; if (nuevo[i] != cur[i]) cambia = true;
             }
             if (cambia) { for (size_t i = 0; i < g.c.size(); i++) memcpy(R + g.c[i].off, &nuevo[i], 4); g.pat = nuevo; }
@@ -2900,6 +3403,8 @@ volatile LONG g_saquePedido = 0, g_saqueEquipo = 1, g_saqueResetReloj = 0, g_saq
 // 0.4.81 (J5 §señal): ProcessMatchPostHalfTime::update (FUN_1412F7500, vf+0xC0; void(this)) corre por tick mientras ese proceso está activo, o sea cuando el menú de descanso se cerró y el flujo pasa a MatchPostHalfTime («proceed»).
 // Gancho (crearDesvio 14 B): si lo armamos nosotros al encolar [0x22] y la instancia es PostHalfTime (vtable exe+0x28CCCB8), se marca g_menuCerrado. El Core lanza entonces el saque central. Sin gancho queda el límite de 120 s.
 bool g_descansoFase3 = false;   // 0.4.89: por defecto false otra vez (con true en 0.4.87: cierre al volver al menú y marcador dudoso); json «descanso_fase3»: true = el 2.º tiempo se escribe en fase 3 con base 0 (HUD 45:00-90:00 sin +N); false (por defecto) = se restaura la fase anterior (0.4.82)
+volatile LONG g_penalNativo = 0;   // 0.5.46 street_penales=1: al cerrar el menu de descanso, ProcessMatchPostHalfTime pone [this+0x8A]=1 -> evento «pk» (flujo MatchPostHalfTime 0_pk -> Match/MatchPkOrder: la tanda nativa)
+volatile ULONGLONG g_tSenalPre = 0;   // 0.5.35: instante en que ganchoPreHalf escribio la senal del menu (0 = aun no)
 volatile LONG g_menuArmado = 0, g_menuCerrado = 0; volatile uint32_t g_faseAntesDescanso = 1; void (*g_postHalfOrig)(void*) = nullptr;
 // 0.4.86 (J5): MatchPreHalfTime::update (FUN_1413090F0) espera el byte [obj+0x290] (obj = *(u64*)([exe+0x3705E10]+0x58)); lo pone a 1 el mensaje 0x105001B del paso de cola 0x25, que nuestra cola [0x22,0x48] no ejecuta: por eso el flujo quedaba en PreHalfTime.
 // Con el menú armado se pone ese byte a 1 (el update lo baja a 0 y emite «proceed» hacia MatchHalfTime = menú nativo). Y en ProcessMatchPostHalfTime::update se ponen +0x89=1, +0x8A=0 para que emita «proceed» hacia MatchIdle.
@@ -2907,19 +3412,22 @@ void (*g_preHalfOrig)(void*) = nullptr;
 void ganchoPreHalf(void* self) {
     if (g_menuArmado && !g_menuCerrado) {
         uint8_t *a = nullptr, *obj = nullptr;
-        if (leerSeguro(g_exe.base + 0x3705E10, &a, 8) && a && leerSeguro(a + 0x58, &obj, 8) && obj) { uint8_t v = 0; leerSeguro(obj + 0x290, &v, 1); if (v == 0) { uint8_t uno = 1; memcpy(obj + 0x290, &uno, 1); static LONG n = 0; if (InterlockedIncrement(&n) <= 5) logf("[DESCANSO] MatchPreHalfTime: señal [obj+0x290]=1 escrita (el flujo pasa al menú de descanso)"); } }
+        if (leerSeguro(g_exe.base + 0x3705E10, &a, 8) && a && leerSeguro(a + 0x58, &obj, 8) && obj) { uint8_t v = 0; leerSeguro(obj + 0x290, &v, 1); if (v == 0) { uint8_t uno = 1; memcpy(obj + 0x290, &uno, 1); g_tSenalPre = GetTickCount64(); static LONG n = 0; if (InterlockedIncrement(&n) <= 5) logf("[DESCANSO] MatchPreHalfTime: señal [obj+0x290]=1 escrita (el flujo pasa al menú de descanso)"); } }
     }
     g_preHalfOrig(self);
 }
 void ganchoPostHalf(void* self) {
     if (g_menuArmado && !g_menuCerrado) {
-        uint64_t vt = 0; if (leerSeguro(self, &vt, 8) && vt == (uint64_t)(g_exe.base + 0x28CCCB8)) { uint8_t f89 = 0, f8a = 0; leerSeguro((uint8_t*)self + 0x89, &f89, 1); leerSeguro((uint8_t*)self + 0x8A, &f8a, 1); logf("[DESCANSO] ProcessMatchPostHalfTime activo (+0x89=%u +0x8A=%u): el menú se cerró", f89, f8a); g_menuCerrado = 1; g_menuArmado = 0; { uint8_t uno = 1, cero = 0; memcpy((uint8_t*)self + 0x89, &uno, 1); memcpy((uint8_t*)self + 0x8A, &cero, 1); } }
+        uint64_t vt = 0; if (leerSeguro(self, &vt, 8) && vt == (uint64_t)(g_exe.base + 0x28CCCB8)) { uint8_t f89 = 0, f8a = 0; leerSeguro((uint8_t*)self + 0x89, &f89, 1); leerSeguro((uint8_t*)self + 0x8A, &f8a, 1); logf("[DESCANSO] ProcessMatchPostHalfTime activo (+0x89=%u +0x8A=%u): el menú se cerró", f89, f8a); g_menuCerrado = 1; g_menuArmado = 0; { uint8_t uno = 1, cero = 0; uint8_t pk = g_penalNativo ? 1 : 0; memcpy((uint8_t*)self + 0x89, &uno, 1); memcpy((uint8_t*)self + 0x8A, g_penalNativo ? &pk : &cero, 1); if (g_penalNativo) { logf("[PENALES] ProcessMatchPostHalfTime: +0x8A=1 -> evento pk (MatchPkOrder)"); g_penalNativo = 0; } } }
     }
     g_postHalfOrig(self);
 }
 volatile LONG g_descansoPedido = 0, g_descansoFase = 0; volatile ULONGLONG g_descansoT = 0, g_ultTickJob = 0; int g_descansoOn = 0;
 int g_velocidadPartido = -1;   // json «velocidad_partido» (0.4.92): -1 = no tocar
 double g_anadidoSeg = 2 * 3600.0;   // json «anadido_min» (0.4.91): minutos de añadido en cada parte (3600 unidades del reloj = 1 min de pantalla); 0 = sin añadido
+volatile LONG g_finPedido = 0;   // 0.5.13: lo pone a 1 procesarOrdenes (clave json/ordenes «street_fin_pedido»); lo consume hiloDosTiempos
+int g_finFase = 2;   // 0.5.19 json «street_fin_fase» (por defecto 2 = como hasta ahora): EXPERIMENTO: fase del job mientras dura la pantalla del final (el título «Descanso» podría depender de la fase 2); 1 es el valor de juego normal (seguro); NO usar 3 ni 10 (cierre B7AAA)
+bool g_streetFin90 = true;   // 0.5.17 json «street_fin_90» (por defecto true): al llegar a 90:00 (+añadido) el final del Street usa la pantalla nativa «Final del partido» (paso 0x21) en vez de la plantilla «Descanso» (0x22); el descanso de los 45 sigue igual. Equivale a final_nativo pero solo con Street activo. Aviso (cap_73): la revancha nativa puede recrear el partido con reglas normales.
 bool g_finalNativo = false;   // json «final_nativo» (0.4.94, EXPERIMENTAL): el final usa la pantalla nativa «Final del partido» (paso de cola 0x21) en vez del panel del descanso
 volatile bool g_segundaParte = false;   // true desde que se cierra el menú del descanso hasta el final (0.4.93)
 volatile bool g_descansoFinal = false;   // 0.4.91: el descanso en curso es el FINAL (panel de estadísticas y revancha)
@@ -2936,6 +3444,35 @@ static bool prepararJuez(uint8_t* job) {
     uint64_t a = 0, b2 = 0; if (!leerSeguro(p, &a, 8) || !a || !leerSeguro(p + 1, &b2, 8)) return false;
     g_a8a0(g_tmpJuez, a, b2); g_b2b0(job + 0x908, job + 0x49C0, g_tmpJuez); return true;
 }
+// 0.5.23 street_fin_period (json, por defecto 2; 0 = apagado) / street_fin_period_off (offset dentro de match.stats, por defecto 4): el panel final elige su botón por stats.period (period=2 -> «Revancha»; period=1 -> «2.ª parte»; pista de Cancha, 7-nov).
+// El Core no conoce la dirección de la estructura de estadísticas: la lee de content\phoenix\sonda.json (campo «ptr_hex» que escribe el módulo phoenix_sonda con match.stats().ptr). Solo se escribe si el dword actual en ptr+off vale 1; se restaura a 1 al cerrar el final.
+// [FIN_PERIOD] vuelca los primeros 0x60 bytes del bloque al pedir el final (para confirmar el offset real con datos).
+int g_finPeriod = 2, g_finPeriodOff = 4; static uint32_t g_finPeriodAntes = 0xFFFFFFFF; static uint8_t* g_finPeriodPtr = nullptr;
+static uint8_t* statsPtrSonda() {
+    std::string t; if (!leerArchivo(g_carpeta + "..\content\phoenix\sonda.json", t)) return nullptr;
+    size_t p = t.find("\"ptr_hex\":\"0x"); if (p == std::string::npos) return nullptr; p += 13;
+    uint64_t v = 0; int n = 0; while (p < t.size() && n < 16) { char c = t[p]; int d = (c >= '0' && c <= '9') ? c - '0' : (c >= 'A' && c <= 'F') ? c - 'A' + 10 : (c >= 'a' && c <= 'f') ? c - 'a' + 10 : -1; if (d < 0) break; v = v * 16 + d; ++p; ++n; }
+    return (n > 0 && v > 0x10000) ? reinterpret_cast<uint8_t*>(v) : nullptr;
+}
+static void finPeriodo(bool poner) {
+    if (g_finPeriod <= 0) return;
+    if (poner) {
+        uint8_t* sp = statsPtrSonda(); if (!sp) { logf("[FIN_PERIOD] sin puntero de match.stats (sonda.json sin ptr_hex): no se escribe"); return; }
+        uint32_t d[24]; if (leerSeguro(sp, d, sizeof d)) { char l[500]; int m = 0; for (int i = 0; i < 24; ++i) m += sprintf_s(l + m, sizeof(l) - m, " +%X=%u", i * 4, d[i]); logf("[FIN_PERIOD] stats@%p:%s", (void*)sp, l); }
+        { uint64_t q0 = 0; if (leerSeguro(sp, &q0, 8) && q0 >= (uint64_t)g_exe.base && q0 < (uint64_t)g_exe.base + g_exe.tamImagen) { logf("[FIN_PERIOD] el puntero de sonda.json (%p) es un OBJETO con vtable (exe+0x%llX), no la estructura match.stats: NO se escribe (escribir +0x%X dañaria la vtable)", (void*)sp, (unsigned long long)(q0 - (uint64_t)g_exe.base), g_finPeriodOff); return; } }
+        uint32_t cur = 0xFFFFFFFF; if (!leerSeguro(sp + g_finPeriodOff, &cur, 4)) { logf("[FIN_PERIOD] no legible +0x%X", g_finPeriodOff); return; }
+        if (cur != 1) { logf("[FIN_PERIOD] +0x%X vale %u (no 1): no se escribe", g_finPeriodOff, cur); return; }
+        uint32_t nv = (uint32_t)g_finPeriod; if (escribirSeguro(sp + g_finPeriodOff, &nv, 4)) { g_finPeriodAntes = cur; g_finPeriodPtr = sp; logf("[FIN_PERIOD] stats+0x%X: %u -> %u (el panel final debería mostrar Revancha)", g_finPeriodOff, cur, nv); }
+    } else if (g_finPeriodPtr && g_finPeriodAntes != 0xFFFFFFFF) {
+        uint32_t cur = 0; if (leerSeguro(g_finPeriodPtr + g_finPeriodOff, &cur, 4) && cur == (uint32_t)g_finPeriod) { escribirSeguro(g_finPeriodPtr + g_finPeriodOff, &g_finPeriodAntes, 4); logf("[FIN_PERIOD] restaurado a %u", g_finPeriodAntes); }
+        g_finPeriodPtr = nullptr; g_finPeriodAntes = 0xFFFFFFFF;
+    }
+}
+void resetEstadosPartido() {
+    if (g_descansoFase || g_descansoPedido || g_saquePedido || g_saqueFase) return;
+    g_menuArmado = 0;   /* 0.5.47: NO se tocan g_segundaParte/g_descansoFinal: el «al entrar» tambien ocurre al volver a TrainingWork DENTRO del mismo partido y provocaba un 2.º descanso en el 2.º tiempo (03:38) */ g_menuCerrado = 0; g_tSenalPre = 0; g_finPedido = 0; g_saqueT = 0; g_descansoT = 0; g_relojPausa = 0;
+    logf("[ESTADO] entrada al partido: banderas de menu/saque a cero (segunda parte y final se conservan)");
+}
 static void __stdcall ayudanteSaque(uint8_t* job) {
     ULONGLONG ahora = GetTickCount64(); ULONGLONG gap = g_ultTickJob ? ahora - g_ultTickJob : 0; g_ultTickJob = ahora;
     if (g_descansoPedido && !g_descansoFase) {
@@ -2947,23 +3484,28 @@ static void __stdcall ayudanteSaque(uint8_t* job) {
         // antes del saque: así FUN_140453530 no hace el 2->3 nativo (cambio de lado + IA/formación con el lado viejo). El reloj no se toca: sigue desde 45:00 y T1 evita el fin de tiempo.
         { uint32_t f0 = 1; leerSeguro(job + 0x2790, &f0, 4); g_faseAntesDescanso = f0; uint32_t fase2 = 2; memcpy(job + 0x2790, &fase2, 4);
             // 0.4.84: IDÉNTICO a 0.4.76 (la última que abrió el menú): base del reloj a 0 y float a 0 al abrir. Las versiones 0.4.78-0.4.83 sin este reinicio NO abrieron el menú (0.4.80: fase 1; 0.4.83: fase 2 sin reinicio; 0.4.76: fase 2 + reinicio = menú).
-            if (g_baseReloj) g_baseReloj(job + 0x2790, 0.0f); float z0 = 0.0f; memcpy(job + 0x279C, &z0, 4); }
-        uint32_t full[30]; for (int i = 0; i < 30; i++) full[i] = i == 0 ? ((g_descansoFinal && g_finalNativo) ? 0x21 : 0x22) : 0x48;   // 0.4.94 (frente Y): el paso 0x21 (FUN_14044B860) manda 0x1050016 = «Final del partido» (MatchStatsResult → MatchPreResult → MatchResult); gemelo del 0x22 del descanso
+            if (g_baseReloj) g_baseReloj(job + 0x2790, 0.0f); float z0 = 0.0f; memcpy(job + 0x279C, &z0, 4); if (g_descansoFinal && g_finFase != 2) { uint32_t ff = (uint32_t)g_finFase; memcpy(job + 0x2790, &ff, 4); logf("[DESCANSO] EXPERIMENTO street_fin_fase: fase del job del final = %u (en vez de 2)", ff); } }
+        if (g_descansoFinal) finPeriodo(true);
+        uint32_t full[30]; for (int i = 0; i < 30; i++) full[i] = i == 0 ? ((g_descansoFinal && (g_finalNativo || (g_streetFin90 && g_streetActivo))) ? 0x21 : 0x22) : 0x48;   // 0.4.94 (frente Y): el paso 0x21 (FUN_14044B860) manda 0x1050016 = «Final del partido» (MatchStatsResult → MatchPreResult → MatchResult); gemelo del 0x22 del descanso
         memcpy(job + 0x878, full, sizeof(full)); job[0x8F0] = 0; job[0x8F1] = 2;
         uint32_t sub2 = 2; memcpy(job + 0x2794, &sub2, 4);
         logf("[DESCANSO] fase=2, reloj a 0 y cola [0x22,0x48..] escritos: se abre el menú de descanso (como 0.4.76)");
-        g_menuCerrado = 0; g_menuArmado = g_postHalfOrig ? 1 : 0;
+        g_menuCerrado = 0; g_menuArmado = g_postHalfOrig ? 1 : 0; g_tSenalPre = 0;
         g_descansoPedido = 0; g_descansoFase = 1; g_descansoT = ahora; return;
     }
     if (g_descansoFase == 1) {
         static ULONGLONG tLogD = 0; if (ahora - tLogD > 3000) { tLogD = ahora; uint32_t q0 = 0, s94 = 0, f = 0; uint8_t cur = 0; leerSeguro(job + 0x878, &q0, 4); leerSeguro(job + 0x2794, &s94, 4); leerSeguro(job + 0x2790, &f, 4); leerSeguro(job + 0x8F0, &cur, 1); logf("[DESCANSO] esperando: cola0=0x%X cursor=%u fase=%u sub=%u gap=%llu ms", q0, (unsigned)cur, f, s94, (unsigned long long)gap); }
-        if (g_menuCerrado || gap > 1500 || ahora - g_descansoT > 180000) {
+        // 0.5.35: liberacion de seguridad (12:37-12:40 del 7-nov: PreHalfTime tardo 43 s y la senal de cierre nunca llego: el 2.º tiempo quedo parado 180 s): sin senal de menu en 20 s, o 45 s tras la senal sin que llegue el cierre, se libera con aviso
+        bool liberaSeg = false; { ULONGLONG ts = g_tSenalPre; if (!g_menuCerrado && !g_descansoFinal) { if (!ts && ahora - g_descansoT > 20000) liberaSeg = true; else if (ts && ahora > ts && ahora - ts > 30000) liberaSeg = true; } }   // 0.5.43: NO en el FINAL (g_descansoFinal): el final usa cola 0x21 y no pasa por PreHalfTime; liberarlo a los 20 s mandaba la revancha en estado intermedio (jugadores y pelota congelados)
+        if (liberaSeg) { g_menuArmado = 0; logf("[DESCANSO] LIBERACION DE SEGURIDAD: %s; se reanuda el partido", g_tSenalPre ? "30 s desde que se abrio el menu sin senal de cierre" : "20 s sin que MatchPreHalfTime abriera el menu"); }
+        if (g_menuCerrado || liberaSeg || gap > 1500 || ahora - g_descansoT > 180000) {
             if (g_descansoFase3) {   // 0.4.83: 2.º tiempo exacto en 45:00 y sin «+N»: fase 3 escrita DIRECTA (sin pasar por 453530/14102CAD0 = sin el 2->3 nativo) y base del reloj a 0 (la pantalla suma 45:00 en fase 3)
                 uint32_t f3 = 3; memcpy(job + 0x2790, &f3, 4); if (g_baseReloj) g_baseReloj(job + 0x2790, 0.0f); float z0 = 0.0f; memcpy(job + 0x279C, &z0, 4);   // 0.4.93: variante SEGURA: base 0 (la pantalla cuenta 0→45 en el 2.º tiempo; con base 45:00 en fase 1 el HUD se quedaba en «45:00 +N»); el final llega a t≥162000+añadido
                 g_relojPausa = 0; logf("[DESCANSO] 2.º tiempo: fase 3 directa y reloj a 0 (la pantalla cuenta 0→45; el final a 45 min de reloj + añadido)");
-            } else if (g_descansoFinal) {   // 0.4.91: final tipo amistoso: tras estadísticas → X (menú) la revancha arranca desde 0:00 en fase 1
+            } else if (g_descansoFinal) { finPeriodo(false);   // 0.4.91: final tipo amistoso: tras estadísticas → X (menú) la revancha arranca desde 0:00 en fase 1
                 uint32_t fa = g_faseAntesDescanso; memcpy(job + 0x2790, &fa, 4); if (g_baseReloj) g_baseReloj(job + 0x2790, 0.0f); float z0 = 0.0f; memcpy(job + 0x279C, &z0, 4); g_relojPausa = 0;
-                InterlockedExchange(&g_rearmaCancha, 1); if (g_golesReinicio) golesReiniciar(); logf("[DESCANSO] final: revancha desde 0:00 (fase %u); el marcador nativo NO se reinicia todavía", fa);
+                InterlockedExchange(&g_rearmaCancha, 1); if (g_golesReinicio) golesReiniciar();
+                { static LONG seqRev = 0; ++seqRev; char sb[160]; sprintf_s(sb, "{\"seq\":%ld,\"t\":%llu}", (long)seqRev, (unsigned long long)GetTickCount64()); std::string rr = g_carpeta + "..\content\phoenix\revancha.json"; FILE* fr = nullptr; if (fopen_s(&fr, rr.c_str(), "wb") == 0 && fr) { fputs(sb, fr); fclose(fr); } logf("[REVANCHA] senal #%ld escrita en content\phoenix\revancha.json (el Lua debe reiniciar marcador visual y reloj)", (long)seqRev); } logf("[DESCANSO] final: revancha desde 0:00 (fase %u); el marcador nativo NO se reinicia todavía", fa);
             } else {
                 uint32_t fa = g_faseAntesDescanso; memcpy(job + 0x2790, &fa, 4); g_relojPausa = 0;   // 0.4.82: se restaura la fase
                 if (g_descansoBase45 && g_baseReloj) { g_baseReloj(job + 0x2790, 162000.0f); float z0 = 0.0f; memcpy(job + 0x279C, &z0, 4); logf("[DESCANSO] 2.º tiempo en fase %u con base del reloj 45:00 (sin tocar la fase)", fa); }   // 0.4.90: alternativa segura a la fase 3
@@ -3005,6 +3547,9 @@ static void __stdcall ayudanteSaque(uint8_t* job) {
             if (g_arma4537) g_arma4537(job);
         }
         logf("[SAQUE] saque central pedido: saca el equipo %d", (int)g_saqueEquipo);
+        { uint8_t *rz = nullptr, *ob = nullptr, *dt = nullptr; int c0 = -1, c1 = -1;   // 0.5.26 [N_LADO]: cantidades por lado en cada saque inicial (diagnostico de revancha)
+          if (leerSeguro(g_globalPartido, &rz, 8) && rz && leerSeguro(rz + 0x3F8, &ob, 8) && ob && leerSeguro(ob + 0x10, &dt, 8) && dt) { leerSeguro(dt + 4 + 0x3C, &c0, 4); leerSeguro(dt + 4 + 0x40, &c1, 4); }
+          static LONG nNL = 0; if (InterlockedIncrement(&nNL) <= 200) logf("[N_LADO] saque: celdas +0x3C=%d +0x40=%d (panel local=%.0f rival=%.0f lado=%.0f)", c0, c1, (double)g_jugLocalF, (double)g_jugRivalF, (double)g_jugLadoF); }
         g_saquePedido = 0; g_saqueResetReloj = 0; g_saqueFase = 1; g_saqueT = ahora; return;
     }
     if (g_saqueFase == 1) {   // vigilar la cola montada; reescribir si empieza por 0F
@@ -3168,12 +3713,19 @@ static int leerGolesNativos(int equipo) {
     }
     return suma;
 }
+// 0.5.47: marcador para el desempate: primero el nativo; si no es legible (-1: hash no valida, ocurre siempre en esta version) se lee estado.json que escribe el Lua del marcador (goles_local / goles_visita)
+static bool leerMarcadorEmpate(int& a, int& b, const char** origen) {
+    a = leerGolesNativos(0); b = leerGolesNativos(1); *origen = "nativo"; if (a >= 0 && b >= 0) return true;
+    std::string t; if (!leerArchivo(g_carpeta + "..\content\phoenix\estado.json", t)) return false;
+    size_t p1 = t.find("\"goles_local\":"), p2 = t.find("\"goles_visita\":"); if (p1 == std::string::npos || p2 == std::string::npos) return false;
+    a = atoi(t.c_str() + p1 + 14); b = atoi(t.c_str() + p2 + 15); *origen = "estado.json"; return a >= 0 && b >= 0;
+}
 DWORD WINAPI hiloDosTiempos(LPVOID) {
     double prev = -1; int estado = 0; ULONGLONG tLog = 0; LONG malas = 0; ULONGLONG tFinal = 0; bool pendMedio = false, pendFinal = false, enTW = false;
     while (g_dosTiemposOn) {
         Sleep(50);
         vigilarCondiciones();
-        if (g_relojVisualDato) { uint32_t nv = (g_relojVisualOn && g_segundaParte && GetTickCount64() - g_tTrainGlob < 3000) ? 45u : 0u; if (*g_relojVisualDato != nv) { *g_relojVisualDato = nv; logf("[RELOJ_VISUAL] suma de minutos del HUD = %u", nv); } }   // 0.4.94: 45 solo en el 2.º tiempo (g_segundaParte), 0 fuera
+        if (g_relojVisualDato) { uint32_t nv = (g_relojVisualOn && g_segundaParte && GetTickCount64() - g_tTrainGlob < 3000) ? 45u : 0u; if (g_finReloj90 && g_relojVisualOn && g_descansoFinal) nv = 90u;   /* 0.5.19d: en la pantalla del final (reloj del job a 0) el HUD debe sumar 90 min, no 45 */ if (*g_relojVisualDato != nv) { *g_relojVisualDato = nv; logf("[RELOJ_VISUAL] suma de minutos del HUD = %u", nv); } }   // 0.4.94: 45 solo en el 2.º tiempo (g_segundaParte), 0 fuera
         if (!trainingWorkEstable()) {
             if (enTW) {   // 0.4.100: al salir del partido se olvidan los punteros guardados (EQ de goles, EQ del HUD): el juego los libera
                 for (int i = 0; i < 2; i++) g_eqGol[i] = nullptr; for (int i = 0; i < 8; i++) g_leeStatVistos[i] = nullptr;
@@ -3197,7 +3749,30 @@ DWORD WINAPI hiloDosTiempos(LPVOID) {
             escribirEstadoStreet("medio_tiempo", t);
             pendMedio = true;   // 0.4.80: se pide cuando hayan pasado >10 s del último gol (la escena de gol + órdenes viejas provocó el cierre 0x4B712B)
         }
-        if (estado < 2 && g_segundaParte && (t >= (g_descansoBase45 ? 324000.0 : 162000.0) + g_anadidoSeg) && !(faseP == 2)) {
+        bool finPed = false;   // 0.5.13 street_fin_pedido: final pedido desde fuera (reglas de calle por Lua); mismo camino que el final por reloj
+        if (InterlockedExchange(&g_finPedido, 0)) {
+            if (g_streetActivo && estado < 2 && faseP != 2) { finPed = true; logf("[FIN_PEDIDO] atendido: se lanza el final con revancha (t=%.0f, estado=%d, fase=%u)", t, estado, faseP); }
+            else logf("[FIN_PEDIDO] ignorado (street=%d estado=%d fase=%u)", (int)g_streetActivo, estado, faseP);
+        }
+        if (estado == 3) {   // 0.5.45 street_penales (fallback): MUERTE SUBITA: tras el empate a los 90 el partido sigue y el SIGUIENTE gol lanza el final
+            int ga = -1, gb = -1; const char* org = ""; bool leido = leerMarcadorEmpate(ga, gb, &org);
+            if (leido && ga != gb) { estado = 1; InterlockedExchange(&g_finPedido, 1); logf("[PENALES] gol en muerte subita (%d-%d): se lanza el final", ga, gb); }
+            continue;
+        }
+        if (g_penalesF > 0.5f && estado < 2 && ((g_segundaParte && t >= (g_descansoBase45 ? 324000.0 : 162000.0) + g_anadidoSeg) || finPed) && !(faseP == 2)) {   // 0.5.47: el chequeo de empate vale para CUALQUIER camino al final (90 naturales y street_fin_pedido)
+            int ga = -1, gb = -1; const char* org = ""; bool leido = leerMarcadorEmpate(ga, gb, &org); static ULONGLONG tNoLeido = 0; if (!leido && GetTickCount64() - tNoLeido > 5000) { tNoLeido = GetTickCount64(); logf("[PENALES] no se pudo leer el marcador (ni nativo ni estado.json): final normal"); }
+            if (leido && ga == gb) { logf("[PENALES] marcador %d-%d leido de %s", ga, gb, org);
+                if (g_penalesF < 1.5f) {   // 0.5.46 NATIVO (experimental): el flujo de descanso con [PostHalfTime+0x8A]=1 emite el evento «pk» -> Match/MatchPkOrder (hallazgo de los JSON de flujo y de FUN_1412F7500)
+                    estado = 1; pendMedio = true; g_penalNativo = 1;
+                    logf("[PENALES] empate %d-%d a los 90, street_penales=1: INTENTO NATIVO (menu de descanso y, al cerrarlo, evento pk -> MatchPkOrder). Si no arranca la tanda, el partido sigue y acaba con el final normal", ga, gb);
+                } else {                   // 2: muerte subita
+                    estado = 3; InterlockedExchange(&g_saquePedido, 1); g_relojPausa = 0;
+                    logf("[PENALES] empate %d-%d a los 90, street_penales=2: MUERTE SUBITA (saque central; el siguiente gol decide)", ga, gb);
+                }
+                continue;
+            }
+        }
+        if (estado < 2 && ((g_segundaParte && (t >= (g_descansoBase45 ? 324000.0 : 162000.0) + g_anadidoSeg)) || finPed) && !(faseP == 2)) {
             estado = 2; logf("[TIEMPOS] FINAL a t=%.0f: aviso, pausa de 8 s y revancha con saque central y reloj a 0", t);
             g_bolaCentroHasta = GetTickCount64() + 8000; escribirEstadoStreet("final", t); tFinal = GetTickCount64() + 8000; g_relojPausa = 1;
             if (g_e770 && g_descansoOn) { tFinal = 0; pendFinal = true; }   // 0.4.91: el final usa el panel de estadísticas del descanso y la revancha sale al cerrar el menú
@@ -3264,22 +3839,42 @@ static int r3DirectInput() {
 // 0.4.108 arquero_dist_seleccion (m, json/panel, por defecto 7): el portero solo puede elegirse con el cambio normal si el balón está a menos de esa distancia de él o viene hacia él
 // (velocidad hacia el portero > 3 m/s a menos de 30 m). Sin pelota localizada o sin posición del portero no se bloquea (deja pasar).
 float g_arqDistSelF = 7.0f, g_arqRivalDistF = 4.0f;
-static bool arqueroElegible(int idxGk) {
+struct ArqDiag { float d = -1, vp = 0, rival = -1; long edadMs = -1; const char* razon = ""; };
+static bool arqueroElegibleImpl(int idxGk, ArqDiag& dg) {
     uint8_t* raiz = nullptr; float gx = 0, gz = 0;
-    if (!leerSeguro(g_globalPartido, &raiz, 8) || !raiz || !posJugPC(raiz, idxGk, gx, gz)) return true;
-    uint8_t* b = g_pelotaSeguida; if (!b) return true;
-    float bp[3], bv[3]; if (!leerSeguro(b + 0x64, bp, 12) || !leerSeguro(b + 0x70, bv, 12)) return true;
-    float dx = bp[0] - gx, dz = bp[2] - gz, d = sqrtf(dx * dx + dz * dz);
+    if (!leerSeguro(g_globalPartido, &raiz, 8) || !raiz || !posJugPC(raiz, idxGk, gx, gz)) { dg.razon = "sin_pos_portero"; return true; }
+    ULONGLONG t0 = GetTickCount64();
+    uint8_t* b = g_pelotaSeguida; if (!b) { dg.razon = "pelota_nula"; return true; }
+    ULONGLONG tMov = g_tPelotaMovio; dg.edadMs = tMov ? (long)(t0 - tMov) : -1;
+    float bp[3], bv[3]; if (!leerSeguro(b + 0x64, bp, 12) || !leerSeguro(b + 0x70, bv, 12)) { dg.razon = "pelota_ilegible"; return true; }
+    float dx = bp[0] - gx, dz = bp[2] - gz, d = sqrtf(dx * dx + dz * dz); dg.d = d;
+    if (d > 0.5f) dg.vp = -(bv[0] * dx + bv[2] * dz) / d;
+    { float mn = 1e9f; for (int i = (idxGk == 0 ? 11 : 0), fin = i + 11; i < fin; ++i) { if (i == 0 || i == 11) continue; float rx = 0, rz = 0; if (!posJugPC(raiz, i, rx, rz)) continue; float ex = rx - bp[0], ez = rz - bp[2]; float r = sqrtf(ex * ex + ez * ez); if (r < mn) mn = r; } if (mn < 1e8f) dg.rival = mn; }
+    // 0.5.6: posición de la pelota vieja/inválida (los [BALL] daban «escaneo: 0 candidatos» y d>7 bloqueaba siempre): sin movimiento >0.05 m en 600 ms, o pérdida/«0 candidatos» en los últimos 3 s = SIEMPRE elegible
+    if (tMov == 0 || t0 - tMov > 600) { dg.razon = "pelota_quieta"; return true; }
+    { ULONGLONG tp = g_tPelotaPerdida; if (tp && t0 - tp < 3000) { dg.razon = "pelota_perdida_reciente"; return true; } }
+    // 0.5.5: balón pegado al portero (lo tiene en las manos o le cae encima) = SIEMPRE elegible y sin mirar rivales; y una vez elegible se mantiene 2,5 s (histéresis) para que no se pierda el mando
+    // mientras el balón se mueve con él. Antes, un rival a < 4 m del balón lo bloqueaba justo cuando el portero lo atrapaba y el portero quedaba solo con la IA hasta que el balón se alejaba.
+    static ULONGLONG s_hasta[2] = { 0, 0 }; ULONGLONG ahora = GetTickCount64(); int eq = idxGk == 0 ? 0 : 1;
+    if (d <= 3.0f) { s_hasta[eq] = ahora + 2500; dg.razon = "d<=3"; return true; }
+    if (ahora < s_hasta[eq]) { dg.razon = "histeresis"; return true; }
     bool candidato = d <= g_arqDistSelF;
     if (!candidato && d < 30.0f) { float vp = -(bv[0] * dx + bv[2] * dz) / d; candidato = vp > 3.0f; }
-    if (!candidato) return false;
+    if (!candidato) { dg.razon = "lejos_y_no_viene"; return false; }
+    if (candidato) s_hasta[eq] = ahora + 1500;
     // 0.4.109 arquero_dist_rival (m, por defecto 4; 0 = no mirar rivales): con un rival a menos de esa distancia del balón NO se elige al portero (se queda el jugador de campo)
-    if (g_arqRivalDistF >= 0.5f) for (int i = (idxGk == 0 ? 11 : 0), fin = i + 11; i < fin; ++i) {
-        if (i == 0 || i == 11) continue;   // los porteros no cuentan como rival cercano
-        float rx = 0, rz = 0; if (!posJugPC(raiz, i, rx, rz)) continue;
-        float ex = rx - bp[0], ez = rz - bp[2]; if (ex * ex + ez * ez < g_arqRivalDistF * g_arqRivalDistF) return false;
+    if (g_arqRivalDistF >= 0.5f && dg.rival >= 0 && dg.rival < g_arqRivalDistF) { dg.razon = "rival_cerca"; return false; }
+    dg.razon = "candidato"; return true;
+}
+static bool arqueroElegible(int idxGk) {
+    ArqDiag dg; bool ok = arqueroElegibleImpl(idxGk, dg);
+    // 0.5.6 [L1_SIN_PT_DIAG]: una línea por bloqueo / permiso nuevo cada 2 s (por equipo y resultado), límite 400
+    static ULONGLONG ultLog[2][2] = {}; static LONG nDiag = 0; ULONGLONG ahora = GetTickCount64(); ULONGLONG& u = ultLog[idxGk == 0 ? 0 : 1][ok ? 1 : 0];
+    if (nDiag < 400 && (u == 0 || ahora - u >= 2000)) {
+        u = ahora; LONG n = InterlockedIncrement(&nDiag);
+        if (n <= 400) logf("[L1_SIN_PT_DIAG] gk=%d %s (%s) d=%.1f vp=%.1f rival=%.1f edadPelota=%ldms R3=%d/%d #%ld", idxGk, ok ? "PERMITE" : "BLOQUEA", dg.razon, dg.d, dg.vp, dg.rival, dg.edadMs, r3DirectInput(), (int)r3Pulsado(), (long)n);
     }
-    return true;
+    return ok;
 }
 static bool equipoSoloPortero(int equipo) {
     uint8_t* raiz = nullptr; int cuenta[2];
@@ -3301,7 +3896,7 @@ static void __stdcall ayudanteCursor(uint8_t* reg, uint32_t idx, uint8_t* ret, u
         uint32_t tb = idx == 0 ? 0u : 11u;
         uint32_t nuevo = (viejo >= tb + 1 && viejo <= tb + 10) ? tb + 1 + (viejo - tb) % 10 : tb + 9;
         *idxPila = nuevo; static LONG nL1 = 0; LONG n = InterlockedIncrement(&nL1);
-        if (n <= 60) logf("[L1_SIN_PT] el cambio de jugador iba al portero idx=%u (antes %u) → se pone el jugador de campo %u (el balón no está cerca ni viene hacia él; L1+R3 sí lo elige) #%ld", idx, viejo, nuevo, (long)n);
+        if (n <= 400) logf("[L1_SIN_PT] el cambio de jugador iba al portero idx=%u (antes %u) → se pone el jugador de campo %u (el balón no está cerca ni viene hacia él; L1+R3 sí lo elige) #%ld", idx, viejo, nuevo, (long)n);
         return;
     }
     if (g_cursorSinPtOn && idx == 0 && idxPila && (off == 0x4403D2 || off == 0x1FB98D2) && GetTickCount64() - g_tTrainGlob < 3000) {
@@ -3443,9 +4038,13 @@ using FnFilaBanda = uint64_t (*)(float*, int);
 FnFilaBanda g_filaBandaOrig = nullptr; volatile LONG g_supOcultosOn = 0, g_supOcultados = 0;
 uint64_t ganchoFilaBanda(float* out, int idx) {
     uint64_t r = g_filaBandaOrig(out, idx);
-    if (g_supOcultosOn && (r & 0xFF) && GetTickCount64() - g_tTrainGlob < 3000) {
-        out[0] = 0.0f; out[2] = 100.0f;
-        LONG n = InterlockedIncrement(&g_supOcultados); if (n <= 10) logf("[SUPL] suplente idx=%d aparcado en (0, 0, 100)", idx);
+    // 0.5.19: además de la ventana de 3 s se aparca siempre que haya TrainingWork vivo y Street activo (hayTrainingWork), para que la revancha nativa (partido recreado) no deje 11 v 11; cada aparcado se anota (límite 60) con el motivo, y los NO aparcados con balda (r&0xFF) también (límite 40)
+    if (g_supOcultosOn && (r & 0xFF)) {
+        bool reciente = GetTickCount64() - g_tTrainGlob < 3000; bool tw = hayTrainingWork();
+        if (reciente || tw) {
+            out[0] = 0.0f; out[2] = 100.0f;
+            LONG n = InterlockedIncrement(&g_supOcultados); if (n <= 400) logf("[SUPL] suplente idx=%d aparcado en (0, 0, 100) (reciente=%d trainingWork=%d) #%ld", idx, (int)reciente, (int)tw, (long)n);
+        } else { static LONG nn = 0; if (InterlockedIncrement(&nn) <= 200) logf("[SUPL] suplente idx=%d NO aparcado (sin ventana reciente %llu ms y sin TrainingWork)", idx, (unsigned long long)(GetTickCount64() - g_tTrainGlob)); }
     }
     return r;
 }
@@ -3475,6 +4074,8 @@ std::vector<Feature> g_funciones = {   // orden = orden de arranque (gol_nativo_
     { "muros_core", "Muros lógicos del Core en el paso de la pelota (rebote contra la línea de la cancha chica)", murosInstalar, murosQuitar },
     { "arco_chico_free", "Arco más chico (3v3): postes y larguero lógicos del Core; ancho y alto en el json (arco_chico_ancho/alto)", arcoChicoInstalar, arcoChicoQuitar },
     { "goles_sonda", "Solo log: punteros reales de los contadores de goles (gancho en FUN_1408C9E90+9) para la revancha 0-0", golesSondaInstalar, golesSondaQuitar },
+    { "reja_hook_copia", "Reja: recorta x/z de los jugadores en la rutina de copia de posicion (exe+0x431E49, hallada con [HWBP]); usa reja_margen", rejaHookInstalar, rejaHookQuitar },
+    { "diag_hwbp", "DIAGNOSTICO (apagado): breakpoint de hardware propio en rec+0x568 de un jugador; anota en [HWBP] los RVA que escriben la posicion (diag_hwbp_slot, 8 por defecto)", hwbpInstalar, hwbpQuitar },
     { "street_jugadores", "Entrenamiento: cantidad de jugadores por equipo sin el mínimo de 3 del menú (EXPERIMENTAL; street_jugadores_local / _rival 0-11, _lado 0/1)", jugCantInstalar, jugCantQuitar },
     { "arco_chico_real", "Arco chico REAL (EXPERIMENTAL): boca lógica y volumen de la red nativa nacen con la medida arco_medida (0 original, 1 = 4x2, 2 = 3x2, 3 = 5x2,2) al empezar el partido", arcoRealInstalar, arcoRealQuitar },
     { "street_saque_trabado", "Saque de centro trabado: anota el estado y empuja el balon si la IA no saca (street_saque_espera_s, street_saque_empuje)", saqueTrabInstalar, saqueTrabQuitar },
@@ -3617,6 +4218,11 @@ void leerConfig() {
     if (valorDe("arco_chico_alto", v)) { g_arcoAlto = (float)atof(v.c_str()); if (g_arcoAlto < 1.0f || g_arcoAlto > 2.44f) g_arcoAlto = 2.0f; }
     if (valorDe("muro_x", v)) g_muroX = atof(v.c_str());
     if (valorDe("muro_z", v)) g_muroZ = atof(v.c_str());
+    if (valorDe("gk_limite_area", v)) g_gkLimiteArea = (v != "false");
+    if (valorDe("saque_margen_chica", v)) g_saqueMargenChica = (v != "false");
+    if (valorDe("ia_encarar_k", v)) { g_iaEncararK = (float)atof(v.c_str()); if (!(g_iaEncararK >= 0.8f && g_iaEncararK <= 2.0f)) g_iaEncararK = 1.3f; }
+    if (valorDe("gk_area_lateral", v)) { g_gkLateral = (float)atof(v.c_str()); if (!(g_gkLateral >= 0.0f && g_gkLateral <= 6.0f)) g_gkLateral = 1.0f; }
+    if (valorDe("gk_area_radio", v)) { g_gkAreaRadio = (float)atof(v.c_str()); if (!(g_gkAreaRadio >= 2.0f && g_gkAreaRadio <= 10.0f)) g_gkAreaRadio = 5.0f; }
     if (valorDe("arquero_salida_max", v)) { g_arqSalidaMax = (float)atof(v.c_str()); if (g_arqSalidaMax < 1.0f || g_arqSalidaMax > 12.0f) g_arqSalidaMax = 3.5f; }
     if (valorDe("gk_pase_corto_m", v)) { g_pcMax = (float)atof(v.c_str()); if (g_pcMax < 4.0f || g_pcMax > 40.0f) g_pcMax = 10.0f; }
     if (valorDe("jugadores_formacion", v)) g_formOn = (v == "true");
@@ -3629,6 +4235,40 @@ void leerConfig() {
     if (valorDe("ia_escala", v)) g_iaE = (float)atof(v.c_str());
     if (valorDe("ia_escala_apoyo", v)) g_iaEApoyo = (float)atof(v.c_str());
     if (valorDe("ia_piso_m", v)) g_iaPiso = (float)atof(v.c_str());
+    if (valorDe("street_rol_ia", v)) g_rolIa = (v == "true");
+    if (valorDe("street_rol_ia_valor", v)) g_rolIaVal = atoi(v.c_str()) != 0 ? 1 : 0;
+    if (valorDe("street_fin_fase", v)) { int ff = atoi(v.c_str()); g_finFase = (ff == 1 || ff == 2 || ff == 3 || ff == 10) ? ff : 2; if (g_finFase >= 3) logf("[DESCANSO] AVISO street_fin_fase=%d es EXPERIMENTAL (fase de fin real; riesgo de cierre B7AAA: la fase anterior se restaura al cerrar el menú)", g_finFase); }
+    if (valorDe("final_reloj_90", v)) g_finReloj90 = (v != "false");
+    if (valorDe("gk_saca_manos", v)) g_gkSacaManos = (v != "false");
+    if (valorDe("gk_patada_k", v)) { g_gkPatadaK = (float)atof(v.c_str()); if (!(g_gkPatadaK >= 0.3f && g_gkPatadaK <= 1.0f)) g_gkPatadaK = 0.6f; }
+    if (valorDe("ia_contra", v)) g_iaContra = (v == "true");
+    if (valorDe("ia_contra_k", v)) { g_iaContraK = (float)atof(v.c_str()); if (!(g_iaContraK >= 1.0f && g_iaContraK <= 2.0f)) g_iaContraK = 1.5f; }
+    if (valorDe("street_fin_period", v)) g_finPeriod = atoi(v.c_str());
+    if (valorDe("street_fin_period_off", v)) { g_finPeriodOff = atoi(v.c_str()); if (g_finPeriodOff < 0 || g_finPeriodOff > 0x200 || (g_finPeriodOff & 3)) g_finPeriodOff = 4; }
+    if (valorDe("gol_caja_boca", v)) g_golCajaBoca = (v != "false");
+    if (valorDe("street_reaparcar", v)) g_reaparcar = (v != "false");
+    if (valorDe("muro_todo_alto", v)) g_muroTodoAlto = (v != "false");
+    if (valorDe("muro_margen_bola", v)) { g_muroMargenBola = (float)atof(v.c_str()); if (!(g_muroMargenBola >= 0.0f && g_muroMargenBola <= 1.0f)) g_muroMargenBola = 0.05f; }
+    { auto num3 = [&](const char* k, float& dst, const char* nombres) { std::string w; if (valorDe(k, w)) { if (w == "auto" || w == "AUTO") dst = 0; else { for (int i = 0; nombres[i]; ++i) if (w.size() == 1 && (w[0] == nombres[i] || w[0] == nombres[i] + 32)) dst = (float)(i + 1); if (!w.empty() && isdigit((unsigned char)w[0])) dst = (float)atof(w.c_str()); } if (dst < 0 || dst > 3) dst = 0; } };   // 0.5.39: auto/S/M/L, auto/A/B/C o 0-3
+      num3("cancha_tamano", g_canchaTamF, "SML"); num3("arco_tamano", g_arcoTamF, "ABC");
+      std::string w2; if (valorDe("street_tamanos", w2)) g_tamanosF = (w2 == "false" || w2 == "0") ? 0.0f : 1.0f; if (valorDe("street_penales", w2)) g_penalesF = (w2 == "true" || w2 == "1") ? 1.0f : (w2 == "2") ? 2.0f : 0.0f; }
+    if (valorDe("street_ultimo_n", v)) { int nn = atoi(v.c_str()); if (nn >= 1 && nn <= 11) g_ultimoN = nn; }
+    if (valorDe("cancha_linea_extra", v)) { g_lineaExtraF = (float)atof(v.c_str()); if (!(g_lineaExtraF >= 0.0f && g_lineaExtraF <= 2.0f)) g_lineaExtraF = 0.0f; }
+    if (valorDe("cancha_muro_extra", v)) { g_muroExtraF = (float)atof(v.c_str()); if (!(g_muroExtraF >= 0.0f && g_muroExtraF <= 0.5f)) g_muroExtraF = 0.05f; }
+    if (valorDe("street_watchdog_s", v)) { g_wdSegF = (float)atof(v.c_str()); if (!(g_wdSegF >= 0.0f && g_wdSegF <= 60.0f)) g_wdSegF = 8.0f; }
+    if (valorDe("sonda_partido_log", v)) g_sondaLogF = (v == "true" || v == "1") ? 1.0f : 0.0f;
+    if (valorDe("reja_hook_a", v)) g_hookAF = (v == "false" || v == "0") ? 0.0f : 1.0f;
+    if (valorDe("reja_hilo_origen", v)) g_hiloOrigen = (v != "false");
+    if (valorDe("reja_margen", v)) { g_rejaMargen = (float)atof(v.c_str()); if (!(g_rejaMargen >= 0.2f && g_rejaMargen <= 3.0f)) g_rejaMargen = 1.4f; }
+    if (valorDe("diag_hwbp_slot", v)) g_hwbpSlot = atoi(v.c_str());
+    if (valorDe("diag_hwbp_off", v)) { int o = (int)strtol(v.c_str(), nullptr, 0); if (o >= 0x500 && o <= 0x600 && (o % 4) == 0) g_hwbpOff = o; }
+    if (valorDe("red_fondo_m", v)) { g_redFondoM = (float)atof(v.c_str()); if (!(g_redFondoM >= 1.0f && g_redFondoM <= 6.0f)) g_redFondoM = 3.3f; }
+    if (valorDe("muro_techo", v)) { g_muroTecho = (float)atof(v.c_str()); if (!(g_muroTecho >= 0.0f && g_muroTecho <= 200.0f)) g_muroTecho = 40.0f; }
+    if (valorDe("muro_alto", v)) { g_muroAlto = (float)atof(v.c_str()); if (!(g_muroAlto >= 0.0f && g_muroAlto <= 30.0f)) g_muroAlto = 6.0f; }
+    if (valorDe("jugadores_dentro_reja", v)) g_jugDentroReja = (v != "false");
+    if (valorDe("ia_base_k", v)) { g_iaBaseK = (float)atof(v.c_str()); if (!(g_iaBaseK >= 0.5f && g_iaBaseK <= 2.0f)) g_iaBaseK = 1.0f; }
+    if (valorDe("ia_presion_k", v)) { g_iaPresionK = (float)atof(v.c_str()); if (!(g_iaPresionK >= 0.8f && g_iaPresionK <= 2.0f)) g_iaPresionK = 2.0f; }
+    if (valorDe("ia_ataque_k", v)) { g_iaAtaqueK = (float)atof(v.c_str()); if (!(g_iaAtaqueK >= 0.8f && g_iaAtaqueK <= 2.0f)) g_iaAtaqueK = 1.4f; }
     if (valorDe("descanso_fase3", v)) g_descansoFase3 = (v == "true");
     if (valorDe("descanso_base45", v)) g_descansoBase45 = (v == "true");
     if (valorDe("tiro_potencia_k", v)) { g_tiroPot = (float)atof(v.c_str()); if (g_tiroPot < 0.5f || g_tiroPot > 2.0f) g_tiroPot = 1.25f; }
@@ -3638,6 +4278,7 @@ void leerConfig() {
     if (valorDe("pase_correccion", v)) { g_paseCorr = (float)atof(v.c_str()); if (g_paseCorr < 0.0f || g_paseCorr > 1.0f) g_paseCorr = 0.6f; }
     if (valorDe("velocidad_partido", v)) { int q = atoi(v.c_str()); g_velocidadPartido = (q >= 0 && q <= 4) ? q : -1; }
     if (valorDe("final_nativo", v)) g_finalNativo = (v == "true");
+    if (valorDe("street_fin_90", v)) g_streetFin90 = (v != "false");
     if (valorDe("street_activo", v)) { LONG s = (v == "false") ? 0 : 1; g_streetActivo = g_streetPedido = s; logf("[STREET] al arrancar: modo Street %s", s ? "ENCENDIDO" : "APAGADO"); }
     if (valorDe("nitidez_piel", v)) { float q = (float)atof(v.c_str()); nit::g_pielNit = (q >= 0.0f && q <= 1.0f) ? q : 0.3f; }   // 0.5.3: multiplica la nitidez en la piel (0..1, por defecto 0.3)
     if (valorDe("suavizado_piel", v)) { float q = (float)atof(v.c_str()); nit::g_pielSuav = (q >= 0.0f && q <= 1.0f) ? q : 0.35f; }   // 0.5.3: suavizado bilateral solo en piel (0..1, por defecto 0.35)
@@ -3700,24 +4341,35 @@ static void persistirClaveJson(const std::string& id, const std::string& valor) 
 }
 static void procesarOrdenes() {
     static ULONGLONG tOrd = 0; ULONGLONG ahora = GetTickCount64(); if (ahora - tOrd < 1000) return; tOrd = ahora;
+    {   // 0.5.13 street_fin_pedido: además del canal ordenes.txt, se mira la clave del json cada ~1 s; con valor 1/true se pone a 0 y se pide el final con revancha (solo si Street está activo; lo decide hiloDosTiempos)
+        std::string tj; if (leerArchivo(g_carpeta + "phoenix_core.json", tj)) {
+            size_t p = tj.find("\"street_fin_pedido\""); if (p != std::string::npos) { size_t c = tj.find(':', p); if (c != std::string::npos) { size_t e = c + 1; while (e < tj.size() && (tj[e] == ' ' || tj[e] == '\t')) e++;
+                if (tj.compare(e, 1, "1") == 0 || tj.compare(e, 4, "true") == 0) { InterlockedExchange(&g_finPedido, 1); persistirClaveJson("street_fin_pedido", "0"); logf("[FIN_PEDIDO] clave del json = 1: puesta a 0 y final pedido"); } } }
+        }
+    }
     std::string ruta = g_carpeta + "ordenes.txt", txt; if (!existe(ruta) || !leerArchivo(ruta, txt)) return;
     DeleteFileA(ruta.c_str());
     static const char* const prohibidas[] = { "arquero_rama_normal", "arquero_propio_cursor", "arquero_salida_corta", "arquero_saque_corto", "sin_despeje_emergencia", "cursor_bloqueo_pt", "arquero_salida_max", "cursor_pt_log", nullptr };
-    static const char* const alReiniciar[] = { "street_dos_tiempos", "street_pantalla_descanso", "street_saque_nativo", "ajustes_partido_free", "marcador_nativo_free", "reloj_street_free", "orden_jugador_segura", "reinicio_seguro", "cancha_chica_free", "descanso_fase3", "descanso_base45", "final_nativo", "clima_forzado", "season_forzada", "anadido_min", nullptr };
+    static const char* const alReiniciar[] = { "street_dos_tiempos", "street_pantalla_descanso", "street_saque_nativo", "ajustes_partido_free", "marcador_nativo_free", "reloj_street_free", "orden_jugador_segura", "reinicio_seguro", "cancha_chica_free", "descanso_fase3", "descanso_base45", "final_nativo", "street_fin_90", "jugadores_dentro_reja", "gk_saca_manos", "gol_caja_boca", "clima_forzado", "season_forzada", "anadido_min", nullptr };
     size_t i = 0;
     while (i < txt.size()) {
         size_t e = txt.find_first_of("\r\n", i); std::string l = txt.substr(i, e == std::string::npos ? std::string::npos : e - i); i = (e == std::string::npos) ? txt.size() : e + 1;
         size_t q = l.find('='); if (q == std::string::npos || q == 0) continue;
         std::string id = l.substr(0, q), v = l.substr(q + 1); while (!v.empty() && (v.back() == ' ' || v.back() == '\t')) v.pop_back();
+        if (id == "diag_hwbp_base") { g_hwbpBaseSrc = (v == "src" || v == "1") ? 1 : 0; logf("[HWBP] orden: base=%s", g_hwbpBaseSrc ? "src (origen de la copia A)" : "rec (registro del jugador)"); continue; }
+        if (id == "diag_hwbp_off") { int o = (int)strtol(v.c_str(), nullptr, 0); if (o >= 0x500 && o <= 0x600 && (o % 4) == 0) { g_hwbpOff = o; logf("[HWBP] orden: offset=0x%X", o); } else logf("[HWBP] orden: offset %s fuera de rango (0x500-0x600, multiplo de 4)", v.c_str()); continue; }
+        if (id == "diag_hwbp_slot") { g_hwbpSlot = atoi(v.c_str()); logf("[HWBP] orden: slot=%d", g_hwbpSlot); continue; }
+        if (id == "diag_hwbp") { if (v == "1" || v == "true") { g_hwbpSlot = g_hwbpSlot; logf("[HWBP] orden: armar (espera partido)"); hwbpArrancar(); } else { g_hwbpOn = 0; logf("[HWBP] orden: cancelar"); } continue; }   // 0.5.28b
         if (claveEn(id.c_str(), prohibidas)) { logf("[PANEL] %s: clave congelada del portero, orden ignorada", id.c_str()); continue; }
         bool esBool = (v == "1" || v == "0" || v == "true" || v == "false"); bool on = (v == "1" || v == "true");
+        if (id == "street_fin_pedido") { if (on) { InterlockedExchange(&g_finPedido, 1); logf("[FIN_PEDIDO] orden recibida por ordenes.txt: final pedido"); } continue; }   // 0.5.13
         if (id == "street_activo" && esBool) {   // 0.4.102: interruptor general; streetVigilar lo aplica cuando no hay Entrenamiento en curso
             InterlockedExchange(&g_streetPedido, on ? 1 : 0); persistirClaveJson(id, on ? "true" : "false");
             logf("[STREET] pedido: modo Street %s%s", on ? "ENCENDIDO" : "APAGADO", (g_streetPedido != g_streetActivo && trainingWorkCrudo()) ? " (se aplica al salir del Entrenamiento)" : "");
             continue;
         }
         {   // parámetros numéricos EN VIVO (se releen al instante: son las variables que usan los ganchos) y se guardan en el json
-            struct Num { const char* id; float* var; float lo, hi; }; static const Num nums[] = { { "tiro_potencia_k", &g_tiroPot, 0.5f, 2.0f }, { "tiro_altura_k", &g_tiroAlt, 0.2f, 1.5f }, { "pase_vel_k", &g_paseVel, 0.8f, 2.0f }, { "pase_correccion", &g_paseCorr, 0.0f, 1.0f }, { "pase_cono_grados", &g_paseCono, 5.0f, 60.0f }, { "muro_rebote", &g_muroRebote, 0.3f, 0.95f }, { "muro_fondo_rebote", &g_muroFondoRebote, 0.0f, 0.95f }, { "muro_lat_friccion", &g_muroLatFric, 0.0f, 1.0f }, { "arco_chico_ancho", &g_arcoAncho, 1.5f, 7.32f }, { "street_1v1_saque", &g_1v1SaqueF, 0.0f, 3.0f }, { "street_jugadores_local", &g_jugLocalF, 0.0f, 11.0f }, { "street_jugadores_rival", &g_jugRivalF, 0.0f, 11.0f }, { "street_jugadores_lado", &g_jugLadoF, 0.0f, 1.0f }, { "arco_medida", &g_arcoMedidaF, 0.0f, 3.0f }, { "street_l1_sin_portero", &g_l1SinPorteroF, 0.0f, 1.0f }, { "arquero_dist_seleccion", &g_arqDistSelF, 2.0f, 25.0f }, { "arquero_dist_rival", &g_arqRivalDistF, 0.0f, 15.0f }, { "red_tope_rebote", &g_redTopeF, 0.0f, 1.0f }, { "red_rebote_factor", &g_reboteFactorF, 0.0f, 1.0f }, { "arcos_visuales", &g_arcosVisualesF, 0.0f, 1.0f }, { "street_saque_espera_s", &g_saqueEsperaF, 2.0f, 20.0f }, { "street_saque_empuje", &g_saqueEmpujeF, 0.0f, 1.0f }, { "red_anclas", &g_anclasF, 0.0f, 1.0f }, { "gk_despeje_dist_m", &g_gkDespejeDist, 1.0f, 15.0f }, { "gk_despeje_presion_m", &g_gkDespejePresion, 0.5f, 15.0f }, { "arco_chico_alto", &g_arcoAlto, 1.0f, 2.44f }, { "muro_lat_empuje", &g_muroLatEmpuje, 0.0f, 0.3f }, { "muro_friccion", &g_muroFric, 0.0f, 1.0f } };
+            struct Num { const char* id; float* var; float lo, hi; }; static const Num nums[] = { { "tiro_potencia_k", &g_tiroPot, 0.5f, 2.0f }, { "tiro_altura_k", &g_tiroAlt, 0.2f, 1.5f }, { "pase_vel_k", &g_paseVel, 0.8f, 2.0f }, { "pase_correccion", &g_paseCorr, 0.0f, 1.0f }, { "pase_cono_grados", &g_paseCono, 5.0f, 60.0f }, { "muro_rebote", &g_muroRebote, 0.3f, 0.95f }, { "muro_fondo_rebote", &g_muroFondoRebote, 0.0f, 0.95f }, { "muro_lat_friccion", &g_muroLatFric, 0.0f, 1.0f }, { "arco_chico_ancho", &g_arcoAncho, 1.5f, 7.32f }, { "street_1v1_saque", &g_1v1SaqueF, 0.0f, 3.0f }, { "street_jugadores_local", &g_jugLocalF, 0.0f, 11.0f }, { "street_jugadores_rival", &g_jugRivalF, 0.0f, 11.0f }, { "street_jugadores_lado", &g_jugLadoF, 0.0f, 1.0f }, { "arco_medida", &g_arcoMedidaF, 0.0f, 3.0f }, { "street_l1_sin_portero", &g_l1SinPorteroF, 0.0f, 1.0f }, { "arquero_dist_seleccion", &g_arqDistSelF, 2.0f, 25.0f }, { "arquero_dist_rival", &g_arqRivalDistF, 0.0f, 15.0f }, { "red_tope_rebote", &g_redTopeF, 0.0f, 1.0f }, { "red_rebote_factor", &g_reboteFactorF, 0.0f, 1.0f }, { "arcos_visuales", &g_arcosVisualesF, 0.0f, 1.0f }, { "street_saque_espera_s", &g_saqueEsperaF, 2.0f, 20.0f }, { "street_saque_empuje", &g_saqueEmpujeF, 0.0f, 1.0f }, { "red_anclas", &g_anclasF, 0.0f, 1.0f }, { "gk_despeje_dist_m", &g_gkDespejeDist, 1.0f, 15.0f }, { "gk_despeje_presion_m", &g_gkDespejePresion, 0.5f, 15.0f }, { "arco_chico_alto", &g_arcoAlto, 1.0f, 2.44f }, { "muro_lat_empuje", &g_muroLatEmpuje, 0.0f, 0.3f }, { "muro_friccion", &g_muroFric, 0.0f, 1.0f }, { "ia_presion_k", &g_iaPresionK, 0.8f, 2.0f }, { "ia_ataque_k", &g_iaAtaqueK, 0.8f, 2.0f }, { "ia_encarar_k", &g_iaEncararK, 0.8f, 2.0f }, { "ia_base_k", &g_iaBaseK, 0.5f, 2.0f }, { "muro_alto", &g_muroAlto, 0.0f, 30.0f }, { "muro_techo", &g_muroTecho, 0.0f, 200.0f }, { "red_fondo_m", &g_redFondoM, 1.0f, 6.0f }, { "street_tamanos", &g_tamanosF, 0.0f, 1.0f }, { "sonda_partido_log", &g_sondaLogF, 0.0f, 1.0f }, { "street_watchdog_s", &g_wdSegF, 0.0f, 60.0f }, { "cancha_linea_extra", &g_lineaExtraF, 0.0f, 2.0f }, { "cancha_muro_extra", &g_muroExtraF, 0.0f, 0.5f }, { "reja_hook_a", &g_hookAF, 0.0f, 1.0f }, { "cancha_tamano", &g_canchaTamF, 0.0f, 3.0f }, { "arco_tamano", &g_arcoTamF, 0.0f, 3.0f }, { "street_penales", &g_penalesF, 0.0f, 2.0f }, { "reja_margen", &g_rejaMargen, 0.2f, 3.0f }, { "muro_margen_bola", &g_muroMargenBola, 0.0f, 1.0f }, { "gk_patada_k", &g_gkPatadaK, 0.3f, 1.0f }, { "ia_contra_k", &g_iaContraK, 1.0f, 2.0f } };
             bool hecho = false; for (const Num& n : nums) if (id == n.id) { float x = (float)atof(v.c_str()); if (x >= n.lo && x <= n.hi) { *n.var = x; persistirClaveJson(id, v); logf("[PANEL] %s = %.3f (en vivo)", n.id, x); } else logf("[PANEL] %s=%s fuera de rango [%.2f, %.2f]: ignorado", n.id, v.c_str(), n.lo, n.hi); hecho = true; break; }
             if (hecho) continue;
         }
@@ -3726,7 +4378,7 @@ static void procesarOrdenes() {
             persistirClaveJson(id, on ? "true" : "false");
             if (claveEn(id.c_str(), alReiniciar)) { f->deseada = on; logf("[PANEL] %s=%s guardado (se aplica al reiniciar PES)", id.c_str(), on ? "ON" : "OFF"); }
             else { EnterCriticalSection(&g_cs); f->deseada = on; bool ok = on ? encender(*f) : apagar(*f); guardarEstado(); LeaveCriticalSection(&g_cs); logf("[PANEL] %s=%s en vivo: %s", id.c_str(), on ? "ON" : "OFF", ok ? "hecho" : "no se pudo"); }
-        } else if (!f && claveEn(id.c_str(), alReiniciar)) { if (id == "final_nativo" && esBool) g_finalNativo = on; persistirClaveJson(id, esBool ? (on ? "true" : "false") : v); logf("[PANEL] %s=%s guardado (partido nuevo / reinicio)", id.c_str(), v.c_str()); }
+        } else if (!f && claveEn(id.c_str(), alReiniciar)) { if (id == "final_nativo" && esBool) g_finalNativo = on; if (id == "street_fin_90" && esBool) g_streetFin90 = on; if (id == "jugadores_dentro_reja" && esBool) g_jugDentroReja = on; if (id == "gk_saca_manos" && esBool) g_gkSacaManos = on; if (id == "gol_caja_boca" && esBool) g_golCajaBoca = on; persistirClaveJson(id, esBool ? (on ? "true" : "false") : v); logf("[PANEL] %s=%s guardado (partido nuevo / reinicio)", id.c_str(), v.c_str()); }
         else logf("[PANEL] orden desconocida o no permitida: %s", l.c_str());
     }
 }
@@ -3746,12 +4398,19 @@ static void streetVigilar() {
 PHX_API const char* phx_core_version(void) { return PHX_CORE_VERSION; }
 PHX_API int phx_core_api_version(void) { return PHX_CORE_API_VERSION; }
 
+static BOOL CALLBACK hayVentanaProc(HWND h, LPARAM lp) { DWORD pid = 0; GetWindowThreadProcessId(h, &pid); if (pid == GetCurrentProcessId() && IsWindowVisible(h)) { *(int*)lp = 1; return FALSE; } return TRUE; }
+static DWORD WINAPI hiloCierre(LPVOID) {   // 0.5.28b: vigila que el juego siga teniendo ventana; si desaparece (cierre), g_cerrando=1 y se apaga el HWBP
+    bool vista = false; int sin = 0;
+    for (;;) { Sleep(100); int hay = 0; EnumWindows(hayVentanaProc, (LPARAM)&hay);
+        if (hay) { vista = true; sin = 0; } else if (vista && ++sin >= 3) { g_cerrando = 1; g_hwbpOn = 0; logf("[CIERRE] el juego ya no tiene ventana: el Core deja de escribir en su memoria"); return 0; } }
+}
 PHX_API int phx_core_iniciar(const char* carpeta) {
     if (g_codigoInicio != -99) return g_codigoInicio;
     if (!g_csLista) { InitializeCriticalSection(&g_cs); g_csLista = true; }
     EnterCriticalSection(&g_cs);
     g_carpeta = carpeta ? carpeta : "";
     if (!g_carpeta.empty() && g_carpeta.back() != '\\' && g_carpeta.back() != '/') g_carpeta += '\\';
+    { static bool hc = false; if (!hc) { hc = true; HANDLE h = CreateThread(nullptr, 0, hiloCierre, nullptr, 0, nullptr); if (h) CloseHandle(h); } }
     leerExe();
     logf("==== Phoenix Core %s (api %d) · exe %s · fecha 0x%08X · checksum 0x%08X · imagen %llu bytes",
          PHX_CORE_VERSION, PHX_CORE_API_VERSION, g_exe.ruta, g_exe.fecha, g_exe.checksum,
@@ -3798,6 +4457,9 @@ PHX_API void phx_core_tick(void) {
     if (g_codigoInicio <= 0) return;
     InterlockedIncrement(&g_fotogramas);
     if (!g_modoSeguro) { procesarOrdenes(); streetVigilar(); }
+    { static ULONGLONG tRot = 0; ULONGLONG ahR = GetTickCount64(); if (ahR - tRot > 30000) { tRot = ahR; rotarGrande("sonda_partido.txt", 5u << 20); rotarGrande("peticiones.log", 5u << 20); rotarGrande("phoenix_core_alt.log", 5u << 20); rotarGrande("escenas.log", 5u << 20); } }   // 0.5.44
+    { static float lc = -1, la = -1, lt = -1; static ULONGLONG tU = 0; ULONGLONG ah = GetTickCount64();   // 0.5.40: .ini del tamano al ARRANCAR y cada vez que cambian las claves (F9) o N
+      if (ah - tU > 1000) { tU = ah; if (g_canchaTamF != lc || g_arcoTamF != la || g_tamanosF != lt) { lc = g_canchaTamF; la = g_arcoTamF; lt = g_tamanosF; escribirIniTamano(g_ultimoN); } } }
     if (Feature* s = buscarFuncion("sonda_partido"); s && s->activa) {
         vigilarParado();
         volcarSonda();
@@ -3830,11 +4492,12 @@ PHX_API int phx_core_estado(char* buf, int n) {
     return need;
 }
 
-BOOL APIENTRY DllMain(HMODULE, DWORD motivo, LPVOID) {
+BOOL APIENTRY DllMain(HMODULE, DWORD motivo, LPVOID reservado) {
     // Nada pesado aquí (bloqueo del cargador de Windows): todo empieza en phx_core_iniciar.
     if (motivo == DLL_PROCESS_DETACH && g_codigoInicio > 0) {
         // 0.4.87: si PES se cierra de forma LIMPIA (el proceso llega aquí; un crash o un cierre forzado no pasa por DllMain), no es un crash: se borra la bandera y el próximo arranque NO entra en modo seguro
         DeleteFileA((g_carpeta + "arrancando.flag").c_str());
+        if (reservado != nullptr) return TRUE;   // 0.5.28b: el proceso termina (ExitProcess): los demas hilos ya no existen y la memoria del juego se esta liberando: NO se restaura nada
         for (auto& f : g_funciones) for (auto& p : f.parches) quitarParche(p);
     }
     return TRUE;
