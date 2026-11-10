@@ -295,6 +295,7 @@ class Intento:
         self.salidos = set()
         self.contados = {}       # (pid, canal, bytes) -> [nativo, tcp] para no entregar dos veces
         self.reenviados = 0
+        self.creado = time.time()
 
     def lista_para(self, pid):
         """L §2.1: [servidor 1F][yo C0|id][otros 80|id …] en orden de id."""
@@ -669,8 +670,13 @@ class Rele(asyncio.DatagramProtocol):
         # (bits 6 y 7 limpios), como hace el propio cliente. Solo la respuesta KX lleva 0x80.
         self.enviar(cli, armar_marco(os.urandom(1)[0] & 0x3F, cuerpo))
 
+    VIDA_INTENTO = 3 * 3600  # protección: una partida «olvidada» se cierra sola a las 3 h
+
     def limpiar(self):
         ahora = time.time()
+        for room in [r for r, it in self.intentos.items() if ahora - it.creado > self.VIDA_INTENTO]:
+            log.warning("gamerelay: partida %s abierta más de 3 h; se cierra", room)
+            self.cerrar_intento(room)
         for a in [a for a, c in self.clientes.items()
                   if c.visto < ahora - (VIDA_PARTIDA if c.intento is not None else self.VIDA_SONDA)]:
             del self.clientes[a]
