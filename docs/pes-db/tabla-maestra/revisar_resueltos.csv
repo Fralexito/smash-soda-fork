@@ -1,0 +1,712 @@
+﻿id_phoenix,id_conmegol,nombre_conmegol,id_sudamerican,nombre_sudamerican,nac_con,nac_sud,edad_con,edad_sud,similitud,veredicto
+PXP-000062,16741,Ri Yong-Jik,16741,Lee Yong-jick,15,15,35,34,0.73,mismo_jugador
+PXP-000147,33491,Gaby Torres,33491,Gabriel Torres,128,128,37,36,0.8,mismo_jugador
+PXP-000162,34424,Mahmoud Khamis,34424,Mahmoud Al Hammadi,37,37,37,37,0.75,mismo_jugador
+PXP-000212,36052,Josep Antoni,36052,Josep Gomes,192,192,40,39,0.61,mismo_jugador
+PXP-000339,37899,Marcelo Martins,37899,Marcelo Moreno Martins,145,145,38,38,0.81,mismo_jugador
+PXP-000450,38873,Erik Bicfalvi,38873,Eric Bicfalvi,229,229,38,37,0.92,mismo_jugador
+PXP-000560,40154,Jens Stryger,40154,Jens Stryger Larsen,203,203,35,34,0.77,mismo_jugador
+PXP-000732,41180,Roberto Fernández,41180,Gatito Fernández,150,150,38,37,0.73,mismo_jugador
+PXP-000745,41235,Wellington Martins,41235,Wellington,146,146,35,34,0.71,mismo_jugador
+PXP-000786,41513,Jonatan Bauman,41513,Jonathan Bauman,144,144,35,34,0.97,mismo_jugador
+PXP-000793,41538,Emmanuel Olivera,41538,Emanuel Olivera,144,144,36,35,0.97,mismo_jugador
+PXP-000830,41849,Bibars Natcho,41849,Bibras Natcho,189,189,38,37,0.92,mismo_jugador
+PXP-000882,42278,Guilherme Camacho,42278,Camacho,146,146,33,35,0.58,mismo_jugador
+PXP-000939,42538,Rodrigo Moreno,42538,Rodrigo,236,236,35,34,0.67,mismo_jugador
+PXP-001130,43497,Anas Bani Yassen,43497,Anas Bani Yaseen,14,14,36,36,0.94,mismo_jugador
+PXP-001191,43901,José Francisco Cevallos Jr.,43901,José F. Cevallos Jr.,149,149,31,30,0.82,mismo_jugador
+PXP-001500,45519,Thomás,45519,Thomás Bedinelli,146,146,32,32,0.55,mismo_jugador
+PXP-001634,45988,Il-Gwan Jong,45988,Jong Il-gwan,15,15,33,31,0.55,mismo_jugador
+PXP-001635,45990,Kuk-Chol Jang,45990,Jang Kuk-chol,15,15,32,29,0.58,mismo_jugador
+PXP-001654,46049,José Élber,46049,Élber,146,146,33,33,0.67,mismo_jugador
+PXP-001659,46089,Vinícius Silva,46089,Vinícius,146,146,32,32,0.73,mismo_jugador
+PXP-001667,46132,Faiyz Al-Rusheidi,46132,Faiz Al-Rushaidi,26,26,37,37,0.9,mismo_jugador
+PXP-001676,46174,Guilherme Dos Santos,46174,Guilherme,30,146,34,34,0.62,personas_distintas_mismo_id
+PXP-001696,46242,Giovanni,46242,Giovanni Piccolomo,146,146,31,31,0.62,mismo_jugador
+PXP-001698,46303,Gabriel,46303,Gabriel Santana,146,146,36,35,0.64,mismo_jugador
+PXP-001920,47250,Adrián San Miguel,47250,Adrián,236,236,39,38,0.52,mismo_jugador
+PXP-002088,47828,Juan Imbert,47828,Juan Martín Imbert,144,144,34,35,0.76,mismo_jugador
+PXP-002110,47872,Eduardo Teixeira,47872,Eduardo,146,146,32,32,0.61,mismo_jugador
+PXP-003438,52302,T. Gresham,52302,Dubar Enríquez,80,149,30,33,0.26,personas_distintas_mismo_id
+PXP-003447,52317,J. Crooks,52317,Nicolas Kristof,87,194,28,25,0.26,personas_distintas_mismo_id
+PXP-003448,52319,E. Gribbin,52319,Frank Lehmann,87,210,30,36,0.18,personas_distintas_mismo_id
+PXP-003449,52321,T. Asquith,52321,Abdelraouf Benguit,87,44,30,29,0.3,personas_distintas_mismo_id
+PXP-003450,52322,F. Macy,52322,Sebastian Saftig,87,210,33,23,0.09,personas_distintas_mismo_id
+PXP-003451,52324,A. Simpson,52324,Kevin Conrad,87,210,27,35,0.29,personas_distintas_mismo_id
+PXP-003452,52325,E. Annis,52325,Billel Bensaha,87,44,26,31,0.29,personas_distintas_mismo_id
+PXP-003453,52326,J. Toshack,52326,Y. Murillo,87,153,35,24,0.22,personas_distintas_mismo_id
+PXP-003454,52327,H. Colman,52327,Abdelkader Bedrane,87,44,32,33,0.23,personas_distintas_mismo_id
+PXP-003456,52329,E. Trimmer,52329,Tobias Mißner,87,210,31,25,0.38,personas_distintas_mismo_id
+PXP-003458,52331,B. Mccabe,52331,Maurice Neubauer,87,210,28,29,0.25,personas_distintas_mismo_id
+PXP-003505,52398,Haroune Camara,52398,Nils Körber,31,210,28,28,0.24,personas_distintas_mismo_id
+PXP-003827,52958,Eric Vales,52958,T. Knost,192,210,22,22,0.24,personas_distintas_mismo_id
+PXP-003840,52974,Lilian Egloff,52974,Roman Kerschbaum,210,194,21,31,0.28,personas_distintas_mismo_id
+PXP-003850,52984,Luka Marić,52984,Ionut Vînă,194,229,21,30,0.2,personas_distintas_mismo_id
+PXP-003856,52991,H. Salguero,52991,A. Mcdowell,119,3,18,19,0.2,personas_distintas_mismo_id
+PXP-003857,52992,K. Arriaga,52992,Qian Zhenzhe,121,7,18,19,0.19,personas_distintas_mismo_id
+PXP-003858,52993,R. Jiménez,52993,Cao Mingbiao,124,7,18,19,0.29,personas_distintas_mismo_id
+PXP-003859,52994,V. Pineda,52994,A. Viner,119,9,19,20,0.53,personas_distintas_mismo_id
+PXP-003860,52995,E. Navas,52995,C. Addinsell,112,10,17,18,0.11,personas_distintas_mismo_id
+PXP-003863,52998,S. Dest,52998,N. Abd Al Rahim,135,14,16,17,0.2,personas_distintas_mismo_id
+PXP-003864,52999,H. Herrera,52999,M. Awais,124,17,19,20,0.25,personas_distintas_mismo_id
+PXP-003865,53000,D. Rugama,53000,A. Farouk,116,19,18,19,0.38,personas_distintas_mismo_id
+PXP-003866,53001,D. Chinchilla,53001,A. Horne,112,21,19,20,0.32,personas_distintas_mismo_id
+PXP-003867,53002,M. Turner,53002,Bin Changhun,135,15,20,21,0.3,personas_distintas_mismo_id
+PXP-003868,53003,V. Lozano,53003,A. Jabir,124,26,18,19,0.27,personas_distintas_mismo_id
+PXP-003869,53004,W. Bengtson,53004,R. Hamidullah,121,28,18,19,0.09,personas_distintas_mismo_id
+PXP-003870,53005,A. Carrasquilla,53005,A. Todd,128,29,16,17,0.2,personas_distintas_mismo_id
+PXP-003873,53008,V. Hernández,53008,S. Rahmi,124,31,17,18,0.22,personas_distintas_mismo_id
+PXP-003874,53009,J. Martínez,53009,N. Gubby,121,32,16,17,0.12,personas_distintas_mismo_id
+PXP-003875,53010,O. Pineda,53010,K. Dickens,124,32,17,18,0.35,personas_distintas_mismo_id
+PXP-003877,53012,C. Borges,53012,Park Sungjae,112,16,17,18,0.3,personas_distintas_mismo_id
+PXP-003878,53013,C. Vela,53013,T. Imad Aldin,124,34,17,18,0.22,personas_distintas_mismo_id
+PXP-003881,53016,A. Ledesma,53016,R. Humphry,116,42,16,17,0.22,personas_distintas_mismo_id
+PXP-003882,53017,E. Alvarado,53017,F. Hamdi,121,37,19,20,0.35,personas_distintas_mismo_id
+PXP-003883,53018,M. Murillo,53018,S. Burham,128,37,17,18,0.35,personas_distintas_mismo_id
+PXP-003885,53020,M. Pulisic,53020,S. Cawkwell,135,38,19,20,0.21,personas_distintas_mismo_id
+PXP-005282,55144,B. Mcdowell,55144,Paterson Chato,87,210,25,28,0.25,personas_distintas_mismo_id
+PXP-005283,55145,B. Donnelly,55145,F. Ben Choug,87,92,26,30,0.29,personas_distintas_mismo_id
+PXP-005339,55244,Matías Benítez,55244,O. Melikov,144,230,35,36,0.17,personas_distintas_mismo_id
+PXP-005340,55245,Luciano Montenegro,55245,F. Erikson,152,237,28,29,0.22,personas_distintas_mismo_id
+PXP-005341,55246,Thiago Silveira,55246,K. Vasilj,146,303,29,30,0.35,personas_distintas_mismo_id
+PXP-005342,55247,Mateo Sotomayor,55247,L. Giorza,147,215,19,20,0.26,personas_distintas_mismo_id
+PXP-005343,55248,Maximiliano Montiel,55248,E. Canning,144,232,24,25,0.29,personas_distintas_mismo_id
+PXP-005344,55249,Santiago Carvallo,55249,I. Hettich,152,210,25,24,0.23,personas_distintas_mismo_id
+PXP-005345,55250,Valentín Madrigal,55250,N. Grenville,144,204,23,24,0.21,personas_distintas_mismo_id
+PXP-005346,55251,Bautista Zabaleta,55251,C. Schipper,144,224,22,23,0.15,personas_distintas_mismo_id
+PXP-005347,55252,Ignacio Villalba,55252,F. Sahnoune,144,208,21,22,0.15,personas_distintas_mismo_id
+PXP-005348,55253,Bruno Riquelme,55253,Q. Arcas,150,236,21,22,0.1,personas_distintas_mismo_id
+PXP-005349,55254,Martín Benítez,55254,B. Goios,150,228,24,25,0.1,personas_distintas_mismo_id
+PXP-005350,55255,Damián Arismendi,55255,K. Geisler,152,194,22,23,0.32,personas_distintas_mismo_id
+PXP-005351,55256,Facundo Peñailillo,55256,D. Mayor,147,229,28,29,0.16,personas_distintas_mismo_id
+PXP-005352,55257,Nicolás Bustamante,55257,M. Candemir,144,190,32,33,0.29,personas_distintas_mismo_id
+PXP-005353,55258,Federico Cárdenas,55258,S. Legoida,148,239,26,27,0.23,personas_distintas_mismo_id
+PXP-005354,55259,Joaquín Alarcón,55259,L. Coulfield,144,214,20,21,0.23,personas_distintas_mismo_id
+PXP-005355,55260,Gonzalo Balbuena,55260,F. Soric,150,200,24,25,0.09,personas_distintas_mismo_id
+PXP-005356,55261,Mariano Huamán,55261,J. Rice,151,226,20,21,0.2,personas_distintas_mismo_id
+PXP-005357,55262,Tomás Angulo,55262,L. Vrany,149,202,34,35,0.32,personas_distintas_mismo_id
+PXP-005358,55263,Emiliano Maciel,55263,M. Pallister,144,225,27,28,0.31,personas_distintas_mismo_id
+PXP-005359,55264,Franco Sanguinetti,55264,E. Castledine,152,211,20,21,0.33,personas_distintas_mismo_id
+PXP-005360,55265,Lautaro Gamarra,55265,N. Karlsen,150,203,22,23,0.17,personas_distintas_mismo_id
+PXP-005361,55266,Esteban Arriagada,55266,V. Mihailov,147,199,23,24,0.15,personas_distintas_mismo_id
+PXP-005362,55267,Alejo Orellana,55267,U. Seiffert,153,238,23,24,0.17,personas_distintas_mismo_id
+PXP-005363,55268,Rodrigo Zanetti,55268,A. Redmond,146,212,25,26,0.25,personas_distintas_mismo_id
+PXP-005364,55269,Agustín Farfán,55269,I. Driessen,151,197,25,26,0.17,personas_distintas_mismo_id
+PXP-005365,55270,Lucas Valenzuela,55270,R. Jarvis,144,241,21,22,0.17,personas_distintas_mismo_id
+PXP-005366,55271,Joaquín Mosquera,55271,A. Hervey,148,227,26,27,0.33,personas_distintas_mismo_id
+PXP-005377,55282,A. Lobato,55282,Castolo,146,146,35,36,0.4,personas_distintas_mismo_id
+PXP-005396,55304,N. Alarcón,55304,N. Hannawald,144,194,19,18,0.4,personas_distintas_mismo_id
+PXP-005397,55305,B. Sotomayor,55305,B. Sanders,147,197,20,17,0.5,personas_distintas_mismo_id
+PXP-005398,55306,E. Cavalcanti,55306,E. Kavazovic,146,198,18,17,0.52,personas_distintas_mismo_id
+PXP-005399,55307,V. Zambrano,55307,V. Stantchev,149,199,18,17,0.38,personas_distintas_mismo_id
+PXP-005400,55308,J. Yahuarcani,55308,J. Vucetic,151,200,18,17,0.48,personas_distintas_mismo_id
+PXP-005401,55309,M. De Giorgi,55309,M. Slezacek,152,202,19,18,0.29,personas_distintas_mismo_id
+PXP-005402,55310,V. Riquelme,55310,V. Bjerre,150,203,17,17,0.44,personas_distintas_mismo_id
+PXP-005403,55311,W. Mosquera,55311,W. Harrington,148,204,20,19,0.27,personas_distintas_mismo_id
+PXP-005404,55312,V. Arriagada,55312,V. Ollikainen,147,207,20,18,0.35,personas_distintas_mismo_id
+PXP-005405,55313,H. Carballo,55313,H. Giroust,152,208,16,16,0.42,personas_distintas_mismo_id
+PXP-005406,55314,M. Benítez,55314,M. Radzuweit,150,210,19,17,0.5,personas_distintas_mismo_id
+PXP-005407,55315,S. Bustamante,55315,S. Lander,144,211,18,17,0.5,personas_distintas_mismo_id
+PXP-005408,55316,D. Cárdenas,55316,D. Gardiner,148,212,19,18,0.6,personas_distintas_mismo_id
+PXP-005409,55317,L. Huamán,55317,L. Hibbert,151,214,20,19,0.35,personas_distintas_mismo_id
+PXP-005410,55318,R. Montiel,55318,R. Mogridge,144,237,18,17,0.63,personas_distintas_mismo_id
+PXP-005411,55319,C. Zanetti,55319,C. Russo,146,215,18,17,0.25,personas_distintas_mismo_id
+PXP-005412,55320,H. Estupiñán,55320,H. Post,149,224,16,16,0.47,personas_distintas_mismo_id
+PXP-005415,55323,K. Mac Allister,55323,K. Mcdowall,144,227,17,18,0.58,personas_distintas_mismo_id
+PXP-005416,55324,L. Da Silva,55324,L. Teixeira,146,228,16,17,0.3,personas_distintas_mismo_id
+PXP-005417,55325,K. Burbano,55325,K. Bloomfield,148,229,17,18,0.38,personas_distintas_mismo_id
+PXP-005419,55327,M. Peñailillo,55327,M. Dowell,147,232,17,18,0.5,personas_distintas_mismo_id
+PXP-005420,55328,D. Balbuena,55328,D. Arbutina,150,303,17,18,0.7,personas_distintas_mismo_id
+PXP-005423,55331,O. Sanguinetti,55331,O. Karlfeldt,152,237,16,17,0.42,personas_distintas_mismo_id
+PXP-005425,55333,A. Farfán,55333,A. Seven,151,190,17,18,0.4,personas_distintas_mismo_id
+PXP-005427,55335,S. Arismendi,55335,F. Javier,152,236,19,18,0.32,personas_distintas_mismo_id
+PXP-005430,55338,I. Nogueira,55338,Ramirez Noguera,146,150,18,18,0.72,personas_distintas_mismo_id
+PXP-005435,55343,V. Bunuel,55343,M. Fleitas,150,150,20,19,0.24,personas_distintas_mismo_id
+PXP-005436,55344,Y. Alguersuari,55344,Y. Santoro,151,151,20,19,0.36,personas_distintas_mismo_id
+PXP-005437,55345,J. Halfter,55345,J. Lasagna,152,152,16,17,0.33,personas_distintas_mismo_id
+PXP-005438,55346,L. Nicolau,55346,L. Sanchez Ramos,153,153,19,17,0.42,personas_distintas_mismo_id
+PXP-005441,55349,L. Pereiro,55349,M. Macacu,146,146,20,18,0.12,personas_distintas_mismo_id
+PXP-005442,55350,O. Farres,55350,F. Callampa,147,151,18,19,0.22,personas_distintas_mismo_id
+PXP-005445,55353,E. Padial,55353,Mariano Cacciavillani,124,144,17,18,0.28,personas_distintas_mismo_id
+PXP-005448,55356,D. Isasmendi,55356,Ricardo Romero,152,147,16,19,0.32,personas_distintas_mismo_id
+PXP-005451,55359,O. Pascual,55359,José Fiestas,145,151,17,18,0.38,personas_distintas_mismo_id
+PXP-005452,55360,P. Manuel,55360,Alejandro Novoa,146,144,17,18,0.17,personas_distintas_mismo_id
+PXP-005454,55362,L. Rubiera,55362,S. Gorosito,148,144,17,17,0.32,personas_distintas_mismo_id
+PXP-006371,57088,Abdulaziz Hatim,57088,Abdulaziz Hatem,30,30,35,34,0.93,mismo_jugador
+PXP-006373,57092,Fawaz Al Qarni,57092,Fawaz Al-Qarni,31,31,32,33,0.96,mismo_jugador
+PXP-006378,57100,Narubadin Weerawatnodom,57100,N. Weerawatnodom,36,36,31,29,0.79,mismo_jugador
+PXP-006379,57104,Abdulaziz Haikal,57104,Abdulaziz Hussain,37,37,34,34,0.79,mismo_jugador
+PXP-006403,57225,Fidel Chaves,57225,Fidel,236,236,36,35,0.59,mismo_jugador
+PXP-006452,57439,Mattheus Oliveira,57439,Mattheus,146,146,31,31,0.64,mismo_jugador
+PXP-007044,58711,Augusto Pacheco,58711,Pacheco,146,146,34,34,0.64,mismo_jugador
+PXP-007105,59025,Seyed Hossein Hosseini,59025,Hossein Hosseini,11,11,33,33,0.84,mismo_jugador
+PXP-007181,59355,A. Contreras,59355,Alejandro Contreras,147,147,27,32,0.73,personas_distintas_mismo_id
+PXP-007313,59952,Hassan Al-Haydos,59952,Hasan Al-Haydos,30,30,35,34,0.97,mismo_jugador
+PXP-007447,60243,José Gómez,60243,José Luis Gómez,144,144,31,32,0.8,mismo_jugador
+PXP-007520,60391,Rafa Silva,60391,Rafa,228,228,32,32,0.57,mismo_jugador
+PXP-007667,60729,Nuno Sequeira,60729,Sequeira,228,228,35,35,0.76,mismo_jugador
+PXP-007681,60761,Erik Lima,60761,Erik,146,146,31,31,0.62,mismo_jugador
+PXP-007720,60861,Mohammed Qassim,60861,Mohammed Qasem,31,31,31,30,0.9,mismo_jugador
+PXP-007757,60934,Mohammed Al Saiari,60934,Mohammed Al-Saiari,31,31,31,32,0.97,mismo_jugador
+PXP-007818,61094,Amine Oudrhiri,61094,Amine,208,76,31,32,0.53,personas_distintas_mismo_id
+PXP-007846,61143,Matías Nahuel,61143,Nahuel Leiva,236,236,29,28,0.48,mismo_jugador
+PXP-007873,61208,Lucas Alves,61208,Lucas,146,146,33,33,0.62,mismo_jugador
+PXP-007897,61318,Eduardo Giusti,61318,Eduardo,146,146,32,32,0.67,mismo_jugador
+PXP-008044,63136,Hussain Shaian,63136,Hussein Shae'an,31,31,35,36,0.86,mismo_jugador
+PXP-008119,63456,Tristan Do,63456,T. Do,31,36,30,31,0.57,personas_distintas_mismo_id
+PXP-008167,63653,Jonatan Cristaldo,63653,Jonathan Cristaldo,144,144,37,35,0.97,mismo_jugador
+PXP-008267,64896,Nouh Al Mousa,64896,Nooh Al-Mousa,31,31,32,34,0.88,mismo_jugador
+PXP-008270,64909,Khalid Kaabi,64909,Khalid Al-Kabi,31,31,32,33,0.88,mismo_jugador
+PXP-008273,64915,Ammar Al Daheem,64915,Ammar Al-Dohaim,31,31,30,32,0.76,mismo_jugador
+PXP-008310,65102,Nicolás Palacios,65102,Mostafa El Aash,148,58,30,25,0.26,personas_distintas_mismo_id
+PXP-008375,65335,Raphaël Varane,65335,Romário,208,146,50,51,0.29,personas_distintas_mismo_id
+PXP-008376,65336,Maynor Figueroa,65336,Lothar Matthäus,121,210,50,51,0.2,personas_distintas_mismo_id
+PXP-008378,65338,Marcelo,65338,Johan Cruyff,146,224,50,51,0.21,personas_distintas_mismo_id
+PXP-008379,65339,Fabio Coentrão,65339,Zico,228,146,50,51,0.33,personas_distintas_mismo_id
+PXP-008380,65340,Pepe,65340,Diego Maradona,228,144,50,51,0.11,personas_distintas_mismo_id
+PXP-008382,65342,Juan Román Riquelme,65342,A. Boninsegna,144,215,50,51,0.19,personas_distintas_mismo_id
+PXP-008383,65343,Ronaldinho,65343,M. Aracil,146,236,50,51,0.33,personas_distintas_mismo_id
+PXP-008384,65344,Diego Forlán,65344,D. Lane,152,162,50,51,0.56,personas_distintas_mismo_id
+PXP-008385,65345,Deco,65345,D. Pleasence,228,135,50,51,0.4,personas_distintas_mismo_id
+PXP-008386,65346,Carlos Valderrama,65346,G. Hedges,148,135,50,51,0.08,personas_distintas_mismo_id
+PXP-008387,65347,Gerard Piqué,65347,S. Casero,236,124,50,51,0.2,personas_distintas_mismo_id
+PXP-008388,65348,Kaká,65348,J. Enguiz,146,151,50,51,0.0,personas_distintas_mismo_id
+PXP-008389,65349,Ronaldo Nazario,65349,R. Dudfield,146,80,50,51,0.24,personas_distintas_mismo_id
+PXP-008390,65350,Pavel Nedvěd,65350,H. Ise,202,13,50,51,0.12,personas_distintas_mismo_id
+PXP-008391,65351,Thierry Henry,65351,K. Eto,208,13,50,51,0.11,personas_distintas_mismo_id
+PXP-008681,100382,David Juncà,100382,Juncà,236,236,32,31,0.62,mismo_jugador
+PXP-008752,100723,Yuri Fonseca,100723,Yuri da  Silva,146,146,40,29,0.54,personas_distintas_mismo_id
+PXP-008880,101195,Ezequiel González,101195,Eldin Jakupovic,144,238,25,40,0.25,personas_distintas_mismo_id
+PXP-008900,101278,Tareq Khattab,101278,Tareq Zeyad,14,14,32,31,0.58,personas_distintas_mismo_id
+PXP-009333,103064,Matheus Magalhães,103064,Matheus,146,146,33,33,0.58,mismo_jugador
+PXP-009374,103170,Ramy Rabia,103170,Rami Rabia,58,58,33,32,0.9,mismo_jugador
+PXP-009473,103505,Cristo González,103505,Cristo,236,236,28,27,0.57,mismo_jugador
+PXP-009591,103919,Nicolas Gorosito,103919,Nicolás Ezequiel Gorosito,144,144,35,37,0.78,mismo_jugador
+PXP-009767,104489,Nathan Pelae,104489,Nathan,146,146,30,30,0.67,mismo_jugador
+PXP-009775,104501,Rodrigo Oliveira,104501,Rodrigo,146,146,28,31,0.61,mismo_jugador
+PXP-009793,104541,Rafael Santos Borré,104541,Rafael Borré,148,148,30,30,0.77,mismo_jugador
+PXP-009809,104584,Agustín Ale,104584,A. Ale,152,152,17,30,0.62,personas_distintas_mismo_id
+PXP-009838,104673,Mohamed Fares,104673,Mohamed Salim Fares,44,44,30,29,0.81,mismo_jugador
+PXP-009881,104762,Gustavo Barreto,104762,Barreto,146,146,30,29,0.64,mismo_jugador
+PXP-009885,104770,Ianson Acosta,104770,Ianson,146,146,27,30,0.63,mismo_jugador
+PXP-009915,104864,Gonzalo Martínez,104864,Pity Martínez,144,144,33,32,0.62,mismo_jugador
+PXP-009949,104977,Ali Al-Busaidi,104977,A. Al Busaidi,26,26,35,32,0.88,mismo_jugador
+PXP-009953,104989,Sarach Yooyen,104989,S. Yooyen,31,36,31,32,0.76,personas_distintas_mismo_id
+PXP-010001,105106,Jonatan Galván,105106,Jonathan Galván,144,144,34,33,0.97,mismo_jugador
+PXP-010016,105138,Kaku,105138,Alejandro Romero,150,150,31,31,0.1,mismo_jugador
+PXP-010049,105223,Federico Lanzillotta,105223,Federico Lanzillota,144,144,33,33,0.97,mismo_jugador
+PXP-010074,105288,Juan Cruz Komar,105288,Juan Komar,144,144,30,29,0.8,mismo_jugador
+PXP-010157,105550,E. Ahumada,105550,Eric Ahumada,147,147,26,31,0.86,personas_distintas_mismo_id
+PXP-010187,106001,Yong-Woo Park,106001,Park Yong-woo,16,16,32,32,0.58,mismo_jugador
+PXP-010291,106387,Abrahan Moreno,106387,Abraham Moreno,153,153,29,28,0.93,mismo_jugador
+PXP-010324,106566,Jean,106566,Jean Fernandes,146,146,30,29,0.44,mismo_jugador
+PXP-010326,106568,Mateus Castro,106568,Mateus Gonçalves,146,146,31,31,0.69,mismo_jugador
+PXP-010335,106580,Jorge Marco,106580,Jorge,146,146,29,29,0.62,mismo_jugador
+PXP-010348,106613,Lincoln Henrique,106613,Lincoln,146,146,27,26,0.61,mismo_jugador
+PXP-010352,106618,Jhonatan Luiz,106618,Jhonatan,146,146,34,34,0.76,mismo_jugador
+PXP-010361,106635,Bernardo Fernandes,106635,Bernardo,146,146,30,30,0.62,mismo_jugador
+PXP-010415,106833,D. Vicencio,106833,Daniel Vicencio,147,147,28,33,0.8,personas_distintas_mismo_id
+PXP-010434,106946,Fali Jiménez,106946,Fali,236,236,32,32,0.5,mismo_jugador
+PXP-010459,107061,Cristiano,107061,Cristiano da Silva,146,146,33,32,0.67,mismo_jugador
+PXP-010461,107065,Emerson,107065,Emerson Santos,146,146,31,30,0.67,mismo_jugador
+PXP-010471,107085,Jeremiah St. Juste,107085,Jerry St. Juste,224,224,29,28,0.77,mismo_jugador
+PXP-010489,107215,Mohsin Al Khaldi,107215,Mohsin Jouhar,26,26,36,37,0.62,mismo_jugador
+PXP-010524,107373,Thiago Santana,107373,Thiago,146,146,30,32,0.6,mismo_jugador
+PXP-010543,107441,Abdulaziz Al Jebreen,107441,Abdulaziz Al-Jebreen,31,31,33,35,0.97,mismo_jugador
+PXP-010593,107612,Trezeguet,107612,Mahmoud Trezeguet,58,58,31,30,0.69,mismo_jugador
+PXP-010594,107613,M. Camargo,107613,Miguel Camargo,128,128,27,32,0.78,personas_distintas_mismo_id
+PXP-010603,107653,Ahmad Sameer,107653,A. Samir,14,14,33,32,0.63,personas_distintas_mismo_id
+PXP-010623,107712,Jason Remeseiro,107712,Jason,236,236,31,31,0.5,mismo_jugador
+PXP-010668,107844,Shangyuan Wang,107844,Wang Shangyuan,7,7,32,32,0.64,mismo_jugador
+PXP-010720,107980,Jordan Siebatcheu,107980,Jordan,135,135,29,29,0.52,mismo_jugador
+PXP-010754,108139,J. Caicedo Vergara,108139,Jhonathan Caicedo,148,148,28,29,0.53,mismo_jugador
+PXP-010929,108743,Rubén Darío Ríos,108743,Ramiro Ríos,144,144,29,29,0.67,mismo_jugador
+PXP-010963,108816,Moisés,108816,Moisés Gaúcho,146,146,26,30,0.63,personas_distintas_mismo_id
+PXP-010987,108877,R. Meléndez,108877,René Meléndez,147,147,22,26,0.87,personas_distintas_mismo_id
+PXP-011020,108941,De Cordova-Reid,108941,Bobby De Cordova-Reid,122,122,33,32,0.82,mismo_jugador
+PXP-011219,109581,R. Escobar,109581,Ricardo Escobar,147,147,22,27,0.75,personas_distintas_mismo_id
+PXP-011262,109743,Blas Riveros,109743,Luis Riveros,150,150,28,27,0.83,mismo_jugador
+PXP-011286,109813,Juan Gutiérrez,109813,Juan Diego Gutiérrez,151,151,31,33,0.82,mismo_jugador
+PXP-011371,110064,Roberto Heuchayer,110064,Roberto,146,146,33,34,0.58,mismo_jugador
+PXP-011432,110273,Kaio Mendes,110273,Kaio,146,146,25,30,0.53,personas_distintas_mismo_id
+PXP-011447,110351,Ismail Azzaoui,110351,I. Azzaoui,197,197,25,26,0.78,mismo_jugador
+PXP-011525,110566,Yan Matheus,110566,Yan,146,146,25,27,0.43,mismo_jugador
+PXP-011545,110607,Kevin Sibille,110607,K. Sibille,144,144,26,26,0.82,mismo_jugador
+PXP-011554,110630,Saulo Ferreira,110630,Saulo,146,146,27,30,0.53,mismo_jugador
+PXP-011625,110802,Yago Pikachu,110802,Pikachu,146,146,34,33,0.74,mismo_jugador
+PXP-011683,110912,Pablo Diogo,110912,Pablo,146,146,32,32,0.62,mismo_jugador
+PXP-011716,111005,Maurício José,111005,Maurício,146,146,35,36,0.76,mismo_jugador
+PXP-011764,111100,Alexis Messidoro,111100,A. Messidoro,144,144,27,27,0.81,mismo_jugador
+PXP-011818,111207,Gabriel,111207,Gabriel Magalhães,146,146,28,27,0.58,mismo_jugador
+PXP-011861,111315,Eduardo Jacinto,111315,Eduardo,146,146,29,28,0.64,mismo_jugador
+PXP-011866,111327,Judson Silva,111327,Judson,146,146,31,32,0.67,mismo_jugador
+PXP-011969,111683,Rayan Al Mousa,111683,Rayan Al-Mousa,31,31,30,31,0.96,mismo_jugador
+PXP-011980,111726,Zaid Al Bawardi,111726,Zaid Al-Bawardi,31,31,27,28,0.97,mismo_jugador
+PXP-011981,111727,Waled Al Enazi,111727,Waleed Al-Anzi,31,31,27,29,0.81,mismo_jugador
+PXP-011984,111731,Abdulrahman Al-Dawsari,111731,Abdulrahman Al-Dosari,31,31,28,27,0.93,mismo_jugador
+PXP-011988,111758,Jasur Yakhshiboev,111758,D. Yakhshibaev,240,240,27,24,0.73,mismo_jugador
+PXP-012008,111833,Carlos Julio Martínez,111833,C. Martínez,115,115,31,30,0.65,mismo_jugador
+PXP-012079,112100,Steven Birnbaum,112100,Steve Birnbaum,135,135,32,34,0.97,mismo_jugador
+PXP-012088,112124,Lawrence Mulenga,112124,L. Mulenga,94,94,25,28,0.72,mismo_jugador
+PXP-012093,112149,Tanaboon Kesarat,112149,T. Kesarat,31,36,30,31,0.72,personas_distintas_mismo_id
+PXP-012108,112174,J. Nuñez,112174,Josiel Núñez,128,128,27,32,0.74,personas_distintas_mismo_id
+PXP-012114,112187,Jameel Al-Yahmadi,112187,J. Al Yahmadi,26,26,29,27,0.79,mismo_jugador
+PXP-012154,112340,Saeed Ezatolahi,112340,Saeid Ezatolahi,11,11,29,28,0.93,mismo_jugador
+PXP-012467,113518,Brenner Marlos,113518,Brenner,146,146,32,31,0.67,mismo_jugador
+PXP-012520,113662,Bartłomiej Drągowski,113662,Bartlomiej Dragowski,227,227,28,28,0.97,mismo_jugador
+PXP-012544,113749,E. Guerrero,113749,Enzo Guerrero,147,147,29,34,0.87,personas_distintas_mismo_id
+PXP-012610,113953,Ângelo Neto,113953,Neto,146,146,32,34,0.53,mismo_jugador
+PXP-012814,114460,Alexandru Dobre,114460,Alex Dobre,229,229,27,27,0.8,mismo_jugador
+PXP-012817,114467,João Basso,114467,Basso,146,146,29,28,0.67,mismo_jugador
+PXP-012851,114557,Álvaro Ferllo,114557,Álvaro Fernández,236,236,28,27,0.69,personas_distintas_mismo_id
+PXP-012932,114723,Gustavo Mantuan,114723,Guilherme Mantuan,146,146,26,28,0.62,mismo_jugador
+PXP-012973,114833,Matías Moya,114833,Matías Moya Godoy,144,147,28,24,0.79,personas_distintas_mismo_id
+PXP-013014,114928,Michael Fracaro,114928,Michael,146,146,26,30,0.64,personas_distintas_mismo_id
+PXP-013030,114969,Rubens Coura,114969,Rubens,146,146,28,31,0.67,mismo_jugador
+PXP-013073,115047,Michel Ferreira,115047,Michel,146,146,31,35,0.57,personas_distintas_mismo_id
+PXP-013098,115089,Jonás Romero,115089,J. Romero,144,144,21,24,0.8,mismo_jugador
+PXP-013162,115206,Ronei Gebing,115206,Ronei,146,146,26,27,0.59,mismo_jugador
+PXP-013220,115442,Azizbek Amanov,115442,A. Amonov,240,240,28,27,0.64,mismo_jugador
+PXP-013231,115499,Habib Al-Watyan,115499,Habib Al-Wutaian,31,31,30,29,0.83,mismo_jugador
+PXP-013243,115532,M. Suárez,115532,Marcelo Suárez,147,147,20,25,0.73,personas_distintas_mismo_id
+PXP-013271,115630,Khalil Ibrahim,115630,Khaled Ebraheim,37,37,31,28,0.76,mismo_jugador
+PXP-013273,115633,Mohamed Al-Shamsi,115633,Mohamed Al Shamsi,37,37,29,28,0.97,mismo_jugador
+PXP-013278,115648,Kwang-Song Han,115648,Han Kwang-song,15,15,27,26,0.69,mismo_jugador
+PXP-013290,115664,Wellington Bueno,115664,Bueno,146,146,28,29,0.48,mismo_jugador
+PXP-013354,116070,Mahdi Al-Mushaifri,116070,M. Al Mushaifri,26,26,33,30,0.84,mismo_jugador
+PXP-013357,116075,Khalid Al Hajri,116075,K. Al Hajri,26,26,30,29,0.8,mismo_jugador
+PXP-013358,116077,Mehdi Khalil,116077,M. Khalil,19,19,33,32,0.8,mismo_jugador
+PXP-013437,116266,Mousa Al-Tamari,116266,Mousa Tamari,14,14,29,28,0.92,mismo_jugador
+PXP-013650,116940,Abdullah Al-Ahrak,116940,A. Abdulsalam,30,30,28,27,0.57,personas_distintas_mismo_id
+PXP-013669,117042,Getterson,117042,Getterson Alves,146,146,32,34,0.75,mismo_jugador
+PXP-013720,117392,Rick Boldrin,117392,Fernando Boldrin,146,146,34,36,0.64,mismo_jugador
+PXP-013805,117588,Arthur Henrique,117588,Arthur,146,146,26,26,0.57,mismo_jugador
+PXP-013980,117978,Enzo Ybañez,117978,E. Ybañez,144,144,25,25,0.84,mismo_jugador
+PXP-013992,117995,Franchu Feuillassier,117995,Franchu,144,144,25,27,0.52,mismo_jugador
+PXP-014019,118045,J. Aguilar,118045,Jorman Aguilar,128,128,26,31,0.78,personas_distintas_mismo_id
+PXP-014033,118064,Pipa Ávila,118064,Pipa,236,236,28,27,0.57,mismo_jugador
+PXP-014056,118105,Niklas Beste,118105,Jan-Niklas Beste,210,210,27,26,0.89,mismo_jugador
+PXP-014063,118129,Hamed Traoré,118129,Hamed Junior Traoré,56,56,26,25,0.77,mismo_jugador
+PXP-014105,118201,Max Clark,118201,M. Clark,204,204,28,28,0.88,mismo_jugador
+PXP-014174,118369,Trevor Doornbusch,118369,T. Doornbusch,140,140,26,25,0.83,mismo_jugador
+PXP-014204,118424,Rogério Oliveira,118424,Rogério,146,146,28,27,0.61,mismo_jugador
+PXP-014224,118459,Lucas Pereira,118459,Lucas,146,146,27,27,0.56,mismo_jugador
+PXP-014232,118487,Aloísio Neto,118487,Pedro Barcelos,146,146,23,29,0.31,personas_distintas_mismo_id
+PXP-014240,118499,Matheus Thuler,118499,Thuler,146,146,24,26,0.6,mismo_jugador
+PXP-014271,118574,Liangming Lin,118574,Lin Liangming,7,7,28,28,0.69,mismo_jugador
+PXP-014428,118951,Álvaro Vieira,118951,Álvaro,146,146,27,28,0.63,mismo_jugador
+PXP-014464,119051,Mateus Gonçalves,119051,Karim Fouad,146,58,31,26,0.15,personas_distintas_mismo_id
+PXP-014483,119092,Lincoln Corrêa,119092,Lincoln,146,146,25,24,0.67,mismo_jugador
+PXP-014629,119694,Mbwana Samatta,119694,Ally Samatta,90,90,33,32,0.69,mismo_jugador
+PXP-014630,119695,Joakim Mæhle,119695,Joakim Maehle,203,203,26,28,0.92,mismo_jugador
+PXP-014638,119704,Manuel Benson,119704,Benson Manuel,45,45,29,28,0.46,mismo_jugador
+PXP-014669,119788,Ruan,119788,Ruan Tressoldi,146,146,27,26,0.44,mismo_jugador
+PXP-014672,119792,Alan Souza,119792,Alan,146,146,26,25,0.57,mismo_jugador
+PXP-014674,119796,Sávio Alves,119796,Sávio,146,146,27,29,0.62,mismo_jugador
+PXP-014729,119901,Sebastián Herrera,119901,Juan Sebastian Herrera,148,148,31,30,0.87,mismo_jugador
+PXP-014789,120006,Jeider Riquett,120006,Jáider Riquett,148,148,36,35,0.93,mismo_jugador
+PXP-014811,120041,John Pérez,120041,Jhon Pérez,148,148,37,37,0.9,mismo_jugador
+PXP-014814,120048,Juan Camilo Mesa,120048,Rafael Carrascal,148,148,26,32,0.31,personas_distintas_mismo_id
+PXP-014815,120050,Jeison Palacios,120050,Jeisson Palacios,148,148,32,31,0.97,mismo_jugador
+PXP-014820,120063,Juan Arboleda,120063,Juan Guillermo Arboleda,148,148,34,36,0.72,mismo_jugador
+PXP-015058,120789,Adam Lundkvist,120789,Adam Lundqvist,237,237,32,31,0.93,mismo_jugador
+PXP-015171,121209,Ruan Gregório,121209,Ruan,146,146,30,30,0.47,mismo_jugador
+PXP-015334,121596,Alex Petkov,121596,Aleks Petkov,199,199,26,26,0.87,mismo_jugador
+PXP-015382,121997,K. Lara,121997,Kennet Lara,147,147,21,26,0.71,personas_distintas_mismo_id
+PXP-015513,122407,Abdalla Al-Naqbi,122407,Abdalla Al Naqbi,37,37,32,32,0.97,mismo_jugador
+PXP-015566,122698,Rômulo Da Silva,122698,Rômulo,146,146,30,29,0.57,mismo_jugador
+PXP-015578,122719,Marcelo,122719,Gaspar,146,146,22,22,0.31,personas_distintas_mismo_id
+PXP-015597,122779,D. Pineda,122779,Denis Pineda,116,116,25,30,0.8,personas_distintas_mismo_id
+PXP-015602,122812,G. Zúñiga,122812,Gastón Zúñiga,147,147,20,25,0.76,personas_distintas_mismo_id
+PXP-015667,123082,Rayan Pereira,123082,Rayan,146,146,34,35,0.56,mismo_jugador
+PXP-015707,123149,Rafal Kurzawa,123149,Rafał Kurzawa,227,227,33,32,0.96,mismo_jugador
+PXP-015709,123151,Jakub Swierczok,123151,J. Świerczok,227,227,33,32,0.85,mismo_jugador
+PXP-015750,123244,Ahmed Al-Rawahi,123244,Ahmed Al Rawahi,26,26,31,29,0.97,mismo_jugador
+PXP-015756,123257,Obieda Al Samarneh,123257,O. Al Samrieh,14,14,32,28,0.73,personas_distintas_mismo_id
+PXP-015759,123262,Un-Chol Ri,123262,Ri Un-chol,15,15,30,28,0.67,mismo_jugador
+PXP-015760,123264,Kuk-Chol Kang,123264,Kang Kuk-chol,15,15,26,21,0.58,personas_distintas_mismo_id
+PXP-015765,123270,Hassan Chaitou,123270,Hassan Chaito,19,19,33,32,0.96,mismo_jugador
+PXP-015769,123300,Ahmed Fathi,123300,Ahmed Fathy,30,30,33,32,0.91,mismo_jugador
+PXP-015777,123314,Amal Knight,123314,A. Knight,122,122,32,30,0.84,mismo_jugador
+PXP-015800,123393,Hyeon-Woo Jo,123393,Jo Hyeon-woo,16,16,34,34,0.73,mismo_jugador
+PXP-015820,123437,Ulises Abreliano,123437,Marcos Abreliano,144,144,28,27,0.69,mismo_jugador
+PXP-015878,123718,Jonathan Silva,123718,Jonathan Vieira,146,146,25,27,0.76,mismo_jugador
+PXP-015947,123925,Andrew Irving,123925,Andy Irving,232,232,25,25,0.83,mismo_jugador
+PXP-016068,124540,Jeremy Cijntje,124540,J. Cijntje,140,140,26,27,0.78,mismo_jugador
+PXP-016124,124846,Giorgi Tsitaishvili,124846,Georgiy Tsitaishvili,209,209,25,24,0.92,mismo_jugador
+PXP-016134,124882,Homam Al-Amin,124882,Homam Ahmed,30,30,26,26,0.7,personas_distintas_mismo_id
+PXP-016185,125024,Salomão,125024,Gustavo Salomão,146,146,23,28,0.64,personas_distintas_mismo_id
+PXP-016267,125523,Phitiwat Sookjitthammakul,125523,P. Sukjitthammakul,36,36,31,29,0.76,mismo_jugador
+PXP-016268,125525,Victor,125525,Erwin Sánchez,146,145,31,31,0.21,personas_distintas_mismo_id
+PXP-016271,125554,Peeradol Chamrasamee,125554,P. Chamratsamee,36,36,33,32,0.76,mismo_jugador
+PXP-016281,125660,Zaidu Sanusi,125660,Zaidu,80,80,28,28,0.59,mismo_jugador
+PXP-016345,125878,Antonio Glauder,125878,Cristian Glauder,29,236,30,29,0.65,personas_distintas_mismo_id
+PXP-016388,126025,Matteo Brunori,126025,Matteo Luigi Brunori,215,215,29,30,0.82,mismo_jugador
+PXP-016539,126361,Rodolfo José,126361,Rodolfo,146,146,33,33,0.74,mismo_jugador
+PXP-016540,126362,Luan,126362,Luan Santos,146,146,26,26,0.53,mismo_jugador
+PXP-016686,126673,Francisco Trincão,126673,Trincão,228,228,26,25,0.58,mismo_jugador
+PXP-016712,126733,R. Gómez,126733,Richet Gómez,144,145,22,27,0.74,personas_distintas_mismo_id
+PXP-016737,126787,Jô Batista,126787,Jô,146,146,30,30,0.33,mismo_jugador
+PXP-016860,127060,J. Echave,127060,Juan José Echave,147,147,19,24,0.67,personas_distintas_mismo_id
+PXP-016957,127487,Jadsom Silva,127487,Jadsom,146,146,24,24,0.67,mismo_jugador
+PXP-016959,127489,Antônio Neto,127489,Neto,146,146,23,22,0.5,mismo_jugador
+PXP-017031,127614,Adrian Stanilewicz,127614,A. Stanilewicz,227,227,26,22,0.84,personas_distintas_mismo_id
+PXP-017065,127704,Roberto Rosa,127704,Roberto,146,146,26,27,0.74,mismo_jugador
+PXP-017078,127733,Héber García,127733,H. García,153,153,29,27,0.8,mismo_jugador
+PXP-017145,127875,Diego Quirino,127875,Quirino,146,146,30,31,0.7,mismo_jugador
+PXP-017163,127933,Matheusinho,127933,Mateus Jesus,146,146,24,25,0.52,mismo_jugador
+PXP-017166,127953,Fabri,127953,Fabrício,146,146,25,24,0.77,mismo_jugador
+PXP-017228,128092,Marco Antônio,128092,Marco Carvalho,146,146,24,25,0.59,mismo_jugador
+PXP-017304,128313,Joe Rafferty,128313,Joseph Rafferty,214,214,32,31,0.89,mismo_jugador
+PXP-017487,128759,Ibrahima Camará,128759,Ibrahima,65,65,24,26,0.7,mismo_jugador
+PXP-017507,128801,L. Singh,128801,Luke Singh,135,133,23,24,0.82,personas_distintas_mismo_id
+PXP-017529,128879,Hassan Vergara,128879,Hasan Vergara,148,148,24,25,0.96,mismo_jugador
+PXP-017570,129042,Rasmus Karjalainen,129042,R. Karjalainen,207,207,28,28,0.84,mismo_jugador
+PXP-017811,129516,Ederson Cabezas,129516,Ederson Cabezas Quiñónez,148,148,26,25,0.77,mismo_jugador
+PXP-017831,129697,Tariq Abdullah,129697,Tareq Abdullah,31,31,30,30,0.93,mismo_jugador
+PXP-017832,129699,Muhannad Al-Shanqeeti,129699,Muhannad Shanqeeti,31,31,27,26,0.95,mismo_jugador
+PXP-017833,129702,Khaled Al-Sumairi,129702,Khaled Al-Samiri,31,31,29,28,0.9,mismo_jugador
+PXP-017837,129708,Mansor Al-Beshe,129708,Mansour Al-Beshi,31,31,26,25,0.9,mismo_jugador
+PXP-017844,129719,Saud Zaydan,129719,Saud Zidan,31,31,25,25,0.86,mismo_jugador
+PXP-017849,129727,Feras Al-Buraikan,129727,Firas Al-Buraikan,31,31,26,25,0.94,mismo_jugador
+PXP-017871,129854,Manaf Yabes,129854,Manaf Abuyabes,31,31,25,24,0.88,mismo_jugador
+PXP-017879,129909,Salem Abdullah,129909,Salem Abdulla,37,37,23,26,0.96,mismo_jugador
+PXP-017904,129987,Lucas Falcão,129987,Falcão,146,146,27,27,0.67,mismo_jugador
+PXP-017908,129992,Marcelo Dal Soler,129992,Marcelo,146,146,25,25,0.58,mismo_jugador
+PXP-017952,130084,Fabrício Barros,130084,Mohamed Seha,146,58,38,25,0.22,personas_distintas_mismo_id
+PXP-017964,130107,Felipe Antonio,130107,Felipe,146,146,31,31,0.6,mismo_jugador
+PXP-017973,130127,Weverton,130127,Weverton Souza,146,146,27,25,0.73,mismo_jugador
+PXP-017992,130153,Gilberto Júnior,130153,Gilberto Santos,146,146,33,36,0.73,mismo_jugador
+PXP-018038,130224,Ju-Hyok Kang,130224,Kang Ju-hyok,15,15,28,23,0.55,personas_distintas_mismo_id
+PXP-018073,130280,Anton Kryvotsiuk,130280,A. Kryvotsyuk,195,195,27,26,0.79,mismo_jugador
+PXP-018119,130353,Hamza Al Dardour,130353,Odai Khadr,14,14,32,29,0.31,personas_distintas_mismo_id
+PXP-018173,130442,Muhsen Al-Ghassani,130442,Muhsen Al Ghassani,26,26,28,26,0.97,mismo_jugador
+PXP-018205,130495,Hernán López Muñoz,130495,Hernán López,144,144,25,25,0.8,mismo_jugador
+PXP-018274,130671,Gian Luca Pugliese,130671,Gianluca Pugliese,144,144,29,28,0.97,mismo_jugador
+PXP-018318,130830,Hugo Vera,130830,Hugo Vera Oviedo,150,150,33,34,0.72,mismo_jugador
+PXP-018328,130913,Jorge Zules Caicedo,130913,Raúl Zules Caicedo,148,148,35,34,0.81,mismo_jugador
+PXP-018336,130954,Brian Rojas,130954,Nikita Burmistrov,144,230,25,36,0.36,personas_distintas_mismo_id
+PXP-018347,131019,Sebastian Jørgensen,131019,Sebastian Jörgensen,203,203,25,25,0.97,mismo_jugador
+PXP-018362,131066,Juan Moreno,131066,Juan Camilo Moreno,148,148,22,23,0.76,mismo_jugador
+PXP-018408,131291,Flávio Silva,131291,Flávio,146,146,24,25,0.67,mismo_jugador
+PXP-018411,131298,Aziz Yakubu,131298,Aziz,64,64,25,26,0.53,mismo_jugador
+PXP-018514,131774,Higor Meritão,131774,Meritão,146,146,32,31,0.7,mismo_jugador
+PXP-018657,132215,Oliver Batista-Meier,132215,Oliver Batista Meier,210,210,25,24,0.97,mismo_jugador
+PXP-018770,132471,Vlatko Stojanovski,132471,V. Stojanovski,221,221,26,27,0.84,mismo_jugador
+PXP-018826,132575,M. Colossi,132575,Matías Colossi,147,147,19,24,0.78,personas_distintas_mismo_id
+PXP-018909,132716,Juan Nardoni,132716,Juan Ignacio Nardoni,144,144,24,23,0.75,mismo_jugador
+PXP-018921,132748,Serge-Philippe Raux-Yao,132748,Serge-Philippe Raux Yao,208,208,26,26,0.98,mismo_jugador
+PXP-019054,133041,Louicius Deedson,133041,Louicius Don Deedson,120,120,25,24,0.89,mismo_jugador
+PXP-019095,133151,Filip Jagiełło,133151,Filip Jagiello,227,227,26,28,0.92,mismo_jugador
+PXP-019114,133182,Breno Washington,133182,Breno,146,146,22,25,0.48,mismo_jugador
+PXP-019126,133220,Airton Moisés,133220,Airton,146,146,27,26,0.63,mismo_jugador
+PXP-019203,133403,Uğur Kaan Yıldız,133403,Ugur Kaan Yildiz,190,190,22,23,0.93,mismo_jugador
+PXP-019247,133525,Salatiel Júnior,133525,Salatiel,146,146,32,33,0.7,mismo_jugador
+PXP-019253,133535,Cristiano Vidal,133535,Vidal,146,146,24,29,0.5,personas_distintas_mismo_id
+PXP-019372,134147,Diego Plaza Ramos,134147,Diego Plaza,147,147,23,24,0.79,mismo_jugador
+PXP-019395,134284,W. Martínez,134284,Walter Martínez,147,147,20,25,0.8,personas_distintas_mismo_id
+PXP-019492,134512,Juan Santos,134512,Juan,146,146,24,23,0.53,mismo_jugador
+PXP-019611,134915,J. Abdala,134915,Joaquín Abdala,147,28,20,25,0.73,personas_distintas_mismo_id
+PXP-019612,134916,V. González,134916,Víctor González Chang,147,147,26,31,0.65,personas_distintas_mismo_id
+PXP-019615,134919,C. Salas,134919,Cristofer Salas,147,147,20,25,0.64,personas_distintas_mismo_id
+PXP-019691,135048,Kleiton Pego,135048,Kleiton,146,146,26,26,0.74,mismo_jugador
+PXP-019722,135109,David Pastor,135109,Pastor,146,146,26,25,0.67,mismo_jugador
+PXP-019741,135167,Guilherme Sityá,135167,Guilherme,146,146,35,35,0.75,mismo_jugador
+PXP-019762,135205,Vinicius Foguinho,135205,Foguinho,146,146,22,25,0.64,mismo_jugador
+PXP-019766,135209,Bernardo Lemes,135209,Bernardo,146,146,22,23,0.73,mismo_jugador
+PXP-019781,135245,Nathan,135245,Nathan Camargo,146,146,25,20,0.6,personas_distintas_mismo_id
+PXP-019787,135252,S. González,135252,Simón González,147,147,20,24,0.83,personas_distintas_mismo_id
+PXP-019929,135587,Anis Ben Slimane,135587,Anis Slimane,92,92,25,24,0.86,mismo_jugador
+PXP-019950,135726,Turki Fahad,135726,Turki Al-Mutairi,31,31,22,24,0.62,mismo_jugador
+PXP-019953,135729,Mansour Al Shammari,135729,Mansour Al-Shammari,31,31,23,25,0.97,mismo_jugador
+PXP-019957,135734,Mohammed Marran,135734,Mohammed Maran,31,31,25,24,0.97,mismo_jugador
+PXP-019967,135753,Fahd Al Hamad,135753,Fahd Al-Hamad,31,31,25,27,0.96,mismo_jugador
+PXP-019971,135758,Sumayhan Al-Nabit,135758,Sumaihan Al-Nabit,31,31,28,29,0.94,mismo_jugador
+PXP-019976,135787,Mohammed Al-Yami,135787,Mohammed Al-rubaie Al-yami,31,31,29,28,0.77,mismo_jugador
+PXP-019977,135788,Mohammed Bassas,135788,Mohammad Al-Bassas,31,31,22,27,0.88,personas_distintas_mismo_id
+PXP-019985,135822,Mohammed Jumaa,135822,Mohammad Juma,37,37,29,28,0.89,mismo_jugador
+PXP-019987,135825,Ahmed Basil Fadhil,135825,Ahmed Basil,12,12,29,29,0.76,mismo_jugador
+PXP-020068,136004,C. Finch,136004,Cristóbal Finch,147,147,18,23,0.64,personas_distintas_mismo_id
+PXP-020079,136020,Jorge Campos,136020,Ryan Giggs,124,241,50,29,0.27,personas_distintas_mismo_id
+PXP-020080,136021,Gastón Fernández,136021,Pep Guardiola,144,236,50,38,0.28,personas_distintas_mismo_id
+PXP-020081,136022,Matías Oyola,136022,Frank Lampard,149,204,50,48,0.32,personas_distintas_mismo_id
+PXP-020102,136093,David Da Costa,136093,David Pereira da Costa,228,228,25,24,0.78,mismo_jugador
+PXP-020107,136107,Eliel,136107,Eliel Costa,146,146,22,22,0.62,mismo_jugador
+PXP-020197,136424,Matty Godden,136424,Matt Godden,204,204,34,34,0.96,mismo_jugador
+PXP-020291,136788,R. Botello,136788,Rolando Botello,128,128,29,33,0.75,personas_distintas_mismo_id
+PXP-020313,136837,José Danilo Tobías,136837,Danilo Tobías,121,121,32,33,0.84,mismo_jugador
+PXP-020327,136863,Larry Bwalya,136863,Benson Sakala,94,94,27,28,0.16,personas_distintas_mismo_id
+PXP-020328,136866,Kyle Hiebert,136866,Dominik Holec,110,234,29,31,0.24,personas_distintas_mismo_id
+PXP-020329,136867,Daniel Avramovski,136867,D. Avramovski,221,221,29,30,0.83,mismo_jugador
+PXP-020346,136903,Moussa Camara,136903,Moussa Camara I,65,65,25,26,0.93,mismo_jugador
+PXP-020411,137234,Wellington N.,137234,Wellington Nascimento,146,146,29,30,0.73,mismo_jugador
+PXP-020494,137935,Matheus,137935,Matheus Souza,146,146,19,24,0.7,personas_distintas_mismo_id
+PXP-020508,137996,Albert Grønbæk,137996,Albert Grønbaek,203,203,24,24,0.92,mismo_jugador
+PXP-020555,138124,Danielzinho,138124,Daniel Martins,146,146,25,23,0.64,personas_distintas_mismo_id
+PXP-020719,138662,Sávio,138662,Savinho,146,146,22,21,0.83,mismo_jugador
+PXP-020941,139649,César Medina,139649,Santiago Churchi,148,144,31,27,0.29,personas_distintas_mismo_id
+PXP-020951,139659,Negueti,139659,Mariano Penepil,146,144,30,22,0.27,personas_distintas_mismo_id
+PXP-020954,139662,Luis Gustavo,139662,Julián Gómez,146,144,31,24,0.42,personas_distintas_mismo_id
+PXP-020955,139663,Joazi,139663,Marcos Machado,146,144,24,24,0.21,personas_distintas_mismo_id
+PXP-020957,139666,Jackson,139666,Javier Martínez,146,144,27,27,0.27,personas_distintas_mismo_id
+PXP-020966,139676,Mazinho,139676,Nahuel Galardi,146,144,31,23,0.19,personas_distintas_mismo_id
+PXP-020996,139707,Przemysław Płacheta,139707,Przemyslaw Placheta,227,227,28,27,0.94,mismo_jugador
+PXP-021009,139721,Wandson,139721,Miguel Ceccotti ,146,144,21,26,0.09,personas_distintas_mismo_id
+PXP-021010,139722,Lucas Carvalho,139722,David Véliz,146,144,24,25,0.08,personas_distintas_mismo_id
+PXP-021065,139784,Kevin Lopez,139784,Martín Torres,148,147,23,20,0.42,personas_distintas_mismo_id
+PXP-021114,139835,Emmanuel Emegha,139835,Emanuel Emegha,224,224,23,22,0.97,mismo_jugador
+PXP-021126,139852,Sebastien Pineau,139852,Kevin Prieto,151,152,23,22,0.5,personas_distintas_mismo_id
+PXP-021133,139862,Werton Rêgo,139862,Oscar Díaz,146,152,20,23,0.19,personas_distintas_mismo_id
+PXP-021134,139863,Pedrinho,139863,Axel Pandiani,146,152,22,25,0.38,personas_distintas_mismo_id
+PXP-021214,139966,Igor Jesus,139966,Matías Moravec,146,144,23,24,0.33,personas_distintas_mismo_id
+PXP-021237,140008,Brandon Dominguès,140008,Valentín Robaldo,208,144,25,25,0.24,personas_distintas_mismo_id
+PXP-021258,140029,Roberto Henrique,140029,Bruno Ponce,146,144,24,24,0.3,personas_distintas_mismo_id
+PXP-021269,140041,Yassine Benhattab,140041,Ricardo Dichiara,208,144,22,29,0.3,personas_distintas_mismo_id
+PXP-021292,140069,Joecio,140069,Lucas Macazaga,146,145,35,19,0.1,personas_distintas_mismo_id
+PXP-021386,140172,F. Levinao,140172,David Chicoma,147,151,20,20,0.27,personas_distintas_mismo_id
+PXP-021399,140186,Rolando Ortíz,140186,Jairo Martínez,150,151,21,21,0.52,personas_distintas_mismo_id
+PXP-021410,140197,K. Figueroa,140197,Fabián García,147,151,20,22,0.26,personas_distintas_mismo_id
+PXP-021411,140199,Dani Bolt,140199,Genaro Haro,146,151,26,18,0.3,personas_distintas_mismo_id
+PXP-021419,140207,Edu Mancha,140207,Edgar Castillo,146,127,30,23,0.33,personas_distintas_mismo_id
+PXP-021475,140274,Á. Gómez,140274,Billy Ramírez,144,151,19,32,0.4,personas_distintas_mismo_id
+PXP-021479,140278,A. Rojas,140278,Willian Navarro,144,151,21,20,0.36,personas_distintas_mismo_id
+PXP-021531,140331,C. Vega,140331,Taiel Arancibia,147,144,20,24,0.19,personas_distintas_mismo_id
+PXP-021580,140403,Gustavo Garcia,140403,Garcia,146,146,24,23,0.6,mismo_jugador
+PXP-021581,140408,Giovani Amorim,140408,Giovani,146,146,22,21,0.67,mismo_jugador
+PXP-021791,140906,J. Román,140906,Fabricio Vasquez,144,145,20,21,0.17,personas_distintas_mismo_id
+PXP-021845,141057,Lucas Santana,141057,Talles,146,146,22,28,0.21,personas_distintas_mismo_id
+PXP-022243,141997,J. Turra,141997,Jonathan Turra,147,147,19,24,0.67,personas_distintas_mismo_id
+PXP-022334,142272,Daniel Ruiz,142272,Daniel Ruiz Rivera,148,148,25,24,0.76,mismo_jugador
+PXP-022433,142476,S. Clark,142476,Enzo Mori,135,151,37,19,0.25,personas_distintas_mismo_id
+PXP-022530,142602,Thomas Thompson,142602,Tommy Thompson,135,135,29,30,0.83,mismo_jugador
+PXP-022552,142631,Nicolas Firmino,142631,Nick Firmino,146,146,23,24,0.81,mismo_jugador
+PXP-022652,142785,Leo Hjelde,142785,Leo Fuhr Hjelde,226,226,22,22,0.8,mismo_jugador
+PXP-022709,142896,G. Guajardo,142896,Guillermo Gajardo,147,147,23,23,0.67,mismo_jugador
+PXP-022781,143015,Nathan Saliba,143015,Nathan-Dylan Saliba,110,110,22,21,0.84,mismo_jugador
+PXP-022822,143074,Mahala Opoku,143074,Kwadwo Opoku,64,64,24,24,0.58,mismo_jugador
+PXP-022850,143130,Ronald Pereira,143130,Ronald,146,146,24,24,0.6,mismo_jugador
+PXP-022859,143147,Pedro Henrique,143147,Pedrinho,146,146,23,23,0.45,mismo_jugador
+PXP-022924,143327,Alejo Cerdá,143327,Neto Costa,144,146,24,28,0.48,personas_distintas_mismo_id
+PXP-022975,143443,Everton Macedo,143443,Everton,146,146,21,23,0.67,mismo_jugador
+PXP-022988,143502,Biel Fonseca,143502,Biel,146,146,24,23,0.5,mismo_jugador
+PXP-023022,143619,Dalberson,143619,Dalberson Ferreira,146,146,29,28,0.67,mismo_jugador
+PXP-023055,143698,Max Alves,143698,Max,146,146,24,24,0.5,mismo_jugador
+PXP-023062,143709,Arthur Wenderroscky,143709,Arthur,146,146,21,21,0.48,mismo_jugador
+PXP-023150,143887,Mehmet Aydin,143887,Mehmet Aydın,190,190,24,23,0.96,mismo_jugador
+PXP-023161,143904,Jonathan Khemdee,143904,J. Khemdee,36,203,23,22,0.72,personas_distintas_mismo_id
+PXP-023360,144333,Jhohan Romaña,144333,Johan Romaña,148,148,28,27,0.96,mismo_jugador
+PXP-023364,144337,Osvaldo Cisneros,144337,Ozzie Cisneros,135,135,19,21,0.67,mismo_jugador
+PXP-023395,144384,Benji Kikanović,144384,Yackson Rivas,135,153,26,24,0.21,personas_distintas_mismo_id
+PXP-023396,144385,Marcus Ferkranus,144385,Genderson Ascanio,135,153,20,22,0.24,personas_distintas_mismo_id
+PXP-023397,144386,Jalen Neal,144386,Luis Casimiro Peña,135,153,23,24,0.29,personas_distintas_mismo_id
+PXP-023444,144455,Roberto Castellanos,144455,Robert Castellanos,135,135,27,27,0.97,mismo_jugador
+PXP-023610,144858,José Carabalí,144858,José Luis Quiñones,149,149,29,23,0.45,personas_distintas_mismo_id
+PXP-023618,144866,Víctor Griffith,144866,Mauricio Alonso,128,152,25,31,0.27,personas_distintas_mismo_id
+PXP-023625,144873,Juma Al-Habsi,144873,Alexis Villalba,26,150,30,25,0.3,personas_distintas_mismo_id
+PXP-023626,144874,Ahmed Al-Khamisi,144874,Adrián Brizuela,26,150,34,22,0.2,personas_distintas_mismo_id
+PXP-023627,144875,Amjad Al-Harthi,144875,Marcelo Jiménez,26,150,32,28,0.28,personas_distintas_mismo_id
+PXP-023629,144877,Omar Al-Fazari,144877,Rodrigo Alborno,26,150,32,32,0.43,personas_distintas_mismo_id
+PXP-023631,144879,Essam Al-Subhi,144879,Fernando Benitez,26,150,28,26,0.34,personas_distintas_mismo_id
+PXP-023720,145500,Abdallah Al-Fakhouri,145500,Abdallah Al Fakhouri,14,14,26,25,0.97,mismo_jugador
+PXP-023805,145759,Az Jackson,145759,Aziel Jackson,135,135,24,23,0.87,mismo_jugador
+PXP-023928,146187,Jhon Balanta,146187,Harold Balanta,148,148,28,27,0.77,mismo_jugador
+PXP-023984,146374,Mohammad Abu Zrayq,146374,Mohammad Abu Zraiq,14,14,28,27,0.94,mismo_jugador
+PXP-024009,146465,Abdul Fatawu,146465,Issahaku Fatawu,64,64,22,21,0.67,mismo_jugador
+PXP-024016,146493,Jassem Gaber,146493,Jassem Gaber Abdulsallam,30,30,24,23,0.67,mismo_jugador
+PXP-024060,146636,André Morales,146636,Andrés Morales,148,148,25,25,0.96,mismo_jugador
+PXP-024089,146704,Luiz Felipe Nunes,146704,Luiz Felipe,146,146,26,28,0.79,mismo_jugador
+PXP-024133,146817,Rúben Ismael,146817,Ismael,228,228,27,26,0.67,mismo_jugador
+PXP-024178,146922,Amourricho Van Axel Dongen,146922,Amourricho Van Axel-Dongen,224,224,21,20,0.98,mismo_jugador
+PXP-024203,146971,Agustín Venezia,146971,A. Venezia,144,144,22,22,0.75,mismo_jugador
+PXP-024287,147162,Gilson Benchimol,147162,Benchimol,51,51,24,23,0.72,mismo_jugador
+PXP-024352,147310,Andreas Ntoi,147310,Andreas Ndoj,211,211,23,22,0.83,mismo_jugador
+PXP-024354,147315,Roger Fernandes,147315,Roger,228,228,20,19,0.5,mismo_jugador
+PXP-024392,147370,Javi Martón,147370,Javier Martón,236,236,24,26,0.92,mismo_jugador
+PXP-024464,147540,Caio Matheus,147540,Caio,146,146,20,21,0.5,mismo_jugador
+PXP-024499,147612,Odeluga Offiah,147612,Odel Offiah,204,204,23,22,0.88,mismo_jugador
+PXP-024580,147803,Rivaldo Lozano,147803,José Lozano,124,124,27,26,0.64,mismo_jugador
+PXP-024686,147951,Ahmed Sidibé,147951,Alassane Sidibe,208,56,24,23,0.67,personas_distintas_mismo_id
+PXP-024736,148058,Marcelo Nunes,148058,Marcelo,146,146,26,26,0.7,mismo_jugador
+PXP-024761,148131,Abdul Kader Keita,148131,Kader Keita,56,56,25,24,0.79,mismo_jugador
+PXP-024763,148137,Demir Ege Tıknaz,148137,Ege Tıknaz,190,190,21,21,0.75,mismo_jugador
+PXP-024848,148697,Darwin Lom,148697,D. Lom,119,119,29,26,0.67,personas_distintas_mismo_id
+PXP-025007,151189,Maximiliano Zelaya,151189,Maxi Zelaya,144,144,29,28,0.76,mismo_jugador
+PXP-025096,151500,Andrés Gómez,151500,Carlos Andrés Gómez,148,148,24,23,0.77,mismo_jugador
+PXP-025302,152055,Mateus Silva,152055,Mateusinho,146,146,27,26,0.64,personas_distintas_mismo_id
+PXP-025456,152451,Adyson Soares,152451,Adyson,146,146,20,19,0.63,mismo_jugador
+PXP-025471,152491,Joan Osorio,152491,Joan Osorio Guzmán,148,148,22,23,0.76,mismo_jugador
+PXP-025535,152693,Daniel Jr,152693,Daniel Júnior,146,146,23,23,0.82,mismo_jugador
+PXP-025635,152889,Júlio César,152889,Júlio,146,146,22,22,0.62,mismo_jugador
+PXP-025682,153023,Max Rodríguez,153023,Maximiliano Rodríguez,144,144,36,37,0.76,mismo_jugador
+PXP-025715,153101,Kevin Pina,153101,Kevin Lenini,51,51,29,28,0.73,mismo_jugador
+PXP-025719,153116,Manu Silva,153116,Manu,228,228,24,24,0.57,mismo_jugador
+PXP-025752,153169,Guilherme Silva,153169,Guilherme,146,146,22,23,0.75,mismo_jugador
+PXP-025783,153249,Tiago Suárez,153249,Tiago,135,135,18,20,0.59,mismo_jugador
+PXP-025985,153908,Sævar Atli Magnússon,153908,Saevar Atli Magnússon,213,213,25,25,0.95,mismo_jugador
+PXP-026054,154122,Mohammad Abu Hasheesh,154122,Mohammad Abu Hashish,14,14,31,30,0.93,mismo_jugador
+PXP-026068,154150,Everton Tiago,154150,Everton,146,146,22,23,0.7,mismo_jugador
+PXP-026093,154212,João Tornich,154212,Alemão,146,146,23,22,0.22,mismo_jugador
+PXP-026142,154334,Joel Quispe,154334,Juan Delgado,151,151,22,21,0.26,personas_distintas_mismo_id
+PXP-026143,154335,Juan Carlos Gonzáles,154335,Piero Cari,151,151,23,19,0.27,personas_distintas_mismo_id
+PXP-026147,154339,Mohammadamin Hazbavi,154339,Mohammad Amin Hazbavi,11,11,22,22,0.98,mismo_jugador
+PXP-026152,154373,Arya Yousefi,154373,Aria Yousefi,11,11,24,23,0.92,mismo_jugador
+PXP-026165,154388,Saad Al Muwallad,154388,Saad Al-Muwallad,31,31,22,23,0.97,mismo_jugador
+PXP-026204,154602,Sebastián Pérez-Bouquet,154602,Sebastián Pérez Bouquet,124,124,23,22,0.98,mismo_jugador
+PXP-026237,154662,R. Hernandez,154662,Rubén Hernández,124,124,21,23,0.85,mismo_jugador
+PXP-026288,154977,Derek Cornelius,154977,Scott Kennedy,110,110,28,28,0.29,personas_distintas_mismo_id
+PXP-026313,155140,Dailon Livramento,155140,Dailon Rocha Livramento,51,51,25,24,0.85,mismo_jugador
+PXP-026361,155331,Cris Montes,155331,Christian Montes,236,236,27,28,0.81,mismo_jugador
+PXP-026565,156986,Giovanni Manson,156986,Giovanni,146,146,24,23,0.7,mismo_jugador
+PXP-026621,157080,Sekou Bangoura,157080,Sekou Tidiany Bangoura,65,65,24,23,0.78,mismo_jugador
+PXP-026767,157355,Lucas Gazal,157355,Gazal,146,146,27,26,0.62,mismo_jugador
+PXP-026854,157532,Rafael Fernández,157532,Rafael Inzunza,124,124,26,25,0.6,mismo_jugador
+PXP-026912,157644,Youssef Chermiti,157644,Chermiti,228,228,19,21,0.67,mismo_jugador
+PXP-026988,157818,Leo Palestina,157818,Leonardo Palestina,124,124,19,21,0.84,mismo_jugador
+PXP-027078,158486,Ruan Pereira,158486,Ruan,146,146,20,20,0.5,mismo_jugador
+PXP-027209,158911,Eduar Esteban,158911,Eduar Beltran,148,148,26,25,0.77,mismo_jugador
+PXP-027241,159046,Jhomier Guerrero,159046,Jhonier Guerrero,148,148,25,24,0.94,mismo_jugador
+PXP-027278,159163,Pape Demba Diop,159163,Pape Diop,83,83,23,22,0.75,mismo_jugador
+PXP-027358,159411,Wesley Borges,159411,Wesley,146,146,22,23,0.63,mismo_jugador
+PXP-027404,159503,Chico da Costa,159503,Francisco da Costa,146,146,31,30,0.81,mismo_jugador
+PXP-027441,159579,David Datro Fofana,159579,David Fofana,56,56,23,24,0.8,mismo_jugador
+PXP-027541,159847,Edson Júnior,159847,Edson,146,146,22,23,0.59,mismo_jugador
+PXP-027715,160235,Kauan Rodrigues,160235,Kauan,146,146,21,20,0.5,mismo_jugador
+PXP-027756,160331,H. Trent,160331,Holden Trent,135,135,24,26,0.74,mismo_jugador
+PXP-027769,160360,Alvaro José,160360,Álvaro,146,146,21,21,0.71,mismo_jugador
+PXP-027849,160569,Lucas Høgsberg,160569,Lucas Högsberg,203,203,20,19,0.96,mismo_jugador
+PXP-027995,160977,Junior Kroupi,160977,Eli Junior Kroupi,208,208,20,19,0.87,mismo_jugador
+PXP-028207,161915,Gaspar,161915,Kialonda Gaspar,45,45,28,27,0.57,mismo_jugador
+PXP-028249,162117,Daniel Ribera,162117,David Ribera,145,145,21,24,0.8,mismo_jugador
+PXP-028341,162714,Jhon Alexander Quiñones,162714,Jhon Quiñones,148,148,22,21,0.72,mismo_jugador
+PXP-028409,163086,Makhir Al-Rashidi,163086,Makhir Saleh,31,31,27,26,0.71,mismo_jugador
+PXP-028419,163235,Nawaf Boushal,163235,Nawaf Al-Boushal,31,31,27,26,0.93,mismo_jugador
+PXP-028448,163636,Emilio Rodríguez,163636,Miguel Rodríguez,124,124,22,22,0.81,mismo_jugador
+PXP-028456,163646,Odin Holm,163646,Odin Thiago Holm,226,226,22,22,0.72,mismo_jugador
+PXP-028461,163652,Marco Huamán,163652,Alexis Huamán,151,151,23,21,0.64,mismo_jugador
+PXP-028492,164319,Vinícius Dias,164319,Vinícius,146,146,26,28,0.76,mismo_jugador
+PXP-028648,164693,Justin Bengui,164693,Justin Bengui Joao,208,208,21,20,0.84,mismo_jugador
+PXP-028686,164765,Davis Silva,164765,Davis,146,146,21,23,0.62,mismo_jugador
+PXP-028702,164807,Lucão,164807,Lucas Rafael,146,146,25,27,0.47,mismo_jugador
+PXP-028706,164819,Marcos Mina,164819,David Mina,148,148,27,26,0.57,mismo_jugador
+PXP-028776,164959,Prince Owusu,164959,Prince Osei Owusu,64,210,29,28,0.83,personas_distintas_mismo_id
+PXP-028779,164963,Sidiki Chérif,164963,Jean Piere Valle,65,151,19,21,0.21,personas_distintas_mismo_id
+PXP-028787,164979,Yunus Konak,164979,Yunus Emre Konak,190,190,19,19,0.81,mismo_jugador
+PXP-028831,165060,Pio Esposito,165060,Francesco Pio Esposito,215,215,21,20,0.71,mismo_jugador
+PXP-028892,165252,Samu Aghehowa,165252,Samu Omorodion,236,236,21,21,0.44,personas_distintas_mismo_id
+PXP-029007,165842,Néiser Villarreal,165842,Neyser Villarreal,148,148,21,20,0.94,mismo_jugador
+PXP-029038,165990,Rakan Kaabi,165990,Rakan Al-Kaabi,31,31,23,22,0.92,mismo_jugador
+PXP-029044,166137,Santi Morales,166137,Santiago Morales,135,135,19,18,0.9,mismo_jugador
+PXP-029175,166743,Jonatan Goya,166743,Jonathan Goya,144,144,37,36,0.96,mismo_jugador
+PXP-029247,167203,Tommaso Pittino,167203,Román Suárez,215,144,18,25,0.3,personas_distintas_mismo_id
+PXP-029389,167785,Francis Mwansa,167785,F. Mwansa,94,94,23,22,0.73,mismo_jugador
+PXP-029393,167790,Mohamed Amine Tougai,167790,Mohamed Amine,44,92,26,30,0.79,personas_distintas_mismo_id
+PXP-029509,168142,T. Parmo,168142,Tomás Parmo,144,144,15,18,0.78,mismo_jugador
+PXP-029716,168593,Cristóbal Piña,168593,C. Piña,147,147,16,17,0.6,mismo_jugador
+PXP-029917,169128,Juan Velázquez,169128,Juan Martín Velázquez,144,144,21,20,0.8,mismo_jugador
+PXP-029945,169171,Luca Kmet,169171,Matus Kmet,150,234,20,25,0.63,personas_distintas_mismo_id
+PXP-030163,170170,Rubén Ramos Jr.,170170,Rubén Ramos,135,135,19,18,0.88,mismo_jugador
+PXP-030551,171976,Gilberto Junior Jiménez,171976,Junior Jiménez,148,148,24,24,0.76,mismo_jugador
+PXP-030682,172443,Ignacio Rodríguez,172443,Nacho Rodríguez,152,152,22,21,0.88,mismo_jugador
+PXP-030726,172576,Chema Andrés,172576,Brito,236,146,21,27,0.12,personas_distintas_mismo_id
+PXP-030731,172582,Francisco Montoro,172582,Sair Moreyra,144,151,22,21,0.34,personas_distintas_mismo_id
+PXP-030737,172590,Kwang-Nam Sin,172590,Josue Tunqui,15,151,22,23,0.17,personas_distintas_mismo_id
+PXP-030746,172599,Alexis González,172599,Jefferson Mendoza,144,151,21,20,0.38,personas_distintas_mismo_id
+PXP-030755,172611,Emilio Gutiérrez,172611,Aldhy Valencia,148,151,19,22,0.13,personas_distintas_mismo_id
+PXP-030763,172622,João Simões,172622,Mathias Panduro,228,151,19,19,0.08,personas_distintas_mismo_id
+PXP-030780,172641,Cristian Guzmán,172641,Álvaro Laura,148,151,17,27,0.3,personas_distintas_mismo_id
+PXP-030781,172642,Victor Reyes,172642,Sidan Taype,148,151,17,21,0.26,personas_distintas_mismo_id
+PXP-030783,172645,Juan Holguín,172645,Emiliano Ciucci,148,144,21,39,0.37,personas_distintas_mismo_id
+PXP-030792,172658,Saad Al-Mousa,172658,Luis Chuna,31,151,23,21,0.18,personas_distintas_mismo_id
+PXP-030793,172659,Hamed Al-Ghamdi,172659,Julián Muñoz,31,148,27,28,0.15,personas_distintas_mismo_id
+PXP-031299,176145,Diego Vargas,176145,Patricio Muñoz,147,147,20,24,0.23,personas_distintas_mismo_id
+PXP-031328,176273,Andrew Pereira,176273,Rodrigo Borzone,153,144,17,21,0.21,personas_distintas_mismo_id
+PXP-031330,176278,Renato Nhaga,176278,Lucas Cornejo,66,144,18,21,0.24,personas_distintas_mismo_id
+PXP-031337,176292,Agustín Falcón,176292,Francisco Gómez,144,144,21,22,0.28,personas_distintas_mismo_id
+PXP-031340,176296,Jhon Rentería,176296,Juan Cruz Meza,148,144,20,18,0.44,personas_distintas_mismo_id
+PXP-031344,176301,Mathys de Carvalho,176301,Ramiro Pedroza,228,144,21,19,0.12,personas_distintas_mismo_id
+PXP-031345,176302,Alejandro Gomes Rodríguez,176302,Juan Rattalino,204,144,18,21,0.21,personas_distintas_mismo_id
+PXP-031373,176337,Deivid Castro,176337,Victor Ávila,148,128,20,27,0.32,personas_distintas_mismo_id
+PXP-031378,176342,Telli Siwe,176342,Jefferson Nazareno,208,149,21,26,0.21,personas_distintas_mismo_id
+PXP-031379,176343,Ramiro Paunero,176343,Josué Cuero,144,149,21,24,0.48,personas_distintas_mismo_id
+PXP-031432,176401,Wilguens Paugain,176401,Anderson Castillo,120,149,24,21,0.12,personas_distintas_mismo_id
+PXP-031475,176446,Mathías Tomás,176446,Kevin Coba,152,149,25,29,0.09,personas_distintas_mismo_id
+PXP-031476,176448,Franz-Ethan Meichtry,176448,Edison Hernández,238,149,21,26,0.23,personas_distintas_mismo_id
+PXP-031491,176464,Martin Expérience,176464,Marcelo Gonzales,120,145,27,20,0.3,personas_distintas_mismo_id
+PXP-031500,176475,Théo Eyoum,176475,Eduardo Justiniano,208,145,24,20,0.29,personas_distintas_mismo_id
+PXP-031507,176482,Martin Rossignol,176482,Daniel Aponte,208,145,22,21,0.14,personas_distintas_mismo_id
+PXP-031508,176483,Noa Boissé,176483,Guilmar Centella,208,145,20,20,0.15,personas_distintas_mismo_id
+PXP-031509,176485,Edwin Quarshie,176485,Celin Padilla,208,145,30,21,0.44,personas_distintas_mismo_id
+PXP-031568,176565,Alessio Cacciamani,176565,Elder Arauz,215,145,19,34,0.14,personas_distintas_mismo_id
+PXP-031578,176577,Juan David Bacca,176577,Willie Barbosa,148,146,21,32,0.33,personas_distintas_mismo_id
+PXP-031586,176585,Prosper Peter,176585,Francisco Rodríguez,208,145,19,31,0.19,personas_distintas_mismo_id
+PXP-031616,176623,Jorge De Asís,176623,Alexander Chavez,144,145,20,24,0.34,personas_distintas_mismo_id
+PXP-031619,176627,Cristiano Oliveira,176627,Albano Alessandrini,135,144,18,22,0.38,personas_distintas_mismo_id
+PXP-031622,176633,Ilan Jourdren,176633,Luis Alí,208,145,18,30,0.19,personas_distintas_mismo_id
+PXP-031623,176634,Ismaël Guerti,176634,Ronald Cuellar,76,145,21,28,0.3,personas_distintas_mismo_id
+PXP-031625,176636,Ilyas Azizi,176636,Jose Ali,208,145,18,20,0.42,personas_distintas_mismo_id
+PXP-031637,176651,Kieran Chandler,176651,Jonathan Yarvi,135,214,21,20,0.34,personas_distintas_mismo_id
+PXP-031641,176656,Lanroy Machine,176656,José Martines,208,145,20,23,0.52,personas_distintas_mismo_id
+PXP-031646,176662,Juan Carrasco,176662,Juan Cuellar,148,145,19,18,0.64,personas_distintas_mismo_id
+PXP-031648,176664,Justin Ellis,176664,Daniel Camacho,135,145,19,27,0.23,personas_distintas_mismo_id
+PXP-031659,176677,Oscar Surmay,176677,Paolo Garcia,148,145,19,23,0.33,personas_distintas_mismo_id
+PXP-031661,176679,Halam Loboa,176679,Ed Verhoeven,148,147,20,24,0.17,personas_distintas_mismo_id
+PXP-031662,176682,Raul Florucz,176682,Gabriel Rojas,194,147,24,26,0.32,personas_distintas_mismo_id
+PXP-031664,176685,Thalente Mbatha,176685,Nicolás Fernández,87,144,26,26,0.25,personas_distintas_mismo_id
+PXP-031665,176686,Yustin Arboleda,176686,Francis Pérez,121,147,34,22,0.29,personas_distintas_mismo_id
+PXP-031666,176687,David Cabezas,176687,Ian Aliaga,149,147,31,23,0.35,personas_distintas_mismo_id
+PXP-031673,176698,Diego Arroyo,176698,Joaquín Muñoz,145,147,20,34,0.16,personas_distintas_mismo_id
+PXP-031674,176699,Moises Paniagua,176699,Nicolás Araya,145,147,18,26,0.43,personas_distintas_mismo_id
+PXP-031675,176700,Francis De Vries,176700,Diego Zambrano,166,147,31,27,0.2,personas_distintas_mismo_id
+PXP-031685,176725,José Carlos Martinez,176725,Luis Muñoz,119,147,27,21,0.4,personas_distintas_mismo_id
+PXP-031686,176726,José Rosales,176726,Diego Plaza Ramos,119,147,33,22,0.14,personas_distintas_mismo_id
+PXP-031687,176727,Fredy Pérez,176727,Matías Recabal,119,147,30,26,0.16,personas_distintas_mismo_id
+PXP-031688,176728,Rudy Muñoz,176728,Alcides Valdez,119,150,20,26,0.25,personas_distintas_mismo_id
+PXP-031694,176734,Léo Gaúcho,176734,Joaquín González O.,146,147,24,19,0.21,personas_distintas_mismo_id
+PXP-031761,176838,Karim Coulibaly,176838,Mathias Martínez,210,150,19,30,0.19,personas_distintas_mismo_id
+PXP-031769,176849,Jean Vercruysse,176849,Leandro Meza,208,150,26,23,0.37,personas_distintas_mismo_id
+PXP-031786,176868,Tyreece Campbell,176868,Fernando Ruiz Díaz,122,150,22,23,0.18,personas_distintas_mismo_id
+PXP-031816,176902,Job Ochieng,176902,Kevin Denis,67,144,23,25,0.27,personas_distintas_mismo_id
+PXP-031855,176967,Kauã Moraes,176967,Gonzalo Areco,146,150,19,30,0.25,personas_distintas_mismo_id
+PXP-031868,176983,Tomás Lavezzi,176983,Rodrigo Rojas,144,150,21,37,0.23,personas_distintas_mismo_id
+PXP-031869,176984,Franco Ratotti,176984,Derlis Alegre,144,150,21,31,0.22,personas_distintas_mismo_id
+PXP-031937,177073,João Alencar,177073,Fernando Dinamarca,146,147,19,21,0.4,personas_distintas_mismo_id
+PXP-032339,182077,Alexander Shaw,182077,Román Gutiérrez,135,152,18,21,0.28,personas_distintas_mismo_id
+PXP-032343,182094,Agustín Massaccesi,182094,Martín Dedes,144,147,23,20,0.47,personas_distintas_mismo_id
+PXP-032346,182099,Luca Rafaelli,182099,Matias Zegarra,144,151,18,17,0.3,personas_distintas_mismo_id
+PXP-032347,182100,Ignacio Rossi,182100,João Lopes,144,146,22,29,0.43,personas_distintas_mismo_id
+PXP-032354,182110,David Fernández,182110,Victor Caetano,150,146,20,27,0.41,personas_distintas_mismo_id
+PXP-032355,182111,Nazareno Roselli,182111,Arthur Vanzela,144,146,20,22,0.33,personas_distintas_mismo_id
+PXP-032356,182112,Simón Escobar,182112,Tiago Cóser,144,146,17,21,0.5,personas_distintas_mismo_id
+PXP-032357,182113,Lucio Ferrari,182113,Nicolas Careca,144,146,18,28,0.3,personas_distintas_mismo_id
+PXP-032358,182114,Lautaro Ortiz,182114,Darlisson,10,146,17,21,0.27,personas_distintas_mismo_id
+PXP-032359,182115,Facundo Jainikoski,182115,Dadá Belmonte,144,146,18,28,0.13,personas_distintas_mismo_id
+PXP-032361,182118,Diego Fernández Picarte,182118,Luizão,147,146,21,23,0.14,personas_distintas_mismo_id
+PXP-032362,182119,Luifer Hernández,182119,Nino Paraíba,153,146,25,39,0.21,personas_distintas_mismo_id
+PXP-032363,182122,Nicolás Morro,182122,Edson Lucas,144,146,29,25,0.33,personas_distintas_mismo_id
+PXP-032365,182124,Norman Rodríguez,182124,Albano,152,146,28,28,0.18,personas_distintas_mismo_id
+PXP-032399,182166,Harvey Sarajian,182166,Daniel Meza,135,144,21,23,0.15,personas_distintas_mismo_id
+PXP-032411,182179,Melker Ellborg,182179,Jose Alipaz,237,145,23,22,0.16,personas_distintas_mismo_id
+PXP-032412,182180,Ignacio Cruzat,182180,Igor Soares,147,146,19,30,0.32,personas_distintas_mismo_id
+PXP-032413,182181,Francisco Herrera,182181,Maximiliano Gómez,147,144,21,38,0.29,personas_distintas_mismo_id
+PXP-032416,182184,Adrian Przyborek,182184,Daniel Cuellar,227,145,19,19,0.33,personas_distintas_mismo_id
+PXP-032417,182185,Bastián Sandoval,182185,Massimo Rinaldi,147,145,18,17,0.39,personas_distintas_mismo_id
+PXP-032423,182191,Yastin Cuevas,182191,Jandry Gómez,147,149,18,19,0.24,personas_distintas_mismo_id
+PXP-032424,182192,Gabriel Maureira,182192,Pablo Calle,147,149,19,17,0.22,personas_distintas_mismo_id
+PXP-032429,182197,Marcus Caldeira,182197,Marcos Sevillano,110,149,21,23,0.45,personas_distintas_mismo_id
+PXP-032430,182198,Ignacio Sabatini,182198,Isaac Sánchez,144,149,27,19,0.48,personas_distintas_mismo_id
+PXP-032432,182200,Benjamín Villarroel,182200,Luis Fragozo,147,148,17,15,0.13,personas_distintas_mismo_id
+PXP-032433,182201,Agustín Albarracín,182201,Andrés Lara,152,149,20,28,0.48,personas_distintas_mismo_id
+PXP-032440,182208,Bruno Caicedo,182208,Yandri Vásquez,149,149,21,19,0.22,personas_distintas_mismo_id
+PXP-032460,182229,Arthur Borghi,182229,Miguel Perea,146,149,18,26,0.08,personas_distintas_mismo_id
+PXP-032462,182231,Sergi Solans,182231,Fabian Cuero,236,148,23,24,0.25,personas_distintas_mismo_id
+PXP-032478,182248,Ville Koski,182248,Brian Kreiman,207,144,24,23,0.33,personas_distintas_mismo_id
+PXP-032492,182263,Pablo Ferreira,182263,Ayrton Morales,144,149,21,30,0.36,personas_distintas_mismo_id
+PXP-032509,182280,Adrian Gill,182280,Diego Cienfuegos,135,151,20,20,0.3,personas_distintas_mismo_id
+PXP-032542,182313,Nolan Miller,182313,Matías Kusmanis,135,152,22,21,0.22,personas_distintas_mismo_id
+PXP-032543,182314,Adrian Lahdo,182314,Maximiliano Riveros,237,147,18,27,0.39,personas_distintas_mismo_id
+PXP-032546,182317,Daniel Valencia,182317,Gabriel Castillo,149,147,30,28,0.45,personas_distintas_mismo_id
+PXP-032550,182321,Vicente Zenteno,182321,Leandro Díaz,147,151,18,24,0.15,personas_distintas_mismo_id
+PXP-032581,182352,Samsy Keita,182352,Sebastien Pineau,110,151,17,23,0.44,personas_distintas_mismo_id
+PXP-032598,182369,Adil Bourabaa,182369,Andrpes Marsengo,44,144,21,23,0.28,personas_distintas_mismo_id
+PXP-032605,182376,Ali Youssif,182376,Malcom Correa,70,151,24,21,0.33,personas_distintas_mismo_id
+PXP-032608,182379,Geiner Martínez,182379,Daniel Carrillo,148,153,23,30,0.33,personas_distintas_mismo_id

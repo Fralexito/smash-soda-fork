@@ -19,3 +19,11 @@ Equipo: mismo nombre normalizado (sin tildes ni símbolos, en minúsculas). Fall
 
 ## Límites
 Es la versión 0 y automática: faltan los ~700 casos «revisar», los homónimos, y la comparación de caras/uniformes. Los nombres que usa son el nombre impreso (`printed`) del registro. No incluye todavía datos con permiso de autores (ratings reescritos, caras, escudos): esos se resuelven aparte.
+
+## Versión v1: casos «revisar» resueltos (10-nov-2026)
+
+Los 711 jugadores con el mismo ID y nombre distinto se resolvieron con reglas (misma nacionalidad, edad ±3 y nombre contenido, similitud ≥ 0,7, misma camiseta o mismo apellido). Archivo `maestra_jugadores_v1.csv` (reemplaza a la v0) y `revisar_resueltos.csv` (lista con el veredicto de cada caso). Script: `revisar2.py`.
+- **368** son el mismo jugador con el nombre escrito distinto (ej. «Gaby Torres» / «Gabriel Torres»): quedan unidos.
+- **343** son **personas distintas que comparten el mismo ID** en cada base (ej. «T. Gresham» en Conmegol y «Dubar Enríquez» en Sudamerican, mismo ID, distinta nacionalidad y altura). Se separaron en dos entradas Phoenix. Hallazgo importante: en las dos bases hay IDs «de relleno» (jugadores generados y editados) que significan cosas distintas, así que **el ID del juego no basta para decir que es el mismo jugador**.
+- Total v1: **41.298** jugadores Phoenix (18.022 en ambas, 11.975 solo Conmegol, 11.301 solo Sudamerican).
+- Límite: la regla de «nombre contenido» puede unir de más casos como «Josep Antoni» / «Josep Gomes» (comparten solo el primer nombre) y separar de más a quien cambió de nacionalidad («Guilherme Dos Santos», nac. 30 vs 146). Son pocos; quedan como revisión manual opcional. Las notas de los 37 «parecidos» siguen sin unir.
