@@ -215,6 +215,33 @@ class Launcher:
             act["tecnico"], "sube" if direccion < 0 else "baja", otro["tecnico"]))
         return True
 
+    def asegurar_raiz(self, ruta, motivo="paquete"):
+        """Deja `cpk.root = "<ruta>"` ENCENDIDA y la PRIMERA de los cpk.root (gana a todos).
+        Devuelve True si cambio algo. Respaldo + CAMBIOS.md como cualquier cambio."""
+        if self.perfil == "V1":
+            raise PermissionError("V1 estable esta congelado. Pasa a V2 en pruebas para cambiar cosas.")
+        lineas, nl = leer_texto(self.ini)
+        its = interruptores(lineas, self.leyenda)
+        roots = [x for x in its if x["clave"] == "cpk.root"]
+        mio = [x for x in roots if os.path.normcase(x["valor"]) == os.path.normcase(ruta)]
+        nueva = 'cpk.root = "%s"' % ruta
+        if mio and mio[0]["encendido"] and roots[0]["linea"] == mio[0]["linea"]:
+            return False
+        self.respaldar("PAQUETE %s arriba y encendido" % nombre_corto(ruta))
+        if mio:
+            del lineas[mio[0]["linea"]]
+            lineas2 = lineas
+        else:
+            lineas2 = lineas
+        its2 = interruptores(lineas2, self.leyenda)
+        roots2 = [x for x in its2 if x["clave"] == "cpk.root"]
+        pos = roots2[0]["linea"] if roots2 else len(lineas2)
+        lineas2.insert(pos, nueva)
+        escribir_texto(self.ini, lineas2, nl)
+        self._sincronizar_perfil()
+        self.registrar("PAQUETE `%s` (%s) encendido y puesto el primero de los cpk.root" % (nombre_corto(ruta), motivo))
+        return True
+
     def cambiar_perfil(self, p):
         if p not in PERFILES:
             raise ValueError(p)
@@ -232,6 +259,17 @@ class Launcher:
         sello = ahora().strftime("%Y%m%d_%H%M%S")
         shutil.copy2(r, r + ".antes_" + sello)
         shutil.copy2(self.ini, r)
+        # las caras elegidas del V2 pasan tambien al V1 (con copia previa)
+        cj = os.path.join(self.pdir, "caras_elegidas.json")
+        if os.path.isfile(cj):
+            shutil.copy2(cj, cj + ".antes_" + sello)
+            try:
+                d = json.load(open(cj, encoding="utf-8"))
+                d["V1"] = d.get("V2", {})
+                with open(cj, "w", encoding="utf-8") as f:
+                    json.dump(d, f, ensure_ascii=False, indent=1)
+            except Exception:
+                pass
         self.registrar("V1 estable REEMPLAZADO por el sider.ini actual (copia previa: %s)" % (
             os.path.basename(r) + ".antes_" + sello))
 

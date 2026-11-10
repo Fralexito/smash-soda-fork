@@ -2,6 +2,7 @@ LEYENDA DE NOMBRES TECNICOS - Parche Phoenix de Frank (PES 2021 base)
 4-nov-2026. Carpeta del juego: C:\PES21\eFootball PES 2021\Sider_7.4.1
 
 LIVECPK (content\livecpk\)
+PHX_FAC_SEL   Caras elegidas a mano       (lo crea Phoenix Launcher > Caras; vive en D:\Frank\Games_\PHX_paquetes\PHX_FAC_SEL, va arriba de todo)
 PHX_ENV_SKY   Cielo 4096                  (antes Phoenix-Cielo-4096)
 PHX_ENV_TRF   Cesped con mips             (antes Phoenix-Cesped-Mips)
 PHX_KIT_MIP   Camisetas con mips          (antes Phoenix-Camisetas-Mips)

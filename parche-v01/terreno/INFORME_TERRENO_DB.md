@@ -58,6 +58,7 @@ python -I 1_recolectar.py          :: ~2 min. Lee TOC de .cpk y recorre livecpk/
 python -I 2_clasificar.py          :: ~3 min. Clasifica, agrupa, choques. -> inventario_*.csv, choques_*.csv, resumen.json
 python -I 3_identidad_jugadores.py :: segundos. -> choques_identidad_jugadores.csv
 python -I 4_vista.py               :: segundos. -> vista_terreno.html
+python -I 5_nombres_por_parche.py  :: segundos. -> nombres_por_parche.csv (nombre y equipo de cada id en cada parche; lo usa la pestaña Caras del launcher)
 ```
 
 Qué hace cada paso:
@@ -128,3 +129,9 @@ Los servidores Lua (kit-server, stadium-server, ball-server, miniface_server) no
 - **«Elegir cara» por jugador en el launcher**: con este inventario se puede mostrar, para un jugador, las 2–3 caras que existen (base, Conmegol, Sudamerican) y que Frank elija cuál gana, generando un `PHX_FIX` automático. Nunca se hizo en PES.
 - **Paquetes de estadio a la carta**: encender solo los estadios de las ligas que se van a jugar ahorra memoria y tiempo de carga.
 - **Detector de choques en el launcher**: al encender un paquete, avisar «este paquete pisa 320 rutas de PHX_KIT_MIP» antes de jugar.
+
+## 9. Ampliación (10-nov, noche): nombres por parche y «Elegir cara»
+
+- `nombres_por_parche.csv`: para cada id, el nombre impreso y los equipos en base (25.208 jugadores), Conmegol (29.997) y Sudamerican (29.323). Formato de Player.bin: registros de 312 bytes, **id en +8**, nombre impreso en +251.
+- Confirma choques reales que la tabla maestra no veía, p. ej. **id 65342 = Juan Román Riquelme (Conmegol) / A. Boninsegna (base y Sudamerican)**.
+- La pestaña «Caras» del Phoenix Launcher usa este inventario para elegir qué cara gana y crear el paquete `PHX_FAC_SEL` (ver `mi-parche\BITACORA_PARCHE.md`).

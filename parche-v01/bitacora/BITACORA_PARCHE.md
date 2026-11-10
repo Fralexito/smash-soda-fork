@@ -148,3 +148,35 @@ Nota: la herramienta de informe al coordinador (`send_message`) dejó de estar d
 - Cifras clave: caras base 2.838 / Conmegol 12.479 / Sudamerican 16.015 ids; 7.555 caras con el mismo id en Conmegol y Sudamerican; 117 jugadores de riesgo ALTO (mismo id, nombre distinto, cara en los dos); 214 equipos «choque» que en realidad son el mismo equipo con otro nombre (fallo de la maestra de equipos).
 - Propuesta de carpetas `PHX_FIX`, `PHX_FAC_RMP/CON/SUD`, `PHX_MIN_CON/SUD`, `PHX_KIT_*`, `PHX_BAL_SUD`, `PHX_STD_<liga>`, `PHX_BDY_PRDX` con orden de prioridad (§6 del informe). Sin aplicar.
 - Hueco: 4 `dt80_*` del Sudamerican no tienen TOC (solo ITOC) y no se leyeron.
+
+## v0.1 · 10-nov-2026 (noche) · Phoenix Launcher: pestaña «Caras» (elegir qué cara gana)
+**Candado respetado:** sin abrir PES; el sider.ini real no cambió (las pruebas lo comprueban por md5).
+
+### Qué se logró
+- El launcher tiene dos pestañas: **Interruptores** (lo de antes) y **Caras**.
+- **Caras** lista los 8.395 jugadores con más de una versión de cara (juego base, Conmegol, Sudamerican). Primero los **116 de riesgo ALTO** (⚠, en rojo), luego los **53 con nombres que no coinciden** entre parches (≠, ámbar), luego el resto. Buscador por nombre, equipo o id.
+- Por jugador, una tarjeta por versión: **minicara real** (vista previa PNG en `Sider_7.4.1\perfiles\cache_caras\`), **nombre y equipo según ese parche**, resolución de la cara (cabecera FTEX), nº de archivos y MB, si viene suelta o dentro de .cpk y si trae **PRDX (mangas/medias)**.
+- Elegir: «Usar esta», «Usar la del juego», «Ninguna (usar la del juego)» o «Por defecto (orden de prioridad)». Se guarda por perfil en `Sider_7.4.1\perfiles\caras_elegidas.json` y va a `CAMBIOS.md`. V1 sigue congelado; «Guardar como V1 estable» copia también las caras del V2 (con copia previa del json).
+- **Aplicar caras** crea el paquete `D:\Frank\Games_\PHX_paquetes\PHX_FAC_SEL`: **enlace duro** si la cara es una carpeta suelta del mismo disco (Conmegol: no gasta espacio); **copia** si viene de dentro de un .cpk o de otro disco (avisa antes con el tamaño). Pone `cpk.root = "D:\Frank\Games_\PHX_paquetes\PHX_FAC_SEL"` **la primera** y encendida (con respaldo `.bak`). Nunca borra: el paquete anterior va a `PHX_paquetes\_anteriores\`.
+- **Quitar caras elegidas** solo apaga la línea. Se vuelve a encender en Interruptores.
+
+### Paso a paso para replicarlo
+1. `python -I D:\Frank\IA\CLAUDE\pes-db\terreno\scripts\5_nombres_por_parche.py` → `nombres_por_parche.csv` (nombre y equipos de cada id en base, Conmegol y Sudamerican).
+2. Abrir el launcher → pestaña Caras → buscar → elegir → «Aplicar caras».
+3. Pruebas: `python -I launcher\test_caras.py` (5/5) y `python -I launcher\test_launcher.py` (8/8).
+
+### Errores e intentos fallidos
+- **El id del jugador en Player.bin está en +8, no en +0** (en +0 hay otro número; con +0 salían decenas de jugadores con el mismo id). Nombre impreso en +251. Equipos: PlayerAssignment (fila, jugador, equipo) + Team.bin (id +8, nombre +0x170).
+- **Las minicaras del juego base vienen comprimidas (CRILAYLA) y en BC7.** Se escribió un descompresor CRILAYLA en Python (comprobado: tamaño exacto y cabecera DDS) y, para BC7, se usa `D:\Frank\IA\CLAUDE\herramientas\texconv\texconv.exe` que ya estaba en la PC. DXT1/3/5 (casi todas las de los parches) se decodifican sin herramientas.
+- La primera versión metía como «cara del Sudamerican» las de `content\Master-League-Selector` (no son ruta directa del juego). Se excluyen.
+- Ninguna cara dentro de los .cpk de caras viene comprimida: se copian tal cual (offset = FileOffset + 2048).
+
+### Cosas a tener en cuenta
+- **Tu PES base usa SU jugador con ese id.** Ejemplo real: id 65342 = Riquelme en Conmegol pero A. Boninsegna en el base y en Sudamerican. Si eliges la cara del Conmegol, Boninsegna saldrá con la cara de Riquelme. La pantalla lo avisa.
+- Las caras que vienen de .cpk ocupan espacio de verdad (unos 3–20 MB por jugador). Las de carpetas sueltas en D: no.
+- El paquete es uno solo: al cambiar de perfil, pulsar «Aplicar caras» para regenerarlo con las caras de ese perfil (el launcher lo avisa).
+- Vista previa de la textura grande de la cara (FTEX): no hecha (necesita descomprimir mips de Fox); se muestra su resolución.
+
+### Comprobar y revertir
+- Comprobar: abrir el paquete en el Explorador; los archivos con enlace duro muestran el mismo tamaño que el original y no suman espacio en disco.
+- Revertir: «Quitar caras elegidas» (apaga). Para quitarlo del todo, borrar la línea `PHX_FAC_SEL` del sider.ini (o Deshacer) y la carpeta `D:\Frank\Games_\PHX_paquetes`.
