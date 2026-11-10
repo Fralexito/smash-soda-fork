@@ -41,7 +41,8 @@ class ClienteRevision(ClienteRele):
         self._trozos = {}          # (id emisor) -> bytearray del mensaje en curso
         self._falta = {}
         self._enviado = 0.0
-        self.pid_rival = 68157441
+        # el pid nativo del PES = 32 bits bajos del pid de 64 bits del roster (292733975847239680 -> 68157440)
+        self.pid_rival = int(STEAM_FALSO, 16) & 0xFFFFFFFF
 
     def _juego(self, canal, b):
         super()._juego(canal, b)
