@@ -1775,3 +1775,56 @@ class TestPase(unittest.IsolatedAsyncioTestCase):
         codigos = [(await srv.canjear_pase("cd" * 18, "100.64.0.9"))[0] for _ in range(11)]
         self.assertEqual(codigos[:10], [403] * 10)
         self.assertEqual(codigos[10], 429)
+
+
+class TestVincularWeb(unittest.IsolatedAsyncioTestCase):
+    """«Vincular mi PES»: código en los Avisos del juego + nombre; el dueño llega de phoenix_duenos."""
+
+    async def test_codigo_en_avisos_y_dueno_desde_la_web(self):
+        import io, json as _j
+        from phoenix_online.nube import Nube
+        srv = Servidor({**CFG, "myclub": {}}, Datos())
+        duenos, pedidos = [], []
+
+        class Resp(io.BytesIO):
+            def __enter__(s): return s
+            def __exit__(s, *a): return False
+
+        def abrir(req, timeout=None):
+            tabla, _, q = req.full_url.split("/rest/v1/")[1].partition("?")
+            pedidos.append((req.get_method(), tabla, q, _j.loads(req.data) if req.data else None))
+            if req.get_method() == "GET" and tabla == "phoenix_duenos":
+                return Resp(_j.dumps(duenos).encode())
+            return Resp(b"[]")
+
+        class S:
+            steam_hex = "7f644000070000"
+        s = S()
+        # sin espejo con la web no hay código; sin club tampoco
+        self.assertFalse(any(a.get("announce_id") == 900 for a in srv._avisos_de(s)))
+        srv.nube = Nube(srv, "https://x.supabase.co", "k", abrir=abrir)
+        self.assertFalse(any(a.get("announce_id") == 900 for a in srv._avisos_de(s)))
+        srv.datos.crear_jugador(s.steam_hex, "ana")
+        srv.datos.guardar_club(s.steam_hex, {"gp": 10, "team_name": "Ana FC"})
+        aviso = srv._avisos_de(s)[0]
+        codigo = aviso["title"].rsplit(" ", 1)[1]
+        self.assertTrue(codigo.isdigit() and len(codigo) == 6)
+        self.assertEqual(srv._avisos_de(s)[0]["title"], aviso["title"])  # el mismo código siempre
+        cuerpo = await srv.c_cmd_get_infobody(s, {"announce_id": 900})
+        self.assertIn(codigo, cuerpo["announce_info"].valor["body"])
+        await srv.nube.vuelta()
+        sub = [p for p in pedidos if p[0] == "POST" and p[1] == "phoenix_vinculos"]
+        self.assertEqual((sub[0][3][0]["codigo"], sub[0][3][0]["clave_servidor"]), (codigo, s.steam_hex))
+        club = [p for p in pedidos if p[0] == "POST" and p[1] == "myclub_clubes"][0][3][0]
+        self.assertEqual((club["nombre_jugador"], "usuario" in club), ("ana", False))
+        # la persona escribe el código en la web -> phoenix_duenos -> el club se sube con su dueño
+        pedidos.clear()
+        duenos.append({"clave_servidor": s.steam_hex, "usuario": "uuid-ana"})
+        await srv.nube.vuelta()
+        self.assertFalse([p for p in pedidos if p[1] == "phoenix_vinculos" and p[0] == "POST"])  # ya subido
+        club = [p for p in pedidos if p[0] == "POST" and p[1] == "myclub_clubes"][0][3][0]
+        self.assertEqual(club["usuario"], "uuid-ana")
+        self.assertFalse(any(a.get("announce_id") == 900 for a in srv._avisos_de(s)))  # ya no hace falta
+        pedidos.clear()
+        await srv.nube.vuelta()
+        self.assertFalse([p for p in pedidos if p[1] == "phoenix_duenos"])  # nada pendiente

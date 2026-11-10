@@ -458,8 +458,26 @@ class Servidor:
                 "popup_type": "ONCE", "weekly_info_type": "MYCLUB_AGENT", "event_id": 0,
                 "date": int(a.get("date", 0)), "evoked_text": ""}
 
+    ID_AVISO_CODIGO = 900
+
+    def _avisos_de(self, s):
+        """Avisos generales y, si el espejo con la web está activo y su club aún no tiene cuenta,
+        primero uno con su código de «Vincular mi PES» (lo escribe en la web y queda unido)."""
+        avisos = list(self._avisos())
+        clave = getattr(s, "steam_hex", None)
+        if self.nube is not None and clave and self.datos.club(clave) is not None:
+            codigo = self.datos.codigo_web(clave)
+            if codigo:
+                web = (self.cfg.get("supabase") or {}).get("web", "la web Phoenix")
+                avisos.insert(0, {"announce_id": self.ID_AVISO_CODIGO, "priority": 100,
+                                  "title": f"Tu código Phoenix: {codigo}",
+                                  "body": f"Para unir este club a tu cuenta: entra a {web} con tu sesión, "
+                                          f"toca «Vincular mi PES» y escribe {codigo}. Se hace una sola vez. "
+                                          f"Si usas el mismo nombre que en la web, allí ya verás tu club."})
+        return avisos
+
     async def c_cmd_get_globalinfotitlelist(self, s, m):
-        avisos = [Empaquetado(self._aviso_basico(a, i)) for i, a in enumerate(self._avisos(), 1)]
+        avisos = [Empaquetado(self._aviso_basico(a, i)) for i, a in enumerate(self._avisos_de(s), 1)]
         return {"announce_info_list": avisos,
                 "annnounce_info_list_num": len(avisos)}  # tres «n», así lo lee el cliente
 
@@ -467,9 +485,10 @@ class Servidor:
         return {"announce_info_list": [], "annnounce_info_list_num": 0}
 
     async def c_cmd_get_infobody(self, s, m):
-        avisos = self._avisos()
+        avisos = self._avisos_de(s)
         n = int(m.get("announce_id", 1) or 1)
-        a = avisos[n - 1] if 0 < n <= len(avisos) else avisos[0]
+        a = next((x for x in avisos if int(x.get("announce_id", 0) or 0) == n), None) or \
+            (avisos[n - 1] if 0 < n <= len(avisos) else avisos[0])
         return {"announce_info": Empaquetado({
             "announce_basic_info": Empaquetado(self._aviso_basico(a, n)),
             "body": str(a.get("body", "")), "link_url": "", "direct_move": "",

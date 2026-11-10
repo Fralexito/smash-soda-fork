@@ -56,6 +56,7 @@ class Nube:
                 "nombre": str(club.get("team_name") or nombre_jugador or "")[:100],
                 "gp": int(club.get("gp") or 0), "monedas": int(club.get("monedas") or 0),
                 "partidos": int(com.get("partidos") or 0), "racha": int(com.get("racha") or 0),
+                "nombre_jugador": str(nombre_jugador or "")[:100],
                 "nivel_com": int(com.get("nivel_idx") or 0),
                 "datos": club, "actualizado": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
         if usuario:
@@ -135,7 +136,34 @@ class Nube:
                                 {"usado": ahora}, "return=representation") or []
         return filas[0].get("usuario") if filas else None
 
+    async def sincronizar_vinculos(self):
+        """Sube los códigos de «Vincular mi PES» y recoge los que la persona ya usó en la web."""
+        datos = self.srv.datos
+        pendientes = datos.codigos_pendientes()
+        if not pendientes:
+            return 0
+        nuevos = [(c, cod, h) for c, cod, sub, h in pendientes if not sub]
+        if nuevos:
+            filas = [{"clave_servidor": c, "codigo": cod,
+                      "caduca": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(h + datos.VIDA_CODIGO))}
+                     for c, cod, h in nuevos]
+            await self._red("POST", "phoenix_vinculos", "on_conflict=clave_servidor", filas,
+                            "resolution=merge-duplicates,return=minimal")
+            datos.marcar_codigos_subidos([c for c, _cod, _h in nuevos])
+        hechos = 0
+        claves = [c for c, *_ in pendientes]
+        for i in range(0, len(claves), 100):
+            lista = ",".join(urllib.parse.quote(c) for c in claves[i:i + 100])
+            filas = await self._red("GET", "phoenix_duenos",
+                                    f"clave_servidor=in.({lista})&select=clave_servidor,usuario") or []
+            for f in filas:
+                datos.vincular(f["clave_servidor"], f["usuario"])
+                log.info("nube: el club %s quedó vinculado a una cuenta de la web", f["clave_servidor"])
+                hechos += 1
+        return hechos
+
     async def vuelta(self):
+        await self.sincronizar_vinculos()
         subidos = await self.subir_clubes()
         cambiadas = await self.leer_reglas()
         movs = await self.aplicar_movimientos()

@@ -32,6 +32,13 @@ create table if not exists pases (
   clave text not null,
   hora real not null
 );
+create table if not exists vinculos_web (
+  clave text primary key,
+  codigo text unique not null,
+  usuario text,
+  subido integer not null default 0,
+  hora real not null
+);
 create table if not exists resultados (
   id integer primary key autoincrement,
   room_id integer not null,
@@ -141,9 +148,49 @@ class Datos:
         return f[0] if f else None
 
     def usuario_de_clave(self, clave):
+        clave = (clave or "").lower()
+        f = self.db.execute("select usuario from vinculos_web where clave=? and usuario is not null",
+                            (clave,)).fetchone()
+        if f:
+            return f[0]
         f = self.db.execute("select usuario from pases where clave=? order by hora desc limit 1",
-                            ((clave or "").lower(),)).fetchone()
+                            (clave,)).fetchone()
         return f[0] if f else None
+
+    # ---- vincular desde la web: código de 6 cifras que la persona ve en los Avisos del juego ----
+    VIDA_CODIGO = 30 * 86400
+
+    def codigo_web(self, clave):
+        """Código para «Vincular mi PES» en la web; None si esa clave ya está vinculada."""
+        import secrets
+        clave = (clave or "").lower()
+        f = self.db.execute("select codigo, usuario, hora from vinculos_web where clave=?", (clave,)).fetchone()
+        if f and f[1]:
+            return None
+        if f and time.time() - f[2] < self.VIDA_CODIGO - 86400:
+            return f[0]
+        for _ in range(50):
+            codigo = f"{secrets.randbelow(900000) + 100000}"
+            if not self.db.execute("select 1 from vinculos_web where codigo=?", (codigo,)).fetchone():
+                break
+        self.db.execute("insert into vinculos_web(clave, codigo, usuario, subido, hora) values (?,?,null,0,?) "
+                        "on conflict(clave) do update set codigo=excluded.codigo, subido=0, hora=excluded.hora",
+                        (clave, codigo, time.time()))
+        self.db.commit()
+        return codigo
+
+    def codigos_pendientes(self):
+        """[(clave, codigo, subido, hora)] de los que aún no tienen cuenta."""
+        return self.db.execute("select clave, codigo, subido, hora from vinculos_web where usuario is null").fetchall()
+
+    def marcar_codigos_subidos(self, claves):
+        self.db.executemany("update vinculos_web set subido=1 where clave=?", [(c,) for c in claves])
+        self.db.commit()
+
+    def vincular(self, clave, usuario):
+        self.db.execute("update vinculos_web set usuario=? where clave=?", (str(usuario), (clave or "").lower()))
+        self.db.commit()
+        self.cambiados.add((clave or "").lower())  # el club se vuelve a subir, ya con su dueño
 
     def guardar_resultado(self, room_id, partido, pid, datos):
         self.db.execute("insert into resultados(room_id, partido, pid, datos, hora) values (?,?,?,?,?)",
