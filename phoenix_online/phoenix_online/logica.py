@@ -3003,6 +3003,20 @@ class Servidor:
             self.datos.guardar_club(s.steam_hex, club)
         return {}
 
+    async def c_cmd_get_myclub_com_match_info(self, s, m):
+        """B.13 (Ghidra): match_stats = bin con 8 enteros; récord del club contra la COM."""
+        club = self.datos.club(s.steam_hex or "") if s.steam_hex else None
+        com = (club or {}).get("vscom") or {}
+        e = lambda k: int(com.get(k) or 0)
+        return {"match_stats": Empaquetado({
+            "match_num": e("partidos"), "win_num": e("ganados"), "lose_num": e("perdidos"),
+            "draw_num": e("empates"), "goal": e("goles"), "lostGoal": e("goles_contra"),
+            "contWin_num": e("racha"), "contWinMax_num": e("racha_max")})}
+
+    async def c_cmd_get_myclub_cloud_squadid(self, s, m):
+        """B.13: sin plantilla en la nube (P: 0 es lo seguro, sin captura)."""
+        return {"squad_id": 0}
+
     async def c_cmd_get_myclub_squadlist(self, s, m):
         plantilla = self._plantilla_principal(s)
         if plantilla is None:
@@ -3617,9 +3631,13 @@ class Servidor:
             j = self.datos.jugador(clave) or {}
             perfil = self.datos.perfil(clave)
             nombre = j.get("pname") or ""
-            lista.append({"rank": inicio + i + 1, "user": {
+            nombre_club = club.get("team_name") or (f"{nombre} FC" if nombre else "Phoenix FC")
+            # C (prueba 10-nov): con team_name solo dentro de «user» el PES pintaba «NotImplement»
+            # (su valor por defecto = clave no leída): va también al nivel del elemento (P)
+            lista.append({"rank": inicio + i + 1, "team_id": int(club.get("base_team_id") or 0),
+                          "team_name": nombre_club, "user": {
                 "pid": self.numero_de_clave(clave) or j.get("pid") or 0,
-                "pname": {"name": nombre, "xuid_one": "NotImplement",
+                "pname": {"name": nombre, "xuid_one": str(self.numero_de_clave(clave) or 0),
                           "psn_user_id": {"account_id": 0, "online_id": nombre, "is_valid_cache": "NO"},
                           "is_deleted": "NO"},
                 "division": self._estado_division(clave)["division"], "manner": MODALES_DEFECTO,
@@ -3629,7 +3647,7 @@ class Servidor:
                                  "win_s_max": int(com.get("racha_max") or 0), "rating": RATING_INICIAL},
                 # C (prueba 10-nov): sin nombre el PES pinta «NotImplement»: nombre del jugador
                 "team_id": int(club.get("base_team_id") or 0),
-                "team_name": club.get("team_name") or (f"{nombre} FC" if nombre else "Phoenix FC")}})
+                "team_name": nombre_club}})
         return {"date": int(time.time()), "total_rank_num": len(filas), "rank_list": lista}
 
     @staticmethod

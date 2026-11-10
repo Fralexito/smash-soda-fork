@@ -2057,6 +2057,10 @@ class TestMyClubExtra(unittest.IsolatedAsyncioTestCase):
         self.assertEqual((h["index"], h["myclub_history_list_num"], h["myclub_history_list"]), (5, 0, []))
         self.assertEqual((await srv.c_cmd_get_myclub_presentlist(x, {}))["present_list"], [])
         self.assertEqual((await srv.c_cmd_get_myclub_achievementlist(x, {}))["achievement_list_num"], 0)
+        srv.datos.guardar_club("aa", {**srv.datos.club("aa"), "vscom": {"partidos": 3, "ganados": 2, "perdidos": 1, "racha_max": 2}})
+        st = (await srv.c_cmd_get_myclub_com_match_info(x, {}))["match_stats"].valor
+        self.assertEqual((st["match_num"], st["win_num"], st["lose_num"], st["draw_num"], st["contWinMax_num"]), (3, 2, 1, 0, 2))
+        self.assertEqual(await srv.c_cmd_get_myclub_cloud_squadid(x, {}), {"squad_id": 0})
         await srv.c_cmd_entry_myclub_weekly_ranking(x, {"is_entry": "YES"})
         self.assertTrue(srv.datos.club("aa")["semanal_inscrito"])
 
