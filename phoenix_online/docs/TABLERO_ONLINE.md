@@ -1,14 +1,14 @@
 # Tablero del online Phoenix (se actualiza con cada avance)
 
-Última actualización: 10-nov-2026, 23:50 (hora del servidor UTC).
+Última actualización: 11-nov-2026, 00:05 (hora del servidor UTC).
 PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 
 ## Resumen
-- **Probado en el PES y funcionando:** 20 de 48 apartados (**42 %**).
-- **Programado (falta probarlo en el PES):** 14 más. Con ellos, **34 de 48 ya están hechos (71 %)**.
-- **A medias** (abre bien pero sin contenido todavía): 6.
+- **Probado en el PES y funcionando:** 21 de 49 apartados (**43 %**).
+- **Programado (falta probarlo en el PES):** 13 más. Con ellos, **34 de 49 ya están hechos (69 %)**.
+- **A medias** (abre bien pero sin contenido todavía, o hecho solo en parte): 7.
 - **Falta hacer:** 8.
-- Comandos del juego que el servidor ya controla: **206 de 439 (47 %)**; sin contar los modos aún no empezados (cooperativo, Matchday, eventos, PES League, clanes, tienda): **202 de 313 (65 %)**.
+- Comandos del juego que el servidor ya controla: **216 de 439 (49 %)**; sin contar los modos aún no empezados (cooperativo, Matchday, eventos, PES League, clanes, tienda): **212 de 313 (68 %)**.
 
 **Leyenda:** ✅ probado en el PES · 🟢 programado, sin probar en el PES · 🟡 a medias (abre, pero vacío) · ❌ falta · 🚫 no se hará (a propósito)
 
@@ -55,7 +55,7 @@ PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 | 24 | GP y premios por partido | ✅ | |
 | 25 | Fichajes: agentes, cazatalentos y subastas | ✅ | con los jugadores de tu parche |
 | 26 | Contratos, entrenadores y experiencia | ✅ | |
-| 27 | Cambiar el nombre del club y de la plantilla | 🟢 | falta encontrar la pantalla en el PES para probarlo |
+| 27 | Cambiar el nombre del club y de la plantilla | ✅ | probado el 10-nov: myClub → quinta pestaña → «Cambiar nombre del equipo» |
 | 28 | Historial | 🟡 | vacío hasta conocer sus tipos |
 | 29 | Regalos | 🟡 | vacío |
 | 30 | Logros | 🟡 | vacío |
@@ -63,6 +63,7 @@ PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 | 32 | Ranking semanal | 🟡 | vacío; el PES lo bloquea hasta jugar 10 partidos 1 contra 1 |
 | 33 | myClub contra otra persona | ❌ | |
 | 34 | Monedas gratis (interruptor) | 🟡 | programado; falta tu decisión de encenderlo |
+| 35 | Gestión del club: entrenador de cada plantilla, dorsales, copiar o borrar plantilla, despedir entrenador, intercambio de jugadores, objetos de entrenamiento | 🟡 | programado: entrenador por plantilla, despedir o renovar entrenador, copiar o borrar plantilla, dorsales, ciudad y base; falta: intercambio, objetos y entrenamiento táctico |
 | — | Tienda con dinero real | 🚫 | nada de dinero real |
 
 ## 5. Otros modos del online
@@ -91,3 +92,5 @@ PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 - 10-nov 23:20: primera versión.
 - 10-nov 23:35: probadas en el PES la pantalla de división, resultados y los dos rankings (ningún cierre); arreglos de ranking; abandono 3-0 programado.
 - 10-nov 23:50: ranking de clubes con nombre real y escudo; récord contra la COM en myClub; al abrir myClub ya no queda ningún comando sin respuesta.
+- 10-nov 23:55: nuevo apartado 35 (gestión del club), que faltaba en el tablero; por eso los porcentajes bajan un punto.
+- 11-nov 00:05: probado el cambio de nombre del club; programada gran parte de la gestión del club (entrenadores, plantillas, dorsales, ciudad).
