@@ -2007,7 +2007,9 @@ class TestDivisiones(unittest.IsolatedAsyncioTestCase):
             await srv.c_cmd_send_game_result(a, informe)
         r = await srv.c_cmd_get_gameresults(a, {"msgid": "CMD_GET_GAMERESULTS", "rqid": 9})
         self.assertGreater(r["rlist_num"], 0)
-        self.assertLessEqual(len(msgpack_min.packb({"msgid": "CMD_GET_GAMERESULTS", "rqid": 9, "result": "NOERR", **r})), 0x410 - 64)
+        from phoenix_online.logica import _cifrado_comprimido
+        self.assertLessEqual(_cifrado_comprimido({"msgid": "CMD_GET_GAMERESULTS", "rqid": 9, "result": "NOERR", **r}), 0x3D8)
+        self.assertGreaterEqual(r["rlist_num"], 5)  # comprimido caben varios
         srv.cfg = {**srv.cfg, "divisiones": {"historial_partidos": False}}
         self.assertEqual((await srv.c_cmd_get_gameresults(a, {}))["rlist_num"], 0)
 

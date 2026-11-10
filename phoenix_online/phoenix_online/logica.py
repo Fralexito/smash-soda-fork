@@ -17,6 +17,7 @@ import time
 
 from . import divisiones as div
 from . import msgpack_min
+from .nclmio import MAX_CIFRADO_CLIENTE
 from .msgpack_min import Empaquetado
 
 log = logging.getLogger("phoenix_online")
@@ -60,7 +61,6 @@ PALABRAS_PROHIBIDAS = ("FUCK", "SHIT", "NIGGER", "CUNT", "HITLER", "NAZI",
 
 DIVISION_INICIAL = "D12"
 RATING_INICIAL = 1000
-MAX_GAMERESULTS = 0x410 - 64  # L (PESBUL): CMD_GET_GAMERESULTS debe caber en un solo marco
 MODALES_DEFECTO = "AA"  # L: fichas de modales AA/A/B/C/D; vacío se pinta «-»
 
 # P (PESBUL matchmaking_policy): opciones guardadas de «Opciones de Matchmaking»
@@ -114,6 +114,13 @@ class Sesion:
             return False
         self.enviar({"msgid": msgid, "rqid": rqid, "result": NOERR, **campos})
         return True
+
+
+def _cifrado_comprimido(mensaje):
+    """Bytes cifrados que ocuparía el mensaje en una trama comprimida (cabecera interna 9 B + zlib, a 8)."""
+    import zlib
+    n = 9 + len(zlib.compress(msgpack_min.packb(mensaje)))
+    return n + (-n % 8)
 
 
 def _texto_si(v, defecto="NO"):
@@ -1355,10 +1362,11 @@ class Servidor:
             p = self.datos.partido_division(partido)
             if p and not p.get("no_cuenta"):
                 filas.append(self._fila_resultado(p))
-        # L: la respuesta entera debe caber en un marco (~0x410 B cifrados): se quitan las más viejas
-        while filas and len(msgpack_min.packb({"msgid": m.get("msgid", "CMD_GET_GAMERESULTS"),
-                                               "rqid": m.get("rqid", 0), "result": NOERR,
-                                               "rlist_num": len(filas), "rlist": filas})) > MAX_GAMERESULTS:
+        # L/C: la respuesta entera en UNA trama (medida ya comprimida, como la manda nclmio): el envío
+        # troceado hacia el cliente aún no está probado en el PES. Se quitan los más viejos.
+        while filas and _cifrado_comprimido({"msgid": m.get("msgid", "CMD_GET_GAMERESULTS"),
+                                             "rqid": m.get("rqid", 0), "result": NOERR,
+                                             "rlist_num": len(filas), "rlist": filas}) > MAX_CIFRADO_CLIENTE:
             filas.pop()
         if not filas:
             return {"rlist_num": 0, "rlist": [], "no_match": "YES"}
