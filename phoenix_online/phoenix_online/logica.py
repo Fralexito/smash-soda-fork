@@ -2916,7 +2916,8 @@ class Servidor:
             "default_rarity": self._rareza(j)})
             for i, j in elegidos]
         plantilla = Empaquetado({
-            "squad_id": 1, "name": "Plantilla 1", "member_list": miembros,
+            "squad_id": 1, "name": (club.get("nombres_plantilla") or {}).get("1") or "Plantilla 1",
+            "member_list": miembros,
             "member_num": len(miembros), "is_entry_compe": "NO",
             "coach_id_list": [d.get("coach_id") or 0 for d in dts[:1]],
             "coach_unique_id_list": [d.get("coach_unique_id") or 1 for d in dts[:1]],
@@ -2925,6 +2926,65 @@ class Servidor:
             "is_club_edition": "NO",
             "club_edition_type": ""})
         return plantilla
+
+    # ---------- myClub extra (docs/ESPEC_DIVISIONES_Y_MYCLUB_EXTRA.md, parte B) ----------
+    NOMBRE_MAX = 32
+
+    async def c_cmd_set_myclub_team_name(self, s, m):
+        """B.1: guardar el nombre del club (y el corto y el id de locución); respuesta solo NOERR."""
+        club = self.datos.club(s.steam_hex or "") if s.steam_hex else None
+        if club is None:
+            return {}
+        nombre = m.get("team_name")
+        corto = m.get("team_name_short")
+        if isinstance(nombre, str) and nombre.strip():
+            club["team_name"] = nombre.strip()[:self.NOMBRE_MAX]
+        if isinstance(corto, str) and corto.strip():
+            club["team_name_short"] = corto.strip()[:8]
+        if isinstance(m.get("team_name_commentary_id"), int):
+            club["team_name_commentary_id"] = m["team_name_commentary_id"]
+        self.datos.guardar_club(s.steam_hex, club)
+        log.info("myClub: %s cambia el nombre del club a %r (%r)", s.steam_hex, club.get("team_name"),
+                 club.get("team_name_short"))
+        return {}
+
+    async def c_cmd_set_myclub_squad_name(self, s, m):
+        """B.2: nombre de una plantilla (squad_id); respuesta solo NOERR."""
+        club = self.datos.club(s.steam_hex or "") if s.steam_hex else None
+        nombre = m.get("name")
+        if club is None or not isinstance(nombre, str) or not nombre.strip():
+            return {}
+        club.setdefault("nombres_plantilla", {})[str(m.get("squad_id") or 1)] = nombre.strip()[:self.NOMBRE_MAX]
+        self.datos.guardar_club(s.steam_hex, club)
+        return {}
+
+    async def c_cmd_get_myclub_historylist(self, s, m):
+        """B.3: historial vacío válido hasta conocer los tokens de history_data_kind/data_type."""
+        try:
+            inicio = max(0, int(m.get("start_index") or 0))
+        except (TypeError, ValueError):
+            inicio = 0
+        return {"myclub_history_list_total": 0, "index": inicio, "myclub_history_list_num": 0,
+                "myclub_history_list": []}
+
+    async def c_cmd_get_myclub_presentlist(self, s, m):
+        """B.4: sin regalos pendientes (lista vacía válida)."""
+        return {"present_list_num": 0, "present_list": []}
+
+    async def c_cmd_get_myclub_achievementlist(self, s, m):
+        """B.5: sin logros todavía (lista vacía válida)."""
+        return {"achievement_list_num": 0, "achievement_list": []}
+
+    async def c_cmd_send_myclub_read_achievementlist(self, s, m):
+        return {}
+
+    async def c_cmd_entry_myclub_weekly_ranking(self, s, m):
+        """B.7: inscribirse (o no) al ranking semanal; se guarda en el club, respuesta solo NOERR."""
+        club = self.datos.club(s.steam_hex or "") if s.steam_hex else None
+        if club is not None:
+            club["semanal_inscrito"] = str(m.get("is_entry") or "").upper() in ("YES", "1", "TRUE")
+            self.datos.guardar_club(s.steam_hex, club)
+        return {}
 
     async def c_cmd_get_myclub_squadlist(self, s, m):
         plantilla = self._plantilla_principal(s)

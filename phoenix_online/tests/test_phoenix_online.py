@@ -2014,6 +2014,33 @@ class TestDivisiones(unittest.IsolatedAsyncioTestCase):
         self.assertEqual((await srv.c_cmd_get_gameresults(a, {}))["rlist_num"], 0)
 
 
+class TestMyClubExtra(unittest.IsolatedAsyncioTestCase):
+    """ESPEC parte B: nombre del club y de la plantilla, historial, regalos, logros (vacíos válidos)."""
+
+    async def test_nombres_y_listas(self):
+        from phoenix_online.logica import Sesion
+        srv = Servidor({**CFG, "myclub": {}}, Datos())
+        x = Sesion(lambda *a: None, ("127.0.0.1", 1), "MENU")
+        x.steam_hex = "aa"
+        srv.datos.guardar_club("aa", {"team_name": "Viejo", "team_name_short": "VIE"})
+        r = await srv.c_cmd_set_myclub_team_name(x, {"team_name": " Phoenix FC ", "team_name_short": "PHX",
+                                                     "is_check_team_name": "YES", "team_name_commentary_id": 7})
+        self.assertEqual(r, {})
+        club = srv.datos.club("aa")
+        self.assertEqual((club["team_name"], club["team_name_short"], club["team_name_commentary_id"]),
+                         ("Phoenix FC", "PHX", 7))
+        await srv.c_cmd_set_myclub_team_name(x, {"team_name": ""})  # vacío: no borra el nombre
+        self.assertEqual(srv.datos.club("aa")["team_name"], "Phoenix FC")
+        await srv.c_cmd_set_myclub_squad_name(x, {"squad_id": 1, "name": "Titulares"})
+        self.assertEqual(srv.datos.club("aa")["nombres_plantilla"], {"1": "Titulares"})
+        h = await srv.c_cmd_get_myclub_historylist(x, {"start_index": 5})
+        self.assertEqual((h["index"], h["myclub_history_list_num"], h["myclub_history_list"]), (5, 0, []))
+        self.assertEqual((await srv.c_cmd_get_myclub_presentlist(x, {}))["present_list"], [])
+        self.assertEqual((await srv.c_cmd_get_myclub_achievementlist(x, {}))["achievement_list_num"], 0)
+        await srv.c_cmd_entry_myclub_weekly_ranking(x, {"is_entry": "YES"})
+        self.assertTrue(srv.datos.club("aa")["semanal_inscrito"])
+
+
 class TestNubeSinLlaveMaestra(unittest.IsolatedAsyncioTestCase):
     """Migración 164: el servidor solo llama a phoenix_srv_* con su secreto (sin service_role)."""
 
