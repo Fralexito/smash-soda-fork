@@ -151,6 +151,9 @@ TIPOS_SIGUE = {0x0071, 0x0072, 0x1071, 0x1072}
 TIPOS_FIN = {0x0072, 0x1072}
 
 
+MAX_TROCEADO = 16 * 1024 * 1024  # 16 MB: muy por encima de lo que manda PES
+
+
 class LectorTramas:
     """Arma tramas completas aunque TCP las parta o las pegue (fallo de Nikow5)."""
 
@@ -163,6 +166,9 @@ class LectorTramas:
         """Devuelve el mensaje cuando el troceado se completa; si no, None."""
         if tipo in TIPOS_INICIO:
             total, largo, _original, flag = struct.unpack(">IIIB", interno[:13])
+            if total > MAX_TROCEADO:
+                # protección: un total absurdo haría crecer la memoria sin límite
+                raise ValueError(f"mensaje troceado demasiado grande ({total} B)")
             self._seg = (secuencia, total, flag, bytearray(interno[13:13 + largo]))
         else:
             if self._seg is None:

@@ -11,6 +11,7 @@ import hmac
 import itertools
 import json
 import logging
+import os
 import random
 import time
 
@@ -87,6 +88,12 @@ class Sesion:
         self.modo_online = None
         self.lobby_id = None
         self.block_id = None
+        self.ip_local = None  # IP del servidor por la que entró este cliente (anuncio automático)
+        self.desde = time.time()
+
+    @property
+    def ip(self):
+        return self.direccion[0] if isinstance(self.direccion, tuple) else None
 
     def enviar(self, mensaje):
         self._enviar_trama(self.secuencia, mensaje)
@@ -208,6 +215,8 @@ class Servidor:
         self.calidades = {}   # pid -> {índice: medida} de SET_GAMERELAY_QUALITY
         self.colas = {}       # matching_type -> [Sesion] buscando rival
         self.parejas = {}     # Sesion -> Pareja de partida rápida
+        self.inicio = time.time()
+        self.sin_manejador = {}  # msgid -> veces (para priorizar qué implementar)
 
     def aplicar_reglas_myclub(self, reglas):
         """Reglas de myClub editables en caliente (archivo reglas_myclub o, más adelante, la
@@ -221,6 +230,18 @@ class Servidor:
         if cambiadas:
             log.info("reglas myClub actualizadas en caliente: %s", ", ".join(sorted(cambiadas)))
         return cambiadas
+
+    def estado(self):
+        """Resumen para GET /estado (Link, web o un vistazo desde el celular)."""
+        en_linea = {x.steam_hex for x in self.sesiones if x.steam_hex}
+        return {"servidor": "Phoenix Online", "activo_desde": int(self.inicio),
+                "minutos_activo": int((time.time() - self.inicio) // 60),
+                "conexiones": len(self.sesiones), "jugadores_en_linea": len(en_linea),
+                "salas": len(self.salas), "buscando_rival": sum(len(c) for c in self.colas.values()),
+                "parejas": len({id(p) for p in self.parejas.values()}),
+                "mantenimiento": self.en_mantenimiento(),
+                "comandos_sin_manejador": dict(sorted(self.sin_manejador.items(),
+                                                      key=lambda kv: -kv[1])[:30])}
 
     # ---------- ciclo de vida ----------
     def abrir(self, sesion):
@@ -265,6 +286,7 @@ class Servidor:
             extra = {}
         else:
             # Desconocido: NOERR mínimo destraba los GET_*; se registra para investigarlo
+            self.sin_manejador[msgid] = self.sin_manejador.get(msgid, 0) + 1
             log.warning("comando sin manejador: %s campos=%s", msgid, sorted(msg))
             if "MYCLUB" in msgid:
                 # myClub: la petición completa sirve para deducir formatos (gameplan, plantilla…)
@@ -274,12 +296,37 @@ class Servidor:
         sesion.enviar({"msgid": msgid, "rqid": rqid, "result": result, **extra})
 
     # ---------- ConnectGate (§11.3) ----------
+    # ---------- IP que se anuncia al cliente ----------
+    def ip_anuncio(self, s=None, ip_local=None):
+        """IP del servidor que se le da al cliente (lista de servidores, URL, relé).
+
+        `ip_publica` fija (VPS con IP propia, o una IP concreta) manda. Con "auto" o vacía se
+        usa la IP por la que ESE cliente llegó al servidor: sirve igual en la misma PC, en la
+        red de casa, por Tailscale/ZeroTier o en un VPS sin NAT, sin tocar la configuración."""
+        fija = str(self.cfg.get("ip_publica") or "auto").strip()
+        if fija.lower() != "auto":
+            return fija
+        ip = ip_local or (getattr(s, "ip_local", None) if s is not None else None)
+        if ip and ip not in ("0.0.0.0", "::"):
+            return ip.split("%")[0].removeprefix("::ffff:")
+        return "127.0.0.1"
+
+    def _con_ip(self, texto, s=None, ip_local=None):
+        """Sustituye «{ip}» en una URL de la configuración por la IP anunciada."""
+        if isinstance(texto, str) and "{ip}" in texto:
+            return texto.replace("{ip}", self.ip_anuncio(s, ip_local))
+        return texto
+
+    def _urls(self, s=None):
+        return {t: self._con_ip(u, s) for t, u in self.cfg["urls"].items()}
+
     async def c_cmd_get_urllist(self, s, m):
-        urls = dict(self.cfg["urls"])  # {type: url}; debe incluir TOPINFO, BANNER, GET_TURN_SERVER_LIST...
+        urls = self._urls(s)  # {type: url}; debe incluir TOPINFO, BANNER, GET_TURN_SERVER_LIST...
         # C (PESBUL, 02-nov): justo tras confirmar el país el cliente busca EULA_PES, EULA_MYCLUB y
         # EULA_PRIVACY_POLICY en esta lista; si falta una da «Se ha producido un error» sin red.
-        base = self.cfg.get("http_base") or next(
-            (u.rsplit("/", 1)[0] for u in urls.values() if u.startswith("http")), "http://127.0.0.1:5000")
+        base = self._con_ip(self.cfg.get("http_base"), s) or next(
+            (u.rsplit("/", 1)[0] for u in urls.values() if u.startswith("http")),
+            f"http://{self.ip_anuncio(s)}:{self.cfg.get('puerto_http', 5000)}")
         for t, ruta in self.URLS_EULA:
             urls.setdefault(t, base + ruta)
         return {"url_num": len(urls),
@@ -371,7 +418,7 @@ class Servidor:
                 "area_code": self._texto(self.cfg.get("area", ""))}
 
     async def c_cmd_get_svrlist(self, s, m):
-        ip = self.cfg["ip_publica"]
+        ip = self.ip_anuncio(s)
         # C (REA 29-oct): ConnectAccount cuenta los servidores «ACCOUNT» de esta lista y, si no
         # hay ninguno, da error fatal sin abrir red. ACCOUNT y MENU pueden ser el mismo puerto.
         menu = self.cfg["puerto_menu"]
@@ -515,8 +562,70 @@ class Servidor:
                 return v
         return None
 
+    # ---------- Identidad provisional por persona (docs/PLAN_MULTIUSUARIO.md §1) ----------
+    # C (02/04-nov): todas las copias del mismo PES mandan el MISMO SteamID (CPY 0x3a660 = 239200;
+    # el PES base, 0x0410000004100000). Sin esto, todos los amigos caerían en el mismo club.
+    STEAM_COMPARTIDOS = ("000000000003a660", "0410000004100000")
+
+    def clave_identidad(self, steam_hex, ip_cliente=None, ip_local=None):
+        """Clave con la que se guarda a la persona (jugador, perfil y club).
+
+        - SteamID propio (no compartido): ese mismo.
+        - SteamID compartido: si la IP está en identidad.por_ip, la clave que diga ahí; si el
+          cliente está en la MISMA PC que el servidor (anfitrión), el SteamID tal cual (así el
+          club de Frank no cambia); si no, una clave fija derivada de su IP («7f» + IP en hex).
+          Con Tailscale/ZeroTier cada amigo tiene IP fija, así que conserva su club.
+        Cuando exista el pase de la web, el pase mandará sobre todo esto."""
+        steam_hex = (steam_hex or "").lower()
+        ide = self.cfg.get("identidad") or {}
+        if not ide.get("activo", True) or not steam_hex:
+            return steam_hex
+        compartidos = {str(x).lower().zfill(16) for x in
+                       ide.get("steam_compartidos", self.STEAM_COMPARTIDOS)}
+        if steam_hex not in compartidos or not ip_cliente:
+            return steam_hex
+        ip = ip_cliente.split("%")[0].removeprefix("::ffff:")
+        fija = (ide.get("por_ip") or {}).get(ip)
+        if fija:
+            return str(fija).lower()
+        if ip.startswith("127.") or ip == "::1" or (ip_local and ip == ip_local.removeprefix("::ffff:")) \
+                or ip in (ide.get("ips_anfitrion") or []):
+            return steam_hex
+        partes = ip.split(".")
+        if len(partes) == 4 and all(p.isdigit() for p in partes):
+            return "7f" + "".join(f"{int(p):02x}" for p in partes) + "000000"
+        return "7e" + hashlib.sha1(ip.encode()).hexdigest()[:14]
+
+    def _clave_de(self, s, m):
+        crudo = self._steam_de(m)
+        if crudo is None:
+            return s.steam_hex
+        return self.clave_identidad(crudo, s.ip, s.ip_local)
+
+    def en_mantenimiento(self):
+        """Archivo MANTENIMIENTO.txt (o el de la config) presente = nadie nuevo entra; los que
+        ya están siguen. Sirve para actualizar el servidor sin cortar un partido."""
+        ruta = self.cfg.get("archivo_mantenimiento", "MANTENIMIENTO.txt")
+        return bool(ruta) and os.path.exists(ruta)
+
+    def _version_distinta(self, m):
+        """exigir_versiones: {"patch_version": "1.07.02", ...}. Una copia con otro parche/BD
+        daría plantillas o partidos desincronizados: mejor un aviso claro al entrar."""
+        for k, quiero in (self.cfg.get("exigir_versiones") or {}).items():
+            v = m.get(k)
+            if v is not None and str(v) != str(quiero):
+                return k, v, quiero
+        return None
+
     def _entrar(self, s, m):
-        steam_hex = self._steam_de(m) or s.steam_hex or ""
+        steam_hex = self._clave_de(s, m) or s.steam_hex or ""
+        if self.en_mantenimiento():
+            log.info("login rechazado: servidor en mantenimiento (%s)", steam_hex)
+            return {"result": "ERR_SERVERNOTREADY"}
+        distinta = self._version_distinta(m)
+        if distinta:
+            log.warning("login rechazado: %s=%r y el servidor exige %r (%s)", *distinta, steam_hex)
+            return {"result": "ERR_DIFFERENT_PATCHVERSION"}
         if not self.datos.autorizado(steam_hex):
             log.info("login rechazado (sin cuenta Phoenix vinculada): %s", steam_hex)
             return {"result": "ERR_LOGIN_FAILED"}  # C: texto de error del exe
@@ -534,7 +643,7 @@ class Servidor:
         # El ticket es un EncryptedAppTicket (P): solo lo abre la clave de Konami, así que no
         # sirve para verificar. La identidad real la garantiza el vínculo de Phoenix Link.
         log.info("CMD_AUTH_STEAM campos=%s", sorted(m))
-        s.steam_hex = self._steam_de(m) or s.steam_hex
+        s.steam_hex = self._clave_de(s, m)
         return {}
 
     async def c_cmd_get_challengecode(self, s, m):
@@ -730,7 +839,7 @@ class Servidor:
         lobbies = [l for l in self.cfg["lobbies"] if l["lobby_type"] == tipo]
         # C (PESBUL 04-nov): el cliente liga la calidad del lobby a gamerelay_index == índice del
         # nodo del checklist; con 0 no hay nodo. Si la config pone 0, se usa el del relé.
-        nodos = self._nodos_relay()
+        nodos = self._nodos_relay(s)
         indice = nodos[0]["gamerelay_index"] if nodos else 0
         return {"lobby_list_num": len(lobbies),
                 "lobby_list": [Empaquetado({**l, "player_num": len(self.por_pid),
@@ -741,14 +850,14 @@ class Servidor:
         return {"has_info": True, "title": "Phoenix Online",
                 "sentence_info": self.cfg.get("lobby_info", ""), "sentence_intro": ""}
 
-    def _url_gamerelay_web(self):
+    def _url_gamerelay_web(self, s=None):
         # C (PESBUL 04-nov): JOIN_LOBBY lleva http://<IP>:5000/gamerelay; vacío deja al cliente
         # en XXJA_0005 / «no se reciben datos» en el vestíbulo
-        u = self.cfg["urls"].get("GAMERELAY_WEB")
+        u = self._con_ip(self.cfg["urls"].get("GAMERELAY_WEB"), s)
         if u:
             return u
-        base = self.cfg.get("http_base") or f"http://{self.cfg.get('ip_publica', '127.0.0.1')}:" \
-                                            f"{self.cfg.get('puerto_http', 5000)}"
+        base = self._con_ip(self.cfg.get("http_base"), s) or \
+            f"http://{self.ip_anuncio(s)}:{self.cfg.get('puerto_http', 5000)}"
         return base.rstrip("/") + "/gamerelay"
 
     async def c_cmd_get_blocklist(self, s, m):
@@ -760,7 +869,7 @@ class Servidor:
 
     async def c_cmd_join_lobby(self, s, m):
         s.lobby_id = m.get("lobby_id") or 1
-        return {"gamerelay_web_url": self._url_gamerelay_web(), "bklist": []}
+        return {"gamerelay_web_url": self._url_gamerelay_web(s), "bklist": []}
 
     async def c_cmd_join_block(self, s, m):
         # L (PESBUL): tras GET_BLOCKLIST el cliente entra al bloque; sin respuesta = C_RL_JS_0002
@@ -2712,21 +2821,22 @@ class Servidor:
         return usuario, clave
 
     # ---------- Gamerelay: comprobación de red (ESPEC_GAMERELAY.md §1 y §5) ----------
-    def _nodos_relay(self):
+    def _nodos_relay(self, s=None, ip_local=None):
         """Nodos UDP del relé que se anuncian al cliente (C: índice 1, IP del servidor, 5100, grid 0)."""
         g = self.cfg.get("gamerelay") or {}
         if not g.get("activo", True):
             return []
+        ip = str(g.get("ip") or "auto")
         return [{"gamerelay_index": int(g.get("indice", 1)),
-                 "ip_addr": str(g.get("ip") or self.cfg.get("ip_publica", "127.0.0.1")),
+                 "ip_addr": ip if ip.lower() != "auto" else self.ip_anuncio(s, ip_local),
                  "port": int(g.get("puerto", 5100)), "grid": int(g.get("grid", 0))}]
 
-    def lista_calidad(self, pid, ip_cliente=None):
+    def lista_calidad(self, pid, ip_cliente=None, ip_local=None, s=None):
         """Respuesta de GET_GAMERELAY_QUALITYCHECKLIST (HTTP o TCP).
 
         Efecto lateral (C): autoriza una sonda UDP desde esa IP contra cada nodo hasta que
         el pid se desconecte (tope 86 400 s)."""
-        nodos = self._nodos_relay()
+        nodos = self._nodos_relay(s, ip_local)
         if ip_cliente:
             hasta = time.time() + 86400
             for n in nodos:
@@ -2748,12 +2858,11 @@ class Servidor:
         return bool(x and x[1] > time.time())
 
     async def c_cmd_get_gamerelay_qualitychecklist(self, s, m):
-        ip = s.direccion[0] if isinstance(s.direccion, tuple) else None
-        return self.lista_calidad(self._pid_visible(s), ip)
+        return self.lista_calidad(self._pid_visible(s), s.ip, s=s)
 
     async def c_cmd_get_gamerelay(self, s, m):
-        nodos = self._nodos_relay()
-        return {"gamerelay_web_url": self._url_gamerelay_web(), "gamerelay_num": len(nodos),
+        nodos = self._nodos_relay(s)
+        return {"gamerelay_web_url": self._url_gamerelay_web(s), "gamerelay_num": len(nodos),
                 "gamerelay_list": [dict(n) for n in nodos]}  # L: mismo formato que el checklist
 
     async def c_cmd_set_gamerelay_quality(self, s, m):
@@ -2865,7 +2974,7 @@ class Servidor:
                 "used_present_product_id_list": [], "used_present_product_id_list_num": 0,
                 "steam_order_id": ""}
 
-    def respuesta_http(self, formulario, ip_cliente=None):
+    def respuesta_http(self, formulario, ip_cliente=None, ip_local=None):
         """Comandos que el cliente manda por WinHTTP (base CommandObjectHttp, REA 29-oct).
 
         Los nombres exactos de los campos aún no se conocen (P): se registran y se
@@ -2878,7 +2987,7 @@ class Servidor:
             return self.respuesta_turn(formulario)
         base = {"msgid": msgid, "rqid": int(formulario.get("rqid", 0) or 0), "result": NOERR}
         if msgid in ("CMD_GET_GAMERELAY_QUALITYCHECKLIST", "GET_GAMERELAY_QUALITYCHECKLIST"):
-            return {**base, **self.lista_calidad(formulario.get("pid"), ip_cliente)}
+            return {**base, **self.lista_calidad(formulario.get("pid"), ip_cliente, ip_local)}
         if msgid in ("CMD_GET_AVATAR_HTTP", "CMD_GET_AVATAR"):
             return {**base, **self._avatar(formulario.get("pid"))}
         if msgid == "CMD_AUTH_STEAM":

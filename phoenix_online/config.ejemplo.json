@@ -8,9 +8,9 @@
     "activo": true,
     "indice": 1,
     "puerto": 5100,
-    "ip": "192.168.1.50"
+    "ip": "auto"
   },
-  "ip_publica": "192.168.1.50",
+  "ip_publica": "auto",
   "puerto_gate": 10000,
   "puerto_menu": 10001,
   "puerto_http": 5000,
@@ -24,18 +24,41 @@
   ],
   "base_datos": "phoenix_online.db",
   "capturas": "capturas",
+  "capturas_activas": true,
+  "capturas_total_mb": 2000,
+  "capturas_archivo_mb": 50,
+  "registro": "registro",
+  "respaldos": {
+    "activo": true,
+    "carpeta": "respaldos",
+    "cada_horas": 6,
+    "guardar": 28
+  },
+  "max_conexiones_por_ip": 16,
+  "inactividad_max_s": 0,
+  "archivo_mantenimiento": "MANTENIMIENTO.txt",
+  "exigir_versiones": {},
+  "identidad": {
+    "activo": true,
+    "steam_compartidos": [
+      "000000000003a660",
+      "0410000004100000"
+    ],
+    "por_ip": {},
+    "ips_anfitrion": []
+  },
   "vinculos": "vinculos.json",
   "abierto_a_todos": false,
   "exigir_misma_huella": false,
   "urls": {
-    "TOPINFO": "http://192.168.1.50:5000/topinfo",
-    "BANNER": "http://192.168.1.50:5000/banner",
-    "GET_TURN_SERVER_LIST": "http://192.168.1.50:5000/turn",
-    "GET_GAMERELAY_QUALITYCHECKLIST": "http://192.168.1.50:5000/gamerelay/qualitychecklist",
-    "GET_GAMERELAY": "http://192.168.1.50:5000/gamerelay",
-    "EULA_PES": "http://192.168.1.50:5000/eula",
-    "AUTH_STEAM": "http://192.168.1.50:5000/auth_steam",
-    "ONLINEID": "http://192.168.1.50:5000/onlineid"
+    "TOPINFO": "http://{ip}:5000/topinfo",
+    "BANNER": "http://{ip}:5000/banner",
+    "GET_TURN_SERVER_LIST": "http://{ip}:5000/turn",
+    "GET_GAMERELAY_QUALITYCHECKLIST": "http://{ip}:5000/gamerelay/qualitychecklist",
+    "GET_GAMERELAY": "http://{ip}:5000/gamerelay",
+    "EULA_PES": "http://{ip}:5000/eula",
+    "AUTH_STEAM": "http://{ip}:5000/auth_steam",
+    "ONLINEID": "http://{ip}:5000/onlineid"
   },
   "archivos_http": {},
   "versiones": {
@@ -476,12 +499,22 @@
       "GIVEUP"
     ],
     "gp_logro_defecto": 300,
-    "gp_logros": {"231": 800, "237": 240, "244": 600},
+    "gp_logros": {
+      "231": 800,
+      "237": 240,
+      "244": 600
+    },
     "dificultad": {
       "activa": true,
       "_nota": "C (REA 05-nov, tabla 0x142645fd0): orden 0..5 del juego",
-      "niveles": ["MATCH_LEVEL_BEGINNER", "MATCH_LEVEL_AMATEUR", "MATCH_LEVEL_REGULAR",
-                  "MATCH_LEVEL_PROFESSIONAL", "MATCH_LEVEL_TOPPLAYER", "MATCH_LEVEL_SUPERSTAR"],
+      "niveles": [
+        "MATCH_LEVEL_BEGINNER",
+        "MATCH_LEVEL_AMATEUR",
+        "MATCH_LEVEL_REGULAR",
+        "MATCH_LEVEL_PROFESSIONAL",
+        "MATCH_LEVEL_TOPPLAYER",
+        "MATCH_LEVEL_SUPERSTAR"
+      ],
       "inicial": "MATCH_LEVEL_REGULAR",
       "victorias_para_subir": 3,
       "derrotas_para_bajar": 2
@@ -492,8 +525,16 @@
     "staff_exp_factor": 1,
     "recuperar_monedas": 0,
     "objetos": [
-      {"clave": "boletos_contrato", "item_type": "CONTRACT", "item_variation": "CONTRACT"},
-      {"clave": "objetos_recuperar", "item_type": "RECOVERY", "item_variation": "RECOVERY"}
+      {
+        "clave": "boletos_contrato",
+        "item_type": "CONTRACT",
+        "item_variation": "CONTRACT"
+      },
+      {
+        "clave": "objetos_recuperar",
+        "item_type": "RECOVERY",
+        "item_variation": "RECOVERY"
+      }
     ],
     "subastas": {
       "activa": true,
@@ -504,9 +545,18 @@
       "precio_por_estrella": 1000,
       "seguimiento_max": 20,
       "deseos_max": 10,
-      "rival_casa": {"activo": false, "probabilidad": 0.3, "tope_factor": 2}
+      "rival_casa": {
+        "activo": false,
+        "probabilidad": 0.3,
+        "tope_factor": 2
+      }
     },
-    "cansancio": {"activo": false, "sube": 10, "baja": 10, "maximo": 100,
-                  "_nota": "rango real de tiredness por confirmar con REA"}
+    "cansancio": {
+      "activo": false,
+      "sube": 10,
+      "baja": 10,
+      "maximo": 100,
+      "_nota": "rango real de tiredness por confirmar con REA"
+    }
   }
 }

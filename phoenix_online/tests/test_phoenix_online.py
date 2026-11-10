@@ -1271,3 +1271,125 @@ class TestGamerelay(unittest.TestCase):
         self._mandar(self.k_ext, [(0, 0, [(0, g.carga_de(b"\x80"))]), (1, 0, [])])
         self._mandar(self.k_ext, [(0, 1, [(1, g.carga_de(b"\x10"))]), (1, 0, [])], seq=1)
         self.assertNotIn(5, self._leer(self.k_ext))
+
+
+class TestBlindaje(unittest.IsolatedAsyncioTestCase):
+    """Protecciones del 10-nov (docs/AUDITORIA_ONLINE_10NOV.md)."""
+
+    async def asyncSetUp(self):
+        import copy
+        self.cfg = copy.deepcopy(CFG)
+        self.srv = Servidor(self.cfg, Datos())
+        self.srv.dormir = _sin_pausa
+
+    def _cliente(self, ip, ip_local="192.168.1.10"):
+        enviados = []
+        s = Sesion(lambda seq, m: enviados.append((seq, m)), (ip, 5555), "MENU")
+        s.ip_local = ip_local
+        self.srv.abrir(s)
+        return s, enviados
+
+    async def test_identidad_por_ip_con_steam_compartido(self):
+        r = self.srv.recibir
+        claves = {}
+        for ip in ("192.168.1.10", "100.64.0.7", "100.64.0.8", "127.0.0.1"):
+            s, env = self._cliente(ip)
+            await r(s, 1, {"msgid": "CMD_LOGIN", "rqid": 1, "username": "410000004100000"})
+            self.assertEqual(env[-1][1]["result"], "NOERR")
+            claves[ip] = s.steam_hex
+        # anfitrión (misma PC) y 127.0.0.1 conservan el SteamID: el club de Frank no cambia
+        self.assertEqual(claves["192.168.1.10"], "0410000004100000")
+        self.assertEqual(claves["127.0.0.1"], "0410000004100000")
+        # cada amigo, su propia clave fija
+        self.assertEqual(claves["100.64.0.7"], "7f644000070" + "00000")
+        self.assertNotEqual(claves["100.64.0.7"], claves["100.64.0.8"])
+        # un SteamID propio (no compartido) no se toca
+        s, _ = self._cliente("100.64.0.9")
+        await r(s, 1, {"msgid": "CMD_LOGIN", "rqid": 1, "np_account_id": 0x0110000100000001})
+        self.assertEqual(s.steam_hex, "0110000100000001")
+        # por_ip manda y se puede apagar
+        self.cfg["identidad"] = {"por_ip": {"100.64.0.7": "00000000000000aa"}}
+        self.assertEqual(self.srv.clave_identidad("0410000004100000", "100.64.0.7"), "00000000000000aa")
+        self.cfg["identidad"] = {"activo": False}
+        self.assertEqual(self.srv.clave_identidad("0410000004100000", "100.64.0.7"), "0410000004100000")
+
+    async def test_ip_automatica_en_svrlist_urls_y_rele(self):
+        self.cfg["ip_publica"] = "auto"
+        self.cfg["urls"] = {**self.cfg["urls"], "TOPINFO": "http://{ip}:5000/topinfo"}
+        self.cfg["gamerelay"] = {"activo": True, "indice": 1, "puerto": 5100, "ip": "auto"}
+        s, env = self._cliente("100.64.0.7", ip_local="100.64.0.1")
+        await self.srv.recibir(s, 1, {"msgid": "CMD_GET_SVRLIST", "rqid": 1})
+        lista = [msgpack_min.unpackb(x) if isinstance(x, bytes) else x.valor for x in env[-1][1]["svrlist"]]
+        self.assertEqual({x["svraddr"] for x in lista}, {"100.64.0.1"})
+        await self.srv.recibir(s, 2, {"msgid": "CMD_GET_URLLIST", "rqid": 2})
+        urls = {e.valor["type"]: e.valor["url"] for e in env[-1][1]["ulist"]}
+        self.assertEqual(urls["TOPINFO"], "http://100.64.0.1:5000/topinfo")
+        self.assertTrue(urls["EULA_PES"].startswith("http://100.64.0.1:"))
+        nodos = self.srv.lista_calidad(1, "100.64.0.7", "100.64.0.1")["quality_check_data_list"]
+        self.assertEqual(nodos[0]["ip_addr"], "100.64.0.1")
+        # una IP fija sigue mandando (VPS)
+        self.cfg["ip_publica"] = "203.0.113.5"
+        self.assertEqual(self.srv.ip_anuncio(s), "203.0.113.5")
+
+    async def test_mantenimiento_y_version(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            marca = os.path.join(d, "MANT.txt")
+            self.cfg["archivo_mantenimiento"] = marca
+            s, env = self._cliente("100.64.0.7")
+            open(marca, "w").close()
+            await self.srv.recibir(s, 1, {"msgid": "CMD_LOGIN", "rqid": 1, "np_account_id": 5})
+            self.assertEqual(env[-1][1]["result"], "ERR_SERVERNOTREADY")
+            self.assertTrue(self.srv.estado()["mantenimiento"])
+            os.remove(marca)
+            self.cfg["exigir_versiones"] = {"patch_version": "1.07.02"}
+            await self.srv.recibir(s, 2, {"msgid": "CMD_LOGIN", "rqid": 2, "np_account_id": 5,
+                                          "patch_version": "1.06.00"})
+            self.assertEqual(env[-1][1]["result"], "ERR_DIFFERENT_PATCHVERSION")
+            await self.srv.recibir(s, 3, {"msgid": "CMD_LOGIN", "rqid": 3, "np_account_id": 5,
+                                          "patch_version": "1.07.02"})
+            self.assertEqual(env[-1][1]["result"], "NOERR")
+
+    async def test_estado_cuenta_comandos_sin_manejador(self):
+        s, _ = self._cliente("100.64.0.7")
+        await self.srv.recibir(s, 1, {"msgid": "CMD_ALGO_NUEVO", "rqid": 1})
+        await self.srv.recibir(s, 2, {"msgid": "CMD_ALGO_NUEVO", "rqid": 2})
+        e = self.srv.estado()
+        self.assertEqual(e["comandos_sin_manejador"], {"CMD_ALGO_NUEVO": 2})
+        self.assertEqual(e["conexiones"], 1)
+
+    def test_respaldo_de_la_base(self):
+        import sqlite3, tempfile
+        with tempfile.TemporaryDirectory() as d:
+            ruta = os.path.join(d, "p.db")
+            datos = Datos(ruta)
+            datos.crear_jugador("00000000000000aa", "FRALEX")
+            copias = [datos.respaldar(os.path.join(d, "r"), guardar=2) for _ in range(3)]
+            import glob, time as _t
+            self.assertTrue(os.path.exists(copias[-1]))
+            fila = sqlite3.connect(copias[-1]).execute("select pname from jugadores").fetchone()
+            self.assertEqual(fila[0], "FRALEX")
+            self.assertLessEqual(len(glob.glob(os.path.join(d, "r", "*.db"))), 2)
+            self.assertEqual(datos.db.execute("pragma journal_mode").fetchone()[0], "wal")
+            datos.cerrar()
+
+    def test_presupuesto_de_capturas(self):
+        import tempfile
+        from phoenix_online import servidor
+        with tempfile.TemporaryDirectory() as d:
+            p = servidor.Presupuesto(d, total_mb=1, archivo_mb=1)
+            self.assertTrue(p.permitir(1000))
+            self.assertFalse(p.permitir(2 * 1024 * 1024))
+            self.assertFalse(servidor.Presupuesto(d, activo=False).permitir(1))
+
+    def test_troceado_absurdo_se_rechaza(self):
+        import hashlib, struct
+        from phoenix_online import nclmio
+        codec = Codec(CLAVE_FALSA, comprobar_clave=False)
+        interno = struct.pack(">IIIB", 1 << 30, 8, 8, 0) + b"\0" * 8
+        interno += b"\0" * (-len(interno) % 8)
+        cif = codec._enc(interno)
+        cab = struct.pack(">HHI", 0x0070, len(cif), 1)
+        trama = nclmio.xor(cab + hashlib.md5(cab + cif).digest() + cif)
+        with self.assertRaises(ValueError):
+            LectorTramas(codec).alimentar(trama)

@@ -1,7 +1,12 @@
 """Datos persistentes: jugadores, vínculos con la cuenta Phoenix y resultados (SQLite)."""
+import glob
 import json
+import logging
+import os
 import sqlite3
 import time
+
+log = logging.getLogger("phoenix_online.datos")
 
 
 ESQUEMA = """
@@ -34,7 +39,19 @@ create table if not exists resultados (
 
 class Datos:
     def __init__(self, ruta=":memory:", vinculos=None):
-        self.db = sqlite3.connect(ruta)
+        self.ruta = ruta
+        # timeout: si otro programa (admin_myclub, respaldo) tiene la base un instante, se espera
+        # en vez de fallar con «database is locked»
+        self.db = sqlite3.connect(ruta, timeout=10)
+        if ruta != ":memory:":
+            # WAL: un corte de luz o un cierre a la fuerza no deja la base a medio escribir, y
+            # las herramientas pueden leer mientras el servidor escribe
+            self.db.execute("pragma journal_mode=wal")
+            self.db.execute("pragma synchronous=normal")
+            fila = self.db.execute("pragma quick_check").fetchone()
+            if not fila or fila[0] != "ok":
+                log.error("BASE DE DATOS DAÑADA (%s): restaurar el último respaldo de "
+                          "respaldos/ con tools/respaldo_base.py", fila)
         self.db.executescript(ESQUEMA)
         # vinculos: {steam_hex: {"usuario_phoenix": ..., "pname": ...}} o None = abierto a todos
         self.vinculos = vinculos
@@ -106,3 +123,32 @@ class Datos:
         filas = self.db.execute("select pid, datos from resultados where partido=? order by id",
                                 (partido,)).fetchall()
         return {pid: json.loads(d) for pid, d in filas}
+
+    # ---------- respaldos ----------
+    def respaldar(self, carpeta="respaldos", guardar=28):
+        """Copia completa y coherente de la base (API de respaldo de SQLite, sirve con el
+        servidor en marcha). Guarda las `guardar` copias más nuevas; devuelve la ruta."""
+        if self.ruta == ":memory:":
+            return None
+        os.makedirs(carpeta, exist_ok=True)
+        base = os.path.splitext(os.path.basename(self.ruta))[0]
+        destino = os.path.join(carpeta, f"{base}_{time.strftime('%Y%m%d-%H%M%S')}.db")
+        copia = sqlite3.connect(destino)
+        try:
+            self.db.backup(copia)
+        finally:
+            copia.close()
+        viejas = sorted(glob.glob(os.path.join(carpeta, f"{base}_*.db")))[:-max(1, int(guardar))]
+        for v in viejas:  # solo nuestras propias copias automáticas, nunca la base viva
+            try:
+                os.remove(v)
+            except OSError:
+                pass
+        return destino
+
+    def cerrar(self):
+        try:
+            self.db.commit()
+            self.db.close()
+        except sqlite3.Error:
+            pass
