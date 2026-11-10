@@ -40,7 +40,15 @@ function Poner-Hosts([string]$ip) {
     }
     $copia = "$hosts.antes_phoenix"
     if (-not (Test-Path $copia)) { Copy-Item $hosts $copia }
-    $lineas = @(Get-Content $hosts -Encoding ASCII | Where-Object { $_ -notmatch "#PHOENIX" })
+    # se quitan nuestras líneas (#PHOENIX) y cualquier otra que redirija los dominios del online de
+    # Konami (p. ej. puestas a mano o por otro programa): así Offline queda limpio y Online no duplica
+    $lineas = @(Get-Content $hosts -Encoding ASCII | Where-Object {
+        $l = $_.Trim()
+        if ($l -match "#PHOENIX") { return $false }
+        if ($l.StartsWith("#") -or -not $l) { return $true }
+        $nombres = @(($l -split "#")[0] -split "\s+" | Select-Object -Skip 1)
+        return -not ($nombres | Where-Object { $dominios -contains $_.ToLower() })
+    })
     if ($ip) { $lineas += $dominios | ForEach-Object { "$ip $_ #PHOENIX" } }
     Set-Content -Path $hosts -Value $lineas -Encoding ASCII
     ipconfig /flushdns | Out-Null
