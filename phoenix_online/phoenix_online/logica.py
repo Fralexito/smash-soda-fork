@@ -545,6 +545,15 @@ class Servidor:
         return {"posession": 0, "passtype": 0, "deffence": 0, "match_up": 0,
                 "favorite_play": 0, "favorite_play_rate": 0}
 
+    async def c_cmd_get_match_analyze(self, s, m):
+        """L (ESPEC_PARTIDO_REAL_PESBUL §2): antes del partido el PES pide el análisis del rival
+        (target_pid). El cliente lee analyze_data_list y analyze_data_size; con el sobre vacío el
+        menú rebota. Sin historial guardado: lista vacía y DRAW (lo mismo que un jugador nuevo)."""
+        log.info("MATCH_ANALYZE pedido: tipo=%r objetivo=%r", m.get("analyze_data_type"), m.get("target_pid"))
+        return {"analyze_data_size": 0, "analyze_data_list": [], "game_res": "DRAW"}
+
+    c_cmd_get_match_analyze_byid = c_cmd_get_match_analyze
+
     async def c_cmd_get_manner_warn(self, s, m):
         return {"warn_kind": 0}
 

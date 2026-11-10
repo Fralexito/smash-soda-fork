@@ -1910,6 +1910,14 @@ class TestPidEnPartida(unittest.TestCase):
         self.assertEqual(srv._pid_visible(anfitrion), 0x0110000100005678)
 
 
+class TestMatchAnalyze(unittest.IsolatedAsyncioTestCase):
+    async def test_respuesta_con_las_tres_claves(self):
+        srv = Servidor(CFG, Datos())
+        for cmd in ("c_cmd_get_match_analyze", "c_cmd_get_match_analyze_byid"):
+            r = await getattr(srv, cmd)(None, {"analyze_data_type": 0, "target_pid": 4660})
+            self.assertEqual(r, {"analyze_data_size": 0, "analyze_data_list": [], "game_res": "DRAW"})
+
+
 class TestNubeSinLlaveMaestra(unittest.IsolatedAsyncioTestCase):
     """Migración 164: el servidor solo llama a phoenix_srv_* con su secreto (sin service_role)."""
 
