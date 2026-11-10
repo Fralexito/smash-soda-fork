@@ -1367,7 +1367,14 @@ class TestBlindaje(unittest.IsolatedAsyncioTestCase):
             copias = [datos.respaldar(os.path.join(d, "r"), guardar=2) for _ in range(3)]
             import glob, time as _t
             self.assertTrue(os.path.exists(copias[-1]))
-            fila = sqlite3.connect(copias[-1]).execute("select pname from jugadores").fetchone()
+            import threading
+            hilo = []
+            t = threading.Thread(target=lambda: hilo.append(datos.respaldar(os.path.join(d, "r"), 5)))
+            t.start(); t.join()
+            self.assertTrue(hilo and os.path.exists(hilo[0]))  # como en el servidor: otro hilo
+            con = sqlite3.connect(copias[-1])
+            fila = con.execute("select pname from jugadores").fetchone()
+            con.close()
             self.assertEqual(fila[0], "FRALEX")
             self.assertLessEqual(len(glob.glob(os.path.join(d, "r", "*.db"))), 2)
             self.assertEqual(datos.db.execute("pragma journal_mode").fetchone()[0], "wal")

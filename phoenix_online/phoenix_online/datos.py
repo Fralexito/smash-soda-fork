@@ -133,11 +133,15 @@ class Datos:
         os.makedirs(carpeta, exist_ok=True)
         base = os.path.splitext(os.path.basename(self.ruta))[0]
         destino = os.path.join(carpeta, f"{base}_{time.strftime('%Y%m%d-%H%M%S')}.db")
+        # C (PC de Frank, 10-nov): se llama desde otro hilo (asyncio.to_thread) y SQLite no deja
+        # usar self.db fuera de su hilo: conexión propia solo para copiar
+        origen = sqlite3.connect(self.ruta, timeout=30)
         copia = sqlite3.connect(destino)
         try:
-            self.db.backup(copia)
+            origen.backup(copia)
         finally:
             copia.close()
+            origen.close()
         viejas = sorted(glob.glob(os.path.join(carpeta, f"{base}_*.db")))[:-max(1, int(guardar))]
         for v in viejas:  # solo nuestras propias copias automáticas, nunca la base viva
             try:
