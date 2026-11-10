@@ -1,0 +1,112 @@
+﻿id_phoenix,codigo,nombre,id_comp_conmegol,id_comp_sudamerican,equipos_conmegol,equipos_sudamerican,estado
+PXL-001,AFC_ASIA_CUP,Copa Asia,35,35,15,16,ambas
+PXL-002,AFRICA_NATIONS_CUP,Copa Africana de Naciones,36,36,16,16,ambas
+PXL-003,ARGENTINA_D1_CUP,Copa Argentina,15,15,66,60,ambas
+PXL-004,ARGENTINA_D1_LEAGUE,Torneo Clausura Mercado Libre,9,9,30,30,ambas
+PXL-005,ARGENTINA_D2_LEAGUE,Primera Nacional,66,66,36,32,ambas
+PXL-006,ARGENTINA_D2_PLAYOFF,,70,70,0,0,ambas
+PXL-007,ARGENTINA_SUPER_CUP,Supercopa Argentina,73,73,2,2,ambas
+PXL-008,BOLIVIA_D1_CUP,Copa Paceña,,20,,16,solo sudamerican
+PXL-009,BOLIVIA_D1_LEAGUE,Play-offs Group B,137,14,16,16,ambas
+PXL-010,BOLIVIA_SUPER_CUP,Supercopa Bolivia,,78,,2,solo sudamerican
+PXL-011,BOLIVIA__D1_CUP,Copa Paceña,138,,0,,solo conmegol
+PXL-012,BRAZIL_D1_CUP,Copa Betano do Brasil,17,18,40,40,ambas
+PXL-013,BRAZIL_D1_LEAGUE,Brasileirão Betano,11,12,20,20,ambas
+PXL-014,BRAZIL_D2_LEAGUE,Brasileirão Série B Superbet,67,68,20,20,ambas
+PXL-015,BRAZIL_D2_PLAYOFF,,71,,0,,solo conmegol
+PXL-016,BRAZIL_SUPER_CUP,Supercopa Betano Rei,74,75,2,2,ambas
+PXL-017,CHAMPIONS_CUP_ASIA,International Champions Cup Asia,102,102,11,11,ambas
+PXL-018,CHAMPIONS_CUP_NA,International Champions Cup NA,100,100,11,11,ambas
+PXL-019,CHAMPIONS_CUP_SA,International Champions Cup SA,101,101,8,8,ambas
+PXL-020,CHILE_D1_CUP,Copa Chile Coca-Cola Zero Azúcar,19,16,32,32,ambas
+PXL-021,CHILE_D1_LEAGUE,Liga de Primera Mercado Libre,13,10,16,16,ambas
+PXL-022,CHILE_D2_LEAGUE,Liga de Ascenso Caixun,39,69,16,16,ambas
+PXL-023,CHILE_D2_PLAYOFF,Liga de Ascenso Caixun Playoffs,,72,,0,solo sudamerican
+PXL-024,CHILE_SUPER_CUP,Supercopa Lanco,77,76,2,2,ambas
+PXL-025,CLASICO_EQUIPOS_AMERICA,Mundial Siglo XXI,198,,0,,solo conmegol
+PXL-026,CLASICO_EQUIPOS_CLUBES,Mundial de Clubes Siglo XXI,197,,23,,solo conmegol
+PXL-027,COLOMBIA_D1_CUP,Copa BetPlay Dimayor,16,19,36,20,ambas
+PXL-028,COLOMBIA_D1_LEAGUE,Liga BetPlay Dimayor,10,13,20,20,ambas
+PXL-029,COLOMBIA_D2_LEAGUE,Torneo BetPlay Dimayor,69,,20,,solo conmegol
+PXL-030,COLOMBIA_D2_PLAYOFF,,72,,0,,solo conmegol
+PXL-031,COLOMBIA_SUPER_CUP,Superliga BetPlay Dimayor,76,77,2,2,ambas
+PXL-032,CONCACAF_CHAMPIONS_LEAGUE,CONCACAF Champions Cup,8,8,25,32,ambas
+PXL-033,CONMEBOL_LIBERTADORES,CONMEBOL Libertadores,2,,47,,solo conmegol
+PXL-034,CONMEBOL_RECOPA,CONMEBOL Recopa,4,,2,,solo conmegol
+PXL-035,CONMEBOL_SUDAMERICANA,CONMEBOL Sudamericana,3,,44,,solo conmegol
+PXL-036,COPA_AMERICA,CONMEBOL Copa America,34,34,16,16,ambas
+PXL-037,COPA_LIBERTADORES,UEFA Champions League,,5,,33,solo sudamerican
+PXL-038,COSTA_RICA_D1_CUP,Torneo de Copa UNAFUT,44,,12,,solo conmegol
+PXL-039,COSTA_RICA_D1_LEAGUE,Liga Promerica,41,,12,,solo conmegol
+PXL-040,COSTA_RICA_SUPER_CUP,Supercopa de Costa Rica,84,,0,,solo conmegol
+PXL-041,ECUADOR_CUP,Copa Ecuador DirecTV,,112,,16,solo sudamerican
+PXL-042,ECUADOR_D1_CUP,Copa Ecuador Banco Pichincha,18,,32,,solo conmegol
+PXL-043,ECUADOR_D1_LEAGUE,Liga Ecuabet,12,111,16,16,ambas
+PXL-044,ECUADOR_D2_LEAGUE,Liga Ecuabet Serie B,68,,16,,solo conmegol
+PXL-045,ECUADOR_SUPER_CUP,Supercopa Ecuador Ecuabet DirecTV,75,113,2,2,ambas
+PXL-046,ENGLAND_D1_CUP,Emirates FA Cup,49,24,28,40,ambas
+PXL-047,ENGLAND_D1_LEAGUE,Premier League,22,21,20,20,ambas
+PXL-048,ENGLAND_D2_LEAGUE,SkyBet Championship,,90,,20,solo sudamerican
+PXL-049,ENGLAND_SUPER_CUP,Community Shield,79,,0,,solo conmegol
+PXL-050,EURO,UEFA EURO,33,33,24,24,ambas
+PXL-051,FAKE_KONAMI,Copa Mundial de la FIFA,37,37,12,0,ambas
+PXL-052,FIFA_CLUB_WORLD_CUP,Copa Intercontinental,1,1,0,0,ambas
+PXL-053,FIFA_WORLD_CUP,FIFA World Cup,27,27,48,0,ambas
+PXL-054,FIFA_WORLD_CUP_AFRICA_FIN,Eliminatorias de África,32,32,0,0,ambas
+PXL-055,FIFA_WORLD_CUP_ASIA_FINAL,Eliminatorias de Asia y Oceanía,31,31,1,1,ambas
+PXL-056,FIFA_WORLD_CUP_EUROPE_FIN,Eliminatorias UEFA,28,28,29,44,ambas
+PXL-057,FIFA_WORLD_CUP_NCAMERICA_,Eliminatorias de la Concacaf,29,29,16,0,ambas
+PXL-058,FIFA_WORLD_CUP_SAMERICA_F,Eliminatorias Sudamericanas,30,30,10,0,ambas
+PXL-059,FRANCE_D1_CUP,Coupe de France–Crédit Agricole,43,53,9,18,ambas
+PXL-060,FRANCE_D1_LEAGUE,Apertura,40,50,18,18,ambas
+PXL-061,GERMANY_D1_CUP,DFB Pokal,,43,,18,solo sudamerican
+PXL-062,GERMANY_D1_LEAGUE,Bundesliga,,40,,18,solo sudamerican
+PXL-063,HONDURAS_D1_CUP,Copa Presidente de Honduras,140,,0,,solo conmegol
+PXL-064,HONDURAS_D1_LEAGUE,Liga Hondubet,139,,12,,solo conmegol
+PXL-065,HONDURAS_SUPER_CUP,Supercopa de Honduras,141,,0,,solo conmegol
+PXL-066,ITALY_D1_CUP,Coppa Italia Frecciarossa,56,56,16,20,ambas
+PXL-067,ITALY_D1_LEAGUE,Serie A Enilive,23,23,20,20,ambas
+PXL-068,KONAMI_LEAGUE,KONAMI 리그,86,86,16,0,ambas
+PXL-069,LEYENDAS_DEL_FÃTBOL,League of Goats,199,,14,,solo conmegol
+PXL-070,MATCHDAY_EFOOTBALL_OPEN,,145,,118,,solo conmegol
+PXL-071,MEXICO_CUP,Copa MX,,123,,18,solo sudamerican
+PXL-072,MEXICO_D1_LEAGUE,Apertura,122,122,18,18,ambas
+PXL-073,MEXICO_SUPER_CUP,Campeón de Campeones,124,124,2,2,ambas
+PXL-074,MLS_D1_CUP,MLS Cup,126,,0,,solo conmegol
+PXL-075,MLS_D1_LEAGUE,Major League Soccer,125,,30,,solo conmegol
+PXL-076,MLS_SUPER_CUP,Lamar Hunt U.S. Open Cup,127,,0,,solo conmegol
+PXL-077,NETHERLANDS_D1_CUP,KNVB Beker,,140,,16,solo sudamerican
+PXL-078,NETHERLANDS_D1_LEAGUE,Eredivisie,,139,,16,solo sudamerican
+PXL-079,NETHERLANDS_SUPER_CUP,Johan Cruijff Schaal,,141,,2,solo sudamerican
+PXL-080,PARAGUAY_CUP,Copa Paraguay,,129,,12,solo sudamerican
+PXL-081,PARAGUAY_D1_CUP,Copa Paraguay,129,,12,,solo conmegol
+PXL-082,PARAGUAY_D1_LEAGUE,Play-offs Group B,128,128,12,12,ambas
+PXL-083,PERU_D1_CUP,Copa Caliente de la Liga,20,17,32,32,ambas
+PXL-084,PERU_D1_LEAGUE,Liga 1 Te Apuesto,14,11,18,18,ambas
+PXL-085,PERU_D2_LEAGUE,Liga2 Caliente,117,67,14,14,ambas
+PXL-086,PERU_D2_PLAYOFF,Liga 2 Caliente.pe Playoffs,,71,,0,solo sudamerican
+PXL-087,PERU_SUPER_CUP,Supercopa Peruana,78,74,2,2,ambas
+PXL-088,SAUDI_D1_CUP,Saudi King's Cup,24,,18,,solo conmegol
+PXL-089,SAUDI_D1_LEAGUE,Saudi Pro League,90,,18,,solo conmegol
+PXL-090,SPAIN_D1_CUP,Copa del Rey Mapfre,123,49,0,20,ambas
+PXL-091,SPAIN_D1_LEAGUE,LaLiga EA Sports,21,22,20,20,ambas
+PXL-092,SPAIN_SUPER_CUP,Supercopa de España,,79,,2,solo sudamerican
+PXL-093,SPE_FRIENDLY_MATCH,국제 친선 경기,45,45,0,0,ambas
+PXL-094,SPE_ML_RETIREMENT_MATCH,은퇴 경기,97,97,0,0,ambas
+PXL-095,SPE_PRACTICE_MATCH,연습 경기,46,46,0,0,ambas
+PXL-096,SPE_RETIREMENT_MATCH,은퇴 경기,47,47,0,0,ambas
+PXL-097,UEFA_CHAMPIONS_LEAGUE,UEFA Champions League,5,2,19,32,ambas
+PXL-098,UEFA_EUROPE_LEAGUE,CONMEBOL Sudamericana,,3,,46,solo sudamerican
+PXL-099,UEFA_SUPER_CUP,CONMEBOL Recopa,,4,,2,solo sudamerican
+PXL-100,URUGUAY_CUP,Copa Uruguay,,115,,16,solo sudamerican
+PXL-101,URUGUAY_D1_CUP,Copa AUF Uruguay,115,,32,,solo conmegol
+PXL-102,URUGUAY_D1_LEAGUE,Liga AUF Uruguaya,114,114,16,16,ambas
+PXL-103,URUGUAY_D2_LEAGUE,Segunda AUF Uruguaya,119,,16,,solo conmegol
+PXL-104,URUGUAY_SUPER_CUP,Supercopa Uruguaya,116,116,2,2,ambas
+PXL-105,USA_CUP,MLS Cup,,126,,30,solo sudamerican
+PXL-106,USA_D1_LEAGUE,Major League Soccer,,125,,30,solo sudamerican
+PXL-107,USA_SUPER_CUP,US Open Cup,,127,,2,solo sudamerican
+PXL-108,VENEZUELA_D1_CUP,Copa Venezuela,112,,14,,solo conmegol
+PXL-109,VENEZUELA_D1_LEAGUE,Eliminatorias Grupo B,111,,14,,solo conmegol
+PXL-110,VENEZUELA_SUPER_CUP,Supercopa de Venezuela,113,,2,,solo conmegol
+PXL-111,WORLD_SELECTION,World Selection Challenge,103,103,0,0,ambas

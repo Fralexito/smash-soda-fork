@@ -1,0 +1,1182 @@
+﻿id_phoenix,nombre,abrev,id_conmegol,id_sudamerican,estado,tipo_coincidencia
+PXT-00001,1.FC Heidenheim 1846,FCH,,5009,solo_sudamerican,exclusivo
+PXT-00002,1.FC Kaiserslautern,FCK,,4135,solo_sudamerican,exclusivo
+PXT-00003,1.FC Köln,KOL,,4137,solo_sudamerican,exclusivo
+PXT-00004,1.FC Magdeburg,MAG,,2293,solo_sudamerican,exclusivo
+PXT-00005,1.FC Nuremberg,FCN,,437,solo_sudamerican,exclusivo
+PXT-00006,1.FC Union Berlin,UNB,,4140,solo_sudamerican,exclusivo
+PXT-00007,1.FSV Mainz 05,M05,,436,solo_sudamerican,exclusivo
+PXT-00008,22 de Julio FC,22J,4447,,solo_conmegol,exclusivo
+PXT-00009,4 de Noviembre,NOV,2312,,solo_conmegol,exclusivo
+PXT-00010,5 de Junio,JUN,2311,,solo_conmegol,exclusivo
+PXT-00011,9 de Octubre FC,9OC,2340,,solo_conmegol,exclusivo
+PXT-00012,a1 Classic Real Madrid CF,RMA,9001,,solo_conmegol,exclusivo
+PXT-00013,a2 Classic FC Barcelona,BAR,9002,,solo_conmegol,exclusivo
+PXT-00014,a3 Classic Bayern Munich,FCB,9003,,solo_conmegol,exclusivo
+PXT-00015,a4 Classic Manchester United FC,MUN,9004,,solo_conmegol,exclusivo
+PXT-00016,a5 Classic Chelsea,CHE,9005,,solo_conmegol,exclusivo
+PXT-00017,a6 Classic Liverpool,LIV,9006,,solo_conmegol,exclusivo
+PXT-00018,a7 Classic Milan,MIL,9007,,solo_conmegol,exclusivo
+PXT-00019,a8 Classic Juventus,JUV,9008,,solo_conmegol,exclusivo
+PXT-00020,a9  Classic Atletico de Madrid,ATM,9009,,solo_conmegol,exclusivo
+PXT-00021,AA Argentinos Juniors,ARG,1236,,solo_conmegol,exclusivo
+PXT-00022,AA Estudiantes (Río Cuarto),ERC,5659,,solo_conmegol,exclusivo
+PXT-00023,AA Ponte Preta,PPR,2465,5909,en_ambas,mismo_nombre_id_distinto
+PXT-00024,Aalborg BK,AAB,,1818,solo_sudamerican,exclusivo
+PXT-00025,Abha Club,ABH,2585,,solo_conmegol,exclusivo
+PXT-00026,AC Goianiense,ACG,,2451,solo_sudamerican,exclusivo
+PXT-00027,AC Milan,MIL,121,121,en_ambas,mismo_id
+PXT-00028,AC Monza,MON,4914,4914,en_ambas,mismo_id
+PXT-00029,AC Reggiana 1919,RGA,,4225,solo_sudamerican,exclusivo
+PXT-00030,Academia Deportiva Cantolao,ADC,,5486,solo_sudamerican,exclusivo
+PXT-00031,Academia Puerto Cabello,APC,5514,5514,en_ambas,mismo_id
+PXT-00032,Academia Quintana,QUI,5704,,solo_conmegol,exclusivo
+PXT-00033,ACF Fiorentina,FIO,124,124,en_ambas,mismo_id
+PXT-00034,AD Cantolao,CAN,5486,,solo_conmegol,exclusivo
+PXT-00035,AD Municipal Pérez Zeledón,MPZ,5054,,solo_conmegol,exclusivo
+PXT-00036,AD San Carlos,SC,5055,,solo_conmegol,exclusivo
+PXT-00037,AD Tarma,TAR,5585,,solo_conmegol,exclusivo
+PXT-00038,ADA Jaén,JAE,5498,2542,en_ambas,mismo_nombre_id_distinto
+PXT-00039,Adana Demirspor,ADA,,5348,solo_sudamerican,exclusivo
+PXT-00040,ADT,ADT,,2496,solo_sudamerican,exclusivo
+PXT-00041,AEK Athens,AEK,,270,solo_sudamerican,exclusivo
+PXT-00042,AFC Bournemouth,BOU,4071,4071,en_ambas,mismo_id
+PXT-00043,Agropecuario,AGR,,5363,solo_sudamerican,exclusivo
+PXT-00044,Águilas Doradas,AGU,2653,2653,en_ambas,mismo_id
+PXT-00045,AJ Auxerre,AUX,180,180,en_ambas,mismo_id
+PXT-00046,Ajax Amsterdam,AJA,116,116,en_ambas,mismo_id
+PXT-00047,Al Ahly FC,AHL,,4235,solo_sudamerican,exclusivo
+PXT-00048,Al Ain FC,AIN,,66871,solo_sudamerican,exclusivo
+PXT-00049,Al-Ahli SFC,AHL,1349,1349,en_ambas,mismo_id
+PXT-00050,Al-Ain FC,AIN,1335,,solo_conmegol,exclusivo
+PXT-00051,Alajuelense,LDA,,2485,solo_sudamerican,exclusivo
+PXT-00052,Alanyaspor,ALA,,5202,solo_sudamerican,exclusivo
+PXT-00053,Albacete Balompié,ALB,,4302,solo_sudamerican,exclusivo
+PXT-00054,Albania,ALB,1165,1165,en_ambas,mismo_id
+PXT-00055,Albion FC,ALB,5504,5509,en_ambas,mismo_nombre_id_distinto
+PXT-00056,Al-Diriyah FC,DIR,2578,,solo_conmegol,exclusivo
+PXT-00057,Aldosivi,ALD,,2717,solo_sudamerican,exclusivo
+PXT-00058,Al-Ettifaq FC,ETT,1902,1902,en_ambas,mismo_id
+PXT-00059,Al-Faisaly FC,FAI,2584,,solo_conmegol,exclusivo
+PXT-00060,Al-Fateh SC,FAT,2576,,solo_conmegol,exclusivo
+PXT-00061,Al-Fayha FC,FAY,2575,,solo_conmegol,exclusivo
+PXT-00062,Algeria,ALG,1040,1040,en_ambas,mismo_id
+PXT-00063,Al-Hazem SC,HAZ,2587,,solo_conmegol,exclusivo
+PXT-00064,Al-Hilal SFC,HIL,1489,1489,en_ambas,mismo_id
+PXT-00065,Alianza Atlético,AAT,5491,,solo_conmegol,exclusivo
+PXT-00066,Alianza Atlético Sullana,AAT,,5491,solo_sudamerican,exclusivo
+PXT-00067,Alianza FC,ALI,4387;5207,5207,en_ambas,mismo_nombre_id_distinto
+PXT-00068,Alianza Lima,ALI,2287,2287,en_ambas,mismo_id
+PXT-00069,Alianza Petrolera FC,APE,5213,,solo_conmegol,exclusivo
+PXT-00070,Alianza Universidad de Huánuco,AUH,,5583,solo_sudamerican,exclusivo
+PXT-00071,Al-Ittihad Club,ITT,1350,1350,en_ambas,mismo_id
+PXT-00072,Al-Khaleej FC,KHA,2586,,solo_conmegol,exclusivo
+PXT-00073,Al-Kholood Club,KHO,2583,,solo_conmegol,exclusivo
+PXT-00074,All Boys,ALL,,2539,solo_sudamerican,exclusivo
+PXT-00075,Almagro,ALM,,5044,solo_sudamerican,exclusivo
+PXT-00076,Almere City FC,ALM,,1598,solo_sudamerican,exclusivo
+PXT-00077,Almirante Brown,ALM,,2718,solo_sudamerican,exclusivo
+PXT-00078,Al-Nassr FC,NSR,2577,2577,en_ambas,mismo_id
+PXT-00079,Al-Qadsiah FC,QAD,2581,2405,en_ambas,mismo_nombre_id_distinto
+PXT-00080,Al-Riyadh SC,RIY,2579,,solo_conmegol,exclusivo
+PXT-00081,Al-Shabab FC,SHA,1348,1348,en_ambas,mismo_id
+PXT-00082,Al-Taawoun FC,TAA,2580,,solo_conmegol,exclusivo
+PXT-00083,Altitude FC,ALT,5711,,solo_conmegol,exclusivo
+PXT-00084,Alvarado,ALV,,5655,solo_sudamerican,exclusivo
+PXT-00085,Always Ready,ALW,,2190,solo_sudamerican,exclusivo
+PXT-00086,América de Cali,AME,1257,1257,en_ambas,mismo_id
+PXT-00087,América MG,AMG,,2450,solo_sudamerican,exclusivo
+PXT-00088,América Mineiro,AME,2450,,solo_conmegol,exclusivo
+PXT-00089,Andorra,AND,,1166,solo_sudamerican,exclusivo
+PXT-00090,Angers SCO,ANG,403,403,en_ambas,mismo_id
+PXT-00091,Antalyaspor,ANT,,1989,solo_sudamerican,exclusivo
+PXT-00092,Antigua GFC,ANT,5273,,solo_conmegol,exclusivo
+PXT-00093,Anzoátegui FC,ANZ,2219,,solo_conmegol,exclusivo
+PXT-00094,Argentina,ARG,50,50,en_ambas,mismo_id
+PXT-00095,Argentinos Juniors,ARG,,1236,solo_sudamerican,exclusivo
+PXT-00096,Armenia,ARM,,1167,solo_sudamerican,exclusivo
+PXT-00097,Arminia Bielefeld,ARM,,4127,solo_sudamerican,exclusivo
+PXT-00098,Arsenal FC,ARS,101,101,en_ambas,mismo_id
+PXT-00099,Arsenal Sarandí,ARS,,1921,solo_sudamerican,exclusivo
+PXT-00100,AS Mónaco,ASM,112,112,en_ambas,mismo_id
+PXT-00101,AS Roma,ROM,125,125,en_ambas,mismo_id
+PXT-00102,AS Saint-Étienne,STE,,418,solo_sudamerican,exclusivo
+PXT-00103,Aston Villa,AVL,,107,solo_sudamerican,exclusivo
+PXT-00104,Aston Villa FC,AVL,107,,solo_conmegol,exclusivo
+PXT-00105,Atalanta BC,ATA,234,234,en_ambas,mismo_id
+PXT-00106,Athletic Bilbao,ATH,,258,solo_sudamerican,exclusivo
+PXT-00107,Athletic Club,ATH,258,2695,en_ambas,mismo_nombre_id_distinto
+PXT-00108,Athletic Club (Minas Gerais),AC,5973,,solo_conmegol,exclusivo
+PXT-00109,Athletico Paranaense,CAP,1930,1930,en_ambas,mismo_id
+PXT-00110,Atlanta,ATL,,5656,solo_sudamerican,exclusivo
+PXT-00111,Atlanta United,ATL,,5736,solo_sudamerican,exclusivo
+PXT-00112,Atlanta United FC,ATL,5736,,solo_conmegol,exclusivo
+PXT-00113,Atlas FC,ATL,1777,,solo_conmegol,exclusivo
+PXT-00114,Atlas Guadalajara,ATS,,1777,solo_sudamerican,exclusivo
+PXT-00115,Atlético Bucaramanga,BUC,5208,5208,en_ambas,mismo_id
+PXT-00116,Atlético de Madrid,ATM,172,172,en_ambas,mismo_id
+PXT-00117,Atlético de Rafaela,RAF,2537,,solo_conmegol,exclusivo
+PXT-00118,Atlético de San Luis,SNL,,5379,solo_sudamerican,exclusivo
+PXT-00119,Atlético FC,ATL,4030;5367,,solo_conmegol,exclusivo
+PXT-00120,Atlético Goianiense,ACG,2451,,solo_conmegol,exclusivo
+PXT-00121,Atlético Grau,AGR,5492,5492,en_ambas,mismo_id
+PXT-00122,Atlético Mineiro,CAM,1245,1245,en_ambas,mismo_id
+PXT-00123,Atlético Nacional,NAC,2193,2193,en_ambas,mismo_id
+PXT-00124,Atlético Ottawa,OTT,5701,,solo_conmegol,exclusivo
+PXT-00125,Atlético Pantoja,ATP,5715,,solo_conmegol,exclusivo
+PXT-00126,Atlético San Luis,ASL,5379,,solo_conmegol,exclusivo
+PXT-00127,Atlético Tucumán,ATU,2719,2719,en_ambas,mismo_id
+PXT-00128,Auckland City,AUC,,4348,solo_sudamerican,exclusivo
+PXT-00129,Audax Italiano,AUD,2192,2192,en_ambas,mismo_id
+PXT-00130,Austin,AUS,,5740,solo_sudamerican,exclusivo
+PXT-00131,Austin FC,AUS,5740,,solo_conmegol,exclusivo
+PXT-00132,Australia,AUS,57,57,en_ambas,mismo_id
+PXT-00133,Austria,AUT,21,21,en_ambas,mismo_id
+PXT-00134,Avaí,AVA,,2452,solo_sudamerican,exclusivo
+PXT-00135,Avaí FC,AVA,2452,,solo_conmegol,exclusivo
+PXT-00136,Avs Futebol,AVS,,5954,solo_sudamerican,exclusivo
+PXT-00137,Ayacucho FC,AYA,2672,2672,en_ambas,mismo_id
+PXT-00138,AZ Alkmaar,AZ,,242,solo_sudamerican,exclusivo
+PXT-00139,Azerbaijan,AZE,,1168,solo_sudamerican,exclusivo
+PXT-00140,b1 Classic Inter,INT,9010,,solo_conmegol,exclusivo
+PXT-00141,b2 Classic Paris Saint-Germain,PSG,9011,,solo_conmegol,exclusivo
+PXT-00142,b3 Classic Arsenal,ARS,9012,,solo_conmegol,exclusivo
+PXT-00143,b4 Classic Manchester City,MCI,9013,,solo_conmegol,exclusivo
+PXT-00144,b5 Classic Borussia Dortmund,BVB,9014,,solo_conmegol,exclusivo
+PXT-00145,b6 Classic Porto,POR,9015,,solo_conmegol,exclusivo
+PXT-00146,b7 Classic Benfica,BEN,9016,,solo_conmegol,exclusivo
+PXT-00147,b8 Classic Boca Juniors,BOC,9017,,solo_conmegol,exclusivo
+PXT-00148,b9 Classic Corinthians,COR,9018,,solo_conmegol,exclusivo
+PXT-00149,Banfield,BAN,,1927,solo_sudamerican,exclusivo
+PXT-00150,Barcelona SC,BSC,2658,2658,en_ambas,mismo_id
+PXT-00151,Barracas Central,BAR,,5657,solo_sudamerican,exclusivo
+PXT-00152,Barranquilla FC,BAR,5368,,solo_conmegol,exclusivo
+PXT-00153,Basaksehir FK,IBB,,1995,solo_sudamerican,exclusivo
+PXT-00154,Bayer 04 Leverkusen,LEV,128,128,en_ambas,mismo_id
+PXT-00155,Bayern Munich,BAY,,127,solo_sudamerican,exclusivo
+PXT-00156,Beckham FC,DB,9315,,solo_conmegol,exclusivo
+PXT-00157,Belarus,BLR,,1169,solo_sudamerican,exclusivo
+PXT-00158,Belgium,BEL,9,9,en_ambas,mismo_id
+PXT-00159,Belgrano,BEL,,2536,solo_sudamerican,exclusivo
+PXT-00160,Bentín Tacna,BEN,,4034,solo_sudamerican,exclusivo
+PXT-00161,Bentín Tacna Heroica,ONC,5252,,solo_conmegol,exclusivo
+PXT-00162,Besiktas JK,BJK,,273,solo_sudamerican,exclusivo
+PXT-00163,Blackburn Rovers,BLB,,176,solo_sudamerican,exclusivo
+PXT-00164,Boavista FC,BOA,,4323,solo_sudamerican,exclusivo
+PXT-00165,Boca Juniors,BOC,,139,solo_sudamerican,exclusivo
+PXT-00166,Boca Juniors de Cali,BJC,5377,,solo_conmegol,exclusivo
+PXT-00167,Bogotá FC,BOG,5369,,solo_conmegol,exclusivo
+PXT-00168,Bolívar,BOL,,2283,solo_sudamerican,exclusivo
+PXT-00169,Bolivia,BOL,1128,1128,en_ambas,mismo_id
+PXT-00170,Bologna FC,BOL,186,,solo_conmegol,exclusivo
+PXT-00171,Bologna FC 1909,BOL,,186,solo_sudamerican,exclusivo
+PXT-00172,Borussia Dortmund,BVB,126,126,en_ambas,mismo_id
+PXT-00173,Borussia Mönchengladbach,BGM,,225,solo_sudamerican,exclusivo
+PXT-00174,Bosnia And Herzegovina,BIH,1170,1170,en_ambas,mismo_id
+PXT-00175,Boston River,BOS,,5436,solo_sudamerican,exclusivo
+PXT-00176,Botafogo,BOT,1246,,solo_conmegol,exclusivo
+PXT-00177,Botafogo de Futebol e Regatas,BOT,,1246,solo_sudamerican,exclusivo
+PXT-00178,Botafogo FC,BSP,5139,,solo_conmegol,exclusivo
+PXT-00179,Botafogo RP,BSP,,5139,solo_sudamerican,exclusivo
+PXT-00180,Boyacá Chicó,CHI,,2195,solo_sudamerican,exclusivo
+PXT-00181,Boyacá Chicó FC,CHI,2195,,solo_conmegol,exclusivo
+PXT-00182,Brazil,BRA,45,45,en_ambas,mismo_id
+PXT-00183,Brentford FC,BRE,4180,4180,en_ambas,mismo_id
+PXT-00184,Brighton & Hove Albion,BHA,377,377,en_ambas,mismo_id
+PXT-00185,Bristol City,BCI,,1760,solo_sudamerican,exclusivo
+PXT-00186,BSC Young Boys,YB,,1950,solo_sudamerican,exclusivo
+PXT-00187,Bulgaria,BUL,27,27,en_ambas,mismo_id
+PXT-00188,Burgos CF,BUR,,4247,solo_sudamerican,exclusivo
+PXT-00189,Burkina Faso,BFA,1044,1044,en_ambas,mismo_id
+PXT-00190,Burnley FC,BUR,,378,solo_sudamerican,exclusivo
+PXT-00191,c1 Classic Flamengo,FLA,9019,,solo_conmegol,exclusivo
+PXT-00192,c2 Classic Gremio,GRE,9020,,solo_conmegol,exclusivo
+PXT-00193,c3 Classic Palmeiras,PAL,9021,,solo_conmegol,exclusivo
+PXT-00194,c4 Atlético Nacional,ATN,9022,,solo_conmegol,exclusivo
+PXT-00195,c5 Classic River Plate,RIV,9023,,solo_conmegol,exclusivo
+PXT-00196,c6 Classic Santos,SAN,9024,,solo_conmegol,exclusivo
+PXT-00197,c7 Classic Al Hilal,HIL,9025,,solo_conmegol,exclusivo
+PXT-00198,c8 Classic Al Nassr,NSR,9026,,solo_conmegol,exclusivo
+PXT-00199,c9 Classic Urawa Red,URA,9027,,solo_conmegol,exclusivo
+PXT-00200,CA Acassuso,ACA,5828,,solo_conmegol,exclusivo
+PXT-00201,CA Aldosivi,CAA,2717,,solo_conmegol,exclusivo
+PXT-00202,CA All Boys,ALL,2539,,solo_conmegol,exclusivo
+PXT-00203,CA Artigas,ART,5513,,solo_conmegol,exclusivo
+PXT-00204,CA Atenas,ATE,5502,,solo_conmegol,exclusivo
+PXT-00205,CA Atlanta,ATL,5656,,solo_conmegol,exclusivo
+PXT-00206,CA Banfield,BAN,1927,,solo_conmegol,exclusivo
+PXT-00207,CA Barracas Central,BAR,5657,,solo_conmegol,exclusivo
+PXT-00208,CA Belgrano,BEL,2536,,solo_conmegol,exclusivo
+PXT-00209,CA Boca Juniors,BOC,139,,solo_conmegol,exclusivo
+PXT-00210,CA Boston River,BRI,5436,,solo_conmegol,exclusivo
+PXT-00211,CA Central Córdoba,COR,4995,,solo_conmegol,exclusivo
+PXT-00212,CA Central Norte,CNO,5007,2347,en_ambas,mismo_nombre_id_distinto
+PXT-00213,CA Cerro,CER,2289,,solo_conmegol,exclusivo
+PXT-00214,CA Chacarita Juniors,CHA,4996,,solo_conmegol,exclusivo
+PXT-00215,CA Chaco For Ever,CFE,2694,,solo_conmegol,exclusivo
+PXT-00216,CA Colegiales,COL,4009,2345,en_ambas,mismo_nombre_id_distinto
+PXT-00217,CA Colón,COL,1923,,solo_conmegol,exclusivo
+PXT-00218,CA Defensores de Belgrano,DDB,5453,,solo_conmegol,exclusivo
+PXT-00219,CA Estudiantes (Caseros),CAE,5658,,solo_conmegol,exclusivo
+PXT-00220,CA Fénix,FEN,2683,,solo_conmegol,exclusivo
+PXT-00221,CA Ferrocarril Midland,FMI,5830,,solo_conmegol,exclusivo
+PXT-00222,CA Gimnasia y Esgrima (Jujuy),JUJ,1928,,solo_conmegol,exclusivo
+PXT-00223,CA Gimnasia y Esgrima (Mendoza),GMZ,4997,,solo_conmegol,exclusivo
+PXT-00224,CA Güemes,GUE,2478,,solo_conmegol,exclusivo
+PXT-00225,CA Huracán,HUR,1922,,solo_conmegol,exclusivo
+PXT-00226,CA Independiente,IND,1240,,solo_conmegol,exclusivo
+PXT-00227,CA Independiente (Siguatepeque),IND,4386,,solo_conmegol,exclusivo
+PXT-00228,CA Juventud,CAJ,,2684,solo_sudamerican,exclusivo
+PXT-00229,CA Juventud (Las Piedras),JUV,2684,,solo_conmegol,exclusivo
+PXT-00230,CA Lanús,LAN,1929,,solo_conmegol,exclusivo
+PXT-00231,CA Los Andes,AND,5001,5001,en_ambas,mismo_id
+PXT-00232,CA Mannucci,MAN,5493,,solo_conmegol,exclusivo
+PXT-00233,CA Mitre,MIT,5365,,solo_conmegol,exclusivo
+PXT-00234,CA Nacional Potosí,NPO,2645,,solo_conmegol,exclusivo
+PXT-00235,CA Nueva Chicago,CHI,2728,,solo_conmegol,exclusivo
+PXT-00236,CA Osasuna,OSA,263,,solo_conmegol,exclusivo
+PXT-00237,CA Patronato,PAT,2729,,solo_conmegol,exclusivo
+PXT-00238,CA Peñarol,PEN,1263,,solo_conmegol,exclusivo
+PXT-00239,CA Platense,CAP,5454,,solo_conmegol,exclusivo
+PXT-00240,CA Progreso,PRO,2685,,solo_conmegol,exclusivo
+PXT-00241,CA Racing (Córdoba),RAC,4046,,solo_conmegol,exclusivo
+PXT-00242,CA Rentistas,REN,4408,,solo_conmegol,exclusivo
+PXT-00243,CA River Plate,RIV,138,,solo_conmegol,exclusivo
+PXT-00244,CA Rosario Central,RC,1242,,solo_conmegol,exclusivo
+PXT-00245,CA San Lorenzo,SLO,1243,,solo_conmegol,exclusivo
+PXT-00246,CA San Martín (San Juan),SMA,1925,,solo_conmegol,exclusivo
+PXT-00247,CA San Martín (Tucumán),SMT,2702,,solo_conmegol,exclusivo
+PXT-00248,CA San Miguel,SMI,5004,,solo_conmegol,exclusivo
+PXT-00249,CA San Telmo,STE,5862,,solo_conmegol,exclusivo
+PXT-00250,CA Sarmiento,CAS,2730,,solo_conmegol,exclusivo
+PXT-00251,CA Talleres,TAL,5046,,solo_conmegol,exclusivo
+PXT-00252,CA Temperley,TEM,4910,,solo_conmegol,exclusivo
+PXT-00253,CA Tigre,TIG,1926,,solo_conmegol,exclusivo
+PXT-00254,CA Unión,CAU,2538,,solo_conmegol,exclusivo
+PXT-00255,CA Vélez Sarsfield,VEL,1244,,solo_conmegol,exclusivo
+PXT-00256,Cádiz CF,CAD,,4308,solo_sudamerican,exclusivo
+PXT-00257,Cagliari Calcio,CAG,320,320,en_ambas,mismo_id
+PXT-00258,Cameroon,CMR,36,36,en_ambas,mismo_id
+PXT-00259,Canada,CAN,1099,1099,en_ambas,mismo_id
+PXT-00260,Cape Verde,CPV,1046,1046,en_ambas,mismo_id
+PXT-00261,Carabobo FC,CBB,5015,5015,en_ambas,mismo_id
+PXT-00262,Caracas,CAR,,2205,solo_sudamerican,exclusivo
+PXT-00263,Caracas FC,CFC,2205,,solo_conmegol,exclusivo
+PXT-00264,Cardiff City,CAR,,379,solo_sudamerican,exclusivo
+PXT-00265,Carlos A. Mannucci,MAN,,5493,solo_sudamerican,exclusivo
+PXT-00266,Carrarese Calcio 1908,CAR,,4218,solo_sudamerican,exclusivo
+PXT-00267,Casa Pia AC,PIA,,5633,solo_sudamerican,exclusivo
+PXT-00268,Castellón,CAS,,4395,solo_sudamerican,exclusivo
+PXT-00269,Cavalier FC,CAV,5714,,solo_conmegol,exclusivo
+PXT-00270,Cavalry FC,CAV,5702,,solo_conmegol,exclusivo
+PXT-00271,Caykur Rizespor,RIZ,,5354,solo_sudamerican,exclusivo
+PXT-00272,CD Águila,AGU,4388,,solo_conmegol,exclusivo
+PXT-00273,CD Antofagasta,ANT,2547,,solo_conmegol,exclusivo
+PXT-00274,CD Atlético Huila,HUI,2648,,solo_conmegol,exclusivo
+PXT-00275,CD Aurora,AUR,1939,,solo_conmegol,exclusivo
+PXT-00276,CD Choloma,CHO,4383,,solo_conmegol,exclusivo
+PXT-00277,CD Cobreloa,CDC,2549,,solo_conmegol,exclusivo
+PXT-00278,CD Cobresal,CSL,2553,,solo_conmegol,exclusivo
+PXT-00279,CD Comerciantes Unidos,CUN,5487,,solo_conmegol,exclusivo
+PXT-00280,CD El Nacional,ENA,2212,,solo_conmegol,exclusivo
+PXT-00281,CD Estrella Roja,ERO,4381,,solo_conmegol,exclusivo
+PXT-00282,CD Everton,EVE,2208,2208,en_ambas,mismo_id
+PXT-00283,CD FAS,FAS,4390,2490,en_ambas,mismo_nombre_id_distinto
+PXT-00284,CD Godoy Cruz,GOD,1924,,solo_conmegol,exclusivo
+PXT-00285,CD Guadalajara,GDL,1700,,solo_conmegol,exclusivo
+PXT-00286,CD La Equidad,EQU,5214,,solo_conmegol,exclusivo
+PXT-00287,CD Llacuabamba,LLA,2731,,solo_conmegol,exclusivo
+PXT-00288,CD Lobos UPNFM,LOB,4380,,solo_conmegol,exclusivo
+PXT-00289,CD Los Chankas,CHA,5496,,solo_conmegol,exclusivo
+PXT-00290,CD Luis Angel Firpo,FIR,4389,,solo_conmegol,exclusivo
+PXT-00291,CD Macará,MAC,2661,,solo_conmegol,exclusivo
+PXT-00292,CD Magallanes,MAG,2712,,solo_conmegol,exclusivo
+PXT-00293,CD Maldonado,DMA,5506,,solo_conmegol,exclusivo
+PXT-00294,CD Marathón,MAR,4377,,solo_conmegol,exclusivo
+PXT-00295,CD Ñublense,NUB,2699,,solo_conmegol,exclusivo
+PXT-00296,CD O'Higgins,OHI,2541,,solo_conmegol,exclusivo
+PXT-00297,CD Olimpia,OLI,4375,2492,en_ambas,mismo_nombre_id_distinto
+PXT-00298,CD Olmedo,OLM,2663,,solo_conmegol,exclusivo
+PXT-00299,CD Oriente Petrolero,OPE,2359,,solo_conmegol,exclusivo
+PXT-00300,CD Palestino,PAL,2548,,solo_conmegol,exclusivo
+PXT-00301,CD Plaza Amador,PAM,5708,,solo_conmegol,exclusivo
+PXT-00302,CD Real Cartagena,RCA,2656,,solo_conmegol,exclusivo
+PXT-00303,CD Real Santander,RSA,5212,,solo_conmegol,exclusivo
+PXT-00304,CD Real Tomayapo,RTO,5418,5455,en_ambas,mismo_nombre_id_distinto
+PXT-00305,CD San Antonio,SAN,5452,,solo_conmegol,exclusivo
+PXT-00306,CD San José,SJO,,2189,solo_sudamerican,exclusivo
+PXT-00307,CD San Luis (Quillota),SGP,2714,,solo_conmegol,exclusivo
+PXT-00308,CD San Marcos (Arica),SMA,2700,,solo_conmegol,exclusivo
+PXT-00309,CD Santiago Wanderers,SWA,2542,,solo_conmegol,exclusivo
+PXT-00310,CD Técnico Universitario,TUN,2664,,solo_conmegol,exclusivo
+PXT-00311,CD Toluca,TOL,1773,,solo_conmegol,exclusivo
+PXT-00312,CD Totora Real Oruro,TOT,5456,,solo_conmegol,exclusivo
+PXT-00313,CD Unión Comercio,UCO,2677,,solo_conmegol,exclusivo
+PXT-00314,CD Unión San Felipe,USF,2552,,solo_conmegol,exclusivo
+PXT-00315,CD Universidad Católica,UCA,4404,4404,en_ambas,mismo_id
+PXT-00316,CD Universidad San Martin,SMP,2200,,solo_conmegol,exclusivo
+PXT-00317,CDP Curicó Unido,CUR,2708,,solo_conmegol,exclusivo
+PXT-00318,CDSC Guabirá,GUA,2644,,solo_conmegol,exclusivo
+PXT-00319,Ceará SC,CEA,2454,2454,en_ambas,mismo_id
+PXT-00320,Celta de Vigo,CEL,,195,solo_sudamerican,exclusivo
+PXT-00321,Celtic,CEL,,131,solo_sudamerican,exclusivo
+PXT-00322,Celtic FC,CEL,131,,solo_conmegol,exclusivo
+PXT-00323,Central Córdoba,CCO,,4995,solo_sudamerican,exclusivo
+PXT-00324,Central Español FC,ESP,2680,2686,en_ambas,mismo_nombre_id_distinto
+PXT-00325,Cerro,CER,,2289,solo_sudamerican,exclusivo
+PXT-00326,Cerro Largo,CLA,,2681,solo_sudamerican,exclusivo
+PXT-00327,Cerro Largo FC,CLA,2681,,solo_conmegol,exclusivo
+PXT-00328,Cerro Porteño,CCP,,1260,solo_sudamerican,exclusivo
+PXT-00329,Cesena FC,CES,,1362,solo_sudamerican,exclusivo
+PXT-00330,CF América,AME,,1264,solo_sudamerican,exclusivo
+PXT-00331,CF Atlante,ATL,1776,,solo_conmegol,exclusivo
+PXT-00332,CF Cruz Azul,CAZ,1265,,solo_conmegol,exclusivo
+PXT-00333,CF Monterrey,MON,1778,1778,en_ambas,mismo_id
+PXT-00334,CF Montréal,MTL,4156,4156,en_ambas,mismo_id
+PXT-00335,CF Pachuca,PAC,1699,1699,en_ambas,mismo_id
+PXT-00336,Chacarita Juniors,CHA,,4996,solo_sudamerican,exclusivo
+PXT-00337,Chaco For Ever,CFE,,2694,solo_sudamerican,exclusivo
+PXT-00338,Chapecoense,CHA,4108,4108,en_ambas,mismo_id
+PXT-00339,Charlotte,CHA,,5832,solo_sudamerican,exclusivo
+PXT-00340,Charlotte FC,CHA,5832,,solo_conmegol,exclusivo
+PXT-00341,Chelsea FC,CHE,102,102,en_ambas,mismo_id
+PXT-00342,Chicago Fire,CHI,,4148,solo_sudamerican,exclusivo
+PXT-00343,Chicago Fire FC,CHI,4148,,solo_conmegol,exclusivo
+PXT-00344,Chile,CHL,47,47,en_ambas,mismo_id
+PXT-00345,China,CHN,54,54,en_ambas,mismo_id
+PXT-00346,Cibao FC,CIB,5716,,solo_conmegol,exclusivo
+PXT-00347,Cienciano,CIE,,2202,solo_sudamerican,exclusivo
+PXT-00348,Cincinnati,CIN,,5737,solo_sudamerican,exclusivo
+PXT-00349,Club ABB,ABB,5457,2466,en_ambas,mismo_nombre_id_distinto
+PXT-00350,Club Agropecuario,AGR,5363,,solo_conmegol,exclusivo
+PXT-00351,Club Almagro,ALM,5044,,solo_conmegol,exclusivo
+PXT-00352,Club Almirante Brown,ALM,2718,,solo_conmegol,exclusivo
+PXT-00353,Club Always Ready,CAR,2190,,solo_conmegol,exclusivo
+PXT-00354,Club América,CA,1264,,solo_conmegol,exclusivo
+PXT-00355,Club Aurora,AUR,,1939,solo_sudamerican,exclusivo
+PXT-00356,Club Blooming,BLO,2282,2282,en_ambas,mismo_id
+PXT-00357,Club Bolívar,BOL,2283,,solo_conmegol,exclusivo
+PXT-00358,Club Brugge KV,BRU,,269,solo_sudamerican,exclusivo
+PXT-00359,Club Brujas KV,BRU,269,,solo_conmegol,exclusivo
+PXT-00360,Club Cerro Porteño,CER,1260,,solo_conmegol,exclusivo
+PXT-00361,Club Cienciano,CIE,2202,,solo_conmegol,exclusivo
+PXT-00362,Club Ciudad de Bolívar,CBO,5829,,solo_conmegol,exclusivo
+PXT-00363,Club de Gimnasia y Tiro,GYT,2690,,solo_conmegol,exclusivo
+PXT-00364,Club Deportivo Cuenca,CUE,,2196,solo_sudamerican,exclusivo
+PXT-00365,Club Deportivo Macará,MAC,,2661,solo_sudamerican,exclusivo
+PXT-00366,Club Deportivo Maipú,MPU,2473,,solo_conmegol,exclusivo
+PXT-00367,Club Deportivo Morón,MOR,5364,,solo_conmegol,exclusivo
+PXT-00368,Club Estudiantes La Plata,EST,1238,,solo_conmegol,exclusivo
+PXT-00369,Club Guaraní,GUA,2213,,solo_conmegol,exclusivo
+PXT-00370,Club León,LEO,1789,,solo_conmegol,exclusivo
+PXT-00371,Club Libertad,LIB,2198,,solo_conmegol,exclusivo
+PXT-00372,Club Nacional,NAC,,1262,solo_sudamerican,exclusivo
+PXT-00373,Club Nacional (Asunción),CN,2214,,solo_conmegol,exclusivo
+PXT-00374,Club Nacional de Football,CNF,1262,,solo_conmegol,exclusivo
+PXT-00375,Club Necaxa,NEC,5130,,solo_conmegol,exclusivo
+PXT-00376,Club Olimpia,OLI,1261,,solo_conmegol,exclusivo
+PXT-00377,Club Oriental,ORI,5508,,solo_conmegol,exclusivo
+PXT-00378,Club Puebla,PUE,1772,,solo_conmegol,exclusivo
+PXT-00379,Club Rubio Ñú,RUB,2667,5475,en_ambas,mismo_nombre_id_distinto
+PXT-00380,Club Santos Laguna,SLA,1779,,solo_conmegol,exclusivo
+PXT-00381,Club Sportivo 2 de Mayo,2DM,5471,5471,en_ambas,mismo_id
+PXT-00382,Club Sportivo Ameliano,CSA,5475,,solo_conmegol,exclusivo
+PXT-00383,Club Sportivo Luqueño,SLU,2199,,solo_conmegol,exclusivo
+PXT-00384,Club Sportivo San Lorenzo,SSL,5484,,solo_conmegol,exclusivo
+PXT-00385,Club Sportivo Trinidense,STR,5485,,solo_conmegol,exclusivo
+PXT-00386,Club Técnico Universitario,TEC,,2664,solo_sudamerican,exclusivo
+PXT-00387,Club The Strongest,TST,2502,,solo_conmegol,exclusivo
+PXT-00388,Club Tijuana,TIJ,1785,,solo_conmegol,exclusivo
+PXT-00389,Club Unión Minas,CUM,5495,,solo_conmegol,exclusivo
+PXT-00390,Clube de Regatas Brasil,CRB,2506,,solo_conmegol,exclusivo
+PXT-00391,Clube do Remo,REM,5145,5145,en_ambas,mismo_id
+PXT-00392,Cobreloa,COB,,2549,solo_sudamerican,exclusivo
+PXT-00393,Cobresal,CSL,,2553,solo_sudamerican,exclusivo
+PXT-00394,Colinas del Jocay SC,CDJ,2308,,solo_conmegol,exclusivo
+PXT-00395,Colo-Colo,CC,,1256,solo_sudamerican,exclusivo
+PXT-00396,Colombia,COL,44,44,en_ambas,mismo_id
+PXT-00397,Colón,COL,,1923,solo_sudamerican,exclusivo
+PXT-00398,Colón FC,COL,5410,,solo_conmegol,exclusivo
+PXT-00399,Colorado Rapids,COL,4150,4150,en_ambas,mismo_id
+PXT-00400,Columbus Crew,CLB,4151,4151,en_ambas,mismo_id
+PXT-00401,Comerciantes FC,COM,5497,4321,en_ambas,mismo_nombre_id_distinto
+PXT-00402,Comerciantes Unidos,CU,,5487,solo_sudamerican,exclusivo
+PXT-00403,Como 1907,COM,4219,4219,en_ambas,mismo_id
+PXT-00404,Comunicaciones FC,COM,5274,2489,en_ambas,mismo_nombre_id_distinto
+PXT-00405,Coquimbo Unido,COQ,2707,2707,en_ambas,mismo_id
+PXT-00406,Córdoba CF,COR,,359,solo_sudamerican,exclusivo
+PXT-00407,Corinthians,COR,,1247,solo_sudamerican,exclusivo
+PXT-00408,Coritiba FBC,CFC,,1931,solo_sudamerican,exclusivo
+PXT-00409,Coritiba FC,CFC,1931,,solo_conmegol,exclusivo
+PXT-00410,Cortuluá FC,COR,5209,,solo_conmegol,exclusivo
+PXT-00411,Costa Rica,CRI,42,42,en_ambas,mismo_id
+PXT-00412,Côte D'Ivoire,CIV,1051,1051,en_ambas,mismo_id
+PXT-00413,Coventry City,COV,,4183,solo_sudamerican,exclusivo
+PXT-00414,Coventry City FC,COV,4183,,solo_conmegol,exclusivo
+PXT-00415,CR Flamengo,FLA,1248,1248,en_ambas,mismo_id
+PXT-00416,CRB,CRB,,2506,solo_sudamerican,exclusivo
+PXT-00417,Criciúma EC,CEC,2460,2460,en_ambas,mismo_id
+PXT-00418,Cristiano FC,CR7,9301,,solo_conmegol,exclusivo
+PXT-00419,Croatia,CRO,24,24,en_ambas,mismo_id
+PXT-00420,Cruyff FC,CRU,9313,,solo_conmegol,exclusivo
+PXT-00421,Cruz Azul,CAZ,,1265,solo_sudamerican,exclusivo
+PXT-00422,Cruzeiro EC,CRU,274,274,en_ambas,mismo_id
+PXT-00423,Crystal Palace,CRY,,382,solo_sudamerican,exclusivo
+PXT-00424,Crystal Palace FC,CRY,382,,solo_conmegol,exclusivo
+PXT-00425,CS Cartaginés,CSC,5053,,solo_conmegol,exclusivo
+PXT-00426,CS Cerrito,CER,5505,,solo_conmegol,exclusivo
+PXT-00427,CS Deportivo Madryn,MAD,2498,,solo_conmegol,exclusivo
+PXT-00428,CS Emelec,EME,2286,2286,en_ambas,mismo_id
+PXT-00429,CS Herediano,CSH,5052,,solo_conmegol,exclusivo
+PXT-00430,CS Independiente Rivadavia,IRI,2726,,solo_conmegol,exclusivo
+PXT-00431,CS Miramar Misiones,MIR,5507,,solo_conmegol,exclusivo
+PXT-00432,CSD Colo Colo,CC,1256,,solo_conmegol,exclusivo
+PXT-00433,CSD Municipal,MUN,5272,2487,en_ambas,mismo_nombre_id_distinto
+PXT-00434,CSD Rangers,RAN,2550,,solo_conmegol,exclusivo
+PXT-00435,CSD Tristán Suárez,TSZ,5827,,solo_conmegol,exclusivo
+PXT-00436,CSD Xelajú MC,XEL,5276,,solo_conmegol,exclusivo
+PXT-00437,CSDC Alianza Universidad,ALU,5583,,solo_conmegol,exclusivo
+PXT-00438,Cúcuta Deportivo,CUC,,5376,solo_sudamerican,exclusivo
+PXT-00439,Cúcuta Deportivo FC,CUC,2194,,solo_conmegol,exclusivo
+PXT-00440,Cuenca Juniors,CJR,4445,,solo_conmegol,exclusivo
+PXT-00441,Cuiabá EC,CUI,5142,,solo_conmegol,exclusivo
+PXT-00442,Cuiabá MT,CUI,,5142,solo_sudamerican,exclusivo
+PXT-00443,Cumbayá FC,CUM,5408,,solo_conmegol,exclusivo
+PXT-00444,Curacao,CUW,1124,1124,en_ambas,mismo_id
+PXT-00445,Curicó Unido,CUR,,2708,solo_sudamerican,exclusivo
+PXT-00446,Cusco FC,CUS,2675,2675,en_ambas,mismo_id
+PXT-00447,Cyprus,CYP,1171,1171,en_ambas,mismo_id
+PXT-00448,Czech Republic,CZE,13,,solo_conmegol,exclusivo
+PXT-00449,Czechia,CZE,,13,solo_sudamerican,exclusivo
+PXT-00450,d1 Classic América,AME,9028,,solo_conmegol,exclusivo
+PXT-00451,d2 Classic Tigres,TIG,9029,,solo_conmegol,exclusivo
+PXT-00452,d3 Classic Monterrey,MON,9030,,solo_conmegol,exclusivo
+PXT-00453,d4 Classic Inter Miami,MIA,9031,,solo_conmegol,exclusivo
+PXT-00454,d5 Classic Al Ahly,AHL,9032,,solo_conmegol,exclusivo
+PXT-00455,Danubio,DAN,,2203,solo_sudamerican,exclusivo
+PXT-00456,Danubio FC,DAN,2203,,solo_conmegol,exclusivo
+PXT-00457,Daquilema FC,DAQ,4450,,solo_conmegol,exclusivo
+PXT-00458,DC United,DCU,4152,4152,en_ambas,mismo_id
+PXT-00459,Defensa y Justicia,DYJ,2722,2722,en_ambas,mismo_id
+PXT-00460,Defensor Sporting Club,DSC,2217,2217,en_ambas,mismo_id
+PXT-00461,Defensores de Belgrano,DDB,,5453,solo_sudamerican,exclusivo
+PXT-00462,Defensores Unidos,CAD,,4045,solo_sudamerican,exclusivo
+PXT-00463,Delfín SC,DEL,5434,5434,en_ambas,mismo_id
+PXT-00464,Denmark,DEN,15,15,en_ambas,mismo_id
+PXT-00465,Deportes Antofagasta,ANT,,5946,solo_sudamerican,exclusivo
+PXT-00466,Deportes Concepción,CON,2709,2709,en_ambas,mismo_id
+PXT-00467,Deportes Copiapó,COP,2710,2710,en_ambas,mismo_id
+PXT-00468,Deportes Iquique,DIQ,2543,2543,en_ambas,mismo_id
+PXT-00469,Deportes La Serena,SER,2544,2544,en_ambas,mismo_id
+PXT-00470,Deportes Limache,LIM,2716,4004,en_ambas,mismo_nombre_id_distinto
+PXT-00471,Deportes Puerto Montt,DPM,5006,2715,en_ambas,mismo_nombre_id_distinto
+PXT-00472,Deportes Quindío,QUI,2649,,solo_conmegol,exclusivo
+PXT-00473,Deportes Recoleta,REC,2483,2483,en_ambas,mismo_id
+PXT-00474,Deportes Santa Cruz,DSC,5582,5582,en_ambas,mismo_id
+PXT-00475,Deportes Temuco,TEM,4321,5499,en_ambas,mismo_nombre_id_distinto
+PXT-00476,Deportes Tolima,TOL,2361,2361,en_ambas,mismo_id
+PXT-00477,Deportivo Alavés,ALV,4145,4145,en_ambas,mismo_id
+PXT-00478,Deportivo Binacional FC,BIN,5488,5488,en_ambas,mismo_id
+PXT-00479,Deportivo Cali,CAL,2650,2650,en_ambas,mismo_id
+PXT-00480,Deportivo Coopsol,DCO,5494,,solo_conmegol,exclusivo
+PXT-00481,Deportivo Cuenca,CUE,2196,,solo_conmegol,exclusivo
+PXT-00482,Deportivo de La Coruña,LAC,,111,solo_sudamerican,exclusivo
+PXT-00483,Deportivo Garcilaso,DGA,5586,2497,en_ambas,mismo_nombre_id_distinto
+PXT-00484,Deportivo Guadalajara,GDL,,1700,solo_sudamerican,exclusivo
+PXT-00485,Deportivo La Guaira,DLG,,4409,solo_sudamerican,exclusivo
+PXT-00486,Deportivo La Guaira FC,DLG,4409,,solo_conmegol,exclusivo
+PXT-00487,Deportivo Llacuabamba,CDL,,2547,solo_sudamerican,exclusivo
+PXT-00488,Deportivo Madryn,MAD,,2498,solo_sudamerican,exclusivo
+PXT-00489,Deportivo Maipú,MPU,,2473,solo_sudamerican,exclusivo
+PXT-00490,Deportivo Maldonado,MAL,,5507,solo_sudamerican,exclusivo
+PXT-00491,Deportivo Moquegua,MOQ,5490,2706,en_ambas,mismo_nombre_id_distinto
+PXT-00492,Deportivo Morón,MOR,,5364,solo_sudamerican,exclusivo
+PXT-00493,Deportivo Municipal,DMU,,5489,solo_sudamerican,exclusivo
+PXT-00494,Deportivo Pasto,PAS,2651,2651,en_ambas,mismo_id
+PXT-00495,Deportivo Pereira,DPR,5370,5370,en_ambas,mismo_id
+PXT-00496,Deportivo Quevedo,QUE,5467,,solo_conmegol,exclusivo
+PXT-00497,Deportivo Quito,SDQ,2211,,solo_conmegol,exclusivo
+PXT-00498,Deportivo Rayo Zuliano,RZU,5520,,solo_conmegol,exclusivo
+PXT-00499,Deportivo Riestra,RIE,5366,5366,en_ambas,mismo_id
+PXT-00500,Deportivo Santo Domingo,DSD,4039,,solo_conmegol,exclusivo
+PXT-00501,Deportivo Saprissa,SAP,5050,,solo_conmegol,exclusivo
+PXT-00502,Deportivo Táchira,TAC,,2218,solo_sudamerican,exclusivo
+PXT-00503,Deportivo Táchira FC,TAC,2218,,solo_conmegol,exclusivo
+PXT-00504,Deportivo Toluca,TOL,,1773,solo_sudamerican,exclusivo
+PXT-00505,Derby County,DER,,383,solo_sudamerican,exclusivo
+PXT-00506,Dijon FCO,DIJ,,1328,solo_sudamerican,exclusivo
+PXT-00507,Dinamo Zagreb,DZG,,1203,solo_sudamerican,exclusivo
+PXT-00508,Diriangén FC,DIR,5705,,solo_conmegol,exclusivo
+PXT-00509,Dominican Republic,RDO,1103,,solo_conmegol,exclusivo
+PXT-00510,DR Congo,COD,1050,1050,en_ambas,mismo_id
+PXT-00511,Dynamo Kyiv,DYN,,134,solo_sudamerican,exclusivo
+PXT-00512,e1 Classic Boca Juniors,BOC,9101,,solo_conmegol,exclusivo
+PXT-00513,e2 River Plate,RIV,9102,,solo_conmegol,exclusivo
+PXT-00514,e3 Sao Paulo,MDA,9103,,solo_conmegol,exclusivo
+PXT-00515,e4 Santos,ARM,9104,,solo_conmegol,exclusivo
+PXT-00516,e5 Grêmio,LUX,9105,,solo_conmegol,exclusivo
+PXT-00517,e6 Flamengo,NIR,9106,,solo_conmegol,exclusivo
+PXT-00518,e7 Corinthians,AZE,9107,,solo_conmegol,exclusivo
+PXT-00519,e8 Atletico Mineiro,RUS,9108,,solo_conmegol,exclusivo
+PXT-00520,e9 Palmeiras,SMR,9109,,solo_conmegol,exclusivo
+PXT-00521,EC Bahia,BAH,2453,2453,en_ambas,mismo_id
+PXT-00522,EC Juventude,JUV,5137,5137,en_ambas,mismo_id
+PXT-00523,EC Vitória,VIT,1937,1937,en_ambas,mismo_id
+PXT-00524,Ecuador,ECU,51,51,en_ambas,mismo_id
+PXT-00525,Egypt,EGY,34,34,en_ambas,mismo_id
+PXT-00526,Eintracht Braunschweig,BRA,,4074,solo_sudamerican,exclusivo
+PXT-00527,Eintracht Frankfurt,EFK,226,226,en_ambas,mismo_id
+PXT-00528,El Porvenir FC,POR,2306,,solo_conmegol,exclusivo
+PXT-00529,El Salvador,SLV,1104,,solo_conmegol,exclusivo
+PXT-00530,Elche CF,ELC,361,361,en_ambas,mismo_id
+PXT-00531,Eldense,ELD,,4988,solo_sudamerican,exclusivo
+PXT-00532,England,ENG,5,5,en_ambas,mismo_id
+PXT-00533,Envigado FC,ENV,2652,,solo_conmegol,exclusivo
+PXT-00534,Escorpiones de Belén,ESC,5082,,solo_conmegol,exclusivo
+PXT-00535,Esperance de túnez,ESP,,2461,solo_sudamerican,exclusivo
+PXT-00536,ESTAC Troyes,TRO,420,,solo_conmegol,exclusivo
+PXT-00537,Estonia,EST,,1172,solo_sudamerican,exclusivo
+PXT-00538,Estrela Amadora,EST,,5844,solo_sudamerican,exclusivo
+PXT-00539,Estudiantes CNI,CNI,,5662,solo_sudamerican,exclusivo
+PXT-00540,Estudiantes de Caseros,EDC,,5658,solo_sudamerican,exclusivo
+PXT-00541,Estudiantes de La Plata,EST,,1238,solo_sudamerican,exclusivo
+PXT-00542,Estudiantes de Mérida FC,EDM,5438,,solo_conmegol,exclusivo
+PXT-00543,Estudiantes Río Cuarto,ERC,,5659,solo_sudamerican,exclusivo
+PXT-00544,Estudiantil CNI,EST,5499,,solo_conmegol,exclusivo
+PXT-00545,Everton,EVE,,177,solo_sudamerican,exclusivo
+PXT-00546,Everton FC,EVE,177,,solo_conmegol,exclusivo
+PXT-00547,Eyüpspor,EYU,,5820,solo_sudamerican,exclusivo
+PXT-00548,f1 Internacional,AND,9110,,solo_conmegol,exclusivo
+PXT-00549,f2 Independiente,BLR,9111,,solo_conmegol,exclusivo
+PXT-00550,f4 Atletico Nacional,NAC,9113,,solo_conmegol,exclusivo
+PXT-00551,f7 LDU Quito,LDU,9116,,solo_conmegol,exclusivo
+PXT-00552,f9 Peñarol,PEN,9118,,solo_conmegol,exclusivo
+PXT-00553,Faroe Islands,FRO,,1173,solo_sudamerican,exclusivo
+PXT-00554,FBC Melgar,MEL,2674,2674,en_ambas,mismo_id
+PXT-00555,FC Arouca,ARO,,2380,solo_sudamerican,exclusivo
+PXT-00556,FC Augsburg,FCA,,4124,solo_sudamerican,exclusivo
+PXT-00557,FC Barcelona,BAR,108,108,en_ambas,mismo_id
+PXT-00558,FC Basel 1893,BAS,,1706,solo_sudamerican,exclusivo
+PXT-00559,FC Bayern Múnich,FCB,127,,solo_conmegol,exclusivo
+PXT-00560,FC Cajamarca,CAJ,5261,5494,en_ambas,mismo_nombre_id_distinto
+PXT-00561,FC Carlos Stein,CCS,,2501,solo_sudamerican,exclusivo
+PXT-00562,FC Cartagena,CAR,,4309,solo_sudamerican,exclusivo
+PXT-00563,FC Cincinnati,FCC,5737,,solo_conmegol,exclusivo
+PXT-00564,FC Copenhagen,FCK,,1207,solo_sudamerican,exclusivo
+PXT-00565,FC Copenhague,COP,1207,,solo_conmegol,exclusivo
+PXT-00566,FC Dallas,FCD,4153,4153,en_ambas,mismo_id
+PXT-00567,FC Empoli,EMP,,235,solo_sudamerican,exclusivo
+PXT-00568,FC Famalicão,FAM,,5028,solo_sudamerican,exclusivo
+PXT-00569,FC Groningen,GRO,,244,solo_sudamerican,exclusivo
+PXT-00570,FC Insutec,INS,4444,,solo_conmegol,exclusivo
+PXT-00571,FC Inter de Milán,INT,119,,solo_conmegol,exclusivo
+PXT-00572,FC Juárez,JUA,5153,5153,en_ambas,mismo_id
+PXT-00573,FC Kairat Almaty,KAI,2058,,solo_conmegol,exclusivo
+PXT-00574,FC Lorient,LOR,414,414,en_ambas,mismo_id
+PXT-00575,FC Metz,FCM,,4123,solo_sudamerican,exclusivo
+PXT-00576,FC Midtjylland,FCM,,2069,solo_sudamerican,exclusivo
+PXT-00577,FC Motagua,MOT,4376,,solo_conmegol,exclusivo
+PXT-00578,FC Nantes,FCN,,216,solo_sudamerican,exclusivo
+PXT-00579,FC Porto,POR,192,192,en_ambas,mismo_id
+PXT-00580,FC San Marcos,SMA,,2700,solo_sudamerican,exclusivo
+PXT-00581,FC Schalke 04,S04,,184,solo_sudamerican,exclusivo
+PXT-00582,FC St. Pauli,STP,,4139,solo_sudamerican,exclusivo
+PXT-00583,FC Südtirol,SUD,,4228,solo_sudamerican,exclusivo
+PXT-00584,FC Toulouse,TFC,,221,solo_sudamerican,exclusivo
+PXT-00585,FC Universitario de Vinto,UNI,5019,,solo_conmegol,exclusivo
+PXT-00586,FC Utrecht,UTR,,251,solo_sudamerican,exclusivo
+PXT-00587,Fenerbahce,FB,,197,solo_sudamerican,exclusivo
+PXT-00588,Fenerbahçe SK,FB,197,,solo_conmegol,exclusivo
+PXT-00589,Ferencvárosi TC,FER,,2241,solo_sudamerican,exclusivo
+PXT-00590,Ferro Carril Oeste,FCO,2725,2725,en_ambas,mismo_id
+PXT-00591,Feyenoord Rotterdam,FEY,,117,solo_sudamerican,exclusivo
+PXT-00592,Finland,FIN,18,18,en_ambas,mismo_id
+PXT-00593,FK Bodø/Glimt,BG,5253,,solo_conmegol,exclusivo
+PXT-00594,FK Crvena Zvezda,CZV,1223,,solo_conmegol,exclusivo
+PXT-00595,Fluminense,FLU,,1249,solo_sudamerican,exclusivo
+PXT-00596,Fluminense FC,FLU,1249,,solo_conmegol,exclusivo
+PXT-00597,Forge FC,FOR,5703,,solo_conmegol,exclusivo
+PXT-00598,Fortaleza CEIF,FOR,5371,5371,en_ambas,mismo_id
+PXT-00599,Fortaleza EC,FOR,5143,5143,en_ambas,mismo_id
+PXT-00600,Fortuna Düsseldorf,F95,,431,solo_sudamerican,exclusivo
+PXT-00601,Fortuna Sittard,FOR,,345,solo_sudamerican,exclusivo
+PXT-00602,France,FRA,8,8,en_ambas,mismo_id
+PXT-00603,Frosinone Calcio,FRO,4234,,solo_conmegol,exclusivo
+PXT-00604,Fulham FC,FUL,178,178,en_ambas,mismo_id
+PXT-00605,g5 Emelec,EME,9123,,solo_conmegol,exclusivo
+PXT-00606,g6 Barcelona,BSC,9124,,solo_conmegol,exclusivo
+PXT-00607,Gabon,GAB,,1056,solo_sudamerican,exclusivo
+PXT-00608,Galatasaray,GS,,130,solo_sudamerican,exclusivo
+PXT-00609,Galatasaray SK,GS,130,,solo_conmegol,exclusivo
+PXT-00610,Gaziantep FK,GZT,,5356,solo_sudamerican,exclusivo
+PXT-00611,GD Estoril Praia,EST,,2383,solo_sudamerican,exclusivo
+PXT-00612,Génesis FC,GEN,4384,,solo_conmegol,exclusivo
+PXT-00613,Genoa CFC,GEN,323,323,en_ambas,mismo_id
+PXT-00614,Georgia,GEO,1174,1174,en_ambas,mismo_id
+PXT-00615,Germany,GER,14,14,en_ambas,mismo_id
+PXT-00616,Getafe CF,GET,362,362,en_ambas,mismo_id
+PXT-00617,Ghana,GHA,1058,1058,en_ambas,mismo_id
+PXT-00618,Gibraltar,GIB,,5439,solo_sudamerican,exclusivo
+PXT-00619,Gil Vicente FC,GIL,,2387,solo_sudamerican,exclusivo
+PXT-00620,Gimnasia La Plata,GIM,1239,1239,en_ambas,mismo_id
+PXT-00621,Gimnasia Mendoza,GMZ,,4997,solo_sudamerican,exclusivo
+PXT-00622,Gimnasia y Esgrima Jujuy,JUJ,,1928,solo_sudamerican,exclusivo
+PXT-00623,Gimnasia y Tiro,GYT,,2690,solo_sudamerican,exclusivo
+PXT-00624,Girona FC,GIR,,2187,solo_sudamerican,exclusivo
+PXT-00625,GNK Dinamo Zagreb,DZG,1203,,solo_conmegol,exclusivo
+PXT-00626,Go Ahead Eagles,GAE,,346,solo_sudamerican,exclusivo
+PXT-00627,Godoy Cruz,GOD,,1924,solo_sudamerican,exclusivo
+PXT-00628,Goiás EC,GOI,1933,1933,en_ambas,mismo_id
+PXT-00629,Göztepe,GOZ,,5203,solo_sudamerican,exclusivo
+PXT-00630,Granada CF,GRA,,1765,solo_sudamerican,exclusivo
+PXT-00631,Greece,GRE,28,28,en_ambas,mismo_id
+PXT-00632,Grêmio,GRE,1250,,solo_conmegol,exclusivo
+PXT-00633,Grêmio FBPA,GRE,,1250,solo_sudamerican,exclusivo
+PXT-00634,Grêmio Novorizontino,GEN,5768,5768,en_ambas,mismo_id
+PXT-00635,GUA Cobán Imperial,COB,5278,,solo_conmegol,exclusivo
+PXT-00636,GUA Deportivo Mixco,MIX,5277,,solo_conmegol,exclusivo
+PXT-00637,GUA Malacateco,MAL,5275,,solo_conmegol,exclusivo
+PXT-00638,Guabira,GUA,,2644,solo_sudamerican,exclusivo
+PXT-00639,Guadalupe FC,GFC,5058,,solo_conmegol,exclusivo
+PXT-00640,Gualaceo SC,GSC,5463,,solo_conmegol,exclusivo
+PXT-00641,Guaraní,GUA,,2213,solo_sudamerican,exclusivo
+PXT-00642,Guatemala,GTM,1107,1107,en_ambas,mismo_id
+PXT-00643,Guayaquil City FC,GCI,5459,2212,en_ambas,mismo_nombre_id_distinto
+PXT-00644,Güemes,GUE,,2478,solo_sudamerican,exclusivo
+PXT-00645,Guinea,GIN,1059,1059,en_ambas,mismo_id
+PXT-00646,GV San José,SJO,2647,,solo_conmegol,exclusivo
+PXT-00647,Haaland FC,EA,9311,,solo_conmegol,exclusivo
+PXT-00648,Haiti,HTI,1108,,solo_conmegol,exclusivo
+PXT-00649,Hamburger SV,HSV,,129,solo_sudamerican,exclusivo
+PXT-00650,Hannover 96,H96,,228,solo_sudamerican,exclusivo
+PXT-00651,Hansa Rostock,FCH,,229,solo_sudamerican,exclusivo
+PXT-00652,Hatayspor,HTY,,5452,solo_sudamerican,exclusivo
+PXT-00653,Hellas Verona,VER,,336,solo_sudamerican,exclusivo
+PXT-00654,Heracles Almelo,HER,,349,solo_sudamerican,exclusivo
+PXT-00655,Herediano,HER,,2486,solo_sudamerican,exclusivo
+PXT-00656,Hertha BSC,BSC,,4125,solo_sudamerican,exclusivo
+PXT-00657,Holstein Kiel,KIE,,5719,solo_sudamerican,exclusivo
+PXT-00658,Honduras,HND,43,43,en_ambas,mismo_id
+PXT-00659,Houston Dynamo,HOU,,4154,solo_sudamerican,exclusivo
+PXT-00660,Houston Dynamo FC,HDY,4154,,solo_conmegol,exclusivo
+PXT-00661,Huachipato,HUA,,2545,solo_sudamerican,exclusivo
+PXT-00662,Huachipato FC,HUA,2545,,solo_conmegol,exclusivo
+PXT-00663,Hull City,HUL,,1589,solo_sudamerican,exclusivo
+PXT-00664,Hull City AFC,HCI,1589,,solo_conmegol,exclusivo
+PXT-00665,Hungary,HUN,22,22,en_ambas,mismo_id
+PXT-00666,Huracán,HUR,,1922,solo_sudamerican,exclusivo
+PXT-00667,Huracán FC,HUR,5510,,solo_conmegol,exclusivo
+PXT-00668,Iceland,ISL,1175,1175,en_ambas,mismo_id
+PXT-00669,Imbabura SC,IMB,4035,,solo_conmegol,exclusivo
+PXT-00670,Independiente,IND,,1240,solo_sudamerican,exclusivo
+PXT-00671,Independiente Del Valle,IND,2659,2659,en_ambas,mismo_id
+PXT-00672,Independiente Juniors,IJR,4449,,solo_conmegol,exclusivo
+PXT-00673,Independiente Medellín,MED,2210,2210,en_ambas,mismo_id
+PXT-00674,Independiente Petrolero,IPE,5455,2647,en_ambas,mismo_nombre_id_distinto
+PXT-00675,Independiente Rivadavia,IRM,,2726,solo_sudamerican,exclusivo
+PXT-00676,Independiente Santa Fe,SFE,2657,2657,en_ambas,mismo_id
+PXT-00677,Independiente Valle del Cauca,IVC,5378,,solo_conmegol,exclusivo
+PXT-00678,Instituto,INS,,2727,solo_sudamerican,exclusivo
+PXT-00679,Instituto AC Córdoba,INS,2727,,solo_conmegol,exclusivo
+PXT-00680,Inter de San Carlos,ISC,5076,,solo_conmegol,exclusivo
+PXT-00681,Inter Miami,MIA,,5738,solo_sudamerican,exclusivo
+PXT-00682,Inter Miami CF,MIA,5738,,solo_conmegol,exclusivo
+PXT-00683,Inter Milan,INT,,119,solo_sudamerican,exclusivo
+PXT-00684,Internacional de Bogotá,IBO,2654,2654,en_ambas,mismo_id
+PXT-00685,Internacional FC,INT,5215,,solo_conmegol,exclusivo
+PXT-00686,Ipswich Town,IPS,,386,solo_sudamerican,exclusivo
+PXT-00687,Ipswich Town FC,ITO,386,,solo_conmegol,exclusivo
+PXT-00688,Iran,IRN,55,55,en_ambas,mismo_id
+PXT-00689,Iraq,IRQ,1010,1010,en_ambas,mismo_id
+PXT-00690,Ireland,IRL,,1,solo_sudamerican,exclusivo
+PXT-00691,Israel,ISR,1164,1164,en_ambas,mismo_id
+PXT-00692,Istanbulspor,IST,,5358,solo_sudamerican,exclusivo
+PXT-00693,Italy,ITA,12,12,en_ambas,mismo_id
+PXT-00694,Jaguares de Córdoba,JAG,5210,2652,en_ambas,mismo_nombre_id_distinto
+PXT-00695,Jamaica,JAM,41,41,en_ambas,mismo_id
+PXT-00696,Japan,JPN,52,52,en_ambas,mismo_id
+PXT-00697,Jocay de Manta,JOC,2319,,solo_conmegol,exclusivo
+PXT-00698,Jocay FC,JOC,2310,,solo_conmegol,exclusivo
+PXT-00699,Jordan,JOR,1011,1011,en_ambas,mismo_id
+PXT-00700,Jorge Washington,JOR,2315,,solo_conmegol,exclusivo
+PXT-00701,Juan Pablo II,CJP,5501,,solo_conmegol,exclusivo
+PXT-00702,Juan Pablo II College,JPC,,2499,solo_sudamerican,exclusivo
+PXT-00703,Junior,JUN,,2285,solo_sudamerican,exclusivo
+PXT-00704,Junior FC,JUN,2285,,solo_conmegol,exclusivo
+PXT-00705,Juticalpa FC,JUT,4382,,solo_conmegol,exclusivo
+PXT-00706,Juventus FC,JUV,120,120,en_ambas,mismo_id
+PXT-00707,k1 Brasil,BRA,9201,,solo_conmegol,exclusivo
+PXT-00708,k2 Alemania,ALE,9202,,solo_conmegol,exclusivo
+PXT-00709,k3 Espana,ESP,9203,,solo_conmegol,exclusivo
+PXT-00710,k4 Francia,FRA,9204,,solo_conmegol,exclusivo
+PXT-00711,k5 Italia,ITA,9205,,solo_conmegol,exclusivo
+PXT-00712,k6 Argentina,ARG,9206,,solo_conmegol,exclusivo
+PXT-00713,k7 Portugal,POR,9207,,solo_conmegol,exclusivo
+PXT-00714,k8 Paises Bajos,NED,9208,,solo_conmegol,exclusivo
+PXT-00715,k9 Inglaterra,ING,9209,,solo_conmegol,exclusivo
+PXT-00716,KAA Gent,GNT,,1196,solo_sudamerican,exclusivo
+PXT-00717,Karlsruher SC,KSC,,4136,solo_sudamerican,exclusivo
+PXT-00718,KAS Eupen,EUP,,5190,solo_sudamerican,exclusivo
+PXT-00719,Kasimpasa,KAS,,2625,solo_sudamerican,exclusivo
+PXT-00720,Kayserispor,KAY,,1996,solo_sudamerican,exclusivo
+PXT-00721,Kazakhstan,KAZ,,1176,solo_sudamerican,exclusivo
+PXT-00722,Khimki,KHI,,5298,solo_sudamerican,exclusivo
+PXT-00723,Konyaspor,KON,,5204,solo_sudamerican,exclusivo
+PXT-00724,Korea Dpr,PRK,,1012,solo_sudamerican,exclusivo
+PXT-00725,Kosovo,KOS,,5440,solo_sudamerican,exclusivo
+PXT-00726,KRC Genk,GNK,,1195,solo_sudamerican,exclusivo
+PXT-00727,Kuwait,KWT,,1013,solo_sudamerican,exclusivo
+PXT-00728,l1 Belgica,BEL,9210,,solo_conmegol,exclusivo
+PXT-00729,l2 Uruguay,URU,9211,,solo_conmegol,exclusivo
+PXT-00730,l3 Croacia,CRO,9212,,solo_conmegol,exclusivo
+PXT-00731,l4 Mexico,MEX,9213,,solo_conmegol,exclusivo
+PXT-00732,l5 Chile,CHI,9214,,solo_conmegol,exclusivo
+PXT-00733,l6 Colombia,COL,9215,,solo_conmegol,exclusivo
+PXT-00734,l7 Suecia,SUE,9217,,solo_conmegol,exclusivo
+PXT-00735,La Luz FC,LUZ,2499,,solo_conmegol,exclusivo
+PXT-00736,Lanús,LAN,,1929,solo_sudamerican,exclusivo
+PXT-00737,LASK,LAS,,2078,solo_sudamerican,exclusivo
+PXT-00738,Latvia,LVA,,59,solo_sudamerican,exclusivo
+PXT-00739,LD Alajuelense,LDA,5051,,solo_conmegol,exclusivo
+PXT-00740,LDU Quito,LDU,,1907,solo_sudamerican,exclusivo
+PXT-00741,Le Havre AC,HAV,413,413,en_ambas,mismo_id
+PXT-00742,Le Mans FC,MAN,212,,solo_conmegol,exclusivo
+PXT-00743,Lebanon,LBN,1015,1015,en_ambas,mismo_id
+PXT-00744,Leeds United,LEE,104,104,en_ambas,mismo_id
+PXT-00745,Leganés,LEG,,4272,solo_sudamerican,exclusivo
+PXT-00746,Legia Warszawa,LEG,,1756,solo_sudamerican,exclusivo
+PXT-00747,Leicester City,LEI,,204,solo_sudamerican,exclusivo
+PXT-00748,León FC,LEO,,1789,solo_sudamerican,exclusivo
+PXT-00749,Leones FC,LEO,5372,5467,en_ambas,mismo_nombre_id_distinto
+PXT-00750,Leones FC (Atuntaqui),LEO,4446,,solo_conmegol,exclusivo
+PXT-00751,Levante UD,LEV,366,366,en_ambas,mismo_id
+PXT-00752,Libertad,LIB,,2198,solo_sudamerican,exclusivo
+PXT-00753,Libertad FC,LIB,4036,2660,en_ambas,mismo_nombre_id_distinto
+PXT-00754,Liechtenstein,LIE,,1177,solo_sudamerican,exclusivo
+PXT-00755,Liga de Loja,LOJ,2660,,solo_conmegol,exclusivo
+PXT-00756,Liga de Portoviejo,POR,5464,,solo_conmegol,exclusivo
+PXT-00757,Liga de Quito,LDU,1907,,solo_conmegol,exclusivo
+PXT-00758,Lithuania,LTU,,1178,solo_sudamerican,exclusivo
+PXT-00759,Liverpool FC,LIV,103,103,en_ambas,mismo_id
+PXT-00760,Liverpool FC (Montevideo),LIV,2363,,solo_conmegol,exclusivo
+PXT-00761,Liverpool Montevideo,LIV,,2363,solo_sudamerican,exclusivo
+PXT-00762,Llaneros FC,LLA,5373,5373,en_ambas,mismo_id
+PXT-00763,Londrina EC,LON,5048,5573,en_ambas,mismo_nombre_id_distinto
+PXT-00764,Los Angeles FC,LA,5741,5741,en_ambas,mismo_id
+PXT-00765,Los Angeles Galaxy,LAG,4155,4155,en_ambas,mismo_id
+PXT-00766,Los Chankas,CHA,,4037,solo_sudamerican,exclusivo
+PXT-00767,LOSC Lille,LIL,213,213,en_ambas,mismo_id
+PXT-00768,Ludogorets Razgrad,LUD,,4355,solo_sudamerican,exclusivo
+PXT-00769,Luis Arboleda Martinez,TEC,2314,,solo_conmegol,exclusivo
+PXT-00770,Luton Town,LUT,,4363,solo_sudamerican,exclusivo
+PXT-00771,Luxembourg,LUX,,1179,solo_sudamerican,exclusivo
+PXT-00772,m3 Paraguay,PAR,9221,,solo_conmegol,exclusivo
+PXT-00773,m4 Costa Rica,CRI,9222,,solo_conmegol,exclusivo
+PXT-00774,Maccabi Tel Aviv,MTA,,2101,solo_sudamerican,exclusivo
+PXT-00775,Magallanes,MAG,,2712,solo_sudamerican,exclusivo
+PXT-00776,Málaga CF,MAL,260,260,en_ambas,mismo_id
+PXT-00777,Mali,MLI,1067,1067,en_ambas,mismo_id
+PXT-00778,Malmö FF,MFF,1702,,solo_conmegol,exclusivo
+PXT-00779,Malta,MLT,1181,1181,en_ambas,mismo_id
+PXT-00780,Mamelodi Sundowns,MAM,,4242,solo_sudamerican,exclusivo
+PXT-00781,Managua FC,MAN,5706,,solo_conmegol,exclusivo
+PXT-00782,Manchester City,MCI,,173,solo_sudamerican,exclusivo
+PXT-00783,Manchester City FC,MCI,173,,solo_conmegol,exclusivo
+PXT-00784,Manchester United,MUN,,100,solo_sudamerican,exclusivo
+PXT-00785,Manchester United FC,MUN,100,,solo_conmegol,exclusivo
+PXT-00786,Manta,MAN,2313,,solo_conmegol,exclusivo
+PXT-00787,Manta F. C.,MAN,,2662,solo_sudamerican,exclusivo
+PXT-00788,Manta FC,MAN,2662,,solo_conmegol,exclusivo
+PXT-00789,Mantova 1911,MAN,,4379,solo_sudamerican,exclusivo
+PXT-00790,Maoq FC,MFC,2309,,solo_conmegol,exclusivo
+PXT-00791,Maradona FC,DM,9305,,solo_conmegol,exclusivo
+PXT-00792,Mazatlán FC,MAZ,,5730,solo_sudamerican,exclusivo
+PXT-00793,Mbappé FC,KM,9312,,solo_conmegol,exclusivo
+PXT-00794,Messi FC,LM,9302,,solo_conmegol,exclusivo
+PXT-00795,Metropolitanos FC,MET,5518,,solo_conmegol,exclusivo
+PXT-00796,Mexico,MEX,40,40,en_ambas,mismo_id
+PXT-00797,Middlesbrough FC,MID,,205,solo_sudamerican,exclusivo
+PXT-00798,Millonarios,MIL,,1258,solo_sudamerican,exclusivo
+PXT-00799,Millonarios FC,MIL,1258,,solo_conmegol,exclusivo
+PXT-00800,Millwall FC,MIL,,387,solo_sudamerican,exclusivo
+PXT-00801,Minnesota United,MNU,5742,5742,en_ambas,mismo_id
+PXT-00802,Mirandés,MIR,,2616,solo_sudamerican,exclusivo
+PXT-00803,Mirassol,MIR,,5767,solo_sudamerican,exclusivo
+PXT-00804,Mirassol FC,MFC,5767,,solo_conmegol,exclusivo
+PXT-00805,Mitre,MIT,,5365,solo_sudamerican,exclusivo
+PXT-00806,MKE Ankaragücü,ANK,,5360,solo_sudamerican,exclusivo
+PXT-00807,ML DEFAULT ASIA,MLA,2696,2696,en_ambas,mismo_id
+PXT-00808,ML Default Europe,MLD,140,140,en_ambas,mismo_id
+PXT-00809,ML DEFAULT LATINAMERICA,MDL,2469,2469,en_ambas,mismo_id
+PXT-00810,Moca FC,MOC,5717,,solo_conmegol,exclusivo
+PXT-00811,Modena FC,MOD,,237,solo_sudamerican,exclusivo
+PXT-00812,Moldova,MDA,,1182,solo_sudamerican,exclusivo
+PXT-00813,Monagas SC,MSC,2701,,solo_conmegol,exclusivo
+PXT-00814,Montenegro,MNE,1551,1551,en_ambas,mismo_id
+PXT-00815,Montevideo City Torque,MCT,5503,5503,en_ambas,mismo_id
+PXT-00816,Montevideo Wanderers,MWD,,2204,solo_sudamerican,exclusivo
+PXT-00817,Montevideo Wanderers FC,MWA,2204,,solo_conmegol,exclusivo
+PXT-00818,Montpellier HSC,MON,,215,solo_sudamerican,exclusivo
+PXT-00819,Moreirense FC,MOR,,2388,solo_sudamerican,exclusivo
+PXT-00820,Morocco,MAR,32,32,en_ambas,mismo_id
+PXT-00821,Motagua,MOT,,2488,solo_sudamerican,exclusivo
+PXT-00822,Mushuc Runa SC,MRU,5465,5465,en_ambas,mismo_id
+PXT-00823,n1 Ecuador,ECU,9228,,solo_conmegol,exclusivo
+PXT-00824,NAC Breda,NAC,,246,solo_sudamerican,exclusivo
+PXT-00825,Nacional,NAC,,1944,solo_sudamerican,exclusivo
+PXT-00826,Nacional Asunción,NAC,,2214,solo_sudamerican,exclusivo
+PXT-00827,Nacional Potosí,NPO,,2645,solo_sudamerican,exclusivo
+PXT-00828,Nashville SC,NSC,5739,5739,en_ambas,mismo_id
+PXT-00829,Náutico Capibare,NAU,,4959,solo_sudamerican,exclusivo
+PXT-00830,Náutico Capibaribe,NAU,1935,,solo_conmegol,exclusivo
+PXT-00831,NEC Nijmegen,NEC,,247,solo_sudamerican,exclusivo
+PXT-00832,Necaxa,NEC,,5130,solo_sudamerican,exclusivo
+PXT-00833,Neom SC,NEO,2582,,solo_conmegol,exclusivo
+PXT-00834,Netherlands,NED,10,10,en_ambas,mismo_id
+PXT-00835,New England Revolution,NER,4157,4157,en_ambas,mismo_id
+PXT-00836,New York City FC,NYC,5061,5061,en_ambas,mismo_id
+PXT-00837,New York RB,NYR,4158,,solo_conmegol,exclusivo
+PXT-00838,New York Red Bulls,NYR,,4158,solo_sudamerican,exclusivo
+PXT-00839,New Zealand,NZL,1141,1141,en_ambas,mismo_id
+PXT-00840,Newcastle United,NEW,,106,solo_sudamerican,exclusivo
+PXT-00841,Newcastle United FC,NEW,106,,solo_conmegol,exclusivo
+PXT-00842,Newell's Old Boys,NOB,1241,1241,en_ambas,mismo_id
+PXT-00843,Neymar FC,NJR,9306,,solo_conmegol,exclusivo
+PXT-00844,Nicaragua,NIC,1112,,solo_conmegol,exclusivo
+PXT-00845,Nigeria,NGA,35,35,en_ambas,mismo_id
+PXT-00846,North Korea,PRK,1012,,solo_conmegol,exclusivo
+PXT-00847,North Macedonia,MKD,1180,1180,en_ambas,mismo_id
+PXT-00848,Northern Ireland,NIR,2,2,en_ambas,mismo_id
+PXT-00849,Norway,NOR,16,16,en_ambas,mismo_id
+PXT-00850,Norwich City,NOR,,388,solo_sudamerican,exclusivo
+PXT-00851,Nottingham Forest,NFO,,389,solo_sudamerican,exclusivo
+PXT-00852,Nottingham Forest FC,NFO,389,,solo_conmegol,exclusivo
+PXT-00853,Ñublense,NUB,,2699,solo_sudamerican,exclusivo
+PXT-00854,Nueva Chicago,CHI,,2728,solo_sudamerican,exclusivo
+PXT-00855,OGC Nice,OGC,,217,solo_sudamerican,exclusivo
+PXT-00856,OGC Niza,NIZ,217,,solo_conmegol,exclusivo
+PXT-00857,O'Higgins,OHI,,2541,solo_sudamerican,exclusivo
+PXT-00858,Olancho FC,OLA,4379,,solo_conmegol,exclusivo
+PXT-00859,Olimpia,OLP,,1261,solo_sudamerican,exclusivo
+PXT-00860,Olympiacos FC,OLY,133,,solo_conmegol,exclusivo
+PXT-00861,Olympiacos Piraeus,OLY,,133,solo_sudamerican,exclusivo
+PXT-00862,Olympique de Lyon,OLY,181,,solo_conmegol,exclusivo
+PXT-00863,Olympique de Marsella,UNH,113,,solo_conmegol,exclusivo
+PXT-00864,Olympique Lyon,OL,,181,solo_sudamerican,exclusivo
+PXT-00865,Olympique Marseille,OM,,113,solo_sudamerican,exclusivo
+PXT-00866,Oman,OMN,1022,1022,en_ambas,mismo_id
+PXT-00867,Once Caldas,ONC,2284,2284,en_ambas,mismo_id
+PXT-00868,Operário Ferroviário EC,OPE,5433,,solo_conmegol,exclusivo
+PXT-00869,Operário PR,OPE,,5433,solo_sudamerican,exclusivo
+PXT-00870,Orense SC,ORE,5466,,solo_conmegol,exclusivo
+PXT-00871,Orense Sporting Club,ORE,,5466,solo_sudamerican,exclusivo
+PXT-00872,Oriente Petrolero,ORI,,2359,solo_sudamerican,exclusivo
+PXT-00873,Orlando City SC,ORL,5062,5062,en_ambas,mismo_id
+PXT-00874,Orsomarso SC,ORS,5374,,solo_conmegol,exclusivo
+PXT-00875,Osasuna,OSA,,263,solo_sudamerican,exclusivo
+PXT-00876,Oxford United,OXF,,5086,solo_sudamerican,exclusivo
+PXT-00877,Pafos FC,PAF,4342,,solo_conmegol,exclusivo
+PXT-00878,Palermo FC,PAL,,238,solo_sudamerican,exclusivo
+PXT-00879,Palestino,PAL,,2548,solo_sudamerican,exclusivo
+PXT-00880,Panama,PAN,1113,1113,en_ambas,mismo_id
+PXT-00881,Panathinaikos,PAN,,198,solo_sudamerican,exclusivo
+PXT-00882,PAOK Thessaloniki,PAO,1212,1212,en_ambas,mismo_id
+PXT-00883,Paraguay,PRY,48,48,en_ambas,mismo_id
+PXT-00884,Paris FC,PAR,4211,4211,en_ambas,mismo_id
+PXT-00885,Paris Saint-Germain,PSG,,114,solo_sudamerican,exclusivo
+PXT-00886,París Saint-Germain FC,PSG,114,,solo_conmegol,exclusivo
+PXT-00887,Parma Calcio,PAR,123,,solo_conmegol,exclusivo
+PXT-00888,Parma Calcio 1913,PAR,,123,solo_sudamerican,exclusivo
+PXT-00889,Patriotas FC,PAT,2655,,solo_conmegol,exclusivo
+PXT-00890,Patronato,PAT,,2729,solo_sudamerican,exclusivo
+PXT-00891,Paysandú FC,PAY,5411,,solo_conmegol,exclusivo
+PXT-00892,PEC Zwolle,ZWO,,256,solo_sudamerican,exclusivo
+PXT-00893,Pedro Balda,PBA,2317,,solo_conmegol,exclusivo
+PXT-00894,Pelé FC,PEL,9303,,solo_conmegol,exclusivo
+PXT-00895,Peñarol,PEN,,1263,solo_sudamerican,exclusivo
+PXT-00896,Peru,PER,46,46,en_ambas,mismo_id
+PXT-00897,Philadelphia Union,PUN,4159,4159,en_ambas,mismo_id
+PXT-00898,Pirata FC,PIR,5584,,solo_conmegol,exclusivo
+PXT-00899,Piratas FC,EPF,,5584,solo_sudamerican,exclusivo
+PXT-00900,Pisa Sporting Club,PIS,,4241,solo_sudamerican,exclusivo
+PXT-00901,Platense,PLA,,5454,solo_sudamerican,exclusivo
+PXT-00902,Platense FC,PLA,4385,,solo_conmegol,exclusivo
+PXT-00903,Plaza Colonia,PCO,5509,,solo_conmegol,exclusivo
+PXT-00904,Plymouth Argyle,PLY,,4364,solo_sudamerican,exclusivo
+PXT-00905,Poland,POL,19,19,en_ambas,mismo_id
+PXT-00906,Portland Timbers,POR,4160,4160,en_ambas,mismo_id
+PXT-00907,Portsmouth FC,POR,,4365,solo_sudamerican,exclusivo
+PXT-00908,Portugal,POR,6,6,en_ambas,mismo_id
+PXT-00909,Portuguesa FC,POR,5519,,solo_conmegol,exclusivo
+PXT-00910,Preston North End,PNE,,4192,solo_sudamerican,exclusivo
+PXT-00911,Preußen Münster,MUN,,2298,solo_sudamerican,exclusivo
+PXT-00912,Progreso,PRO,,2685,solo_sudamerican,exclusivo
+PXT-00913,PSV Eindhoven,PSV,118,118,en_ambas,mismo_id
+PXT-00914,Puebla FC,PUE,,1772,solo_sudamerican,exclusivo
+PXT-00915,Puerto Rico,PRI,1114,,solo_conmegol,exclusivo
+PXT-00916,Pumas UNAM,PUM,1775,1775,en_ambas,mismo_id
+PXT-00917,Puntarenas FC,PFC,5078,,solo_conmegol,exclusivo
+PXT-00918,Qarabağ FK,QRB,4326,4326,en_ambas,mismo_id
+PXT-00919,Qatar,QAT,1026,1026,en_ambas,mismo_id
+PXT-00920,Queens Park Rangers,QPR,,1327,solo_sudamerican,exclusivo
+PXT-00921,Querétaro FC,QUE,1792,1792,en_ambas,mismo_id
+PXT-00922,Quevilly Rouen Métropole,QUR,,5100,solo_sudamerican,exclusivo
+PXT-00923,Quilmes AC,QUI,2629,2629,en_ambas,mismo_id
+PXT-00924,Racing Club,RAC,1237,1237,en_ambas,mismo_id
+PXT-00925,Racing Club de Estrasburgo,MUN,4213,,solo_conmegol,exclusivo
+PXT-00926,Racing Club (Montevideo),RAC,2290,2290,en_ambas,mismo_id
+PXT-00927,Racing Córdoba,RAC,,4046,solo_sudamerican,exclusivo
+PXT-00928,Racing Ferrol,RAC,,4259,solo_sudamerican,exclusivo
+PXT-00929,Racing Santander,SAN,,264,solo_sudamerican,exclusivo
+PXT-00930,Rampla Juniors FC,RAM,5437,,solo_conmegol,exclusivo
+PXT-00931,Rangers,RAN,,132,solo_sudamerican,exclusivo
+PXT-00932,Rangers de Talca,RAN,,5501,solo_sudamerican,exclusivo
+PXT-00933,Rayo Vallecano,RAY,370,370,en_ambas,mismo_id
+PXT-00934,RB Leipzig,RBL,,5010,solo_sudamerican,exclusivo
+PXT-00935,RC Celta de Vigo,CEL,195,,solo_conmegol,exclusivo
+PXT-00936,RC Deportivo A Coruña,RCD,111,,solo_conmegol,exclusivo
+PXT-00937,RC Lens,LEN,182,182,en_ambas,mismo_id
+PXT-00938,RC Strasbourg Alsace,RCS,,4213,solo_sudamerican,exclusivo
+PXT-00939,RCD Espanyol,ESP,259,259,en_ambas,mismo_id
+PXT-00940,RCD Mallorca,MLL,,261,solo_sudamerican,exclusivo
+PXT-00941,Real Betis,BET,194,,solo_conmegol,exclusivo
+PXT-00942,Real Betis Balompié,BET,,194,solo_sudamerican,exclusivo
+PXT-00943,Real CD España,RES,4378,,solo_conmegol,exclusivo
+PXT-00944,Real Cundinamarca FC,RSC,5375,,solo_conmegol,exclusivo
+PXT-00945,Real Estelí FC,EST,5707,,solo_conmegol,exclusivo
+PXT-00946,Real Hope FA,HOP,5712,,solo_conmegol,exclusivo
+PXT-00947,Real Madrid,RMA,,109,solo_sudamerican,exclusivo
+PXT-00948,Real Madrid CF,RMA,109,,solo_conmegol,exclusivo
+PXT-00949,Real Oruro,ORU,,5457,solo_sudamerican,exclusivo
+PXT-00950,Real Oviedo,OVI,,4260,solo_sudamerican,exclusivo
+PXT-00951,Real Potosí,RPO,1940,2358,en_ambas,mismo_nombre_id_distinto
+PXT-00952,Real Racing Club,RRC,264,,solo_conmegol,exclusivo
+PXT-00953,Real Salt Lake City,RSL,4161,4161,en_ambas,mismo_id
+PXT-00954,Real Sociedad,RSO,196,196,en_ambas,mismo_id
+PXT-00955,Real Valladolid CF,VLL,,266,solo_sudamerican,exclusivo
+PXT-00956,Real Zaragoza,ZAR,,268,solo_sudamerican,exclusivo
+PXT-00957,Recoleta FC,REC,5483,5481,en_ambas,mismo_nombre_id_distinto
+PXT-00958,Red Bull Bragantino,RBB,2459,2459,en_ambas,mismo_id
+PXT-00959,Red Bull Salzburg,RBS,,1586,solo_sudamerican,exclusivo
+PXT-00960,Red Star Belgrade,CRZ,,1223,solo_sudamerican,exclusivo
+PXT-00961,Republic of Ireland,IRL,1,,solo_conmegol,exclusivo
+PXT-00962,Republic Of Korea,KOR,,53,solo_sudamerican,exclusivo
+PXT-00963,Rio Ave FC,AVE,,1979,solo_sudamerican,exclusivo
+PXT-00964,Riquelme FC,JRR,9314,,solo_conmegol,exclusivo
+PXT-00965,River Plate,RIV,,138,solo_sudamerican,exclusivo
+PXT-00966,River Plate (Montevideo),RIV,2686,,solo_conmegol,exclusivo
+PXT-00967,RKC Waalwijk,RKC,,254,solo_sudamerican,exclusivo
+PXT-00968,Romania,ROU,26,26,en_ambas,mismo_id
+PXT-00969,Ronadinho FC,R10,9304,,solo_conmegol,exclusivo
+PXT-00970,Ronaldo FC,R9,9309,,solo_conmegol,exclusivo
+PXT-00971,Rosario Central,CEN,,1242,solo_sudamerican,exclusivo
+PXT-00972,Ross County,ROS,,2622,solo_sudamerican,exclusivo
+PXT-00973,RSC Anderlecht,AND,,174,solo_sudamerican,exclusivo
+PXT-00974,Rubin Kazan,RKA,,1941,solo_sudamerican,exclusivo
+PXT-00975,Russia,RUS,,31,solo_sudamerican,exclusivo
+PXT-00976,RWD Molenbeek,MOL,,5683,solo_sudamerican,exclusivo
+PXT-00977,SAL Cacahuatique,CAC,4394,,solo_conmegol,exclusivo
+PXT-00978,SAL Fuerte San Francisco,FSF,4399,,solo_conmegol,exclusivo
+PXT-00979,SAL Hércules,HER,4392,,solo_conmegol,exclusivo
+PXT-00980,SAL Inter,INT,4397,,solo_conmegol,exclusivo
+PXT-00981,SAL Isidro Metapán,MET,4391,,solo_conmegol,exclusivo
+PXT-00982,SAL Municipal Limeño,LIM,4393,,solo_conmegol,exclusivo
+PXT-00983,SAL Platense Zacatecoluca,PLA,4396,,solo_conmegol,exclusivo
+PXT-00984,SAL Zacatecoluca,ZAC,4398,,solo_conmegol,exclusivo
+PXT-00985,Samsunspor,SAM,,5361,solo_sudamerican,exclusivo
+PXT-00986,San Antonio Bulo Bulo,SAB,,2480,solo_sudamerican,exclusivo
+PXT-00987,San Antonio FC,SAN,4448,,solo_conmegol,exclusivo
+PXT-00988,San Diego FC,SDI,6084,6084,en_ambas,mismo_id
+PXT-00989,San Jose,SJO,2322,,solo_conmegol,exclusivo
+PXT-00990,San Jose Earthquakes,SJE,4162,4162,en_ambas,mismo_id
+PXT-00991,San Lorenzo de Almagro,SLO,,1243,solo_sudamerican,exclusivo
+PXT-00992,San Luis de Quillota,SL,,2714,solo_sudamerican,exclusivo
+PXT-00993,San Marcos de Arica,SMA,,5495,solo_sudamerican,exclusivo
+PXT-00994,San Marino,SMR,,1183,solo_sudamerican,exclusivo
+PXT-00995,San Martín San Juan,SMA,,1925,solo_sudamerican,exclusivo
+PXT-00996,San Martín Tucumán,SMT,,2702,solo_sudamerican,exclusivo
+PXT-00997,San Miguel,MIG,,2689,solo_sudamerican,exclusivo
+PXT-00998,San Telmo,TEL,,5826,solo_sudamerican,exclusivo
+PXT-00999,Santa Ana FC,SAN,5056,,solo_conmegol,exclusivo
+PXT-01000,Santa Clara,STA,,2391,solo_sudamerican,exclusivo
+PXT-01001,Santiago Wanderers,WAN,,5389,solo_sudamerican,exclusivo
+PXT-01002,Santos,SAN,,1254,solo_sudamerican,exclusivo
+PXT-01003,Santos FC,SAN,1254,,solo_conmegol,exclusivo
+PXT-01004,Santos FC Nazca,SAN,,2550,solo_sudamerican,exclusivo
+PXT-01005,Santos Laguna,SLG,,1779,solo_sudamerican,exclusivo
+PXT-01006,São Bernardo FC,BER,5911,5148,en_ambas,mismo_nombre_id_distinto
+PXT-01007,São Paulo,SAO,,1255,solo_sudamerican,exclusivo
+PXT-01008,São Paulo FC,SAO,1255,,solo_conmegol,exclusivo
+PXT-01009,Saprissa,SAP,,2484,solo_sudamerican,exclusivo
+PXT-01010,Sarmiento Junin,SAR,,2730,solo_sudamerican,exclusivo
+PXT-01011,Saudi Arabia,SAU,56,56,en_ambas,mismo_id
+PXT-01012,SC Braga,BRA,,1974,solo_sudamerican,exclusivo
+PXT-01013,SC Corinthians,COR,1247,,solo_conmegol,exclusivo
+PXT-01014,SC Farense,FAR,,4086,solo_sudamerican,exclusivo
+PXT-01015,SC Freiburg,FRE,,227,solo_sudamerican,exclusivo
+PXT-01016,SC Heerenveen,HEE,,245,solo_sudamerican,exclusivo
+PXT-01017,SC Internacional,INT,1252,1252,en_ambas,mismo_id
+PXT-01018,SC Paderborn 07,SCP,,4324,solo_sudamerican,exclusivo
+PXT-01019,Scotland,SCO,3,3,en_ambas,mismo_id
+PXT-01020,SD Aucas,AUC,5458,5458,en_ambas,mismo_id
+PXT-01021,SD Eibar,EIB,,4146,solo_sudamerican,exclusivo
+PXT-01022,SD Huesca,HUE,,2188,solo_sudamerican,exclusivo
+PXT-01023,SE Palmeiras,PAL,137,137,en_ambas,mismo_id
+PXT-01024,Seattle Sounders,SEA,,4163,solo_sudamerican,exclusivo
+PXT-01025,Seattle Sounders FC,SEA,4163,,solo_conmegol,exclusivo
+PXT-01026,Senegal,SEN,38,38,en_ambas,mismo_id
+PXT-01027,Serbia,SRB,1550,1550,en_ambas,mismo_id
+PXT-01028,Sevilla FC,SEV,265,265,en_ambas,mismo_id
+PXT-01029,Shakhtar Donetsk,SHK,,1232,solo_sudamerican,exclusivo
+PXT-01030,Sheffield United,SHU,,4194,solo_sudamerican,exclusivo
+PXT-01031,Sheffield Wednesday,SHW,,394,solo_sudamerican,exclusivo
+PXT-01032,Sivasspor,SIV,,1809,solo_sudamerican,exclusivo
+PXT-01033,SK Slavia Praga,SLA,5189,,solo_conmegol,exclusivo
+PXT-01034,SL Benfica,SLB,191,191,en_ambas,mismo_id
+PXT-01035,Slavia Prague,SLA,,5189,solo_sudamerican,exclusivo
+PXT-01036,Slovakia,SVK,20,20,en_ambas,mismo_id
+PXT-01037,Slovan Bratislava,SLB,,4344,solo_sudamerican,exclusivo
+PXT-01038,Slovenia,SVN,23,23,en_ambas,mismo_id
+PXT-01039,South Africa,ZAF,37,37,en_ambas,mismo_id
+PXT-01040,South Korea,KOR,53,,solo_conmegol,exclusivo
+PXT-01041,Southampton FC,SOU,,207,solo_sudamerican,exclusivo
+PXT-01042,Spain,ESP,7,7,en_ambas,mismo_id
+PXT-01043,Sparta Prague,SPA,,175,solo_sudamerican,exclusivo
+PXT-01044,Sparta Rotterdam,SPA,,351,solo_sudamerican,exclusivo
+PXT-01045,Spezia Calcio,SPE,,1600,solo_sudamerican,exclusivo
+PXT-01046,Sport Boys,SBA,2676,,solo_conmegol,exclusivo
+PXT-01047,Sport Boys Association,SBA,,2676,solo_sudamerican,exclusivo
+PXT-01048,Sport Club do Recife,SPO,,1936,solo_sudamerican,exclusivo
+PXT-01049,Sport Huancayo,HUA,2503,2503,en_ambas,mismo_id
+PXT-01050,Sport Huancayo B,HUA,,5661,solo_sudamerican,exclusivo
+PXT-01051,Sport Recife,SPO,1936,,solo_conmegol,exclusivo
+PXT-01052,Sporting CP,SCP,193,,solo_conmegol,exclusivo
+PXT-01053,Sporting Cristal,SC,2216,2216,en_ambas,mismo_id
+PXT-01054,Sporting de Lisboa,SCP,,193,solo_sudamerican,exclusivo
+PXT-01055,Sporting FC,SFC,5075,,solo_conmegol,exclusivo
+PXT-01056,Sporting Gijón,GIJ,,363,solo_sudamerican,exclusivo
+PXT-01057,Sporting Kansas City,SKC,4164,4164,en_ambas,mismo_id
+PXT-01058,Sportivo Ameliano,AME,,2665,solo_sudamerican,exclusivo
+PXT-01059,Sportivo Luqueño,SLU,,2199,solo_sudamerican,exclusivo
+PXT-01060,Sportivo San Lorenzo,CSS,,5472,solo_sudamerican,exclusivo
+PXT-01061,Sportivo Trinidense,TRI,,5485,solo_sudamerican,exclusivo
+PXT-01062,SpVgg Greuther Fürth,GFU,,4133,solo_sudamerican,exclusivo
+PXT-01063,SS Juve Stabia,JST,,2517,solo_sudamerican,exclusivo
+PXT-01064,SS Lazio,LAZ,122,122,en_ambas,mismo_id
+PXT-01065,SSC Bari,BAR,,319,solo_sudamerican,exclusivo
+PXT-01066,SSC Napoli,NAP,327,327,en_ambas,mismo_id
+PXT-01067,St. Louis City SC,LCI,5903,5903,en_ambas,mismo_id
+PXT-01068,Stade Brestois 29,SB,1329,1329,en_ambas,mismo_id
+PXT-01069,Stade Reims,SDR,,1330,solo_sudamerican,exclusivo
+PXT-01070,Stade Rennais FC,REN,218,218,en_ambas,mismo_id
+PXT-01071,Stoke City,STK,,395,solo_sudamerican,exclusivo
+PXT-01072,Sturm Graz,STG,,2081,solo_sudamerican,exclusivo
+PXT-01073,Sudamerican Project Club,SPC,,5468,solo_sudamerican,exclusivo
+PXT-01074,Sunderland AFC,SUN,396,396,en_ambas,mismo_id
+PXT-01075,Suriname,SUR,1123,,solo_conmegol,exclusivo
+PXT-01076,SV 07 Elversberg,ELV,,2300,solo_sudamerican,exclusivo
+PXT-01077,SV Darmstadt 98,D98,,5008,solo_sudamerican,exclusivo
+PXT-01078,SV Robinhood,ROB,5710,,solo_conmegol,exclusivo
+PXT-01079,SV Wehen Wiesbaden,WEH,,2297,solo_sudamerican,exclusivo
+PXT-01080,SV Werder Bremen,SVW,,185,solo_sudamerican,exclusivo
+PXT-01081,Swansea City,SWA,,1909,solo_sudamerican,exclusivo
+PXT-01082,Sweden,SWE,17,17,en_ambas,mismo_id
+PXT-01083,Switzerland,SUI,11,11,en_ambas,mismo_id
+PXT-01084,Syria,SYR,,1029,solo_sudamerican,exclusivo
+PXT-01085,Tacuarembó FC,TAC,5511,,solo_conmegol,exclusivo
+PXT-01086,Talleres,TAL,,5046,solo_sudamerican,exclusivo
+PXT-01087,Talleres RE,TRE,,4098,solo_sudamerican,exclusivo
+PXT-01088,Tauro FC,TAU,5709,2491,en_ambas,mismo_nombre_id_distinto
+PXT-01089,Temperley,TEM,,4910,solo_sudamerican,exclusivo
+PXT-01090,Tenerife,TEN,,4147,solo_sudamerican,exclusivo
+PXT-01091,Thailand,THA,1031,1031,en_ambas,mismo_id
+PXT-01092,The Old Boys,TOB,4971,4971,en_ambas,mismo_id
+PXT-01093,The Strongest,STG,,2502,solo_sudamerican,exclusivo
+PXT-01094,Tigre,TIG,,1926,solo_sudamerican,exclusivo
+PXT-01095,Tigres FC,TIG,5211,,solo_conmegol,exclusivo
+PXT-01096,Tigres UANL,TIG,1782,1782,en_ambas,mismo_id
+PXT-01097,Tijuana,TIJ,,1785,solo_sudamerican,exclusivo
+PXT-01098,Torino FC,TOR,333,333,en_ambas,mismo_id
+PXT-01099,Toronto FC,TOR,4165,4165,en_ambas,mismo_id
+PXT-01100,Tottenham Hotspur,TOT,,179,solo_sudamerican,exclusivo
+PXT-01101,Tottenham Hotspur FC,TOT,179,,solo_conmegol,exclusivo
+PXT-01102,Toulouse FC,TOU,221,,solo_conmegol,exclusivo
+PXT-01103,Trabzonspor,TS,,1945,solo_sudamerican,exclusivo
+PXT-01104,Trinidad and Tobago,TTO,1118,,solo_conmegol,exclusivo
+PXT-01105,Tristan Suarez,TSZ,,5827,solo_sudamerican,exclusivo
+PXT-01106,Trujillanos FC,TRU,4048,,solo_conmegol,exclusivo
+PXT-01107,TSG 1899 Hoffenheim,HOF,,4126,solo_sudamerican,exclusivo
+PXT-01108,Tunisia,TUN,33,33,en_ambas,mismo_id
+PXT-01109,Turkey,TUR,29,,solo_conmegol,exclusivo
+PXT-01110,Türkiye,TUR,,29,solo_sudamerican,exclusivo
+PXT-01111,Twente Enschede FC,TWE,,250,solo_sudamerican,exclusivo
+PXT-01112,UCV,UCV,,5535,solo_sudamerican,exclusivo
+PXT-01113,UD Almería,ALM,,357,solo_sudamerican,exclusivo
+PXT-01114,UD Las Palmas,LAP,,364,solo_sudamerican,exclusivo
+PXT-01115,Udinese Calcio,UDI,190,190,en_ambas,mismo_id
+PXT-01116,Ukraine,UKR,30,30,en_ambas,mismo_id
+PXT-01117,Ulsan HD FC,ULS,,69710,solo_sudamerican,exclusivo
+PXT-01118,Unión Comercio,COM,,2677,solo_sudamerican,exclusivo
+PXT-01119,Unión Española,UE,2360,2360,en_ambas,mismo_id
+PXT-01120,Unión La Calera,ULC,2546,2546,en_ambas,mismo_id
+PXT-01121,Unión Magdalena,MAG,5376,,solo_conmegol,exclusivo
+PXT-01122,Unión Minas,UNI,,5663,solo_sudamerican,exclusivo
+PXT-01123,Union Saint-Gilloise,USG,5220,5220,en_ambas,mismo_id
+PXT-01124,Unión San Felipe,USF,,2552,solo_sudamerican,exclusivo
+PXT-01125,Unión Santa Fe,CAU,,2538,solo_sudamerican,exclusivo
+PXT-01126,United Arab Emirates,ARE,1032,1032,en_ambas,mismo_id
+PXT-01127,United States,USA,39,,solo_conmegol,exclusivo
+PXT-01128,Universidad Católica,UC,2191,2191,en_ambas,mismo_id
+PXT-01129,Universidad Central de Venezuela,UCE,5535,,solo_conmegol,exclusivo
+PXT-01130,Universidad César Vallejo,UCV,2678,2678,en_ambas,mismo_id
+PXT-01131,Universidad de Chile,UCH,2209,2209,en_ambas,mismo_id
+PXT-01132,Universidad de Concepción,UCO,2551,2551,en_ambas,mismo_id
+PXT-01133,Universidad de San Martín,USM,,2200,solo_sudamerican,exclusivo
+PXT-01134,Universitario,UNI,2215,2215,en_ambas,mismo_id
+PXT-01135,Universitario de Vinto,VIN,,5456,solo_sudamerican,exclusivo
+PXT-01136,UPC Jocay,UPC,2307,,solo_conmegol,exclusivo
+PXT-01137,Urawa Red Diamonds,URD,,147,solo_sudamerican,exclusivo
+PXT-01138,Uruguay,URY,49,49,en_ambas,mismo_id
+PXT-01139,Uruguay Montevideo FC,UMO,5512,,solo_conmegol,exclusivo
+PXT-01140,US Catanzaro,CAT,,4233,solo_sudamerican,exclusivo
+PXT-01141,US Concarneau,CON,,5097,solo_sudamerican,exclusivo
+PXT-01142,US Cremonese,CRE,,4220,solo_sudamerican,exclusivo
+PXT-01143,US Lecce,LEC,4237,4237,en_ambas,mismo_id
+PXT-01144,US Sassuolo,SAS,1919,1919,en_ambas,mismo_id
+PXT-01145,USA,USA,,39,solo_sudamerican,exclusivo
+PXT-01146,USL Dunkerque,DKQ,,4206,solo_sudamerican,exclusivo
+PXT-01147,UTC Cajamarca,UTC,4407,4407,en_ambas,mismo_id
+PXT-01148,Uzbekistan,UZB,1184,1184,en_ambas,mismo_id
+PXT-01149,Valencia CF,VAL,110,110,en_ambas,mismo_id
+PXT-01150,Valenciennes,VA,,1528,solo_sudamerican,exclusivo
+PXT-01151,Vancouver Whitecaps,VAN,,4166,solo_sudamerican,exclusivo
+PXT-01152,Vancouver Whitecaps FC,VW,4166,,solo_conmegol,exclusivo
+PXT-01153,Vasco da Gama,VAS,136,136,en_ambas,mismo_id
+PXT-01154,Vélez Sarsfield,VEL,,1244,solo_sudamerican,exclusivo
+PXT-01155,Venezia FC,VEN,4229,4229,en_ambas,mismo_id
+PXT-01156,Venezuela,VEN,1129,1129,en_ambas,mismo_id
+PXT-01157,VfB Stuttgart,STU,,231,solo_sudamerican,exclusivo
+PXT-01158,VfL Bochum,BCH,,4128,solo_sudamerican,exclusivo
+PXT-01159,VfL Osnabrück,OSN,,2301,solo_sudamerican,exclusivo
+PXT-01160,VfL Wolfsburg,WOL,,232,solo_sudamerican,exclusivo
+PXT-01161,Viktoria Plzen,PLZ,,2037,solo_sudamerican,exclusivo
+PXT-01162,Vila Nova,VIL,,2468,solo_sudamerican,exclusivo
+PXT-01163,Vila Nova FC,VIL,2468,,solo_conmegol,exclusivo
+PXT-01164,Villarreal CF,VIL,267,267,en_ambas,mismo_id
+PXT-01165,Vinícius FC,VJR,9316,,solo_conmegol,exclusivo
+PXT-01166,Vinotinto FC,VIN,4042,,solo_conmegol,exclusivo
+PXT-01167,Violette AC,VIO,5713,,solo_conmegol,exclusivo
+PXT-01168,Vitória Guimarães SC,GUI,,1804,solo_sudamerican,exclusivo
+PXT-01169,Wales,WAL,4,4,en_ambas,mismo_id
+PXT-01170,Watford FC,WAT,,398,solo_sudamerican,exclusivo
+PXT-01171,West Bromwich Albion,WBA,,399,solo_sudamerican,exclusivo
+PXT-01172,West Ham United,WHU,,105,solo_sudamerican,exclusivo
+PXT-01173,Willem II Tilburg,WIL,,255,solo_sudamerican,exclusivo
+PXT-01174,Wolverhampton Wanderers,WOL,,208,solo_sudamerican,exclusivo
+PXT-01175,World Selection,WOS,5129,5129,en_ambas,mismo_id
+PXT-01176,Wydad Casablanca,WYD,,4231,solo_sudamerican,exclusivo
+PXT-01177,Yamal FC,LY,9307,,solo_conmegol,exclusivo
+PXT-01178,Zambia,ZMB,1083,1083,en_ambas,mismo_id
+PXT-01179,Zamora FC,ZAM,2504,,solo_conmegol,exclusivo
+PXT-01180,Zidane FC,ZZ,9308,,solo_conmegol,exclusivo
+PXT-01181,Zlatan FC,ZFC,9310,,solo_conmegol,exclusivo

@@ -1,0 +1,112 @@
+﻿codigo,nombre,id_comp_conmegol,equipos_conmegol,id_comp_sud,equipos_sud,equipos_en_comun_por_nombre,estado
+AFC_ASIA_CUP,Copa Asia,35,15,35,16,13,ambas
+AFRICA_NATIONS_CUP,Copa Africana de Naciones,36,16,36,16,15,ambas
+ARGENTINA_D1_CUP,Copa Argentina,15,66,15,60,11,ambas
+ARGENTINA_D1_LEAGUE,Torneo Clausura Mercado Libre,9,30,9,30,6,ambas
+ARGENTINA_D2_LEAGUE,Primera Nacional,66,36,66,32,5,ambas
+ARGENTINA_D2_PLAYOFF,,70,0,70,0,0,ambas
+ARGENTINA_SUPER_CUP,Supercopa Argentina,73,2,73,2,0,ambas
+BOLIVIA_D1_CUP,Copa Paceña,,,20,16,,solo sudamerican
+BOLIVIA_D1_LEAGUE,Play-offs Group B,137,16,14,16,5,ambas
+BOLIVIA_SUPER_CUP,Supercopa Bolivia,,,78,2,,solo sudamerican
+BOLIVIA__D1_CUP,Copa Paceña,138,0,,,,solo conmegol
+BRAZIL_D1_CUP,Copa Betano do Brasil,17,40,18,40,21,ambas
+BRAZIL_D1_LEAGUE,Brasileirão Betano,11,20,12,20,12,ambas
+BRAZIL_D2_LEAGUE,Brasileirão Série B Superbet,67,20,68,20,9,ambas
+BRAZIL_D2_PLAYOFF,,71,0,,,,solo conmegol
+BRAZIL_SUPER_CUP,Supercopa Betano Rei,74,2,75,2,1,ambas
+CHAMPIONS_CUP_ASIA,International Champions Cup Asia,102,11,102,11,6,ambas
+CHAMPIONS_CUP_NA,International Champions Cup NA,100,11,100,11,6,ambas
+CHAMPIONS_CUP_SA,International Champions Cup SA,101,8,101,8,4,ambas
+CHILE_D1_CUP,Copa Chile Coca-Cola Zero Azúcar,19,32,16,32,17,ambas
+CHILE_D1_LEAGUE,Liga de Primera Mercado Libre,13,16,10,16,10,ambas
+CHILE_D2_LEAGUE,Liga de Ascenso Caixun,39,16,69,16,7,ambas
+CHILE_D2_PLAYOFF,Liga de Ascenso Caixun Playoffs,,,72,0,,solo sudamerican
+CHILE_SUPER_CUP,Supercopa Lanco,77,2,76,2,2,ambas
+CLASICO_EQUIPOS_AMERICA,Mundial Siglo XXI,198,0,,,,solo conmegol
+CLASICO_EQUIPOS_CLUBES,Mundial de Clubes Siglo XXI,197,23,,,,solo conmegol
+COLOMBIA_D1_CUP,Copa BetPlay Dimayor,16,36,19,20,16,ambas
+COLOMBIA_D1_LEAGUE,Liga BetPlay Dimayor,10,20,13,20,16,ambas
+COLOMBIA_D2_LEAGUE,Torneo BetPlay Dimayor,69,20,,,,solo conmegol
+COLOMBIA_D2_PLAYOFF,,72,0,,,,solo conmegol
+COLOMBIA_SUPER_CUP,Superliga BetPlay Dimayor,76,2,77,2,1,ambas
+CONCACAF_CHAMPIONS_LEAGUE,CONCACAF Champions Cup,8,25,8,32,4,ambas
+CONMEBOL_LIBERTADORES,CONMEBOL Libertadores,2,47,,,,solo conmegol
+CONMEBOL_RECOPA,CONMEBOL Recopa,4,2,,,,solo conmegol
+CONMEBOL_SUDAMERICANA,CONMEBOL Sudamericana,3,44,,,,solo conmegol
+COPA_AMERICA,CONMEBOL Copa America,34,16,34,16,15,ambas
+COPA_LIBERTADORES,UEFA Champions League,,,5,33,,solo sudamerican
+COSTA_RICA_D1_CUP,Torneo de Copa UNAFUT,44,12,,,,solo conmegol
+COSTA_RICA_D1_LEAGUE,Liga Promerica,41,12,,,,solo conmegol
+COSTA_RICA_SUPER_CUP,Supercopa de Costa Rica,84,0,,,,solo conmegol
+ECUADOR_CUP,Copa Ecuador DirecTV,,,112,16,,solo sudamerican
+ECUADOR_D1_CUP,Copa Ecuador Banco Pichincha,18,32,,,,solo conmegol
+ECUADOR_D1_LEAGUE,Liga Ecuabet,12,16,111,16,9,ambas
+ECUADOR_D2_LEAGUE,Liga Ecuabet Serie B,68,16,,,,solo conmegol
+ECUADOR_SUPER_CUP,Supercopa Ecuador Ecuabet DirecTV,75,2,113,2,2,ambas
+ENGLAND_D1_CUP,Emirates FA Cup,49,28,24,40,0,ambas
+ENGLAND_D1_LEAGUE,Premier League,22,20,21,20,9,ambas
+ENGLAND_D2_LEAGUE,SkyBet Championship,,,90,20,,solo sudamerican
+ENGLAND_SUPER_CUP,Community Shield,79,0,,,,solo conmegol
+EURO,UEFA EURO,33,24,33,24,22,ambas
+FAKE_KONAMI,Copa Mundial de la FIFA,37,12,37,0,0,ambas
+FIFA_CLUB_WORLD_CUP,Copa Intercontinental,1,0,1,0,0,ambas
+FIFA_WORLD_CUP,FIFA World Cup,27,48,27,0,0,ambas
+FIFA_WORLD_CUP_AFRICA_FIN,Eliminatorias de África,32,0,32,0,0,ambas
+FIFA_WORLD_CUP_ASIA_FINAL,Eliminatorias de Asia y Oceanía,31,1,31,1,1,ambas
+FIFA_WORLD_CUP_EUROPE_FIN,Eliminatorias UEFA,28,29,28,44,26,ambas
+FIFA_WORLD_CUP_NCAMERICA_,Eliminatorias de la Concacaf,29,16,29,0,0,ambas
+FIFA_WORLD_CUP_SAMERICA_F,Eliminatorias Sudamericanas,30,10,30,0,0,ambas
+FRANCE_D1_CUP,Coupe de France–Crédit Agricole,43,9,53,18,0,ambas
+FRANCE_D1_LEAGUE,Apertura,40,18,50,18,10,ambas
+GERMANY_D1_CUP,DFB Pokal,,,43,18,,solo sudamerican
+GERMANY_D1_LEAGUE,Bundesliga,,,40,18,,solo sudamerican
+HONDURAS_D1_CUP,Copa Presidente de Honduras,140,0,,,,solo conmegol
+HONDURAS_D1_LEAGUE,Liga Hondubet,139,12,,,,solo conmegol
+HONDURAS_SUPER_CUP,Supercopa de Honduras,141,0,,,,solo conmegol
+ITALY_D1_CUP,Coppa Italia Frecciarossa,56,16,56,20,0,ambas
+ITALY_D1_LEAGUE,Serie A Enilive,23,20,23,20,14,ambas
+KONAMI_LEAGUE,KONAMI 리그,86,16,86,0,0,ambas
+LEYENDAS_DEL_FÃTBOL,League of Goats,199,14,,,,solo conmegol
+MATCHDAY_EFOOTBALL_OPEN,,145,118,,,,solo conmegol
+MEXICO_CUP,Copa MX,,,123,18,,solo sudamerican
+MEXICO_D1_LEAGUE,Apertura,122,18,122,18,6,ambas
+MEXICO_SUPER_CUP,Campeón de Campeones,124,2,124,2,1,ambas
+MLS_D1_CUP,MLS Cup,126,0,,,,solo conmegol
+MLS_D1_LEAGUE,Major League Soccer,125,30,,,,solo conmegol
+MLS_SUPER_CUP,Lamar Hunt U.S. Open Cup,127,0,,,,solo conmegol
+NETHERLANDS_D1_CUP,KNVB Beker,,,140,16,,solo sudamerican
+NETHERLANDS_D1_LEAGUE,Eredivisie,,,139,16,,solo sudamerican
+NETHERLANDS_SUPER_CUP,Johan Cruijff Schaal,,,141,2,,solo sudamerican
+PARAGUAY_CUP,Copa Paraguay,,,129,12,,solo sudamerican
+PARAGUAY_D1_CUP,Copa Paraguay,129,12,,,,solo conmegol
+PARAGUAY_D1_LEAGUE,Play-offs Group B,128,12,128,12,3,ambas
+PERU_D1_CUP,Copa Caliente de la Liga,20,32,17,32,15,ambas
+PERU_D1_LEAGUE,Liga 1 Te Apuesto,14,18,11,18,11,ambas
+PERU_D2_LEAGUE,Liga2 Caliente,117,14,67,14,4,ambas
+PERU_D2_PLAYOFF,Liga 2 Caliente.pe Playoffs,,,71,0,,solo sudamerican
+PERU_SUPER_CUP,Supercopa Peruana,78,2,74,2,1,ambas
+SAUDI_D1_CUP,Saudi King's Cup,24,18,,,,solo conmegol
+SAUDI_D1_LEAGUE,Saudi Pro League,90,18,,,,solo conmegol
+SPAIN_D1_CUP,Copa del Rey Mapfre,123,0,49,20,0,ambas
+SPAIN_D1_LEAGUE,LaLiga EA Sports,21,20,22,20,12,ambas
+SPAIN_SUPER_CUP,Supercopa de España,,,79,2,,solo sudamerican
+SPE_FRIENDLY_MATCH,국제 친선 경기,45,0,45,0,0,ambas
+SPE_ML_RETIREMENT_MATCH,은퇴 경기,97,0,97,0,0,ambas
+SPE_PRACTICE_MATCH,연습 경기,46,0,46,0,0,ambas
+SPE_RETIREMENT_MATCH,은퇴 경기,47,0,47,0,0,ambas
+UEFA_CHAMPIONS_LEAGUE,UEFA Champions League,5,19,2,32,0,ambas
+UEFA_EUROPE_LEAGUE,CONMEBOL Sudamericana,,,3,46,,solo sudamerican
+UEFA_SUPER_CUP,CONMEBOL Recopa,,,4,2,,solo sudamerican
+URUGUAY_CUP,Copa Uruguay,,,115,16,,solo sudamerican
+URUGUAY_D1_CUP,Copa AUF Uruguay,115,32,,,,solo conmegol
+URUGUAY_D1_LEAGUE,Liga AUF Uruguaya,114,16,114,16,5,ambas
+URUGUAY_D2_LEAGUE,Segunda AUF Uruguaya,119,16,,,,solo conmegol
+URUGUAY_SUPER_CUP,Supercopa Uruguaya,116,2,116,2,0,ambas
+USA_CUP,MLS Cup,,,126,30,,solo sudamerican
+USA_D1_LEAGUE,Major League Soccer,,,125,30,,solo sudamerican
+USA_SUPER_CUP,US Open Cup,,,127,2,,solo sudamerican
+VENEZUELA_D1_CUP,Copa Venezuela,112,14,,,,solo conmegol
+VENEZUELA_D1_LEAGUE,Eliminatorias Grupo B,111,14,,,,solo conmegol
+VENEZUELA_SUPER_CUP,Supercopa de Venezuela,113,2,,,,solo conmegol
+WORLD_SELECTION,World Selection Challenge,103,0,103,0,0,ambas
