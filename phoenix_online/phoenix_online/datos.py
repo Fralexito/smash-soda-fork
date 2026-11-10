@@ -32,6 +32,11 @@ create table if not exists pases (
   clave text not null,
   hora real not null
 );
+create table if not exists presentaciones (
+  ip text primary key,
+  usuario text not null,
+  hora real not null
+);
 create table if not exists vinculos_web (
   clave text primary key,
   codigo text unique not null,
@@ -142,6 +147,16 @@ class Datos:
                         "do update set usuario=excluded.usuario, clave=excluded.clave, hora=excluded.hora",
                         (ip, str(usuario), clave.lower(), time.time()))
         self.db.commit()
+
+    def presentar(self, ip, usuario):
+        """El launcher abrió el PES de esta IP con esta cuenta (para exigir_launcher)."""
+        self.db.execute("insert into presentaciones(ip, usuario, hora) values (?,?,?) on conflict(ip) "
+                        "do update set usuario=excluded.usuario, hora=excluded.hora", (ip, str(usuario), time.time()))
+        self.db.commit()
+
+    def presentado(self, ip, horas):
+        f = self.db.execute("select hora from presentaciones where ip=?", (ip,)).fetchone()
+        return bool(f and time.time() - f[0] < horas * 3600)
 
     def clave_por_ip(self, ip):
         f = self.db.execute("select clave from pases where ip=?", (ip,)).fetchone()

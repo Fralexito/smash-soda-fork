@@ -245,7 +245,7 @@ async def http(srv, reader, writer):
         try:
             linea_cap = json.dumps({"t": time.time(), "linea": linea, "cabeceras": cabeceras,
                                     # el pase de identidad nunca se guarda en claro
-                                    "cuerpo": "(oculto)" if ruta_sin_query.rstrip("/") == "/pase"
+                                    "cuerpo": "(oculto)" if ruta_sin_query.rstrip("/") in ("/pase", "/entrar")
                                     else cuerpo[:8192].decode("latin-1")},
                                    ensure_ascii=False) + "\n"
             if PRESUPUESTO is None or PRESUPUESTO.permitir(len(linea_cap)):
@@ -259,6 +259,13 @@ async def http(srv, reader, writer):
             # Estado del servidor (para Link, la web o mirarlo desde el celular)
             _http_simple(writer, 200, "OK", json.dumps(srv.estado(), ensure_ascii=False).encode(),
                          "application/json; charset=utf-8")
+            return
+        if metodo == "POST" and ruta_sin_query.rstrip("/") == "/entrar":
+            # Phoenix Launcher: «Jugar Online» con la sesión de la web (respuesta JSON)
+            ip = (writer.get_extra_info("peername") or (None,))[0]
+            codigo, r = await srv.entrar_launcher(form.get("token"), ip, _ip_local(writer))
+            _http_simple(writer, codigo, "OK" if codigo == 200 else "Error",
+                         json.dumps(r, ensure_ascii=False).encode(), "application/json; charset=utf-8")
             return
         if metodo == "POST" and ruta_sin_query.rstrip("/") == "/pase":
             # Pase de identidad de la web (Link lo manda; la respuesta es JSON)

@@ -1828,3 +1828,37 @@ class TestVincularWeb(unittest.IsolatedAsyncioTestCase):
         pedidos.clear()
         await srv.nube.vuelta()
         self.assertFalse([p for p in pedidos if p[1] == "phoenix_duenos"])  # nada pendiente
+
+
+class TestLauncher(unittest.IsolatedAsyncioTestCase):
+    """Phoenix Launcher: POST /entrar con la sesión de la web; exigir_launcher solo afecta al online."""
+
+    async def test_entrar_y_exigir_launcher(self):
+        import copy
+        cfg = copy.deepcopy({**CFG, "myclub": {}})
+        srv = Servidor(cfg, Datos())
+
+        class NubeFalsa:
+            async def usuario_de_token(self, token):
+                return "uuid-ana" if token == "a.b.c" + "x" * 20 else None
+        self.assertEqual((await srv.entrar_launcher("a.b.c" + "x" * 20, "100.64.0.7"))[0], 503)
+        srv.nube = NubeFalsa()
+        self.assertEqual((await srv.entrar_launcher("sin-puntos" * 3, "100.64.0.7"))[0], 400)
+        self.assertEqual((await srv.entrar_launcher("x.y.z" + "x" * 20, "100.64.0.7"))[0], 403)
+        codigo, r = await srv.entrar_launcher("a.b.c" + "x" * 20, "100.64.0.7")
+        self.assertEqual(codigo, 200)
+        self.assertEqual(srv.clave_identidad("0410000004100000", "100.64.0.7"), Servidor.clave_de_usuario("uuid-ana"))
+        # anfitrión: presentado pero conserva su club
+        codigo, r = await srv.entrar_launcher("a.b.c" + "x" * 20, "127.0.0.1")
+        self.assertEqual((codigo, r["clave"]), (200, None))
+        self.assertEqual(srv.clave_identidad("0410000004100000", "127.0.0.1"), "0410000004100000")
+
+        class S:
+            ip_local = "192.168.1.5"
+            def __init__(self, ip): self.ip = ip
+        cfg["identidad"] = {"exigir_launcher": True}
+        self.assertFalse(srv._sin_launcher(S("100.64.0.7")))   # abrió el launcher
+        self.assertTrue(srv._sin_launcher(S("100.64.0.8")))    # no lo abrió: sin online
+        self.assertFalse(srv._sin_launcher(S("192.168.1.5")))  # la PC del servidor, exenta
+        cfg["identidad"] = {}
+        self.assertFalse(srv._sin_launcher(S("100.64.0.8")))   # apagado por defecto

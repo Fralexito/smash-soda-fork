@@ -45,7 +45,7 @@
       "0410000004100000"
     ],
     "por_ip": {},
-    "ips_anfitrion": []
+    "ips_anfitrion": [], "exigir_launcher": false, "launcher_horas": 12
   },
   "vinculos": "vinculos.json",
   "abierto_a_todos": false,

@@ -28,7 +28,8 @@ CAMPO_MOVIMIENTO = {"gp": "gp", "monedas": "monedas", "boletos": "boletos_contra
 class Nube:
     def __init__(self, srv, url, clave, cada_s=30, abrir=None):
         self.srv = srv
-        self.url = url.rstrip("/") + "/rest/v1/"
+        self.base = url.rstrip("/")
+        self.url = self.base + "/rest/v1/"
         self.clave = clave
         self.cada_s = max(5, int(cada_s))
         self.reglas_vistas = None
@@ -122,6 +123,23 @@ class Nube:
             datos.guardar_club(clave, club)
             hechos += 1
         return hechos
+
+    def _usuario_de_token(self, token):
+        req = urllib.request.Request(self.base + "/auth/v1/user", method="GET", headers={
+            "apikey": self.clave, "Authorization": f"Bearer {token}", "Accept": "application/json"})
+        try:
+            with self._abrir(req, timeout=15) as r:
+                crudo = r.read()
+        except urllib.error.HTTPError as e:
+            if e.code in (401, 403):
+                return None  # sesión caducada o falsa
+            raise
+        datos = json.loads(crudo) if crudo else {}
+        return datos.get("id")
+
+    async def usuario_de_token(self, token):
+        """Supabase Auth confirma la sesión de la web que manda el launcher -> uuid o None."""
+        return await asyncio.to_thread(self._usuario_de_token, token)
 
     async def canjear_pase(self, pase):
         """Marca el pase como usado en Supabase y devuelve el usuario (uuid) o None.

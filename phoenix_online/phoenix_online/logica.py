@@ -668,6 +668,48 @@ class Servidor:
         log.info("pase aceptado: %s queda ligada a la cuenta %s (clave %s)", ip, usuario, clave)
         return 200, {"ok": True, "mensaje": "listo: entra al online y tendrás tu propio club", "clave": clave}
 
+    async def entrar_launcher(self, token, ip_cliente, ip_local=None):
+        """POST /entrar {"token": sesión de la web} desde Phoenix Launcher (botón «Jugar Online»).
+        Supabase confirma la sesión; esa PC queda ligada a la cuenta (su club va con su cuenta) y
+        presentada (para exigir_launcher). El token no se guarda ni se registra."""
+        ip = (ip_cliente or "").split("%")[0].removeprefix("::ffff:")
+        token = str(token or "").strip()
+        if self.nube is None:
+            return 503, {"ok": False, "mensaje": "el servidor no está conectado a la web (Supabase)"}
+        if not (20 <= len(token) <= 4096) or token.count(".") != 2:
+            return 400, {"ok": False, "mensaje": "sesión con formato raro"}
+        ahora = time.time()
+        intentos = [t for t in self.intentos_pase.get(ip, []) if ahora - t < 600]
+        if len(intentos) >= 30:
+            return 429, {"ok": False, "mensaje": "demasiados intentos; espera 10 minutos"}
+        self.intentos_pase[ip] = intentos + [ahora]
+        try:
+            usuario = await self.nube.usuario_de_token(token)
+        except Exception as e:
+            log.warning("launcher: Supabase no respondió (%s)", e)
+            return 502, {"ok": False, "mensaje": "la web no respondió; prueba otra vez"}
+        if not usuario:
+            return 403, {"ok": False, "mensaje": "tu sesión de la web caducó: vuelve a iniciar sesión"}
+        anfitrion = ip.startswith("127.") or ip == "::1" or (ip_local and ip == ip_local.removeprefix("::ffff:"))
+        self.datos.presentar(ip, usuario)
+        clave = None
+        if not anfitrion:  # la PC del servidor conserva su club
+            clave = self.clave_de_usuario(usuario)
+            self.datos.guardar_pase(ip, usuario, clave)
+        log.info("launcher: %s presentado con la cuenta %s%s", ip, usuario, "" if clave else " (anfitrión)")
+        return 200, {"ok": True, "mensaje": "listo: abre el PES y entra al online", "clave": clave}
+
+    def _sin_launcher(self, s):
+        """identidad.exigir_launcher: solo entra al online quien abrió el PES con el launcher
+        (en las últimas N horas). La PC del servidor queda exenta. El offline nunca se ve afectado."""
+        ide = self.cfg.get("identidad") or {}
+        if not ide.get("exigir_launcher"):
+            return False
+        ip = (s.ip or "").split("%")[0].removeprefix("::ffff:")
+        if ip.startswith("127.") or ip == "::1" or (s.ip_local and ip == s.ip_local.removeprefix("::ffff:")):
+            return False
+        return not self.datos.presentado(ip, float(ide.get("launcher_horas", 12)))
+
     def _clave_de(self, s, m):
         crudo = self._steam_de(m)
         if crudo is None:
@@ -693,6 +735,9 @@ class Servidor:
         steam_hex = self._clave_de(s, m) or s.steam_hex or ""
         if self.en_mantenimiento():
             log.info("login rechazado: servidor en mantenimiento (%s)", steam_hex)
+            return {"result": "ERR_SERVERNOTREADY"}
+        if self._sin_launcher(s):
+            log.info("login rechazado: %s no abrió el PES con Phoenix Launcher", s.ip)
             return {"result": "ERR_SERVERNOTREADY"}
         distinta = self._version_distinta(m)
         if distinta:

@@ -40,7 +40,8 @@ en modo offline (nada que ver con lo online: el que quiera juega offline y local
   Hasta que Link lo tenga, una versión puente con el `.bat` actual más un paso «Iniciar sesión».
 
 ## Orden
-1. Servidor: `POST /entrar` (token de Supabase) y `exigir_launcher` (apagado por defecto). Lo hago en este hilo, con pruebas.
+1. ✅ Servidor (10-nov): `POST /entrar {token}` (Supabase confirma la sesión; la PC queda ligada a la cuenta) e
+   `identidad.exigir_launcher` + `launcher_horas` (apagado por defecto; la PC del servidor exenta). 97 pruebas OK.
 2. Launcher puente: botones Online/Offline sobre el `.bat` actual (sin descargas).
 3. Link: pestaña «Jugar» con inicio de sesión de la web. Hilo de Link, cuando Frank lo diga.
 4. Encender `exigir_launcher` cuando todos los amigos lo tengan.
