@@ -30,6 +30,12 @@ CONFIRMACIONES = {
     # L (PESBUL): estos también se contestan solo con NOERR
     "CMD_CHECK_CHEAT", "CMD_GET_DMM_NOTIFICATION", "CMD_GET_URGENT_ANNOUNCEMENT",
     "CMD_FINISH_SEASON",
+    # L (ESPEC_GAMERELAY_FASE23 §5.1): durante una partida de 2 solo esperan NOERR, y A TIEMPO
+    # (SET_GAMEPLAYER_PLAYTIME sin respuesta = ABNORMALEND a los ~55 s para los dos)
+    "CMD_SET_GAMEPLAYER_PLAYTIME", "CMD_SET_GAMETEAM", "CMD_CHANGE_GAMEPHASE",
+    "CMD_SEND_MATCH_ANALYZE", "CMD_ADD_SCORE", "CMD_ADD_FOUL", "CMD_SEND_MATCH_TEAM_INFO",
+    "CMD_SEND_STATS_DATA", "CMD_REQ_GAMEADDPOINT", "CMD_START_SEND_GAME_SEQUENCE_DATA",
+    "CMD_SET_GAMEMEMBERENV", "CMD_SET_GAMERELAY_MATCH_QUALITY", "CMD_SET_LOCAL_GAMERELAY_LIST",
 }
 
 # C (§17, capturado 05-nov): gameplan que el propio cliente generó para un 4-2-3-1 con 18
@@ -217,6 +223,9 @@ class Servidor:
         self.parejas = {}     # Sesion -> Pareja de partida rápida
         self.inicio = time.time()
         self.sin_manejador = {}  # msgid -> veces (para priorizar qué implementar)
+        self.rele = None         # gamerelay.Rele (lo pone servidor.principal)
+        self.ntl_por_clave = {}  # clave de persona -> última declaración NTL (+ ip TCP)
+        self._partidas = itertools.count(1)  # salas sintéticas de las parejas: 700 000 000 + n
 
     def aplicar_reglas_myclub(self, reglas):
         """Reglas de myClub editables en caliente (archivo reglas_myclub o, más adelante, la
@@ -240,6 +249,7 @@ class Servidor:
                 "salas": len(self.salas), "buscando_rival": sum(len(c) for c in self.colas.values()),
                 "parejas": len({id(p) for p in self.parejas.values()}),
                 "mantenimiento": self.en_mantenimiento(),
+                "rele": self.rele.estado() if self.rele is not None and hasattr(self.rele, "estado") else None,
                 "comandos_sin_manejador": dict(sorted(self.sin_manejador.items(),
                                                       key=lambda kv: -kv[1])[:30])}
 
@@ -253,7 +263,7 @@ class Servidor:
             del self.por_pid[sesion.pid]
         await self._salir_de_sala(sesion)
         self._salir_de_cola(sesion)
-        self.parejas.pop(sesion, None)
+        self._dejar_pareja(sesion, "se cortó su conexión")
         # C: la sonda autorizada se revoca al desconectar el TCP de ese pid
         pid = str(self._pid_visible(sesion))
         if pid not in {str(self._pid_visible(x)) for x in self.sesiones}:
@@ -726,6 +736,9 @@ class Servidor:
         for k in ("ntl_nat_type", "host_addr", "reflexive_addr", "relayed_addr"):
             if k in m:
                 s.ntl[k] = m[k]
+        # L (FASE23 §1.1): el UDP del relé no trae pid; se reconoce por estas direcciones
+        if s.steam_hex:
+            self.ntl_por_clave[s.steam_hex] = {**s.ntl, "ip_tcp": s.ip}
         hashes = m.get("file_hash_list")
         if hashes is not None:
             crudo = repr(hashes).encode()
@@ -780,10 +793,86 @@ class Servidor:
         s.enviar({"msgid": "CMD_WATCH_MATCHING", "rqid": 0, "result": NOERR,
                   "matching_state": estado, "player_num": len(miembros), "member": miembros})
 
+    # ---------- Partida de 2 por el relé (ESPEC_GAMERELAY_FASE23 §1.5) ----------
+    def _endpoints(self, clave, sesiones=()):
+        """Direcciones UDP declaradas por una persona: reflexiva y host (la TURN no cuenta)."""
+        from .gamerelay import endpoint_de_ntl
+        decl = dict(self.ntl_por_clave.get(clave) or {})
+        for x in sesiones:
+            if x.ntl:
+                decl.update(x.ntl)
+        return [e for e in (endpoint_de_ntl(decl.get("reflexive_addr")),
+                            endpoint_de_ntl(decl.get("host_addr"))) if e]
+
+    def _abrir_partida(self, pareja):
+        """Sala sintética de la pareja (anfitrión enter_no 0, invitado 1) y aviso al relé."""
+        anfitrion, invitado = pareja["miembros"]
+        room_id = 700_000_000 + next(self._partidas)
+        pareja["room_id"] = room_id
+        pareja["claves"] = [self._clave_partida(anfitrion), self._clave_partida(invitado)]
+        if self.rele is None or not hasattr(self.rele, "abrir_intento"):
+            return room_id
+        miembros = []
+        for enter_no, x in enumerate((anfitrion, invitado)):
+            clave = self._clave_partida(x)
+            miembros.append({"pid": clave, "enter_no": enter_no, "ip_tcp": x.ip,
+                             "endpoints": (lambda c=clave, ses=x: self._endpoints(c, (ses,)))})
+        self.rele.abrir_intento(room_id, miembros)
+        return room_id
+
+    def _clave_partida(self, x):
+        return x.steam_hex or f"sesion{id(x)}"
+
+    def _dejar_pareja(self, s, motivo=""):
+        pareja = self.parejas.pop(s, None)
+        if not pareja:
+            return
+        room_id = pareja.get("room_id")
+        if room_id and self.rele is not None and hasattr(self.rele, "miembro_salio"):
+            self.rele.miembro_salio(room_id, self._clave_partida(s))
+        if motivo:
+            log.info("pareja %s: %s se va (%s)", room_id, s.pid, motivo)
+
+    def _pareja_por_clave(self, s):
+        p = self.parejas.get(s)
+        if p:
+            return p
+        clave = s.steam_hex
+        for x, p in self.parejas.items():
+            if clave and x.steam_hex == clave:
+                return p
+        return None
+
+    async def c_cmd_send_game_sequence_data(self, s, m):
+        """L (FASE23 §3.4): copia TCP de los mensajes de 10/12/15. Respuesta NOERR siempre; el
+        reenvío al otro jugador es efecto lateral (deduplicado con la copia UDP)."""
+        if self.rele is None or not hasattr(self.rele, "reenviar_tcp"):
+            return {}
+        for r in m.get("game_seq_data") or []:
+            try:
+                if isinstance(r, (bytes, bytearray)):
+                    r = msgpack_min.unpackb(bytes(r))
+                if not isinstance(r, dict) or int(r.get("type", 0)) != 2:
+                    continue
+                canal = int(r.get("channelId", -1))
+                if canal not in (10, 12, 15):
+                    continue
+                d = r.get("data")
+                crudo = base64.b64decode(d + "=" * (-len(d) % 4)) if isinstance(d, str) else bytes(d or b"")
+                if len(crudo) < 9:
+                    continue
+                largo = int.from_bytes(crudo[7:9], "big")
+                mensaje = crudo[9:9 + largo]
+                if mensaje:
+                    self.rele.reenviar_tcp(self._clave_partida(s), canal, mensaje, r.get("fromId"))
+            except Exception:
+                log.exception("GameSeq TCP ilegible de %s", s.pid)
+        return {}
+
     async def c_cmd_start_matching(self, s, m):
         tipo = str(m.get("matching_type") or "OC_QUICK")
         self._salir_de_cola(s)
-        self.parejas.pop(s, None)
+        self._dejar_pareja(s, "busca otra partida")
         s.enviar({"msgid": m["msgid"], "rqid": m.get("rqid", 0), "result": NOERR})
         cola = self.colas.setdefault(tipo, [])
         rival = next((x for x in cola if x is not s and x in self.sesiones), None)
@@ -796,8 +885,9 @@ class Servidor:
         cola.remove(rival)
         # el que esperaba es anfitrión/LOCAL; el que completa la pareja, VISITANTE (r7.3.644/650)
         miembros = [self._miembro(rival, 0, True, "HOME"), self._miembro(s, 1, False, "AWAY")]
-        pareja = {"miembros": (rival, s), "check": set()}
+        pareja = {"miembros": (rival, s), "check": set(), "tipo": tipo}
         self.parejas[rival] = self.parejas[s] = pareja
+        self._abrir_partida(pareja)
         await self.dormir(PAUSA_EMPUJE)
         for x in (rival, s):
             self._vigilar_emparejamiento(x, "FINISH", miembros)
@@ -806,7 +896,7 @@ class Servidor:
 
     async def c_cmd_cancel_matching(self, s, m):
         self._salir_de_cola(s)
-        self.parejas.pop(s, None)
+        self._dejar_pareja(s, "canceló")
         s.enviar({"msgid": m["msgid"], "rqid": m.get("rqid", 0), "result": NOERR})
         # C (r7.3.648): la pantalla de búsqueda solo se cierra con el empuje CANCEL
         self._vigilar_emparejamiento(s, "CANCEL", [])
@@ -814,12 +904,17 @@ class Servidor:
 
     async def c_cmd_set_gamerelay_check_res(self, s, m):
         s.enviar({"msgid": m["msgid"], "rqid": m.get("rqid", 0), "result": NOERR})
-        pareja = self.parejas.get(s)
+        pareja = self._pareja_por_clave(s)
         if pareja is None:
             return None
-        pareja["check"].add(s)
+        if m.get("error_code") not in (None, NOERR, "") or int(m.get("failed_reason") or 0):
+            log.warning("chequeo de conexión con error %s (motivo %s) de %s", m.get("error_code"),
+                        m.get("failed_reason"), s.pid)
+            return None
+        pareja["check"].add(self._clave_partida(s))
         # P (política PESBUL): se libera cuando los dos informaron; el cliente espera 30 s máx.
-        if len(pareja["check"]) == 2:
+        if len(pareja["check"]) == 2 and not pareja.get("check_enviado"):
+            pareja["check_enviado"] = True  # una sola vez por partida
             for x in pareja["miembros"]:
                 x.enviar({"msgid": "CMD_WATCH_GAMERELAY_CHECK_RES", "rqid": 0,
                           "result": NOERR, "error_code": NOERR})
@@ -2769,6 +2864,16 @@ class Servidor:
         return None
 
     async def c_cmd_send_game_result(self, s, m):
+        pareja = self._pareja_por_clave(s)
+        if pareja and pareja.get("room_id"):
+            datos = {k: v for k, v in m.items() if k not in ("msgid", "rqid")}
+            partido = f"pareja{pareja['room_id']}"
+            self.datos.guardar_resultado(pareja["room_id"], partido, s.pid or 0, datos)
+            res = self.datos.resultados(partido)
+            if len(res) >= 2:
+                iguales = len({repr(v.get("result", v)) for v in res.values()}) == 1
+                log.info("partido %s cerrado; los dos lados %s", partido,
+                         "coinciden" if iguales else "NO coinciden (revisar)")
         sala = self.salas.get(s.room_id)
         if sala and sala.partido:
             datos = {k: v for k, v in m.items() if k not in ("msgid", "rqid")}
@@ -2782,9 +2887,11 @@ class Servidor:
 
     async def c_cmd_send_abnormalend(self, s, m):
         log.warning("fin anormal pid=%s motivo=%s", s.pid, m.get("reason", m))
+        self._dejar_pareja(s, "fin anormal")
         return {}
 
     async def c_cmd_leave_game(self, s, m):
+        self._dejar_pareja(s, "salió del partido")
         return {}
 
     async def c_cmd_leave_room(self, s, m):

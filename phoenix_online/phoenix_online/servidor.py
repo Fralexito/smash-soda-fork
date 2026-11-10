@@ -339,6 +339,7 @@ async def principal(ruta_config):
     if cfg.get("clave_gamerelay") and g.get("activo", True):
         rele = Rele.desde_archivo(srv, cfg["clave_gamerelay"], int(g.get("indice", 1)))
         await bucle.create_datagram_endpoint(lambda: rele, local_addr=("0.0.0.0", int(g.get("puerto", 5100))))
+        srv.rele = rele
         log.info("gamerelay UDP en %s", g.get("puerto", 5100))
     else:
         log.warning("sin clave_gamerelay: no hay relé UDP; la comprobación de red fallará")

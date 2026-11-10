@@ -338,6 +338,36 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         for e in (ea, eb):
             self.assertEqual(e[-1][1]["error_code"], "NOERR")
 
+    async def test_pareja_abre_partida_en_el_rele(self):
+        import base64, struct
+        from phoenix_online import gamerelay as g
+        rele = g.Rele(None, bytes(256), bytes(16))
+        self.srv.rele = rele
+        a, ea = await self.entrar("A1")
+        b, eb = await self.entrar("B2")
+        r = self.srv.recibir
+        sa = base64.b64encode(struct.pack(">H", 50001) + b"\0\0" + bytes([100, 64, 0, 1]) + b"\0" * 6).decode()
+        await r(a, 19, {"msgid": "CMD_SEND_IPANDPORT_NTL", "rqid": 9, "reflexive_addr": {"sa_data": sa}})
+        await r(a, 21, {"msgid": "CMD_START_MATCHING", "rqid": 2, "matching_type": "OC_RANK"})
+        await r(b, 30, {"msgid": "CMD_START_MATCHING", "rqid": 3, "matching_type": "OC_RANK"})
+        [(room, it)] = rele.intentos.items()
+        self.assertGreater(room, 700000000)
+        self.assertEqual(it.ids, {"00000000000000a1": 0, "00000000000000b2": 1})
+        self.assertEqual(it.miembros[0]["endpoints"](), [("100.64.0.1", 50001)])
+        datos = base64.b64encode(bytes([2, 0, 15]) + (0).to_bytes(4, "big") + (3).to_bytes(2, "big")
+                                 + b"abc" + b"\0" * 20).decode()
+        await r(b, 32, {"msgid": "CMD_SEND_GAME_SEQUENCE_DATA", "rqid": 6, "game_seq_data": [
+            {"type": 2, "fromId": 1, "channelId": 15, "sequenceNumber": 0, "data": datos, "data_len": 32}]})
+        self.assertEqual(eb[-1][1]["result"], "NOERR")
+        self.assertEqual(it.contados[("00000000000000b2", 15, b"abc")], [0, 1])
+        # un fallo en el chequeo no libera la barrera; la salida de los dos cierra la partida
+        await r(a, 22, {"msgid": "CMD_SET_GAMERELAY_CHECK_RES", "rqid": 4, "error_code": "ER_CONNECT"})
+        self.assertNotEqual(ea[-1][1]["msgid"], "CMD_WATCH_GAMERELAY_CHECK_RES")
+        await r(a, 23, {"msgid": "CMD_LEAVE_GAME", "rqid": 5})
+        await self.srv.cerrar(b)
+        self.assertEqual(rele.intentos, {})
+        self.assertIn("rele", self.srv.estado())
+
     def test_lista_calidad_http_autoriza_sonda(self):
         r = self.srv.respuesta_http({"msgid": "CMD_GET_GAMERELAY_QUALITYCHECKLIST", "rqid": "5",
                                      "pid": "7"}, "10.0.0.2")
@@ -1400,3 +1430,132 @@ class TestBlindaje(unittest.IsolatedAsyncioTestCase):
         trama = nclmio.xor(cab + hashlib.md5(cab + cif).digest() + cif)
         with self.assertRaises(ValueError):
             LectorTramas(codec).alimentar(trama)
+
+
+class TestPartidaDos(unittest.TestCase):
+    """Fase 2-3 del relé (ESPEC_GAMERELAY_FASE23): dos PES falsos en la misma partida."""
+
+    def setUp(self):
+        from phoenix_online import gamerelay as g
+        self.g = g
+        self.k_ext, self.k_int = bytes(range(256)), bytes(range(16, 32))
+
+        class SrvFalso:
+            def sonda_autorizada(s, ip, indice):
+                return False
+
+        self.rele = g.Rele(SrvFalso(), self.k_ext, self.k_int)
+        self.salida = []
+
+        class T:
+            def sendto(s, d, a):
+                self.salida.append((d, a))
+
+        self.rele.connection_made(T())
+        self.A, self.B = ("100.64.0.1", 50001), ("100.64.0.2", 50002)
+        self.rele.abrir_intento(700000001, [
+            {"pid": "aa", "enter_no": 0, "ip_tcp": "100.64.0.1", "endpoints": [self.A]},
+            {"pid": "bb", "enter_no": 1, "ip_tcp": "100.64.0.2", "endpoints": [("100.64.0.2", 50002)]}])
+        self.claves, self.seq = {}, {}
+
+    def _kx(self, addr):
+        g = self.g
+        self.rele.datagram_received(g.cifrar_exterior(self.k_ext, g.armar_marco(
+            0x80, g.rc4(self.k_int, (7).to_bytes(4, "big")))), addr)
+        d, _ = self.salida[-1]
+        _, cuerpo = g.leer_marco(g.descifrar_exterior(self.k_ext, d))
+        self.claves[addr] = g.rc4(self.k_int, cuerpo)
+        self.seq[addr] = 0
+
+    def _mandar(self, addr, secciones, flags=0):
+        g = self.g
+        cuerpo = bytearray(g.armar_transporte(self.seq[addr], secciones))
+        cuerpo[4] = flags
+        self.seq[addr] += 1
+        self.rele.datagram_received(g.cifrar_exterior(self.claves[addr], g.armar_marco(0x01, bytes(cuerpo))), addr)
+
+    def _ultimo(self, addr):
+        g = self.g
+        d = [d for d, a in self.salida if a == addr][-1]
+        _, cuerpo = g.leer_marco(g.descifrar_exterior(self.claves[addr], d))
+        seq, flags, eco, secs = g.leer_datagrama(cuerpo)
+        return {"flags": flags, "eco": eco, "tam": len(cuerpo),
+                "c": {c: (ack, a) for c, ack, a, _b in secs}}
+
+    def _conectar(self, addr):
+        g = self.g
+        self._kx(addr)
+        self._mandar(addr, [(0, 0, [(0, g.carga_de(b"\x80"))]), (1, 0, [])])
+        self._mandar(addr, [(0, 1, [(1, g.carga_de(b"\x10"))]), (1, 0, [])])
+        self._mandar(addr, [(0, 2, []), (1, 0, [(0, g.carga_de(b"\x80\x05"), ), ])])
+        for k, ch in enumerate((9, 10, 12, 15)):
+            self._mandar(addr, [(0, 2, []), (1, 1 + k, [(1 + k, g.carga_de(bytes([0x80, ch])))])])
+
+    def test_lista_de_tres_y_reenvio(self):
+        g = self.g
+        self._conectar(self.A)
+        self._conectar(self.B)
+        lista_a = [g.bloques(c) for _, c in self._ultimo(self.A)["c"][5][1]]
+        lista_b = [g.bloques(c) for _, c in self._ultimo(self.B)["c"][5][1]]
+        self.assertEqual(lista_a, [[bytes([0x1F, 0xC0, 0x81])]])
+        self.assertEqual(lista_b, [[bytes([0x1F, 0xC1, 0x80])]])
+        # canal 9 de A: dos bloques en un elemento (consumen 2 claves); llega etiquetado a los dos
+        self._mandar(self.A, [(0, 2, []), (1, 5, []), (9, 0, [(0, g.carga_de(b"\x11", b"\x22"))])], flags=0x80)
+        ra, rb = self._ultimo(self.A), self._ultimo(self.B)
+        self.assertEqual(ra["c"][9][0], 2)  # ack = siguiente clave esperada (2 bloques)
+        self.assertEqual([g.bloques(c)[0] for _, c in rb["c"][9][1]], [b"\x00\x11", b"\x00\x22"])
+        self.assertEqual([g.bloques(c)[0] for _, c in ra["c"][9][1]], [b"\x00\x11", b"\x00\x22"])
+        self.assertEqual(ra["flags"], 0x40)  # eco RTT pedido con 0x80
+        self.assertEqual(ra["eco"][0], self.seq[self.A] - 1)
+        # repetición del mismo elemento: no se reenvía otra vez
+        antes = len(self._ultimo(self.B)["c"][9][1])
+        self._mandar(self.A, [(0, 2, []), (1, 5, []), (9, 0, [(0, g.carga_de(b"\x11", b"\x22"))])])
+        self.assertEqual(len(self._ultimo(self.B)["c"][9][1]), antes)
+        # canal 15 de B: a A con cabecera 0x4010; la copia TCP idéntica no se entrega dos veces
+        self._mandar(self.B, [(0, 2, []), (1, 5, []), (15, 0, [(0, g.carga_de(b"LISTO"))])])
+        quince = [g.bloques(c) for _, c in self._ultimo(self.A)["c"][15][1]]
+        self.assertEqual(quince, [[b"\x40\x10LISTO"]])
+        self.assertEqual(self.rele.reenviar_tcp("bb", 15, b"LISTO", 1), 0)
+        self.assertEqual(self.rele.reenviar_tcp("bb", 15, b"OTRO", 1), 1)
+        self.assertEqual(self.rele.reenviar_tcp("bb", 15, b"OTRO2", 0), 0)  # fromId equivocado
+        # reordenación: la clave 1 llega antes que la 0 y se entrega cuando se cierra el hueco
+        self._mandar(self.B, [(0, 2, []), (1, 5, []), (12, 1, [(1, g.carga_de(b"seg"))])])
+        self.assertEqual(self._ultimo(self.A)["c"].get(12, (0, []))[1], [])
+        self._mandar(self.B, [(0, 2, []), (1, 5, []), (12, 0, [(0, g.carga_de(b"pri"))])])
+        doce = [g.bloques(c)[0] for _, c in self._ultimo(self.A)["c"][12][1]]
+        self.assertEqual(doce, [b"\x40\x10pri", b"\x40\x10seg"])
+
+    def test_mensaje_largo_y_tope_de_2048(self):
+        g = self.g
+        self._conectar(self.A)
+        self._conectar(self.B)
+        grande = bytes(range(256)) * 3  # 768 B -> 4 bloques (2 de cabecera + 768 = 770)
+        for k in range(6):
+            self._mandar(self.B, [(0, 2, []), (1, 5, []), (10, k * 4, [(k * 4, g.carga_de(*g.trozos(grande)))])])
+        r = self._ultimo(self.A)
+        self.assertLessEqual(r["tam"], 0x800)
+        elems = r["c"][10][1]
+        self.assertTrue(elems)
+        self.assertEqual(b"".join(g.bloques(elems[0][1])), b"\x40\x10" + grande)
+        claves = [k for k, _ in elems]
+        self.assertEqual(claves, sorted(claves))
+        self.assertEqual(claves[1] - claves[0], 4)  # 4 bloques = 4 claves
+
+    def test_ambiguo_no_liga_y_salida_cierra(self):
+        g = self.g
+        self.rele.abrir_intento(700000002, [
+            {"pid": "cc", "enter_no": 0, "ip_tcp": "100.64.0.1", "endpoints": []},
+            {"pid": "dd", "enter_no": 1, "ip_tcp": "9.9.9.9", "endpoints": []}])
+        otro = ("100.64.0.1", 40000)  # misma IP que A y que cc, puerto no declarado: ambiguo
+        self._conectar(otro)
+        self.assertNotIn(5, {c for c, (ack, a) in self._ultimo(otro)["c"].items() if a})
+        self.rele.miembro_salio(700000001, "aa")
+        self.rele.miembro_salio(700000001, "bb")
+        self.assertNotIn(700000001, self.rele.intentos)
+
+    def test_endpoint_de_ntl(self):
+        import base64, struct
+        sa = struct.pack(">H", 50002) + b"\0\0" + bytes([100, 64, 0, 2]) + b"\0" * 6
+        self.assertEqual(self.g.endpoint_de_ntl({"sa_data": base64.b64encode(sa).decode()}),
+                         ("100.64.0.2", 50002))
+        self.assertIsNone(self.g.endpoint_de_ntl({"sa_data": ""}))
