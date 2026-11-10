@@ -83,6 +83,43 @@ class Nube:
             fila["usuario"] = usuario  # dueño en la web (pase); así ve su club en su perfil
         return fila
 
+    @staticmethod
+    def fila_division(clave, e, nombre_jugador="", usuario=None):
+        """Resumen de Divisiones para la web (migración 165). Nada de historial ni claves internas."""
+        archivadas = e.get("archivadas") or []
+        fila = {"clave_servidor": clave, "nombre_jugador": str(nombre_jugador or "")[:40],
+                "division": e.get("division", "D12"), "rating": int(e.get("rating", 1000)),
+                "sp": int(e.get("sp", 0)), "temporada": int(e.get("temporada", 1)),
+                "jugados": int(e.get("jugados", 0)),
+                "victorias": int(e.get("win", 0)) + sum(int(a.get("win", 0)) for a in archivadas),
+                "empates": int(e.get("draw", 0)) + sum(int(a.get("draw", 0)) for a in archivadas),
+                "derrotas": int(e.get("loss", 0)) + sum(int(a.get("loss", 0)) for a in archivadas),
+                "racha_max": int(e.get("racha_max", 0)),
+                "partidos_total": int(e.get("jugados", 0)) + sum(int(a.get("jugados", 0)) for a in archivadas)}
+        if usuario:
+            fila["usuario"] = usuario
+        return fila
+
+    async def subir_divisiones(self):
+        """Solo con el secreto (migración 165): sin él no hay función a la que llamar."""
+        datos = self.srv.datos
+        if not self.secreto or not hasattr(datos, "div_cambiadas") or not datos.div_cambiadas:
+            return 0
+        claves, datos.div_cambiadas = sorted(datos.div_cambiadas), set()
+        filas = []
+        for k in claves:
+            e = datos.division(k)
+            if e is not None:
+                j = datos.jugador(k) or {}
+                filas.append(self.fila_division(k, e, j.get("pname", ""), datos.usuario_de_clave(k)))
+        try:
+            for i in range(0, len(filas), 200):
+                await self._llamar("phoenix_srv_subir_divisiones", p_filas=filas[i:i + 200])
+        except Exception:
+            datos.div_cambiadas.update(claves)  # se reintenta en la siguiente vuelta
+            raise
+        return len(filas)
+
     # La red va en un hilo aparte (to_thread); la base de datos y los clubes SOLO en el hilo del
     # servidor (SQLite no deja usar su conexión desde otro hilo, y así no hay carreras con el juego).
     async def _red(self, *a, **k):
@@ -225,9 +262,15 @@ class Nube:
             # primera vuelta: sube TODOS los clubes, así la web los ve aunque nadie juegue hoy
             if hasattr(self.srv.datos, "claves_de_clubes"):
                 self.srv.datos.marcar_cambiados(self.srv.datos.claves_de_clubes())
+            if hasattr(self.srv.datos, "divisiones"):
+                self.srv.datos.div_cambiadas.update(self.srv.datos.divisiones())
             self._todo_subido = True
         await self.sincronizar_vinculos()
         subidos = await self.subir_clubes()
+        try:
+            await self.subir_divisiones()
+        except Exception as e:  # la migración 165 puede no estar aplicada: no frena lo demás
+            log.warning("nube: Divisiones sin subir (%s)", e)
         cambiadas = await self.leer_reglas()
         movs = await self.aplicar_movimientos()
         if subidos or cambiadas or movs:

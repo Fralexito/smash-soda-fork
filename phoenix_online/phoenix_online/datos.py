@@ -83,6 +83,7 @@ class Datos:
         # vinculos: {steam_hex: {"usuario_phoenix": ..., "pname": ...}} o None = abierto a todos
         self.vinculos = vinculos
         self.cambiados = set()  # clubes que cambiaron desde la última subida a la nube
+        self.div_cambiadas = set()  # estados de Divisiones que cambiaron (para la web)
 
     def autorizado(self, steam_hex):
         return self.vinculos is None or steam_hex.lower() in self.vinculos
@@ -235,6 +236,7 @@ class Datos:
         self.db.execute("insert into divisiones(steam_hex, datos) values (?,?) on conflict(steam_hex) "
                         "do update set datos=excluded.datos", ((steam_hex or "").lower(), json.dumps(estado)))
         self.db.commit()
+        self.div_cambiadas.add((steam_hex or "").lower())
 
     def divisiones(self):
         return {k: json.loads(d) for k, d in self.db.execute("select steam_hex, datos from divisiones")}

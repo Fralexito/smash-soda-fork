@@ -2133,6 +2133,33 @@ class TestNubeSinLlaveMaestra(unittest.IsolatedAsyncioTestCase):
         await n.vuelta()
         self.assertEqual(subidas, [["aa", "bb"]])  # la primera sube todo; la segunda nada (sin cambios)
 
+    async def test_divisiones_a_la_web(self):
+        import io, json as _j
+        from phoenix_online.nube import Nube
+        srv = Servidor({**CFG, "myclub": {}}, Datos())
+        srv.datos.crear_jugador("aa", "ANA")
+        srv.datos.guardar_division("aa", {"division": "D11", "rating": 1040, "win": 2,
+                                          "archivadas": [{"win": 7, "draw": 1, "loss": 2, "jugados": 10}], "jugados": 2})
+        srv.datos.div_cambiadas.clear()
+        subidas = []
+
+        class Resp(io.BytesIO):
+            def __enter__(s): return s
+            def __exit__(s, *a): return False
+
+        def abrir(req, timeout=None):
+            if req.full_url.endswith("phoenix_srv_subir_divisiones"):
+                subidas.append(_j.loads(req.data)["p_filas"])
+            return Resp(b"[]")
+
+        n = Nube(srv, "https://x.supabase.co", "sb_publishable_x", abrir=abrir, secreto="s" * 40)
+        await n.vuelta()
+        await n.vuelta()
+        self.assertEqual(len(subidas), 1)
+        f = subidas[0][0]
+        self.assertEqual((f["division"], f["rating"], f["victorias"], f["partidos_total"], f["nombre_jugador"]),
+                         ("D11", 1040, 9, 12, "ANA"))
+
     def test_desde_config_prefiere_sin_llave_maestra(self):
         import os
         from phoenix_online.nube import desde_config
