@@ -1,0 +1,712 @@
+﻿id,id_phoenix,nombre_maestra,nota,cara_en,minicara_en,riesgo
+41180,PXP-000732,Roberto Fernández,revisar,conmegol+sudamerican,base+conmegol+sudamerican,ALTO: cara en las dos
+41513,PXP-000786,Jonatan Bauman,revisar,conmegol+sudamerican,sudamerican,ALTO: cara en las dos
+41538,PXP-000793,Emmanuel Olivera,revisar,conmegol+sudamerican,base+sudamerican,ALTO: cara en las dos
+42538,PXP-000939,Rodrigo Moreno,revisar,base+conmegol+sudamerican,base+sudamerican,ALTO: cara en las dos
+43901,PXP-001191,José Francisco Cevallos Jr.,revisar,conmegol+sudamerican,conmegol+sudamerican,ALTO: cara en las dos
+46089,PXP-001659,Vinícius Silva,revisar,conmegol+sudamerican,base+sudamerican,ALTO: cara en las dos
+46303,PXP-001698,Gabriel,revisar,conmegol+sudamerican,sudamerican,ALTO: cara en las dos
+47250,PXP-001920,Adrián San Miguel,revisar,base+conmegol+sudamerican,base+sudamerican,ALTO: cara en las dos
+57088,PXP-006371,Abdulaziz Hatim,revisar,conmegol+sudamerican,sudamerican,ALTO: cara en las dos
+57100,PXP-006378,Narubadin Weerawatnodom,revisar,base+conmegol+sudamerican,base+sudamerican,ALTO: cara en las dos
+59025,PXP-007105,Seyed Hossein Hosseini,revisar,conmegol+sudamerican,base+sudamerican,ALTO: cara en las dos
+60391,PXP-007520,Rafa Silva,revisar,base+conmegol+sudamerican,base+sudamerican,ALTO: cara en las dos
+61143,PXP-007846,Matías Nahuel,revisar,conmegol+sudamerican,base+sudamerican,ALTO: cara en las dos
+65336,PXP-008376,Maynor Figueroa,revisar,base+conmegol+sudamerican,,ALTO: cara en las dos
+65342,PXP-008382,Juan Román Riquelme,revisar,base+conmegol+sudamerican,,ALTO: cara en las dos
+65345,PXP-008385,Deco,revisar,base+conmegol+sudamerican,,ALTO: cara en las dos
+65347,PXP-008387,Gerard Piqué,revisar,base+conmegol+sudamerican,,ALTO: cara en las dos
+65350,PXP-008390,Pavel Nedvěd,revisar,base+conmegol+sudamerican,,ALTO: cara en las dos
+103064,PXP-009333,Matheus Magalhães,revisar,conmegol+sudamerican,base+sudamerican,ALTO: cara en las dos
+104541,PXP-009793,Rafael Santos Borré,revisar,base+conmegol+sudamerican,base+conmegol+sudamerican,ALTO: cara en las dos
+104864,PXP-009915,Gonzalo Martínez,revisar,conmegol+sudamerican,conmegol+sudamerican,ALTO: cara en las dos
+105106,PXP-010001,Jonatan Galván,revisar,conmegol+sudamerican,base+conmegol+sudamerican,ALTO: cara en las dos
+105138,PXP-010016,Kaku,revisar,conmegol+sudamerican,conmegol+sudamerican,ALTO: cara en las dos
+105223,PXP-010049,Federico Lanzillotta,revisar,conmegol+sudamerican,base+sudamerican,ALTO: cara en las dos
+105288,PXP-010074,Juan Cruz Komar,revisar,conmegol+sudamerican,base+conmegol+sudamerican,ALTO: cara en las dos
+106566,PXP-010324,Jean,revisar,conmegol+sudamerican,base+conmegol+sudamerican,ALTO: cara en las dos
+106613,PXP-010348,Lincoln Henrique,revisar,conmegol+sudamerican,base+sudamerican,ALTO: cara en las dos
+106618,PXP-010352,Jhonatan Luiz,revisar,conmegol+sudamerican,base+sudamerican,ALTO: cara en las dos
+106635,PXP-010361,Bernardo Fernandes,revisar,conmegol+sudamerican,base+sudamerican,ALTO: cara en las dos
+107061,PXP-010459,Cristiano,revisar,conmegol+sudamerican,sudamerican,ALTO: cara en las dos
+107065,PXP-010461,Emerson,revisar,conmegol+sudamerican,sudamerican,ALTO: cara en las dos
+107085,PXP-010471,Jeremiah St. Juste,revisar,base+conmegol+sudamerican,base+sudamerican,ALTO: cara en las dos
+107612,PXP-010593,Trezeguet,revisar,base+conmegol+sudamerican,base+conmegol+sudamerican,ALTO: cara en las dos
+107712,PXP-010623,Jason Remeseiro,revisar,conmegol+sudamerican,base+sudamerican,ALTO: cara en las dos
+107980,PXP-010720,Jordan Siebatcheu,revisar,conmegol+sudamerican,base+sudamerican,ALTO: cara en las dos
+108941,PXP-011020,De Cordova-Reid,revisar,conmegol+sudamerican,base+sudamerican,ALTO: cara en las dos
+109743,PXP-011262,Blas Riveros,revisar,conmegol+sudamerican,base+conmegol+sudamerican,ALTO: cara en las dos
+110802,PXP-011625,Yago Pikachu,revisar,conmegol+sudamerican,base+sudamerican,ALTO: cara en las dos
+111207,PXP-011818,Gabriel,revisar,base+conmegol+sudamerican,base+conmegol+sudamerican,ALTO: cara en las dos
+112340,PXP-012154,Saeed Ezatolahi,revisar,conmegol+sudamerican,base+conmegol+sudamerican,ALTO: cara en las dos
+114460,PXP-012814,Alexandru Dobre,revisar,conmegol+sudamerican,base+sudamerican,ALTO: cara en las dos
+114557,PXP-012851,Álvaro Ferllo,revisar,conmegol+sudamerican,base+sudamerican,ALTO: cara en las dos
+116266,PXP-013437,Mousa Al-Tamari,revisar,conmegol+sudamerican,base+conmegol+sudamerican,ALTO: cara en las dos
+118105,PXP-014056,Niklas Beste,revisar,conmegol+sudamerican,base+sudamerican,ALTO: cara en las dos
+118129,PXP-014063,Hamed Traoré,revisar,conmegol+sudamerican,base+sudamerican,ALTO: cara en las dos
+118424,PXP-014204,Rogério Oliveira,revisar,conmegol+sudamerican,base+sudamerican,ALTO: cara en las dos
+119695,PXP-014630,Joakim Mæhle,revisar,base+conmegol+sudamerican,base+sudamerican,ALTO: cara en las dos
+119788,PXP-014669,Ruan,revisar,conmegol+sudamerican,sudamerican,ALTO: cara en las dos
+119792,PXP-014672,Alan Souza,revisar,conmegol+sudamerican,sudamerican,ALTO: cara en las dos
+120006,PXP-014789,Jeider Riquett,revisar,conmegol+sudamerican,base+sudamerican,ALTO: cara en las dos
+123300,PXP-015769,Ahmed Fathi,revisar,conmegol+sudamerican,conmegol+sudamerican,ALTO: cara en las dos
+123393,PXP-015800,Hyeon-Woo Jo,revisar,conmegol+sudamerican,base+conmegol+sudamerican,ALTO: cara en las dos
+123925,PXP-015947,Andrew Irving,revisar,conmegol+sudamerican,sudamerican,ALTO: cara en las dos
+124846,PXP-016124,Giorgi Tsitaishvili,revisar,conmegol+sudamerican,base+sudamerican,ALTO: cara en las dos
+124882,PXP-016134,Homam Al-Amin,revisar,conmegol+sudamerican,conmegol+sudamerican,ALTO: cara en las dos
+125660,PXP-016281,Zaidu Sanusi,revisar,conmegol+sudamerican,base+sudamerican,ALTO: cara en las dos
+125878,PXP-016345,Antonio Glauder,revisar,conmegol+sudamerican,base+sudamerican,ALTO: cara en las dos
+126025,PXP-016388,Matteo Brunori,revisar,conmegol+sudamerican,base+sudamerican,ALTO: cara en las dos
+126362,PXP-016540,Luan,revisar,conmegol+sudamerican,base+sudamerican,ALTO: cara en las dos
+126673,PXP-016686,Francisco Trincão,revisar,base+conmegol+sudamerican,base+conmegol+sudamerican,ALTO: cara en las dos
+127953,PXP-017166,Fabri,revisar,conmegol+sudamerican,sudamerican,ALTO: cara en las dos
+129727,PXP-017849,Feras Al-Buraikan,revisar,conmegol+sudamerican,base+conmegol+sudamerican,ALTO: cara en las dos
+130442,PXP-018173,Muhsen Al-Ghassani,revisar,conmegol+sudamerican,base+sudamerican,ALTO: cara en las dos
+130495,PXP-018205,Hernán López Muñoz,revisar,conmegol+sudamerican,base+conmegol+sudamerican,ALTO: cara en las dos
+130671,PXP-018274,Gian Luca Pugliese,revisar,conmegol+sudamerican,base+sudamerican,ALTO: cara en las dos
+131774,PXP-018514,Higor Meritão,revisar,conmegol+sudamerican,base+sudamerican,ALTO: cara en las dos
+132215,PXP-018657,Oliver Batista-Meier,revisar,conmegol+sudamerican,base+sudamerican,ALTO: cara en las dos
+132716,PXP-018909,Juan Nardoni,revisar,conmegol+sudamerican,base+sudamerican,ALTO: cara en las dos
+132748,PXP-018921,Serge-Philippe Raux-Yao,revisar,conmegol+sudamerican,base+sudamerican,ALTO: cara en las dos
+133151,PXP-019095,Filip Jagiełło,revisar,conmegol+sudamerican,base+sudamerican,ALTO: cara en las dos
+133403,PXP-019203,Uğur Kaan Yıldız,revisar,conmegol+sudamerican,base+sudamerican,ALTO: cara en las dos
+134147,PXP-019372,Diego Plaza Ramos,revisar,conmegol+sudamerican,base+sudamerican,ALTO: cara en las dos
+134512,PXP-019492,Juan Santos,revisar,conmegol+sudamerican,base+sudamerican,ALTO: cara en las dos
+135587,PXP-019929,Anis Ben Slimane,revisar,conmegol+sudamerican,base+conmegol+sudamerican,ALTO: cara en las dos
+135787,PXP-019976,Mohammed Al-Yami,revisar,conmegol+sudamerican,base+sudamerican,ALTO: cara en las dos
+136020,PXP-020079,Jorge Campos,revisar,base+conmegol+sudamerican,,ALTO: cara en las dos
+136021,PXP-020080,Gastón Fernández,revisar,base+conmegol+sudamerican,,ALTO: cara en las dos
+136022,PXP-020081,Matías Oyola,revisar,base+conmegol+sudamerican,,ALTO: cara en las dos
+136093,PXP-020102,David Da Costa,revisar,conmegol+sudamerican,base+sudamerican,ALTO: cara en las dos
+136424,PXP-020197,Matty Godden,revisar,conmegol+sudamerican,base+sudamerican,ALTO: cara en las dos
+137996,PXP-020508,Albert Grønbæk,revisar,conmegol+sudamerican,base+sudamerican,ALTO: cara en las dos
+138662,PXP-020719,Sávio,revisar,conmegol+sudamerican,base+sudamerican,ALTO: cara en las dos
+139707,PXP-020996,Przemysław Płacheta,revisar,base+conmegol+sudamerican,base+sudamerican,ALTO: cara en las dos
+139835,PXP-021114,Emmanuel Emegha,revisar,conmegol+sudamerican,base+sudamerican,ALTO: cara en las dos
+139852,PXP-021126,Sebastien Pineau,revisar,conmegol+sudamerican,base+sudamerican,ALTO: cara en las dos
+140403,PXP-021580,Gustavo Garcia,revisar,conmegol+sudamerican,sudamerican,ALTO: cara en las dos
+142272,PXP-022334,Daniel Ruiz,revisar,conmegol+sudamerican,base+conmegol+sudamerican,ALTO: cara en las dos
+142785,PXP-022652,Leo Hjelde,revisar,conmegol+sudamerican,base+sudamerican,ALTO: cara en las dos
+143074,PXP-022822,Mahala Opoku,revisar,conmegol+sudamerican,sudamerican,ALTO: cara en las dos
+143709,PXP-023062,Arthur Wenderroscky,revisar,conmegol+sudamerican,sudamerican,ALTO: cara en las dos
+143887,PXP-023150,Mehmet Aydin,revisar,conmegol+sudamerican,base+sudamerican,ALTO: cara en las dos
+143904,PXP-023161,Jonathan Khemdee,revisar,conmegol+sudamerican,base+sudamerican,ALTO: cara en las dos
+144333,PXP-023360,Jhohan Romaña,revisar,conmegol+sudamerican,sudamerican,ALTO: cara en las dos
+144384,PXP-023395,Benji Kikanović,revisar,conmegol+sudamerican,sudamerican,ALTO: cara en las dos
+144386,PXP-023397,Jalen Neal,revisar,conmegol+sudamerican,sudamerican,ALTO: cara en las dos
+146465,PXP-024009,Abdul Fatawu,revisar,conmegol+sudamerican,conmegol+sudamerican,ALTO: cara en las dos
+146817,PXP-024133,Rúben Ismael,revisar,conmegol+sudamerican,sudamerican,ALTO: cara en las dos
+146922,PXP-024178,Amourricho Van Axel Dongen,revisar,conmegol+sudamerican,sudamerican,ALTO: cara en las dos
+146971,PXP-024203,Agustín Venezia,revisar,conmegol+sudamerican,sudamerican,ALTO: cara en las dos
+147315,PXP-024354,Roger Fernandes,revisar,conmegol+sudamerican,sudamerican,ALTO: cara en las dos
+147370,PXP-024392,Javi Martón,revisar,conmegol+sudamerican,sudamerican,ALTO: cara en las dos
+147612,PXP-024499,Odeluga Offiah,revisar,conmegol+sudamerican,sudamerican,ALTO: cara en las dos
+147803,PXP-024580,Rivaldo Lozano,revisar,conmegol+sudamerican,sudamerican,ALTO: cara en las dos
+147951,PXP-024686,Ahmed Sidibé,revisar,conmegol+sudamerican,sudamerican,ALTO: cara en las dos
+151500,PXP-025096,Andrés Gómez,revisar,conmegol+sudamerican,conmegol+sudamerican,ALTO: cara en las dos
+154602,PXP-026204,Sebastián Pérez-Bouquet,revisar,conmegol+sudamerican,sudamerican,ALTO: cara en las dos
+157532,PXP-026854,Rafael Fernández,revisar,conmegol+sudamerican,sudamerican,ALTO: cara en las dos
+157644,PXP-026912,Youssef Chermiti,revisar,conmegol+sudamerican,sudamerican,ALTO: cara en las dos
+158486,PXP-027078,Ruan Pereira,revisar,conmegol+sudamerican,,ALTO: cara en las dos
+159503,PXP-027404,Chico da Costa,revisar,conmegol+sudamerican,sudamerican,ALTO: cara en las dos
+159579,PXP-027441,David Datro Fofana,revisar,conmegol+sudamerican,sudamerican,ALTO: cara en las dos
+160977,PXP-027995,Junior Kroupi,revisar,conmegol+sudamerican,sudamerican,ALTO: cara en las dos
+163646,PXP-028456,Odin Holm,revisar,conmegol+sudamerican,sudamerican,ALTO: cara en las dos
+164979,PXP-028787,Yunus Konak,revisar,conmegol+sudamerican,sudamerican,ALTO: cara en las dos
+165060,PXP-028831,Pio Esposito,revisar,conmegol+sudamerican,sudamerican,ALTO: cara en las dos
+165252,PXP-028892,Samu Aghehowa,revisar,conmegol+sudamerican,sudamerican,ALTO: cara en las dos
+169128,PXP-029917,Juan Velázquez,revisar,conmegol+sudamerican,conmegol,ALTO: cara en las dos
+16741,PXP-000062,Ri Yong-Jik,revisar,,sudamerican,bajo
+33491,PXP-000147,Gaby Torres,revisar,sudamerican,base+sudamerican,bajo
+34424,PXP-000162,Mahmoud Khamis,revisar,,,bajo
+36052,PXP-000212,Josep Antoni,revisar,,base+sudamerican,bajo
+37899,PXP-000339,Marcelo Martins,revisar,base+sudamerican,base+sudamerican,bajo
+38873,PXP-000450,Erik Bicfalvi,revisar,sudamerican,base+sudamerican,bajo
+40154,PXP-000560,Jens Stryger,revisar,base+conmegol,base+sudamerican,bajo
+41235,PXP-000745,Wellington Martins,revisar,sudamerican,base+sudamerican,bajo
+41849,PXP-000830,Bibars Natcho,revisar,base,base+sudamerican,bajo
+42278,PXP-000882,Guilherme Camacho,revisar,sudamerican,base+sudamerican,bajo
+43497,PXP-001130,Anas Bani Yassen,revisar,,sudamerican,bajo
+45519,PXP-001500,Thomás,revisar,sudamerican,,bajo
+45988,PXP-001634,Il-Gwan Jong,revisar,,sudamerican,bajo
+45990,PXP-001635,Kuk-Chol Jang,revisar,,sudamerican,bajo
+46049,PXP-001654,José Élber,revisar,sudamerican,sudamerican,bajo
+46132,PXP-001667,Faiyz Al-Rusheidi,revisar,,sudamerican,bajo
+46174,PXP-001676,Guilherme Dos Santos,revisar,conmegol,base+sudamerican,bajo
+46242,PXP-001696,Giovanni,revisar,sudamerican,base+sudamerican,bajo
+47828,PXP-002088,Juan Imbert,revisar,sudamerican,sudamerican,bajo
+47872,PXP-002110,Eduardo Teixeira,revisar,sudamerican,base+sudamerican,bajo
+52302,PXP-003438,T. Gresham,revisar,,base+sudamerican,bajo
+52317,PXP-003447,J. Crooks,revisar,,base+sudamerican,bajo
+52319,PXP-003448,E. Gribbin,revisar,,base,bajo
+52321,PXP-003449,T. Asquith,revisar,,base,bajo
+52322,PXP-003450,F. Macy,revisar,,base,bajo
+52324,PXP-003451,A. Simpson,revisar,,base,bajo
+52325,PXP-003452,E. Annis,revisar,,base,bajo
+52326,PXP-003453,J. Toshack,revisar,,base,bajo
+52327,PXP-003454,H. Colman,revisar,,base,bajo
+52329,PXP-003456,E. Trimmer,revisar,,base,bajo
+52331,PXP-003458,B. Mccabe,revisar,,base,bajo
+52398,PXP-003505,Haroune Camara,revisar,,sudamerican,bajo
+52958,PXP-003827,Eric Vales,revisar,,sudamerican,bajo
+52974,PXP-003840,Lilian Egloff,revisar,,sudamerican,bajo
+52984,PXP-003850,Luka Marić,revisar,,sudamerican,bajo
+52991,PXP-003856,H. Salguero,revisar,,,bajo
+52992,PXP-003857,K. Arriaga,revisar,,,bajo
+52993,PXP-003858,R. Jiménez,revisar,,,bajo
+52994,PXP-003859,V. Pineda,revisar,,,bajo
+52995,PXP-003860,E. Navas,revisar,,,bajo
+52998,PXP-003863,S. Dest,revisar,,,bajo
+52999,PXP-003864,H. Herrera,revisar,,,bajo
+53000,PXP-003865,D. Rugama,revisar,,,bajo
+53001,PXP-003866,D. Chinchilla,revisar,,,bajo
+53002,PXP-003867,M. Turner,revisar,,,bajo
+53003,PXP-003868,V. Lozano,revisar,,,bajo
+53004,PXP-003869,W. Bengtson,revisar,,,bajo
+53005,PXP-003870,A. Carrasquilla,revisar,,,bajo
+53008,PXP-003873,V. Hernández,revisar,,,bajo
+53009,PXP-003874,J. Martínez,revisar,,,bajo
+53010,PXP-003875,O. Pineda,revisar,,,bajo
+53012,PXP-003877,C. Borges,revisar,,,bajo
+53013,PXP-003878,C. Vela,revisar,,,bajo
+53016,PXP-003881,A. Ledesma,revisar,,,bajo
+53017,PXP-003882,E. Alvarado,revisar,,sudamerican,bajo
+53018,PXP-003883,M. Murillo,revisar,,,bajo
+53020,PXP-003885,M. Pulisic,revisar,,,bajo
+55144,PXP-005282,B. Mcdowell,revisar,,base+sudamerican,bajo
+55145,PXP-005283,B. Donnelly,revisar,,base,bajo
+55244,PXP-005339,Matías Benítez,revisar,,base+sudamerican,bajo
+55245,PXP-005340,Luciano Montenegro,revisar,,base+sudamerican,bajo
+55246,PXP-005341,Thiago Silveira,revisar,,base+sudamerican,bajo
+55247,PXP-005342,Mateo Sotomayor,revisar,,base+sudamerican,bajo
+55248,PXP-005343,Maximiliano Montiel,revisar,,base+sudamerican,bajo
+55249,PXP-005344,Santiago Carvallo,revisar,,base+sudamerican,bajo
+55250,PXP-005345,Valentín Madrigal,revisar,,base+sudamerican,bajo
+55251,PXP-005346,Bautista Zabaleta,revisar,,base+sudamerican,bajo
+55252,PXP-005347,Ignacio Villalba,revisar,,base+sudamerican,bajo
+55253,PXP-005348,Bruno Riquelme,revisar,,base+sudamerican,bajo
+55254,PXP-005349,Martín Benítez,revisar,,base+sudamerican,bajo
+55255,PXP-005350,Damián Arismendi,revisar,,base+sudamerican,bajo
+55256,PXP-005351,Facundo Peñailillo,revisar,,base+sudamerican,bajo
+55257,PXP-005352,Nicolás Bustamante,revisar,,base+sudamerican,bajo
+55258,PXP-005353,Federico Cárdenas,revisar,,base+sudamerican,bajo
+55259,PXP-005354,Joaquín Alarcón,revisar,,base+sudamerican,bajo
+55260,PXP-005355,Gonzalo Balbuena,revisar,,base+sudamerican,bajo
+55261,PXP-005356,Mariano Huamán,revisar,,base+sudamerican,bajo
+55262,PXP-005357,Tomás Angulo,revisar,,base+sudamerican,bajo
+55263,PXP-005358,Emiliano Maciel,revisar,,base+sudamerican,bajo
+55264,PXP-005359,Franco Sanguinetti,revisar,,base+sudamerican,bajo
+55265,PXP-005360,Lautaro Gamarra,revisar,,base,bajo
+55266,PXP-005361,Esteban Arriagada,revisar,,base,bajo
+55267,PXP-005362,Alejo Orellana,revisar,,base+sudamerican,bajo
+55268,PXP-005363,Rodrigo Zanetti,revisar,,base+sudamerican,bajo
+55269,PXP-005364,Agustín Farfán,revisar,,base+sudamerican,bajo
+55270,PXP-005365,Lucas Valenzuela,revisar,,base+sudamerican,bajo
+55271,PXP-005366,Joaquín Mosquera,revisar,,base+sudamerican,bajo
+55282,PXP-005377,A. Lobato,revisar,sudamerican,base+sudamerican,bajo
+55304,PXP-005396,N. Alarcón,revisar,,,bajo
+55305,PXP-005397,B. Sotomayor,revisar,,,bajo
+55306,PXP-005398,E. Cavalcanti,revisar,,,bajo
+55307,PXP-005399,V. Zambrano,revisar,,,bajo
+55308,PXP-005400,J. Yahuarcani,revisar,sudamerican,,bajo
+55309,PXP-005401,M. De Giorgi,revisar,,,bajo
+55310,PXP-005402,V. Riquelme,revisar,,,bajo
+55311,PXP-005403,W. Mosquera,revisar,,,bajo
+55312,PXP-005404,V. Arriagada,revisar,,,bajo
+55313,PXP-005405,H. Carballo,revisar,,,bajo
+55314,PXP-005406,M. Benítez,revisar,,,bajo
+55315,PXP-005407,S. Bustamante,revisar,,,bajo
+55316,PXP-005408,D. Cárdenas,revisar,,,bajo
+55317,PXP-005409,L. Huamán,revisar,,,bajo
+55318,PXP-005410,R. Montiel,revisar,,,bajo
+55319,PXP-005411,C. Zanetti,revisar,,,bajo
+55320,PXP-005412,H. Estupiñán,revisar,,,bajo
+55323,PXP-005415,K. Mac Allister,revisar,,,bajo
+55324,PXP-005416,L. Da Silva,revisar,,,bajo
+55325,PXP-005417,K. Burbano,revisar,,,bajo
+55327,PXP-005419,M. Peñailillo,revisar,,,bajo
+55328,PXP-005420,D. Balbuena,revisar,,,bajo
+55331,PXP-005423,O. Sanguinetti,revisar,,,bajo
+55333,PXP-005425,A. Farfán,revisar,,,bajo
+55335,PXP-005427,S. Arismendi,revisar,,,bajo
+55338,PXP-005430,I. Nogueira,revisar,,,bajo
+55343,PXP-005435,V. Bunuel,revisar,,,bajo
+55344,PXP-005436,Y. Alguersuari,revisar,,,bajo
+55345,PXP-005437,J. Halfter,revisar,,,bajo
+55346,PXP-005438,L. Nicolau,revisar,,,bajo
+55349,PXP-005441,L. Pereiro,revisar,,,bajo
+55350,PXP-005442,O. Farres,revisar,,,bajo
+55353,PXP-005445,E. Padial,revisar,sudamerican,,bajo
+55356,PXP-005448,D. Isasmendi,revisar,sudamerican,,bajo
+55359,PXP-005451,O. Pascual,revisar,sudamerican,,bajo
+55360,PXP-005452,P. Manuel,revisar,sudamerican,,bajo
+55362,PXP-005454,L. Rubiera,revisar,,,bajo
+57092,PXP-006373,Fawaz Al Qarni,revisar,,sudamerican,bajo
+57104,PXP-006379,Abdulaziz Haikal,revisar,,base,bajo
+57225,PXP-006403,Fidel Chaves,revisar,sudamerican,base+sudamerican,bajo
+57439,PXP-006452,Mattheus Oliveira,revisar,,base+sudamerican,bajo
+58711,PXP-007044,Augusto Pacheco,revisar,,sudamerican,bajo
+59355,PXP-007181,A. Contreras,revisar,,base+sudamerican,bajo
+60243,PXP-007447,José Gómez,revisar,base,base+sudamerican,bajo
+60729,PXP-007667,Nuno Sequeira,revisar,sudamerican,base+sudamerican,bajo
+60761,PXP-007681,Erik Lima,revisar,base+sudamerican,base+sudamerican,bajo
+60861,PXP-007720,Mohammed Qassim,revisar,,,bajo
+60934,PXP-007757,Mohammed Al Saiari,revisar,,,bajo
+61094,PXP-007818,Amine Oudrhiri,revisar,sudamerican,base+sudamerican,bajo
+61208,PXP-007873,Lucas Alves,revisar,,base+sudamerican,bajo
+61318,PXP-007897,Eduardo Giusti,revisar,sudamerican,sudamerican,bajo
+63136,PXP-008044,Hussain Shaian,revisar,,base,bajo
+63456,PXP-008119,Tristan Do,revisar,base+sudamerican,base+sudamerican,bajo
+63653,PXP-008167,Jonatan Cristaldo,revisar,sudamerican,base+sudamerican,bajo
+64896,PXP-008267,Nouh Al Mousa,revisar,,base+sudamerican,bajo
+64909,PXP-008270,Khalid Kaabi,revisar,,sudamerican,bajo
+64915,PXP-008273,Ammar Al Daheem,revisar,,,bajo
+65102,PXP-008310,Nicolás Palacios,revisar,sudamerican,base+sudamerican,bajo
+65335,PXP-008375,Raphaël Varane,revisar,base+conmegol,,bajo
+65338,PXP-008378,Marcelo,revisar,base+conmegol,,bajo
+65339,PXP-008379,Fabio Coentrão,revisar,base+conmegol,,bajo
+65340,PXP-008380,Pepe,revisar,base+conmegol,,bajo
+65343,PXP-008383,Ronaldinho,revisar,base+conmegol,,bajo
+65344,PXP-008384,Diego Forlán,revisar,base+conmegol,,bajo
+65346,PXP-008386,Carlos Valderrama,revisar,base+conmegol,,bajo
+65348,PXP-008388,Kaká,revisar,base+conmegol,,bajo
+65349,PXP-008389,Ronaldo Nazario,revisar,base+conmegol,,bajo
+65351,PXP-008391,Thierry Henry,revisar,base+conmegol,,bajo
+100382,PXP-008681,David Juncà,revisar,sudamerican,base+sudamerican,bajo
+100723,PXP-008752,Yuri Fonseca,revisar,sudamerican,base+sudamerican,bajo
+101195,PXP-008880,Ezequiel González,revisar,sudamerican,base+sudamerican,bajo
+101278,PXP-008900,Tareq Khattab,revisar,,sudamerican,bajo
+103505,PXP-009473,Cristo González,revisar,sudamerican,base+sudamerican,bajo
+103919,PXP-009591,Nicolas Gorosito,revisar,sudamerican,base+sudamerican,bajo
+104489,PXP-009767,Nathan Pelae,revisar,,base+sudamerican,bajo
+104501,PXP-009775,Rodrigo Oliveira,revisar,,sudamerican,bajo
+104584,PXP-009809,Agustín Ale,revisar,sudamerican,sudamerican,bajo
+104673,PXP-009838,Mohamed Fares,revisar,sudamerican,base+sudamerican,bajo
+104762,PXP-009881,Gustavo Barreto,revisar,sudamerican,base+sudamerican,bajo
+104770,PXP-009885,Ianson Acosta,revisar,,base+sudamerican,bajo
+104977,PXP-009949,Ali Al-Busaidi,revisar,,sudamerican,bajo
+104989,PXP-009953,Sarach Yooyen,revisar,base+sudamerican,base+sudamerican,bajo
+105550,PXP-010157,E. Ahumada,revisar,,base+sudamerican,bajo
+106001,PXP-010187,Yong-Woo Park,revisar,sudamerican,sudamerican,bajo
+106387,PXP-010291,Abrahan Moreno,revisar,,conmegol,bajo
+106568,PXP-010326,Mateus Castro,revisar,,sudamerican,bajo
+106580,PXP-010335,Jorge Marco,revisar,base,base+sudamerican,bajo
+106833,PXP-010415,D. Vicencio,revisar,,base+sudamerican,bajo
+106946,PXP-010434,Fali Jiménez,revisar,sudamerican,base+sudamerican,bajo
+107215,PXP-010489,Mohsin Al Khaldi,revisar,,sudamerican,bajo
+107373,PXP-010524,Thiago Santana,revisar,,base+sudamerican,bajo
+107441,PXP-010543,Abdulaziz Al Jebreen,revisar,,base+sudamerican,bajo
+107613,PXP-010594,M. Camargo,revisar,,base+sudamerican,bajo
+107653,PXP-010603,Ahmad Sameer,revisar,,sudamerican,bajo
+107844,PXP-010668,Shangyuan Wang,revisar,,base+sudamerican,bajo
+108139,PXP-010754,J. Caicedo Vergara,revisar,,sudamerican,bajo
+108743,PXP-010929,Rubén Darío Ríos,revisar,sudamerican,sudamerican,bajo
+108816,PXP-010963,Moisés,revisar,,base+sudamerican,bajo
+108877,PXP-010987,R. Meléndez,revisar,,base+sudamerican,bajo
+109581,PXP-011219,R. Escobar,revisar,,base+sudamerican,bajo
+109813,PXP-011286,Juan Gutiérrez,revisar,,sudamerican,bajo
+110064,PXP-011371,Roberto Heuchayer,revisar,sudamerican,base+sudamerican,bajo
+110273,PXP-011432,Kaio Mendes,revisar,,base+sudamerican,bajo
+110351,PXP-011447,Ismail Azzaoui,revisar,sudamerican,base+sudamerican,bajo
+110566,PXP-011525,Yan Matheus,revisar,sudamerican,base+sudamerican,bajo
+110607,PXP-011545,Kevin Sibille,revisar,sudamerican,base+sudamerican,bajo
+110630,PXP-011554,Saulo Ferreira,revisar,sudamerican,base+sudamerican,bajo
+110912,PXP-011683,Pablo Diogo,revisar,sudamerican,base+sudamerican,bajo
+111005,PXP-011716,Maurício José,revisar,,base+sudamerican,bajo
+111100,PXP-011764,Alexis Messidoro,revisar,sudamerican,base+sudamerican,bajo
+111315,PXP-011861,Eduardo Jacinto,revisar,,sudamerican,bajo
+111327,PXP-011866,Judson Silva,revisar,,sudamerican,bajo
+111683,PXP-011969,Rayan Al Mousa,revisar,,base,bajo
+111726,PXP-011980,Zaid Al Bawardi,revisar,,base,bajo
+111727,PXP-011981,Waled Al Enazi,revisar,,sudamerican,bajo
+111731,PXP-011984,Abdulrahman Al-Dawsari,revisar,,base,bajo
+111758,PXP-011988,Jasur Yakhshiboev,revisar,sudamerican,base+sudamerican,bajo
+111833,PXP-012008,Carlos Julio Martínez,revisar,sudamerican,base+sudamerican,bajo
+112100,PXP-012079,Steven Birnbaum,revisar,sudamerican,sudamerican,bajo
+112124,PXP-012088,Lawrence Mulenga,revisar,,sudamerican,bajo
+112149,PXP-012093,Tanaboon Kesarat,revisar,base+sudamerican,base+sudamerican,bajo
+112174,PXP-012108,J. Nuñez,revisar,,base+sudamerican,bajo
+112187,PXP-012114,Jameel Al-Yahmadi,revisar,,sudamerican,bajo
+113518,PXP-012467,Brenner Marlos,revisar,sudamerican,base+sudamerican,bajo
+113662,PXP-012520,Bartłomiej Drągowski,revisar,base+sudamerican,base+sudamerican,bajo
+113749,PXP-012544,E. Guerrero,revisar,,base+sudamerican,bajo
+113953,PXP-012610,Ângelo Neto,revisar,,sudamerican,bajo
+114467,PXP-012817,João Basso,revisar,,sudamerican,bajo
+114723,PXP-012932,Gustavo Mantuan,revisar,sudamerican,base+sudamerican,bajo
+114833,PXP-012973,Matías Moya,revisar,sudamerican,base+sudamerican,bajo
+114928,PXP-013014,Michael Fracaro,revisar,sudamerican,base+sudamerican,bajo
+114969,PXP-013030,Rubens Coura,revisar,,sudamerican,bajo
+115047,PXP-013073,Michel Ferreira,revisar,sudamerican,sudamerican,bajo
+115089,PXP-013098,Jonás Romero,revisar,sudamerican,base+sudamerican,bajo
+115206,PXP-013162,Ronei Gebing,revisar,,base+sudamerican,bajo
+115499,PXP-013231,Habib Al-Watyan,revisar,,sudamerican,bajo
+115532,PXP-013243,M. Suárez,revisar,sudamerican,base+sudamerican,bajo
+115630,PXP-013271,Khalil Ibrahim,revisar,,base+sudamerican,bajo
+115633,PXP-013273,Mohamed Al-Shamsi,revisar,,base+sudamerican,bajo
+115648,PXP-013278,Kwang-Song Han,revisar,base+conmegol,base+sudamerican,bajo
+115664,PXP-013290,Wellington Bueno,revisar,sudamerican,base+sudamerican,bajo
+116070,PXP-013354,Mahdi Al-Mushaifri,revisar,,sudamerican,bajo
+116075,PXP-013357,Khalid Al Hajri,revisar,,sudamerican,bajo
+116077,PXP-013358,Mehdi Khalil,revisar,,sudamerican,bajo
+116940,PXP-013650,Abdullah Al-Ahrak,revisar,,,bajo
+117042,PXP-013669,Getterson,revisar,,base+sudamerican,bajo
+117392,PXP-013720,Rick Boldrin,revisar,,base+sudamerican,bajo
+117588,PXP-013805,Arthur Henrique,revisar,sudamerican,base+sudamerican,bajo
+117978,PXP-013980,Enzo Ybañez,revisar,sudamerican,base+sudamerican,bajo
+117995,PXP-013992,Franchu Feuillassier,revisar,,base+sudamerican,bajo
+118045,PXP-014019,J. Aguilar,revisar,sudamerican,base+sudamerican,bajo
+118064,PXP-014033,Pipa Ávila,revisar,sudamerican,base+sudamerican,bajo
+118201,PXP-014105,Max Clark,revisar,sudamerican,base+sudamerican,bajo
+118459,PXP-014224,Lucas Pereira,revisar,,base+sudamerican,bajo
+118487,PXP-014232,Aloísio Neto,revisar,,base+sudamerican,bajo
+118499,PXP-014240,Matheus Thuler,revisar,sudamerican,base+sudamerican,bajo
+118574,PXP-014271,Liangming Lin,revisar,,base+sudamerican,bajo
+118951,PXP-014428,Álvaro Vieira,revisar,,base+sudamerican,bajo
+119051,PXP-014464,Mateus Gonçalves,revisar,sudamerican,base+sudamerican,bajo
+119092,PXP-014483,Lincoln Corrêa,revisar,sudamerican,base+sudamerican,bajo
+119694,PXP-014629,Mbwana Samatta,revisar,base+conmegol,base+sudamerican,bajo
+119704,PXP-014638,Manuel Benson,revisar,sudamerican,base+sudamerican,bajo
+119796,PXP-014674,Sávio Alves,revisar,,base+sudamerican,bajo
+119901,PXP-014729,Sebastián Herrera,revisar,,base+sudamerican,bajo
+120041,PXP-014811,John Pérez,revisar,,base+sudamerican,bajo
+120048,PXP-014814,Juan Camilo Mesa,revisar,,base+sudamerican,bajo
+120050,PXP-014815,Jeison Palacios,revisar,conmegol,base+sudamerican,bajo
+120063,PXP-014820,Juan Arboleda,revisar,,base+sudamerican,bajo
+120789,PXP-015058,Adam Lundkvist,revisar,sudamerican,sudamerican,bajo
+121209,PXP-015171,Ruan Gregório,revisar,sudamerican,sudamerican,bajo
+121596,PXP-015334,Alex Petkov,revisar,,sudamerican,bajo
+121997,PXP-015382,K. Lara,revisar,sudamerican,base+sudamerican,bajo
+122407,PXP-015513,Abdalla Al-Naqbi,revisar,,base+sudamerican,bajo
+122698,PXP-015566,Rômulo Da Silva,revisar,,base+sudamerican,bajo
+122719,PXP-015578,Marcelo,revisar,,base,bajo
+122779,PXP-015597,D. Pineda,revisar,,base+sudamerican,bajo
+122812,PXP-015602,G. Zúñiga,revisar,,base+sudamerican,bajo
+123082,PXP-015667,Rayan Pereira,revisar,sudamerican,base+sudamerican,bajo
+123149,PXP-015707,Rafal Kurzawa,revisar,base,base+sudamerican,bajo
+123151,PXP-015709,Jakub Swierczok,revisar,base+sudamerican,base+sudamerican,bajo
+123244,PXP-015750,Ahmed Al-Rawahi,revisar,,sudamerican,bajo
+123257,PXP-015756,Obieda Al Samarneh,revisar,,sudamerican,bajo
+123262,PXP-015759,Un-Chol Ri,revisar,,sudamerican,bajo
+123264,PXP-015760,Kuk-Chol Kang,revisar,,sudamerican,bajo
+123270,PXP-015765,Hassan Chaitou,revisar,,sudamerican,bajo
+123314,PXP-015777,Amal Knight,revisar,,sudamerican,bajo
+123437,PXP-015820,Ulises Abreliano,revisar,sudamerican,base+sudamerican,bajo
+123718,PXP-015878,Jonathan Silva,revisar,sudamerican,base+sudamerican,bajo
+124540,PXP-016068,Jeremy Cijntje,revisar,sudamerican,base+sudamerican,bajo
+125024,PXP-016185,Salomão,revisar,,base+sudamerican,bajo
+125523,PXP-016267,Phitiwat Sookjitthammakul,revisar,base+conmegol,base+sudamerican,bajo
+125525,PXP-016268,Victor,revisar,sudamerican,base+sudamerican,bajo
+125554,PXP-016271,Peeradol Chamrasamee,revisar,,base+sudamerican,bajo
+126361,PXP-016539,Rodolfo José,revisar,,sudamerican,bajo
+126733,PXP-016712,R. Gómez,revisar,sudamerican,base+sudamerican,bajo
+126787,PXP-016737,Jô Batista,revisar,sudamerican,sudamerican,bajo
+127060,PXP-016860,J. Echave,revisar,sudamerican,base+sudamerican,bajo
+127487,PXP-016957,Jadsom Silva,revisar,sudamerican,base+sudamerican,bajo
+127489,PXP-016959,Antônio Neto,revisar,,sudamerican,bajo
+127614,PXP-017031,Adrian Stanilewicz,revisar,sudamerican,base+sudamerican,bajo
+127704,PXP-017065,Roberto Rosa,revisar,sudamerican,base+sudamerican,bajo
+127875,PXP-017145,Diego Quirino,revisar,,sudamerican,bajo
+127933,PXP-017163,Matheusinho,revisar,sudamerican,base+sudamerican,bajo
+128092,PXP-017228,Marco Antônio,revisar,,,bajo
+128313,PXP-017304,Joe Rafferty,revisar,sudamerican,base+sudamerican,bajo
+128759,PXP-017487,Ibrahima Camará,revisar,,base+sudamerican,bajo
+128801,PXP-017507,L. Singh,revisar,,sudamerican,bajo
+128879,PXP-017529,Hassan Vergara,revisar,,base+sudamerican,bajo
+129042,PXP-017570,Rasmus Karjalainen,revisar,base,base+sudamerican,bajo
+129516,PXP-017811,Ederson Cabezas,revisar,,sudamerican,bajo
+129697,PXP-017831,Tariq Abdullah,revisar,,,bajo
+129699,PXP-017832,Muhannad Al-Shanqeeti,revisar,,sudamerican,bajo
+129702,PXP-017833,Khaled Al-Sumairi,revisar,,sudamerican,bajo
+129708,PXP-017837,Mansor Al-Beshe,revisar,,base+sudamerican,bajo
+129719,PXP-017844,Saud Zaydan,revisar,,,bajo
+129854,PXP-017871,Manaf Yabes,revisar,,base,bajo
+129909,PXP-017879,Salem Abdullah,revisar,,base,bajo
+129987,PXP-017904,Lucas Falcão,revisar,sudamerican,sudamerican,bajo
+129992,PXP-017908,Marcelo Dal Soler,revisar,,base+sudamerican,bajo
+130084,PXP-017952,Fabrício Barros,revisar,,base+sudamerican,bajo
+130107,PXP-017964,Felipe Antonio,revisar,sudamerican,base+sudamerican,bajo
+130127,PXP-017973,Weverton,revisar,sudamerican,base+sudamerican,bajo
+130153,PXP-017992,Gilberto Júnior,revisar,sudamerican,base+sudamerican,bajo
+130224,PXP-018038,Ju-Hyok Kang,revisar,,sudamerican,bajo
+130280,PXP-018073,Anton Kryvotsiuk,revisar,,base+sudamerican,bajo
+130353,PXP-018119,Hamza Al Dardour,revisar,,sudamerican,bajo
+130830,PXP-018318,Hugo Vera,revisar,,base+sudamerican,bajo
+130913,PXP-018328,Jorge Zules Caicedo,revisar,,base+sudamerican,bajo
+130954,PXP-018336,Brian Rojas,revisar,,base+sudamerican,bajo
+131019,PXP-018347,Sebastian Jørgensen,revisar,,base+sudamerican,bajo
+131066,PXP-018362,Juan Moreno,revisar,,base+sudamerican,bajo
+131291,PXP-018408,Flávio Silva,revisar,sudamerican,base+sudamerican,bajo
+131298,PXP-018411,Aziz Yakubu,revisar,sudamerican,base+sudamerican,bajo
+132471,PXP-018770,Vlatko Stojanovski,revisar,base+conmegol,base+sudamerican,bajo
+132575,PXP-018826,M. Colossi,revisar,,base+sudamerican,bajo
+133182,PXP-019114,Breno Washington,revisar,sudamerican,base+sudamerican,bajo
+133220,PXP-019126,Airton Moisés,revisar,,base+sudamerican,bajo
+133525,PXP-019247,Salatiel Júnior,revisar,sudamerican,base+sudamerican,bajo
+133535,PXP-019253,Cristiano Vidal,revisar,,base+sudamerican,bajo
+134284,PXP-019395,W. Martínez,revisar,,base+sudamerican,bajo
+134915,PXP-019611,J. Abdala,revisar,,base+sudamerican,bajo
+134916,PXP-019612,V. González,revisar,sudamerican,base+sudamerican,bajo
+134919,PXP-019615,C. Salas,revisar,,base+sudamerican,bajo
+135048,PXP-019691,Kleiton Pego,revisar,,base+sudamerican,bajo
+135109,PXP-019722,David Pastor,revisar,,,bajo
+135167,PXP-019741,Guilherme Sityá,revisar,conmegol,base+sudamerican,bajo
+135205,PXP-019762,Vinicius Foguinho,revisar,sudamerican,base,bajo
+135209,PXP-019766,Bernardo Lemes,revisar,sudamerican,sudamerican,bajo
+135245,PXP-019781,Nathan,revisar,conmegol,base+sudamerican,bajo
+135252,PXP-019787,S. González,revisar,,base+sudamerican,bajo
+135726,PXP-019950,Turki Fahad,revisar,,base,bajo
+135729,PXP-019953,Mansour Al Shammari,revisar,,base,bajo
+135753,PXP-019967,Fahd Al Hamad,revisar,,base+sudamerican,bajo
+135758,PXP-019971,Sumayhan Al-Nabit,revisar,,base+sudamerican,bajo
+135788,PXP-019977,Mohammed Bassas,revisar,,base,bajo
+135822,PXP-019985,Mohammed Jumaa,revisar,,base+sudamerican,bajo
+136004,PXP-020068,C. Finch,revisar,sudamerican,base+sudamerican,bajo
+136107,PXP-020107,Eliel,revisar,,base+sudamerican,bajo
+136788,PXP-020291,R. Botello,revisar,,base+sudamerican,bajo
+136837,PXP-020313,José Danilo Tobías,revisar,,base,bajo
+136863,PXP-020327,Larry Bwalya,revisar,,,bajo
+136866,PXP-020328,Kyle Hiebert,revisar,,base+sudamerican,bajo
+136867,PXP-020329,Daniel Avramovski,revisar,,base+sudamerican,bajo
+136903,PXP-020346,Moussa Camara,revisar,,,bajo
+137234,PXP-020411,Wellington N.,revisar,,,bajo
+137935,PXP-020494,Matheus,revisar,,base+sudamerican,bajo
+138124,PXP-020555,Danielzinho,revisar,,base+sudamerican,bajo
+139649,PXP-020941,César Medina,revisar,,base,bajo
+139659,PXP-020951,Negueti,revisar,,base,bajo
+139662,PXP-020954,Luis Gustavo,revisar,,base,bajo
+139663,PXP-020955,Joazi,revisar,,base,bajo
+139666,PXP-020957,Jackson,revisar,,base,bajo
+139676,PXP-020966,Mazinho,revisar,,base,bajo
+139721,PXP-021009,Wandson,revisar,,base,bajo
+139722,PXP-021010,Lucas Carvalho,revisar,,base,bajo
+139784,PXP-021065,Kevin Lopez,revisar,,base,bajo
+139862,PXP-021133,Werton Rêgo,revisar,sudamerican,base,bajo
+139863,PXP-021134,Pedrinho,revisar,,base,bajo
+139966,PXP-021214,Igor Jesus,revisar,,sudamerican,bajo
+140008,PXP-021237,Brandon Dominguès,revisar,,base+sudamerican,bajo
+140029,PXP-021258,Roberto Henrique,revisar,,base,bajo
+140041,PXP-021269,Yassine Benhattab,revisar,,base+sudamerican,bajo
+140069,PXP-021292,Joecio,revisar,,base+sudamerican,bajo
+140172,PXP-021386,F. Levinao,revisar,,base+sudamerican,bajo
+140186,PXP-021399,Rolando Ortíz,revisar,,base+sudamerican,bajo
+140197,PXP-021410,K. Figueroa,revisar,,base+sudamerican,bajo
+140199,PXP-021411,Dani Bolt,revisar,,sudamerican,bajo
+140207,PXP-021419,Edu Mancha,revisar,,base+sudamerican,bajo
+140274,PXP-021475,Á. Gómez,revisar,,base+sudamerican,bajo
+140278,PXP-021479,A. Rojas,revisar,,base+sudamerican,bajo
+140331,PXP-021531,C. Vega,revisar,,base+sudamerican,bajo
+140408,PXP-021581,Giovani Amorim,revisar,conmegol,sudamerican,bajo
+140906,PXP-021791,J. Román,revisar,,base+sudamerican,bajo
+141057,PXP-021845,Lucas Santana,revisar,,base,bajo
+141997,PXP-022243,J. Turra,revisar,,base+sudamerican,bajo
+142476,PXP-022433,S. Clark,revisar,,sudamerican,bajo
+142602,PXP-022530,Thomas Thompson,revisar,,sudamerican,bajo
+142631,PXP-022552,Nicolas Firmino,revisar,,sudamerican,bajo
+142896,PXP-022709,G. Guajardo,revisar,,base+sudamerican,bajo
+143130,PXP-022850,Ronald Pereira,revisar,,sudamerican,bajo
+143147,PXP-022859,Pedro Henrique,revisar,conmegol,sudamerican,bajo
+143327,PXP-022924,Alejo Cerdá,revisar,,base,bajo
+143443,PXP-022975,Everton Macedo,revisar,,sudamerican,bajo
+143502,PXP-022988,Biel Fonseca,revisar,conmegol,sudamerican,bajo
+143619,PXP-023022,Dalberson,revisar,,base+sudamerican,bajo
+143698,PXP-023055,Max Alves,revisar,,sudamerican,bajo
+144337,PXP-023364,Osvaldo Cisneros,revisar,,sudamerican,bajo
+144385,PXP-023396,Marcus Ferkranus,revisar,,sudamerican,bajo
+144455,PXP-023444,Roberto Castellanos,revisar,sudamerican,sudamerican,bajo
+144858,PXP-023610,José Carabalí,revisar,conmegol,sudamerican,bajo
+144873,PXP-023625,Juma Al-Habsi,revisar,,,bajo
+144874,PXP-023626,Ahmed Al-Khamisi,revisar,sudamerican,,bajo
+144875,PXP-023627,Amjad Al-Harthi,revisar,sudamerican,,bajo
+144877,PXP-023629,Omar Al-Fazari,revisar,,,bajo
+144879,PXP-023631,Essam Al-Subhi,revisar,,,bajo
+145759,PXP-023805,Az Jackson,revisar,conmegol,sudamerican,bajo
+146187,PXP-023928,Jhon Balanta,revisar,,,bajo
+146636,PXP-024060,André Morales,revisar,,sudamerican,bajo
+146704,PXP-024089,Luiz Felipe Nunes,revisar,,sudamerican,bajo
+147310,PXP-024352,Andreas Ntoi,revisar,conmegol,sudamerican,bajo
+147540,PXP-024464,Caio Matheus,revisar,,sudamerican,bajo
+148058,PXP-024736,Marcelo Nunes,revisar,,,bajo
+148131,PXP-024761,Abdul Kader Keita,revisar,,sudamerican,bajo
+148137,PXP-024763,Demir Ege Tıknaz,revisar,conmegol,sudamerican,bajo
+148697,PXP-024848,Darwin Lom,revisar,,sudamerican,bajo
+151189,PXP-025007,Maximiliano Zelaya,revisar,,sudamerican,bajo
+152055,PXP-025302,Mateus Silva,revisar,,sudamerican,bajo
+152451,PXP-025456,Adyson Soares,revisar,sudamerican,sudamerican,bajo
+152491,PXP-025471,Joan Osorio,revisar,,sudamerican,bajo
+152693,PXP-025535,Daniel Jr,revisar,,sudamerican,bajo
+152889,PXP-025635,Júlio César,revisar,,sudamerican,bajo
+153023,PXP-025682,Max Rodríguez,revisar,,sudamerican,bajo
+153116,PXP-025719,Manu Silva,revisar,conmegol,sudamerican,bajo
+153169,PXP-025752,Guilherme Silva,revisar,sudamerican,sudamerican,bajo
+153249,PXP-025783,Tiago Suárez,revisar,,sudamerican,bajo
+153908,PXP-025985,Sævar Atli Magnússon,revisar,conmegol,sudamerican,bajo
+154150,PXP-026068,Everton Tiago,revisar,,,bajo
+154212,PXP-026093,João Tornich,revisar,,,bajo
+154334,PXP-026142,Joel Quispe,revisar,sudamerican,sudamerican,bajo
+154335,PXP-026143,Juan Carlos Gonzáles,revisar,sudamerican,sudamerican,bajo
+154339,PXP-026147,Mohammadamin Hazbavi,revisar,,,bajo
+154388,PXP-026165,Saad Al Muwallad,revisar,,,bajo
+154662,PXP-026237,R. Hernandez,revisar,,sudamerican,bajo
+155331,PXP-026361,Cris Montes,revisar,sudamerican,sudamerican,bajo
+156986,PXP-026565,Giovanni Manson,revisar,sudamerican,sudamerican,bajo
+157080,PXP-026621,Sekou Bangoura,revisar,,,bajo
+157355,PXP-026767,Lucas Gazal,revisar,,sudamerican,bajo
+157818,PXP-026988,Leo Palestina,revisar,sudamerican,sudamerican,bajo
+158911,PXP-027209,Eduar Esteban,revisar,,,bajo
+159163,PXP-027278,Pape Demba Diop,revisar,,sudamerican,bajo
+159411,PXP-027358,Wesley Borges,revisar,,,bajo
+159847,PXP-027541,Edson Júnior,revisar,,,bajo
+160235,PXP-027715,Kauan Rodrigues,revisar,,sudamerican,bajo
+160331,PXP-027756,H. Trent,revisar,,sudamerican,bajo
+160360,PXP-027769,Alvaro José,revisar,,,bajo
+160569,PXP-027849,Lucas Høgsberg,revisar,conmegol,sudamerican,bajo
+161915,PXP-028207,Gaspar,revisar,conmegol,sudamerican,bajo
+162117,PXP-028249,Daniel Ribera,revisar,,,bajo
+162714,PXP-028341,Jhon Alexander Quiñones,revisar,,sudamerican,bajo
+163086,PXP-028409,Makhir Al-Rashidi,revisar,,sudamerican,bajo
+163636,PXP-028448,Emilio Rodríguez,revisar,,,bajo
+163652,PXP-028461,Marco Huamán,revisar,,sudamerican,bajo
+164319,PXP-028492,Vinícius Dias,revisar,,,bajo
+164693,PXP-028648,Justin Bengui,revisar,sudamerican,sudamerican,bajo
+164765,PXP-028686,Davis Silva,revisar,,,bajo
+164807,PXP-028702,Lucão,revisar,,,bajo
+164959,PXP-028776,Prince Owusu,revisar,conmegol,sudamerican,bajo
+164963,PXP-028779,Sidiki Chérif,revisar,conmegol,sudamerican,bajo
+165842,PXP-029007,Néiser Villarreal,revisar,conmegol,,bajo
+165990,PXP-029038,Rakan Kaabi,revisar,,sudamerican,bajo
+166137,PXP-029044,Santi Morales,revisar,conmegol,sudamerican,bajo
+166743,PXP-029175,Jonatan Goya,revisar,sudamerican,sudamerican,bajo
+167203,PXP-029247,Tommaso Pittino,revisar,,sudamerican,bajo
+167785,PXP-029389,Francis Mwansa,revisar,,sudamerican,bajo
+168142,PXP-029509,T. Parmo,revisar,sudamerican,sudamerican,bajo
+168593,PXP-029716,Cristóbal Piña,revisar,,sudamerican,bajo
+169171,PXP-029945,Luca Kmet,revisar,,sudamerican,bajo
+170170,PXP-030163,Rubén Ramos Jr.,revisar,,,bajo
+171976,PXP-030551,Gilberto Junior Jiménez,revisar,,,bajo
+172443,PXP-030682,Ignacio Rodríguez,revisar,,sudamerican,bajo
+172576,PXP-030726,Chema Andrés,revisar,sudamerican,sudamerican,bajo
+172582,PXP-030731,Francisco Montoro,revisar,,sudamerican,bajo
+172590,PXP-030737,Kwang-Nam Sin,revisar,,sudamerican,bajo
+172599,PXP-030746,Alexis González,revisar,,sudamerican,bajo
+172611,PXP-030755,Emilio Gutiérrez,revisar,,sudamerican,bajo
+172622,PXP-030763,João Simões,revisar,conmegol,,bajo
+172641,PXP-030780,Cristian Guzmán,revisar,sudamerican,sudamerican,bajo
+172642,PXP-030781,Victor Reyes,revisar,sudamerican,sudamerican,bajo
+172645,PXP-030783,Juan Holguín,revisar,,sudamerican,bajo
+172658,PXP-030792,Saad Al-Mousa,revisar,,sudamerican,bajo
+172659,PXP-030793,Hamed Al-Ghamdi,revisar,,sudamerican,bajo
+176145,PXP-031299,Diego Vargas,revisar,conmegol,,bajo
+176273,PXP-031328,Andrew Pereira,revisar,,sudamerican,bajo
+176278,PXP-031330,Renato Nhaga,revisar,,sudamerican,bajo
+176301,PXP-031344,Mathys de Carvalho,revisar,,sudamerican,bajo
+176302,PXP-031345,Alejandro Gomes Rodríguez,revisar,,sudamerican,bajo
+176337,PXP-031373,Deivid Castro,revisar,,,bajo
+176342,PXP-031378,Telli Siwe,revisar,,,bajo
+176446,PXP-031475,Mathías Tomás,revisar,,sudamerican,bajo
+176448,PXP-031476,Franz-Ethan Meichtry,revisar,,sudamerican,bajo
+176475,PXP-031500,Théo Eyoum,revisar,,sudamerican,bajo
+176482,PXP-031507,Martin Rossignol,revisar,,sudamerican,bajo
+176483,PXP-031508,Noa Boissé,revisar,,sudamerican,bajo
+176485,PXP-031509,Edwin Quarshie,revisar,,sudamerican,bajo
+176565,PXP-031568,Alessio Cacciamani,revisar,,sudamerican,bajo
+176577,PXP-031578,Juan David Bacca,revisar,,,bajo
+176585,PXP-031586,Prosper Peter,revisar,,sudamerican,bajo
+176623,PXP-031616,Jorge De Asís,revisar,,sudamerican,bajo
+176627,PXP-031619,Cristiano Oliveira,revisar,,sudamerican,bajo
+176633,PXP-031622,Ilan Jourdren,revisar,,sudamerican,bajo
+176634,PXP-031623,Ismaël Guerti,revisar,conmegol,sudamerican,bajo
+176636,PXP-031625,Ilyas Azizi,revisar,,sudamerican,bajo
+176651,PXP-031637,Kieran Chandler,revisar,,,bajo
+176656,PXP-031641,Lanroy Machine,revisar,,,bajo
+176662,PXP-031646,Juan Carrasco,revisar,,sudamerican,bajo
+176664,PXP-031648,Justin Ellis,revisar,,sudamerican,bajo
+176677,PXP-031659,Oscar Surmay,revisar,,sudamerican,bajo
+176679,PXP-031661,Halam Loboa,revisar,,conmegol,bajo
+176682,PXP-031662,Raul Florucz,revisar,,sudamerican,bajo
+176686,PXP-031665,Yustin Arboleda,revisar,,,bajo
+176687,PXP-031666,David Cabezas,revisar,conmegol,conmegol,bajo
+176698,PXP-031673,Diego Arroyo,revisar,,,bajo
+176699,PXP-031674,Moises Paniagua,revisar,,sudamerican,bajo
+176725,PXP-031685,José Carlos Martinez,revisar,,,bajo
+176726,PXP-031686,José Rosales,revisar,,,bajo
+176727,PXP-031687,Fredy Pérez,revisar,,,bajo
+176728,PXP-031688,Rudy Muñoz,revisar,,,bajo
+176734,PXP-031694,Léo Gaúcho,revisar,,,bajo
+176838,PXP-031761,Karim Coulibaly,revisar,,,bajo
+176849,PXP-031769,Jean Vercruysse,revisar,,,bajo
+176868,PXP-031786,Tyreece Campbell,revisar,conmegol,,bajo
+176902,PXP-031816,Job Ochieng,revisar,,,bajo
+176967,PXP-031855,Kauã Moraes,revisar,,,bajo
+176983,PXP-031868,Tomás Lavezzi,revisar,,,bajo
+176984,PXP-031869,Franco Ratotti,revisar,,conmegol,bajo
+177073,PXP-031937,João Alencar,revisar,,,bajo
+182077,PXP-032339,Alexander Shaw,revisar,,,bajo
+182094,PXP-032343,Agustín Massaccesi,revisar,,conmegol,bajo
+182100,PXP-032347,Ignacio Rossi,revisar,,,bajo
+182110,PXP-032354,David Fernández,revisar,,,bajo
+182111,PXP-032355,Nazareno Roselli,revisar,,conmegol,bajo
+182112,PXP-032356,Simón Escobar,revisar,,conmegol,bajo
+182113,PXP-032357,Lucio Ferrari,revisar,,,bajo
+182114,PXP-032358,Lautaro Ortiz,revisar,,conmegol,bajo
+182115,PXP-032359,Facundo Jainikoski,revisar,,conmegol,bajo
+182118,PXP-032361,Diego Fernández Picarte,revisar,,,bajo
+182119,PXP-032362,Luifer Hernández,revisar,,,bajo
+182122,PXP-032363,Nicolás Morro,revisar,,,bajo
+182124,PXP-032365,Norman Rodríguez,revisar,,,bajo
+182166,PXP-032399,Harvey Sarajian,revisar,,,bajo
+182179,PXP-032411,Melker Ellborg,revisar,,,bajo
+182180,PXP-032412,Ignacio Cruzat,revisar,,,bajo
+182181,PXP-032413,Francisco Herrera,revisar,,,bajo
+182184,PXP-032416,Adrian Przyborek,revisar,,,bajo
+182185,PXP-032417,Bastián Sandoval,revisar,,,bajo
+182192,PXP-032424,Gabriel Maureira,revisar,,conmegol,bajo
+182197,PXP-032429,Marcus Caldeira,revisar,,,bajo
+182198,PXP-032430,Ignacio Sabatini,revisar,,conmegol,bajo
+182200,PXP-032432,Benjamín Villarroel,revisar,,,bajo
+182201,PXP-032433,Agustín Albarracín,revisar,,,bajo
+182208,PXP-032440,Bruno Caicedo,revisar,,sudamerican,bajo
+182229,PXP-032460,Arthur Borghi,revisar,,,bajo
+182231,PXP-032462,Sergi Solans,revisar,,,bajo
+182248,PXP-032478,Ville Koski,revisar,,,bajo
+182263,PXP-032492,Pablo Ferreira,revisar,,conmegol,bajo
+182280,PXP-032509,Adrian Gill,revisar,,,bajo
+182313,PXP-032542,Nolan Miller,revisar,,,bajo
+182314,PXP-032543,Adrian Lahdo,revisar,,,bajo
+182317,PXP-032546,Daniel Valencia,revisar,,conmegol,bajo
+182321,PXP-032550,Vicente Zenteno,revisar,,,bajo
+182352,PXP-032581,Samsy Keita,revisar,,sudamerican,bajo
+182369,PXP-032598,Adil Bourabaa,revisar,,,bajo
+182376,PXP-032605,Ali Youssif,revisar,,,bajo
+182379,PXP-032608,Geiner Martínez,revisar,,,bajo
+59952,PXP-007313,Hassan Al-Haydos,revisar,base+conmegol,base+conmegol+sudamerican,medio: minicara en las dos
+103170,PXP-009374,Ramy Rabia,revisar,,base+conmegol+sudamerican,medio: minicara en las dos
+115442,PXP-013220,Azizbek Amanov,revisar,sudamerican,conmegol+sudamerican,medio: minicara en las dos
+118369,PXP-014174,Trevor Doornbusch,revisar,,base+conmegol+sudamerican,medio: minicara en las dos
+127733,PXP-017078,Héber García,revisar,sudamerican,base+conmegol+sudamerican,medio: minicara en las dos
+133041,PXP-019054,Louicius Deedson,revisar,,base+conmegol+sudamerican,medio: minicara en las dos
+135734,PXP-019957,Mohammed Marran,revisar,,base+conmegol+sudamerican,medio: minicara en las dos
+135825,PXP-019987,Ahmed Basil Fadhil,revisar,conmegol,base+conmegol+sudamerican,medio: minicara en las dos
+143015,PXP-022781,Nathan Saliba,revisar,conmegol,conmegol+sudamerican,medio: minicara en las dos
+144866,PXP-023618,Víctor Griffith,revisar,sudamerican,conmegol+sudamerican,medio: minicara en las dos
+145500,PXP-023720,Abdallah Al-Fakhouri,revisar,,conmegol+sudamerican,medio: minicara en las dos
+146374,PXP-023984,Mohammad Abu Zrayq,revisar,,conmegol+sudamerican,medio: minicara en las dos
+146493,PXP-024016,Jassem Gaber,revisar,,conmegol+sudamerican,medio: minicara en las dos
+147162,PXP-024287,Gilson Benchimol,revisar,conmegol,conmegol+sudamerican,medio: minicara en las dos
+153101,PXP-025715,Kevin Pina,revisar,,conmegol+sudamerican,medio: minicara en las dos
+154122,PXP-026054,Mohammad Abu Hasheesh,revisar,,conmegol+sudamerican,medio: minicara en las dos
+154373,PXP-026152,Arya Yousefi,revisar,conmegol,conmegol+sudamerican,medio: minicara en las dos
+154977,PXP-026288,Derek Cornelius,revisar,sudamerican,conmegol+sudamerican,medio: minicara en las dos
+155140,PXP-026313,Dailon Livramento,revisar,conmegol,conmegol+sudamerican,medio: minicara en las dos
+159046,PXP-027241,Jhomier Guerrero,revisar,,conmegol+sudamerican,medio: minicara en las dos
+163235,PXP-028419,Nawaf Boushal,revisar,conmegol,conmegol+sudamerican,medio: minicara en las dos
+164819,PXP-028706,Marcos Mina,revisar,conmegol,conmegol+sudamerican,medio: minicara en las dos
+167790,PXP-029393,Mohamed Amine Tougai,revisar,conmegol,conmegol+sudamerican,medio: minicara en las dos
+176292,PXP-031337,Agustín Falcón,revisar,,conmegol+sudamerican,medio: minicara en las dos
+176296,PXP-031340,Jhon Rentería,revisar,,conmegol+sudamerican,medio: minicara en las dos
+176343,PXP-031379,Ramiro Paunero,revisar,sudamerican,conmegol+sudamerican,medio: minicara en las dos
+176401,PXP-031432,Wilguens Paugain,revisar,,conmegol+sudamerican,medio: minicara en las dos
+176464,PXP-031491,Martin Expérience,revisar,,conmegol+sudamerican,medio: minicara en las dos
+176685,PXP-031664,Thalente Mbatha,revisar,,conmegol+sudamerican,medio: minicara en las dos
+176700,PXP-031675,Francis De Vries,revisar,,conmegol+sudamerican,medio: minicara en las dos
+182099,PXP-032346,Luca Rafaelli,revisar,,conmegol+sudamerican,medio: minicara en las dos
+182191,PXP-032423,Yastin Cuevas,revisar,conmegol,conmegol+sudamerican,medio: minicara en las dos

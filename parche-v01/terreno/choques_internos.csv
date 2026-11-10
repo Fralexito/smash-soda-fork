@@ -1,0 +1,371 @@
+﻿fuente,contenedores_que_traen_la_misma_ruta,n_rutas,ejemplo_ruta,gana_segun_orden
+sudamerican,<sider>\livecpk\Kits > <sider>\livecpk\SP_Licence,4343,asset/model/character/uniform/texture/#windx11/u0002g1.ftex,<sider>\livecpk\Kits
+sudamerican,<sider>/content/miniface_server > <sider>\livecpk\SP_Minifaces,3193,common/render/symbol/player/100117.dds,<sider>\livecpk\SP_Minifaces
+conmegol,<sider>\livecpk\Turfs > D:\SP2026\Sudamerican Project Sider\livecpk\SP_Menu Light,1544,asset/model/bg/st084/#win/st084_df.fpk,D:\SP2026\Sudamerican Project Sider\livecpk\SP_Menu Light
+base,Data/dt34_g4.cpk > download/dt80_100E_x64.cpk,1413,asset/model/character/uniform/texture/#windx11/u0030p1.ftex,download/dt80_100E_x64.cpk
+conmegol,<sider>/content/miniface_server > <sider>\livecpk\Logos,1245,common/render/symbol/player/100133.dds,<sider>\livecpk\Logos
+base,Data/dt14_all.cpk > download/dt80_200E_x64.cpk,997,common/render/symbol/player/100059.dds,download/dt80_200E_x64.cpk
+base,Data/dt34_g4.cpk > download/dt80_200E_x64.cpk,882,asset/model/character/uniform/texture/#windx11/u0005g1.ftex,download/dt80_200E_x64.cpk
+base,Data/dt14_all.cpk > download/dt80_400E_x64.cpk,848,common/render/symbol/player/100112.dds,download/dt80_400E_x64.cpk
+base,Data/dt14_all.cpk > download/dt80_500E_x64.cpk,749,common/render/symbol/player/100053.dds,download/dt80_500E_x64.cpk
+base,Data/dt34_g4.cpk > download/dt80_100E_x64.cpk > download/dt80_200E_x64.cpk,636,asset/model/character/uniform/texture/#windx11/u0030p2.ftex,download/dt80_200E_x64.cpk
+base,Data/dt14_all.cpk > download/dt80_100E_x64.cpk,618,common/render/symbol/player/100212.dds,download/dt80_100E_x64.cpk
+sudamerican,download/SP_Faces_7.cpk > download/SP_Faces_9.cpk,558,asset/model/character/face/real/147899/sourceimages/#windx11/eye_occlusion_alp.ftex,download/SP_Faces_9.cpk
+base,Data/dt34_g4.cpk > download/dt80_300E_x64.cpk,544,asset/model/character/uniform/texture/#windx11/u0004g1_back.ftex,download/dt80_300E_x64.cpk
+base,Data/dt14_all.cpk > download/dt80_300E_x64.cpk,492,common/render/symbol/player/100108.dds,download/dt80_300E_x64.cpk
+sudamerican,download/SP_Faces_0.cpk > download/SP_Faces_2.cpk,480,asset/model/character/face/real/51799/#win/face.fpk,download/SP_Faces_2.cpk
+sudamerican,download/SP_Faces_6.cpk > download/SP_Faces_9.cpk,471,asset/model/character/face/real/127787/sourceimages/#windx11/eye_sclera_bsm.ftex,download/SP_Faces_9.cpk
+sudamerican,<sider>\livecpk\SP_Minifaces > download/dt80_700E_x64.cpk,460,common/render/symbol/player/103701.dds,<sider>\livecpk\SP_Minifaces
+sudamerican,download/SP_Faces_5.cpk > download/SP_Faces_9.cpk,414,asset/model/character/face/real/122012/#win/face.fpk,download/SP_Faces_9.cpk
+sudamerican,download/SP_Faces_2.cpk > download/SP_Faces_9.cpk,401,asset/model/character/face/real/44676/#win/face.fpk,download/SP_Faces_9.cpk
+sudamerican,download/SP_Faces_4.cpk > download/SP_Faces_9.cpk,354,asset/model/character/face/real/108657/#win/face.fpk,download/SP_Faces_9.cpk
+base,Data/dt14_all.cpk > download/dt80_600E_x64.cpk,325,common/render/symbol/player/100508.dds,download/dt80_600E_x64.cpk
+base,Data/dt34_g4.cpk > download/dt80_600E_x64.cpk,324,asset/model/character/uniform/texture/#windx11/u0007g1_back.ftex,download/dt80_600E_x64.cpk
+conmegol,<sider>\livecpk\Kits > D:\Frank\IA\CLAUDE\pes-graficos\paquete_camisetas\Phoenix-Camisetas-Mips,320,asset/model/character/uniform/texture/#windx11/u0050p1.ftex,<sider>\livecpk\Kits
+sudamerican,download/SP_Faces_8.cpk > download/SP_Faces_9.cpk,314,asset/model/character/face/real/168122/#win/face.fpk,download/SP_Faces_9.cpk
+base,Data/dt14_all.cpk > download/dt80_500E_x64.cpk > download/dt80_600E_x64.cpk,272,common/render/symbol/player/108865.dds,download/dt80_600E_x64.cpk
+base,Data/dt34_g4.cpk > download/dt80_100E_x64.cpk > download/dt80_300E_x64.cpk,252,asset/model/character/uniform/texture/#windx11/u0112g1_back.ftex,download/dt80_300E_x64.cpk
+base,Data/dt14_all.cpk > download/dt80_100E_x64.cpk > download/dt80_400E_x64.cpk,221,common/render/symbol/player/100497.dds,download/dt80_400E_x64.cpk
+sudamerican,download/SP_Faces_12.cpk > download/SP_Faces_9.cpk,214,asset/model/character/face/real/40002/sourceimages/#windx11/arm_bsm.ftex,download/SP_Faces_9.cpk
+sudamerican,download/SP_Faces_12.cpk > download/SP_Faces_2.cpk,209,asset/model/character/face/real/44379/#win/face.fpk,download/SP_Faces_2.cpk
+base,Data/dt34_g4.cpk > download/dt80_200E_x64.cpk > download/dt80_300E_x64.cpk,204,asset/model/character/uniform/texture/#windx11/u0123p1.ftex,download/dt80_300E_x64.cpk
+base,Data/dt36_g4.cpk > download/dt80_300E_x64.cpk,197,asset/model/character/face/real/108696/#win/face.fpk,download/dt80_300E_x64.cpk
+sudamerican,download/SP_Faces_3.cpk > download/dt80_700E_x64.cpk,188,asset/model/character/face/real/105988/#win/face.fpk,download/dt80_700E_x64.cpk
+conmegol,<sider>\livecpk\Next Gen Graphics > <sider>\livecpk\Turfs > D:\SP2026\Sudamerican Project Sider\livecpk\SP_Menu Light,184,asset/model/bg/st084/sourceimages/tga/#windx11/pitch_alp.ftex,D:\SP2026\Sudamerican Project Sider\livecpk\SP_Menu Light
+base,download/dt80_100E_x64.cpk > download/dt80_200E_x64.cpk,183,asset/model/character/face/real/61525/#win/face.fpk,download/dt80_200E_x64.cpk
+base,Data/dt36_g4.cpk > download/dt80_500E_x64.cpk,181,asset/model/character/face/real/102526/#win/face.fpk,download/dt80_500E_x64.cpk
+sudamerican,download/SP_Faces_11.cpk > download/SP_Faces_4.cpk,174,asset/model/character/face/real/108239/#win/face.fpk,download/SP_Faces_4.cpk
+sudamerican,download/SP_Faces_3.cpk > download/SP_Faces_9.cpk,173,asset/model/character/face/real/104540/#win/face.fpk,download/SP_Faces_9.cpk
+sudamerican,download/SP_Faces_4.cpk > download/dt80_700E_x64.cpk,167,asset/model/character/face/real/115228/#win/face.fpk,download/dt80_700E_x64.cpk
+sudamerican,download/SP_Faces_11.cpk > download/SP_Faces_5.cpk,163,asset/model/character/face/real/123721/#win/face.fpk,download/SP_Faces_5.cpk
+sudamerican,download/SP_Faces_1.cpk > download/SP_Faces_9.cpk,151,asset/model/character/face/real/35477/#win/face.fpk,download/SP_Faces_9.cpk
+sudamerican,download/SP_Faces_5.cpk > download/dt80_700E_x64.cpk,146,asset/model/character/face/real/118657/#win/face.fpk,download/dt80_700E_x64.cpk
+base,Data/dt34_g4.cpk > download/dt80_100E_x64.cpk > download/dt80_200E_x64.cpk > download/dt80_300E_x64.cpk,145,asset/model/character/uniform/texture/#windx11/u0112g1.ftex,download/dt80_300E_x64.cpk
+base,Data/dt36_g4.cpk > download/dt80_100E_x64.cpk,141,asset/model/character/face/real/104204/#win/face.fpk,download/dt80_100E_x64.cpk
+base,Data/dt36_g4.cpk > download/dt80_400E_x64.cpk,134,asset/model/character/face/real/101115/#win/face.fpk,download/dt80_400E_x64.cpk
+base,Data/dt36_g4.cpk > download/dt80_600E_x64.cpk,130,asset/model/character/face/real/101221/#win/face.fpk,download/dt80_600E_x64.cpk
+sudamerican,download/SP_Faces_12.cpk > download/SP_Faces_4.cpk,127,asset/model/character/face/real/108959/#win/face.fpk,download/SP_Faces_4.cpk
+base,Data/dt34_g4.cpk > download/dt80_500E_x64.cpk,126,asset/model/character/uniform/texture/#windx11/u0031g1.ftex,download/dt80_500E_x64.cpk
+sudamerican,download/SP_Faces_12.cpk > download/SP_Faces_6.cpk,126,asset/model/character/face/real/130319/#win/face.fpk,download/SP_Faces_6.cpk
+sudamerican,download/SP_Faces_11.cpk > download/SP_Faces_7.cpk,123,asset/model/character/face/real/147455/sourceimages/#windx11/eye_occlusion_alp.ftex,download/SP_Faces_7.cpk
+base,download/dt80_200E_x64.cpk > download/dt80_300E_x64.cpk,122,asset/model/character/uniform/texture/#windx11/u0116p3.ftex,download/dt80_300E_x64.cpk
+sudamerican,download/SP_Faces_12.cpk > download/SP_Faces_5.cpk,119,asset/model/character/face/real/116751/#win/face.fpk,download/SP_Faces_5.cpk
+sudamerican,download/SP_Faces_11.cpk > download/SP_Faces_6.cpk,116,asset/model/character/face/real/132216/#win/face.fpk,download/SP_Faces_6.cpk
+base,Data/dt36_g4.cpk > download/dt80_200E_x64.cpk,115,asset/model/character/face/real/100630/#win/face.fpk,download/dt80_200E_x64.cpk
+sudamerican,download/SP_Faces_6.cpk > download/dt80_700E_x64.cpk,112,asset/model/character/face/real/126720/#win/face.fpk,download/dt80_700E_x64.cpk
+base,download/dt80_200E_x64.cpk > download/dt80_400E_x64.cpk,107,asset/model/character/uniform/texture/#windx11/u0120p3.ftex,download/dt80_400E_x64.cpk
+base,Data/dt14_all.cpk > download/dt80_700E_x64.cpk,104,common/render/symbol/player/103701.dds,download/dt80_700E_x64.cpk
+sudamerican,download/SP_Faces_11.cpk > download/SP_Faces_12.cpk,103,asset/model/character/face/real/133677/#win/face.fpk,download/SP_Faces_12.cpk
+sudamerican,download/SP_Faces_2.cpk > download/dt80_700E_x64.cpk,100,asset/model/character/face/real/60391/#win/face.fpk,download/dt80_700E_x64.cpk
+sudamerican,<sider>\livecpk\SP_Menu Light > <sider>\livecpk\SP_Worn Turf,99,asset/model/bg/st046/sourceimages/tga/#windx11/pitch_grain_alp.ftex,<sider>\livecpk\SP_Menu Light
+base,download/dt80_500E_x64.cpk > download/dt80_600E_x64.cpk,98,asset/model/character/face/real/130016/#win/face.fpk,download/dt80_600E_x64.cpk
+sudamerican,download/SP_Faces_12.cpk > download/SP_Faces_3.cpk,97,asset/model/character/face/real/106410/#win/face.fpk,download/SP_Faces_3.cpk
+sudamerican,download/SP_Faces_12.cpk > download/SP_Faces_6.cpk > download/SP_Faces_9.cpk,96,asset/model/character/face/real/127787/#win/face.fpk,download/SP_Faces_9.cpk
+base,Data/dt34_g4.cpk > download/dt80_100E_x64.cpk > download/dt80_400E_x64.cpk,95,asset/model/character/uniform/texture/#windx11/u0127p2_back.ftex,download/dt80_400E_x64.cpk
+conmegol,<sider>\livecpk\Turfs > <sider>\livecpk\Worn Turf > D:\SP2026\Sudamerican Project Sider\livecpk\SP_Menu Light,91,asset/model/bg/st065/sourceimages/tga/#windx11/cm000_line001_bsm_alp.ftex,D:\SP2026\Sudamerican Project Sider\livecpk\SP_Menu Light
+base,Data/dt34_g4.cpk > download/dt80_300E_x64.cpk > download/dt80_600E_x64.cpk,86,asset/model/character/uniform/texture/#windx11/u0012p1.ftex,download/dt80_600E_x64.cpk
+base,Data/dt34_g4.cpk > download/dt80_400E_x64.cpk,85,asset/model/character/uniform/texture/#windx11/u0001g1.ftex,download/dt80_400E_x64.cpk
+sudamerican,<sider>/content/miniface_server > <sider>\livecpk\SP_Minifaces > download/dt80_700E_x64.cpk,84,common/render/symbol/player/105950.dds,<sider>\livecpk\SP_Minifaces
+base,Data/dt14_all.cpk > download/dt80_200E_x64.cpk > download/dt80_500E_x64.cpk,83,common/render/symbol/player/101038.dds,download/dt80_500E_x64.cpk
+base,Data/dt34_g4.cpk > download/dt80_300E_x64.cpk > download/dt80_400E_x64.cpk,83,asset/model/character/uniform/texture/#windx11/u0188g1.ftex,download/dt80_400E_x64.cpk
+base,Data/dt34_g4.cpk > download/dt80_100E_x64.cpk > download/dt80_500E_x64.cpk,82,asset/model/character/uniform/texture/#windx11/u0134g1.ftex,download/dt80_500E_x64.cpk
+sudamerican,download/SP_Faces_1.cpk > download/SP_Faces_12.cpk > download/SP_Faces_9.cpk,79,asset/model/character/face/real/40002/#win/face.fpk,download/SP_Faces_9.cpk
+sudamerican,download/SP_Faces_11.cpk > download/SP_Faces_8.cpk,79,asset/model/character/face/real/168233/sourceimages/#windx11/eye_occlusion_alp.ftex,download/SP_Faces_8.cpk
+sudamerican,download/SP_Faces_10.cpk > download/SP_Faces_2.cpk,78,asset/model/character/face/real/46815/#win/face.fpk,download/SP_Faces_2.cpk
+base,download/dt80_300E_x64.cpk > download/dt80_600E_x64.cpk,76,asset/model/character/uniform/texture/#windx11/u0274p3.ftex,download/dt80_600E_x64.cpk
+sudamerican,<sider>\livecpk\SP_Faces > download/SP_Faces_4.cpk,76,asset/model/character/face/real/108069/#win/face.fpk,<sider>\livecpk\SP_Faces
+sudamerican,download/SP_Faces_12.cpk > download/SP_Faces_8.cpk,76,asset/model/character/face/real/165874/sourceimages/#windx11/eye_occlusion_alp.ftex,download/SP_Faces_8.cpk
+sudamerican,download/SP_Faces_11.cpk > download/SP_Faces_9.cpk,71,asset/model/character/face/real/167737/sourceimages/#windx11/eye_occlusion_alp.ftex,download/SP_Faces_9.cpk
+conmegol,<sider>\livecpk\Faces > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Accessory-Bandages,69,asset/model/character/face/real/58759/sourceimages/#windx11/arm_bsm.ftex,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Accessory-Bandages
+base,Data/dt34_g4.cpk > download/dt80_400E_x64.cpk > download/dt80_600E_x64.cpk,66,asset/model/character/uniform/texture/#windx11/u1178g1.ftex,download/dt80_600E_x64.cpk
+sudamerican,download/SP_Faces_12.cpk > download/SP_Faces_7.cpk,66,asset/model/character/face/real/147692/#win/face.fpk,download/SP_Faces_7.cpk
+sudamerican,download/SP_Faces_11.cpk > download/SP_Faces_12.cpk > download/SP_Faces_7.cpk,66,asset/model/character/face/real/147235/sourceimages/#windx11/eye_occlusion_alp.ftex,download/SP_Faces_7.cpk
+base,Data/dt14_all.cpk > download/dt80_300E_x64.cpk > download/dt80_500E_x64.cpk,64,common/render/symbol/player/100035.dds,download/dt80_500E_x64.cpk
+conmegol,<sider>\livecpk\Next Gen Graphics > D:\SP2026\Sudamerican Project Sider\livecpk\SP_Menu Light,64,asset/model/bg/st084/sourceimages/tga/#windx11/pitch_detail_alp.ftex,D:\SP2026\Sudamerican Project Sider\livecpk\SP_Menu Light
+sudamerican,download/SP_Faces_11.cpk > download/SP_Faces_2.cpk,60,asset/model/character/face/real/47070/#win/face.fpk,download/SP_Faces_2.cpk
+sudamerican,<sider>\livecpk\SP_Faces > download/SP_Faces_2.cpk,60,asset/model/character/face/real/57330/#win/face.fpk,<sider>\livecpk\SP_Faces
+base,download/dt80_600E_x64.cpk > download/dt80_700E_x64.cpk,60,asset/model/character/face/real/134681/#win/face.fpk,download/dt80_700E_x64.cpk
+base,Data/dt34_g4.cpk > download/dt80_300E_x64.cpk > download/dt80_500E_x64.cpk,59,asset/model/character/uniform/texture/#windx11/u1242g1.ftex,download/dt80_500E_x64.cpk
+base,Data/dt34_g4.cpk > download/dt80_100E_x64.cpk > download/dt80_200E_x64.cpk > download/dt80_400E_x64.cpk,57,asset/model/character/uniform/texture/#windx11/u0120g1_back.ftex,download/dt80_400E_x64.cpk
+sudamerican,download/SP_Faces_7.cpk > download/dt80_700E_x64.cpk,56,asset/model/character/face/real/137995/#win/face.fpk,download/dt80_700E_x64.cpk
+base,Data/dt14_all.cpk > download/dt80_400E_x64.cpk > download/dt80_500E_x64.cpk,55,common/render/symbol/player/100432.dds,download/dt80_500E_x64.cpk
+base,download/dt80_100E_x64.cpk > download/dt80_400E_x64.cpk,54,asset/model/character/face/real/11055/#win/face.fpk,download/dt80_400E_x64.cpk
+base,download/dt80_200E_x64.cpk > download/dt80_500E_x64.cpk,52,common/render/symbol/player/105046.dds,download/dt80_500E_x64.cpk
+conmegol,<sider>\livecpk\Next Gen Graphics > D:\Frank\IA\CLAUDE\pes-graficos\paquete_bloom\Phoenix-Bloom,50,asset/model/bg/st081/light/#win/light_st081_af.fpkd,<sider>\livecpk\Next Gen Graphics
+sudamerican,download/SP_Faces_12.cpk > download/SP_Faces_8.cpk > download/SP_Faces_9.cpk,50,asset/model/character/face/real/167998/sourceimages/#windx11/arm_bsm.ftex,download/SP_Faces_9.cpk
+sudamerican,download/SP_Faces_11.cpk > download/SP_Faces_3.cpk,46,asset/model/character/face/real/104680/#win/face.fpk,download/SP_Faces_3.cpk
+base,download/dt80_300E_x64.cpk > download/dt80_500E_x64.cpk,45,asset/model/character/uniform/texture/#windx11/u0336p3.ftex,download/dt80_500E_x64.cpk
+sudamerican,download/SP_Faces_10.cpk > download/SP_Faces_8.cpk,45,asset/model/character/face/real/154863/sourceimages/#windx11/eye_occlusion_alp.ftex,download/SP_Faces_8.cpk
+base,Data/dt14_all.cpk > download/dt80_100E_x64.cpk > download/dt80_300E_x64.cpk,44,common/render/symbol/player/100165.dds,download/dt80_300E_x64.cpk
+base,Data/dt36_g4.cpk > download/dt80_700E_x64.cpk,44,asset/model/character/face/real/105988/#win/face.fpk,download/dt80_700E_x64.cpk
+sudamerican,<sider>\livecpk\SP_Faces > download/SP_Faces_9.cpk,44,asset/model/character/face/real/133653/#win/face.fpk,<sider>\livecpk\SP_Faces
+sudamerican,download/SP_Faces_10.cpk > download/SP_Faces_12.cpk,44,asset/model/character/face/real/61583/sourceimages/#windx11/face_bsm_alp.ftex,download/SP_Faces_12.cpk
+sudamerican,<sider>\livecpk\SP_Faces > download/SP_Faces_6.cpk,43,asset/model/character/face/real/126689/#win/face.fpk,<sider>\livecpk\SP_Faces
+base,Data/dt14_all.cpk > download/dt80_100E_x64.cpk > download/dt80_500E_x64.cpk,42,common/render/symbol/player/101228.dds,download/dt80_500E_x64.cpk
+conmegol,<sider>\livecpk\Next Gen Graphics > D:\Frank\IA\CLAUDE\pes-graficos\paquete_bloom\Phoenix-Bloom > D:\SP2026\Sudamerican Project Sider\livecpk\SP_Menu Light,42,asset/model/bg/st081/light/#win/light_st081_ar.fpkd,D:\SP2026\Sudamerican Project Sider\livecpk\SP_Menu Light
+sudamerican,<sider>\livecpk\SP_Faces > download/SP_Faces_3.cpk,41,asset/model/character/face/real/101334/#win/face.fpk,<sider>\livecpk\SP_Faces
+sudamerican,download/SP_Faces_12.cpk > download/SP_Faces_2.cpk > download/SP_Faces_9.cpk,41,asset/model/character/face/real/46879/#win/face.fpk,download/SP_Faces_9.cpk
+base,download/dt80_400E_x64.cpk > download/dt80_600E_x64.cpk,39,asset/model/character/face/real/109904/#win/face.fpk,download/dt80_600E_x64.cpk
+conmegol,<sider>\livecpk\Next Gen Graphics > <sider>\livecpk\Turfs,38,asset/model/bg/st081/sourceimages/tga/#windx11/turf_withers.ftex,<sider>\livecpk\Next Gen Graphics
+base,Data/dt34_g4.cpk > download/dt80_100E_x64.cpk > download/dt80_300E_x64.cpk > download/dt80_600E_x64.cpk,35,asset/model/character/uniform/texture/#windx11/u0138g1_back.ftex,download/dt80_600E_x64.cpk
+base,download/dt80_200E_x64.cpk > download/dt80_600E_x64.cpk,35,asset/model/character/uniform/texture/#windx11/u1248p3.ftex,download/dt80_600E_x64.cpk
+conmegol,<sider>\livecpk\Next Gen Graphics > <sider>\livecpk\Worn Turf,35,asset/model/bg/st065/sourceimages/tga/#windx11/pitch_detail_alp.ftex,<sider>\livecpk\Next Gen Graphics
+sudamerican,download/SP_Faces_1.cpk > download/SP_Faces_12.cpk,34,asset/model/character/face/real/39173/#win/face.fpk,download/SP_Faces_12.cpk
+sudamerican,download/SP_Faces_11.cpk > download/SP_Faces_8.cpk > download/SP_Faces_9.cpk,34,asset/model/character/face/real/154986/sourceimages/#windx11/eye_occlusion_alp.ftex,download/SP_Faces_9.cpk
+sudamerican,<sider>\livecpk\SP_Faces > download/SP_Faces_7.cpk,34,asset/model/character/face/real/148172/sourceimages/#windx11/eye_occlusion_alp.ftex,<sider>\livecpk\SP_Faces
+sudamerican,download/SP_Faces_0.cpk > download/SP_Faces_9.cpk,34,asset/model/character/face/real/52611/#win/face.fpk,download/SP_Faces_9.cpk
+sudamerican,<sider>\livecpk\SP_Global > download/SP_Faces_3.cpk,34,asset/model/character/face/real/65439/#win/face.fpk,<sider>\livecpk\SP_Global
+sudamerican,<sider>\livecpk\SP_Faces > download/SP_Faces_5.cpk,33,asset/model/character/face/real/121813/#win/face.fpk,<sider>\livecpk\SP_Faces
+sudamerican,<sider>\livecpk\SP_Faces > download/SP_Faces_8.cpk,33,asset/model/character/face/real/164876/sourceimages/#windx11/eye_occlusion_alp.ftex,<sider>\livecpk\SP_Faces
+sudamerican,download/SP_Faces_11.cpk > download/SP_Faces_7.cpk > download/SP_Faces_9.cpk,33,asset/model/character/face/real/146165/sourceimages/#windx11/eye_occlusion_alp.ftex,download/SP_Faces_9.cpk
+conmegol,<sider>\livecpk\Turfs > <sider>\livecpk\Worn Turf,33,asset/model/bg/st046/#win/st046_df.fpk,<sider>\livecpk\Worn Turf
+sudamerican,download/SP_Faces_0.cpk > download/SP_Faces_12.cpk,33,asset/model/character/face/real/51776/#win/face.fpk,download/SP_Faces_12.cpk
+base,Data/dt34_g4.cpk > download/dt80_200E_x64.cpk > download/dt80_400E_x64.cpk,32,asset/model/character/uniform/texture/#windx11/u0052g1_back.ftex,download/dt80_400E_x64.cpk
+sudamerican,download/SP_Faces_10.cpk > download/SP_Faces_7.cpk,28,asset/model/character/face/real/142886/sourceimages/#windx11/arm_bsm.ftex,download/SP_Faces_7.cpk
+base,Data/dt34_g4.cpk > download/dt80_100E_x64.cpk > download/dt80_600E_x64.cpk,26,asset/model/character/uniform/texture/#windx11/u0138p3.ftex,download/dt80_600E_x64.cpk
+base,download/dt80_400E_x64.cpk > download/dt80_700E_x64.cpk,26,common/render/symbol/player/110599.dds,download/dt80_700E_x64.cpk
+sudamerican,download/SP_Faces_12.cpk > download/SP_Faces_4.cpk > download/SP_Faces_9.cpk,26,asset/model/character/face/real/116543/#win/face.fpk,download/SP_Faces_9.cpk
+base,Data/dt14_all.cpk > download/dt80_100E_x64.cpk > download/dt80_200E_x64.cpk,25,common/render/symbol/player/101849.dds,download/dt80_200E_x64.cpk
+sudamerican,download/SP_Faces_1.cpk > download/dt80_700E_x64.cpk,25,asset/model/character/face/real/40323/#win/face.fpk,download/dt80_700E_x64.cpk
+base,Data/dt36_g4.cpk > download/dt80_300E_x64.cpk > download/dt80_600E_x64.cpk,24,asset/model/character/face/real/111342/#win/face.fpk,download/dt80_600E_x64.cpk
+sudamerican,download/SP_Faces_10.cpk > download/SP_Faces_12.cpk > download/SP_Faces_8.cpk,24,asset/model/character/face/real/154335/#win/face.fpk,download/SP_Faces_8.cpk
+base,Data/dt14_all.cpk > download/dt80_200E_x64.cpk > download/dt80_400E_x64.cpk,23,common/render/symbol/player/102759.dds,download/dt80_400E_x64.cpk
+sudamerican,download/SP_Faces_11.cpk > download/SP_Faces_12.cpk > download/SP_Faces_5.cpk,23,asset/model/character/face/real/118096/#win/face.fpk,download/SP_Faces_5.cpk
+base,download/dt80_100E_x64.cpk > download/dt80_300E_x64.cpk,23,asset/model/character/uniform/texture/#windx11/u0112p3_back.ftex,download/dt80_300E_x64.cpk
+sudamerican,download/SP_Faces_11.cpk > download/SP_Faces_5.cpk > download/SP_Faces_9.cpk,22,asset/model/character/face/real/117793/#win/face.fpk,download/SP_Faces_9.cpk
+sudamerican,download/SP_Faces_12.cpk > download/SP_Faces_7.cpk > download/SP_Faces_9.cpk,22,asset/model/character/face/real/146209/sourceimages/#windx11/eye_occlusion_alp.ftex,download/SP_Faces_9.cpk
+sudamerican,download/SP_Faces_11.cpk > download/SP_Faces_6.cpk > download/SP_Faces_9.cpk,22,asset/model/character/face/real/134794/sourceimages/#windx11/eye_occlusion_alp.ftex,download/SP_Faces_9.cpk
+sudamerican,download/SP_Faces_0.cpk > download/SP_Faces_11.cpk,22,asset/model/character/face/real/53539/#win/face.fpk,download/SP_Faces_11.cpk
+base,Data/dt14_all.cpk > download/dt80_100E_x64.cpk > download/dt80_400E_x64.cpk > download/dt80_500E_x64.cpk,21,common/render/symbol/player/100485.dds,download/dt80_500E_x64.cpk
+base,download/dt80_200E_x64.cpk > download/dt80_700E_x64.cpk,20,common/render/symbol/player/102631.dds,download/dt80_700E_x64.cpk
+sudamerican,download/SP_Faces_10.cpk > download/SP_Faces_6.cpk,20,asset/model/character/face/real/135015/sourceimages/#windx11/eye_sclera_bsm.ftex,download/SP_Faces_6.cpk
+sudamerican,download/SP_Faces_1.cpk > download/SP_Faces_11.cpk,19,asset/model/character/face/real/34098/#win/face.fpk,download/SP_Faces_11.cpk
+sudamerican,download/SP_Faces_0.cpk > download/SP_Faces_12.cpk > download/SP_Faces_2.cpk,19,asset/model/character/face/real/55792/#win/face.fpk,download/SP_Faces_2.cpk
+base,Data/dt34_g4.cpk > download/dt80_500E_x64.cpk > download/dt80_600E_x64.cpk,18,asset/model/character/uniform/texture/#windx11/u1935g1_back.ftex,download/dt80_600E_x64.cpk
+sudamerican,download/SP_Faces_11.cpk > download/SP_Faces_12.cpk > download/SP_Faces_4.cpk,18,asset/model/character/face/real/114808/#win/face.fpk,download/SP_Faces_4.cpk
+base,download/dt80_100E_x64.cpk > download/dt80_600E_x64.cpk,18,asset/model/character/face/real/113662/#win/face.fpk,download/dt80_600E_x64.cpk
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Pants-Baggy > download/SP_Faces_1.cpk,18,asset/model/character/face/real/7511/nocloth/#win/pants_001.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Pants-Baggy
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Pants-Shorter > download/SP_Faces_4.cpk,18,asset/model/character/face/real/110718/nocloth/#win/pants_001.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Pants-Shorter
+base,Data/dt34_g4.cpk > download/dt80_100E_x64.cpk > download/dt80_300E_x64.cpk > download/dt80_500E_x64.cpk,17,asset/model/character/uniform/texture/#windx11/u0182p1.ftex,download/dt80_500E_x64.cpk
+base,download/dt80_500E_x64.cpk > download/dt80_700E_x64.cpk,17,common/render/symbol/player/105338.dds,download/dt80_700E_x64.cpk
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Pants-Shorter > download/SP_Faces_6.cpk,17,asset/model/character/face/real/131728/nocloth/#win/pants_001.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Pants-Shorter
+sudamerican,download/SP_Faces_10.cpk > download/SP_Faces_6.cpk > download/SP_Faces_9.cpk,17,asset/model/character/face/real/133301/sourceimages/#windx11/arm_bsm.ftex,download/SP_Faces_9.cpk
+sudamerican,<sider>\livecpk\SP_Faces > download/SP_Faces_4.cpk > download/SP_Faces_9.cpk,16,asset/model/character/face/real/110784/#win/face.fpk,<sider>\livecpk\SP_Faces
+sudamerican,<sider>\livecpk\SP_Faces > download/SP_Faces_12.cpk > download/SP_Faces_4.cpk,16,asset/model/character/face/real/110644/#win/face.fpk,<sider>\livecpk\SP_Faces
+base,Data/dt14_all.cpk > download/dt80_200E_x64.cpk > download/dt80_600E_x64.cpk,15,common/render/symbol/player/101331.dds,download/dt80_600E_x64.cpk
+base,download/dt80_100E_x64.cpk > download/dt80_700E_x64.cpk,15,asset/model/character/face/real/115228/#win/face.fpk,download/dt80_700E_x64.cpk
+sudamerican,download/SP_Faces_10.cpk > download/SP_Faces_11.cpk > download/SP_Faces_6.cpk,15,asset/model/character/face/real/137000/sourceimages/#windx11/1hair_parts_bsm_alp.ftex,download/SP_Faces_6.cpk
+sudamerican,<sider>\livecpk\SP_Details > <sider>\livecpk\SP_Global,15,asset/model/character/face/real/65404/sourceimages/#windx11/eye_occlusion_alp.ftex,<sider>\livecpk\SP_Details
+base,download/dt80_300E_x64.cpk > download/dt80_400E_x64.cpk,14,asset/model/character/uniform/texture/#windx11/u0188p3.ftex,download/dt80_400E_x64.cpk
+sudamerican,<sider>\livecpk\SP_Faces > download/SP_Faces_11.cpk,14,asset/model/character/face/real/147955/sourceimages/#windx11/desktop.ini,<sider>\livecpk\SP_Faces
+base,Data/dt14_all.cpk > download/dt80_300E_x64.cpk > download/dt80_400E_x64.cpk,13,common/render/symbol/player/101870.dds,download/dt80_400E_x64.cpk
+base,<sider>\content\livecpk\PHX_KIT_MIP > Data/dt34_g4.cpk > download/dt80_200E_x64.cpk,12,asset/model/character/uniform/texture/#windx11/u0108g1_back.ftex,<sider>\content\livecpk\PHX_KIT_MIP
+base,Data/dt34_g4.cpk > download/dt80_100E_x64.cpk > download/dt80_500E_x64.cpk > download/dt80_600E_x64.cpk,12,asset/model/character/uniform/texture/#windx11/u0139g1.ftex,download/dt80_600E_x64.cpk
+base,Data/dt34_g4.cpk > download/dt80_100E_x64.cpk > download/dt80_400E_x64.cpk > download/dt80_500E_x64.cpk,12,asset/model/character/uniform/texture/#windx11/u0139g1_back.ftex,download/dt80_600E_x64.cpk
+base,Data/dt36_g4.cpk > download/dt80_100E_x64.cpk > download/dt80_500E_x64.cpk,12,asset/model/character/face/real/100510/#win/face.fpk,download/dt80_500E_x64.cpk
+sudamerican,<sider>\livecpk\SP_Faces > download/SP_Faces_11.cpk > download/SP_Faces_4.cpk,12,asset/model/character/face/real/110626/#win/face.fpk,<sider>\livecpk\SP_Faces
+base,Data/dt36_g4.cpk > download/dt80_600E_x64.cpk > download/dt80_700E_x64.cpk,12,asset/model/character/face/real/40323/#win/face.fpk,download/dt80_700E_x64.cpk
+sudamerican,download/SP_Faces_1.cpk > download/SP_Faces_11.cpk > download/SP_Faces_9.cpk,12,asset/model/character/face/real/7511/#win/face.fpk,download/SP_Faces_9.cpk
+base,download/dt80_100E_x64.cpk > download/dt80_200E_x64.cpk > download/dt80_400E_x64.cpk,12,common/render/symbol/player/110802.dds,download/dt80_400E_x64.cpk
+sudamerican,<sider>\livecpk\SP_Faces > download/SP_Faces_12.cpk > download/SP_Faces_6.cpk > download/SP_Faces_9.cpk,12,asset/model/character/face/real/133157/#win/face.fpk,<sider>\livecpk\SP_Faces
+base,download/dt80_300E_x64.cpk > download/dt80_700E_x64.cpk,12,common/render/symbol/player/109364.dds,download/dt80_700E_x64.cpk
+sudamerican,<sider>\livecpk\SP_Faces > download/SP_Faces_5.cpk > download/dt80_700E_x64.cpk,12,asset/model/character/face/real/119782/#win/face.fpk,<sider>\livecpk\SP_Faces
+sudamerican,<sider>\livecpk\SP_Faces > download/SP_Faces_12.cpk > download/SP_Faces_8.cpk > download/SP_Faces_9.cpk,12,asset/model/character/face/real/162114/sourceimages/#windx11/eye_occlusion_alp.ftex,<sider>\livecpk\SP_Faces
+sudamerican,<sider>\livecpk\SP_Faces > download/SP_Faces_11.cpk > download/SP_Faces_8.cpk,12,asset/model/character/face/real/152928/sourceimages/#windx11/eye_occlusion_alp.ftex,<sider>\livecpk\SP_Faces
+sudamerican,<sider>\livecpk\SP_Faces > download/SP_Faces_11.cpk > download/SP_Faces_3.cpk,11,asset/model/character/face/real/104717/#win/face.fpk,<sider>\livecpk\SP_Faces
+sudamerican,download/SP_Faces_11.cpk > download/SP_Faces_12.cpk > download/SP_Faces_4.cpk > download/SP_Faces_9.cpk,11,asset/model/character/face/real/108279/#win/face.fpk,download/SP_Faces_9.cpk
+sudamerican,download/SP_Faces_11.cpk > download/SP_Faces_4.cpk > download/SP_Faces_9.cpk,11,asset/model/character/face/real/109329/#win/face.fpk,download/SP_Faces_9.cpk
+sudamerican,<sider>\livecpk\SP_Faces > download/SP_Faces_10.cpk > download/SP_Faces_4.cpk,11,asset/model/character/face/real/110718/#win/face.fpk,<sider>\livecpk\SP_Faces
+sudamerican,<sider>\livecpk\SP_Faces > download/SP_Faces_11.cpk > download/SP_Faces_4.cpk > download/SP_Faces_9.cpk,11,asset/model/character/face/real/113960/#win/face.fpk,<sider>\livecpk\SP_Faces
+sudamerican,download/SP_Faces_10.cpk > download/SP_Faces_4.cpk,11,asset/model/character/face/real/114235/#win/face.fpk,download/SP_Faces_4.cpk
+sudamerican,<sider>\livecpk\SP_Faces > download/SP_Faces_11.cpk > download/SP_Faces_12.cpk > download/SP_Faces_6.cpk,11,asset/model/character/face/real/133543/#win/face.fpk,<sider>\livecpk\SP_Faces
+sudamerican,<sider>\livecpk\SP_Faces > download/SP_Faces_1.cpk > download/SP_Faces_12.cpk > download/SP_Faces_9.cpk,11,asset/model/character/face/real/40352/#win/face.fpk,<sider>\livecpk\SP_Faces
+sudamerican,<sider>\livecpk\SP_Faces > download/SP_Faces_10.cpk > download/SP_Faces_2.cpk,11,asset/model/character/face/real/47051/#win/face.fpk,<sider>\livecpk\SP_Faces
+base,download/dt80_100E_x64.cpk > download/dt80_500E_x64.cpk,11,asset/model/character/face/real/100510/sourceimages/#windx11/eye_sclera_bsm.ftex,download/dt80_500E_x64.cpk
+base,download/dt80_200E_x64.cpk > download/dt80_300E_x64.cpk > download/dt80_400E_x64.cpk,11,asset/model/character/uniform/texture/#windx11/u0337g1_back.ftex,download/dt80_400E_x64.cpk
+sudamerican,download/SP_Faces_11.cpk > download/SP_Faces_5.cpk > download/dt80_700E_x64.cpk,11,asset/model/character/face/real/122333/#win/face.fpk,download/dt80_700E_x64.cpk
+sudamerican,download/SP_Faces_12.cpk > download/SP_Faces_6.cpk > download/dt80_700E_x64.cpk,11,asset/model/character/face/real/132192/#win/face.fpk,download/dt80_700E_x64.cpk
+sudamerican,download/SP_Faces_12.cpk > download/SP_Faces_6.cpk > download/SP_Faces_9.cpk > download/dt80_700E_x64.cpk,11,asset/model/character/face/real/133594/#win/face.fpk,download/dt80_700E_x64.cpk
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Accessory-Bandages > download/SP_Faces_7.cpk,11,asset/model/character/face/real/142088/sourceimages/#windx11/eye_occlusion_alp.ftex,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Accessory-Bandages
+sudamerican,<sider>\livecpk\SP_Faces > download/SP_Faces_11.cpk > download/SP_Faces_7.cpk,11,asset/model/character/face/real/147955/sourceimages/#windx11/eye_occlusion_alp.ftex,<sider>\livecpk\SP_Faces
+sudamerican,download/SP_Faces_11.cpk > download/SP_Faces_12.cpk > download/SP_Faces_7.cpk > download/SP_Faces_9.cpk,11,asset/model/character/face/real/140308/sourceimages/#windx11/eye_occlusion_alp.ftex,download/SP_Faces_9.cpk
+sudamerican,<sider>\livecpk\SP_Faces > download/SP_Faces_6.cpk > download/SP_Faces_9.cpk,11,asset/model/character/face/real/128281/sourceimages/#windx11/eye_occlusion_alp.ftex,<sider>\livecpk\SP_Faces
+sudamerican,download/SP_Faces_10.cpk > download/SP_Faces_5.cpk,11,asset/model/character/face/real/122283/sourceimages/#windx11/eye_occlusion_alp.ftex,download/SP_Faces_5.cpk
+sudamerican,download/SP_Faces_12.cpk > download/SP_Faces_5.cpk > download/SP_Faces_9.cpk,11,asset/model/character/face/real/121311/sourceimages/#windx11/eye_occlusion_alp.ftex,download/SP_Faces_9.cpk
+sudamerican,download/SP_Faces_10.cpk > download/SP_Faces_11.cpk > download/SP_Faces_5.cpk,11,asset/model/character/face/real/119531/sourceimages/#windx11/eye_occlusion_alp.ftex,download/SP_Faces_5.cpk
+sudamerican,download/SP_Faces_12.cpk > download/SP_Faces_3.cpk > download/SP_Faces_9.cpk,11,asset/model/character/face/real/102782/sourceimages/#windx11/eye_occlusion_alp.ftex,download/SP_Faces_9.cpk
+sudamerican,download/SP_Faces_10.cpk > download/SP_Faces_3.cpk,11,asset/model/character/face/real/102232/sourceimages/#windx11/eye_occlusion_alp.ftex,download/SP_Faces_3.cpk
+base,Data/dt14_all.cpk > download/dt80_100E_x64.cpk > download/dt80_600E_x64.cpk,10,common/render/symbol/player/112149.dds,download/dt80_600E_x64.cpk
+base,Data/dt15_x64.cpk > download/dt80_100E_x64.cpk,10,asset/model/ball/ball120/#win/ball.fpk,download/dt80_100E_x64.cpk
+base,Data/dt34_g4.cpk > download/dt80_100E_x64.cpk > download/dt80_300E_x64.cpk > download/dt80_400E_x64.cpk,10,asset/model/character/uniform/texture/#windx11/u1247g1.ftex,download/dt80_500E_x64.cpk
+base,Data/dt34_g4.cpk > download/dt80_200E_x64.cpk > download/dt80_300E_x64.cpk > download/dt80_400E_x64.cpk,10,asset/model/character/uniform/texture/#windx11/u1933p3.ftex,download/dt80_400E_x64.cpk
+base,Data/dt14_all.cpk > download/dt80_200E_x64.cpk > download/dt80_300E_x64.cpk,9,common/render/symbol/player/105083.dds,download/dt80_300E_x64.cpk
+base,Data/dt14_all.cpk > download/dt80_200E_x64.cpk > download/dt80_700E_x64.cpk,9,common/render/symbol/player/110945.dds,download/dt80_700E_x64.cpk
+base,<sider>\content\livecpk\PHX_KIT_MIP > Data/dt34_g4.cpk > download/dt80_600E_x64.cpk,9,asset/model/character/uniform/texture/#windx11/u0050p1.ftex,<sider>\content\livecpk\PHX_KIT_MIP
+conmegol,<sider>\livecpk\Next Gen Graphics > <sider>\livecpk\Turfs > D:\Frank\IA\CLAUDE\pes-graficos\paquete_cesped\Phoenix-Cesped-Mips > D:\SP2026\Sudamerican Project Sider\livecpk\SP_Menu Light,9,asset/model/bg/st080/sourceimages/tga/#windx11/pitch_grain_alp.ftex,D:\SP2026\Sudamerican Project Sider\livecpk\SP_Menu Light
+base,Data/dt34_g4.cpk > download/dt80_400E_x64.cpk > download/dt80_500E_x64.cpk,8,asset/model/character/uniform/texture/#windx11/u1255g1.ftex,download/dt80_500E_x64.cpk
+base,Data/dt34_g4.cpk > download/dt80_200E_x64.cpk > download/dt80_400E_x64.cpk > download/dt80_600E_x64.cpk,8,asset/model/character/uniform/texture/#windx11/u1255p1_back.ftex,download/dt80_600E_x64.cpk
+conmegol,D:\Frank\IA\CLAUDE\pes-graficos\paquete_bloom\Phoenix-Bloom > D:\SP2026\Sudamerican Project Sider\livecpk\SP_Menu Light,8,asset/model/bg/st084/light/#win/light_st084_ar.fpkd,D:\SP2026\Sudamerican Project Sider\livecpk\SP_Menu Light
+conmegol,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Sleeve Roll Up-Forearm Both > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Sleeve Roll Up-Forearm Both Tattoo,8,asset/model/character/face/real/167997/nocloth/#win/sleeve_long_001.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Sleeve Roll Up-Forearm Both
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Sleeve Roll Up-Forearm Both > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Sleeve Roll Up-Forearm Both Tattoo,8,asset/model/character/face/real/167997/nocloth/#win/sleeve_long_001.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Sleeve Roll Up-Forearm Both
+sudamerican,<sider>\livecpk\SP_Faces > download/SP_Faces_12.cpk > download/SP_Faces_9.cpk,8,asset/model/character/face/real/162114/sourceimages/#windx11/oral_bsm.ftex,<sider>\livecpk\SP_Faces
+base,Data/dt14_all.cpk > download/dt80_100E_x64.cpk > download/dt80_300E_x64.cpk > download/dt80_500E_x64.cpk,7,common/render/symbol/player/102682.dds,download/dt80_500E_x64.cpk
+base,download/dt80_100E_x64.cpk > download/dt80_200E_x64.cpk > download/dt80_300E_x64.cpk,7,asset/model/character/uniform/texture/#windx11/u0112p3.ftex,download/dt80_300E_x64.cpk
+sudamerican,download/SP_Faces_10.cpk > download/SP_Faces_6.cpk > download/SP_Faces_9.cpk > download/dt80_700E_x64.cpk,7,asset/model/character/face/real/126624/#win/face.fpk,download/dt80_700E_x64.cpk
+conmegol,<sider>\livecpk\Next Gen Graphics > <sider>\livecpk\Turfs > D:\Frank\IA\CLAUDE\pes-graficos\paquete_bloom\Phoenix-Bloom > D:\SP2026\Sudamerican Project Sider\livecpk\SP_Menu Light,7,asset/model/bg/st071/light/#win/light_st071_ar.fpkd,D:\SP2026\Sudamerican Project Sider\livecpk\SP_Menu Light
+conmegol,<sider>\livecpk\Next Gen Graphics > <sider>\livecpk\Turfs > <sider>\livecpk\Worn Turf > D:\SP2026\Sudamerican Project Sider\livecpk\SP_Menu Light,7,asset/model/bg/st065/sourceimages/tga/#windx11/pitch_detail.ftex,D:\SP2026\Sudamerican Project Sider\livecpk\SP_Menu Light
+base,Data/dt15_x64.cpk > download/dt80_300E_x64.cpk,6,asset/model/ball/ball208/#win/ball.fpk,download/dt80_300E_x64.cpk
+base,Data/dt15_x64.cpk > download/dt80_400E_x64.cpk,6,asset/model/ball/ball802/#win/ball.fpk,download/dt80_400E_x64.cpk
+base,Data/dt34_g4.cpk > download/dt80_200E_x64.cpk > download/dt80_300E_x64.cpk > download/dt80_500E_x64.cpk,6,asset/model/character/uniform/texture/#windx11/u1600g1.ftex,download/dt80_500E_x64.cpk
+base,download/dt80_100E_x64.cpk > download/dt80_300E_x64.cpk > download/dt80_600E_x64.cpk,6,asset/model/character/uniform/texture/#windx11/u1254p3.ftex,download/dt80_600E_x64.cpk
+base,download/dt80_400E_x64.cpk > download/dt80_500E_x64.cpk > download/dt80_600E_x64.cpk,6,asset/model/character/uniform/texture/#windx11/u0139p4.ftex,download/dt80_600E_x64.cpk
+conmegol,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Dual Color All Teams > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Sock-Holes,6,asset/model/character/face/real/132152/#win/tights_middle.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Dual Color All Teams
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Dual Color All Teams > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Sock-Holes,6,asset/model/character/face/real/132152/#win/tights_middle.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Dual Color All Teams
+conmegol,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Sock-Extreme Short > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Sock-Short,6,asset/model/character/face/real/132216/#win/socks_short.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Sock-Short
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Sock-Extreme Short > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Sock-Short,6,asset/model/character/face/real/132216/#win/socks_short.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Sock-Short
+sudamerican,download/SP_Faces_11.cpk > download/SP_Faces_12.cpk > download/SP_Faces_3.cpk,6,asset/model/character/face/real/106173/#win/face.fpk,download/SP_Faces_3.cpk
+sudamerican,download/SP_Faces_11.cpk > download/SP_Faces_12.cpk > download/SP_Faces_2.cpk,6,asset/model/character/face/real/55068/#win/face.fpk,download/SP_Faces_2.cpk
+base,Data/dt14_all.cpk > download/dt80_100E_x64.cpk > download/dt80_500E_x64.cpk > download/dt80_600E_x64.cpk,5,common/render/symbol/player/121867.dds,download/dt80_600E_x64.cpk
+base,<sider>\livecpk\ball-root > Data/dt15_x64.cpk,5,asset/model/ball/ball021/#win/ball.fpk,<sider>\livecpk\ball-root
+base,<sider>\content\livecpk\PHX_KIT_MIP > download/dt80_200E_x64.cpk,5,asset/model/character/uniform/texture/#windx11/u0108p3_back.ftex,<sider>\content\livecpk\PHX_KIT_MIP
+conmegol,<sider>\livecpk\Next Gen Graphics > <sider>\livecpk\Turfs > D:\Frank\IA\CLAUDE\pes-graficos\paquete_bloom\Phoenix-Bloom,5,asset/model/bg/st064/light/#win/light_st064_af.fpkd,<sider>\livecpk\Next Gen Graphics
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Accessory-Bandages > download/SP_Faces_11.cpk,5,asset/model/character/face/real/152928/sourceimages/#windx11/desktop.ini,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Accessory-Bandages
+sudamerican,download/SP_Faces_10.cpk > download/SP_Faces_9.cpk,5,asset/model/character/face/real/133301/sourceimages/#windx11/eye_sclera_bsm.ftex,download/SP_Faces_9.cpk
+base,Data/dt14_all.cpk > download/dt80_200E_x64.cpk > download/dt80_400E_x64.cpk > download/dt80_500E_x64.cpk,4,common/render/symbol/player/111342.dds,download/dt80_500E_x64.cpk
+base,Data/dt14_all.cpk > download/dt80_600E_x64.cpk > download/dt80_700E_x64.cpk,4,common/render/symbol/player/119133.dds,download/dt80_700E_x64.cpk
+base,download/dt80_200E_x64.cpk > download/dt80_400E_x64.cpk > download/dt80_500E_x64.cpk > download/dt80_600E_x64.cpk,4,asset/model/character/uniform/texture/#windx11/u0139p3_back.ftex,download/dt80_600E_x64.cpk
+base,download/dt80_400E_x64.cpk > download/dt80_500E_x64.cpk,4,common/render/symbol/player/132462.dds,download/dt80_500E_x64.cpk
+sudamerican,download/SP_Faces_6.cpk > download/SP_Faces_9.cpk > download/dt80_700E_x64.cpk,4,asset/model/character/face/real/126624/sourceimages/#windx11/hair_parts_bsm_alp.ftex,download/dt80_700E_x64.cpk
+sudamerican,<sider>/content/miniface_server > download/dt80_700E_x64.cpk,4,common/render/symbol/player/144107.dds,download/dt80_700E_x64.cpk
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Accessory-Bandages > download/SP_Faces_4.cpk,4,asset/model/character/face/real/113960/sourceimages/#windx11/arm_bsm.ftex,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Accessory-Bandages
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Sock-Holes > download/SP_Faces_6.cpk,4,asset/model/character/face/real/132933/#win/socks_middle.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Sock-Holes
+base,Data/dt14_all.cpk > download/dt80_500E_x64.cpk > download/dt80_700E_x64.cpk,3,common/render/symbol/player/106173.dds,download/dt80_700E_x64.cpk
+base,Data/dt14_all.cpk > download/dt80_100E_x64.cpk > download/dt80_300E_x64.cpk > download/dt80_400E_x64.cpk,3,common/render/symbol/player/111207.dds,download/dt80_400E_x64.cpk
+base,download/dt80_100E_x64.cpk > download/dt80_200E_x64.cpk > download/dt80_300E_x64.cpk > download/dt80_400E_x64.cpk,3,asset/model/character/uniform/texture/#windx11/u1247p3.ftex,download/dt80_500E_x64.cpk
+base,download/dt80_200E_x64.cpk > download/dt80_500E_x64.cpk > download/dt80_600E_x64.cpk,3,asset/model/character/uniform/texture/#windx11/u0139p3.ftex,download/dt80_600E_x64.cpk
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Accessory-Bandages > download/SP_Faces_3.cpk,3,asset/model/character/face/real/107686/sourceimages/#windx11/arm_bsm.ftex,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Accessory-Bandages
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Shirt-Baggy > download/SP_Faces_1.cpk,3,asset/model/character/face/real/7511/nocloth/#win/shirt_out.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Shirt-Baggy
+conmegol,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Sleeve Inner-Half > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Sleeve Roll Up-Forearm Both Tattoo,3,asset/model/character/face/real/117047/#win/hand_l.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Sleeve Inner-Half
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Sleeve Inner-Half > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Sleeve Roll Up-Forearm Both Tattoo,3,asset/model/character/face/real/117047/#win/hand_l.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Sleeve Inner-Half
+base,Data/dt14_all.cpk > download/dt80_300E_x64.cpk > download/dt80_600E_x64.cpk,2,common/render/symbol/player/108904.dds,download/dt80_600E_x64.cpk
+base,Data/dt14_all.cpk > download/dt80_200E_x64.cpk > download/dt80_300E_x64.cpk > download/dt80_500E_x64.cpk,2,common/render/symbol/player/110010.dds,download/dt80_500E_x64.cpk
+base,Data/dt14_all.cpk > download/dt80_100E_x64.cpk > download/dt80_200E_x64.cpk > download/dt80_500E_x64.cpk,2,common/render/symbol/player/114659.dds,download/dt80_500E_x64.cpk
+base,Data/dt14_all.cpk > download/dt80_300E_x64.cpk > download/dt80_700E_x64.cpk,2,common/render/symbol/player/114871.dds,download/dt80_700E_x64.cpk
+base,Data/dt14_all.cpk > download/dt80_100E_x64.cpk > download/dt80_700E_x64.cpk,2,common/render/symbol/player/120343.dds,download/dt80_700E_x64.cpk
+base,Data/dt14_all.cpk > download/dt80_200E_x64.cpk > download/dt80_300E_x64.cpk > download/dt80_400E_x64.cpk,2,common/render/symbol/player/123745.dds,download/dt80_500E_x64.cpk
+base,Data/dt14_all.cpk > download/dt80_400E_x64.cpk > download/dt80_600E_x64.cpk,2,common/render/symbol/player/125435.dds,download/dt80_600E_x64.cpk
+base,Data/dt14_all.cpk > download/dt80_400E_x64.cpk > download/dt80_700E_x64.cpk,2,common/render/symbol/player/126187.dds,download/dt80_700E_x64.cpk
+base,Data/dt15_x64.cpk > download/dt80_200E_x64.cpk,2,common/render/thumbnail/stadium/st035.dds,download/dt80_200E_x64.cpk
+base,Data/dt34_g4.cpk > download/dt80_400E_x64.cpk > download/dt80_500E_x64.cpk > download/dt80_600E_x64.cpk,2,asset/model/character/uniform/texture/#windx11/u1255p1.ftex,download/dt80_600E_x64.cpk
+base,Data/dt34_g4.cpk > download/dt80_200E_x64.cpk > download/dt80_400E_x64.cpk > download/dt80_500E_x64.cpk,2,asset/model/character/uniform/texture/#windx11/u1255p3.ftex,download/dt80_600E_x64.cpk
+base,Data/dt34_g4.cpk > download/dt80_300E_x64.cpk > download/dt80_400E_x64.cpk > download/dt80_600E_x64.cpk,2,asset/model/character/uniform/texture/#windx11/u1923p2.ftex,download/dt80_600E_x64.cpk
+base,Data/dt34_g4.cpk > download/dt80_300E_x64.cpk > download/dt80_400E_x64.cpk > download/dt80_500E_x64.cpk,2,asset/model/character/uniform/texture/#windx11/u2209g1.ftex,download/dt80_500E_x64.cpk
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Accessory-Bandages > download/SP_Faces_12.cpk > download/SP_Faces_2.cpk,2,asset/model/character/face/real/58759/sourceimages/#windx11/arm_bsm.ftex,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Accessory-Bandages
+base,download/dt80_100E_x64.cpk > download/dt80_300E_x64.cpk > download/dt80_400E_x64.cpk,2,asset/model/character/uniform/texture/#windx11/u5191p3.ftex,download/dt80_400E_x64.cpk
+base,download/dt80_200E_x64.cpk > download/dt80_500E_x64.cpk > download/dt80_700E_x64.cpk,2,common/render/symbol/player/132617.dds,download/dt80_700E_x64.cpk
+base,<sider>\content\livecpk\PHX_FX_BLM > <sider>\content\livecpk\PHX_LGT_GI,2,asset/model/bg/st002/light/#win/light_st002_af.fpkd,<sider>\content\livecpk\PHX_LGT_GI
+conmegol,D:\Frank\IA\CLAUDE\pes-graficos\paquete_tinte_fuerte\Phoenix-Tinte-Piel-Fuerte > D:\SP2026\Sudamerican Project Sider\livecpk\SP_Menu Light,2,asset/model/bg/st002/sourceimages/tga/#windx11/lut_s_day_demo.ftex,D:\SP2026\Sudamerican Project Sider\livecpk\SP_Menu Light
+conmegol,<sider>\livecpk\BannerStadium > D:\SP2026\Sudamerican Project Sider\livecpk\SP_Menu Light,2,asset/model/bg/st020/sourceimages/tga/#windx11/banner2_nrm.ftex,D:\SP2026\Sudamerican Project Sider\livecpk\SP_Menu Light
+conmegol,<sider>\livecpk\Next Gen Graphics > <sider>\livecpk\Turfs > <sider>\livecpk\Worn Turf,2,asset/model/bg/st046/sourceimages/tga/#windx11/turf_withers.ftex,<sider>\livecpk\Next Gen Graphics
+conmegol,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Sock-Middle High > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Special Body,2,asset/model/character/face/real/60241/#win/thigh_middle.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Special Body
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Sock-Middle High > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Special Body,2,asset/model/character/face/real/60241/#win/thigh_middle.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Special Body
+conmegol,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Shirt-Adidas\Real Madrid > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Special Body,2,asset/model/character/face/real/110718/nocloth/#win/shirt_out.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Special Body
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Shirt-Adidas\Real Madrid > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Special Body > download/SP_Faces_4.cpk,2,asset/model/character/face/real/110718/nocloth/#win/shirt_out.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Special Body
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Accessory-Bandages > download/SP_Faces_2.cpk,2,asset/model/character/face/real/60928/sourceimages/#windx11/arm_bsm.ftex,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Accessory-Bandages
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Accessory-Bandages > <sider>\livecpk\SP_Faces,2,asset/model/character/face/real/152928/sourceimages/#windx11/thigh_bsm.ftex,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Accessory-Bandages
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Accessory-Bandages > download/SP_Faces_5.cpk,2,asset/model/character/face/real/126336/sourceimages/#windx11/arm_bsm.ftex,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Accessory-Bandages
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Accessory-Bandages > download/SP_Faces_11.cpk > download/SP_Faces_12.cpk,2,asset/model/character/face/real/114808/sourceimages/#windx11/arm_bsm.ftex,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Accessory-Bandages
+conmegol,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Dual Color All Teams > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Pants-Shorter,2,asset/model/character/face/real/161548/#win/spats.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Dual Color All Teams
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Dual Color All Teams > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Pants-Shorter,2,asset/model/character/face/real/161548/#win/spats.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Dual Color All Teams
+conmegol,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Extra Long > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Long,2,asset/model/character/face/real/154986/#win/taping.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Extra Long
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Extra Long > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Long,2,asset/model/character/face/real/154986/#win/taping.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Extra Long
+conmegol,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Extra Long > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Sleeve Roll Up-Forearm Both Tattoo,2,asset/model/character/face/real/114044/#win/taping.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Extra Long
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Extra Long > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Sleeve Roll Up-Forearm Both Tattoo,2,asset/model/character/face/real/114044/#win/taping.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Extra Long
+conmegol,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Long > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Short,2,asset/model/character/face/real/114566/#win/taping.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Long
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Long > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Short,2,asset/model/character/face/real/114566/#win/taping.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Long
+conmegol,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Shirt-Baggy > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Sleeve Roll Up-Forearm Both Tattoo,2,asset/model/character/face/real/118977/nocloth/#win/sleeve_long_001.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Shirt-Baggy
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Shirt-Baggy > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Sleeve Roll Up-Forearm Both Tattoo,2,asset/model/character/face/real/118977/nocloth/#win/sleeve_long_001.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Shirt-Baggy
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Shirt-Adidas\Liverpool > download/SP_Faces_2.cpk,2,asset/model/character/face/real/57123/nocloth/#win/shirt_out.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Shirt-Adidas\Liverpool
+conmegol,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Shirt-Adidas\Manchester United > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Shirt-Adidas\Newcastle United,2,asset/model/character/face/real/42669/nocloth/#win/shirt_out.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Shirt-Adidas\Manchester United
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Shirt-Adidas\Manchester United > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Shirt-Adidas\Newcastle United,2,asset/model/character/face/real/42669/nocloth/#win/shirt_out.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Shirt-Adidas\Manchester United
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Shirt-Adidas\Real Madrid > download/SP_Faces_6.cpk,2,asset/model/character/face/real/132933/nocloth/#win/shirt_out.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Shirt-Adidas\Real Madrid
+conmegol,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Sleeve Inner-One Side R > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Sleeve Inner-One Side R Half,2,asset/model/character/face/real/104680/#win/arm.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Sleeve Inner-One Side R
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Sleeve Inner-One Side R > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Sleeve Inner-One Side R Half,2,asset/model/character/face/real/104680/#win/arm.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Sleeve Inner-One Side R
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Sleeve Roll Up-Forearm L > download/SP_Faces_4.cpk,2,asset/model/character/face/real/110718/nocloth/#win/sleeve_long_001.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Sleeve Roll Up-Forearm L
+conmegol,<sider>\livecpk\Faces > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Sleeve Roll Up-Forearm L Tattoo,2,asset/model/character/face/real/113525/sourceimages/#windx11/arm_bsm.ftex,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Sleeve Roll Up-Forearm L Tattoo
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Sleeve Roll Up-Forearm L Tattoo > download/SP_Faces_4.cpk,2,asset/model/character/face/real/113525/sourceimages/#windx11/arm_bsm.ftex,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Sleeve Roll Up-Forearm L Tattoo
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Sock-Middle High > download/SP_Faces_3.cpk,2,asset/model/character/face/real/104226/#win/socks_middle.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Sock-Middle High
+sudamerican,<sider>\livecpk\SP_Faces > download/SP_Faces_12.cpk,2,asset/model/character/face/real/40352/sourceimages/#windx11/hairtra_bsm_alp.ftex,<sider>\livecpk\SP_Faces
+sudamerican,download/SP_Faces_11.cpk > download/SP_Faces_12.cpk > download/SP_Faces_8.cpk,2,asset/model/character/face/real/157472/#win/face.fpk,download/SP_Faces_8.cpk
+sudamerican,download/SP_Faces_10.cpk > download/SP_Faces_12.cpk > download/SP_Faces_4.cpk,2,asset/model/character/face/real/111356/#win/face.fpk,download/SP_Faces_4.cpk
+sudamerican,download/SP_Faces_0.cpk > download/SP_Faces_11.cpk > download/SP_Faces_2.cpk,2,asset/model/character/face/real/54369/#win/face.fpk,download/SP_Faces_2.cpk
+base,Data/dt14_all.cpk > download/dt80_100E_x64.cpk > download/dt80_200E_x64.cpk > download/dt80_300E_x64.cpk,1,common/render/symbol/player/114013.dds,download/dt80_300E_x64.cpk
+base,Data/dt14_all.cpk > download/dt80_100E_x64.cpk > download/dt80_200E_x64.cpk > download/dt80_400E_x64.cpk,1,common/render/symbol/player/114196.dds,download/dt80_400E_x64.cpk
+base,Data/dt14_all.cpk > download/dt80_200E_x64.cpk > download/dt80_500E_x64.cpk > download/dt80_600E_x64.cpk,1,common/render/symbol/player/129003.dds,download/dt80_600E_x64.cpk
+base,Data/dt14_all.cpk > download/dt80_100E_x64.cpk > download/dt80_400E_x64.cpk > download/dt80_600E_x64.cpk,1,common/render/symbol/player/129452.dds,download/dt80_600E_x64.cpk
+base,Data/dt14_all.cpk > download/dt80_400E_x64.cpk > download/dt80_500E_x64.cpk > download/dt80_600E_x64.cpk,1,common/render/symbol/player/129844.dds,download/dt80_600E_x64.cpk
+base,Data/dt14_all.cpk > download/dt80_300E_x64.cpk > download/dt80_500E_x64.cpk > download/dt80_700E_x64.cpk,1,common/render/symbol/player/133594.dds,download/dt80_700E_x64.cpk
+base,Data/dt14_all.cpk > download/dt80_100E_x64.cpk > download/dt80_200E_x64.cpk > download/dt80_700E_x64.cpk,1,common/render/symbol/player/39719.dds,download/dt80_700E_x64.cpk
+base,Data/dt14_all.cpk > download/dt80_100E_x64.cpk > download/dt80_200E_x64.cpk > download/dt80_600E_x64.cpk,1,common/render/symbol/player/59419.dds,download/dt80_600E_x64.cpk
+base,Data/dt15_x64.cpk > download/dt80_500E_x64.cpk,1,common/render/thumbnail/stadium/st062.dds,download/dt80_500E_x64.cpk
+base,Data/dt15_x64.cpk > download/dt80_100E_x64.cpk > download/dt80_300E_x64.cpk > download/dt80_400E_x64.cpk,1,common/render/thumbnail/stadium/st065.dds,download/dt80_400E_x64.cpk
+base,<sider>\content\livecpk\PHX_KIT_MIP > Data/dt34_g4.cpk,1,asset/model/character/uniform/texture/#windx11/u0050p2.ftex,<sider>\content\livecpk\PHX_KIT_MIP
+base,<sider>\content\livecpk\PHX_KIT_MIP > Data/dt34_g4.cpk > download/dt80_100E_x64.cpk,1,asset/model/character/uniform/texture/#windx11/u0108p1_srm.ftex,<sider>\content\livecpk\PHX_KIT_MIP
+base,<sider>\content\livecpk\PHX_KIT_MIP > Data/dt34_g4.cpk > download/dt80_100E_x64.cpk > download/dt80_200E_x64.cpk,1,asset/model/character/uniform/texture/#windx11/u0108p2_srm.ftex,<sider>\content\livecpk\PHX_KIT_MIP
+base,download/dt80_200E_x64.cpk > download/dt80_300E_x64.cpk > download/dt80_400E_x64.cpk > download/dt80_500E_x64.cpk,1,common/render/symbol/player/115017.dds,download/dt80_500E_x64.cpk
+base,download/dt80_200E_x64.cpk > download/dt80_400E_x64.cpk > download/dt80_600E_x64.cpk,1,common/render/symbol/player/137924.dds,download/dt80_600E_x64.cpk
+base,download/dt80_300E_x64.cpk > download/dt80_500E_x64.cpk > download/dt80_700E_x64.cpk,1,common/render/symbol/player/140349.dds,download/dt80_700E_x64.cpk
+base,download/dt80_300E_x64.cpk > download/dt80_400E_x64.cpk > download/dt80_600E_x64.cpk,1,common/render/symbol/player/140450.dds,download/dt80_600E_x64.cpk
+conmegol,<sider>\livecpk\Next Gen Graphics > <sider>\livecpk\Turfs > <sider>\livecpk\Worn Turf > D:\Frank\IA\CLAUDE\pes-graficos\paquete_cesped\Phoenix-Cesped-Mips,1,asset/model/bg/st046/sourceimages/tga/#windx11/pitch_grain_alp.ftex,D:\SP2026\Sudamerican Project Sider\livecpk\SP_Menu Light
+conmegol,<sider>\livecpk\Next Gen Graphics > D:\Frank\IA\CLAUDE\pes-graficos\paquete_bloom\Phoenix-Bloom > D:\Frank\IA\CLAUDE\pes-graficos\paquete_rebote05_campnou\Phoenix-Rebote05-CampNou,1,asset/model/bg/st002/light/#win/light_st002_af.fpkd,<sider>\livecpk\Next Gen Graphics
+conmegol,<sider>\livecpk\Next Gen Graphics > D:\Frank\IA\CLAUDE\pes-graficos\paquete_bloom\Phoenix-Bloom > D:\Frank\IA\CLAUDE\pes-graficos\paquete_rebote05_campnou\Phoenix-Rebote05-CampNou > D:\SP2026\Sudamerican Project Sider\livecpk\SP_Menu Light,1,asset/model/bg/st002/light/#win/light_st002_ar.fpkd,D:\SP2026\Sudamerican Project Sider\livecpk\SP_Menu Light
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Special Body > download/SP_Faces_1.cpk,1,asset/model/character/face/real/4522/nocloth/#win/shirt_out.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Special Body
+conmegol,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Dual Color All Teams > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Special Body,1,asset/model/character/face/real/118274/#win/tights_middle.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Special Body
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Dual Color All Teams > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Special Body,1,asset/model/character/face/real/118274/#win/tights_middle.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Special Body
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Accessory-Bandages > <sider>\livecpk\SP_Faces > download/SP_Faces_12.cpk > download/SP_Faces_9.cpk,1,asset/model/character/face/real/162114/sourceimages/#windx11/arm_bsm.ftex,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Accessory-Bandages
+conmegol,<sider>\livecpk\Faces > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Accessory-Bandages > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Sock-Holes,1,asset/model/character/face/real/154863/sourceimages/#windx11/arm_bsm.ftex,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Accessory-Bandages
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Accessory-Bandages > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Sock-Holes > download/SP_Faces_10.cpk > download/SP_Faces_8.cpk,1,asset/model/character/face/real/154863/sourceimages/#windx11/arm_bsm.ftex,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Accessory-Bandages
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Accessory-Bandages > <sider>\livecpk\SP_Faces > download/SP_Faces_8.cpk,1,asset/model/character/face/real/152928/sourceimages/#windx11/arm_bsm.ftex,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Accessory-Bandages
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Accessory-Bandages > download/SP_Faces_12.cpk > download/SP_Faces_7.cpk,1,asset/model/character/face/real/147290/sourceimages/#windx11/arm_bsm.ftex,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Accessory-Bandages
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Accessory-Bandages > download/SP_Faces_11.cpk > download/SP_Faces_12.cpk > download/SP_Faces_7.cpk,1,asset/model/character/face/real/138156/sourceimages/#windx11/arm_bsm.ftex,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Accessory-Bandages
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Accessory-Bandages > download/SP_Faces_12.cpk > download/SP_Faces_6.cpk > download/SP_Faces_9.cpk,1,asset/model/character/face/real/135039/sourceimages/#windx11/arm_bsm.ftex,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Accessory-Bandages
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Accessory-Bandages > download/SP_Faces_6.cpk,1,asset/model/character/face/real/130319/sourceimages/#windx11/arm_bsm.ftex,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Accessory-Bandages
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Accessory-Bandages > download/SP_Faces_12.cpk,1,asset/model/character/face/real/128463/sourceimages/#windx11/arm_bsm.ftex,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Accessory-Bandages
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Accessory-Bandages > <sider>\livecpk\SP_Faces > download/SP_Faces_6.cpk > download/SP_Faces_9.cpk,1,asset/model/character/face/real/128281/sourceimages/#windx11/arm_bsm.ftex,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Accessory-Bandages
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Accessory-Bandages > download/SP_Faces_11.cpk > download/SP_Faces_6.cpk,1,asset/model/character/face/real/127160/sourceimages/#windx11/arm_bsm.ftex,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Accessory-Bandages
+conmegol,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Accessory-Bandages > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Sleeve Roll Up-Elbow Tattoo,1,asset/model/character/face/real/127160/sourceimages/#windx11/desktop.ini,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Accessory-Bandages
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Accessory-Bandages > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Sleeve Roll Up-Elbow Tattoo > download/SP_Faces_6.cpk,1,asset/model/character/face/real/127160/sourceimages/#windx11/desktop.ini,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Accessory-Bandages
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Accessory-Bandages > download/SP_Faces_11.cpk > download/SP_Faces_4.cpk > download/SP_Faces_9.cpk,1,asset/model/character/face/real/113960/sourceimages/#windx11/desktop.ini,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Accessory-Bandages
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Accessory-Bandages > <sider>\livecpk\SP_Faces > download/SP_Faces_12.cpk > download/SP_Faces_4.cpk,1,asset/model/character/face/real/110644/sourceimages/#windx11/arm_bsm.ftex,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Accessory-Bandages
+conmegol,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Brands\Gravity > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Sleeve Roll Up-Elbow Tattoo,1,asset/model/character/face/real/128281/#win/taping.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Brands\Gravity
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Brands\Gravity > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Sleeve Roll Up-Elbow Tattoo,1,asset/model/character/face/real/128281/#win/taping.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Brands\Gravity
+conmegol,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Dual Color All Teams > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Short,1,asset/model/character/face/real/161548/#win/taping.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Dual Color All Teams
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Dual Color All Teams > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Short,1,asset/model/character/face/real/161548/#win/taping.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Dual Color All Teams
+conmegol,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Dual Color All Teams > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Long > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Short,1,asset/model/character/face/real/131286/#win/taping.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Dual Color All Teams
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Dual Color All Teams > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Long > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Short,1,asset/model/character/face/real/131286/#win/taping.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Dual Color All Teams
+conmegol,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Dual Color All Teams > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Sleeve Roll Up-Forearm Both,1,asset/model/character/face/real/130319/#win/taping.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Dual Color All Teams
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Dual Color All Teams > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Sleeve Roll Up-Forearm Both,1,asset/model/character/face/real/130319/#win/taping.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Dual Color All Teams
+conmegol,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Dual Color All Teams > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Sleeve Roll Up-Elbow Tattoo,1,asset/model/character/face/real/127160/#win/taping.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Dual Color All Teams
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Dual Color All Teams > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Sleeve Roll Up-Elbow Tattoo,1,asset/model/character/face/real/127160/#win/taping.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Dual Color All Teams
+conmegol,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Extra Long > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Long > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Sleeve Roll Up-Forearm Both Tattoo,1,asset/model/character/face/real/144440/#win/taping.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Extra Long
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Extra Long > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Long > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Sleeve Roll Up-Forearm Both Tattoo,1,asset/model/character/face/real/144440/#win/taping.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Extra Long
+conmegol,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Extra Long > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Sleeve Inner-Half,1,asset/model/character/face/real/116605/#win/taping.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Extra Long
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Extra Long > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Sleeve Inner-Half,1,asset/model/character/face/real/116605/#win/taping.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Extra Long
+conmegol,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Long > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Wristtaping Longer GK,1,asset/model/character/face/real/36627/#win/taping.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Long
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Long > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Wristtaping Longer GK,1,asset/model/character/face/real/36627/#win/taping.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Grip Sock-Long
+conmegol,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Shirt-Adidas\Newcastle United > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Shirt-Baggy,1,asset/model/character/face/real/142212/nocloth/#win/shirt_out.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Shirt-Baggy
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Shirt-Adidas\Newcastle United > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Shirt-Baggy,1,asset/model/character/face/real/142212/nocloth/#win/shirt_out.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Shirt-Baggy
+conmegol,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Shirt-Adidas\Real Madrid > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Shirt-Baggy,1,asset/model/character/face/real/118977/nocloth/#win/shirt_out.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Shirt-Baggy
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Shirt-Adidas\Real Madrid > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Shirt-Baggy,1,asset/model/character/face/real/118977/nocloth/#win/shirt_out.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Shirt-Baggy
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Shirt-Adidas\Fulham > download/SP_Faces_2.cpk,1,asset/model/character/face/real/61050/nocloth/#win/shirt_out.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Shirt-Adidas\Fulham
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Shirt-Adidas\Real Madrid > download/SP_Faces_2.cpk,1,asset/model/character/face/real/57353/nocloth/#win/shirt_out.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Shirt-Adidas\Real Madrid
+conmegol,<sider>\livecpk\Faces > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Sleeve Roll Up-Elbow GK Tattoo,1,asset/model/character/face/real/101520/sourceimages/#windx11/arm_bsm.ftex,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Sleeve Roll Up-Elbow GK Tattoo
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Sleeve Roll Up-Elbow GK Tattoo > download/SP_Faces_3.cpk,1,asset/model/character/face/real/101520/sourceimages/#windx11/arm_bsm.ftex,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Sleeve Roll Up-Elbow GK Tattoo
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Sleeve Roll Up-Elbow No Tattoo > download/SP_Faces_12.cpk,1,asset/model/character/face/real/4522/sourceimages/#windx11/desktop.ini,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Sleeve Roll Up-Elbow No Tattoo
+conmegol,<sider>\livecpk\Faces > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Sleeve Roll Up-Elbow No Tattoo,1,asset/model/character/face/real/118136/sourceimages/#windx11/desktop.ini,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Sleeve Roll Up-Elbow No Tattoo
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Sleeve Roll Up-Elbow No Tattoo > download/SP_Faces_11.cpk,1,asset/model/character/face/real/118136/sourceimages/#windx11/desktop.ini,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Sleeve Roll Up-Elbow No Tattoo
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Sleeve Roll Up-Elbow No Tattoo > download/SP_Faces_5.cpk,1,asset/model/character/face/real/116751/nocloth/#win/sleeve_long_001.fmdl,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Sleeve Roll Up-Elbow No Tattoo
+conmegol,<sider>\livecpk\Faces > <sider>\livecpk\PRDX_Body Model-Add On V2.6\Sock-Holes,1,asset/model/character/face/real/154863/sourceimages/#windx11/thigh_bsm.ftex,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Sock-Holes
+sudamerican,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Sock-Holes > download/SP_Faces_10.cpk,1,asset/model/character/face/real/154863/sourceimages/#windx11/thigh_bsm.ftex,<sider>\livecpk\PRDX_Body Model-Add On V2.6\Sock-Holes
+sudamerican,download/SP_Faces_11.cpk > download/SP_Faces_12.cpk > download/SP_Faces_9.cpk,1,asset/model/character/face/real/108279/sourceimages/#windx11/hair_parts_bsm.ftex,download/SP_Faces_9.cpk
+sudamerican,download/SP_Faces_10.cpk > download/SP_Faces_11.cpk,1,asset/model/character/face/real/119531/sourceimages/#windx11/eye_sclera_bsm.ftex,download/SP_Faces_11.cpk

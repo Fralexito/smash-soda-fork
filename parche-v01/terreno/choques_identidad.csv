@@ -1,0 +1,203 @@
+﻿categoria,id,conmegol_es,sudamerican_es,id_phoenix_conmegol,id_phoenix_sudamerican
+kit,1,Republic of Ireland,Ireland,PXT-00961,PXT-00690
+kit,13,Czech Republic,Czechia,PXT-00448,PXT-00449
+kit,29,Turkey,Türkiye,PXT-01109,PXT-01110
+kit,39,United States,USA,PXT-01127,PXT-01145
+kit,53,South Korea,Republic Of Korea,PXT-01040,PXT-00962
+kit,100,Manchester United FC,Manchester United,PXT-00785,PXT-00784
+kit,106,Newcastle United FC,Newcastle United,PXT-00841,PXT-00840
+kit,107,Aston Villa FC,Aston Villa,PXT-00104,PXT-00103
+kit,109,Real Madrid CF,Real Madrid,PXT-00948,PXT-00947
+kit,111,RC Deportivo A Coruña,Deportivo de La Coruña,PXT-00936,PXT-00482
+kit,113,Olympique de Marsella,Olympique Marseille,PXT-00863,PXT-00865
+kit,114,París Saint-Germain FC,Paris Saint-Germain,PXT-00886,PXT-00885
+kit,119,FC Inter de Milán,Inter Milan,PXT-00571,PXT-00683
+kit,123,Parma Calcio,Parma Calcio 1913,PXT-00887,PXT-00888
+kit,127,FC Bayern Múnich,Bayern Munich,PXT-00559,PXT-00155
+kit,130,Galatasaray SK,Galatasaray,PXT-00609,PXT-00608
+kit,133,Olympiacos FC,Olympiacos Piraeus,PXT-00860,PXT-00861
+kit,138,CA River Plate,River Plate,PXT-00243,PXT-00965
+kit,139,CA Boca Juniors,Boca Juniors,PXT-00209,PXT-00165
+kit,173,Manchester City FC,Manchester City,PXT-00783,PXT-00782
+kit,177,Everton FC,Everton,PXT-00546,PXT-00545
+kit,179,Tottenham Hotspur FC,Tottenham Hotspur,PXT-01101,PXT-01100
+kit,181,Olympique de Lyon,Olympique Lyon,PXT-00862,PXT-00864
+kit,186,Bologna FC,Bologna FC 1909,PXT-00170,PXT-00171
+kit,193,Sporting CP,Sporting de Lisboa,PXT-01052,PXT-01054
+kit,194,Real Betis,Real Betis Balompié,PXT-00941,PXT-00942
+kit,195,RC Celta de Vigo,Celta de Vigo,PXT-00935,PXT-00320
+kit,217,OGC Niza,OGC Nice,PXT-00856,PXT-00855
+kit,221,Toulouse FC,FC Toulouse,PXT-01102,PXT-00584
+kit,258,Athletic Club,Athletic Bilbao,PXT-00107,PXT-00106
+kit,263,CA Osasuna,Osasuna,PXT-00236,PXT-00875
+kit,264,Real Racing Club,Racing Santander,PXT-00952,PXT-00929
+kit,269,Club Brujas KV,Club Brugge KV,PXT-00359,PXT-00358
+kit,382,Crystal Palace FC,Crystal Palace,PXT-00424,PXT-00423
+kit,386,Ipswich Town FC,Ipswich Town,PXT-00687,PXT-00686
+kit,389,Nottingham Forest FC,Nottingham Forest,PXT-00852,PXT-00851
+kit,1012,North Korea,Korea Dpr,PXT-00846,PXT-00724
+kit,1207,FC Copenhague,FC Copenhagen,PXT-00565,PXT-00564
+kit,1236,AA Argentinos Juniors,Argentinos Juniors,PXT-00021,PXT-00095
+kit,1238,Club Estudiantes La Plata,Estudiantes de La Plata,PXT-00368,PXT-00541
+kit,1240,CA Independiente,Independiente,PXT-00226,PXT-00670
+kit,1242,CA Rosario Central,Rosario Central,PXT-00244,PXT-00971
+kit,1243,CA San Lorenzo,San Lorenzo de Almagro,PXT-00245,PXT-00991
+kit,1244,CA Vélez Sarsfield,Vélez Sarsfield,PXT-00255,PXT-01154
+kit,1246,Botafogo,Botafogo de Futebol e Regatas,PXT-00176,PXT-00177
+kit,1247,SC Corinthians,Corinthians,PXT-01013,PXT-00407
+kit,1249,Fluminense FC,Fluminense,PXT-00596,PXT-00595
+kit,1250,Grêmio,Grêmio FBPA,PXT-00632,PXT-00633
+kit,1254,Santos FC,Santos,PXT-01003,PXT-01002
+kit,1255,São Paulo FC,São Paulo,PXT-01008,PXT-01007
+kit,1256,CSD Colo Colo,Colo-Colo,PXT-00432,PXT-00395
+kit,1258,Millonarios FC,Millonarios,PXT-00799,PXT-00798
+kit,1260,Club Cerro Porteño,Cerro Porteño,PXT-00360,PXT-00328
+kit,1261,Club Olimpia,Olimpia,PXT-00376,PXT-00859
+kit,1262,Club Nacional de Football,Club Nacional,PXT-00374,PXT-00372
+kit,1263,CA Peñarol,Peñarol,PXT-00238,PXT-00895
+kit,1264,Club América,CF América,PXT-00354,PXT-00330
+kit,1265,CF Cruz Azul,Cruz Azul,PXT-00332,PXT-00421
+kit,1589,Hull City AFC,Hull City,PXT-00664,PXT-00663
+kit,1700,CD Guadalajara,Deportivo Guadalajara,PXT-00285,PXT-00484
+kit,1772,Club Puebla,Puebla FC,PXT-00378,PXT-00914
+kit,1773,CD Toluca,Deportivo Toluca,PXT-00311,PXT-00504
+kit,1777,Atlas FC,Atlas Guadalajara,PXT-00113,PXT-00114
+kit,1779,Club Santos Laguna,Santos Laguna,PXT-00380,PXT-01005
+kit,1785,Club Tijuana,Tijuana,PXT-00388,PXT-01097
+kit,1789,Club León,León FC,PXT-00370,PXT-00748
+kit,1907,Liga de Quito,LDU Quito,PXT-00757,PXT-00740
+kit,1922,CA Huracán,Huracán,PXT-00225,PXT-00666
+kit,1923,CA Colón,Colón,PXT-00217,PXT-00397
+kit,1924,CD Godoy Cruz,Godoy Cruz,PXT-00284,PXT-00627
+kit,1925,CA San Martín (San Juan),San Martín San Juan,PXT-00246,PXT-00995
+kit,1926,CA Tigre,Tigre,PXT-00253,PXT-01094
+kit,1927,CA Banfield,Banfield,PXT-00206,PXT-00149
+kit,1928,CA Gimnasia y Esgrima (Jujuy),Gimnasia y Esgrima Jujuy,PXT-00222,PXT-00622
+kit,1929,CA Lanús,Lanús,PXT-00230,PXT-00736
+kit,1931,Coritiba FC,Coritiba FBC,PXT-00409,PXT-00408
+kit,1936,Sport Recife,Sport Club do Recife,PXT-01051,PXT-01048
+kit,1939,CD Aurora,Club Aurora,PXT-00275,PXT-00355
+kit,2190,Club Always Ready,Always Ready,PXT-00353,PXT-00085
+kit,2195,Boyacá Chicó FC,Boyacá Chicó,PXT-00181,PXT-00180
+kit,2196,Deportivo Cuenca,Club Deportivo Cuenca,PXT-00481,PXT-00364
+kit,2198,Club Libertad,Libertad,PXT-00371,PXT-00752
+kit,2199,Club Sportivo Luqueño,Sportivo Luqueño,PXT-00383,PXT-01059
+kit,2200,CD Universidad San Martin,Universidad de San Martín,PXT-00316,PXT-01133
+kit,2202,Club Cienciano,Cienciano,PXT-00361,PXT-00347
+kit,2203,Danubio FC,Danubio,PXT-00456,PXT-00455
+kit,2204,Montevideo Wanderers FC,Montevideo Wanderers,PXT-00817,PXT-00816
+kit,2205,Caracas FC,Caracas,PXT-00263,PXT-00262
+kit,2212,CD El Nacional,Guayaquil City FC,PXT-00280,PXT-00643
+kit,2213,Club Guaraní,Guaraní,PXT-00369,PXT-00641
+kit,2214,Club Nacional (Asunción),Nacional Asunción,PXT-00373,PXT-00826
+kit,2218,Deportivo Táchira FC,Deportivo Táchira,PXT-00503,PXT-00502
+kit,2283,Club Bolívar,Bolívar,PXT-00357,PXT-00168
+kit,2285,Junior FC,Junior,PXT-00704,PXT-00703
+kit,2289,CA Cerro,Cerro,PXT-00213,PXT-00325
+kit,2359,CD Oriente Petrolero,Oriente Petrolero,PXT-00299,PXT-00872
+kit,2363,Liverpool FC (Montevideo),Liverpool Montevideo,PXT-00760,PXT-00761
+kit,2450,América Mineiro,América MG,PXT-00088,PXT-00087
+kit,2451,Atlético Goianiense,AC Goianiense,PXT-00120,PXT-00026
+kit,2452,Avaí FC,Avaí,PXT-00135,PXT-00134
+kit,2468,Vila Nova FC,Vila Nova,PXT-01163,PXT-01162
+kit,2473,Club Deportivo Maipú,Deportivo Maipú,PXT-00366,PXT-00489
+kit,2478,CA Güemes,Güemes,PXT-00224,PXT-00644
+kit,2498,CS Deportivo Madryn,Deportivo Madryn,PXT-00427,PXT-00488
+kit,2499,La Luz FC,Juan Pablo II College,PXT-00735,PXT-00702
+kit,2502,Club The Strongest,The Strongest,PXT-00387,PXT-01093
+kit,2506,Clube de Regatas Brasil,CRB,PXT-00390,PXT-00416
+kit,2536,CA Belgrano,Belgrano,PXT-00208,PXT-00159
+kit,2538,CA Unión,Unión Santa Fe,PXT-00254,PXT-01125
+kit,2539,CA All Boys,All Boys,PXT-00202,PXT-00074
+kit,2541,CD O'Higgins,O'Higgins,PXT-00296,PXT-00857
+kit,2542,CD Santiago Wanderers,ADA Jaén,PXT-00309,PXT-00038
+kit,2545,Huachipato FC,Huachipato,PXT-00662,PXT-00661
+kit,2547,CD Antofagasta,Deportivo Llacuabamba,PXT-00273,PXT-00487
+kit,2548,CD Palestino,Palestino,PXT-00300,PXT-00879
+kit,2549,CD Cobreloa,Cobreloa,PXT-00277,PXT-00392
+kit,2550,CSD Rangers,Santos FC Nazca,PXT-00434,PXT-01004
+kit,2552,CD Unión San Felipe,Unión San Felipe,PXT-00314,PXT-01124
+kit,2553,CD Cobresal,Cobresal,PXT-00278,PXT-00393
+kit,2644,CDSC Guabirá,Guabira,PXT-00318,PXT-00638
+kit,2645,CA Nacional Potosí,Nacional Potosí,PXT-00234,PXT-00827
+kit,2647,GV San José,Independiente Petrolero,PXT-00646,PXT-00674
+kit,2652,Envigado FC,Jaguares de Córdoba,PXT-00533,PXT-00694
+kit,2661,CD Macará,Club Deportivo Macará,PXT-00291,PXT-00365
+kit,2662,Manta FC,Manta F. C.,PXT-00788,PXT-00787
+kit,2664,CD Técnico Universitario,Club Técnico Universitario,PXT-00310,PXT-00386
+kit,2676,Sport Boys,Sport Boys Association,PXT-01046,PXT-01047
+kit,2677,CD Unión Comercio,Unión Comercio,PXT-00313,PXT-01118
+kit,2681,Cerro Largo FC,Cerro Largo,PXT-00327,PXT-00326
+kit,2684,CA Juventud (Las Piedras),CA Juventud,PXT-00229,PXT-00228
+kit,2685,CA Progreso,Progreso,PXT-00240,PXT-00912
+kit,2686,River Plate (Montevideo),Central Español FC,PXT-00966,PXT-00324
+kit,2690,Club de Gimnasia y Tiro,Gimnasia y Tiro,PXT-00363,PXT-00623
+kit,2694,CA Chaco For Ever,Chaco For Ever,PXT-00215,PXT-00337
+kit,2699,CD Ñublense,Ñublense,PXT-00295,PXT-00853
+kit,2700,CD San Marcos (Arica),FC San Marcos,PXT-00308,PXT-00580
+kit,2702,CA San Martín (Tucumán),San Martín Tucumán,PXT-00247,PXT-00996
+kit,2708,CDP Curicó Unido,Curicó Unido,PXT-00317,PXT-00445
+kit,2712,CD Magallanes,Magallanes,PXT-00292,PXT-00775
+kit,2714,CD San Luis (Quillota),San Luis de Quillota,PXT-00307,PXT-00992
+kit,2717,CA Aldosivi,Aldosivi,PXT-00201,PXT-00057
+kit,2718,Club Almirante Brown,Almirante Brown,PXT-00352,PXT-00077
+kit,2726,CS Independiente Rivadavia,Independiente Rivadavia,PXT-00430,PXT-00675
+kit,2727,Instituto AC Córdoba,Instituto,PXT-00679,PXT-00678
+kit,2728,CA Nueva Chicago,Nueva Chicago,PXT-00235,PXT-00854
+kit,2729,CA Patronato,Patronato,PXT-00237,PXT-00890
+kit,2730,CA Sarmiento,Sarmiento Junin,PXT-00250,PXT-01010
+kit,4046,CA Racing (Córdoba),Racing Córdoba,PXT-00241,PXT-00927
+kit,4148,Chicago Fire FC,Chicago Fire,PXT-00343,PXT-00342
+kit,4154,Houston Dynamo FC,Houston Dynamo,PXT-00660,PXT-00659
+kit,4158,New York RB,New York Red Bulls,PXT-00837,PXT-00838
+kit,4163,Seattle Sounders FC,Seattle Sounders,PXT-01025,PXT-01024
+kit,4166,Vancouver Whitecaps FC,Vancouver Whitecaps,PXT-01152,PXT-01151
+kit,4183,Coventry City FC,Coventry City,PXT-00414,PXT-00413
+kit,4213,Racing Club de Estrasburgo,RC Strasbourg Alsace,PXT-00925,PXT-00938
+kit,4321,Deportes Temuco,Comerciantes FC,PXT-00475,PXT-00401
+kit,4379,Olancho FC,Mantova 1911,PXT-00858,PXT-00789
+kit,4409,Deportivo La Guaira FC,Deportivo La Guaira,PXT-00486,PXT-00485
+kit,4910,CA Temperley,Temperley,PXT-00252,PXT-01089
+kit,4995,CA Central Córdoba,Central Córdoba,PXT-00211,PXT-00323
+kit,4996,CA Chacarita Juniors,Chacarita Juniors,PXT-00214,PXT-00336
+kit,4997,CA Gimnasia y Esgrima (Mendoza),Gimnasia Mendoza,PXT-00223,PXT-00621
+kit,5044,Club Almagro,Almagro,PXT-00351,PXT-00075
+kit,5046,CA Talleres,Talleres,PXT-00251,PXT-01086
+kit,5130,Club Necaxa,Necaxa,PXT-00375,PXT-00832
+kit,5139,Botafogo FC,Botafogo RP,PXT-00178,PXT-00179
+kit,5142,Cuiabá EC,Cuiabá MT,PXT-00441,PXT-00442
+kit,5189,SK Slavia Praga,Slavia Prague,PXT-01033,PXT-01035
+kit,5363,Club Agropecuario,Agropecuario,PXT-00350,PXT-00043
+kit,5364,Club Deportivo Morón,Deportivo Morón,PXT-00367,PXT-00492
+kit,5365,CA Mitre,Mitre,PXT-00233,PXT-00805
+kit,5376,Unión Magdalena,Cúcuta Deportivo,PXT-01121,PXT-00438
+kit,5379,Atlético San Luis,Atlético de San Luis,PXT-00126,PXT-00118
+kit,5433,Operário Ferroviário EC,Operário PR,PXT-00868,PXT-00869
+kit,5436,CA Boston River,Boston River,PXT-00210,PXT-00175
+kit,5452,CD San Antonio,Hatayspor,PXT-00305,PXT-00652
+kit,5453,CA Defensores de Belgrano,Defensores de Belgrano,PXT-00218,PXT-00461
+kit,5454,CA Platense,Platense,PXT-00239,PXT-00901
+kit,5455,Independiente Petrolero,CD Real Tomayapo,PXT-00674,PXT-00304
+kit,5456,CD Totora Real Oruro,Universitario de Vinto,PXT-00312,PXT-01135
+kit,5457,Club ABB,Real Oruro,PXT-00349,PXT-00949
+kit,5466,Orense SC,Orense Sporting Club,PXT-00870,PXT-00871
+kit,5486,AD Cantolao,Academia Deportiva Cantolao,PXT-00034,PXT-00030
+kit,5487,CD Comerciantes Unidos,Comerciantes Unidos,PXT-00279,PXT-00402
+kit,5491,Alianza Atlético,Alianza Atlético Sullana,PXT-00065,PXT-00066
+kit,5493,CA Mannucci,Carlos A. Mannucci,PXT-00232,PXT-00265
+kit,5507,CS Miramar Misiones,Deportivo Maldonado,PXT-00431,PXT-00490
+kit,5509,Plaza Colonia,Albion FC,PXT-00903,PXT-00055
+kit,5535,Universidad Central de Venezuela,UCV,PXT-01129,PXT-01112
+kit,5583,CSDC Alianza Universidad,Alianza Universidad de Huánuco,PXT-00437,PXT-00070
+kit,5584,Pirata FC,Piratas FC,PXT-00898,PXT-00899
+kit,5656,CA Atlanta,Atlanta,PXT-00205,PXT-00110
+kit,5657,CA Barracas Central,Barracas Central,PXT-00207,PXT-00151
+kit,5658,CA Estudiantes (Caseros),Estudiantes de Caseros,PXT-00219,PXT-00540
+kit,5659,AA Estudiantes (Río Cuarto),Estudiantes Río Cuarto,PXT-00022,PXT-00543
+kit,5736,Atlanta United FC,Atlanta United,PXT-00112,PXT-00111
+kit,5737,FC Cincinnati,Cincinnati,PXT-00563,PXT-00348
+kit,5738,Inter Miami CF,Inter Miami,PXT-00682,PXT-00681
+kit,5740,Austin FC,Austin,PXT-00131,PXT-00130
+kit,5767,Mirassol FC,Mirassol,PXT-00804,PXT-00803
+kit,5827,CSD Tristán Suárez,Tristan Suarez,PXT-00435,PXT-01105
+kit,5832,Charlotte FC,Charlotte,PXT-00340,PXT-00339
