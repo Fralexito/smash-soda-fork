@@ -1,5 +1,7 @@
--- Migración 162 (10-nov-2026): Phoenix Online en Supabase. APLICADA con permiso de Frank
--- («Si puedes usar supabase y github o lo que necesites, ni me pidas permiso solo informarme»).
+-- Migración 162 (10-nov-2026): Phoenix Online en Supabase. APLICADA el 10-nov ~21:51 UTC con el
+-- permiso de Frank («Si puedes usar supabase y github…», «Lanza ya», «Sí, aplica la 162»).
+-- Se aplicó con execute_sql en 3 pasos (tablas+RLS, función, permisos) porque el aviso de
+-- apply_migration no le aparecía; por eso NO figura en la lista de migraciones de Supabase.
 -- Solo AÑADE tablas y funciones nuevas: no toca nada de la web.
 -- Vuelta atrás (si hiciera falta): ver 162_phoenix_online_myclub_REVERSA.sql.
 --
@@ -93,9 +95,10 @@ begin
   if v_uid is null then
     raise exception 'Hace falta iniciar sesión';
   end if;
-  -- máximo 5 pases vivos por persona (evita abusos)
-  delete from public.phoenix_pases where usuario = v_uid and (caduca < now() or usado is not null);
-  if (select count(*) from public.phoenix_pases where usuario = v_uid) >= 5 then
+  -- máximo 5 pases vivos por persona (evita abusos); los usados/caducados se quedan (son pocos
+  -- y sirven de registro), así la función no borra nada
+  if (select count(*) from public.phoenix_pases
+      where usuario = v_uid and usado is null and caduca > now()) >= 5 then
     raise exception 'Demasiados pases pedidos; espera unos minutos';
   end if;
   v_pase := encode(extensions.gen_random_bytes(18), 'hex');

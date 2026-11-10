@@ -17,7 +17,7 @@ solución preventiva. Se actualiza en cada ronda.
    **dos PES** (dos PCs: Frank + un amigo). Ojo: el amistoso de sala libre va directo entre las dos
    PCs (P2P); Partida rápida y Divisiones van por nuestro relé.
 2. Identidad definitiva por persona (pase de la web): hoy hay una identidad **provisional** por IP.
-3. Espejo en Supabase y panel web: espera el SÍ de Frank a la migración 162 (base compartida con la web).
+3. Espejo en Supabase: tablas de la migración 162 CREADAS el 10-nov (RLS en las 4, función del pase solo para usuarios con sesión). Falta: poner la clave de servicio en la PC (variable PHOENIX_SUPABASE_KEY) y encender `supabase.activo`; botón «Pedir pase» en la web.
 4. Detalles de myClub que esperan ingeniería inversa: Boleto ×0 y la carta «PT 40» del entrenamiento.
 
 ## 3. Riesgos y su solución preventiva
