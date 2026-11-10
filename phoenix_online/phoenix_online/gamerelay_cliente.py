@@ -17,7 +17,7 @@ import time
 
 from .gamerelay import (ABRIR, ABRIR_OK, ACK, CANAL_CONTROL, CANAL_FLUJOS, CANAL_LISTA, CANAL_ORDENES,
                         CANALES_FLUJO, SYN, SYN_ACK, VIDA, armar_marco, armar_transporte, bloques, carga_de,
-                        cifrar_exterior, descifrar_exterior, leer_datagrama, leer_marco, rc4, trozos)
+                        cifrar_exterior, descifrar_exterior, leer_datagrama, leer_marco, rc4)
 
 log = logging.getLogger("phoenix.gamerelay_cliente")
 
@@ -134,10 +134,6 @@ class ClienteRele(asyncio.DatagramProtocol):
             self._elemento(canal, sig)
 
     def _elemento(self, canal, blq):
-        if canal in CANALES_FLUJO and blq:
-            # 10/12/15: un elemento = un mensaje partido en bloques de ≤255; se junta entero
-            self._juego(canal, b"".join(blq))
-            return
         for b in blq:
             if canal == CANAL_CONTROL and b:
                 if b[0] == SYN_ACK:
@@ -159,7 +155,11 @@ class ClienteRele(asyncio.DatagramProtocol):
     def _juego(self, canal, b):
         self.recibidos.append((canal, b))
         if len(self.recibidos) <= 400:
-            self._anotar(f"canal {canal} <- {len(b)} B {b[:64].hex()}")
+            self._anotar(f"canal {canal} <- {len(b)} B {b.hex()}")
+            texto = descomprimir(b)
+            if texto:
+                self._anotar(f"  descomprimido ({len(texto)} B): {texto.hex()}")
+                self._anotar(f"  como texto: {texto.decode('latin-1')!r}")
         if not self.espejo:
             return
         if canal == CANAL_ORDENES and len(b) >= 2:
@@ -167,9 +167,10 @@ class ClienteRele(asyncio.DatagramProtocol):
             if emisor != self.mi_id:
                 self.poner(CANAL_ORDENES, carga_de(b[1:]))
         elif canal in CANALES_FLUJO and len(b) >= 3:
+            # cada bloque = un mensaje con la cabecera del relé (0x4000 | id<<4) delante
             (cab,) = struct.unpack(">H", b[:2])
             if (cab >> 4) & 0x1F != self.mi_id:
-                self.poner(canal, carga_de(*trozos(b[2:])))
+                self.poner(canal, carga_de(b[2:]))
 
     # ---- guion completo ----
     async def entrar(self, abrir=(CANAL_LISTA, 14, 15), espera=10.0):
@@ -206,6 +207,18 @@ class ClienteRele(asyncio.DatagramProtocol):
                 ultima_vida = time.monotonic()
             self.enviar()
             await asyncio.sleep(cada)
+
+
+def descomprimir(b):
+    """Diagnóstico: busca un bloque zlib (78 01/5E/9C/DA) dentro del mensaje y lo descomprime."""
+    import zlib
+    for i in range(min(len(b) - 2, 16)):
+        if b[i] == 0x78 and b[i + 1] in (0x01, 0x5E, 0x9C, 0xDA):
+            try:
+                return zlib.decompressobj().decompress(b[i:])
+            except zlib.error:
+                continue
+    return None
 
 
 def endpoint_ntl(ip, puerto):

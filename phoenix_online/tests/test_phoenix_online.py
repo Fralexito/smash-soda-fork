@@ -1536,10 +1536,11 @@ class TestPartidaDos(unittest.TestCase):
         self.assertLessEqual(r["tam"], 0x800)
         elems = r["c"][10][1]
         self.assertTrue(elems)
-        self.assertEqual(b"".join(g.bloques(elems[0][1])), b"\x40\x10" + grande)
+        # cada bloque del emisor es un mensaje propio (C 10-nov): 2 + 255 B -> 2 bloques = 2 claves
+        self.assertEqual(b"".join(g.bloques(elems[0][1])), b"\x40\x10" + grande[:255])
         claves = [k for k, _ in elems]
         self.assertEqual(claves, sorted(claves))
-        self.assertEqual(claves[1] - claves[0], 4)  # 4 bloques = 4 claves
+        self.assertEqual(claves[1] - claves[0], 2)
 
     def test_ambiguo_no_liga_y_salida_cierra(self):
         g = self.g
@@ -1698,18 +1699,16 @@ class TestRivalUdp(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(pes.lista, bytes([0x1F, 0xC0, 0x81]))
         self.assertEqual(rival.lista, bytes([0x1F, 0xC1, 0x80]))
         self.assertEqual(sorted(rele.intentos[700000001].pares), ["pes", "rival"])
-        # el «PES» manda un mensaje largo por el 15: el rival lo recibe con la cabecera 0x4000 y,
-        # en modo espejo, se lo devuelve; el PES lo recibe con la cabecera del rival (0x4010)
-        msg = bytes(range(256)) + b"hola"
-        pes.poner(15, gamerelay.carga_de(*gamerelay.trozos(msg)))
+        # el «PES» manda por el 15 un mensaje en fragmentos de 16 B (C 10-nov): cada bloque es un
+        # mensaje propio; el rival lo recibe con la cabecera 0x4000 y, en modo espejo, lo devuelve
+        frag = [b"\x40\xdd" + bytes(14), b"\x8f" + bytes(range(15)), b"\x8c" + bytes(12)]
+        pes.poner(15, gamerelay.carga_de(*frag))
         for _ in range(100):
-            if any(c == 15 for c, _b in pes.recibidos):
+            if sum(c == 15 for c, _b in pes.recibidos) >= 3:
                 break
             await asyncio.sleep(0.03)
-        de_pes = b"".join(b for c, b in rival.recibidos if c == 15)
-        self.assertEqual(de_pes, b"\x40\x00" + msg)
-        de_rival = b"".join(b for c, b in pes.recibidos if c == 15)
-        self.assertEqual(de_rival, b"\x40\x10" + msg)
+        self.assertEqual([b for c, b in rival.recibidos if c == 15], [b"\x40\x00" + f for f in frag])
+        self.assertEqual([b for c, b in pes.recibidos if c == 15], [b"\x40\x10" + f for f in frag])
         # canal 9: eco propio y copia para el otro con la etiqueta id<<3
         pes.poner(9, gamerelay.carga_de(b"\xfa"))
         for _ in range(100):

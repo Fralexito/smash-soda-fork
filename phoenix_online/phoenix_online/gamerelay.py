@@ -580,9 +580,12 @@ class Rele(asyncio.DatagramProtocol):
                     tocados.add(otro)
                     it.reenviados += 1
         elif canal in CANALES_FLUJO:
-            mensaje = b"".join(blq)
-            if mensaje and it.contar(cli.pid, canal, mensaje, "nativo"):
-                self.entregar_flujo(it, cli.pid, canal, mensaje, tocados)
+            # C (10-nov, PES base): cada BLOQUE es un mensaje propio (fragmentos de ~16 B con su
+            # cabecera de aplicación, p. ej. 40 dd…, 8f…, 8c…), igual que cada registro de la copia
+            # TCP. Juntarlos en uno dejaba al otro PES con un mensaje que no sabe leer.
+            for b in blq:
+                if b and it.contar(cli.pid, canal, bytes(b), "nativo"):
+                    self.entregar_flujo(it, cli.pid, canal, bytes(b), tocados)
         # 11, 13 y 14: solo se observan (L §3.5)
 
     def _receptores(self, it, emisor, incluir_emisor=False):

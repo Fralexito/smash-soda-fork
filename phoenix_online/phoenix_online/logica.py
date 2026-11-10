@@ -85,6 +85,7 @@ class Sesion:
         self.room_id = None
         self.ntl = {}
         self.huella = None
+        self.gameseq_vistos = 0  # registros GameSeq TCP anotados (diagnóstico)
         self.ultima_alineacion = None
         self.versiones = {}
         self.entry = False
@@ -881,6 +882,11 @@ class Servidor:
                     continue
                 largo = int.from_bytes(crudo[7:9], "big")
                 mensaje = crudo[9:9 + largo]
+                # diagnóstico (10-nov): los primeros registros de cada persona, completos
+                s.gameseq_vistos += 1
+                if s.gameseq_vistos <= 80:
+                    log.info("GameSeq TCP de %s: canal %s fromId %s seq %s cab %s msg %s", s.pid, canal,
+                             r.get("fromId"), r.get("sequenceNumber"), crudo[:9].hex(), mensaje.hex())
                 if mensaje:
                     self.rele.reenviar_tcp(self._clave_partida(s), canal, mensaje, r.get("fromId"))
             except Exception:
