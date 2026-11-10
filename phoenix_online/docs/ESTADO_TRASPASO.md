@@ -126,3 +126,15 @@ Bloquear/Desbloquear, Liberar, Convertir en Entrenador y caja de Representante (
 - **Player.bin del base**: habilidades de 6 bits (valor − 40), tabla de bits en `RE_PLAYERBIN_HABILIDADES.md`; catálogo regenerado con `rating_estimado` (exacto en porteros/defensas, −2 a −5 en delanteros/medios).
 - **RE de la noche** en `RE_NOCHE_05NOV.md` (niveles de la COM, USE_STAFF, objetos, subastas, bit del logro de convertir = 244).
 - Sin salida/abandono en la pausa de vs COM (decisión de Frank: dejarlo como el original).
+
+
+## 10-nov — Online completo y blindado (leer primero)
+- PES del online: SOLO el PES base `C:\PES21\eFootball PES 2021`.
+- b7450fe + be92e24: blindaje (identidad provisional por IP con SteamID compartido, IP anunciada «auto» y URLs con `{ip}`,
+  capturas con tope, SQLite WAL + respaldo cada 6 h, keepalive, tope por IP, HTTP con espera/tope, arrancador que reabre,
+  mantenimiento, `GET /estado`). Instalado en la PC y comprobado (el arrancador reabrió el servidor en 10 s).
+- b2a3f7e: `docs/ESPEC_GAMERELAY_FASE23.md` (estudio de solo lectura del relé de 2 jugadores).
+- acc9664 + df27d20: relé fases 2 y 3 (partida = sala sintética 700 000 000+n al emparejar; ligado por NTL; lista de 3;
+  reenvío 9/10/12/15; GameSeq TCP deduplicado; eco RTT; tope 2048 B); `tools/rival_falso.py`. 88 pruebas OK.
+- Auditoría con los 20 riesgos: `docs/AUDITORIA_ONLINE_10NOV.md`.
+- Siguiente: prueba con `rival_falso.py` + PES real (Divisiones) → prueba real con un amigo por Tailscale.

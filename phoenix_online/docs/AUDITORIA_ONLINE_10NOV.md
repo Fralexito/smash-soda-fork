@@ -13,10 +13,9 @@ solución preventiva. Se actualiza en cada ronda.
   recuperar forma, partido vs COM con GP, reglas que se cambian sin reiniciar.
 
 ## 2. Qué falta (de más a menos importante)
-1. **Partido entre 2 personas.** El emparejamiento ya junta a 2 jugadores, pero el relé solo hace
-   la «sonda» (fase 1). Falta la fase 2 (lista de participantes con el rival) y la fase 3 (reenviar
-   los datos del partido, canales 9 a 15). Es lo más grande que queda. Para probarlo hacen falta
-   **dos PES** (dos PCs: Frank + un amigo, o dos PCs de Frank).
+1. **Partido entre 2 personas.** Programado el 10-nov (fases 2 y 3 del relé). Falta probarlo con
+   **dos PES** (dos PCs: Frank + un amigo). Ojo: el amistoso de sala libre va directo entre las dos
+   PCs (P2P); Partida rápida y Divisiones van por nuestro relé.
 2. Identidad definitiva por persona (pase de la web): hoy hay una identidad **provisional** por IP.
 3. Espejo en Supabase y panel web: espera el SÍ de Frank a la migración 162 (base compartida con la web).
 4. Detalles de myClub que esperan ingeniería inversa: Boleto ×0 y la carta «PT 40» del entrenamiento.
@@ -36,8 +35,8 @@ solución preventiva. Se actualiza en cada ronda.
 | 10 | Actualizar el servidor corta un partido | `tools/mantenimiento.py on`: nadie nuevo entra; `GET /estado` dice cuántos juegan; se cierra cuando hay 0. | ✅ hecho |
 | 11 | Un amigo con otro parche/versión entra y el partido se desincroniza | `exigir_versiones` (apagado hasta conocer los valores reales: el servidor ya los registra en cada login). | ✅ listo, apagado |
 | 12 | El juego manda un comando que no conocemos | Respuesta mínima NOERR (ya existía) + contador en `GET /estado` para saber cuál implementar primero. | ✅ hecho |
-| 13 | Partido de 2 personas: relé incompleto | Fases 2 y 3 del relé. Primero leer en la PC cómo lo hace la referencia (solo leer, sin copiar), luego programar y probar con 2 PES. | ⏳ siguiente |
-| 14 | Desconexión a mitad de partido de 2 | Definir quién gana / partido anulado, sin colgar al otro. Va con el punto 13. | ⏳ con el 13 |
+| 13 | Partido de 2 personas: relé incompleto | Fases 2 y 3 programadas (acc9664, ver ESPEC_GAMERELAY_FASE23.md): partida ligada por NTL, lista de 3, reenvío 9/10/12/15, copia TCP deduplicada, eco RTT, tope 2048 B. Falta la prueba real con 2 PES. `tools/rival_falso.py` permite probar el emparejamiento con un solo PES. | ✅ programado, ⏳ prueba real |
+| 14 | Desconexión a mitad de partido de 2 | La salida o caída de uno libera su estado en el relé; la partida se cierra al irse los dos (o a las 3 h). El resultado de cada lado se guarda y se avisa si no coinciden. Qué hace el PES del que se queda: se verá en la prueba real. | 🟡 base hecha |
 | 15 | El archivo hosts sigue apuntando al servidor cuando está apagado → el online «normal» falla | Bats CONECTAR/DESCONECTAR (ya existen en `tools/amigo`); más adelante Phoenix Core redirige sin tocar hosts. | 🟡 parcial |
 | 16 | Amigos fuera de casa no llegan (router, NAT) | Recomendado **Tailscale** (sin abrir puertos del router). Luego un VPS. | 🟡 decisión de Frank |
 | 17 | Firewall de Windows bloquea los puertos | Puertos: TCP 10000, 10001, 5000; UDP 5100, 3478, 5730. Lo abre Frank (es ajuste de seguridad: no lo tocamos nosotros). | 🟡 parte de Frank |
@@ -54,6 +53,6 @@ Todas tienen valor por defecto: un `config.json` viejo sigue funcionando igual.
 ## 5. Plan
 1. ✅ Blindaje del servidor (esta ronda; 83 pruebas OK).
 2. Instalar en la PC (con respaldo y forma de volver atrás) cuando el PES esté cerrado.
-3. Relé de 2 jugadores (fases 2 y 3) + desconexiones.
-4. Prueba real con 2 PES.
+3. ✅ Relé de 2 jugadores (fases 2 y 3) + desconexiones (88 pruebas OK).
+4. Prueba real con 2 PES (antes, prueba de emparejamiento con `tools/rival_falso.py`).
 5. Pase de identidad web + Supabase (con el SÍ de Frank).
