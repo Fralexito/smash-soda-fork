@@ -1,0 +1,110 @@
+<title>Duelo de Parches Phoenix</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: lista filtrable a la izquierda, duelo lado a lado a la derecha; Conmegol en cian, Sudamerican en ámbar */
+:root{--bg:#f6f7fb;--panel:#fff;--fg:#14172b;--mut:#5d6380;--line:#dfe2ee;--con:#0a8aa0;--sud:#c47a00;--pur:#6a2bb5;--ok:#1f8a4c;--bad:#c0392b;--chip:#eceefa;--ph:#d9dcee}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#05060f;--panel:#0d1020;--fg:#eceef8;--mut:#98a0c4;--line:#232848;--con:#00e5ff;--sud:#ffb340;--pur:#a870ee;--ok:#4cd38a;--bad:#ff6b5b;--chip:#171b36;--ph:#1c2140;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#05060f;--panel:#0d1020;--fg:#eceef8;--mut:#98a0c4;--line:#232848;--con:#00e5ff;--sud:#ffb340;--pur:#a870ee;--ok:#4cd38a;--bad:#ff6b5b;--chip:#171b36;--ph:#1c2140;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:Inter,system-ui,sans-serif;font-size:14px;padding-block:20px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.w{max-width:1200px;margin:0 auto;display:grid;gap:14px}
+h1{font:700 1.5rem 'Space Grotesk',Inter,sans-serif;margin:0}
+h2{font:600 1rem 'Space Grotesk',Inter,sans-serif;margin:0}
+.sub{color:var(--mut);margin:4px 0 0;max-width:75ch;font-size:13px}
+nav{display:flex;gap:6px;flex-wrap:wrap}
+nav button{font:inherit;background:var(--chip);color:var(--fg);border:1px solid var(--line);padding:8px 14px;border-radius:6px;cursor:pointer}
+nav button[aria-selected=true]{background:var(--pur);color:#fff;border-color:var(--pur);font-weight:600}
+button:focus-visible,input:focus-visible,select:focus-visible,.row:focus-visible{outline:2px solid var(--pur);outline-offset:2px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px;min-width:0}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:14px;align-items:start}
+@media(max-width:820px){.grid{grid-template-columns:minmax(0,1fr)}}
+.tools{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+input,select{font:inherit;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:7px 10px;min-width:0}
+input{flex:1 1 160px}
+.list{max-height:640px;overflow-y:auto}
+.row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:7px 4px;border-bottom:1px solid var(--line);cursor:pointer}
+.row:hover,.row[aria-selected=true]{background:var(--chip)}
+.faces{display:flex;gap:3px}
+.f{width:44px;height:44px;border-radius:6px;background:var(--ph);object-fit:cover;display:block;font-size:10px;color:var(--mut);text-align:center;line-height:44px}
+.nm{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mt{color:var(--mut);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rt{font-variant-numeric:tabular-nums;text-align:right;font-size:13px;white-space:nowrap}
+.c{color:var(--con);font-weight:700}.s{color:var(--sud);font-weight:700}
+.duel{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px}
+.side{text-align:center;border-radius:8px;padding:10px;border:1px solid var(--line)}
+.side.c{border-top:3px solid var(--con)}.side.s{border-top:3px solid var(--sud)}
+.big{width:96px;height:96px;border-radius:10px;background:var(--ph);margin:0 auto 6px;object-fit:cover;display:block;line-height:96px;color:var(--mut);font-size:12px}
+.ovr{font:700 2rem 'Space Grotesk',sans-serif;font-variant-numeric:tabular-nums}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+td,th{padding:4px 6px;border-bottom:1px solid var(--line);text-align:center}
+td:first-child,th:first-child{text-align:left;color:var(--mut)}
+th{font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--mut)}
+.d{font-size:12px}.up{color:var(--ok)}.dn{color:var(--bad)}
+.tw{overflow-x:auto}
+.chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.chip{font-size:12px;padding:2px 8px;border-radius:10px;border:1px solid var(--line);background:var(--chip)}
+.chip.c{border-color:var(--con)}.chip.s{border-color:var(--sud)}.chip.b{border-color:var(--pur)}
+.cnt{color:var(--mut);font-size:12px;margin:6px 0 0}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:600px){.two{grid-template-columns:1fr}.duel{grid-template-columns:1fr}}
+.pl{display:flex;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:1px solid var(--line);font-size:13px}
+.pl span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ex{color:var(--mut)}
+[hidden]{display:none!important}
+</style>
+<div class="w">
+<header><h1>Duelo de Parches Phoenix</h1>
+<p class="sub">Mismo jugador o mismo club en Conmegol (<span class="c">cian</span>) y en Sudamerican (<span class="s">ámbar</span>), con minicara y datos de cada base. La "media" es una cuenta mía (promedio de los mejores atributos; en porteros, los de arquero), no la del juego. Minicara: Conmegol tiene la de 522 de los 1.500 mejores y Sudamerican 1.470; el resto sale vacío.</p></header>
+<nav id="tabs" role="tablist"></nav>
+<main id="main"></main>
+</div>
+<script>
+const D=__DATA__;
+const $=(s,e=document)=>e.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const POS=['POR','DFC','LI','LD','MCD','MC','MI','MD','MCO','EI','ED','SD','DC'];
+const AB=['Ataque','Control','Regate','Posesión','Pase corto','Pase largo','Definición','Cabeceo','Balón parado','Efecto','Velocidad','Aceleración','Potencia tiro','Salto','Contacto','Equilibrio','Resistencia','Defensa','Recuperación','Agresividad','Arq. reflejo ','Arq. atajada','Arq. despeje','Arq. reflejos','Arq. alcance'];
+AB[20]='Arq. conciencia';AB[21]='Arq. atrapada';AB[22]='Arq. despeje';AB[23]='Arq. reflejos';AB[24]='Arq. alcance';
+const SK=['Finta tijera','Doble toque','Flip flap','Marsellesa','Sombrero','Giro cruzado','Corte y giro','Scotch','Pisar balón','Cabeceo (hab.)','Tiro largo','Tiro con globo','Tiro de media distancia','Tiro flotante','Tiro con caída','Tiro ascendente','Remate acrobático','Taco','Tiro a primera','Pase a un toque','Pase filtrado','Pase medido','Centro preciso','Curva exterior','Rabona','Pase sin mirar','Pase bajo en alto','Despeje bajo arq.','Despeje alto arq.','Saque largo','Saque largo arq.','Especialista penal','Para penales','Picardía','Marca al hombre','Repliegue','Intercepción','Despeje acrobático','Capitanía','Revulsivo','Espíritu de lucha','Engañador','Carrera sinuosa','Bala','Carrera incisiva','Pase largo experto','Centro temprano','Tirador lejano'];
+const im=i=>i?`<img class="f" alt="" src="data:image/webp;base64,${D.IM[i-1]}">`:`<span class="f">sin foto</span>`;
+const imb=i=>i?`<img class="big" alt="" src="data:image/webp;base64,${D.IM[i-1]}">`:`<span class="big">sin minicara</span>`;
+const nat=n=>D.NAT[n]||('País #'+n);
+let sel=null;
+const tabs=[['jug','Jugadores'],['club','Clubes']];
+function jug(){
+ const nats=[...new Set(D.R.map(r=>r[4]))].sort((a,b)=>nat(a).localeCompare(nat(b)));
+ $('#main').innerHTML=`<div class="grid"><div class="panel"><div class="tools"><input id="q" placeholder="Buscar jugador o club" aria-label="Buscar"><select id="nt" aria-label="Nacionalidad"><option value="">Todas las nacionalidades</option>${nats.map(n=>`<option value="${n}">${esc(nat(n))}</option>`).join('')}</select><select id="ps" aria-label="Posición"><option value="">Posición</option>${POS.map((p,i)=>`<option value="${i}">${p}</option>`).join('')}</select><select id="fc" aria-label="Minicara"><option value="">Con o sin minicara</option><option value="a">Con las dos minicaras</option><option value="n">Falta alguna</option></select><select id="ord" aria-label="Orden"><option value="0">Mayor media</option><option value="1">Mayor diferencia entre parches</option></select></div><div class="list" id="lst"></div><p class="cnt" id="cn"></p></div><div class="panel" id="det"><h2>Elige un jugador</h2><p class="sub">Verás las dos minicaras, la media y todos sus datos en cada parche, con la diferencia.</p></div></div>`;
+ const draw=()=>{const q=$('#q').value.toLowerCase(),n=$('#nt').value,p=$('#ps').value,f=$('#fc').value,o=$('#ord').value;
+  let r=D.R.filter(x=>(!q||(x[2]+' '+x[3]+' '+x[5]+' '+x[6]).toLowerCase().includes(q))&&(!n||x[4]==n)&&(p===''||x[7][0]==p||x[8][0]==p)&&(f===''||(f==='a'?(x[9]&&x[10]):!(x[9]&&x[10]))));
+  if(o==='1')r=[...r].sort((a,b)=>Math.abs(b[7][11]-b[8][11])-Math.abs(a[7][11]-a[8][11]));
+  $('#cn').textContent=`${r.length.toLocaleString('es')} de ${D.R.length.toLocaleString('es')} jugadores en ambos parches (se listan 150)`;
+  $('#lst').innerHTML=r.slice(0,150).map(x=>{const dl=x[8][11]-x[7][11];return `<div class="row" tabindex="0" role="button" data-k="${D.R.indexOf(x)}"><div class="faces">${im(x[9])}${im(x[10])}</div><div style="min-width:0"><div class="nm">${esc(x[2])}</div><div class="mt">${esc(nat(x[4]))} · ${POS[x[7][0]]} · ${esc(x[5]||x[6]||'sin club')}</div></div><div class="rt"><span class="c">${x[7][11]}</span> · <span class="s">${x[8][11]}</span><div class="d ${dl>0?'up':dl<0?'dn':''}">${dl>0?'+':''}${dl}</div></div></div>`}).join('')};
+ ['q','nt','ps','fc','ord'].forEach(i=>$('#'+i).oninput=draw);
+ $('#lst').onclick=e=>{const r=e.target.closest('.row');if(r)show(+r.dataset.k)};
+ $('#lst').onkeydown=e=>{if(e.key==='Enter'){const r=e.target.closest('.row');if(r)show(+r.dataset.k)}};
+ draw();show(0)}
+function cell(a,b,d,fmt){const x=fmt?fmt(a):a,y=fmt?fmt(b):b;const dl=typeof a==='number'?b-a:0;return `<tr><td>${d}</td><td class="c">${x}</td><td class="s">${y}</td><td class="d ${dl>0?'up':dl<0?'dn':''}">${dl?(dl>0?'+':'')+dl:'='}</td></tr>`}
+function show(k){const x=D.R[k],a=x[7],b=x[8];
+ document.querySelectorAll('.row').forEach(r=>r.setAttribute('aria-selected',r.dataset.k==k));
+ const sk=(m)=>SK.filter((_,i)=>m>>i&1&&true);
+ const hasC=i=>a[10]/Math.pow(2,i)%2>=1,hasS=i=>b[10]/Math.pow(2,i)%2>=1;
+ const chips=SK.map((n,i)=>{const c=hasC(i),s=hasS(i);return c||s?`<span class="chip ${c&&s?'b':c?'c':'s'}">${n}</span>`:''}).join('');
+ const feet=v=>v?'Izq.':'Der.';
+ $('#det').innerHTML=`<div class="duel"><div class="side c">${imb(x[9])}<div class="mt">Conmegol · id ${x[0]}</div><div class="nm">${esc(x[2])}</div><div class="ovr c">${a[11]}</div><div class="mt">${esc(x[5]||'sin club')}</div></div><div class="side s">${imb(x[10])}<div class="mt">Sudamerican · id ${x[1]}</div><div class="nm">${esc(x[3]||x[2])}</div><div class="ovr s">${b[11]}</div><div class="mt">${esc(x[6]||'sin club')}</div></div></div>
+ <div class="tw"><table><thead><tr><th>Dato</th><th>Conmegol</th><th>Sudamerican</th><th>Dif.</th></tr></thead><tbody>
+ ${cell(a[0],b[0],'Posición',v=>POS[v])}${cell(a[1],b[1],'Edad')}${cell(a[2],b[2],'Altura (cm)')}${cell(a[3],b[3],'Peso (kg)')}${cell(a[4],b[4],'Pie hábil',feet)}${cell(a[5],b[5],'Estilo de juego (n.º)')}${cell(a[6],b[6],'Uso pie malo')}${cell(a[7],b[7],'Precisión pie malo')}${cell(a[8],b[8],'Forma')}${cell(a[9],b[9],'Resist. lesión')}
+ ${AB.map((n,i)=>cell(a[12+i],b[12+i],n)).join('')}</tbody></table></div>
+ <h2 style="margin-top:12px">Habilidades</h2><div class="chips">${chips||'<span class="mt">Ninguna</span>'}</div><p class="cnt"><span class="chip c">solo Conmegol</span> <span class="chip s">solo Sudamerican</span> <span class="chip b">en ambos</span></p>`}
+function club(){
+ $('#main').innerHTML=`<div class="panel"><div class="tools"><input id="cq" placeholder="Buscar club" aria-label="Buscar club"><select id="cs" aria-label="Club" style="flex:2 1 260px"></select></div><div id="cd"></div></div>`;
+ const fill=()=>{const q=$('#cq').value.toLowerCase();$('#cs').innerHTML=D.T.map((t,i)=>[t,i]).filter(([t])=>!q||t[0].toLowerCase().includes(q)).map(([t,i])=>`<option value="${i}">${esc(t[0])} (${t[3].length} / ${t[4].length})</option>`).join('');cd()};
+ const avg=l=>l.length?Math.round(l.slice(0,14).reduce((s,x)=>s+x[3],0)/Math.min(14,l.length)):0;
+ const col=(l,cls)=>l.map(p=>`<div class="pl"><span class="${p[5]?'':'ex'}">${p[4]}. ${esc(p[1])}</span><span>${POS[p[2]]} · <b class="${cls}">${p[3]}</b></span></div>`).join('');
+ const cd=()=>{const v=$('#cs').value;if(v==='')return $('#cd').innerHTML='<p class="sub">Sin resultados.</p>';const t=D.T[v];
+  $('#cd').innerHTML=`<h2>${esc(t[0])}</h2><p class="sub">Media de sus 14 mejores: Conmegol <b class="c">${avg(t[3])}</b>, Sudamerican <b class="s">${avg(t[4])}</b>. Los nombres en gris no están en el otro parche.</p><div class="two" style="margin-top:10px"><div><h2 class="c">Conmegol · ${t[3].length}</h2>${col(t[3],'c')}</div><div><h2 class="s">Sudamerican · ${t[4].length}</h2>${col(t[4],'s')}</div></div>`};
+ $('#cq').oninput=fill;$('#cs').onchange=cd;fill()}
+const views={jug,club};
+function go(k){document.querySelectorAll('#tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.k===k));views[k]();try{history.replaceState(null,'','#'+k)}catch(e){}}
+$('#tabs').innerHTML=tabs.map(([k,n])=>`<button role="tab" data-k="${k}">${n}</button>`).join('');
+$('#tabs').onclick=e=>{const b=e.target.closest('button');if(b)go(b.dataset.k)};
+go(views[location.hash.slice(1)]?location.hash.slice(1):'jug');
+</script>
