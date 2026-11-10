@@ -14,3 +14,9 @@ Notas:
 - Partido entre los dos: «Partida rápida» o «Divisiones en línea» van por el relé del servidor (lo más seguro). El amistoso de sala libre va directo entre las dos PCs (P2P).
 - Si los dos PES no tienen la misma base de jugadores, myClub mostrará otros jugadores o el juego puede cerrarse.
 - Escrito por nosotros; no usa código de PESBUL.
+
+## Tu propio club con el pase de la web (cuando esté activo)
+1. En la web Phoenix, con tu sesión iniciada, pide un **pase para el online** (dura 10 minutos y sirve una vez).
+2. Abre `USAR_PASE.bat`, escribe la IP del servidor y pega el pase.
+3. Si dice «listo», entra al online: ese club es tuyo y queda ligado a tu cuenta.
+El pase nunca se guarda en ningún archivo ni registro del servidor; solo viaja su huella (hash).
