@@ -16,7 +16,7 @@ Resultados:
 
 Límites (decirlo claro): comparar por nombre es una primera pasada. Hay variantes de escritura («Gaby Torres» / «Gabriel Torres») y apodos que cuentan como «distinto». «Exclusivo» aquí incluye retirados, jugadores genéricos o editados. Los atributos «+40» son los que muestra el juego en la ficha.
 
-Scripts: `cpkx.py` (índice), `ext.py` (extrae y descomprime), `cmp.py` (compara), `teams.py` (equipos). Correr con `python3 -I`; las rutas son las del entorno de la sesión, ajustarlas.
+Scripts: `cpkx.py` (índice), `ext.py` (extrae y descomprime), `cmp.py` (compara), `teams.py` (equipos), `ligas.py` (ligas), `parecidos.py` (nombres parecidos). Correr con `python3 -I`; las rutas son las del entorno de la sesión, ajustarlas.
 
 ## Parte 2: equipos y asignaciones
 
@@ -29,6 +29,19 @@ Resultados:
 - Exclusivos de Conmegol: 9.934 (3.915 sin equipo; el resto en clubes como «Atlético FC», «CD Estrella Roja», «Platense FC», más equipos «Classic» de 40 jugadores).
 - Exclusivos de Sudamerican: 10.428 (7.338 sin equipo; el resto en «Sudamerican Project Club», Auckland City, Urawa Red Diamonds, Mantova, selecciones pequeñas como San Marino, Gibraltar, Faroe, etc.). (`exclusivos_*_con_equipo.csv`)
 
-Límites: comparar equipos por nombre falla con variantes («Republic of Ireland» / «Ireland»). «Sin equipo» son jugadores en la base pero sin fila de asignación (agentes libres o relleno). Todavía NO se leyeron las ligas (`Competition*.bin`); falta el mapa de esos registros (en el repositorio de Matozanato está en `tools/mkleague.py`).
+Límites: comparar equipos por nombre falla con variantes («Republic of Ireland» / «Ireland»). «Sin equipo» son jugadores en la base pero sin fila de asignación (agentes libres o relleno).
+
+## Parte 3: ligas y «parecidos»
+
+Formatos (mapa del repositorio de Matozanato, `tools/mkleague.py`): `Competition.bin` registros de 36 bytes (id de competición en +0x05, región +0x03, código de texto desde +0x08, ej. `ENGLAND_D1_LEAGUE`); `CompetitionRegulation.bin` de 2.352 bytes (id de competición +0x08, tipo +0x09, nombre desde +0x14); `CompetitionEntry.bin` de 12 bytes (id de equipo +0x00, id de competición +0x08, posición +0x09).
+
+- Conmegol: 90 competiciones (71 con equipos, 1.406 filas). Sudamerican: 80 competiciones (65 con equipos, 1.166 filas).
+- Por código: **59 en ambas**, **31 solo en Conmegol**, **21 solo en Sudamerican** (`ligas_comparacion.csv`).
+- Solo Conmegol (con equipos): Libertadores, Sudamericana y Recopa (códigos `CONMEBOL_*`), Venezuela (liga, copa, supercopa), Costa Rica, Honduras, MLS, Arabia Saudita (liga y copa), Colombia D2, Ecuador D2 y copa, Uruguay D2 y copa, Paraguay copa, «Clásico equipos clubes», «Leyendas del fútbol», Matchday eFootball Open.
+- Solo Sudamerican (con equipos): Bundesliga y su copa, Eredivisie y su copa y supercopa, Premier League D2 (`ENGLAND_D2_LEAGUE`), Europa League y Supercopa de la UEFA, `COPA_LIBERTADORES`, EE. UU. (liga, copa, supercopa), Bolivia copa y supercopa, México copa, Ecuador, Paraguay y Uruguay copas, Supercopa de España.
+- **Hallazgo importante para los IDs:** el MISMO código de liga tiene ID de competición DISTINTO en cada base (ej. `ENGLAND_D1_LEAGUE` es 22 en Conmegol y 21 en Sudamerican; `UEFA_CHAMPIONS_LEAGUE` es 5 y 2). El código de texto es la clave estable; los números no se pueden usar para comparar. Pasa igual con los IDs de jugador y de equipo en 4.013 jugadores y 32 equipos con el mismo nombre.
+- Los equipos en común por liga son pocos (columna «equipos_en_comun_por_nombre»), p. ej. Premier League 9 de 20, LaLiga 12 de 20, Serie A 14 de 20. Comparar por nombre de equipo subestima el solape (variantes de escritura).
+
+Parecidos: de los exclusivos de cada base se buscan pares con misma nacionalidad, edad ±2, altura ±4 y nombre muy parecido (similitud ≥ 0,88 o un nombre contenido en el otro con edad ±1). Resultado: **37 pares** (`parecidos.csv`), p. ej. «Francisco Gualtieri» / «Francisco Gualiteri», «Maurits Kjærgaard» / «Maurits Kjaergaard», «Cristhoper Zambrano» / «Christhoper Zambrano». Quitando esos pares, los exclusivos quedan en **9.897 (Conmegol)** y **10.392 (Sudamerican)** (`exclusivos_*_v2.csv`). Quedan pocos pares porque las dos bases son en gran parte jugadores distintos, no el mismo escrito diferente. Revisar a mano los de similitud 0,9 con un solo nombre («Diego» / «Diego Renan»): pueden ser falsos positivos.
 
 Los CSV completos están en Drive («Phoenix Mercado — Base de conocimiento PES 2021») y en `D:\Frank\IA\CLAUDE\pes-db\comparador`.
