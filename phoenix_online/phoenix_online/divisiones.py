@@ -56,6 +56,8 @@ class Reglas:
         self.k = int(cfg.get("elo_k", ELO_K))
         self.tipos = set(cfg.get("tipos_que_cuentan", ["OC_RANK", "OC_RANKING"]))
         self.abandono = cfg.get("abandono", "no_count")
+        # L (A.2): salir con el partido en juego = pierde 3-0 (política de PESBUL, se puede apagar)
+        self.abandono_3_0 = bool(cfg.get("abandono_3_0", True))
 
     def sp_de(self, team_id):
         try:

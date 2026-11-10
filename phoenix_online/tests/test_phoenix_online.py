@@ -477,6 +477,8 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(ea[-1][1]["no_match"], "YES")
         await r(a, 82, {"msgid": "CMD_GET_OFTEN_USED_TEAM_LIST", "rqid": 3})
         self.assertEqual(ea[-1][1]["used_team_id_list_num"], 0)
+        for x in (a, b):  # solo salen quienes jugaron Divisiones (o quien pregunta)
+            self.srv.datos.guardar_division(x.steam_hex, {"jugados": 1})
         await r(a, 83, {"msgid": "CMD_GET_DIVISION_RANKING", "rqid": 4, "division_type": "D12"})
         m = ea[-1][1]
         self.assertEqual((m["total_rank_num"], m["rank_list"][1]["rank"]), (2, 2))
@@ -1993,11 +1995,29 @@ class TestDivisiones(unittest.IsolatedAsyncioTestCase):
         srv.parejas[a] = srv.parejas[b] = pareja3
         await srv.c_cmd_send_game_result(a, informe)
         self.assertEqual(srv.datos.division(a.steam_hex)["jugados"], 1)
+        # abandono con el partido en juego: el que sale pierde 3-0
+        class ReleFalso:
+            def __init__(s2): s2.jugando = set()
+            def en_juego(s2, room): return room in s2.jugando
+            def miembro_salio(s2, *a): pass
+        srv.rele = ReleFalso()
+        pareja4 = {**pareja, "room_id": 700000004}
+        srv.parejas[a] = srv.parejas[b] = pareja4
+        await srv.c_cmd_leave_game(b, {})  # aún no se jugaba: no cuenta
+        self.assertEqual(srv.datos.division(b.steam_hex)["jugados"], 1)
+        pareja5 = {**pareja, "room_id": 700000005}
+        srv.parejas[a] = srv.parejas[b] = pareja5
+        srv.rele.jugando.add(700000005)
+        await srv.c_cmd_leave_game(b, {})  # BETO (visitante) se va en pleno partido
+        eb2 = srv.datos.division(b.steam_hex)
+        self.assertEqual((eb2["jugados"], eb2["loss"]), (2, 2))
+        self.assertEqual(srv.datos.partido_division("div700000005")["home"]["score"], 3)
+        srv.rele = None
         # historial de partidos: encendido, bien formado y siempre dentro de un marco
         r = await srv.c_cmd_get_gameresults(a, {})
-        self.assertEqual(r["rlist_num"], 1)
+        self.assertEqual(r["rlist_num"], 2)  # el partido normal y el abandono (el más nuevo primero)
         from phoenix_online import msgpack_min
-        fila = r["rlist"][0].valor
+        fila = r["rlist"][-1].valor
         self.assertEqual(fila["team"], [101, 202])  # enteros planos, no bin
         self.assertIsInstance(fila["score"][0], msgpack_min.Empaquetado)
         self.assertEqual(fila["player"][0].valor["cpu_level"], "0")
@@ -2069,7 +2089,17 @@ class TestRankingsHttp(unittest.IsolatedAsyncioTestCase):
         r = srv.respuesta_http({"msgid": "CMD_RECV_MYCLUB_PRESENT", "rqid": "7", "present_id": "1"})
         self.assertEqual(r["receive_result_list_num"], 0)
         r = srv.respuesta_http({"msgid": "CMD_GET_DIVISION_RANKING", "rqid": "8", "division": "D12"})
-        self.assertEqual(r["total_rank_num"], 2)
+        self.assertEqual(r["total_rank_num"], 0)  # nadie jugó Divisiones todavía
+        r = srv.respuesta_http({"msgid": "CMD_GET_DIVISION_RANKING", "rqid": "8", "division": "D12",
+                                "pid": str(0x0110000100000001)})
+        self.assertEqual(r["total_rank_num"], 1)  # quien pregunta siempre se ve
+        srv.datos.guardar_division("0110000100000002", {"jugados": 3})
+        srv.datos.guardar_division("0110000100000009", {"jugados": 1})  # cuenta sin jugador: no sale
+        r = srv.respuesta_http({"msgid": "CMD_GET_DIVISION_RANKING", "rqid": "8", "division": "D12"})
+        self.assertEqual([f["user"]["pname"]["name"] for f in r["rank_list"]], ["BETO"])
+        srv.datos.guardar_club("0110000100000002", {"vscom": {}})
+        r = srv.respuesta_http({"msgid": "CMD_GET_MYCLUB_RANKING", "rqid": "9"})
+        self.assertIn("BETO FC", [f["user"]["team_name"] for f in r["rank_list"]])  # sin nombre: «<jugador> FC»
 
 
 class TestNubeSinLlaveMaestra(unittest.IsolatedAsyncioTestCase):

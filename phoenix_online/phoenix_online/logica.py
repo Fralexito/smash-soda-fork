@@ -1407,10 +1407,17 @@ class Servidor:
         # L (PESBUL r728): elementos como MAPAS (no bin); ordenados por rating y luego puntos
         division = m.get("division_type") or m.get("division")
         estados = self.datos.divisiones()
+        pide = str(m.get("pid") or "")
         filas = []
         for f in self.datos.todos():
-            e = div.completar(estados.get((f["steam_hex"] or "").lower()))
-            if division in (None, "") or e["division"] == division:
+            clave = (f["steam_hex"] or "").lower()
+            e = div.completar(estados.get(clave))
+            n = self.numero_de_clave(clave)
+            # C (prueba 10-nov): con todos los registrados salían filas repetidas (cuentas viejas de
+            # pruebas con el mismo nombre): solo quien jugó Divisiones, y siempre quien pregunta
+            jugo = clave in estados and (e["jugados"] or e["archivadas"])
+            es_quien_pide = pide and pide in (str(n), str(n & 0xFFFFFFFF), str(f["pid"]))
+            if (jugo or es_quien_pide) and (division in (None, "") or e["division"] == division):
                 filas.append((f, e))
         # L (A.7): rating de mayor a menor, luego SP, luego pid
         filas.sort(key=lambda fe: (-fe[1]["rating"], -fe[1]["sp"], int(fe[0]["pid"] or 0)))
@@ -3305,10 +3312,32 @@ class Servidor:
         return {}
 
     async def c_cmd_leave_game(self, s, m):
+        self._abandono_division(s)
         self._dejar_pareja(s, "salió del partido")
         return {}
 
+    def _abandono_division(self, s):
+        """L (A.2, CLEAN_LEAVE): quien SALE con el partido de Divisiones en juego (ya hubo canal 9)
+        y sin resultado aún pierde 3-0. Un corte de conexión no entra aquí (es ambiguo: no cuenta)."""
+        pareja = self._pareja_por_clave(s)
+        if not pareja or not pareja.get("room_id") or s not in pareja["miembros"]:
+            return
+        reglas = self._reglas_division()
+        if not reglas.abandono_3_0 or pareja.get("tipo") not in reglas.tipos:
+            return
+        if self.rele is None or not hasattr(self.rele, "en_juego") or not self.rele.en_juego(pareja["room_id"]):
+            return
+        if self.datos.partido_division(f"div{pareja['room_id']}") is not None:
+            return  # ya hay resultado: salir después del final no es abandono
+        sale_casa = s is pareja["miembros"][0]
+        log.info("partido div%s: %s abandona con el partido en juego: pierde 3-0", pareja["room_id"], s.pid)
+        self._resultado_division(s, pareja, {"home_score": 0 if sale_casa else 3,
+                                             "away_score": 3 if sale_casa else 0,
+                                             "abnormalend_reason": "NORMAL_END"})
+
     async def c_cmd_leave_room(self, s, m):
+        if s in self.parejas:
+            self._abandono_division(s)
         if m.get("error_code"):
             log.warning("salida con error %s pid=%s", m["error_code"], s.pid)  # MXNV_0013 = P2P falló
         await self._salir_de_sala(s)
@@ -3598,7 +3627,9 @@ class Servidor:
                 "intro": perfil["intro"],
                 "match_record": {"win_count": g, "draw_count": e, "lose_count": p,
                                  "win_s_max": int(com.get("racha_max") or 0), "rating": RATING_INICIAL},
-                "team_id": int(club.get("base_team_id") or 0), "team_name": club.get("team_name") or ""}})
+                # C (prueba 10-nov): sin nombre el PES pinta «NotImplement»: nombre del jugador
+                "team_id": int(club.get("base_team_id") or 0),
+                "team_name": club.get("team_name") or (f"{nombre} FC" if nombre else "Phoenix FC")}})
         return {"date": int(time.time()), "total_rank_num": len(filas), "rank_list": lista}
 
     @staticmethod

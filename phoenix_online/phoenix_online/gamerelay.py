@@ -297,6 +297,7 @@ class Intento:
         self.contados = {}       # (pid, canal, bytes) -> [nativo, tcp] para no entregar dos veces
         self.reenviados = 0
         self.creado = time.time()
+        self.jugando_desde = None  # primer mensaje del canal 9 = el partido ya se está jugando
 
     def lista_para(self, pid):
         """L §2.1: [servidor 1F][yo C0|id][otros 80|id …] en orden de id."""
@@ -394,6 +395,11 @@ class Rele(asyncio.DatagramProtocol):
             if cli.intento is it:
                 cli.intento = cli.pid = cli.id_rele = None
         log.info("gamerelay: partida %s cerrada (%d mensajes reenviados)", room_id, it.reenviados)
+
+    def en_juego(self, room_id):
+        """True si el partido ya empezó (llegó canal 9): salir ahora es abandono (L A.2)."""
+        it = self.intentos.get(room_id)
+        return bool(it and it.jugando_desde)
 
     def miembro_salio(self, room_id, pid):
         """L §4.3: se olvida su estado de par; sin aviso UDP al otro. Si ya no queda nadie, se cierra."""
@@ -571,6 +577,9 @@ class Rele(asyncio.DatagramProtocol):
                 log.info("gamerelay %s: canal de juego %d sin partida ligada (se ignora)", cli.addr, canal)
             return
         if canal == CANAL_ORDENES:
+            if it.jugando_desde is None and blq:
+                it.jugando_desde = time.time()
+                log.info("gamerelay: partida %s en juego (primer canal 9)", it.room_id)
             for b in blq:
                 if not b or len(b) > 254:
                     continue
