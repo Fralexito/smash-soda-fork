@@ -131,7 +131,29 @@ function Pedir-Token {
     return $r.access_token
 }
 
+function Poner-Core([bool]$online, [string]$ip) {
+    # Phoenix Core 0.5.66+: desvía el online desde dentro del PES (sin hosts ni permisos de Windows).
+    # Devuelve $true si Core se encargó; $false si no hay Core configurado (entonces se usa el hosts).
+    $ruta = $cfg.ruta_core_json
+    if (-not $ruta -or -not (Test-Path $ruta)) { return $false }
+    $texto = Get-Content $ruta -Raw -Encoding UTF8
+    $json = $texto | ConvertFrom-Json
+    Copy-Item $ruta "$ruta.antes_jugar" -Force
+    $json | Add-Member -NotePropertyName desvio_online -NotePropertyValue $online -Force
+    $json | Add-Member -NotePropertyName servidor_online -NotePropertyValue ($(if ($online) { $ip } else { "" })) -Force
+    $nuevo = $json | ConvertTo-Json -Depth 20
+    if (-not $nuevo) { throw "no se pudo preparar el json de Core; no se cambió nada" }
+    [IO.File]::WriteAllText($ruta, $nuevo, (New-Object Text.UTF8Encoding($false)))
+    return [bool]$cfg.usar_core_para_online
+}
+
 function Abrir-PES {
+    # Sider (con el parche y Phoenix Core) se abre primero si está configurado y no está ya abierto
+    $sider = $cfg.ruta_sider
+    if ($sider -and (Test-Path $sider) -and -not (Get-Process -Name ([IO.Path]::GetFileNameWithoutExtension($sider)) -ErrorAction SilentlyContinue)) {
+        Start-Process -FilePath $sider -WorkingDirectory (Split-Path -Parent $sider)
+        Start-Sleep -Seconds 2
+    }
     $exe = $cfg.ruta_pes
     if (-not (Test-Path $exe)) { throw "No encuentro el PES en $exe (revisa ruta_pes en PhoenixJugar.json)." }
     Start-Process -FilePath $exe -WorkingDirectory (Split-Path -Parent $exe)
@@ -145,7 +167,8 @@ try {
         }
         "Offline" {
             Write-Host "Modo Offline: quito la conexión al servidor Phoenix y abro el PES."
-            Poner-Hosts ""
+            Poner-Core $false "" | Out-Null
+            if (-not $cfg.usar_core_para_online) { Poner-Hosts "" }
             Abrir-PES
         }
         "Online" {
@@ -162,7 +185,7 @@ try {
                 if ($m) { throw (($m | ConvertFrom-Json).mensaje) } else { throw "No se pudo hablar con el servidor: $($_.Exception.Message)" }
             }
             Write-Host $r.mensaje
-            Poner-Hosts $ip
+            if (-not (Poner-Core $true $ip)) { Poner-Hosts $ip }
             Write-Host "En línea: $($estado.jugadores_en_linea) jugador(es). Abriendo el PES..."
             Abrir-PES
         }

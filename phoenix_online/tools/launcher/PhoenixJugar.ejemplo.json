@@ -2,5 +2,8 @@
   "ip_servidor": "100.x.x.x (la IP de Tailscale del servidor de Frank)",
   "url_web_api": "https://fiibiyijojkxqlsrhcil.supabase.co",
   "clave_publica_web": "la clave pública (anon/publishable) que usa la web; NO la service_role",
-  "ruta_pes": "C:\\PES21\\eFootball PES 2021\\PES2021.exe"
+  "ruta_pes": "C:\\PES21\\eFootball PES 2021\\PES2021.exe",
+  "ruta_sider": "ruta a sider.exe del PES (vacío si no se usa Sider)",
+  "ruta_core_json": "ruta al json de Phoenix Core dentro de SiderAddons (vacío si no hay Core)",
+  "usar_core_para_online": false
 }

@@ -52,3 +52,11 @@ en modo offline (nada que ver con lo online: el que quiera juega offline y local
    su perfil. Link hará el inicio con Discord/Google.
 3. Link: pestaña «Jugar» con inicio de sesión de la web. Hilo de Link, cuando Frank lo diga.
 4. Encender `exigir_launcher` cuando todos los amigos lo tengan.
+
+## Decisiones del 10-nov (Frank)
+- Phoenix Core se sigue cargando **por Sider** (el parche ya lo necesita y así se comparte todo en una carpeta).
+- El online se desviará **dentro del PES** con Core 0.5.66 «desvio_online» (claves `desvio_online` y
+  `servidor_online` en el json de Core; hilo de Core). El launcher escribe esas claves (Online = true + IP,
+  Offline = false) y, con `usar_core_para_online: true`, ya no toca el archivo hosts ni pide permisos.
+  Hasta entonces, el hosts como puente (con copia, comprobación y vuelta atrás).
+- El launcher abre Sider (si `ruta_sider`) y luego el PES.
