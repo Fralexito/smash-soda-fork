@@ -228,6 +228,8 @@ class Servidor:
         self.ntl_por_clave = {}  # clave de persona -> última declaración NTL (+ ip TCP)
         self.huella_por_clave = {}  # clave de persona -> (n.º de archivos, sha256) de su file_hash_list
         self._partidas = itertools.count(1)  # salas sintéticas de las parejas: 700 000 000 + n
+        self.nube = None          # espejo en Supabase (nube.py), si está activo
+        self.intentos_pase = {}   # ip -> [instantes] de POST /pase (tope contra abusos)
 
     def aplicar_reglas_myclub(self, reglas):
         """Reglas de myClub editables en caliente (archivo reglas_myclub o, más adelante, la
@@ -587,7 +589,9 @@ class Servidor:
           cliente está en la MISMA PC que el servidor (anfitrión), el SteamID tal cual (así el
           club de Frank no cambia); si no, una clave fija derivada de su IP («7f» + IP en hex).
           Con Tailscale/ZeroTier cada amigo tiene IP fija, así que conserva su club.
-        Cuando exista el pase de la web, el pase mandará sobre todo esto."""
+        - Pase de la web (POST /pase): la IP queda ligada a la cuenta Phoenix y la clave sale de
+          la cuenta («7d» + sha1 del usuario), así la persona conserva su club aunque cambie de PC.
+          No se aplica a la PC del servidor (el club de Frank no cambia)."""
         steam_hex = (steam_hex or "").lower()
         ide = self.cfg.get("identidad") or {}
         if not ide.get("activo", True) or not steam_hex:
@@ -603,10 +607,47 @@ class Servidor:
         if ip.startswith("127.") or ip == "::1" or (ip_local and ip == ip_local.removeprefix("::ffff:")) \
                 or ip in (ide.get("ips_anfitrion") or []):
             return steam_hex
+        # pase de la web: esa IP quedó ligada a una cuenta Phoenix (manda sobre la clave por IP)
+        por_pase = self.datos.clave_por_ip(ip) if hasattr(self.datos, "clave_por_ip") else None
+        if por_pase:
+            return por_pase
         partes = ip.split(".")
         if len(partes) == 4 and all(p.isdigit() for p in partes):
             return "7f" + "".join(f"{int(p):02x}" for p in partes) + "000000"
         return "7e" + hashlib.sha1(ip.encode()).hexdigest()[:14]
+
+    @staticmethod
+    def clave_de_usuario(usuario):
+        return "7d" + hashlib.sha1(str(usuario).encode()).hexdigest()[:14]
+
+    async def canjear_pase(self, pase, ip_cliente, ip_local=None):
+        """POST /pase {"pase": "..."} desde Link (o a mano): liga esa IP a la cuenta del pase.
+        Devuelve (código HTTP, {ok, mensaje}). Nunca guarda ni registra el pase en claro."""
+        ip = (ip_cliente or "").split("%")[0].removeprefix("::ffff:")
+        pase = str(pase or "").strip().lower()
+        if self.nube is None:
+            return 503, {"ok": False, "mensaje": "el servidor no está conectado a la web (Supabase)"}
+        if not (16 <= len(pase) <= 128) or any(c not in "0123456789abcdef" for c in pase):
+            return 400, {"ok": False, "mensaje": "pase con formato raro"}
+        if ip.startswith("127.") or ip == "::1" or (ip_local and ip == ip_local.removeprefix("::ffff:")):
+            return 400, {"ok": False, "mensaje": "la PC del servidor no usa pase (conserva su club)"}
+        ahora = time.time()
+        intentos = [t for t in self.intentos_pase.get(ip, []) if ahora - t < 600]
+        if len(intentos) >= 10:
+            return 429, {"ok": False, "mensaje": "demasiados intentos; espera 10 minutos"}
+        self.intentos_pase[ip] = intentos + [ahora]
+        try:
+            usuario = await self.nube.canjear_pase(pase)
+        except Exception as e:
+            log.warning("pase: Supabase no respondió (%s)", e)
+            return 502, {"ok": False, "mensaje": "la web no respondió; prueba otra vez"}
+        if not usuario:
+            log.info("pase rechazado desde %s (no existe, usado o caducado)", ip)
+            return 403, {"ok": False, "mensaje": "pase no válido, ya usado o caducado (dura 10 min)"}
+        clave = self.clave_de_usuario(usuario)
+        self.datos.guardar_pase(ip, usuario, clave)
+        log.info("pase aceptado: %s queda ligada a la cuenta %s (clave %s)", ip, usuario, clave)
+        return 200, {"ok": True, "mensaje": "listo: entra al online y tendrás tu propio club", "clave": clave}
 
     def _clave_de(self, s, m):
         crudo = self._steam_de(m)

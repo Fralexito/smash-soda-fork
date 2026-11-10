@@ -26,6 +26,12 @@ create table if not exists myclub (
   steam_hex text primary key,
   datos text not null
 );
+create table if not exists pases (
+  ip text primary key,
+  usuario text not null,
+  clave text not null,
+  hora real not null
+);
 create table if not exists resultados (
   id integer primary key autoincrement,
   room_id integer not null,
@@ -122,6 +128,22 @@ class Datos:
 
     def marcar_cambiados(self, claves):
         self.cambiados.update(claves)
+
+    # ---- pase de identidad (web): IP de la persona -> su cuenta Phoenix ----
+    def guardar_pase(self, ip, usuario, clave):
+        self.db.execute("insert into pases(ip, usuario, clave, hora) values (?,?,?,?) on conflict(ip) "
+                        "do update set usuario=excluded.usuario, clave=excluded.clave, hora=excluded.hora",
+                        (ip, str(usuario), clave.lower(), time.time()))
+        self.db.commit()
+
+    def clave_por_ip(self, ip):
+        f = self.db.execute("select clave from pases where ip=?", (ip,)).fetchone()
+        return f[0] if f else None
+
+    def usuario_de_clave(self, clave):
+        f = self.db.execute("select usuario from pases where clave=? order by hora desc limit 1",
+                            ((clave or "").lower(),)).fetchone()
+        return f[0] if f else None
 
     def guardar_resultado(self, room_id, partido, pid, datos):
         self.db.execute("insert into resultados(room_id, partido, pid, datos, hora) values (?,?,?,?,?)",

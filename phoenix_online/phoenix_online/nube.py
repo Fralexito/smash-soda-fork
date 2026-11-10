@@ -50,14 +50,17 @@ class Nube:
 
     # ---------- piezas ----------
     @staticmethod
-    def fila_club(clave, club, nombre_jugador=""):
+    def fila_club(clave, club, nombre_jugador="", usuario=None):
         com = club.get("vscom") or {}
-        return {"clave_servidor": clave,
+        fila = {"clave_servidor": clave,
                 "nombre": str(club.get("team_name") or nombre_jugador or "")[:100],
                 "gp": int(club.get("gp") or 0), "monedas": int(club.get("monedas") or 0),
                 "partidos": int(com.get("partidos") or 0), "racha": int(com.get("racha") or 0),
                 "nivel_com": int(com.get("nivel_idx") or 0),
                 "datos": club, "actualizado": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
+        if usuario:
+            fila["usuario"] = usuario  # dueño en la web (pase); así ve su club en su perfil
+        return fila
 
     # La red va en un hilo aparte (to_thread); la base de datos y los clubes SOLO en el hilo del
     # servidor (SQLite no deja usar su conexión desde otro hilo, y así no hay carreras con el juego).
@@ -74,7 +77,7 @@ class Nube:
             club = datos.club(k)
             if club is not None:
                 j = datos.jugador(k) or {}
-                filas.append(self.fila_club(k, club, j.get("pname", "")))
+                filas.append(self.fila_club(k, club, j.get("pname", ""), datos.usuario_de_clave(k)))
         try:
             if filas:
                 await self._red("POST", "myclub_clubes", "on_conflict=clave_servidor", filas,
@@ -118,6 +121,19 @@ class Nube:
             datos.guardar_club(clave, club)
             hechos += 1
         return hechos
+
+    async def canjear_pase(self, pase):
+        """Marca el pase como usado en Supabase y devuelve el usuario (uuid) o None.
+
+        Un solo PATCH condicionado (sin usar y sin caducar): si dos lo intentan a la vez, solo uno
+        recibe la fila. Solo viaja el hash; el pase en claro no sale de esta PC."""
+        import hashlib
+        h = hashlib.sha256(pase.encode()).hexdigest()
+        ahora = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        filas = await self._red("PATCH", "phoenix_pases",
+                                f"hash=eq.{h}&usado=is.null&caduca=gt.{ahora}&select=usuario",
+                                {"usado": ahora}, "return=representation") or []
+        return filas[0].get("usuario") if filas else None
 
     async def vuelta(self):
         subidos = await self.subir_clubes()

@@ -1720,3 +1720,58 @@ class TestRivalUdp(unittest.IsolatedAsyncioTestCase):
         self.assertIn((9, b"\x08\xfa"), pes.recibidos)          # devuelto por el rival espejo
         for v in vida:
             v.cancel()
+
+
+class TestPase(unittest.IsolatedAsyncioTestCase):
+    """Pase de identidad de la web: liga la IP del amigo a su cuenta Phoenix (con Supabase falso)."""
+
+    async def test_canjear_pase_liga_ip_y_sube_dueno(self):
+        import hashlib as _h, io, json as _j
+        from phoenix_online.nube import Nube
+        srv = Servidor({**CFG, "myclub": {}}, Datos())
+        pases = {_h.sha256(b"ab" * 18).hexdigest(): "uuid-ana"}
+        pedidos = []
+
+        class Resp(io.BytesIO):
+            def __enter__(s): return s
+            def __exit__(s, *a): return False
+
+        def abrir(req, timeout=None):
+            tabla, _, q = req.full_url.split("/rest/v1/")[1].partition("?")
+            pedidos.append((req.get_method(), tabla, q, _j.loads(req.data) if req.data else None))
+            if req.get_method() == "PATCH" and tabla == "phoenix_pases":
+                h = q.split("hash=eq.")[1].split("&")[0]
+                u = pases.pop(h, None)  # un pase solo sirve una vez
+                return Resp(_j.dumps([{"usuario": u}] if u else []).encode())
+            return Resp(b"[]")
+
+        # sin Supabase no hay pase
+        self.assertEqual((await srv.canjear_pase("ab" * 18, "100.64.0.7"))[0], 503)
+        srv.nube = Nube(srv, "https://x.supabase.co", "k", abrir=abrir)
+        self.assertEqual((await srv.canjear_pase("no-hex!", "100.64.0.7"))[0], 400)
+        self.assertEqual((await srv.canjear_pase("ab" * 18, "127.0.0.1"))[0], 400)  # PC del servidor
+        codigo, r = await srv.canjear_pase("AB" * 18, "100.64.0.7")
+        self.assertEqual((codigo, r["ok"]), (200, True))
+        self.assertNotIn("ab" * 18, repr(pedidos))  # solo viaja el hash
+        self.assertEqual((await srv.canjear_pase("ab" * 18, "100.64.0.7"))[0], 403)  # ya usado
+        clave = Servidor.clave_de_usuario("uuid-ana")
+        # el SteamID compartido desde esa IP ya no da la clave por IP sino la de la cuenta
+        self.assertEqual(srv.clave_identidad("0410000004100000", "100.64.0.7"), clave)
+        self.assertEqual(srv.clave_identidad("0410000004100000", "100.64.0.8"), "7f644000080000"[:2] + "64400008" + "000000")
+        self.assertEqual(srv.clave_identidad("0410000004100000", "127.0.0.1"), "0410000004100000")
+        # el club sube a la web con su dueño
+        srv.datos.guardar_club(clave, {"gp": 5})
+        await srv.nube.subir_clubes()
+        post = [p for p in pedidos if p[0] == "POST"][0]
+        self.assertEqual(post[3][0]["usuario"], "uuid-ana")
+
+    async def test_tope_de_intentos(self):
+        srv = Servidor({**CFG, "myclub": {}}, Datos())
+
+        class NubeFalsa:
+            async def canjear_pase(self, pase):
+                return None
+        srv.nube = NubeFalsa()
+        codigos = [(await srv.canjear_pase("cd" * 18, "100.64.0.9"))[0] for _ in range(11)]
+        self.assertEqual(codigos[:10], [403] * 10)
+        self.assertEqual(codigos[10], 429)

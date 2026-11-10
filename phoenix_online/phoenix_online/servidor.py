@@ -244,7 +244,9 @@ async def http(srv, reader, writer):
         # Espía: cada pedido HTTP queda en capturas/http.jsonl (cuerpo recortado y con tope de disco)
         try:
             linea_cap = json.dumps({"t": time.time(), "linea": linea, "cabeceras": cabeceras,
-                                    "cuerpo": cuerpo[:8192].decode("latin-1")},
+                                    # el pase de identidad nunca se guarda en claro
+                                    "cuerpo": "(oculto)" if ruta_sin_query.rstrip("/") == "/pase"
+                                    else cuerpo[:8192].decode("latin-1")},
                                    ensure_ascii=False) + "\n"
             if PRESUPUESTO is None or PRESUPUESTO.permitir(len(linea_cap)):
                 carpeta = srv.cfg.get("capturas", "capturas")
@@ -257,6 +259,13 @@ async def http(srv, reader, writer):
             # Estado del servidor (para Link, la web o mirarlo desde el celular)
             _http_simple(writer, 200, "OK", json.dumps(srv.estado(), ensure_ascii=False).encode(),
                          "application/json; charset=utf-8")
+            return
+        if metodo == "POST" and ruta_sin_query.rstrip("/") == "/pase":
+            # Pase de identidad de la web (Link lo manda; la respuesta es JSON)
+            ip = (writer.get_extra_info("peername") or (None,))[0]
+            codigo, r = await srv.canjear_pase(form.get("pase"), ip, _ip_local(writer))
+            _http_simple(writer, codigo, "OK" if codigo == 200 else "Error",
+                         json.dumps(r, ensure_ascii=False).encode(), "application/json; charset=utf-8")
             return
         if metodo == "GET" and ruta_sin_query.startswith("/eula"):
             # Textos legales que el cliente muestra tras elegir país (EULA_PES/MYCLUB/PRIVACY_POLICY)
@@ -349,6 +358,7 @@ async def principal(ruta_config):
         tareas.append(vigilar_reglas(srv, cfg["reglas_myclub"], int(cfg.get("reglas_cada_s", 30))))
     from .nube import desde_config
     nube = desde_config(srv, cfg)
+    srv.nube = nube
     if nube is not None:
         tareas.append(nube.correr())
         log.info("espejo en Supabase activo (cada %d s)", nube.cada_s)
