@@ -1560,7 +1560,7 @@ class Servidor:
             "defensive_main_concept": Empaquetado({k: e(k) for k in self.CONCEPTO_DT}),
             "formation_data": t("formation_data", ""), "overall": e("overall", 70),
             "management": e("management", 70), "adaptability_rate": e("adaptability_rate", 100),
-            "sell_gp": 0, "contract_gp": 0, "contract_pes_point": 0,
+            "sell_gp": self._venta_dt_gp(d), "contract_gp": 0, "contract_pes_point": 0,
             "current_point_division": 0, "current_point_sim": 0, "current_point_vscom": 0,
             "is_use_variable_formation": t("is_use_variable_formation"),
             "is_coach_texture_use": t("is_coach_texture_use"), "team_id": e("team_id"),
@@ -2848,8 +2848,8 @@ class Servidor:
     # ---------- menú del jugador: bloquear y liberar (C, 07:50) ----------
     @staticmethod
     def _uids_en_uso(club):
-        """Jugadores inscritos en la plantilla (no se pueden liberar ni convertir)."""
-        return {u for u in (club.get("inscritos") or {}).get("1") or []}
+        """Jugadores inscritos en alguna plantilla (no se pueden liberar ni convertir)."""
+        return {u for lista in (club.get("inscritos") or {}).values() for u in lista or []}
 
     @staticmethod
     def _lista_uids(m, clave="gameplayer_unique_id_list"):
@@ -2908,23 +2908,38 @@ class Servidor:
         return {"coach_list": fichas, "coach_list_num": len(fichas)}
 
     @staticmethod
-    def _elegidos(club, jugadores):
+    def _elegidos(club, jugadores, squad_id=1):
         """C (§17): los 18 inscritos (XI + 7) en el orden guardado; si no hay, los 18 primeros.
         Devuelve [(índice, jugador)]."""
         uid = lambda i, j: j.get("gameplayer_unique_id") or i + 1
         por_uid = {uid(i, j): (i, j) for i, j in enumerate(jugadores)}
-        orden = [u for u in (club.get("inscritos") or {}).get("1") or [] if u in por_uid]
+        orden = [u for u in (club.get("inscritos") or {}).get(str(squad_id)) or [] if u in por_uid]
         if not orden:
             orden = [uid(i, j) for i, j in enumerate(jugadores)]
         return [por_uid[u] for u in orden[:18]]
 
-    def _plantilla_principal(self, s):
+    @staticmethod
+    def _ids_plantillas(club):
+        """B.15: plantillas del club (la 1 siempre existe; COPY/DELETE añaden o quitan otras)."""
+        ids = [int(x) for x in club.get("plantillas_ids") or [] if isinstance(x, int)]
+        return [1] + sorted(x for x in set(ids) if x != 1)
+
+    @staticmethod
+    def _dt_de_plantilla(club, dts, squad_id=1):
+        """B.15: el entrenador asignado con SET_MYCLUB_SQUAD_COACH; si no hay, el primero."""
+        uid = (club.get("dt_plantilla") or {}).get(str(squad_id))
+        elegido = [d for d in dts if d.get("coach_unique_id") == uid]
+        return elegido[:1] or dts[:1]
+
+    def _plantilla_principal(self, s, squad_id=1):
         jugadores, dts = self._plantel_myclub(s)
         if not jugadores:
             return None
         club = self.datos.club(s.steam_hex or "") or {}
-        plan = (club.get("gameplans") or {}).get("1") or {}
-        elegidos = self._elegidos(club, jugadores)
+        sq = str(squad_id)
+        plan = (club.get("gameplans") or {}).get(sq) or (club.get("gameplans") or {}).get("1") or {}
+        elegidos = self._elegidos(club, jugadores, squad_id)
+        dts = self._dt_de_plantilla(club, dts, squad_id)
         miembros = [Empaquetado({
             "gameplayer_unique_id": j.get("gameplayer_unique_id") or i + 1,
             "gameplayer_id": j.get("gameplayer_id") or 0,
@@ -2933,7 +2948,8 @@ class Servidor:
             "default_rarity": self._rareza(j)})
             for i, j in elegidos]
         plantilla = Empaquetado({
-            "squad_id": 1, "name": (club.get("nombres_plantilla") or {}).get("1") or "Plantilla 1",
+            "squad_id": int(squad_id),
+            "name": (club.get("nombres_plantilla") or {}).get(sq) or f"Plantilla {squad_id}",
             "member_list": miembros,
             "member_num": len(miembros), "is_entry_compe": "NO",
             "coach_id_list": [d.get("coach_id") or 0 for d in dts[:1]],
@@ -3017,12 +3033,198 @@ class Servidor:
         """B.13: sin plantilla en la nube (P: 0 es lo seguro, sin captura)."""
         return {"squad_id": 0}
 
+    # ---------- gestión del club (ESPEC_DIVISIONES_Y_MYCLUB_EXTRA.md, parte B.15) ----------
+    def _club_propio(self, s):
+        return self.datos.club(s.steam_hex or "") if s.steam_hex else None
+
+    @staticmethod
+    def _id_entero(v):
+        try:
+            return int(v)
+        except (TypeError, ValueError):
+            return None
+
+    async def c_cmd_set_myclub_squad_coach(self, s, m):
+        """B.15.1: entrenador (y su plan de juego) de una plantilla; respuesta solo NOERR."""
+        club = self._club_propio(s)
+        sq = self._id_entero(m.get("squad_id")) or 1
+        uid = self._id_entero(m.get("coach_unique_id"))
+        if club is None:
+            return {}
+        if uid is None or not any(d.get("coach_unique_id") == uid for d in club.get("entrenadores") or []):
+            return {"result": "ERR_NOTFOUND"}
+        club.setdefault("dt_plantilla", {})[str(sq)] = uid
+        if isinstance(m.get("gameplan_data"), str) and m["gameplan_data"]:
+            plan = club.setdefault("gameplans", {}).setdefault(str(sq), {})
+            plan["gameplan_data"] = m["gameplan_data"]
+            if isinstance(m.get("tacticsPlanKind"), int):
+                plan["tacticsPlanKind"] = m["tacticsPlanKind"]
+        self.datos.guardar_club(s.steam_hex, club)
+        log.info("myClub %s: plantilla %d con el entrenador %d", s.steam_hex, sq, uid)
+        return {}
+
+    async def c_cmd_sell_myclub_coach(self, s, m):
+        """B.15.2: despedir (vender) un entrenador; respuesta gain_gp. El último entrenador o uno
+        que dirige una plantilla no se puede vender."""
+        club = self._club_propio(s)
+        uid = self._id_entero(m.get("coach_unique_id"))
+        dts = (club or {}).get("entrenadores") or []
+        dt = next((d for d in dts if d.get("coach_unique_id") == uid), None)
+        if dt is None:
+            return {"result": "ERR_NOTFOUND"}
+        en_uso = {(self._dt_de_plantilla(club, dts, sq) or [{}])[0].get("coach_unique_id")
+                  for sq in self._ids_plantillas(club)}
+        if len(dts) <= 1 or uid in en_uso:
+            return {"result": "ERR_FORBIDDEN"}
+        ganancia = self._venta_dt_gp(dt)
+        club["entrenadores"] = [d for d in dts if d is not dt]
+        club["gp"] = int(club.get("gp") or 0) + ganancia
+        self.datos.guardar_club(s.steam_hex, club)
+        log.info("myClub %s despidió al entrenador %s: +%d GP", s.steam_hex, dt.get("coach_id"), ganancia)
+        return {"gain_gp": ganancia}
+
+    def _venta_dt_gp(self, dt):
+        if isinstance(dt.get("sell_gp"), int):
+            return max(0, dt["sell_gp"])
+        return max(0, int((self.cfg.get("myclub") or {}).get("venta_dt_gp") or 0))
+
+    async def c_cmd_update_myclub_coach_contract(self, s, m):
+        """B.15.3: renovar el contrato del entrenador (mismo precio y plazo que EXTEND_MYCLUB_COACH,
+        siempre en GP); respuesta contract_term."""
+        club = self._club_propio(s)
+        uid = self._id_entero(m.get("coach_unique_id"))
+        dt = next((d for d in (club or {}).get("entrenadores") or [] if d.get("coach_unique_id") == uid), None)
+        if dt is None:
+            return {"result": "ERR_NOTFOUND"}
+        cfg = self.cfg.get("myclub") or {}
+        error = self._cobrar(club, int(cfg.get("renovacion_gp") or 0), 0, False)
+        if error:
+            return {"result": error}
+        dt["contract_term"] = int(dt.get("contract_term") or 0) + int(cfg.get("renovacion_partidos") or 10)
+        self.datos.guardar_club(s.steam_hex, club)
+        return {"contract_term": dt["contract_term"]}
+
+    async def c_cmd_copy_myclub_squad(self, s, m):
+        """B.15.4: copiar una plantilla (inscritos, plan, entrenador y nombre); respuesta squad_id."""
+        club = self._club_propio(s)
+        origen = self._id_entero(m.get("copy_squad_id")) or 1
+        if club is None:
+            return {"result": "ERR_NOTFOUND"}
+        ids = self._ids_plantillas(club)
+        if origen not in ids:
+            return {"result": "ERR_NOTFOUND"}
+        if len(ids) >= int((self.cfg.get("myclub") or {}).get("max_plantillas") or 3):
+            return {"result": "ERR_FORBIDDEN"}
+        nuevo = max(ids) + 1
+        o, n = str(origen), str(nuevo)
+        for clave in ("inscritos", "gameplans", "dt_plantilla"):
+            if o in (club.get(clave) or {}):
+                valor = club[clave][o]
+                club[clave][n] = list(valor) if isinstance(valor, list) else \
+                    dict(valor) if isinstance(valor, dict) else valor
+        nombre = (club.get("nombres_plantilla") or {}).get(o) or f"Plantilla {origen}"
+        club.setdefault("nombres_plantilla", {})[n] = f"{nombre[:self.NOMBRE_MAX - 4]} ({nuevo})"
+        club["plantillas_ids"] = ids + [nuevo]
+        self.datos.guardar_club(s.steam_hex, club)
+        log.info("myClub %s copió la plantilla %d en la %d", s.steam_hex, origen, nuevo)
+        return {"squad_id": nuevo}
+
+    async def c_cmd_delete_myclub_squad(self, s, m):
+        """B.15.5: borrar una plantilla (la 1, la principal, no se borra); respuesta solo NOERR."""
+        club = self._club_propio(s)
+        sq = self._id_entero(m.get("squad_id"))
+        if club is None or sq not in self._ids_plantillas(club):
+            return {"result": "ERR_NOTFOUND"}
+        if sq == 1:
+            return {"result": "ERR_FORBIDDEN"}
+        club["plantillas_ids"] = [x for x in self._ids_plantillas(club) if x != sq]
+        for clave in ("inscritos", "gameplans", "dt_plantilla", "nombres_plantilla"):
+            (club.get(clave) or {}).pop(str(sq), None)
+        self.datos.guardar_club(s.steam_hex, club)
+        return {}
+
+    async def c_cmd_set_myclub_player_number_fixation(self, s, m):
+        """B.15: fijar dorsales. Se guarda la lista y se aplica el número a los jugadores del club
+        (player_id = id único o id del jugador); respuesta solo NOERR."""
+        club = self._club_propio(s)
+        if club is None:
+            return {}
+        fijados = {}
+        for el in m.get("player_number_list") or []:
+            if isinstance(el, (bytes, bytearray)):
+                try:
+                    el = msgpack_min.unpackb(el)
+                except Exception:
+                    continue
+            if isinstance(el, dict) and isinstance(el.get("player_id"), int) \
+                    and isinstance(el.get("number"), int) and 1 <= el["number"] <= 99:
+                fijados[el["player_id"]] = el["number"]
+        for j in club.get("jugadores") or []:
+            num = fijados.get(j.get("gameplayer_unique_id"), fijados.get(j.get("gameplayer_id")))
+            if num:
+                j["uniform_number"] = num
+        club["dorsales_fijos"] = [[k, v] for k, v in fijados.items()]
+        self.datos.guardar_club(s.steam_hex, club)
+        return {}
+
+    async def c_cmd_set_myclub_team_base(self, s, m):
+        """B.15: «Copiar base del equipo» = base_team_id; respuesta solo NOERR."""
+        club = self._club_propio(s)
+        base = self._id_entero(m.get("base_team_id"))
+        if club is not None and base is not None and base >= 0:
+            club["base_team_id"] = base
+            self.datos.guardar_club(s.steam_hex, club)
+        return {}
+
+    async def c_cmd_set_myclub_hometown(self, s, m):
+        """B.15: ciudad del club (home_town texto, nation_id, label); respuesta solo NOERR."""
+        club = self._club_propio(s)
+        if club is None:
+            return {}
+        casa = dict(club.get("home_town") or {}) if isinstance(club.get("home_town"), dict) else {}
+        if isinstance(m.get("home_town"), str):
+            casa["name"] = m["home_town"][:64]
+        if isinstance(m.get("nation_id"), int):
+            casa["nation_id"] = m["nation_id"]
+        if isinstance(m.get("label"), str):
+            casa["label"] = m["label"][:64]
+        club["home_town"] = casa
+        self.datos.guardar_club(s.steam_hex, club)
+        return {}
+
+    async def c_cmd_set_myclub_add_uniform_id(self, s, m):
+        """B.15: añadir camiseta. Se guarda; USER_INFO sigue mandando add_uniform_list vacía hasta
+        conocer el formato de sus elementos. Respuesta solo NOERR."""
+        club = self._club_propio(s)
+        uni = self._id_entero(m.get("add_uniform_id"))
+        if club is not None and uni is not None:
+            lista = [u for u in club.get("uniformes_extra") or [] if u != uni]
+            club["uniformes_extra"] = (lista + [uni])[-20:]
+            self.datos.guardar_club(s.steam_hex, club)
+        return {}
+
+    async def c_cmd_get_myclub_gameplayer_need_experiencelist(self, s, m):
+        return {}  # B.15: la respuesta no tiene claves conocidas; solo NOERR
+
+
     async def c_cmd_get_myclub_squadlist(self, s, m):
         plantilla = self._plantilla_principal(s)
         if plantilla is None:
             return {"squad_list": [], "squad_list_num": 0, "edition_squad_list": [],
                     "edition_squad_list_num": 0, "main_squad_id": 0, "cloud_squad_id": 0}
-        return {"squad_list": [plantilla], "squad_list_num": 1, "edition_squad_list": [],
+        club = self.datos.club(s.steam_hex or "") or {}
+        lista = [plantilla]
+        for sq in self._ids_plantillas(club)[1:]:
+            otra = self._plantilla_principal(s, sq)
+            prueba = {"msgid": "CMD_GET_MYCLUB_SQUADLIST", "rqid": 0, "result": "NOERR",
+                      "squad_list": lista + [otra], "squad_list_num": len(lista) + 1,
+                      "edition_squad_list": [], "edition_squad_list_num": 0, "main_squad_id": 1,
+                      "cloud_squad_id": 0}
+            if otra is None or _cifrado_comprimido(prueba) > MAX_CIFRADO_CLIENTE:
+                log.warning("myClub: SQUADLIST recortada a %d plantilla(s) (límite de trama)", len(lista))
+                break
+            lista.append(otra)
+        return {"squad_list": lista, "squad_list_num": len(lista), "edition_squad_list": [],
                 "edition_squad_list_num": 0, "main_squad_id": 1, "cloud_squad_id": 0}
 
     async def c_cmd_get_myclub_main_squad(self, s, m):
@@ -3038,7 +3240,8 @@ class Servidor:
         completo = (self.cfg.get("myclub") or {}).get("main_squad_completo")
         fichas = [self._ficha_jugador_myclub(i, j) for i, j in self._elegidos(club, jugadores)] \
             if completo else []
-        dt = [self._ficha_dt_myclub(i, d) for i, d in enumerate(dts[:1])] if completo else []
+        dt = [self._ficha_dt_myclub(i, d) for i, d in enumerate(self._dt_de_plantilla(club, dts))] \
+            if completo else []
         return {"squad": plantilla or Empaquetado({}), "gameplayer_list": fichas,
                 "gameplayer_list_num": len(fichas), "coach_list": dt, "coach_list_num": len(dt),
                 "team_name": club.get("team_name") or "",

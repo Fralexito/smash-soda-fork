@@ -790,6 +790,68 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
                        "use_pes_point": "YES"})
         self.assertEqual(ea[-1][1]["result"], "ERR_FORBIDDEN")
 
+    async def test_myclub_gestion_entrenadores_y_plantillas(self):
+        """B.15: entrenador por plantilla, despedir y renovar entrenador, copiar y borrar plantilla,
+        dorsales, base y ciudad."""
+        self.srv.cfg = {**self.srv.cfg, "myclub": {
+            "jugadores": [{"gameplayer_id": 100 + i} for i in range(20)],
+            "entrenadores": [{"coach_id": 8}], "venta_dt_gp": 700, "renovacion_gp": 100,
+            "club_de_prueba": {"team_name": "P", "gp": 6000},
+            "mercado_dt": [{"coach_id": 24, "gp": 1000}]}}
+        a, ea = await self.entrar("A1")
+        r = self.srv.recibir
+        res = lambda: ea[-1][1]
+        await r(a, 1, {"msgid": "CMD_BUY_MYCLUB_MARKET_COACH", "rqid": 1, "coach_id": 24,
+                       "use_pes_point": "NO"})
+        self.assertEqual(res()["gp"], 5000)
+        # el titular (uid 1) no se puede despedir; el nuevo (uid 2) sí, hasta que dirija una plantilla
+        await r(a, 2, {"msgid": "CMD_SELL_MYCLUB_COACH", "rqid": 2, "coach_unique_id": 1})
+        self.assertEqual(res()["result"], "ERR_FORBIDDEN")
+        await r(a, 3, {"msgid": "CMD_SET_MYCLUB_SQUAD_COACH", "rqid": 3, "squad_id": 1,
+                       "coach_unique_id": 2, "tacticsPlanKind": 0, "gameplan_data_size": 3,
+                       "gameplan_data": "QUJD"})
+        self.assertEqual(res()["result"], "NOERR")
+        await r(a, 4, {"msgid": "CMD_GET_MYCLUB_SQUADLIST", "rqid": 4})
+        sq = msgpack_min.unpackb(msgpack_min.packb(res()["squad_list"][0].valor))
+        self.assertEqual((sq["coach_id_list"], sq["coach_unique_id_list"], sq["gameplan_data"]),
+                         ([24], [2], "QUJD"))
+        await r(a, 5, {"msgid": "CMD_SELL_MYCLUB_COACH", "rqid": 5, "coach_unique_id": 2})
+        self.assertEqual(res()["result"], "ERR_FORBIDDEN")  # dirige la plantilla 1
+        await r(a, 6, {"msgid": "CMD_SET_MYCLUB_SQUAD_COACH", "rqid": 6, "squad_id": 1,
+                       "coach_unique_id": 1})
+        await r(a, 7, {"msgid": "CMD_SELL_MYCLUB_COACH", "rqid": 7, "coach_unique_id": 2})
+        self.assertEqual((res()["result"], res()["gain_gp"]), ("NOERR", 700))
+        await r(a, 8, {"msgid": "CMD_UPDATE_MYCLUB_COACH_CONTRACT", "rqid": 8, "coach_unique_id": 1})
+        self.assertEqual(res()["result"], "NOERR")
+        self.assertGreater(res()["contract_term"], 0)
+        club = self.srv.datos.club(a.steam_hex)
+        self.assertEqual(club["gp"], 5000 + 700 - 100)
+        # copiar y borrar plantillas (la 1 no se borra)
+        await r(a, 9, {"msgid": "CMD_COPY_MYCLUB_SQUAD", "rqid": 9, "copy_squad_id": 1})
+        self.assertEqual(res()["squad_id"], 2)
+        await r(a, 10, {"msgid": "CMD_GET_MYCLUB_SQUADLIST", "rqid": 10})
+        self.assertEqual(res()["squad_list_num"], 2)
+        dos = msgpack_min.unpackb(msgpack_min.packb(res()["squad_list"][1].valor))
+        self.assertEqual((dos["squad_id"], dos["name"]), (2, "Plantilla 1 (2)"))
+        await r(a, 11, {"msgid": "CMD_DELETE_MYCLUB_SQUAD", "rqid": 11, "squad_id": 1})
+        self.assertEqual(res()["result"], "ERR_FORBIDDEN")
+        await r(a, 12, {"msgid": "CMD_DELETE_MYCLUB_SQUAD", "rqid": 12, "squad_id": 2})
+        self.assertEqual(res()["result"], "NOERR")
+        await r(a, 13, {"msgid": "CMD_GET_MYCLUB_SQUADLIST", "rqid": 13})
+        self.assertEqual(res()["squad_list_num"], 1)
+        # dorsales, base del equipo y ciudad
+        el = msgpack_min.packb({"player_id": 3, "number": 10})
+        await r(a, 14, {"msgid": "CMD_SET_MYCLUB_PLAYER_NUMBER_FIXATION", "rqid": 14,
+                        "player_number_list_num": 1, "player_number_list": [el]})
+        await r(a, 15, {"msgid": "CMD_SET_MYCLUB_TEAM_BASE", "rqid": 15, "base_team_id": 101})
+        await r(a, 16, {"msgid": "CMD_SET_MYCLUB_HOMETOWN", "rqid": 16, "home_town": "Lima",
+                        "nation_id": 54, "label": "LIM"})
+        club = self.srv.datos.club(a.steam_hex)
+        j3 = next(j for j in club["jugadores"] if j.get("gameplayer_unique_id") == 3)
+        self.assertEqual(j3["uniform_number"], 10)
+        self.assertEqual(club["base_team_id"], 101)
+        self.assertEqual(club["home_town"], {"name": "Lima", "nation_id": 54, "label": "LIM"})
+
     async def test_myclub_catalogo_club_y_rival_rotando(self):
         import os, struct, tempfile, zlib, json as _j, sys as _s
         _s.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "tools"))

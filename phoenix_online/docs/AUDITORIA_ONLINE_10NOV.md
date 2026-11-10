@@ -79,3 +79,18 @@ Todas tienen valor por defecto: un `config.json` viejo sigue funcionando igual.
   se compara. Fin anormal = no cuenta. Partida rápida no toca Divisiones. Empuja `WATCH_GAMEADDPOINT`.
 - `GET_DIVISION_INFO`, `GET_DIVISION_POINT_INFO`, ranking y perfil con datos reales; `FINISH_SEASON` cierra la
   temporada (ascenso/descenso). `GET_GAMERESULTS` queda apagado hasta confirmar el anidamiento exacto.
+
+## Gestión del club en myClub (10-nov, ESPEC parte B.15)
+Ya tienen respuesta en el servidor:
+- **Entrenador de cada plantilla** (`SET_MYCLUB_SQUAD_COACH`). Se guarda junto con su plan de juego, y la plantilla lo muestra.
+- **Despedir entrenador** (`SELL_MYCLUB_COACH`). Paga `myclub.venta_dt_gp` (0 si no está en la config), y la ficha muestra esa misma cifra. No se puede despedir al último entrenador ni a uno que dirige una plantilla.
+- **Renovar contrato** (`UPDATE_MYCLUB_COACH_CONTRACT`). Mismo precio y mismo plazo que `EXTEND_MYCLUB_COACH`, siempre en GP.
+- **Copiar y borrar plantillas** (`COPY_` y `DELETE_MYCLUB_SQUAD`):
+  - Como máximo `myclub.max_plantillas` (3 por defecto).
+  - La plantilla 1 no se borra.
+  - `SQUADLIST` manda todas las plantillas mientras quepan en una trama; si no caben, se recorta y queda anotado en el log.
+- **Dorsales** (`SET_MYCLUB_PLAYER_NUMBER_FIXATION`). Se aplican a la ficha del jugador.
+- **Base del equipo** (`SET_MYCLUB_TEAM_BASE`), **ciudad** (`SET_MYCLUB_HOMETOWN`) y **camiseta añadida** (`SET_MYCLUB_ADD_UNIFORM_ID`). La camiseta solo se guarda: `USER_INFO` sigue mandando la lista vacía.
+- **`GET_MYCLUB_GAMEPLAYER_NEED_EXPERIENCELIST`**: devuelve solo NOERR.
+
+Todavía sin respuesta: el intercambio de jugadores, los objetos `USE_*`, el entrenamiento táctico y los entrenadores iniciales. Esos devuelven fichas completas, y no se inventan.
