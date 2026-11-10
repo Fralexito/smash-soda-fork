@@ -141,6 +141,10 @@ class Datos:
     def marcar_cambiados(self, claves):
         self.cambiados.update(claves)
 
+    def claves_de_clubes(self):
+        """Todas las claves con club guardado (para la primera subida completa a la web)."""
+        return [f[0] for f in self.db.execute("select steam_hex from myclub")]
+
     # ---- pase de identidad (web): IP de la persona -> su cuenta Phoenix ----
     def guardar_pase(self, ip, usuario, clave):
         self.db.execute("insert into pases(ip, usuario, clave, hora) values (?,?,?,?) on conflict(ip) "

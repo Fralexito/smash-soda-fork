@@ -221,6 +221,11 @@ class Nube:
         return hechos
 
     async def vuelta(self):
+        if not getattr(self, "_todo_subido", False):
+            # primera vuelta: sube TODOS los clubes, así la web los ve aunque nadie juegue hoy
+            if hasattr(self.srv.datos, "claves_de_clubes"):
+                self.srv.datos.marcar_cambiados(self.srv.datos.claves_de_clubes())
+            self._todo_subido = True
         await self.sincronizar_vinculos()
         subidos = await self.subir_clubes()
         cambiadas = await self.leer_reglas()

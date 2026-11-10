@@ -1955,6 +1955,30 @@ class TestNubeSinLlaveMaestra(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(srv.cfg["myclub"]["gp_por_partido"], 7)
         self.assertEqual(srv.datos.club("aa")["gp"], 150)  # solo el 5; el 6 no se da dos veces
 
+    async def test_primera_vuelta_sube_todos_los_clubes(self):
+        import io, json as _j
+        from phoenix_online.nube import Nube
+        srv = Servidor({**CFG, "myclub": {}}, Datos())
+        srv.datos.guardar_club("aa", {"gp": 1})
+        srv.datos.guardar_club("bb", {"gp": 2})
+        srv.datos.tomar_cambiados()  # como tras reiniciar: nada marcado como cambiado
+        subidas = []
+
+        class Resp(io.BytesIO):
+            def __enter__(s): return s
+            def __exit__(s, *a): return False
+
+        def abrir(req, timeout=None):
+            cuerpo = _j.loads(req.data)
+            if req.full_url.endswith("phoenix_srv_subir_clubes"):
+                subidas.append(sorted(f["clave_servidor"] for f in cuerpo["p_filas"]))
+            return Resp(b"[]")
+
+        n = Nube(srv, "https://x.supabase.co", "sb_publishable_x", abrir=abrir, secreto="s" * 40)
+        await n.vuelta()
+        await n.vuelta()
+        self.assertEqual(subidas, [["aa", "bb"]])  # la primera sube todo; la segunda nada (sin cambios)
+
     def test_desde_config_prefiere_sin_llave_maestra(self):
         import os
         from phoenix_online.nube import desde_config
