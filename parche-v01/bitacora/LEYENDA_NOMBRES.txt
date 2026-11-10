@@ -1,0 +1,26 @@
+LEYENDA DE NOMBRES TECNICOS - Parche Phoenix de Frank (PES 2021 base)
+4-nov-2026. Carpeta del juego: C:\PES21\eFootball PES 2021\Sider_7.4.1
+
+LIVECPK (content\livecpk\)
+PHX_ENV_SKY   Cielo 4096                  (antes Phoenix-Cielo-4096)
+PHX_ENV_TRF   Cesped con mips             (antes Phoenix-Cesped-Mips)
+PHX_KIT_MIP   Camisetas con mips          (antes Phoenix-Camisetas-Mips)
+PHX_GFX_SSS   Piel SSS / LOD              (antes Phoenix-Piel-SSS-LOD)
+PHX_LGT_GI    Rebote de luz 0,5 Camp Nou  (antes Phoenix-Rebote05-CampNou)
+PHX_FX_BLM    Bloom                       (antes Phoenix-Bloom)
+PHX_FX_LUT    Tinte de piel fuerte        (antes Phoenix-Tinte-Piel-Fuerte)
+PHX_IO_PAD    Pantalla de mandos 9-16     (antes PhoenixMandos)              APAGADO
+PHX_KIT_TRN   Ropa del entrenamiento      (antes Phoenix-Entrenamiento-Ropa) APAGADO
+
+MODULOS (modules\)
+phx_core.lua   Cargador de Phoenix Core (DLL en phoenix_core\)   (antes phoenix_core_loader.lua)
+phx_mon.lua    Sonda: escribe content\phoenix\sonda.json         (antes phoenix_sonda.lua)
+phx_ref.lua    Referee: estado.json / resultado.json / escenas   (antes phoenix_referee.lua)
+phx_sync.lua   Fichajes de Phoenix Sync                          (antes phoenix.lua)               APAGADO
+phx_map2d.lua  Campo 2D (lee modules\phx_map2d.ini)              (antes phoenix_campo.lua/.ini)    APAGADO
+phx_sbf.lua    Marcador del entrenamiento libre (Street)         (antes phoenix_marcador_free.lua) APAGADO
+phx_io16.lua   Mandos 9-16                                       (antes phoenix_mandos_fase1.lua)  APAGADO
+netblock.lua   Oficial de Sider: bloquea el online               (sin cambio)                      APAGADO
+
+Los archivos de SALIDA no cambiaron de nombre (los leen Link y el MCP phoenix-pes):
+content\phoenix\sonda.json, estado.json, resultado.json, pantalla.json, escenas.log.

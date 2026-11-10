@@ -1,0 +1,3361 @@
+{
+ "por_categoria": {
+  "cara": {
+   "sudamerican": {
+    "ids": 16015,
+    "archivos": 228607,
+    "mb": 98696
+   },
+   "base": {
+    "ids": 2838,
+    "archivos": 33685,
+    "mb": 15675
+   },
+   "conmegol": {
+    "ids": 12479,
+    "archivos": 132771,
+    "mb": 51963
+   }
+  },
+  "minicara": {
+   "sudamerican": {
+    "ids": 40332,
+    "archivos": 84486,
+    "mb": 1512
+   },
+   "base": {
+    "ids": 22978,
+    "archivos": 29634,
+    "mb": 490
+   },
+   "conmegol": {
+    "ids": 4427,
+    "archivos": 5672,
+    "mb": 180
+   }
+  },
+  "kit": {
+   "base": {
+    "ids": 450,
+    "archivos": 17484,
+    "mb": 2212
+   },
+   "conmegol": {
+    "ids": 3106,
+    "archivos": 29826,
+    "mb": 5562
+   },
+   "sudamerican": {
+    "ids": 4296,
+    "archivos": 56359,
+    "mb": 17832
+   }
+  },
+  "estadio": {
+   "conmegol": {
+    "ids": 720,
+    "archivos": 236411,
+    "mb": 142728
+   },
+   "base": {
+    "ids": 69,
+    "archivos": 252,
+    "mb": 94
+   },
+   "sudamerican": {
+    "ids": 1001,
+    "archivos": 437101,
+    "mb": 257270
+   }
+  },
+  "balon": {
+   "sudamerican": {
+    "ids": 1577,
+    "archivos": 19372,
+    "mb": 7440
+   },
+   "base": {
+    "ids": 52,
+    "archivos": 311,
+    "mb": 56
+   },
+   "conmegol": {
+    "ids": 88,
+    "archivos": 549,
+    "mb": 293
+   }
+  }
+ },
+ "choques": {
+  "misma_ruta": {
+   "minicara | base+sudamerican": 17643,
+   "cara | conmegol+sudamerican": 6720,
+   "minicara | base+conmegol+sudamerican": 1285,
+   "minicara | conmegol+sudamerican": 1140,
+   "cara | base+conmegol+sudamerican": 835,
+   "cara | base+conmegol": 580,
+   "cara | base+sudamerican": 428,
+   "kit | conmegol+sudamerican": 308,
+   "kit | base+sudamerican": 235,
+   "kit | base+conmegol+sudamerican": 204,
+   "estadio | base+conmegol+sudamerican": 63,
+   "estadio | base+conmegol": 5,
+   "minicara | base+conmegol": 4,
+   "kit | base+conmegol": 3,
+   "estadio | conmegol+sudamerican": 2
+  },
+  "identidad": {
+   "kit": 202
+  },
+  "identidad_ids_maestra": {
+   "jugadores": 0,
+   "equipos": 214
+  },
+  "internos_top": [
+   {
+    "fuente": "sudamerican",
+    "contenedores": "<sider>\\livecpk\\Kits > <sider>\\livecpk\\SP_Licence",
+    "n": 4343
+   },
+   {
+    "fuente": "sudamerican",
+    "contenedores": "<sider>/content/miniface_server > <sider>\\livecpk\\SP_Minifaces",
+    "n": 3193
+   },
+   {
+    "fuente": "conmegol",
+    "contenedores": "<sider>\\livecpk\\Turfs > D:\\SP2026\\Sudamerican Project Sider\\livecpk\\SP_Menu Light",
+    "n": 1544
+   },
+   {
+    "fuente": "base",
+    "contenedores": "Data/dt34_g4.cpk > download/dt80_100E_x64.cpk",
+    "n": 1413
+   },
+   {
+    "fuente": "conmegol",
+    "contenedores": "<sider>/content/miniface_server > <sider>\\livecpk\\Logos",
+    "n": 1245
+   },
+   {
+    "fuente": "base",
+    "contenedores": "Data/dt14_all.cpk > download/dt80_200E_x64.cpk",
+    "n": 997
+   },
+   {
+    "fuente": "base",
+    "contenedores": "Data/dt34_g4.cpk > download/dt80_200E_x64.cpk",
+    "n": 882
+   },
+   {
+    "fuente": "base",
+    "contenedores": "Data/dt14_all.cpk > download/dt80_400E_x64.cpk",
+    "n": 848
+   },
+   {
+    "fuente": "base",
+    "contenedores": "Data/dt14_all.cpk > download/dt80_500E_x64.cpk",
+    "n": 749
+   },
+   {
+    "fuente": "base",
+    "contenedores": "Data/dt34_g4.cpk > download/dt80_100E_x64.cpk > download/dt80_200E_x64.cpk",
+    "n": 636
+   },
+   {
+    "fuente": "base",
+    "contenedores": "Data/dt14_all.cpk > download/dt80_100E_x64.cpk",
+    "n": 618
+   },
+   {
+    "fuente": "sudamerican",
+    "contenedores": "download/SP_Faces_7.cpk > download/SP_Faces_9.cpk",
+    "n": 558
+   },
+   {
+    "fuente": "base",
+    "contenedores": "Data/dt34_g4.cpk > download/dt80_300E_x64.cpk",
+    "n": 544
+   },
+   {
+    "fuente": "base",
+    "contenedores": "Data/dt14_all.cpk > download/dt80_300E_x64.cpk",
+    "n": 492
+   },
+   {
+    "fuente": "sudamerican",
+    "contenedores": "download/SP_Faces_0.cpk > download/SP_Faces_2.cpk",
+    "n": 480
+   },
+   {
+    "fuente": "sudamerican",
+    "contenedores": "download/SP_Faces_6.cpk > download/SP_Faces_9.cpk",
+    "n": 471
+   },
+   {
+    "fuente": "sudamerican",
+    "contenedores": "<sider>\\livecpk\\SP_Minifaces > download/dt80_700E_x64.cpk",
+    "n": 460
+   },
+   {
+    "fuente": "sudamerican",
+    "contenedores": "download/SP_Faces_5.cpk > download/SP_Faces_9.cpk",
+    "n": 414
+   },
+   {
+    "fuente": "sudamerican",
+    "contenedores": "download/SP_Faces_2.cpk > download/SP_Faces_9.cpk",
+    "n": 401
+   },
+   {
+    "fuente": "sudamerican",
+    "contenedores": "download/SP_Faces_4.cpk > download/SP_Faces_9.cpk",
+    "n": 354
+   },
+   {
+    "fuente": "base",
+    "contenedores": "Data/dt14_all.cpk > download/dt80_600E_x64.cpk",
+    "n": 325
+   },
+   {
+    "fuente": "base",
+    "contenedores": "Data/dt34_g4.cpk > download/dt80_600E_x64.cpk",
+    "n": 324
+   },
+   {
+    "fuente": "conmegol",
+    "contenedores": "<sider>\\livecpk\\Kits > D:\\Frank\\IA\\CLAUDE\\pes-graficos\\paquete_camisetas\\Phoenix-Camisetas-Mips",
+    "n": 320
+   },
+   {
+    "fuente": "sudamerican",
+    "contenedores": "download/SP_Faces_8.cpk > download/SP_Faces_9.cpk",
+    "n": 314
+   },
+   {
+    "fuente": "base",
+    "contenedores": "Data/dt14_all.cpk > download/dt80_500E_x64.cpk > download/dt80_600E_x64.cpk",
+    "n": 272
+   }
+  ],
+  "identidad_jugadores_revisar": {
+   "bajo": 562,
+   "ALTO: cara en las dos": 117,
+   "medio: minicara en las dos": 32
+  }
+ },
+ "contenedores": [
+  {
+   "fuente": "sudamerican",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\SP_Minifaces",
+   "activo": "si",
+   "prioridad": "101",
+   "minicara": 38964
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\SP_Minifaces",
+   "activo": "si",
+   "prioridad": "90",
+   "minicara": 38964
+  },
+  {
+   "fuente": "base",
+   "tipo": "cpk",
+   "contenedor": "Data/dt14_all.cpk",
+   "activo": "",
+   "prioridad": "",
+   "minicara": 14609
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\Faces",
+   "activo": "si",
+   "prioridad": "91",
+   "cara": 9209
+  },
+  {
+   "fuente": "base",
+   "tipo": "cpk",
+   "contenedor": "download/dt80_200E_x64.cpk",
+   "activo": "",
+   "prioridad": "",
+   "cara": 167,
+   "kit": 172,
+   "estadio": 4,
+   "minicara": 3365
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\Logos",
+   "activo": "si",
+   "prioridad": "92",
+   "minicara": 3680
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\Leyendas",
+   "activo": "si",
+   "prioridad": "100",
+   "minicara": 747,
+   "cara": 2778
+  },
+  {
+   "fuente": "base",
+   "tipo": "cpk",
+   "contenedor": "download/dt80_500E_x64.cpk",
+   "activo": "",
+   "prioridad": "",
+   "balon": 1,
+   "cara": 128,
+   "kit": 34,
+   "minicara": 2981,
+   "estadio": 1
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "content",
+   "contenedor": "<sider>/content/miniface_server",
+   "activo": "",
+   "prioridad": "",
+   "minicara": 2930
+  },
+  {
+   "fuente": "sudamerican",
+   "tipo": "content",
+   "contenedor": "<sider>/content/kit-server",
+   "activo": "",
+   "prioridad": "",
+   "kit": 2834
+  },
+  {
+   "fuente": "base",
+   "tipo": "cpk",
+   "contenedor": "download/dt80_400E_x64.cpk",
+   "activo": "",
+   "prioridad": "",
+   "balon": 1,
+   "cara": 100,
+   "kit": 46,
+   "minicara": 2606,
+   "estadio": 1
+  },
+  {
+   "fuente": "sudamerican",
+   "tipo": "content",
+   "contenedor": "<sider>/content/miniface_server",
+   "activo": "",
+   "prioridad": "",
+   "minicara": 2531
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "content",
+   "contenedor": "<sider>/content/kit-server",
+   "activo": "",
+   "prioridad": "",
+   "kit": 2258
+  },
+  {
+   "fuente": "base",
+   "tipo": "cpk",
+   "contenedor": "download/dt80_300E_x64.cpk",
+   "activo": "",
+   "prioridad": "",
+   "balon": 2,
+   "cara": 85,
+   "kit": 106,
+   "minicara": 1937,
+   "estadio": 2
+  },
+  {
+   "fuente": "base",
+   "tipo": "cpk",
+   "contenedor": "Data/dt36_g4.cpk",
+   "activo": "",
+   "prioridad": "",
+   "cara": 2087
+  },
+  {
+   "fuente": "base",
+   "tipo": "cpk",
+   "contenedor": "download/dt80_100E_x64.cpk",
+   "activo": "",
+   "prioridad": "",
+   "balon": 2,
+   "cara": 148,
+   "kit": 176,
+   "minicara": 1547,
+   "estadio": 5
+  },
+  {
+   "fuente": "sudamerican",
+   "tipo": "cpk",
+   "contenedor": "download/SP_Faces_5.cpk",
+   "activo": "",
+   "prioridad": "",
+   "cara": 1750
+  },
+  {
+   "fuente": "sudamerican",
+   "tipo": "cpk",
+   "contenedor": "download/SP_Faces_6.cpk",
+   "activo": "",
+   "prioridad": "",
+   "cara": 1750
+  },
+  {
+   "fuente": "sudamerican",
+   "tipo": "cpk",
+   "contenedor": "download/SP_Faces_7.cpk",
+   "activo": "",
+   "prioridad": "",
+   "cara": 1750
+  },
+  {
+   "fuente": "sudamerican",
+   "tipo": "cpk",
+   "contenedor": "download/SP_Faces_3.cpk",
+   "activo": "",
+   "prioridad": "",
+   "cara": 1749
+  },
+  {
+   "fuente": "sudamerican",
+   "tipo": "cpk",
+   "contenedor": "download/SP_Faces_4.cpk",
+   "activo": "",
+   "prioridad": "",
+   "cara": 1749
+  },
+  {
+   "fuente": "sudamerican",
+   "tipo": "cpk",
+   "contenedor": "download/SP_Faces_1.cpk",
+   "activo": "",
+   "prioridad": "",
+   "cara": 1746
+  },
+  {
+   "fuente": "sudamerican",
+   "tipo": "cpk",
+   "contenedor": "download/SP_Faces_2.cpk",
+   "activo": "",
+   "prioridad": "",
+   "cara": 1746
+  },
+  {
+   "fuente": "base",
+   "tipo": "cpk",
+   "contenedor": "download/dt80_600E_x64.cpk",
+   "activo": "",
+   "prioridad": "",
+   "cara": 128,
+   "kit": 41,
+   "minicara": 1492
+  },
+  {
+   "fuente": "sudamerican",
+   "tipo": "cpk",
+   "contenedor": "download/SP_Faces_8.cpk",
+   "activo": "",
+   "prioridad": "",
+   "cara": 1593
+  },
+  {
+   "fuente": "sudamerican",
+   "tipo": "content",
+   "contenedor": "<sider>/content/ball-server",
+   "activo": "",
+   "prioridad": "",
+   "balon": 1576
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "content",
+   "contenedor": "<sider>/content/ball-server",
+   "activo": "",
+   "prioridad": "",
+   "balon": 1576
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "content",
+   "contenedor": "<sider>/content/miniface_server",
+   "activo": "",
+   "prioridad": "",
+   "minicara": 1245
+  },
+  {
+   "fuente": "base",
+   "tipo": "cpk",
+   "contenedor": "download/dt80_700E_x64.cpk",
+   "activo": "",
+   "prioridad": "",
+   "cara": 100,
+   "minicara": 1097
+  },
+  {
+   "fuente": "sudamerican",
+   "tipo": "cpk",
+   "contenedor": "download/dt80_700E_x64.cpk",
+   "activo": "",
+   "prioridad": "",
+   "cara": 100,
+   "minicara": 1097
+  },
+  {
+   "fuente": "sudamerican",
+   "tipo": "cpk",
+   "contenedor": "download/SP_Faces_0.cpk",
+   "activo": "",
+   "prioridad": "",
+   "cara": 1062
+  },
+  {
+   "fuente": "sudamerican",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\SP_Licence",
+   "activo": "si",
+   "prioridad": "96",
+   "kit": 958
+  },
+  {
+   "fuente": "sudamerican",
+   "tipo": "content",
+   "contenedor": "<sider>/content/stadium-server",
+   "activo": "",
+   "prioridad": "",
+   "estadio": 882
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\Kits",
+   "activo": "si",
+   "prioridad": "94",
+   "kit": 848
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\Kits",
+   "activo": "si",
+   "prioridad": "96",
+   "kit": 795
+  },
+  {
+   "fuente": "sudamerican",
+   "tipo": "cpk",
+   "contenedor": "download/SP_Faces_9.cpk",
+   "activo": "",
+   "prioridad": "",
+   "cara": 755
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "content",
+   "contenedor": "<sider>/content/stadium-server",
+   "activo": "",
+   "prioridad": "",
+   "estadio": 647
+  },
+  {
+   "fuente": "base",
+   "tipo": "cpk",
+   "contenedor": "Data/dt34_g4.cpk",
+   "activo": "",
+   "prioridad": "",
+   "kit": 421
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "content",
+   "contenedor": "<sider>/content/kit-server",
+   "activo": "",
+   "prioridad": "",
+   "kit": 364
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\Managers",
+   "activo": "si",
+   "prioridad": "103",
+   "cara": 348
+  },
+  {
+   "fuente": "sudamerican",
+   "tipo": "cpk",
+   "contenedor": "download/SP_Faces_11.cpk",
+   "activo": "",
+   "prioridad": "",
+   "cara": 207
+  },
+  {
+   "fuente": "sudamerican",
+   "tipo": "cpk",
+   "contenedor": "download/SP_Faces_12.cpk",
+   "activo": "",
+   "prioridad": "",
+   "cara": 163
+  },
+  {
+   "fuente": "sudamerican",
+   "tipo": "content",
+   "contenedor": "<sider>/content/Master-League-Selector",
+   "activo": "",
+   "prioridad": "",
+   "cara": 158,
+   "balon": 1
+  },
+  {
+   "fuente": "sudamerican",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\SP_Global",
+   "activo": "si",
+   "prioridad": "92",
+   "cara": 125
+  },
+  {
+   "fuente": "base",
+   "tipo": "cpk",
+   "contenedor": "Data/dt15_x64.cpk",
+   "activo": "",
+   "prioridad": "",
+   "balon": 49,
+   "estadio": 57
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Accessory-Bandages",
+   "activo": "si",
+   "prioridad": "15",
+   "cara": 98
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Accessory-Bandages",
+   "activo": "si",
+   "prioridad": "3",
+   "cara": 98
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "content",
+   "contenedor": "<sider>/content/ball-server",
+   "activo": "",
+   "prioridad": "",
+   "balon": 88
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\Next Gen Graphics",
+   "activo": "si",
+   "prioridad": "12",
+   "estadio": 68
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\SP_Faces",
+   "activo": "si",
+   "prioridad": "82",
+   "cara": 68
+  },
+  {
+   "fuente": "base",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\content\\livecpk\\PHX_FX_BLM",
+   "activo": "si",
+   "prioridad": "5",
+   "estadio": 64
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "D:\\Frank\\IA\\CLAUDE\\pes-graficos\\paquete_bloom\\Phoenix-Bloom",
+   "activo": "no",
+   "prioridad": "9",
+   "estadio": 64
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\Turfs",
+   "activo": "si",
+   "prioridad": "111",
+   "estadio": 63
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "D:\\SP2026\\Sudamerican Project Sider\\livecpk\\SP_Menu Light",
+   "activo": "si",
+   "prioridad": "11",
+   "estadio": 58
+  },
+  {
+   "fuente": "sudamerican",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\SP_Menu Light",
+   "activo": "si",
+   "prioridad": "99",
+   "estadio": 58
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\SP_Menu Light",
+   "activo": "si",
+   "prioridad": "88",
+   "estadio": 58
+  },
+  {
+   "fuente": "sudamerican",
+   "tipo": "cpk",
+   "contenedor": "download/SP_Faces_10.cpk",
+   "activo": "",
+   "prioridad": "",
+   "cara": 54
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "content",
+   "contenedor": "<sider>/content/stadium-server",
+   "activo": "",
+   "prioridad": "",
+   "estadio": 54
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "content",
+   "contenedor": "<sider>/content/fans-server",
+   "activo": "",
+   "prioridad": "",
+   "estadio": 44
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Shirt-Adidas\\Liverpool",
+   "activo": "si",
+   "prioridad": "58",
+   "cara": 39
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Shirt-Adidas\\Newcastle United",
+   "activo": "si",
+   "prioridad": "60",
+   "cara": 39
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Shirt-Adidas\\Real Madrid",
+   "activo": "si",
+   "prioridad": "61",
+   "cara": 39
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Shirt-Adidas\\Liverpool",
+   "activo": "si",
+   "prioridad": "46",
+   "cara": 39
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Shirt-Adidas\\Newcastle United",
+   "activo": "si",
+   "prioridad": "48",
+   "cara": 39
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Shirt-Adidas\\Real Madrid",
+   "activo": "si",
+   "prioridad": "49",
+   "cara": 39
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Shirt-Adidas\\Juventus",
+   "activo": "si",
+   "prioridad": "56",
+   "cara": 38
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Shirt-Adidas\\Manchester United",
+   "activo": "si",
+   "prioridad": "59",
+   "cara": 38
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Shirt-Adidas\\Juventus",
+   "activo": "si",
+   "prioridad": "44",
+   "cara": 38
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Shirt-Adidas\\Manchester United",
+   "activo": "si",
+   "prioridad": "47",
+   "cara": 38
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Pants-Shorter",
+   "activo": "si",
+   "prioridad": "44",
+   "cara": 36
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Pants-Shorter",
+   "activo": "si",
+   "prioridad": "32",
+   "cara": 36
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Shirt-Adidas\\Arsenal",
+   "activo": "si",
+   "prioridad": "50",
+   "cara": 34
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Shirt-Adidas\\Arsenal",
+   "activo": "si",
+   "prioridad": "38",
+   "cara": 34
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Shirt-Adidas\\As Roma",
+   "activo": "si",
+   "prioridad": "51",
+   "cara": 33
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Shirt-Adidas\\Como 1907",
+   "activo": "si",
+   "prioridad": "54",
+   "cara": 33
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Shirt-Adidas\\As Roma",
+   "activo": "si",
+   "prioridad": "39",
+   "cara": 33
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Shirt-Adidas\\Como 1907",
+   "activo": "si",
+   "prioridad": "42",
+   "cara": 33
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Shirt-Adidas\\Aston Villa",
+   "activo": "si",
+   "prioridad": "52",
+   "cara": 31
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Shirt-Adidas\\Bayern Munich",
+   "activo": "si",
+   "prioridad": "53",
+   "cara": 31
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Shirt-Adidas\\Aston Villa",
+   "activo": "si",
+   "prioridad": "40",
+   "cara": 31
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Shirt-Adidas\\Bayern Munich",
+   "activo": "si",
+   "prioridad": "41",
+   "cara": 31
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Shirt-Adidas\\Leeds United",
+   "activo": "si",
+   "prioridad": "57",
+   "cara": 29
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Shirt-Adidas\\Leeds United",
+   "activo": "si",
+   "prioridad": "45",
+   "cara": 29
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Shirt-Adidas\\Fulham",
+   "activo": "si",
+   "prioridad": "55",
+   "cara": 27
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Shirt-Adidas\\Fulham",
+   "activo": "si",
+   "prioridad": "43",
+   "cara": 27
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Grip Sock-Dual Color All Teams",
+   "activo": "si",
+   "prioridad": "36",
+   "cara": 26
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Grip Sock-Dual Color All Teams",
+   "activo": "si",
+   "prioridad": "24",
+   "cara": 26
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Pants-Baggy",
+   "activo": "si",
+   "prioridad": "42",
+   "cara": 25
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sock-Holes",
+   "activo": "si",
+   "prioridad": "78",
+   "cara": 25
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Pants-Baggy",
+   "activo": "si",
+   "prioridad": "30",
+   "cara": 25
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sock-Holes",
+   "activo": "si",
+   "prioridad": "66",
+   "cara": 25
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Grip Sock-Extra Long",
+   "activo": "si",
+   "prioridad": "38",
+   "cara": 24
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Grip Sock-Extra Long",
+   "activo": "si",
+   "prioridad": "26",
+   "cara": 24
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Wristtaping Longer",
+   "activo": "si",
+   "prioridad": "85",
+   "cara": 23
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Wristtaping Longer",
+   "activo": "si",
+   "prioridad": "73",
+   "cara": 23
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Special Body",
+   "activo": "si",
+   "prioridad": "14",
+   "cara": 21
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Grip Sock-Long",
+   "activo": "si",
+   "prioridad": "39",
+   "cara": 21
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Special Body",
+   "activo": "si",
+   "prioridad": "2",
+   "cara": 21
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Grip Sock-Long",
+   "activo": "si",
+   "prioridad": "27",
+   "cara": 21
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sleeve Inner-Half",
+   "activo": "si",
+   "prioridad": "62",
+   "cara": 17
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sleeve Inner-Half",
+   "activo": "si",
+   "prioridad": "50",
+   "cara": 17
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Shirt-Baggy",
+   "activo": "si",
+   "prioridad": "49",
+   "cara": 15
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sock-Middle High",
+   "activo": "si",
+   "prioridad": "79",
+   "cara": 15
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Shirt-Baggy",
+   "activo": "si",
+   "prioridad": "37",
+   "cara": 15
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sock-Middle High",
+   "activo": "si",
+   "prioridad": "67",
+   "cara": 15
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Grip Sock-Short",
+   "activo": "si",
+   "prioridad": "40",
+   "cara": 12
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Grip Sock-Short",
+   "activo": "si",
+   "prioridad": "28",
+   "cara": 12
+  },
+  {
+   "fuente": "base",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\content\\livecpk\\PHX_ENV_TRF",
+   "activo": "si",
+   "prioridad": "1",
+   "estadio": 10
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "D:\\Frank\\IA\\CLAUDE\\pes-graficos\\paquete_cesped\\Phoenix-Cesped-Mips",
+   "activo": "no",
+   "prioridad": "5",
+   "estadio": 10
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sleeve Roll Up-Forearm Both Tattoo",
+   "activo": "si",
+   "prioridad": "73",
+   "cara": 8
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sleeve Roll Up-Forearm Both Tattoo",
+   "activo": "si",
+   "prioridad": "61",
+   "cara": 8
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Leg-Curves",
+   "activo": "si",
+   "prioridad": "41",
+   "cara": 7
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Wristtaping Longer GK",
+   "activo": "si",
+   "prioridad": "87",
+   "cara": 7
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\Worn Turf",
+   "activo": "si",
+   "prioridad": "110",
+   "estadio": 7
+  },
+  {
+   "fuente": "sudamerican",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\SP_Worn Turf",
+   "activo": "si",
+   "prioridad": "106",
+   "estadio": 7
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Leg-Curves",
+   "activo": "si",
+   "prioridad": "29",
+   "cara": 7
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Wristtaping Longer GK",
+   "activo": "si",
+   "prioridad": "75",
+   "cara": 7
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\SP_Worn Turf",
+   "activo": "si",
+   "prioridad": "95",
+   "estadio": 7
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sleeve Roll Up-Forearm Both",
+   "activo": "si",
+   "prioridad": "72",
+   "cara": 6
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sock-Extreme Short",
+   "activo": "si",
+   "prioridad": "83",
+   "cara": 6
+  },
+  {
+   "fuente": "sudamerican",
+   "tipo": "content",
+   "contenedor": "<sider>/content/Stadium_Banner",
+   "activo": "",
+   "prioridad": "",
+   "estadio": 6
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sleeve Roll Up-Forearm Both",
+   "activo": "si",
+   "prioridad": "60",
+   "cara": 6
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sock-Extreme Short",
+   "activo": "si",
+   "prioridad": "71",
+   "cara": 6
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "content",
+   "contenedor": "<sider>/content/Stadium_Banner",
+   "activo": "",
+   "prioridad": "",
+   "estadio": 6
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sleeve Roll Up-Elbow No Tattoo",
+   "activo": "si",
+   "prioridad": "70",
+   "cara": 5
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Wristtaping Shorter",
+   "activo": "si",
+   "prioridad": "88",
+   "cara": 5
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sleeve Roll Up-Elbow No Tattoo",
+   "activo": "si",
+   "prioridad": "58",
+   "cara": 5
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Wristtaping Shorter",
+   "activo": "si",
+   "prioridad": "76",
+   "cara": 5
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Arm Muscle",
+   "activo": "si",
+   "prioridad": "16",
+   "cara": 4
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sleeve Inner-One Side L",
+   "activo": "si",
+   "prioridad": "64",
+   "cara": 4
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sleeve Roll Up-Elbow GK",
+   "activo": "si",
+   "prioridad": "68",
+   "cara": 4
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Arm Muscle",
+   "activo": "si",
+   "prioridad": "4",
+   "cara": 4
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sleeve Inner-One Side L",
+   "activo": "si",
+   "prioridad": "52",
+   "cara": 4
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sleeve Roll Up-Elbow GK",
+   "activo": "si",
+   "prioridad": "56",
+   "cara": 4
+  },
+  {
+   "fuente": "base",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\content\\livecpk\\PHX_KIT_MIP",
+   "activo": "si",
+   "prioridad": "2",
+   "kit": 3
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "D:\\Frank\\IA\\CLAUDE\\pes-graficos\\paquete_camisetas\\Phoenix-Camisetas-Mips",
+   "activo": "no",
+   "prioridad": "6",
+   "kit": 3
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Grip Sock-Dual Color FCB",
+   "activo": "si",
+   "prioridad": "37",
+   "cara": 3
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sleeve Roll Up-Elbow Tattoo",
+   "activo": "si",
+   "prioridad": "71",
+   "cara": 3
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sock-Extreme Short with Shinpads",
+   "activo": "si",
+   "prioridad": "84",
+   "cara": 3
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\BannerStadium",
+   "activo": "si",
+   "prioridad": "99",
+   "estadio": 3
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Grip Sock-Dual Color FCB",
+   "activo": "si",
+   "prioridad": "25",
+   "cara": 3
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sleeve Roll Up-Elbow Tattoo",
+   "activo": "si",
+   "prioridad": "59",
+   "cara": 3
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sock-Extreme Short with Shinpads",
+   "activo": "si",
+   "prioridad": "72",
+   "cara": 3
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Gloves-Brands\\Adidas",
+   "activo": "si",
+   "prioridad": "17",
+   "cara": 2
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Gloves-Brands\\Nike",
+   "activo": "si",
+   "prioridad": "20",
+   "cara": 2
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Pants-Extra Baggy",
+   "activo": "si",
+   "prioridad": "43",
+   "cara": 2
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sleeve Inner-Half GK",
+   "activo": "si",
+   "prioridad": "63",
+   "cara": 2
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sleeve Inner-One Side L Half",
+   "activo": "si",
+   "prioridad": "65",
+   "cara": 2
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sleeve Roll Up-Forearm L",
+   "activo": "si",
+   "prioridad": "74",
+   "cara": 2
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sock-Short",
+   "activo": "si",
+   "prioridad": "82",
+   "cara": 2
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\ShirtlessCelebration",
+   "activo": "si",
+   "prioridad": "113",
+   "cara": 2
+  },
+  {
+   "fuente": "sudamerican",
+   "tipo": "content",
+   "contenedor": "<sider>/content/Entrance",
+   "activo": "",
+   "prioridad": "",
+   "estadio": 2
+  },
+  {
+   "fuente": "sudamerican",
+   "tipo": "content",
+   "contenedor": "<sider>/content/Stadium_Tunnel",
+   "activo": "",
+   "prioridad": "",
+   "estadio": 2
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Gloves-Brands\\Adidas",
+   "activo": "si",
+   "prioridad": "5",
+   "cara": 2
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Gloves-Brands\\Nike",
+   "activo": "si",
+   "prioridad": "8",
+   "cara": 2
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Pants-Extra Baggy",
+   "activo": "si",
+   "prioridad": "31",
+   "cara": 2
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sleeve Inner-Half GK",
+   "activo": "si",
+   "prioridad": "51",
+   "cara": 2
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sleeve Inner-One Side L Half",
+   "activo": "si",
+   "prioridad": "53",
+   "cara": 2
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sleeve Roll Up-Forearm L",
+   "activo": "si",
+   "prioridad": "62",
+   "cara": 2
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sock-Short",
+   "activo": "si",
+   "prioridad": "70",
+   "cara": 2
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "content",
+   "contenedor": "<sider>/content/Stadium_Tunnel",
+   "activo": "",
+   "prioridad": "",
+   "estadio": 2
+  },
+  {
+   "fuente": "base",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\content\\livecpk\\PHX_LGT_GI",
+   "activo": "si",
+   "prioridad": "4",
+   "estadio": 1
+  },
+  {
+   "fuente": "base",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\content\\livecpk\\PHX_FX_LUT",
+   "activo": "si",
+   "prioridad": "6",
+   "estadio": 1
+  },
+  {
+   "fuente": "base",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\ball-root",
+   "activo": "no_listado",
+   "prioridad": "",
+   "balon": 1
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "D:\\Frank\\IA\\CLAUDE\\pes-graficos\\paquete_rebote05_campnou\\Phoenix-Rebote05-CampNou",
+   "activo": "no",
+   "prioridad": "8",
+   "estadio": 1
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "D:\\Frank\\IA\\CLAUDE\\pes-graficos\\paquete_tinte_fuerte\\Phoenix-Tinte-Piel-Fuerte",
+   "activo": "no",
+   "prioridad": "10",
+   "estadio": 1
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Gloves-Brands\\Bayern Munich",
+   "activo": "si",
+   "prioridad": "18",
+   "cara": 1
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Gloves-Brands\\Ejendals Tegera",
+   "activo": "si",
+   "prioridad": "19",
+   "cara": 1
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Gloves-Brands\\Northwave Skeleton",
+   "activo": "si",
+   "prioridad": "21",
+   "cara": 1
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Gloves-Brands\\Precision",
+   "activo": "si",
+   "prioridad": "22",
+   "cara": 1
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Gloves-Brands\\Real Madrid",
+   "activo": "si",
+   "prioridad": "23",
+   "cara": 1
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Gloves-Brands\\Sondico",
+   "activo": "si",
+   "prioridad": "24",
+   "cara": 1
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Gloves-Brands\\Stanno",
+   "activo": "si",
+   "prioridad": "25",
+   "cara": 1
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Gloves-Brands\\The North Face",
+   "activo": "si",
+   "prioridad": "26",
+   "cara": 1
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Grip Sock-Brands\\Adidas",
+   "activo": "si",
+   "prioridad": "27",
+   "cara": 1
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Grip Sock-Brands\\Falke",
+   "activo": "si",
+   "prioridad": "28",
+   "cara": 1
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Grip Sock-Brands\\Gravity",
+   "activo": "si",
+   "prioridad": "29",
+   "cara": 1
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Grip Sock-Brands\\Metasox",
+   "activo": "si",
+   "prioridad": "30",
+   "cara": 1
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Grip Sock-Brands\\Nike",
+   "activo": "si",
+   "prioridad": "31",
+   "cara": 1
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Grip Sock-Brands\\Storelli",
+   "activo": "si",
+   "prioridad": "33",
+   "cara": 1
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Grip Sock-Brands\\Tapedesign",
+   "activo": "si",
+   "prioridad": "34",
+   "cara": 1
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Grip Sock-Brands\\TruSox",
+   "activo": "si",
+   "prioridad": "35",
+   "cara": 1
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sleeve Inner-One Side R",
+   "activo": "si",
+   "prioridad": "66",
+   "cara": 1
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sleeve Inner-One Side R Half",
+   "activo": "si",
+   "prioridad": "67",
+   "cara": 1
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sleeve Roll Up-Elbow GK Tattoo",
+   "activo": "si",
+   "prioridad": "69",
+   "cara": 1
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sleeve Roll Up-Forearm L Tattoo",
+   "activo": "si",
+   "prioridad": "75",
+   "cara": 1
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sleeve Roll Up-Forearm R",
+   "activo": "si",
+   "prioridad": "76",
+   "cara": 1
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sleeve Roll Up-Forearm R Tattoo",
+   "activo": "si",
+   "prioridad": "77",
+   "cara": 1
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sock-Shinpads V1",
+   "activo": "si",
+   "prioridad": "80",
+   "cara": 1
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sock-Shinpads V2",
+   "activo": "si",
+   "prioridad": "81",
+   "cara": 1
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Wristtaping Extra Longer",
+   "activo": "si",
+   "prioridad": "86",
+   "cara": 1
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\Adboards",
+   "activo": "si",
+   "prioridad": "90",
+   "estadio": 1
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "content",
+   "contenedor": "<sider>/content/Banners-Server",
+   "activo": "",
+   "prioridad": "",
+   "estadio": 1
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "content",
+   "contenedor": "<sider>/content/Master-League-Selector",
+   "activo": "",
+   "prioridad": "",
+   "cara": 1
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "content",
+   "contenedor": "<sider>/content/phoenix",
+   "activo": "",
+   "prioridad": "",
+   "estadio": 1
+  },
+  {
+   "fuente": "conmegol",
+   "tipo": "content",
+   "contenedor": "<sider>/content/Real-Time-Match-Manager",
+   "activo": "",
+   "prioridad": "",
+   "estadio": 1
+  },
+  {
+   "fuente": "sudamerican",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\SP_Details",
+   "activo": "si",
+   "prioridad": "90",
+   "cara": 1
+  },
+  {
+   "fuente": "sudamerican",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\SP_Faces",
+   "activo": "si",
+   "prioridad": "91",
+   "cara": 1
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Gloves-Brands\\Bayern Munich",
+   "activo": "si",
+   "prioridad": "6",
+   "cara": 1
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Gloves-Brands\\Ejendals Tegera",
+   "activo": "si",
+   "prioridad": "7",
+   "cara": 1
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Gloves-Brands\\Northwave Skeleton",
+   "activo": "si",
+   "prioridad": "9",
+   "cara": 1
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Gloves-Brands\\Precision",
+   "activo": "si",
+   "prioridad": "10",
+   "cara": 1
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Gloves-Brands\\Real Madrid",
+   "activo": "si",
+   "prioridad": "11",
+   "cara": 1
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Gloves-Brands\\Sondico",
+   "activo": "si",
+   "prioridad": "12",
+   "cara": 1
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Gloves-Brands\\Stanno",
+   "activo": "si",
+   "prioridad": "13",
+   "cara": 1
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Gloves-Brands\\The North Face",
+   "activo": "si",
+   "prioridad": "14",
+   "cara": 1
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Grip Sock-Brands\\Adidas",
+   "activo": "si",
+   "prioridad": "15",
+   "cara": 1
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Grip Sock-Brands\\Falke",
+   "activo": "si",
+   "prioridad": "16",
+   "cara": 1
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Grip Sock-Brands\\Gravity",
+   "activo": "si",
+   "prioridad": "17",
+   "cara": 1
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Grip Sock-Brands\\Metasox",
+   "activo": "si",
+   "prioridad": "18",
+   "cara": 1
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Grip Sock-Brands\\Nike",
+   "activo": "si",
+   "prioridad": "19",
+   "cara": 1
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Grip Sock-Brands\\Storelli",
+   "activo": "si",
+   "prioridad": "21",
+   "cara": 1
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Grip Sock-Brands\\Tapedesign",
+   "activo": "si",
+   "prioridad": "22",
+   "cara": 1
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Grip Sock-Brands\\TruSox",
+   "activo": "si",
+   "prioridad": "23",
+   "cara": 1
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sleeve Inner-One Side R",
+   "activo": "si",
+   "prioridad": "54",
+   "cara": 1
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sleeve Inner-One Side R Half",
+   "activo": "si",
+   "prioridad": "55",
+   "cara": 1
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sleeve Roll Up-Elbow GK Tattoo",
+   "activo": "si",
+   "prioridad": "57",
+   "cara": 1
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sleeve Roll Up-Forearm L Tattoo",
+   "activo": "si",
+   "prioridad": "63",
+   "cara": 1
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sleeve Roll Up-Forearm R",
+   "activo": "si",
+   "prioridad": "64",
+   "cara": 1
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sleeve Roll Up-Forearm R Tattoo",
+   "activo": "si",
+   "prioridad": "65",
+   "cara": 1
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sock-Shinpads V1",
+   "activo": "si",
+   "prioridad": "68",
+   "cara": 1
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sock-Shinpads V2",
+   "activo": "si",
+   "prioridad": "69",
+   "cara": 1
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Wristtaping Extra Longer",
+   "activo": "si",
+   "prioridad": "74",
+   "cara": 1
+  },
+  {
+   "fuente": "sud_wc26",
+   "tipo": "livecpk",
+   "contenedor": "<sider>\\livecpk\\SP_Details",
+   "activo": "no_listado",
+   "prioridad": "",
+   "cara": 1
+  }
+ ],
+ "errores_lectura": [
+  [
+   "sudamerican",
+   "cpk",
+   "download/SP_Adboards_1.cpk",
+   "error",
+   "",
+   "",
+   "error('unpack requires a buffer of 8 bytes')"
+  ],
+  [
+   "sudamerican",
+   "cpk",
+   "download/SP_Adboards_2.cpk",
+   "error",
+   "",
+   "",
+   "error('unpack requires a buffer of 8 bytes')"
+  ],
+  [
+   "sudamerican",
+   "cpk",
+   "download/SP_Adboards_3.cpk",
+   "error",
+   "",
+   "",
+   "error('unpack requires a buffer of 8 bytes')"
+  ],
+  [
+   "sudamerican",
+   "cpk",
+   "download/SP_Adboards_4.cpk",
+   "error",
+   "",
+   "",
+   "error('unpack requires a buffer of 8 bytes')"
+  ],
+  [
+   "sudamerican",
+   "cpk",
+   "download/SP_Adboards_5.cpk",
+   "error",
+   "",
+   "",
+   "error('unpack requires a buffer of 8 bytes')"
+  ],
+  [
+   "sudamerican",
+   "cpk",
+   "download/SP_Adboards_6.cpk",
+   "error",
+   "",
+   "",
+   "error('unpack requires a buffer of 8 bytes')"
+  ],
+  [
+   "sudamerican",
+   "cpk",
+   "download/SP_Adboards_7.cpk",
+   "error",
+   "",
+   "",
+   "error('unpack requires a buffer of 8 bytes')"
+  ],
+  [
+   "sudamerican",
+   "cpk",
+   "download/dt80_300E_x64.cpk",
+   "error",
+   "",
+   "",
+   "ValueError('sin TOC')"
+  ],
+  [
+   "sudamerican",
+   "cpk",
+   "download/dt80_400E_x64.cpk",
+   "error",
+   "",
+   "",
+   "ValueError('sin TOC')"
+  ],
+  [
+   "sudamerican",
+   "cpk",
+   "download/dt80_500E_x64.cpk",
+   "error",
+   "",
+   "",
+   "ValueError('sin TOC')"
+  ],
+  [
+   "sudamerican",
+   "cpk",
+   "download/dt80_600E_x64.cpk",
+   "error",
+   "",
+   "",
+   "ValueError('sin TOC')"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-BASE V2.6",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=0"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Special Body",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=1"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Accessory-Bandages",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=2"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Arm Muscle",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=3"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Gloves-Brands\\Adidas",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=4"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Gloves-Brands\\Bayern Munich",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=5"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Gloves-Brands\\Ejendals Tegera",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=6"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Gloves-Brands\\Nike",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=7"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Gloves-Brands\\Northwave Skeleton",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=8"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Gloves-Brands\\Precision",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=9"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Gloves-Brands\\Real Madrid",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=10"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Gloves-Brands\\Sondico",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=11"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Gloves-Brands\\Stanno",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=12"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Gloves-Brands\\The North Face",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=13"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Grip Sock-Brands\\Adidas",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=14"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Grip Sock-Brands\\Falke",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=15"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Grip Sock-Brands\\Gravity",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=16"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Grip Sock-Brands\\Metasox",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=17"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Grip Sock-Brands\\Nike",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=18"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Grip Sock-Brands\\SoxPro",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=19"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Grip Sock-Brands\\Storelli",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=20"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Grip Sock-Brands\\Tapedesign",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=21"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Grip Sock-Brands\\TruSox",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=22"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Grip Sock-Dual Color All Teams",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=23"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Grip Sock-Dual Color FCB",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=24"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Grip Sock-Extra Long",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=25"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Grip Sock-Long",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=26"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Grip Sock-Short",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=27"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Leg-Curves",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=28"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Pants-Baggy",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=29"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Pants-Extra Baggy",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=30"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Pants-Shorter",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=31"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Referee Body-Female",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=32"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Referee Body-Male",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=33"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Referee Faces-Female",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=34"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Referee Faces-Male",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=35"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Shirt-Baggy",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=36"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Shirt-Adidas\\Arsenal",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=37"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Shirt-Adidas\\As Roma",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=38"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Shirt-Adidas\\Aston Villa",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=39"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Shirt-Adidas\\Bayern Munich",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=40"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Shirt-Adidas\\Como 1907",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=41"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Shirt-Adidas\\Fulham",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=42"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Shirt-Adidas\\Juventus",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=43"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Shirt-Adidas\\Leeds United",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=44"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Shirt-Adidas\\Liverpool",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=45"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Shirt-Adidas\\Manchester United",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=46"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Shirt-Adidas\\Newcastle United",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=47"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Shirt-Adidas\\Real Madrid",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=48"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sleeve Inner-Half",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=49"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sleeve Inner-Half GK",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=50"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sleeve Inner-One Side L",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=51"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sleeve Inner-One Side L Half",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=52"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sleeve Inner-One Side R",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=53"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sleeve Inner-One Side R Half",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=54"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sleeve Roll Up-Elbow GK",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=55"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sleeve Roll Up-Elbow GK Tattoo",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=56"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sleeve Roll Up-Elbow No Tattoo",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=57"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sleeve Roll Up-Elbow Tattoo",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=58"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sleeve Roll Up-Forearm Both",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=59"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sleeve Roll Up-Forearm Both Tattoo",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=60"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sleeve Roll Up-Forearm L",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=61"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sleeve Roll Up-Forearm L Tattoo",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=62"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sleeve Roll Up-Forearm R",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=63"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sleeve Roll Up-Forearm R Tattoo",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=64"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sock-Holes",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=65"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sock-Middle High",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=66"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sock-Shinpads V1",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=67"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sock-Shinpads V2",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=68"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sock-Short",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=69"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sock-Extreme Short",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=70"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Sock-Extreme Short with Shinpads",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=71"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Wristtaping Longer",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=72"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Wristtaping Extra Longer",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=73"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Wristtaping Longer GK",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=74"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\PRDX_Body Model-Add On V2.6\\Wristtaping Shorter",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=75"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\SP_cursorfc24",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=89"
+  ],
+  [
+   "sudamerican",
+   "livecpk",
+   "<sider>\\livecpk\\SP_Lightmod",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=97"
+  ],
+  [
+   "sud_wc26",
+   "livecpk",
+   "<sider>\\livecpk\\SP_Lightmod",
+   "no_existe",
+   "",
+   "",
+   "activo=True prio=85"
+  ]
+ ],
+ "ejemplos_identidad": [
+  {
+   "categoria": "kit",
+   "id": "1",
+   "conmegol_es": "Republic of Ireland",
+   "sudamerican_es": "Ireland",
+   "id_phoenix_conmegol": "PXT-00961",
+   "id_phoenix_sudamerican": "PXT-00690"
+  },
+  {
+   "categoria": "kit",
+   "id": "13",
+   "conmegol_es": "Czech Republic",
+   "sudamerican_es": "Czechia",
+   "id_phoenix_conmegol": "PXT-00448",
+   "id_phoenix_sudamerican": "PXT-00449"
+  },
+  {
+   "categoria": "kit",
+   "id": "29",
+   "conmegol_es": "Turkey",
+   "sudamerican_es": "Türkiye",
+   "id_phoenix_conmegol": "PXT-01109",
+   "id_phoenix_sudamerican": "PXT-01110"
+  },
+  {
+   "categoria": "kit",
+   "id": "100",
+   "conmegol_es": "Manchester United FC",
+   "sudamerican_es": "Manchester United",
+   "id_phoenix_conmegol": "PXT-00785",
+   "id_phoenix_sudamerican": "PXT-00784"
+  },
+  {
+   "categoria": "kit",
+   "id": "113",
+   "conmegol_es": "Olympique de Marsella",
+   "sudamerican_es": "Olympique Marseille",
+   "id_phoenix_conmegol": "PXT-00863",
+   "id_phoenix_sudamerican": "PXT-00865"
+  },
+  {
+   "categoria": "kit",
+   "id": "114",
+   "conmegol_es": "París Saint-Germain FC",
+   "sudamerican_es": "Paris Saint-Germain",
+   "id_phoenix_conmegol": "PXT-00886",
+   "id_phoenix_sudamerican": "PXT-00885"
+  },
+  {
+   "categoria": "kit",
+   "id": "123",
+   "conmegol_es": "Parma Calcio",
+   "sudamerican_es": "Parma Calcio 1913",
+   "id_phoenix_conmegol": "PXT-00887",
+   "id_phoenix_sudamerican": "PXT-00888"
+  },
+  {
+   "categoria": "kit",
+   "id": "127",
+   "conmegol_es": "FC Bayern Múnich",
+   "sudamerican_es": "Bayern Munich",
+   "id_phoenix_conmegol": "PXT-00559",
+   "id_phoenix_sudamerican": "PXT-00155"
+  },
+  {
+   "categoria": "kit",
+   "id": "130",
+   "conmegol_es": "Galatasaray SK",
+   "sudamerican_es": "Galatasaray",
+   "id_phoenix_conmegol": "PXT-00609",
+   "id_phoenix_sudamerican": "PXT-00608"
+  },
+  {
+   "categoria": "kit",
+   "id": "133",
+   "conmegol_es": "Olympiacos FC",
+   "sudamerican_es": "Olympiacos Piraeus",
+   "id_phoenix_conmegol": "PXT-00860",
+   "id_phoenix_sudamerican": "PXT-00861"
+  },
+  {
+   "categoria": "kit",
+   "id": "138",
+   "conmegol_es": "CA River Plate",
+   "sudamerican_es": "River Plate",
+   "id_phoenix_conmegol": "PXT-00243",
+   "id_phoenix_sudamerican": "PXT-00965"
+  },
+  {
+   "categoria": "kit",
+   "id": "139",
+   "conmegol_es": "CA Boca Juniors",
+   "sudamerican_es": "Boca Juniors",
+   "id_phoenix_conmegol": "PXT-00209",
+   "id_phoenix_sudamerican": "PXT-00165"
+  },
+  {
+   "categoria": "kit",
+   "id": "181",
+   "conmegol_es": "Olympique de Lyon",
+   "sudamerican_es": "Olympique Lyon",
+   "id_phoenix_conmegol": "PXT-00862",
+   "id_phoenix_sudamerican": "PXT-00864"
+  },
+  {
+   "categoria": "kit",
+   "id": "186",
+   "conmegol_es": "Bologna FC",
+   "sudamerican_es": "Bologna FC 1909",
+   "id_phoenix_conmegol": "PXT-00170",
+   "id_phoenix_sudamerican": "PXT-00171"
+  },
+  {
+   "categoria": "kit",
+   "id": "193",
+   "conmegol_es": "Sporting CP",
+   "sudamerican_es": "Sporting de Lisboa",
+   "id_phoenix_conmegol": "PXT-01052",
+   "id_phoenix_sudamerican": "PXT-01054"
+  },
+  {
+   "categoria": "kit",
+   "id": "217",
+   "conmegol_es": "OGC Niza",
+   "sudamerican_es": "OGC Nice",
+   "id_phoenix_conmegol": "PXT-00856",
+   "id_phoenix_sudamerican": "PXT-00855"
+  },
+  {
+   "categoria": "kit",
+   "id": "221",
+   "conmegol_es": "Toulouse FC",
+   "sudamerican_es": "FC Toulouse",
+   "id_phoenix_conmegol": "PXT-01102",
+   "id_phoenix_sudamerican": "PXT-00584"
+  },
+  {
+   "categoria": "kit",
+   "id": "269",
+   "conmegol_es": "Club Brujas KV",
+   "sudamerican_es": "Club Brugge KV",
+   "id_phoenix_conmegol": "PXT-00359",
+   "id_phoenix_sudamerican": "PXT-00358"
+  },
+  {
+   "categoria": "kit",
+   "id": "1207",
+   "conmegol_es": "FC Copenhague",
+   "sudamerican_es": "FC Copenhagen",
+   "id_phoenix_conmegol": "PXT-00565",
+   "id_phoenix_sudamerican": "PXT-00564"
+  },
+  {
+   "categoria": "kit",
+   "id": "1236",
+   "conmegol_es": "AA Argentinos Juniors",
+   "sudamerican_es": "Argentinos Juniors",
+   "id_phoenix_conmegol": "PXT-00021",
+   "id_phoenix_sudamerican": "PXT-00095"
+  },
+  {
+   "categoria": "kit",
+   "id": "1238",
+   "conmegol_es": "Club Estudiantes La Plata",
+   "sudamerican_es": "Estudiantes de La Plata",
+   "id_phoenix_conmegol": "PXT-00368",
+   "id_phoenix_sudamerican": "PXT-00541"
+  },
+  {
+   "categoria": "kit",
+   "id": "1240",
+   "conmegol_es": "CA Independiente",
+   "sudamerican_es": "Independiente",
+   "id_phoenix_conmegol": "PXT-00226",
+   "id_phoenix_sudamerican": "PXT-00670"
+  },
+  {
+   "categoria": "kit",
+   "id": "1242",
+   "conmegol_es": "CA Rosario Central",
+   "sudamerican_es": "Rosario Central",
+   "id_phoenix_conmegol": "PXT-00244",
+   "id_phoenix_sudamerican": "PXT-00971"
+  },
+  {
+   "categoria": "kit",
+   "id": "1243",
+   "conmegol_es": "CA San Lorenzo",
+   "sudamerican_es": "San Lorenzo de Almagro",
+   "id_phoenix_conmegol": "PXT-00245",
+   "id_phoenix_sudamerican": "PXT-00991"
+  },
+  {
+   "categoria": "kit",
+   "id": "1244",
+   "conmegol_es": "CA Vélez Sarsfield",
+   "sudamerican_es": "Vélez Sarsfield",
+   "id_phoenix_conmegol": "PXT-00255",
+   "id_phoenix_sudamerican": "PXT-01154"
+  },
+  {
+   "categoria": "kit",
+   "id": "1246",
+   "conmegol_es": "Botafogo",
+   "sudamerican_es": "Botafogo de Futebol e Regatas",
+   "id_phoenix_conmegol": "PXT-00176",
+   "id_phoenix_sudamerican": "PXT-00177"
+  },
+  {
+   "categoria": "kit",
+   "id": "1247",
+   "conmegol_es": "SC Corinthians",
+   "sudamerican_es": "Corinthians",
+   "id_phoenix_conmegol": "PXT-01013",
+   "id_phoenix_sudamerican": "PXT-00407"
+  },
+  {
+   "categoria": "kit",
+   "id": "1249",
+   "conmegol_es": "Fluminense FC",
+   "sudamerican_es": "Fluminense",
+   "id_phoenix_conmegol": "PXT-00596",
+   "id_phoenix_sudamerican": "PXT-00595"
+  },
+  {
+   "categoria": "kit",
+   "id": "1250",
+   "conmegol_es": "Grêmio",
+   "sudamerican_es": "Grêmio FBPA",
+   "id_phoenix_conmegol": "PXT-00632",
+   "id_phoenix_sudamerican": "PXT-00633"
+  },
+  {
+   "categoria": "kit",
+   "id": "1254",
+   "conmegol_es": "Santos FC",
+   "sudamerican_es": "Santos",
+   "id_phoenix_conmegol": "PXT-01003",
+   "id_phoenix_sudamerican": "PXT-01002"
+  },
+  {
+   "categoria": "kit",
+   "id": "1255",
+   "conmegol_es": "São Paulo FC",
+   "sudamerican_es": "São Paulo",
+   "id_phoenix_conmegol": "PXT-01008",
+   "id_phoenix_sudamerican": "PXT-01007"
+  },
+  {
+   "categoria": "kit",
+   "id": "1256",
+   "conmegol_es": "CSD Colo Colo",
+   "sudamerican_es": "Colo-Colo",
+   "id_phoenix_conmegol": "PXT-00432",
+   "id_phoenix_sudamerican": "PXT-00395"
+  },
+  {
+   "categoria": "kit",
+   "id": "1258",
+   "conmegol_es": "Millonarios FC",
+   "sudamerican_es": "Millonarios",
+   "id_phoenix_conmegol": "PXT-00799",
+   "id_phoenix_sudamerican": "PXT-00798"
+  },
+  {
+   "categoria": "kit",
+   "id": "1922",
+   "conmegol_es": "CA Huracán",
+   "sudamerican_es": "Huracán",
+   "id_phoenix_conmegol": "PXT-00225",
+   "id_phoenix_sudamerican": "PXT-00666"
+  },
+  {
+   "categoria": "kit",
+   "id": "1923",
+   "conmegol_es": "CA Colón",
+   "sudamerican_es": "Colón",
+   "id_phoenix_conmegol": "PXT-00217",
+   "id_phoenix_sudamerican": "PXT-00397"
+  },
+  {
+   "categoria": "kit",
+   "id": "1924",
+   "conmegol_es": "CD Godoy Cruz",
+   "sudamerican_es": "Godoy Cruz",
+   "id_phoenix_conmegol": "PXT-00284",
+   "id_phoenix_sudamerican": "PXT-00627"
+  },
+  {
+   "categoria": "kit",
+   "id": "1927",
+   "conmegol_es": "CA Banfield",
+   "sudamerican_es": "Banfield",
+   "id_phoenix_conmegol": "PXT-00206",
+   "id_phoenix_sudamerican": "PXT-00149"
+  },
+  {
+   "categoria": "kit",
+   "id": "1929",
+   "conmegol_es": "CA Lanús",
+   "sudamerican_es": "Lanús",
+   "id_phoenix_conmegol": "PXT-00230",
+   "id_phoenix_sudamerican": "PXT-00736"
+  },
+  {
+   "categoria": "kit",
+   "id": "1931",
+   "conmegol_es": "Coritiba FC",
+   "sudamerican_es": "Coritiba FBC",
+   "id_phoenix_conmegol": "PXT-00409",
+   "id_phoenix_sudamerican": "PXT-00408"
+  },
+  {
+   "categoria": "kit",
+   "id": "1936",
+   "conmegol_es": "Sport Recife",
+   "sudamerican_es": "Sport Club do Recife",
+   "id_phoenix_conmegol": "PXT-01051",
+   "id_phoenix_sudamerican": "PXT-01048"
+  },
+  {
+   "categoria": "kit",
+   "id": "2195",
+   "conmegol_es": "Boyacá Chicó FC",
+   "sudamerican_es": "Boyacá Chicó",
+   "id_phoenix_conmegol": "PXT-00181",
+   "id_phoenix_sudamerican": "PXT-00180"
+  },
+  {
+   "categoria": "kit",
+   "id": "2285",
+   "conmegol_es": "Junior FC",
+   "sudamerican_es": "Junior",
+   "id_phoenix_conmegol": "PXT-00704",
+   "id_phoenix_sudamerican": "PXT-00703"
+  },
+  {
+   "categoria": "kit",
+   "id": "2450",
+   "conmegol_es": "América Mineiro",
+   "sudamerican_es": "América MG",
+   "id_phoenix_conmegol": "PXT-00088",
+   "id_phoenix_sudamerican": "PXT-00087"
+  },
+  {
+   "categoria": "kit",
+   "id": "2451",
+   "conmegol_es": "Atlético Goianiense",
+   "sudamerican_es": "AC Goianiense",
+   "id_phoenix_conmegol": "PXT-00120",
+   "id_phoenix_sudamerican": "PXT-00026"
+  },
+  {
+   "categoria": "kit",
+   "id": "2452",
+   "conmegol_es": "Avaí FC",
+   "sudamerican_es": "Avaí",
+   "id_phoenix_conmegol": "PXT-00135",
+   "id_phoenix_sudamerican": "PXT-00134"
+  },
+  {
+   "categoria": "kit",
+   "id": "2506",
+   "conmegol_es": "Clube de Regatas Brasil",
+   "sudamerican_es": "CRB",
+   "id_phoenix_conmegol": "PXT-00390",
+   "id_phoenix_sudamerican": "PXT-00416"
+  },
+  {
+   "categoria": "kit",
+   "id": "2538",
+   "conmegol_es": "CA Unión",
+   "sudamerican_es": "Unión Santa Fe",
+   "id_phoenix_conmegol": "PXT-00254",
+   "id_phoenix_sudamerican": "PXT-01125"
+  },
+  {
+   "categoria": "kit",
+   "id": "2541",
+   "conmegol_es": "CD O'Higgins",
+   "sudamerican_es": "O'Higgins",
+   "id_phoenix_conmegol": "PXT-00296",
+   "id_phoenix_sudamerican": "PXT-00857"
+  },
+  {
+   "categoria": "kit",
+   "id": "2542",
+   "conmegol_es": "CD Santiago Wanderers",
+   "sudamerican_es": "ADA Jaén",
+   "id_phoenix_conmegol": "PXT-00309",
+   "id_phoenix_sudamerican": "PXT-00038"
+  },
+  {
+   "categoria": "kit",
+   "id": "2545",
+   "conmegol_es": "Huachipato FC",
+   "sudamerican_es": "Huachipato",
+   "id_phoenix_conmegol": "PXT-00662",
+   "id_phoenix_sudamerican": "PXT-00661"
+  },
+  {
+   "categoria": "kit",
+   "id": "2547",
+   "conmegol_es": "CD Antofagasta",
+   "sudamerican_es": "Deportivo Llacuabamba",
+   "id_phoenix_conmegol": "PXT-00273",
+   "id_phoenix_sudamerican": "PXT-00487"
+  },
+  {
+   "categoria": "kit",
+   "id": "2548",
+   "conmegol_es": "CD Palestino",
+   "sudamerican_es": "Palestino",
+   "id_phoenix_conmegol": "PXT-00300",
+   "id_phoenix_sudamerican": "PXT-00879"
+  },
+  {
+   "categoria": "kit",
+   "id": "2553",
+   "conmegol_es": "CD Cobresal",
+   "sudamerican_es": "Cobresal",
+   "id_phoenix_conmegol": "PXT-00278",
+   "id_phoenix_sudamerican": "PXT-00393"
+  },
+  {
+   "categoria": "kit",
+   "id": "2652",
+   "conmegol_es": "Envigado FC",
+   "sudamerican_es": "Jaguares de Córdoba",
+   "id_phoenix_conmegol": "PXT-00533",
+   "id_phoenix_sudamerican": "PXT-00694"
+  },
+  {
+   "categoria": "kit",
+   "id": "2676",
+   "conmegol_es": "Sport Boys",
+   "sudamerican_es": "Sport Boys Association",
+   "id_phoenix_conmegol": "PXT-01046",
+   "id_phoenix_sudamerican": "PXT-01047"
+  },
+  {
+   "categoria": "kit",
+   "id": "2708",
+   "conmegol_es": "CDP Curicó Unido",
+   "sudamerican_es": "Curicó Unido",
+   "id_phoenix_conmegol": "PXT-00317",
+   "id_phoenix_sudamerican": "PXT-00445"
+  },
+  {
+   "categoria": "kit",
+   "id": "2717",
+   "conmegol_es": "CA Aldosivi",
+   "sudamerican_es": "Aldosivi",
+   "id_phoenix_conmegol": "PXT-00201",
+   "id_phoenix_sudamerican": "PXT-00057"
+  },
+  {
+   "categoria": "kit",
+   "id": "2729",
+   "conmegol_es": "CA Patronato",
+   "sudamerican_es": "Patronato",
+   "id_phoenix_conmegol": "PXT-00237",
+   "id_phoenix_sudamerican": "PXT-00890"
+  },
+  {
+   "categoria": "kit",
+   "id": "4213",
+   "conmegol_es": "Racing Club de Estrasburgo",
+   "sudamerican_es": "RC Strasbourg Alsace",
+   "id_phoenix_conmegol": "PXT-00925",
+   "id_phoenix_sudamerican": "PXT-00938"
+  },
+  {
+   "categoria": "kit",
+   "id": "4995",
+   "conmegol_es": "CA Central Córdoba",
+   "sudamerican_es": "Central Córdoba",
+   "id_phoenix_conmegol": "PXT-00211",
+   "id_phoenix_sudamerican": "PXT-00323"
+  }
+ ]
+}
