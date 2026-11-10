@@ -7,8 +7,13 @@ El servidor sigue trabajando con su SQLite local (rápido y sin depender de inte
   3. aplica los `myclub_movimientos` pendientes (dar GP, monedas, boletos, recuperar) y los marca.
 Si Supabase falla o no hay internet, no pasa nada: se reintenta en la siguiente vuelta.
 
-La clave de servicio NUNCA va en archivos: variable de entorno PHOENIX_SUPABASE_KEY.
-Configuración: "supabase": {"activo": true, "url": "https://<proyecto>.supabase.co", "cada_s": 30}
+Dos modos:
+  * RECOMENDADO (migración 164, «sin llave maestra»): clave pública de la web en la config
+    ("clave_publica") + secreto propio del servidor en la variable PHOENIX_SERVIDOR_SECRETO. Solo puede
+    llamar a las funciones phoenix_srv_* (permisos mínimos); en Supabase solo está la huella del secreto.
+  * Antiguo: clave service_role en la variable PHOENIX_SUPABASE_KEY (acceso total; mejor no usarlo).
+Ningún secreto va en archivos.
+Configuración: "supabase": {"activo": true, "url": "https://<proyecto>.supabase.co", "clave_publica": "sb_publishable_…", "cada_s": 30}
 """
 import asyncio
 import json
@@ -26,8 +31,9 @@ CAMPO_MOVIMIENTO = {"gp": "gp", "monedas": "monedas", "boletos": "boletos_contra
 
 
 class Nube:
-    def __init__(self, srv, url, clave, cada_s=30, abrir=None):
+    def __init__(self, srv, url, clave, cada_s=30, abrir=None, secreto=None):
         self.srv = srv
+        self.secreto = secreto   # modo «sin llave maestra»: clave = la pública de la web
         self.base = url.rstrip("/")
         self.url = self.base + "/rest/v1/"
         self.clave = clave
@@ -48,6 +54,19 @@ class Nube:
         with self._abrir(req, timeout=15) as r:
             crudo = r.read()
         return json.loads(crudo) if crudo else None
+
+    def _rpc(self, funcion, args):
+        """Modo sin llave maestra: POST /rest/v1/rpc/<funcion> con el secreto del servidor."""
+        req = urllib.request.Request(self.url + "rpc/" + funcion, method="POST",
+                                     data=json.dumps({"p_secreto": self.secreto, **args}).encode(),
+                                     headers={"apikey": self.clave, "Content-Type": "application/json",
+                                              "Accept": "application/json"})
+        with self._abrir(req, timeout=15) as r:
+            crudo = r.read()
+        return json.loads(crudo) if crudo else None
+
+    async def _llamar(self, funcion, **args):
+        return await asyncio.to_thread(self._rpc, funcion, args)
 
     # ---------- piezas ----------
     @staticmethod
@@ -81,7 +100,10 @@ class Nube:
                 j = datos.jugador(k) or {}
                 filas.append(self.fila_club(k, club, j.get("pname", ""), datos.usuario_de_clave(k)))
         try:
-            if filas:
+            if filas and self.secreto:
+                for i in range(0, len(filas), 200):
+                    await self._llamar("phoenix_srv_subir_clubes", p_filas=filas[i:i + 200])
+            elif filas:
                 await self._red("POST", "myclub_clubes", "on_conflict=clave_servidor", filas,
                                 "resolution=merge-duplicates,return=minimal")
         except Exception:
@@ -90,7 +112,10 @@ class Nube:
         return len(filas)
 
     async def leer_reglas(self):
-        filas = await self._red("GET", "myclub_reglas", "id=eq.1&select=reglas,actualizado") or []
+        if self.secreto:
+            filas = await self._llamar("phoenix_srv_reglas") or []
+        else:
+            filas = await self._red("GET", "myclub_reglas", "id=eq.1&select=reglas,actualizado") or []
         if not filas:
             return []
         marca = filas[0].get("actualizado")
@@ -101,8 +126,11 @@ class Nube:
         return self.srv.aplicar_reglas_myclub(reglas) if reglas else []
 
     async def aplicar_movimientos(self):
-        filas = await self._red("GET", "myclub_movimientos",
-                                "aplicado=is.null&select=id,clave_servidor,tipo,cantidad,motivo&order=id&limit=200") or []
+        if self.secreto:
+            filas = await self._llamar("phoenix_srv_movimientos") or []
+        else:
+            filas = await self._red("GET", "myclub_movimientos",
+                                    "aplicado=is.null&select=id,clave_servidor,tipo,cantidad,motivo&order=id&limit=200") or []
         hechos = 0
         datos = self.srv.datos
         for f in filas:
@@ -112,8 +140,12 @@ class Nube:
                 log.warning("movimiento %s sin club para %s: queda pendiente", f.get("id"), clave)
                 continue
             # primero se marca en la nube (si falla, no se aplica: nunca se da dos veces)
-            await self._red("PATCH", "myclub_movimientos", f"id=eq.{int(f['id'])}&aplicado=is.null",
-                            {"aplicado": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}, "return=minimal")
+            if self.secreto:
+                if not await self._llamar("phoenix_srv_marcar_movimiento", p_id=int(f["id"])):
+                    continue  # ya estaba aplicado (otra vuelta u otro servidor): no se da dos veces
+            else:
+                await self._red("PATCH", "myclub_movimientos", f"id=eq.{int(f['id'])}&aplicado=is.null",
+                                {"aplicado": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}, "return=minimal")
             club = datos.club(clave)  # releído tras la espera: puede haber cambiado mientras tanto
             club[campo] = max(0, int(club.get(campo) or 0) + int(f.get("cantidad") or 0))
             club.setdefault("admin", []).append({"hora": int(time.time()), "orden": f"web:{f.get('tipo')}",
@@ -148,6 +180,8 @@ class Nube:
         recibe la fila. Solo viaja el hash; el pase en claro no sale de esta PC."""
         import hashlib
         h = hashlib.sha256(pase.encode()).hexdigest()
+        if self.secreto:
+            return await self._llamar("phoenix_srv_canjear_pase", p_hash=h)
         ahora = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
         filas = await self._red("PATCH", "phoenix_pases",
                                 f"hash=eq.{h}&usado=is.null&caduca=gt.{ahora}&select=usuario",
@@ -165,15 +199,21 @@ class Nube:
             filas = [{"clave_servidor": c, "codigo": cod,
                       "caduca": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(h + datos.VIDA_CODIGO))}
                      for c, cod, h in nuevos]
-            await self._red("POST", "phoenix_vinculos", "on_conflict=clave_servidor", filas,
-                            "resolution=merge-duplicates,return=minimal")
+            if self.secreto:
+                await self._llamar("phoenix_srv_subir_codigos", p_filas=filas)
+            else:
+                await self._red("POST", "phoenix_vinculos", "on_conflict=clave_servidor", filas,
+                                "resolution=merge-duplicates,return=minimal")
             datos.marcar_codigos_subidos([c for c, _cod, _h in nuevos])
         hechos = 0
         claves = [c for c, *_ in pendientes]
         for i in range(0, len(claves), 100):
-            lista = ",".join(urllib.parse.quote(c) for c in claves[i:i + 100])
-            filas = await self._red("GET", "phoenix_duenos",
-                                    f"clave_servidor=in.({lista})&select=clave_servidor,usuario") or []
+            if self.secreto:
+                filas = await self._llamar("phoenix_srv_duenos", p_claves=claves[i:i + 100]) or []
+            else:
+                lista = ",".join(urllib.parse.quote(c) for c in claves[i:i + 100])
+                filas = await self._red("GET", "phoenix_duenos",
+                                        f"clave_servidor=in.({lista})&select=clave_servidor,usuario") or []
             for f in filas:
                 datos.vincular(f["clave_servidor"], f["usuario"])
                 log.info("nube: el club %s quedó vinculado a una cuenta de la web", f["clave_servidor"])
@@ -208,8 +248,16 @@ def desde_config(srv, cfg):
     s = cfg.get("supabase") or {}
     if not s.get("activo"):
         return None
-    clave = os.environ.get("PHOENIX_SUPABASE_KEY")
-    if not clave or not s.get("url"):
-        log.warning("supabase activo pero falta la url o la variable PHOENIX_SUPABASE_KEY: espejo apagado")
+    if not s.get("url"):
+        log.warning("supabase activo pero falta la url: espejo apagado")
         return None
-    return Nube(srv, s["url"], clave, s.get("cada_s", 30))
+    secreto = os.environ.get("PHOENIX_SERVIDOR_SECRETO")
+    if secreto and s.get("clave_publica"):
+        log.info("espejo en Supabase: modo sin llave maestra (funciones phoenix_srv_*)")
+        return Nube(srv, s["url"], s["clave_publica"], s.get("cada_s", 30), secreto=secreto)
+    clave = os.environ.get("PHOENIX_SUPABASE_KEY")
+    if clave:
+        log.warning("espejo en Supabase con la llave maestra (service_role): mejor el modo sin llave maestra")
+        return Nube(srv, s["url"], clave, s.get("cada_s", 30))
+    log.warning("supabase activo pero falta PHOENIX_SERVIDOR_SECRETO (+ clave_publica): espejo apagado")
+    return None

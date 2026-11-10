@@ -1862,3 +1862,59 @@ class TestLauncher(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(srv._sin_launcher(S("192.168.1.5")))  # la PC del servidor, exenta
         cfg["identidad"] = {}
         self.assertFalse(srv._sin_launcher(S("100.64.0.8")))   # apagado por defecto
+
+
+class TestNubeSinLlaveMaestra(unittest.IsolatedAsyncioTestCase):
+    """Migración 164: el servidor solo llama a phoenix_srv_* con su secreto (sin service_role)."""
+
+    async def test_vuelta_por_funciones(self):
+        import io, json as _j
+        from phoenix_online.nube import Nube
+        srv = Servidor({**CFG, "myclub": {}}, Datos())
+        srv.datos.guardar_club("aa", {"gp": 100, "team_name": "Phoenix FC"})
+        llamadas = []
+        respuestas = {"phoenix_srv_reglas": [{"reglas": {"gp_por_partido": 7}, "actualizado": "t1"}],
+                      "phoenix_srv_movimientos": [{"id": 5, "clave_servidor": "aa", "tipo": "gp", "cantidad": 50, "motivo": ""},
+                                                  {"id": 6, "clave_servidor": "aa", "tipo": "gp", "cantidad": 99, "motivo": ""}],
+                      "phoenix_srv_marcar_movimiento": None}
+
+        class Resp(io.BytesIO):
+            def __enter__(s): return s
+            def __exit__(s, *a): return False
+
+        def abrir(req, timeout=None):
+            ruta = req.full_url.split("/rest/v1/")[1]
+            self.assertTrue(ruta.startswith("rpc/"))  # nunca toca tablas directamente
+            self.assertNotIn("Authorization", req.headers)
+            cuerpo = _j.loads(req.data)
+            self.assertEqual(cuerpo["p_secreto"], "s" * 40)
+            f = ruta[4:]
+            llamadas.append((f, cuerpo))
+            if f == "phoenix_srv_marcar_movimiento":
+                return Resp(_j.dumps(cuerpo["p_id"] == 5).encode())  # el 6 ya estaba aplicado
+            return Resp(_j.dumps(respuestas.get(f, [])).encode())
+
+        n = Nube(srv, "https://x.supabase.co", "sb_publishable_x", abrir=abrir, secreto="s" * 40)
+        await n.vuelta()
+        nombres = [f for f, _ in llamadas]
+        self.assertIn("phoenix_srv_subir_clubes", nombres)
+        self.assertEqual(srv.cfg["myclub"]["gp_por_partido"], 7)
+        self.assertEqual(srv.datos.club("aa")["gp"], 150)  # solo el 5; el 6 no se da dos veces
+
+    def test_desde_config_prefiere_sin_llave_maestra(self):
+        import os
+        from phoenix_online.nube import desde_config
+        srv = Servidor({**CFG, "myclub": {}}, Datos())
+        cfg = {"supabase": {"activo": True, "url": "https://x.supabase.co", "clave_publica": "sb_publishable_x"}}
+        viejo = {k: os.environ.pop(k, None) for k in ("PHOENIX_SERVIDOR_SECRETO", "PHOENIX_SUPABASE_KEY")}
+        try:
+            self.assertIsNone(desde_config(srv, cfg))
+            os.environ["PHOENIX_SUPABASE_KEY"] = "maestra"
+            os.environ["PHOENIX_SERVIDOR_SECRETO"] = "s" * 40
+            n = desde_config(srv, cfg)
+            self.assertEqual((n.clave, n.secreto), ("sb_publishable_x", "s" * 40))
+        finally:
+            for k, v in viejo.items():
+                os.environ.pop(k, None)
+                if v is not None:
+                    os.environ[k] = v
