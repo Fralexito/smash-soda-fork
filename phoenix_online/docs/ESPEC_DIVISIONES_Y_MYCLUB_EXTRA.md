@@ -92,38 +92,69 @@ Por jugador: división, rating, temporada (número, SP, partidos jugados, W/D/L,
 Los umbrales reales de Konami (los de arriba son de PESBUL, calibrados en pantalla en D12); el significado de `enemy_cpu_level` y de los tokens de `ex_type`/`match_category`; la fórmula de ranking real de Konami (PESBUL ordena por rating y luego SP).
 
 ---
-# PARTE B. myClub extra
+# PARTE B. myClub extra (ingeniería inversa del cliente, solo lectura, 10-nov-2026)
 
-**PESBUL no implementa nada de myClub** (solo aparecen los nombres de comando en listas de símbolos del cliente). Aquí solo hay lo que sabemos nosotros (capturas reales del PES base, `ESPEC_MYCLUB.md`, la lista de comandos del ejecutable `cmd_lista.txt`) y lo que hay que sacar por ingeniería inversa. Nada de esto está escrito en PESBUL.
+**PESBUL no implementa nada de myClub.** Todo lo de esta parte sale de leer el **ejecutable del PES base** (proyecto de Ghidra ya analizado `PES2021_recortado.exe`, mismas direcciones que el exe original) con un script de solo lectura: para cada comando se localizaron las clases `Cmd…Option` (petición) y `Cmd…Result` (respuesta), y de su tabla virtual se descompilaron el serializador (petición) y el deserializador (respuesta, ranura 7). Marcas: **L** = leído directamente del código del cliente; **C** = confirmado con una captura real; **P** = inferido (se dice cómo).
+No se modificó el exe ni el proyecto (`-readOnly`).
 
-## B.1 Comandos y qué sabemos de cada uno
-| Comando | Petición real capturada (C) | Respuesta hoy | Qué falta |
-|---|---|---|---|
-| `CMD_GET_MYCLUB_HISTORYLIST` | `{pid, start_index 0}` (paginación por índice) | sobre `NOERR` vacío | claves del parser (movimientos del club) |
-| `CMD_GET_MYCLUB_PRESENTLIST` | `{pid}` | sobre `NOERR` vacío | claves del parser (regalos pendientes) |
-| `CMD_RECV_MYCLUB_PRESENT` | no capturado | — | campos y qué entrega |
-| `CMD_GET_MYCLUB_ACHIEVEMENTLIST` | `{pid}` | sobre `NOERR` vacío | claves del parser (logros con estado) |
-| `CMD_SEND_MYCLUB_READ_ACHIEVEMENTLIST` | no capturado | — | marca de «logros vistos» |
-| `CMD_GET_MYCLUB_RANKING` y `_BYID` | no capturado | — | petición y parser |
-| `CMD_ENTRY_MYCLUB_WEEKLY_RANKING` | no capturado | — | inscripción en el ranking semanal |
-| `CMD_GET_MYCLUB_WEEKLY_RANKING` y `_BYID` | no capturado | — | parser de la lista semanal |
-| `CMD_GET_MYCLUB_WEEKLY_RANKING_BASIC_INFO` | `{pid}` | resuelto en `ESPEC_MYCLUB.md`: `basic_info{eura_url, is_beginner, is_join, is_rejected, is_season_end, reward, division, division_change_type, is_no_play_season, is_group_rank_1st}` | ampliar premios |
-| **Cambio de nombre del club** | — | — | **`CMD_SET_MYCLUB_TEAM_NAME`** |
-| **Cambio de nombre de la plantilla** | — | — | **`CMD_SET_MYCLUB_SQUAD_NAME`** |
+## B.0 Cómo leer los parsers (convenciones del cliente)
+- **Sobre de petición** de los mensajes msgpack (TCP, comandos de «tipo mapa»): `msgid`, `rqid`, `pid`, `svrtype`, `client` + los campos propios del comando (el mapa lleva `5 + n` entradas; la cabecera del mapa lo confirma).
+- **Respuesta:** `msgid`, `rqid`, `result` + campos propios. Un subobjeto que el cliente abre con su desempaquetador interno de «subflujo» es un **bin(packb(...))**; un subobjeto leído sin él es un **mapa directo**. Esa distinción se dedujo de los puntos donde el deserializador llama al desempaquetador de subflujo (cuenta y clave padre; L).
+- **Cinco comandos NO van por el mapa TCP sino por HTTP** (petición en formulario `msgid=…&rqid=…&urltype=…&pid=…` y respuesta msgpack, como `GET_GAMERELAY`): `CMD_GET_MYCLUB_RANKING`, `CMD_GET_MYCLUB_RANKING_BYID`, `CMD_GET_MYCLUB_WEEKLY_RANKING`, `CMD_GET_MYCLUB_WEEKLY_RANKING_BYID` y `CMD_RECV_MYCLUB_PRESENT`. El `urltype` es el índice de la lista de URLs que manda `CMD_GET_URLLIST`: `MYCLUB_RANKING`=14, `MYCLUB_RANKING_BYID`=15, `MYCLUB_WEEKLY_RANKING`=37, `MYCLUB_WEEKLY_RANKING_BYID`=38, `RECV_MYCLUB_PRESENT`=51 (y `EULA_MYCLUB`=16, `MYCLUB_AGENT_BANNER`=17, `MYCLUB_LIVEEVENT_BANNER`=39). **Hallazgo importante:** la lista de URLs que manda hoy nuestro servidor tiene 14 tipos y **ninguno de myClub**, así que el cliente no tiene a dónde llamar para esos cinco comandos (probablemente por eso no se capturaron nunca). Para activarlos hay que añadir esas URLs (apuntando a `http://{ip}:5000/…`) y responder en HTTP. Lo mismo vale para `DIVISION_RANK`=11 y `DIVISION_RANK_BYID`=12 (rankings de Divisiones, parte A.7).
 
-Direcciones de las cadenas de comando en el ejecutable (base 0x140000000), para buscar el parser por referencias cruzadas: HISTORYLIST 0x1428ABD18, PRESENTLIST 0x1428AC000, RECV_MYCLUB_PRESENT 0x1428A0C40, ACHIEVEMENTLIST 0x1428AB400, SEND_MYCLUB_READ_ACHIEVEMENTLIST 0x1428A6258, MYCLUB_RANKING 0x1428AC130, MYCLUB_RANKING_BYID 0x1428AC180, ENTRY_MYCLUB_WEEKLY_RANKING 0x1428A7FC0, WEEKLY_RANKING 0x1428AC548, WEEKLY_RANKING_BASIC_INFO 0x1428AC5E0, WEEKLY_RANKING_BYID 0x1428AC620, SET_MYCLUB_TEAM_NAME 0x1428A8A80, SET_MYCLUB_SQUAD_NAME 0x1428A89D0. Otros cercanos de identidad del club: `SET_MYCLUB_CLUB_EDITION_INFO` 0x1428A85F8, `SET_MYCLUB_HOMETOWN` 0x1428A86A8, `SET_MYCLUB_ADD_UNIFORM_ID` 0x1428A8520, `SET_MYCLUB_ACHIEVEMENT` 0x1428A84B0.
+## B.1 Cambio de nombre del club: `CMD_SET_MYCLUB_TEAM_NAME` (L, TCP mapa)
+- **Petición** (mapa de 10 entradas): `msgid`, `rqid`, `pid`, `svrtype`, `client`, `team_name` (texto), `team_name_short` (texto, el nombre corto), `is_check_team_name` (texto, token tipo `YES`/`NO`; por defecto del objeto `NotImplement`), `is_check_team_name_short` (texto, ídem), `team_name_commentary_id` (entero; id del nombre en la locución).
+- **Respuesta:** solo `msgid`, `rqid`, `result` (el deserializador no lee nada más) → sobre `NOERR` y nada más. **Obligatoria:** `result`.
+- Servidor: guardar `team_name` y `team_name_short` en el club (y el id de locución) y contestar `NOERR`. Los `is_check_*` indican si el cliente pide **validar** el nombre. **P:** un token de error de nombre mostraría el aviso de nombre no válido; no se ha capturado.
 
-## B.2 Cambio de nombre (P)
-Los comandos son **`CMD_SET_MYCLUB_TEAM_NAME`** (nombre del club) y **`CMD_SET_MYCLUB_SQUAD_NAME`** (nombre de una plantilla guardada). La petición debería llevar el texto nuevo y, para la plantilla, su `squad_id`; la respuesta casi seguro es solo el sobre `NOERR`, como el resto de los `SET_MYCLUB_*` ya implementados (**P**, por analogía). No hay captura: hay que provocarlo en el PES (myClub → editar nombre) y capturar la petición.
+## B.2 Cambio de nombre de la plantilla: `CMD_SET_MYCLUB_SQUAD_NAME` (L, TCP mapa)
+- **Petición** (mapa de 7 entradas): `msgid`, `rqid`, `pid`, `svrtype`, `client`, `squad_id` (entero), `name` (texto: el nombre nuevo de esa plantilla).
+- **Respuesta:** solo `msgid`, `rqid`, `result` → sobre `NOERR`.
+- Servidor: guardar el nombre en la plantilla `squad_id` del club y contestar `NOERR`.
 
-## B.3 Regalos (PRESENTLIST / RECV_PRESENT) (P)
-Por el nombre y por los premios ya vistos en `WEEKLY_RANKING_BASIC_INFO` (`reward`): la lista llevaría regalos con tipo, cantidad (GP, monedas, objetos o jugadores) y fecha límite, y `RECV_MYCLUB_PRESENT` los marca como recibidos y suma al saldo. Sin parser no se puede dar la forma exacta.
+## B.3 Historial: `CMD_GET_MYCLUB_HISTORYLIST` (L, TCP mapa)
+- **Petición** (mapa de 6): sobre + `start_index` (entero; **C:** `{pid, start_index 0}`; paginación por índice).
+- **Respuesta** (todas las claves son las que lee el cliente):
+```
+{ msgid, rqid, result 'NOERR',
+  myclub_history_list_total: int       (total de registros en el servidor),
+  index: int                           (índice de inicio de esta página; el que pidió el cliente),
+  myclub_history_list_num: int         (cuántos elementos trae esta página),
+  myclub_history_list: [ bin(packb({
+        history_data_kind: str         (tipo de movimiento: token de una enumeración del cliente; sin capturar),
+        history_data_in:  bin(packb({  data_type: str, entity_id: int, count: int,
+                                       item_data: bin(packb({item_type: str, item_variation: int, item_effect_arg: int, count: int, pes_point_price: int})) })),
+        history_data_out: bin(packb({  count: int,
+                                       item_data: bin(packb({item_type, item_variation, item_effect_arg, count, pes_point_price})) })) })) , ... ] }
+```
+  La anidación es L: cada elemento de la lista es un **bin**; dentro, `history_data_in` y `history_data_out` son **bin**, y dentro de cada uno `item_data` es otro **bin**. La lista admite **hasta 100 elementos** por página (el objeto reserva 100 registros de 0x158 bytes). `history_data_in` = lo que el club **dio** y `history_data_out` = lo que **recibió** (**P**, por los nombres; no se ha visto un registro real).
+- **Valores por defecto para un club nuevo (P, seguros para que el menú no rebote):** `myclub_history_list_total 0`, `index` = el pedido, `myclub_history_list_num 0`, `myclub_history_list []` (un array vacío es válido: el bucle se salta con cuenta 0).
+- **No cerrado (P):** los tokens de `history_data_kind`, `data_type` e `item_type` (el cliente los compara con tablas de cadenas). Mientras no se saquen conviene devolver lista vacía.
 
-## B.4 Rankings (P, con apoyo de PESBUL como analogía)
-El ranking de club es probablemente de la **misma familia de parsers** que el de Divisiones (A.7): `date`, `total_rank_num` y `rank_list` con `rank`, `point` y un bloque de usuario con `pid` e identidad (mapas directos, **no bin**). Es razonable que `CMD_GET_MYCLUB_RANKING` tenga esa forma con un bloque de club, **pero no está comprobado**. La petición de PESBUL en rankings trae `start_index` y `view_num` (y `division` en Divisiones); `_BYID` lleva un identificador de jugador. El semanal añade inscripción previa (`ENTRY_...`) y premios al terminar la semana (`is_season_end`, `reward`, `division_change_type` ya vienen en `BASIC_INFO`).
+## B.4 Regalos: `CMD_GET_MYCLUB_PRESENTLIST` (L, TCP mapa) y `CMD_RECV_MYCLUB_PRESENT` (L, HTTP)
+- **PRESENTLIST petición:** solo el sobre (**C:** `{pid}`). **Respuesta:** `{ result, present_list_num: int, present_list: [ bin(packb({ present_id: int, name_jp: str, title: str, entity_id: int, grade: str, skill: bin(…skill_category, skill_id…), player_level: int, contract_term: int, team_id: int, present_type: str, <bin con los datos del objeto: item_type, item_variation, item_effect_arg, count, pes_point_price>, receipt_deadline: int (fecha límite), count: int })) ] }`. El deserializador abre **tres subflujos bin** (elemento, y dos dentro: el de `skill` y el del objeto, L por la cuenta; cuál es cuál se dedujo por el orden de claves, **P**).
+- **RECV_MYCLUB_PRESENT petición (HTTP, `urltype` 51):** `pid`, `present_id` (entero), `is_all` (SÍ/NO: recibir todos). **Respuesta:** `{ result, receive_result_list_num: int, receive_result_list: [ mapa directo { name_jp, title, entity_id, grade, skill, skill_category, skill_id, player_level, contract_term, team_id, present_type, item_type, item_variation, item_effect_arg, count, pes_point_price, receipt_deadline, count, result } ] }` (aquí **no** hay subflujos bin: los elementos son mapas directos; el `result` de cada elemento es el resultado de recibir ese regalo).
+- Servidor: la lista con los regalos pendientes (vacía = «sin regalos»); al recibir, mover el objeto al club y marcar el regalo.
 
-## B.5 Cómo sacar los parsers que faltan (plan, no hecho)
-1. Usar el proyecto de Ghidra ya analizado `D:\Frank\Games_\PRUEBA_CANCHA\copias\ghidra_proyecto_completo` (solo lectura). Abrir el ejecutable entero en REA tardó y se colgó una hora la última vez.
-2. De la cadena `CMD_...` (direcciones de arriba) subir por referencias cruzadas hasta la clase `Cmd...Result` y su lector; leer en orden las cadenas de claves que compara (como se hizo con Divisiones: «parser 0x1D32570»). Para la petición, la clase `Cmd...` de escritura.
-3. Provocar cada pantalla en el PES y capturar la petición real con las capturas del servidor.
-Orden por valor: renombrar club/plantilla → `GET_MYCLUB_HISTORYLIST` → `GET_MYCLUB_ACHIEVEMENTLIST` → regalos → rankings.
+## B.5 Logros: `CMD_GET_MYCLUB_ACHIEVEMENTLIST` y `CMD_SEND_MYCLUB_READ_ACHIEVEMENTLIST` (L, TCP mapa)
+- **ACHIEVEMENTLIST petición:** solo el sobre (**C:** `{pid}`). **Respuesta:** `{ result, achievement_list_num: int, achievement_list: [ bin(packb({ achievement_category: str, received_all, is_new, milestone_list_num: int, milestone_list: [ bin(packb({ target_value: int, value: int, received_milestone_level: int, present: bin(packb({ present_id, name_jp, title, entity_id, grade, skill, player_level, contract_term, team_id, present_type, <objeto…>, receipt_deadline, count })) })) ] })) ] }`. L por las claves y por los 6 subflujos bin (lista → elemento → `milestone_list` → hito → `present` → `skill`/objeto); si `received_all`/`is_new` son texto o entero es **P**.
+- **READ_ACHIEVEMENTLIST petición:** sobre + `achievement_category_list` (lista de categorías vistas). La clase de respuesta no se volcó; por analogía con los otros `SEND_*` es el sobre `NOERR` (**P**).
+- Valores por defecto: `achievement_list_num 0`, `achievement_list []`.
+
+## B.6 Rankings de club (L, HTTP)
+- **`CMD_GET_MYCLUB_RANKING` petición:** `msgid`, `rqid`, `urltype` (=14), `pid`, `start_index`, `sort`, `order`, `view_num`, `is_coach` (SÍ/NO: ranking de entrenadores). **`..._BYID`:** `urltype` (=15), `pid`, `xuid_one`, `np_account_id`, `sort`, `order`, `view_num`, `is_coach`.
+- **Respuesta (ambas):** `{ result, total_rank_num: int, rank_list: [ mapa directo { pname: {name, xuid_one, psn_user_id:{account_id, online_id, is_valid_cache}, is_deleted}, division, favoriteTeam, favoritePlayer, intro, manner, match_record:{win_count, draw_count, lose_count, win_s_max, rating}, team_id, team_name, + posición/puntos } ] }`. El deserializador solo abre el subflujo bin del mensaje entero: **los elementos y `pname`/`match_record` son mapas directos** (misma familia que el ranking de Divisiones, A.7, con `team_id` y `team_name` del club añadidos). Las claves de posición y puntos por elemento no salieron como literales en este volcado (**P**: probablemente claves cortas escritas desde datos, como `rank`/`point` en Divisiones; resolverlas con el mismo método que `rqid`/`pid`).
+
+## B.7 Ranking semanal (L, HTTP) y su inscripción (L, TCP mapa)
+- **`CMD_ENTRY_MYCLUB_WEEKLY_RANKING` (TCP mapa):** petición = sobre + `is_entry` (SÍ/NO: inscribirse); respuesta = solo `msgid`/`result` (sobre `NOERR`).
+- **`CMD_GET_MYCLUB_WEEKLY_RANKING` petición (HTTP, `urltype` 37):** `pid`, `group_search_target_pid`, `start_index`, `view_num`, `is_group_ranking` (SÍ/NO: solo mi grupo), `is_old_season` (SÍ/NO: temporada anterior). **`_BYID` (38):** `pid`, `xuid_one`, `np_account_id`, `view_num`, `is_group_ranking`, `is_old_season`.
+- **Respuesta:** `{ result, total_rank_num, max_weekly_point (int), group_number (int), division (str), rank_list [mapas directos con pname y sus puntos semanales], reward_list: [ mapa directo { reward: {present_id, name_jp, title, entity_id, grade, skill{skill_category, skill_id}, player_level, contract_term, team_id, present_type, item_type, item_variation, item_effect_arg, count, pes_point_price, receipt_deadline} } ] }`. Los `reward_list` son los premios de la semana (mapas directos, sin subflujos bin).
+
+## B.8 Qué hacer en el servidor (por valor)
+1. **Cambio de nombre del club y de la plantilla** (B.1, B.2): guardar y contestar `NOERR` (lo que más se nota; sin captura previa; probar abriendo el editor de nombre en el PES).
+2. **Historial** (B.3): contestar con la estructura vacía válida (`total 0`, `index`, `num 0`, `list []`); registros reales cuando se conozcan los tokens.
+3. **Regalos y logros** (B.4, B.5): estructuras vacías válidas; luego regalos reales (los premios de la semana ya salen en `WEEKLY_RANKING_BASIC_INFO.reward`).
+4. **Añadir al `CMD_GET_URLLIST` las URLs** de `MYCLUB_RANKING`, `MYCLUB_RANKING_BYID`, `MYCLUB_WEEKLY_RANKING`, `MYCLUB_WEEKLY_RANKING_BYID`, `RECV_MYCLUB_PRESENT` (y `DIVISION_RANK`, `DIVISION_RANK_BYID`) y responder esos endpoints HTTP (B.0, B.6, B.7).
+
+## B.9 Cómo se obtuvo (para replicar)
+`analyzeHeadless <proyecto> PEStrim -process -noanalysis -readOnly -postScript DumpCmd.java` (busca las cadenas `CMD_…` y descompila las funciones que las referencian), luego `DumpVt.java` (para una clase, descompila las funciones de las ranuras 0-12 de su `vftable`); las claves cortas escritas desde datos (`rqid`, `pid`, `name`) se resolvieron con `PrintStr.java`. La petición con campos extra usa la ranura 6 (mapa msgpack) o la ranura 3 (formulario HTTP `clave=valor&…`); la respuesta usa la ranura 7. Los scripts están en el scratchpad de la sesión (no subidos).
