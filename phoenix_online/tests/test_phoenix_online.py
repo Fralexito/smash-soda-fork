@@ -1579,3 +1579,27 @@ class TestHuellaParche(unittest.IsolatedAsyncioTestCase):
         await r(c, 3, {"msgid": "CMD_START_MATCHING", "rqid": 3, "matching_type": "OC_RANK"})
         self.assertEqual(ec[-1][1]["matching_state"], "FINISH")
         self.assertEqual(ea[-1][1]["matching_state"], "FINISH")
+
+
+class TestRelePrueba10Nov(unittest.IsolatedAsyncioTestCase):
+    """Lo que faltó en la prueba real del 10-nov (rival de prueba + PES base)."""
+
+    async def test_get_gamerelay_http_y_matchid(self):
+        import copy
+        cfg = copy.deepcopy(CFG)
+        cfg["ip_publica"] = "auto"
+        cfg["gamerelay"] = {"activo": True, "indice": 1, "puerto": 5100, "ip": "auto"}
+        srv = Servidor(cfg, Datos())
+        srv.dormir = _sin_pausa
+        r = srv.respuesta_http({"msgid": "CMD_GET_GAMERELAY", "pid": "2", "rqid": "7",
+                                "urltype": "GET_GAMERELAY"}, "192.168.100.236", "192.168.100.236")
+        self.assertEqual((r["result"], r["rqid"], r["gamerelay_num"]), ("NOERR", 7, 1))
+        self.assertEqual(r["gamerelay_list"][0]["ip_addr"], "192.168.100.236")
+        self.assertIsInstance(r["gamerelay_list"][0], dict)  # mapa en línea, no bin
+        a, ea = cliente(srv)
+        b, eb = cliente(srv)
+        for s, u in ((a, "a1"), (b, "b2")):
+            await srv.recibir(s, 1, {"msgid": "CMD_LOGIN", "rqid": 1, "username": u})
+            await srv.recibir(s, 2, {"msgid": "CMD_START_MATCHING", "rqid": 2, "matching_type": "OC_RANK"})
+        await srv.recibir(b, 3, {"msgid": "CMD_GET_MATCHID", "rqid": 3})
+        self.assertGreater(eb[-1][1]["match_id"], 700000000)

@@ -2988,10 +2988,25 @@ class Servidor:
     async def c_cmd_get_gamerelay_qualitychecklist(self, s, m):
         return self.lista_calidad(self._pid_visible(s), s.ip, s=s)
 
+    def respuesta_gamerelay(self, s=None, ip_local=None):
+        """Nodo del relé para la partida. P (10-nov): mismos campos que el checklist, como mapas
+        en línea (con bin el cliente no leyó los nodos del checklist)."""
+        nodos = self._nodos_relay(s, ip_local)
+        web = self._url_gamerelay_web(s) if s is not None else (
+            self._con_ip(self.cfg.get("http_base"), ip_local=ip_local) or
+            f"http://{self.ip_anuncio(ip_local=ip_local)}:{self.cfg.get('puerto_http', 5000)}") + "/gamerelay"
+        return {"gamerelay_web_url": web, "gamerelay_num": len(nodos),
+                "gamerelay_list": [dict(n) for n in nodos]}
+
     async def c_cmd_get_gamerelay(self, s, m):
-        nodos = self._nodos_relay(s)
-        return {"gamerelay_web_url": self._url_gamerelay_web(s), "gamerelay_num": len(nodos),
-                "gamerelay_list": [dict(n) for n in nodos]}  # L: mismo formato que el checklist
+        return self.respuesta_gamerelay(s)
+
+    async def c_cmd_get_matchid(self, s, m):
+        # C (prueba 10-nov): el cliente lo pide justo tras el FINISH (campos client/svrtype).
+        # P: el id de la partida = la sala sintética de la pareja (700 000 000 + n)
+        pareja = self._pareja_por_clave(s)
+        mid = int(pareja.get("room_id") or 0) if pareja else 0
+        return {"match_id": mid, "matchid": mid}
 
     async def c_cmd_set_gamerelay_quality(self, s, m):
         # C: cada elemento llega como bin con un mapa {gamerelay_index, quality(ms), last_update};
@@ -3116,6 +3131,11 @@ class Servidor:
         base = {"msgid": msgid, "rqid": int(formulario.get("rqid", 0) or 0), "result": NOERR}
         if msgid in ("CMD_GET_GAMERELAY_QUALITYCHECKLIST", "GET_GAMERELAY_QUALITYCHECKLIST"):
             return {**base, **self.lista_calidad(formulario.get("pid"), ip_cliente, ip_local)}
+        if msgid in ("CMD_GET_GAMERELAY", "GET_GAMERELAY"):
+            # C (prueba 10-nov): tras el FINISH el cliente lo pide por HTTP (POST /get_gamerelay,
+            # campos msgid/pid/rqid/urltype); sin respuesta manda CHECK_RES ER_MATCHING_RETRY y
+            # SEND_MATCHING_RESULT con gamerelay_ip_addr «NotImplement» (MXNV_0010)
+            return {**base, **self.respuesta_gamerelay(ip_local=ip_local)}
         if msgid in ("CMD_GET_AVATAR_HTTP", "CMD_GET_AVATAR"):
             return {**base, **self._avatar(formulario.get("pid"))}
         if msgid == "CMD_AUTH_STEAM":
