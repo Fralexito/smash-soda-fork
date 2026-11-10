@@ -17,11 +17,13 @@ Primero arranca este rival y DESPUÉS busca partida en el PES (o al revés: da i
 """
 import asyncio
 import json
+import time
 import os
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from phoenix_online.gamerelay_cliente import ClienteRele, claves_de_archivo, endpoint_ntl  # noqa: E402
+from phoenix_online.gamerelay import carga_de  # noqa: E402
 from phoenix_online.msgpack_min import Empaquetado  # noqa: E402
 from phoenix_online.nclmio import Codec, LectorTramas  # noqa: E402
 
@@ -29,7 +31,78 @@ STEAM_FALSO = "0110000100001234"
 HOST = "127.0.0.1"
 
 
-async def main(tipo, espejo=False, con_udp=True):
+class ClienteRevision(ClienteRele):
+    """Con --revision: reconstruye el CMD_REVISION_CHECK que manda el PES por el canal 15
+    (framing PESBUL: [0x40][largo zlib][datos] + trozos [0x80|n][n bytes], zlib de un mapa msgpack)
+    y manda el suyo, con los mismos checksums, su pid y su nombre, cada 5 s."""
+
+    def __init__(self, *a, **k):
+        super().__init__(*a, **k)
+        self._trozos = {}          # (id emisor) -> bytearray del mensaje en curso
+        self._falta = {}
+        self._enviado = 0.0
+        self.pid_rival = 68157441
+
+    def _juego(self, canal, b):
+        super()._juego(canal, b)
+        if canal != 15 or len(b) < 3:
+            return
+        cab, resto = b[:2], b[2:]
+        emisor = ((cab[0] << 8 | cab[1]) >> 4) & 0x1F
+        if emisor == self.mi_id:
+            return
+        if resto[0] == 0x40 and len(resto) >= 2:
+            self._trozos[emisor] = bytearray(resto[2:])
+            self._falta[emisor] = resto[1] - len(resto[2:])
+        elif resto[0] & 0xC0 == 0x80 and emisor in self._trozos:
+            self._trozos[emisor] += resto[1:]
+            self._falta[emisor] -= len(resto) - 1
+        else:
+            return
+        if self._falta.get(emisor, 1) == 0:
+            self._responder_revision(bytes(self._trozos.pop(emisor)))
+
+    def _responder_revision(self, comprimido):
+        import zlib
+        from phoenix_online import msgpack_min
+        try:
+            m = msgpack_min.unpackb(zlib.decompress(comprimido))
+        except Exception as e:
+            self._anotar(f"REVISION_CHECK del PES no se pudo leer: {e}")
+            return
+        if not isinstance(m, dict) or m.get("msgid") != "CMD_REVISION_CHECK":
+            self._anotar(f"mensaje del 15 que no es REVISION_CHECK: {str(m)[:120]}")
+            return
+        self._anotar(f"REVISION_CHECK del PES: {m}")
+        if int(m.get("is_request", 1)) == 0:
+            self._anotar("  -> es la RESPUESTA del PES a mi petición (el PES aceptó mi revision check)")
+            return
+        # petición del PES: se responde SIEMPRE (is_request 0) y además se manda la propia petición
+        self._enviar_revision(m, 0)
+        if time.monotonic() - self._enviado < 4:
+            return
+        self._enviado = time.monotonic()
+        self._enviar_revision(m, 1)
+
+    def _enviar_revision(self, m, es_peticion):
+        import zlib
+        from phoenix_online import msgpack_min
+        mio = dict(m)
+        mio["pid"] = self.pid_rival
+        mio["name"] = "RIVAL_PRUEBA"
+        mio["is_request"] = es_peticion
+        crudo = zlib.compress(msgpack_min.packb(mio))
+        pieza = bytes([0x40, len(crudo)]) + crudo[:14]
+        self.poner(15, carga_de(pieza))
+        resto = crudo[14:]
+        while resto:
+            n = resto[:15]
+            self.poner(15, carga_de(bytes([0x80 | len(n)]) + n))
+            resto = resto[15:]
+        self._anotar(f"REVISION_CHECK del rival enviado (is_request {es_peticion}, {len(crudo)} B comprimidos)")
+
+
+async def main(tipo, espejo=False, con_udp=True, revision=False):
     with open("config.json", encoding="utf-8") as f:
         cfg = json.load(f)
     with open(cfg["clave_nclmio"], "rb") as f:
@@ -64,7 +137,7 @@ async def main(tipo, espejo=False, con_udp=True):
         registro = open(os.path.join("registro", "rival_udp.txt"), "a", encoding="utf-8")
         puerto_rele = int((cfg.get("gamerelay") or {}).get("puerto", 5100))
         _t, udp = await asyncio.get_running_loop().create_datagram_endpoint(
-            lambda: ClienteRele(k_ext, k_int, espejo=espejo, registro=registro),
+            lambda: (ClienteRevision if revision else ClienteRele)(k_ext, k_int, espejo=espejo, registro=registro),
             remote_addr=(HOST, puerto_rele))
         ip_udp, puerto_udp = _t.get_extra_info("sockname")[:2]
         print(f"Socket UDP del rival: {ip_udp}:{puerto_udp} -> relé {HOST}:{puerto_rele}")
@@ -129,4 +202,4 @@ async def main(tipo, espejo=False, con_udp=True):
 if __name__ == "__main__":
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     asyncio.run(main(args[0] if args else "OC_RANK", espejo="--espejo" in sys.argv,
-                     con_udp="--sin-udp" not in sys.argv))
+                     con_udp="--sin-udp" not in sys.argv, revision="--revision" in sys.argv))
