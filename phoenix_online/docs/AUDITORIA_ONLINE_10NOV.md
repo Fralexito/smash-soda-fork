@@ -56,3 +56,16 @@ Todas tienen valor por defecto: un `config.json` viejo sigue funcionando igual.
 3. ✅ Relé de 2 jugadores (fases 2 y 3) + desconexiones (88 pruebas OK).
 4. Prueba real con 2 PES (antes, prueba de emparejamiento con `tools/rival_falso.py`).
 5. Pase de identidad web + Supabase (con el SÍ de Frank).
+
+## Pid en partida (10-nov, después de la prueba 6e)
+- Hallazgo (prueba 6e): en `CMD_REVISION_CHECK` cada PES manda como `pid` los 32 bits bajos de su número, y el
+  otro PES lo compara con los 32 bits bajos del pid que el servidor le dio en la lista de FINISH. Con eso bien,
+  el PES pasó «Revisando estado de conexión» y llegó a «Se están enviando y recibiendo los datos…».
+- Arreglo en el servidor: las claves que inventa el servidor («7f»+IP, «7e», «7d»+cuenta) ya no dan números con
+  los 32 bits bajos casi iguales; ahora salen de un resumen de la clave (distintos entre amigos y distintos de
+  los SteamID compartidos 0x04100000 / 0x3a660). La clave guardada (club, perfil) no cambia.
+- Duda que decide una prueba (A/B): el PES ¿saca su pid del SteamID propio (A) o del pid que le da el servidor
+  en GET_PLAYER_DATA (B)? Prueba: `identidad.pid_forzado {"IP del PES": "0110000100005678"}`, reiniciar, PES +
+  `rival_falso.py --revision`. Si el PES manda 22136 (0x5678) = B: el arreglo basta. Si manda 68157440 = A: hace
+  falta que Phoenix Core (o el launcher) dé a cada PC un SteamID distinto; mientras, `identidad.pid_en_partida:
+  "nativo"` pone en FINISH el SteamID tal cual. Quitar `pid_forzado` después de la prueba.

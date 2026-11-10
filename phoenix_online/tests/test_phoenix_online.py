@@ -1864,6 +1864,52 @@ class TestLauncher(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(srv._sin_launcher(S("100.64.0.8")))   # apagado por defecto
 
 
+class TestPidEnPartida(unittest.TestCase):
+    """Prueba 6e: los 32 bits bajos del pid de FINISH son lo que el otro PES exige en REVISION_CHECK."""
+
+    def _s(self, ip, clave, crudo):
+        from phoenix_online.logica import Sesion
+        s = Sesion(lambda *a: None, (ip, 1), "MENU")
+        s.ip_local, s.steam_hex, s.steam_crudo, s.pid, s.pname = "192.168.1.5", clave, crudo, 7, "X"
+        return s
+
+    def test_amigos_con_steam_compartido_tienen_pid_distinto(self):
+        import copy
+        cfg = copy.deepcopy(CFG)
+        srv = Servidor(cfg, Datos())
+        compartido = "0410000004100000"
+        # anfitrión: su SteamID tal cual (lo que ya pasó la prueba 6e)
+        self.assertEqual(srv._pid_visible(self._s("127.0.0.1", compartido, compartido)), 0x0410000004100000)
+        # dos amigos cuya IP termina igual: antes salían con los mismos 32 bits bajos
+        a = srv.clave_identidad(compartido, "100.64.0.7")
+        b = srv.clave_identidad(compartido, "100.64.1.7")
+        pa = srv._pid_visible(self._s("100.64.0.7", a, compartido))
+        pb = srv._pid_visible(self._s("100.64.1.7", b, compartido))
+        bajos = {pa & 0xFFFFFFFF, pb & 0xFFFFFFFF, 0x04100000, 0x3A660}
+        self.assertEqual(len(bajos), 4)
+        self.assertEqual(pa >> 32, 0x01100001)
+        # la clave guardada no cambia y el número es estable
+        self.assertEqual(a, "7f644000070" + "00000")
+        self.assertEqual(Servidor.numero_de_clave(a), pa)
+        # un SteamID propio (no compartido) se queda igual
+        self.assertEqual(Servidor.numero_de_clave("0110000100001234"), 0x0110000100001234)
+
+    def test_modos_de_prueba(self):
+        import copy
+        cfg = copy.deepcopy(CFG)
+        srv = Servidor(cfg, Datos())
+        compartido = "0410000004100000"
+        amigo = self._s("100.64.0.7", srv.clave_identidad(compartido, "100.64.0.7"), compartido)
+        self.assertNotEqual(srv._pid_en_partida(amigo), 0x0410000004100000)
+        cfg["identidad"] = {"pid_en_partida": "nativo"}
+        self.assertEqual(srv._pid_en_partida(amigo), 0x0410000004100000)
+        # pid_forzado manda sobre todo (solo para la prueba A/B en la PC del servidor)
+        cfg["identidad"] = {"pid_forzado": {"127.0.0.1": "0110000100005678"}}
+        anfitrion = self._s("127.0.0.1", compartido, compartido)
+        self.assertEqual(srv._pid_en_partida(anfitrion), 0x0110000100005678)
+        self.assertEqual(srv._pid_visible(anfitrion), 0x0110000100005678)
+
+
 class TestNubeSinLlaveMaestra(unittest.IsolatedAsyncioTestCase):
     """Migración 164: el servidor solo llama a phoenix_srv_* con su secreto (sin service_role)."""
 

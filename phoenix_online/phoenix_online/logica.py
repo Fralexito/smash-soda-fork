@@ -79,6 +79,7 @@ class Sesion:
         self.svrtype = svrtype
         self.secuencia = 0  # última recibida: se usa al responder Y al empujar (§11.2.7)
         self.steam_hex = None
+        self.steam_crudo = None  # SteamID tal como lo mandó el PES (antes de la clave por IP/cuenta)
         self.pid = None
         self.pname = None
         self.vigilancias = {}  # msgid -> rqid
@@ -714,6 +715,7 @@ class Servidor:
         crudo = self._steam_de(m)
         if crudo is None:
             return s.steam_hex
+        s.steam_crudo = crudo.lower()
         return self.clave_identidad(crudo, s.ip, s.ip_local)
 
     def en_mantenimiento(self):
@@ -786,14 +788,49 @@ class Servidor:
                 "pname": Empaquetado(self._identidad(s, j["pname"]))}
 
     def _pid_visible(self, s):
-        return self._numero_cuenta(s) or s.pid
+        forzado = self._pid_forzado(s)
+        return forzado or self._numero_cuenta(s) or s.pid
 
-    @staticmethod
-    def _numero_cuenta(s):
+    def _pid_forzado(self, s):
+        """identidad.pid_forzado {"IP": "hex de 16"}: SOLO para la prueba que decide de dónde saca el
+        PES el pid que manda en CMD_REVISION_CHECK (del SteamID propio o del pid que le da el servidor)."""
+        tabla = (self.cfg.get("identidad") or {}).get("pid_forzado") or {}
+        ip = (getattr(s, "ip", None) or "").split("%")[0].removeprefix("::ffff:")
+        v = tabla.get(ip)
         try:
-            return int(s.steam_hex or "0", 16)
+            return int(str(v), 16) if v else 0
         except ValueError:
             return 0
+
+    # Claves que inventa el servidor (no son SteamID): «7f»+IP, «7e»+sha1(IP), «7d»+sha1(cuenta).
+    PREFIJOS_DERIVADOS = ("7d", "7e", "7f")
+    STEAM_BASE = 0x0110000100000000  # prefijo de una cuenta Steam individual (32 bits altos 0x01100001)
+    PIDS_NATIVOS_COMPARTIDOS = (0x04100000, 0x0003A660)
+
+    @classmethod
+    def numero_de_clave(cls, clave):
+        """Número de cuenta (pid de 64 bits) que ven los PES para una clave del servidor.
+
+        C (prueba 6e, 10-nov): en CMD_REVISION_CHECK cada PES manda como pid los 32 bits BAJOS de su
+        número, y el otro PES lo compara con los 32 bits bajos del pid que le dimos en la lista de
+        FINISH. Las claves derivadas «7f»+IP+«000000» tenían los 32 bits bajos casi iguales para
+        todos (IP terminada en el mismo número = mismo pid): ahora salen de un resumen de la clave,
+        distintos entre amigos y distintos de los SteamID compartidos. La clave guardada no cambia."""
+        clave = (clave or "").lower()
+        try:
+            n = int(clave or "0", 16)
+        except ValueError:
+            return 0
+        if len(clave) == 16 and clave[:2] in cls.PREFIJOS_DERIVADOS:
+            bajo = int.from_bytes(hashlib.sha1(clave.encode()).digest()[:4], "big") & 0x7FFFFFFF
+            if bajo == 0 or bajo in cls.PIDS_NATIVOS_COMPARTIDOS:
+                bajo = (bajo ^ 0x5A5A5A5A) & 0x7FFFFFFF or 1
+            return cls.STEAM_BASE | bajo
+        return n
+
+    @classmethod
+    def _numero_cuenta(cls, s):
+        return cls.numero_de_clave(s.steam_hex)
 
     @classmethod
     def _identidad(cls, s, nombre):
@@ -874,11 +911,23 @@ class Servidor:
             if s in cola:
                 cola.remove(s)
 
+    def _pid_en_partida(self, s):
+        """pid de la ficha de FINISH: los 32 bits bajos son lo que el OTRO PES exigirá en el
+        CMD_REVISION_CHECK. identidad.pid_en_partida = "clave" (por defecto: el número que el
+        servidor da a esa persona) o "nativo" (el SteamID tal cual lo mandó su PES)."""
+        modo = (self.cfg.get("identidad") or {}).get("pid_en_partida", "clave")
+        if modo == "nativo" and s.steam_crudo and not self._pid_forzado(s):
+            try:
+                return int(s.steam_crudo, 16)
+            except ValueError:
+                pass
+        return self._pid_visible(s) or 0
+
     def _miembro(self, s, orden, dueno, lado=None):
         """Una ficha del roster de CMD_WATCH_MATCHING (bin con MessagePack dentro)."""
         ident = self._identidad(s, s.pname or "Phoenix")
         f = {"matching_order": orden, "is_owner": "YES" if dueno else "NO",
-             "pid": self._pid_visible(s) or 0, "pname": Empaquetado(ident),
+             "pid": self._pid_en_partida(s), "pname": Empaquetado(ident),
              "ntl_nat_type": int(s.ntl.get("ntl_nat_type") or 0),
              "has_guestplayer": "NO", "guest_info": Empaquetado([]),
              "rating": 0, "manner": "", "team_power_lv": "", "division": "",
@@ -1204,10 +1253,7 @@ class Servidor:
         lista = []
         for i, f in enumerate(filas[inicio:inicio + cuantos]):
             perfil = self.datos.perfil(f["steam_hex"])
-            try:
-                cuenta_pid = int(f["steam_hex"], 16)
-            except ValueError:
-                cuenta_pid = f["pid"]
+            cuenta_pid = self.numero_de_clave(f["steam_hex"]) or f["pid"]
             lista.append({"rank": inicio + i + 1, "point": 0, "user": {
                 "pid": cuenta_pid,
                 "pname": {"name": f["pname"], "xuid_one": "NotImplement",
