@@ -42,6 +42,13 @@ en modo offline (nada que ver con lo online: el que quiera juega offline y local
 ## Orden
 1. ✅ Servidor (10-nov): `POST /entrar {token}` (Supabase confirma la sesión; la PC queda ligada a la cuenta) e
    `identidad.exigir_launcher` + `launcher_horas` (apagado por defecto; la PC del servidor exenta). 97 pruebas OK.
-2. Launcher puente: botones Online/Offline sobre el `.bat` actual (sin descargas).
+2. Launcher puente (10-nov, programado): `tools/launcher/PhoenixJugar.ps1` (+ `PhoenixJugar.json` en la PC).
+   «Jugar Online»: comprueba `/estado`, inicia sesión con la web (correo y contraseña; queda guardada cifrada
+   con DPAPI en %APPDATA%\PhoenixLauncher), manda `POST /entrar`, pone las líneas `#PHOENIX` en hosts
+   (permiso de administrador) y abre el PES. «Jugar Offline»: quita las líneas `#PHOENIX` y abre el PES.
+   Al `Phoenix Launcher.bat` del hilo del parche solo se le añaden 2 opciones de menú que llaman al `.ps1`
+   (cambio mínimo, con respaldo `.antes_jugar`). No se reescribe nada de perfiles V1/V2 ni de Caras.
+   Límite de la versión puente: quien entra a la web solo con Discord/Google necesita poner una contraseña en
+   su perfil. Link hará el inicio con Discord/Google.
 3. Link: pestaña «Jugar» con inicio de sesión de la web. Hilo de Link, cuando Frank lo diga.
 4. Encender `exigir_launcher` cuando todos los amigos lo tengan.
