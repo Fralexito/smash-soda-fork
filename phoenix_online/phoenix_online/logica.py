@@ -15,6 +15,7 @@ import os
 import random
 import time
 
+from . import divisiones as div
 from . import msgpack_min
 from .msgpack_min import Empaquetado
 
@@ -29,7 +30,6 @@ CONFIRMACIONES = {
     "CMD_LEAVE_OFFLINE_MODE", "CMD_SEND_HEARTBEAT", "CMD_SET_ROOM_OPTION",
     # L (PESBUL): estos también se contestan solo con NOERR
     "CMD_CHECK_CHEAT", "CMD_GET_DMM_NOTIFICATION", "CMD_GET_URGENT_ANNOUNCEMENT",
-    "CMD_FINISH_SEASON",
     # L (ESPEC_GAMERELAY_FASE23 §5.1): durante una partida de 2 solo esperan NOERR, y A TIEMPO
     # (SET_GAMEPLAYER_PLAYTIME sin respuesta = ABNORMALEND a los ~55 s para los dos)
     "CMD_SET_GAMEPLAYER_PLAYTIME", "CMD_SET_GAMETEAM", "CMD_CHANGE_GAMEPHASE",
@@ -498,16 +498,109 @@ class Servidor:
     async def c_cmd_get_division_info(self, s, m):
         # L (PESBUL online_division): con NOERR pelado el cliente cae en «fin de temporada» y
         # repite la sonda; cuenta nueva = D12, partido 1 de la temporada, sin historial
+        # L (ESPEC_DIVISIONES A.4): anidados como bin; historial = partidos de la temporada
         j = self.datos.jugador(s.steam_hex or "") or {}
+        info = div.info_division(self._estado_division(s.steam_hex), self._reglas_division())
+        info["match_record"] = Empaquetado(info["match_record"])
+        info["match_history_list"] = [Empaquetado(h) for h in info["match_history_list"]]
         return {"pname": Sala.pname(s) if s.pname else Empaquetado(self._identidad(s, j.get("pname", ""))),
-                "division_info": Empaquetado({
-                    # L (reglamento por defecto): D12 no desciende, asciende con 300 pts,
-                    # sin doble ascenso (99999 = desactivado), 10 partidos, rating inicial 1000
-                    "division": "D12", "demotion_point": 0, "promotion_point": 300,
-                    "doublerank_promotion_point": 99999, "other_match_num": 1,
-                    "match_record": Empaquetado({"win_count": 0, "draw_count": 0, "lose_count": 0,
-                                                 "win_s_max": 0, "rating": 1000}),
-                    "match_history_list": []})}
+                "division_info": Empaquetado(info)}
+
+    # ---------- Divisiones en línea (div = phoenix_online/divisiones.py) ----------
+    def _reglas_division(self):
+        return div.Reglas(self.cfg.get("divisiones"))
+
+    def _estado_division(self, clave):
+        return div.completar(self.datos.division(clave or "") if clave else None)
+
+    async def c_cmd_finish_season(self, s, m):
+        """L (A.0): el cliente cierra la temporada; solo se archiva si se jugó entera o ya ganó el
+        ascenso (nunca una temporada vacía ni una a medias sin ascenso)."""
+        if not s.steam_hex:
+            return {}
+        reglas = self._reglas_division()
+        e = self._estado_division(s.steam_hex)
+        sube = reglas.ascenso(e["division"])
+        if e["jugados"] and (div.temporada_terminada(e, reglas) or (sube is not None and e["sp"] >= sube)):
+            cambio = div.cerrar_temporada(e, reglas)
+            self.datos.guardar_division(s.steam_hex, e)
+            log.info("temporada cerrada para %s: %s -> %s", s.steam_hex, cambio, e["division"])
+        return {}
+
+    def _resultado_division(self, s, pareja, m):
+        """CMD_SEND_GAME_RESULT de un partido de Divisiones (A.1/A.2). El PRIMER informe completo
+        se aplica a los dos jugadores; el segundo solo se compara."""
+        reglas = self._reglas_division()
+        if pareja.get("tipo") not in reglas.tipos:
+            log.info("resultado de %s: no es de Divisiones, no cambia rating", pareja.get("tipo"))
+            return
+        partido = f"div{pareja['room_id']}"
+        try:
+            goles = (max(0, int(m.get("home_score") or 0)), max(0, int(m.get("away_score") or 0)))
+        except (TypeError, ValueError):
+            log.warning("partido %s: marcador ilegible %r", partido, m)
+            return
+        motivo = m.get("abnormalend_reason")
+        motivo = motivo if isinstance(motivo, str) else ""
+        previo = self.datos.partido_division(partido)
+        if previo is not None:
+            if (previo.get("home", {}).get("score"), previo.get("away", {}).get("score")) != goles \
+                    and not previo.get("no_cuenta"):
+                log.warning("partido %s: los dos informes NO coinciden (%s vs %s); manda el primero",
+                            partido, (previo["home"]["score"], previo["away"]["score"]), goles)
+            return
+        casa, fuera = pareja["miembros"]
+        claves = pareja.get("claves") or [self._clave_partida(casa), self._clave_partida(fuera)]
+        equipos = [m.get("home_team_id") or 0, m.get("away_team_id") or 0]
+        fichas = []
+        for x, clave, eq, g in zip((casa, fuera), claves, equipos, goles):
+            j = self.datos.jugador(clave) or {}
+            fichas.append({"pid": self._pid_en_partida(x), "name": j.get("pname") or x.pname or "",
+                           "team": int(eq) if isinstance(eq, int) else 0, "score": g, "clave": clave})
+        guardado = div.partido_guardable(time.time(), fichas[0], fichas[1], motivo)
+        if motivo not in div.FINES_NORMALES and reglas.abandono == "no_count":
+            # L (A.2, política no_count): un fin anormal no se adivina, no cuenta para nadie
+            guardado["no_cuenta"] = True
+            self.datos.guardar_partido_division(partido, guardado)
+            log.info("partido %s: fin anormal (%s) %s-%s: no cuenta", partido, motivo, *goles)
+            return
+        if not self.datos.guardar_partido_division(partido, guardado):
+            return
+        estados = [self._estado_division(c) for c in claves]
+        viejos = [e["rating"] for e in estados]
+        cambios = []
+        for i, (e, clave) in enumerate(zip(estados, claves)):
+            o = 1 - i
+            res, sp, viejo = div.aplicar(e, reglas, goles[i], goles[o], fichas[i]["team"], fichas[o]["team"],
+                                         viejos[o], fichas[o]["name"], ("AWAY", "HOME")[i], partido)
+            self.datos.guardar_division(clave, e)
+            cambios.append((res, sp, viejo, e))
+        log.info("partido %s aplicado: %s %d-%d %s (rating %d->%d / %d->%d)", partido, fichas[0]["name"],
+                 goles[0], goles[1], fichas[1]["name"], viejos[0], estados[0]["rating"], viejos[1],
+                 estados[1]["rating"])
+        self._empujar_cambio_rating(pareja, fichas, cambios, goles)
+
+    def _empujar_cambio_rating(self, pareja, fichas, cambios, goles):
+        """L (A.3): CMD_WATCH_GAMEADDPOINT NO lo pide el cliente: se EMPUJA (rqid 0) una vez a cada
+        participante que siga conectado; es lo que arma la pantalla «Cambios en el rating»."""
+        ganador = "WINNER_HOME" if goles[0] > goles[1] else "WINNER_AWAY" if goles[1] > goles[0] else "WINNER_NONE"
+        lista = []
+        for f, (res, sp, viejo, e), lado in zip(fichas, cambios, ("HOME", "AWAY")):
+            lista.append(Empaquetado({
+                "pid": f["pid"],
+                "pes_pname": Empaquetado({"name": f["name"], "xuid_one": "NotImplement",
+                                          "psn_user_id": Empaquetado({"account_id": 0, "online_id": f["name"],
+                                                                      "is_valid_cache": "NO"}),
+                                          "is_deleted": "NO"}),
+                "rating_type": "RANKMATCH", "rating": e["rating"], "oldrating": viejo,
+                "rating_boost_type": "", "rating_boost_rate": 0, "rating_compe": 0,
+                "team_id": f["team"], "side": lado, "contWin_num": e["racha"],
+                "skill_rank": "SKILL_RANK_NONE", "is_rankup_skill_rank": "NO", "is_first_skillrank": "NO"}))
+        for x in pareja["miembros"]:
+            if x in self.sesiones:
+                x.enviar({"msgid": "CMD_WATCH_GAMEADDPOINT", "rqid": 0, "result": NOERR,
+                          "player_count": len(lista), "player_list": lista, "winner_side": ganador,
+                          "gameend_reason": "NORMAL_END", "is_pk": "NO"})
 
     async def c_cmd_join_online_mode(self, s, m):
         s.modo_online = m.get("online_mode") if isinstance(m.get("online_mode"), str) else None
@@ -1225,10 +1318,15 @@ class Servidor:
                                        "match_num": 0, "win_num": 0, "lose_num": 0,
                                        "draw_num": 0},
                  "match_data_size": 0, "match_data": b""}
-        estadisticas = {"division": DIVISION_INICIAL, "rating": RATING_INICIAL,
-                        "max_weekly_point": 0, "current_weekly_point": 0, "match_num": 0,
-                        "win_num": 0, "lose_num": 0, "draw_num": 0, "contWin_num": 0,
-                        "contWinMax_num": 0, "goal": 0, "lostGoal": 0}
+        e = self._estado_division(destino.steam_hex)
+        partidos = sum(a["jugados"] for a in e["archivadas"]) + e["jugados"]
+        estadisticas = {"division": e["division"], "rating": e["rating"],
+                        "max_weekly_point": 0, "current_weekly_point": 0, "match_num": partidos,
+                        "win_num": e["win"] + sum(a["win"] for a in e["archivadas"]),
+                        "lose_num": e["loss"] + sum(a["loss"] for a in e["archivadas"]),
+                        "draw_num": e["draw"] + sum(a["draw"] for a in e["archivadas"]),
+                        "contWin_num": e["racha"], "contWinMax_num": e["racha_max"],
+                        "goal": e["goles"], "lostGoal": e["goles_contra"]}
         return {"pid": self._pid_visible(destino), "pname": Empaquetado(pname),
                 "favoriteTeam": perfil["favorite_team"],
                 "favoritePlayer": perfil["favorite_player"], "intro": perfil["intro"],
@@ -1242,38 +1340,76 @@ class Servidor:
 
     async def c_cmd_get_division_point_info(self, s, m):
         # L (PESBUL r7.3.630): la tabla es POSICIONAL: siempre 12 filas, D12 -> D1, como bin
-        return {"server_num": 1, "division_list": [
-            Empaquetado({"division_type": f"D{d}", "point": 0, "rank": 0})
-            for d in range(12, 0, -1)]}
+        e = self._estado_division(s.steam_hex)
+        return {"server_num": 1, "division_list": [Empaquetado(f) for f in div.filas_carrera(e)]}
 
     async def c_cmd_get_gameresults(self, s, m):
         # L (PESBUL r7.3.629): sin historial = no_match «YES»; un elemento mal formado cierra PES
-        return {"rlist_num": 0, "rlist": [], "no_match": "YES"}
+        # Apagado hasta confirmar el anidamiento exacto (A.6: una clave en el nivel equivocado cerró
+        # el PES): divisiones.historial_partidos = true lo enciende.
+        if not (self.cfg.get("divisiones") or {}).get("historial_partidos", False):
+            return {"rlist_num": 0, "rlist": [], "no_match": "YES"}
+        filas = []
+        for partido in self._estado_division(s.steam_hex)["resultados"][:div.MAX_RESULTADOS]:
+            p = self.datos.partido_division(partido)
+            if p and not p.get("no_cuenta"):
+                filas.append(self._fila_resultado(p))
+        if not filas:
+            return {"rlist_num": 0, "rlist": [], "no_match": "YES"}
+        return {"rlist_num": len(filas), "rlist": filas}
+
+    @staticmethod
+    def _fila_resultado(p):
+        def marcador(g):
+            return Empaquetado({"score_1st": int(g), "score_2nd": 0, "score_ex1st": 0, "score_ex2nd": 0,
+                                "score_pk": 0})
+
+        def jugador(f, lado):
+            return Empaquetado({"pname": Empaquetado({"name": f["name"], "xuid_one": "NotImplement",
+                                                      "psn_user_id": Empaquetado({"account_id": 0,
+                                                                                  "online_id": f["name"],
+                                                                                  "is_valid_cache": "NO"}),
+                                                      "is_deleted": "NO"}),
+                                "pid": f["pid"], "side": lado, "is_com": "NO", "cpu_level": "",
+                                "is_follow": "NO", "is_guest": "NO"})
+        casa, fuera = p["home"], p["away"]
+        return Empaquetado({"date": int(p["date"]), "match_category": "ONLINE_DIVISIONS", "ex_type": "NONE",
+                            "gameend_reason": p.get("reason") or "NORMAL_END", "pk_flag": "NO",
+                            "score": [marcador(casa["score"]), marcador(fuera["score"])],
+                            "player": [jugador(casa, "HOME"), jugador(fuera, "AWAY")],
+                            "team": [int(casa["team"]), int(fuera["team"])]})
 
     async def c_cmd_get_ranking(self, s, m):
         # L (PESBUL r728): elementos como MAPAS (no bin); ordenados por rating y luego puntos
         division = m.get("division_type") or m.get("division")
-        filas = [] if division not in (None, "", DIVISION_INICIAL) else self.datos.todos()
+        estados = self.datos.divisiones()
+        filas = []
+        for f in self.datos.todos():
+            e = div.completar(estados.get((f["steam_hex"] or "").lower()))
+            if division in (None, "") or e["division"] == division:
+                filas.append((f, e))
+        # L (A.7): rating de mayor a menor, luego SP, luego pid
+        filas.sort(key=lambda fe: (-fe[1]["rating"], -fe[1]["sp"], int(fe[0]["pid"] or 0)))
         try:
             inicio = max(0, int(m.get("start_index") or 0))
             cuantos = min(100, max(0, int(m.get("view_num") or 50)))
         except (TypeError, ValueError):
             inicio, cuantos = 0, 50
         lista = []
-        for i, f in enumerate(filas[inicio:inicio + cuantos]):
+        for i, (f, e) in enumerate(filas[inicio:inicio + cuantos]):
             perfil = self.datos.perfil(f["steam_hex"])
             cuenta_pid = self.numero_de_clave(f["steam_hex"]) or f["pid"]
-            lista.append({"rank": inicio + i + 1, "point": 0, "user": {
+            lista.append({"rank": inicio + i + 1, "point": e["sp"], "user": {
                 "pid": cuenta_pid,
                 "pname": {"name": f["pname"], "xuid_one": "NotImplement",
                           "psn_user_id": {"account_id": 0, "online_id": f["pname"],
                                           "is_valid_cache": "NO"},
                           "is_deleted": "NO"},
-                "division": DIVISION_INICIAL, "manner": MODALES_DEFECTO,
+                "division": e["division"], "manner": MODALES_DEFECTO,
                 "favoriteTeam": perfil["favorite_team"],
                 "favoritePlayer": perfil["favorite_player"], "intro": perfil["intro"],
-                "match_record": {"win_count": 0, "draw_count": 0, "lose_count": 0,
-                                 "win_s_max": 0, "rating": RATING_INICIAL}}})
+                "match_record": {"win_count": e["win"], "draw_count": e["draw"], "lose_count": e["loss"],
+                                 "win_s_max": e["racha_max"], "rating": e["rating"]}}})
         return {"date": int(time.time()), "total_rank_num": len(filas), "rank_list": lista}
 
     c_cmd_get_ranking_byid = c_cmd_get_ranking
@@ -3053,6 +3189,10 @@ class Servidor:
     async def c_cmd_send_game_result(self, s, m):
         pareja = self._pareja_por_clave(s)
         if pareja and pareja.get("room_id"):
+            try:
+                self._resultado_division(s, pareja, m)
+            except Exception:
+                log.exception("no se pudo aplicar el resultado de Divisiones")
             datos = {k: v for k, v in m.items() if k not in ("msgid", "rqid")}
             partido = f"pareja{pareja['room_id']}"
             self.datos.guardar_resultado(pareja["room_id"], partido, s.pid or 0, datos)

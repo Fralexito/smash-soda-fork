@@ -1918,6 +1918,88 @@ class TestMatchAnalyze(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(r, {"analyze_data_size": 0, "analyze_data_list": [], "game_res": "DRAW"})
 
 
+class TestDivisiones(unittest.IsolatedAsyncioTestCase):
+    """ESPEC_DIVISIONES parte A: SP, Elo, temporada y ascenso; resultado aplicado una sola vez."""
+
+    def test_reglas_puras(self):
+        from phoenix_online import divisiones as d
+        r = d.Reglas()
+        self.assertEqual(d.elo(1000, 1000, "WIN"), 1016)
+        self.assertEqual(d.elo(1000, 1000, "LOSS"), 984)
+        self.assertEqual(d.elo(1000, 1000, "DRAW"), 1000)
+        e = d.estado_nuevo()
+        res, sp, viejo = d.aplicar(e, r, 2, 1, 100, 200, 1000, "RIVAL", "AWAY", "p1")
+        self.assertEqual((res, sp, viejo, e["rating"], e["sp"], e["jugados"]), ("WIN", 300, 1000, 1016, 300, 1))
+        res, sp, _ = d.aplicar(e, r, 1, 1, 100, 200, 1000, "RIVAL", "HOME", "p2")
+        self.assertEqual((res, sp), ("DRAW", 99))  # 300 x 0,33
+        info = d.info_division(e, r)
+        self.assertEqual((info["division"], info["promotion_point"], info["other_match_num"]), ("D12", 300, 3))
+        self.assertEqual(info["match_history_list"][0]["home_score"], 2)
+        self.assertEqual(info["match_history_list"][1]["enemy_side"], "HOME")
+        self.assertEqual(info["match_history_list"][1]["away_score"], 1)
+        # temporada completa: 399 SP >= 300 -> asciende a D11
+        e["jugados"] = 10
+        self.assertEqual(d.info_division(e, r)["other_match_num"], 0)
+        self.assertEqual(d.cerrar_temporada(e, r), "UP")
+        self.assertEqual((e["division"], e["sp"], e["jugados"], e["rating"]), ("D11", 0, 0, 1015))  # el empate contra 1000 restó 1
+        filas = d.filas_carrera(e)
+        self.assertEqual(len(filas), 12)
+        self.assertEqual((filas[0]["division_type"], filas[0]["point"]), ("D12", 399))
+        # D11 con pocos SP al final -> desciende
+        e["jugados"], e["sp"] = 10, 100
+        self.assertEqual(d.cerrar_temporada(e, r), "DOWN")
+        self.assertEqual(e["division"], "D12")
+        # D1 no asciende
+        self.assertEqual(d.info_division({**d.estado_nuevo(), "division": "D1"}, r)["promotion_point"], 99999)
+
+    async def test_partido_completo_por_el_servidor(self):
+        from phoenix_online.logica import Sesion
+        srv = Servidor(CFG, Datos())
+        enviados = {}
+
+        def ses(ip, clave, nombre):
+            x = Sesion(lambda seq, msg, k=clave: enviados.setdefault(k, []).append(msg), (ip, 1), "MENU")
+            x.steam_hex, x.pname, x.pid = clave, nombre, 1
+            srv.datos.crear_jugador(clave, nombre)
+            srv.sesiones.add(x)
+            return x
+        a = ses("100.64.0.1", "0110000100000001", "ANA")
+        b = ses("100.64.0.2", "0110000100000002", "BETO")
+        pareja = {"miembros": (a, b), "check": set(), "tipo": "OC_RANK", "room_id": 700000001,
+                  "claves": [a.steam_hex, b.steam_hex]}
+        srv.parejas[a] = srv.parejas[b] = pareja
+        informe = {"msgid": "CMD_SEND_GAME_RESULT", "side": "HOME", "home_score": 3, "away_score": 1,
+                   "home_team_id": 101, "away_team_id": 202, "abnormalend_reason": "NOERR"}
+        await srv.c_cmd_send_game_result(a, informe)
+        await srv.c_cmd_send_game_result(b, {**informe, "side": "AWAY"})  # el segundo no se aplica otra vez
+        ea, eb = srv.datos.division(a.steam_hex), srv.datos.division(b.steam_hex)
+        self.assertEqual((ea["win"], ea["sp"], ea["rating"], ea["jugados"]), (1, 300, 1016, 1))
+        self.assertEqual((eb["loss"], eb["sp"], eb["rating"], eb["jugados"]), (0 + 1, 0, 984, 1))
+        empujes = [m for m in enviados.get(a.steam_hex, []) if m["msgid"] == "CMD_WATCH_GAMEADDPOINT"]
+        self.assertEqual(len(empujes), 1)
+        self.assertEqual((empujes[0]["winner_side"], empujes[0]["player_count"]), ("WINNER_HOME", 2))
+        info = await srv.c_cmd_get_division_info(a, {})
+        self.assertIn("division_info", info)
+        rk = await srv.c_cmd_get_ranking(a, {"start_index": 0, "view_num": 10})
+        self.assertEqual(rk["rank_list"][0]["user"]["match_record"]["rating"], 1016)
+        # fin anormal 0-0 en otra partida: no cuenta
+        pareja2 = {**pareja, "room_id": 700000002}
+        srv.parejas[a] = srv.parejas[b] = pareja2
+        await srv.c_cmd_send_game_result(a, {**informe, "home_score": 0, "away_score": 0,
+                                             "abnormalend_reason": "LOAD_TIMEOUT"})
+        self.assertEqual(srv.datos.division(a.steam_hex)["jugados"], 1)
+        # partida rápida: no toca Divisiones
+        pareja3 = {**pareja, "room_id": 700000003, "tipo": "OC_QUICK"}
+        srv.parejas[a] = srv.parejas[b] = pareja3
+        await srv.c_cmd_send_game_result(a, informe)
+        self.assertEqual(srv.datos.division(a.steam_hex)["jugados"], 1)
+        # historial de partidos: apagado por defecto, y bien formado al encenderlo
+        self.assertEqual((await srv.c_cmd_get_gameresults(a, {}))["rlist_num"], 0)
+        srv.cfg = {**srv.cfg, "divisiones": {"historial_partidos": True}}
+        r = await srv.c_cmd_get_gameresults(a, {})
+        self.assertEqual(r["rlist_num"], 1)
+
+
 class TestNubeSinLlaveMaestra(unittest.IsolatedAsyncioTestCase):
     """Migración 164: el servidor solo llama a phoenix_srv_* con su secreto (sin service_role)."""
 

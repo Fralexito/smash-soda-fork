@@ -44,6 +44,15 @@ create table if not exists vinculos_web (
   subido integer not null default 0,
   hora real not null
 );
+create table if not exists divisiones (
+  steam_hex text primary key,
+  datos text not null
+);
+create table if not exists partidos_division (
+  partido text primary key,
+  datos text not null,
+  hora real not null
+);
 create table if not exists resultados (
   id integer primary key autoincrement,
   room_id integer not null,
@@ -215,6 +224,34 @@ class Datos:
         self.db.execute("insert into resultados(room_id, partido, pid, datos, hora) values (?,?,?,?,?)",
                         (room_id, partido, pid, json.dumps(datos, default=repr), time.time()))
         self.db.commit()
+
+    # ---- Divisiones en línea (docs/ESPEC_DIVISIONES_Y_MYCLUB_EXTRA.md, parte A) ----
+    def division(self, steam_hex):
+        f = self.db.execute("select datos from divisiones where steam_hex=?",
+                            ((steam_hex or "").lower(),)).fetchone()
+        return json.loads(f[0]) if f else None
+
+    def guardar_division(self, steam_hex, estado):
+        self.db.execute("insert into divisiones(steam_hex, datos) values (?,?) on conflict(steam_hex) "
+                        "do update set datos=excluded.datos", ((steam_hex or "").lower(), json.dumps(estado)))
+        self.db.commit()
+
+    def divisiones(self):
+        return {k: json.loads(d) for k, d in self.db.execute("select steam_hex, datos from divisiones")}
+
+    def guardar_partido_division(self, partido, datos):
+        """Un partido de Divisiones ya aplicado. False si ya estaba (nunca se aplica dos veces)."""
+        try:
+            self.db.execute("insert into partidos_division(partido, datos, hora) values (?,?,?)",
+                            (partido, json.dumps(datos), time.time()))
+        except sqlite3.IntegrityError:
+            return False
+        self.db.commit()
+        return True
+
+    def partido_division(self, partido):
+        f = self.db.execute("select datos from partidos_division where partido=?", (partido,)).fetchone()
+        return json.loads(f[0]) if f else None
 
     def resultados(self, partido):
         filas = self.db.execute("select pid, datos from resultados where partido=? order by id",

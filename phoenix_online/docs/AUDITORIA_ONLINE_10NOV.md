@@ -69,3 +69,13 @@ Todas tienen valor por defecto: un `config.json` viejo sigue funcionando igual.
   `rival_falso.py --revision`. Si el PES manda 22136 (0x5678) = B: el arreglo basta. Si manda 68157440 = A: hace
   falta que Phoenix Core (o el launcher) dé a cada PC un SteamID distinto; mientras, `identidad.pid_en_partida:
   "nativo"` pone en FINISH el SteamID tal cual. Quitar `pid_forzado` después de la prueba.
+
+## Divisiones de verdad (10-nov, noche)
+- `phoenix_online/divisiones.py` (lógica pura) + tablas `divisiones` y `partidos_division`. Reglas por defecto de
+  PESBUL (ESPEC_DIVISIONES_Y_MYCLUB_EXTRA.md parte A), todas cambiables en `config.json → "divisiones"`
+  (umbrales, partidos_por_temporada, sp_equipo_defecto, sp_por_equipo, multiplicador, elo_k, tipos_que_cuentan,
+  abandono, historial_partidos).
+- `SEND_GAME_RESULT`: el primer informe se aplica a los dos (SP, rating, W/D/L, racha, historial); el segundo solo
+  se compara. Fin anormal = no cuenta. Partida rápida no toca Divisiones. Empuja `WATCH_GAMEADDPOINT`.
+- `GET_DIVISION_INFO`, `GET_DIVISION_POINT_INFO`, ranking y perfil con datos reales; `FINISH_SEASON` cierra la
+  temporada (ascenso/descenso). `GET_GAMERESULTS` queda apagado hasta confirmar el anidamiento exacto.

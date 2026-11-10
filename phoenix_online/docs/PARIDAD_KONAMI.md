@@ -11,7 +11,7 @@ incluso, pero con todo lo que necesito para hacer mi parche». PES: solo el base
 | Modo | Estado | Comandos que faltan |
 |---|---|---|
 | Entrar al online, perfil, avisos, vestíbulo, salas | ✅ funciona | — |
-| Partida rápida y Divisiones 1v1 | ✅ emparejar + relé de 2 programado; ⏳ prueba con 2 PES | pocos (READY_FLAG, SELECT_SIDE van por el relé) |
+| Partida rápida y Divisiones 1v1 | ✅ emparejar + relé de 2 + chequeo de conexión superado (10-nov); ✅ Divisiones con temporada de 10 partidos, puntos (SP), rating Elo, ascenso/descenso D12..D1, pantalla «Cambios en el rating», ranking real; ⏳ prueba con 2 PES | historial de partidos (GET_GAMERESULTS) apagado hasta confirmar su formato |
 | Amistoso con amigo (sala libre) | 🟡 salas OK; el partido va directo PC a PC (P2P). Con Tailscale no hace falta TURN | — |
 | myClub vs COM | ✅ funciona (fichajes, contratos, subastas, entrenadores, GP) | 48 extra (nombres de club/plantilla, regalos, logros, historial, rankings, alquiler, objetos de habilidad…) |
 | Cooperativo (2v2, 3v3) | ❌ no hecho | 46 |
