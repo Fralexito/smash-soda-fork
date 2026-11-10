@@ -71,8 +71,19 @@ class ClienteRevision(ClienteRele):
         except Exception as e:
             self._anotar(f"REVISION_CHECK del PES no se pudo leer: {e}")
             return
-        if not isinstance(m, dict) or m.get("msgid") != "CMD_REVISION_CHECK":
-            self._anotar(f"mensaje del 15 que no es REVISION_CHECK: {str(m)[:120]}")
+        if not isinstance(m, dict):
+            return
+        if m.get("msgid") != "CMD_REVISION_CHECK":
+            self._anotar(f"mensaje del 15 (no es REVISION_CHECK): {str(m)[:900]}")
+            if m.get("msgid") in ("CMD_READY_FLAG", "CMD_SELECT_SIDE", "CMD_START_COUNTDOWN", "CMD_ALLREADY_FLAG"):
+                self._enviar_msg(dict(m))      # el rival hace lo mismo que el PES (solo prueba)
+            elif m.get("msgid") == "CMD_USER_DATA_SYNC":
+                mio = dict(m)                  # sus datos de usuario: su pid, su nombre y el lado contrario
+                mio["pid"] = self.pid_rival
+                mio["name"] = "RIVAL_PRUEBA"
+                if "side" in mio:
+                    mio["side"] = "HOME" if str(m.get("side")) == "AWAY" else "AWAY"
+                self._enviar_msg(mio)
             return
         self._anotar(f"REVISION_CHECK del PES: {m}")
         if int(m.get("is_request", 1)) == 0:
@@ -92,6 +103,11 @@ class ClienteRevision(ClienteRele):
         mio["pid"] = self.pid_rival
         mio["name"] = "RIVAL_PRUEBA"
         mio["is_request"] = es_peticion
+        self._enviar_msg(mio, f"REVISION_CHECK del rival enviado (is_request {es_peticion})")
+
+    def _enviar_msg(self, mio, etiqueta=None):
+        import zlib
+        from phoenix_online import msgpack_min
         crudo = zlib.compress(msgpack_min.packb(mio))
         pieza = bytes([0x40, len(crudo)]) + crudo[:14]
         self.poner(15, carga_de(pieza))
@@ -100,7 +116,7 @@ class ClienteRevision(ClienteRele):
             n = resto[:15]
             self.poner(15, carga_de(bytes([0x80 | len(n)]) + n))
             resto = resto[15:]
-        self._anotar(f"REVISION_CHECK del rival enviado (is_request {es_peticion}, {len(crudo)} B comprimidos)")
+        self._anotar(f"{etiqueta or 'mensaje del rival ' + str(mio.get('msgid'))} enviado ({len(crudo)} B comprimidos)")
 
 
 async def main(tipo, espejo=False, con_udp=True, revision=False):
