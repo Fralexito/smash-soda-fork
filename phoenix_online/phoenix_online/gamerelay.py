@@ -271,6 +271,7 @@ class Cliente:
         self.pid = None          # clave de la persona (la misma que usa el servidor TCP)
         self.id_rele = None      # id de 5 bits en la lista del canal 5
         self.ecos = []           # [(dgseq, instante)] pedidos de eco RTT pendientes (máx. 16)
+        self.vistos_juego = 0    # mensajes de juego anotados en el registro (diagnóstico)
 
     def canal(self, n):
         return self.canales.setdefault(n, Canal())
@@ -559,6 +560,12 @@ class Rele(asyncio.DatagramProtocol):
     def _juego(self, cli, canal, blq, tocados):
         """Fase 3: reenvío entre los jugadores de la misma partida (L FASE23 §3.3-3.4)."""
         it = cli.intento
+        # diagnóstico (10-nov): los primeros mensajes de juego de cada jugador quedan en el registro,
+        # para saber qué manda el PES durante el chequeo de conexión (sobre todo por 14 y 15)
+        cli.vistos_juego += 1
+        if cli.vistos_juego <= 60:
+            log.info("gamerelay %s: canal %d -> %s", cli.addr, canal,
+                     " | ".join(b[:48].hex() + ("…" if len(b) > 48 else "") for b in blq[:4]) or "(vacío)")
         if it is None:
             if blq:
                 log.info("gamerelay %s: canal de juego %d sin partida ligada (se ignora)", cli.addr, canal)

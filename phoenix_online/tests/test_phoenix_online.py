@@ -1660,3 +1660,64 @@ class TestNube(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(OSError):
             await n.vuelta()
         self.assertEqual(srv.datos.cambiados, {"aa"})
+
+
+class TestRivalUdp(unittest.IsolatedAsyncioTestCase):
+    """10-nov: el rival de prueba entra al relé por UDP (KX, canal 0, claves 5/14/15) y queda ligado."""
+
+    async def _par(self, rele, k_ext, k_int, espejo=False):
+        from phoenix_online.gamerelay_cliente import ClienteRele
+        loop = asyncio.get_running_loop()
+        t, c = await loop.create_datagram_endpoint(lambda: ClienteRele(k_ext, k_int, espejo=espejo),
+                                                   remote_addr=("127.0.0.1", self.puerto))
+        self.addCleanup(t.close)
+        return c, t.get_extra_info("sockname")[:2]
+
+    async def test_dos_clientes_ligados_y_reenvio(self):
+        from phoenix_online import gamerelay
+        from phoenix_online.gamerelay_cliente import endpoint_ntl
+        k_ext, k_int = bytes(range(256)), bytes(range(16))
+        rele = gamerelay.Rele(None, k_ext, k_int)
+        loop = asyncio.get_running_loop()
+        t, _ = await loop.create_datagram_endpoint(lambda: rele, local_addr=("127.0.0.1", 0))
+        self.addCleanup(t.close)
+        self.puerto = t.get_extra_info("sockname")[1]
+        pes, ep_pes = await self._par(rele, k_ext, k_int)
+        rival, ep_rival = await self._par(rele, k_ext, k_int, espejo=True)
+        # la declaración NTL se decodifica igual que la del PES
+        self.assertEqual(gamerelay.endpoint_de_ntl(endpoint_ntl(*ep_rival)), tuple(ep_rival))
+        rele.abrir_intento(700000001, [
+            {"pid": "pes", "enter_no": 0, "ip_tcp": "127.0.0.1", "endpoints": [tuple(ep_pes)]},
+            {"pid": "rival", "enter_no": 1, "ip_tcp": "127.0.0.1", "endpoints": [tuple(ep_rival)]}])
+        # el relé solo manda secciones de las claves abiertas: el 9 se abre como hace el PES al jugar
+        self.assertTrue(await pes.entrar(abrir=(5, 9, 14, 15)))
+        self.assertTrue(await rival.entrar(abrir=(5, 9, 14, 15)))
+        vida = [asyncio.ensure_future(pes.mantener(15, cada=0.02)),
+                asyncio.ensure_future(rival.mantener(15, cada=0.02))]
+        await asyncio.wait_for(asyncio.gather(pes.lista_llego.wait(), rival.lista_llego.wait()), 3)
+        self.assertEqual(pes.lista, bytes([0x1F, 0xC0, 0x81]))
+        self.assertEqual(rival.lista, bytes([0x1F, 0xC1, 0x80]))
+        self.assertEqual(sorted(rele.intentos[700000001].pares), ["pes", "rival"])
+        # el «PES» manda un mensaje largo por el 15: el rival lo recibe con la cabecera 0x4000 y,
+        # en modo espejo, se lo devuelve; el PES lo recibe con la cabecera del rival (0x4010)
+        msg = bytes(range(256)) + b"hola"
+        pes.poner(15, gamerelay.carga_de(*gamerelay.trozos(msg)))
+        for _ in range(100):
+            if any(c == 15 for c, _b in pes.recibidos):
+                break
+            await asyncio.sleep(0.03)
+        de_pes = b"".join(b for c, b in rival.recibidos if c == 15)
+        self.assertEqual(de_pes, b"\x40\x00" + msg)
+        de_rival = b"".join(b for c, b in pes.recibidos if c == 15)
+        self.assertEqual(de_rival, b"\x40\x10" + msg)
+        # canal 9: eco propio y copia para el otro con la etiqueta id<<3
+        pes.poner(9, gamerelay.carga_de(b"\xfa"))
+        for _ in range(100):
+            if any(c == 9 and b[0] == 1 << 3 for c, b in pes.recibidos):
+                break
+            await asyncio.sleep(0.03)
+        self.assertIn((9, b"\x00\xfa"), rival.recibidos)
+        self.assertIn((9, b"\x00\xfa"), pes.recibidos)          # eco propio
+        self.assertIn((9, b"\x08\xfa"), pes.recibidos)          # devuelto por el rival espejo
+        for v in vida:
+            v.cancel()
