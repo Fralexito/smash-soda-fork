@@ -2995,8 +2995,15 @@ class Servidor:
         web = self._url_gamerelay_web(s) if s is not None else (
             self._con_ip(self.cfg.get("http_base"), ip_local=ip_local) or
             f"http://{self.ip_anuncio(ip_local=ip_local)}:{self.cfg.get('puerto_http', 5000)}") + "/gamerelay"
-        return {"gamerelay_web_url": web, "gamerelay_num": len(nodos),
-                "gamerelay_list": [dict(n) for n in nodos]}
+        r = {"gamerelay_web_url": web, "gamerelay_num": len(nodos),
+             "gamerelay_list": [dict(n) for n in nodos]}
+        if nodos:
+            # C (PESBUL R7.3.494/602, comparado el 10-nov): el cliente copia a su objeto de
+            # resultado SOLO los campos sueltos gamerelay_index/ip_addr/port/grid (si no llegan
+            # queda «NotImplement»/0 y el SEND_MATCHING_RESULT sale con MXNV_0010)
+            r.update({"gamerelay_index": nodos[0]["gamerelay_index"], "ip_addr": nodos[0]["ip_addr"],
+                      "port": nodos[0]["port"], "grid": nodos[0]["grid"]})
+        return r
 
     async def c_cmd_get_gamerelay(self, s, m):
         return self.respuesta_gamerelay(s)
@@ -3006,7 +3013,8 @@ class Servidor:
         # P: el id de la partida = la sala sintética de la pareja (700 000 000 + n)
         pareja = self._pareja_por_clave(s)
         mid = int(pareja.get("room_id") or 0) if pareja else 0
-        return {"match_id": mid, "matchid": mid}
+        # C (PESBUL main.py 21668): match_id es TEXTO «PESBUL-<10 dígitos>» + upload «YES»
+        return {"match_id": "PHOENIX-%010d" % mid, "upload": "YES"}
 
     async def c_cmd_set_gamerelay_quality(self, s, m):
         # C: cada elemento llega como bin con un mapa {gamerelay_index, quality(ms), last_update};

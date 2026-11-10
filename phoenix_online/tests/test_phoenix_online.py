@@ -1596,13 +1596,16 @@ class TestRelePrueba10Nov(unittest.IsolatedAsyncioTestCase):
         self.assertEqual((r["result"], r["rqid"], r["gamerelay_num"]), ("NOERR", 7, 1))
         self.assertEqual(r["gamerelay_list"][0]["ip_addr"], "192.168.100.236")
         self.assertIsInstance(r["gamerelay_list"][0], dict)  # mapa en línea, no bin
+        # campos sueltos que el cliente copia a su resultado (PESBUL R7.3.494)
+        self.assertEqual((r["gamerelay_index"], r["ip_addr"], r["port"]), (1, "192.168.100.236", 5100))
         a, ea = cliente(srv)
         b, eb = cliente(srv)
         for s, u in ((a, "a1"), (b, "b2")):
             await srv.recibir(s, 1, {"msgid": "CMD_LOGIN", "rqid": 1, "username": u})
             await srv.recibir(s, 2, {"msgid": "CMD_START_MATCHING", "rqid": 2, "matching_type": "OC_RANK"})
         await srv.recibir(b, 3, {"msgid": "CMD_GET_MATCHID", "rqid": 3})
-        self.assertGreater(eb[-1][1]["match_id"], 700000000)
+        self.assertTrue(eb[-1][1]["match_id"].startswith("PHOENIX-0700000"))
+        self.assertEqual(eb[-1][1]["upload"], "YES")
 
 
 class TestNube(unittest.IsolatedAsyncioTestCase):
