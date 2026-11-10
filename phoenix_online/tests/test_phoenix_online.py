@@ -1603,3 +1603,57 @@ class TestRelePrueba10Nov(unittest.IsolatedAsyncioTestCase):
             await srv.recibir(s, 2, {"msgid": "CMD_START_MATCHING", "rqid": 2, "matching_type": "OC_RANK"})
         await srv.recibir(b, 3, {"msgid": "CMD_GET_MATCHID", "rqid": 3})
         self.assertGreater(eb[-1][1]["match_id"], 700000000)
+
+
+class TestNube(unittest.IsolatedAsyncioTestCase):
+    """Espejo en Supabase con un Supabase falso (sin red)."""
+
+    async def test_sube_clubes_reglas_y_movimientos(self):
+        import io, json as _j
+        from phoenix_online.nube import Nube
+        srv = Servidor({**CFG, "myclub": {}}, Datos())
+        srv.datos.guardar_club("aa", {"gp": 100, "team_name": "Phoenix FC", "vscom": {"partidos": 3}})
+        pedidos = []
+        tablas = {"myclub_reglas": [{"reglas": {"gp_por_partido": 999}, "actualizado": "t1"}],
+                  "myclub_movimientos": [{"id": 5, "clave_servidor": "AA", "tipo": "gp", "cantidad": 50, "motivo": "premio"},
+                                         {"id": 6, "clave_servidor": "zz", "tipo": "gp", "cantidad": 1}]}
+
+        class Resp(io.BytesIO):
+            def __enter__(s): return s
+            def __exit__(s, *a): return False
+
+        def abrir(req, timeout=None):
+            tabla = req.full_url.split("/rest/v1/")[1].split("?")[0]
+            pedidos.append((req.get_method(), tabla, req.full_url, _j.loads(req.data) if req.data else None))
+            if req.get_method() == "GET":
+                return Resp(_j.dumps(tablas.get(tabla, [])).encode())
+            return Resp(b"")
+
+        n = Nube(srv, "https://x.supabase.co", "clave-falsa", abrir=abrir)
+        await n.vuelta()
+        post = [p for p in pedidos if p[0] == "POST"][0]
+        self.assertEqual(post[3][0]["clave_servidor"], "aa")
+        self.assertEqual((post[3][0]["gp"], post[3][0]["nombre"], post[3][0]["partidos"]), (100, "Phoenix FC", 3))
+        self.assertEqual(srv.cfg["myclub"]["gp_por_partido"], 999)
+        self.assertEqual(srv.datos.club("aa")["gp"], 150)
+        self.assertEqual([p[2].split("?")[1] for p in pedidos if p[0] == "PATCH"], ["id=eq.5&aplicado=is.null"])
+        # el club cambió por el movimiento: se vuelve a subir; las reglas ya vistas no se reaplican
+        pedidos.clear()
+        tablas["myclub_movimientos"] = []
+        srv.cfg["myclub"]["gp_por_partido"] = 1
+        await n.vuelta()
+        self.assertEqual([p[0] for p in pedidos if p[0] == "POST"], ["POST"])
+        self.assertEqual(srv.cfg["myclub"]["gp_por_partido"], 1)
+
+    async def test_si_falla_la_subida_se_reintenta(self):
+        from phoenix_online.nube import Nube
+        srv = Servidor(CFG, Datos())
+        srv.datos.guardar_club("aa", {"gp": 1})
+
+        def abrir(req, timeout=None):
+            raise OSError("sin internet")
+
+        n = Nube(srv, "https://x.supabase.co", "k", abrir=abrir)
+        with self.assertRaises(OSError):
+            await n.vuelta()
+        self.assertEqual(srv.datos.cambiados, {"aa"})

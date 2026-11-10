@@ -559,5 +559,10 @@
       "_nota": "rango real de tiredness por confirmar con REA"
     }
   },
-  "emparejar_misma_huella": false
+  "emparejar_misma_huella": false,
+  "supabase": {
+    "activo": false,
+    "url": "https://fiibiyijojkxqlsrhcil.supabase.co",
+    "cada_s": 30
+  }
 }

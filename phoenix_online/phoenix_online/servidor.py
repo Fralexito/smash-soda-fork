@@ -347,6 +347,11 @@ async def principal(ruta_config):
     tareas = [s.serve_forever() for s in servidores]
     if cfg.get("reglas_myclub"):
         tareas.append(vigilar_reglas(srv, cfg["reglas_myclub"], int(cfg.get("reglas_cada_s", 30))))
+    from .nube import desde_config
+    nube = desde_config(srv, cfg)
+    if nube is not None:
+        tareas.append(nube.correr())
+        log.info("espejo en Supabase activo (cada %d s)", nube.cada_s)
     r = cfg.get("respaldos", {})
     if r.get("activo", True):
         tareas.append(respaldar_cada(datos, r.get("carpeta", "respaldos"),
