@@ -60,6 +60,7 @@ PALABRAS_PROHIBIDAS = ("FUCK", "SHIT", "NIGGER", "CUNT", "HITLER", "NAZI",
 
 DIVISION_INICIAL = "D12"
 RATING_INICIAL = 1000
+MAX_GAMERESULTS = 0x410 - 64  # L (PESBUL): CMD_GET_GAMERESULTS debe caber en un solo marco
 MODALES_DEFECTO = "AA"  # L: fichas de modales AA/A/B/C/D; vacío se pinta «-»
 
 # P (PESBUL matchmaking_policy): opciones guardadas de «Opciones de Matchmaking»
@@ -1345,15 +1346,20 @@ class Servidor:
 
     async def c_cmd_get_gameresults(self, s, m):
         # L (PESBUL r7.3.629): sin historial = no_match «YES»; un elemento mal formado cierra PES
-        # Apagado hasta confirmar el anidamiento exacto (A.6: una clave en el nivel equivocado cerró
-        # el PES): divisiones.historial_partidos = true lo enciende.
-        if not (self.cfg.get("divisiones") or {}).get("historial_partidos", False):
+        # L (A.6, confirmado en PESBUL 10-nov): todo bin salvo «team» (enteros). Una clave en el nivel
+        # equivocado cerró el PES en PESBUL: divisiones.historial_partidos = false lo apaga.
+        if not (self.cfg.get("divisiones") or {}).get("historial_partidos", True):
             return {"rlist_num": 0, "rlist": [], "no_match": "YES"}
         filas = []
         for partido in self._estado_division(s.steam_hex)["resultados"][:div.MAX_RESULTADOS]:
             p = self.datos.partido_division(partido)
             if p and not p.get("no_cuenta"):
                 filas.append(self._fila_resultado(p))
+        # L: la respuesta entera debe caber en un marco (~0x410 B cifrados): se quitan las más viejas
+        while filas and len(msgpack_min.packb({"msgid": m.get("msgid", "CMD_GET_GAMERESULTS"),
+                                               "rqid": m.get("rqid", 0), "result": NOERR,
+                                               "rlist_num": len(filas), "rlist": filas})) > MAX_GAMERESULTS:
+            filas.pop()
         if not filas:
             return {"rlist_num": 0, "rlist": [], "no_match": "YES"}
         return {"rlist_num": len(filas), "rlist": filas}
@@ -1370,7 +1376,7 @@ class Servidor:
                                                                                   "online_id": f["name"],
                                                                                   "is_valid_cache": "NO"}),
                                                       "is_deleted": "NO"}),
-                                "pid": f["pid"], "side": lado, "is_com": "NO", "cpu_level": "",
+                                "pid": f["pid"], "side": lado, "is_com": "NO", "cpu_level": "0",
                                 "is_follow": "NO", "is_guest": "NO"})
         casa, fuera = p["home"], p["away"]
         return Empaquetado({"date": int(p["date"]), "match_category": "ONLINE_DIVISIONS", "ex_type": "NONE",

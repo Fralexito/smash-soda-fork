@@ -1993,11 +1993,23 @@ class TestDivisiones(unittest.IsolatedAsyncioTestCase):
         srv.parejas[a] = srv.parejas[b] = pareja3
         await srv.c_cmd_send_game_result(a, informe)
         self.assertEqual(srv.datos.division(a.steam_hex)["jugados"], 1)
-        # historial de partidos: apagado por defecto, y bien formado al encenderlo
-        self.assertEqual((await srv.c_cmd_get_gameresults(a, {}))["rlist_num"], 0)
-        srv.cfg = {**srv.cfg, "divisiones": {"historial_partidos": True}}
+        # historial de partidos: encendido, bien formado y siempre dentro de un marco
         r = await srv.c_cmd_get_gameresults(a, {})
         self.assertEqual(r["rlist_num"], 1)
+        from phoenix_online import msgpack_min
+        fila = r["rlist"][0].valor
+        self.assertEqual(fila["team"], [101, 202])  # enteros planos, no bin
+        self.assertIsInstance(fila["score"][0], msgpack_min.Empaquetado)
+        self.assertEqual(fila["player"][0].valor["cpu_level"], "0")
+        for i in range(30):
+            pz = {**pareja, "room_id": 700000100 + i}
+            srv.parejas[a] = srv.parejas[b] = pz
+            await srv.c_cmd_send_game_result(a, informe)
+        r = await srv.c_cmd_get_gameresults(a, {"msgid": "CMD_GET_GAMERESULTS", "rqid": 9})
+        self.assertGreater(r["rlist_num"], 0)
+        self.assertLessEqual(len(msgpack_min.packb({"msgid": "CMD_GET_GAMERESULTS", "rqid": 9, "result": "NOERR", **r})), 0x410 - 64)
+        srv.cfg = {**srv.cfg, "divisiones": {"historial_partidos": False}}
+        self.assertEqual((await srv.c_cmd_get_gameresults(a, {}))["rlist_num"], 0)
 
 
 class TestNubeSinLlaveMaestra(unittest.IsolatedAsyncioTestCase):
