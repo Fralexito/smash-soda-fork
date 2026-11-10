@@ -13,7 +13,8 @@ Cambiar el archivo hosts pide permiso de administrador (Windows lo pregunta solo
 La configuración va en PhoenixJugar.json, junto a este archivo (sin contraseñas ni claves secretas: la clave
 pública de la web es la misma que usa la página).
 #>
-param([ValidateSet("Online", "Offline", "Salir")][string]$Modo = "Online", [switch]$SoloHosts, [string]$IpHosts)
+param([ValidateSet("Online", "Offline", "Salir")][string]$Modo = "Online", [switch]$SoloHosts, [string]$IpHosts = "NINGUNA",
+      [string]$Informe)
 
 $ErrorActionPreference = "Stop"
 $aqui = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -31,31 +32,65 @@ function Esta-Elevado {
 }
 
 function Poner-Hosts([string]$ip) {
-    # $ip vacío = quitar. Solo toca las líneas con la marca #PHOENIX; copia de seguridad la primera vez.
+    # $ip vacío = quitar las redirecciones del online de Konami (las #PHOENIX y cualquier otra).
     if (-not (Esta-Elevado)) {
-        $argumentos = "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`" -Modo $Modo -SoloHosts -IpHosts `"$ip`""
-        $p = Start-Process powershell -ArgumentList $argumentos -Verb RunAs -Wait -PassThru
-        if ($p.ExitCode -ne 0) { throw "No se pudo cambiar el archivo hosts (¿se canceló el permiso?)." }
+        # «NINGUNA» en vez de "": Windows PowerShell pierde los argumentos vacíos al relanzarse
+        $valor = if ($ip) { $ip } else { "NINGUNA" }
+        $informe = Join-Path $env:TEMP "PhoenixJugar_hosts.txt"
+        Remove-Item $informe -ErrorAction SilentlyContinue
+        $argumentos = "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`" -Modo $Modo -SoloHosts -IpHosts $valor -Informe `"$informe`""
+        try { $p = Start-Process powershell -ArgumentList $argumentos -Verb RunAs -Wait -PassThru -WindowStyle Hidden }
+        catch { throw "Hace falta aceptar el permiso de Windows para cambiar el archivo hosts." }
+        if ($p.ExitCode -ne 0) {
+            $motivo = if (Test-Path $informe) { Get-Content $informe -Raw } else { "sin detalle" }
+            throw "No se pudo cambiar el archivo hosts: $motivo"
+        }
         return
     }
+    # 10-nov: escribir el hosts de golpe podía dejarlo VACÍO si Windows/antivirus lo tenía bloqueado.
+    # Ahora: copia siempre antes, contenido nuevo en un temporal, comprobación, y solo entonces se cambia;
+    # si algo falla, se vuelve a poner la copia.
+    $original = [IO.File]::ReadAllLines($hosts)
     $copia = "$hosts.antes_phoenix"
-    if (-not (Test-Path $copia)) { Copy-Item $hosts $copia }
-    # se quitan nuestras líneas (#PHOENIX) y cualquier otra que redirija los dominios del online de
-    # Konami (p. ej. puestas a mano o por otro programa): así Offline queda limpio y Online no duplica
-    $lineas = @(Get-Content $hosts -Encoding ASCII | Where-Object {
-        $l = $_.Trim()
-        if ($l -match "#PHOENIX") { return $false }
-        if ($l.StartsWith("#") -or -not $l) { return $true }
-        $nombres = @(($l -split "#")[0] -split "\s+" | Select-Object -Skip 1)
-        return -not ($nombres | Where-Object { $dominios -contains $_.ToLower() })
-    })
-    if ($ip) { $lineas += $dominios | ForEach-Object { "$ip $_ #PHOENIX" } }
-    Set-Content -Path $hosts -Value $lineas -Encoding ASCII
+    if (-not (Test-Path $copia)) { Copy-Item $hosts $copia -Force }
+    Copy-Item $hosts "$hosts.phoenix_ultima" -Force   # copia de justo antes de este cambio
+    $quitadas = 0
+    $lineas = New-Object System.Collections.Generic.List[string]
+    foreach ($linea in $original) {
+        $l = $linea.Trim()
+        $nuestra = $false
+        if ($l -match "#PHOENIX") { $nuestra = $true }
+        elseif ($l -and -not $l.StartsWith("#")) {
+            $nombres = @((($l -split "#")[0] -split "\s+") | Select-Object -Skip 1)
+            foreach ($n in $nombres) { if ($dominios -contains $n.ToLower()) { $nuestra = $true } }
+        }
+        if ($nuestra) { $quitadas++ } else { $lineas.Add($linea) }
+    }
+    if ($ip) { foreach ($d in $dominios) { $lineas.Add("$ip $d #PHOENIX") } }
+    # comprobación: no se pierde ninguna línea ajena
+    if ($lineas.Count -lt ($original.Count - $quitadas)) { throw "comprobación del hosts fallida; no se cambió nada" }
+    $tmp = "$hosts.phoenix_nuevo"
+    [IO.File]::WriteAllLines($tmp, $lineas, (New-Object Text.ASCIIEncoding))
+    if ((Get-Item $tmp).Length -eq 0 -and $original.Count -gt 0 -and $lineas.Count -gt 0) {
+        throw "el hosts nuevo salió vacío; no se cambió nada"
+    }
+    try {
+        Copy-Item $tmp $hosts -Force
+        $leido = [IO.File]::ReadAllLines($hosts)
+        if ($leido.Count -ne $lineas.Count) { throw "el hosts no quedó como debía" }
+    } catch {
+        Copy-Item "$hosts.phoenix_ultima" $hosts -Force   # vuelta atrás
+        throw "no se pudo cambiar el hosts ($_); quedó como estaba"
+    } finally {
+        Remove-Item $tmp -ErrorAction SilentlyContinue
+    }
     ipconfig /flushdns | Out-Null
 }
 
 if ($SoloHosts) {   # segunda vuelta, ya como administrador
-    try { Poner-Hosts $IpHosts; exit 0 } catch { Write-Host $_; exit 1 }
+    $ipReal = if ($IpHosts -eq "NINGUNA") { "" } else { $IpHosts }
+    try { Poner-Hosts $ipReal; exit 0 }
+    catch { if ($Informe) { "$_" | Set-Content $Informe -Encoding UTF8 }; exit 1 }
 }
 
 function Guardar-Sesion($refresh) {
