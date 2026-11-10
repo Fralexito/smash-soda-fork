@@ -558,5 +558,6 @@
       "maximo": 100,
       "_nota": "rango real de tiredness por confirmar con REA"
     }
-  }
+  },
+  "emparejar_misma_huella": false
 }

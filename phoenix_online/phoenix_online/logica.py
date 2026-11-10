@@ -225,6 +225,7 @@ class Servidor:
         self.sin_manejador = {}  # msgid -> veces (para priorizar qué implementar)
         self.rele = None         # gamerelay.Rele (lo pone servidor.principal)
         self.ntl_por_clave = {}  # clave de persona -> última declaración NTL (+ ip TCP)
+        self.huella_por_clave = {}  # clave de persona -> (n.º de archivos, sha256) de su file_hash_list
         self._partidas = itertools.count(1)  # salas sintéticas de las parejas: 700 000 000 + n
 
     def aplicar_reglas_myclub(self, reglas):
@@ -744,6 +745,9 @@ class Servidor:
             crudo = repr(hashes).encode()
             s.huella = (len(hashes) if hasattr(hashes, "__len__") else 0,
                         hashlib.sha256(crudo).hexdigest())
+            if s.steam_hex:
+                self.huella_por_clave[s.steam_hex] = s.huella
+            log.info("huella de archivos de %s: %d archivos, %s", s.pid, s.huella[0], s.huella[1][:12])
         return {}
 
     # ---------- Partida rápida: matchmaking (PESBUL r7.3.641-649, solo hechos de protocolo) ----------
@@ -820,6 +824,20 @@ class Servidor:
         self.rele.abrir_intento(room_id, miembros)
         return room_id
 
+    def _huella(self, x):
+        return x.huella or self.huella_por_clave.get(x.steam_hex or "")
+
+    def _misma_huella(self, a, b):
+        # apagado hasta comprobar con 2 PES iguales que su huella coincide (si no, nunca se emparejarían)
+        if not self.cfg.get("emparejar_misma_huella", False):
+            return True
+        ha, hb = self._huella(a), self._huella(b)
+        if ha is None or hb is None:
+            return True  # sin dato no se bloquea (se registra para aprender)
+        if ha != hb:
+            log.info("no se empareja %s con %s: archivos del juego distintos", a.pid, b.pid)
+        return ha == hb
+
     def _clave_partida(self, x):
         return x.steam_hex or f"sesion{id(x)}"
 
@@ -875,7 +893,10 @@ class Servidor:
         self._dejar_pareja(s, "busca otra partida")
         s.enviar({"msgid": m["msgid"], "rqid": m.get("rqid", 0), "result": NOERR})
         cola = self.colas.setdefault(tipo, [])
-        rival = next((x for x in cola if x is not s and x in self.sesiones), None)
+        # Parche: solo se empareja a quien tiene LOS MISMOS archivos (file_hash_list de NTL);
+        # con parches distintos el partido se desincroniza o el juego se cierra
+        rival = next((x for x in cola if x is not s and x in self.sesiones
+                      and self._misma_huella(s, x)), None)
         if rival is None:
             cola.append(s)
             await self.dormir(PAUSA_EMPUJE)

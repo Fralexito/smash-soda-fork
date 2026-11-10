@@ -1559,3 +1559,23 @@ class TestPartidaDos(unittest.TestCase):
         self.assertEqual(self.g.endpoint_de_ntl({"sa_data": base64.b64encode(sa).decode()}),
                          ("100.64.0.2", 50002))
         self.assertIsNone(self.g.endpoint_de_ntl({"sa_data": ""}))
+
+
+class TestHuellaParche(unittest.IsolatedAsyncioTestCase):
+    async def test_solo_empareja_con_los_mismos_archivos(self):
+        srv = Servidor(dict(CFG, emparejar_misma_huella=True), Datos())
+        srv.dormir = _sin_pausa
+        r = srv.recibir
+        ses = []
+        for steam, archivos in (("a1", ["x", "y"]), ("b2", ["x", "z"]), ("c3", ["x", "y"])):
+            s, e = cliente(srv)
+            await r(s, 1, {"msgid": "CMD_LOGIN", "rqid": 1, "username": steam})
+            await r(s, 2, {"msgid": "CMD_SEND_IPANDPORT_NTL", "rqid": 2, "file_hash_list": archivos})
+            ses.append((s, e))
+        (a, ea), (b, eb), (c, ec) = ses
+        await r(a, 3, {"msgid": "CMD_START_MATCHING", "rqid": 3, "matching_type": "OC_RANK"})
+        await r(b, 3, {"msgid": "CMD_START_MATCHING", "rqid": 3, "matching_type": "OC_RANK"})
+        self.assertEqual(eb[-1][1]["matching_state"], "SEARCHING")  # parche distinto: sigue buscando
+        await r(c, 3, {"msgid": "CMD_START_MATCHING", "rqid": 3, "matching_type": "OC_RANK"})
+        self.assertEqual(ec[-1][1]["matching_state"], "FINISH")
+        self.assertEqual(ea[-1][1]["matching_state"], "FINISH")
