@@ -376,7 +376,14 @@ class Servidor:
                  # C (PESBUL local 04-nov): clave exacta del chequeo de red; si falta, el
                  # cliente falla antes de abrir el socket UDP del relé
                  ("GET_GAMERELAY_QUALITYCHECKLIST", "/gamerelay/qualitychecklist"),
-                 ("GAMERELAY", "/gamerelay"))
+                 ("GAMERELAY", "/gamerelay"),
+                 # L (ESPEC parte B.0/B.12, Ghidra 10-nov): estos comandos van por HTTP con
+                 # urltype=<este nombre>; sin la URL el cliente nunca los pide
+                 ("DIVISION_RANK_BYID", "/division_rank_byid"),
+                 ("MYCLUB_RANKING", "/myclub_ranking"), ("MYCLUB_RANKING_BYID", "/myclub_ranking_byid"),
+                 ("MYCLUB_WEEKLY_RANKING", "/myclub_weekly_ranking"),
+                 ("MYCLUB_WEEKLY_RANKING_BYID", "/myclub_weekly_ranking_byid"),
+                 ("RECV_MYCLUB_PRESENT", "/recv_myclub_present"))
     VERSIONES_EULA = ("eula_version", "eula_myclub_version", "eula_privacy_policy_version")
     VERSIONES_EULA_CERO = ("eula_privacy_notice_version", "eula_privacy_policy_california_version",
                            "eula_privacy_policy_japan_version")
@@ -1394,6 +1401,9 @@ class Servidor:
                             "team": [int(casa["team"]), int(fuera["team"])]})
 
     async def c_cmd_get_ranking(self, s, m):
+        return self._ranking_division(m)
+
+    def _ranking_division(self, m):
         # L (PESBUL r728): elementos como MAPAS (no bin); ordenados por rating y luego puntos
         division = m.get("division_type") or m.get("division")
         estados = self.datos.divisiones()
@@ -3092,6 +3102,9 @@ class Servidor:
         com = club.setdefault("vscom", {"partidos": 0, "racha": 0, "historial": []})
         com["partidos"] = int(com.get("partidos") or 0) + 1
         com["racha"] = int(com.get("racha") or 0) + 1 if desenlace == "WIN" else 0
+        contador = {"WIN": "ganados", "DRAW": "empates", "LOSE": "perdidos"}.get(desenlace)
+        if contador:
+            com[contador] = int(com.get(contador) or 0) + 1
         com["racha_max"] = max(int(com.get("racha_max") or 0), com["racha"])
         self._ajustar_dificultad(com, desenlace)
         simple = {k: v for k, v in m.items() if isinstance(v, (int, str)) and k not in ("msgid", "rqid")}
@@ -3526,6 +3539,24 @@ class Servidor:
             return {**base, **self.respuesta_gamerelay(ip_local=ip_local)}
         if msgid in ("CMD_GET_AVATAR_HTTP", "CMD_GET_AVATAR"):
             return {**base, **self._avatar(formulario.get("pid"))}
+        if msgid in ("CMD_GET_RANKING", "CMD_GET_RANKING_BYID", "CMD_GET_DIVISION_RANKING",
+                     "CMD_GET_DIVISION_RANKING_BYID"):
+            r = self._ranking_division(formulario)
+            if msgid.endswith("_BYID"):
+                r = self._solo_buscado(r, formulario)
+            return {**base, **r}
+        if msgid in ("CMD_GET_MYCLUB_RANKING", "CMD_GET_MYCLUB_RANKING_BYID"):
+            r = self._ranking_myclub(formulario)
+            if msgid.endswith("_BYID"):
+                r = self._solo_buscado(r, formulario)
+            return {**base, **r}
+        if msgid in ("CMD_GET_MYCLUB_WEEKLY_RANKING", "CMD_GET_MYCLUB_WEEKLY_RANKING_BYID"):
+            # B.7: sin torneo semanal propio todavía: respuesta vacía válida
+            return {**base, "date": int(time.time()), "total_rank_num": 0, "rank_list": [],
+                    "max_weekly_point": 0, "group_number": 0, "division": "", "reward_list": []}
+        if msgid == "CMD_RECV_MYCLUB_PRESENT":
+            # B.4: no hay regalos pendientes que recibir
+            return {**base, "receive_result_list_num": 0, "receive_result_list": []}
         if msgid == "CMD_AUTH_STEAM":
             # Ticket = GetAuthSessionTicket en hex + SteamID64 en claro. Verificar la firma
             # del ticket queda pendiente; hoy la identidad la garantiza el vínculo de Link.
@@ -3535,6 +3566,50 @@ class Servidor:
             return base
         log.warning("comando HTTP sin manejador: %s campos=%s", msgid, sorted(formulario))
         return base
+
+    def _ranking_myclub(self, m):
+        """L (B.6/B.12): rank_list de MAPAS directos {rank, user{pid, pname, division, ..., team_id,
+        team_name}}. Orden propio de Phoenix: puntos vs COM (3 por victoria, 1 por empate) y luego
+        menos partidos."""
+        try:
+            inicio = max(0, int(m.get("start_index") or 0))
+            cuantos = min(100, max(1, int(m.get("view_num") or 50)))
+        except (TypeError, ValueError):
+            inicio, cuantos = 0, 50
+        filas = []
+        for clave in self.datos.claves_de_clubes():
+            club = self.datos.club(clave) or {}
+            com = club.get("vscom") or {}
+            g, e, p = int(com.get("ganados") or 0), int(com.get("empates") or 0), int(com.get("perdidos") or 0)
+            filas.append((3 * g + e, -int(com.get("partidos") or 0), clave, club, (g, e, p, com)))
+        filas.sort(key=lambda f: (-f[0], -f[1], f[2]))
+        lista = []
+        for i, (_pts, _np, clave, club, (g, e, p, com)) in enumerate(filas[inicio:inicio + cuantos]):
+            j = self.datos.jugador(clave) or {}
+            perfil = self.datos.perfil(clave)
+            nombre = j.get("pname") or ""
+            lista.append({"rank": inicio + i + 1, "user": {
+                "pid": self.numero_de_clave(clave) or j.get("pid") or 0,
+                "pname": {"name": nombre, "xuid_one": "NotImplement",
+                          "psn_user_id": {"account_id": 0, "online_id": nombre, "is_valid_cache": "NO"},
+                          "is_deleted": "NO"},
+                "division": self._estado_division(clave)["division"], "manner": MODALES_DEFECTO,
+                "favoriteTeam": perfil["favorite_team"], "favoritePlayer": perfil["favorite_player"],
+                "intro": perfil["intro"],
+                "match_record": {"win_count": g, "draw_count": e, "lose_count": p,
+                                 "win_s_max": int(com.get("racha_max") or 0), "rating": RATING_INICIAL},
+                "team_id": int(club.get("base_team_id") or 0), "team_name": club.get("team_name") or ""}})
+        return {"date": int(time.time()), "total_rank_num": len(filas), "rank_list": lista}
+
+    @staticmethod
+    def _solo_buscado(r, m):
+        """_BYID: la fila de la persona buscada (por pid, xuid_one o np_account_id)."""
+        # «pid» es quien pregunta; el buscado viene en xuid_one / np_account_id (o target_pid)
+        buscados = {str(m.get(k)) for k in ("target_pid", "xuid_one", "np_account_id")
+                    if m.get(k) not in (None, "", "0", 0, "NotImplement")} or {str(m.get("pid"))}
+        filas = [f for f in r["rank_list"] if str(f["user"]["pid"]) in buscados
+                 or str(f["user"]["pid"] & 0xFFFFFFFF) in buscados]
+        return {**r, "rank_list": filas[:1]}
 
     def _avatar(self, pid):
         """C (PESBUL avatar_service): avatar_data = base64 de una imagen 128x128x3 (49152 B),

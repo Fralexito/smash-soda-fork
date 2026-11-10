@@ -150,7 +150,7 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         s, env = cliente(self.srv)
         await self.srv.recibir(s, 42, {"msgid": "CMD_GET_URLLIST", "rqid": 9})
         seq, m = env[-1]
-        self.assertEqual((seq, m["rqid"], m["result"], m["url_num"]), (42, 9, "NOERR", 20))
+        self.assertEqual((seq, m["rqid"], m["result"], m["url_num"]), (42, 9, "NOERR", 26))  # +6 URLs HTTP de rankings y regalos (ESPEC B.0)
         self.assertTrue(all(isinstance(x, Empaquetado) for x in m["ulist"]))
 
     async def test_login_real_steam_challenge_account(self):
@@ -2039,6 +2039,37 @@ class TestMyClubExtra(unittest.IsolatedAsyncioTestCase):
         self.assertEqual((await srv.c_cmd_get_myclub_achievementlist(x, {}))["achievement_list_num"], 0)
         await srv.c_cmd_entry_myclub_weekly_ranking(x, {"is_entry": "YES"})
         self.assertTrue(srv.datos.club("aa")["semanal_inscrito"])
+
+
+class TestRankingsHttp(unittest.IsolatedAsyncioTestCase):
+    """B.0/B.12: rankings de myClub y Divisiones por HTTP (urltype con nombre) + URLs en la lista."""
+
+    async def test_urls_y_respuestas(self):
+        srv = Servidor({**CFG, "myclub": {}}, Datos())
+        tipos = {e.valor["type"] for e in (await srv.c_cmd_get_urllist(None, {}))["ulist"]}
+        for t in ("MYCLUB_RANKING", "MYCLUB_RANKING_BYID", "MYCLUB_WEEKLY_RANKING",
+                  "MYCLUB_WEEKLY_RANKING_BYID", "RECV_MYCLUB_PRESENT", "DIVISION_RANK", "DIVISION_RANK_BYID"):
+            self.assertIn(t, tipos)
+        for clave, nombre, g in (("0110000100000001", "ANA", 3), ("0110000100000002", "BETO", 5)):
+            srv.datos.crear_jugador(clave, nombre)
+            srv.datos.guardar_club(clave, {"team_name": f"{nombre} FC", "base_team_id": 9,
+                                           "vscom": {"ganados": g, "partidos": g}})
+        r = srv.respuesta_http({"msgid": "CMD_GET_MYCLUB_RANKING", "rqid": "4", "urltype": "MYCLUB_RANKING",
+                                "pid": "1", "start_index": "0", "view_num": "50"})
+        self.assertEqual((r["result"], r["rqid"], r["total_rank_num"]), ("NOERR", 4, 2))
+        self.assertEqual([f["user"]["team_name"] for f in r["rank_list"]], ["BETO FC", "ANA FC"])
+        self.assertEqual(r["rank_list"][0]["rank"], 1)
+        self.assertNotIn("point", r["rank_list"][0])  # L: el ranking de club no lleva point
+        r = srv.respuesta_http({"msgid": "CMD_GET_MYCLUB_RANKING_BYID", "rqid": "5", "pid": "1",
+                                "xuid_one": str(0x0110000100000001)})
+        self.assertEqual([f["user"]["team_name"] for f in r["rank_list"]], ["ANA FC"])
+        self.assertEqual(r["rank_list"][0]["rank"], 2)
+        r = srv.respuesta_http({"msgid": "CMD_GET_MYCLUB_WEEKLY_RANKING", "rqid": "6"})
+        self.assertEqual((r["rank_list"], r["reward_list"]), ([], []))
+        r = srv.respuesta_http({"msgid": "CMD_RECV_MYCLUB_PRESENT", "rqid": "7", "present_id": "1"})
+        self.assertEqual(r["receive_result_list_num"], 0)
+        r = srv.respuesta_http({"msgid": "CMD_GET_DIVISION_RANKING", "rqid": "8", "division": "D12"})
+        self.assertEqual(r["total_rank_num"], 2)
 
 
 class TestNubeSinLlaveMaestra(unittest.IsolatedAsyncioTestCase):
