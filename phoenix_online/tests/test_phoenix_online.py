@@ -277,43 +277,65 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.assertNotEqual(env[-1][1]["result"], "NOERR")
 
     async def test_amistoso_completo(self):
+        """R (rooms.md/livetests.md AzrakHQ, flujo probado con 2 PES el 06-nov): ADD de la sala al
+        crearla, nunca RELOAD empujado, lista de jugadores solo a quien ya mandó ENTRY_GAME, inicio con
+        SET_GAMEMEMBER del dueño, DECIDE_GAMEENV + SETENV, vuelta a la sala tras LEAVE_GAME."""
         a, ea = await self.entrar("A1")
         b, eb = await self.entrar("B2")
-        await self.srv.recibir(a, 5, {"msgid": "CMD_CREATEJOIN_ROOM", "rqid": 6, "name": "X"})
-        # L (ESPEC_SALAS §2): primero la respuesta con room_id, luego el RELOAD de salas
+        r = self.srv.recibir
+        await r(a, 5, {"msgid": "CMD_CREATEJOIN_ROOM", "rqid": 6, "name": "X"})
         self.assertEqual([m["msgid"] for _, m in ea[-2:]], ["CMD_CREATEJOIN_ROOM", "CMD_REQWATCHL_ROOMLIST"])
+        self.assertEqual(ea[-1][1]["list_type"], "ADD")
         room = ea[-2][1]["room_id"]
-        await self.srv.recibir(a, 6, {"msgid": "CMD_SET_GAMEENV", "rqid": 7, "gametime": 10})
+        env = msgpack_min.packb({"gametime": 15, "limitTime": "LONG", "injury": "NO"})
+        await r(a, 6, {"msgid": "CMD_SET_GAMEENV", "rqid": 7, "game_env": env})
         vistas = [m for _, m in eb if m.get("msgid") == "CMD_REQWATCHL_ROOMLIST" and m["list_num"]]
-        self.assertTrue(vistas and vistas[-1]["list_type"] == "RELOAD")  # B vio la sala nueva
+        self.assertTrue(vistas)
+        self.assertNotIn("RELOAD", [m["list_type"] for m in vistas[1:]])  # RELOAD solo como respuesta
         fila = msgpack_min.unpackb(msgpack_min.packb(vistas[-1]["list_data"][0].valor))
-        self.assertEqual((fila["vs_com"], fila["is_passwd"], fila["game_phase"], fila["is_room_owner"]),
-                         ("PL_VS_PL", "NO", "DATASYNC", "NO"))
-        self.assertIsInstance(fila["owner_pname"], bytes)
-        self.assertIsInstance(fila["gameenv"], bytes)
+        self.assertEqual((fila["vs_com"], fila["is_passwd"], fila["is_room_owner"]), ("PL_VS_PL", "NO", "NO"))
+        self.assertEqual(msgpack_min.unpackb(fila["gameenv"])["gametime"], 15)
         eb.clear()
-        await self.srv.recibir(b, 9, {"msgid": "CMD_JOIN_ROOM", "rqid": 8, "room_id": room})
-        listas = [m for _, m in eb if m["msgid"] == "CMD_REQWATCHL_ROOMPLAYERLIST_NTL"]
-        self.assertEqual([m["list_type"] for m in listas], ["UPDATE", "ADD"])
-        self.assertEqual(listas[-1]["list_num"], 2)  # sin esto: UQOW_0006
-        self.assertTrue(all(seq == 9 for seq, _ in eb))  # secuencia actual de la sesión
-        self.assertEqual(eb[-1][1]["msgid"], "CMD_WATCH_ENTRY_GAME")
-        await self.srv.recibir(a, 7, {"msgid": "CMD_ENTRY_GAME", "rqid": 10, "entry": "TRUE"})
-        self.assertEqual(ea[-1][1]["entryflag"], "TRUE")
-        self.assertFalse(any(m.get("state") == "SETENV" for _, m in ea))
-        await self.srv.recibir(b, 10, {"msgid": "CMD_ENTRY_GAME", "rqid": 11, "entry": True})
+        await r(b, 9, {"msgid": "CMD_JOIN_ROOM_NTL", "rqid": 8, "room_id": room, "password": ""})
+        self.assertEqual(eb[0][1]["msgid"], "CMD_JOIN_ROOM_NTL")
+        self.assertEqual(eb[0][1]["room_stat"], "WAITING")
+        # el dueño aún no mandó ENTRY_GAME: no se le empuja la lista de jugadores
+        self.assertNotIn("CMD_REQWATCHL_ROOMPLAYERLIST_NTL", [m["msgid"] for _, m in ea[-3:]])
+        await r(b, 10, {"msgid": "CMD_REQWATCHL_ROOMPLAYERLIST_NTL", "rqid": 9, "room_id": room})
+        rel = [m for _, m in eb if m["msgid"] == "CMD_REQWATCHL_ROOMPLAYERLIST_NTL"][-1]
+        self.assertEqual((rel["list_type"], rel["list_num"]), ("RELOAD", 2))
+        await r(a, 7, {"msgid": "CMD_ENTRY_GAME", "rqid": 10, "entry": "TRUE"})
+        self.assertEqual([m for _, m in ea if m["msgid"] == "CMD_ENTRY_GAME"][-1]["entryflag"], "TRUE")
+        await r(a, 8, {"msgid": "CMD_SET_GAMEMEMBER", "rqid": 11})
+        self.assertFalse(any(m.get("state") == "SETENV" for _, m in ea))  # falta el invitado
+        await r(b, 11, {"msgid": "CMD_ENTRY_GAME", "rqid": 12, "entry": "TRUE"})
+        eg = [m for _, m in ea if m["msgid"] == "CMD_WATCH_ENTRY_GAME"][-1]
+        self.assertEqual(eg["entry_count"], 2)
+        self.assertIsInstance(msgpack_min.packb(eg), bytes)
+        await r(a, 9, {"msgid": "CMD_SET_GAMEMEMBER", "rqid": 13})
         for e in (ea, eb):
             ids = [m["msgid"] for _, m in e]
-            self.assertIn("CMD_WATCH_ROOMSTATE", ids)
-            self.assertEqual(e[-2][1]["msgid"], "CMD_WATCH_DECIDE_GAMEENV_FREE")
-            self.assertEqual(e[-2][1]["gametime"], 10)
+            self.assertIn("CMD_WATCH_DECIDE_GAMEENV", ids)
+            st = [m for _, m in e if m["msgid"] == "CMD_WATCH_ROOMSTATE"][-1]
+            self.assertEqual((st["event"], st["state"]), ("StateChanged", "SETENV"))
         sala = self.srv.salas[room]
-        self.assertEqual(sala.estado, "GAME")
-        for s, q in ((a, 8), (b, 11)):
-            await self.srv.recibir(s, q, {"msgid": "CMD_SEND_GAME_RESULT", "rqid": 1, "result_a": 2})
-        self.assertEqual(len(self.srv.datos.resultados(sala.partido)), 2)
-        await self.srv.recibir(b, 12, {"msgid": "CMD_LEAVE_ROOM", "rqid": 1})
-        await self.srv.cerrar(a)
+        pareja = self.srv._pareja_por_clave(a)
+        self.assertTrue(pareja and pareja["room_id"])  # partida abierta: id de partido, relé, resultados
+        mid = await self.srv.c_cmd_get_matchid(b, {})
+        self.assertNotEqual(mid["match_id"], "PHOENIX-0000000000")
+        for s, q in ((a, 12), (b, 13)):
+            await r(s, q, {"msgid": "CMD_SEND_GAME_RESULT", "rqid": 1, "home_score": 1, "away_score": 0})
+        self.assertEqual(len(self.srv.datos.resultados(f"pareja{pareja['room_id']}")), 2)
+        await r(a, 13, {"msgid": "CMD_LEAVE_GAME", "rqid": 1})
+        self.assertEqual(sala.estado, "SETENV")
+        await r(b, 14, {"msgid": "CMD_LEAVE_GAME", "rqid": 1})
+        self.assertEqual((sala.estado, sala.game_no), ("WAITING", 1))
+        # el dueño se va: el invitado pasa a ser dueño (AppointOwner)
+        await r(a, 14, {"msgid": "CMD_LEAVE_ROOM", "rqid": 1})
+        st = [m for _, m in eb if m["msgid"] == "CMD_WATCH_ROOMSTATE"][-1]
+        self.assertEqual(st["event"], "AppointOwner")
+        self.assertIs(sala.dueno, b)
+        await self.srv.cerrar(b)
         self.assertEqual(self.srv.salas, {})
 
     async def test_partida_rapida_empareja_dos(self):
@@ -423,7 +445,7 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.assertEqual((m["msgid"], m["rqid"], m["list_type"], m["list_num"]),
                          ("CMD_REQWATCHL_ROOMPLAYERLIST_NTL", 5, "RELOAD", 1))
         fila = msgpack_min.unpackb(msgpack_min.packb(m["list_data"][0].valor))
-        self.assertEqual((fila["is_owner"], fila["room_entry_no"], fila["side"]), ("YES", 1, ""))
+        self.assertEqual((fila["is_owner"], fila["room_entry_no"], fila["side"]), ("YES", 1, "HOME"))
         self.assertIsInstance(fila["pname"], bytes)
 
     async def test_division_info_cuenta_nueva(self):

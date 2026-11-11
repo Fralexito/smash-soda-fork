@@ -158,7 +158,15 @@ class Sala:
             self.max_players = int(self.opciones.get("max_players") or 2)
         except (TypeError, ValueError):
             self.max_players = 2
+        self.max_players = max(2, min(self.max_players, 2))  # R: 2 fijo en el vestíbulo 1 vs 1
         self.partido = None
+        # R (rooms.md/livetests.md AzrakHQ, probado con 2 PES): número de entrada por jugador tras
+        # «Empezar partido», quiénes ya mandaron ENTRY_GAME (solo a ellos se les actualiza la lista de
+        # jugadores), quiénes salieron del partido y el número de partido de la sala
+        self.entradas = {}
+        self.escuchan = set()
+        self.salieron = set()
+        self.game_no = 0
 
     @staticmethod
     def pname(s):
@@ -175,6 +183,8 @@ class Sala:
         o = self.opciones
         entra = self.miembros.index(para) + 1 if para in self.miembros else 0
         env = {**GAMEENV_SALA, **{k: v for k, v in self.gameenv.items() if k in GAMEENV_SALA}}
+        if env.get("limitTime") in (None, "", "NOSET"):
+            env["limitTime"] = "MIDDLE"  # R (roomlist.md): con NOSET la sala no sale en ninguna lista
         return {
             "slot": slot, "room_id": self.room_id,
             "name": self.nombre, "room_name": self.nombre, "roomName": self.nombre,
@@ -182,9 +192,9 @@ class Sala:
             "game_phase": "DATASYNC", "gameenv": Empaquetado(env),
             "gamer_num": len(self.miembros),
             "gamer": [Empaquetado({"pid": x.pid or 0, "is_room_owner": _texto_si(x is self.dueno),
-                                   "side": "HOME" if i == 0 else "AWAY", "enter_no": i + 1,
-                                   "game_no": 1}) for i, x in enumerate(self.miembros)],
-            "is_room_owner": _texto_si(para is self.dueno), "enter_no": entra, "game_no": 1,
+                                   "side": "HOME" if x is self.dueno else "AWAY", "enter_no": i + 1,
+                                   "game_no": self.game_no}) for i, x in enumerate(self.miembros)],
+            "is_room_owner": _texto_si(para is self.dueno), "enter_no": entra, "game_no": self.game_no,
             "is_passwd": _texto_si(bool(self.passwd)), "max_players": self.max_players,
             "is_invite_limit": _texto_si(o.get("is_invite_limit")), "dlcontent": "7.00",
             "is_original_player": _texto_si(o.get("use_original_player"), "YES"),
@@ -201,13 +211,16 @@ class Sala:
     def ficha_jugador(self, s, numero):
         """L ESPEC_SALAS §3: enteros obligatorios pid/room_player_id/room_entry_no/game_entry_no;
         textos obligatorios lang/is_owner/side/is_quality_bad/has_guest; pname y guest_info bin."""
+        # R (roomcrash.md/rooms.md AzrakHQ, probado con 2 PES): side HOME/AWAY, is_quality_bad y
+        # has_guest «NO», game_entry_no = nº de entrada tras «Empezar partido» (0 antes) y SIN guest_info
+        # cuando has_guest es NO
         fila = {
-            "pid": s.pid or 0, "room_player_id": s.pid or 0,
-            "room_entry_no": numero + 1, "game_entry_no": numero + 1,
+            "pid": s.pid or 0, "room_player_id": numero + 1,
+            "room_entry_no": numero + 1, "game_entry_no": int(self.entradas.get(s) or 0),
             "pname": self.pname(s),
-            "lang": s.lang if isinstance(s.lang, str) and s.lang else "US",
-            "is_owner": _texto_si(s is self.dueno), "side": "",
-            "is_quality_bad": "", "has_guest": "", "guest_info": _binario([]),
+            "lang": s.lang if isinstance(s.lang, str) and s.lang else "en",
+            "is_owner": _texto_si(s is self.dueno), "side": "HOME" if s is self.dueno else "AWAY",
+            "is_quality_bad": "NO", "has_guest": "NO",
             "ntl_nat_type": int(s.ntl.get("ntl_nat_type", 0) or 0),
         }
         for k in ("host_addr", "reflexive_addr", "relayed_addr"):
@@ -226,6 +239,7 @@ class Servidor:
         self.sesiones = set()
         self.por_pid = {}
         self.salas = {}
+        self.suscritos_salas = set()  # quienes miran la lista de salas (REQWATCHL_ROOMLIST)
         self.turn_pendiente = {}  # pid destino -> (address, size)
         self.dormir = asyncio.sleep
         self.avatares = {}    # pid (texto) -> base64 del avatar
@@ -279,6 +293,7 @@ class Servidor:
         if sesion.pid is not None and self.por_pid.get(sesion.pid) is sesion:
             del self.por_pid[sesion.pid]
         await self._salir_de_sala(sesion)
+        self.suscritos_salas.discard(sesion)
         self._salir_de_cola(sesion)
         self._salir_de_sala_coop(sesion)
         self._dejar_pareja(sesion, "se cortó su conexión")
@@ -5655,52 +5670,84 @@ class Servidor:
 
     # ---------- Vigilancias ----------
     async def _al_vigilar(self, s, msgid):
+        # R (rooms.md AzrakHQ, probado en vivo 06-nov): RELOAD SOLO como respuesta a un pedido nuevo de
+        # vigilancia (su caché está vacía). Un RELOAD empujado sobre una caché con datos hace que el
+        # mezclador 0x1411c1340 lance std::out_of_range y el PES se cierra. Lo demás va como ADD/UPDATE/DEL.
         if msgid == "CMD_REQWATCHL_ROOMLIST":
-            self._empujar_salas(s, "RELOAD", list(self.salas.values()))
-        elif msgid == "CMD_REQWATCHL_ROOMPLAYERLIST_NTL" and s.room_id in self.salas:
-            # L (ESPEC_SALAS §2.5): al abrir el watch dentro de la sala, RELOAD con los jugadores
-            self._empujar_jugadores(s, self.salas[s.room_id], "RELOAD")
+            self.suscritos_salas.add(s)
+            salas = list(self.salas.values())
+            s.completar(msgid, **self._lista_vigilada("room_id", "RELOAD",
+                                                      [Empaquetado(x.ficha(s, i)) for i, x in enumerate(salas)]))
+        elif msgid == "CMD_REQWATCHL_ROOMPLAYERLIST_NTL":
+            sala = self.salas.get(s.room_id)
+            datos = [Empaquetado(sala.ficha_jugador(x, i)) for i, x in enumerate(sala.miembros)] if sala else []
+            s.completar(msgid, **self._lista_vigilada("pid", "RELOAD", datos))
         elif msgid == "CMD_WATCH_TURN_ADDRESS_DATA" and s.pid in self.turn_pendiente:
             addr, size = self.turn_pendiente.pop(s.pid)
             s.completar(msgid, address=addr, address_data_size=size)
 
-    def _empujar_salas(self, s, accion=None, salas=None):
-        # L (ESPEC_SALAS §1): siempre RELOAD con TODAS las salas, list_key_name «slot» y la fila
-        # vista por quien recibe (con ADD el cliente queda vacío -> VZLN_0002)
-        salas = list(self.salas.values())
-        s.completar("CMD_REQWATCHL_ROOMLIST", list_type="RELOAD", list_num=len(salas),
-                    list_key_name="slot",
-                    list_data=[Empaquetado(x.ficha(s, i)) for i, x in enumerate(salas)])
+    @staticmethod
+    def _lista_vigilada(clave, tipo, datos):
+        return {"list_type": tipo, "list_key_name": clave, "list_num": len(datos), "list_data": datos}
 
-    def _empujar_salas_a_todos(self, accion=None, salas=None):
-        for otro in list(self.sesiones):
-            self._empujar_salas(otro)
+    @staticmethod
+    def _empujar(x, msgid, **campos):
+        """Empuje con rqid 0 y NOERR (forma de AzrakHQ y de nuestra búsqueda rápida, probada en vivo)."""
+        x.enviar({"msgid": msgid, "rqid": 0, "result": NOERR, **campos})
 
-    def _empujar_jugadores(self, s, sala, accion="RELOAD", miembros=None):
-        # L (ESPEC_SALAS §3): PESBUL manda RELOAD; al entrar un segundo jugador se mantiene el
-        # orden UPDATE -> ADD que ya se había comprobado (§11.5.6)
-        miembros = sala.miembros if miembros is None else miembros
-        datos = [Empaquetado(sala.ficha_jugador(x, sala.miembros.index(x))) for x in miembros]
-        s.completar("CMD_REQWATCHL_ROOMPLAYERLIST_NTL", list_type=accion, list_num=len(datos),
-                    list_key_name="pid", list_data=datos)
+    def _empujar_salas_a_todos(self, accion="UPDATE", salas=None):
+        """ADD / UPDATE / DEL de salas a quienes miran la lista (nunca RELOAD empujado)."""
+        for sala in salas or []:
+            for x in list(self.suscritos_salas):
+                if x not in self.sesiones:
+                    self.suscritos_salas.discard(x)
+                    continue
+                if accion == "DEL":
+                    datos = [Empaquetado({"room_id": sala.room_id})]
+                else:
+                    datos = [Empaquetado(sala.ficha(x, 0))]
+                self._empujar(x, "CMD_REQWATCHL_ROOMLIST", **self._lista_vigilada("room_id", accion, datos))
 
-    # ---------- Salas (§11.5 pasos 4-8) ----------
+    def _empujar_jugadores(self, sala, accion="UPDATE", solo=None, se_fue=None):
+        """UPDATE (o DEL de quien se fue) de la lista de jugadores, SOLO a los miembros que ya mandaron
+        ENTRY_GAME desde que entraron (empujar antes cerraba el PES del dueño)."""
+        for x in list(sala.miembros):
+            if x not in sala.escuchan or (solo is not None and x not in solo) or x not in self.sesiones:
+                continue
+            if accion == "DEL":
+                datos = [Empaquetado({"pid": se_fue})]
+            else:
+                datos = [Empaquetado(sala.ficha_jugador(y, i)) for i, y in enumerate(sala.miembros)]
+            self._empujar(x, "CMD_REQWATCHL_ROOMPLAYERLIST_NTL", **self._lista_vigilada("pid", accion, datos))
+
+    # ---------- Salas del vestíbulo amistoso 1 vs 1 (R: pesrooms.py + rooms.md de AzrakHQ) ----------
     async def c_cmd_createjoin_room(self, s, m):
         await self._salir_de_sala(s)
         nombre = m.get("name") if isinstance(m.get("name"), str) and m.get("name") else f"Sala de {s.pname}"
-        sala = Sala(s, nombre, {k: v for k, v in m.items() if k not in ("msgid", "rqid")})
+        sala = Sala(s, nombre[:64], {k: v for k, v in m.items() if k not in ("msgid", "rqid")})
         self.salas[sala.room_id] = sala
         s.room_id, s.entry = sala.room_id, False
-        # L (ESPEC_SALAS §2): PRIMERO la respuesta, DESPUÉS el RELOAD de salas
-        s.enviar({"msgid": m["msgid"], "rqid": m.get("rqid", 0), "result": NOERR,
-                  "room_id": sala.room_id})
-        self._empujar_salas_a_todos()
+        self.suscritos_salas.add(s)
+        s.enviar({"msgid": m["msgid"], "rqid": m.get("rqid", 0), "result": NOERR, "room_id": sala.room_id})
+        # R (roomcrash.md): el dueño busca SU sala en la lista justo después: ADD de inmediato
+        await self.dormir(PAUSA_EMPUJE)
+        self._empujar_salas_a_todos("ADD", [sala])
         return None
 
     async def c_cmd_set_gameenv(self, s, m):
+        """R: los 9 ajustes llegan empaquetados en game_env (bin). Se guardan y se repiten en la fila
+        de la sala; sin ellos limitTime quedaba en NOSET y la sala no salía para el 2.º jugador."""
         sala = self.salas.get(s.room_id)
         if sala and s is sala.dueno:
-            sala.gameenv = {k: v for k, v in m.items() if k not in ("msgid", "rqid")}
+            env = m.get("game_env")
+            if isinstance(env, (bytes, bytearray)):
+                try:
+                    env = msgpack_min.unpackb(bytes(env))
+                except Exception:
+                    env = None
+            if not isinstance(env, dict):
+                env = {k: v for k, v in m.items() if k in GAMEENV_SALA}
+            sala.gameenv.update({k: v for k, v in env.items() if k in GAMEENV_SALA})
             self._empujar_salas_a_todos("UPDATE", [sala])
         return {}
 
@@ -5722,11 +5769,12 @@ class Servidor:
             if self.cfg.get("exigir_misma_huella") and s.huella != sala.dueno.huella:
                 log.info("huella distinta: %s vs %s", s.huella, sala.dueno.huella)
                 return {"result": "ERR_DIFFDCVERSION"}  # R: «Paquete de datos incompatible»
-        await self._salir_de_sala(s)
-        previos = [x for x in sala.miembros if x is not s]
-        s.room_id, s.entry = sala.room_id, False
-        if s not in sala.miembros:
+            await self._salir_de_sala(s)
             sala.miembros.append(s)
+            log.info("sala %s: entra %s", sala.room_id, s.pid)
+        s.room_id, s.entry = sala.room_id, False
+        sala.escuchan.discard(s)
+        otros = {x for x in sala.miembros if x is not s}
         dueno = sala.dueno
         ficha = {"pid": self._pid_visible(dueno), "pname": Sala.pname(dueno)}
         for k in ("host_addr", "reflexive_addr", "relayed_addr"):
@@ -5735,61 +5783,85 @@ class Servidor:
                 ficha[k] = Empaquetado(v) if isinstance(v, dict) else v
         s.enviar({"msgid": m["msgid"], "rqid": m.get("rqid", 0), "result": NOERR,
                   "room_id": sala.room_id, "room_owner": Empaquetado(ficha), "room_stat": sala.estado})
-        # Orden que funcionó (§11.5.6): UPDATE sin el que entra → RELOAD salas → ADD con él → ENTRY_GAME
-        for x in sala.miembros:
-            self._empujar_jugadores(x, sala, "UPDATE", previos)
         await self.dormir(PAUSA_EMPUJE)
-        self._empujar_salas_a_todos("RELOAD", list(self.salas.values()))
-        await self.dormir(PAUSA_EMPUJE)
-        for x in sala.miembros:
-            self._empujar_jugadores(x, sala, "ADD", sala.miembros)
-        await self.dormir(PAUSA_EMPUJE)
-        for x in sala.miembros:
-            # C: el cliente lee entry_count y entrygame [{entryNum, gameNum}]
-            x.completar("CMD_WATCH_ENTRY_GAME", entry_count=len(sala.miembros),
-                        entrygame=[{"entryNum": i, "gameNum": i} for i in range(len(sala.miembros))])
+        self._empujar_salas_a_todos("UPDATE", [sala])
+        self._empujar_jugadores(sala, "UPDATE", solo=otros)
         return None
 
     c_cmd_join_room_ntl = c_cmd_join_room
 
     async def c_cmd_set_room_option(self, s, m):
-        """R (commands.json): {pid, name, password, is_anyplayers, auto_start_num, game_rating_limit};
+        """R (pesrooms.py): {pid, name, password, is_anyplayers, auto_start_num, game_rating_limit};
         solo el dueño cambia su sala y todos ven la lista nueva."""
         sala = self.salas.get(s.room_id)
-        if sala and s is sala.dueno:
-            if isinstance(m.get("name"), str) and m["name"].strip():
-                sala.nombre = m["name"][:40]
-            if "password" in m:
-                sala.passwd = str(m.get("password") or "") or None
-                sala.opciones["password"] = sala.passwd or ""
-            for k in ("is_anyplayers", "auto_start_num", "game_rating_limit"):
-                if k in m:
-                    sala.opciones[k] = m[k]
-            self._empujar_salas_a_todos("UPDATE", [sala])
+        if sala is None:
+            return {"result": "ERR_NOTINROOM"}
+        if s is not sala.dueno:
+            return {"result": "ERR_NOTROOMOWNER"}
+        if isinstance(m.get("name"), str) and m["name"].strip():
+            sala.nombre = m["name"][:64]
+        if "password" in m:
+            sala.passwd = str(m.get("password") or "") or None
+            sala.opciones["password"] = sala.passwd or ""
+        for k in ("is_anyplayers", "auto_start_num", "game_rating_limit"):
+            if k in m and m[k] not in (None, ""):
+                sala.opciones[k] = m[k]
+        self._empujar_salas_a_todos("UPDATE", [sala])
         return {}
 
     async def c_cmd_entry_game(self, s, m):
+        """«Empezar partido» (entry TRUE) o cancelarlo. Desde aquí su lista de jugadores puede
+        actualizarse. A todos: WATCH_ENTRY_GAME {entry_count, entrygame:[bin{pid, entryNum, gameNum}]}
+        y un UPDATE de jugadores (la comprobación de inicio del dueño corre tras ese UPDATE)."""
         sala = self.salas.get(s.room_id)
-        entrada = m.get("entry", "TRUE")
+        if sala is None:
+            return {"result": "ERR_NOTINROOM"}
+        sala.escuchan.add(s)
+        entrada = m.get("entry", "FALSE")
         s.entry = (entrada.upper() in ("TRUE", "YES", "1")) if isinstance(entrada, str) else bool(entrada)
-        # C/L (ESPEC_SALAS §4): entryflag = eco en texto y gameNum
+        if s.entry:
+            sala.entradas.setdefault(s, len(sala.entradas) + 1)
+        else:
+            sala.entradas.pop(s, None)
         s.enviar({"msgid": m["msgid"], "rqid": m.get("rqid", 0), "result": NOERR,
-                  "entryflag": "TRUE" if s.entry else "FALSE",
-                  "gameNum": 1 if sala and sala.partido else 0})
-        if not sala:
-            return None
-        if sala.estado == "WAITING" and len(sala.miembros) == sala.max_players \
-                and all(x.entry for x in sala.miembros):
-            sala.estado = "SETENV"
-            for x in sala.miembros:
-                x.completar("CMD_WATCH_ROOMSTATE", event="StateChanged", state="SETENV")
-            await self.dormir(PAUSA_EMPUJE)
-            for x in sala.miembros:
-                if not x.completar("CMD_WATCH_DECIDE_GAMEENV_FREE", **sala.gameenv):
-                    x.completar("CMD_WATCH_DECIDE_GAMEENV", **sala.gameenv)
-            sala.estado = "GAME"
-            sala.partido = f"{sala.room_id}-{int(time.time())}"
-            self._empujar_salas_a_todos("UPDATE", [sala])
+                  "entryflag": "TRUE" if s.entry else "FALSE", "gameNum": sala.game_no})
+        await self.dormir(PAUSA_EMPUJE)
+        lista = [Empaquetado({"pid": x.pid or 0, "entryNum": n, "gameNum": sala.game_no})
+                 for x, n in sala.entradas.items()]
+        for x in sala.miembros:
+            self._empujar(x, "CMD_WATCH_ENTRY_GAME", entry_count=len(lista), entrygame=lista)
+        self._empujar_jugadores(sala, "UPDATE")
+        return None
+
+    async def c_cmd_set_gamemember(self, s, m):
+        """El dueño pide empezar (lo manda en cada cambio). Solo con los 2 dentro y los 2 con «Empezar
+        partido»: WATCH_DECIDE_GAMEENV {game_env} + WATCH_ROOMSTATE SETENV y se abre la partida (relé,
+        id de partido, resultados) igual que en la búsqueda rápida. Fuera de una sala: solo NOERR."""
+        sala = self.salas.get(s.room_id)
+        if sala is None or s is not sala.dueno or sala.estado != "WAITING":
+            return {}
+        if len(sala.miembros) < 2 or set(sala.entradas) != set(sala.miembros):
+            return {}
+        sala.estado = "SETENV"
+        sala.salieron = set()
+        sala.partido = f"{sala.room_id}-{int(time.time())}"
+        invitado = next(x for x in sala.miembros if x is not sala.dueno)
+        for x in sala.miembros:
+            self._salir_de_cola(x)
+            self._dejar_pareja(x, "empieza partido en sala")
+        pareja = {"miembros": (sala.dueno, invitado), "check": set(), "tipo": "FREE", "sala": sala.room_id}
+        self.parejas[sala.dueno] = self.parejas[invitado] = pareja
+        self._abrir_partida(pareja)
+        env = {**GAMEENV_SALA, **sala.gameenv}
+        log.info("sala %s: empieza el partido %s (%s vs %s)", sala.room_id, pareja["room_id"],
+                 sala.dueno.pid, invitado.pid)
+        s.enviar({"msgid": m["msgid"], "rqid": m.get("rqid", 0), "result": NOERR})
+        for x in sala.miembros:
+            self._empujar(x, "CMD_WATCH_DECIDE_GAMEENV", game_env=Empaquetado(env))
+            self._empujar(x, "CMD_WATCH_ROOMSTATE", event="StateChanged", state="SETENV",
+                          owner_pid=self._pid_visible(sala.dueno), password="")
+        await self.dormir(PAUSA_EMPUJE)
+        self._empujar_salas_a_todos("UPDATE", [sala])
         return None
 
     async def c_cmd_send_game_result(self, s, m):
@@ -5830,6 +5902,20 @@ class Servidor:
     async def c_cmd_leave_game(self, s, m):
         self._abandono_division(s)
         self._dejar_pareja(s, "salió del partido")
+        # R (pesrooms.py, probado en vivo): cuando los 2 salieron del partido, StateChanged WAITING los
+        # devuelve a la sala para la revancha
+        sala = self.salas.get(s.room_id)
+        if sala is not None:
+            sala.salieron.add(s)
+            if sala.estado != "WAITING" and sala.salieron >= set(sala.miembros):
+                sala.estado, sala.entradas, sala.salieron = "WAITING", {}, set()
+                sala.game_no += 1
+                for x in sala.miembros:
+                    x.entry = False
+                    self._empujar(x, "CMD_WATCH_ROOMSTATE", event="StateChanged", state="WAITING",
+                                  owner_pid=self._pid_visible(sala.dueno), password="")
+                self._empujar_salas_a_todos("UPDATE", [sala])
+                log.info("sala %s: vuelven a la sala tras el partido", sala.room_id)
         return {}
 
     def _abandono_division(self, s):
@@ -5862,23 +5948,29 @@ class Servidor:
     async def _salir_de_sala(self, s):
         sala = self.salas.get(s.room_id) if s.room_id else None
         s.room_id, s.entry = None, False
-        if not sala:
+        if not sala or s not in sala.miembros:
             return
-        if s in sala.miembros:
-            sala.miembros.remove(s)
+        sala.miembros.remove(s)
+        sala.entradas.pop(s, None)
+        sala.escuchan.discard(s)
+        sala.salieron.discard(s)
         if not sala.miembros:
             del self.salas[sala.room_id]
             self._empujar_salas_a_todos("DEL", [sala])
+            log.info("sala %s cerrada", sala.room_id)
             return
+        self._empujar_jugadores(sala, "DEL", se_fue=s.pid or 0)
         if sala.dueno is s:
-            sala.dueno = sala.miembros[0]
-        sala.estado = "WAITING"
-        for x in sala.miembros:
-            x.entry = False
-            self._empujar_jugadores(x, sala, "RELOAD", sala.miembros)
+            # R (pesrooms.py): el nuevo dueño recibe AppointOwner (con la clave); los demás OwnerChanged
+            nuevo = sala.dueno = sala.miembros[0]
+            self._empujar(nuevo, "CMD_WATCH_ROOMSTATE", event="AppointOwner", state=sala.estado,
+                          owner_pid=self._pid_visible(nuevo), password=sala.passwd or "")
+            for x in sala.miembros[1:]:
+                self._empujar(x, "CMD_WATCH_ROOMSTATE", event="OwnerChanged", state=sala.estado,
+                              owner_pid=self._pid_visible(nuevo), password="")
+            self._empujar_jugadores(sala, "UPDATE")
         self._empujar_salas_a_todos("UPDATE", [sala])
 
-    # ---------- TURN (§11.6) ----------
     def credenciales_turn(self, pid):
         t = self.cfg["turn"]
         usuario = f"{int(time.time()) + t.get('vida_segundos', 3600)}:{pid}"
