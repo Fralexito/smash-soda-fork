@@ -4625,6 +4625,14 @@ class Servidor:
         puntos = (club or {}).get("matchday_puntos") or {}
         grupo = str(mio.get("grupo") or "MATCHDAY_GROUP_NONE")
         cfgm = self.cfg.get("myclub") or {}
+        # L (Ghidra 11-nov, FUN_140db6d60 + FUN_14105b690): con el estado GROUP_MATCH el PES solo da
+        # la fase por jugable si el pid del usuario está en pickup_users_group_a/b de su bando (o un
+        # indicador de sesión); con las listas vacías salía «Finalizó la fase de partidos de grupo».
+        # myclub.matchday_pickup_yo = "NO" vuelve a las listas vacías.
+        lista_a, lista_b = [], []
+        if s.steam_hex and str(cfgm.get("matchday_pickup_yo", "YES")) != "NO":
+            yo = self._usuario_plano((s.steam_hex or "").lower())
+            (lista_b if grupo.upper().endswith("_B") else lista_a).append(yo)
         return {"mainmenu_info": Empaquetado({
             "matchday_progress": str(cfgm.get("matchday_progreso") or "MATCHDAY_PROGRESS_GROUP_MATCH"),
             "group_match_info": Empaquetado({
@@ -4633,8 +4641,9 @@ class Servidor:
                 "total_matchday_point_group_a": 0, "total_matchday_point_group_b": 0,
                 "pickup_match_score_group_a": 0, "pickup_match_score_group_b": 0}),
             "is_hide_graph": "NO",
-            "pickup_user_info": Empaquetado({"pickup_users_group_a": [], "pickup_users_group_b": [],
-                                             "pickup_user_group_a_num": 0, "pickup_user_group_b_num": 0,
+            "pickup_user_info": Empaquetado({"pickup_users_group_a": lista_a, "pickup_users_group_b": lista_b,
+                                             "pickup_user_group_a_num": len(lista_a),
+                                             "pickup_user_group_b_num": len(lista_b),
                                              "is_failed_pickup_users": "NO"}),
             "is_final_reward": "NO", "is_get_final_reward": "NO", "is_watch_match": "NO",
             "final_reward_list": [], "pickup_reward_list": [],
