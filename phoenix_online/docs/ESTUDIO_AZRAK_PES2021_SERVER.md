@@ -31,3 +31,20 @@ Copia de lectura: `/mnt/project-files/pes-online/referencia_azrak_mit/`. La lice
 3. Eventos contra la COM: modes2.md sección B (dice que no tiene menú propio; se entra por myClub).
 4. Regalos «máximo»: buscar la tabla de diálogos en menus.md y messages.md.
 5. Cooperativo (partido): coop2.md.
+
+## Lo que ya pasamos de AzrakHQ a Phoenix (11-nov, tarde)
+Método: su código se LEE (nunca se ejecuta; su .exe es el mismo servidor en Python empaquetado con PyInstaller). `tools/formas_azrak_estatico.py` compara los tipos de respuesta con ast; `docs/COMPARACION_TIPOS_AZRAK.md` queda con 4 diferencias que solo aparecen con datos (reinicio anunciado, aviso urgente) o por la clave de sesión (no la cambiamos).
+
+| Tema | Antes | Ahora (commit) |
+|---|---|---|
+| Cooperativo: búsqueda | sin handler | START/CANCEL_COOP_MATCHING, WATCH_COOP_MATCHING FINISH con 2 grupos, datos COOP (a3118c9) |
+| Salas del amistoso | RELOAD empujado a todos (cierra el PES del que ya tenía la lista) y JOIN_ROOM (el PES manda JOIN_ROOM_NTL) | flujo probado por ellos con 2 PES: ADD/UPDATE/DEL, lista de jugadores solo tras ENTRY_GAME, inicio con SET_GAMEMEMBER, vuelta a la sala con LEAVE_GAME, traspaso de dueño (eee85e0) |
+| Tiempos del partido | 60 s todo (un 2.º PC lento se cortaba) | 180/120/240/180 = valores del propio PES; matchrejectpid_max 400 (a0abdde) |
+| Lista de bloqueo | siempre «llena» | SET_MATCHREJECTPID guarda y el emparejamiento lo respeta (a0abdde) |
+| Chat / reconexión / direcciones | sin handler | SEND_TEXTCHAT, RECONNECT (misma IP), GET_IPANDPORT_NTL (a0abdde) |
+| Veredicto del partido | solo Divisiones | al pitazo final para todos los modos y al instante con REQ_GAMEADDPOINT (2cc5ab3, 4623355) |
+| Matchday | sin puntos tras el partido | puntos 3/1/0, pantalla de puntos, ranking del bando (a0abdde) |
+| Torneo en línea | puntos siempre 0, cola común | 3/1/0 con G/E/P y goles, menú y ranking reales, cola por torneo (4623355) |
+| Otros | — | GET_COOP_PROFILE, aviso urgente por config (`aviso_urgente`), mantenimiento, DLC, SET_CURRENTPLAYER con chat permitido |
+
+Pendiente de revisar contra su código: abandono a mitad de partido (pesmanner), nivel cooperativo (pescoop.award), análisis del partido (pesresults), y su red TURN (turn*.md) frente a nuestro relé.

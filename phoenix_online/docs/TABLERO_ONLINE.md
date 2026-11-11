@@ -43,7 +43,7 @@ PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 ## 3. Amistoso con un amigo (salas)
 | # | Apartado | Estado | Nota |
 |---|---|---|---|
-| 19 | Crear sala, unirse, lista de salas | ✅ | |
+| 19 | Crear sala, unirse, lista de salas | ✅ | 11-nov: flujo cambiado al probado por AzrakHQ con 2 PES (sin RELOAD empujado, JOIN_ROOM_NTL, vuelta a la sala tras el partido). **Volver a probar crear sala con 1 PES** |
 | 20 | Partido en la sala | 🟢 | va directo entre las dos PC; **falta la prueba con 2 PES** |
 
 ## 4. myClub
