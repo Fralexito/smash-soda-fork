@@ -233,6 +233,8 @@ class Servidor:
         self.parejas = {}     # Sesion -> Pareja de partida rápida
         self.inicio = time.time()
         self.sin_manejador = {}  # msgid -> veces (para priorizar qué implementar)
+        self.salas_coop = {}      # room_id -> sala cooperativa (D.8, en memoria)
+        self._ids_coop = itertools.count(1)
         self.rele = None         # gamerelay.Rele (lo pone servidor.principal)
         self.ntl_por_clave = {}  # clave de persona -> última declaración NTL (+ ip TCP)
         self.huella_por_clave = {}  # clave de persona -> (n.º de archivos, sha256) de su file_hash_list
@@ -276,6 +278,7 @@ class Servidor:
             del self.por_pid[sesion.pid]
         await self._salir_de_sala(sesion)
         self._salir_de_cola(sesion)
+        self._salir_de_sala_coop(sesion)
         self._dejar_pareja(sesion, "se cortó su conexión")
         # C: la sonda autorizada se revoca al desconectar el TCP de ese pid
         pid = str(self._pid_visible(sesion))
@@ -4023,14 +4026,126 @@ class Servidor:
                 "is_exist_new_pending": "NO"}
 
     async def c_cmd_get_is_join_coop_room(self, s, m):
-        return {"is_join_coop_room": "NO"}
+        return {"is_join_coop_room": "YES" if self._sala_coop_de(s) else "NO"}
 
     async def c_cmd_get_coop_profile(self, s, m):
         # P (D.1): sin user_info la pantalla abre con valores por defecto (visto en vivo)
         return {}
 
+    # ---------- Salas cooperativas (D.8, L): en memoria, se borran al quedar vacías ----------
+    # Sala = {"room_id", "basic" (dict), "match" (dict), "miembros": [Sesion], "listos": set,
+    # "compe_id"}. Los ajustes se devuelven tal como los mandó el PES (así los tipos son los suyos).
+    # El partido en sí (relé entre PCs) aún no: la sala sirve para crearla, verla y entrar.
+    # myclub.coop_salas = "NO" vuelve a la lista vacía de antes.
+    MAX_MIEMBROS_COOP = 6
+
+    def _salas_coop_activas(self):
+        return (self.cfg.get("myclub") or {}).get("coop_salas", "YES") != "NO"
+
+    def _sala_coop_de(self, s):
+        for sala in self.salas_coop.values():
+            if s in sala["miembros"]:
+                return sala
+        return None
+
+    def _salir_de_sala_coop(self, s):
+        sala = self._sala_coop_de(s)
+        if not sala:
+            return
+        sala["miembros"].remove(s)
+        sala["listos"].discard(s)
+        if not sala["miembros"]:
+            self.salas_coop.pop(sala["room_id"], None)
+
+    def _fila_sala_coop(self, sala):
+        dueno = sala["miembros"][0] if sala["miembros"] else None
+        basic = {**sala["basic"], "room_id": sala["room_id"]}
+        clave_d = (dueno.steam_hex or "").lower() if dueno else ""
+        d_clan, c = self._clan_de(clave_d)
+        basic.setdefault("room_name", "Sala Phoenix")
+        basic.setdefault("clan_name", (c or {}).get("nombre") or "")
+        basic.setdefault("is_follow", "NO")
+        if dueno and d_clan:
+            basic.setdefault("clan_owner_info", self._usuario_clave(d_clan))
+        return Empaquetado({"basic_settings": Empaquetado(basic), "match_settings": Empaquetado(dict(sala["match"])),
+                            "user_num": len(sala["miembros"]), "compe_id": sala.get("compe_id") or 0,
+                            "is_game": "NO"})
+
     async def c_cmd_get_coop_roomlist(self, s, m):
-        return {"room_list": [], "room_list_num": 0, "all_room_num": 0}
+        if not self._salas_coop_activas():
+            return {"room_list": [], "room_list_num": 0, "all_room_num": 0}
+        b = self._mapa(m.get("search_options"))
+        salas = [x for x in self.salas_coop.values() if x["miembros"]]
+        if self._id_entero(b.get("room_id")):
+            salas = [x for x in salas if x["room_id"] == self._id_entero(b.get("room_id"))]
+        inicio = m.get("start_index") if isinstance(m.get("start_index"), int) else 0
+        filas = [self._fila_sala_coop(x) for x in salas[max(0, inicio):max(0, inicio) + 20]]
+        return self._lista_que_cabe("CMD_GET_COOP_ROOMLIST", filas, lambda f: {
+            "room_list": f, "room_list_num": len(f), "all_room_num": len(salas)})
+
+    async def c_cmd_createjoin_coop_room(self, s, m):
+        if not self._salas_coop_activas():
+            return {}
+        self._salir_de_sala_coop(s)
+        basic = {k: v for k, v in self._mapa(m.get("basic_settings")).items() if k != "room_id"}
+        sala = {"room_id": next(self._ids_coop), "basic": basic,
+                "match": self._mapa(m.get("match_settings")), "miembros": [s], "listos": set(),
+                "compe_id": self._id_entero(m.get("compe_id")) or 0}
+        self.salas_coop[sala["room_id"]] = sala
+        log.info("sala cooperativa %s creada por %s", sala["room_id"], s.pname)
+        return {"room_id": sala["room_id"]}
+
+    async def c_cmd_join_coop_room(self, s, m):
+        sala = self.salas_coop.get(self._id_entero(m.get("room_id")))
+        if not sala or len(sala["miembros"]) >= self.MAX_MIEMBROS_COOP:
+            return {}
+        clave = self._texto(sala["basic"].get("password"))
+        if clave and clave != self._texto(m.get("password")):
+            return {}
+        if s not in sala["miembros"]:
+            self._salir_de_sala_coop(s)
+            sala["miembros"].append(s)
+        return {}
+
+    async def c_cmd_leave_coop_room(self, s, m):
+        self._salir_de_sala_coop(s)
+        return {}
+
+    async def c_cmd_set_coop_match_ready(self, s, m):
+        sala = self._sala_coop_de(s)
+        if sala:
+            (sala["listos"].add if self._texto(m.get("is_ready")) in ("YES", "1", "True") else
+             sala["listos"].discard)(s)
+        return {}
+
+    async def c_cmd_set_coop_room_option(self, s, m):
+        sala = self._sala_coop_de(s)
+        if sala and sala["miembros"][0] is s:
+            if m.get("basic_settings") is not None:
+                sala["basic"] = {k: v for k, v in self._mapa(m["basic_settings"]).items() if k != "room_id"}
+            if m.get("match_settings") is not None:
+                sala["match"] = self._mapa(m["match_settings"])
+        return {}
+
+    async def c_cmd_get_coop_room_option(self, s, m):
+        sala = self.salas_coop.get(self._id_entero(m.get("room_id"))) or self._sala_coop_de(s)
+        if not sala:
+            return {}
+        f = self._fila_sala_coop(sala).valor
+        return {"basic_settings": f["basic_settings"], "match_settings": f["match_settings"]}
+
+    async def c_cmd_get_coop_room_member(self, s, m):
+        sala = self.salas_coop.get(self._id_entero(m.get("room_id"))) or self._sala_coop_de(s)
+        filas = []
+        for i, x in enumerate((sala or {}).get("miembros") or []):
+            clave = (x.steam_hex or "").lower()
+            dueno_clan = self._clan_de(clave)[0]
+            filas.append(Empaquetado({
+                "player_index": i, "user_info": self._usuario_clave(clave), "is_owner": "YES" if i == 0 else "NO",
+                "coop_level": 1, "is_clan_member": "YES" if dueno_clan else "NO", "is_follow": "NO",
+                "is_guest": "NO", "is_platform_guest": "NO",
+                "is_ready": "YES" if x in sala["listos"] else "NO"}))
+        return {"list_data": filas, "list_num": len(filas)}
 
     async def c_cmd_get_coop_reject_list(self, s, m):
         return {"reject_list": [], "reject_list_num": 0}

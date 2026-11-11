@@ -1142,6 +1142,41 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(ea[-1][1]["result"], "NOERR")
         self.assertFalse({k for k in self.srv.sin_manejador if "CLAN" in k})
 
+    async def test_salas_coop_crear_entrar_salir(self):
+        """D.8: crear sala cooperativa, verla en la lista, entrar, listo, opciones y salir."""
+        a, ea = await self.entrar("S1")
+        b, eb = await self.entrar("S2")
+        r = self.srv.recibir
+        basic = {"room_name": "Phoenix", "is_com_match": "YES", "team_level": 0, "password": ""}
+        await r(a, 1, {"msgid": "CMD_CREATEJOIN_COOP_ROOM", "rqid": 1, "basic_settings": msgpack_min.packb(basic),
+                       "match_settings": msgpack_min.packb({"user_team_id": 101, "enemy_team_id": 0, "cpu_level": 3})})
+        sala = ea[-1][1]["room_id"]
+        self.assertTrue(sala)
+        await r(b, 2, {"msgid": "CMD_GET_COOP_ROOMLIST", "rqid": 2, "start_index": 0,
+                       "search_options": msgpack_min.packb({"room_id": 0})})
+        lista = eb[-1][1]
+        self.assertEqual(lista["room_list_num"], 1)
+        fila = lista["room_list"][0].valor
+        self.assertEqual((fila["basic_settings"].valor["room_name"], fila["basic_settings"].valor["room_id"],
+                          fila["match_settings"].valor["user_team_id"], fila["user_num"]), ("Phoenix", sala, 101, 1))
+        msgpack_min.packb(lista)
+        await r(b, 3, {"msgid": "CMD_JOIN_COOP_ROOM", "rqid": 3, "room_id": sala, "password": "", "is_invite": "NO"})
+        await r(b, 4, {"msgid": "CMD_SET_COOP_MATCH_READY", "rqid": 4, "room_id": sala, "is_ready": "YES"})
+        await r(b, 5, {"msgid": "CMD_GET_IS_JOIN_COOP_ROOM", "rqid": 5})
+        self.assertEqual(eb[-1][1]["is_join_coop_room"], "YES")
+        await r(a, 6, {"msgid": "CMD_GET_COOP_ROOM_MEMBER", "rqid": 6, "room_id": sala})
+        miembros = [x.valor for x in ea[-1][1]["list_data"]]
+        self.assertEqual([(x["is_owner"], x["is_ready"]) for x in miembros], [("YES", "NO"), ("NO", "YES")])
+        await r(a, 7, {"msgid": "CMD_SET_COOP_ROOM_OPTION", "rqid": 7, "room_id": sala,
+                       "match_settings": msgpack_min.packb({"user_team_id": 5, "enemy_team_id": 0, "cpu_level": 2})})
+        await r(b, 8, {"msgid": "CMD_GET_COOP_ROOM_OPTION", "rqid": 8, "room_id": sala})
+        self.assertEqual(eb[-1][1]["match_settings"].valor["user_team_id"], 5)
+        await r(a, 9, {"msgid": "CMD_LEAVE_COOP_ROOM", "rqid": 9, "room_id": sala})
+        await self.srv.cerrar(b)
+        await r(a, 10, {"msgid": "CMD_GET_COOP_ROOMLIST", "rqid": 10, "start_index": 0})
+        self.assertEqual(ea[-1][1]["room_list_num"], 0)
+        self.assertFalse({k for k in self.srv.sin_manejador if "COOP" in k})
+
     async def test_coop_matchday_pesleague_pantallas_vacias(self):
         """Parte D: los 13 comandos responden NOERR; Matchday/PES League leen torneos de config."""
         self.srv.cfg = {**self.srv.cfg, "myclub": {"matchday": [{"compe_id": 3, "compe_name": "Jornada"}],
