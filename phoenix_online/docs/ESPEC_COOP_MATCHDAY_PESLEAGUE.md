@@ -53,7 +53,7 @@ Entrada: «Torneo en línea» (eFootball) y «eFootball League de myClub» (myCl
 
 **Qué decide «la inscripción para este Campeonato está cerrada»** (**P**, el texto del aviso es el de `ERR_COMPE_AFTER_ENTRYTIME`/`BEFORE_ENTRYTIME`; el cliente lo muestra antes de mandar `JOIN`): se evalúa con los datos del elemento de la lista y de `GET_PESLEAGUE_COMPE_INFO`: (1) fecha: `entry_limit_date` (y `start_date`/`end_date`) frente a la hora del servidor; (2) `entry_user_limit`/`entry_user_num` frente a `entry_user_max`; (3) rango de división: `entry_limit_division_min` ≤ **tu división** ≤ `entry_limit_division_max`, donde tu división viene de `GET_PESLEAGUE_MAINMENU_INFO.division` (si esa va vacía el cliente puede considerar que no pertenece al rango → «cerrada»; por eso 64d2a05 manda la división real). Para abrir sin trabas: `entry_limit_date` en el futuro, `entry_user_limit:"NO"`, rango de división que incluya la tuya y `entry_user_num` < `entry_user_max`.
 
-## D.6 Respuestas de `GET_PESLEAGUE_COMPE_TEAM_LIST` y `GET_PESLEAGUE_1VS1_MAINMENU_INFO` (Ghidra solo lectura, 11-nov, L salvo lo marcado)
+## D.6a Respuestas de `GET_PESLEAGUE_COMPE_TEAM_LIST` y `GET_PESLEAGUE_1VS1_MAINMENU_INFO` (Ghidra solo lectura, 11-nov, L salvo lo marcado)
 
 Prueba en el PES base (60d0374): el Torneo ya deja inscribirse (`JOIN_PESLEAGUE_COMPE{compe_id 12, team_id 174}` → NOERR) y luego manda `GET_PESLEAGUE_COMPE_TEAM_LIST{compe_id}` y `GET_PESLEAGUE_1VS1_MAINMENU_INFO{compe_id}`. Nosotros contestábamos NOERR sin campos. El PES muestra «Se calcularon los resultados finales» y los dos relojes («El período de Matchmaking abre en» / «El campeonato finaliza en») en `-- : --`.
 
