@@ -4845,7 +4845,9 @@ class Servidor:
         # equipo y nombre del club inscrito (con "" salía «Nom. del equipo» vacío)
         club = self.datos.club(s.steam_hex or "") if s.steam_hex else None
         equipo = int(((club or {}).get("pesleague_equipo") or {}).get(str(e["compe_id"])) or 0)
-        intervalo = int(e.get("matching_interval") or 86400)
+        # Prueba 11-nov (PES base): con intervalo = ventana = 86400 salía «el período abre en 59:42» y
+        # sin botón; con 3600/3600 sale «Selecciona Empezar partido» y «el período cierra en 0:59:41».
+        intervalo = int(e.get("matching_interval") or 3600)
         return {"matching_first_date": int(e["inicio"]), "matching_time": int(e.get("matching_time") or intervalo),
                 "matching_interval": intervalo, "compe_end_time": int(e["fin"]), "team_id": equipo,
                 "team_name": str((club or {}).get("team_name") or ""), "point": 0, "win_count": 0,
