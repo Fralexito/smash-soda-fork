@@ -3338,6 +3338,7 @@ class Servidor:
             elegido = 0
         cobrar = [r for r in self._regalos(club) if todos or int(r["id"]) == elegido]
         salida = []
+        fichas = []
         gp_antes = int(club.get("gp") or 0)
         for r in cobrar:
             tipo, n = r.get("tipo"), int(r.get("cantidad") or 0)
@@ -3350,6 +3351,14 @@ class Servidor:
             club["regalos"].remove(r)
             club["regalos_recibidos"] = int(club.get("regalos_recibidos") or 0) + 1
             data_type, nombre, objeto = self._datos_regalo(r)
+            # L (Ghidra 11-nov): el lector da a cada elemento la ficha completa del regalo
+            # (present_id, name, type, item{…}); modo de prueba «ficha» en regalos_respuesta
+            fichas.append(Empaquetado({
+                "present_id": int(r["id"]), "name": nombre, "name_jp": nombre, "title": nombre,
+                "body": "", "entity_id": 0, "grade": 0, "type": data_type, "player_level": 0,
+                "contract_term": 0, "team_id": 0, "present_type": "NORMAL",
+                "item": Empaquetado(dict(objeto, count=n)), "receipt_deadline": int(r["hasta"]),
+                "count": n}))
             salida.append({"name_jp": nombre, "title": nombre, "entity_id": 0, "grade": 0,
                            "skill": 0, "skill_category": "", "skill_id": 0, "player_level": 0,
                            "contract_term": 0, "team_id": 0, "present_type": "NORMAL",
@@ -3373,6 +3382,9 @@ class Servidor:
                 e["result"] = ""
             elif modo == "cero":
                 e["result"] = 0
+        if modo == "ficha":
+            return {"result": "NOERR" if fichas else "ERR_NOTFOUND",
+                    "receive_result_list_num": len(fichas), "receive_result_list": fichas}
         if modo == "solo_top":
             return {"result": "NOERR" if salida else "ERR_NOTFOUND"}
         return {"result": "NOERR" if salida else "ERR_NOTFOUND",
