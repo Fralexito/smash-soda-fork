@@ -4634,8 +4634,10 @@ class Servidor:
         fin, dia = e["fin"], 86400
         base = {"end_group_match_date": fin - 2 * dia, "pickup_member_date": fin - dia - dia // 2,
                 "entry_pickup_match_start_date": fin - dia, "watch_match_start_date": fin - dia,
-                "start_match_limit_date": fin - 2 * dia, "group_match_time": 2 * dia,
-                "pickup_match_time": 3600, "watch_wait_time": 600}
+                "start_match_limit_date": fin - 2 * dia,
+                # R (matchday2.md AzrakHQ, receta que llegó a partido): estos 3 son duración en
+                # minutos, no fechas; 2 días en «minutos» no tenía sentido
+                "group_match_time": 10, "pickup_match_time": 10, "watch_wait_time": 0}
         return {k: int(e[k]) if isinstance(e.get(k), int) else v for k, v in base.items()}
 
     def _campos_matchday(self, s, e):
@@ -4645,8 +4647,13 @@ class Servidor:
             "is_disp_compe_name": "YES", "group_name": str(e.get("group_name") or ""),
             "group_desc": "",
             "group_info_a": self._bando_matchday(e, "a"), "group_info_b": self._bando_matchday(e, "b"),
-            "is_entry_restricted": "NO", "match_type": "", "squad_type": "MATCHDAY_SQUAD_MYCLUB",
-            "group_type": "MATCHDAY_GROUP_TYPE_OTHER", "rating_rank": "MATCHDAY_RATING_RANK_NONE",
+            # R (matchday2.md / pesmatchday AzrakHQ, partido completo en vivo 7-nov): plantilla
+            # especial (el equipo elegido en el JOIN), grupos por equipo, partido único. Con
+            # SQUAD_MYCLUB el PES salía del menú con LEAVE_MATCHDAY (prueba 11-nov 14:52).
+            "is_entry_restricted": "NO", "match_type": str(e.get("match_type") or "SINGLE_MATCH"),
+            "squad_type": str(e.get("squad_type") or "MATCHDAY_SQUAD_SPECIAL"),
+            "group_type": str(e.get("group_type") or "MATCHDAY_GROUP_TYPE_TEAM"),
+            "rating_rank": "MATCHDAY_RATING_RANK_NONE",
             "start_date": e["inicio"], "entry_limit_date": self._fechas_matchday(e)["end_group_match_date"],
             "end_group_match_date": self._fechas_matchday(e)["end_group_match_date"],
             "pickup_member_date": self._fechas_matchday(e)["pickup_member_date"], "end_date": e["fin"], "entry_user_num": 0,
@@ -4679,9 +4686,10 @@ class Servidor:
                    if k not in ("end_group_match_date", "pickup_member_date")},
                 "is_check_eula": "NO", "eula_url": "",
                 "ball_id": int(e.get("ball_id") or 0), "use_stadium_id": int(e.get("estadio") or 0),
-                "fixed_timezone": "", "fixed_weather": "", "fixed_season": "", "is_fix_condition": "NO",
+                "fixed_timezone": "TIME_ZONE_TYPE_NONE", "fixed_weather": "WEATHER_TYPE_NONE",
+                "fixed_season": "SEASON_TYPE_NONE", "is_fix_condition": "NO",
                 "is_equalization": "NO", "is_pesleague_stadium": "NO", "is_efootball_pro_stadium": "NO",
-                "joined_matchday_group": str(mio.get("grupo") or ""), "pickup_select": "",
+                "joined_matchday_group": str(mio.get("grupo") or ""), "pickup_select": "NO",
                 "team_id": int(mio.get("team_id") or 0), "pickup_cut_off_rank": 0, "team_list_num": 0,
                 "all_reward_info": [], "achievement_reward_list": [],
                 "win_reward_list": [], "lose_reward_list": [],
@@ -4726,7 +4734,7 @@ class Servidor:
         # indicador de sesión); con las listas vacías salía «Finalizó la fase de partidos de grupo».
         # myclub.matchday_pickup_yo = "NO" vuelve a las listas vacías.
         lista_a, lista_b = [], []
-        if s.steam_hex and str(cfgm.get("matchday_pickup_yo", "YES")) != "NO":
+        if s.steam_hex and str(cfgm.get("matchday_pickup_yo", "NO")) != "NO":
             yo = self._usuario_plano((s.steam_hex or "").lower())
             (lista_b if grupo.upper().endswith("_B") else lista_a).append(yo)
         return {"mainmenu_info": Empaquetado({
@@ -4735,8 +4743,8 @@ class Servidor:
                 "matchday_point": int(puntos.get(str(cid)) or 0), "matchday_rank": 0,
                 "matchday_ranking_user_num": 0, "matchday_ratio": 0,
                 "total_matchday_point_group_a": 0, "total_matchday_point_group_b": 0,
-                "pickup_match_score_group_a": 0, "pickup_match_score_group_b": 0}),
-            "is_hide_graph": "NO",
+                "pickup_match_score_group_a": 0, "pickup_match_score_group_b": 0,
+                "is_hide_graph": "NO"}),  # R: va DENTRO de group_match_info (matchday2.md)
             "pickup_user_info": Empaquetado({"pickup_users_group_a": lista_a, "pickup_users_group_b": lista_b,
                                              "pickup_user_group_a_num": len(lista_a),
                                              "pickup_user_group_b_num": len(lista_b),
