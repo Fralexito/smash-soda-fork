@@ -4045,7 +4045,11 @@ class Servidor:
         return {}
 
     async def c_cmd_get_pesleague_mainmenu_info(self, s, m):
-        return {"division": "", "new_result": "NO"}
+        # Con division "" el PES dice «inscripción cerrada»: se manda la división real (D12..D1)
+        division = ""
+        if s.steam_hex and (self.cfg.get("myclub") or {}).get("pesleague_division", "YES") != "NO":
+            division = str(self._estado_division(s.steam_hex).get("division") or DIVISION_INICIAL)
+        return {"division": division, "new_result": "NO"}
 
     async def c_cmd_get_pesleague_compe_list(self, s, m):
         lista = []
