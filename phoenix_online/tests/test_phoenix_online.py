@@ -1274,7 +1274,9 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
             msgpack_min.packb(res())
         self.assertEqual(res()["mainmenu_info"].valor["is_watch_match"], "NO")
         await r(a, 42, {"msgid": "CMD_GET_MATCHDAY_INFO", "rqid": 42, "compe_id": 3})
-        self.assertEqual(res()["compe_info"].valor["compe_id"], 3)
+        sobre = res()["compe_info"].valor["info_overview"].valor  # Q: el evento va DENTRO (PESBUL)
+        self.assertEqual(sobre["compe_id"], 3)
+        self.assertGreater(sobre["end_group_match_date"], 0)
         self.assertEqual(res()["compe_info"].valor["is_check_eula"], "NO")
         self.assertEqual(res()["compe_info"].valor["win_reward_list"], [])  # premios = lista
         await r(a, 43, {"msgid": "CMD_JOIN_MATCHDAY", "rqid": 43, "compe_id": 0, "team_id": 174,
@@ -1282,7 +1284,7 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.assertIn("squad_rating_info", res())
         self.assertEqual(res()["compe_id"], 3)
         await r(a, 45, {"msgid": "CMD_GET_MATCHDAY_INFO", "rqid": 45, "compe_id": 0})  # el PES manda 0
-        self.assertEqual(res()["compe_info"].valor["compe_id"], 3)
+        self.assertEqual(res()["compe_info"].valor["info_overview"].valor["compe_id"], 3)
         self.srv.cfg["myclub"]["matchday_info_extra"] = ["joined_matchday_group", "team_id"]
         await r(a, 44, {"msgid": "CMD_GET_MATCHDAY_INFO", "rqid": 44, "compe_id": 3})
         self.assertNotIn("all_reward_info", res()["compe_info"].valor)

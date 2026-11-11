@@ -4696,18 +4696,20 @@ class Servidor:
             extra = [] if extra == "minimo" else list(extra or [])
             base = set(self._campos_matchday(s, e)) | {"is_check_eula"} | set(extra)
             info = {k: v for k, v in info.items() if k in base}
-        # Q (PESBUL, 11-nov, solo forma del mensaje): su compe_info lleva info_overview ANIDADO
-        # dentro, y anota que con las claves planas el cliente leía compe_id 0 y end_group_match_date 0
-        # y pintaba «fase de grupos terminada». Aquí también va dentro (myclub.matchday_overview_dentro
-        # = "NO" lo quita). Es la hipótesis nueva para el botón gris de «Empezar partido».
-        plano = dict(info)
+        # Q (Ghidra de PESBUL público, 11-nov, notes/re matchday2: 0x14105d370 + 0x14105cead): el
+        # cliente saca compe_id y end_group_match_date de compe_info.info_overview (mismo mapa que una
+        # entrada de la LISTA). Si no están ahí valen 0 y con progress GROUP_MATCH y ahora >= fecha
+        # baja a «fase de grupos terminada» (botón gris). Va DENTRO de compe_info, no como clave
+        # hermana. myclub.matchday_overview_dentro = "NO" vuelve a la forma anterior.
+        campos = self._campos_matchday(s, e)
         if cfgm.get("matchday_overview_dentro") != "NO":
-            info["info_overview"] = Empaquetado(dict(plano))
+            solo_info = {k: v for k, v in info.items() if k not in campos or k == "compe_db_id"}
+            solo_info["info_overview"] = Empaquetado(dict(campos))
+            return {"compe_info": Empaquetado(solo_info)}
         salida = {"compe_info": Empaquetado(info)}
-        # P (Ghidra): el cliente toma compe_id y el detalle de info_overview; con él vacío, JOIN
-        # llegaba con compe_id 0. Va el mismo mapa (myclub.matchday_info_overview "NO" lo quita).
+        # P (Ghidra): forma anterior, mapa como clave hermana (myclub.matchday_info_overview "NO" lo quita).
         if cfgm.get("matchday_info_overview") != "NO":
-            salida["info_overview"] = Empaquetado(dict(plano))
+            salida["info_overview"] = Empaquetado(dict(info))
         return salida
 
     async def c_cmd_get_matchday_mainmenu_info(self, s, m):
