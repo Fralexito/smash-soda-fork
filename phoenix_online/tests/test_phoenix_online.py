@@ -1094,6 +1094,25 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         await r(a, 7, {"msgid": "CMD_GET_MYCLUB_ACHIEVEMENTLIST", "rqid": 7})
         self.assertEqual(res()["achievement_list_num"], 1)
 
+    async def test_coop_matchday_pesleague_pantallas_vacias(self):
+        """Parte D: los 13 comandos responden NOERR; Matchday/PES League leen torneos de config."""
+        self.srv.cfg = {**self.srv.cfg, "myclub": {"matchday": [{"compe_id": 3, "compe_name": "Jornada"}],
+                                                    "pesleague": [{"compe_id": 4}]}}
+        a, ea = await self.entrar("A1")
+        r = self.srv.recibir
+        res = lambda: ea[-1][1]
+        for i, c in enumerate(["CMD_GET_COOP_MAINMENU_INFO", "CMD_GET_IS_JOIN_COOP_ROOM", "CMD_GET_COOP_PROFILE",
+                               "CMD_GET_COOP_REJECT_LIST", "CMD_GET_COOP_ROOMLIST", "CMD_GET_CLAN_LIST",
+                               "CMD_JOIN_MATCHDAY_MODE", "CMD_GET_MATCHDAY_LIST", "CMD_LEAVE_MATCHDAY_MODE",
+                               "CMD_JOIN_PESLEAGUE_COMPE_MODE", "CMD_GET_PESLEAGUE_MAINMENU_INFO",
+                               "CMD_GET_PESLEAGUE_COMPE_LIST", "CMD_LEAVE_PESLEAGUE_COMPE_MODE"], 1):
+            await r(a, i, {"msgid": c, "rqid": i, "start_index": 0})
+            self.assertEqual(res()["result"], "NOERR", c)
+            msgpack_min.packb(res())
+            if c in ("CMD_GET_MATCHDAY_LIST", "CMD_GET_PESLEAGUE_COMPE_LIST"):
+                self.assertEqual(res()["list_num"], 1)
+        self.assertNotIn("CMD_GET_CLAN_LIST", getattr(self.srv, "sin_manejador", {}) or {})
+
     async def test_myclub_catalogo_club_y_rival_rotando(self):
         import os, struct, tempfile, zlib, json as _j, sys as _s
         _s.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "tools"))

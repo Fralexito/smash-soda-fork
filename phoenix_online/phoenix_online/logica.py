@@ -3975,6 +3975,90 @@ class Servidor:
     async def c_cmd_get_complg_myentry_compeid(self, s, m):
         return {"compe_id": 0}
 
+    # ---------- Cooperativo, Clanes, Matchday y PES League (docs/ESPEC_COOP_MATCHDAY_PESLEAGUE.md) ----------
+    # Por ahora pantallas vacías válidas (sin salas, clanes ni torneos). Matchday y PES League
+    # leen torneos de config (myclub.matchday / pesleague = [{compe_id, compe_name, inicio, fin}]).
+    async def c_cmd_get_coop_mainmenu_info(self, s, m):
+        return {"is_coop_banned": "NO", "is_season_end": "NO", "division": "", "pre_season_rank": 0,
+                "pre_season_rank_all_clan_num": 0, "division_change_type": "",
+                "is_exist_owner_clan": "NO", "is_exist_new_request": "NO", "is_exist_new_pending": "NO"}
+
+    async def c_cmd_get_is_join_coop_room(self, s, m):
+        return {"is_join_coop_room": "NO"}
+
+    async def c_cmd_get_coop_profile(self, s, m):
+        # P (D.1): sin user_info la pantalla abre con valores por defecto (visto en vivo)
+        return {}
+
+    async def c_cmd_get_coop_roomlist(self, s, m):
+        return {"room_list": [], "room_list_num": 0, "all_room_num": 0}
+
+    async def c_cmd_get_coop_reject_list(self, s, m):
+        return {"reject_list": [], "reject_list_num": 0}
+
+    async def c_cmd_get_clan_list(self, s, m):
+        return {"clan_list": [], "clan_list_num": 0, "all_list_num": 0,
+                "start_index": int(m.get("start_index") or 0) if isinstance(m.get("start_index"), int) else 0}
+
+    async def c_cmd_join_matchday_mode(self, s, m):
+        return {}
+
+    async def c_cmd_leave_matchday_mode(self, s, m):
+        return {}
+
+    def _torneos(self, clave):
+        ahora = int(time.time())
+        salida = []
+        for e in (self.cfg.get("myclub") or {}).get(clave) or []:
+            if isinstance(e, dict) and isinstance(e.get("compe_id"), int):
+                salida.append({**e, "inicio": int(e.get("inicio") or ahora - 86400),
+                               "fin": int(e.get("fin") or ahora + 30 * 86400)})
+        return salida[:self.MAX_EVENTOS]
+
+    @staticmethod
+    def _banner():
+        return Empaquetado({"filename": "", "hash_str": ""})
+
+    async def c_cmd_get_matchday_list(self, s, m):
+        lista = []
+        for e in self._torneos("matchday"):
+            lista.append(Empaquetado({
+                "compe_id": e["compe_id"], "base_id": int(e.get("base_id") or e["compe_id"]),
+                "compe_name": str(e.get("compe_name") or f"Matchday {e['compe_id']}"),
+                "is_disp_compe_name": "YES", "group_name": str(e.get("group_name") or ""),
+                "group_desc": "", "group_info_a": Empaquetado({}), "group_info_b": Empaquetado({}),
+                "is_entry_restricted": "NO", "match_type": "", "squad_type": "MATCHDAY_SQUAD_MYCLUB",
+                "group_type": "MATCHDAY_GROUP_TYPE_OTHER", "rating_rank": "MATCHDAY_RATING_RANK_NONE",
+                "start_date": e["inicio"], "entry_limit_date": e["fin"], "end_group_match_date": e["fin"],
+                "pickup_member_date": e["fin"], "end_date": e["fin"], "entry_user_num": 0,
+                "entry_user_max": int(e.get("cupo") or 1000), "is_end": "NO",
+                "banner_file_info": self._banner(), "list_banner_file_info": self._banner(),
+                "is_use_emblem": "NO", "is_use_emblem_list": "NO", "is_entry": "NO",
+                "watch_match_reward_state": "", "compe_db_id": e["compe_id"], "is_possible_watch": "NO",
+                "add_limit_rating": 0}))
+        return {"compe_list": lista, "list_num": len(lista), "list_max": len(lista), "is_no_check": "NO"}
+
+    async def c_cmd_join_pesleague_compe_mode(self, s, m):
+        return {}
+
+    async def c_cmd_leave_pesleague_compe_mode(self, s, m):
+        return {}
+
+    async def c_cmd_get_pesleague_mainmenu_info(self, s, m):
+        return {"division": "", "new_result": "NO"}
+
+    async def c_cmd_get_pesleague_compe_list(self, s, m):
+        lista = []
+        for e in self._torneos("pesleague"):
+            lista.append(Empaquetado({
+                "compe_id": e["compe_id"], "compe_name": str(e.get("compe_name") or f"Torneo {e['compe_id']}"),
+                "start_date": e["inicio"], "end_date": e["fin"],
+                "entry_limit_division": "", "entry_limit_division_min": str(e.get("division_min") or "D12"),
+                "entry_limit_division_max": str(e.get("division_max") or "D1"), "is_end": "NO",
+                "is_entry": "NO", "is_gm_account": "NO", "compe_db_id": e["compe_id"],
+                "banner_file_info": self._banner(), "list_banner_file_info": self._banner()}))
+        return {"compe_list": lista, "list_num": len(lista), "list_max": len(lista), "is_no_check": "NO"}
+
     async def c_cmd_get_myclub_squadlist(self, s, m):
         plantilla = self._plantilla_principal(s)
         if plantilla is None:
