@@ -1998,6 +1998,57 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(await self.srv.c_cmd_check_string(a, {"str": "Computadora de la disputa"}), {})
         self.assertEqual((await self.srv.c_cmd_check_string(a, {"str": "p.u.t.a"}))["result"], "ERR_NGWORD")
 
+    def test_actualizacion_en_vivo_propia(self):
+        """R (liveupdate AzrakHQ): un .cpk con version_wu.bin en la carpeta se ofrece en GET_DLC_FILELIST con
+        sha256 y dlc_version entera; sin carpeta, listas vacías como antes."""
+        import hashlib, struct, tempfile
+        from phoenix_online import actualizacion
+
+        def utf(cols, filas):
+            textos, datos_col = bytearray(b"<NULL>\0"), []
+            def s(x):
+                o = len(textos); textos.extend(x.encode() + b"\0"); return o
+            fmt = {4: ">I", 6: ">Q", 0xA: ">I"}
+            cab = b"".join(bytes([0x50 | ty]) + struct.pack(">I", s(n)) for n, ty in cols)
+            fila_b = []
+            for f in filas:
+                fila_b.append(b"".join(struct.pack(fmt[ty], s(f[n]) if ty == 0xA else f[n]) for n, ty in cols))
+            largo = len(fila_b[0])
+            filas_off = 24 + len(cab)
+            str_off = filas_off + largo * len(filas)
+            data_off = str_off + len(textos)
+            cuerpo = struct.pack(">IIIIHHI", filas_off, str_off, data_off, 0, len(cols), largo, len(filas)) + cab \
+                + b"".join(fila_b) + bytes(textos)
+            return b"@UTF" + struct.pack(">I", len(cuerpo)) + cuerpo
+
+        version = b"1.02".ljust(10, b"\0") + b"1.07".ljust(10, b"\0") + b"Phoenix".ljust(10, b"\0")
+        toc_utf = utf([("DirName", 0xA), ("FileName", 0xA), ("FileSize", 4), ("ExtractSize", 4), ("FileOffset", 6)],
+                      [{"DirName": "common/etc/version", "FileName": "version_wu.bin", "FileSize": 30,
+                        "ExtractSize": 30, "FileOffset": 0}])
+        cab_len = 16 + len(utf([("TocOffset", 6), ("ContentOffset", 6)], [{"TocOffset": 0, "ContentOffset": 0}]))
+        toc_off = cab_len
+        contenido_off = toc_off + 16 + len(toc_utf)
+        cab = utf([("TocOffset", 6), ("ContentOffset", 6)], [{"TocOffset": toc_off, "ContentOffset": contenido_off}])
+        toc_utf = utf([("DirName", 0xA), ("FileName", 0xA), ("FileSize", 4), ("ExtractSize", 4), ("FileOffset", 6)],
+                      [{"DirName": "common/etc/version", "FileName": "version_wu.bin", "FileSize": 30,
+                        "ExtractSize": 30, "FileOffset": contenido_off - toc_off}])
+        cpk = b"CPK " + bytes(4) + struct.pack("<Q", len(cab)) + cab + b"TOC " + bytes(4) \
+            + struct.pack("<Q", len(toc_utf)) + toc_utf + version
+        with tempfile.TemporaryDirectory() as d:
+            self.srv.cfg["carpeta_actualizacion"] = d
+            r = self.srv.respuesta_http({"msgid": "CMD_GET_DLC_FILELIST", "rqid": "1"}, ip_local="100.70.0.1")
+            self.assertEqual(r["dlcfile_list_count"], 0)
+            with open(os.path.join(d, "Phoenix_102.cpk"), "wb") as f:
+                f.write(cpk)
+            r = self.srv.respuesta_http({"msgid": "CMD_GET_DLC_FILELIST", "rqid": "1"}, ip_local="100.70.0.1")
+            fila = r["dlcfile_list"][0]
+            self.assertEqual((fila["dlc_version"], fila["size"], fila["hash"]),
+                             ("102", len(cpk), hashlib.sha256(cpk).hexdigest()))
+            self.assertTrue(fila["url"].endswith("/actualizacion/Phoenix_102.cpk"))
+            self.assertIsNotNone(actualizacion.archivo_para(d, "phoenix_102.cpk"))
+            self.assertIsNone(actualizacion.archivo_para(d, "../config.json"))
+            msgpack_min.packb(r)
+
     async def test_avatar_subido_queda_guardado(self):
         """R (pesavatar AzrakHQ): SET_AVATAR se guarda en la base y se lee con cualquier forma del pid."""
         import base64, hashlib

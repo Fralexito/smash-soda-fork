@@ -6721,8 +6721,17 @@ class Servidor:
             return {**base, "date": int(time.time()), "total_rank_num": 0, "rank_list": [],
                     "max_weekly_point": 0, "group_number": 0, "division": "", "reward_list": []}
         if msgid == "CMD_GET_DLC_FILELIST":
-            # R (pescmds.py AzrakHQ): listas vacías = nada que bajar; dlc_version igual a la del PES
-            return {**base, "dlc_version": str(self.cfg.get("dlc_version") or "7.00"),
+            # R (pescmds.py AzrakHQ): listas vacías = nada que bajar; dlc_version igual a la del PES.
+            # Con un .cpk en la carpeta «actualizacion» se ofrece SIEMPRE (actualizacion.py); la URL usa
+            # la IP por la que llegó este pedido (un PES de la casa no llega a la IP pública: SGJC_0007)
+            ver = str(self.cfg.get("dlc_version") or "7.00")
+            from . import actualizacion
+            url_base = f"http://{self.ip_anuncio(ip_local=ip_local)}:{self.cfg.get('puerto_http', 5000)}"
+            f = actualizacion.fila(self.cfg.get("carpeta_actualizacion", "actualizacion"), url_base)
+            if f is not None:
+                return {**base, "dlc_version": ver, "dlcfile_list_count": 1, "dlcfile_list": [f],
+                        "variation_file_list_count": 0, "variation_file_list": []}
+            return {**base, "dlc_version": ver,
                     "dlcfile_list_count": 0, "dlcfile_list": "",
                     "variation_file_list_count": 0, "variation_file_list": ""}
         if msgid == "CMD_RECV_MYCLUB_PRESENT":

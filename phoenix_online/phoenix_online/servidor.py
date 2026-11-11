@@ -280,6 +280,25 @@ async def http(srv, reader, writer):
             writer.write(f"HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\n"
                          f"Content-Length: {len(datos)}\r\nConnection: close\r\n\r\n".encode() + datos)
             return
+        if metodo in ("GET", "HEAD") and ruta_sin_query.startswith("/actualizacion/"):
+            # actualización en vivo propia (actualizacion.py): solo el .cpk que se ofrece ahora
+            from . import actualizacion
+            archivo = actualizacion.archivo_para(srv.cfg.get("carpeta_actualizacion", "actualizacion"),
+                                                 urllib.parse.unquote(ruta_sin_query.rsplit("/", 1)[-1]))
+            if archivo is None:
+                writer.write(b"HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
+                return
+            tam = os.path.getsize(archivo)
+            writer.write(f"HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: {tam}\r\n"
+                         f"Connection: close\r\n\r\n".encode())
+            if metodo == "GET":
+                with open(archivo, "rb") as f:
+                    for trozo in iter(lambda: f.read(1 << 20), b""):
+                        writer.write(trozo)
+                        await writer.drain()
+                log.info("actualización %s enviada a %s", os.path.basename(archivo),
+                         (writer.get_extra_info("peername") or ("",))[0])
+            return
         if ruta_sin_query.lstrip("/").startswith("livedata/"):
             respuesta = srv.respuesta_livedata(ruta_sin_query.rstrip("/").rsplit("/", 1)[-1], form)
         else:
