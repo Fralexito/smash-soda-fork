@@ -3156,11 +3156,16 @@ class Servidor:
         Prueba (10-nov: el PES descartó los logros con estos valores): config myclub.logros.regalo
         = {clave: valor} sobrescribe campos del regalo; logros.regalo_quitar = [claves] los quita."""
         cfg = (self.cfg.get("myclub") or {}).get("logros") or {}
+        # L (Ghidra 11-nov): el icono/texto del premio sale de «type» (tabla data_type: GP, PES_POINT…;
+        # sin «type» = PES_POINT = la estrella); present_type es NORMAL/GM/EVENTER/KONAMISTAFF;
+        # el objeto va anidado en «item» (bin)
         regalo = {
-            "present_id": n, "name_jp": f"{gp} GP", "title": f"{gp} GP", "entity_id": 0, "grade": 0,
-            "player_level": 0, "contract_term": 0, "team_id": 0, "present_type": "NORMAL",
-            "item_type": "", "item_variation": "", "item_effect_arg": 0, "count": gp,
-            "pes_point_price": 0, "receipt_deadline": 0}
+            "present_id": n, "name": f"{gp} GP", "name_jp": f"{gp} GP", "title": f"{gp} GP", "body": "",
+            "entity_id": 0, "grade": 0, "type": "GP", "player_level": 0, "contract_term": 0,
+            "team_id": 0, "present_type": "NORMAL",
+            "item": Empaquetado({"item_type": "", "item_variation": "", "item_effect_arg": 0,
+                                 "count": 0, "pes_point_price": 0}),
+            "receipt_deadline": 0, "count": gp}
         regalo.update({k: v for k, v in (cfg.get("regalo") or {}).items() if isinstance(v, (int, str))})
         for k in cfg.get("regalo_quitar") or []:
             regalo.pop(k, None)
