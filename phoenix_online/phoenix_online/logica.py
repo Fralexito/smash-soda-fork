@@ -3671,6 +3671,9 @@ class Servidor:
             "filename": "", "hash_str": "", "banner_file_info": sin_archivo,
             "list_banner_file_info": Empaquetado({"filename": "", "hash_str": ""})}
         datos.update(extra or {})
+        # Para pruebas en el PES: el evento de config puede pisar cualquier campo con
+        # «campos»: {clave: valor} (p. ej. is_squad_bonus "false" en vez de "NO")
+        datos.update({k: v for k, v in (e.get("campos") or {}).items() if isinstance(v, (int, str))})
         return Empaquetado(datos)
 
     def _inscripcion(self, s, modo=None):
