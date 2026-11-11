@@ -6776,7 +6776,7 @@ class Servidor:
                 "pname": {"name": nombre, "xuid_one": str(self.numero_de_clave(clave) or 0),
                           "psn_user_id": {"account_id": 0, "online_id": nombre, "is_valid_cache": "NO"},
                           "is_deleted": "NO"},
-                "division": self._estado_division(clave)["division"], "manner": MODALES_DEFECTO,
+                "division": self._estado_division(clave)["division"], "manner": self.grado_modales(clave),
                 "favoriteTeam": perfil["favorite_team"], "favoritePlayer": perfil["favorite_player"],
                 "intro": perfil["intro"],
                 "match_record": {"win_count": g, "draw_count": e, "lose_count": p,
