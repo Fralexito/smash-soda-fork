@@ -53,6 +53,10 @@ create table if not exists partidos_division (
   datos text not null,
   hora real not null
 );
+create table if not exists relaciones (
+  steam_hex text primary key,
+  datos text not null
+);
 create table if not exists clanes (
   dueno text primary key,
   datos text not null
@@ -158,6 +162,18 @@ class Datos:
     def claves_de_clubes(self):
         """Todas las claves con club guardado (para la primera subida completa a la web)."""
         return [f[0] for f in self.db.execute("select steam_hex from myclub")]
+
+    # ---- seguidos y rechazados (Cooperativo): {"sigo": [], "bloqueados": [], "rechazados": []} ----
+    def relaciones(self, steam_hex):
+        f = self.db.execute("select datos from relaciones where steam_hex=?",
+                            ((steam_hex or "").lower(),)).fetchone()
+        d = json.loads(f[0]) if f else {}
+        return {k: list(d.get(k) or []) for k in ("sigo", "bloqueados", "rechazados")}
+
+    def guardar_relaciones(self, steam_hex, d):
+        self.db.execute("insert into relaciones(steam_hex, datos) values (?,?) on conflict(steam_hex) "
+                        "do update set datos=excluded.datos", ((steam_hex or "").lower(), json.dumps(d)))
+        self.db.commit()
 
     # ---- clanes (Cooperativo): uno por dueño; miembros = claves de jugador ----
     def clan(self, dueno):

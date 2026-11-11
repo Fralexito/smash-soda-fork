@@ -8,7 +8,7 @@ PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 - **Programado (falta probarlo en el PES):** 14 más. Con ellos, **39 de 49 ya están hechos (80 %)**.
 - **A medias** (abre bien pero sin contenido todavía, o hecho solo en parte): 7 (Matchday y PES League pasaron aquí: ya abren en el PES, falta la inscripción).
 - **Falta hacer:** 3.
-- Comandos del juego que el servidor ya controla: **277 de 439 (63 %)**. Cooperativo, Matchday, PES League y clanes ya tienen respuesta; solo falta empezar la tienda.
+- Comandos del juego que el servidor ya controla: **281 de 439 (64 %)**. Cooperativo, Matchday, PES League y clanes ya tienen respuesta; solo falta empezar la tienda.
 
 **Leyenda:** ✅ probado en el PES · 🟢 programado, sin probar en el PES · 🟡 a medias (abre, pero vacío) · ❌ falta · 🚫 no se hará (a propósito)
 
@@ -112,3 +112,4 @@ PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 - 11-nov 10:05: Eventos destrabado: inscripción en la Copa Phoenix probada en el PES. Matchday: pantalla principal programada con sus datos (D.7), sin probar.
 - 11-nov 11:15: Clanes programados de punta a punta (12 comandos nuevos, se guardan en la base). Falta probarlos en el PES.
 - 11-nov 11:30: salas de Cooperativo programadas (7 comandos): crear, entrar, «listo» y salir. El partido cooperativo todavía no.
+- 11-nov 11:35: seguir jugadores y lista de rechazados del Cooperativo programados (4 comandos).

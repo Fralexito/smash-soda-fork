@@ -4032,6 +4032,73 @@ class Servidor:
         # P (D.1): sin user_info la pantalla abre con valores por defecto (visto en vivo)
         return {}
 
+    # ---------- Seguir y rechazar jugadores (D.8, L): tabla relaciones ----------
+    def _clave_de_id(self, ident):
+        n = self._id_entero(ident)
+        if not n:
+            return None
+        for j in self.datos.todos():
+            if self._es_id_de(n, j["steam_hex"]):
+                return j["steam_hex"].lower()
+        return None
+
+    def _cambiar_relacion(self, s, campo, poner, quitar):
+        clave = (s.steam_hex or "").lower()
+        if not clave:
+            return
+        d = self.datos.relaciones(clave)
+        for ident in poner or []:
+            otro = self._clave_de_id(ident)
+            if otro and otro != clave and otro not in d[campo]:
+                d[campo].append(otro)
+        for ident in quitar or []:
+            otro = self._clave_de_id(ident)
+            if otro in d[campo]:
+                d[campo].remove(otro)
+                if campo == "sigo" and otro in d["bloqueados"]:
+                    d["bloqueados"].remove(otro)
+        d[campo] = d[campo][-100:]
+        self.datos.guardar_relaciones(clave, d)
+
+    @staticmethod
+    def _lista_ids(v):
+        return v if isinstance(v, list) else ([] if v is None else [v])
+
+    async def c_cmd_follow_user(self, s, m):
+        self._cambiar_relacion(s, "sigo", self._lista_ids(m.get("follow_user_id_list")),
+                               self._lista_ids(m.get("unfollow_user_id_list")))
+        return {}
+
+    async def c_cmd_lock_follow_user(self, s, m):
+        clave = (s.steam_hex or "").lower()
+        otro = self._clave_de_id(m.get("target_pid"))
+        if clave and otro:
+            d = self.datos.relaciones(clave)
+            if self._texto(m.get("is_lock")) in ("YES", "1", "True"):
+                if otro not in d["bloqueados"]:
+                    d["bloqueados"].append(otro)
+            elif otro in d["bloqueados"]:
+                d["bloqueados"].remove(otro)
+            self.datos.guardar_relaciones(clave, d)
+        return {}
+
+    async def c_cmd_get_follow_list(self, s, m):
+        d = self.datos.relaciones(s.steam_hex)
+        mi_clan = self._clan_de(s.steam_hex)[0]
+        filas = []
+        for otro in d["sigo"]:
+            u = self._usuario_clave(otro).valor
+            filas.append(Empaquetado({**u, "is_locked": "YES" if otro in d["bloqueados"] else "NO",
+                                      "is_clan_member": "YES" if mi_clan and self._clan_de(otro)[0] == mi_clan
+                                      else "NO"}))
+        return self._lista_que_cabe("CMD_GET_FOLLOW_LIST", filas, lambda f: {
+            "follow_list": f, "follow_list_num": len(f)})
+
+    async def c_cmd_set_coop_reject(self, s, m):
+        self._cambiar_relacion(s, "rechazados", self._lista_ids(m.get("set_reject_pid_list")),
+                               self._lista_ids(m.get("unset_reject_pid_list")))
+        return {}
+
     # ---------- Salas cooperativas (D.8, L): en memoria, se borran al quedar vacías ----------
     # Sala = {"room_id", "basic" (dict), "match" (dict), "miembros": [Sesion], "listos": set,
     # "compe_id"}. Los ajustes se devuelven tal como los mandó el PES (así los tipos son los suyos).
@@ -4142,13 +4209,16 @@ class Servidor:
             dueno_clan = self._clan_de(clave)[0]
             filas.append(Empaquetado({
                 "player_index": i, "user_info": self._usuario_clave(clave), "is_owner": "YES" if i == 0 else "NO",
-                "coop_level": 1, "is_clan_member": "YES" if dueno_clan else "NO", "is_follow": "NO",
+                "coop_level": 1, "is_clan_member": "YES" if dueno_clan else "NO",
+                "is_follow": "YES" if clave in self.datos.relaciones(s.steam_hex)["sigo"] else "NO",
                 "is_guest": "NO", "is_platform_guest": "NO",
                 "is_ready": "YES" if x in sala["listos"] else "NO"}))
         return {"list_data": filas, "list_num": len(filas)}
 
     async def c_cmd_get_coop_reject_list(self, s, m):
-        return {"reject_list": [], "reject_list_num": 0}
+        filas = [self._usuario_clave(x) for x in self.datos.relaciones(s.steam_hex)["rechazados"]]
+        return self._lista_que_cabe("CMD_GET_COOP_REJECT_LIST", filas, lambda f: {
+            "reject_list": f, "reject_list_num": len(f)})
 
     # ---------- Clanes (D.8, L): guardados en la tabla clanes (uno por dueño) ----------
     # Un clan = {"nombre", "comentario", "abierto" (YES/NO), "miembros": [claves], "creado"}.

@@ -1142,6 +1142,31 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(ea[-1][1]["result"], "NOERR")
         self.assertFalse({k for k in self.srv.sin_manejador if "CLAN" in k})
 
+    async def test_seguir_y_rechazar(self):
+        """D.8: seguir, bloquear seguimiento, dejar de seguir y lista de rechazados del Cooperativo."""
+        a, ea = await self.entrar("F1")
+        b, eb = await self.entrar("F2")
+        r = self.srv.recibir
+        id_b = self.srv.numero_de_clave(b.steam_hex)
+        await r(a, 1, {"msgid": "CMD_FOLLOW_USER", "rqid": 1, "follow_user_id_list": [id_b], "unfollow_user_id_list": []})
+        await r(a, 2, {"msgid": "CMD_LOCK_FOLLOW_USER", "rqid": 2, "target_pid": id_b, "is_lock": "YES"})
+        await r(a, 3, {"msgid": "CMD_GET_FOLLOW_LIST", "rqid": 3})
+        lista = ea[-1][1]
+        self.assertEqual(lista["follow_list_num"], 1)
+        self.assertEqual((lista["follow_list"][0].valor["user_id"], lista["follow_list"][0].valor["is_locked"]),
+                         (id_b, "YES"))
+        msgpack_min.packb(lista)
+        await r(a, 4, {"msgid": "CMD_FOLLOW_USER", "rqid": 4, "follow_user_id_list": [], "unfollow_user_id_list": [id_b]})
+        await r(a, 5, {"msgid": "CMD_GET_FOLLOW_LIST", "rqid": 5})
+        self.assertEqual(ea[-1][1]["follow_list_num"], 0)
+        await r(a, 6, {"msgid": "CMD_SET_COOP_REJECT", "rqid": 6, "set_reject_pid_list": [id_b], "unset_reject_pid_list": []})
+        await r(a, 7, {"msgid": "CMD_GET_COOP_REJECT_LIST", "rqid": 7})
+        self.assertEqual(ea[-1][1]["reject_list_num"], 1)
+        await r(a, 8, {"msgid": "CMD_SET_COOP_REJECT", "rqid": 8, "set_reject_pid_list": [], "unset_reject_pid_list": [id_b]})
+        await r(a, 9, {"msgid": "CMD_GET_COOP_REJECT_LIST", "rqid": 9})
+        self.assertEqual(ea[-1][1]["reject_list_num"], 0)
+        self.assertFalse({k for k in self.srv.sin_manejador if "FOLLOW" in k or "REJECT" in k})
+
     async def test_salas_coop_crear_entrar_salir(self):
         """D.8: crear sala cooperativa, verla en la lista, entrar, listo, opciones y salir."""
         a, ea = await self.entrar("S1")
