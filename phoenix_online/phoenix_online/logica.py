@@ -3177,7 +3177,9 @@ class Servidor:
                 hito["present"] = self._premio_gp(i + 1, gp)
             hitos_bin.append(Empaquetado(hito))
         listo = cobrados < len(hitos) and valor >= hitos[cobrados][0]
-        logro = {"achievement_category": cat,
+        # C (10-nov, PES): value y received_milestone_level los lee el cliente AL NIVEL DEL LOGRO
+        # (dentro del hito no se usan: la barra salía 0/1); se dejan también en el hito por si acaso
+        logro = {"achievement_category": cat, "value": valor, "received_milestone_level": cobrados,
                  "received_all": "YES" if cobrados >= len(hitos) else "NO",
                  "is_new": "YES" if listo and cat not in vistos else "NO",
                  "milestone_list_num": len(hitos_bin), "milestone_list": hitos_bin}

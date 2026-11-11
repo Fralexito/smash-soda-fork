@@ -887,6 +887,8 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
              (msgpack_min.unpackb(msgpack_min.packb(e.valor)) for e in res()["achievement_list"])}
         self.assertEqual(set(l), {"PLAY_VSCOM_MATCH", "CREATE_SQUAD"})
         self.assertEqual((l["PLAY_VSCOM_MATCH"]["is_new"], l["CREATE_SQUAD"]["is_new"]), ("YES", "NO"))
+        self.assertEqual((l["PLAY_VSCOM_MATCH"]["value"], l["PLAY_VSCOM_MATCH"]["received_milestone_level"]),
+                         (60, 0))
         hito = msgpack_min.unpackb(l["PLAY_VSCOM_MATCH"]["milestone_list"][1])
         self.assertEqual((hito["target_value"], hito["value"]), (100, 60))
         await r(a, 31, {"msgid": "CMD_GET_MYCLUB_MAINMENU_INFO", "rqid": 31})
