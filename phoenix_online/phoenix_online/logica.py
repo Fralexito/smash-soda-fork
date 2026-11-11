@@ -4280,11 +4280,14 @@ class Servidor:
         # L (Ghidra + volcado 11-nov): user_id es un BIN {pid: int32}, no un entero; con el entero el
         # lector de GET_CLAN_SETTINGS (FUN_141deb550) copiaba con un puntero -1 y el PES se cerraba
         # (msvcrt+0x7b212, pila 0x141debda8). pid = los 32 bits bajos de la cuenta.
-        u = {"user_id": Empaquetado({"pid": cuenta & 0xFFFFFFFF}),
-             "pname": Empaquetado({"name": nombre, "xuid_one": str(cuenta),
-                                   "psn_user_id": Empaquetado({"account_id": cuenta, "online_id": nombre,
-                                                               "is_valid_cache": "YES"}),
-                                   "is_deleted": "NO"})}
+        # L (pedido GET_CLAN_INFO.owner_id del propio PES): user_id = bin{pid, pname{...}}; el nombre
+        # va DENTRO de user_id (si va al lado, «Dueño» sale «NotImplement»)
+        u = {"user_id": Empaquetado({
+            "pid": cuenta & 0xFFFFFFFF,
+            "pname": Empaquetado({"name": nombre, "xuid_one": str(cuenta),
+                                  "psn_user_id": Empaquetado({"account_id": cuenta, "online_id": nombre,
+                                                              "is_valid_cache": "YES"}),
+                                  "is_deleted": "NO"})})}
         if ampliado:
             # P: en listas de miembros el PES lee además coop_level, is_follow, last_login,
             # current_online_mode, is_join_online_mode; tipos aún sin ver: van solo los seguros
