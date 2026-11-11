@@ -3278,8 +3278,11 @@ class Servidor:
     def _datos_regalo(self, r):
         """Campos del regalo para el cliente: (type, nombre, item{…})."""
         tipo, n = r.get("tipo"), int(r.get("cantidad") or 0)
-        objeto = {"item_type": "", "item_variation": "", "item_effect_arg": 0, "count": 0,
-                  "pes_point_price": 0}
+        # B.22 (prueba): item_type "" no es ninguno de los 8 tokens del cliente; config
+        # myclub.regalo_item_type_moneda lo cambia (p. ej. "NotImplement" o "STORE") para GP/monedas.
+        tok = str((self.cfg.get("myclub") or {}).get("regalo_item_type_moneda") or "")
+        objeto = {"item_type": tok if tipo in ("gp", "monedas") else "", "item_variation": "",
+                  "item_effect_arg": 0, "count": 0, "pes_point_price": 0}
         if tipo == "gp":
             return "GP", r.get("titulo") or f"{n} GP", objeto
         if tipo == "monedas":
