@@ -4705,10 +4705,41 @@ class Servidor:
             return r
         club = self._club_propio(s)
         cid = self._cid_torneo(s, m, "matchday")
-        club.setdefault("matchday_equipo", {})[str(cid)] = {
-            "grupo": str(m.get("entry_matchday_group") or ""), "team_id": self._id_entero(m.get("team_id")) or 0}
+        mio = {"grupo": str(m.get("entry_matchday_group") or ""),
+               "team_id": self._id_entero(m.get("team_id")) or 0}
+        # L (Ghidra FUN_141bc4bc0): GET_MATCHDAY_SP_GAMEPLAN devuelve gameplan_data(+_size) y
+        # sp_member_list, que el PES manda aquí al inscribirse (sp_gameplan_data / sp_member_list)
+        if isinstance(m.get("sp_gameplan_data"), str) and m["sp_gameplan_data"]:
+            mio["sp_gameplan_data"] = m["sp_gameplan_data"]
+        if isinstance(m.get("sp_member_list"), list):
+            mio["sp_member_list"] = [int(x) for x in m["sp_member_list"] if isinstance(x, int)]
+        club.setdefault("matchday_equipo", {})[str(cid)] = mio
         self.datos.guardar_club(s.steam_hex, club)
         return {"squad_rating_info": self._valoracion_plantilla(), "compe_id": cid}
+
+    async def c_cmd_get_matchday_sp_gameplan(self, s, m):
+        """Estrategia especial de Matchday: sin manejador la pantalla principal dejaba «Empezar
+        partido» en gris. Devuelve lo guardado al inscribirse (o el plan por defecto y lista vacía)."""
+        cid = self._cid_torneo(s, m, "matchday")
+        club = self.datos.club(s.steam_hex or "") if s.steam_hex else None
+        mio = ((club or {}).get("matchday_equipo") or {}).get(str(cid)) or {}
+        tam, texto = self._plan_texto(mio.get("sp_gameplan_data"))
+        return {"gameplan_data_size": tam, "gameplan_data": texto,
+                "sp_member_list": list(mio.get("sp_member_list") or [])}
+
+    async def c_cmd_set_matchday_sp_gameplan(self, s, m):
+        cid = self._cid_torneo(s, m, "matchday")
+        club = self._club_propio(s)
+        if club is None:
+            return {}
+        mio = club.setdefault("matchday_equipo", {}).setdefault(str(cid), {})
+        for k_in, k_out in (("gameplan_data", "sp_gameplan_data"), ("sp_gameplan_data", "sp_gameplan_data")):
+            if isinstance(m.get(k_in), str) and m[k_in]:
+                mio[k_out] = m[k_in]
+        if isinstance(m.get("sp_member_list"), list):
+            mio["sp_member_list"] = [int(x) for x in m["sp_member_list"] if isinstance(x, int)]
+        self.datos.guardar_club(s.steam_hex, club)
+        return {}
 
     async def c_cmd_leave_matchday(self, s, m):
         return self._salir_torneo(s, m, "matchday")
