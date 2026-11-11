@@ -1,6 +1,6 @@
 # Tablero del online Phoenix (se actualiza con cada avance)
 
-Última actualización: 11-nov-2026, 06:59 (hora del servidor UTC).
+Última actualización: 11-nov-2026, 07:08 (hora del servidor UTC).
 PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 
 ## Resumen
@@ -62,7 +62,7 @@ PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 | 31 | Ranking de clubes | ✅ | probado: muestra «Phoenix FC» con escudo |
 | 32 | Ranking semanal | 🟡 | vacío; el PES lo bloquea hasta jugar 10 partidos 1 contra 1 |
 | 33 | myClub contra otra persona | ❌ | |
-| 34 | Monedas gratis (interruptor) | 🟢 | encendido el 11-nov por decisión de Frank: logros (1000 GP = 10 monedas), 1 por victoria contra la COM y premio de eventos. Falta verlo en el PES |
+| 34 | Monedas gratis (interruptor) | ✅ | probado el 11-nov: los logros pagan en monedas (cobrado «+10 monedas») y los regalos también. Falta ver la moneda por victoria contra la COM |
 | 35 | Gestión del club: entrenador de cada plantilla, dorsales, copiar o borrar plantilla, despedir entrenador, intercambio de jugadores, objetos de entrenamiento | 🟡 | **probado en el PES:** copiar y borrar plantilla, plantilla activa, plantilla para la nube y ciudad del club. Programado, sin probar: entrenador por plantilla, despedir o renovar entrenador, dorsales, intercambio de cartas repetidas, objetos (habilidad, posición, gestión y adaptación del DT) y entrenamiento táctico. Los objetos se dan desde admin; falta saber cómo los nombra el PES en su lista |
 | — | Tienda con dinero real | 🚫 | nada de dinero real |
 
@@ -105,3 +105,4 @@ PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 - 11-nov 03:50: monedas gratis encendidas. La prueba de Eventos en el PES se paró en «Campeonato no encontrado» (el PES no reconoce el nombre de la categoría); probando varios nombres a la vez.
 - 11-nov 06:34: regalos de verdad programados (bandeja con GP, monedas y objetos, y cobro). Eventos: se ve la Copa, pero la inscripción sigue bloqueada por un chequeo del juego; buscándolo con REA y x64dbg.
 - 11-nov 06:59: regalos probados en el PES: se ven y se cobran (GP, monedas y objetos). Queda un aviso falso al cobrar. Los objetos de entrenamiento aún no los cuenta el juego (probando otro tipo). Inscripción en Eventos aparcada por decisión de Frank.
+- 11-nov 07:08: monedas por logros probadas en el PES (+10 monedas). El aviso falso de los regalos y la inscripción en Eventos quedan para después.
