@@ -4224,7 +4224,14 @@ class Servidor:
         return self._salir_torneo(s, m, "matchday")
 
     async def c_cmd_join_pesleague_compe(self, s, m):
-        return self._inscribir_torneo(s, m, "pesleague")
+        r = self._inscribir_torneo(s, m, "pesleague")
+        if r:
+            return r
+        club = self._club_propio(s)
+        club.setdefault("pesleague_equipo", {})[str(self._cid_torneo(s, m, "pesleague"))] = \
+            self._id_entero(m.get("team_id")) or 0
+        self.datos.guardar_club(s.steam_hex, club)
+        return {}
 
     async def c_cmd_leave_pesleague_compe(self, s, m):
         return self._salir_torneo(s, m, "pesleague")
@@ -4247,8 +4254,14 @@ class Servidor:
         e = self._torneo_pesleague(m) or next(iter(self._torneos("pesleague")), None)
         if e is None:
             return {"result": "ERR_COMPE_NOTFOUND"}
-        return {"matching_first_date": int(e["inicio"]), "matching_time": 3600, "matching_interval": 86400,
-                "compe_end_time": int(e["fin"]), "team_id": 0, "team_name": "", "point": 0, "win_count": 0,
+        # Matchmaking siempre abierto (ventana = intervalo) salvo que el torneo diga otra cosa;
+        # equipo y nombre del club inscrito (con "" salía «Nom. del equipo» vacío)
+        club = self.datos.club(s.steam_hex or "") if s.steam_hex else None
+        equipo = int(((club or {}).get("pesleague_equipo") or {}).get(str(e["compe_id"])) or 0)
+        intervalo = int(e.get("matching_interval") or 86400)
+        return {"matching_first_date": int(e["inicio"]), "matching_time": int(e.get("matching_time") or intervalo),
+                "matching_interval": intervalo, "compe_end_time": int(e["fin"]), "team_id": equipo,
+                "team_name": str((club or {}).get("team_name") or ""), "point": 0, "win_count": 0,
                 "lose_count": 0, "draw_count": 0, "match_num": 0, "regulation_match_num": 10, "rank_type": ""}
 
     async def c_cmd_get_pesleague_compe_team_list(self, s, m):
