@@ -2112,6 +2112,31 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.srv.cfg["max_partidos_rival_dia"] = 0
         self.assertTrue(self.srv._puntua({"miembros": (a, b)}))
 
+    async def test_sala_reutilizable_si_el_otro_se_va_sin_leave_game(self):
+        """PESBUL (evoweb, 11-nov): tras el partido la sala quedaba inservible. Si el dueño sale del partido
+        y el invitado se va de la SALA sin mandar LEAVE_GAME, la sala vuelve a WAITING y admite otro invitado."""
+        a, ea = await self.entrar("A9")
+        b, eb = await self.entrar("B9")
+        c, ec = await self.entrar("C9")
+        r = self.srv.recibir
+        await r(a, 1, {"msgid": "CMD_CREATEJOIN_ROOM", "rqid": 1, "name": "R"})
+        room = [m for _, m in ea if m["msgid"] == "CMD_CREATEJOIN_ROOM"][-1]["room_id"]
+        await r(b, 2, {"msgid": "CMD_JOIN_ROOM_NTL", "rqid": 2, "room_id": room, "password": ""})
+        sala = self.srv.salas[room]
+        self.assertEqual(sala.entradas, {})  # entrar el invitado no marca «listo» al dueño
+        for s_ in (a, b):
+            await r(s_, 3, {"msgid": "CMD_ENTRY_GAME", "rqid": 3, "entry": "TRUE"})
+        await r(a, 4, {"msgid": "CMD_SET_GAMEMEMBER", "rqid": 4})
+        self.assertEqual(sala.estado, "SETENV")
+        await r(a, 5, {"msgid": "CMD_LEAVE_GAME", "rqid": 5})
+        self.assertEqual(sala.estado, "SETENV")  # el invitado sigue dentro del partido
+        await r(b, 6, {"msgid": "CMD_LEAVE_ROOM", "rqid": 6})  # se va de la sala sin LEAVE_GAME
+        self.assertEqual((sala.estado, sala.entradas, sala.miembros), ("WAITING", {}, [a]))
+        self.assertEqual(sala.game_no, 1)
+        await r(c, 7, {"msgid": "CMD_JOIN_ROOM_NTL", "rqid": 7, "room_id": room, "password": ""})
+        self.assertEqual([m for _, m in ec if m["msgid"] == "CMD_JOIN_ROOM_NTL"][-1]["result"], "NOERR")
+        self.assertEqual(len(sala.miembros), 2)
+
     async def test_misma_identidad_sin_puntos_y_aviso(self):
         """11-nov (estudio del mod de AzrakHQ: copias que reportan el MISMO SteamID): dos PES con la misma
         clave no puntúan entre sí, y entrar desde otra IP con una clave ya conectada avisa."""

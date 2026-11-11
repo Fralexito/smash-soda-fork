@@ -6516,16 +6516,24 @@ class Servidor:
         sala = self.salas.get(s.room_id)
         if sala is not None:
             sala.salieron.add(s)
-            if sala.estado != "WAITING" and sala.salieron >= set(sala.miembros):
-                sala.estado, sala.entradas, sala.salieron = "WAITING", {}, set()
-                sala.game_no += 1
-                for x in sala.miembros:
-                    x.entry = False
-                    self._empujar(x, "CMD_WATCH_ROOMSTATE", event="StateChanged", state="WAITING",
-                                  owner_pid=self._pid_visible(sala.dueno), password="")
-                self._empujar_salas_a_todos("UPDATE", [sala])
-                log.info("sala %s: vuelven a la sala tras el partido", sala.room_id)
+            self._volver_a_sala(sala)
         return {}
+
+    def _volver_a_sala(self, sala):
+        """Cuando todos los que siguen en la sala ya salieron del partido, la sala vuelve a WAITING para
+        la revancha (entradas a cero, partido nuevo). También se llama si el OTRO se va de la sala sin
+        mandar LEAVE_GAME (PESBUL: la sala quedaba inservible tras el partido). True si volvió."""
+        if not sala.miembros or sala.estado == "WAITING" or not (sala.salieron >= set(sala.miembros)):
+            return False
+        sala.estado, sala.entradas, sala.salieron = "WAITING", {}, set()
+        sala.game_no += 1
+        for x in sala.miembros:
+            x.entry = False
+            self._empujar(x, "CMD_WATCH_ROOMSTATE", event="StateChanged", state="WAITING",
+                          owner_pid=self._pid_visible(sala.dueno), password="")
+        self._empujar_salas_a_todos("UPDATE", [sala])
+        log.info("sala %s: vuelven a la sala tras el partido", sala.room_id)
+        return True
 
     def _abandono_division(self, s):
         """L (A.2, CLEAN_LEAVE): quien SALE con el partido de Divisiones en juego (ya hubo canal 9)
@@ -6579,6 +6587,8 @@ class Servidor:
                               owner_pid=self._pid_visible(nuevo), password="")
             self._empujar_jugadores(sala, "UPDATE")
         self._empujar_salas_a_todos("UPDATE", [sala])
+        # el que se fue de la sala sin LEAVE_GAME no debe dejar la sala atascada en SETENV
+        self._volver_a_sala(sala)
 
     def credenciales_turn(self, pid):
         t = self.cfg["turn"]
