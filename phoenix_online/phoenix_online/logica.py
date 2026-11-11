@@ -4277,7 +4277,10 @@ class Servidor:
         j = self.datos.jugador(clave) or {}
         nombre = j.get("pname") or ""
         cuenta = self.numero_de_clave(clave)
-        u = {"user_id": cuenta,
+        # L (Ghidra + volcado 11-nov): user_id es un BIN {pid: int32}, no un entero; con el entero el
+        # lector de GET_CLAN_SETTINGS (FUN_141deb550) copiaba con un puntero -1 y el PES se cerraba
+        # (msvcrt+0x7b212, pila 0x141debda8). pid = los 32 bits bajos de la cuenta.
+        u = {"user_id": Empaquetado({"pid": cuenta & 0xFFFFFFFF}),
              "pname": Empaquetado({"name": nombre, "xuid_one": str(cuenta),
                                    "psn_user_id": Empaquetado({"account_id": cuenta, "online_id": nombre,
                                                                "is_valid_cache": "YES"}),

@@ -1116,7 +1116,7 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.assertEqual((lista["clan_list_num"], lista["all_list_num"]), (1, 1))
         info = lista["clan_list"][0].valor
         self.assertEqual(info["basic_settings"].valor["clan_name"], "Fénix")
-        id_dueno = info["basic_settings"].valor["owner_info"].valor["user_id"]
+        id_dueno = info["basic_settings"].valor["owner_info"].valor["user_id"].valor["pid"]
         await r(b, 5, {"msgid": "CMD_GET_CLAN_SIMPLE_INFO_LIST", "rqid": 5, "owner_pid_list": [id_dueno]})
         self.assertEqual(eb[-1][1]["clan_simple_info_list_num"], 1)
         await r(b, 6, {"msgid": "CMD_ENTRY_CLAN", "rqid": 6, "target_pid": id_dueno})
@@ -1130,7 +1130,7 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.assertEqual((aj["clan_name"], aj["clan_comment"], aj["enable_request"]), ("Fénix 2", "hola", "NO"))
         await r(b, 10, {"msgid": "CMD_GET_CLAN_INFO", "rqid": 10, "owner_id": id_dueno})
         miembros = eb[-1][1]["clan_info"].valor["clan_members"]
-        id_b = [x.valor["user_id"] for x in miembros if x.valor["user_id"] != id_dueno][0]
+        id_b = [x.valor["user_id"].valor["pid"] for x in miembros if x.valor["user_id"].valor["pid"] != id_dueno][0]
         await r(a, 11, {"msgid": "CMD_EXPEL_CLAN_MEMBER", "rqid": 11, "target_pid": id_b})
         await r(a, 12, {"msgid": "CMD_GET_CLAN_MEMBER_MODE", "rqid": 12})
         self.assertEqual(ea[-1][1]["clan_member_num"], 1)
@@ -1153,8 +1153,8 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         await r(a, 3, {"msgid": "CMD_GET_FOLLOW_LIST", "rqid": 3})
         lista = ea[-1][1]
         self.assertEqual(lista["follow_list_num"], 1)
-        self.assertEqual((lista["follow_list"][0].valor["user_id"], lista["follow_list"][0].valor["is_locked"]),
-                         (id_b, "YES"))
+        self.assertEqual((lista["follow_list"][0].valor["user_id"].valor["pid"], lista["follow_list"][0].valor["is_locked"]),
+                         (id_b & 0xFFFFFFFF, "YES"))
         msgpack_min.packb(lista)
         await r(a, 4, {"msgid": "CMD_FOLLOW_USER", "rqid": 4, "follow_user_id_list": [], "unfollow_user_id_list": [id_b]})
         await r(a, 5, {"msgid": "CMD_GET_FOLLOW_LIST", "rqid": 5})
