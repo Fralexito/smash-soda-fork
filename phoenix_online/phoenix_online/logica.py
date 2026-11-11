@@ -4517,14 +4517,26 @@ class Servidor:
     def _banner():
         return Empaquetado({"filename": "", "hash_str": ""})
 
-    @staticmethod
-    def _bando_matchday(e, lado):
+    def _equipos_bando(self, e, lado):
+        """Ids de equipo de los clubes inscritos en ese bando (entry_matchday_group del JOIN)."""
+        ids = []
+        for clave in self.datos.claves_de_clubes():
+            club = self.datos.club(clave) or {}
+            mio = (club.get("matchday_equipo") or {}).get(str(e["compe_id"])) or {}
+            if str(mio.get("grupo") or "").upper().endswith("_" + lado.upper()) and mio.get("team_id"):
+                ids.append(int(mio["team_id"]))
+        return ids
+
+    def _bando_matchday(self, e, lado):
         """D.7: group_info_a/b = {team_list, team_list_num, group_name, group_desc, ...}.
-        Con "bandos": "NO" en el torneo vuelve al bin vacío que ya se probó en la lista."""
+        Con "bandos": "NO" en el torneo vuelve al bin vacío que ya se probó en la lista.
+        team_list = equipos inscritos en el bando (prueba 11-nov: con [] el PES daba la fase de
+        grupos por terminada y «Empezar partido» salía en gris)."""
         if str(e.get("bandos") or "") == "NO":
             return Empaquetado({})
         nombre = str(e.get(f"bando_{lado}") or ("Bando A" if lado == "a" else "Bando B"))
-        return Empaquetado({"team_list": [], "team_list_num": 0, "group_name": nombre, "group_desc": "",
+        equipos = self._equipos_bando(e, lado)
+        return Empaquetado({"team_list": equipos, "team_list_num": len(equipos), "group_name": nombre, "group_desc": "",
                             "is_entry_restricted": "NO", "pre_pickup_users_pid_list": []})
 
     @staticmethod
