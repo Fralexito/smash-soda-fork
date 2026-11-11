@@ -3748,7 +3748,15 @@ class Servidor:
         partidos, puntos = self._umbral_evento(e)
         premio = int(e.get("premio_gp") or 0)
         monedas = int(e.get("premio_monedas") or 0) if self._monedas_activas() else 0
-        extra = {"entry_type": str(e.get("entry_type") or ""), "clear_match_num": partidos,
+        # Prueba en el PES (11-nov): sin estos campos el cliente decide solo «No cumples los
+        # requisitos» y no manda JOIN_COMPEV. Por defecto, requisitos abiertos; cada evento de
+        # config puede fijar los suyos con las mismas claves.
+        abiertos = {"entry_national_id": 0, "entry_team_id": 0, "entry_player_num": 0,
+                    "entry_teamspirit_min": 0, "entry_teamspirit_max": 999,
+                    "entry_teamstrength_min": 0, "entry_teamstrength_max": 99999,
+                    "entry_coach_id": 0, "player_num": 11}
+        requisitos = {k: int(e[k]) if isinstance(e.get(k), int) else v for k, v in abiertos.items()}
+        extra = {**requisitos, "entry_type": str(e.get("entry_type") or ""), "clear_match_num": partidos,
                  "clear_win_point": puntos, "precondition_compe_id": 0,
                  "precondition_compe_name": "", "ad_file_name": "", "logo_file_name": "",
                  "is_compe_reward_exist": "YES" if premio > 0 or monedas > 0 else "NO",
@@ -3771,6 +3779,13 @@ class Servidor:
         return {"compe_mode": str(modo or ""), "compe_id": int(ins.get("compe_id") or 0),
                 "compe_cpu_level": str(ins.get("cpu_level") or "COMPE_DIFFICULTY_NONE"),
                 "progress_game_count": int(ins.get("progreso") or 0)}
+
+    async def c_cmd_get_myclub_squad_bonus_target_playerlist(self, s, m):
+        """Prueba en el PES (11-nov): llega tras GET_COMPEV_INFO, con compe_id. Sin «bonus de
+        plantilla» la lista va vacía. P: nombres de las claves; se mandan las variantes probables."""
+        return {"gameplayer_list": [], "gameplayer_list_num": 0, "target_player_list": [],
+                "target_player_list_num": 0, "squad_bonus_target_player_list": [],
+                "squad_bonus_target_player_list_num": 0, "compe_id": self._id_entero(m.get("compe_id"))}
 
     async def c_cmd_join_compev(self, s, m):
         e = self._evento(self._id_entero(m.get("compe_id")))

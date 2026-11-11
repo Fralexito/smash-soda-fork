@@ -988,7 +988,9 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
                           res()["clear_count"]), (2, 4, "FINISHWIN", 1))
         await r(a, 9, {"msgid": "CMD_GET_MYCLUB_USER_INFO", "rqid": 9})
         self.assertEqual(res()["gp"], 5000)
-        await r(a, 10, {"msgid": "CMD_GET_COMPEV_INFO", "rqid": 10, "compe_mode": "EVENT_COMPE", "compe_id": 7})
+        await r(a, 10, {"msgid": "CMD_GET_COMPEV_INFO", "rqid": 10, "compe_mode": "EVENT", "compe_id": 7})
+        from phoenix_online.logica import _cifrado_comprimido
+        self.assertLess(_cifrado_comprimido(res()), 984)
         info = msgpack_min.unpackb(msgpack_min.packb(res()["compe_info"].valor))
         self.assertEqual((info["is_cleared"], info["cleared_count"], info["clear_match_num"],
                           info["clear_win_point"]), ("YES", 1, 2, 4))
