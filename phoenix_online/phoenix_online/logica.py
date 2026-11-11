@@ -4696,11 +4696,18 @@ class Servidor:
             extra = [] if extra == "minimo" else list(extra or [])
             base = set(self._campos_matchday(s, e)) | {"is_check_eula"} | set(extra)
             info = {k: v for k, v in info.items() if k in base}
+        # Q (PESBUL, 11-nov, solo forma del mensaje): su compe_info lleva info_overview ANIDADO
+        # dentro, y anota que con las claves planas el cliente leía compe_id 0 y end_group_match_date 0
+        # y pintaba «fase de grupos terminada». Aquí también va dentro (myclub.matchday_overview_dentro
+        # = "NO" lo quita). Es la hipótesis nueva para el botón gris de «Empezar partido».
+        plano = dict(info)
+        if cfgm.get("matchday_overview_dentro") != "NO":
+            info["info_overview"] = Empaquetado(dict(plano))
         salida = {"compe_info": Empaquetado(info)}
         # P (Ghidra): el cliente toma compe_id y el detalle de info_overview; con él vacío, JOIN
         # llegaba con compe_id 0. Va el mismo mapa (myclub.matchday_info_overview "NO" lo quita).
         if cfgm.get("matchday_info_overview") != "NO":
-            salida["info_overview"] = Empaquetado(dict(info))
+            salida["info_overview"] = Empaquetado(dict(plano))
         return salida
 
     async def c_cmd_get_matchday_mainmenu_info(self, s, m):
