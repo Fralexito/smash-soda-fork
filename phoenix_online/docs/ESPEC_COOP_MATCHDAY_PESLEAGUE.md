@@ -52,3 +52,33 @@ Entrada: «Torneo en línea» (eFootball) y «eFootball League de myClub» (myCl
 | `GET_PESLEAGUE_COMPE_OVERVIEW_INFO` | `compe_id` (int) | `overview_info` (texto/bin, **N**: el lector no muestra claves internas) |
 
 **Qué decide «la inscripción para este Campeonato está cerrada»** (**P**, el texto del aviso es el de `ERR_COMPE_AFTER_ENTRYTIME`/`BEFORE_ENTRYTIME`; el cliente lo muestra antes de mandar `JOIN`): se evalúa con los datos del elemento de la lista y de `GET_PESLEAGUE_COMPE_INFO`: (1) fecha: `entry_limit_date` (y `start_date`/`end_date`) frente a la hora del servidor; (2) `entry_user_limit`/`entry_user_num` frente a `entry_user_max`; (3) rango de división: `entry_limit_division_min` ≤ **tu división** ≤ `entry_limit_division_max`, donde tu división viene de `GET_PESLEAGUE_MAINMENU_INFO.division` (si esa va vacía el cliente puede considerar que no pertenece al rango → «cerrada»; por eso 64d2a05 manda la división real). Para abrir sin trabas: `entry_limit_date` en el futuro, `entry_user_limit:"NO"`, rango de división que incluya la tuya y `entry_user_num` < `entry_user_max`.
+
+## D.6 Respuestas de `GET_PESLEAGUE_COMPE_TEAM_LIST` y `GET_PESLEAGUE_1VS1_MAINMENU_INFO` (Ghidra solo lectura, 11-nov, L salvo lo marcado)
+
+Prueba en el PES base (60d0374): el Torneo ya deja inscribirse (`JOIN_PESLEAGUE_COMPE{compe_id 12, team_id 174}` → NOERR) y luego manda `GET_PESLEAGUE_COMPE_TEAM_LIST{compe_id}` y `GET_PESLEAGUE_1VS1_MAINMENU_INFO{compe_id}`. Nosotros contestábamos NOERR sin campos. El PES muestra «Se calcularon los resultados finales» y los dos relojes («El período de Matchmaking abre en» / «El campeonato finaliza en») en `-- : --`.
+
+**`GET_PESLEAGUE_COMPE_TEAM_LIST` (Result, lector `FUN_141bdf3b0`)** — claves en la raíz, sin bloques anidados:
+| Clave | Tipo | Nota |
+|---|---|---|
+| `team_list` | lista de **int** (cada elemento int/double → int) | ids de equipo ya usados en el torneo |
+| `team_list_num` | int | cantidad |
+(más `msgid`, `rqid`, `result`). Con lista vacía y `team_list_num` 0 basta; no es lo que dispara el aviso de «resultados finales».
+
+**`GET_PESLEAGUE_1VS1_MAINMENU_INFO` (Result, lector `FUN_141c36530`)** — TODAS las claves en la raíz (sin bin):
+| Clave | Tipo | Dónde va (offset en el objeto) | Lectura probable (**P**) |
+|---|---|---|---|
+| `matching_first_date` | int | +0xB8 | inicio del primer período de matchmaking (hora) |
+| `matching_time` | int | +0xBC | duración/ventana del período |
+| `matching_interval` | int | +0xC0 | intervalo entre períodos |
+| `compe_end_time` | int | +0xC4 | fin del campeonato (hora) |
+| `team_id` | int | +0xC8 | equipo con el que se inscribió |
+| `team_name` | texto | +0xD0 | nombre del equipo |
+| `point` | int | +0xF0 | puntos |
+| `win_count` / `lose_count` / `draw_count` | int | +0xF4 / +0xF8 / +0xFC | G/P/E |
+| `match_num` | int | +0x100 | partidos jugados |
+| `regulation_match_num` | int | +0x104 | partidos de reglamento (tope) |
+| `rank_type` | texto | +0x108 | tipo de ranking |
+Los enteros se leen como int o como double (los dos valen). Sin ninguno de ellos todo queda en 0.
+
+**Causa probable de «Se calcularon los resultados finales» (P, sin probar):** al recibir `matching_first_date` = 0 y `compe_end_time` = 0, el cliente trata el campeonato como terminado y enseña los relojes en `-- : --`. La pantalla de la prueba lo confirma: ambos relojes vacíos y `Puntos 0 · G/E/P 0/0/0` (los contadores vienen de `point`/`win_count`… que tampoco mandamos). **Propuesta:** responder `GET_PESLEAGUE_1VS1_MAINMENU_INFO` con `compe_end_time` y `matching_first_date` en el futuro (mismos valores que el `end_date`/`start_date` del torneo en `GET_PESLEAGUE_COMPE_INFO`), `matching_time` y `matching_interval` positivos (p. ej. 3600 y 86400), `team_id`/`team_name` del club inscrito y los contadores en 0, y `regulation_match_num` > 0. Si el aviso persiste, mirar los campos de fecha de `GET_PESLEAGUE_COMPE_INFO` (`start_date`, `end_date`, `match_end_date`) que ya enviamos: deben ser coherentes con esos.
+No se halló el texto «resultados finales» en este lector: es una decisión local del cliente a partir de esas fechas (**N**: falta confirmar con una prueba en vivo).
