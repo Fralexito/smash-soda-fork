@@ -4033,10 +4033,58 @@ class Servidor:
                 "pickup_member_date": e["fin"], "end_date": e["fin"], "entry_user_num": 0,
                 "entry_user_max": int(e.get("cupo") or 1000), "is_end": "NO",
                 "banner_file_info": self._banner(), "list_banner_file_info": self._banner(),
-                "is_use_emblem": "NO", "is_use_emblem_list": "NO", "is_entry": "NO",
+                "is_use_emblem": "NO", "is_use_emblem_list": "NO",
+                "is_entry": self._inscrito(s, "matchday", e["compe_id"]),
                 "watch_match_reward_state": "", "compe_db_id": e["compe_id"], "is_possible_watch": "NO",
                 "add_limit_rating": 0}))
         return {"compe_list": lista, "list_num": len(lista), "list_max": len(lista), "is_no_check": "NO"}
+
+    # Inscripción propia en torneos de Matchday / PES League (respuesta vacía = NOERR; las claves
+    # de respuesta reales se completan cuando se lean en Ghidra).
+    def _inscribir_torneo(self, s, m, clave):
+        cid = self._id_entero(m.get("compe_id"))
+        e = next((x for x in self._torneos(clave) if x["compe_id"] == cid), None)
+        if e is None:
+            return {"result": "ERR_COMPE_NOTFOUND"}
+        ahora = int(time.time())
+        if ahora > e["fin"]:
+            return {"result": "ERR_COMPE_AFTER_ENTRYTIME"}
+        club = self._club_propio(s)
+        if club is None:
+            return {"result": "ERR_NOTREGISTERED"}
+        inscritos = club.setdefault("torneos_inscripcion", {}).setdefault(clave, [])
+        if cid not in inscritos:
+            inscritos.append(cid)
+            self.datos.guardar_club(s.steam_hex, club)
+            log.info("%s: %s se inscribe en el torneo %d", clave, s.steam_hex, cid)
+        return {}
+
+    def _salir_torneo(self, s, m, clave):
+        cid = self._id_entero(m.get("compe_id"))
+        club = self._club_propio(s)
+        if club is None:
+            return {}
+        inscritos = (club.get("torneos_inscripcion") or {}).get(clave) or []
+        if cid in inscritos:
+            inscritos.remove(cid)
+            self.datos.guardar_club(s.steam_hex, club)
+        return {}
+
+    def _inscrito(self, s, clave, cid):
+        club = self.datos.club(s.steam_hex or "") if s.steam_hex else None
+        return "YES" if club and cid in ((club.get("torneos_inscripcion") or {}).get(clave) or []) else "NO"
+
+    async def c_cmd_join_matchday(self, s, m):
+        return self._inscribir_torneo(s, m, "matchday")
+
+    async def c_cmd_leave_matchday(self, s, m):
+        return self._salir_torneo(s, m, "matchday")
+
+    async def c_cmd_join_pesleague_compe(self, s, m):
+        return self._inscribir_torneo(s, m, "pesleague")
+
+    async def c_cmd_leave_pesleague_compe(self, s, m):
+        return self._salir_torneo(s, m, "pesleague")
 
     async def c_cmd_join_pesleague_compe_mode(self, s, m):
         return {}
@@ -4059,7 +4107,8 @@ class Servidor:
                 "start_date": e["inicio"], "end_date": e["fin"],
                 "entry_limit_division": "", "entry_limit_division_min": str(e.get("division_min") or "D12"),
                 "entry_limit_division_max": str(e.get("division_max") or "D1"), "is_end": "NO",
-                "is_entry": "NO", "is_gm_account": "NO", "compe_db_id": e["compe_id"],
+                "is_entry": self._inscrito(s, "pesleague", e["compe_id"]), "is_gm_account": "NO",
+                "compe_db_id": e["compe_id"],
                 "banner_file_info": self._banner(), "list_banner_file_info": self._banner()}))
         return {"compe_list": lista, "list_num": len(lista), "list_max": len(lista), "is_no_check": "NO"}
 

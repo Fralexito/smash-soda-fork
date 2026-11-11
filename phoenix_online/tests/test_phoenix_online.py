@@ -1097,7 +1097,10 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
     async def test_coop_matchday_pesleague_pantallas_vacias(self):
         """Parte D: los 13 comandos responden NOERR; Matchday/PES League leen torneos de config."""
         self.srv.cfg = {**self.srv.cfg, "myclub": {"matchday": [{"compe_id": 3, "compe_name": "Jornada"}],
-                                                    "pesleague": [{"compe_id": 4}]}}
+                                                    "pesleague": [{"compe_id": 4}],
+                                                    "jugadores": [{"gameplayer_id": 100 + i} for i in range(18)],
+                                                    "entrenadores": [{"coach_id": 8}],
+                                                    "club_de_prueba": {"team_name": "P", "gp": 0}}}
         a, ea = await self.entrar("A1")
         r = self.srv.recibir
         res = lambda: ea[-1][1]
@@ -1112,6 +1115,19 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
             if c in ("CMD_GET_MATCHDAY_LIST", "CMD_GET_PESLEAGUE_COMPE_LIST"):
                 self.assertEqual(res()["list_num"], 1)
         self.assertNotIn("CMD_GET_CLAN_LIST", getattr(self.srv, "sin_manejador", {}) or {})
+        # inscripción propia: JOIN marca is_entry, LEAVE lo quita, torneo inexistente da error
+        for i, (c, cid, lista, campo) in enumerate([
+                ("CMD_JOIN_MATCHDAY", 3, "CMD_GET_MATCHDAY_LIST", "matchday"),
+                ("CMD_JOIN_PESLEAGUE_COMPE", 4, "CMD_GET_PESLEAGUE_COMPE_LIST", "pesleague")], 20):
+            await r(a, i, {"msgid": c, "rqid": i, "compe_id": cid})
+            self.assertEqual(res()["result"], "NOERR", c)
+            await r(a, i, {"msgid": lista, "rqid": i, "start_index": 0})
+            self.assertEqual(res()["compe_list"][0].valor["is_entry"], "YES", campo)
+            await r(a, i, {"msgid": c.replace("JOIN", "LEAVE"), "rqid": i, "compe_id": cid})
+            await r(a, i, {"msgid": lista, "rqid": i, "start_index": 0})
+            self.assertEqual(res()["compe_list"][0].valor["is_entry"], "NO", campo)
+        await r(a, 30, {"msgid": "CMD_JOIN_MATCHDAY", "rqid": 30, "compe_id": 99})
+        self.assertEqual(res()["result"], "ERR_COMPE_NOTFOUND")
 
     async def test_myclub_catalogo_club_y_rival_rotando(self):
         import os, struct, tempfile, zlib, json as _j, sys as _s
