@@ -326,6 +326,7 @@ async def principal(ruta_config):
             vinculos = {k.lower(): v for k, v in json.load(f).items()}
     datos = Datos(cfg.get("base_datos", "phoenix_online.db"), vinculos)
     srv = Servidor(cfg, datos)
+    srv.ruta_config = ruta_config  # recarga en caliente de cfg['myclub'] (ver Servidor._recargar_config)
     carpeta = cfg.get("capturas", "capturas")
     global PRESUPUESTO
     PRESUPUESTO = Presupuesto(carpeta, cfg.get("capturas_total_mb", 2000),

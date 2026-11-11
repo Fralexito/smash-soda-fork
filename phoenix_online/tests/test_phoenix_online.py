@@ -1167,6 +1167,29 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(ea[-1][1]["reject_list_num"], 0)
         self.assertFalse({k for k in self.srv.sin_manejador if "FOLLOW" in k or "REJECT" in k})
 
+    async def test_recarga_config_en_caliente(self):
+        """Cambiar myclub en config.json se aplica sin reiniciar (solo la clave myclub)."""
+        import json as _j, tempfile, os as _o
+        with tempfile.TemporaryDirectory() as d:
+            ruta = _o.path.join(d, "config.json")
+            with open(ruta, "w", encoding="utf-8") as f:
+                _j.dump({"myclub": {"x": 1}, "turn": {"secreto": "no"}}, f)
+            self.srv.ruta_config = ruta
+            self.srv._mtime_config = None
+            self.srv._recargar_config()          # fija la hora base
+            turn_antes = self.srv.cfg.get("turn")
+            with open(ruta, "w", encoding="utf-8") as f:
+                _j.dump({"myclub": {"x": 2}, "turn": {"secreto": "otro"}}, f)
+            _o.utime(ruta, (_o.path.getmtime(ruta) + 5, _o.path.getmtime(ruta) + 5))
+            self.srv._recargar_config()
+            self.assertEqual(self.srv.cfg["myclub"], {"x": 2})
+            self.assertEqual(self.srv.cfg.get("turn"), turn_antes)
+            with open(ruta, "w", encoding="utf-8") as f:
+                f.write("{ roto")
+            _o.utime(ruta, (_o.path.getmtime(ruta) + 10, _o.path.getmtime(ruta) + 10))
+            self.srv._recargar_config()          # JSON roto: conserva la anterior
+            self.assertEqual(self.srv.cfg["myclub"], {"x": 2})
+
     async def test_salas_coop_crear_entrar_salir(self):
         """D.8: crear sala cooperativa, verla en la lista, entrar, listo, opciones y salir."""
         a, ea = await self.entrar("S1")

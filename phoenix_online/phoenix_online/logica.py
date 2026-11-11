@@ -221,6 +221,8 @@ class Servidor:
     def __init__(self, config, datos):
         self.cfg = config
         self.datos = datos
+        self.ruta_config = None
+        self._mtime_config = None
         self.sesiones = set()
         self.por_pid = {}
         self.salas = {}
@@ -287,7 +289,30 @@ class Servidor:
                 del self.sondas[k]
 
     # ---------- despacho ----------
+    def _recargar_config(self):
+        """Recarga en caliente SOLO cfg['myclub'] (fechas de torneos, tokens de prueba…) cuando cambia
+        config.json, para probar valores sin reiniciar servidor ni PES. Nunca toca claves, turn ni red."""
+        ruta = self.ruta_config
+        if not ruta:
+            return
+        try:
+            m = os.path.getmtime(ruta)
+            if self._mtime_config is None:
+                self._mtime_config = m
+                return
+            if m == self._mtime_config:
+                return
+            self._mtime_config = m
+            with open(ruta, encoding="utf-8") as f:
+                nuevo = json.load(f)
+            if isinstance(nuevo.get("myclub"), dict):
+                self.cfg["myclub"] = nuevo["myclub"]
+                log.info("config.json: myclub recargado en caliente")
+        except (OSError, ValueError) as e:
+            log.warning("recarga de config.json fallida (se mantiene la anterior): %s", e)
+
     async def recibir(self, sesion, secuencia, msg):
+        self._recargar_config()
         sesion.secuencia = secuencia
         if not isinstance(msg, dict) or "msgid" not in msg:
             log.warning("mensaje sin msgid de %s: %r", sesion.direccion, msg)
@@ -3330,6 +3355,7 @@ class Servidor:
 
     def recibir_regalos(self, formulario, ip_cliente=None):
         """B.4 (HTTP): cobra un regalo (present_id) o todos (is_all YES)."""
+        self._recargar_config()
         s = self._sesion_http(formulario, ip_cliente)
         club = self._club_propio(s) if s is not None else None
         if club is None:
@@ -4565,6 +4591,7 @@ class Servidor:
         return {}
 
     def _torneos(self, clave):
+        self._recargar_config()
         ahora = int(time.time())
         salida = []
         for e in (self.cfg.get("myclub") or {}).get(clave) or []:
