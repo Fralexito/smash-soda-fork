@@ -3790,7 +3790,10 @@ class Servidor:
         bonus_jugadores (ids de jugador) y bonus_necesarios (def. 0 = no exige nada)."""
         e = self._evento(self._id_entero(m.get("compe_id"))) or {}
         ids = [int(x) for x in e.get("bonus_jugadores") or [] if isinstance(x, int)]
-        return {"gameplayer_id_list": ids, "gameplayer_id_list_num": len(ids),
+        # L (Ghidra 11-nov, tras un cierre con enteros sueltos): cada elemento es un bin
+        # {gameplayer_id}
+        return {"gameplayer_id_list": [Empaquetado({"gameplayer_id": x}) for x in ids],
+                "gameplayer_id_list_num": len(ids),
                 "need_player_num": int(e.get("bonus_necesarios") or 0)}
 
     async def c_cmd_join_compev(self, s, m):
