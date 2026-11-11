@@ -3358,6 +3358,20 @@ class Servidor:
                 {"hora": int(time.time()), "cmd": "CMD_RECV_MYCLUB_PRESENT", "gp": delta}])[-self.MAX_HISTORIAL_GP:]
         self.datos.guardar_club(s.steam_hex, club)
         log.info("Regalos: %s cobra %d regalo(s)", s.steam_hex, len(salida))
+        # Prueba en el PES (11-nov): cobra bien pero el juego avisa «ya tienes el máximo»
+        # (ERR_RECV_PRESENT_FULL). Config myclub.regalos_respuesta para probar formas:
+        # "normal" (result NOERR por elemento), "sin_result", "vacio" (""), "cero" (0),
+        # "solo_top" (sin lista).
+        modo = str((self.cfg.get("myclub") or {}).get("regalos_respuesta") or "normal")
+        for e in salida:
+            if modo == "sin_result":
+                e.pop("result", None)
+            elif modo == "vacio":
+                e["result"] = ""
+            elif modo == "cero":
+                e["result"] = 0
+        if modo == "solo_top":
+            return {"result": "NOERR" if salida else "ERR_NOTFOUND"}
         return {"result": "NOERR" if salida else "ERR_NOTFOUND",
                 "receive_result_list_num": len(salida), "receive_result_list": salida}
 
