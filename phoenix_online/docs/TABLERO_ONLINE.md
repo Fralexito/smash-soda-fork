@@ -1,14 +1,14 @@
 # Tablero del online Phoenix (se actualiza con cada avance)
 
-Última actualización: 11-nov-2026, 21:55 (hora del servidor UTC).
+Última actualización: 11-nov-2026, 18:30 (hora de Lima).
 PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 
 ## Resumen
-- **Probado en el PES y funcionando:** 25 de 55 apartados (**45 %**).
-- **Programado (falta probarlo en el PES):** 20 más. Con ellos, **45 de 55 ya están hechos (82 %)**.
-- **A medias** (abre bien pero sin contenido todavía, o hecho solo en parte): 7 (Matchday y PES League pasaron aquí: ya abren en el PES, falta la inscripción).
-- **Falta hacer:** 3.
-- Comandos del juego que el servidor ya controla: **281 de 439 (64 %)**. Cooperativo, Matchday, PES League y clanes ya tienen respuesta; solo falta empezar la tienda.
+- **Probado en el PES y funcionando:** 25 de 58 apartados (**43 %**).
+- **Programado (falta probarlo en el PES):** 22 más. Con ellos, **47 de 58 ya están hechos (81 %)**.
+- **A medias** (abre bien pero sin contenido o hecho solo en parte): 8 (Matchday, PES League, Cooperativo y Clanes abren y se usan en el PES; falta el partido con 2 PES).
+- **Falta hacer:** 3 (myClub contra otra persona, Tailscale, servidor en internet).
+- Comandos del juego que el servidor ya controla: **319 de 433 (74 %)** (11-nov 18:30, contados contra `commands.json` de AzrakHQ; el resto son sobre todo avisos del partido).
 
 **Leyenda:** ✅ probado en el PES · 🟢 programado, sin probar en el PES · 🟡 a medias (abre, pero vacío) · ❌ falta · 🚫 no se hará (a propósito)
 
@@ -73,7 +73,7 @@ PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 | 37 | Matchday | 🟡 | probado el 11-nov: inscripción funciona (bando y equipo) y abre la pantalla del torneo sin cerrarse; faltan textos (bando, clasificación, premios) |
 | 38 | Eventos y competiciones online | ✅ | probado el 11-nov: inscripción en la Copa Phoenix funciona (antes «No cumples los requisitos»: el servidor mandaba los datos sin empaquetar); falta el partido |
 | 39 | PES League | 🟡 | probado el 11-nov: inscripción funciona («Torneo Phoenix» con equipo), abre su pantalla y ya no sale el aviso «resultados finales» (ahora dice «Espera a que abra el período de Matchmaking»). Programado, sin probar: nombre del equipo y matchmaking siempre abierto. Falta jugar el partido |
-| 40 | Clanes | 🟢 | programado el 11-nov: crear clan, buscarlo, entrar, ajustes (nombre, comentario, abierto), expulsar, salir o disolver y lista de miembros. Falta probarlo en el PES |
+| 40 | Clanes | 🟡 | probado el 11-nov en el PES: Opciones de Cooperativo, Crear/Editar clan, Perfil del clan (1/11), «Tu lista de clanes» (arreglada hoy: antes salía vacía), Solicitudes hechas y Lista de seguimiento vacías con su aviso; **falta** invitar, expulsar y solicitudes recibidas (hace falta un 2.º jugador) |
 
 ## 6. Lo propio de Phoenix (fuera del juego)
 | # | Apartado | Estado | Nota |
@@ -87,12 +87,15 @@ PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 | 47 | Desvío del online con Phoenix Core (sin «hosts») | 🟢 | Core 0.5.66 listo; se instala después de la prueba de Street |
 | 48 | Amigos por Tailscale | ❌ | falta instalar Tailscale (con tu permiso) |
 | 49 | Servidor en internet (VPS, sin tu PC encendida) | ❌ | |
-| 50 | Relé TURN propio (partido entre 2 PC aunque el router bloquee) | 🟢 | probado por AzrakHQ con 2 PES; se enciende con `turn_propio.activo` + 2 paquetes de Python |
+| 50 | Relé TURN propio (partido entre 2 PC aunque el router bloquee) | 🟢 | **encendido el 11-nov 17:16** (tls 5349 + dtls 5350, relé udp 49160-49179, certificado para 127.0.0.1 y 192.168.100.236); falta probarlo con 2 PES; en internet hay que abrir esos puertos en el router |
 | 51 | Actualización en vivo propia (todos con la misma base del parche) | 🟢 | carpeta `actualizacion/` + `tools/armar_actualizacion.py` |
 | 52 | No emparejar PES con datos distintos («error DATAPACK») | 🟢 | sumas de CHECK_CHEAT + versión |
 | 53 | Dirección del PES de tu PC para un amigo de otra casa | 🟢 | host_addr con tu IP pública/Tailscale |
 | 54 | Reconexión a tiempo sin derrota; abandono por sesión exacta | 🟢 | |
-| 55 | Tope de partidos con puntos contra el mismo rival por día | 🟢 | opción, apagada (`max_partidos_rival_dia`) |
+| 55 | Tope de partidos con puntos contra el mismo rival por día | 🟢 | **activado el 11-nov 18:18: `max_partidos_rival_dia` = 3**; probado con pruebas automáticas (140), no en el PES |
+| 56 | Sonda de vida: enlace P2P cortado con los 2 en el servidor anula la partida sin derrota ni puntos | 🟢 | 11-nov (dc6990c): `SEND_ABNORMALEND`/`SEND_ALIVE` con `DISCONN_SC`/`DEGRADE_SC`; empujón `WATCH_CHECK_ALIVE_PLAYER` opcional (`sonda_vida`, apagado); falta verlo con 2 PES |
+| 57 | Misma identidad (mismo SteamID e IP): aviso en el registro y sin puntos entre ellos | 🟢 | 11-nov (1fe6ea7): se suma al reparto por IP/pase ya existente; solo pruebas automáticas |
+| 58 | Salas: la sala vuelve a «esperando» aunque el otro se vaya sin `LEAVE_GAME` | 🟢 | 11-nov (5c6d5e3): hueco real arreglado; el invitado ya no marca «listo» al dueño (verificado) |
 
 ## Historial de este tablero
 - 11-nov 21:55: comparación completa con AzrakHQ y lectura a fondo de OpenEleven/MGSV/Sider. Nuevo: nivel cooperativo, perfil de desconectados, avatar guardado, ranking con orden, lista de bloqueo, filtro de palabras sin falsos rechazos, resumen del partido, TURN propio, actualización en vivo, emparejar solo datos iguales, reconexión. 135 pruebas en verde.
