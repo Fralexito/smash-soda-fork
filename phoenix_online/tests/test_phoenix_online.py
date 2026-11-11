@@ -1928,6 +1928,22 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         r = self.srv.respuesta_http({"msgid": "CMD_GET_AVATAR_HTTP", "rqid": "3", "pid": "7"})
         self.assertEqual((r["avatar_data_size"], r["avatar_md5"]), (49152, hashlib.md5(img).hexdigest()))
 
+    async def test_avatar_subido_queda_guardado(self):
+        """R (pesavatar AzrakHQ): SET_AVATAR se guarda en la base y se lee con cualquier forma del pid."""
+        import base64, hashlib
+        a, ea = await self.entrar("0110000100000071")
+        img = bytes(range(256)) * 192
+        b64 = base64.b64encode(img).decode()
+        await self.srv.recibir(a, 1, {"msgid": "CMD_SET_AVATAR", "rqid": 1, "avatar_data": b64,
+                                      "avatar_data_size": len(img), "avatar_md5": hashlib.md5(img).hexdigest()})
+        self.srv.avatares.clear()
+        bajo = str(self.srv.numero_de_clave(a.steam_hex) & 0xFFFFFFFF)
+        r = self.srv.respuesta_http({"msgid": "CMD_GET_AVATAR_HTTP", "rqid": "3", "pid": bajo})
+        self.assertEqual((r["avatar_data"], r["avatar_data_size"]), (b64, 49152))
+        await self.srv.recibir(a, 2, {"msgid": "CMD_SET_AVATAR", "rqid": 2, "avatar_data": "no*base64"})
+        r = self.srv.respuesta_http({"msgid": "CMD_GET_AVATAR_HTTP", "rqid": "3", "pid": bajo})
+        self.assertEqual(r["avatar_data_size"], 49152)   # lo inválido no borra el bueno
+
     async def test_tarjeta_con_nombre_en_conexion_menu(self):
         await self.entrar("A1")
         self.srv.datos.crear_jugador(Servidor._steam_de({"username": "A1"}) or "a1", "FRALEX")

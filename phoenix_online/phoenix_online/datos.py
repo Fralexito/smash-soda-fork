@@ -57,6 +57,12 @@ create table if not exists historial (
     steam_hex text primary key,
     datos text not null
 );
+create table if not exists avatares (
+    steam_hex text primary key,
+    datos text not null,
+    tam integer not null,
+    md5 text not null
+);
 create table if not exists modales (
     steam_hex text primary key,
     datos text not null
@@ -202,6 +208,21 @@ class Datos:
     def guardar_historial(self, steam_hex, d):
         self.db.execute("insert into historial(steam_hex, datos) values (?,?) on conflict(steam_hex) "
                         "do update set datos=excluded.datos", ((steam_hex or "").lower(), json.dumps(d)))
+        self.db.commit()
+
+    # ---- avatar (editor del PES): base64 tal como lo subió, con su tamaño y md5 ----
+    def avatar(self, steam_hex):
+        f = self.db.execute("select datos, tam, md5 from avatares where steam_hex=?",
+                            ((steam_hex or "").lower(),)).fetchone()
+        return {"data": f[0], "size": f[1], "md5": f[2]} if f else None
+
+    def guardar_avatar(self, steam_hex, datos, tam, md5):
+        if not datos:
+            self.db.execute("delete from avatares where steam_hex=?", ((steam_hex or "").lower(),))
+        else:
+            self.db.execute("insert into avatares(steam_hex, datos, tam, md5) values (?,?,?,?) on conflict(steam_hex) "
+                            "do update set datos=excluded.datos, tam=excluded.tam, md5=excluded.md5",
+                            ((steam_hex or "").lower(), datos, int(tam), md5))
         self.db.commit()
 
     # ---- cortesía (modales): {"hist": [0/1 por partido, el último al final], "grado": "A", "avisados": n} ----

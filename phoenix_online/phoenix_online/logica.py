@@ -6639,14 +6639,21 @@ class Servidor:
                  or str(f["user"]["pid"] & 0xFFFFFFFF) in buscados]
         return {**r, "rank_list": filas[:1]}
 
+    AVATAR_MAX = 0xC000  # 128x128x3
+
     def _avatar(self, pid):
-        """C (PESBUL avatar_service): avatar_data = base64 de una imagen 128x128x3 (49152 B),
-        avatar_data_size = bytes decodificados y avatar_md5 = md5 de esos bytes. Sin avatar:
-        NOERR con datos vacíos (no se inventa imagen)."""
-        texto = self.avatares.get(str(pid or ""), "")
-        crudo = base64.b64decode(texto) if texto else b""
-        return {"avatar_data": texto, "avatar_data_size": len(crudo),
-                "avatar_md5": hashlib.md5(crudo).hexdigest() if crudo else ""}
+        """R (pesavatar AzrakHQ) + C (PESBUL avatar_service): avatar_data = base64 de una imagen 128x128x3,
+        avatar_data_size = bytes y avatar_md5 = md5 de esos bytes; el PES lo acepta solo si el tamaño es
+        1..0xC000 y el md5 cuadra. Se devuelve tal cual lo subió. Sin avatar: datos vacíos (silueta)."""
+        clave = self._clave_de_id(pid)
+        a = self.datos.avatar(clave) if clave else None
+        if a is None:
+            texto = self.avatares.get(str(pid or ""), "")
+            if not texto:
+                return {"avatar_data": "", "avatar_data_size": 0, "avatar_md5": ""}  # silueta (así ya se probó)
+            crudo = base64.b64decode(texto)
+            a = {"data": texto, "size": len(crudo), "md5": hashlib.md5(crudo).hexdigest()}
+        return {"avatar_data": a["data"], "avatar_data_size": a["size"], "avatar_md5": a["md5"]}
 
     async def c_cmd_get_avatar_http(self, s, m):
         return self._avatar(m.get("pid"))
@@ -6654,10 +6661,25 @@ class Servidor:
     c_cmd_get_avatar = c_cmd_get_avatar_http
 
     async def c_cmd_set_avatar(self, s, m):
-        # el cliente sube el base64 tal cual; se guarda en memoria (P: persistir en la web)
-        datos = m.get("avatar_data")
-        if isinstance(datos, (bytes, str)) and datos:
-            self.avatares[str(self._pid_visible(s))] = datos.decode() if isinstance(datos, bytes) else datos
+        """R (pesavatar AzrakHQ): al salir del editor (Ajustes en línea > Perfil de usuario) el PES sube
+        {avatar_data_size, avatar_data, avatar_md5}. Solo el avatar propio; se guarda en la base para que
+        sobreviva a un reinicio y lo vean los demás aunque estés desconectado."""
+        datos = m.get("avatar_data") or ""
+        if isinstance(datos, (bytes, bytearray)):
+            datos = bytes(datos).decode("ascii", "replace")
+        try:
+            crudo = base64.b64decode(datos, validate=True) if datos else b""
+        except (ValueError, TypeError):
+            log.warning("avatar de %s no es base64; ignorado", s.pid)
+            return {}
+        if len(crudo) > self.AVATAR_MAX:
+            return {}
+        md5 = str(m.get("avatar_md5") or hashlib.md5(crudo).hexdigest()).lower()
+        tam = self._id_entero(m.get("avatar_data_size")) or len(crudo)
+        if getattr(s, "steam_hex", None):
+            self.datos.guardar_avatar(s.steam_hex, datos, tam, md5)
+        else:
+            self.avatares[str(self._pid_visible(s))] = datos
         return {}
 
     def respuesta_turn(self, formulario):
