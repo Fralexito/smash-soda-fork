@@ -1388,6 +1388,36 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("warn_kind", ea[-1][1])  # una sola vez
         self.assertEqual(self.srv.grado_modales(a.steam_hex.lower()), "A")  # 1 abandono sigue en A
 
+    async def test_turn_propio_lista_y_direcciones(self):
+        """R (turn.py AzrakHQ): lista TURN con port y tls_port no nulos + certificado; la dirección de
+        relé va al rival (rqid 0) y el que manda recibe la que el rival mandó antes."""
+        a, ea = await self.entrar("0110000100000041")
+        b, eb = await self.entrar("0110000100000042")
+
+        class TurnFalso:
+            def activo(self):
+                return True
+
+            def lista(self, pid, direccion):
+                return {"turn_server_list": [{"zone": 1, "address": direccion, "port": 3479, "tls_port": 5349}],
+                        "id": "u", "pw": "p", "server_certificate": "QUJD", "server_certificate_data_size": 3}
+        self.srv.turn_propio = TurnFalso()
+        r = self.srv.respuesta_http({"msgid": "CMD_GET_TURN_SERVER_LIST", "rqid": "4", "pid": "9"},
+                                    ip_local="100.64.0.9")
+        self.assertEqual((r["result"], r["turn_server_list"][0]["address"], r["turn_server_list"][0]["tls_port"]),
+                         ("NOERR", self.srv.ip_anuncio(ip_local="100.64.0.9"), 5349))
+        pareja = {"miembros": (a, b), "check": set(), "tipo": "OC_QUICK", "room_id": 990005}
+        self.srv.parejas[a] = self.srv.parejas[b] = pareja
+        await self.srv.recibir(b, 1, {"msgid": "CMD_SEND_TURN_ADDRESS_DATA", "rqid": 1, "address": b"BB",
+                                      "address_data_size": 2})
+        w = [m for _, m in ea if m["msgid"] == "CMD_WATCH_TURN_ADDRESS_DATA"][-1]
+        self.assertEqual((w["address"], w["rqid"]), (b"BB", 0))
+        await self.srv.recibir(a, 2, {"msgid": "CMD_SEND_TURN_ADDRESS_DATA", "rqid": 2, "address": b"AA",
+                                      "address_data_size": 2})
+        self.assertEqual([m for _, m in ea if m["msgid"] == "CMD_WATCH_TURN_ADDRESS_DATA"][-1]["address"], b"BB")
+        self.assertEqual([m for _, m in eb if m["msgid"] == "CMD_WATCH_TURN_ADDRESS_DATA"][-1]["address"], b"AA")
+        self.srv.turn_propio = None
+
     async def test_recarga_config_en_caliente(self):
         """Cambiar myclub en config.json se aplica sin reiniciar (solo la clave myclub)."""
         import json as _j, tempfile, os as _o

@@ -360,6 +360,15 @@ async def principal(ruta_config):
         log.info("gamerelay UDP en %s", g.get("puerto", 5100))
     else:
         log.warning("sin clave_gamerelay: no hay relé UDP; la comprobación de red fallará")
+    # Relé TURN propio (R: AzrakHQ, partido entero por relé probado con 2 PES). Opcional y apagable.
+    tp = cfg.get("turn_propio") or {}
+    if tp.get("activo"):
+        from .turn_propio import TurnPropio
+        turn = TurnPropio(tp)
+        ip_fija = str(cfg.get("ip_publica") or "auto")
+        ips = [ip_fija] if ip_fija.lower() != "auto" else []
+        if await turn.iniciar(lambda ip_local, ip_cliente: srv.ip_anuncio(ip_local=ip_local), ips):
+            srv.turn_propio = turn
     log.info("Phoenix Online escuchando en %s", [s.sockets[0].getsockname() for s in servidores])
     tareas = [s.serve_forever() for s in servidores]
     if cfg.get("reglas_myclub"):

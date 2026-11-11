@@ -240,6 +240,7 @@ class Servidor:
         self.por_pid = {}
         self.salas = {}
         self.suscritos_salas = set()  # quienes miran la lista de salas (REQWATCHL_ROOMLIST)
+        self.turn_propio = None  # relé TURN propio (turn_propio.py), si config turn_propio.activo
         self.turn_pendiente = {}  # pid destino -> (address, size)
         self.dormir = asyncio.sleep
         self.avatares = {}    # pid (texto) -> base64 del avatar
@@ -6350,6 +6351,12 @@ class Servidor:
         msgid = formulario.get("msgid")
         if not msgid:
             return None
+        if msgid == "CMD_GET_TURN_SERVER_LIST" and self.turn_propio is not None and self.turn_propio.activo():
+            # R (turn.py AzrakHQ): una entrada con port y tls_port distintos de 0 (si no, el PES la descarta),
+            # dirección = la IP por la que este PES llega al servidor, y el certificado en DER
+            pid = formulario.get("pid", "0")
+            return {"msgid": msgid, "rqid": int(formulario.get("rqid", 0) or 0), "result": NOERR,
+                    **self.turn_propio.lista(pid, self.ip_anuncio(ip_local=ip_local))}
         if msgid == "CMD_GET_TURN_SERVER_LIST" and self.cfg.get("turn"):
             return self.respuesta_turn(formulario)
         base = {"msgid": msgid, "rqid": int(formulario.get("rqid", 0) or 0), "result": NOERR}
@@ -6478,11 +6485,25 @@ class Servidor:
                 "server_certificate": b"", "server_certificate_data_size": 0}
 
     async def c_cmd_send_turn_address_data(self, s, m):
-        destino = m.get("pid")
-        addr, size = m.get("address", b""), m.get("address_data_size", 0)
-        otro = self.por_pid.get(destino)
-        # El bloque viaja intacto; si el otro aún no vigila, se guarda
-        if not (otro and otro.completar("CMD_WATCH_TURN_ADDRESS_DATA",
-                                        address=addr, address_data_size=size)):
-            self.turn_pendiente[destino] = (addr, size)
+        """R (turn.py AzrakHQ, probado en vivo): la dirección de relé de un PES va byte a byte a su
+        rival como WATCH_TURN_ADDRESS_DATA (rqid 0). Quien la manda recibe también la que el rival mandó
+        antes (pudo llegar antes de que el otro vigilara). Sin pareja: el destino es m['pid'] (antiguo)."""
+        addr, size = m.get("address", b""), int(m.get("address_data_size", 0) or 0)
+        pareja = self._pareja_por_clave(s)
+        if pareja is None:
+            destino = m.get("pid")
+            otro = self.por_pid.get(destino)
+            if not (otro and otro.completar("CMD_WATCH_TURN_ADDRESS_DATA", address=addr, address_data_size=size)):
+                self.turn_pendiente[destino] = (addr, size)
+            return {}
+        guardadas = pareja.setdefault("turn_addr", {})
+        guardadas[s] = {"address": addr, "address_data_size": size}
+        for x in pareja["miembros"]:
+            if x is s:
+                continue
+            if x in self.sesiones:
+                self._empujar(x, "CMD_WATCH_TURN_ADDRESS_DATA", **guardadas[s])
+            if x in guardadas:
+                self._empujar(s, "CMD_WATCH_TURN_ADDRESS_DATA", **guardadas[x])
+        log.info("TURN: dirección de %s (%d bytes) enviada al rival", s.pid, size)
         return {}
