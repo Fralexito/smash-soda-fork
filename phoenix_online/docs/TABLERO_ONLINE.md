@@ -8,7 +8,7 @@ PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 - **Programado (falta probarlo en el PES):** 14 más. Con ellos, **38 de 49 ya están hechos (78 %)**.
 - **A medias** (abre bien pero sin contenido todavía, o hecho solo en parte): 8 (Matchday y PES League pasaron aquí: ya abren en el PES, falta la inscripción).
 - **Falta hacer:** 3.
-- Comandos del juego que el servidor ya controla: **259 de 439 (59 %)**. Cooperativo, Matchday, PES League y clanes ya tienen respuesta; solo falta empezar la tienda.
+- Comandos del juego que el servidor ya controla: **258 de 439 (59 %)**. Cooperativo, Matchday, PES League y clanes ya tienen respuesta; solo falta empezar la tienda.
 
 **Leyenda:** ✅ probado en el PES · 🟢 programado, sin probar en el PES · 🟡 a medias (abre, pero vacío) · ❌ falta · 🚫 no se hará (a propósito)
 
