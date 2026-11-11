@@ -4227,6 +4227,15 @@ class Servidor:
                 "is_ready": "YES" if x in sala["listos"] else "NO"}))
         return {"list_data": filas, "list_num": len(filas)}
 
+    async def c_cmd_reqwatchl_coop_room_member(self, s, m):
+        """L (Ghidra FUN_141e29680 + prueba 11-nov 08:07): tras crear la sala el PES manda
+        REQWATCHL_COOP_ROOM_MEMBER{room_id} y espera la lista vigilada: list_type, list_num,
+        list_key_name y list_data (mismos miembros que GET_COOP_ROOM_MEMBER). Sin manejador la
+        pantalla de la sala se quedaba en blanco. list_type/list_key_name: P (texto libre en el lector)."""
+        r = await self.c_cmd_get_coop_room_member(s, m)
+        return {"list_type": str((self.cfg.get("myclub") or {}).get("coop_lista_tipo") or "ALL"),
+                "list_num": r["list_num"], "list_key_name": "player_index", "list_data": r["list_data"]}
+
     async def c_cmd_get_coop_reject_list(self, s, m):
         filas = [self._usuario_clave(x) for x in self.datos.relaciones(s.steam_hex)["rechazados"]]
         return self._lista_que_cabe("CMD_GET_COOP_REJECT_LIST", filas, lambda f: {
