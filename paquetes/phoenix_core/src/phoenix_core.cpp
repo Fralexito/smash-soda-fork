@@ -30,7 +30,7 @@
 #include "phoenix_api.h"
 #include "redireccion_online.h"
 
-#define PHX_CORE_VERSION "0.4.96"
+#define PHX_CORE_VERSION "0.4.97"
 
 namespace {
 
@@ -2925,6 +2925,128 @@ bool supOcultosInstalar(Feature& f) {
 }
 bool supOcultosQuitar(Feature&) { g_supOcultosOn = 0; return true; }
 
+// --- coop_online (0.4.97, APAGADA por defecto; se aplica al reiniciar PES): arregla el Cooperativo 1 contra 1 del PES 2021 1.01.00.
+// Idea: mod pes2021online.c de AzrakHQ (MIT). En 1.01.00 el co-op nunca conecta: TaskCoopSession (FUN 0x141134C00) arma la lista de pares
+// pero no se la da a la capa P2P (0x141092720; Quick Match sí, desde 0x14111A8FE) y el manejador de WATCH_COOP_MATCHING (0x14110FE00)
+// tira las direcciones que el parser decodificó. Dos ganchos devuelven lo que hace Quick Match; nada más cambia. Solo se instalan si
+// los bytes de las 6 direcciones del plan son EXACTOS (si no, nada se toca). Los dos prólogos (18 y 16 B) no llevan RIP-relativos.
+// Estructuras (RVA = VA - 0x140000000): g = [exe+0x36FCED8]; g+0x30 = estado co-op (ranuras +0x58/+0x90, cada una con vector de
+// registros de 0x68 B en +0x18/+0x20); g+0x58 = modo red (vector de pares de 0x30 B en +0x60/+0x68). Miembro parseado: 0x3E8 B
+// (pid +0x28, host +0xD8/+0xDC, reflejada +0xF0/+0xF4, NAT +0x120); registro: host +0x3C/+0x40, refl. +0x50/+0x54, NAT +0x64.
+typedef uint64_t (*FnCoop)(void*, void*, void*, void*);
+FnCoop g_coopPeersOrig = nullptr, g_coopWatchOrig = nullptr;
+void (*g_coopEntregar)(void*) = nullptr;         // 0x141092720: entrega la lista de pares a la capa P2P
+uint8_t* g_coopGlobalPtr = nullptr;              // dirección de la variable [0x1436FCED8]
+volatile LONG g_coopActiva = 0, g_coopNPares = 0, g_coopNDirs = 0;
+struct CoopDir { int32_t pid; uint8_t host[18], refl[18]; uint32_t nat; };
+
+uint8_t* coopPtr(const uint8_t* p) { uint8_t* v = nullptr; if (!p || !leerSeguro(p, &v, 8)) return nullptr; return v; }
+uint8_t* coopGlobales() { return coopPtr(g_coopGlobalPtr); }
+bool coopEntregarSeguro(void* net) {
+    __try { g_coopEntregar(net); return true; }
+    __except (EXCEPTION_EXECUTE_HANDLER) { return false; }
+}
+uint64_t ganchoCoopPeers(void* a, void* b, void* c, void* d) {
+    uint64_t r = g_coopPeersOrig(a, b, c, d);
+    if (!g_coopActiva) return r;
+    uint8_t* g = coopGlobales();
+    uint8_t* net = coopPtr(g ? g + 0x58 : nullptr);
+    if (!net) return r;
+    uint8_t* p0 = coopPtr(net + 0x60); uint8_t* p1 = coopPtr(net + 0x68);
+    size_t n = (p0 && p1 > p0) ? (size_t)(p1 - p0) / 0x30 : 0;
+    LONG k = InterlockedIncrement(&g_coopNPares);
+    if (n != 1) { if (k <= 20) logf("[COOP] lista de pares con %u elementos: la capa P2P toma exactamente 1 (solo 1v1); no se entrega", (unsigned)n); return r; }
+    bool ok = coopEntregarSeguro(net);
+    if (k <= 20) { int32_t pid = 0; leerSeguro(p0, &pid, 4); logf("[COOP] par entregado a la capa P2P: %s (pid %d)", ok ? "ok" : "EXCEPCION (ignorada)", pid); }
+    return r;
+}
+uint64_t ganchoCoopWatch(void* cmd, void* b, void* c, void* d) {
+    CoopDir got[24]; int n = 0;
+    if (g_coopActiva) {
+        uint8_t* res = coopPtr(cmd ? (uint8_t*)cmd + 0xD0 : nullptr);
+        if (res) {
+            uint8_t* grupos = coopPtr(res + 0x1D8);
+            uint32_t ng = (uint32_t)leerU32(res, 0x1E0);
+            for (uint32_t i = 0; grupos && i < ng && i < 8; i++) {
+                uint8_t* mem = coopPtr(grupos + i * 0x20 + 8);
+                uint32_t nm = (uint32_t)leerU32(grupos, i * 0x20 + 0x10);
+                for (uint32_t j = 0; mem && j < nm && j < 3 && n < 24; j++) {
+                    const uint8_t* m = mem + (size_t)j * 0x3E8;
+                    CoopDir& q = got[n];
+                    if (leerSeguro(m + 0x28, &q.pid, 4) && leerSeguro(m + 0xD8, q.host, 4) && leerSeguro(m + 0xDC, q.host + 4, 14) &&
+                        leerSeguro(m + 0xF0, q.refl, 4) && leerSeguro(m + 0xF4, q.refl + 4, 14) && leerSeguro(m + 0x120, &q.nat, 4)) n++;
+                }
+            }
+        }
+    }
+    uint64_t r = g_coopWatchOrig(cmd, b, c, d);   // construye los registros de miembros
+    if (!g_coopActiva || !n) return r;
+    uint8_t* g = coopGlobales(); uint8_t* co = coopPtr(g ? g + 0x30 : nullptr);
+    int copiados = 0;
+    for (int s = 0; co && s < 2; s++) {
+        uint8_t* ranura = co + (s ? 0x90 : 0x58);
+        uint8_t* reg = coopPtr(ranura + 0x18); uint8_t* fin = coopPtr(ranura + 0x20);
+        if (!reg || fin <= reg || (size_t)(fin - reg) / 0x68 > 16) continue;
+        for (; reg < fin; reg += 0x68) {
+            int32_t pid = 0; if (!leerSeguro(reg + 0x28, &pid, 4) || !pid) continue;
+            for (int k = 0; k < n; k++) if (got[k].pid == pid) {
+                if (escribirSeguro(reg + 0x3C, got[k].host, 4) && escribirSeguro(reg + 0x40, got[k].host + 4, 14) &&
+                    escribirSeguro(reg + 0x50, got[k].refl, 4) && escribirSeguro(reg + 0x54, got[k].refl + 4, 14) &&
+                    escribirSeguro(reg + 0x64, &got[k].nat, 4)) copiados++;
+                break;
+            }
+        }
+    }
+    LONG k = InterlockedIncrement(&g_coopNDirs);
+    if (k <= 20) logf("[COOP] direcciones de %d de %d miembros conservadas", copiados, n);
+    return r;
+}
+bool coopBytes(uint64_t va, const char* hex) {   // ¿están exactamente esos bytes en esa dirección virtual del PES 1.01.00?
+    Patron p; if (!parsearPatron(hex, p)) return false;
+    uint8_t* d = g_exe.base + (va - 0x140000000ULL);
+    uint8_t tmp[64]; if (p.b.size() > sizeof tmp || !leerSeguro(d, tmp, p.b.size())) return false;
+    for (size_t i = 0; i < p.b.size(); i++) if (p.m[i] && tmp[i] != p.b[i]) return false;
+    return true;
+}
+bool coopInstalar(Feature& f) {
+    if (g_exe.base == nullptr || 0x140000000ULL + g_exe.tamImagen <= 0x1436FCED8ULL + 8) { f.estado = "no es el PES 2021 1.01.00 (imagen demasiado corta)"; return false; }
+    // las 6 firmas del plan (todas deben coincidir, si no no se instala nada)
+    static const struct { uint64_t va; const char* hex; } fir[] = {
+        { 0x14110FE00ULL, "40 55 41 54 41 55 41 56 41 57 48 8D AC 24 B0 ED" },
+        { 0x141134C00ULL, "48 8B C4 55 41 54 41 55 41 56 41 57 48 8D 68 B8" },
+        { 0x1411346C3ULL, "E8 38 05 00 00 B0 01" },
+        { 0x141092720ULL, "48 89 5C 24 08 48 89 6C 24 10 48 89 74 24 18 57" },
+        { 0x14111A8FEULL, "49 8B CE E8 1A 7E F7 FF" },
+        { 0x140FF0A20ULL, "48 8B 05 B1 C4 70 02 C3" },
+    };
+    for (auto& s : fir) if (!coopBytes(s.va, s.hex)) { char b[96]; sprintf_s(b, "firma distinta en 0x%llX: no es el exe 1.01.00, no se instala", (unsigned long long)s.va); f.estado = b; return false; }
+    // las dos funciones a desviar: firma larga y ÚNICA en el código (la corta del plan aparece 8 veces) y en la dirección esperada
+    uint8_t* watch = firmaUnica("codigo", "40 55 41 54 41 55 41 56 41 57 48 8D AC 24 B0 ED FF FF B8 50 13 00 00 E8 ?? ?? ?? ?? 48 2B E0 48 C7 45 D8 FE FF FF FF", f.id);
+    uint8_t* peers = firmaUnica("codigo", "48 8B C4 55 41 54 41 55 41 56 41 57 48 8D 68 B8 48 81 EC 20 01 00 00 48 C7 44 24 68 FE FF FF FF 48 89 58 10 48 89 70 18 48 89 78 20 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 45 10 4C 8B E1 E8", f.id);   // los 43 B del inicio se repiten en exe+0xC4F840; lo que lo distingue es «mov r12,rcx ; call»
+    if (!watch || !peers) { f.estado = "sin firma única de WATCH_COOP_MATCHING o de TaskCoopSession"; return false; }
+    if (watch != g_exe.base + 0x110FE00 || peers != g_exe.base + 0x1134C00) { f.estado = "las firmas únicas no caen en las direcciones del plan"; return false; }
+    // la entrega al P2P se localiza por la llamada de Quick Match (call rel32 en 0x14111A901, desplazamiento en +2) y debe caer en 0x141092720
+    int32_t rel = 0; if (!leerSeguro(g_exe.base + 0x111A902, &rel, 4)) { f.estado = "no se pudo leer la llamada de Quick Match"; return false; }
+    uint8_t* entrega = g_exe.base + 0x111A906 + rel;
+    if (entrega != g_exe.base + 0x1092720) { f.estado = "la llamada de Quick Match no apunta a 0x141092720"; return false; }
+    // la variable de globales se resuelve desde el getter (mov rax,[rip+disp]; ret) y debe ser 0x1436FCED8
+    int32_t disp = 0; if (!leerSeguro(g_exe.base + 0xFF0A23, &disp, 4)) { f.estado = "no se pudo leer el getter de globales"; return false; }
+    uint8_t* gp = g_exe.base + 0xFF0A27 + disp;
+    if (gp != g_exe.base + 0x36FCED8) { f.estado = "el getter de globales no apunta a 0x1436FCED8"; return false; }
+    g_coopEntregar = reinterpret_cast<void (*)(void*)>(entrega);
+    g_coopGlobalPtr = gp;
+    InterlockedExchange(&g_coopActiva, 0);
+    if (!crearDesvio(f, peers, 16, (void*)ganchoCoopPeers, (void**)&g_coopPeersOrig)) { f.estado = "no se pudo desviar TaskCoopSession"; return false; }
+    if (!crearDesvio(f, watch, 18, (void*)ganchoCoopWatch, (void**)&g_coopWatchOrig)) {
+        for (auto& p : f.parches) quitarParche(p);   // todo o nada: deshace el primer gancho
+        f.parches.clear(); f.estado = "no se pudo desviar WATCH_COOP_MATCHING (deshecho el primer gancho)"; return false;
+    }
+    InterlockedExchange(&g_coopActiva, 1);
+    f.estado = "ok: co-op 1v1 arreglado (ganchos en exe+0x1134C00 y exe+0x110FE00; 6 firmas exactas)";
+    return true;
+}
+bool coopQuitar(Feature&) { InterlockedExchange(&g_coopActiva, 0); return true; }   // los ganchos quedan como paso directo; los parches los restaura apagar()
+
 std::vector<Feature> g_funciones = {   // orden = orden de arranque (gol_nativo_free necesita la sonda)
     { "diagnostico",     "Diagnóstico de firmas (solo lectura)",       diagInstalar,  diagQuitar  },
     { "sonda_partido",   "Sonda: estados y gol nativo (solo mira)",    sondaInstalar, sondaQuitar },
@@ -2972,6 +3094,7 @@ std::vector<Feature> g_funciones = {   // orden = orden de arranque (gol_nativo_
     { "sin_1D_free", "Gol sin el paso 0x1D de la cola (entrenamiento; evita el congelón)", sin1DInstalar, sin1DQuitar },
     { "rescate_render_free", "Rescate del bloqueo juego↔render (experimental)", rescateInstalar, rescateQuitar },
     { "vigilante_bucles", "Vigilante de cuelgues (solo mira)",         vigilanteInstalar, vigilanteQuitar },
+    { "coop_online", "Online: arregla el Cooperativo 1v1 del PES 1.01.00 (entrega los pares al P2P y conserva sus direcciones; solo con las 6 firmas exactas; se aplica al reiniciar)", coopInstalar, coopQuitar },
 };
 bool sondaActiva() {
     for (auto& f : g_funciones) if (strcmp(f.id, "sonda_partido") == 0) return f.activa;
@@ -3137,7 +3260,7 @@ static void procesarOrdenes() {
     std::string ruta = g_carpeta + "ordenes.txt", txt; if (!existe(ruta) || !leerArchivo(ruta, txt)) return;
     DeleteFileA(ruta.c_str());
     static const char* const prohibidas[] = { "arquero_rama_normal", "arquero_propio_cursor", "arquero_salida_corta", "arquero_saque_corto", "sin_despeje_emergencia", "cursor_bloqueo_pt", "arquero_salida_max", "cursor_pt_log", nullptr };
-    static const char* const alReiniciar[] = { "online_phoenix", "street_dos_tiempos", "street_pantalla_descanso", "street_saque_nativo", "ajustes_partido_free", "marcador_nativo_free", "reloj_street_free", "orden_jugador_segura", "reinicio_seguro", "cancha_chica_free", "descanso_fase3", "descanso_base45", "final_nativo", "clima_forzado", "season_forzada", "anadido_min", nullptr };
+    static const char* const alReiniciar[] = { "online_phoenix", "coop_online", "street_dos_tiempos", "street_pantalla_descanso", "street_saque_nativo", "ajustes_partido_free", "marcador_nativo_free", "reloj_street_free", "orden_jugador_segura", "reinicio_seguro", "cancha_chica_free", "descanso_fase3", "descanso_base45", "final_nativo", "clima_forzado", "season_forzada", "anadido_min", nullptr };
     size_t i = 0;
     while (i < txt.size()) {
         size_t e = txt.find_first_of("\r\n", i); std::string l = txt.substr(i, e == std::string::npos ? std::string::npos : e - i); i = (e == std::string::npos) ? txt.size() : e + 1;
