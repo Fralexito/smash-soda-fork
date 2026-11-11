@@ -4012,9 +4012,15 @@ class Servidor:
     # Por ahora pantallas vacías válidas (sin salas, clanes ni torneos). Matchday y PES League
     # leen torneos de config (myclub.matchday / pesleague = [{compe_id, compe_name, inicio, fin}]).
     async def c_cmd_get_coop_mainmenu_info(self, s, m):
-        return {"is_coop_banned": "NO", "is_season_end": "NO", "division": "", "pre_season_rank": 0,
+        # L (D.8): is_exist_owner_clan = el jugador tiene clan (dueño o miembro); division = texto
+        dueno, _ = self._clan_de(s.steam_hex)
+        division = ""
+        if (self.cfg.get("myclub") or {}).get("coop_division", "YES") != "NO" and s.steam_hex:
+            division = str(self._estado_division(s.steam_hex).get("division") or "")
+        return {"is_coop_banned": "NO", "is_season_end": "NO", "division": division, "pre_season_rank": 0,
                 "pre_season_rank_all_clan_num": 0, "division_change_type": "",
-                "is_exist_owner_clan": "NO", "is_exist_new_request": "NO", "is_exist_new_pending": "NO"}
+                "is_exist_owner_clan": "YES" if dueno else "NO", "is_exist_new_request": "NO",
+                "is_exist_new_pending": "NO"}
 
     async def c_cmd_get_is_join_coop_room(self, s, m):
         return {"is_join_coop_room": "NO"}
@@ -4029,9 +4035,250 @@ class Servidor:
     async def c_cmd_get_coop_reject_list(self, s, m):
         return {"reject_list": [], "reject_list_num": 0}
 
+    # ---------- Clanes (D.8, L): guardados en la tabla clanes (uno por dueño) ----------
+    # Un clan = {"nombre", "comentario", "abierto" (YES/NO), "miembros": [claves], "creado"}.
+    # Entrar es directo (sin solicitudes): las listas de solicitudes van vacías hasta ver en el PES
+    # cómo pinta «status» (token P). myclub.clanes = "NO" vuelve a las pantallas vacías de antes.
+    @staticmethod
+    def _texto(v):
+        if isinstance(v, (bytes, bytearray)):
+            return bytes(v).decode("utf-8", "replace")
+        return "" if v is None else str(v)
+
+    @staticmethod
+    def _mapa(v):
+        if isinstance(v, (bytes, bytearray)) and v:
+            try:
+                v = msgpack_min.unpackb(bytes(v))
+            except Exception:
+                return {}
+        if isinstance(v, Empaquetado):
+            v = v.valor
+        return v if isinstance(v, dict) else {}
+
+    def _clanes_activos(self):
+        return (self.cfg.get("myclub") or {}).get("clanes", "YES") != "NO"
+
+    def _clan_de(self, clave):
+        """(dueño, clan) del clan en que está la clave (como dueño o miembro), o (None, None)."""
+        clave = (clave or "").lower()
+        if not clave or not self._clanes_activos():
+            return None, None
+        propio = self.datos.clan(clave)
+        if propio:
+            return clave, propio
+        for dueno, c in self.datos.clanes():
+            if clave in (c.get("miembros") or []):
+                return dueno, c
+        return None, None
+
+    def _es_id_de(self, n, clave):
+        """¿El número n es esa clave? (cuenta completa, sus 32 bits bajos o el pid del servidor)."""
+        cuenta = self.numero_de_clave(clave)
+        return bool(n) and n in (cuenta, cuenta & 0xFFFFFFFF, (self.datos.jugador(clave) or {}).get("pid"))
+
+    def _clan_por_id(self, ident):
+        """Clan cuyo dueño tiene ese número de cuenta (el que ven los PES) o ese pid del servidor."""
+        n = self._id_entero(ident)
+        if not n:
+            return None, None
+        for dueno, c in self.datos.clanes():
+            if self._es_id_de(n, dueno):
+                return dueno, c
+        return None, None
+
+    def _usuario_clave(self, clave, ampliado=False):
+        """L (D.8): bin de usuario (user_id + pname) de cualquier jugador guardado, conectado o no."""
+        j = self.datos.jugador(clave) or {}
+        nombre = j.get("pname") or ""
+        cuenta = self.numero_de_clave(clave)
+        u = {"user_id": cuenta,
+             "pname": Empaquetado({"name": nombre, "xuid_one": str(cuenta),
+                                   "psn_user_id": Empaquetado({"account_id": cuenta, "online_id": nombre,
+                                                               "is_valid_cache": "YES"}),
+                                   "is_deleted": "NO"})}
+        if ampliado:
+            # P: en listas de miembros el PES lee además coop_level, is_follow, last_login,
+            # current_online_mode, is_join_online_mode; tipos aún sin ver: van solo los seguros
+            u.update({"coop_level": 1, "is_follow": "NO"})
+            u.update((self.cfg.get("myclub") or {}).get("clan_miembro_extra") or {})
+        return Empaquetado(u)
+
+    def _ajustes_clan(self, dueno, c):
+        return Empaquetado({"clan_name": c.get("nombre") or "", "owner_info": self._usuario_clave(dueno),
+                            "enable_request": c.get("abierto") or "YES",
+                            "clan_comment": c.get("comentario") or "", "is_banned": "NO"})
+
+    @staticmethod
+    def _estadisticas_clan():
+        cero = {"match_count": 0, "win_count": 0, "draw_count": 0, "lose_count": 0,
+                "win_s": 0, "win_s_max": 0, "lost_goal": 0}
+        return Empaquetado({"current_division": "", "current_rating": 0,
+                            "season_match_stats": Empaquetado(dict(cero)),
+                            "total_match_stats": Empaquetado(dict(cero)),
+                            "season_win_count": 0, "residual_div_first_count": 0})
+
+    def _info_clan(self, dueno, c):
+        miembros = [self._usuario_clave(x, ampliado=True) for x in (c.get("miembros") or [dueno])]
+        return Empaquetado({"basic_settings": self._ajustes_clan(dueno, c), "clan_members": miembros,
+                            "clan_member_num": len(miembros), "clan_stats_online": self._estadisticas_clan(),
+                            "clan_stats_myclub": self._estadisticas_clan()})
+
+    MAX_MIEMBROS_CLAN = 30
+
+    async def c_cmd_create_clan(self, s, m):
+        if not self._clanes_activos() or not s.steam_hex:
+            return {}
+        nombre = self._texto(m.get("clan_name")).strip()[:32] or (s.pname or "Clan Phoenix")
+        clave = s.steam_hex.lower()
+        dueno, c = self._clan_de(clave)
+        if dueno == clave:  # ya es dueño: se renombra
+            self.datos.guardar_clan(clave, {**c, "nombre": nombre})
+            return {}
+        if dueno:  # estaba en otro clan: lo deja para fundar el suyo
+            self._sacar_de_clan(dueno, c, clave)
+        self.datos.guardar_clan(clave, {"nombre": nombre, "comentario": "", "abierto": "YES",
+                                        "miembros": [clave], "creado": int(time.time())})
+        log.info("clan creado: %s (dueño %s)", nombre, clave)
+        return {}
+
+    def _sacar_de_clan(self, dueno, c, clave):
+        if clave == dueno:
+            self.datos.disolver_clan(dueno)
+            log.info("clan disuelto: %s", c.get("nombre"))
+            return
+        c["miembros"] = [x for x in (c.get("miembros") or []) if x != clave]
+        self.datos.guardar_clan(dueno, c)
+
+    async def c_cmd_get_clan_settings(self, s, m):
+        dueno, c = self._clan_de(s.steam_hex)
+        if not dueno:
+            return {"clan_basic_settings": Empaquetado({"clan_name": "", "owner_info": self._usuario_clave(s.steam_hex or ""),
+                                                        "enable_request": "YES", "clan_comment": "",
+                                                        "is_banned": "NO"})}
+        return {"clan_basic_settings": self._ajustes_clan(dueno, c)}
+
+    async def c_cmd_set_clan_settings(self, s, m):
+        clave = (s.steam_hex or "").lower()
+        c = self.datos.clan(clave) if self._clanes_activos() else None
+        if not c:
+            return {}  # solo el dueño cambia los ajustes
+        a = self._mapa(m.get("clan_basic_settings"))
+        if a.get("clan_name"):
+            c["nombre"] = self._texto(a["clan_name"]).strip()[:32] or c["nombre"]
+        if "clan_comment" in a:
+            c["comentario"] = self._texto(a["clan_comment"])[:200]
+        if a.get("enable_request") in ("YES", "NO", b"YES", b"NO"):
+            c["abierto"] = self._texto(a["enable_request"])
+        self.datos.guardar_clan(clave, c)
+        return {}
+
+    async def c_cmd_get_clan_info(self, s, m):
+        dueno, c = self._clan_por_id(m.get("owner_id"))
+        if not dueno:
+            dueno, c = self._clan_de(s.steam_hex)
+        if not dueno:
+            # P (D.8): sin clan, clan_info vacío en vez de un ERR que no conocemos
+            return {"clan_info": Empaquetado({"basic_settings": Empaquetado({
+                "clan_name": "", "owner_info": self._usuario_clave(s.steam_hex or ""), "enable_request": "YES",
+                "clan_comment": "", "is_banned": "NO"}), "clan_members": [], "clan_member_num": 0,
+                "clan_stats_online": self._estadisticas_clan(), "clan_stats_myclub": self._estadisticas_clan()})}
+        return {"clan_info": self._info_clan(dueno, c)}
+
+    def _lista_que_cabe(self, msgid, filas, armar):
+        while filas and _cifrado_comprimido({"msgid": msgid, "rqid": 0, "result": "NOERR",
+                                             **armar(filas)}) > MAX_CIFRADO_CLIENTE:
+            filas = filas[:len(filas) * 3 // 4]
+        return armar(filas)
+
+    async def c_cmd_get_clan_simple_info_list(self, s, m):
+        if "owner_pid_list" in m:
+            filas = []
+            for ident in m.get("owner_pid_list") or []:
+                dueno, c = self._clan_por_id(ident)
+                if dueno:
+                    filas.append(Empaquetado({"clan_name": c.get("nombre") or "",
+                                              "owner_info": self._usuario_clave(dueno)}))
+            return self._lista_que_cabe("CMD_GET_CLAN_SIMPLE_INFO_LIST", filas, lambda f: {
+                "clan_simple_info_list": f, "clan_simple_info_list_num": len(f)})
+        return await self.c_cmd_get_clan_list(s, m)
+
     async def c_cmd_get_clan_list(self, s, m):
-        return {"clan_list": [], "clan_list_num": 0, "all_list_num": 0,
-                "start_index": int(m.get("start_index") or 0) if isinstance(m.get("start_index"), int) else 0}
+        inicio = m.get("start_index") if isinstance(m.get("start_index"), int) else 0
+        inicio = max(0, inicio)
+        b = self._mapa(m.get("search_options"))
+        buscar = self._texto(b.get("clan_name")).strip().lower()
+        todos = [(d, c) for d, c in (self.datos.clanes() if self._clanes_activos() else [])
+                 if not buscar or buscar in (c.get("nombre") or "").lower()]
+        if self._texto(b.get("enable_request")) == "YES":
+            todos = [(d, c) for d, c in todos if (c.get("abierto") or "YES") == "YES"]
+        filas = [self._info_clan(d, c) for d, c in todos[inicio:inicio + 20]]
+        return self._lista_que_cabe("CMD_GET_CLAN_LIST", filas, lambda f: {
+            "clan_list": f, "clan_list_num": len(f), "all_list_num": len(todos), "start_index": inicio})
+
+    async def c_cmd_get_clan_request_list(self, s, m):
+        return {"request_info_list": [], "request_info_list_num": 0}
+
+    async def c_cmd_get_clan_pending_list(self, s, m):
+        return {"pending_info_list": [], "pending_info_list_num": 0}
+
+    async def c_cmd_entry_clan(self, s, m):
+        """Pedir entrar = entrar directo si el clan admite solicitudes y tiene sitio."""
+        dueno, c = self._clan_por_id(m.get("target_pid"))
+        clave = (s.steam_hex or "").lower()
+        if not dueno or not clave:
+            return {}
+        if (c.get("abierto") or "YES") != "YES" or len(c.get("miembros") or []) >= self.MAX_MIEMBROS_CLAN:
+            return {}
+        antes, ca = self._clan_de(clave)
+        if antes == dueno:
+            return {}
+        if antes:
+            self._sacar_de_clan(antes, ca, clave)
+            c = self.datos.clan(dueno) or c
+        c["miembros"] = list(c.get("miembros") or [dueno]) + [clave]
+        self.datos.guardar_clan(dueno, c)
+        return {}
+
+    async def c_cmd_invite_clan(self, s, m):
+        # P: la invitación se acepta sola si el invitado no tiene clan (sin bandeja de avisos aún)
+        clave = (s.steam_hex or "").lower()
+        c = self.datos.clan(clave) if self._clanes_activos() else None
+        n = self._id_entero(m.get("target_id"))
+        if not c or not n:
+            return {}
+        for j in self.datos.todos():
+            if self._es_id_de(n, j["steam_hex"]):
+                destino = j["steam_hex"].lower()
+                if not self._clan_de(destino)[0] and len(c.get("miembros") or []) < self.MAX_MIEMBROS_CLAN:
+                    c["miembros"] = list(c.get("miembros") or [clave]) + [destino]
+                    self.datos.guardar_clan(clave, c)
+                break
+        return {}
+
+    async def c_cmd_leave_clan(self, s, m):
+        clave = (s.steam_hex or "").lower()
+        dueno, c = self._clan_de(clave)
+        if dueno:
+            self._sacar_de_clan(dueno, c, clave)
+        return {}
+
+    async def c_cmd_expel_clan_member(self, s, m):
+        clave = (s.steam_hex or "").lower()
+        c = self.datos.clan(clave) if self._clanes_activos() else None
+        n = self._id_entero(m.get("target_pid"))
+        if c and n:
+            fuera = [x for x in c.get("miembros") or [] if x != clave and self._es_id_de(n, x)]
+            if fuera:
+                c["miembros"] = [x for x in c["miembros"] if x not in fuera]
+                self.datos.guardar_clan(clave, c)
+        return {}
+
+    async def c_cmd_get_clan_member_mode(self, s, m):
+        dueno, c = self._clan_de(s.steam_hex)
+        miembros = [self._usuario_clave(x, ampliado=True) for x in ((c or {}).get("miembros") or [])]
+        return self._lista_que_cabe("CMD_GET_CLAN_MEMBER_MODE", miembros, lambda f: {
+            "clan_members": f, "clan_member_num": len(f)})
 
     async def c_cmd_join_matchday_mode(self, s, m):
         return {}

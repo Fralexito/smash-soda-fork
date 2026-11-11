@@ -1099,6 +1099,49 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         await r(a, 7, {"msgid": "CMD_GET_MYCLUB_ACHIEVEMENTLIST", "rqid": 7})
         self.assertEqual(res()["achievement_list_num"], 1)
 
+    async def test_clanes_crear_entrar_salir(self):
+        """D.8: crear clan, verlo en la lista, otro entra, ajustes, expulsar y disolver."""
+        a, ea = await self.entrar("C1")
+        b, eb = await self.entrar("C2")
+        r = self.srv.recibir
+        await r(a, 1, {"msgid": "CMD_GET_CLAN_INFO", "rqid": 1, "owner_id": 0})
+        self.assertEqual(ea[-1][1]["clan_info"].valor["clan_member_num"], 0)
+        await r(a, 2, {"msgid": "CMD_CREATE_CLAN", "rqid": 2, "clan_name": "Fénix"})
+        self.assertEqual(ea[-1][1]["result"], "NOERR")
+        await r(a, 3, {"msgid": "CMD_GET_COOP_MAINMENU_INFO", "rqid": 3})
+        self.assertEqual(ea[-1][1]["is_exist_owner_clan"], "YES")
+        await r(b, 4, {"msgid": "CMD_GET_CLAN_SIMPLE_INFO_LIST", "rqid": 4, "start_index": 0,
+                       "search_options": msgpack_min.packb({"clan_name": "fén"})})
+        lista = eb[-1][1]
+        self.assertEqual((lista["clan_list_num"], lista["all_list_num"]), (1, 1))
+        info = lista["clan_list"][0].valor
+        self.assertEqual(info["basic_settings"].valor["clan_name"], "Fénix")
+        id_dueno = info["basic_settings"].valor["owner_info"].valor["user_id"]
+        await r(b, 5, {"msgid": "CMD_GET_CLAN_SIMPLE_INFO_LIST", "rqid": 5, "owner_pid_list": [id_dueno]})
+        self.assertEqual(eb[-1][1]["clan_simple_info_list_num"], 1)
+        await r(b, 6, {"msgid": "CMD_ENTRY_CLAN", "rqid": 6, "target_pid": id_dueno})
+        await r(b, 7, {"msgid": "CMD_GET_CLAN_MEMBER_MODE", "rqid": 7})
+        self.assertEqual(eb[-1][1]["clan_member_num"], 2)
+        msgpack_min.packb(eb[-1][1])
+        await r(a, 8, {"msgid": "CMD_SET_CLAN_SETTINGS", "rqid": 8, "clan_basic_settings": msgpack_min.packb(
+            {"clan_name": "Fénix 2", "clan_comment": "hola", "enable_request": "NO"})})
+        await r(b, 9, {"msgid": "CMD_GET_CLAN_SETTINGS", "rqid": 9})
+        aj = eb[-1][1]["clan_basic_settings"].valor
+        self.assertEqual((aj["clan_name"], aj["clan_comment"], aj["enable_request"]), ("Fénix 2", "hola", "NO"))
+        await r(b, 10, {"msgid": "CMD_GET_CLAN_INFO", "rqid": 10, "owner_id": id_dueno})
+        miembros = eb[-1][1]["clan_info"].valor["clan_members"]
+        id_b = [x.valor["user_id"] for x in miembros if x.valor["user_id"] != id_dueno][0]
+        await r(a, 11, {"msgid": "CMD_EXPEL_CLAN_MEMBER", "rqid": 11, "target_pid": id_b})
+        await r(a, 12, {"msgid": "CMD_GET_CLAN_MEMBER_MODE", "rqid": 12})
+        self.assertEqual(ea[-1][1]["clan_member_num"], 1)
+        await r(a, 13, {"msgid": "CMD_LEAVE_CLAN", "rqid": 13, "owner_pid": id_dueno})
+        await r(b, 14, {"msgid": "CMD_GET_CLAN_LIST", "rqid": 14, "start_index": 0})
+        self.assertEqual(eb[-1][1]["clan_list_num"], 0)
+        for c in ("CMD_GET_CLAN_REQUEST_LIST", "CMD_GET_CLAN_PENDING_LIST"):
+            await r(a, 15, {"msgid": c, "rqid": 15})
+            self.assertEqual(ea[-1][1]["result"], "NOERR")
+        self.assertFalse({k for k in self.srv.sin_manejador if "CLAN" in k})
+
     async def test_coop_matchday_pesleague_pantallas_vacias(self):
         """Parte D: los 13 comandos responden NOERR; Matchday/PES League leen torneos de config."""
         self.srv.cfg = {**self.srv.cfg, "myclub": {"matchday": [{"compe_id": 3, "compe_name": "Jornada"}],

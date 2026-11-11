@@ -53,6 +53,10 @@ create table if not exists partidos_division (
   datos text not null,
   hora real not null
 );
+create table if not exists clanes (
+  dueno text primary key,
+  datos text not null
+);
 create table if not exists resultados (
   id integer primary key autoincrement,
   room_id integer not null,
@@ -154,6 +158,32 @@ class Datos:
     def claves_de_clubes(self):
         """Todas las claves con club guardado (para la primera subida completa a la web)."""
         return [f[0] for f in self.db.execute("select steam_hex from myclub")]
+
+    # ---- clanes (Cooperativo): uno por dueño; miembros = claves de jugador ----
+    def clan(self, dueno):
+        f = self.db.execute("select datos from clanes where dueno=?", ((dueno or "").lower(),)).fetchone()
+        return json.loads(f[0]) if f else None
+
+    def guardar_clan(self, dueno, clan):
+        self.db.execute("insert into clanes(dueno, datos) values (?,?) on conflict(dueno) "
+                        "do update set datos=excluded.datos", ((dueno or "").lower(), json.dumps(clan)))
+        self.db.commit()
+
+    def disolver_clan(self, dueno):
+        """El dueño deja su clan: se guarda aparte como disuelto (no se pierde el registro)."""
+        c = self.clan(dueno)
+        if c is not None:
+            self.db.execute("delete from clanes where dueno=?", ((dueno or "").lower(),))
+            self.db.execute("insert or replace into clanes(dueno, datos) values (?,?)",
+                            (f"disuelto:{(dueno or '').lower()}:{int(time.time())}",
+                             json.dumps({**c, "disuelto": True})))
+            self.db.commit()
+
+    def clanes(self):
+        """[(dueño, clan)] de los clanes vivos, del más antiguo al más nuevo."""
+        return [(f[0], json.loads(f[1])) for f in
+                self.db.execute("select dueno, datos from clanes where dueno not like 'disuelto:%' "
+                                "order by rowid")]
 
     # ---- pase de identidad (web): IP de la persona -> su cuenta Phoenix ----
     def guardar_pase(self, ip, usuario, clave):
