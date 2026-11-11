@@ -1162,8 +1162,11 @@ class Servidor:
     def _vigilar_emparejamiento(s, estado, miembros):
         # C (r7.3.641/644): el estado llega por un EMPUJE con rqid 0 y result NOERR obligatorio;
         # START_MATCHING solo lleva msgid/rqid/result
+        # R (pesmatch.py AzrakHQ, probado en vivo): ping y los 3 indicadores de partida especial
         s.enviar({"msgid": "CMD_WATCH_MATCHING", "rqid": 0, "result": NOERR,
-                  "matching_state": estado, "player_num": len(miembros), "member": miembros})
+                  "matching_state": estado, "player_num": len(miembros), "ping": 30,
+                  "is_special_match": "NO", "is_first_rookie_match": "NO", "is_same_group_match": "NO",
+                  "member": miembros})
 
     # ---------- Partida de 2 por el relé (ESPEC_GAMERELAY_FASE23 §1.5) ----------
     def _endpoints(self, clave, sesiones=()):
@@ -1265,6 +1268,9 @@ class Servidor:
         self._salir_de_cola(s)
         self._dejar_pareja(s, "busca otra partida")
         s.enviar({"msgid": m["msgid"], "rqid": m.get("rqid", 0), "result": NOERR})
+        if "PES_LEAGUE" in tipo.upper():
+            # R (pesmatch._queue_key AzrakHQ): en Torneo en línea solo se empareja dentro del MISMO torneo
+            tipo = f"{tipo}:{self._cid_torneo(s, m, 'pesleague') or 0}"
         cola = self.colas.setdefault(tipo, [])
         # Parche: solo se empareja a quien tiene LOS MISMOS archivos (file_hash_list de NTL);
         # con parches distintos el partido se desincroniza o el juego se cierra
@@ -1512,6 +1518,49 @@ class Servidor:
         self.datos.guardar_club(s.steam_hex, club)
         log.info("Matchday %s: %s +%d (torneo %s)", s.pid, res, pts, cid)
 
+    def _resultado_pesleague(self, s, pareja, m):
+        """R (pestourney.record AzrakHQ): Torneo en línea, 3 por victoria y 1 por empate, con G/E/P y goles.
+        Cada PES suma lo suyo, una vez por partido, solo dentro de las fechas del torneo."""
+        if "PES_LEAGUE" not in str(pareja.get("tipo") or "").upper() or not s.steam_hex:
+            return
+        try:
+            goles = (int(m.get("home_score") or 0), int(m.get("away_score") or 0))
+        except (TypeError, ValueError):
+            return
+        cid = self._cid_torneo(s, {}, "pesleague") or 0
+        e = next((x for x in self._torneos("pesleague") if x["compe_id"] == cid), None)
+        if e is None or not e["inicio"] <= time.time() < e["fin"]:
+            return
+        casa = pareja["miembros"][0] is s or (pareja["miembros"][0].steam_hex == s.steam_hex)
+        mios, suyos = goles if casa else goles[::-1]
+        res = "WIN" if mios > suyos else "LOSE" if mios < suyos else "DRAW"
+        club = self._club_propio(s)
+        if club is None:
+            return
+        partido = f"pl{pareja.get('room_id')}"
+        vistos = club.setdefault("pesleague_partidos_vistos", [])
+        if partido in vistos:
+            return
+        vistos.append(partido)
+        del vistos[:-50]
+        k = str(cid)
+        st = club.setdefault("pesleague_stats", {}).setdefault(k, {"WIN": 0, "DRAW": 0, "LOSE": 0, "gf": 0, "gc": 0})
+        st[res] += 1
+        st["gf"] += mios
+        st["gc"] += suyos
+        puntos = club.setdefault("pesleague_puntos", {})
+        puntos[k] = int(puntos.get(k) or 0) + self.PUNTOS_MATCHDAY[res]
+        self.datos.guardar_club(s.steam_hex, club)
+        log.info("Torneo %s: %s %s %d-%d (+%d)", cid, s.pid, res, mios, suyos, self.PUNTOS_MATCHDAY[res])
+
+    def _stats_pesleague(self, club, cid):
+        st = ((club or {}).get("pesleague_stats") or {}).get(str(cid)) or {}
+        g, e, p = int(st.get("WIN") or 0), int(st.get("DRAW") or 0), int(st.get("LOSE") or 0)
+        return {"win_count": g, "draw_count": e, "lose_count": p, "match_num": g + e + p,
+                "get_score": int(st.get("gf") or 0), "lose_score": int(st.get("gc") or 0),
+                "diff_score": int(st.get("gf") or 0) - int(st.get("gc") or 0),
+                "point": int(((club or {}).get("pesleague_puntos") or {}).get(str(cid)) or 0)}
+
     async def c_cmd_get_matchday_achievement_reward(self, s, m):
         """Pantalla de puntos tras el partido: «Revisión del juego» = puntos/10 en décimas, factor 1.0."""
         club = self._club_propio(s) if s.steam_hex else None
@@ -1598,10 +1647,26 @@ class Servidor:
         return {}
 
     async def c_cmd_change_gamephase(self, s, m):
+        """R (pesmatch.py/lobby2.md AzrakHQ): cuando los 2 PES dicen END se empuja el veredicto a los
+        dos. Sin él, al salir el primero de la pantalla de resultado el otro ve «se perdió la conexión»,
+        y los contadores «N partidos / Victorias» del vestíbulo no suben. En Divisiones el veredicto
+        con rating sale con SEND_GAME_RESULT (llega después), así que aquí no se manda."""
         pareja = self._pareja_por_clave(s)
         fase = str(m.get("phase") or m.get("game_phase") or "")
-        if pareja is not None and fase:
-            pareja.setdefault("fases", {})[self._pid_visible(s)] = fase
+        if pareja is None or not fase:
+            return {}
+        fases = pareja.setdefault("fases", {})
+        fases[self._pid_visible(s)] = fase
+        if pareja.get("tipo") in self._reglas_division().tipos or pareja.get("veredicto_al_final"):
+            return {}
+        if len(fases) >= 2 and all(f == "END" for f in fases.values()) \
+                and self.cfg.get("veredicto_al_final", True):
+            v = self._veredicto_sin_rating(pareja)
+            if v is not None:
+                pareja["veredicto"] = pareja["veredicto_al_final"] = v
+                for x in pareja["miembros"]:
+                    if x in self.sesiones:
+                        x.enviar({"msgid": "CMD_WATCH_GAMEADDPOINT", "rqid": 0, "result": NOERR, **v})
         return {}
 
     async def c_cmd_add_score(self, s, m):
@@ -5317,9 +5382,8 @@ class Servidor:
             salida.append((n, Empaquetado({
                 "pid": u.valor["pid"], "entry_name": j["pname"] or "",
                 "team_id": int((club.get("pesleague_equipo") or {}).get(str(cid)) or 0),
-                "clan_owner_name": u.valor["pname"], "point": pts, "rank": n,
-                "win_count": 0, "draw_count": 0, "lose_count": 0, "match_num": 0,
-                "get_score": 0, "lose_score": 0, "diff_score": 0, "recode_date": int(time.time()),
+                "clan_owner_name": u.valor["pname"], "rank": n,
+                **self._stats_pesleague(club, cid), "recode_date": int(time.time()),
                 "continuous_win": 0, "is_get_participation_right": "NO",
                 "is_mydata": "YES" if j["steam_hex"].lower() == (yo or "").lower() else "NO",
                 "rank_type": "NONE"}), j["steam_hex"].lower()))
@@ -5404,8 +5468,12 @@ class Servidor:
         intervalo = int(e.get("matching_interval") or 3600)
         return {"matching_first_date": int(e["inicio"]), "matching_time": int(e.get("matching_time") or intervalo),
                 "matching_interval": intervalo, "compe_end_time": int(e["fin"]), "team_id": equipo,
-                "team_name": str((club or {}).get("team_name") or ""), "point": 0, "win_count": 0,
-                "lose_count": 0, "draw_count": 0, "match_num": 0, "regulation_match_num": 10, "rank_type": ""}
+                "team_name": str((club or {}).get("team_name") or ""),
+                **{k: v for k, v in self._stats_pesleague(club, e["compe_id"]).items()
+                   if k in ("point", "win_count", "lose_count", "draw_count", "match_num")},
+                # R (pestourney.py, en vivo 08-nov): «Mejor resultado de N partidos seguidos» = jugados (mín. 1)
+                "regulation_match_num": max(1, self._stats_pesleague(club, e["compe_id"])["match_num"]),
+                "rank_type": "NONE"}
 
     async def c_cmd_get_pesleague_compe_team_list(self, s, m):
         return {"team_list": [], "team_list_num": 0}
@@ -5875,6 +5943,10 @@ class Servidor:
                 self._resultado_matchday(s, pareja, m)
             except Exception:
                 log.exception("no se pudo aplicar el resultado de Matchday")
+            try:
+                self._resultado_pesleague(s, pareja, m)
+            except Exception:
+                log.exception("no se pudo aplicar el resultado del Torneo en línea")
             datos = {k: v for k, v in m.items() if k not in ("msgid", "rqid")}
             partido = f"pareja{pareja['room_id']}"
             self.datos.guardar_resultado(pareja["room_id"], partido, s.pid or 0, datos)

@@ -1341,6 +1341,25 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(v["player_list"][1].valor["team_id"], 108)
         msgpack_min.packb(v)
 
+    async def test_torneo_en_linea_suma_puntos(self):
+        """R (pestourney.record AzrakHQ): 3/1/0 por partido, una vez, y el menú 1vs1 muestra G/E/P."""
+        self.srv.cfg.setdefault("myclub", {})["pesleague"] = [{"compe_id": 4}]
+        a, ea = await self.entrar("0110000100000061")
+        b, eb = await self.entrar("0110000100000062")
+        for x in (a, b):
+            club = self.srv._club_propio(x) or {}
+            club.setdefault("torneos_inscripcion", {})["pesleague"] = [4]
+            self.srv.datos.guardar_club(x.steam_hex, club)
+        pareja = {"miembros": (a, b), "check": set(), "tipo": "PES_LEAGUE", "room_id": 990003}
+        for x in (a, b):
+            self.srv._resultado_pesleague(x, pareja, {"home_score": 1, "away_score": 1})
+        self.srv._resultado_pesleague(a, pareja, {"home_score": 1, "away_score": 1})  # repetido
+        menu = await self.srv.c_cmd_get_pesleague_1vs1_mainmenu_info(a, {"compe_id": 4})
+        self.assertEqual((menu["point"], menu["draw_count"], menu["match_num"], menu["regulation_match_num"]),
+                         (1, 1, 1, 1))
+        rk = await self.srv.c_cmd_get_pesleague_compe_ranking(a, {"compe_id": 4})
+        self.assertEqual(rk["rank_list"][0].valor["point"], 1)
+
     async def test_recarga_config_en_caliente(self):
         """Cambiar myclub en config.json se aplica sin reiniciar (solo la clave myclub)."""
         import json as _j, tempfile, os as _o
