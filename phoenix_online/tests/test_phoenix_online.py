@@ -833,12 +833,20 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(res()["squad_list_num"], 2)
         dos = msgpack_min.unpackb(msgpack_min.packb(res()["squad_list"][1].valor))
         self.assertEqual((dos["squad_id"], dos["name"]), (2, "Plantilla 1 (2)"))
+        await r(a, 92, {"msgid": "CMD_SET_MYCLUB_MAIN_SQUAD", "rqid": 92, "squad_id": 2})
+        await r(a, 93, {"msgid": "CMD_GET_MYCLUB_SQUADLIST", "rqid": 93})
+        self.assertEqual(res()["main_squad_id"], 2)
         await r(a, 11, {"msgid": "CMD_DELETE_MYCLUB_SQUAD", "rqid": 11, "squad_id": 1})
         self.assertEqual(res()["result"], "ERR_FORBIDDEN")
         await r(a, 12, {"msgid": "CMD_DELETE_MYCLUB_SQUAD", "rqid": 12, "squad_id": 2})
         self.assertEqual(res()["result"], "NOERR")
         await r(a, 13, {"msgid": "CMD_GET_MYCLUB_SQUADLIST", "rqid": 13})
-        self.assertEqual(res()["squad_list_num"], 1)
+        self.assertEqual((res()["squad_list_num"], res()["main_squad_id"]), (1, 1))
+        await r(a, 94, {"msgid": "CMD_COPY_MYCLUB_SQUAD", "rqid": 94, "copy_squad_id": 1,
+                        "name": "Plantilla2"})
+        await r(a, 95, {"msgid": "CMD_GET_MYCLUB_SQUADLIST", "rqid": 95})
+        dos = msgpack_min.unpackb(msgpack_min.packb(res()["squad_list"][1].valor))
+        self.assertEqual(dos["name"], "Plantilla2")
         # dorsales, base del equipo y ciudad
         el = msgpack_min.packb({"player_id": 3, "number": 10})
         await r(a, 14, {"msgid": "CMD_SET_MYCLUB_PLAYER_NUMBER_FIXATION", "rqid": 14,

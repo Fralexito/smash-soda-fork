@@ -1802,6 +1802,9 @@ class Servidor:
                     continue
             if isinstance(el, dict) and isinstance(el.get("gameplayer_unique_id"), int):
                 orden.append(el["gameplayer_unique_id"])
+                if isinstance(el.get("uniform_number"), int) and 1 <= el["uniform_number"] <= 99:
+                    club.setdefault("dorsales_plantilla", {}).setdefault(
+                        str(m.get("squad_id") or 1), {})[str(el["gameplayer_unique_id"])] = el["uniform_number"]
                 # P (06-nov): «parameters» del miembro = el formato que el cliente espera en
                 # exp_info_pre/post (con lista vacía la carta del entrenamiento sale PT 40 / 0)
                 par = el.get("parameters")
@@ -1826,7 +1829,18 @@ class Servidor:
         return {}
 
     async def c_cmd_set_myclub_main_squad(self, s, m):
-        return {}  # C (§15.5): solo msgid/rqid/result
+        # C (§15.5): solo msgid/rqid/result. C (10-nov, PES): tras copiar, el PES activa la copia
+        # con este comando; se guarda cuál es la plantilla activa (la que juega).
+        club = self.datos.club(s.steam_hex or "") if s.steam_hex else None
+        sq = self._id_entero(m.get("squad_id"))
+        if club is not None and sq in self._ids_plantillas(club):
+            club["plantilla_activa"] = sq
+            self.datos.guardar_club(s.steam_hex, club)
+        return {}
+
+    def _activa(self, club):
+        sq = self._id_entero((club or {}).get("plantilla_activa"))
+        return sq if sq in self._ids_plantillas(club or {}) else 1
 
     async def c_cmd_set_myclub_cloud_squad(self, s, m):
         return {}  # C (§15.6)
@@ -2940,10 +2954,12 @@ class Servidor:
         plan = (club.get("gameplans") or {}).get(sq) or (club.get("gameplans") or {}).get("1") or {}
         elegidos = self._elegidos(club, jugadores, squad_id)
         dts = self._dt_de_plantilla(club, dts, squad_id)
+        dorsales = (club.get("dorsales_plantilla") or {}).get(sq) or {}
         miembros = [Empaquetado({
             "gameplayer_unique_id": j.get("gameplayer_unique_id") or i + 1,
             "gameplayer_id": j.get("gameplayer_id") or 0,
-            "uniform_number": j.get("uniform_number") or i + 1,
+            "uniform_number": dorsales.get(str(j.get("gameplayer_unique_id") or i + 1))
+            or j.get("uniform_number") or i + 1,
             "player_level": j.get("level") or 1, "parameters": list(j.get("parameters") or []),
             "default_rarity": self._rareza(j)})
             for i, j in elegidos]
@@ -3117,13 +3133,17 @@ class Servidor:
             return {"result": "ERR_FORBIDDEN"}
         nuevo = max(ids) + 1
         o, n = str(origen), str(nuevo)
-        for clave in ("inscritos", "gameplans", "dt_plantilla"):
+        for clave in ("inscritos", "gameplans", "dt_plantilla", "dorsales_plantilla"):
             if o in (club.get(clave) or {}):
                 valor = club[clave][o]
                 club[clave][n] = list(valor) if isinstance(valor, list) else \
                     dict(valor) if isinstance(valor, dict) else valor
-        nombre = (club.get("nombres_plantilla") or {}).get(o) or f"Plantilla {origen}"
-        club.setdefault("nombres_plantilla", {})[n] = f"{nombre[:self.NOMBRE_MAX - 4]} ({nuevo})"
+        if isinstance(m.get("name"), str) and m["name"].strip():  # C (10-nov): el PES manda el nombre
+            nombre_nuevo = m["name"].strip()[:self.NOMBRE_MAX]
+        else:
+            nombre = (club.get("nombres_plantilla") or {}).get(o) or f"Plantilla {origen}"
+            nombre_nuevo = f"{nombre[:self.NOMBRE_MAX - 4]} ({nuevo})"
+        club.setdefault("nombres_plantilla", {})[n] = nombre_nuevo
         club["plantillas_ids"] = ids + [nuevo]
         self.datos.guardar_club(s.steam_hex, club)
         log.info("myClub %s copió la plantilla %d en la %d", s.steam_hex, origen, nuevo)
@@ -3138,8 +3158,10 @@ class Servidor:
         if sq == 1:
             return {"result": "ERR_FORBIDDEN"}
         club["plantillas_ids"] = [x for x in self._ids_plantillas(club) if x != sq]
-        for clave in ("inscritos", "gameplans", "dt_plantilla", "nombres_plantilla"):
+        for clave in ("inscritos", "gameplans", "dt_plantilla", "nombres_plantilla", "dorsales_plantilla"):
             (club.get(clave) or {}).pop(str(sq), None)
+        if club.get("plantilla_activa") == sq:
+            club["plantilla_activa"] = 1  # se borró la activa: vuelve a jugar la 1
         self.datos.guardar_club(s.steam_hex, club)
         return {}
 
@@ -3237,22 +3259,23 @@ class Servidor:
                 break
             lista.append(otra)
         return {"squad_list": lista, "squad_list_num": len(lista), "edition_squad_list": [],
-                "edition_squad_list_num": 0, "main_squad_id": 1, "cloud_squad_id": 0}
+                "edition_squad_list_num": 0, "main_squad_id": self._activa(club), "cloud_squad_id": 0}
 
     async def c_cmd_get_myclub_main_squad(self, s, m):
         # C (05-nov, lector 141c06500): plantilla principal de target_pid. P: hoy solo la propia
         # (ver la de otro jugador necesita la identidad propia y buscar su club por pid).
         jugadores, dts = self._plantel_myclub(s)
         club = self.datos.club(s.steam_hex or "") or {}
-        plantilla = self._plantilla_principal(s)
+        activa = self._activa(club)
+        plantilla = self._plantilla_principal(s, activa)
         # C (05-nov 04:00): con las 18 fichas + DT medía ~1600 B cifrados; el envío troceado
         # hacia el cliente aún no lo acepta PES (pantalla en blanco → C_WNJJ_0002). Hasta
         # resolverlo, solo la plantilla (los miembros ya llevan id, dorsal, nivel y rareza);
         # config myclub.main_squad_completo = true para volver a mandar las fichas.
         completo = (self.cfg.get("myclub") or {}).get("main_squad_completo")
-        fichas = [self._ficha_jugador_myclub(i, j) for i, j in self._elegidos(club, jugadores)] \
+        fichas = [self._ficha_jugador_myclub(i, j) for i, j in self._elegidos(club, jugadores, activa)] \
             if completo else []
-        dt = [self._ficha_dt_myclub(i, d) for i, d in enumerate(self._dt_de_plantilla(club, dts))] \
+        dt = [self._ficha_dt_myclub(i, d) for i, d in enumerate(self._dt_de_plantilla(club, dts, activa))] \
             if completo else []
         return {"squad": plantilla or Empaquetado({}), "gameplayer_list": fichas,
                 "gameplayer_list_num": len(fichas), "coach_list": dt, "coach_list_num": len(dt),
@@ -3264,7 +3287,8 @@ class Servidor:
         # experiencia y nivel ya actualizados (misma ficha que GAMEPLAYERLIST)
         jugadores, _ = self._plantel_myclub(s)
         club = self.datos.club(s.steam_hex or "") or {}
-        fichas = [self._ficha_jugador_myclub(i, j) for i, j in self._elegidos(club, jugadores)]
+        fichas = [self._ficha_jugador_myclub(i, j)
+                  for i, j in self._elegidos(club, jugadores, self._activa(club))]
         return {"gameplayer_list": fichas, "gameplayer_list_num": len(fichas)}
 
     async def c_cmd_get_myclub_game_bonus(self, s, m):
@@ -3366,7 +3390,7 @@ class Servidor:
         gasto = self._partidos_a_unidad(cfgm.get("contrato_por_partido") or 0)
         cans = cfgm.get("cansancio") or {}
         inscritos = set()
-        for _, j in self._elegidos(club, club["jugadores"]):
+        for _, j in self._elegidos(club, club["jugadores"], self._activa(club)):
             inscritos.add(id(j))
             j["exp_total"] = int(j.get("exp_total") or 0) + ganada
             j["games"] = int(j.get("games") or 0) + 1
