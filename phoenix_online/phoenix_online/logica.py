@@ -296,6 +296,13 @@ class Servidor:
         self.suscritos_salas.discard(sesion)
         self._salir_de_cola(sesion)
         self._salir_de_sala_coop(sesion)
+        pareja = self._pareja_por_clave(sesion)
+        if pareja is not None and pareja.get("en_juego") and not pareja.get("terminado") \
+                and not pareja.get("abandonaron"):
+            # R (pesmanner.dropped): se cerró su PES con el partido en marcha
+            pareja.setdefault("abandonaron", set()).add(sesion)
+            self._anotar_modales((sesion.steam_hex or "").lower(), True, "DISCONNECTED")
+            self._programar_derrota(pareja)
         self._dejar_pareja(sesion, "se cortó su conexión")
         # C: la sonda autorizada se revoca al desconectar el TCP de ese pid
         pid = str(self._pid_visible(sesion))
@@ -752,8 +759,44 @@ class Servidor:
 
     c_cmd_get_match_analyze_byid = c_cmd_get_match_analyze
 
+    # ---------- Cortesía (R: pesmanner.py de AzrakHQ, avisos vistos en vivo el 07-nov) ----------
+    RECIENTES_MODALES = 10
+    MOTIVOS_PROPIOS = {"GIVEUP", "EXIT", "NO_OPERATION"}
+
+    @staticmethod
+    def _grado_modales(abandonos):
+        return "A" if abandonos <= 1 else "B" if abandonos <= 3 else "C"
+
+    def _anotar_modales(self, clave, abandono, motivo=""):
+        if not clave:
+            return
+        d = self.datos.modales(clave)
+        d["hist"] = (list(d.get("hist") or []) + [1 if abandono else 0])[-self.RECIENTES_MODALES:]
+        self.datos.guardar_modales(clave, d)
+        if abandono:
+            log.info("cortesía: %s dejó un partido antes de tiempo (%s): %s", clave[-6:], motivo,
+                     self._grado_modales(sum(d["hist"])))
+
+    def grado_modales(self, clave):
+        return self._grado_modales(sum((self.datos.modales(clave) if clave else {}).get("hist") or []))
+
     async def c_cmd_get_manner_warn(self, s, m):
-        return {"warn_kind": 0}
+        """Un aviso (una vez) tras el abandono que lo causó: sigue A -> DOWN_B, baja a B -> A_TO_B,
+        en B -> DOWN_C, baja a C u otro abandono en C -> STILL_C. Sin aviso: sin warn_kind."""
+        clave = (s.steam_hex or "").lower()
+        if not clave:
+            return {}
+        d = self.datos.modales(clave)
+        q = sum(d.get("hist") or [])
+        g, antes, avisados = self._grado_modales(q), d.get("grado") or "A", int(d.get("avisados") or 0)
+        tipo = None
+        if "ABC".index(g) > "ABC".index(antes):
+            tipo = "A_TO_B" if g == "B" else "STILL_C"
+        elif g == antes and q > avisados:
+            tipo = {"A": "DOWN_B", "B": "DOWN_C", "C": "STILL_C"}[g]
+        d["grado"], d["avisados"] = g, q
+        self.datos.guardar_modales(clave, d)
+        return {"warn_kind": tipo} if tipo else {}
 
     async def c_cmd_get_game_team_list(self, s, m):
         return {"team_list": [], "team_list_num": 0}
@@ -1331,7 +1374,8 @@ class Servidor:
         """Un grupo de un humano. Anidado como lo lee 0x141dc9a70: group_list[] -> bin{member_list[] ->
         bin{member: ficha 1v1, ...}}; un solo is_owner YES, en el dueño LOCAL."""
         fila = Empaquetado({"member": self._miembro(x, orden, dueno, lado), "guest_kind": "GUEST_NONE",
-                            "is_follow": "NO", "coop_level": 1, "coop_manner": "A"})
+                            "is_follow": "NO", "coop_level": 1,
+                            "coop_manner": self.grado_modales((x.steam_hex or "").lower())})
         return Empaquetado({"member_list": [fila], "member_list_num": 1, "use_team_id": equipo,
                             "owner_pid": self._pid_en_partida(x), "group_id": gid})
 
@@ -1657,6 +1701,15 @@ class Servidor:
             return {}
         fases = pareja.setdefault("fases", {})
         fases[self._pid_visible(s)] = fase
+        if fase.startswith("1ST"):
+            pareja["en_juego"] = True
+        if len(fases) >= 2 and all(f == "END" for f in fases.values()) and not pareja.get("modales_hecho"):
+            # partido completo: cuenta como «terminado bien» para quien no abandonó
+            pareja["modales_hecho"] = True
+            pareja["terminado"] = True
+            for x in pareja["miembros"]:
+                if x not in pareja.get("abandonaron", set()):
+                    self._anotar_modales((x.steam_hex or "").lower(), False)
         if pareja.get("tipo") in self._reglas_division().tipos or pareja.get("veredicto_al_final"):
             return {}
         if len(fases) >= 2 and all(f == "END" for f in fases.values()) \
@@ -4552,7 +4605,7 @@ class Servidor:
         datos = {"is_follow": "YES" if clave and clave != mia and clave in sigo else "NO",
                  "coop_level": 1, "coop_level_point": 0,
                  "follower": self.datos.seguidores(clave) if clave else 0,
-                 "coop_manner": "A", "online_match": 0, "vscom_match": 0,
+                 "coop_manner": self.grado_modales(clave), "online_match": 0, "vscom_match": 0,
                  "match_data_size": int(d.get("size") or 0), "match_data": str(d.get("data") or "")}
         return {"user_info": self._usuario_plano(clave) if clave else Empaquetado({}),
                 "coop_profile_data": Empaquetado(datos)}
@@ -5967,9 +6020,59 @@ class Servidor:
         return {}
 
     async def c_cmd_send_abnormalend(self, s, m):
-        log.warning("fin anormal pid=%s motivo=%s", s.pid, m.get("reason", m))
+        """R (pesmanner.py): el propio PES avisa GIVEUP / EXIT (salir desde la pausa) o NO_OPERATION
+        (un minuto sin tocar nada). Con el partido ya empezado y sin terminar, cuenta como abandono; a
+        los 15 s, si abandonó UNO solo, pierde 3-0 (o por lo que iba perdiendo) en Matchday, Torneo y
+        Divisiones. Un corte de red entre los dos no cuenta contra nadie."""
+        motivo = str(m.get("reason") or "").upper()
+        log.warning("fin anormal pid=%s motivo=%s", s.pid, motivo or m)
+        pareja = self._pareja_por_clave(s)
+        if pareja is not None and pareja.get("en_juego") and not pareja.get("terminado") \
+                and motivo in self.MOTIVOS_PROPIOS:
+            marcados = pareja.setdefault("abandonaron", set())
+            if s not in marcados:
+                marcados.add(s)
+                self._anotar_modales((s.steam_hex or "").lower(), True, motivo)
+                self._programar_derrota(pareja)
         self._dejar_pareja(s, "fin anormal")
         return {}
+
+    def _programar_derrota(self, pareja):
+        if pareja.get("derrota_programada"):
+            return
+        pareja["derrota_programada"] = True
+        pareja["derrota_pendiente"] = True  # sin veredicto normal mientras se decide
+
+        def decidir():
+            pareja.pop("derrota_pendiente", None)
+            marcados = pareja.get("abandonaron") or set()
+            if len(marcados) == 1:
+                try:
+                    self._derrota_por_abandono(pareja, next(iter(marcados)))
+                except Exception:
+                    log.exception("derrota por abandono")
+        pareja["decidir_derrota"] = decidir
+        try:
+            asyncio.get_running_loop().call_later(15, decidir)
+        except RuntimeError:
+            pass
+
+    def _derrota_por_abandono(self, pareja, quien):
+        if pareja.get("derrota") is not None:
+            return
+        casa, fuera = pareja["miembros"]
+        g = pareja.get("marcador") or {"HOME": 0, "AWAY": 0}
+        gana = "AWAY" if quien is casa else "HOME"
+        pierde = "HOME" if gana == "AWAY" else "AWAY"
+        marcador = dict(g) if g[gana] > g[pierde] else {gana: 3, pierde: 0}
+        pareja["derrota"] = quien
+        m = {"home_score": marcador["HOME"], "away_score": marcador["AWAY"], "abnormalend_reason": "NORMAL_END"}
+        for x in (casa, fuera):
+            self._resultado_matchday(x, pareja, m)
+            self._resultado_pesleague(x, pareja, m)
+        self._resultado_division(quien, pareja, m)
+        log.info("partido %s: %s abandonó; gana el otro %s-%s", pareja.get("room_id"), quien.pid,
+                 marcador["HOME"], marcador["AWAY"])
 
     async def c_cmd_leave_game(self, s, m):
         self._abandono_division(s)

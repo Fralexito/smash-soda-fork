@@ -53,6 +53,10 @@ create table if not exists partidos_division (
   datos text not null,
   hora real not null
 );
+create table if not exists modales (
+    steam_hex text primary key,
+    datos text not null
+);
 create table if not exists coop_datos (
     steam_hex text primary key,
     datos text not null
@@ -182,6 +186,17 @@ class Datos:
 
     def guardar_relaciones(self, steam_hex, d):
         self.db.execute("insert into relaciones(steam_hex, datos) values (?,?) on conflict(steam_hex) "
+                        "do update set datos=excluded.datos", ((steam_hex or "").lower(), json.dumps(d)))
+        self.db.commit()
+
+    # ---- cortesía (modales): {"hist": [0/1 por partido, el último al final], "grado": "A", "avisados": n} ----
+    def modales(self, steam_hex):
+        f = self.db.execute("select datos from modales where steam_hex=?",
+                            ((steam_hex or "").lower(),)).fetchone()
+        return json.loads(f[0]) if f else {"hist": [], "grado": "A", "avisados": 0}
+
+    def guardar_modales(self, steam_hex, d):
+        self.db.execute("insert into modales(steam_hex, datos) values (?,?) on conflict(steam_hex) "
                         "do update set datos=excluded.datos", ((steam_hex or "").lower(), json.dumps(d)))
         self.db.commit()
 

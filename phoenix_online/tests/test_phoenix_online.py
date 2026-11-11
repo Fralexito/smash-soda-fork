@@ -1360,6 +1360,34 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         rk = await self.srv.c_cmd_get_pesleague_compe_ranking(a, {"compe_id": 4})
         self.assertEqual(rk["rank_list"][0].valor["point"], 1)
 
+    async def test_cortesia_y_derrota_por_abandono(self):
+        """R (pesmanner.py AzrakHQ): abandono con el partido en juego = aviso de cortesía y, si fue uno
+        solo, pierde 3-0 en Matchday. Partido completo = nada."""
+        a, ea = await self.entrar("0110000100000051")
+        b, eb = await self.entrar("0110000100000052")
+        r = self.srv.recibir
+        for x in (a, b):
+            club = self.srv._club_propio(x) or {}
+            club.setdefault("matchday_equipo", {})["3"] = {"grupo": "MATCHDAY_GROUP_A", "team_id": 101}
+            club.setdefault("torneos_inscripcion", {})["matchday"] = [3]
+            self.srv.datos.guardar_club(x.steam_hex, club)
+        pareja = {"miembros": (a, b), "check": set(), "tipo": "MATCHDAY", "room_id": 990004}
+        self.srv.parejas[a] = self.srv.parejas[b] = pareja
+        await r(a, 1, {"msgid": "CMD_GET_MANNER_WARN", "rqid": 1})
+        self.assertNotIn("warn_kind", ea[-1][1])
+        for x in (a, b):
+            await r(x, 2, {"msgid": "CMD_CHANGE_GAMEPHASE", "rqid": 2, "phase": "1ST"})
+        await r(a, 3, {"msgid": "CMD_SEND_ABNORMALEND", "rqid": 3, "reason": "GIVEUP"})
+        pareja["decidir_derrota"]()
+        club_b = self.srv.datos.club(b.steam_hex)
+        self.assertEqual(club_b["matchday_puntos"]["3"], 3)
+        self.assertEqual(int((self.srv.datos.club(a.steam_hex).get("matchday_puntos") or {}).get("3") or 0), 0)
+        await r(a, 4, {"msgid": "CMD_GET_MANNER_WARN", "rqid": 4})
+        self.assertEqual(ea[-1][1]["warn_kind"], "DOWN_B")
+        await r(a, 5, {"msgid": "CMD_GET_MANNER_WARN", "rqid": 5})
+        self.assertNotIn("warn_kind", ea[-1][1])  # una sola vez
+        self.assertEqual(self.srv.grado_modales(a.steam_hex.lower()), "A")  # 1 abandono sigue en A
+
     async def test_recarga_config_en_caliente(self):
         """Cambiar myclub en config.json se aplica sin reiniciar (solo la clave myclub)."""
         import json as _j, tempfile, os as _o
