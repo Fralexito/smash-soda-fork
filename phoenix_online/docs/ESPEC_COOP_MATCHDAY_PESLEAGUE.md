@@ -98,3 +98,38 @@ Prueba en el PES base con 5ea6c3d: `GET_MATCHDAY_INFO` y `JOIN_MATCHDAY` salen b
 **`GET_MATCHDAY_INFO`** (`compe_info` → `info_overview`): `compe_id`, `base_id`, `compe_name`, `is_disp_compe_name`, **`group_info_a`** y **`group_info_b`** (cada uno con `team_list` (lista), `team_list_num`, `group_name`, `group_desc`, `is_entry_restricted`, `pre_pickup_users_pid_list`), `match_type`, `squad_type` (`MATCHDAY_SQUAD_MYCLUB`/`MATCHDAY_SQUAD_SPECIAL`), `group_type` (`MATCHDAY_GROUP_TYPE_OTHER`/`NATIONAL`/`LEAGUE`/`TEAM`), `rating_rank` (`MATCHDAY_RATING_RANK_ELITE`/`PRO`/`ACADEMY`/`NONE`), fechas (`start_date`, `entry_limit_date`, `end_group_match_date`, `pickup_member_date`, `end_date`), `entry_user_num`, `entry_user_max`, `is_end`, `banner_file_info`, `list_banner_file_info`, `is_use_emblem(_list)`, `is_entry`, `watch_match_reward_state`, `compe_db_id`, `is_possible_watch`, `start_match_limit_date`, `entry_pickup_match_start_date`, `watch_match_start_date`, `is_check_eula`, `eula_url`, `ball_id`, `group_match_time`, `pickup_match_time`, `watch_wait_time`, `use_stadium_id`, `fixed_timezone`, `fixed_weather`, `fixed_season`, `is_fix_condition`, `is_equalization`, `is_pesleague_stadium`, `is_efootball_pro_stadium`, `joined_matchday_group`, `pickup_select` (`MATCHDAY_PICKUP_SELECT_RANDOM`/`RANKING`), `team_id`, `pickup_cut_off_rank`, `all_reward_info` (con `achievement_reward_list` (`is_repeat`, `require_point`, `reward_list`), `required_point_final_reward`, `win_reward_list`, `lose_reward_list`, `watching_reward_list`, `pickup_win_reward_list`, `pickup_lose_reward_list`, `pickup_reward_type`), `squad_rating_info` (`sp_squad_rating`, `rating_kind_player_bonus_value_list`, `evaluation_a`, `evaluation_b`, `superiority_border_ratio`). Los elementos de premio llevan las mismas claves que arriba.
 
 **Propuesta:** en `c_cmd_get_matchday_mainmenu_info` mandar `matchday_progress:"MATCHDAY_PROGRESS_GROUP_MATCH"`, `group_match_info` con las 8 claves a 0, `pickup_user_group_b_num: 0`, `group_result:"MATCHDAY_GROUP_A"`, `pickup_reward_type:"MATCHDAY_PICKUP_REWARD_NONE"`. Si aún sale vacío, probar los demás tokens de uno en uno (config) y mirar el nombre del bando en `group_info_a.group_name`.
+
+## D.8 Clanes y salas cooperativas: pedido y respuesta (Ghidra solo lectura, 11-nov) (L salvo lo marcado)
+Método: Ghidra 12.0.4 headless, solo lectura, `PES2021_recortado.exe`; para cada comando, el constructor del pedido y el lector del resultado (`msgid`, `rqid`, `result` van siempre; no se repiten). Clave común **`user_info`/`owner_info`** (bin de usuario): `user_id`, `pname`, `xuid_one`, `psn_user_id`, `account_id`, `online_id`, `is_valid_cache`, `is_deleted`; en listas de miembros se añaden `coop_level`, `is_follow`, `last_login`, `current_online_mode`, `is_join_online_mode`.
+
+**Clanes**
+| Comando | Pedido | Respuesta (aparte de `result`) |
+|---|---|---|
+| `CREATE_CLAN` (`FUN_141de82f0`) | `clan_name` | solo `result` |
+| `SET_CLAN_SETTINGS` (`FUN_141de9210`) | `clan_basic_settings` (bin: `clan_name`, `owner_info`, `enable_request`, `clan_comment`, `is_banned`) | solo `result` |
+| `GET_CLAN_SETTINGS` (`FUN_141deb550`) | — | `clan_basic_settings` (las mismas claves) |
+| `GET_CLAN_INFO` (`FUN_141dedec0`) | `owner_id` (+ datos de usuario) | `clan_info` (bin): `basic_settings` (`clan_name`, `owner_info`, `enable_request`, `clan_comment`, `is_banned`), `clan_members` (lista) y `clan_member_num`, `clan_stats_online` (`current_division`, `current_rating`, `season_match_stats`{`match_count`, `win_count`, `draw_count`, `lose_count`, `win_s`, `win_s_max`, `lost_goal`}, `total_match_stats`, `season_win_count`, `residual_div_first_count`), `clan_stats_myclub` |
+| `GET_CLAN_SIMPLE_INFO_LIST` | por dueños: `owner_pid_list`; búsqueda: `search_options` (`clan_name`, `enable_request`, `is_joined_clan`), `start_index` | por dueños: `clan_simple_info_list` (+`clan_simple_info_list_num`, elementos con `clan_name`, `owner_info`); búsqueda: `clan_list` (como `clan_info`), `clan_list_num`, `all_list_num`, `start_index` |
+| `GET_CLAN_REQUEST_LIST` / `GET_CLAN_PENDING_LIST` | — | `request_info_list` / `pending_info_list` (cada elemento: `status`, `is_new`, `appliciant_user_id` + datos de usuario, `is_follow`, `applicant_clan_name`) y `…_list_num` |
+| `ENTRY_CLAN` | `target_pid` | solo `result` |
+| `INVITE_CLAN` | `target_id` (+ datos de usuario) | solo `result` |
+| `LEAVE_CLAN` | `owner_pid` | solo `result` |
+| `EXPEL_CLAN_MEMBER` | `target_pid` | solo `result` |
+| `GET_CLAN_MEMBER_MODE` | — | `clan_members` (lista de miembros con los datos de usuario ampliados) y `clan_member_num` |
+| `GET_COOP_MAINMENU_INFO` | `online_mode`, `is_check_season_end` | `is_coop_banned`, `is_season_end`, `division`, `pre_season_rank`, `pre_season_rank_all_clan_num`, `division_change_type`, `is_exist_owner_clan`, `is_exist_new_request`, `is_exist_new_pending` |
+| `FOLLOW_USER` / `GET_FOLLOW_LIST` / `LOCK_FOLLOW_USER` | `follow_user_id_list`+`unfollow_user_id_list` / — / `target_pid`+`is_lock` | solo `result` / `follow_list` (`user_id`+usuario, `is_locked`, `is_clan_member`) y `follow_list_num` / solo `result` |
+| `SET_COOP_REJECT` / `GET_COOP_REJECT_LIST` | `set_reject_pid_list`, `unset_reject_pid_list` / — | `reject_list` (usuarios) y `reject_list_num` |
+
+**Salas cooperativas**
+| Comando | Pedido | Respuesta |
+|---|---|---|
+| `GET_COOP_ROOMLIST` | `search_options` (`room_id`, `use_password`, `vs_setting`, `team_level`, `coop_level`, `coop_manner`, `cpu_level_min`, `cpu_level_max`, `can_entry`, `compe_id`), `start_index` | `room_list` (cada sala: `basic_settings`{`room_id`, `room_name`, `clan_name`, `clan_owner_info`, `is_follow`, `is_com_match`, `is_use_chat`, `is_same_level`, `team_level`, `coop_level`, `is_same_manner`, `coop_manner`, `room_entry_restriction`, `password`}, `match_settings`{`user_team_id`, `enemy_team_id`, `cpu_level`}, `user_num`, `compe_id`, `is_game`), `room_list_num`, `all_room_num` |
+| `CREATEJOIN_COOP_ROOM` | `basic_settings` y `match_settings` (las claves de arriba) | `room_id` |
+| `JOIN_COOP_ROOM` | `room_id`, `password`, `is_invite` | solo `result` |
+| `LEAVE_COOP_ROOM` | `room_id` | solo `result` |
+| `SET_COOP_MATCH_READY` | `room_id`, `is_ready` | solo `result` |
+| `SET_COOP_ROOM_OPTION` | `room_id`, `basic_settings`, `match_settings` | solo `result` |
+| `GET_COOP_ROOM_OPTION` | `room_id` | **P** (reader no abierto): `basic_settings` + `match_settings` como en `SET` |
+| `GET_COOP_ROOM_MEMBER` | `room_id` | `list_data` (cada miembro: `player_index`, `user_info`, `is_owner`, `coop_level`, `is_clan_member`, `is_follow`, `is_guest`, `guest_info`, `is_platform_guest`, `is_ready`), `list_num` |
+
+**Respuestas mínimas para que abran sin fallo (P):** `GET_CLAN_INFO` sin clan → `ERR` propio no visto; mandar `clan_info` con `clan_members: []`, `clan_member_num: 0` y `basic_settings` con `clan_name` vacío; `GET_COOP_ROOMLIST` → `room_list: []`, `room_list_num: 0`, `all_room_num: 0`; `GET_COOP_MAINMENU_INFO` → los booleanos en `"NO"`, `division` texto de división (la de PES League, p. ej. `"D12"`), `division_change_type` token por descubrir. Los booleanos de estos comandos viajan como texto (`"YES"/"NO"`, como en el resto de la familia).
