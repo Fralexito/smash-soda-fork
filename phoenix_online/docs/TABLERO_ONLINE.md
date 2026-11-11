@@ -116,3 +116,4 @@ PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 - 11-nov 11:35: seguir jugadores y lista de rechazados del Cooperativo programados (4 comandos).
 - 14:40 (Lima): repo AzrakHQ (MIT) estudiado: causa exacta del botón gris de Matchday aplicada (066485b, por probar); 195 comandos por revisar. Ver ESTUDIO_AZRAK_PES2021_SERVER.md.
 - 14:50 (Lima): ranking de PES League (inscritos) + 6 avisos de Clanes + ranking de clanes vacío + premios PES League vacíos (forma de AzrakHQ, MIT). 120 pruebas OK. Por probar en el PES.
+- 15:05 (Lima): Matchday con la receta completa de AzrakHQ (0206876); avisos SEND_NOTICE/SYNC/SYSTEM reenviados y game_sycom P2P en salas de Cooperativo (coop2.md); comparación automática de campos de 280 comandos (docs/COMPARACION_CAMPOS_AZRAK.md). 121 pruebas OK.

@@ -1193,6 +1193,22 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
             msgpack_min.packb(ea[-1][1])
         self.assertFalse({k for k in self.srv.sin_manejador if "CLAN" in k or "PESLEAGUE_COMPE_R" in k})
 
+    async def test_reenvio_de_avisos_y_sycom_coop(self):
+        """R (coop2.md AzrakHQ): SEND_NOTICE llega como WATCH_NOTICE al otro; SYNC_PROGRESS también vuelve al que lo manda."""
+        a, ea = await self.entrar("N1")
+        b, eb = await self.entrar("N2")
+        r = self.srv.recibir
+        pb = self.srv._pid_visible(b)
+        await r(a, 1, {"msgid": "CMD_SEND_NOTICE", "rqid": 1, "pid_list": [pb], "data": "hola"})
+        self.assertEqual(ea[-1][1]["result"], "NOERR")
+        self.assertEqual((eb[-1][1]["msgid"], eb[-1][1]["data"]), ("CMD_WATCH_NOTICE", "hola"))
+        n = len(ea)
+        pa = self.srv._pid_visible(a)
+        await r(a, 2, {"msgid": "CMD_SEND_NOTICE", "rqid": 2, "pid_list": [pa, pb],
+                       "data": '{"notice_key":"SYNC_PROGRESS"}'})
+        self.assertIn("CMD_WATCH_NOTICE", [m["msgid"] for _, m in ea[n:]])
+        self.assertNotIn("game_sycom", self.srv.respuesta_gamerelay(a))
+
     async def test_recarga_config_en_caliente(self):
         """Cambiar myclub en config.json se aplica sin reiniciar (solo la clave myclub)."""
         import json as _j, tempfile, os as _o

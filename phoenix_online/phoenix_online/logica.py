@@ -648,6 +648,40 @@ class Servidor:
                           "player_count": len(lista), "player_list": lista, "winner_side": ganador,
                           "gameend_reason": "NORMAL_END", "is_pk": "NO"})
 
+    def _reenviar_aviso(self, s, m, vigilancia):
+        """R (coop2.md + pesmatch._relay_notice de AzrakHQ, probado en vivo): CMD_SEND_*NOTICE
+        {pid_list, data} se empuja como CMD_WATCH_*NOTICE {data} (rqid 0) a cada pid, una vez, sin
+        volver al que lo manda; EXCEPTO SYNC_PROGRESS, que el Cooperativo espera también de sí mismo
+        (TaskSyncProgress 0x141147fd0: grupo + yo, 30 s)."""
+        pids = m.get("pid_list") or []
+        if isinstance(pids, int):
+            pids = [pids]
+        datos = m.get("data", "")
+        eco = vigilancia == "CMD_WATCH_NOTICE" and "SYNC_PROGRESS" in str(datos)
+        mio = self._pid_visible(s)
+        objetivos = []
+        for p in pids:
+            try:
+                p = int(p)
+            except (TypeError, ValueError):
+                continue
+            if p not in objetivos and (p not in (mio, mio & 0xFFFFFFFF) or eco):
+                objetivos.append(p)
+        for x in list(self.sesiones):
+            pv = self._pid_visible(x)
+            if pv in objetivos or (pv & 0xFFFFFFFF) in objetivos:
+                x.enviar({"msgid": vigilancia, "rqid": 0, "result": NOERR, "data": datos})
+        return {}
+
+    async def c_cmd_send_notice(self, s, m):
+        return self._reenviar_aviso(s, m, "CMD_WATCH_NOTICE")
+
+    async def c_cmd_send_sync_notice(self, s, m):
+        return self._reenviar_aviso(s, m, "CMD_WATCH_SYNC_NOTICE")
+
+    async def c_cmd_send_system_notice(self, s, m):
+        return self._reenviar_aviso(s, m, "CMD_WATCH_SYSTEM_NOTICE")
+
     async def c_cmd_join_online_mode(self, s, m):
         s.modo_online = m.get("online_mode") if isinstance(m.get("online_mode"), str) else None
         return {}
@@ -5497,6 +5531,14 @@ class Servidor:
             # queda «NotImplement»/0 y el SEND_MATCHING_RESULT sale con MXNV_0010)
             r.update({"gamerelay_index": nodos[0]["gamerelay_index"], "ip_addr": nodos[0]["ip_addr"],
                       "port": nodos[0]["port"], "grid": nodos[0]["grid"]})
+        # R (coop2.md AzrakHQ, 0x1410c2b40): el Cooperativo toma el modo de red de game_sycom; con ""
+        # no hay sesión multijugador (MXNV_0010). Partida rápida y salas lo fijan solas. Solo a quien
+        # está en una sala de Cooperativo. myclub.coop_game_sycom = "NO" lo quita.
+        clave = (getattr(s, "steam_hex", "") or "").lower()
+        if clave and (self.cfg.get("myclub") or {}).get("coop_game_sycom") != "NO" and any(
+                (getattr(x, "steam_hex", "") or "").lower() == clave
+                for sala in getattr(self, "salas_coop", {}).values() for x in sala["miembros"]):
+            r["game_sycom"] = "P2P"
         return r
 
     async def c_cmd_get_gamerelay(self, s, m):
