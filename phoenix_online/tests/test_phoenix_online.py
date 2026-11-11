@@ -1406,6 +1406,59 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("warn_kind", ea[-1][1])  # una sola vez
         self.assertEqual(self.srv.grado_modales(a.steam_hex.lower()), "A")  # 1 abandono sigue en A
 
+    async def test_enlace_p2p_cortado_anula_sin_derrota(self):
+        """R (match.md AzrakHQ, sonda de vida): si el PES avisa de enlace P2P caido (DISCONN_SC/DEGRADE_SC)
+        con los DOS aun en el servidor, el partido se anula: nadie pierde 3-0 ni suma puntos."""
+        a, ea = await self.entrar("0110000100000061")
+        b, eb = await self.entrar("0110000100000062")
+        r = self.srv.recibir
+        for x in (a, b):
+            club = self.srv._club_propio(x) or {}
+            club.setdefault("matchday_equipo", {})["3"] = {"grupo": "MATCHDAY_GROUP_A", "team_id": 101}
+            club.setdefault("torneos_inscripcion", {})["matchday"] = [3]
+            self.srv.datos.guardar_club(x.steam_hex, club)
+        pareja = {"miembros": (a, b), "check": set(), "tipo": "MATCHDAY", "room_id": 990061}
+        self.srv.parejas[a] = self.srv.parejas[b] = pareja
+        for x in (a, b):
+            await r(x, 2, {"msgid": "CMD_CHANGE_GAMEPHASE", "rqid": 2, "phase": "1ST"})
+        self.assertTrue(pareja.get("en_juego"))
+        # NOERR normal: no pasa nada
+        await r(a, 3, {"msgid": "CMD_SEND_ALIVE", "rqid": 3, "pid": self.srv._pid_visible(a), "reason": "NOERR"})
+        self.assertFalse(pareja.get("anulada"))
+        # el enlace cae: anulada, sin derrota ni puntos
+        with self.assertLogs(level="WARNING"):
+            await r(a, 4, {"msgid": "CMD_SEND_ABNORMALEND", "rqid": 4, "reason": "DISCONN_SC"})
+        self.assertTrue(pareja["anulada"])
+        self.assertFalse(self.srv._puntua(pareja))
+        self.assertIsNone(pareja.get("derrota"))
+        for x in (a, b):
+            self.assertEqual(int((self.srv.datos.club(x.steam_hex).get("matchday_puntos") or {}).get("3") or 0), 0)
+
+    async def test_enlace_cortado_si_uno_se_fue_del_servidor_no_anula(self):
+        """Si uno de los dos ya no esta en el servidor, el enlace caido NO anula: lo decide el abandono."""
+        a, _ea = await self.entrar("0110000100000063")
+        b, _eb = await self.entrar("0110000100000064")
+        pareja = {"miembros": (a, b), "check": set(), "tipo": "MATCHDAY", "room_id": 990062}
+        self.srv.parejas[a] = self.srv.parejas[b] = pareja
+        for x in (a, b):
+            await self.srv.recibir(x, 2, {"msgid": "CMD_CHANGE_GAMEPHASE", "rqid": 2, "phase": "1ST"})
+        self.srv.sesiones.discard(b)
+        self.assertFalse(self.srv._anular_por_enlace(pareja, a, "DISCONN_SC"))
+        self.assertFalse(pareja.get("anulada"))
+
+    async def test_sonda_de_vida_solo_con_config(self):
+        """CMD_WATCH_CHECK_ALIVE_PLAYER es un empujon opcional: apagado por defecto."""
+        a, ea = await self.entrar("0110000100000065")
+        b, eb = await self.entrar("0110000100000066")
+        pareja = {"miembros": (a, b), "check": set(), "tipo": "OC_QUICK", "room_id": 990063}
+        self.assertEqual(self.srv._sondear_vida(pareja), 0)
+        self.srv.cfg["sonda_vida"] = True
+        ea.clear(); eb.clear()
+        self.assertEqual(self.srv._sondear_vida(pareja), 2)
+        self.assertIn("CMD_WATCH_CHECK_ALIVE_PLAYER", [m["msgid"] for _, m in ea + eb])
+        for e in (ea, eb):
+            msgpack_min.packb([m for _, m in e if m["msgid"] == "CMD_WATCH_CHECK_ALIVE_PLAYER"][-1])
+
     async def test_corte_y_reconexion_a_tiempo(self):
         """R (evoweb PESBUL p. 9 + OpenEleven): cerrar una conexión con otra viva del mismo jugador no es
         abandono; si se cae del todo y RECONNECT llega antes de los 15 s, no pierde por abandono."""

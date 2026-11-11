@@ -6456,6 +6456,9 @@ class Servidor:
         motivo = str(m.get("reason") or "").upper()
         log.warning("fin anormal pid=%s motivo=%s", s.pid, motivo or m)
         pareja = self._pareja_por_clave(s)
+        if motivo in self.MOTIVOS_ENLACE and self._anular_por_enlace(pareja, s, motivo):
+            self._dejar_pareja(s, "enlace P2P cortado")
+            return {}
         if pareja is not None and pareja.get("en_juego") and not pareja.get("terminado") \
                 and motivo in self.MOTIVOS_PROPIOS:
             marcados = pareja.setdefault("abandonaron", set())
@@ -6466,14 +6469,60 @@ class Servidor:
         self._dejar_pareja(s, "fin anormal")
         return {}
 
+    # R (match.md AzrakHQ, 0x1410f6220): el propio PES informa del estado del ENLACE P2P: DISCONN_SC = enlace
+    # caido, DEGRADE_SC = enlace degradado. Si pasa con los DOS aun conectados al servidor no es culpa de
+    # nadie: el partido se anula (sin derrota, sin puntos, sin racha).
+    MOTIVOS_ENLACE = {"DISCONN_SC", "DEGRADE_SC"}
+
+    def _anular_por_enlace(self, pareja, quien, motivo):
+        """P2P cortado entre los 2 PES con los 2 todavia en el servidor: anula la partida sin derrota."""
+        if pareja is None or pareja.get("terminado") or pareja.get("anulada") or not pareja.get("en_juego"):
+            return False
+        if not all(x in self.sesiones for x in pareja["miembros"]):
+            return False  # alguien se fue del servidor: eso lo decide el abandono normal
+        pareja["anulada"] = True
+        pareja["puntua"] = False  # ni Divisiones, ni Matchday, ni Torneo en linea la cuentan
+        pareja.pop("abandonaron", None)
+        pareja.pop("derrota_pendiente", None)
+        pareja["terminado"] = True
+        log.warning("partido %s anulado sin derrota: enlace P2P cortado (%s, pid=%s) con los dos en el servidor",
+                    pareja.get("room_id"), motivo, getattr(quien, "pid", None))
+        return True
+
+    def _sondear_vida(self, pareja):
+        """R (match.md): CMD_WATCH_CHECK_ALIVE_PLAYER {result NOERR} es un empujon del servidor; el PES
+        contesta con SEND_ALIVE y SEND_ALIVEPLAYER. Solo con config sonda_vida=true (por defecto apagado:
+        en vivo nunca se ha visto)."""
+        if not self.cfg.get("sonda_vida") or pareja is None:
+            return 0
+        n = 0
+        for x in pareja["miembros"]:
+            if x in self.sesiones:
+                self._empujar(x, "CMD_WATCH_CHECK_ALIVE_PLAYER", result=NOERR)
+                n += 1
+        return n
+
+    async def c_cmd_send_alive(self, s, m):
+        """{pid, reason}: reason = estado del partido (NOERR normal). DISCONN_SC / DEGRADE_SC = enlace P2P."""
+        motivo = str(m.get("reason") or "").upper()
+        if motivo in self.MOTIVOS_ENLACE:
+            self._anular_por_enlace(self._pareja_por_clave(s), s, motivo)
+        return {}
+
+    async def c_cmd_send_aliveplayer(self, s, m):
+        """{pid, pid_list}: a quien oye por P2P. Solo se acepta; la anulacion llega por reason de SEND_ALIVE."""
+        return {}
+
     def _programar_derrota(self, pareja):
-        if pareja.get("derrota_programada"):
+        if pareja.get("derrota_programada") or pareja.get("anulada"):
             return
         pareja["derrota_programada"] = True
         pareja["derrota_pendiente"] = True  # sin veredicto normal mientras se decide
 
         def decidir():
             pareja.pop("derrota_pendiente", None)
+            if pareja.get("anulada"):
+                return
             marcados = pareja.get("abandonaron") or set()
             if len(marcados) == 1:
                 try:
