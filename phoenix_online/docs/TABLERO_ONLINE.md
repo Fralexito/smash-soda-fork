@@ -1,6 +1,6 @@
 # Tablero del online Phoenix (se actualiza con cada avance)
 
-Última actualización: 11-nov-2026, 00:30 (hora del servidor UTC).
+Última actualización: 11-nov-2026, 00:55 (hora del servidor UTC).
 PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 
 ## Resumen
@@ -58,7 +58,7 @@ PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 | 27 | Cambiar el nombre del club y de la plantilla | ✅ | probado el 10-nov: myClub → quinta pestaña → «Cambiar nombre del equipo» |
 | 28 | Historial | 🟡 | vacío hasta conocer sus tipos |
 | 29 | Regalos | 🟡 | vacío |
-| 30 | Logros | 🟡 | vacío |
+| 30 | Logros | 🟡 | programados (50 y 100 partidos, 5 victorias seguidas, premio en GP), apagados hasta probarlos; la pantalla de Logros hay que abrirla a mano |
 | 31 | Ranking de clubes | ✅ | probado: muestra «Phoenix FC» con escudo |
 | 32 | Ranking semanal | 🟡 | vacío; el PES lo bloquea hasta jugar 10 partidos 1 contra 1 |
 | 33 | myClub contra otra persona | ❌ | |
@@ -95,3 +95,4 @@ PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 - 10-nov 23:55: nuevo apartado 35 (gestión del club), que faltaba en el tablero; por eso los porcentajes bajan un punto.
 - 11-nov 00:05: probado el cambio de nombre del club; programada gran parte de la gestión del club (entrenadores, plantillas, dorsales, ciudad).
 - 11-nov 00:30: probadas en el PES copiar y borrar plantilla, la plantilla activa, la plantilla para la nube y la ciudad del club (arreglado su formato). Ningún cierre.
+- 11-nov 00:55: logros programados (apagados hasta probarlos). Encontré y corregí a tiempo un choque con los logros de GP que ya existían; no llegó a afectar nada.
