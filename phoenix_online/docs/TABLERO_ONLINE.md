@@ -1,6 +1,6 @@
 # Tablero del online Phoenix (se actualiza con cada avance)
 
-Última actualización: 11-nov-2026, 03:55 (hora del servidor UTC).
+Última actualización: 11-nov-2026, 03:20 (hora del servidor UTC).
 PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 
 ## Resumen
@@ -100,4 +100,4 @@ PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 - 11-nov 02:45: Regalos probado; Logros ya muestra filas en el PES (el PES solo acepta 24 tipos de logro con nombre fijo).
 - 11-nov 03:10: Logros completo en el PES (progreso real y cobro). La Tienda myClub abre (vacía, sin venta). El Historial sigue sin encontrarse en el menú.
 - 11-nov 03:20: empezamos a estudiar los Eventos online (torneos).
-- 11-nov 03:55: Eventos programados de punta a punta (12 comandos). Falta la prueba en el PES base.
+- 11-nov 03:20: Eventos programados de punta a punta (12 comandos). Falta la prueba en el PES base.
