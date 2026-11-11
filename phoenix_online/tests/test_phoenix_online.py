@@ -1000,6 +1000,51 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(cat["not_cleared_event_num"], 0)
         msgpack_min.packb(res())
 
+    async def test_myclub_intercambio_y_objetos_de_entrenamiento(self):
+        """B.21: intercambio de cartas, objetos de habilidad/posición/DT/táctico y valoración."""
+        jug = [{"gameplayer_id": 100 + i} for i in range(20)]
+        self.srv.cfg = {**self.srv.cfg, "myclub": {
+            "jugadores": jug, "entrenadores": [{"coach_id": 8}],
+            "club_de_prueba": {"team_name": "P", "gp": 0}, "habilidades_objeto": [41]}}
+        a, ea = await self.entrar("A1")
+        r = self.srv.recibir
+        res = lambda: ea[-1][1]
+        await r(a, 1, {"msgid": "CMD_GET_MYCLUB_USER_INFO", "rqid": 1})
+        club = self.srv.datos.club(a.steam_hex)
+        uids = [j["gameplayer_unique_id"] for j in club["jugadores"]]
+        en_uso = self.srv._uids_en_uso(club)
+        libres = [u for u in uids if u not in en_uso]
+        await r(a, 2, {"msgid": "CMD_TRADE_MYCLUB_GAMEPLAYER", "rqid": 2,
+                       "my_player_trade_list": libres[:1], "target_trade_player": 7511})
+        self.assertEqual(res()["result"], "ERR_FORBIDDEN")
+        await r(a, 3, {"msgid": "CMD_TRADE_MYCLUB_GAMEPLAYER", "rqid": 3,
+                       "my_player_trade_list": libres[:2], "target_trade_player": 7511})
+        f = msgpack_min.unpackb(msgpack_min.packb(res()["gameplayer"].valor))
+        self.assertEqual(f["gameplayer_id"], 7511)
+        club = self.srv.datos.club(a.steam_hex)
+        self.assertEqual(len(club["jugadores"]), len(uids) - 1)
+        uid = club["jugadores"][0]["gameplayer_unique_id"]
+        await r(a, 4, {"msgid": "CMD_USE_MYCLUB_ADD_SKILL_ITEM", "rqid": 4, "gameplayer_unique_id": uid})
+        self.assertEqual(res()["result"], "ERR_FORBIDDEN")  # sin objetos
+        club["objetos_habilidad"], club["objetos_gestion"], club["objetos_tactico"] = 1, 2, 1
+        club["objetos_posicion"] = 1
+        self.srv.datos.guardar_club(a.steam_hex, club)
+        await r(a, 5, {"msgid": "CMD_USE_MYCLUB_ADD_SKILL_ITEM", "rqid": 5, "gameplayer_unique_id": uid})
+        self.assertEqual(res()["add_skill_id"], 41)
+        await r(a, 6, {"msgid": "CMD_USE_MYCLUB_ADD_POSITION_APTITUDE_ITEM", "rqid": 6,
+                       "gameplayer_unique_id": uid, "use_count": 1})
+        self.assertEqual(res()["result"], "NOERR")
+        cu = self.srv.datos.club(a.steam_hex)["entrenadores"][0].get("coach_unique_id", 1)
+        await r(a, 7, {"msgid": "CMD_USE_MYCLUB_MANAGEMENT_ITEM", "rqid": 7, "coach_unique_id": cu, "use_count": 2})
+        self.assertEqual(res()["management"], 72)
+        await r(a, 8, {"msgid": "CMD_USE_MYCLUB_TACTICAL_TRAINING", "rqid": 8, "squad_id": 1,
+                       "coach_unique_id": cu, "is_offensive_formation": True, "use_count": 1})
+        self.assertGreater(len(res()["gameplayer_list"]), 0)
+        msgpack_min.packb(res())
+        await r(a, 9, {"msgid": "CMD_SET_POSITION_RATING", "rqid": 9, "position": "CF", "rating": 80})
+        await r(a, 10, {"msgid": "CMD_GET_POSITION_RATING", "rqid": 10, "target_pid": 1})
+        self.assertEqual((res()["total_position_rating"], res()["total_position_match_num"]), (80, 1))
+
     async def test_myclub_catalogo_club_y_rival_rotando(self):
         import os, struct, tempfile, zlib, json as _j, sys as _s
         _s.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "tools"))

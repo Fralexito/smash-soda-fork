@@ -1,6 +1,6 @@
 # Tablero del online Phoenix (se actualiza con cada avance)
 
-Última actualización: 11-nov-2026, 03:20 (hora del servidor UTC).
+Última actualización: 11-nov-2026, 03:23 (hora del servidor UTC).
 PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 
 ## Resumen
@@ -8,7 +8,7 @@ PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 - **Programado (falta probarlo en el PES):** 14 más. Con ellos, **37 de 49 ya están hechos (76 %)**.
 - **A medias** (abre bien pero sin contenido todavía, o hecho solo en parte): 5.
 - **Falta hacer:** 7.
-- Comandos del juego que el servidor ya controla: **229 de 439 (52 %)**; sin contar los modos aún no empezados (cooperativo, Matchday, PES League, clanes, tienda): **226 de 325 (70 %)**.
+- Comandos del juego que el servidor ya controla: **237 de 439 (54 %)**; sin contar los modos aún no empezados (cooperativo, Matchday, PES League, clanes, tienda): **234 de 325 (72 %)**.
 
 **Leyenda:** ✅ probado en el PES · 🟢 programado, sin probar en el PES · 🟡 a medias (abre, pero vacío) · ❌ falta · 🚫 no se hará (a propósito)
 
@@ -63,7 +63,7 @@ PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 | 32 | Ranking semanal | 🟡 | vacío; el PES lo bloquea hasta jugar 10 partidos 1 contra 1 |
 | 33 | myClub contra otra persona | ❌ | |
 | 34 | Monedas gratis (interruptor) | 🟡 | programado; falta tu decisión de encenderlo |
-| 35 | Gestión del club: entrenador de cada plantilla, dorsales, copiar o borrar plantilla, despedir entrenador, intercambio de jugadores, objetos de entrenamiento | 🟡 | **probado en el PES:** copiar y borrar plantilla, plantilla activa, plantilla para la nube y ciudad del club. Programado, sin probar: entrenador por plantilla, despedir o renovar entrenador y dorsales. Falta: intercambio, objetos y entrenamiento táctico |
+| 35 | Gestión del club: entrenador de cada plantilla, dorsales, copiar o borrar plantilla, despedir entrenador, intercambio de jugadores, objetos de entrenamiento | 🟡 | **probado en el PES:** copiar y borrar plantilla, plantilla activa, plantilla para la nube y ciudad del club. Programado, sin probar: entrenador por plantilla, despedir o renovar entrenador, dorsales, intercambio de cartas repetidas, objetos (habilidad, posición, gestión y adaptación del DT) y entrenamiento táctico. Los objetos se dan desde admin; falta saber cómo los nombra el PES en su lista |
 | — | Tienda con dinero real | 🚫 | nada de dinero real |
 
 ## 5. Otros modos del online
@@ -101,3 +101,4 @@ PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 - 11-nov 03:10: Logros completo en el PES (progreso real y cobro). La Tienda myClub abre (vacía, sin venta). El Historial sigue sin encontrarse en el menú.
 - 11-nov 03:20: empezamos a estudiar los Eventos online (torneos).
 - 11-nov 03:20: Eventos programados de punta a punta (12 comandos). Falta la prueba en el PES base.
+- 11-nov 03:23: programados el intercambio de cartas, los objetos de entrenamiento, el entrenamiento táctico y la valoración por posición (8 comandos).

@@ -2832,6 +2832,162 @@ class Servidor:
                                               "contract_term": j["contract_term"]}),
                 "extend_ticket": club["boletos_contrato"]}
 
+    # ---------- B.21: intercambio de cartas y objetos de entrenamiento ----------
+    # Los objetos se guardan como contadores en el club (se dan con admin o como premio).
+    # Su item_variation en ITEMLIST aún no se conoce (N), por eso no salen en OBJETOS_DEFECTO.
+    OBJETO_POR_USO = {"habilidad": "objetos_habilidad", "posicion": "objetos_posicion",
+                      "gestion": "objetos_gestion", "adaptacion": "objetos_adaptacion",
+                      "tactico": "objetos_tactico"}
+
+    def _gastar_objeto(self, club, uso, cuantos=1):
+        """Resta `cuantos` objetos del contador del club; None si alcanzan, o el error."""
+        clave = self.OBJETO_POR_USO[uso]
+        cuantos = max(1, int(cuantos or 1))
+        if int(club.get(clave) or 0) < cuantos:
+            return "ERR_FORBIDDEN"
+        club[clave] = int(club.get(clave) or 0) - cuantos
+        return None
+
+    def _jugador_uid(self, club, uid):
+        return next((x for x in club.get("jugadores") or []
+                     if x.get("gameplayer_unique_id") == uid), None)
+
+    async def c_cmd_trade_myclub_gameplayer(self, s, m):
+        """B.21: das tus cartas repetidas (my_player_trade_list) y recibes target_trade_player.
+        Config myclub.intercambio = {activo (def. sí), cartas (def. 2)}. No se dan cartas
+        inscritas en una plantilla ni protegidas."""
+        club = self._club_inicial(s)
+        cfg = (self.cfg.get("myclub") or {}).get("intercambio") or {}
+        if club is None:
+            return {"result": "ERR_NOTFOUND"}
+        if cfg.get("activo") is False:
+            return {"result": "ERR_FORBIDDEN"}
+        objetivo = self._id_entero(m.get("target_trade_player"))
+        cartas = list(dict.fromkeys(self._lista_uids(m, "my_player_trade_list")))
+        en_uso = self._uids_en_uso(club)
+        dadas = [self._jugador_uid(club, u) for u in cartas]
+        if not objetivo or len(cartas) < int(cfg.get("cartas") or 2) or None in dadas \
+                or any(u in en_uso for u in cartas) or any(j.get("is_protected") == "YES" for j in dadas):
+            return {"result": "ERR_FORBIDDEN"}
+        club["jugadores"] = [j for j in club["jugadores"] if j.get("gameplayer_unique_id") not in cartas]
+        nuevo = (self._equipo_catalogo_jugador(objetivo) or {"gameplayer_id": objetivo})
+        ficha = self._fichar(club, [nuevo])[0]
+        self.datos.guardar_club(s.steam_hex or "", club)
+        log.info("myClub %s: intercambia %d cartas por el jugador %d", s.steam_hex, len(cartas), objetivo)
+        return {"gameplayer": ficha}
+
+    def _equipo_catalogo_jugador(self, gameplayer_id):
+        """Datos del catálogo (rating, puesto…) para un jugador, si hay catálogo."""
+        try:
+            cat = self._catalogo() or {}
+        except Exception:
+            return None
+        datos = (cat.get("jugadores") or {}).get(str(gameplayer_id))
+        if not isinstance(datos, dict):
+            return None
+        return {**datos, "gameplayer_id": gameplayer_id}
+
+    async def c_cmd_use_myclub_add_skill_item(self, s, m):
+        """B.21: objeto de habilidad. La habilidad sale de config myclub.habilidades_objeto
+        (lista de ids; P) por turno; responde add_skill_id."""
+        club = self._club_inicial(s)
+        j = self._jugador_uid(club or {}, m.get("gameplayer_unique_id"))
+        if club is None or j is None:
+            return {"result": "ERR_NOTFOUND"}
+        if j.get("add_skill_id"):
+            return {"result": "ERR_FORBIDDEN"}
+        error = self._gastar_objeto(club, "habilidad")
+        if error:
+            return {"result": error}
+        ids = [x for x in (self.cfg.get("myclub") or {}).get("habilidades_objeto") or [1] if isinstance(x, int)] or [1]
+        j["add_skill_id"] = ids[int(club.get("habilidades_dadas") or 0) % len(ids)]
+        club["habilidades_dadas"] = int(club.get("habilidades_dadas") or 0) + 1
+        self.datos.guardar_club(s.steam_hex or "", club)
+        return {"add_skill_id": j["add_skill_id"]}
+
+    async def c_cmd_use_myclub_add_position_aptitude_item(self, s, m):
+        """B.21: aptitud de posición. Guarda cuántos objetos recibió el jugador (P: el efecto
+        lo aplica el cliente según su ficha)."""
+        club = self._club_inicial(s)
+        j = self._jugador_uid(club or {}, m.get("gameplayer_unique_id"))
+        if club is None or j is None:
+            return {"result": "ERR_NOTFOUND"}
+        error = self._gastar_objeto(club, "posicion", m.get("use_count"))
+        if error:
+            return {"result": error}
+        j["aptitud_extra"] = int(j.get("aptitud_extra") or 0) + max(1, int(m.get("use_count") or 1))
+        self.datos.guardar_club(s.steam_hex or "", club)
+        return {}
+
+    def _usar_objeto_dt(self, s, m, uso, clave, paso, tope):
+        club = self._club_inicial(s)
+        if club is None:
+            return {"result": "ERR_NOTFOUND"}
+        dts = club.get("entrenadores") or []
+        i, d = next(((i, d) for i, d in enumerate(dts)
+                     if d.get("coach_unique_id", i + 1) == m.get("coach_unique_id")), (None, None))
+        if d is None:
+            return {"result": "ERR_NOTFOUND"}
+        veces = max(1, int(m.get("use_count") or 1))
+        error = self._gastar_objeto(club, uso, veces)
+        if error:
+            return {"result": error}
+        d[clave] = min(tope, int(d.get(clave) or (100 if clave == "adaptability_rate" else 70)) + paso * veces)
+        self.datos.guardar_club(s.steam_hex or "", club)
+        ficha = self._ficha_dt_myclub(i, d)
+        return {"coach": ficha, **ficha.valor}
+
+    async def c_cmd_use_myclub_management_item(self, s, m):
+        """B.21: objeto de gestión: +1 de gestión del DT por objeto (P), tope 99."""
+        return self._usar_objeto_dt(s, m, "gestion", "management", 1, 99)
+
+    async def c_cmd_use_myclub_adaptability_rate_item(self, s, m):
+        """B.21: objeto de adaptación: +5 % de adaptación del DT por objeto (P), tope 100."""
+        return self._usar_objeto_dt(s, m, "adaptacion", "adaptability_rate", 5, 100)
+
+    async def c_cmd_use_myclub_tactical_training(self, s, m):
+        """B.21: entrenamiento táctico de una plantilla. P: cada objeto da
+        myclub.exp_tactico (def. 100) de experiencia a los inscritos de squad_id."""
+        club = self._club_inicial(s)
+        if club is None:
+            return {"result": "ERR_NOTFOUND"}
+        veces = max(1, int(m.get("use_count") or 1))
+        error = self._gastar_objeto(club, "tactico", veces)
+        if error:
+            return {"result": error}
+        if not club.get("jugadores"):
+            club["jugadores"] = self._plantel_inicial()[0]
+        sq = self._id_entero(m.get("squad_id")) or self._activa(club)
+        ganada = int((self.cfg.get("myclub") or {}).get("exp_tactico") or 100) * veces
+        fichas = []
+        for i, j in self._elegidos(club, club["jugadores"], sq):
+            j["exp_total"] = int(j.get("exp_total") or 0) + ganada
+            fichas.append(self._ficha_jugador_myclub(i, j))
+        self.datos.guardar_club(s.steam_hex or "", club)
+        return {"gameplayer_list": fichas}
+
+    async def c_cmd_get_position_rating(self, s, m):
+        """B.21 (P): valoración por posición del jugador online; hoy solo la propia.
+        pos_rating_list = bins {position, rating, match_num} (forma P)."""
+        club = self._club_propio(s) or {}
+        datos = club.get("valoracion_posiciones") or {}
+        lista = [Empaquetado({"position": pos, "rating": int(v[0] / max(1, v[1])), "match_num": int(v[1])})
+                 for pos, v in datos.items()]
+        total = sum(v[1] for v in datos.values())
+        return {"pos_rating_list": lista,
+                "total_position_rating": int(sum(v[0] for v in datos.values()) / total) if total else 0,
+                "total_position_match_num": total}
+
+    async def c_cmd_set_position_rating(self, s, m):
+        club = self._club_propio(s)
+        pos, nota = m.get("position"), m.get("rating")
+        if club is not None and isinstance(pos, str) and pos and isinstance(nota, int):
+            v = club.setdefault("valoracion_posiciones", {}).setdefault(pos, [0, 0])
+            v[0] += nota
+            v[1] += 1
+            self.datos.guardar_club(s.steam_hex, club)
+        return {}
+
     async def c_cmd_use_myclub_item_recovery(self, s, m):
         """Recuperar cansancio. C (REA 05-nov noche, 0x141c81660 / 0x141c81e80): petición
         {gameplayer_unique_id_list, is_all, use_pes_point}; respuesta {pes_point}.
