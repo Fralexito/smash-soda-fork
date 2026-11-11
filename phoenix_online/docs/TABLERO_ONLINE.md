@@ -69,7 +69,7 @@ PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 ## 5. Otros modos del online
 | # | Apartado | Estado | Nota |
 |---|---|---|---|
-| 36 | Cooperativo (2 contra 2, 3 contra 3) | 🟡 | probado el 11-nov: abre (Partido informal, de clan, Estadísticas, Perfil). Programado el 11-nov: crear sala, verla en la lista, entrar, «listo», opciones y miembros (sin probar). Falta el partido en sí |
+| 36 | Cooperativo (2 contra 2, 3 contra 3) | 🟡 | probado el 11-nov: abre (Partido informal, de clan, Estadísticas, Perfil) y **crear salón de clan funciona** (antes quedaba en blanco): título, temporizador, tabla del clan y lista con FRALEX (Dueño). Detalle: el nombre de la sala sale cortado. Falta el partido en sí |
 | 37 | Matchday | 🟡 | probado el 11-nov: inscripción funciona (bando y equipo) y abre la pantalla del torneo sin cerrarse; faltan textos (bando, clasificación, premios) |
 | 38 | Eventos y competiciones online | ✅ | probado el 11-nov: inscripción en la Copa Phoenix funciona (antes «No cumples los requisitos»: el servidor mandaba los datos sin empaquetar); falta el partido |
 | 39 | PES League | 🟡 | probado el 11-nov: inscripción funciona («Torneo Phoenix» con equipo), abre su pantalla y ya no sale el aviso «resultados finales» (ahora dice «Espera a que abra el período de Matchmaking»). Programado, sin probar: nombre del equipo y matchmaking siempre abierto. Falta jugar el partido |
@@ -112,4 +112,5 @@ PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 - 11-nov 10:05: Eventos destrabado: inscripción en la Copa Phoenix probada en el PES. Matchday: pantalla principal programada con sus datos (D.7), sin probar.
 - 11-nov 11:15: Clanes programados de punta a punta (12 comandos nuevos, se guardan en la base). Falta probarlos en el PES.
 - 11-nov 11:30: salas de Cooperativo programadas (7 comandos): crear, entrar, «listo» y salir. El partido cooperativo todavía no.
+- 11-nov 13:20: sala de Cooperativo probada en el PES: ya no queda en blanco (forma de la sala corregida comparando con PESBUL).
 - 11-nov 11:35: seguir jugadores y lista de rechazados del Cooperativo programados (4 comandos).
