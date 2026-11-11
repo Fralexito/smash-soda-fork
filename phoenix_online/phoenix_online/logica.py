@@ -1656,6 +1656,18 @@ class Servidor:
     OBJETOS_DEFECTO = [
         {"clave": "boletos_contrato", "item_type": "CONTRACT", "item_variation": "CONTRACT"},
         {"clave": "objetos_recuperar", "item_type": "RECOVERY", "item_variation": "RECOVERY"},
+        # B.21b (P): no hay item_type propio para estos; item_variation = texto de «uso de
+        # objeto» del cliente. Solo salen si el club tiene alguno (no tocan la lista de hoy).
+        {"clave": "objetos_habilidad", "item_type": "STORE", "item_variation": "ADD_SKILL",
+         "mostrar_vacio": False},
+        {"clave": "objetos_posicion", "item_type": "STORE", "item_variation": "ADD_POSITION_APTITUDE",
+         "mostrar_vacio": False},
+        {"clave": "objetos_gestion", "item_type": "STORE", "item_variation": "IMPROVE_MANAGEMENT",
+         "mostrar_vacio": False},
+        {"clave": "objetos_adaptacion", "item_type": "STORE",
+         "item_variation": "IMPROVE_TEAM_ADAPTABILITY_RATE", "mostrar_vacio": False},
+        {"clave": "objetos_tactico", "item_type": "STORE", "item_variation": "TACTICS_TRAINING",
+         "mostrar_vacio": False},
     ]
 
     def _objetos(self):

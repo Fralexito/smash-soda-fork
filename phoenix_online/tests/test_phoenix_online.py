@@ -1027,7 +1027,7 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         await r(a, 4, {"msgid": "CMD_USE_MYCLUB_ADD_SKILL_ITEM", "rqid": 4, "gameplayer_unique_id": uid})
         self.assertEqual(res()["result"], "ERR_FORBIDDEN")  # sin objetos
         club["objetos_habilidad"], club["objetos_gestion"], club["objetos_tactico"] = 1, 2, 1
-        club["objetos_posicion"] = 1
+        club["objetos_posicion"], club["objetos_adaptacion"] = 1, 1
         self.srv.datos.guardar_club(a.steam_hex, club)
         await r(a, 5, {"msgid": "CMD_USE_MYCLUB_ADD_SKILL_ITEM", "rqid": 5, "gameplayer_unique_id": uid})
         self.assertEqual(res()["add_skill_id"], 41)
@@ -1041,6 +1041,10 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
                        "coach_unique_id": cu, "is_offensive_formation": True, "use_count": 1})
         self.assertGreater(len(res()["gameplayer_list"]), 0)
         msgpack_min.packb(res())
+        await r(a, 81, {"msgid": "CMD_GET_MYCLUB_ITEMLIST", "rqid": 81})
+        variantes = [msgpack_min.unpackb(msgpack_min.packb(o.valor))["item_variation"] for o in res()["item_list"]]
+        self.assertIn("IMPROVE_TEAM_ADAPTABILITY_RATE", variantes)  # sin usar: sale
+        self.assertNotIn("ADD_SKILL", variantes)
         await r(a, 9, {"msgid": "CMD_SET_POSITION_RATING", "rqid": 9, "position": "CF", "rating": 80})
         await r(a, 10, {"msgid": "CMD_GET_POSITION_RATING", "rqid": 10, "target_pid": 1})
         self.assertEqual((res()["total_position_rating"], res()["total_position_match_num"]), (80, 1))
