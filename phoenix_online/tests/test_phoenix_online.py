@@ -925,6 +925,35 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(reg["history_data_kind"], "GP")
         self.assertEqual(msgpack_min.unpackb(reg["history_data_out"])["count"], 10000)
 
+    async def test_eventos_lista_inscripcion_y_baja(self):
+        """Parte C: sin eventos = lista vacía; con uno de config: lista, detalle, inscribirse y salir."""
+        self.srv.cfg = {**self.srv.cfg, "myclub": {
+            "jugadores": [{"gameplayer_id": 1}], "entrenadores": [{"coach_id": 8}],
+            "club_de_prueba": {"team_name": "P", "gp": 0}}}
+        a, ea = await self.entrar("A1")
+        r = self.srv.recibir
+        res = lambda: ea[-1][1]
+        await r(a, 1, {"msgid": "CMD_GET_COMPEV_LIST", "rqid": 1, "compe_list_kind": "X", "compe_mode": "EVENT_COMPE"})
+        self.assertEqual((res()["compe_num"], res()["compe_list"]), (0, []))
+        self.srv.cfg["myclub"]["eventos"] = [{"compe_id": 7, "compe_name": "Copa Phoenix"}]
+        await r(a, 2, {"msgid": "CMD_GET_COMPEV_LIST", "rqid": 2, "compe_list_kind": "X", "compe_mode": "EVENT_COMPE"})
+        el = msgpack_min.unpackb(msgpack_min.packb(res()["compe_list"][0].valor))
+        self.assertEqual((el["compe_id"], el["compe_name"], el["difficulty"]), (7, "Copa Phoenix", "COMPE_DIFFICULTY_NONE"))
+        await r(a, 3, {"msgid": "CMD_GET_COMPEV_INFO", "rqid": 3, "compe_mode": "EVENT_COMPE", "compe_id": 9})
+        self.assertEqual(res()["result"], "ERR_COMPE_NOTFOUND")
+        await r(a, 4, {"msgid": "CMD_JOIN_COMPEV", "rqid": 4, "compe_mode": "EVENT_COMPE", "compe_id": 7,
+                       "compe_cpu_level": "COMPE_DIFFICULTY_2"})
+        self.assertEqual(res()["result"], "NOERR")
+        await r(a, 5, {"msgid": "CMD_GET_COMPEV_MYENTRY_COMPEID", "rqid": 5, "compe_mode": "EVENT_COMPE"})
+        self.assertEqual((res()["compe_id"], res()["compe_cpu_level"]), (7, "COMPE_DIFFICULTY_2"))
+        await r(a, 6, {"msgid": "CMD_GET_COMPEV_MAINMENU_INFO", "rqid": 6, "compe_mode": "EVENT_COMPE",
+                       "compe_id": 7, "target_pid": 1})
+        self.assertEqual(res()["status"], "ENTRY")
+        await r(a, 7, {"msgid": "CMD_LEAVE_COMPEV", "rqid": 7, "compe_mode": "EVENT_COMPE"})
+        self.assertEqual(res()["result"], "NOERR")
+        await r(a, 8, {"msgid": "CMD_LEAVE_COMPEV", "rqid": 8, "compe_mode": "EVENT_COMPE"})
+        self.assertEqual(res()["result"], "ERR_COMPE_NOTENTRY")
+
     async def test_myclub_catalogo_club_y_rival_rotando(self):
         import os, struct, tempfile, zlib, json as _j, sys as _s
         _s.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "tools"))

@@ -3459,6 +3459,131 @@ class Servidor:
         return {}  # B.15: la respuesta no tiene claves conocidas; solo NOERR
 
 
+    # ---------- Eventos de competición online (docs/ESPEC_EVENTOS_ONLINE.md, parte C) ----------
+    # Los eventos salen de config myclub.eventos = [{compe_id, compe_name, compe_kind, inicio, fin,
+    # dificultad, ...}] (más adelante, de la web). Sin eventos = lista vacía (pantalla vacía válida).
+    MAX_EVENTOS = 20
+
+    def _eventos(self):
+        ahora = int(time.time())
+        salida = []
+        for e in (self.cfg.get("myclub") or {}).get("eventos") or []:
+            if isinstance(e, dict) and isinstance(e.get("compe_id"), int):
+                salida.append({**e, "inicio": int(e.get("inicio") or ahora - 86400),
+                               "fin": int(e.get("fin") or ahora + 30 * 86400)})
+        return salida[:self.MAX_EVENTOS]
+
+    def _evento(self, compe_id):
+        return next((e for e in self._eventos() if e["compe_id"] == compe_id), None)
+
+    @staticmethod
+    def _evento_bin(e, extra=None):
+        t = lambda k, d="": str(e.get(k)) if isinstance(e.get(k), (str, int)) and e.get(k) != "" else d
+        i = lambda k: int(e.get(k) or 0) if isinstance(e.get(k), (int, float)) else 0
+        sin_archivo = Empaquetado({"filename": "", "hash_str": ""})
+        dif = t("dificultad", "COMPE_DIFFICULTY_NONE")
+        datos = {
+            "compe_id": e["compe_id"], "compe_name": t("compe_name", f"Evento {e['compe_id']}"),
+            "compe_kind": t("compe_kind", "COMEVENT"),
+            "compe_start_time": e["inicio"], "compe_end_time": e["fin"],
+            "compe_cpu_level": dif, "difficulty": dif,
+            "is_cleared": "NO", "is_locked": "NO", "is_coop_match": "NO", "is_squad_bonus": "NO",
+            "add_limit_vscom_win_rate": i("add_limit_vscom_win_rate"),
+            "add_limit_rating_min": i("add_limit_rating_min"), "add_limit_rating_max": i("add_limit_rating_max"),
+            "add_limit_match_num_min": i("add_limit_match_num_min"),
+            "add_limit_match_num_max": i("add_limit_match_num_max"),
+            "filename": "", "hash_str": "", "banner_file_info": sin_archivo,
+            "list_banner_file_info": Empaquetado({"filename": "", "hash_str": ""})}
+        datos.update(extra or {})
+        return Empaquetado(datos)
+
+    def _inscripcion(self, s, modo=None):
+        club = self._club_propio(s)
+        ins = (club or {}).get("eventos_inscripcion") or {}
+        return club, (ins.get(str(modo)) if modo is not None else ins)
+
+    async def c_cmd_get_compev_mainmenu_info(self, s, m):
+        _, ins = self._inscripcion(s, m.get("compe_mode"))
+        ins = ins or {}
+        return {"status": "ENTRY" if ins else "", "compe_result": "NORESULT", "win_point": 0,
+                "progress_game_count": int(ins.get("progreso") or 0), "vscom_team_id": 0,
+                "cpu_level": str(ins.get("cpu_level") or "COMPE_DIFFICULTY_NONE"), "clear_count": 0}
+
+    async def c_cmd_get_compev_list(self, s, m):
+        lista = [self._evento_bin(e) for e in self._eventos()]
+        return {"compe_list_kind": str(m.get("compe_list_kind") or ""), "compe_num": len(lista),
+                "compe_list": lista, "banner_file_info": Empaquetado({"filename": "", "hash_str": ""})}
+
+    async def c_cmd_get_compev_info(self, s, m):
+        e = self._evento(self._id_entero(m.get("compe_id")))
+        if e is None:
+            return {"result": "ERR_COMPE_NOTFOUND"}
+        extra = {"entry_type": str(e.get("entry_type") or ""), "clear_match_num": int(e.get("partidos") or 0),
+                 "clear_win_point": 0, "cleared_count": 0, "precondition_compe_id": 0,
+                 "precondition_compe_name": "", "ad_file_name": "", "logo_file_name": "",
+                 "is_compe_reward_exist": "NO", "is_same_team_power_level": "NO",
+                 "is_limited_matching_target": "NO", "is_exist_unlocked_compe_by_cleared": "NO",
+                 "is_pesleague_stadium": "NO", "is_efootball_pro_stadium": "NO"}
+        return {"compe_data": self._evento_bin(e, extra), "compe_info": self._evento_bin(e, extra),
+                "banner_file_info": Empaquetado({"filename": "", "hash_str": ""}),
+                "event_compe_reward_list": [], "compe_reward": Empaquetado({}),
+                "squad_bonus": Empaquetado({}), "reward": Empaquetado({})}
+
+    async def c_cmd_get_compev_myentry_compeid(self, s, m):
+        modo = m.get("compe_mode")
+        _, ins = self._inscripcion(s, modo)
+        ins = ins or {}
+        return {"compe_mode": str(modo or ""), "compe_id": int(ins.get("compe_id") or 0),
+                "compe_cpu_level": str(ins.get("cpu_level") or "COMPE_DIFFICULTY_NONE"),
+                "progress_game_count": int(ins.get("progreso") or 0)}
+
+    async def c_cmd_join_compev(self, s, m):
+        e = self._evento(self._id_entero(m.get("compe_id")))
+        if e is None:
+            return {"result": "ERR_COMPE_NOTFOUND"}
+        ahora = int(time.time())
+        if ahora < e["inicio"]:
+            return {"result": "ERR_COMPE_BEFORE_ENTRYTIME"}
+        if ahora > e["fin"]:
+            return {"result": "ERR_COMPE_AFTER_ENTRYTIME"}
+        club = self._club_propio(s)
+        if club is None:
+            return {"result": "ERR_NOTREGISTERED"}
+        club.setdefault("eventos_inscripcion", {})[str(m.get("compe_mode") or "")] = {
+            "compe_id": e["compe_id"], "cpu_level": str(m.get("compe_cpu_level") or "COMPE_DIFFICULTY_NONE"),
+            "progreso": 0, "hora": ahora}
+        self.datos.guardar_club(s.steam_hex, club)
+        log.info("Eventos: %s se inscribe en el evento %d", s.steam_hex, e["compe_id"])
+        return {}
+
+    async def c_cmd_leave_compev(self, s, m):
+        club, ins = self._inscripcion(s, m.get("compe_mode"))
+        if not ins:
+            return {"result": "ERR_COMPE_NOTENTRY"}
+        club["eventos_inscripcion"].pop(str(m.get("compe_mode") or ""), None)
+        self.datos.guardar_club(s.steam_hex, club)
+        return {}
+
+    async def c_cmd_reentry_compev(self, s, m):
+        e = self._evento(self._id_entero(m.get("compe_id")))
+        if e is None:
+            return {"result": "ERR_COMPE_NOTFOUND"}
+        if int(time.time()) > e["fin"]:
+            return {"result": "ERR_COMPE_AFTER_ENTRYTIME"}
+        return {}
+
+    async def c_cmd_join_compev_mode(self, s, m):
+        return {}
+
+    async def c_cmd_leave_compev_mode(self, s, m):
+        return {}
+
+    async def c_cmd_sync_compev_progress(self, s, m):
+        return {}
+
+    async def c_cmd_get_complg_myentry_compeid(self, s, m):
+        return {"compe_id": 0}
+
     async def c_cmd_get_myclub_squadlist(self, s, m):
         plantilla = self._plantilla_principal(s)
         if plantilla is None:
