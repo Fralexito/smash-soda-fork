@@ -68,3 +68,10 @@ Qué va como bin y qué como mapa directo: **P** — `compe_list` es una lista d
 - **Logro relacionado:** la categoría 8 `JOIN_EVENT_COMPE` de los logros (B.19) cuenta inscripciones a eventos; la 3 `JOIN_VSCOM_COMPE` las de vs-COM.
 - **Hecho en el servidor (11-nov 03:20):** `VSCOM_OPPONENT` manda `is_entry_compe` (config `myclub.marca_evento`, por defecto «YES») y el `cpu_level` del evento; `VSCOM_GAMERESULT` suma progreso y puntos (`myclub.puntos_evento`, 3/1/0); al llegar a `partidos` y `puntos_para_superar` del evento queda `FINISHWIN`, `clear_count`/`cleared_count` suben, `is_cleared:"YES"` y se cobran una vez sus `premio_gp`. `GET_EVENT_CATEGORY_LIST` da una categoría (`myclub.evento_categoria`, P «COMEVENT») con todos los eventos.
 - **No comprobado (N):** ninguna de las respuestas anteriores se ha visto en captura; el orden exacto de comandos al volver al menú (si pide `MAINMENU_INFO` o `INFO` primero) se verá en la prueba con el PES base.
+
+## C.9 Visto en el PES base (11-nov, C)
+- Entrada: myClub → pestaña Partido → 1.ª tarjeta «En curso». Con `event_category_list` de 12 textos aparecen 3 tarjetas: Matchday, eFootball League de myClub y «Desafío online» (copas). Antes, con un texto desconocido: «Campeonato no encontrado».
+- Orden real: `GET_PESLEAGUE_COMPE_RESULT_LIST` → `GET_EVENT_CATEGORY_LIST` → `JOIN_COMPEV_MODE{compe_mode:"EVENT"}` → `GET_COMPEV_MYENTRY_COMPEID{compe_mode:"EVENT"}` → `GET_PLAYERINFO` → `GET_MYCLUB_COM_MATCH_INFO` → `GET_COMPEV_LIST{compe_list_kind:"NOW_PLAY", compe_mode:"EVENT"}` → al elegir el evento: `GET_COMPEV_INFO{compe_mode:"EVENT", compe_id}` → `GET_MYCLUB_SQUAD_BONUS_TARGET_PLAYERLIST{compe_id}` → diálogo «Inscribirte en este Campeonato».
+- Valores reales: `compe_mode` = `"EVENT"`, `compe_list_kind` = `"NOW_PLAY"`.
+- La lista mostró «Copa Phoenix», «Finaliza en 30 d 0 h», «1 vs. COM», «Participa».
+- Al confirmar la inscripción, el cliente dijo «No cumples los requisitos para participar en este Campeonato» sin mandar `JOIN_COMPEV` (comprobación local). Arreglo en prueba (df391e5): requisitos `entry_*` abiertos en `GET_COMPEV_INFO` y respuesta para `SQUAD_BONUS_TARGET_PLAYERLIST`.
