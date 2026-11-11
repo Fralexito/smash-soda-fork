@@ -1185,7 +1185,12 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.assertEqual((fila["basic_settings"].valor["room_name"], fila["basic_settings"].valor["room_id"],
                           fila["match_settings"].valor["user_team_id"], fila["user_num"]), ("Phoenix", sala, 101, 1))
         msgpack_min.packb(lista)
+        await r(a, 30, {"msgid": "CMD_REQWATCHL_COOP_ROOM_MEMBER", "rqid": 50, "room_id": sala})
+        self.assertEqual((ea[-1][1]["list_type"], ea[-1][1]["list_num"]), ("RELOAD", 1))
         await r(b, 3, {"msgid": "CMD_JOIN_COOP_ROOM", "rqid": 3, "room_id": sala, "password": "", "is_invite": "NO"})
+        aviso = ea[-1][1]  # suscripción: al entrar B, A recibe la lista con SU rqid
+        self.assertEqual((aviso["msgid"], aviso["rqid"], aviso["list_num"]), ("CMD_REQWATCHL_COOP_ROOM_MEMBER", 50, 2))
+        self.assertIn("guest_info", aviso["list_data"][1].valor)
         await r(b, 4, {"msgid": "CMD_SET_COOP_MATCH_READY", "rqid": 4, "room_id": sala, "is_ready": "YES"})
         await r(b, 5, {"msgid": "CMD_GET_IS_JOIN_COOP_ROOM", "rqid": 5})
         self.assertEqual(eb[-1][1]["is_join_coop_room"], "YES")

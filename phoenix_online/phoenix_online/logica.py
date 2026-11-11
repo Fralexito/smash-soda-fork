@@ -4133,20 +4133,43 @@ class Servidor:
             return
         sala["miembros"].remove(s)
         sala["listos"].discard(s)
+        sala.get("vigilantes", {}).pop(s, None)
         if not sala["miembros"]:
             self.salas_coop.pop(sala["room_id"], None)
+        else:
+            self._avisar_sala_coop(sala)
+
+    # L (11-nov, comparando con la forma que usa PESBUL; código propio): basic_settings se ARMA en el
+    # servidor con todas sus claves (devolver lo que mandó el PES pinta el dueño «NotImplement»);
+    # en room_list match_settings es LISTA si no hay ajustes y bin {user_team_id, enemy_team_id,
+    # cpu_level(texto)} si los hay; la lista vigilada usa list_type RELOAD.
+    def _ajustes_sala_coop(self, sala):
+        dueno = sala["miembros"][0] if sala["miembros"] else None
+        clave_d = (dueno.steam_hex or "").lower() if dueno else ""
+        _, c = self._clan_de(clave_d)
+        b = sala["basic"]
+        return Empaquetado({
+            "room_id": sala["room_id"],
+            "room_name": self._texto(b.get("room_name")) or "Sala Phoenix",
+            "clan_name": self._texto(b.get("clan_name")) or (c or {}).get("nombre") or "",
+            "clan_owner_info": self._usuario_plano(clave_d),
+            "is_follow": "NO",
+            "is_com_match": self._texto(b.get("is_com_match")) or "NO",
+            "is_use_chat": "YES", "is_same_level": "NO", "team_level": 0, "coop_level": 0,
+            "is_same_manner": "NO", "coop_manner": 0, "room_entry_restriction": "NONE",
+            "password": "", "lang": ""})
+
+    def _ajustes_partido_coop(self, sala, vacio):
+        ms = sala.get("match") or {}
+        if not ms:
+            return vacio
+        return Empaquetado({"user_team_id": self._id_entero(ms.get("user_team_id")) or 0,
+                            "enemy_team_id": self._id_entero(ms.get("enemy_team_id")) or 0,
+                            "cpu_level": self._texto(ms.get("cpu_level"))})
 
     def _fila_sala_coop(self, sala):
-        dueno = sala["miembros"][0] if sala["miembros"] else None
-        basic = {**sala["basic"], "room_id": sala["room_id"]}
-        clave_d = (dueno.steam_hex or "").lower() if dueno else ""
-        d_clan, c = self._clan_de(clave_d)
-        basic.setdefault("room_name", "Sala Phoenix")
-        basic.setdefault("clan_name", (c or {}).get("nombre") or "")
-        basic.setdefault("is_follow", "NO")
-        if dueno and d_clan:
-            basic.setdefault("clan_owner_info", self._usuario_plano(d_clan))
-        return Empaquetado({"basic_settings": Empaquetado(basic), "match_settings": Empaquetado(dict(sala["match"])),
+        return Empaquetado({"basic_settings": self._ajustes_sala_coop(sala),
+                            "match_settings": self._ajustes_partido_coop(sala, []),
                             "user_num": len(sala["miembros"]), "compe_id": sala.get("compe_id") or 0,
                             "is_game": "NO"})
 
@@ -4184,6 +4207,7 @@ class Servidor:
         if s not in sala["miembros"]:
             self._salir_de_sala_coop(s)
             sala["miembros"].append(s)
+            self._avisar_sala_coop(sala, menos=s)
         return {}
 
     async def c_cmd_leave_coop_room(self, s, m):
@@ -4195,6 +4219,7 @@ class Servidor:
         if sala:
             (sala["listos"].add if self._texto(m.get("is_ready")) in ("YES", "1", "True") else
              sala["listos"].discard)(s)
+            self._avisar_sala_coop(sala, menos=s)
         return {}
 
     async def c_cmd_set_coop_room_option(self, s, m):
@@ -4209,32 +4234,58 @@ class Servidor:
     async def c_cmd_get_coop_room_option(self, s, m):
         sala = self.salas_coop.get(self._id_entero(m.get("room_id"))) or self._sala_coop_de(s)
         if not sala:
-            return {}
-        f = self._fila_sala_coop(sala).valor
-        return {"basic_settings": f["basic_settings"], "match_settings": f["match_settings"]}
+            return {"result": "ERR_ROOMNOTFOUND"}
+        return {"room_id": sala["room_id"], "basic_settings": self._ajustes_sala_coop(sala),
+                "match_settings": self._ajustes_partido_coop(sala, Empaquetado({})),
+                "is_game": "NO", "room_phase": "NotImplement", "is_start_count_down": "NO",
+                "countdown_end_time": 0, "is_stop_countdown": "NO", "is_start_matching": "NO"}
+
+    def _miembros_sala_coop(self, sala, para):
+        filas = []
+        sigo = self.datos.relaciones(para.steam_hex)["sigo"] if para else []
+        for i, x in enumerate((sala or {}).get("miembros") or []):
+            clave = (x.steam_hex or "").lower()
+            filas.append(Empaquetado({
+                "player_index": i, "user_info": self._usuario_plano(clave),
+                "is_owner": "YES" if i == 0 else "NO", "coop_level": 1,
+                "is_clan_member": "YES" if self._clan_de(clave)[0] else "NO",
+                "is_follow": "YES" if clave in sigo else "NO",
+                "is_guest": "NO", "guest_info": Empaquetado({}), "is_platform_guest": "NO",
+                "is_ready": "YES" if x in sala["listos"] else "NO"}))
+        return filas
 
     async def c_cmd_get_coop_room_member(self, s, m):
         sala = self.salas_coop.get(self._id_entero(m.get("room_id"))) or self._sala_coop_de(s)
-        filas = []
-        for i, x in enumerate((sala or {}).get("miembros") or []):
-            clave = (x.steam_hex or "").lower()
-            dueno_clan = self._clan_de(clave)[0]
-            filas.append(Empaquetado({
-                "player_index": i, "user_info": self._usuario_plano(clave), "is_owner": "YES" if i == 0 else "NO",
-                "coop_level": 1, "is_clan_member": "YES" if dueno_clan else "NO",
-                "is_follow": "YES" if clave in self.datos.relaciones(s.steam_hex)["sigo"] else "NO",
-                "is_guest": "NO", "is_platform_guest": "NO",
-                "is_ready": "YES" if x in sala["listos"] else "NO"}))
+        filas = self._miembros_sala_coop(sala, s)
         return {"list_data": filas, "list_num": len(filas)}
 
+    def _lista_vigilada_coop(self, sala, para):
+        filas = self._miembros_sala_coop(sala, para)
+        return {"room_id": sala["room_id"] if sala else 0,
+                "list_type": str((self.cfg.get("myclub") or {}).get("coop_lista_tipo") or "RELOAD"),
+                "list_num": len(filas), "list_key_name": "player_index", "list_data": filas}
+
     async def c_cmd_reqwatchl_coop_room_member(self, s, m):
-        """L (Ghidra FUN_141e29680 + prueba 11-nov 08:07): tras crear la sala el PES manda
-        REQWATCHL_COOP_ROOM_MEMBER{room_id} y espera la lista vigilada: list_type, list_num,
-        list_key_name y list_data (mismos miembros que GET_COOP_ROOM_MEMBER). Sin manejador la
-        pantalla de la sala se quedaba en blanco. list_type/list_key_name: P (texto libre en el lector)."""
-        r = await self.c_cmd_get_coop_room_member(s, m)
-        return {"list_type": str((self.cfg.get("myclub") or {}).get("coop_lista_tipo") or "ALL"),
-                "list_num": r["list_num"], "list_key_name": "player_index", "list_data": r["list_data"]}
+        """L (Ghidra FUN_141e29680 + prueba 11-nov): tras crear la sala el PES manda
+        REQWATCHL_COOP_ROOM_MEMBER{room_id} y espera la lista vigilada (list_type RELOAD, list_num,
+        list_key_name, list_data). Es una SUSCRIPCIÓN: el rqid se guarda y cada cambio de la sala
+        (entra, sale, listo) se vuelve a mandar con ese mismo rqid."""
+        sala = self.salas_coop.get(self._id_entero(m.get("room_id"))) or self._sala_coop_de(s)
+        if not sala:
+            return {"result": "ERR_ROOMNOTFOUND"}
+        sala.setdefault("vigilantes", {})[s] = m.get("rqid", 0)
+        return self._lista_vigilada_coop(sala, s)
+
+    def _avisar_sala_coop(self, sala, menos=None):
+        """Reenvía la lista de miembros a cada PES suscrito (con SU rqid de la suscripción)."""
+        for x, rqid in list((sala or {}).get("vigilantes", {}).items()):
+            if x is menos or x not in sala["miembros"]:
+                continue
+            try:
+                x.enviar({"msgid": "CMD_REQWATCHL_COOP_ROOM_MEMBER", "rqid": rqid, "result": "NOERR",
+                          **self._lista_vigilada_coop(sala, x)})
+            except Exception:
+                log.exception("no pude avisar a la sala coop %s", sala.get("room_id"))
 
     async def c_cmd_get_coop_reject_list(self, s, m):
         filas = [self._usuario_plano(x) for x in self.datos.relaciones(s.steam_hex)["rechazados"]]
