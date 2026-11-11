@@ -2206,11 +2206,20 @@ class Servidor:
     async def c_cmd_get_ranking(self, s, m):
         return self._ranking_division(m)
 
-    def _ranking_division(self, m):
-        # L (PESBUL r728): elementos como MAPAS (no bin); ordenados por rating y luego puntos
+    # R (pesranking AzrakHQ, en vivo 07-nov): sort RATING|WIN_NUM|MATCH_NUM|WIN_STRAIGHT|WIN_RATE; point = el
+    # valor del orden; Tasa de victorias solo con 10+ partidos (nota del propio PES). _BYID: ventana alrededor del pid
+    ORDEN_RANKING = {
+        "RATING": lambda c: c["rating"], "WIN_NUM": lambda c: c["w"], "MATCH_NUM": lambda c: c["w"] + c["d"] + c["l"],
+        "WIN_STRAIGHT": lambda c: c["racha_max"],
+        "WIN_RATE": lambda c: round(100 * c["w"] / max(1, c["w"] + c["d"] + c["l"])),
+    }
+
+    def _ranking_division(self, m, por_id=False, todo=False):
+        # L (PESBUL r728): elementos como MAPAS (no bin)
         division = m.get("division_type") or m.get("division")
         estados = self.datos.divisiones()
         pide = str(m.get("pid") or "")
+        orden = str(m.get("sort") or "").upper()
         filas = []
         for f in self.datos.todos():
             clave = (f["steam_hex"] or "").lower()
@@ -2221,34 +2230,56 @@ class Servidor:
             jugo = clave in estados and (e["jugados"] or e["archivadas"])
             es_quien_pide = pide and pide in (str(n), str(n & 0xFFFFFFFF), str(f["pid"]))
             if (jugo or es_quien_pide) and (division in (None, "") or e["division"] == division):
-                filas.append((f, e))
-        # L (A.7): rating de mayor a menor, luego SP, luego pid
-        filas.sort(key=lambda fe: (-fe[1]["rating"], -fe[1]["sp"], int(fe[0]["pid"] or 0)))
+                arch = e.get("archivadas") or []
+                carrera = {"rating": e["rating"], "racha_max": e["racha_max"],
+                           "w": e["win"] + sum(a.get("win", 0) for a in arch),
+                           "d": e["draw"] + sum(a.get("draw", 0) for a in arch),
+                           "l": e["loss"] + sum(a.get("loss", 0) for a in arch)}
+                filas.append((f, e, carrera, es_quien_pide))
+        if division not in (None, "") and orden in ("", "POINT"):
+            # R: ranking de una división = puntos de esta temporada, luego victorias
+            filas.sort(key=lambda x: (-x[1]["sp"], -x[1]["win"], int(x[0]["pid"] or 0)))
+            valor = lambda x: x[1]["sp"]
+        else:
+            clave_orden = self.ORDEN_RANKING.get(orden, self.ORDEN_RANKING["RATING"])
+            if orden == "WIN_RATE":
+                filas = [x for x in filas if x[2]["w"] + x[2]["d"] + x[2]["l"] >= 10]
+            # L (A.7): a igual valor, SP y luego pid
+            filas.sort(key=lambda x: (-clave_orden(x[2]), -x[1]["sp"], int(x[0]["pid"] or 0)))
+            valor = (lambda x: x[1]["sp"]) if orden == "" else (lambda x: clave_orden(x[2]))
         try:
             inicio = max(0, int(m.get("start_index") or 0))
             cuantos = min(100, max(0, int(m.get("view_num") or 50)))
         except (TypeError, ValueError):
             inicio, cuantos = 0, 50
+        if por_id:
+            en = next((i for i, x in enumerate(filas) if x[3]), 0)
+            inicio = max(0, en - cuantos // 2)
+        if todo:
+            inicio, cuantos = 0, len(filas)
         lista = []
-        for i, (f, e) in enumerate(filas[inicio:inicio + cuantos]):
+        for i, (f, e, c, _) in enumerate(filas[inicio:inicio + cuantos]):
             perfil = self.datos.perfil(f["steam_hex"])
             cuenta_pid = self.numero_de_clave(f["steam_hex"]) or f["pid"]
-            lista.append({"rank": inicio + i + 1, "point": e["sp"], "user": {
+            lista.append({"rank": inicio + i + 1, "point": int(valor((f, e, c, None))), "user": {
                 "pid": cuenta_pid,
                 "pname": {"name": f["pname"], "xuid_one": "NotImplement",
                           "psn_user_id": {"account_id": 0, "online_id": f["pname"],
                                           "is_valid_cache": "NO"},
                           "is_deleted": "NO"},
-                "division": e["division"], "manner": MODALES_DEFECTO,
+                # R: aquí manner es TEXTO suelto (en GET_PLAYERINFO es bin)
+                "division": e["division"], "manner": self.grado_modales((f["steam_hex"] or "").lower()),
                 "favoriteTeam": perfil["favorite_team"],
                 "favoritePlayer": perfil["favorite_player"], "intro": perfil["intro"],
-                "match_record": {"win_count": e["win"], "draw_count": e["draw"], "lose_count": e["loss"],
+                "match_record": {"win_count": c["w"], "draw_count": c["d"], "lose_count": c["l"],
                                  "win_s_max": e["racha_max"], "rating": e["rating"]}}})
         return {"date": int(time.time()), "total_rank_num": len(filas), "rank_list": lista}
 
-    c_cmd_get_ranking_byid = c_cmd_get_ranking
+    async def c_cmd_get_ranking_byid(self, s, m):
+        return self._ranking_division(m, por_id=True)
+
     c_cmd_get_division_ranking = c_cmd_get_ranking
-    c_cmd_get_division_ranking_byid = c_cmd_get_ranking
+    c_cmd_get_division_ranking_byid = c_cmd_get_ranking_byid
 
     # ---------- myClub (docs/ESPEC_MYCLUB.md, leído del exe) ----------
     # C (§12): todo objeto anidado y todo elemento de lista de objetos = bin(msgpack); las listas
@@ -6635,9 +6666,15 @@ class Servidor:
             return {**base, **self._avatar(formulario.get("pid"))}
         if msgid in ("CMD_GET_RANKING", "CMD_GET_RANKING_BYID", "CMD_GET_DIVISION_RANKING",
                      "CMD_GET_DIVISION_RANKING_BYID"):
-            r = self._ranking_division(formulario)
             if msgid.endswith("_BYID"):
-                r = self._solo_buscado(r, formulario)
+                # el buscado se busca en TODA la tabla (antes solo en la 1.ª página); si no se pidió a
+                # nadie concreto, ventana alrededor de quien pregunta (R: pesranking AzrakHQ)
+                todos = self._ranking_division(formulario, todo=True)
+                r = self._solo_buscado(todos, formulario)
+                if not r["rank_list"] and not self._hay_buscado(formulario):
+                    r = self._ranking_division(formulario, por_id=True)
+            else:
+                r = self._ranking_division(formulario)
             return {**base, **r}
         if msgid in ("CMD_GET_MYCLUB_RANKING", "CMD_GET_MYCLUB_RANKING_BYID"):
             r = self._ranking_myclub(formulario)
@@ -6704,6 +6741,10 @@ class Servidor:
                 "team_id": int(club.get("base_team_id") or 0),
                 "team_name": nombre_club}})
         return {"date": int(time.time()), "total_rank_num": len(filas), "rank_list": lista}
+
+    @staticmethod
+    def _hay_buscado(m):
+        return any(m.get(k) not in (None, "", "0", 0, "NotImplement") for k in ("target_pid", "xuid_one", "np_account_id"))
 
     @staticmethod
     def _solo_buscado(r, m):

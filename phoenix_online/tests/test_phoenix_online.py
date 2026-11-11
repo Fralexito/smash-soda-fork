@@ -1964,6 +1964,28 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         await r(c, 2, {"msgid": "CMD_START_MATCHING", "rqid": 2, "matching_type": "OC_QUICK"})
         self.assertIs(self.srv.parejas[c], self.srv.parejas[a])
 
+    async def test_ranking_por_orden_y_mi_posicion(self):
+        """R (pesranking AzrakHQ): sort cambia el orden y point; Tasa de victorias pide 10+ partidos; _BYID sin
+        buscado = ventana alrededor de quien pregunta, aunque esté fuera de la 1.ª página."""
+        from phoenix_online import divisiones as dv
+        claves = []
+        for i in range(8):
+            k = f"01101001000001{i:02d}"
+            self.srv.datos.crear_jugador(k, f"J{i}")
+            e = dv.estado_nuevo()
+            e.update({"jugados": 10 + i, "win": i, "loss": 10, "rating": 1000 + 10 * (7 - i), "racha_max": i})
+            self.srv.datos.guardar_division(k, e)
+            claves.append(k)
+        r = self.srv._ranking_division({"sort": "WIN_NUM", "start_index": 0, "view_num": 3})
+        self.assertEqual([f["point"] for f in r["rank_list"]], [7, 6, 5])
+        r = self.srv._ranking_division({"sort": "RATING", "start_index": 0, "view_num": 3})
+        self.assertEqual(r["rank_list"][0]["user"]["pname"]["name"], "J0")
+        self.assertIn(r["rank_list"][0]["user"]["manner"], ("A", "B", "C"))
+        yo = self.srv.numero_de_clave(claves[0]) & 0xFFFFFFFF
+        r = self.srv.respuesta_http({"msgid": "CMD_GET_RANKING_BYID", "rqid": "1", "pid": str(yo),
+                                     "sort": "WIN_NUM", "start_index": "0", "view_num": "2"})
+        self.assertIn("J0", [f["user"]["pname"]["name"] for f in r["rank_list"]])
+
     async def test_avatar_subido_queda_guardado(self):
         """R (pesavatar AzrakHQ): SET_AVATAR se guarda en la base y se lee con cualquier forma del pid."""
         import base64, hashlib
