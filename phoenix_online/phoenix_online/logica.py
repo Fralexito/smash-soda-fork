@@ -3860,13 +3860,34 @@ class Servidor:
             "banner_file_info": Empaquetado({"filename": "", "hash_str": ""})}) for texto in textos]
         return {"event_category_list": lista, "matchday_emblem_info": emblema}
 
+    def _vscom_equipo_evento(self, ins):
+        e = self._evento(ins.get("compe_id")) if ins else None
+        v = (e or {}).get("vscom_team_id")
+        if isinstance(v, int) and v > 0:
+            return v
+        riv = (self.cfg.get("myclub") or {}).get("rival") or {}
+        v = riv.get("base_team_id")
+        return v if isinstance(v, int) and v > 0 else 109
+
+    @staticmethod
+    def _nivel_cpu_evento(ins):
+        n = str((ins or {}).get("cpu_level") or "")
+        if n.startswith("COMPE_DIFFICULTY_"):
+            return n
+        return {"EASY": "COMPE_DIFFICULTY_2", "NORMAL": "COMPE_DIFFICULTY_3",
+                "HARD": "COMPE_DIFFICULTY_4"}.get(n, "COMPE_DIFFICULTY_3")
+
     async def c_cmd_get_compev_mainmenu_info(self, s, m):
         club, ins = self._inscripcion(s, m.get("compe_mode"))
         ins = ins or {}
         return {"status": "ENTRY" if ins else "", "compe_result": str(ins.get("resultado") or "NORESULT"),
                 "win_point": int(ins.get("puntos") or 0),
-                "progress_game_count": int(ins.get("progreso") or 0), "vscom_team_id": 0,
-                "cpu_level": str(ins.get("cpu_level") or "COMPE_DIFFICULTY_NONE"),
+                "progress_game_count": int(ins.get("progreso") or 0),
+                # Prueba 11-nov: con vscom_team_id 0 («Próximo rival: -») el PES buscó rival humano
+                # (Matchmaking) en vez de jugar contra la COM. cpu_level ha de ser un token del
+                # cliente (COMPE_DIFFICULTY_1..5/NONE), no «NORMAL».
+                "vscom_team_id": self._vscom_equipo_evento(ins),
+                "cpu_level": self._nivel_cpu_evento(ins),
                 "clear_count": int(self._superados(club).get(str(ins.get("compe_id"))) or 0) if ins else 0}
 
     async def c_cmd_get_compev_list(self, s, m):
