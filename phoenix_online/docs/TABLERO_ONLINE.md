@@ -1,6 +1,6 @@
 # Tablero del online Phoenix (se actualiza con cada avance)
 
-Última actualización: 11-nov-2026, 03:23 (hora del servidor UTC).
+Última actualización: 11-nov-2026, 03:50 (hora del servidor UTC).
 PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 
 ## Resumen
@@ -58,11 +58,11 @@ PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 | 27 | Cambiar el nombre del club y de la plantilla | ✅ | probado el 10-nov: myClub → quinta pestaña → «Cambiar nombre del equipo» |
 | 28 | Historial | 🟡 | programado (cada movimiento de GP queda anotado). Su pantalla parece estar dentro de la tienda de monedas, que no abrimos (nada de dinero real) |
 | 29 | Regalos | ✅ | probado el 11-nov: «Bandeja entrada» abre y dice «No hay artículos» (aún no damos regalos) |
-| 30 | Logros | ✅ | probado el 11-nov: 5 logros reales con progreso; cobro probado (+1000 GP). Falta tu decisión: premio en monedas o en GP |
+| 30 | Logros | ✅ | probado el 11-nov: 5 logros reales con progreso; cobro probado (+1000 GP). Desde el 11-nov el premio es en monedas gratis |
 | 31 | Ranking de clubes | ✅ | probado: muestra «Phoenix FC» con escudo |
 | 32 | Ranking semanal | 🟡 | vacío; el PES lo bloquea hasta jugar 10 partidos 1 contra 1 |
 | 33 | myClub contra otra persona | ❌ | |
-| 34 | Monedas gratis (interruptor) | 🟡 | programado; falta tu decisión de encenderlo |
+| 34 | Monedas gratis (interruptor) | 🟢 | encendido el 11-nov por decisión de Frank: logros (1000 GP = 10 monedas), 1 por victoria contra la COM y premio de eventos. Falta verlo en el PES |
 | 35 | Gestión del club: entrenador de cada plantilla, dorsales, copiar o borrar plantilla, despedir entrenador, intercambio de jugadores, objetos de entrenamiento | 🟡 | **probado en el PES:** copiar y borrar plantilla, plantilla activa, plantilla para la nube y ciudad del club. Programado, sin probar: entrenador por plantilla, despedir o renovar entrenador, dorsales, intercambio de cartas repetidas, objetos (habilidad, posición, gestión y adaptación del DT) y entrenamiento táctico. Los objetos se dan desde admin; falta saber cómo los nombra el PES en su lista |
 | — | Tienda con dinero real | 🚫 | nada de dinero real |
 
@@ -102,3 +102,4 @@ PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 - 11-nov 03:20: empezamos a estudiar los Eventos online (torneos).
 - 11-nov 03:20: Eventos programados de punta a punta (12 comandos). Falta la prueba en el PES base.
 - 11-nov 03:23: programados el intercambio de cartas, los objetos de entrenamiento, el entrenamiento táctico y la valoración por posición (8 comandos).
+- 11-nov 03:50: monedas gratis encendidas. La prueba de Eventos en el PES se paró en «Campeonato no encontrado» (el PES no reconoce el nombre de la categoría); probando varios nombres a la vez.
