@@ -8,6 +8,7 @@ import asyncio
 import base64
 import hashlib
 import hmac
+import ipaddress
 import itertools
 import json
 import logging
@@ -1230,7 +1231,60 @@ class Servidor:
                 pass
         return self._pid_visible(s) or 0
 
-    def _miembro(self, s, orden, dueno, lado=None):
+    # ---------- Direcciones de un PES tal como debe verlas su rival (R: pesmatch._for_viewer AzrakHQ) ----------
+    @staticmethod
+    def _es_remota(ip):
+        """¿Llega desde fuera de la casa del servidor (internet o Tailscale 100.64/10)?"""
+        try:
+            d = ipaddress.ip_address(str(ip or "").split("%")[0])
+        except ValueError:
+            return False
+        d = getattr(d, "ipv4_mapped", None) or d
+        return d.is_global or d in ipaddress.ip_network("100.64.0.0/10")
+
+    def _direcciones_para(self, fila, x, viewer):
+        """El PES que juega en la PC del servidor (o en su red) saca su dirección «pública» de nuestro
+        STUN por la red local: declara 127.0.0.1 o 192.168.x. Un amigo de otra casa no llega ahí. Para ese
+        amigo se pone en host_addr la IP por la que él llega al servidor (misma salida a internet),
+        con el mismo puerto. reflexive_addr NO se toca: el PES la usa como etiqueta para decidir quién
+        abre el enlace y, cambiada, los dos se quedan esperando (MXNV_0013). Si ni así conecta, va el TURN.
+        config.direccion_para_remoto = false lo apaga."""
+        if viewer is None or viewer is x or not self.cfg.get("direccion_para_remoto", True):
+            return fila
+        if not self._es_remota(getattr(viewer, "ip", None)):
+            return fila
+        v = fila.get("reflexive_addr")
+        try:
+            obj = v
+            if isinstance(obj, (bytes, bytearray)):
+                obj = msgpack_min.unpackb(bytes(obj))
+            if isinstance(obj, Empaquetado):
+                obj = obj.valor
+            if not isinstance(obj, dict) or obj.get("address_family") not in (1, None):
+                return fila
+            sa = obj.get("sa_data")
+            como_texto = isinstance(sa, str)
+            crudo = base64.b64decode(sa + "=" * (-len(sa) % 4)) if como_texto else bytes(sa or b"")
+            if len(crudo) < 8 or ipaddress.IPv4Address(crudo[4:8]).is_global:
+                return fila
+            nueva = ipaddress.IPv4Address(self.ip_anuncio(viewer))
+        except (ValueError, TypeError, KeyError):
+            return fila
+        if not (nueva.is_global or nueva in ipaddress.ip_network("100.64.0.0/10")):
+            return fila
+        crudo = crudo[:4] + nueva.packed + crudo[8:]
+        nuevo = {**obj, "sa_data": base64.b64encode(crudo).decode() if como_texto else crudo}
+        fila = dict(fila)
+        if isinstance(v, (bytes, bytearray)):
+            fila["host_addr"] = msgpack_min.packb(nuevo)
+        elif isinstance(v, Empaquetado):
+            fila["host_addr"] = Empaquetado(nuevo)
+        else:
+            fila["host_addr"] = nuevo
+        log.info("dirección de %s para un rival remoto: %s (host_addr)", getattr(x, "pid", "?"), nueva)
+        return fila
+
+    def _miembro(self, s, orden, dueno, lado=None, para=None):
         """Una ficha del roster de CMD_WATCH_MATCHING (bin con MessagePack dentro)."""
         ident = self._identidad(s, s.pname or "Phoenix")
         f = {"matching_order": orden, "is_owner": "YES" if dueno else "NO",
@@ -1250,7 +1304,7 @@ class Servidor:
                 v = Empaquetado(v)
             if v:
                 f[k] = v
-        return Empaquetado(f)
+        return Empaquetado(self._direcciones_para(f, s, para))
 
     @staticmethod
     def _vigilar_emparejamiento(s, estado, miembros):
@@ -1378,12 +1432,12 @@ class Servidor:
             return None
         cola.remove(rival)
         # el que esperaba es anfitrión/LOCAL; el que completa la pareja, VISITANTE (r7.3.644/650)
-        miembros = [self._miembro(rival, 0, True, "HOME"), self._miembro(s, 1, False, "AWAY")]
         pareja = {"miembros": (rival, s), "check": set(), "tipo": tipo}
         self.parejas[rival] = self.parejas[s] = pareja
         self._abrir_partida(pareja)
         await self.dormir(PAUSA_EMPUJE)
         for x in (rival, s):
+            miembros = [self._miembro(rival, 0, True, "HOME", para=x), self._miembro(s, 1, False, "AWAY", para=x)]
             self._vigilar_emparejamiento(x, "FINISH", miembros)
         log.info("pareja de %s: %s vs %s", tipo, rival.pid, s.pid)
         return None
@@ -1421,10 +1475,10 @@ class Servidor:
         # force_alone: sin búsqueda en grupo (2 humanos en un bando necesitan 2 pares P2P)
         return {"is_vscom": "NO", "force_alone": "YES", "cpu_level_min": "NORMAL", "cpu_level_max": "NORMAL"}
 
-    def _grupo_coop(self, x, orden, dueno, gid, equipo, lado):
+    def _grupo_coop(self, x, orden, dueno, gid, equipo, lado, para=None):
         """Un grupo de un humano. Anidado como lo lee 0x141dc9a70: group_list[] -> bin{member_list[] ->
         bin{member: ficha 1v1, ...}}; un solo is_owner YES, en el dueño LOCAL."""
-        fila = Empaquetado({"member": self._miembro(x, orden, dueno, lado), "guest_kind": "GUEST_NONE",
+        fila = Empaquetado({"member": self._miembro(x, orden, dueno, lado, para=para), "guest_kind": "GUEST_NONE",
                             "is_follow": "NO", "coop_level": self.nivel_coop((x.steam_hex or "").lower())[0],
                             "coop_manner": self.grado_modales((x.steam_hex or "").lower())})
         return Empaquetado({"member_list": [fila], "member_list_num": 1, "use_team_id": equipo,
@@ -1451,8 +1505,9 @@ class Servidor:
         ta = rival.equipo_coop if rival.equipo_coop != self.SIN_EQUIPO_COOP else base[0]
         tb = s.equipo_coop if s.equipo_coop != self.SIN_EQUIPO_COOP else base[-1]
         await self.dormir(PAUSA_EMPUJE)
-        grupos = [self._grupo_coop(rival, 0, True, 1, ta, "HOME"), self._grupo_coop(s, 1, False, 2, tb, "AWAY")]
         for x in (rival, s):
+            grupos = [self._grupo_coop(rival, 0, True, 1, ta, "HOME", para=x),
+                      self._grupo_coop(s, 1, False, 2, tb, "AWAY", para=x)]
             x.enviar({"msgid": "CMD_WATCH_COOP_MATCHING", "rqid": 0, "result": NOERR,
                       "matching_state": "FINISH", "group_list_num": 2, "group_list": grupos})
         log.info("pareja de COOP: %s (equipo %s) vs %s (equipo %s)", rival.pid, ta, s.pid, tb)
@@ -1549,7 +1604,7 @@ class Servidor:
             v = decl.get(k)
             if v:
                 out[k] = Empaquetado(v) if isinstance(v, dict) else v
-        return out
+        return self._direcciones_para(out, x, s)
 
     CHAT_MAX = 120
 
@@ -5986,7 +6041,8 @@ class Servidor:
                                                       [Empaquetado(x.ficha(s, i)) for i, x in enumerate(salas)]))
         elif msgid == "CMD_REQWATCHL_ROOMPLAYERLIST_NTL":
             sala = self.salas.get(s.room_id)
-            datos = [Empaquetado(sala.ficha_jugador(x, i)) for i, x in enumerate(sala.miembros)] if sala else []
+            datos = [Empaquetado(self._direcciones_para(sala.ficha_jugador(x, i), x, s))
+                     for i, x in enumerate(sala.miembros)] if sala else []
             s.completar(msgid, **self._lista_vigilada("pid", "RELOAD", datos))
         elif msgid == "CMD_WATCH_TURN_ADDRESS_DATA" and s.pid in self.turn_pendiente:
             addr, size = self.turn_pendiente.pop(s.pid)
@@ -6023,7 +6079,8 @@ class Servidor:
             if accion == "DEL":
                 datos = [Empaquetado({"pid": se_fue})]
             else:
-                datos = [Empaquetado(sala.ficha_jugador(y, i)) for i, y in enumerate(sala.miembros)]
+                datos = [Empaquetado(self._direcciones_para(sala.ficha_jugador(y, i), y, x))
+                         for i, y in enumerate(sala.miembros)]
             self._empujar(x, "CMD_REQWATCHL_ROOMPLAYERLIST_NTL", **self._lista_vigilada("pid", accion, datos))
 
     # ---------- Salas del vestíbulo amistoso 1 vs 1 (R: pesrooms.py + rooms.md de AzrakHQ) ----------
@@ -6087,6 +6144,7 @@ class Servidor:
             v = dueno.ntl.get(k)
             if v:
                 ficha[k] = Empaquetado(v) if isinstance(v, dict) else v
+        ficha = self._direcciones_para(ficha, dueno, s)
         s.enviar({"msgid": m["msgid"], "rqid": m.get("rqid", 0), "result": NOERR,
                   "room_id": sala.room_id, "room_owner": Empaquetado(ficha), "room_stat": sala.estado})
         await self.dormir(PAUSA_EMPUJE)

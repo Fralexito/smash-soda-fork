@@ -1928,6 +1928,27 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         r = self.srv.respuesta_http({"msgid": "CMD_GET_AVATAR_HTTP", "rqid": "3", "pid": "7"})
         self.assertEqual((r["avatar_data_size"], r["avatar_md5"]), (49152, hashlib.md5(img).hexdigest()))
 
+    async def test_direccion_del_anfitrion_para_rival_remoto(self):
+        """R (pesmatch._for_viewer AzrakHQ): el PES de la PC del servidor declara 127.0.0.1; a un rival que
+        llega por Tailscale/internet se le da host_addr con la IP pública y el mismo puerto; reflexive igual."""
+        import base64, struct
+        a, ea = await self.entrar("0110000100000061")
+        b, eb = await self.entrar("0110000100000062")
+        a.direccion, b.direccion = ("127.0.0.1", 5000), ("100.80.1.2", 5000)
+        sa = struct.pack(">HH", 5739, 0) + bytes([127, 0, 0, 1]) + bytes(6)
+        refl = msgpack_min.packb({"address_family": 1, "sa_data": base64.b64encode(sa).decode()})
+        await self.srv.recibir(a, 1, {"msgid": "CMD_SEND_IPANDPORT_NTL", "rqid": 1, "ntl_nat_type": 1,
+                                      "reflexive_addr": refl})
+        r = await self.srv.c_cmd_get_ipandport_ntl(b, {"pid": self.srv._pid_visible(a)})
+        self.assertEqual(r["reflexive_addr"], refl)
+        h = msgpack_min.unpackb(r["host_addr"])
+        crudo = base64.b64decode(h["sa_data"])
+        self.assertEqual((struct.unpack(">H", crudo[:2])[0], ".".join(map(str, crudo[4:8]))), (5739, "1.2.3.4"))
+        # el propio PES y un rival de la misma casa lo ven tal cual
+        self.assertNotIn("host_addr", await self.srv.c_cmd_get_ipandport_ntl(a, {"pid": self.srv._pid_visible(a)}))
+        b.direccion = ("192.168.1.5", 5000)
+        self.assertNotIn("host_addr", await self.srv.c_cmd_get_ipandport_ntl(b, {"pid": self.srv._pid_visible(a)}))
+
     async def test_avatar_subido_queda_guardado(self):
         """R (pesavatar AzrakHQ): SET_AVATAR se guarda en la base y se lee con cualquier forma del pid."""
         import base64, hashlib
