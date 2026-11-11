@@ -47,3 +47,9 @@ Frank corrigió: va en **Conmegol** (`D:\Frank\Games_\Conmegol Patch`), no en el
 - Resultado: en Ajustes el ítem se ve como **«Phoenix»**; al pulsarlo se abre Entrenamiento libre (Local/Visitante). PES respondió, sin cierres. `sider.log` muestra los dos paquetes cargados. Ítems online NO pulsados.
 - Se deja ACTIVO. Revertir: `;` a las dos líneas (o restaurar `respaldo_E1_conmegol_20261110\sider.ini.antes_prueba_boton`).
 - Rama de respaldo: GitHub `Fralexito/smash-soda-fork` → `claude/pantallas-propias-menus` (carpeta `parche-v01/menu-phoenix-e1`, sin `all.str`). Drive: carpeta «Menu Phoenix E1 — 10-nov-2026 (respaldo)».
+
+## PRUEBA 1 del diseño de pantalla propia — ida y vuelta (10-nov, ~22:20) — OK
+- Cambio solo de JSON en `Phoenix-Menu\...\TopMenu\TopMenuNew.json`: `20_onlinesettings` → `TopMenu/TopMenu` (antes → `Match/TrainingDirectInit`). Backup: `TopMenuNew.json.e1_antes_prueba1_entrenamiento`. Sin Core, sin descargas, sin ítems online.
+- Resultado: Frank pulsó «Phoenix» en Conmegol y volvió al menú principal sin cerrarse. La sonda registró la zona **7 → 49 → 7** (TOP_MENU → ONLINE_SETTINGS → TOP_MENU) y PES siguió estable. Confirma el flanco 7→49 como disparador para la pantalla propia (ver DISENO_PANTALLA_PROPIA_CORE.md §2–3, variante A).
+- Estado actual: «Phoenix» hace ida y vuelta y NO abre el Entrenamiento libre. Para volver al Entrenamiento libre: restaurar el JSON del backup.
+- Incidente: mis teclas de arranque coincidieron con Frank usando la misma ventana (él tenía Conmegol abierto); no mandé más teclas al darme cuenta.

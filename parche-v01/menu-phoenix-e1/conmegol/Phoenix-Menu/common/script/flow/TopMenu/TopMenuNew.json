@@ -169,7 +169,7 @@
 			"bgType":"none"
 		},
 		"20_onlinesettings":{
-			"to":"Match/TrainingDirectInit",
+			"to":"TopMenu/TopMenu",
 			"go":"forward",
 			"clear":"all",
 			"fadeStart":"",
