@@ -961,7 +961,8 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
             "jugadores": jug, "entrenadores": [{"coach_id": 8}],
             "club_de_prueba": {"team_name": "P", "gp": 0},
             "eventos": [{"compe_id": 7, "compe_name": "Copa", "partidos": 2,
-                         "puntos_para_superar": 4, "premio_gp": 5000}]}}
+                         "puntos_para_superar": 4, "premio_gp": 5000, "premio_monedas": 30}],
+            "monedas_gratis": True}}
         a, ea = await self.entrar("A1")
         r = self.srv.recibir
         res = lambda: ea[-1][1]
@@ -991,7 +992,9 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         info = msgpack_min.unpackb(msgpack_min.packb(res()["compe_info"].valor))
         self.assertEqual((info["is_cleared"], info["cleared_count"], info["clear_match_num"],
                           info["clear_win_point"]), ("YES", 1, 2, 4))
-        self.assertEqual(len(res()["event_compe_reward_list"]), 1)
+        self.assertEqual(len(res()["event_compe_reward_list"]), 2)
+        await r(a, 101, {"msgid": "CMD_GET_MYCLUB_USER_INFO", "rqid": 101})
+        self.assertEqual(res()["pes_point"], 30)
         await partido(11, "WINNER_HOME")  # ya superado: no suma ni cobra otra vez
         await r(a, 12, {"msgid": "CMD_GET_MYCLUB_USER_INFO", "rqid": 12})
         self.assertEqual(res()["gp"], 5000)

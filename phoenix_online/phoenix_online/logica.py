@@ -3333,7 +3333,11 @@ class Servidor:
         return {"achievement_not_recieved_num": sin_cobrar, "achievement_num": alcanzados,
                 "achievement_total_num": total}
 
-    def _premio_gp(self, n, gp):
+    def _premio_monedas(self, n, monedas):
+        """Regalo de monedas gratis (premio de evento): type PES_POINT, count = monedas."""
+        return self._premio_gp(n, monedas, cantidad=monedas, tipo="PES_POINT", nombre=f"{monedas} monedas")
+
+    def _premio_gp(self, n, gp, cantidad=None, tipo="GP", nombre=None):
         """Regalo de B.14 con todos los campos; el premio real (GP) lo suma el servidor al cobrar.
         Prueba (10-nov: el PES descartó los logros con estos valores): config myclub.logros.regalo
         = {clave: valor} sobrescribe campos del regalo; logros.regalo_quitar = [claves] los quita."""
@@ -3342,12 +3346,12 @@ class Servidor:
         # sin «type» = PES_POINT = la estrella); present_type es NORMAL/GM/EVENTER/KONAMISTAFF;
         # el objeto va anidado en «item» (bin)
         regalo = {
-            "present_id": n, "name": f"{gp} GP", "name_jp": f"{gp} GP", "title": f"{gp} GP", "body": "",
-            "entity_id": 0, "grade": 0, "type": "GP", "player_level": 0, "contract_term": 0,
+            "present_id": n, "name": nombre or f"{gp} GP", "name_jp": nombre or f"{gp} GP",
+            "title": nombre or f"{gp} GP", "body": "", "entity_id": 0, "grade": 0, "type": tipo, "player_level": 0, "contract_term": 0,
             "team_id": 0, "present_type": "NORMAL",
             "item": Empaquetado({"item_type": "", "item_variation": "", "item_effect_arg": 0,
                                  "count": 0, "pes_point_price": 0}),
-            "receipt_deadline": 0, "count": self._premio_logro(gp)[1]}
+            "receipt_deadline": 0, "count": self._premio_logro(gp)[1] if cantidad is None else cantidad}
         regalo.update({k: v for k, v in (cfg.get("regalo") or {}).items() if isinstance(v, (int, str))})
         for k in cfg.get("regalo_quitar") or []:
             regalo.pop(k, None)
@@ -3740,19 +3744,22 @@ class Servidor:
             return {"result": "ERR_COMPE_NOTFOUND"}
         partidos, puntos = self._umbral_evento(e)
         premio = int(e.get("premio_gp") or 0)
+        monedas = int(e.get("premio_monedas") or 0) if self._monedas_activas() else 0
         extra = {"entry_type": str(e.get("entry_type") or ""), "clear_match_num": partidos,
                  "clear_win_point": puntos, "precondition_compe_id": 0,
                  "precondition_compe_name": "", "ad_file_name": "", "logo_file_name": "",
-                 "is_compe_reward_exist": "YES" if premio > 0 else "NO", "is_same_team_power_level": "NO",
+                 "is_compe_reward_exist": "YES" if premio > 0 or monedas > 0 else "NO",
+                 "is_same_team_power_level": "NO",
                  "is_limited_matching_target": "NO", "is_exist_unlocked_compe_by_cleared": "NO",
                  "is_pesleague_stadium": "NO", "is_efootball_pro_stadium": "NO",
                  **self._evento_extra(self._club_propio(s), e)}
         return {"compe_data": self._evento_bin(e, extra), "compe_info": self._evento_bin(e, extra),
                 "banner_file_info": Empaquetado({"filename": "", "hash_str": ""}),
-                "event_compe_reward_list": [self._premio_gp(1, premio)] if premio > 0 else [],
-                "compe_reward": self._premio_gp(1, premio) if premio > 0 else Empaquetado({}),
+                "event_compe_reward_list": ([self._premio_gp(1, premio, cantidad=premio)] if premio > 0 else [])
+                + ([self._premio_monedas(2, monedas)] if monedas > 0 else []),
+                "compe_reward": self._premio_gp(1, premio, cantidad=premio) if premio > 0 else Empaquetado({}),
                 "squad_bonus": Empaquetado({}),
-                "reward": self._premio_gp(1, premio) if premio > 0 else Empaquetado({})}
+                "reward": self._premio_gp(1, premio, cantidad=premio) if premio > 0 else Empaquetado({})}
 
     async def c_cmd_get_compev_myentry_compeid(self, s, m):
         modo = m.get("compe_mode")
@@ -3996,6 +4003,8 @@ class Servidor:
                 clave = str(e["compe_id"])
                 if not sup.get(clave):
                     club["gp"] = int(club.get("gp") or 0) + int(e.get("premio_gp") or 0)
+                    if self._monedas_activas():
+                        club["monedas"] = int(club.get("monedas") or 0) + int(e.get("premio_monedas") or 0)
                 sup[clave] = int(sup.get(clave) or 0) + 1
                 log.info("Eventos: evento %s superado (%d partidos, %d puntos)", clave,
                          ins["progreso"], ins["puntos"])
