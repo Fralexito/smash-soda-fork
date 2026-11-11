@@ -72,7 +72,7 @@ PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 | 36 | Cooperativo (2 contra 2, 3 contra 3) | 🟡 | probado el 11-nov: abre (Partido informal, de clan, Estadísticas, Perfil). Programado el 11-nov: crear sala, verla en la lista, entrar, «listo», opciones y miembros (sin probar). Falta el partido en sí |
 | 37 | Matchday | 🟡 | probado el 11-nov: inscripción funciona (bando y equipo) y abre la pantalla del torneo sin cerrarse; faltan textos (bando, clasificación, premios) |
 | 38 | Eventos y competiciones online | ✅ | probado el 11-nov: inscripción en la Copa Phoenix funciona (antes «No cumples los requisitos»: el servidor mandaba los datos sin empaquetar); falta el partido |
-| 39 | PES League | 🟡 | probado el 11-nov: inscripción funciona («Torneo Phoenix» con equipo) y abre su pantalla; falta quitar el aviso «resultados finales» y los datos de equipos |
+| 39 | PES League | 🟡 | probado el 11-nov: inscripción funciona («Torneo Phoenix» con equipo), abre su pantalla y ya no sale el aviso «resultados finales» (ahora dice «Espera a que abra el período de Matchmaking»). Programado, sin probar: nombre del equipo y matchmaking siempre abierto. Falta jugar el partido |
 | 40 | Clanes | 🟢 | programado el 11-nov: crear clan, buscarlo, entrar, ajustes (nombre, comentario, abierto), expulsar, salir o disolver y lista de miembros. Falta probarlo en el PES |
 
 ## 6. Lo propio de Phoenix (fuera del juego)
