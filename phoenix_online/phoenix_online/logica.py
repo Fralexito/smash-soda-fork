@@ -4062,16 +4062,17 @@ class Servidor:
                 "is_equalization": "NO", "is_pesleague_stadium": "NO", "is_efootball_pro_stadium": "NO",
                 "joined_matchday_group": str(mio.get("grupo") or ""), "pickup_select": "",
                 "team_id": int(mio.get("team_id") or 0), "pickup_cut_off_rank": 0, "team_list_num": 0,
-                "all_reward_info": Empaquetado({}), "achievement_reward_list": Empaquetado({}),
-                "win_reward_list": Empaquetado({}), "lose_reward_list": Empaquetado({}),
-                "watching_reward_list": Empaquetado({}), "pickup_win_reward_list": Empaquetado({}),
-                "pickup_lose_reward_list": Empaquetado({}), "squad_rating_info": self._valoracion_plantilla()}
-        # El completo cerró el PES (0xc0000005 en el desempaquetador): por defecto solo los campos
-        # que la LISTA ya acepta + is_check_eula; el resto se añade a mano para aislar el culpable:
-        # myclub.matchday_info_extra = ["ball_id", ...]; "todo" = completo; info_overview opcional.
+                "all_reward_info": [], "achievement_reward_list": [],
+                "win_reward_list": [], "lose_reward_list": [],
+                "watching_reward_list": [], "pickup_win_reward_list": [],
+                "pickup_lose_reward_list": [], "squad_rating_info": self._valoracion_plantilla()}
+        # L (Ghidra): los 7 bloques de premios son ARRAYS (lista de bin regalo); como bin suelto el
+        # PES se cerraba (0xc0000005). Respaldo: myclub.matchday_info_extra = "minimo" o [claves]
+        # manda solo lo que la LISTA ya acepta + is_check_eula (+ esas claves).
         cfgm = self.cfg.get("myclub") or {}
-        extra = cfgm.get("matchday_info_extra") or []
+        extra = cfgm.get("matchday_info_extra", "todo")
         if extra != "todo":
+            extra = [] if extra == "minimo" else list(extra or [])
             base = set(self._campos_matchday(s, e)) | {"is_check_eula"} | set(extra)
             info = {k: v for k, v in info.items() if k in base}
         salida = {"compe_info": Empaquetado(info)}
@@ -4085,7 +4086,7 @@ class Servidor:
             "pickup_user_info": Empaquetado({"pickup_users_group_a": [], "pickup_users_group_b": [],
                                              "pickup_user_group_a_num": 0, "is_failed_pickup_users": "NO"}),
             "is_final_reward": "NO", "is_get_final_reward": "NO", "is_watch_match": "NO",
-            "final_reward_list": Empaquetado({}), "pickup_reward_list": Empaquetado({}),
+            "final_reward_list": [], "pickup_reward_list": [],
             "group_result": "", "pickup_reward_type": ""})}
 
     # Inscripción propia en torneos de Matchday / PES League (respuesta vacía = NOERR; las claves
