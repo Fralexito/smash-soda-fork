@@ -136,3 +136,11 @@ Entre pasos: revisar `phoenix_core.log`, `sider.log` y `phoenix_core_estado.json
 
 ## 12. Siguiente paso sugerido
 Pruebas 1 y 2: ida y vuelta por JSON y rectángulo fijo. Para la 2, compilar Core 0.5.67 en la rama `phoenix-core-nitidez` con `cmake --build` (nunca con `COMPILAR_PHOENIX.bat`, que es de Link) y probarlo primero en una copia, no en el Conmegol de Frank.
+
+## 13. Estado de la prueba 2 (10-nov, ~22:30) — preparada y compilada; falta probarla dentro de PES
+- **Decisión de diseño:** en vez de meter la pantalla en `phoenix_core.dll` (el Conmegol de Frank corre Core 0.5.58; el código fuente disponible es la 0.5.66 y no se debe instalar 0.5.65/0.5.66), la pantalla salió como **DLL independiente `phoenix_pantalla.dll`** + módulo de Sider propio (`phoenix_pantalla_loader.lua`), con on/off (línea del `sider.ini` o archivo `PHOENIX_PANTALLA_OFF`). Core queda intacto. La lógica (`src/pantalla.h`) es la misma que habría ido en Core, así que pasarla a Core más adelante es incluir el archivo.
+- **Qué incluye:** `src/pantalla.h` (HLSL propio, atlas de fuente GDI, guardado/restauración de estado DX11 incl. constantes del VS y sampler, apertura por flanco de zona 7→49, F7 abre/cierra a mano, F8 cierra, cierre automático a los 20 s), `src/pantalla_dll.cpp` (lectura de zona con firma del exe, gancho de `Present` por la vtable, API `phx_pantalla_iniciar`), cargador Lua y arnés `herramientas/pantalla_arnes`.
+- **Probado fuera de PES (arnés con ventana + swapchain propios):** la DLL carga, engancha `Present`, compila shaders, hornea el atlas y dibuja velo + panel + título + texto con acentos (áéíóú ñ ü ¿¡) correctamente; el viewport y el RTV del «juego» se restauran. Captura: `phoenix_pantalla_0.1.0\prueba_arnes_fuera_de_PES.png`.
+- **Detalle por pulir:** puntitos sueltos bajo algunas letras (sangrado entre celdas del atlas; ampliar celda o recortar).
+- **No hecho aún (según el orden de §8):** bloqueo de entrada, mando, acciones reales, y la prueba dentro de PES (instalar con el OK de Frank, PES cerrado, backup del `sider.ini`).
+- **Paquete:** `D:\Frank\IA\CLAUDE\pes-menus\phoenix_pantalla_0.1.0\` (LEEME con instalar/probar/apagar). Código: rama `claude/pantallas-propias-menus` (`parche-v01/menu-phoenix-e1/pantalla/`) y worktree `C:\dev\phoenix-pantalla-wt`, rama `claude/core-pantalla` (commit `eb7925b`).
