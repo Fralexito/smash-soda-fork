@@ -1057,6 +1057,43 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         await r(a, 10, {"msgid": "CMD_GET_POSITION_RATING", "rqid": 10, "target_pid": 1})
         self.assertEqual((res()["total_position_rating"], res()["total_position_match_num"]), (80, 1))
 
+    async def test_myclub_regalos_bandeja_y_cobro(self):
+        """B.4: bienvenida de config, regalo de admin, lista, cobro por HTTP y logro RECV_PRESENT."""
+        jug = [{"gameplayer_id": 100 + i} for i in range(18)]
+        self.srv.cfg = {**self.srv.cfg, "myclub": {
+            "jugadores": jug, "entrenadores": [{"coach_id": 8}], "monedas_gratis": True,
+            "club_de_prueba": {"team_name": "P", "gp": 0},
+            "regalo_bienvenida": [{"tipo": "gp", "cantidad": 5000}],
+            "logros": {"activo": True, "premios": {"RECV_PRESENT": [[1, 1000]]}}}}
+        a, ea = await self.entrar("A1")
+        r = self.srv.recibir
+        res = lambda: ea[-1][1]
+        await r(a, 1, {"msgid": "CMD_GET_MYCLUB_USER_INFO", "rqid": 1})
+        club = self.srv.datos.club(a.steam_hex)
+        self.srv.dar_regalo(club, "monedas", 20, "Copa")
+        self.srv.dar_regalo(club, "objetos_recuperar", 2)
+        self.srv.datos.guardar_club(a.steam_hex, club)
+        await r(a, 2, {"msgid": "CMD_GET_MYCLUB_PRESENTLIST", "rqid": 2})
+        self.assertEqual(res()["present_list_num"], 3)
+        tipos = [msgpack_min.unpackb(msgpack_min.packb(x.valor))["type"] for x in res()["present_list"]]
+        self.assertEqual(sorted(tipos), ["GP", "ITEM", "PES_POINT"])
+        primero = msgpack_min.unpackb(msgpack_min.packb(res()["present_list"][0].valor))["present_id"]
+        resp = self.srv.respuesta_http({"msgid": "CMD_RECV_MYCLUB_PRESENT", "rqid": "3",
+                                        "pid": str(a.pid), "present_id": str(primero), "is_all": "NO"})
+        self.assertEqual(resp["receive_result_list_num"], 1)
+        msgpack_min.packb(resp)
+        resp = self.srv.respuesta_http({"msgid": "CMD_RECV_MYCLUB_PRESENT", "rqid": "4",
+                                        "pid": str(a.pid), "present_id": "0", "is_all": "YES"})
+        self.assertEqual(resp["receive_result_list_num"], 2)
+        await r(a, 5, {"msgid": "CMD_GET_MYCLUB_USER_INFO", "rqid": 5})
+        self.assertEqual((res()["gp"], res()["pes_point"]), (5000, 20))
+        club = self.srv.datos.club(a.steam_hex)
+        self.assertEqual((club["objetos_recuperar"], club["regalos"]), (2, []))
+        await r(a, 6, {"msgid": "CMD_GET_MYCLUB_PRESENTLIST", "rqid": 6})
+        self.assertEqual(res()["present_list_num"], 0)  # la bienvenida no se repite
+        await r(a, 7, {"msgid": "CMD_GET_MYCLUB_ACHIEVEMENTLIST", "rqid": 7})
+        self.assertEqual(res()["achievement_list_num"], 1)
+
     async def test_myclub_catalogo_club_y_rival_rotando(self):
         import os, struct, tempfile, zlib, json as _j, sys as _s
         _s.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "tools"))

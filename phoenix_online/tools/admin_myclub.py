@@ -12,6 +12,9 @@ Uso, en la carpeta del servidor:
     igual con poner-boletos)
     python -I tools/admin_myclub.py config.json dar-recuperar FRALEX 3  (objetos «Recuperar
     resistencia»; igual con poner-recuperar)
+    python -I tools/admin_myclub.py config.json regalo FRALEX gp 5000 "Premio del torneo"
+    (pone un regalo en la «Bandeja entrada»; tipo gp, monedas o la clave de un objeto, p. ej.
+    objetos_recuperar o boletos_contrato; el título es opcional; dura 30 días)
 
 La persona se indica por su nombre en el juego (pname) o por su steam_hex.
 Se puede usar con el servidor encendido: el cambio se ve la próxima vez que PES pida el club
@@ -68,6 +71,23 @@ def main(argv=None):
                                              "monto": partidos, "jugadores": cambiados})
         datos.guardar_club(j["steam_hex"], club)
         print(f'{j["pname"]}: contrato de {partidos} partidos a los unique_id {cambiados}')
+        return 0
+    if orden == "regalo" and len(argv) in (5, 6):
+        from phoenix_online.logica import Servidor
+        j = buscar(datos, argv[2])
+        club = datos.club(j["steam_hex"]) if j else None
+        if club is None:
+            print("No encontré a esa persona o todavía no tiene club.")
+            return 1
+        tipo, cantidad = argv[3], int(argv[4])
+        if cantidad <= 0:
+            print("La cantidad debe ser mayor que 0.")
+            return 1
+        ide = Servidor.dar_regalo(club, tipo, cantidad, argv[5] if len(argv) == 6 else "")
+        club.setdefault("admin", []).append({"hora": int(time.time()), "orden": orden,
+                                             "tipo": tipo, "monto": cantidad, "regalo": ide})
+        datos.guardar_club(j["steam_hex"], club)
+        print(f'{j["pname"]}: regalo {ide} ({tipo} x{cantidad}) en su bandeja')
         return 0
     campos = {"dar-gp": "gp", "poner-gp": "gp", "dar-monedas": "monedas",
               "poner-monedas": "monedas", "dar-boletos": "boletos_contrato",

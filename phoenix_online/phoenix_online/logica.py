@@ -1634,7 +1634,7 @@ class Servidor:
                 "rank_total_num": 0, "rank_coach": 0, "rank_coach_total_num": 0,
                 # P (vivo 06-nov): la tarjeta Entrenamiento decía 0 con 1 entrenador; antes iba fijo en 0.
                 # P: scount_num [sic] = cazatalentos del club.
-                "present_num": 0,
+                "present_num": len(self._regalos(club)) if club else 0,
                 "scount_num": sum(int(c.get("count") or 1) for c in club.get("scouts") or []),
                 "staff_num": len(club.get("staff") or []),
                 "is_free_enable": "YES", "is_coop_enable": "NO", "is_auction_state_changed": "NO",
@@ -3241,9 +3241,125 @@ class Servidor:
                                             "count": -delta if delta < 0 else 0, "item_data": objeto()}),
             "history_data_out": Empaquetado({"count": delta if delta > 0 else 0, "item_data": objeto()})})
 
+    # ---------- Regalos (B.4): «Bandeja entrada» de myClub ----------
+    # club["regalos"] = [{id, tipo: gp|monedas|<clave de objeto>, cantidad, titulo, hora, hasta}].
+    # Se dan con tools/admin_myclub.py (regalo …) o el de bienvenida de config
+    # (myclub.regalo_bienvenida = [{tipo, cantidad, titulo}], una sola vez por club).
+    MAX_REGALOS = 30
+
+    @staticmethod
+    def dar_regalo(club, tipo, cantidad, titulo="", dias=30):
+        """Pone un regalo en la bandeja del club (lo usan admin y el servidor)."""
+        regalos = club.setdefault("regalos", [])
+        nuevo = max([int(r.get("id") or 0) for r in regalos] + [int(club.get("regalo_ultimo_id") or 0)]) + 1
+        club["regalo_ultimo_id"] = nuevo
+        ahora = int(time.time())
+        regalos.append({"id": nuevo, "tipo": str(tipo), "cantidad": int(cantidad),
+                        "titulo": str(titulo or ""), "hora": ahora, "hasta": ahora + int(dias) * 86400})
+        return nuevo
+
+    def _regalos(self, club):
+        """Regalos vigentes; da una vez el de bienvenida de config."""
+        if club is None:
+            return []
+        bienvenida = (self.cfg.get("myclub") or {}).get("regalo_bienvenida") or []
+        if bienvenida and not club.get("bienvenida_dada"):
+            for r in bienvenida:
+                if isinstance(r, dict) and r.get("tipo") and int(r.get("cantidad") or 0) > 0:
+                    self.dar_regalo(club, r["tipo"], r["cantidad"], r.get("titulo") or "Bienvenida")
+            club["bienvenida_dada"] = True
+        ahora = int(time.time())
+        club["regalos"] = [r for r in club.get("regalos") or [] if int(r.get("hasta") or 0) > ahora]
+        return club["regalos"]
+
+    def _datos_regalo(self, r):
+        """Campos del regalo para el cliente: (type, nombre, item{…})."""
+        tipo, n = r.get("tipo"), int(r.get("cantidad") or 0)
+        objeto = {"item_type": "", "item_variation": "", "item_effect_arg": 0, "count": 0,
+                  "pes_point_price": 0}
+        if tipo == "gp":
+            return "GP", r.get("titulo") or f"{n} GP", objeto
+        if tipo == "monedas":
+            return "PES_POINT", r.get("titulo") or f"{n} monedas", objeto
+        o = next((x for x in self._objetos() if x.get("clave") == tipo), {})
+        objeto.update({"item_type": str(o.get("item_type") or ""),
+                       "item_variation": str(o.get("item_variation") or ""), "count": n})
+        return "ITEM", r.get("titulo") or "Objeto", objeto
+
     async def c_cmd_get_myclub_presentlist(self, s, m):
-        """B.4: sin regalos pendientes (lista vacía válida)."""
-        return {"present_list_num": 0, "present_list": []}
+        """B.4: los regalos pendientes del club (lista vacía válida si no hay)."""
+        club = self._club_propio(s)
+        regalos = self._regalos(club)
+        if club is not None:
+            self.datos.guardar_club(s.steam_hex, club)
+        lista = []
+        for r in regalos[:self.MAX_REGALOS]:
+            tipo, nombre, objeto = self._datos_regalo(r)
+            lista.append(Empaquetado({
+                "present_id": int(r["id"]), "name": nombre, "name_jp": nombre, "title": nombre,
+                "body": "", "entity_id": 0, "grade": 0, "type": tipo, "player_level": 0,
+                "contract_term": 0, "team_id": 0, "present_type": "NORMAL",
+                "item": Empaquetado(objeto), "receipt_deadline": int(r["hasta"]),
+                "count": int(r.get("cantidad") or 0)}))
+            prueba = {"msgid": "CMD_GET_MYCLUB_PRESENTLIST", "rqid": 0, "result": "NOERR",
+                      "present_list_num": len(lista), "present_list": lista}
+            if _cifrado_comprimido(prueba) > MAX_CIFRADO_CLIENTE:
+                lista.pop()
+                break
+        return {"present_list_num": len(lista), "present_list": lista}
+
+    def _sesion_http(self, formulario, ip_cliente):
+        """Sesión TCP de quien llama por HTTP: por su pid y, si no, por su IP."""
+        try:
+            pid = int(str(formulario.get("pid") or "0"))
+        except ValueError:
+            pid = 0
+        con_club = [x for x in self.sesiones if x.steam_hex]
+        por_pid = [x for x in con_club if pid and pid in (x.pid, self._pid_visible(x))]
+        if por_pid:
+            return por_pid[0]
+        ip = (ip_cliente or "").split("%")[0].removeprefix("::ffff:")
+        por_ip = [x for x in con_club if (x.ip or "").split("%")[0].removeprefix("::ffff:") == ip]
+        return por_ip[0] if len(por_ip) == 1 else None
+
+    def recibir_regalos(self, formulario, ip_cliente=None):
+        """B.4 (HTTP): cobra un regalo (present_id) o todos (is_all YES)."""
+        s = self._sesion_http(formulario, ip_cliente)
+        club = self._club_propio(s) if s is not None else None
+        if club is None:
+            return {"result": "ERR_NOTFOUND", "receive_result_list_num": 0, "receive_result_list": []}
+        todos = str(formulario.get("is_all") or "").upper() in ("YES", "1", "TRUE")
+        try:
+            elegido = int(str(formulario.get("present_id") or "0"))
+        except ValueError:
+            elegido = 0
+        cobrar = [r for r in self._regalos(club) if todos or int(r["id"]) == elegido]
+        salida = []
+        gp_antes = int(club.get("gp") or 0)
+        for r in cobrar:
+            tipo, n = r.get("tipo"), int(r.get("cantidad") or 0)
+            if tipo == "gp":
+                club["gp"] = int(club.get("gp") or 0) + n
+            elif tipo == "monedas":
+                club["monedas"] = int(club.get("monedas") or 0) + n
+            else:
+                club[tipo] = int(club.get(tipo) or 0) + n
+            club["regalos"].remove(r)
+            club["regalos_recibidos"] = int(club.get("regalos_recibidos") or 0) + 1
+            data_type, nombre, objeto = self._datos_regalo(r)
+            salida.append({"name_jp": nombre, "title": nombre, "entity_id": 0, "grade": 0,
+                           "skill": 0, "skill_category": "", "skill_id": 0, "player_level": 0,
+                           "contract_term": 0, "team_id": 0, "present_type": "NORMAL",
+                           **objeto, "count": n, "receipt_deadline": int(r["hasta"]),
+                           "result": "NOERR"})
+        delta = int(club.get("gp") or 0) - gp_antes
+        if delta:
+            club["historial_gp"] = ((club.get("historial_gp") or []) + [
+                {"hora": int(time.time()), "cmd": "CMD_RECV_MYCLUB_PRESENT", "gp": delta}])[-self.MAX_HISTORIAL_GP:]
+        self.datos.guardar_club(s.steam_hex, club)
+        log.info("Regalos: %s cobra %d regalo(s)", s.steam_hex, len(salida))
+        return {"result": "NOERR" if salida else "ERR_NOTFOUND",
+                "receive_result_list_num": len(salida), "receive_result_list": salida}
 
     async def c_cmd_get_myclub_achievementlist(self, s, m):
         """B.5/B.17: logros del club. Apagados (lista vacía) salvo config myclub.logros.activo."""
@@ -3279,7 +3395,8 @@ class Servidor:
                 "GET_COACH": len(club.get("dt_comprados") or []),
                 "CREATE_SQUAD": int(club.get("plantillas_creadas") or 0),
                 "SET_CLOUD_MATCH_SQUAD": 1 if club.get("plantilla_nube") else 0,
-                "JOIN_EVENT_COMPE": int(club.get("eventos_inscritos") or 0)}
+                "JOIN_EVENT_COMPE": int(club.get("eventos_inscritos") or 0),
+                "RECV_PRESENT": int(club.get("regalos_recibidos") or 0)}
         rank = 0
         if s is not None and s.steam_hex:
             try:
@@ -4467,8 +4584,7 @@ class Servidor:
             return {**base, "date": int(time.time()), "total_rank_num": 0, "rank_list": [],
                     "max_weekly_point": 0, "group_number": 0, "division": "", "reward_list": []}
         if msgid == "CMD_RECV_MYCLUB_PRESENT":
-            # B.4: no hay regalos pendientes que recibir
-            return {**base, "receive_result_list_num": 0, "receive_result_list": []}
+            return {**base, **self.recibir_regalos(formulario, ip_cliente)}
         if msgid == "CMD_AUTH_STEAM":
             # Ticket = GetAuthSessionTicket en hex + SteamID64 en claro. Verificar la firma
             # del ticket queda pendiente; hoy la identidad la garantiza el vínculo de Link.
