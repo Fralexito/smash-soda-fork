@@ -5,10 +5,10 @@ PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 
 ## Resumen
 - **Probado en el PES y funcionando:** 25 de 49 apartados (**51 %**).
-- **Programado (falta probarlo en el PES):** 13 más. Con ellos, **38 de 49 ya están hechos (78 %)**.
-- **A medias** (abre bien pero sin contenido todavía, o hecho solo en parte): 8 (Matchday y PES League pasaron aquí: ya abren en el PES, falta la inscripción).
+- **Programado (falta probarlo en el PES):** 14 más. Con ellos, **39 de 49 ya están hechos (80 %)**.
+- **A medias** (abre bien pero sin contenido todavía, o hecho solo en parte): 7 (Matchday y PES League pasaron aquí: ya abren en el PES, falta la inscripción).
 - **Falta hacer:** 3.
-- Comandos del juego que el servidor ya controla: **258 de 439 (59 %)**. Cooperativo, Matchday, PES League y clanes ya tienen respuesta; solo falta empezar la tienda.
+- Comandos del juego que el servidor ya controla: **270 de 439 (62 %)**. Cooperativo, Matchday, PES League y clanes ya tienen respuesta; solo falta empezar la tienda.
 
 **Leyenda:** ✅ probado en el PES · 🟢 programado, sin probar en el PES · 🟡 a medias (abre, pero vacío) · ❌ falta · 🚫 no se hará (a propósito)
 
@@ -73,7 +73,7 @@ PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 | 37 | Matchday | 🟡 | probado el 11-nov: inscripción funciona (bando y equipo) y abre la pantalla del torneo sin cerrarse; faltan textos (bando, clasificación, premios) |
 | 38 | Eventos y competiciones online | ✅ | probado el 11-nov: inscripción en la Copa Phoenix funciona (antes «No cumples los requisitos»: el servidor mandaba los datos sin empaquetar); falta el partido |
 | 39 | PES League | 🟡 | probado el 11-nov: inscripción funciona («Torneo Phoenix» con equipo) y abre su pantalla; falta quitar el aviso «resultados finales» y los datos de equipos |
-| 40 | Clanes | 🟡 | la lista de clanes abre vacía; falta crear clanes |
+| 40 | Clanes | 🟢 | programado el 11-nov: crear clan, buscarlo, entrar, ajustes (nombre, comentario, abierto), expulsar, salir o disolver y lista de miembros. Falta probarlo en el PES |
 
 ## 6. Lo propio de Phoenix (fuera del juego)
 | # | Apartado | Estado | Nota |
@@ -110,3 +110,4 @@ PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 - 11-nov 08:46: Matchday probado hasta elegir bando y equipo. Se corrigió un cierre del PES (la lista de premios iba con la forma equivocada). Falta confirmar la inscripción final y el Torneo en línea; la prueba se pausó porque se cortó el enlace con la PC.
 - 11-nov 09:31: inscripción probada en el PES en Torneo en línea y en Matchday; los dos abren su pantalla. Faltan datos de esas pantallas.
 - 11-nov 10:05: Eventos destrabado: inscripción en la Copa Phoenix probada en el PES. Matchday: pantalla principal programada con sus datos (D.7), sin probar.
+- 11-nov 11:15: Clanes programados de punta a punta (12 comandos nuevos, se guardan en la base). Falta probarlos en el PES.
