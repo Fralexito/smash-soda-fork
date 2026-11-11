@@ -14,6 +14,7 @@ import json
 import logging
 import os
 import random
+import re
 import time
 from types import SimpleNamespace
 
@@ -2022,8 +2023,37 @@ class Servidor:
     async def c_cmd_check_string(self, s, m):
         # L (PESBUL R7.3.341): campo «str»; sin respuesta el cliente espera para siempre
         texto = m.get("str") if isinstance(m.get("str"), str) else ""
-        mal = any(p in texto.upper() for p in PALABRAS_PROHIBIDAS)
-        return {"result": "ERR_NGWORD"} if mal else {}
+        mala = self.palabra_bloqueada(texto)
+        if mala:
+            log.info("texto rechazado de %s (palabra %r)", s.pid, mala)
+            return {"result": "ERR_NGWORD"}
+        return {}
+
+    @staticmethod
+    def _normal(texto):
+        import unicodedata
+        t = unicodedata.normalize("NFKD", str(texto or "")).casefold()
+        t = "".join(c for c in t if not unicodedata.combining(c))
+        return re.sub(r"\s+", " ", t)
+
+    def palabra_bloqueada(self, texto):
+        """R (peswords AzrakHQ): palabras ENTERAS (antes «COMPUTADORA» o «disputa» se rechazaban por contener
+        una grosería dentro); una frase con espacios vale en cualquier parte; letras sueltas «p.u.t.a» se
+        juntan. Lista base + config palabras_bloqueadas (sin tildes ni mayúsculas que importen)."""
+        lista = [self._normal(p) for p in (*PALABRAS_PROHIBIDAS, *(self.cfg.get("palabras_bloqueadas") or []))]
+        t = self._normal(texto)
+        juntas = re.sub(r"(?<![^\W_])(?:[^\W_][\W_]+){2,}[^\W_](?![^\W_])",
+                        lambda x: re.sub(r"[\W_]+", "", x.group()), t)
+        for cand in (t, juntas):
+            for w in lista:
+                if not w:
+                    continue
+                if " " in w:
+                    if w in cand:
+                        return w
+                elif re.search(rf"(?<![^\W_]){re.escape(w)}(?![^\W_])", cand):
+                    return w
+        return None
 
     # ---------- Perfil y registros ----------
     async def c_cmd_set_playerprofile(self, s, m):
@@ -3366,7 +3396,12 @@ class Servidor:
         return {"rental_gameplayer_list": [], "rental_gameplayer_list_num": 0}
 
     async def c_cmd_get_matchrejectlist(self, s, m):
-        return {"reject_list": [], "reject_list_num": 0}  # C (§16.8)
+        """R (pesblock AzrakHQ): reject_list [bin{pid, pname}] + num, como la lista de bloqueo de Cooperativo.
+        Antes iba siempre vacía aunque SET_MATCHREJECTPID sí guardaba."""
+        clave = (getattr(s, "steam_hex", None) or "").lower()
+        filas = [self._usuario_plano(x) for x in self.datos.relaciones(clave)["no_emparejar"]] if clave else []
+        return self._lista_que_cabe("CMD_GET_MATCHREJECTLIST", filas, lambda f: {
+            "reject_list": f, "reject_list_num": len(f)})
 
     async def c_cmd_get_pesleague_compe_result_list(self, s, m):
         return {"result_list": [], "result_list_num": 0}  # C (§16.10)
@@ -4924,7 +4959,7 @@ class Servidor:
                 d[campo].remove(otro)
                 if campo == "sigo" and otro in d["bloqueados"]:
                     d["bloqueados"].remove(otro)
-        d[campo] = d[campo][-100:]
+        d[campo] = d[campo][-(400 if campo == "no_emparejar" else 100):]  # 400 = matchrejectpid_max
         self.datos.guardar_relaciones(clave, d)
 
     @staticmethod

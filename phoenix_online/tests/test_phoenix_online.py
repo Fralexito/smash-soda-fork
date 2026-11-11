@@ -1986,6 +1986,18 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
                                      "sort": "WIN_NUM", "start_index": "0", "view_num": "2"})
         self.assertIn("J0", [f["user"]["pname"]["name"] for f in r["rank_list"]])
 
+    async def test_lista_de_bloqueo_y_palabras(self):
+        """R (pesblock/peswords AzrakHQ): la lista de bloqueo de partidos se ve; palabras enteras."""
+        a, ea = await self.entrar("0110000100000041")
+        b, eb = await self.entrar("0110000100000042")
+        await self.srv.recibir(a, 1, {"msgid": "CMD_SET_MATCHREJECTPID", "rqid": 1,
+                                      "reject_pid": self.srv._pid_visible(b), "is_reject": "YES"})
+        r = await self.srv.c_cmd_get_matchrejectlist(a, {})
+        self.assertEqual(r["reject_list_num"], 1)
+        msgpack_min.packb(r)
+        self.assertEqual(await self.srv.c_cmd_check_string(a, {"str": "Computadora de la disputa"}), {})
+        self.assertEqual((await self.srv.c_cmd_check_string(a, {"str": "p.u.t.a"}))["result"], "ERR_NGWORD")
+
     async def test_avatar_subido_queda_guardado(self):
         """R (pesavatar AzrakHQ): SET_AVATAR se guarda en la base y se lee con cualquier forma del pid."""
         import base64, hashlib
