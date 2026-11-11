@@ -53,6 +53,10 @@ create table if not exists partidos_division (
   datos text not null,
   hora real not null
 );
+create table if not exists historial (
+    steam_hex text primary key,
+    datos text not null
+);
 create table if not exists modales (
     steam_hex text primary key,
     datos text not null
@@ -186,6 +190,17 @@ class Datos:
 
     def guardar_relaciones(self, steam_hex, d):
         self.db.execute("insert into relaciones(steam_hex, datos) values (?,?) on conflict(steam_hex) "
+                        "do update set datos=excluded.datos", ((steam_hex or "").lower(), json.dumps(d)))
+        self.db.commit()
+
+    # ---- historial general de partidos y análisis de juego (R: pesresults.py AzrakHQ) ----
+    def historial(self, steam_hex):
+        f = self.db.execute("select datos from historial where steam_hex=?",
+                            ((steam_hex or "").lower(),)).fetchone()
+        return json.loads(f[0]) if f else {"partidos": [], "analisis": {}}
+
+    def guardar_historial(self, steam_hex, d):
+        self.db.execute("insert into historial(steam_hex, datos) values (?,?) on conflict(steam_hex) "
                         "do update set datos=excluded.datos", ((steam_hex or "").lower(), json.dumps(d)))
         self.db.commit()
 

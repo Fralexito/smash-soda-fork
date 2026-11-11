@@ -752,11 +752,60 @@ class Servidor:
                 "favorite_play": 0, "favorite_play_rate": 0}
 
     async def c_cmd_get_match_analyze(self, s, m):
-        """L (ESPEC_PARTIDO_REAL_PESBUL §2): antes del partido el PES pide el análisis del rival
-        (target_pid). El cliente lee analyze_data_list y analyze_data_size; con el sobre vacío el
-        menú rebota. Sin historial guardado: lista vacía y DRAW (lo mismo que un jugador nuevo)."""
-        log.info("MATCH_ANALYZE pedido: tipo=%r objetivo=%r", m.get("analyze_data_type"), m.get("target_pid"))
-        return {"analyze_data_size": 0, "analyze_data_list": [], "game_res": "DRAW"}
+        """L (ESPEC_PARTIDO_REAL_PESBUL §2) + R (pesresults.py AzrakHQ): el PES pide el análisis de juego
+        (target_pid) y él mismo promedia los últimos 10. Lista de BIN (un mapa en línea cerró el PES al
+        abrir «Cobertura de juego», en vivo 07-nov). Sin datos: lista vacía."""
+        tipo = str(m.get("analyze_data_type") or "ONLINE_DIVISIONS")
+        clave = (self._clave_de_id(m.get("target_pid")) if m.get("target_pid") else None) or (getattr(s, "steam_hex", None) or "")
+        lista = (self.datos.historial(clave)["analisis"].get(tipo) or []) if clave else []
+        return {"analyze_data_size": len(lista), "analyze_data_list": [Empaquetado(x) for x in lista],
+                "game_res": "DRAW"}
+
+    async def c_cmd_send_match_analyze(self, s, m):
+        """Tras Divisiones (y myClub) el PES sube 46 números de su juego; se guardan los últimos 10."""
+        datos = m.get("analyze_data")
+        if isinstance(datos, (bytes, bytearray)):
+            try:
+                datos = msgpack_min.unpackb(bytes(datos))
+            except Exception:
+                datos = None
+        if isinstance(datos, dict) and s.steam_hex:
+            limpio = {str(k): v for k, v in datos.items() if isinstance(v, (int, str)) and not isinstance(v, bool)
+                      or (isinstance(v, list) and all(isinstance(x, int) for x in v))}
+            tipo = str(m.get("analyze_data_type") or "ONLINE_DIVISIONS")
+            h = self.datos.historial(s.steam_hex)
+            h.setdefault("analisis", {})[tipo] = (list(h["analisis"].get(tipo) or []) + [limpio])[-10:]
+            self.datos.guardar_historial(s.steam_hex, h)
+        return {}
+
+    def _guardar_historial(self, pareja, m):
+        """El primer resultado de una pareja se guarda en el historial de los dos (últimos 30)."""
+        if pareja.get("historial_guardado"):
+            return
+        try:
+            goles = (int(m.get("home_score") or 0), int(m.get("away_score") or 0))
+        except (TypeError, ValueError):
+            return
+        pareja["historial_guardado"] = True
+        tipo = str(pareja.get("tipo") or "").upper()
+        categoria = ("RANK" if tipo in self._reglas_division().tipos else "MATCHDAY" if "MATCHDAY" in tipo
+                     else "PESLEAGUE" if "PES_LEAGUE" in tipo else "COOP" if tipo == "COOP" else "LOBBY")
+        casa, fuera = pareja["miembros"]
+        equipos = [self._id_entero(m.get("home_team_id")) or 0, self._id_entero(m.get("away_team_id")) or 0]
+        fichas = []
+        for x, eq, g in zip((casa, fuera), equipos, goles):
+            j = self.datos.jugador(x.steam_hex or "") or {}
+            fichas.append({"pid": self._pid_en_partida(x), "name": j.get("pname") or x.pname or "",
+                           "team": eq, "score": g})
+        p = {"date": int(time.time()), "home": fichas[0], "away": fichas[1], "categoria": categoria,
+             "reason": "NORMAL_END", "partido": pareja.get("room_id")}
+        if categoria == "PESLEAGUE":
+            p["compe"] = self._cid_torneo(casa, {}, "pesleague") or 0
+        for x in (casa, fuera):
+            if x.steam_hex:
+                h = self.datos.historial(x.steam_hex)
+                h["partidos"] = (list(h.get("partidos") or []) + [p])[-30:]
+                self.datos.guardar_historial(x.steam_hex, h)
 
     c_cmd_get_match_analyze_byid = c_cmd_get_match_analyze
 
@@ -1922,10 +1971,20 @@ class Servidor:
         if not (self.cfg.get("divisiones") or {}).get("historial_partidos", True):
             return {"rlist_num": 0, "rlist": [], "no_match": "YES"}
         filas = []
-        for partido in self._estado_division(s.steam_hex)["resultados"][:div.MAX_RESULTADOS]:
-            p = self.datos.partido_division(partido)
-            if p and not p.get("no_cuenta"):
+        tipo = str(m.get("game_res_type") or "RANK").upper()
+        if tipo in ("ALL", "PESLEAGUE") and s.steam_hex:
+            # R (pesresults.py AzrakHQ): «ALL» = todos los partidos (Información online -> Registro),
+            # «PESLEAGUE» = los del Torneo en línea {pesleague_compe_id}
+            cid = self._id_entero(m.get("pesleague_compe_id"))
+            for p in reversed(self.datos.historial(s.steam_hex)["partidos"]):
+                if tipo == "PESLEAGUE" and (p.get("categoria") != "PESLEAGUE" or (cid and p.get("compe") != cid)):
+                    continue
                 filas.append(self._fila_resultado(p))
+        else:
+            for partido in self._estado_division(s.steam_hex)["resultados"][:div.MAX_RESULTADOS]:
+                p = self.datos.partido_division(partido)
+                if p and not p.get("no_cuenta"):
+                    filas.append(self._fila_resultado(p))
         # L/C: la respuesta entera en UNA trama (medida ya comprimida, como la manda nclmio): el envío
         # troceado hacia el cliente aún no está probado en el PES. Se quitan los más viejos.
         while filas and _cifrado_comprimido({"msgid": m.get("msgid", "CMD_GET_GAMERESULTS"),
@@ -1951,7 +2010,12 @@ class Servidor:
                                 "pid": f["pid"], "side": lado, "is_com": "NO", "cpu_level": "0",
                                 "is_follow": "NO", "is_guest": "NO"})
         casa, fuera = p["home"], p["away"]
-        return Empaquetado({"date": int(p["date"]), "match_category": "ONLINE_DIVISIONS", "ex_type": "NONE",
+        # R (pesresults.CATEGORY AzrakHQ, en vivo 07-nov): nombre exacto del enum del PES; Partida
+        # rápida, sala y desconocidos van como PESLEAGUE_LOBBY (sin etiqueta), Cooperativo ONLINE_COOP
+        categoria = {"RANK": "RANK_MATCH", "MATCHDAY": "MATCHDAY", "COOP": "ONLINE_COOP",
+                     "PESLEAGUE": "PESLEAGUE_LOBBY"}.get(p.get("categoria") or "", "PESLEAGUE_LOBBY") \
+            if p.get("categoria") else "ONLINE_DIVISIONS"
+        return Empaquetado({"date": int(p["date"]), "match_category": categoria, "ex_type": "NONE",
                             "gameend_reason": p.get("reason") or "NORMAL_END", "pk_flag": "NO",
                             "score": [marcador(casa["score"]), marcador(fuera["score"])],
                             "player": [jugador(casa, "HOME"), jugador(fuera, "AWAY")],
@@ -6001,6 +6065,10 @@ class Servidor:
                 self._resultado_pesleague(s, pareja, m)
             except Exception:
                 log.exception("no se pudo aplicar el resultado del Torneo en línea")
+            try:
+                self._guardar_historial(pareja, m)
+            except Exception:
+                log.exception("no se pudo guardar el historial del partido")
             datos = {k: v for k, v in m.items() if k not in ("msgid", "rqid")}
             partido = f"pareja{pareja['room_id']}"
             self.datos.guardar_resultado(pareja["room_id"], partido, s.pid or 0, datos)
