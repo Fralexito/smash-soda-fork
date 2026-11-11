@@ -4046,15 +4046,11 @@ class Servidor:
                             "evaluation_a": 0, "evaluation_b": 0, "superiority_border_ratio": 0})
 
     async def c_cmd_get_matchday_info(self, s, m):
-        """D.5: sin compe_info el cliente olvida el compe_id y manda JOIN con 0."""
-        cid = self._id_entero(m.get("compe_id"))
+        """D.5: tras inscribirse el PES pide INFO con compe_id 0 (ver _cid_torneo)."""
+        cid = self._cid_torneo(s, m, "matchday")
         e = next((x for x in self._torneos("matchday") if x["compe_id"] == cid), None)
         if e is None:
             return {"result": "ERR_COMPE_NOTFOUND"}
-        try:
-            s.ultimo_torneo = {**(getattr(s, "ultimo_torneo", None) or {}), "matchday": cid}
-        except AttributeError:
-            pass
         club = self.datos.club(s.steam_hex or "") if s.steam_hex else None
         mio = ((club or {}).get("matchday_equipo") or {}).get(str(cid)) or {}
         info = {**self._campos_matchday(s, e),
@@ -4097,14 +4093,32 @@ class Servidor:
 
     # Inscripción propia en torneos de Matchday / PES League (respuesta vacía = NOERR; las claves
     # de respuesta reales se completan cuando se lean en Ghidra).
-    def _inscribir_torneo(self, s, m, clave):
+    def _cid_torneo(self, s, m, clave):
+        """compe_id del pedido. El PES de Matchday lo pierde y manda 0 tras inscribirse (probado
+        11-nov): entonces vale el último torneo de esta sesión, el inscrito o el único que haya."""
         cid = self._id_entero(m.get("compe_id"))
-        if not cid:
-            # JOIN_MATCHDAY puede llegar con compe_id 0: se usa el último torneo que el PES pidió
-            # con INFO en esta sesión, o el único que haya
-            torneos = self._torneos(clave)
-            cid = (getattr(s, "ultimo_torneo", {}) or {}).get(clave) or (
-                torneos[0]["compe_id"] if len(torneos) == 1 else 0)
+        if cid:
+            self._recordar_torneo(s, clave, cid)
+            return cid
+        torneos = self._torneos(clave)
+        cid = (getattr(s, "ultimo_torneo", None) or {}).get(clave)
+        if not cid and s.steam_hex:
+            club = self.datos.club(s.steam_hex) or {}
+            inscritos = (club.get("torneos_inscripcion") or {}).get(clave) or []
+            cid = inscritos[-1] if inscritos else 0
+        if not cid and len(torneos) == 1:
+            cid = torneos[0]["compe_id"]
+        return cid or 0
+
+    @staticmethod
+    def _recordar_torneo(s, clave, cid):
+        try:
+            s.ultimo_torneo = {**(getattr(s, "ultimo_torneo", None) or {}), clave: cid}
+        except AttributeError:
+            pass
+
+    def _inscribir_torneo(self, s, m, clave):
+        cid = self._cid_torneo(s, m, clave)
         e = next((x for x in self._torneos(clave) if x["compe_id"] == cid), None)
         if e is None:
             return {"result": "ERR_COMPE_NOTFOUND"}
@@ -4141,12 +4155,11 @@ class Servidor:
         if r:
             return r
         club = self._club_propio(s)
-        cid = self._id_entero(m.get("compe_id")) or (getattr(s, "ultimo_torneo", None) or {}).get("matchday") or (
-            self._torneos("matchday")[0]["compe_id"] if len(self._torneos("matchday")) == 1 else 0)
+        cid = self._cid_torneo(s, m, "matchday")
         club.setdefault("matchday_equipo", {})[str(cid)] = {
             "grupo": str(m.get("entry_matchday_group") or ""), "team_id": self._id_entero(m.get("team_id")) or 0}
         self.datos.guardar_club(s.steam_hex, club)
-        return {"squad_rating_info": self._valoracion_plantilla()}
+        return {"squad_rating_info": self._valoracion_plantilla(), "compe_id": cid}
 
     async def c_cmd_leave_matchday(self, s, m):
         return self._salir_torneo(s, m, "matchday")
