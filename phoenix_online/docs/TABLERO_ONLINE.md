@@ -1,14 +1,14 @@
 # Tablero del online Phoenix (se actualiza con cada avance)
 
-Última actualización: 11-nov-2026, 07:08 (hora del servidor UTC).
+Última actualización: 11-nov-2026, 07:40 (hora del servidor UTC).
 PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 
 ## Resumen
-- **Probado en el PES y funcionando:** 23 de 49 apartados (**47 %**).
-- **Programado (falta probarlo en el PES):** 14 más. Con ellos, **37 de 49 ya están hechos (76 %)**.
-- **A medias** (abre bien pero sin contenido todavía, o hecho solo en parte): 5.
-- **Falta hacer:** 7.
-- Comandos del juego que el servidor ya controla: **237 de 439 (54 %)**; sin contar los modos aún no empezados (cooperativo, Matchday, PES League, clanes, tienda): **234 de 325 (72 %)**.
+- **Probado en el PES y funcionando:** 24 de 49 apartados (**49 %**).
+- **Programado (falta probarlo en el PES):** 16 más. Con ellos, **40 de 49 ya están hechos (82 %)**.
+- **A medias** (abre bien pero sin contenido todavía, o hecho solo en parte): 6.
+- **Falta hacer:** 3.
+- Comandos del juego que el servidor ya controla: **250 de 439 (57 %)**. Cooperativo, Matchday, PES League y clanes ya tienen respuesta; solo falta empezar la tienda.
 
 **Leyenda:** ✅ probado en el PES · 🟢 programado, sin probar en el PES · 🟡 a medias (abre, pero vacío) · ❌ falta · 🚫 no se hará (a propósito)
 
@@ -69,11 +69,11 @@ PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 ## 5. Otros modos del online
 | # | Apartado | Estado | Nota |
 |---|---|---|---|
-| 36 | Cooperativo (2 contra 2, 3 contra 3) | ❌ | el relé ya admite más de 2 |
-| 37 | Matchday | ❌ | |
+| 36 | Cooperativo (2 contra 2, 3 contra 3) | 🟡 | probado el 11-nov: abre (Partido informal, de clan, Estadísticas, Perfil) y la lista de salas vacía; falta crear salas y jugar |
+| 37 | Matchday | 🟢 | programado: lista de jornadas desde config; probando en el PES |
 | 38 | Eventos y competiciones online | 🟢 | programado: lista, detalle, inscribirse, salir, partido del evento contra la COM con su dificultad, progreso, «superado» y premio en GP. Falta probarlo en el PES base (estaba ocupado). Más adelante: crearlos desde la web |
-| 39 | PES League | ❌ | |
-| 40 | Clanes | ❌ | |
+| 39 | PES League | 🟢 | programado («Torneo en línea» y «eFootball League de myClub»): lista de torneos desde config; probando en el PES |
+| 40 | Clanes | 🟡 | la lista de clanes abre vacía; falta crear clanes |
 
 ## 6. Lo propio de Phoenix (fuera del juego)
 | # | Apartado | Estado | Nota |
@@ -106,3 +106,4 @@ PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 - 11-nov 06:34: regalos de verdad programados (bandeja con GP, monedas y objetos, y cobro). Eventos: se ve la Copa, pero la inscripción sigue bloqueada por un chequeo del juego; buscándolo con REA y x64dbg.
 - 11-nov 06:59: regalos probados en el PES: se ven y se cobran (GP, monedas y objetos). Queda un aviso falso al cobrar. Los objetos de entrenamiento aún no los cuenta el juego (probando otro tipo). Inscripción en Eventos aparcada por decisión de Frank.
 - 11-nov 07:08: monedas por logros probadas en el PES (+10 monedas). El aviso falso de los regalos y la inscripción en Eventos quedan para después.
+- 11-nov 07:26: Cooperativo y Clanes abren en el PES (vacíos); Matchday y PES League programados con sus listas (13 comandos nuevos).
