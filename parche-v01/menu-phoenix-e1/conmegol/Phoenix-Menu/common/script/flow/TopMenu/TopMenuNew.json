@@ -169,7 +169,7 @@
 			"bgType":"none"
 		},
 		"20_onlinesettings":{
-			"to":"Option/SysSettings/Lang/MenuInGameText",
+			"to":"Match/TrainingDirectInit",
 			"go":"forward",
 			"clear":"all",
 			"fadeStart":"",

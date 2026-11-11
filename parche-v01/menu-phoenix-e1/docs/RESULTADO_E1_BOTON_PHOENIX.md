@@ -41,3 +41,9 @@ Frank corrigió: va en **Conmegol** (`D:\Frank\Games_\Conmegol Patch`), no en el
 
 ## Revertir
 `;` delante de la línea `Phoenix-Menu` en `SiderAddons\sider.ini` (o restaurar `sider.ini.antes`) y reiniciar PES.
+
+## PRUEBA FINAL (10-nov, ~22:05) — BOTÓN COMPLETO OK
+- Config activa en Conmegol: `Phoenix-Menu` (remapea `14` y `20_onlinesettings` → `Match/TrainingDirectInit` → `Match/MatchTrainingTeamSel`) + `Phoenix-Menu-Texto` (`all.str` con «Opciones en línea» → «Phoenix», sustitución en sitio). Ambas líneas `cpk.root` activas arriba del `sider.ini`.
+- Resultado: en Ajustes el ítem se ve como **«Phoenix»**; al pulsarlo se abre Entrenamiento libre (Local/Visitante). PES respondió, sin cierres. `sider.log` muestra los dos paquetes cargados. Ítems online NO pulsados.
+- Se deja ACTIVO. Revertir: `;` a las dos líneas (o restaurar `respaldo_E1_conmegol_20261110\sider.ini.antes_prueba_boton`).
+- Rama de respaldo: GitHub `Fralexito/smash-soda-fork` → `claude/pantallas-propias-menus` (carpeta `parche-v01/menu-phoenix-e1`, sin `all.str`). Drive: carpeta «Menu Phoenix E1 — 10-nov-2026 (respaldo)».
