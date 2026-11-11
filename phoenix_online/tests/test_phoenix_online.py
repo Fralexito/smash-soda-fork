@@ -1949,6 +1949,21 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         b.direccion = ("192.168.1.5", 5000)
         self.assertNotIn("host_addr", await self.srv.c_cmd_get_ipandport_ntl(b, {"pid": self.srv._pid_visible(a)}))
 
+    async def test_no_empareja_datos_distintos(self):
+        """R (pesmatch._compatible AzrakHQ): sumas de CHECK_CHEAT distintas = no se emparejan (DATAPACK MXNV533)."""
+        a, ea = await self.entrar("0110000100000051")
+        b, eb = await self.entrar("0110000100000052")
+        c, ec = await self.entrar("0110000100000053")
+        r = self.srv.recibir
+        await r(a, 1, {"msgid": "CMD_CHECK_CHEAT", "rqid": 1, "param_check_sum": 11, "entry_check_sum": 22})
+        await r(b, 1, {"msgid": "CMD_CHECK_CHEAT", "rqid": 1, "param_check_sum": 99, "entry_check_sum": 22})
+        await r(c, 1, {"msgid": "CMD_CHECK_CHEAT", "rqid": 1, "param_check_sum": 11, "entry_check_sum": 22})
+        await r(a, 2, {"msgid": "CMD_START_MATCHING", "rqid": 2, "matching_type": "OC_QUICK"})
+        await r(b, 2, {"msgid": "CMD_START_MATCHING", "rqid": 2, "matching_type": "OC_QUICK"})
+        self.assertNotIn(a, self.srv.parejas)
+        await r(c, 2, {"msgid": "CMD_START_MATCHING", "rqid": 2, "matching_type": "OC_QUICK"})
+        self.assertIs(self.srv.parejas[c], self.srv.parejas[a])
+
     async def test_avatar_subido_queda_guardado(self):
         """R (pesavatar AzrakHQ): SET_AVATAR se guarda en la base y se lee con cualquier forma del pid."""
         import base64, hashlib

@@ -1346,7 +1346,23 @@ class Servidor:
     def _huella(self, x):
         return x.huella or self.huella_por_clave.get(x.steam_hex or "")
 
+    def _datos_juego(self, x):
+        """R (pesmatch._game_data AzrakHQ, probado en vivo): lo que debe ser igual para jugar: las 2 sumas de
+        CHECK_CHEAT (los PES comparan param_check_sum y luego entry_check_sum antes del saque; distinto =
+        «error DATAPACK» MXNV533) y las versiones. None si el PES no las mandó (se empareja con cualquiera)."""
+        sumas = getattr(x, "sumas", None) or self.__dict__.get("_sumas_por_clave", {}).get(
+            (getattr(x, "steam_hex", None) or "").lower())
+        if not sumas or not sumas.get("param"):
+            return None
+        v = getattr(x, "versiones", None) or {}
+        return sumas["param"], sumas.get("entry", ""), v.get("patch_version", ""), v.get("dlc_version", "")
+
     def _misma_huella(self, a, b):
+        if self.cfg.get("emparejar_mismos_datos", True):
+            da, db = self._datos_juego(a), self._datos_juego(b)
+            if da is not None and db is not None and da != db:
+                log.info("no se empareja %s con %s: datos del juego distintos (sumas o versión)", a.pid, b.pid)
+                return False
         # apagado hasta comprobar con 2 PES iguales que su huella coincide (si no, nunca se emparejarían)
         if not self.cfg.get("emparejar_misma_huella", False):
             return True
@@ -1842,6 +1858,8 @@ class Servidor:
     async def c_cmd_check_cheat(self, s, m):
         # Solo se lee result; cualquier error bloquea la entrada online (CCWR450/455). Se guardan las sumas
         s.sumas = {"param": str(m.get("param_check_sum", "")), "entry": str(m.get("entry_check_sum", ""))}
+        if s.steam_hex:  # puede llegar por otra conexión que la de la búsqueda
+            self.__dict__.setdefault("_sumas_por_clave", {})[s.steam_hex.lower()] = s.sumas
         return {}
 
     async def c_cmd_set_gameteam(self, s, m):
