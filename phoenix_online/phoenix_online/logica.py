@@ -3053,7 +3053,8 @@ class Servidor:
         com = club.get("vscom") or {}
         progreso = {"MATCH50": int(com.get("partidos") or 0), "MATCH100": int(com.get("partidos") or 0),
                     "SUCCESSIVE5": int(com.get("racha_max") or 0)}
-        cobrados = club.get("logros_cobrados") or {}
+        # ojo: «logros_cobrados» (lista) ya lo usa GP_ACHIEVEMENT; los de myClub van aparte
+        cobrados = club.get("logros_myclub") if isinstance(club.get("logros_myclub"), dict) else {}
         salida = []
         for cat, hitos in (cfg.get("premios") or self.LOGROS_DEFECTO).items():
             if cat not in progreso:
@@ -3111,7 +3112,7 @@ class Servidor:
                 cobrados += 1
             if not ganado:
                 continue
-            club.setdefault("logros_cobrados", {})[cat] = cobrados
+            club.setdefault("logros_myclub", {})[cat] = cobrados
             club["gp"] = int(club.get("gp") or 0) + ganado
             recibidos.append(Empaquetado({
                 "achievement_category": cat, "achievement_id": n,

@@ -877,6 +877,7 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.srv.cfg["myclub"]["logros"] = {"activo": True}
         club = self.srv.datos.club(a.steam_hex)
         club["vscom"] = {"partidos": 60, "racha_max": 3}
+        club["logros_cobrados"] = [{"id": 1, "gp": 300}]  # los de GP_ACHIEVEMENT (lista) no estorban
         self.srv.datos.guardar_club(a.steam_hex, club)
         await r(a, 2, {"msgid": "CMD_GET_MYCLUB_ACHIEVEMENTLIST", "rqid": 2})
         self.assertEqual(res()["achievement_list_num"], 3)
