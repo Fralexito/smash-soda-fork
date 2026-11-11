@@ -1638,8 +1638,8 @@ class Servidor:
                 "scount_num": sum(int(c.get("count") or 1) for c in club.get("scouts") or []),
                 "staff_num": len(club.get("staff") or []),
                 "is_free_enable": "YES", "is_coop_enable": "NO", "is_auction_state_changed": "NO",
-                "achievement_info": Empaquetado({"achievement_not_recieved_num": 0,
-                                                 "achievement_num": 0, "achievement_total_num": 0}),
+                # C (10-nov, PES): «Registros de myClub» muestra «Progreso num/total» de aquí
+                "achievement_info": Empaquetado(self._resumen_logros(club)),
                 "agent_panel_file_info": sin_archivo(), "liveevent_panel_file_info": sin_archivo(),
                 "matchday_emblem_info": Empaquetado({
                     "is_use_emblem": "NO", "is_auto_make_compe_name": "NO",
@@ -3114,6 +3114,18 @@ class Servidor:
             if hitos:
                 salida.append((cat, progreso[cat], hitos, min(int(cobrados.get(cat) or 0), len(hitos))))
         return salida
+
+    def _resumen_logros(self, club):
+        """Resumen de MAINMENU_INFO: hitos en total, alcanzados y alcanzados sin cobrar (P: el
+        sentido de cada contador sale de sus nombres)."""
+        total = alcanzados = sin_cobrar = 0
+        for _, valor, hitos, cobrados in self._logros(club):
+            total += len(hitos)
+            hechos = sum(1 for meta, _ in hitos if valor >= meta)
+            alcanzados += hechos
+            sin_cobrar += max(0, hechos - cobrados)
+        return {"achievement_not_recieved_num": sin_cobrar, "achievement_num": alcanzados,
+                "achievement_total_num": total}
 
     def _premio_gp(self, n, gp):
         """Regalo de B.14 con todos los campos; el premio real (GP) lo suma el servidor al cobrar.

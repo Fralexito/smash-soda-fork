@@ -886,6 +886,10 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.assertEqual((l["MATCH50"]["is_new"], l["MATCH100"]["is_new"]), ("YES", "NO"))
         hito = msgpack_min.unpackb(l["MATCH100"]["milestone_list"][0])
         self.assertEqual((hito["target_value"], hito["value"]), (100, 60))
+        await r(a, 31, {"msgid": "CMD_GET_MYCLUB_MAINMENU_INFO", "rqid": 31})
+        info = msgpack_min.unpackb(msgpack_min.packb(res()["achievement_info"].valor))
+        self.assertEqual((info["achievement_total_num"], info["achievement_num"],
+                          info["achievement_not_recieved_num"]), (3, 1, 1))
         await r(a, 3, {"msgid": "CMD_RECV_MYCLUB_ACHIEVEMENT_BONUS", "rqid": 3, "is_all": "YES"})
         self.assertEqual(len(res()["recv_achievement_list"]), 1)
         self.assertEqual(self.srv.datos.club(a.steam_hex)["gp"], 10000)
