@@ -4195,6 +4195,18 @@ class Servidor:
             division = str(self._estado_division(s.steam_hex).get("division") or DIVISION_INICIAL)
         return {"division": division, "new_result": "NO"}
 
+    async def c_cmd_get_pesleague_1vs1_mainmenu_info(self, s, m):
+        # D.6: sin fechas el cliente da el torneo por terminado («Se calcularon los resultados finales»)
+        e = self._torneo_pesleague(m) or next(iter(self._torneos("pesleague")), None)
+        if e is None:
+            return {"result": "ERR_COMPE_NOTFOUND"}
+        return {"matching_first_date": int(e["inicio"]), "matching_time": 3600, "matching_interval": 86400,
+                "compe_end_time": int(e["fin"]), "team_id": 0, "team_name": "", "point": 0, "win_count": 0,
+                "lose_count": 0, "draw_count": 0, "match_num": 0, "regulation_match_num": 10, "rank_type": ""}
+
+    async def c_cmd_get_pesleague_compe_team_list(self, s, m):
+        return {"team_list": [], "team_list_num": 0}
+
     async def c_cmd_get_pesleague_compe_list(self, s, m):
         lista = []
         for e in self._torneos("pesleague"):
