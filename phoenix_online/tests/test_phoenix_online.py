@@ -1406,6 +1406,35 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("warn_kind", ea[-1][1])  # una sola vez
         self.assertEqual(self.srv.grado_modales(a.steam_hex.lower()), "A")  # 1 abandono sigue en A
 
+    async def test_corte_y_reconexion_a_tiempo(self):
+        """R (evoweb PESBUL p. 9 + OpenEleven): cerrar una conexión con otra viva del mismo jugador no es
+        abandono; si se cae del todo y RECONNECT llega antes de los 15 s, no pierde por abandono."""
+        a, ea = await self.entrar("0110000100000021")
+        b, eb = await self.entrar("0110000100000022")
+        a.direccion = ("100.64.0.21", 1)
+        pareja = {"miembros": (a, b), "check": set(), "tipo": "OC_QUICK", "room_id": 990021}
+        self.srv.parejas[a] = self.srv.parejas[b] = pareja
+        for x in (a, b):
+            await self.srv.recibir(x, 1, {"msgid": "CMD_CHANGE_GAMEPHASE", "rqid": 1, "phase": "1ST"})
+        otra, _ = cliente(self.srv)
+        otra.steam_hex = a.steam_hex
+        self.srv.sesiones.add(otra)
+        await self.srv.cerrar(otra)          # cerrar una conexión extra: a sigue viva
+        self.assertFalse(pareja.get("abandonaron"))
+        pid_a = self.srv._pid_visible(a)
+        self.srv.ntl_por_clave[a.steam_hex] = {"ip_tcp": "100.64.0.21"}
+        await self.srv.cerrar(a)             # se cae del todo
+        self.assertEqual(len(pareja["abandonaron"]), 1)
+        nueva, en = cliente(self.srv)
+        nueva.direccion = ("100.64.0.21", 2)
+        await self.srv.recibir(nueva, 2, {"msgid": "CMD_RECONNECT", "rqid": 2, "pid": pid_a})
+        self.assertEqual(en[-1][1]["result"], "NOERR")
+        self.assertFalse(pareja["abandonaron"])
+        self.assertIn(nueva, pareja["miembros"])
+        pareja["decidir_derrota"]()
+        self.assertIsNone(pareja.get("derrota"))
+        self.assertEqual(self.srv.grado_modales(a.steam_hex.lower()), "A")
+
     async def test_turn_propio_lista_y_direcciones(self):
         """R (turn.py AzrakHQ): lista TURN con port y tls_port no nulos + certificado; la dirección de
         relé va al rival (rqid 0) y el que manda recibe la que el rival mandó antes."""

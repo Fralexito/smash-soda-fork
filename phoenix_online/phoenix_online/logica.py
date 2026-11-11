@@ -301,8 +301,11 @@ class Servidor:
         self._salir_de_cola(sesion)
         self._salir_de_sala_coop(sesion)
         pareja = self._pareja_por_clave(sesion)
+        # R (evoweb, hilo PESBUL p. 9): por la sesión EXACTA. El PES abre más de una conexión; si otra
+        # del mismo jugador sigue viva, cerrar esta no es un abandono
+        sigue = bool(sesion.steam_hex) and any(x.steam_hex == sesion.steam_hex for x in self.sesiones)
         if pareja is not None and pareja.get("en_juego") and not pareja.get("terminado") \
-                and not pareja.get("abandonaron"):
+                and not pareja.get("abandonaron") and not sigue:
             # R (pesmanner.dropped): se cerró su PES con el partido en marcha
             pareja.setdefault("abandonaron", set()).add(sesion)
             self._anotar_modales((sesion.steam_hex or "").lower(), True, "DISCONNECTED")
@@ -1752,10 +1755,25 @@ class Servidor:
             s.ntl = dict(viejo.ntl or {})
             s.huella = getattr(viejo, "huella", None)
             s.versiones = getattr(viejo, "versiones", {})
-            for d in (self.parejas,):
-                if viejo in d:
-                    d[s] = d.pop(viejo)
-                    d[s]["miembros"] = tuple(s if x is viejo else x for x in d[s]["miembros"])
+        # vuelve a su partido aunque la sesión vieja ya se haya cerrado (se busca por la clave, y la
+        # pareja sigue viva en la entrada del rival); si se cayó con el partido en juego y volvió antes
+        # de los 15 s, el corte no cuenta como abandono
+        pareja = self.parejas.pop(viejo, None) if viejo is not None else None
+        pareja = pareja or next((p for p in self.parejas.values()
+                                 if any((x.steam_hex or "").lower() == clave for x in p["miembros"])), None)
+        if pareja is not None:
+            pareja["miembros"] = tuple(s if (x.steam_hex or "").lower() == clave else x for x in pareja["miembros"])
+            self.parejas[s] = pareja
+            aband = pareja.get("abandonaron") or set()
+            volvio = {x for x in aband if (x.steam_hex or "").lower() == clave}
+            if volvio:
+                aband -= volvio
+                pareja["abandonaron"] = aband
+                d = self.datos.modales(clave)
+                if (d.get("hist") or [])[-1:] == [1]:
+                    d["hist"][-1] = 0
+                    self.datos.guardar_modales(clave, d)
+                log.info("RECONNECT de %s a tiempo: el corte no cuenta como abandono", clave[-6:])
         self._registrar(s, j)
         log.info("RECONNECT de %s (pid %s)", clave[-6:], s.pid)
         return {}
@@ -6446,7 +6464,12 @@ class Servidor:
             return
         casa, fuera = pareja["miembros"]
         g = pareja.get("marcador") or {"HOME": 0, "AWAY": 0}
-        gana = "AWAY" if quien is casa else "HOME"
+        # por clave: tras un RECONNECT la sesión de la pareja ya no es el mismo objeto
+        es_casa = quien is casa or (bool(quien.steam_hex) and quien.steam_hex == casa.steam_hex)
+        if not es_casa and quien is not fuera and quien.steam_hex != fuera.steam_hex:
+            return
+        quien = casa if es_casa else fuera
+        gana = "AWAY" if es_casa else "HOME"
         pierde = "HOME" if gana == "AWAY" else "AWAY"
         marcador = dict(g) if g[gana] > g[pierde] else {gana: 3, pierde: 0}
         pareja["derrota"] = quien
