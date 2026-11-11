@@ -4019,25 +4019,63 @@ class Servidor:
     def _banner():
         return Empaquetado({"filename": "", "hash_str": ""})
 
+    def _campos_matchday(self, s, e):
+        return {
+            "compe_id": e["compe_id"], "base_id": int(e.get("base_id") or e["compe_id"]),
+            "compe_name": str(e.get("compe_name") or f"Matchday {e['compe_id']}"),
+            "is_disp_compe_name": "YES", "group_name": str(e.get("group_name") or ""),
+            "group_desc": "", "group_info_a": Empaquetado({}), "group_info_b": Empaquetado({}),
+            "is_entry_restricted": "NO", "match_type": "", "squad_type": "MATCHDAY_SQUAD_MYCLUB",
+            "group_type": "MATCHDAY_GROUP_TYPE_OTHER", "rating_rank": "MATCHDAY_RATING_RANK_NONE",
+            "start_date": e["inicio"], "entry_limit_date": e["fin"], "end_group_match_date": e["fin"],
+            "pickup_member_date": e["fin"], "end_date": e["fin"], "entry_user_num": 0,
+            "entry_user_max": int(e.get("cupo") or 1000), "is_end": "NO",
+            "banner_file_info": self._banner(), "list_banner_file_info": self._banner(),
+            "is_use_emblem": "NO", "is_use_emblem_list": "NO",
+            "is_entry": self._inscrito(s, "matchday", e["compe_id"]),
+            "watch_match_reward_state": "", "compe_db_id": e["compe_id"], "is_possible_watch": "NO",
+            "add_limit_rating": 0}
+
     async def c_cmd_get_matchday_list(self, s, m):
-        lista = []
-        for e in self._torneos("matchday"):
-            lista.append(Empaquetado({
-                "compe_id": e["compe_id"], "base_id": int(e.get("base_id") or e["compe_id"]),
-                "compe_name": str(e.get("compe_name") or f"Matchday {e['compe_id']}"),
-                "is_disp_compe_name": "YES", "group_name": str(e.get("group_name") or ""),
-                "group_desc": "", "group_info_a": Empaquetado({}), "group_info_b": Empaquetado({}),
-                "is_entry_restricted": "NO", "match_type": "", "squad_type": "MATCHDAY_SQUAD_MYCLUB",
-                "group_type": "MATCHDAY_GROUP_TYPE_OTHER", "rating_rank": "MATCHDAY_RATING_RANK_NONE",
-                "start_date": e["inicio"], "entry_limit_date": e["fin"], "end_group_match_date": e["fin"],
-                "pickup_member_date": e["fin"], "end_date": e["fin"], "entry_user_num": 0,
-                "entry_user_max": int(e.get("cupo") or 1000), "is_end": "NO",
-                "banner_file_info": self._banner(), "list_banner_file_info": self._banner(),
-                "is_use_emblem": "NO", "is_use_emblem_list": "NO",
-                "is_entry": self._inscrito(s, "matchday", e["compe_id"]),
-                "watch_match_reward_state": "", "compe_db_id": e["compe_id"], "is_possible_watch": "NO",
-                "add_limit_rating": 0}))
+        lista = [Empaquetado(self._campos_matchday(s, e)) for e in self._torneos("matchday")]
         return {"compe_list": lista, "list_num": len(lista), "list_max": len(lista), "is_no_check": "NO"}
+
+    @staticmethod
+    def _valoracion_plantilla():
+        return Empaquetado({"sp_squad_rating": 0, "rating_kind_player_bonus_value_list": [],
+                            "evaluation_a": 0, "evaluation_b": 0, "superiority_border_ratio": 0})
+
+    async def c_cmd_get_matchday_info(self, s, m):
+        """D.5: sin compe_info el cliente olvida el compe_id y manda JOIN con 0."""
+        cid = self._id_entero(m.get("compe_id"))
+        e = next((x for x in self._torneos("matchday") if x["compe_id"] == cid), None)
+        if e is None:
+            return {"result": "ERR_COMPE_NOTFOUND"}
+        club = self.datos.club(s.steam_hex or "") if s.steam_hex else None
+        mio = ((club or {}).get("matchday_equipo") or {}).get(str(cid)) or {}
+        info = {**self._campos_matchday(s, e),
+                "start_match_limit_date": e["fin"], "entry_pickup_match_start_date": e["fin"],
+                "watch_match_start_date": e["fin"], "is_check_eula": "NO", "eula_url": "",
+                "ball_id": int(e.get("ball_id") or 0), "group_match_time": 0, "pickup_match_time": 0,
+                "watch_wait_time": 0, "use_stadium_id": int(e.get("estadio") or 0),
+                "fixed_timezone": "", "fixed_weather": "", "fixed_season": "", "is_fix_condition": "NO",
+                "is_equalization": "NO", "is_pesleague_stadium": "NO", "is_efootball_pro_stadium": "NO",
+                "joined_matchday_group": str(mio.get("grupo") or ""), "pickup_select": "",
+                "team_id": int(mio.get("team_id") or 0), "pickup_cut_off_rank": 0, "team_list_num": 0,
+                "all_reward_info": Empaquetado({}), "achievement_reward_list": Empaquetado({}),
+                "win_reward_list": Empaquetado({}), "lose_reward_list": Empaquetado({}),
+                "watching_reward_list": Empaquetado({}), "pickup_win_reward_list": Empaquetado({}),
+                "pickup_lose_reward_list": Empaquetado({}), "squad_rating_info": self._valoracion_plantilla()}
+        return {"compe_info": Empaquetado(info), "info_overview": Empaquetado({})}
+
+    async def c_cmd_get_matchday_mainmenu_info(self, s, m):
+        return {"mainmenu_info": Empaquetado({
+            "matchday_progress": "", "group_match_info": Empaquetado({}), "is_hide_graph": "YES",
+            "pickup_user_info": Empaquetado({"pickup_users_group_a": [], "pickup_users_group_b": [],
+                                             "pickup_user_group_a_num": 0, "is_failed_pickup_users": "NO"}),
+            "is_final_reward": "NO", "is_get_final_reward": "NO", "is_watch_match": "NO",
+            "final_reward_list": Empaquetado({}), "pickup_reward_list": Empaquetado({}),
+            "group_result": "", "pickup_reward_type": ""})}
 
     # Inscripción propia en torneos de Matchday / PES League (respuesta vacía = NOERR; las claves
     # de respuesta reales se completan cuando se lean en Ghidra).
@@ -4075,7 +4113,14 @@ class Servidor:
         return "YES" if club and cid in ((club.get("torneos_inscripcion") or {}).get(clave) or []) else "NO"
 
     async def c_cmd_join_matchday(self, s, m):
-        return self._inscribir_torneo(s, m, "matchday")
+        r = self._inscribir_torneo(s, m, "matchday")
+        if r:
+            return r
+        club = self._club_propio(s)
+        club.setdefault("matchday_equipo", {})[str(self._id_entero(m.get("compe_id")))] = {
+            "grupo": str(m.get("entry_matchday_group") or ""), "team_id": self._id_entero(m.get("team_id")) or 0}
+        self.datos.guardar_club(s.steam_hex, club)
+        return {"squad_rating_info": self._valoracion_plantilla()}
 
     async def c_cmd_leave_matchday(self, s, m):
         return self._salir_torneo(s, m, "matchday")
@@ -4104,13 +4149,45 @@ class Servidor:
         for e in self._torneos("pesleague"):
             lista.append(Empaquetado({
                 "compe_id": e["compe_id"], "compe_name": str(e.get("compe_name") or f"Torneo {e['compe_id']}"),
-                "start_date": e["inicio"], "end_date": e["fin"],
-                "entry_limit_division": "", "entry_limit_division_min": str(e.get("division_min") or "D12"),
+                "start_date": e["inicio"], "end_date": e["fin"], "entry_limit_date": e["fin"],
+                "match_end_date": e["fin"], "entry_user_limit": "NO", "entry_user_num": 0,
+                "entry_user_max": int(e.get("cupo") or 1000), "entry_limit_division": "", "entry_limit_division_min": str(e.get("division_min") or "D12"),
                 "entry_limit_division_max": str(e.get("division_max") or "D1"), "is_end": "NO",
                 "is_entry": self._inscrito(s, "pesleague", e["compe_id"]), "is_gm_account": "NO",
                 "compe_db_id": e["compe_id"],
                 "banner_file_info": self._banner(), "list_banner_file_info": self._banner()}))
         return {"compe_list": lista, "list_num": len(lista), "list_max": len(lista), "is_no_check": "NO"}
+
+    def _torneo_pesleague(self, m):
+        cid = self._id_entero(m.get("compe_id"))
+        return next((x for x in self._torneos("pesleague") if x["compe_id"] == cid), None)
+
+    async def c_cmd_get_pesleague_compe_info(self, s, m):
+        e = self._torneo_pesleague(m)
+        if e is None:
+            return {"result": "ERR_COMPE_NOTFOUND"}
+        return {"compe_data": Empaquetado({
+            "compe_id": e["compe_id"], "compe_name": str(e.get("compe_name") or f"Torneo {e['compe_id']}"),
+            "is_myclub": "YES", "match_type": str(e.get("match_type") or ""), "start_date": e["inicio"],
+            "end_date": e["fin"], "entry_limit_date": e["fin"], "match_end_date": e["fin"],
+            "entry_user_limit": "NO", "entry_user_num": 0, "entry_user_max": int(e.get("cupo") or 1000),
+            "entry_limit_division": "", "entry_limit_division_min": str(e.get("division_min") or "D12"),
+            "entry_limit_division_max": str(e.get("division_max") or "D1"), "banner_file_info": self._banner(),
+            "is_exist_overview_info": "NO", "is_exist_participation_right": "NO", "is_exist_rewardInfo": "NO",
+            "compe_db_id": e["compe_id"], "use_ball_id": int(e.get("ball_id") or 0), "is_e_sports": "NO",
+            "is_pesleague_stadium": "NO", "is_efootball_pro_stadium": "NO",
+            "entry_compe": self._inscrito(s, "pesleague", e["compe_id"]), "team_id": 0,
+            "clan_info": Empaquetado({}), "compe_regulation": Empaquetado({}), "eula_url": ""})}
+
+    async def c_cmd_get_pesleague_compe_participation_right(self, s, m):
+        e = self._torneo_pesleague(m)
+        if e is None:
+            return {"result": "ERR_COMPE_NOTFOUND"}
+        return {"participation_right": Empaquetado({
+            "compe_id": e["compe_id"], "compe_name": str(e.get("compe_name") or ""),
+            "banner_file_info": self._banner(), "start_date": e["inicio"], "end_date": e["fin"],
+            "need_match_num": 0, "need_point": 0, "player_point": 0, "clan_name": "", "clan_owner_pid": 0,
+            "clan_owner_name": Empaquetado({"pname": ""}), "is_get": "YES"})}
 
     async def c_cmd_get_myclub_squadlist(self, s, m):
         plantilla = self._plantilla_principal(s)

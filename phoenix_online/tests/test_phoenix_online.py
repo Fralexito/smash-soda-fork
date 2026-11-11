@@ -1126,6 +1126,24 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
             await r(a, i, {"msgid": c.replace("JOIN", "LEAVE"), "rqid": i, "compe_id": cid})
             await r(a, i, {"msgid": lista, "rqid": i, "start_index": 0})
             self.assertEqual(res()["compe_list"][0].valor["is_entry"], "NO", campo)
+        for i, c in enumerate(["CMD_GET_MATCHDAY_INFO", "CMD_GET_MATCHDAY_MAINMENU_INFO"], 40):
+            await r(a, i, {"msgid": c, "rqid": i, "compe_id": 3})
+            self.assertEqual(res()["result"], "NOERR", c)
+            msgpack_min.packb(res())
+        self.assertEqual(res()["mainmenu_info"].valor["is_watch_match"], "NO")
+        await r(a, 42, {"msgid": "CMD_GET_MATCHDAY_INFO", "rqid": 42, "compe_id": 3})
+        self.assertEqual(res()["compe_info"].valor["compe_id"], 3)
+        self.assertEqual(res()["compe_info"].valor["is_check_eula"], "NO")
+        await r(a, 43, {"msgid": "CMD_JOIN_MATCHDAY", "rqid": 43, "compe_id": 3, "team_id": 174,
+                        "entry_matchday_group": "MATCHDAY_GROUP_A"})
+        self.assertIn("squad_rating_info", res())
+        await r(a, 44, {"msgid": "CMD_GET_MATCHDAY_INFO", "rqid": 44, "compe_id": 3})
+        self.assertEqual((res()["compe_info"].valor["joined_matchday_group"], res()["compe_info"].valor["team_id"]),
+                         ("MATCHDAY_GROUP_A", 174))
+        for i, c in enumerate(["CMD_GET_PESLEAGUE_COMPE_INFO", "CMD_GET_PESLEAGUE_COMPE_PARTICIPATION_RIGHT"], 50):
+            await r(a, i, {"msgid": c, "rqid": i, "compe_id": 4})
+            self.assertEqual(res()["result"], "NOERR", c)
+            msgpack_min.packb(res())
         await r(a, 30, {"msgid": "CMD_JOIN_MATCHDAY", "rqid": 30, "compe_id": 99})
         self.assertEqual(res()["result"], "ERR_COMPE_NOTFOUND")
 
