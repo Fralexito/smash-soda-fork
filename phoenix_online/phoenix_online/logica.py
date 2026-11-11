@@ -4148,9 +4148,15 @@ class Servidor:
         clave_d = (dueno.steam_hex or "").lower() if dueno else ""
         _, c = self._clan_de(clave_d)
         b = sala["basic"]
+        nombre_sala = self._texto(b.get("room_name")) or "Sala Phoenix"
+        # Prueba 11-nov: el PES manda el nombre por defecto «Salón de juego de» SIN el dueño (lo espera
+        # completado por el servidor); si termina en « de» se le añade el nombre del dueño.
+        nombre_dueno = str((self.datos.jugador(clave_d) or {}).get("pname") or "") if clave_d else ""
+        if nombre_dueno and nombre_sala.rstrip().lower().endswith(" de"):
+            nombre_sala = nombre_sala.rstrip() + " " + nombre_dueno
         return Empaquetado({
             "room_id": sala["room_id"],
-            "room_name": self._texto(b.get("room_name")) or "Sala Phoenix",
+            "room_name": nombre_sala,
             "clan_name": self._texto(b.get("clan_name")) or (c or {}).get("nombre") or "",
             "clan_owner_info": self._usuario_plano(clave_d),
             "is_follow": "NO",

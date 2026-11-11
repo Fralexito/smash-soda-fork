@@ -1185,6 +1185,12 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.assertEqual((fila["basic_settings"].valor["room_name"], fila["basic_settings"].valor["room_id"],
                           fila["match_settings"].valor["user_team_id"], fila["user_num"]), ("Phoenix", sala, 101, 1))
         msgpack_min.packb(lista)
+        # nombre por defecto del PES («… de») se completa con el dueño
+        sala_obj = self.srv.salas_coop[sala]
+        sala_obj["basic"]["room_name"] = "Salón de juego de"
+        completo = self.srv._ajustes_sala_coop(sala_obj).valor["room_name"]
+        self.assertTrue(completo.startswith("Salón de juego de ") and len(completo) > len("Salón de juego de "), completo)
+        sala_obj["basic"]["room_name"] = "Phoenix"
         await r(a, 30, {"msgid": "CMD_REQWATCHL_COOP_ROOM_MEMBER", "rqid": 50, "room_id": sala})
         self.assertEqual((ea[-1][1]["list_type"], ea[-1][1]["list_num"]), ("RELOAD", 1))
         await r(b, 3, {"msgid": "CMD_JOIN_COOP_ROOM", "rqid": 3, "room_id": sala, "password": "", "is_invite": "NO"})
