@@ -47,3 +47,32 @@ Disponibles: Enter (A), Esc (B), Espacio, Tab, Retroceso, flechas, Shift, Ctrl, 
 - `myclub.objetos` y otras claves de config necesitan **reiniciar el servidor** (no se recargan en caliente).
 - `pes_navegar` con varios Enter seguidos puede perder pulsaciones: mejor una tecla por llamada con captura entre pasos.
 - Las pantallas de Matchday/Eventos solo modifican datos de nuestro servidor (reversible); los «Términos de Uso» son de la pantalla del juego, no un acuerdo real.
+
+## 8. Torneo en línea y Matchday: qué los destrabó y cómo repetirlo (11-nov, Claude hilo ONLINE)
+
+**Logro.** Torneo en línea (PES League 1 vs 1) y Matchday ya se pueden inscribir y abren su pantalla en el PES base. Torneo: relojes y «Espera a que abra el período de Matchmaking». Matchday: «Opciones de Matchmaking → Ir a Matchmaking». Antes: «inscripción cerrada», «Se calcularon los resultados finales», «Finalizó la fase de partidos de grupo», «No se ha encontrado el Campeonato».
+
+**Regla que lo explica todo: si el servidor manda las fechas/duraciones en 0 (o todas iguales), el PES da el campeonato por TERMINADO.** El texto de «terminado» sale aunque el nombre y la lista se vean bien. Hay que mandar fechas coherentes y duraciones positivas.
+
+**Torneo (PES League).** Tras `JOIN_PESLEAGUE_COMPE{compe_id, team_id}` el PES pide `GET_PESLEAGUE_COMPE_TEAM_LIST` y `GET_PESLEAGUE_1VS1_MAINMENU_INFO`. La segunda debe llevar (todo en la raíz, enteros salvo los dos textos): `matching_first_date`, `matching_time` (3600), `matching_interval` (86400), `compe_end_time`, `team_id`, `team_name`, `point`, `win_count`, `lose_count`, `draw_count`, `match_num`, `regulation_match_num` (>0), `rank_type`. Fuente: D.6. Commit `3594702` (después afinado por el coordinador).
+
+**Matchday.** Dos causas seguidas, probadas en el PES:
+1. `info_overview` NO fija el compe_id: tras inscribirse el PES manda casi todo con `compe_id: 0` (INFO, SP_GAMEPLAN, MAINMENU_INFO, AD_FILE, WATCHING_MATCH_LIST). El servidor debe resolver 0 → último torneo de la sesión, el inscrito o el único (`_cid_torneo`), y `JOIN_MATCHDAY` debe devolver `compe_id`. Commits `5ea6c3d` y siguientes.
+2. Con `end_group_match_date`, `pickup_member_date`, `start_match_limit_date`, `entry_pickup_match_start_date` y `watch_match_start_date` todas = fin del torneo, y `group_match_time`/`pickup_match_time`/`watch_wait_time` = 0, sale «Finalizó la fase de partidos de grupo». Con las fechas escalonadas (grupo = fin-2 d, pickup = fin-1,5 d, gran final = fin-1 d) la cuenta atrás se movió exactamente un día (el cliente sí las lee), pero seguía igual hasta que se dio duración a `group_match_time` (≥ 2 días). Entonces abre «Opciones de Matchmaking». Función `_fechas_matchday` del servidor.
+
+**Paso a paso para repetirlo (PES base, servidor con esos commits).**
+1. Revisar el lock (`PES_EN_USO_ONLINE.txt`), que no haya `PES2021.exe`/`sider.exe` ajenos y que `/estado` responda 200.
+2. Abrir el PES; pantalla de título → Enter ×2 → menú principal.
+3. `Derecha` + Enter (icono eFootball) → aviso «Actualiz. en vivo» → Enter. **Mirar la captura antes de cada tecla**: el cursor recuerda la última entrada (puede estar en «Cooperativo»).
+4. Matchday: 4.º elemento; Torneo en línea: 5.º. Enter → lista → Enter → «¿Inscribirte? Sí» (`Derecha`, Enter).
+5. Términos de Uso (si aparecen): Enter sobre el texto, `Abajo` hasta «Acepto», Enter (marca), `Abajo` a los botones, `Derecha` hasta «Aceptar», Enter. Si se desmarca, mirar captura: Abajo desde «Acepto» puede caer directo en «Aceptar» y la Derecha siguiente cae en «No aceptar».
+6. Elegir bando/liga → equipo → «¿Continuar/Participar? Sí».
+
+**Errores e intentos fallidos (para no repetirlos).**
+- El **puntero del ratón sobre la ventana del PES mueve el cursor del menú** (caía en Master League). Antes de probar: `Cursor.Position = (1900,1070)` o el ratón fuera de la ventana. Frank también lo toca sin querer.
+- **Dos sesiones pulsando teclas en el mismo PES se pisan**; y abrir un segundo PES con la misma cuenta o reiniciar el servidor corta la prueba de la otra. Siempre: lock, una sola ventana, avisar.
+- Esc en la pantalla principal de Matchday/Torneo cerró el PES dos veces sin volcado (nota del lock, 05:40): para salir de Torneo usar `Z` → Sí; no Esc.
+- Con solo las fechas escalonadas (sin `group_match_time`) Matchday seguía «Finalizó…»: no basta una de las dos cosas.
+- `GET_PESLEAGUE_1VS1_MAINMENU_INFO` aún sin respuesta propia = NOERR vacío = «resultados finales» + relojes `-- : --`.
+
+**Cómo comprobar y revertir.** Comprobar: Torneo muestra reloj de matchmaking y «Mejor resultado en 10 partidos»; Matchday abre «Opciones de Matchmaking». Revertir: cada instalación tiene respaldo `logica.py.antes_<commit>`, `config.antes_<commit>.json` y `respaldos/phoenix_online.antes_<commit>.db`; copiar de vuelta y reiniciar el servidor (PES fuera del online, o sale C_MHJX_0002).
