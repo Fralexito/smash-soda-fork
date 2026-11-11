@@ -5,7 +5,7 @@ PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 
 ## Resumen
 - **Probado en el PES y funcionando:** 22 de 49 apartados (**45 %**).
-- **Programado (falta probarlo en el PES):** 13 más. Con ellos, **34 de 49 ya están hechos (69 %)**.
+- **Programado (falta probarlo en el PES):** 13 más. Con ellos, **35 de 49 ya están hechos (71 %)**.
 - **A medias** (abre bien pero sin contenido todavía, o hecho solo en parte): 6.
 - **Falta hacer:** 8.
 - Comandos del juego que el servidor ya controla: **216 de 439 (49 %)**; sin contar los modos aún no empezados (cooperativo, Matchday, eventos, PES League, clanes, tienda): **212 de 313 (68 %)**.
