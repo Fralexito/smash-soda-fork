@@ -969,6 +969,9 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         await r(a, 1, {"msgid": "CMD_GET_EVENT_CATEGORY_LIST", "rqid": 1})
         cat = msgpack_min.unpackb(msgpack_min.packb(res()["event_category_list"][0].valor))
         self.assertEqual((cat["open_event_num"], cat["not_cleared_event_num"]), (1, 1))
+        await r(a, 21, {"msgid": "CMD_GET_MYCLUB_SQUAD_BONUS_TARGET_PLAYERLIST", "rqid": 21, "compe_id": 7})
+        self.assertEqual((res()["gameplayer_id_list"], res()["gameplayer_id_list_num"],
+                          res()["need_player_num"]), ([], 0, 0))
         await r(a, 2, {"msgid": "CMD_GET_MYCLUB_VSCOM_OPPONENT", "rqid": 2})
         self.assertEqual(res()["is_entry_compe"], "NO")
         await r(a, 3, {"msgid": "CMD_JOIN_COMPEV", "rqid": 3, "compe_mode": "EVENT_COMPE", "compe_id": 7,

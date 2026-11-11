@@ -3784,11 +3784,14 @@ class Servidor:
                 "progress_game_count": int(ins.get("progreso") or 0)}
 
     async def c_cmd_get_myclub_squad_bonus_target_playerlist(self, s, m):
-        """Prueba en el PES (11-nov): llega tras GET_COMPEV_INFO, con compe_id. Sin «bonus de
-        plantilla» la lista va vacía. P: nombres de las claves; se mandan las variantes probables."""
-        return {"gameplayer_list": [], "gameplayer_list_num": 0, "target_player_list": [],
-                "target_player_list_num": 0, "squad_bonus_target_player_list": [],
-                "squad_bonus_target_player_list_num": 0, "compe_id": self._id_entero(m.get("compe_id"))}
+        """L (Ghidra 11-nov): respuesta {gameplayer_id_list, gameplayer_id_list_num,
+        need_player_num}. El cliente comprueba con esto el «bonus de plantilla» antes de
+        inscribir; sin estas claves dice «No cumples los requisitos». Por evento en config:
+        bonus_jugadores (ids de jugador) y bonus_necesarios (def. 0 = no exige nada)."""
+        e = self._evento(self._id_entero(m.get("compe_id"))) or {}
+        ids = [int(x) for x in e.get("bonus_jugadores") or [] if isinstance(x, int)]
+        return {"gameplayer_id_list": ids, "gameplayer_id_list_num": len(ids),
+                "need_player_num": int(e.get("bonus_necesarios") or 0)}
 
     async def c_cmd_join_compev(self, s, m):
         e = self._evento(self._id_entero(m.get("compe_id")))
