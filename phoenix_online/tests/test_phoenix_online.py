@@ -892,6 +892,13 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         await r(a, 4, {"msgid": "CMD_RECV_MYCLUB_ACHIEVEMENT_BONUS", "rqid": 4, "is_all": "YES"})
         self.assertEqual(res()["recv_achievement_list"], [])  # no se cobra dos veces
         self.assertEqual(self.srv.datos.club(a.steam_hex)["gp"], 10000)
+        # el cobro quedó en el historial de GP (visible con myclub.historial)
+        self.srv.cfg["myclub"]["historial"] = True
+        await r(a, 5, {"msgid": "CMD_GET_MYCLUB_HISTORYLIST", "rqid": 5, "start_index": 0})
+        self.assertEqual((res()["myclub_history_list_total"], res()["myclub_history_list_num"]), (1, 1))
+        reg = msgpack_min.unpackb(msgpack_min.packb(res()["myclub_history_list"][0].valor))
+        self.assertEqual(reg["history_data_kind"], "GP")
+        self.assertEqual(msgpack_min.unpackb(reg["history_data_out"])["count"], 10000)
 
     async def test_myclub_catalogo_club_y_rival_rotando(self):
         import os, struct, tempfile, zlib, json as _j, sys as _s

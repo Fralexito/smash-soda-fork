@@ -297,12 +297,15 @@ class Servidor:
             return
         manejador = getattr(self, "c_" + msgid.lower(), None)
         if manejador is not None:
+            gp_antes = self._gp_actual(sesion, msgid)
             try:
                 extra = await manejador(sesion, msg)
             except Exception:
                 # un fallo nuestro no debe cerrar la conexión: el cliente lo vive como desconexión
                 log.exception("fallo en %s", msgid)
                 extra = {"result": "ERR_SERVERNOTREADY"}
+            if gp_antes is not None:
+                self._anotar_movimiento_gp(sesion, msgid, gp_antes)
             if extra is None:
                 return  # el manejador ya respondió o no responde
         elif msgid in CONFIRMACIONES:
@@ -3020,13 +3023,55 @@ class Servidor:
         return {}
 
     async def c_cmd_get_myclub_historylist(self, s, m):
-        """B.3: historial vacío válido hasta conocer los tokens de history_data_kind/data_type."""
+        """B.3/B.17: historial de GP del club (lo más nuevo primero). Vacío salvo config
+        myclub.historial = true, hasta ver en el PES cómo muestra los registros (tokens P)."""
         try:
             inicio = max(0, int(m.get("start_index") or 0))
         except (TypeError, ValueError):
             inicio = 0
-        return {"myclub_history_list_total": 0, "index": inicio, "myclub_history_list_num": 0,
-                "myclub_history_list": []}
+        club = self._club_propio(s) if (self.cfg.get("myclub") or {}).get("historial") else None
+        movs = list(reversed((club or {}).get("historial_gp") or []))
+        pagina = [self._registro_historial(x) for x in movs[inicio:inicio + 100]]
+        cuerpo = lambda: {"msgid": "CMD_GET_MYCLUB_HISTORYLIST", "rqid": 0, "result": "NOERR",
+                          "myclub_history_list_total": len(movs), "index": inicio,
+                          "myclub_history_list_num": len(pagina), "myclub_history_list": pagina}
+        while pagina and _cifrado_comprimido(cuerpo()) > MAX_CIFRADO_CLIENTE:
+            pagina = pagina[:len(pagina) * 3 // 4]  # que quepa en una trama (como GAMERESULTS)
+        return {"myclub_history_list_total": len(movs), "index": inicio,
+                "myclub_history_list_num": len(pagina), "myclub_history_list": pagina}
+
+    MAX_HISTORIAL_GP = 100
+
+    def _gp_actual(self, s, msgid):
+        """GP del club antes de un comando que puede moverlos (solo comandos de myClub)."""
+        if "MYCLUB" not in msgid and "GP_ACHIEVEMENT" not in msgid or not s.steam_hex:
+            return None
+        club = self.datos.club(s.steam_hex)
+        return int(club.get("gp") or 0) if club else None
+
+    def _anotar_movimiento_gp(self, s, msgid, antes):
+        """Si el comando cambió los GP, queda un registro para el historial (B.3)."""
+        club = self.datos.club(s.steam_hex)
+        if not club:
+            return
+        delta = int(club.get("gp") or 0) - antes
+        if not delta:
+            return
+        club["historial_gp"] = ((club.get("historial_gp") or []) + [
+            {"hora": int(time.time()), "cmd": msgid, "gp": delta}])[-self.MAX_HISTORIAL_GP:]
+        self.datos.guardar_club(s.steam_hex, club)
+
+    @staticmethod
+    def _registro_historial(mov):
+        """P (B.17): in = lo que el club dio, out = lo que recibió; tipo y data_type «GP»."""
+        objeto = lambda: Empaquetado({"item_type": "", "item_variation": "", "item_effect_arg": 0,
+                                      "count": 0, "pes_point_price": 0})
+        delta = int(mov.get("gp") or 0)
+        return Empaquetado({
+            "history_data_kind": "GP",
+            "history_data_in": Empaquetado({"data_type": "GP", "entity_id": 0,
+                                            "count": -delta if delta < 0 else 0, "item_data": objeto()}),
+            "history_data_out": Empaquetado({"count": delta if delta > 0 else 0, "item_data": objeto()})})
 
     async def c_cmd_get_myclub_presentlist(self, s, m):
         """B.4: sin regalos pendientes (lista vacía válida)."""
