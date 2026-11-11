@@ -60,3 +60,13 @@ Método: su código se LEE (nunca se ejecuta; su .exe es el mismo servidor en Py
 | Actualización en vivo | sin | el PES baja el .cpk de la carpeta `actualizacion` (misma BD para todos) con lector CPK propio (e289f02) |
 
 Lo que NO se pasa (a propósito): su instalador de DLL en el PES (gamesetup/hostctl: tocan el juego del usuario), su panel de administración web (lo haremos en la web Phoenix) y su identidad de servidor (usamos la web Phoenix).
+
+## Anexo (11-nov, REA, solo lectura): analisis estatico de `pes2021-server-windows-x64.exe` (release de AzrakHQ)
+
+Archivo de referencia (NO ejecutar): 15 034 409 bytes, SHA-256 `c8f482120e1c4eca50c7d9767e206f178235d3ac93263dd87da54bd114d0b4b7`. Guardado en `D:\Frank\IA\CLAUDE\pes-online\referencia_exe_azrak\`. REA lo reconoce como **PyInstaller** (417 nodos, Python 3.12, 415 archivos extraidos a una carpeta temporal sin ejecutar nada).
+- **Es el mismo servidor MIT que ya estudiamos**, compilado: 42 modulos `pesserver/*` (los mas grandes: httpgate 72 KB, pesmatch 49 KB, pestourney 45 KB, hostctl 44 KB, turnrelay 36 KB, pescmds 34 KB, adminextra 33 KB, pescoop 32 KB, events 30 KB, pesrooms 28 KB, netsetup 26 KB, gamesetup 24 KB, pesreplay 24 KB), mas `schemas.json` (145 KB), `team_list.json` (663 equipos), `web/admin.html` (255 KB), `web/index.html`, `web/teams.json` y los scripts de cliente `join.ps1`, `join.sh`, `install-ca-proton.py`. Empaqueta `cryptography` y `pyOpenSSL` (las mismas dependencias que pide nuestro TURN propio).
+- **Red:** por defecto gate 10000 + http 8080 (y 80 para las paginas de jugador con `--join-port`), STUN 3478, relé 7600; `--auto-net` detecta IP LAN/publica y abre puertos con UPnP (`netsetup`); `--public-ip`, `--steam-id`, `--no-register` entre sus opciones.
+- **Certificados (`certs`):** crea `ca.crt` propia, `server.crt/key` para el chequeo de red del juego (nombres `ntl.service.konami.net`, `ntleu/ntljp/ntlus`) y `admin.crt/key`; el script `/join` instala la CA solo para esos nombres.
+- **Panel de admin:** contrasena en `<data>/admin_password` o variable ADMIN_PASSWORD; en el PC del servidor entra sin clave (127.0.0.1). Nosotros lo haremos en la web Phoenix, no copiamos el panel.
+- **Lo que tiene y no portamos a proposito:** instalador de DLL en el juego del usuario (`gamesetup`/`hostctl`), panel de administracion web, `join.ps1/join.sh`, UPnP (`netsetup`). Lo demas ya esta pasado modulo por modulo (ver arriba).
+- Para decompilar los `.pyc` hace falta Python 3.12 (aqui hay 3.11/3.14): no se hizo; las cadenas y la estructura bastaron para este anexo.
