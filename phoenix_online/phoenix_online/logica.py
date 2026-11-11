@@ -1639,7 +1639,7 @@ class Servidor:
                 "staff_num": len(club.get("staff") or []),
                 "is_free_enable": "YES", "is_coop_enable": "NO", "is_auction_state_changed": "NO",
                 # C (10-nov, PES): «Registros de myClub» muestra «Progreso num/total» de aquí
-                "achievement_info": Empaquetado(self._resumen_logros(club)),
+                "achievement_info": Empaquetado(self._resumen_logros(club, s)),
                 "agent_panel_file_info": sin_archivo(), "liveevent_panel_file_info": sin_archivo(),
                 "matchday_emblem_info": Empaquetado({
                     "is_use_emblem": "NO", "is_auto_make_compe_name": "NO",
@@ -3080,7 +3080,7 @@ class Servidor:
     async def c_cmd_get_myclub_achievementlist(self, s, m):
         """B.5/B.17: logros del club. Apagados (lista vacía) salvo config myclub.logros.activo."""
         club = self._club_propio(s)
-        lista = [self._logro_bin(club, l) for l in self._logros(club)] if club is not None else []
+        lista = [self._logro_bin(club, l) for l in self._logros(club, s)] if club is not None else []
         return {"achievement_list_num": len(lista), "achievement_list": lista}
 
     async def c_cmd_send_myclub_read_achievementlist(self, s, m):
@@ -3088,38 +3088,62 @@ class Servidor:
 
     # ---------- logros (B.14 y B.17; los textos y el sentido de value/target son P) ----------
     # categoría: [(meta, GP del premio), ...]; el progreso sale del récord contra la COM
-    LOGROS_DEFECTO = {"MATCH50": [[50, 10000]], "MATCH100": [[100, 20000]], "SUCCESSIVE5": [[5, 5000]]}
+    # B.19 (Ghidra): el cliente SOLO acepta estas 24 categorías (otra = el logro no se pinta).
+    CATEGORIAS_LOGRO = (
+        "RECV_PRESENT", "PLAY_VSCOM_MATCH", "JOIN_VSCOM_COMPE", "PLAY_CASUAL_MATCH", "PLAY_CLAN_MATCH",
+        "PLAY_RANK_MATCH_COACH", "PLAY_RANK_MATCH", "JOIN_EVENT_COMPE", "GET_PLAYER_BY_AGENT",
+        "GET_PLAYER_BY_SCOUT", "GET_PLAYER_BY_RENTAL", "GET_COACH", "EXTEND_PLAYER_CONTRACT",
+        "RECOVERY_ITEM_USE", "TRAINING_PLAYER", "CREATE_SQUAD", "SET_CLOUD_MATCH_SQUAD", "SET_AVATAR",
+        "CHECK_TACTICS_COMPARISON_MENU", "PLAY_SPECIAL_MATCH", "GET_SKILL_RANK", "SUCCESSFUL_BID_SCOUT",
+        "GET_JUST_ONE_PLAYER_BY_SCOUT", "PERFECT_TEAM_SPIRIT")
+    # categoría: [[meta, GP del premio], ...] (hitos en orden); solo las que el servidor puede medir
+    LOGROS_DEFECTO = {
+        "PLAY_VSCOM_MATCH": [[1, 1000], [10, 3000], [50, 10000], [100, 20000]],
+        "PLAY_RANK_MATCH": [[1, 1000], [10, 3000], [50, 10000]],
+        "GET_COACH": [[1, 2000]],
+        "CREATE_SQUAD": [[1, 1000]],
+        "SET_CLOUD_MATCH_SQUAD": [[1, 1000]],
+    }
 
-    def _logros(self, club):
+    def _progreso_logros(self, club, s=None):
+        com = club.get("vscom") or {}
+        prog = {"PLAY_VSCOM_MATCH": int(com.get("partidos") or 0),
+                "GET_COACH": len(club.get("dt_comprados") or []),
+                "CREATE_SQUAD": int(club.get("plantillas_creadas") or 0),
+                "SET_CLOUD_MATCH_SQUAD": 1 if club.get("plantilla_nube") else 0}
+        rank = 0
+        if s is not None and s.steam_hex:
+            try:
+                e = div.completar(self.datos.division(s.steam_hex))
+                rank = e["jugados"] + sum(int(a.get("jugados") or 0) for a in e["archivadas"])
+            except Exception:
+                rank = 0
+        prog["PLAY_RANK_MATCH"] = rank
+        return prog
+
+    def _logros(self, club, s=None):
         """[(categoría, progreso, [(meta, gp)], hitos cobrados)] o [] si están apagados."""
         cfg = (self.cfg.get("myclub") or {}).get("logros") or {}
         if not cfg.get("activo") or club is None:
             return []
-        com = club.get("vscom") or {}
-        progreso = {"MATCH50": int(com.get("partidos") or 0), "MATCH100": int(com.get("partidos") or 0),
-                    "SUCCESSIVE5": int(com.get("racha_max") or 0)}
-        if cfg.get("todas"):  # prueba: las 6 categorías del cliente (las no medibles, a 0)
-            progreso.update({k: 0 for k in ("DIFFERENT20", "POWERFUL_ENEMY", "HIGH_SUCCESS")})
+        progreso = self._progreso_logros(club, s)
         # ojo: «logros_cobrados» (lista) ya lo usa GP_ACHIEVEMENT; los de myClub van aparte
         cobrados = club.get("logros_myclub") if isinstance(club.get("logros_myclub"), dict) else {}
         salida = []
-        premios = dict(cfg.get("premios") or self.LOGROS_DEFECTO)
-        if cfg.get("todas"):
-            for k, meta in (("DIFFERENT20", 20), ("POWERFUL_ENEMY", 1), ("HIGH_SUCCESS", 1)):
-                premios.setdefault(k, [[meta, 5000]])
-        for cat, hitos in premios.items():
-            if cat not in progreso:
-                continue  # sin forma de medirlo todavía (DIFFERENT20, POWERFUL_ENEMY, HIGH_SUCCESS)
-            hitos = [(int(h[0]), int(h[1])) for h in hitos if isinstance(h, (list, tuple)) and len(h) == 2]
+        for cat, hitos in dict(cfg.get("premios") or self.LOGROS_DEFECTO).items():
+            if cat not in self.CATEGORIAS_LOGRO or cat not in progreso:
+                continue  # el cliente no la pinta, o el servidor aún no sabe medirla
+            hitos = sorted((int(h[0]), int(h[1])) for h in hitos
+                           if isinstance(h, (list, tuple)) and len(h) == 2 and int(h[0]) > 0)
             if hitos:
                 salida.append((cat, progreso[cat], hitos, min(int(cobrados.get(cat) or 0), len(hitos))))
         return salida
 
-    def _resumen_logros(self, club):
+    def _resumen_logros(self, club, s=None):
         """Resumen de MAINMENU_INFO: hitos en total, alcanzados y alcanzados sin cobrar (P: el
         sentido de cada contador sale de sus nombres)."""
         total = alcanzados = sin_cobrar = 0
-        for _, valor, hitos, cobrados in self._logros(club):
+        for _, valor, hitos, cobrados in self._logros(club, s):
             total += len(hitos)
             hechos = sum(1 for meta, _ in hitos if valor >= meta)
             alcanzados += hechos
@@ -3178,7 +3202,7 @@ class Servidor:
         todos = str(m.get("is_all") or "").upper() == "YES"
         pedido = m.get("achievement_category")
         recibidos = []
-        for n, (cat, valor, hitos, cobrados) in enumerate(self._logros(club)):
+        for n, (cat, valor, hitos, cobrados) in enumerate(self._logros(club, s)):
             if not todos and cat != pedido:
                 continue
             ganado = 0
@@ -3190,7 +3214,7 @@ class Servidor:
             club.setdefault("logros_myclub", {})[cat] = cobrados
             club["gp"] = int(club.get("gp") or 0) + ganado
             recibidos.append(Empaquetado({
-                "achievement_category": cat, "achievement_id": n,
+                "achievement_category": cat, "achievement_id": self.CATEGORIAS_LOGRO.index(cat) + 1,
                 "achievement_bonus": Empaquetado({"present": self._premio_gp(n + 1, ganado)}),
                 "received_all": "YES" if cobrados >= len(hitos) else "NO",
                 "received_milestone_level": cobrados}))
@@ -3318,6 +3342,7 @@ class Servidor:
             nombre_nuevo = f"{nombre[:self.NOMBRE_MAX - 4]} ({nuevo})"
         club.setdefault("nombres_plantilla", {})[n] = nombre_nuevo
         club["plantillas_ids"] = ids + [nuevo]
+        club["plantillas_creadas"] = int(club.get("plantillas_creadas") or 0) + 1
         self.datos.guardar_club(s.steam_hex, club)
         log.info("myClub %s copió la plantilla %d en la %d", s.steam_hex, origen, nuevo)
         return {"squad_id": nuevo}

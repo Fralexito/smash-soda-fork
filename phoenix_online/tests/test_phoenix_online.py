@@ -865,7 +865,7 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(club["home_town"], {"name": "Lima", "nation_id": 54, "label": "LIM"})
 
     async def test_myclub_logros_con_premio(self):
-        """B.17: apagados = lista vacía; encendidos = progreso del récord contra la COM y cobro en GP."""
+        """B.19: solo categorías del cliente; progreso real; cobro en GP una sola vez; historial."""
         self.srv.cfg = {**self.srv.cfg, "myclub": {
             "jugadores": [{"gameplayer_id": 1}], "entrenadores": [{"coach_id": 8}],
             "club_de_prueba": {"team_name": "P", "gp": 0}}}
@@ -873,18 +873,21 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         r = self.srv.recibir
         res = lambda: ea[-1][1]
         await r(a, 1, {"msgid": "CMD_GET_MYCLUB_ACHIEVEMENTLIST", "rqid": 1})
-        self.assertEqual(res()["achievement_list_num"], 0)
-        self.srv.cfg["myclub"]["logros"] = {"activo": True}
+        self.assertEqual(res()["achievement_list_num"], 0)  # apagados
+        self.srv.cfg["myclub"]["logros"] = {"activo": True, "premios": {
+            "PLAY_VSCOM_MATCH": [[50, 10000], [100, 20000]], "CREATE_SQUAD": [[1, 1000]],
+            "MATCH50": [[1, 99]]}}  # MATCH50 no es del cliente: se ignora
         club = self.srv.datos.club(a.steam_hex)
         club["vscom"] = {"partidos": 60, "racha_max": 3}
         club["logros_cobrados"] = [{"id": 1, "gp": 300}]  # los de GP_ACHIEVEMENT (lista) no estorban
         self.srv.datos.guardar_club(a.steam_hex, club)
         await r(a, 2, {"msgid": "CMD_GET_MYCLUB_ACHIEVEMENTLIST", "rqid": 2})
-        self.assertEqual(res()["achievement_list_num"], 3)
+        self.assertEqual(res()["achievement_list_num"], 2)
         l = {x["achievement_category"]: x for x in
              (msgpack_min.unpackb(msgpack_min.packb(e.valor)) for e in res()["achievement_list"])}
-        self.assertEqual((l["MATCH50"]["is_new"], l["MATCH100"]["is_new"]), ("YES", "NO"))
-        hito = msgpack_min.unpackb(l["MATCH100"]["milestone_list"][0])
+        self.assertEqual(set(l), {"PLAY_VSCOM_MATCH", "CREATE_SQUAD"})
+        self.assertEqual((l["PLAY_VSCOM_MATCH"]["is_new"], l["CREATE_SQUAD"]["is_new"]), ("YES", "NO"))
+        hito = msgpack_min.unpackb(l["PLAY_VSCOM_MATCH"]["milestone_list"][1])
         self.assertEqual((hito["target_value"], hito["value"]), (100, 60))
         await r(a, 31, {"msgid": "CMD_GET_MYCLUB_MAINMENU_INFO", "rqid": 31})
         info = msgpack_min.unpackb(msgpack_min.packb(res()["achievement_info"].valor))
@@ -892,15 +895,22 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
                           info["achievement_not_recieved_num"]), (3, 1, 1))
         await r(a, 3, {"msgid": "CMD_RECV_MYCLUB_ACHIEVEMENT_BONUS", "rqid": 3, "is_all": "YES"})
         self.assertEqual(len(res()["recv_achievement_list"]), 1)
+        rec = msgpack_min.unpackb(msgpack_min.packb(res()["recv_achievement_list"][0].valor))
+        self.assertEqual((rec["achievement_id"], rec["received_milestone_level"]), (2, 1))
         self.assertEqual(self.srv.datos.club(a.steam_hex)["gp"], 10000)
         await r(a, 4, {"msgid": "CMD_RECV_MYCLUB_ACHIEVEMENT_BONUS", "rqid": 4, "is_all": "YES"})
         self.assertEqual(res()["recv_achievement_list"], [])  # no se cobra dos veces
         self.assertEqual(self.srv.datos.club(a.steam_hex)["gp"], 10000)
+        # copiar una plantilla cumple CREATE_SQUAD
+        await r(a, 6, {"msgid": "CMD_COPY_MYCLUB_SQUAD", "rqid": 6, "copy_squad_id": 1, "name": "B"})
+        await r(a, 7, {"msgid": "CMD_RECV_MYCLUB_ACHIEVEMENT_BONUS", "rqid": 7,
+                       "achievement_category": "CREATE_SQUAD", "is_all": "NO"})
+        self.assertEqual(self.srv.datos.club(a.steam_hex)["gp"], 11000)
         # el cobro quedó en el historial de GP (visible con myclub.historial)
         self.srv.cfg["myclub"]["historial"] = True
         await r(a, 5, {"msgid": "CMD_GET_MYCLUB_HISTORYLIST", "rqid": 5, "start_index": 0})
-        self.assertEqual((res()["myclub_history_list_total"], res()["myclub_history_list_num"]), (1, 1))
-        reg = msgpack_min.unpackb(msgpack_min.packb(res()["myclub_history_list"][0].valor))
+        self.assertEqual((res()["myclub_history_list_total"], res()["myclub_history_list_num"]), (2, 2))
+        reg = msgpack_min.unpackb(msgpack_min.packb(res()["myclub_history_list"][1].valor))
         self.assertEqual(reg["history_data_kind"], "GP")
         self.assertEqual(msgpack_min.unpackb(reg["history_data_out"])["count"], 10000)
 
