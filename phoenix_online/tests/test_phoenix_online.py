@@ -1137,7 +1137,9 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         await r(a, 43, {"msgid": "CMD_JOIN_MATCHDAY", "rqid": 43, "compe_id": 3, "team_id": 174,
                         "entry_matchday_group": "MATCHDAY_GROUP_A"})
         self.assertIn("squad_rating_info", res())
+        self.srv.cfg["myclub"]["matchday_info_extra"] = ["joined_matchday_group", "team_id"]
         await r(a, 44, {"msgid": "CMD_GET_MATCHDAY_INFO", "rqid": 44, "compe_id": 3})
+        self.assertNotIn("all_reward_info", res()["compe_info"].valor)
         self.assertEqual((res()["compe_info"].valor["joined_matchday_group"], res()["compe_info"].valor["team_id"]),
                          ("MATCHDAY_GROUP_A", 174))
         for i, c in enumerate(["CMD_GET_PESLEAGUE_COMPE_INFO", "CMD_GET_PESLEAGUE_COMPE_PARTICIPATION_RIGHT"], 50):

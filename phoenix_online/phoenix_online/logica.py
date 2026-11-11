@@ -4066,7 +4066,18 @@ class Servidor:
                 "win_reward_list": Empaquetado({}), "lose_reward_list": Empaquetado({}),
                 "watching_reward_list": Empaquetado({}), "pickup_win_reward_list": Empaquetado({}),
                 "pickup_lose_reward_list": Empaquetado({}), "squad_rating_info": self._valoracion_plantilla()}
-        return {"compe_info": Empaquetado(info), "info_overview": Empaquetado({})}
+        # El completo cerró el PES (0xc0000005 en el desempaquetador): por defecto solo los campos
+        # que la LISTA ya acepta + is_check_eula; el resto se añade a mano para aislar el culpable:
+        # myclub.matchday_info_extra = ["ball_id", ...]; "todo" = completo; info_overview opcional.
+        cfgm = self.cfg.get("myclub") or {}
+        extra = cfgm.get("matchday_info_extra") or []
+        if extra != "todo":
+            base = set(self._campos_matchday(s, e)) | {"is_check_eula"} | set(extra)
+            info = {k: v for k, v in info.items() if k in base}
+        salida = {"compe_info": Empaquetado(info)}
+        if cfgm.get("matchday_info_overview") == "YES":
+            salida["info_overview"] = Empaquetado({})
+        return salida
 
     async def c_cmd_get_matchday_mainmenu_info(self, s, m):
         return {"mainmenu_info": Empaquetado({
