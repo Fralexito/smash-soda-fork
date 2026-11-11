@@ -4062,6 +4062,18 @@ class Servidor:
         return Empaquetado({"team_list": [], "team_list_num": 0, "group_name": nombre, "group_desc": "",
                             "is_entry_restricted": "NO", "pre_pickup_users_pid_list": []})
 
+    @staticmethod
+    def _fechas_matchday(e):
+        """Fases escalonadas (antes todas = fin y el PES pintaba «fase de grupos terminada»):
+        grupos hasta fin-2d, elección de jugadores fin-36h, gran final desde fin-1d. Cada fecha
+        se puede fijar en el torneo de config con la misma clave."""
+        fin, dia = e["fin"], 86400
+        base = {"end_group_match_date": fin - 2 * dia, "pickup_member_date": fin - dia - dia // 2,
+                "entry_pickup_match_start_date": fin - dia, "watch_match_start_date": fin - dia,
+                "start_match_limit_date": fin - 2 * dia, "group_match_time": 2 * dia,
+                "pickup_match_time": 3600, "watch_wait_time": 600}
+        return {k: int(e[k]) if isinstance(e.get(k), int) else v for k, v in base.items()}
+
     def _campos_matchday(self, s, e):
         return {
             "compe_id": e["compe_id"], "base_id": int(e.get("base_id") or e["compe_id"]),
@@ -4071,8 +4083,9 @@ class Servidor:
             "group_info_a": self._bando_matchday(e, "a"), "group_info_b": self._bando_matchday(e, "b"),
             "is_entry_restricted": "NO", "match_type": "", "squad_type": "MATCHDAY_SQUAD_MYCLUB",
             "group_type": "MATCHDAY_GROUP_TYPE_OTHER", "rating_rank": "MATCHDAY_RATING_RANK_NONE",
-            "start_date": e["inicio"], "entry_limit_date": e["fin"], "end_group_match_date": e["fin"],
-            "pickup_member_date": e["fin"], "end_date": e["fin"], "entry_user_num": 0,
+            "start_date": e["inicio"], "entry_limit_date": self._fechas_matchday(e)["end_group_match_date"],
+            "end_group_match_date": self._fechas_matchday(e)["end_group_match_date"],
+            "pickup_member_date": self._fechas_matchday(e)["pickup_member_date"], "end_date": e["fin"], "entry_user_num": 0,
             "entry_user_max": int(e.get("cupo") or 1000), "is_end": "NO",
             "banner_file_info": self._banner(), "list_banner_file_info": self._banner(),
             "is_use_emblem": "NO", "is_use_emblem_list": "NO",
@@ -4098,10 +4111,10 @@ class Servidor:
         club = self.datos.club(s.steam_hex or "") if s.steam_hex else None
         mio = ((club or {}).get("matchday_equipo") or {}).get(str(cid)) or {}
         info = {**self._campos_matchday(s, e),
-                "start_match_limit_date": e["fin"], "entry_pickup_match_start_date": e["fin"],
-                "watch_match_start_date": e["fin"], "is_check_eula": "NO", "eula_url": "",
-                "ball_id": int(e.get("ball_id") or 0), "group_match_time": 0, "pickup_match_time": 0,
-                "watch_wait_time": 0, "use_stadium_id": int(e.get("estadio") or 0),
+                **{k: v for k, v in self._fechas_matchday(e).items()
+                   if k not in ("end_group_match_date", "pickup_member_date")},
+                "is_check_eula": "NO", "eula_url": "",
+                "ball_id": int(e.get("ball_id") or 0), "use_stadium_id": int(e.get("estadio") or 0),
                 "fixed_timezone": "", "fixed_weather": "", "fixed_season": "", "is_fix_condition": "NO",
                 "is_equalization": "NO", "is_pesleague_stadium": "NO", "is_efootball_pro_stadium": "NO",
                 "joined_matchday_group": str(mio.get("grupo") or ""), "pickup_select": "",
