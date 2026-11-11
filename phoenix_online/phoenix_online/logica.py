@@ -14,6 +14,7 @@ import logging
 import os
 import random
 import time
+from types import SimpleNamespace
 
 from . import divisiones as div
 from . import msgpack_min
@@ -796,7 +797,7 @@ class Servidor:
         for x, eq, g in zip((casa, fuera), equipos, goles):
             j = self.datos.jugador(x.steam_hex or "") or {}
             fichas.append({"pid": self._pid_en_partida(x), "name": j.get("pname") or x.pname or "",
-                           "team": eq, "score": g})
+                           "team": eq, "score": g, "clave": (x.steam_hex or "").lower()})
         p = {"date": int(time.time()), "home": fichas[0], "away": fichas[1], "categoria": categoria,
              "reason": "NORMAL_END", "partido": pareja.get("room_id")}
         if categoria == "PESLEAGUE":
@@ -1978,7 +1979,14 @@ class Servidor:
         # L (PESBUL R7.3.141/636): pid + pname(bin) + favoriteTeam/favoritePlayer/intro ARRIBA
         # (si faltan, «Editar perfil» muestra NotImplement); rankmatch_stats y manner van como
         # bin; division es TEXTO, el resto números
-        destino = self._sesion_de_pid(m.get("pid")) or s
+        # R (pesprofile AzrakHQ, en vivo 07-nov): el PES pide el perfil con user_id bin{pid, pname};
+        # el jugador puede estar desconectado (p. ej. desde la lista de bloqueo)
+        destino = self._sesion_de_pid(m.get("pid")) or self._sesion_de_pid(self._pid_de_blob(m.get("user_id")))
+        if destino is None:
+            otro = self._clave_de_id(m.get("user_id")) or (self._clave_de_id(m.get("pid")) if m.get("pid") else None)
+            if otro and otro != (getattr(s, "steam_hex", None) or "").lower():
+                destino = SimpleNamespace(steam_hex=otro, pname="", pid=None, ip=None, steam_crudo=None)
+        destino = destino or s
         j = self.datos.jugador(destino.steam_hex or "") or {}
         nombre = j.get("pname") or destino.pname or ""
         perfil = self.datos.perfil(destino.steam_hex or "")
@@ -2008,12 +2016,57 @@ class Servidor:
                 "favoriteTeam": perfil["favorite_team"],
                 "favoritePlayer": perfil["favorite_player"], "intro": perfil["intro"],
                 "rankmatch_stats": Empaquetado(estadisticas),
-                "manner": Empaquetado({"manner": MODALES_DEFECTO}),
-                "rankmatch_teamLog": []}
+                "manner": self._ficha_modales(destino.steam_hex),
+                "rankmatch_teamLog": self._equipos_usados(destino.steam_hex)[:5]}
+
+    def _ficha_modales(self, clave):
+        """R (pesprofile AzrakHQ, en vivo): bin{manner, disconnect_rate}; LOW_RATE / SEMI_HIGH_RATE /
+        HIGH_RATE = Bajo / Moderadamente alto / Alto (tabla 0x1437f33f0), con los mismos abandonos que
+        el grado de cortesía. Un texto suelto aquí cierra el PES."""
+        clave = (clave or "").lower()
+        q = sum((self.datos.modales(clave) if clave else {}).get("hist") or [])
+        tasa = "LOW_RATE" if q <= 1 else "SEMI_HIGH_RATE" if q <= 3 else "HIGH_RATE"
+        return Empaquetado({"manner": self._grado_modales(q), "disconnect_rate": tasa})
+
+    @staticmethod
+    def _pid_de_blob(v):
+        if isinstance(v, (bytes, bytearray)):
+            try:
+                v = msgpack_min.unpackb(bytes(v))
+            except Exception:  # noqa: BLE001
+                return None
+        if isinstance(v, Empaquetado):
+            v = v.valor
+        return v.get("pid") if isinstance(v, dict) else None
+
+    def _equipos_usados(self, clave, solo_divisiones=True):
+        """Equipos propios de los últimos partidos (el más reciente primero), del historial guardado."""
+        clave = (clave or "").lower()
+        if not clave:
+            return []
+        out = []
+        for p in reversed(self.datos.historial(clave).get("partidos") or []):
+            if solo_divisiones and p.get("categoria") != "RANK":
+                continue
+            for lado in ("home", "away"):
+                f = p.get(lado) or {}
+                if f.get("clave") == clave and int(f.get("team") or 0) > 0:
+                    out.append(int(f["team"]))
+        return out
 
     async def c_cmd_get_often_used_team_list(self, s, m):
-        # L (PESBUL, parser 0x1D46940): ids de equipo SIMPLES (el cliente hace id << 14)
-        return {"last_used_team_id": 0, "used_team_id_list": [], "used_team_id_list_num": 0}
+        """R (pesdivisions AzrakHQ, parsebench 07-nov): «Equipos más elegidos» en Divisiones, hasta 6 por
+        uso y luego el último; lista de enteros (L PESBUL: id simple, el cliente hace id << 14). Sin
+        partidos, sin la lista."""
+        usados = self._equipos_usados(getattr(s, "steam_hex", None))
+        if not usados:
+            return {"last_used_team_id": 0, "used_team_id_list_num": 0}
+        cuenta = {}
+        for i, eq in enumerate(usados):
+            n, primero = cuenta.get(eq, (0, i))
+            cuenta[eq] = (n + 1, primero)
+        top = sorted(cuenta, key=lambda e: (-cuenta[e][0], cuenta[e][1]))[:6]
+        return {"used_team_id_list": top, "used_team_id_list_num": len(top), "last_used_team_id": usados[0]}
 
     async def c_cmd_get_division_point_info(self, s, m):
         # L (PESBUL r7.3.630): la tabla es POSICIONAL: siempre 12 filas, D12 -> D1, como bin

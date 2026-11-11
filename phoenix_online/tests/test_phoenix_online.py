@@ -485,7 +485,7 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.assertEqual((est["division"], est["rating"]), ("D12", 1000))
         pn = msgpack_min.unpackb(msgpack_min.packb(m["pname"].valor))
         self.assertIsInstance(pn["psn_user_id"], bytes)
-        self.assertEqual(msgpack_min.unpackb(msgpack_min.packb(m["manner"].valor))["manner"], "AA")
+        self.assertEqual(msgpack_min.unpackb(msgpack_min.packb(m["manner"].valor))["manner"], "A")  # R: grado real de cortesía (pesmanner AzrakHQ)
 
     async def test_registros_y_ranking(self):
         a, ea = await self.entrar("A1")
@@ -2750,6 +2750,17 @@ class TestDivisiones(unittest.IsolatedAsyncioTestCase):
                    "home_team_id": 101, "away_team_id": 202, "abnormalend_reason": "NOERR"}
         await srv.c_cmd_send_game_result(a, informe)
         await srv.c_cmd_send_game_result(b, {**informe, "side": "AWAY"})  # el segundo no se aplica otra vez
+        # R (pesdivisions/pesprofile AzrakHQ): equipos más usados, últimos equipos y perfil de alguien desconectado
+        usados = await srv.c_cmd_get_often_used_team_list(b, {})
+        self.assertEqual((usados["used_team_id_list"], usados["last_used_team_id"]), ([202], 202))
+        srv.sesiones.discard(b)
+        from phoenix_online import msgpack_min as mm
+        uid = mm.packb({"pid": srv.numero_de_clave(b.steam_hex) & 0xFFFFFFFF, "pname": mm.Empaquetado({"name": "BETO"})})
+        perfil = await srv.c_cmd_get_playerinfo(a, {"user_id": uid})
+        self.assertEqual((perfil["pname"].valor["name"], perfil["rankmatch_teamLog"]), ("BETO", [202]))
+        self.assertEqual(perfil["manner"].valor, {"manner": "A", "disconnect_rate": "LOW_RATE"})
+        mm.packb(perfil)
+        srv.sesiones.add(b)
         ea, eb = srv.datos.division(a.steam_hex), srv.datos.division(b.steam_hex)
         self.assertEqual((ea["win"], ea["sp"], ea["rating"], ea["jugados"]), (1, 300, 1016, 1))
         self.assertEqual((eb["loss"], eb["sp"], eb["rating"], eb["jugados"]), (0 + 1, 0, 984, 1))
