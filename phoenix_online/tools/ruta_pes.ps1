@@ -5,7 +5,13 @@
 param([Parameter(Mandatory=$true)][string]$Ruta)
 $ay = 'D:\Frank\IA\CLAUDE\pes-mcp\ayudante.ps1'
 $fr = 'C:\Temp\claude\online\frente2.ps1'
-function T($k,$n=1,$e=1){ & powershell -NoProfile -ExecutionPolicy Bypass -File $fr | Out-Null; & powershell -NoProfile -ExecutionPolicy Bypass -File $ay -Accion tecla -Teclas $k -Veces $n | Out-Null; Start-Sleep -Seconds $e }
+function Esperar-Ventana { for($i=0;$i -lt 60;$i++){ $p=Get-Process PES2021 -EA SilentlyContinue | Select -First 1; if($p -and $p.MainWindowHandle -ne [IntPtr]::Zero){ return }; Start-Sleep -Seconds 2 }; throw 'PES2021 no tiene ventana (60 s)' }
+function T($k,$n=1,$e=1){
+  Esperar-Ventana
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $fr 2>$null | Out-Null
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $ay -Accion tecla -Teclas $k -Veces $n 2>&1 | Out-Null
+  if ($LASTEXITCODE -ne 0) { throw "falló la tecla $k (¿PES al frente?)" }
+  Start-Sleep -Seconds $e }
 switch ($Ruta) {
   # PES recién abierto (pantalla «THE PITCH IS OURS») -> menú principal
   'arranque' { T Enter 1 24; T Enter 2 3 }
