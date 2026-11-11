@@ -938,7 +938,7 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.srv.cfg["myclub"]["eventos"] = [{"compe_id": 7, "compe_name": "Copa Phoenix"}]
         await r(a, 2, {"msgid": "CMD_GET_COMPEV_LIST", "rqid": 2, "compe_list_kind": "X", "compe_mode": "EVENT_COMPE"})
         el = msgpack_min.unpackb(msgpack_min.packb(res()["compe_list"][0].valor))
-        self.assertEqual((el["compe_id"], el["compe_name"], el["difficulty"]), (7, "Copa Phoenix", "COMPE_DIFFICULTY_NONE"))
+        self.assertEqual((el["compe_id"], el["compe_name"], el["difficulty"]), (7, "Copa Phoenix", "COMPE_DIFFICULTY_3"))
         await r(a, 3, {"msgid": "CMD_GET_COMPEV_INFO", "rqid": 3, "compe_mode": "EVENT_COMPE", "compe_id": 9})
         self.assertEqual(res()["result"], "ERR_COMPE_NOTFOUND")
         await r(a, 4, {"msgid": "CMD_JOIN_COMPEV", "rqid": 4, "compe_mode": "EVENT_COMPE", "compe_id": 7,

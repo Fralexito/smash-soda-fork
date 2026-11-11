@@ -3788,7 +3788,7 @@ class Servidor:
         t = lambda k, d="": str(e.get(k)) if isinstance(e.get(k), (str, int)) and e.get(k) != "" else d
         i = lambda k: int(e.get(k) or 0) if isinstance(e.get(k), (int, float)) else 0
         sin_archivo = Empaquetado({"filename": "", "hash_str": ""})
-        dif = t("dificultad", "COMPE_DIFFICULTY_NONE")
+        dif = t("dificultad", "COMPE_DIFFICULTY_3")  # con NONE el PES hacía matchmaking humano (11-nov)
         datos = {
             "compe_id": e["compe_id"], "compe_name": t("compe_name", f"Evento {e['compe_id']}"),
             "compe_kind": t("compe_kind", "COMEVENT"),
