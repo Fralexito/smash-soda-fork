@@ -4145,7 +4145,7 @@ class Servidor:
         basic.setdefault("clan_name", (c or {}).get("nombre") or "")
         basic.setdefault("is_follow", "NO")
         if dueno and d_clan:
-            basic.setdefault("clan_owner_info", self._usuario_clave(d_clan))
+            basic.setdefault("clan_owner_info", self._usuario_plano(d_clan))
         return Empaquetado({"basic_settings": Empaquetado(basic), "match_settings": Empaquetado(dict(sala["match"])),
                             "user_num": len(sala["miembros"]), "compe_id": sala.get("compe_id") or 0,
                             "is_game": "NO"})
@@ -4220,7 +4220,7 @@ class Servidor:
             clave = (x.steam_hex or "").lower()
             dueno_clan = self._clan_de(clave)[0]
             filas.append(Empaquetado({
-                "player_index": i, "user_info": self._usuario_clave(clave), "is_owner": "YES" if i == 0 else "NO",
+                "player_index": i, "user_info": self._usuario_plano(clave), "is_owner": "YES" if i == 0 else "NO",
                 "coop_level": 1, "is_clan_member": "YES" if dueno_clan else "NO",
                 "is_follow": "YES" if clave in self.datos.relaciones(s.steam_hex)["sigo"] else "NO",
                 "is_guest": "NO", "is_platform_guest": "NO",
@@ -4237,7 +4237,7 @@ class Servidor:
                 "list_num": r["list_num"], "list_key_name": "player_index", "list_data": r["list_data"]}
 
     async def c_cmd_get_coop_reject_list(self, s, m):
-        filas = [self._usuario_clave(x) for x in self.datos.relaciones(s.steam_hex)["rechazados"]]
+        filas = [self._usuario_plano(x) for x in self.datos.relaciones(s.steam_hex)["rechazados"]]
         return self._lista_que_cabe("CMD_GET_COOP_REJECT_LIST", filas, lambda f: {
             "reject_list": f, "reject_list_num": len(f)})
 
@@ -4315,6 +4315,12 @@ class Servidor:
             u.update({"coop_level": 1, "is_follow": "NO"})
             u.update((self.cfg.get("myclub") or {}).get("clan_miembro_extra") or {})
         return Empaquetado(u)
+
+    def _usuario_plano(self, clave):
+        """L (Ghidra + prueba 11-nov): en user_info (miembros de sala), reject_list y clan_owner_info el
+        bloque de usuario es bin{pid, pname{...}} DIRECTO, sin la clave user_id (que solo existe en
+        owner_info/clan_members/follow_list). Con la forma equivocada la sala se quedaba en blanco."""
+        return self._usuario_clave(clave).valor["user_id"]
 
     def _ajustes_clan(self, dueno, c):
         return Empaquetado({"clan_name": c.get("nombre") or "", "owner_info": self._usuario_clave(dueno),
