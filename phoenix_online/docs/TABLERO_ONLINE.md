@@ -1,12 +1,12 @@
 # Tablero del online Phoenix (se actualiza con cada avance)
 
-Última actualización: 11-nov-2026, 01:10 (hora del servidor UTC).
+Última actualización: 11-nov-2026, 02:45 (hora del servidor UTC).
 PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 
 ## Resumen
-- **Probado en el PES y funcionando:** 21 de 49 apartados (**43 %**).
+- **Probado en el PES y funcionando:** 22 de 49 apartados (**45 %**).
 - **Programado (falta probarlo en el PES):** 13 más. Con ellos, **34 de 49 ya están hechos (69 %)**.
-- **A medias** (abre bien pero sin contenido todavía, o hecho solo en parte): 7.
+- **A medias** (abre bien pero sin contenido todavía, o hecho solo en parte): 6.
 - **Falta hacer:** 8.
 - Comandos del juego que el servidor ya controla: **216 de 439 (49 %)**; sin contar los modos aún no empezados (cooperativo, Matchday, eventos, PES League, clanes, tienda): **212 de 313 (68 %)**.
 
@@ -57,8 +57,8 @@ PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 | 26 | Contratos, entrenadores y experiencia | ✅ | |
 | 27 | Cambiar el nombre del club y de la plantilla | ✅ | probado el 10-nov: myClub → quinta pestaña → «Cambiar nombre del equipo» |
 | 28 | Historial | 🟡 | programado: cada movimiento de GP queda anotado; apagado hasta que se abra esa pantalla en el PES y se vea bien |
-| 29 | Regalos | 🟡 | vacío |
-| 30 | Logros | 🟡 | programados (50 y 100 partidos, 5 victorias seguidas, premio en GP), apagados hasta probarlos; la pantalla de Logros hay que abrirla a mano |
+| 29 | Regalos | ✅ | probado el 11-nov: «Bandeja entrada» abre y dice «No hay artículos» (aún no damos regalos) |
+| 30 | Logros | 🟡 | probado el 11-nov: «Registro de myClub» muestra 5 logros reales; falta que la barra marque el progreso, el icono de GP y probar el cobro |
 | 31 | Ranking de clubes | ✅ | probado: muestra «Phoenix FC» con escudo |
 | 32 | Ranking semanal | 🟡 | vacío; el PES lo bloquea hasta jugar 10 partidos 1 contra 1 |
 | 33 | myClub contra otra persona | ❌ | |
@@ -97,3 +97,4 @@ PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 - 11-nov 00:30: probadas en el PES copiar y borrar plantilla, la plantilla activa, la plantilla para la nube y la ciudad del club (arreglado su formato). Ningún cierre.
 - 11-nov 00:55: logros programados (apagados hasta probarlos). Encontré y corregí a tiempo un choque con los logros de GP que ya existían; no llegó a afectar nada.
 - 11-nov 01:10: historial de GP programado (apagado hasta probarlo).
+- 11-nov 02:45: Regalos probado; Logros ya muestra filas en el PES (el PES solo acepta 24 tipos de logro con nombre fijo).
