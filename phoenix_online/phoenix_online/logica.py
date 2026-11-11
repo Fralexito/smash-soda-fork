@@ -4622,7 +4622,12 @@ class Servidor:
         if str(e.get("bandos") or "") == "NO":
             return Empaquetado({})
         nombre = str(e.get(f"bando_{lado}") or ("Bando A" if lado == "a" else "Bando B"))
-        equipos = self._equipos_bando(e, lado)
+        # R (pesmatchday AzrakHQ, partido completo en vivo): team_list = equipos PERMITIDOS del bando
+        # (con group_type TEAM el buscador de equipos se limita a ellos; nunca vacío). Config por
+        # torneo: "equipos_a"/"equipos_b"; por defecto 4 equipos reales del juego base por bando.
+        base = {"a": [101, 108, 114, 127], "b": [100, 116, 120, 131]}[lado]
+        equipos = [int(x) for x in (e.get(f"equipos_{lado}") or base) if isinstance(x, int)]
+        equipos += [x for x in self._equipos_bando(e, lado) if x not in equipos]
         return Empaquetado({"team_list": equipos, "team_list_num": len(equipos), "group_name": nombre, "group_desc": "",
                             "is_entry_restricted": "NO", "pre_pickup_users_pid_list": []})
 
@@ -4644,8 +4649,7 @@ class Servidor:
         return {
             "compe_id": e["compe_id"], "base_id": int(e.get("base_id") or e["compe_id"]),
             "compe_name": str(e.get("compe_name") or f"Matchday {e['compe_id']}"),
-            "is_disp_compe_name": "YES", "group_name": str(e.get("group_name") or ""),
-            "group_desc": "",
+            "is_disp_compe_name": "YES",
             "group_info_a": self._bando_matchday(e, "a"), "group_info_b": self._bando_matchday(e, "b"),
             # R (matchday2.md / pesmatchday AzrakHQ, partido completo en vivo 7-nov): plantilla
             # especial (el equipo elegido en el JOIN), grupos por equipo, partido único. Con
@@ -4661,12 +4665,14 @@ class Servidor:
             "banner_file_info": self._banner(), "list_banner_file_info": self._banner(),
             "is_use_emblem": "NO", "is_use_emblem_list": "NO",
             "is_entry": self._inscrito(s, "matchday", e["compe_id"]),
-            "watch_match_reward_state": "", "compe_db_id": e["compe_id"], "is_possible_watch": "NO",
-            "add_limit_rating": 0}
+            # R: valores de la entrada que llegó a partido (AzrakHQ): enum real, no ""
+            "watch_match_reward_state": "NOT_FINISH_PICKUP_MATCH", "compe_db_id": 0,
+            "is_possible_watch": "NO"}
 
     async def c_cmd_get_matchday_list(self, s, m):
         lista = [Empaquetado(self._campos_matchday(s, e)) for e in self._torneos("matchday")]
-        return {"compe_list": lista, "list_num": len(lista), "list_max": len(lista), "is_no_check": "NO"}
+        return {"compe_list": lista, "list_num": len(lista), "list_max": len(lista), "is_no_check": "NO",
+                "add_limit_rating": 0}
 
     @staticmethod
     def _valoracion_plantilla():
@@ -4993,7 +4999,8 @@ class Servidor:
                 "is_entry": self._inscrito(s, "pesleague", e["compe_id"]), "is_gm_account": "NO",
                 "compe_db_id": e["compe_id"],
                 "banner_file_info": self._banner(), "list_banner_file_info": self._banner()}))
-        return {"compe_list": lista, "list_num": len(lista), "list_max": len(lista), "is_no_check": "NO"}
+        return {"compe_list": lista, "list_num": len(lista), "list_max": len(lista), "is_no_check": "NO",
+                "add_limit_rating": 0}
 
     def _torneo_pesleague(self, m):
         cid = self._id_entero(m.get("compe_id"))
