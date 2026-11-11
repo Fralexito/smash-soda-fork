@@ -4548,7 +4548,11 @@ class Servidor:
         buscar = self._texto(b.get("clan_name")).strip().lower()
         todos = [(d, c) for d, c in (self.datos.clanes() if self._clanes_activos() else [])
                  if not buscar or buscar in (c.get("nombre") or "").lower()]
-        if self._texto(b.get("enable_request")) == "YES":
+        if self._texto(b.get("is_joined_clan")) == "YES":
+            # «Tu lista de clanes» (11-nov, prueba en el PES): solo los clanes donde estás, abiertos o no
+            clave = (s.steam_hex or "").lower()
+            todos = [(d, c) for d, c in todos if d == clave or clave in (c.get("miembros") or [])]
+        elif self._texto(b.get("enable_request")) == "YES":
             todos = [(d, c) for d, c in todos if (c.get("abierto") or "YES") == "YES"]
         filas = [self._info_clan(d, c) for d, c in todos[inicio:inicio + 20]]
         return self._lista_que_cabe("CMD_GET_CLAN_LIST", filas, lambda f: {
