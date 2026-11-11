@@ -4862,6 +4862,78 @@ class Servidor:
     async def c_cmd_leave_pesleague_compe(self, s, m):
         return self._salir_torneo(s, m, "pesleague")
 
+    def _filas_ranking_pesleague(self, cid, yo):
+        """R (notes/re tourney.md de AzrakHQ, MIT; forma de cada fila = parser 0x141c1b2e0): los inscritos
+        del torneo, por puntos (los guarda club['pesleague_puntos'][cid]; sin partidos jugados = 0)."""
+        filas = []
+        for j in self.datos.todos():
+            club = self.datos.club(j["steam_hex"]) or {}
+            if cid not in ((club.get("torneos_inscripcion") or {}).get("pesleague") or []):
+                continue
+            pts = int(((club.get("pesleague_puntos") or {}).get(str(cid))) or 0)
+            filas.append((pts, j))
+        filas.sort(key=lambda x: (-x[0], x[1]["pid"]))
+        salida = []
+        for n, (pts, j) in enumerate(filas, 1):
+            u = self._usuario_plano(j["steam_hex"].lower())
+            club = self.datos.club(j["steam_hex"]) or {}
+            salida.append((n, Empaquetado({
+                "pid": u.valor["pid"], "entry_name": j["pname"] or "",
+                "team_id": int((club.get("pesleague_equipo") or {}).get(str(cid)) or 0),
+                "clan_owner_name": u.valor["pname"], "point": pts, "rank": n,
+                "win_count": 0, "draw_count": 0, "lose_count": 0, "match_num": 0,
+                "get_score": 0, "lose_score": 0, "diff_score": 0, "recode_date": int(time.time()),
+                "continuous_win": 0, "is_get_participation_right": "NO",
+                "is_mydata": "YES" if j["steam_hex"].lower() == (yo or "").lower() else "NO",
+                "rank_type": "NONE"}), j["steam_hex"].lower()))
+        return salida
+
+    async def c_cmd_get_pesleague_compe_ranking(self, s, m):
+        cid = self._cid_torneo(s, m, "pesleague")
+        todas = self._filas_ranking_pesleague(cid, s.steam_hex)
+        ini = max(0, int(self._id_entero(m.get("start_index")) or 0))
+        n = max(1, min(100, int(self._id_entero(m.get("view_num")) or 100)))
+        pagina = [f for _, f, _ in todas[ini:ini + n]]
+        return {"rank_list": pagina, "list_num": len(pagina), "list_max": len(todas),
+                "update_date": int(time.time())}
+
+    async def c_cmd_get_pesleague_compe_ranking_byid(self, s, m):
+        cid = self._cid_torneo(s, m, "pesleague")
+        todas = self._filas_ranking_pesleague(cid, s.steam_hex)
+        mias = [f for _, f, k in todas if k == (s.steam_hex or "").lower()]
+        return {"rank_list": mias, "list_num": len(mias), "list_max": len(todas),
+                "update_date": int(time.time())}
+
+    async def c_cmd_get_pesleague_compe_reward_list(self, s, m):
+        return {"reward_list": [], "reward_list_num": 0}
+
+    async def c_cmd_get_pesleague_compe_reward_info(self, s, m):
+        return {"reward_info": Empaquetado({"reward_list": [], "reward_list_num": 0})}
+
+    # Clanes: aquí «pedir entrar» ya entra directo, así que no hay solicitudes pendientes que
+    # aceptar, rechazar o cancelar (los pedidos del juego se contestan sin error).
+    async def c_cmd_accept_clan_entry(self, s, m):
+        return {}
+
+    async def c_cmd_cancel_clan_entry(self, s, m):
+        return {}
+
+    async def c_cmd_confirm_clan_request(self, s, m):
+        return {}
+
+    async def c_cmd_reject_clan_request(self, s, m):
+        return {}
+
+    async def c_cmd_accept_clan_invite(self, s, m):
+        return {}
+
+    async def c_cmd_cancel_clan_invite(self, s, m):
+        return {}
+
+    async def c_cmd_get_clan_ranking(self, s, m):
+        """Sin partidos de clan todavía: lista vacía (forma segura, no se ha visto la fila)."""
+        return {"clan_ranking": [], "clan_ranking_num": 0, "clan_ranking_all_list_num": 0}
+
     async def c_cmd_join_pesleague_compe_mode(self, s, m):
         return {}
 

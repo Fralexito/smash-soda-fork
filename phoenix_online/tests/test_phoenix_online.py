@@ -1167,6 +1167,32 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(ea[-1][1]["reject_list_num"], 0)
         self.assertFalse({k for k in self.srv.sin_manejador if "FOLLOW" in k or "REJECT" in k})
 
+    async def test_ranking_pesleague_y_clanes_extra(self):
+        """R (AzrakHQ MIT): ranking de PES League con los inscritos y los avisos de clan sin error."""
+        self.srv.cfg = {**self.srv.cfg, "myclub": {"pesleague": [{"compe_id": 4}],
+                                                    "club_de_prueba": {"team_name": "P", "gp": 0}}}
+        a, ea = await self.entrar("R1")
+        r = self.srv.recibir
+        await r(a, 1, {"msgid": "CMD_GET_PESLEAGUE_COMPE_RANKING", "rqid": 1, "compe_id": 4, "start_index": 0, "view_num": 20})
+        self.assertEqual((ea[-1][1]["result"], ea[-1][1]["list_num"]), ("NOERR", 0))
+        await r(a, 2, {"msgid": "CMD_JOIN_PESLEAGUE_COMPE", "rqid": 2, "compe_id": 4, "team_id": 174})
+        await r(a, 3, {"msgid": "CMD_GET_PESLEAGUE_COMPE_RANKING", "rqid": 3, "compe_id": 4, "start_index": 0, "view_num": 20})
+        res = ea[-1][1]
+        self.assertEqual((res["list_num"], res["list_max"]), (1, 1))
+        fila = res["rank_list"][0].valor
+        self.assertEqual((fila["rank"], fila["team_id"], fila["is_mydata"]), (1, 174, "YES"))
+        msgpack_min.packb(res)
+        await r(a, 4, {"msgid": "CMD_GET_PESLEAGUE_COMPE_RANKING_BYID", "rqid": 4, "compe_id": 4, "view_num": 5})
+        self.assertEqual(ea[-1][1]["list_num"], 1)
+        for i, c in enumerate(["CMD_ACCEPT_CLAN_ENTRY", "CMD_CANCEL_CLAN_ENTRY", "CMD_CONFIRM_CLAN_REQUEST",
+                               "CMD_REJECT_CLAN_REQUEST", "CMD_ACCEPT_CLAN_INVITE", "CMD_CANCEL_CLAN_INVITE",
+                               "CMD_GET_CLAN_RANKING", "CMD_GET_PESLEAGUE_COMPE_REWARD_LIST",
+                               "CMD_GET_PESLEAGUE_COMPE_REWARD_INFO"], 10):
+            await r(a, i, {"msgid": c, "rqid": i, "target_pid": 1})
+            self.assertEqual(ea[-1][1]["result"], "NOERR", c)
+            msgpack_min.packb(ea[-1][1])
+        self.assertFalse({k for k in self.srv.sin_manejador if "CLAN" in k or "PESLEAGUE_COMPE_R" in k})
+
     async def test_recarga_config_en_caliente(self):
         """Cambiar myclub en config.json se aplica sin reiniciar (solo la clave myclub)."""
         import json as _j, tempfile, os as _o
