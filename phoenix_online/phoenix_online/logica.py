@@ -3177,18 +3177,30 @@ class Servidor:
         return {}
 
     async def c_cmd_set_myclub_hometown(self, s, m):
-        """B.15: ciudad del club (home_town texto, nation_id, label); respuesta solo NOERR."""
+        """B.15 (C, captura del 10-nov): home_town llega como bin(packb({nation_id, label, name}));
+        se acepta también texto suelto con nation_id/label arriba. Respuesta solo NOERR."""
         club = self._club_propio(s)
         if club is None:
             return {}
         casa = dict(club.get("home_town") or {}) if isinstance(club.get("home_town"), dict) else {}
-        if isinstance(m.get("home_town"), str):
-            casa["name"] = m["home_town"][:64]
-        if isinstance(m.get("nation_id"), int):
-            casa["nation_id"] = m["nation_id"]
-        if isinstance(m.get("label"), str):
-            casa["label"] = m["label"][:64]
+        pedido = m.get("home_town")
+        if isinstance(pedido, (bytes, bytearray)):
+            try:
+                pedido = msgpack_min.unpackb(pedido)
+            except Exception:
+                pedido = None
+        if isinstance(pedido, dict):
+            fuente = pedido
+        else:
+            fuente = {"name": pedido, "nation_id": m.get("nation_id"), "label": m.get("label")}
+        if isinstance(fuente.get("name"), str):
+            casa["name"] = fuente["name"][:64]
+        if isinstance(fuente.get("nation_id"), int):
+            casa["nation_id"] = fuente["nation_id"]
+        if isinstance(fuente.get("label"), str):
+            casa["label"] = fuente["label"][:64]
         club["home_town"] = casa
+        log.info("myClub %s: ciudad del club %r (país %s)", s.steam_hex, casa.get("name"), casa.get("nation_id"))
         self.datos.guardar_club(s.steam_hex, club)
         return {}
 

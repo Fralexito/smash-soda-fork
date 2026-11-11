@@ -844,8 +844,8 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         await r(a, 14, {"msgid": "CMD_SET_MYCLUB_PLAYER_NUMBER_FIXATION", "rqid": 14,
                         "player_number_list_num": 1, "player_number_list": [el]})
         await r(a, 15, {"msgid": "CMD_SET_MYCLUB_TEAM_BASE", "rqid": 15, "base_team_id": 101})
-        await r(a, 16, {"msgid": "CMD_SET_MYCLUB_HOMETOWN", "rqid": 16, "home_town": "Lima",
-                        "nation_id": 54, "label": "LIM"})
+        await r(a, 16, {"msgid": "CMD_SET_MYCLUB_HOMETOWN", "rqid": 16,  # forma real (captura)
+                        "home_town": msgpack_min.packb({"nation_id": 54, "label": "LIM", "name": "Lima"})})
         club = self.srv.datos.club(a.steam_hex)
         j3 = next(j for j in club["jugadores"] if j.get("gameplayer_unique_id") == 3)
         self.assertEqual(j3["uniform_number"], 10)
