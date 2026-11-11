@@ -3139,6 +3139,16 @@ class Servidor:
                 salida.append((cat, progreso[cat], hitos, min(int(cobrados.get(cat) or 0), len(hitos))))
         return salida
 
+    def _premio_logro(self, gp):
+        """(campo del club, cantidad). C (11-nov, PES): el cliente SIEMPRE muestra el premio de logro
+        como «Monedas de myClub». Con myclub.logros.moneda = "monedas" (y monedas_gratis encendido)
+        se acreditan monedas: gp / logros.gp_por_moneda (100 por defecto), mínimo 1. Si no, GP."""
+        cfg = self.cfg.get("myclub") or {}
+        if str((cfg.get("logros") or {}).get("moneda") or "gp") == "monedas" and self._monedas_activas():
+            por = max(1, int((cfg.get("logros") or {}).get("gp_por_moneda") or 100))
+            return "monedas", max(1, gp // por)
+        return "gp", gp
+
     def _resumen_logros(self, club, s=None):
         """Resumen de MAINMENU_INFO: hitos en total, alcanzados y alcanzados sin cobrar (P: el
         sentido de cada contador sale de sus nombres)."""
@@ -3165,7 +3175,7 @@ class Servidor:
             "team_id": 0, "present_type": "NORMAL",
             "item": Empaquetado({"item_type": "", "item_variation": "", "item_effect_arg": 0,
                                  "count": 0, "pes_point_price": 0}),
-            "receipt_deadline": 0, "count": gp}
+            "receipt_deadline": 0, "count": self._premio_logro(gp)[1]}
         regalo.update({k: v for k, v in (cfg.get("regalo") or {}).items() if isinstance(v, (int, str))})
         for k in cfg.get("regalo_quitar") or []:
             regalo.pop(k, None)
@@ -3219,13 +3229,14 @@ class Servidor:
             if not ganado:
                 continue
             club.setdefault("logros_myclub", {})[cat] = cobrados
-            club["gp"] = int(club.get("gp") or 0) + ganado
+            moneda, cantidad = self._premio_logro(ganado)
+            club[moneda] = int(club.get(moneda) or 0) + cantidad
             recibidos.append(Empaquetado({
                 "achievement_category": cat, "achievement_id": self.CATEGORIAS_LOGRO.index(cat) + 1,
                 "achievement_bonus": Empaquetado({"present": self._premio_gp(n + 1, ganado)}),
                 "received_all": "YES" if cobrados >= len(hitos) else "NO",
                 "received_milestone_level": cobrados}))
-            log.info("myClub %s cobra el logro %s: +%d GP", s.steam_hex, cat, ganado)
+            log.info("myClub %s cobra el logro %s: +%d %s", s.steam_hex, cat, cantidad, moneda)
         if recibidos:
             self.datos.guardar_club(s.steam_hex, club)
         return {"recv_achievement_list": recibidos}

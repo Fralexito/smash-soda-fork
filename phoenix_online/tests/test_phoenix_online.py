@@ -908,6 +908,15 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         await r(a, 7, {"msgid": "CMD_RECV_MYCLUB_ACHIEVEMENT_BONUS", "rqid": 7,
                        "achievement_category": "CREATE_SQUAD", "is_all": "NO"})
         self.assertEqual(self.srv.datos.club(a.steam_hex)["gp"], 11000)
+        # en monedas (con monedas gratis): 1000 GP de meta = 10 monedas
+        self.srv.cfg["myclub"]["monedas_gratis"] = True
+        self.srv.cfg["myclub"]["logros"]["moneda"] = "monedas"
+        self.srv.cfg["myclub"]["logros"]["premios"]["SET_CLOUD_MATCH_SQUAD"] = [[1, 1000]]
+        await r(a, 8, {"msgid": "CMD_SET_MYCLUB_CLOUD_SQUAD", "rqid": 8, "cloud_squad_id": 1})
+        await r(a, 9, {"msgid": "CMD_RECV_MYCLUB_ACHIEVEMENT_BONUS", "rqid": 9, "is_all": "YES"})
+        club = self.srv.datos.club(a.steam_hex)
+        self.assertEqual((club["gp"], club.get("monedas")), (11000, 10))
+        self.srv.cfg["myclub"]["monedas_gratis"] = False
         # el cobro quedó en el historial de GP (visible con myclub.historial)
         self.srv.cfg["myclub"]["historial"] = True
         await r(a, 5, {"msgid": "CMD_GET_MYCLUB_HISTORYLIST", "rqid": 5, "start_index": 0})
