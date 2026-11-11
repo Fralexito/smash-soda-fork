@@ -1187,7 +1187,7 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         for i, c in enumerate(["CMD_ACCEPT_CLAN_ENTRY", "CMD_CANCEL_CLAN_ENTRY", "CMD_CONFIRM_CLAN_REQUEST",
                                "CMD_REJECT_CLAN_REQUEST", "CMD_ACCEPT_CLAN_INVITE", "CMD_CANCEL_CLAN_INVITE",
                                "CMD_GET_CLAN_RANKING", "CMD_GET_PESLEAGUE_COMPE_REWARD_LIST",
-                               "CMD_GET_PESLEAGUE_COMPE_REWARD_INFO"], 10):
+                               "CMD_GET_PESLEAGUE_COMPE_REWARD_INFO", "CMD_GET_ONLINE_AD_FILE"], 10):
             await r(a, i, {"msgid": c, "rqid": i, "target_pid": 1})
             self.assertEqual(ea[-1][1]["result"], "NOERR", c)
             msgpack_min.packb(ea[-1][1])

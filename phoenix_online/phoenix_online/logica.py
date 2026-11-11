@@ -4904,6 +4904,12 @@ class Servidor:
         return {"rank_list": mias, "list_num": len(mias), "list_max": len(todas),
                 "update_date": int(time.time())}
 
+    async def c_cmd_get_online_ad_file(self, s, m):
+        """R (menus.md AzrakHQ, parser 0x141dde9c0): carteles del estadio para Matchday, PES League,
+        eventos y partido. Nombres vacíos = no descarga nada. Sin respuesta el botón «Participa»
+        de Matchday se quedaba en la misma pantalla (prueba 11-nov 14:45)."""
+        return {"ad_banner_file_name": "", "ad_signage_file_name": ""}
+
     async def c_cmd_get_pesleague_compe_reward_list(self, s, m):
         return {"reward_list": [], "reward_list_num": 0}
 
