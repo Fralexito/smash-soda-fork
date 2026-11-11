@@ -6,3 +6,6 @@ catalogo*.json
 *.bin
 capturas/
 __pycache__/
+turn/
+actualizacion/
+*.cpk

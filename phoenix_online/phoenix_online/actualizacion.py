@@ -165,3 +165,132 @@ def archivo_para(carpeta, nombre):
     if a is None or a[1]["name"].lower() != str(nombre).lower():
         return None
     return a[0]
+
+
+# ---------- Escritor de CPK (sin comprimir, solo TOC), con la forma de los CPK del propio PES ----------
+# Datos del formato (R: notas de AzrakHQ sobre dt80_100E_x64.cpk, CPKMC2.49.32):
+#   0x000 bloque 'CPK ' (u32 0, u64 largo, tabla @UTF «CpkHeader» enmascarada), en 0x7fa '(c)CRI'
+#   0x800 bloque 'TOC ' (tabla «CpkTocInfo»: DirName, FileName, FileSize, ExtractSize, FileOffset, ID, UserString)
+#   contenido alineado a 0x800; FileOffset relativo a 0x800; filas ordenadas por ruta en MAYÚSCULAS;
+#   EnabledPackedSize = EnabledDataSize = 2 * suma de tamaños (rareza de los oficiales).
+_ALINEA = 0x800
+_FMT = {0: "B", 1: "b", 2: "H", 3: "h", 4: "I", 5: "i", 6: "Q", 7: "q", 8: "f", 9: "d"}
+_CERO, _FIJO, _FILA = 0x10, 0x30, 0x50
+_U16, _U32, _U64, _TXT, _DAT = 2, 4, 6, 0xA, 0xB
+
+
+def _alinear(x):
+    return (x + _ALINEA - 1) // _ALINEA * _ALINEA
+
+
+def _armar_utf(nombre, columnas, filas):
+    """columnas: [(nombre, clase, tipo, valor_fijo)]; filas: [dict]. Devuelve la tabla SIN enmascarar."""
+    textos, indice, datos = bytearray(b"<NULL>\0"), {"<NULL>": 0}, bytearray()
+
+    def s(x):
+        if x not in indice:
+            indice[x] = len(textos)
+            textos.extend(x.encode("utf-8") + b"\0")
+        return indice[x]
+
+    nombre_tabla = s(nombre)
+
+    def celda(tipo, v):
+        if tipo in _FMT:
+            return struct.pack(">" + _FMT[tipo], v)
+        if tipo == _TXT:
+            return struct.pack(">I", s(v))
+        if tipo == _DAT:
+            o = len(datos)
+            datos.extend(v)
+            return struct.pack(">II", o, len(v))
+        raise ValueError(tipo)
+
+    esquema = bytearray()
+    for n, clase, tipo, fijo in columnas:
+        esquema += struct.pack(">BI", clase | tipo, s(n))
+        if clase == _FIJO:
+            esquema += celda(tipo, fijo)
+    cuerpo, largo = bytearray(), 0
+    for f in filas:
+        antes = len(cuerpo)
+        for n, clase, tipo, _ in columnas:
+            if clase == _FILA:
+                cuerpo += celda(tipo, f[n])
+        largo = len(cuerpo) - antes
+    filas_off = 0x18 + len(esquema)
+    textos_off = filas_off + len(cuerpo)
+    relleno = (-(textos_off + len(textos))) % 8
+    datos_off = textos_off + len(textos) + relleno
+    tam = datos_off + len(datos)
+    cab = struct.pack(">4sIIIIIHHI", b"@UTF", tam, filas_off, textos_off, datos_off, nombre_tabla,
+                      len(columnas), largo, len(filas))
+    return cab + esquema + cuerpo + textos + bytes(relleno) + datos
+
+
+def _bloque(magia, tabla):
+    return magia + struct.pack("<IQ", 0, len(tabla)) + _desenmascarar(tabla)  # la máscara es simétrica
+
+
+def escribir_cpk(salida, archivos):
+    """archivos: [(ruta_dentro_del_cpk, ruta_local)]. CPK sin comprimir, como los del PES."""
+    archivos = sorted(archivos, key=lambda a: a[0].upper())
+    nombres = [a[0] for a in archivos]
+    if len({n.upper() for n in nombres}) != len(nombres):
+        raise ValueError("rutas repetidas en el CPK")
+    tams = [os.path.getsize(a[1]) for a in archivos]
+    cols_toc = [("DirName", _FILA, _TXT, None), ("FileName", _FILA, _TXT, None), ("FileSize", _FILA, _U32, None),
+                ("ExtractSize", _FILA, _U32, None), ("FileOffset", _FILA, _U64, None), ("ID", _FILA, _U32, None),
+                ("UserString", _FIJO, _TXT, "<NULL>")]
+
+    def filas_toc(inicio):
+        filas, pos = [], inicio
+        for i, (ruta, tam) in enumerate(zip(nombres, tams)):
+            carpeta, _, nombre = ruta.rpartition("/")
+            filas.append({"DirName": carpeta, "FileName": nombre, "FileSize": tam, "ExtractSize": tam,
+                          "FileOffset": pos - _ALINEA, "ID": i})
+            pos = _alinear(pos + tam)
+        return filas, pos
+
+    tam_toc = 16 + len(_armar_utf("CpkTocInfo", cols_toc, filas_toc(_ALINEA)[0]))  # celdas de ancho fijo
+    contenido = _alinear(_ALINEA + tam_toc)
+    filas, fin = filas_toc(contenido)
+    toc = _bloque(b"TOC ", _armar_utf("CpkTocInfo", cols_toc, filas))
+    total = sum(tams)
+    H = [("UpdateDateTime", _FILA, _U64, 0), ("FileSize", _CERO, _U64, None), ("ContentOffset", _FILA, _U64, contenido),
+         ("ContentSize", _FILA, _U64, fin - contenido), ("TocOffset", _FILA, _U64, _ALINEA),
+         ("TocSize", _FILA, _U64, tam_toc), ("TocCrc", _CERO, _U32, None), ("HtocOffset", _CERO, _U64, None),
+         ("HtocSize", _CERO, _U64, None), ("EtocOffset", _CERO, _U64, None), ("EtocSize", _CERO, _U64, None),
+         ("ItocOffset", _CERO, _U64, None), ("ItocSize", _CERO, _U64, None), ("ItocCrc", _CERO, _U32, None),
+         ("GtocOffset", _CERO, _U64, None), ("GtocSize", _CERO, _U64, None), ("GtocCrc", _CERO, _U32, None),
+         ("HgtocOffset", _CERO, _U64, None), ("HgtocSize", _CERO, _U64, None),
+         ("EnabledPackedSize", _FILA, _U64, 2 * total), ("EnabledDataSize", _FILA, _U64, 2 * total),
+         ("TotalDataSize", _CERO, _U64, None), ("Tocs", _CERO, _U32, None), ("Files", _FILA, _U32, len(archivos)),
+         ("Groups", _FILA, _U32, 0), ("Attrs", _FILA, _U32, 0), ("TotalFiles", _CERO, _U32, None),
+         ("Directories", _CERO, _U32, None), ("Updates", _CERO, _U32, None), ("Version", _FILA, _U16, 7),
+         ("Revision", _FILA, _U16, 14), ("Align", _FILA, _U16, _ALINEA), ("Sorted", _FILA, _U16, 1),
+         ("EnableFileName", _FILA, _U16, 1), ("EID", _CERO, _U16, None), ("CpkMode", _FILA, _U32, 1),
+         ("Tvers", _FILA, _TXT, "CPKMC2.49.32, DLL3.24.00"), ("Comment", _CERO, _TXT, None),
+         ("Codec", _FILA, _U32, 0), ("DpkItoc", _FILA, _U32, 0), ("EnableTocCrc", _FILA, _U16, 0),
+         ("EnableFileCrc", _FILA, _U16, 0), ("CrcMode", _FILA, _U32, 0), ("CrcTable", _FILA, _DAT, b"")]
+    cab = _bloque(b"CPK ", _armar_utf("CpkHeader", [(n, c, t, None) for n, c, t, _ in H],
+                                      [{n: v for n, _, _, v in H}]))
+    if len(cab) > _ALINEA - 6:
+        raise ValueError("cabecera demasiado grande")
+    with open(salida, "wb") as o:
+        o.write(cab + bytes(_ALINEA - 6 - len(cab)) + b"(c)CRI")
+        o.write(toc)
+        o.write(bytes(contenido - _ALINEA - tam_toc))
+        for (_, local), fila in zip(archivos, filas):
+            if o.tell() != fila["FileOffset"] + _ALINEA:
+                raise ValueError("desalineado")
+            with open(local, "rb") as f:
+                for trozo in iter(lambda: f.read(1 << 20), b""):
+                    o.write(trozo)
+            o.write(bytes(_alinear(o.tell()) - o.tell()))
+    return salida
+
+
+def archivo_version(version, juego="1.01.00", etiqueta="Phoenix"):
+    """version_wu.bin: 3 campos de 10 bytes (versión de datos «1.02», versión del juego, etiqueta)."""
+    return b"".join(str(x).encode("ascii")[:10].ljust(10, b"\0") for x in (version, juego, etiqueta))

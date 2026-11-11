@@ -2048,6 +2048,20 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
             self.assertIsNotNone(actualizacion.archivo_para(d, "phoenix_102.cpk"))
             self.assertIsNone(actualizacion.archivo_para(d, "../config.json"))
             msgpack_min.packb(r)
+            # el escritor propio arma un CPK que el lector propio entiende (forma de los CPK del PES)
+            tabla = os.path.join(d, "Team.bin")
+            with open(tabla, "wb") as f:
+                f.write(b"WESYS" + bytes(3000))
+            ver = os.path.join(d, "v.bin")
+            with open(ver, "wb") as f:
+                f.write(actualizacion.archivo_version("1.03"))
+            salida = os.path.join(d, "Phoenix_103.cpk")
+            actualizacion.escribir_cpk(salida, [(actualizacion.ARCHIVO_VERSION, ver), ("common/etc/pesdb/Team.bin", tabla)])
+            self.assertEqual(actualizacion.leer_de_cpk(salida, "common/etc/pesdb/Team.bin")[:5], b"WESYS")
+            self.assertEqual(actualizacion.actual(d)[1]["dlc_version"], "103")
+            with open(salida, "rb") as f:
+                cab = f.read(0x800)
+            self.assertEqual((cab[:4], cab[0x7FA:0x800]), (b"CPK ", b"(c)CRI"))
 
     async def test_avatar_subido_queda_guardado(self):
         """R (pesavatar AzrakHQ): SET_AVATAR se guarda en la base y se lee con cualquier forma del pid."""
