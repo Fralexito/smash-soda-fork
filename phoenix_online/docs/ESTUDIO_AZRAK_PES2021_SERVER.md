@@ -47,4 +47,16 @@ Método: su código se LEE (nunca se ejecuta; su .exe es el mismo servidor en Py
 | Torneo en línea | puntos siempre 0, cola común | 3/1/0 con G/E/P y goles, menú y ranking reales, cola por torneo (4623355) |
 | Otros | — | GET_COOP_PROFILE, aviso urgente por config (`aviso_urgente`), mantenimiento, DLC, SET_CURRENTPLAYER con chat permitido |
 
-Pendiente de revisar contra su código: abandono a mitad de partido (pesmanner), nivel cooperativo (pescoop.award), análisis del partido (pesresults), y su red TURN (turn*.md) frente a nuestro relé.
+| Cortesía y abandono | modales fijos «AA», sin castigo | grado A/B/C por los últimos 10, avisos DOWN_B/A_TO_B/DOWN_C/STILL_C, derrota 3-0 a los 15 s (adcc0d2) |
+| Relé TURN | sin TURN propio | TLS + DTLS con certificado propio que va en la respuesta (552a863); se enciende con `turn_propio.activo` y 2 paquetes de Python |
+| Historial y análisis | solo Divisiones | historial general (ALL/PESLEAGUE) y GET/SEND_MATCH_ANALYZE (206beb8) |
+| Nivel cooperativo | siempre nivel 1 | 30/20/10 puntos tras cada Cooperativo, pantalla de nivel, seguir desde ella (user_id bin), bloqueo de COOP en la cola (abc11a0) |
+| Perfil | solo jugadores conectados; modales fijos | user_id bin, jugadores desconectados, cortesía y tasa de desconexión reales, últimos 5 equipos, equipos más usados (3374f2e) |
+| Avatar | en memoria (se perdía al reiniciar) | guardado en la base, validado, por cualquier forma del pid (b075615) |
+| Dirección del PES de casa | el amigo recibía 127.0.0.1 / 192.168.x | host_addr con la IP por la que llega el amigo, reflexive intacta (5ff39ca) |
+| Datos distintos | se emparejaban y salía «error DATAPACK» | no se empareja si las sumas de CHECK_CHEAT o la versión difieren (8482f03) |
+| Ranking | solo por rating; _BYID solo 1.ª página | orden por rating/victorias/partidos/racha/% (10+ partidos), cortesía real, totales de carrera (b7a4e98) |
+| Lista de bloqueo y palabras | lista vacía; «Computadora» rechazada | lista real; palabras enteras, sin tildes, letras sueltas (427175b) |
+| Actualización en vivo | sin | el PES baja el .cpk de la carpeta `actualizacion` (misma BD para todos) con lector CPK propio (e289f02) |
+
+Lo que NO se pasa (a propósito): su instalador de DLL en el PES (gamesetup/hostctl: tocan el juego del usuario), su panel de administración web (lo haremos en la web Phoenix) y su identidad de servidor (usamos la web Phoenix).
