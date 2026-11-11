@@ -1241,6 +1241,63 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         await r(a, 9, {"msgid": "CMD_GET_COOP_LEVEL_RESULT", "rqid": 9})
         self.assertEqual(ea[-1][1]["coop_level_user_list"], [])
 
+    async def test_lote_azrak_salas_chat_bloqueo_matchday(self):
+        """R (AzrakHQ, MIT): JOIN_ROOM_NTL con clave y room_owner; SET_ROOM_OPTION; chat; bloqueo de
+        partidos; IPANDPORT; puntos y ranking de Matchday; aviso urgente una vez; tiempos del PES."""
+        a, ea = await self.entrar("0110000100000081")
+        b, eb = await self.entrar("0110000100000082")
+        r = self.srv.recibir
+        env = await self.srv.c_cmd_get_server_env(a, {})
+        self.assertEqual((env["match_client_timeout_load_timeout"], env["matchrejectpid_max"],
+                          env["is_revision_check"]), (180, 400, "NO"))
+        await r(a, 1, {"msgid": "CMD_CREATEJOIN_ROOM", "rqid": 1, "name": "X", "password": "123"})
+        sala = [m for _, m in ea if m.get("msgid") == "CMD_CREATEJOIN_ROOM"][-1]["room_id"]
+        await r(b, 2, {"msgid": "CMD_JOIN_ROOM_NTL", "rqid": 2, "room_id": sala, "password": "999"})
+        self.assertEqual(eb[-1][1]["result"], "ERR_PASSWDINCORRECT")
+        await r(a, 3, {"msgid": "CMD_SET_ROOM_OPTION", "rqid": 3, "name": "Nueva", "password": ""})
+        self.assertEqual(self.srv.salas[sala].nombre, "Nueva")
+        await r(b, 4, {"msgid": "CMD_JOIN_ROOM_NTL", "rqid": 4, "room_id": sala, "password": ""})
+        resp = [m for _, m in eb if m.get("msgid") == "CMD_JOIN_ROOM_NTL"][-1]
+        self.assertEqual((resp["result"], resp["room_stat"]), ("NOERR", "WAITING"))
+        self.assertEqual(resp["room_owner"].valor["pid"], self.srv._pid_visible(a))
+        msgpack_min.packb(resp)
+        await r(a, 5, {"msgid": "CMD_SEND_TEXTCHAT", "rqid": 5, "channel": "ROOM", "statement": "hola"})
+        chat = [m for _, m in eb if m.get("msgid") == "CMD_WATCH_TEXTCHAT"][-1]
+        self.assertEqual((chat["statement"], chat["from_pid"]), ("hola", self.srv._pid_visible(a)))
+        a.ntl["reflexive_addr"] = {"ip": "1.2.3.4", "port": 5}
+        ip = await self.srv.c_cmd_get_ipandport_ntl(b, {"pid": self.srv._pid_visible(a)})
+        self.assertEqual(ip["reflexive_addr"].valor["port"], 5)
+        # bloqueo: a bloquea a b y no se emparejan
+        await r(a, 6, {"msgid": "CMD_SET_MATCHREJECTPID", "rqid": 6, "reject_pid": self.srv._pid_visible(b),
+                       "is_reject": "YES"})
+        self.assertTrue(self.srv._no_emparejar(a, b))
+        await r(a, 7, {"msgid": "CMD_SET_MATCHREJECTPID", "rqid": 7, "reject_pid": self.srv._pid_visible(b),
+                       "is_reject": "NO"})
+        self.assertFalse(self.srv._no_emparejar(a, b))
+        # Matchday: inscritos en el mismo bando, gana a 2-0 y suma 3
+        for x, eq in ((a, 101), (b, 108)):
+            club = self.srv._club_propio(x) or {}
+            club.setdefault("matchday_equipo", {})["3"] = {"grupo": "MATCHDAY_GROUP_A", "team_id": eq}
+            club.setdefault("torneos_inscripcion", {})["matchday"] = [3]
+            self.srv.datos.guardar_club(x.steam_hex, club)
+        pareja = {"miembros": (a, b), "check": set(), "tipo": "MATCHDAY", "room_id": 990001}
+        self.srv.parejas[a] = self.srv.parejas[b] = pareja
+        self.srv._resultado_matchday(a, pareja, {"home_score": 2, "away_score": 0})
+        self.srv._resultado_matchday(a, pareja, {"home_score": 2, "away_score": 0})  # una sola vez
+        self.srv._resultado_matchday(b, pareja, {"home_score": 2, "away_score": 0})
+        pts = await self.srv.c_cmd_get_matchday_achievement_reward(a, {})
+        self.assertEqual((pts["add_matchday_point"], pts["gameplay_quality"]), (3, 30))
+        self.assertEqual((await self.srv.c_cmd_get_matchday_achievement_reward(a, {}))["add_matchday_point"], 0)
+        rk = await self.srv.c_cmd_get_matchday_ranking(b, {"compe_id": 3})
+        self.assertEqual((rk["list_max"], rk["rank_list"][0].valor["matchday_point"],
+                          rk["rank_list"][0].valor["team_id"]), (2, 3, 101))
+        # aviso urgente: una vez por persona
+        self.srv.cfg["aviso_urgente"] = {"id": 7, "titulo": "Hola", "texto": "Mantenimiento 22:00"}
+        u = await self.srv.c_cmd_get_urgent_announcement(a, {})
+        self.assertEqual((u["is_announcement"], u["announcement_data"].valor["body"]), ("YES", "Mantenimiento 22:00"))
+        self.assertEqual(await self.srv.c_cmd_get_urgent_announcement(a, {}), {})
+        del self.srv.cfg["aviso_urgente"]
+
     async def test_recarga_config_en_caliente(self):
         """Cambiar myclub en config.json se aplica sin reiniciar (solo la clave myclub)."""
         import json as _j, tempfile, os as _o

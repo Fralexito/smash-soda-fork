@@ -28,9 +28,9 @@ NOERR = "NOERR"
 CONFIRMACIONES = {
     "CMD_SEND_PSID", "CMD_SET_CURRENT_PLAYER", "CMD_LOGIN_MENU", "CMD_SET_LANGUAGE",
     "CMD_JOIN_OFFLINE_MODE",
-    "CMD_LEAVE_OFFLINE_MODE", "CMD_SEND_HEARTBEAT", "CMD_SET_ROOM_OPTION",
+    "CMD_LEAVE_OFFLINE_MODE", "CMD_SEND_HEARTBEAT",
     # L (PESBUL): estos también se contestan solo con NOERR
-    "CMD_CHECK_CHEAT", "CMD_GET_DMM_NOTIFICATION", "CMD_GET_URGENT_ANNOUNCEMENT",
+    "CMD_CHECK_CHEAT", "CMD_GET_DMM_NOTIFICATION",
     # L (ESPEC_GAMERELAY_FASE23 §5.1): durante una partida de 2 solo esperan NOERR, y A TIEMPO
     # (SET_GAMEPLAYER_PLAYTIME sin respuesta = ABNORMALEND a los ~55 s para los dos)
     "CMD_SET_GAMEPLAYER_PLAYTIME", "CMD_SET_GAMETEAM", "CMD_CHANGE_GAMEPHASE",
@@ -704,12 +704,19 @@ class Servidor:
                                                        "P2P_GIVE_UP_QUICKLY_LEVEL")}}
         if not isinstance(proto, (str, int)):
             proto = json.dumps(proto, sort_keys=True, separators=(",", ":"))
+        # R (match.md/datacheck.md/menus.md AzrakHQ): los tiempos del partido son los valores por defecto
+        # del propio PES (ctor 0x141e45ee0): carga 180 s, fuera de juego largo 120, inicio 240, falta de
+        # comandos 180 (con 60 una carga lenta del 2.º PC daba LOAD_TIMEOUT). matchrejectpid_max 0 hacía
+        # que «Añadir a la lista de bloqueo» dijera siempre «lista llena»; el PES usa 400.
+        # is_revision_check: solo "YES" exacto compara sumas de datos entre los 2 PES (GNCX_0006 si
+        # difieren); "NO" deja jugar con parches distintos. Se cambia en config (revision_check).
         return {"proto_opt": proto, "max_division": "D12",
                 "teamlobby_game_rating_border_normal": 0, "teamlobby_game_rating_border_hard": 0,
-                "is_revision_check": 0, "quality_check_wait_sec": 0, "trigger_keep_alive": 30,
-                "matchrejectpid_max": 0, "match_client_timeout_load_timeout": 60,
-                "match_client_timeout_long_outofplay": 60, "match_client_timeout_init_not_end": 60,
-                "match_client_timeout_cmd_lack": 60, "is_check_myclub_level": 0,
+                "is_revision_check": "YES" if self.cfg.get("revision_check") else "NO",
+                "quality_check_wait_sec": 0, "trigger_keep_alive": 30,
+                "matchrejectpid_max": 400, "match_client_timeout_load_timeout": 180,
+                "match_client_timeout_long_outofplay": 120, "match_client_timeout_init_not_end": 240,
+                "match_client_timeout_cmd_lack": 180, "is_check_myclub_level": 0,
                 "log_update_level": 0, "lobby_ping_good": 50, "lobby_ping_normal": 150,
                 "quick_ping_good": 50, "quick_ping_normal": 150, "konamiid_api_retry_sec": 5}
 
@@ -1086,6 +1093,9 @@ class Servidor:
         return {}
 
     async def c_cmd_get_maintenance_info(self, s, m):
+        # R (announce.py AzrakHQ): solo cuando hay reinicio anunciado van maintenance_warn YES y la hora
+        if self.en_mantenimiento():
+            return {"maintenance_warn": "YES", "maintenance_time": int(time.time()) + 300}
         return {}
 
     def _salir_de_cola(self, s):
@@ -1238,7 +1248,7 @@ class Servidor:
         # Parche: solo se empareja a quien tiene LOS MISMOS archivos (file_hash_list de NTL);
         # con parches distintos el partido se desincroniza o el juego se cierra
         rival = next((x for x in cola if x is not s and x in self.sesiones
-                      and self._misma_huella(s, x)), None)
+                      and self._misma_huella(s, x) and not self._no_emparejar(s, x)), None)
         if rival is None:
             cola.append(s)
             await self.dormir(PAUSA_EMPUJE)
@@ -1306,7 +1316,8 @@ class Servidor:
         s.equipo_coop = self._id_entero(m.get("use_team_id")) or self.SIN_EQUIPO_COOP
         s.enviar({"msgid": m["msgid"], "rqid": m.get("rqid", 0), "result": NOERR})
         cola = self.colas.setdefault("COOP", [])
-        rival = next((x for x in cola if x is not s and x in self.sesiones and self._misma_huella(s, x)), None)
+        rival = next((x for x in cola if x is not s and x in self.sesiones and self._misma_huella(s, x)
+                      and not self._no_emparejar(s, x)), None)
         if rival is None:
             cola.append(s)
             return None
@@ -1350,6 +1361,207 @@ class Servidor:
     async def c_cmd_get_coop_level_result(self, s, m):
         # R: lista de bin{status, user_id{pid,pname}, ...} (parser 0x141ba8ec0); vacía = sin pantalla de nivel
         return {"coop_level_user_list": []}
+
+    # ---------- Red, chat y bloqueo (R: pesmatch/pesrooms/pesblock/pescmds de AzrakHQ) ----------
+    async def c_cmd_get_ipandport_ntl(self, s, m):
+        """Direcciones NTL que declaró otro jugador (SEND_IPANDPORT_NTL), por su pid."""
+        x = self._sesion_de_pid(m.get("pid")) or s
+        decl = dict(self.ntl_por_clave.get(x.steam_hex) or {}) if x.steam_hex else {}
+        decl.update(x.ntl or {})
+        out = {"pid": self._pid_visible(x), "ntl_nat_type": int(decl.get("ntl_nat_type") or 0)}
+        for k in ("host_addr", "reflexive_addr", "relayed_addr"):
+            v = decl.get(k)
+            if v:
+                out[k] = Empaquetado(v) if isinstance(v, dict) else v
+        return out
+
+    CHAT_MAX = 120
+
+    async def c_cmd_send_textchat(self, s, m):
+        """{channel, statement, list_flg, list_pid} -> CMD_WATCH_TEXTCHAT {channel, from_pid, name,
+        statement} a los de la sala o del partido (y al que escribe). Con list_flg CHAT_SEND solo a
+        list_pid."""
+        texto = str(m.get("statement") or "")[:self.CHAT_MAX]
+        if not texto.strip():
+            return {}
+        canal = str(m.get("channel") or "ROOM")
+        sala = self.salas.get(s.room_id)
+        pareja = self._pareja_por_clave(s)
+        if canal == "ROOM" and sala:
+            para = list(sala.miembros)
+        elif pareja:
+            para = list(pareja["miembros"])
+        elif sala:
+            para = list(sala.miembros)
+        else:
+            para = [s]
+        lista = m.get("list_pid")
+        if str(m.get("list_flg") or "") == "CHAT_SEND" and isinstance(lista, list) and lista:
+            elegidos = {str(p) for p in lista}
+            para = [x for x in para if x is s or str(self._pid_visible(x)) in elegidos]
+        if s not in para:
+            para.append(s)
+        cuerpo = {"channel": canal, "from_pid": self._pid_visible(s), "name": s.pname or "",
+                  "statement": texto}
+        for x in para:
+            if not x.completar("CMD_WATCH_TEXTCHAT", **cuerpo):
+                x.enviar({"msgid": "CMD_WATCH_TEXTCHAT", "rqid": 0, "result": NOERR, **cuerpo})
+        log.info("chat %s de %s a %d: %r", canal, s.pid, len(para), texto)
+        return {}
+
+    def _no_emparejar(self, a, b):
+        """Lista de bloqueo de partidos (SET_MATCHREJECTPID): si uno bloqueó al otro no se emparejan."""
+        ka, kb = (a.steam_hex or "").lower(), (b.steam_hex or "").lower()
+        if not ka or not kb:
+            return False
+        return kb in self.datos.relaciones(ka)["no_emparejar"] or ka in self.datos.relaciones(kb)["no_emparejar"]
+
+    async def c_cmd_set_matchrejectpid(self, s, m):
+        poner = self._texto(m.get("is_reject", "YES")).upper() != "NO"
+        ident = m.get("reject_pid")
+        if poner:
+            self._cambiar_relacion(s, "no_emparejar", [ident], [])
+        else:
+            self._cambiar_relacion(s, "no_emparejar", [], [ident])
+        return {}
+
+    async def c_cmd_send_tamper_data(self, s, m):
+        # El propio PES avisa que los datos de jugadores cambiaron en memoria tras entrar (un trainer)
+        log.warning("AVISO de datos alterados de %s: %s", s.pid,
+                    {k: v for k, v in m.items() if k not in ("msgid", "rqid")})
+        return {}
+
+    async def c_cmd_reconnect(self, s, m):
+        """R (match.md: OnlineSystemClientReconnect): tras caerse la conexión el PES abre otra y manda
+        {pid, platform, patch_version, dlc_version, online_mode} SIN volver a entrar. La sesión nueva
+        toma el puesto del pid. Solo si viene de la misma IP que la sesión anterior (nadie se hace pasar
+        por otro con un pid ajeno)."""
+        clave = self._clave_de_id(m.get("pid"))
+        viejo = self._sesion_de_pid(m.get("pid"))
+        ip_antes = (viejo.ip if viejo else None) or (self.ntl_por_clave.get(clave) or {}).get("ip_tcp")
+        if not clave or not ip_antes or ip_antes != s.ip:
+            log.warning("RECONNECT rechazado: pid %r desde %s", m.get("pid"), s.ip)
+            return {"result": "ERR_LOGIN_FAILED"}
+        j = self.datos.jugador(clave)
+        if not j:
+            return {"result": "ERR_LOGIN_FAILED"}
+        s.steam_hex = clave
+        if viejo is not None:
+            s.ntl = dict(viejo.ntl or {})
+            s.huella = getattr(viejo, "huella", None)
+            s.versiones = getattr(viejo, "versiones", {})
+            for d in (self.parejas,):
+                if viejo in d:
+                    d[s] = d.pop(viejo)
+                    d[s]["miembros"] = tuple(s if x is viejo else x for x in d[s]["miembros"])
+        self._registrar(s, j)
+        log.info("RECONNECT de %s (pid %s)", clave[-6:], s.pid)
+        return {}
+
+    # ---------- Matchday tras el partido (R: pesmatchday.py de AzrakHQ) ----------
+    PUNTOS_MATCHDAY = {"WIN": 3, "DRAW": 1, "LOSE": 0}
+
+    def _resultado_matchday(self, s, pareja, m):
+        """Cada PES informa su propio resultado: se suman SUS puntos (victoria 3, empate 1) una sola
+        vez por partido. Quedan pendientes para la pantalla de puntos (ACHIEVEMENT_REWARD)."""
+        if "MATCHDAY" not in str(pareja.get("tipo") or "").upper() or not s.steam_hex:
+            return
+        try:
+            goles = (int(m.get("home_score") or 0), int(m.get("away_score") or 0))
+        except (TypeError, ValueError):
+            return
+        casa = pareja["miembros"][0] is s or (pareja["miembros"][0].steam_hex == s.steam_hex)
+        mios, suyos = goles if casa else goles[::-1]
+        res = "WIN" if mios > suyos else "LOSE" if mios < suyos else "DRAW"
+        club = self._club_propio(s)
+        if club is None:
+            return
+        partido = f"md{pareja.get('room_id')}"
+        vistos = club.setdefault("matchday_partidos_vistos", [])
+        if partido in vistos:
+            return
+        vistos.append(partido)
+        del vistos[:-50]
+        cid = str(self._cid_torneo(s, {}, "matchday") or 0)
+        pts = self.PUNTOS_MATCHDAY[res]
+        puntos, jugados = club.setdefault("matchday_puntos", {}), club.setdefault("matchday_jugados", {})
+        puntos[cid] = int(puntos.get(cid) or 0) + pts
+        jugados[cid] = int(jugados.get(cid) or 0) + 1
+        club["matchday_pendiente"] = int(club.get("matchday_pendiente") or 0) + pts
+        self.datos.guardar_club(s.steam_hex, club)
+        log.info("Matchday %s: %s +%d (torneo %s)", s.pid, res, pts, cid)
+
+    async def c_cmd_get_matchday_achievement_reward(self, s, m):
+        """Pantalla de puntos tras el partido: «Revisión del juego» = puntos/10 en décimas, factor 1.0."""
+        club = self._club_propio(s) if s.steam_hex else None
+        pts = int((club or {}).get("matchday_pendiente") or 0)
+        if club is not None and pts:
+            club["matchday_pendiente"] = 0
+            self.datos.guardar_club(s.steam_hex, club)
+        return {"add_matchday_point": pts, "gameplay_quality": pts * 10, "squad_rating": 10,
+                "achievement_reward_list": []}
+
+    async def c_cmd_get_matchday_watch_match_reward(self, s, m):
+        return {"is_exist_watch_match_reward": "NO", "watch_match_reward_list": []}
+
+    async def c_cmd_get_matchday_ranking(self, s, m):
+        """Ranking de MI bando: entradas bin {pname: bin{pid, pname: bin{...}}, entry_name, team_id, rank,
+        matchday_point, recode_date} (forma comprobada por AzrakHQ en el parser del PES)."""
+        cid = str(self._cid_torneo(s, m, "matchday") or 0)
+        mio = ((self.datos.club(s.steam_hex) or {}).get("matchday_equipo") or {}).get(cid) if s.steam_hex else None
+        grupo = (mio or {}).get("grupo") or ""
+        filas = []
+        for clave in self.datos.claves_de_clubes():
+            club = self.datos.club(clave) or {}
+            suyo = (club.get("matchday_equipo") or {}).get(cid)
+            if not suyo or (suyo.get("grupo") or "") != grupo:
+                continue
+            filas.append((int((club.get("matchday_puntos") or {}).get(cid) or 0),
+                          int((club.get("matchday_jugados") or {}).get(cid) or 0), clave,
+                          int(suyo.get("team_id") or 0)))
+        filas.sort(key=lambda f: (-f[0], f[1], f[2]))
+        try:
+            inicio = max(0, int(m.get("start_index") or 0))
+            cuantos = max(1, min(100, int(m.get("view_num") or 100)))
+        except (TypeError, ValueError):
+            inicio, cuantos = 0, 100
+        ahora = int(time.time())
+        lista = []
+        for rank, (pts, _n, clave, equipo) in enumerate(filas, 1):
+            if rank <= inicio or len(lista) >= cuantos:
+                continue
+            lista.append(Empaquetado({"pname": self._usuario_plano(clave), "entry_name": "", "team_id": equipo,
+                                      "rank": rank, "matchday_point": pts, "recode_date": ahora}))
+        return {"rank_list": lista, "list_num": len(lista), "list_max": len(filas), "update_date": ahora}
+
+    async def c_cmd_get_pesleague_compe_overview_info(self, s, m):
+        """Texto propio del torneo (reglas, premios): myclub.pesleague[].resumen en config."""
+        cid = self._id_entero(m.get("compe_id"))
+        e = next((x for x in self._torneos("pesleague") if x["compe_id"] == cid), None)
+        return {"overview_info": str((e or {}).get("resumen") or "")}
+
+    # ---------- Ver partidos (R: pesreplay.py). Sin grabaciones propias aún: lista vacía válida ----------
+    async def c_cmd_get_watching_match_list(self, s, m):
+        return {"match_list": [], "match_list_num": 0, "total_match_num": 0}
+
+    async def c_cmd_send_watching_result(self, s, m):
+        return {}
+
+    # ---------- Aviso urgente al entrar (R: announce.py): config aviso_urgente {id, titulo, texto} ----------
+    async def c_cmd_get_urgent_announcement(self, s, m):
+        aviso = self.cfg.get("aviso_urgente")
+        if not isinstance(aviso, dict) or not aviso.get("texto"):
+            return {}
+        ident = int(aviso.get("id") or 1)
+        vistos = self.__dict__.setdefault("_avisos_vistos", set())
+        quien = (s.steam_hex or str(s.pid), ident)
+        if quien in vistos:
+            return {}
+        vistos.add(quien)
+        datos = {"announcement_id": ident, "online_mode": m.get("online_mode", "QUICK"),
+                 "announcement_type": m.get("announcement_type", "PRE_MAIN"), "read_check": "NO",
+                 "title": str(aviso.get("titulo") or "Phoenix Online"), "body": str(aviso["texto"])}
+        return {"is_announcement": "YES", "announcement_data": Empaquetado(datos)}
 
     async def c_cmd_send_matching_result(self, s, m):
         if m.get("error_code") not in (None, NOERR):
@@ -4172,8 +4384,20 @@ class Servidor:
         return {"is_join_coop_room": "YES" if self._sala_coop_de(s) else "NO"}
 
     async def c_cmd_get_coop_profile(self, s, m):
-        # P (D.1): sin user_info la pantalla abre con valores por defecto (visto en vivo)
-        return {}
+        """R (pescoop.py AzrakHQ, verificado con parsebench sobre el parser del PES): dos bin de primer
+        nivel lado a lado, user_info{pid, pname} y coop_profile_data{...}. Antes respondíamos vacío y
+        la ficha salía con valores por defecto."""
+        mia = (s.steam_hex or "").lower()
+        clave = (self._clave_de_id(m.get("pid")) if m.get("pid") else None) or mia
+        d = self.datos.coop_datos(clave) if clave else {}
+        sigo = self.datos.relaciones(mia)["sigo"] if mia else []
+        datos = {"is_follow": "YES" if clave and clave != mia and clave in sigo else "NO",
+                 "coop_level": 1, "coop_level_point": 0,
+                 "follower": self.datos.seguidores(clave) if clave else 0,
+                 "coop_manner": "A", "online_match": 0, "vscom_match": 0,
+                 "match_data_size": int(d.get("size") or 0), "match_data": str(d.get("data") or "")}
+        return {"user_info": self._usuario_plano(clave) if clave else Empaquetado({}),
+                "coop_profile_data": Empaquetado(datos)}
 
     # ---------- Seguir y rechazar jugadores (D.8, L): tabla relaciones ----------
     def _clave_de_id(self, ident):
@@ -5106,7 +5330,7 @@ class Servidor:
                 "compe_db_id": e["compe_id"],
                 "banner_file_info": self._banner(), "list_banner_file_info": self._banner()}))
         return {"compe_list": lista, "list_num": len(lista), "list_max": len(lista), "is_no_check": "NO",
-                "add_limit_rating": 0}
+                "add_limit_rating": 0, "is_end": "YES"}  # R (pesreplay.py AzrakHQ): fin de la paginación
 
     def _torneo_pesleague(self, m):
         cid = self._id_entero(m.get("compe_id"))
@@ -5403,22 +5627,36 @@ class Servidor:
         return {}
 
     async def c_cmd_join_room(self, s, m):
-        sala = self.salas.get(m.get("room_id"))
+        """R (commands.json + server_errors.tsv de AzrakHQ): el PES manda CMD_JOIN_ROOM_NTL {room_id,
+        is_invited, password} y espera room_owner (bin {pid, pname, direcciones}) y room_stat. Los
+        errores válidos son los de su tabla (ERR_PASSWDINCORRECT, ERR_ROOMSTATNOTMATCH, ...)."""
+        sala = self.salas.get(self._id_entero(m.get("room_id")))
         if sala is None:
-            return {"result": "ERR_ROOMNOTFOUND"}  # C
-        if len(sala.miembros) >= sala.max_players or sala.estado != "WAITING":
-            return {"result": "ERR_ROOMISFULL"}  # C
-        if sala.passwd and m.get("passwd") != sala.passwd:
-            return {"result": "ERR_PASSWD"}  # P
-        if self.cfg.get("exigir_misma_huella") and s.huella != sala.dueno.huella:
-            log.info("huella distinta: %s vs %s", s.huella, sala.dueno.huella)
-            return {"result": "ERR_DIFFERENT_PATCHVERSION"}  # C: evita SYNC_FAILED a mitad del partido
+            return {"result": "ERR_ROOMNOTFOUND"}
+        if s not in sala.miembros:
+            if len(sala.miembros) >= sala.max_players:
+                return {"result": "ERR_ROOMISFULL"}
+            if sala.estado != "WAITING":
+                return {"result": "ERR_ROOMSTATNOTMATCH"}
+            clave = m.get("password", m.get("passwd"))
+            if sala.passwd and str(clave or "") != str(sala.passwd):
+                return {"result": "ERR_PASSWDINCORRECT"}
+            if self.cfg.get("exigir_misma_huella") and s.huella != sala.dueno.huella:
+                log.info("huella distinta: %s vs %s", s.huella, sala.dueno.huella)
+                return {"result": "ERR_DIFFDCVERSION"}  # R: «Paquete de datos incompatible»
         await self._salir_de_sala(s)
-        previos = list(sala.miembros)
+        previos = [x for x in sala.miembros if x is not s]
         s.room_id, s.entry = sala.room_id, False
-        sala.miembros.append(s)
+        if s not in sala.miembros:
+            sala.miembros.append(s)
+        dueno = sala.dueno
+        ficha = {"pid": self._pid_visible(dueno), "pname": Sala.pname(dueno)}
+        for k in ("host_addr", "reflexive_addr", "relayed_addr"):
+            v = dueno.ntl.get(k)
+            if v:
+                ficha[k] = Empaquetado(v) if isinstance(v, dict) else v
         s.enviar({"msgid": m["msgid"], "rqid": m.get("rqid", 0), "result": NOERR,
-                  "room_id": sala.room_id})
+                  "room_id": sala.room_id, "room_owner": Empaquetado(ficha), "room_stat": sala.estado})
         # Orden que funcionó (§11.5.6): UPDATE sin el que entra → RELOAD salas → ADD con él → ENTRY_GAME
         for x in sala.miembros:
             self._empujar_jugadores(x, sala, "UPDATE", previos)
@@ -5433,6 +5671,24 @@ class Servidor:
             x.completar("CMD_WATCH_ENTRY_GAME", entry_count=len(sala.miembros),
                         entrygame=[{"entryNum": i, "gameNum": i} for i in range(len(sala.miembros))])
         return None
+
+    c_cmd_join_room_ntl = c_cmd_join_room
+
+    async def c_cmd_set_room_option(self, s, m):
+        """R (commands.json): {pid, name, password, is_anyplayers, auto_start_num, game_rating_limit};
+        solo el dueño cambia su sala y todos ven la lista nueva."""
+        sala = self.salas.get(s.room_id)
+        if sala and s is sala.dueno:
+            if isinstance(m.get("name"), str) and m["name"].strip():
+                sala.nombre = m["name"][:40]
+            if "password" in m:
+                sala.passwd = str(m.get("password") or "") or None
+                sala.opciones["password"] = sala.passwd or ""
+            for k in ("is_anyplayers", "auto_start_num", "game_rating_limit"):
+                if k in m:
+                    sala.opciones[k] = m[k]
+            self._empujar_salas_a_todos("UPDATE", [sala])
+        return {}
 
     async def c_cmd_entry_game(self, s, m):
         sala = self.salas.get(s.room_id)
@@ -5465,6 +5721,10 @@ class Servidor:
                 self._resultado_division(s, pareja, m)
             except Exception:
                 log.exception("no se pudo aplicar el resultado de Divisiones")
+            try:
+                self._resultado_matchday(s, pareja, m)
+            except Exception:
+                log.exception("no se pudo aplicar el resultado de Matchday")
             datos = {k: v for k, v in m.items() if k not in ("msgid", "rqid")}
             partido = f"pareja{pareja['room_id']}"
             self.datos.guardar_resultado(pareja["room_id"], partido, s.pid or 0, datos)
@@ -5772,6 +6032,11 @@ class Servidor:
             # B.7: sin torneo semanal propio todavía: respuesta vacía válida
             return {**base, "date": int(time.time()), "total_rank_num": 0, "rank_list": [],
                     "max_weekly_point": 0, "group_number": 0, "division": "", "reward_list": []}
+        if msgid == "CMD_GET_DLC_FILELIST":
+            # R (pescmds.py AzrakHQ): listas vacías = nada que bajar; dlc_version igual a la del PES
+            return {**base, "dlc_version": str(self.cfg.get("dlc_version") or "7.00"),
+                    "dlcfile_list_count": 0, "dlcfile_list": "",
+                    "variation_file_list_count": 0, "variation_file_list": ""}
         if msgid == "CMD_RECV_MYCLUB_PRESENT":
             return {**base, **self.recibir_regalos(formulario, ip_cliente)}
         if msgid == "CMD_AUTH_STEAM":

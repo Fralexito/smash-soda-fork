@@ -172,7 +172,13 @@ class Datos:
         f = self.db.execute("select datos from relaciones where steam_hex=?",
                             ((steam_hex or "").lower(),)).fetchone()
         d = json.loads(f[0]) if f else {}
-        return {k: list(d.get(k) or []) for k in ("sigo", "bloqueados", "rechazados")}
+        return {k: list(d.get(k) or []) for k in ("sigo", "bloqueados", "rechazados", "no_emparejar")}
+
+    def seguidores(self, steam_hex):
+        """Cuántos jugadores siguen a esta clave (ficha de Cooperativo: follower)."""
+        clave = (steam_hex or "").lower()
+        return sum(1 for (datos,) in self.db.execute("select datos from relaciones")
+                   if clave in (json.loads(datos).get("sigo") or []))
 
     def guardar_relaciones(self, steam_hex, d):
         self.db.execute("insert into relaciones(steam_hex, datos) values (?,?) on conflict(steam_hex) "
