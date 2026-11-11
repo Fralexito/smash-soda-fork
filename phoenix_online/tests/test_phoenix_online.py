@@ -994,10 +994,15 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         await r(a, 10, {"msgid": "CMD_GET_COMPEV_INFO", "rqid": 10, "compe_mode": "EVENT", "compe_id": 7})
         from phoenix_online.logica import _cifrado_comprimido
         self.assertLess(_cifrado_comprimido(res()), 984)
-        info = msgpack_min.unpackb(msgpack_min.packb(res()["compe_info"].valor))
-        self.assertEqual((info["is_cleared"], info["cleared_count"], info["clear_match_num"],
-                          info["clear_win_point"]), ("YES", 1, 2, 4))
-        self.assertEqual(len(res()["event_compe_reward_list"]), 2)
+        # C.11: en la raíz solo compe_data; dentro compe_info (evento + requisitos) y el detalle
+        self.assertEqual(set(res()) - {"msgid", "rqid", "result"}, {"compe_data"})
+        datos = res()["compe_data"].valor
+        info = datos["compe_info"].valor
+        self.assertEqual((info["compe_id"], info["is_cleared"], info["cleared_count"], info["entry_player_num"]),
+                         (7, "YES", 1, 0))
+        self.assertEqual((datos["clear_match_num"], datos["clear_win_point"]), (2, 4))
+        self.assertEqual(len(datos["event_compe_reward_list"]), 2)
+        self.assertIn("compe_reward", datos["event_compe_reward_list"][0].valor)
         await r(a, 101, {"msgid": "CMD_GET_MYCLUB_USER_INFO", "rqid": 101})
         self.assertEqual(res()["pes_point"], 30)
         await partido(11, "WINNER_HOME")  # ya superado: no suma ni cobra otra vez

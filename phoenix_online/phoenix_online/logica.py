@@ -3890,21 +3890,33 @@ class Servidor:
                     "entry_teamstrength_min": 0, "entry_teamstrength_max": 99999,
                     "entry_coach_id": 0, "player_num": 11}
         requisitos = {k: int(e[k]) if isinstance(e.get(k), int) else v for k, v in abiertos.items()}
-        extra = {**requisitos, "entry_type": str(e.get("entry_type") or ""), "clear_match_num": partidos,
-                 "clear_win_point": puntos, "precondition_compe_id": 0,
-                 "precondition_compe_name": "", "ad_file_name": "", "logo_file_name": "",
-                 "is_compe_reward_exist": "YES" if premio > 0 or monedas > 0 else "NO",
-                 "is_same_team_power_level": "NO",
-                 "is_limited_matching_target": "NO", "is_exist_unlocked_compe_by_cleared": "NO",
-                 "is_pesleague_stadium": "NO", "is_efootball_pro_stadium": "NO",
-                 **self._evento_extra(self._club_propio(s), e)}
-        return {"compe_data": self._evento_bin(e, extra), "compe_info": self._evento_bin(e, extra),
-                "banner_file_info": Empaquetado({"filename": "", "hash_str": ""}),
-                "event_compe_reward_list": ([self._premio_gp(1, premio, cantidad=premio)] if premio > 0 else [])
-                + ([self._premio_monedas(2, monedas)] if monedas > 0 else []),
-                "compe_reward": self._premio_gp(1, premio, cantidad=premio) if premio > 0 else Empaquetado({}),
-                "squad_bonus": Empaquetado({}),
-                "reward": self._premio_gp(1, premio, cantidad=premio) if premio > 0 else Empaquetado({})}
+        hay_premio = "YES" if premio > 0 or monedas > 0 else "NO"
+        # C.11 (Ghidra, lector FUN_141c849d0): en la raíz solo se lee compe_data; dentro va
+        # compe_info (el evento con requisitos y compe_id) y el resto del detalle. Mandado plano,
+        # el cliente dejaba compe_id y entry_* en 0 → «No cumples los requisitos».
+        compe_info = self._evento_bin(e, {**requisitos, "entry_type": str(e.get("entry_type") or ""),
+                                          **self._evento_extra(self._club_propio(s), e)})
+        premios = []
+        if premio > 0:
+            premios.append(self._premio_gp(1, premio, cantidad=premio))
+        if monedas > 0:
+            premios.append(self._premio_monedas(2, monedas))
+        lista_premios = [Empaquetado({"cleared_count": 0, "compe_reward": p, "is_compe_reward_exist": "YES"})
+                         for p in premios]
+        detalle = {"compe_info": compe_info, "clear_match_num": partidos, "clear_win_point": puntos,
+                   "ad_file_name": "", "logo_file_name": "", "event_compe_reward_list": lista_premios,
+                   "is_compe_reward_exist": hay_premio, "is_same_team_power_level": "NO",
+                   "is_limited_matching_target": "NO", "precondition_compe_id": 0,
+                   "precondition_compe_name": "", "is_exist_unlocked_compe_by_cleared": "NO",
+                   "squad_bonus": Empaquetado({"reward": premios[0] if premios else Empaquetado({})}),
+                   "is_pesleague_stadium": "NO", "is_efootball_pro_stadium": "NO"}
+        if (self.cfg.get("myclub") or {}).get("eventos_info_plano") == "YES":
+            # respaldo: la forma vieja (plana) que se usó hasta el 11-nov
+            extra = {**requisitos, **{k: v for k, v in detalle.items() if k not in (
+                "compe_info", "event_compe_reward_list", "squad_bonus")}}
+            return {"compe_data": self._evento_bin(e, extra), "compe_info": self._evento_bin(e, extra),
+                    "event_compe_reward_list": premios}
+        return {"compe_data": Empaquetado(detalle)}
 
     async def c_cmd_get_compev_myentry_compeid(self, s, m):
         modo = m.get("compe_mode")
