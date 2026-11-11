@@ -1,6 +1,6 @@
 # Tablero del online Phoenix (se actualiza con cada avance)
 
-Última actualización: 11-nov-2026, 08:46 (hora del servidor UTC).
+Última actualización: 11-nov-2026, 09:31 (hora del servidor UTC).
 PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 
 ## Resumen
@@ -70,9 +70,9 @@ PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 | # | Apartado | Estado | Nota |
 |---|---|---|---|
 | 36 | Cooperativo (2 contra 2, 3 contra 3) | 🟡 | probado el 11-nov: abre (Partido informal, de clan, Estadísticas, Perfil) y la lista de salas vacía; falta crear salas y jugar |
-| 37 | Matchday | 🟡 | probado el 11-nov: sale «Jornada Phoenix»; al inscribirse elige bando y equipo sin cerrarse. Falta el último paso (el juego perdía el número del torneo; arreglado en 10eb614, sin probar) |
+| 37 | Matchday | 🟡 | probado el 11-nov: inscripción funciona (bando y equipo) y abre la pantalla del torneo sin cerrarse; faltan textos (bando, clasificación, premios) |
 | 38 | Eventos y competiciones online | 🟢 | programado: lista, detalle, inscribirse, salir, partido del evento contra la COM con su dificultad, progreso, «superado» y premio en GP. Falta probarlo en el PES base (estaba ocupado). Más adelante: crearlos desde la web |
-| 39 | PES League | 🟡 | probado el 11-nov: sale «Torneo Phoenix» en «Torneo en línea» y en myClub, pero dice «inscripción cerrada». Arreglo de fecha, cupo y división programado, sin probar |
+| 39 | PES League | 🟡 | probado el 11-nov: inscripción funciona («Torneo Phoenix» con equipo) y abre su pantalla; falta quitar el aviso «resultados finales» y los datos de equipos |
 | 40 | Clanes | 🟡 | la lista de clanes abre vacía; falta crear clanes |
 
 ## 6. Lo propio de Phoenix (fuera del juego)
@@ -108,3 +108,4 @@ PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 - 11-nov 07:08: monedas por logros probadas en el PES (+10 monedas). El aviso falso de los regalos y la inscripción en Eventos quedan para después.
 - 11-nov 07:26: Cooperativo y Clanes abren en el PES (vacíos); Matchday y PES League programados con sus listas (13 comandos nuevos).
 - 11-nov 08:46: Matchday probado hasta elegir bando y equipo. Se corrigió un cierre del PES (la lista de premios iba con la forma equivocada). Falta confirmar la inscripción final y el Torneo en línea; la prueba se pausó porque se cortó el enlace con la PC.
+- 11-nov 09:31: inscripción probada en el PES en Torneo en línea y en Matchday; los dos abren su pantalla. Faltan datos de esas pantallas.
