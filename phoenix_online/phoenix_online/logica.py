@@ -1843,7 +1843,19 @@ class Servidor:
         return sq if sq in self._ids_plantillas(club or {}) else 1
 
     async def c_cmd_set_myclub_cloud_squad(self, s, m):
-        return {}  # C (§15.6)
+        # C (§15.6): solo result. C (10-nov, PES): {cloud_squad_id, is_use_cloud_match}; se guarda
+        club = self.datos.club(s.steam_hex or "") if s.steam_hex else None
+        sq = self._id_entero(m.get("cloud_squad_id"))
+        if club is not None and sq in self._ids_plantillas(club):
+            club["plantilla_nube"] = sq
+            if isinstance(m.get("is_use_cloud_match"), str):
+                club["usa_nube"] = m["is_use_cloud_match"]
+            self.datos.guardar_club(s.steam_hex, club)
+        return {}
+
+    def _nube(self, club):
+        sq = self._id_entero((club or {}).get("plantilla_nube"))
+        return sq if sq in self._ids_plantillas(club or {}) else 0
 
     async def c_cmd_get_myclub_player_number_fixation(self, s, m):
         return {"player_number_list": [], "player_number_list_num": 0}  # C (§15.7)
@@ -3047,7 +3059,8 @@ class Servidor:
 
     async def c_cmd_get_myclub_cloud_squadid(self, s, m):
         """B.13: sin plantilla en la nube (P: 0 es lo seguro, sin captura)."""
-        return {"squad_id": 0}
+        club = self.datos.club(s.steam_hex or "") if s.steam_hex else None
+        return {"squad_id": self._nube(club)}
 
     # ---------- gestión del club (ESPEC_DIVISIONES_Y_MYCLUB_EXTRA.md, parte B.15) ----------
     def _club_propio(self, s):
@@ -3162,6 +3175,8 @@ class Servidor:
             (club.get(clave) or {}).pop(str(sq), None)
         if club.get("plantilla_activa") == sq:
             club["plantilla_activa"] = 1  # se borró la activa: vuelve a jugar la 1
+        if club.get("plantilla_nube") == sq:
+            club["plantilla_nube"] = 1  # (el PES ya no deja borrarla; por si acaso)
         self.datos.guardar_club(s.steam_hex, club)
         return {}
 
@@ -3259,7 +3274,8 @@ class Servidor:
                 break
             lista.append(otra)
         return {"squad_list": lista, "squad_list_num": len(lista), "edition_squad_list": [],
-                "edition_squad_list_num": 0, "main_squad_id": self._activa(club), "cloud_squad_id": 0}
+                "edition_squad_list_num": 0, "main_squad_id": self._activa(club),
+                "cloud_squad_id": self._nube(club)}
 
     async def c_cmd_get_myclub_main_squad(self, s, m):
         # C (05-nov, lector 141c06500): plantilla principal de target_pid. P: hoy solo la propia

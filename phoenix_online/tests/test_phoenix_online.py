@@ -834,8 +834,12 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         dos = msgpack_min.unpackb(msgpack_min.packb(res()["squad_list"][1].valor))
         self.assertEqual((dos["squad_id"], dos["name"]), (2, "Plantilla 1 (2)"))
         await r(a, 92, {"msgid": "CMD_SET_MYCLUB_MAIN_SQUAD", "rqid": 92, "squad_id": 2})
+        await r(a, 96, {"msgid": "CMD_SET_MYCLUB_CLOUD_SQUAD", "rqid": 96, "cloud_squad_id": 2,
+                        "is_use_cloud_match": "YES"})
         await r(a, 93, {"msgid": "CMD_GET_MYCLUB_SQUADLIST", "rqid": 93})
-        self.assertEqual(res()["main_squad_id"], 2)
+        self.assertEqual((res()["main_squad_id"], res()["cloud_squad_id"]), (2, 2))
+        await r(a, 97, {"msgid": "CMD_GET_MYCLUB_CLOUD_SQUADID", "rqid": 97})
+        self.assertEqual(res()["squad_id"], 2)
         await r(a, 11, {"msgid": "CMD_DELETE_MYCLUB_SQUAD", "rqid": 11, "squad_id": 1})
         self.assertEqual(res()["result"], "ERR_FORBIDDEN")
         await r(a, 12, {"msgid": "CMD_DELETE_MYCLUB_SQUAD", "rqid": 12, "squad_id": 2})
