@@ -3098,10 +3098,16 @@ class Servidor:
         com = club.get("vscom") or {}
         progreso = {"MATCH50": int(com.get("partidos") or 0), "MATCH100": int(com.get("partidos") or 0),
                     "SUCCESSIVE5": int(com.get("racha_max") or 0)}
+        if cfg.get("todas"):  # prueba: las 6 categorías del cliente (las no medibles, a 0)
+            progreso.update({k: 0 for k in ("DIFFERENT20", "POWERFUL_ENEMY", "HIGH_SUCCESS")})
         # ojo: «logros_cobrados» (lista) ya lo usa GP_ACHIEVEMENT; los de myClub van aparte
         cobrados = club.get("logros_myclub") if isinstance(club.get("logros_myclub"), dict) else {}
         salida = []
-        for cat, hitos in (cfg.get("premios") or self.LOGROS_DEFECTO).items():
+        premios = dict(cfg.get("premios") or self.LOGROS_DEFECTO)
+        if cfg.get("todas"):
+            for k, meta in (("DIFFERENT20", 20), ("POWERFUL_ENEMY", 1), ("HIGH_SUCCESS", 1)):
+                premios.setdefault(k, [[meta, 5000]])
+        for cat, hitos in premios.items():
             if cat not in progreso:
                 continue  # sin forma de medirlo todavía (DIFFERENT20, POWERFUL_ENEMY, HIGH_SUCCESS)
             hitos = [(int(h[0]), int(h[1])) for h in hitos if isinstance(h, (list, tuple)) and len(h) == 2]
@@ -3109,27 +3115,39 @@ class Servidor:
                 salida.append((cat, progreso[cat], hitos, min(int(cobrados.get(cat) or 0), len(hitos))))
         return salida
 
-    @staticmethod
-    def _premio_gp(n, gp):
-        """Regalo de B.14 con todos los campos; el premio real (GP) lo suma el servidor al cobrar."""
-        return Empaquetado({
+    def _premio_gp(self, n, gp):
+        """Regalo de B.14 con todos los campos; el premio real (GP) lo suma el servidor al cobrar.
+        Prueba (10-nov: el PES descartó los logros con estos valores): config myclub.logros.regalo
+        = {clave: valor} sobrescribe campos del regalo; logros.regalo_quitar = [claves] los quita."""
+        cfg = (self.cfg.get("myclub") or {}).get("logros") or {}
+        regalo = {
             "present_id": n, "name_jp": f"{gp} GP", "title": f"{gp} GP", "entity_id": 0, "grade": 0,
             "player_level": 0, "contract_term": 0, "team_id": 0, "present_type": "NORMAL",
             "item_type": "", "item_variation": "", "item_effect_arg": 0, "count": gp,
-            "pes_point_price": 0, "receipt_deadline": 0})
+            "pes_point_price": 0, "receipt_deadline": 0}
+        regalo.update({k: v for k, v in (cfg.get("regalo") or {}).items() if isinstance(v, (int, str))})
+        for k in cfg.get("regalo_quitar") or []:
+            regalo.pop(k, None)
+        return Empaquetado(regalo)
 
     def _logro_bin(self, club, logro):
         cat, valor, hitos, cobrados = logro
         vistos = club.get("logros_vistos") or []
-        hitos_bin = [Empaquetado({"target_value": meta, "value": min(valor, meta),
-                                  "received_milestone_level": cobrados,
-                                  "present": self._premio_gp(i + 1, gp)})
-                     for i, (meta, gp) in enumerate(hitos)]
+        cfg = (self.cfg.get("myclub") or {}).get("logros") or {}
+        hitos_bin = []
+        for i, (meta, gp) in enumerate(hitos):
+            hito = {"target_value": meta, "value": min(valor, meta), "received_milestone_level": cobrados}
+            if not cfg.get("sin_regalo"):
+                hito["present"] = self._premio_gp(i + 1, gp)
+            hitos_bin.append(Empaquetado(hito))
         listo = cobrados < len(hitos) and valor >= hitos[cobrados][0]
-        return Empaquetado({"achievement_category": cat,
-                            "received_all": "YES" if cobrados >= len(hitos) else "NO",
-                            "is_new": "YES" if listo and cat not in vistos else "NO",
-                            "milestone_list_num": len(hitos_bin), "milestone_list": hitos_bin})
+        logro = {"achievement_category": cat,
+                 "received_all": "YES" if cobrados >= len(hitos) else "NO",
+                 "is_new": "YES" if listo and cat not in vistos else "NO",
+                 "milestone_list_num": len(hitos_bin), "milestone_list": hitos_bin}
+        # prueba: campos extra en cada logro (p. ej. {"achievement_id": 0})
+        logro.update({k: v for k, v in (cfg.get("logro_extra") or {}).items() if isinstance(v, (int, str))})
+        return Empaquetado(logro)
 
     async def c_cmd_set_myclub_achievement(self, s, m):
         """B.17: marcar un logro como visto; respuesta solo NOERR."""
