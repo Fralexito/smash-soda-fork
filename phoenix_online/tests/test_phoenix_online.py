@@ -1262,6 +1262,24 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.assertEqual((ea[-1][1]["match_data"], ea[-1][1]["match_data_size"]), ("QUJD", 3))
         await r(a, 9, {"msgid": "CMD_GET_COOP_LEVEL_RESULT", "rqid": 9})
         self.assertEqual(ea[-1][1]["coop_level_user_list"], [])
+        # R (pescoop.award AzrakHQ): gol del local y pitazo final -> 30 y 10 puntos, pantalla de nivel
+        await r(a, 10, {"msgid": "CMD_ADD_SCORE", "rqid": 10, "goal_side": "HOME", "gtimer": 100})
+        for x, n in ((a, 11), (b, 12)):
+            await r(x, n, {"msgid": "CMD_CHANGE_GAMEPHASE", "rqid": n, "phase": "END"})
+        await r(a, 13, {"msgid": "CMD_GET_COOP_LEVEL_RESULT", "rqid": 13})
+        filas = [f.valor for f in ea[-1][1]["coop_level_user_list"]]
+        self.assertEqual(sorted(f["point"] for f in filas), [10, 30])
+        self.assertTrue(all(f["before_level"] == 1 and f["status"] == "NONE" for f in filas))
+        msgpack_min.packb(ea[-1][1])
+        # seguir al compañero desde esa pantalla: llega user_id bin{pid, pname}
+        uid = next(f["user_id"] for f in filas if f["point"] == 10)
+        await r(a, 14, {"msgid": "CMD_FOLLOW_USER", "rqid": 14,
+                        "follow_user_id_list": [msgpack_min.packb(uid.valor)]})
+        await r(a, 15, {"msgid": "CMD_GET_COOP_PROFILE", "rqid": 15, "pid": uid.valor["pid"]})
+        perfil = ea[-1][1]["coop_profile_data"].valor
+        self.assertEqual((perfil["is_follow"], perfil["coop_level_point"], perfil["online_match"]), ("YES", 10, 1))
+        await r(a, 16, {"msgid": "CMD_GET_COOP_MATCH_DATA", "rqid": 16})
+        self.assertEqual(ea[-1][1]["match_data"], "QUJD")
 
     async def test_lote_azrak_salas_chat_bloqueo_matchday(self):
         """R (AzrakHQ, MIT): JOIN_ROOM_NTL con clave y room_owner; SET_ROOM_OPTION; chat; bloqueo de

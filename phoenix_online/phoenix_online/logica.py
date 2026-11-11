@@ -1424,7 +1424,7 @@ class Servidor:
         """Un grupo de un humano. Anidado como lo lee 0x141dc9a70: group_list[] -> bin{member_list[] ->
         bin{member: ficha 1v1, ...}}; un solo is_owner YES, en el dueño LOCAL."""
         fila = Empaquetado({"member": self._miembro(x, orden, dueno, lado), "guest_kind": "GUEST_NONE",
-                            "is_follow": "NO", "coop_level": 1,
+                            "is_follow": "NO", "coop_level": self.nivel_coop((x.steam_hex or "").lower())[0],
                             "coop_manner": self.grado_modales((x.steam_hex or "").lower())})
         return Empaquetado({"member_list": [fila], "member_list_num": 1, "use_team_id": equipo,
                             "owner_pid": self._pid_en_partida(x), "group_id": gid})
@@ -1438,7 +1438,7 @@ class Servidor:
         s.enviar({"msgid": m["msgid"], "rqid": m.get("rqid", 0), "result": NOERR})
         cola = self.colas.setdefault("COOP", [])
         rival = next((x for x in cola if x is not s and x in self.sesiones and self._misma_huella(s, x)
-                      and not self._no_emparejar(s, x)), None)
+                      and not self._no_emparejar(s, x) and not self._no_emparejar(s, x, "rechazados")), None)
         if rival is None:
             cola.append(s)
             return None
@@ -1472,16 +1472,70 @@ class Servidor:
         las pide antes del siguiente (GET_COOP_MATCH_DATA) y en la ficha de Cooperativo."""
         datos, tam = m.get("match_data"), m.get("match_data_size")
         if s.steam_hex and isinstance(datos, str) and isinstance(tam, int) and 0 < tam <= 4096 and len(datos) <= 8192:
-            self.datos.guardar_coop_datos(s.steam_hex, {"size": tam, "data": datos})
+            d = self.datos.coop_datos(s.steam_hex)
+            d.update({"size": tam, "data": datos})
+            self.datos.guardar_coop_datos(s.steam_hex, d)
         return {}
 
     async def c_cmd_get_coop_match_data(self, s, m):
         d = self.datos.coop_datos(s.steam_hex) if s.steam_hex else {}
         return {"match_data_size": int(d.get("size") or 0), "match_data": str(d.get("data") or "")}
 
+    # R (pescoop.py AzrakHQ): puntos por partido Cooperativo terminado, un nivel cada 100
+    PUNTOS_NIVEL_COOP = 100
+    NIVEL_MAX_COOP = 99
+    PREMIO_COOP = {"WIN": 30, "DRAW": 20, "LOSE": 10}
+
+    def nivel_coop(self, clave):
+        d = self.datos.coop_datos(clave) if clave else {}
+        pts = int(d.get("puntos") or 0)
+        return min(self.NIVEL_MAX_COOP, 1 + pts // self.PUNTOS_NIVEL_COOP), pts, int(d.get("partidos") or 0)
+
+    def _premiar_coop(self, pareja):
+        """Al pitazo final (los 2 en END) de un Cooperativo: puntos a los 2, una vez por pareja. El antes
+        y después se guardan para GET_COOP_LEVEL_RESULT, que llega cuando la pareja ya no existe."""
+        if pareja.get("tipo") != "COOP" or pareja.get("coop_premiado") or len(pareja["miembros"]) != 2:
+            return
+        pareja["coop_premiado"] = True
+        g = pareja.get("marcador") or {"HOME": 0, "AWAY": 0}
+        filas = {}
+        for x, lado in zip(pareja["miembros"], ("HOME", "AWAY")):
+            clave = (x.steam_hex or "").lower()
+            if not clave:
+                continue
+            mio, suyo = (g["HOME"], g["AWAY"]) if lado == "HOME" else (g["AWAY"], g["HOME"])
+            res = "WIN" if mio > suyo else "LOSE" if mio < suyo else "DRAW"
+            d = self.datos.coop_datos(clave)
+            antes = int(d.get("puntos") or 0)
+            d["puntos"] = antes + self.PREMIO_COOP[res]
+            d["partidos"] = int(d.get("partidos") or 0) + 1
+            d["victorias"] = int(d.get("victorias") or 0) + (res == "WIN")
+            self.datos.guardar_coop_datos(clave, d)
+            nivel = lambda p: min(self.NIVEL_MAX_COOP, 1 + p // self.PUNTOS_NIVEL_COOP)
+            filas[clave] = {"punto": self.PREMIO_COOP[res], "antes": antes, "despues": d["puntos"],
+                            "nivel_antes": nivel(antes), "nivel_despues": nivel(d["puntos"])}
+        ultimo = self.__dict__.setdefault("_coop_ultimo", {})
+        for clave in filas:
+            ultimo[clave] = {"miembros": list(filas), "filas": filas}
+        log.info("nivel COOP: %s", {k[-6:]: f"{v['antes']}->{v['despues']}" for k, v in filas.items()})
+
     async def c_cmd_get_coop_level_result(self, s, m):
-        # R: lista de bin{status, user_id{pid,pname}, ...} (parser 0x141ba8ec0); vacía = sin pantalla de nivel
-        return {"coop_level_user_list": []}
+        """R (pescoop.py AzrakHQ, parser 0x141ba8ec0): los 2 jugadores con puntos y nivel antes/después.
+        Vacía = sin pantalla de nivel."""
+        mia = (getattr(s, "steam_hex", None) or "").lower()
+        ultimo = self.__dict__.get("_coop_ultimo", {}).get(mia)
+        sigo = self.datos.relaciones(mia)["sigo"] if mia else []
+        lista = []
+        for clave in (ultimo or {}).get("miembros", []):
+            d = ultimo["filas"][clave]
+            lista.append(Empaquetado({
+                "status": "LEVEL_UP" if d["nivel_despues"] > d["nivel_antes"] else "NONE",
+                "user_id": self._usuario_plano(clave), "is_clan_owner": "NO",
+                "is_follow": "YES" if clave != mia and clave in sigo else "NO",
+                "evalution": d["punto"], "reference": self.PUNTOS_NIVEL_COOP - d["despues"] % self.PUNTOS_NIVEL_COOP,
+                "point": d["punto"], "before_point": d["antes"], "after_point": d["despues"],
+                "before_level": d["nivel_antes"], "after_level": d["nivel_despues"]}))
+        return {"coop_level_user_list": lista}
 
     # ---------- Red, chat y bloqueo (R: pesmatch/pesrooms/pesblock/pescmds de AzrakHQ) ----------
     async def c_cmd_get_ipandport_ntl(self, s, m):
@@ -1530,12 +1584,13 @@ class Servidor:
         log.info("chat %s de %s a %d: %r", canal, s.pid, len(para), texto)
         return {}
 
-    def _no_emparejar(self, a, b):
-        """Lista de bloqueo de partidos (SET_MATCHREJECTPID): si uno bloqueó al otro no se emparejan."""
+    def _no_emparejar(self, a, b, lista="no_emparejar"):
+        """Lista de bloqueo de partidos (SET_MATCHREJECTPID) o, en Cooperativo, la de SET_COOP_REJECT
+        (R: pescoop.blocked AzrakHQ): si uno bloqueó al otro no se emparejan."""
         ka, kb = (a.steam_hex or "").lower(), (b.steam_hex or "").lower()
         if not ka or not kb:
             return False
-        return kb in self.datos.relaciones(ka)["no_emparejar"] or ka in self.datos.relaciones(kb)["no_emparejar"]
+        return kb in self.datos.relaciones(ka)[lista] or ka in self.datos.relaciones(kb)[lista]
 
     async def c_cmd_set_matchrejectpid(self, s, m):
         poner = self._texto(m.get("is_reject", "YES")).upper() != "NO"
@@ -1760,6 +1815,7 @@ class Servidor:
             for x in pareja["miembros"]:
                 if x not in pareja.get("abandonaron", set()):
                     self._anotar_modales((x.steam_hex or "").lower(), False)
+            self._premiar_coop(pareja)
         if pareja.get("tipo") in self._reglas_division().tipos or pareja.get("veredicto_al_final"):
             return {}
         if len(fases) >= 2 and all(f == "END" for f in fases.values()) \
@@ -4667,16 +4723,27 @@ class Servidor:
         clave = (self._clave_de_id(m.get("pid")) if m.get("pid") else None) or mia
         d = self.datos.coop_datos(clave) if clave else {}
         sigo = self.datos.relaciones(mia)["sigo"] if mia else []
+        nivel, puntos, jugados = self.nivel_coop(clave)
         datos = {"is_follow": "YES" if clave and clave != mia and clave in sigo else "NO",
-                 "coop_level": 1, "coop_level_point": 0,
+                 "coop_level": nivel, "coop_level_point": puntos,
                  "follower": self.datos.seguidores(clave) if clave else 0,
-                 "coop_manner": self.grado_modales(clave), "online_match": 0, "vscom_match": 0,
+                 "coop_manner": self.grado_modales(clave), "online_match": jugados, "vscom_match": 0,
                  "match_data_size": int(d.get("size") or 0), "match_data": str(d.get("data") or "")}
         return {"user_info": self._usuario_plano(clave) if clave else Empaquetado({}),
                 "coop_profile_data": Empaquetado(datos)}
 
     # ---------- Seguir y rechazar jugadores (D.8, L): tabla relaciones ----------
     def _clave_de_id(self, ident):
+        # R (pescoop._user_pids AzrakHQ): tras un Cooperativo el PES manda user_id bin{pid, pname{...}}
+        if isinstance(ident, (bytes, bytearray)):
+            try:
+                ident = msgpack_min.unpackb(bytes(ident))
+            except Exception:  # noqa: BLE001
+                return None
+        if isinstance(ident, Empaquetado):
+            ident = ident.valor
+        if isinstance(ident, dict):
+            ident = ident.get("pid")
         n = self._id_entero(ident)
         if not n:
             return None
