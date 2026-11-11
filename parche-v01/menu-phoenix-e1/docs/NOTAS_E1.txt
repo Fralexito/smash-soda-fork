@@ -1,0 +1,4 @@
+21:41 TEMPORAL: 08_online_coop(MenuSound) y 11_quick(OpSoundTrack) -> TrainingDirectInit en Phoenix-Menu; original en TopMenuNew.json.e1_fijo_14 (solo 14 cambiado)
+21:45 08/11 revertidos (llevaron a ONLINE_QUICK). TEMPORAL ahora: 20_onlinesettings(MenuInGameText) y 21_systemsettings(MenuBgSet) -> TrainingDirectInit; + 14 fijo.
+21:48 Con 20 remapeado, PES se cerro (ONLINE_SETTINGS zona final) -> probando TrainingDirectInit -> Match/MatchTrainingTeamSel (ruta oficial). Orig en .e1_original
+21:51 PRUEBA OK: 20_onlinesettings -> TrainingDirectInit -> MatchTrainingTeamSel llego a Local/Visitante. Restaurado TopMenuNew.json a solo-14. PES Conmegol cerrado y liberado.

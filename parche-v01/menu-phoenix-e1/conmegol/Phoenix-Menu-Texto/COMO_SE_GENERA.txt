@@ -1,0 +1,1 @@
+all.str no se sube (es del parche Conmegol). Se genera: copia de livecpk\Comentarios\spa\string\all.str con 'Opciones en linea' -> 'Phoenix' en sitio (rellenar con ceros hasta 18 bytes UTF-8).

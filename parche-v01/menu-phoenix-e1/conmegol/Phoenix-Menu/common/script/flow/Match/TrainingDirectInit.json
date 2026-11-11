@@ -1,0 +1,17 @@
+{
+	"events":{
+		"proceed":{
+			"to":"Match/MatchTrainingTeamSel",
+			"go":"forward",
+			"clear":"all",
+			"fadeStart":"",
+			"fadeEnd":"do",
+			"bgType":"none"
+		}
+	},
+	"data":{
+		"type":"process",
+		"bgId":"",
+		"dialog":""
+	}
+}
