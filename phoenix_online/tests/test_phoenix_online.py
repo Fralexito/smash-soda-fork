@@ -2063,6 +2063,26 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
                 cab = f.read(0x800)
             self.assertEqual((cab[:4], cab[0x7FA:0x800]), (b"CPK ", b"(c)CRI"))
 
+    async def test_playdata_y_tope_por_rival(self):
+        """R (results.md AzrakHQ / OpenEleven): SET_PLAYDATA_MATCH se guarda; con max_partidos_rival_dia el
+        mismo cruce deja de dar puntos ese día."""
+        import json as _j
+        a, ea = await self.entrar("0110000100000031")
+        b, eb = await self.entrar("0110000100000032")
+        pid = str(self.srv.numero_de_clave(a.steam_hex) & 0xFFFFFFFF)
+        jd = {"scorer": [7511, 0], "team": [{"team_id": 101, "member": [{"player_id": 7511, "rating": 7.5,
+                                                                        "play_time": 90}, None]}]}
+        r = self.srv.respuesta_http({"msgid": "CMD_SET_PLAYDATA_MATCH", "rqid": "1", "pid": pid,
+                                     "play_data": _j.dumps(jd)})
+        self.assertEqual(r["result"], "NOERR")
+        h = self.srv.datos.historial(a.steam_hex)["playdata"][-1]["resumen"]
+        self.assertEqual((h["goleadores"], h["notas"]["7511"]["nota"]), ([7511], 7.5))
+        self.srv.cfg["max_partidos_rival_dia"] = 2
+        vistos = [self.srv._puntua({"miembros": (a, b)}) for _ in range(3)]
+        self.assertEqual(vistos, [True, True, False])
+        self.srv.cfg["max_partidos_rival_dia"] = 0
+        self.assertTrue(self.srv._puntua({"miembros": (a, b)}))
+
     async def test_avatar_subido_queda_guardado(self):
         """R (pesavatar AzrakHQ): SET_AVATAR se guarda en la base y se lee con cualquier forma del pid."""
         import base64, hashlib

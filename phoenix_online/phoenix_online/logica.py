@@ -599,12 +599,37 @@ class Servidor:
             log.info("temporada cerrada para %s: %s -> %s", s.steam_hex, cambio, e["division"])
         return {}
 
+    def _puntua(self, pareja):
+        """R (ServerOptions/LiveSettingCatalog de OpenEleven): contra el farmeo, como máximo N partidos que
+        dan puntos contra el MISMO rival por día (config max_partidos_rival_dia; 0 o sin poner = sin
+        límite). Se decide una vez por partido y vale para Divisiones, Matchday y Torneo en línea."""
+        if "puntua" in pareja:
+            return pareja["puntua"]
+        tope = int(self.cfg.get("max_partidos_rival_dia") or 0)
+        claves = frozenset((x.steam_hex or "").lower() for x in pareja.get("miembros") or ())
+        if tope <= 0 or len(claves) != 2 or "" in claves:
+            pareja["puntua"] = True
+            return True
+        dia = time.strftime("%Y-%m-%d")
+        cruces = self.__dict__.setdefault("_cruces_dia", {})
+        for k in [k for k in cruces if k[0] != dia]:
+            del cruces[k]
+        n = cruces.get((dia, claves), 0)
+        pareja["puntua"] = n < tope
+        if pareja["puntua"]:
+            cruces[(dia, claves)] = n + 1
+        else:
+            log.info("partido %s no da puntos: ya van %d hoy contra el mismo rival", pareja.get("room_id"), n)
+        return pareja["puntua"]
+
     def _resultado_division(self, s, pareja, m):
         """CMD_SEND_GAME_RESULT de un partido de Divisiones (A.1/A.2). El PRIMER informe completo
         se aplica a los dos jugadores; el segundo solo se compara."""
         reglas = self._reglas_division()
         if pareja.get("tipo") not in reglas.tipos:
             log.info("resultado de %s: no es de Divisiones, no cambia rating", pareja.get("tipo"))
+            return
+        if not self._puntua(pareja):
             return
         partido = f"div{pareja['room_id']}"
         try:
@@ -811,6 +836,34 @@ class Servidor:
                 self.datos.guardar_historial(x.steam_hex, h)
 
     c_cmd_get_match_analyze_byid = c_cmd_get_match_analyze
+
+    def _guardar_playdata(self, formulario):
+        """R (results.md AzrakHQ, en vivo): ~2 s antes del resultado cada PES manda por HTTP el resumen del
+        partido en JSON (goleadores, nota y minutos por jugador, estadio...). La mejor fuente de notas y
+        goleadores: se guarda tal cual (los últimos 10) con un resumen leído."""
+        clave = self._clave_de_id(formulario.get("pid"))
+        crudo = formulario.get("play_data")
+        if not clave or not isinstance(crudo, str) or len(crudo) > 200_000:
+            return
+        try:
+            j = json.loads(crudo)
+        except ValueError:
+            log.warning("play_data ilegible de %s", clave[-6:])
+            return
+        if not isinstance(j, dict):
+            return
+        notas = {}
+        for eq in j.get("team") or []:
+            for mi in (eq or {}).get("member") or [] if isinstance(eq, dict) else []:
+                if isinstance(mi, dict) and mi.get("player_id"):
+                    notas[str(mi["player_id"])] = {"nota": mi.get("rating"), "minutos": mi.get("play_time")}
+        resumen = {"fecha": int(time.time()), "goleadores": [g for g in (j.get("scorer") or []) if g],
+                   "equipos": [(e or {}).get("team_id") for e in (j.get("team") or []) if isinstance(e, dict)],
+                   "estadio": j.get("stadium_id"), "notas": notas}
+        h = self.datos.historial(clave)
+        h["playdata"] = (list(h.get("playdata") or []) + [{"resumen": resumen, "crudo": j}])[-10:]
+        self.datos.guardar_historial(clave, h)
+        log.info("resumen del partido de %s: goleadores %s", clave[-6:], resumen["goleadores"])
 
     # ---------- Cortesía (R: pesmanner.py de AzrakHQ, avisos vistos en vivo el 07-nov) ----------
     RECIENTES_MODALES = 10
@@ -1713,7 +1766,7 @@ class Servidor:
     def _resultado_matchday(self, s, pareja, m):
         """Cada PES informa su propio resultado: se suman SUS puntos (victoria 3, empate 1) una sola
         vez por partido. Quedan pendientes para la pantalla de puntos (ACHIEVEMENT_REWARD)."""
-        if "MATCHDAY" not in str(pareja.get("tipo") or "").upper() or not s.steam_hex:
+        if "MATCHDAY" not in str(pareja.get("tipo") or "").upper() or not s.steam_hex or not self._puntua(pareja):
             return
         try:
             goles = (int(m.get("home_score") or 0), int(m.get("away_score") or 0))
@@ -1743,7 +1796,7 @@ class Servidor:
     def _resultado_pesleague(self, s, pareja, m):
         """R (pestourney.record AzrakHQ): Torneo en línea, 3 por victoria y 1 por empate, con G/E/P y goles.
         Cada PES suma lo suyo, una vez por partido, solo dentro de las fechas del torneo."""
-        if "PES_LEAGUE" not in str(pareja.get("tipo") or "").upper() or not s.steam_hex:
+        if "PES_LEAGUE" not in str(pareja.get("tipo") or "").upper() or not s.steam_hex or not self._puntua(pareja):
             return
         try:
             goles = (int(m.get("home_score") or 0), int(m.get("away_score") or 0))
@@ -6734,6 +6787,9 @@ class Servidor:
             return {**base, "dlc_version": ver,
                     "dlcfile_list_count": 0, "dlcfile_list": "",
                     "variation_file_list_count": 0, "variation_file_list": ""}
+        if msgid == "CMD_SET_PLAYDATA_MATCH":
+            self._guardar_playdata(formulario)
+            return base
         if msgid == "CMD_RECV_MYCLUB_PRESENT":
             return {**base, **self.recibir_regalos(formulario, ip_cliente)}
         if msgid == "CMD_AUTH_STEAM":
