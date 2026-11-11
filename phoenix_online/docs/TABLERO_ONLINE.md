@@ -1,6 +1,6 @@
 # Tablero del online Phoenix (se actualiza con cada avance)
 
-Última actualización: 11-nov-2026, 00:05 (hora del servidor UTC).
+Última actualización: 11-nov-2026, 00:30 (hora del servidor UTC).
 PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 
 ## Resumen
@@ -63,7 +63,7 @@ PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 | 32 | Ranking semanal | 🟡 | vacío; el PES lo bloquea hasta jugar 10 partidos 1 contra 1 |
 | 33 | myClub contra otra persona | ❌ | |
 | 34 | Monedas gratis (interruptor) | 🟡 | programado; falta tu decisión de encenderlo |
-| 35 | Gestión del club: entrenador de cada plantilla, dorsales, copiar o borrar plantilla, despedir entrenador, intercambio de jugadores, objetos de entrenamiento | 🟡 | programado: entrenador por plantilla, despedir o renovar entrenador, copiar o borrar plantilla, dorsales, ciudad y base; falta: intercambio, objetos y entrenamiento táctico |
+| 35 | Gestión del club: entrenador de cada plantilla, dorsales, copiar o borrar plantilla, despedir entrenador, intercambio de jugadores, objetos de entrenamiento | 🟡 | **probado en el PES:** copiar y borrar plantilla, plantilla activa, plantilla para la nube y ciudad del club. Programado, sin probar: entrenador por plantilla, despedir o renovar entrenador y dorsales. Falta: intercambio, objetos y entrenamiento táctico |
 | — | Tienda con dinero real | 🚫 | nada de dinero real |
 
 ## 5. Otros modos del online
@@ -94,3 +94,4 @@ PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 - 10-nov 23:50: ranking de clubes con nombre real y escudo; récord contra la COM en myClub; al abrir myClub ya no queda ningún comando sin respuesta.
 - 10-nov 23:55: nuevo apartado 35 (gestión del club), que faltaba en el tablero; por eso los porcentajes bajan un punto.
 - 11-nov 00:05: probado el cambio de nombre del club; programada gran parte de la gestión del club (entrenadores, plantillas, dorsales, ciudad).
+- 11-nov 00:30: probadas en el PES copiar y borrar plantilla, la plantilla activa, la plantilla para la nube y la ciudad del club (arreglado su formato). Ningún cierre.
