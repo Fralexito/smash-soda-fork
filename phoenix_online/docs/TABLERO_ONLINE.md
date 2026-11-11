@@ -1,11 +1,11 @@
 # Tablero del online Phoenix (se actualiza con cada avance)
 
-Última actualización: 11-nov-2026, 10:05 (hora del servidor UTC).
+Última actualización: 11-nov-2026, 21:55 (hora del servidor UTC).
 PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 
 ## Resumen
-- **Probado en el PES y funcionando:** 25 de 49 apartados (**51 %**).
-- **Programado (falta probarlo en el PES):** 14 más. Con ellos, **39 de 49 ya están hechos (80 %)**.
+- **Probado en el PES y funcionando:** 25 de 55 apartados (**45 %**).
+- **Programado (falta probarlo en el PES):** 20 más. Con ellos, **45 de 55 ya están hechos (82 %)**.
 - **A medias** (abre bien pero sin contenido todavía, o hecho solo en parte): 7 (Matchday y PES League pasaron aquí: ya abren en el PES, falta la inscripción).
 - **Falta hacer:** 3.
 - Comandos del juego que el servidor ya controla: **281 de 439 (64 %)**. Cooperativo, Matchday, PES League y clanes ya tienen respuesta; solo falta empezar la tienda.
@@ -87,8 +87,15 @@ PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 | 47 | Desvío del online con Phoenix Core (sin «hosts») | 🟢 | Core 0.5.66 listo; se instala después de la prueba de Street |
 | 48 | Amigos por Tailscale | ❌ | falta instalar Tailscale (con tu permiso) |
 | 49 | Servidor en internet (VPS, sin tu PC encendida) | ❌ | |
+| 50 | Relé TURN propio (partido entre 2 PC aunque el router bloquee) | 🟢 | probado por AzrakHQ con 2 PES; se enciende con `turn_propio.activo` + 2 paquetes de Python |
+| 51 | Actualización en vivo propia (todos con la misma base del parche) | 🟢 | carpeta `actualizacion/` + `tools/armar_actualizacion.py` |
+| 52 | No emparejar PES con datos distintos («error DATAPACK») | 🟢 | sumas de CHECK_CHEAT + versión |
+| 53 | Dirección del PES de tu PC para un amigo de otra casa | 🟢 | host_addr con tu IP pública/Tailscale |
+| 54 | Reconexión a tiempo sin derrota; abandono por sesión exacta | 🟢 | |
+| 55 | Tope de partidos con puntos contra el mismo rival por día | 🟢 | opción, apagada (`max_partidos_rival_dia`) |
 
 ## Historial de este tablero
+- 11-nov 21:55: comparación completa con AzrakHQ y lectura a fondo de OpenEleven/MGSV/Sider. Nuevo: nivel cooperativo, perfil de desconectados, avatar guardado, ranking con orden, lista de bloqueo, filtro de palabras sin falsos rechazos, resumen del partido, TURN propio, actualización en vivo, emparejar solo datos iguales, reconexión. 135 pruebas en verde.
 - 10-nov 23:20: primera versión.
 - 10-nov 23:35: probadas en el PES la pantalla de división, resultados y los dos rankings (ningún cierre); arreglos de ranking; abandono 3-0 programado.
 - 10-nov 23:50: ranking de clubes con nombre real y escudo; récord contra la COM en myClub; al abrir myClub ya no queda ningún comando sin respuesta.
