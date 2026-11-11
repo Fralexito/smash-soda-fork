@@ -864,6 +864,34 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(club["base_team_id"], 101)
         self.assertEqual(club["home_town"], {"name": "Lima", "nation_id": 54, "label": "LIM"})
 
+    async def test_myclub_logros_con_premio(self):
+        """B.17: apagados = lista vacía; encendidos = progreso del récord contra la COM y cobro en GP."""
+        self.srv.cfg = {**self.srv.cfg, "myclub": {
+            "jugadores": [{"gameplayer_id": 1}], "entrenadores": [{"coach_id": 8}],
+            "club_de_prueba": {"team_name": "P", "gp": 0}}}
+        a, ea = await self.entrar("A1")
+        r = self.srv.recibir
+        res = lambda: ea[-1][1]
+        await r(a, 1, {"msgid": "CMD_GET_MYCLUB_ACHIEVEMENTLIST", "rqid": 1})
+        self.assertEqual(res()["achievement_list_num"], 0)
+        self.srv.cfg["myclub"]["logros"] = {"activo": True}
+        club = self.srv.datos.club(a.steam_hex)
+        club["vscom"] = {"partidos": 60, "racha_max": 3}
+        self.srv.datos.guardar_club(a.steam_hex, club)
+        await r(a, 2, {"msgid": "CMD_GET_MYCLUB_ACHIEVEMENTLIST", "rqid": 2})
+        self.assertEqual(res()["achievement_list_num"], 3)
+        l = {x["achievement_category"]: x for x in
+             (msgpack_min.unpackb(msgpack_min.packb(e.valor)) for e in res()["achievement_list"])}
+        self.assertEqual((l["MATCH50"]["is_new"], l["MATCH100"]["is_new"]), ("YES", "NO"))
+        hito = msgpack_min.unpackb(l["MATCH100"]["milestone_list"][0])
+        self.assertEqual((hito["target_value"], hito["value"]), (100, 60))
+        await r(a, 3, {"msgid": "CMD_RECV_MYCLUB_ACHIEVEMENT_BONUS", "rqid": 3, "is_all": "YES"})
+        self.assertEqual(len(res()["recv_achievement_list"]), 1)
+        self.assertEqual(self.srv.datos.club(a.steam_hex)["gp"], 10000)
+        await r(a, 4, {"msgid": "CMD_RECV_MYCLUB_ACHIEVEMENT_BONUS", "rqid": 4, "is_all": "YES"})
+        self.assertEqual(res()["recv_achievement_list"], [])  # no se cobra dos veces
+        self.assertEqual(self.srv.datos.club(a.steam_hex)["gp"], 10000)
+
     async def test_myclub_catalogo_club_y_rival_rotando(self):
         import os, struct, tempfile, zlib, json as _j, sys as _s
         _s.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "tools"))

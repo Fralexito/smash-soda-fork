@@ -3033,11 +3033,95 @@ class Servidor:
         return {"present_list_num": 0, "present_list": []}
 
     async def c_cmd_get_myclub_achievementlist(self, s, m):
-        """B.5: sin logros todavía (lista vacía válida)."""
-        return {"achievement_list_num": 0, "achievement_list": []}
+        """B.5/B.17: logros del club. Apagados (lista vacía) salvo config myclub.logros.activo."""
+        club = self._club_propio(s)
+        lista = [self._logro_bin(club, l) for l in self._logros(club)] if club is not None else []
+        return {"achievement_list_num": len(lista), "achievement_list": lista}
 
     async def c_cmd_send_myclub_read_achievementlist(self, s, m):
         return {}
+
+    # ---------- logros (B.14 y B.17; los textos y el sentido de value/target son P) ----------
+    # categoría: [(meta, GP del premio), ...]; el progreso sale del récord contra la COM
+    LOGROS_DEFECTO = {"MATCH50": [[50, 10000]], "MATCH100": [[100, 20000]], "SUCCESSIVE5": [[5, 5000]]}
+
+    def _logros(self, club):
+        """[(categoría, progreso, [(meta, gp)], hitos cobrados)] o [] si están apagados."""
+        cfg = (self.cfg.get("myclub") or {}).get("logros") or {}
+        if not cfg.get("activo") or club is None:
+            return []
+        com = club.get("vscom") or {}
+        progreso = {"MATCH50": int(com.get("partidos") or 0), "MATCH100": int(com.get("partidos") or 0),
+                    "SUCCESSIVE5": int(com.get("racha_max") or 0)}
+        cobrados = club.get("logros_cobrados") or {}
+        salida = []
+        for cat, hitos in (cfg.get("premios") or self.LOGROS_DEFECTO).items():
+            if cat not in progreso:
+                continue  # sin forma de medirlo todavía (DIFFERENT20, POWERFUL_ENEMY, HIGH_SUCCESS)
+            hitos = [(int(h[0]), int(h[1])) for h in hitos if isinstance(h, (list, tuple)) and len(h) == 2]
+            if hitos:
+                salida.append((cat, progreso[cat], hitos, min(int(cobrados.get(cat) or 0), len(hitos))))
+        return salida
+
+    @staticmethod
+    def _premio_gp(n, gp):
+        """Regalo de B.14 con todos los campos; el premio real (GP) lo suma el servidor al cobrar."""
+        return Empaquetado({
+            "present_id": n, "name_jp": f"{gp} GP", "title": f"{gp} GP", "entity_id": 0, "grade": 0,
+            "player_level": 0, "contract_term": 0, "team_id": 0, "present_type": "NORMAL",
+            "item_type": "", "item_variation": "", "item_effect_arg": 0, "count": gp,
+            "pes_point_price": 0, "receipt_deadline": 0})
+
+    def _logro_bin(self, club, logro):
+        cat, valor, hitos, cobrados = logro
+        vistos = club.get("logros_vistos") or []
+        hitos_bin = [Empaquetado({"target_value": meta, "value": min(valor, meta),
+                                  "received_milestone_level": cobrados,
+                                  "present": self._premio_gp(i + 1, gp)})
+                     for i, (meta, gp) in enumerate(hitos)]
+        listo = cobrados < len(hitos) and valor >= hitos[cobrados][0]
+        return Empaquetado({"achievement_category": cat,
+                            "received_all": "YES" if cobrados >= len(hitos) else "NO",
+                            "is_new": "YES" if listo and cat not in vistos else "NO",
+                            "milestone_list_num": len(hitos_bin), "milestone_list": hitos_bin})
+
+    async def c_cmd_set_myclub_achievement(self, s, m):
+        """B.17: marcar un logro como visto; respuesta solo NOERR."""
+        club = self._club_propio(s)
+        cat = m.get("achievement_category")
+        if club is not None and isinstance(cat, str) and cat:
+            vistos = club.setdefault("logros_vistos", [])
+            if cat not in vistos:
+                vistos.append(cat)
+                self.datos.guardar_club(s.steam_hex, club)
+        return {}
+
+    async def c_cmd_recv_myclub_achievement_bonus(self, s, m):
+        """B.17: cobrar los premios de logro alcanzados (uno o todos con is_all); suma los GP."""
+        club = self._club_propio(s)
+        todos = str(m.get("is_all") or "").upper() == "YES"
+        pedido = m.get("achievement_category")
+        recibidos = []
+        for n, (cat, valor, hitos, cobrados) in enumerate(self._logros(club)):
+            if not todos and cat != pedido:
+                continue
+            ganado = 0
+            while cobrados < len(hitos) and valor >= hitos[cobrados][0]:
+                ganado += hitos[cobrados][1]
+                cobrados += 1
+            if not ganado:
+                continue
+            club.setdefault("logros_cobrados", {})[cat] = cobrados
+            club["gp"] = int(club.get("gp") or 0) + ganado
+            recibidos.append(Empaquetado({
+                "achievement_category": cat, "achievement_id": n,
+                "achievement_bonus": Empaquetado({"present": self._premio_gp(n + 1, ganado)}),
+                "received_all": "YES" if cobrados >= len(hitos) else "NO",
+                "received_milestone_level": cobrados}))
+            log.info("myClub %s cobra el logro %s: +%d GP", s.steam_hex, cat, ganado)
+        if recibidos:
+            self.datos.guardar_club(s.steam_hex, club)
+        return {"recv_achievement_list": recibidos}
 
     async def c_cmd_entry_myclub_weekly_ranking(self, s, m):
         """B.7: inscribirse (o no) al ranking semanal; se guarda en el club, respuesta solo NOERR."""
@@ -3064,7 +3148,7 @@ class Servidor:
 
     # ---------- gestión del club (ESPEC_DIVISIONES_Y_MYCLUB_EXTRA.md, parte B.15) ----------
     def _club_propio(self, s):
-        return self.datos.club(s.steam_hex or "") if s.steam_hex else None
+        return self._club_inicial(s) if s.steam_hex else None
 
     @staticmethod
     def _id_entero(v):
