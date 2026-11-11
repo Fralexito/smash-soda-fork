@@ -1,11 +1,11 @@
 -- =============================================================================
---  Phoenix Pantalla · cargador (módulo de Sider para PES 2021) · v0.1.0 · 10-nov-2026
+--  Phoenix Pantalla · cargador (módulo de Sider para PES 2021) · v0.1.1 · 10-nov-2026
 --  Carga SiderAddons\phoenix_pantalla\phoenix_pantalla.dll con LoadLibraryA y llama a phx_pantalla_iniciar(carpeta) UNA vez.
 --  La DLL engancha Present por su cuenta; no hace falta tick por fotograma. No depende de Phoenix Core.
 --  Apagar: quitar (o comentar con ;) la línea lua.module de este módulo en sider.ini, o crear el archivo vacío
 --  SiderAddons\phoenix_pantalla\PHOENIX_PANTALLA_OFF. Lo que pasa se anota en phoenix_pantalla\cargador.txt y phoenix_pantalla.log.
 -- =============================================================================
-local m = { version = "0.1.0" }
+local m = { version = "0.1.1" }
 local carpeta
 
 local function anotar(txt)
@@ -32,8 +32,8 @@ end
 
 function m.init(ctx)
     carpeta = (ctx.sider_dir or ".\\") .. "phoenix_pantalla\\"
-    local ok, err = pcall(cargar)
-    if not ok then anotar("error en el cargador: " .. tostring(err)) end
+    -- Sider no ofrece pcall en este entorno: si algo falla, Sider desactiva solo este modulo (y lo anota en sider.log).
+    cargar()
 end
 
 return m

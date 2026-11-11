@@ -83,8 +83,14 @@ HRESULT STDMETHODCALLTYPE ganchoPresent(IDXGISwapChain* sc, UINT sync, UINT flag
 // Vtable de IDXGISwapChain creando un dispositivo y una swapchain minimos (se destruyen enseguida). Mismo metodo que nitidez.h del Core.
 void** vtableSwapChain(char* diag, size_t nd) {
     diag[0] = 0;
-    HMODULE d3d = GetModuleHandleA("d3d11.dll"); if (!d3d) d3d = LoadLibraryA("d3d11.dll");
-    if (!d3d) { snprintf(diag, nd, "no hay d3d11.dll (err %lu)", GetLastError()); return nullptr; }
+    // 0.1.1: NO usar GetModuleHandle("d3d11.dll"): en Conmegol la carpeta del juego trae su propio d3d11.dll (proxy ReShade) y crear el dispositivo de
+    // prueba por ahi hizo que PES se cerrara (d3d11.dll+0x3850d, 10-nov 22:36). Se usa el del sistema por ruta completa.
+    wchar_t sys[MAX_PATH] = {}; GetSystemDirectoryW(sys, MAX_PATH);
+    std::wstring ruta = std::wstring(sys) + L"\\d3d11.dll";
+    HMODULE d3d = LoadLibraryW(ruta.c_str());
+    HMODULE prox = GetModuleHandleA("d3d11.dll");
+    if (prox && prox != d3d) { wchar_t pp[MAX_PATH] = {}; GetModuleFileNameW(prox, pp, MAX_PATH); logf("d3d11.dll del juego (proxy) detectado: %ls; se usa el del sistema: %ls", pp, ruta.c_str()); }
+    if (!d3d) { snprintf(diag, nd, "no hay d3d11.dll del sistema (err %lu)", GetLastError()); return nullptr; }
     CrearDispFn crear = (CrearDispFn)GetProcAddress(d3d, "D3D11CreateDeviceAndSwapChain");
     if (!crear) { snprintf(diag, nd, "no existe D3D11CreateDeviceAndSwapChain"); return nullptr; }
     WNDCLASSA wc = {}; wc.lpfnWndProc = DefWindowProcA; wc.hInstance = GetModuleHandleA(nullptr); wc.lpszClassName = "PhoenixPantallaDummy";
@@ -112,7 +118,21 @@ void** vtableSegura(char* diag, size_t nd) {
 }
 
 // Engancha Present en un hilo aparte con reintentos (cada 1 s, hasta 2 min), cuando el juego ya tiene ventana/DX11.
+ULONGLONG g_tIni = 0;
 DWORD WINAPI hiloEnganche(LPVOID) {
+    // 0.1.1: esperar a que el juego este estable (zona 7 = menu principal mantenida 8 s y 25 s desde el arranque del modulo), hasta 5 min.
+    ULONGLONG desde7 = 0; int espera = 0;
+    const bool arnes = GetFileAttributesA((g_carpeta + "ARNES").c_str()) != INVALID_FILE_ATTRIBUTES;   // solo pruebas fuera de PES: salta la espera
+    for (; espera < 300 && !arnes; ++espera) {
+        ULONGLONG a = GetTickCount64(); int z = zonaId();
+        if (z == 7) { if (!desde7) desde7 = a; } else desde7 = 0;
+        if (desde7 && a - desde7 >= 8000 && a - g_tIni >= 25000) break;
+        Sleep(1000);
+    }
+    if (!arnes && espera >= 300) { logf("el juego no llego a un menu estable en 5 min: no se engancha Present"); InterlockedExchange(&g_hiloVivo, 0); return 0; }
+    logf("juego estable en el menu tras %d s: se engancha Present", espera);
+    // Candado anti-cierres: si PES se cierra antes de que pasen 60 s con el gancho, este archivo queda y el proximo arranque NO engancha.
+    std::string cand = g_carpeta + "ENGANCHE_EN_CURSO"; { FILE* f = fopen(cand.c_str(), "wb"); if (f) { fputs("si este archivo existe, PES se cerro mientras se enganchaba Present; borrarlo para reintentar", f); fclose(f); } }
     for (int i = 0; i < 120 && !g_enganchado; ++i) {
         char diag[240];
         void** vt = vtableSegura(diag, sizeof diag);
@@ -130,7 +150,8 @@ DWORD WINAPI hiloEnganche(LPVOID) {
         if (i < 3 || i % 20 == 0) logf("intento %d sin vtable: %s", i + 1, diag);
         Sleep(1000);
     }
-    if (!g_enganchado) logf("NO se pudo enganchar Present tras los reintentos; la pantalla queda apagada");
+    if (!g_enganchado) { logf("NO se pudo enganchar Present tras los reintentos; la pantalla queda apagada"); DeleteFileA(cand.c_str()); }
+    else { Sleep(60000); DeleteFileA(cand.c_str()); logf("60 s con el gancho puesto sin cierres: candado retirado"); }
     InterlockedExchange(&g_hiloVivo, 0);
     return 0;
 }
@@ -149,6 +170,13 @@ static int iniciarInterno(const char* carpeta) {
     g_carpeta = carpeta ? carpeta : "";
     std::string off = g_carpeta + "PHOENIX_PANTALLA_OFF";
     if (GetFileAttributesA(off.c_str()) != INVALID_FILE_ATTRIBUTES) return 0;
+    std::string cand0 = g_carpeta + "ENGANCHE_EN_CURSO";
+    if (GetFileAttributesA(cand0.c_str()) != INVALID_FILE_ATTRIBUTES) {
+        if (!g_log) g_log = fopen((g_carpeta + "phoenix_pantalla.log").c_str(), "ab");
+        logf("CANDADO: el arranque anterior se cerro mientras se enganchaba Present (existe ENGANCHE_EN_CURSO). NO se engancha. Borra ese archivo para reintentar.");
+        return 0;
+    }
+    g_tIni = GetTickCount64();
     if (!g_log) g_log = fopen((g_carpeta + "phoenix_pantalla.log").c_str(), "ab");
     g_base = reinterpret_cast<uint8_t*>(GetModuleHandleA(nullptr));
     logf("==== Phoenix Pantalla 0.1.0-prueba2 · exe base %p · F7 abre/cierra a mano en el menu principal, F8 cierra", (void*)g_base);
