@@ -1298,6 +1298,27 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(await self.srv.c_cmd_get_urgent_announcement(a, {}), {})
         del self.srv.cfg["aviso_urgente"]
 
+    async def test_veredicto_por_req_gameaddpoint(self):
+        """R (results.md AzrakHQ): goles contados una vez, END de los dos y REQ_GAMEADDPOINT -> empuje."""
+        a, ea = await self.entrar("0110000100000071")
+        b, eb = await self.entrar("0110000100000072")
+        r = self.srv.recibir
+        pareja = {"miembros": (a, b), "check": set(), "tipo": "OC_QUICK", "room_id": 990002}
+        self.srv.parejas[a] = self.srv.parejas[b] = pareja
+        await r(a, 1, {"msgid": "CMD_SET_GAMETEAM", "rqid": 1, "home_team_id": 101, "away_team_id": 108})
+        for x in (a, b):  # los dos PES informan el mismo gol
+            await r(x, 2, {"msgid": "CMD_ADD_SCORE", "rqid": 2, "goal_side": "AWAY", "gtimer": 1234})
+        await r(b, 3, {"msgid": "CMD_REQ_GAMEADDPOINT", "rqid": 3})
+        self.assertNotIn("CMD_WATCH_GAMEADDPOINT", [m["msgid"] for _, m in eb])  # sin END no hay veredicto
+        for x in (a, b):
+            await r(x, 4, {"msgid": "CMD_CHANGE_GAMEPHASE", "rqid": 4, "phase": "END"})
+        await r(b, 5, {"msgid": "CMD_REQ_GAMEADDPOINT", "rqid": 5})
+        v = [m for _, m in eb if m["msgid"] == "CMD_WATCH_GAMEADDPOINT"][-1]
+        self.assertEqual((v["winner_side"], v["gameend_reason"], v["player_count"], v["rqid"]),
+                         ("WINNER_AWAY", "NORMAL_END", 2, 0))
+        self.assertEqual(v["player_list"][1].valor["team_id"], 108)
+        msgpack_min.packb(v)
+
     async def test_recarga_config_en_caliente(self):
         """Cambiar myclub en config.json se aplica sin reiniciar (solo la clave myclub)."""
         import json as _j, tempfile, os as _o

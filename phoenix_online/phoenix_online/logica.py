@@ -647,6 +647,9 @@ class Servidor:
                 x.enviar({"msgid": "CMD_WATCH_GAMEADDPOINT", "rqid": 0, "result": NOERR,
                           "player_count": len(lista), "player_list": lista, "winner_side": ganador,
                           "gameend_reason": "NORMAL_END", "is_pk": "NO"})
+        # R (results.md AzrakHQ): se guarda para contestar CMD_REQ_GAMEADDPOINT al instante
+        pareja["veredicto"] = {"player_count": len(lista), "player_list": lista, "winner_side": ganador,
+                               "gameend_reason": "NORMAL_END", "is_pk": "NO"}
 
     def _reenviar_aviso(self, s, m, vigilancia):
         """R (coop2.md + pesmatch._relay_notice de AzrakHQ, probado en vivo): CMD_SEND_*NOTICE
@@ -1044,7 +1047,10 @@ class Servidor:
     async def c_cmd_set_currentplayer(self, s, m):
         # C (PESBUL R7.3.122): el msgid real va SIN guion entre CURRENT y PLAYER; sin respuesta
         # el cliente espera ~53 s y se desconecta
-        return {}
+        # R (pescmds.py/lobby2.md AzrakHQ, probado en vivo por ellos): mismos campos SIN key/key_size
+        # (nuestra clave de sesión no cambia). chat_probi "NO" = chat permitido (0x1410f9d49).
+        return {"nation_code_server": str(self.cfg.get("pais_servidor") or "US"), "chat_probi": "NO",
+                "is_select_code_changed": "NO", "subscription_active": "NO", "subscription_expire_date": 0}
 
     c_cmd_set_current_player = c_cmd_set_currentplayer
 
@@ -1562,6 +1568,78 @@ class Servidor:
                  "announcement_type": m.get("announcement_type", "PRE_MAIN"), "read_check": "NO",
                  "title": str(aviso.get("titulo") or "Phoenix Online"), "body": str(aviso["texto"])}
         return {"is_announcement": "YES", "announcement_data": Empaquetado(datos)}
+
+    # ---------- Durante el partido (R: pesmatch.py/events.py + results.md de AzrakHQ) ----------
+    async def c_cmd_check_cheat(self, s, m):
+        # Solo se lee result; cualquier error bloquea la entrada online (CCWR450/455). Se guardan las sumas
+        s.sumas = {"param": str(m.get("param_check_sum", "")), "entry": str(m.get("entry_check_sum", ""))}
+        return {}
+
+    async def c_cmd_set_gameteam(self, s, m):
+        pareja = self._pareja_por_clave(s)
+        if pareja is not None:
+            pareja["equipos"] = (self._id_entero(m.get("home_team_id")) or 0,
+                                 self._id_entero(m.get("away_team_id")) or 0)
+        return {}
+
+    async def c_cmd_change_gamephase(self, s, m):
+        pareja = self._pareja_por_clave(s)
+        fase = str(m.get("phase") or m.get("game_phase") or "")
+        if pareja is not None and fase:
+            pareja.setdefault("fases", {})[self._pid_visible(s)] = fase
+        return {}
+
+    async def c_cmd_add_score(self, s, m):
+        """Los dos PES mandan cada gol {goal_side, gtimer}; se cuenta una vez por (gtimer, lado)."""
+        pareja = self._pareja_por_clave(s)
+        lado = str(m.get("goal_side") or "").upper()
+        if pareja is not None and lado in ("HOME", "AWAY"):
+            vistos = pareja.setdefault("goles_vistos", set())
+            clave = (str(m.get("gtimer")), lado)
+            if clave not in vistos:
+                vistos.add(clave)
+                goles = pareja.setdefault("marcador", {"HOME": 0, "AWAY": 0})
+                goles[lado] += 1
+        return {}
+
+    def _veredicto_sin_rating(self, pareja):
+        """Partido que no es de Divisiones: pantalla de resultado con el rating sin cambios."""
+        fases = (pareja.get("fases") or {}).values()
+        if "END" not in fases:
+            return None
+        g = pareja.get("marcador") or {"HOME": 0, "AWAY": 0}
+        ganador = ("WINNER_HOME" if g["HOME"] > g["AWAY"] else "WINNER_AWAY" if g["AWAY"] > g["HOME"]
+                   else "WINNER_NONE")
+        equipos = pareja.get("equipos") or (0, 0)
+        lista = []
+        for x, lado, eq in zip(pareja["miembros"], ("HOME", "AWAY"), equipos):
+            nombre = x.pname or ""
+            lista.append(Empaquetado({
+                "pid": self._pid_en_partida(x),
+                "pes_pname": Empaquetado({"name": nombre, "xuid_one": "", "is_deleted": "NO",
+                                          "psn_user_id": Empaquetado({"account_id": 0, "online_id": "",
+                                                                      "is_valid_cache": "NO"})}),
+                "rating_type": "RANKMATCH", "rating": RATING_INICIAL, "oldrating": RATING_INICIAL,
+                "rating_boost_type": "NONE", "rating_boost_rate": 0, "rating_compe": 0, "team_id": int(eq or 0),
+                "side": lado, "contWin_num": 0, "skill_rank": "SKILL_RANK_NONE",
+                "is_rankup_skill_rank": "NO", "is_first_skillrank": "NO"}))
+        return {"player_count": len(lista), "player_list": lista, "winner_side": ganador,
+                "gameend_reason": "NORMAL_END", "is_pk": "NO"}
+
+    async def c_cmd_req_gameaddpoint(self, s, m):
+        """R (results.md): el PES que perdió la conexión espera el veredicto; a los 10 s lo pide aquí y a
+        los 20 s se rinde (sin pantalla de rating). Se contesta NOERR y se empuja ya WATCH_GAMEADDPOINT."""
+        s.enviar({"msgid": m["msgid"], "rqid": m.get("rqid", 0), "result": NOERR})
+        pareja = self._pareja_por_clave(s)
+        if pareja is None:
+            return None
+        v = pareja.get("veredicto") or self._veredicto_sin_rating(pareja)
+        if v is not None:
+            pareja["veredicto"] = v
+            s.enviar({"msgid": "CMD_WATCH_GAMEADDPOINT", "rqid": 0, "result": NOERR, **v})
+        else:
+            log.info("REQ_GAMEADDPOINT de %s: el partido no llegó a END, sin veredicto", s.pid)
+        return None
 
     async def c_cmd_send_matching_result(self, s, m):
         if m.get("error_code") not in (None, NOERR):
