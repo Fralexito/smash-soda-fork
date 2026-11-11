@@ -954,6 +954,52 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         await r(a, 8, {"msgid": "CMD_LEAVE_COMPEV", "rqid": 8, "compe_mode": "EVENT_COMPE"})
         self.assertEqual(res()["result"], "ERR_COMPE_NOTENTRY")
 
+    async def test_eventos_partido_suma_progreso_y_supera(self):
+        """C.8: partido vs COM con evento inscrito: marca, dificultad, progreso, superado y premio."""
+        jug = [{"gameplayer_id": 100 + i} for i in range(18)]
+        self.srv.cfg = {**self.srv.cfg, "myclub": {
+            "jugadores": jug, "entrenadores": [{"coach_id": 8}],
+            "club_de_prueba": {"team_name": "P", "gp": 0},
+            "eventos": [{"compe_id": 7, "compe_name": "Copa", "partidos": 2,
+                         "puntos_para_superar": 4, "premio_gp": 5000}]}}
+        a, ea = await self.entrar("A1")
+        r = self.srv.recibir
+        res = lambda: ea[-1][1]
+        await r(a, 1, {"msgid": "CMD_GET_EVENT_CATEGORY_LIST", "rqid": 1})
+        cat = msgpack_min.unpackb(msgpack_min.packb(res()["event_category_list"][0].valor))
+        self.assertEqual((cat["open_event_num"], cat["not_cleared_event_num"]), (1, 1))
+        await r(a, 2, {"msgid": "CMD_GET_MYCLUB_VSCOM_OPPONENT", "rqid": 2})
+        self.assertEqual(res()["is_entry_compe"], "NO")
+        await r(a, 3, {"msgid": "CMD_JOIN_COMPEV", "rqid": 3, "compe_mode": "EVENT_COMPE", "compe_id": 7,
+                       "compe_cpu_level": "COMPE_DIFFICULTY_3"})
+        await r(a, 4, {"msgid": "CMD_GET_MYCLUB_VSCOM_OPPONENT", "rqid": 4})
+        self.assertEqual((res()["is_entry_compe"], res()["cpu_level"]), ("YES", "COMPE_DIFFICULTY_3"))
+        partido = lambda q, w: r(a, q, {"msgid": "CMD_SET_MYCLUB_VSCOM_GAMERESULT", "rqid": q,
+                                        "winner_side": w, "gameend_reason": "NORMAL_END",
+                                        "past_game_played_pid": 7, "pes_srv_rtt_nums": 3})
+        await partido(5, "WINNER_HOME")
+        await r(a, 6, {"msgid": "CMD_GET_COMPEV_MAINMENU_INFO", "rqid": 6, "compe_mode": "EVENT_COMPE"})
+        self.assertEqual((res()["progress_game_count"], res()["win_point"], res()["compe_result"],
+                          res()["clear_count"]), (1, 3, "NORESULT", 0))
+        await partido(7, "WINNER_NONE")
+        await r(a, 8, {"msgid": "CMD_GET_COMPEV_MAINMENU_INFO", "rqid": 8, "compe_mode": "EVENT_COMPE"})
+        self.assertEqual((res()["progress_game_count"], res()["win_point"], res()["compe_result"],
+                          res()["clear_count"]), (2, 4, "FINISHWIN", 1))
+        await r(a, 9, {"msgid": "CMD_GET_MYCLUB_USER_INFO", "rqid": 9})
+        self.assertEqual(res()["gp"], 5000)
+        await r(a, 10, {"msgid": "CMD_GET_COMPEV_INFO", "rqid": 10, "compe_mode": "EVENT_COMPE", "compe_id": 7})
+        info = msgpack_min.unpackb(msgpack_min.packb(res()["compe_info"].valor))
+        self.assertEqual((info["is_cleared"], info["cleared_count"], info["clear_match_num"],
+                          info["clear_win_point"]), ("YES", 1, 2, 4))
+        self.assertEqual(len(res()["event_compe_reward_list"]), 1)
+        await partido(11, "WINNER_HOME")  # ya superado: no suma ni cobra otra vez
+        await r(a, 12, {"msgid": "CMD_GET_MYCLUB_USER_INFO", "rqid": 12})
+        self.assertEqual(res()["gp"], 5000)
+        await r(a, 13, {"msgid": "CMD_GET_EVENT_CATEGORY_LIST", "rqid": 13})
+        cat = msgpack_min.unpackb(msgpack_min.packb(res()["event_category_list"][0].valor))
+        self.assertEqual(cat["not_cleared_event_num"], 0)
+        msgpack_min.packb(res())
+
     async def test_myclub_catalogo_club_y_rival_rotando(self):
         import os, struct, tempfile, zlib, json as _j, sys as _s
         _s.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "tools"))

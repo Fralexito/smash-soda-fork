@@ -1,14 +1,14 @@
 # Tablero del online Phoenix (se actualiza con cada avance)
 
-Última actualización: 11-nov-2026, 03:20 (hora del servidor UTC).
+Última actualización: 11-nov-2026, 03:55 (hora del servidor UTC).
 PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 
 ## Resumen
 - **Probado en el PES y funcionando:** 23 de 49 apartados (**47 %**).
-- **Programado (falta probarlo en el PES):** 13 más. Con ellos, **36 de 49 ya están hechos (73 %)**.
+- **Programado (falta probarlo en el PES):** 14 más. Con ellos, **37 de 49 ya están hechos (76 %)**.
 - **A medias** (abre bien pero sin contenido todavía, o hecho solo en parte): 5.
-- **Falta hacer:** 8.
-- Comandos del juego que el servidor ya controla: **218 de 439 (50 %)**; sin contar los modos aún no empezados (cooperativo, Matchday, eventos, PES League, clanes, tienda): **214 de 313 (68 %)**.
+- **Falta hacer:** 7.
+- Comandos del juego que el servidor ya controla: **229 de 439 (52 %)**; sin contar los modos aún no empezados (cooperativo, Matchday, PES League, clanes, tienda): **226 de 325 (70 %)**.
 
 **Leyenda:** ✅ probado en el PES · 🟢 programado, sin probar en el PES · 🟡 a medias (abre, pero vacío) · ❌ falta · 🚫 no se hará (a propósito)
 
@@ -71,7 +71,7 @@ PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 |---|---|---|---|
 | 36 | Cooperativo (2 contra 2, 3 contra 3) | ❌ | el relé ya admite más de 2 |
 | 37 | Matchday | ❌ | |
-| 38 | Eventos y competiciones online | ❌ | estudiando sus comandos (11), para torneos de la liga Phoenix creados desde la web |
+| 38 | Eventos y competiciones online | 🟢 | programado: lista, detalle, inscribirse, salir, partido del evento contra la COM con su dificultad, progreso, «superado» y premio en GP. Falta probarlo en el PES base (estaba ocupado). Más adelante: crearlos desde la web |
 | 39 | PES League | ❌ | |
 | 40 | Clanes | ❌ | |
 
@@ -100,3 +100,4 @@ PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 - 11-nov 02:45: Regalos probado; Logros ya muestra filas en el PES (el PES solo acepta 24 tipos de logro con nombre fijo).
 - 11-nov 03:10: Logros completo en el PES (progreso real y cobro). La Tienda myClub abre (vacía, sin venta). El Historial sigue sin encontrarse en el menú.
 - 11-nov 03:20: empezamos a estudiar los Eventos online (torneos).
+- 11-nov 03:55: Eventos programados de punta a punta (12 comandos). Falta la prueba en el PES base.

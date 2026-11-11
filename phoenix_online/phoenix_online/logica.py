@@ -2525,12 +2525,6 @@ class Servidor:
     async def c_cmd_get_matchrejectlist(self, s, m):
         return {"reject_list": [], "reject_list_num": 0}  # C (§16.8)
 
-    async def c_cmd_get_event_category_list(self, s, m):
-        # C (§16.9): sin eventos; el emblema de jornada vacío como en MAINMENU_INFO
-        return {"event_category_list": [], "matchday_emblem_info": Empaquetado({
-            "is_use_emblem": "NO", "is_auto_make_compe_name": "NO", "matchday_group_type": "",
-            "team_list_group_a": [], "team_list_group_b": [], "compe_db_id": 0})}
-
     async def c_cmd_get_pesleague_compe_result_list(self, s, m):
         return {"result_list": [], "result_list_num": 0}  # C (§16.10)
 
@@ -2629,9 +2623,15 @@ class Servidor:
         if not jugadores and r.get("base_team_id"):
             jugadores = self._equipo_catalogo(r["base_team_id"], 18)
         nombre = r.get("team_name") or "Rival"
-        return {"side": r.get("side", "AWAY"),
-                "cpu_level": self._nivel_cpu(self._club_inicial(s)) if not r.get("cpu_level_fijo")
-                else r.get("cpu_level", "MATCH_LEVEL_REGULAR"),
+        # C.8: si hay evento inscrito, el partido cuenta para él (is_entry_compe) y la COM juega
+        # con la dificultad elegida al inscribirse
+        _, ins = self._inscripcion_activa(s)
+        nivel = self._nivel_cpu(self._club_inicial(s)) if not r.get("cpu_level_fijo") \
+            else r.get("cpu_level", "MATCH_LEVEL_REGULAR")
+        if ins and str(ins.get("cpu_level") or "") not in ("", "COMPE_DIFFICULTY_NONE"):
+            nivel = str(ins["cpu_level"])
+        return {"side": r.get("side", "AWAY"), "cpu_level": nivel,
+                "is_entry_compe": self._marca_evento() if ins else "NO",
                 "team_name": nombre, "team_name_short": r.get("team_name_short", "RIV"),
                 "base_team_id": int(r.get("base_team_id") or 0),
                 "team_data": self._plantilla_bin(jugadores, int(r.get("coach_id") or 0), nombre,
@@ -3110,7 +3110,8 @@ class Servidor:
         prog = {"PLAY_VSCOM_MATCH": int(com.get("partidos") or 0),
                 "GET_COACH": len(club.get("dt_comprados") or []),
                 "CREATE_SQUAD": int(club.get("plantillas_creadas") or 0),
-                "SET_CLOUD_MATCH_SQUAD": 1 if club.get("plantilla_nube") else 0}
+                "SET_CLOUD_MATCH_SQUAD": 1 if club.get("plantilla_nube") else 0,
+                "JOIN_EVENT_COMPE": int(club.get("eventos_inscritos") or 0)}
         rank = 0
         if s is not None and s.steam_hex:
             try:
@@ -3130,7 +3131,10 @@ class Servidor:
         # ojo: «logros_cobrados» (lista) ya lo usa GP_ACHIEVEMENT; los de myClub van aparte
         cobrados = club.get("logros_myclub") if isinstance(club.get("logros_myclub"), dict) else {}
         salida = []
-        for cat, hitos in dict(cfg.get("premios") or self.LOGROS_DEFECTO).items():
+        tabla = dict(cfg.get("premios") or self.LOGROS_DEFECTO)
+        if not cfg.get("premios") and self._eventos():
+            tabla.setdefault("JOIN_EVENT_COMPE", [[1, 1000], [5, 3000]])
+        for cat, hitos in tabla.items():
             if cat not in self.CATEGORIAS_LOGRO or cat not in progreso:
                 continue  # el cliente no la pinta, o el servidor aún no sabe medirla
             hitos = sorted((int(h[0]), int(h[1])) for h in hitos
@@ -3502,15 +3506,63 @@ class Servidor:
         ins = (club or {}).get("eventos_inscripcion") or {}
         return club, (ins.get(str(modo)) if modo is not None else ins)
 
+    def _inscripcion_activa(self, s):
+        """(modo, inscripción) del evento en curso, o (None, None). El partido vs COM no trae
+        compe_mode (C.8): vale la primera inscripción guardada."""
+        club = self._club_propio(s)
+        for modo, ins in ((club or {}).get("eventos_inscripcion") or {}).items():
+            if isinstance(ins, dict) and self._evento(ins.get("compe_id")) is not None:
+                return modo, ins
+        return None, None
+
+    def _marca_evento(self):
+        """P (C.8): texto de is_entry_compe con evento inscrito. Config myclub.marca_evento."""
+        return str((self.cfg.get("myclub") or {}).get("marca_evento") or "YES")
+
+    @staticmethod
+    def _umbral_evento(e):
+        """(partidos para superar, puntos para superar) del evento; 1 partido y 0 puntos si no
+        se dice nada en config."""
+        return max(1, int(e.get("partidos") or 1)), max(0, int(e.get("puntos_para_superar") or 0))
+
+    def _superados(self, club):
+        return (club or {}).get("eventos_superados") or {}
+
+    def _evento_extra(self, club, e):
+        veces = int(self._superados(club).get(str(e["compe_id"])) or 0)
+        return {"is_cleared": "YES" if veces else "NO", "cleared_count": veces}
+
+    async def c_cmd_get_event_category_list(self, s, m):
+        """C.8 extra: categorías de la pantalla Eventos. Una sola categoría con todos los eventos
+        de config (texto en myclub.evento_categoria; P: «COMEVENT»). Sin eventos = lista vacía."""
+        # C (§16.9, probado): sin eventos = lista vacía y el emblema de jornada vacío
+        emblema = Empaquetado({
+            "is_use_emblem": "NO", "is_auto_make_compe_name": "NO", "matchday_group_type": "",
+            "team_list_group_a": [], "team_list_group_b": [], "compe_db_id": 0})
+        eventos = self._eventos()
+        if not eventos:
+            return {"event_category_list": [], "matchday_emblem_info": emblema}
+        club = self._club_propio(s)
+        sin_superar = sum(1 for e in eventos if not self._superados(club).get(str(e["compe_id"])))
+        categoria = Empaquetado({
+            "event_category": str((self.cfg.get("myclub") or {}).get("evento_categoria") or "COMEVENT"),
+            "open_event_num": len(eventos), "not_cleared_event_num": sin_superar,
+            "recent_event_start_time": max(e["inicio"] for e in eventos),
+            "banner_file_info": Empaquetado({"filename": "", "hash_str": ""})})
+        return {"event_category_list": [categoria], "matchday_emblem_info": emblema}
+
     async def c_cmd_get_compev_mainmenu_info(self, s, m):
-        _, ins = self._inscripcion(s, m.get("compe_mode"))
+        club, ins = self._inscripcion(s, m.get("compe_mode"))
         ins = ins or {}
-        return {"status": "ENTRY" if ins else "", "compe_result": "NORESULT", "win_point": 0,
+        return {"status": "ENTRY" if ins else "", "compe_result": str(ins.get("resultado") or "NORESULT"),
+                "win_point": int(ins.get("puntos") or 0),
                 "progress_game_count": int(ins.get("progreso") or 0), "vscom_team_id": 0,
-                "cpu_level": str(ins.get("cpu_level") or "COMPE_DIFFICULTY_NONE"), "clear_count": 0}
+                "cpu_level": str(ins.get("cpu_level") or "COMPE_DIFFICULTY_NONE"),
+                "clear_count": int(self._superados(club).get(str(ins.get("compe_id"))) or 0) if ins else 0}
 
     async def c_cmd_get_compev_list(self, s, m):
-        lista = [self._evento_bin(e) for e in self._eventos()]
+        club = self._club_propio(s)
+        lista = [self._evento_bin(e, self._evento_extra(club, e)) for e in self._eventos()]
         return {"compe_list_kind": str(m.get("compe_list_kind") or ""), "compe_num": len(lista),
                 "compe_list": lista, "banner_file_info": Empaquetado({"filename": "", "hash_str": ""})}
 
@@ -3518,16 +3570,21 @@ class Servidor:
         e = self._evento(self._id_entero(m.get("compe_id")))
         if e is None:
             return {"result": "ERR_COMPE_NOTFOUND"}
-        extra = {"entry_type": str(e.get("entry_type") or ""), "clear_match_num": int(e.get("partidos") or 0),
-                 "clear_win_point": 0, "cleared_count": 0, "precondition_compe_id": 0,
+        partidos, puntos = self._umbral_evento(e)
+        premio = int(e.get("premio_gp") or 0)
+        extra = {"entry_type": str(e.get("entry_type") or ""), "clear_match_num": partidos,
+                 "clear_win_point": puntos, "precondition_compe_id": 0,
                  "precondition_compe_name": "", "ad_file_name": "", "logo_file_name": "",
-                 "is_compe_reward_exist": "NO", "is_same_team_power_level": "NO",
+                 "is_compe_reward_exist": "YES" if premio > 0 else "NO", "is_same_team_power_level": "NO",
                  "is_limited_matching_target": "NO", "is_exist_unlocked_compe_by_cleared": "NO",
-                 "is_pesleague_stadium": "NO", "is_efootball_pro_stadium": "NO"}
+                 "is_pesleague_stadium": "NO", "is_efootball_pro_stadium": "NO",
+                 **self._evento_extra(self._club_propio(s), e)}
         return {"compe_data": self._evento_bin(e, extra), "compe_info": self._evento_bin(e, extra),
                 "banner_file_info": Empaquetado({"filename": "", "hash_str": ""}),
-                "event_compe_reward_list": [], "compe_reward": Empaquetado({}),
-                "squad_bonus": Empaquetado({}), "reward": Empaquetado({})}
+                "event_compe_reward_list": [self._premio_gp(1, premio)] if premio > 0 else [],
+                "compe_reward": self._premio_gp(1, premio) if premio > 0 else Empaquetado({}),
+                "squad_bonus": Empaquetado({}),
+                "reward": self._premio_gp(1, premio) if premio > 0 else Empaquetado({})}
 
     async def c_cmd_get_compev_myentry_compeid(self, s, m):
         modo = m.get("compe_mode")
@@ -3551,7 +3608,8 @@ class Servidor:
             return {"result": "ERR_NOTREGISTERED"}
         club.setdefault("eventos_inscripcion", {})[str(m.get("compe_mode") or "")] = {
             "compe_id": e["compe_id"], "cpu_level": str(m.get("compe_cpu_level") or "COMPE_DIFFICULTY_NONE"),
-            "progreso": 0, "hora": ahora}
+            "progreso": 0, "puntos": 0, "resultado": "NORESULT", "hora": ahora}
+        club["eventos_inscritos"] = int(club.get("eventos_inscritos") or 0) + 1
         self.datos.guardar_club(s.steam_hex, club)
         log.info("Eventos: %s se inscribe en el evento %d", s.steam_hex, e["compe_id"])
         return {}
@@ -3711,6 +3769,7 @@ class Servidor:
             com[contador] = int(com.get(contador) or 0) + 1
         com["racha_max"] = max(int(com.get("racha_max") or 0), com["racha"])
         self._ajustar_dificultad(com, desenlace)
+        self._sumar_partido_evento(club, desenlace)
         simple = {k: v for k, v in m.items() if isinstance(v, (int, str)) and k not in ("msgid", "rqid")}
         com.setdefault("historial", []).append({"hora": int(time.time()), "desenlace": desenlace,
                                                 "gp": premio, "datos": simple})
@@ -3750,6 +3809,29 @@ class Servidor:
         self.datos.guardar_club(s.steam_hex or "", club)
         log.info("myClub vs COM %s: %s, +%d GP (saldo %d)", s.steam_hex, desenlace or "?",
                  premio, club["gp"])
+
+    def _sumar_partido_evento(self, club, desenlace):
+        """C.8: con evento inscrito, el partido vs COM suma al progreso. Puntos por resultado en
+        config myclub.puntos_evento (por defecto 3/1/0). Al llegar a los partidos y puntos del
+        evento queda «superado» (FINISHWIN) y, la primera vez, se cobran sus premio_gp."""
+        for modo, ins in (club.get("eventos_inscripcion") or {}).items():
+            e = self._evento(ins.get("compe_id")) if isinstance(ins, dict) else None
+            if e is None or ins.get("resultado") == "FINISHWIN":
+                continue
+            tabla = (self.cfg.get("myclub") or {}).get("puntos_evento") or {"WIN": 3, "DRAW": 1, "LOSE": 0}
+            ins["progreso"] = int(ins.get("progreso") or 0) + 1
+            ins["puntos"] = int(ins.get("puntos") or 0) + int(tabla.get(desenlace, 0) or 0)
+            partidos, puntos = self._umbral_evento(e)
+            if ins["progreso"] >= partidos and ins["puntos"] >= puntos:
+                ins["resultado"] = "FINISHWIN"
+                sup = club.setdefault("eventos_superados", {})
+                clave = str(e["compe_id"])
+                if not sup.get(clave):
+                    club["gp"] = int(club.get("gp") or 0) + int(e.get("premio_gp") or 0)
+                sup[clave] = int(sup.get(clave) or 0) + 1
+                log.info("Eventos: evento %s superado (%d partidos, %d puntos)", clave,
+                         ins["progreso"], ins["puntos"])
+            return
 
     async def c_cmd_set_myclub_vscom_gameresult(self, s, m):
         self._guardar_partido_vscom(s, m)
