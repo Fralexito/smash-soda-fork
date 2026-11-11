@@ -1283,6 +1283,74 @@ class Servidor:
                           "result": NOERR, "error_code": NOERR})
         return None
 
+    # ---------- Cooperativo: búsqueda rápida 1 humano por bando + CPU (R: pescoop.py / coop.md AzrakHQ) ----------
+    SIN_EQUIPO_COOP = 262143  # use_team_id cuando el jugador no trae equipo propio
+
+    async def c_cmd_get_coop_quickmatchoption(self, s, m):
+        # force_alone: sin búsqueda en grupo (2 humanos en un bando necesitan 2 pares P2P)
+        return {"is_vscom": "NO", "force_alone": "YES", "cpu_level_min": "NORMAL", "cpu_level_max": "NORMAL"}
+
+    def _grupo_coop(self, x, orden, dueno, gid, equipo, lado):
+        """Un grupo de un humano. Anidado como lo lee 0x141dc9a70: group_list[] -> bin{member_list[] ->
+        bin{member: ficha 1v1, ...}}; un solo is_owner YES, en el dueño LOCAL."""
+        fila = Empaquetado({"member": self._miembro(x, orden, dueno, lado), "guest_kind": "GUEST_NONE",
+                            "is_follow": "NO", "coop_level": 1, "coop_manner": "A"})
+        return Empaquetado({"member_list": [fila], "member_list_num": 1, "use_team_id": equipo,
+                            "owner_pid": self._pid_en_partida(x), "group_id": gid})
+
+    async def c_cmd_start_coop_matching(self, s, m):
+        """R: misma cola y pareja que Partida rápida (tipo COOP). Sin equipo propio en ambos bandos el
+        PES carga un equipo nulo y se cierra: se ponen dos equipos reales distintos."""
+        self._salir_de_cola(s)
+        self._dejar_pareja(s, "busca Cooperativo")
+        s.equipo_coop = self._id_entero(m.get("use_team_id")) or self.SIN_EQUIPO_COOP
+        s.enviar({"msgid": m["msgid"], "rqid": m.get("rqid", 0), "result": NOERR})
+        cola = self.colas.setdefault("COOP", [])
+        rival = next((x for x in cola if x is not s and x in self.sesiones and self._misma_huella(s, x)), None)
+        if rival is None:
+            cola.append(s)
+            return None
+        cola.remove(rival)
+        pareja = {"miembros": (rival, s), "check": set(), "tipo": "COOP"}
+        self.parejas[rival] = self.parejas[s] = pareja
+        self._abrir_partida(pareja)
+        base = [int(x) for x in ((self.cfg.get("myclub") or {}).get("coop_equipos") or [101, 108])][:2]
+        ta = rival.equipo_coop if rival.equipo_coop != self.SIN_EQUIPO_COOP else base[0]
+        tb = s.equipo_coop if s.equipo_coop != self.SIN_EQUIPO_COOP else base[-1]
+        await self.dormir(PAUSA_EMPUJE)
+        grupos = [self._grupo_coop(rival, 0, True, 1, ta, "HOME"), self._grupo_coop(s, 1, False, 2, tb, "AWAY")]
+        for x in (rival, s):
+            x.enviar({"msgid": "CMD_WATCH_COOP_MATCHING", "rqid": 0, "result": NOERR,
+                      "matching_state": "FINISH", "group_list_num": 2, "group_list": grupos})
+        log.info("pareja de COOP: %s (equipo %s) vs %s (equipo %s)", rival.pid, ta, s.pid, tb)
+        return None
+
+    async def c_cmd_cancel_coop_matching(self, s, m):
+        # R: como Partida rápida, la búsqueda solo se cierra con el empuje CANCEL (coop.md: estado 4)
+        estaba = s in self.colas.get("COOP", [])
+        self._salir_de_cola(s)
+        s.enviar({"msgid": m["msgid"], "rqid": m.get("rqid", 0), "result": NOERR})
+        if estaba:
+            s.enviar({"msgid": "CMD_WATCH_COOP_MATCHING", "rqid": 0, "result": NOERR,
+                      "matching_state": "CANCEL", "group_list_num": 0, "group_list": []})
+        return None
+
+    async def c_cmd_set_coop_match_data(self, s, m):
+        """R: tras cada partido Cooperativo el PES sube sus tablas de puntuación (texto base64, ~480 B) y
+        las pide antes del siguiente (GET_COOP_MATCH_DATA) y en la ficha de Cooperativo."""
+        datos, tam = m.get("match_data"), m.get("match_data_size")
+        if s.steam_hex and isinstance(datos, str) and isinstance(tam, int) and 0 < tam <= 4096 and len(datos) <= 8192:
+            self.datos.guardar_coop_datos(s.steam_hex, {"size": tam, "data": datos})
+        return {}
+
+    async def c_cmd_get_coop_match_data(self, s, m):
+        d = self.datos.coop_datos(s.steam_hex) if s.steam_hex else {}
+        return {"match_data_size": int(d.get("size") or 0), "match_data": str(d.get("data") or "")}
+
+    async def c_cmd_get_coop_level_result(self, s, m):
+        # R: lista de bin{status, user_id{pid,pname}, ...} (parser 0x141ba8ec0); vacía = sin pantalla de nivel
+        return {"coop_level_user_list": []}
+
     async def c_cmd_send_matching_result(self, s, m):
         if m.get("error_code") not in (None, NOERR):
             log.warning("matching_result con error %s pid=%s", m.get("error_code"), s.pid)
@@ -5539,7 +5607,10 @@ class Servidor:
         # no hay sesión multijugador (MXNV_0010). Partida rápida y salas lo fijan solas. Solo a quien
         # está en una sala de Cooperativo. myclub.coop_game_sycom = "NO" lo quita.
         clave = (getattr(s, "steam_hex", "") or "").lower()
-        if clave and (self.cfg.get("myclub") or {}).get("coop_game_sycom") != "NO" and any(
+        pareja = self._pareja_por_clave(s) if s is not None else None
+        if (pareja or {}).get("tipo") == "COOP" and (self.cfg.get("myclub") or {}).get("coop_game_sycom") != "NO":
+            r["game_sycom"] = "P2P"
+        elif clave and (self.cfg.get("myclub") or {}).get("coop_game_sycom") != "NO" and any(
                 (getattr(x, "steam_hex", "") or "").lower() == clave
                 for sala in getattr(self, "salas_coop", {}).values() for x in sala["miembros"]):
             r["game_sycom"] = "P2P"

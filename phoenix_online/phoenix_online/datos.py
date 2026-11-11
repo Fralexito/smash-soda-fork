@@ -53,6 +53,10 @@ create table if not exists partidos_division (
   datos text not null,
   hora real not null
 );
+create table if not exists coop_datos (
+    steam_hex text primary key,
+    datos text not null
+);
 create table if not exists relaciones (
   steam_hex text primary key,
   datos text not null
@@ -172,6 +176,17 @@ class Datos:
 
     def guardar_relaciones(self, steam_hex, d):
         self.db.execute("insert into relaciones(steam_hex, datos) values (?,?) on conflict(steam_hex) "
+                        "do update set datos=excluded.datos", ((steam_hex or "").lower(), json.dumps(d)))
+        self.db.commit()
+
+    # ---- tablas de Cooperativo que sube el PES (SET_COOP_MATCH_DATA): {"size": n, "data": "base64"} ----
+    def coop_datos(self, steam_hex):
+        f = self.db.execute("select datos from coop_datos where steam_hex=?",
+                            ((steam_hex or "").lower(),)).fetchone()
+        return json.loads(f[0]) if f else {}
+
+    def guardar_coop_datos(self, steam_hex, d):
+        self.db.execute("insert into coop_datos(steam_hex, datos) values (?,?) on conflict(steam_hex) "
                         "do update set datos=excluded.datos", ((steam_hex or "").lower(), json.dumps(d)))
         self.db.commit()
 

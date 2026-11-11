@@ -1209,6 +1209,38 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.assertIn("CMD_WATCH_NOTICE", [m["msgid"] for _, m in ea[n:]])
         self.assertNotIn("game_sycom", self.srv.respuesta_gamerelay(a))
 
+    async def test_busqueda_cooperativa(self):
+        """R (pescoop.py/coop.md AzrakHQ): 2 en cola COOP -> WATCH_COOP_MATCHING FINISH con 2 grupos a ambos;
+        CANCEL solo si estaba en cola; los datos de COOP van y vuelven; gamerelay lleva game_sycom P2P."""
+        a, ea = await self.entrar("0110000100000091")
+        b, eb = await self.entrar("0110000100000092")
+        r = self.srv.recibir
+        await r(a, 1, {"msgid": "CMD_GET_COOP_QUICKMATCHOPTION", "rqid": 1})
+        self.assertEqual(ea[-1][1]["force_alone"], "YES")
+        await r(a, 2, {"msgid": "CMD_START_COOP_MATCHING", "rqid": 2, "use_team_id": 262143})
+        await r(a, 3, {"msgid": "CMD_CANCEL_COOP_MATCHING", "rqid": 3})
+        self.assertEqual(ea[-1][1]["matching_state"], "CANCEL")
+        n = len(ea)
+        await r(a, 4, {"msgid": "CMD_CANCEL_COOP_MATCHING", "rqid": 4})
+        self.assertEqual(len(ea), n + 1)           # sin cola: solo el NOERR, sin empuje
+        await r(a, 5, {"msgid": "CMD_START_COOP_MATCHING", "rqid": 5, "use_team_id": 262143})
+        await r(b, 6, {"msgid": "CMD_START_COOP_MATCHING", "rqid": 6, "use_team_id": 105})
+        for e in (ea, eb):
+            w = [m for _, m in e if m.get("msgid") == "CMD_WATCH_COOP_MATCHING"][-1]
+            self.assertEqual((w["matching_state"], w["group_list_num"], w["rqid"]), ("FINISH", 2, 0))
+            g0, g1 = (g.valor for g in w["group_list"])
+            self.assertEqual((g0["use_team_id"], g1["use_team_id"]), (101, 105))
+            m0 = g0["member_list"][0].valor["member"].valor
+            m1 = g1["member_list"][0].valor["member"].valor
+            self.assertEqual((m0["is_owner"], m0["side"], m1["is_owner"], m1["side"]), ("YES", "HOME", "NO", "AWAY"))
+            msgpack_min.packb(w)
+        self.assertEqual(self.srv.respuesta_gamerelay(a).get("game_sycom"), "P2P")
+        await r(a, 7, {"msgid": "CMD_SET_COOP_MATCH_DATA", "rqid": 7, "match_data": "QUJD", "match_data_size": 3})
+        await r(a, 8, {"msgid": "CMD_GET_COOP_MATCH_DATA", "rqid": 8})
+        self.assertEqual((ea[-1][1]["match_data"], ea[-1][1]["match_data_size"]), ("QUJD", 3))
+        await r(a, 9, {"msgid": "CMD_GET_COOP_LEVEL_RESULT", "rqid": 9})
+        self.assertEqual(ea[-1][1]["coop_level_user_list"], [])
+
     async def test_recarga_config_en_caliente(self):
         """Cambiar myclub en config.json se aplica sin reiniciar (solo la clave myclub)."""
         import json as _j, tempfile, os as _o
