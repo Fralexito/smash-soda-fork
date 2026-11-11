@@ -4051,6 +4051,10 @@ class Servidor:
         e = next((x for x in self._torneos("matchday") if x["compe_id"] == cid), None)
         if e is None:
             return {"result": "ERR_COMPE_NOTFOUND"}
+        try:
+            s.ultimo_torneo = {**(getattr(s, "ultimo_torneo", None) or {}), "matchday": cid}
+        except AttributeError:
+            pass
         club = self.datos.club(s.steam_hex or "") if s.steam_hex else None
         mio = ((club or {}).get("matchday_equipo") or {}).get(str(cid)) or {}
         info = {**self._campos_matchday(s, e),
@@ -4076,8 +4080,10 @@ class Servidor:
             base = set(self._campos_matchday(s, e)) | {"is_check_eula"} | set(extra)
             info = {k: v for k, v in info.items() if k in base}
         salida = {"compe_info": Empaquetado(info)}
-        if cfgm.get("matchday_info_overview") == "YES":
-            salida["info_overview"] = Empaquetado({})
+        # P (Ghidra): el cliente toma compe_id y el detalle de info_overview; con él vacío, JOIN
+        # llegaba con compe_id 0. Va el mismo mapa (myclub.matchday_info_overview "NO" lo quita).
+        if cfgm.get("matchday_info_overview") != "NO":
+            salida["info_overview"] = Empaquetado(dict(info))
         return salida
 
     async def c_cmd_get_matchday_mainmenu_info(self, s, m):
@@ -4093,6 +4099,12 @@ class Servidor:
     # de respuesta reales se completan cuando se lean en Ghidra).
     def _inscribir_torneo(self, s, m, clave):
         cid = self._id_entero(m.get("compe_id"))
+        if not cid:
+            # JOIN_MATCHDAY puede llegar con compe_id 0: se usa el último torneo que el PES pidió
+            # con INFO en esta sesión, o el único que haya
+            torneos = self._torneos(clave)
+            cid = (getattr(s, "ultimo_torneo", {}) or {}).get(clave) or (
+                torneos[0]["compe_id"] if len(torneos) == 1 else 0)
         e = next((x for x in self._torneos(clave) if x["compe_id"] == cid), None)
         if e is None:
             return {"result": "ERR_COMPE_NOTFOUND"}
@@ -4129,7 +4141,9 @@ class Servidor:
         if r:
             return r
         club = self._club_propio(s)
-        club.setdefault("matchday_equipo", {})[str(self._id_entero(m.get("compe_id")))] = {
+        cid = self._id_entero(m.get("compe_id")) or (getattr(s, "ultimo_torneo", None) or {}).get("matchday") or (
+            self._torneos("matchday")[0]["compe_id"] if len(self._torneos("matchday")) == 1 else 0)
+        club.setdefault("matchday_equipo", {})[str(cid)] = {
             "grupo": str(m.get("entry_matchday_group") or ""), "team_id": self._id_entero(m.get("team_id")) or 0}
         self.datos.guardar_club(s.steam_hex, club)
         return {"squad_rating_info": self._valoracion_plantilla()}

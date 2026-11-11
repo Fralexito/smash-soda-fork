@@ -1135,7 +1135,7 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(res()["compe_info"].valor["compe_id"], 3)
         self.assertEqual(res()["compe_info"].valor["is_check_eula"], "NO")
         self.assertEqual(res()["compe_info"].valor["win_reward_list"], [])  # premios = lista
-        await r(a, 43, {"msgid": "CMD_JOIN_MATCHDAY", "rqid": 43, "compe_id": 3, "team_id": 174,
+        await r(a, 43, {"msgid": "CMD_JOIN_MATCHDAY", "rqid": 43, "compe_id": 0, "team_id": 174,
                         "entry_matchday_group": "MATCHDAY_GROUP_A"})
         self.assertIn("squad_rating_info", res())
         self.srv.cfg["myclub"]["matchday_info_extra"] = ["joined_matchday_group", "team_id"]
