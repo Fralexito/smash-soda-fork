@@ -3716,12 +3716,15 @@ class Servidor:
             return {"event_category_list": [], "matchday_emblem_info": emblema}
         club = self._club_propio(s)
         sin_superar = sum(1 for e in eventos if not self._superados(club).get(str(e["compe_id"])))
-        categoria = Empaquetado({
-            "event_category": str((self.cfg.get("myclub") or {}).get("evento_categoria") or "COMEVENT"),
-            "open_event_num": len(eventos), "not_cleared_event_num": sin_superar,
+        # P: el texto de categoría no se conoce aún. myclub.evento_categoria puede ser una lista:
+        # una categoría por texto (para probar varios a la vez en el PES; sobra lo que no reconoce)
+        textos = (self.cfg.get("myclub") or {}).get("evento_categoria") or "COMEVENT"
+        textos = [str(x) for x in (textos if isinstance(textos, list) else [textos]) if x][:12]
+        lista = [Empaquetado({
+            "event_category": texto, "open_event_num": len(eventos), "not_cleared_event_num": sin_superar,
             "recent_event_start_time": max(e["inicio"] for e in eventos),
-            "banner_file_info": Empaquetado({"filename": "", "hash_str": ""})})
-        return {"event_category_list": [categoria], "matchday_emblem_info": emblema}
+            "banner_file_info": Empaquetado({"filename": "", "hash_str": ""})}) for texto in textos]
+        return {"event_category_list": lista, "matchday_emblem_info": emblema}
 
     async def c_cmd_get_compev_mainmenu_info(self, s, m):
         club, ins = self._inscripcion(s, m.get("compe_mode"))
