@@ -4031,12 +4031,23 @@ class Servidor:
     def _banner():
         return Empaquetado({"filename": "", "hash_str": ""})
 
+    @staticmethod
+    def _bando_matchday(e, lado):
+        """D.7: group_info_a/b = {team_list, team_list_num, group_name, group_desc, ...}.
+        Con "bandos": "NO" en el torneo vuelve al bin vacío que ya se probó en la lista."""
+        if str(e.get("bandos") or "") == "NO":
+            return Empaquetado({})
+        nombre = str(e.get(f"bando_{lado}") or ("Bando A" if lado == "a" else "Bando B"))
+        return Empaquetado({"team_list": [], "team_list_num": 0, "group_name": nombre, "group_desc": "",
+                            "is_entry_restricted": "NO", "pre_pickup_users_pid_list": []})
+
     def _campos_matchday(self, s, e):
         return {
             "compe_id": e["compe_id"], "base_id": int(e.get("base_id") or e["compe_id"]),
             "compe_name": str(e.get("compe_name") or f"Matchday {e['compe_id']}"),
             "is_disp_compe_name": "YES", "group_name": str(e.get("group_name") or ""),
-            "group_desc": "", "group_info_a": Empaquetado({}), "group_info_b": Empaquetado({}),
+            "group_desc": "",
+            "group_info_a": self._bando_matchday(e, "a"), "group_info_b": self._bando_matchday(e, "b"),
             "is_entry_restricted": "NO", "match_type": "", "squad_type": "MATCHDAY_SQUAD_MYCLUB",
             "group_type": "MATCHDAY_GROUP_TYPE_OTHER", "rating_rank": "MATCHDAY_RATING_RANK_NONE",
             "start_date": e["inicio"], "entry_limit_date": e["fin"], "end_group_match_date": e["fin"],
@@ -4095,13 +4106,28 @@ class Servidor:
         return salida
 
     async def c_cmd_get_matchday_mainmenu_info(self, s, m):
+        """D.7: con matchday_progress "" (no es token válido) la pantalla salía con textos vacíos.
+        Fase por config myclub.matchday_progreso (defecto MATCHDAY_PROGRESS_GROUP_MATCH)."""
+        cid = self._cid_torneo(s, m, "matchday")
+        club = self.datos.club(s.steam_hex or "") if s.steam_hex else None
+        mio = ((club or {}).get("matchday_equipo") or {}).get(str(cid)) or {}
+        puntos = (club or {}).get("matchday_puntos") or {}
+        grupo = str(mio.get("grupo") or "MATCHDAY_GROUP_NONE")
+        cfgm = self.cfg.get("myclub") or {}
         return {"mainmenu_info": Empaquetado({
-            "matchday_progress": "", "group_match_info": Empaquetado({}), "is_hide_graph": "YES",
+            "matchday_progress": str(cfgm.get("matchday_progreso") or "MATCHDAY_PROGRESS_GROUP_MATCH"),
+            "group_match_info": Empaquetado({
+                "matchday_point": int(puntos.get(str(cid)) or 0), "matchday_rank": 0,
+                "matchday_ranking_user_num": 0, "matchday_ratio": 0,
+                "total_matchday_point_group_a": 0, "total_matchday_point_group_b": 0,
+                "pickup_match_score_group_a": 0, "pickup_match_score_group_b": 0}),
+            "is_hide_graph": "NO",
             "pickup_user_info": Empaquetado({"pickup_users_group_a": [], "pickup_users_group_b": [],
-                                             "pickup_user_group_a_num": 0, "is_failed_pickup_users": "NO"}),
+                                             "pickup_user_group_a_num": 0, "pickup_user_group_b_num": 0,
+                                             "is_failed_pickup_users": "NO"}),
             "is_final_reward": "NO", "is_get_final_reward": "NO", "is_watch_match": "NO",
             "final_reward_list": [], "pickup_reward_list": [],
-            "group_result": "", "pickup_reward_type": ""})}
+            "group_result": grupo, "pickup_reward_type": "MATCHDAY_PICKUP_REWARD_NONE"})}
 
     # Inscripción propia en torneos de Matchday / PES League (respuesta vacía = NOERR; las claves
     # de respuesta reales se completan cuando se lean en Ghidra).
