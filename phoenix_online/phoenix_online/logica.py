@@ -610,6 +610,13 @@ class Servidor:
             return pareja["puntua"]
         tope = int(self.cfg.get("max_partidos_rival_dia") or 0)
         claves = frozenset((x.steam_hex or "").lower() for x in pareja.get("miembros") or ())
+        if len(claves) == 1 and "" not in claves and len(pareja.get("miembros") or ()) == 2:
+            # misma identidad en los dos lados (dos PES con el mismo SteamID y la misma IP): no hay rival
+            # real, así que no cuenta para ranking, puntos ni rachas (anti-autofarmeo)
+            log.warning("partido %s sin puntos: los dos jugadores son la misma identidad (%s); "
+                        "pon identidad.por_ip para separarlos", pareja.get("room_id"), next(iter(claves)))
+            pareja["puntua"] = False
+            return False
         if tope <= 0 or len(claves) != 2 or "" in claves:
             pareja["puntua"] = True
             return True
@@ -1092,6 +1099,25 @@ class Servidor:
                 return k, v, quiero
         return None
 
+    def _avisar_identidad_repetida(self, s):
+        """Dos PC distintas (otra IP) con la MISMA clave de jugador se verían como la misma persona
+        (mismo club, mismo pid). Un PES abre varias conexiones desde su IP: eso es normal y no avisa.
+        Solo avisa; la separación real se configura con identidad.por_ip (ver clave_identidad)."""
+        ip = (getattr(s, "ip", None) or "").split("%")[0].removeprefix("::ffff:")
+        clave = (s.steam_hex or "").lower()
+        if not clave or not ip:
+            return False
+        for x in self.sesiones:
+            if x is s or (x.steam_hex or "").lower() != clave:
+                continue
+            otra = (getattr(x, "ip", None) or "").split("%")[0].removeprefix("::ffff:")
+            if otra and otra != ip:
+                log.warning("identidad repetida: %s ya está en el servidor desde %s y ahora entra desde %s; "
+                            "se verán como la misma persona. Pon identidad.por_ip {IP: clave} para separarlos",
+                            clave, otra, ip)
+                return True
+        return False
+
     def _entrar(self, s, m):
         steam_hex = self._clave_de(s, m) or s.steam_hex or ""
         if self.en_mantenimiento():
@@ -1108,6 +1134,7 @@ class Servidor:
             log.info("login rechazado (sin cuenta Phoenix vinculada): %s", steam_hex)
             return {"result": "ERR_LOGIN_FAILED"}  # C: texto de error del exe
         s.steam_hex = steam_hex
+        self._avisar_identidad_repetida(s)
         s.versiones = {k: m.get(k) for k in ("patch_version", "dlc_version",
                                               "livedata_version", "extradata_version")}
         # La conexión MENU (matchmaking) no pide GET_PLAYER_DATA: sin esto la tarjeta salía

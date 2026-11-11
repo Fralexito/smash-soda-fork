@@ -2112,6 +2112,25 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.srv.cfg["max_partidos_rival_dia"] = 0
         self.assertTrue(self.srv._puntua({"miembros": (a, b)}))
 
+    async def test_misma_identidad_sin_puntos_y_aviso(self):
+        """11-nov (estudio del mod de AzrakHQ: copias que reportan el MISMO SteamID): dos PES con la misma
+        clave no puntúan entre sí, y entrar desde otra IP con una clave ya conectada avisa."""
+        a, _ea = await self.entrar("0110000100000041")
+        b, _eb = cliente(self.srv)
+        await self.srv.recibir(b, 1, {"msgid": "CMD_LOGIN", "rqid": 1, "username": "0110000100000041"})
+        self.assertEqual(a.steam_hex, b.steam_hex)
+        self.srv.cfg["max_partidos_rival_dia"] = 0
+        self.assertFalse(self.srv._puntua({"miembros": (a, b), "room_id": 1}))
+        c, _ec = await self.entrar("0110000100000042")
+        d, _ed = await self.entrar("0110000100000043")
+        self.assertTrue(self.srv._puntua({"miembros": (c, d), "room_id": 2}))
+        a.direccion, b.direccion = ("10.0.0.1", 1), ("10.0.0.1", 2)
+        self.assertFalse(self.srv._avisar_identidad_repetida(b))
+        b.direccion = ("10.0.0.2", 2)
+        with self.assertLogs(level="WARNING") as lg:
+            self.assertTrue(self.srv._avisar_identidad_repetida(b))
+        self.assertIn("identidad repetida", lg.output[0])
+
     async def test_avatar_subido_queda_guardado(self):
         """R (pesavatar AzrakHQ): SET_AVATAR se guarda en la base y se lee con cualquier forma del pid."""
         import base64, hashlib
