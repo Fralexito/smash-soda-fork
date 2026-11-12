@@ -29,13 +29,25 @@ function Copiar-Tachado($origen, $nombre, $horas) {
 }
 
 "Paquete de diagnostico creado el $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Set-Content (Join-Path $dest "LEEME.txt")
-"Incluye (con SteamID, hashes y tokens TACHADOS): log del servidor, sider.log del PES, resumen del estado." | Add-Content (Join-Path $dest "LEEME.txt")
+"Incluye (con SteamID, hashes y tokens TACHADOS): log del servidor, peticiones/respuestas de cada jugador (capturas de las ultimas horas, tope 60 MB), sider.log del PES, resumen del estado." | Add-Content (Join-Path $dest "LEEME.txt")
 "NO incluye: config.json, claves, base de datos, capturas completas. NO LO SUBAS A GITHUB." | Add-Content (Join-Path $dest "LEEME.txt")
 
 $err = Get-ChildItem (Join-Path $raiz "arranque_*.err") | Sort-Object LastWriteTime -Descending | Select-Object -First 1
 if ($err) { Copiar-Tachado $err.FullName "servidor_stderr.log" $Horas }
 Copiar-Tachado (Join-Path $raiz "registro\servidor.log") "servidor.log" $Horas
 Copiar-Tachado (Join-Path $raiz "registro\rival_udp.txt") "rival_udp.txt" $null
+# Peticiones y respuestas de cada jugador (capturas/*.jsonl y http.jsonl) de las ultimas horas,
+# TACHADAS. Tope 60 MB para no llenar el disco; lo mas reciente primero.
+$capt = Join-Path $dest "capturas"
+New-Item -ItemType Directory -Path $capt | Out-Null
+$usado = 0
+Get-ChildItem (Join-Path $raiz "capturas") -File -Filter *.jsonl | Where-Object { $_.LastWriteTime -ge (Get-Date).AddHours(-$Horas) } |
+    Sort-Object LastWriteTime -Descending | ForEach-Object {
+        if ($usado + $_.Length -le 60MB) {
+            Copiar-Tachado $_.FullName ("capturas\" + $_.Name) $null
+            $usado += $_.Length
+        } else { "capturas: no cabe $($_.Name) ($([int]($_.Length/1KB)) KB)" | Add-Content (Join-Path $dest "LEEME.txt") }
+    }
 foreach ($n in @("Sider\sider.log", "Sider\sider-app.log")) {
     $p = Join-Path $Pes $n
     if (Test-Path $p) { Copiar-Tachado $p ($n -replace '\\', '_') $null }
@@ -48,7 +60,7 @@ $r += "Servidor (python): " + ((Get-CimInstance Win32_Process -Filter "Name='pyt
 $r += "PES2021.exe: " + ((Get-Process PES2021 | ForEach-Object { "PID $($_.Id) responde=$($_.Responding) memoria=$([int]($_.WorkingSet64/1MB))MB" }) -join ", ")
 $exe = Join-Path $Pes "PES2021.exe"
 if (Test-Path $exe) { $i = Get-Item $exe; $r += "PES2021.exe tamano=$($i.Length) fecha=$($i.LastWriteTime.ToString('yyyy-MM-dd HH:mm'))" }
-$r += "Capturas en disco: $(@(Get-ChildItem (Join-Path $raiz 'capturas') -File).Count) archivos (no se copian)"
+$r += "Capturas en disco: $(@(Get-ChildItem (Join-Path $raiz 'capturas') -File).Count) archivos (copiadas tachadas las de las ultimas $Horas h)"
 $r += "Cierres de aplicacion recientes de PES2021:"
 Get-WinEvent -FilterHashtable @{ LogName = 'Application'; ProviderName = 'Application Error'; StartTime = (Get-Date).AddHours(-$Horas) } -MaxEvents 20 |
     Where-Object { $_.Message -match 'PES2021' } | ForEach-Object { $r += "  " + $_.TimeCreated.ToString('HH:mm:ss') + " " + (($_.Message -split "`n")[0..2] -join ' ') }

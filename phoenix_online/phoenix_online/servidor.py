@@ -385,7 +385,10 @@ async def principal(ruta_config):
         from .turn_propio import TurnPropio
         turn = TurnPropio(tp)
         ip_fija = str(cfg.get("ip_publica") or "auto")
-        ips = [ip_fija] if ip_fija.lower() != "auto" else []
+        # con "auto": todas las IPv4 de esta PC (LAN y Tailscale 100.x) entran en el certificado TURN,
+        # así no hay que escribir la IP de Tailscale a mano (si Tailscale entra después, reiniciar)
+        ips = [ip_fija] if ip_fija.lower() != "auto" else ips_de_esta_pc()
+        log.info("TURN propio: IP en el certificado %s", ips)
         if await turn.iniciar(lambda ip_local, ip_cliente: srv.ip_anuncio(ip_local=ip_local), ips):
             srv.turn_propio = turn
     log.info("Phoenix Online escuchando en %s", [s.sockets[0].getsockname() for s in servidores])
@@ -422,6 +425,24 @@ async def respaldar_cada(datos, carpeta, horas, guardar):
         except Exception as e:
             log.warning("respaldo de la base falló (se reintenta luego): %s", e)
         await asyncio.sleep(max(0.1, horas) * 3600)
+
+
+def ips_de_esta_pc():
+    """IPv4 propias (no 0.0.0.0): nombre de la PC + la de la ruta por defecto. Sin red, lista vacía."""
+    ips = set()
+    try:
+        for info in socket.getaddrinfo(socket.gethostname(), None, socket.AF_INET):
+            ips.add(info[4][0])
+    except OSError:
+        pass
+    for destino in ("8.8.8.8", "100.100.100.100"):  # ruta a internet y a Tailscale (no se envía nada)
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+                s.connect((destino, 9))
+                ips.add(s.getsockname()[0])
+        except OSError:
+            pass
+    return sorted(i for i in ips if i and not i.startswith("0.") and i != "127.0.0.1")
 
 
 async def vigilar_config(srv, cada):
