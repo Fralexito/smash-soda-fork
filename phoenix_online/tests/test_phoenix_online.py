@@ -1339,6 +1339,12 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         gi_a = (await self.srv.c_cmd_get_matchday_mainmenu_info(a, {"compe_id": 3}))["mainmenu_info"].valor
         self.assertEqual(gi_a["group_match_info"].valor["matchday_rank"], 1)
         self.assertGreaterEqual(int((self.srv.datos.club(a.steam_hex) or {}).get("gp") or 0), 1000)
+        # Vestíbulo de juego en equipo (MULTI): ya no sale vacío; "lobby_equipo": "NO" lo quita
+        lob = await self.srv.c_cmd_get_lobbylist(a, {"lobby_type": "MULTI"})
+        self.assertEqual((lob["lobby_list_num"], lob["lobby_list"][0].valor["lobby_type"]), (1, "MULTI"))
+        self.srv.cfg["lobby_equipo"] = "NO"
+        self.assertEqual((await self.srv.c_cmd_get_lobbylist(a, {"lobby_type": "MULTI"}))["lobby_list_num"], 0)
+        del self.srv.cfg["lobby_equipo"]
         # premios visibles: all_reward_info es un ARRAY con un bin (nunca bin suelto); "NO" lo apaga
         e = {"compe_id": 3, "premios": {"WIN": 800, "LOSE": 200}}
         info = self.srv._info_premios_matchday(e)

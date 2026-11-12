@@ -2096,7 +2096,14 @@ class Servidor:
     # ---------- Lobby (§11.5 pasos 1-2) ----------
     async def c_cmd_get_lobbylist(self, s, m):
         tipo = m.get("lobby_type", "FREE")
-        lobbies = [l for l in self.cfg["lobbies"] if l["lobby_type"] == tipo]
+        lobbies = [l for l in self.cfg.get("lobbies") or [] if l.get("lobby_type") == tipo]
+        # «Vestíbulo de juego en equipo» (lobby_type MULTI, lobby2.md AzrakHQ): sin vestíbulo propio
+        # el PES decía «Datos no encontrados». Si la config no trae uno MULTI se ofrece uno por
+        # defecto (config "lobby_equipo": "NO" lo quita). Ojo: el partido de este modo va por el
+        # relé SC de Konami y aún no conecta (necesita un arreglo en el Core).
+        if not lobbies and tipo == "MULTI" and str(self.cfg.get("lobby_equipo", "SI")) != "NO":
+            lobbies = [{"lobby_id": 2, "name": "Phoenix Juego en equipo", "player_num": 0,
+                        "player_num_max": 200, "gamerelay_index": 0, "lobby_type": "MULTI"}]
         # C (PESBUL 04-nov): el cliente liga la calidad del lobby a gamerelay_index == índice del
         # nodo del checklist; con 0 no hay nodo. Si la config pone 0, se usa el del relé.
         nodos = self._nodos_relay(s)
