@@ -4372,8 +4372,13 @@ class Servidor:
         tok = str((self.cfg.get("myclub") or {}).get("regalo_item_type_moneda") or "")
         objeto = {"item_type": tok if tipo in ("gp", "monedas") else "", "item_variation": "",
                   "item_effect_arg": 0, "count": 0, "pes_point_price": 0}
+        # Prueba 12-nov: el aviso falso de «máximo» sale de la LISTA; el objeto va vacío (count 0).
+        # myclub.regalo_lista_modo: "count" = item.count=n; "tipo_item" = type "ITEM" con count=n.
+        modo = str((self.cfg.get("myclub") or {}).get("regalo_lista_modo") or "")
+        if modo in ("count", "tipo_item") and tipo in ("gp", "monedas"):
+            objeto["count"] = n
         if tipo == "gp":
-            return "GP", r.get("titulo") or f"{n} GP", objeto
+            return ("ITEM" if modo == "tipo_item" else "GP"), r.get("titulo") or f"{n} GP", objeto
         if tipo == "monedas":
             return "PES_POINT", r.get("titulo") or f"{n} monedas", objeto
         o = next((x for x in self._objetos() if x.get("clave") == tipo), {})
