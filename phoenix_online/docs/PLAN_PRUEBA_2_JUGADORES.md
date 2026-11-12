@@ -37,6 +37,8 @@ Objetivo (Frank, 12-nov): dejar todo el apartado online listo para que, en la pr
 - Registro: cada conexión deja su JSONL en `capturas/` y el HTTP en `capturas/http.jsonl` (con tope de disco). Sirve para corregir sin repetir. Nunca se suben a GitHub.
 - `tools/comparar_con_azrak.py`: los «faltan» en listas vacías son falsos positivos (la lista no trae elementos en la prueba); no hay huecos en los modos de 2 jugadores que cambien el flujo.
 - Riesgo principal fuera del código: el **firewall** (punto 9).
+- **12-nov, fallo grave encontrado y arreglado (97be73a):** en Windows con Python 3.11 el relé UDP 5100 (y STUN/TURN) se quedaba sordo para siempre, sin error en el log, tras mandar algo a un puerto ya cerrado (un PES que se cerró). Habría roto la prueba con el amigo a la primera desconexión. Arreglo: SIO_UDP_CONNRESET apagado en `udp.py` y `error_received` al log.
+- **12-nov, Términos del Torneo en cada «Reanudar»:** team_id solo (d287d6f) no bastó; 32bc809 manda los campos de COMPE_INFO arriba y dentro de compe_data como AzrakHQ. Pendiente de probar en PES.
 
 ## C. Reglas del día
 
