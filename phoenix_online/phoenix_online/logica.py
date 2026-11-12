@@ -6078,8 +6078,15 @@ class Servidor:
             "is_exist_overview_info": "NO", "is_exist_participation_right": "NO", "is_exist_rewardInfo": "NO",
             "compe_db_id": e["compe_id"], "use_ball_id": int(e.get("ball_id") or 0), "is_e_sports": "NO",
             "is_pesleague_stadium": "NO", "is_efootball_pro_stadium": "NO",
-            "entry_compe": self._inscrito(s, "pesleague", e["compe_id"]), "team_id": 0,
+            "entry_compe": self._inscrito(s, "pesleague", e["compe_id"]),
+            # Prueba 11-nov: con team_id 0 y entry_compe YES el PES volvía a pedir los Términos de Uso
+            # (aceptación local, sin comando) y el equipo en cada «Reanudar torneo»: va el equipo inscrito
+            "team_id": self._equipo_pesleague(s, e["compe_id"]),
             "clan_info": Empaquetado({}), "compe_regulation": Empaquetado({}), "eula_url": ""})}
+
+    def _equipo_pesleague(self, s, cid):
+        club = self.datos.club(s.steam_hex or "") if s.steam_hex else None
+        return int(((club or {}).get("pesleague_equipo") or {}).get(str(cid)) or 0)
 
     async def c_cmd_get_pesleague_compe_participation_right(self, s, m):
         e = self._torneo_pesleague(m)
