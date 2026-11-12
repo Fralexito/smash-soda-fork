@@ -1845,6 +1845,8 @@ class Servidor:
         club["matchday_pendiente"] = int(club.get("matchday_pendiente") or 0) + pts
         e = next((x for x in self._torneos("matchday") if str(x["compe_id"]) == cid), None)
         gp = self._premios_matchday(e or {}).get("WIN" if res == "WIN" else "LOSE", 0)
+        antes = puntos[cid] - pts
+        gp += sum(premio for meta, premio in self._hitos_matchday(e or {}) if antes < meta <= puntos[cid])
         if gp:
             club["gp"] = int(club.get("gp") or 0) + gp
         self.datos.guardar_club(s.steam_hex, club)
@@ -1930,15 +1932,30 @@ class Servidor:
         p = p if isinstance(p, dict) else {}
         return {k: int(p.get(k, d)) for k, d in (("WIN", 1000), ("LOSE", 300)) if isinstance(p.get(k, d), int)}
 
+    def _hitos_matchday(self, e):
+        """Premios por puntos de evento («Recomp. pt. de evento»): torneo "premios_puntos" =
+        [[puntos, gp], ...]; "NO" los quita. Se pagan una vez al cruzar cada meta."""
+        p = e.get("premios_puntos", [[3, 500], [9, 1000], [15, 2000]])
+        if p == "NO" or not isinstance(p, list):
+            return []
+        return [(int(a), int(b)) for a, b in (x for x in p if isinstance(x, (list, tuple)) and len(x) == 2)
+                if isinstance(a, int) and isinstance(b, int) and a > 0 and b > 0]
+
     def _info_premios_matchday(self, e):
         """R (matchday2.md AzrakHQ Q3): all_reward_info es un ARRAY con un bin {achievement_reward_list,
         required_point_final_reward, win/lose/watching/pickup_*_reward_list [regalos], pickup_reward_type}.
         Nunca un bin suelto (cerraba el PES). myclub.matchday_premios_info = "NO" vuelve a []."""
         premios = self._premios_matchday(e)
-        if not premios or str((self.cfg.get("myclub") or {}).get("matchday_premios_info", "SI")) == "NO":
+        hitos = self._hitos_matchday(e)
+        if (not premios and not hitos) or \
+                str((self.cfg.get("myclub") or {}).get("matchday_premios_info", "SI")) == "NO":
             return []
         lista = lambda k, n: [self._premio_gp(n, premios[k], cantidad=premios[k])] if premios.get(k) else []
-        return [Empaquetado({"achievement_reward_list": [], "required_point_final_reward": 0,
+        # Tabla de «Info. de las recompensas» (prueba 11-nov: con [] salía solo el texto, sin tabla)
+        logros = [Empaquetado({"is_repeat": "NO", "require_point": meta,
+                               "reward_list": [self._premio_gp(10 + i, gp, cantidad=gp)]})
+                  for i, (meta, gp) in enumerate(hitos)]
+        return [Empaquetado({"achievement_reward_list": logros, "required_point_final_reward": 0,
                              "win_reward_list": lista("WIN", 1), "lose_reward_list": lista("LOSE", 2),
                              "watching_reward_list": [], "pickup_win_reward_list": [],
                              "pickup_lose_reward_list": [], "pickup_reward_type": "MATCHDAY_PICKUP_REWARD_NONE"})]

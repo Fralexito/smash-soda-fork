@@ -1356,7 +1356,11 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         info = self.srv._info_premios_matchday(e)
         self.assertIsInstance(info, list)
         self.assertEqual(info[0].valor["win_reward_list"][0].valor["count"], 800)
-        self.assertEqual(self.srv._info_premios_matchday({"premios": "NO"}), [])
+        self.assertEqual(self.srv._info_premios_matchday({"premios": "NO", "premios_puntos": "NO"}), [])
+        hitos = info[0].valor["achievement_reward_list"]
+        self.assertEqual((len(hitos), hitos[0].valor["require_point"]), (3, 3))
+        # a cruzó la meta de 3 puntos: 1000 por ganar + 500 de la meta
+        self.assertGreaterEqual(int((self.srv.datos.club(a.steam_hex) or {}).get("gp") or 0), 1500)
         msgpack_min.packb({"all_reward_info": info})
         self.assertIn("suma puntos", self.srv._bando_matchday({"compe_id": 3}, "a").valor["group_desc"])
         # aviso urgente: una vez por persona
