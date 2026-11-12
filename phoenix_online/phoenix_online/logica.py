@@ -4408,6 +4408,13 @@ class Servidor:
             # Los `type` que conoce el cliente: E_FOOTBALL_POINT, PLAYER, UNIFORM, ITEM, RENTAL_PLAYER,
             # SCOUT, AGENT, COACH, PES_POINT («GP» no existe ahí). Modos en caliente de regalo_lista_modo:
             # "listas" (elemento bin, item/skill listas) y "listas_directo" (elemento mapa directo).
+            # Pruebas en caliente sin tocar código: myclub.regalo_ficha_extra = {clave: valor} se mezcla
+            # en la ficha de la lista (p. ej. {"present_type": "GM"}); valor null quita la clave
+            for k, v in (mc.get("regalo_ficha_extra") or {}).items():
+                if v is None:
+                    ficha.pop(k, None)
+                else:
+                    ficha[k] = v
             modo_l = str(mc.get("regalo_lista_modo") or "")
             if modo_l in ("listas", "listas_directo"):
                 ficha["item"] = [dict(objeto, count=int(r.get("cantidad") or 0))]
@@ -4538,6 +4545,12 @@ class Servidor:
                 else:
                     e["skill"] = {"skill_category": "", "skill_id": 0}
                     e["item"] = dict(e["item"].valor)
+                # igual en RECV: myclub.regalo_recv_extra se mezcla en la ficha del elemento
+                for k, v in (mc.get("regalo_recv_extra") or {}).items():
+                    if v is None:
+                        e.pop(k, None)
+                    else:
+                        e[k] = v
                 elems.append({"item": e, "result": res_elem})
             return {"result": "NOERR" if elems else "ERR_NOTFOUND",
                     "receive_result_list_num": len(elems), "receive_result_list": elems}
