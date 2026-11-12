@@ -1,12 +1,12 @@
 # Tablero del online Phoenix (se actualiza con cada avance)
 
-Última actualización: 11-nov-2026, 18:30 (hora de Lima).
+Última actualización: 11-nov-2026, 21:45 (hora de Lima).
 PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 
 ## Resumen
-- **Probado en el PES y funcionando:** 25 de 58 apartados (**43 %**).
-- **Programado (falta probarlo en el PES):** 22 más. Con ellos, **47 de 58 ya están hechos (81 %)**.
-- **A medias** (abre bien pero sin contenido o hecho solo en parte): 8 (Matchday, PES League, Cooperativo y Clanes abren y se usan en el PES; falta el partido con 2 PES).
+- **Probado en el PES y funcionando:** 26 de 58 apartados (**45 %**).
+- **Programado (falta probarlo en el PES):** 22 más. Con ellos, **48 de 58 ya están hechos (83 %)**.
+- **A medias** (abre bien pero sin contenido o hecho solo en parte): 7 (Análisis del rival, amistoso con 2 PES, Historial, Ranking semanal, Gestión del club, PES League y Clanes; el partido con 2 PES sigue pendiente).
 - **Falta hacer:** 3 (myClub contra otra persona, Tailscale, servidor en internet).
 - Comandos del juego que el servidor ya controla: **319 de 433 (74 %)** (11-nov 18:30, contados contra `commands.json` de AzrakHQ; el resto son sobre todo avisos del partido).
 
@@ -51,13 +51,13 @@ PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 |---|---|---|---|
 | 21 | Entrar a myClub y club propio | ✅ | |
 | 22 | Plantilla, alineación y plan de juego | ✅ | |
-| 23 | Partido contra la COM | ✅ | primer partido completo el 05-nov; récord contra la COM guardado |
-| 24 | GP y premios por partido | ✅ | |
+| 23 | Partido contra la COM | ✅ | primer partido completo el 05-nov; **11-nov: partido vs COM jugado entero en el PES base (Phoenix FC 2–1 Bayern, 90 min) y pantalla «Recompensas del partido»** |
+| 24 | GP y premios por partido | ✅ | probado el 11-nov: victoria vs COM = «GP 240 (Resultado: Victoria)» + bonus de nivel y calidad ×1.00; el servidor suma +240 GP (saldo 38260→41800 con los logros). Ganar paga GP, no monedas |
 | 25 | Fichajes: agentes, cazatalentos y subastas | ✅ | con los jugadores de tu parche |
 | 26 | Contratos, entrenadores y experiencia | ✅ | |
 | 27 | Cambiar el nombre del club y de la plantilla | ✅ | probado el 10-nov: myClub → quinta pestaña → «Cambiar nombre del equipo» |
 | 28 | Historial | 🟡 | programado (cada movimiento de GP queda anotado). Su pantalla parece estar dentro de la tienda de monedas, que no abrimos (nada de dinero real) |
-| 29 | Regalos | ✅ | probado el 11-nov: la «Bandeja entrada» (pestaña Configuración) muestra los regalos con su número y se cobran: GP, monedas y objetos llegan al club. Falta quitar un aviso falso («ya tienes el máximo») que sale al cobrar |
+| 29 | Regalos | ✅ | probado el 11-nov: la «Bandeja entrada» (fila inferior de myClub) muestra los regalos y se cobran (GP y monedas llegan al club; probados 50, 500, 3000, 5000 GP y 5 monedas). **Fallo menor, sin causa conocida:** el aviso «No puedes recibir este objeto porque ya tienes el máximo permitido» sale con cualquier cantidad aunque el regalo se paga (probado `regalos_skill` plano/mapa/bin y cantidades 5–5000). La bandeja pinta todo regalo como «Monedas de myClub» |
 | 30 | Logros | ✅ | probado el 11-nov: 5 logros reales con progreso; cobro probado (+1000 GP). Desde el 11-nov el premio es en monedas gratis |
 | 31 | Ranking de clubes | ✅ | probado: muestra «Phoenix FC» con escudo |
 | 32 | Ranking semanal | 🟡 | vacío; el PES lo bloquea hasta jugar 10 partidos 1 contra 1 |
@@ -69,7 +69,7 @@ PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 ## 5. Otros modos del online
 | # | Apartado | Estado | Nota |
 |---|---|---|---|
-| 36 | Cooperativo (2 contra 2, 3 contra 3) | 🟡 | probado el 11-nov (c475ca8): «Partido informal» = solo matchmaking 3 vs. 3 (botón «Ir a Matchmaking»); «Partido de clan» → Crear Salón (Clan de FRALEX) → opciones → «Ficha y opciones de Nivel de partido» → sala. Nombre exacto en la sala: **«[1]Clan de FRALEX»**, se lee completo (no cortado) en la captura; tabla del clan G/E/P 0/0/0 y «FRALEX (Dueño) Nv.1». Salir pide confirmación. Falta el partido en sí. «Vestíbulo de juego en equipo» (MULTI): con f0c28f3 abre su Lista de Salón (antes «Datos no encontrados»); el partido irá por el relé SC |
+| 36 | Cooperativo (2 contra 2, 3 contra 3) | ✅ | probado el 11-nov (c475ca8): «Partido informal» = solo matchmaking 3 vs. 3 (botón «Ir a Matchmaking»); «Partido de clan» → Crear Salón (Clan de FRALEX) → opciones → «Ficha y opciones de Nivel de partido» → sala. Nombre exacto en la sala: **«[1]Clan de FRALEX»**, se lee completo (no cortado) en la captura; tabla del clan G/E/P 0/0/0 y «FRALEX (Dueño) Nv.1». Salir pide confirmación. Falta el partido en sí. «Vestíbulo de juego en equipo» (MULTI): con f0c28f3 abre su Lista de Salón (antes «Datos no encontrados»); el partido irá por el relé SC |
 | 37 | Matchday | ✅ | probado el 11-nov (de1a288): lista «Jornada Phoenix» (acaba en 28d0h), pantalla del torneo (0-0, Puntos de evento, Progreso «Completado», Clasificación del bando Pos. 1), «Clasificación del bando» con «1 · FRALEX · ANDERLECHT», Detalles del Campeonato (calendario 10/11–9/12, Equipo prestablecido) y **«Info. de las recompensas» ya dibuja la tabla**: 3 puntos → 500, 9 → 1000, 15 → … monedas de myClub. Sin cierres. **Pendiente:** la tabla de recompensas dice «Monedas de myClub» (icono de moneda con estrella) pero el servidor paga GP; aunque cada premio ya lleva `type: "GP"`. Análisis estático (Ghidra, 11-nov): las dos funciones que leen `achievement_reward_list` son `FUN_141cc3cd0` (INFO de Matchday, 29 KB) y `FUN_141d151a0` (resultado de partido, 7 KB); ambas parsean el premio como el mismo «regalo» (elemento `FUN_141bbd140`, lista `FUN_141bbd9a0`) y en la del resultado `type` se guarda como TEXTO sin convertir (la conversión a icono sale después, en la pantalla, que no se localizó). Falta leer las tarjetas del bando (la captura corta la derecha) y jugar el partido |
 | 38 | Eventos y competiciones online | ✅ | probado el 11-nov: inscripción en la Copa Phoenix funciona (antes «No cumples los requisitos»: el servidor mandaba los datos sin empaquetar); falta el partido |
 | 39 | PES League | 🟡 | probado el 11-nov: inscripción funciona («Torneo Phoenix» con equipo), abre su pantalla y ya no sale el aviso «resultados finales» (ahora dice «Espera a que abra el período de Matchmaking»). Programado, sin probar: nombre del equipo y matchmaking siempre abierto. Falta jugar el partido |
