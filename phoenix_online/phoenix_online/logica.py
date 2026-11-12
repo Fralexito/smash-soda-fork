@@ -4395,12 +4395,24 @@ class Servidor:
         lista = []
         for r in regalos[:self.MAX_REGALOS]:
             tipo, nombre, objeto = self._datos_regalo(r)
-            lista.append(Empaquetado({
+            mc = self.cfg.get("myclub") or {}
+            if tipo == "GP" and mc.get("regalo_type_gp"):
+                tipo = str(mc["regalo_type_gp"])
+            ficha = {
                 "present_id": int(r["id"]), "name": nombre, "name_jp": nombre, "title": nombre,
                 "body": "", "entity_id": 0, "grade": 0, "type": tipo, "player_level": 0,
                 "contract_term": 0, "team_id": 0, "present_type": "NORMAL",
                 "item": Empaquetado(objeto), "receipt_deadline": int(r["hasta"]),
-                "count": int(r.get("cantidad") or 0)}))
+                "count": int(r.get("cantidad") or 0)}
+            # L (Ghidra 12-nov, FUN_141c473e0): en la ficha «skill» e «item» son LISTAS de mapas directos.
+            # Los `type` que conoce el cliente: E_FOOTBALL_POINT, PLAYER, UNIFORM, ITEM, RENTAL_PLAYER,
+            # SCOUT, AGENT, COACH, PES_POINT («GP» no existe ahí). Modos en caliente de regalo_lista_modo:
+            # "listas" (elemento bin, item/skill listas) y "listas_directo" (elemento mapa directo).
+            modo_l = str(mc.get("regalo_lista_modo") or "")
+            if modo_l in ("listas", "listas_directo"):
+                ficha["item"] = [dict(objeto, count=int(r.get("cantidad") or 0))]
+                ficha["skill"] = []
+            lista.append(ficha if modo_l == "listas_directo" else Empaquetado(ficha))
             prueba = {"msgid": "CMD_GET_MYCLUB_PRESENTLIST", "rqid": 0, "result": "NOERR",
                       "present_list_num": len(lista), "present_list": lista}
             if _cifrado_comprimido(prueba) > MAX_CIFRADO_CLIENTE:
