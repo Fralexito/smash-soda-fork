@@ -16,6 +16,8 @@ import os
 import struct
 import time
 
+from .udp import AvisoError
+
 log = logging.getLogger("phoenix.gamerelay")
 
 IV0 = 0xEA
@@ -348,8 +350,10 @@ def endpoint_de_ntl(v):
         return None
 
 
-class Rele(asyncio.DatagramProtocol):
+class Rele(AvisoError, asyncio.DatagramProtocol):
     """Atiende el puerto UDP del nodo (5100 por defecto)."""
+
+    nombre_udp = "gamerelay"
 
     VIDA_SONDA = 10  # s (L: PESBUL borra la sonda tras 10 s sin datos; el cliente vuelve a medir)
 

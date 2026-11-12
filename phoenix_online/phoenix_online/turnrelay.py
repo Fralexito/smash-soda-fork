@@ -24,6 +24,8 @@ base64(HMAC-SHA1(secret, username)); key = MD5(username:realm:password).
 """
 import asyncio, base64, binascii, hashlib, hmac, ipaddress, logging, os, socket, ssl, struct, time
 
+from .udp import sin_connreset
+
 log = logging.getLogger("pesserver.turnrelay")
 
 MAGIC = 0x2112A442
@@ -349,6 +351,7 @@ class _Conn:
             try:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                 sock.bind(("0.0.0.0", port))
+                sin_connreset(sock)  # Phoenix: Windows + Python 3.11 deja el socket sordo tras un ICMP
                 break
             except OSError:
                 sock.close(); sock = None

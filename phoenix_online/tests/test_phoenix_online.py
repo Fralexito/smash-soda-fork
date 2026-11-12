@@ -3381,3 +3381,32 @@ class TestNubeSinLlaveMaestra(unittest.IsolatedAsyncioTestCase):
                 os.environ.pop(k, None)
                 if v is not None:
                     os.environ[k] = v
+
+
+class TestUdpProtegido(unittest.IsolatedAsyncioTestCase):
+    async def test_socket_udp_recibe_y_avisa_errores(self):
+        """udp.abrir da un endpoint que recibe; error_received queda en el log (antes se tragaba)."""
+        from phoenix_online import udp
+        recibidos = []
+
+        class P(udp.AvisoError, asyncio.DatagramProtocol):
+            nombre_udp = "prueba"
+
+            def datagram_received(self, data, addr):
+                recibidos.append(data)
+
+        bucle = asyncio.get_running_loop()
+        t, p = await udp.abrir(bucle, P, "127.0.0.1", 0)
+        puerto = t.get_extra_info("sockname")[1]
+        t2, _ = await bucle.create_datagram_endpoint(asyncio.DatagramProtocol, remote_addr=("127.0.0.1", puerto))
+        t2.sendto(b"hola")
+        for _ in range(50):
+            if recibidos:
+                break
+            await asyncio.sleep(0.01)
+        self.assertEqual(recibidos, [b"hola"])
+        self.assertFalse(udp.sin_connreset(t.get_extra_info("socket")))  # fuera de Windows no toca nada
+        with self.assertLogs("phoenix.udp", "WARNING"):
+            p.error_received(ConnectionResetError(10054, "reset"))
+        t.close()
+        t2.close()

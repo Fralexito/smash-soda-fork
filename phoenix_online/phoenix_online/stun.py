@@ -7,6 +7,8 @@ import logging
 import socket
 import struct
 
+from .udp import AvisoError
+
 log = logging.getLogger("phoenix_online")
 
 COOKIE = 0x2112A442
@@ -32,7 +34,9 @@ def respuesta_binding(peticion, ip, puerto):
     return struct.pack(">HHI", BINDING_RESPONSE, len(cuerpo), COOKIE) + txid + cuerpo
 
 
-class ProtocoloStun(asyncio.DatagramProtocol):
+class ProtocoloStun(AvisoError, asyncio.DatagramProtocol):
+    nombre_udp = "stun"
+
     def connection_made(self, transporte):
         self.t = transporte
 

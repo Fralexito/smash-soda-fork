@@ -28,6 +28,8 @@ same code as on the TLS leg. ChannelData is not padded here (UDP framing). Needs
 """
 import asyncio, logging, struct, time
 
+from .udp import abrir
+
 log = logging.getLogger("pesserver.turndtls")
 
 try:
@@ -260,6 +262,6 @@ class DtlsLeg(asyncio.DatagramProtocol):
 
 async def start(server, host, port, certfile, keyfile):
     loop = asyncio.get_running_loop()
-    transport, proto = await loop.create_datagram_endpoint(lambda: DtlsLeg(server, certfile, keyfile),
-                                                           local_addr=(host, port))
+    # Phoenix: socket protegido contra el ICMP «port unreachable» de Windows (ver udp.py)
+    transport, proto = await abrir(loop, lambda: DtlsLeg(server, certfile, keyfile), host, port)
     return proto
