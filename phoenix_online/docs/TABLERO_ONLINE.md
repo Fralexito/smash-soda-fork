@@ -79,7 +79,7 @@ PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 | # | Apartado | Estado | Nota |
 |---|---|---|---|
 | 41 | Launcher: «Jugar Offline» | ✅ | probado el 10-nov |
-| 42 | Launcher: «Jugar Online» con la cuenta de la web | 🟢 | falta probarlo de punta a punta |
+| 42 | Launcher: «Jugar Online» con la cuenta de la web | 🟢 | sin probar: cambia el hosts (administrador), pide la contraseña de Frank y falta PhoenixJugar.json |
 | 43 | Tu web recibe los clubes de myClub | ✅ | conectado el 10-nov, sin la llave maestra |
 | 44 | Tu web recibe las Divisiones (ranking online) | 🟢 | migración 165 aplicada; falta la tabla en la página |
 | 45 | Vincular el PES con la cuenta de la web | 🟢 | el servidor está listo; falta el botón en la web |
@@ -88,7 +88,7 @@ PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 | 48 | Amigos por Tailscale | ❌ | falta instalar Tailscale (con tu permiso) |
 | 49 | Servidor en internet (VPS, sin tu PC encendida) | ❌ | |
 | 50 | Relé TURN propio (partido entre 2 PC aunque el router bloquee) | 🟢 | **encendido el 11-nov 17:16** (tls 5349 + dtls 5350, relé udp 49160-49179, certificado para 127.0.0.1 y 192.168.100.236); falta probarlo con 2 PES; en internet hay que abrir esos puertos en el router |
-| 51 | Actualización en vivo propia (todos con la misma base del parche) | 🟢 | carpeta `actualizacion/` + `tools/armar_actualizacion.py` |
+| 51 | Actualización en vivo propia (todos con la misma base del parche) | 🟢 | probada 12-nov con 99ace2e: el PES la baja (ofrecida → GET → enviada) sin error; reentrar no la repite (1 vez por sesión) |
 | 52 | No emparejar PES con datos distintos («error DATAPACK») | 🟢 | sumas de CHECK_CHEAT + versión |
 | 53 | Dirección del PES de tu PC para un amigo de otra casa | 🟢 | host_addr con tu IP pública/Tailscale |
 | 54 | Reconexión a tiempo sin derrota; abandono por sesión exacta | 🟢 | |
@@ -144,3 +144,4 @@ PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 - **Aviso falso de regalos, prueba por cantidad (11-nov, regalos_skill="plano"):** «No puedes recibir este objeto porque ya tienes el máximo permitido» sale con un regalo de 5 monedas y con uno de 50 GP (el de 500 GP se cobró sin capturar su aviso). NO depende de la cantidad. Los tres se pintan «Monedas de myClub» y se pagan bien (GP 49920→50470, monedas 62→67).
 - **Matchday con captura completa (1920×1080):** pantalla del torneo «Jornada Phoenix»: marcador 0-0, barra azul 0 / rosa 0, «Tus estadísticas» (Puntos de evento 0, Progreso recomp. result. «Completado», Clasificación del bando «Pos. 1», Condición representante «-»), a la derecha «Para la próxima recompensa: 3 Puntos» con «5 Monedas de myClub», y «Part. grupo acaba en 27d23h». «Clasificación del bando»: columnas Nombre del usuario / Nom. del equipo / Puntos de evento; fila «1 · FRALEX · ANDERLECHT · 0», «Última actualiz. 11/11 21:35». «Descripción del campeonato» muestra el texto estándar («En Matchday, los participantes se unen a uno de los 2 bandos…»). Las TARJETAS DE BANDO con `group_desc` solo salen al elegir bando al inscribirse; con el usuario ya inscrito no se ven (pendiente: probar con un usuario nuevo o borrar la inscripción). Ojo: Enter de más en la lista del torneo abre «Matchmaking / Buscando oponente»; se cancela con Esc → «¿Cancelar?» → Derecha (Sí).
 
+- 12-nov 00:40 (Lima, sesión online nueva, PES base): ENSAYO COMPLETO tras el arreglo UDP (97be73a/a38165f). Servidor reiniciado con código nuevo: «gamerelay UDP en 5100», sin aviso CONNRESET. Entrar online: sin VNBP. Torneo Phoenix «Reanudar»: NO pide Términos, sí pide elegir equipo (Jupiler → ANDERLECHT). `rival_falso --revision` con PES_LEAGUE, OC_RANK, OC_QUICK y MATCHDAY: pareja → el relé responde al KX de 127.0.0.1 → chequeo de red OK → barrera liberada → carga → el PES abandona por «error imprevisto» (mismo techo: falta un segundo PES real). Ojo: en Divisiones/Partida rápida hay que pulsar «Ir a Matchmaking» (la fila «Invitado» abre otra pantalla). Certificado TURN con las IP de la PC (6586a31: 169.254.x y 192.168.x; aquí no hay Tailscale). Paquete de diagnóstico (3 h): 1,4 MB, 0 coincidencias de SteamID/secreto/base64. Copia previa a la prueba del amigo en `respaldosntes_prueba_amigo_*` (local, no se sube). Actualización propia 99ace2e: ofrecida y bajada sin error.
