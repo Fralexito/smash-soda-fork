@@ -5597,8 +5597,13 @@ class Servidor:
             # current_online_mode, is_join_online_mode; tipos aún sin ver: van solo los seguros
             # L (Ghidra 12-nov, FUN_141de2b50): last_login = ENTERO (epoch; sin él «Último acceso» sale 31/12/1969),
             # is_follow / is_join_online_mode = texto. Probado en el PES con clan_miembro_extra.
+            # «Miembros en línea» (probado en el PES 12-nov): con is_join_online_mode "YES" muestra el texto
+            # del enum current_online_mode («MYCLUB» -> «myClub»); sin él «No String». Conectado = tiene sesión.
+            en_linea = any((x.steam_hex or "").lower() == (clave or "").lower() for x in self.sesiones)
             u.update({"coop_level": 1, "is_follow": "NO", "last_login": int(time.time()),
-                      "is_join_online_mode": "NO"})
+                      "is_join_online_mode": "YES" if en_linea else "NO"})
+            if en_linea:
+                u["current_online_mode"] = "MYCLUB"
             u.update((self.cfg.get("myclub") or {}).get("clan_miembro_extra") or {})
         return Empaquetado(u)
 
