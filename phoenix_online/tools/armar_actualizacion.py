@@ -5,6 +5,8 @@ Uso (en la PC del servidor):
 
 <carpeta_con_tablas> lleva las tablas de la base del parche TAL COMO están en el parche (ya empaquetadas
 WESYS), por ejemplo Player.bin, PlayerAssignment.bin, Team.bin, Coach.bin... Van a common/etc/pesdb/.
+Con «-» como carpeta se arma una actualización de PRUEBA que solo lleva version_wu.bin (no cambia
+ningún dato del juego): sirve para comprobar que el PES la baja y la monta.
 La versión tiene que SUBIR cada vez que se publica otra («1.02» -> «1.03»), si no el PES no la baja.
 Nunca subir el .cpk ni las tablas a GitHub (son datos del juego/parche).
 """
@@ -17,8 +19,8 @@ from phoenix_online import actualizacion  # noqa: E402
 
 
 def main(version, carpeta, salida):
-    tablas = sorted(x for x in os.listdir(carpeta) if x.lower().endswith(".bin"))
-    if not tablas:
+    tablas = [] if carpeta == "-" else sorted(x for x in os.listdir(carpeta) if x.lower().endswith(".bin"))
+    if not tablas and carpeta != "-":
         sys.exit(f"no hay .bin en {carpeta}")
     with tempfile.TemporaryDirectory() as tmp:
         ver = os.path.join(tmp, "version_wu.bin")
