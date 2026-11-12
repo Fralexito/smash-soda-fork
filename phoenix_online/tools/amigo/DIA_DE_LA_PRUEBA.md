@@ -53,3 +53,9 @@ Tu amigo ejecuta `DESCONECTAR_PHOENIX.bat` (como administrador).
 - «MXNV_0013» al conectar entre los dos: el enlace directo falló; va por el relé TURN (revisa que el relé esté en el log).
 - «SGJC_0007»: el PES intentó la IP pública desde la misma casa; usa la IP de Tailscale.
 - Para dejar todo como estaba: sección «Reversa».
+
+## 4. Paquete de diagnóstico (después de la prueba, o si algo falla)
+En la carpeta del servidor: `powershell -ExecutionPolicy Bypass -File tools\paquete_diagnostico.ps1`
+Crea `diagnostico_<fecha>` con el log del servidor, el `sider.log` del PES base y un resumen del estado, con SteamID, hashes y tokens tachados.
+No copia `config.json`, claves, la base de datos ni las capturas. Solo lee y copia. **No lo subas a GitHub** (`diagnostico_*` está en `.gitignore`).
+Para borrarlo: elimina esa carpeta.

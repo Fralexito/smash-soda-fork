@@ -9,3 +9,5 @@ __pycache__/
 turn/
 actualizacion/
 *.cpk
+
+diagnostico_*/
