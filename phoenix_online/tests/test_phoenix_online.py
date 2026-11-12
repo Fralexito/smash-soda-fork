@@ -3453,6 +3453,24 @@ class TestRegalosPlanoTop(unittest.TestCase):
                          ("NOERR", 7, 50, 1))
         self.assertEqual(r["receive_result_list"][0]["result"], "NOERR")
 
+    def test_modo_elemento_item_es_la_forma_del_lector(self):
+        datos = Datos(":memory:")
+        srv = Servidor({"urls": {}, "myclub": {"regalos_respuesta": "elemento_item"}}, datos)
+        s = Sesion(lambda *a: None, ("x", 1), "MENU")
+        s.steam_hex = "00000000000000a3"
+        club = datos.club(s.steam_hex) or {}
+        club.update({"gp": 0, "regalos": [{"id": 9, "tipo": "gp", "cantidad": 50, "hasta": 4102444800}]})
+        datos.guardar_club(s.steam_hex, club)
+        srv._sesion_http = lambda f, ip: s
+        srv._club_propio = lambda ses: datos.club(ses.steam_hex)
+        r = srv.recibir_regalos({"present_id": "9"})
+        e = r["receive_result_list"][0]
+        self.assertEqual(sorted(e), ["item", "result"])
+        self.assertEqual((e["result"], e["item"]["present_id"], e["item"]["count"]), ("NOERR", 9, 50))
+        self.assertEqual(e["item"]["item"][0]["count"], 50)
+        self.assertEqual(e["item"]["skill"], [])
+        self.assertEqual(datos.club(s.steam_hex)["gp"], 50)
+
     def test_modo_ficha_result_manda_ficha_anidada_con_result(self):
         datos = Datos(":memory:")
         srv = Servidor({"urls": {}, "myclub": {"regalos_respuesta": "ficha_result"}}, datos)

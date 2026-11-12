@@ -4501,6 +4501,24 @@ class Servidor:
             primero.setdefault("pes_point_price", 0)
             return {"result": "NOERR", **primero, "receive_result_list_num": len(salida),
                     "receive_result_list": salida}
+        if modo == "elemento_item":
+            # L (Ghidra 12-nov, FUN_141cd7f00 descompilado entero): cada elemento de receive_result_list
+            # es un MAPA DIRECTO {"item": <ficha del regalo>, "result": <texto>}. Dentro de la ficha,
+            # «skill» e «item» son LISTAS de mapas directos (sin bin). El result por elemento vale
+            # «NotImplement» si falta. Textos de prueba en caliente: myclub.regalos_result_elemento y
+            # myclub.regalo_type_gp (el type «GP» se pinta como «Monedas de myClub»).
+            mc = self.cfg.get("myclub") or {}
+            res_elem = str(mc.get("regalos_result_elemento") or "NOERR")
+            elems = []
+            for f in fichas:
+                e = dict(f.valor)
+                if e.get("type") == "GP" and mc.get("regalo_type_gp"):
+                    e["type"] = str(mc["regalo_type_gp"])
+                e["skill"] = [{"skill_category": "", "skill_id": 0}] if mc.get("regalos_skill_lleno") else []
+                e["item"] = [dict(e["item"].valor)]
+                elems.append({"item": e, "result": res_elem})
+            return {"result": "NOERR" if elems else "ERR_NOTFOUND",
+                    "receive_result_list_num": len(elems), "receive_result_list": elems}
         if modo in ("ficha_result", "ficha_result_mapa"):
             # Prueba 12-nov: combinación nunca probada. El lector (FUN_141cd7f00) lee por elemento la
             # ficha ANIDADA (item{…}, skill{…}) Y una clave result; «normal» manda result pero plano,
