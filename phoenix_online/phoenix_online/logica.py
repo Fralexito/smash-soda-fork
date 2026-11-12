@@ -4501,6 +4501,18 @@ class Servidor:
             primero.setdefault("pes_point_price", 0)
             return {"result": "NOERR", **primero, "receive_result_list_num": len(salida),
                     "receive_result_list": salida}
+        if modo in ("ficha_result", "ficha_result_mapa"):
+            # Prueba 12-nov: combinación nunca probada. El lector (FUN_141cd7f00) lee por elemento la
+            # ficha ANIDADA (item{…}, skill{…}) Y una clave result; «normal» manda result pero plano,
+            # y «ficha» manda anidado pero sin result. Aquí van las dos cosas juntas.
+            completas = []
+            for f in fichas:
+                e = dict(f.valor)
+                e["skill"] = Empaquetado({"skill_category": "", "skill_id": 0})
+                e["result"] = "NOERR"
+                completas.append(Empaquetado(e) if modo == "ficha_result" else e)
+            return {"result": "NOERR" if completas else "ERR_NOTFOUND",
+                    "receive_result_list_num": len(completas), "receive_result_list": completas}
         if modo == "ficha":
             return {"result": "NOERR" if fichas else "ERR_NOTFOUND",
                     "receive_result_list_num": len(fichas), "receive_result_list": fichas}

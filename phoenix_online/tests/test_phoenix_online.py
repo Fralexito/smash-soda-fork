@@ -3452,3 +3452,19 @@ class TestRegalosPlanoTop(unittest.TestCase):
         self.assertEqual((r["result"], r["present_id"], r["count"], r["receive_result_list_num"]),
                          ("NOERR", 7, 50, 1))
         self.assertEqual(r["receive_result_list"][0]["result"], "NOERR")
+
+    def test_modo_ficha_result_manda_ficha_anidada_con_result(self):
+        datos = Datos(":memory:")
+        srv = Servidor({"urls": {}, "myclub": {"regalos_respuesta": "ficha_result"}}, datos)
+        s = Sesion(lambda *a: None, ("x", 1), "MENU")
+        s.steam_hex = "00000000000000a2"
+        club = datos.club(s.steam_hex) or {}
+        club.update({"gp": 0, "regalos": [{"id": 8, "tipo": "gp", "cantidad": 50, "hasta": 4102444800}]})
+        datos.guardar_club(s.steam_hex, club)
+        srv._sesion_http = lambda f, ip: s
+        srv._club_propio = lambda ses: datos.club(ses.steam_hex)
+        r = srv.recibir_regalos({"present_id": "8"})
+        e = r["receive_result_list"][0].valor
+        self.assertEqual((e["result"], e["present_id"], e["count"], e["item"].valor["count"]),
+                         ("NOERR", 8, 50, 50))
+        self.assertEqual(e["skill"].valor, {"skill_category": "", "skill_id": 0})
