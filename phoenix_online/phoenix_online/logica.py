@@ -7196,6 +7196,10 @@ class Servidor:
             if msgid.endswith("_BYID"):
                 r = self._solo_buscado(r, formulario)
             return {**base, **r}
+        if msgid in ("CMD_GET_CLAN_RANKING", "CMD_GET_CLAN_RANKING_BYID"):
+            # Probado en el PES 12-nov: el ranking de clanes llega por HTTP (POST //clan_ranking con
+            # division, is_old_season, is_myclub, start_index, view_num), no por el socket del menú
+            return {**base, **self._ranking_clanes(formulario)}
         if msgid in ("CMD_GET_MYCLUB_WEEKLY_RANKING", "CMD_GET_MYCLUB_WEEKLY_RANKING_BYID"):
             # B.7: sin torneo semanal propio todavía: respuesta vacía válida
             return {**base, "date": int(time.time()), "total_rank_num": 0, "rank_list": [],
