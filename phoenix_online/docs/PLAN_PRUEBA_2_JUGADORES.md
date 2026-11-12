@@ -40,7 +40,7 @@ Objetivo (Frank, 12-nov): dejar todo el apartado online listo para que, en la pr
 
 ## C. Reglas del día
 
-- Nadie reinicia el servidor con un PES dentro del online.
+- Nadie reinicia el servidor con un PES ABIERTO (el menú principal del PES también cuenta como online: conserva la sesión y se cuelga). Si hace falta reiniciar: cerrar los dos PES, reiniciar, volver a abrirlos.
 - Cada fallo: hora exacta, pantalla, mensaje y código; el servidor guarda el resto.
 - Al final: paquete de diagnóstico + copia de seguridad.
 - Si algo grave bloquea, apagar solo ese módulo con su interruptor y seguir con los demás.
