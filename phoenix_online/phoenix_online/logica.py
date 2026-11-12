@@ -2418,6 +2418,12 @@ class Servidor:
                 if tipo == "PESLEAGUE" and (p.get("categoria") != "PESLEAGUE" or (cid and p.get("compe") != cid)):
                     continue
                 filas.append(self._fila_resultado(p))
+        elif tipo == "MYCLUB" and s.steam_hex:
+            # myClub «Últimos 20 partidos» (Estadíst.): los partidos vs COM del club (club["vscom"]["historial"]);
+            # el PES no manda el marcador en SET_MYCLUB_VSCOM_GAMERESULT, así que se muestra 1-0 / 0-0 / 0-1
+            club = self.datos.club(s.steam_hex) or {}
+            for h in list(reversed((club.get("vscom") or {}).get("historial") or []))[:20]:
+                filas.append(self._fila_resultado(self._partido_vscom_fila(s, h)))
         else:
             for partido in self._estado_division(s.steam_hex)["resultados"][:div.MAX_RESULTADOS]:
                 p = self.datos.partido_division(partido)
@@ -2433,6 +2439,15 @@ class Servidor:
             return {"rlist_num": 0, "rlist": [], "no_match": "YES"}
         return {"rlist_num": len(filas), "rlist": filas}
 
+    def _partido_vscom_fila(self, s, h):
+        """Fila de resultado para un partido vs COM de myClub (marcador aproximado por el desenlace)."""
+        g = {"WIN": (1, 0), "DRAW": (0, 0), "LOSE": (0, 1)}.get(h.get("desenlace"), (0, 0))
+        nombre = (self.datos.jugador(s.steam_hex or "") or {}).get("pname") or s.pname or ""
+        return {"date": int(h.get("hora") or 0), "categoria": "VSCOM",
+                "reason": str((h.get("datos") or {}).get("gameend_reason") or "NORMAL_END"),
+                "home": {"pid": self._pid_visible(s), "name": nombre, "team": 0, "score": g[0]},
+                "away": {"pid": 0, "name": "COM", "team": 0, "score": g[1], "com": True}}
+
     @staticmethod
     def _fila_resultado(p):
         def marcador(g):
@@ -2445,13 +2460,13 @@ class Servidor:
                                                                                   "online_id": f["name"],
                                                                                   "is_valid_cache": "NO"}),
                                                       "is_deleted": "NO"}),
-                                "pid": f["pid"], "side": lado, "is_com": "NO", "cpu_level": "0",
+                                "pid": f["pid"], "side": lado, "is_com": "YES" if f.get("com") else "NO", "cpu_level": "0",
                                 "is_follow": "NO", "is_guest": "NO"})
         casa, fuera = p["home"], p["away"]
         # R (pesresults.CATEGORY AzrakHQ, en vivo 07-nov): nombre exacto del enum del PES; Partida
         # rápida, sala y desconocidos van como PESLEAGUE_LOBBY (sin etiqueta), Cooperativo ONLINE_COOP
         categoria = {"RANK": "RANK_MATCH", "MATCHDAY": "MATCHDAY", "COOP": "ONLINE_COOP",
-                     "PESLEAGUE": "PESLEAGUE_LOBBY"}.get(p.get("categoria") or "", "PESLEAGUE_LOBBY") \
+                     "PESLEAGUE": "PESLEAGUE_LOBBY", "VSCOM": "VSCOM_MATCH"}.get(p.get("categoria") or "", "PESLEAGUE_LOBBY") \
             if p.get("categoria") else "ONLINE_DIVISIONS"
         return Empaquetado({"date": int(p["date"]), "match_category": categoria, "ex_type": "NONE",
                             "gameend_reason": p.get("reason") or "NORMAL_END", "pk_flag": "NO",

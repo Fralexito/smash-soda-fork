@@ -3234,6 +3234,25 @@ class TestMyClubExtra(unittest.IsolatedAsyncioTestCase):
         await srv.c_cmd_entry_myclub_weekly_ranking(x, {"is_entry": "YES"})
         self.assertTrue(srv.datos.club("aa")["semanal_inscrito"])
 
+    async def test_ultimos_partidos_myclub(self):
+        """Estadíst. «Últimos 20 partidos» pide game_res_type MYCLUB: salen los partidos vs COM del club."""
+        from phoenix_online.logica import Sesion
+        srv = Servidor({**CFG, "myclub": {}}, Datos())
+        x = Sesion(lambda *a: None, ("127.0.0.1", 1), "MENU")
+        x.steam_hex = "aa"
+        r = await srv.c_cmd_get_gameresults(x, {"game_res_type": "MYCLUB"})
+        self.assertEqual((r["rlist_num"], r["no_match"]), (0, "YES"))  # sin partidos: vacío válido
+        hist = [{"hora": 1000 + i, "desenlace": d, "gp": 120, "datos": {"gameend_reason": "NORMAL_END"}}
+                for i, d in enumerate(("WIN", "DRAW", "LOSE"))]
+        srv.datos.guardar_club("aa", {"team_name": "Phoenix FC", "vscom": {"partidos": 3, "historial": hist}})
+        r = await srv.c_cmd_get_gameresults(x, {"game_res_type": "MYCLUB"})
+        self.assertEqual(r["rlist_num"], 3)
+        nueva = r["rlist"][0].valor  # el más reciente primero (LOSE)
+        self.assertEqual(nueva["match_category"], "VSCOM_MATCH")
+        self.assertEqual([e.valor["score_1st"] for e in nueva["score"]], [0, 1])
+        self.assertEqual(nueva["player"][1].valor["is_com"], "YES")
+        self.assertEqual(nueva["player"][0].valor["is_com"], "NO")
+
 
 class TestRankingsHttp(unittest.IsolatedAsyncioTestCase):
     """B.0/B.12: rankings de myClub y Divisiones por HTTP (urltype con nombre) + URLs en la lista."""
