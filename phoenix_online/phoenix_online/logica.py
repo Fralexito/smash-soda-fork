@@ -4483,6 +4483,19 @@ class Servidor:
                 e["result"] = ""
             elif modo == "cero":
                 e["result"] = 0
+        if modo in ("plano_top", "plano_top_ficha") and salida:
+            # Prueba 12-nov: el aviso «máximo» sale aun con solo_top, o sea no viene de la lista. El
+            # commands.json de AzrakHQ da a esta respuesta campos PLANOS arriba (present_id, name, item,
+            # count, item_type…) además de la lista: se manda el primer regalo también plano
+            primero = dict(fichas[0].valor) if (modo == "plano_top_ficha" and fichas) else dict(salida[0])
+            primero.pop("result", None)
+            primero.setdefault("present_id", int(cobrar[0]["id"]))
+            primero.setdefault("body", "")
+            primero.setdefault("type", self._datos_regalo(cobrar[0])[0])
+            primero.setdefault("item_effect_arg", 0)
+            primero.setdefault("pes_point_price", 0)
+            return {"result": "NOERR", **primero, "receive_result_list_num": len(salida),
+                    "receive_result_list": salida}
         if modo == "ficha":
             return {"result": "NOERR" if fichas else "ERR_NOTFOUND",
                     "receive_result_list_num": len(fichas), "receive_result_list": fichas}

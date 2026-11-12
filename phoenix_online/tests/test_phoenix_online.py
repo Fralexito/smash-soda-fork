@@ -3435,3 +3435,20 @@ class TestLivedataActualizacion(unittest.TestCase):
             srv.cfg["carpeta_actualizacion"] = _o.path.join(d, "vacia")
             r = srv.respuesta_livedata("LiveDataSetFlow", {"msgid": "CMD_GET_DLC_FILELIST", "rqid": "4"})
             self.assertEqual(r["dlcfile_list_count"], 0)
+
+
+class TestRegalosPlanoTop(unittest.TestCase):
+    def test_modo_plano_top_manda_el_primer_regalo_tambien_plano(self):
+        datos = Datos(":memory:")
+        srv = Servidor({"urls": {}, "myclub": {"regalos_respuesta": "plano_top"}}, datos)
+        s = Sesion(lambda *a: None, ("x", 1), "MENU")
+        s.steam_hex = "00000000000000a1"
+        club = datos.club(s.steam_hex) or {}
+        club.update({"gp": 0, "regalos": [{"id": 7, "tipo": "gp", "cantidad": 50, "hasta": 4102444800}]})
+        datos.guardar_club(s.steam_hex, club)
+        srv._sesion_http = lambda f, ip: s
+        srv._club_propio = lambda ses: datos.club(ses.steam_hex)
+        r = srv.recibir_regalos({"present_id": "7"})
+        self.assertEqual((r["result"], r["present_id"], r["count"], r["receive_result_list_num"]),
+                         ("NOERR", 7, 50, 1))
+        self.assertEqual(r["receive_result_list"][0]["result"], "NOERR")
