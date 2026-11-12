@@ -5595,7 +5595,10 @@ class Servidor:
         if ampliado:
             # P: en listas de miembros el PES lee además coop_level, is_follow, last_login,
             # current_online_mode, is_join_online_mode; tipos aún sin ver: van solo los seguros
-            u.update({"coop_level": 1, "is_follow": "NO"})
+            # L (Ghidra 12-nov, FUN_141de2b50): last_login = ENTERO (epoch; sin él «Último acceso» sale 31/12/1969),
+            # is_follow / is_join_online_mode = texto. Probado en el PES con clan_miembro_extra.
+            u.update({"coop_level": 1, "is_follow": "NO", "last_login": int(time.time()),
+                      "is_join_online_mode": "NO"})
             u.update((self.cfg.get("myclub") or {}).get("clan_miembro_extra") or {})
         return Empaquetado(u)
 
