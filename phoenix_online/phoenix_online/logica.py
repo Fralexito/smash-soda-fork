@@ -1835,8 +1835,12 @@ class Servidor:
         puntos[cid] = int(puntos.get(cid) or 0) + pts
         jugados[cid] = int(jugados.get(cid) or 0) + 1
         club["matchday_pendiente"] = int(club.get("matchday_pendiente") or 0) + pts
+        e = next((x for x in self._torneos("matchday") if str(x["compe_id"]) == cid), None)
+        gp = self._premios_matchday(e or {}).get("WIN" if res == "WIN" else "LOSE", 0)
+        if gp:
+            club["gp"] = int(club.get("gp") or 0) + gp
         self.datos.guardar_club(s.steam_hex, club)
-        log.info("Matchday %s: %s +%d (torneo %s)", s.pid, res, pts, cid)
+        log.info("Matchday %s: %s +%d puntos +%d GP (torneo %s)", s.pid, res, pts, gp, cid)
 
     def _resultado_pesleague(self, s, pareja, m):
         """R (pestourney.record AzrakHQ): Torneo en línea, 3 por victoria y 1 por empate, con G/E/P y goles.
@@ -1894,22 +1898,50 @@ class Servidor:
     async def c_cmd_get_matchday_watch_match_reward(self, s, m):
         return {"is_exist_watch_match_reward": "NO", "watch_match_reward_list": []}
 
+    def _filas_matchday(self, cid, grupo=None):
+        """Inscritos de un torneo Matchday (de un bando, o de todos con grupo None), ordenados:
+        [(puntos, jugados, clave, team_id, grupo)]."""
+        filas = []
+        for clave in self.datos.claves_de_clubes():
+            club = self.datos.club(clave) or {}
+            suyo = (club.get("matchday_equipo") or {}).get(str(cid))
+            if not suyo or (grupo is not None and (suyo.get("grupo") or "") != grupo):
+                continue
+            filas.append((int((club.get("matchday_puntos") or {}).get(str(cid)) or 0),
+                          int((club.get("matchday_jugados") or {}).get(str(cid)) or 0), clave,
+                          int(suyo.get("team_id") or 0), str(suyo.get("grupo") or "")))
+        filas.sort(key=lambda f: (-f[0], f[1], f[2]))
+        return filas
+
+    def _premios_matchday(self, e):
+        """GP por partido de Matchday: torneo "premios" = {"WIN": gp, "LOSE": gp} (el empate cobra
+        LOSE). "premios": "NO" lo apaga. Se muestran en INFO (all_reward_info) y se pagan al final."""
+        p = e.get("premios")
+        if p == "NO":
+            return {}
+        p = p if isinstance(p, dict) else {}
+        return {k: int(p.get(k, d)) for k, d in (("WIN", 1000), ("LOSE", 300)) if isinstance(p.get(k, d), int)}
+
+    def _info_premios_matchday(self, e):
+        """R (matchday2.md AzrakHQ Q3): all_reward_info es un ARRAY con un bin {achievement_reward_list,
+        required_point_final_reward, win/lose/watching/pickup_*_reward_list [regalos], pickup_reward_type}.
+        Nunca un bin suelto (cerraba el PES). myclub.matchday_premios_info = "NO" vuelve a []."""
+        premios = self._premios_matchday(e)
+        if not premios or str((self.cfg.get("myclub") or {}).get("matchday_premios_info", "SI")) == "NO":
+            return []
+        lista = lambda k, n: [self._premio_gp(n, premios[k], cantidad=premios[k])] if premios.get(k) else []
+        return [Empaquetado({"achievement_reward_list": [], "required_point_final_reward": 0,
+                             "win_reward_list": lista("WIN", 1), "lose_reward_list": lista("LOSE", 2),
+                             "watching_reward_list": [], "pickup_win_reward_list": [],
+                             "pickup_lose_reward_list": [], "pickup_reward_type": "MATCHDAY_PICKUP_REWARD_NONE"})]
+
     async def c_cmd_get_matchday_ranking(self, s, m):
         """Ranking de MI bando: entradas bin {pname: bin{pid, pname: bin{...}}, entry_name, team_id, rank,
         matchday_point, recode_date} (forma comprobada por AzrakHQ en el parser del PES)."""
         cid = str(self._cid_torneo(s, m, "matchday") or 0)
         mio = ((self.datos.club(s.steam_hex) or {}).get("matchday_equipo") or {}).get(cid) if s.steam_hex else None
         grupo = (mio or {}).get("grupo") or ""
-        filas = []
-        for clave in self.datos.claves_de_clubes():
-            club = self.datos.club(clave) or {}
-            suyo = (club.get("matchday_equipo") or {}).get(cid)
-            if not suyo or (suyo.get("grupo") or "") != grupo:
-                continue
-            filas.append((int((club.get("matchday_puntos") or {}).get(cid) or 0),
-                          int((club.get("matchday_jugados") or {}).get(cid) or 0), clave,
-                          int(suyo.get("team_id") or 0)))
-        filas.sort(key=lambda f: (-f[0], f[1], f[2]))
+        filas = self._filas_matchday(cid, grupo)
         try:
             inicio = max(0, int(m.get("start_index") or 0))
             cuantos = max(1, min(100, int(m.get("view_num") or 100)))
@@ -1917,7 +1949,7 @@ class Servidor:
             inicio, cuantos = 0, 100
         ahora = int(time.time())
         lista = []
-        for rank, (pts, _n, clave, equipo) in enumerate(filas, 1):
+        for rank, (pts, _n, clave, equipo, _g) in enumerate(filas, 1):
             if rank <= inicio or len(lista) >= cuantos:
                 continue
             lista.append(Empaquetado({"pname": self._usuario_plano(clave), "entry_name": "", "team_id": equipo,
@@ -5591,7 +5623,9 @@ class Servidor:
         base = {"a": [101, 108, 114, 127], "b": [100, 116, 120, 131]}[lado]
         equipos = [int(x) for x in (e.get(f"equipos_{lado}") or base) if isinstance(x, int)]
         equipos += [x for x in self._equipos_bando(e, lado) if x not in equipos]
-        return Empaquetado({"team_list": equipos, "team_list_num": len(equipos), "group_name": nombre, "group_desc": "",
+        # Texto de la tarjeta del bando (con group_desc "" la tarjeta salía sin texto, matchday2.md)
+        desc = str(e.get(f"bando_{lado}_texto") or "Elige un equipo de este bando y suma puntos para tu lado.")
+        return Empaquetado({"team_list": equipos, "team_list_num": len(equipos), "group_name": nombre, "group_desc": desc,
                             "is_entry_restricted": "NO", "pre_pickup_users_pid_list": []})
 
     @staticmethod
@@ -5660,7 +5694,7 @@ class Servidor:
                 "is_equalization": "NO", "is_pesleague_stadium": "NO", "is_efootball_pro_stadium": "NO",
                 "joined_matchday_group": str(mio.get("grupo") or ""), "pickup_select": "NO",
                 "team_id": int(mio.get("team_id") or 0), "pickup_cut_off_rank": 0, "team_list_num": 0,
-                "all_reward_info": [], "achievement_reward_list": [],
+                "all_reward_info": self._info_premios_matchday(e), "achievement_reward_list": [],
                 "win_reward_list": [], "lose_reward_list": [],
                 "watching_reward_list": [], "pickup_win_reward_list": [],
                 "pickup_lose_reward_list": [], "squad_rating_info": self._valoracion_plantilla()}
@@ -5706,12 +5740,19 @@ class Servidor:
         if s.steam_hex and str(cfgm.get("matchday_pickup_yo", "NO")) != "NO":
             yo = self._usuario_plano((s.steam_hex or "").lower())
             (lista_b if grupo.upper().endswith("_B") else lista_a).append(yo)
+        # Clasificación real (antes 0 de 0): mi puesto en mi bando y la suma de puntos de cada bando
+        todas = self._filas_matchday(cid) if cid else []
+        mi_bando = [f for f in todas if f[4] == str(mio.get("grupo") or "")] if mio else []
+        mi_puesto = next((i for i, f in enumerate(mi_bando, 1) if f[2] == (s.steam_hex or "").lower()
+                          or f[2] == s.steam_hex), 0)
+        total_a = sum(f[0] for f in todas if f[4].upper().endswith("_A"))
+        total_b = sum(f[0] for f in todas if f[4].upper().endswith("_B"))
         return {"mainmenu_info": Empaquetado({
             "matchday_progress": str(cfgm.get("matchday_progreso") or "MATCHDAY_PROGRESS_GROUP_MATCH"),
             "group_match_info": Empaquetado({
-                "matchday_point": int(puntos.get(str(cid)) or 0), "matchday_rank": 0,
-                "matchday_ranking_user_num": 0, "matchday_ratio": 0,
-                "total_matchday_point_group_a": 0, "total_matchday_point_group_b": 0,
+                "matchday_point": int(puntos.get(str(cid)) or 0), "matchday_rank": mi_puesto,
+                "matchday_ranking_user_num": len(mi_bando), "matchday_ratio": 0,
+                "total_matchday_point_group_a": total_a, "total_matchday_point_group_b": total_b,
                 "pickup_match_score_group_a": 0, "pickup_match_score_group_b": 0,
                 "is_hide_graph": "NO"}),  # R: va DENTRO de group_match_info (matchday2.md)
             "pickup_user_info": Empaquetado({"pickup_users_group_a": lista_a, "pickup_users_group_b": lista_b,

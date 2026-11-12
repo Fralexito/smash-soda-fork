@@ -1331,6 +1331,22 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         rk = await self.srv.c_cmd_get_matchday_ranking(b, {"compe_id": 3})
         self.assertEqual((rk["list_max"], rk["rank_list"][0].valor["matchday_point"],
                           rk["rank_list"][0].valor["team_id"]), (2, 3, 101))
+        # clasificación real en el menú (puesto 1 de 2, bando A con 3) y GP por victoria pagados
+        mm = (await self.srv.c_cmd_get_matchday_mainmenu_info(b, {"compe_id": 3}))["mainmenu_info"].valor
+        gi = mm["group_match_info"].valor
+        self.assertEqual((gi["matchday_rank"], gi["matchday_ranking_user_num"], gi["total_matchday_point_group_a"]),
+                         (2, 2, 3))
+        gi_a = (await self.srv.c_cmd_get_matchday_mainmenu_info(a, {"compe_id": 3}))["mainmenu_info"].valor
+        self.assertEqual(gi_a["group_match_info"].valor["matchday_rank"], 1)
+        self.assertGreaterEqual(int((self.srv.datos.club(a.steam_hex) or {}).get("gp") or 0), 1000)
+        # premios visibles: all_reward_info es un ARRAY con un bin (nunca bin suelto); "NO" lo apaga
+        e = {"compe_id": 3, "premios": {"WIN": 800, "LOSE": 200}}
+        info = self.srv._info_premios_matchday(e)
+        self.assertIsInstance(info, list)
+        self.assertEqual(info[0].valor["win_reward_list"][0].valor["count"], 800)
+        self.assertEqual(self.srv._info_premios_matchday({"premios": "NO"}), [])
+        msgpack_min.packb({"all_reward_info": info})
+        self.assertIn("suma puntos", self.srv._bando_matchday({"compe_id": 3}, "a").valor["group_desc"])
         # aviso urgente: una vez por persona
         self.srv.cfg["aviso_urgente"] = {"id": 7, "titulo": "Hola", "texto": "Mantenimiento 22:00"}
         u = await self.srv.c_cmd_get_urgent_announcement(a, {})
@@ -1630,6 +1646,7 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.assertGreater(sobre["end_group_match_date"], 0)
         self.assertEqual(res()["compe_info"].valor["is_check_eula"], "NO")
         self.assertEqual(res()["compe_info"].valor["win_reward_list"], [])  # premios = lista
+        self.assertIsInstance(res()["compe_info"].valor["all_reward_info"], list)  # array, nunca bin
         await r(a, 43, {"msgid": "CMD_JOIN_MATCHDAY", "rqid": 43, "compe_id": 0, "team_id": 174,
                         "entry_matchday_group": "MATCHDAY_GROUP_A"})
         self.assertIn("squad_rating_info", res())
