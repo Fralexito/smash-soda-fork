@@ -11,7 +11,7 @@ Sirven para cuando una parte del online falla durante la prueba. Se apaga solo e
    "interruptores": { "apagados": ["matchday", "chat"], "error": "ERR_SERVERNOTREADY" }
    ```
 
-3. Guardar el archivo. El servidor lo lee solo en la siguiente petición de cualquier PES, y en su log aparece «recargado en caliente … apagados=[…]».
+3. Guardar el archivo. El servidor lo lee solo en unos 5 segundos, y en su log aparece «recargado en caliente … apagados=[…]».
 4. Para volver a encenderlo, quitar el nombre de la lista y guardar.
 
 Cuando un módulo está apagado, el PES que intenta entrar recibe un error y vuelve al menú. Lo demás sigue igual. Cada rechazo queda en el log como «interruptor: módulo X apagado».
