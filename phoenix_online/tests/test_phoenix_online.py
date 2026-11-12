@@ -150,7 +150,7 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         s, env = cliente(self.srv)
         await self.srv.recibir(s, 42, {"msgid": "CMD_GET_URLLIST", "rqid": 9})
         seq, m = env[-1]
-        self.assertEqual((seq, m["rqid"], m["result"], m["url_num"]), (42, 9, "NOERR", 26))  # +6 URLs HTTP de rankings y regalos (ESPEC B.0)
+        self.assertEqual((seq, m["rqid"], m["result"], m["url_num"]), (42, 9, "NOERR", 28))  # +8 URLs HTTP de rankings y regalos (ESPEC B.0)
         self.assertTrue(all(isinstance(x, Empaquetado) for x in m["ulist"]))
 
     async def test_login_real_steam_challenge_account(self):
@@ -1126,6 +1126,22 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(res()["present_list_num"], 0)  # la bienvenida no se repite
         await r(a, 7, {"msgid": "CMD_GET_MYCLUB_ACHIEVEMENTLIST", "rqid": 7})
         self.assertEqual(res()["achievement_list_num"], 1)
+
+    async def test_ranking_de_clanes(self):
+        """Ghidra 12-nov: clan_ranking = lista de mapas directos + dos contadores."""
+        a, ea = await self.entrar("R1")
+        r = self.srv.recibir
+        await r(a, 1, {"msgid": "CMD_CREATE_CLAN", "rqid": 1, "clan_name": "Rank"})
+        await r(a, 2, {"msgid": "CMD_GET_CLAN_RANKING", "rqid": 2, "start_index": 0, "view_num": 100})
+        x = ea[-1][1]
+        self.assertEqual((x["clan_ranking_num"], x["clan_ranking_all_list_num"]), (1, 1))
+        f = x["clan_ranking"][0]
+        self.assertEqual((f["rank"], f["basic_settings"]["clan_name"]), (1, "Rank"))
+        self.assertIn("user_id", f["basic_settings"]["owner_info"])
+        self.assertEqual(f["match_stats"]["win_count"], 0)
+        await r(a, 3, {"msgid": "CMD_GET_CLAN_RANKING_BYID", "rqid": 3})
+        self.assertEqual(ea[-1][1]["clan_ranking_num"], 1)
+        msgpack_min.packb(ea[-1][1])
 
     async def test_clanes_crear_entrar_salir(self):
         """D.8: crear clan, verlo en la lista, otro entra, ajustes, expulsar y disolver."""

@@ -508,7 +508,9 @@ class Servidor:
                  ("MYCLUB_RANKING", "/myclub_ranking"), ("MYCLUB_RANKING_BYID", "/myclub_ranking_byid"),
                  ("MYCLUB_WEEKLY_RANKING", "/myclub_weekly_ranking"),
                  ("MYCLUB_WEEKLY_RANKING_BYID", "/myclub_weekly_ranking_byid"),
-                 ("RECV_MYCLUB_PRESENT", "/recv_myclub_present"))
+                 ("RECV_MYCLUB_PRESENT", "/recv_myclub_present"),
+                 # Ghidra 12-nov (FUN_141de2b50): ranking de clanes de Cooperativo
+                 ("CLAN_RANKING", "/clan_ranking"), ("CLAN_RANKING_BYID", "/clan_ranking_byid"))
     VERSIONES_EULA = ("eula_version", "eula_myclub_version", "eula_privacy_policy_version")
     VERSIONES_EULA_CERO = ("eula_privacy_notice_version", "eula_privacy_policy_california_version",
                            "eula_privacy_policy_japan_version")
@@ -5729,6 +5731,39 @@ class Servidor:
         return self._lista_que_cabe("CMD_GET_CLAN_LIST", filas, lambda f: {
             "clan_list": f, "clan_list_num": len(f), "all_list_num": len(todos), "start_index": inicio})
 
+    def _ranking_clanes(self, m):
+        """Lector FUN_141de2b50: clan_ranking = lista de MAPAS directos {rank, rating,
+        division_change_type, basic_settings{..., owner_info{user_id{...}, ...}}, match_stats{7 enteros}}."""
+        try:
+            inicio = max(0, int(m.get("start_index") or 0))
+            cuantos = min(100, max(1, int(m.get("view_num") or 50)))
+        except (TypeError, ValueError):
+            inicio, cuantos = 0, 50
+        todos = list(self.datos.clanes()) if self._clanes_activos() else []
+        todos.sort(key=lambda dc: (-len(dc[1].get("miembros") or []), (dc[1].get("nombre") or "").lower()))
+        lista = []
+        for i, (d, c) in enumerate(todos[inicio:inicio + cuantos]):
+            lista.append({"rank": inicio + i + 1, "rating": 0, "division_change_type": "NotImplement",
+                          "basic_settings": {"clan_name": c.get("nombre") or "",
+                                             "owner_info": dict(self._usuario_clave(d, ampliado=True).valor),
+                                             "enable_request": c.get("abierto") or "YES",
+                                             "clan_comment": c.get("comentario") or "", "is_banned": "NO"},
+                          "match_stats": dict(self._estadisticas_clan().valor["total_match_stats"].valor)})
+        return {"clan_ranking": lista, "clan_ranking_num": len(lista), "clan_ranking_all_list_num": len(todos)}
+
+    async def c_cmd_get_clan_ranking(self, s, m):
+        return self._ranking_clanes(m)
+
+    async def c_cmd_get_clan_ranking_byid(self, s, m):
+        r = self._ranking_clanes({"start_index": 0, "view_num": 100})
+        dueno, _c = self._clan_de((s.steam_hex or ""))
+        nombre = self._usuario_clave(dueno).valor["user_id"]["pid"] if dueno else None
+        if nombre is not None:
+            r["clan_ranking"] = [x for x in r["clan_ranking"]
+                                 if x["basic_settings"]["owner_info"]["user_id"]["pid"] == nombre]
+            r["clan_ranking_num"] = len(r["clan_ranking"])
+        return r
+
     async def c_cmd_get_clan_request_list(self, s, m):
         return {"request_info_list": [], "request_info_list_num": 0}
 
@@ -6166,10 +6201,6 @@ class Servidor:
 
     async def c_cmd_cancel_clan_invite(self, s, m):
         return {}
-
-    async def c_cmd_get_clan_ranking(self, s, m):
-        """Sin partidos de clan todavía: lista vacía (forma segura, no se ha visto la fila)."""
-        return {"clan_ranking": [], "clan_ranking_num": 0, "clan_ranking_all_list_num": 0}
 
     async def c_cmd_join_pesleague_compe_mode(self, s, m):
         return {}
