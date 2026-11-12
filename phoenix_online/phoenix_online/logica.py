@@ -4411,6 +4411,14 @@ class Servidor:
         # "normal" (result NOERR por elemento), "sin_result", "vacio" (""), "cero" (0),
         # "solo_top" (sin lista).
         modo = str((self.cfg.get("myclub") or {}).get("regalos_respuesta") or "normal")
+        # L (Ghidra 12-nov + reward_list semanal B.7): «skill» es un MAPA {skill_category, skill_id},
+        # no un entero; mandar 0 puede romper el elemento. myclub.regalos_skill: "plano" (como antes),
+        # "mapa" (mapa directo) o "bin" (mapa empaquetado)
+        forma = str((self.cfg.get("myclub") or {}).get("regalos_skill") or "plano")
+        if forma in ("mapa", "bin"):
+            for e in salida:
+                sk = {"skill_category": e.pop("skill_category", ""), "skill_id": e.pop("skill_id", 0)}
+                e["skill"] = Empaquetado(sk) if forma == "bin" else sk
         for e in salida:
             if modo == "sin_result":
                 e.pop("result", None)

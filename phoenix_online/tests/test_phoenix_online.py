@@ -1109,9 +1109,15 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
                                         "pid": str(a.pid), "present_id": str(primero), "is_all": "NO"})
         self.assertEqual(resp["receive_result_list_num"], 1)
         msgpack_min.packb(resp)
+        # «skill» como mapa {skill_category, skill_id} (interruptor myclub.regalos_skill)
+        self.srv.cfg.setdefault("myclub", {})["regalos_skill"] = "mapa"
         resp = self.srv.respuesta_http({"msgid": "CMD_RECV_MYCLUB_PRESENT", "rqid": "4",
                                         "pid": str(a.pid), "present_id": "0", "is_all": "YES"})
         self.assertEqual(resp["receive_result_list_num"], 2)
+        self.assertEqual(resp["receive_result_list"][0]["skill"], {"skill_category": "", "skill_id": 0})
+        self.assertNotIn("skill_id", resp["receive_result_list"][0])
+        msgpack_min.packb(resp)
+        del self.srv.cfg["myclub"]["regalos_skill"]
         await r(a, 5, {"msgid": "CMD_GET_MYCLUB_USER_INFO", "rqid": 5})
         self.assertEqual((res()["gp"], res()["pes_point"]), (5000, 20))
         club = self.srv.datos.club(a.steam_hex)
