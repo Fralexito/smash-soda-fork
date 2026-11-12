@@ -6125,7 +6125,7 @@ class Servidor:
         e = self._torneo_pesleague(m)
         if e is None:
             return {"result": "ERR_COMPE_NOTFOUND"}
-        return {"compe_data": Empaquetado({
+        datos = {
             "compe_id": e["compe_id"], "compe_name": str(e.get("compe_name") or f"Torneo {e['compe_id']}"),
             "is_myclub": "YES", "match_type": str(e.get("match_type") or ""), "start_date": e["inicio"],
             "end_date": e["fin"], "entry_limit_date": e["fin"], "match_end_date": e["fin"],
@@ -6139,7 +6139,11 @@ class Servidor:
             # Prueba 11-nov: con team_id 0 y entry_compe YES el PES volvía a pedir los Términos de Uso
             # (aceptación local, sin comando) y el equipo en cada «Reanudar torneo»: va el equipo inscrito
             "team_id": self._equipo_pesleague(s, e["compe_id"]),
-            "clan_info": Empaquetado({}), "compe_regulation": Empaquetado({}), "eula_url": ""})}
+            "clan_info": Empaquetado({}), "compe_regulation": Empaquetado({}), "eula_url": ""}
+        # R (pestourney.compe_info AzrakHQ, probado en vivo): los campos van ARRIBA y también dentro de
+        # compe_data. Prueba 12-nov: solo dentro, el PES seguía pidiendo los Términos en cada «Reanudar
+        # torneo» aunque entry_compe era YES y eula_url "" (regla eula_agree de peslg_path.md)
+        return {**datos, "compe_data": Empaquetado(dict(datos))}
 
     def _equipo_pesleague(self, s, cid):
         club = self.datos.club(s.steam_hex or "") if s.steam_hex else None

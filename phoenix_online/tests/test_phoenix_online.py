@@ -1214,6 +1214,8 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         await r(a, 31, {"msgid": "CMD_GET_PESLEAGUE_COMPE_INFO", "rqid": 31, "compe_id": 4})
         cd = ea[-1][1]["compe_data"].valor
         self.assertEqual((cd["entry_compe"], cd["team_id"]), ("YES", 174))
+        arriba = ea[-1][1]
+        self.assertEqual((arriba["entry_compe"], arriba["eula_url"], arriba["team_id"]), ("YES", "", 174))
         await r(a, 4, {"msgid": "CMD_GET_PESLEAGUE_COMPE_RANKING_BYID", "rqid": 4, "compe_id": 4, "view_num": 5})
         self.assertEqual(ea[-1][1]["list_num"], 1)
         for i, c in enumerate(["CMD_ACCEPT_CLAN_ENTRY", "CMD_CANCEL_CLAN_ENTRY", "CMD_CONFIRM_CLAN_REQUEST",
