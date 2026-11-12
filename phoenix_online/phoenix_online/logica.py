@@ -5731,6 +5731,17 @@ class Servidor:
         return self._lista_que_cabe("CMD_GET_CLAN_LIST", filas, lambda f: {
             "clan_list": f, "clan_list_num": len(f), "all_list_num": len(todos), "start_index": inicio})
 
+    @classmethod
+    def _plano(cls, v):
+        """Quita los Empaquetado de forma recursiva: el lector de rankings quiere mapas directos."""
+        if isinstance(v, Empaquetado):
+            v = v.valor
+        if isinstance(v, dict):
+            return {k: cls._plano(x) for k, x in v.items()}
+        if isinstance(v, list):
+            return [cls._plano(x) for x in v]
+        return v
+
     def _ranking_clanes(self, m):
         """Lector FUN_141de2b50: clan_ranking = lista de MAPAS directos {rank, rating,
         division_change_type, basic_settings{..., owner_info{user_id{...}, ...}}, match_stats{7 enteros}}."""
@@ -5745,10 +5756,10 @@ class Servidor:
         for i, (d, c) in enumerate(todos[inicio:inicio + cuantos]):
             lista.append({"rank": inicio + i + 1, "rating": 0, "division_change_type": "NotImplement",
                           "basic_settings": {"clan_name": c.get("nombre") or "",
-                                             "owner_info": dict(self._usuario_clave(d, ampliado=True).valor),
+                                             "owner_info": self._plano(self._usuario_clave(d, ampliado=True)),
                                              "enable_request": c.get("abierto") or "YES",
                                              "clan_comment": c.get("comentario") or "", "is_banned": "NO"},
-                          "match_stats": dict(self._estadisticas_clan().valor["total_match_stats"].valor)})
+                          "match_stats": self._plano(self._estadisticas_clan())["total_match_stats"]})
         return {"clan_ranking": lista, "clan_ranking_num": len(lista), "clan_ranking_all_list_num": len(todos)}
 
     async def c_cmd_get_clan_ranking(self, s, m):
@@ -5757,7 +5768,7 @@ class Servidor:
     async def c_cmd_get_clan_ranking_byid(self, s, m):
         r = self._ranking_clanes({"start_index": 0, "view_num": 100})
         dueno, _c = self._clan_de((s.steam_hex or ""))
-        nombre = self._usuario_clave(dueno).valor["user_id"]["pid"] if dueno else None
+        nombre = self._plano(self._usuario_clave(dueno))["user_id"]["pid"] if dueno else None
         if nombre is not None:
             r["clan_ranking"] = [x for x in r["clan_ranking"]
                                  if x["basic_settings"]["owner_info"]["user_id"]["pid"] == nombre]
