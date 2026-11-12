@@ -3405,7 +3405,9 @@ class TestUdpProtegido(unittest.IsolatedAsyncioTestCase):
                 break
             await asyncio.sleep(0.01)
         self.assertEqual(recibidos, [b"hola"])
-        self.assertFalse(udp.sin_connreset(t.get_extra_info("socket")))  # fuera de Windows no toca nada
+        # en Windows debe apagar SIO_UDP_CONNRESET (True); fuera de Windows no toca nada (False)
+        import sys as _s
+        self.assertEqual(udp.sin_connreset(t.get_extra_info("socket")), _s.platform == "win32")
         with self.assertLogs("phoenix.udp", "WARNING"):
             p.error_received(ConnectionResetError(10054, "reset"))
         t.close()
