@@ -85,6 +85,7 @@ class Sesion:
         self.steam_hex = None
         self.steam_crudo = None  # SteamID tal como lo mandó el PES (antes de la clave por IP/cuenta)
         self.pid = None
+        self.pid_visible = 0  # pid que el PES conoce como suyo (se fija al crear o unirse a una sala)
         self.pname = None
         self.vigilancias = {}  # msgid -> rqid
         self.room_id = None
@@ -172,6 +173,13 @@ class Sala:
         self.game_no = 0
 
     @staticmethod
+    def pid_de(s):
+        """pid que el PES conoce como SUYO (el de GET_PLAYER_DATA = _pid_visible). Desde ae851ea
+        (10-nov) ya no es el número interno s.pid; con s.pid el dueño no se encontraba en la lista de
+        jugadores de su sala y salía VZLN_0002 al crearla (prueba 11-nov 19:50)."""
+        return getattr(s, "pid_visible", 0) or s.pid or 0
+
+    @staticmethod
     def pname(s):
         """L §1d: bin(mapa) con name, xuid_one, psn_user_id (bin) e is_deleted, todo en texto."""
         nombre = s.pname or ""
@@ -194,7 +202,7 @@ class Sala:
             "status": self.estado if isinstance(self.estado, str) else "WAITING",
             "game_phase": "DATASYNC", "gameenv": Empaquetado(env),
             "gamer_num": len(self.miembros),
-            "gamer": [Empaquetado({"pid": x.pid or 0, "is_room_owner": _texto_si(x is self.dueno),
+            "gamer": [Empaquetado({"pid": self.pid_de(x), "is_room_owner": _texto_si(x is self.dueno),
                                    "side": "HOME" if x is self.dueno else "AWAY", "enter_no": i + 1,
                                    "game_no": self.game_no}) for i, x in enumerate(self.miembros)],
             "is_room_owner": _texto_si(para is self.dueno), "enter_no": entra, "game_no": self.game_no,
@@ -218,7 +226,7 @@ class Sala:
         # has_guest «NO», game_entry_no = nº de entrada tras «Empezar partido» (0 antes) y SIN guest_info
         # cuando has_guest es NO
         fila = {
-            "pid": s.pid or 0, "room_player_id": numero + 1,
+            "pid": self.pid_de(s), "room_player_id": numero + 1,
             "room_entry_no": numero + 1, "game_entry_no": int(self.entradas.get(s) or 0),
             "pname": self.pname(s),
             "lang": s.lang if isinstance(s.lang, str) and s.lang else "en",
@@ -6316,6 +6324,7 @@ class Servidor:
     # ---------- Salas del vestíbulo amistoso 1 vs 1 (R: pesrooms.py + rooms.md de AzrakHQ) ----------
     async def c_cmd_createjoin_room(self, s, m):
         await self._salir_de_sala(s)
+        s.pid_visible = self._pid_visible(s)
         nombre = m.get("name") if isinstance(m.get("name"), str) and m.get("name") else f"Sala de {s.pname}"
         sala = Sala(s, nombre[:64], {k: v for k, v in m.items() if k not in ("msgid", "rqid")})
         self.salas[sala.room_id] = sala
@@ -6351,6 +6360,7 @@ class Servidor:
         sala = self.salas.get(self._id_entero(m.get("room_id")))
         if sala is None:
             return {"result": "ERR_ROOMNOTFOUND"}
+        s.pid_visible = self._pid_visible(s)
         if s not in sala.miembros:
             if len(sala.miembros) >= sala.max_players:
                 return {"result": "ERR_ROOMISFULL"}
@@ -6420,7 +6430,7 @@ class Servidor:
         s.enviar({"msgid": m["msgid"], "rqid": m.get("rqid", 0), "result": NOERR,
                   "entryflag": "TRUE" if s.entry else "FALSE", "gameNum": sala.game_no})
         await self.dormir(PAUSA_EMPUJE)
-        lista = [Empaquetado({"pid": x.pid or 0, "entryNum": n, "gameNum": sala.game_no})
+        lista = [Empaquetado({"pid": Sala.pid_de(x), "entryNum": n, "gameNum": sala.game_no})
                  for x, n in sala.entradas.items()]
         for x in sala.miembros:
             self._empujar(x, "CMD_WATCH_ENTRY_GAME", entry_count=len(lista), entrygame=lista)
@@ -6673,7 +6683,7 @@ class Servidor:
             self._empujar_salas_a_todos("DEL", [sala])
             log.info("sala %s cerrada", sala.room_id)
             return
-        self._empujar_jugadores(sala, "DEL", se_fue=s.pid or 0)
+        self._empujar_jugadores(sala, "DEL", se_fue=Sala.pid_de(s))
         if sala.dueno is s:
             # R (pesrooms.py): el nuevo dueño recibe AppointOwner (con la clave); los demás OwnerChanged
             nuevo = sala.dueno = sala.miembros[0]

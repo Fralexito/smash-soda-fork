@@ -1292,6 +1292,12 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
                           env["is_revision_check"]), (180, 400, "NO"))
         await r(a, 1, {"msgid": "CMD_CREATEJOIN_ROOM", "rqid": 1, "name": "X", "password": "123"})
         sala = [m for _, m in ea if m.get("msgid") == "CMD_CREATEJOIN_ROOM"][-1]["room_id"]
+        # el dueño debe encontrarse con SU pid (el de GET_PLAYER_DATA) en la lista de jugadores y en la
+        # sala; con el número interno salía VZLN_0002 al crearla (prueba 11-nov)
+        await r(a, 90, {"msgid": "CMD_REQWATCHL_ROOMPLAYERLIST_NTL", "rqid": 90, "room_id": sala})
+        lj = [m for _, m in ea if m.get("msgid") == "CMD_REQWATCHL_ROOMPLAYERLIST_NTL"][-1]
+        self.assertEqual(lj["list_data"][0].valor["pid"], self.srv._pid_visible(a))
+        self.assertEqual(self.srv.salas[sala].ficha(a)["gamer"][0].valor["pid"], self.srv._pid_visible(a))
         await r(b, 2, {"msgid": "CMD_JOIN_ROOM_NTL", "rqid": 2, "room_id": sala, "password": "999"})
         self.assertEqual(eb[-1][1]["result"], "ERR_PASSWDINCORRECT")
         await r(a, 3, {"msgid": "CMD_SET_ROOM_OPTION", "rqid": 3, "name": "Nueva", "password": ""})
