@@ -1,22 +1,41 @@
-# Jugar en el servidor Phoenix (prueba con un amigo)
+# Prueba con Frank: pasos para tu PC
 
-1. Tu amigo necesita **su propia copia de PES 2021**, la misma versión que Frank (PES base, sin parche, igual que el de pruebas de Frank).
-2. Frank le pasa la **IP** de su servidor. Lo más fácil y seguro: los dos instalan **Tailscale** (gratis) y
-   entran a la misma red; Frank le pasa su IP de Tailscale (empieza por 100.). Así no hay que abrir puertos del
-   router, y cada amigo tiene una IP fija, que es la que el servidor usa para darle **su propio club**.
-3. El amigo abre `CONECTAR_PHOENIX.bat` con clic derecho → **Ejecutar como administrador** y escribe la IP.
-4. Abre PES 2021 y entra al modo online (icono «EF»).
-5. Para dejarlo como antes: `DESCONECTAR_PHOENIX.bat` (como administrador).
+Vas a ayudar a Frank a probar su servidor de PES 2021. Son 6 pasos cortos.
+Nada se instala en PES ni se descarga nada raro. Si algo te da miedo, pregúntale a Frank antes.
 
-Notas:
-- Solo cambia líneas marcadas `#PHOENIX` en el archivo hosts; guarda una copia `hosts.antes_phoenix` la primera vez.
-- El servidor de Frank debe estar encendido y alcanzable desde internet (puerto abierto o VPS). Puertos: TCP 80, 5000, 10000, 10001 y UDP 5100, 3478, 5730 (ver GUIA_REPLICAR_ONLINE.md). El servidor debe tener `ip_publica: "auto"` (o la IP de Tailscale de Frank).
-- Partido entre los dos: «Partida rápida» o «Divisiones en línea» van por el relé del servidor (lo más seguro). El amistoso de sala libre va directo entre las dos PCs (P2P).
-- Si los dos PES no tienen la misma base de jugadores, myClub mostrará otros jugadores o el juego puede cerrarse.
+## Antes de empezar
+- Necesitas **PES 2021 en tu PC** (la misma versión que Frank).
+- Frank te dirá **una dirección** que empieza con `100.` (por ejemplo `100.64.1.5`). La necesitas en el paso 4.
+
+## Pasos
+1. **Instala Tailscale** (programa gratis, sirve para que tu PC y la de Frank se vean). Entra con la cuenta que Frank te indique.
+2. **Comprueba tu PES**: haz doble clic en `COMPROBAR_MI_PES.bat`. Te muestra unos números en pantalla.
+   Mándale una foto o copia de esos números a Frank. Este paso **no cambia nada**.
+3. **Espera** a que Frank te diga «listo, mi servidor está encendido».
+4. Haz **clic derecho** en `CONECTAR_PHOENIX.bat` y elige **Ejecutar como administrador**. Escribe la dirección `100.…` que te dio Frank y pulsa Enter.
+5. **Abre PES 2021** y entra al modo online (el icono «EF»).
+6. Haz lo que Frank te pida (por ejemplo, crear una sala o aceptar su reto).
+
+## Al terminar
+Haz **clic derecho** en `DESCONECTAR_PHOENIX.bat` → **Ejecutar como administrador**.
+Así tu PES vuelve a funcionar como antes.
+
+## Qué hace `CONECTAR_PHOENIX.bat` (por si quieres saberlo)
+- Guarda una copia de seguridad del archivo `hosts` de Windows (`hosts.antes_phoenix`).
+- Añade unas pocas líneas que dicen: «los servidores de Konami del PES ahora son el servidor de Frank».
+- Cada línea lleva la marca `#PHOENIX`, y `DESCONECTAR_PHOENIX.bat` borra solo esas líneas.
+- No toca PES, ni el firewall, ni el registro.
+
+## Si algo sale mal
+- Si PES dice «error de conexión»: pregúntale a Frank si su servidor sigue encendido.
+- Si no puedes volver a lo normal: ejecuta `DESCONECTAR_PHOENIX.bat` otra vez como administrador.
+- Si PES se cierra solo: ábrelo de nuevo y avisa a Frank.
+
+---
+
+### Para Frank (notas técnicas)
 - Escrito por nosotros; no usa código de PESBUL.
-
-## Tu propio club con el pase de la web (cuando esté activo)
-1. En la web Phoenix, con tu sesión iniciada, pide un **pase para el online** (dura 10 minutos y sirve una vez).
-2. Abre `USAR_PASE.bat`, escribe la IP del servidor y pega el pase.
-3. Si dice «listo», entra al online: ese club es tuyo y queda ligado a tu cuenta.
-El pase nunca se guarda en ningún archivo ni registro del servidor; solo viaja su huella (hash).
+- Los dos PES deben tener la misma base de jugadores; si no, myClub puede mostrar otros jugadores o el juego puede cerrarse.
+- El servidor debe estar encendido y alcanzable por la IP de Tailscale. Puertos: TCP 80, 5000, 10000, 10001 y UDP 5100, 3478, 5730 (ver `GUIA_REPLICAR_ONLINE.md`). El día de la prueba, ver `DIA_DE_LA_PRUEBA.md`.
+- Partido entre los dos: «Partida rápida» o «Divisiones en línea» van por el relé del servidor (lo más seguro). El amistoso de sala libre va directo entre las dos PCs (P2P).
+- Con el pase de la web (cuando esté activo): `USAR_PASE.bat`, escribe la IP del servidor y pega el pase de 10 minutos. El pase nunca se guarda en ningún archivo ni registro; solo viaja su huella.
