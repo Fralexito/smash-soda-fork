@@ -300,7 +300,9 @@ async def http(srv, reader, writer):
                          (writer.get_extra_info("peername") or ("",))[0])
             return
         if ruta_sin_query.lstrip("/").startswith("livedata/"):
-            respuesta = srv.respuesta_livedata(ruta_sin_query.rstrip("/").rsplit("/", 1)[-1], form)
+            ip = (writer.get_extra_info("peername") or (None,))[0]
+            respuesta = srv.respuesta_livedata(ruta_sin_query.rstrip("/").rsplit("/", 1)[-1], form,
+                                               ip, _ip_local(writer))
         else:
             ip = (writer.get_extra_info("peername") or (None,))[0]
             respuesta = srv.respuesta_http(form, ip, _ip_local(writer))

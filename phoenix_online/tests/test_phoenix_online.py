@@ -3412,3 +3412,26 @@ class TestUdpProtegido(unittest.IsolatedAsyncioTestCase):
             p.error_received(ConnectionResetError(10054, "reset"))
         t.close()
         t2.close()
+
+
+class TestLivedataActualizacion(unittest.TestCase):
+    def test_livedata_ofrece_la_actualizacion_propia(self):
+        """POST //livedata/LiveDataSetFlow con CMD_GET_DLC_FILELIST debe llevar la fila del .cpk."""
+        import tempfile, os as _o
+        from phoenix_online import actualizacion
+        with tempfile.TemporaryDirectory() as d:
+            ver = _o.path.join(d, "v.bin")
+            with open(ver, "wb") as f:
+                f.write(actualizacion.archivo_version("1.01"))
+            actualizacion.escribir_cpk(_o.path.join(d, "Phoenix_101.cpk"), [(actualizacion.ARCHIVO_VERSION, ver)])
+            srv = Servidor({"carpeta_actualizacion": d, "puerto_http": 5000, "urls": {}}, Datos(":memory:"))
+            r = srv.respuesta_livedata("LiveDataSetFlow", {"msgid": "CMD_GET_DLC_FILELIST", "rqid": "3",
+                                                           "file_type": "LIVEDATA"}, "127.0.0.1", "192.168.1.5")
+            self.assertEqual(r["dlcfile_list_count"], 1)
+            fila = r["dlcfile_list"][0]
+            self.assertEqual(fila["dlc_version"], "101")
+            self.assertTrue(fila["url"].startswith("http://192.168.1.5:5000/actualizacion/Phoenix_101.cpk"))
+            # sin .cpk: respuesta vacía válida, no «no_update»
+            srv.cfg["carpeta_actualizacion"] = _o.path.join(d, "vacia")
+            r = srv.respuesta_livedata("LiveDataSetFlow", {"msgid": "CMD_GET_DLC_FILELIST", "rqid": "4"})
+            self.assertEqual(r["dlcfile_list_count"], 0)

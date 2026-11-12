@@ -6913,9 +6913,13 @@ class Servidor:
                 "build_gamerelay_num_for_1vs1": 0, "build_gamerelay_num_for_3vs3": 0,
                 "build_gamerelay_num_for_11vs11": 0}
 
-    def respuesta_livedata(self, flujo, formulario):
+    def respuesta_livedata(self, flujo, formulario, ip_cliente=None, ip_local=None):
         """Datos en vivo por HTTP: «no hay actualización» con las versiones del juego (P, PESBUL)."""
         log.info("HTTP livedata %s campos=%s", flujo, sorted(formulario))
+        # Prueba 12-nov: el PES pide CMD_GET_DLC_FILELIST por «POST //livedata/LiveDataSetFlow»; antes
+        # todo lo de livedata/ recibía «no_update» y la actualización propia nunca se ofrecía
+        if formulario.get("msgid") == "CMD_GET_DLC_FILELIST":
+            return self.respuesta_http(formulario, ip_cliente, ip_local)
         return {"msgid": formulario.get("msgid") or flujo, "rqid": int(formulario.get("rqid", 0) or 0),
                 "result": NOERR, "flow": flujo, "urltype": flujo, "status": "online",
                 "no_update": True, "update_required": False, "maintenance": False,
