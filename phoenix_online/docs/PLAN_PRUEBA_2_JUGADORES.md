@@ -12,7 +12,7 @@ Objetivo (Frank, 12-nov): dejar todo el apartado online listo para que, en la pr
 | 4 | Revisión de escritorio del camino de 2 jugadores: unirse a sala, relé, TURN, resultado, abandono, reconexión, comprobación de datos (DATAPACK), anti-trampa (sumas) | Opus | ⏳ |
 | 5 | `tools/comparar_con_azrak.py` sobre TODAS las respuestas de los modos de 2 jugadores | cualquiera | ⏳ |
 | 6 | Registro del día: log del servidor con hora + peticiones/respuestas de cada jugador (claves y secretos tachados) + eventos del relé y TURN; un comando que empaquete todo en una carpeta de diagnóstico | cualquiera | ⏳ |
-| 7 | Interruptores de emergencia: lista por módulo (cómo apagarlo con una clave de config) | cualquiera | ⏳ |
+| 7 | Interruptores de emergencia: `interruptores.apagados` en config.json, en caliente (docs/INTERRUPTORES_EMERGENCIA.md) | Opus | ✅ |
 | 8 | Copia de seguridad de la base y de `config.json` justo antes de la prueba | sesión PC | ⏳ |
 | 9 | **Firewall de Windows (solo lectura):** el amigo debe poder entrar por Tailscale a python.exe (TCP 10000, 10001, 5000, 80; UDP 3478, 5730, 5100; TURN 5349/5350 + UDP 49160-49179) y los dos PES2021.exe deben recibir UDP del otro. `tools/amigo/REVISAR_ANTES_DE_LA_PRUEBA.ps1` lo comprueba. Cualquier cambio en el firewall lo decide y lo hace Frank (límite 3) | sesión PC + Frank | ⏳ |
 

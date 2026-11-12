@@ -10,6 +10,10 @@
     "puerto": 5100,
     "ip": "auto"
   },
+  "interruptores": {
+    "apagados": [],
+    "error": "ERR_SERVERNOTREADY"
+  },
   "ip_publica": "auto",
   "puerto_gate": 10000,
   "puerto_menu": 10001,

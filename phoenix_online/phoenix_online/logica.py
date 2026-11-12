@@ -27,6 +27,28 @@ log = logging.getLogger("phoenix_online")
 
 NOERR = "NOERR"
 
+# Interruptores de emergencia (config «interruptores.apagados», se recargan en caliente).
+# Cada módulo se corta en su ENTRADA: el PES recibe un error y vuelve al menú; el resto sigue.
+MODULOS_INTERRUPTOR = {
+    "divisiones": {"CMD_START_MATCHING": "OC_RANK"},
+    "partida_rapida": {"CMD_START_MATCHING": "OC_QUICK"},
+    "salas": {"CMD_CREATEJOIN_ROOM": None, "CMD_JOIN_ROOM": None},
+    "cooperativo": {"CMD_START_COOP_MATCHING": None, "CMD_CREATEJOIN_COOP_ROOM": None,
+                    "CMD_JOIN_COOP_ROOM": None},
+    "matchday": {"CMD_JOIN_MATCHDAY": None},
+    "pesleague": {"CMD_JOIN_PESLEAGUE_COMPE": None},
+    "eventos": {"CMD_JOIN_COMPEV": None, "CMD_REENTRY_COMPEV": None},
+    "chat": {"CMD_SEND_TEXTCHAT": None},
+    "clanes": {"CMD_CREATE_CLAN": None, "CMD_ENTRY_CLAN": None, "CMD_INVITE_CLAN": None},
+    "subastas": {"CMD_TENDER_MYCLUB_AUCTION_SCOUT": None},
+    "intercambio": {"CMD_TRADE_MYCLUB_GAMEPLAYER": None},
+    "turn": {},  # se mira en respuesta_http: sin lista TURN el PES intenta solo conexión directa
+}
+# Claves de primer nivel de config.json que se pueden cambiar en caliente sin riesgo (además de myclub)
+CLAVES_EN_CALIENTE = ("interruptores", "max_partidos_rival_dia", "sonda_vida", "revision_check",
+                      "veredicto_al_final", "emparejar_mismos_datos", "exigir_versiones",
+                      "direccion_para_remoto", "palabras_bloqueadas")
+
 # Comandos que solo esperan msgid/rqid/result (cap_72 §11.4)
 CONFIRMACIONES = {
     "CMD_SEND_PSID", "CMD_SET_CURRENT_PLAYER", "CMD_LOGIN_MENU", "CMD_SET_LANGUAGE",
@@ -327,7 +349,7 @@ class Servidor:
 
     # ---------- despacho ----------
     def _recargar_config(self):
-        """Recarga en caliente SOLO cfg['myclub'] (fechas de torneos, tokens de prueba…) cuando cambia
+        """Recarga en caliente cfg['myclub'] y las CLAVES_EN_CALIENTE (interruptores…; fechas de torneos, tokens de prueba…) cuando cambia
         config.json, para probar valores sin reiniciar servidor ni PES. Nunca toca claves, turn ni red."""
         ruta = self.ruta_config
         if not ruta:
@@ -345,6 +367,15 @@ class Servidor:
             if isinstance(nuevo.get("myclub"), dict):
                 self.cfg["myclub"] = nuevo["myclub"]
                 log.info("config.json: myclub recargado en caliente")
+            cambiadas = [k for k in CLAVES_EN_CALIENTE if nuevo.get(k) != self.cfg.get(k)]
+            for k in cambiadas:
+                if k in nuevo:
+                    self.cfg[k] = nuevo[k]
+                else:
+                    self.cfg.pop(k, None)
+            if cambiadas:
+                log.warning("config.json: recargado en caliente %s; apagados=%s", cambiadas,
+                            self._modulos_apagados() or "ninguno")
         except (OSError, ValueError) as e:
             log.warning("recarga de config.json fallida (se mantiene la anterior): %s", e)
 
@@ -359,6 +390,12 @@ class Servidor:
         if msgid in VIGILANCIAS:
             sesion.vigilancias[msgid] = rqid
             await self._al_vigilar(sesion, msgid)
+            return
+        apagado = self._interruptor(msgid, msg)
+        if apagado:
+            log.warning("interruptor: módulo «%s» apagado, rechazo %s de %s", apagado, msgid,
+                        sesion.direccion)
+            sesion.enviar({"msgid": msgid, "rqid": rqid, "result": self._error_interruptor()})
             return
         manejador = getattr(self, "c_" + msgid.lower(), None)
         if manejador is not None:
@@ -385,6 +422,26 @@ class Servidor:
             extra = {}
         result = extra.pop("result", NOERR)
         sesion.enviar({"msgid": msgid, "rqid": rqid, "result": result, **extra})
+
+    # ---------- Interruptores de emergencia ----------
+    def _modulos_apagados(self):
+        return [str(x).lower() for x in ((self.cfg.get("interruptores") or {}).get("apagados") or [])]
+
+    def _error_interruptor(self):
+        return str((self.cfg.get("interruptores") or {}).get("error") or "ERR_SERVERNOTREADY")
+
+    def _interruptor(self, msgid, msg):
+        """Nombre del módulo apagado que corta este comando, o None."""
+        apagados = self._modulos_apagados()
+        if not apagados:
+            return None
+        for modulo in apagados:
+            regla = MODULOS_INTERRUPTOR.get(modulo) or {}
+            if msgid in regla:
+                tipo = regla[msgid]
+                if tipo is None or str(msg.get("matching_type") or "OC_QUICK") == tipo:
+                    return modulo
+        return None
 
     # ---------- ConnectGate (§11.3) ----------
     # ---------- IP que se anuncia al cliente ----------
@@ -6944,6 +7001,10 @@ class Servidor:
         msgid = formulario.get("msgid")
         if not msgid:
             return None
+        self._recargar_config()
+        if msgid == "CMD_GET_TURN_SERVER_LIST" and "turn" in self._modulos_apagados():
+            log.warning("interruptor: módulo «turn» apagado, lista TURN vacía")
+            return {"msgid": msgid, "rqid": int(formulario.get("rqid", 0) or 0), "result": NOERR}
         if msgid == "CMD_GET_TURN_SERVER_LIST" and self.turn_propio is not None and self.turn_propio.activo():
             # R (turn.py AzrakHQ): una entrada con port y tls_port distintos de 0 (si no, el PES la descarta),
             # dirección = la IP por la que este PES llega al servidor, y el certificado en DER

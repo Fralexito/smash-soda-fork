@@ -1590,6 +1590,40 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
             self.srv._recargar_config()          # JSON roto: conserva la anterior
             self.assertEqual(self.srv.cfg["myclub"], {"x": 2})
 
+    async def test_interruptores_de_emergencia(self):
+        """interruptores.apagados corta la entrada de un módulo (error) sin tocar los demás, en caliente."""
+        import json as _j, tempfile, os as _o
+        a, ea = await self.entrar("I1")
+        r = self.srv.recibir
+        with tempfile.TemporaryDirectory() as d:
+            ruta = _o.path.join(d, "config.json")
+            with open(ruta, "w", encoding="utf-8") as f:
+                _j.dump({"myclub": self.srv.cfg.get("myclub") or {}}, f)
+            self.srv.ruta_config = ruta
+            self.srv._mtime_config = None
+            self.srv._recargar_config()
+            with open(ruta, "w", encoding="utf-8") as f:
+                _j.dump({"myclub": self.srv.cfg.get("myclub") or {},
+                         "interruptores": {"apagados": ["divisiones", "chat", "turn"]}}, f)
+            _o.utime(ruta, (_o.path.getmtime(ruta) + 5, _o.path.getmtime(ruta) + 5))
+            await r(a, 2, {"msgid": "CMD_START_MATCHING", "rqid": 2, "matching_type": "OC_RANK"})
+            self.assertEqual(ea[-1][1]["result"], "ERR_SERVERNOTREADY")
+            await r(a, 3, {"msgid": "CMD_SEND_TEXTCHAT", "rqid": 3, "text": "hola"})
+            self.assertEqual(ea[-1][1]["result"], "ERR_SERVERNOTREADY")
+            await r(a, 4, {"msgid": "CMD_START_MATCHING", "rqid": 4, "matching_type": "OC_QUICK"})
+            self.assertEqual([m["result"] for _, m in ea if m.get("rqid") == 4][0], "NOERR")
+            await r(a, 5, {"msgid": "CMD_CANCEL_MATCHING", "rqid": 5})
+            resp = self.srv.respuesta_http({"msgid": "CMD_GET_TURN_SERVER_LIST", "rqid": "7", "pid": "1"})
+            self.assertEqual((resp["result"], set(resp) - {"msgid", "rqid", "result"}), ("NOERR", set()))
+            # se vuelve a encender sin reiniciar
+            with open(ruta, "w", encoding="utf-8") as f:
+                _j.dump({"myclub": self.srv.cfg.get("myclub") or {}}, f)
+            _o.utime(ruta, (_o.path.getmtime(ruta) + 10, _o.path.getmtime(ruta) + 10))
+            await r(a, 6, {"msgid": "CMD_START_MATCHING", "rqid": 6, "matching_type": "OC_RANK"})
+            self.assertEqual([m["result"] for _, m in ea if m.get("rqid") == 6][0], "NOERR")
+            self.assertNotIn("interruptores", self.srv.cfg)
+            self.srv.ruta_config = None
+
     async def test_salas_coop_crear_entrar_salir(self):
         """D.8: crear sala cooperativa, verla en la lista, entrar, listo, opciones y salir."""
         a, ea = await self.entrar("S1")
