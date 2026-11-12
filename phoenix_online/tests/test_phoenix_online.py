@@ -3467,8 +3467,8 @@ class TestRegalosPlanoTop(unittest.TestCase):
         e = r["receive_result_list"][0]
         self.assertEqual(sorted(e), ["item", "result"])
         self.assertEqual((e["result"], e["item"]["present_id"], e["item"]["count"]), ("NOERR", 9, 50))
-        self.assertEqual(e["item"]["item"][0]["count"], 50)
-        self.assertEqual(e["item"]["skill"], [])
+        self.assertEqual(e["item"]["item"]["count"], 50)
+        self.assertEqual(e["item"]["skill"], {"skill_category": "", "skill_id": 0})
         self.assertEqual(datos.club(s.steam_hex)["gp"], 50)
 
     def test_modo_ficha_result_manda_ficha_anidada_con_result(self):

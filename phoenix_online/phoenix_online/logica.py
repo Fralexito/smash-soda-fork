@@ -4412,7 +4412,11 @@ class Servidor:
             if modo_l in ("listas", "listas_directo"):
                 ficha["item"] = [dict(objeto, count=int(r.get("cantidad") or 0))]
                 ficha["skill"] = []
-            lista.append(ficha if modo_l == "listas_directo" else Empaquetado(ficha))
+            elif modo_l in ("mapas", "mapas_directo"):
+                # igual que en RECV: item y skill como MAPAS directos (paso 0x30 en el lector)
+                ficha["item"] = dict(objeto, count=int(r.get("cantidad") or 0))
+                ficha["skill"] = {"skill_category": "", "skill_id": 0}
+            lista.append(ficha if modo_l.endswith("_directo") else Empaquetado(ficha))
             prueba = {"msgid": "CMD_GET_MYCLUB_PRESENTLIST", "rqid": 0, "result": "NOERR",
                       "present_list_num": len(lista), "present_list": lista}
             if _cifrado_comprimido(prueba) > MAX_CIFRADO_CLIENTE:
@@ -4526,8 +4530,14 @@ class Servidor:
                 e = dict(f.valor)
                 if e.get("type") == "GP" and mc.get("regalo_type_gp"):
                     e["type"] = str(mc["regalo_type_gp"])
-                e["skill"] = [{"skill_category": "", "skill_id": 0}] if mc.get("regalos_skill_lleno") else []
-                e["item"] = [dict(e["item"].valor)]
+                # Corrección (misma lectura): item y skill se recorren con paso 0x30 = MAPAS directos,
+                # no listas (paso 0x18). myclub.regalos_anidado="listas" deja la forma anterior de prueba.
+                if str(mc.get("regalos_anidado") or "mapas") == "listas":
+                    e["skill"] = []
+                    e["item"] = [dict(e["item"].valor)]
+                else:
+                    e["skill"] = {"skill_category": "", "skill_id": 0}
+                    e["item"] = dict(e["item"].valor)
                 elems.append({"item": e, "result": res_elem})
             return {"result": "NOERR" if elems else "ERR_NOTFOUND",
                     "receive_result_list_num": len(elems), "receive_result_list": elems}
