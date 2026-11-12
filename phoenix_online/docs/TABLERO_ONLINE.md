@@ -79,7 +79,7 @@ PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 | # | Apartado | Estado | Nota |
 |---|---|---|---|
 | 41 | Launcher: «Jugar Offline» | ✅ | probado el 10-nov |
-| 42 | Launcher: «Jugar Online» con la cuenta de la web | 🟢 | sin probar: cambia el hosts (administrador), pide la contraseña de Frank y falta PhoenixJugar.json |
+| 42 | Launcher: «Jugar Online» con la cuenta de la web | 🟢 | falta probarlo de punta a punta |
 | 43 | Tu web recibe los clubes de myClub | ✅ | conectado el 10-nov, sin la llave maestra |
 | 44 | Tu web recibe las Divisiones (ranking online) | 🟢 | migración 165 aplicada; falta la tabla en la página |
 | 45 | Vincular el PES con la cuenta de la web | 🟢 | el servidor está listo; falta el botón en la web |
@@ -88,7 +88,7 @@ PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 | 48 | Amigos por Tailscale | ❌ | falta instalar Tailscale (con tu permiso) |
 | 49 | Servidor en internet (VPS, sin tu PC encendida) | ❌ | |
 | 50 | Relé TURN propio (partido entre 2 PC aunque el router bloquee) | 🟢 | **encendido el 11-nov 17:16** (tls 5349 + dtls 5350, relé udp 49160-49179, certificado para 127.0.0.1 y 192.168.100.236); falta probarlo con 2 PES; en internet hay que abrir esos puertos en el router |
-| 51 | Actualización en vivo propia (todos con la misma base del parche) | 🟢 | probada 12-nov con 99ace2e: el PES la baja (ofrecida → GET → enviada) sin error; reentrar no la repite (1 vez por sesión) |
+| 51 | Actualización en vivo propia (todos con la misma base del parche) | 🟢 | carpeta `actualizacion/` + `tools/armar_actualizacion.py` |
 | 52 | No emparejar PES con datos distintos («error DATAPACK») | 🟢 | sumas de CHECK_CHEAT + versión |
 | 53 | Dirección del PES de tu PC para un amigo de otra casa | 🟢 | host_addr con tu IP pública/Tailscale |
 | 54 | Reconexión a tiempo sin derrota; abandono por sesión exacta | 🟢 | |
@@ -144,4 +144,25 @@ PES del online: solo el base `C:\PES21\eFootball PES 2021`.
 - **Aviso falso de regalos, prueba por cantidad (11-nov, regalos_skill="plano"):** «No puedes recibir este objeto porque ya tienes el máximo permitido» sale con un regalo de 5 monedas y con uno de 50 GP (el de 500 GP se cobró sin capturar su aviso). NO depende de la cantidad. Los tres se pintan «Monedas de myClub» y se pagan bien (GP 49920→50470, monedas 62→67).
 - **Matchday con captura completa (1920×1080):** pantalla del torneo «Jornada Phoenix»: marcador 0-0, barra azul 0 / rosa 0, «Tus estadísticas» (Puntos de evento 0, Progreso recomp. result. «Completado», Clasificación del bando «Pos. 1», Condición representante «-»), a la derecha «Para la próxima recompensa: 3 Puntos» con «5 Monedas de myClub», y «Part. grupo acaba en 27d23h». «Clasificación del bando»: columnas Nombre del usuario / Nom. del equipo / Puntos de evento; fila «1 · FRALEX · ANDERLECHT · 0», «Última actualiz. 11/11 21:35». «Descripción del campeonato» muestra el texto estándar («En Matchday, los participantes se unen a uno de los 2 bandos…»). Las TARJETAS DE BANDO con `group_desc` solo salen al elegir bando al inscribirse; con el usuario ya inscrito no se ven (pendiente: probar con un usuario nuevo o borrar la inscripción). Ojo: Enter de más en la lista del torneo abre «Matchmaking / Buscando oponente»; se cancela con Esc → «¿Cancelar?» → Derecha (Sí).
 
-- 12-nov 00:40 (Lima, sesión online nueva, PES base): ENSAYO COMPLETO tras el arreglo UDP (97be73a/a38165f). Servidor reiniciado con código nuevo: «gamerelay UDP en 5100», sin aviso CONNRESET. Entrar online: sin VNBP. Torneo Phoenix «Reanudar»: NO pide Términos, sí pide elegir equipo (Jupiler → ANDERLECHT). `rival_falso --revision` con PES_LEAGUE, OC_RANK, OC_QUICK y MATCHDAY: pareja → el relé responde al KX de 127.0.0.1 → chequeo de red OK → barrera liberada → carga → el PES abandona por «error imprevisto» (mismo techo: falta un segundo PES real). Ojo: en Divisiones/Partida rápida hay que pulsar «Ir a Matchmaking» (la fila «Invitado» abre otra pantalla). Certificado TURN con las IP de la PC (6586a31: 169.254.x y 192.168.x; aquí no hay Tailscale). Paquete de diagnóstico (3 h): 1,4 MB, 0 coincidencias de SteamID/secreto/base64. Copia previa a la prueba del amigo en `respaldosntes_prueba_amigo_*` (local, no se sube). Actualización propia 99ace2e: ofrecida y bajada sin error.
+
+## Hallazgos de la noche del 11 al 12 de noviembre (hilo ONLINE, regalos y teclas)
+Documento largo por tema: aquí queda TODO lo averiguado sobre el aviso falso «ya tienes el máximo permitido» y sobre las teclas.
+
+**Qué se logró**
+- Se entregó el lector del resultado del regalo (`FUN_141cd7f00`, pseudocódigo en `analisis_coop_rea\d1_lector_141cd7f00.txt`): raíz {msgid, rqid, result, receive_result_list_num, receive_result_list}; cada elemento es un mapa DIRECTO {"item": ficha, "result": texto}; dentro de la ficha, `item` y `skill` son MAPAS (paso de 0x30 bytes con claves string), no listas.
+- Se probó en el PES base con los commits 89b2a75 (listas), 4906a5e (mapas) y 1fe1433: GP, contrato y 5 monedas, result por elemento NOERR y ERR_RECV_PRESENT_ALL. **El aviso sigue saliendo siempre**; el GP/monedas/boletos sí se pagan.
+- Tabla de errores del cliente para `CMD_RECV_MYCLUB_PRESENT`: solo ERR_DATABASE→0x022602ca y ERR_KONAMIID_MAINTENANCE→0x020800b0. Existen ERR_RECV_PRESENT_FULL y ERR_RECV_PRESENT_ALL como ids globales (`FUN_14021fa30`, FULL=0x1437f4350, ALL=0x1437f4308), sin referencias directas.
+- Enum de `type` del regalo (`FUN_14021bec0`): PES_POINT, GP, COACH, AGENT, SCOUT, RENTAL_PLAYER, ITEM, UNIFORM, PLAYER, E_FOOTBALL_POINT. Enum de `item_type` (8): SUBSCRIPTION, STORE, RECOVERY, CONTRACT, USE_SPECIAL_AGENT, USE_TOP_AGENT, USE_SCOUT, PRE_MAIN.
+- Clases con nombre (RTTI) para seguir: `commandautomake::CmdRecvMyclubPresentResult` (vtable 0x142b04600, lista de `PresentReceiveResult` de 0x180 bytes), `CmdRecvMyclubPresentOption` (0x142b045a8), `menu::OnlineMyClubPresentBox` (0x142746ab0, lista `p_presentBoxList`), `menu::OnlineMyClubPresentDialog` (0x1427358b0). La Bandeja dibuja desde un vector de entradas de 0xB0 bytes (`obj+0x1E0`, `FUN_141047440` cuenta, `FUN_141047510` copia).
+- Lectura de memoria en vivo (solo lectura, `tools/buscar_mem.py`, ver abajo): la entrada de 0xB0 guarda el nombre en +0x00 y +0x20 (std::string inline), `receipt_deadline` en +0x7C y `count` en +0x80; el dword en +0x6C vale 1 para ITEM (contrato) y 0 tanto para GP como para PES_POINT (por eso todo se pinta «Monedas de myClub»). La respuesta del servidor llegó al cliente EXACTAMENTE con la forma correcta (búfer de red leído en memoria), así que la causa no es la forma del JSON.
+
+**Errores e intentos fallidos**
+- `myclub.regalo_lista_modo = "mapas"` CIERRA el PES al abrir la Bandeja (2 caídas, 03:27 y 03:31 del 12-nov). Dejar vacío.
+- Abrir el exe de 60 MB en REA es lento: se usó Ghidra sin interfaz sobre el proyecto ya analizado (`copias\ghidra_proyecto_completo\PEStrim`, `-noanalysis -readOnly`) con `DecompilarFunciones.java` y `Referencias.java`; cada consulta tarda 20–60 s.
+- La ruta de teclas `ruta_pes.ps1 arranque` se pasa con PES recién abierto (llega a la pantalla de mandos); con PES nuevo hay que esperar ~2,5 min al título, Enter, ~30 s de carga, Enter y luego `ruta_pes.ps1 bandeja`.
+- Al reabrir la Bandeja desde «Sede de club» el cursor recuerda la última casilla: un `Derecha` de más entra en «Comprar Monedas de myClub» (solo salió «no hay ninguna a la venta»; no se compró nada).
+
+**Cosas a tener en cuenta**
+- Teclas del MCP: **A = LB «Cambiar pestaña» y da la vuelta** (Partido ← Sede de club ← Contrato ← Estadíst. ← Configuración ← y de Partido salta a Configuración). Sin efecto probadas: Q, E, R, F, C, V, W, S, D, 1, 2, Tab, Shift, Ctrl, Espacio. No se encontró RB. Z no se probó (es «salir»).
+- `tools/buscar_mem.py <salida.txt> <bytes> texto...` busca textos en la memoria privada del PES (OpenProcess QUERY|VM_READ, sin escribir ni pausar) y vuelca los bytes de alrededor; los nombres de 12–15 letras caben dentro del std::string y permiten ver las estructuras sin punteros. Cómo comprobarlo: abrir la Bandeja con regalos «ZQ…» y ejecutarlo; cómo revertir: no cambia nada (solo lee).
+- Pendiente (siguiente idea): el aviso podría venir de datos del club que mandamos mal (p. ej. un tope de monedas/objetos o `present_num`/`is_present_inbox`); sin la función que decide el diálogo (el comando y las pantallas se crean por tablas de fábrica 0x143b9e2a8 / 0x143067650) no está cerrado.
