@@ -390,6 +390,7 @@ async def principal(ruta_config):
             srv.turn_propio = turn
     log.info("Phoenix Online escuchando en %s", [s.sockets[0].getsockname() for s in servidores])
     tareas = [s.serve_forever() for s in servidores]
+    tareas.append(vigilar_config(srv, 5))
     if cfg.get("reglas_myclub"):
         tareas.append(vigilar_reglas(srv, cfg["reglas_myclub"], int(cfg.get("reglas_cada_s", 30))))
     from .nube import desde_config
@@ -421,6 +422,14 @@ async def respaldar_cada(datos, carpeta, horas, guardar):
         except Exception as e:
             log.warning("respaldo de la base falló (se reintenta luego): %s", e)
         await asyncio.sleep(max(0.1, horas) * 3600)
+
+
+async def vigilar_config(srv, cada):
+    """Relee config.json cada pocos segundos aunque ningún PES mande nada (interruptores de
+    emergencia y myclub se aplican y quedan en el log al momento)."""
+    while True:
+        await asyncio.sleep(cada)
+        srv._recargar_config()
 
 
 async def vigilar_reglas(srv, ruta, cada):
