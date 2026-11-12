@@ -14,6 +14,7 @@ Objetivo (Frank, 12-nov): dejar todo el apartado online listo para que, en la pr
 | 6 | Registro del día: log del servidor con hora + peticiones/respuestas de cada jugador (claves y secretos tachados) + eventos del relé y TURN; un comando que empaquete todo en una carpeta de diagnóstico | cualquiera | ⏳ |
 | 7 | Interruptores de emergencia: lista por módulo (cómo apagarlo con una clave de config) | cualquiera | ⏳ |
 | 8 | Copia de seguridad de la base y de `config.json` justo antes de la prueba | sesión PC | ⏳ |
+| 9 | **Firewall de Windows (solo lectura):** el amigo debe poder entrar por Tailscale a python.exe (TCP 10000, 10001, 5000, 80; UDP 3478, 5730, 5100; TURN 5349/5350 + UDP 49160-49179) y los dos PES2021.exe deben recibir UDP del otro. `tools/amigo/REVISAR_ANTES_DE_LA_PRUEBA.ps1` lo comprueba. Cualquier cambio en el firewall lo decide y lo hace Frank (límite 3) | sesión PC + Frank | ⏳ |
 
 ## B. Guion del día (orden propuesto)
 
@@ -28,6 +29,14 @@ Objetivo (Frank, 12-nov): dejar todo el apartado online listo para que, en la pr
 9. Mismo rival varias veces (tope diario de 3).
 10. TURN: forzar relé aunque la conexión directa sea posible.
 11. Cooperativo 2 contra 2 solo si el Core 0.4.97 está instalado en los dos PES (opcional).
+
+## Revisión de código (12-nov, hallazgos)
+
+- Direcciones: con `ip_publica` "auto" cada PES recibe la IP por la que llegó; `_direcciones_para` cambia el host_addr de Frank (127.0.0.1/192.168.x) por su IP de Tailscale cuando quien mira es el amigo (100.64/10 se trata como remota). El amigo publica su 100.y por nuestro STUN. Correcto en el código.
+- Identidad: con Steam compartido, cada jugador se distingue por IP (Tailscale da una distinta). Hay prueba automática.
+- Registro: cada conexión deja su JSONL en `capturas/` y el HTTP en `capturas/http.jsonl` (con tope de disco). Sirve para corregir sin repetir. Nunca se suben a GitHub.
+- `tools/comparar_con_azrak.py`: los «faltan» en listas vacías son falsos positivos (la lista no trae elementos en la prueba); no hay huecos en los modos de 2 jugadores que cambien el flujo.
+- Riesgo principal fuera del código: el **firewall** (punto 9).
 
 ## C. Reglas del día
 
