@@ -1362,6 +1362,13 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         # a cruzó la meta de 3 puntos: 1000 por ganar + 500 de la meta
         self.assertGreaterEqual(int((self.srv.datos.club(a.steam_hex) or {}).get("gp") or 0), 1500)
         msgpack_min.packb({"all_reward_info": info})
+        # el PES pinta las metas como «Monedas»: con logros.moneda "monedas" se muestran y pagan monedas
+        r0 = hitos[0].valor["reward_list"][0].valor
+        self.assertEqual((r0["type"], r0["count"]), ("GP", 500))
+        self.srv.cfg.setdefault("myclub", {}).update({"monedas_gratis": True, "logros": {"moneda": "monedas"}})
+        r0 = self.srv._info_premios_matchday(e)[0].valor["achievement_reward_list"][0].valor["reward_list"][0].valor
+        self.assertEqual((r0["type"], r0["count"]), ("PES_POINT", 5))
+        del self.srv.cfg["myclub"]["monedas_gratis"], self.srv.cfg["myclub"]["logros"]
         self.assertIn("suma puntos", self.srv._bando_matchday({"compe_id": 3}, "a").valor["group_desc"])
         # aviso urgente: una vez por persona
         self.srv.cfg["aviso_urgente"] = {"id": 7, "titulo": "Hola", "texto": "Mantenimiento 22:00"}

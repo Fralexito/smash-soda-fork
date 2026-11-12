@@ -1846,9 +1846,16 @@ class Servidor:
         e = next((x for x in self._torneos("matchday") if str(x["compe_id"]) == cid), None)
         gp = self._premios_matchday(e or {}).get("WIN" if res == "WIN" else "LOSE", 0)
         antes = puntos[cid] - pts
-        gp += sum(premio for meta, premio in self._hitos_matchday(e or {}) if antes < meta <= puntos[cid])
         if gp:
             club["gp"] = int(club.get("gp") or 0) + gp
+        # Metas de puntos: el PES las pinta SIEMPRE como «Monedas de myClub» (11-nov, igual que los
+        # logros), así que se pagan con la misma regla que los logros (_premio_logro: GP o monedas)
+        for meta, premio in self._hitos_matchday(e or {}):
+            if antes < meta <= puntos[cid]:
+                campo, cantidad = self._premio_logro(premio)
+                club[campo] = int(club.get(campo) or 0) + cantidad
+                if campo == "gp":
+                    gp += cantidad
         self.datos.guardar_club(s.steam_hex, club)
         log.info("Matchday %s: %s +%d puntos +%d GP (torneo %s)", s.pid, res, pts, gp, cid)
 
@@ -1953,7 +1960,7 @@ class Servidor:
         lista = lambda k, n: [self._premio_gp(n, premios[k], cantidad=premios[k])] if premios.get(k) else []
         # Tabla de «Info. de las recompensas» (prueba 11-nov: con [] salía solo el texto, sin tabla)
         logros = [Empaquetado({"is_repeat": "NO", "require_point": meta,
-                               "reward_list": [self._premio_gp(10 + i, gp, cantidad=gp)]})
+                               "reward_list": [self._premio_gp(10 + i, gp, tipo=self._tipo_premio_logro())]})
                   for i, (meta, gp) in enumerate(hitos)]
         return [Empaquetado({"achievement_reward_list": logros, "required_point_final_reward": 0,
                              "win_reward_list": lista("WIN", 1), "lose_reward_list": lista("LOSE", 2),
@@ -4495,6 +4502,10 @@ class Servidor:
             por = max(1, int((cfg.get("logros") or {}).get("gp_por_moneda") or 100))
             return "monedas", max(1, gp // por)
         return "gp", gp
+
+    def _tipo_premio_logro(self):
+        """«type» del regalo según lo que de verdad se paga (monedas = PES_POINT, si no GP)."""
+        return "PES_POINT" if self._premio_logro(1)[0] == "monedas" else "GP"
 
     def _resumen_logros(self, club, s=None):
         """Resumen de MAINMENU_INFO: hitos en total, alcanzados y alcanzados sin cobrar (P: el
