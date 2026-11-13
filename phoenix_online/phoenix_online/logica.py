@@ -599,7 +599,7 @@ class Servidor:
         return {"announce_type": "NO_BANNER_INFO", "title": str(a.get("title", "")),
                 "announce_id": int(a.get("announce_id", n)), "priority": int(a.get("priority", 0)),
                 "popup_type": "ONCE", "weekly_info_type": "MYCLUB_AGENT", "event_id": 0,
-                "date": int(a.get("date") or (int(time.time()) // 86400 * 86400)), "evoked_text": ""}
+                "date": int(a.get("date") or (int(time.time()) // 86400 * 86400 + 43200)), "evoked_text": ""}
 
     ID_AVISO_CODIGO = 900
 
