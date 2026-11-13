@@ -205,3 +205,11 @@ Sigue sin arreglar (el pago llega bien; es cosmético). Lo que quedó **comproba
 **Pseudocódigo clave (`FUN_1410d68d0`):** reset del contenedor `R+0x28`; recorre `receive_result_list` (array en +0x1D8 de la respuesta, nº en +0x1D0, elementos de 0x180 bytes); compara la cadena `result` de cada elemento (+0x160) con las 4 cadenas k=0..3 de `FUN_141cd6fc0(k)`; si coincide, categoría = k, si no 4; `FUN_141046a10(contenedor, elemento, cat)` (solo si cat<4) guarda la entrada en el vector del grupo `elemento+0x80` (tipo 0..9, paso 0x18) y suma 1 a `cont[0xF0 + (cat + grupo*4)*4]`.
 **Las 4 cadenas (`FUN_1402218c0`):** 0 `SUCCESS_ADDED`, 1 `SUCCESS_EXTEND`, 2 `FAIL_DUPLICATE`, 3 `FAIL_FULL`. `FUN_1413cf5e0` elige el texto con esos contadores: (0+1)>0 y (2+3)==0 → `0x22600C5` (todo recibido); (0+1)>0 y (2+3)>0 → `0x22600C6`/`0x226018A`; ninguno → `0x22600C7`/`0x22600C8` («lleno»). Posible uso futuro: `FAIL_FULL`/`FAIL_DUPLICATE` para simular «lleno» o «ya lo tienes» en objetos únicos.
 **Cómo revertir:** poner `myclub.regalos_result_elemento` a `NOERR` (vuelve el aviso falso).
+
+## Pruebas en el PES del 13-nov (hilo ONLINE, pantallas de 1 jugador)
+- ✅ **Dirección plantilla:** abre con «Plantilla 1 · Tácticas predefinidas 1: Principal Ofensivo», XI de 11 jugadores con fotos y valoración, entrenador ALEXAND, espíritu de equipo 1, calidad 2652, gastos 54/70. (Enter en un jugador entra en modo intercambiar; Esc lo cancela.)
+- ✅ **Entrenamiento de jugador:** lista con nivel («Nv.6/30») y «Al siguiente nivel»; Enter abre «Detalles del Entrenador de experiencia» con sus 3 pestañas; sin entrenadores sale el texto oficial «No hay ningún Entrenador de experiencia…» (correcto).
+- ✅ **Eventos («En curso»):** lista con Matchday, eFootball League y Copa Desafío. **Matchday:** tarjeta «Jornada Phoenix · Part. grupo acaba en 28d0h · Participa».
+- ✅ **Información en línea:** «Tu código Phoenix: 640023» y «Phoenix Online». **Cosmético:** la columna de fecha sale «--/--/----» (falta el campo de fecha en esas entradas; mismo tipo de detalle que «Última actualiz.» del ranking de clanes, candidato ebd614d).
+- Regalos: el aviso falso ya no sale (ver «Regalos: causa y solución»).
+- Pendiente de probar en el PES: dorsales y entrenador por plantilla (ficha del jugador / elegir entrenador), intercambio de cartas.
