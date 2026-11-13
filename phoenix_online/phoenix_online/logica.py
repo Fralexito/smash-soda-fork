@@ -3997,6 +3997,26 @@ class Servidor:
         log.info("myClub %s: intercambia %d cartas por el jugador %d", s.steam_hex, len(cartas), objetivo)
         return {"gameplayer": ficha}
 
+    async def c_cmd_get_myclub_procurable_gameplayerlist_rarity(self, s, m):
+        """«Negociar» (prueba en el PES 13-nov): tras marcar los duplicados el PES pide las cartas
+        que se pueden recibir de esa rareza. Misma forma que la lista del cazatalentos. Candidatos:
+        jugadores del catálogo con esa rareza que el club no tiene (hasta 30, fijos por día)."""
+        club = self._club_inicial(s) or {}
+        rareza = self._texto(m.get("rarity"))
+        tiene = {j.get("gameplayer_id") for j in club.get("jugadores") or []}
+        try:
+            datos = (self._catalogo() or {}).get("jugadores") or {}
+        except Exception:
+            datos = {}
+        ids = sorted(int(g) for g, d in datos.items() if isinstance(d, dict) and str(g).isdigit()
+                     and int(g) not in tiene and self._rareza(d) == rareza)
+        azar = random.Random(f"{s.steam_hex}|{rareza}|{int(time.time()) // 86400}")
+        elegidos = azar.sample(ids, min(30, len(ids)))
+        lista = [Empaquetado({"gameplayer_id": g, "level_limit": 30,
+                              "team_id": int((datos.get(str(g)) or {}).get("team_id") or 0),
+                              "is_draw": "YES"}) for g in elegidos]
+        return {"gameplayer_list": lista, "gameplayer_list_num": len(lista)}
+
     def _equipo_catalogo_jugador(self, gameplayer_id):
         """Datos del catálogo (rating, puesto…) para un jugador, si hay catálogo."""
         try:
