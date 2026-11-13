@@ -1114,8 +1114,9 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         resp = self.srv.respuesta_http({"msgid": "CMD_RECV_MYCLUB_PRESENT", "rqid": "4",
                                         "pid": str(a.pid), "present_id": "0", "is_all": "YES"})
         self.assertEqual(resp["receive_result_list_num"], 2)
-        self.assertEqual(resp["receive_result_list"][0]["skill"], {"skill_category": "", "skill_id": 0})
-        self.assertNotIn("skill_id", resp["receive_result_list"][0])
+        e0 = resp["receive_result_list"][0]
+        self.assertEqual(e0["result"], "SUCCESS_ADDED")  # forma por defecto = la del lector del juego
+        self.assertEqual(e0["item"]["skill"], {"skill_category": "", "skill_id": 0})
         msgpack_min.packb(resp)
         del self.srv.cfg["myclub"]["regalos_skill"]
         await r(a, 5, {"msgid": "CMD_GET_MYCLUB_USER_INFO", "rqid": 5})

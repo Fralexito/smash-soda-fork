@@ -4512,7 +4512,7 @@ class Servidor:
         # (ERR_RECV_PRESENT_FULL). Config myclub.regalos_respuesta para probar formas:
         # "normal" (result NOERR por elemento), "sin_result", "vacio" (""), "cero" (0),
         # "solo_top" (sin lista).
-        modo = str((self.cfg.get("myclub") or {}).get("regalos_respuesta") or "normal")
+        modo = str((self.cfg.get("myclub") or {}).get("regalos_respuesta") or "elemento_item")
         # L (Ghidra 12-nov + reward_list semanal B.7): «skill» es un MAPA {skill_category, skill_id},
         # no un entero; mandar 0 puede romper el elemento. myclub.regalos_skill: "plano" (como antes),
         # "mapa" (mapa directo) o "bin" (mapa empaquetado)
