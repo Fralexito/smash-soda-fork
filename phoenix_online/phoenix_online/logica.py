@@ -5763,7 +5763,11 @@ class Servidor:
                                              "enable_request": c.get("abierto") or "YES",
                                              "clan_comment": c.get("comentario") or "", "is_banned": "NO"},
                           "match_stats": self._plano(self._estadisticas_clan())["total_match_stats"]})
-        return {"clan_ranking": lista, "clan_ranking_num": len(lista), "clan_ranking_all_list_num": len(todos)}
+        # «Última actualiz.» salía 31/12 (fecha 0): el lector no tiene campo propio; candidatos como
+        # en los otros rankings (sin probar en el PES)
+        ahora = int(time.time())
+        return {"date": ahora, "update_date": ahora, "clan_ranking": lista, "clan_ranking_num": len(lista),
+                "clan_ranking_all_list_num": len(todos)}
 
     async def c_cmd_get_clan_ranking(self, s, m):
         return self._ranking_clanes(m)
