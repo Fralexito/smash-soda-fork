@@ -4548,7 +4548,10 @@ class Servidor:
             # «NotImplement» si falta. Textos de prueba en caliente: myclub.regalos_result_elemento y
             # myclub.regalo_type_gp (el type «GP» se pinta como «Monedas de myClub»).
             mc = self.cfg.get("myclub") or {}
-            res_elem = str(mc.get("regalos_result_elemento") or "NOERR")
+            # CAUSA DEL AVISO «máximo» (Ghidra+breakpoint 13-nov, FUN_1410d68d0): el cliente compara el
+            # result de cada elemento con SUCCESS_ADDED / SUCCESS_EXTEND / FAIL_DUPLICATE / FAIL_FULL
+            # (FUN_1402218c0); con NOERR no coincide ninguna, cuenta 0 y muestra el texto de «lleno»
+            res_elem = str(mc.get("regalos_result_elemento") or "SUCCESS_ADDED")
             elems = []
             for f in fichas:
                 e = dict(f.valor)

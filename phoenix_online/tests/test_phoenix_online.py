@@ -3501,7 +3501,9 @@ class TestRegalosPlanoTop(unittest.TestCase):
         r = srv.recibir_regalos({"present_id": "9"})
         e = r["receive_result_list"][0]
         self.assertEqual(sorted(e), ["item", "result"])
-        self.assertEqual((e["result"], e["item"]["present_id"], e["item"]["count"]), ("NOERR", 9, 50))
+        # el cliente cuenta el elemento solo si result es SUCCESS_ADDED/SUCCESS_EXTEND/FAIL_*
+        # (FUN_1402218c0); con NOERR salía el aviso falso «ya tienes el máximo»
+        self.assertEqual((e["result"], e["item"]["present_id"], e["item"]["count"]), ("SUCCESS_ADDED", 9, 50))
         self.assertEqual(e["item"]["item"]["count"], 50)
         self.assertEqual(e["item"]["skill"], {"skill_category": "", "skill_id": 0})
         self.assertEqual(datos.club(s.steam_hex)["gp"], 50)
