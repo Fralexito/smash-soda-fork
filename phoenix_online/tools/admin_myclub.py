@@ -16,6 +16,9 @@ Uso, en la carpeta del servidor:
     (pone un regalo en la «Bandeja entrada»; tipo gp, monedas o la clave de un objeto, p. ej.
     objetos_recuperar o boletos_contrato; el título es opcional; dura 30 días)
 
+    python -I tools/admin_myclub.py config.json duplicar-jugador FRALEX 5 2   (añade 2 copias de
+    la carta con gameplayer_unique_id 5; sirve para probar «Negociar» = intercambio de duplicados)
+
 La persona se indica por su nombre en el juego (pname) o por su steam_hex.
 Se puede usar con el servidor encendido: el cambio se ve la próxima vez que PES pida el club
 (al entrar a myClub). Cada cambio queda anotado en club["admin"] con la hora.
@@ -71,6 +74,29 @@ def main(argv=None):
                                              "monto": partidos, "jugadores": cambiados})
         datos.guardar_club(j["steam_hex"], club)
         print(f'{j["pname"]}: contrato de {partidos} partidos a los unique_id {cambiados}')
+        return 0
+    if orden == "duplicar-jugador" and len(argv) == 5:
+        j = buscar(datos, argv[2])
+        club = datos.club(j["steam_hex"]) if j else None
+        if club is None or not club.get("jugadores"):
+            print("No encontré a esa persona o su club todavía no tiene jugadores guardados.")
+            return 1
+        uid, copias = int(argv[3]), int(argv[4])
+        jug = club["jugadores"]
+        base = next((x for x in jug if int(x.get("gameplayer_unique_id") or 0) == uid), None)
+        if base is None or not 1 <= copias <= 5:
+            print("No hay carta con ese unique_id, o las copias no están entre 1 y 5.")
+            return 1
+        siguiente = max(int(x.get("gameplayer_unique_id") or 0) for x in jug) + 1
+        nuevos = []
+        for _ in range(copias):
+            jug.append({**base, "gameplayer_unique_id": siguiente})
+            nuevos.append(siguiente)
+            siguiente += 1
+        club.setdefault("admin", []).append({"hora": int(time.time()), "orden": orden,
+                                             "base": uid, "nuevos": nuevos})
+        datos.guardar_club(j["steam_hex"], club)
+        print(f'{j["pname"]}: {copias} copia(s) de la carta {uid} -> unique_id {nuevos}')
         return 0
     if orden == "regalo" and len(argv) in (5, 6):
         from phoenix_online.logica import Servidor
