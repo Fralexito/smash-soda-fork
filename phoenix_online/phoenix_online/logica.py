@@ -599,7 +599,7 @@ class Servidor:
         return {"announce_type": "NO_BANNER_INFO", "title": str(a.get("title", "")),
                 "announce_id": int(a.get("announce_id", n)), "priority": int(a.get("priority", 0)),
                 "popup_type": "ONCE", "weekly_info_type": "MYCLUB_AGENT", "event_id": 0,
-                "date": int(a.get("date", 0)), "evoked_text": ""}
+                "date": int(a.get("date") or (int(time.time()) // 86400 * 86400)), "evoked_text": ""}
 
     ID_AVISO_CODIGO = 900
 
@@ -5766,6 +5766,8 @@ class Servidor:
         # «Última actualiz.» salía 31/12 (fecha 0): el lector no tiene campo propio; candidatos como
         # en los otros rankings (sin probar en el PES)
         ahora = int(time.time())
+        for f in lista:
+            f["recode_date"] = ahora
         return {"date": ahora, "update_date": ahora, "clan_ranking": lista, "clan_ranking_num": len(lista),
                 "clan_ranking_all_list_num": len(todos)}
 
