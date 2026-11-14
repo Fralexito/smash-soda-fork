@@ -2786,6 +2786,12 @@ class Servidor:
          "item_variation": "NONE", "mostrar_vacio": False},
         {"clave": "objetos_tactico", "item_type": "TACTICS_TRAINING", "item_variation": "NONE",
          "mostrar_vacio": False},
+        # C (14-nov, RE + prueba en vivo): «Entrenador de experiencia especial» = tipo 7 con
+        # variación SMALL/MEDIUM/LARGE (1-3); la pantalla lo lista en Entrenamiento →
+        # Entrenador de experiencia con «Puntos de experiencia» = item_effect_arg por unidad.
+        # Se usa con CMD_USE_MYCLUB_STAFF.use_item_list [{item_variation, count}].
+        {"clave": "objetos_especial", "item_type": "SPECIAL_TRAINING_COACH",
+         "item_variation": "SMALL", "item_effect_arg": 100, "mostrar_vacio": False},
     ]
 
     def _objetos(self):
@@ -3958,10 +3964,23 @@ class Servidor:
             if isinstance(el, dict) and isinstance(el.get("id"), int):
                 ids.add(el["id"])
         usados = [e for e in club.get("staff") or [] if e.get("id") in ids]
-        if j is None or not usados:
+        # C (14-nov): entrenador de experiencia especial = objetos en use_item_list
+        # [bin {item_variation, count}]; cada unidad da item_effect_arg de exp.
+        especiales = 0
+        for el in m.get("use_item_list") or []:
+            el = des(el)
+            if isinstance(el, dict) and isinstance(el.get("count"), int) and el["count"] > 0:
+                especiales += el["count"]
+        if j is None or (not usados and not especiales):
             return {"result": "ERR_NOTFOUND"}
+        if especiales > int(club.get("objetos_especial") or 0):
+            return {"result": "ERR_FORBIDDEN"}
+        efecto = next((int(o.get("item_effect_arg") or 0) for o in self._objetos()
+                       if o.get("clave") == "objetos_especial"), 0)
         factor = float((self.cfg.get("myclub") or {}).get("staff_exp_factor") or 1)
-        ganada = int(sum(int(e.get("base_exp") or 0) for e in usados) * factor)
+        ganada = int(sum(int(e.get("base_exp") or 0) for e in usados) * factor) + especiales * efecto
+        if especiales:
+            club["objetos_especial"] = int(club.get("objetos_especial") or 0) - especiales
         # C (vivo 06-nov): player_info.ability son solo 6 enteros (no las habilidades) y con
         # ellos la carta seguía en PT 40. Se usan los parameters que el cliente mandó al
         # guardar la plantilla (SET_MYCLUB_SQUAD_GAMEPLAYER).
