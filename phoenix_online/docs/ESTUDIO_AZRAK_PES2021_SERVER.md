@@ -1,0 +1,87 @@
+# Estudio del repo AzrakHQ/pes2021-online-server (MIT), 11-nov
+
+Repo: https://github.com/AzrakHQ/pes2021-online-server (licencia MIT; Frank autorizó usarlo, 11-nov 14:24 hora Lima).
+Copia de lectura: `/mnt/project-files/pes-online/referencia_azrak_mit/`. La licencia MIT pide conservar el aviso de copyright (Mohamed Ali Rashad, 2026) si se copia texto largo. Nuestro código sigue siendo propio, con el mismo protocolo.
+
+## Qué trae y nos sirve
+1. **notes/re/functions/*.md**: 36 informes de ingeniería inversa estática de PES2021.exe 1.01.00 (el mismo exe que usamos), con direcciones. Leerlos ANTES de probar.
+2. **data/commands.json**: los 433 comandos con claves de pedido, claves de respuesta y área. Contra nuestro `logica.py`: tenemos handler de 238 y faltan 195 (muchos son avisos WATCH_/SEND_ del partido).
+3. **data/server_errors.tsv y server_error_table.txt**: 764 pares (comando, ERR_*) con el texto que muestra el juego.
+4. **tools/**: `kb.py` (referencias cruzadas y claves de un comando), `pe.py`, `parsebench.py` (corre el parser del propio juego sobre nuestros bytes: dice si una respuesta es válida sin probar a ciegas), `pesflow.py` (pantalla actual y navegación sin teclas), `probe.py` y `probe.c` (sonda dentro del juego), `scenario.py`. Necesitan Python con capstone y numpy, y el exe.
+5. **server/mod** (dinput8.dll con MinHook): redirige el servidor sin tocar el archivo hosts. Es el equivalente a nuestro «Core 0.5.66 desvio_online»; sirve de referencia de forma.
+6. **server/pesserver/*.py**: servidor completo (matchday, coop, tourney, divisions, rooms, TURN/relay, results, replay, ranking).
+
+## Hallazgo ya aplicado: botón gris de Matchday (matchday2.md)
+`compe_info` va a dos niveles. `compe_id`, `group_info_a/b`, las fechas e `is_entry` deben ir dentro de `compe_info.info_overview`. Con claves planas el cliente leía 0 y `end_group_match_date` quedaba en 0. Con `matchday_progress` = GROUP_MATCH y «ahora ≥ fecha», el juego baja el estado a «fase terminada» (función 0x14105d370; mgr+0x7f4 es `info_overview.end_group_match_date`). Eso explica por qué escribir +0x7F4 a mano no sirvió: la respuesta INFO lo volvía a poner en 0.
+- `all_reward_info` es un ARRAY (nunca un bin).
+- Tras JOIN el juego lee la plantilla con GET_MATCHDAY_SP_GAMEPLAN (ya lo tenemos).
+- Arreglo: commit 066485b. Pendiente: probar en el PES.
+
+## Lo que nos falta y ellos ya resolvieron (comandos sin handler nuestro)
+- Matchday (11): ranking, resultado final, recompensas de logro, pickup.
+- Co-op (28): partido cooperativo. Leer coop.md, coop2.md y pescoop.py.
+- PES League (5): ranking y premios. Clanes (5): aceptar o rechazar entrada, ranking.
+- Partido real (Match 32 + sincronía 14): results.md, match.md, pesmatch.py, pesresults.py. Sirve para el partido entre 2 PC.
+- Red: net.md, turn*.md, nettune.md, peslg_path.md.
+- Tienda y plataforma (24), Divisiones y ranking (3), Social y chat (5).
+
+## Orden propuesto
+1. Probar Matchday con el arreglo.
+2. Leer results.md y match.md y compararlos con nuestro partido (lo que falta para el partido real en 2 PC).
+3. Eventos contra la COM: modes2.md sección B (dice que no tiene menú propio; se entra por myClub).
+4. Regalos «máximo»: buscar la tabla de diálogos en menus.md y messages.md.
+5. Cooperativo (partido): coop2.md.
+
+## Lo que ya pasamos de AzrakHQ a Phoenix (11-nov, tarde)
+Método: su código se LEE (nunca se ejecuta; su .exe es el mismo servidor en Python empaquetado con PyInstaller). `tools/formas_azrak_estatico.py` compara los tipos de respuesta con ast; `docs/COMPARACION_TIPOS_AZRAK.md` queda con 4 diferencias que solo aparecen con datos (reinicio anunciado, aviso urgente) o por la clave de sesión (no la cambiamos).
+
+| Tema | Antes | Ahora (commit) |
+|---|---|---|
+| Cooperativo: búsqueda | sin handler | START/CANCEL_COOP_MATCHING, WATCH_COOP_MATCHING FINISH con 2 grupos, datos COOP (a3118c9) |
+| Salas del amistoso | RELOAD empujado a todos (cierra el PES del que ya tenía la lista) y JOIN_ROOM (el PES manda JOIN_ROOM_NTL) | flujo probado por ellos con 2 PES: ADD/UPDATE/DEL, lista de jugadores solo tras ENTRY_GAME, inicio con SET_GAMEMEMBER, vuelta a la sala con LEAVE_GAME, traspaso de dueño (eee85e0) |
+| Tiempos del partido | 60 s todo (un 2.º PC lento se cortaba) | 180/120/240/180 = valores del propio PES; matchrejectpid_max 400 (a0abdde) |
+| Lista de bloqueo | siempre «llena» | SET_MATCHREJECTPID guarda y el emparejamiento lo respeta (a0abdde) |
+| Chat / reconexión / direcciones | sin handler | SEND_TEXTCHAT, RECONNECT (misma IP), GET_IPANDPORT_NTL (a0abdde) |
+| Veredicto del partido | solo Divisiones | al pitazo final para todos los modos y al instante con REQ_GAMEADDPOINT (2cc5ab3, 4623355) |
+| Matchday | sin puntos tras el partido | puntos 3/1/0, pantalla de puntos, ranking del bando (a0abdde) |
+| Torneo en línea | puntos siempre 0, cola común | 3/1/0 con G/E/P y goles, menú y ranking reales, cola por torneo (4623355) |
+| Otros | — | GET_COOP_PROFILE, aviso urgente por config (`aviso_urgente`), mantenimiento, DLC, SET_CURRENTPLAYER con chat permitido |
+
+| Cortesía y abandono | modales fijos «AA», sin castigo | grado A/B/C por los últimos 10, avisos DOWN_B/A_TO_B/DOWN_C/STILL_C, derrota 3-0 a los 15 s (adcc0d2) |
+| Relé TURN | sin TURN propio | TLS + DTLS con certificado propio que va en la respuesta (552a863); se enciende con `turn_propio.activo` y 2 paquetes de Python |
+| Historial y análisis | solo Divisiones | historial general (ALL/PESLEAGUE) y GET/SEND_MATCH_ANALYZE (206beb8) |
+| Nivel cooperativo | siempre nivel 1 | 30/20/10 puntos tras cada Cooperativo, pantalla de nivel, seguir desde ella (user_id bin), bloqueo de COOP en la cola (abc11a0) |
+| Perfil | solo jugadores conectados; modales fijos | user_id bin, jugadores desconectados, cortesía y tasa de desconexión reales, últimos 5 equipos, equipos más usados (3374f2e) |
+| Avatar | en memoria (se perdía al reiniciar) | guardado en la base, validado, por cualquier forma del pid (b075615) |
+| Dirección del PES de casa | el amigo recibía 127.0.0.1 / 192.168.x | host_addr con la IP por la que llega el amigo, reflexive intacta (5ff39ca) |
+| Datos distintos | se emparejaban y salía «error DATAPACK» | no se empareja si las sumas de CHECK_CHEAT o la versión difieren (8482f03) |
+| Ranking | solo por rating; _BYID solo 1.ª página | orden por rating/victorias/partidos/racha/% (10+ partidos), cortesía real, totales de carrera (b7a4e98) |
+| Lista de bloqueo y palabras | lista vacía; «Computadora» rechazada | lista real; palabras enteras, sin tildes, letras sueltas (427175b) |
+| Actualización en vivo | sin | el PES baja el .cpk de la carpeta `actualizacion` (misma BD para todos) con lector CPK propio (e289f02) |
+
+Lo que NO se pasa (a propósito): su instalador de DLL en el PES (gamesetup/hostctl: tocan el juego del usuario), su panel de administración web (lo haremos en la web Phoenix) y su identidad de servidor (usamos la web Phoenix).
+
+## Anexo (11-nov, REA, solo lectura): analisis estatico de `pes2021-server-windows-x64.exe` (release de AzrakHQ)
+
+Archivo de referencia (NO ejecutar): 15 034 409 bytes, SHA-256 `c8f482120e1c4eca50c7d9767e206f178235d3ac93263dd87da54bd114d0b4b7`. Guardado en `D:\Frank\IA\CLAUDE\pes-online\referencia_exe_azrak\`. REA lo reconoce como **PyInstaller** (417 nodos, Python 3.12, 415 archivos extraidos a una carpeta temporal sin ejecutar nada).
+- **Es el mismo servidor MIT que ya estudiamos**, compilado: 42 modulos `pesserver/*` (los mas grandes: httpgate 72 KB, pesmatch 49 KB, pestourney 45 KB, hostctl 44 KB, turnrelay 36 KB, pescmds 34 KB, adminextra 33 KB, pescoop 32 KB, events 30 KB, pesrooms 28 KB, netsetup 26 KB, gamesetup 24 KB, pesreplay 24 KB), mas `schemas.json` (145 KB), `team_list.json` (663 equipos), `web/admin.html` (255 KB), `web/index.html`, `web/teams.json` y los scripts de cliente `join.ps1`, `join.sh`, `install-ca-proton.py`. Empaqueta `cryptography` y `pyOpenSSL` (las mismas dependencias que pide nuestro TURN propio).
+- **Red:** por defecto gate 10000 + http 8080 (y 80 para las paginas de jugador con `--join-port`), STUN 3478, relé 7600; `--auto-net` detecta IP LAN/publica y abre puertos con UPnP (`netsetup`); `--public-ip`, `--steam-id`, `--no-register` entre sus opciones.
+- **Certificados (`certs`):** crea `ca.crt` propia, `server.crt/key` para el chequeo de red del juego (nombres `ntl.service.konami.net`, `ntleu/ntljp/ntlus`) y `admin.crt/key`; el script `/join` instala la CA solo para esos nombres.
+- **Panel de admin:** contrasena en `<data>/admin_password` o variable ADMIN_PASSWORD; en el PC del servidor entra sin clave (127.0.0.1). Nosotros lo haremos en la web Phoenix, no copiamos el panel.
+- **Lo que tiene y no portamos a proposito:** instalador de DLL en el juego del usuario (`gamesetup`/`hostctl`), panel de administracion web, `join.ps1/join.sh`, UPnP (`netsetup`). Lo demas ya esta pasado modulo por modulo (ver arriba).
+- Para decompilar los `.pyc` hace falta Python 3.12 (aqui hay 3.11/3.14): no se hizo; las cadenas y la estructura bastaron para este anexo.
+
+## Anexo 2 (11-nov, solo lectura): el mod de cliente `server/mod/pes2021online.c` (dinput8.dll, MIT) y que nos sirve para el Core
+
+NO se instalo ni se compilo nada; se leyo el codigo (1094 lineas, MinHook + Monocypher + musl-math). El exe de PES base es el mismo 1.01.00 (el visor de eventos dice «PES2021.exe 1.1.0.0»; el «1.07.02» de CMD_LOGIN es la version de DATOS), asi que sus direcciones valen para nuestro PES.
+
+| Parte del mod | Que hace | Para nosotros |
+|---|---|---|
+| **Desvio de nombres** | Engancha `getaddrinfo/GetAddrInfoW/GetAddrInfoExW/gethostbyname`; el servidor se prueba con un nonce firmado Ed25519 (`/mod/hello`) y, si cambia de IP, una «nota» firmada dice donde esta | Es lo que hace nuestro Core `desvio_online`. Ventaja a copiar: servidor con identidad firmada y notas de IP, sin hosts. |
+| **Certificado** | Solo para los 4 nombres `ntl*.service.konami.net` le dice a WinHTTP que acepte el certificado propio del servidor | Evita instalar la CA en el PC de cada amigo (hoy: CA + hosts con administrador). Candidato claro para el Core. |
+| **PESID** | Los PES no-Steam mandan TODOS el mismo SteamID; el mod manda al abrir el puerto 10000 una linea `PESID1 <hash32>` (secreto aleatorio en `pes2021-online.ini` + id de maquina Windows; v2 añade `math1`, `coop1`, `inv=<codigo>`) | Nuestro servidor ya separa por IP (`clave_identidad`, `identidad.por_ip`, pase de la web). Una linea PESID del Core seria mas robusta (misma IP/NAT, cambio de red). Implica que el servidor lea esa linea ANTES de las tramas NCL. Hecho hoy: aviso si dos IP distintas entran con la misma clave y partidos de la misma identidad no puntuan. |
+| **Mates iguales (SYNC_FAILED, RMYN393)** | Sustituye `sinf, powf, atan2f, cosf, expf, qsort...` de `ucrtbase.dll` por copias musl (carpeta `musl-math/`, 74 archivos) para que Windows y Wine/Proton den los mismos bits | Solo hace falta si alguien juega desde Linux/Steam Deck contra Windows. Entre dos Windows no. Dejar en reserva (copiar `musl-math` si un amigo usa Deck). |
+| **Co-op 1 contra 1** | En 1.01.00 el co-op NUNCA conecta: `TaskCoopSession` (0x141134c00) arma la lista de pares pero no se la da a la capa P2P (0x141092720, que Quick Match si llama desde 0x14111a8fe), y el manejador de `WATCH_COOP_MATCHING` (0x14110fe00) tira las direcciones que el parser decodifico. Dos hooks lo arreglan; solo se activan si los bytes en cada direccion son exactos (6 firmas). Globales: `[0x1436fced8]` (+0x30 estado coop, ranuras +0x58/+0x90) | **Es la pieza clave para que el Partido de clan llegue a jugarse**: hoy nuestro coop crea sala y empareja pero el partido no puede empezar. Aplicable a nuestro PES (mismo exe). Hay que portarlo al Core (hook nativo; desde Lua/Sider solo no se puede hacer un detour, ver `pes_memoria_firma`), con las mismas 6 firmas como seguro, y el servidor debe emparejar coop solo con quien diga `coop1`. |
+| **Invitaciones** | Un mod por amigo con `inv=<codigo>`; revocar = banear | Ya tenemos vinculo por Link/pase web; idea para identificar amigos en otra PC. |
+
+Decision: no instalar la DLL. Orden de valor para el Core: 1) hooks de co-op, 2) PESID por conexion, 3) certificado propio sin CA, 4) musl-math si hay Linux.

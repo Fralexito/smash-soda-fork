@@ -1,0 +1,112 @@
+# ESPEC · Eventos de competición online (COMPEV) — parte C
+
+Estudio en solo lectura del cliente (Ghidra `-readOnly`, mismas direcciones que `PES2021.exe`). Marcas: **L** = leído del código del cliente; **P** = probable, deducido; **N** = no se pudo comprobar. Ninguno de estos comandos se ha visto aún en una captura real.
+
+## C.1 Resumen
+- Hay 11 comandos de la familia: `CMD_GET_COMPEV_MAINMENU_INFO`, `_LIST`, `_INFO`, `_MYENTRY_COMPEID`, `CMD_JOIN_COMPEV`, `CMD_LEAVE_COMPEV`, `CMD_JOIN_COMPEV_MODE`, `CMD_LEAVE_COMPEV_MODE`, `CMD_REENTRY_COMPEV`, `CMD_SYNC_COMPEV_PROGRESS` y `CMD_GET_COMPLG_MYENTRY_COMPEID` (existe). **L**
+- Todos los campos de modo, estado, dificultad y resultado viajan como **texto** (el nombre del token), nunca como número. **L** (los lectores del cliente guardan esos campos con la rutina de asignar cadena).
+- Cada comando lleva además `msgid`, `rqid` y, cuando se ve, `pid`/`svrtype`/`client` en el pedido; y `msgid`, `rqid`, `result` en la respuesta (`result:'NOERR'` si todo va bien). Los que dicen «sin campos propios» responden solo eso.
+
+## C.2 Pedido y respuesta de cada comando (L salvo lo marcado)
+
+| Comando | Pedido (campos propios) | Respuesta (campos propios) |
+|---|---|---|
+| `GET_COMPEV_MAINMENU_INFO` | `compe_mode` (texto), `compe_id` (entero), `target_pid` (entero) | `status` (texto), `compe_result` (texto), `win_point` (int), `progress_game_count` (int), `vscom_team_id` (int), `cpu_level` (texto), `clear_count` (int) |
+| `GET_COMPEV_LIST` | `compe_list_kind` (texto), `compe_mode` (texto) | `compe_list_kind` (texto, eco), `compe_num` (int), `compe_list` (**bin**), `banner_file_info` (bin) |
+| `GET_COMPEV_INFO` | `compe_mode` (texto), `compe_id` (int) | `compe_data` (**bin**), `compe_info` (**bin**), `banner_file_info` (bin), `event_compe_reward_list` (bin), `compe_reward` (bin), `squad_bonus` (bin), `reward` (bin), más los escalares de C.3 |
+| `GET_COMPEV_MYENTRY_COMPEID` | `compe_mode` (texto) | `compe_mode` (texto), `compe_id` (int), `compe_cpu_level` (texto), `progress_game_count` (int) |
+| `JOIN_COMPEV` | `compe_mode` (texto), `compe_id` (int), `compe_cpu_level` (texto) | sin campos propios |
+| `LEAVE_COMPEV` | `compe_mode` (texto) | sin campos propios |
+| `JOIN_COMPEV_MODE` | `compe_mode` (texto) | sin campos propios |
+| `LEAVE_COMPEV_MODE` | sin campos propios | sin campos propios |
+| `REENTRY_COMPEV` | `compe_id` (int) | sin campos propios |
+| `SYNC_COMPEV_PROGRESS` | `target_pid` (int), `room_id` (int) | sin campos propios |
+| `GET_COMPLG_MYENTRY_COMPEID` | sin campos propios | sin campos propios que el lector reconozca (**N**: la respuesta parece vacía; devolver `result` y, por si acaso, `compe_id`) |
+
+Notas: `compe_id` y `target_pid` son enteros; `compe_mode` en `MYENTRY` vuelve en la respuesta, así que el servidor puede devolver el mismo texto que recibió. **L**
+
+## C.3 Escalares de la respuesta de `GET_COMPEV_INFO` y de cada elemento de `compe_list`
+Cada elemento de `compe_list` (y el bloque `compe_info`) es un submapa con (tipo): `compe_id` (int), `compe_name` (texto), `compe_kind` (texto), `compe_start_time` / `compe_end_time` (int, unix), `compe_cpu_level` (texto), `difficulty` (texto), `is_cleared`, `is_locked`, `is_coop_match`, `is_squad_bonus` (**texto** `"true"/"false"` o equivalente; **P**: el lector los guarda como cadena), `add_limit_vscom_win_rate`, `add_limit_rating_min`, `add_limit_rating_max`, `add_limit_match_num_min`, `add_limit_match_num_max` (int), `filename` y `hash_str` (texto, del banner), `banner_file_info` (bin, con `filename`+`hash_str`), `list_banner_file_info` (bin).
+Solo en `GET_COMPEV_INFO` (dentro de `compe_data`/`compe_info`): `entry_type` (texto), `entry_national_id`, `entry_team_id`, `entry_player_num`, `entry_teamspirit_min/max`, `entry_teamstrength_min/max`, `entry_coach_id`, `player_num`, `clear_match_num`, `clear_win_point`, `cleared_count`, `precondition_compe_id` (int), `precondition_compe_name` (texto), `ad_file_name`, `logo_file_name` (texto), `is_compe_reward_exist`, `is_same_team_power_level`, `is_limited_matching_target`, `is_exist_unlocked_compe_by_cleared`, `is_pesleague_stadium`, `is_efootball_pro_stadium` (texto booleano), y `squad_bonus` (bin).
+Los premios (`event_compe_reward_list`, `compe_reward`, `reward`) usan el objeto «regalo» de B.11 (`present_id, name, name_jp, title, body, entity_id, grade, skill, type, player_level, contract_term, team_id, present_type, item…`) **L**. `present_type` es texto (`NORMAL`, `GM`, `EVENTER`, `KONAMISTAFF`).
+Qué va como bin y qué como mapa directo: **P** — `compe_list` es una lista de submapas empaquetados (bin); `compe_data`, `compe_info`, `squad_bonus`, `reward` y los premios también bin. Si el cliente no los reconoce, devolver bin con el mismo patrón que ya funciona en logros/regalos (B.14, B.19).
+
+## C.4 Textos (enums) que usa el cliente
+- **Tipo de partida/modo** (16 valores, orden = índice): `RANK_MATCH`, `RANK_MATCH_COACH`, `COMPE_MATCH`, `COMPE_MATCH_COACH`, `VSCOM_MATCH`, `VSCOM_COMPE`, `EVENT_COMPE`, (un valor `FREE…` no legible), `PESLEAGUE`, `MATCHDAY`, `RANK_COOP`, `VSCOM_COOP`, `EVENT_COMPE_COOP`, `VSCOM_COMPE_COOP`, `PESLEAGUE_COOP`, `MATCHDAY_COOP`. **L** (tabla en 0x1437F22C8).
+- **Tipo de partida de myClub** (7 valores): (`COOP…`), `MYCLUB_COOP`, `PESLEAGUE`, `MYCLUB_PESLEAGUE_COOP`, `EVENT_COMPE`, `EVENT_COM_COMPE`, `FOLLOW`. **L**
+- **`compe_mode`**: no hay comparación visible en los lectores (el cliente solo lo guarda y lo reenvía); el valor lo pone la pantalla. **P**: para este frente es `EVENT_COMPE` (o `EVENT_COM_COMPE` en el modo contra CPU). **Recomendación:** aceptar cualquier texto y devolverlo tal cual.
+- **Dificultad (`compe_cpu_level` / `cpu_level` / `difficulty`)**, 6 valores: `COMPE_DIFFICULTY_NONE`, `COMPE_DIFFICULTY_1` … `COMPE_DIFFICULTY_5`. **L** (el valor por defecto del cliente es `COMPE_DIFFICULTY_NONE`).
+- **Tipo de competición** (5 valores): `ONEMATCH`, (`KO`), `LEAGUE`, `COMEVENT`, `EXHIBITION`. **P** para `compe_kind` (los nombres coinciden con eventos/ligas).
+- **Resultado de partido** (3 valores): `NORESULT`, `FINISHWIN`, `FINISHLOSE`. **P** para `compe_result` en `MAINMENU_INFO`.
+- **`status`** de `MAINMENU_INFO`, `compe_list_kind` y `entry_type`: **N** (no se halló la tabla; no hay comparación literal). Devolver texto corto y probar; empezar con `status:"ENTRY"` si ya está inscrito y vacío si no.
+
+## C.5 Códigos de error `result` propios de estos comandos (L)
+- `JOIN_COMPEV`: `ERR_COMPE_BEFORE_ENTRYTIME` (aún no abre), `ERR_COMPE_AFTER_ENTRYTIME` (ya cerró), `ERR_COMPE_FULL`, `ERR_COMPE_JOIN_MANNER`, `ERR_COMPE_NOTFOUND`.
+- `LEAVE_COMPEV`: `ERR_COMPE_NOTENTRY`, `ERR_DATABASE`. `LEAVE_COMPEV_MODE`: `ERR_DATABASE`.
+- `REENTRY_COMPEV`: `ERR_COMPE_AFTER_ENTRYTIME`, `ERR_COMPE_JOIN_MANNER`, `ERR_COMPE_NOTFOUND`, `ERR_DATABASE`, `ERR_NOTREGISTERED`.
+- Otros de la familia: `ERR_COMPE_AFTER_MATCHTIME`, `ERR_COMPE_BEFORE_MATCHTIME`, `ERR_COMPE_MATCH_NOTFOUND`, `ERR_COMPE_JOIN_SANCTION`, `ERR_COMPE_ENTRY`.
+
+## C.6 Tope por trama y menú de entrada
+- **Tope de la lista:** no hay tope literal en el lector; la lista trae `compe_num` + `compe_list` en una sola respuesta. **N**. Conviene no pasar de ~20 eventos por trama (límite práctico de los demás listados del servidor).
+- **Entrada desde el menú:** `Online/MyClub/MenuEventCategoryList` (categorías de eventos) → `Online/MyClub/EvCompe/MenuMainEvCompe` (menú del evento) → `MenuCompeList` (lista) → `MenuCompeDetail` (detalle). Después del partido: `MenuAfterMatch`, `MenuRewardDialog`, `MenuCommendation`; las pantallas `MenuSquadBonus…` muestran las bonificaciones de plantilla (`squad_bonus`) y `Information/MenuNoticeCompe` el aviso del evento. **L** (nombres de pantalla); el enlace entre pantallas va por tablas de flujo, así que el orden exacto es **P**.
+- **Primer comando probable:** `GET_COMPEV_MAINMENU_INFO` al abrir `MenuMainEvCompe`, luego `GET_COMPEV_LIST` al entrar en la lista y `GET_COMPEV_INFO` al abrir el detalle; `JOIN_COMPEV_MODE` al entrar al modo y `JOIN_COMPEV` al inscribirse. **P**.
+
+## C.7 Cómo implementarlo en el servidor (propuesta)
+1. Primero manejadores vacíos que devuelvan `result:'NOERR'` para `JOIN/LEAVE_COMPEV_MODE`, `LEAVE_COMPEV`, `SYNC_COMPEV_PROGRESS`, `GET_COMPLG_MYENTRY_COMPEID`.
+2. `GET_COMPEV_LIST` con `compe_num:0` y `compe_list` vacía (pantalla vacía sin romper); luego una competición de prueba con `compe_id`, `compe_name`, `compe_kind:"COMEVENT"`, fechas y `difficulty:"COMPE_DIFFICULTY_NONE"`.
+3. `GET_COMPEV_INFO` devolviendo los mismos datos más premios (objeto regalo, B.11). `MYENTRY`: tabla `inscripciones(pid, compe_mode, compe_id, cpu_level, progreso)`.
+4. Para torneos creados desde la web: una tabla `eventos_compe` en SQLite que alimente la lista y el detalle; los premios usan el mismo cobro que los logros (B.17).
+5. Probar con el PES base entrando por myClub → Eventos y mirar `comandos_sin_manejador` y las capturas `*.jsonl` para confirmar las marcas **P/N** de este documento.
+
+## C.8 Cómo se juega un partido de evento contra la COM (L salvo lo marcado)
+**Resumen: no hay comandos propios de evento para jugar.** El partido de evento usa los mismos dos comandos que el partido normal contra la COM de myClub, y el servidor debe recordar en qué evento está inscrito el jugador (`JOIN_COMPEV`/`MYENTRY_COMPEID`).
+- **Al empezar:** `CMD_GET_MYCLUB_VSCOM_OPPONENT`. Pedido: `is_coach_mode`, `is_team_power_lv` (sin `compe_id` ni `compe_mode`). Respuesta: la del rival de siempre (`team_name`, `team_name_short`, `base_team_id`, `team_data`, `squad_id`, `member_list`, `gameplan_data(_size)`, `concept_data`, `coach_unique_id_list`, `cpu_level`…) más **`is_entry_compe`** (texto): la marca de que el partido cuenta para un evento. **P:** poner `is_entry_compe:"true"` cuando el jugador tenga evento inscrito; y `cpu_level` con la dificultad del evento (`COMPE_DIFFICULTY_n`, el que se dio en `JOIN_COMPEV`).
+- **Al terminar:** `CMD_SET_MYCLUB_VSCOM_GAMERESULT`. Pedido: `cpu_level`, `gameend_reason`, `winner_side`, `ex_flag`, `pk_flag`, `score` (+ `score_1st/2nd/ex1st/ex2nd/pk`), listas de goleadores, asistentes, amarillas, rojas y lesionados. Tampoco lleva `compe_id`. Respuesta: `rating`, `oldrating`, `rating_type`, `rating_boost_type/rate`, **`rating_compe`**, `contWin_num`, `skill_rank`, `is_rankup_skill_rank`, `is_first_skillrank`, `is_first`, `gameend_reason`, `team_id`, `player_data` (bin). No contiene premio ni progreso del evento.
+- **Dónde se informan `win_point`, `progress_game_count`, `clear_count`:** solo en la respuesta de `GET_COMPEV_MAINMENU_INFO` (C.2); el cliente la pide al volver al menú del evento tras el partido (`MenuAfterMatch`/`MenuMainEvCompe`). Por tanto el servidor, al recibir `SET_MYCLUB_VSCOM_GAMERESULT` con evento inscrito, debe sumar el partido a su progreso (`progress_game_count`+1; `win_point` según resultado) y devolverlo luego en `MAINMENU_INFO`. **P** (deducido: ningún otro comando los transporta).
+- **Premio (`MenuRewardDialog`, `MenuCommendation`):** no viaja en el resultado del partido. Se muestra con los premios de `GET_COMPEV_INFO` (`compe_reward`, `event_compe_reward_list`, `reward`, `is_compe_reward_exist`, `cleared_count`) y, si son objetos, llegan al buzón como regalos (`CMD_GET_MYCLUB_PRESENTLIST`/`RECV_MYCLUB_PRESENT`, B.14). **P.**
+- **«Superado»:** **P** — se ve cuando el cliente recibe `GET_COMPEV_MAINMENU_INFO` con `compe_result:"FINISHWIN"` y `clear_count` mayor que 0 (y/o `progress_game_count` ≥ `clear_match_num`, `win_point` ≥ `clear_win_point` de `GET_COMPEV_INFO`), y en la lista/detalle con `is_cleared:"true"` (y `cleared_count` > 0). Los umbrales `clear_match_num` y `clear_win_point` son los que decide el servidor en `GET_COMPEV_INFO`: así se define «superado» (p. ej. `clear_match_num:1`, `clear_win_point:3`).
+- **Logro relacionado:** la categoría 8 `JOIN_EVENT_COMPE` de los logros (B.19) cuenta inscripciones a eventos; la 3 `JOIN_VSCOM_COMPE` las de vs-COM.
+- **Hecho en el servidor (11-nov 03:20):** `VSCOM_OPPONENT` manda `is_entry_compe` (config `myclub.marca_evento`, por defecto «YES») y el `cpu_level` del evento; `VSCOM_GAMERESULT` suma progreso y puntos (`myclub.puntos_evento`, 3/1/0); al llegar a `partidos` y `puntos_para_superar` del evento queda `FINISHWIN`, `clear_count`/`cleared_count` suben, `is_cleared:"YES"` y se cobran una vez sus `premio_gp`. `GET_EVENT_CATEGORY_LIST` da una categoría (`myclub.evento_categoria`, P «COMEVENT») con todos los eventos.
+- **No comprobado (N):** ninguna de las respuestas anteriores se ha visto en captura; el orden exacto de comandos al volver al menú (si pide `MAINMENU_INFO` o `INFO` primero) se verá en la prueba con el PES base.
+
+## C.9 Visto en el PES base (11-nov, C)
+- Entrada: myClub → pestaña Partido → 1.ª tarjeta «En curso». Con `event_category_list` de 12 textos aparecen 3 tarjetas: Matchday, eFootball League de myClub y «Desafío online» (copas). Antes, con un texto desconocido: «Campeonato no encontrado».
+- Orden real: `GET_PESLEAGUE_COMPE_RESULT_LIST` → `GET_EVENT_CATEGORY_LIST` → `JOIN_COMPEV_MODE{compe_mode:"EVENT"}` → `GET_COMPEV_MYENTRY_COMPEID{compe_mode:"EVENT"}` → `GET_PLAYERINFO` → `GET_MYCLUB_COM_MATCH_INFO` → `GET_COMPEV_LIST{compe_list_kind:"NOW_PLAY", compe_mode:"EVENT"}` → al elegir el evento: `GET_COMPEV_INFO{compe_mode:"EVENT", compe_id}` → `GET_MYCLUB_SQUAD_BONUS_TARGET_PLAYERLIST{compe_id}` → diálogo «Inscribirte en este Campeonato».
+- Valores reales: `compe_mode` = `"EVENT"`, `compe_list_kind` = `"NOW_PLAY"`.
+- La lista mostró «Copa Phoenix», «Finaliza en 30 d 0 h», «1 vs. COM», «Participa».
+- Al confirmar la inscripción, el cliente dijo «No cumples los requisitos para participar en este Campeonato» sin mandar `JOIN_COMPEV` (comprobación local). Arreglo en prueba (df391e5): requisitos `entry_*` abiertos en `GET_COMPEV_INFO` y respuesta para `SQUAD_BONUS_TARGET_PLAYERLIST`.
+
+## C.10 Inscripción en Copa Phoenix: «No cumples los requisitos» (estado 11-nov, sin resolver)
+**Resumen honesto:** el cliente muestra el aviso «No cumples los requisitos para participar en este Campeonato» tras pulsar «Sí» y nunca manda `CMD_JOIN_COMPEV`. Es un chequeo LOCAL (no un código de error del servidor). Estas pruebas NO lo arreglaron (PES base limpio, sin sider, con la respuesta correcta de cada comando):
+- `entry_*` abiertos (`entry_teamstrength_max 99999`, `entry_teamspirit_max 999`, `entry_player_num 0`, `player_num 11`, `entry_type "NONE"`).
+- `SQUAD_BONUS_TARGET_PLAYERLIST` con las claves reales: vacía (need 0) y con 3 ids de plantilla (need 1). Con enteros sueltos el PES se cierra (APPCRASH en PES2021.exe+0x1C028E4); el formato correcto es lista de bin `{"gameplayer_id": n}`.
+- `add_limit_rating_min/max` 0..99999, `add_limit_match_num_min/max` 0..99999, `add_limit_vscom_win_rate` 0.
+- `is_squad_bonus "false"` en los campos del evento.
+
+**Qué sí se sabe del código (L):**
+- Orden real de comandos: `EVENT_CATEGORY_LIST` → `JOIN_COMPEV_MODE{compe_mode:"EVENT"}` → `GET_COMPEV_MYENTRY_COMPEID` → `GET_PLAYERINFO` → `GET_MYCLUB_COM_MATCH_INFO` → `GET_COMPEV_LIST{compe_list_kind:"NOW_PLAY",compe_mode:"EVENT"}` → `GET_COMPEV_INFO{compe_id}` → `GET_MYCLUB_SQUAD_BONUS_TARGET_PLAYERLIST{compe_id}` → aviso.
+- Flujo: `process::OnlineEvCompeEntry` / `OnlineEvCompeCheckSquadBonusFlow` (ruta «Online/MyClub/EvCompe/ProcCheckSquadBonusFlow») y menú `OnlineMyClubEvCompeDetail::CreateObjectEntry`; layout `compe_list_join_error_dialog` (el cuadro del aviso) y elementos `requirement`, `requirement_item/value`, `requirementResult_item/value` (lista de requisitos con resultado, la pinta FUN_140dabda0).
+- **CORRECCIÓN (11-nov):** la función FUN_140da8120 («compe_join», fórmula de «puede unirse» con offsets +0x54/+0x58/+0x5C/+0x48…) NO es del evento COMPEV: es la pantalla de **PES League** (pide `CmdGetPesLgCompeInfo`, struct `onlinemode::ParameterPesLgCompeInfo`, constructor FUN_141088ac0). No sirve para explicar el aviso de la Copa Phoenix. El struct de evento es `onlinemode::ParameterMyClubEvCompeInfo` (vtable 0x14281BA18, ctor FUN_141036440): es solo un contenedor de textos (nombre, banner, premios), sin campos de condición evidentes; la condición del aviso vive en el flujo `OnlineEvCompeCheckSquadBonusFlow`/`OnlineEvCompeEntry`, aún sin localizar.
+- Depuración observada (observar_v10.exe, exec en FUN_141c02400): la pila al recibir el bonus solo muestra el gestor genérico de red; la condición del aviso está en otro sitio.
+
+**Hipótesis abiertas (de más a menos probable; las que citaban offsets de FUN_140da8120 quedan descartadas por la corrección):** (1) el chequeo usa `GET_PLAYERINFO` (rating del jugador = 1000 en nuestra respuesta, `is_...` flags) y los topes de `add_limit_*` como enteros SIN signo comparados con 0; probar `add_limit_rating_min: 0`+`max: 3000` y rating del jugador distinto; (2) `is_limited_matching_target`/`is_same_team_power_level` en «YES»/«NO» invertidos; (3) el chequeo depende de la plantilla (calidad 2652, espíritu 1, 54/70 de gastos) frente a `entry_teamstrength` en otra escala (p. ej. 0..99 en vez de 0..99999); (4) falta una clave de INFO que el cliente exige (p. ej. `entry_type` con un token de una tabla que no conocemos).
+**Siguiente paso recomendado:** depurador con watch de LECTURA sobre el struct de competición (se arma leyendo el puntero en el primer acceso a `FUN_141049280`, que devuelve `compe`), o probar (3) y (1) por config.
+
+## C.11 Lector de `GET_COMPEV_INFO` (Ghidra, 11-nov): la estructura es ANIDADA, la nuestra va plana (L salvo lo marcado)
+Fuente: `FUN_141c849d0` (17 496 bytes; el que trae `msgid`, `result` y `compe_data`; los disparadores del nombre `CMD_GET_COMPEV_INFO` son `FUN_141c83340`/`FUN_141c83470`). Hermana con las mismas claves: `FUN_141c8e250` (otro comando de la familia; no estudiada). Método: Ghidra 12.0.4 headless, solo lectura, sobre `PES2021_recortado.exe`; scripts en la carpeta de trabajo (`CadenasRef.java`, `DecompilarLista.java`). Cada nivel se lee con `FUN_141c190a0` (decodifica un `bin` a una tabla de entradas de 0x30 bytes: clave + valor) y se compara cada clave por nombre.
+
+**Árbol real de claves**
+- **Raíz del mensaje:** solo `rqid`, `msgid`, `result` y **`compe_data`** (bin). El cliente NO mira ninguna otra clave de primer nivel (`compe_info`, `banner_file_info`, `event_compe_reward_list`, `compe_reward`, `squad_bonus`, `reward` sueltas en la raíz se ignoran).
+- **`compe_data` (bin → mapa).** Dentro, sus claves hermanas son:
+  - **`compe_info`** (bin → mapa) con: `compe_kind`, **`compe_id`**, `compe_start_time`, `compe_end_time`, `compe_name`, **`entry_type`**, `entry_national_id`, `entry_team_id`, `entry_player_num`, `entry_teamspirit_min/max`, `entry_teamstrength_min/max`, `entry_coach_id`, `player_num`, `banner_file_info` (bin → `filename`, `hash_str`), `list_banner_file_info` (bin → `filename`, `hash_str`), `compe_cpu_level`, `add_limit_vscom_win_rate`, `add_limit_rating_min/max`, `is_squad_bonus`, `add_limit_match_num_min/max`, `is_cleared`, `is_coop_match`, `is_locked`, `difficulty`.
+  - `clear_match_num`, `clear_win_point`, `ad_file_name`, `logo_file_name`.
+  - **`event_compe_reward_list`** (**ARREGLO**: el cliente recorre las entradas sin mirar la clave y construye un elemento por entrada, `FUN_141c83570`). Cada elemento es un mapa con `cleared_count` y `compe_reward` (bin → mapa con `present_id`, `name`, `name_jp`, `title`, `body`, `type`, `item`, `entity_id`, `grade`, `skill` (bin), `player_level`, `contract_term`, `team_id`, `present_type`) y `is_compe_reward_exist`.
+  - `is_same_team_power_level`, `is_limited_matching_target`, `precondition_compe_id`, `precondition_compe_name`, `is_exist_unlocked_compe_by_cleared`.
+  - **`squad_bonus`** (bin → mapa; contiene `reward`, un bin con las mismas claves de premio incluida `skill`).
+  - `is_pesleague_stadium`, `is_efootball_pro_stadium`.
+- **Arreglos frente a bins sueltos:** arreglo = `event_compe_reward_list` (y lo que ya sabíamos: `gameplayer_id_list`, lista de bins `{gameplayer_id}`). Bins sueltos (un mapa, no lista) = `compe_data`, `compe_info`, `banner_file_info`, `list_banner_file_info`, `compe_reward`, `squad_bonus`, `reward`, `skill` (esta última **P**: tomada por el patrón de bucle).
+
+**Dónde toma el cliente los requisitos de entrada y el `compe_id`:** de `compe_data` → `compe_info` (`compe_id`, `entry_*`, `player_num`, `add_limit_*`, `is_squad_bonus`). Los indicadores `is_same_team_power_level`, `is_limited_matching_target`, `precondition_*` y `clear_*` están un nivel por encima (en `compe_data`, junto a `compe_info`).
+
+**Diferencia con lo que manda hoy el servidor (`c_cmd_get_compev_info`, 5ea6c3d):** envía `compe_data` como UN mapa plano (`compe_id`, `entry_*`, flags, todo mezclado), y además `compe_info`, `banner_file_info`, `event_compe_reward_list`, `compe_reward`, `squad_bonus`, `reward` como claves de la raíz. Según el lector, dentro de `compe_data` el cliente no encuentra la clave `compe_info`, así que `compe_id` y todos los `entry_*`/`add_limit_*` le quedan en su valor por defecto (0). **P (fuerte): esto explica el aviso «No cumples los requisitos» de C.10** (los requisitos no se leen y la comparación contra cero falla), y que `GET_MATCHDAY_INFO` mande `compe_id 0` más tarde.
+**Arreglo propuesto (por probar):** `compe_data = Empaquetado({"compe_info": Empaquetado({compe_kind, compe_id, compe_start_time, compe_end_time, compe_name, entry_*, player_num, banner_file_info, list_banner_file_info, compe_cpu_level, add_limit_*, is_squad_bonus, is_cleared, is_coop_match, is_locked, difficulty}), "clear_match_num": …, "clear_win_point": …, "ad_file_name": "", "logo_file_name": "", "event_compe_reward_list": [ {cleared_count, compe_reward:{…}, is_compe_reward_exist} ], "is_same_team_power_level": …, "is_limited_matching_target": …, "precondition_compe_id": 0, "precondition_compe_name": "", "is_exist_unlocked_compe_by_cleared": …, "squad_bonus": Empaquetado({}), "is_pesleague_stadium": …, "is_efootball_pro_stadium": …})`, y dejar en la raíz solo `result`. Los valores booleanos van como texto (probar `"YES"/"NO"` como hasta ahora).

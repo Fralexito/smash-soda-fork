@@ -1,0 +1,573 @@
+{
+  "reglas_myclub": "reglas_myclub.json",
+  "reglas_cada_s": 30,
+  "clave_nclmio": "D:/Frank/IA/CLAUDE/pes-online/nclmio_key.bin",
+  "blowfish_le": false,
+  "clave_gamerelay": "D:/Frank/IA/CLAUDE/pes-online/gamerelay_claves.bin",
+  "gamerelay": {
+    "activo": true,
+    "indice": 1,
+    "puerto": 5100,
+    "ip": "auto"
+  },
+  "interruptores": {
+    "apagados": [],
+    "error": "ERR_SERVERNOTREADY"
+  },
+  "ip_publica": "auto",
+  "puerto_gate": 10000,
+  "puerto_menu": 10001,
+  "puerto_http": 5000,
+  "puertos_http": [
+    5000,
+    80
+  ],
+  "puertos_stun": [
+    5730,
+    3478
+  ],
+  "base_datos": "phoenix_online.db",
+  "capturas": "capturas",
+  "capturas_activas": true,
+  "capturas_total_mb": 2000,
+  "capturas_archivo_mb": 50,
+  "registro": "registro",
+  "respaldos": {
+    "activo": true,
+    "carpeta": "respaldos",
+    "cada_horas": 6,
+    "guardar": 28
+  },
+  "max_conexiones_por_ip": 16,
+  "inactividad_max_s": 0,
+  "archivo_mantenimiento": "MANTENIMIENTO.txt",
+  "exigir_versiones": {},
+  "identidad": {
+    "activo": true,
+    "steam_compartidos": [
+      "000000000003a660",
+      "0410000004100000"
+    ],
+    "por_ip": {},
+    "ips_anfitrion": [], "exigir_launcher": false, "launcher_horas": 12
+  },
+  "vinculos": "vinculos.json",
+  "abierto_a_todos": false,
+  "exigir_misma_huella": false,
+  "urls": {
+    "TOPINFO": "http://{ip}:5000/topinfo",
+    "BANNER": "http://{ip}:5000/banner",
+    "GET_TURN_SERVER_LIST": "http://{ip}:5000/turn",
+    "GET_GAMERELAY_QUALITYCHECKLIST": "http://{ip}:5000/gamerelay/qualitychecklist",
+    "GET_GAMERELAY": "http://{ip}:5000/gamerelay",
+    "EULA_PES": "http://{ip}:5000/eula",
+    "AUTH_STEAM": "http://{ip}:5000/auth_steam",
+    "ONLINEID": "http://{ip}:5000/onlineid"
+  },
+  "archivos_http": {},
+  "versiones": {
+    "version": "1.07.02",
+    "patch_version": "1.07.02",
+    "dlc_version": "7.00",
+    "livedata_version": "0",
+    "eula_version": "0",
+    "eula_myclub_version": "0",
+    "eula_privacy_policy_version": "0",
+    "eula_privacy_notice_version": "0",
+    "eula_privacy_policy_california_version": "0",
+    "eula_privacy_policy_japan_version": "0"
+  },
+  "naciones": [
+    {
+      "nation_code": "PE",
+      "privacy_kind": "PRIVACY_POLICY",
+      "has_area": "NO",
+      "name": "Peru"
+    }
+  ],
+  "nacion": "PE",
+  "area": "",
+  "areas_por_defecto": [
+    {
+      "nation_code": "PE",
+      "area_code": "PE-LIM",
+      "privacy_kind": "0",
+      "name": "Lima"
+    }
+  ],
+  "anuncios": [],
+  "lobbies": [
+    {
+      "lobby_id": 1,
+      "name": "Phoenix 1v1",
+      "player_num": 0,
+      "player_num_max": 200,
+      "gamerelay_index": 0,
+      "lobby_type": "FREE"
+    }
+  ],
+  "turn": null,
+  "myclub": {
+    "ranking_semanal_real": true,
+    "progreso_sin_club": "",
+    "progreso_con_club": "",
+    "gp_inicial": 0,
+    "jugadores": [
+      {
+        "gameplayer_id": 61672,
+        "rating": 90,
+        "level": 1,
+        "uniform_number": 24,
+        "team_id": 108
+      },
+      {
+        "gameplayer_id": 8639,
+        "rating": 90,
+        "level": 1,
+        "uniform_number": 2,
+        "team_id": 108
+      },
+      {
+        "gameplayer_id": 104418,
+        "rating": 90,
+        "level": 1,
+        "uniform_number": 14,
+        "team_id": 108
+      },
+      {
+        "gameplayer_id": 42892,
+        "rating": 90,
+        "level": 1,
+        "uniform_number": 19,
+        "team_id": 108
+      },
+      {
+        "gameplayer_id": 40425,
+        "rating": 90,
+        "level": 1,
+        "uniform_number": 17,
+        "team_id": 108
+      },
+      {
+        "gameplayer_id": 38568,
+        "rating": 90,
+        "level": 1,
+        "uniform_number": 4,
+        "team_id": 108
+      },
+      {
+        "gameplayer_id": 108662,
+        "rating": 90,
+        "level": 1,
+        "uniform_number": 20,
+        "team_id": 108
+      },
+      {
+        "gameplayer_id": 36625,
+        "rating": 90,
+        "level": 1,
+        "uniform_number": 3,
+        "team_id": 108
+      },
+      {
+        "gameplayer_id": 7511,
+        "rating": 90,
+        "level": 1,
+        "uniform_number": 9,
+        "team_id": 108
+      },
+      {
+        "gameplayer_id": 42316,
+        "rating": 90,
+        "level": 1,
+        "uniform_number": 16,
+        "team_id": 108
+      },
+      {
+        "gameplayer_id": 34881,
+        "rating": 90,
+        "level": 1,
+        "uniform_number": 8,
+        "team_id": 108
+      },
+      {
+        "gameplayer_id": 43202,
+        "rating": 90,
+        "level": 1,
+        "uniform_number": 12,
+        "team_id": 108
+      },
+      {
+        "gameplayer_id": 45330,
+        "rating": 90,
+        "level": 1,
+        "uniform_number": 22,
+        "team_id": 108
+      },
+      {
+        "gameplayer_id": 119150,
+        "rating": 90,
+        "level": 1,
+        "uniform_number": 39,
+        "team_id": 108
+      },
+      {
+        "gameplayer_id": 132544,
+        "rating": 90,
+        "level": 1,
+        "uniform_number": 32,
+        "team_id": 108
+      },
+      {
+        "gameplayer_id": 108696,
+        "rating": 90,
+        "level": 1,
+        "uniform_number": 1,
+        "team_id": 108
+      },
+      {
+        "gameplayer_id": 121314,
+        "rating": 90,
+        "level": 1,
+        "uniform_number": 23,
+        "team_id": 108
+      },
+      {
+        "gameplayer_id": 36714,
+        "rating": 90,
+        "level": 1,
+        "uniform_number": 21,
+        "team_id": 108
+      },
+      {
+        "gameplayer_id": 106614,
+        "rating": 90,
+        "level": 1,
+        "uniform_number": 7,
+        "team_id": 108
+      },
+      {
+        "gameplayer_id": 121985,
+        "rating": 90,
+        "level": 1,
+        "uniform_number": 27,
+        "team_id": 108
+      },
+      {
+        "gameplayer_id": 122908,
+        "rating": 90,
+        "level": 1,
+        "uniform_number": 29,
+        "team_id": 108
+      },
+      {
+        "gameplayer_id": 110626,
+        "rating": 90,
+        "level": 1,
+        "uniform_number": 10,
+        "team_id": 108
+      },
+      {
+        "gameplayer_id": 60622,
+        "rating": 90,
+        "level": 1,
+        "uniform_number": 18,
+        "team_id": 108
+      }
+    ],
+    "entrenadores": [
+      {
+        "coach_id": 8,
+        "overall": 70
+      }
+    ],
+    "mercado_dt": [
+      24,
+      37,
+      104
+    ],
+    "club_de_prueba": {
+      "team_name": "Phoenix FC",
+      "team_name_short": "PHX",
+      "base_team_id": 108,
+      "home_town": {
+        "nation_id": 0,
+        "label": "",
+        "name": ""
+      },
+      "nation_id": 0,
+      "gp": 10000
+    },
+    "gp_por_partido": {
+      "WIN": 240,
+      "DRAW": 150,
+      "LOSE": 50,
+      "": 50
+    },
+    "rival": {
+      "jugadores": [
+        {
+          "gameplayer_id": 0,
+          "uniform_number": 1
+        },
+        {
+          "gameplayer_id": 0,
+          "uniform_number": 2
+        },
+        {
+          "gameplayer_id": 0,
+          "uniform_number": 3
+        },
+        {
+          "gameplayer_id": 0,
+          "uniform_number": 4
+        },
+        {
+          "gameplayer_id": 0,
+          "uniform_number": 5
+        },
+        {
+          "gameplayer_id": 0,
+          "uniform_number": 6
+        },
+        {
+          "gameplayer_id": 0,
+          "uniform_number": 7
+        },
+        {
+          "gameplayer_id": 0,
+          "uniform_number": 8
+        },
+        {
+          "gameplayer_id": 0,
+          "uniform_number": 9
+        },
+        {
+          "gameplayer_id": 0,
+          "uniform_number": 10
+        },
+        {
+          "gameplayer_id": 0,
+          "uniform_number": 11
+        },
+        {
+          "gameplayer_id": 0,
+          "uniform_number": 12
+        },
+        {
+          "gameplayer_id": 0,
+          "uniform_number": 13
+        },
+        {
+          "gameplayer_id": 0,
+          "uniform_number": 14
+        },
+        {
+          "gameplayer_id": 0,
+          "uniform_number": 15
+        },
+        {
+          "gameplayer_id": 0,
+          "uniform_number": 16
+        },
+        {
+          "gameplayer_id": 0,
+          "uniform_number": 17
+        },
+        {
+          "gameplayer_id": 0,
+          "uniform_number": 18
+        }
+      ],
+      "coach_id": 24,
+      "team_name": "Real Madrid",
+      "team_name_short": "RMA",
+      "base_team_id": 109,
+      "cpu_level": "MATCH_LEVEL_REGULAR",
+      "side": "AWAY",
+      "equipos": [
+        {
+          "base_team_id": 109,
+          "team_name": "Madrid Chamartín",
+          "team_name_short": "MCH",
+          "coach_id": 24
+        },
+        {
+          "base_team_id": 103,
+          "team_name": "Liverpool",
+          "team_name_short": "LIV",
+          "coach_id": 24
+        },
+        {
+          "base_team_id": 114,
+          "team_name": "PSG",
+          "team_name_short": "PSG",
+          "coach_id": 24
+        },
+        {
+          "base_team_id": 120,
+          "team_name": "Juventus",
+          "team_name_short": "JUV",
+          "coach_id": 24
+        },
+        {
+          "base_team_id": 127,
+          "team_name": "Bayern",
+          "team_name_short": "BAY",
+          "coach_id": 24
+        },
+        {
+          "base_team_id": 173,
+          "team_name": "Man City",
+          "team_name_short": "MCI",
+          "coach_id": 24
+        },
+        {
+          "base_team_id": 100,
+          "team_name": "Manchester United",
+          "team_name_short": "MUN",
+          "coach_id": 24
+        }
+      ]
+    },
+    "catalogo": "D:/Frank/IA/CLAUDE/pes-online/catalogo.json",
+    "exp_por_partido": {
+      "WIN": 60,
+      "DRAW": 40,
+      "LOSE": 30,
+      "": 30
+    },
+    "monedas_gratis": true,
+    "monedas_por_partido": {
+      "WIN": 10,
+      "DRAW": 5,
+      "LOSE": 2,
+      "": 2
+    },
+    "agentes": [
+      {
+        "agent_id": 1,
+        "name": "Phoenix Estrellas",
+        "gp": 10000,
+        "pes_point": 100,
+        "get_player_num": 1,
+        "equipos": [
+          103,
+          108,
+          109,
+          114,
+          127,
+          173
+        ]
+      },
+      {
+        "agent_id": 2,
+        "name": "Delanteros",
+        "gp": 6000,
+        "pes_point": 60,
+        "get_player_num": 1,
+        "equipos": [
+          100,
+          101,
+          102,
+          119,
+          120,
+          121,
+          172,
+          327
+        ],
+        "posiciones": [
+          "DC",
+          "SD",
+          "EI",
+          "ED"
+        ]
+      }
+    ],
+    "cazatalentos": [
+      {
+        "agent_id": 50,
+        "grade": 3,
+        "count": 2,
+        "sell_gp": 500,
+        "equipos": [
+          103,
+          114
+        ]
+      }
+    ],
+    "renovacion_partidos": 10,
+    "renovacion_gp": 200,
+    "renovacion_monedas": 2,
+    "abandono_es_derrota": true,
+    "motivos_abandono": [
+      "GIVEUP"
+    ],
+    "gp_logro_defecto": 300,
+    "gp_logros": {
+      "231": 800,
+      "237": 240,
+      "244": 600
+    },
+    "dificultad": {
+      "activa": true,
+      "_nota": "C (REA 05-nov, tabla 0x142645fd0): orden 0..5 del juego",
+      "niveles": [
+        "MATCH_LEVEL_BEGINNER",
+        "MATCH_LEVEL_AMATEUR",
+        "MATCH_LEVEL_REGULAR",
+        "MATCH_LEVEL_PROFESSIONAL",
+        "MATCH_LEVEL_TOPPLAYER",
+        "MATCH_LEVEL_SUPERSTAR"
+      ],
+      "inicial": "MATCH_LEVEL_REGULAR",
+      "victorias_para_subir": 3,
+      "derrotas_para_bajar": 2
+    },
+    "contrato_inicial": 10,
+    "renovacion_maximo": 50,
+    "contrato_por_partido": 1,
+    "staff_exp_factor": 1,
+    "recuperar_monedas": 0,
+    "objetos": [
+      {
+        "clave": "boletos_contrato",
+        "item_type": "EXTEND_PLAYER",
+        "item_variation": "NONE"
+      },
+      {
+        "clave": "objetos_recuperar",
+        "item_type": "RECOVERY_ONE",
+        "item_variation": "NONE"
+      }
+    ],
+    "subastas": {
+      "activa": true,
+      "_nota": "subastas de la casa: cazatalentos de 'productos' (o de 'cazatalentos' si falta)",
+      "cantidad": 6,
+      "duracion_min": 60,
+      "incremento": 100,
+      "precio_por_estrella": 1000,
+      "seguimiento_max": 20,
+      "deseos_max": 10,
+      "rival_casa": {
+        "activo": false,
+        "probabilidad": 0.3,
+        "tope_factor": 2
+      }
+    },
+    "cansancio": {
+      "activo": false,
+      "sube": 10,
+      "baja": 10,
+      "maximo": 100,
+      "_nota": "rango real de tiredness por confirmar con REA"
+    }
+  },
+  "emparejar_misma_huella": false,
+  "supabase": {
+    "activo": false,
+    "url": "https://fiibiyijojkxqlsrhcil.supabase.co",
+    "cada_s": 30
+  }
+}

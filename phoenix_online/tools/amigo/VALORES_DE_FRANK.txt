@@ -1,0 +1,24 @@
+Valores del PES base de Frank (11-nov-2026). Solo tamanos, fechas y huellas; nada de claves ni de SteamID.
+Se sacaron con COMPROBAR_MI_PES.ps1 (solo lectura) sobre C:\PES21\eFootball PES 2021.
+El amigo debe sacar los MISMOS numeros; si no coinciden, el partido o myClub pueden fallar.
+
+PES2021.exe
+  Tamano : 458739200 bytes
+  Fecha  : 2023-04-16 17:39
+  SHA-256: 641720E22725D5795DED8A2E61D56DD4F20AFC886205C3896190B60AA9160E5A
+
+Carpeta Data    : 70 archivos, 37769852304 bytes, ultimo cambio 2025-12-09 15:18
+Carpeta download: 8 archivos, 9318812890 bytes, ultimo cambio 2025-10-31 08:58
+
+download\DpFileList.bin
+  Tamano : 3080 bytes
+  SHA-256: 39D8AA4CCA9E93D01D4F8717A2EF4AFB86FEF53F272F18F8D839B1295B2E5085
+
+Archivos .cpk de download (nombre y tamano):
+  dt80_100E_x64.cpk  1631610910
+  dt80_200E_x64.cpk  2325905438
+  dt80_300E_x64.cpk  1163005982
+  dt80_400E_x64.cpk  999602206
+  dt80_500E_x64.cpk  1207423006
+  dt80_600E_x64.cpk  1113294878
+  dt80_700E_x64.cpk  877967390
