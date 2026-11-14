@@ -288,3 +288,8 @@ Sigue sin arreglar (el pago llega bien; es cosmético). Lo que quedó **comproba
 - **Entrenador especial (tipo 7)**: FUN_1413f1320 busca (7, variación 3→1) en el mapa y decide si mostrar la opción (también depende del tamaño de una lista de 0x70 B por elemento); requiere item_variation SMALL/MEDIUM/LARGE (1-3), no NONE. Pantalla y comando sin localizar.
 - **USE_STAFF**: el lector (FUN_141ca40d0) lee parameters/enhanced_parameters/add_skill_id en exp_info_pre/post; `_info_exp` ya manda 108 con la opción encendida. Sin prueba en vivo (consume un jugador).
 - Respaldo en Drive: TABLERO_ONLINE_2026-11-14.md (carpeta 1YArkOuXoqrHvIYIuQSZxK0GLD-oc3Jmm, id 1Ai9tkvy99K_bc9OvdMrl60asOhYedAER).
+
+## 14-nov (tanda 10) — Objetos de DT (gestión/adaptación): sin pantalla conocida
+- Prueba con 2 DT en el club (copia previa `phoenix_online.antes_dt2_14nov.db`; DT2 quitado al terminar): el Menú del DT sigue sin «Usar objeto» y el icono del DT en Dirección plantilla solo abre el selector de DT. **No usable con un solo DT / sin pantalla conocida**: ni el Menú del DT ni el Menú del equipo (que solo muestra «Recuperar (todos)» y «Entrenamiento táctico») ofrecen gestión/adaptación aunque el ITEMLIST los lleve (tipos 5 y 6, variación 0).
+- Ghidra: FUN_140d4fc20 es el diálogo de uso con selector de cantidad («p_option»: caption, itemName, description, icono `icon_adaptation…`): estado 0 → tipo 5 (adaptación), 1 → tipo 6 (gestión), 2 → tipo 4 (táctico); clave de búsqueda (tipo, 0); si hay 1 unidad usa directo («proceed»). Las filas dependen de FUN_1413cc180 (tipo 5) y FUN_1413cea00 (tipo 6), máquinas de estado con el evento 0x1080005; aún no se sabe qué condición las muestra.
+- Pendiente: entrenador especial (tipo 7, variaciones 1-3) y USE_STAFF en vivo.
