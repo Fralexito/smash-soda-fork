@@ -3221,6 +3221,33 @@ class TestDivisiones(unittest.IsolatedAsyncioTestCase):
         self.assertEqual((await srv.c_cmd_get_gameresults(a, {}))["rlist_num"], 0)
 
 
+class TestParametros108(unittest.TestCase):
+    """C (14-nov): `parameters` del cliente = 108 enteros (RE FUN_1410290b0)."""
+
+    def _srv(self, cat):
+        import os, tempfile, json as _j
+        ruta = os.path.join(tempfile.mkdtemp(), "catalogo.json")
+        with open(ruta, "w") as f:
+            _j.dump(cat, f)
+        srv = Servidor.__new__(Servidor)
+        srv.cfg = {"myclub": {"catalogo": ruta}}
+        return srv
+
+    def test_108_valores_con_habilidades_y_posicion(self):
+        hab = {k: 40 + i for i, k in enumerate(Servidor.PARAM108_HABILIDAD.values())}
+        srv = self._srv({"jugadores": {"7": {"habilidades": hab, "posicion": 3}}})
+        p = srv._parametros_108({"gameplayer_id": 7})
+        self.assertEqual(len(p), 108)
+        self.assertEqual(p[0], 3)
+        for n, (i, k) in enumerate(Servidor.PARAM108_HABILIDAD.items()):
+            self.assertEqual(p[i], 40 + n)
+        self.assertEqual(p[32], 0)  # el 32 no es una habilidad (2 bits)
+        self.assertEqual(sorted(Servidor.PARAM108_HABILIDAD), [*range(14, 32), *range(33, 40)])
+
+    def test_sin_catalogo_devuelve_vacio(self):
+        self.assertEqual(self._srv({"jugadores": {}})._parametros_108({"gameplayer_id": 9}), [])
+
+
 class TestMyClubExtra(unittest.IsolatedAsyncioTestCase):
     """ESPEC parte B: nombre del club y de la plantilla, historial, regalos, logros (vacíos válidos)."""
 

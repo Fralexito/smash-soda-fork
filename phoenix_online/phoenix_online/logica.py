@@ -2652,8 +2652,9 @@ class Servidor:
                 self.EXP_POR_NIVEL - exp % self.EXP_POR_NIVEL}),
             # P (14-nov): tras usar un objeto la tarjeta sale un momento con media 40; con
             # myclub.ficha_parametros_catalogo se rellena parameters desde el catálogo.
-            "parameters": list(j.get("parameters") or (self._habilidades_catalogo(j)
-                               if cfgm.get("ficha_parametros_catalogo") else [])),
+            "parameters": list(j.get("parameters") or (
+                self._parametros_108(j) if cfgm.get("ficha_parametros_108") else
+                self._habilidades_catalogo(j) if cfgm.get("ficha_parametros_catalogo") else [])),
             "enhanced_parameters": list(j.get("enhanced_parameters") or []),
             "add_skill_id": e("add_skill_id"), "is_protected": t("is_protected"),
             "redcard_info_list": [], "default_overall": e("default_overall", e("rating", 75)),
@@ -3884,6 +3885,33 @@ class Servidor:
             return []
         return [int(hab.get(k) or 40) for k in self.ORDEN_HABILIDADES]
 
+    # C (14-nov, RE FUN_1414c6e90 + FUN_1410290b0): `parameters` = 108 enteros; el cliente los
+    # escribe uno a uno en el registro empaquetado del jugador (44 bytes). Con otro tamaño no
+    # escribe nada y la tarjeta «Resultados del entrenamiento» sale PT 40. Índices verificados
+    # con 3 jugadores reales leyendo su registro en memoria (valor directo 40..99, sin -40):
+    PARAM108_HABILIDAD = {
+        14: "act_ofensiva", 15: "act_defensiva", 16: "act_portero", 17: "drible", 18: "control",
+        19: "posesion", 20: "finalizacion", 21: "pase_ras", 22: "pase_bombeado", 23: "cabeceo",
+        24: "recuperacion", 25: "agresividad", 26: "balon_parado", 27: "efecto", 28: "atajar",
+        29: "despejar", 30: "reflejos", 31: "cobertura", 33: "velocidad", 34: "contacto",
+        35: "equilibrio", 36: "potencia_tiro", 37: "aceleracion", 38: "salto", 39: "resistencia"}
+
+    def _parametros_108(self, j):
+        """Los 108 valores de `parameters` desde el catálogo. Mapeado: 25 habilidades
+        (índices 14-31 y 33-39) y posición registrada (índice 0). Sin mapear (0 por ahora):
+        aptitudes de posición 1-13, estilos/pie y las 44 marcas de habilidades especiales."""
+        datos = (self._catalogo().get("jugadores") or {}).get(str(j.get("gameplayer_id"))) or {}
+        hab = j.get("habilidades") or datos.get("habilidades") or {}
+        if not isinstance(hab, dict) or not hab:
+            return []
+        p = [0] * 108
+        for i, k in self.PARAM108_HABILIDAD.items():
+            p[i] = max(0, min(127, int(hab.get(k) or 40)))
+        pos = j.get("posicion") if isinstance(j.get("posicion"), int) else datos.get("posicion")
+        if isinstance(pos, int) and 0 <= pos <= 12:
+            p[0] = pos
+        return p
+
     def _info_exp(self, j, habilidades=None):
         """C (REA 05-nov noche, 0x141ca40d0): exp_info_pre/post = UN bin con level, level_limit,
         exp_total, exp_current_level, exp_to_next_level, parameters, enhanced_parameters,
@@ -3898,7 +3926,9 @@ class Servidor:
             "exp_to_next_level": 0 if nivel >= limite else self.EXP_POR_NIVEL - exp % self.EXP_POR_NIVEL,
             # C (vivo 06-nov): con parameters vacío, «Resultados del entrenamiento» pintaba la
             # carta con media 40 y todos los atributos 0.
-            "parameters": list(j.get("parameters") or habilidades or []),
+            "parameters": list(j.get("parameters") or (
+                self._parametros_108(j) if (self.cfg.get("myclub") or {}).get("ficha_parametros_108")
+                else habilidades) or []),
             "enhanced_parameters": list(j.get("enhanced_parameters") or []),
             "add_skill_id": e("add_skill_id")})
 
