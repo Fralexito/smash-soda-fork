@@ -3565,3 +3565,39 @@ class TestRegalosPlanoTop(unittest.TestCase):
         self.assertEqual((e["result"], e["present_id"], e["count"], e["item"].valor["count"]),
                          ("NOERR", 8, 50, 50))
         self.assertEqual(e["skill"].valor, {"skill_category": "", "skill_id": 0})
+
+
+class TestRankingSemanalReal(unittest.TestCase):
+    """(14-nov) Ranking semanal con partidos reales registrados, sin inventar."""
+
+    def _srv(self, clubes):
+        class D:
+            def claves_de_clubes(s): return list(clubes)
+            def club(s, c): return clubes[c]
+            def jugador(s, c): return {"pname": "J" + c, "pid": int(c)}
+        srv = Servidor.__new__(Servidor)
+        srv.cfg = {"myclub": {"ranking_semanal_real": True}}
+        srv.datos = D()
+        srv.numero_de_clave = lambda c: int(c)
+        return srv
+
+    def test_ordena_por_puntos_y_ignora_semanas_viejas(self):
+        import time
+        ahora = time.time()
+        viejo = Servidor._inicio_semana(ahora) - 86400
+        h = lambda d, t: {"hora": int(t), "desenlace": d}
+        srv = self._srv({
+            "1": {"vscom": {"historial": [h("WIN", ahora), h("DRAW", ahora)]}},   # 4
+            "2": {"vscom": {"historial": [h("WIN", ahora), h("WIN", ahora)]}},    # 6
+            "3": {"vscom": {"historial": [h("WIN", viejo)]}},                       # no cuenta
+            "4": {}})
+        r = srv._ranking_semanal_real({}, ahora)
+        self.assertEqual([f["pid"] for f in r["rank_list"]], [2, 1])
+        self.assertEqual([f["rank"] for f in r["rank_list"]], [1, 2])
+        self.assertEqual(r["total_rank_num"], 2)
+        self.assertEqual(r["max_weekly_point"], 6)
+        self.assertEqual(r["rank_list"][0]["pname"]["name"], "J2")
+
+    def test_sin_partidos_vacio(self):
+        r = self._srv({"1": {}})._ranking_semanal_real({})
+        self.assertEqual((r["total_rank_num"], r["rank_list"], r["max_weekly_point"]), (0, [], 0))

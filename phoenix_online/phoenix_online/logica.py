@@ -7316,6 +7316,14 @@ class Servidor:
             return {**base, **self._ranking_clanes(formulario)}
         if msgid in ("CMD_GET_MYCLUB_WEEKLY_RANKING", "CMD_GET_MYCLUB_WEEKLY_RANKING_BYID"):
             # B.7: sin torneo semanal propio todavía: respuesta vacía válida
+            # (14-nov) Con myclub.ranking_semanal_real encendido: datos reales de partidos registrados
+            if (self.cfg.get("myclub") or {}).get("ranking_semanal_real"):
+                r = self._ranking_semanal_real(formulario)
+                if msgid.endswith("_BYID"):
+                    buscados = {str(formulario.get(k)) for k in ("target_pid", "xuid_one", "np_account_id", "pid")
+                                if formulario.get(k) not in (None, "", "0", 0, "NotImplement")}
+                    r["rank_list"] = [f for f in r["rank_list"] if str(f["pid"]) in buscados][:1]
+                return {**base, **r}
             return {**base, "date": int(time.time()), "total_rank_num": 0, "rank_list": [],
                     "max_weekly_point": 0, "group_number": 0, "division": "", "reward_list": []}
         if msgid == "CMD_GET_DLC_FILELIST":
@@ -7386,6 +7394,50 @@ class Servidor:
                 "team_id": int(club.get("base_team_id") or 0),
                 "team_name": nombre_club}})
         return {"date": int(time.time()), "total_rank_num": len(filas), "rank_list": lista}
+
+    @staticmethod
+    def _inicio_semana(ahora=None):
+        """Lunes 00:00 (hora local del servidor) de la semana en curso, en segundos."""
+        t = time.localtime(ahora if ahora is not None else time.time())
+        return int(time.mktime((t.tm_year, t.tm_mon, t.tm_mday, 0, 0, 0, 0, 0, -1))) - t.tm_wday * 86400
+
+    def _ranking_semanal_real(self, m, ahora=None):
+        """(14-nov) Ranking semanal con datos REALES: puntos de la semana en curso de cada club a
+        partir de los partidos «Partido igualado» (vs COM) ya registrados (3 por victoria, 1 por
+        empate). Sin inventar partidos: quien no jugó esta semana no aparece. Campos de cada fila
+        según el lector del PES (Ghidra): pid, pname{name, xuid_one, psn_user_id{account_id,
+        online_id, is_valid_cache}, is_deleted}, rank, max_weekly_point."""
+        desde = self._inicio_semana(ahora)
+        filas = []
+        for clave in self.datos.claves_de_clubes():
+            club = self.datos.club(clave) or {}
+            puntos = jugados = 0
+            for h in (club.get("vscom") or {}).get("historial") or []:
+                if int(h.get("hora") or 0) < desde:
+                    continue
+                jugados += 1
+                puntos += {"WIN": 3, "DRAW": 1}.get(h.get("desenlace"), 0)
+            if jugados:
+                filas.append((puntos, jugados, clave))
+        filas.sort(key=lambda f: (-f[0], f[1], f[2]))
+        try:
+            inicio = max(0, int(m.get("start_index") or 0))
+            cuantos = min(100, max(1, int(m.get("view_num") or 50)))
+        except (TypeError, ValueError):
+            inicio, cuantos = 0, 50
+        lista = []
+        for i, (puntos, _n, clave) in enumerate(filas[inicio:inicio + cuantos]):
+            j = self.datos.jugador(clave) or {}
+            num = self.numero_de_clave(clave) or j.get("pid") or 0
+            nombre = j.get("pname") or ""
+            lista.append({"pid": num,
+                          "pname": {"name": nombre, "xuid_one": str(num),
+                                    "psn_user_id": {"account_id": 0, "online_id": nombre, "is_valid_cache": "NO"},
+                                    "is_deleted": "NO"},
+                          "rank": inicio + i + 1, "max_weekly_point": puntos})
+        return {"date": int(time.time()), "total_rank_num": len(filas), "rank_list": lista,
+                "max_weekly_point": filas[0][0] if filas else 0, "group_number": 1,
+                "division": "", "reward_list": []}
 
     @staticmethod
     def _hay_buscado(m):
