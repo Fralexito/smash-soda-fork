@@ -75,6 +75,46 @@ GRUPO_DE_PUESTO = {0: "PT", 1: "DEF", 2: "DEF", 3: "DEF", 4: "MED", 5: "MED", 6:
                    7: "MED", 8: "MED", 9: "ATA", 10: "ATA", 11: "ATA", 12: "ATA"}
 
 
+
+# C (14-nov, RE FUN_1414c6e90 + registros vivos del PES): el cliente usa 108 «parameters» por jugador
+# (idx 0..107). Las 25 habilidades son los idx de PARAM108_HABILIDAD (valor 40..99, igual que
+# HABILIDADES pero guardado directo). El resto sale de estos bits del registro de Player.bin
+# (idx -> (bit_inicio, ancho)), hallados cruzando 26 jugadores reales (coincidencia exacta o con
+# 1 solo jugador discrepante). Aptitudes de posición idx 1-13: 1 DC, 2 SD, 3 EI, 4 ED, 5 MO,
+# 6 MCD, 7 MC, 8 MDI, 9 MDD, 10 DFC, 11 LI, 12 LD, 13 PT (valor 2 = posición registrada).
+# idx 60-107 = marcas de 1 bit (habilidades especiales/estilos). Sin resolver (van a 0):
+# 43, 45-48, 59, 68, 74, 83-87, 90, 95, 97, 102, 104, 106.
+PARAM108_HABILIDAD = {
+    14: "act_ofensiva", 15: "act_defensiva", 16: "act_portero", 17: "drible", 18: "control",
+    19: "posesion", 20: "finalizacion", 21: "pase_ras", 22: "pase_bombeado", 23: "cabeceo",
+    24: "recuperacion", 25: "agresividad", 26: "balon_parado", 27: "efecto", 28: "atajar",
+    29: "despejar", 30: "reflejos", 31: "cobertura", 33: "velocidad", 34: "contacto",
+    35: "equilibrio", 36: "potencia_tiro", 37: "aceleracion", 38: "salto", 39: "resistencia"}
+PARAM108_BITS = {
+    0: (370, 4), 1: (406, 2), 2: (414, 2), 3: (408, 2), 4: (412, 2), 5: (400, 2), 6: (350, 2),
+    7: (392, 2), 8: (402, 2), 9: (396, 2), 10: (404, 2), 11: (254, 2), 12: (410, 2),
+    13: (286, 2), 32: (398, 2), 40: (374, 3), 41: (394, 2), 42: (450, 1), 44: (390, 2),
+    49: (318, 2), 50: (416, 2), 51: (377, 3), 52: (362, 4), 53: (384, 3), 54: (366, 4),
+    55: (59, 5), 56: (380, 3), 57: (358, 4), 58: (178, 8), 60: (425, 1), 61: (467, 1),
+    62: (462, 1), 63: (446, 1), 64: (465, 1), 65: (383, 1), 66: (456, 1), 67: (455, 1),
+    69: (433, 1), 70: (418, 1), 71: (464, 1), 72: (461, 1), 73: (431, 1), 75: (449, 1),
+    76: (460, 1), 77: (441, 1), 78: (447, 1), 79: (443, 1), 80: (420, 1), 81: (419, 1),
+    82: (429, 1), 88: (427, 1), 89: (440, 1), 91: (466, 1), 92: (428, 1), 93: (452, 1),
+    94: (422, 1), 96: (437, 1), 98: (442, 1), 99: (436, 1), 100: (430, 1), 101: (435, 1),
+    103: (439, 1), 105: (223, 1), 107: (423, 1)}
+
+
+def parametros_108(v, hab):
+    """Los 108 «parameters» del cliente para un registro (v = entero de 512 bits) y sus 25
+    habilidades (dict con valores 40..99)."""
+    p = [0] * 108
+    for i, (bit, ancho) in PARAM108_BITS.items():
+        p[i] = (v >> bit) & ((1 << ancho) - 1)
+    for i, k in PARAM108_HABILIDAD.items():
+        p[i] = hab[k]
+    return p
+
+
 def estimar_media(hab, puesto):
     claves, ajuste = CLAVE_POR_GRUPO[GRUPO_DE_PUESTO.get(puesto, "MED")]
     valor = sum(hab[k] for k in claves) / len(claves) + ajuste
@@ -97,7 +137,8 @@ def leer_fichas(datos):
             hab = {k: ((v >> b) & 63) + 40 for k, b in HABILIDADES.items()}
             fichas[str(pid)] = {"posicion": pos, "posicion_txt": POSICIONES[pos] if pos < 13 else "",
                                 "nacion": (v >> 169) & 127, "habilidades": hab,
-                                "rating": estimar_media(hab, pos), "rating_estimado": True}
+                                "rating": estimar_media(hab, pos), "rating_estimado": True,
+                                "parametros": parametros_108(v, hab)}
     return fichas
 
 

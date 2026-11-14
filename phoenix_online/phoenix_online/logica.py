@@ -3901,6 +3901,11 @@ class Servidor:
         (índices 14-31 y 33-39) y posición registrada (índice 0). Sin mapear (0 por ahora):
         aptitudes de posición 1-13, estilos/pie y las 44 marcas de habilidades especiales."""
         datos = (self._catalogo().get("jugadores") or {}).get(str(j.get("gameplayer_id"))) or {}
+        # C (14-nov): con el catálogo regenerado (tools/catalogo_pesdb.py) cada jugador trae
+        # `parametros` (los 108 completos: aptitudes, habilidades y marcas de skills).
+        completo = datos.get("parametros")
+        if isinstance(completo, list) and len(completo) == 108 and not j.get("habilidades"):
+            return [int(x) for x in completo]
         hab = j.get("habilidades") or datos.get("habilidades") or {}
         if not isinstance(hab, dict) or not hab:
             return []

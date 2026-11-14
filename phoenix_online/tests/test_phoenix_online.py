@@ -3244,6 +3244,20 @@ class TestParametros108(unittest.TestCase):
         self.assertEqual(p[32], 0)  # el 32 no es una habilidad (2 bits)
         self.assertEqual(sorted(Servidor.PARAM108_HABILIDAD), [*range(14, 32), *range(33, 40)])
 
+    def test_usa_parametros_completos_del_catalogo(self):
+        completo = list(range(108))
+        srv = self._srv({"jugadores": {"7": {"parametros": completo}}})
+        self.assertEqual(srv._parametros_108({"gameplayer_id": 7}), completo)
+
+    def test_parametros_desde_registro_player_bin(self):
+        import sys
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "tools"))
+        import catalogo_pesdb as cp
+        hab = {k: 40 + i for i, k in enumerate(cp.PARAM108_HABILIDAD.values())}
+        v = (2 << 406) | (3 << 370)  # aptitud idx1 = 2, posicion 3 (LD)
+        p = cp.parametros_108(v, hab)
+        self.assertEqual((len(p), p[0], p[1], p[14], p[39]), (108, 3, 2, 40, 64))
+
     def test_sin_catalogo_devuelve_vacio(self):
         self.assertEqual(self._srv({"jugadores": {}})._parametros_108({"gameplayer_id": 9}), [])
 
