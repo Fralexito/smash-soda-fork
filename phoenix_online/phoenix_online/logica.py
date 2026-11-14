@@ -2732,7 +2732,7 @@ class Servidor:
         sin_archivo = lambda: Empaquetado({"filename": "", "hash_str": ""})
         club = self._club_inicial(s) or {}
         com = club.get("vscom") or {}
-        return {"com_countWin_num": int(com.get("racha") or 0),
+        r = {"com_countWin_num": int(com.get("racha") or 0),
                 "com_match_num": int(com.get("partidos") or 0), "oppo_level": 0,
                 "weekly_group_rank": 0, "weekly_group_rank_total_num": 0, "rank": 0,
                 "rank_total_num": 0, "rank_coach": 0, "rank_coach_total_num": 0,
@@ -2749,6 +2749,11 @@ class Servidor:
                     "is_use_emblem": "NO", "is_auto_make_compe_name": "NO",
                     "matchday_group_type": "", "team_list_group_a": [], "team_list_group_b": [],
                     "compe_db_id": 0})}
+        # Prueba en caliente (14-nov, ranking semanal): myclub.mainmenu_extra = {campo: valor}
+        extra = (self.cfg.get("myclub") or {}).get("mainmenu_extra")
+        if isinstance(extra, dict):
+            r.update(extra)
+        return r
 
     async def c_cmd_get_myclub_login_bonus(self, s, m):
         return {"login_bonus_list": [], "login_bonus_list_num": 0, "today_bonus_number": 0,
