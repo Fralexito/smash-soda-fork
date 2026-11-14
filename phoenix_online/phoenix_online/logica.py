@@ -3009,7 +3009,7 @@ class Servidor:
         # C (§15.9). P: «reward» (regalo) se omite hasta tener uno real
         # Prueba en caliente (13-nov): myclub.semanal_basico = {campo: valor} pisa estos campos
         # (sospecha: is_beginner YES = «juega 10 partidos 1 contra 1» y oculta el ranking semanal)
-        info = {"eura_url": "", "is_beginner": "YES", "is_join": "NO", "is_rejected": "NO",
+        info = {"eura_url": "", "is_beginner": "NO", "is_join": "NO", "is_rejected": "NO",
                 "is_season_end": "NO", "division": "", "division_change_type": "",
                 "is_no_play_season": "NO", "is_group_rank_1st": "NO"}
         extra = (self.cfg.get("myclub") or {}).get("semanal_basico")
@@ -7317,7 +7317,7 @@ class Servidor:
         if msgid in ("CMD_GET_MYCLUB_WEEKLY_RANKING", "CMD_GET_MYCLUB_WEEKLY_RANKING_BYID"):
             # B.7: sin torneo semanal propio todavía: respuesta vacía válida
             # (14-nov) Con myclub.ranking_semanal_real encendido: datos reales de partidos registrados
-            if (self.cfg.get("myclub") or {}).get("ranking_semanal_real"):
+            if (self.cfg.get("myclub") or {}).get("ranking_semanal_real", True):
                 r = self._ranking_semanal_real(formulario)
                 if msgid.endswith("_BYID"):
                     buscados = {str(formulario.get(k)) for k in ("target_pid", "xuid_one", "np_account_id", "pid")

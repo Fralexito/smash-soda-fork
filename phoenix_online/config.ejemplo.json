@@ -108,6 +108,7 @@
   ],
   "turn": null,
   "myclub": {
+    "ranking_semanal_real": true,
     "progreso_sin_club": "",
     "progreso_con_club": "",
     "gp_inicial": 0,
