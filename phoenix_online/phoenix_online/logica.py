@@ -2650,7 +2650,10 @@ class Servidor:
                 "exp_current_level": exp % self.EXP_POR_NIVEL,
                 "exp_to_next_level": 0 if nivel >= limite else
                 self.EXP_POR_NIVEL - exp % self.EXP_POR_NIVEL}),
-            "parameters": list(j.get("parameters") or []),
+            # P (14-nov): tras usar un objeto la tarjeta sale un momento con media 40; con
+            # myclub.ficha_parametros_catalogo se rellena parameters desde el catálogo.
+            "parameters": list(j.get("parameters") or (self._habilidades_catalogo(j)
+                               if cfgm.get("ficha_parametros_catalogo") else [])),
             "enhanced_parameters": list(j.get("enhanced_parameters") or []),
             "add_skill_id": e("add_skill_id"), "is_protected": t("is_protected"),
             "redcard_info_list": [], "default_overall": e("default_overall", e("rating", 75)),
