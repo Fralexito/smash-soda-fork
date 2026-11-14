@@ -2759,23 +2759,28 @@ class Servidor:
         return {"login_bonus_list": [], "login_bonus_list_num": 0, "today_bonus_number": 0,
                 "is_bonus": "NO"}  # C (§15.2): «sin bonus»
 
-    # P (05-nov noche): item_type/item_variation son texto libre (no hay enum en el exe, RE
-    # noche §ITEMLIST). Candidatos de la tabla de categorías 0x142ad6780: CONTRACT y RECOVERY.
-    # Se cambian en caliente con myclub.objetos para probar otros valores sin reiniciar.
+    # C (14-nov, consumidor FUN_1410a2b40): el cliente busca el texto de item_type en la tabla
+    # de 10 usos (RECOVERY_ONE, RECOVERY_ALL, EXTEND_PLAYER, EXTEND_COACH, TACTICS_TRAINING,
+    # IMPROVE_TEAM_ADAPTABILITY_RATE, IMPROVE_MANAGEMENT, SPECIAL_TRAINING_COACH, ADD_SKILL,
+    # ADD_POSITION_APTITUDE) y el de item_variation en la de 4 tamaños (NONE, SMALL, MEDIUM,
+    # LARGE). Texto desconocido = índice 0, y todo caía en «Recuperar (uno)».
+    # Se cambian en caliente con myclub.objetos.
     OBJETOS_DEFECTO = [
-        {"clave": "boletos_contrato", "item_type": "CONTRACT", "item_variation": "CONTRACT"},
-        {"clave": "objetos_recuperar", "item_type": "RECOVERY", "item_variation": "RECOVERY"},
-        # B.21b (P): no hay item_type propio para estos; item_variation = texto de «uso de
-        # objeto» del cliente. Solo salen si el club tiene alguno (no tocan la lista de hoy).
-        {"clave": "objetos_habilidad", "item_type": "STORE", "item_variation": "ADD_SKILL",
+        {"clave": "boletos_contrato", "item_type": "EXTEND_PLAYER", "item_variation": "NONE"},
+        {"clave": "objetos_recuperar", "item_type": "RECOVERY_ONE", "item_variation": "NONE"},
+        {"clave": "objetos_recuperar_todos", "item_type": "RECOVERY_ALL", "item_variation": "NONE",
          "mostrar_vacio": False},
-        {"clave": "objetos_posicion", "item_type": "STORE", "item_variation": "ADD_POSITION_APTITUDE",
+        {"clave": "boletos_dt", "item_type": "EXTEND_COACH", "item_variation": "NONE",
          "mostrar_vacio": False},
-        {"clave": "objetos_gestion", "item_type": "STORE", "item_variation": "IMPROVE_MANAGEMENT",
+        {"clave": "objetos_habilidad", "item_type": "ADD_SKILL", "item_variation": "NONE",
          "mostrar_vacio": False},
-        {"clave": "objetos_adaptacion", "item_type": "STORE",
-         "item_variation": "IMPROVE_TEAM_ADAPTABILITY_RATE", "mostrar_vacio": False},
-        {"clave": "objetos_tactico", "item_type": "STORE", "item_variation": "TACTICS_TRAINING",
+        {"clave": "objetos_posicion", "item_type": "ADD_POSITION_APTITUDE",
+         "item_variation": "NONE", "mostrar_vacio": False},
+        {"clave": "objetos_gestion", "item_type": "IMPROVE_MANAGEMENT", "item_variation": "NONE",
+         "mostrar_vacio": False},
+        {"clave": "objetos_adaptacion", "item_type": "IMPROVE_TEAM_ADAPTABILITY_RATE",
+         "item_variation": "NONE", "mostrar_vacio": False},
+        {"clave": "objetos_tactico", "item_type": "TACTICS_TRAINING", "item_variation": "NONE",
          "mostrar_vacio": False},
     ]
 
@@ -3965,7 +3970,6 @@ class Servidor:
 
     # ---------- B.21: intercambio de cartas y objetos de entrenamiento ----------
     # Los objetos se guardan como contadores en el club (se dan con admin o como premio).
-    # Su item_variation en ITEMLIST aún no se conoce (N), por eso no salen en OBJETOS_DEFECTO.
     OBJETO_POR_USO = {"habilidad": "objetos_habilidad", "posicion": "objetos_posicion",
                       "gestion": "objetos_gestion", "adaptacion": "objetos_adaptacion",
                       "tactico": "objetos_tactico"}

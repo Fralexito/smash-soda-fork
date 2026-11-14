@@ -1077,7 +1077,7 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.assertGreater(len(res()["gameplayer_list"]), 0)
         msgpack_min.packb(res())
         await r(a, 81, {"msgid": "CMD_GET_MYCLUB_ITEMLIST", "rqid": 81})
-        variantes = [msgpack_min.unpackb(msgpack_min.packb(o.valor))["item_variation"] for o in res()["item_list"]]
+        variantes = [msgpack_min.unpackb(msgpack_min.packb(o.valor))["item_type"] for o in res()["item_list"]]
         self.assertIn("IMPROVE_TEAM_ADAPTABILITY_RATE", variantes)  # sin usar: sale
         self.assertNotIn("ADD_SKILL", variantes)
         await r(a, 9, {"msgid": "CMD_SET_POSITION_RATING", "rqid": 9, "position": "CF", "rating": 80})
@@ -1988,7 +1988,7 @@ class TestFlujo(unittest.IsolatedAsyncioTestCase):
         self.srv.datos.guardar_club(a.steam_hex, club)
         await r(a, 2, {"msgid": "CMD_GET_MYCLUB_ITEMLIST", "rqid": 2})
         items = {i.valor["item_type"]: i.valor["count"] for i in ea[-1][1]["item_list"]}
-        self.assertEqual(items, {"CONTRACT": 3, "RECOVERY": 2})
+        self.assertEqual(items, {"EXTEND_PLAYER": 3, "RECOVERY_ONE": 2})
         # los valores se cambian en caliente desde config
         self.srv.cfg["myclub"]["objetos"] = [{"clave": "boletos_contrato", "item_type": "X",
                                               "item_variation": "Y"}]

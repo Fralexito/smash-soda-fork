@@ -531,13 +531,13 @@
     "objetos": [
       {
         "clave": "boletos_contrato",
-        "item_type": "CONTRACT",
-        "item_variation": "CONTRACT"
+        "item_type": "EXTEND_PLAYER",
+        "item_variation": "NONE"
       },
       {
         "clave": "objetos_recuperar",
-        "item_type": "RECOVERY",
-        "item_variation": "RECOVERY"
+        "item_type": "RECOVERY_ONE",
+        "item_variation": "NONE"
       }
     ],
     "subastas": {

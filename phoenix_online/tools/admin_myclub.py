@@ -118,7 +118,9 @@ def main(argv=None):
     campos = {"dar-gp": "gp", "poner-gp": "gp", "dar-monedas": "monedas",
               "poner-monedas": "monedas", "dar-boletos": "boletos_contrato",
               "poner-boletos": "boletos_contrato", "dar-recuperar": "objetos_recuperar",
-              "poner-recuperar": "objetos_recuperar"}
+              "poner-recuperar": "objetos_recuperar",
+              "dar-habilidad": "objetos_habilidad", "poner-habilidad": "objetos_habilidad",
+              "dar-posicion": "objetos_posicion", "poner-posicion": "objetos_posicion"}
     if orden in campos and len(argv) == 4:
         campo = campos[orden]
         j = buscar(datos, argv[2])
