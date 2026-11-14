@@ -2653,7 +2653,7 @@ class Servidor:
             # P (14-nov): tras usar un objeto la tarjeta sale un momento con media 40; con
             # myclub.ficha_parametros_catalogo se rellena parameters desde el catálogo.
             "parameters": list(j.get("parameters") or (
-                self._parametros_108(j) if cfgm.get("ficha_parametros_108") else
+                self._parametros_108(j) if cfgm.get("ficha_parametros_108", True) else
                 self._habilidades_catalogo(j) if cfgm.get("ficha_parametros_catalogo") else [])),
             "enhanced_parameters": list(j.get("enhanced_parameters") or []),
             "add_skill_id": e("add_skill_id"), "is_protected": t("is_protected"),
@@ -3932,8 +3932,8 @@ class Servidor:
             # C (vivo 06-nov): con parameters vacío, «Resultados del entrenamiento» pintaba la
             # carta con media 40 y todos los atributos 0.
             "parameters": list(j.get("parameters") or (
-                self._parametros_108(j) if (self.cfg.get("myclub") or {}).get("ficha_parametros_108")
-                else habilidades) or []),
+                self._parametros_108(j) if (self.cfg.get("myclub") or {}).get("ficha_parametros_108", True)
+                else None) or habilidades or []),
             "enhanced_parameters": list(j.get("enhanced_parameters") or []),
             "add_skill_id": e("add_skill_id")})
 
@@ -4100,7 +4100,7 @@ class Servidor:
         # C (14-nov, RE FUN_141cc0080): el lector de esta respuesta lee `result_parameters` (lista
         # de 108 enteros, vector en +0x1D0 del objeto); la tarjeta «Resultados del entrenamiento»
         # la usa para pintar al jugador (FUN_1410290b0 exige exactamente 108; vacío = PT 40).
-        if (self.cfg.get("myclub") or {}).get("ficha_parametros_108"):
+        if (self.cfg.get("myclub") or {}).get("ficha_parametros_108", True):
             p108 = self._parametros_108(j)
             if p108:
                 res["result_parameters"] = p108
@@ -4120,7 +4120,7 @@ class Servidor:
         self.datos.guardar_club(s.steam_hex or "", club)
         res = {}
         # C (14-nov, RE FUN_141cccb50): también lee `result_parameters` (108 enteros).
-        if (self.cfg.get("myclub") or {}).get("ficha_parametros_108"):
+        if (self.cfg.get("myclub") or {}).get("ficha_parametros_108", True):
             p108 = self._parametros_108(j)
             if p108:
                 res["result_parameters"] = p108
