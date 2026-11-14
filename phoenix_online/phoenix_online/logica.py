@@ -2987,10 +2987,15 @@ class Servidor:
 
     async def c_cmd_get_myclub_weekly_ranking_basic_info(self, s, m):
         # C (§15.9). P: «reward» (regalo) se omite hasta tener uno real
-        return {"basic_info": Empaquetado({
-            "eura_url": "", "is_beginner": "YES", "is_join": "NO", "is_rejected": "NO",
-            "is_season_end": "NO", "division": "", "division_change_type": "",
-            "is_no_play_season": "NO", "is_group_rank_1st": "NO"})}
+        # Prueba en caliente (13-nov): myclub.semanal_basico = {campo: valor} pisa estos campos
+        # (sospecha: is_beginner YES = «juega 10 partidos 1 contra 1» y oculta el ranking semanal)
+        info = {"eura_url": "", "is_beginner": "YES", "is_join": "NO", "is_rejected": "NO",
+                "is_season_end": "NO", "division": "", "division_change_type": "",
+                "is_no_play_season": "NO", "is_group_rank_1st": "NO"}
+        extra = (self.cfg.get("myclub") or {}).get("semanal_basico")
+        if isinstance(extra, dict):
+            info.update(extra)
+        return {"basic_info": Empaquetado(info)}
 
     async def c_cmd_get_myclub_cloudmatch_bonus(self, s, m):
         # C (§15.10). P: «cloud_bonus» (regalo) se omite
