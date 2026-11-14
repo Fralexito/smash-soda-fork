@@ -4091,7 +4091,15 @@ class Servidor:
         j["add_skill_id"] = ids[int(club.get("habilidades_dadas") or 0) % len(ids)]
         club["habilidades_dadas"] = int(club.get("habilidades_dadas") or 0) + 1
         self.datos.guardar_club(s.steam_hex or "", club)
-        return {"add_skill_id": j["add_skill_id"]}
+        res = {"add_skill_id": j["add_skill_id"]}
+        # C (14-nov, RE FUN_141cc0080): el lector de esta respuesta lee `result_parameters` (lista
+        # de 108 enteros, vector en +0x1D0 del objeto); la tarjeta «Resultados del entrenamiento»
+        # la usa para pintar al jugador (FUN_1410290b0 exige exactamente 108; vacío = PT 40).
+        if (self.cfg.get("myclub") or {}).get("ficha_parametros_108"):
+            p108 = self._parametros_108(j)
+            if p108:
+                res["result_parameters"] = p108
+        return res
 
     async def c_cmd_use_myclub_add_position_aptitude_item(self, s, m):
         """B.21: aptitud de posición. Guarda cuántos objetos recibió el jugador (P: el efecto
@@ -4105,7 +4113,13 @@ class Servidor:
             return {"result": error}
         j["aptitud_extra"] = int(j.get("aptitud_extra") or 0) + max(1, int(m.get("use_count") or 1))
         self.datos.guardar_club(s.steam_hex or "", club)
-        return {}
+        res = {}
+        # C (14-nov, RE FUN_141cccb50): también lee `result_parameters` (108 enteros).
+        if (self.cfg.get("myclub") or {}).get("ficha_parametros_108"):
+            p108 = self._parametros_108(j)
+            if p108:
+                res["result_parameters"] = p108
+        return res
 
     def _usar_objeto_dt(self, s, m, uso, clave, paso, tope):
         club = self._club_inicial(s)
